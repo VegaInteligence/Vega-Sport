@@ -12,6 +12,10 @@ Les contributions sont ensuite agrégées sur la saison pour associer volume et 
 
 Les formules, pondérations et limites sont détaillées dans la [documentation mathématique](docs/METHODE_CLASSEMENT_BALLON_D_OR.md).
 
+## Explorer les données
+
+Le [dashboard Orion](docs/DASHBOARD.md) propose une interface sombre pour parcourir les compétitions et les clubs, comparer les joueurs et explorer les données complètes des matchs. La connexion à PitchAPI ouvre les saisons et les analyses à la demande. Les notes affichées proviennent de PitchAPI ; le classement Orion reste à calibrer et à valider.
+
 ## Licence
 
 [MIT](LICENSE). Les données de fournisseurs tiers restent soumises à leurs propres conditions d’utilisation.
