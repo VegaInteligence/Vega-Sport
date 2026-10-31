@@ -14,7 +14,7 @@ Les formules, pondérations et limites sont détaillées dans la [documentation 
 
 ## Explorer les données
 
-Le [dashboard Orion](docs/DASHBOARD.md) permet de parcourir les matchs collectés, comparer les performances individuelles et visualiser les tirs ainsi que la couverture des données. Les notes affichées proviennent de PitchAPI ; le classement Orion reste à calibrer et à valider.
+Le [dashboard Orion](docs/DASHBOARD.md) propose une interface sombre pour parcourir les compétitions et les clubs, comparer les joueurs et explorer les données complètes des matchs. La connexion à PitchAPI ouvre les saisons et les analyses à la demande. Les notes affichées proviennent de PitchAPI ; le classement Orion reste à calibrer et à valider.
 
 ## Licence
 

@@ -1,4 +1,4 @@
-/** Local, dependency-free server for the dashboard and two source snapshots. */
+/** Local dashboard, protected source snapshots and the server-only PitchAPI gateway. */
 import http from 'node:http';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
@@ -20,8 +20,44 @@ const mimeTypes = {
   '.ico': 'image/x-icon',
 };
 
-const requestedPort = Number(process.env.PORT);
+const cli = process.argv.slice(2);
+function argument(name) {
+  const inline = cli.find(value => value.startsWith(`${name}=`));
+  if (inline) return inline.slice(name.length + 1);
+  const index = cli.indexOf(name);
+  return index >= 0 ? cli[index + 1] : undefined;
+}
+const requestedPort = Number(argument('--port') ?? process.env.PORT);
 const port = Number.isInteger(requestedPort) && requestedPort >= 1 && requestedPort <= 65535 ? requestedPort : 8765;
+// The managed preview explicitly supplies --host 0.0.0.0. Local use stays local.
+const requestedHost = argument('--host');
+const host = requestedHost === '0.0.0.0' ? requestedHost : '127.0.0.1';
+let gateway;
+let localEnvironment;
+
+async function getLocalEnvironment() {
+  if (!localEnvironment) {
+    localEnvironment = (async () => {
+      if (process.env.PITCHAPI_API_KEY) return { PITCHAPI_API_KEY: process.env.PITCHAPI_API_KEY };
+      try {
+        const file = await readFile(path.resolve(dashboardRoot, '../.env'), 'utf8');
+        const match = file.match(/^\s*PITCHAPI_API_KEY\s*=\s*(.*?)\s*$/m);
+        if (match) return { PITCHAPI_API_KEY: match[1].replace(/^(['"])(.*)\1$/, '$2') };
+      } catch { /* Local credentials are optional; the snapshot remains usable. */ }
+      return {};
+    })();
+  }
+  return localEnvironment;
+}
+
+async function serveApi(request, response) {
+  // Lazy loading keeps the standalone static server portable for existing tooling.
+  gateway ||= import('../worker/pitchapi.js');
+  const [{ handlePitchApi }, env] = await Promise.all([gateway, getLocalEnvironment()]);
+  const result = await handlePitchApi(new Request(`http://127.0.0.1:${port}${request.url}`, { method: request.method }), env);
+  response.writeHead(result.status, Object.fromEntries(result.headers));
+  response.end(request.method === 'HEAD' ? undefined : Buffer.from(await result.arrayBuffer()));
+}
 
 function reply(response, status, message, head = false) {
   const body = Buffer.from(message);
@@ -41,12 +77,6 @@ function contained(root, target) {
 
 async function serve(request, response) {
   const head = request.method === 'HEAD';
-  if (request.method !== 'GET' && !head) {
-    response.setHeader('Allow', 'GET, HEAD');
-    reply(response, 405, 'Method not allowed');
-    return;
-  }
-
   let pathname;
   try {
     // Validate before URL/path normalization can silently remove traversal.
@@ -62,6 +92,16 @@ async function serve(request, response) {
   }
   if (pathname.split('/').some(segment => segment.startsWith('.'))) {
     reply(response, 403, 'Forbidden', head);
+    return;
+  }
+
+  if (pathname === '/api' || pathname.startsWith('/api/')) {
+    await serveApi(request, response);
+    return;
+  }
+  if (request.method !== 'GET' && !head) {
+    response.setHeader('Allow', 'GET, HEAD');
+    reply(response, 405, 'Method not allowed');
     return;
   }
 
@@ -127,6 +167,6 @@ server.on('error', error => {
   process.exitCode = 1;
 });
 
-server.listen(port, '127.0.0.1', () => {
+server.listen(port, host, () => {
   console.log(`Dashboard: http://127.0.0.1:${port}`);
 });

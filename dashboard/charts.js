@@ -1,5 +1,5 @@
 /** Small, dependency-free visualizations of the supplied observations. */
-const COLORS = { home: '#147d5b', away: '#64748b', grid: '#e8edea', text: '#758078', dark: '#253b30' };
+const COLORS = { home: '#c6f36b', away: '#b2a7df', grid: '#2b3426', text: '#9da98f', dark: '#e8efde', surface: '#172015' };
 const isNumber = value => typeof value === 'number' && Number.isFinite(value);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
 const fmt = (value, digits = 2) => isNumber(value) ? value.toLocaleString('fr-FR', { maximumFractionDigits: digits }) : 'Non renseigné';
@@ -55,7 +55,7 @@ export function scatterPlot(appearances, options = {}) {
   const axis = axisGrid({ width, height, margin, xDomain, yDomain, xLabel, yLabel });
   const points = available.map(appearance => {
     const label = `${appearance.name} · ${typeof appearance.team === 'string' ? appearance.team : appearance.team?.name || ''} · ${xLabel} : ${fmt(appearance[xKey])} · ${yLabel} : ${fmt(appearance[yKey])}${isNumber(appearance.minutes) ? ` · ${fmt(appearance.minutes, 0)} minutes` : ''}`;
-    return `<circle class="chart-point" cx="${num(axis.x(appearance[xKey]))}" cy="${num(axis.y(appearance[yKey]))}" r="4.4" fill="${COLORS.home}" fill-opacity="0.64" stroke="white" stroke-width="1.1" ${playerInteraction(appearance.id, label)}><title>${esc(label)}</title></circle>`;
+    return `<circle class="chart-point" cx="${num(axis.x(appearance[xKey]))}" cy="${num(axis.y(appearance[yKey]))}" r="4.4" fill="${COLORS.home}" fill-opacity="0.64" stroke="${COLORS.surface}" stroke-width="1.1" ${playerInteraction(appearance.id, label)}><title>${esc(label)}</title></circle>`;
   }).join('');
   const missing = source.length - available.length;
   const description = `${available.length} apparitions avec les deux mesures renseignées. Axe horizontal : ${xLabel}. Axe vertical : ${yLabel}. Chaque point ouvre la fiche de l'apparition.`;
@@ -103,8 +103,8 @@ export function shotMap(match, options = {}) {
   const x = value => left + value * fieldWidth / 105;
   const y = value => top + value * fieldHeight / 68;
   const centerY = y(34);
-  const fieldStroke = '#cddbd2';
-  const pitch = `<rect x="${left}" y="${top}" width="${fieldWidth}" height="${num(fieldHeight)}" rx="3" fill="#f3f7f3" stroke="${fieldStroke}"/><g stroke="${fieldStroke}" fill="none" stroke-width="1"><line x1="${num(x(52.5))}" y1="${top}" x2="${num(x(52.5))}" y2="${num(y(68))}"/><circle cx="${num(x(52.5))}" cy="${num(centerY)}" r="${num(9.15 * fieldWidth / 105)}"/><rect x="${left}" y="${num(y(13.84))}" width="${num(16.5 * fieldWidth / 105)}" height="${num(40.32 * fieldHeight / 68)}"/><rect x="${num(x(88.5))}" y="${num(y(13.84))}" width="${num(16.5 * fieldWidth / 105)}" height="${num(40.32 * fieldHeight / 68)}"/><rect x="${left}" y="${num(y(24.84))}" width="${num(5.5 * fieldWidth / 105)}" height="${num(18.32 * fieldHeight / 68)}"/><rect x="${num(x(99.5))}" y="${num(y(24.84))}" width="${num(5.5 * fieldWidth / 105)}" height="${num(18.32 * fieldHeight / 68)}"/><rect x="${left - 5}" y="${num(y(30.34))}" width="5" height="${num(7.32 * fieldHeight / 68)}"/><rect x="${left + fieldWidth}" y="${num(y(30.34))}" width="5" height="${num(7.32 * fieldHeight / 68)}"/></g><g fill="${fieldStroke}"><circle cx="${num(x(52.5))}" cy="${num(centerY)}" r="2"/><circle cx="${num(x(11))}" cy="${num(centerY)}" r="2"/><circle cx="${num(x(94))}" cy="${num(centerY)}" r="2"/></g>`;
+  const fieldStroke = '#3a4a30';
+  const pitch = `<rect x="${left}" y="${top}" width="${fieldWidth}" height="${num(fieldHeight)}" rx="3" fill="#141e11" stroke="${fieldStroke}"/><g stroke="${fieldStroke}" fill="none" stroke-width="1"><line x1="${num(x(52.5))}" y1="${top}" x2="${num(x(52.5))}" y2="${num(y(68))}"/><circle cx="${num(x(52.5))}" cy="${num(centerY)}" r="${num(9.15 * fieldWidth / 105)}"/><rect x="${left}" y="${num(y(13.84))}" width="${num(16.5 * fieldWidth / 105)}" height="${num(40.32 * fieldHeight / 68)}"/><rect x="${num(x(88.5))}" y="${num(y(13.84))}" width="${num(16.5 * fieldWidth / 105)}" height="${num(40.32 * fieldHeight / 68)}"/><rect x="${left}" y="${num(y(24.84))}" width="${num(5.5 * fieldWidth / 105)}" height="${num(18.32 * fieldHeight / 68)}"/><rect x="${num(x(99.5))}" y="${num(y(24.84))}" width="${num(5.5 * fieldWidth / 105)}" height="${num(18.32 * fieldHeight / 68)}"/><rect x="${left - 5}" y="${num(y(30.34))}" width="5" height="${num(7.32 * fieldHeight / 68)}"/><rect x="${left + fieldWidth}" y="${num(y(30.34))}" width="5" height="${num(7.32 * fieldHeight / 68)}"/></g><g fill="${fieldStroke}"><circle cx="${num(x(52.5))}" cy="${num(centerY)}" r="2"/><circle cx="${num(x(11))}" cy="${num(centerY)}" r="2"/><circle cx="${num(x(94))}" cy="${num(centerY)}" r="2"/></g>`;
   // Draw goals last so they remain visible when several events share coordinates.
   const points = [...located].sort((a, b) => Number(Boolean(a.isGoal || a.isOwnGoal)) - Number(Boolean(b.isGoal || b.isOwnGoal))).map(shot => {
     const color = teamFor(match, shot.teamId).color;
@@ -112,7 +112,7 @@ export function shotMap(match, options = {}) {
     const radius = isNumber(shot.xg) ? 4 + 9 * Math.sqrt(Math.max(0, Math.min(1, shot.xg))) : 5;
     const label = shotLabel(shot, match);
     const id = shot.playerId ? `${match.id}:${shot.playerId}` : null;
-    return `<circle class="chart-point shot-point" cx="${num(x(shot.x))}" cy="${num(y(shot.y))}" r="${num(radius)}" fill="${goal ? color : '#ffffff'}" fill-opacity="${goal ? '0.96' : '0.7'}" stroke="${color}" stroke-width="${goal ? 1.8 : 1.4}"${isNumber(shot.xg) ? '' : ' stroke-dasharray="2 2"'} ${playerInteraction(id, label)}><title>${esc(label)}</title></circle>`;
+    return `<circle class="chart-point shot-point" cx="${num(x(shot.x))}" cy="${num(y(shot.y))}" r="${num(radius)}" fill="${goal ? color : COLORS.surface}" fill-opacity="${goal ? '0.96' : '0.7'}" stroke="${color}" stroke-width="${goal ? 1.8 : 1.4}"${isNumber(shot.xg) ? '' : ' stroke-dasharray="2 2"'} ${playerInteraction(id, label)}><title>${esc(label)}</title></circle>`;
   }).join('');
   const missingXg = located.filter(shot => !isNumber(shot.xg)).length;
   const missingCoordinates = shots.length - located.length;
@@ -151,9 +151,9 @@ export function xgTimeline(match, options = {}) {
     const area = `${path} V ${num(axis.y(0))} H ${num(axis.x(0))} Z`;
     const points = events.map(({ shot, total }) => {
       const label = `${shotLabel(shot, match)} · xG cumulés : ${fmt(total)}`;
-      return `<circle class="chart-point" cx="${num(axis.x(shot.minute))}" cy="${num(axis.y(total))}" r="3" fill="${color}" stroke="white" stroke-width="1" tabindex="0" role="img" aria-label="${esc(label)}"><title>${esc(label)}</title></circle>`;
+      return `<circle class="chart-point" cx="${num(axis.x(shot.minute))}" cy="${num(axis.y(total))}" r="3" fill="${color}" stroke="${COLORS.surface}" stroke-width="1" tabindex="0" role="img" aria-label="${esc(label)}"><title>${esc(label)}</title></circle>`;
     }).join('');
-    return `<path d="${area}" fill="${color}" fill-opacity="0.045"/><path d="${path}" fill="none" stroke="${color}" stroke-width="2.3" stroke-linejoin="round"${side === 'away' ? ' stroke-dasharray="5 3"' : ''}/>${points}`;
+    return `<path d="${area}" fill="${color}" fill-opacity="0.07"/><path d="${path}" fill="none" stroke="${color}" stroke-width="2.3" stroke-linejoin="round"${side === 'away' ? ' stroke-dasharray="5 3"' : ''}/>${points}`;
   }).join('');
   const totals = Object.fromEntries(series.map(item => [item.side, item.total]));
   const excluded = shots.length - valid.length;

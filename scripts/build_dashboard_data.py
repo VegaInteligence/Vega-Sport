@@ -19,6 +19,11 @@ ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_PATH = ROOT / "data/pitchapi_premiers_matchs.json"
 CATALOG_PATH = ROOT / "data/pitchapi_championnats.json"
 DEFAULT_OUTPUT = ROOT / "dashboard/data/football.json"
+MATCH_ENDPOINTS = (
+    "match", "shots", "momentum", "events", "players", "players/halves",
+    "lineups", "h2h", "stats", "advanced", "advanced/players",
+    "advanced/network", "heatmaps",
+)
 
 # Repeated metrics in provider groups are a single observation, never a sum.
 PLAYER_METRICS = {
@@ -312,6 +317,21 @@ def build_snapshot(raw, catalog):
         if match["season"] not in competition["sampleSeasons"]:
             competition["sampleSeasons"].append(match["season"])
     competitions = sorted(competition_lookup.values(), key=lambda c: (c["name"] or "", c["id"]))
+    team_lookup = {}
+    for match in matches:
+        for side in ("home", "away"):
+            source_team = match[side]
+            team = team_lookup.setdefault(source_team["id"], {
+                "id": source_team["id"], "name": source_team["name"],
+                "imageUrl": source_team.get("imageUrl"), "leagueIds": [],
+                "seasons": [], "sampleMatches": 0,
+            })
+            team["sampleMatches"] += 1
+            if match["leagueId"] not in team["leagueIds"]:
+                team["leagueIds"].append(match["leagueId"])
+            if match["season"] not in team["seasons"]:
+                team["seasons"].append(match["season"])
+    teams = sorted(team_lookup.values(), key=lambda t: (t["name"] or "", t["id"]))
     played = [p for p in appearances if p["minutes"] is not None and p["minutes"] > 0]
     all_shots = [s for m in matches for s in m["shots"]]
     dates = sorted(m["date"] for m in matches if m.get("date"))
@@ -330,6 +350,8 @@ def build_snapshot(raw, catalog):
             "listedAppearanceCount": len(appearances),
             "teamCount": len({p["teamId"] for p in appearances if p["teamId"]}),
             "catalogCount": len(((catalog.get("data") or {}).get("leagues") or [])),
+            "seasonCount": sum(len(set(c["seasons"])) for c in competitions),
+            "catalogSeasons": sorted({season for c in competitions for season in c["seasons"]}),
             "sampleCompetitionCount": len({m["leagueId"] for m in matches}),
             "shotCount": len(all_shots),
             "knownShotXgCount": sum(s["xg"] is not None for s in all_shots),
@@ -351,10 +373,42 @@ def build_snapshot(raw, catalog):
             ],
         },
         "competitions": competitions,
+        "teams": teams,
         "matches": matches,
         "appearances": appearances,
         "metrics": METRICS,
     }
+
+
+def write_raw_match_shards(raw, output_directory):
+    """Expose the complete payloads actually present in the original sample.
+
+    The fixture row is not misrepresented as a fetched /matches/{id} summary.
+    Endpoints that were never collected remain explicitly not_collected.
+    """
+    output_directory = Path(output_directory)
+    output_directory.mkdir(parents=True, exist_ok=True)
+    for sample in unique_rows(raw.get("samples") or [], lambda s: s["match"]["id"]):
+        match_id = sample["match"]["id"]
+        if not re.fullmatch(r"m_[A-Za-z0-9]{6}", match_id):
+            raise ValueError("Invalid match identifier in source snapshot")
+        shard = {
+            "meta": {"retrievedAt": raw.get("retrieved_at_utc"), "source": "data/pitchapi_premiers_matchs.json"},
+            "match": {"data": sample["match"], "source": "fixture_index"},
+            "availability": {key: {"state": "not_collected", "status": None} for key in MATCH_ENDPOINTS},
+        }
+        shard["availability"]["match"] = {"state": "fixture_only", "status": None}
+        for target, source in (("players", "players"), ("lineups", "lineups"), ("stats", "team_stats"), ("shots", "shots")):
+            response = sample.get(source)
+            if not isinstance(response, dict):
+                continue
+            shard["availability"][target] = {"state": "collected" if response.get("ok") else "error", "status": response.get("status")}
+            if response.get("ok"):
+                shard[target] = {"data": response.get("data"), "status": response.get("status")}
+        text = json.dumps(shard, ensure_ascii=False, separators=(",", ":"), allow_nan=False) + "\n"
+        if re.search(r"pk_(?:live|test)_[A-Za-z0-9_-]+", text):
+            raise ValueError("Credential-like value found in raw snapshot; shard not written")
+        (output_directory / f"{match_id}.json").write_text(text, encoding="utf-8")
 
 
 def main():
@@ -363,13 +417,15 @@ def main():
     args = parser.parse_args()
     sample_bytes = SAMPLE_PATH.read_bytes()
     catalog_bytes = CATALOG_PATH.read_bytes()
-    snapshot = build_snapshot(json.loads(sample_bytes.decode("utf-8-sig")), json.loads(catalog_bytes.decode("utf-8-sig")))
+    raw = json.loads(sample_bytes.decode("utf-8-sig"))
+    snapshot = build_snapshot(raw, json.loads(catalog_bytes.decode("utf-8-sig")))
     snapshot["meta"]["sourceSha256"] = {
         SAMPLE_PATH.name: hashlib.sha256(sample_bytes).hexdigest(),
         CATALOG_PATH.name: hashlib.sha256(catalog_bytes).hexdigest(),
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(snapshot, ensure_ascii=False, separators=(",", ":"), allow_nan=False) + "\n", encoding="utf-8")
+    write_raw_match_shards(raw, args.output.parent / "matches")
     print(f"Dashboard snapshot: {snapshot['meta']['matchCount']} matches, {snapshot['meta']['appearanceCount']} played appearances, {snapshot['meta']['shotCount']} shot events → {args.output}")
 
 

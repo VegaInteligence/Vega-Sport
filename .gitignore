@@ -7,3 +7,4 @@ node_modules/
 dist/
 .sites-runtime/
 .sites-checkout/
+data/pitchapi_full/
