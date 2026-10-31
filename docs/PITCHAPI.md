@@ -40,5 +40,25 @@ ne doivent pas être interprétés comme des mesures fiables. Les xG manquants n
 doivent pas être remplacés par zéro ; un but contre son camp n'a notamment pas
 nécessairement de xG de tir.
 
+## Tableau de bord local
+
+Avec Node.js installé, lancer à la racine du dépôt :
+
+```powershell
+node dashboard/server.js
+```
+
+Ouvrir ensuite http://127.0.0.1:8765/. Le tableau de bord lit l’instantané
+préparé à partir des fichiers du dépôt ; il ne réalise pas de requêtes vers
+PitchAPI. Après une nouvelle collecte, régénérer cet instantané :
+
+```powershell
+python scripts/build_dashboard_data.py
+```
+
+Le serveur affiche aussi bien `/` que les anciennes URLs `/dashboard/`.
+Les filtres, graphiques et exports sont présentés dans la
+[documentation du dashboard](DASHBOARD.md).
+
 Source : [documentation PitchAPI](https://pitchapi.dev/). Respecter les
 conditions d'utilisation du fournisseur avant toute redistribution des données.

@@ -11,6 +11,7 @@ Le dashboard est un explorateur des données présentes dans le dépôt. Il prop
 - Passer des volumes du match aux volumes par 90 minutes ; la note fournisseur et les minutes restent inchangées.
 - Sélectionner jusqu’à trois apparitions pour les comparer.
 - Ouvrir un joueur depuis le tableau ou les graphiques ; ouvrir un match pour consulter les statistiques d’équipe, les tirs et le cumul des xG.
+- Consulter les arrêts et buts évités du fournisseur dans les fiches, la comparaison et les exports ; rechercher une compétition ou un pays dans le catalogue.
 - Exporter les apparitions filtrées dans un CSV UTF-8. Les données manquantes restent vides.
 
 Les filtres principaux et la page active sont conservés dans l’URL. Le raccourci `/` place le curseur dans la recherche. Les cartes de joueur et la comparaison utilisent une boîte de dialogue native, fermable avec Échap.
@@ -19,6 +20,14 @@ Les filtres principaux et la page active sont conservés dans l’URL. Le raccou
 
 Le frontend est en HTML, CSS et JavaScript natifs, sans dépendance à installer. Il nécessite un serveur HTTP ; ouvrir directement `index.html` avec `file://` ne permet pas le chargement fiable du fichier JSON.
 
+La commande locale du dashboard initial reste disponible, avec Node.js :
+
+```bash
+node dashboard/server.js
+```
+
+Ouvrir `http://127.0.0.1:8765/`. `npm run serve` est un raccourci équivalent. L’instantané préparé est inclus dans le dépôt ; aucune installation Python n’est nécessaire pour simplement le consulter avec ce serveur.
+
 Depuis la racine du dépôt :
 
 ```bash
@@ -26,13 +35,13 @@ python scripts/build_dashboard_data.py
 python -m http.server 3000 --directory dashboard
 ```
 
-Ouvrir ensuite `http://localhost:3000`. Python 3 est requis. `npm run serve` est un raccourci équivalent pour les environnements avec Node.js et npm.
+Cette alternative utilise Python 3 et sert le dashboard à `http://localhost:3000`.
 
 ## Vérification et construction
 
 ```bash
 python -m unittest discover -s tests -v
-node --test tests/dashboard.test.mjs
+node --test tests/*.test.mjs
 python scripts/build_dashboard.py
 ```
 

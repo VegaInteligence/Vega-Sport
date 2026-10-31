@@ -15,3 +15,4 @@
 - Valeurs absentes conservées, zéros suspects de 3. Liga masqués, notes PitchAPI identifiées et rôles non interprétés. Aucun modèle ou classement Orion implémenté.
 - Revue croisée par sous-agents pour la méthode, les données, les graphiques et le système visuel. Tests des données et des fonctions JavaScript, plus vérification des interactions et des mises en page dans le navigateur.
 - Documentation : `docs/DASHBOARD.md` et `docs/DASHBOARD_DATA.md`.
+- Le commit `b1bd916` de `main`, arrivé pendant la refonte avec le dashboard initial, a été intégré : commande locale `node dashboard/server.js`, indicateurs gardiens et recherche du catalogue conservés dans la nouvelle interface.

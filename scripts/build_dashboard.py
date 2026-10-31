@@ -13,7 +13,7 @@ def main():
     destination.mkdir(exist_ok=True)
     # Copy only the explicitly reviewed frontend; never copy raw project files,
     # credentials, repository metadata or local configuration into the site.
-    for name in ["index.html", "styles.css", "app.js", "charts.js", "model.js", "favicon.svg"]:
+    for name in ["index.html", "styles.css", "style.css", "app.js", "charts.js", "model.js", "favicon.svg"]:
         shutil.copy2(root / "dashboard" / name, destination / name)
     (destination / "data").mkdir(exist_ok=True)
     shutil.copy2(root / "dashboard/data/football.json", destination / "data/football.json")
