@@ -40,5 +40,17 @@ ne doivent pas être interprétés comme des mesures fiables. Les xG manquants n
 doivent pas être remplacés par zéro ; un but contre son camp n'a notamment pas
 nécessairement de xG de tir.
 
+## Tableau de bord local
+
+Avec Node.js installé, lancer à la racine du dépôt :
+
+```powershell
+node dashboard/server.js
+```
+
+Ouvrir ensuite http://127.0.0.1:8765/. Le tableau de bord lit les fichiers
+présents dans `data/` ; il ne réalise pas de requêtes vers PitchAPI. Actualiser
+ces fichiers avec le script de collecte pour afficher un nouvel échantillon.
+
 Source : [documentation PitchAPI](https://pitchapi.dev/). Respecter les
 conditions d'utilisation du fournisseur avant toute redistribution des données.
