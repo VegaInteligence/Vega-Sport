@@ -1,0 +1,22 @@
+/* STATARENA brand tokens. Fonts are references, not bundled files. */
+:root {
+  --statarena-navy: #112538;
+  --statarena-ink: #0d2134;
+  --statarena-blue: #1d6fd6;
+  --statarena-blue-bright: #3b8eff;
+  --statarena-background: #f6f9fc;
+  --statarena-surface: #ffffff;
+  --statarena-text: #0d2134;
+  --statarena-muted: #61778e;
+  --statarena-border: #dce5ef;
+  --statarena-font: "Inter", system-ui, -apple-system, sans-serif;
+  --statarena-font-heading: "Inter Display", "Inter", system-ui, sans-serif;
+  --statarena-radius: 14px;
+}
+[data-theme="dark"] {
+  --statarena-background: #071626;
+  --statarena-surface: #112538;
+  --statarena-text: #f6fafe;
+  --statarena-muted: #98adc2;
+  --statarena-border: #23405a;
+}

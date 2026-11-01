@@ -1,0 +1,27 @@
+{
+  "brand": "STATARENA",
+  "palette": {
+    "navy": "#112538",
+    "blue": "#1D6FD6",
+    "blue-bright": "#3B8EFF",
+    "ink": "#0D2134",
+    "deep": "#071626",
+    "light": "#F6F9FC",
+    "border": "#DCE5EF",
+    "muted": "#7F94AB"
+  },
+  "typography": {
+    "display": "Inter Display",
+    "interface": "Inter",
+    "numbers": "ui-monospace, Menlo, Consolas, monospace"
+  },
+  "clearspace": {
+    "recommended": "At least 25% of the logo-symbol height on all sides"
+  },
+  "minimum_sizes": {
+    "full_symbol": "64px",
+    "micro_icon": "16px",
+    "horizontal_lockup": "180px wide",
+    "stacked_lockup": "180px wide"
+  }
+}

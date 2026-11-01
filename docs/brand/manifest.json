@@ -1,0 +1,254 @@
+{
+  "brand": "STATARENA",
+  "file_count": 62,
+  "files": [
+    {
+      "file": "START_HERE.md",
+      "size_bytes": 2286
+    },
+    {
+      "file": "guidelines/STATARENA_Brand_Guidelines.pdf",
+      "size_bytes": 612446
+    },
+    {
+      "file": "icons/android-chrome-192.png",
+      "size_bytes": 15059
+    },
+    {
+      "file": "icons/android-chrome-512.png",
+      "size_bytes": 40258
+    },
+    {
+      "file": "icons/app-icon-blue-1024.png",
+      "size_bytes": 30331
+    },
+    {
+      "file": "icons/app-icon-dark-1024.png",
+      "size_bytes": 32926
+    },
+    {
+      "file": "icons/app-icon-light-1024.png",
+      "size_bytes": 32635
+    },
+    {
+      "file": "icons/apple-touch-icon.png",
+      "size_bytes": 12715
+    },
+    {
+      "file": "icons/favicon-16.png",
+      "size_bytes": 473
+    },
+    {
+      "file": "icons/favicon-32.png",
+      "size_bytes": 930
+    },
+    {
+      "file": "icons/favicon-48.png",
+      "size_bytes": 1246
+    },
+    {
+      "file": "icons/favicon-64.png",
+      "size_bytes": 1574
+    },
+    {
+      "file": "icons/favicon.ico",
+      "size_bytes": 6348
+    },
+    {
+      "file": "icons/favicon.svg",
+      "size_bytes": 647
+    },
+    {
+      "file": "icons/github-avatar-512.png",
+      "size_bytes": 40258
+    },
+    {
+      "file": "logos/png/statarena-horizontal-color.png",
+      "size_bytes": 49228
+    },
+    {
+      "file": "logos/png/statarena-horizontal-inverse.png",
+      "size_bytes": 46199
+    },
+    {
+      "file": "logos/png/statarena-horizontal-navy.png",
+      "size_bytes": 49220
+    },
+    {
+      "file": "logos/png/statarena-horizontal-white.png",
+      "size_bytes": 37459
+    },
+    {
+      "file": "logos/png/statarena-stacked-color.png",
+      "size_bytes": 69541
+    },
+    {
+      "file": "logos/png/statarena-stacked-inverse.png",
+      "size_bytes": 65614
+    },
+    {
+      "file": "logos/png/statarena-stacked-navy.png",
+      "size_bytes": 69528
+    },
+    {
+      "file": "logos/png/statarena-stacked-white.png",
+      "size_bytes": 53756
+    },
+    {
+      "file": "logos/png/statarena-symbol-color.png",
+      "size_bytes": 52509
+    },
+    {
+      "file": "logos/png/statarena-symbol-inverse.png",
+      "size_bytes": 50062
+    },
+    {
+      "file": "logos/png/statarena-symbol-navy.png",
+      "size_bytes": 52495
+    },
+    {
+      "file": "logos/png/statarena-symbol-white.png",
+      "size_bytes": 40845
+    },
+    {
+      "file": "logos/png/statarena-wordmark-color.png",
+      "size_bytes": 28194
+    },
+    {
+      "file": "logos/png/statarena-wordmark-inverse.png",
+      "size_bytes": 26535
+    },
+    {
+      "file": "logos/png/statarena-wordmark-navy.png",
+      "size_bytes": 28194
+    },
+    {
+      "file": "logos/png/statarena-wordmark-white.png",
+      "size_bytes": 21537
+    },
+    {
+      "file": "logos/svg/statarena-horizontal-color.svg",
+      "size_bytes": 6357
+    },
+    {
+      "file": "logos/svg/statarena-horizontal-inverse.svg",
+      "size_bytes": 6357
+    },
+    {
+      "file": "logos/svg/statarena-horizontal-navy.svg",
+      "size_bytes": 6357
+    },
+    {
+      "file": "logos/svg/statarena-horizontal-white.svg",
+      "size_bytes": 6357
+    },
+    {
+      "file": "logos/svg/statarena-micro-icon.svg",
+      "size_bytes": 647
+    },
+    {
+      "file": "logos/svg/statarena-stacked-color.svg",
+      "size_bytes": 6357
+    },
+    {
+      "file": "logos/svg/statarena-stacked-inverse.svg",
+      "size_bytes": 6357
+    },
+    {
+      "file": "logos/svg/statarena-stacked-navy.svg",
+      "size_bytes": 6357
+    },
+    {
+      "file": "logos/svg/statarena-stacked-white.svg",
+      "size_bytes": 6357
+    },
+    {
+      "file": "logos/svg/statarena-symbol-color.svg",
+      "size_bytes": 3742
+    },
+    {
+      "file": "logos/svg/statarena-symbol-inverse.svg",
+      "size_bytes": 3742
+    },
+    {
+      "file": "logos/svg/statarena-symbol-navy.svg",
+      "size_bytes": 3742
+    },
+    {
+      "file": "logos/svg/statarena-symbol-white.svg",
+      "size_bytes": 3742
+    },
+    {
+      "file": "logos/svg/statarena-wordmark-color.svg",
+      "size_bytes": 2599
+    },
+    {
+      "file": "logos/svg/statarena-wordmark-inverse.svg",
+      "size_bytes": 2599
+    },
+    {
+      "file": "logos/svg/statarena-wordmark-navy.svg",
+      "size_bytes": 2599
+    },
+    {
+      "file": "logos/svg/statarena-wordmark-white.svg",
+      "size_bytes": 2599
+    },
+    {
+      "file": "previews/STATARENA_Brand_Kit_Overview.png",
+      "size_bytes": 91026
+    },
+    {
+      "file": "previews/brand-guide-page-01.png",
+      "size_bytes": 92470
+    },
+    {
+      "file": "previews/brand-guide-page-02.png",
+      "size_bytes": 147513
+    },
+    {
+      "file": "previews/brand-guide-page-03.png",
+      "size_bytes": 102017
+    },
+    {
+      "file": "previews/brand-guide-page-06.png",
+      "size_bytes": 131791
+    },
+    {
+      "file": "social/github-readme-banner-1280x380.png",
+      "size_bytes": 34042
+    },
+    {
+      "file": "social/github-social-preview-1280x640.png",
+      "size_bytes": 37415
+    },
+    {
+      "file": "social/open-graph-1200x630.png",
+      "size_bytes": 36056
+    },
+    {
+      "file": "source/original-statarena-reference.png",
+      "size_bytes": 1118443
+    },
+    {
+      "file": "tokens/statarena.css",
+      "size_bytes": 713
+    },
+    {
+      "file": "tokens/statarena.json",
+      "size_bytes": 627
+    },
+    {
+      "file": "web/INTEGRATION.md",
+      "size_bytes": 1158
+    },
+    {
+      "file": "web/STATARENA-Logo.tsx",
+      "size_bytes": 528
+    },
+    {
+      "file": "web/site.webmanifest",
+      "size_bytes": 389
+    }
+  ]
+}
