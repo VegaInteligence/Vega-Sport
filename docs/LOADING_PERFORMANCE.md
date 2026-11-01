@@ -8,7 +8,7 @@ En production, les fichiers publics sont lus directement à une révision immuab
 
 ## Mesures et limites
 
-Le relevé HTTP initial en production a pris 16,94 s pour la saison complète et 6,06 s pour une seule compétition. Les mesures locales après optimisation (1,11 s et 0,08 s) servent à vérifier le code ; elles ne constituent pas une comparaison de latence réseau avec la production. Les mesures de déploiement, lorsqu'elles sont effectuées, sont conservées séparément dans `dashboard/outputs/loading-performance/`.
+Le relevé HTTP initial en production a pris 16,94 s pour la saison complète et 6,06 s pour une seule compétition. Les mesures locales après optimisation (1,11 s et 0,08 s) servent à vérifier le code ; elles ne constituent pas une comparaison de latence réseau avec la production. Après déploiement du commit `cd406420`, une mesure HTTP avec les mêmes données donne 1,97 s pour la saison complète et 0,28 s pour une compétition. Les ressources de données de la première vue Ligue 1 ont terminé à 816 ms depuis la navigation dans le navigateur contrôlé. Ce sont des observations sur un réseau donné, avec un cache de distribution potentiellement chaud ; elles ne constituent pas une garantie de délai pour chaque visiteur. Les relevés sont conservés dans `dashboard/outputs/loading-performance/`.
 
 Les données détaillées de toutes les compétitions d'une saison complète restent volumineuses. Les temps dépendent du réseau, du cache HTTP et du terminal. Le format réduit le volume et les requêtes ; il ne garantit pas un délai identique pour tous les visiteurs.
 
