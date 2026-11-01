@@ -58,14 +58,18 @@ async function waitOrFinish(done,ms){
 }
 async function main(){
   const interval=Math.max(60_000,Number(process.env.PITCH_CHECKPOINT_MINUTES||30)*60_000);
-  const done=startCollector();
-  while(true){
-    const result=await waitOrFinish(done,interval);
-    if(result){
-      if(result.code!==0)throw new Error(`Historical collection stopped (${result.code}); existing checkpoints remain available.`);
-      checkpoint();console.log('Historical collection and final GitHub push complete.');return;
+  const retryDelay=Math.max(0,Number(process.env.PITCH_RETRY_DELAY_SECONDS||30)*1000);
+  for(let attempt=1;attempt<=5;attempt++){
+    const done=startCollector();let result;
+    while(true){
+      result=await waitOrFinish(done,interval);
+      if(result)break;
+      try{checkpoint()}catch(error){console.error(`Checkpoint deferred: ${error.message}`);}
     }
-    try{checkpoint()}catch(error){console.error(`Checkpoint deferred: ${error.message}`);}
+    if(result.code===0){checkpoint();console.log('Historical collection and final GitHub push complete.');return;}
+    if(attempt===5)throw new Error(`Historical collection stopped after ${attempt} attempts; existing checkpoints remain available.`);
+    console.error(`Historical collection stopped (${result.code}); retrying saved checkpoints (${attempt}/5).`);
+    await new Promise(resolve=>setTimeout(resolve,retryDelay));
   }
 }
 if(process.argv.includes('--checkpoint-only')){
