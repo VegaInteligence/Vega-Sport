@@ -4,12 +4,7 @@ import { FootballProvider } from "../src/hooks/FootballContext.jsx";
 export default function Providers({ children }) {
   const pathname = usePathname();
   return (
-    <FootballProvider
-      loadData={
-        !pathname.startsWith("/classement-joueurs") &&
-        !pathname.startsWith("/reglages")
-      }
-    >
+    <FootballProvider loadData={!pathname.startsWith("/classement-joueurs")}>
       {children}
     </FootballProvider>
   );

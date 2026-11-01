@@ -1,21 +1,21 @@
-/* Orion interface: one token system, shared primitives and responsive compositions. */
+/* STATARENA interface: one token system, shared primitives and responsive compositions. */
 :root {
   color-scheme: dark;
-  --bg: #0a0a0a;
-  --surface: #101010;
-  --surface-subtle: #171717;
-  --ink: #ededed;
-  --ink-strong: #fafafa;
-  --muted: #999;
-  --muted-light: #737373;
-  --border: #262626;
-  --border-strong: #404040;
-  --accent: #b8e99b;
-  --accent-dark: #d0f4bb;
-  --accent-soft: #203019;
-  --accent-pale: #14200f;
-  --danger: #ffada5;
-  --font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --bg: var(--statarena-background);
+  --surface: var(--statarena-surface);
+  --surface-subtle: light-dark(#ccdbec, #162e44);
+  --ink: var(--statarena-text);
+  --ink-strong: light-dark(#2e2e30, #ffffff);
+  --muted: var(--statarena-muted);
+  --muted-light: light-dark(#6e6e70, #909092);
+  --border: var(--statarena-border);
+  --border-strong: light-dark(#707072, #525254);
+  --accent: var(--statarena-blue-bright);
+  --accent-dark: light-dark(#002a5c, #a7cfff);
+  --accent-soft: light-dark(#bfd2e7, #17395d);
+  --accent-pale: light-dark(#dddddf, #102b46);
+  --danger: light-dark(#5c0800, #ffada5);
+  --font: var(--statarena-font);
   --font-mono: "SFMono-Regular", Consolas, monospace;
 }
 *,
@@ -88,7 +88,7 @@ button:disabled {
 }
 ::selection {
   background: var(--accent);
-  color: #101010;
+  color: light-dark(#f0f0f2, #101012);
 }
 .icon {
   width: 17px;
@@ -123,26 +123,17 @@ button:disabled {
   align-items: center;
   flex-shrink: 0;
 }
-.brand-mark {
-  width: 30px;
-  height: 30px;
+.brand-logo {
+  display: block;
+  width: 167px;
+  height: 36px;
+  object-fit: contain;
+}
+.footer-brand {
   color: var(--ink);
-}
-.brand-mark path {
-  stroke: var(--bg);
-}
-.brand-mark circle {
-  fill: var(--bg);
-}
-.brand-word {
-  color: var(--ink);
-  font-size: 25px;
-  font-weight: 700;
-  letter-spacing: -1.3px;
-  line-height: 1;
-}
-.brand-period {
-  color: var(--accent);
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  font-size: 11px;
 }
 .main-nav {
   display: flex;
@@ -202,6 +193,7 @@ button:disabled {
   margin-bottom: 36px;
 }
 .page-title {
+  font-family: var(--statarena-font-heading);
   font-size: clamp(32px, 4vw, 46px);
   font-weight: 550;
   letter-spacing: -2px;
@@ -241,7 +233,7 @@ button:disabled {
 }
 .button-primary:hover {
   color: var(--bg);
-  background: #d4d4d4;
+  background: light-dark(#2e2e30, #d4d4d6);
 }
 .button-secondary {
   border-color: var(--border-strong);
@@ -519,7 +511,7 @@ input[type="checkbox"] {
   white-space: nowrap;
 }
 .segmented-control button[aria-pressed="true"] {
-  background: #262626;
+  background: var(--border);
   color: var(--ink);
 }
 .segmented-control button:hover {
@@ -579,7 +571,7 @@ input[type="checkbox"] {
   place-items: center;
   flex-shrink: 0;
   overflow: hidden;
-  background: #1c1c1c;
+  background: var(--surface-subtle);
   border: 1px solid var(--border);
   color: var(--muted);
 }
@@ -673,15 +665,15 @@ input[type="checkbox"] {
   min-width: 38px;
   padding: 4px 6px;
   border-radius: 4px;
-  border: 1px solid #33492a;
-  background: #1d2b16;
+  border: 1px solid light-dark(#bfd3e7, #1a3759);
+  background: light-dark(#e4e4e6, #202022);
   color: var(--accent);
   font: 11px var(--font-mono);
 }
 .rating-high {
   background: var(--accent);
   border-color: var(--accent);
-  color: #13200c;
+  color: light-dark(#ececee, #161618);
 }
 .match-row {
   display: flex;
@@ -780,7 +772,7 @@ input[type="checkbox"] {
   background: var(--accent);
 }
 .coverage-fill.partial {
-  background: #6e8b60;
+  background: light-dark(#707072, #767678);
 }
 .coverage-footnote {
   margin-top: 24px;
@@ -960,7 +952,7 @@ input[type="checkbox"] {
   font-size: 12px;
 }
 .notice-warning {
-  color: #e8c995;
+  color: light-dark(#6a4b17, #e8c995);
 }
 .missing-value {
   color: var(--muted-light);
@@ -1050,7 +1042,7 @@ input[type="checkbox"] {
   padding: 12px 16px;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #171717f5;
+  background: light-dark(#d4e1eff5, #242426f5);
   box-shadow: 0 4px 40px #0008;
   z-index: 50;
   font-size: 11px;
@@ -1143,9 +1135,9 @@ input[type="checkbox"] {
   margin: 20px auto;
   max-width: 420px;
   aspect-ratio: 100/135;
-  border: 1px solid #34462c;
+  border: 1px solid light-dark(#d3d3d5, #1a3658);
   border-radius: 6px;
-  background: #14200f;
+  background: light-dark(#eaeaec, #18181a);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 135' fill='none' stroke='%233a4b32' stroke-width='.4'%3E%3Crect x='5' y='5' width='90' height='125'/%3E%3Cpath d='M5 67.5h90M25 5v20h50V5M25 130v-20h50v20M36 5v9h28V5M36 130v-9h28v9'/%3E%3Ccircle cx='50' cy='67.5' r='12'/%3E%3C/svg%3E");
   background-size: 100% 100%;
 }
@@ -1175,13 +1167,13 @@ input[type="checkbox"] {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  background: #0a1308e8;
+  background: light-dark(#eeeef0e8, #131315e8);
   border-radius: 3px;
   font-size: 8px;
   white-space: nowrap;
 }
 .lineup-team:nth-child(2) .formation-player b {
-  background: #b2a7df;
+  background: light-dark(#53687f, #9cc7ff);
 }
 .lineup-list {
   padding: 0 14px;
@@ -1322,8 +1314,9 @@ input[type="checkbox"] {
   .brand {
     height: 64px;
   }
-  .brand-word {
-    font-size: 24px;
+  .brand-logo {
+    width: 148px;
+    height: 32px;
   }
   .main-nav {
     order: 2;
@@ -1551,16 +1544,16 @@ input[type="checkbox"] {
 
 /* Reserve the workspace while its selected data slice arrives. */
 .season-loading {
-  color: var(--muted, #a0a0a0);
+  color: var(--muted, light-dark(#5f5f61, #a0a0a2));
   display: grid;
   gap: 24px;
 }
 .loading-filter,
 .loading-metrics > div,
 .loading-chart {
-  border: 1px solid var(--border, #242424);
+  border: 1px solid var(--border, light-dark(#e2e2e4, #242426));
   border-radius: 10px;
-  background: var(--surface, #101310);
+  background: var(--surface, light-dark(#eeeef0, #131315));
 }
 .loading-filter {
   height: 130px;

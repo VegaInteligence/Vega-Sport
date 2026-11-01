@@ -29,7 +29,7 @@ export default function MethodPage() {
           saisons civiles sont regroupées par année de début.
         </p>
         <p>
-          Les notes affichées sont celles de PitchAPI. Le classement Orion, ses
+          Les notes affichées sont celles de PitchAPI. Le classement STATARENA, ses
           pondérations par rôle et son agrégation saisonnière restent à calibrer
           et à valider.
         </p>
@@ -43,7 +43,7 @@ export default function MethodPage() {
           avant chaque match. Les périodes et dates de mise à jour restent
           distinctes.
         </p>
-        <Link href="https://github.com/OrionQuantPlatform/Football_Ranking/tree/main/docs">
+        <Link href="https://github.com/OrionQuantPlatform/STATARENA/tree/main/docs">
           Documentation du projet
         </Link>
       </Card>

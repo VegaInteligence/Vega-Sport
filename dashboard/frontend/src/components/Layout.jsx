@@ -247,7 +247,7 @@ export default function Layout({
           )}
           {children}
           <footer className="app-footer">
-            <span>orion.</span>
+            <span className="footer-brand">STATARENA</span>
             <nav aria-label="Informations du projet">
               <Link
                 href={f.href("/methode/")}
@@ -256,7 +256,7 @@ export default function Layout({
                 Données & méthode
               </Link>
               <Link
-                href="https://github.com/OrionQuantPlatform/Football_Ranking"
+                href="https://github.com/OrionQuantPlatform/STATARENA"
                 target="_blank"
                 rel="noreferrer"
               >

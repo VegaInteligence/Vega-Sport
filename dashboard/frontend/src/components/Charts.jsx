@@ -5,7 +5,7 @@ const compact = (v) =>
   isNumber(v)
     ? new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(v)
     : "—";
-const colors = ["#c6f36b", "#b2a7df"];
+const colors = ["light-dark(#1d6fd6, #3b8eff)", "light-dark(#53687f, #9cc7ff)"];
 function bounds(values) {
   const hi = values.reduce((max, v) => Math.max(max, v), 1);
   return { max: hi * 1.05, ticks: [0, hi / 4, hi / 2, (hi * 3) / 4, hi] };
@@ -55,14 +55,14 @@ export function ScatterPlot({
               y1={260 - (v / y.max) * 225}
               x2="615"
               y2={260 - (v / y.max) * 225}
-              stroke="#293222"
+              stroke="light-dark(#dedee0, #2a2a2c)"
             />
             <text
               className="chart-tick"
               x="38"
               y={264 - (v / y.max) * 225}
               textAnchor="end"
-              fill="#9ea895"
+              fill="light-dark(#606062, #9e9ea0)"
               fontSize="10"
             >
               {number(v, 1)}
@@ -75,13 +75,19 @@ export function ScatterPlot({
             className="chart-tick"
             x={44 + (v / x.max) * 570}
             y="280"
-            fill="#9ea895"
+            fill="light-dark(#606062, #9e9ea0)"
             fontSize="10"
           >
             {number(v, 1)}
           </text>
         ))}
-        <text className="chart-axis" x="44" y="15" fill="#9ea895" fontSize="11">
+        <text
+          className="chart-axis"
+          x="44"
+          y="15"
+          fill="light-dark(#606062, #9e9ea0)"
+          fontSize="11"
+        >
           {yLabel === "xA" ? "Passes décisives attendues · xA" : yLabel}
         </text>
         <text
@@ -89,7 +95,7 @@ export function ScatterPlot({
           x="615"
           y="305"
           textAnchor="end"
-          fill="#9ea895"
+          fill="light-dark(#606062, #9e9ea0)"
           fontSize="11"
         >
           {xLabel === "xG" ? "Buts attendus · xG" : xLabel}
@@ -103,7 +109,7 @@ export function ScatterPlot({
             cy={260 - (r[yKey] / y.max) * 225}
             r="3.2"
             fill={colors[0]}
-            stroke="#171a17"
+            stroke="light-dark(#eaeaec, #18181a)"
             strokeWidth="0.7"
             opacity=".65"
             role="button"
@@ -200,15 +206,21 @@ export function ShotMap({ match, teamId = "all", onPlayer = () => {} }) {
           y="22"
           width="608"
           height="394"
-          fill="#141e11"
-          stroke="#3a4a30"
+          fill="light-dark(#ebebed, #18181a)"
+          stroke="light-dark(#d0d0d2, #3d3d3f)"
         />
         <path
           d="M330 22v394M26 102h96v234H26M634 102h-96v234h96"
           fill="none"
-          stroke="#3a4a30"
+          stroke="light-dark(#d0d0d2, #3d3d3f)"
         />
-        <circle cx="330" cy="219" r="53" fill="none" stroke="#3a4a30" />
+        <circle
+          cx="330"
+          cy="219"
+          r="53"
+          fill="none"
+          stroke="light-dark(#d0d0d2, #3d3d3f)"
+        />
         {located.map((s, i) => (
           <Point
             key={s.id || i}
@@ -294,14 +306,14 @@ export function XgTimeline({ match, teamId = "all", onPlayer = () => {} }) {
               x2="614"
               y1={245 - (value / max) * 220}
               y2={245 - (value / max) * 220}
-              stroke="#29372d"
+              stroke="light-dark(#dadadc, #303032)"
             />
             <text
               className="chart-tick"
               x="34"
               y={249 - (value / max) * 220}
               textAnchor="end"
-              fill="#8ea595"
+              fill="light-dark(#666668, #9a9a9c)"
               fontSize="11"
             >
               {compact(value)}
@@ -315,13 +327,19 @@ export function XgTimeline({ match, teamId = "all", onPlayer = () => {} }) {
             x={44 + (value / duration) * 570}
             y="268"
             textAnchor="middle"
-            fill="#8ea595"
+            fill="light-dark(#666668, #9a9a9c)"
             fontSize="11"
           >
             {value}′
           </text>
         ))}
-        <text className="chart-axis" x="44" y="13" fill="#8ea595" fontSize="10">
+        <text
+          className="chart-axis"
+          x="44"
+          y="13"
+          fill="light-dark(#666668, #9a9a9c)"
+          fontSize="10"
+        >
           xG cumulés · tirs
         </text>
         {series.map(({ side, events }, i) => (

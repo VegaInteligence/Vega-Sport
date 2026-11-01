@@ -130,7 +130,7 @@ export default function PlayerData({ row, mode }) {
           className="button button-secondary"
           onClick={() =>
             download(
-              `orion-${row.id}-${source}.json`,
+              `statarena-${row.id}-${source}.json`,
               JSON.stringify(value, null, 2),
             )
           }

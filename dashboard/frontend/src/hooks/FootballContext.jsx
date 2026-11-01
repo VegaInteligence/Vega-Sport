@@ -256,7 +256,7 @@ export function FootballProvider({ children, loadData = true }) {
       "goalsPrevented",
     ];
     download(
-      "orion-performances.csv",
+      "statarena-performances.csv",
       csvString(
         fields,
         rows.map((r) =>

@@ -12,7 +12,7 @@ export default function LoadingPage({ href }) {
       <SiteHeader path={path} href={href} />
       <main id="main" className="workspace" aria-busy="true">
         <div className="page-heading">
-          <h1 className="page-title">{page?.title || "Orion"}</h1>
+          <h1 className="page-title">{page?.title || "STATARENA"}</h1>
         </div>
         <div className="season-loading" role="status">
           <span>Chargement des données…</span>

@@ -8,7 +8,7 @@ export const dataUrl = (path) => {
         : path === "football-manifest.json"
           ? "raw/index.json"
           : path;
-    return `https://raw.githubusercontent.com/OrionQuantPlatform/Football_Ranking/${revision}/data/${relative}`;
+    return `https://raw.githubusercontent.com/OrionQuantPlatform/STATARENA/${revision}/data/${relative}`;
   }
   return `/data/${path}`;
 };

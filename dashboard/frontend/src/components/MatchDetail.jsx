@@ -331,7 +331,7 @@ function MatchPlayers({ match, players }) {
       "xa",
     ];
     download(
-      `orion-${match.id}-joueurs.csv`,
+      `statarena-${match.id}-joueurs.csv`,
       csvString(
         fields,
         rows.map((r) => fields.map((k) => r[k])),
@@ -527,7 +527,7 @@ export default function MatchDetail({ match }) {
         <button
           className="button button-secondary"
           onClick={() =>
-            download(`orion-${match.id}.json`, JSON.stringify(match, null, 2))
+            download(`statarena-${match.id}.json`, JSON.stringify(match, null, 2))
           }
         >
           <Icon name="download" />

@@ -325,7 +325,13 @@ export function Momentum({ match, payload }) {
         role="img"
         aria-label="Pression minute par minute"
       >
-        <line x1="30" y1="110" x2="700" y2="110" stroke="#596451" />
+        <line
+          x1="30"
+          y1="110"
+          x2="700"
+          y2="110"
+          stroke="light-dark(#707072, #5a5a5c)"
+        />
         {points.map((p, i) => {
           const height = (Math.abs(p.value) / limit) * 82;
           return (
@@ -335,16 +341,20 @@ export function Momentum({ match, payload }) {
               y={p.value >= 0 ? 110 - height : 110}
               width={Math.max(2, 640 / points.length)}
               height={height}
-              fill={p.value >= 0 ? "#c6f36b" : "#b2a7df"}
+              fill={
+                p.value >= 0
+                  ? "light-dark(#1d6fd6, #3b8eff)"
+                  : "light-dark(#53687f, #9cc7ff)"
+              }
             >
               <title>{`${number(p.minute)}′ : ${number(p.value, 3)}`}</title>
             </rect>
           );
         })}
-        <text x="30" y="20" fill="#c6f36b">
+        <text x="30" y="20" fill="light-dark(#1d6fd6, #3b8eff)">
           {match.home.name}
         </text>
-        <text x="30" y="230" fill="#b2a7df">
+        <text x="30" y="230" fill="light-dark(#53687f, #9cc7ff)">
           {match.away.name}
         </text>
       </svg>
@@ -415,8 +425,8 @@ export function Heatmap({ match, payload, initialSelection = "" }) {
             y="20"
             width="640"
             height="400"
-            fill="#122014"
-            stroke="#526447"
+            fill="light-dark(#eaeaec, #19191b)"
+            stroke="light-dark(#707072, #565658)"
           />
           {cells.map(([x, y, n], i) => (
             <rect
@@ -425,7 +435,7 @@ export function Heatmap({ match, payload, initialSelection = "" }) {
               y={20 + (y / width) * 400}
               width={640 / length}
               height={400 / width}
-              fill="#c6f36b"
+              fill="light-dark(#1d6fd6, #3b8eff)"
               fillOpacity={0.12 + (n / max) * 0.8}
             >
               <title>{`${n} actions · cellule ${x}, ${y}`}</title>
@@ -434,7 +444,7 @@ export function Heatmap({ match, payload, initialSelection = "" }) {
           <path
             d="M340 20v400M20 140h100v160H20M660 140H560v160h100"
             fill="none"
-            stroke="#91a883"
+            stroke="light-dark(#6a6a6c, #959597)"
           />
         </svg>
       </figure>
@@ -451,7 +461,9 @@ export function PassNetworks({ payload }) {
             (n) => isNumber(n.avg_x) && isNumber(n.avg_y),
           ),
           byId = new Map(nodes.map((n) => [n.player.id, n])),
-          color = i ? "#b2a7df" : "#c6f36b";
+          color = i
+            ? "light-dark(#53687f, #9cc7ff)"
+            : "light-dark(#1d6fd6, #3b8eff)";
         return (
           <figure className="chart-figure" key={network.team?.id || i}>
             <h3>{network.team?.name}</h3>
@@ -465,8 +477,8 @@ export function PassNetworks({ payload }) {
                 y="15"
                 width="370"
                 height="250"
-                fill="#132014"
-                stroke="#4d5d44"
+                fill="light-dark(#eaeaec, #1a1a1c)"
+                stroke="light-dark(#707072, #505052)"
               />
               {(network.edges || [])
                 .filter(
@@ -506,7 +518,7 @@ export function PassNetworks({ payload }) {
                     x={15 + (n.avg_x / 105) * 370}
                     y={35 + (n.avg_y / 68) * 250}
                     textAnchor="middle"
-                    fill="#e2e7dc"
+                    fill="light-dark(#2e2e30, #e2e2e4)"
                     fontSize="8"
                   >
                     {n.player.name}
@@ -654,7 +666,7 @@ export function MatchSections({
                 className="button button-secondary"
                 onClick={() =>
                   download(
-                    `orion-${match.id}-${section.replaceAll("/", "-")}.json`,
+                    `statarena-${match.id}-${section.replaceAll("/", "-")}.json`,
                     JSON.stringify(
                       {
                         source: value.source,
