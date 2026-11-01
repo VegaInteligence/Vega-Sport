@@ -12,7 +12,7 @@ const bundled=path.join(os.homedir(),'.cache','codex-runtimes','codex-primary-ru
 const python=process.env.PITCH_PYTHON||(existsSync(bundled)?bundled:(process.platform==='win32'?'python':'python3'));
 function command(cwd,cmd,args,env=process.env){const r=spawnSync(cmd,args,{cwd,env,encoding:'utf8'});if(r.status!==0)throw new Error(`${cmd}: ${r.stderr||r.stdout}`);return r.stdout.trim()}
 
-test('historical checkpoint pushes only generated data and preserves unrelated work',{timeout:30000},async()=>{
+test('historical checkpoints and final push preserve unrelated work',{timeout:60000},async()=>{
   const dir=await mkdtemp(path.join(os.tmpdir(),'orion-publish-'));
   try{
     const work=path.join(dir,'work'),remote=path.join(dir,'remote.git');await mkdir(work);
@@ -21,7 +21,8 @@ test('historical checkpoint pushes only generated data and preserves unrelated w
     await mkdir(path.join(work,'scripts'));await writeFile(path.join(work,'.gitignore'),'.env\n');
     await writeFile(path.join(work,'.env'),'PITCHAPI_API_KEY=private-test-key\n');await writeFile(path.join(work,'user.txt'),'original\n');
     await writeFile(path.join(work,'scripts/index_europe.mjs'),'process.exit(0);\n');
-    await writeFile(path.join(work,'scripts/build_multiseason_dashboard.py'),"from pathlib import Path\np=Path('dashboard/data/seasons/2025-2026');p.mkdir(parents=True,exist_ok=True)\n(p/'sample.gz').write_bytes(b'data')\nPath('dashboard/data/football-manifest.json').write_text('{}')\nPath('dashboard/data/multiseason_issues.json').write_text('[]')\n");
+    await writeFile(path.join(work,'scripts/collect_europe.mjs'),'process.exit(0);\n');
+    await writeFile(path.join(work,'scripts/build_multiseason_dashboard.py'),"from pathlib import Path\nimport os\np=Path('dashboard/data/seasons/2025-2026');p.mkdir(parents=True,exist_ok=True)\n(p/'sample.gz').write_bytes(os.environ.get('FIXTURE_PAYLOAD','data').encode())\nPath('dashboard/data/football-manifest.json').write_text('{}')\nPath('dashboard/data/multiseason_issues.json').write_text('[]')\n");
     await writeFile(path.join(work,'scripts/bundle_europe.py'),"from pathlib import Path\np=Path('data/pitchapi_bundles/europe_2021_2026');p.mkdir(parents=True,exist_ok=True)\n(p/'manifest.json').write_text('{}')\n");
     command(work,'git',['add','--all']);command(work,'git',['commit','-m','[ADD] Initial fixture']);
     command(work,'git',['remote','add','origin',remote]);command(work,'git',['push','origin','main']);
@@ -38,6 +39,10 @@ test('historical checkpoint pushes only generated data and preserves unrelated w
     assert.equal(command(work,'git',['ls-files','--','.env']),'');
     assert.equal(await readFile(path.join(work,'user.txt'),'utf8'),'user work\n');
     assert.match(command(work,'git',['status','--short']),/user\.txt/);
+    const finalRun=spawnSync(process.execPath,[path.join(root,'scripts/publish_history.mjs')],{cwd:work,env:{...env,FIXTURE_PAYLOAD:'final'},encoding:'utf8'});
+    assert.equal(finalRun.status,0,finalRun.stderr);assert.match(finalRun.stdout,/final GitHub push complete/);
+    assert.equal(command(work,'git',['rev-parse','HEAD']),command(work,'git',['ls-remote','--heads','origin','main']).split(/\s+/)[0]);
+    assert.equal(await readFile(path.join(work,'dashboard/data/seasons/2025-2026/sample.gz'),'utf8'),'final');
   }finally{
     const resolved=await realpath(dir),temp=await realpath(os.tmpdir()),relative=path.relative(temp,resolved);
     if(!relative||relative.startsWith('..')||path.isAbsolute(relative)||!path.basename(resolved).startsWith('orion-publish-'))throw new Error('Unexpected test directory');
