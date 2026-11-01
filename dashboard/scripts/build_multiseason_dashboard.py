@@ -7,7 +7,7 @@ import sys
 
 from build_season_dashboard import ROOT, build, season_label
 
-ARCHIVES = [ROOT / 'data' / 'sources' / 'pitchapi' / 'archives' / 'europe_2026_2027', ROOT / 'data' / 'sources' / 'pitchapi' / 'archives' / 'europe_2021_2026']
+ARCHIVES = [ROOT / 'data' / 'sources' / 'pitchapi' / 'archives' / 'europe_2026_2027', ROOT / 'data' / 'sources' / 'pitchapi' / 'archives' / 'europe_2021_2026', ROOT / 'data' / 'sources' / 'pitchapi' / 'archives' / 'world_cup_2026']
 DASHBOARD = ROOT / 'data' / 'staging' / 'dashboard'
 MANIFEST = DASHBOARD / 'football-manifest.json'
 
@@ -34,7 +34,7 @@ def fingerprint(archive, competitions, retrieved_at, builder_digest):
 
 
 def main():
-    builder_digest = hashlib.sha256((ROOT/'scripts'/'build_season_dashboard.py').read_bytes() + (ROOT/'scripts'/'build_dashboard_data.py').read_bytes()).digest()
+    builder_digest = hashlib.sha256((ROOT/'dashboard'/'scripts'/'build_season_dashboard.py').read_bytes() + (ROOT/'dashboard'/'scripts'/'build_dashboard_data.py').read_bytes()).digest()
     try:
         previous = json.loads(MANIFEST.read_text(encoding='utf-8'))
     except (OSError, ValueError):
@@ -51,6 +51,16 @@ def main():
             year = int(label[:4]) if len(label) >= 4 and label[:4].isdigit() else 0
             if 2024 <= year:
                 groups.setdefault((label, archive, competition['id']), []).append(competition)
+    # A competition can be retained in more than one archive. Build it once,
+    # from the most recently retrieved inventory, preserving its source season.
+    selected = {}
+    for key in groups:
+        label, archive, league = key
+        identity = (label, league)
+        current = selected.get(identity)
+        if current is None or archive_retrieved[archive] > archive_retrieved[current[1]]:
+            selected[identity] = key
+    groups = {key: groups[key] for key in selected.values()}
     seasons = {}
     all_issues = []
     for (label, archive, league_id), competitions in sorted(groups.items(), key=lambda entry:(entry[0][0],entry[0][2]), reverse=True):

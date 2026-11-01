@@ -37,6 +37,7 @@ const extraLeagues = new Set([
   "Europa League",
   "Conference League",
   "1. Lig",
+  "World Cup",
 ]);
 const endpoints = {
   match: "",

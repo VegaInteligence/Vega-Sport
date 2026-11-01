@@ -11,7 +11,7 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parents[2]
 BUNDLES = ROOT / 'data' / 'sources' / 'pitchapi' / 'bundles'
-ARCHIVES = ('europe_2026_2027', 'europe_2021_2026')
+ARCHIVES = ('europe_2026_2027', 'europe_2021_2026', 'world_cup_2026')
 
 
 def destination(base, name):

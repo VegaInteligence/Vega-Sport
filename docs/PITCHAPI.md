@@ -1,8 +1,8 @@
 # Football Ranking — données PitchAPI
 
-L'archive locale couvre les saisons européennes PitchAPI 2024/25 à 2026/27 et
-les saisons civiles 2024 à 2026. Les réponses brutes sont conservées dans
-`data/sources/pitchapi/archives/europe_2021_2026/` et `data/sources/pitchapi/archives/europe_2026_2027/`, par compétition et match.
+L'archive locale couvre les saisons européennes PitchAPI 2024/25 à 2026/27,
+les saisons civiles 2024 à 2026 et la Coupe du monde 2026. Les réponses brutes sont conservées dans
+`data/sources/pitchapi/archives/europe_2021_2026/`, `data/sources/pitchapi/archives/europe_2026_2027/` et `data/sources/pitchapi/archives/world_cup_2026/`, par compétition et match.
 Les calendriers et scores sont visibles dès l'inventaire ; les détails peuvent
 encore être en cours de collecte, avec une couverture indiquée dans le dashboard.
 Une saison civile est regroupée dans la saison commençant la même année, tout en

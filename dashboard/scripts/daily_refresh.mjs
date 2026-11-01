@@ -51,6 +51,7 @@ const cups = new Set([
   "Europa League",
   "Conference League",
   "1. Lig",
+  "World Cup",
 ]);
 const endpoints = {
   match: "",
@@ -364,7 +365,15 @@ await pool(profileJobs, async ({ kind, id }) => {
 receipt.completedAt = new Date().toISOString();
 receipt.requests = requests;
 receipt.retries = retries;
-await write(path.join(archive, "catalogue.json"), catalog.data);
+await write(path.join(archive, "catalogue.json"), {
+  ...catalog.data,
+  leagues: catalog.data.leagues.map((league) => ({
+    ...league,
+    seasons: (league.seasons || []).filter(
+      (value) => Number(String(value).slice(0, 4)) >= 2024,
+    ),
+  })),
+});
 await write(path.join(archive, "inventory.json"), {
   retrieved_at_utc: now.toISOString(),
   competitions,
