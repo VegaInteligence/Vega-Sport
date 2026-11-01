@@ -23,7 +23,7 @@ test('historical checkpoints and final push preserve unrelated work',{timeout:60
     await writeFile(path.join(work,'scripts/index_europe.mjs'),'process.exit(0);\n');
     await writeFile(path.join(work,'scripts/collect_europe.mjs'),"import {existsSync,writeFileSync} from 'node:fs';if(!existsSync('retry-marker')){writeFileSync('retry-marker','1');process.exit(1)}process.exit(0);\n");
     await writeFile(path.join(work,'scripts/build_multiseason_dashboard.py'),"from pathlib import Path\nimport os\np=Path('dashboard/data/seasons/2025-2026');p.mkdir(parents=True,exist_ok=True)\n(p/'sample.gz').write_bytes(os.environ.get('FIXTURE_PAYLOAD','data').encode())\nPath('dashboard/data/football-manifest.json').write_text('{}')\nPath('dashboard/data/multiseason_issues.json').write_text('[]')\n");
-    await writeFile(path.join(work,'scripts/bundle_europe.py'),"from pathlib import Path\np=Path('data/pitchapi_bundles/europe_2021_2026');p.mkdir(parents=True,exist_ok=True)\n(p/'manifest.json').write_text('{}')\n");
+    await writeFile(path.join(work,'scripts/bundle_europe.py'),"from pathlib import Path\nfor name in ('europe_2021_2026','europe_2026_2027'):\n p=Path('data/pitchapi_bundles')/name;p.mkdir(parents=True,exist_ok=True)\n (p/'manifest.json').write_text('{}')\n");
     command(work,'git',['add','--all']);command(work,'git',['commit','-m','[ADD] Initial fixture']);
     command(work,'git',['remote','add','origin',remote]);command(work,'git',['push','origin','main']);
     const env={...process.env,PITCH_PROJECT_ROOT:work,PITCH_PYTHON:python,GIT_TERMINAL_PROMPT:'0'};

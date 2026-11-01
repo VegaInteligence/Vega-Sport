@@ -103,7 +103,8 @@ node scripts/refresh_europe.mjs --refresh-details
 
 Pour une collecte historique longue avec publication progressive sur GitHub,
 `node scripts/publish_history.mjs` lance une seule collecte puis crée et pousse
-des checkpoints des données toutes les 30 minutes et à la fin. La commande
+des checkpoints des données toutes les 30 minutes et à la fin. À la fin, elle
+actualise aussi la saison courante avant la dernière publication. La commande
 n'ajoute que les instantanés et archives générés ; elle reporte la publication si
 `main` local et distant diffèrent ou si d'autres changements sont déjà indexés. La clé reste
 dans `.env`. La durée dépend du débit et de la couverture du fournisseur.

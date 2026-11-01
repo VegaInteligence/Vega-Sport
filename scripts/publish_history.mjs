@@ -9,7 +9,7 @@ const root=process.env.PITCH_PROJECT_ROOT?path.resolve(process.env.PITCH_PROJECT
 const bundledPython=path.join(os.homedir(),'.cache','codex-runtimes','codex-primary-runtime','dependencies','python',process.platform==='win32'?'python.exe':'bin/python3');
 const python=process.env.PITCH_PYTHON||(existsSync(bundledPython)?bundledPython:(process.platform==='win32'?'python':'python3'));
 const report=process.argv.slice(2).find(arg=>!arg.startsWith('--'));
-const paths=['dashboard/data/football-manifest.json','dashboard/data/multiseason_issues.json','dashboard/data/seasons','data/pitchapi_bundles/europe_2021_2026'];
+const basePaths=['dashboard/data/football-manifest.json','dashboard/data/multiseason_issues.json','dashboard/data/seasons','data/pitchapi_bundles/europe_2021_2026'];
 const env={...process.env,GIT_TERMINAL_PROMPT:'0'};
 function run(command,args,{capture=false,allow=[0]}={}){
   const result=spawnSync(command,args,{cwd:root,env,encoding:'utf8',stdio:capture?'pipe':'inherit'});
@@ -18,11 +18,21 @@ function run(command,args,{capture=false,allow=[0]}={}){
   return result;
 }
 function git(args,options){return run('git',args,options)}
-function checkpoint(){
+function checkpoint({includeCurrent=false}={}){
   console.log(`Checkpoint started: ${new Date().toISOString()}`);
+  if(includeCurrent){
+    let complete=false;
+    for(let attempt=1;attempt<=5;attempt++){
+      const result=run(process.execPath,['scripts/collect_europe.mjs'],{allow:[0,1]});
+      if(result.status===0){complete=true;break;}
+      console.error(`Current-season refresh stopped (${result.status}); retrying saved checkpoints (${attempt}/5).`);
+    }
+    if(!complete)throw new Error('Current-season refresh did not complete; saved checkpoints remain available.');
+    run(process.execPath,['scripts/index_europe.mjs']);
+  }
   run(process.execPath,['scripts/index_europe.mjs','--history']);
   run(python,['scripts/build_multiseason_dashboard.py']);
-  run(python,['scripts/bundle_europe.py','--history-only']);
+  run(python,includeCurrent?['scripts/bundle_europe.py']:['scripts/bundle_europe.py','--history-only']);
   if(report)run(process.execPath,['scripts/report_europe.mjs',report]);
   const branch=git(['branch','--show-current'],{capture:true}).stdout.trim();
   if(branch!=='main')throw new Error('Checkpoint stopped because the current branch is not main.');
@@ -30,6 +40,7 @@ function checkpoint(){
   const remote=git(['ls-remote','--heads','origin','main'],{capture:true}).stdout.trim().split(/\s+/)[0];
   if(head!==remote)throw new Error('Checkpoint stopped because local and remote main differ.');
   if(git(['ls-files','--','.env'],{capture:true}).stdout.trim() || git(['check-ignore','-q','.env'],{allow:[0,1]}).status!==0)throw new Error('Credential file is not safely ignored.');
+  const paths=includeCurrent?[...basePaths,'data/pitchapi_bundles/europe_2026_2027']:basePaths;
   const staged=git(['diff','--cached','--name-only','-z'],{capture:true}).stdout.split('\0').filter(Boolean);
   if(staged.length)throw new Error('Checkpoint stopped because the Git index already has staged changes.');
   git(['add','--',...paths]);
@@ -66,7 +77,7 @@ async function main(){
       if(result)break;
       try{checkpoint()}catch(error){console.error(`Checkpoint deferred: ${error.message}`);}
     }
-    if(result.code===0){checkpoint();console.log('Historical collection and final GitHub push complete.');return;}
+    if(result.code===0){checkpoint({includeCurrent:true});console.log('Historical collection and final GitHub push complete.');return;}
     if(attempt===5)throw new Error(`Historical collection stopped after ${attempt} attempts; existing checkpoints remain available.`);
     console.error(`Historical collection stopped (${result.code}); retrying saved checkpoints (${attempt}/5).`);
     await new Promise(resolve=>setTimeout(resolve,retryDelay));
