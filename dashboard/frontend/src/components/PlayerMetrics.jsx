@@ -27,7 +27,12 @@ export default function PlayerMetrics({ row }) {
                     ? "—"
                     : item.stat?.total != null
                       ? `${number(item.stat.value, 2)} / ${number(item.stat.total, 2)}`
-                      : String(item.stat.value)}
+                      : typeof item.stat.value === "number"
+                        ? number(
+                            item.stat.value,
+                            item.stat.type === "double" ? 3 : 0,
+                          )
+                        : String(item.stat.value)}
                 </dd>
               </div>
             ))}
