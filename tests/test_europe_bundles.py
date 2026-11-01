@@ -57,6 +57,21 @@ class BundleTests(unittest.TestCase):
             file.write_text('{}',encoding='utf-8')
             self.assertTrue(bundle.pack_archive(source,base/'bundles')['complete'])
 
+    def test_profile_identity_check_allows_extras_but_not_a_missing_expected_id(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory);source=base/'europe_2021_2026';source.mkdir()
+            (source/'inventory.json').write_text(json.dumps({'retrieved_at_utc':'2026-11-01','competitions':[]}),encoding='utf-8')
+            collection={'completed':0,'incomplete':0,'other_fixtures':{'completed':0,'incomplete':0},
+                        'profiles':{'leagues':0,'teams':0,'players':1,'failed':0},'profiles_collected':True,
+                        'profile_ids':{'leagues':[],'teams':[],'players':['p_000001']}}
+            metadata=source/'collection.json';metadata.write_text(json.dumps(collection),encoding='utf-8')
+            for identifier in ('p_000001','p_000002'):
+                file=source/'profiles'/'players'/f'{bundle.archive_name(identifier)}.json';file.parent.mkdir(parents=True,exist_ok=True)
+                file.write_text(json.dumps({'status':200,'data':{'id':identifier}}),encoding='utf-8')
+            self.assertTrue(bundle.pack_archive(source,base/'bundles')['complete'])
+            collection['profile_ids']['players']=['p_000003'];metadata.write_text(json.dumps(collection),encoding='utf-8')
+            self.assertFalse(bundle.pack_archive(source,base/'bundles')['complete'])
+
 
 if __name__ == '__main__':
     unittest.main()

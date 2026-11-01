@@ -94,6 +94,7 @@ def pack_archive(archive, output, key=None):
             if file.is_file():
                 bucket = hashlib.sha256(identifier.encode()).hexdigest()[0]
                 groups[(kind, season, archive_name(league), bucket)].append(file)
+    found_profiles={kind:set() for kind in ('leagues','teams','players')}
     for kind, prefix in (('leagues','l'),('teams','t'),('players','p')):
         directory = archive / 'profiles' / kind
         if not directory.is_dir():
@@ -104,6 +105,7 @@ def pack_archive(archive, output, key=None):
             identifier = safe_id(file.name.split('--',1)[0], prefix)
             if file.name != f'{archive_name(identifier)}.json':
                 raise ValueError('Profile filename is not case-safe')
+            found_profiles[kind].add(identifier)
             bucket = hashlib.sha256(identifier.encode()).hexdigest()[:2]
             groups[('profiles', kind, bucket)].append(file)
     bundles = []
@@ -149,8 +151,11 @@ def pack_archive(archive, output, key=None):
                          'bytes':destination.stat().st_size,'sha256':hashlib.sha256(destination.read_bytes()).hexdigest()})
     counts={kind:sum(len(files) for group,files in groups.items() if group[0]==kind) for kind in ('matches','fixtures','profiles')}
     expected_profiles=sum(collection.get('profiles',{}).get(kind,0) for kind in ('leagues','teams','players')) if collection else 0
-    complete=bool(collection and not collection.get('incomplete') and not collection.get('other_fixtures',{}).get('incomplete') and not collection.get('profiles',{}).get('failed')
-                  and counts['matches']==collection.get('completed') and counts['fixtures']==collection.get('other_fixtures',{}).get('completed') and counts['profiles']==expected_profiles)
+    profile_ids=collection.get('profile_ids') if collection else None
+    profiles_complete=(all(len(set(profile_ids.get(kind,[])))==collection.get('profiles',{}).get(kind,0) and set(profile_ids.get(kind,[])).issubset(found_profiles[kind]) for kind in found_profiles)
+                       if isinstance(profile_ids,dict) else counts['profiles']==expected_profiles)
+    complete=bool(collection and collection.get('profiles_collected',True) and not collection.get('incomplete') and not collection.get('other_fixtures',{}).get('incomplete') and not collection.get('profiles',{}).get('failed')
+                  and counts['matches']==collection.get('completed') and counts['fixtures']==collection.get('other_fixtures',{}).get('completed') and profiles_complete)
     result={'archive':archive.name,'generated_at_utc':datetime.now(timezone.utc).isoformat(),
             'inventory_at_utc':inventory['retrieved_at_utc'],'complete':complete,'file_counts':counts,
             'bundles':bundles,'metadata':metadata}

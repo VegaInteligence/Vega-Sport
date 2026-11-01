@@ -187,6 +187,7 @@ if (!limit && !failed) {
   await Promise.all(Array.from({length:concurrency},fixtureWorker));
 }
 const profileCounts = {leagues:0, teams:0, players:0, unavailable:0, restricted:0, failed:0};
+const profileIds = {leagues:[], teams:[], players:[]};
 if (!matchesOnly && !limit && !failed) {
   const ids = {leagues:new Set(competitions.map(c=>c.id)), teams:new Set(), players:new Set()};
   for (const c of competitions) for (const fixture of c.matches) for (const team of [fixture.home_team,fixture.away_team]) if (/^t_[A-Za-z0-9]{6}$/.test(team?.id||'')) ids.teams.add(team.id);
@@ -200,6 +201,7 @@ if (!matchesOnly && !limit && !failed) {
     let record;try{record=JSON.parse(await fs.readFile(path.join(dataRoot,'fixtures',item.competition_id,matchFilename(item.fixture.id)),'utf8'))}catch{continue}
     gatherPlayerIds(record.endpoints,ids.players);
   }
+  for(const kind of Object.keys(profileIds))profileIds[kind]=[...ids[kind]].sort();
   const legacyFiles={}, collisionKeys={};
   for(const [kind,set] of Object.entries(ids)){
     const seen=new Map(), collisions=new Set();
@@ -235,6 +237,6 @@ if (!matchesOnly && !limit && !failed) {
   }}
   await Promise.all(Array.from({length:concurrency},profileWorker));
 }
-await atomicJson(path.join(dataRoot,'collection.json'), {retrieved_at_utc:new Date().toISOString(), competitions:competitions.length, fixtures:competitions.reduce((n,c)=>n+c.matches.length,0), finished:played.length, considered:limit || played.length, completed, incomplete:failed, endpoints:Object.keys(endpoints), other_fixtures:{total:otherFixtures.length,completed:fixtureCompleted,incomplete:fixtureFailed,endpoints:Object.keys(upcomingEndpoints)}, profiles:profileCounts});
+await atomicJson(path.join(dataRoot,'collection.json'), {retrieved_at_utc:new Date().toISOString(), competitions:competitions.length, fixtures:competitions.reduce((n,c)=>n+c.matches.length,0), finished:played.length, considered:limit || played.length, completed, incomplete:failed, endpoints:Object.keys(endpoints), other_fixtures:{total:otherFixtures.length,completed:fixtureCompleted,incomplete:fixtureFailed,endpoints:Object.keys(upcomingEndpoints)}, profiles:profileCounts, profiles_collected:!matchesOnly&&!limit&&!failed, profile_ids:profileIds});
 console.log(`Collection complete: ${completed}/${played.length}; incomplete ${failed}; other fixtures ${fixtureCompleted}/${otherFixtures.length}, incomplete ${fixtureFailed}; profile failures ${profileCounts.failed}.`);
 if (failed || fixtureFailed || profileCounts.failed) process.exitCode = 1;
