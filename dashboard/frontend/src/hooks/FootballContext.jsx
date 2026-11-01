@@ -8,6 +8,7 @@ import React, {
   useEffect,
 } from "react";
 import { loadSeason } from "../season_data.js";
+import { dataUrl } from "../data-url.js";
 import {
   filterAppearances,
   filterMatches,
@@ -100,7 +101,7 @@ export function FootballProvider({ children, loadData = true }) {
     [comparing, setComparing] = useState(false),
     [notice, setNotice] = useState("");
   const manifest = useResource("manifest", () =>
-    json("/data/football-manifest.json"),
+    json(dataUrl("football-manifest.json")),
   );
   const chosen = manifest.value?.seasons.some((s) => s.id === season)
     ? season

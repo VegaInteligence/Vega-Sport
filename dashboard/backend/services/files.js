@@ -25,7 +25,7 @@ export async function publicFile(root, relative, head = false) {
     try {
       return response(null, 307, {
         Location: remoteDataUrl(relative),
-        "Cache-Control": "public, max-age=3600, immutable",
+        "Cache-Control": "no-store",
       });
     } catch {
       return response("Data revision unavailable", 503);

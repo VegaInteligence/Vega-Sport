@@ -1,5 +1,7 @@
 # Vercel et collecte quotidienne
 
+Site : [orion-football-ranking.vercel.app](https://orion-football-ranking.vercel.app).
+
 Le projet Vercel est relié à `OrionQuantPlatform/Football_Ranking`, branche de production `main`. Les pushes déclenchent les déploiements Git. Les commits qui restent uniquement sur une machine ne déclenchent pas Vercel.
 
 | Réglage Vercel | Valeur |
@@ -11,6 +13,7 @@ Le projet Vercel est relié à `OrionQuantPlatform/Football_Ranking`, branche de
 | Output Directory | valeur Next.js par défaut `.next` |
 | Runtime | Bun 1.4.x |
 | Région | Paris `cdg1` |
+| Skip deployments when no root changes | désactivé, car les JSON sont hors du frontend |
 
 `dashboard/frontend/vercel.json` et le workspace Bun définissent ces commandes. Le code partagé/backend reste dans `dashboard`. Il faut autoriser les fichiers extérieurs à la racine frontend pour le build du monorepo. Les clés et les 1,7 Go de données ne sont pas inclus dans les Functions.
 
@@ -18,7 +21,7 @@ Le projet Vercel est relié à `OrionQuantPlatform/Football_Ranking`, branche de
 
 En local, Next relaie les requêtes au serveur `Bun.serve` sur le port 8765. Sur Vercel, les mêmes handlers backend s'exécutent dans les routes Next avec le runtime Bun. Aucun service localhost n'est requis dans le cloud.
 
-Les JSON canoniques restent dans `data/raw` et `data/computed`. Vercel utilise le SHA Git du déploiement pour lire exactement cette révision GitHub. Les routes `/data/*` redirigent vers les fichiers bruts publics correspondants ; les archives de matchs/profils sont reconstruites côté serveur à partir des partitions gzip. Cela évite de charger toute la base dans un bundle et de dépendre d'un disque persistant dans une Function. Aucun secret n'est ajouté à ces URL. Cette configuration repose sur le caractère public actuel du dépôt.
+Les JSON canoniques restent dans `data/raw` et `data/computed`. Vercel utilise le SHA Git du déploiement pour lire exactement cette révision GitHub. Les routes `/data/*` redirigent vers les fichiers bruts publics correspondants ; les archives de matchs/profils sont reconstruites côté serveur à partir des partitions gzip. Les redirections ne sont pas mises en cache ; les requêtes du frontend portent le SHA public du build pour éviter de réutiliser une ancienne redirection après déploiement. Les fichiers GitHub eux-mêmes ont une URL immuable. Cela évite de charger toute la base dans un bundle et de dépendre d'un disque persistant dans une Function. Aucun secret n'est ajouté à ces URL. Cette configuration repose sur le caractère public actuel du dépôt.
 
 Le cache mémoire du backend est borné et facultatif : la révision Git, et non un processus Vercel, constitue la source persistante. Un nouveau déploiement prend la nouvelle révision. Les anciennes saisons et les valeurs absentes sont conservées.
 
@@ -31,13 +34,13 @@ Le cache mémoire du backend est borné et facultatif : la révision Git, et non
 3. Collecte des nouveaux matchs terminés, des trois derniers jours et des rencontres dont les métadonnées ont changé ; conservation des 13 familles. Les détails des rencontres à venir dans les 48 heures sont également actualisés. Le calendrier complet est actualisé quotidiennement.
 4. Ajout/actualisation des profils concernés (cache de sept jours), normalisation avec les parseurs existants et reconstruction des partitions JSON de ces compétitions. Les autres saisons sont conservées.
 5. Vérification des hashes, références et doublons, puis commit des seuls fichiers de données et push sans force sur `main`. Une course avec un autre push fait échouer la publication plutôt que remplacer ses modifications.
-6. Déploiement Git Vercel ; un deploy hook peut également être configuré pour garantir le déclenchement après un push du bot.
+6. Déploiement Git Vercel automatique après le push, y compris les pushes du bot de collecte. Ce parcours a été vérifié sur une collecte réelle.
 
 Une erreur d'authentification, un inventaire invalide, un échec transitoire persistant ou une normalisation invalide empêche le commit. Les erreurs d'indisponibilité par endpoint restent dans les observations ; elles ne deviennent pas des zéros. `raw/sync.json` décrit la dernière collecte réussie. GitHub Actions conserve les logs et une copie de ce reçu.
 
 ## Secrets
 
-- GitHub Actions : `PITCHAPI_API_KEY`, secret du dépôt ; `VERCEL_DEPLOY_HOOK` facultatif, également secret.
+- GitHub Actions : `PITCHAPI_API_KEY`, secret du dépôt.
 - Vercel : `PITCHAPI_API_KEY`, secret côté serveur, sans préfixe `NEXT_PUBLIC_`.
 - Local : `dashboard/.env`, ignoré par Git.
 

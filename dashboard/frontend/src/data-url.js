@@ -1,2 +1,5 @@
-/** Same-origin requests work on every App Router route and through the Bun proxy. */
-export const dataUrl = (path) => `/data/${path}`;
+/** Avoid mixing cached data redirects from different deployed revisions. */
+export const dataUrl = (path) => {
+  const revision = process.env.NEXT_PUBLIC_DATA_REVISION;
+  return `/data/${path}${revision ? `?v=${revision}` : ""}`;
+};

@@ -17,6 +17,7 @@ import { MatchLink } from "../components/MatchLink.jsx";
 import { normalizeText, seasonLabel, number } from "../services/format.js";
 import { useResource, json, download } from "../services/resources.js";
 import { csvString } from "../model.js";
+import { dataUrl } from "../data-url.js";
 import CompetitionScope from "../components/CompetitionScope.jsx";
 import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
 export function SupplementalPanel({
@@ -118,14 +119,14 @@ function Supplemental() {
   const [id, setId] = useState(""),
     [kind, setKind] = useState("results");
   const result = useResource("supplemental", async () => {
-    const index = await json("/data/raw/supplemental-index.json");
+    const index = await json(dataUrl("raw/supplemental-index.json"));
     return {
       meta: index.meta,
       competitions: await Promise.all(
         index.competitions.map(async (c) => {
           const { tables, ...value } = c;
           for (const [name, ref] of Object.entries(tables)) {
-            const r = await fetch("/data/" + ref.path);
+            const r = await fetch(dataUrl(ref.path));
             if (!r.ok) throw new Error(`HTTP ${r.status}`);
             value[name] = await new Response(
               r.body.pipeThrough(new DecompressionStream("gzip")),

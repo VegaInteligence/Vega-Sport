@@ -14,6 +14,8 @@ Les formules, pondérations et limites sont détaillées dans la [documentation 
 
 ## Explorer les données
 
+[Ouvrir le dashboard Orion](https://orion-football-ranking.vercel.app).
+
 Le stockage est une [base JSON](docs/JSON_DATABASE.md) dans `data/raw/`, organisée par saison et par entité : joueurs, équipes, matchs, performances et tirs. Le dashboard lit ces tables ; `data/computed/` est réservé aux futurs résultats des modèles.
 
 Le [dashboard Orion](docs/DASHBOARD.md) propose une interface sombre pour parcourir les compétitions et les clubs, comparer les joueurs et explorer les données complètes des matchs. La connexion à PitchAPI ouvre les saisons et les analyses à la demande. Les notes affichées proviennent de PitchAPI ; le classement Orion reste à calibrer et à valider.

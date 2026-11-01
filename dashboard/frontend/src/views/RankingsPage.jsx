@@ -4,6 +4,7 @@ import Layout from "../components/Layout.jsx";
 import { Card, AsyncState, Segments } from "../components/UI.jsx";
 import { useResource, json } from "../services/resources.js";
 import { number, normalizeText } from "../services/format.js";
+import { dataUrl } from "../data-url.js";
 export const editionLabel = (e) => {
   const now = new Date(),
     ending = now.getUTCFullYear() + (now.getUTCMonth() >= 6 ? 1 : 0);
@@ -39,7 +40,7 @@ export function RankingTable({ rows, association = false }) {
 }
 function Edition({ reference, query, kind }) {
   const result = useResource(`ranking:${reference.path}`, () =>
-    json("/data/" + reference.path),
+    json(dataUrl(reference.path)),
   );
   return (
     <AsyncState resource={result}>
@@ -76,7 +77,7 @@ function Rankings() {
     [selected, setSelected] = useState(""),
     [query, setQuery] = useState(""),
     index = useResource("rankings-index", () =>
-      json("/data/raw/rankings/index.json"),
+      json(dataUrl("raw/rankings/index.json")),
     );
   return (
     <AsyncState resource={index}>
@@ -133,8 +134,8 @@ function Rankings() {
 export function ClubRanking({ clubId }) {
   const result = useResource(`club-ranking:${clubId}`, async () => {
     const [index, links] = await Promise.all([
-      json("/data/raw/rankings/index.json"),
-      json("/data/raw/rankings/club-links.json"),
+      json(dataUrl("raw/rankings/index.json")),
+      json(dataUrl("raw/rankings/club-links.json")),
     ]);
     const link = links.links[clubId];
     if (!link) return null;
@@ -143,7 +144,7 @@ export function ClubRanking({ clubId }) {
         .filter((e) => e.kind === "uefa-clubs" && e.provider === "UEFA")
         .map(async (e) => ({
           edition: e,
-          row: (await json("/data/" + e.path)).rows.find(
+          row: (await json(dataUrl(e.path))).rows.find(
             (r) => r.entityId === link.entityId,
           ),
         })),

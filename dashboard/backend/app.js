@@ -40,7 +40,10 @@ export async function handleRequest(request) {
   if (pathname.split("/").some((x) => x.startsWith(".")))
     return response("Forbidden", 403);
   if (pathname === "/api/health")
-    return Response.json({ status: "ok", runtime: "bun" });
+    return Response.json({
+      status: "ok",
+      runtime: typeof Bun !== "undefined" ? "bun" : "node",
+    });
   if (pathname === "/api/settings") {
     if (request.method !== "GET" && !head)
       return response("Method not allowed", 405, { Allow: "GET, HEAD" });
@@ -193,7 +196,7 @@ async function legacyArchive(profile, match) {
           : `${id}.json`;
       const record = await archiveJson(
         base,
-        path.join(folder, entry.competition_id, name),
+        path.join(/*turbopackIgnore: true*/ folder, entry.competition_id, name),
       );
       if (record.fixture?.id && record.fixture.id !== id) continue;
       const mapping = {

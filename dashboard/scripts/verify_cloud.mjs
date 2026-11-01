@@ -36,6 +36,7 @@ try {
     redirect: "manual",
   });
   assert.equal(raw.status, 307);
+  assert.equal(raw.headers.get("cache-control"), "no-store");
   assert.match(
     raw.headers.get("location"),
     /^https:\/\/raw\.githubusercontent\.com\/OrionQuantPlatform\/Football_Ranking\/[a-f0-9]{40}\/data\/raw\/index.json$/,
@@ -69,11 +70,12 @@ try {
   process.exitCode = 1;
 }
 await Bun.write(
-  new URL(
-    "../outputs/vercel-daily/" +
-      (process.env.ORION_VERIFY_URL ? "live-http.json" : "cloud-http.json"),
-    import.meta.url,
-  ),
+  process.env.ORION_CLOUD_EVIDENCE ||
+    new URL(
+      "../outputs/vercel-daily/" +
+        (process.env.ORION_VERIFY_URL ? "live-http.json" : "cloud-http.json"),
+      import.meta.url,
+    ),
   JSON.stringify(report, null, 2),
 );
 console.log(JSON.stringify(report, null, 2));

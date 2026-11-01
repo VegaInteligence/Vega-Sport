@@ -45,14 +45,6 @@ jobs:
           - Rebuild canonical JSON partitions and preserve historical seasons"
           git push origin HEAD:main
           echo "changed=true" >> "$GITHUB_OUTPUT"
-      - name: Refresh Vercel production
-        if: steps.publish.outputs.changed == 'true'
-        env:
-          DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
-        run: |
-          if [ -n "$DEPLOY_HOOK" ]; then
-            curl --fail --silent --show-error --request POST "$DEPLOY_HOOK" > /dev/null
-          fi
       - name: Save collection receipt
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
