@@ -31,7 +31,8 @@ try {
   assert.equal(settings.schedule.cron, "0 0 * * *");
   const manifest = await json("/data/football-manifest.json");
   assert.equal(manifest.storage, "json-relational");
-  assert.ok(manifest.seasons.length >= 6);
+  assert.ok(manifest.seasons.length >= 3);
+  assert.ok(manifest.seasons.every((season) => Number(season.id.slice(0, 4)) >= 2024));
   const raw = await fetch(base + "/data/football-manifest.json", {
     redirect: "manual",
   });

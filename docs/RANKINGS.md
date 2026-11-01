@@ -5,7 +5,7 @@ Les tableaux sont stockés dans la base JSON sous `data/raw/rankings/`. Le site 
 ## Périmètre collecté
 
 - FIFA masculin : les 32 éditions proposées par le catalogue officiel du 10 février 2022 au 7 octobre 2026.
-- UEFA : coefficients globaux sur cinq saisons des clubs et associations pour les saisons se terminant en 2022, 2023, 2024, 2025, 2026 et 2027. La saison 2026/2027 est en cours et ses valeurs peuvent évoluer.
+- UEFA : coefficients globaux sur cinq saisons des clubs et associations pour les saisons se terminant en 2024, 2025, 2026 et 2027. La saison 2026/2027 est en cours et ses valeurs peuvent évoluer.
 - SportsAPI : instantanés actuels FIFA masculin, clubs UEFA et pays UEFA. Son endpoint de classement documente uniquement le tableau actuel, sans paramètre historique. Les instantanés ne sont pas renommés en éditions historiques.
 
 Sources : [SportsAPI](https://sportsapi.app/docs#rankings), [FIFA](https://inside.fifa.com/fifa-rankings/world-ranking/men), [UEFA clubs](https://www.uefa.com/nationalassociations/uefarankings/club/), [UEFA associations](https://www.uefa.com/nationalassociations/uefarankings/country/).

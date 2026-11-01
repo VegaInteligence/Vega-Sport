@@ -8,6 +8,6 @@ test('a 2024 scope includes the 2024/2025 and calendar-year 2024 seasons only',(
   assert.equal(inHistoryScope({season:'2024'},years),true);
   assert.equal(inHistoryScope({season:'2023/2024'},years),false);
   assert.equal(inHistoryScope({season:'2025/2026'},years),false);
-  assert.equal(inHistoryScope({season:'2021/2022'},null),true);
-  assert.throws(()=>historyYears(['--years=2026']),/2021 through 2025/);
+  assert.equal(inHistoryScope({season:'2021/2022'},null),false);
+  assert.throws(()=>historyYears(['--years=2026']),/2024 through 2025/);
 });

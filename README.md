@@ -21,7 +21,7 @@ Le stockage est une [base JSON](docs/JSON_DATABASE.md) dans `data/raw/`, organis
 Le [dashboard Orion](docs/DASHBOARD.md) propose une interface sombre pour parcourir les compétitions et les clubs, comparer les joueurs et explorer les données complètes des matchs. La connexion à PitchAPI ouvre les saisons et les analyses à la demande. Les notes affichées proviennent de PitchAPI ; le classement Orion reste à calibrer et à valider.
 
 L'archive locale couvre les compétitions européennes PitchAPI disponibles de
-2021/22 à 2026/27, ainsi que les saisons civiles 2021 à 2026. Des résultats et calendriers complémentaires
+2024/25 à 2026/27, ainsi que les saisons civiles 2024 à 2026. Des résultats et calendriers complémentaires
 proviennent d'[open-matchday](https://github.com/oladeeayo/open-matchday), sous
 conditions d'usage non commercial et avec attribution. Les deux sources peuvent
 contenir les mêmes matchs et restent séparées.

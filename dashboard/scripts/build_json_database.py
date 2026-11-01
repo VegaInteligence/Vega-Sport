@@ -51,6 +51,7 @@ def build_tables():
     index={'schemaVersion':3,'storage':'json-relational','schema':'raw/schema.json','defaultSeason':old['defaultSeason'],'seasons':[]}
     counts=Counter(); comparisons=0
     for season in old['seasons']:
+        if int(season['id'][:4]) < 2024: continue
         out={'id':season['id'],'chunks':[]}
         for chunk in season['chunks']:
             part=read(source/chunk['path']); league=chunk['leagueId'];encoded=league+'--'+league.encode().hex()

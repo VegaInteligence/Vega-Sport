@@ -193,6 +193,10 @@ if (
   !Array.isArray(catalogResponse.data?.leagues)
 )
   throw new Error("Could not retrieve league catalogue.");
+catalogResponse.data.leagues = catalogResponse.data.leagues.map((league) => ({
+  ...league,
+  seasons: (league.seasons || []).filter((season) => inHistoryScope({ season }, null)),
+}));
 await atomicJson(path.join(dataRoot, "catalogue.json"), catalogResponse.data);
 const european = catalogResponse.data.leagues.filter(
   (l) =>
@@ -205,7 +209,7 @@ const allSelected = historical
         (l.seasons || [])
           .filter(
             (s) =>
-              /^(202[1-5])(?:\/(202[2-6]))?$/.test(s) &&
+              /^(202[4-5])(?:\/(202[5-6]))?$/.test(s) &&
               (s.length === 4 ||
                 Number(s.slice(5)) === Number(s.slice(0, 4)) + 1),
           )
@@ -270,7 +274,7 @@ if (scopedYears) {
       await fs.readFile(path.join(dataRoot, "inventory.json"), "utf8"),
     );
     carried = previous.competitions.filter(
-      (c) => !inHistoryScope(c, scopedYears),
+      (c) => inHistoryScope(c, null) && !inHistoryScope(c, scopedYears),
     );
   } catch {}
 }

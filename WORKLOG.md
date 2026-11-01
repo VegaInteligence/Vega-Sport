@@ -1,10 +1,9 @@
 # Worklog
 
-- Goal: deepen the Data’Scout benchmark specifically around paid/hidden functionality; revise recommendations to reflect premium analytical value, not just free UI access.
-- Scope: research/report only. Existing Next.js/Bun application and canonical data preserved. No provider collection, purchase, vote, favorite, saved search or scenario submitted. Previous application work remains deployed at cd1eed61.
-- Walkthrough: all 13 primary tools inspected through the existing free browser session; 15 recorded steps include home and player-to-median comparison. Generated a two-player radar and xG/xA scatter, executed scouting filters, loaded player/team/coach profiles, ranking, builder and simulator. Standard projection gated; public daily-player example exposes similarity, projection and club-fit presentation. Model accuracy and paid workflows unverified.
-- Orion verification: live player-specific page still lists match appearances; existing match-data explorer, comparison, scatter presets and exports verified in code. All 44 current-season performance chunks and every indexed player/team profile observation inspected for data readiness.
-- Findings: prioritize player-season aggregation, role/league centiles, richer comparison, configurable statistical search, saved local views and club-season profiles. Role taxonomy must be normalized; role is null in all normalized current-season performances. Profiles lack age/foot/height/contracts/market/injuries. Physical tracking and transfer/coaching models require new data and validation.
-- Deliverables: docs/DATASCOUT_BENCHMARK.md (complete functionality/priority matrix and screenshot gallery); dashboard/outputs/datascout-benchmark/ (23 current screenshots, ordered journal, reproducible data inventory and limits). Links and screenshot inventory checked; no application tests needed for this read-only research/documentation task.
-- State: premium refinement completed. User confirmed labels/descriptions suffice and free account only. Report now inventories 16 paid function groups, official methodology pages, current premium-card captures and custom-ranking gate. Priority revised to custom indices/role scoring, similarity, contextual comparison and descriptive club fit; aggregate season data is their shared foundation. No new account access is needed for this requested feature inventory.
-- Suggested commit: docs: compare DataScout features with Orion.
+- Goal: retain football seasons from 2024/2025 onward and publish the cleaned dataset.
+- Scope: remove older season partitions, UEFA editions before 2023/2024 and historical source inventory entries. Preserve current seasons, 2023/2024 UEFA rankings, source archives, player profiles and independently dated FIFA rankings.
+- Direction: collection and database builders enforce the 2024 start-year boundary; the dashboard derives available seasons from the canonical index.
+- Progress: removed 2021/22–2023/24 match and performance seasons, updated manifests, summaries and documentation; retained archive and table checksums recorded for reproducible verification.
+- Verification: season-retention E2E and the dashboard test suite; see dashboard/outputs/season-retention/ for evidence.
+- State: verified; publish the data and retention safeguards together.
+- Suggested commit: data: retain football seasons from 2024/25 onward.

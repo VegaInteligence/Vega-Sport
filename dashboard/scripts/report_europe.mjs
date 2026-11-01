@@ -163,7 +163,7 @@ for (const c of historical?.competition_summaries || []) {
   historySeasons.set(label, row);
 }
 const lines = [
-  "# European football data — 2021/22 through 2026/27",
+  "# European football data — 2024/25 through 2026/27",
   "",
   `Status: **${complete ? "collection complete for this inventory" : scopedComplete ? `requested scope ${scopeYears.map((y) => `${y}/${Number(y) + 1}`).join(", ")} complete; older seasons remain incomplete` : "collection in progress or incomplete"}**.`,
   "",

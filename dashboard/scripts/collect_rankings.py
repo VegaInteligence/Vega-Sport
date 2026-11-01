@@ -99,7 +99,7 @@ def main():
                 r=entry['rankingItem'];rows.append({'entityId':'fifa:'+str(r['idTeam']),'entityName':r['name'],'countryCode':r['countryCode'],'position':r['rank'],'points':r.get('totalPoints'),'previousPosition':r.get('previousRank'),'imageUrl':r.get('flag',{}).get('src'),'confederation':entry.get('tag',{}).get('id'),'sourceRow':entry})
             emit('fifa-men',date['date']+'.fifa','FIFA',url,rows,date['date'],date['date']);print('FIFA',date['date'],len(rows),flush=True)
         except Exception as exc:errors.append({'provider':'FIFA','date':date['date'],'error':type(exc).__name__})
-    for year in range(args.from_year,now.year+2):
+    for year in range(max(args.from_year,2024),now.year+2):
         for kind,typ in [('uefa-clubs','MEN_CLUB'),('uefa-associations','MEN_ASSOCIATION')]:
             native=[];updated=None;urls=[];total=None
             try:
