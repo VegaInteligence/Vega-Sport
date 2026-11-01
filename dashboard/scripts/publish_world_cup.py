@@ -61,4 +61,6 @@ with tempfile.TemporaryDirectory(prefix='orion-worldcup-') as tmp:
  for file in (DATA/'raw/profiles').glob('*/*.gz'):response_counts[file.parent.name]+=len(db.read(file))
  summary.update(table_rows=dict(counts),seasons=len(index['seasons']),roundtripped_partitions=sum(len(s['chunks']) for s in index['seasons']),observations={'documents':documents,'match_ids':len(db.read(DATA/'raw/match-observations.json')),'response_rows':dict(response_counts)})
  db.write('raw/import-summary.json',summary);db.write('raw/index.json',index)
+ from build_dashboard_views import build_views
+ build_views(DATA)
 print(json.dumps({'status':'published','competition':LEAGUE,'season':LABEL,'matches':len(part['matches']),'appearances':len(part['appearances']),'source_bundle':str(bundle.relative_to(ROOT))},indent=2))

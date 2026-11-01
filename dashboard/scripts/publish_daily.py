@@ -63,6 +63,8 @@ def main():
     db.write('raw/index.json',index)
     receipt.update(status='success',normalizedMatches=count)
     db.write('raw/sync.json',receipt)
+    from build_dashboard_views import build_views
+    build_views(data)
     print(json.dumps(receipt),flush=True)
 
 if __name__=='__main__':main()

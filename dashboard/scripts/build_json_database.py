@@ -156,6 +156,8 @@ def main():
     if not args.tables_only:
         summary['observations']=build_observations();finalize_indexes()
     write('raw/import-summary.json',summary)
+    from build_dashboard_views import build_views
+    build_views(DATA)
     print(json.dumps(summary),flush=True)
 
 if __name__=='__main__':main()

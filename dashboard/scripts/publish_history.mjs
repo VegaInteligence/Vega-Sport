@@ -31,6 +31,7 @@ const report = options.find((arg) => !arg.startsWith("--"));
 const skipCurrent = options.includes("--skip-current");
 const basePaths = [
   "data/raw",
+  "data/computed",
   "data/sources/pitchapi/bundles/europe_2021_2026",
 ];
 const env = { ...process.env, GIT_TERMINAL_PROMPT: "0" };
