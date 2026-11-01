@@ -8,9 +8,10 @@
     "dev": "bun --bun next dev --hostname 127.0.0.1 --port 3000"
   },
   "dependencies": {
+    "@vercel/speed-insights": "^2.0.0",
+    "lucide-react": "^1.66.0",
     "next": "^16.4.3",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "lucide-react": "^1.66.0"
+    "react-dom": "^19.2.0"
   }
 }

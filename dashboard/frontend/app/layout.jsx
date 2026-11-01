@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import Providers from "./providers.jsx";
 import "../src/styles.css";
 import "../src/analysis.css";
@@ -21,6 +22,7 @@ export default function RootLayout({ children }) {
         >
           <Providers>{children}</Providers>
         </Suspense>
+        <SpeedInsights />
       </body>
     </html>
   );
