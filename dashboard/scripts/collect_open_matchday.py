@@ -11,7 +11,7 @@ import re
 import urllib.request
 import zipfile
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / 'data' / 'sources' / 'open_matchday' / '2026-2027'
 URL = 'https://github.com/oladeeayo/open-matchday/archive/refs/heads/master.zip'
 SOURCE = 'https://github.com/oladeeayo/open-matchday'

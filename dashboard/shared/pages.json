@@ -1,0 +1,44 @@
+[
+  {
+    "key": "overview",
+    "path": "/",
+    "title": "Vue d’ensemble",
+    "component": "OverviewPage"
+  },
+  {
+    "key": "competitions",
+    "path": "/competitions/",
+    "title": "Compétitions",
+    "component": "CompetitionsPage"
+  },
+  {
+    "key": "clubs",
+    "path": "/clubs/",
+    "title": "Clubs",
+    "component": "ClubsPage"
+  },
+  {
+    "key": "players",
+    "path": "/joueurs/",
+    "title": "Joueurs",
+    "component": "PlayersPage"
+  },
+  {
+    "key": "matches",
+    "path": "/matchs/",
+    "title": "Matchs",
+    "component": "MatchesPage"
+  },
+  {
+    "key": "rankings",
+    "path": "/classements/",
+    "title": "Classements",
+    "component": "RankingsPage"
+  },
+  {
+    "key": "method",
+    "path": "/methode/",
+    "title": "Données & méthode",
+    "component": "MethodPage"
+  }
+]

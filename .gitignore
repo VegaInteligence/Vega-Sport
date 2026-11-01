@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+!dashboard/.env.example
 __pycache__/
 *.py[cod]
 node_modules/
@@ -14,3 +15,10 @@ data/staging/dashboard/football.json
 data/staging/
 
 .DS_Store
+
+dashboard/node_modules/
+dashboard/dist/
+
+.next/
+.next-dev/
+next-env.d.ts

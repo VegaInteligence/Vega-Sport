@@ -2,12 +2,12 @@
 """Reconcile every ranking edition against the downloaded source records."""
 import hashlib,json
 from pathlib import Path
-ROOT=Path(__file__).resolve().parents[1]
+ROOT=Path(__file__).resolve().parents[2]
 
 def read(p):return json.loads(p.read_text())
 
 def main():
-    index=read(ROOT/'data/raw/rankings/index.json');summary={'setup':'Completed collect_rankings.py run, downloaded source responses and normalized JSON tables. No network or credentials needed.','command':'python3 scripts/verify_rankings.py','expected':'All FIFA catalogue editions since 2022, both UEFA overall rankings for every season-end year, SportsAPI source rows and coefficients reconcile; no secret in public assets.','status':'failed'}
+    index=read(ROOT/'data/raw/rankings/index.json');summary={'setup':'Completed collect_rankings.py run, downloaded source responses and normalized JSON tables. No network or credentials needed.','command':'python3 dashboard/scripts/verify_rankings.py','expected':'All FIFA catalogue editions since 2022, both UEFA overall rankings for every season-end year, SportsAPI source rows and coefficients reconcile; no secret in public assets.','status':'failed'}
     try:
         assert not index['errors'];counts={};nulls=0
         for ref in index['editions']:
@@ -45,13 +45,13 @@ def main():
         for link in mappings['links'].values():
             candidates=[r for t in official for r in t['rows'] if r['entityId']==link['entityId']]
             assert candidates and all(r['countryCode']==link['countryCode'] for r in candidates)
-        key=next(line.split('=',1)[1] for line in (ROOT/'.env').read_text().splitlines() if line.startswith('SPORTSAPI_API_KEY='))
-        for base in ('dashboard','data/raw/rankings','dist'):
+        key=next(line.split('=',1)[1] for line in (ROOT/'dashboard/.env').read_text().splitlines() if line.startswith('SPORTSAPI_API_KEY='))
+        for base in ('dashboard/frontend','data/raw/rankings','dashboard/dist'):
             for p in (ROOT/base).rglob('*'):
                 if p.is_file() and p.suffix in ('.js','.json','.html','.css'):assert key.encode() not in p.read_bytes(),p
         summary.update(status='passed',actual={'editions':len(index['editions']),'source_rows':counts,'unranked_positions_preserved':nulls,'linked_clubs':len(mappings['links']),'unmatched_clubs':len(mappings['unmatched']),'ambiguous_clubs':len(mappings['ambiguous']),'secret_found_in_public_assets':False})
     except Exception as exc:summary['error']=repr(exc);raise
     finally:
-        p=ROOT/'outputs/rankings/verification.json';p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(summary,indent=2)+'\n')
+        p=ROOT/'dashboard/outputs/rankings/verification.json';p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(summary,indent=2)+'\n')
     print(json.dumps(summary,indent=2))
 if __name__=='__main__':main()

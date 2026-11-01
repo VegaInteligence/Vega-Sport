@@ -12,7 +12,7 @@ import sys
 
 from build_dashboard_data import METRICS, build_snapshot
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 ARCHIVE = ROOT / 'data' / 'sources' / 'pitchapi' / 'archives' / 'europe_2026_2027'
 OUTPUT = ROOT / 'data' / 'staging' / 'dashboard' / 'football.json'
 

@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 import tarfile
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 ARCHIVES = ('europe_2026_2027', 'europe_2021_2026')
 OUTPUT = ROOT / 'data' / 'sources' / 'pitchapi' / 'bundles'
 LIMIT = 80 * 1024 * 1024

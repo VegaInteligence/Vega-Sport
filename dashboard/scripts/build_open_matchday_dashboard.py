@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 ARCHIVE = ROOT / 'data' / 'sources' / 'open_matchday' / '2026-2027'
 OUTPUT = ROOT / 'data' / 'staging' / 'dashboard' / 'open_matchday.json'
 

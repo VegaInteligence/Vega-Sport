@@ -1,0 +1,30 @@
+{
+  "name": "orion-football-ranking",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Explorateur des données du projet Orion Football Ranking",
+  "scripts": {
+    "dev": "bun scripts/dev.mjs",
+    "dev:frontend": "bun --bun next dev frontend --hostname 127.0.0.1 --port 3000",
+    "build": "NEXT_TELEMETRY_DISABLED=1 bun --bun next build frontend",
+    "start": "bun scripts/dev.mjs --production",
+    "test": "bun run build && cd .. && python3 -m unittest discover -s tests && node --test tests/*.test.mjs",
+    "data": "python3 scripts/build_json_database.py",
+    "rankings": "python3 scripts/collect_rankings.py --from-year 2022",
+    "dev:backend": "bun --watch backend/server.js",
+    "format": "prettier --write frontend/src frontend/app frontend/next.config.mjs backend shared scripts/*.mjs package.json",
+    "format:check": "prettier --check frontend/src frontend/app frontend/next.config.mjs backend shared scripts/*.mjs package.json",
+    "verify": "bun scripts/verify_application.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^1.66.0",
+    "next": "^16.4.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10"
+  },
+  "packageManager": "bun@1.4.4"
+}

@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 import unicodedata
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 PITCH = ROOT / 'data' / 'sources' / 'pitchapi' / 'archives' / 'europe_2026_2027' / 'inventory.json'
 SUPPLEMENT = ROOT / 'data' / 'sources' / 'open_matchday' / '2026-2027'
 

@@ -24,7 +24,7 @@ from urllib.parse import quote, urlencode
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 BASE_URL = "https://api.pitchapi.dev/v1"
 DEFAULT_OUTPUT = ROOT / "data/sources/pitchapi/full"
 LOCAL_CATALOG = ROOT / "data/sources/pitchapi/archives/europe_2026_2027/catalogue.json"
@@ -63,7 +63,7 @@ def load_api_key(environ=None, env_path=None):
     environ = os.environ if environ is None else environ
     key = environ.get("PITCHAPI_API_KEY", "").strip()
     if not key:
-        env_path = Path(env_path or ROOT / ".env")
+        env_path = Path(env_path or ROOT / "dashboard/.env")
         if env_path.is_file():
             for line in env_path.read_text(encoding="utf-8-sig").splitlines():
                 match = re.match(r"^\s*(?:export\s+)?PITCHAPI_API_KEY\s*=\s*(.*?)\s*$", line)

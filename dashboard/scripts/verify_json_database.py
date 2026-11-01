@@ -5,8 +5,8 @@ from pathlib import Path
 from build_json_database import DATA, ROOT, read, restore_part
 
 def main():
-    ap=argparse.ArgumentParser();ap.add_argument('--evidence',default='outputs/json-database/evidence.json');args=ap.parse_args()
-    evidence={'setup':'Python 3, Node.js, generated data/raw and original data/sources plus data/staging views. No provider network or API credentials.','command':'python3 scripts/verify_json_database.py --evidence '+args.evidence,'expected':'Every original partition reassembles exactly, identity references resolve, source files retain their hashes, detailed routes reconstruct representative original documents and profiles.','status':'failed'}
+    ap=argparse.ArgumentParser();ap.add_argument('--evidence',default='dashboard/outputs/json-database/evidence.json');args=ap.parse_args()
+    evidence={'setup':'Python 3, Node.js, generated data/raw and original data/sources plus data/staging views. No provider network or API credentials.','command':'python3 dashboard/scripts/verify_json_database.py --evidence '+args.evidence,'expected':'Every original partition reassembles exactly, identity references resolve, source files retain their hashes, detailed routes reconstruct representative original documents and profiles.','status':'failed'}
     proc=None;out=ROOT/args.evidence;out.parent.mkdir(parents=True,exist_ok=True)
     try:
         manifest=read(DATA/'raw/index.json');old=read(DATA/'staging/dashboard/football-manifest.json');counts={};parts=0
@@ -26,14 +26,14 @@ def main():
                 parts+=1
         # Before-relocation inventories include the old source paths; all bytes remain.
         source_count=0
-        before=ROOT/'outputs/data-organization/before.json'
+        before=ROOT/'dashboard/outputs/data-organization/before.json'
         if before.exists():
             for row in read(before):
                 p=row['path'].replace('data/pitchapi_bundles','data/sources/pitchapi/bundles').replace('data/open_matchday_2026_2027','data/sources/open_matchday/2026-2027')
                 assert hashlib.sha256((ROOT/p).read_bytes()).hexdigest()==row['sha256'];source_count+=1
         # Check a real local backend against source archive objects.
         with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
-        log=(out.parent/'backend.log').open('w');proc=subprocess.Popen(['node','dashboard/server.js','--port',str(port)],cwd=ROOT,stdout=log,stderr=log)
+        log=(out.parent/'backend.log').open('w');proc=subprocess.Popen([str(Path.home()/'.bun/bin/bun'),'dashboard/backend/server.js','--port',str(port)],cwd=ROOT,stdout=log,stderr=log)
         def get(path):return urllib.request.urlopen(f'http://127.0.0.1:{port}'+path,timeout=60).read()
         for _ in range(100):
             try:get('/');break

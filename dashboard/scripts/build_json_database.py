@@ -4,7 +4,7 @@ import argparse, gzip, hashlib, json, os, tarfile, subprocess, sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-ROOT=Path(__file__).resolve().parents[1]
+ROOT=Path(__file__).resolve().parents[2]
 DATA=ROOT/'data'
 
 def digest(value):
@@ -43,10 +43,10 @@ def restore_part(chunk):
 def build_tables():
     source=DATA/'staging/dashboard'
     if not (source/'football-manifest.json').is_file():
-        subprocess.run([sys.executable,str(ROOT/'scripts/restore_europe.py')],check=True)
-        subprocess.run([sys.executable,str(ROOT/'scripts/build_multiseason_dashboard.py')],check=True)
+        subprocess.run([sys.executable,str(ROOT/'dashboard/scripts/restore_europe.py')],check=True)
+        subprocess.run([sys.executable,str(ROOT/'dashboard/scripts/build_multiseason_dashboard.py')],check=True)
     if not (source/'open_matchday.json').is_file():
-        subprocess.run([sys.executable,str(ROOT/'scripts/build_open_matchday_dashboard.py')],check=True)
+        subprocess.run([sys.executable,str(ROOT/'dashboard/scripts/build_open_matchday_dashboard.py')],check=True)
     old=read(source/'football-manifest.json')
     index={'schemaVersion':3,'storage':'json-relational','schema':'raw/schema.json','defaultSeason':old['defaultSeason'],'seasons':[]}
     counts=Counter(); comparisons=0

@@ -3,7 +3,7 @@
 import argparse, concurrent.futures, hashlib, json, math, re, time, unicodedata, urllib.error, urllib.parse, urllib.request
 from datetime import datetime,timezone
 from pathlib import Path
-ROOT=Path(__file__).resolve().parents[1]
+ROOT=Path(__file__).resolve().parents[2]
 RAW=ROOT/'data/raw/rankings';SOURCES=ROOT/'data/sources/rankings'
 
 def save(p,obj):
@@ -67,10 +67,10 @@ def main():
             if previous.get('rows')==rows and previous.get('sourceUpdatedAt')==updated:obj['retrievedAt']=previous['retrievedAt']
         save(path,obj)
         editions.append({k:obj[k] for k in ('kind','edition','provider','sourceUrl','retrievedAt','sourceUpdatedAt','period','officialEdition')}|{'path':path.relative_to(ROOT/'data').as_posix(),'rows':len(rows),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
-    key=next((l.split('=',1)[1].strip().strip('"\'') for l in (ROOT/'.env').read_text().splitlines() if l.startswith('SPORTSAPI_API_KEY=')),None)
+    key=next((l.split('=',1)[1].strip().strip('"\'') for l in (ROOT/'dashboard/.env').read_text().splitlines() if l.startswith('SPORTSAPI_API_KEY=')),None)
     for kind in ('fifa-men','uefa-countries','uefa-clubs'):
         url='https://api.sportsapi.app/v2/rankings/'+kind;p=SOURCES/'sportsapi'/now.date().isoformat()/(kind+'.json')
-        prior=ROOT/'outputs/rankings'/(kind+'.json')
+        prior=ROOT/'dashboard/outputs/rankings'/(kind+'.json')
         if prior.exists() and not p.exists() and not args.refresh:save(p,json.loads(prior.read_text()))
         try:
             body=fetch(url,p,key,args.refresh);rows=[]
@@ -119,7 +119,7 @@ def main():
             except Exception as exc:errors.append({'provider':'UEFA','year':year,'kind':kind,'error':type(exc).__name__})
     editions.sort(key=lambda x:(x['kind'],x['edition']),reverse=True)
     result={'schemaVersion':1,'requestedFromYear':args.from_year,'retrievedAt':now.isoformat(),'fifaCatalogueDates':len(dates),'editions':editions,'errors':errors,'notes':{'uefa-associations':'Association club coefficients, not national-team strength.','historicalDates':'UEFA period is a season ending year, not a known publication date. SportsAPI updatedAt is a source refresh timestamp, not an official edition date.'}}
-    result['clubMapping']=club_links(editions);save(RAW/'index.json',result);save(ROOT/'outputs/rankings/collection.json',result)
+    result['clubMapping']=club_links(editions);save(RAW/'index.json',result);save(ROOT/'dashboard/outputs/rankings/collection.json',result)
     print('Editions',len(editions),'errors',errors,'mapping',result['clubMapping'],flush=True)
     return bool(errors)
 if __name__=='__main__':raise SystemExit(main())
