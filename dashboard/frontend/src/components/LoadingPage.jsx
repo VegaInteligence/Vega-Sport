@@ -17,11 +17,6 @@ export default function LoadingPage({ href }) {
         <div className="season-loading" role="status">
           <span>Chargement des données…</span>
           <div className="loading-filter" aria-hidden="true" />
-          <div className="loading-metrics" aria-hidden="true">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} />
-            ))}
-          </div>
           <div className="loading-chart" aria-hidden="true" />
         </div>
       </main>

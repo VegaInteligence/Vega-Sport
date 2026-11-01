@@ -24,16 +24,12 @@ export default function OverviewPage() {
   );
   const coverage = useMemo(() => {
     const result = {
-      shots: 0,
-      competitions: new Set(),
       players: 0,
       shotMatches: 0,
       xg: 0,
       ratings: 0,
     };
     for (const m of f.matches) {
-      result.shots += m.shots?.length || 0;
-      result.competitions.add(m.leagueId);
       for (const key of ["players", "xg", "ratings"])
         if (m.coverage?.[key]) result[key]++;
       if (m.coverage?.shots) result.shotMatches++;
@@ -93,22 +89,6 @@ export default function OverviewPage() {
           </div>
         </section>
       )}
-      <section className="metric-grid" aria-label="Chiffres de la collecte">
-        {[
-          ["Apparitions affichées", f.rows.length, "players"],
-          ["Matchs", f.matches.length, "pitch"],
-          ["Compétitions", coverage.competitions.size, "globe"],
-          ["Événements de tir", coverage.shots, "target"],
-        ].map(([label, value, icon]) => (
-          <article className="metric-card" key={label}>
-            <div className="metric-label">{label}</div>
-            <span className="metric-icon">
-              <Icon name={icon} />
-            </span>
-            <div className="metric-value">{number(value)}</div>
-          </article>
-        ))}
-      </section>
       <div className="dashboard-grid">
         <Card
           title="Performances"
