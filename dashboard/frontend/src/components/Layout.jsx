@@ -7,7 +7,7 @@ import { PlayerDialog, Comparison } from "./PlayerDetails.jsx";
 import { number, date } from "../services/format.js";
 import CompetitionScope from "./CompetitionScope.jsx";
 export const navigation = pages.map((page) => [page.path, page.title]);
-export function Filters() {
+export function Filters({ fixtures = false }) {
   const f = useFootball();
   const reset = () =>
     f.setFilters({ query: "", league: "all", minutes: 1, match: "all" });
@@ -21,15 +21,16 @@ export function Filters() {
   const active =
     f.filters.query ||
     f.filters.league !== "all" ||
-    f.filters.minutes !== 1 ||
-    f.filters.match !== "all";
+    (!fixtures && (f.filters.minutes !== 1 || f.filters.match !== "all"));
   const selected = f.data.competitions.find((c) => c.id === f.filters.league);
   const names = new Map();
   for (const c of f.competitions)
     names.set(c.name, (names.get(c.name) || 0) + 1);
   return (
     <section className="filter-panel" aria-label="Filtres des données">
-      <div className="filter-fields">
+      <div
+        className={`filter-fields${fixtures ? " fixture-filter-fields" : ""}`}
+      >
         <div className="filter-field filter-search">
           <label htmlFor="player-search">Recherche</label>
           <div className="filter-input-wrap">
@@ -37,8 +38,12 @@ export function Filters() {
             <input
               id="player-search"
               type="search"
-              aria-label="Rechercher un joueur ou un club"
-              placeholder="Joueur, club…"
+              aria-label={
+                fixtures
+                  ? "Rechercher un club ou une compétition"
+                  : "Rechercher un joueur ou un club"
+              }
+              placeholder={fixtures ? "Club, compétition…" : "Joueur, club…"}
               value={f.filters.query}
               onChange={(e) =>
                 f.setFilters((v) => ({ ...v, query: e.target.value }))
@@ -90,26 +95,31 @@ export function Filters() {
             <Icon name="chevron" className="select-chevron" />
           </div>
         </div>
-        <div className="filter-field">
-          <label htmlFor="minutes-filter">Temps de jeu</label>
-          <div className="filter-input-wrap">
-            <Icon name="timer" />
-            <select
-              id="minutes-filter"
-              value={f.filters.minutes}
-              onChange={(e) =>
-                f.setFilters((v) => ({ ...v, minutes: Number(e.target.value) }))
-              }
-            >
-              {minutes.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <Icon name="chevron" className="select-chevron" />
+        {!fixtures && (
+          <div className="filter-field">
+            <label htmlFor="minutes-filter">Temps de jeu</label>
+            <div className="filter-input-wrap">
+              <Icon name="timer" />
+              <select
+                id="minutes-filter"
+                value={f.filters.minutes}
+                onChange={(e) =>
+                  f.setFilters((v) => ({
+                    ...v,
+                    minutes: Number(e.target.value),
+                  }))
+                }
+              >
+                {minutes.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <Icon name="chevron" className="select-chevron" />
+            </div>
           </div>
-        </div>
+        )}
       </div>
       <div className="filter-panel-footer">
         <CompetitionScope />
@@ -137,7 +147,7 @@ export function Filters() {
               <Icon name="close" />
             </button>
           )}
-          {f.filters.minutes !== 1 && (
+          {!fixtures && f.filters.minutes !== 1 && (
             <button
               className="filter-chip"
               aria-label="Retirer le filtre de temps de jeu"
@@ -147,7 +157,7 @@ export function Filters() {
               <Icon name="close" />
             </button>
           )}
-          {f.filters.match !== "all" && (
+          {!fixtures && f.filters.match !== "all" && (
             <button
               className="filter-chip"
               onClick={() => f.setFilters((v) => ({ ...v, match: "all" }))}
@@ -156,10 +166,12 @@ export function Filters() {
               <Icon name="close" />
             </button>
           )}
-          <span className="filter-result-count" aria-live="polite">
-            <strong>{number(f.rows.length)}</strong> apparitions <span>·</span>{" "}
-            <strong>{number(f.matches.length)}</strong> matchs
-          </span>
+          {!fixtures && (
+            <span className="filter-result-count" aria-live="polite">
+              <strong>{number(f.rows.length)}</strong> apparitions{" "}
+              <span>·</span> <strong>{number(f.matches.length)}</strong> matchs
+            </span>
+          )}
         </div>
         {active && (
           <button className="filter-reset-button" onClick={reset}>
@@ -175,6 +187,7 @@ export default function Layout({
   path,
   title,
   filters = false,
+  filterKind = "performances",
   hideHeading = false,
   className = "",
   children,
@@ -233,7 +246,7 @@ export default function Layout({
                     {date(f.data.meta.retrievedAt)}
                   </span>
                 )}
-                {filters && (
+                {filters && filterKind !== "fixtures" && (
                   <button
                     className="button button-secondary"
                     onClick={() => f.exportRows()}
@@ -244,7 +257,7 @@ export default function Layout({
               </div>
             </div>
           )}
-          {filters && <Filters />}
+          {filters && <Filters fixtures={filterKind === "fixtures"} />}
           {f.notice && (
             <div role="status" className="notice">
               {f.notice}

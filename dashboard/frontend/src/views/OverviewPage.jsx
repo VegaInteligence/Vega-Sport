@@ -9,6 +9,7 @@ import { ScatterPlot } from "../components/Charts.jsx";
 import { number, date } from "../services/format.js";
 import { isNumber, sortRows } from "../model.js";
 import { MatchLink } from "../components/MatchLink.jsx";
+import UpcomingMatches from "../components/UpcomingMatches.jsx";
 export default function OverviewPage() {
   const f = useFootball(),
     [scatter, setScatter] = useState("attack"),
@@ -45,6 +46,7 @@ export default function OverviewPage() {
   );
   return (
     <Layout path="/" title="Vue d’ensemble" filters>
+      <UpcomingMatches compact />
       {featured && (
         <section
           className="hero-strip featured-match"

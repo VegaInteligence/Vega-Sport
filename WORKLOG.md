@@ -1,9 +1,9 @@
 # Worklog
 
-- Goal delivered: public Next.js/Bun site at https://orion-football-ranking.vercel.app, Vercel linked to OrionQuantPlatform/Football_Ranking/main. Root dashboard/frontend; Bun 1.4.x, Paris region, outside-root sources enabled and data-only pushes deploy automatically.
-- Constraints/decisions: canonical data stays in data/raw and data/computed, no DB. Cloud reads the deployment Git revision, with noncached redirects and versioned browser URLs. Keys are GitHub/Vercel production secrets. Focus = seven ENG/ESP/GER/ITA/FRA/POR/NED first divisions plus Champions/Europa/Conference League; preferences local to the device.
-- Worker: GitHub Actions at 00:00 Europe/Paris, DST-aware, plus manual dispatch. Updates ongoing seasons/new/recent games and near-term fixture detail; all 13 source families preserved. Validates before a non-force data push; older season files remain unchanged.
-- Verified: real run 41328922932 succeeded (44 competitions, 238 matches updated, 89 fixtures, 48 profiles; 4394 current-season matches, +55). Its data commit 36a8151 automatically deployed. All 80 existing regressions, fixture-worker E2E, production HTTP/provider tests and desktop/390px browser flows pass. Source adb9ee79 is READY on Vercel; keyboard focus, calendar scope and fresh data verified. No captured browser warnings/errors. No new unit tests.
-- Evidence: dashboard/outputs/vercel-daily/EVIDENCE.md, immutable GitHub/Vercel receipts and screenshots. Final evidence-only deployment readback is stored in ignored dashboard/outputs/daily-refresh. Data/provider discrepancies remain visible; no model-validation or full WCAG claim.
-- State/next: user review of the deployed site; nightly collection enabled. Local development remains available on ports 3000/8765. No pending permission or configuration.
-- Commit name: docs: record Vercel hosting and daily refresh verification.
+- Goal: show upcoming games remaining this week on the overview and provide a dedicated weekly calendar.
+- Preserve: real Next.js/Bun site, canonical JSON, daily worker and immutable Vercel data transport; Top 7 Europe/UEFA preferences and all existing match analysis.
+- Direction: calendar weeks Monday–Sunday in Europe/Paris; use collected not_started fixtures and exclude elapsed kickoffs. Overview preview + /calendrier with week navigation, relevant filters, day groups and fixture-detail links/back navigation. Unknown times stay unknown.
+- Progress: overview preview, /calendrier, day groups, pagination, Paris times, filters and detail/back navigation implemented. Production build + existing 27 Python/53 Node tests pass. Browser/oracle checks cover all 127 next-week Europe fixtures, Champions League, accents, all leagues/Ligue 2, mobile/keyboard, historical empty state, unknown times and year boundary. Current week has four Europe fixtures after the 19:00 kickoffs. Evidence: dashboard/outputs/upcoming-week/.
+- Timing: client selection refreshes every 30 seconds and on visibility return; provider status/fixture changes arrive through the existing daily worker. No new collection or raw-data changes.
+- Next: finish daylight-saving week verification, push the feature, verify the Git-triggered Vercel deployment and save final evidence.
+- Suggested commit: feat: add weekly upcoming fixtures and calendar.

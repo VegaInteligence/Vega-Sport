@@ -30,6 +30,12 @@
     "component": "MatchesPage"
   },
   {
+    "key": "calendar",
+    "path": "/calendrier/",
+    "title": "Calendrier",
+    "component": "CalendarPage"
+  },
+  {
     "key": "rankings",
     "path": "/classements/",
     "title": "Classements",

@@ -391,9 +391,15 @@ export default function MatchDetail({ match }) {
     <div className="match-detail">
       <div className="match-breadcrumb-row">
         <nav className="match-breadcrumb" aria-label="Fil d’Ariane du match">
-          <Link href={f.href("/matchs/")}>
+          <Link
+            href={
+              search.get("from") === "calendar"
+                ? f.href("/calendrier/", { week: search.get("week") || "" })
+                : f.href("/matchs/")
+            }
+          >
             <Icon name="back" />
-            Matchs
+            {search.get("from") === "calendar" ? "Calendrier" : "Matchs"}
           </Link>
           <Icon name="right" />
           <span>{match.league || competition?.name || "Compétition"}</span>
