@@ -19,11 +19,16 @@ const otherTotal=index.fixtures-index.finished;
 const currentComplete=index.finished===index.downloaded && !index.incomplete && index.other_fixtures_downloaded===otherTotal && !index.other_fixtures_incomplete && collection && !collection.profiles.failed;
 const historyComplete=historical && historical.finished===historical.downloaded && !historical.incomplete && historical.other_fixtures_downloaded===historical.fixtures-historical.finished && !historical.other_fixtures_incomplete && historyCollection && !historyCollection.profiles.failed;
 const complete=currentComplete&&historyComplete;
+const scopeYears=historyCollection?.scope_years;
+const scopedRows=Array.isArray(scopeYears)?(historical?.competition_summaries||[]).filter(c=>scopeYears.includes(String(c.season).slice(0,4))):[];
+const scopedFinished=scopedRows.reduce((n,c)=>n+c.finished,0),scopedDownloaded=scopedRows.reduce((n,c)=>n+c.downloaded,0);
+const scopedOther=scopedRows.reduce((n,c)=>n+c.fixtures-c.finished,0),scopedOtherDownloaded=scopedRows.reduce((n,c)=>n+c.other_downloaded,0);
+const scopedComplete=Boolean(scopeYears?.length && currentComplete && historyCollection?.profiles_collected && !historyCollection.incomplete && !historyCollection.other_fixtures?.incomplete && !historyCollection.profiles?.failed && scopedFinished===scopedDownloaded && scopedOther===scopedOtherDownloaded);
 const historySeasons=new Map();
 for(const c of historical?.competition_summaries||[]){const label=/^\d{4}$/.test(c.season)?`${c.season}/${Number(c.season)+1}`:c.season;const row=historySeasons.get(label)||{pairs:0,finished:0,downloaded:0,players:0,shots:0};row.pairs++;row.finished+=c.finished;row.downloaded+=c.downloaded;row.players+=c.matches_with_players||0;row.shots+=c.shots||0;historySeasons.set(label,row)}
 const lines=[
   '# European football data — 2021/22 through 2026/27', '',
-  `Status: **${complete?'collection complete for this inventory':'collection in progress or incomplete'}**.`, '',
+  `Status: **${complete?'collection complete for this inventory':scopedComplete?`requested scope ${scopeYears.map(y=>`${y}/${Number(y)+1}`).join(', ')} complete; older seasons remain incomplete`:'collection in progress or incomplete'}**.`, '',
   `Inventory retrieved: ${index.inventory_at_utc}. Coverage calculated: ${index.generated_at_utc}.`, '',
   `- Competitions: ${index.competitions}; fixtures: ${index.fixtures}.`,
   `- Finished matches archived: ${index.downloaded}/${index.finished}; incomplete match records: ${index.incomplete}.`,

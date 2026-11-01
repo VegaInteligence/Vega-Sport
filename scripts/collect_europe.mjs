@@ -1,10 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {historyYears,inHistoryScope} from './history_scope.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 const historical = args.includes('--history');
+const scopedYears = historical ? historyYears(args) : null;
 const dataRoot = path.join(root, 'data', historical ? 'europe_2021_2026' : 'europe_2026_2027');
 const currentDataRoot = path.join(root, 'data', 'europe_2026_2027');
 // Include UEFA associations even if they are not yet in the provider catalogue.
@@ -103,11 +105,13 @@ const catalogResponse = await request('/leagues');
 if (catalogResponse.status !== 200 || !Array.isArray(catalogResponse.data?.leagues)) throw new Error('Could not retrieve league catalogue.');
 await atomicJson(path.join(dataRoot, 'catalogue.json'), catalogResponse.data);
 const european = catalogResponse.data.leagues.filter(l => europeanCodes.has(l.country_code) || (['INT','INT-2'].includes(l.country_code) && extraLeagues.has(l.name)));
-const selected = historical
+const allSelected = historical
   ? european.flatMap(l => (l.seasons||[]).filter(s => /^(202[1-5])(?:\/(202[2-6]))?$/.test(s) && (s.length===4 || Number(s.slice(5))===Number(s.slice(0,4))+1)).map(s => ({...l,requested_season:s}))).sort((a,b)=>b.requested_season.localeCompare(a.requested_season)||a.name.localeCompare(b.name))
   : european.filter(l => l.seasons?.includes('2026/2027') || l.seasons?.includes('2026')).map(l => ({...l, requested_season:l.seasons.includes('2026/2027') ? '2026/2027' : '2026'}));
+const selected=scopedYears?allSelected.filter(l=>inHistoryScope({season:l.requested_season},scopedYears)):allSelected;
+if(scopedYears && !selected.length)throw new Error('No requested historical seasons are available in the catalogue.');
 let cursor = 0;
-const competitions = new Array(selected.length);
+const fetched = new Array(selected.length);
 async function inventoryWorker() {
   while (true) {
     const i = cursor++;
@@ -116,20 +120,24 @@ async function inventoryWorker() {
     const result = await request(`/leagues/${encodeURIComponent(league.id)}/matches?season=${encodeURIComponent(league.requested_season)}&status=all`);
     const responseValid = Array.isArray(result.data?.matches);
     const matches = responseValid ? result.data.matches : [];
-    competitions[i] = {id:league.id, name:league.name, country_code:league.country_code, season:league.requested_season, status:result.status, response_valid:responseValid, error:result.error, matches};
+    fetched[i] = {id:league.id, name:league.name, country_code:league.country_code, season:league.requested_season, status:result.status, response_valid:responseValid, error:result.error, matches};
     console.log(`Inventory ${i+1}/${selected.length}: ${league.country_code} ${league.name}, ${matches.length} fixtures`);
   }
 }
 await Promise.all(Array.from({length:concurrency}, inventoryWorker));
+let carried=[];
+if(scopedYears){try{const previous=JSON.parse(await fs.readFile(path.join(dataRoot,'inventory.json'),'utf8'));carried=previous.competitions.filter(c=>!inHistoryScope(c,scopedYears));}catch{}}
+const competitions=[...carried,...fetched];
 const inventory = {retrieved_at_utc:new Date().toISOString(), competitions};
-if (competitions.some(c => c.status !== 200 || !c.response_valid)) {
+if (fetched.some(c => c.status !== 200 || !c.response_valid)) {
   await atomicJson(path.join(dataRoot, 'inventory_failure.json'), inventory);
   throw new Error('Some competition inventories failed or had an invalid response. Rerun to retry.');
 }
 await atomicJson(path.join(dataRoot, 'inventory.json'), inventory);
+const scopedCompetitions=competitions.filter(c=>inHistoryScope(c,scopedYears));
 const seen = new Set();
-const played = competitions.flatMap(c => c.matches.filter(m => m.status === 'finished').map(m => ({competition_id:c.id, competition_name:c.name, country_code:c.country_code, season:c.season, fixture:m}))).filter(x => {if(seen.has(x.fixture.id))return false;seen.add(x.fixture.id);return true});
-console.log(`Inventory: ${competitions.length} competitions; ${played.length} finished matches; ${competitions.reduce((n,c)=>n+c.matches.length,0)} total fixtures.`);
+const played = scopedCompetitions.flatMap(c => c.matches.filter(m => m.status === 'finished').map(m => ({competition_id:c.id, competition_name:c.name, country_code:c.country_code, season:c.season, fixture:m}))).filter(x => {if(seen.has(x.fixture.id))return false;seen.add(x.fixture.id);return true});
+console.log(`Inventory: ${competitions.length} competition-seasons; scope ${scopedYears?[...scopedYears].join(','):'all'}; ${played.length} finished matches; ${scopedCompetitions.reduce((n,c)=>n+c.matches.length,0)} scoped fixtures.`);
 if (inventoryOnly) process.exit(0);
 
 cursor = 0;
@@ -164,7 +172,7 @@ await Promise.all(Array.from({length:concurrency}, matchWorker));
 // Refresh older fixture records on later runs; predictions are time-sensitive.
 const upcomingEndpoints = {match:'', lineups:'lineups', h2h:'h2h'};
 const otherSeen = new Set();
-const otherFixtures = competitions.flatMap(c => c.matches.filter(m => m.status !== 'finished').map(m => ({competition_id:c.id, competition_name:c.name, country_code:c.country_code, season:c.season, fixture:m}))).filter(x => {if(otherSeen.has(x.fixture.id))return false;otherSeen.add(x.fixture.id);return true});
+const otherFixtures = scopedCompetitions.flatMap(c => c.matches.filter(m => m.status !== 'finished').map(m => ({competition_id:c.id, competition_name:c.name, country_code:c.country_code, season:c.season, fixture:m}))).filter(x => {if(otherSeen.has(x.fixture.id))return false;otherSeen.add(x.fixture.id);return true});
 let fixtureCompleted=0, fixtureFailed=0;
 if (!limit && !failed) {
   cursor=0;
@@ -189,8 +197,8 @@ if (!limit && !failed) {
 const profileCounts = {leagues:0, teams:0, players:0, unavailable:0, restricted:0, failed:0};
 const profileIds = {leagues:[], teams:[], players:[]};
 if (!matchesOnly && !limit && !failed) {
-  const ids = {leagues:new Set(competitions.map(c=>c.id)), teams:new Set(), players:new Set()};
-  for (const c of competitions) for (const fixture of c.matches) for (const team of [fixture.home_team,fixture.away_team]) if (/^t_[A-Za-z0-9]{6}$/.test(team?.id||'')) ids.teams.add(team.id);
+  const ids = {leagues:new Set(scopedCompetitions.map(c=>c.id)), teams:new Set(), players:new Set()};
+  for (const c of scopedCompetitions) for (const fixture of c.matches) for (const team of [fixture.home_team,fixture.away_team]) if (/^t_[A-Za-z0-9]{6}$/.test(team?.id||'')) ids.teams.add(team.id);
   for (const item of played) {
     const file=path.join(dataRoot,'matches',item.competition_id,matchFilename(item.fixture.id));
     const record=JSON.parse(await fs.readFile(file,'utf8'));
@@ -237,6 +245,6 @@ if (!matchesOnly && !limit && !failed) {
   }}
   await Promise.all(Array.from({length:concurrency},profileWorker));
 }
-await atomicJson(path.join(dataRoot,'collection.json'), {retrieved_at_utc:new Date().toISOString(), competitions:competitions.length, fixtures:competitions.reduce((n,c)=>n+c.matches.length,0), finished:played.length, considered:limit || played.length, completed, incomplete:failed, endpoints:Object.keys(endpoints), other_fixtures:{total:otherFixtures.length,completed:fixtureCompleted,incomplete:fixtureFailed,endpoints:Object.keys(upcomingEndpoints)}, profiles:profileCounts, profiles_collected:!matchesOnly&&!limit&&!failed, profile_ids:profileIds});
+await atomicJson(path.join(dataRoot,'collection.json'), {retrieved_at_utc:new Date().toISOString(), competitions:scopedCompetitions.length, fixtures:scopedCompetitions.reduce((n,c)=>n+c.matches.length,0), finished:played.length, considered:limit || played.length, completed, incomplete:failed, scope_years:scopedYears?[...scopedYears].sort():null, endpoints:Object.keys(endpoints), other_fixtures:{total:otherFixtures.length,completed:fixtureCompleted,incomplete:fixtureFailed,endpoints:Object.keys(upcomingEndpoints)}, profiles:profileCounts, profiles_collected:!matchesOnly&&!limit&&!failed, profile_ids:profileIds});
 console.log(`Collection complete: ${completed}/${played.length}; incomplete ${failed}; other fixtures ${fixtureCompleted}/${otherFixtures.length}, incomplete ${fixtureFailed}; profile failures ${profileCounts.failed}.`);
 if (failed || fixtureFailed || profileCounts.failed) process.exitCode = 1;

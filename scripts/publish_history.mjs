@@ -4,11 +4,14 @@ import {existsSync,statSync} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {historyYears} from './history_scope.mjs';
 
 const root=process.env.PITCH_PROJECT_ROOT?path.resolve(process.env.PITCH_PROJECT_ROOT):path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const bundledPython=path.join(os.homedir(),'.cache','codex-runtimes','codex-primary-runtime','dependencies','python',process.platform==='win32'?'python.exe':'bin/python3');
 const python=process.env.PITCH_PYTHON||(existsSync(bundledPython)?bundledPython:(process.platform==='win32'?'python':'python3'));
-const report=process.argv.slice(2).find(arg=>!arg.startsWith('--'));
+const options=process.argv.slice(2),years=historyYears(options);
+const report=options.find(arg=>!arg.startsWith('--'));
+const skipCurrent=options.includes('--skip-current');
 const basePaths=['dashboard/data/football-manifest.json','dashboard/data/multiseason_issues.json','dashboard/data/seasons','data/pitchapi_bundles/europe_2021_2026'];
 const env={...process.env,GIT_TERMINAL_PROMPT:'0'};
 function run(command,args,{capture=false,allow=[0]}={}){
@@ -58,7 +61,7 @@ function checkpoint({includeCurrent=false}={}){
 }
 function startCollector(){
   return new Promise(resolve=>{
-    const child=spawn(process.execPath,['scripts/collect_europe.mjs','--history'],{cwd:root,env,stdio:'inherit'});
+    const child=spawn(process.execPath,['scripts/collect_europe.mjs','--history',...(years?[`--years=${[...years].join(',')}`]:[])],{cwd:root,env,stdio:'inherit'});
     child.once('error',error=>resolve({code:1,error:error.message}));
     child.once('exit',(code,signal)=>resolve({code:code??1,signal}));
   });
@@ -77,7 +80,7 @@ async function main(){
       if(result)break;
       try{checkpoint()}catch(error){console.error(`Checkpoint deferred: ${error.message}`);}
     }
-    if(result.code===0){checkpoint({includeCurrent:true});console.log('Historical collection and final GitHub push complete.');return;}
+    if(result.code===0){checkpoint({includeCurrent:!skipCurrent});console.log('Historical collection and final GitHub push complete.');return;}
     if(attempt===5)throw new Error(`Historical collection stopped after ${attempt} attempts; existing checkpoints remain available.`);
     console.error(`Historical collection stopped (${result.code}); retrying saved checkpoints (${attempt}/5).`);
     await new Promise(resolve=>setTimeout(resolve,retryDelay));

@@ -150,14 +150,19 @@ def pack_archive(archive, output, key=None):
         metadata.append({'path':destination.relative_to(output).as_posix(),'target':name,
                          'bytes':destination.stat().st_size,'sha256':hashlib.sha256(destination.read_bytes()).hexdigest()})
     counts={kind:sum(len(files) for group,files in groups.items() if group[0]==kind) for kind in ('matches','fixtures','profiles')}
+    scope_years=collection.get('scope_years') if collection else None
+    scoped_counts={kind:sum(len(files) for group,files in groups.items() if group[0]==kind and (not scope_years or group[1][:4] in scope_years)) for kind in ('matches','fixtures')}
+    inventory_finished=sum(sum(m.get('status')=='finished' for m in c['matches']) for c in inventory['competitions'])
+    inventory_other=sum(sum(m.get('status')!='finished' for m in c['matches']) for c in inventory['competitions'])
     expected_profiles=sum(collection.get('profiles',{}).get(kind,0) for kind in ('leagues','teams','players')) if collection else 0
     profile_ids=collection.get('profile_ids') if collection else None
     profiles_complete=(all(len(set(profile_ids.get(kind,[])))==collection.get('profiles',{}).get(kind,0) and set(profile_ids.get(kind,[])).issubset(found_profiles[kind]) for kind in found_profiles)
                        if isinstance(profile_ids,dict) else counts['profiles']==expected_profiles)
-    complete=bool(collection and collection.get('profiles_collected',True) and not collection.get('incomplete') and not collection.get('other_fixtures',{}).get('incomplete') and not collection.get('profiles',{}).get('failed')
-                  and counts['matches']==collection.get('completed') and counts['fixtures']==collection.get('other_fixtures',{}).get('completed') and profiles_complete)
+    scope_complete=bool(collection and collection.get('profiles_collected',True) and not collection.get('incomplete') and not collection.get('other_fixtures',{}).get('incomplete') and not collection.get('profiles',{}).get('failed')
+                        and scoped_counts['matches']==collection.get('completed') and scoped_counts['fixtures']==collection.get('other_fixtures',{}).get('completed') and profiles_complete)
+    complete=bool(scope_complete and counts['matches']==inventory_finished and counts['fixtures']==inventory_other)
     result={'archive':archive.name,'generated_at_utc':datetime.now(timezone.utc).isoformat(),
-            'inventory_at_utc':inventory['retrieved_at_utc'],'complete':complete,'file_counts':counts,
+            'inventory_at_utc':inventory['retrieved_at_utc'],'complete':complete,'scope_complete':scope_complete,'scope_years':scope_years,'file_counts':counts,
             'bundles':bundles,'metadata':metadata}
     if previous and {k:v for k,v in previous.items() if k!='generated_at_utc'} == {k:v for k,v in result.items() if k!='generated_at_utc'}:
         result['generated_at_utc'] = previous.get('generated_at_utc', result['generated_at_utc'])

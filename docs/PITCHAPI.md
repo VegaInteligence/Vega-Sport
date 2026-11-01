@@ -109,6 +109,16 @@ n'ajoute que les instantanés et archives générés ; elle reporte la publicati
 `main` local et distant diffèrent ou si d'autres changements sont déjà indexés. La clé reste
 dans `.env`. La durée dépend du débit et de la couverture du fournisseur.
 
+Pour limiter cette collecte à 2024/2025 et aux saisons civiles 2024, sans
+réactualiser la saison courante lors du dernier checkpoint :
+
+```powershell
+node scripts/publish_history.mjs --years=2024 --skip-current
+```
+
+Le manifeste indique séparément si ce périmètre demandé est complet et si les
+saisons plus anciennes de l'inventaire sont complètes.
+
 Le serveur affiche aussi bien `/` que les anciennes URLs `/dashboard/`.
 Les filtres, graphiques et exports sont présentés dans la
 [documentation du dashboard](DASHBOARD.md).

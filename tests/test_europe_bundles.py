@@ -72,6 +72,22 @@ class BundleTests(unittest.TestCase):
             collection['profile_ids']['players']=['p_000003'];metadata.write_text(json.dumps(collection),encoding='utf-8')
             self.assertFalse(bundle.pack_archive(source,base/'bundles')['complete'])
 
+    def test_scoped_completion_does_not_claim_older_seasons_are_complete(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory);source=base/'europe_2021_2026';source.mkdir()
+            league='l_000001';current='m_000001';older='m_000002'
+            inventory={'retrieved_at_utc':'2026-11-01','competitions':[
+                {'id':league,'season':'2024/2025','matches':[{'id':current,'status':'finished'}]},
+                {'id':league,'season':'2023/2024','matches':[{'id':older,'status':'finished'}]}]}
+            (source/'inventory.json').write_text(json.dumps(inventory),encoding='utf-8')
+            (source/'collection.json').write_text(json.dumps({'completed':1,'incomplete':0,'scope_years':['2024'],
+                'other_fixtures':{'completed':0,'incomplete':0},'profiles':{'leagues':0,'teams':0,'players':0,'failed':0}}),encoding='utf-8')
+            file=source/'matches'/league/f'{bundle.archive_name(current)}.json';file.parent.mkdir(parents=True)
+            file.write_text('{}',encoding='utf-8')
+            manifest=bundle.pack_archive(source,base/'bundles')
+            self.assertTrue(manifest['scope_complete'])
+            self.assertFalse(manifest['complete'])
+
 
 if __name__ == '__main__':
     unittest.main()
