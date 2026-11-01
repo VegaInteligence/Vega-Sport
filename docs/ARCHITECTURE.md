@@ -13,7 +13,8 @@ dashboard/
       clubs/page.jsx
       joueurs/page.jsx
       matchs/page.jsx
-      classements/page.jsx
+      classement-joueurs/page.jsx
+      reglages/page.jsx
       methode/page.jsx
       api/[...path]/route.js   transport vers Bun
       data/[...path]/route.js  transport vers Bun
@@ -21,7 +22,7 @@ dashboard/
       error.jsx
       not-found.jsx
     src/
-      views/                  contenu des sept pages
+      views/                  contenu des pages
       components/             UI, graphiques, profils et détails de match
       hooks/                  saison, filtres, sélection et comparaison
       services/               chargement des données et formatage
@@ -43,7 +44,7 @@ docs/
 tests/
 ```
 
-Les identifiants, saisons et filtres restent dans les URL, par exemple `/clubs?season=2025%2F2026&id=t_1cpjqO`. `useSearchParams` suit les changements d’URL et le retour navigateur. Les mises à jour de filtre utilisent l’API History prise en charge par Next. Le cache conserve une saison complète ; les classements peuvent se consulter seuls sans télécharger ses performances.
+Les identifiants, saisons et filtres restent dans les URL, par exemple `/clubs?season=2025%2F2026&id=t_1cpjqO`. `useSearchParams` suit les changements d’URL et le retour navigateur. Les mises à jour de filtre utilisent l’API History prise en charge par Next. Le cache conserve une saison complète ; le classement joueurs en attente et les réglages ne téléchargent pas ses performances.
 
 Le backend conserve l’accès aux archives et aux clés. En local, Next relaie les réponses sur `/api/*` et `/data/*` vers `ORION_API_ORIGIN`. Sur Vercel, les mêmes handlers tournent dans les routes Next avec Bun ; les JSON sont lus depuis la révision GitHub du déploiement. Aucune copie de `data/` dans le frontend. Seuls les chemins de données autorisés sont exposés par l’application ; les observations absentes restent distinctes des zéros. La [configuration de déploiement](DEPLOYMENT.md) décrit le transport cloud et le worker quotidien.
 

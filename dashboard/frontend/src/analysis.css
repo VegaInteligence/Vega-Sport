@@ -1,4 +1,84 @@
 /* Shared analytical surfaces use the Orion interface tokens. */
+.ballon-dor-icon {
+  display: inline-block;
+  width: 34px;
+  height: 42px;
+  flex-shrink: 0;
+}
+.page-title-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.page-title-with-icon > span {
+  min-width: 0;
+}
+.player-ranking-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.player-ranking-list > li {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 76px;
+  padding: 16px 26px;
+}
+.player-ranking-list > li + li {
+  border-top: 1px solid var(--border);
+}
+.player-ranking-position {
+  width: 36px;
+  flex-shrink: 0;
+  color: var(--muted-light);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.player-ranking-list > li:nth-child(-n + 3) .player-ranking-position {
+  color: var(--accent);
+}
+.player-ranking-avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px dashed var(--border-strong);
+  border-radius: 50%;
+  color: #68736a;
+  background: #141a15;
+}
+.player-ranking-avatar .icon {
+  width: 16px;
+  height: 16px;
+}
+.player-ranking-placeholder {
+  color: var(--muted);
+  font-size: 14px;
+}
+@media (max-width: 640px) {
+  .page-title-with-icon {
+    gap: 11px;
+  }
+  .page-title-with-icon .ballon-dor-icon {
+    width: 27px;
+    height: 34px;
+  }
+  .player-ranking-list > li {
+    min-height: 68px;
+    padding: 14px 18px;
+    gap: 14px;
+  }
+  .player-ranking-position {
+    width: 28px;
+  }
+}
 .sr-only {
   position: absolute;
   width: 1px;

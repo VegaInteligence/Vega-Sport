@@ -24,6 +24,12 @@
     "component": "PlayersPage"
   },
   {
+    "key": "player-ranking",
+    "path": "/classement-joueurs/",
+    "title": "Classement joueurs",
+    "component": "PlayerRankingPage"
+  },
+  {
     "key": "matches",
     "path": "/matchs/",
     "title": "Matchs",
@@ -35,12 +41,6 @@
     "title": "Calendrier",
     "component": "MatchesPage",
     "navigation": false
-  },
-  {
-    "key": "rankings",
-    "path": "/classements/",
-    "title": "Classements",
-    "component": "RankingsPage"
   },
   {
     "key": "method",

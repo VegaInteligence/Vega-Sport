@@ -188,6 +188,7 @@ export function Filters({ fixtures = false }) {
 export default function Layout({
   path,
   title,
+  titleIcon,
   filters = false,
   filterKind = "performances",
   hideHeading = false,
@@ -242,7 +243,18 @@ export default function Layout({
         <main id="main" className={`workspace ${className}`} tabIndex="-1">
           {!hideHeading && (
             <div className="page-heading">
-              <h1 className="page-title">{title}</h1>
+              <h1
+                className={`page-title${titleIcon ? " page-title-with-icon" : ""}`}
+              >
+                {titleIcon ? (
+                  <>
+                    {titleIcon}
+                    <span>{title}</span>
+                  </>
+                ) : (
+                  title
+                )}
+              </h1>
               <div className="heading-actions">
                 {f.data.meta.retrievedAt && (
                   <span className="snapshot-label">

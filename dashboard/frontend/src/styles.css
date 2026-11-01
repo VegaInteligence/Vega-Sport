@@ -945,37 +945,7 @@ input[type="checkbox"] {
   color: var(--muted);
   font: 10px var(--font-mono);
 }
-.rankings-toolbar {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--border);
-}
-.rankings-toolbar label {
-  display: grid;
-  gap: 7px;
-  color: var(--muted);
-  font-size: 11px;
-}
-.rankings-toolbar > input {
-  margin-left: auto;
-}
-.ranking-source {
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 24px 0;
-  font-size: 12px;
-}
-.ranking-source span {
-  color: var(--muted);
-  font: 10px var(--font-mono);
-}
-.club-ranking .data-table,
-.ranking-table {
+.club-ranking .data-table {
   min-width: 0;
 }
 .notice {
@@ -1514,13 +1484,6 @@ input[type="checkbox"] {
     flex-wrap: wrap;
     padding: 10px;
   }
-  .rankings-toolbar > input,
-  .rankings-toolbar label {
-    width: 100%;
-    margin-left: 0;
-  }
-  .ranking-table th,
-  .ranking-table td,
   .club-ranking .data-table th,
   .club-ranking .data-table td {
     padding: 12px 7px;

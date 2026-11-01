@@ -6,7 +6,7 @@ export default function Providers({ children }) {
   return (
     <FootballProvider
       loadData={
-        !pathname.startsWith("/classements") &&
+        !pathname.startsWith("/classement-joueurs") &&
         !pathname.startsWith("/reglages")
       }
     >

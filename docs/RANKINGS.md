@@ -33,7 +33,7 @@ Les rangs peuvent être ex æquo. Les réponses SportsAPI des clubs comportent u
 
 ## Interface
 
-La page **Classements** permet de choisir les sélections FIFA ou les associations UEFA, de sélectionner une édition et de rechercher un pays. Les fiches clubs reliées affichent l’historique UEFA des six saisons collectées, avec rang européen et coefficient. Une absence dans une édition est distincte d’une correspondance d’identité manquante.
+Les fiches clubs reliées affichent l’historique UEFA des six saisons collectées, avec rang européen et coefficient. Une absence dans une édition est distincte d’une correspondance d’identité manquante. Les archives FIFA et UEFA des associations restent stockées dans la base JSON ; elles n’ont pas de page dédiée dans le dashboard.
 
 ## Reproduction
 

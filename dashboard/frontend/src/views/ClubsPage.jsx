@@ -7,7 +7,7 @@ import Layout from "../components/Layout.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { Card, Media, Pager } from "../components/UI.jsx";
 import { ProfileDialog } from "../components/PlayerDetails.jsx";
-import { ClubRanking } from "./RankingsPage.jsx";
+import ClubRanking from "../components/ClubRanking.jsx";
 import { MatchLink } from "../components/MatchLink.jsx";
 import { normalizeText, number } from "../services/format.js";
 export default function ClubsPage() {
