@@ -229,6 +229,42 @@ select optgroup {
   border-top: 1px solid #252c27;
   background: #0d100e;
 }
+.data-explorer {
+  min-width: 0;
+}
+.data-explorer > .segmented-control {
+  margin-block: 14px;
+}
+.data-explorer .json-view {
+  max-height: 65dvh;
+  overflow: auto;
+  tab-size: 2;
+}
+.data-sequence-count,
+.data-record-index {
+  color: var(--muted);
+  font: 11px var(--font-mono);
+}
+.source-metric-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+.source-metric-groups > section {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+}
+.source-metric-groups h3 {
+  margin: 0 0 14px;
+  font-size: 13px;
+}
+.source-metric-groups .performance-stat-list dt {
+  overflow-wrap: anywhere;
+}
 .filter-applied {
   display: flex;
   flex-wrap: wrap;

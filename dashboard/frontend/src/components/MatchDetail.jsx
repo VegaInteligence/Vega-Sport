@@ -2,10 +2,11 @@ import React, { useMemo, useRef, useId, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
-import { Card, Media, Rating, Segments, Empty } from "./UI.jsx";
+import { Card, Media, Rating, Segments, Empty, AsyncState } from "./UI.jsx";
 import Icon from "./Icon.jsx";
 import { XgTimeline, ShotMap } from "./Charts.jsx";
 import { MatchSections } from "./MatchSections.jsx";
+import { periodLabel } from "./PlayerMetrics.jsx";
 import { number, date, isNumber } from "../services/format.js";
 import {
   groupedStats,
@@ -13,7 +14,7 @@ import {
   statValue,
   statPercentage,
 } from "../services/match-data.js";
-import { download } from "../services/resources.js";
+import { download, useResource } from "../services/resources.js";
 import { csvString } from "../model.js";
 const views = [
   ["overview", "Vue d’ensemble", "activity"],
@@ -23,6 +24,114 @@ const views = [
   ["players", "Joueurs", "players"],
   ["data", "Données complètes", "json"],
 ];
+function MatchStatistics({ match }) {
+  const f = useFootball(),
+    [period, setPeriod] = useState("All"),
+    resource = useResource(
+      `team-periods:${match.id}:${f.client.id}`,
+      async () => {
+        await f.client.ensureEndpoint(
+          match,
+          "stats",
+          Boolean(f.client.payloads.get(`${match.id}:stats`)?.error),
+        );
+        const entry = f.client.payloads.get(`${match.id}:stats`);
+        if (entry.error) throw new Error(entry.error);
+        return entry.data;
+      },
+      f.statusKnown,
+    );
+  const display = (payload) => {
+    const periods = payload?.periods || [],
+      selected = periods.find((p) => p.period === period) || periods[0],
+      groups = selected
+        ? (selected.groups || []).map((group, index) => ({
+            title:
+              {
+                Defence: "Défense",
+                Discipline: "Discipline",
+                Duels: "Duels",
+                "Expected goals (xG)": "Buts attendus · xG",
+                Passes: "Passes",
+                Shots: "Tirs",
+                "Top stats": "Chiffres clés",
+              }[group.group_name] ||
+              group.group_name ||
+              `Groupe ${index + 1}`,
+            rows: (group.items || []).map((item) => {
+              const numeric = (value) =>
+                typeof value === "number"
+                  ? value
+                  : typeof value === "string" && /^-?\d/.test(value)
+                    ? Number.parseFloat(value)
+                    : null;
+              const stat = {
+                ...item,
+                label: item.title || item.key,
+                home: numeric(item.home),
+                away: numeric(item.away),
+                homeRaw: item.home,
+                awayRaw: item.away,
+                format: item.format_type,
+              };
+              return groupedStats({ stats: [stat] })[0].rows[0];
+            }),
+          }))
+        : groupedStats(match);
+    return (
+      <>
+        {periods.length > 0 && (
+          <div className="table-toolbar">
+            <label htmlFor="team-stats-period">Période</label>
+            <select
+              id="team-stats-period"
+              value={selected.period}
+              onChange={(e) => setPeriod(e.target.value)}
+            >
+              {periods.map((p) => (
+                <option key={p.period} value={p.period}>
+                  {periodLabel(p.period)}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        {groups.some((group) => group.rows.length) ? (
+          <div className="match-stat-groups">
+            {groups.map((group, index) => (
+              <Card
+                key={`${group.title}:${index}`}
+                title={group.title}
+                action={
+                  <span className="data-source-tag">{group.rows.length}</span>
+                }
+              >
+                <StatRows match={match} stats={group.rows} />
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card title="Statistiques équipes">
+            <Empty>Statistiques d’équipe indisponibles.</Empty>
+          </Card>
+        )}
+      </>
+    );
+  };
+  if (resource.error && match.stats?.length)
+    return (
+      <>
+        <p className="notice" role="status">
+          Périodes détaillées indisponibles.{" "}
+          <button className="inline-link" onClick={resource.retry}>
+            Réessayer
+          </button>
+        </p>
+        {display(null)}
+      </>
+    );
+  return <AsyncState resource={resource}>{display}</AsyncState>;
+}
 function StatRows({ match, stats }) {
   return (
     <div className="comparison-stats">
@@ -413,7 +522,7 @@ export default function MatchDetail({ match }) {
           <Icon name="right" />
           <span>{match.league || competition?.name || "Compétition"}</span>
           <Icon name="right" />
-          <span>{f.season}</span>
+          <span>{match.season || f.season}</span>
         </nav>
         <button
           className="button button-secondary"
@@ -558,26 +667,7 @@ export default function MatchDetail({ match }) {
             </Card>
           </div>
         )}
-        {view === "stats" &&
-          (match.stats?.length ? (
-            <div className="match-stat-groups">
-              {groupedStats(match).map((group) => (
-                <Card
-                  key={group.title}
-                  title={group.title}
-                  action={
-                    <span className="data-source-tag">{group.rows.length}</span>
-                  }
-                >
-                  <StatRows match={match} stats={group.rows} />
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card title="Statistiques équipes">
-              <Empty>Statistiques d’équipe indisponibles.</Empty>
-            </Card>
-          ))}
+        {view === "stats" && <MatchStatistics match={match} />}
         {view === "shots" && <MatchShots match={match} />}
         {view === "lineups" && (
           <MatchSections

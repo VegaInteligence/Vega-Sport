@@ -1,9 +1,11 @@
 import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
 import Icon from "./Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number, date, isNumber } from "../services/format.js";
-import { Modal, Rating, Media, StructuredData, AsyncState } from "./UI.jsx";
+import { Modal, Rating, Media, AsyncState, Segments } from "./UI.jsx";
+import DataExplorer from "./DataExplorer.jsx";
+import PlayerData from "./PlayerData.jsx";
 import { useResource, json } from "../services/resources.js";
 export const metrics = [
   ["minutes", "Minutes"],
@@ -34,7 +36,7 @@ export function ProfileDialog({ id, kind, onClose }) {
   return (
     <Modal title="Fiche PitchAPI" onClose={onClose}>
       <AsyncState resource={resource}>
-        {(value) => <StructuredData value={value} />}
+        {(value) => <DataExplorer value={value} />}
       </AsyncState>
     </Modal>
   );
@@ -99,6 +101,7 @@ function PerformanceMetrics({ fields, row }) {
 }
 export function PlayerDialog() {
   const f = useFootball(),
+    [view, setView] = useState("overview"),
     row = f.byAppearance.get(f.player);
   if (!row) return null;
   const match = f.data.matches.find((m) => m.id === row.matchId);
@@ -178,80 +181,96 @@ export function PlayerDialog() {
         </>
       }
     >
-      {match && (
-        <div className="performance-fixture">
-          <span>
-            {row.starter === true
-              ? "Titulaire"
-              : row.starter === false
-                ? "Remplaçant"
-                : "Participation"}
-          </span>
-          <div>
-            <span>{match.home.name}</span>
-            <b>
-              {number(match.home.score)} <i>–</i> {number(match.away.score)}
-            </b>
-            <span>{match.away.name}</span>
-          </div>
-        </div>
-      )}
+      <Segments
+        label="Vue de la performance"
+        value={view}
+        onChange={setView}
+        items={[
+          ["overview", "Synthèse"],
+          ["stats", "Statistiques"],
+          ["data", "Données complètes"],
+        ]}
+      />
       {!row.statsReliable && (
         <p role="status" className="notice notice-warning">
-          Statistiques partielles : les valeurs suspectes restent absentes.
+          Certaines statistiques sources sont signalées comme incohérentes.
         </p>
       )}
-      <section
-        className="performance-kpis"
-        aria-label="Chiffres clés du joueur"
-      >
-        {[
-          ["minutes", "Minutes", "timer"],
-          ["goals", "Buts", "goal"],
-          ["assists", "Passes décisives", "arrow"],
-          ["shots", "Tirs", "target"],
-        ].map(([key, label, icon]) => (
-          <div key={key}>
-            <Icon name={icon} />
-            <strong>{number(row[key])}</strong>
-            <span>{label}</span>
-          </div>
-        ))}
-      </section>
-      <div className="performance-groups">
-        {performanceGroups.map((group) => (
-          <section className="performance-group" key={group.title}>
-            <h3>
-              <Icon name={group.icon} />
-              {group.title}
-            </h3>
-            <PerformanceMetrics fields={group.fields} row={row} />
-          </section>
-        ))}
-        <section className="performance-group performance-quality">
-          <h3>
-            <Icon name="ball" />
-            Qualité des occasions
-          </h3>
-          <PerformanceMetrics
-            fields={[
-              ["npxg", "xG hors penalty"],
-              ["xgot", "xG cadrés · xGOT"],
-            ]}
-            row={row}
-          />
-          <details
-            className="performance-keeper"
-            open={isNumber(row.saves) || isNumber(row.goalsPrevented)}
+      {view !== "overview" ? (
+        <PlayerData key={row.id} row={row} mode={view} />
+      ) : (
+        <>
+          {match && (
+            <div className="performance-fixture">
+              <span>
+                {row.starter === true
+                  ? "Titulaire"
+                  : row.starter === false
+                    ? "Remplaçant"
+                    : "Participation"}
+              </span>
+              <div>
+                <span>{match.home.name}</span>
+                <b>
+                  {number(match.home.score)} <i>–</i> {number(match.away.score)}
+                </b>
+                <span>{match.away.name}</span>
+              </div>
+            </div>
+          )}
+          <section
+            className="performance-kpis"
+            aria-label="Chiffres clés du joueur"
           >
-            <summary>
-              Gardien
-              <Icon name="chevron" />
-            </summary>
-            <PerformanceMetrics fields={keeperFields} row={row} />
-          </details>
-        </section>
-      </div>
+            {[
+              ["minutes", "Minutes", "timer"],
+              ["goals", "Buts", "goal"],
+              ["assists", "Passes décisives", "arrow"],
+              ["shots", "Tirs", "target"],
+            ].map(([key, label, icon]) => (
+              <div key={key}>
+                <Icon name={icon} />
+                <strong>{number(row[key])}</strong>
+                <span>{label}</span>
+              </div>
+            ))}
+          </section>
+          <div className="performance-groups">
+            {performanceGroups.map((group) => (
+              <section className="performance-group" key={group.title}>
+                <h3>
+                  <Icon name={group.icon} />
+                  {group.title}
+                </h3>
+                <PerformanceMetrics fields={group.fields} row={row} />
+              </section>
+            ))}
+            <section className="performance-group performance-quality">
+              <h3>
+                <Icon name="ball" />
+                Qualité des occasions
+              </h3>
+              <PerformanceMetrics
+                fields={[
+                  ["npxg", "xG hors penalty"],
+                  ["xgot", "xG cadrés · xGOT"],
+                ]}
+                row={row}
+              />
+              <details
+                className="performance-keeper"
+                open={isNumber(row.saves) || isNumber(row.goalsPrevented)}
+              >
+                <summary>
+                  Gardien
+                  <Icon name="chevron" />
+                </summary>
+                <PerformanceMetrics fields={keeperFields} row={row} />
+              </details>
+            </section>
+          </div>
+        </>
+      )}
     </Modal>
   );
 }

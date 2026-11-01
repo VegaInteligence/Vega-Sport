@@ -164,7 +164,54 @@ export function Modal({
     </dialog>
   );
 }
-export function StructuredData({ value, depth = 0 }) {
+function DataRecord({ label, open: initiallyOpen, lazy, children }) {
+  const [open, setOpen] = useState(initiallyOpen);
+  return (
+    <details
+      className="data-record"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary>{label}</summary>
+      {(!lazy || open) && children}
+    </details>
+  );
+}
+function DataSequence({ value, depth, lazy }) {
+  const [page, setPage] = useState(1);
+  const size = 50,
+    total = Math.ceil(value.length / size),
+    current = Math.min(page, total),
+    start = (current - 1) * size;
+  return (
+    <div className="data-sequence">
+      <div className="data-sequence-count" role="status">
+        {number(start + 1)}–{number(Math.min(start + size, value.length))} /{" "}
+        {number(value.length)}
+      </div>
+      {value.slice(start, start + size).map((item, offset) => (
+        <DataRecord
+          key={start + offset}
+          open={value.length < 5}
+          lazy={lazy}
+          label={
+            <>
+              <span className="data-record-index">{start + offset + 1}.</span>{" "}
+              {item?.player?.name ||
+                item?.team?.name ||
+                item?.name ||
+                `Élément ${start + offset + 1}`}
+            </>
+          }
+        >
+          <StructuredData value={item} depth={depth + 1} lazy={lazy} />
+        </DataRecord>
+      ))}
+      {total > 1 && <Pager page={current} total={total} onChange={setPage} />}
+    </div>
+  );
+}
+export function StructuredData({ value, depth = 0, lazy = false }) {
   if (value == null) return <span className="missing-value">—</span>;
   if (typeof value !== "object")
     return (
@@ -182,25 +229,7 @@ export function StructuredData({ value, depth = 0 }) {
     return <pre className="json-view">{JSON.stringify(value, null, 2)}</pre>;
   if (Array.isArray(value))
     return value.length ? (
-      <div className="data-sequence">
-        {value.slice(0, 200).map((item, i) => (
-          <details className="data-record" key={i} open={value.length < 5}>
-            <summary>
-              {item?.player?.name ||
-                item?.team?.name ||
-                item?.name ||
-                `Élément ${i + 1}`}
-            </summary>
-            <StructuredData value={item} depth={depth + 1} />
-          </details>
-        ))}
-        {value.length > 200 && (
-          <p>
-            {value.length - 200} autres éléments dans le téléchargement JSON
-            complet.
-          </p>
-        )}
-      </div>
+      <DataSequence value={value} depth={depth} lazy={lazy} />
     ) : (
       <Empty>Aucun élément renseigné.</Empty>
     );
@@ -210,6 +239,7 @@ export function StructuredData({ value, depth = 0 }) {
     nested = Object.entries(value).filter(
       ([, v]) => v !== null && typeof v === "object",
     );
+  if (!simple.length && !nested.length) return <code>{"{}"}</code>;
   return (
     <>
       <dl className="data-fields">
@@ -220,17 +250,16 @@ export function StructuredData({ value, depth = 0 }) {
               {key === "image_url" && safeImageUrl(v) ? (
                 <Media name="Image" url={v} />
               ) : (
-                <StructuredData value={v} depth={depth + 1} />
+                <StructuredData value={v} depth={depth + 1} lazy={lazy} />
               )}
             </dd>
           </div>
         ))}
       </dl>
       {nested.map(([key, v]) => (
-        <details key={key} className="data-record" open={depth < 1}>
-          <summary>{title(key)}</summary>
-          <StructuredData value={v} depth={depth + 1} />
-        </details>
+        <DataRecord key={key} open={depth < 1} label={title(key)} lazy={lazy}>
+          <StructuredData value={v} depth={depth + 1} lazy={lazy} />
+        </DataRecord>
       ))}
     </>
   );

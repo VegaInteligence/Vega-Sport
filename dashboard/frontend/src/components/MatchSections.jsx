@@ -9,13 +9,10 @@ import {
 } from "./UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { ProfileDialog } from "./PlayerDetails.jsx";
-import { useResource, download } from "../services/resources.js";
-import {
-  MATCH_SECTIONS,
-  number,
-  isNumber,
-  rawPlayerMetrics,
-} from "../services/format.js";
+import { useResource, download, json } from "../services/resources.js";
+import DataExplorer from "./DataExplorer.jsx";
+import PlayerMetrics, { periodLabel } from "./PlayerMetrics.jsx";
+import { MATCH_SECTIONS, number, isNumber } from "../services/format.js";
 import { ShotMap, XgTimeline } from "./Charts.jsx";
 import { MatchLink } from "./MatchLink.jsx";
 export function Lineups({ payload }) {
@@ -172,8 +169,7 @@ export function PlayerStats({
   const row = players.find((p) => p.player?.id === selected) || players[0];
   if (!row) return <Empty>Statistiques joueurs absentes.</Empty>;
   const periods = row.periods || [],
-    chosen = periods.find((p) => p.period === period) || periods[0],
-    metrics = rawPlayerMetrics(chosen || row);
+    chosen = periods.find((p) => p.period === period) || periods[0];
   return (
     <>
       {match.coverage?.teamStatsReliable === false && (
@@ -209,10 +205,7 @@ export function PlayerStats({
             >
               {periods.map((p) => (
                 <option key={p.period} value={p.period}>
-                  {{
-                    FirstHalf: "Première mi-temps",
-                    SecondHalf: "Seconde mi-temps",
-                  }[p.period] || p.period}
+                  {periodLabel(p.period)}
                 </option>
               ))}
             </select>
@@ -220,23 +213,7 @@ export function PlayerStats({
         )}
       </div>
       <h3>{row.player.name} · toutes les métriques</h3>
-      <dl className="data-fields">
-        {[...metrics.values()].map((stat) => (
-          <div key={stat.key}>
-            <dt>{stat.label}</dt>
-            <dd>
-              {stat.value == null
-                ? "—"
-                : stat.total != null
-                  ? `${number(stat.value, 2)} / ${number(stat.total, 2)}`
-                  : typeof stat.value === "number"
-                    ? number(stat.value, 3)
-                    : String(stat.value)}
-            </dd>
-          </div>
-        ))}
-      </dl>
-      {!metrics.size && <StructuredData value={chosen || row} />}
+      <PlayerMetrics row={chosen || row} />
     </>
   );
 }
@@ -620,10 +597,16 @@ export function MatchSections({
 }) {
   const f = useFootball(),
     [section, setSection] = useState(initialSection),
+    [mode, setMode] = useState("analysis"),
     [version, setVersion] = useState(0);
   const result = useResource(
     `section:${match.id}:${section}:${f.configured}:${version}`,
     async () => {
+      if (section === "archive")
+        return {
+          data: await json(`/api/archive/matches/${match.id}`),
+          source: "snapshot",
+        };
       await f.client.ensureEndpoint(match, section, version > 0);
       const entry = f.client.payloads.get(`${match.id}:${section}`);
       if (entry.error) throw new Error(entry.error);
@@ -653,6 +636,7 @@ export function MatchSections({
                 {label}
               </option>
             ))}
+            <option value="archive">Archive complète</option>
           </select>
           <span>{MATCH_SECTIONS.length} analyses</span>
         </div>
@@ -688,13 +672,28 @@ export function MatchSections({
               </button>
             </div>
             {value.warning && <p role="status">{value.warning}</p>}
-            <SectionContent
-              key={match.id + section}
-              match={match}
-              section={section}
-              payload={value.data}
-              onPlayer={f.setPlayer}
-            />
+            {showNavigation && section !== "archive" && (
+              <Segments
+                label="Affichage des données du match"
+                value={mode}
+                items={[
+                  ["analysis", "Analyse"],
+                  ["source", "Données sources"],
+                ]}
+                onChange={setMode}
+              />
+            )}
+            {section === "archive" || mode === "source" ? (
+              <DataExplorer key={section} value={value.data} />
+            ) : (
+              <SectionContent
+                key={match.id + section}
+                match={match}
+                section={section}
+                payload={value.data}
+                onPlayer={f.setPlayer}
+              />
+            )}
           </div>
         )}
       </AsyncState>

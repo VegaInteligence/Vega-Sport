@@ -13,7 +13,15 @@ function RemoteDetail({ id }) {
   const f = useFootball(),
     resource = useResource(`remote-match:${id}`, async () => {
       const record = await json(`/api/archive/matches/${id}`);
-      if (record.fixture) return f.client.normalizedRemote(record.fixture);
+      if (record.fixture)
+        return f.client.normalizedRemote({
+          ...record.fixture,
+          league: record.fixture.league || {
+            id: record.competition_id,
+            name: record.competition_name,
+          },
+          season: record.fixture.season || record.season,
+        });
       return f.client.normalizedRemote(
         (await f.client.request(`matches/${id}`)).data,
       );
