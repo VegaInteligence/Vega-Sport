@@ -2,6 +2,7 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import { pages } from "../../../shared/pages.js";
 import SiteHeader from "./SiteHeader.jsx";
+import SiteFooter from "./SiteFooter.jsx";
 export default function LoadingPage({ href }) {
   const path = usePathname();
   const page = pages.find(
@@ -20,6 +21,7 @@ export default function LoadingPage({ href }) {
           <div className="loading-chart" aria-hidden="true" />
         </div>
       </main>
+      <SiteFooter href={href} path={path} />
     </div>
   );
 }

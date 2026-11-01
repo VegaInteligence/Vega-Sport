@@ -7,6 +7,7 @@ import { PlayerDialog, Comparison } from "./PlayerDetails.jsx";
 import { number, date } from "../services/format.js";
 import CompetitionScope from "./CompetitionScope.jsx";
 import SiteHeader from "./SiteHeader.jsx";
+import SiteFooter from "./SiteFooter.jsx";
 export const navigation = pages
   .filter((page) => page.navigation !== false)
   .map((page) => [page.path, page.title]);
@@ -246,25 +247,8 @@ export default function Layout({
             </div>
           )}
           {children}
-          <footer className="app-footer">
-            <span className="footer-brand">STATARENA</span>
-            <nav aria-label="Informations du projet">
-              <Link
-                href={f.href("/methode/")}
-                aria-current={path === "/methode/" ? "page" : undefined}
-              >
-                Données & méthode
-              </Link>
-              <Link
-                href="https://github.com/OrionQuantPlatform/STATARENA"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Voir le projet ↗
-              </Link>
-            </nav>
-          </footer>
         </main>
+        <SiteFooter href={f.href} path={path} />
       </div>
       <PlayerDialog />
       <Comparison />

@@ -118,6 +118,9 @@ button:disabled {
   background: var(--bg);
 }
 .brand {
+  min-width: 44px;
+  min-height: 44px;
+  justify-content: center;
   display: inline-flex;
   gap: 10px;
   align-items: center;
@@ -125,15 +128,9 @@ button:disabled {
 }
 .brand-logo {
   display: block;
-  width: 167px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
-}
-.footer-brand {
-  color: var(--ink);
-  font-weight: 650;
-  letter-spacing: 0.09em;
-  font-size: 11px;
 }
 .main-nav {
   display: flex;
@@ -1222,19 +1219,116 @@ input[type="checkbox"] {
   font-size: 10px;
   color: var(--muted);
 }
-.app-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 48px;
+/* Shared footer: full-width rule, compact link columns and a separate legal row. */
+.site-footer {
+  margin-top: 80px;
   border-top: 1px solid var(--border);
-  padding: 24px 0 32px;
-  color: var(--muted-light);
+  color: var(--muted);
+  background: var(--bg);
+}
+.site-footer-inner {
+  max-width: 1296px;
+  margin: 0 auto;
+  padding: 52px 28px 0;
+}
+.site-footer-main {
+  display: grid;
+  grid-template-columns: minmax(210px, 1.4fr) repeat(4, minmax(0, 1fr));
+  gap: 40px;
+  padding-bottom: 52px;
+}
+.site-footer-home {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.site-footer-logo {
+  display: block;
+  width: 186px;
+  height: 40px;
+}
+.site-footer-column h2 {
+  margin: 7px 0 18px;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 1.3px;
+  line-height: 1.6;
+  text-transform: uppercase;
+}
+.site-footer-column ul {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.site-footer-column a {
+  display: inline-block;
+  max-width: 100%;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.site-footer a:hover,
+.site-footer a[aria-current="page"] {
+  color: var(--accent);
+}
+.site-footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  border-top: 1px solid var(--border);
+  padding: 24px 0 30px;
   font-size: 11px;
 }
-.app-footer > span {
-  font-weight: 600;
-  color: var(--muted);
+.site-footer-copyright {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.site-footer-github {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+.site-footer-github .icon {
+  width: 14px;
+  height: 14px;
+}
+@media (max-width: 1050px) {
+  .site-footer-main {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 32px;
+  }
+  .site-footer-identity {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 640px) {
+  .site-footer {
+    margin-top: 56px;
+  }
+  .site-footer-inner {
+    padding: 36px 20px 0;
+  }
+  .site-footer-main {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 30px 24px;
+    padding-bottom: 36px;
+  }
+  .site-footer-column h2 {
+    margin-top: 0;
+    margin-bottom: 14px;
+  }
+  .site-footer-bottom {
+    padding: 18px 0 24px;
+    gap: 12px;
+  }
 }
 .route-error {
   max-width: 700px;
@@ -1315,7 +1409,7 @@ input[type="checkbox"] {
     height: 64px;
   }
   .brand-logo {
-    width: 148px;
+    width: 32px;
     height: 32px;
   }
   .main-nav {

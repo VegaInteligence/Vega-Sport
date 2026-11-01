@@ -14,7 +14,12 @@ export default function SiteHeader({ path, href, configured = false }) {
         aria-label="STATARENA, vue d’ensemble"
         href={href("/")}
       >
-        <StatarenaLogo className="brand-logo" width={167} height={36} />
+        <StatarenaLogo
+          layout="symbol"
+          className="brand-logo"
+          width={32}
+          height={32}
+        />
       </Link>
       <nav className="main-nav" aria-label="Navigation principale">
         {navigation.map(([url, label]) => (
