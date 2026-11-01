@@ -84,9 +84,10 @@ def build_tables():
     write('raw/supplemental-index.json',{'meta':supplemental['meta'],'competitions':refs})
     return {'table_rows':dict(counts),'roundtripped_partitions':comparisons,'seasons':len(index['seasons'])}
 
-def build_observations():
+def build_observations(archive_names=None):
     counts=Counter();lookup={};profiles=defaultdict(list);doc_count=0
     for archive in sorted((DATA/'sources/pitchapi/bundles').iterdir()):
+        if archive_names is not None and archive.name not in archive_names: continue
         manifest=read(archive/'manifest.json')
         for bundle in manifest['bundles']:
             path=archive/bundle['path'];body=path.read_bytes()

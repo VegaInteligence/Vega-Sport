@@ -24,10 +24,10 @@ def destination(base, name):
     return target
 
 
-def restore_archive(source, target, overwrite=False):
+def restore_archive(source, target, overwrite=False, allowed_archives=ARCHIVES):
     source, target = Path(source), Path(target)
     manifest = json.loads((source / 'manifest.json').read_text(encoding='utf-8'))
-    if manifest['archive'] != target.name or manifest['archive'] not in ARCHIVES:
+    if manifest['archive'] != target.name or manifest['archive'] not in allowed_archives:
         raise ValueError('Bundle archive name mismatch')
     written = skipped = 0
     for item in manifest['bundles']:

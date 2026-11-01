@@ -1,0 +1,63 @@
+name: Daily season refresh
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+      timezone: "Europe/Paris"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: football-daily-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: "1.4.4"
+      - name: Refresh ongoing seasons
+        working-directory: dashboard
+        run: bun scripts/daily_refresh.mjs
+        env:
+          PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
+      - name: Validate and publish canonical data
+        id: publish
+        run: |
+          python3 dashboard/scripts/verify_daily_data.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/raw data/sources/pitchapi/bundles
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --cached --check
+          git commit -m "data: refresh ongoing football seasons" -m "- Update fixtures, recent matches and player observations
+          - Rebuild canonical JSON partitions and preserve historical seasons"
+          git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: Refresh Vercel production
+        if: steps.publish.outputs.changed == 'true'
+        env:
+          DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$DEPLOY_HOOK" ]; then
+            curl --fail --silent --show-error --request POST "$DEPLOY_HOOK" > /dev/null
+          fi
+      - name: Save collection receipt
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: daily-season-receipt
+          path: data/raw/sync.json
+          if-no-files-found: ignore
+          retention-days: 14

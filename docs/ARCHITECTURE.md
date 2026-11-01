@@ -45,7 +45,7 @@ tests/
 
 Les identifiants, saisons et filtres restent dans les URL, par exemple `/clubs?season=2025%2F2026&id=t_1cpjqO`. `useSearchParams` suit les changements d’URL et le retour navigateur. Les mises à jour de filtre utilisent l’API History prise en charge par Next. Le cache conserve une saison complète ; les classements peuvent se consulter seuls sans télécharger ses performances.
 
-Le backend conserve l’accès aux archives et aux clés. Next relaie les corps de réponse en flux sur `/api/*` et `/data/*`, avec une destination locale configurée côté serveur par `ORION_API_ORIGIN`. Aucune copie de `data/` dans le frontend. Seuls les chemins de données autorisés par Bun sont publics ; fichiers sources, clés, archives privées et liens symboliques sortant de leur périmètre restent bloqués. Les observations absentes restent distinctes des zéros.
+Le backend conserve l’accès aux archives et aux clés. En local, Next relaie les réponses sur `/api/*` et `/data/*` vers `ORION_API_ORIGIN`. Sur Vercel, les mêmes handlers tournent dans les routes Next avec Bun ; les JSON sont lus depuis la révision GitHub du déploiement. Aucune copie de `data/` dans le frontend. Seuls les chemins de données autorisés sont exposés par l’application ; les observations absentes restent distinctes des zéros. La [configuration de déploiement](DEPLOYMENT.md) décrit le transport cloud et le worker quotidien.
 
 ## Développement
 
