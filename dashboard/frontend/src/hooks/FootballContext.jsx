@@ -109,7 +109,7 @@ export function FootballProvider({ children, loadData = true }) {
       ? preferences.defaultSeason
       : manifest.value?.defaultSeason;
   const dataset = useResource(
-    `season:${chosen}:${focus}:${loadData ? "full" : "catalog"}`,
+    `season:${chosen}:${loadData ? `${focus}:full` : "catalog"}`,
     () =>
       chosen
         ? loadData
