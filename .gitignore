@@ -22,3 +22,5 @@ dashboard/dist/
 .next/
 .next-dev/
 next-env.d.ts
+.vercel/
+dashboard/outputs/daily-refresh/

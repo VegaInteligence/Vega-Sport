@@ -116,9 +116,20 @@ export function mergeSeason(manifest, selected, parts) {
   };
 }
 
-export async function loadSeason(manifest, selected, fetcher = fetch) {
-  const season = manifest.seasons.find((item) => item.id === selected);
-  if (!season) throw new Error("Saison indisponible");
+export async function loadSeason(
+  manifest,
+  selected,
+  fetcher = fetch,
+  leagueIds = null,
+) {
+  const source = manifest.seasons.find((item) => item.id === selected);
+  if (!source) throw new Error("Saison indisponible");
+  const season = {
+    ...source,
+    chunks: source.chunks.filter(
+      (c) => !leagueIds || leagueIds.has(c.leagueId),
+    ),
+  };
   const parts = new Array(season.chunks.length);
   let cursor = 0;
   async function worker() {

@@ -17,6 +17,8 @@ import { MatchLink } from "../components/MatchLink.jsx";
 import { normalizeText, seasonLabel, number } from "../services/format.js";
 import { useResource, json, download } from "../services/resources.js";
 import { csvString } from "../model.js";
+import CompetitionScope from "../components/CompetitionScope.jsx";
+import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
 export function SupplementalPanel({
   data: value,
   id = "",
@@ -212,7 +214,10 @@ function Fixtures({ competition, day }) {
       <AsyncState resource={resource}>
         {(value) => {
           const rows = value.matches.filter(
-              (m) => status === "all" || m.status === status,
+              (m) =>
+                (status === "all" || m.status === status) &&
+                (f.focus !== "europe" ||
+                  EUROPE_FOCUS_IDS.has(m.league?.id || m.leagueId)),
             ),
             pages = Math.max(1, Math.ceil(rows.length / 30)),
             current = Math.min(page, pages);
@@ -244,7 +249,7 @@ export default function CompetitionsPage() {
     [page, setPage] = useState(1),
     [supplemental, setSupplemental] = useState(false),
     [day, setDay] = useState("");
-  const catalog = (f.client.catalog || f.data.competitions).map((c) => ({
+  const catalog = f.catalog.map((c) => ({
       ...c,
       seasons: [
         ...new Set([
@@ -283,6 +288,7 @@ export default function CompetitionsPage() {
       ) : (
         <>
           <div className="clubs-toolbar">
+            <CompetitionScope />
             <input
               type="search"
               placeholder="Rechercher une compétition…"
@@ -312,6 +318,7 @@ export default function CompetitionsPage() {
             </select>
             <button
               className="button button-secondary"
+              disabled={f.focus === "europe"}
               onClick={() => setSupplemental((v) => !v)}
             >
               Autres ligues et coupes
@@ -327,7 +334,7 @@ export default function CompetitionsPage() {
             </label>
           </div>
           {day && <Fixtures key={day} day={day} />}{" "}
-          {supplemental ? (
+          {supplemental && f.focus !== "europe" ? (
             <Supplemental />
           ) : (
             <>

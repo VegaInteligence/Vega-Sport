@@ -5,6 +5,7 @@ import { appRoot, databaseRoot } from "./config.js";
 import { matchObservation, profileObservation } from "./services/database.js";
 import { publicFile, response, contained } from "./services/files.js";
 import { handlePitchApi } from "./services/pitchapi.js";
+import { dataJson, remoteData } from "./services/data-store.js";
 
 let credentials;
 async function environment() {
@@ -40,6 +41,35 @@ export async function handleRequest(request) {
     return response("Forbidden", 403);
   if (pathname === "/api/health")
     return Response.json({ status: "ok", runtime: "bun" });
+  if (pathname === "/api/settings") {
+    if (request.method !== "GET" && !head)
+      return response("Method not allowed", 405, { Allow: "GET, HEAD" });
+    let sync = null;
+    try {
+      sync = await dataJson("raw/sync.json");
+    } catch {}
+    const config = await environment();
+    return response(
+      head
+        ? null
+        : JSON.stringify({
+            provider: "PitchAPI Soccer",
+            configured: Boolean(config.PITCHAPI_API_KEY),
+            schedule: {
+              cron: "0 0 * * *",
+              timezone: "Europe/Paris",
+              runner: "GitHub Actions",
+            },
+            sync,
+            revision:
+              (process.env.VERCEL_GIT_COMMIT_SHA || "").slice(0, 7) || null,
+            workflowUrl:
+              "https://github.com/OrionQuantPlatform/Football_Ranking/actions/workflows/daily-data.yml",
+          }),
+      200,
+      { "Content-Type": "application/json; charset=utf-8" },
+    );
+  }
   const profile = pathname.match(
     /^\/api\/archive\/profiles\/(leagues|teams|players)\/([ltp]_[A-Za-z0-9]{6})$/,
   );
@@ -52,7 +82,7 @@ export async function handleRequest(request) {
       return response("Not found", 404);
     try {
       let record;
-      if (existsSync(path.join(databaseRoot, "raw/index.json")))
+      if (remoteData || existsSync(path.join(databaseRoot, "raw/index.json")))
         record = profile
           ? await profileObservation(profile[1], profile[2])
           : await matchObservation(match[1]);
@@ -75,7 +105,7 @@ export async function handleRequest(request) {
   if (pathname === "/data/football-manifest.json")
     return publicFile(
       databaseRoot,
-      existsSync(path.join(databaseRoot, "raw/index.json"))
+      remoteData || existsSync(path.join(databaseRoot, "raw/index.json"))
         ? "raw/index.json"
         : "staging/dashboard/football-manifest.json",
       head,
@@ -86,7 +116,7 @@ export async function handleRequest(request) {
   )
     return publicFile(databaseRoot, pathname.slice(6), head);
   if (pathname.startsWith("/data/")) {
-    if (existsSync(path.join(databaseRoot, "raw/index.json")))
+    if (remoteData || existsSync(path.join(databaseRoot, "raw/index.json")))
       return response("Not found", 404);
     const name = pathname.slice(6);
     const samples = [

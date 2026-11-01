@@ -40,5 +40,11 @@
     "path": "/methode/",
     "title": "Données & méthode",
     "component": "MethodPage"
+  },
+  {
+    "key": "settings",
+    "path": "/reglages/",
+    "title": "Réglages",
+    "component": "SettingsPage"
   }
 ]

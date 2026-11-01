@@ -1,5 +1,7 @@
 import path from "node:path";
 import { realpath, stat } from "node:fs/promises";
+import { databaseRoot } from "../config.js";
+import { remoteData, remoteDataUrl } from "./data-store.js";
 export const response = (body, status = 200, headers = {}) =>
   new Response(body, {
     status,
@@ -19,6 +21,16 @@ export async function publicFile(root, relative, head = false) {
     !contained(root, path.resolve(root, relative))
   )
     return response("Forbidden", 403);
+  if (remoteData && root === databaseRoot) {
+    try {
+      return response(null, 307, {
+        Location: remoteDataUrl(relative),
+        "Cache-Control": "public, max-age=3600, immutable",
+      });
+    } catch {
+      return response("Data revision unavailable", 503);
+    }
+  }
   try {
     const [base, file] = await Promise.all([
       realpath(root),

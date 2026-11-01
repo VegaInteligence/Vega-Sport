@@ -5,6 +5,7 @@ import React from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { PlayerDialog, Comparison } from "./PlayerDetails.jsx";
 import { number, date } from "../services/format.js";
+import CompetitionScope from "./CompetitionScope.jsx";
 export const navigation = pages.map((page) => [page.path, page.title]);
 export function Filters() {
   const f = useFootball();
@@ -24,7 +25,7 @@ export function Filters() {
     f.filters.match !== "all";
   const selected = f.data.competitions.find((c) => c.id === f.filters.league);
   const names = new Map();
-  for (const c of f.data.competitions)
+  for (const c of f.competitions)
     names.set(c.name, (names.get(c.name) || 0) + 1);
   return (
     <section className="filter-panel" aria-label="Filtres des données">
@@ -61,7 +62,7 @@ export function Filters() {
               }
             >
               <option value="all">Toutes les compétitions</option>
-              {f.data.competitions.map((c) => (
+              {f.competitions.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                   {names.get(c.name) > 1 ? ` · ${c.country || c.id}` : ""}
@@ -111,6 +112,7 @@ export function Filters() {
         </div>
       </div>
       <div className="filter-panel-footer">
+        <CompetitionScope />
         <div className="filter-applied">
           {selected && (
             <button

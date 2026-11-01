@@ -19,8 +19,7 @@ const report = {
   command: `cd dashboard && bun run build && ${process.env.ORION_EVIDENCE_DIR ? `ORION_EVIDENCE_DIR=${process.env.ORION_EVIDENCE_DIR} ` : ""}bun run verify`,
   setup:
     "Production Next.js build and local canonical JSON data; native Bun API on ephemeral port; no provider key required",
-  expected:
-    "Seven Next routes, 404 unknown route, real data/archive proxy, no private files or exposed credentials",
+  expected: `${pages.length} Next routes, 404 unknown route, real data/archive proxy, no private files or exposed credentials`,
   status: "failed",
   checks: [],
 };

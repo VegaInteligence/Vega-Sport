@@ -18,12 +18,47 @@ import {
 import { json, useResource, download } from "../services/resources.js";
 import { FootballDataClient } from "../services/football-client.js";
 import { AsyncState } from "../components/UI.jsx";
+import {
+  EUROPE_FOCUS_IDS,
+  PREFERENCES_KEY,
+} from "../../../shared/competition-scope.js";
 export const FootballContext = createContext(null);
 const Context = FootballContext;
 export const useFootball = () => useContext(Context);
 export function FootballProvider({ children, loadData = true }) {
   const initial = useSearchParams();
   const [matchFilter, setMatchFilter] = useState("all");
+  const [preferences, setPreferences] = useState({
+    focus: "all",
+    defaultSeason: "",
+  });
+  const focus =
+    initial.get("focus") === "europe"
+      ? "europe"
+      : initial.get("focus") === "all"
+        ? "all"
+        : preferences.focus;
+  function savePreferences(values) {
+    setPreferences((previous) => {
+      const next = { ...previous, ...values };
+      try {
+        window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(
+        window.localStorage.getItem(PREFERENCES_KEY) || "{}",
+      );
+      setPreferences({
+        focus: saved.focus === "europe" ? "europe" : "all",
+        defaultSeason:
+          typeof saved.defaultSeason === "string" ? saved.defaultSeason : "",
+      });
+    } catch {}
+  }, []);
   const season = initial.get("season") || "";
   const filters = useMemo(
     () => ({
@@ -69,13 +104,20 @@ export function FootballProvider({ children, loadData = true }) {
   );
   const chosen = manifest.value?.seasons.some((s) => s.id === season)
     ? season
-    : manifest.value?.defaultSeason;
+    : manifest.value?.seasons.some((s) => s.id === preferences.defaultSeason)
+      ? preferences.defaultSeason
+      : manifest.value?.defaultSeason;
   const dataset = useResource(
-    `season:${chosen}:${loadData ? "full" : "catalog"}`,
+    `season:${chosen}:${focus}:${loadData ? "full" : "catalog"}`,
     () =>
       chosen
         ? loadData
-          ? loadSeason(manifest.value, chosen)
+          ? loadSeason(
+              manifest.value,
+              chosen,
+              fetch,
+              focus === "europe" ? EUROPE_FOCUS_IDS : null,
+            )
           : Promise.resolve({
               meta: { retrievedAt: manifest.value.retrievedAt },
               competitions: [],
@@ -95,6 +137,20 @@ export function FootballProvider({ children, loadData = true }) {
     await (loadData ? client.init() : client.checkStatus());
     return client.configured;
   });
+  const competitions = useMemo(
+    () =>
+      (data?.competitions || []).filter(
+        (c) => focus !== "europe" || EUROPE_FOCUS_IDS.has(c.id),
+      ),
+    [client, data, focus, status.value, status.loading],
+  );
+  const catalog = useMemo(
+    () =>
+      (client?.catalog || data?.competitions || []).filter(
+        (c) => focus !== "europe" || EUROPE_FOCUS_IDS.has(c.id),
+      ),
+    [client, data, focus, status.value, status.loading],
+  );
   const scope = useMemo(
     () => ({ ...filters, season: chosen }),
     [filters, chosen],
@@ -120,6 +176,7 @@ export function FootballProvider({ children, loadData = true }) {
   const href = (page, params = {}) => {
     const query = new URLSearchParams({
       season: chosen || "",
+      focus,
       ...(filters.query ? { q: filters.query } : {}),
       ...(filters.league !== "all" ? { league: filters.league } : {}),
       ...(filters.minutes !== 1 ? { minutes: String(filters.minutes) } : {}),
@@ -127,6 +184,27 @@ export function FootballProvider({ children, loadData = true }) {
     });
     return `${page}${query.size ? "?" + query : ""}`;
   };
+  function changeFocus(next) {
+    const value = next === "europe" ? "europe" : "all";
+    const params = new URLSearchParams(window.location.search);
+    const league = params.get("league");
+    updateQuery({
+      focus: value,
+      ...(value === "europe" && league && !EUROPE_FOCUS_IDS.has(league)
+        ? { league: "" }
+        : {}),
+      ...(value === "europe" &&
+      window.location.pathname.startsWith("/competitions") &&
+      params.get("id") &&
+      !EUROPE_FOCUS_IDS.has(params.get("id"))
+        ? { id: "" }
+        : {}),
+    });
+    savePreferences({ focus: value });
+    setComparison([]);
+    setPlayer(null);
+    setMatchFilter("all");
+  }
   function toggle(id) {
     setComparison((list) =>
       list.includes(id)
@@ -190,6 +268,12 @@ export function FootballProvider({ children, loadData = true }) {
   }, [chosen, initial]);
   const value = {
     data,
+    focus,
+    changeFocus,
+    competitions,
+    catalog,
+    preferences,
+    savePreferences,
     manifest: manifest.value,
     season: chosen,
     changeSeason,
