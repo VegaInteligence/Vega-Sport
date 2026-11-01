@@ -14,10 +14,10 @@ from urllib.parse import parse_qs, urlsplit
 
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("collect_pitchapi_all", ROOT / "scripts/collect_pitchapi_all.py")
+spec = importlib.util.spec_from_file_location("collect_pitchapi_all", ROOT / "dashboard/scripts/collect_pitchapi_all.py")
 collector = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(collector)
-spec_data = importlib.util.spec_from_file_location("build_dashboard_data", ROOT / "scripts/build_dashboard_data.py")
+spec_data = importlib.util.spec_from_file_location("build_dashboard_data", ROOT / "dashboard/scripts/build_dashboard_data.py")
 builder = importlib.util.module_from_spec(spec_data)
 spec_data.loader.exec_module(builder)
 TEST_KEY = "pk_test_offlineFixtureCredential"

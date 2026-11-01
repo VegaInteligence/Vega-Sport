@@ -10,10 +10,10 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / 'scripts'))
+sys.path.insert(0, str(ROOT / 'dashboard/scripts'))
 from test_dashboard_data import synthetic
 
-spec = importlib.util.spec_from_file_location('season_builder', ROOT / 'scripts/build_season_dashboard.py')
+spec = importlib.util.spec_from_file_location('season_builder', ROOT / 'dashboard/scripts/build_season_dashboard.py')
 builder = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(builder)
 

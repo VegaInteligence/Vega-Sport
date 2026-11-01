@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { copyFile, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { cp, copyFile, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import net from 'node:net';
 import os from 'node:os';
@@ -38,14 +38,11 @@ test('local server preserves dashboard routes while isolating source snapshots a
   let child;
   try {
     await mkdir(path.join(fixture, 'data/staging/dashboard'), { recursive: true });
-    await mkdir(path.join(fixture, 'dashboard'), { recursive: true });
     await mkdir(path.join(fixture, 'data/sources/pitchapi/samples'), {recursive:true});
     await writeFile(path.join(fixture, 'package.json'), '{"type":"module"}');
-    await copyFile(path.join(repositoryRoot, 'dashboard/server.js'), path.join(fixture, 'dashboard/server.js'));
-    await writeFile(path.join(fixture, 'dashboard/index.html'), '<!doctype html><title>Orion test</title>');
-    await writeFile(path.join(fixture, 'dashboard/app.js'), 'export const fixture = "dashboard-app";');
-    await writeFile(path.join(fixture, 'dashboard/styles.css'), ':root { color: green; }');
-    await writeFile(path.join(fixture, 'dashboard/favicon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
+    await cp(path.join(repositoryRoot,'dashboard/shared'),path.join(fixture,'dashboard/shared'),{recursive:true});
+    await cp(path.join(repositoryRoot,'dashboard/backend'),path.join(fixture,'dashboard/backend'),{recursive:true});
+    await copyFile(path.join(repositoryRoot, 'dashboard/backend/server.js'), path.join(fixture, 'dashboard/backend/server.js'));
     await writeFile(path.join(fixture, 'data/staging/dashboard/football.json'), '{"generated":true}');
     await writeFile(path.join(fixture, 'data/sources/pitchapi/samples/pitchapi_championnats.json'), '{"catalog":true}');
     await writeFile(path.join(fixture, 'data/sources/pitchapi/samples/pitchapi_premiers_matchs.json'), '{"matches":true}');
@@ -81,7 +78,7 @@ test('local server preserves dashboard routes while isolating source snapshots a
     }
 
     const port = await availablePort();
-    child = spawn(process.execPath, [path.join(fixture, 'dashboard/server.js')], {
+    child = spawn(process.env.BUN_BINARY||path.join(os.homedir(),'.bun','bin',process.platform==='win32'?'bun.exe':'bun'), [path.join(fixture, 'dashboard/backend/server.js')], {
       cwd: fixture,
       env: { ...process.env, PORT: String(port) },
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -98,28 +95,10 @@ test('local server preserves dashboard routes while isolating source snapshots a
       });
     });
 
-    await t.test('root and legacy entry points serve the dashboard HTML', async () => {
-      for (const route of ['/', '/index.html', '/dashboard', '/dashboard/', '/dashboard/index.html']) {
-        const result = await request(port, route);
-        assert.equal(result.status, 200, route);
-        assert.match(result.headers['content-type'], /^text\/html/);
-        assert.match(result.body, /<title>Orion test<\/title>/);
-      }
-    });
-
-    await t.test('root and legacy assets have browser-compatible MIME types', async () => {
-      for (const route of ['/app.js', '/dashboard/app.js', '/app.js?v=1']) {
-        const result = await request(port, route);
-        assert.equal(result.status, 200, route);
-        assert.match(result.headers['content-type'], /^text\/javascript/);
-        assert.match(result.body, /dashboard-app/);
-      }
-      assert.match((await request(port, '/styles.css')).headers['content-type'], /^text\/css/);
-      assert.match((await request(port, '/favicon.svg')).headers['content-type'], /^image\/svg\+xml/);
-      const head = await request(port, '/app.js', 'HEAD');
-      assert.equal(head.status, 200);
-      assert.equal(head.body, '');
-      assert.ok(Number(head.headers['content-length']) > 0);
+    await t.test('Bun exposes only API/data; page routes belong to Next', async () => {
+      assert.equal((await request(port, '/')).status,404);
+      assert.equal((await request(port, '/clubs/')).status,404);
+      assert.equal(JSON.parse((await request(port, '/api/health')).body).runtime,'bun');
     });
 
     await t.test('generated data and exact raw aliases remain distinct', async () => {
@@ -169,11 +148,11 @@ test('local server preserves dashboard routes while isolating source snapshots a
     });
 
     await t.test('unsupported methods and absent public assets fail cleanly', async () => {
-      const post = await request(port, '/app.js', 'POST');
+      const post = await request(port, '/assets/app-fixture.js', 'POST');
       assert.equal(post.status, 405);
       assert.equal(post.headers.allow, 'GET, HEAD');
-      assert.equal((await request(port, '/missing.js')).status, 404);
-      assert.equal((await request(port, '/app.js')).headers['x-content-type-options'], 'nosniff');
+      assert.equal((await request(port, '/assets/missing.js')).status, 403);
+      assert.equal((await request(port, '/data/football-manifest.json')).headers['x-content-type-options'], 'nosniff');
     });
   } finally {
     if (child && child.exitCode === null) {

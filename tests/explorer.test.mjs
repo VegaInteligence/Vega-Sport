@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MATCH_SECTIONS, PitchExplorer, media, rawPlayerMetrics, safeImageUrl, structuredData } from '../dashboard/explorer.js';
+import {reactFixtures} from './react-runtime.mjs';
+const { MATCH_SECTIONS, PitchExplorer, media, rawPlayerMetrics, safeImageUrl, structuredData }=await reactFixtures();
 
 const player = {player:{id:'p_000001',name:'Player A'},team_id:'t_000001',stats:[{key:'top_stats',title:'Top stats',stats:{'Accurate passes':{key:'accurate_passes',stat:{value:4,total:4}},'Defensive actions':{key:'defensive_actions',stat:{value:1}},'Was fouled':{key:'was_fouled',stat:{value:null}}}}]};
 const makeMatch = (id,league,leagueId,reliable=true) => ({id,league,leagueId,country:'FRA',season:'2026/2027',date:'2026-10-01',status:'finished',home:{id:'t_000001',name:'Home',score:1},away:{id:'t_000002',name:'Away',score:0},coverage:{teamStatsReliable:reliable,shots:reliable},shots:[],stats:[],warnings:[]});
@@ -25,7 +26,7 @@ test('provider media allows only HTTPS CDN images and escapes names and attribut
   const html = media('<script>alert(1)</script>', `${good}?name="<img src=x onerror='alert(1)'>`, 'crest" onclick="alert(1)');
   rejectExecutableMarkup(html);
   assert.match(html, /loading="lazy"/);
-  assert.match(html, /referrerpolicy="no-referrer"/);
+  assert.match(html, /referrerpolicy="no-referrer"/i);
 });
 
 test('structured data retains unknown fields, missingness, zero and nested untrusted text', () => {
@@ -70,8 +71,8 @@ test('synthetic shards render their collected families and preserve source warni
     assert.match(app.renderPayload(match, 'lineups', shard.lineups.data), /Titulaires/);
     assert.match(app.renderPayload(match, 'players', shard.players.data), /toutes les métriques/);
     if (!match.coverage.teamStatsReliable) {
-      assert.match(app.renderPayload(match, 'stats', shard.stats.data), /incohérences|incohérentes/);
-      assert.match(app.renderPayload(match, 'players', shard.players.data), /incohérences|incohérentes/);
+      assert.match(app.renderPayload(match, 'stats', shard.stats.data), /incohérences|incohérentes/i);
+      assert.match(app.renderPayload(match, 'players', shard.players.data), /incohérences|incohérentes/i);
       assert.match(app.renderPayload(match, 'shots', shard.shots.data), /indisponibles|indisponible/);
     }
   }
@@ -133,7 +134,7 @@ test('supplemental competitions remain separate and display missing stats as unk
   assert.match(html,/Ukrainian Premier League/);
   assert.match(html,/&lt;Club&gt;/);
   assert.match(html,/missing-value/);
-  assert.match(html,/>1 – 0</);
+  assert.match(html,/<td>1<\/td><td>0<\/td>/);
   assert.doesNotMatch(html,/<Club>/);
   app.handleClick({dataset:{supplementalTab:'fixtures'}});
   assert.match(app.renderSupplemental(),/Aucune donnée/);

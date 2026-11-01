@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {filterAppearances, filterMatches, seasonLabel, sortRows, per90, sumKnown, csvString, escapeHtml} from '../dashboard/model.js';
+import {filterAppearances, filterMatches, seasonLabel, sortRows, per90, sumKnown, csvString, escapeHtml} from '../dashboard/frontend/src/model.js';
 
 const rows = [
   {id:'a', name:'Álex', team:'Liège', leagueId:'A', season:'2026', matchId:'m1', minutes:45, xg:0, rating:7},
@@ -54,7 +54,8 @@ test('a match filter remains exact when a competition contains several matches',
   assert.deepEqual(filterMatches(matches,moreRows,scoped).map(match=>match.id),['m2']);
 });
 
-import {scatterPlot, shotMap, xgTimeline} from '../dashboard/charts.js';
+import {reactFixtures} from './react-runtime.mjs';
+const {scatterPlot, shotMap, xgTimeline}=await reactFixtures();
 
 const chartMatch = (id, league, shots, homeScore=1, awayScore=0) => ({id, league, home:{id:'home',name:'Home',score:homeScore}, away:{id:'away',name:'Away',score:awayScore}, shots, coverage:{shots:shots.length>0}});
 const normalShot = (i) => ({id:`s${i}`,playerId:'p',playerName:'Player',teamId:i%2?'home':'away',x:90,y:34,minute:i+1,xg:0.1,type:'AttemptSaved',isGoal:false,isOwnGoal:false});

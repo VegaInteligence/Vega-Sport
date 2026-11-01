@@ -2,13 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { cp, copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createMemoryCache, createPitchApiHandler } from '../worker/pitchapi.js';
-import worker from '../worker/index.js';
+import { createMemoryCache, createPitchApiHandler } from '../dashboard/backend/services/pitchapi.js';
+
 
 const fixtureKey = 'pk_test_fixture_only_not_a_real_credential';
 const env = { PITCHAPI_API_KEY: fixtureKey };
@@ -207,33 +207,22 @@ test('network failures and oversized provider bodies fail without leaking except
   assert.equal((await limited.json()).error.code, 'PITCHAPI_INVALID_RESPONSE');
 });
 
-test('the Worker routes APIs before its static asset allowlist', async () => {
-  const status = await worker.fetch(new Request('https://orion.example/api/status'), {});
-  assert.equal(status.status, 200);
-  assert.equal((await status.json()).configured, false);
-  assert.equal((await worker.fetch(new Request('https://orion.example/api/pitchapi/leagues'), {})).status, 503);
-  for (const pathname of ['/.env', '/worker/pitchapi.js', '/server/index.js', '/.openai/hosting.json', '/data/private.json']) {
-    assert.equal((await worker.fetch(new Request(`https://orion.example${pathname}`), {})).status, 404);
-  }
-});
-
 test('the local server serves the same API contract with managed-preview CLI arguments', { timeout: 15000 }, async () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const directory = await mkdtemp(path.join(os.tmpdir(), 'orion-api-server-'));
   let child;
   try {
-    await mkdir(path.join(directory, 'dashboard'));
-    await mkdir(path.join(directory, 'worker'));
     await writeFile(path.join(directory, 'package.json'), '{"type":"module"}');
-    await writeFile(path.join(directory, 'dashboard/index.html'), '<!doctype html><title>Fixture</title>');
-    await copyFile(path.join(root, 'dashboard/server.js'), path.join(directory, 'dashboard/server.js'));
-    await copyFile(path.join(root, 'worker/pitchapi.js'), path.join(directory, 'worker/pitchapi.js'));
+    await cp(path.join(root,'dashboard/shared'),path.join(directory,'dashboard/shared'),{recursive:true});
+    await cp(path.join(root,'dashboard/backend'),path.join(directory,'dashboard/backend'),{recursive:true});
+    await copyFile(path.join(root, 'dashboard/backend/server.js'), path.join(directory, 'dashboard/backend/server.js'));
+    await copyFile(path.join(root, 'dashboard/backend/services/pitchapi.js'), path.join(directory, 'dashboard/backend/services/pitchapi.js'));
     const probe = net.createServer();
     probe.listen(0, '127.0.0.1');
     await once(probe, 'listening');
     const port = probe.address().port;
     await new Promise(resolve => probe.close(resolve));
-    child = spawn(process.execPath, ['dashboard/server.js', '--host', '0.0.0.0', '--port', String(port)], {
+    child = spawn(process.env.BUN_BINARY||path.join(os.homedir(),'.bun','bin',process.platform==='win32'?'bun.exe':'bun'), ['dashboard/backend/server.js', '--host', '0.0.0.0', '--port', String(port)], {
       cwd: directory,
       env: { ...process.env, PORT: '8765', PITCHAPI_API_KEY: '' },
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -255,7 +244,7 @@ test('the local server serves the same API contract with managed-preview CLI arg
     const post = await fetch(`http://127.0.0.1:${port}/api/pitchapi/leagues`, { method: 'POST' });
     assert.equal(post.status, 405);
     assert.equal((await post.json()).error.code, 'METHOD_NOT_ALLOWED');
-    assert.equal((await fetch(`http://127.0.0.1:${port}/`)).status, 200);
+    assert.equal((await fetch(`http://127.0.0.1:${port}/`)).status, 404);
   } finally {
     if (child && child.exitCode === null) {
       const exited = once(child, 'exit');

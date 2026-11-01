@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {gzipSync} from 'node:zlib';
-import {loadSeason, mergeSeason} from '../dashboard/season_data.js';
+import {loadSeason, mergeSeason} from '../dashboard/frontend/src/season_data.js';
 
 const manifest={defaultSeason:'2025/2026',seasons:[{id:'2025/2026',chunks:[{path:'seasons/example.json.gz'}]}]};
 const part={meta:{retrievedAt:'2026-10-31T00:00:00Z',collectedMatches:1,expectedFinishedMatches:2,shotCount:1,knownShotXgCount:1,ratedAppearanceCount:1},

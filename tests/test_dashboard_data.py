@@ -6,7 +6,7 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location('build_dashboard_data', ROOT / 'scripts/build_dashboard_data.py')
+spec = importlib.util.spec_from_file_location('build_dashboard_data', ROOT / 'dashboard/scripts/build_dashboard_data.py')
 builder = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(builder)
 

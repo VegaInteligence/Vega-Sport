@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {historyYears,inHistoryScope} from '../scripts/history_scope.mjs';
+import {historyYears,inHistoryScope} from '../dashboard/scripts/history_scope.mjs';
 
 test('a 2024 scope includes the 2024/2025 and calendar-year 2024 seasons only',()=>{
   const years=historyYears(['--history','--years=2024']);
