@@ -387,19 +387,28 @@ export default function MatchDetail({ match }) {
           timeZone: "Europe/Paris",
         }).format(new Date(match.timeUtc))
       : null;
+  const fromUpcoming =
+    ["upcoming", "calendar"].includes(search.get("from")) ||
+    match.status === "not_started";
   return (
     <div className="match-detail">
       <div className="match-breadcrumb-row">
         <nav className="match-breadcrumb" aria-label="Fil d’Ariane du match">
           <Link
             href={
-              search.get("from") === "calendar"
-                ? f.href("/calendrier/", { week: search.get("week") || "" })
-                : f.href("/matchs/")
+              fromUpcoming
+                ? f.href("/matchs/", {
+                    tab: "upcoming",
+                    ...(search.get("week") ? { week: search.get("week") } : {}),
+                  })
+                : f.href("/matchs/", {
+                    tab: "results",
+                    ...(search.get("week") ? { week: search.get("week") } : {}),
+                  })
             }
           >
             <Icon name="back" />
-            {search.get("from") === "calendar" ? "Calendrier" : "Matchs"}
+            {fromUpcoming ? "Matchs à venir" : "Résultats"}
           </Link>
           <Icon name="right" />
           <span>{match.league || competition?.name || "Compétition"}</span>

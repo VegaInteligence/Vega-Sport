@@ -33,7 +33,8 @@
     "key": "calendar",
     "path": "/calendrier/",
     "title": "Calendrier",
-    "component": "CalendarPage"
+    "component": "MatchesPage",
+    "navigation": false
   },
   {
     "key": "rankings",
@@ -45,7 +46,8 @@
     "key": "method",
     "path": "/methode/",
     "title": "Données & méthode",
-    "component": "MethodPage"
+    "component": "MethodPage",
+    "navigation": false
   },
   {
     "key": "settings",

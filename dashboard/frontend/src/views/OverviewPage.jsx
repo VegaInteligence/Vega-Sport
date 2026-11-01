@@ -199,7 +199,10 @@ export default function OverviewPage() {
           title="Matchs collectés"
           className="span-8 match-list-card"
           action={
-            <Link className="inline-link" href={f.href("/matchs/")}>
+            <Link
+              className="inline-link"
+              href={f.href("/matchs/", { tab: "results" })}
+            >
               Tous les matchs <Icon name="arrow" />
             </Link>
           }

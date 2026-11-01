@@ -6,7 +6,9 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { PlayerDialog, Comparison } from "./PlayerDetails.jsx";
 import { number, date } from "../services/format.js";
 import CompetitionScope from "./CompetitionScope.jsx";
-export const navigation = pages.map((page) => [page.path, page.title]);
+export const navigation = pages
+  .filter((page) => page.navigation !== false)
+  .map((page) => [page.path, page.title]);
 export function Filters({ fixtures = false }) {
   const f = useFootball();
   const reset = () =>
@@ -190,6 +192,7 @@ export default function Layout({
   filterKind = "performances",
   hideHeading = false,
   className = "",
+  subnav,
   children,
 }) {
   const f = useFootball();
@@ -257,6 +260,7 @@ export default function Layout({
               </div>
             </div>
           )}
+          {subnav}
           {filters && <Filters fixtures={filterKind === "fixtures"} />}
           {f.notice && (
             <div role="status" className="notice">
@@ -267,13 +271,21 @@ export default function Layout({
           {children}
           <footer className="app-footer">
             <span>orion.</span>
-            <Link
-              href="https://github.com/OrionQuantPlatform/Football_Ranking"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Voir le projet ↗
-            </Link>
+            <nav aria-label="Informations du projet">
+              <Link
+                href={f.href("/methode/")}
+                aria-current={path === "/methode/" ? "page" : undefined}
+              >
+                Données & méthode
+              </Link>
+              <Link
+                href="https://github.com/OrionQuantPlatform/Football_Ranking"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Voir le projet ↗
+              </Link>
+            </nav>
           </footer>
         </main>
       </div>

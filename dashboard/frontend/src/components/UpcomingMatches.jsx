@@ -38,7 +38,8 @@ function Fixture({ entry, week, compact }) {
         id: fixture.id,
         competition: fixture.league?.id,
         sourceSeason: fixture.season,
-        from: "calendar",
+        from: "upcoming",
+        tab: "upcoming",
         week,
       })}
       data-fixture-id={fixture.id}
@@ -102,7 +103,8 @@ export default function UpcomingMatches({ compact = false }) {
     if (!groups.has(entry.day)) groups.set(entry.day, []);
     groups.get(entry.day).push(entry);
   }
-  const calendarHref = (start) => f.href("/calendrier/", { week: start });
+  const calendarHref = (start) =>
+    f.href("/matchs/", { tab: "upcoming", week: start });
   return (
     <section
       className={`upcoming-section${compact ? " upcoming-preview" : " weekly-calendar"}`}
@@ -124,7 +126,7 @@ export default function UpcomingMatches({ compact = false }) {
         </div>
         {compact ? (
           <Link className="inline-link" href={calendarHref(week.start)}>
-            Calendrier <Icon name="arrow" />
+            Tous les matchs à venir <Icon name="arrow" />
           </Link>
         ) : (
           <nav className="week-navigation" aria-label="Choisir la semaine">
@@ -210,7 +212,8 @@ export default function UpcomingMatches({ compact = false }) {
           {f.season !== f.manifest.defaultSeason ? (
             <Link
               className="button button-secondary"
-              href={f.href("/calendrier/", {
+              href={f.href("/matchs/", {
+                tab: "upcoming",
                 season: f.manifest.defaultSeason,
                 week: currentWeek.start,
                 league: "",

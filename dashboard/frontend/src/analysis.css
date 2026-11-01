@@ -1680,6 +1680,32 @@
 }
 
 /* Upcoming fixtures share one compact preview and a weekly calendar. */
+.matches-view-switch {
+  display: flex;
+  gap: 28px;
+  margin: -12px 0 24px;
+  border-bottom: 1px solid var(--border);
+}
+.matches-view-switch a {
+  padding: 10px 0 13px;
+  color: var(--muted);
+  font-size: 13px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.matches-view-switch a:hover {
+  color: var(--ink);
+}
+.matches-view-switch a[aria-current="page"] {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.app-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px 24px;
+}
 .fixture-filter-fields {
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(140px, 0.6fr);
 }

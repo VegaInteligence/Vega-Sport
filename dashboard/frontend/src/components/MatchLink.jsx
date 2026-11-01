@@ -4,7 +4,7 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { number, date } from "../services/format.js";
 import Icon from "./Icon.jsx";
 import { Media } from "./UI.jsx";
-export function MatchLink({ match }) {
+export function MatchLink({ match, week }) {
   const f = useFootball(),
     m = match.home
       ? {
@@ -24,6 +24,8 @@ export function MatchLink({ match }) {
       href={
         m.id
           ? f.href("/matchs/", {
+              tab: "results",
+              ...(week ? { week } : {}),
               id: m.id,
               competition: match.league?.id || m.leagueId || "",
               sourceSeason: match.season || m.season || "",
