@@ -175,7 +175,7 @@ class PitchClient:
             headers = {}
             error_info = None
             try:
-                request = Request(url, headers={"X-API-KEY": self._api_key, "Accept": "application/json", "User-Agent": "Orion-Football-Ranking/1.0"}, method="GET")
+                request = Request(url, headers={"X-API-KEY": self._api_key, "Accept": "application/json", "User-Agent": "STATARENA-Football-Ranking/1.0"}, method="GET")
                 status, headers, body = self._transport(request, self.timeout)
                 text = body.decode("utf-8-sig", errors="replace")
                 try:

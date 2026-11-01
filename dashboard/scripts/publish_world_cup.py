@@ -19,7 +19,7 @@ for file in (DATA/'staging/pitchapi-world-cup'/LEAGUE).glob('*.json'):
 assert len(list((archive/'matches'/LEAGUE).glob('*.json')))==104
 profiles=DATA/'staging/pitchapi-world-cup-profiles'
 if profiles.exists():shutil.copytree(profiles,archive/'profiles')
-base='https://orion-football-ranking.vercel.app/api/pitchapi'
+base='https://statarena-analytics.vercel.app/api/pitchapi'
 def get(path):
  with urllib.request.urlopen(base+path,timeout=30) as response:return json.load(response)['data']
 league=next(x for x in get('/leagues')['leagues'] if x['id']==LEAGUE)

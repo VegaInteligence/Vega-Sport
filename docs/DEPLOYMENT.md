@@ -1,8 +1,8 @@
 # Vercel et collecte quotidienne
 
-Site : [orion-football-ranking.vercel.app](https://orion-football-ranking.vercel.app).
+Site : [statarena-analytics.vercel.app](https://statarena-analytics.vercel.app).
 
-Le projet Vercel est relié à `OrionQuantPlatform/Football_Ranking`, branche de production `main`. Les pushes déclenchent les déploiements Git. Les commits qui restent uniquement sur une machine ne déclenchent pas Vercel.
+Le projet Vercel est relié à `OrionQuantPlatform/STATARENA`, branche de production `main`. Les pushes déclenchent les déploiements Git. Les commits qui restent uniquement sur une machine ne déclenchent pas Vercel.
 
 | Réglage Vercel | Valeur |
 | --- | --- |
@@ -44,7 +44,7 @@ Une erreur d'authentification, un inventaire invalide, un échec transitoire per
 - Vercel : `PITCHAPI_API_KEY`, secret côté serveur, sans préfixe `NEXT_PUBLIC_`.
 - Local : `dashboard/.env`, ignoré par Git.
 
-La page **Réglages** affiche l'état de configuration et la dernière collecte ; elle ne permet pas d'écrire une clé serveur depuis le site public. Les préférences d'affichage sont enregistrées sur l'appareil. Le focus **Top 7 Europe + UEFA** contient les premières divisions anglaise, espagnole, allemande, italienne, française, portugaise et néerlandaise, plus Champions League, Europa League et Conference League ; les autres données restent disponibles en désactivant ce focus.
+Le bouton de thème est placé à droite de la navigation ; son choix est enregistré sur l’appareil. L’état de collecte reste accessible via `/api/settings` et GitHub Actions. Le focus **Top 7 Europe + UEFA** contient les premières divisions anglaise, espagnole, allemande, italienne, française, portugaise et néerlandaise, plus Champions League, Europa League et Conference League ; les autres données restent disponibles en désactivant ce focus.
 
 ## Vérifier ou lancer en local
 

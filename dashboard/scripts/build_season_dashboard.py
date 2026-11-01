@@ -118,7 +118,7 @@ def build(output=OUTPUT, archive=None, display_season=None, include_inventory_on
         'notes': [
             'Compétitions européennes PitchAPI ; les saisons civiles sont regroupées par année de début.',
             'La collecte peut être incomplète ; comparer collectedMatches à expectedFinishedMatches.',
-            'Les notes proviennent de PitchAPI ; aucun score Orion n’est calculé.',
+            'Les notes proviennent de PitchAPI ; aucun score STATARENA n’est calculé.',
             'Les valeurs absentes restent null ; les statistiques d’action incohérentes sont masquées.',
             'Les rôles ne sont pas déduits des codes de position non validés du fournisseur.',
         ],

@@ -16,7 +16,7 @@ export function remoteDataUrl(relative) {
     process.env.ORION_DATA_REVISION || process.env.VERCEL_GIT_COMMIT_SHA;
   if (!/^[a-f0-9]{40}$/i.test(revision || ""))
     throw new Error("Missing immutable data revision");
-  return `https://raw.githubusercontent.com/OrionQuantPlatform/Football_Ranking/${revision}/data/${relative}`;
+  return `https://raw.githubusercontent.com/OrionQuantPlatform/STATARENA/${revision}/data/${relative}`;
 }
 
 // An optional bounded warm-instance cache; Git is the durable source of truth.

@@ -1,6 +1,8 @@
-# Football Ranking
+# STATARENA
 
-Football Ranking est un projet de recherche consacré à la création d’un classement personnel du Ballon d’Or à partir des performances individuelles, match par match.
+![STATARENA](dashboard/frontend/public/branding/social/github-readme-banner-1280x380.png)
+
+STATARENA est un projet de recherche consacré à la création d’un classement personnel du Ballon d’Or à partir des performances individuelles, match par match.
 
 L’approche vise à comparer attaquants, milieux, défenseurs et gardiens en tenant compte de leur rôle, de leur temps de jeu et du niveau des équipes rencontrées.
 
@@ -14,11 +16,11 @@ Les formules, pondérations et limites sont détaillées dans la [documentation 
 
 ## Explorer les données
 
-[Ouvrir le dashboard Orion](https://orion-football-ranking.vercel.app).
+[Ouvrir le dashboard STATARENA](https://statarena-analytics.vercel.app).
 
-Le stockage est une [base JSON](docs/JSON_DATABASE.md) dans `data/raw/`, organisée par saison et par entité : joueurs, équipes, matchs, performances et tirs. Le dashboard lit ces tables ; `data/computed/` est réservé aux futurs résultats des modèles.
+Le stockage est une [base JSON](docs/JSON_DATABASE.md) dans `data/raw/`, organisée par saison et par entité : joueurs, équipes, matchs, performances et tirs. Le dashboard utilise les vues optimisées de `data/computed/` et accède aux tables brutes pour les détails complets.
 
-Le [dashboard Orion](docs/DASHBOARD.md) propose une interface sombre pour parcourir les compétitions et les clubs, comparer les joueurs et explorer les données complètes des matchs. La connexion à PitchAPI ouvre les saisons et les analyses à la demande. Les notes affichées proviennent de PitchAPI ; le classement Orion reste à calibrer et à valider.
+Le [dashboard STATARENA](docs/DASHBOARD.md) propose une interface claire ou sombre pour parcourir les compétitions et les clubs, comparer les joueurs et explorer les données complètes des matchs. La connexion à PitchAPI ouvre les saisons et les analyses à la demande. Les notes affichées proviennent de PitchAPI ; le classement STATARENA reste à calibrer et à valider.
 
 L'archive locale couvre les compétitions européennes PitchAPI disponibles de
 2024/25 à 2026/27, ainsi que les saisons civiles 2024 à 2026. Des résultats et calendriers complémentaires

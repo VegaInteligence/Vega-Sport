@@ -1,4 +1,4 @@
-# Dashboard Orion
+# Dashboard STATARENA
 
 Application Next.js App Router avec backend Bun et base JSON locale. Sept sections : vue d’ensemble, compétitions, clubs, joueurs, classement joueurs, matchs et réglages. La méthode reste accessible dans le pied de page. Les données disponibles restent consultables sans clé API.
 
@@ -8,7 +8,7 @@ bun install --frozen-lockfile
 bun run dev
 ```
 
-Ouvrir http://127.0.0.1:3000/. Les pages et la navigation utilisent Next.js ; `/api` et `/data` passent par le backend natif Bun. Le projet conserve les saisons, filtres, profils, comparaisons, exports et treize familles de détails de match. Les notes affichées sont celles de PitchAPI ; aucun classement Orion validé n’est encore calculé.
+Ouvrir http://127.0.0.1:3000/. Les pages et la navigation utilisent Next.js ; `/api` et `/data` passent par le backend natif Bun. Le projet conserve les saisons, filtres, profils, comparaisons, exports et treize familles de détails de match. Les notes affichées sont celles de PitchAPI ; aucun classement STATARENA validé n’est encore calculé.
 
 Les statistiques des matchs et des joueurs proposent toutes les périodes collectées et conservent les groupes de métriques de la source. Les fiches joueurs donnent aussi accès aux données avancées, tirs, cartes d’activité, événements, compositions, réseaux de passes et profils. Les synthèses restent disponibles.
 

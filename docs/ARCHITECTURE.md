@@ -1,6 +1,6 @@
 # Architecture
 
-Orion est une application **Next.js App Router** avec un backend de données **Bun.serve**. Les routes sont définies par les fichiers `app/**/page.jsx`. Le layout Next partage le contexte React et les liens Next assurent la navigation sans rechargement du document.
+STATARENA est une application **Next.js App Router** avec un backend de données **Bun.serve**. Les routes sont définies par les fichiers `app/**/page.jsx`. Le layout Next partage le contexte React et les liens Next assurent la navigation sans rechargement du document.
 
 ```text
 dashboard/
@@ -14,7 +14,6 @@ dashboard/
       joueurs/page.jsx
       matchs/page.jsx
       classement-joueurs/page.jsx
-      reglages/page.jsx
       methode/page.jsx
       api/[...path]/route.js   transport vers Bun
       data/[...path]/route.js  transport vers Bun

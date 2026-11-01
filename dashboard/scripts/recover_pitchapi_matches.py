@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Stage missing finished European match endpoint observations via the configured Orion proxy."""
+"""Stage missing finished European match endpoint observations via the configured STATARENA proxy."""
 import collections, concurrent.futures, datetime, json, sys, time, urllib.request, urllib.error, urllib.parse
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2];WORLD_CUP='--world-cup' in sys.argv; OUT=ROOT/'data/staging'/('pitchapi-world-cup' if WORLD_CUP else 'pitchapi-audit-recovery');OUT.mkdir(parents=True,exist_ok=True)
-BASE='https://orion-football-ranking.vercel.app/api/pitchapi'; audit=json.loads((ROOT/'dashboard/outputs/pitchapi-coverage/live-catalogue-audit.json').read_text())
+BASE='https://statarena-analytics.vercel.app/api/pitchapi'; audit=json.loads((ROOT/'dashboard/outputs/pitchapi-coverage/live-catalogue-audit.json').read_text())
 endpoints={'match':'','events':'events','players':'players','shots':'shots','stats':'stats','lineups':'lineups','momentum':'momentum','h2h':'h2h','player_halves':'players/halves','advanced_teams':'advanced','advanced_players':'advanced/players','pass_networks':'advanced/network','heatmaps':'heatmaps'}
 def get(path):
  for attempt in range(4):
@@ -43,5 +43,5 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=1 if WORLD_CUP else 3) as
  for i,row in enumerate(ex.map(worker,jobs),1):
   results.append(row)
   if i%10==0:print('Recovered',i,'/',len(jobs),flush=True)
-report={'setup':'Live Orion server-side PitchAPI proxy; staged World Cup matches.' if WORLD_CUP else 'Live Orion server-side PitchAPI proxy, matches with missing families from live catalogue audit; staged only.','command':'python3 dashboard/scripts/recover_pitchapi_matches.py'+(' --world-cup' if WORLD_CUP else ''),'expected':'Each identified finished match has all 13 recorded endpoint responses; 404 is preserved as unavailable, not as success.','matches':len(jobs),'complete':sum(r['complete'] for r in results),'incomplete':sum(not r['complete'] for r in results),'results':results}
+report={'setup':'Live STATARENA server-side PitchAPI proxy; staged World Cup matches.' if WORLD_CUP else 'Live STATARENA server-side PitchAPI proxy, matches with missing families from live catalogue audit; staged only.','command':'python3 dashboard/scripts/recover_pitchapi_matches.py'+(' --world-cup' if WORLD_CUP else ''),'expected':'Each identified finished match has all 13 recorded endpoint responses; 404 is preserved as unavailable, not as success.','matches':len(jobs),'complete':sum(r['complete'] for r in results),'incomplete':sum(not r['complete'] for r in results),'results':results}
 (ROOT/'dashboard/outputs/pitchapi-coverage'/('world-cup-recovery.json' if WORLD_CUP else 'recovery.json')).write_text(json.dumps(report,indent=2)+'\n');print(json.dumps({k:v for k,v in report.items() if k!='results'},indent=2))

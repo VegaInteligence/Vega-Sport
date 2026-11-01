@@ -93,7 +93,7 @@ async function request(endpoint) {
         headers: {
           "X-API-KEY": key,
           Accept: "application/json",
-          "User-Agent": "Orion-Football-Ranking/1.0",
+          "User-Agent": "STATARENA-Football-Ranking/1.0",
         },
         redirect: "error",
         signal: AbortSignal.timeout(30000),

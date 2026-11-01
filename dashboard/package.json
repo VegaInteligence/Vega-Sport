@@ -1,12 +1,12 @@
 {
-  "name": "orion-football-ranking",
+  "name": "statarena",
   "version": "1.0.0",
   "private": true,
   "workspaces": [
     "frontend"
   ],
   "type": "module",
-  "description": "Explorateur des données du projet Orion Football Ranking",
+  "description": "Explorateur des données du projet STATARENA Football Ranking",
   "scripts": {
     "dev": "bun scripts/dev.mjs",
     "dev:frontend": "bun --bun next dev frontend --hostname 127.0.0.1 --port 3000",

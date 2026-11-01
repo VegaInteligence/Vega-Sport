@@ -53,7 +53,7 @@ fournisseur, notamment les pourcentages entre parenthèses.
 - `meta.playerCount` compte tous les joueurs distincts inscrits ;
   `activePlayerCount` compte ceux qui ont joué.
 - Une note `rating` est une note du fournisseur PitchAPI, sans validation comme
-  score Orion. `meta.rankingAvailable` reste `false`.
+  score STATARENA. `meta.rankingAvailable` reste `false`.
 - `role` reste `null` : les codes de poste des titulaires et des remplaçants ne
   sont pas interchangeables, et leur correspondance n’est pas validée.
   `starter`, `positionId`, `rawPitchX` et `rawPitchY` conservent l’information

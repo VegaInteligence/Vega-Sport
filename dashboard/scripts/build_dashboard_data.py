@@ -2,7 +2,7 @@
 """Build the public dashboard snapshot from the checked-in PitchAPI responses.
 
 Only the Python standard library is required. This script does not contact an API,
-read credentials, calculate an Orion ranking, or modify the source snapshots.
+read credentials, calculate an STATARENA ranking, or modify the source snapshots.
 """
 
 from __future__ import annotations
@@ -371,7 +371,7 @@ def build_snapshot(raw, catalog):
             "seasons": sorted({m["season"] for m in matches if m.get("season")}),
             "notes": [
                 "Échantillon exploratoire de matchs ; ce n’est pas une saison complète.",
-                "Les notes sont celles du fournisseur PitchAPI. Aucun score ni classement Orion n’est calculé.",
+                "Les notes sont celles du fournisseur PitchAPI. Aucun score ni classement STATARENA n’est calculé.",
                 "Une donnée manquante reste null. Les zéros suspects sont masqués et signalés.",
                 "Les rôles ne sont pas déduits des identifiants de poste non documentés du fournisseur.",
                 "Les coordonnées de tirs sont celles du fournisseur ; aucune précision géométrique supplémentaire n’est inférée.",

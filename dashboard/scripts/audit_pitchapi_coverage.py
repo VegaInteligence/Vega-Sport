@@ -3,7 +3,7 @@
 import collections, concurrent.futures, datetime, gzip, json, time, urllib.parse, urllib.request, urllib.error
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2]; DATA=ROOT/'data'; OUT=ROOT/'dashboard/outputs/pitchapi-coverage';OUT.mkdir(parents=True,exist_ok=True)
-BASE='https://orion-football-ranking.vercel.app/api/pitchapi'
+BASE='https://statarena-analytics.vercel.app/api/pitchapi'
 def get(path):
  for attempt in range(4):
   try:
@@ -53,5 +53,5 @@ required={'match','events','players','shots','stats','lineups','momentum','h2h',
 for row in results:
  row['finished_missing_families']=[{'match_id':mid,'missing':sorted(required-covered[mid])} for mid in row.get('live_finished_ids',[]) if required-covered[mid]]
  row.pop('live_finished_ids',None)
-report={'timestamp_utc' :datetime.datetime.now(datetime.timezone.utc).isoformat(),'setup':'Public Orion server-side PitchAPI proxy; locally saved source bundle inventories and canonical match-observations index. Scope: European competitions and FIFA World Cup, seasons from 2024 onward. No credentials recorded.','command':'python3 dashboard/scripts/audit_pitchapi_coverage.py','catalogue_leagues':len(catalogue),'catalogue_competition_seasons':len(jobs),'successful':sum('error' not in r for r in results),'failed':sum('error' in r for r in results),'season_competitions_not_in_inventory':sum(not r['in_saved_inventory'] for r in results),'live_finished_without_observations':sum(len(r.get('finished_without_observations',[])) for r in results),'new_fixtures':sum(len(r.get('new_fixture_ids',[])) for r in results),'finished_missing_families':sum(len(r['finished_missing_families']) for r in results),'results':results}
+report={'timestamp_utc' :datetime.datetime.now(datetime.timezone.utc).isoformat(),'setup':'Public STATARENA server-side PitchAPI proxy; locally saved source bundle inventories and canonical match-observations index. Scope: European competitions and FIFA World Cup, seasons from 2024 onward. No credentials recorded.','command':'python3 dashboard/scripts/audit_pitchapi_coverage.py','catalogue_leagues':len(catalogue),'catalogue_competition_seasons':len(jobs),'successful':sum('error' not in r for r in results),'failed':sum('error' in r for r in results),'season_competitions_not_in_inventory':sum(not r['in_saved_inventory'] for r in results),'live_finished_without_observations':sum(len(r.get('finished_without_observations',[])) for r in results),'new_fixtures':sum(len(r.get('new_fixture_ids',[])) for r in results),'finished_missing_families':sum(len(r['finished_missing_families']) for r in results),'results':results}
 (OUT/'live-catalogue-audit.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n');print(json.dumps({k:v for k,v in report.items() if k!='results'},indent=2),flush=True)

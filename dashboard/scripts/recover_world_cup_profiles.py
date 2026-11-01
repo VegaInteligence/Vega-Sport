@@ -22,7 +22,7 @@ def worker(job):
  for attempt in range(3):
   try:
    time.sleep(1)
-   with urllib.request.urlopen(f'https://orion-football-ranking.vercel.app/api/pitchapi/{kind}/{id}',timeout=30) as response:status=response.status;body=json.load(response)
+   with urllib.request.urlopen(f'https://statarena-analytics.vercel.app/api/pitchapi/{kind}/{id}',timeout=30) as response:status=response.status;body=json.load(response)
   except urllib.error.HTTPError as e:
    status=e.code
    try:body=json.load(e)
@@ -36,5 +36,5 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
  for n,status in enumerate(ex.map(worker,jobs),1):
   counts[str(status)]+=1
   if n%100==0:print('Profiles',n,'/',len(jobs),flush=True)
-report={'setup':'World Cup match IDs vs existing profile index; live Orion PitchAPI proxy.','command':'python3 dashboard/scripts/recover_world_cup_profiles.py','expected':'Record provider status for every referenced profile missing a previously successful observation.','referenced':{k:len(v) for k,v in ids.items()},'requested':len(jobs),'statuses':dict(counts),'staged':True}
+report={'setup':'World Cup match IDs vs existing profile index; live STATARENA PitchAPI proxy.','command':'python3 dashboard/scripts/recover_world_cup_profiles.py','expected':'Record provider status for every referenced profile missing a previously successful observation.','referenced':{k:len(v) for k,v in ids.items()},'requested':len(jobs),'statuses':dict(counts),'staged':True}
 (ROOT/'dashboard/outputs/pitchapi-coverage/world-cup-profiles.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report,indent=2))

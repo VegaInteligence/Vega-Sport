@@ -2,7 +2,7 @@
 import fs from 'node:fs/promises';
 import {performance} from 'node:perf_hooks';
 import {loadSeason} from '../frontend/src/season_data.js';
-const base=process.env.ORION_VERIFY_URL||'https://orion-football-ranking.vercel.app';
+const base=process.env.ORION_VERIFY_URL||'https://statarena-analytics.vercel.app';
 const output=process.argv[2]||'outputs/loading-performance/http-baseline.json';
 const report={setup:'Fresh Node process without a browser HTTP cache; live HTTP application and actual season loader. No provider requests.',command:`cd dashboard && ORION_VERIFY_URL=${base} ${process.env.NEXT_PUBLIC_DATA_REVISION ? `NEXT_PUBLIC_DATA_REVISION=${process.env.NEXT_PUBLIC_DATA_REVISION} ` : ""}${process.env.ORION_DATA_MANIFEST ? `ORION_DATA_MANIFEST=${process.env.ORION_DATA_MANIFEST} ` : ""}node scripts/benchmark_loading.mjs ${output}`,expected:'Load the current season without losing fixtures, matches or appearances; record data requests, bytes and wall time.',status:'failed',scopes:[]};
 try {

@@ -40,7 +40,7 @@ try {
   assert.equal(raw.headers.get("cache-control"), "no-store");
   assert.match(
     raw.headers.get("location"),
-    /^https:\/\/raw\.githubusercontent\.com\/OrionQuantPlatform\/Football_Ranking\/[a-f0-9]{40}\/data\/raw\/index.json$/,
+    /^https:\/\/raw\.githubusercontent\.com\/OrionQuantPlatform\/STATARENA\/[a-f0-9]{40}\/data\/raw\/index.json$/,
   );
   report.dataLocation = raw.headers.get("location");
   const archive = await json("/api/archive/matches/m_4XOc3a");

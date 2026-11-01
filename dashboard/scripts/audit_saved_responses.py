@@ -23,7 +23,7 @@ for code in ('PLAN_UPGRADE_REQUIRED','RESOURCE_NOT_FOUND'):
   kind,id=examples[code];checks.append((code,id,'/'+kind+'/'+id))
 for kind,id,path in checks:
  try:
-  with urllib.request.urlopen('https://orion-football-ranking.vercel.app/api/pitchapi'+path,timeout=25) as response:status=response.status;body=json.load(response)
+  with urllib.request.urlopen('https://statarena-analytics.vercel.app/api/pitchapi'+path,timeout=25) as response:status=response.status;body=json.load(response)
  except urllib.error.HTTPError as e:
   status=e.code
   try:body=json.load(e)
@@ -33,5 +33,5 @@ for kind,id,path in checks:
 summary={}
 for code in ('PLAN_UPGRADE_REQUIRED','RESOURCE_NOT_FOUND'):
  entities=[id for id,v in profiles.items() if code in v];summary[code]={'entities':len(entities),'without_any_success':sum('OK' not in profiles[id] for id in entities)}
-report={'setup':'Saved raw response versions and profile observations; live representative retries through the deployed Orion proxy. Counts describe response versions, not necessarily distinct matches.','command':'python3 dashboard/scripts/audit_saved_responses.py','expected':'Count recorded statuses and distinguish previously denied/absent profiles from entities with a successful version; retry examples without claiming all historic failures remain unavailable.','endpoint_response_versions':[{'family':k[0],'status':k[1],'error_code':k[2],'count':n} for k,n in sorted(counts.items())],'profile_entities':summary,'retry_samples':retry}
+report={'setup':'Saved raw response versions and profile observations; live representative retries through the deployed STATARENA proxy. Counts describe response versions, not necessarily distinct matches.','command':'python3 dashboard/scripts/audit_saved_responses.py','expected':'Count recorded statuses and distinguish previously denied/absent profiles from entities with a successful version; retry examples without claiming all historic failures remain unavailable.','endpoint_response_versions':[{'family':k[0],'status':k[1],'error_code':k[2],'count':n} for k,n in sorted(counts.items())],'profile_entities':summary,'retry_samples':retry}
 out=ROOT/'dashboard/outputs/pitchapi-coverage/saved-responses.json';out.parent.mkdir(parents=True,exist_ok=True);out.write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report,indent=2))

@@ -67,7 +67,7 @@ export async function handleRequest(request) {
             revision:
               (process.env.VERCEL_GIT_COMMIT_SHA || "").slice(0, 7) || null,
             workflowUrl:
-              "https://github.com/OrionQuantPlatform/Football_Ranking/actions/workflows/daily-data.yml",
+              "https://github.com/OrionQuantPlatform/STATARENA/actions/workflows/daily-data.yml",
           }),
       200,
       { "Content-Type": "application/json; charset=utf-8" },

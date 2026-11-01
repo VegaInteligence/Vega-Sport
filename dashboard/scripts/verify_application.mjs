@@ -91,7 +91,7 @@ try {
   for (const page of pages) {
     const html = await (await get(page.path + "?season=2025%2F2026")).text();
     assert.match(html, /_next\//);
-    assert.match(html, /orion/i);
+    assert.match(html, /STATARENA/);
     report.checks.push({ route: page.path, status: 200, next: true });
   }
   assert.equal((await fetch(web + "/unknown-page")).status, 404);
