@@ -46,6 +46,17 @@ class BundleTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'Credential'):
                 bundle.pack_archive(source,base/'bundles',b'secret-value')
 
+    def test_complete_requires_every_collected_file_to_be_present(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory);source=base/'europe_2021_2026';source.mkdir()
+            league='l_000001';identifier='m_000001'
+            (source/'inventory.json').write_text(json.dumps({'retrieved_at_utc':'2026-11-01','competitions':[{'id':league,'season':'2025/2026','matches':[{'id':identifier,'status':'finished'}]}]}),encoding='utf-8')
+            (source/'collection.json').write_text(json.dumps({'completed':1,'incomplete':0,'other_fixtures':{'completed':0,'incomplete':0},'profiles':{'leagues':0,'teams':0,'players':0,'failed':0}}),encoding='utf-8')
+            self.assertFalse(bundle.pack_archive(source,base/'bundles')['complete'])
+            file=source/'matches'/league/f'{bundle.archive_name(identifier)}.json';file.parent.mkdir(parents=True)
+            file.write_text('{}',encoding='utf-8')
+            self.assertTrue(bundle.pack_archive(source,base/'bundles')['complete'])
+
 
 if __name__ == '__main__':
     unittest.main()

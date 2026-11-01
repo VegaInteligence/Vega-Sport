@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Package the complete local PitchAPI archives into recoverable Git-sized files."""
 from collections import defaultdict
+import argparse
 from datetime import datetime, timezone
 import gzip
 import hashlib
@@ -68,6 +69,10 @@ def pack_group(files, base, destination, key):
 def pack_archive(archive, output, key=None):
     archive, output = Path(archive), Path(output)
     inventory = json.loads((archive / 'inventory.json').read_text(encoding='utf-8'))
+    try:
+        collection = json.loads((archive / 'collection.json').read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        collection = None
     try:
         previous = json.loads((output / 'manifest.json').read_text(encoding='utf-8'))
     except (OSError, ValueError):
@@ -142,8 +147,12 @@ def pack_archive(archive, output, key=None):
         temporary.replace(destination)
         metadata.append({'path':destination.relative_to(output).as_posix(),'target':name,
                          'bytes':destination.stat().st_size,'sha256':hashlib.sha256(destination.read_bytes()).hexdigest()})
+    counts={kind:sum(len(files) for group,files in groups.items() if group[0]==kind) for kind in ('matches','fixtures','profiles')}
+    expected_profiles=sum(collection.get('profiles',{}).get(kind,0) for kind in ('leagues','teams','players')) if collection else 0
+    complete=bool(collection and not collection.get('incomplete') and not collection.get('other_fixtures',{}).get('incomplete') and not collection.get('profiles',{}).get('failed')
+                  and counts['matches']==collection.get('completed') and counts['fixtures']==collection.get('other_fixtures',{}).get('completed') and counts['profiles']==expected_profiles)
     result={'archive':archive.name,'generated_at_utc':datetime.now(timezone.utc).isoformat(),
-            'inventory_at_utc':inventory['retrieved_at_utc'],'complete':(archive/'collection.json').is_file(),
+            'inventory_at_utc':inventory['retrieved_at_utc'],'complete':complete,'file_counts':counts,
             'bundles':bundles,'metadata':metadata}
     if previous and {k:v for k,v in previous.items() if k!='generated_at_utc'} == {k:v for k,v in result.items() if k!='generated_at_utc'}:
         result['generated_at_utc'] = previous.get('generated_at_utc', result['generated_at_utc'])
@@ -156,8 +165,11 @@ def pack_archive(archive, output, key=None):
 
 
 def main():
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--history-only',action='store_true')
+    args=parser.parse_args()
     key=credential()
-    for name in ARCHIVES:
+    for name in (('europe_2021_2026',) if args.history_only else ARCHIVES):
         archive=ROOT/'data'/name
         if (archive/'inventory.json').is_file():
             pack_archive(archive, OUTPUT/name, key)

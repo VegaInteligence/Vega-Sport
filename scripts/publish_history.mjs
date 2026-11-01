@@ -22,7 +22,7 @@ function checkpoint(){
   console.log(`Checkpoint started: ${new Date().toISOString()}`);
   run(process.execPath,['scripts/index_europe.mjs','--history']);
   run(python,['scripts/build_multiseason_dashboard.py']);
-  run(python,['scripts/bundle_europe.py']);
+  run(python,['scripts/bundle_europe.py','--history-only']);
   if(report)run(process.execPath,['scripts/report_europe.mjs',report]);
   const branch=git(['branch','--show-current'],{capture:true}).stdout.trim();
   if(branch!=='main')throw new Error('Checkpoint stopped because the current branch is not main.');
