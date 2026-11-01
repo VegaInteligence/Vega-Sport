@@ -1548,3 +1548,36 @@ input[type="checkbox"] {
     scroll-behavior: auto !important;
   }
 }
+
+/* Reserve the workspace while its selected data slice arrives. */
+.season-loading {
+  color: var(--muted, #a0a0a0);
+  display: grid;
+  gap: 24px;
+}
+.loading-filter,
+.loading-metrics > div,
+.loading-chart {
+  border: 1px solid var(--border, #242424);
+  border-radius: 10px;
+  background: var(--surface, #101310);
+}
+.loading-filter {
+  height: 130px;
+}
+.loading-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+}
+.loading-metrics > div {
+  height: 110px;
+}
+.loading-chart {
+  height: 360px;
+}
+@media (max-width: 640px) {
+  .loading-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

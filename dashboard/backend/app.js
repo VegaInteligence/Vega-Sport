@@ -105,6 +105,15 @@ export async function handleRequest(request) {
     return response("Method not allowed", 405, { Allow: "GET, HEAD" });
   if (pathname === "/dashboard") pathname = "/";
   else if (pathname.startsWith("/dashboard/")) pathname = pathname.slice(10);
+  if (pathname === "/data/dashboard-manifest.json")
+    return publicFile(
+      databaseRoot,
+      remoteData ||
+        existsSync(path.join(databaseRoot, "computed/dashboard/index.json"))
+        ? "computed/dashboard/index.json"
+        : "raw/index.json",
+      head,
+    );
   if (pathname === "/data/football-manifest.json")
     return publicFile(
       databaseRoot,

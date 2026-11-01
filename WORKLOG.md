@@ -1,9 +1,10 @@
 # Worklog
 
-- Goal: audit all PitchAPI data for European competitions from 2024/2025 onward, with the FIFA World Cup as the sole non-European exception.
-- Constraints: preserve existing data and the 2023/2024 UEFA ranking exception. Keep provider errors and unknown values explicit; never expose API credentials. User chose to continue with the existing key.
-- Progress: live catalogue audit now covers all 127 in-scope competition-seasons and finds no finished match missing a recorded endpoint family. GitHub daily run 41347598645 succeeded and published 281 refreshed match records; local World Cup import added 104 matches, 5,323 player performances and 411 accessible missing profiles.
-- Limits: 601 distinct profiles have no successful stored version and at least one historical plan-denied response; 183 have no success and at least one not-found response. Provider 404/empty 200 values remain and cannot be called complete information. Some access-denied samples still fail with the current deployed key.
-- Verification: local archive/backend and profile E2E, 1,008 preserved table hashes, canonical integrity, daily-worker scope and regression suite passed. Audit and reproducible evidence are in docs/PITCHAPI_COVERAGE_AUDIT.md and dashboard/outputs/pitchapi-coverage/.
-- State: European refresh was pushed automatically by GitHub Actions at 6e54cd53. World Cup data, worker changes, audit and evidence are being committed and pushed for deployment. Re-run audits when source data or access changes.
-- Suggested commit: data: complete European and World Cup PitchAPI coverage.
+- Goal: reduce first-load time and competition/season transitions without introducing a database or losing data.
+- Baseline: 45 competition chunks × 8 serial table requests per chunk, each redirected through Vercel to immutable GitHub data; 19.8 MB compressed for the current season and 48.4 MB for 2025/26. A league filter still loads every league. Browser baseline on top-Europe scope showed 80 table requests and an individual shot request taking 6 seconds.
+- Direction: derive lossless packed dashboard views under data/computed, one request per competition; a small serving manifest, direct immutable data URLs, league-scoped loading and bounded reuse. Keep raw data authoritative and wire view regeneration into normal publication.
+- Constraints: preserve all routes, filters, match/player statistics and exports; retain current geographic/season scope. Never hide missing fields behind defaults or invented values.
+- Verification: write a reproducible E2E contract before implementation; compare complete decoded views to canonical tables, exercise real browser cold loads, filters, details and back navigation. Store baseline and final evidence in dashboard/outputs/loading-performance/.
+- State: lossless views validated across 1,928,898 table rows; real HTTP output equals canonical loading; local browser filters, player and match details, historical season and cache reuse passed. 27 Python / 53 Node checks and daily-publication E2E passed. Publishing for production measurement.
+- Next: verify deployment and measure the actual production path.
+- Suggested commit: perf: reduce dashboard data requests and first-load payloads.

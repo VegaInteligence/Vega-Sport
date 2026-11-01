@@ -6,6 +6,7 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { PlayerDialog, Comparison } from "./PlayerDetails.jsx";
 import { number, date } from "../services/format.js";
 import CompetitionScope from "./CompetitionScope.jsx";
+import SiteHeader from "./SiteHeader.jsx";
 export const navigation = pages
   .filter((page) => page.navigation !== false)
   .map((page) => [page.path, page.title]);
@@ -24,7 +25,7 @@ export function Filters({ fixtures = false }) {
     f.filters.query ||
     f.filters.league !== "all" ||
     (!fixtures && (f.filters.minutes !== 1 || f.filters.match !== "all"));
-  const selected = f.data.competitions.find((c) => c.id === f.filters.league);
+  const selected = f.competitions.find((c) => c.id === f.filters.league);
   const names = new Map();
   for (const c of f.competitions)
     names.set(c.name, (names.get(c.name) || 0) + 1);
@@ -203,43 +204,7 @@ export default function Layout({
         Aller au contenu
       </Link>
       <div className="app-shell">
-        <header className="topbar">
-          <Link
-            className="brand"
-            aria-label="Orion, vue d’ensemble"
-            href={f.href("/")}
-          >
-            <svg className="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
-              <rect width="40" height="40" rx="11" fill="currentColor" />
-              <path
-                d="M12 25 20 11l8 14M15.5 19h9"
-                fill="none"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-              <circle cx="20" cy="28" r="2" />
-            </svg>
-            <span className="brand-word">
-              orion<span className="brand-period">.</span>
-            </span>
-          </Link>
-          <nav className="main-nav" aria-label="Navigation principale">
-            {navigation.map(([url, label]) => (
-              <Link
-                key={url}
-                className="nav-button"
-                aria-current={path === url ? "page" : undefined}
-                href={f.href(url)}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
-          <div className="topbar-meta">
-            <span className="status-dot" />
-            {f.configured ? "PitchAPI configuré" : "Données collectées"}
-          </div>
-        </header>
+        <SiteHeader path={path} href={f.href} configured={f.configured} />
         <main id="main" className={`workspace ${className}`} tabIndex="-1">
           {!hideHeading && (
             <div className="page-heading">

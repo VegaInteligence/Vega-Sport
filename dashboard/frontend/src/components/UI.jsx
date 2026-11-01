@@ -46,11 +46,13 @@ export function Card({ title, children, action, footer, className = "" }) {
 export function Empty({ children = "Aucune donnée disponible." }) {
   return <div className="chart-empty">{children}</div>;
 }
-export function AsyncState({ resource, children }) {
+export function AsyncState({ resource, children, loading }) {
   return resource.loading ? (
-    <div role="status" className="loading-state">
-      Chargement…
-    </div>
+    loading || (
+      <div role="status" className="loading-state">
+        Chargement…
+      </div>
+    )
   ) : resource.error ? (
     <div role="alert" className="notice notice-warning">
       {resource.error}{" "}

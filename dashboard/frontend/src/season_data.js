@@ -1,4 +1,31 @@
 import { dataUrl } from "./data-url.js";
+import { decodeTables } from "./packed_data.js";
+const chunkCaches = new WeakMap();
+async function compressedJson(url, fetcher) {
+  const response = await fetcher(url);
+  if (!response.ok)
+    throw new Error(`Données indisponibles (HTTP ${response.status})`);
+  return new Response(
+    response.body.pipeThrough(new DecompressionStream("gzip")),
+  ).json();
+}
+function cachedPart(key, fetcher, loader) {
+  if (!chunkCaches.has(fetcher)) chunkCaches.set(fetcher, new Map());
+  const cache = chunkCaches.get(fetcher);
+  if (cache.has(key)) {
+    const value = cache.get(key);
+    cache.delete(key);
+    cache.set(key, value);
+    return value;
+  }
+  const promise = loader().catch((error) => {
+    cache.delete(key);
+    throw error;
+  });
+  cache.set(key, promise);
+  while (cache.size > 48) cache.delete(cache.keys().next().value);
+  return promise;
+}
 /** Load one season from independently compressed competition snapshots. */
 export function mergeSeason(manifest, selected, parts) {
   const matches = [],
@@ -116,6 +143,38 @@ export function mergeSeason(manifest, selected, parts) {
   };
 }
 
+function restoreTables(tables, chunk) {
+  const players = new Map(tables.players.map((p) => [p.id, p]));
+  const shots = new Map(),
+    stats = new Map(
+      tables.team_statistics.map((row) => [row.matchId, row.values]),
+    );
+  for (const shot of tables.shots) {
+    const { matchId, ...value } = shot;
+    if (!shots.has(matchId)) shots.set(matchId, []);
+    shots.get(matchId).push(value);
+  }
+  const appearances = tables.performances.map((row) => {
+    const { playerRef, ...value } = row,
+      player = players.get(playerRef);
+    if (!player) throw new Error("Référence joueur absente");
+    return { ...value, name: player.name, imageUrl: player.imageUrl };
+  });
+  return {
+    meta: chunk.meta,
+    metrics: chunk.metrics,
+    fixtures: tables.fixtures,
+    competitions: tables.competitions,
+    teams: tables.teams,
+    matches: tables.matches.map((row) => ({
+      ...row,
+      shots: shots.get(row.id) || [],
+      stats: stats.get(row.id) || [],
+    })),
+    appearances,
+  };
+}
+
 export async function loadSeason(
   manifest,
   selected,
@@ -136,6 +195,15 @@ export async function loadSeason(
     while (true) {
       const index = cursor++;
       if (index >= season.chunks.length) return;
+      if (manifest.storage === "json-packed") {
+        const chunk = season.chunks[index];
+        const url = dataUrl(chunk.path);
+        parts[index] = await cachedPart(url, fetcher, async () => {
+          const packed = await compressedJson(url, fetcher);
+          return restoreTables(decodeTables(packed), packed);
+        });
+        continue;
+      }
       if (manifest.storage === "json-relational") {
         const chunk = season.chunks[index],
           tables = {};
@@ -150,35 +218,7 @@ export async function loadSeason(
           );
           tables[table] = await new Response(stream).json();
         }
-        const players = new Map(tables.players.map((p) => [p.id, p]));
-        const shots = new Map(),
-          stats = new Map(
-            tables.team_statistics.map((row) => [row.matchId, row.values]),
-          );
-        for (const shot of tables.shots) {
-          const { matchId, ...value } = shot;
-          if (!shots.has(matchId)) shots.set(matchId, []);
-          shots.get(matchId).push(value);
-        }
-        const appearances = tables.performances.map((row) => {
-          const { playerRef, ...value } = row,
-            player = players.get(playerRef);
-          if (!player) throw new Error("Référence joueur absente");
-          return { ...value, name: player.name, imageUrl: player.imageUrl };
-        });
-        parts[index] = {
-          meta: chunk.meta,
-          metrics: chunk.metrics,
-          fixtures: tables.fixtures,
-          competitions: tables.competitions,
-          teams: tables.teams,
-          matches: tables.matches.map((row) => ({
-            ...row,
-            shots: shots.get(row.id) || [],
-            stats: stats.get(row.id) || [],
-          })),
-          appearances,
-        };
+        parts[index] = restoreTables(tables, chunk);
         continue;
       }
       const chunk = season.chunks[index],

@@ -19,6 +19,7 @@ import {
 import { json, useResource, download } from "../services/resources.js";
 import { FootballDataClient } from "../services/football-client.js";
 import { AsyncState } from "../components/UI.jsx";
+import LoadingPage from "../components/LoadingPage.jsx";
 import {
   EUROPE_FOCUS_IDS,
   PREFERENCES_KEY,
@@ -101,7 +102,7 @@ export function FootballProvider({ children, loadData = true }) {
     [comparing, setComparing] = useState(false),
     [notice, setNotice] = useState("");
   const manifest = useResource("manifest", () =>
-    json(dataUrl("football-manifest.json")),
+    json(dataUrl("dashboard-manifest.json")),
   );
   const chosen = manifest.value?.seasons.some((s) => s.id === season)
     ? season
@@ -109,7 +110,7 @@ export function FootballProvider({ children, loadData = true }) {
       ? preferences.defaultSeason
       : manifest.value?.defaultSeason;
   const dataset = useResource(
-    `season:${chosen}:${loadData ? `${focus}:full` : "catalog"}`,
+    `season:${chosen}:${loadData ? `${focus}:${filters.league}:full` : "catalog"}`,
     () =>
       chosen
         ? loadData
@@ -117,7 +118,15 @@ export function FootballProvider({ children, loadData = true }) {
               manifest.value,
               chosen,
               fetch,
-              focus === "europe" ? EUROPE_FOCUS_IDS : null,
+              filters.league !== "all"
+                ? new Set(
+                    focus !== "europe" || EUROPE_FOCUS_IDS.has(filters.league)
+                      ? [filters.league]
+                      : [],
+                  )
+                : focus === "europe"
+                  ? EUROPE_FOCUS_IDS
+                  : null,
             )
           : Promise.resolve({
               meta: { retrievedAt: manifest.value.retrievedAt },
@@ -138,12 +147,22 @@ export function FootballProvider({ children, loadData = true }) {
     await (loadData ? client.init() : client.checkStatus());
     return client.configured;
   });
+  const seasonCompetitions = useMemo(
+    () =>
+      manifest.value?.storage === "json-packed"
+        ? manifest.value.seasons
+            .find((s) => s.id === chosen)
+            ?.chunks.flatMap((c) => c.competitions)
+            .sort((a, b) => (a.name || "").localeCompare(b.name || "", "fr")) || []
+        : data?.competitions || [],
+    [manifest.value, chosen, data],
+  );
   const competitions = useMemo(
     () =>
-      (data?.competitions || []).filter(
+      seasonCompetitions.filter(
         (c) => focus !== "europe" || EUROPE_FOCUS_IDS.has(c.id),
       ),
-    [client, data, focus, status.value, status.loading],
+    [seasonCompetitions, focus],
   );
   const catalog = useMemo(
     () =>
@@ -300,9 +319,9 @@ export function FootballProvider({ children, loadData = true }) {
   };
   return (
     <Context.Provider value={value}>
-      <AsyncState resource={manifest}>
+      <AsyncState resource={manifest} loading={<LoadingPage href={href} />}>
         {() => (
-          <AsyncState resource={dataset}>
+          <AsyncState resource={dataset} loading={<LoadingPage href={href} />}>
             {(value) =>
               value ? (
                 children

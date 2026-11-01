@@ -7,7 +7,10 @@ const config = {
   poweredByHeader: false,
   reactStrictMode: true,
   devIndicators: false,
-  env: { NEXT_PUBLIC_DATA_REVISION: process.env.VERCEL_GIT_COMMIT_SHA || "" },
+  env: {
+    NEXT_PUBLIC_DATA_REVISION:
+      process.env.ORION_DATA_REVISION || process.env.VERCEL_GIT_COMMIT_SHA || "",
+  },
   outputFileTracingRoot: path.resolve(directory, "../.."),
   turbopack: { root: path.resolve(directory, "../..") },
   outputFileTracingExcludes: {
