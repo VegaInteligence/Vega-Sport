@@ -55,7 +55,7 @@ export default function RootLayout({ children }) {
         <script
           id="statarena-theme"
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("statarena.theme")==="light"?"light":"dark";document.documentElement.dataset.theme=t;document.querySelector('meta[name="theme-color"]')?.setAttribute("content",t==="light"?"#FCFCFC":"#0F0F11")}catch{}`,
+            __html: `try{var t=localStorage.getItem("statarena.theme")==="light"?"light":"dark";document.documentElement.dataset.theme=t;document.querySelector('meta[name="theme-color"]')?.setAttribute("content",t==="light"?"#FFFFFF":"#0F0F11")}catch{}`,
           }}
         />
       </head>

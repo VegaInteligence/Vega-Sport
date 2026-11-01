@@ -14,7 +14,7 @@ export default function ThemeToggle() {
     document.documentElement.dataset.theme = next;
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", next === "light" ? "#FCFCFC" : "#0F0F11");
+      ?.setAttribute("content", next === "light" ? "#FFFFFF" : "#0F0F11");
     try {
       localStorage.setItem("statarena.theme", next);
     } catch {}

@@ -1,6 +1,6 @@
 # Identité STATARENA
 
-Kit fourni appliqué aux logos et accents : `#1D6FD6` et `#3B8EFF`. La capture de référence choisie par l’utilisateur définit les fonds/textes : clair `#FCFCFC` / `#0D0D0D`, sombre `#0F0F11` / `#E3E4E6`. Les surfaces restent neutres.
+Kit fourni appliqué aux logos et accents : `#1D6FD6` et `#3B8EFF`. Le thème sombre conserve `#0F0F11` / `#E3E4E6`. Le thème clair reprend les surfaces blanches et les contrastes neutres de [London Strategic Edge](https://londonstrategicedge.com/data/) : fond `#FFFFFF`, texte `#16181D`, bordures `#DCDFE4`. Les accents restent bleus.
 
 - Les SVG, PNG, icônes et visuels sociaux originaux sont conservés dans [`public/branding`](../../dashboard/frontend/public/branding/).
 - Le guide, les aperçus, la référence source et les fichiers d’intégration sont conservés ici.
