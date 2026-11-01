@@ -1,29 +1,26 @@
 # Worklog
 
-- Objectif : concevoir un classement personnel du Ballon d’Or, explicable et adapté aux différents rôles.
-- Direction : excellence relative par rôle, contexte des équipes, performance par match et agrégation sur la saison ; hypothèses et alternative VAEP dans `docs/METHODE_CLASSEMENT_BALLON_D_OR.md`.
-- État : méthode documentée et licence MIT ajoutée. README épuré à la demande de l’utilisateur : présentation du projet, approche, documentation et licence ; sans checklist, calendrier, badges ou instructions techniques. Aucun pipeline, modèle ou classement implémenté ni validé.
-- Données : PitchAPI envisagée ; couverture, qualité et droits restent à vérifier. `.env` est ignoré par Git.
-- Prochaine action : mesurer la couverture des données et arrêter les paramètres ouverts de la méthode avant implémentation.
-- Commit suggéré : `docs: simplify project README`.
+- Objectif corrigé : construire une base de données JSON par saison et entité dans `data/raw/`, reliée directement au backend/frontend du dashboard ; réserver `data/computed/` aux futurs résultats.
+- Conserver toutes les observations et leur provenance. Les archives d’origine sont des entrées d’import dans `data/sources/`, jamais le modèle de lecture du dashboard. Intermédiaires locaux dans `data/staging/` ignoré par Git.
+- Tables principales : compétitions, équipes, versions d’identité des joueurs, calendriers, matchs, performances joueur-match, tirs et statistiques d’équipe. `playerRef` conserve les différences de nom/image sans fusion approximative.
+- Import complet des treize familles détaillées et profils versionnés depuis les archives, avec index par match et profil. Complément Open Matchday distinct pour éviter les identités inventées et doubles comptes.
+- `scripts/build_json_database.py` génère les tables, vérifie la reconstitution exacte des anciennes partitions et conserve les sources originales.
+- Dashboard : chargeur avec jointures des tables JSON ; backend Node vers `data/raw/`, index des matchs/profils et futur `computed/`. Worker/build embarque les tables publiques de base et le complément, pas toutes les archives détaillées.
+- État : import terminé. Six saisons / 189 partitions reconstituées sans différence ; 1 035 949 performances, 714 967 tirs, 53 686 entrées de calendrier, 34 880 observations détaillées de matchs/calendriers et 40 087 observations de profils conservées. Open Matchday : 16 229 lignes de résultats/calendriers/buts séparées.
+- Validation : 28 contrôles Python et 56 Node réussis ; build 1719 assets réussi ; toutes les partitions jointes et leurs références joueurs/équipes/matchs contrôlées, 3 871 fichiers sources inchangés, exemples de réponses détaillées/profil reconstruits exactement par HTTP. Navigateur réel : 2026/2027 puis 2025/2026 et ouverture d’un match, sans erreur console. Preuves et capture dans `outputs/json-database/`.
+- Neon supprimé à la demande de l’utilisateur ; aucun nouveau service DB. Aucun score Orion calculé.
+- Livraison Git autorisée : commit et push de l’ensemble sur `main` ; aucun déploiement du site demandé.
+- Validation terminée ; livraison de la base JSON et des classements sur GitHub. Le site hébergé reste à sa version précédente.
+- Commit suggéré : `feat: add season-based JSON database and dashboard data access`.
 
-## 31 octobre 2026 — Dashboard d’exploration
+## 1 novembre 2026 — Classements FIFA et UEFA
 
-- Audit du dépôt : aucune interface préexistante dans la branche `main` consultée ; création du dashboard dans `dashboard/` à partir des fichiers disponibles.
-- Design clair et responsive, navigation par vue d’ensemble, joueurs, matchs, données et méthode. Filtres, tri, comparaison de trois apparitions, fiches joueurs et matchs, carte des tirs, fil des xG et export CSV.
-- Préparation reproductible des données avec la bibliothèque standard Python ; frontend HTML/CSS/JavaScript sans dépendance. Les fichiers bruts restent inchangés.
-- Valeurs absentes conservées, zéros suspects de 3. Liga masqués, notes PitchAPI identifiées et rôles non interprétés. Aucun modèle ou classement Orion implémenté.
-- Revue croisée par sous-agents pour la méthode, les données, les graphiques et le système visuel. Tests des données et des fonctions JavaScript, plus vérification des interactions et des mises en page dans le navigateur.
-- Documentation : `docs/DASHBOARD.md` et `docs/DASHBOARD_DATA.md`.
-- Le commit `b1bd916` de `main`, arrivé pendant la refonte avec le dashboard initial, a été intégré : commande locale `node dashboard/server.js`, indicateurs gardiens et recherche du catalogue conservés dans la nouvelle interface.
-
-## 31 octobre 2026 — Refonte sombre et exploration PitchAPI
-
-- Nouvelle demande : remplacer le design blanc par une interface noire, afficher les vrais logos et ouvrir l’ensemble des données PitchAPI.
-- Refonte sombre avec accents lime, logos de clubs, portraits, match mis en avant, catalogue de compétitions et fiches clubs. Les 18 logos de clubs de l’instantané se chargent dans le navigateur.
-- Catalogue initial complet : 77 compétitions et 303 couples compétition–saison. Les données réellement collectées restent 9 matchs, 18 équipes et 320 joueurs référencés, dont 274 entrés en jeu.
-- Les quatre réponses détaillées déjà présentes par match sont maintenant publiables intégralement : compositions, statistiques équipes, statistiques joueurs et tirs. Treize familles sont consultables depuis chaque match avec état de disponibilité explicite et export JSON.
-- Passerelle serveur couvrant les 24 formes de ressources GET documentées, validation des routes, clé exclusivement côté serveur, cache court, erreurs nettoyées, limites de ressources et repli sur l’instantané. Site préparé en Worker ESM sans dépendance frontend.
-- Collecteur exhaustif Python ajouté : index de toutes les saisons, détails des matchs terminés, profils et points de reprise. Le plan hors réseau confirme 77/303 ; aucune collecte supplémentaire réelle n’a été exécutée, car aucune clé PitchAPI n’est configurée dans l’environnement de travail ou le site.
-- Validation : 19 tests Python et 45 tests Node réussis. Contrôle navigateur des logos, catalogue, saisons, clubs, compositions, statistiques complètes et mi-temps, états absents et export JSON réel. Mobile et tablette sans débordement horizontal du document.
-- Travail parallèle sur le design, l’intégration API, la collecte et les régressions. La méthode de classement Orion reste inchangée et non calculée.
+- Objectif : collecter les classements à partir de 2022, enrichir les fiches clubs et ajouter une page pour sélections/associations.
+- Sources : SportsAPI (clé uniquement dans `.env`, instantanés actuels), FIFA officiel (32 éditions datées) et UEFA officiel (clubs + associations, années de fin de saison 2022–2027). 47 tableaux au total, sans erreur finale.
+- Stockage : `data/raw/rankings/` pour les tables et liens de clubs ; réponses originales dans `data/sources/rankings/`. UEFA associations = performances des clubs par pays, pas force des sélections.
+- Identités : 242 clubs reliés par nom/alias explicite et pays ; 588 non reliés, zéro ambiguïté retenue. Les éditions officielles UEFA alimentent les fiches clubs.
+- Qualité : rangs FIFA non attribués conservés à null ; doublon SportsAPI conservé et signalé dans les métadonnées ; coefficient UEFA affiché = totalValue (minimum association inclus). Ne pas assimiler la mise à jour source à une date connue avant match.
+- Interface : page Classements avec type/édition/recherche et historique sur les fiches clubs. Dates, fournisseur et périodes restent distincts.
+- Validation : réconciliation exhaustive des 47 éditions avec les réponses sources et empreintes ; aucun secret dans frontend/tables/build ; 28 contrôles Python et 56 Node réussis ; build de 1 769 assets réussi. E2E navigateur réussi : FIFA 2022 avec recherche France, associations UEFA 2022, historique Bayern sur six saisons et absence de correspondance Fulham ; aucune erreur console. Captures et protocole dans `outputs/rankings/browser-evidence.json`.
+- Documentation : `docs/RANKINGS.md`. Commit et push de l’ensemble autorisés ; pas de déploiement du site.
+- Commit suggéré : `feat: add historical FIFA and UEFA rankings`.

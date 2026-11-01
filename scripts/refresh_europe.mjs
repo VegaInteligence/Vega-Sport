@@ -23,6 +23,7 @@ const steps=[
   [python,['scripts/build_open_matchday_dashboard.py']],
   [python,['scripts/audit_open_matchday.py']],
   [python,['scripts/bundle_europe.py']],
+  [python,['scripts/build_json_database.py']],
   ...(report?[[process.execPath,['scripts/report_europe.mjs',report]]]:[]),
 ];
 for(const [command,args] of steps){

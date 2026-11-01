@@ -3,9 +3,27 @@ import http from 'node:http';
 import { open, readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 
 const dashboardRoot = path.dirname(fileURLToPath(import.meta.url));
-const dataRoot = path.resolve(dashboardRoot, '../data');
+const databaseRoot = path.resolve(dashboardRoot, '../data');
+const dashboardDataRoot = path.join(databaseRoot, 'staging/dashboard');
+const dataRoot = path.join(databaseRoot, 'sources/pitchapi');
+const canonical = existsSync(path.join(databaseRoot,'raw/index.json'));
+let observationIndex;
+let observationShards;
+let profileIndex;
+async function jsonTable(ref){const body=await readFile(path.join(databaseRoot,ref.path));return JSON.parse(ref.path.endsWith('.gz')?gunzipSync(body).toString('utf8'):body.toString('utf8'));}
+async function matchObservation(id){
+  observationIndex ||= JSON.parse(await readFile(path.join(databaseRoot,'raw/match-observations.json'),'utf8'));
+  const entry=observationIndex[id]?.[0];if(!entry)return null;
+  observationShards ||= JSON.parse(await readFile(path.join(databaseRoot,'raw/observation-shards.json'),'utf8'));
+  const ref={...observationShards[entry.shard],ordinal:entry.ordinal};
+  const doc=(await jsonTable(ref.document))[ref.ordinal];const endpoints={};
+  for(const endpoint of doc.endpoints){const rows=await jsonTable(ref.tables[endpoint]);const row=rows.find(r=>r.documentId===doc.id);if(!row)throw new Error('Incomplete source observations');endpoints[endpoint]=row.response;}
+  return {...doc.metadata,endpoints};
+}
 const rawFiles = new Set(['pitchapi_championnats.json', 'pitchapi_premiers_matchs.json']);
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -100,8 +118,11 @@ async function serve(request, response) {
   if (archiveProfile && (request.method === 'GET' || head)) {
     const [, kind, id] = archiveProfile;
     if (id[0] !== {leagues:'l',teams:'t',players:'p'}[kind]) { reply(response, 404, 'Not found', head); return; }
+    if(canonical){
+      try{profileIndex ||= JSON.parse(await readFile(path.join(databaseRoot,'raw/profile-index.json'),'utf8'));const ref=profileIndex.entities[kind+':'+id]?.at(-1);if(!ref){reply(response,404,'Not found',head);return;}const row=(await jsonTable(ref))[ref.ordinal];const body=Buffer.from(JSON.stringify(row.observation));response.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Content-Length':body.length});response.end(head?undefined:body);}catch{reply(response,500,'Profile unavailable',head);}return;
+    }
     for(const archiveName of ['europe_2026_2027','europe_2021_2026']) try {
-      const archiveRoot = path.join(dataRoot, archiveName);
+      const archiveRoot = path.join(dataRoot, 'archives', archiveName);
       const directory = path.join(archiveRoot, 'profiles', kind);
       const encoded = path.join(directory, `${id}--${Buffer.from(id,'utf8').toString('hex')}.json`);
       let resolvedFile;try{resolvedFile=await realpath(encoded)}catch{resolvedFile=await realpath(path.join(directory,`${id}.json`))}
@@ -119,9 +140,12 @@ async function serve(request, response) {
   }
 
   const archiveMatch = pathname.match(/^\/api\/archive\/matches\/(m_[A-Za-z0-9]{6})$/);
+  if(canonical && archiveMatch && (request.method==='GET'||head)){
+    try{const record=await matchObservation(archiveMatch[1]);if(!record){reply(response,404,'Not found',head);return;}const body=Buffer.from(JSON.stringify(record));response.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Content-Length':body.length,'Cache-Control':'no-store'});response.end(head?undefined:body);}catch{reply(response,500,'Observation unavailable',head);}return;
+  }
   if (archiveMatch && (request.method === 'GET' || head)) {
     for(const archiveName of ['europe_2026_2027','europe_2021_2026']) try {
-      const archiveRoot = path.join(dataRoot, archiveName);
+      const archiveRoot = path.join(dataRoot, 'archives', archiveName);
       let index;try{index=JSON.parse(await readFile(path.join(archiveRoot,'index.json'),'utf8'))}catch{}
       let entry = index?.matches?.find(item => item.match?.id === archiveMatch[1]);
       let folder = 'matches';
@@ -170,8 +194,17 @@ async function serve(request, response) {
 
   let root = dashboardRoot;
   let relativeFile = pathname.slice(1);
-  if (pathname.startsWith('/data/') && rawFiles.has(pathname.slice('/data/'.length))) {
-    root = dataRoot;
+  if(canonical && pathname==='/data/football-manifest.json'){
+    root=databaseRoot;relativeFile='raw/index.json';
+  } else if(canonical && (pathname.startsWith('/data/raw/')||pathname.startsWith('/data/computed/'))){
+    root=path.join(databaseRoot,pathname.startsWith('/data/raw/')?'raw':'computed');relativeFile=pathname.split('/').slice(3).join('/');
+  } else if(canonical && pathname.startsWith('/data/')){
+    reply(response,404,'Not found',head);return;
+  } else if (pathname.startsWith('/data/') && rawFiles.has(pathname.slice('/data/'.length))) {
+    root = path.join(dataRoot, 'samples');
+    relativeFile = pathname.slice('/data/'.length);
+  } else if (pathname.startsWith('/data/')) {
+    root = dashboardDataRoot;
     relativeFile = pathname.slice('/data/'.length);
   }
 

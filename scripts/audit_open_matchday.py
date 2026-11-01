@@ -8,8 +8,8 @@ import re
 import unicodedata
 
 ROOT = Path(__file__).resolve().parents[1]
-PITCH = ROOT / 'data' / 'europe_2026_2027' / 'inventory.json'
-SUPPLEMENT = ROOT / 'data' / 'open_matchday_2026_2027'
+PITCH = ROOT / 'data' / 'sources' / 'pitchapi' / 'archives' / 'europe_2026_2027' / 'inventory.json'
+SUPPLEMENT = ROOT / 'data' / 'sources' / 'open_matchday' / '2026-2027'
 
 # Explicit competition-level equivalence; unmatched names are never guessed.
 LEAGUES = {

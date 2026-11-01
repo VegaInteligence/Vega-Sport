@@ -2,7 +2,7 @@
 
 L'archive locale couvre les saisons européennes PitchAPI 2021/22 à 2026/27 et
 les saisons civiles 2021 à 2026. Les réponses brutes sont conservées dans
-`data/europe_2021_2026/` et `data/europe_2026_2027/`, par compétition et match.
+`data/sources/pitchapi/archives/europe_2021_2026/` et `data/sources/pitchapi/archives/europe_2026_2027/`, par compétition et match.
 Les calendriers et scores sont visibles dès l'inventaire ; les détails peuvent
 encore être en cours de collecte, avec une couverture indiquée dans le dashboard.
 Une saison civile est regroupée dans la saison commençant la même année, tout en
@@ -40,7 +40,7 @@ Les noms de fichiers de profils ajoutent l'identifiant encodé en hexadécimal :
 PitchAPI distingue les majuscules et minuscules, même sur un système de fichiers
 Windows qui ne les distingue pas. Le nom conserve aussi l'identifiant d'origine.
 
-Les réponses brutes sont empaquetées dans `data/pitchapi_bundles/` pour GitHub.
+Les réponses brutes sont empaquetées dans `data/sources/pitchapi/bundles/` pour GitHub.
 Les archives sont découpées par saison et compétition, avec empreintes SHA-256.
 Après un clone, `python scripts/restore_europe.py` vérifie ces empreintes et
 restaure les fichiers absents ; `--overwrite` remplace les fichiers locaux.
@@ -167,7 +167,7 @@ le repère par défaut du fournisseur.
 
 ### Fichiers et états
 
-Le dossier de sortie par défaut est `data/pitchapi_full/`. `--output` permet de
+Le dossier de sortie par défaut est `data/sources/pitchapi/full/`. `--output` permet de
 choisir un autre emplacement. Les sous-dossiers sont organisés ainsi :
 
 - `catalog.json` : réponse du catalogue ;
@@ -218,7 +218,7 @@ Les archives locales ne sont pas automatiquement publiées sur le site hébergé
 
 ## Source complémentaire : open-matchday
 
-`data/open_matchday_2026_2027/` contient les CSV de compétitions européennes
+`data/sources/open_matchday/2026-2027/` contient les CSV de compétitions européennes
 publiés par [open-matchday](https://github.com/oladeeayo/open-matchday), dont
 plusieurs coupes et divisions absentes du catalogue PitchAPI. Ces données
 peuvent recouvrir des matchs PitchAPI : ne pas additionner les deux sources sans

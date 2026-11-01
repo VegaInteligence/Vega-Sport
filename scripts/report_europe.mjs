@@ -3,14 +3,14 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-const archive=path.join(root,'data','europe_2026_2027');
+const archive=path.join(root,'data','sources','pitchapi','archives','europe_2026_2027');
 const index=JSON.parse(await fs.readFile(path.join(archive,'index.json'),'utf8'));
 let collection;try{collection=JSON.parse(await fs.readFile(path.join(archive,'collection.json'),'utf8'))}catch{}
 let historical,historyCollection;
-try{historical=JSON.parse(await fs.readFile(path.join(root,'data','europe_2021_2026','index.json'),'utf8'))}catch{}
-try{historyCollection=JSON.parse(await fs.readFile(path.join(root,'data','europe_2021_2026','collection.json'),'utf8'))}catch{}
-let supplemental;try{supplemental=JSON.parse(await fs.readFile(path.join(root,'data','open_matchday_2026_2027','manifest.json'),'utf8'))}catch{}
-let audit;try{audit=JSON.parse(await fs.readFile(path.join(root,'data','open_matchday_2026_2027','cross_source_audit.json'),'utf8'))}catch{}
+try{historical=JSON.parse(await fs.readFile(path.join(root,'data','sources','pitchapi','archives','europe_2021_2026','index.json'),'utf8'))}catch{}
+try{historyCollection=JSON.parse(await fs.readFile(path.join(root,'data','sources','pitchapi','archives','europe_2021_2026','collection.json'),'utf8'))}catch{}
+let supplemental;try{supplemental=JSON.parse(await fs.readFile(path.join(root,'data','sources','open_matchday','2026-2027','manifest.json'),'utf8'))}catch{}
+let audit;try{audit=JSON.parse(await fs.readFile(path.join(root,'data','sources','open_matchday','2026-2027','cross_source_audit.json'),'utf8'))}catch{}
 const mappedFolders=new Set((audit?.competitions||[]).map(item=>item.folder));
 const unmapped=supplemental?.competitions.filter(item=>!mappedFolders.has(item.folder))||[];
 const output=path.resolve(process.argv[2]||path.join(archive,'coverage.md'));
@@ -62,7 +62,7 @@ const lines=[
     'This source supplies match-level data rather than player xG or goalkeeper statistics. Coverage can be partial, including for calendar-year seasons. It is for informational, non-commercial use with attribution; see [open-matchday terms](https://github.com/oladeeayo/open-matchday/blob/master/DISCLAIMER.md).', '',
     ...(audit?[`Score cross-check: ${audit.agreements}/${audit.compared} exact competition/date/team matches agree; ${audit.disagreements.length} disagree. Unmatched names are not inferred. This is not validation of other statistics.`, '',
       ...audit.disagreements.slice(0,10).map(x=>`- ${esc(x.date)} ${esc(x.competition)}: ${esc(x.home)} v ${esc(x.away)}, PitchAPI ${x.pitchapi_score.join('–')}, open-matchday ${x.open_matchday_score.join('–')}.`), ...(audit.disagreements.length?['']:[])]:[]),
-    `Local source files: \`${path.join(root,'data','open_matchday_2026_2027')}\`.`, '',
+    `Local source files: \`${path.join(root,'data','sources','open_matchday','2026-2027')}\`.`, '',
     '| Country | Competition | Result rows | Fixture rows |', '| --- | --- | ---: | ---: |',
     ...supplemental.competitions.map(c=>`| ${esc(c.country_code)} | ${esc(c.name||c.folder)} | ${c.files.results?.rows||0} | ${c.files.fixtures?.rows||0} |`), ''
   ]:[]),

@@ -2,6 +2,7 @@ import {normalizeText, seasonLabel, isNumber, escapeHtml as esc, formatNumber as
 import {scatterPlot, shotMap, xgTimeline} from './charts.js';
 import {PitchExplorer, media} from './explorer.js';
 import {loadSeason} from './season_data.js';
+import {RankingsView} from './rankings.js';
 
 const $ = (selector) => document.querySelector(selector);
 const REPO = 'https://github.com/OrionQuantPlatform/Football_Ranking';
@@ -9,7 +10,8 @@ const PAGE_SIZE = 20;
 const defaults = {query:'',league:'all',season:'all',minutes:1,match:'all'};
 const state = {page:'overview',filters:{...defaults},sort:'rating',direction:'desc',tablePage:1,mode:'total',scatter:'attack',leaders:'rating',selectedMatch:null,shotTeam:'all',matchChart:'map',compare:[],catalogAll:false,catalogQuery:'',matchListPage:1};
 let data, byAppearance, byMatch, toastTimer, explorer, seasonManifest;
-const PAGES = ['overview','competitions','clubs','players','matches','method'];
+const PAGES = ['overview','competitions','clubs','players','matches','rankings','method'];
+const rankings=new RankingsView(()=>{if(data)render();});
 
 function icon(name, size = 18) {
   const paths = {
@@ -73,20 +75,21 @@ function render() {
     clubs:['LES COULEURS DU JEU','Chaque club, son histoire.','Retrouvez les équipes, leurs matchs et les joueurs présents dans les données.'],
     players:['EXPLORATEUR DE JOUEURS','Chaque performance compte.','Comparez les statistiques individuelles, une apparition à la fois.'],
     matches:['EXPLORATEUR DE MATCHS','Au plus près du match.','Résultats, occasions et contributions individuelles, dans leur contexte.'],
+    rankings:['CLASSEMENTS INTERNATIONAUX','Sélections & associations',''],
     method:['LE PROJET ORION','Une lecture plus juste.','La couverture des données et les fondations du futur classement.']
   };
   const heading = headings[state.page];
   $('#page-eyebrow').textContent=heading[0]; $('#page-title').textContent=heading[1]; $('#page-description').textContent=heading[2];
-  document.title = `${{overview:'Vue d’ensemble',competitions:'Compétitions',clubs:'Clubs',players:'Joueurs',matches:'Matchs',method:'Données & méthode'}[state.page]} — Orion Football Ranking`;
+  document.title = `${{overview:'Vue d’ensemble',competitions:'Compétitions',clubs:'Clubs',players:'Joueurs',matches:'Matchs',rankings:'Classements',method:'Données & méthode'}[state.page]} — Orion Football Ranking`;
   document.querySelectorAll('[data-page]').forEach((button)=>{ if(button.dataset.page === state.page) button.setAttribute('aria-current','page'); else button.removeAttribute('aria-current'); });
-  $('#filters').hidden=['method','competitions','clubs'].includes(state.page);
-  $('#filter-summary').hidden=['method','competitions','clubs'].includes(state.page);
-  $('#export-button').hidden=['method','competitions','clubs'].includes(state.page);
+  $('#filters').hidden=['method','competitions','clubs','rankings'].includes(state.page);
+  $('#filter-summary').hidden=['method','competitions','clubs','rankings'].includes(state.page);
+  $('#export-button').hidden=['method','competitions','clubs','rankings'].includes(state.page);
   const focusedMatch=byMatch.get(state.filters.match);
   $('#filter-summary').innerHTML=`<span><strong>${fmt(rows.length)}</strong> apparition${rows.length>1?'s':''} affichée${rows.length>1?'s':''} <span class="summary-separator">/</span> ${matches.length} match${matches.length>1?'s':''} dans le périmètre${focusedMatch?` <button class="match-filter-chip" data-clear-match title="Retirer le filtre du match">${esc(focusedMatch.home.name)} – ${esc(focusedMatch.away.name)} ${icon('close',12)}</button>`:''}</span><span>${date(data.meta.startDate)} — ${date(data.meta.endDate,{day:'numeric',month:'short',year:'numeric'})}<span class="badge badge-neutral">Instantané</span></span>`;
   const active=Object.keys(defaults).some((key)=>String(state.filters[key])!==String(defaults[key]));
   $('#reset-filters').hidden=!active;
-  $('#content').innerHTML=state.page==='overview' ? overview(rows,matches) : state.page==='players' ? playersView(rows) : state.page==='matches' ? matchesView(matches) : state.page==='competitions' ? explorer.renderCompetitions() : state.page==='clubs' ? explorer.renderClubs() : methodView();
+  $('#content').innerHTML=state.page==='overview' ? overview(rows,matches) : state.page==='players' ? playersView(rows) : state.page==='matches' ? matchesView(matches) : state.page==='competitions' ? explorer.renderCompetitions() : state.page==='clubs' ? explorer.renderClubs() : state.page==='rankings' ? rankings.render() : methodView();
   renderCompareTray();
   syncUrl();
 }
@@ -277,7 +280,7 @@ function installDataset(next) {
   $('#league-filter').innerHTML='<option value="all">Toutes les compétitions</option>'+leagues.map(league=>`<option value="${esc(league.id)}">${esc(league.name)}</option>`).join('');
   if(state.filters.league!=='all'&&!leagues.some(league=>league.id===state.filters.league))state.filters.league='all';
   $('#snapshot-label').innerHTML=`${icon('calendar',15)} ${date(data.meta.retrievedAt,{day:'numeric',month:'short',year:'numeric'})}`;
-  explorer=new PitchExplorer({data,redraw:()=>render(),navigate:changePage,openLocalMatch:(id)=>{state.filters={...defaults};syncFilterInputs();state.selectedMatch=id;state.shotTeam='all';changePage('matches');}});
+  explorer=new PitchExplorer({data,rankings,redraw:()=>render(),navigate:changePage,openLocalMatch:(id)=>{state.filters={...defaults};syncFilterInputs();state.selectedMatch=id;state.shotTeam='all';changePage('matches');}});
   return leagues;
 }
 
@@ -297,6 +300,7 @@ async function switchSeason(selected) {
 document.addEventListener('click',(event)=>{
   const target=event.target.closest('button, a, [data-open-player]'); if(!target || !data) return;
   const d=target.dataset;
+  if(rankings.handleClick(target)) return;
   if(explorer?.handleClick(target)) return;
   if(d.page) changePage(d.page);
   else if(d.openPlayer) openPlayer(d.openPlayer);
@@ -322,6 +326,7 @@ document.addEventListener('click',(event)=>{
 
 document.addEventListener('change',(event)=>{
   if(!data) return;
+  if(rankings.handleChange(event.target)) return;
   if(explorer?.handleChange(event.target)) return;
   if(event.target.matches('[data-compare]')) { toggleCompare(event.target.dataset.compare); return; }
   if(event.target.id==='shot-team') { state.shotTeam=event.target.value; render(); return; }
@@ -330,6 +335,7 @@ document.addEventListener('change',(event)=>{
   if(key) { state.filters[key]=event.target.value; if(key==='league'||key==='season')state.filters.match='all'; state.tablePage=1; render(); }
 });
 document.addEventListener('input',(event)=>{
+  if(rankings.handleInput(event.target)) return;
   if(explorer?.handleInput(event.target)) return;
   if(data && event.target.id==='catalog-search') {
     const cursor=event.target.selectionStart; state.catalogQuery=event.target.value; render();
@@ -341,7 +347,7 @@ $('#reset-filters').addEventListener('click',resetFilters);
 $('#export-button').addEventListener('click',()=>{if(data) exportRows();});
 $('#detail-dialog').addEventListener('click',(event)=>{if(event.target===$('#detail-dialog')) {const rect=event.target.getBoundingClientRect(); if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom) event.target.close();}});
 document.addEventListener('keydown',(event)=>{
-  if(event.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(event.target.tagName)&&!$('#detail-dialog').open&&!['method','competitions','clubs'].includes(state.page)){event.preventDefault();$('#search-input').focus();}
+  if(event.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(event.target.tagName)&&!$('#detail-dialog').open&&!['method','competitions','clubs','rankings'].includes(state.page)){event.preventDefault();$('#search-input').focus();}
   if(['Enter',' '].includes(event.key)&&event.target.matches('svg [data-open-player]')) {event.preventDefault();if(!explorer?.handleClick(event.target))openPlayer(event.target.dataset.openPlayer);}
 });
 window.addEventListener('hashchange',()=>{const page=location.hash.slice(1);if(data&&PAGES.includes(page)&&page!==state.page) changePage(page);});

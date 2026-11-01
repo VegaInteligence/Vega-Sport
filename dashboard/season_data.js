@@ -37,6 +37,22 @@ export async function loadSeason(manifest, selected, fetcher=fetch) {
   if(!season)throw new Error('Saison indisponible');
   const parts=new Array(season.chunks.length);let cursor=0;
   async function worker(){while(true){const index=cursor++;if(index>=season.chunks.length)return;
+    if(manifest.storage==='json-relational'){
+      const chunk=season.chunks[index], tables={};
+      for(const [table,ref] of Object.entries(chunk.tables)){
+        const response=await fetcher(new URL(`./data/${ref.path}`,import.meta.url));
+        if(!response.ok)throw new Error(`Table indisponible : ${table} (HTTP ${response.status})`);
+        const stream=response.body.pipeThrough(new DecompressionStream('gzip'));
+        tables[table]=await new Response(stream).json();
+      }
+      const players=new Map(tables.players.map(p=>[p.id,p]));
+      const shots=new Map(), stats=new Map(tables.team_statistics.map(row=>[row.matchId,row.values]));
+      for(const shot of tables.shots){const {matchId,...value}=shot;if(!shots.has(matchId))shots.set(matchId,[]);shots.get(matchId).push(value);}
+      const appearances=tables.performances.map(row=>{const {playerRef,...value}=row,player=players.get(playerRef);if(!player)throw new Error('Référence joueur absente');return {...value,name:player.name,imageUrl:player.imageUrl};});
+      parts[index]={meta:chunk.meta,metrics:chunk.metrics,fixtures:tables.fixtures,competitions:tables.competitions,teams:tables.teams,
+        matches:tables.matches.map(row=>({...row,shots:shots.get(row.id)||[],stats:stats.get(row.id)||[]})),appearances};
+      continue;
+    }
     const chunk=season.chunks[index],response=await fetcher(new URL(`./data/${chunk.path}`,import.meta.url));
     if(!response.ok)throw new Error(`Données de saison indisponibles (HTTP ${response.status})`);
     if(typeof DecompressionStream==='undefined')throw new Error('Ce navigateur ne peut pas décompresser les données de saison.');

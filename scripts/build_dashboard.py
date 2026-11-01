@@ -17,6 +17,7 @@ FRONTEND_ASSETS = {
     "explorer.js": "text/javascript; charset=utf-8",
     "charts.js": "text/javascript; charset=utf-8",
     "model.js": "text/javascript; charset=utf-8",
+    "rankings.js": "text/javascript; charset=utf-8",
     "season_data.js": "text/javascript; charset=utf-8",
     "favicon.svg": "image/svg+xml",
     "data/football-manifest.json": "application/json; charset=utf-8",
@@ -25,7 +26,12 @@ FRONTEND_ASSETS = {
 
 def main():
     root = Path(__file__).resolve().parents[1]
-    subprocess.run([sys.executable, str(root / "scripts/build_dashboard_data.py")], check=True)
+    canonical = root / 'data/raw/index.json'
+    if not canonical.is_file():
+        subprocess.run([sys.executable, str(root / "scripts/build_dashboard_data.py")], check=True)
+        importer = root / 'scripts/build_json_database.py'
+        if importer.is_file():
+            subprocess.run([sys.executable, str(importer), '--tables-only'], check=True)
     destination = root / "dist"
     if destination.exists():
         shutil.rmtree(destination)
@@ -33,23 +39,49 @@ def main():
     # Copy only the explicitly reviewed frontend; never copy raw project files,
     # credentials, repository metadata or local configuration into the site.
     asset_names = dict(FRONTEND_ASSETS)
-    if (root / 'dashboard/data/open_matchday.json').is_file():
-        asset_names['data/open_matchday.json'] = 'application/json; charset=utf-8'
-    manifest = json.loads((root / "dashboard/data/football-manifest.json").read_text(encoding="utf-8"))
-    for season in manifest.get("seasons", []):
-        for chunk in season.get("chunks", []):
-            relative = chunk.get("path", "")
-            match = re.fullmatch(r"seasons/20\d{2}-20\d{2}/(l_[A-Za-z0-9]{6})--([0-9a-f]+)\.json\.gz", relative)
-            if not match or match.group(1).encode().hex() != match.group(2):
-                raise ValueError("Invalid competition snapshot path")
-            asset_names[f"data/{relative}"] = "application/gzip"
+    sources = {}
+    if canonical.is_file():
+        manifest = json.loads(canonical.read_text(encoding='utf-8'))
+        sources['data/football-manifest.json'] = canonical
+        sources['data/raw/index.json'] = canonical
+        asset_names['data/raw/index.json'] = 'application/json; charset=utf-8'
+        ranking_dir = root / 'data/raw/rankings'
+        if ranking_dir.is_dir():
+            for file in ranking_dir.rglob('*.json'):
+                name = 'data/' + file.relative_to(root/'data').as_posix()
+                sources[name] = file
+                asset_names[name] = 'application/json; charset=utf-8'
+        refs = [ref for season in manifest['seasons'] for chunk in season['chunks'] for ref in chunk['tables'].values()]
+        supplemental = root / 'data/raw/supplemental-index.json'
+        if supplemental.is_file():
+            sources['data/raw/supplemental-index.json'] = supplemental
+            asset_names['data/raw/supplemental-index.json'] = 'application/json; charset=utf-8'
+            refs += [ref for comp in json.loads(supplemental.read_text())['competitions'] for ref in comp['tables'].values()]
+        for ref in refs:
+            name = 'data/' + ref['path']
+            if not ref['path'].startswith('raw/seasons/') or '..' in Path(ref['path']).parts:
+                raise ValueError('Invalid JSON table path')
+            sources[name] = root / 'data' / ref['path']
+            asset_names[name] = 'application/gzip'
+    else:
+        if (root / 'data/staging/dashboard/open_matchday.json').is_file():
+            asset_names['data/open_matchday.json'] = 'application/json; charset=utf-8'
+        manifest = json.loads((root / 'data/staging/dashboard/football-manifest.json').read_text(encoding='utf-8'))
+        for season in manifest.get('seasons', []):
+            for chunk in season.get('chunks', []):
+                relative = chunk.get('path', '')
+                match = re.fullmatch(r'seasons/20\d{2}-20\d{2}/(l_[A-Za-z0-9]{6})--([0-9a-f]+)\.json\.gz', relative)
+                if not match or match.group(1).encode().hex() != match.group(2):
+                    raise ValueError('Invalid competition snapshot path')
+                asset_names[f'data/{relative}'] = 'application/gzip'
     assets = {}
     for name, content_type in asset_names.items():
-        source = root / "dashboard" / name
+        source_root = root / ('data' if canonical.is_file() else 'data/staging/dashboard') if name.startswith('data/') else root / 'dashboard'
+        source = sources.get(name) or source_root / (name.removeprefix('data/') if name.startswith('data/') else name)
         # During the migration the explorer can be authored independently.
         if name == "explorer.js" and not source.exists():
             continue
-        if source.is_symlink() or not source.resolve().is_relative_to((root / "dashboard").resolve()):
+        if source.is_symlink() or not source.resolve().is_relative_to(source_root.resolve()):
             raise ValueError(f"Refusing symlinked public asset: {name}")
         (destination / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination / name)

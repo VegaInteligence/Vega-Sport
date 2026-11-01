@@ -37,19 +37,20 @@ test('local server preserves dashboard routes while isolating source snapshots a
   const fixture = await mkdtemp(path.join(os.tmpdir(), 'orion-dashboard-server-'));
   let child;
   try {
-    await mkdir(path.join(fixture, 'dashboard/data'), { recursive: true });
-    await mkdir(path.join(fixture, 'data'));
+    await mkdir(path.join(fixture, 'data/staging/dashboard'), { recursive: true });
+    await mkdir(path.join(fixture, 'dashboard'), { recursive: true });
+    await mkdir(path.join(fixture, 'data/sources/pitchapi/samples'), {recursive:true});
     await writeFile(path.join(fixture, 'package.json'), '{"type":"module"}');
     await copyFile(path.join(repositoryRoot, 'dashboard/server.js'), path.join(fixture, 'dashboard/server.js'));
     await writeFile(path.join(fixture, 'dashboard/index.html'), '<!doctype html><title>Orion test</title>');
     await writeFile(path.join(fixture, 'dashboard/app.js'), 'export const fixture = "dashboard-app";');
     await writeFile(path.join(fixture, 'dashboard/styles.css'), ':root { color: green; }');
     await writeFile(path.join(fixture, 'dashboard/favicon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
-    await writeFile(path.join(fixture, 'dashboard/data/football.json'), '{"generated":true}');
-    await writeFile(path.join(fixture, 'data/pitchapi_championnats.json'), '{"catalog":true}');
-    await writeFile(path.join(fixture, 'data/pitchapi_premiers_matchs.json'), '{"matches":true}');
+    await writeFile(path.join(fixture, 'data/staging/dashboard/football.json'), '{"generated":true}');
+    await writeFile(path.join(fixture, 'data/sources/pitchapi/samples/pitchapi_championnats.json'), '{"catalog":true}');
+    await writeFile(path.join(fixture, 'data/sources/pitchapi/samples/pitchapi_premiers_matchs.json'), '{"matches":true}');
     await writeFile(path.join(fixture, 'data/private.json'), '{"private":"must-not-leak"}');
-    const archive = path.join(fixture, 'data/europe_2026_2027');
+    const archive = path.join(fixture, 'data/sources/pitchapi/archives/europe_2026_2027');
     await mkdir(path.join(archive, 'matches/l_000001'), {recursive:true});
     await mkdir(path.join(archive, 'fixtures/l_000001'), {recursive:true});
     await mkdir(path.join(archive, 'profiles/players'), {recursive:true});
@@ -57,7 +58,7 @@ test('local server preserves dashboard routes while isolating source snapshots a
     await writeFile(path.join(archive, 'inventory.json'), JSON.stringify({competitions:[{id:'l_000001',matches:[{id:'m_000003',status:'not_started'}]}]}));
     await writeFile(path.join(archive, 'matches/l_000001/m_000001.json'), JSON.stringify({retrieved_at_utc:'2026-11-01T00:00:00Z',endpoints:{players:{status:200,data:[{player:{id:'p_000001'}}]},shots:{status:404,data:null}}}));
     await writeFile(path.join(archive, 'fixtures/l_000001/m_000003.json'), JSON.stringify({retrieved_at_utc:'2026-11-01T00:00:00Z',endpoints:{lineups:{status:200,data:{home:{confirmed:false}}}}}));
-    const history = path.join(fixture, 'data/europe_2021_2026');
+    const history = path.join(fixture, 'data/sources/pitchapi/archives/europe_2021_2026');
     await mkdir(path.join(history, 'matches/l_000001'), {recursive:true});
     await mkdir(path.join(history, 'profiles/players'), {recursive:true});
     await writeFile(path.join(history, 'index.json'), JSON.stringify({matches:[{competition_id:'l_000001',match:{id:'m_10VVHs'}},{competition_id:'l_000001',match:{id:'m_10vvHS'}}]}));
@@ -71,8 +72,8 @@ test('local server preserves dashboard routes while isolating source snapshots a
     await writeFile(path.join(fixture, 'dashboard/.env'), 'SECRET=must-not-leak');
     let symlinksAvailable = true;
     try {
-      await symlink(path.join(fixture, '.env'), path.join(fixture, 'dashboard/data/escape.json'));
-      await symlink(path.join(fixture, 'dashboard/.env'), path.join(fixture, 'dashboard/data/hidden-alias.json'));
+      await symlink(path.join(fixture, '.env'), path.join(fixture, 'data/staging/dashboard/escape.json'));
+      await symlink(path.join(fixture, 'dashboard/.env'), path.join(fixture, 'data/staging/dashboard/hidden-alias.json'));
     } catch (error) {
       if (!['EPERM', 'EACCES', 'ENOSYS', 'ENOTSUP'].includes(error.code)) throw error;
       symlinksAvailable = false;

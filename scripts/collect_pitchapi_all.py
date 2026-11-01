@@ -26,8 +26,8 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE_URL = "https://api.pitchapi.dev/v1"
-DEFAULT_OUTPUT = ROOT / "data/pitchapi_full"
-LOCAL_CATALOG = ROOT / "data/europe_2026_2027/catalogue.json"
+DEFAULT_OUTPUT = ROOT / "data/sources/pitchapi/full"
+LOCAL_CATALOG = ROOT / "data/sources/pitchapi/archives/europe_2026_2027/catalogue.json"
 ID_PATTERN = re.compile(r"^[ltpm]_[A-Za-z0-9]{6}$")
 KEY_PATTERN = re.compile(r"^pk_(?:live|test)_[A-Za-z0-9_-]+$")
 CREDENTIAL_PATTERN = re.compile(r"pk_(?:live|test)_[A-Za-z0-9_-]+")
@@ -464,6 +464,11 @@ def main(argv=None):
     try:
         if args.plan:
             catalogue = read_json(args.catalog)
+            if catalogue is None and args.catalog == LOCAL_CATALOG:
+                import gzip
+                bundled = ROOT / 'data/sources/pitchapi/bundles/europe_2026_2027/metadata/catalogue.json.gz'
+                if bundled.is_file():
+                    catalogue = json.loads(gzip.decompress(bundled.read_bytes()).decode('utf-8-sig'))
             if catalogue is None:
                 raise CollectionError("The local catalogue could not be read.")
             leagues, pairs = catalogue_pairs(catalogue)

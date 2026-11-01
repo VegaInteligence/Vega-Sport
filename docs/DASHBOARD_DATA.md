@@ -1,10 +1,8 @@
 # Contrat de données du dashboard
 
-Le dashboard lit `dashboard/data/football-manifest.json` puis des instantanés
-compressés par compétition et saison dans `dashboard/data/seasons/`, dérivés
-des deux archives européennes locales.
-Le générateur ne contacte aucun service, ne lit aucune clé et ne calcule pas de
-classement Orion.
+Le dashboard lit désormais la [base JSON du projet](JSON_DATABASE.md) : `data/raw/index.json`, puis les tables par saison et compétition. Les joueurs, performances, matchs, tirs et statistiques sont joints par leurs identifiants dans le chargeur du frontend. Les routes d’archives du backend reconstruisent les réponses détaillées à partir des tables d’observations.
+
+Les collections décrites ci-dessous constituent le format de lecture de l’interface, assemblé depuis ces tables. Les anciens instantanés de compétition sont uniquement des intermédiaires de génération dans `data/staging/`.
 
 ## Actualisation
 
@@ -14,6 +12,7 @@ Après avoir actualisé les réponses brutes avec le collecteur existant :
 node scripts/index_europe.mjs
 node scripts/index_europe.mjs --history
 python scripts/build_multiseason_dashboard.py
+python scripts/build_json_database.py
 python -m unittest discover -s tests -v
 ```
 

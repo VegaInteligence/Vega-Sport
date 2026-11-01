@@ -17,7 +17,7 @@ test('dashboard switches between season snapshots and never shows a bare calenda
   const old={document:globalThis.document,window:globalThis.window,location:globalThis.location,history:globalThis.history,fetch:globalThis.fetch};
   try{
     await writeFile(path.join(dir,'package.json'),'{"type":"module"}');
-    for(const name of ['app.js','model.js','charts.js','explorer.js','season_data.js'])await copyFile(path.join(root,'dashboard',name),path.join(dir,name));
+    for(const name of ['app.js','model.js','charts.js','explorer.js','season_data.js','rankings.js'])await copyFile(path.join(root,'dashboard',name),path.join(dir,name));
     await mkdir(path.join(dir,'data','seasons'),{recursive:true});
     const manifest={defaultSeason:'2026/2027',seasons:[{id:'2026/2027',chunks:[{path:'seasons/current.json.gz'}]},{id:'2025/2026',chunks:[{path:'seasons/previous.json.gz'}]}]};
     await writeFile(path.join(dir,'data/football-manifest.json'),JSON.stringify(manifest));

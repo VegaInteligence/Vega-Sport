@@ -16,9 +16,9 @@ import re
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SAMPLE_PATH = ROOT / "data/pitchapi_premiers_matchs.json"
-CATALOG_PATH = ROOT / "data/pitchapi_championnats.json"
-DEFAULT_OUTPUT = ROOT / "dashboard/data/football.json"
+SAMPLE_PATH = ROOT / "data/sources/pitchapi/samples/pitchapi_premiers_matchs.json"
+CATALOG_PATH = ROOT / "data/sources/pitchapi/samples/pitchapi_championnats.json"
+DEFAULT_OUTPUT = ROOT / "data/staging/dashboard/football.json"
 MATCH_ENDPOINTS = (
     "match", "shots", "momentum", "events", "players", "players/halves",
     "lineups", "h2h", "stats", "advanced", "advanced/players",
@@ -345,7 +345,7 @@ def build_snapshot(raw, catalog):
             "schemaVersion": 1,
             "retrievedAt": raw.get("retrieved_at_utc"),
             "source": "PitchAPI · instantané du dépôt",
-            "sourceFiles": ["data/pitchapi_premiers_matchs.json", "data/pitchapi_championnats.json"],
+            "sourceFiles": ["data/sources/pitchapi/samples/pitchapi_premiers_matchs.json", "data/sources/pitchapi/samples/pitchapi_championnats.json"],
             "ratingSource": "PitchAPI",
             "rankingAvailable": False,
             "matchCount": len(matches),
@@ -398,7 +398,7 @@ def write_raw_match_shards(raw, output_directory):
         if not re.fullmatch(r"m_[A-Za-z0-9]{6}", match_id):
             raise ValueError("Invalid match identifier in source snapshot")
         shard = {
-            "meta": {"retrievedAt": raw.get("retrieved_at_utc"), "source": "data/pitchapi_premiers_matchs.json"},
+            "meta": {"retrievedAt": raw.get("retrieved_at_utc"), "source": "data/sources/pitchapi/samples/pitchapi_premiers_matchs.json"},
             "match": {"data": sample["match"], "source": "fixture_index"},
             "availability": {key: {"state": "not_collected", "status": None} for key in MATCH_ENDPOINTS},
         }
@@ -420,7 +420,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
-    if (ROOT / "data/europe_2026_2027/inventory.json").exists():
+    if (ROOT / "data/sources/pitchapi/archives/europe_2026_2027/inventory.json").exists():
         if args.output == DEFAULT_OUTPUT:
             from build_multiseason_dashboard import main as build_multiseason
             if build_multiseason():
@@ -429,6 +429,10 @@ def main():
         from build_season_dashboard import build
         if build(args.output):
             raise SystemExit("Some archived matches could not be normalized; inspect dashboard_issues.json.")
+        return
+    manifest = ROOT / 'data/staging/dashboard/football-manifest.json'
+    if args.output == DEFAULT_OUTPUT and manifest.is_file() and not SAMPLE_PATH.is_file():
+        print('Using checked-in season snapshots from data/staging/dashboard; restore raw archives to regenerate them.')
         return
     sample_bytes = SAMPLE_PATH.read_bytes()
     catalog_bytes = CATALOG_PATH.read_bytes()

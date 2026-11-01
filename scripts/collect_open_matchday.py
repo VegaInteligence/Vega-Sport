@@ -12,7 +12,7 @@ import urllib.request
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / 'data' / 'open_matchday_2026_2027'
+OUTPUT = ROOT / 'data' / 'sources' / 'open_matchday' / '2026-2027'
 URL = 'https://github.com/oladeeayo/open-matchday/archive/refs/heads/master.zip'
 SOURCE = 'https://github.com/oladeeayo/open-matchday'
 EUROPE = set('ALB AND ARM AUT AZE BEL BIH BLR BUL CRO CYP CZE DEN ENG ESP EST FIN FRA FRO GEO GER GIB GRE HUN IRE IRL ISL ISR ITA KAZ KOS LIE LTU LUX LVA MDA MKD MLT MNE NED NIR NOR POL POR ROU RUS SCO SMR SRB SUI SVK SVN SWE TUR UEFA UKR WAL'.split())

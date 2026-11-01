@@ -6,8 +6,8 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / 'data' / 'open_matchday_2026_2027'
-OUTPUT = ROOT / 'dashboard' / 'data' / 'open_matchday.json'
+ARCHIVE = ROOT / 'data' / 'sources' / 'open_matchday' / '2026-2027'
+OUTPUT = ROOT / 'data' / 'staging' / 'dashboard' / 'open_matchday.json'
 
 
 def build(archive=ARCHIVE, output=OUTPUT):

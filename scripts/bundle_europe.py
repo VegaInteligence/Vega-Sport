@@ -14,7 +14,7 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
 ARCHIVES = ('europe_2026_2027', 'europe_2021_2026')
-OUTPUT = ROOT / 'data' / 'pitchapi_bundles'
+OUTPUT = ROOT / 'data' / 'sources' / 'pitchapi' / 'bundles'
 LIMIT = 80 * 1024 * 1024
 
 
@@ -180,7 +180,7 @@ def main():
     args=parser.parse_args()
     key=credential()
     for name in (('europe_2021_2026',) if args.history_only else ARCHIVES):
-        archive=ROOT/'data'/name
+        archive=ROOT/'data'/'sources'/'pitchapi'/'archives'/name
         if (archive/'inventory.json').is_file():
             pack_archive(archive, OUTPUT/name, key)
 

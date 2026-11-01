@@ -3,7 +3,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const historical=process.argv.includes('--history');
-const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..','data',historical?'europe_2021_2026':'europe_2026_2027');
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..','data','sources','pitchapi','archives',historical?'europe_2021_2026':'europe_2026_2027');
 const matchFilename=id=>historical?`${id}--${Buffer.from(id,'utf8').toString('hex')}.json`:`${id}.json`;
 const inventory=JSON.parse(await fs.readFile(path.join(root,'inventory.json'),'utf8'));
 const rows=[], competitionSummaries=[], endpointCounts={}, otherEndpointCounts={};

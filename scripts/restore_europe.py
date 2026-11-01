@@ -10,7 +10,7 @@ import shutil
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
-BUNDLES = ROOT / 'data' / 'pitchapi_bundles'
+BUNDLES = ROOT / 'data' / 'sources' / 'pitchapi' / 'bundles'
 ARCHIVES = ('europe_2026_2027', 'europe_2021_2026')
 
 
@@ -73,7 +73,7 @@ def main():
     for name in ARCHIVES:
         source=BUNDLES/name
         if (source/'manifest.json').is_file():
-            restore_archive(source,ROOT/'data'/name,args.overwrite)
+            restore_archive(source,ROOT/'data'/'sources'/'pitchapi'/'archives'/name,args.overwrite)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
-/data/open_matchday_2026_2027/** -text
-/data/pitchapi_bundles/** -text
-/dashboard/data/seasons/** -text
+/data/sources/open_matchday/2026-2027/** -text
+/data/sources/pitchapi/bundles/** -text
+/data/staging/dashboard/seasons/** -text
+/data/raw/**/*.gz -text

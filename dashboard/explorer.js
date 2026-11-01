@@ -55,8 +55,8 @@ function statValue(stat) {
 function message(titleText,copy) { return `<div class="chart-empty"><strong>${esc(titleText)}</strong><p>${esc(copy)}</p></div>`; }
 
 export class PitchExplorer {
-  constructor({data,redraw,navigate,openLocalMatch}) {
-    Object.assign(this,{data,redraw,navigate,openLocalMatch});
+  constructor({data,rankings,redraw,navigate,openLocalMatch}) {
+    Object.assign(this,{data,rankings,redraw,navigate,openLocalMatch});
     this.configured=false;this.statusKnown=false;this.catalog=data.competitions;
     this.competitionQuery='';this.country='all';this.competitionId=null;this.season=null;this.fixtureStatus='all';
     this.clubQuery='';this.clubId=null;this.remoteMatch=null;this.page=1;
@@ -128,6 +128,12 @@ export class PitchExplorer {
   async loadSupplemental() {
     this.supplementalLoading=true;this.supplementalError=null;
     try {
+      const indexResponse=await fetch(new URL('./data/raw/supplemental-index.json',import.meta.url));
+      if(indexResponse.ok){
+        const index=await indexResponse.json(),competitions=[];
+        for(const item of index.competitions){const {tables,...value}=item;for(const [kind,ref] of Object.entries(tables)){const response=await fetch(new URL(`./data/${ref.path}`,import.meta.url));if(!response.ok)throw new Error(`HTTP ${response.status}`);value[kind]=await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).json();}competitions.push(value);}
+        this.supplementalData={meta:index.meta,competitions};this.supplementalLoading=false;this.redraw();return;
+      }
       const response=await fetch(new URL('./data/open_matchday.json',import.meta.url));
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       const value=await response.json();
@@ -189,7 +195,7 @@ export class PitchExplorer {
     const club=this.data.teams.find(t=>t.id===this.clubId);if(!club){this.clubId=null;return this.renderClubs();}
     const matches=this.localFixtures().filter(m=>m.home_team.id===club.id||m.away_team.id===club.id);
     const players=this.data.appearances.filter(p=>p.teamId===club.id);
-    return `<button class="inline-link back-link" data-back-clubs>← Tous les clubs</button><section class="card"><div class="club-detail-heading">${media(club.name,club.imageUrl,'crest club-logo')}<div><div class="eyebrow">CLUB · DONNÉES COLLECTÉES</div><h2>${esc(club.name)}</h2><p class="muted">${matches.length} match${matches.length>1?'s':''} · ${new Set(players.map(p=>p.playerId)).size} joueurs référencés</p></div><button class="button button-secondary" data-provider-profile="${esc(club.id)}" data-profile-type="teams">Fiche PitchAPI ${arrow}</button></div><div class="card-body"><h3 class="detail-section-title">Les matchs du club</h3><div class="fixture-list">${matches.map(m=>this.fixtureRow(m)).join('')}</div><h3 class="detail-section-title">Les joueurs référencés</h3><div class="club-roster">${players.sort((a,b)=>(b.minutes||0)-(a.minutes||0)).map(p=>`<button class="roster-player" data-open-player="${esc(p.id)}">${media(p.name,p.imageUrl,'player-avatar')}<span><strong>${esc(p.name)}</strong><small>${fmt(p.minutes)} min · ${p.starter?'Titulaire':'Remplaçant'}</small></span></button>`).join('')}</div></div></section>`;
+    return `<button class="inline-link back-link" data-back-clubs>← Tous les clubs</button><section class="card"><div class="club-detail-heading">${media(club.name,club.imageUrl,'crest club-logo')}<div><div class="eyebrow">CLUB · DONNÉES COLLECTÉES</div><h2>${esc(club.name)}</h2><p class="muted">${matches.length} match${matches.length>1?'s':''} · ${new Set(players.map(p=>p.playerId)).size} joueurs référencés</p></div><button class="button button-secondary" data-provider-profile="${esc(club.id)}" data-profile-type="teams">Fiche PitchAPI ${arrow}</button></div><div class="card-body">${this.rankings?.clubPanel(club.id)||''}<h3 class="detail-section-title">Les matchs du club</h3><div class="fixture-list">${matches.map(m=>this.fixtureRow(m)).join('')}</div><h3 class="detail-section-title">Les joueurs référencés</h3><div class="club-roster">${players.sort((a,b)=>(b.minutes||0)-(a.minutes||0)).map(p=>`<button class="roster-player" data-open-player="${esc(p.id)}">${media(p.name,p.imageUrl,'player-avatar')}<span><strong>${esc(p.name)}</strong><small>${fmt(p.minutes)} min · ${p.starter?'Titulaire':'Remplaçant'}</small></span></button>`).join('')}</div></div></section>`;
   }
   async loadShard(id) {
     if(!this.shards.has(id)) this.shards.set(id,(async()=>{for(const url of [`/api/archive/matches/${encodeURIComponent(id)}`,`./data/matches/${encodeURIComponent(id)}.json`]){try{const response=await fetch(url);if(response.ok)return await response.json();}catch{}}return null;})());

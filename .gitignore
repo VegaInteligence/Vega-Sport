@@ -7,7 +7,10 @@ node_modules/
 dist/
 .sites-runtime/
 .sites-checkout/
-data/pitchapi_full/
-data/europe_2026_2027/
-data/europe_2021_2026/
-dashboard/data/football.json
+data/sources/pitchapi/full/
+data/sources/pitchapi/archives/europe_2026_2027/
+data/sources/pitchapi/archives/europe_2021_2026/
+data/staging/dashboard/football.json
+data/staging/
+
+.DS_Store

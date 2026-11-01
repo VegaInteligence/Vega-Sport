@@ -13,8 +13,8 @@ import sys
 from build_dashboard_data import METRICS, build_snapshot
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / 'data' / 'europe_2026_2027'
-OUTPUT = ROOT / 'dashboard' / 'data' / 'football.json'
+ARCHIVE = ROOT / 'data' / 'sources' / 'pitchapi' / 'archives' / 'europe_2026_2027'
+OUTPUT = ROOT / 'data' / 'staging' / 'dashboard' / 'football.json'
 
 
 def season_label(value):
@@ -95,7 +95,7 @@ def build(output=OUTPUT, archive=None, display_season=None, include_inventory_on
     meta = {
         'schemaVersion': 1, 'retrievedAt': inventory['retrieved_at_utc'],
         'source': 'PitchAPI · archive européenne locale',
-        'sourceFiles': [f'data/{archive.name}/inventory.json', f'data/{archive.name}/matches/'],
+        'sourceFiles': [f'data/sources/pitchapi/archives/{archive.name}/inventory.json', f'data/sources/pitchapi/archives/{archive.name}/matches/'],
         'sourceSha256': {'inventory.json': hashlib.sha256(inventory_bytes).hexdigest()},
         'ratingSource': 'PitchAPI', 'rankingAvailable': False,
         'matchCount': len(matches), 'collectedMatches': collected_matches, 'expectedFinishedMatches': total_finished,

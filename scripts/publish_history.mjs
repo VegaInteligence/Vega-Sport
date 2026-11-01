@@ -12,7 +12,7 @@ const python=process.env.PITCH_PYTHON||(existsSync(bundledPython)?bundledPython:
 const options=process.argv.slice(2),years=historyYears(options);
 const report=options.find(arg=>!arg.startsWith('--'));
 const skipCurrent=options.includes('--skip-current');
-const basePaths=['dashboard/data/football-manifest.json','dashboard/data/multiseason_issues.json','dashboard/data/seasons','data/pitchapi_bundles/europe_2021_2026'];
+const basePaths=['data/raw','data/sources/pitchapi/bundles/europe_2021_2026'];
 const env={...process.env,GIT_TERMINAL_PROMPT:'0'};
 function run(command,args,{capture=false,allow=[0]}={}){
   const result=spawnSync(command,args,{cwd:root,env,encoding:'utf8',stdio:capture?'pipe':'inherit'});
@@ -36,6 +36,7 @@ function checkpoint({includeCurrent=false}={}){
   run(process.execPath,['scripts/index_europe.mjs','--history']);
   run(python,['scripts/build_multiseason_dashboard.py']);
   run(python,includeCurrent?['scripts/bundle_europe.py']:['scripts/bundle_europe.py','--history-only']);
+  run(python,['scripts/build_json_database.py']);
   if(report)run(process.execPath,['scripts/report_europe.mjs',report]);
   const branch=git(['branch','--show-current'],{capture:true}).stdout.trim();
   if(branch!=='main')throw new Error('Checkpoint stopped because the current branch is not main.');
@@ -43,7 +44,7 @@ function checkpoint({includeCurrent=false}={}){
   const remote=git(['ls-remote','--heads','origin','main'],{capture:true}).stdout.trim().split(/\s+/)[0];
   if(head!==remote)throw new Error('Checkpoint stopped because local and remote main differ.');
   if(git(['ls-files','--','.env'],{capture:true}).stdout.trim() || git(['check-ignore','-q','.env'],{allow:[0,1]}).status!==0)throw new Error('Credential file is not safely ignored.');
-  const paths=includeCurrent?[...basePaths,'data/pitchapi_bundles/europe_2026_2027']:basePaths;
+  const paths=includeCurrent?[...basePaths,'data/sources/pitchapi/bundles/europe_2026_2027']:basePaths;
   const staged=git(['diff','--cached','--name-only','-z'],{capture:true}).stdout.split('\0').filter(Boolean);
   if(staged.length)throw new Error('Checkpoint stopped because the Git index already has staged changes.');
   git(['add','--',...paths]);

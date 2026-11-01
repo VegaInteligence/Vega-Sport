@@ -4,6 +4,7 @@ import contextlib
 from datetime import datetime, timezone
 import importlib.util
 import io
+import gzip
 import json
 from pathlib import Path
 import tempfile
@@ -73,7 +74,7 @@ def make_client(transport, **kwargs):
 
 class PitchCollectionTests(unittest.TestCase):
     def test_offline_plan_covers_every_catalogue_season_without_loading_credentials(self):
-        catalogue = {"data": json.loads((ROOT / "data/europe_2026_2027/catalogue.json").read_text(encoding="utf-8-sig"))}
+        catalogue = {"data": json.loads(gzip.decompress((ROOT / "data/sources/pitchapi/bundles/europe_2026_2027/metadata/catalogue.json.gz").read_bytes()).decode("utf-8-sig"))}
         leagues, pairs = collector.catalogue_pairs(catalogue)
         self.assertEqual((len(leagues), len(pairs)), (77, 303))
         with patch.object(collector, "load_api_key", side_effect=AssertionError("No key access in a plan")):

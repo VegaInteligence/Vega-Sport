@@ -7,8 +7,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 const historical = args.includes('--history');
 const scopedYears = historical ? historyYears(args) : null;
-const dataRoot = path.join(root, 'data', historical ? 'europe_2021_2026' : 'europe_2026_2027');
-const currentDataRoot = path.join(root, 'data', 'europe_2026_2027');
+const dataRoot = path.join(root, 'data', 'sources', 'pitchapi', 'archives', historical ? 'europe_2021_2026' : 'europe_2026_2027');
+const currentDataRoot = path.join(root, 'data', 'sources', 'pitchapi', 'archives', 'europe_2026_2027');
 // Include UEFA associations even if they are not yet in the provider catalogue.
 const europeanCodes = new Set('ALB AND ARM AUT AZE BEL BIH BLR BUL CRO CYP CZE DEN ENG ESP EST FIN FRA FRO GEO GER DEU GIB GRE GRC HUN IRL ISL ISR ITA KAZ KOS XKX LIE LTU LUX LVA MDA MKD MLT MNE NED NLD NIR NOR POL POR ROU RUS SCO SMR SRB SUI CHE SVK SVN SWE TUR UKR WAL'.split(' '));
 const extraLeagues = new Set(['Champions League', 'Europa League', 'Conference League', '1. Lig']);

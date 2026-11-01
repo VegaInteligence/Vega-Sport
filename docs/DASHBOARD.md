@@ -32,15 +32,14 @@ node dashboard/server.js
 
 Ouvrir `http://127.0.0.1:8765/`. `npm run serve` est un raccourci équivalent. L’instantané préparé est inclus dans le dépôt ; aucune installation Python n’est nécessaire pour simplement le consulter avec ce serveur.
 
-Depuis la racine du dépôt :
+Toutes les données sont regroupées dans [`data/`](../data/README.md). Le serveur Node lit la base JSON dans `data/raw/` ; servir uniquement le dossier d’interface avec un serveur statique ne suffit plus. Pour un aperçu statique, construire le site puis servir le résultat :
 
 ```bash
-node scripts/index_europe.mjs
-python scripts/build_season_dashboard.py
-python -m http.server 3000 --directory dashboard
+python3 scripts/build_dashboard.py
+python3 -m http.server 3000 --directory dist
 ```
 
-Cette alternative utilise Python 3 et sert le dashboard à `http://localhost:3000`. Elle permet de consulter l’instantané ; utiliser le serveur Node pour les routes API.
+Cet aperçu statique ne fournit pas les routes API.
 
 ## Vérification et construction
 
@@ -91,8 +90,8 @@ Le [contrat de données](DASHBOARD_DATA.md) documente les agrégats, les champs 
 | `dashboard/explorer.js` | Compétitions, clubs, vues détaillées et chargement progressif |
 | `dashboard/model.js` | Fonctions pures de filtrage, tri et formatage |
 | `dashboard/charts.js` | Graphiques SVG sans dépendance |
-| `dashboard/data/football.json` | Instantané compact reproductible |
-| `dashboard/data/matches/` | Réponses complètes déjà collectées, une par match |
+| `data/raw/index.json` | Index de la base JSON par saison |
+| `data/raw/seasons/` | Tables des joueurs, matchs, performances, tirs et observations |
 | `worker/pitchapi.js` | Connexion sécurisée aux ressources du fournisseur |
 | `worker/index.js` | Routage du site et assets publics autorisés |
 | `scripts/build_dashboard_data.py` | Normalisation des fichiers bruts |

@@ -7,8 +7,8 @@ import sys
 
 from build_season_dashboard import ROOT, build, season_label
 
-ARCHIVES = [ROOT / 'data' / 'europe_2026_2027', ROOT / 'data' / 'europe_2021_2026']
-DASHBOARD = ROOT / 'dashboard' / 'data'
+ARCHIVES = [ROOT / 'data' / 'sources' / 'pitchapi' / 'archives' / 'europe_2026_2027', ROOT / 'data' / 'sources' / 'pitchapi' / 'archives' / 'europe_2021_2026']
+DASHBOARD = ROOT / 'data' / 'staging' / 'dashboard'
 MANIFEST = DASHBOARD / 'football-manifest.json'
 
 
