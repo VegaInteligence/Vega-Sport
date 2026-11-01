@@ -114,7 +114,22 @@ export class FootballDataClient {
           ? `date/${day}?status=all`
           : `leagues/${league.id}/matches?season=${encodeURIComponent(season)}&status=all`,
       );
-      result = { matches: payload.data?.matches || [], source: "api" };
+      const matches = payload.data?.matches || [];
+      result = {
+        matches:
+          browseMode === "day"
+            ? matches
+            : matches.map((match) => ({
+                ...match,
+                league: match.league ||
+                  payload.data?.league || {
+                    id: league.id,
+                    name: league.name,
+                  },
+                season: match.season ?? season,
+              })),
+        source: "api",
+      };
     } catch (error) {
       const matches =
         browseMode === "day"

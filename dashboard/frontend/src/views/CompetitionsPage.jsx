@@ -258,7 +258,14 @@ export default function CompetitionsPage() {
           ...f.manifest.seasons.flatMap((s) =>
             s.chunks
               .filter((chunk) => chunk.leagueId === c.id)
-              .flatMap((chunk) => chunk.meta.seasons || []),
+              .flatMap(
+                (chunk) =>
+                  chunk.competitions?.find((item) => item.id === c.id)
+                    ?.seasons ||
+                  chunk.meta?.catalogSeasons ||
+                  chunk.meta?.seasons ||
+                  [],
+              ),
           ),
         ]),
       ]
