@@ -65,8 +65,8 @@ Le build publie les tables nécessaires aux vues principales et au complément O
 ## Génération
 
 ```bash
-python3 scripts/build_json_database.py
-node dashboard/server.js
+python3 dashboard/scripts/build_json_database.py
+bun dashboard/backend/server.js
 ```
 
 L’import reconstruit les tables depuis les vues locales existantes dans `data/staging/dashboard/` et les archives dans `data/sources/`. Chaque partition est reconstruite depuis les nouvelles tables puis comparée à l’ancienne vue : toute perte de valeur bloque la génération. `--tables-only` limite la génération aux tables principales ; `--indexes-only` reconstruit les index d’observations.

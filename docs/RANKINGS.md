@@ -37,14 +37,14 @@ La page **Classements** permet de choisir les sélections FIFA ou les associatio
 
 ## Reproduction
 
-La clé SportsAPI est conservée dans `.env` sous `SPORTSAPI_API_KEY`. Elle n’est jamais incluse dans les tables publiques, le frontend ou le build.
+La clé SportsAPI est conservée dans `dashboard/.env` sous `SPORTSAPI_API_KEY`. Elle n’est jamais incluse dans les tables publiques, le frontend ou le build.
 
 ```bash
-python3 scripts/collect_rankings.py --from-year 2022
-python3 scripts/verify_rankings.py
-node dashboard/server.js
+python3 dashboard/scripts/collect_rankings.py --from-year 2022
+python3 dashboard/scripts/verify_rankings.py
+bun dashboard/backend/server.js
 ```
 
 Le collecteur réutilise les réponses locales. `--refresh` permet de les redemander aux sources. Les éditions restent séparées par fournisseur et ne se remplacent pas mutuellement.
 
-Les preuves de collecte et de vérification sont dans `outputs/rankings/`. Les premières tentatives rejetées sont conservées : paramètre FIFA superflu, positions non attribuées et doublon SportsAPI ont été identifiés puis traités explicitement. La réconciliation finale compare toutes les lignes normalisées aux réponses originales téléchargées.
+Les preuves de collecte et de vérification sont dans `dashboard/outputs/rankings/`. Les premières tentatives rejetées sont conservées : paramètre FIFA superflu, positions non attribuées et doublon SportsAPI ont été identifiés puis traités explicitement. La réconciliation finale compare toutes les lignes normalisées aux réponses originales téléchargées.

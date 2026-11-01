@@ -24,18 +24,16 @@ proviennent d'[open-matchday](https://github.com/oladeeayo/open-matchday), sous
 conditions d'usage non commercial et avec attribution. Les deux sources peuvent
 contenir les mêmes matchs et restent séparées.
 
-```powershell
-node dashboard/server.js
+```sh
+cd dashboard
+bun install
+bun run build
+bun start
 ```
 
-Ouvrir ensuite http://127.0.0.1:8765/. Pour reprendre la collecte et régénérer
-les vues locales, configurer la clé dans `.env` puis lancer
-`node scripts/refresh_europe.mjs`. Le périmètre, les limites et les autres options
-sont décrits dans [la documentation des données](docs/PITCHAPI.md).
+Ouvrir http://127.0.0.1:3000/. Le site utilise Next.js App Router pour les pages et la navigation ; le backend de données utilise Bun. La [structure de l’application](docs/ARCHITECTURE.md) décrit les dossiers et les commandes de développement.
 
-Après un clone GitHub, `python scripts/restore_europe.py` restaure les réponses
-brutes depuis les archives compressées du dépôt. Le dashboard peut déjà afficher
-les instantanés de saison sans cette étape.
+Les clés facultatives se configurent dans `dashboard/.env`, à partir de `dashboard/.env.example`. Les données locales restent consultables sans clé.
 
 ## Licence
 

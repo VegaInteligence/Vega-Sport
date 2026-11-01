@@ -9,10 +9,10 @@ Les collections décrites ci-dessous constituent le format de lecture de l’int
 Après avoir actualisé les réponses brutes avec le collecteur existant :
 
 ```bash
-node scripts/index_europe.mjs
-node scripts/index_europe.mjs --history
-python scripts/build_multiseason_dashboard.py
-python scripts/build_json_database.py
+node dashboard/scripts/index_europe.mjs
+node dashboard/scripts/index_europe.mjs --history
+python dashboard/scripts/build_multiseason_dashboard.py
+python dashboard/scripts/build_json_database.py
 python -m unittest discover -s tests -v
 ```
 
