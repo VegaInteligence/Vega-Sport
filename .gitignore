@@ -8,3 +8,6 @@ dist/
 .sites-runtime/
 .sites-checkout/
 data/pitchapi_full/
+data/europe_2026_2027/
+data/europe_2021_2026/
+dashboard/data/football.json

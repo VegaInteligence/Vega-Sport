@@ -73,7 +73,7 @@ def make_client(transport, **kwargs):
 
 class PitchCollectionTests(unittest.TestCase):
     def test_offline_plan_covers_every_catalogue_season_without_loading_credentials(self):
-        catalogue = json.loads((ROOT / "data/pitchapi_championnats.json").read_text(encoding="utf-8-sig"))
+        catalogue = {"data": json.loads((ROOT / "data/europe_2026_2027/catalogue.json").read_text(encoding="utf-8-sig"))}
         leagues, pairs = collector.catalogue_pairs(catalogue)
         self.assertEqual((len(leagues), len(pairs)), (77, 303))
         with patch.object(collector, "load_api_key", side_effect=AssertionError("No key access in a plan")):
@@ -206,10 +206,11 @@ class PitchCollectionTests(unittest.TestCase):
                 collector.load_api_key({"PITCHAPI_API_KEY": "invalid"}, env_path)
 
     def test_dashboard_shards_expose_all_collected_fields_without_claiming_uncollected_endpoints(self):
-        raw = json.loads((ROOT / "data/pitchapi_premiers_matchs.json").read_text(encoding="utf-8-sig"))
+        from test_dashboard_data import synthetic
+        raw, _ = synthetic()
         with tempfile.TemporaryDirectory() as directory:
             builder.write_raw_match_shards(raw, directory)
-            self.assertEqual(len(list(Path(directory).glob("*.json"))), 9)
+            self.assertEqual(len(list(Path(directory).glob("*.json"))), 2)
             for sample in raw["samples"]:
                 shard = collector.read_json(Path(directory) / f"{sample['match']['id']}.json")
                 self.assertEqual(shard["players"]["data"], sample["players"]["data"])

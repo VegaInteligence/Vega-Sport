@@ -21,7 +21,8 @@ export default {
     if (pathname === '/') pathname = '/index.html';
     if (!Object.hasOwn(assets, pathname)) return new Response('Not found', { status: 404, headers });
     const asset = assets[pathname];
-    return new Response(request.method === 'HEAD' ? null : asset.body, {
+    const body=request.method==='HEAD'?null:asset.encoding==='base64'?Uint8Array.from(atob(asset.body),c=>c.charCodeAt(0)):asset.body;
+    return new Response(body, {
       headers: { ...headers, 'Content-Type': asset.type },
     });
   },

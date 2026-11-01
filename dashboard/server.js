@@ -1,6 +1,6 @@
 /** Local dashboard, protected source snapshots and the server-only PitchAPI gateway. */
 import http from 'node:http';
-import { readFile, realpath, stat } from 'node:fs/promises';
+import { open, readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,6 +12,7 @@ const mimeTypes = {
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.gz': 'application/gzip',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.webp': 'image/webp',
@@ -95,6 +96,63 @@ async function serve(request, response) {
     return;
   }
 
+  const archiveProfile = pathname.match(/^\/api\/archive\/profiles\/(leagues|teams|players)\/([ltp]_[A-Za-z0-9]{6})$/);
+  if (archiveProfile && (request.method === 'GET' || head)) {
+    const [, kind, id] = archiveProfile;
+    if (id[0] !== {leagues:'l',teams:'t',players:'p'}[kind]) { reply(response, 404, 'Not found', head); return; }
+    for(const archiveName of ['europe_2026_2027','europe_2021_2026']) try {
+      const archiveRoot = path.join(dataRoot, archiveName);
+      const directory = path.join(archiveRoot, 'profiles', kind);
+      const encoded = path.join(directory, `${id}--${Buffer.from(id,'utf8').toString('hex')}.json`);
+      let resolvedFile;try{resolvedFile=await realpath(encoded)}catch{resolvedFile=await realpath(path.join(directory,`${id}.json`))}
+      const resolvedRoot = await realpath(archiveRoot);
+      if (!contained(resolvedRoot, resolvedFile)) { reply(response, 403, 'Forbidden', head); return; }
+      const profile = JSON.parse(await readFile(resolvedFile, 'utf8'));
+      if (profile.status !== 200 || profile.data?.id !== id) continue;
+      const body = Buffer.from(JSON.stringify(profile));
+      response.writeHead(200, {'Content-Type':'application/json; charset=utf-8','Content-Length':body.length,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
+      response.end(head ? undefined : body);
+      return;
+    } catch { /* Try the next season archive. */ }
+    reply(response, 404, 'Not found', head);
+    return;
+  }
+
+  const archiveMatch = pathname.match(/^\/api\/archive\/matches\/(m_[A-Za-z0-9]{6})$/);
+  if (archiveMatch && (request.method === 'GET' || head)) {
+    for(const archiveName of ['europe_2026_2027','europe_2021_2026']) try {
+      const archiveRoot = path.join(dataRoot, archiveName);
+      let index;try{index=JSON.parse(await readFile(path.join(archiveRoot,'index.json'),'utf8'))}catch{}
+      let entry = index?.matches?.find(item => item.match?.id === archiveMatch[1]);
+      let folder = 'matches';
+      if (!entry) {
+        const inventory = JSON.parse(await readFile(path.join(archiveRoot, 'inventory.json'), 'utf8'));
+        const competition = inventory.competitions.find(item => item.matches.some(match => match.id === archiveMatch[1]));
+        const fixture=competition?.matches.find(match=>match.id===archiveMatch[1]);
+        if (competition) { entry = {competition_id:competition.id}; folder = fixture.status==='finished'?'matches':'fixtures'; }
+      }
+      if (!entry || !/^l_[A-Za-z0-9]{6}$/.test(entry.competition_id)) continue;
+      const id=archiveMatch[1],filename=archiveName==='europe_2021_2026'?`${id}--${Buffer.from(id,'utf8').toString('hex')}.json`:`${id}.json`;
+      const archivePath = path.join(archiveRoot, folder, entry.competition_id, filename);
+      const [resolvedRoot, resolvedFile] = await Promise.all([realpath(archiveRoot), realpath(archivePath)]);
+      if (!contained(resolvedRoot, resolvedFile)) { reply(response, 403, 'Forbidden', head); return; }
+      const record = JSON.parse(await readFile(resolvedFile, 'utf8'));
+      if(record.fixture?.id && record.fixture.id!==id)continue;
+      const mapping = {match:'match', shots:'shots', momentum:'momentum', events:'events', players:'players', 'players/halves':'player_halves', lineups:'lineups', h2h:'h2h', stats:'stats', advanced:'advanced_teams', 'advanced/players':'advanced_players', 'advanced/network':'pass_networks', heatmaps:'heatmaps'};
+      const shard = {meta:{retrievedAt:record.retrieved_at_utc,source:'Archive PitchAPI locale'},availability:{}};
+      for (const [name, key] of Object.entries(mapping)) {
+        const item = record.endpoints?.[key];
+        shard.availability[name] = {state:item?.status === 200 ? 'collected' : 'error',status:item?.status ?? null};
+        if (item?.status === 200) shard[name] = {data:item.data,status:item.status};
+      }
+      const body = Buffer.from(JSON.stringify(shard));
+      response.writeHead(200, {'Content-Type':'application/json; charset=utf-8','Content-Length':body.length,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
+      response.end(head ? undefined : body);
+      return;
+    } catch { /* Try the next season archive. */ }
+    reply(response, 404, 'Not found', head);
+    return;
+  }
   if (pathname === '/api' || pathname.startsWith('/api/')) {
     await serveApi(request, response);
     return;
@@ -136,19 +194,28 @@ async function serve(request, response) {
       reply(response, 403, 'Forbidden', head);
       return;
     }
-    const fileStat = await stat(resolvedFile);
+    // Keep the same file open for the stat and stream, even if a refresh
+    // replaces the snapshot while a browser is reading it.
+    const handle = await open(resolvedFile, 'r');
+    const fileStat = await handle.stat();
     if (!fileStat.isFile()) {
+      await handle.close();
       reply(response, 404, 'Not found', head);
       return;
     }
-    const content = await readFile(resolvedFile);
     response.writeHead(200, {
       'Content-Type': mimeTypes[extension],
-      'Content-Length': content.length,
+      'Content-Length': fileStat.size,
       'X-Content-Type-Options': 'nosniff',
       'Cache-Control': 'no-cache',
     });
-    response.end(head ? undefined : content);
+    if (head) { await handle.close(); response.end(); }
+    else {
+      const stream = handle.createReadStream();
+      stream.once('error', () => response.destroy());
+      response.once('close', () => { if (!response.writableFinished) stream.destroy(); });
+      stream.pipe(response);
+    }
   } catch (error) {
     const absent = error.code === 'ENOENT' || error.code === 'ENOTDIR';
     reply(response, absent ? 404 : 500, absent ? 'Not found' : 'Unable to read asset', head);

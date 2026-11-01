@@ -1,5 +1,5 @@
 /** Catalogue, complete provider payloads and progressive PitchAPI exploration. */
-import {escapeHtml as esc, formatNumber as fmt, normalizeText, isNumber} from './model.js';
+import {escapeHtml as esc, formatNumber as fmt, normalizeText, seasonLabel, isNumber, csvString} from './model.js';
 import {shotMap, xgTimeline} from './charts.js';
 
 export const MATCH_SECTIONS = [
@@ -9,7 +9,7 @@ export const MATCH_SECTIONS = [
   ['advanced/players','Joueurs · avancé'], ['advanced/network','Réseaux de passes'],
   ['heatmaps','Cartes d’activité'], ['h2h','Confrontations'], ['match','Fiche du match']
 ];
-const countryNames = {FRA:'France',ENG:'Angleterre',ESP:'Espagne',GER:'Allemagne',ITA:'Italie',POR:'Portugal',BEL:'Belgique',NED:'Pays-Bas',SCO:'Écosse',DEN:'Danemark',SWE:'Suède',NOR:'Norvège',FIN:'Finlande',CRO:'Croatie',ROU:'Roumanie',TUR:'Turquie',GRE:'Grèce',SUI:'Suisse',AUT:'Autriche',POL:'Pologne',CZE:'Tchéquie',LVA:'Lettonie',USA:'États-Unis',BRA:'Brésil',ARG:'Argentine',JPN:'Japon',KOR:'Corée du Sud',SAU:'Arabie saoudite',AUS:'Australie',MEX:'Mexique',UKR:'Ukraine',SRB:'Serbie',SVK:'Slovaquie',SVN:'Slovénie',HUN:'Hongrie',IRL:'Irlande',ISL:'Islande',LTU:'Lituanie',EST:'Estonie',BUL:'Bulgarie',CYP:'Chypre',ISR:'Israël',EU:'Europe',EUR:'Europe',INT:'International',WORLD:'International'};
+const countryNames = {FRA:'France',ENG:'Angleterre',ESP:'Espagne',GER:'Allemagne',ITA:'Italie',POR:'Portugal',BEL:'Belgique',NED:'Pays-Bas',SCO:'Écosse',DEN:'Danemark',SWE:'Suède',NOR:'Norvège',FIN:'Finlande',CRO:'Croatie',ROU:'Roumanie',TUR:'Turquie',GRE:'Grèce',SUI:'Suisse',AUT:'Autriche',POL:'Pologne',CZE:'Tchéquie',LVA:'Lettonie',USA:'États-Unis',BRA:'Brésil',ARG:'Argentine',JPN:'Japon',KOR:'Corée du Sud',SAU:'Arabie saoudite',AUS:'Australie',MEX:'Mexique',UKR:'Ukraine',SRB:'Serbie',SVK:'Slovaquie',SVN:'Slovénie',HUN:'Hongrie',IRL:'Irlande',IRE:'Irlande',WAL:'Pays de Galles',KAZ:'Kazakhstan',UEFA:'Europe',ISL:'Islande',LTU:'Lituanie',EST:'Estonie',BUL:'Bulgarie',CYP:'Chypre',ISR:'Israël',EU:'Europe',EUR:'Europe',INT:'International',WORLD:'International'};
 const countries = code => countryNames[code] || code || 'International';
 const initials = name => String(name || '?').trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toLocaleUpperCase('fr');
 const date = value => value && !Number.isNaN(Date.parse(value)) ? new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'short',timeZone:'Europe/Paris'}).format(new Date(value)) : '—';
@@ -62,6 +62,9 @@ export class PitchExplorer {
     this.clubQuery='';this.clubId=null;this.remoteMatch=null;this.page=1;
     this.sections=new Map();this.payloads=new Map();this.shards=new Map();this.fixtures=new Map();this.profiles=new Map();
     this.playerSelection=new Map();this.heatSelection=new Map();this.periodSelection=new Map();this.fixtureIndex=new Map();
+    this.supplementalMode=false;this.supplementalData=null;this.supplementalError=null;this.supplementalLoading=false;this.supplementalCompetition=null;this.supplementalTab='results';
+    this.playerIdsByTeam=new Map();
+    for(const row of data.appearances){if(!this.playerIdsByTeam.has(row.teamId))this.playerIdsByTeam.set(row.teamId,new Set());this.playerIdsByTeam.get(row.teamId).add(row.playerId);}
     this.day=data.meta.endDate;this.browseMode='catalog';this.refreshing=false;
     this.statusPromise=Promise.resolve();
   }
@@ -69,7 +72,7 @@ export class PitchExplorer {
     this.statusPromise=this.checkStatus();
     await this.statusPromise;
     if(this.configured) {
-      try {const response=await this.request('leagues'); if(Array.isArray(response.data?.leagues)) this.catalog=response.data.leagues.map(l=>({...l,country:l.country_code,imageUrl:l.image_url,sampleMatches:this.data.competitions.find(x=>x.id===l.id)?.sampleMatches||0}));} catch { /* Keep the traceable local catalogue. */ }
+      try {const response=await this.request('leagues'); if(Array.isArray(response.data?.leagues)) this.catalog=response.data.leagues.map(l=>({...l,country:this.data.competitions.find(x=>x.id===l.id)?.country||l.country_code,imageUrl:l.image_url,sampleMatches:this.data.competitions.find(x=>x.id===l.id)?.sampleMatches||0}));} catch { /* Keep the traceable local catalogue. */ }
     }
     this.redraw();
   }
@@ -89,6 +92,7 @@ export class PitchExplorer {
     return `<div class="api-status ${this.configured?'is-connected':''}"><span class="api-status-dot"></span><div><strong>${this.configured?'Connexion PitchAPI configurée':'Connexion PitchAPI à configurer'}</strong><p>${this.configured?'Le catalogue, les saisons et les détails des matchs se chargent à la demande.':'Les données déjà collectées sont accessibles. La clé du projet doit être ajoutée côté serveur pour charger les autres saisons et les analyses avancées.'}</p></div><a href="https://pitchapi.dev/" target="_blank" rel="noopener noreferrer">PitchAPI ${arrow}</a></div>`;
   }
   localFixtures(leagueId,season) {
+    if(Array.isArray(this.data.fixtures)) return this.data.fixtures.filter(m=>(!leagueId||m.league?.id===leagueId)&&(!season||m.season===season));
     return this.data.matches.filter(m=>(!leagueId||m.leagueId===leagueId)&&(!season||m.season===season)).map(m=>({id:m.id,date:m.date,time_utc:m.timeUtc,status:m.status,home_team:{...m.home,image_url:m.home.imageUrl},away_team:{...m.away,image_url:m.away.imageUrl},score_home:m.home.score,score_away:m.away.score,league:{id:m.leagueId,name:m.league},season:m.season}));
   }
   async loadFixtures() {
@@ -111,14 +115,56 @@ export class PitchExplorer {
     this.fixtures.set(key,result);this.redraw();
   }
   renderCompetitions() {
+    if(this.supplementalMode) return this.renderSupplemental();
     if(this.remoteMatch) return this.renderRemoteMatch();
     if(this.competitionId || this.browseMode==='day') return this.renderSeason();
     const query=normalizeText(this.competitionQuery);
     const leagues=this.catalog.filter(l=>(this.country==='all'||l.country===this.country)&&normalizeText(`${l.name} ${countries(l.country)} ${l.country}`).includes(query)).sort((a,b)=>(b.sampleMatches>0)-(a.sampleMatches>0)||a.name.localeCompare(b.name,'fr'));
     const visible=leagues.slice(0,this.page*24);
-    return `${this.renderConnection()}<div class="section-toolbar"><div><span class="section-label">LE CATALOGUE COMPLET</span><h2>${this.catalog.length} compétitions. Toutes les saisons référencées.</h2><p class="muted">${this.catalog.reduce((n,l)=>n+(l.seasons?.length||0),0)} couples compétition–saison au catalogue · ${this.data.meta.sampleCompetitionCount} compétitions dans l’instantané actuel.</p></div><button class="button button-secondary" data-browse-day>Calendrier par date ${arrow}</button></div>
+    return `${this.renderConnection()}<div class="section-toolbar"><div><span class="section-label">LE CATALOGUE COMPLET</span><h2>${this.catalog.length} compétitions. Toutes les saisons référencées.</h2><p class="muted">${this.catalog.reduce((n,l)=>n+(l.seasons?.length||0),0)} couples compétition–saison au catalogue · ${this.data.meta.sampleCompetitionCount} compétitions dans l’instantané actuel.</p></div><div><button class="button button-secondary" data-open-supplemental>Autres ligues et coupes ${arrow}</button> <button class="button button-secondary" data-browse-day>Calendrier par date ${arrow}</button></div></div>
       <div class="clubs-toolbar"><div class="search-field">⌕ <input id="competition-query" type="search" placeholder="Compétition ou pays…" value="${esc(this.competitionQuery)}" aria-label="Rechercher une compétition"></div><select id="competition-country" aria-label="Filtrer par pays"><option value="all">Tous les pays</option>${[...new Set(this.catalog.map(l=>l.country))].sort((a,b)=>countries(a).localeCompare(countries(b),'fr')).map(c=>`<option value="${esc(c)}" ${this.country===c?'selected':''}>${esc(countries(c))}</option>`).join('')}</select><span class="table-hint">${leagues.length} résultats</span></div>
-      <div class="competition-grid">${visible.map(l=>`<button class="competition-card" data-open-competition="${esc(l.id)}"><div class="competition-card-header">${media(l.name,l.imageUrl,'crest competition-logo')}<span class="country-code">${esc(countries(l.country))}</span>${arrow}</div><h3>${esc(l.name)}</h3><div class="competition-card-meta"><span>${l.seasons?.length||0} saisons</span><span>${esc([...(l.seasons||[])].sort().at(-1)||'—')}</span></div><div class="competition-card-foot"><span class="badge ${l.sampleMatches?'badge-success':'badge-neutral'}">${l.sampleMatches?`${l.sampleMatches} match chargé`:'Catalogue PitchAPI'}</span><span>Explorer →</span></div></button>`).join('')||message('Aucune compétition','Essayez un autre nom ou un autre pays.')}</div>${visible.length<leagues.length?`<div class="load-more"><button class="button button-secondary" data-more-competitions>Afficher les ${Math.min(24,leagues.length-visible.length)} suivantes</button></div>`:''}`;
+      <div class="competition-grid">${visible.map(l=>`<button class="competition-card" data-open-competition="${esc(l.id)}"><div class="competition-card-header">${media(l.name,l.imageUrl,'crest competition-logo')}<span class="country-code">${esc(countries(l.country))}</span>${arrow}</div><h3>${esc(l.name)}</h3><div class="competition-card-meta"><span>${l.seasons?.length||0} saisons</span><span>${esc(seasonLabel([...(l.seasons||[])].sort().at(-1)||'—'))}</span></div><div class="competition-card-foot"><span class="badge ${l.sampleMatches?'badge-success':'badge-neutral'}">${l.sampleMatches?`${l.sampleMatches} match chargé`:'Catalogue PitchAPI'}</span><span>Explorer →</span></div></button>`).join('')||message('Aucune compétition','Essayez un autre nom ou un autre pays.')}</div>${visible.length<leagues.length?`<div class="load-more"><button class="button button-secondary" data-more-competitions>Afficher les ${Math.min(24,leagues.length-visible.length)} suivantes</button></div>`:''}`;
+  }
+  async loadSupplemental() {
+    this.supplementalLoading=true;this.supplementalError=null;
+    try {
+      const response=await fetch(new URL('./data/open_matchday.json',import.meta.url));
+      if(!response.ok)throw new Error(`HTTP ${response.status}`);
+      const value=await response.json();
+      if(!Array.isArray(value.competitions)||!value.meta)throw new Error('Format de données invalide');
+      this.supplementalData=value;
+    }catch(error){this.supplementalError=error.message;}
+    this.supplementalLoading=false;this.redraw();
+  }
+  renderSupplemental() {
+    const back='<button class="inline-link back-link" data-back-supplemental>← Retour aux compétitions</button>';
+    if(!this.supplementalData){
+      if(!this.supplementalLoading&&!this.supplementalError)void this.loadSupplemental();
+      return back+(this.supplementalError?`${message('Données complémentaires indisponibles',this.supplementalError)}<button class="button button-secondary" data-retry-supplemental>Réessayer</button>`:pending);
+    }
+    const data=this.supplementalData, selected=data.competitions.find(c=>c.folder===this.supplementalCompetition);
+    const source=`<p class="table-hint">Source : <a href="https://github.com/oladeeayo/open-matchday" target="_blank" rel="noopener noreferrer">open-matchday</a> · relevé ${esc(data.meta.source_generated_at_utc?.slice(0,10)||'—')} · usage informatif non commercial avec attribution. Certains matchs recoupent PitchAPI.</p>`;
+    if(!selected){
+      return `${back}<div class="section-toolbar"><div><h2>Autres ligues et coupes</h2><p class="muted">${data.competitions.length} compétitions · résultats et calendriers de la source complémentaire.</p>${source}</div></div><div class="competition-grid">${data.competitions.map(c=>`<button class="competition-card" data-supplemental-competition="${esc(c.folder)}"><div class="competition-card-header"><span class="country-code">${esc(countries(c.country_code))}</span>${arrow}</div><h3>${esc(c.name||c.folder)}</h3><div class="competition-card-meta"><span>${c.results.length} résultats</span><span>${c.fixtures.length} rencontres au calendrier</span></div></button>`).join('')}</div>`;
+    }
+    const kind=['results','fixtures','goals'].includes(this.supplementalTab)?this.supplementalTab:'results';
+    const rows=selected[kind]||[], value=v=>v===null||v===undefined||v===''?'<span class="missing-value">—</span>':esc(v);
+    const sorted=[...rows].sort((a,b)=>kind==='fixtures'?(a.date||'').localeCompare(b.date||''):(b.date||'').localeCompare(a.date||''));
+    const headers=kind==='results'?'<th>Date</th><th>Match</th><th>Score</th><th>Tirs</th><th>Corners</th><th>Source</th>':kind==='goals'?'<th>Date</th><th>Match</th><th>Minute</th><th>Score</th><th>Buteur</th>':'<th>Date</th><th>Match</th><th>Heure source</th>';
+    const body=sorted.map(row=>{
+      const match=`${value(row.home)} – ${value(row.away)}`;
+      if(kind==='results')return `<tr><td>${value(row.date)}</td><td>${match}</td><td>${value(row.ft_home)} – ${value(row.ft_away)}</td><td>${value(row.home_shots)} – ${value(row.away_shots)}</td><td>${value(row.home_corners)} – ${value(row.away_corners)}</td><td>${value(row.source)}</td></tr>`;
+      if(kind==='goals')return `<tr><td>${value(row.date)}</td><td>${match}</td><td>${value(row.minute)}</td><td>${value(row.score_home)} – ${value(row.score_away)}</td><td>${value(row.scorer)}</td></tr>`;
+      return `<tr><td>${value(row.date)}</td><td>${match}</td><td>${value(row.time)}</td></tr>`;
+    }).join('');
+    return `<button class="inline-link back-link" data-back-supplemental>← Autres ligues et coupes</button><section class="card"><div class="card-header"><div><h2 class="card-title">${esc(selected.name||selected.folder)}</h2><p class="card-subtitle">${esc(countries(selected.country_code))} · open-matchday</p>${source}</div></div><div class="table-toolbar"><div class="segmented-control" aria-label="Données de la compétition">${[['results','Résultats'],['fixtures','Calendrier'],['goals','Buts']].map(([key,label])=>`<button data-supplemental-tab="${key}" aria-pressed="${key===kind}">${label} · ${selected[key]?.length||0}</button>`).join('')}</div><button class="button button-secondary" data-supplemental-download="${kind}" ${rows.length?'':'disabled'}>Exporter le CSV complet</button></div>${rows.length?`<div class="table-scroll" tabindex="0" role="region" aria-label="Matchs open-matchday"><table class="data-table"><thead><tr>${headers}</tr></thead><tbody>${body}</tbody></table></div>`:message('Aucune donnée pour cette rubrique','La source ne publie aucune ligne pour cette sélection.')}</section>`;
+  }
+  downloadSupplemental(kind) {
+    const competition=this.supplementalData?.competitions.find(c=>c.folder===this.supplementalCompetition);
+    const rows=competition?.[kind];if(!Array.isArray(rows)||!rows.length)return;
+    const headers=Object.keys(rows[0]), csv=csvString(headers,rows.map(row=>headers.map(key=>row[key])));
+    const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+    const a=document.createElement('a');a.href=url;a.download=`open-matchday-${competition.folder}-${kind}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
   renderSeason() {
     const league=this.catalog.find(x=>x.id===this.competitionId);
@@ -127,8 +173,8 @@ export class PitchExplorer {
     const key=byDay?`date:${this.day}`:`${this.competitionId}:${this.season}`;
     const result=this.fixtures.get(key); if(!result) void this.loadFixtures();
     const matches=(result?.matches||[]).filter(m=>this.fixtureStatus==='all'||(this.fixtureStatus==='played'?m.status==='finished':m.status!=='finished'));
-    return `<button class="inline-link back-link" data-back-catalog>← Toutes les compétitions</button><section class="card season-card"><div class="season-heading">${byDay?'':media(league.name,league.imageUrl,'crest competition-logo')}<div><div class="eyebrow">${byDay?'CALENDRIER MONDIAL':esc(countries(league.country))}</div><h2>${byDay?'Les matchs du jour choisi':esc(league.name)}</h2></div><div class="season-controls">${byDay?`<label class="select-field">Date<input id="fixture-date" type="date" value="${esc(this.day)}" aria-label="Date des matchs"></label>`:`<label class="select-field">Saison<select id="fixture-season">${[...league.seasons].sort().reverse().map(s=>`<option ${s===this.season?'selected':''}>${esc(s)}</option>`).join('')}</select></label>`}<label class="select-field">Matchs<select id="fixture-status"><option value="all" ${this.fixtureStatus==='all'?'selected':''}>Tous les matchs</option><option value="played" ${this.fixtureStatus==='played'?'selected':''}>Terminés</option><option value="upcoming" ${this.fixtureStatus==='upcoming'?'selected':''}>À venir</option></select></label></div></div>
-      ${!result||result.loading?pending:`<div class="card-body">${result.source==='snapshot'?`<div class="api-status"><span class="api-status-dot"></span><p><strong>Instantané local uniquement.</strong> ${esc(result.error)} ${matches.length?'Les matchs ci-dessous sont ceux déjà collectés.':'Aucun match de cette saison n’est encore chargé dans le projet.'}</p><button class="button button-ghost" data-retry-fixtures>Réessayer</button></div>`:`<div class="data-kicker">PITCHAPI · ${matches.length} MATCHS · SAISON ${esc(this.season||this.day)}</div>`}<div class="fixture-list">${matches.map(m=>this.fixtureRow(m)).join('')||message('Aucun match à afficher',result.source==='api'?'PitchAPI ne renvoie pas de match pour cette sélection.':'La saison est référencée au catalogue ; ses matchs attendent la connexion API.')}</div></div>`}</section>`;
+    return `<button class="inline-link back-link" data-back-catalog>← Toutes les compétitions</button><section class="card season-card"><div class="season-heading">${byDay?'':media(league.name,league.imageUrl,'crest competition-logo')}<div><div class="eyebrow">${byDay?'CALENDRIER MONDIAL':esc(countries(league.country))}</div><h2>${byDay?'Les matchs du jour choisi':esc(league.name)}</h2></div><div class="season-controls">${byDay?`<label class="select-field">Date<input id="fixture-date" type="date" value="${esc(this.day)}" aria-label="Date des matchs"></label>`:`<label class="select-field">Saison<select id="fixture-season">${[...league.seasons].sort().reverse().map(s=>`<option value="${esc(s)}" ${s===this.season?'selected':''}>${esc(seasonLabel(s))}${/^\d{4}$/.test(s)?' (saison civile)':''}</option>`).join('')}</select></label>`}<label class="select-field">Matchs<select id="fixture-status"><option value="all" ${this.fixtureStatus==='all'?'selected':''}>Tous les matchs</option><option value="played" ${this.fixtureStatus==='played'?'selected':''}>Terminés</option><option value="upcoming" ${this.fixtureStatus==='upcoming'?'selected':''}>À venir</option></select></label></div></div>
+      ${!result||result.loading?pending:`<div class="card-body">${result.source==='snapshot'?`<div class="api-status"><span class="api-status-dot"></span><p><strong>Instantané local uniquement.</strong> ${esc(result.error)} ${matches.length?'Les matchs ci-dessous sont ceux déjà collectés.':'Aucun match de cette saison n’est encore chargé dans le projet.'}</p><button class="button button-ghost" data-retry-fixtures>Réessayer</button></div>`:`<div class="data-kicker">PITCHAPI · ${matches.length} MATCHS · SAISON ${esc(this.season?seasonLabel(this.season):this.day)}</div>`}<div class="fixture-list">${matches.map(m=>this.fixtureRow(m)).join('')||message('Aucun match à afficher',result.source==='api'?'PitchAPI ne renvoie pas de match pour cette sélection.':'La saison est référencée au catalogue ; ses matchs attendent la connexion API.')}</div></div>`}</section>`;
   }
   fixtureRow(match) {
     const home=match.home_team||match.home||{},away=match.away_team||match.away||{};
@@ -137,7 +183,7 @@ export class PitchExplorer {
   renderClubs() {
     if(this.clubId) return this.renderClub();
     const clubs=(this.data.teams||[]).filter(t=>normalizeText(t.name).includes(normalizeText(this.clubQuery))).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
-    return `<div class="section-toolbar"><div><span class="section-label">LES CLUBS DU PROJET</span><h2>Les couleurs derrière les chiffres.</h2><p class="muted">${this.data.teams?.length||0} clubs dans les matchs collectés. Les autres équipes se découvrent depuis leur compétition.</p></div><button class="button button-secondary" data-page="competitions">Explorer les compétitions ${arrow}</button></div><div class="clubs-toolbar"><div class="search-field">⌕ <input id="club-query" type="search" placeholder="Rechercher un club…" aria-label="Rechercher un club" value="${esc(this.clubQuery)}"></div><span class="table-hint">${clubs.length} clubs</span></div><div class="club-grid">${clubs.map(t=>{const league=this.catalog.find(l=>l.id===t.leagueIds[0]);const players=new Set(this.data.appearances.filter(p=>p.teamId===t.id).map(p=>p.playerId));return `<button class="club-card" data-open-club="${esc(t.id)}"><div class="club-card-header">${media(t.name,t.imageUrl,'crest club-logo')}${arrow}</div><h3>${esc(t.name)}</h3><p class="club-card-meta">${esc(league?.name||'')} · ${esc(countries(league?.country))}</p><div class="card-stats"><span><strong>${t.sampleMatches}</strong> match${t.sampleMatches>1?'s':''}</span><span><strong>${players.size}</strong> joueurs référencés</span></div></button>`;}).join('')||message('Aucun club','Essayez une autre recherche.')}</div>`;
+    return `<div class="section-toolbar"><div><span class="section-label">LES CLUBS DU PROJET</span><h2>Les couleurs derrière les chiffres.</h2><p class="muted">${this.data.teams?.length||0} clubs dans les matchs collectés. Les autres équipes se découvrent depuis leur compétition.</p></div><button class="button button-secondary" data-page="competitions">Explorer les compétitions ${arrow}</button></div><div class="clubs-toolbar"><div class="search-field">⌕ <input id="club-query" type="search" placeholder="Rechercher un club…" aria-label="Rechercher un club" value="${esc(this.clubQuery)}"></div><span class="table-hint">${clubs.length} clubs</span></div><div class="club-grid">${clubs.map(t=>{const league=this.catalog.find(l=>l.id===t.leagueIds[0]);const players=this.playerIdsByTeam.get(t.id)?.size||0;return `<button class="club-card" data-open-club="${esc(t.id)}"><div class="club-card-header">${media(t.name,t.imageUrl,'crest club-logo')}${arrow}</div><h3>${esc(t.name)}</h3><p class="club-card-meta">${esc(league?.name||'')} · ${esc(countries(league?.country))}</p><div class="card-stats"><span><strong>${t.sampleMatches}</strong> match${t.sampleMatches>1?'s':''}</span><span><strong>${players}</strong> joueurs référencés</span></div></button>`;}).join('')||message('Aucun club','Essayez une autre recherche.')}</div>`;
   }
   renderClub() {
     const club=this.data.teams.find(t=>t.id===this.clubId);if(!club){this.clubId=null;return this.renderClubs();}
@@ -146,7 +192,7 @@ export class PitchExplorer {
     return `<button class="inline-link back-link" data-back-clubs>← Tous les clubs</button><section class="card"><div class="club-detail-heading">${media(club.name,club.imageUrl,'crest club-logo')}<div><div class="eyebrow">CLUB · DONNÉES COLLECTÉES</div><h2>${esc(club.name)}</h2><p class="muted">${matches.length} match${matches.length>1?'s':''} · ${new Set(players.map(p=>p.playerId)).size} joueurs référencés</p></div><button class="button button-secondary" data-provider-profile="${esc(club.id)}" data-profile-type="teams">Fiche PitchAPI ${arrow}</button></div><div class="card-body"><h3 class="detail-section-title">Les matchs du club</h3><div class="fixture-list">${matches.map(m=>this.fixtureRow(m)).join('')}</div><h3 class="detail-section-title">Les joueurs référencés</h3><div class="club-roster">${players.sort((a,b)=>(b.minutes||0)-(a.minutes||0)).map(p=>`<button class="roster-player" data-open-player="${esc(p.id)}">${media(p.name,p.imageUrl,'player-avatar')}<span><strong>${esc(p.name)}</strong><small>${fmt(p.minutes)} min · ${p.starter?'Titulaire':'Remplaçant'}</small></span></button>`).join('')}</div></div></section>`;
   }
   async loadShard(id) {
-    if(!this.shards.has(id)) this.shards.set(id,(async()=>{try{const response=await fetch(`./data/matches/${encodeURIComponent(id)}.json`);return response.ok?await response.json():null;}catch{return null;}})());
+    if(!this.shards.has(id)) this.shards.set(id,(async()=>{for(const url of [`/api/archive/matches/${encodeURIComponent(id)}`,`./data/matches/${encodeURIComponent(id)}.json`]){try{const response=await fetch(url);if(response.ok)return await response.json();}catch{}}return null;})());
     return await this.shards.get(id);
   }
   async ensureEndpoint(match,section,force=false) {
@@ -154,6 +200,7 @@ export class PitchExplorer {
     this.payloads.set(key,{loading:true});
     if(force)this.shards.delete(match.id);
     await this.statusPromise;
+    if(!force){const shard=await this.loadShard(match.id);if(shard?.[section]&&Object.hasOwn(shard[section],'data')){this.payloads.set(key,{data:shard[section].data,source:'snapshot'});this.redraw();return;}}
     let apiError;
     if(this.configured) {
       try {const payload=await this.request(`matches/${match.id}${section==='match'?'':`/${section}`}`);this.payloads.set(key,{data:payload.data,source:'api'});this.redraw();return;}catch(error){apiError=error;}
@@ -183,7 +230,7 @@ export class PitchExplorer {
     return structuredData(payload);
   }
   lineups(payload) {
-    return `<div class="lineup-grid">${['home','away'].map(side=>{const lineup=payload[side],team=payload[`${side}_team`]||{};if(!lineup)return message('Composition absente',team.name||side);return `<section class="lineup-team"><div class="lineup-title">${media(team.name,team.image_url,'crest club-crest')}<h3>${esc(team.name)}</h3><strong>${esc(lineup.formation||'—')}</strong></div><p class="table-hint">${lineup.confirmed===true?'Composition confirmée':lineup.confirmed===false?'Composition prévisionnelle':'Confirmation non renseignée'}${lineup.coach?.name?` · ${esc(lineup.coach.name)}`:''}</p><div class="formation-pitch" role="img" aria-label="Placement des titulaires de ${esc(team.name)}"><div class="formation-center"></div>${(lineup.starters||[]).filter(p=>isNumber(p.pitch_x)&&isNumber(p.pitch_y)&&p.pitch_x>=0&&p.pitch_x<=1&&p.pitch_y>=0&&p.pitch_y<=1).map(p=>`<span class="formation-player" style="left:${8+p.pitch_y*84}%;top:${8+(1-p.pitch_x)*78}%"><b>${esc(p.shirt_number||'•')}</b><small>${esc(p.name)}${p.is_captain?' ©':''}</small></span>`).join('')}</div><details class="data-record" open><summary>Titulaires · ${(lineup.starters||[]).length}</summary><div class="lineup-list">${(lineup.starters||[]).map(p=>`<div><span class="shirt-number">${esc(p.shirt_number||'—')}</span><span>${esc(p.name)}${p.is_captain?' · Capitaine':''}</span><button class="inline-link" data-provider-profile="${esc(p.player_id)}" data-profile-type="players" aria-label="Fiche de ${esc(p.name)}">${arrow}</button></div>`).join('')}</div></details><details class="data-record"><summary>Remplaçants · ${(lineup.subs||[]).length}</summary><div class="lineup-list">${(lineup.subs||[]).map(p=>`<div><span class="shirt-number">${esc(p.shirt_number||'—')}</span><span>${esc(p.name)}</span></div>`).join('')}</div></details></section>`;}).join('')}</div>`;
+    return `<div class="lineup-grid">${['home','away'].map(side=>{const lineup=payload[side],team=payload[`${side}_team`]||{};if(!lineup)return message('Composition absente',team.name||side);return `<section class="lineup-team"><div class="lineup-title">${media(team.name,team.image_url,'crest club-crest')}<h3>${esc(team.name)}</h3><strong>${esc(lineup.formation||'—')}</strong></div><p class="table-hint">${lineup.confirmed===true?'Composition confirmée':lineup.confirmed===false?((lineup.starters?.length||lineup.subs?.length)?'Composition prévisionnelle':'Composition non renseignée'):'Confirmation non renseignée'}${lineup.coach?.name?` · ${esc(lineup.coach.name)}`:''}</p><div class="formation-pitch" role="img" aria-label="Placement des titulaires de ${esc(team.name)}"><div class="formation-center"></div>${(lineup.starters||[]).filter(p=>isNumber(p.pitch_x)&&isNumber(p.pitch_y)&&p.pitch_x>=0&&p.pitch_x<=1&&p.pitch_y>=0&&p.pitch_y<=1).map(p=>`<span class="formation-player" style="left:${8+p.pitch_y*84}%;top:${8+(1-p.pitch_x)*78}%"><b>${esc(p.shirt_number||'•')}</b><small>${esc(p.name)}${p.is_captain?' ©':''}</small></span>`).join('')}</div><details class="data-record" open><summary>Titulaires · ${(lineup.starters||[]).length}</summary><div class="lineup-list">${(lineup.starters||[]).map(p=>`<div><span class="shirt-number">${esc(p.shirt_number||'—')}</span><span>${esc(p.name)}${p.is_captain?' · Capitaine':''}</span><button class="inline-link" data-provider-profile="${esc(p.player_id)}" data-profile-type="players" aria-label="Fiche de ${esc(p.name)}">${arrow}</button></div>`).join('')}</div></details><details class="data-record"><summary>Remplaçants · ${(lineup.subs||[]).length}</summary><div class="lineup-list">${(lineup.subs||[]).map(p=>`<div><span class="shirt-number">${esc(p.shirt_number||'—')}</span><span>${esc(p.name)}</span></div>`).join('')}</div></details></section>`;}).join('')}</div>`;
   }
   teamStats(match,payload) {
     const periods=payload.periods||[];if(!periods.length)return message('Statistiques absentes','Aucune période n’est renseignée.');
@@ -245,7 +292,14 @@ export class PitchExplorer {
     if(!/^[pt]_[A-Za-z0-9]{6}$/.test(id)||!['teams','players'].includes(type))return;
     const dialog=document.querySelector('#detail-dialog');const content=document.querySelector('#dialog-content');
     content.innerHTML=`<div class="modal-header"><h2 id="dialog-title">Fiche PitchAPI</h2><button class="button button-ghost" data-close-dialog aria-label="Fermer la fiche">✕</button></div><div class="modal-body" id="profile-body">${pending}</div>`;if(!dialog.open)dialog.showModal();
-    try {await this.statusPromise;if(!this.configured)throw new Error('La connexion PitchAPI doit être activée pour charger ce profil complet.');const key=`${type}/${id}`;if(!this.profiles.has(key))this.profiles.set(key,(await this.request(key)).data);const body=document.querySelector('#profile-body');if(body)body.innerHTML=structuredData(this.profiles.get(key));}catch(error){const body=document.querySelector('#profile-body');if(body)body.innerHTML=message('Profil non chargé',error.message);}
+    try {
+      const key=`${type}/${id}`;
+      if(!this.profiles.has(key)) {
+        try {const response=await fetch(`/api/archive/profiles/${key}`);if(response.ok)this.profiles.set(key,(await response.json()).data);}catch{}
+        if(!this.profiles.has(key)) {await this.statusPromise;if(!this.configured)throw new Error('Ce profil n’est pas dans l’archive et la connexion PitchAPI est indisponible.');this.profiles.set(key,(await this.request(key)).data);}
+      }
+      const body=document.querySelector('#profile-body');if(body)body.innerHTML=structuredData(this.profiles.get(key));
+    }catch(error){const body=document.querySelector('#profile-body');if(body)body.innerHTML=message('Profil non chargé',error.message);}
   }
   download(matchId) {
     const section=this.sections.get(matchId)||'lineups',result=this.payloads.get(`${matchId}:${section}`);if(!result||!Object.hasOwn(result,'data'))return;
@@ -253,7 +307,13 @@ export class PitchExplorer {
   }
   handleClick(target) {
     const d=target.dataset;
-    if(d.openCompetition){this.competitionId=d.openCompetition;this.season=[...(this.catalog.find(l=>l.id===d.openCompetition)?.seasons||[])].sort().at(-1);this.remoteMatch=null;this.browseMode='catalog';this.redraw();}
+    if('openSupplemental'in d){this.supplementalMode=true;this.supplementalCompetition=null;this.redraw();}
+    else if('backSupplemental'in d){if(this.supplementalCompetition)this.supplementalCompetition=null;else this.supplementalMode=false;this.redraw();}
+    else if('retrySupplemental'in d){this.supplementalError=null;this.redraw();}
+    else if(d.supplementalCompetition){this.supplementalCompetition=d.supplementalCompetition;this.supplementalTab='results';this.redraw();}
+    else if(d.supplementalTab){this.supplementalTab=d.supplementalTab;this.redraw();}
+    else if(d.supplementalDownload){this.downloadSupplemental(d.supplementalDownload);}
+    else if(d.openCompetition){this.competitionId=d.openCompetition;this.season=[...(this.catalog.find(l=>l.id===d.openCompetition)?.seasons||[])].sort().at(-1);this.remoteMatch=null;this.browseMode='catalog';this.redraw();}
     else if('backCatalog'in d){this.competitionId=null;this.remoteMatch=null;this.browseMode='catalog';this.redraw();}
     else if('moreCompetitions'in d){this.page++;this.redraw();}
     else if('browseDay'in d){this.browseMode='day';this.redraw();}

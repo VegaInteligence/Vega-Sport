@@ -11,8 +11,8 @@ function emptyState(title, detail) {
 }
 
 function scaleExtent(values, targetTicks = 4) {
-  const low = Math.min(0, ...values);
-  const high = Math.max(0, ...values);
+  const low = values.reduce((min, value) => Math.min(min, value), 0);
+  const high = values.reduce((max, value) => Math.max(max, value), 0);
   const span = high - low || 1;
   const rough = span / targetTicks;
   const magnitude = 10 ** Math.floor(Math.log10(rough));
@@ -53,13 +53,18 @@ export function scatterPlot(appearances, options = {}) {
   const xDomain = scaleExtent(available.map(appearance => appearance[xKey]));
   const yDomain = scaleExtent(available.map(appearance => appearance[yKey]));
   const axis = axisGrid({ width, height, margin, xDomain, yDomain, xLabel, yLabel });
-  const points = available.map(appearance => {
+  // Limit SVG nodes for full-season datasets while keeping the original domain.
+  const maxPoints = 1200;
+  const shown = available.length > maxPoints
+    ? Array.from({ length: maxPoints }, (_, index) => available[Math.floor(index * available.length / maxPoints)])
+    : available;
+  const points = shown.map(appearance => {
     const label = `${appearance.name} · ${typeof appearance.team === 'string' ? appearance.team : appearance.team?.name || ''} · ${xLabel} : ${fmt(appearance[xKey])} · ${yLabel} : ${fmt(appearance[yKey])}${isNumber(appearance.minutes) ? ` · ${fmt(appearance.minutes, 0)} minutes` : ''}`;
     return `<circle class="chart-point" cx="${num(axis.x(appearance[xKey]))}" cy="${num(axis.y(appearance[yKey]))}" r="4.4" fill="${COLORS.home}" fill-opacity="0.64" stroke="${COLORS.surface}" stroke-width="1.1" ${playerInteraction(appearance.id, label)}><title>${esc(label)}</title></circle>`;
   }).join('');
   const missing = source.length - available.length;
   const description = `${available.length} apparitions avec les deux mesures renseignées. Axe horizontal : ${xLabel}. Axe vertical : ${yLabel}. Chaque point ouvre la fiche de l'apparition.`;
-  return `<figure class="chart-figure scatter-chart"><svg viewBox="0 0 ${width} ${height}" width="100%" role="group" aria-label="${esc(`${xLabel} et ${yLabel} par apparition`)}" xmlns="http://www.w3.org/2000/svg"><title>${esc(`${xLabel} et ${yLabel} par apparition`)}</title><desc>${esc(description)}</desc>${axis.html}${points}</svg><figcaption class="chart-caption">Un point = une apparition · ${fmt(available.length, 0)} avec les deux mesures${missing ? ` · ${fmt(missing, 0)} ${plural(missing, 'apparition sans les deux mesures', 'apparitions sans les deux mesures')}` : ''}.</figcaption></figure>`;
+  return `<figure class="chart-figure scatter-chart"><svg viewBox="0 0 ${width} ${height}" width="100%" role="group" aria-label="${esc(`${xLabel} et ${yLabel} par apparition`)}" xmlns="http://www.w3.org/2000/svg"><title>${esc(`${xLabel} et ${yLabel} par apparition`)}</title><desc>${esc(description)}</desc>${axis.html}${points}</svg><figcaption class="chart-caption">Un point = une apparition · ${fmt(available.length, 0)} avec les deux mesures${shown.length < available.length ? ` · ${fmt(shown.length, 0)} points affichés` : ''}${missing ? ` · ${fmt(missing, 0)} ${plural(missing, 'apparition sans les deux mesures', 'apparitions sans les deux mesures')}` : ''}.</figcaption></figure>`;
 }
 
 function selectedShots(match, teamId) {

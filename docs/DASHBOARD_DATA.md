@@ -1,30 +1,33 @@
 # Contrat de données du dashboard
 
-Le dashboard lit `dashboard/data/football.json`, un instantané dérivé exclusivement
-des deux réponses PitchAPI enregistrées dans `data/`. Le générateur ne contacte
-aucun service, ne lit aucune clé et ne calcule pas de classement Orion.
+Le dashboard lit `dashboard/data/football-manifest.json` puis des instantanés
+compressés par compétition et saison dans `dashboard/data/seasons/`, dérivés
+des deux archives européennes locales.
+Le générateur ne contacte aucun service, ne lit aucune clé et ne calcule pas de
+classement Orion.
 
 ## Actualisation
 
 Après avoir actualisé les réponses brutes avec le collecteur existant :
 
 ```bash
-python scripts/build_dashboard_data.py
+node scripts/index_europe.mjs
+node scripts/index_europe.mjs --history
+python scripts/build_multiseason_dashboard.py
 python -m unittest discover -s tests -v
 ```
 
-Le générateur utilise uniquement la bibliothèque standard Python. `--output`
-permet de choisir un autre fichier de sortie. L’ordre des matchs et des
-apparitions est stable ; aucun horodatage de génération variable n’est ajouté.
-`meta.retrievedAt` conserve l’horodatage du relevé et `meta.sourceSha256` permet
-d’identifier exactement les fichiers sources.
+Le générateur utilise uniquement la bibliothèque standard Python. L’ordre des
+matchs et des apparitions est stable. `meta.retrievedAt` conserve l’horodatage
+du catalogue de rencontres et `meta.sourceSha256` identifie cet inventaire.
 
 ## Collections
 
 | Collection | Contenu |
 | --- | --- |
 | `meta` | Périmètre, date du relevé, compteurs, source, réserves et empreintes des sources. |
-| `competitions` | Catalogue complet du fournisseur ; `sampleMatches` distingue les compétitions réellement présentes dans l’échantillon. |
+| `competitions` | Compétitions européennes retenues ; `sampleMatches` compte leurs matchs affichés. |
+| `fixtures` | Calendriers et résultats disponibles dans l'inventaire, y compris les matchs à venir. |
 | `matches` | Scores, équipes, statistiques, événements de tir, couverture et réserves par rencontre. |
 | `appearances` | Une ligne par joueur inscrit et par match, y compris les joueurs sans minute jouée. |
 | `metrics` | Libellés français et précision d’affichage des principaux indicateurs. |
@@ -59,8 +62,8 @@ fournisseur, notamment les pourcentages entre parenthèses.
 - Une réponse HTTP en échec est indisponible même si elle contient une charge
   utile résiduelle.
 
-Le match de 3. Liga comporte un score de 1–2, aucun événement de tir et des
-statistiques de tirs et de passes entièrement nulles au sens sportif. Ces zéros
+Certains matchs comportent des statistiques de tirs et de passes toutes à zéro
+alors que leurs tirs sont absents ou incompatibles avec le score. Ces zéros
 sont suspects. Le générateur les remplace par `null` dans les mesures d’action,
 signale `SUSPICIOUS_ZERO_STATS` et conserve les minutes, buts et passes décisives
 enregistrés indépendamment. Les scores restent ceux du fournisseur. Les champs
@@ -69,14 +72,15 @@ enregistrés indépendamment. Les scores restent ceux du fournisseur. Les champs
 ## Événements de tir
 
 `shots[].x` et `y` sont les coordonnées brutes du fournisseur. `type` conserve
-`event_type`. `isGoal` désigne `Goal` ; `isOwnGoal` désigne séparément `OwnGoal`.
+`event_type`. `isOwnGoal` reconnaît `OwnGoal` ainsi que le drapeau
+`is_own_goal` du fournisseur ; `isGoal` exclut les buts contre son camp.
 Un but contre son camp peut ne pas avoir de xG et conserve alors `xg: null`.
 `meta.shotCount` compte tous les événements de cette réponse, y compris le but
 contre son camp : ce compteur peut donc différer du nombre de tentatives dans
 les statistiques d’équipe.
 
-Dans le relevé du 31 octobre 2026, l’échantillon comprend 9 matchs, 18 équipes,
-320 joueurs inscrits, 274 apparitions avec des minutes jouées, 109 notes,
-234 événements de tir et 233 xG de tir renseignés. Le catalogue de 77
-compétitions ne signifie pas que des statistiques ont été collectées pour
-chacune. Il s’agit d’un échantillon exploratoire et non d’une saison complète.
+Le nombre de matchs avec détails effectivement téléchargés figure dans
+`meta.collectedMatches`, à comparer à `meta.expectedFinishedMatches`.
+Les matchs dont seuls les scores sont connus restent visibles, avec les
+statistiques absentes signalées. Les saisons civiles sont regroupées dans la
+saison commençant la même année ; la saison source reste inchangée dans les données.

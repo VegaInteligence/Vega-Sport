@@ -49,6 +49,24 @@ test('local server preserves dashboard routes while isolating source snapshots a
     await writeFile(path.join(fixture, 'data/pitchapi_championnats.json'), '{"catalog":true}');
     await writeFile(path.join(fixture, 'data/pitchapi_premiers_matchs.json'), '{"matches":true}');
     await writeFile(path.join(fixture, 'data/private.json'), '{"private":"must-not-leak"}');
+    const archive = path.join(fixture, 'data/europe_2026_2027');
+    await mkdir(path.join(archive, 'matches/l_000001'), {recursive:true});
+    await mkdir(path.join(archive, 'fixtures/l_000001'), {recursive:true});
+    await mkdir(path.join(archive, 'profiles/players'), {recursive:true});
+    await writeFile(path.join(archive, 'index.json'), JSON.stringify({matches:[{competition_id:'l_000001',match:{id:'m_000001'}}]}));
+    await writeFile(path.join(archive, 'inventory.json'), JSON.stringify({competitions:[{id:'l_000001',matches:[{id:'m_000003',status:'not_started'}]}]}));
+    await writeFile(path.join(archive, 'matches/l_000001/m_000001.json'), JSON.stringify({retrieved_at_utc:'2026-11-01T00:00:00Z',endpoints:{players:{status:200,data:[{player:{id:'p_000001'}}]},shots:{status:404,data:null}}}));
+    await writeFile(path.join(archive, 'fixtures/l_000001/m_000003.json'), JSON.stringify({retrieved_at_utc:'2026-11-01T00:00:00Z',endpoints:{lineups:{status:200,data:{home:{confirmed:false}}}}}));
+    const history = path.join(fixture, 'data/europe_2021_2026');
+    await mkdir(path.join(history, 'matches/l_000001'), {recursive:true});
+    await mkdir(path.join(history, 'profiles/players'), {recursive:true});
+    await writeFile(path.join(history, 'index.json'), JSON.stringify({matches:[{competition_id:'l_000001',match:{id:'m_10VVHs'}},{competition_id:'l_000001',match:{id:'m_10vvHS'}}]}));
+    for(const id of ['m_10VVHs','m_10vvHS']) await writeFile(path.join(history,'matches/l_000001',`${id}--${Buffer.from(id).toString('hex')}.json`), JSON.stringify({fixture:{id},endpoints:{match:{status:200,data:{id}}}}));
+    const profileFile = id => `${id}--${Buffer.from(id,'utf8').toString('hex')}.json`;
+    await writeFile(path.join(archive, 'profiles/players', profileFile('p_000001')), JSON.stringify({status:200,data:{id:'p_000001',name:'Player'}}));
+    await writeFile(path.join(archive, 'profiles/players', profileFile('p_10VVHs')), JSON.stringify({status:200,data:{id:'p_10VVHs',name:'First'}}));
+    await writeFile(path.join(archive, 'profiles/players', profileFile('p_10vvHS')), JSON.stringify({status:200,data:{id:'p_10vvHS',name:'Second'}}));
+    await writeFile(path.join(history, 'profiles/players', profileFile('p_000002')), JSON.stringify({status:200,data:{id:'p_000002',name:'Historical'}}));
     await writeFile(path.join(fixture, '.env'), 'SECRET=must-not-leak');
     await writeFile(path.join(fixture, 'dashboard/.env'), 'SECRET=must-not-leak');
     let symlinksAvailable = true;
@@ -115,6 +133,25 @@ test('local server preserves dashboard routes while isolating source snapshots a
       const extraRaw = await request(port, '/data/private.json');
       assert.equal(extraRaw.status, 404);
       assert.doesNotMatch(extraRaw.body, /must-not-leak/);
+    });
+
+    await t.test('season archive returns collected fields and preserves unavailable endpoints', async () => {
+      const result = await request(port, '/api/archive/matches/m_000001');
+      assert.equal(result.status, 200);
+      const shard = JSON.parse(result.body);
+      assert.equal(shard.players.data[0].player.id, 'p_000001');
+      assert.equal(shard.availability.shots.status, 404);
+      assert.equal(shard.availability.shots.state, 'error');
+      const future = JSON.parse((await request(port, '/api/archive/matches/m_000003')).body);
+      assert.equal(future.lineups.data.home.confirmed, false);
+      assert.equal(JSON.parse((await request(port, '/api/archive/profiles/players/p_000001')).body).data.name, 'Player');
+      assert.equal(JSON.parse((await request(port, '/api/archive/profiles/players/p_10VVHs')).body).data.name, 'First');
+      assert.equal(JSON.parse((await request(port, '/api/archive/profiles/players/p_10vvHS')).body).data.name, 'Second');
+      assert.equal(JSON.parse((await request(port, '/api/archive/profiles/players/p_000002')).body).data.name, 'Historical');
+      for(const id of ['m_10VVHs','m_10vvHS']) assert.equal(JSON.parse((await request(port, `/api/archive/matches/${id}`)).body).match.data.id,id);
+      assert.equal((await request(port, '/api/archive/profiles/teams/p_000001')).status, 404);
+      assert.equal((await request(port, '/api/archive/matches/m_000002')).status, 404);
+      assert.equal((await request(port, '/api/archive/matches/../../.env')).status, 403);
     });
 
     await t.test('literal and encoded traversal, dotfiles and symlink escapes are denied', async () => {

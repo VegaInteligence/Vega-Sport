@@ -27,7 +27,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 ROOT = Path(__file__).resolve().parents[1]
 BASE_URL = "https://api.pitchapi.dev/v1"
 DEFAULT_OUTPUT = ROOT / "data/pitchapi_full"
-LOCAL_CATALOG = ROOT / "data/pitchapi_championnats.json"
+LOCAL_CATALOG = ROOT / "data/europe_2026_2027/catalogue.json"
 ID_PATTERN = re.compile(r"^[ltpm]_[A-Za-z0-9]{6}$")
 KEY_PATTERN = re.compile(r"^pk_(?:live|test)_[A-Za-z0-9_-]+$")
 CREDENTIAL_PATTERN = re.compile(r"pk_(?:live|test)_[A-Za-z0-9_-]+")
@@ -259,7 +259,7 @@ def payload(record):
 
 
 def catalogue_pairs(catalogue):
-    data = catalogue.get("data") if isinstance(catalogue, dict) else None
+    data = catalogue.get("data", catalogue) if isinstance(catalogue, dict) else None
     leagues = data.get("leagues") if isinstance(data, dict) else None
     if not isinstance(leagues, list):
         raise CollectionError("The catalogue has no leagues array.")

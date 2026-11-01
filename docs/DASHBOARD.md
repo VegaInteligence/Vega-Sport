@@ -11,12 +11,12 @@ Le dashboard présente le projet dans une interface noire, avec les logos des cl
 - Passer des volumes du match aux volumes par 90 minutes ; la note fournisseur et les minutes restent inchangées.
 - Sélectionner jusqu’à trois apparitions pour les comparer.
 - Ouvrir un joueur depuis le tableau ou les graphiques ; ouvrir un match pour consulter les statistiques d’équipe, les tirs et le cumul des xG.
-- Consulter les arrêts et buts évités du fournisseur dans les fiches, la comparaison et les exports ; rechercher une compétition ou un pays dans le catalogue.
+- Trier les arrêts et buts évités du fournisseur dans le tableau des joueurs ; les consulter aussi dans les fiches, la comparaison et les exports.
 - Exporter les apparitions filtrées dans un CSV UTF-8. Les données manquantes restent vides.
-- Parcourir les 77 compétitions et 303 couples compétition–saison du catalogue initial ; ouvrir une saison ou un calendrier par date.
+- Parcourir les compétitions européennes collectées et ouvrir une saison ou un calendrier par date.
 - Ouvrir une fiche club avec ses rencontres et joueurs référencés.
 - Explorer 13 familles de données par match : compositions, statistiques des équipes et joueurs, mi-temps, tirs, événements, momentum, analyses avancées, réseaux de passes, cartes d’activité, confrontations et résumé.
-- Consulter tous les champs du fournisseur et télécharger chaque réponse en JSON. Les neuf matchs déjà collectés incluent leurs compositions et statistiques brutes complètes.
+- Consulter tous les champs disponibles du fournisseur et télécharger chaque réponse en JSON.
 
 Les filtres principaux et la page active sont conservés dans l’URL. Le raccourci `/` place le curseur dans la recherche. Les cartes de joueur et la comparaison utilisent une boîte de dialogue native, fermable avec Échap.
 
@@ -35,7 +35,8 @@ Ouvrir `http://127.0.0.1:8765/`. `npm run serve` est un raccourci équivalent. L
 Depuis la racine du dépôt :
 
 ```bash
-python scripts/build_dashboard_data.py
+node scripts/index_europe.mjs
+python scripts/build_season_dashboard.py
 python -m http.server 3000 --directory dashboard
 ```
 
@@ -49,7 +50,7 @@ node --test tests/*.test.mjs
 python scripts/build_dashboard.py
 ```
 
-Les raccourcis `npm test` et `npm run build` sont également disponibles. La construction régénère l’instantané compact et les neuf fichiers détaillés, copie les fichiers publics dans `dist/`, puis produit le Worker autonome `dist/server/index.js`. Seuls les assets explicitement autorisés sont embarqués. Aucune clé API ni configuration privée locale n’est incluse.
+Les raccourcis `npm test` et `npm run build` sont également disponibles. La construction copie les fichiers publics dans `dist/` et produit le Worker autonome `dist/server/index.js`. Seuls les assets explicitement autorisés sont embarqués. Aucune clé API ni configuration privée locale n’est incluse. La taille d'un instantané de saison complète doit être vérifiée avant toute publication ; l'archive brute locale n'est pas embarquée.
 
 ## Connexion PitchAPI et actualisation
 
@@ -57,13 +58,13 @@ La connexion utilise la variable serveur `PITCHAPI_API_KEY`. En local, elle est 
 
 `GET /api/status` indique si une clé est configurée. Les ressources sont disponibles via `/api/pitchapi/…`, avec une liste fermée des 24 formes de routes documentées et des paramètres acceptés. Le serveur conserve les réponses dans un cache court, déduplique les requêtes et transmet les erreurs de disponibilité sans les transformer en zéros.
 
-Sans clé, l’interface reste utilisable avec les neuf matchs de l’instantané et indique les rubriques non collectées. Une fois la clé activée, les saisons et détails sont chargés à la demande. Cela ne signifie pas qu’un historique complet est déjà importé ni qu’un classement de saison a été calculé.
+Sans clé, le serveur local peut consulter les réponses archivées pour les matchs collectés. Une fois la clé activée, les informations peuvent aussi être actualisées à la demande. Aucun classement de saison n’est calculé.
 
-Pour reconstruire l’instantané du projet :
+Pour reconstruire l’instantané local du projet :
 
-1. Mettre à jour les fichiers bruts avec le script de collecte existant.
-2. Relancer la préparation des données et les tests.
-3. Reconstruire et republier le dashboard.
+1. Mettre à jour les fichiers bruts avec `node scripts/collect_europe.mjs`.
+2. Relancer `node scripts/index_europe.mjs` et `python scripts/build_season_dashboard.py`.
+3. Vérifier les données avant une éventuelle republication du dashboard.
 
 Pour archiver tout le périmètre disponible, `python scripts/collect_pitchapi_all.py --all` collecte les index de toutes les saisons avant les détails des matchs terminés et les profils, avec points de reprise. `--plan` décrit ce périmètre sans clé ni réseau. La [documentation PitchAPI](PITCHAPI.md) précise les options et la structure des archives. Ces archives volumineuses ne sont pas embarquées dans le site ; l’explorateur utilise les mêmes ressources à la demande.
 

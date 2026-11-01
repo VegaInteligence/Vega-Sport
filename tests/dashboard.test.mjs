@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {filterAppearances, filterMatches, sortRows, per90, sumKnown, csvString, escapeHtml} from '../dashboard/model.js';
+import {filterAppearances, filterMatches, seasonLabel, sortRows, per90, sumKnown, csvString, escapeHtml} from '../dashboard/model.js';
 
 const rows = [
   {id:'a', name:'Álex', team:'Liège', leagueId:'A', season:'2026', matchId:'m1', minutes:45, xg:0, rating:7},
@@ -12,8 +12,13 @@ const filters = {query:'',league:'all',season:'all',minutes:1};
 
 test('filters combine accent-insensitive search, season and minutes without inventing appearances', () => {
   assert.deepEqual(filterAppearances(rows,{...filters,query:'liege'}).map(x=>x.id),['a']);
-  assert.deepEqual(filterAppearances(rows,{...filters,season:'2026/2027',minutes:30}).map(x=>x.id),['b']);
+  assert.deepEqual(filterAppearances(rows,{...filters,season:'2026/2027',minutes:30}).map(x=>x.id),['a','b']);
   assert.equal(filterAppearances(rows,{...filters,minutes:0}).length,4);
+});
+test('calendar-year seasons use a season label while preserving source values', () => {
+  assert.equal(seasonLabel('2026'),'2026/2027');
+  assert.equal(seasonLabel('2025/2026'),'2025/2026');
+  assert.equal(rows[0].season,'2026');
 });
 test('missing values always sort last and observed zero remains a real value', () => {
   assert.deepEqual(sortRows(rows,'xg','asc').map(x=>x.id),['a','d','b','c']);
@@ -49,14 +54,17 @@ test('a match filter remains exact when a competition contains several matches',
   assert.deepEqual(filterMatches(matches,moreRows,scoped).map(match=>match.id),['m2']);
 });
 
-import {readFileSync} from 'node:fs';
 import {scatterPlot, shotMap, xgTimeline} from '../dashboard/charts.js';
 
-const chartSnapshot = JSON.parse(readFileSync(new URL('../dashboard/data/football.json',import.meta.url),'utf8'));
+const chartMatch = (id, league, shots, homeScore=1, awayScore=0) => ({id, league, home:{id:'home',name:'Home',score:homeScore}, away:{id:'away',name:'Away',score:awayScore}, shots, coverage:{shots:shots.length>0}});
+const normalShot = (i) => ({id:`s${i}`,playerId:'p',playerName:'Player',teamId:i%2?'home':'away',x:90,y:34,minute:i+1,xg:0.1,type:'AttemptSaved',isGoal:false,isOwnGoal:false});
+const ownGoal = {...normalShot(26),xg:null,type:'OwnGoal',isOwnGoal:true};
+const chartMatches = [chartMatch('m1','Example',[normalShot(0)]), chartMatch('m2','3. Liga',[],1,2), chartMatch('m3','Finland',[...Array.from({length:26},(_,i)=>normalShot(i)),ownGoal])];
+const chartSnapshot = {matches:chartMatches, appearances:chartMatches.map(match=>({id:`${match.id}:p`}))};
 const chartPointCount = (html) => [...html.matchAll(/<circle\b[^>]*class="chart-point(?:\s[^"]*)?"/g)].length;
 
-test('all nine real matches render valid chart values and resolve every selectable shot to an appearance', () => {
-  assert.equal(chartSnapshot.matches.length,9);
+test('synthetic matches render valid chart values and resolve every selectable shot to an appearance', () => {
+  assert.equal(chartSnapshot.matches.length,3);
   const appearanceIds = new Set(chartSnapshot.appearances.map(row=>row.id));
   for(const match of chartSnapshot.matches) {
     const map = shotMap(match);
@@ -101,7 +109,7 @@ test('3. Liga missing shots produce explicit unavailable states instead of a zer
   }
 });
 
-test('the real own goal remains on the shot map with unknown xG and is excluded from the cumulative curve', () => {
+test('an own goal remains on the shot map with unknown xG and is excluded from the cumulative curve', () => {
   const match = chartSnapshot.matches.find(item=>item.shots.some(shot=>shot.isOwnGoal));
   const ownGoal = match.shots.find(shot=>shot.isOwnGoal);
   assert.equal(ownGoal.xg,null);

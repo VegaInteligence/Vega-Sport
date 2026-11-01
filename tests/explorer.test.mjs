@@ -1,10 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import { MATCH_SECTIONS, PitchExplorer, media, rawPlayerMetrics, safeImageUrl, structuredData } from '../dashboard/explorer.js';
 
-const data = JSON.parse(await readFile(new URL('../dashboard/data/football.json', import.meta.url), 'utf8'));
-const shards = new Map(await Promise.all(data.matches.map(async match => [match.id, JSON.parse(await readFile(new URL(`../dashboard/data/matches/${match.id}.json`, import.meta.url), 'utf8'))])));
+const player = {player:{id:'p_000001',name:'Player A'},team_id:'t_000001',stats:[{key:'top_stats',title:'Top stats',stats:{'Accurate passes':{key:'accurate_passes',stat:{value:4,total:4}},'Defensive actions':{key:'defensive_actions',stat:{value:1}},'Was fouled':{key:'was_fouled',stat:{value:null}}}}]};
+const makeMatch = (id,league,leagueId,reliable=true) => ({id,league,leagueId,country:'FRA',season:'2026/2027',date:'2026-10-01',status:'finished',home:{id:'t_000001',name:'Home',score:1},away:{id:'t_000002',name:'Away',score:0},coverage:{teamStatsReliable:reliable,shots:reliable},shots:[],stats:[],warnings:[]});
+const data = {meta:{endDate:'2026-10-01'},competitions:[],teams:[],matches:[makeMatch('m_000001','Ligue 1','l_000001'),makeMatch('m_000002','3. Liga','l_000002',false)],appearances:[{id:'m_000001:p_000001',playerId:'p_000001',name:'Player A',teamId:'t_000001',matchId:'m_000001'}]};
+const makeShard = () => ({availability:{lineups:{state:'collected'},stats:{state:'collected'},players:{state:'collected'},shots:{state:'collected'}},lineups:{data:{home_team:{name:'Home'},away_team:{name:'Away'},home:{starters:[],subs:[]},away:{starters:[],subs:[]}}},stats:{data:{periods:[{period:'All',groups:[]}]}},players:{data:[structuredClone(player)]},shots:{data:{periods:[]}}});
+const shards = new Map(data.matches.map(match=>[match.id,makeShard()]));
 const explorer = () => new PitchExplorer({ data, redraw() {}, navigate() {}, openLocalMatch() {} });
 const response = (body, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => structuredClone(body) });
 const rejectExecutableMarkup = html => {
@@ -51,9 +53,9 @@ test('structured data retains unknown fields, missingness, zero and nested untru
   assert.match(structuredData(deep), /missing/);
 });
 
-test('all nine real shards render their collected families and preserve source warnings', () => {
+test('synthetic shards render their collected families and preserve source warnings', () => {
   const app = explorer();
-  assert.equal(shards.size, 9);
+  assert.equal(shards.size, 2);
   for (const match of data.matches) {
     const shard = shards.get(match.id);
     for (const family of ['lineups', 'stats', 'players', 'shots']) {
@@ -78,7 +80,7 @@ test('all nine real shards render their collected families and preserve source w
 test('player metrics keep fractions and deduplicate a metric repeated in provider groups', () => {
   const match = data.matches.find(m => m.league === 'Ligue 1');
   const players = shards.get(match.id).players.data;
-  const player = players.find(p => p.player.name === 'Olivier Giroud');
+  const player = players.find(p => p.player.name === 'Player A');
   const metrics = rawPlayerMetrics(player);
   assert.equal(metrics.get('accurate_passes').value, 4);
   assert.equal(metrics.get('accurate_passes').total, 4);
@@ -109,6 +111,32 @@ test('upcoming fixtures and H2H meetings retain null scores instead of a zero dr
   const h2h = app.headToHead({ home_wins: 0, away_wins: 0, draws: 0, total_matches: 0, recent_matches: [{ home: fixture.home_team, away: fixture.away_team, score_home: null, score_away: null, finished: false }] });
   assert.match(h2h, /À venir/);
   assert.doesNotMatch(h2h, />0\s*<span>–/);
+});
+
+test('offline season fixtures include upcoming matches', () => {
+  const fixture={id:'m_000003',status:'not_started',season:'2026/2027',league:{id:'l_000001'},home_team:{name:'A'},away_team:{name:'B'},score_home:null,score_away:null};
+  const app=new PitchExplorer({data:{...data,fixtures:[fixture]},redraw(){},navigate(){},openLocalMatch(){}});
+  assert.equal(app.localFixtures('l_000001','2026/2027')[0].id,'m_000003');
+  assert.match(app.fixtureRow(fixture),/À venir/);
+});
+
+test('supplemental competitions remain separate and display missing stats as unknown', () => {
+  const app=explorer();
+  app.supplementalMode=true;
+  app.supplementalData={meta:{source_generated_at_utc:'2026-10-31T04:53:24Z'},competitions:[{
+    folder:'UKR_1_premier-league',name:'Ukrainian Premier League',country_code:'UKR',
+    results:[{date:'2026-08-01',home:'<Club>',away:'Away',ft_home:'1',ft_away:'0',home_shots:'',away_shots:'3',home_corners:'',away_corners:'',source:'soccerway'}],fixtures:[],goals:[],
+  }]};
+  assert.match(app.renderSupplemental(),/non commercial/);
+  app.handleClick({dataset:{supplementalCompetition:'UKR_1_premier-league'}});
+  const html=app.renderSupplemental();
+  assert.match(html,/Ukrainian Premier League/);
+  assert.match(html,/&lt;Club&gt;/);
+  assert.match(html,/missing-value/);
+  assert.match(html,/>1 – 0</);
+  assert.doesNotMatch(html,/<Club>/);
+  app.handleClick({dataset:{supplementalTab:'fixtures'}});
+  assert.match(app.renderSupplemental(),/Aucune donnée/);
 });
 
 test('documented sparse heatmaps respect the chosen frame and skip invalid cells', () => {
@@ -192,8 +220,8 @@ test('all thirteen live families use the proxy routes and preserve a successful 
     assert.equal(result.source, 'api');
     assert.equal(result.data, null);
   }
-  assert.equal(calls.length, 13);
-  const routes = new Set(calls.map(call => call.url));
+  assert.equal(calls.length, 14); // One local-archive probe, then 13 API calls.
+  const routes = new Set(calls.map(call => call.url).filter(url => url.startsWith('/api/pitchapi/')));
   assert.ok(routes.has(`/api/pitchapi/matches/${match.id}`));
   assert.ok(routes.has(`/api/pitchapi/matches/${match.id}/players/halves`));
   assert.ok(routes.has(`/api/pitchapi/matches/${match.id}/advanced/players`));
@@ -226,7 +254,7 @@ test('missing-key mode loads known snapshot payloads once and keeps advanced dat
     assert.equal(absent.code, 'NOT_COLLECTED');
     assert.equal(Object.hasOwn(absent, 'data'), false);
   }
-  assert.equal(calls.length, 9);
+  assert.equal(calls.length, data.matches.length * 2); // Archive then static fallback.
   assert.ok(calls.every(call => !call.url.startsWith('https:') && !call.url.includes('/api/pitchapi')));
   assert.doesNotMatch(JSON.stringify(calls), /x-api-key|pk_live_|pk_test_|authorization/i);
 });
@@ -269,11 +297,11 @@ test('fixture fallback is scoped to the original competition and season, includi
 test('explicit retry recovers a temporarily missing local shard', async t => {
   const match = data.matches[0];
   let calls = 0;
-  t.mock.method(globalThis, 'fetch', async () => ++calls === 1 ? response({}, 404) : response(shards.get(match.id)));
+  t.mock.method(globalThis, 'fetch', async () => ++calls <= 2 ? response({}, 404) : response(shards.get(match.id)));
   const app = explorer();
   await app.ensureEndpoint(match, 'lineups');
   assert.equal(app.payloads.get(`${match.id}:lineups`).code, 'NOT_COLLECTED');
   await app.ensureEndpoint(match, 'lineups', true);
   assert.equal(app.payloads.get(`${match.id}:lineups`).source, 'snapshot');
-  assert.equal(calls, 2);
+  assert.equal(calls, 3);
 });

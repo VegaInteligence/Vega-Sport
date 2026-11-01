@@ -16,6 +16,25 @@ Les formules, pondérations et limites sont détaillées dans la [documentation 
 
 Le [dashboard Orion](docs/DASHBOARD.md) propose une interface sombre pour parcourir les compétitions et les clubs, comparer les joueurs et explorer les données complètes des matchs. La connexion à PitchAPI ouvre les saisons et les analyses à la demande. Les notes affichées proviennent de PitchAPI ; le classement Orion reste à calibrer et à valider.
 
+L'archive locale couvre les compétitions européennes PitchAPI disponibles de
+2021/22 à 2026/27, ainsi que les saisons civiles 2021 à 2026. Des résultats et calendriers complémentaires
+proviennent d'[open-matchday](https://github.com/oladeeayo/open-matchday), sous
+conditions d'usage non commercial et avec attribution. Les deux sources peuvent
+contenir les mêmes matchs et restent séparées.
+
+```powershell
+node dashboard/server.js
+```
+
+Ouvrir ensuite http://127.0.0.1:8765/. Pour reprendre la collecte et régénérer
+les vues locales, configurer la clé dans `.env` puis lancer
+`node scripts/refresh_europe.mjs`. Le périmètre, les limites et les autres options
+sont décrits dans [la documentation des données](docs/PITCHAPI.md).
+
+Après un clone GitHub, `python scripts/restore_europe.py` restaure les réponses
+brutes depuis les archives compressées du dépôt. Le dashboard peut déjà afficher
+les instantanés de saison sans cette étape.
+
 ## Licence
 
 [MIT](LICENSE). Les données de fournisseurs tiers restent soumises à leurs propres conditions d’utilisation.

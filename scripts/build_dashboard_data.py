@@ -168,17 +168,22 @@ def build_snapshot(raw, catalog):
         )
         team_shots = source_stats.get("total_shots") or {}
         team_passes = source_stats.get("accurate_passes") or {}
-        # A fixture with goals, no events and zero passes/shots is not a genuine
-        # all-zero performance. Retain independently recorded goals/assists/minutes.
+        shot_list_suspect = not source_shots and (
+            source_periods is None
+            or (number(source_match.get("score_home")) or 0) + (number(source_match.get("score_away")) or 0) > 0
+            or any((first_number(team_shots.get(side)) or 0) > 0 for side in ("home", "away"))
+        )
+        # Missing shot periods plus zero passes/shots are placeholders, including
+        # 0-0 fixtures. Retain independently recorded goals/assists/minutes.
         suspicious = (
             not source_shots
-            and (number(source_match.get("score_home")) or 0) + (number(source_match.get("score_away")) or 0) > 0
+            and (source_periods is None or (number(source_match.get("score_home")) or 0) + (number(source_match.get("score_away")) or 0) > 0)
             and all(first_number(item.get(side)) == 0 for item in (team_shots, team_passes) for side in ("home", "away"))
         )
-        shots_available = bool((sample.get("shots") or {}).get("ok")) and isinstance(source_periods, list) and not suspicious
+        shots_available = bool((sample.get("shots") or {}).get("ok")) and isinstance(source_periods, list) and not shot_list_suspect
         warnings = []
         if suspicious:
-            warnings.append("Les statistiques d’action renvoient des zéros malgré le score. Elles sont masquées ; le score, les buts, les passes décisives et les minutes restent ceux du fournisseur.")
+            warnings.append("Les statistiques d’action comportent des zéros incohérents et des tirs absents. Elles sont masquées ; le score, les buts, les passes décisives et les minutes restent ceux du fournisseur.")
         if not shots_available:
             warnings.append("Les données de tirs ne sont pas disponibles pour ce match.")
         lineup = lineup_lookup(sample)
@@ -230,8 +235,8 @@ def build_snapshot(raw, catalog):
                 "type": shot.get("event_type"),
                 "shotType": shot.get("shot_type"),
                 "situation": shot.get("situation"),
-                "isGoal": shot.get("event_type") == "Goal",
-                "isOwnGoal": shot.get("event_type") == "OwnGoal",
+                "isGoal": shot.get("event_type") == "Goal" and shot.get("is_own_goal") is not True,
+                "isOwnGoal": shot.get("is_own_goal") is True or shot.get("event_type") == "OwnGoal",
                 "isOnTarget": shot.get("is_on_target"),
             }
             for shot in source_shots
@@ -415,6 +420,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
+    if (ROOT / "data/europe_2026_2027/inventory.json").exists():
+        if args.output == DEFAULT_OUTPUT:
+            from build_multiseason_dashboard import main as build_multiseason
+            if build_multiseason():
+                raise SystemExit("Some archived matches could not be normalized; inspect multiseason_issues.json.")
+            return
+        from build_season_dashboard import build
+        if build(args.output):
+            raise SystemExit("Some archived matches could not be normalized; inspect dashboard_issues.json.")
+        return
     sample_bytes = SAMPLE_PATH.read_bytes()
     catalog_bytes = CATALOG_PATH.read_bytes()
     raw = json.loads(sample_bytes.decode("utf-8-sig"))

@@ -1,10 +1,12 @@
 # Football Ranking — données PitchAPI
 
-Ce dépôt contient un premier relevé du catalogue PitchAPI et des données brutes
-de neuf matchs européens. Les fichiers sont dans `data/` :
-
-- `pitchapi_championnats.json` : catalogue des compétitions et saisons renvoyées par l'API ;
-- `pitchapi_premiers_matchs.json` : compositions, statistiques de joueurs et d'équipes, et tirs pour les matchs testés.
+L'archive locale couvre les saisons européennes PitchAPI 2021/22 à 2026/27 et
+les saisons civiles 2021 à 2026. Les réponses brutes sont conservées dans
+`data/europe_2021_2026/` et `data/europe_2026_2027/`, par compétition et match.
+Les calendriers et scores sont visibles dès l'inventaire ; les détails peuvent
+encore être en cours de collecte, avec une couverture indiquée dans le dashboard.
+Une saison civile est regroupée dans la saison commençant la même année, tout en
+conservant la valeur exacte du fournisseur dans les données.
 
 ## Configuration
 
@@ -12,27 +14,46 @@ Créer un fichier `.env` à la racine à partir de `.env.example`, puis renseign
 `PITCHAPI_API_KEY`. Le fichier `.env` est ignoré par Git. La clé peut aussi être
 fournie dans la variable d'environnement `PITCHAPI_API_KEY`, qui est prioritaire.
 
-Avec PowerShell, récupérer un nouveau catalogue et les derniers matchs terminés
-des championnats de l'échantillon :
+Avec Node.js, collecter le catalogue, les calendriers complets, les 13 familles
+de données des matchs terminés, les détails et compositions disponibles des
+rencontres à venir, et les profils de compétition, club et joueur :
 
 ```powershell
-./scripts/collect_pitchapi.ps1
+node scripts/collect_europe.mjs
+node scripts/collect_europe.mjs --history
 ```
 
-Pour actualiser uniquement le catalogue :
+Pour récupérer uniquement l'inventaire des calendriers :
 
 ```powershell
-./scripts/collect_pitchapi.ps1 -CatalogOnly
+node scripts/collect_europe.mjs --inventory-only
 ```
 
-Le script enregistre les réponses dans `data/` et les erreurs HTTP éventuelles
-dans l'échantillon. Il n'inscrit pas la clé dans les fichiers de données.
+Le script reprend les fichiers complets après interruption et réessaie les
+réponses transitoires. Les indisponibilités, y compris les 404, restent indiquées
+pour chaque route. Les profils renvoyant `PLAN_UPGRADE_REQUIRED` sont conservés
+comme indisponibles avec la clé courante. Les fiches de rencontres non terminées sont rafraîchies après
+six heures ; leurs compositions peuvent être prévisionnelles. La clé n'est pas
+enregistrée dans les données.
+
+Les noms de fichiers de profils ajoutent l'identifiant encodé en hexadécimal :
+PitchAPI distingue les majuscules et minuscules, même sur un système de fichiers
+Windows qui ne les distingue pas. Le nom conserve aussi l'identifiant d'origine.
+
+Les réponses brutes sont empaquetées dans `data/pitchapi_bundles/` pour GitHub.
+Les archives sont découpées par saison et compétition, avec empreintes SHA-256.
+Après un clone, `python scripts/restore_europe.py` vérifie ces empreintes et
+restaure les fichiers absents ; `--overwrite` remplace les fichiers locaux.
+Les instantanés compressés du dashboard sont consultables sans restauration.
 
 ## Lecture des données
 
 Le catalogue contient 77 compétitions mondiales au moment du premier relevé :
 il ne couvre pas toutes les ligues européennes. Les données individuelles
 dépendent de la compétition et du match.
+
+La 1. Lig turque est classée `INT` dans le catalogue source. Les vues dérivées
+l'affichent sous `TUR` ; le code d'origine reste conservé dans l'inventaire.
 
 Dans les vérifications initiales, plusieurs matchs de 3. Liga allemande ont
 renvoyé une liste de tirs vide et des totaux à zéro malgré des buts. Ces zéros
@@ -51,11 +72,33 @@ node dashboard/server.js
 Ouvrir ensuite http://127.0.0.1:8765/. Le tableau de bord lit l’instantané
 préparé à partir des fichiers du dépôt. Si `PITCHAPI_API_KEY` est configurée,
 le serveur fournit aussi un accès à la demande aux saisons et aux détails
-PitchAPI ; la clé reste côté serveur. Après une nouvelle collecte de
-l’échantillon, régénérer cet instantané :
+PitchAPI ; la clé reste côté serveur. Après une collecte, régénérer l'index local
+et l'instantané du dashboard :
 
 ```powershell
-python scripts/build_dashboard_data.py
+node scripts/index_europe.mjs
+node scripts/index_europe.mjs --history
+python scripts/build_multiseason_dashboard.py
+```
+
+Pour reprendre la collecte et régénérer automatiquement les deux fichiers du
+dashboard en une commande :
+
+```powershell
+node scripts/refresh_europe.mjs
+```
+
+Si Python n'est pas accessible sous le nom `python`, `PITCH_PYTHON` peut
+contenir le chemin de son exécutable. Un chemin de rapport Markdown peut être
+fourni comme premier argument à cette commande.
+
+Une reprise normale garde les réponses déjà collectées. Pour réessayer les 404
+si le fournisseur a ajouté des données, ou redemander tous les détails des
+matchs, utiliser respectivement :
+
+```powershell
+node scripts/refresh_europe.mjs --retry-unavailable
+node scripts/refresh_europe.mjs --refresh-details
 ```
 
 Le serveur affiche aussi bien `/` que les anciennes URLs `/dashboard/`.
@@ -68,9 +111,9 @@ conditions d'utilisation du fournisseur avant toute redistribution des données.
 ## Collecte exhaustive et reprise
 
 `scripts/collect_pitchapi_all.py` collecte le périmètre annoncé par le catalogue,
-avec Python et sa bibliothèque standard. Le relevé local contient **77
-compétitions et 303 couples compétition–saison**. Ce nombre décrit le catalogue,
-pas des données déjà téléchargées. Pour vérifier ce périmètre sans clé ni accès
+avec Python et sa bibliothèque standard. Il s'agit d'un outil distinct du
+collecteur européen ci-dessus : il vise toutes les saisons et toutes les régions
+du catalogue. Pour vérifier ce périmètre sans clé ni accès
 réseau :
 
 ```powershell
@@ -148,15 +191,38 @@ acceptée comme argument de commande, ni écrite dans les réponses, les erreurs
 le manifeste. Le client utilise HTTPS et refuse les redirections. Les archives
 exhaustives ne sont pas incorporées automatiquement au dashboard publié.
 
-### Données intégrales déjà présentes dans le dashboard
+### Données intégrales dans le dashboard local
 
-La génération de `dashboard/data/football.json` crée aussi
-`dashboard/data/matches/<match_id>.json`. Ces neuf fichiers rendent accessibles
-tous les champs bruts déjà collectés : statistiques individuelles et d’équipe,
-compositions et tirs. Leur champ `availability` distingue les réponses collectées,
-les routes non collectées et les erreurs. Le résumé disponible provient de
-l’index des rencontres et est signalé `fixture_only` ; il ne se présente pas
-comme une réponse complète d’une route qui n’a pas été appelée.
+Le serveur local lit les réponses détaillées directement dans l'archive, une
+rencontre à la fois. Le fichier `collection.json` résume les endpoints et les
+profils ; `index.json` indique les matchs disponibles et les zéros suspects.
+Les archives locales ne sont pas automatiquement publiées sur le site hébergé.
 
-La collection exhaustive reste séparée de cet échantillon. La commande
-`--plan` et les tests hors réseau ne constituent pas une collecte réelle.
+## Source complémentaire : open-matchday
+
+`data/open_matchday_2026_2027/` contient les CSV de compétitions européennes
+publiés par [open-matchday](https://github.com/oladeeayo/open-matchday), dont
+plusieurs coupes et divisions absentes du catalogue PitchAPI. Ces données
+peuvent recouvrir des matchs PitchAPI : ne pas additionner les deux sources sans
+rapprochement. Elles portent principalement sur les résultats, calendriers et
+certaines statistiques d'équipe, sans xG ou statistiques individuelles.
+Dans le dashboard, ouvrir « Compétitions » puis « Autres ligues et coupes »
+pour consulter cette source séparément et exporter ses CSV complets.
+
+La source autorise l'usage informatif non commercial avec attribution ; ses
+[conditions et crédits](https://github.com/oladeeayo/open-matchday/blob/master/DISCLAIMER.md)
+sont également conservés localement. Certaines saisons civiles sont partielles et
+les données peuvent être en retard sur les résultats les plus récents.
+`cross_source_audit.json` compare les scores uniquement lorsque compétition,
+date et noms d'équipes normalisés correspondent exactement ; il ne conclut rien
+sur les rencontres non rapprochées ni sur les statistiques individuelles.
+
+Pour actualiser uniquement cette source :
+
+```powershell
+python scripts/collect_open_matchday.py
+python scripts/build_open_matchday_dashboard.py
+```
+
+`node scripts/refresh_europe.mjs` actualise les deux sources, reconstruit l'index
+et le dashboard PitchAPI, puis peut régénérer le rapport de couverture.

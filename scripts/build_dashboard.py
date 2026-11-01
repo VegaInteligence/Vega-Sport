@@ -1,5 +1,6 @@
 """Build static preview assets and a self-contained Sites Worker."""
 
+import base64
 import json
 from pathlib import Path
 import re
@@ -16,8 +17,9 @@ FRONTEND_ASSETS = {
     "explorer.js": "text/javascript; charset=utf-8",
     "charts.js": "text/javascript; charset=utf-8",
     "model.js": "text/javascript; charset=utf-8",
+    "season_data.js": "text/javascript; charset=utf-8",
     "favicon.svg": "image/svg+xml",
-    "data/football.json": "application/json; charset=utf-8",
+    "data/football-manifest.json": "application/json; charset=utf-8",
 }
 
 
@@ -31,14 +33,16 @@ def main():
     # Copy only the explicitly reviewed frontend; never copy raw project files,
     # credentials, repository metadata or local configuration into the site.
     asset_names = dict(FRONTEND_ASSETS)
-    snapshot = json.loads((root / "dashboard/data/football.json").read_text(encoding="utf-8"))
-    for match in snapshot.get("matches", []):
-        match_id = match.get("id", "")
-        if not re.fullmatch(r"m_[A-Za-z0-9]{6}", match_id):
-            raise ValueError("Invalid match ID in dashboard snapshot")
-        name = f"data/matches/{match_id}.json"
-        if (root / "dashboard" / name).is_file():
-            asset_names[name] = "application/json; charset=utf-8"
+    if (root / 'dashboard/data/open_matchday.json').is_file():
+        asset_names['data/open_matchday.json'] = 'application/json; charset=utf-8'
+    manifest = json.loads((root / "dashboard/data/football-manifest.json").read_text(encoding="utf-8"))
+    for season in manifest.get("seasons", []):
+        for chunk in season.get("chunks", []):
+            relative = chunk.get("path", "")
+            match = re.fullmatch(r"seasons/20\d{2}-20\d{2}/(l_[A-Za-z0-9]{6})--([0-9a-f]+)\.json\.gz", relative)
+            if not match or match.group(1).encode().hex() != match.group(2):
+                raise ValueError("Invalid competition snapshot path")
+            asset_names[f"data/{relative}"] = "application/gzip"
     assets = {}
     for name, content_type in asset_names.items():
         source = root / "dashboard" / name
@@ -49,7 +53,10 @@ def main():
             raise ValueError(f"Refusing symlinked public asset: {name}")
         (destination / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination / name)
-        assets[f"/{name}"] = {"type": content_type, "body": source.read_text(encoding="utf-8")}
+        if name.endswith('.gz'):
+            assets[f"/{name}"] = {"type":content_type,"body":base64.b64encode(source.read_bytes()).decode('ascii'),"encoding":"base64"}
+        else:
+            assets[f"/{name}"] = {"type": content_type, "body": source.read_text(encoding="utf-8")}
 
     # The Worker ESM contract requires one module. Both sources are dependency-free.
     gateway = (root / "worker/pitchapi.js").read_text(encoding="utf-8")
