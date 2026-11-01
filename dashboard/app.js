@@ -244,10 +244,10 @@ function toast(message) {
 
 function exportRows() {
   const rows=sortRows(currentRows(),state.sort,state.direction,state.mode);
-  const keys=['name','team','league','season','date','minutes','rating','goals','assists','xg','xa','shots','chancesCreated','defensiveActions','saves','goalsPrevented'];
-  const headers=['Joueur','Club','Compétition','Saison','Date','Minutes','Note PitchAPI /10','Buts','Passes décisives','xG','xA','Tirs','Occasions créées','Actions défensives','Arrêts','Buts évités (PitchAPI)'];
-  if(state.mode==='per90') for(let i=7;i<headers.length;i++) headers[i]+=' /90';
-  const csv=csvString(headers,rows.map((row)=>keys.map((key,index)=>state.mode==='per90'&&index>=7?per90(row[key],row.minutes):row[key])));
+  const keys=['name','team','league','seasonDisplay','season','date','minutes','rating','goals','assists','xg','xa','shots','chancesCreated','defensiveActions','saves','goalsPrevented'];
+  const headers=['Joueur','Club','Compétition','Saison','Saison source','Date','Minutes','Note PitchAPI /10','Buts','Passes décisives','xG','xA','Tirs','Occasions créées','Actions défensives','Arrêts','Buts évités (PitchAPI)'];
+  if(state.mode==='per90') for(let i=8;i<headers.length;i++) headers[i]+=' /90';
+  const csv=csvString(headers,rows.map((row)=>keys.map((key,index)=>key==='seasonDisplay'?seasonLabel(row.season):state.mode==='per90'&&index>=8?per90(row[key],row.minutes):row[key])));
   const href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
   const link=document.createElement('a'); link.href=href; link.download=`orion-performances-${state.mode==='per90'?'par90-':''}${data.meta.endDate}.csv`; document.body.append(link); link.click(); link.remove(); setTimeout(()=>URL.revokeObjectURL(href),1000);
   toast(`${rows.length} apparitions exportées. Les données manquantes restent vides.`);

@@ -145,6 +145,8 @@ def pack_archive(archive, output, key=None):
     result={'archive':archive.name,'generated_at_utc':datetime.now(timezone.utc).isoformat(),
             'inventory_at_utc':inventory['retrieved_at_utc'],'complete':(archive/'collection.json').is_file(),
             'bundles':bundles,'metadata':metadata}
+    if previous and {k:v for k,v in previous.items() if k!='generated_at_utc'} == {k:v for k,v in result.items() if k!='generated_at_utc'}:
+        result['generated_at_utc'] = previous.get('generated_at_utc', result['generated_at_utc'])
     output.mkdir(parents=True, exist_ok=True)
     temporary=output / f'manifest.{os.getpid()}.tmp'
     temporary.write_text(json.dumps(result,ensure_ascii=False,separators=(',',':')),encoding='utf-8')

@@ -32,6 +32,7 @@ class BundleTests(unittest.TestCase):
                 file.write_bytes(json.dumps({'status':200,'data':{'id':identifier}}).encode())
             packed=base/'bundles';manifest=bundle.pack_archive(source,packed,b'not-present-secret')
             self.assertEqual(sum(item['files'] for item in manifest['bundles']),4)
+            self.assertEqual(bundle.pack_archive(source,packed,b'not-present-secret'),manifest)
             target=base/'restored'/'europe_2021_2026'
             restore.restore_archive(packed,target)
             for original in source.rglob('*.json'):
