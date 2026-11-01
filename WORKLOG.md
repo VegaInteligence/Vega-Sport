@@ -1,9 +1,9 @@
 # Worklog
 
-- Goal: add the reference-style multi-column footer and reduce navbar branding to a smaller symbol without the STATARENA wordmark.
-- Delivered: shared SiteFooter outside main and in the loading shell; full footer logo; Explorer/Joueurs/Méthode/Projet groups with real destinations; separated copyright/MIT row. Navbar uses the original 32px symbol with a 44px home target; theme switch remains far right.
-- Preserved: user reference light/dark palettes and brand blue accents, original assets, football JSON data, filters, season/competition navigation context and the removed Settings route.
-- Verified locally: production build and full eight-route/data/archive E2E; desktop 1280x720 and mobile 390x844 in both themes; footer links to Players/ranking/home; one footer outside main; two mobile columns and no horizontal overflow. Screenshots, commands and logs: dashboard/outputs/site-footer/.
-- Failure retained: unsupported icon import and subsequent missing-build run; fixed with the existing icon component and rerun successfully. Loading-shell wiring compiled/reviewed; intentionally stalled loading not simulated.
-- Publication: code commit 6ff6f857; repo OrionQuantPlatform/STATARENA, Vercel statarena (prj_DhaqrVkH3Gi4uysT7IRsm9fB2bjR), https://statarena-analytics.vercel.app. Publish evidence with the code and confirm the automatic Git deployment before reporting completion.
-- No further implementation planned. Suggested commit: docs: record footer and compact navbar verification.
+- Goal: reference-inspired white theme and dark/light via the navbar icon. User clarified: just moon/sun, no menu or Settings page.
+- Delivered: white #FFFFFF body/cards, dark gray #16181D text, #DCDFE4 borders and subtle gray controls/footers; STATARENA blue retained. Light treatment covers selectors, match detail, player dialog, charts and shared footer. Dark palette, compact symbol, full footer logo, JSON data and filters preserved.
+- Theme control: existing persistent navbar button retained; 44px icon-only target. Sun activates light, Moon dark. Browser theme-color is #FFFFFF or #0F0F11, including after reload/navigation.
+- Reference observed live: London Strategic Edge /data light scheme. Only neutral palette/surface treatments reused; no financial content, artwork or layout copied. Colors recorded in dashboard/outputs/theme-reference/reference-palette.json.
+- Verified locally: production build and eight-route/data/archive E2E; browser desktop 1280x720 and mobile 390x844, real player/match details, open selector, persistence, no overflow or console errors. Evidence: dashboard/outputs/theme-reference/. Storage denial/cross-tab sync not simulated.
+- Publication: source commit 6bfc4bf7; repo OrionQuantPlatform/STATARENA, Vercel statarena (prj_DhaqrVkH3Gi4uysT7IRsm9fB2bjR), https://statarena-analytics.vercel.app. Push code/evidence and confirm the automatic Git deployment before reporting completion.
+- No further implementation planned. Suggested commit: docs: record light and dark theme verification.
