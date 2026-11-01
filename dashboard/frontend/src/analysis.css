@@ -165,6 +165,59 @@
 .filter-input-wrap input::placeholder {
   color: #78827b;
 }
+select,
+select option,
+select optgroup {
+  color-scheme: dark;
+  color: #e5eae6;
+  background-color: #111713;
+}
+@supports (appearance: base-select) {
+  select,
+  .filter-input-wrap select,
+  select::picker(select) {
+    appearance: base-select;
+  }
+  select {
+    align-items: center;
+  }
+  select::picker(select) {
+    color: #e5eae6;
+    background: #111713;
+    border: 1px solid #465044;
+    border-radius: 9px;
+    box-shadow: 0 14px 40px #0008;
+    padding: 5px;
+    margin-block: 6px;
+    max-height: min(380px, 60dvh);
+    overflow-y: auto;
+    font: 12px var(--font);
+  }
+  select option {
+    padding: 10px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  select option:checked {
+    background: #283623;
+    color: #d4f2bd;
+  }
+  select option:hover,
+  select option:focus-visible {
+    background: #303c33;
+    color: #fff;
+    outline: 1px solid #a4c98e;
+    outline-offset: -1px;
+  }
+  select option::checkmark {
+    color: #b8e99b;
+  }
+  .filter-input-wrap select::picker-icon {
+    display: none;
+  }
+}
 .filter-panel-footer {
   display: flex;
   align-items: center;
