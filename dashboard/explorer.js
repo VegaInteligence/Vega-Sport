@@ -143,7 +143,7 @@ export class PitchExplorer {
       return back+(this.supplementalError?`${message('Données complémentaires indisponibles',this.supplementalError)}<button class="button button-secondary" data-retry-supplemental>Réessayer</button>`:pending);
     }
     const data=this.supplementalData, selected=data.competitions.find(c=>c.folder===this.supplementalCompetition);
-    const source=`<p class="table-hint">Source : <a href="https://github.com/oladeeayo/open-matchday" target="_blank" rel="noopener noreferrer">open-matchday</a> · relevé ${esc(data.meta.source_generated_at_utc?.slice(0,10)||'—')} · usage informatif non commercial avec attribution. Certains matchs recoupent PitchAPI.</p>`;
+    const source=`<p class="table-hint">Saison 2026/2027 (ou saison civile 2026) · source : <a href="https://github.com/oladeeayo/open-matchday" target="_blank" rel="noopener noreferrer">open-matchday</a> · relevé ${esc(data.meta.source_generated_at_utc?.slice(0,10)||'—')} · usage informatif non commercial avec attribution. Certains matchs recoupent PitchAPI.</p>`;
     if(!selected){
       return `${back}<div class="section-toolbar"><div><h2>Autres ligues et coupes</h2><p class="muted">${data.competitions.length} compétitions · résultats et calendriers de la source complémentaire.</p>${source}</div></div><div class="competition-grid">${data.competitions.map(c=>`<button class="competition-card" data-supplemental-competition="${esc(c.folder)}"><div class="competition-card-header"><span class="country-code">${esc(countries(c.country_code))}</span>${arrow}</div><h3>${esc(c.name||c.folder)}</h3><div class="competition-card-meta"><span>${c.results.length} résultats</span><span>${c.fixtures.length} rencontres au calendrier</span></div></button>`).join('')}</div>`;
     }
