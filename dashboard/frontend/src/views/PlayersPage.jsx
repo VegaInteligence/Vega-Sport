@@ -6,6 +6,7 @@ import Layout from "../components/Layout.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number, isNumber } from "../services/format.js";
 import { sortRows, per90 } from "../model.js";
+import PlayerSeasonProfile from "../components/PlayerSeasonProfile.jsx";
 import {
   Card,
   Rating,
@@ -21,16 +22,15 @@ export default function PlayersPage() {
     [sort, setSort] = useState({ key: "rating", direction: "desc" }),
     [page, setPage] = useState(1);
   const id = useSearchParams().get("id");
+  const scopeRows = id ? f.seasonPlayerScope : [];
+  const playerRows = useMemo(
+    () => (id ? scopeRows.filter((row) => row.playerId === id) : f.rows),
+    [id, scopeRows, f.rows],
+  );
   const rows = useMemo(
     () =>
-      sortRows(
-        id ? f.rows.filter((r) => r.playerId === id) : f.rows,
-        sort.key,
-        sort.direction,
-        mode,
-        f.data.appearances,
-      ),
-    [f.rows, f.data, id, sort, mode],
+      sortRows(playerRows, sort.key, sort.direction, mode, f.data.appearances),
+    [playerRows, f.data, sort, mode],
   );
   const pages = Math.max(1, Math.ceil(rows.length / 20)),
     current = Math.min(page, pages);
@@ -48,7 +48,16 @@ export default function PlayersPage() {
     ["goalsPrevented", "Buts évités"],
   ];
   return (
-    <Layout path="/joueurs/" title="Joueurs" filters filterKind="players">
+    <Layout
+      path="/joueurs/"
+      title="Joueurs"
+      filters
+      filterKind="players"
+      onExport={() => f.exportRows(mode, id ? rows : undefined)}
+    >
+      {id && (
+        <PlayerSeasonProfile id={id} rows={playerRows} scopeRows={scopeRows} />
+      )}
       <Card
         title={id ? `Performances de ${rows[0]?.name || id}` : "Performances"}
         action={
@@ -63,7 +72,7 @@ export default function PlayersPage() {
             )}
             <button
               className="button button-secondary"
-              onClick={() => f.exportRows(mode)}
+              onClick={() => f.exportRows(mode, id ? rows : undefined)}
             >
               Exporter CSV
             </button>

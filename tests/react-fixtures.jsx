@@ -30,3 +30,8 @@ export class PitchExplorer extends FootballDataClient{
  renderSupplemental(){return serialize(<SupplementalPanel data={this.supplementalData} id={this.supplementalCompetition} kind={this.supplementalTab||'results'}/>);}
  handleClick({dataset}){if(dataset.supplementalCompetition)this.supplementalCompetition=dataset.supplementalCompetition;if(dataset.supplementalTab)this.supplementalTab=dataset.supplementalTab;}
 }
+
+import PlayerSearchResults from '../dashboard/frontend/src/components/PlayerSearchResults.jsx';
+import PlayerSeasonProfile from '../dashboard/frontend/src/components/PlayerSeasonProfile.jsx';
+export const renderSeasonSearch=(rows,query)=>renderToStaticMarkup(<FootballContext.Provider value={{rows,filters:{query},partial:false,href:(path,params={})=>path+'?'+new URLSearchParams(params)}}><PlayerSearchResults/></FootballContext.Provider>);
+export const renderSeasonProfile=(rows,matches,id)=>renderToStaticMarkup(<FootballContext.Provider value={{season:'2026/2027',competitions:[],filters:{league:'all',minutes:1},focus:'all',data:{matches},setPlayer:()=>{}}}><PlayerSeasonProfile id={id} rows={rows} scopeRows={rows}/></FootballContext.Provider>);

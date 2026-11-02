@@ -208,10 +208,10 @@ export function PlayerDialog() {
           <div className="performance-links">
             <Link
               className="button button-ghost"
-              href={f.href("/joueurs/", { id: row.playerId })}
+              href={f.href("/joueurs/", { id: row.playerId, q: "" })}
               onClick={close}
             >
-              Toutes ses performances
+              Fiche joueur
             </Link>
             <Link
               className="button button-primary"

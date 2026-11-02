@@ -26,6 +26,7 @@ import {
   primeResource,
 } from "../services/resources.js";
 import { warmProfiles } from "../services/player-profile.js";
+import { filterSeasonPlayerScope } from "../services/season-player.js";
 import {
   advancedKey,
   advancedQuery,
@@ -307,6 +308,15 @@ export function FootballProvider({ children, loadData = true }) {
       recent.entries.delete(recent.entries.keys().next().value);
     return result;
   }, [data, deferredScope]);
+  // A player's season and its peers share the active filters, but not the
+  // search text or the selected single-match filter. Compute only on demand.
+  const seasonPlayerScope = useMemo(() => {
+    let value;
+    return () =>
+      (value ??= data
+        ? filterSeasonPlayerScope(data.appearances, deferredScope)
+        : []);
+  }, [data, deferredScope]);
   // Computed on first use: the players pages never read the match list.
   const matchList = useMemo(() => {
     let value;
@@ -411,7 +421,7 @@ export function FootballProvider({ children, loadData = true }) {
           : (setNotice("La comparaison est limitée à3 performances."), list),
     );
   }
-  function exportRows(mode = "total") {
+  function exportRows(mode = "total", selectedRows = rows) {
     const fields = [
       "date",
       "matchId",
@@ -436,7 +446,7 @@ export function FootballProvider({ children, loadData = true }) {
       "statarena-performances.csv",
       csvString(
         fields,
-        rows.map((r) =>
+        selectedRows.map((r) =>
           fields.map((key) =>
             mode === "per90" &&
             ![
@@ -479,6 +489,9 @@ export function FootballProvider({ children, loadData = true }) {
     filters,
     setFilters,
     rows,
+    get seasonPlayerScope() {
+      return seasonPlayerScope();
+    },
     get matches() {
       return matchList();
     },

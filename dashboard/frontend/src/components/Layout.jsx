@@ -10,6 +10,7 @@ import { AdvancedPanel, AdvancedToggle } from "./AdvancedFilters.jsx";
 import { advancedChips, countAdvanced } from "../services/advanced-filters.js";
 import SiteHeader from "./SiteHeader.jsx";
 import SiteFooter from "./SiteFooter.jsx";
+import PlayerSearchResults from "./PlayerSearchResults.jsx";
 export const navigation = pages
   .filter((page) => page.navigation !== false)
   .map((page) => [page.path, page.title]);
@@ -225,6 +226,7 @@ export default function Layout({
   showSeasonContext = true,
   className = "",
   subnav,
+  onExport,
   children,
 }) {
   const f = useFootball();
@@ -273,7 +275,7 @@ export default function Layout({
                 <div className="heading-actions">
                   <button
                     className="button button-secondary"
-                    onClick={() => f.exportRows()}
+                    onClick={onExport || (() => f.exportRows())}
                   >
                     <Icon name="download" /> Exporter les données
                   </button>
@@ -283,6 +285,7 @@ export default function Layout({
           )}
           {subnav}
           {filters && <Filters kind={filterKind} />}
+          {filters && filterKind !== "fixtures" && <PlayerSearchResults />}
           {f.notice && (
             <div role="status" className="notice">
               {f.notice}
