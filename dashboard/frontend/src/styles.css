@@ -1975,6 +1975,10 @@ th[aria-sort="descending"] .sort-indicator {
 .standings-table tbody tr:hover th:nth-child(2) {
   background: var(--surface-hover);
 }
+.standings-table tr[data-match-team="true"],
+.standings-table tr[data-match-team="true"] th:nth-child(2) {
+  background: var(--accent-soft);
+}
 .standings-table .standings-team {
   display: flex;
   min-width: 0;

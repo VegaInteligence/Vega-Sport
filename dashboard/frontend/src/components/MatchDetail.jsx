@@ -6,6 +6,7 @@ import { Card, Media, Rating, Segments, Empty, AsyncState } from "./UI.jsx";
 import Icon from "./Icon.jsx";
 import { XgTimeline, ShotMap } from "./Charts.jsx";
 import { MatchSections } from "./MatchSections.jsx";
+import MatchStandings from "./MatchStandings.jsx";
 import { periodShort } from "./PlayerMetrics.jsx";
 import { number, date, isNumber } from "../services/format.js";
 import {
@@ -19,6 +20,7 @@ import { download, useResource } from "../services/resources.js";
 import { csvString } from "../model.js";
 const views = [
   ["overview", "Vue d’ensemble", "activity"],
+  ["standings", "Classement", "trophy"],
   ["stats", "Statistiques", "filters"],
   ["shots", "Tirs & xG", "target"],
   ["lineups", "Compositions", "pitch"],
@@ -664,6 +666,7 @@ export default function MatchDetail({ match }) {
           </div>
         )}
         {view === "stats" && <MatchStatistics match={match} />}
+        {view === "standings" && <MatchStandings match={match} />}
         {view === "shots" && <MatchShots match={match} />}
         {view === "lineups" && (
           <MatchSections
