@@ -327,8 +327,14 @@ select:hover {
 input:not([type="checkbox"]):not([type="radio"]):focus,
 select:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: none;
+}
+input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+select:focus-visible {
+  background: var(--surface-hover);
+}
+select option:focus-visible {
+  outline: none;
 }
 input::placeholder {
   color: var(--muted-light);

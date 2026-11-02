@@ -50,8 +50,8 @@
 }
 .league-spotlight-item:focus-visible,
 .league-cup-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: none;
+  background: var(--surface-hover);
 }
 .league-spotlight-logo {
   width: 38px;
