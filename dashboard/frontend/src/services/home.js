@@ -61,7 +61,6 @@ export const FEATURED_CLUB_IDS = new Set([
   "t_1jOgDP", // PSV Eindhoven
   "t_4KvHFN", // Feyenoord
 ]);
-export const FEATURED_CLUB_DAYS = 7;
 
 function featuredClubCount(match) {
   return (
@@ -83,13 +82,11 @@ function matchTime(match) {
 
 /** Select from the already-filtered scope, prioritising recently played major clubs. */
 export function selectFeaturedMatch(matches, now) {
-  const eligible = recentFinishedMatches(matches, now).filter(
-    (match) => !match.status || match.status === "finished",
+  const candidates = recentFinishedMatches(matches, now).filter(
+    (match) =>
+      (!match.status || match.status === "finished") &&
+      featuredClubCount(match) > 0,
   );
-  const highInterest = recentRecords(eligible, now, FEATURED_CLUB_DAYS).filter(
-    (match) => featuredClubCount(match) > 0,
-  );
-  const candidates = highInterest.length ? highInterest : eligible;
   let best = null,
     bestTime = -Infinity,
     bestClubCount = 0;

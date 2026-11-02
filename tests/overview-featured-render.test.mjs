@@ -136,6 +136,24 @@ test("home promotes a recent major-club match within the followed competitions",
     onlyPortugal.match(
       /<section class="hero-strip featured-match"[\s\S]*?<\/section>/,
     )?.[0] || "";
-  assert.match(portugalFeatured, /Braga/);
-  assert.doesNotMatch(portugalFeatured, /Arsenal/);
+  assert.equal(portugalFeatured, "");
+
+  context.matches = [
+    braga,
+    arsenal,
+    {
+      ...braga,
+      id: "porto",
+      date: "2026-10-31",
+      timeUtc: "2026-10-31T20:00:00Z",
+      home: { id: "t_0dVrhE", name: "FC Porto", score: 4 },
+    },
+  ];
+  const withPorto = renderToStaticMarkup(h(mod.exports.default));
+  const portoFeatured =
+    withPorto.match(
+      /<section class="hero-strip featured-match"[\s\S]*?<\/section>/,
+    )?.[0] || "";
+  assert.match(portoFeatured, /FC Porto/);
+  assert.doesNotMatch(portoFeatured, /Braga/);
 });

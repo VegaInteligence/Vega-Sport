@@ -67,7 +67,7 @@ test("equally recent games prefer a meeting between two featured clubs", () => {
   );
 });
 
-test("selection respects the followed competitions and falls back to their latest match", () => {
+test("selection respects followed competitions and never falls back to ordinary games", () => {
   const portugal = match(
     "braga",
     "por",
@@ -85,7 +85,7 @@ test("selection respects the followed competitions and falls back to their lates
     "t_1gkhxH",
   );
   const filtered = followedRecords([arsenal, portugal], ["por"]);
-  assert.equal(selectFeaturedMatch(filtered, now).id, "braga");
+  assert.equal(selectFeaturedMatch(filtered, now), null);
   const porto = match(
     "porto",
     "por",
@@ -103,7 +103,7 @@ test("selection respects the followed competitions and falls back to their lates
   );
 });
 
-test("old, future, unfinished and unscored matches cannot be promoted as current", () => {
+test("major matches remain eligible within 14 days; future and unfinished games are excluded", () => {
   const ordinary = match(
     "ordinary",
     "por",
@@ -148,9 +148,21 @@ test("old, future, unfinished and unscored matches cannot be promoted as current
   );
   assert.equal(
     selectFeaturedMatch([future, live, noScore, olderReal, ordinary], now).id,
-    "ordinary",
+    "older",
   );
-  assert.equal(selectFeaturedMatch([future, live, noScore], now), null);
+  assert.equal(
+    selectFeaturedMatch([future, live, noScore, ordinary], now),
+    null,
+  );
+  const staleReal = match(
+    "stale",
+    "esp",
+    "2026-10-19",
+    "12:00",
+    "t_4NZcri",
+    "other",
+  );
+  assert.equal(selectFeaturedMatch([ordinary, staleReal], now), null);
   assert.equal(recentFinishedMatches([future], now).length, 0);
 });
 
