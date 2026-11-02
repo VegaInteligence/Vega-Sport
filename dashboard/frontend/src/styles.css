@@ -1370,6 +1370,66 @@ th[aria-sort="descending"] .sort-indicator {
   height: 14px;
 }
 
+/* Ranking placeholder and method page */
+.ranking-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 16px;
+  color: var(--muted);
+  font-size: var(--text-md);
+}
+.method-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 680px) minmax(260px, 340px);
+  justify-content: start;
+  gap: 48px;
+  align-items: start;
+}
+.method-prose {
+  display: grid;
+  gap: 24px;
+  max-width: 68ch;
+}
+.method-prose h2 {
+  margin-bottom: 6px;
+  font-size: var(--text-lg);
+  letter-spacing: -0.01em;
+}
+.method-prose p {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.method-prose p + p {
+  margin-top: 10px;
+}
+.method-prose > .inline-link {
+  justify-self: start;
+}
+.method-figures {
+  margin: 0;
+  padding: 0 16px 6px;
+}
+.method-figures > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  font-size: var(--text-md);
+}
+.method-figures dt {
+  color: var(--muted);
+}
+.method-figures dd {
+  margin: 0;
+  color: var(--ink-strong);
+  font-weight: 600;
+}
+
 /* Errors */
 .route-error {
   max-width: 640px;
@@ -1427,7 +1487,8 @@ th[aria-sort="descending"] .sort-indicator {
     scrollbar-width: none;
   }
   .lineup-grid,
-  .data-chart-grid {
+  .data-chart-grid,
+  .method-layout {
     grid-template-columns: minmax(0, 1fr);
   }
   .card-header {

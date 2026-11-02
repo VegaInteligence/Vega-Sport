@@ -29,12 +29,10 @@
 .player-ranking-list > li {
   display: flex;
   align-items: center;
-  gap: 20px;
-  min-height: 76px;
-  padding: 16px 26px;
-}
-.player-ranking-list > li + li {
-  border-top: 1px solid var(--border);
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
 }
 .player-ranking-position {
   width: 22px;
@@ -63,7 +61,23 @@
 }
 .player-ranking-placeholder {
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--text-md);
+}
+.player-ranking-list > li:nth-child(10n) {
+  border-bottom: 0;
+}
+@media (max-width: 900px) {
+  .player-ranking-list {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-auto-flow: row;
+  }
+  .player-ranking-list > li:nth-child(10n) {
+    border-bottom: 1px solid var(--border);
+  }
+  .player-ranking-list > li:last-child {
+    border-bottom: 0;
+  }
 }
 @media (max-width: 640px) {
   .page-title-with-icon {
