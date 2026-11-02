@@ -978,17 +978,20 @@ select optgroup {
 .team-dot.away {
   background: var(--away);
 }
-.comparison-stats dl {
+/* Team statistics: one row grammar everywhere. Values sit on the outside, the
+   label in the middle, and two bars grow from the centre so the gap between
+   the teams reads at a glance. The side that leads keeps full colour. */
+.stat-rows {
   margin: 0;
 }
-.comparison-stat {
+.stat-row {
   display: grid;
   grid-template-columns: minmax(52px, auto) minmax(0, 1fr) minmax(52px, auto);
   align-items: baseline;
   gap: 6px 12px;
   padding: 7px 0;
 }
-.comparison-stat dt {
+.stat-row dt {
   grid-column: 2;
   grid-row: 1;
   min-width: 0;
@@ -996,52 +999,183 @@ select optgroup {
   font-size: var(--text-md);
   text-align: center;
 }
-.comparison-stat dt .icon {
+.stat-row dt .icon {
   width: 12px;
   margin-left: 4px;
   color: var(--gold);
   vertical-align: -1px;
 }
-.comparison-stat dd {
+.stat-value {
+  grid-row: 1;
   margin: 0;
   color: var(--muted);
   font-size: var(--text-md);
   font-weight: 500;
   white-space: nowrap;
 }
-.home-stat {
+.stat-value.home {
   grid-column: 1;
 }
-.comparison-stat .away-stat {
+.stat-value.away {
   grid-column: 3;
   text-align: right;
 }
-.comparison-track {
-  grid-column: 1/-1;
-  display: flex;
-  gap: 4px;
-  height: 4px;
-  border-radius: 4px;
-  overflow: hidden;
-  background: light-dark(#dedee0, #2a2a2c);
+.stat-value.is-lead {
+  color: var(--ink-strong);
+  font-weight: 650;
 }
-.comparison-track > span {
-  height: 100%;
-  min-width: 0;
-  border-radius: 2px;
-  background: light-dark(#28558a, #75a2d7);
+.stat-value small {
+  margin-left: 5px;
+  color: var(--muted-light);
+  font-size: var(--text-xs);
+  font-weight: 400;
 }
-.comparison-track > span:last-child {
-  background: light-dark(#45396a, #a195c6);
+.stat-value.away small {
+  margin: 0 5px 0 0;
 }
-.comparison-unavailable {
-  opacity: 0.4;
-}
-.match-stat-groups {
+.stat-bars {
+  grid-column: 1 / -1;
+  grid-row: 2;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
-  gap: 22px;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 0;
+}
+.stat-bars.is-empty {
+  opacity: 0.45;
+}
+.stat-track {
+  display: flex;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--surface-subtle);
+}
+.stat-track.home {
+  justify-content: flex-end;
+}
+.stat-track > i {
+  display: block;
+  flex: 0 1 auto;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--home);
+}
+.stat-track.away > i,
+.stat-track > i.away {
+  background: var(--away);
+}
+.stat-track > i.is-trailing {
+  opacity: 0.35;
+}
+.stat-row.is-share .stat-bars {
+  display: block;
+}
+.stat-row.is-share .stat-track {
+  gap: 3px;
+  background: transparent;
+}
+.comparison-stats .stat-row:first-child {
+  padding-top: 12px;
+}
+
+.stats-board {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.stats-board-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-areas: "home period away";
+  align-items: center;
+  gap: 12px 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.stats-board-head .segmented-control {
+  grid-area: period;
+}
+.stats-team {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.stats-team.home {
+  grid-area: home;
+}
+.stats-team.away {
+  grid-area: away;
+  flex-direction: row-reverse;
+  justify-self: end;
+}
+.stats-team .crest {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.stats-team strong {
+  overflow: hidden;
+  color: var(--ink-strong);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stats-team::after {
+  content: "";
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--home);
+}
+.stats-team.away::after {
+  background: var(--away);
+}
+.stats-possession {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.stats-possession .stat-row {
+  padding: 0;
+  gap: 8px 16px;
+}
+.stats-possession .stat-value {
+  font: 650 var(--text-xl) / 1.2 var(--font-display);
+  letter-spacing: -0.01em;
+}
+.stats-possession .stat-value:not(.is-lead) {
+  color: var(--ink);
+}
+.stats-possession dt {
+  align-self: center;
+  font-size: var(--text-sm);
+}
+.stats-possession .stat-track {
+  height: 8px;
+  border-radius: 4px;
+}
+.stats-possession .stat-track > i {
+  border-radius: 4px;
+}
+.stats-sections {
+  columns: 2;
+  column-gap: 48px;
+  column-rule: 1px solid var(--border);
+  padding: 4px 20px 16px;
+}
+.stats-section {
+  break-inside: avoid;
+  padding-top: 16px;
+}
+.stats-section h3 {
+  margin: 0 0 4px;
+  color: var(--ink-strong);
+  font-size: var(--text-md);
+  font-weight: 600;
 }
 .match-goals {
   margin: 0;
@@ -1335,9 +1469,11 @@ select optgroup {
   .scoreboard-team strong {
     font-size: 17px;
   }
-  .match-team-players,
-  .match-stat-groups {
+  .match-team-players {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .stats-sections {
+    columns: 1;
   }
 }
 @media (max-width: 640px) {
@@ -1558,51 +1694,43 @@ select optgroup {
     padding: 12px 14px;
   }
   .match-detail .card-body {
-    padding: 0 17px 18px;
-  }
-  .match-detail .card-title {
-    font-size: 13px;
-  }
-  .match-detail .card-actions {
-    gap: 8px;
-  }
-  .match-detail .inline-link {
-    font-size: 10px;
-  }
-  .comparison-stat {
-    grid-template-columns: 47px minmax(0, 1fr) 47px;
-    gap: 8px;
-  }
-  .comparison-stat dt {
-    font-size: 10px;
-  }
-  .comparison-stat dd {
-    font-size: 11px;
+    padding: 0 14px 14px;
   }
   .match-detail .card-footer {
     padding: 10px 14px;
   }
-  .match-player-row {
-    gap: 9px;
+  .stat-row {
+    grid-template-columns: minmax(44px, auto) minmax(0, 1fr) minmax(44px, auto);
+    gap: 6px 8px;
   }
-  .match-player-row .player-name {
-    font-size: 11px;
+  .stat-row dt {
+    font-size: var(--text-sm);
   }
-  .match-player-row .player-meta {
-    font-size: 9px;
+  .stats-board-head {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "home away"
+      "period period";
+    padding: 12px 14px;
   }
-  .match-player-row .player-avatar {
-    flex-basis: 30px;
-    width: 30px;
-    height: 30px;
+  .stats-board-head .segmented-control {
+    justify-self: stretch;
+    overflow-x: auto;
   }
-  .match-player-minutes {
-    font-size: 9px;
-    min-width: 23px;
+  .stats-board-head .segmented-control button {
+    flex: 1 0 auto;
   }
-  .match-detail .rating-pill {
-    min-width: 35px;
-    font-size: 10px;
+  .stats-team strong {
+    font-size: var(--text-md);
+  }
+  .stats-team .crest {
+    width: 24px;
+    height: 24px;
+  }
+  .stats-possession,
+  .stats-sections {
+    padding-left: 14px;
+    padding-right: 14px;
   }
   .match-section-toolbar {
     align-items: flex-start;
@@ -1644,13 +1772,7 @@ select optgroup {
   }
 }
 
-.comparison-stat dd > small {
-  display: block;
-  margin-top: 4px;
-  color: light-dark(#707072, #88888a);
-  font: 9px var(--font-mono);
-}
-/* Competition focus and local preferences. */
+/* Competition focus: a toggle that lives with the other filters. */
 .competition-scope-button {
   display: inline-flex;
   align-items: center;

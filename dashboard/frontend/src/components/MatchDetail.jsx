@@ -6,10 +6,11 @@ import { Card, Media, Rating, Segments, Empty, AsyncState } from "./UI.jsx";
 import Icon from "./Icon.jsx";
 import { XgTimeline, ShotMap } from "./Charts.jsx";
 import { MatchSections } from "./MatchSections.jsx";
-import { periodLabel } from "./PlayerMetrics.jsx";
+import { periodShort } from "./PlayerMetrics.jsx";
 import { number, date, isNumber } from "../services/format.js";
 import {
   groupedStats,
+  periodStats,
   overviewStats,
   statValue,
   statPercentage,
@@ -42,80 +43,53 @@ function MatchStatistics({ match }) {
       f.statusKnown,
     );
   const display = (payload) => {
-    const periods = payload?.periods || [],
+    const periods = (payload?.periods || []).filter((p) => p.groups?.length),
       selected = periods.find((p) => p.period === period) || periods[0],
-      groups = selected
-        ? (selected.groups || []).map((group, index) => ({
-            title:
-              {
-                Defence: "Défense",
-                Discipline: "Discipline",
-                Duels: "Duels",
-                "Expected goals (xG)": "Buts attendus · xG",
-                Passes: "Passes",
-                Shots: "Tirs",
-                "Top stats": "Chiffres clés",
-              }[group.group_name] ||
-              group.group_name ||
-              `Groupe ${index + 1}`,
-            rows: (group.items || []).map((item) => {
-              const numeric = (value) =>
-                typeof value === "number"
-                  ? value
-                  : typeof value === "string" && /^-?\d/.test(value)
-                    ? Number.parseFloat(value)
-                    : null;
-              const stat = {
-                ...item,
-                label: item.title || item.key,
-                home: numeric(item.home),
-                away: numeric(item.away),
-                homeRaw: item.home,
-                awayRaw: item.away,
-                format: item.format_type,
-              };
-              return groupedStats({ stats: [stat] })[0].rows[0];
-            }),
-          }))
-        : groupedStats(match);
+      groups = groupedStats(selected ? periodStats(selected) : match),
+      possession = groups.find((g) => g.title === "Possession")?.rows[0],
+      sections = groups.filter((g) => g.title !== "Possession");
+    if (!sections.length && !possession)
+      return (
+        <Card title="Statistiques équipes">
+          <Empty>Statistiques d’équipe indisponibles.</Empty>
+        </Card>
+      );
     return (
-      <>
-        {periods.length > 0 && (
-          <div className="table-toolbar">
-            <label htmlFor="team-stats-period">Période</label>
-            <select
-              id="team-stats-period"
+      <section className="stats-board" aria-label="Statistiques des équipes">
+        <header className="stats-board-head">
+          {[match.home, match.away].map((team, i) => (
+            <span key={team.id} className={`stats-team ${i ? "away" : "home"}`}>
+              <Media name={team.name} url={team.imageUrl} />
+              <strong>{team.name}</strong>
+            </span>
+          ))}
+          {periods.length > 1 && (
+            <Segments
+              label="Période des statistiques"
               value={selected.period}
-              onChange={(e) => setPeriod(e.target.value)}
-            >
-              {periods.map((p) => (
-                <option key={p.period} value={p.period}>
-                  {periodLabel(p.period)}
-                </option>
-              ))}
-            </select>
-          </div>
+              onChange={setPeriod}
+              items={periods.map((p) => [p.period, periodShort(p.period)])}
+            />
+          )}
+        </header>
+        {possession && (
+          <dl className="stat-rows stats-possession">
+            <StatRow match={match} stat={possession} />
+          </dl>
         )}
-        {groups.some((group) => group.rows.length) ? (
-          <div className="match-stat-groups">
-            {groups.map((group, index) => (
-              <Card
-                key={`${group.title}:${index}`}
-                title={group.title}
-                action={
-                  <span className="data-source-tag">{group.rows.length}</span>
-                }
-              >
-                <StatRows match={match} stats={group.rows} />
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <Card title="Statistiques équipes">
-            <Empty>Statistiques d’équipe indisponibles.</Empty>
-          </Card>
-        )}
-      </>
+        <div className="stats-sections">
+          {sections.map((group) => (
+            <section className="stats-section" key={group.title}>
+              <h3>{group.title}</h3>
+              <dl className="stat-rows">
+                {group.rows.map((s, i) => (
+                  <StatRow key={`${s.key}:${i}`} match={match} stat={s} />
+                ))}
+              </dl>
+            </section>
+          ))}
+        </div>
+      </section>
     );
   };
   if (resource.error && match.stats?.length)
@@ -132,6 +106,78 @@ function MatchStatistics({ match }) {
     );
   return <AsyncState resource={resource}>{display}</AsyncState>;
 }
+const SHARE_KEYS = new Set(["BallPossesion"]);
+function StatRow({ match, stat: s }) {
+  const home = s.home ?? s.homeValue,
+    away = s.away ?? s.awayValue;
+  const valid =
+    s.reliable !== false &&
+    isNumber(home) &&
+    isNumber(away) &&
+    home >= 0 &&
+    away >= 0 &&
+    home + away > 0;
+  const share = SHARE_KEYS.has(s.key),
+    max = Math.max(home, away),
+    lead = !valid ? null : home > away ? "home" : away > home ? "away" : "both";
+  const value = (side) => (
+    <dd
+      className={`stat-value ${side}${lead === side || lead === "both" ? " is-lead" : ""}`}
+      aria-label={`${match[side].name} : ${statValue(s, side)}${statPercentage(s, side) ? ` (${statPercentage(s, side)})` : ""}`}
+    >
+      {side === "away" && statPercentage(s, side) && (
+        <small>{statPercentage(s, side)}</small>
+      )}
+      {statValue(s, side)}
+      {side === "home" && statPercentage(s, side) && (
+        <small>{statPercentage(s, side)}</small>
+      )}
+    </dd>
+  );
+  return (
+    <div className={`stat-row${share ? " is-share" : ""}`}>
+      <dt>
+        {s.label}
+        {s.reliable === false && (
+          <span title="Valeur signalée comme non fiable par la source">
+            <Icon name="info" />
+          </span>
+        )}
+      </dt>
+      {value("home")}
+      {value("away")}
+      <dd className={`stat-bars${valid ? "" : " is-empty"}`} aria-hidden="true">
+        {share ? (
+          <span className="stat-track">
+            <i
+              className="home"
+              style={{ width: valid ? `${(home / (home + away)) * 100}%` : 0 }}
+            />
+            <i
+              className="away"
+              style={{ width: valid ? `${(away / (home + away)) * 100}%` : 0 }}
+            />
+          </span>
+        ) : (
+          ["home", "away"].map((side) => (
+            <span className={`stat-track ${side}`} key={side}>
+              <i
+                className={
+                  lead && lead !== side && lead !== "both" ? "is-trailing" : ""
+                }
+                style={{
+                  width: valid
+                    ? `${((side === "home" ? home : away) / max) * 100}%`
+                    : 0,
+                }}
+              />
+            </span>
+          ))
+        )}
+      </dd>
+    </div>
+  );
+}
 function StatRows({ match, stats }) {
   return (
     <div className="comparison-stats">
@@ -145,63 +191,10 @@ function StatRows({ match, stats }) {
           {match.away.name}
         </span>
       </div>
-      <dl>
-        {stats.map((s, i) => {
-          const home = s.home ?? s.homeValue,
-            away = s.away ?? s.awayValue;
-          const valid =
-            s.reliable !== false &&
-            isNumber(home) &&
-            isNumber(away) &&
-            home >= 0 &&
-            away >= 0 &&
-            home + away > 0;
-          return (
-            <div className="comparison-stat" key={`${s.key}:${i}`}>
-              <dt>
-                {s.label}
-                {s.reliable === false && (
-                  <span title="Valeur signalée comme non fiable par la source">
-                    <Icon name="info" />
-                  </span>
-                )}
-              </dt>
-              <dd
-                className="home-stat"
-                aria-label={`${match.home.name} : ${statValue(s, "home")}${statPercentage(s, "home") ? ` (${statPercentage(s, "home")})` : ""}`}
-              >
-                {statValue(s, "home")}
-                {statPercentage(s, "home") && (
-                  <small>{statPercentage(s, "home")}</small>
-                )}
-              </dd>
-              <dd
-                className="away-stat"
-                aria-label={`${match.away.name} : ${statValue(s, "away")}${statPercentage(s, "away") ? ` (${statPercentage(s, "away")})` : ""}`}
-              >
-                {statValue(s, "away")}
-                {statPercentage(s, "away") && (
-                  <small>{statPercentage(s, "away")}</small>
-                )}
-              </dd>
-              <dd
-                className={`comparison-track${valid ? "" : " comparison-unavailable"}`}
-                aria-hidden="true"
-              >
-                <span
-                  style={{
-                    width: valid ? `${(home / (home + away)) * 100}%` : "0%",
-                  }}
-                />
-                <span
-                  style={{
-                    width: valid ? `${(away / (home + away)) * 100}%` : "0%",
-                  }}
-                />
-              </dd>
-            </div>
-          );
-        })}
+      <dl className="stat-rows">
+        {stats.map((s, i) => (
+          <StatRow key={`${s.key}:${i}`} match={match} stat={s} />
+        ))}
       </dl>
     </div>
   );
@@ -527,7 +520,10 @@ export default function MatchDetail({ match }) {
         <button
           className="button button-secondary"
           onClick={() =>
-            download(`statarena-${match.id}.json`, JSON.stringify(match, null, 2))
+            download(
+              `statarena-${match.id}.json`,
+              JSON.stringify(match, null, 2),
+            )
           }
         >
           <Icon name="download" />

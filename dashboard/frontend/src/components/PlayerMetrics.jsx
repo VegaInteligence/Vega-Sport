@@ -10,6 +10,14 @@ export const periodLabel = (period) =>
     ExtraFirstHalf: "Prolongation · première période",
     ExtraSecondHalf: "Prolongation · seconde période",
   })[period] || period;
+export const periodShort = (period) =>
+  ({
+    All: "Match",
+    FirstHalf: "1re mi-temps",
+    SecondHalf: "2e mi-temps",
+    ExtraFirstHalf: "Prol. 1",
+    ExtraSecondHalf: "Prol. 2",
+  })[period] || periodLabel(period);
 
 export default function PlayerMetrics({ row }) {
   if (!row?.stats?.length) return <Empty>Statistiques non renseignées.</Empty>;
