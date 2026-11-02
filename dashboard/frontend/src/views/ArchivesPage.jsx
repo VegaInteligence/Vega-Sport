@@ -3,6 +3,7 @@ import Link from "next/link";
 import React from "react";
 import Layout from "../components/Layout.jsx";
 import Archive from "../components/Archive.jsx";
+import ArchiveAttribution from "../components/ArchiveAttribution.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 
 export default function ArchivesPage() {
@@ -16,6 +17,7 @@ export default function ArchivesPage() {
         ← Retour aux compétitions
       </Link>
       <Archive />
+      <ArchiveAttribution />
     </Layout>
   );
 }
