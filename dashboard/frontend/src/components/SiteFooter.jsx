@@ -17,7 +17,7 @@ const groups = [
     title: "Joueurs",
     links: [
       ["Performances", "/joueurs/"],
-      ["Classement joueurs", "/classement-joueurs/"],
+      ["Classement Ballon d’Or", "/classement-joueurs/"],
     ],
   },
   {

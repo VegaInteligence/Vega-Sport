@@ -161,7 +161,7 @@ export default function PlayerRankingPage() {
   return (
     <Layout
       path="/classement-joueurs/"
-      title="Classement joueurs"
+      title="Classement Ballon d’Or"
       titleIcon={<BallonDorIcon />}
     >
       <section className="award-intro" aria-labelledby="award-title">
