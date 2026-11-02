@@ -11,6 +11,7 @@ Sources et conditions :
 - [footballcsv/cache.soccerdata](https://github.com/footballcsv/cache.soccerdata)
   indique CC0-1.0 pour son cache et reprend des données de
   [engsoccerdata](https://github.com/jalapic/engsoccerdata).
+- [schochastics/football-data (World Club Ratings)](https://github.com/schochastics/football-data) est publié sous ODC-BY 1.0 ; les résultats écossais 1890/1891–1993/1994 sont ajoutés aux saisons concernées. La source est partielle pour 1915/1916 (379 résultats pour 380 matchs attendus).
 - Le paquet engsoccerdata indique GPL-2.0 ou ultérieure ; son auteur précise un
   usage gratuit non commercial et demande une attribution. Les fichiers source,
   révisions, empreintes, licences et attribution sont conservés dans
@@ -40,6 +41,7 @@ Pour reconstruire les fichiers et leurs empreintes :
 python dashboard/scripts/build_openfootball_history.py --archive data/sources/openfootball/football-json-e6744429.zip
 python dashboard/scripts/build_footballcsv_history.py --england data/sources/openfootball/footballcsv-england-52b7e5f5.zip --deutschland data/sources/openfootball/footballcsv-deutschland-17832462.zip --europe data/sources/openfootball/footballcsv-europe-66393c8d.zip --soccerdata data/sources/openfootball/footballcsv-soccerdata-f1c9d418.zip
 python dashboard/scripts/build_engsoccerdata_history.py
+python dashboard/scripts/build_scottish_history.py
 ```
 
 Le manifeste `data/raw/openfootball/index.json` détaille, pour chaque saison, le
