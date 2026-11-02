@@ -106,13 +106,6 @@ export default function SiteFooter({ href, path }) {
             </a>
             <span>© {new Date().getFullYear()} STATARENA</span>
           </div>
-          <a
-            href={`${repository}/blob/main/LICENSE`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Licence MIT
-          </a>
         </div>
       </div>
     </footer>
