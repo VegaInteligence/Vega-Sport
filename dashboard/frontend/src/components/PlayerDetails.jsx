@@ -1,5 +1,5 @@
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import Icon from "./Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number, date, isNumber } from "../services/format.js";
@@ -7,6 +7,13 @@ import { Modal, Rating, Media, AsyncState, Segments } from "./UI.jsx";
 import DataExplorer from "./DataExplorer.jsx";
 import PlayerData from "./PlayerData.jsx";
 import { useResource, json } from "../services/resources.js";
+import {
+  keyFigures,
+  matchRatingRank,
+  MIN_PEER_MINUTES,
+  performanceProfile,
+  positionOf,
+} from "../services/player-profile.js";
 export const metrics = [
   ["minutes", "Minutes"],
   ["rating", "Note PitchAPI"],
@@ -41,111 +48,149 @@ export function ProfileDialog({ id, kind, onClose }) {
     </Modal>
   );
 }
-const performanceGroups = [
-  {
-    title: "Attaque & création",
-    icon: "target",
-    fields: [
-      ["xg", "Buts attendus · xG"],
-      ["xa", "Passes attendues · xA"],
-      ["shotsOnTarget", "Tirs cadrés"],
-      ["chancesCreated", "Occasions créées"],
-      ["bigChancesCreated", "Grosses occasions créées"],
-      ["touchesBox", "Ballons dans la surface"],
-    ],
-  },
-  {
-    title: "Ballon & distribution",
-    icon: "activity",
-    fields: [
-      ["passesAccurate", "Passes réussies"],
-      ["passesAttempted", "Passes tentées"],
-      ["touches", "Ballons touchés"],
-      ["passesFinalThird", "Passes dernier tiers"],
-      ["dribbles", "Dribbles réussis"],
-    ],
-  },
-  {
-    title: "Défense & duels",
-    icon: "shield",
-    fields: [
-      ["defensiveActions", "Actions défensives"],
-      ["tackles", "Tacles"],
-      ["interceptions", "Interceptions"],
-      ["recoveries", "Récupérations"],
-      ["duelsWon", "Duels gagnés"],
-      ["duelsLost", "Duels perdus"],
-      ["clearances", "Dégagements"],
-      ["blocks", "Tirs bloqués"],
-    ],
-  },
-];
-function PerformanceMetrics({ fields, row }) {
+const ordinal = (n) => (n === 1 ? "1re" : `${n}e`);
+const tier = (p) =>
+  p >= 90 ? "is-elite" : p >= 70 ? "is-strong" : p >= 40 ? "is-mid" : "is-low";
+const figure = (value, decimals, unit = "") =>
+  isNumber(value) ? `${number(value, decimals)}${unit}` : "—";
+function ProfileSection({ section, peers }) {
   return (
-    <dl className="performance-stat-list">
-      {fields.map(([key, label]) => (
-        <div key={key}>
-          <dt>{label}</dt>
-          <dd className={!isNumber(row[key]) ? "missing-value" : ""}>
-            {number(
-              row[key],
-              ["xg", "xa", "xgot", "npxg", "goalsPrevented"].includes(key)
-                ? 2
-                : 0,
-            )}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <section className="pc-section">
+      <h4>{section.title}</h4>
+      <ul>
+        {section.metrics.map((m) => (
+          <li key={m.key}>
+            <span className="pc-metric-label">{m.label}</span>
+            <strong className="pc-metric-value">
+              {figure(m.value, m.decimals, m.unit)}
+            </strong>
+            <span
+              className={`pc-bar ${m.percentile == null ? "is-empty" : tier(m.percentile)}`}
+              title={
+                m.percentile == null
+                  ? "Centile indisponible"
+                  : `Au-dessus de ${m.percentile} % des ${peers}`
+              }
+            >
+              <i style={{ width: `${m.percentile ?? 0}%` }} />
+            </span>
+            <span
+              className={`pc-pct ${m.percentile == null ? "" : tier(m.percentile)}`}
+            >
+              {m.percentile ?? "—"}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 export function PlayerDialog() {
   const f = useFootball(),
     [view, setView] = useState("overview"),
-    row = f.byAppearance.get(f.player);
+    row = f.byAppearance.get(f.player),
+    appearances = f.data.appearances;
+  const profile = useMemo(
+      () => (row ? performanceProfile(row, appearances) : null),
+      [row, appearances],
+    ),
+    rank = useMemo(
+      () => (row ? matchRatingRank(row, appearances) : null),
+      [row, appearances],
+    );
   if (!row) return null;
   const match = f.data.matches.find((m) => m.id === row.matchId);
-  const side =
-    match && (match.home.id === row.teamId ? match.home : match.away);
-  const keeperFields = [
-    ["saves", "Arrêts"],
-    ["goalsPrevented", "Buts évités · PitchAPI"],
-  ];
+  const competition = f.data.competitions.find((c) => c.id === row.leagueId);
+  const line = positionOf(row);
   const close = () => f.setPlayer(null);
+  const role =
+    row.starter === true
+      ? "Titulaire"
+      : row.starter === false
+        ? "Entré en jeu"
+        : "Participation";
   return (
     <Modal
       title={row.name}
       onClose={close}
       className="player-performance"
       header={
-        <div className="performance-hero">
-          <Media
-            name={row.name}
-            url={row.imageUrl}
-            className="player-avatar performance-portrait"
-          />
-          <div className="performance-identity">
-            <div className="performance-context">
-              {row.league}
-              <span>·</span>
-              {date(row.date)}
+        <div className="pc-head">
+          <div className="pc-hero">
+            <Media
+              name={row.name}
+              url={row.imageUrl}
+              className="player-avatar pc-portrait"
+            />
+            <div className="pc-identity">
+              <h2>{row.name}</h2>
+              <p className="pc-meta">
+                <span className="pc-club">
+                  {match && (
+                    <Media
+                      name={row.team}
+                      url={
+                        (match.home.id === row.teamId ? match.home : match.away)
+                          .imageUrl
+                      }
+                    />
+                  )}
+                  {row.team}
+                </span>
+                {line && <span>{line.label}</span>}
+                {row.shirtNumber && <span>N° {row.shirtNumber}</span>}
+              </p>
             </div>
-            <h2>{row.name}</h2>
-            <div className="performance-team">
-              {side && <Media name={side.name} url={side.imageUrl} />}
-              {row.team}
-              {row.shirtNumber && (
-                <span className="shirt-badge">N° {row.shirtNumber}</span>
-              )}
+            {isNumber(row.rating) && (
+              <div
+                className={`pc-rating${row.rating >= 8 ? " is-high" : row.rating < 6 ? " is-low" : ""}`}
+              >
+                <strong>{number(row.rating, 2)}</strong>
+                <span>Note PitchAPI</span>
+                {rank && rank.total > 1 && (
+                  <small>
+                    {rank.rank === 1
+                      ? "Meilleure note du match"
+                      : `${ordinal(rank.rank)} note sur ${rank.total}`}
+                  </small>
+                )}
+              </div>
+            )}
+          </div>
+          {match && (
+            <div className="pc-fixture">
+              <span className="pc-fixture-competition">
+                {competition && (
+                  <Media name={competition.name} url={competition.imageUrl} />
+                )}
+                {row.league}
+                <span>{date(row.date)}</span>
+              </span>
+              <span className="pc-fixture-score">
+                {[match.home, match.away].map((team, i) => (
+                  <React.Fragment key={team.id}>
+                    {i === 1 && (
+                      <b>
+                        {number(match.home.score)}
+                        <i>–</i>
+                        {number(match.away.score)}
+                      </b>
+                    )}
+                    <span
+                      className={`pc-fixture-team${team.id === row.teamId ? " is-own" : ""}${i ? " away" : ""}`}
+                    >
+                      <Media name={team.name} url={team.imageUrl} />
+                      {team.name}
+                    </span>
+                  </React.Fragment>
+                ))}
+              </span>
+              <span className="pc-fixture-role">
+                {role}
+                {isNumber(row.minutes) && <b>{number(row.minutes)} min</b>}
+              </span>
             </div>
-          </div>
-          <div className="performance-rating">
-            <span>Note PitchAPI</span>
-            <strong>
-              {number(row.rating, 2)}
-              <small>/10</small>
-            </strong>
-          </div>
+          )}
         </div>
       }
       footer={
@@ -162,35 +207,35 @@ export function PlayerDialog() {
           <div className="performance-links">
             <Link
               className="button button-ghost"
-              aria-label="Toutes les performances"
               href={f.href("/joueurs/", { id: row.playerId })}
               onClick={close}
             >
-              Performances
-              <Icon name="external" />
+              Toutes ses performances
             </Link>
             <Link
               className="button button-primary"
               href={f.href("/matchs/", { id: row.matchId })}
               onClick={close}
             >
-              Explorer le match
+              Voir le match
               <Icon name="arrow" />
             </Link>
           </div>
         </>
       }
     >
-      <Segments
-        label="Vue de la performance"
-        value={view}
-        onChange={setView}
-        items={[
-          ["overview", "Synthèse"],
-          ["stats", "Statistiques"],
-          ["data", "Données complètes"],
-        ]}
-      />
+      <div className="pc-tabs">
+        <Segments
+          label="Vue de la performance"
+          value={view}
+          onChange={setView}
+          items={[
+            ["overview", "Synthèse"],
+            ["stats", "Toutes les stats"],
+            ["data", "Données brutes"],
+          ]}
+        />
+      </div>
       {!row.statsReliable && (
         <p role="status" className="notice notice-warning">
           Certaines statistiques sources sont signalées comme incohérentes.
@@ -200,75 +245,49 @@ export function PlayerDialog() {
         <PlayerData key={row.id} row={row} mode={view} />
       ) : (
         <>
-          {match && (
-            <div className="performance-fixture">
-              <span>
-                {row.starter === true
-                  ? "Titulaire"
-                  : row.starter === false
-                    ? "Remplaçant"
-                    : "Participation"}
-              </span>
-              <div>
-                <span>{match.home.name}</span>
-                <b>
-                  {number(match.home.score)} <i>–</i> {number(match.away.score)}
-                </b>
-                <span>{match.away.name}</span>
-              </div>
-            </div>
-          )}
-          <section
-            className="performance-kpis"
-            aria-label="Chiffres clés du joueur"
-          >
-            {[
-              ["minutes", "Minutes", "timer"],
-              ["goals", "Buts", "goal"],
-              ["assists", "Passes décisives", "arrow"],
-              ["shots", "Tirs", "target"],
-            ].map(([key, label, icon]) => (
-              <div key={key}>
-                <Icon name={icon} />
-                <strong>{number(row[key])}</strong>
-                <span>{label}</span>
+          <dl className="pc-figures">
+            {keyFigures(row).map((k) => (
+              <div key={k.key}>
+                <dt>{k.label}</dt>
+                <dd className={isNumber(k.value) ? "" : "is-missing"}>
+                  {figure(k.value, k.decimals, k.unit)}
+                </dd>
               </div>
             ))}
-          </section>
-          <div className="performance-groups">
-            {performanceGroups.map((group) => (
-              <section className="performance-group" key={group.title}>
-                <h3>
-                  <Icon name={group.icon} />
-                  {group.title}
-                </h3>
-                <PerformanceMetrics fields={group.fields} row={row} />
-              </section>
-            ))}
-            <section className="performance-group performance-quality">
-              <h3>
-                <Icon name="ball" />
-                Qualité des occasions
-              </h3>
-              <PerformanceMetrics
-                fields={[
-                  ["npxg", "xG hors penalty"],
-                  ["xgot", "xG cadrés · xGOT"],
-                ]}
-                row={row}
-              />
-              <details
-                className="performance-keeper"
-                open={isNumber(row.saves) || isNumber(row.goalsPrevented)}
-              >
-                <summary>
-                  Gardien
-                  <Icon name="chevron" />
-                </summary>
-                <PerformanceMetrics fields={keeperFields} row={row} />
-              </details>
+          </dl>
+          {profile.sections.length > 0 && (
+            <section
+              className="pc-profile"
+              aria-label="Profil de la performance"
+            >
+              <header>
+                <h3>Profil de la performance</h3>
+                <p>
+                  {profile.peers >= 30
+                    ? `Centile parmi ${number(profile.peers)} performances de ${profile.line.peers} cette saison, ${MIN_PEER_MINUTES} min ou plus.`
+                    : "Échantillon trop réduit pour situer cette performance."}
+                  {profile.peers >= 30 &&
+                    isNumber(row.minutes) &&
+                    row.minutes < MIN_PEER_MINUTES &&
+                    ` Avec ${number(row.minutes)} min jouées, les volumes sont mécaniquement plus bas.`}
+                </p>
+              </header>
+              <div className="pc-sections">
+                {profile.sections.map((section) => (
+                  <ProfileSection
+                    key={section.id}
+                    section={section}
+                    peers={profile.line.peers}
+                  />
+                ))}
+              </div>
+              {profile.missing.length > 0 && (
+                <p className="pc-missing">
+                  Non renseignés par la source : {profile.missing.join(", ")}.
+                </p>
+              )}
             </section>
-          </div>
+          )}
         </>
       )}
     </Modal>

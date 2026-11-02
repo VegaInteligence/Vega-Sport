@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { AsyncState, Empty } from "./UI.jsx";
+import { AsyncState, Empty, Segments } from "./UI.jsx";
 import DataExplorer from "./DataExplorer.jsx";
-import PlayerMetrics, { periodLabel } from "./PlayerMetrics.jsx";
+import PlayerMetrics, { periodShort } from "./PlayerMetrics.jsx";
 import { useResource, json, download } from "../services/resources.js";
 
 const sources = [
@@ -103,20 +103,19 @@ export default function PlayerData({ row, mode }) {
             );
           return (
             <>
-              <div className="table-toolbar">
-                <label htmlFor="player-stat-period">Période</label>
-                <select
-                  id="player-stat-period"
-                  value={selected.period}
-                  onChange={(e) => setPeriod(e.target.value)}
-                >
-                  {periods.map((p) => (
-                    <option key={p.period} value={p.period}>
-                      {periodLabel(p.period)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {periods.length > 1 && (
+                <div className="pc-period">
+                  <Segments
+                    label="Période des statistiques"
+                    value={selected.period}
+                    onChange={setPeriod}
+                    items={periods.map((p) => [
+                      p.period,
+                      periodShort(p.period),
+                    ])}
+                  />
+                </div>
+              )}
               <PlayerMetrics row={selected} />
             </>
           );

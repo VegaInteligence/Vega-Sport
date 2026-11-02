@@ -90,9 +90,9 @@ test('player metrics keep fractions and deduplicate a metric repeated in provide
   const app = explorer();
   app.playerSelection.set(`${match.id}:players`, player.player.id);
   const html = app.playerStats(match, players, 'players');
-  assert.match(html, /4,00 \/ 4,00/);
-  assert.match(html, /Was fouled/);
-  assert.match(html, /<dd>—<\/dd>/);
+  assert.match(html, /4\/4<small>100 %<\/small>/);
+  assert.match(html, /Fautes subies/);
+  assert.match(html, /<dd class="missing-value">—<\/dd>/);
   const halves = { players: [{ player: player.player, team_id: player.team_id, periods: [
     { period: 'SecondHalf', stats: [{ key: 'top_stats', title: 'Top stats', stats: { Minutes: { key: 'minutes_played', stat: { type: 'integer', value: 17 } } } }] },
   ] }] };
