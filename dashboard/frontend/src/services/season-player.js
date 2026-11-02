@@ -26,6 +26,7 @@ export const SEASON_METRICS = {
   interceptions: { label: "Interceptions" },
   recoveries: { label: "Récupérations" },
   clearances: { label: "Dégagements" },
+  defensiveActions: { label: "Actions défensives" },
   blocks: { label: "Tirs bloqués" },
   saves: { label: "Arrêts" },
   goalsPrevented: { label: "Buts évités · PitchAPI", decimals: 2 },
@@ -241,6 +242,38 @@ export function aggregateSeason(rows, playerId) {
   for (const row of rows)
     if (row.playerId === playerId) addAppearance(acc, row);
   return finish(acc);
+}
+
+/** One accumulation pass for the directory; keep match history in the source. */
+export function aggregateSeasonPlayers(rows) {
+  const players = new Map();
+  for (const row of rows) {
+    if (!row.playerId) continue;
+    let acc = players.get(row.playerId);
+    if (!acc) {
+      acc = accumulator(row.playerId);
+      acc.identity = row;
+      acc.leagues = new Set();
+      players.set(row.playerId, acc);
+    }
+    if (String(row.date || "") > String(acc.identity.date || ""))
+      acc.identity = row;
+    if (row.league) acc.leagues.add(row.league);
+    addAppearance(acc, row);
+  }
+  return [...players.values()].map((acc) => {
+    const profile = finish(acc);
+    return {
+      ...profile,
+      name: (profile.latest || acc.identity).name || "Joueur",
+      imageUrl: (profile.latest || acc.identity).imageUrl,
+      teams: profile.teams.length
+        ? profile.teams
+        : [acc.identity.team].filter(Boolean),
+      role: profile.role || positionOf(acc.identity),
+      leagues: [...acc.leagues],
+    };
+  });
 }
 
 /** Missing observations stay missing; per-90 uses only their observed minutes. */

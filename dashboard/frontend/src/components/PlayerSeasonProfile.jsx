@@ -216,7 +216,7 @@ export default function PlayerSeasonProfile({ id, rows, scopeRows }) {
               ? "Top 7 Europe + UEFA"
               : "Toutes les compétitions chargées"}
           {f.filters.minutes > 1
-            ? ` · ${number(f.filters.minutes)} min ou plus par match`
+            ? ` · moyenne ≥ ${number(f.filters.minutes)} min`
             : ""}
           {countAdvanced(f.filters.advanced) > 0
             ? " · Filtres avancés appliqués"

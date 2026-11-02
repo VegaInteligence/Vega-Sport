@@ -2229,6 +2229,36 @@ select optgroup {
   max-width: 100%;
   overflow-x: auto;
 }
+.advanced-position-field {
+  flex-basis: 100%;
+}
+.advanced-position-field .segmented-control {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+.player-directory-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.player-directory-toolbar > span {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.player-directory-table .table-player {
+  min-width: 240px;
+  max-width: 320px;
+}
+.player-directory-table tbody td:nth-child(n + 3) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.player-directory-table thead th:nth-child(n + 3) {
+  text-align: right;
+}
 .advanced-field > .advanced-input {
   width: 120px;
 }

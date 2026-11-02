@@ -48,7 +48,7 @@ export function AdvancedToggle({ open, onToggle, controls }) {
       onClick={onToggle}
     >
       <Icon name="filters" />
-      Avancé
+      Filtres avancés
       {count > 0 && <span className="advanced-count">{count}</span>}
     </button>
   );
@@ -66,15 +66,22 @@ export function AdvancedPanel({ id }) {
   const used = new Set(advanced.conditions.map((c) => c.key));
   return (
     <div className="advanced-panel" id={id}>
-      <div className="advanced-field">
+      <div className="advanced-field advanced-position-field">
         <span className="advanced-label" id={`${base}-pos`}>
-          Poste
+          Position
         </span>
         <div
           className="segmented-control"
           role="group"
           aria-labelledby={`${base}-pos`}
         >
+          <button
+            type="button"
+            aria-pressed={advanced.positions.length === 0}
+            onClick={() => update(() => ({ positions: [] }))}
+          >
+            Tous les postes
+          </button>
           {POSITIONS.map(([key, label]) => {
             const on = advanced.positions.includes(key);
             return (
@@ -125,7 +132,7 @@ export function AdvancedPanel({ id }) {
       </div>
       <div className="advanced-field">
         <label className="advanced-label" htmlFor={`${base}-rating`}>
-          Note minimale
+          Note moyenne minimale
         </label>
         <NumberField
           id={`${base}-rating`}
@@ -162,8 +169,9 @@ export function AdvancedPanel({ id }) {
       </div>
       <div className="advanced-field advanced-conditions">
         <span className="advanced-label">
-          Statistiques du match
-          <small>Valeurs sur le match, pas sur 90 minutes</small>
+          {f.filters.basis === "per90"
+            ? "Statistiques moyennes par 90 minutes"
+            : "Statistiques moyennes par match"}
         </span>
         {advanced.conditions.map((condition, index) => (
           <div className="advanced-condition" key={index}>

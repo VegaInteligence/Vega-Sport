@@ -26,9 +26,9 @@ export function Filters({ kind = "performances" }) {
     f.setFilters({ query: "", league: "all", minutes: 1, match: "all" });
   const minutes = [
     [1, "Joueurs entrés en jeu"],
-    [30, "30 minutes et plus"],
-    [60, "60 minutes et plus"],
-    [90, "90 minutes et plus"],
+    [30, "Moyenne ≥ 30 min"],
+    [60, "Moyenne ≥ 60 min"],
+    [90, "Moyenne ≥ 90 min"],
     [0, "Inclure le banc"],
   ];
   const active =
@@ -111,7 +111,7 @@ export function Filters({ kind = "performances" }) {
         </div>
         {players && (
           <div className="filter-field">
-            <label htmlFor="minutes-filter">Temps de jeu</label>
+            <label htmlFor="minutes-filter">Temps de jeu moyen</label>
             <div className="filter-input-wrap">
               <Icon name="timer" />
               <select
@@ -227,6 +227,7 @@ export default function Layout({
   className = "",
   subnav,
   onExport,
+  performanceComparison = true,
   children,
 }) {
   const f = useFootball();
@@ -285,7 +286,9 @@ export default function Layout({
           )}
           {subnav}
           {filters && <Filters kind={filterKind} />}
-          {filters && filterKind !== "fixtures" && <PlayerSearchResults />}
+          {filters && filterKind !== "fixtures" && filterKind !== "players" && (
+            <PlayerSearchResults />
+          )}
           {f.notice && (
             <div role="status" className="notice">
               {f.notice}
@@ -297,7 +300,7 @@ export default function Layout({
         <SiteFooter href={f.href} path={path} />
       </div>
       <PlayerDialog />
-      <Comparison />
+      {performanceComparison && <Comparison />}
     </>
   );
 }

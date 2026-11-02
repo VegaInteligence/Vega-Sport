@@ -104,6 +104,7 @@ export function FootballProvider({ children, loadData = true }) {
       query: initial.get("q") || "",
       league: initial.get("league") || "all",
       minutes: Number(initial.get("minutes") ?? 1),
+      basis: initial.get("basis") === "per90" ? "per90" : "perMatch",
       match: matchFilter,
       advanced: parseAdvanced(initial),
     }),
@@ -133,6 +134,7 @@ export function FootballProvider({ children, loadData = true }) {
       query: current.get("q") || "",
       league: current.get("league") || "all",
       minutes: Number(current.get("minutes") ?? 1),
+      basis: current.get("basis") === "per90" ? "per90" : "perMatch",
       advanced: parseAdvanced(current),
     };
     const next = typeof action === "function" ? action(latest) : action;
@@ -141,6 +143,7 @@ export function FootballProvider({ children, loadData = true }) {
       q: next.query,
       league: next.league === "all" ? "" : next.league,
       minutes: next.minutes === 1 ? "" : next.minutes,
+      basis: next.basis === "per90" ? "per90" : "",
       ...advancedQuery(next.advanced || EMPTY_ADVANCED),
     });
   }
@@ -382,6 +385,7 @@ export function FootballProvider({ children, loadData = true }) {
       ...(urlFilters.minutes !== 1
         ? { minutes: String(urlFilters.minutes) }
         : {}),
+      ...(urlFilters.basis === "per90" ? { basis: "per90" } : {}),
       ...Object.fromEntries(
         Object.entries(advancedQuery(urlFilters.advanced)).filter(
           ([, value]) => value,

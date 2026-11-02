@@ -1,12 +1,24 @@
 "use client";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { ProfileDialog } from "../components/PlayerDetails.jsx";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useDeferredValue } from "react";
 import Layout from "../components/Layout.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number, isNumber } from "../services/format.js";
 import { sortRows, per90 } from "../model.js";
 import PlayerSeasonProfile from "../components/PlayerSeasonProfile.jsx";
+import PlayerDirectory from "../components/PlayerDirectory.jsx";
+import { aggregateSeasonPlayers } from "../services/season-player.js";
+import {
+  directoryCSV,
+  filterPlayerAverages,
+  playerAverage,
+  playerDirectoryScope,
+  searchPlayerAverages,
+  sortPlayerAverages,
+} from "../services/player-directory.js";
+import { download } from "../services/resources.js";
 import {
   Card,
   Rating,
@@ -18,14 +30,57 @@ import {
 export default function PlayersPage() {
   const [profile, setProfile] = useState(false);
   const f = useFootball(),
-    [mode, setMode] = useState("total"),
     [sort, setSort] = useState({ key: "rating", direction: "desc" }),
     [page, setPage] = useState(1);
+  const filters = useDeferredValue(f.filters);
+  const mode = f.filters.basis;
+  const setMode = (basis) => f.setFilters((v) => ({ ...v, basis }));
   const id = useSearchParams().get("id");
-  const scopeRows = id ? f.seasonPlayerScope : [];
+  const matchIndex = useMemo(
+    () => new Map(f.data.matches.map((match) => [match.id, match])),
+    [f.data.matches],
+  );
+  const contextRows = useMemo(
+    () =>
+      playerDirectoryScope(f.data.appearances, f.season, filters, matchIndex),
+    [
+      f.data.appearances,
+      f.season,
+      matchIndex,
+      filters.league,
+      filters.match,
+      filters.advanced.role,
+      filters.advanced.venue,
+      filters.advanced.result,
+      filters.advanced.from,
+      filters.advanced.to,
+    ],
+  );
+  const profiles = useMemo(
+    () => aggregateSeasonPlayers(contextRows),
+    [contextRows],
+  );
+  const averages = useMemo(
+    () => profiles.map((value) => playerAverage(value, mode)),
+    [profiles, mode],
+  );
+  const eligible = useMemo(
+    () => filterPlayerAverages(averages, filters),
+    [averages, filters.minutes, filters.advanced],
+  );
+  const directoryRows = useMemo(
+    () =>
+      sortPlayerAverages(searchPlayerAverages(eligible, filters.query), sort),
+    [eligible, filters.query, sort],
+  );
+  const scopeRows = useMemo(() => {
+    if (!id) return [];
+    const ids = new Set(eligible.map((row) => row.playerId));
+    return contextRows.filter((row) => ids.has(row.playerId));
+  }, [id, contextRows, eligible]);
   const playerRows = useMemo(
-    () => (id ? scopeRows.filter((row) => row.playerId === id) : f.rows),
-    [id, scopeRows, f.rows],
+    () => (id ? scopeRows.filter((row) => row.playerId === id) : []),
+    [id, scopeRows],
   );
   const rows = useMemo(
     () =>
@@ -47,145 +102,174 @@ export default function PlayersPage() {
     ["saves", "Arrêts"],
     ["goalsPrevented", "Buts évités"],
   ];
+  const exportCurrent = () =>
+    id
+      ? f.exportRows(mode, rows)
+      : download(
+          "statarena-joueurs-moyennes.csv",
+          directoryCSV(directoryRows, mode),
+          "text/csv;charset=utf-8",
+        );
   return (
     <Layout
       path="/joueurs/"
       title="Joueurs"
       filters
       filterKind="players"
-      onExport={() => f.exportRows(mode, id ? rows : undefined)}
+      onExport={exportCurrent}
+      performanceComparison={Boolean(id)}
     >
+      {id && (
+        <Link
+          className="inline-link competition-back"
+          href={f.href("/joueurs/", { id: "", q: "" })}
+        >
+          ← Tous les joueurs
+        </Link>
+      )}
       {id && (
         <PlayerSeasonProfile id={id} rows={playerRows} scopeRows={scopeRows} />
       )}
-      <Card
-        title={id ? `Performances de ${rows[0]?.name || id}` : "Performances"}
-        action={
-          <>
-            {id && (
+      {id ? (
+        <Card
+          title={`Matchs de ${rows[0]?.name || id}`}
+          action={
+            <>
+              {id && (
+                <button
+                  className="button button-secondary"
+                  onClick={() => setProfile(true)}
+                >
+                  Fiche PitchAPI
+                </button>
+              )}
               <button
                 className="button button-secondary"
-                onClick={() => setProfile(true)}
+                onClick={exportCurrent}
               >
-                Fiche PitchAPI
+                Exporter CSV
               </button>
-            )}
-            <button
-              className="button button-secondary"
-              onClick={() => f.exportRows(mode, id ? rows : undefined)}
-            >
-              Exporter CSV
-            </button>
-          </>
-        }
-      >
-        <Segments
-          label="Mode des statistiques"
-          value={mode}
-          onChange={setMode}
-          items={[
-            ["total", "Par match"],
-            ["per90", "Par 90 minutes"],
-          ]}
-        />
-        {rows.length ? (
-          <div className="table-scroll">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Comparer</th>
-                  {fields.map(([key, label]) => (
-                    <th
-                      key={key}
-                      aria-sort={
-                        sort.key === key
-                          ? sort.direction === "asc"
-                            ? "ascending"
-                            : "descending"
-                          : "none"
-                      }
-                    >
-                      <button
-                        onClick={() => {
-                          setSort({
-                            key,
-                            direction:
-                              sort.key === key && sort.direction === "desc"
-                                ? "asc"
-                                : "desc",
-                          });
-                          setPage(1);
-                        }}
-                      >
-                        {label}{" "}
-                        <span className="sort-indicator" aria-hidden="true">
-                          {sort.key === key
+            </>
+          }
+        >
+          <Segments
+            label="Mode des statistiques"
+            value={mode}
+            onChange={setMode}
+            items={[
+              ["perMatch", "Par match"],
+              ["per90", "Par 90 minutes"],
+            ]}
+          />
+          {rows.length ? (
+            <div className="table-scroll">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Comparer</th>
+                    {fields.map(([key, label]) => (
+                      <th
+                        key={key}
+                        aria-sort={
+                          sort.key === key
                             ? sort.direction === "asc"
-                              ? "↑"
-                              : "↓"
-                            : "↕"}
-                        </span>
-                      </button>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.slice((current - 1) * 20, current * 20).map((r) => (
-                  <tr key={r.id}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        aria-label={`Comparer ${r.name}`}
-                        checked={f.comparison.includes(r.id)}
-                        onChange={() => f.toggle(r.id)}
-                      />
-                    </td>
-                    <td>
-                      <button
-                        className="table-player"
-                        onClick={() => f.setPlayer(r.id)}
+                              ? "ascending"
+                              : "descending"
+                            : "none"
+                        }
                       >
-                        <Media
-                          name={r.name}
-                          url={r.imageUrl}
-                          className="player-avatar"
-                        />
-                        <span className="player-copy">
-                          <strong className="player-name">{r.name}</strong>
-                          <span className="player-meta">
-                            {r.team} · {r.league}
+                        <button
+                          onClick={() => {
+                            setSort({
+                              key,
+                              direction:
+                                sort.key === key && sort.direction === "desc"
+                                  ? "asc"
+                                  : "desc",
+                            });
+                            setPage(1);
+                          }}
+                        >
+                          {label}{" "}
+                          <span className="sort-indicator" aria-hidden="true">
+                            {sort.key === key
+                              ? sort.direction === "asc"
+                                ? "↑"
+                                : "↓"
+                              : "↕"}
                           </span>
-                        </span>
-                      </button>
-                    </td>
-                    {fields.slice(1).map(([key]) => (
-                      <td key={key}>
-                        {key === "rating" ? (
-                          <Rating value={r.rating} />
-                        ) : (
-                          number(
-                            mode === "per90" && key !== "minutes"
-                              ? per90(r[key], r.minutes)
-                              : r[key],
-                            ["xg", "xa", "goalsPrevented"].includes(key) ||
-                              mode === "per90"
-                              ? 2
-                              : 0,
-                          )
-                        )}
-                      </td>
+                        </button>
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <Empty>Aucune performance pour ces filtres.</Empty>
-        )}
-        <Pager page={current} total={pages} onChange={setPage} />
-      </Card>
+                </thead>
+                <tbody>
+                  {rows.slice((current - 1) * 20, current * 20).map((r) => (
+                    <tr key={r.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          aria-label={`Comparer ${r.name}`}
+                          checked={f.comparison.includes(r.id)}
+                          onChange={() => f.toggle(r.id)}
+                        />
+                      </td>
+                      <td>
+                        <button
+                          className="table-player"
+                          onClick={() => f.setPlayer(r.id)}
+                        >
+                          <Media
+                            name={r.name}
+                            url={r.imageUrl}
+                            className="player-avatar"
+                          />
+                          <span className="player-copy">
+                            <strong className="player-name">{r.name}</strong>
+                            <span className="player-meta">
+                              {r.team} · {r.league}
+                            </span>
+                          </span>
+                        </button>
+                      </td>
+                      {fields.slice(1).map(([key]) => (
+                        <td key={key}>
+                          {key === "rating" ? (
+                            <Rating value={r.rating} />
+                          ) : (
+                            number(
+                              mode === "per90" && key !== "minutes"
+                                ? per90(r[key], r.minutes)
+                                : r[key],
+                              ["xg", "xa", "goalsPrevented"].includes(key) ||
+                                mode === "per90"
+                                ? 2
+                                : 0,
+                            )
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <Empty>Aucune performance pour ces filtres.</Empty>
+          )}
+          <Pager page={current} total={pages} onChange={setPage} />
+        </Card>
+      ) : (
+        <PlayerDirectory
+          rows={directoryRows}
+          players={averages}
+          sort={sort}
+          onSort={setSort}
+          mode={mode}
+          onMode={setMode}
+          onExport={exportCurrent}
+        />
+      )}
       {profile && (
         <ProfileDialog
           id={id}
