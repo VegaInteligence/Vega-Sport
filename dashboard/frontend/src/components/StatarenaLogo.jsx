@@ -1,4 +1,4 @@
-/** Original kit variants, selected by the same theme as the interface. */
+/** Official green stadium assets; the interface keeps its production theme. */
 export default function StatarenaLogo({
   layout = "horizontal",
   alt = "STATARENA",
@@ -9,13 +9,13 @@ export default function StatarenaLogo({
     <span className={`statarena-logo ${className}`}>
       <img
         className="logo-dark"
-        src={`/branding/statarena-${layout}-inverse.svg`}
+        src={`/branding/green/logos/svg/statarena-${layout}-dark.svg`}
         alt={alt}
         {...props}
       />
       <img
         className="logo-light"
-        src={`/branding/statarena-${layout}-color.svg`}
+        src={`/branding/green/logos/svg/statarena-${layout}-light.svg`}
         alt={alt}
         {...props}
       />

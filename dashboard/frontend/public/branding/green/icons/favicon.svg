@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Statarena icon">
+ <rect width="64" height="64" rx="15" fill="#0F172A"/>
+ <path d="M8 35c0-9 10-15 24-15 14 0 24 6 24 15 0 9-10 15-24 15C18 50 8 44 8 35Zm8 0c0 4 6 8 16 8s16-4 16-8c0-4-6-8-16-8s-16 4-16 8Z" fill="#F8FAFC" fill-rule="evenodd"/>
+ <rect x="22" y="23" width="5" height="13" rx="0.7" fill="#13C992"/>
+ <rect x="30" y="17" width="5" height="19" rx="0.7" fill="#13C992"/>
+ <rect x="38" y="11" width="5" height="25" rx="0.7" fill="#13C992"/>
+ </svg>

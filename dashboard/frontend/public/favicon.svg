@@ -1,1 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="STATARENA" viewBox="0 0 36 36" width="36" height="36"><g><path d="M5 23.5 C7 17.8 22.3 14.8 29 18.3 C33 20.4 33 24.0 29 27.0 C22.6 31.5 8.9 28.9 5 23.5 Z M5.5 26 C7.2 32.5 27.5 35.5 30.5 27" fill="none" stroke="#112538" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="11" y="18" width="3.6" height="9" rx=".4" fill="#1D6FD6"/><rect x="16.2" y="13.5" width="3.6" height="13.5" rx=".4" fill="#1D6FD6"/><rect x="21.4" y="9.2" width="3.6" height="17.8" rx=".4" fill="#1D6FD6"/><rect x="26.6" y="5.3" width="3.6" height="21.7" rx=".4" fill="#1D6FD6"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Statarena icon">
+ <rect width="64" height="64" rx="15" fill="#0F172A"/>
+ <path d="M8 35c0-9 10-15 24-15 14 0 24 6 24 15 0 9-10 15-24 15C18 50 8 44 8 35Zm8 0c0 4 6 8 16 8s16-4 16-8c0-4-6-8-16-8s-16 4-16 8Z" fill="#F8FAFC" fill-rule="evenodd"/>
+ <rect x="22" y="23" width="5" height="13" rx="0.7" fill="#13C992"/>
+ <rect x="30" y="17" width="5" height="19" rx="0.7" fill="#13C992"/>
+ <rect x="38" y="11" width="5" height="25" rx="0.7" fill="#13C992"/>
+ </svg>

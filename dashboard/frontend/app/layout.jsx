@@ -24,18 +24,18 @@ export const metadata = {
     template: "%s — STATARENA",
   },
   description,
-  manifest: "/site.webmanifest",
+  manifest: "/site.webmanifest?brand=green",
   icons: {
     icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.svg?brand=green", type: "image/svg+xml" },
+      { url: "/favicon.ico?brand=green", sizes: "any" },
       {
-        url: "/branding/icons/favicon-32.png",
+        url: "/branding/green/icons/favicon-32.png",
         type: "image/png",
         sizes: "32x32",
       },
     ],
-    apple: "/apple-touch-icon.png",
+    apple: "/apple-touch-icon.png?brand=green",
   },
   openGraph: {
     type: "website",
@@ -44,14 +44,19 @@ export const metadata = {
     title: "STATARENA — Football Analytics",
     description,
     images: [
-      { url: "/og-image.png", width: 1200, height: 630, alt: "STATARENA" },
+      {
+        url: "/og-image.png?brand=green",
+        width: 1200,
+        height: 630,
+        alt: "STATARENA",
+      },
     ],
   },
   twitter: {
     card: "summary_large_image",
     title: "STATARENA — Football Analytics",
     description,
-    images: ["/og-image.png"],
+    images: ["/og-image.png?brand=green"],
   },
 };
 export const viewport = { themeColor: "#0E0F12", colorScheme: "dark light" };
