@@ -129,7 +129,8 @@ function ArchiveBrowser({ index }) {
                 <a href={source.upstream.url} target="_blank" rel="noreferrer">
                   {source.upstream.name}
                 </a>{" "}
-                ({source.upstream.license})
+                ({source.upstream.license}
+                {source.upstream.usage ? ` ; ${source.upstream.usage}` : ""})
               </>
             )}
           </React.Fragment>

@@ -73,6 +73,7 @@ class EarlierEnglishResultsTests(unittest.TestCase):
             index=json.loads((out/'index.json').read_text(encoding='utf-8'))
             self.assertEqual(index['seasons'][0]['id'],'1888/1889')
             self.assertEqual(index['source']['additionalSources'][0]['upstream']['license'],'GPL-2.0-or-later')
+            self.assertIn('non commercial',index['source']['additionalSources'][0]['upstream']['usage'])
             match=json.loads(gzip.decompress((out/'1888-1889.json.gz').read_bytes()))['competitions'][0]['matches'][0]
             self.assertEqual((match['date'],match['score']['ft']),('1888-09-08',[3,6]))
             self.assertEqual(match['sourceFields']['FT'],'3-6')

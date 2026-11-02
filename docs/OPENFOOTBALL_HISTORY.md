@@ -9,8 +9,9 @@ Les saisons antérieures utilisent des fichiers de
 [footballcsv/cache.soccerdata](https://github.com/footballcsv/cache.soccerdata),
 qui indiquent une licence CC0-1.0. Le dernier dépôt reprend des données de
 [engsoccerdata](https://github.com/jalapic/engsoccerdata), dont le paquet indique
-une licence GPL-2.0 ou ultérieure. Les sources, révisions, empreintes et licences
-sont conservées dans `data/sources/openfootball/` et le manifeste.
+une licence GPL-2.0 ou ultérieure. Son auteur précise un usage gratuit non commercial
+et demande une attribution. Les sources, révisions, empreintes et licences sont
+conservées dans `data/sources/openfootball/` et le manifeste.
 
 De 1888/1889 à 1954/1955, les saisons disponibles couvrent les divisions
 anglaises, avec des interruptions dans la série. À partir de 1955/1956, elles

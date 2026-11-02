@@ -18,7 +18,7 @@ SOURCES = {
     'england': {'name':'footballcsv/england', 'url':'https://github.com/footballcsv/england', 'license':'CC0-1.0', 'revision':'52b7e5f5f37b28db72dba1fdc8dbec1adae4c8d0', 'country':'Angleterre'},
     'deutschland': {'name':'footballcsv/deutschland', 'url':'https://github.com/footballcsv/deutschland', 'license':'CC0-1.0', 'revision':'178324626681a9e4c42b81463f59f9c4500dbd53', 'country':'Allemagne'},
     'europe': {'name':'footballcsv/europe-champions-league', 'url':'https://github.com/footballcsv/europe-champions-league', 'license':'CC0-1.0', 'revision':'66393c8dc5c86b459dc700a0ae3a0bd0abedb56e', 'country':'Europe'},
-    'soccerdata': {'name':'footballcsv/cache.soccerdata', 'url':'https://github.com/footballcsv/cache.soccerdata', 'license':'CC0-1.0', 'revision':'f1c9d41893a42afef0e72fd5c48ccfb51d166281', 'country':'Angleterre', 'upstream':{'name':'engsoccerdata', 'url':'https://github.com/jalapic/engsoccerdata', 'license':'GPL-2.0-or-later'}},
+    'soccerdata': {'name':'footballcsv/cache.soccerdata', 'url':'https://github.com/footballcsv/cache.soccerdata', 'license':'CC0-1.0', 'revision':'f1c9d41893a42afef0e72fd5c48ccfb51d166281', 'country':'Angleterre', 'upstream':{'name':'engsoccerdata', 'url':'https://github.com/jalapic/engsoccerdata', 'license':'GPL-2.0-or-later','usage':'usage gratuit non commercial ; attribution demandée'}},
 }
 
 
