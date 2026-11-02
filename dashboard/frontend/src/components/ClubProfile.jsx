@@ -1,13 +1,15 @@
 "use client";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, Media } from "./UI.jsx";
 import { useResource } from "../services/resources.js";
 import { loadClubFacts } from "../services/club-facts.js";
 import { clubRoster, ROSTER_GROUPS } from "../services/club-roster.js";
 import { date, normalizeText, number } from "../services/format.js";
+import StadiumDialog from "./StadiumDialog.jsx";
 
 export function ClubFacts({ club, matches }) {
+  const [stadiumOpen, setStadiumOpen] = useState(false);
   const finished = matches
     .filter((m) => m.status === "finished")
     .sort((a, b) =>
@@ -83,7 +85,18 @@ export function ClubFacts({ club, matches }) {
             </div>
             <div className="club-fact">
               <span className="club-fact-label">Stade</span>
-              <strong>{stadium || "Non renseigné"}</strong>
+              {stadium ? (
+                <button
+                  type="button"
+                  className="stadium-link"
+                  onClick={() => setStadiumOpen(true)}
+                >
+                  {stadium}
+                  <span aria-hidden="true"> ↗</span>
+                </button>
+              ) : (
+                <strong>Non renseigné</strong>
+              )}
               {alias && normalizeText(alias) !== normalizeText(stadium) && (
                 <small>Également appelé {alias}</small>
               )}
@@ -105,6 +118,13 @@ export function ClubFacts({ club, matches }) {
               </small>
             </div>
           </div>
+          {stadiumOpen && stadium && (
+            <StadiumDialog
+              name={stadium}
+              id={wiki?.stadiumId}
+              onClose={() => setStadiumOpen(false)}
+            />
+          )}
           <p className="club-facts-source">
             {wiki?.sourceUrl ? (
               <>

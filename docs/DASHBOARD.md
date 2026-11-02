@@ -48,3 +48,10 @@ classement supposé.
 La fiche regroupe les joueurs inscrits dans les matchs collectés de la saison choisie en gardiens, défenseurs, milieux et attaquants. Le dernier poste connu dans une composition est utilisé ; les joueurs sans poste restent dans une rubrique distincte. Ces joueurs ne constituent pas nécessairement l’effectif complet ou actuel du club.
 
 Le stade, l’entraîneur et l’année de fondation proviennent de Wikidata lorsque l’identité du club est établie par l’identifiant UEFA existant ou, à défaut, par une correspondance unique du nom exact et du pays. Les portraits proviennent de Wikimedia Commons avec le crédit et la licence indiqués. Si Wikidata ne fournit pas l’information, la fiche indique l’entraîneur observé au dernier match collecté et le stade du dernier match à domicile renseigné par PitchAPI. Les informations Wikidata sont actuelles au moment de leur consultation et ne sont pas présentées comme historiques pour la saison choisie. Les réponses sont mises en cache côté site.
+
+
+## Fiche stade
+
+Le nom du stade ouvre une fiche indépendante de la saison sélectionnée. Pour les stades liés à une entrée Wikidata, elle affiche la capacité maximale référencée, la date de création et celle d'ouverture, avec leurs précisions et la date de la capacité quand elle existe. Cette capacité ne garantit pas le nombre de places disponibles pour un match, notamment en cas de travaux.
+
+Si des coordonnées terrestres sont disponibles, une carte interactive utilise MapLibre et les tuiles OpenFreeMap / OpenStreetMap. Elle affiche les volumes 3D présents dans les données cartographiques ; il ne s'agit pas nécessairement d'un modèle architectural détaillé du stade. Lorsque les données ou la carte ne sont pas disponibles, la fiche le signale.

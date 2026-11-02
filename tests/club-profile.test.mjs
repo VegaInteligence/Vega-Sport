@@ -204,6 +204,7 @@ test("Wikidata identity, temporal selection and Commons credits are preserved", 
   assert.match(query, /wdt:P7361 "50058"/);
   assert.match(query, /pq:P582/);
   assert.equal(result.stadiumAlias, "San Siro");
+  assert.equal(result.stadiumId, "Q133566");
   assert.equal(result.coach.name, "Coach");
   assert.equal(result.coach.photo.author, "Photographer");
   assert.equal(result.coach.photo.license, "CC BY 3.0");

@@ -56,6 +56,7 @@ test("club cards render coach, attributed photo, stadium and four player lines",
     "../services/resources.js": {
       useResource: () => ({ value: payload, loading: false }),
     },
+    "./StadiumDialog.jsx": { __esModule: true, default: () => null },
     "../services/club-facts.js": { loadClubFacts: () => {} },
     "../services/club-roster.js": roster,
     "../services/format.js": format,
@@ -88,6 +89,7 @@ test("club cards render coach, attributed photo, stadium and four player lines",
   );
   assert.match(facts, /Rúben Amorim/);
   assert.match(facts, /San Siro/);
+  assert.match(facts, /<button[^>]*class="stadium-link"[^>]*>/);
   assert.match(facts, /Photographer/);
   assert.match(facts, /CC BY 3.0/);
   assert.match(facts, /commons.wikimedia.org/);
