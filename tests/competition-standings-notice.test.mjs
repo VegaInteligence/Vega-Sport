@@ -26,6 +26,9 @@ test("SportScore standings render without the update-timing message", async () =
     "../services/format.js": { normalizeText: (value) => String(value).toLowerCase(), number: String, date: String },
     "../services/resources.js": { useResource: () => ({ value: { tables: [{ name: "Général", rows: [{ name: "Paris", position: 1, points: 3, played: 1, wins: 1, draws: 0, losses: 0, goalsFor: 2, goalsAgainst: 0, difference: 2 }] }] } }), json: () => {} },
     "../services/sportscore-standings.js": sportscore,
+    "../services/cup-worker-client.js": { cupWorkerSnapshot: async () => ({ tables: [] }) },
+    "../services/cup-catalog.js": { WORLD_CUP_ID: "l_1XLtP0" },
+    "../services/competition-selector.js": { FEATURED_EUROPE_IDS: [] },
     "../services/competition-standings.js": standings,
   };
   const filename = path.join(root, "dashboard/frontend/src/components/CompetitionStandings.jsx");

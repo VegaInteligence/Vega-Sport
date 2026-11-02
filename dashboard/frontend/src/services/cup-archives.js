@@ -12,3 +12,8 @@ export const NATIONAL_CUP_ARCHIVES = {
 };
 export const GERMAN_CUP_FOLDER = "GER_CUP_dfb-pokal";
 export const GERMAN_CUP_SEASONS = ["2026/2027", "2025/2026"];
+
+export function isGermanCupSeason(season) {
+  const match = /^(\d{4})\/(\d{4})$/.exec(season || "");
+  return Boolean(match && Number(match[1]) >= 2025 && Number(match[2]) === Number(match[1]) + 1);
+}

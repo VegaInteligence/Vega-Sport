@@ -165,7 +165,7 @@ function Fixtures({ competition, day }) {
     competition?.seasons?.find((s) => seasonLabel(s) === f.season) || competition?.seasons?.[0] || f.season,
   );
   const supported = !day;
-  const hasKnockout = Boolean(competition && (competition.id === WORLD_CUP_ID || FEATURED_EUROPE_IDS.includes(competition.id)));
+  const hasKnockout = Boolean(competition && (competition.id === WORLD_CUP_ID || FEATURED_EUROPE_IDS.includes(competition.id) || competition.cupWorker));
   const [view, setView] = useState(supported ? "standings" : "matches");
   const [status, setStatus] = useState(() => defaultCompetitionMatchStatus(day));
   const [page, setPage] = useState(1);
@@ -173,7 +173,7 @@ function Fixtures({ competition, day }) {
     "fixtures:" + f.client.id + ":" + competition?.id + ":" + season + ":" + day + ":" + f.configured,
     async () => {
       const scoped = Object.assign(Object.create(f.client), {
-        browseMode: day ? "day" : "catalog", day, competitionId: competition?.id, season,
+        browseMode: day ? "day" : "catalog", day, competitionId: competition?.id, season, competition, useCupSnapshot: hasKnockout || Boolean(competition?.cupWorker),
       });
       await f.client.loadFixtures.call(scoped);
       return scoped.fixtures.get(day ? "date:" + day : competition.id + ":" + season);
@@ -208,7 +208,7 @@ function Fixtures({ competition, day }) {
           const pages = Math.max(1, Math.ceil(rows.length / 30)), current = Math.min(page, pages);
           return <>
             {value.error && <p role="status">{value.error} · données collectées affichées.</p>}
-            {supported && view === "bracket" && hasKnockout ? <NativeKnockoutBracket competition={competition} season={season} matches={value.matches || []} /> : supported && view === "standings" ? <CompetitionStandings competition={competition} season={season} matches={value.matches || []} source={value.source} /> : supported ? <MatchdaySchedule key={competition.id + ":" + season} competition={competition} season={season} initialStatus={status} matches={(value.matches || []).filter((m) => f.focus !== "europe" || EUROPE_FOCUS_IDS.has(m.league?.id || m.leagueId))} /> : <>
+            {supported && view === "bracket" && hasKnockout ? <NativeKnockoutBracket competition={competition} season={season} matches={value.matches || []} rounds={value.rounds} /> : supported && view === "standings" ? <CompetitionStandings competition={competition} season={season} matches={value.matches || []} source={value.source} /> : supported ? <MatchdaySchedule key={competition.id + ":" + season} competition={competition} season={season} initialStatus={status} matches={(value.matches || []).filter((m) => f.focus !== "europe" || EUROPE_FOCUS_IDS.has(m.league?.id || m.leagueId))} /> : <>
               <Segments value={status} onChange={(v) => { setStatus(v); setPage(1); }} label="Statut des rencontres" items={[["finished", "Résultats"], ["not_started", "À venir"], ["all", "Tous"]]} />
               {!day && <p className="competition-matches-order">{status === "finished" ? "Les résultats les plus récents en premier" : status === "not_started" ? "Les prochaines rencontres en premier" : "Résultats récents, puis rencontres à venir"}</p>}
               {rows.slice((current - 1) * 30, current * 30).map((m) => <MatchLink key={m.id} match={m} />)}
@@ -276,7 +276,9 @@ export default function CompetitionsPage() {
     }
     return countries;
   }, [f.manifest]);
-  const cupIndex = useResource("supplemental-cup-index", () => json(dataUrl("raw/supplemental-index.json")));
+  const legacyCupIndex = useResource("supplemental-cup-index", () => json(dataUrl("raw/supplemental-index.json")));
+  const workerCupIndex = useResource("cup-worker-index", () => json(dataUrl("raw/cup-worker/index.json")));
+  const cupIndex = workerCupIndex.value?.competitions?.length ? workerCupIndex : legacyCupIndex;
   const nativeCatalog = f.catalog.map((c) => ({
     ...c,
     country: referenceCountries.get(c.id) || c.country,
@@ -286,7 +288,7 @@ export default function CompetitionsPage() {
       ),
     )])].sort().reverse(),
   }));
-  const expandedCatalog = mergeCupCatalog(nativeCatalog, cupIndex.value);
+  const expandedCatalog = mergeCupCatalog(nativeCatalog, cupIndex.value, workerCupIndex.value?.native);
   const catalog = f.focus === "europe" ? expandedCatalog.filter((competition) => EUROPE_FOCUS_IDS.has(competition.id)) : expandedCatalog;
   const chosenId = id || (choice.ready ? preferredCompetition(catalog, choice.saved, choice.country) : null);
   const selected = (id ? expandedCatalog : catalog).find((c) => c.id === chosenId);
@@ -363,7 +365,7 @@ export default function CompetitionsPage() {
               <button type="button" className="button button-secondary" onClick={openCups}>Explorer les coupes <Icon name="right" /></button>
             </div>
           </section>
-        {selected && (selected.source || selected.id === WORLD_CUP_ID || FEATURED_EUROPE_IDS.includes(selected.id)) && <button type="button" className="inline-link cup-return" onClick={openCups}>← Toutes les coupes</button>}
+        {selected && (selected.source || selected.id === WORLD_CUP_ID || FEATURED_EUROPE_IDS.includes(selected.id) || selected.cupWorker) && <button type="button" className="inline-link cup-return" onClick={openCups}>← Toutes les coupes</button>}
         {selected ? (selected.sourceKey === "nations-league" ? <NationsCompetition key={selected.id} competition={selected} /> : selected.source ? <CupCompetition key={selected.id} competition={selected} /> : <Fixtures key={selected.id} competition={selected} />) : (!id && !choice.ready) || (id?.startsWith("open-matchday:") && cupIndex.loading) ? <div className="loading-state" role="status">Chargement de la compétition…</div> : id?.startsWith("open-matchday:") && cupIndex.error ? <div className="notice" role="alert">Les coupes nationales sont indisponibles. <button className="button button-secondary" onClick={cupIndex.retry}>Réessayer</button></div> : <Empty>Compétition inconnue ou indisponible.</Empty>}
       </> : directory === "cups" ? <CupDirectory catalog={expandedCatalog} selectedId={selected?.id} onSelect={chooseCompetition} onBack={() => setDirectory(false)} error={cupIndex.error} onRetry={cupIndex.retry} loading={cupIndex.loading} /> : <>
         <button className="inline-link competition-back" onClick={() => setDirectory(false)}>← Retour à la compétition</button>

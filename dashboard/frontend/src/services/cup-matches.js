@@ -37,7 +37,8 @@ export function normalizeSupplementalCup(results, fixtures) {
     if (!home || !away || score.some((number) => number === null)) continue;
     const day = validDay(row.date) ? row.date : "";
     keys.add(identity(day, home, away));
-    completed.push({ key: "result:" + index, date: day, home, away, score, status: "finished" });
+    const roundName = String(row.round_name || row.round || row.stage || "").trim();
+    completed.push({ key: "result:" + index, date: day, home, away, score, roundName, round: readableRound(roundName), status: "finished" });
   }
   const scheduled = [];
   for (const [index, row] of (fixtures || []).entries()) {
@@ -45,7 +46,8 @@ export function normalizeSupplementalCup(results, fixtures) {
     if (!home || !away) continue;
     const day = validDay(row.date) ? row.date : "";
     if (keys.has(identity(day, home, away))) continue;
-    scheduled.push({ key: "fixture:" + index, date: day, home, away, score: null, status: "scheduled" });
+    const roundName = String(row.round_name || row.round || row.stage || "").trim();
+    scheduled.push({ key: "fixture:" + index, date: day, home, away, score: null, roundName, round: readableRound(roundName), status: "scheduled" });
   }
   return [...completed, ...scheduled];
 }

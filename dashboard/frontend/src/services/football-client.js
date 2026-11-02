@@ -1,5 +1,6 @@
 import { normalizeArchive } from "./format.js";
 import { dataUrl } from "../data-url.js";
+import { cupWorkerSnapshot } from "./cup-worker-client.js";
 /** Data access only: no view builders, document selectors or event delegation. */
 let clientSequence = 0;
 export class FootballDataClient {
@@ -99,43 +100,51 @@ export class FootballDataClient {
   }
   async loadFixtures() {
     const { browseMode, day, competitionId, season } = this;
-    const league = this.catalog.find((x) => x.id === competitionId);
+    const league = this.catalog.find((x) => x.id === competitionId) || this.competition;
     const key =
       browseMode === "day" ? `date:${day}` : `${competitionId}:${season}`;
     if (this.fixtures.has(key)) return;
     this.fixtures.set(key, { loading: true });
     await this.statusPromise;
     let result;
-    try {
-      if (!this.configured)
-        throw new Error("La connexion API n’est pas encore activée.");
-      const payload = await this.request(
-        browseMode === "day"
-          ? `date/${day}?status=all`
-          : `leagues/${league.id}/matches?season=${encodeURIComponent(season)}&status=all`,
-      );
-      const matches = payload.data?.matches || [];
-      result = {
-        matches:
+    if (browseMode !== "day" && this.useCupSnapshot) {
+      try {
+        const saved = await cupWorkerSnapshot("native", competitionId, season);
+        result = { matches: saved.matches, rounds: saved.rounds || {}, source: "snapshot" };
+      } catch { /* Older editions can still use the provider or local archive. */ }
+    }
+    if (!result) {
+      try {
+        if (!this.configured)
+          throw new Error("La connexion API n’est pas encore activée.");
+        const payload = await this.request(
           browseMode === "day"
-            ? matches
-            : matches.map((match) => ({
-                ...match,
-                league: match.league ||
-                  payload.data?.league || {
-                    id: league.id,
-                    name: league.name,
-                  },
-                season: match.season ?? season,
-              })),
-        source: "api",
-      };
-    } catch (error) {
-      const matches =
-        browseMode === "day"
-          ? this.localFixtures().filter((m) => m.date === day)
-          : this.localFixtures(competitionId, season);
-      result = { matches, source: "snapshot", error: error.message };
+            ? `date/${day}?status=all`
+            : `leagues/${league.id}/matches?season=${encodeURIComponent(season)}&status=all`,
+        );
+        const matches = payload.data?.matches || [];
+        result = {
+          matches:
+            browseMode === "day"
+              ? matches
+              : matches.map((match) => ({
+                  ...match,
+                  league: match.league ||
+                    payload.data?.league || {
+                      id: league.id,
+                      name: league.name,
+                    },
+                  season: match.season ?? season,
+                })),
+          source: "api",
+        };
+      } catch (error) {
+        const matches =
+          browseMode === "day"
+            ? this.localFixtures().filter((m) => m.date === day)
+            : this.localFixtures(competitionId, season);
+        result = { matches, source: "snapshot", error: error.message };
+      }
     }
     for (const match of result.matches) this.fixtureIndex.set(match.id, match);
     this.fixtures.set(key, result);

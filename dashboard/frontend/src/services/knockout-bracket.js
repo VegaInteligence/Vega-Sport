@@ -169,3 +169,14 @@ export function combineCupLegs(matches) {
   }
   return (matches || []).flatMap((match) => omitted.has(match.key) ? [] : [replacements.get(match.key) || match]);
 }
+
+/** Preserve individual games when a newly discovered cup has no leg format. */
+export function nativeSingleKnockoutMatches(matches, rounds) {
+  return (matches || []).flatMap((match) => {
+    const roundName = rounds?.[match.id]?.name;
+    const home = match.home_team || match.home, away = match.away_team || match.away;
+    if (!knockoutStage(roundName) || !home?.name || !away?.name) return [];
+    const finished = match.status === "finished" || match.finished === true;
+    return [{ key: "native:" + match.id, id: match.id, date: match.date || "", home: home.name, away: away.name, homeImage: home.image_url || home.imageUrl, awayImage: away.image_url || away.imageUrl, roundName, score: finished ? scorePair(match.score_home ?? home.score, match.score_away ?? away.score) : null, status: finished ? "finished" : "scheduled" }];
+  });
+}

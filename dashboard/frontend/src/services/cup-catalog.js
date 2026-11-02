@@ -29,15 +29,15 @@ export function supplementalCupCatalog(index) {
   if (!Array.isArray(index?.competitions)) return [];
   return index.competitions.flatMap((item) => {
     if (!/^[A-Z]{3}_CUP_[a-z0-9-]+$/i.test(item.folder || "")) return [];
-    if (!(Number(item.tables?.results?.rows) > 0 || Number(item.tables?.fixtures?.rows) > 0)) return [];
+    if (!(Number(item.tables?.results?.rows) > 0 || Number(item.tables?.fixtures?.rows) > 0) && !item.discovered) return [];
     const ref = item.tables?.results?.path || item.tables?.fixtures?.path || "";
     const seasonParts = ref.match(/^raw\/seasons\/(\d{4})-(\d{4})\//);
-    if (!seasonParts) return [];
-    const season = seasonParts[1] + "/" + seasonParts[2];
+    const season = /^\d{4}\/\d{4}$/.test(item.season || "") ? item.season : seasonParts ? seasonParts[1] + "/" + seasonParts[2] : "";
+    if (!season) return [];
     const labels = CUP_LABELS[item.folder] || [item.name || item.folder];
     const archive = NATIONAL_CUP_ARCHIVES[item.folder];
-    const editions = [season, ...(archive ? [archive.season] : []), ...(item.folder === GERMAN_CUP_FOLDER ? GERMAN_CUP_SEASONS : [])];
-    return [{ id: "open-matchday:" + item.folder, name: labels[0], country: item.country_code || "", source: "open-matchday", folder: item.folder, seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...labels.slice(1), item.name || ""], tables: item.tables, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null }];
+    const editions = [season, ...Object.keys(item.editions || {}).filter((value) => /^\d{4}\/\d{4}$/.test(value)), ...(archive ? [archive.season] : []), ...(item.folder === GERMAN_CUP_FOLDER ? GERMAN_CUP_SEASONS : [])];
+    return [{ id: "open-matchday:" + item.folder, name: labels[0], country: item.country_code || "", source: "open-matchday", folder: item.folder, seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...labels.slice(1), item.name || ""], tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null }];
   });
 }
 
@@ -49,8 +49,14 @@ export function competitionSearchText(competition, countryName = "") {
 }
 
 /** Native provider IDs remain authoritative; no two sources are merged by name. */
-export function mergeCupCatalog(nativeCompetitions, supplementalIndex) {
-  const native = nativeCompetitions.map((competition) => competition.id === WORLD_CUP_ID ? { ...competition, name: "Coupe du monde", seasons: [...new Set([...(competition.seasons || []), ...WORLD_CUP_FALLBACK.seasons])].sort().reverse() } : competition);
+export function mergeCupCatalog(nativeCompetitions, supplementalIndex, workerNative = []) {
+  const pending = new Map((workerNative || []).filter((item) => /^l_[A-Za-z0-9]{6}$/.test(item.id || "")).map((item) => [item.id, item]));
+  const native = nativeCompetitions.map((competition) => {
+    const saved = pending.get(competition.id); pending.delete(competition.id);
+    const seasons = [...new Set([...(competition.seasons || []), ...(saved?.seasons || []), ...(competition.id === WORLD_CUP_ID ? WORLD_CUP_FALLBACK.seasons : [])])].sort().reverse();
+    return { ...competition, ...(saved ? { cupWorker: true } : {}), ...(competition.id === WORLD_CUP_ID ? { name: "Coupe du monde" } : {}), seasons };
+  });
+  native.push(...[...pending.values()].map((competition) => ({ ...competition, cupWorker: true })));
   const ids = new Set(native.map((competition) => competition.id));
   const world = ids.has(WORLD_CUP_ID) ? [] : [WORLD_CUP_FALLBACK];
   const extras = supplementalCupCatalog(supplementalIndex);

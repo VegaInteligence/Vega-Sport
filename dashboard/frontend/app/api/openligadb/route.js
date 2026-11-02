@@ -7,7 +7,12 @@ const SOURCES = {
 export async function GET(request) {
   const params = new URL(request.url).searchParams, competition = params.get("competition"), season = params.get("season");
   const editions = Object.hasOwn(SOURCES, competition || "") ? SOURCES[competition] : null;
-  const source = editions && Object.hasOwn(editions, season || "") ? editions[season] : null;
+  let source = editions && Object.hasOwn(editions, season || "") ? editions[season] : null;
+  if (!source && competition === "germany-cup") {
+    const match = /^(\d{4})\/(\d{4})$/.exec(season || "");
+    const year = new Date().getUTCFullYear();
+    if (match && Number(match[1]) >= 2025 && Number(match[1]) <= year + 1 && Number(match[2]) === Number(match[1]) + 1) source = ["dfb", match[1]];
+  }
   if (!source) return Response.json({ error: "Compétition ou édition indisponible." }, { status: 400 });
   try {
     const response = await fetch("https://api.openligadb.de/getmatchdata/" + source.join("/"), {

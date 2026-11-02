@@ -3,7 +3,8 @@ import React, { useMemo, useState } from "react";
 import { AsyncState, Card, Segments } from "./UI.jsx";
 import { CupMatchList } from "./CupCompetition.jsx";
 import KnockoutBracket from "./KnockoutBracket.jsx";
-import { json, useResource } from "../services/resources.js";
+import { useResource } from "../services/resources.js";
+import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { nationsStandings } from "../services/nations-standings.js";
 
 function Groups({ matches }) {
@@ -23,8 +24,8 @@ function Groups({ matches }) {
 }
 export default function NationsCompetition({ competition }) {
   const [league, setLeague] = useState("A"), [view, setView] = useState("standings"), [status, setStatus] = useState("finished"), [query, setQuery] = useState(""), [page, setPage] = useState(1);
-  const leagueA = useResource("nations-league-a:2026/2027", () => json("/api/openligadb?competition=nations-league&season=2026%2F2027"), league === "A");
-  const otherLeagues = useResource("nations-league-other:2026/2027", () => json("/api/nations-results?season=2026%2F2027"), league !== "A");
+  const leagueA = useResource("nations-league-a:2026/2027", () => cupWorkerSnapshot("openligadb", "nations-league", "2026/2027", "/api/openligadb?competition=nations-league&season=2026%2F2027"), league === "A");
+  const otherLeagues = useResource("nations-league-other:2026/2027", () => cupWorkerSnapshot("nations-results", "nations-league", "2026/2027", "/api/nations-results?season=2026%2F2027"), league !== "A");
   const resource = league === "A" ? leagueA : otherLeagues;
   const chooseLeague = (next) => { setLeague(next); if (view === "bracket" && next !== "A") setView("standings"); setPage(1); };
   return <Card className="cup-detail nations-detail" title={<span className="competition-detail-title"><span><strong>{competition.name}</strong><small>2026/2027</small></span></span>}>

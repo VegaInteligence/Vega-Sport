@@ -4,19 +4,20 @@ import { Card, Media, Pager, Segments, AsyncState, Empty } from "./UI.jsx";
 import { date } from "../services/format.js";
 import { parisDay } from "../services/fixtures.js";
 import KnockoutBracket from "./KnockoutBracket.jsx";
-import { useResource, json } from "../services/resources.js";
+import { useResource } from "../services/resources.js";
 import { dataUrl } from "../data-url.js";
 import { competitionCountryLabel } from "../services/competition-selector.js";
 import { normalizeOpenCup, normalizeSupplementalCup, filterCupMatches } from "../services/cup-matches.js";
-import { combineCupLegs } from "../services/knockout-bracket.js";
-import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, GERMAN_CUP_SEASONS } from "../services/cup-archives.js";
+import { combineCupLegs, knockoutStage } from "../services/knockout-bracket.js";
+import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
+import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, isGermanCupSeason } from "../services/cup-archives.js";
 
 async function compressedRows(ref) {
   if (!ref || Number(ref.rows) === 0) return [];
   const response = await fetch(dataUrl(ref.path));
   if (!response.ok) throw new Error("Données de coupe indisponibles (HTTP " + response.status + ")");
-  if (typeof DecompressionStream === "undefined") throw new Error("Ce navigateur ne peut pas lire ces données de coupe.");
-  const rows = await new Response(response.body.pipeThrough(new DecompressionStream("gzip"))).json();
+  if (ref.format !== "json" && typeof DecompressionStream === "undefined") throw new Error("Ce navigateur ne peut pas lire ces données de coupe.");
+  const rows = ref.format === "json" ? await response.json() : await new Response(response.body.pipeThrough(new DecompressionStream("gzip"))).json();
   if (!Array.isArray(rows)) throw new Error("Format de coupe invalide.");
   return rows;
 }
@@ -46,21 +47,25 @@ export default function CupCompetition({ competition }) {
   const [status, setStatus] = useState(competition.source === "open-matchday" && !Number(competition.tables?.results?.rows) ? "scheduled" : "finished");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
-  const version = competition.source === "open-matchday" ? [competition.tables?.results?.sha256, competition.tables?.fixtures?.sha256].join(":") : season;
+  const tables = competition.editions?.[season] || (season === competition.defaultSeason ? competition.tables : null);
+  const version = competition.source === "open-matchday" ? [tables?.results?.sha256, tables?.fixtures?.sha256].join(":") : season;
   const mode = competition.source !== "open-matchday" ? "openfootball"
-    : season === competition.defaultSeason && view === "matches" ? "supplemental"
-    : germany && GERMAN_CUP_SEASONS.includes(season) ? "openligadb"
+    : view === "bracket" && germany && isGermanCupSeason(season) ? "openligadb"
+    : view === "bracket" && archive && season === archive.season ? "archive"
+    : tables ? "supplemental"
+    : germany && isGermanCupSeason(season) ? "openligadb"
     : archive && season === archive.season ? "archive"
     : "unavailable";
   const resource = useResource("cup:" + competition.id + ":" + mode + ":" + view + ":" + season + ":" + version, async () => {
     if (mode === "supplemental") {
-      const [results, fixtures] = await Promise.all([compressedRows(competition.tables?.results), compressedRows(competition.tables?.fixtures)]);
-      return { matches: normalizeSupplementalCup(results, fixtures) };
+      const [results, fixtures] = await Promise.all([compressedRows(tables?.results), compressedRows(tables?.fixtures)]);
+      const matches = normalizeSupplementalCup(results, fixtures);
+      return view === "bracket" && !matches.some((match) => knockoutStage(match.roundName)) ? { matches, unavailable: true } : { matches };
     }
     if (mode === "unavailable") return { matches: [], unavailable: true };
-    if (mode === "openligadb") return json("/api/openligadb?competition=germany-cup&season=" + encodeURIComponent(season));
+    if (mode === "openligadb") return cupWorkerSnapshot("openligadb", "germany-cup", season, "/api/openligadb?competition=germany-cup&season=" + encodeURIComponent(season));
     const key = mode === "archive" ? archive.key : competition.sourceKey;
-    const payload = await json("/api/open-cups?competition=" + encodeURIComponent(key) + "&season=" + encodeURIComponent(season));
+    const payload = await cupWorkerSnapshot("open-cups", key, season, "/api/open-cups?competition=" + encodeURIComponent(key) + "&season=" + encodeURIComponent(season));
     const matches = normalizeOpenCup(payload.matches);
     return { matches: mode === "archive" && archive.twoLegged && view === "bracket" ? combineCupLegs(matches) : matches, source: payload.source };
   });

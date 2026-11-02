@@ -5,6 +5,9 @@ import { Empty, Media } from "./UI.jsx";
 import { normalizeText, number, date } from "../services/format.js";
 import { useResource, json } from "../services/resources.js";
 import { SPORTSCORE_LEAGUES } from "../services/sportscore-standings.js";
+import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
+import { WORLD_CUP_ID } from "../services/cup-catalog.js";
+import { FEATURED_EUROPE_IDS } from "../services/competition-selector.js";
 import {
   SIMPLE_LEAGUES,
   standingsFromFixtures,
@@ -259,10 +262,13 @@ export default function CompetitionStandings({
   const latest = competition?.seasons?.[0];
   const current = Boolean(latest) && String(latest) === String(season);
   const enabled = current && Boolean(SPORTSCORE_LEAGUES[competition.id]);
+  const cup = competition.id === WORLD_CUP_ID || FEATURED_EUROPE_IDS.includes(competition.id) || competition.cupWorker;
   const external = useResource(
     "sportscore-standings:" + competition.id + ":" + season,
-    () =>
-      json("/api/standings?competition=" + encodeURIComponent(competition.id)),
+    () => {
+      const url = "/api/standings?competition=" + encodeURIComponent(competition.id);
+      return cup ? cupWorkerSnapshot("standings", competition.id, String(season), url) : json(url);
+    },
     enabled,
   );
   if (enabled && external.loading)
