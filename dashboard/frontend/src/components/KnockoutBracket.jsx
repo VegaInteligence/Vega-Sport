@@ -43,17 +43,20 @@ function MatchCard({ match, hrefForMatch }) {
 
 export default function KnockoutBracket({ matches, hrefForMatch }) {
   const bracket = useMemo(() => buildKnockoutBracket(matches), [matches]);
+  const early = bracket.rounds.length > 1 && bracket.rounds[0].key === "round64" ? bracket.rounds[0] : null;
+  const rounds = early ? bracket.rounds.slice(1) : bracket.rounds;
   if (!bracket.rounds.length && !bracket.preliminary && !bracket.thirdPlace.length)
     return <Empty>Le tableau apparaîtra lorsque les matchs à élimination directe seront disponibles.</Empty>;
   return (
     <section className="knockout-section" aria-label="Tableau éliminatoire">
+      {early && <details className="knockout-early"><summary>Trente-deuxièmes de finale · {early.matches.length} matchs</summary><div className="knockout-preliminary-grid">{early.matches.map((match) => <MatchCard key={match.key} match={match} hrefForMatch={hrefForMatch} />)}</div></details>}
       {bracket.preliminary && <section className="knockout-preliminary"><h3>{bracket.preliminary.label}</h3><div className="knockout-preliminary-grid">{bracket.preliminary.matches.map((match) => <MatchCard key={match.key} match={match} hrefForMatch={hrefForMatch} />)}</div></section>}
-      {bracket.rounds.length > 0 && <>
-        {!bracket.connected && bracket.rounds.length > 1 && <p className="knockout-note">Les matchs sont regroupés par tour lorsque leurs croisements ne sont pas précisés par la source.</p>}
+      {rounds.length > 0 && <>
+        {!bracket.connected && rounds.length > 1 && <p className="knockout-note">Les matchs sont regroupés par tour lorsque leurs croisements ne sont pas précisés par la source.</p>}
         <p className="knockout-scroll-hint" aria-hidden="true">Faites défiler pour voir les autres tours.</p>
         <div className="knockout-scroll" role="region" aria-label="Parcourir le tableau éliminatoire" tabIndex="0">
-          <div className={"knockout-columns" + (bracket.connected ? " knockout-columns-linked" : "")} style={{ "--knockout-slots": bracket.rounds[0].matches.length }}>
-            {bracket.rounds.map((round, index) => (
+          <div className={"knockout-columns" + (bracket.connected ? " knockout-columns-linked" : "")} style={{ "--knockout-slots": rounds[0].matches.length }}>
+            {rounds.map((round, index) => (
               <section className="knockout-column" key={round.key}>
                 <h3>{round.label}</h3>
                 <div className="knockout-track">

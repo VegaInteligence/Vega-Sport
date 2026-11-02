@@ -1,9 +1,11 @@
 import { normalizeText } from "../model.js";
+import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, GERMAN_CUP_SEASONS } from "./cup-archives.js";
 
 export const WORLD_CUP_ID = "l_1XLtP0";
 export const WORLD_CUP_FALLBACK = { id: WORLD_CUP_ID, name: "Coupe du monde", country: "INT", seasons: ["2026", "2022"] };
 export const OPEN_CUP_CATALOG = [
   { id: "open-cup:france-cup", name: "Coupe de France", country: "FRA", source: "openfootball", sourceKey: "france-cup", seasons: ["2024/2025"], defaultSeason: "2024/2025", aliases: ["French Cup"], coverage: "Archive 2024/2025" },
+  { id: "openligadb:nations-league", name: "Ligue des Nations", country: "UEFA", source: "openligadb", sourceKey: "nations-league", seasons: ["2026/2027"], defaultSeason: "2026/2027", aliases: ["UEFA Nations League", "Nations League"], coverage: "Ligues A à D · 2026/2027" },
   { id: "open-cup:euro", name: "Euro", country: "UEFA", source: "openfootball", sourceKey: "euro", seasons: ["2028", "2024", "2020"], defaultSeason: "2024", aliases: ["Championnat d’Europe", "European Championship"] },
   { id: "open-cup:club-world-cup", name: "Coupe du monde des clubs", country: "INT", source: "openfootball", sourceKey: "club-world-cup", seasons: ["2025"], defaultSeason: "2025", aliases: ["Club World Cup"] },
   { id: "open-cup:world-cup-history", name: "Coupe du monde — archives", country: "INT", source: "openfootball", sourceKey: "world-cup-history", seasons: ["2018", "2014", "2010", "2006", "2002", "1998", "1994", "1990", "1986", "1982", "1978", "1974", "1970", "1966", "1962", "1958", "1954", "1950", "1938", "1934", "1930"], defaultSeason: "2018", aliases: ["World Cup", "Mondial"] },
@@ -33,7 +35,9 @@ export function supplementalCupCatalog(index) {
     if (!seasonParts) return [];
     const season = seasonParts[1] + "/" + seasonParts[2];
     const labels = CUP_LABELS[item.folder] || [item.name || item.folder];
-    return [{ id: "open-matchday:" + item.folder, name: labels[0], country: item.country_code || "", source: "open-matchday", folder: item.folder, seasons: [season], defaultSeason: season, aliases: [...labels.slice(1), item.name || ""], tables: item.tables, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null }];
+    const archive = NATIONAL_CUP_ARCHIVES[item.folder];
+    const editions = [season, ...(archive ? [archive.season] : []), ...(item.folder === GERMAN_CUP_FOLDER ? GERMAN_CUP_SEASONS : [])];
+    return [{ id: "open-matchday:" + item.folder, name: labels[0], country: item.country_code || "", source: "open-matchday", folder: item.folder, seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...labels.slice(1), item.name || ""], tables: item.tables, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null }];
   });
 }
 

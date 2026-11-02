@@ -138,3 +138,34 @@ export function bracketTeamLabel(name) {
     .replace(/^Winner Group ([A-Z])$/i, "1er groupe $1")
     .replace(/^3rd Group /i, "3e groupe ");
 }
+
+/** Combine only explicitly identified, reversed home-and-away cup ties. */
+export function combineCupLegs(matches) {
+  const groups = new Map();
+  for (const match of matches || []) {
+    const stage = knockoutStage(match.roundName || match.round);
+    if (!stage || stage === "final" || stage === "third") continue;
+    const names = [teamName(match.home), teamName(match.away)];
+    if (!names[0] || !names[1] || names[0] === names[1]) continue;
+    const key = stage + ":" + [...names].sort().join("|");
+    const rows = groups.get(key) || [];
+    rows.push(match);
+    groups.set(key, rows);
+  }
+  const replacements = new Map(), omitted = new Set();
+  for (const rows of groups.values()) {
+    if (rows.length !== 2) continue;
+    const [first, second] = [...rows].sort(dateOrder);
+    if (!first.date || !second.date || first.date === second.date || teamName(first.home) !== teamName(second.away) || teamName(first.away) !== teamName(second.home)) continue;
+    const legs = [first, second].map((match, index) => ({
+      date: match.date, home: match.home, away: match.away, status: match.status,
+      score: match.score ? (index === 1 ? [match.score[1], match.score[0]] : match.score) : null,
+    }));
+    const complete = legs.every((leg) => leg.status === "finished" && leg.score);
+    const score = complete ? legs.reduce((sum, leg) => [sum[0] + leg.score[0], sum[1] + leg.score[1]], [0, 0]) : null;
+    const penalties = second.penalties ? [second.penalties[1], second.penalties[0]] : null;
+    replacements.set(first.key, { ...first, score, penalties, legs, status: complete ? "finished" : "scheduled" });
+    omitted.add(second.key);
+  }
+  return (matches || []).flatMap((match) => omitted.has(match.key) ? [] : [replacements.get(match.key) || match]);
+}

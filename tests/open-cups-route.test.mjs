@@ -35,3 +35,19 @@ test("French Cup text is parsed and an unavailable source is reported", async ()
     assert.equal(error.status, 502);
   } finally { globalThis.fetch = original; }
 });
+
+test("national archive route preserves the announced rounds and scores", async () => {
+  const original = globalThis.fetch;
+  const urls = [];
+  globalThis.fetch = async (url) => { urls.push(url); return new Response("# Matches 2\n▪ Round 4\nSat Jan 25 2025\n  15:00  A   v B   5-4 pen. 1-1 a.e.t. (1-1)\n▪ Final\nSat May 17\n  15:00  A   v C   2-0 (1-0)\n"); };
+  try {
+    const response = await GET(new Request("http://localhost/api/open-cups?competition=fa-cup-archive&season=2024%2F2025"));
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.matches[0].round, "Round of 32");
+    assert.deepEqual(body.matches[0].score, { ft: [1, 1], p: [5, 4], et: [1, 1] });
+    assert.match(urls[0], /openfootball\/england\/master\/2024-25\/facup\.txt$/);
+    const bad = await GET(new Request("http://localhost/api/open-cups?competition=fa-cup-archive&season=2026%2F2027"));
+    assert.equal(bad.status, 400);
+  } finally { globalThis.fetch = original; }
+});

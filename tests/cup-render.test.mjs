@@ -16,6 +16,8 @@ const elem = React.createElement;
 
 test("cup view identifies the edition and preserves penalty shootouts", async () => {
   const cupMatches = await import("../dashboard/frontend/src/services/cup-matches.js");
+  const bracket = await import("../dashboard/frontend/src/services/knockout-bracket.js");
+  const archives = await import("../dashboard/frontend/src/services/cup-archives.js");
   const rows = cupMatches.normalizeOpenCup([{ date: "2024-11-15", team1: "Paris FC", team2: "Quevilly", round: "Round 7", score: { ft: [1, 1], p: [2, 4] } }]);
   const Card = ({ title, children }) => elem("section", null, elem("h2", null, title), children);
   const stubs = {
@@ -23,10 +25,13 @@ test("cup view identifies the edition and preserves penalty shootouts", async ()
     "./UI.jsx": { Card, Media: () => null, Pager: () => null, Segments: ({ items }) => elem("div", null, items.map(([id, text]) => elem("button", { key: id }, text))), AsyncState: ({ resource, children }) => children(resource.value), Empty: ({ children }) => elem("p", null, children) },
     "./KnockoutBracket.jsx": { __esModule: true, default: () => elem("div", null, "Tableau éliminatoire") },
     "../services/format.js": { date: String },
+    "../services/fixtures.js": { parisDay: () => "2026-11-02" },
     "../services/resources.js": { useResource: () => ({ value: { matches: rows } }), json: () => {} },
     "../data-url.js": { dataUrl: (path) => path },
     "../services/competition-selector.js": { competitionCountryLabel: () => "France" },
     "../services/cup-matches.js": cupMatches,
+    "../services/knockout-bracket.js": bracket,
+    "../services/cup-archives.js": archives,
   };
   const filename = path.join(root, "dashboard/frontend/src/components/CupCompetition.jsx");
   const compiled = babel.transformSync(await fs.readFile(filename, "utf8"), { presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename }).code;

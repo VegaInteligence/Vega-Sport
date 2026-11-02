@@ -41,6 +41,8 @@ test("competition page renders a result-derived league table and its limits", as
     "next/link": { __esModule: true, default: Link },
     "../components/Icon.jsx": { __esModule: true, default: () => null },
     "../components/CupCompetition.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-cup-id": competition.id }, competition.name) },
+    "../components/CupDirectory.jsx": { __esModule: true, default: () => elem("section", { "data-cup-directory": true }, "Coupes") },
+    "../components/NationsCompetition.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-nations-id": competition.id }, competition.name) },
     "../components/NativeKnockoutBracket.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-native-bracket": competition.id }, "Tableau éliminatoire") },
     "../components/CompetitionHighlights.jsx": { __esModule: true, default: ({ season }) => elem("aside", { "data-highlights-season": season }, "Prochains matchs et derniers résultats") },
     "../components/Layout.jsx": { __esModule: true, default: ({ children, showSeasonContext = true, showDataContext = true }) => elem("main", { "data-season-context": String(showSeasonContext), "data-data-context": String(showDataContext) }, children) },
@@ -77,18 +79,7 @@ test("competition page renders a result-derived league table and its limits", as
   const html = renderToStaticMarkup(elem(mod.exports.default));
   assert.match(html, /Classement calculé à partir des résultats disponibles/);
   assert.match(html, /Championnats à la une/);
-  assert.match(html, /Coupes internationales/);
-  assert.match(html, /Coupe du monde/);
-  assert.match(html, /Euro/);
-  assert.match(html, /Coupe du Roi/);
-  assert.match(html, /Coupe de France/);
-  const nationalPicker = html.match(/<select aria-labelledby="national-cups-label"[\s\S]*?<\/select>/)?.[0];
-  assert.ok(nationalPicker, "national cups have a labelled selector");
-  assert.match(nationalPicker, /<optgroup label="Espagne">[\s\S]*Coupe du Roi/);
-  assert.match(nationalPicker, /<optgroup label="France">[\s\S]*Coupe de France · Archive 2024\/2025/);
-  assert.match(nationalPicker, /<optgroup label="Suisse">[\s\S]*Coupe de Suisse/);
-  assert.ok(nationalPicker.indexOf("Espagne") < nationalPicker.indexOf("France"));
-  assert.ok(nationalPicker.indexOf("France") < nationalPicker.indexOf("Suisse"));
+  assert.match(html, /Explorer les coupes/);
   assert.match(html, /<a[^>]*href="\/archives\/"[^>]*>Archives<\/a>/);
   assert.doesNotMatch(html, /Archives de buts/);
   assert.ok(html.indexOf(">Archives</a>") < html.indexOf("Toutes les compétitions"));
@@ -112,6 +103,9 @@ test("competition page renders a result-derived league table and its limits", as
   assert.doesNotMatch(historic, /Groupe A/);
   assert.match(historic, /Classement calculé à partir des résultats disponibles/);
 
+  requestedId = "openligadb:nations-league";
+  const nations = renderToStaticMarkup(elem(mod.exports.default));
+  assert.match(nations, /data-nations-id="openligadb:nations-league"/);
   requestedId = "open-cup:euro";
   context.focus = "europe";
   const euro = renderToStaticMarkup(elem(mod.exports.default));
@@ -122,7 +116,6 @@ test("competition page renders a result-derived league table and its limits", as
   context.focus = "all";
   const spanishCup = renderToStaticMarkup(elem(mod.exports.default));
   assert.match(spanishCup, /data-cup-id="open-matchday:ESP_CUP_copa-del-rey"/);
-  assert.match(spanishCup, /<option value="open-matchday:ESP_CUP_copa-del-rey" selected=""/);
   requestedId = "l_1XLtP0";
   forceBracketView = true;
   const worldBracket = renderToStaticMarkup(elem(mod.exports.default));

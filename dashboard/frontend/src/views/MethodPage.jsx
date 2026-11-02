@@ -20,6 +20,14 @@ export default function MethodPage() {
             </p>
           </section>
           <section>
+            <h2>Données de compétitions</h2>
+            <p>
+              Les résultats de la Ligue A de la Ligue des Nations et de la Coupe
+              d’Allemagne comprennent des données d’<a href="https://www.openligadb.de/">OpenLigaDB</a>,
+              mises à disposition sous <a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL 1.0</a>.
+            </p>
+          </section>
+          <section>
             <h2>Notes et classement</h2>
             <p>
               Les notes affichées sont les notes de match. Le classement

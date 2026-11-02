@@ -2,11 +2,14 @@
 import React, { useMemo, useState } from "react";
 import { Card, Media, Pager, Segments, AsyncState, Empty } from "./UI.jsx";
 import { date } from "../services/format.js";
+import { parisDay } from "../services/fixtures.js";
 import KnockoutBracket from "./KnockoutBracket.jsx";
 import { useResource, json } from "../services/resources.js";
 import { dataUrl } from "../data-url.js";
 import { competitionCountryLabel } from "../services/competition-selector.js";
 import { normalizeOpenCup, normalizeSupplementalCup, filterCupMatches } from "../services/cup-matches.js";
+import { combineCupLegs } from "../services/knockout-bracket.js";
+import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, GERMAN_CUP_SEASONS } from "../services/cup-archives.js";
 
 async function compressedRows(ref) {
   if (!ref || Number(ref.rows) === 0) return [];
@@ -37,18 +40,29 @@ function CupMatch({ match }) {
 export default function CupCompetition({ competition }) {
   const [season, setSeason] = useState(competition.defaultSeason);
   const [view, setView] = useState("matches");
-  const supportsBracket = competition.source === "openfootball";
+  const supportsBracket = competition.source === "openfootball" || competition.source === "open-matchday";
+  const archive = NATIONAL_CUP_ARCHIVES[competition.folder];
+  const germany = competition.folder === GERMAN_CUP_FOLDER;
   const [status, setStatus] = useState(competition.source === "open-matchday" && !Number(competition.tables?.results?.rows) ? "scheduled" : "finished");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const version = competition.source === "open-matchday" ? [competition.tables?.results?.sha256, competition.tables?.fixtures?.sha256].join(":") : season;
-  const resource = useResource("cup:" + competition.id + ":" + version, async () => {
-    if (competition.source === "open-matchday") {
+  const mode = competition.source !== "open-matchday" ? "openfootball"
+    : season === competition.defaultSeason && view === "matches" ? "supplemental"
+    : germany && GERMAN_CUP_SEASONS.includes(season) ? "openligadb"
+    : archive && season === archive.season ? "archive"
+    : "unavailable";
+  const resource = useResource("cup:" + competition.id + ":" + mode + ":" + view + ":" + season + ":" + version, async () => {
+    if (mode === "supplemental") {
       const [results, fixtures] = await Promise.all([compressedRows(competition.tables?.results), compressedRows(competition.tables?.fixtures)]);
       return { matches: normalizeSupplementalCup(results, fixtures) };
     }
-    const payload = await json("/api/open-cups?competition=" + encodeURIComponent(competition.sourceKey) + "&season=" + encodeURIComponent(season));
-    return { matches: normalizeOpenCup(payload.matches), source: payload.source };
+    if (mode === "unavailable") return { matches: [], unavailable: true };
+    if (mode === "openligadb") return json("/api/openligadb?competition=germany-cup&season=" + encodeURIComponent(season));
+    const key = mode === "archive" ? archive.key : competition.sourceKey;
+    const payload = await json("/api/open-cups?competition=" + encodeURIComponent(key) + "&season=" + encodeURIComponent(season));
+    const matches = normalizeOpenCup(payload.matches);
+    return { matches: mode === "archive" && archive.twoLegged && view === "bracket" ? combineCupLegs(matches) : matches, source: payload.source };
   });
   return (
     <Card className="cup-detail" title={<span className="competition-detail-title"><Media name={competition.name} url={competition.imageUrl} /><span><strong>{competition.name}</strong><small>{competitionCountryLabel(competition)}</small></span></span>}>
@@ -64,15 +78,18 @@ export default function CupCompetition({ competition }) {
           <input type="search" aria-label="Rechercher une équipe dans la coupe" placeholder="Rechercher une équipe…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />
         </>}
       </div>
-      {competition.source === "open-matchday" ? (competition.sourceDate && <p className="cup-source">Données du {date(competition.sourceDate)}</p>) : <p className="cup-source">{competition.coverage || "Résultats et calendrier"}</p>}
+      {mode === "archive" ? <p className="cup-source">Archive {season}</p> : mode === "openligadb" ? <p className="cup-source">Résultats et calendrier</p> : competition.source === "open-matchday" ? (competition.sourceDate && <p className="cup-source">Données du {date(competition.sourceDate)}</p>) : <p className="cup-source">{competition.coverage || "Résultats et calendrier"}</p>}
       {competition.sourceKey === "euro" && season === "2028" && <p className="cup-source">Les équipes indiquées par des codes restent à déterminer.</p>}
       <AsyncState resource={resource}>
-        {(value) => view === "bracket" ? <KnockoutBracket matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} />}
+        {(value) => value.unavailable ? <div className="cup-bracket-unavailable"><Empty>Les tours de cette édition ne sont pas disponibles dans la source.</Empty>{archive && season !== archive.season && <button className="button button-secondary" onClick={() => setSeason(archive.season)}>Voir le tableau {archive.season}</button>}</div> : <>
+          {value.matches.some((match) => match.status === "scheduled" && match.date && match.date < parisDay(Date.now())) && <p className="cup-source">Certains scores de cette édition ne sont pas renseignés dans la source.</p>}
+          {view === "bracket" ? <KnockoutBracket matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} />}
+        </>}
       </AsyncState>
     </Card>
   );
 }
-function CupMatchList({ matches, status, query, page, onPage }) {
+export function CupMatchList({ matches, status, query, page, onPage }) {
   const rows = useMemo(() => filterCupMatches(matches, status, query), [matches, status, query]);
   const pages = Math.max(1, Math.ceil(rows.length / 30)), current = Math.min(page, pages);
   return <>

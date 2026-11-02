@@ -14,7 +14,7 @@ test("cup catalogue exposes actual cup data, Euro, France archive and World Cup 
   const national = supplementalCupCatalog(index);
   assert.equal(national.length, 1);
   assert.equal(national[0].name, "Coupe du Roi");
-  assert.deepEqual(national[0].seasons, ["2026/2027"]);
+  assert.deepEqual(national[0].seasons, ["2026/2027", "2024/2025"]);
   assert.match(competitionSearchText(national[0], "Espagne"), /copa del rey/);
   assert.ok(competitionSearchText({ name: "FA Cup", aliases: ["Coupe d’Angleterre"] }).includes(normalizeCompetitionQuery("coupe d'angleterre")));
   const merged = mergeCupCatalog([{ id: WORLD_CUP_ID, name: "World Cup", country: "INT", seasons: ["2026", "2022"] }], index);
@@ -22,6 +22,7 @@ test("cup catalogue exposes actual cup data, Euro, France archive and World Cup 
   const sparse = mergeCupCatalog([{ id: WORLD_CUP_ID, name: "World Cup", seasons: ["2026"] }], index);
   assert.deepEqual(sparse.find((item) => item.id === WORLD_CUP_ID).seasons, ["2026", "2022"]);
   assert.ok(merged.some((item) => item.id === "open-cup:euro" && item.seasons.includes("2024")));
+  assert.ok(merged.some((item) => item.id === "openligadb:nations-league" && item.coverage.includes("A à D")));
   assert.ok(merged.some((item) => item.id === "open-cup:france-cup" && item.defaultSeason === "2024/2025"));
   assert.ok(merged.some((item) => item.id === "open-cup:world-cup-history" && item.seasons.includes("1930")));
   assert.ok(merged.some((item) => item.id === "open-cup:club-world-cup"));
