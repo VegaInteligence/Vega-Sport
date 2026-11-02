@@ -22,12 +22,16 @@ def credential():
     value = os.environ.get('PITCHAPI_API_KEY')
     if value:
         return value.encode()
-    try:
-        text = (ROOT / '.env').read_text(encoding='utf-8')
-    except OSError:
-        return None
-    match = re.search(r'^\s*PITCHAPI_API_KEY\s*=\s*["\']?([^\s"\']+)', text, re.MULTILINE)
-    return match.group(1).encode() if match else None
+    # Match the collector's configuration first, retaining the legacy fallback.
+    for file in (ROOT / 'dashboard' / '.env', ROOT / '.env'):
+        try:
+            text = file.read_text(encoding='utf-8')
+        except OSError:
+            continue
+        match = re.search(r'^\s*PITCHAPI_API_KEY\s*=\s*["\']?([^\s"\']+)', text, re.MULTILINE)
+        if match:
+            return match.group(1).encode()
+    return None
 
 
 def safe_id(value, prefix):

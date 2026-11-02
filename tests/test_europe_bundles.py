@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -18,6 +19,18 @@ restore=load('restore_europe')
 
 
 class BundleTests(unittest.TestCase):
+    def test_credential_lookup_matches_collector_configuration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory);dashboard=base/'dashboard';dashboard.mkdir()
+            (dashboard/'.env').write_text('PITCHAPI_API_KEY=dashboard-test-key\n',encoding='utf-8')
+            (base/'.env').write_text('PITCHAPI_API_KEY=legacy-test-key\n',encoding='utf-8')
+            with patch.object(bundle,'ROOT',base), patch.dict(bundle.os.environ,{},clear=True):
+                self.assertEqual(bundle.credential(),b'dashboard-test-key')
+                with patch.dict(bundle.os.environ,{'PITCHAPI_API_KEY':'env-test-key'}):
+                    self.assertEqual(bundle.credential(),b'env-test-key')
+                (dashboard/'.env').unlink()
+                self.assertEqual(bundle.credential(),b'legacy-test-key')
+
     def test_round_trip_preserves_case_sensitive_ids_and_bytes(self):
         with tempfile.TemporaryDirectory() as directory:
             base=Path(directory);source=base/'original'/'europe_2021_2026';source.mkdir(parents=True)
