@@ -1,8 +1,9 @@
 # Worklog
 
-- Goal: simplify the player ranking page according to the latest text, alignment and podium annotations, plus remove the footer MIT link.
-- Direction: centred heading; no season subtitle on ranking, no introduction sentence, calibration banner or method footnote; podium cards reuse the shared card primitive, neutral background, radius and uniform thin border. Latest refinement also removes the Le Ballon d’Or STATARENA subheading.
-- Preserve: latest remote rename to Classement Ballon d’Or (41b2e500), thirty empty positions, season selector, method steps, navbar, both themes and other page contexts. Remove the displayed licence link only; retain repository licensing.
-- UX/DX/AX: fewer duplicate labels and decorative borders; explicit shared-layout prop for hiding season text on ranking only; semantic headings, list ranks and season buttons stay inspectable.
-- Verification: build, formatting and diff checks passed. Browser E2E passed at 954x1031 and 390x844 in light/dark; all 30 placeholders, uniform shared card styling, title alignment, copy removals, season selector and other-page season context checked. Reproducible evidence: dashboard/outputs/ranking-cleanup/PLAN.md and browser-evidence.json. The remote rename was integrated without conflicts, rebuilt and checked again at both viewport sizes. Release path: origin/main and its existing Vercel Git deployment; local preview remains on 3015. No remaining implementation work.
-- Suggested commit: ui: simplify the player ranking page and podium.
+- Goal: align Vercel project naming and avatar with STATARENA branding shown on the public site.
+- Direction: rename existing project statarena to statarena-analytics to match the canonical domain; upload the supplied official dark app icon as its project avatar. Reuse project prj_DhaqrVkH3Gi4uysT7IRsm9fB2bjR and existing Git integration.
+- Preserve: repository, data, environment variables, build/root settings, access protections and public canonical URL.
+- Findings: deployed favicon/manifest already use STATARENA. The stale Orion tile is a project avatar; the Vercel connector exposes renaming but no avatar field, so use authenticated dashboard upload for the avatar.
+- Verification plan: read project ID/name, upload existing brand PNG through Avatar settings, verify after reload, inspect the team project tile, confirm canonical site and favicon still respond. Save reproducible evidence under dashboard/outputs/vercel-branding.
+- Result: existing project renamed to statarena-analytics; official logo uploaded and verified after reload and on the dashboard tile; duplicate import suggestion dismissed. Canonical page, favicon ICO/SVG and manifest return 200, icon/manifest bytes match local assets. Evidence: dashboard/outputs/vercel-branding. No remaining identity changes; no application source/data edits.
+- Suggested commit: docs: record Vercel project branding alignment.
