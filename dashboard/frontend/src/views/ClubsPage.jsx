@@ -17,6 +17,8 @@ import { ProfileDialog } from "../components/PlayerDetails.jsx";
 import ClubRanking from "../components/ClubRanking.jsx";
 import { ClubFacts, ClubRoster } from "../components/ClubProfile.jsx";
 import { MatchLink } from "../components/MatchLink.jsx";
+import ClubForm from "../components/ClubForm.jsx";
+import { clubMatchHistory } from "../services/club-matches.js";
 import { normalizeText, number } from "../services/format.js";
 import {
   countryLabel,
@@ -163,6 +165,10 @@ export default function ClubsPage() {
   useEffect(() => {
     setPaging({ key: pageKey, data: f.data, page: 1 });
   }, [pageKey, f.data]);
+  const clubMatches = useMemo(
+    () => clubMatchHistory(f.data.matches, f.data.fixtures, id),
+    [f.data.matches, f.data.fixtures, id],
+  );
   return (
     <Layout path="/clubs/" title={selected ? selected.name : "Clubs"}>
       {selected ? (
@@ -192,13 +198,7 @@ export default function ClubsPage() {
               </p>
             </div>
           </Card>
-          <ClubFacts
-            club={selected}
-            matches={f.data.matches.filter(
-              (m) => m.home.id === id || m.away.id === id,
-            )}
-          />
-          <ClubRanking clubId={id} />
+          <ClubFacts club={selected} matches={clubMatches} />
           <ClubRoster
             clubId={id}
             appearances={f.data.appearances}
@@ -206,12 +206,13 @@ export default function ClubsPage() {
             season={f.season}
           />
           <Card title="Matchs du club">
-            {f.data.matches
-              .filter((m) => m.home.id === id || m.away.id === id)
-              .map((m) => (
-                <MatchLink key={m.id} match={m} />
-              ))}
+            <ClubForm matches={clubMatches} clubId={id} href={f.href} />
+            {clubMatches.map((match) => (
+              <MatchLink key={match.id} match={match} />
+            ))}
+            {!clubMatches.length && <Empty>Aucun match disponible pour cette saison.</Empty>}
           </Card>
+          <ClubRanking clubId={id} />
           {profile && (
             <ProfileDialog
               id={id}

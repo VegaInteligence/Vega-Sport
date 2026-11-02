@@ -275,3 +275,23 @@ test("name fallback declines an ambiguous same-country club", async () => {
         });
   assert.equal(await resolveClubIdentity("Club", "FRA", fetcher), null);
 });
+
+test("roster orders players by unique matches played, then starts", () => {
+  const row = (playerId, matchId, minutes, starter = false, name = playerId) => ({
+    playerId, teamId: "club", positionId: 11, date: "2026-10-01",
+    matchId, minutes, starter, name,
+  });
+  const players = clubRoster([
+    row("bench", "m1", null, false, "Aaa Bench"),
+    row("second", "m1", 90, true, "Bbb Second"),
+    row("second", "m2", 90, true, "Bbb Second"),
+    row("first", "m1", 90, true, "Zzz First"),
+    row("first", "m2", 90, true, "Zzz First"),
+    row("first", "m3", 90, true, "Zzz First"),
+    row("first", "m3", 90, true, "Zzz First"),
+    row("bench", "m2", null, false, "Aaa Bench"),
+  ], "club").G;
+  assert.deepEqual(players.map((p) => [p.row.playerId, p.played]), [
+    ["first", 3], ["second", 2], ["bench", 0],
+  ]);
+});

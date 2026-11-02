@@ -142,7 +142,7 @@ export function ClubRoster({ clubId, appearances, href, season }) {
   );
   return (
     <Card
-      title="Joueurs référencés"
+      title="Joueurs"
       action={
         <span className="club-roster-count">
           {number(total)} joueurs · {season}
@@ -150,9 +150,9 @@ export function ClubRoster({ clubId, appearances, href, season }) {
       }
     >
       <p className="club-roster-note">
-        Joueurs inscrits dans les matchs collectés cette saison. Le poste
-        correspond au dernier poste renseigné dans une composition ; cette liste
-        ne représente pas nécessairement l’effectif actuel complet.
+        Classés par nombre de matchs joués cette saison, selon les minutes
+        disponibles. Le poste indiqué est le dernier renseigné ; l’effectif
+        affiché peut être incomplet.
       </p>
       {total ? (
         ROSTER_GROUPS.filter(([key]) => groups[key].length > 0).map(
@@ -162,7 +162,7 @@ export function ClubRoster({ clubId, appearances, href, season }) {
                 {label} <span>{groups[key].length}</span>
               </h3>
               <div className="club-roster">
-                {groups[key].map(({ row, role }) => (
+                {groups[key].map(({ row, role, played }) => (
                   <Link
                     className="roster-player"
                     key={row.playerId}
@@ -176,7 +176,7 @@ export function ClubRoster({ clubId, appearances, href, season }) {
                     <span>
                       <strong>{row.name}</strong>
                       <small>
-                        {role?.label || "Poste non renseigné"}
+                        {number(played)} match{played > 1 ? "s" : ""} joué{played > 1 ? "s" : ""} · {role?.label || "Poste non renseigné"}
                         {row.shirtNumber ? ` · n° ${row.shirtNumber}` : ""}
                       </small>
                     </span>
@@ -187,7 +187,7 @@ export function ClubRoster({ clubId, appearances, href, season }) {
           ),
         )
       ) : (
-        <p>Aucun joueur référencé pour cette sélection.</p>
+        <p>Aucun joueur disponible pour cette sélection.</p>
       )}
     </Card>
   );

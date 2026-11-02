@@ -2190,3 +2190,57 @@ th[aria-sort="descending"] .sort-indicator {
   .stadium-embedded-heading { align-items: flex-start; flex-wrap: wrap; }
   .stadium-official-frame { height: 460px; min-height: 0; }
 }
+
+.club-form {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  padding: 15px 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.club-form-copy h3 {
+  margin: 0 0 4px;
+  color: var(--ink-strong);
+  font-size: var(--text-md);
+}
+.club-form-copy p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.club-form-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.club-form-badge {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  color: #fff;
+  font-size: var(--text-md);
+  font-weight: 700;
+  line-height: 1;
+}
+.club-form-badge:hover {
+  color: #fff;
+  filter: brightness(1.12);
+}
+.club-form-badge:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.club-form-badge--win { background: #178044; }
+.club-form-badge--draw { background: #5f6b7b; }
+.club-form-badge--loss { background: #c12c3b; }
+.club-form-badge--unknown { background: #5f6b7b; }

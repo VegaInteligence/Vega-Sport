@@ -118,6 +118,6 @@ test("club cards render coach, attributed photo, stadium and four player lines",
   assert.equal((html.match(/class="roster-player"/g) || []).length, 4);
   assert.match(
     html,
-    /ne représente pas nécessairement l’effectif actuel complet/,
+    /l’effectif affiché peut être incomplet/,
   );
 });

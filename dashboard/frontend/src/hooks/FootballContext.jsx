@@ -162,22 +162,24 @@ export function FootballProvider({ children, loadData = true }) {
   // A competition filter only narrows the download when the whole scope has
   // not been loaded yet (deep link). Once it has, the filter runs in memory:
   // no second download, no re-merge, no loading screen.
-  const scopeKey = `${chosen}:${focus}`,
-    leagueOnly = filters.league !== "all" && !loadedScopes.has(scopeKey),
+  const clubDetail = pathname.startsWith("/clubs") && Boolean(initial.get("id"));
+  const dataFocus = clubDetail ? "all" : focus;
+  const scopeKey = `${chosen}:${dataFocus}`,
+    leagueOnly = !clubDetail && filters.league !== "all" && !loadedScopes.has(scopeKey),
     // "All competitions" first shows the Top 7 + UEFA chunks (a quarter of
     // the bytes), then merges the other leagues loaded in the background.
     // Pages opened on a specific record wait for the full scope instead.
     progressive =
       loadData &&
-      focus === "all" &&
+      dataFocus === "all" &&
       filters.league === "all" &&
       !initial.get("id") &&
       !loadedScopes.has(scopeKey),
-    fullKey = `season:${chosen}:${focus}:all:full`;
+    fullKey = `season:${chosen}:${dataFocus}:all:full`;
   const dataset = useResource(
     progressive
       ? `season:${chosen}:europe:all:full`
-      : `season:${chosen}:${loadData ? `${focus}:${leagueOnly ? filters.league : "all"}:full` : "catalog"}`,
+      : `season:${chosen}:${loadData ? `${dataFocus}:${leagueOnly ? filters.league : "all"}:full` : "catalog"}`,
     () =>
       chosen
         ? loadData
@@ -187,11 +189,11 @@ export function FootballProvider({ children, loadData = true }) {
               fetch,
               leagueOnly
                 ? new Set(
-                    focus !== "europe" || EUROPE_FOCUS_IDS.has(filters.league)
+                    dataFocus !== "europe" || EUROPE_FOCUS_IDS.has(filters.league)
                       ? [filters.league]
                       : [],
                   )
-                : focus === "europe" || progressive
+                : dataFocus === "europe" || progressive
                   ? EUROPE_FOCUS_IDS
                   : null,
             ).then((value) => {
