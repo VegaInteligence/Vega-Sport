@@ -4,7 +4,7 @@ import { pages } from "../../../shared/pages.js";
 import React from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { PlayerDialog, Comparison } from "./PlayerDetails.jsx";
-import { number, date } from "../services/format.js";
+import { date } from "../services/format.js";
 import CompetitionScope from "./CompetitionScope.jsx";
 import SiteHeader from "./SiteHeader.jsx";
 import SiteFooter from "./SiteFooter.jsx";
@@ -170,12 +170,6 @@ export function Filters({ fixtures = false }) {
               <Icon name="close" />
             </button>
           )}
-          {!fixtures && (
-            <span className="filter-result-count" aria-live="polite">
-              <strong>{number(f.rows.length)}</strong> apparitions{" "}
-              <span>·</span> <strong>{number(f.matches.length)}</strong> matchs
-            </span>
-          )}
         </div>
         {active && (
           <button className="filter-reset-button" onClick={reset}>
@@ -205,7 +199,7 @@ export default function Layout({
         Aller au contenu
       </Link>
       <div className="app-shell">
-        <SiteHeader path={path} href={f.href} configured={f.configured} />
+        <SiteHeader path={path} href={f.href} />
         <main id="main" className={`workspace ${className}`} tabIndex="-1">
           {!hideHeading && (
             <div className="page-heading">

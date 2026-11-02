@@ -6,7 +6,7 @@ import { pages } from "../../../shared/pages.js";
 const navigation = pages
   .filter((page) => page.navigation !== false)
   .map((page) => [page.path, page.title]);
-export default function SiteHeader({ path, href, configured = false }) {
+export default function SiteHeader({ path, href }) {
   return (
     <header className="topbar">
       <Link
@@ -34,10 +34,6 @@ export default function SiteHeader({ path, href, configured = false }) {
         ))}
       </nav>
       <div className="topbar-actions">
-        <div className="topbar-meta">
-          <span className="status-dot" />
-          {configured ? "PitchAPI configuré" : "Données collectées"}
-        </div>
         <ThemeToggle />
       </div>
     </header>

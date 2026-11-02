@@ -160,22 +160,6 @@ button:disabled {
   width: 100%;
   background: var(--ink);
 }
-.topbar-meta {
-  margin-left: auto;
-  display: flex;
-  gap: 7px;
-  align-items: center;
-  white-space: nowrap;
-  color: var(--muted);
-  font-size: 10px;
-}
-.status-dot {
-  width: 5px;
-  height: 5px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--accent);
-}
 .workspace {
   max-width: 1296px;
   margin: auto;
@@ -1355,9 +1339,6 @@ input[type="checkbox"] {
   }
   .main-nav {
     gap: 20px;
-  }
-  .topbar-meta {
-    display: none;
   }
   .filter-bar .select-field {
     flex-wrap: wrap;

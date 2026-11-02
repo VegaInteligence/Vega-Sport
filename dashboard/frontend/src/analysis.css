@@ -301,24 +301,6 @@ select optgroup {
   background: var(--accent);
   flex-shrink: 0;
 }
-.filter-result-count {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  color: light-dark(#707072, #8e8e90);
-  font-size: 11px;
-}
-.filter-result-count strong {
-  color: light-dark(#313133, #ceced0);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 400;
-}
-.filter-result-count > span {
-  color: light-dark(#707072, #545456);
-  padding: 0 3px;
-}
 .filter-reset-button {
   display: inline-flex;
   align-items: center;
@@ -1399,9 +1381,6 @@ select optgroup {
   }
   .filter-applied {
     gap: 9px;
-  }
-  .filter-result-count {
-    gap: 5px;
   }
   .filter-reset-button {
     padding-left: 0;
