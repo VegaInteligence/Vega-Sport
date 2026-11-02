@@ -10,6 +10,10 @@ bun run dev
 
 Ouvrir http://127.0.0.1:3000/. Les pages et la navigation utilisent Next.js ; `/api` et `/data` passent par le backend natif Bun. Le projet conserve les saisons, filtres, profils, comparaisons, exports et treize familles de détails de match. Les notes affichées sont celles de PitchAPI ; aucun classement STATARENA validé n’est encore calculé.
 
+La liste Joueurs affiche une ligne par identifiant joueur. Les statistiques représentent les moyennes des observations renseignées ; le nombre de matchs et les minutes moyennes restent visibles. Le mode par 90 minutes utilise la somme de chaque statistique et les minutes de ses observations connues. La note reste une moyenne, sans conversion par 90. Les seuils de minutes, note et statistiques s’appliquent après regroupement ; la compétition, la période, le statut, le lieu et le résultat définissent d’abord l’échantillon. La position est celle qui cumule le plus de temps de jeu. Le CSV et la comparaison utilisent ces mêmes valeurs, avec la couverture de chaque statistique dans le CSV. La fiche joueur donne accès aux performances match par match.
+
+Sur l’accueil, le contrôle Compétitions réunit toutes les compétitions, le préréglage Top 7 Europe + UEFA et la sélection personnalisée enregistrée sur l’appareil. La page Clubs combine recherche, pays et saison ; ses pages s’adaptent aux dimensions de l’écran. Les classements de compétitions utilisent la largeur disponible avec défilement horizontal du tableau sur mobile.
+
 Les statistiques des matchs et des joueurs proposent toutes les périodes collectées et conservent les groupes de métriques de la source. Les fiches joueurs donnent aussi accès aux données avancées, tirs, cartes d’activité, événements, compositions, réseaux de passes et profils. Les synthèses restent disponibles.
 
 Dans **Données complètes**, chaque famille de match dispose d’une analyse, d’un explorateur et du JSON intégral. **Archive complète** contient aussi les statuts et métadonnées d’observation. Les listes se parcourent par pages de cinquante éléments ; le JSON et son téléchargement gardent la précision originale. Une absence reste distincte de zéro.
