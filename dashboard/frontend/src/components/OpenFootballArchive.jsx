@@ -121,10 +121,20 @@ function ArchiveBrowser({ index }) {
             {" · "}
             <a href={source.url} target="_blank" rel="noreferrer">
               {source.name}
-            </a>
+            </a>{" "}
+            ({source.license})
+            {source.upstream && (
+              <>
+                {" · "}
+                <a href={source.upstream.url} target="_blank" rel="noreferrer">
+                  {source.upstream.name}
+                </a>{" "}
+                ({source.upstream.license})
+              </>
+            )}
           </React.Fragment>
         ))}{" "}
-        · domaine public (CC0). Ces archives contiennent les résultats et
+        · données gratuites. Ces archives contiennent les résultats et
         calendriers uniquement : aucune statistique individuelle ni xG. Elles
         sont distinctes de PitchAPI.
       </p>

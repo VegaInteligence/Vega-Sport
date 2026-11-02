@@ -59,5 +59,23 @@ class EuropeanCupTests(unittest.TestCase):
             self.assertEqual(penalty['score']['p'],[4,3])
             self.assertEqual(penalty['sourceFields']['P'],'4-3 (pen.)')
 
+class EarlierEnglishResultsTests(unittest.TestCase):
+    def test_pre_1955_results_preserve_original_values_and_upstream_license(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);out=root/'out';out.mkdir()
+            (out/'index.json').write_text(json.dumps({'source':{'name':'OpenFootball'},'seasons':[]}),encoding='utf-8')
+            archive=root/'soccerdata.zip'
+            with zipfile.ZipFile(archive,'w') as z:
+                z.writestr('cache/1800s/1888-89/eng.1.csv','Date,Team 1,FT,Team 2\nSat Sep 8 1888,Bolton Wanderers,3-6,Derby County\n')
+                z.writestr('cache/1990s/1992-93/eng.1.csv','Date,Team 1,FT,Team 2\nSat Aug 15 1992,Arsenal,2-4,Norwich\n')
+            result=legacy.build(out,{'soccerdata':archive})
+            self.assertEqual((result['seasons'],result['matches']),(1,1))
+            index=json.loads((out/'index.json').read_text(encoding='utf-8'))
+            self.assertEqual(index['seasons'][0]['id'],'1888/1889')
+            self.assertEqual(index['source']['additionalSources'][0]['upstream']['license'],'GPL-2.0-or-later')
+            match=json.loads(gzip.decompress((out/'1888-1889.json.gz').read_bytes()))['competitions'][0]['matches'][0]
+            self.assertEqual((match['date'],match['score']['ft']),('1888-09-08',[3,6]))
+            self.assertEqual(match['sourceFields']['FT'],'3-6')
+
 
 if __name__=='__main__': unittest.main()

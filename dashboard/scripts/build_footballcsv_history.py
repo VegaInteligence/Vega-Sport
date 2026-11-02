@@ -18,6 +18,7 @@ SOURCES = {
     'england': {'name':'footballcsv/england', 'url':'https://github.com/footballcsv/england', 'license':'CC0-1.0', 'revision':'52b7e5f5f37b28db72dba1fdc8dbec1adae4c8d0', 'country':'Angleterre'},
     'deutschland': {'name':'footballcsv/deutschland', 'url':'https://github.com/footballcsv/deutschland', 'license':'CC0-1.0', 'revision':'178324626681a9e4c42b81463f59f9c4500dbd53', 'country':'Allemagne'},
     'europe': {'name':'footballcsv/europe-champions-league', 'url':'https://github.com/footballcsv/europe-champions-league', 'license':'CC0-1.0', 'revision':'66393c8dc5c86b459dc700a0ae3a0bd0abedb56e', 'country':'Europe'},
+    'soccerdata': {'name':'footballcsv/cache.soccerdata', 'url':'https://github.com/footballcsv/cache.soccerdata', 'license':'CC0-1.0', 'revision':'f1c9d41893a42afef0e72fd5c48ccfb51d166281', 'country':'Angleterre', 'upstream':{'name':'engsoccerdata', 'url':'https://github.com/jalapic/engsoccerdata', 'license':'GPL-2.0-or-later'}},
 }
 
 
@@ -40,6 +41,10 @@ def source_score(value):
 def competition_name(repo, code, year):
     if repo == 'europe' and code == 'champs': return 'Coupe d’Europe des clubs champions' if year < 1992 else 'Ligue des champions'
     if repo == 'deutschland' and code == 'de.1': return 'Bundesliga'
+    if repo == 'soccerdata' and code.startswith('eng.'):
+        tier = code.split('.',1)[1]
+        labels = {'3a':'3 Nord','3b':'3 Sud'}
+        return f"Angleterre · Division {labels.get(tier,tier)}"
     if repo == 'england' and code.startswith('eng.'):
         tier = code.split('.',1)[1]
         return 'Premier League' if tier == '1' else f'Angleterre · Division {tier}'
@@ -56,7 +61,7 @@ def build(output, sources):
     for repo, archive in sources.items():
         info = SOURCES[repo]
         archive = Path(archive)
-        additional.append({key: info[key] for key in ('name','url','license','revision')} | {'archiveSha256':hashlib.sha256(archive.read_bytes()).hexdigest()})
+        additional.append({key: info[key] for key in ('name','url','license','revision')} | {'archiveSha256':hashlib.sha256(archive.read_bytes()).hexdigest()} | ({'upstream':info['upstream']} if 'upstream' in info else {}))
         with zipfile.ZipFile(archive) as zipped:
             for name in zipped.namelist():
                 parts = PurePosixPath(name).parts
@@ -64,7 +69,7 @@ def build(output, sources):
                 season = re.fullmatch(r'(\d{4})-(\d{2})', parts[-2])
                 if not season: continue
                 year = int(season.group(1))
-                if year >= 2010 or int(season.group(2)) != (year + 1) % 100: continue
+                if year >= (1992 if repo == 'soccerdata' else 2010) or int(season.group(2)) != (year + 1) % 100: continue
                 code = parts[-1][:-4]
                 text = zipped.read(name).decode('utf-8-sig')
                 reader = csv.DictReader(io.StringIO(text))
@@ -101,6 +106,7 @@ if __name__ == '__main__':
     parser.add_argument('--england',type=Path,required=True)
     parser.add_argument('--deutschland',type=Path,required=True)
     parser.add_argument('--europe',type=Path,required=True)
+    parser.add_argument('--soccerdata',type=Path,required=True)
     args=parser.parse_args()
-    result=build(args.output,{'england':args.england,'deutschland':args.deutschland,'europe':args.europe})
+    result=build(args.output,{'england':args.england,'deutschland':args.deutschland,'europe':args.europe,'soccerdata':args.soccerdata})
     print(json.dumps({key:value for key,value in result.items() if key!='entries'},ensure_ascii=False))
