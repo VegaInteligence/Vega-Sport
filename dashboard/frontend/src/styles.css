@@ -191,6 +191,30 @@ button:disabled {
   padding-left: 12px;
   border-left: 1px solid var(--border-strong);
 }
+.page-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--accent-dark);
+}
+.page-progress::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: progress-pulse 1.2s ease-in-out infinite;
+}
+@keyframes progress-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-progress::before {
+    animation: none;
+  }
+}
 .heading-actions,
 .card-actions {
   display: flex;

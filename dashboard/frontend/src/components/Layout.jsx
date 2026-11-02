@@ -222,6 +222,12 @@ export default function Layout({
                     {f.data.meta.retrievedAt && (
                       <span>Données au {date(f.data.meta.retrievedAt)}</span>
                     )}
+                    {f.partial && (
+                      <span className="page-progress" role="status">
+                        Top 7 + UEFA affichés, autres compétitions en cours de
+                        chargement…
+                      </span>
+                    )}
                   </p>
                 )}
               </div>

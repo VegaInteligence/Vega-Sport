@@ -3,7 +3,9 @@ import { useSearchParams } from "next/navigation";
 import React, {
   createContext,
   useContext,
+  useDeferredValue,
   useMemo,
+  useRef,
   useState,
   useEffect,
 } from "react";
@@ -13,10 +15,17 @@ import {
   filterAppearances,
   filterMatches,
   csvString,
+  normalizeText,
   per90,
   seasonLabel,
 } from "../model.js";
-import { json, useResource, download } from "../services/resources.js";
+import {
+  json,
+  useResource,
+  download,
+  primeResource,
+} from "../services/resources.js";
+import { warmProfiles } from "../services/player-profile.js";
 import { FootballDataClient } from "../services/football-client.js";
 import { AsyncState } from "../components/UI.jsx";
 import LoadingPage from "../components/LoadingPage.jsx";
@@ -25,6 +34,7 @@ import {
   PREFERENCES_KEY,
 } from "../../../shared/competition-scope.js";
 export const FootballContext = createContext(null);
+const loadedScopes = new Set();
 const Context = FootballContext;
 export const useFootball = () => useContext(Context);
 export function FootballProvider({ children, loadData = true }) {
@@ -109,8 +119,25 @@ export function FootballProvider({ children, loadData = true }) {
     : manifest.value?.seasons.some((s) => s.id === preferences.defaultSeason)
       ? preferences.defaultSeason
       : manifest.value?.defaultSeason;
+  // A competition filter only narrows the download when the whole scope has
+  // not been loaded yet (deep link). Once it has, the filter runs in memory:
+  // no second download, no re-merge, no loading screen.
+  const scopeKey = `${chosen}:${focus}`,
+    leagueOnly = filters.league !== "all" && !loadedScopes.has(scopeKey),
+    // "All competitions" first shows the Top 7 + UEFA chunks (a quarter of
+    // the bytes), then merges the other leagues loaded in the background.
+    // Pages opened on a specific record wait for the full scope instead.
+    progressive =
+      loadData &&
+      focus === "all" &&
+      filters.league === "all" &&
+      !initial.get("id") &&
+      !loadedScopes.has(scopeKey),
+    fullKey = `season:${chosen}:${focus}:all:full`;
   const dataset = useResource(
-    `season:${chosen}:${loadData ? `${focus}:${filters.league}:full` : "catalog"}`,
+    progressive
+      ? `season:${chosen}:europe:all:full`
+      : `season:${chosen}:${loadData ? `${focus}:${leagueOnly ? filters.league : "all"}:full` : "catalog"}`,
     () =>
       chosen
         ? loadData
@@ -118,16 +145,20 @@ export function FootballProvider({ children, loadData = true }) {
               manifest.value,
               chosen,
               fetch,
-              filters.league !== "all"
+              leagueOnly
                 ? new Set(
                     focus !== "europe" || EUROPE_FOCUS_IDS.has(filters.league)
                       ? [filters.league]
                       : [],
                   )
-                : focus === "europe"
+                : focus === "europe" || progressive
                   ? EUROPE_FOCUS_IDS
                   : null,
-            )
+            ).then((value) => {
+              if (!leagueOnly)
+                loadedScopes.add(progressive ? `${chosen}:europe` : scopeKey);
+              return value;
+            })
           : Promise.resolve({
               meta: { retrievedAt: manifest.value.retrievedAt },
               competitions: [],
@@ -138,6 +169,22 @@ export function FootballProvider({ children, loadData = true }) {
         : Promise.resolve(null),
   );
   const data = dataset.value;
+  const [, settle] = useState(0);
+  useEffect(() => {
+    if (!progressive || !data) return;
+    let active = true;
+    primeResource(fullKey, () =>
+      loadSeason(manifest.value, chosen, fetch, null).then((value) => {
+        loadedScopes.add(scopeKey);
+        return value;
+      }),
+    )
+      .then(() => active && settle((n) => n + 1))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [progressive, data, fullKey]);
   const client = useMemo(
     () => (data ? new FootballDataClient({ data }) : null),
     [data],
@@ -153,7 +200,8 @@ export function FootballProvider({ children, loadData = true }) {
         ? manifest.value.seasons
             .find((s) => s.id === chosen)
             ?.chunks.flatMap((c) => c.competitions)
-            .sort((a, b) => (a.name || "").localeCompare(b.name || "", "fr")) || []
+            .sort((a, b) => (a.name || "").localeCompare(b.name || "", "fr")) ||
+          []
         : data?.competitions || [],
     [manifest.value, chosen, data],
   );
@@ -175,18 +223,94 @@ export function FootballProvider({ children, loadData = true }) {
     () => ({ ...filters, season: chosen }),
     [filters, chosen],
   );
-  const rows = useMemo(
-    () => (data ? filterAppearances(data.appearances, scope) : []),
-    [data, scope],
-  );
-  const matches = useMemo(
-    () => (data ? filterMatches(data.matches, data.appearances, scope) : []),
-    [data, scope],
-  );
-  const byAppearance = useMemo(
-    () => new Map((data?.appearances || []).map((r) => [r.id, r])),
-    [data],
-  );
+  // Inputs update at once; the filtered lists follow in a deferred render.
+  const deferredScope = useDeferredValue(scope);
+  const lastSearch = useRef(null),
+    recentRows = useRef({ data: null, entries: new Map() });
+  const rows = useMemo(() => {
+    if (!data) return [];
+    const query = normalizeText(deferredScope.query).trim(),
+      base = [
+        deferredScope.league,
+        deferredScope.season,
+        deferredScope.minutes,
+        deferredScope.match,
+      ].join("|"),
+      recent = recentRows.current;
+    // Going back to a recent filter returns the same list (and its sorts).
+    if (recent.data !== data) {
+      recent.data = data;
+      recent.entries.clear();
+    }
+    const signature = `${base}|${query}`;
+    if (recent.entries.has(signature)) return recent.entries.get(signature);
+    // Typing more letters only narrows the previous result, so each new
+    // letter filters the last matches instead of the whole season.
+    const previous = lastSearch.current,
+      source =
+        previous?.data === data &&
+        previous.base === base &&
+        previous.query &&
+        query.includes(previous.query)
+          ? previous.rows
+          : data.appearances,
+      result = filterAppearances(source, deferredScope);
+    lastSearch.current = { data, base, query, rows: result };
+    recent.entries.set(signature, result);
+    if (recent.entries.size > 8)
+      recent.entries.delete(recent.entries.keys().next().value);
+    return result;
+  }, [data, deferredScope]);
+  // Computed on first use: the players pages never read the match list.
+  const matchList = useMemo(() => {
+    let value;
+    return () =>
+      (value ??= data
+        ? filterMatches(data.matches, data.appearances, deferredScope)
+        : []);
+  }, [data, deferredScope]);
+  // Index of every performance by id, filled in idle time after a load and
+  // completed at once if a card opens before it is ready.
+  const appearanceIndex = useMemo(() => {
+    const list = data?.appearances || [],
+      index = new Map();
+    let next = 0;
+    const fill = (budget = Infinity) => {
+      const stop = performance.now() + budget;
+      while (next < list.length) {
+        const end = Math.min(next + 5000, list.length);
+        for (; next < end; next++) index.set(list[next].id, list[next]);
+        if (performance.now() > stop) break;
+      }
+      return next >= list.length;
+    };
+    const get = () => (fill(), index);
+    get.fill = fill;
+    return get;
+  }, [data]);
+  useEffect(() => {
+    if (!loadData || !data) return;
+    const cancelProfiles = warmProfiles(data.appearances),
+      idle =
+        window.requestIdleCallback ||
+        ((callback) =>
+          setTimeout(() => callback({ timeRemaining: () => 8 }), 50)),
+      cancelIdle = window.cancelIdleCallback || clearTimeout;
+    let handle;
+    const step = (deadline) => {
+      if (
+        !appearanceIndex.fill(
+          Math.max(4, Math.min(12, deadline.timeRemaining())),
+        )
+      )
+        handle = idle(step, { timeout: 2000 });
+    };
+    handle = idle(step, { timeout: 2000 });
+    return () => {
+      cancelProfiles();
+      cancelIdle(handle);
+    };
+  }, [data, loadData, appearanceIndex]);
   function changeSeason(value) {
     updateQuery({ season: value, league: "" });
     setMatchFilter("all");
@@ -300,7 +424,10 @@ export function FootballProvider({ children, loadData = true }) {
     filters,
     setFilters,
     rows,
-    matches,
+    get matches() {
+      return matchList();
+    },
+    partial: progressive && Boolean(data),
     client,
     configured: status.value === true,
     statusKnown: !status.loading,
@@ -308,7 +435,9 @@ export function FootballProvider({ children, loadData = true }) {
     comparison,
     setComparison,
     toggle,
-    byAppearance,
+    get byAppearance() {
+      return appearanceIndex();
+    },
     player,
     setPlayer,
     comparing,
