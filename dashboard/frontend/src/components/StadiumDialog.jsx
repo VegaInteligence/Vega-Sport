@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { Modal, AsyncState } from "./UI.jsx";
 import { useResource, json } from "../services/resources.js";
 import { number } from "../services/format.js";
@@ -24,6 +24,37 @@ function stadiumDate(value) {
   );
 }
 
+function PlanImage({ plan }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <p className="stadium-plan-unavailable" role="status">
+        L’aperçu est indisponible.{" "}
+        <a href={plan.url} target="_blank" rel="noopener noreferrer">
+          Consulter le site officiel ↗
+        </a>
+      </p>
+    );
+  }
+  return (
+    <a
+      className="stadium-plan-image-link"
+      href={plan.imageUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Agrandir le plan des tribunes"
+    >
+      <img
+        className="stadium-plan-image"
+        src={plan.imageUrl}
+        alt="Plan des tribunes"
+        loading="lazy"
+        onError={() => setFailed(true)}
+      />
+    </a>
+  );
+}
+
 function StadiumPlans({ id }) {
   const plans = stadiumPlans(id);
   return (
@@ -35,30 +66,38 @@ function StadiumPlans({ id }) {
           <ul className="stadium-plan-list">
             {plans.map((plan) => (
               <li key={plan.url}>
-                {plan.embedded ? (
+                {plan.embedded || plan.imageUrl ? (
                   <div className="stadium-embedded-plan">
                     <div className="stadium-embedded-heading">
                       <div className="stadium-plan-copy">
                         <strong>{plan.title}</strong>
                         <small>{plan.detail}</small>
                       </div>
-                      <a
-                        href={plan.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Ouvrir en grand <span aria-hidden="true">↗</span>
-                      </a>
+                      <div className="stadium-embedded-actions">
+                        <a
+                          href={plan.imageUrl || plan.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Ouvrir en grand <span aria-hidden="true">↗</span>
+                        </a>
+                      </div>
                     </div>
-                    <iframe
-                      className="stadium-official-frame"
-                      src={plan.url}
-                      title={plan.title}
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      allow="geolocation"
-                      allowFullScreen
-                    />
+                    {plan.imageUrl ? (
+                      <PlanImage plan={plan} />
+                    ) : (
+                      <iframe
+                        className="stadium-official-frame"
+                        src={plan.url}
+                        title={plan.title}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        allow={
+                          plan.allowGeolocation ? "geolocation" : undefined
+                        }
+                        allowFullScreen
+                      />
+                    )}
                   </div>
                 ) : (
                   <a

@@ -2244,3 +2244,45 @@ th[aria-sort="descending"] .sort-indicator {
 .club-form-badge--draw { background: #5f6b7b; }
 .club-form-badge--loss { background: #c12c3b; }
 .club-form-badge--unknown { background: #5f6b7b; }
+
+.stadium-embedded-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px 14px;
+}
+.stadium-plan-image-link {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+  background: #fff;
+  cursor: zoom-in;
+}
+.stadium-plan-image-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.stadium-plan-image {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: min(65vh, 620px);
+  object-fit: contain;
+}
+.stadium-plan-unavailable {
+  padding: 16px;
+  margin: 0;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.stadium-plan-unavailable a {
+  color: var(--accent);
+}
+@media (max-width: 480px) {
+  .stadium-embedded-actions { justify-content: flex-start; }
+  .stadium-plan-image { max-height: 55vh; }
+}

@@ -81,6 +81,23 @@ test("stadium dialog renders sourced dates, capacity and a map only with coordin
   assert.match(html, /août 1925/);
   assert.match(html, /data-map="San Siro"/);
   assert.match(html, /sansirostadium\.com/);
+  assert.match(
+    html,
+    /<img[^>]+src="https:\/\/sansirostadium\.com\/wp-content\/uploads\/2026\/09\/SETTORI-STADIO\.jpg"/,
+  );
+  assert.match(html, /Agrandir le plan des tribunes/);
+  assert.match(render("Q159884"), /media\.asroma\.com\/prod\/images\/original/);
+  assert.match(render("Q163995"), /euc-cdn\.freshdesk\.com/);
+  assert.match(render("Q45671"), /PL-2026-2027-Prices-MAP-72\.jpg/);
+  assert.match(render("Q171458"), /seating-plan-jult23\.png/);
+  assert.match(render("Q150928"), /stadionplan_2026/);
+  assert.match(render("Q207109"), /ajax\.nl\/media\/2zvhmq2a\/afbeelding\.png/);
+  assert.match(render("Q62149"), /<iframe[^>]+page=6/);
+  assert.match(render("Q48159"), /<iframe[^>]+etihad-map-new\.pdf/);
+  assert.match(
+    render("Q55074091"),
+    /<iframe[^>]+tottenhamhotspur\.io-media\.com/,
+  );
   assert.match(render("Q270474"), /legaseriea\.it\/team\/fiorentina\/stadium/);
   assert.match(render("Q55074091"), /tottenhamhotspur\.io-media\.com/);
   const psg = render("Q193431");
