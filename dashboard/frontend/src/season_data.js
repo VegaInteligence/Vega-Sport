@@ -1,5 +1,5 @@
 import { dataUrl } from "./data-url.js";
-import { decodeTables } from "./packed_data.js";
+import { decodeTables, rowCopier } from "./packed_data.js";
 const chunkCaches = new WeakMap();
 async function compressedJson(url, fetcher) {
   const response = await fetcher(url);
@@ -154,10 +154,21 @@ function restoreTables(tables, chunk) {
     if (!shots.has(matchId)) shots.set(matchId, []);
     shots.get(matchId).push(value);
   }
+  const packed = chunk?.tables?.performances,
+    uniform =
+      packed?.keys &&
+      !Object.values(packed.missing || {}).some((absent) => absent?.length),
+    copy = uniform
+      ? rowCopier(
+          packed.keys.filter((key) => key !== "playerRef"),
+          ["name", "imageUrl"],
+        )
+      : null;
   const appearances = tables.performances.map((row) => {
-    const { playerRef, ...value } = row,
-      player = players.get(playerRef);
+    const player = players.get(row.playerRef);
     if (!player) throw new Error("Référence joueur absente");
+    if (copy) return copy(row, player);
+    const { playerRef, ...value } = row;
     return { ...value, name: player.name, imageUrl: player.imageUrl };
   });
   return {
