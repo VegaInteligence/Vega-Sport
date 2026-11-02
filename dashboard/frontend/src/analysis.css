@@ -2349,12 +2349,43 @@ select optgroup {
   background: var(--surface-hover);
 }
 .fixture-competition {
-  overflow: hidden;
-  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ink);
   font-size: var(--text-xs);
   font-weight: 500;
+}
+.fixture-competition-crest {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+}
+.fixture-competition-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.fixture-competition-name {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.fixture-competition-country {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.fixture-tile .fixture-competition-copy {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fixture-tile .fixture-competition-country::before {
+  content: "·";
+  margin-right: 6px;
 }
 .fixture-teams {
   display: grid;
