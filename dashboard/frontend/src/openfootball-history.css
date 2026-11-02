@@ -81,17 +81,7 @@
 .archive-results td.archive-score a:focus-visible {
   text-decoration: underline;
 }
-.archive-goal-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
+
 
 .archive-match-title {
   display: flex;

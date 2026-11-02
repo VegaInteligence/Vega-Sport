@@ -97,3 +97,18 @@ test("only matches with goals are clickable", async () => {
   assert.match(html, /archive-row-closed/);
   assert.equal((html.match(/<a /g) || []).length, 2);
 });
+
+test("a match captured twice is shown once with its final score", () => {
+  const season = buildArchiveSeason(null, {
+    season: "2024/2025",
+    competitions: [{ id: "aut", name: "Bundesliga", country: "Autriche", events: [
+      { date: "2024-11-09", player: "Maderner", team: "Grazer AK", minute: "10", score: [1, 0], match: "Grazer AK vs. WSG Tirol 1:0" },
+      { date: "2024-11-09", player: "Maderner", team: "Grazer AK", minute: "10", score: [1, 0], match: "Grazer AK vs. WSG Tirol 2:1" },
+      { date: "2024-11-09", player: "Anselm", team: "WSG Tirol", minute: "61", score: [1, 1], match: "Grazer AK vs. WSG Tirol 2:1" },
+      { date: "2024-11-09", player: "Lawrence", team: "Grazer AK", minute: "76", score: [2, 1], match: "Grazer AK vs. WSG Tirol 2:1" },
+    ] }],
+  });
+  assert.equal(season.matches.length, 1);
+  assert.deepEqual(season.matches[0].score, [2, 1]);
+  assert.equal(season.matches[0].goals.length, 3);
+});

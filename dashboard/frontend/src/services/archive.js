@@ -120,10 +120,13 @@ function goalGroups(goals) {
   for (const league of goals?.competitions || []) {
     const byMatch = new Map();
     for (const event of league.events || []) {
-      const id = `${event.date}|${event.match}`;
+      const parsed = parseGoalMatch(event.match);
+      // A match captured twice (e.g. mid-game then final) shares its teams.
+      const id = parsed
+        ? `${event.date}|${parsed.team1}|${parsed.team2}`
+        : `${event.date}|${event.match}`;
       let group = byMatch.get(id);
       if (!group) {
-        const parsed = parseGoalMatch(event.match);
         group = {
           league,
           date: event.date,
@@ -132,14 +135,29 @@ function goalGroups(goals) {
           team2: parsed?.team2 || "",
           parsed,
           events: [],
+          seen: new Set(),
         };
         byMatch.set(id, group);
         groups.push(group);
+      } else if (
+        parsed &&
+        group.parsed &&
+        parsed.score[0] + parsed.score[1] >
+          group.parsed.score[0] + group.parsed.score[1]
+      ) {
+        group.parsed = parsed;
+        group.label = event.match;
       }
+      const goal = `${event.minute}|${event.player}|${event.team}|${event.score?.join(":")}`;
+      if (group.seen.has(goal)) continue;
+      group.seen.add(goal);
       group.events.push(event);
     }
   }
-  for (const group of groups) group.events = orderedGoals(group.events);
+  for (const group of groups) {
+    group.events = orderedGoals(group.events);
+    delete group.seen;
+  }
   return groups;
 }
 

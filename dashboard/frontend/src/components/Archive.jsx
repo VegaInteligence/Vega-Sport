@@ -2,17 +2,14 @@ import React, { useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { dataUrl } from "../data-url.js";
-import { csvString } from "../model.js";
 import {
-  ARCHIVE_CSV_FIELDS,
-  archiveCsvRow,
   archiveRows,
   archiveSeasons,
   buildArchiveSeason,
   teamSimilarity,
 } from "../services/archive.js";
-import { date, number } from "../services/format.js";
-import { download, json, useResource } from "../services/resources.js";
+import { date } from "../services/format.js";
+import { json, useResource } from "../services/resources.js";
 import {
   competitionLabel,
   orderedCompetitions,
@@ -54,7 +51,6 @@ export function ArchiveResults({ rows, page, onPage, matchHref, onOpen }) {
               <th>Équipe 1</th>
               <th>Score</th>
               <th>Équipe 2</th>
-              <th>Buts</th>
             </tr>
           </thead>
           <tbody>
@@ -98,15 +94,6 @@ export function ArchiveResults({ rows, page, onPage, matchHref, onOpen }) {
                       )}
                     </td>
                     <td>{match.team2 || "—"}</td>
-                    <td className="archive-goal-count">
-                      {open ? (
-                        <span className="archive-goal-badge">
-                          {match.goals.length} <span aria-hidden="true">›</span>
-                        </span>
-                      ) : (
-                        <span className="missing-value">—</span>
-                      )}
-                    </td>
                   </tr>
                 );
               })}
@@ -185,7 +172,7 @@ export function ArchiveMatchDetail({ match, backHref }) {
   );
 }
 
-function SeasonArchive({ entry, params, setParams, hrefWith }) {
+function SeasonArchive({ seasons, entry, params, setParams, hrefWith }) {
   const competition = params.get("ac") || "all";
   const query = params.get("aq") || "";
   const page = Math.max(1, Number(params.get("ap")) || 1);
@@ -199,10 +186,10 @@ function SeasonArchive({ entry, params, setParams, hrefWith }) {
     return buildArchiveSeason(results, goals);
   });
   const matchHref = (match) => hrefWith({ m: match.key });
-  return (
-    <AsyncState resource={resource}>
-      {(season) => {
-        if (matchKey) {
+  if (matchKey)
+    return (
+      <AsyncState resource={resource}>
+        {(season) => {
           const match = season.matches.find((item) => item.key === matchKey);
           return match?.goals?.length ? (
             <ArchiveMatchDetail
@@ -217,8 +204,68 @@ function SeasonArchive({ entry, params, setParams, hrefWith }) {
               </Link>
             </Card>
           );
-        }
-        return (
+        }}
+      </AsyncState>
+    );
+  const competitions = resource.value
+    ? orderedCompetitions(resource.value.competitions)
+    : [];
+  return (
+    <Card title="Archives" className="archive-card">
+      <div className="historical-archive-filters">
+        <label>
+          Saison{" "}
+          <select
+            aria-label="Saison des archives"
+            value={entry.id}
+            onChange={(event) =>
+              setParams({
+                as: event.target.value.replace("/", "-"),
+                ac: null,
+                ap: null,
+              })
+            }
+          >
+            {seasons.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.id}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Compétition{" "}
+          <select
+            aria-label="Compétition des archives"
+            value={competition}
+            disabled={!resource.value}
+            onChange={(event) =>
+              setParams({ ac: event.target.value, ap: null })
+            }
+          >
+            <option value="all">Toutes les compétitions</option>
+            {competitions.map((league) => (
+              <option key={league.id} value={league.id}>
+                {competitionLabel(league)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Équipe ou buteur{" "}
+          <input
+            type="search"
+            aria-label="Rechercher une équipe ou un buteur dans les archives"
+            placeholder="Nom d’équipe ou de joueur…"
+            defaultValue={query}
+            onChange={(event) =>
+              setParams({ aq: event.target.value, ap: null })
+            }
+          />
+        </label>
+      </div>
+      <AsyncState resource={resource}>
+        {(season) => (
           <SeasonList
             season={season}
             competition={competition}
@@ -228,9 +275,9 @@ function SeasonArchive({ entry, params, setParams, hrefWith }) {
             matchHref={matchHref}
             onOpen={(match) => router.push(matchHref(match), { scroll: true })}
           />
-        );
-      }}
-    </AsyncState>
+        )}
+      </AsyncState>
+    </Card>
   );
 }
 
@@ -247,58 +294,14 @@ function SeasonList({
     () => archiveRows(season, competition, query),
     [season, competition, query],
   );
-  const withGoals = useMemo(
-    () =>
-      rows.reduce((total, match) => total + (match.goals?.length ? 1 : 0), 0),
-    [rows],
-  );
   return (
-    <>
-      <div className="historical-archive-filters">
-        <label>
-          Compétition{" "}
-          <select
-            aria-label="Compétition des archives"
-            value={competition}
-            onChange={(event) =>
-              setParams({ ac: event.target.value, ap: null })
-            }
-          >
-            <option value="all">Toutes les compétitions</option>
-            {orderedCompetitions(season.competitions).map((league) => (
-              <option key={league.id} value={league.id}>
-                {competitionLabel(league)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="historical-archive-summary">
-        <span>
-          {number(rows.length)} matchs · {number(withGoals)} avec le détail des
-          buts (cliquables)
-        </span>
-        <button
-          className="button button-secondary"
-          onClick={() =>
-            download(
-              `archives-${season.season.replace("/", "-")}.csv`,
-              csvString(ARCHIVE_CSV_FIELDS, rows.map(archiveCsvRow)),
-              "text/csv;charset=utf-8",
-            )
-          }
-        >
-          Exporter CSV
-        </button>
-      </div>
-      <ArchiveResults
-        rows={rows}
-        page={page}
-        onPage={(next) => setParams({ ap: next > 1 ? String(next) : null })}
-        matchHref={matchHref}
-        onOpen={onOpen}
-      />
-    </>
+    <ArchiveResults
+      rows={rows}
+      page={page}
+      onPage={(next) => setParams({ ap: next > 1 ? String(next) : null })}
+      matchHref={matchHref}
+      onOpen={onOpen}
+    />
   );
 }
 
@@ -330,55 +333,15 @@ export default function Archive() {
         if (!seasons.length) return <Empty>Aucune archive disponible.</Empty>;
         const id = (params.get("as") || "").replace("-", "/");
         const entry = seasons.find((item) => item.id === id) || seasons[0];
-        const query = params.get("aq") || "";
-        const archive = (
+        return (
           <SeasonArchive
             key={entry.id}
+            seasons={seasons}
             entry={entry}
             params={params}
             setParams={setParams}
             hrefWith={hrefWith}
           />
-        );
-        if (params.get("m")) return archive;
-        return (
-          <Card title="Archives" className="archive-card">
-            <div className="historical-archive-filters">
-              <label>
-                Saison{" "}
-                <select
-                  aria-label="Saison des archives"
-                  value={entry.id}
-                  onChange={(event) =>
-                    setParams({
-                      as: event.target.value.replace("/", "-"),
-                      ac: null,
-                      ap: null,
-                    })
-                  }
-                >
-                  {seasons.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.id}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Équipe ou buteur{" "}
-                <input
-                  type="search"
-                  aria-label="Rechercher une équipe ou un buteur dans les archives"
-                  placeholder="Nom d’équipe ou de joueur…"
-                  defaultValue={query}
-                  onChange={(event) =>
-                    setParams({ aq: event.target.value, ap: null })
-                  }
-                />
-              </label>
-            </div>
-            {archive}
-          </Card>
         );
       }}
     </AsyncState>
