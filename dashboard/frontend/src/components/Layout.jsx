@@ -3,6 +3,7 @@ import Icon from "./Icon.jsx";
 import { pages } from "../../../shared/pages.js";
 import React, { useId, useState, useMemo } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
+import { useResearch } from "../hooks/ResearchContext.jsx";
 import { PlayerDialog, Comparison } from "./PlayerDetails.jsx";
 import { date } from "../services/format.js";
 import CompetitionScope from "./CompetitionScope.jsx";
@@ -253,6 +254,7 @@ export default function Layout({
   children,
 }) {
   const f = useFootball();
+  const research = useResearch();
   return (
     <>
       <Link className="skip-link" href="#main">
@@ -322,7 +324,7 @@ export default function Layout({
         <SiteFooter href={f.href} path={path} />
       </div>
       <PlayerDialog />
-      {performanceComparison && <Comparison />}
+      {performanceComparison && (!(path === "/joueurs/" && research?.data.comparison.length && research.comparisonKind === "players") || f.comparing) && <Comparison />}
     </>
   );
 }

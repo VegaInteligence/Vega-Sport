@@ -128,11 +128,13 @@ export function sortPlayerAverages(rows, { key, direction }) {
   });
 }
 
-export function directoryCSV(rows, basis) {
+export function directoryCSV(rows, basis, columns) {
   const metrics = [
     ...new Set([
-      ...DIRECTORY_FIELDS.slice(3).map(([key]) => key),
-      ...CONDITION_METRICS.map(([key]) => key),
+      ...(columns ? columns.filter(key => SEASON_METRICS[key]) : [
+        ...DIRECTORY_FIELDS.slice(3).map(([key]) => key),
+        ...CONDITION_METRICS.map(([key]) => key),
+      ]),
     ]),
   ];
   const fields = [

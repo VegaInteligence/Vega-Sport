@@ -10,17 +10,22 @@ export const SEASON_METRICS = {
   goals: { label: "Buts" },
   assists: { label: "Passes décisives" },
   xg: { label: "Buts attendus · xG", decimals: 2 },
+  npxg: { label: "xG hors penalty", decimals: 2 },
+  xgot: { label: "xG cadrés · xGOT", decimals: 2 },
   xa: { label: "Passes décisives attendues · xA", decimals: 2 },
   shots: { label: "Tirs" },
   shotsOnTarget: { label: "Tirs cadrés" },
   touchesBox: { label: "Ballons dans la surface" },
   chancesCreated: { label: "Occasions créées" },
+  bigChancesCreated: { label: "Grosses occasions créées" },
   passesFinalThird: { label: "Passes dans le dernier tiers" },
   dribbles: { label: "Dribbles réussis" },
   touches: { label: "Ballons touchés" },
   passesAccurate: { label: "Passes réussies" },
+  passesAttempted: { label: "Passes tentées" },
   passAccuracy: { label: "Précision des passes", unit: "%", ratio: true },
   duelsWon: { label: "Duels gagnés" },
+  duelsLost: { label: "Duels perdus", lowerIsBetter: true },
   duelRate: { label: "Duels gagnés", unit: "%", ratio: true },
   tackles: { label: "Tacles" },
   interceptions: { label: "Interceptions" },
@@ -134,6 +139,10 @@ function accumulator(id, keepRows = false) {
     ratios: Object.create(null),
     ratingSum: 0,
     ratingCount: 0,
+    starts: 0,
+    knownStarts: 0,
+    leagueIds: new Set(),
+    teamIds: new Set(),
     positions: new Map(),
     teams: new Set(),
     latest: null,
@@ -167,6 +176,12 @@ function addAppearance(acc, row) {
   acc.seen.add(row.matchId);
   acc.matches++;
   acc.minutes += row.minutes;
+  if (typeof row.starter === "boolean") {
+    acc.knownStarts++;
+    if (row.starter) acc.starts++;
+  }
+  if (row.leagueId) acc.leagueIds.add(row.leagueId);
+  if (row.teamId) acc.teamIds.add(row.teamId);
   if (acc.keepRows) acc.rows.push(row);
   if (row.team) acc.teams.add(row.team);
   if (!acc.latest || String(row.date || "") > String(acc.latest.date || ""))
@@ -229,6 +244,8 @@ function finish(acc) {
     role: position?.line || null,
     unknownMinutes: acc.unknownMatches.size,
     teams: [...acc.teams],
+    leagueIds: [...acc.leagueIds],
+    teamIds: [...acc.teamIds],
     rating: acc.ratingCount ? acc.ratingSum / acc.ratingCount : null,
     rows: acc.rows.sort((a, b) =>
       String(b.date || "").localeCompare(String(a.date || "")),

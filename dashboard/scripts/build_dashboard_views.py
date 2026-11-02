@@ -70,6 +70,8 @@ def build_views(data=None):
     cached = {(s['id'], c['leagueId']): c for s in previous['seasons'] for c in s['chunks']}
     manifest = dict(schemaVersion=1, storage='json-packed', defaultSeason=source['defaultSeason'], seasons=[])
     manifest['clubCountries'] = club_countries(source)
+    from build_scouting_index import build_routes
+    manifest['scouting'] = build_routes(source, previous.get('scouting'))
     built = reused = raw_bytes = packed_bytes = 0
     for season in source['seasons']:
         out = dict(id=season['id'], chunks=[])
