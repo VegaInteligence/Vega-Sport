@@ -368,6 +368,52 @@ input[type="date"] {
   color: var(--muted);
   font-size: var(--text-sm);
 }
+.club-directory-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 200px) minmax(
+      130px,
+      170px
+    );
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.club-directory-toolbar .club-directory-select {
+  display: grid;
+  gap: 6px;
+}
+.club-directory-select select {
+  width: 100%;
+  min-width: 0;
+}
+.club-directory-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.club-directory-summary .filter-reset-button {
+  min-height: 24px;
+  padding-block: 0;
+}
+.club-directory-grid > .competition-card {
+  content-visibility: visible;
+  height: 66px;
+}
+.club-directory-grid {
+  align-content: start;
+}
+@media (max-width: 640px) {
+  .club-directory-toolbar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .club-directory-search {
+    grid-column: 1 / -1;
+  }
+}
 
 /* Overview: featured match */
 .hero-strip {

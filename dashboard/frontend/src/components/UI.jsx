@@ -89,10 +89,10 @@ export function Segments({ label, value, items, onChange }) {
     </div>
   );
 }
-export function Pager({ page, total, onChange }) {
+export function Pager({ page, total, onChange, label = "Pagination" }) {
   if (total <= 1) return null;
   return (
-    <div className="pagination">
+    <nav className="pagination" aria-label={label}>
       <button
         className="button button-secondary"
         disabled={page <= 1}
@@ -100,7 +100,10 @@ export function Pager({ page, total, onChange }) {
       >
         Précédents
       </button>
-      <span>
+      <span
+        aria-label={`Page ${page} sur ${Math.max(1, total)}`}
+        aria-live="polite"
+      >
         {page} / {Math.max(1, total)}
       </span>
       <button
@@ -110,7 +113,7 @@ export function Pager({ page, total, onChange }) {
       >
         Suivants
       </button>
-    </div>
+    </nav>
   );
 }
 export function Modal({

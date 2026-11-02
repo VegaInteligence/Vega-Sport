@@ -27,6 +27,40 @@ def pack_table(rows):
                 **({'missing': missing} if missing else {}))
 
 
+def club_countries(source):
+    """National competition affiliation by stable team id, newest season first.
+
+    Continental competitions are never treated as a club's country. Reviewed
+    ranking links only fill gaps; ambiguous domestic memberships stay unknown.
+    """
+    international = {'', 'UEFA', 'FIFA', 'INT', 'INT-2'}
+    result, unresolved = {}, set()
+    for season in sorted(source['seasons'], key=lambda s: s['id'], reverse=True):
+        candidates = {}
+        for chunk in season['chunks']:
+            competitions = db.read(db.DATA/chunk['tables']['competitions']['path'])
+            countries = {c.get('country', '') for c in competitions} - international
+            if len(countries) != 1:
+                continue
+            country = next(iter(countries))
+            for team in db.read(db.DATA/chunk['tables']['teams']['path']):
+                candidates.setdefault(team['id'], set()).add(country)
+        for team_id, countries in candidates.items():
+            if team_id in result or team_id in unresolved:
+                continue
+            if len(countries) == 1:
+                result[team_id] = next(iter(countries))
+            else:
+                unresolved.add(team_id)
+    links = db.DATA/'raw/rankings/club-links.json'
+    if links.is_file():
+        for team_id, link in db.read(links).get('links', {}).items():
+            country = link.get('countryCode', '')
+            if country not in international and team_id not in unresolved:
+                result.setdefault(team_id, country)
+    return dict(sorted(result.items()))
+
+
 def build_views(data=None):
     if data is not None:
         db.DATA = Path(data)
@@ -35,6 +69,7 @@ def build_views(data=None):
     previous = db.read(target) if target.is_file() else {'seasons': []}
     cached = {(s['id'], c['leagueId']): c for s in previous['seasons'] for c in s['chunks']}
     manifest = dict(schemaVersion=1, storage='json-packed', defaultSeason=source['defaultSeason'], seasons=[])
+    manifest['clubCountries'] = club_countries(source)
     built = reused = raw_bytes = packed_bytes = 0
     for season in source['seasons']:
         out = dict(id=season['id'], chunks=[])

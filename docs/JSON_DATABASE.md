@@ -56,6 +56,8 @@ Une même personne peut changer de nom d’affichage ou d’image. `playerRef` p
 
 ## Lecture du dashboard
 
+Le manifeste optimisé `data/computed/dashboard/index.json` inclut `clubCountries`, un petit index par identifiant de club. Le générateur le reconstruit à partir de l’affiliation aux compétitions nationales, saison la plus récente en priorité, puis complète les absences avec les liens UEFA déjà vérifiés. Une compétition internationale ne devient jamais un pays ; les appartenances ambiguës restent inconnues. Cet index sert au filtre Pays des clubs sans télécharger d’autres saisons ou leurs statistiques.
+
 Le serveur associe `/data/football-manifest.json` à `data/raw/index.json`. Le chargeur lit les tables de la saison demandée et joint les joueurs aux performances, ainsi que les tirs et statistiques aux matchs. Il reconstitue ensuite le format attendu par l’interface. Aucun instantané métier n’est stocké dans `dashboard/`.
 
 `/api/archive/matches/:id` reconstitue une observation détaillée à partir des index et des tables JSON. Les différentes versions restent présentes ; la version dont la date de collecte est la plus récente est privilégiée. Les profils passent par leur propre index. `data/sources/` ne sert pas de stockage de lecture au dashboard.
