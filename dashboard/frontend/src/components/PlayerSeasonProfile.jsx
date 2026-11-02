@@ -227,8 +227,9 @@ export default function PlayerSeasonProfile({
     () => roleAssessments(profile, cohorts),
     [profile, cohorts],
   );
-  const view = TABS.some(([key]) => key === params.get("playerView"))
-    ? params.get("playerView")
+  const requestedView = params?.get("playerView");
+  const view = TABS.some(([key]) => key === requestedView)
+    ? requestedView
     : "overview";
   const change = (next) => {
     const url = new URL(window.location.href);
