@@ -40,6 +40,8 @@ export function historicalPair(value) {
 
 /** Show the final match score, with extra time distinguished from penalties. */
 export function historicalScore(match) {
+  const final = historicalPair(match?.score?.final);
+  if (final.every((value) => value !== null)) return final;
   const extra = historicalPair(match?.score?.et);
   return extra.every((value) => value !== null)
     ? extra
@@ -53,8 +55,16 @@ export function historicalScoreNotes(match) {
   if (extra.every((value) => value !== null)) notes.push("après prolongation");
   if (penalties.every((value) => value !== null))
     notes.push(`tirs au but ${penalties[0]} – ${penalties[1]}`);
-  const comment = match?.sourceFields?.Comments?.trim();
-  if (comment) notes.push(`Source : ${comment}`);
+  const fields = match?.sourceFields || {};
+  if (match?.status === "not_played")
+    notes.push(
+      `Rencontre non disputée${fields.nonmatch ? ` : ${fields.nonmatch}` : ""}`,
+    );
+  if ((fields.neutral || "").toLowerCase() === "yes")
+    notes.push("terrain neutre");
+  const comment = (fields.Comments || fields.notes || "").trim();
+  if (comment && comment.toLowerCase() !== "na")
+    notes.push(`Source : ${comment}`);
   return notes;
 }
 
@@ -71,6 +81,12 @@ export const HISTORICAL_CSV_FIELDS = [
   "penalties_home",
   "penalties_away",
   "notes",
+  "source_date",
+  "source_venue",
+  "source_attendance",
+  "source_neutral",
+  "status",
+  "date_note",
 ];
 
 export function historicalCsvRow({ competition, match }) {
@@ -90,5 +106,11 @@ export function historicalCsvRow({ competition, match }) {
     penaltiesHome,
     penaltiesAway,
     historicalScoreNotes(match).join(" · "),
+    match.sourceFields?.Date,
+    match.sourceFields?.Venue,
+    match.sourceFields?.attendance,
+    match.sourceFields?.neutral,
+    match.status,
+    match.dateNote,
   ];
 }

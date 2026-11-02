@@ -56,9 +56,9 @@ export function HistoryResults({ season, competition, query, page, onPage }) {
               <tr>
                 <th>Date</th>
                 <th>Compétition</th>
-                <th>Domicile</th>
+                <th>Équipe 1</th>
                 <th>Score</th>
-                <th>Extérieur</th>
+                <th>Équipe 2</th>
               </tr>
             </thead>
             <tbody>
@@ -69,7 +69,14 @@ export function HistoryResults({ season, competition, query, page, onPage }) {
                   const notes = historicalScoreNotes(match);
                   return (
                     <tr key={key}>
-                      <td>{date(match.date)}</td>
+                      <td>
+                        {date(match.date)}
+                        {match.dateNote && (
+                          <small className="historical-score-note">
+                            Date non vérifiée
+                          </small>
+                        )}
+                      </td>
                       <td>{name}</td>
                       <td>{match.team1 || "—"}</td>
                       <td>
@@ -122,7 +129,8 @@ function ArchiveBrowser({ index }) {
             <a href={source.url} target="_blank" rel="noreferrer">
               {source.name}
             </a>{" "}
-            ({source.license})
+            ({source.license}
+            {source.usage ? ` ; ${source.usage}` : ""})
             {source.upstream && (
               <>
                 {" · "}
@@ -175,7 +183,13 @@ function ArchiveBrowser({ index }) {
       <p className="historical-archive-coverage">
         {number(selected.competitions)} compétitions ·{" "}
         {number(selected.results)} résultats renseignés sur{" "}
-        {number(selected.matches)} matchs
+        {number(selected.matches)} rencontres
+        {selected.unplayed > 0
+          ? ` · ${number(selected.unplayed)} non disputées`
+          : ""}
+        {selected.unverifiedDates > 0
+          ? ` · ${number(selected.unverifiedDates)} dates absentes ou non vérifiées`
+          : ""}
       </p>
       <AsyncState resource={resource}>
         {(value) => (

@@ -107,3 +107,32 @@ test("CSV keeps existing goal columns and separates regulation from extra time a
   assert.deepEqual([row.home_goals_90, row.away_goals_90], [2, 2]);
   assert.deepEqual([row.penalties_home, row.penalties_away], [4, 3]);
 });
+
+import { historicalScoreNotes } from "../dashboard/frontend/src/services/openfootball-history.js";
+test("source-only final scores, unplayed ties and neutral venues remain explicit", () => {
+  const match = {
+    score: { final: [2, 1], et: [2, 1], p: [4, 3] },
+    sourceFields: { neutral: "yes", notes: "Final" },
+    status: "finished",
+  };
+  assert.deepEqual(historicalScore(match), [2, 1]);
+  assert.match(historicalScoreNotes(match).join(" "), /après prolongation/);
+  assert.match(historicalScoreNotes(match).join(" "), /terrain neutre/);
+  const row = Object.fromEntries(
+    HISTORICAL_CSV_FIELDS.map((key, index) => [
+      key,
+      historicalCsvRow({ competition: "FA Cup", match })[index],
+    ]),
+  );
+  assert.equal(row.home_goals_90, null);
+  assert.equal(row.home_goals, 2);
+  const notPlayed = {
+    status: "not_played",
+    sourceFields: { nonmatch: "Walkover", notes: "Team progresses" },
+  };
+  assert.deepEqual(historicalScore(notPlayed), [null, null]);
+  assert.match(
+    historicalScoreNotes(notPlayed).join(" "),
+    /Rencontre non disputée/,
+  );
+});
