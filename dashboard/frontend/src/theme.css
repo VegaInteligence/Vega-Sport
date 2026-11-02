@@ -53,6 +53,8 @@ html[data-theme="dark"] {
   --danger: #ff8a80;
   --warning-ink: #e8c995;
   --gold: #d9b45a;
+  --silver: #c3cad4;
+  --bronze: #c98b5b;
   --shadow-overlay: 0 24px 80px rgb(0 0 0 / 0.55);
   --shadow-pop: 0 12px 32px rgb(0 0 0 / 0.45);
   --backdrop: rgb(6 10 16 / 0.62);
@@ -83,9 +85,19 @@ html[data-theme="light"] {
   --danger: #b53630;
   --warning-ink: #7a5512;
   --gold: #a97c12;
+  --silver: #75808e;
+  --bronze: #99592b;
   --shadow-overlay: 0 24px 64px rgb(13 33 52 / 0.16);
   --shadow-pop: 0 12px 32px rgb(13 33 52 / 0.12);
   --backdrop: rgb(13 33 52 / 0.3);
+}
+
+/* Set for two frames while the theme changes, so every element takes its
+   new colours at once (see ThemeToggle). */
+html[data-theme-switching] *,
+html[data-theme-switching] *::before,
+html[data-theme-switching] *::after {
+  transition: none !important;
 }
 
 .statarena-logo img {

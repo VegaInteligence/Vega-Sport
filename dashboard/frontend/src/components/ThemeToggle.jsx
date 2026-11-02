@@ -9,9 +9,17 @@ export default function ThemeToggle() {
     );
   }, []);
   function toggle() {
-    const next =
-      document.documentElement.dataset.theme === "light" ? "dark" : "light";
-    document.documentElement.dataset.theme = next;
+    const root = document.documentElement,
+      next = root.dataset.theme === "light" ? "dark" : "light";
+    // Hover transitions on buttons, fields and cards would otherwise fade
+    // those elements into the new theme after everything else: switch with
+    // transitions off, then restore them once the new colours are painted.
+    root.setAttribute("data-theme-switching", "");
+    root.dataset.theme = next;
+    void document.body.offsetHeight;
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => root.removeAttribute("data-theme-switching")),
+    );
     document
       .querySelector('meta[name="theme-color"]')
       ?.setAttribute("content", next === "light" ? "#F6F8FB" : "#0E0F12");
