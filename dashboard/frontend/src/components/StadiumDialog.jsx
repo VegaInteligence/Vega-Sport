@@ -95,17 +95,6 @@ export default function StadiumDialog({ name, id, onClose }) {
                   </p>
                 )}
               </section>
-              <p className="stadium-source">
-                Données du stade :{" "}
-                <a
-                  href={stadium.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Wikidata
-                </a>{" "}
-                · consultées le {stadiumDate(stadium.fetchedAt?.slice(0, 10))}.
-              </p>
             </>
           )}
         </AsyncState>
