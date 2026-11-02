@@ -1,7 +1,6 @@
 "use client";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ProfileDialog } from "../components/PlayerDetails.jsx";
 import React, { useState, useMemo, useDeferredValue } from "react";
 import Layout from "../components/Layout.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -30,7 +29,6 @@ import {
   Empty,
 } from "../components/UI.jsx";
 export default function PlayersPage() {
-  const [profile, setProfile] = useState(false);
   const research = useResearch(),
     params = useSearchParams();
   const profileView = params.get("playerView") || "overview";
@@ -138,7 +136,6 @@ export default function PlayersPage() {
           rows={playerRows}
           scopeRows={contextRows}
           profiles={profiles}
-          onSource={() => setProfile(true)}
         />
       )}
       {id ? (
@@ -147,14 +144,6 @@ export default function PlayersPage() {
             title={`Matchs de ${rows[0]?.name || id}`}
             action={
               <>
-                {id && (
-                  <button
-                    className="button button-secondary"
-                    onClick={() => setProfile(true)}
-                  >
-                    Fiche détaillée
-                  </button>
-                )}
                 <button
                   className="button button-secondary"
                   onClick={exportCurrent}
@@ -288,13 +277,6 @@ export default function PlayersPage() {
         />
       )}
       <ResearchComparisonTray performanceComparison={Boolean(id)} />
-      {profile && (
-        <ProfileDialog
-          id={id}
-          kind="players"
-          onClose={() => setProfile(false)}
-        />
-      )}
     </Layout>
   );
 }

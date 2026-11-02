@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   Card,
   Empty,
@@ -8,15 +9,15 @@ import {
   Media,
 } from "./UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
-import { ProfileDialog } from "./PlayerDetails.jsx";
 import { useResource, download, json } from "../services/resources.js";
 import DataExplorer from "./DataExplorer.jsx";
 import PlayerMetrics, { periodLabel } from "./PlayerMetrics.jsx";
 import { MATCH_SECTIONS, number, isNumber } from "../services/format.js";
 import { ShotMap, XgTimeline } from "./Charts.jsx";
 import { MatchLink } from "./MatchLink.jsx";
+const MATCH_ANALYSES = MATCH_SECTIONS.filter(([key]) => key !== "match");
 export function Lineups({ payload }) {
-  const [profile, setProfile] = useState(null);
+  const f = useFootball();
   return (
     <>
       <div className="lineup-grid">
@@ -98,13 +99,13 @@ export function Lineups({ payload }) {
                         </span>
                         <span>{p.name}</span>
                         {p.player_id && (
-                          <button
+                          <Link
                             className="inline-link"
-                            aria-label={`Fiche de ${p.name}`}
-                            onClick={() => setProfile(p.player_id)}
+                            href={f.href("/joueurs/", { id: p.player_id })}
+                            aria-label={`Voir le profil de ${p.name}`}
                           >
-                            Fiche
-                          </button>
+                            Profil
+                          </Link>
                         )}
                       </div>
                     ))}
@@ -115,13 +116,6 @@ export function Lineups({ payload }) {
           );
         })}
       </div>
-      {profile && (
-        <ProfileDialog
-          id={profile}
-          kind="players"
-          onClose={() => setProfile(null)}
-        />
-      )}
     </>
   );
 }
@@ -643,14 +637,14 @@ export function MatchSections({
               setVersion(0);
             }}
           >
-            {MATCH_SECTIONS.map(([key, label]) => (
+            {MATCH_ANALYSES.map(([key, label]) => (
               <option key={key} value={key}>
                 {label}
               </option>
             ))}
             <option value="archive">Archive complète</option>
           </select>
-          <span>{MATCH_SECTIONS.length} analyses</span>
+          <span>{MATCH_ANALYSES.length} analyses</span>
         </div>
       )}
       <AsyncState

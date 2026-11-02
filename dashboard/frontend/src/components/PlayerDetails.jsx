@@ -3,10 +3,8 @@ import React, { useMemo, useState } from "react";
 import Icon from "./Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number, date, isNumber } from "../services/format.js";
-import { Modal, Rating, Media, AsyncState, Segments } from "./UI.jsx";
-import DataExplorer from "./DataExplorer.jsx";
+import { Modal, Rating, Media, Segments } from "./UI.jsx";
 import PlayerData from "./PlayerData.jsx";
-import { useResource, json } from "../services/resources.js";
 import {
   keyFigures,
   matchRatingRank,
@@ -32,22 +30,6 @@ export const metrics = [
   ["saves", "Arrêts"],
   ["goalsPrevented", "Buts évités"],
 ];
-export function ProfileDialog({ id, kind, onClose }) {
-  const resource = useResource(`profile:${kind}:${id}`, async () => {
-    try {
-      return (await json(`/api/archive/profiles/${kind}/${id}`)).data;
-    } catch {
-      return (await json(`/api/pitchapi/${kind}/${id}`)).data;
-    }
-  });
-  return (
-    <Modal title="Fiche détaillée" onClose={onClose}>
-      <AsyncState resource={resource}>
-        {(value) => <DataExplorer value={value} />}
-      </AsyncState>
-    </Modal>
-  );
-}
 const ordinal = (n) => (n === 1 ? "1re" : `${n}e`);
 const tier = (p) =>
   p >= 90 ? "is-elite" : p >= 70 ? "is-strong" : p >= 40 ? "is-mid" : "is-low";

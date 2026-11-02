@@ -14,7 +14,6 @@ const sources = [
   ["events", "Événements"],
   ["lineups", "Composition"],
   ["pass_networks", "Réseau de passes de l’équipe"],
-  ["profile", "Fiche du joueur"],
 ];
 function containsPlayer(value, id) {
   if (value === id) return true;
@@ -74,11 +73,6 @@ export default function PlayerData({ row, mode }) {
     [source, setSource] = useState("performance"),
     resource = useResource(`player-match-source:${row.matchId}`, () =>
       json(`/api/archive/matches/${row.matchId}`),
-    ),
-    profile = useResource(
-      `player-profile-source:${row.playerId}`,
-      () => json(`/api/archive/profiles/players/${row.playerId}`),
-      mode === "data" && source === "profile",
     );
   if (mode === "stats")
     return (
@@ -162,8 +156,6 @@ export default function PlayerData({ row, mode }) {
       </div>
       {source === "performance" ? (
         display(row)
-      ) : source === "profile" ? (
-        <AsyncState resource={profile}>{display}</AsyncState>
       ) : (
         <AsyncState resource={resource}>
           {(archive) =>

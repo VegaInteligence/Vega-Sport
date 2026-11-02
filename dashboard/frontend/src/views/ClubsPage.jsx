@@ -13,7 +13,6 @@ import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { Card, Media, Pager, Empty } from "../components/UI.jsx";
-import { ProfileDialog } from "../components/PlayerDetails.jsx";
 import ClubRanking from "../components/ClubRanking.jsx";
 import { ClubFacts, ClubRoster } from "../components/ClubProfile.jsx";
 import { MatchLink } from "../components/MatchLink.jsx";
@@ -68,8 +67,7 @@ export default function ClubsPage() {
     [query, setQuery] = useState(""),
     [country, setCountry] = useState("all"),
     [competitionId, setCompetitionId] = useState("all"),
-    [paging, setPaging] = useState({ key: "", page: 1 }),
-    [profile, setProfile] = useState(false);
+    [paging, setPaging] = useState({ key: "", page: 1 });
   const id = useSearchParams().get("id");
   const gridRef = useRef(null);
   const clubs = useMemo(() => {
@@ -176,17 +174,7 @@ export default function ClubsPage() {
           <Link className="inline-link" href={f.href("/clubs/")}>
             ← Tous les clubs
           </Link>
-          <Card
-            title={selected.name}
-            action={
-              <button
-                className="button button-secondary"
-                onClick={() => setProfile(true)}
-              >
-                Fiche détaillée
-              </button>
-            }
-          >
+          <Card title={selected.name}>
             <div className="club-identity">
               <Media
                 name={selected.name}
@@ -210,16 +198,11 @@ export default function ClubsPage() {
             {clubMatches.map((match) => (
               <MatchLink key={match.id} match={match} />
             ))}
-            {!clubMatches.length && <Empty>Aucun match disponible pour cette saison.</Empty>}
+            {!clubMatches.length && (
+              <Empty>Aucun match disponible pour cette saison.</Empty>
+            )}
           </Card>
           <ClubRanking clubId={id} />
-          {profile && (
-            <ProfileDialog
-              id={id}
-              kind="teams"
-              onClose={() => setProfile(false)}
-            />
-          )}
         </>
       ) : (
         <>

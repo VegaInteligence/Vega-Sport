@@ -202,7 +202,6 @@ export default function PlayerSeasonProfile({
   rows,
   scopeRows,
   profiles: allProfiles,
-  onSource,
 }) {
   const f = useFootball(),
     params = useSearchParams();
@@ -329,9 +328,6 @@ export default function PlayerSeasonProfile({
             season={f.season}
           />
           <ComparePlayerButton profile={profile} season={f.season} />
-          <button className="button button-secondary" onClick={onSource}>
-            Fiche détaillée
-          </button>
           <ReportButton
             title={`${profile.name} · ${f.season}`}
             context={`${profile.teams.join(" · ")} · ${profile.matches} matchs · ${profile.minutes} minutes · minimum de cohorte ${minMinutes} min`}
