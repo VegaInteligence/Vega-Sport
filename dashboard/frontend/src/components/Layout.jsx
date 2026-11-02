@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Icon from "./Icon.jsx";
 import { pages } from "../../../shared/pages.js";
-import React, { useId, useState } from "react";
+import React, { useId, useState, useMemo } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { PlayerDialog, Comparison } from "./PlayerDetails.jsx";
 import { date } from "../services/format.js";
@@ -12,6 +12,10 @@ import SiteHeader from "./SiteHeader.jsx";
 import SiteFooter from "./SiteFooter.jsx";
 import PlayerSearchResults from "./PlayerSearchResults.jsx";
 import HomePreferences from "./HomePreferences.jsx";
+import {
+  competitionLabel,
+  orderedCompetitions,
+} from "../services/competition-selector.js";
 export const navigation = pages
   .filter((page) => page.navigation !== false)
   .map((page) => [page.path, page.title]);
@@ -45,10 +49,11 @@ export function Filters({ kind = "performances" }) {
       (f.preferences.favoriteLeagueIds.length > 0 || f.focus === "europe")) ||
     (players && (f.filters.minutes !== 1 || advancedCount > 0)) ||
     (!fixtures && f.filters.match !== "all");
-  const selected = f.competitions.find((c) => c.id === f.filters.league);
-  const names = new Map();
-  for (const c of f.competitions)
-    names.set(c.name, (names.get(c.name) || 0) + 1);
+  const competitions = useMemo(
+    () => orderedCompetitions(f.competitions),
+    [f.competitions],
+  );
+  const selected = competitions.find((c) => c.id === f.filters.league);
   return (
     <section className="filter-panel" aria-label="Filtres des données">
       <div
@@ -93,10 +98,9 @@ export function Filters({ kind = "performances" }) {
                 }
               >
                 <option value="all">Toutes les compétitions</option>
-                {f.competitions.map((c) => (
+                {competitions.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name}
-                    {names.get(c.name) > 1 ? ` · ${c.country || c.id}` : ""}
+                    {competitionLabel(c)}
                   </option>
                 ))}
               </select>
@@ -174,7 +178,7 @@ export function Filters({ kind = "performances" }) {
                 }
               >
                 <span className="scope-dot" />
-                {selected.name}
+                {competitionLabel(selected)}
                 <Icon name="close" />
               </button>
             )}

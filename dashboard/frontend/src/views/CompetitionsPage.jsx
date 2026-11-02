@@ -1,7 +1,7 @@
 "use client";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import React, { useState, useMemo, useEffect, useRef, useDeferredValue } from "react";
+import React, { useState, useEffect, useRef, useDeferredValue, useMemo } from "react";
 import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -15,18 +15,18 @@ import {
 } from "../components/UI.jsx";
 import { MatchLink } from "../components/MatchLink.jsx";
 import { defaultCompetitionMatchStatus, orderCompetitionMatches } from "../services/competition-matches.js";
-import { normalizeText, seasonLabel, number, date } from "../services/format.js";
+import { normalizeText, seasonLabel } from "../services/format.js";
 import { useResource, json, download } from "../services/resources.js";
 import { csvString } from "../model.js";
 import { dataUrl } from "../data-url.js";
 import CompetitionScope from "../components/CompetitionScope.jsx";
 import OpenFootballArchive from "../components/OpenFootballArchive.jsx";
 import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
-import { SPORTSCORE_LEAGUES } from "../services/sportscore-standings.js";
-import { FEATURED_EUROPE_IDS, FEATURED_LEAGUE_IDS, countryLabel, orderedFeatured, orderedCountryCodes, competitionGroups } from "../services/competition-selector.js";
+import CompetitionStandings from "../components/CompetitionStandings.jsx";
+import { FEATURED_EUROPE_IDS, FEATURED_LEAGUE_IDS, countryLabel, orderedFeatured, orderedCountryCodes, competitionGroups, orderedCompetitions, competitionLabel, competitionCountry, competitionCountryLabel } from "../services/competition-selector.js";
 import {
-  SIMPLE_LEAGUES, PREFERRED_COMPETITION_KEY, localeCountry,
-  preferredCompetition, standingsFromFixtures, hasCompleteHomeAwaySchedule,
+  PREFERRED_COMPETITION_KEY, localeCountry,
+  preferredCompetition,
 } from "../services/competition-standings.js";
 export function SupplementalPanel({
   data: value,
@@ -51,9 +51,9 @@ export function SupplementalPanel({
         Compétition
         <select value={id} onChange={(e) => onId(e.target.value)}>
           <option value="">Choisir</option>
-          {value.competitions.map((c) => (
+          {orderedCompetitions(value.competitions).map((c) => (
             <option key={c.folder} value={c.folder}>
-              {c.name || c.folder}
+              {competitionLabel({ ...c, name: c.name || c.folder })}
             </option>
           ))}
         </select>
@@ -159,199 +159,6 @@ function Supplemental() {
     </AsyncState>
   );
 }
-function ResultStandings({ matches, source }) {
-  const f = useFootball();
-  const table = useMemo(() => standingsFromFixtures(matches), [matches]);
-  if (table.complexSchedule) return <Empty>Le format de cette saison comprend des rencontres supplémentaires : le classement ne peut pas être établi à partir des seuls scores. Retrouvez les matchs dans l’onglet Matchs.</Empty>;
-  if (!table.played) return <Empty>Aucun résultat terminé disponible pour établir le classement.</Empty>;
-  return (
-    <div className="competition-standings">
-      <div className="standings-meta">
-        <span>{number(table.played)} matchs pris en compte{table.lastDate ? " · dernier match le " + date(table.lastDate) : ""}</span>
-        <span>{source === "api" ? "Résultats PitchAPI" : "Archive PitchAPI"}</span>
-      </div>
-      <div className="table-scroll standings-scroll" role="region" aria-label="Classement de la compétition" tabIndex={0}>
-        <table className="data-table standings-table">
-          <caption className="sr-only">Classement calculé à partir des résultats disponibles</caption>
-          <thead><tr><th scope="col">#</th><th scope="col">Équipe</th><th scope="col" title="Points">Pts</th><th scope="col" title="Matchs joués">J</th><th scope="col" title="Victoires">G</th><th scope="col" title="Matchs nuls">N</th><th scope="col" title="Défaites">D</th><th scope="col" title="Buts pour">BP</th><th scope="col" title="Buts contre">BC</th><th scope="col" title="Différence de buts">Diff.</th></tr></thead>
-          <tbody>{table.rows.map((row, index) => (
-            <tr key={row.id}>
-              <td>{index + 1}</td>
-              <th scope="row"><Link className="standings-team" href={f.href("/clubs/", { id: row.id })}><Media name={row.name} url={row.imageUrl} /> <span>{row.name}</span></Link></th>
-              <td className="standings-points">{row.points}</td><td>{row.played}</td><td>{row.wins}</td><td>{row.draws}</td><td>{row.losses}</td><td>{row.goalsFor}</td><td>{row.goalsAgainst}</td><td>{row.difference > 0 ? "+" : ""}{row.difference}</td>
-            </tr>
-          ))}</tbody>
-        </table>
-      </div>
-      <p className="standings-note">Classement calculé à partir des résultats disponibles. Les sanctions et certains critères de départage ne sont pas pris en compte.{table.excluded ? " " + table.excluded + " match(s) terminé(s) sans score exploitable ont été exclus." : ""}</p>
-    </div>
-  );
-}
-function SportscoreTable({ table, index, multiple, matches }) {
-  const f = useFootball();
-  const teams = useMemo(() => {
-    const result = new Map();
-    for (const match of matches) {
-      for (const team of [match.home_team, match.away_team]) {
-        if (!team?.id || !team.name) continue;
-        const key = normalizeText(team.name).replace(/[^a-z0-9]/g, "");
-        if (!key) continue;
-        if (result.has(key) && result.get(key)?.id !== team.id)
-          result.set(key, null);
-        else if (!result.has(key)) result.set(key, team);
-      }
-    }
-    return result;
-  }, [matches]);
-  const display = (value) => (value == null ? "—" : number(value));
-  return (
-    <section className="standings-group">
-      {(table.name || multiple) && (
-        <h3>{table.name || "Tableau " + (index + 1)}</h3>
-      )}
-      <div className="table-scroll standings-scroll" role="region" aria-label={table.name ? `Classement ${table.name}` : "Classement de la compétition"} tabIndex={0}>
-        <table className="data-table standings-table">
-          <caption className="sr-only">
-            Classement SportScore{table.name ? " : " + table.name : ""}
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">#</th>
-              <th scope="col">Équipe</th>
-              <th scope="col" title="Points">
-                Pts
-              </th>
-              <th scope="col" title="Matchs joués">
-                J
-              </th>
-              <th scope="col" title="Victoires">
-                G
-              </th>
-              <th scope="col" title="Matchs nuls">
-                N
-              </th>
-              <th scope="col" title="Défaites">
-                D
-              </th>
-              <th scope="col" title="Buts pour">
-                BP
-              </th>
-              <th scope="col" title="Buts contre">
-                BC
-              </th>
-              <th scope="col" title="Différence de buts">
-                Diff.
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {table.rows.map((row, i) => {
-              const key = normalizeText(row.name).replace(/[^a-z0-9]/g, "");
-              const club = teams.get(key);
-              const identity = (
-                <>
-                  <Media name={row.name} url={row.imageUrl} />
-                  <span>{row.name}</span>
-                </>
-              );
-              return (
-                <tr key={key + ":" + i}>
-                  <td>{display(row.position)}</td>
-                  <th scope="row">
-                    {club ? (
-                      <Link
-                        className="standings-team"
-                        href={f.href("/clubs/", { id: club.id })}
-                      >
-                        {identity}
-                      </Link>
-                    ) : (
-                      <span className="standings-team">{identity}</span>
-                    )}
-                  </th>
-                  <td className="standings-points">{display(row.points)}</td>
-                  <td>{display(row.played)}</td>
-                  <td>{display(row.wins)}</td>
-                  <td>{display(row.draws)}</td>
-                  <td>{display(row.losses)}</td>
-                  <td>{display(row.goalsFor)}</td>
-                  <td>{display(row.goalsAgainst)}</td>
-                  <td>
-                    {row.difference == null
-                      ? "—"
-                      : (row.difference > 0 ? "+" : "") +
-                        number(row.difference)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
-function Standings({ competition, season, matches, source }) {
-  const latest = competition?.seasons?.[0];
-  const current = Boolean(latest) && String(latest) === String(season);
-  const enabled = current && Boolean(SPORTSCORE_LEAGUES[competition.id]);
-  const external = useResource(
-    "sportscore-standings:" + competition.id + ":" + season,
-    () =>
-      json("/api/standings?competition=" + encodeURIComponent(competition.id)),
-    enabled,
-  );
-  if (enabled && external.loading)
-    return (
-      <div className="loading-state" role="status">
-        Chargement du classement…
-      </div>
-    );
-  if (enabled && external.value?.tables?.length) {
-    const tables = external.value.tables;
-    return (
-      <div className="competition-standings">
-        {tables.map((table, index) => (
-          <SportscoreTable
-            key={index}
-            table={table}
-            index={index}
-            multiple={tables.length > 1}
-            matches={matches}
-          />
-        ))}
-        <p className="standings-note">Les classements SportScore et les matchs PitchAPI peuvent être actualisés à des moments différents.</p>
-      {tables.length > 1 && tables.some((table) => !table.name) && (
-          <p className="standings-note">
-            La source ne précise pas le nom de toutes les phases.
-          </p>
-        )}
-      </div>
-    );
-  }
-  if (
-    SIMPLE_LEAGUES.has(competition.id) ||
-    hasCompleteHomeAwaySchedule(matches)
-  )
-    return <ResultStandings matches={matches} source={source} />;
-  if (enabled && external.error)
-    return (
-      <div className="standings-unavailable">
-        <p role="status">Le classement est temporairement indisponible.</p>
-        <button className="button button-secondary" onClick={external.retry}>
-          Réessayer
-        </button>
-      </div>
-    );
-  return (
-    <Empty>
-      {!current
-        ? "Aucun classement de cette saison n’est disponible. Les matchs restent consultables dans l’onglet Matchs."
-        : "Classement indisponible pour cette compétition pour le moment. Retrouvez ses matchs dans l’onglet Matchs."}
-    </Empty>
-  );
-}
 
 function Fixtures({ competition, day }) {
   const f = useFootball();
@@ -374,7 +181,7 @@ function Fixtures({ competition, day }) {
     f.statusKnown,
   );
   return (
-    <Card title={competition ? <span className="competition-detail-title"><Media name={competition.name} url={competition.imageUrl} /><span><strong>{competition.name}</strong><small>{countryLabel(competition.country)}</small></span></span> : "Calendrier par date"} className="competition-detail">
+    <Card title={competition ? <span className="competition-detail-title"><Media name={competition.name} url={competition.imageUrl} /><span><strong>{competition.name}</strong><small>{competitionCountryLabel(competition)}</small></span></span> : "Calendrier par date"} className="competition-detail">
       {!day && (
         <div className="competition-detail-controls">
           <label>Saison de compétition
@@ -399,7 +206,7 @@ function Fixtures({ competition, day }) {
           const pages = Math.max(1, Math.ceil(rows.length / 30)), current = Math.min(page, pages);
           return <>
             {value.error && <p role="status">{value.error} · données collectées affichées.</p>}
-            {supported && view === "standings" ? <Standings competition={competition} season={season} matches={value.matches || []} source={value.source} /> : <>
+            {supported && view === "standings" ? <CompetitionStandings competition={competition} season={season} matches={value.matches || []} source={value.source} /> : <>
               <Segments value={status} onChange={(v) => { setStatus(v); setPage(1); }} label="Statut des rencontres" items={[["finished", "Résultats"], ["not_started", "À venir"], ["all", "Tous"]]} />
               {!day && <p className="competition-matches-order">{status === "finished" ? "Les résultats les plus récents en premier" : status === "not_started" ? "Les prochaines rencontres en premier" : "Résultats récents, puis rencontres à venir"}</p>}
               {rows.slice((current - 1) * 30, current * 30).map((m) => <MatchLink key={m.id} match={m} />)}
@@ -470,8 +277,8 @@ export default function CompetitionsPage() {
   }));
   const chosenId = id || (choice.ready ? preferredCompetition(catalog, choice.saved, choice.country) : null);
   const selected = catalog.find((c) => c.id === chosenId);
-  const rows = catalog.filter((c) =>
-    (country === "all" || c.country === country) && normalizeText((c.name || "") + " " + (c.country || "") + " " + countryLabel(c.country)).includes(normalizeText(query)),
+  const rows = orderedCompetitions(catalog).filter((c) =>
+    (country === "all" || competitionCountry(c) === country) && normalizeText((c.name || "") + " " + (c.country || "") + " " + competitionCountryLabel(c)).includes(normalizeText(query)),
   );
   // Render the first screen immediately, then the rest of the catalogue.
   const complete = useDeferredValue(true, false);
@@ -507,7 +314,7 @@ export default function CompetitionsPage() {
               </button>
             </div>
             <div className="league-spotlight-grid">
-              {orderedFeatured(catalog, FEATURED_LEAGUE_IDS).map((c) => (
+              {orderedCompetitions(orderedFeatured(catalog, FEATURED_LEAGUE_IDS)).map((c) => (
                 <button
                   key={c.id}
                   className="league-spotlight-item"
@@ -522,7 +329,7 @@ export default function CompetitionsPage() {
                   />
                   <span>
                     <strong>{c.name}</strong>
-                    <small>{countryLabel(c.country)}</small>
+                    <small>{competitionCountryLabel(c)}</small>
                   </span>
                 </button>
               ))}
@@ -530,7 +337,7 @@ export default function CompetitionsPage() {
             {orderedFeatured(catalog, FEATURED_EUROPE_IDS).length > 0 && (
               <div className="league-spotlight-cups">
                 <span>Coupes d’Europe</span>
-                {orderedFeatured(catalog, FEATURED_EUROPE_IDS).map((c) => (
+                {orderedCompetitions(orderedFeatured(catalog, FEATURED_EUROPE_IDS)).map((c) => (
                   <button
                     key={c.id}
                     type="button"
@@ -539,7 +346,7 @@ export default function CompetitionsPage() {
                     onClick={() => chooseCompetition(c.id)}
                   >
                     <Media name={c.name} url={c.imageUrl} />
-                    <span>{c.name}</span>
+                    <span>{competitionLabel(c)}</span>
                   </button>
                 ))}
               </div>
@@ -568,7 +375,7 @@ export default function CompetitionsPage() {
                 <h2 id={"competition-country-" + index}>{group.label}</h2>
                 <div className="competition-grid directory-grid">
                   {group.competitions.map((c) => <button key={c.id} type="button" className="competition-card competition-card-button" onClick={() => chooseCompetition(c.id)}>
-                    <div className="competition-card-header"><Media name={c.name} url={c.imageUrl} /><div><h3>{c.name}</h3><p>{countryLabel(c.country)}</p></div></div>
+                    <div className="competition-card-header"><Media name={c.name} url={c.imageUrl} /><div><h3>{c.name}</h3><p>{competitionCountryLabel(c)}</p></div></div>
                     <div className="directory-card-footer"><span>{c.seasons?.length || 0} saisons</span><Icon name="arrow" /></div>
                   </button>)}
                 </div>

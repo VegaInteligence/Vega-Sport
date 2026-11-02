@@ -16,6 +16,7 @@ export const COUNTRY_NAMES = {
   CHN: "Chine",
   COL: "Colombie",
   CRO: "Croatie",
+  CYP: "Chypre",
   CZE: "Tchéquie",
   DEN: "Danemark",
   ECU: "Équateur",
@@ -30,10 +31,12 @@ export const COUNTRY_NAMES = {
   INT: "International",
   "INT-2": "Europe",
   IRL: "Irlande",
+  IRE: "Irlande",
   ISL: "Islande",
   ISR: "Israël",
   ITA: "Italie",
   JPN: "Japon",
+  KAZ: "Kazakhstan",
   KOR: "Corée du Sud",
   KSA: "Arabie saoudite",
   LVA: "Lettonie",
@@ -52,27 +55,60 @@ export const COUNTRY_NAMES = {
   SRB: "Serbie",
   SUI: "Suisse",
   SVK: "Slovaquie",
+  SVN: "Slovénie",
   SWE: "Suède",
   THA: "Thaïlande",
   TUR: "Turquie",
   UAE: "Émirats arabes unis",
+  UKR: "Ukraine",
   USA: "États-Unis",
   VEN: "Venezuela",
+  WAL: "Pays de Galles",
   UEFA: "Europe",
 };
 export const countryLabel = (country) =>
   COUNTRY_NAMES[country] || country || "International";
+export const competitionCountry = (competition) =>
+  FEATURED_EUROPE_IDS.includes(competition.id)
+    ? "UEFA"
+    : competition.country ||
+      competition.country_code ||
+      competition.countryCode ||
+      "";
+export const competitionCountryLabel = (competition) =>
+  countryLabel(competitionCountry(competition));
+export const competitionLabel = (competition) =>
+  `${competition.name} · ${competitionCountryLabel(competition)}`;
+const countryOrder = new Intl.Collator("fr", {
+  sensitivity: "base",
+  numeric: true,
+});
+/** Shared by native filters, the home picker and both archive catalogues. */
+export function orderedCompetitions(competitions) {
+  return [...competitions].sort(
+    (a, b) =>
+      countryOrder.compare(
+        competitionCountryLabel(a),
+        competitionCountryLabel(b),
+      ) ||
+      countryOrder.compare(a.name || "", b.name || "") ||
+      countryOrder.compare(a.id || a.folder || "", b.id || b.folder || ""),
+  );
+}
 export function orderedFeatured(catalog, ids = FEATURED_LEAGUE_IDS) {
   const byId = new Map(catalog.map((item) => [item.id, item]));
   return ids.map((id) => byId.get(id)).filter(Boolean);
 }
 
-// Keep international competitions together, then order countries by their
-// French display name. Known league pyramids are listed from top to bottom.
-const INTERNATIONAL_COUNTRIES = new Set(["INT", "INT-2", "UEFA"]);
-const frenchOrder = new Intl.Collator("fr", { sensitivity: "base", numeric: true });
+// Keep the grouped catalogue and league pyramids, with the same country A-Z
+// order used by competition selectors.
+const frenchOrder = new Intl.Collator("fr", {
+  sensitivity: "base",
+  numeric: true,
+});
 const LEAGUE_ORDER = {
-  INT: ["Champions League", "Europa League", "Conference League", "World Cup"],
+  INT: ["World Cup"],
+  UEFA: ["Champions League", "Europa League", "Conference League"],
   ENG: ["Premier League", "Championship", "League One", "League Two"],
   GER: ["Bundesliga", "2. Bundesliga", "3. Liga"],
   FRA: ["Ligue 1", "Ligue 2"],
@@ -90,14 +126,12 @@ const LEAGUE_ORDER = {
   USA: ["MLS", "USL Championship", "USL League One", "MLS Next Pro"],
 };
 
-function countryRank(country) {
-  return INTERNATIONAL_COUNTRIES.has(country) ? 0 : country ? 1 : 2;
-}
-
 /** Country options use their visible French labels, not provider codes. */
 export function orderedCountryCodes(catalog) {
-  return [...new Set(catalog.map((item) => item.country).filter(Boolean))].sort(
-    (a, b) => countryRank(a) - countryRank(b) || frenchOrder.compare(countryLabel(a), countryLabel(b)) || frenchOrder.compare(a, b),
+  return [...new Set(catalog.map(competitionCountry).filter(Boolean))].sort(
+    (a, b) =>
+      frenchOrder.compare(countryLabel(a), countryLabel(b)) ||
+      frenchOrder.compare(a, b),
   );
 }
 
@@ -105,26 +139,37 @@ export function orderedCountryCodes(catalog) {
 export function competitionGroups(catalog, limit = Infinity) {
   const groups = new Map();
   for (const competition of catalog) {
-    const country = competition.country || "";
-    const key = INTERNATIONAL_COUNTRIES.has(country) ? "international" : country || "unknown";
-    if (!groups.has(key)) groups.set(key, {
-      key, country: key === "international" ? "INT" : country,
-      label: key === "international" ? "International" : country ? countryLabel(country) : "Autres compétitions",
-      competitions: [],
-    });
+    const country = competitionCountry(competition);
+    const key = country || "unknown";
+    if (!groups.has(key))
+      groups.set(key, {
+        key,
+        country,
+        label: country ? countryLabel(country) : "Autres compétitions",
+        competitions: [],
+      });
     groups.get(key).competitions.push(competition);
   }
-  const ordered = [...groups.values()].sort((a, b) =>
-    countryRank(a.country) - countryRank(b.country) || frenchOrder.compare(a.label, b.label) || frenchOrder.compare(a.key, b.key),
+  const ordered = [...groups.values()].sort(
+    (a, b) =>
+      frenchOrder.compare(a.label, b.label) ||
+      frenchOrder.compare(a.key, b.key),
   );
   let remaining = Math.max(0, limit);
   return ordered.flatMap((group) => {
     const priorities = LEAGUE_ORDER[group.country] || [];
     function rank(competition) {
-      const index = priorities.findIndex((name) => frenchOrder.compare(name, competition.name || "") === 0);
+      const index = priorities.findIndex(
+        (name) => frenchOrder.compare(name, competition.name || "") === 0,
+      );
       return index < 0 ? Number.MAX_SAFE_INTEGER : index;
     }
-    group.competitions.sort((a, b) => rank(a) - rank(b) || frenchOrder.compare(a.name || "", b.name || "") || frenchOrder.compare(a.id || "", b.id || ""));
+    group.competitions.sort(
+      (a, b) =>
+        rank(a) - rank(b) ||
+        frenchOrder.compare(a.name || "", b.name || "") ||
+        frenchOrder.compare(a.id || "", b.id || ""),
+    );
     const visible = group.competitions.slice(0, remaining);
     remaining -= visible.length;
     return visible.length ? [{ ...group, competitions: visible }] : [];

@@ -10,6 +10,10 @@ import {
 } from "../services/openfootball-history.js";
 import { date, number } from "../services/format.js";
 import { download, json, useResource } from "../services/resources.js";
+import {
+  competitionLabel,
+  orderedCompetitions,
+} from "../services/competition-selector.js";
 import { AsyncState, Card, Empty, Pager } from "./UI.jsx";
 
 async function loadSeason(path) {
@@ -206,9 +210,9 @@ function ArchiveBrowser({ index }) {
                   }}
                 >
                   <option value="all">Toutes les compétitions</option>
-                  {value.competitions.map((league) => (
+                  {orderedCompetitions(value.competitions).map((league) => (
                     <option key={league.id} value={league.id}>
-                      {league.name} · {league.country}
+                      {competitionLabel(league)}
                     </option>
                   ))}
                 </select>

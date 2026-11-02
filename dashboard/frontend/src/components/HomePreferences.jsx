@@ -6,8 +6,9 @@ import { Media, Modal } from "./UI.jsx";
 import { normalizeText } from "../model.js";
 import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
 import {
-  FEATURED_LEAGUE_IDS,
-  countryLabel,
+  competitionCountryLabel,
+  competitionLabel,
+  orderedCompetitions,
 } from "../services/competition-selector.js";
 
 function CompetitionPicker({ f, competitions, initialIds, onClose }) {
@@ -16,7 +17,7 @@ function CompetitionPicker({ f, competitions, initialIds, onClose }) {
   const search = normalizeText(query).trim();
   const visible = competitions.filter((c) =>
     normalizeText(
-      [c.name, c.country, countryLabel(c.country)].filter(Boolean).join(" "),
+      [c.name, c.country, competitionCountryLabel(c)].filter(Boolean).join(" "),
     ).includes(search),
   );
   const europe = competitions
@@ -96,63 +97,35 @@ function CompetitionPicker({ f, competitions, initialIds, onClose }) {
           onChange={(event) => setQuery(event.target.value)}
         />
       </div>
-      {[
-        [
-          "Championnats",
-          visible
-            .filter((c) => FEATURED_LEAGUE_IDS.includes(c.id))
-            .sort(
-              (a, b) =>
-                FEATURED_LEAGUE_IDS.indexOf(a.id) -
-                FEATURED_LEAGUE_IDS.indexOf(b.id),
-            ),
-        ],
-        [
-          "Coupes européennes",
-          visible.filter(
-            (c) =>
-              EUROPE_FOCUS_IDS.has(c.id) && !FEATURED_LEAGUE_IDS.includes(c.id),
-          ),
-        ],
-        [
-          "Autres compétitions",
-          visible.filter((c) => !EUROPE_FOCUS_IDS.has(c.id)),
-        ],
-      ].map(([title, items]) =>
-        items.length ? (
-          <section className="home-competition-section" key={title}>
-            <h3>{title}</h3>
-            <div
-              className="home-competition-list"
-              role="group"
-              aria-label={title}
-            >
-              {items.map((competition) => (
-                <label className="home-competition-option" key={competition.id}>
-                  <input
-                    type="checkbox"
-                    checked={selected.has(competition.id)}
-                    onChange={() =>
-                      setSelected((previous) => {
-                        const next = new Set(previous);
-                        if (next.has(competition.id))
-                          next.delete(competition.id);
-                        else next.add(competition.id);
-                        return next;
-                      })
-                    }
-                  />
-                  <Media name={competition.name} url={competition.imageUrl} />
-                  <span>
-                    <strong>{competition.name}</strong>
-                    <small>{countryLabel(competition.country)}</small>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </section>
-        ) : null,
-      )}
+      <section className="home-competition-section">
+        <div
+          className="home-competition-list"
+          role="group"
+          aria-label="Compétitions"
+        >
+          {visible.map((competition) => (
+            <label className="home-competition-option" key={competition.id}>
+              <input
+                type="checkbox"
+                checked={selected.has(competition.id)}
+                onChange={() =>
+                  setSelected((previous) => {
+                    const next = new Set(previous);
+                    if (next.has(competition.id)) next.delete(competition.id);
+                    else next.add(competition.id);
+                    return next;
+                  })
+                }
+              />
+              <Media name={competition.name} url={competition.imageUrl} />
+              <span>
+                <strong>{competition.name}</strong>
+                <small>{competitionCountryLabel(competition)}</small>
+              </span>
+            </label>
+          ))}
+        </div>
+      </section>
       {!visible.length && (
         <p className="empty-state">Aucune compétition pour cette recherche.</p>
       )}
@@ -171,11 +144,7 @@ export default function HomePreferences({ f }) {
     if (!byId.size)
       for (const competition of f.competitions)
         byId.set(competition.id, competition);
-    return [...byId.values()].sort(
-      (a, b) =>
-        (a.name || "").localeCompare(b.name || "", "fr") ||
-        (a.country || "").localeCompare(b.country || "", "fr"),
-    );
+    return orderedCompetitions([...byId.values()]);
   }, [f.manifest, f.competitions]);
   const ids =
     f.filters.league !== "all"
@@ -199,8 +168,11 @@ export default function HomePreferences({ f }) {
       : isEurope && effectiveIds.length
         ? "Top 7 Europe + UEFA"
         : effectiveIds.length === 1
-          ? competitions.find((c) => c.id === effectiveIds[0])?.name ||
-            "1 compétition"
+          ? competitionLabel(
+              competitions.find((c) => c.id === effectiveIds[0]) || {
+                name: "1 compétition",
+              },
+            )
           : effectiveIds.length
             ? `${effectiveIds.length} compétitions`
             : "Toutes les compétitions";
