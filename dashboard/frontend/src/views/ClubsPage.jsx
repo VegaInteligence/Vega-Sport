@@ -8,6 +8,7 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { Card, Media } from "../components/UI.jsx";
 import { ProfileDialog } from "../components/PlayerDetails.jsx";
 import ClubRanking from "../components/ClubRanking.jsx";
+import { ClubFacts, ClubRoster } from "../components/ClubProfile.jsx";
 import { MatchLink } from "../components/MatchLink.jsx";
 import { normalizeText, number } from "../services/format.js";
 export default function ClubsPage() {
@@ -21,7 +22,14 @@ export default function ClubsPage() {
       for (const side of ["home", "away"]) {
         const t = m[side];
         if (!map.has(t.id)) map.set(t.id, { ...t, league: m.league, count: 0 });
-        map.get(t.id).count++;
+        const club = map.get(t.id);
+        if (
+          !club.country &&
+          /^[A-Z]{3}$/.test(m.country || "") &&
+          !["INT", "EUR"].includes(m.country)
+        )
+          club.country = m.country;
+        club.count++;
       }
     return [...map.values()]
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -68,40 +76,25 @@ export default function ClubsPage() {
               </p>
             </div>
           </Card>
+          <ClubFacts
+            club={selected}
+            matches={f.data.matches.filter(
+              (m) => m.home.id === id || m.away.id === id,
+            )}
+          />
           <ClubRanking clubId={id} />
+          <ClubRoster
+            clubId={id}
+            appearances={f.data.appearances}
+            href={f.href}
+            season={f.season}
+          />
           <Card title="Matchs du club">
             {f.data.matches
               .filter((m) => m.home.id === id || m.away.id === id)
               .map((m) => (
                 <MatchLink key={m.id} match={m} />
               ))}
-          </Card>
-          <Card title="Joueurs référencés">
-            <div className="club-roster">
-              {[
-                ...new Map(
-                  f.data.appearances
-                    .filter((r) => r.teamId === id)
-                    .map((r) => [r.playerId, r]),
-                ).values(),
-              ].map((r) => (
-                <Link
-                  className="roster-player"
-                  key={r.playerId}
-                  href={f.href("/joueurs/", { id: r.playerId })}
-                >
-                  <Media
-                    name={r.name}
-                    url={r.imageUrl}
-                    className="player-avatar"
-                  />
-                  <span>
-                    <strong>{r.name}</strong>
-                    <small>{r.position || ""}</small>
-                  </span>
-                </Link>
-              ))}
-            </div>
           </Card>
           {profile && (
             <ProfileDialog

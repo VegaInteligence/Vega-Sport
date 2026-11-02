@@ -38,3 +38,9 @@ ligues simples ou lorsque le calendrier complet est un aller-retour équilibré.
 Il est signalé comme calculé et ne tient pas compte des sanctions ni de tous
 les départages. Les autres formats affichent une indisponibilité plutôt qu’un
 classement supposé.
+
+## Fiches clubs
+
+La fiche regroupe les joueurs inscrits dans les matchs collectés de la saison choisie en gardiens, défenseurs, milieux et attaquants. Le dernier poste connu dans une composition est utilisé ; les joueurs sans poste restent dans une rubrique distincte. Ces joueurs ne constituent pas nécessairement l’effectif complet ou actuel du club.
+
+Le stade, l’entraîneur et l’année de fondation proviennent de Wikidata lorsque l’identité du club est établie par l’identifiant UEFA existant ou, à défaut, par une correspondance unique du nom exact et du pays. Les portraits proviennent de Wikimedia Commons avec le crédit et la licence indiqués. Si Wikidata ne fournit pas l’information, la fiche indique l’entraîneur observé au dernier match collecté et le stade du dernier match à domicile renseigné par PitchAPI. Les informations Wikidata sont actuelles au moment de leur consultation et ne sont pas présentées comme historiques pour la saison choisie. Les réponses sont mises en cache côté site.
