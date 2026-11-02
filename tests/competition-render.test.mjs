@@ -40,6 +40,7 @@ test("competition page renders a result-derived league table and its limits", as
     "../components/Icon.jsx": { __esModule: true, default: () => null },
     "../components/OpenFootballArchive.jsx": { __esModule: true, default: () => null },
     "../components/CompetitionHighlights.jsx": { __esModule: true, default: ({ season }) => elem("aside", { "data-highlights-season": season }, "Prochains matchs et derniers résultats") },
+    "../components/HistoricalGoalsArchive.jsx": { __esModule: true, default: () => null },
     "../components/Layout.jsx": { __esModule: true, default: ({ children }) => elem("main", null, children) },
     "../hooks/FootballContext.jsx": { useFootball: () => context }, "../components/UI.jsx": UI,
     "../components/MatchLink.jsx": { MatchLink: ({ match }) => elem("p", { "data-match": match.id }, match.id) },
@@ -63,6 +64,7 @@ test("competition page renders a result-derived league table and its limits", as
   assert.match(html, /Classement calculé à partir des résultats disponibles/);
   assert.match(html, /Championnats à la une/);
   assert.match(html, /Archives de résultats/);
+  assert.match(html, /Archives de buts/);
   assert.match(html, /France/);
   assert.match(html, /Paris/);
   assert.match(html, /Lille/);
@@ -78,6 +80,7 @@ test("competition page renders a result-derived league table and its limits", as
   assert.match(sourced, /Groupe A/);
   assert.match(sourced, /Groupe B/);
   assert.match(sourced, /classements SportScore et les matchs PitchAPI/);
+  assert.match(sourced, /peuvent être actualisés à des moments différents/);
   context.season = "2025/2026";
   const historic = renderToStaticMarkup(elem(mod.exports.default));
   assert.doesNotMatch(historic, /Groupe A/);

@@ -38,3 +38,5 @@ export const renderSeasonProfile=(rows,matches,id)=>renderToStaticMarkup(<Footba
 import {historicalRows,historicalScore} from '../dashboard/frontend/src/services/openfootball-history.js';
 export const renderHistoricalResults=(season,competition='all',query='')=>serialize(<HistoryResults season={season} competition={competition} query={query} page={1} onPage={()=>{}}/>);
 import {HistoryResults} from '../dashboard/frontend/src/components/OpenFootballArchive.jsx';
+import {GoalResults} from '../dashboard/frontend/src/components/HistoricalGoalsArchive.jsx';
+export const renderHistoricalGoals=(season,competition='all',query='')=>serialize(<GoalResults season={season} competition={competition} query={query} page={1} onPage={()=>{}}/>);

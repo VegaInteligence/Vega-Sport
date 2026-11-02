@@ -22,6 +22,7 @@ import { dataUrl } from "../data-url.js";
 import CompetitionScope from "../components/CompetitionScope.jsx";
 import OpenFootballArchive from "../components/OpenFootballArchive.jsx";
 import CompetitionHighlights from "../components/CompetitionHighlights.jsx";
+import HistoricalGoalsArchive from "../components/HistoricalGoalsArchive.jsx";
 import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
 import { SPORTSCORE_LEAGUES } from "../services/sportscore-standings.js";
 import { FEATURED_EUROPE_IDS, FEATURED_LEAGUE_IDS, countryLabel, orderedFeatured, orderedCountryCodes, competitionGroups } from "../services/competition-selector.js";
@@ -499,7 +500,7 @@ export default function CompetitionsPage() {
     <Layout path="/competitions/" title="Compétitions">
       {historical ? <>
         <button className="inline-link competition-back" onClick={() => setHistorical(false)}>← Retour aux compétitions</button>
-        <OpenFootballArchive />
+        {historical === "goals" ? <HistoricalGoalsArchive /> : <OpenFootballArchive />}
       </> : <>
       {!directory ? <>
         <section
@@ -557,7 +558,7 @@ export default function CompetitionsPage() {
               </div>
             )}
           </section>
-        <div className="historical-archive-entry"><button className="button button-secondary" onClick={() => setHistorical(true)}>Archives de résultats</button></div>
+        <div className="historical-archive-entry"><button className="button button-secondary" onClick={() => setHistorical("results")}>Archives de résultats</button>{" "}<button className="button button-secondary" onClick={() => setHistorical("goals")}>Archives de buts</button></div>
         {selected ? <Fixtures key={selected.id} competition={selected} /> : !id && !choice.ready ? <div className="loading-state" role="status">Choix du championnat…</div> : <Empty>Compétition inconnue ou indisponible.</Empty>}
       </> : <>
         <button className="inline-link competition-back" onClick={() => setDirectory(false)}>← Retour à la compétition</button>
