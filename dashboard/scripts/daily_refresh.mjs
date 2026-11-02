@@ -367,12 +367,7 @@ receipt.requests = requests;
 receipt.retries = retries;
 await write(path.join(archive, "catalogue.json"), {
   ...catalog.data,
-  leagues: catalog.data.leagues.map((league) => ({
-    ...league,
-    seasons: (league.seasons || []).filter(
-      (value) => Number(String(value).slice(0, 4)) >= 2024,
-    ),
-  })),
+  leagues: catalog.data.leagues,
 });
 await write(path.join(archive, "inventory.json"), {
   retrieved_at_utc: now.toISOString(),

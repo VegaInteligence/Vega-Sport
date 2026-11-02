@@ -49,7 +49,7 @@ def main():
         for competition in inventory['competitions']:
             label = season_label(competition['season'])
             year = int(label[:4]) if len(label) >= 4 and label[:4].isdigit() else 0
-            if 2024 <= year:
+            if year:
                 groups.setdefault((label, archive, competition['id']), []).append(competition)
     # A competition can be retained in more than one archive. Build it once,
     # from the most recently retrieved inventory, preserving its source season.

@@ -1,7 +1,8 @@
 # Football Ranking — données PitchAPI
 
-L'archive locale couvre les saisons européennes PitchAPI 2024/25 à 2026/27,
-les saisons civiles 2024 à 2026 et la Coupe du monde 2026. Les réponses brutes sont conservées dans
+Les saisons effectivement importées et leur couverture figurent dans le manifeste
+`data/raw/index.json`. PitchAPI propose des saisons remontant à 2021 selon les
+compétitions, ainsi que la Coupe du monde 2026. Les réponses brutes sont conservées dans
 `data/sources/pitchapi/archives/europe_2021_2026/`, `data/sources/pitchapi/archives/europe_2026_2027/` et `data/sources/pitchapi/archives/world_cup_2026/`, par compétition et match.
 Les calendriers et scores sont visibles dès l'inventaire ; les détails peuvent
 encore être en cours de collecte, avec une couverture indiquée dans le dashboard.
@@ -10,7 +11,7 @@ conservant la valeur exacte du fournisseur dans les données.
 
 ## Configuration
 
-Créer un fichier `.env` à la racine à partir de `.env.example`, puis renseigner
+Créer `dashboard/.env` à partir de `dashboard/.env.example`, puis renseigner
 `PITCHAPI_API_KEY`. Le fichier `.env` est ignoré par Git. La clé peut aussi être
 fournie dans la variable d'environnement `PITCHAPI_API_KEY`, qui est prioritaire.
 
@@ -109,11 +110,11 @@ n'ajoute que les instantanés et archives générés ; elle reporte la publicati
 `main` local et distant diffèrent ou si d'autres changements sont déjà indexés. La clé reste
 dans `dashboard/.env`. La durée dépend du débit et de la couverture du fournisseur.
 
-Pour limiter cette collecte à 2024/2025 et aux saisons civiles 2024, sans
+Pour collecter 2023/2024 et les saisons civiles 2023, sans
 réactualiser la saison courante lors du dernier checkpoint :
 
 ```powershell
-node dashboard/scripts/publish_history.mjs --years=2024 --skip-current
+node dashboard/scripts/publish_history.mjs --years=2023 --skip-current
 ```
 
 Le manifeste indique séparément si ce périmètre demandé est complet et si les

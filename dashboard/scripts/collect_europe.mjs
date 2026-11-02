@@ -196,7 +196,9 @@ if (
   throw new Error("Could not retrieve league catalogue.");
 catalogResponse.data.leagues = catalogResponse.data.leagues.map((league) => ({
   ...league,
-  seasons: (league.seasons || []).filter((season) => inHistoryScope({ season }, null)),
+  seasons: (league.seasons || []).filter((season) =>
+    inHistoryScope({ season }, null),
+  ),
 }));
 await atomicJson(path.join(dataRoot, "catalogue.json"), catalogResponse.data);
 const european = catalogResponse.data.leagues.filter(
@@ -208,12 +210,7 @@ const allSelected = historical
   ? european
       .flatMap((l) =>
         (l.seasons || [])
-          .filter(
-            (s) =>
-              /^(202[4-5])(?:\/(202[5-6]))?$/.test(s) &&
-              (s.length === 4 ||
-                Number(s.slice(5)) === Number(s.slice(0, 4)) + 1),
-          )
+          .filter((s) => inHistoryScope({ season: s }, null))
           .map((s) => ({ ...l, requested_season: s })),
       )
       .sort(

@@ -26,7 +26,7 @@ cups={'Champions League','Europa League','Conference League','1. Lig','World Cup
 for l in catalogue:
  if not (l.get('country_code') in countries or (l.get('country_code') in ('INT','INT-2') and l.get('name') in cups)):continue
  for s in l.get('seasons',[]):
-  if len(s)>=4 and s[:4].isdigit() and int(s[:4])>=2024:jobs.append((l,s))
+  if len(s)>=4 and s[:4].isdigit():jobs.append((l,s))
 def check(job):
  l,s=job;key=(l['id'],s);p='/leagues/'+l['id']+'/matches?'+urllib.parse.urlencode({'season':s,'status':'all'});localrow=local.get(key);out={'id':l['id'],'name':l['name'],'country_code':l['country_code'],'season':s,'in_saved_inventory':bool(localrow)}
  try:
@@ -53,5 +53,5 @@ required={'match','events','players','shots','stats','lineups','momentum','h2h',
 for row in results:
  row['finished_missing_families']=[{'match_id':mid,'missing':sorted(required-covered[mid])} for mid in row.get('live_finished_ids',[]) if required-covered[mid]]
  row.pop('live_finished_ids',None)
-report={'timestamp_utc' :datetime.datetime.now(datetime.timezone.utc).isoformat(),'setup':'Public STATARENA server-side PitchAPI proxy; locally saved source bundle inventories and canonical match-observations index. Scope: European competitions and FIFA World Cup, seasons from 2024 onward. No credentials recorded.','command':'python3 dashboard/scripts/audit_pitchapi_coverage.py','catalogue_leagues':len(catalogue),'catalogue_competition_seasons':len(jobs),'successful':sum('error' not in r for r in results),'failed':sum('error' in r for r in results),'season_competitions_not_in_inventory':sum(not r['in_saved_inventory'] for r in results),'live_finished_without_observations':sum(len(r.get('finished_without_observations',[])) for r in results),'new_fixtures':sum(len(r.get('new_fixture_ids',[])) for r in results),'finished_missing_families':sum(len(r['finished_missing_families']) for r in results),'results':results}
+report={'timestamp_utc' :datetime.datetime.now(datetime.timezone.utc).isoformat(),'setup':'Public STATARENA server-side PitchAPI proxy; locally saved source bundle inventories and canonical match-observations index. Scope: European competitions and FIFA World Cup, all seasons in the catalogue. No credentials recorded.','command':'python3 dashboard/scripts/audit_pitchapi_coverage.py','catalogue_leagues':len(catalogue),'catalogue_competition_seasons':len(jobs),'successful':sum('error' not in r for r in results),'failed':sum('error' in r for r in results),'season_competitions_not_in_inventory':sum(not r['in_saved_inventory'] for r in results),'live_finished_without_observations':sum(len(r.get('finished_without_observations',[])) for r in results),'new_fixtures':sum(len(r.get('new_fixture_ids',[])) for r in results),'finished_missing_families':sum(len(r['finished_missing_families']) for r in results),'results':results}
 (OUT/'live-catalogue-audit.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n');print(json.dumps({k:v for k,v in report.items() if k!='results'},indent=2),flush=True)

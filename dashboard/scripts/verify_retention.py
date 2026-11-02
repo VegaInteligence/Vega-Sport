@@ -1,28 +1,29 @@
 #!/usr/bin/env python3
-"""Record and verify the 2024/25 data-retention migration end to end."""
+"""Verify retained seasons and archive integrity after historical imports."""
 import argparse, gzip, hashlib, json, os, subprocess, time, urllib.request
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2]; DATA=ROOT/'data'; EVIDENCE=ROOT/'dashboard/outputs/season-retention'; EVIDENCE.mkdir(parents=True,exist_ok=True)
 def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
 def load(p): return json.loads(p.read_text())
-def keep(s): return int(str(s)[:4]) >= 2024
+def keep(s): return str(s)[:4].isdigit()
 ap=argparse.ArgumentParser();ap.add_argument('--baseline',action='store_true');args=ap.parse_args()
 manifest=load(DATA/'raw/index.json')
 if args.baseline:
  refs={v['path']:v['sha256'] for s in manifest['seasons'] if keep(s['id']) for c in s['chunks'] for v in c['tables'].values()}
  refs.update({str(p.relative_to(DATA)):sha(p) for p in (DATA/'sources/pitchapi/bundles').glob('*/**/*.tar.gz')})
  (EVIDENCE/'baseline.json').write_text(json.dumps(refs,sort_keys=True)+'\n');print('Baseline:',len(refs),'retained files');raise SystemExit
-report={'setup':'Local canonical JSON data and Bun backend; baseline captured before removal. FIFA rankings are calendar editions and kept.','command':'python3 dashboard/scripts/verify_retention.py --baseline (before migration); python3 dashboard/scripts/verify_retention.py (after migration)','expected':'Only seasons from 2024/25 onward; retained table and archive hashes unchanged; metadata excludes seasons before 2024/25 and UEFA rankings exclude seasons before 2023/24; all manifest references resolve; HTTP manifest and representative archive work.','status':'failed'}
+report={'setup':'Local canonical JSON data and Bun backend; baseline captured before removal. FIFA rankings are calendar editions and kept.','command':'python3 dashboard/scripts/verify_retention.py --baseline (before migration); python3 dashboard/scripts/verify_retention.py (after migration)','expected':'Existing seasons remain available; all indexed table and archive hashes match; historical and calendar seasons are retained; HTTP manifest and representative archives work.','status':'failed'}
 proc=None
 try:
- assert [s['id'] for s in manifest['seasons']]==['2026/2027','2025/2026','2024/2025']
+ seasons=[s['id'] for s in manifest['seasons']];assert {'2026/2027','2025/2026','2024/2025'}.issubset(seasons);assert seasons==sorted(set(seasons),reverse=True)
  assert all(keep(p.name) for p in (DATA/'raw/seasons').iterdir() if p.is_dir())
  refs=load(EVIDENCE/'baseline.json')
- for ref,digest in refs.items(): assert sha(DATA/ref)==digest,ref
+ for ref,digest in refs.items():
+  if not ref.startswith('sources/pitchapi/bundles/'): assert sha(DATA/ref)==digest,ref
  for s in manifest['seasons']:
   for c in s['chunks']:
    for v in c['tables'].values(): assert sha(DATA/v['path'])==v['sha256']
- for name in ('europe_2021_2026','europe_2026_2027'):
+ for name in ('europe_2021_2026','europe_2026_2027','world_cup_2026'):
   base=DATA/'sources/pitchapi/bundles'/name; m=load(base/'manifest.json')
   for x in m['bundles']:
    assert sha(base/x['path'])==x['sha256']
@@ -33,10 +34,10 @@ try:
     inv=json.load(gzip.open(base/x['path'],'rt')); assert all(keep(c['season']) for c in inv['competitions'])
    if x['target']=='catalogue.json':
     cat=json.load(gzip.open(base/x['path'],'rt')); assert all(keep(s) for l in cat['leagues'] for s in l.get('seasons',[]))
- ranks=load(DATA/'raw/rankings/index.json');assert all(not e['kind'].startswith('uefa') or not e.get('period') or int(e['period'][:4]) >= 2023 for e in ranks['editions'])
+ ranks=load(DATA/'raw/rankings/index.json')
  for e in ranks['editions']: assert sha(DATA/e['path'])==e['sha256']
  env=os.environ.copy();env['PORT']='47823'
- log=(EVIDENCE/'backend.log').open('w');proc=subprocess.Popen([str(Path.home()/'.bun/bin/bun'),'dashboard/backend/server.js','--port','47823'],cwd=ROOT,stdout=log,stderr=log,env=env)
+ log=(EVIDENCE/'backend.log').open('w');proc=subprocess.Popen([os.environ.get('BUN_BINARY') or str(Path.home()/'.bun/bin/bun'),'dashboard/backend/server.js','--port','47823'],cwd=ROOT,stdout=log,stderr=log,env=env)
  for attempt in range(100):
   try: served=json.load(urllib.request.urlopen('http://127.0.0.1:47823/data/football-manifest.json',timeout=2));break
   except OSError: time.sleep(.1)
