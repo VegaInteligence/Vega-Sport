@@ -35,16 +35,18 @@ export default function PlayerEvolution({ id, profile }) {
             ))}
           </select>
         </label>
-        <Segments
-          label="Base de l’évolution"
-          value={mode}
-          onChange={setMode}
-          items={[
-            ["per90", "Par 90"],
-            ["total", "Totaux"],
-            ["perMatch", "Par match"],
-          ]}
-        />
+        {!["rating", "minutes"].includes(metric) && (
+          <Segments
+            label="Base de l’évolution"
+            value={mode}
+            onChange={setMode}
+            items={[
+              ["per90", "Par 90"],
+              ["total", "Totaux"],
+              ["perMatch", "Par match"],
+            ]}
+          />
+        )}
       </div>
       <AsyncState resource={history}>
         {(seasons) => (

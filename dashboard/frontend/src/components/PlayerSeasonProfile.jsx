@@ -18,12 +18,13 @@ import {
   rankMetric,
   roleAssessments,
   SCOUT_METRICS,
+  similarPlayers,
 } from "../services/scouting.js";
 import {
   comparisonKey,
   playerSelection,
 } from "../services/research-storage.js";
-import { date, number } from "../services/format.js";
+import { date, normalizeText, number } from "../services/format.js";
 import { Card, Empty, Media, Segments } from "./UI.jsx";
 import {
   BookmarkButton,
@@ -109,24 +110,28 @@ export function PlayerMetricTable({ profile, keys, mode, cohorts }) {
     </div>
   );
 }
-function ProfileComparison({ profile, profiles }) {
+function ProfileComparison({ profile, profiles, cohorts }) {
   const f = useFootball(),
     r = useResearch(),
     [search, setSearch] = useState("");
+  const needle = normalizeText(search).trim();
+  const suggestions = useMemo(
+    () =>
+      cohorts ? similarPlayers(profile, cohorts, 4).map((s) => s.profile) : [],
+    [profile, cohorts],
+  );
   const candidates = useMemo(
     () =>
-      search.length >= 2
+      needle.length >= 2
         ? profiles
             .filter(
               (p) =>
-                p.id !== profile.id &&
-                p.name
-                  .toLocaleLowerCase("fr")
-                  .includes(search.toLocaleLowerCase("fr")),
+                p.id !== profile.id && normalizeText(p.name).includes(needle),
             )
+            .sort((a, b) => b.minutes - a.minutes)
             .slice(0, 8)
-        : [],
-    [profiles, profile.id, search],
+        : suggestions,
+    [profiles, profile.id, needle, suggestions],
   );
   const seasons = f.manifest.seasons
     .map((s) => s.id)
@@ -183,6 +188,9 @@ function ProfileComparison({ profile, profiles }) {
           placeholder="Nom du joueur…"
         />
       </label>
+      {needle.length < 2 && candidates.length > 0 && (
+        <p className="club-note">Profils statistiques proches au même poste</p>
+      )}
       <div className="research-saved-list">
         {candidates.map((candidate) => (
           <div className="research-selection" key={candidate.id}>
@@ -641,7 +649,11 @@ export default function PlayerSeasonProfile({
           )}
           {view === "evolution" && <Evolution id={id} profile={profile} />}
           {view === "compare" && (
-            <ProfileComparison profile={profile} profiles={profiles} />
+            <ProfileComparison
+              profile={profile}
+              profiles={profiles}
+              cohorts={cohorts}
+            />
           )}
           {view === "matches" && (
             <div className="research-context">

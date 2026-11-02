@@ -385,7 +385,7 @@ export default function PlayerIndices({ rows, profiles }) {
       {visible.length ? (
         <>
           <div className="table-scroll">
-            <table className="data-table">
+            <table className="data-table research-index-table">
               <thead>
                 <tr>
                   <th>#</th>
