@@ -21,6 +21,7 @@ test("cup view identifies the edition and preserves penalty shootouts", async ()
   const stubs = {
     "react": React,
     "./UI.jsx": { Card, Media: () => null, Pager: () => null, Segments: ({ items }) => elem("div", null, items.map(([id, text]) => elem("button", { key: id }, text))), AsyncState: ({ resource, children }) => children(resource.value), Empty: ({ children }) => elem("p", null, children) },
+    "./KnockoutBracket.jsx": { __esModule: true, default: () => elem("div", null, "Tableau éliminatoire") },
     "../services/format.js": { date: String },
     "../services/resources.js": { useResource: () => ({ value: { matches: rows } }), json: () => {} },
     "../data-url.js": { dataUrl: (path) => path },
@@ -33,6 +34,7 @@ test("cup view identifies the edition and preserves penalty shootouts", async ()
   vm.runInThisContext("(function(require,module,exports){" + compiled + "\n})", { filename })((name) => { if (!(name in stubs)) throw Error("Unexpected import " + name); return stubs[name]; }, mod, mod.exports);
   const html = renderToStaticMarkup(elem(mod.exports.default, { competition: { id: "open-cup:france-cup", name: "Coupe de France", country: "FRA", source: "openfootball", sourceKey: "france-cup", seasons: ["2024/2025"], defaultSeason: "2024/2025", coverage: "Archive 2024/2025" } }));
   assert.match(html, /Coupe de France/);
+  assert.match(html, /Tableau/);
   assert.match(html, /Archive 2024\/2025/);
   assert.match(html, /Paris FC/);
   assert.match(html, /1 – 1/);

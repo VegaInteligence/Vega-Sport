@@ -46,7 +46,7 @@ export function competitionSearchText(competition, countryName = "") {
 
 /** Native provider IDs remain authoritative; no two sources are merged by name. */
 export function mergeCupCatalog(nativeCompetitions, supplementalIndex) {
-  const native = nativeCompetitions.map((competition) => competition.id === WORLD_CUP_ID ? { ...competition, name: "Coupe du monde" } : competition);
+  const native = nativeCompetitions.map((competition) => competition.id === WORLD_CUP_ID ? { ...competition, name: "Coupe du monde", seasons: [...new Set([...(competition.seasons || []), ...WORLD_CUP_FALLBACK.seasons])].sort().reverse() } : competition);
   const ids = new Set(native.map((competition) => competition.id));
   const world = ids.has(WORLD_CUP_ID) ? [] : [WORLD_CUP_FALLBACK];
   const extras = supplementalCupCatalog(supplementalIndex);

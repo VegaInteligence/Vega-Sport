@@ -59,7 +59,7 @@ export function normalizeOpenCup(matches) {
     const notes = [];
     if (extra) notes.push("après prolongation");
     if (penalties) notes.push("tirs au but " + penalties[0] + " – " + penalties[1]);
-    return [{ key: "open:" + index, date: validDay(match.date) ? match.date : "", home, away, score, notes, round: readableRound(match.round, match.group), status: score ? "finished" : "scheduled" }];
+    return [{ key: "open:" + index, date: validDay(match.date) ? match.date : "", home, away, score, penalties, notes, roundName: String(match.round || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: score ? "finished" : "scheduled" }];
   });
 }
 

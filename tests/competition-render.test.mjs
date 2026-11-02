@@ -22,9 +22,9 @@ test("competition page renders a result-derived league table and its limits", as
   const ordering = await import("../dashboard/frontend/src/services/competition-matches.js");
   const cups = await import("../dashboard/frontend/src/services/cup-catalog.js");
   let requestedId = "l_3FJFUl";
-  let forceMatchView = false;
+  let forceMatchView = false, forceBracketView = false;
   let forceDirectory = false, hookCount = 0;
-  const reactStub = { ...React, useState: (initial) => { const [value, setValue] = React.useState(initial); hookCount++; if (forceDirectory && hookCount === 3) return [true, setValue]; return [forceMatchView && initial === "standings" ? "matches" : value, setValue]; } };
+  const reactStub = { ...React, useState: (initial) => { const [value, setValue] = React.useState(initial); hookCount++; if (forceDirectory && hookCount === 3) return [true, setValue]; return [forceBracketView && initial === "standings" ? "bracket" : forceMatchView && initial === "standings" ? "matches" : value, setValue]; } };
   let externalTable = null;
   const league = { id: "l_3FJFUl", name: "Ligue 1", country: "FRA", seasons: ["2026/2027", "2025/2026"] };
   const matches = [
@@ -42,6 +42,7 @@ test("competition page renders a result-derived league table and its limits", as
     "../components/Icon.jsx": { __esModule: true, default: () => null },
     "../components/OpenFootballArchive.jsx": { __esModule: true, default: () => null },
     "../components/CupCompetition.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-cup-id": competition.id }, competition.name) },
+    "../components/NativeKnockoutBracket.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-native-bracket": competition.id }, "Tableau éliminatoire") },
     "../components/CompetitionHighlights.jsx": { __esModule: true, default: ({ season }) => elem("aside", { "data-highlights-season": season }, "Prochains matchs et derniers résultats") },
     "../components/HistoricalGoalsArchive.jsx": { __esModule: true, default: () => null },
     "../components/Layout.jsx": { __esModule: true, default: ({ children, showSeasonContext = true, showDataContext = true }) => elem("main", { "data-season-context": String(showSeasonContext), "data-data-context": String(showDataContext) }, children) },
@@ -123,6 +124,12 @@ test("competition page renders a result-derived league table and its limits", as
   const spanishCup = renderToStaticMarkup(elem(mod.exports.default));
   assert.match(spanishCup, /data-cup-id="open-matchday:ESP_CUP_copa-del-rey"/);
   assert.match(spanishCup, /<option value="open-matchday:ESP_CUP_copa-del-rey" selected=""/);
+  requestedId = "l_1XLtP0";
+  forceBracketView = true;
+  const worldBracket = renderToStaticMarkup(elem(mod.exports.default));
+  assert.match(worldBracket, /data-native-bracket="l_1XLtP0"/);
+  assert.match(worldBracket, /Tableau éliminatoire/);
+  forceBracketView = false;
   requestedId = "l_3FJFUl";
 
   forceMatchView = true;

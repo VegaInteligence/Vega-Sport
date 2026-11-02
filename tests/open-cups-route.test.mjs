@@ -5,17 +5,21 @@ import { GET } from "../dashboard/frontend/app/api/open-cups/route.js";
 test("open cup route allows known editions and rejects arbitrary upstream paths", async () => {
   const original = globalThis.fetch;
   const urls = [];
-  globalThis.fetch = async (url) => { urls.push(url); return Response.json({ name: "Euro 2024", matches: [{ date: "2024-07-14", team1: "Spain", team2: "England", score: { ft: [2, 1] } }] }); };
+  globalThis.fetch = async (url) => { urls.push(url); return Response.json({ name: "Euro 2024", matches: [{ num: 51, date: "2024-07-14", team1: "Spain", team2: "England", score: { ft: [2, 1] } }] }); };
   try {
     const valid = await GET(new Request("http://localhost/api/open-cups?competition=euro&season=2024"));
     assert.equal(valid.status, 200);
     const body = await valid.json();
     assert.equal(body.matches.length, 1);
+    assert.equal(body.matches[0].num, 51);
     assert.equal(body.source.name, "OpenFootball");
     assert.match(urls[0], /^https:\/\/raw\.githubusercontent\.com\/openfootball\/euro\.json\/master\/2024\/euro\.json$/);
     const bad = await GET(new Request("http://localhost/api/open-cups?competition=euro&season=../../secret"));
     assert.equal(bad.status, 400);
     assert.equal(urls.length, 1);
+    const world = await GET(new Request("http://localhost/api/open-cups?competition=world-cup-history&season=2022"));
+    assert.equal(world.status, 200);
+    assert.match(urls[1], /worldcup\.json\/master\/2022\/worldcup\.json$/);
   } finally { globalThis.fetch = original; }
 });
 

@@ -24,6 +24,7 @@ import CompetitionScope from "../components/CompetitionScope.jsx";
 import OpenFootballArchive from "../components/OpenFootballArchive.jsx";
 import CompetitionHighlights from "../components/CompetitionHighlights.jsx";
 import CupCompetition from "../components/CupCompetition.jsx";
+import NativeKnockoutBracket from "../components/NativeKnockoutBracket.jsx";
 import HistoricalGoalsArchive from "../components/HistoricalGoalsArchive.jsx";
 import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
 import CompetitionStandings from "../components/CompetitionStandings.jsx";
@@ -171,6 +172,7 @@ function Fixtures({ competition, day }) {
     competition?.seasons?.find((s) => seasonLabel(s) === f.season) || competition?.seasons?.[0] || f.season,
   );
   const supported = !day;
+  const hasKnockout = Boolean(competition && (competition.id === WORLD_CUP_ID || FEATURED_EUROPE_IDS.includes(competition.id)));
   const [view, setView] = useState(supported ? "standings" : "matches");
   const [status, setStatus] = useState(() => defaultCompetitionMatchStatus(day));
   const [page, setPage] = useState(1);
@@ -201,7 +203,7 @@ function Fixtures({ competition, day }) {
               {competition.seasons?.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </label>
-          {supported && <Segments value={view} onChange={(next) => { if (next === "matches" && view !== "matches") { setStatus("finished"); setPage(1); } setView(next); }} label="Vue de la compétition" items={[["standings", "Classement"], ["matches", "Matchs"]]} />}
+          {supported && <Segments value={view} onChange={(next) => { if (next === "matches" && view !== "matches") { setStatus("finished"); setPage(1); } setView(next); }} label="Vue de la compétition" items={[["standings", "Classement"], ["matches", "Matchs"], ...(hasKnockout ? [["bracket", "Tableau"]] : [])]} />}
         </div>
       )}
       <AsyncState resource={resource}>
@@ -213,7 +215,7 @@ function Fixtures({ competition, day }) {
           const pages = Math.max(1, Math.ceil(rows.length / 30)), current = Math.min(page, pages);
           return <>
             {value.error && <p role="status">{value.error} · données collectées affichées.</p>}
-            {supported && view === "standings" ? <CompetitionStandings competition={competition} season={season} matches={value.matches || []} source={value.source} /> : supported ? <MatchdaySchedule key={competition.id + ":" + season} competition={competition} season={season} initialStatus={status} matches={(value.matches || []).filter((m) => f.focus !== "europe" || EUROPE_FOCUS_IDS.has(m.league?.id || m.leagueId))} /> : <>
+            {supported && view === "bracket" && hasKnockout ? <NativeKnockoutBracket competition={competition} season={season} matches={value.matches || []} /> : supported && view === "standings" ? <CompetitionStandings competition={competition} season={season} matches={value.matches || []} source={value.source} /> : supported ? <MatchdaySchedule key={competition.id + ":" + season} competition={competition} season={season} initialStatus={status} matches={(value.matches || []).filter((m) => f.focus !== "europe" || EUROPE_FOCUS_IDS.has(m.league?.id || m.leagueId))} /> : <>
               <Segments value={status} onChange={(v) => { setStatus(v); setPage(1); }} label="Statut des rencontres" items={[["finished", "Résultats"], ["not_started", "À venir"], ["all", "Tous"]]} />
               {!day && <p className="competition-matches-order">{status === "finished" ? "Les résultats les plus récents en premier" : status === "not_started" ? "Les prochaines rencontres en premier" : "Résultats récents, puis rencontres à venir"}</p>}
               {rows.slice((current - 1) * 30, current * 30).map((m) => <MatchLink key={m.id} match={m} />)}

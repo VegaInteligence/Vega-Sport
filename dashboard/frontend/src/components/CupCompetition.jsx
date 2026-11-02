@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { Card, Media, Pager, Segments, AsyncState, Empty } from "./UI.jsx";
 import { date } from "../services/format.js";
+import KnockoutBracket from "./KnockoutBracket.jsx";
 import { useResource, json } from "../services/resources.js";
 import { dataUrl } from "../data-url.js";
 import { competitionCountryLabel } from "../services/competition-selector.js";
@@ -35,6 +36,8 @@ function CupMatch({ match }) {
 
 export default function CupCompetition({ competition }) {
   const [season, setSeason] = useState(competition.defaultSeason);
+  const [view, setView] = useState("matches");
+  const supportsBracket = competition.source === "openfootball";
   const [status, setStatus] = useState(competition.source === "open-matchday" && !Number(competition.tables?.results?.rows) ? "scheduled" : "finished");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -55,15 +58,18 @@ export default function CupCompetition({ competition }) {
             {competition.seasons.map((value) => <option key={value} value={value}>{editionLabel(competition, value)}</option>)}
           </select>
         </label>
-        <Segments label="Vue des matchs" value={status} onChange={(next) => { setStatus(next); setPage(1); }} items={[["finished", "Résultats"], ["scheduled", "À venir"], ["all", "Tous"]]} />
-        <input type="search" aria-label="Rechercher une équipe dans la coupe" placeholder="Rechercher une équipe…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />
+        {supportsBracket && <Segments label="Vue de la compétition" value={view} onChange={setView} items={[["matches", "Matchs"], ["bracket", "Tableau"]]} />}
+        {view === "matches" && <>
+          <Segments label="Vue des matchs" value={status} onChange={(next) => { setStatus(next); setPage(1); }} items={[["finished", "Résultats"], ["scheduled", "À venir"], ["all", "Tous"]]} />
+          <input type="search" aria-label="Rechercher une équipe dans la coupe" placeholder="Rechercher une équipe…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />
+        </>}
       </div>
       <p className="cup-source">
         {competition.source === "open-matchday" ? <><a href="https://github.com/oladeeayo/open-matchday">open-matchday</a>{competition.sourceDate ? " · données du " + date(competition.sourceDate) : ""} · couverture selon la source · usage non commercial</> : <><a href={"https://github.com/openfootball/" + (competition.sourceKey === "euro" ? "euro.json" : competition.sourceKey === "france-cup" ? "europe" : "worldcup.json")}>OpenFootball</a> · {competition.coverage || "résultats et calendrier"} · mise à jour selon la source</>}
       </p>
       {competition.sourceKey === "euro" && season === "2028" && <p className="cup-source">Les équipes indiquées par des codes restent à déterminer.</p>}
       <AsyncState resource={resource}>
-        {(value) => <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} />}
+        {(value) => view === "bracket" ? <KnockoutBracket matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} />}
       </AsyncState>
     </Card>
   );

@@ -19,6 +19,8 @@ test("cup catalogue exposes actual cup data, Euro, France archive and World Cup 
   assert.ok(competitionSearchText({ name: "FA Cup", aliases: ["Coupe d’Angleterre"] }).includes(normalizeCompetitionQuery("coupe d'angleterre")));
   const merged = mergeCupCatalog([{ id: WORLD_CUP_ID, name: "World Cup", country: "INT", seasons: ["2026", "2022"] }], index);
   assert.equal(merged.filter((item) => item.id === WORLD_CUP_ID).length, 1);
+  const sparse = mergeCupCatalog([{ id: WORLD_CUP_ID, name: "World Cup", seasons: ["2026"] }], index);
+  assert.deepEqual(sparse.find((item) => item.id === WORLD_CUP_ID).seasons, ["2026", "2022"]);
   assert.ok(merged.some((item) => item.id === "open-cup:euro" && item.seasons.includes("2024")));
   assert.ok(merged.some((item) => item.id === "open-cup:france-cup" && item.defaultSeason === "2024/2025"));
   assert.ok(merged.some((item) => item.id === "open-cup:world-cup-history" && item.seasons.includes("1930")));
