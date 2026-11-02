@@ -18,7 +18,12 @@ import ClubRanking from "../components/ClubRanking.jsx";
 import { ClubFacts, ClubRoster } from "../components/ClubProfile.jsx";
 import { MatchLink } from "../components/MatchLink.jsx";
 import { normalizeText, number } from "../services/format.js";
-import { countryLabel } from "../services/competition-selector.js";
+import {
+  countryLabel,
+  competitionCountry,
+  competitionLabel,
+  orderedCompetitions,
+} from "../services/competition-selector.js";
 
 function useDirectoryCapacity(gridRef, active, scope) {
   const [layout, setLayout] = useState({ capacity: 12, height: undefined });
@@ -60,6 +65,7 @@ export default function ClubsPage() {
   const f = useFootball(),
     [query, setQuery] = useState(""),
     [country, setCountry] = useState("all"),
+    [competitionId, setCompetitionId] = useState("all"),
     [paging, setPaging] = useState({ key: "", page: 1 }),
     [profile, setProfile] = useState(false);
   const id = useSearchParams().get("id");
@@ -79,6 +85,7 @@ export default function ClubsPage() {
             ...t,
             league: m.league,
             count: 0,
+            competitionCounts: {},
             country:
               f.manifest.clubCountries?.[t.id] ||
               (domestic ? leagueCountry : "unknown"),
@@ -86,6 +93,8 @@ export default function ClubsPage() {
         if (domestic && map.get(t.id).country === "unknown")
           map.get(t.id).country = leagueCountry;
         map.get(t.id).count++;
+        const counts = map.get(t.id).competitionCounts;
+        counts[m.leagueId] = (counts[m.leagueId] || 0) + 1;
       }
     return [...map.values()]
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -103,6 +112,21 @@ export default function ClubsPage() {
     [clubs],
   );
   const activeCountry = countries.includes(country) ? country : "all";
+  const competitions = useMemo(() => {
+    const represented = new Set(
+      clubs.flatMap((club) => Object.keys(club.competitionCounts)),
+    );
+    return orderedCompetitions(
+      f.data.competitions.filter(
+        (competition) =>
+          represented.has(competition.id) &&
+          (activeCountry === "all" ||
+            competitionCountry(competition) === activeCountry),
+      ),
+    );
+  }, [clubs, f.data.competitions, activeCountry]);
+  const activeCompetition = competitions.find((c) => c.id === competitionId);
+  const activeCompetitionId = activeCompetition?.id || "all";
   const search = normalizeText(useDeferredValue(query)),
     selected = clubs.find((c) => c.id === id),
     visible = useMemo(
@@ -110,17 +134,26 @@ export default function ClubsPage() {
         clubs.filter(
           (c) =>
             c.search.includes(search) &&
-            (activeCountry === "all" || c.country === activeCountry),
+            (activeCountry === "all" || c.country === activeCountry) &&
+            (activeCompetitionId === "all" ||
+              c.competitionCounts[activeCompetitionId] > 0),
         ),
-      [clubs, search, activeCountry],
+      [clubs, search, activeCountry, activeCompetitionId],
     ),
     layout = useDirectoryCapacity(
       gridRef,
       !selected && visible.length > 0,
-      [f.season, f.focus, search, activeCountry].join("|"),
+      [f.season, f.focus, search, activeCountry, activeCompetitionId].join("|"),
     ),
     capacity = layout.capacity,
-    pageKey = [f.season, f.focus, search, activeCountry, capacity].join("|"),
+    pageKey = [
+      f.season,
+      f.focus,
+      search,
+      activeCountry,
+      activeCompetitionId,
+      capacity,
+    ].join("|"),
     pages = Math.max(1, Math.ceil(visible.length / capacity)),
     current =
       paging.key === pageKey && paging.data === f.data
@@ -205,7 +238,10 @@ export default function ClubsPage() {
               <select
                 aria-label="Pays des clubs"
                 value={activeCountry}
-                onChange={(e) => setCountry(e.target.value)}
+                onChange={(e) => {
+                  setCountry(e.target.value);
+                  setCompetitionId("all");
+                }}
               >
                 <option value="all">Tous les pays</option>
                 {countries.map((value) => (
@@ -218,11 +254,31 @@ export default function ClubsPage() {
               </select>
             </label>
             <label className="club-directory-select">
+              <span>Compétition</span>
+              <select
+                aria-label="Compétition des clubs"
+                value={activeCompetitionId}
+                onChange={(e) => setCompetitionId(e.target.value)}
+              >
+                <option value="all">Toutes les compétitions</option>
+                {competitions.map((competition) => (
+                  <option key={competition.id} value={competition.id}>
+                    {competitionLabel(competition)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="club-directory-select">
               <span>Saison</span>
               <select
                 aria-label="Saison"
                 value={f.season}
-                onChange={(e) => f.changeSeason(e.target.value)}
+                onChange={(e) => {
+                  setQuery("");
+                  setCountry("all");
+                  setCompetitionId("all");
+                  f.changeSeason(e.target.value);
+                }}
               >
                 {f.manifest.seasons.map((s) => (
                   <option value={s.id} key={s.id}>
@@ -240,12 +296,15 @@ export default function ClubsPage() {
             <span>
               {number(visible.length)} club{visible.length === 1 ? "" : "s"}
             </span>
-            {(query || activeCountry !== "all") && (
+            {(query ||
+              activeCountry !== "all" ||
+              activeCompetitionId !== "all") && (
               <button
                 className="filter-reset-button"
                 onClick={() => {
                   setQuery("");
                   setCountry("all");
+                  setCompetitionId("all");
                 }}
               >
                 <Icon name="reset" /> Réinitialiser
@@ -269,13 +328,22 @@ export default function ClubsPage() {
                     <h2>{c.name}</h2>
                     <p>
                       {c.country === "unknown"
-                        ? c.league
-                        : countryLabel(c.country) + " · " + c.league}
+                        ? activeCompetition?.name || c.league
+                        : countryLabel(c.country) +
+                          " · " +
+                          (activeCompetition?.name || c.league)}
                     </p>
                   </div>
                 </div>
                 <div className="directory-card-footer">
-                  <span>{number(c.count)} matchs</span>
+                  <span>
+                    {number(
+                      activeCompetition
+                        ? c.competitionCounts[activeCompetitionId]
+                        : c.count,
+                    )}{" "}
+                    matchs
+                  </span>
                   <Icon name="arrow" />
                 </div>
               </Link>

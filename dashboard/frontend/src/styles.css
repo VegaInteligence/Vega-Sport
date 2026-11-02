@@ -376,10 +376,10 @@ input[type="date"] {
 }
 .club-directory-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 200px) minmax(
-      130px,
-      170px
-    );
+  grid-template-columns: minmax(200px, 1fr) minmax(150px, 180px) minmax(
+      190px,
+      260px
+    ) minmax(130px, 160px);
   align-items: end;
   gap: 12px;
   margin-bottom: 10px;
@@ -412,12 +412,14 @@ input[type="date"] {
 .club-directory-grid {
   align-content: start;
 }
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   .club-directory-toolbar {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
-  .club-directory-search {
-    grid-column: 1 / -1;
+}
+@media (max-width: 640px) {
+  .club-directory-toolbar {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
