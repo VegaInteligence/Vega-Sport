@@ -4,6 +4,9 @@ import { csvString } from "../model.js";
 import {
   historicalRows,
   historicalScore,
+  historicalScoreNotes,
+  HISTORICAL_CSV_FIELDS,
+  historicalCsvRow,
 } from "../services/openfootball-history.js";
 import { date, number } from "../services/format.js";
 import { download, json, useResource } from "../services/resources.js";
@@ -35,30 +38,10 @@ export function HistoryResults({ season, competition, query, page, onPage }) {
         <button
           className="button button-secondary"
           onClick={() => {
-            const fields = [
-              "date",
-              "competition",
-              "round",
-              "home",
-              "home_goals",
-              "away_goals",
-              "away",
-            ];
-            const values = rows.map(({ competition: name, match }) => {
-              const [home, away] = historicalScore(match);
-              return [
-                match.date,
-                name,
-                match.round,
-                match.team1,
-                home,
-                away,
-                match.team2,
-              ];
-            });
+            const values = rows.map(historicalCsvRow);
             download(
               `openfootball-${season.season.replace("/", "-")}.csv`,
-              csvString(fields, values),
+              csvString(HISTORICAL_CSV_FIELDS, values),
               "text/csv;charset=utf-8",
             );
           }}
@@ -83,6 +66,7 @@ export function HistoryResults({ season, competition, query, page, onPage }) {
                 .slice((current - 1) * size, current * size)
                 .map(({ key, competition: name, match }) => {
                   const [home, away] = historicalScore(match);
+                  const notes = historicalScoreNotes(match);
                   return (
                     <tr key={key}>
                       <td>{date(match.date)}</td>
@@ -92,6 +76,11 @@ export function HistoryResults({ season, competition, query, page, onPage }) {
                         {home === null || away === null
                           ? "—"
                           : `${home} – ${away}`}
+                        {notes.length > 0 && (
+                          <small className="historical-score-note">
+                            {notes.join(" · ")}
+                          </small>
+                        )}
                       </td>
                       <td>{match.team2 || "—"}</td>
                     </tr>
@@ -123,10 +112,18 @@ function ArchiveBrowser({ index }) {
   return (
     <>
       <p className="historical-archive-note">
-        Source :{" "}
+        Sources :{" "}
         <a href={index.source.url} target="_blank" rel="noreferrer">
           OpenFootball
-        </a>{" "}
+        </a>
+        {(index.source.additionalSources || []).map((source) => (
+          <React.Fragment key={source.name}>
+            {" · "}
+            <a href={source.url} target="_blank" rel="noreferrer">
+              {source.name}
+            </a>
+          </React.Fragment>
+        ))}{" "}
         · domaine public (CC0). Ces archives contiennent les résultats et
         calendriers uniquement : aucune statistique individuelle ni xG. Elles
         sont distinctes de PitchAPI.

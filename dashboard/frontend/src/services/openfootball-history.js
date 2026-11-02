@@ -31,10 +31,64 @@ export function historicalRows(season, competition = "all", query = "") {
   return rows;
 }
 
-export function historicalScore(match) {
-  const value = match?.score?.ft;
+export function historicalPair(value) {
   if (!Array.isArray(value) || value.length !== 2) return [null, null];
   return value.map((item) =>
     Number.isInteger(item) && item >= 0 ? item : null,
   );
+}
+
+/** Show the final match score, with extra time distinguished from penalties. */
+export function historicalScore(match) {
+  const extra = historicalPair(match?.score?.et);
+  return extra.every((value) => value !== null)
+    ? extra
+    : historicalPair(match?.score?.ft);
+}
+
+export function historicalScoreNotes(match) {
+  const notes = [];
+  const extra = historicalPair(match?.score?.et);
+  const penalties = historicalPair(match?.score?.p);
+  if (extra.every((value) => value !== null)) notes.push("après prolongation");
+  if (penalties.every((value) => value !== null))
+    notes.push(`tirs au but ${penalties[0]} – ${penalties[1]}`);
+  const comment = match?.sourceFields?.Comments?.trim();
+  if (comment) notes.push(`Source : ${comment}`);
+  return notes;
+}
+
+export const HISTORICAL_CSV_FIELDS = [
+  "date",
+  "competition",
+  "round",
+  "home",
+  "home_goals",
+  "away_goals",
+  "away",
+  "home_goals_90",
+  "away_goals_90",
+  "penalties_home",
+  "penalties_away",
+  "notes",
+];
+
+export function historicalCsvRow({ competition, match }) {
+  const [home90, away90] = historicalPair(match.score?.ft);
+  const [home, away] = historicalScore(match);
+  const [penaltiesHome, penaltiesAway] = historicalPair(match.score?.p);
+  return [
+    match.date,
+    competition,
+    match.round,
+    match.team1,
+    home,
+    away,
+    match.team2,
+    home90,
+    away90,
+    penaltiesHome,
+    penaltiesAway,
+    historicalScoreNotes(match).join(" · "),
+  ];
 }
