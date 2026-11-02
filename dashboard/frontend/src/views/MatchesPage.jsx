@@ -9,23 +9,12 @@ import { MatchLink } from "../components/MatchLink.jsx";
 import MatchDetail from "../components/MatchDetail.jsx";
 import UpcomingMatches from "../components/UpcomingMatches.jsx";
 import { useResource, json } from "../services/resources.js";
+import { loadRemoteMatch } from "../services/remote-match.js";
 function RemoteDetail({ id }) {
   const f = useFootball(),
-    resource = useResource(`remote-match:${id}`, async () => {
-      const record = await json(`/api/archive/matches/${id}`);
-      if (record.fixture)
-        return f.client.normalizedRemote({
-          ...record.fixture,
-          league: record.fixture.league || {
-            id: record.competition_id,
-            name: record.competition_name,
-          },
-          season: record.fixture.season || record.season,
-        });
-      return f.client.normalizedRemote(
-        (await f.client.request(`matches/${id}`)).data,
-      );
-    });
+    resource = useResource(`remote-match:${id}`, () =>
+      loadRemoteMatch(id, f.client, json),
+    );
   return (
     <AsyncState resource={resource}>
       {(match) => <MatchDetail key={match.id} match={match} />}

@@ -39,6 +39,7 @@ test("competition page renders a result-derived league table and its limits", as
     "next/link": { __esModule: true, default: Link },
     "../components/Icon.jsx": { __esModule: true, default: () => null },
     "../components/OpenFootballArchive.jsx": { __esModule: true, default: () => null },
+    "../components/CompetitionHighlights.jsx": { __esModule: true, default: ({ season }) => elem("aside", { "data-highlights-season": season }, "Prochains matchs et derniers résultats") },
     "../components/Layout.jsx": { __esModule: true, default: ({ children }) => elem("main", null, children) },
     "../hooks/FootballContext.jsx": { useFootball: () => context }, "../components/UI.jsx": UI,
     "../components/MatchLink.jsx": { MatchLink: ({ match }) => elem("p", { "data-match": match.id }, match.id) },
@@ -67,6 +68,7 @@ test("competition page renders a result-derived league table and its limits", as
   assert.match(html, /Lille/);
   assert.match(html, /sanctions/);
   assert.match(html, /<table/);
+  assert.match(html, /data-highlights-season="2026\/2027"/);
 
   externalTable = { tables: [
     { name: "Groupe A", rows: [{ name: "Paris", position: 1, points: 3, played: 1, wins: 1, draws: 0, losses: 0, goalsFor: 2, goalsAgainst: 0, difference: 2 }] },
@@ -75,7 +77,7 @@ test("competition page renders a result-derived league table and its limits", as
   const sourced = renderToStaticMarkup(elem(mod.exports.default));
   assert.match(sourced, /Groupe A/);
   assert.match(sourced, /Groupe B/);
-  assert.match(sourced, /saison non précisée/);
+  assert.match(sourced, /classements SportScore et les matchs PitchAPI/);
   context.season = "2025/2026";
   const historic = renderToStaticMarkup(elem(mod.exports.default));
   assert.doesNotMatch(historic, /Groupe A/);
@@ -87,6 +89,7 @@ test("competition page renders a result-derived league table and its limits", as
   assert.match(resultView, /aria-pressed="true">Résultats/);
   assert.ok(resultView.indexOf("m_1") < resultView.indexOf("m_old"));
   assert.doesNotMatch(resultView, /m_future/);
+  assert.doesNotMatch(resultView, /data-highlights-season/);
 
   context.catalog = [
     { id: "championship", name: "Championship", country: "ENG", seasons: [] },
