@@ -14,6 +14,7 @@ import {
   Empty,
 } from "../components/UI.jsx";
 import { MatchLink } from "../components/MatchLink.jsx";
+import { defaultCompetitionMatchStatus, orderCompetitionMatches } from "../services/competition-matches.js";
 import { normalizeText, seasonLabel, number, date } from "../services/format.js";
 import { useResource, json, download } from "../services/resources.js";
 import { csvString } from "../model.js";
@@ -370,7 +371,7 @@ function Fixtures({ competition, day }) {
   );
   const supported = !day;
   const [view, setView] = useState(supported ? "standings" : "matches");
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState(() => defaultCompetitionMatchStatus(day));
   const [page, setPage] = useState(1);
   const resource = useResource(
     "fixtures:" + f.client.id + ":" + competition?.id + ":" + season + ":" + day + ":" + f.configured,
@@ -397,22 +398,23 @@ function Fixtures({ competition, day }) {
               {competition.seasons?.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </label>
-          {supported && <Segments value={view} onChange={setView} label="Vue de la compétition" items={[["standings", "Classement"], ["matches", "Matchs"]]} />}
+          {supported && <Segments value={view} onChange={(next) => { if (next === "matches" && view !== "matches") { setStatus("finished"); setPage(1); } setView(next); }} label="Vue de la compétition" items={[["standings", "Classement"], ["matches", "Matchs"]]} />}
         </div>
       )}
       <AsyncState resource={resource}>
         {(value) => {
-          const rows = (value.matches || []).filter((m) =>
-            (status === "all" || m.status === status) &&
-            (f.focus !== "europe" || EUROPE_FOCUS_IDS.has(m.league?.id || m.leagueId)),
+          const rows = orderCompetitionMatches(
+            (value.matches || []).filter((m) => f.focus !== "europe" || EUROPE_FOCUS_IDS.has(m.league?.id || m.leagueId)),
+            { status, day: Boolean(day) },
           );
           const pages = Math.max(1, Math.ceil(rows.length / 30)), current = Math.min(page, pages);
           return <>
             {value.error && <p role="status">{value.error} · données collectées affichées.</p>}
             {supported && view === "standings" ? <Standings competition={competition} season={season} matches={value.matches || []} source={value.source} /> : <>
-              <Segments value={status} onChange={(v) => { setStatus(v); setPage(1); }} label="Statut des rencontres" items={[["all", "Tous"], ["finished", "Terminés"], ["not_started", "À venir"]]} />
+              <Segments value={status} onChange={(v) => { setStatus(v); setPage(1); }} label="Statut des rencontres" items={[["finished", "Résultats"], ["not_started", "À venir"], ["all", "Tous"]]} />
+              {!day && <p className="competition-matches-order">{status === "finished" ? "Les résultats les plus récents en premier" : status === "not_started" ? "Les prochaines rencontres en premier" : "Résultats récents, puis rencontres à venir"}</p>}
               {rows.slice((current - 1) * 30, current * 30).map((m) => <MatchLink key={m.id} match={m} />)}
-              {!rows.length && <Empty>Aucune rencontre collectée.</Empty>}
+              {!rows.length && <Empty>{status === "finished" ? "Aucun match terminé disponible pour cette saison." : "Aucune rencontre collectée."}</Empty>}
               <Pager page={current} total={pages} onChange={setPage} />
             </>}
           </>;

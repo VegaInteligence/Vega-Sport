@@ -19,20 +19,27 @@ test("competition page renders a result-derived league table and its limits", as
   const standings = await import("../dashboard/frontend/src/services/competition-standings.js");
   const selector = await import("../dashboard/frontend/src/services/competition-selector.js");
   const sportscore = await import("../dashboard/frontend/src/services/sportscore-standings.js");
+  const ordering = await import("../dashboard/frontend/src/services/competition-matches.js");
+  let forceMatchView = false;
+  const reactStub = { ...React, useState: (initial) => { const [value, setValue] = React.useState(initial); return [forceMatchView && initial === "standings" ? "matches" : value, setValue]; } };
   let externalTable = null;
   const league = { id: "l_3FJFUl", name: "Ligue 1", country: "FRA", seasons: ["2026/2027", "2025/2026"] };
-  const matches = [{ id: "m_1", status: "finished", date: "2026-11-01", home_team: { id: "a", name: "Paris" }, away_team: { id: "b", name: "Lille" }, score_home: 2, score_away: 0 }];
+  const matches = [
+    { id: "m_old", status: "finished", date: "2026-08-01", home_team: { id: "c", name: "Reims" }, away_team: { id: "d", name: "Nice" }, score_home: 1, score_away: 0 },
+    { id: "m_1", status: "finished", date: "2026-11-01", home_team: { id: "a", name: "Paris" }, away_team: { id: "b", name: "Lille" }, score_home: 2, score_away: 0 },
+    { id: "m_future", status: "not_started", date: "2026-11-08", home_team: { id: "a", name: "Paris" }, away_team: { id: "b", name: "Lille" } },
+  ];
   const context = { catalog: [league], manifest: { seasons: [{ id: "2026/2027", chunks: [] }] }, season: "2026/2027", focus: "all", client: { id: 1 }, statusKnown: true, configured: false, href: (url) => url };
   const Link = ({ href, children, ...props }) => elem("a", { href, ...props }, children);
   const Card = ({ title, children }) => elem("section", null, elem("h2", null, title), children);
-  const UI = { Card, Media: () => null, Pager: () => null, Segments: ({ items }) => elem("div", null, items.map(([id, text]) => elem("button", { key: id }, text))), Empty: ({ children }) => elem("div", null, children), AsyncState: ({ resource, children }) => children(resource.value) };
+  const UI = { Card, Media: () => null, Pager: () => null, Segments: ({ items, value }) => elem("div", null, items.map(([id, text]) => elem("button", { key: id, "aria-pressed": value === id }, text))), Empty: ({ children }) => elem("div", null, children), AsyncState: ({ resource, children }) => children(resource.value) };
   const stubs = {
-    "react": React, "next/navigation": { useSearchParams: () => new URLSearchParams("id=l_3FJFUl") },
+    "react": reactStub, "next/navigation": { useSearchParams: () => new URLSearchParams("id=l_3FJFUl") },
     "next/link": { __esModule: true, default: Link },
     "../components/Icon.jsx": { __esModule: true, default: () => null },
     "../components/Layout.jsx": { __esModule: true, default: ({ children }) => elem("main", null, children) },
     "../hooks/FootballContext.jsx": { useFootball: () => context }, "../components/UI.jsx": UI,
-    "../components/MatchLink.jsx": { MatchLink: () => null },
+    "../components/MatchLink.jsx": { MatchLink: ({ match }) => elem("p", { "data-match": match.id }, match.id) },
     "../services/format.js": { normalizeText: String, seasonLabel: String, number: String, date: String },
     "../services/resources.js": { useResource: (key, _loader, enabled = true) => ({ value: key.startsWith("sportscore-standings:") && enabled && externalTable ? externalTable : { matches, source: "snapshot" } }), json: () => {}, download: () => {} },
     "../model.js": { csvString: () => "" }, "../data-url.js": { dataUrl: (x) => x },
@@ -41,6 +48,7 @@ test("competition page renders a result-derived league table and its limits", as
     "../services/competition-standings.js": standings,
     "../services/competition-selector.js": selector,
     "../services/sportscore-standings.js": sportscore,
+    "../services/competition-matches.js": ordering,
   };
   const filename = path.join(root, "dashboard/frontend/src/views/CompetitionsPage.jsx");
   const source = await fs.readFile(filename, "utf8");
@@ -69,5 +77,12 @@ test("competition page renders a result-derived league table and its limits", as
   const historic = renderToStaticMarkup(elem(mod.exports.default));
   assert.doesNotMatch(historic, /Groupe A/);
   assert.match(historic, /Classement calculé à partir des résultats disponibles/);
+
+  forceMatchView = true;
+  context.season = "2026/2027";
+  const resultView = renderToStaticMarkup(elem(mod.exports.default));
+  assert.match(resultView, /aria-pressed="true">Résultats/);
+  assert.ok(resultView.indexOf("m_1") < resultView.indexOf("m_old"));
+  assert.doesNotMatch(resultView, /m_future/);
 
 });
