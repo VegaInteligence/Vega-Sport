@@ -64,9 +64,7 @@ export default function CupCompetition({ competition }) {
           <input type="search" aria-label="Rechercher une équipe dans la coupe" placeholder="Rechercher une équipe…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />
         </>}
       </div>
-      <p className="cup-source">
-        {competition.source === "open-matchday" ? <><a href="https://github.com/oladeeayo/open-matchday">open-matchday</a>{competition.sourceDate ? " · données du " + date(competition.sourceDate) : ""} · couverture selon la source · usage non commercial</> : <><a href={"https://github.com/openfootball/" + (competition.sourceKey === "euro" ? "euro.json" : competition.sourceKey === "france-cup" ? "europe" : "worldcup.json")}>OpenFootball</a> · {competition.coverage || "résultats et calendrier"} · mise à jour selon la source</>}
-      </p>
+      {competition.source === "open-matchday" ? (competition.sourceDate && <p className="cup-source">Données du {date(competition.sourceDate)}</p>) : <p className="cup-source">{competition.coverage || "Résultats et calendrier"}</p>}
       {competition.sourceKey === "euro" && season === "2028" && <p className="cup-source">Les équipes indiquées par des codes restent à déterminer.</p>}
       <AsyncState resource={resource}>
         {(value) => view === "bracket" ? <KnockoutBracket matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} />}

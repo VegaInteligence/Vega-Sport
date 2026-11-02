@@ -26,7 +26,7 @@ export default function PlayerEvolution({ id, profile }) {
             value={metric}
             onChange={(e) => setMetric(e.target.value)}
           >
-            <option value="rating">Note PitchAPI</option>
+            <option value="rating">Note</option>
             <option value="minutes">Minutes jouées</option>
             {Object.entries(SCOUT_METRICS).map(([key, d]) => (
               <option key={key} value={key}>
@@ -50,7 +50,7 @@ export default function PlayerEvolution({ id, profile }) {
         {(seasons) => (
           <>
             <ResearchTrend
-              label={`${metric === "rating" ? "Note PitchAPI" : metric === "minutes" ? "Minutes jouées" : SCOUT_METRICS[metric].label} · saisons collectées`}
+              label={`${metric === "rating" ? "Note" : metric === "minutes" ? "Minutes jouées" : SCOUT_METRICS[metric].label} · saisons collectées`}
               points={[...seasons]
                 .reverse()
                 .map((s) => ({

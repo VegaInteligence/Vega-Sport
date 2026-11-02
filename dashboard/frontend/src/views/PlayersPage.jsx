@@ -152,7 +152,7 @@ export default function PlayersPage() {
                     className="button button-secondary"
                     onClick={() => setProfile(true)}
                   >
-                    Fiche PitchAPI
+                    Fiche détaillée
                   </button>
                 )}
                 <button

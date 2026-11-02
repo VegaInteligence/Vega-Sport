@@ -68,7 +68,7 @@ export function Rating({ value }) {
   return (
     <span
       className={`rating-pill${value >= 8 ? " rating-high" : ""}`}
-      title="Note du fournisseur PitchAPI sur10"
+      title="Note sur 10"
     >
       {number(value, 2)}
     </span>

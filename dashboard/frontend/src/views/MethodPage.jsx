@@ -22,7 +22,7 @@ export default function MethodPage() {
           <section>
             <h2>Notes et classement</h2>
             <p>
-              Les notes affichées sont celles de PitchAPI. Le classement
+              Les notes affichées sont les notes de match. Le classement
               STATARENA, ses pondérations par rôle et son agrégation saisonnière
               restent à calibrer et à valider.
             </p>
@@ -59,7 +59,6 @@ export default function MethodPage() {
               ["Saison", f.season],
               ["Matchs collectés", number(f.data.matches.length)],
               ["Apparitions", number(f.data.appearances.length)],
-              ["Source principale", "PitchAPI"],
             ].map(([k, v]) => (
               <div key={k}>
                 <dt>{k}</dt>

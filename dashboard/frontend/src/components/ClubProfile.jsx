@@ -57,7 +57,7 @@ export function ClubFacts({ club, matches }) {
                 {!isWikiCoach && (
                   <small>
                     {coach
-                      ? `Observé le ${date(coach.date)} · PitchAPI`
+                      ? `Observé le ${date(coach.date)}`
                       : "Aucune donnée disponible"}
                   </small>
                 )}
@@ -65,20 +65,6 @@ export function ClubFacts({ club, matches }) {
                   <small>
                     Dernier match de la saison : {value.observedCoach.name} ·{" "}
                     {date(value.observedCoach.date)}
-                  </small>
-                )}
-                {photo?.sourceUrl && (
-                  <small className="club-photo-credit">
-                    <a
-                      href={photo.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Photo : {photo.author || "Wikimedia Commons"}
-                      {photo.license
-                        ? ` · ${photo.license}`
-                        : " · Wikimedia Commons"}
-                    </a>
                   </small>
                 )}
               </div>

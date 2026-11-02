@@ -40,11 +40,9 @@ test("competition page renders a result-derived league table and its limits", as
     "react": reactStub, "next/navigation": { useSearchParams: () => new URLSearchParams({ id: requestedId }) },
     "next/link": { __esModule: true, default: Link },
     "../components/Icon.jsx": { __esModule: true, default: () => null },
-    "../components/OpenFootballArchive.jsx": { __esModule: true, default: () => null },
     "../components/CupCompetition.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-cup-id": competition.id }, competition.name) },
     "../components/NativeKnockoutBracket.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-native-bracket": competition.id }, "Tableau éliminatoire") },
     "../components/CompetitionHighlights.jsx": { __esModule: true, default: ({ season }) => elem("aside", { "data-highlights-season": season }, "Prochains matchs et derniers résultats") },
-    "../components/HistoricalGoalsArchive.jsx": { __esModule: true, default: () => null },
     "../components/Layout.jsx": { __esModule: true, default: ({ children, showSeasonContext = true, showDataContext = true }) => elem("main", { "data-season-context": String(showSeasonContext), "data-data-context": String(showDataContext) }, children) },
     "../hooks/FootballContext.jsx": { useFootball: () => context }, "../components/UI.jsx": UI,
     "../components/MatchLink.jsx": { MatchLink: ({ match }) => elem("p", { "data-match": match.id }, match.id) },
@@ -91,8 +89,9 @@ test("competition page renders a result-derived league table and its limits", as
   assert.match(nationalPicker, /<optgroup label="Suisse">[\s\S]*Coupe de Suisse/);
   assert.ok(nationalPicker.indexOf("Espagne") < nationalPicker.indexOf("France"));
   assert.ok(nationalPicker.indexOf("France") < nationalPicker.indexOf("Suisse"));
-  assert.match(html, /Archives de résultats/);
-  assert.match(html, /Archives de buts/);
+  assert.match(html, /<a[^>]*href="\/archives\/"[^>]*>Archives<\/a>/);
+  assert.doesNotMatch(html, /Archives de buts/);
+  assert.ok(html.indexOf(">Archives</a>") < html.indexOf("Toutes les compétitions"));
   assert.match(html, /France/);
   assert.match(html, /Paris/);
   assert.match(html, /Lille/);

@@ -224,7 +224,7 @@ export function ShotMap({ match, teamId = "all", onPlayer = () => {} }) {
       >
         <title>{`Carte des tirs · ${match.home.name} — ${match.away.name}`}</title>
         <desc>
-          Coordonnées du fournisseur, buts en plein et autres tirs en contour.
+          Buts en plein et autres tirs en contour.
         </desc>
         <rect
           x="26"

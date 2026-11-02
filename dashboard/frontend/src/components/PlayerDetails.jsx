@@ -16,7 +16,7 @@ import {
 } from "../services/player-profile.js";
 export const metrics = [
   ["minutes", "Minutes"],
-  ["rating", "Note PitchAPI"],
+  ["rating", "Note"],
   ["goals", "Buts"],
   ["assists", "Passes décisives"],
   ["xg", "xG"],
@@ -30,7 +30,7 @@ export const metrics = [
   ["interceptions", "Interceptions"],
   ["duelsWon", "Duels gagnés"],
   ["saves", "Arrêts"],
-  ["goalsPrevented", "Buts évités (PitchAPI)"],
+  ["goalsPrevented", "Buts évités"],
 ];
 export function ProfileDialog({ id, kind, onClose }) {
   const resource = useResource(`profile:${kind}:${id}`, async () => {
@@ -41,7 +41,7 @@ export function ProfileDialog({ id, kind, onClose }) {
     }
   });
   return (
-    <Modal title="Fiche PitchAPI" onClose={onClose}>
+    <Modal title="Fiche détaillée" onClose={onClose}>
       <AsyncState resource={resource}>
         {(value) => <DataExplorer value={value} />}
       </AsyncState>
@@ -147,7 +147,7 @@ export function PlayerDialog() {
                 className={`pc-rating${row.rating >= 8 ? " is-high" : row.rating < 6 ? " is-low" : ""}`}
               >
                 <strong>{number(row.rating, 2)}</strong>
-                <span>Note PitchAPI</span>
+                <span>Note</span>
                 {rank && rank.total > 1 && (
                   <small>
                     {rank.rank === 1
@@ -239,7 +239,7 @@ export function PlayerDialog() {
       </div>
       {!row.statsReliable && (
         <p role="status" className="notice notice-warning">
-          Certaines statistiques sources sont signalées comme incohérentes.
+          Certaines statistiques sont signalées comme incohérentes.
         </p>
       )}
       {view !== "overview" ? (
@@ -284,7 +284,7 @@ export function PlayerDialog() {
               </div>
               {profile.missing.length > 0 && (
                 <p className="pc-missing">
-                  Non renseignés par la source : {profile.missing.join(", ")}.
+                  Non renseignés : {profile.missing.join(", ")}.
                 </p>
               )}
             </section>

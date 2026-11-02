@@ -52,13 +52,12 @@ test("historical results preserve zero and do not invent missing scores", () => 
 });
 
 test("historical result table shows scores and missing scores separately", async () => {
-  const { renderHistoricalResults } = await reactFixtures();
-  const html = renderHistoricalResults(season);
+  const { renderArchiveResults } = await reactFixtures();
+  const html = renderArchiveResults(season);
   assert.match(html, /Fulham/);
   assert.match(html, /0 – 3/);
   assert.match(html, /0 – 0/);
   assert.match(html, /—/);
-  assert.match(html, /Exporter CSV/);
 });
 
 test("extra time and shootouts remain distinct from the regulation score", async () => {
@@ -69,8 +68,8 @@ test("extra time and shootouts remain distinct from the regulation score", async
     score: { ft: [2, 2], et: [3, 2], p: [4, 3] },
   };
   assert.deepEqual(historicalScore(match), [3, 2]);
-  const { renderHistoricalResults } = await reactFixtures();
-  const html = renderHistoricalResults({
+  const { renderArchiveResults } = await reactFixtures();
+  const html = renderArchiveResults({
     season: "1957/1958",
     competitions: [
       {

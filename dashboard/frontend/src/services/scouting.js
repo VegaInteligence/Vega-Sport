@@ -10,16 +10,16 @@ import {
 export const SCOUTING_VERSION = "statarena-descriptive-v1";
 const definitions = {
   goals: "Buts inscrits dans les performances renseignées.",
-  assists: "Passes décisives attribuées par PitchAPI.",
-  xg: "Somme des probabilités de but des tirs renseignés par PitchAPI.",
-  npxg: "Buts attendus en excluant les penalties, lorsque la source les renseigne.",
-  xgot: "Buts attendus après placement du tir cadré, selon PitchAPI.",
-  xa: "Passes décisives attendues renseignées. PitchAPI omet certaines observations nulles : pas de centile ou de score sur cette mesure.",
+  assists: "Passes décisives attribuées.",
+  xg: "Somme des probabilités de but des tirs renseignés.",
+  npxg: "Buts attendus en excluant les penalties, lorsqu’ils sont renseignés.",
+  xgot: "Buts attendus après placement du tir cadré.",
+  xa: "Passes décisives attendues renseignées. Certaines observations nulles sont absentes : pas de centile ou de score sur cette mesure.",
   shots: "Tirs tentés renseignés, indépendamment de leur résultat.",
-  shotsOnTarget: "Tirs cadrés renseignés par le fournisseur.",
+  shotsOnTarget: "Tirs cadrés renseignés.",
   touchesBox: "Ballons touchés dans la surface adverse.",
-  chancesCreated: "Occasions créées selon la définition du fournisseur.",
-  bigChancesCreated: "Grosses occasions créées renseignées par PitchAPI.",
+  chancesCreated: "Occasions créées.",
+  bigChancesCreated: "Grosses occasions créées.",
   passesFinalThird:
     "Passes dans le dernier tiers. Ce n’est pas une mesure complète des directions de passe.",
   dribbles: "Dribbles réussis. Les observations absentes restent inconnues.",
@@ -28,21 +28,21 @@ const definitions = {
   passesAttempted: "Passes tentées, hors observations non renseignées.",
   passAccuracy:
     "100 × somme des passes réussies / somme des passes tentées sur les mêmes observations.",
-  duelsWon: "Duels gagnés renseignés par le fournisseur.",
+  duelsWon: "Duels gagnés.",
   duelsLost:
     "Duels perdus. Le volume dépend aussi du nombre de duels disputés.",
   duelRate:
     "100 × duels gagnés / (duels gagnés + perdus), sur les mêmes observations.",
-  tackles: "Tacles renseignés par PitchAPI.",
-  interceptions: "Interceptions renseignées par PitchAPI.",
-  recoveries: "Récupérations de balle renseignées par PitchAPI.",
-  clearances: "Dégagements renseignés par PitchAPI.",
+  tackles: "Tacles.",
+  interceptions: "Interceptions.",
+  recoveries: "Récupérations de balle.",
+  clearances: "Dégagements.",
   defensiveActions:
     "Agrégat d’actions défensives fourni dans les observations.",
   blocks: "Tirs bloqués par le joueur.",
-  saves: "Arrêts du gardien renseignés par PitchAPI.",
+  saves: "Arrêts du gardien.",
   goalsPrevented:
-    "Buts évités selon l’indicateur du fournisseur, disponible sur une partie des gardiens.",
+    "Buts évités, disponible sur une partie des gardiens.",
 };
 export const SCOUT_METRICS = Object.fromEntries(
   Object.entries(SEASON_METRICS).map(([key, value]) => [

@@ -73,10 +73,6 @@ export function MetricInfo({ metric, observed, total }) {
           <p>{definition.description}</p>
           <dl className="research-definition">
             <div>
-              <dt>Source</dt>
-              <dd>PitchAPI</dd>
-            </div>
-            <div>
               <dt>Calcul</dt>
               <dd>
                 {definition.ratio
@@ -119,7 +115,7 @@ export function MetricPicker({
       ? [
           ["matches", { label: "Matchs" }],
           ["minutes", { label: "Minutes moyennes" }],
-          ["rating", { label: "Note PitchAPI" }],
+          ["rating", { label: "Note" }],
         ]
       : []),
     ...Object.entries(SCOUT_METRICS),
@@ -530,7 +526,7 @@ export function ReportButton({ title, context, children, data }) {
                   <strong>STATARENA</strong>
                   <p>{context}</p>
                   <small>
-                    {new Date().toLocaleDateString("fr-FR")} · PitchAPI ·{" "}
+                    {new Date().toLocaleDateString("fr-FR")} ·{" "}
                     {SCOUTING_VERSION}
                   </small>
                 </header>
@@ -553,7 +549,6 @@ export function ReportButton({ title, context, children, data }) {
                           version: SCOUTING_VERSION,
                           title,
                           context,
-                          source: "PitchAPI",
                           generatedAt: new Date().toISOString(),
                           data,
                         },

@@ -33,7 +33,8 @@ test("SportScore standings render without the update-timing message", async () =
   const mod = { exports: {} };
   vm.runInThisContext("(function(require,module,exports){" + compiled + "\n})", { filename })((name) => { if (!(name in stubs)) throw Error("Unexpected import " + name); return stubs[name]; }, mod, mod.exports);
   const html = renderToStaticMarkup(elem(mod.exports.default, { competition: { id: "l_3FJFUl", seasons: ["2026/2027"] }, season: "2026/2027", matches: [] }));
-  assert.match(html, /Classement SportScore/);
+  assert.match(html, /Classement/);
+  assert.doesNotMatch(html, /SportScore|PitchAPI/);
   assert.match(html, /Paris/);
   assert.doesNotMatch(html, /Les classements SportScore et les matchs PitchAPI/);
   assert.doesNotMatch(html, /actualisés à des moments différents/);

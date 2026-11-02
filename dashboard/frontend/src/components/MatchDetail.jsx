@@ -141,7 +141,7 @@ function StatRow({ match, stat: s }) {
       <dt>
         {s.label}
         {s.reliable === false && (
-          <span title="Valeur signalée comme non fiable par la source">
+          <span title="Valeur signalée comme non fiable">
             <Icon name="info" />
           </span>
         )}
@@ -612,7 +612,7 @@ export default function MatchDetail({ match }) {
       </section>
       {match.coverage?.teamStatsReliable === false && (
         <p role="status" className="notice notice-warning">
-          Statistiques d’équipe signalées comme incohérentes dans la source.
+          Statistiques d’équipe signalées comme incohérentes.
         </p>
       )}
       <MatchViewTabs view={view} onChange={selectView} panelId={panelId} />
@@ -647,7 +647,6 @@ export default function MatchDetail({ match }) {
             <Card
               title="Meilleures notes"
               className="match-leaders-card"
-              action={<span className="data-source-tag">PitchAPI</span>}
               footer={
                 <button
                   className="inline-link"

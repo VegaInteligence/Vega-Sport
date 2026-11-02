@@ -212,7 +212,7 @@ export default function MatchdaySchedule({
         <p className="matchday-note">
           {loadingMore
             ? "Recherche des journées en cours…"
-            : "La source ne précise pas la journée de ces rencontres. Elles restent accessibles par date."}
+            : "La journée de ces rencontres n’est pas précisée. Elles restent accessibles par date."}
         </p>
       )}
       {selected.matches.slice((current - 1) * 30, current * 30).map((match) => (

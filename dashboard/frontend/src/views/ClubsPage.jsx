@@ -183,7 +183,7 @@ export default function ClubsPage() {
                 className="button button-secondary"
                 onClick={() => setProfile(true)}
               >
-                Fiche PitchAPI
+                Fiche détaillée
               </button>
             }
           >

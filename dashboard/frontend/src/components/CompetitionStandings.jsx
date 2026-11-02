@@ -40,9 +40,6 @@ function ResultStandings({ matches, source, highlightTeams }) {
           {number(table.played)} matchs pris en compte
           {table.lastDate ? " · dernier match le " + date(table.lastDate) : ""}
         </span>
-        <span>
-          {source === "api" ? "Résultats PitchAPI" : "Archive PitchAPI"}
-        </span>
       </div>
       <div
         className="table-scroll standings-scroll"
@@ -164,7 +161,7 @@ function SportscoreTable({ table, index, multiple, matches, highlightTeams }) {
       >
         <table className="data-table standings-table">
           <caption className="sr-only">
-            Classement SportScore{table.name ? " : " + table.name : ""}
+            Classement{table.name ? " : " + table.name : ""}
           </caption>
           <thead>
             <tr>
@@ -290,7 +287,7 @@ export default function CompetitionStandings({
         ))}
         {tables.length > 1 && tables.some((table) => !table.name) && (
           <p className="standings-note">
-            La source ne précise pas le nom de toutes les phases.
+            Le nom de certaines phases n’est pas précisé.
           </p>
         )}
       </div>

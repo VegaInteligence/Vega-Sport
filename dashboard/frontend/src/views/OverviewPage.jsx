@@ -172,7 +172,7 @@ export default function OverviewPage() {
               label="Trier les performances"
               value={metric}
               items={[
-                ["rating", "Note PitchAPI"],
+                ["rating", "Note"],
                 ["xg", "xG"],
                 ["chancesCreated", "Création"],
               ]}

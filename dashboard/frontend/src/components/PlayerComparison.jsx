@@ -117,7 +117,7 @@ function ComparisonContent({ samples, basis, keys, withMedian, minMinutes }) {
           {[
             ["matches", "Matchs"],
             ["minutes", "Minutes jouées"],
-            ["rating", "Note PitchAPI"],
+            ["rating", "Note"],
           ].map(([key, label]) => (
             <tr key={key}>
               <th scope="row">{label}</th>

@@ -16,7 +16,7 @@ const babel = requireLocal("next/dist/compiled/babel/core"),
   );
 const e = React.createElement;
 
-test("club cards render coach, attributed photo, stadium and four player lines", async () => {
+test("club cards render coach, photo without credit, stadium and four player lines", async () => {
   const roster =
     await import("../dashboard/frontend/src/services/club-roster.js");
   const format = await import("../dashboard/frontend/src/services/format.js");
@@ -90,9 +90,7 @@ test("club cards render coach, attributed photo, stadium and four player lines",
   assert.match(facts, /Rúben Amorim/);
   assert.match(facts, /San Siro/);
   assert.match(facts, /<button[^>]*class="stadium-link"[^>]*>/);
-  assert.match(facts, /Photographer/);
-  assert.match(facts, /CC BY 3.0/);
-  assert.match(facts, /commons.wikimedia.org/);
+  assert.doesNotMatch(facts, /Photographer|Wikimedia|PitchAPI/);
   const rows = [
     [11, "Gardien"],
     [1, "Défenseur"],

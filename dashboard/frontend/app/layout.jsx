@@ -119,16 +119,6 @@ export default function RootLayout({ children }) {
         <Suspense fallback={<ShellFallback />}>
           <Providers>{children}</Providers>
         </Suspense>
-        <div className="sportscore-credit">
-          Données de classement :{" "}
-          <a
-            href="https://sportscore.com/"
-            rel="dofollow"
-            title="Sports data by SportScore"
-          >
-            SportScore
-          </a>
-        </div>
         <SpeedInsights />
         <Analytics />
       </body>

@@ -31,7 +31,7 @@ function StadiumPlans({ id }) {
       <h3>Plans officiels</h3>
       {plans.length ? (
         <>
-          <p>Plans et vues des tribunes publiés par les clubs ou les stades.</p>
+          <p>Plans et vues des tribunes.</p>
           <ul className="stadium-plan-list">
             {plans.map((plan) => (
               <li key={plan.url}>
@@ -40,9 +40,7 @@ function StadiumPlans({ id }) {
                     <div className="stadium-embedded-heading">
                       <div className="stadium-plan-copy">
                         <strong>{plan.title}</strong>
-                        <small>
-                          {plan.source} · {plan.detail}
-                        </small>
+                        <small>{plan.detail}</small>
                       </div>
                       <a
                         href={plan.url}
@@ -55,7 +53,7 @@ function StadiumPlans({ id }) {
                     <iframe
                       className="stadium-official-frame"
                       src={plan.url}
-                      title={`${plan.title} — ${plan.source}`}
+                      title={plan.title}
                       loading="lazy"
                       referrerPolicy="no-referrer"
                       allow="geolocation"
@@ -68,14 +66,12 @@ function StadiumPlans({ id }) {
                     href={plan.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label={`${plan.title} : ${plan.source}, ouvre un nouvel onglet`}
+                    aria-label={`${plan.title}, ouvre un nouvel onglet`}
                   >
                     <span className="stadium-plan-format">{plan.format}</span>
                     <span className="stadium-plan-copy">
                       <strong>{plan.title}</strong>
-                      <small>
-                        {plan.source} · {plan.detail}
-                      </small>
+                      <small>{plan.detail}</small>
                     </span>
                     <span className="stadium-plan-open">
                       Ouvrir <span aria-hidden="true">↗</span>
@@ -86,7 +82,7 @@ function StadiumPlans({ id }) {
             ))}
           </ul>
           <p>
-            Les plans sont fournis par leur éditeur. Les secteurs peuvent varier
+            Les secteurs peuvent varier
             selon le match ou les travaux.
           </p>
         </>
@@ -158,8 +154,7 @@ export default function StadiumDialog({ name, id, onClose }) {
                   <>
                     <StadiumMap name={name} coordinates={stadium.coordinates} />
                     <p className="stadium-map-note">
-                      Carte OpenStreetMap / OpenMapTiles / OpenFreeMap. Les
-                      volumes sont simplifiés et dépendent des données
+                      Les volumes sont simplifiés et dépendent des données
                       disponibles ; le stade peut ne pas être modélisé en
                       détail.
                     </p>

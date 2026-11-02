@@ -65,12 +65,20 @@ test("filters by player, team and competition and preserves source fields in CSV
   assert.equal(csv.score_final_divergent, "oui");
 });
 
-test("renders event details, calendar year and score disagreement", async () => {
-  const { renderHistoricalGoals } = await reactFixtures();
-  const html = renderHistoricalGoals(season, "nor");
-  assert.match(html, /Jérémy/);
-  assert.match(html, /90\+2/);
-  assert.match(html, /Année civile 2020/);
-  assert.match(html, /score final divergents/);
-  assert.match(html, /Exporter CSV/);
+test("goal-only matches open a sub-page with their goal events", async () => {
+  const { renderArchiveResults, renderArchiveMatch } = await reactFixtures();
+  const html = renderArchiveResults(null, season);
+  assert.match(html, /archive-row-open/);
+  assert.match(html, /href="\/archives\/?\?m=/);
+  const { buildArchiveSeason } = await import(
+    "../dashboard/frontend/src/services/archive.js"
+  );
+  const match = buildArchiveSeason(null, season).matches.find(
+    (item) => item.team1 === "A" && item.team2 === "B",
+  );
+  const detail = renderArchiveMatch(match);
+  assert.match(detail, /Jérémy/);
+  assert.match(detail, /90\+2/);
+  assert.match(detail, /archive-goal-home/);
+  assert.match(detail, /Retour aux archives/);
 });

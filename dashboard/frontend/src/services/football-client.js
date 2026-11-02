@@ -239,7 +239,7 @@ export class FootballDataClient {
           apiError?.message ||
           (this.configured
             ? "Ces données ne sont pas disponibles pour ce match."
-            : "Ces données ne figurent pas dans l’instantané. Elles se chargeront après activation de PitchAPI."),
+            : "Ces données ne figurent pas dans l’instantané. Elles se chargeront dès que la connexion aux données sera active."),
         code: apiError?.code || "NOT_COLLECTED",
       });
     this.redraw();

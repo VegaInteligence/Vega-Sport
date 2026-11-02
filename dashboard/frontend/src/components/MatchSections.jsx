@@ -134,8 +134,8 @@ export function TeamStats({ match, payload }) {
     <>
       {match.coverage?.teamStatsReliable === false && (
         <p className="notice notice-warning">
-          Statistiques d’équipe incohérentes ; interpréter les données sources
-          avec prudence.
+          Statistiques d’équipe incohérentes ; interpréter ces données avec
+          prudence.
         </p>
       )}
       <label>
@@ -174,7 +174,7 @@ export function PlayerStats({
     <>
       {match.coverage?.teamStatsReliable === false && (
         <p className="notice notice-warning">
-          Incohérences possibles dans les statistiques sources.
+          Incohérences possibles dans les statistiques.
         </p>
       )}
       <div className="table-toolbar">
@@ -659,9 +659,7 @@ export function MatchSections({
         {(value) => (
           <div className="archive-payload" data-section={section}>
             <div className="table-toolbar">
-              <span>
-                {value.source === "snapshot" ? "Archive collectée" : "PitchAPI"}
-              </span>
+              <span />
               <button
                 className="button button-secondary"
                 onClick={() =>
@@ -690,7 +688,7 @@ export function MatchSections({
                 value={mode}
                 items={[
                   ["analysis", "Analyse"],
-                  ["source", "Données sources"],
+                  ["source", "Données brutes"],
                 ]}
                 onChange={setMode}
               />

@@ -128,7 +128,7 @@ test('supplemental competitions remain separate and display missing stats as unk
     folder:'UKR_1_premier-league',name:'Ukrainian Premier League',country_code:'UKR',
     results:[{date:'2026-08-01',home:'<Club>',away:'Away',ft_home:'1',ft_away:'0',home_shots:'',away_shots:'3',home_corners:'',away_corners:'',source:'soccerway'}],fixtures:[],goals:[],
   }]};
-  assert.match(app.renderSupplemental(),/non commercial/);
+  assert.doesNotMatch(app.renderSupplemental(),/open-matchday|PitchAPI|Source/);
   app.handleClick({dataset:{supplementalCompetition:'UKR_1_premier-league'}});
   const html=app.renderSupplemental();
   assert.match(html,/Ukrainian Premier League/);

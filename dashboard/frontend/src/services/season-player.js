@@ -34,7 +34,7 @@ export const SEASON_METRICS = {
   defensiveActions: { label: "Actions défensives" },
   blocks: { label: "Tirs bloqués" },
   saves: { label: "Arrêts" },
-  goalsPrevented: { label: "Buts évités · PitchAPI", decimals: 2 },
+  goalsPrevented: { label: "Buts évités", decimals: 2 },
 };
 
 const COUNTS = Object.keys(SEASON_METRICS).filter(

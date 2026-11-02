@@ -29,7 +29,7 @@ export default function SeasonShots({ shots, title = "Tirs de la saison" }) {
         <svg ref={ref} viewBox="0 0 680 470" role="img" aria-label={title}>
           <title>{title}</title>
           <desc>
-            Coordonnées du fournisseur. Buts en plein, autres tirs en contour ;
+            Buts en plein, autres tirs en contour ;
             les valeurs absentes ne sont pas placées sur le terrain.
           </desc>
           <rect

@@ -30,7 +30,6 @@ export default function NativeKnockoutBracket({ competition, season, matches }) 
     sourceSeason: season,
   });
   return <AsyncState resource={resource}>{() => <>
-    {worldCup && <p className="knockout-note">Tableau et tirs au but : <a href="https://github.com/openfootball/worldcup.json">OpenFootball</a>.</p>}
     <KnockoutBracket matches={bracketMatches} hrefForMatch={hrefForMatch} />
   </>}</AsyncState>;
 }

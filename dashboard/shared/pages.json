@@ -12,6 +12,13 @@
     "component": "CompetitionsPage"
   },
   {
+    "key": "archives",
+    "path": "/archives/",
+    "title": "Archives",
+    "component": "ArchivesPage",
+    "navigation": false
+  },
+  {
     "key": "clubs",
     "path": "/clubs/",
     "title": "Clubs",

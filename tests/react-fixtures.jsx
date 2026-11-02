@@ -37,7 +37,7 @@ export const renderSeasonSearch=(rows,query)=>renderToStaticMarkup(<FootballCont
 import {ResearchProvider} from '../dashboard/frontend/src/hooks/ResearchContext.jsx';
 export const renderSeasonProfile=(rows,matches,id)=>renderToStaticMarkup(<FootballContext.Provider value={{season:'2026/2027',competitions:[],filters:{league:'all',minutes:1},focus:'all',data:{matches},setPlayer:()=>{}}}><ResearchProvider><PlayerSeasonProfile id={id} rows={rows} scopeRows={rows}/></ResearchProvider></FootballContext.Provider>);
 import {historicalRows,historicalScore} from '../dashboard/frontend/src/services/openfootball-history.js';
-export const renderHistoricalResults=(season,competition='all',query='')=>serialize(<HistoryResults season={season} competition={competition} query={query} page={1} onPage={()=>{}}/>);
-import {HistoryResults} from '../dashboard/frontend/src/components/OpenFootballArchive.jsx';
-import {GoalResults} from '../dashboard/frontend/src/components/HistoricalGoalsArchive.jsx';
-export const renderHistoricalGoals=(season,competition='all',query='')=>serialize(<GoalResults season={season} competition={competition} query={query} page={1} onPage={()=>{}}/>);
+import {ArchiveResults,ArchiveMatchDetail} from '../dashboard/frontend/src/components/Archive.jsx';
+import {archiveRows,buildArchiveSeason} from '../dashboard/frontend/src/services/archive.js';
+export const renderArchiveResults=(results,goals=null,competition='all',query='')=>serialize(<ArchiveResults rows={archiveRows(buildArchiveSeason(results,goals),competition,query)} page={1} onPage={()=>{}} matchHref={(match)=>'/archives/?m='+encodeURIComponent(match.key)}/>);
+export const renderArchiveMatch=(match)=>serialize(<ArchiveMatchDetail match={match} backHref="/archives/"/>);

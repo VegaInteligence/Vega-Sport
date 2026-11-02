@@ -330,7 +330,7 @@ export default function PlayerSeasonProfile({
           />
           <ComparePlayerButton profile={profile} season={f.season} />
           <button className="button button-secondary" onClick={onSource}>
-            Fiche PitchAPI
+            Fiche détaillée
           </button>
           <ReportButton
             title={`${profile.name} · ${f.season}`}
@@ -355,7 +355,7 @@ export default function PlayerSeasonProfile({
           <strong>{profile.knownStarts ? number(profile.starts) : "—"}</strong>
         </div>
         <div>
-          <span>Note PitchAPI</span>
+          <span>Note</span>
           <strong>{number(profile.rating, 2)}</strong>
         </div>
       </div>

@@ -21,11 +21,9 @@ import { useResource, json, download } from "../services/resources.js";
 import { csvString } from "../model.js";
 import { dataUrl } from "../data-url.js";
 import CompetitionScope from "../components/CompetitionScope.jsx";
-import OpenFootballArchive from "../components/OpenFootballArchive.jsx";
 import CompetitionHighlights from "../components/CompetitionHighlights.jsx";
 import CupCompetition from "../components/CupCompetition.jsx";
 import NativeKnockoutBracket from "../components/NativeKnockoutBracket.jsx";
-import HistoricalGoalsArchive from "../components/HistoricalGoalsArchive.jsx";
 import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
 import CompetitionStandings from "../components/CompetitionStandings.jsx";
 import { WORLD_CUP_ID, mergeCupCatalog, competitionSearchText, normalizeCompetitionQuery } from "../services/cup-catalog.js";
@@ -45,14 +43,7 @@ export function SupplementalPanel({
     rows = selected?.[kind] || [];
   return (
     <Card title="Autres ligues et coupes">
-      <p>
-        Saison2026/2027 ou année2026 · Source :{" "}
-        <Link href="https://github.com/oladeeayo/open-matchday">
-          open-matchday
-        </Link>{" "}
-        · usage non commercial avec attribution · certains matchs recoupent
-        PitchAPI.
-      </p>
+      <p>Saison 2026/2027 ou année 2026.</p>
       <label>
         Compétition
         <select value={id} onChange={(e) => onId(e.target.value)}>
@@ -81,7 +72,7 @@ export function SupplementalPanel({
             onClick={() => {
               const keys = [...new Set(rows.flatMap((r) => Object.keys(r)))];
               download(
-                `open-matchday-${id}-${kind}.csv`,
+                `autres-competitions-${id}-${kind}.csv`,
                 csvString(
                   keys,
                   rows.map((r) => keys.map((k) => r[k])),
@@ -244,7 +235,6 @@ export default function CompetitionsPage() {
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("all");
   const [directory, setDirectory] = useState(false);
-  const [historical, setHistorical] = useState(false);
   const [supplemental, setSupplemental] = useState(false);
   const [day, setDay] = useState("");
   const [choice, setChoice] = useState({ ready: false, saved: null, country: null });
@@ -335,10 +325,6 @@ export default function CompetitionsPage() {
   }
   return (
     <Layout path="/competitions/" title="Compétitions" showSeasonContext={!selected?.source} showDataContext={!selected?.source}>
-      {historical ? <>
-        <button className="inline-link competition-back" onClick={() => setHistorical(false)}>← Retour aux compétitions</button>
-        {historical === "goals" ? <HistoricalGoalsArchive /> : <OpenFootballArchive />}
-      </> : <>
       {!directory ? <>
         <section
             className="league-spotlight"
@@ -349,12 +335,20 @@ export default function CompetitionsPage() {
                 <h2>Championnats à la une</h2>
                 <p>Retrouvez les sept grandes ligues européennes.</p>
               </div>
-              <button
-                className="button button-secondary"
-                onClick={openDirectory}
-              >
-                Toutes les compétitions <Icon name="arrow" />
-              </button>
+              <div className="league-spotlight-actions">
+                <Link
+                  className="button button-secondary"
+                  href={f.href("/archives/")}
+                >
+                  Archives
+                </Link>
+                <button
+                  className="button button-secondary"
+                  onClick={openDirectory}
+                >
+                  Toutes les compétitions <Icon name="arrow" />
+                </button>
+              </div>
             </div>
             <div className="league-spotlight-grid">
               {orderedCompetitions(orderedFeatured(catalog, FEATURED_LEAGUE_IDS)).map((c) => (
@@ -421,13 +415,11 @@ export default function CompetitionsPage() {
             )}
             {cupIndex.error && <p className="cup-catalog-error" role="status">Les autres coupes nationales sont temporairement indisponibles. <button type="button" onClick={cupIndex.retry}>Réessayer</button></p>}
           </section>
-        <div className="historical-archive-entry"><button className="button button-secondary" onClick={() => setHistorical("results")}>Archives de résultats</button>{" "}<button className="button button-secondary" onClick={() => setHistorical("goals")}>Archives de buts</button></div>
         {selected ? (selected.source ? <CupCompetition key={selected.id} competition={selected} /> : <Fixtures key={selected.id} competition={selected} />) : (!id && !choice.ready) || (id?.startsWith("open-matchday:") && cupIndex.loading) ? <div className="loading-state" role="status">Chargement de la compétition…</div> : id?.startsWith("open-matchday:") && cupIndex.error ? <div className="notice" role="alert">Les coupes nationales sont indisponibles. <button className="button button-secondary" onClick={cupIndex.retry}>Réessayer</button></div> : <Empty>Compétition inconnue ou indisponible.</Empty>}
       </> : <>
         <button className="inline-link competition-back" onClick={() => setDirectory(false)}>← Retour à la compétition</button>
         <div className="clubs-toolbar">
           <CompetitionScope />
-          <button className="button button-secondary" onClick={() => setHistorical(true)}>Archives de résultats</button>
           <input type="search" placeholder="Rechercher une compétition…" aria-label="Rechercher une compétition" value={query} onChange={(e) => { setQuery(e.target.value); }} />
           <select aria-label="Filtrer par pays" value={country} onChange={(e) => { setCountry(e.target.value); }}>
             <option value="all">Tous les pays</option>
@@ -453,7 +445,6 @@ export default function CompetitionsPage() {
           </div>
           {!rows.length && (cupIndex.loading ? <div className="loading-state" role="status">Chargement des compétitions…</div> : <Empty>Aucune compétition ne correspond à la recherche.</Empty>)}
         </>}
-      </>}
       </>}
     </Layout>
   );

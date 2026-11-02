@@ -158,7 +158,7 @@ export default function StadiumMap({ name, coordinates }) {
             target="_blank"
             rel="noopener noreferrer"
           >
-            Ouvrir la carte OpenStreetMap
+            Ouvrir la carte
           </a>
         </div>
       )}

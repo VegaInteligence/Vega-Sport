@@ -99,7 +99,7 @@ export default function PlayerData({ row, mode }) {
             selected = periods.find((p) => p.period === period) || periods[0];
           if (!selected)
             return (
-              <Empty>Statistiques sources non collectées pour ce joueur.</Empty>
+              <Empty>Statistiques détaillées non collectées pour ce joueur.</Empty>
             );
           return (
             <>
