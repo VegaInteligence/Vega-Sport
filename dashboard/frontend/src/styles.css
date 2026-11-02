@@ -840,6 +840,15 @@ input[type="date"] {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
+/* Directories list every entry at once and add columns on wide screens.
+   Rows outside the viewport are skipped until scrolled into view. */
+.competition-grid.directory-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+}
+.directory-grid > .competition-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 60px;
+}
 .competition-card {
   display: flex;
   align-items: center;

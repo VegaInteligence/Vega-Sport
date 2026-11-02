@@ -1,11 +1,11 @@
 "use client";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import React, { useState, useMemo } from "react";
+import React, { useDeferredValue, useState, useMemo } from "react";
 import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
-import { Card, Media, Pager } from "../components/UI.jsx";
+import { Card, Media } from "../components/UI.jsx";
 import { ProfileDialog } from "../components/PlayerDetails.jsx";
 import ClubRanking from "../components/ClubRanking.jsx";
 import { MatchLink } from "../components/MatchLink.jsx";
@@ -13,7 +13,6 @@ import { normalizeText, number } from "../services/format.js";
 export default function ClubsPage() {
   const f = useFootball(),
     [query, setQuery] = useState(""),
-    [page, setPage] = useState(1),
     [profile, setProfile] = useState(false);
   const id = useSearchParams().get("id");
   const clubs = useMemo(() => {
@@ -24,14 +23,22 @@ export default function ClubsPage() {
         if (!map.has(t.id)) map.set(t.id, { ...t, league: m.league, count: 0 });
         map.get(t.id).count++;
       }
-    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+    return [...map.values()]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((club) => ({ ...club, search: normalizeText(club.name) }));
   }, [f.data]);
-  const selected = clubs.find((c) => c.id === id),
-    visible = clubs.filter((c) =>
-      normalizeText(c.name).includes(normalizeText(query)),
+  // The whole directory is listed; the search filters it without blocking
+  // the keystroke.
+  const search = normalizeText(useDeferredValue(query)),
+    selected = clubs.find((c) => c.id === id),
+    visible = useMemo(
+      () => clubs.filter((c) => c.search.includes(search)),
+      [clubs, search],
     ),
-    pages = Math.max(1, Math.ceil(visible.length / 24)),
-    current = Math.min(page, pages);
+    // The first screens paint at once; the rest of the list follows in a
+    // background render.
+    complete = useDeferredValue(true, false),
+    shown = complete ? visible : visible.slice(0, 120);
   return (
     <Layout path="/clubs/" title={selected ? selected.name : "Clubs"}>
       {selected ? (
@@ -112,10 +119,7 @@ export default function ClubsPage() {
               type="search"
               aria-label="Rechercher un club"
               value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setPage(1);
-              }}
+              onChange={(e) => setQuery(e.target.value)}
             />
             <span>{visible.length} clubs</span>
             <label>
@@ -134,7 +138,7 @@ export default function ClubsPage() {
             </label>
           </div>
           <div className="competition-grid directory-grid">
-            {visible.slice((current - 1) * 24, current * 24).map((c) => (
+            {shown.map((c) => (
               <Link
                 className="competition-card"
                 key={c.id}
@@ -154,7 +158,6 @@ export default function ClubsPage() {
               </Link>
             ))}
           </div>
-          <Pager page={current} total={pages} onChange={setPage} />
         </>
       )}
     </Layout>

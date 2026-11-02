@@ -1,7 +1,7 @@
 "use client";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import React, { useState, useMemo } from "react";
+import React, { useDeferredValue, useState, useMemo } from "react";
 import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -247,7 +247,6 @@ export default function CompetitionsPage() {
     id = params.get("id"),
     [query, setQuery] = useState(""),
     [country, setCountry] = useState("all"),
-    [page, setPage] = useState(1),
     [supplemental, setSupplemental] = useState(false),
     [day, setDay] = useState("");
   const catalog = f.catalog.map((c) => ({
@@ -278,8 +277,8 @@ export default function CompetitionsPage() {
         (country === "all" || c.country === country) &&
         normalizeText(`${c.name} ${c.country}`).includes(normalizeText(query)),
     ),
-    pages = Math.max(1, Math.ceil(rows.length / 24)),
-    current = Math.min(page, pages);
+    // Large catalogues paint their first screens at once, then the rest.
+    complete = useDeferredValue(true, false);
   return (
     <Layout path="/competitions/" title="Compétitions">
       {id ? (
@@ -302,18 +301,12 @@ export default function CompetitionsPage() {
               placeholder="Rechercher une compétition…"
               aria-label="Rechercher une compétition"
               value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setPage(1);
-              }}
+              onChange={(e) => setQuery(e.target.value)}
             />
             <select
               aria-label="Filtrer par pays"
               value={country}
-              onChange={(e) => {
-                setCountry(e.target.value);
-                setPage(1);
-              }}
+              onChange={(e) => setCountry(e.target.value)}
             >
               <option value="all">Tous les pays</option>
               {[...new Set(catalog.map((c) => c.country).filter(Boolean))]
@@ -347,7 +340,7 @@ export default function CompetitionsPage() {
           ) : (
             <>
               <div className="competition-grid directory-grid">
-                {rows.slice((current - 1) * 24, current * 24).map((c) => (
+                {(complete ? rows : rows.slice(0, 120)).map((c) => (
                   <Link
                     key={c.id}
                     className="competition-card"
@@ -367,7 +360,6 @@ export default function CompetitionsPage() {
                   </Link>
                 ))}
               </div>
-              <Pager page={current} total={pages} onChange={setPage} />
             </>
           )}
         </>
