@@ -1,5 +1,5 @@
 "use client";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import React, {
   createContext,
   useContext,
@@ -72,7 +72,11 @@ export function FootballProvider({ children, loadData = true }) {
     } catch {}
   }, []);
   const season = initial.get("season") || "";
-  const filters = useMemo(
+  // Playing time belongs to the players page: it stays in the URL across
+  // pages but only narrows the data there.
+  const pathname = usePathname() || "",
+    playerScope = pathname.startsWith("/joueurs");
+  const urlFilters = useMemo(
     () => ({
       query: initial.get("q") || "",
       league: initial.get("league") || "all",
@@ -80,6 +84,10 @@ export function FootballProvider({ children, loadData = true }) {
       match: matchFilter,
     }),
     [initial, matchFilter],
+  );
+  const filters = useMemo(
+    () => (playerScope ? urlFilters : { ...urlFilters, minutes: 1 }),
+    [urlFilters, playerScope],
   );
   function updateQuery(values) {
     const url = new URL(window.location.href);
@@ -321,9 +329,11 @@ export function FootballProvider({ children, loadData = true }) {
     const query = new URLSearchParams({
       season: chosen || "",
       focus,
-      ...(filters.query ? { q: filters.query } : {}),
-      ...(filters.league !== "all" ? { league: filters.league } : {}),
-      ...(filters.minutes !== 1 ? { minutes: String(filters.minutes) } : {}),
+      ...(urlFilters.query ? { q: urlFilters.query } : {}),
+      ...(urlFilters.league !== "all" ? { league: urlFilters.league } : {}),
+      ...(urlFilters.minutes !== 1
+        ? { minutes: String(urlFilters.minutes) }
+        : {}),
       ...params,
     });
     return `${page}${query.size ? "?" + query : ""}`;

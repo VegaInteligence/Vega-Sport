@@ -11,8 +11,11 @@ import SiteFooter from "./SiteFooter.jsx";
 export const navigation = pages
   .filter((page) => page.navigation !== false)
   .map((page) => [page.path, page.title]);
-export function Filters({ fixtures = false }) {
-  const f = useFootball();
+export function Filters({ kind = "performances" }) {
+  const f = useFootball(),
+    fixtures = kind === "fixtures",
+    // Playing time only makes sense on the players page.
+    players = kind === "players";
   const reset = () =>
     f.setFilters({ query: "", league: "all", minutes: 1, match: "all" });
   const minutes = [
@@ -25,7 +28,8 @@ export function Filters({ fixtures = false }) {
   const active =
     f.filters.query ||
     f.filters.league !== "all" ||
-    (!fixtures && (f.filters.minutes !== 1 || f.filters.match !== "all"));
+    (players && f.filters.minutes !== 1) ||
+    (!fixtures && f.filters.match !== "all");
   const selected = f.competitions.find((c) => c.id === f.filters.league);
   const names = new Map();
   for (const c of f.competitions)
@@ -99,7 +103,7 @@ export function Filters({ fixtures = false }) {
             <Icon name="chevron" className="select-chevron" />
           </div>
         </div>
-        {!fixtures && (
+        {players && (
           <div className="filter-field">
             <label htmlFor="minutes-filter">Temps de jeu</label>
             <div className="filter-input-wrap">
@@ -152,7 +156,7 @@ export function Filters({ fixtures = false }) {
                 <Icon name="close" />
               </button>
             )}
-            {!fixtures && f.filters.minutes !== 1 && (
+            {players && f.filters.minutes !== 1 && (
               <button
                 className="filter-chip"
                 aria-label="Retirer le filtre de temps de jeu"
@@ -244,7 +248,7 @@ export default function Layout({
             </div>
           )}
           {subnav}
-          {filters && <Filters fixtures={filterKind === "fixtures"} />}
+          {filters && <Filters kind={filterKind} />}
           {f.notice && (
             <div role="status" className="notice">
               {f.notice}

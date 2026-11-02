@@ -48,7 +48,7 @@ export default function PlayersPage() {
     ["goalsPrevented", "Buts évités"],
   ];
   return (
-    <Layout path="/joueurs/" title="Joueurs" filters>
+    <Layout path="/joueurs/" title="Joueurs" filters filterKind="players">
       <Card
         title={id ? `Performances de ${rows[0]?.name || id}` : "Performances"}
         action={
