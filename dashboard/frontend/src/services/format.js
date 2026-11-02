@@ -21,6 +21,8 @@ export function safeImageUrl(value) {
     const u = new URL(value);
     return u.protocol === "https:" &&
       (u.hostname === "cdn.pitchapi.dev" ||
+        (u.hostname === "upload.wikimedia.org" &&
+          /^\/wikipedia\/commons\//.test(u.pathname)) ||
         (u.hostname === "img.thesports.com" &&
           /^\/football\/team\/[a-z0-9]+\.(?:png|webp|jpe?g)$/i.test(
             u.pathname,
