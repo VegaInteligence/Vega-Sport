@@ -17,6 +17,7 @@
   --danger: light-dark(#5c0800, #ffada5);
   --font: var(--statarena-font);
   --font-mono: "SFMono-Regular", Consolas, monospace;
+  --page-gutter: 24px;
 }
 *,
 *::before,
@@ -113,7 +114,7 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 36px;
-  padding: 0 max(28px, calc((100% - 1240px) / 2));
+  padding: 0 var(--page-gutter);
   border-bottom: 1px solid var(--border);
   background: var(--bg);
 }
@@ -161,9 +162,7 @@ button:disabled {
   background: var(--ink);
 }
 .workspace {
-  max-width: 1296px;
-  margin: auto;
-  padding: 48px 28px 0;
+  padding: 48px var(--page-gutter) 0;
   min-height: calc(100vh - 72px);
 }
 .page-heading {
@@ -1211,9 +1210,7 @@ input[type="checkbox"] {
   background: var(--bg);
 }
 .site-footer-inner {
-  max-width: 1296px;
-  margin: 0 auto;
-  padding: 52px 28px 0;
+  padding: 52px var(--page-gutter) 0;
 }
 .site-footer-main {
   display: grid;
@@ -1298,7 +1295,7 @@ input[type="checkbox"] {
     margin-top: 56px;
   }
   .site-footer-inner {
-    padding: 36px 20px 0;
+    padding: 36px var(--page-gutter) 0;
   }
   .site-footer-main {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1381,10 +1378,13 @@ input[type="checkbox"] {
   }
 }
 @media (max-width: 640px) {
+  :root {
+    --page-gutter: 12px;
+  }
   .topbar {
     flex-wrap: wrap;
     gap: 0;
-    padding: 0 20px;
+    padding: 0 var(--page-gutter);
   }
   .brand {
     height: 64px;
@@ -1404,7 +1404,7 @@ input[type="checkbox"] {
     font-size: 11px;
   }
   .workspace {
-    padding: 32px 20px 0;
+    padding: 32px var(--page-gutter) 0;
   }
   .page-heading {
     flex-wrap: wrap;
