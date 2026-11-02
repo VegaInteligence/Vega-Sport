@@ -12,11 +12,9 @@ import React, {
 import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
-import { Card, Media, Pager, Empty } from "../components/UI.jsx";
-import ClubRanking from "../components/ClubRanking.jsx";
-import { ClubFacts, ClubRoster } from "../components/ClubProfile.jsx";
-import { MatchLink } from "../components/MatchLink.jsx";
-import ClubForm from "../components/ClubForm.jsx";
+import { Media, Pager, Empty } from "../components/UI.jsx";
+import ClubWorkspace from "../components/ClubWorkspace.jsx";
+import { ResearchLists } from "../components/ResearchUI.jsx";
 import { clubMatchHistory } from "../services/club-matches.js";
 import { normalizeText, number } from "../services/format.js";
 import {
@@ -62,13 +60,33 @@ function useDirectoryCapacity(gridRef, active, scope) {
   return layout;
 }
 
+function ClubsViewSwitch({ saved = false, href }) {
+  return (
+    <nav className="matches-view-switch" aria-label="Vue des clubs">
+      <Link
+        href={href("/clubs/", { clubsView: "" })}
+        aria-current={saved ? undefined : "page"}
+      >
+        Annuaire
+      </Link>
+      <Link
+        href={href("/clubs/", { clubsView: "saved" })}
+        aria-current={saved ? "page" : undefined}
+      >
+        Mes clubs
+      </Link>
+    </nav>
+  );
+}
+
 export default function ClubsPage() {
   const f = useFootball(),
     [query, setQuery] = useState(""),
     [country, setCountry] = useState("all"),
     [competitionId, setCompetitionId] = useState("all"),
     [paging, setPaging] = useState({ key: "", page: 1 });
-  const id = useSearchParams().get("id");
+  const params = useSearchParams(),
+    id = params.get("id");
   const gridRef = useRef(null);
   const clubs = useMemo(() => {
     const map = new Map();
@@ -168,44 +186,35 @@ export default function ClubsPage() {
     [f.data.matches, f.data.fixtures, id],
   );
   return (
-    <Layout path="/clubs/" title={selected ? selected.name : "Clubs"}>
+    <Layout path="/clubs/" title="Clubs">
       {selected ? (
         <>
-          <Link className="inline-link" href={f.href("/clubs/")}>
+          <Link
+            className="inline-link competition-back"
+            href={f.href("/clubs/", { clubView: "", clubScope: "", vs: "" })}
+          >
             ← Tous les clubs
           </Link>
-          <Card title={selected.name}>
-            <div className="club-identity">
-              <Media
-                name={selected.name}
-                url={selected.imageUrl}
-                className="crest club-logo"
-              />
-              <p>
-                {selected.league} · {number(selected.count)} matchs
-              </p>
-            </div>
-          </Card>
-          <ClubFacts club={selected} matches={clubMatches} />
-          <ClubRoster
-            clubId={id}
-            appearances={f.data.appearances}
-            href={f.href}
-            season={f.season}
+          <ClubWorkspace
+            key={selected.id}
+            club={{
+              ...selected,
+              countryLabel:
+                selected.country === "unknown"
+                  ? ""
+                  : countryLabel(selected.country),
+            }}
+            history={clubMatches}
           />
-          <Card title="Matchs du club">
-            <ClubForm matches={clubMatches} clubId={id} href={f.href} />
-            {clubMatches.map((match) => (
-              <MatchLink key={match.id} match={match} />
-            ))}
-            {!clubMatches.length && (
-              <Empty>Aucun match disponible pour cette saison.</Empty>
-            )}
-          </Card>
-          <ClubRanking clubId={id} />
+        </>
+      ) : params.get("clubsView") === "saved" ? (
+        <>
+          <ClubsViewSwitch saved href={f.href} />
+          <ResearchLists kind="clubs" />
         </>
       ) : (
         <>
+          <ClubsViewSwitch href={f.href} />
           <div className="clubs-toolbar club-directory-toolbar">
             <div className="filter-input-wrap club-directory-search">
               <Icon name="search" />

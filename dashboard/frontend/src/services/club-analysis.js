@@ -314,7 +314,13 @@ export function clubCentile(club, key, cohort) {
     : null;
 }
 export function similarClubs(target, clubs, cohort, limit = 6) {
-  const required = Math.max(5, Math.ceil(CLUB_STYLE_KEYS.filter((key) => clubCentile(target, key, cohort) != null).length * .75));
+  const required = Math.max(
+    5,
+    Math.ceil(
+      CLUB_STYLE_KEYS.filter((key) => clubCentile(target, key, cohort) != null)
+        .length * 0.75,
+    ),
+  );
   return clubs
     .filter((c) => c.id !== target.id)
     .flatMap((club) => {
@@ -391,4 +397,92 @@ export function clubSquad(data, club, options = {}) {
         100
       : null,
   };
+}
+
+/** Competitions the club played this season, most played first. */
+export function clubCompetitions(data, clubId) {
+  const counts = new Map();
+  for (const match of clubMatchIndex(data).byClub.get(clubId) || []) {
+    if (!match.leagueId) continue;
+    const entry = counts.get(match.leagueId) || {
+      id: match.leagueId,
+      name: match.league || match.leagueId,
+      matches: 0,
+      finished: 0,
+    };
+    entry.matches++;
+    if (match.status === "finished") entry.finished++;
+    counts.set(match.leagueId, entry);
+  }
+  return [...counts.values()].sort(
+    (a, b) => b.finished - a.finished || a.name.localeCompare(b.name, "fr"),
+  );
+}
+export function upcomingClubMatches(club, now = Date.now(), limit = 3) {
+  return club.games
+    .filter((m) => m.status === "not_started")
+    .filter((m) => {
+      const time = Date.parse(m.timeUtc || m.date || "");
+      return !Number.isFinite(time) || time >= now - 3 * 3600000;
+    })
+    .sort((a, b) =>
+      String(a.timeUtc || a.date).localeCompare(String(b.timeUtc || b.date)),
+    )
+    .slice(0, limit);
+}
+/** Results by formation: only matches whose formation the source gives. */
+export function formationRecords(club) {
+  const records = new Map();
+  for (const form of club.forms) {
+    const formation = form.match[form.side]?.formation;
+    if (!formation) continue;
+    const record = records.get(formation) || {
+      formation,
+      matches: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      goalsFor: 0,
+      goalsAgainst: 0,
+    };
+    record.matches++;
+    record.goalsFor += form.scoreFor;
+    record.goalsAgainst += form.scoreAgainst;
+    if (form.result === "V") record.wins++;
+    else if (form.result === "N") record.draws++;
+    else record.losses++;
+    records.set(formation, record);
+  }
+  return [...records.values()].sort((a, b) => b.matches - a.matches);
+}
+/** Centile oriented so that a higher value always reads "more favourable". */
+export function orientedCentile(club, key, cohort) {
+  const value = clubCentile(club, key, cohort);
+  return value == null
+    ? null
+    : CLUB_METRICS[key]?.lowerIsBetter
+      ? 100 - value
+      : value;
+}
+export function cohortMedian(cohort, key) {
+  const values = cohort[key] || [];
+  if (!values.length) return null;
+  const middle = Math.floor(values.length / 2);
+  return values.length % 2
+    ? values[middle]
+    : (values[middle - 1] + values[middle]) / 2;
+}
+/** Season meetings between two clubs, newest first. */
+export function headToHead(data, a, b) {
+  return (clubMatchIndex(data).byClub.get(a) || [])
+    .filter(
+      (m) =>
+        (m.home.id === b || m.away.id === b) &&
+        m.status === "finished" &&
+        isNumber(m.home.score) &&
+        isNumber(m.away.score),
+    )
+    .sort((x, y) =>
+      String(y.timeUtc || y.date).localeCompare(String(x.timeUtc || x.date)),
+    );
 }
