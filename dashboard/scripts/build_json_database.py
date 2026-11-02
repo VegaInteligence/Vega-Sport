@@ -150,10 +150,16 @@ def finalize_indexes():
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--tables-only',action='store_true');parser.add_argument('--indexes-only',action='store_true');args=parser.parse_args()
-    if args.indexes_only:finalize_indexes();return
+    if args.indexes_only:
+        finalize_indexes()
+        from build_matchdays import build_matchdays
+        build_matchdays(DATA)
+        return
     summary=build_tables()
     if not args.tables_only:
         summary['observations']=build_observations();finalize_indexes()
+        from build_matchdays import build_matchdays
+        summary['matchdays']=build_matchdays(DATA)
     write('raw/import-summary.json',summary)
     from build_dashboard_views import build_views
     build_views(DATA)

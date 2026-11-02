@@ -44,6 +44,7 @@ test("competition page renders a result-derived league table and its limits", as
     "../components/Layout.jsx": { __esModule: true, default: ({ children }) => elem("main", null, children) },
     "../hooks/FootballContext.jsx": { useFootball: () => context }, "../components/UI.jsx": UI,
     "../components/MatchLink.jsx": { MatchLink: ({ match }) => elem("p", { "data-match": match.id }, match.id) },
+    "../components/MatchdaySchedule.jsx": { __esModule: true, default: ({ matches, initialStatus }) => elem("section", { "data-matchday-status": initialStatus }, matches.map((match) => elem("p", { key: match.id, "data-match": match.id }, match.id))) },
     "../services/format.js": { normalizeText: String, seasonLabel: String, number: String, date: String },
     "../services/resources.js": { useResource: (key, _loader, enabled = true) => ({ value: key.startsWith("sportscore-standings:") && enabled && externalTable ? externalTable : { matches, source: "snapshot" } }), json: () => {}, download: () => {} },
     "../model.js": { csvString: () => "" }, "../data-url.js": { dataUrl: (x) => x },
@@ -54,6 +55,16 @@ test("competition page renders a result-derived league table and its limits", as
     "../services/sportscore-standings.js": sportscore,
     "../services/competition-matches.js": ordering,
   };
+  stubs["./UI.jsx"] = UI;
+  const standingsFile = path.join(root, "dashboard/frontend/src/components/CompetitionStandings.jsx");
+  const standingsSource = await fs.readFile(standingsFile, "utf8");
+  const standingsCode = babel.transformSync(standingsSource, { presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename: standingsFile }).code;
+  const standingsModule = { exports: {} };
+  vm.runInThisContext("(function(require,module,exports){" + standingsCode + "\n})", { filename: standingsFile })(
+    (name) => { if (!(name in stubs)) throw Error("Unexpected import " + name); return stubs[name]; },
+    standingsModule, standingsModule.exports,
+  );
+  stubs["../components/CompetitionStandings.jsx"] = { __esModule: true, default: standingsModule.exports.default };
   const filename = path.join(root, "dashboard/frontend/src/views/CompetitionsPage.jsx");
   const source = await fs.readFile(filename, "utf8");
   const compiled = babel.transformSync(source, { presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename }).code;
@@ -89,9 +100,10 @@ test("competition page renders a result-derived league table and its limits", as
   forceMatchView = true;
   context.season = "2026/2027";
   const resultView = renderToStaticMarkup(elem(mod.exports.default));
-  assert.match(resultView, /aria-pressed="true">Résultats/);
-  assert.ok(resultView.indexOf("m_1") < resultView.indexOf("m_old"));
-  assert.doesNotMatch(resultView, /m_future/);
+  assert.match(resultView, /data-matchday-status="finished"/);
+  assert.match(resultView, /data-match="m_1"/);
+  assert.match(resultView, /data-match="m_old"/);
+  assert.match(resultView, /data-match="m_future"/);
   assert.doesNotMatch(resultView, /data-highlights-season/);
 
   context.catalog = [
@@ -107,7 +119,7 @@ test("competition page renders a result-derived league table and its limits", as
   forceDirectory = true;
   hookCount = 0;
   const directory = renderToStaticMarkup(elem(mod.exports.default));
-  assert.ok(directory.indexOf(">International</h2>") < directory.indexOf(">Allemagne</h2>"));
+  assert.ok(directory.indexOf(">Australie</h2>") < directory.indexOf(">International</h2>"));
   assert.ok(directory.indexOf(">Allemagne</h2>") < directory.indexOf(">Angleterre</h2>"));
   assert.ok(directory.indexOf(">Premier League</h3>") < directory.indexOf(">Championship</h3>"));
   assert.ok(directory.indexOf(">Angleterre</h2>") < directory.indexOf(">Australie</h2>"));

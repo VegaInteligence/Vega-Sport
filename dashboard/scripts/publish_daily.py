@@ -61,6 +61,8 @@ def main():
     index.update(defaultSeason=receipt['season'] if receipt['season'] in seasons else max(seasons),seasons=sorted(seasons.values(),key=lambda s:s['id'],reverse=True))
     # Publish the manifest last, only after all source/roundtrip checks pass.
     db.write('raw/index.json',index)
+    from build_matchdays import build_matchdays
+    receipt['matchdays'] = build_matchdays(data, labels={receipt['season']})
     receipt.update(status='success',normalizedMatches=count)
     db.write('raw/sync.json',receipt)
     from build_dashboard_views import build_views

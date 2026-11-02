@@ -14,6 +14,7 @@ import {
   Empty,
 } from "../components/UI.jsx";
 import { MatchLink } from "../components/MatchLink.jsx";
+import MatchdaySchedule from "../components/MatchdaySchedule.jsx";
 import { defaultCompetitionMatchStatus, orderCompetitionMatches } from "../services/competition-matches.js";
 import { normalizeText, seasonLabel } from "../services/format.js";
 import { useResource, json, download } from "../services/resources.js";
@@ -210,7 +211,7 @@ function Fixtures({ competition, day }) {
           const pages = Math.max(1, Math.ceil(rows.length / 30)), current = Math.min(page, pages);
           return <>
             {value.error && <p role="status">{value.error} · données collectées affichées.</p>}
-            {supported && view === "standings" ? <CompetitionStandings competition={competition} season={season} matches={value.matches || []} source={value.source} /> : <>
+            {supported && view === "standings" ? <CompetitionStandings competition={competition} season={season} matches={value.matches || []} source={value.source} /> : supported ? <MatchdaySchedule key={competition.id + ":" + season} competition={competition} season={season} initialStatus={status} matches={(value.matches || []).filter((m) => f.focus !== "europe" || EUROPE_FOCUS_IDS.has(m.league?.id || m.leagueId))} /> : <>
               <Segments value={status} onChange={(v) => { setStatus(v); setPage(1); }} label="Statut des rencontres" items={[["finished", "Résultats"], ["not_started", "À venir"], ["all", "Tous"]]} />
               {!day && <p className="competition-matches-order">{status === "finished" ? "Les résultats les plus récents en premier" : status === "not_started" ? "Les prochaines rencontres en premier" : "Résultats récents, puis rencontres à venir"}</p>}
               {rows.slice((current - 1) * 30, current * 30).map((m) => <MatchLink key={m.id} match={m} />)}

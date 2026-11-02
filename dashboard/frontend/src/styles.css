@@ -2096,3 +2096,68 @@ th[aria-sort="descending"] .sort-indicator {
   .stadium-overview { grid-template-columns: 1fr; gap: 16px; }
   .stadium-map-wrap { height: 300px; }
 }
+
+.matchday-schedule {
+  margin-top: 4px;
+}
+.matchday-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 18px;
+  margin: 4px 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-hover);
+}
+.matchday-heading {
+  min-width: 0;
+}
+.matchday-eyebrow {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.matchday-heading h3 {
+  margin: 4px 0;
+  font-size: var(--text-lg);
+}
+.matchday-heading p,
+.matchday-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.matchday-navigation {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.matchday-navigation select {
+  min-width: 142px;
+  max-width: 240px;
+}
+.matchday-arrow {
+  min-width: 38px;
+  padding-inline: 10px;
+}
+.matchday-note {
+  margin: 12px 0;
+}
+.matchday-more {
+  margin-top: 12px;
+}
+@media (max-width: 600px) {
+  .matchday-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .matchday-navigation {
+    width: 100%;
+  }
+  .matchday-navigation select {
+    min-width: 0;
+    max-width: none;
+    flex: 1;
+  }
+}

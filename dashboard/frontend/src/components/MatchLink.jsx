@@ -4,7 +4,8 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { number, date } from "../services/format.js";
 import Icon from "./Icon.jsx";
 import { Media } from "./UI.jsx";
-export function MatchLink({ match, week }) {
+const kickoffFormatter = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
+export function MatchLink({ match, week, showKickoff = false }) {
   const f = useFootball(),
     m = match.home
       ? {
@@ -16,6 +17,9 @@ export function MatchLink({ match, week }) {
             (match.finished === false ? "not_started" : undefined),
         }
       : f.client.normalizedRemote(match);
+  const kickoffValue = match.time_utc || match.timeUtc || m.timeUtc;
+  const kickoffTime = kickoffValue ? Date.parse(kickoffValue) : NaN;
+  const kickoff = Number.isFinite(kickoffTime) ? kickoffFormatter.format(new Date(kickoffTime)) : "Horaire à confirmer";
   const Tag = m.id ? Link : "div";
   return (
     <Tag
@@ -24,7 +28,8 @@ export function MatchLink({ match, week }) {
       href={
         m.id
           ? f.href("/matchs/", {
-              tab: "results",
+              tab: showKickoff && m.status === "not_started" ? "upcoming" : "results",
+              ...(showKickoff && m.status === "not_started" ? { from: "upcoming" } : {}),
               ...(week ? { week } : {}),
               id: m.id,
               competition: match.league?.id || m.leagueId || "",
@@ -41,7 +46,7 @@ export function MatchLink({ match, week }) {
         </span>
         <strong className="score">
           {m.status === "not_started"
-            ? "À venir"
+            ? (showKickoff ? kickoff : "À venir")
             : `${number(m.home?.score)} – ${number(m.away?.score)}`}
         </strong>
         <span className="team-name">
