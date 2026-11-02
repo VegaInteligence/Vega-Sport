@@ -25,3 +25,5 @@ dashboard/dist/
 next-env.d.ts
 .vercel/
 dashboard/outputs/daily-refresh/
+
+dashboard/frontend/public/assets/

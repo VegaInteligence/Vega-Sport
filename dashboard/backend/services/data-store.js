@@ -12,10 +12,21 @@ export function remoteDataUrl(relative) {
     relative.split("/").some((p) => p.startsWith("."))
   )
     throw new Error("Invalid data path");
-  const revision =
-    process.env.ORION_DATA_REVISION || process.env.VERCEL_GIT_COMMIT_SHA;
+  const revision = process.env.VERCEL
+    ? process.env.VERCEL_GIT_COMMIT_SHA
+    : process.env.ORION_DATA_REVISION || process.env.VERCEL_GIT_COMMIT_SHA;
   if (!/^[a-f0-9]{40}$/i.test(revision || ""))
     throw new Error("Missing immutable data revision");
+  if (process.env.VERCEL) {
+    const host =
+      process.env.VERCEL_ENV === "production"
+        ? process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+          "statarena-analytics.vercel.app"
+        : process.env.VERCEL_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    if (!/^[a-z0-9.-]+$/i.test(host || ""))
+      throw new Error("Missing deployment hostname");
+    return `https://${host}/assets/${revision}/${relative}`;
+  }
   return `https://raw.githubusercontent.com/OrionQuantPlatform/STATARENA/${revision}/data/${relative}`;
 }
 

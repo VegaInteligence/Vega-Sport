@@ -1,4 +1,4 @@
-/** Public immutable data bypasses a serverless redirect on every file request. */
+/** Versioned data assets are published with the site, not the private repository. */
 export const dataUrl = (path) => {
   const revision = process.env.NEXT_PUBLIC_DATA_REVISION;
   if (/^[a-f0-9]{40}$/i.test(revision || "")) {
@@ -8,7 +8,7 @@ export const dataUrl = (path) => {
         : path === "football-manifest.json"
           ? "raw/index.json"
           : path;
-    return `https://raw.githubusercontent.com/OrionQuantPlatform/STATARENA/${revision}/data/${relative}`;
+    return `/assets/${revision}/${relative}`;
   }
   return `/data/${path}`;
 };
