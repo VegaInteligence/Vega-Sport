@@ -6,9 +6,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
 const app = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const out = path.join(app, "outputs/vercel-daily");
+const out =
+  process.env.ORION_DAILY_EVIDENCE_DIR ||
+  path.join(app, "outputs/vercel-daily");
 await fs.mkdir(out, { recursive: true });
-const dir = await fs.mkdtemp(path.join(os.tmpdir(), "orion-daily-e2e-"));
+const tempRoot = await fs.realpath(os.tmpdir());
+const dir = await fs.mkdtemp(path.join(tempRoot, "orion-daily-e2e-"));
 const report = {
   command: "cd dashboard && bun scripts/verify_daily_refresh.mjs",
   setup:
@@ -46,7 +49,7 @@ const league = {
   id: "l_3FJFUl",
   name: "Ligue 1",
   country_code: "FRA",
-  seasons: ["2026/2027", "2025/2026"],
+  seasons: ["2026/2027", "2025/2026", "2023/2024", "2023"],
 };
 const player = {
   player: { id: "p_000001", name: "Observed Player" },
@@ -147,6 +150,7 @@ const read = async (ref) =>
   JSON.parse(gunzipSync(await fs.readFile(path.join(dir, ref.path))));
 try {
   await fs.mkdir(path.join(dir, "raw/seasons/2025-2026"), { recursive: true });
+  await fs.mkdir(path.join(dir, "raw/seasons/2023-2024"), { recursive: true });
   const historical = Buffer.from(
     '[{"id":"preserved-history","missing":null}]\n',
   );
@@ -155,12 +159,19 @@ try {
     historical,
   );
   await fs.writeFile(
+    path.join(dir, "raw/seasons/2023-2024/sentinel.json"),
+    historical,
+  );
+  await fs.writeFile(
     path.join(dir, "raw/index.json"),
     JSON.stringify({
       schemaVersion: 3,
       storage: "json-relational",
       defaultSeason: "2025/2026",
-      seasons: [{ id: "2025/2026", chunks: [] }],
+      seasons: [
+        { id: "2025/2026", chunks: [] },
+        { id: "2023/2024", chunks: [] },
+      ],
     }),
   );
   assert.equal(await run(), 0, "first collection process");
@@ -168,6 +179,21 @@ try {
     season = index.seasons.find((s) => s.id === "2026/2027"),
     tables = season.chunks[0].tables;
   assert.equal(season.chunks.length, 1);
+  assert.ok(index.seasons.some((entry) => entry.id === "2023/2024"));
+  assert.deepEqual(
+    await fs.readFile(path.join(dir, "raw/seasons/2023-2024/sentinel.json")),
+    historical,
+  );
+  const catalogue = JSON.parse(
+    await fs.readFile(
+      path.join(
+        dir,
+        "sources/pitchapi/archives/europe_2026_2027/catalogue.json",
+      ),
+    ),
+  );
+  assert.ok(catalogue.leagues[0].seasons.includes("2023/2024"));
+  assert.ok(catalogue.leagues[0].seasons.includes("2023"));
   assert.equal((await read(tables.matches)).length, 1);
   assert.equal((await read(tables.performances)).length, 1);
   assert.equal(
@@ -221,6 +247,15 @@ try {
     path.join(out, "worker-runtime.log"),
     logs.map((l) => `exit=${l.code}\n${l.stdout}${l.stderr}`).join("\n"),
   );
-  await fs.rm(dir, { recursive: true, force: true });
+  const resolved = await fs.realpath(dir),
+    relative = path.relative(tempRoot, resolved);
+  if (
+    !relative ||
+    relative.startsWith("..") ||
+    path.isAbsolute(relative) ||
+    !path.basename(resolved).startsWith("orion-daily-e2e-")
+  )
+    throw new Error("Unexpected temporary test directory");
+  await fs.rm(resolved, { recursive: true, force: true });
 }
 console.log(JSON.stringify(report, null, 2));
