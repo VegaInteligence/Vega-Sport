@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { competitionHighlights, highlightKickoff } from "../dashboard/frontend/src/services/competition-highlights.js";
+import { competitionHighlights, highlightKickoff, recentResultCapacity } from "../dashboard/frontend/src/services/competition-highlights.js";
 
 const team = (name) => ({ id: name, name });
 const fixture = (id, status, date, time, home = "Paris", away = "Lille", scores = [null, null]) => ({
@@ -33,4 +33,19 @@ test("historical seasons do not show old fixtures as upcoming and respect the li
   const result = competitionHighlights(matches, now, 4);
   assert.deepEqual(result.recent.map((m) => m.id), ["r5", "r4", "r3", "r2"]);
   assert.deepEqual(result.upcoming, []);
+});
+
+
+test("result capacity adapts to the standings and available room", () => {
+  assert.equal(recentResultCapacity({ standingsHeight: 1400, upcomingHeight: 400, headerHeight: 50, rowHeight: 100 }), 9);
+  assert.equal(recentResultCapacity({ standingsHeight: 450, upcomingHeight: 350, headerHeight: 50, rowHeight: 100 }), 1);
+  assert.equal(recentResultCapacity({ standingsHeight: 4000, upcomingHeight: 400, headerHeight: 50, rowHeight: 100 }), 20);
+  assert.equal(recentResultCapacity({ standingsHeight: 1000, upcomingHeight: 400, headerHeight: 50, rowHeight: 0 }), 4);
+});
+
+test("expanded highlights retain their chronological order", () => {
+  const now = Date.parse("2026-11-02T12:00:00Z");
+  const matches = Array.from({ length: 10 }, (_, i) => fixture("r" + i, "finished", "2026-10-" + String(10 + i), null, "A", "B", [1, 0]));
+  const result = competitionHighlights(matches, now, 7);
+  assert.deepEqual(result.recent.map((m) => m.id), ["r9", "r8", "r7", "r6", "r5", "r4", "r3"]);
 });

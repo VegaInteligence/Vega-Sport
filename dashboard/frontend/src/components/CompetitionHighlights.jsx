@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Card, Media } from "./UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { date } from "../services/format.js";
@@ -10,6 +10,7 @@ import {
   highlightKickoff,
   highlightScore,
   highlightTeam,
+  recentResultCapacity,
 } from "../services/competition-highlights.js";
 
 function HighlightMatch({ match, competition, season, upcoming }) {
@@ -50,10 +51,49 @@ export default function CompetitionHighlights({ matches, competition, season, on
     const timer = setInterval(() => setNow(Date.now()), 60000);
     return () => clearInterval(timer);
   }, []);
-  const { upcoming, recent } = useMemo(() => competitionHighlights(matches, now), [matches, now]);
+  const [recentLimit, setRecentLimit] = useState(4);
+  const highlightsRef = useRef(null);
+  const { upcoming: allUpcoming, recent: allRecent } = useMemo(
+    () => competitionHighlights(matches, now, Math.max(4, recentLimit)),
+    [matches, now, recentLimit],
+  );
+  const upcoming = allUpcoming.slice(0, 4);
+  const recent = allRecent.slice(0, recentLimit);
+  useEffect(() => {
+    const aside = highlightsRef.current;
+    const standings = aside?.closest(".competition-detail-layout--overview")?.querySelector(".competition-detail");
+    const nextCard = aside?.querySelector(".competition-highlights-upcoming");
+    const resultsCard = aside?.querySelector(".competition-highlights-results");
+    const header = resultsCard?.querySelector(".card-header");
+    if (!aside || !standings || !nextCard || !resultsCard || !header) return;
+    const update = () => {
+      if (!window.matchMedia("(min-width: 1051px)").matches) {
+        setRecentLimit(4);
+        return;
+      }
+      const row = resultsCard.querySelector(".competition-highlight-match");
+      if (!row) return;
+      const gap = Number.parseFloat(window.getComputedStyle(aside).rowGap) || 0;
+      const limit = recentResultCapacity({
+        standingsHeight: standings.getBoundingClientRect().height,
+        upcomingHeight: nextCard.getBoundingClientRect().height,
+        headerHeight: header.getBoundingClientRect().height,
+        rowHeight: row.getBoundingClientRect().height,
+        gap,
+      });
+      setRecentLimit((previous) => previous === limit ? previous : limit);
+    };
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    observer?.observe(standings);
+    observer?.observe(nextCard);
+    observer?.observe(header);
+    window.addEventListener("resize", update);
+    update();
+    return () => { observer?.disconnect(); window.removeEventListener("resize", update); };
+  }, [competition.id, season, matches, upcoming.length]);
   return (
-    <aside className="competition-highlights" aria-label="Matchs de la compétition">
-      <Card title="Prochains matchs" className="competition-highlights-card" action={
+    <aside ref={highlightsRef} className="competition-highlights" aria-label="Matchs de la compétition">
+      <Card title="Prochains matchs" className="competition-highlights-card competition-highlights-upcoming" action={
         <button type="button" className="competition-highlights-more" onClick={() => onShowMatches("not_started")}>Voir tout</button>
       }>
         {upcoming.length ? <>
@@ -61,7 +101,7 @@ export default function CompetitionHighlights({ matches, competition, season, on
           {upcoming.map((match) => <HighlightMatch key={match.id} match={match} competition={competition} season={season} upcoming />)}
         </> : <p className="competition-highlights-empty">Aucune rencontre à venir pour cette saison.</p>}
       </Card>
-      <Card title="Derniers résultats" className="competition-highlights-card" action={
+      <Card title="Derniers résultats" className="competition-highlights-card competition-highlights-results" action={
         <button type="button" className="competition-highlights-more" onClick={() => onShowMatches("finished")}>Voir tout</button>
       }>
         {recent.length ? recent.map((match) => <HighlightMatch key={match.id} match={match} competition={competition} season={season} />)
