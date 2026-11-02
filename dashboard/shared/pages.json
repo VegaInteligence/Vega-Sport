@@ -26,7 +26,7 @@
   {
     "key": "player-ranking",
     "path": "/classement-joueurs/",
-    "title": "Classement joueurs",
+    "title": "Classement Ballon d’Or",
     "component": "PlayerRankingPage"
   },
   {

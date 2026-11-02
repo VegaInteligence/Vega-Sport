@@ -13,7 +13,7 @@ export default function PlayerRankingPage() {
   return (
     <Layout
       path="/classement-joueurs/"
-      title="Classement joueurs"
+      title="Classement Ballon d’Or"
       titleIcon={<BallonDorIcon />}
     >
       <div className="ranking-intro">
@@ -28,7 +28,7 @@ export default function PlayerRankingPage() {
       <ol
         className="player-ranking-list"
         role="list"
-        aria-label="Classement des joueurs"
+        aria-label="Classement Ballon d’Or"
       >
         {positions.map((position) => (
           <li
