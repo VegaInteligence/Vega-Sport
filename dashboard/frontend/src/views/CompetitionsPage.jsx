@@ -23,7 +23,7 @@ import CompetitionScope from "../components/CompetitionScope.jsx";
 import OpenFootballArchive from "../components/OpenFootballArchive.jsx";
 import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
 import { SPORTSCORE_LEAGUES } from "../services/sportscore-standings.js";
-import { FEATURED_EUROPE_IDS, FEATURED_LEAGUE_IDS, countryLabel, orderedFeatured } from "../services/competition-selector.js";
+import { FEATURED_EUROPE_IDS, FEATURED_LEAGUE_IDS, countryLabel, orderedFeatured, orderedCountryCodes, competitionGroups } from "../services/competition-selector.js";
 import {
   SIMPLE_LEAGUES, PREFERRED_COMPETITION_KEY, localeCountry,
   preferredCompetition, standingsFromFixtures, hasCompleteHomeAwaySchedule,
@@ -457,8 +457,23 @@ export default function CompetitionsPage() {
     })();
     return () => { active = false; clearTimeout(timer); controller.abort(); };
   }, []);
+  // The archived catalogue corrects a few provider country codes even while
+  // the full season is still loading (for example Turkey's 1. Lig).
+  const referenceCountries = useMemo(() => {
+    const countries = new Map();
+    for (const season of f.manifest.seasons) {
+      for (const chunk of season.chunks) {
+        for (const competition of chunk.competitions || []) {
+          if (competition.id && competition.country && !countries.has(competition.id))
+            countries.set(competition.id, competition.country);
+        }
+      }
+    }
+    return countries;
+  }, [f.manifest]);
   const catalog = f.catalog.map((c) => ({
     ...c,
+    country: referenceCountries.get(c.id) || c.country,
     seasons: [...new Set([...(c.seasons || []), ...f.manifest.seasons.flatMap((s) =>
       s.chunks.filter((chunk) => chunk.leagueId === c.id).flatMap((chunk) =>
         chunk.competitions?.find((item) => item.id === c.id)?.seasons || chunk.meta?.catalogSeasons || chunk.meta?.seasons || [],
@@ -472,6 +487,7 @@ export default function CompetitionsPage() {
   );
   // Render the first screen immediately, then the rest of the catalogue.
   const complete = useDeferredValue(true, false);
+  const groups = competitionGroups(rows, complete ? Infinity : 120);
   function chooseCompetition(next) {
     manualChoice.current = true;
     try { window.localStorage.setItem(PREFERRED_COMPETITION_KEY, next); } catch {}
@@ -551,18 +567,25 @@ export default function CompetitionsPage() {
           <input type="search" placeholder="Rechercher une compétition…" aria-label="Rechercher une compétition" value={query} onChange={(e) => { setQuery(e.target.value); }} />
           <select aria-label="Filtrer par pays" value={country} onChange={(e) => { setCountry(e.target.value); }}>
             <option value="all">Tous les pays</option>
-            {[...new Set(catalog.map((c) => c.country).filter(Boolean))].sort().map((c) => <option key={c} value={c}>{countryLabel(c)}</option>)}
+            {orderedCountryCodes(catalog).map((c) => <option key={c} value={c}>{countryLabel(c)}</option>)}
           </select>
           <button className="button button-secondary" disabled={f.focus === "europe"} onClick={() => setSupplemental((v) => !v)}>Autres ligues et coupes</button>
           <label>Calendrier par date <input type="date" aria-label="Calendrier par date" value={day} onChange={(e) => setDay(e.target.value)} /></label>
         </div>
         {day && <Fixtures key={day} day={day} />}
         {supplemental && f.focus !== "europe" ? <Supplemental /> : <>
-          <div className="competition-grid directory-grid">
-            {(complete ? rows : rows.slice(0, 120)).map((c) => <button key={c.id} className="competition-card competition-card-button" onClick={() => chooseCompetition(c.id)}>
-              <div className="competition-card-header"><Media name={c.name} url={c.imageUrl} /><div><h2>{c.name}</h2><p>{countryLabel(c.country)}</p></div></div>
-              <div className="directory-card-footer"><span>{c.seasons?.length || 0} saisons</span><Icon name="arrow" /></div>
-            </button>)}
+          <div className="competition-directory">
+            {groups.map((group, index) => (
+              <section key={group.key} className="directory-country" aria-labelledby={"competition-country-" + index}>
+                <h2 id={"competition-country-" + index}>{group.label}</h2>
+                <div className="competition-grid directory-grid">
+                  {group.competitions.map((c) => <button key={c.id} type="button" className="competition-card competition-card-button" onClick={() => chooseCompetition(c.id)}>
+                    <div className="competition-card-header"><Media name={c.name} url={c.imageUrl} /><div><h3>{c.name}</h3><p>{countryLabel(c.country)}</p></div></div>
+                    <div className="directory-card-footer"><span>{c.seasons?.length || 0} saisons</span><Icon name="arrow" /></div>
+                  </button>)}
+                </div>
+              </section>
+            ))}
           </div>
           {!rows.length && <Empty>Aucune compétition ne correspond à la recherche.</Empty>}
         </>}
