@@ -108,11 +108,13 @@ export default function PlayersPage() {
                         }}
                       >
                         {label}{" "}
-                        {sort.key === key
-                          ? sort.direction === "asc"
-                            ? "↑"
-                            : "↓"
-                          : "↕"}
+                        <span className="sort-indicator" aria-hidden="true">
+                          {sort.key === key
+                            ? sort.direction === "asc"
+                              ? "↑"
+                              : "↓"
+                            : "↕"}
+                        </span>
                       </button>
                     </th>
                   ))}

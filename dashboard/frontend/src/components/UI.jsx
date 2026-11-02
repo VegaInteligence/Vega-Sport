@@ -90,6 +90,7 @@ export function Segments({ label, value, items, onChange }) {
   );
 }
 export function Pager({ page, total, onChange }) {
+  if (total <= 1) return null;
   return (
     <div className="pagination">
       <button

@@ -124,60 +124,60 @@ export function Filters({ fixtures = false }) {
             </div>
           </div>
         )}
-      </div>
-      <div className="filter-panel-footer">
         <CompetitionScope />
-        <div className="filter-applied">
-          {selected && (
-            <button
-              className="filter-chip"
-              aria-label={`Retirer la compétition ${selected.name}`}
-              onClick={() =>
-                f.setFilters((v) => ({ ...v, league: "all", match: "all" }))
-              }
-            >
-              <span className="scope-dot" />
-              {selected.name}
-              <Icon name="close" />
-            </button>
-          )}
-          {f.filters.query && (
-            <button
-              className="filter-chip"
-              aria-label="Retirer la recherche"
-              onClick={() => f.setFilters((v) => ({ ...v, query: "" }))}
-            >
-              {f.filters.query}
-              <Icon name="close" />
-            </button>
-          )}
-          {!fixtures && f.filters.minutes !== 1 && (
-            <button
-              className="filter-chip"
-              aria-label="Retirer le filtre de temps de jeu"
-              onClick={() => f.setFilters((v) => ({ ...v, minutes: 1 }))}
-            >
-              {minutes.find(([v]) => v === f.filters.minutes)?.[1]}
-              <Icon name="close" />
-            </button>
-          )}
-          {!fixtures && f.filters.match !== "all" && (
-            <button
-              className="filter-chip"
-              onClick={() => f.setFilters((v) => ({ ...v, match: "all" }))}
-            >
-              Retirer le filtre du match
-              <Icon name="close" />
-            </button>
-          )}
-        </div>
-        {active && (
+      </div>
+      {active && (
+        <div className="filter-panel-footer">
+          <div className="filter-applied">
+            {selected && (
+              <button
+                className="filter-chip"
+                aria-label={`Retirer la compétition ${selected.name}`}
+                onClick={() =>
+                  f.setFilters((v) => ({ ...v, league: "all", match: "all" }))
+                }
+              >
+                <span className="scope-dot" />
+                {selected.name}
+                <Icon name="close" />
+              </button>
+            )}
+            {f.filters.query && (
+              <button
+                className="filter-chip"
+                aria-label="Retirer la recherche"
+                onClick={() => f.setFilters((v) => ({ ...v, query: "" }))}
+              >
+                {f.filters.query}
+                <Icon name="close" />
+              </button>
+            )}
+            {!fixtures && f.filters.minutes !== 1 && (
+              <button
+                className="filter-chip"
+                aria-label="Retirer le filtre de temps de jeu"
+                onClick={() => f.setFilters((v) => ({ ...v, minutes: 1 }))}
+              >
+                {minutes.find(([v]) => v === f.filters.minutes)?.[1]}
+                <Icon name="close" />
+              </button>
+            )}
+            {!fixtures && f.filters.match !== "all" && (
+              <button
+                className="filter-chip"
+                onClick={() => f.setFilters((v) => ({ ...v, match: "all" }))}
+              >
+                Retirer le filtre du match
+                <Icon name="close" />
+              </button>
+            )}
+          </div>
           <button className="filter-reset-button" onClick={reset}>
             <Icon name="reset" />
             Réinitialiser
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -203,33 +203,38 @@ export default function Layout({
         <main id="main" className={`workspace ${className}`} tabIndex="-1">
           {!hideHeading && (
             <div className="page-heading">
-              <h1
-                className={`page-title${titleIcon ? " page-title-with-icon" : ""}`}
-              >
-                {titleIcon ? (
-                  <>
-                    {titleIcon}
-                    <span>{title}</span>
-                  </>
-                ) : (
-                  title
+              <div className="page-heading-copy">
+                <h1
+                  className={`page-title${titleIcon ? " page-title-with-icon" : ""}`}
+                >
+                  {titleIcon ? (
+                    <>
+                      {titleIcon}
+                      <span>{title}</span>
+                    </>
+                  ) : (
+                    title
+                  )}
+                </h1>
+                {(f.season || f.data.meta.retrievedAt) && (
+                  <p className="page-context">
+                    {f.season && <span>Saison {f.season}</span>}
+                    {f.data.meta.retrievedAt && (
+                      <span>Données au {date(f.data.meta.retrievedAt)}</span>
+                    )}
+                  </p>
                 )}
-              </h1>
-              <div className="heading-actions">
-                {f.data.meta.retrievedAt && (
-                  <span className="snapshot-label">
-                    {date(f.data.meta.retrievedAt)}
-                  </span>
-                )}
-                {filters && filterKind !== "fixtures" && (
+              </div>
+              {filters && filterKind !== "fixtures" && (
+                <div className="heading-actions">
                   <button
                     className="button button-secondary"
                     onClick={() => f.exportRows()}
                   >
                     <Icon name="download" /> Exporter les données
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
           {subnav}
