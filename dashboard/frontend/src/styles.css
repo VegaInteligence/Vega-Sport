@@ -1402,17 +1402,7 @@ th[aria-sort="descending"] .sort-indicator {
   height: 14px;
 }
 
-/* Ranking placeholder and method page */
-.ranking-intro {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 20px;
-  margin-bottom: 16px;
-  color: var(--muted);
-  font-size: var(--text-md);
-}
+/* Method page */
 .method-layout {
   display: grid;
   grid-template-columns: minmax(0, 680px) minmax(260px, 340px);
