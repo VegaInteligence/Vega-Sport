@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { localeCountry, preferredCompetition, standingsFromFixtures, COUNTRY_LEAGUES } from "../dashboard/frontend/src/services/competition-standings.js";
+import { localeCountry, preferredCompetition, standingsFromFixtures, hasCompleteHomeAwaySchedule, COUNTRY_LEAGUES } from "../dashboard/frontend/src/services/competition-standings.js";
 import { GET as visitorCountry } from "../dashboard/frontend/app/api/visitor-country/route.js";
 
 const team = (id) => ({ id, name: id });
@@ -48,4 +48,30 @@ test("a final result replaces a duplicate upcoming fixture", () => {
 test("additional meetings mark a schedule as unsuitable for a simple table", () => {
   const result = standingsFromFixtures([game("1", "A", "B", 1, 0), game("2", "B", "A", 1, 1), game("3", "A", "B", 0, 0)]);
   assert.equal(result.complexSchedule, true);
+});
+
+test("a complete balanced home-and-away schedule can support a derived table", () => {
+  const games = [
+    game("1", "A", "B", 1, 0),
+    game("2", "B", "A", null, null, "not_started"),
+    game("3", "A", "C", 2, 1),
+    game("4", "C", "A", null, null, "not_started"),
+    game("5", "B", "C", 0, 0),
+    game("6", "C", "B", null, null, "not_started"),
+  ];
+  assert.equal(hasCompleteHomeAwaySchedule(games), true);
+  assert.equal(hasCompleteHomeAwaySchedule([...games, games[0]]), true);
+  assert.equal(hasCompleteHomeAwaySchedule(games.slice(0, 5)), false);
+  assert.equal(
+    hasCompleteHomeAwaySchedule([...games, game("7", "A", "B", 2, 0)]),
+    false,
+  );
+  assert.equal(
+    hasCompleteHomeAwaySchedule(
+      games.map((g) =>
+        g.id === "2" ? { ...g, home_team: team("A"), away_team: team("B") } : g,
+      ),
+    ),
+    false,
+  );
 });

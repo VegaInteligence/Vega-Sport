@@ -95,3 +95,35 @@ export function standingsFromFixtures(fixtures) {
   rows.sort((a, b) => b.points - a.points || b.difference - a.difference || b.goalsFor - a.goalsFor || a.name.localeCompare(b.name, "fr"));
   return { rows, played, excluded, lastDate, complexSchedule };
 }
+
+// A complete home-and-away schedule can support a clearly labelled table
+// even when the provider offers no standings for this competition.
+export function hasCompleteHomeAwaySchedule(fixtures) {
+  const matches = new Map();
+  for (const match of fixtures || []) {
+    if (
+      !match?.id ||
+      !validTeam(match.home_team) ||
+      !validTeam(match.away_team) ||
+      match.home_team.id === match.away_team.id
+    )
+      return false;
+    if (!matches.has(match.id)) matches.set(match.id, match);
+  }
+  const teams = new Set(),
+    pairs = new Map();
+  for (const match of matches.values()) {
+    const home = match.home_team.id,
+      away = match.away_team.id;
+    teams.add(home);
+    teams.add(away);
+    const key = [home, away].sort().join("|");
+    if (!pairs.has(key)) pairs.set(key, []);
+    pairs.get(key).push(home);
+  }
+  if (teams.size < 3 || pairs.size !== (teams.size * (teams.size - 1)) / 2)
+    return false;
+  return [...pairs.values()].every(
+    (homes) => homes.length === 2 && homes[0] !== homes[1],
+  );
+}

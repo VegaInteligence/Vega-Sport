@@ -16,7 +16,7 @@ try {
    const f={catalog,manifest,season:season.id,configured:false,statusKnown:true,client:{id:'fixture'},focus:'all',data:{meta:{},matches:[],fixtures:[]},href:(p,params={})=>p+'?'+new URLSearchParams(params),byAppearance:new Map(),comparison:[],player:null};
    return renderToStaticMarkup(<SearchParamsContext.Provider value={new URLSearchParams(id?{id}:{})}><PathnameContext.Provider value='/competitions'><FootballContext.Provider value={f}><CompetitionsPage/></FootballContext.Provider></PathnameContext.Provider></SearchParamsContext.Provider>);
   }
-  const initial=render();assert.match(initial,/aria-label="Choisir une compétition"/);assert.match(initial,/Toutes les compétitions/);assert.ok(initial.includes('value="l_3FJFUl"'),'Competition picker must contain the catalogue');assert.doesNotMatch(initial,/Chargement impossible/);
+  const initial=render();assert.match(initial,/aria-label="Choisir une compétition"/);assert.match(initial,/Toutes les compétitions/);assert.match(initial, /Championnats à la une/);assert.match(initial, /Ligue 1/);assert.doesNotMatch(initial,/Chargement impossible/);
   for(const [id,values] of [['l_3FJFUl',['2024/2025','2025/2026','2026/2027']],['l_0uqFK8',['2024','2025','2026']],['l_1XLtP0',['2026']]]){
    const html=render(id);for(const value of values)assert.ok(html.includes(`value="${value}"`),id+':'+value);
    if(id==='l_1XLtP0')assert.ok(!html.includes('value="2026/2027"'),'World Cup query must preserve calendar season');

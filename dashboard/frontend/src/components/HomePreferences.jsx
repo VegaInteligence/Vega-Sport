@@ -4,6 +4,10 @@ import React, { useMemo, useState } from "react";
 import Icon from "./Icon.jsx";
 import { Media, Modal } from "./UI.jsx";
 import { normalizeText } from "../model.js";
+import {
+  FEATURED_LEAGUE_IDS,
+  countryLabel,
+} from "../services/competition-selector.js";
 
 function CompetitionPicker({ f, competitions, onClose }) {
   const [selected, setSelected] = useState(
@@ -12,9 +16,9 @@ function CompetitionPicker({ f, competitions, onClose }) {
   const [query, setQuery] = useState("");
   const search = normalizeText(query).trim();
   const visible = competitions.filter((c) =>
-    normalizeText([c.name, c.country].filter(Boolean).join(" ")).includes(
-      search,
-    ),
+    normalizeText(
+      [c.name, c.country, countryLabel(c.country)].filter(Boolean).join(" "),
+    ).includes(search),
   );
 
   function save(ids) {
@@ -72,33 +76,56 @@ function CompetitionPicker({ f, competitions, onClose }) {
           onChange={(event) => setQuery(event.target.value)}
         />
       </div>
-      <div
-        className="home-competition-list"
-        role="group"
-        aria-label="Compétitions à suivre"
-      >
-        {visible.map((competition) => (
-          <label className="home-competition-option" key={competition.id}>
-            <input
-              type="checkbox"
-              checked={selected.has(competition.id)}
-              onChange={() =>
-                setSelected((previous) => {
-                  const next = new Set(previous);
-                  if (next.has(competition.id)) next.delete(competition.id);
-                  else next.add(competition.id);
-                  return next;
-                })
-              }
-            />
-            <Media name={competition.name} url={competition.imageUrl} />
-            <span>
-              <strong>{competition.name}</strong>
-              <small>{competition.country || "International"}</small>
-            </span>
-          </label>
-        ))}
-      </div>
+      {[
+        [
+          "Championnats à la une",
+          visible
+            .filter((c) => FEATURED_LEAGUE_IDS.includes(c.id))
+            .sort(
+              (a, b) =>
+                FEATURED_LEAGUE_IDS.indexOf(a.id) -
+                FEATURED_LEAGUE_IDS.indexOf(b.id),
+            ),
+        ],
+        [
+          "Autres compétitions",
+          visible.filter((c) => !FEATURED_LEAGUE_IDS.includes(c.id)),
+        ],
+      ].map(([title, items]) =>
+        items.length ? (
+          <section className="home-competition-section" key={title}>
+            <h3>{title}</h3>
+            <div
+              className="home-competition-list"
+              role="group"
+              aria-label="Compétitions à suivre"
+            >
+              {items.map((competition) => (
+                <label className="home-competition-option" key={competition.id}>
+                  <input
+                    type="checkbox"
+                    checked={selected.has(competition.id)}
+                    onChange={() =>
+                      setSelected((previous) => {
+                        const next = new Set(previous);
+                        if (next.has(competition.id))
+                          next.delete(competition.id);
+                        else next.add(competition.id);
+                        return next;
+                      })
+                    }
+                  />
+                  <Media name={competition.name} url={competition.imageUrl} />
+                  <span>
+                    <strong>{competition.name}</strong>
+                    <small>{countryLabel(competition.country)}</small>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </section>
+        ) : null,
+      )}
       {!visible.length && (
         <p>Aucune compétition ne correspond à cette recherche.</p>
       )}

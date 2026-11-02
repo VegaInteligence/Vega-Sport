@@ -12,6 +12,7 @@ import "../src/theme.css";
 import "../src/styles.css";
 import "../src/analysis.css";
 import "../src/season-profile.css";
+import "../src/competition-selector.css";
 const siteUrl = "https://statarena-analytics.vercel.app";
 const description =
   "Statistiques de football, analyses de matchs, profils de joueurs et classement du Ballon d’Or.";
@@ -111,6 +112,16 @@ export default function RootLayout({ children }) {
         <Suspense fallback={<ShellFallback />}>
           <Providers>{children}</Providers>
         </Suspense>
+        <div className="sportscore-credit">
+          Données de classement :{" "}
+          <a
+            href="https://sportscore.com/"
+            rel="dofollow"
+            title="Sports data by SportScore"
+          >
+            SportScore
+          </a>
+        </div>
         <SpeedInsights />
         <Analytics />
       </body>

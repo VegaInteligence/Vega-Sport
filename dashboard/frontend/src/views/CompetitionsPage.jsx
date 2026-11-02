@@ -20,9 +20,11 @@ import { csvString } from "../model.js";
 import { dataUrl } from "../data-url.js";
 import CompetitionScope from "../components/CompetitionScope.jsx";
 import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
+import { SPORTSCORE_LEAGUES } from "../services/sportscore-standings.js";
+import { FEATURED_EUROPE_IDS, FEATURED_LEAGUE_IDS, countryLabel, orderedFeatured } from "../services/competition-selector.js";
 import {
   SIMPLE_LEAGUES, PREFERRED_COMPETITION_KEY, localeCountry,
-  preferredCompetition, standingsFromFixtures,
+  preferredCompetition, standingsFromFixtures, hasCompleteHomeAwaySchedule,
 } from "../services/competition-standings.js";
 export function SupplementalPanel({
   data: value,
@@ -155,7 +157,7 @@ function Supplemental() {
     </AsyncState>
   );
 }
-function Standings({ matches, source }) {
+function ResultStandings({ matches, source }) {
   const f = useFootball();
   const table = useMemo(() => standingsFromFixtures(matches), [matches]);
   if (table.complexSchedule) return <Empty>Le format de cette saison comprend des rencontres supplémentaires : le classement ne peut pas être établi à partir des seuls scores. Retrouvez les matchs dans l’onglet Matchs.</Empty>;
@@ -183,12 +185,190 @@ function Standings({ matches, source }) {
     </div>
   );
 }
+function SportscoreTable({ table, index, multiple, matches }) {
+  const f = useFootball();
+  const teams = useMemo(() => {
+    const result = new Map();
+    for (const match of matches) {
+      for (const team of [match.home_team, match.away_team]) {
+        if (!team?.id || !team.name) continue;
+        const key = normalizeText(team.name).replace(/[^a-z0-9]/g, "");
+        if (!key) continue;
+        if (result.has(key) && result.get(key)?.id !== team.id)
+          result.set(key, null);
+        else if (!result.has(key)) result.set(key, team);
+      }
+    }
+    return result;
+  }, [matches]);
+  const display = (value) => (value == null ? "—" : number(value));
+  return (
+    <section className="standings-group">
+      {(table.name || multiple) && (
+        <h3>{table.name || "Tableau " + (index + 1)}</h3>
+      )}
+      <div className="table-scroll">
+        <table className="data-table standings-table">
+          <caption className="sr-only">
+            Classement SportScore{table.name ? " : " + table.name : ""}
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Équipe</th>
+              <th scope="col" title="Points">
+                Pts
+              </th>
+              <th scope="col" title="Matchs joués">
+                J
+              </th>
+              <th scope="col" title="Victoires">
+                G
+              </th>
+              <th scope="col" title="Matchs nuls">
+                N
+              </th>
+              <th scope="col" title="Défaites">
+                D
+              </th>
+              <th scope="col" title="Buts pour">
+                BP
+              </th>
+              <th scope="col" title="Buts contre">
+                BC
+              </th>
+              <th scope="col" title="Différence de buts">
+                Diff.
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {table.rows.map((row, i) => {
+              const key = normalizeText(row.name).replace(/[^a-z0-9]/g, "");
+              const club = teams.get(key);
+              const identity = (
+                <>
+                  <Media name={row.name} url={row.imageUrl} />
+                  <span>{row.name}</span>
+                </>
+              );
+              return (
+                <tr key={key + ":" + i}>
+                  <td>{display(row.position)}</td>
+                  <th scope="row">
+                    {club ? (
+                      <Link
+                        className="standings-team"
+                        href={f.href("/clubs/", { id: club.id })}
+                      >
+                        {identity}
+                      </Link>
+                    ) : (
+                      <span className="standings-team">{identity}</span>
+                    )}
+                  </th>
+                  <td className="standings-points">{display(row.points)}</td>
+                  <td>{display(row.played)}</td>
+                  <td>{display(row.wins)}</td>
+                  <td>{display(row.draws)}</td>
+                  <td>{display(row.losses)}</td>
+                  <td>{display(row.goalsFor)}</td>
+                  <td>{display(row.goalsAgainst)}</td>
+                  <td>
+                    {row.difference == null
+                      ? "—"
+                      : (row.difference > 0 ? "+" : "") +
+                        number(row.difference)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function Standings({ competition, season, matches, source }) {
+  const latest = competition?.seasons?.[0];
+  const current = Boolean(latest) && String(latest) === String(season);
+  const enabled = current && Boolean(SPORTSCORE_LEAGUES[competition.id]);
+  const external = useResource(
+    "sportscore-standings:" + competition.id + ":" + season,
+    () =>
+      json("/api/standings?competition=" + encodeURIComponent(competition.id)),
+    enabled,
+  );
+  if (enabled && external.loading)
+    return (
+      <div className="loading-state" role="status">
+        Chargement du classement…
+      </div>
+    );
+  if (enabled && external.value?.tables?.length) {
+    const tables = external.value.tables;
+    return (
+      <div className="competition-standings">
+        <div className="standings-meta">
+          <span>
+            Dernier tableau disponible · saison non précisée par la source
+          </span>
+          <a
+            href="https://sportscore.com/"
+            rel="dofollow"
+            title="Sports data by SportScore"
+          >
+            SportScore
+          </a>
+        </div>
+        {tables.map((table, index) => (
+          <SportscoreTable
+            key={index}
+            table={table}
+            index={index}
+            multiple={tables.length > 1}
+            matches={matches}
+          />
+        ))}
+        <p className="standings-note">Les classements SportScore et les matchs PitchAPI peuvent être actualisés à des moments différents.</p>
+      {tables.length > 1 && tables.some((table) => !table.name) && (
+          <p className="standings-note">
+            La source ne précise pas le nom de toutes les phases.
+          </p>
+        )}
+      </div>
+    );
+  }
+  if (
+    SIMPLE_LEAGUES.has(competition.id) ||
+    hasCompleteHomeAwaySchedule(matches)
+  )
+    return <ResultStandings matches={matches} source={source} />;
+  if (enabled && external.error)
+    return (
+      <div className="standings-unavailable">
+        <p role="status">Le classement est temporairement indisponible.</p>
+        <button className="button button-secondary" onClick={external.retry}>
+          Réessayer
+        </button>
+      </div>
+    );
+  return (
+    <Empty>
+      {!current
+        ? "Aucun classement de cette saison n’est disponible. Les matchs restent consultables dans l’onglet Matchs."
+        : "Classement indisponible pour cette compétition pour le moment. Retrouvez ses matchs dans l’onglet Matchs."}
+    </Empty>
+  );
+}
+
 function Fixtures({ competition, day }) {
   const f = useFootball();
   const [season, setSeason] = useState(
     competition?.seasons?.find((s) => seasonLabel(s) === f.season) || competition?.seasons?.[0] || f.season,
   );
-  const supported = !day && SIMPLE_LEAGUES.has(competition?.id);
+  const supported = !day;
   const [view, setView] = useState(supported ? "standings" : "matches");
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
@@ -204,7 +384,7 @@ function Fixtures({ competition, day }) {
     f.statusKnown,
   );
   return (
-    <Card title={competition?.name || "Calendrier par date"} className="competition-detail">
+    <Card title={competition ? <span className="competition-detail-title"><Media name={competition.name} url={competition.imageUrl} /><span><strong>{competition.name}</strong><small>{countryLabel(competition.country)}</small></span></span> : "Calendrier par date"} className="competition-detail">
       {!day && (
         <div className="competition-detail-controls">
           <label>Saison de compétition
@@ -214,13 +394,12 @@ function Fixtures({ competition, day }) {
               if (f.manifest.seasons.some((s) => s.id === next)) f.changeSeason(next);
               setPage(1);
             }}>
-              {competition.seasons?.map((s) => <option key={s} value={s}>{seasonLabel(s)}</option>)}
+              {competition.seasons?.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </label>
           {supported && <Segments value={view} onChange={setView} label="Vue de la compétition" items={[["standings", "Classement"], ["matches", "Matchs"]]} />}
         </div>
       )}
-      {!day && !supported && <p className="standings-note">Le classement n’est pas disponible pour le format de cette compétition. Retrouvez ses matchs ci-dessous.</p>}
       <AsyncState resource={resource}>
         {(value) => {
           const rows = (value.matches || []).filter((m) =>
@@ -230,7 +409,7 @@ function Fixtures({ competition, day }) {
           const pages = Math.max(1, Math.ceil(rows.length / 30)), current = Math.min(page, pages);
           return <>
             {value.error && <p role="status">{value.error} · données collectées affichées.</p>}
-            {supported && view === "standings" ? <Standings matches={value.matches || []} source={value.source} /> : <>
+            {supported && view === "standings" ? <Standings competition={competition} season={season} matches={value.matches || []} source={value.source} /> : <>
               <Segments value={status} onChange={(v) => { setStatus(v); setPage(1); }} label="Statut des rencontres" items={[["all", "Tous"], ["finished", "Terminés"], ["not_started", "À venir"]]} />
               {rows.slice((current - 1) * 30, current * 30).map((m) => <MatchLink key={m.id} match={m} />)}
               {!rows.length && <Empty>Aucune rencontre collectée.</Empty>}
@@ -285,7 +464,7 @@ export default function CompetitionsPage() {
   const chosenId = id || (choice.ready ? preferredCompetition(catalog, choice.saved, choice.country) : null);
   const selected = catalog.find((c) => c.id === chosenId);
   const rows = catalog.filter((c) =>
-    (country === "all" || c.country === country) && normalizeText((c.name || "") + " " + (c.country || "")).includes(normalizeText(query)),
+    (country === "all" || c.country === country) && normalizeText((c.name || "") + " " + (c.country || "") + " " + countryLabel(c.country)).includes(normalizeText(query)),
   );
   // Render the first screen immediately, then the rest of the catalogue.
   const complete = useDeferredValue(true, false);
@@ -299,15 +478,61 @@ export default function CompetitionsPage() {
   return (
     <Layout path="/competitions/" title="Compétitions">
       {!directory ? <>
-        <div className="competition-picker">
-          <label className="competition-picker-field">Compétition
-            <select aria-label="Choisir une compétition" value={selected?.id || ""} onChange={(e) => chooseCompetition(e.target.value)}>
-              {!selected && <option value="">Choisir une compétition</option>}
-              {[...catalog].sort((a, b) => (a.name || "").localeCompare(b.name || "", "fr")).map((c) => <option key={c.id} value={c.id}>{c.name}{c.country ? " (" + c.country + ")" : ""}</option>)}
-            </select>
-          </label>
-          <button className="button button-secondary" onClick={() => setDirectory(true)}>Toutes les compétitions</button>
-        </div>
+        <section
+            className="league-spotlight"
+            aria-label="Choisir une compétition"
+          >
+            <div className="league-spotlight-heading">
+              <div>
+                <h2>Championnats à la une</h2>
+                <p>Retrouvez les sept grandes ligues européennes.</p>
+              </div>
+              <button
+                className="button button-secondary"
+                onClick={() => setDirectory(true)}
+              >
+                Toutes les compétitions <Icon name="arrow" />
+              </button>
+            </div>
+            <div className="league-spotlight-grid">
+              {orderedFeatured(catalog, FEATURED_LEAGUE_IDS).map((c) => (
+                <button
+                  key={c.id}
+                  className="league-spotlight-item"
+                  type="button"
+                  aria-pressed={selected?.id === c.id}
+                  onClick={() => chooseCompetition(c.id)}
+                >
+                  <Media
+                    name={c.name}
+                    url={c.imageUrl}
+                    className="crest league-spotlight-logo"
+                  />
+                  <span>
+                    <strong>{c.name}</strong>
+                    <small>{countryLabel(c.country)}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+            {orderedFeatured(catalog, FEATURED_EUROPE_IDS).length > 0 && (
+              <div className="league-spotlight-cups">
+                <span>Coupes d’Europe</span>
+                {orderedFeatured(catalog, FEATURED_EUROPE_IDS).map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className="league-cup-button"
+                    aria-pressed={selected?.id === c.id}
+                    onClick={() => chooseCompetition(c.id)}
+                  >
+                    <Media name={c.name} url={c.imageUrl} />
+                    <span>{c.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
         {selected ? <Fixtures key={selected.id} competition={selected} /> : !id && !choice.ready ? <div className="loading-state" role="status">Choix du championnat…</div> : <Empty>Compétition inconnue ou indisponible.</Empty>}
       </> : <>
         <button className="inline-link competition-back" onClick={() => setDirectory(false)}>← Retour à la compétition</button>
@@ -316,7 +541,7 @@ export default function CompetitionsPage() {
           <input type="search" placeholder="Rechercher une compétition…" aria-label="Rechercher une compétition" value={query} onChange={(e) => { setQuery(e.target.value); }} />
           <select aria-label="Filtrer par pays" value={country} onChange={(e) => { setCountry(e.target.value); }}>
             <option value="all">Tous les pays</option>
-            {[...new Set(catalog.map((c) => c.country).filter(Boolean))].sort().map((c) => <option key={c} value={c}>{c}</option>)}
+            {[...new Set(catalog.map((c) => c.country).filter(Boolean))].sort().map((c) => <option key={c} value={c}>{countryLabel(c)}</option>)}
           </select>
           <button className="button button-secondary" disabled={f.focus === "europe"} onClick={() => setSupplemental((v) => !v)}>Autres ligues et coupes</button>
           <label>Calendrier par date <input type="date" aria-label="Calendrier par date" value={day} onChange={(e) => setDay(e.target.value)} /></label>
@@ -325,7 +550,7 @@ export default function CompetitionsPage() {
         {supplemental && f.focus !== "europe" ? <Supplemental /> : <>
           <div className="competition-grid directory-grid">
             {(complete ? rows : rows.slice(0, 120)).map((c) => <button key={c.id} className="competition-card competition-card-button" onClick={() => chooseCompetition(c.id)}>
-              <div className="competition-card-header"><Media name={c.name} url={c.imageUrl} /><div><h2>{c.name}</h2><p>{c.country}</p></div></div>
+              <div className="competition-card-header"><Media name={c.name} url={c.imageUrl} /><div><h2>{c.name}</h2><p>{countryLabel(c.country)}</p></div></div>
               <div className="directory-card-footer"><span>{c.seasons?.length || 0} saisons</span><Icon name="arrow" /></div>
             </button>)}
           </div>
