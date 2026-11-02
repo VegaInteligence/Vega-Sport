@@ -222,6 +222,7 @@ export default function Layout({
   filters = false,
   filterKind = "performances",
   hideHeading = false,
+  showSeasonContext = true,
   className = "",
   subnav,
   children,
@@ -250,9 +251,12 @@ export default function Layout({
                     title
                   )}
                 </h1>
-                {(f.season || f.data.meta.retrievedAt) && (
+                {((showSeasonContext && f.season) ||
+                  f.data.meta.retrievedAt) && (
                   <p className="page-context">
-                    {f.season && <span>Saison {f.season}</span>}
+                    {showSeasonContext && f.season && (
+                      <span>Saison {f.season}</span>
+                    )}
                     {f.data.meta.retrievedAt && (
                       <span>Données au {date(f.data.meta.retrievedAt)}</span>
                     )}

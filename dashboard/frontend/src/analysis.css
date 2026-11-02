@@ -14,26 +14,21 @@
   min-width: 0;
 }
 
-/* Player ranking: the STATARENA Ballon d’Or. The podium carries the award
-   identity (gold for the winner only); everything around it stays quiet. */
+/* Player ranking */
+.ranking-page > .page-heading {
+  display: block;
+  text-align: center;
+}
+.ranking-page .page-title {
+  justify-content: center;
+}
 .award-intro {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 16px 32px;
   margin-bottom: 14px;
-}
-.award-copy h2 {
-  color: var(--ink-strong);
-  font: 650 var(--text-xl) / 1.25 var(--font-display);
-  letter-spacing: -0.015em;
-}
-.award-copy p {
-  max-width: 62ch;
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: var(--text-lg);
 }
 .award-season {
   display: flex;
@@ -41,40 +36,6 @@
   gap: 10px;
   color: var(--muted);
   font-size: var(--text-sm);
-}
-.award-status {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  margin: 0 0 20px;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  color: var(--muted);
-  font-size: var(--text-md);
-}
-.award-status .inline-link {
-  margin-left: auto;
-}
-.award-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--gold) 14%, transparent);
-  color: var(--gold);
-  font-size: var(--text-xs);
-  font-weight: 600;
-}
-.award-status-badge::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--gold);
 }
 .podium {
   display: grid;
@@ -90,18 +51,12 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  min-width: 0;
-  padding: 20px 18px 16px;
-  border: 1px solid var(--border);
-  border-top: 3px solid var(--medal);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
+  padding: 20px 16px 16px;
   text-align: center;
 }
 .podium-gold {
   --medal: var(--gold);
   min-height: 300px;
-  background: color-mix(in srgb, var(--gold) 5%, var(--surface));
 }
 .podium-silver {
   --medal: var(--silver);
@@ -316,15 +271,6 @@
   font-size: var(--text-md);
   line-height: 1.5;
 }
-.award-method-note {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-  margin: 12px 0 0;
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
 @media (max-width: 1000px) {
   .rank-columns {
     grid-template-columns: minmax(0, 1fr);
@@ -334,18 +280,12 @@
   }
 }
 @media (max-width: 640px) {
-  .award-copy p {
-    font-size: var(--text-md);
-  }
   .award-season {
     width: 100%;
   }
   .award-season .segmented-control {
     flex: 1;
     overflow-x: auto;
-  }
-  .award-status .inline-link {
-    margin-left: 0;
   }
   .podium {
     grid-template-columns: minmax(0, 1fr);
@@ -358,8 +298,6 @@
     gap: 12px;
     min-height: 0;
     padding: 12px 14px;
-    border-top: 1px solid var(--border);
-    border-left: 3px solid var(--medal);
     text-align: left;
   }
   .podium-gold {

@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import Link from "next/link";
 import Layout from "../components/Layout.jsx";
 import Icon from "../components/Icon.jsx";
 import BallonDorIcon from "../components/BallonDorIcon.jsx";
@@ -57,7 +56,7 @@ function Avatar({ entry, className }) {
 function PodiumPlace({ rank, medal, entry }) {
   return (
     <li
-      className={`podium-place podium-${medal}`}
+      className={`card podium-place podium-${medal}`}
       value={rank}
       aria-label={
         entry
@@ -163,15 +162,10 @@ export default function PlayerRankingPage() {
       path="/classement-joueurs/"
       title="Classement Ballon d’Or"
       titleIcon={<BallonDorIcon />}
+      className="ranking-page"
+      showSeasonContext={false}
     >
-      <section className="award-intro" aria-labelledby="award-title">
-        <div className="award-copy">
-          <h2 id="award-title">Le Ballon d’Or STATARENA</h2>
-          <p>
-            Les 30 meilleurs joueurs de la saison, classés à partir des seules
-            données de match.
-          </p>
-        </div>
+      <div className="award-intro">
         {seasons.length > 1 && (
           <div className="award-season">
             <span>Saison</span>
@@ -183,16 +177,7 @@ export default function PlayerRankingPage() {
             />
           </div>
         )}
-      </section>
-      <p className="award-status" role="status">
-        <span className="award-status-badge">En calibrage</span>
-        <span>
-          Le classement {f.season} sera publié une fois le modèle validé.
-        </span>
-        <Link className="inline-link" href={f.href("/methode/")}>
-          Lire la méthode <Icon name="arrow" />
-        </Link>
-      </p>
+      </div>
 
       <ol className="podium" role="list" aria-label="Podium">
         {PODIUM.map((place) => (
@@ -225,13 +210,6 @@ export default function PlayerRankingPage() {
             </li>
           ))}
         </ol>
-        <p className="award-method-note">
-          Les poids et seuils sont en cours de calibrage sur les saisons
-          collectées.{" "}
-          <Link className="inline-link" href={f.href("/methode/")}>
-            Méthode détaillée <Icon name="arrow" />
-          </Link>
-        </p>
       </section>
     </Layout>
   );

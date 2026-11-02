@@ -11,7 +11,11 @@ export default function LoadingPage({ href }) {
   return (
     <div className="app-shell">
       <SiteHeader path={path} href={href} />
-      <main id="main" className="workspace" aria-busy="true">
+      <main
+        id="main"
+        className={`workspace${page?.path === "/classement-joueurs/" ? " ranking-page" : ""}`}
+        aria-busy="true"
+      >
         <div className="page-heading">
           <h1 className="page-title">{page?.title || "STATARENA"}</h1>
         </div>
