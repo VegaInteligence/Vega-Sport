@@ -1,11 +1,10 @@
 # Worklog
 
-- Goal: adopt the green stadium logo only across the public site, GitHub repository and Vercel project.
-- Latest correction: reject the full-kit palette/font preview. Preserve the production blue/neutral palette and Inter typography byte for byte. Publication is now requested for logos across the live services; the previous local-only preview remains separate.
-- Direction: versioned green-kit logo assets, theme-specific SVGs, root favicons and share images; update README/banner, GitHub social preview and Vercel avatar.
-- GitHub scope confirmed: repository STATARENA imagery only; no organization avatar change.
-- Preserve: all palette CSS, chart colours, layout, data, routes and upstream player profiles, historical-season and competition-selection changes through 516baaa2.
-- Progress: original palette restored on local 3016; green navbar/footer, favicons and share assets verified in both themes and at mobile width. Ranking navigation and player detail passed; no browser console errors. GitHub repository social preview and Vercel avatar saved and verified after reload.
-- Result: logo-only commit ce4ad4b8 is live on statarena-analytics.vercel.app, deployment READY with the exact Git SHA. Public dark/light themes retain the original backgrounds, Inter and chart colours. Nine public image/metadata responses match source bytes. Final local source build and homepage smoke check also passed; previews run on 3015 and 3016 with the original palette.
-- Evidence: dashboard/outputs/green-logo-rollout; six palette/font/chart files remain byte-identical, all 53 supplied assets match their manifest. GitHub social preview and Vercel avatar persist after reload. README/brand documentation and reproducible evidence accompany this change. Hand-off: keep the current palette and the local preview; await further user direction on design.
-- Suggested commits: ui: adopt the green stadium logo with the existing theme; docs: update STATARENA repository branding.
+- Goal: publish the reviewed Clubs, Players, Overview and Competitions improvements while preserving upstream and concurrent local work.
+- Preserve: production neutral/blue palette, Inter, green branding, raw data and existing contracts. Leave unrelated untracked ` 2` copies intact.
+- Delivered: country-filtered clubs with responsive pagination; one row per player with average-based filters, CSV and comparisons; one home competition picker; full-width standings; neutral filter focus styling. Keep the title Performances and global SportScore attribution.
+- Data: 761 club-country mappings generated from existing domestic memberships and reviewed ranking links; no scraping or raw-data duplication.
+- Verified: 42 prior browser observations with no unresolved failures, independent raw-data references and successful builds. Integrated production build also passes after merging the ten upstream commits through adf2ec06. Evidence: dashboard/outputs/navigation-filters/PUBLICATION.md and RESULTS.md.
+- Publication: five focused commits plus upstream integration, all with clear titles and bullet descriptions. Integration used an isolated worktree so the original checkout and its local servers remain intact.
+- Next: continue the separate match-detail standings and country-selector work in the original checkout; those in-progress modifications are excluded from this publication.
+- Suggested commit: merge: integrate dashboard improvements with latest GitHub changes.

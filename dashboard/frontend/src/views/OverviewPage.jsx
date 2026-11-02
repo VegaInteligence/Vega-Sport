@@ -15,6 +15,7 @@ import {
   recentFinishedMatches,
   recentRecords,
   RECENT_PERFORMANCE_DAYS,
+  selectFeaturedMatch,
 } from "../services/home.js";
 export default function OverviewPage() {
   const f = useFootball(),
@@ -72,7 +73,10 @@ export default function OverviewPage() {
     }
     return result;
   }, [homeMatches]);
-  const featured = recentMatches[0];
+  const featured = useMemo(
+    () => selectFeaturedMatch(recentMatches, now),
+    [recentMatches, now],
+  );
   return (
     <Layout path="/" title="Vue d’ensemble" filters filterKind="home">
       <UpcomingMatches compact />

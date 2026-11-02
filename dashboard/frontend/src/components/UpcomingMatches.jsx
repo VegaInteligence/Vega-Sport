@@ -6,6 +6,10 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { Media, Pager } from "./UI.jsx";
 import Icon from "./Icon.jsx";
 import {
+  competitionIndex,
+  fixtureCompetition,
+} from "../services/competition-identity.js";
+import {
   dayLabel,
   fixtureWeek,
   kickoffFormatter,
@@ -28,9 +32,10 @@ function useClock() {
   }, []);
   return now;
 }
-function Fixture({ entry, week, compact }) {
+function Fixture({ entry, week, compact, competitions }) {
   const f = useFootball(),
-    { fixture, kickoff, day } = entry;
+    { fixture, kickoff, day } = entry,
+    competition = fixtureCompetition(fixture, competitions);
   return (
     <Link
       className={`fixture-link${compact ? " fixture-tile" : ""}`}
@@ -44,7 +49,21 @@ function Fixture({ entry, week, compact }) {
       })}
       data-fixture-id={fixture.id}
     >
-      <span className="fixture-competition">{fixture.league?.name}</span>
+      <span className="fixture-competition">
+        <Media
+          name={competition.name}
+          url={competition.imageUrl}
+          className="crest fixture-competition-crest"
+        />
+        <span className="fixture-competition-copy">
+          <span className="fixture-competition-name">{competition.name}</span>
+          {competition.country && (
+            <span className="fixture-competition-country">
+              {competition.country}
+            </span>
+          )}
+        </span>
+      </span>
       <span className="fixture-teams">
         {[fixture.home_team, fixture.away_team].map((team, i) => (
           <span className="fixture-team" key={i}>
@@ -79,6 +98,10 @@ export default function UpcomingMatches({ compact = false }) {
     !compact && validDay(requested) ? fixtureWeek(requested) : currentWeek;
   const current = week.start === currentWeek.start;
   const [page, setPage] = useState(1);
+  const competitions = useMemo(
+    () => competitionIndex(f.competitions, f.data.competitions, f.catalog),
+    [f.competitions, f.data.competitions, f.catalog],
+  );
   // Follows the search without blocking the keystroke that changed it.
   const query = useDeferredValue(f.filters.query),
     league = useDeferredValue(f.filters.league),
@@ -170,6 +193,7 @@ export default function UpcomingMatches({ compact = false }) {
                 key={entry.fixture.id}
                 entry={entry}
                 week={week.start}
+                competitions={competitions}
                 compact
               />
             ))}
@@ -202,6 +226,7 @@ export default function UpcomingMatches({ compact = false }) {
                       key={entry.fixture.id}
                       entry={entry}
                       week={week.start}
+                      competitions={competitions}
                     />
                   ))}
                 </div>

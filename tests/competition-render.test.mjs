@@ -21,7 +21,8 @@ test("competition page renders a result-derived league table and its limits", as
   const sportscore = await import("../dashboard/frontend/src/services/sportscore-standings.js");
   const ordering = await import("../dashboard/frontend/src/services/competition-matches.js");
   let forceMatchView = false;
-  const reactStub = { ...React, useState: (initial) => { const [value, setValue] = React.useState(initial); return [forceMatchView && initial === "standings" ? "matches" : value, setValue]; } };
+  let forceDirectory = false, hookCount = 0;
+  const reactStub = { ...React, useState: (initial) => { const [value, setValue] = React.useState(initial); hookCount++; if (forceDirectory && hookCount === 3) return [true, setValue]; return [forceMatchView && initial === "standings" ? "matches" : value, setValue]; } };
   let externalTable = null;
   const league = { id: "l_3FJFUl", name: "Ligue 1", country: "FRA", seasons: ["2026/2027", "2025/2026"] };
   const matches = [
@@ -86,5 +87,25 @@ test("competition page renders a result-derived league table and its limits", as
   assert.match(resultView, /aria-pressed="true">Résultats/);
   assert.ok(resultView.indexOf("m_1") < resultView.indexOf("m_old"));
   assert.doesNotMatch(resultView, /m_future/);
+
+  context.catalog = [
+    { id: "championship", name: "Championship", country: "ENG", seasons: [] },
+    { id: "australia", name: "A-League", country: "AUS", seasons: [] },
+    { id: "england", name: "Premier League", country: "ENG", seasons: [] },
+    { id: "champions", name: "Champions League", country: "INT", seasons: [] },
+    { id: "germany", name: "Bundesliga", country: "GER", seasons: [] },
+    { id: "turkey2", name: "1. Lig", country: "INT", seasons: [] },
+  ];
+  context.manifest.seasons[0].chunks = [{ leagueId: "turkey2", competitions: [{ id: "turkey2", country: "TUR", seasons: [] }] }];
+  forceMatchView = false;
+  forceDirectory = true;
+  hookCount = 0;
+  const directory = renderToStaticMarkup(elem(mod.exports.default));
+  assert.ok(directory.indexOf(">International</h2>") < directory.indexOf(">Allemagne</h2>"));
+  assert.ok(directory.indexOf(">Allemagne</h2>") < directory.indexOf(">Angleterre</h2>"));
+  assert.ok(directory.indexOf(">Premier League</h3>") < directory.indexOf(">Championship</h3>"));
+  assert.ok(directory.indexOf(">Angleterre</h2>") < directory.indexOf(">Australie</h2>"));
+  assert.ok(directory.indexOf(">Turquie</h2>") < directory.indexOf(">1. Lig</h3>"));
+
 
 });
