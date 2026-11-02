@@ -1,6 +1,6 @@
 # STATARENA
 
-![STATARENA](dashboard/frontend/public/branding/social/github-readme-banner-1280x380.png)
+![STATARENA](dashboard/frontend/public/branding/green/social/github-readme-banner-1280x380.png)
 
 STATARENA est un projet de recherche consacré à la création d’un classement personnel du Ballon d’Or à partir des performances individuelles, match par match.
 
