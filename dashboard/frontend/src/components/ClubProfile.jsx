@@ -54,13 +54,13 @@ export function ClubFacts({ club, matches }) {
               <div className="club-fact-copy">
                 <span className="club-fact-label">Entraîneur</span>
                 <strong>{coach?.name || "Non renseigné"}</strong>
-                <small>
-                  {isWikiCoach
-                    ? "Entraîneur référencé par Wikidata"
-                    : coach
+                {!isWikiCoach && (
+                  <small>
+                    {coach
                       ? `Observé le ${date(coach.date)} · PitchAPI`
                       : "Aucune donnée disponible"}
-                </small>
+                  </small>
+                )}
                 {observedDiffers && (
                   <small>
                     Dernier match de la saison : {value.observedCoach.name} ·{" "}
@@ -100,22 +100,18 @@ export function ClubFacts({ club, matches }) {
               {alias && normalizeText(alias) !== normalizeText(stadium) && (
                 <small>Également appelé {alias}</small>
               )}
-              <small>
-                {wiki?.stadium
-                  ? "Stade référencé par Wikidata"
-                  : stadium
+              {!wiki?.stadium && (
+                <small>
+                  {stadium
                     ? `Dernier match à domicile · ${date(value.observedStadium.date)}`
                     : "Aucune donnée disponible"}
-              </small>
+                </small>
+              )}
             </div>
             <div className="club-fact">
               <span className="club-fact-label">Fondation</span>
               <strong>{wiki?.founded || "Non renseignée"}</strong>
-              <small>
-                {wiki?.founded
-                  ? "Année référencée par Wikidata"
-                  : "Aucune donnée disponible"}
-              </small>
+              {!wiki?.founded && <small>Aucune donnée disponible</small>}
             </div>
           </div>
           {stadiumOpen && stadium && (
@@ -126,18 +122,6 @@ export function ClubFacts({ club, matches }) {
             />
           )}
           <p className="club-facts-source">
-            {wiki?.sourceUrl ? (
-              <>
-                <a
-                  href={wiki.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Wikidata
-                </a>{" "}
-                · consultation du {date(wiki.fetchedAt)}.{" "}
-              </>
-            ) : null}
             Les informations du club peuvent évoluer indépendamment de la saison
             sélectionnée.
           </p>
