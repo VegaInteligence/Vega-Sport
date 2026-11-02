@@ -50,4 +50,10 @@ test("competition overview renders linked fixtures, results, scores and empty st
   const empty = renderToStaticMarkup(elem(mod.exports.default, { ...props, matches: [] }));
   assert.match(empty, /Aucune rencontre à venir/);
   assert.match(empty, /Aucun résultat disponible/);
+  const completed = Array.from({ length: 6 }, (_, i) => ({ id: "m_done_" + i, status: "finished", date: "2000-01-0" + (i + 1), home_team: { name: "Équipe A" }, away_team: { name: "Équipe B" }, score_home: i, score_away: 0 }));
+  const five = renderToStaticMarkup(elem(mod.exports.default, { ...props, matches: completed }));
+  assert.equal((five.match(/class="competition-highlight-match"/g) || []).length, 5);
+  assert.match(five, /m_done_5/);
+  assert.doesNotMatch(five, /m_done_0/);
+
 });

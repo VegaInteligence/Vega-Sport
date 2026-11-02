@@ -90,8 +90,7 @@ test("competition page renders a result-derived league table and its limits", as
   const sourced = renderToStaticMarkup(elem(mod.exports.default));
   assert.match(sourced, /Groupe A/);
   assert.match(sourced, /Groupe B/);
-  assert.match(sourced, /classements SportScore et les matchs PitchAPI/);
-  assert.match(sourced, /peuvent être actualisés à des moments différents/);
+  assert.doesNotMatch(sourced, /Les classements SportScore et les matchs PitchAPI/);
   context.season = "2025/2026";
   const historic = renderToStaticMarkup(elem(mod.exports.default));
   assert.doesNotMatch(historic, /Groupe A/);

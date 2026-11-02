@@ -38,9 +38,9 @@ test("historical seasons do not show old fixtures as upcoming and respect the li
 
 test("result capacity adapts to the standings and available room", () => {
   assert.equal(recentResultCapacity({ standingsHeight: 1400, upcomingHeight: 400, headerHeight: 50, rowHeight: 100 }), 9);
-  assert.equal(recentResultCapacity({ standingsHeight: 450, upcomingHeight: 350, headerHeight: 50, rowHeight: 100 }), 1);
+  assert.equal(recentResultCapacity({ standingsHeight: 450, upcomingHeight: 350, headerHeight: 50, rowHeight: 100 }), 5);
   assert.equal(recentResultCapacity({ standingsHeight: 4000, upcomingHeight: 400, headerHeight: 50, rowHeight: 100 }), 20);
-  assert.equal(recentResultCapacity({ standingsHeight: 1000, upcomingHeight: 400, headerHeight: 50, rowHeight: 0 }), 4);
+  assert.equal(recentResultCapacity({ standingsHeight: 1000, upcomingHeight: 400, headerHeight: 50, rowHeight: 0 }), 5);
 });
 
 test("expanded highlights retain their chronological order", () => {

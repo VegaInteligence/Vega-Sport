@@ -288,10 +288,6 @@ export default function CompetitionStandings({
             highlightTeams={highlightTeams}
           />
         ))}
-        <p className="standings-note">
-          Les classements SportScore et les matchs PitchAPI peuvent être
-          actualisés à des moments différents.
-        </p>
         {tables.length > 1 && tables.some((table) => !table.name) && (
           <p className="standings-note">
             La source ne précise pas le nom de toutes les phases.

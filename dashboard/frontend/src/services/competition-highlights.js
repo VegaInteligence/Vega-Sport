@@ -53,7 +53,7 @@ export function competitionHighlights(matches, now = Date.now(), limit = 4) {
 
 /** Number of whole result rows that fit beside the standings on wide screens. */
 export function recentResultCapacity({ standingsHeight, upcomingHeight, headerHeight, rowHeight, gap = 16, padding = 10, max = 20 }) {
-  if (![standingsHeight, upcomingHeight, headerHeight, rowHeight, gap, padding, max].every(Number.isFinite) || rowHeight <= 0) return 4;
+  if (![standingsHeight, upcomingHeight, headerHeight, rowHeight, gap, padding, max].every(Number.isFinite) || rowHeight <= 0) return 5;
   const available = standingsHeight - upcomingHeight - headerHeight - gap - padding;
-  return Math.max(1, Math.min(max, Math.floor(available / rowHeight)));
+  return Math.min(max, Math.max(5, Math.floor(available / rowHeight)));
 }

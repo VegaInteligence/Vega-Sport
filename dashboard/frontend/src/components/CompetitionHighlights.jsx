@@ -51,7 +51,7 @@ export default function CompetitionHighlights({ matches, competition, season, on
     const timer = setInterval(() => setNow(Date.now()), 60000);
     return () => clearInterval(timer);
   }, []);
-  const [recentLimit, setRecentLimit] = useState(4);
+  const [recentLimit, setRecentLimit] = useState(5);
   const highlightsRef = useRef(null);
   const { upcoming: allUpcoming, recent: allRecent } = useMemo(
     () => competitionHighlights(matches, now, Math.max(4, recentLimit)),
@@ -68,7 +68,7 @@ export default function CompetitionHighlights({ matches, competition, season, on
     if (!aside || !standings || !nextCard || !resultsCard || !header) return;
     const update = () => {
       if (!window.matchMedia("(min-width: 1051px)").matches) {
-        setRecentLimit(4);
+        setRecentLimit(5);
         return;
       }
       const row = resultsCard.querySelector(".competition-highlight-match");

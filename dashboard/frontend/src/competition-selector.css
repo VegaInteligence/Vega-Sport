@@ -234,6 +234,12 @@
   border-bottom: 1px solid var(--border);
   color: var(--ink);
 }
+.competition-highlights-results {
+  min-height: min-content;
+}
+.competition-highlights-results .competition-highlight-match {
+  padding: 6px 0;
+}
 .competition-highlight-match:last-child {
   border-bottom: 0;
 }
