@@ -41,3 +41,5 @@ import {ArchiveResults,ArchiveMatchDetail} from '../dashboard/frontend/src/compo
 import {archiveRows,buildArchiveSeason} from '../dashboard/frontend/src/services/archive.js';
 export const renderArchiveResults=(results,goals=null,competition='all',query='')=>serialize(<ArchiveResults rows={archiveRows(buildArchiveSeason(results,goals),competition,query)} page={1} onPage={()=>{}} matchHref={(match)=>'/archives/?m='+encodeURIComponent(match.key)}/>);
 export const renderArchiveMatch=(match)=>serialize(<ArchiveMatchDetail match={match} backHref="/archives/"/>);
+import ArchiveAttribution from '../dashboard/frontend/src/components/ArchiveAttribution.jsx';
+export const renderArchiveAttribution=()=>serialize(<ArchiveAttribution/>);
