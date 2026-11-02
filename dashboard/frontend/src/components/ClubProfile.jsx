@@ -150,9 +150,8 @@ export function ClubRoster({ clubId, appearances, href, season }) {
       }
     >
       <p className="club-roster-note">
-        Classés par nombre de matchs joués cette saison, selon les minutes
-        disponibles. Le poste indiqué est le dernier renseigné ; l’effectif
-        affiché peut être incomplet.
+        Le poste indiqué est le dernier renseigné ; l’effectif affiché peut
+        être incomplet.
       </p>
       {total ? (
         ROSTER_GROUPS.filter(([key]) => groups[key].length > 0).map(
@@ -162,7 +161,7 @@ export function ClubRoster({ clubId, appearances, href, season }) {
                 {label} <span>{groups[key].length}</span>
               </h3>
               <div className="club-roster">
-                {groups[key].map(({ row, role, played }) => (
+                {groups[key].map(({ row, role }) => (
                   <Link
                     className="roster-player"
                     key={row.playerId}
@@ -176,7 +175,7 @@ export function ClubRoster({ clubId, appearances, href, season }) {
                     <span>
                       <strong>{row.name}</strong>
                       <small>
-                        {number(played)} match{played > 1 ? "s" : ""} joué{played > 1 ? "s" : ""} · {role?.label || "Poste non renseigné"}
+                        {role?.label || "Poste non renseigné"}
                         {row.shirtNumber ? ` · n° ${row.shirtNumber}` : ""}
                       </small>
                     </span>

@@ -26,4 +26,5 @@ next-env.d.ts
 .vercel/
 dashboard/outputs/daily-refresh/
 
-dashboard/frontend/public/assets/
+# Local resumable worldwide collection queue
+data/computed/pitchapi-world/

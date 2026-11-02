@@ -165,14 +165,14 @@ export function FootballProvider({ children, loadData = true }) {
   const clubDetail = pathname.startsWith("/clubs") && Boolean(initial.get("id"));
   const dataFocus = clubDetail ? "all" : focus;
   const scopeKey = `${chosen}:${dataFocus}`,
-    leagueOnly = !clubDetail && filters.league !== "all" && !loadedScopes.has(scopeKey),
+    leagueOnly = !pathname.startsWith("/clubs") && filters.league !== "all" && !loadedScopes.has(scopeKey),
     // "All competitions" first shows the Top 7 + UEFA chunks (a quarter of
     // the bytes), then merges the other leagues loaded in the background.
     // Pages opened on a specific record wait for the full scope instead.
     progressive =
       loadData &&
       dataFocus === "all" &&
-      filters.league === "all" &&
+      (pathname.startsWith("/clubs") || filters.league === "all") &&
       !initial.get("id") &&
       !loadedScopes.has(scopeKey),
     fullKey = `season:${chosen}:${dataFocus}:all:full`;

@@ -14,6 +14,7 @@ import "../src/analysis.css";
 import "../src/season-profile.css";
 import "../src/competition-selector.css";
 import "../src/openfootball-history.css";
+import "../src/research.css";
 const siteUrl = "https://statarena-analytics.vercel.app";
 const description =
   "Statistiques de football, analyses de matchs, profils de joueurs et classement du Ballon d’Or.";

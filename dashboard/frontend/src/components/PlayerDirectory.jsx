@@ -1,135 +1,142 @@
 import Link from "next/link";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
-import { Card, Empty, Media, Modal, Pager, Rating, Segments } from "./UI.jsx";
+import { useResearch } from "../hooks/ResearchContext.jsx";
+import { playerSelection } from "../services/research-storage.js";
+import { SCOUT_METRICS } from "../services/scouting.js";
 import { number } from "../services/format.js";
-import { DIRECTORY_FIELDS } from "../services/player-directory.js";
-
-function averageText(row, key) {
-  return number(row[key], key === "matches" ? 0 : key === "minutes" ? 1 : 2);
-}
-
+import { Card, Empty, Media, Pager, Rating, Segments } from "./UI.jsx";
+import {
+  BookmarkButton,
+  MetricInfo,
+  MetricPicker,
+  SavedViews,
+} from "./ResearchUI.jsx";
+const labels = { matches: "Matchs", minutes: "Min. moy.", rating: "Note" };
 export default function PlayerDirectory({
   rows,
-  players,
   sort,
   onSort,
   mode,
   onMode,
   onExport,
 }) {
-  const f = useFootball();
+  const f = useFootball(),
+    r = useResearch();
   const [page, setPage] = useState({ rows: null, value: 1 });
-  const [selected, setSelected] = useState([]);
-  const [comparing, setComparing] = useState(false);
+  const fields = r.data.settings.columns.map((key) => [
+    key,
+    labels[key] || SCOUT_METRICS[key]?.label || key,
+  ]);
   const pages = Math.max(1, Math.ceil(rows.length / 20));
   const current = page.rows === rows ? Math.min(page.value, pages) : 1;
-  const selection = useMemo(
-    () => players.filter((row) => selected.includes(row.playerId)),
-    [players, selected],
-  );
-  function toggle(id) {
-    const ids = selection.map((row) => row.playerId);
-    if (!ids.includes(id) && ids.length >= 3) {
-      f.setNotice("La comparaison est limitée à 3 joueurs.");
-      return;
-    }
-    setSelected(
-      ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id],
-    );
-  }
   return (
-    <>
-      <Card
-        title="Performances"
-        action={
+    <Card
+      title="Performances"
+      action={
+        <>
+          <SavedViews />
+          <MetricPicker
+            label="Colonnes"
+            value={r.data.settings.columns}
+            includeMeta
+            onChange={(columns) => r.setSettings({ columns })}
+          />
           <button className="button button-secondary" onClick={onExport}>
             Exporter CSV
           </button>
-        }
-      >
-        <div className="player-directory-toolbar">
-          <Segments
-            label="Calcul des moyennes"
-            value={mode}
-            onChange={onMode}
-            items={[
-              ["perMatch", "Par match"],
-              ["per90", "Par 90 minutes"],
-            ]}
-          />
-          <span role="status">
-            {number(rows.length)} joueur{rows.length === 1 ? "" : "s"}
-          </span>
-        </div>
-        {rows.length ? (
-          <div className="table-scroll">
-            <table className="data-table player-directory-table">
-              <caption className="sr-only">
-                Un joueur par ligne,{" "}
-                {mode === "per90"
-                  ? "moyennes par 90 minutes"
-                  : "moyennes par match"}
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">
-                    <span className="sr-only">Comparer</span>
+        </>
+      }
+    >
+      <div className="player-directory-toolbar">
+        <Segments
+          label="Calcul des performances"
+          value={mode}
+          onChange={onMode}
+          items={[
+            ["perMatch", "Par match"],
+            ["per90", "Par 90 minutes"],
+          ]}
+        />
+        <span role="status">
+          {number(rows.length)} joueur{rows.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      {rows.length ? (
+        <div className="table-scroll">
+          <table className="data-table player-directory-table">
+            <caption className="sr-only">
+              Un joueur par ligne, valeurs{" "}
+              {mode === "per90" ? "par 90 minutes" : "par match"}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">
+                  <span className="sr-only">Comparer et enregistrer</span>
+                </th>
+                {[["name", "Joueur"], ...fields].map(([key, label]) => (
+                  <th
+                    key={key}
+                    scope="col"
+                    aria-sort={
+                      sort.key === key
+                        ? sort.direction === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
+                  >
+                    <button
+                      onClick={() =>
+                        onSort({
+                          key,
+                          direction:
+                            sort.key === key
+                              ? sort.direction === "desc"
+                                ? "asc"
+                                : "desc"
+                              : key === "name"
+                                ? "asc"
+                                : "desc",
+                        })
+                      }
+                    >
+                      {label}
+                      <span className="sort-indicator" aria-hidden="true">
+                        {sort.key === key
+                          ? sort.direction === "asc"
+                            ? "↑"
+                            : "↓"
+                          : "↕"}
+                      </span>
+                    </button>
+                    {SCOUT_METRICS[key] && <MetricInfo metric={key} />}
                   </th>
-                  {[["name", "Joueur"], ...DIRECTORY_FIELDS].map(
-                    ([key, label]) => (
-                      <th
-                        key={key}
-                        scope="col"
-                        aria-sort={
-                          sort.key === key
-                            ? sort.direction === "asc"
-                              ? "ascending"
-                              : "descending"
-                            : "none"
-                        }
-                      >
-                        <button
-                          onClick={() =>
-                            onSort({
-                              key,
-                              direction:
-                                sort.key === key
-                                  ? sort.direction === "desc"
-                                    ? "asc"
-                                    : "desc"
-                                  : key === "name"
-                                    ? "asc"
-                                    : "desc",
-                            })
-                          }
-                        >
-                          {label}{" "}
-                          <span className="sort-indicator" aria-hidden="true">
-                            {sort.key === key
-                              ? sort.direction === "asc"
-                                ? "↑"
-                                : "↓"
-                              : "↕"}
-                          </span>
-                        </button>
-                      </th>
-                    ),
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.slice((current - 1) * 20, current * 20).map((row) => (
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.slice((current - 1) * 20, current * 20).map((row) => {
+                const entry = playerSelection(row.profile, f);
+                return (
                   <tr key={row.playerId} data-player-id={row.playerId}>
                     <td>
-                      <input
-                        type="checkbox"
-                        aria-label={`Comparer ${row.name}`}
-                        checked={selection.some(
-                          (value) => value.playerId === row.playerId,
-                        )}
-                        onChange={() => toggle(row.playerId)}
-                      />
+                      <span className="research-row-actions">
+                        <input
+                          type="checkbox"
+                          aria-label={`Comparer ${row.name}`}
+                          checked={r.isComparing(entry)}
+                          onChange={() => r.toggleComparison(entry)}
+                        />
+                        <BookmarkButton
+                          kind="players"
+                          id={row.playerId}
+                          name={row.name}
+                          imageUrl={row.imageUrl}
+                          season={f.season}
+                          compact
+                        />
+                      </span>
                     </td>
                     <td>
                       <Link
@@ -149,16 +156,17 @@ export default function PlayerDirectory({
                         </span>
                       </Link>
                     </td>
-                    {DIRECTORY_FIELDS.map(([key]) => {
+                    {fields.map(([key]) => {
                       const observed =
                         key === "rating"
                           ? row.profile.ratingCount
-                          : row.profile.stats[key]?.count;
+                          : (row.profile.stats[key]?.count ??
+                            row.profile.ratios[key]?.count);
                       return (
                         <td
                           key={key}
                           title={
-                            observed != null && observed < row.matches
+                            observed != null
                               ? `${observed} / ${row.matches} matchs renseignés`
                               : undefined
                           }
@@ -166,90 +174,38 @@ export default function PlayerDirectory({
                           {key === "rating" ? (
                             <Rating value={row.rating} />
                           ) : (
-                            averageText(row, key)
+                            <>
+                              {number(
+                                row[key],
+                                key === "matches"
+                                  ? 0
+                                  : key === "minutes"
+                                    ? 1
+                                    : 2,
+                              )}
+                              {SCOUT_METRICS[key]?.unit
+                                ? ` ${SCOUT_METRICS[key].unit}`
+                                : ""}
+                            </>
                           )}
                         </td>
                       );
                     })}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <Empty>Aucun joueur pour ces filtres.</Empty>
-        )}
-        <Pager
-          page={current}
-          total={pages}
-          label="Pagination des joueurs"
-          onChange={(value) => setPage({ rows, value })}
-        />
-      </Card>
-      {selection.length > 0 && (
-        <aside className="compare-tray" aria-label="Comparaison de joueurs">
-          <span>
-            Comparer <strong>{selection.length}/3</strong>
-          </span>
-          {selection.map((row) => (
-            <span className="compare-pill" key={row.playerId}>
-              {row.name}
-              <button
-                aria-label={`Retirer ${row.name} de la comparaison`}
-                onClick={() => toggle(row.playerId)}
-              >
-                ×
-              </button>
-            </span>
-          ))}
-          <button
-            className="button button-primary"
-            disabled={selection.length < 2}
-            onClick={() => setComparing(true)}
-          >
-            Comparer les joueurs
-          </button>
-          <button
-            className="button button-ghost"
-            onClick={() => setSelected([])}
-          >
-            Vider
-          </button>
-        </aside>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <Empty>Aucun joueur pour ces filtres.</Empty>
       )}
-      {comparing && (
-        <Modal title="Comparer les joueurs" onClose={() => setComparing(false)}>
-          <div className="table-scroll">
-            <table className="data-table">
-              <caption className="sr-only">
-                {mode === "per90"
-                  ? "Moyennes par 90 minutes"
-                  : "Moyennes par match"}
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Indicateur</th>
-                  {selection.map((row) => (
-                    <th scope="col" key={row.playerId}>
-                      {row.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {DIRECTORY_FIELDS.map(([key, label]) => (
-                  <tr key={key}>
-                    <th scope="row">{label}</th>
-                    {selection.map((row) => (
-                      <td key={row.playerId}>{averageText(row, key)}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Modal>
-      )}
-    </>
+      <Pager
+        page={current}
+        total={pages}
+        label="Pagination des joueurs"
+        onChange={(value) => setPage({ rows, value })}
+      />
+    </Card>
   );
 }

@@ -24,6 +24,9 @@ import {
   Check,
   Eye,
   CircleHelp,
+  Bookmark,
+  GitCompareArrows,
+  Save,
 } from "lucide-react";
 const icons = {
   search: Search,
@@ -51,6 +54,9 @@ const icons = {
   check: Check,
   eye: Eye,
   info: CircleHelp,
+  bookmark: Bookmark,
+  compare: GitCompareArrows,
+  save: Save,
 };
 export default function Icon({ name, className = "" }) {
   const Component = icons[name] || CircleDot;

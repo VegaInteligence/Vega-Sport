@@ -57,14 +57,15 @@ test("search presents one navigable player for multiple match performances", () 
   assert.match(html, /\/joueurs\/?\?id=p_1/);
 });
 
-test("season card renders observed averages, sample warning and individual matches", () => {
+test("season card renders observed totals, average controls, sample warning and matches", () => {
   const html = renderSeasonProfile(rows, matches, "p_1");
-  assert.match(html, /Fiche joueur/);
+  assert.match(html, /Neymar/);
   assert.match(html, /37/);
   assert.match(html, /6,68/);
-  assert.match(html, /0,41/);
-  assert.match(html, /Moins de 450 minutes/);
-  assert.match(html, /Brazil 1 – 2 Norway/);
-  assert.match(html, /Brazil 2 – 1 Portugal/);
+  assert.match(html, /0,82/);
+  assert.match(html, /Par match/);
+  assert.match(html, /Échantillon insuffisant/);
+  assert.match(html, /5 juil\. 2026/);
+  assert.match(html, /29 juin 2026/);
   assert.doesNotMatch(html, /NaN|Infinity/);
 });

@@ -34,7 +34,8 @@ export class PitchExplorer extends FootballDataClient{
 import PlayerSearchResults from '../dashboard/frontend/src/components/PlayerSearchResults.jsx';
 import PlayerSeasonProfile from '../dashboard/frontend/src/components/PlayerSeasonProfile.jsx';
 export const renderSeasonSearch=(rows,query)=>renderToStaticMarkup(<FootballContext.Provider value={{rows,filters:{query},partial:false,href:(path,params={})=>path+'?'+new URLSearchParams(params)}}><PlayerSearchResults/></FootballContext.Provider>);
-export const renderSeasonProfile=(rows,matches,id)=>renderToStaticMarkup(<FootballContext.Provider value={{season:'2026/2027',competitions:[],filters:{league:'all',minutes:1},focus:'all',data:{matches},setPlayer:()=>{}}}><PlayerSeasonProfile id={id} rows={rows} scopeRows={rows}/></FootballContext.Provider>);
+import {ResearchProvider} from '../dashboard/frontend/src/hooks/ResearchContext.jsx';
+export const renderSeasonProfile=(rows,matches,id)=>renderToStaticMarkup(<FootballContext.Provider value={{season:'2026/2027',competitions:[],filters:{league:'all',minutes:1},focus:'all',data:{matches},setPlayer:()=>{}}}><ResearchProvider><PlayerSeasonProfile id={id} rows={rows} scopeRows={rows}/></ResearchProvider></FootballContext.Provider>);
 import {historicalRows,historicalScore} from '../dashboard/frontend/src/services/openfootball-history.js';
 export const renderHistoricalResults=(season,competition='all',query='')=>serialize(<HistoryResults season={season} competition={competition} query={query} page={1} onPage={()=>{}}/>);
 import {HistoryResults} from '../dashboard/frontend/src/components/OpenFootballArchive.jsx';
