@@ -10,6 +10,7 @@ import MatchDetail from "../components/MatchDetail.jsx";
 import UpcomingMatches from "../components/UpcomingMatches.jsx";
 import { useResource, json } from "../services/resources.js";
 import { loadRemoteMatch } from "../services/remote-match.js";
+import { ResearchLists } from "../components/ResearchUI.jsx";
 function RemoteDetail({ id }) {
   const f = useFootball(),
     resource = useResource(`remote-match:${id}`, () =>
@@ -26,7 +27,8 @@ export default function MatchesPage() {
     [page, setPage] = useState(1),
     search = useSearchParams(),
     id = search.get("id"),
-    upcoming = search.get("tab") !== "results",
+    saved = search.get("tab") === "saved",
+    upcoming = !saved && search.get("tab") !== "results",
     selected = f.data.matches.find((m) => m.id === id),
     fixture = f.data.fixtures?.find((m) => m.id === id),
     pages = Math.max(1, Math.ceil(f.matches.length / 30)),
@@ -35,7 +37,7 @@ export default function MatchesPage() {
     <Layout
       path="/matchs/"
       title="Matchs"
-      filters={!id}
+      filters={!id && !saved}
       filterKind={upcoming ? "fixtures" : "performances"}
       hideHeading={!!id}
       className={id ? "match-workspace" : ""}
@@ -45,6 +47,7 @@ export default function MatchesPage() {
             {[
               ["upcoming", "À venir"],
               ["results", "Résultats"],
+              ["saved", "Mes matchs"],
             ].map(([tab, label]) => (
               <Link
                 key={tab}
@@ -53,7 +56,7 @@ export default function MatchesPage() {
                   ...(search.get("week") ? { week: search.get("week") } : {}),
                 })}
                 aria-current={
-                  (upcoming ? "upcoming" : "results") === tab
+                  (saved ? "saved" : upcoming ? "upcoming" : "results") === tab
                     ? "page"
                     : undefined
                 }
@@ -78,6 +81,8 @@ export default function MatchesPage() {
             <RemoteDetail id={id} />
           )}
         </>
+      ) : saved ? (
+        <ResearchLists kind="matches" />
       ) : upcoming ? (
         <UpcomingMatches />
       ) : (

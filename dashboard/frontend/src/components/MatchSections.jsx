@@ -265,43 +265,56 @@ export function Shots({ match, payload, onPlayer = () => {} }) {
     </>
   );
 }
-export function Events({ payload }) {
+const EVENT_LABELS = {
+  goal: "But",
+  owngoal: "But contre son camp",
+  substitution: "Remplacement",
+  yellowcard: "Carton jaune",
+  secondyellow: "Second carton jaune",
+  redcard: "Carton rouge",
+  var: "VAR",
+};
+export const eventKind = (e) =>
+  e.is_own_goal ? "owngoal" : String(e.event_type || "").toLowerCase();
+export const eventLabel = (e) =>
+  EVENT_LABELS[eventKind(e)] || e.event_type || "Événement";
+export function Events({ payload, match }) {
   const events = payload.events || [];
   if (!events.length) return <Empty>Aucun événement renseigné.</Empty>;
+  const teams = match
+    ? {
+        [match.home.id]: { name: match.home.name, side: "home" },
+        [match.away.id]: { name: match.away.name, side: "away" },
+      }
+    : {};
   return (
     <ol className="event-timeline">
-      {events.map((e, i) => (
-        <li key={e.id || i}>
-          <strong className="event-minute">
-            {number(e.minute)}
-            {e.minute_added ? `+${number(e.minute_added)}` : ""}′
-          </strong>
-          <span className="event-marker" />
-          <div>
-            <strong>
-              {e.is_own_goal
-                ? "But contre son camp"
-                : {
-                    Goal: "But",
-                    Substitution: "Remplacement",
-                    YellowCard: "Carton jaune",
-                    RedCard: "Carton rouge",
-                  }[e.event_type] || e.event_type}
+      {events.map((e, i) => {
+        const team = teams[e.team?.id || e.team_id];
+        return (
+          <li key={e.id || i} data-kind={eventKind(e)} data-side={team?.side}>
+            <strong className="event-minute">
+              {number(e.minute)}
+              {e.minute_added ? `+${number(e.minute_added)}` : ""}′
             </strong>
-            <p>
-              {e.player?.name}
-              {e.sub_in_player ? ` → ${e.sub_in_player.name}` : ""}
-              {e.is_penalty ? " · Penalty" : ""}
-              {e.is_own_goal ? " · CSC" : ""}
-            </p>
-          </div>
-          {e.score_home != null && e.score_away != null && (
-            <span className="score">
-              {number(e.score_home)}–{number(e.score_away)}
-            </span>
-          )}
-        </li>
-      ))}
+            <span className="event-marker" />
+            <div>
+              <strong>{eventLabel(e)}</strong>
+              <p>
+                {e.player?.name}
+                {e.sub_in_player ? ` → ${e.sub_in_player.name}` : ""}
+                {e.is_penalty ? " · Penalty" : ""}
+                {team ? <span className="event-team"> · {team.name}</span> : ""}
+              </p>
+            </div>
+            {e.score_home != null && e.score_away != null && (
+              <span className="score">
+                {number(e.score_home)}–{number(e.score_away)}
+              </span>
+            )}
+          </li>
+        );
+      })}
     </ol>
   );
 }
@@ -566,7 +579,7 @@ export function SectionContent({
         <Shots match={match} payload={payload} onPlayer={onPlayer} />
       );
     case "events":
-      return <Events payload={payload} />;
+      return <Events payload={payload} match={match} />;
     case "momentum":
       return <Momentum match={match} payload={payload} />;
     case "heatmaps":

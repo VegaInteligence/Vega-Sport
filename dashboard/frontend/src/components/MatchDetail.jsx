@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useId, useState } from "react";
+import React, { lazy, Suspense, useMemo, useRef, useId, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -7,6 +7,9 @@ import Icon from "./Icon.jsx";
 import { XgTimeline, ShotMap } from "./Charts.jsx";
 import { MatchSections } from "./MatchSections.jsx";
 import MatchStandings from "./MatchStandings.jsx";
+import MatchEventHighlights from "./MatchEventHighlights.jsx";
+import { StatRow, StatRows } from "./StatRows.jsx";
+const MatchContext = lazy(() => import("./MatchContext.jsx"));
 import { periodShort } from "./PlayerMetrics.jsx";
 import { number, date, isNumber } from "../services/format.js";
 import {
@@ -14,12 +17,13 @@ import {
   periodStats,
   overviewStats,
   statValue,
-  statPercentage,
 } from "../services/match-data.js";
 import { download, useResource } from "../services/resources.js";
-import { csvString } from "../model.js";
+import { csvString, seasonLabel } from "../model.js";
+import { BookmarkButton } from "./ResearchUI.jsx";
 const views = [
   ["overview", "Vue d’ensemble", "activity"],
+  ["context", "Avant-match", "calendar"],
   ["standings", "Classement", "trophy"],
   ["stats", "Statistiques", "filters"],
   ["shots", "Tirs & xG", "target"],
@@ -108,99 +112,6 @@ function MatchStatistics({ match }) {
     );
   return <AsyncState resource={resource}>{display}</AsyncState>;
 }
-const SHARE_KEYS = new Set(["BallPossesion"]);
-function StatRow({ match, stat: s }) {
-  const home = s.home ?? s.homeValue,
-    away = s.away ?? s.awayValue;
-  const valid =
-    s.reliable !== false &&
-    isNumber(home) &&
-    isNumber(away) &&
-    home >= 0 &&
-    away >= 0 &&
-    home + away > 0;
-  const share = SHARE_KEYS.has(s.key),
-    max = Math.max(home, away),
-    lead = !valid ? null : home > away ? "home" : away > home ? "away" : "both";
-  const value = (side) => (
-    <dd
-      className={`stat-value ${side}${lead === side || lead === "both" ? " is-lead" : ""}`}
-      aria-label={`${match[side].name} : ${statValue(s, side)}${statPercentage(s, side) ? ` (${statPercentage(s, side)})` : ""}`}
-    >
-      {side === "away" && statPercentage(s, side) && (
-        <small>{statPercentage(s, side)}</small>
-      )}
-      {statValue(s, side)}
-      {side === "home" && statPercentage(s, side) && (
-        <small>{statPercentage(s, side)}</small>
-      )}
-    </dd>
-  );
-  return (
-    <div className={`stat-row${share ? " is-share" : ""}`}>
-      <dt>
-        {s.label}
-        {s.reliable === false && (
-          <span title="Valeur signalée comme non fiable">
-            <Icon name="info" />
-          </span>
-        )}
-      </dt>
-      {value("home")}
-      {value("away")}
-      <dd className={`stat-bars${valid ? "" : " is-empty"}`} aria-hidden="true">
-        {share ? (
-          <span className="stat-track">
-            <i
-              className="home"
-              style={{ width: valid ? `${(home / (home + away)) * 100}%` : 0 }}
-            />
-            <i
-              className="away"
-              style={{ width: valid ? `${(away / (home + away)) * 100}%` : 0 }}
-            />
-          </span>
-        ) : (
-          ["home", "away"].map((side) => (
-            <span className={`stat-track ${side}`} key={side}>
-              <i
-                className={
-                  lead && lead !== side && lead !== "both" ? "is-trailing" : ""
-                }
-                style={{
-                  width: valid
-                    ? `${((side === "home" ? home : away) / max) * 100}%`
-                    : 0,
-                }}
-              />
-            </span>
-          ))
-        )}
-      </dd>
-    </div>
-  );
-}
-function StatRows({ match, stats }) {
-  return (
-    <div className="comparison-stats">
-      <div className="comparison-teams">
-        <span>
-          <i className="team-dot home" />
-          {match.home.name}
-        </span>
-        <span>
-          <i className="team-dot away" />
-          {match.away.name}
-        </span>
-      </div>
-      <dl className="stat-rows">
-        {stats.map((s, i) => (
-          <StatRow key={`${s.key}:${i}`} match={match} stat={s} />
-        ))}
-      </dl>
-    </div>
-  );
-}
 function MatchViewTabs({ view, onChange, panelId }) {
   const refs = useRef([]);
   return (
@@ -265,50 +176,6 @@ function MatchPlayer({ row, rank }) {
       <span className="match-player-minutes">{number(row.minutes)}′</span>
       <Rating value={row.rating} />
     </button>
-  );
-}
-function MatchGoals({ match }) {
-  const f = useFootball();
-  const goals = (match.shots || [])
-    .filter((s) => s.isGoal || s.isOwnGoal)
-    .sort((a, b) => (a.minute ?? Infinity) - (b.minute ?? Infinity));
-  return (
-    <Card
-      title="Buts"
-      className="match-goals-card"
-      action={<span className="data-source-tag">Tirs collectés</span>}
-    >
-      {goals.length ? (
-        <ol className="match-goals">
-          {goals.map((s, i) => (
-            <li key={s.id || i}>
-              <span className="goal-minute">{number(s.minute)}′</span>
-              <span className="goal-ball">
-                <Icon name="ball" />
-              </span>
-              <button
-                onClick={() =>
-                  s.playerId && f.setPlayer(`${match.id}:${s.playerId}`)
-                }
-                disabled={!s.playerId}
-              >
-                <strong>
-                  {s.playerName || "Joueur non renseigné"}
-                  {s.isOwnGoal ? " · CSC" : ""}
-                </strong>
-                <span>
-                  {[match.home, match.away].find((t) => t.id === s.teamId)
-                    ?.name || "Équipe non renseignée"}
-                </span>
-              </button>
-              <Icon name="goal" />
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <Empty>Aucun but renseigné dans les tirs collectés.</Empty>
-      )}
-    </Card>
   );
 }
 function MatchPlayers({ match, players }) {
@@ -457,12 +324,14 @@ export default function MatchDetail({ match }) {
   const f = useFootball(),
     search = useSearchParams(),
     panelId = useId();
+  // Before kick-off there is nothing to analyse yet: open on the context.
+  const defaultView = match.status === "not_started" ? "context" : "overview";
   const view = views.some(([key]) => key === search.get("view"))
     ? search.get("view")
-    : "overview";
+    : defaultView;
   const selectView = (value) => {
     const url = new URL(window.location.href);
-    if (value === "overview") url.searchParams.delete("view");
+    if (value === defaultView) url.searchParams.delete("view");
     else url.searchParams.set("view", value);
     window.history.replaceState(null, "", url.pathname + url.search);
   };
@@ -519,18 +388,26 @@ export default function MatchDetail({ match }) {
           <Icon name="right" />
           <span>{match.season || f.season}</span>
         </nav>
-        <button
-          className="button button-secondary"
-          onClick={() =>
-            download(
-              `statarena-${match.id}.json`,
-              JSON.stringify(match, null, 2),
-            )
-          }
-        >
-          <Icon name="download" />
-          Exporter le match
-        </button>
+        <div className="match-breadcrumb-actions">
+          <BookmarkButton
+            kind="matches"
+            id={match.id}
+            name={`${match.home.name} – ${match.away.name}`}
+            season={seasonLabel(match.season || f.season)}
+          />
+          <button
+            className="button button-secondary"
+            onClick={() =>
+              download(
+                `statarena-${match.id}.json`,
+                JSON.stringify(match, null, 2),
+              )
+            }
+          >
+            <Icon name="download" />
+            Exporter le match
+          </button>
+        </div>
       </div>
       <section className="match-scoreboard" aria-label="Résumé du match">
         <div className="scoreboard-meta">
@@ -643,7 +520,7 @@ export default function MatchDetail({ match }) {
             <Card title="Les chiffres du match">
               <StatRows match={match} stats={overviewStats(match)} />
             </Card>
-            <MatchGoals match={match} />
+            <MatchEventHighlights match={match} />
             <Card
               title="Meilleures notes"
               className="match-leaders-card"
@@ -663,6 +540,17 @@ export default function MatchDetail({ match }) {
               {!leading.length && <Empty>Aucune note collectée.</Empty>}
             </Card>
           </div>
+        )}
+        {view === "context" && (
+          <Suspense
+            fallback={
+              <div className="loading-state" role="status">
+                Chargement du contexte…
+              </div>
+            }
+          >
+            <MatchContext match={match} />
+          </Suspense>
         )}
         {view === "stats" && <MatchStatistics match={match} />}
         {view === "standings" && <MatchStandings match={match} />}

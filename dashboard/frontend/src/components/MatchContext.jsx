@@ -16,8 +16,9 @@ import {
   normalizedFixture,
 } from "../services/club-analysis.js";
 import { date, isNumber, number, seasonLabel } from "../services/format.js";
-import { AsyncState, Card, Empty } from "./UI.jsx";
+import { AsyncState, Card, Empty, Media } from "./UI.jsx";
 import { MatchLink } from "./MatchLink.jsx";
+import { StatRows } from "./StatRows.jsx";
 
 async function contextData(f, match) {
   const season = seasonLabel(match.season || f.season);
@@ -58,6 +59,60 @@ function restDays(club, match) {
     ? Math.floor((current - previous) / 86400000)
     : null;
 }
+const RESULT = { V: "Victoire", N: "Nul", D: "Défaite" };
+function TeamForm({ club, match, side }) {
+  const f = useFootball();
+  const rest = restDays(club, match);
+  return (
+    <section className={`context-team context-team--${side}`}>
+      <header>
+        <Media name={club.name} url={match[side].imageUrl || club.imageUrl} />
+        <div>
+          <strong>{club.name}</strong>
+          <span>
+            {club.matches
+              ? `${club.matches} matchs · ${club.wins}V ${club.draws}N ${club.losses}D`
+              : "Aucun résultat antérieur collecté"}
+            {isNumber(rest) && ` · ${rest} j de repos`}
+          </span>
+        </div>
+      </header>
+      {club.forms.length > 0 && (
+        <ol className="context-results">
+          {club.forms.slice(0, 5).map((form) => {
+            const opponent =
+              form.side === "home" ? form.match.away : form.match.home;
+            return (
+              <li key={form.match.id}>
+                <Link
+                  href={f.href("/matchs/", {
+                    tab: "results",
+                    id: form.match.id,
+                    competition: form.match.leagueId,
+                    sourceSeason: form.match.season,
+                  })}
+                  title={`${RESULT[form.result]} · ${form.match.league || ""}`}
+                >
+                  <span className="context-date">{date(form.match.date)}</span>
+                  <span className="context-venue">
+                    {form.side === "home" ? "Dom." : "Ext."}
+                  </span>
+                  <span className="context-opponent">
+                    <Media name={opponent.name} url={opponent.imageUrl} />
+                    {opponent.name}
+                  </span>
+                  <span className="context-score" data-result={form.result}>
+                    {form.scoreFor}–{form.scoreAgainst}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </section>
+  );
+}
 function Content({ match, value }) {
   const f = useFootball();
   const home = clubSummary(value.data, match.home.id, { before: match }),
@@ -75,142 +130,146 @@ function Content({ match, value }) {
     .sort((a, b) =>
       String(b.timeUtc || b.date).localeCompare(String(a.timeUtc || a.date)),
     );
-  const sides = [home, away];
-  const rows = [
-    ["Matchs", (club) => club.matches],
-    ["Victoires", (club) => club.wins],
-    ["Nuls", (club) => club.draws],
-    ["Défaites", (club) => club.losses],
-    ["Buts pour / match", (club) => clubMetric(club, "goalsFor").value],
-    ["Buts contre / match", (club) => clubMetric(club, "goalsAgainst").value],
-    ["xG pour / match", (club) => clubMetric(club, "xgFor").value],
-    ["xG contre / match", (club) => clubMetric(club, "xgAgainst").value],
-    ["Tirs / match", (club) => clubMetric(club, "shotsFor").value],
-    ["Possession (%)", (club) => clubMetric(club, "possession").value],
-    ["Jours depuis le dernier match collecté", (club) => restDays(club, match)],
+  const h2hRecord = { [match.home.id]: 0, [match.away.id]: 0, draws: 0 };
+  for (const m of h2h)
+    if (m.home.score === m.away.score) h2hRecord.draws++;
+    else h2hRecord[m.home.score > m.away.score ? m.home.id : m.away.id]++;
+  const stat = (key, label, get, format = "double", lowerIsBetter = false) => ({
+    key,
+    label,
+    format,
+    lowerIsBetter,
+    home: home.matches ? get(home) : null,
+    away: away.matches ? get(away) : null,
+  });
+  const stats = [
+    stat(
+      "points",
+      "Points / match",
+      (c) => clubMetric(c, "pointsPerMatch").value,
+    ),
+    stat(
+      "goalsFor",
+      "Buts marqués / match",
+      (c) => clubMetric(c, "goalsFor").value,
+    ),
+    stat(
+      "goalsAgainst",
+      "Buts encaissés / match",
+      (c) => clubMetric(c, "goalsAgainst").value,
+      "double",
+      true,
+    ),
+    stat(
+      "expected_goals_for",
+      "xG pour / match",
+      (c) => clubMetric(c, "xgFor").value,
+    ),
+    stat(
+      "expected_goals_against",
+      "xG contre / match",
+      (c) => clubMetric(c, "xgAgainst").value,
+      "double",
+      true,
+    ),
+    stat("shots", "Tirs / match", (c) => clubMetric(c, "shotsFor").value),
+    // Season averages of two teams are not shares of one match: no split bar.
+    stat(
+      "possession",
+      "Possession moyenne (%)",
+      (c) => clubMetric(c, "possession").value,
+      "integer",
+    ),
   ];
+  const players = [home, away].map((club) =>
+    clubSquad(value.data, club)
+      .profiles.filter((p) => p.matches > 0)
+      .slice(0, 5),
+  );
   return (
-    <>
+    <div className="match-context">
       <div className="research-context">
-        <strong>Avant le {date(match.date)}</strong>
+        <strong>Avant le {date(match.timeUtc || match.date)}</strong>
         <span>
           Saison {value.season} · compétitions collectées · seuls les matchs
           antérieurs au coup d’envoi
         </span>
       </div>
-      <div className="research-two-columns">
-        {sides.map((club) => (
-          <Card key={club.id} title={club.name}>
-            <div
-              className="research-form"
-              aria-label={`Forme de ${club.name} avant le match`}
-            >
-              {club.forms.slice(0, 5).map((form) => (
-                <Link
-                  key={form.match.id}
-                  data-result={form.result}
-                  title={`${date(form.match.date)} · ${form.match.home.name} ${form.match.home.score}–${form.match.away.score} ${form.match.away.name}`}
-                  href={f.href("/matchs/", {
-                    id: form.match.id,
-                    competition: form.match.leagueId,
-                    sourceSeason: form.match.season,
-                  })}
-                >
-                  {form.result}
-                </Link>
+      <div className="match-overview-grid">
+        <Card title="Forme avant le match">
+          <div className="context-teams">
+            <TeamForm club={home} match={match} side="home" />
+            <TeamForm club={away} match={match} side="away" />
+          </div>
+        </Card>
+        <Card title="Repères de la saison">
+          {home.matches || away.matches ? (
+            <StatRows match={match} stats={stats} />
+          ) : (
+            <Empty>Aucun match antérieur collecté pour ces équipes.</Empty>
+          )}
+        </Card>
+        <Card
+          title="Confrontations précédentes"
+          action={
+            h2h.length > 0 && (
+              <span className="data-source-tag">
+                {match.home.name} {h2hRecord[match.home.id]} · Nuls{" "}
+                {h2hRecord.draws} · {match.away.name} {h2hRecord[match.away.id]}
+              </span>
+            )
+          }
+        >
+          {h2h.length ? (
+            <div className="club-match-list">
+              {h2h.slice(0, 6).map((m) => (
+                <MatchLink key={m.id} match={m} />
               ))}
             </div>
-            {club.forms.length ? (
-              <div className="season-match-list">
-                {club.forms.slice(0, 3).map((form) => (
-                  <MatchLink key={form.match.id} match={form.match} />
-                ))}
-              </div>
-            ) : (
-              <Empty>
-                Aucun résultat antérieur collecté pour cette saison.
-              </Empty>
-            )}
-          </Card>
-        ))}
-      </div>
-      <Card title="Repères avant le match">
-        <div className="table-scroll">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Indicateur</th>
-                <th>{home.name}</th>
-                <th>{away.name}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(([label, get]) => (
-                <tr key={label}>
-                  <th>{label}</th>
-                  {sides.map((club) => (
-                    <td key={club.id}>
-                      {club.matches
-                        ? number(
-                            get(club),
-                            label.includes("/") || label.includes("%") ? 2 : 0,
-                          )
-                        : "—"}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-      <Card title="Confrontations précédentes">
-        {h2h.length ? (
-          <>
-            {h2h.slice(0, 6).map((m) => (
-              <MatchLink key={m.id} match={m} />
+          ) : (
+            <Empty>Aucune confrontation antérieure collectée.</Empty>
+          )}
+        </Card>
+        <Card title="Joueurs les plus utilisés">
+          <div className="context-players">
+            {[home, away].map((club, i) => (
+              <section key={club.id}>
+                <h3>{club.name}</h3>
+                {players[i].length ? (
+                  <ol>
+                    {players[i].map((player) => (
+                      <li key={player.id}>
+                        <Link
+                          href={f.href("/joueurs/", {
+                            id: player.id,
+                            season: value.season,
+                            league: "",
+                            q: "",
+                          })}
+                        >
+                          <Media
+                            name={player.name}
+                            url={player.imageUrl}
+                            className="player-avatar"
+                          />
+                          <span>
+                            <strong>{player.name}</strong>
+                            <small>{player.role?.label || "Joueur"}</small>
+                          </span>
+                          <b>{number(player.minutes)} min</b>
+                        </Link>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <Empty>Aucune minute collectée avant le match.</Empty>
+                )}
+              </section>
             ))}
-            <span className="research-context">
-              {h2h.length} rencontres antérieures dans les archives disponibles
-            </span>
-          </>
-        ) : (
-          <Empty>Aucune confrontation antérieure collectée.</Empty>
-        )}
-      </Card>
-      <div className="research-two-columns">
-        {sides.map((club) => (
-          <Card
-            title={`${club.name} · joueurs les plus utilisés`}
-            key={club.id}
-          >
-            <div className="research-saved-list">
-              {clubSquad(value.data, club)
-                .profiles.filter((p) => p.matches > 0)
-                .slice(0, 5)
-                .map((player) => (
-                  <div className="research-selection" key={player.id}>
-                    <Link
-                      href={f.href("/joueurs/", {
-                        id: player.id,
-                        season: value.season,
-                        league: "all",
-                        q: "",
-                        rmin: "",
-                        stats: "",
-                      })}
-                    >
-                      {player.name}
-                      <small>{player.role?.label} · fiche de saison</small>
-                    </Link>
-                    <span>{number(player.minutes)} min avant le match</span>
-                  </div>
-                ))}
-            </div>
-          </Card>
-        ))}
+          </div>
+        </Card>
       </div>
-    </>
+    </div>
   );
 }
 export default function MatchContext({ match }) {

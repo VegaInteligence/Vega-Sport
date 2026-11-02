@@ -1,22 +1,138 @@
 "use client";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResource } from "../services/resources.js";
-import { Card, AsyncState, Empty } from "./UI.jsx";
-import { Events } from "./MatchSections.jsx";
+import { AsyncState, Card, Empty, Segments } from "./UI.jsx";
+import Icon from "./Icon.jsx";
+import { Events, eventKind } from "./MatchSections.jsx";
 import { number } from "../services/format.js";
-const names = {
-  Goal: "Buts",
-  Substitution: "Remplacements",
-  YellowCard: "Cartons jaunes",
-  RedCard: "Cartons rouges",
-  Var: "VAR",
+
+const KINDS = {
+  all: null,
+  goals: ["goal", "owngoal"],
+  cards: ["yellowcard", "secondyellow", "redcard"],
+  substitutions: ["substitution"],
 };
+
+const ORDER = { yellowcard: 0, secondyellow: 0, redcard: 2 };
+function GoalList({ match }) {
+  const f = useFootball();
+  const goals = (match.shots || [])
+    .filter((s) => s.isGoal || s.isOwnGoal)
+    .sort((a, b) => (a.minute ?? Infinity) - (b.minute ?? Infinity));
+  if (!goals.length)
+    return <Empty>Aucun but renseigné dans les tirs collectés.</Empty>;
+  return (
+    <ol className="match-goals">
+      {goals.map((s, i) => (
+        <li key={s.id || i}>
+          <span className="goal-minute">{number(s.minute)}′</span>
+          <span className="goal-ball">
+            <Icon name="ball" />
+          </span>
+          <button
+            onClick={() =>
+              s.playerId && f.setPlayer(`${match.id}:${s.playerId}`)
+            }
+            disabled={!s.playerId}
+          >
+            <strong>
+              {s.playerName || "Joueur non renseigné"}
+              {s.isOwnGoal ? " · CSC" : ""}
+            </strong>
+            <span>
+              {[match.home, match.away].find((t) => t.id === s.teamId)?.name ||
+                "Équipe non renseignée"}
+            </span>
+          </button>
+          <Icon name="goal" />
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function Timeline({ match, payload }) {
+  const [kind, setKind] = useState("all"),
+    [team, setTeam] = useState("all");
+  const events = useMemo(
+    () =>
+      (payload?.events || [])
+        .map((event, i) => ({ ...event, ordinal: i }))
+        .sort(
+          (a, b) =>
+            (a.minute ?? Infinity) - (b.minute ?? Infinity) ||
+            (a.minute_added || 0) - (b.minute_added || 0) ||
+            // A second yellow is listed before the red card it causes.
+            (ORDER[eventKind(a)] ?? 1) - (ORDER[eventKind(b)] ?? 1) ||
+            a.ordinal - b.ordinal,
+        ),
+    [payload],
+  );
+  const teamOf = (e) => e.team?.id || e.team_id;
+  const tally = (kinds, side) =>
+    events.filter((e) => kinds.includes(eventKind(e)) && teamOf(e) === side)
+      .length;
+  const filtered = events.filter(
+    (e) =>
+      (!KINDS[kind] || KINDS[kind].includes(eventKind(e))) &&
+      (team === "all" || teamOf(e) === team),
+  );
+  if (!events.length) return <Empty>Aucun événement renseigné.</Empty>;
+  return (
+    <>
+      <dl className="match-event-summary">
+        {[
+          ["Cartons jaunes", KINDS.cards.slice(0, 2)],
+          ["Cartons rouges", ["redcard"]],
+          ["Remplacements", KINDS.substitutions],
+        ].map(([label, kinds]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>
+              <b className="home-number">{tally(kinds, match.home.id)}</b>
+              <i>–</i>
+              <b className="away-number">{tally(kinds, match.away.id)}</b>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <div className="match-event-filters">
+        <Segments
+          label="Types d’événements"
+          value={kind}
+          onChange={setKind}
+          items={[
+            ["all", "Tout"],
+            ["goals", "Buts"],
+            ["cards", "Cartons"],
+            ["substitutions", "Remplacements"],
+          ]}
+        />
+        <Segments
+          label="Équipe des événements"
+          value={team}
+          onChange={setTeam}
+          items={[
+            ["all", "Les deux"],
+            [match.home.id, match.home.name],
+            [match.away.id, match.away.name],
+          ]}
+        />
+      </div>
+      {filtered.length ? (
+        <Events payload={{ events: filtered }} match={match} />
+      ) : (
+        <Empty>Aucun événement pour ce filtre.</Empty>
+      )}
+    </>
+  );
+}
+
+/** Goals from the collected shots; the full timeline loads on request. */
 export default function MatchEventHighlights({ match }) {
   const f = useFootball(),
-    [open, setOpen] = useState(false),
-    [type, setType] = useState("all"),
-    [team, setTeam] = useState("all");
+    [view, setView] = useState("goals");
   const resource = useResource(
     `match-events:${f.client.id}:${match.id}`,
     async () => {
@@ -26,104 +142,32 @@ export default function MatchEventHighlights({ match }) {
         Boolean(f.client.payloads.get(`${match.id}:events`)?.error),
       );
       const value = f.client.payloads.get(`${match.id}:events`);
-      if (value.error) throw new Error(value.error);
-      return value.data;
+      if (value?.error) throw new Error(value.error);
+      return value?.data;
     },
-    open && f.statusKnown,
+    view === "timeline" && f.statusKnown,
   );
-  const goals = (match.shots || []).filter((shot) => shot.isGoal);
   return (
     <Card
       title="Temps forts"
+      className="match-goals-card"
       action={
-        <button
-          className="inline-link"
-          aria-expanded={open}
-          onClick={() => setOpen((value) => !value)}
-        >
-          {open ? "Réduire" : "Chronologie complète"}
-        </button>
+        <Segments
+          label="Temps forts du match"
+          value={view}
+          onChange={setView}
+          items={[
+            ["goals", "Buts"],
+            ["timeline", "Chronologie"],
+          ]}
+        />
       }
     >
-      {!open ? (
-        goals.length ? (
-          <ol className="research-goal-list">
-            {goals.map((shot, i) => (
-              <li key={shot.id || i}>
-                <strong>{number(shot.minute)}′</strong>
-                <span>
-                  {shot.playerName || "Buteur non renseigné"}
-                  {shot.isOwnGoal ? " · CSC" : ""}
-                  <small>
-                    {shot.teamId === match.home.id
-                      ? match.home.name
-                      : shot.teamId === match.away.id
-                        ? match.away.name
-                        : ""}
-                  </small>
-                </span>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <Empty>Aucun but dans les tirs collectés.</Empty>
-        )
+      {view === "goals" ? (
+        <GoalList match={match} />
       ) : (
         <AsyncState resource={resource}>
-          {(payload) => {
-            const events = (payload?.events || [])
-              .map((event, i) => ({ ...event, ordinal: i }))
-              .sort(
-                (a, b) =>
-                  (a.minute ?? Infinity) - (b.minute ?? Infinity) ||
-                  (a.minute_added || 0) - (b.minute_added || 0) ||
-                  a.ordinal - b.ordinal,
-              );
-            const filtered = events.filter(
-              (e) =>
-                (type === "all" || e.event_type === type) &&
-                (team === "all" || e.team?.id === team || e.team_id === team),
-            );
-            return (
-              <>
-                <div className="research-toolbar">
-                  <label>
-                    Événements
-                    <select
-                      aria-label="Types d’événements"
-                      value={type}
-                      onChange={(e) => setType(e.target.value)}
-                    >
-                      <option value="all">Tous</option>
-                      {[
-                        ...new Set(
-                          events.map((e) => e.event_type).filter(Boolean),
-                        ),
-                      ].map((key) => (
-                        <option key={key} value={key}>
-                          {names[key] || key}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Équipe
-                    <select
-                      aria-label="Équipe des événements"
-                      value={team}
-                      onChange={(e) => setTeam(e.target.value)}
-                    >
-                      <option value="all">Les deux équipes</option>
-                      <option value={match.home.id}>{match.home.name}</option>
-                      <option value={match.away.id}>{match.away.name}</option>
-                    </select>
-                  </label>
-                  <span>{filtered.length} événements</span>
-                </div>
-                <Events payload={{ events: filtered }} />
-              </>
-            );
-          }}
+          {(payload) => <Timeline match={match} payload={payload} />}
         </AsyncState>
       )}
     </Card>
