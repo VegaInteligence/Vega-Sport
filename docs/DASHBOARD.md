@@ -55,3 +55,8 @@ Le stade, l’entraîneur et l’année de fondation proviennent de Wikidata lor
 Le nom du stade ouvre une fiche indépendante de la saison sélectionnée. Pour les stades liés à une entrée Wikidata, elle affiche la capacité maximale référencée, la date de création et celle d'ouverture, avec leurs précisions et la date de la capacité quand elle existe. Cette capacité ne garantit pas le nombre de places disponibles pour un match, notamment en cas de travaux.
 
 Si des coordonnées terrestres sont disponibles, une carte interactive utilise MapLibre et les tuiles OpenFreeMap / OpenStreetMap. Elle affiche les volumes 3D présents dans les données cartographiques ; il ne s'agit pas nécessairement d'un modèle architectural détaillé du stade. Lorsque les données ou la carte ne sont pas disponibles, la fiche le signale.
+
+
+### Plans officiels des tribunes
+
+Quand une source officielle a été vérifiée, la fiche propose un lien vers le plan du stade ou sa visite des tribunes. Les plans restent hébergés par leur éditeur ; leur présentation et leur disponibilité peuvent varier. Certaines vues 3D, notamment celles de la billetterie Juventus, dépendent des matchs en vente ou d'une connexion. Le catalogue est relié à l'identifiant du stade, et aucune correspondance n'est supposée lorsqu'elle est absente.

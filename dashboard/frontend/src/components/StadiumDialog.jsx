@@ -4,6 +4,7 @@ import { Modal, AsyncState } from "./UI.jsx";
 import { useResource, json } from "../services/resources.js";
 import { number } from "../services/format.js";
 import StadiumMap from "./StadiumMap.jsx";
+import { stadiumPlans } from "../services/stadium-plans.js";
 
 function stadiumDate(value) {
   if (!value) return "Non renseignée";
@@ -23,6 +24,50 @@ function stadiumDate(value) {
   );
 }
 
+function StadiumPlans({ id }) {
+  const plans = stadiumPlans(id);
+  return (
+    <section className="stadium-plans">
+      <h3>Plans officiels</h3>
+      {plans.length ? (
+        <>
+          <p>Plans et vues des tribunes publiés par les clubs ou les stades.</p>
+          <ul className="stadium-plan-list">
+            {plans.map((plan) => (
+              <li key={plan.url}>
+                <a
+                  className="stadium-plan-link"
+                  href={plan.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`${plan.title} : ${plan.source}, ouvre un nouvel onglet`}
+                >
+                  <span className="stadium-plan-format">{plan.format}</span>
+                  <span className="stadium-plan-copy">
+                    <strong>{plan.title}</strong>
+                    <small>
+                      {plan.source} · {plan.detail}
+                    </small>
+                  </span>
+                  <span className="stadium-plan-open">
+                    Ouvrir <span aria-hidden="true">↗</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p>
+            Le plan s’ouvre sur le site de son éditeur. Les secteurs peuvent
+            varier selon le match ou les travaux.
+          </p>
+        </>
+      ) : (
+        <p>Pas encore de plan officiel référencé pour ce stade.</p>
+      )}
+    </section>
+  );
+}
+
 export default function StadiumDialog({ name, id, onClose }) {
   const resource = useResource(
     `stadium:${id || "unknown"}`,
@@ -31,6 +76,7 @@ export default function StadiumDialog({ name, id, onClose }) {
   );
   return (
     <Modal title={name} onClose={onClose} className="stadium-dialog">
+      {id && <StadiumPlans id={id} />}
       {!id ? (
         <p>
           Les informations détaillées de ce stade ne sont pas encore

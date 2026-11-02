@@ -18,6 +18,8 @@ const e = React.createElement;
 
 test("stadium dialog renders sourced dates, capacity and a map only with coordinates", async () => {
   const format = await import("../dashboard/frontend/src/services/format.js");
+  const plans =
+    await import("../dashboard/frontend/src/services/stadium-plans.js");
   let stadium = {
     capacity: 75817,
     capacityAsOf: "2022-09-25",
@@ -39,6 +41,7 @@ test("stadium dialog renders sourced dates, capacity and a map only with coordin
       json: () => {},
     },
     "../services/format.js": format,
+    "../services/stadium-plans.js": plans,
     "./StadiumMap.jsx": {
       __esModule: true,
       default: ({ name, coordinates }) =>
@@ -77,6 +80,11 @@ test("stadium dialog renders sourced dates, capacity and a map only with coordin
   assert.match(html, /19 septembre 1926/);
   assert.match(html, /août 1925/);
   assert.match(html, /data-map="San Siro"/);
+  assert.match(html, /sansirostadium\.com/);
+  assert.match(render("Q270474"), /legaseriea\.it\/team\/fiorentina\/stadium/);
+  assert.match(render("Q55074091"), /tottenhamhotspur\.io-media\.com/);
+  assert.match(render("Q999999999"), /Pas encore de plan officiel référencé/);
+  assert.doesNotMatch(render("Q999999999"), /sansirostadium|tottenhamhotspur/);
   assert.match(
     html,
     /peuvent être simplifiés ou absents|peut ne pas être modélisé en détail/,
