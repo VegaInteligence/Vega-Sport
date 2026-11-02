@@ -4,14 +4,17 @@ export {
   normalizeText,
   seasonLabel,
 } from "../model.js";
+const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "Europe/Paris",
+});
 export const date = (value) =>
   value && !Number.isNaN(Date.parse(value))
-    ? new Intl.DateTimeFormat("fr-FR", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        timeZone: "Europe/Paris",
-      }).format(new Date(value.includes("T") ? value : `${value}T12:00:00Z`))
+    ? dateFormatter.format(
+        new Date(value.includes("T") ? value : `${value}T12:00:00Z`),
+      )
     : "—";
 export function safeImageUrl(value) {
   try {

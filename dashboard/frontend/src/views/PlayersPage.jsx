@@ -28,8 +28,9 @@ export default function PlayersPage() {
         sort.key,
         sort.direction,
         mode,
+        f.data.appearances,
       ),
-    [f.rows, id, sort, mode],
+    [f.rows, f.data, id, sort, mode],
   );
   const pages = Math.max(1, Math.ceil(rows.length / 20)),
     current = Math.min(page, pages);

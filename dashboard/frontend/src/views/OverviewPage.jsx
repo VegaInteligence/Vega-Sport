@@ -5,9 +5,9 @@ import Layout from "../components/Layout.jsx";
 import Icon from "../components/Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { Card, Segments, Rating, Media, Empty } from "../components/UI.jsx";
-import { ScatterPlot } from "../components/Charts.jsx";
+import { DeferredScatterPlot } from "../components/Charts.jsx";
 import { number, date } from "../services/format.js";
-import { isNumber, sortRows } from "../model.js";
+import { isNumber, topRows } from "../model.js";
 import { MatchLink } from "../components/MatchLink.jsx";
 import UpcomingMatches from "../components/UpcomingMatches.jsx";
 export default function OverviewPage() {
@@ -16,10 +16,11 @@ export default function OverviewPage() {
     [metric, setMetric] = useState("rating");
   const leaders = useMemo(
     () =>
-      sortRows(
+      topRows(
         f.rows.filter((r) => isNumber(r[metric])),
         metric,
-      ).slice(0, 5),
+        5,
+      ),
     [f.rows, metric],
   );
   const coverage = useMemo(() => {
@@ -105,7 +106,7 @@ export default function OverviewPage() {
             />
           }
         >
-          <ScatterPlot
+          <DeferredScatterPlot
             appearances={f.rows}
             {...(scatter === "balance"
               ? {

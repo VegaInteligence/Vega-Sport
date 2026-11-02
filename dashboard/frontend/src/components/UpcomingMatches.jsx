@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { Media, Pager } from "./UI.jsx";
 import Icon from "./Icon.jsx";
@@ -79,15 +79,18 @@ export default function UpcomingMatches({ compact = false }) {
     !compact && validDay(requested) ? fixtureWeek(requested) : currentWeek;
   const current = week.start === currentWeek.start;
   const [page, setPage] = useState(1);
+  // Follows the search without blocking the keystroke that changed it.
+  const query = useDeferredValue(f.filters.query),
+    league = useDeferredValue(f.filters.league);
   const entries = useMemo(
     () =>
       upcomingFixtures(f.data.fixtures, {
         week,
         now,
-        league: f.filters.league,
-        query: f.filters.query,
+        league,
+        query,
       }),
-    [f.data.fixtures, week.start, now, f.filters.league, f.filters.query],
+    [f.data.fixtures, week.start, now, league, query],
   );
   const pageCount = Math.max(1, Math.ceil(entries.length / 40));
   const selectedPage = Math.min(page, pageCount);

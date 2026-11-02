@@ -2178,3 +2178,8 @@ select optgroup {
     max-width: 110px;
   }
 }
+.chart-pending {
+  aspect-ratio: 640 / 340;
+  border-radius: var(--radius);
+  background: var(--surface-subtle);
+}

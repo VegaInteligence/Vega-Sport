@@ -1,16 +1,16 @@
 import React from "react";
 import { isNumber, number } from "../services/format.js";
 import { Empty } from "./UI.jsx";
-const compact = (v) =>
-  isNumber(v)
-    ? new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(v)
-    : "—";
+const compactFormat = new Intl.NumberFormat("fr-FR", {
+  maximumFractionDigits: 2,
+});
+const compact = (v) => (isNumber(v) ? compactFormat.format(v) : "—");
 const colors = ["light-dark(#1d6fd6, #3b8eff)", "light-dark(#53687f, #9cc7ff)"];
 function bounds(values) {
   const hi = values.reduce((max, v) => Math.max(max, v), 1);
   return { max: hi * 1.05, ticks: [0, hi / 4, hi / 2, (hi * 3) / 4, hi] };
 }
-export function ScatterPlot({
+function ScatterPlotView({
   appearances = [],
   xKey = "xg",
   yKey = "xa",
@@ -100,32 +100,41 @@ export function ScatterPlot({
         >
           {xLabel === "xG" ? "Buts attendus · xG" : xLabel}
         </text>
-        {shown.map((r, i) => (
-          <circle
-            key={`${r.id}:${i}`}
-            className="chart-point"
-            data-open-player={r.id}
-            cx={44 + (r[xKey] / x.max) * 570}
-            cy={260 - (r[yKey] / y.max) * 225}
-            r="3.2"
-            fill={colors[0]}
-            stroke="light-dark(#eaeaec, #18181a)"
-            strokeWidth="0.7"
-            opacity=".65"
-            role="button"
-            tabIndex="0"
-            onClick={() => onPlayer(r.id)}
-            onKeyDown={(e) => {
-              if (["Enter", " "].includes(e.key)) {
-                e.preventDefault();
-                onPlayer(r.id);
-              }
-            }}
-            aria-label={`${r.name} · ${r.team} · ${xLabel} : ${compact(r[xKey])} · ${yLabel} : ${compact(r[yKey])}`}
-          >
-            <title>{`${r.name} · ${r.team} · ${xLabel} : ${compact(r[xKey])} · ${yLabel} : ${compact(r[yKey])}`}</title>
-          </circle>
-        ))}
+        {/* One delegated handler for all points; each point is named by its
+            <title>, which is also its tooltip. */}
+        <g
+          onClick={(e) => {
+            const id =
+              e.target.closest?.("[data-open-player]")?.dataset.openPlayer;
+            if (id) onPlayer(id);
+          }}
+          onKeyDown={(e) => {
+            const id = e.target.dataset?.openPlayer;
+            if (id && ["Enter", " "].includes(e.key)) {
+              e.preventDefault();
+              onPlayer(id);
+            }
+          }}
+        >
+          {shown.map((r, i) => (
+            <circle
+              key={`${r.id}:${i}`}
+              className="chart-point"
+              data-open-player={r.id}
+              cx={44 + (r[xKey] / x.max) * 570}
+              cy={260 - (r[yKey] / y.max) * 225}
+              r="3.2"
+              fill={colors[0]}
+              stroke="light-dark(#eaeaec, #18181a)"
+              strokeWidth="0.7"
+              opacity=".65"
+              role="button"
+              tabIndex="0"
+            >
+              <title>{`${r.name} · ${r.team} · ${xLabel} : ${compact(r[xKey])} · ${yLabel} : ${compact(r[yKey])}`}</title>
+            </circle>
+          ))}
+        </g>
       </svg>
       <figcaption>
         {number(valid.length)} avec les deux mesures · {shown.length} points
@@ -133,6 +142,22 @@ export function ScatterPlot({
         les deux mesures.
       </figcaption>
     </figure>
+  );
+}
+// The overview re-renders on every provider update (dialog, comparison…);
+// redrawing up to 1,200 interactive points is skipped unless inputs change.
+export const ScatterPlot = React.memo(ScatterPlotView);
+/** Lets the page paint first, then draws the plot in a background render. */
+export function DeferredScatterPlot(props) {
+  const ready = React.useDeferredValue(true, false);
+  return ready ? (
+    <ScatterPlot {...props} />
+  ) : (
+    <div
+      className="chart-pending"
+      role="status"
+      aria-label="Graphique en cours de chargement"
+    />
   );
 }
 const shotText = (s) =>
