@@ -23,9 +23,11 @@ import { dataUrl } from "../data-url.js";
 import CompetitionScope from "../components/CompetitionScope.jsx";
 import OpenFootballArchive from "../components/OpenFootballArchive.jsx";
 import CompetitionHighlights from "../components/CompetitionHighlights.jsx";
+import CupCompetition from "../components/CupCompetition.jsx";
 import HistoricalGoalsArchive from "../components/HistoricalGoalsArchive.jsx";
 import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
 import CompetitionStandings from "../components/CompetitionStandings.jsx";
+import { WORLD_CUP_ID, mergeCupCatalog, competitionSearchText, normalizeCompetitionQuery } from "../services/cup-catalog.js";
 import { FEATURED_EUROPE_IDS, FEATURED_LEAGUE_IDS, countryLabel, orderedFeatured, orderedCountryCodes, competitionGroups, orderedCompetitions, competitionLabel, competitionCountry, competitionCountryLabel } from "../services/competition-selector.js";
 import {
   PREFERRED_COMPETITION_KEY, localeCountry,
@@ -280,7 +282,8 @@ export default function CompetitionsPage() {
     }
     return countries;
   }, [f.manifest]);
-  const catalog = f.catalog.map((c) => ({
+  const cupIndex = useResource("supplemental-cup-index", () => json(dataUrl("raw/supplemental-index.json")));
+  const nativeCatalog = f.catalog.map((c) => ({
     ...c,
     country: referenceCountries.get(c.id) || c.country,
     seasons: [...new Set([...(c.seasons || []), ...f.manifest.seasons.flatMap((s) =>
@@ -289,23 +292,47 @@ export default function CompetitionsPage() {
       ),
     )])].sort().reverse(),
   }));
+  const expandedCatalog = mergeCupCatalog(nativeCatalog, cupIndex.value);
+  const catalog = f.focus === "europe" ? expandedCatalog.filter((competition) => EUROPE_FOCUS_IDS.has(competition.id)) : expandedCatalog;
   const chosenId = id || (choice.ready ? preferredCompetition(catalog, choice.saved, choice.country) : null);
-  const selected = catalog.find((c) => c.id === chosenId);
+  const selected = (id ? expandedCatalog : catalog).find((c) => c.id === chosenId);
   const rows = orderedCompetitions(catalog).filter((c) =>
-    (country === "all" || competitionCountry(c) === country) && normalizeText((c.name || "") + " " + (c.country || "") + " " + competitionCountryLabel(c)).includes(normalizeText(query)),
+    (country === "all" || competitionCountry(c) === country) && competitionSearchText(c, competitionCountryLabel(c)).includes(normalizeCompetitionQuery(query)),
   );
   // Render the first screen immediately, then the rest of the catalogue.
   const complete = useDeferredValue(true, false);
   const groups = competitionGroups(rows, complete ? Infinity : 120);
+  const internationalCups = [WORLD_CUP_ID, "open-cup:euro", "open-cup:club-world-cup"].map((key) => expandedCatalog.find((competition) => competition.id === key)).filter(Boolean);
+  const nationalCups = expandedCatalog.filter((competition) =>
+    competition.id === "open-cup:france-cup" || competition.source === "open-matchday",
+  );
+  const nationalCupGroups = competitionGroups(nationalCups);
+  const selectedNationalCup = nationalCups.some((competition) => competition.id === selected?.id)
+    ? selected.id
+    : "";
+  useEffect(() => {
+    if (!id || f.focus !== "europe" || EUROPE_FOCUS_IDS.has(id)) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("focus", "all");
+    window.history.replaceState(null, "", url.pathname + url.search);
+  }, [id, f.focus]);
+  function openDirectory() {
+    if (f.focus === "europe") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("focus", "all");
+      window.history.replaceState(null, "", url.pathname + url.search);
+    }
+    setDirectory(true);
+  }
   function chooseCompetition(next) {
     manualChoice.current = true;
     try { window.localStorage.setItem(PREFERRED_COMPETITION_KEY, next); } catch {}
     setChoice({ ready: true, saved: next, country: null });
     setDirectory(false);
-    window.history.pushState(null, "", f.href("/competitions/", { id: next }));
+    window.history.pushState(null, "", f.href("/competitions/", { id: next, ...(f.focus === "europe" && !EUROPE_FOCUS_IDS.has(next) ? { focus: "all" } : {}) }));
   }
   return (
-    <Layout path="/competitions/" title="Compétitions">
+    <Layout path="/competitions/" title="Compétitions" showSeasonContext={!selected?.source} showDataContext={!selected?.source}>
       {historical ? <>
         <button className="inline-link competition-back" onClick={() => setHistorical(false)}>← Retour aux compétitions</button>
         {historical === "goals" ? <HistoricalGoalsArchive /> : <OpenFootballArchive />}
@@ -322,7 +349,7 @@ export default function CompetitionsPage() {
               </div>
               <button
                 className="button button-secondary"
-                onClick={() => setDirectory(true)}
+                onClick={openDirectory}
               >
                 Toutes les compétitions <Icon name="arrow" />
               </button>
@@ -365,9 +392,35 @@ export default function CompetitionsPage() {
                 ))}
               </div>
             )}
+            {internationalCups.length > 0 && <div className="league-spotlight-cups"><span>Coupes internationales</span>{internationalCups.map((c) => <button key={c.id} type="button" className="league-cup-button" aria-pressed={selected?.id === c.id} onClick={() => chooseCompetition(c.id)}><Media name={c.name} url={c.imageUrl} /><span>{c.name}</span></button>)}</div>}
+            {nationalCupGroups.length > 0 && (
+              <div className="league-spotlight-cups">
+                <span id="national-cups-label">Coupes nationales</span>
+                <div className="national-cup-picker" data-selected={Boolean(selectedNationalCup)}>
+                  <select
+                    aria-labelledby="national-cups-label"
+                    value={selectedNationalCup}
+                    onChange={(event) => chooseCompetition(event.target.value)}
+                  >
+                    <option value="" disabled>Choisir une coupe</option>
+                    {nationalCupGroups.map((group) => (
+                      <optgroup key={group.key} label={group.label}>
+                        {group.competitions.map((competition) => (
+                          <option key={competition.id} value={competition.id}>
+                            {competition.name}{competition.coverage ? " · " + competition.coverage : ""}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <Icon name="chevron" />
+                </div>
+              </div>
+            )}
+            {cupIndex.error && <p className="cup-catalog-error" role="status">Les autres coupes nationales sont temporairement indisponibles. <button type="button" onClick={cupIndex.retry}>Réessayer</button></p>}
           </section>
         <div className="historical-archive-entry"><button className="button button-secondary" onClick={() => setHistorical("results")}>Archives de résultats</button>{" "}<button className="button button-secondary" onClick={() => setHistorical("goals")}>Archives de buts</button></div>
-        {selected ? <Fixtures key={selected.id} competition={selected} /> : !id && !choice.ready ? <div className="loading-state" role="status">Choix du championnat…</div> : <Empty>Compétition inconnue ou indisponible.</Empty>}
+        {selected ? (selected.source ? <CupCompetition key={selected.id} competition={selected} /> : <Fixtures key={selected.id} competition={selected} />) : (!id && !choice.ready) || (id?.startsWith("open-matchday:") && cupIndex.loading) ? <div className="loading-state" role="status">Chargement de la compétition…</div> : id?.startsWith("open-matchday:") && cupIndex.error ? <div className="notice" role="alert">Les coupes nationales sont indisponibles. <button className="button button-secondary" onClick={cupIndex.retry}>Réessayer</button></div> : <Empty>Compétition inconnue ou indisponible.</Empty>}
       </> : <>
         <button className="inline-link competition-back" onClick={() => setDirectory(false)}>← Retour à la compétition</button>
         <div className="clubs-toolbar">
@@ -396,7 +449,7 @@ export default function CompetitionsPage() {
               </section>
             ))}
           </div>
-          {!rows.length && <Empty>Aucune compétition ne correspond à la recherche.</Empty>}
+          {!rows.length && (cupIndex.loading ? <div className="loading-state" role="status">Chargement des compétitions…</div> : <Empty>Aucune compétition ne correspond à la recherche.</Empty>)}
         </>}
       </>}
       </>}

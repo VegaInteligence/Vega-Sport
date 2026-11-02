@@ -20,6 +20,8 @@ test("competition page renders a result-derived league table and its limits", as
   const selector = await import("../dashboard/frontend/src/services/competition-selector.js");
   const sportscore = await import("../dashboard/frontend/src/services/sportscore-standings.js");
   const ordering = await import("../dashboard/frontend/src/services/competition-matches.js");
+  const cups = await import("../dashboard/frontend/src/services/cup-catalog.js");
+  let requestedId = "l_3FJFUl";
   let forceMatchView = false;
   let forceDirectory = false, hookCount = 0;
   const reactStub = { ...React, useState: (initial) => { const [value, setValue] = React.useState(initial); hookCount++; if (forceDirectory && hookCount === 3) return [true, setValue]; return [forceMatchView && initial === "standings" ? "matches" : value, setValue]; } };
@@ -35,23 +37,25 @@ test("competition page renders a result-derived league table and its limits", as
   const Card = ({ title, children }) => elem("section", null, elem("h2", null, title), children);
   const UI = { Card, Media: () => null, Pager: () => null, Segments: ({ items, value }) => elem("div", null, items.map(([id, text]) => elem("button", { key: id, "aria-pressed": value === id }, text))), Empty: ({ children }) => elem("div", null, children), AsyncState: ({ resource, children }) => children(resource.value) };
   const stubs = {
-    "react": reactStub, "next/navigation": { useSearchParams: () => new URLSearchParams("id=l_3FJFUl") },
+    "react": reactStub, "next/navigation": { useSearchParams: () => new URLSearchParams({ id: requestedId }) },
     "next/link": { __esModule: true, default: Link },
     "../components/Icon.jsx": { __esModule: true, default: () => null },
     "../components/OpenFootballArchive.jsx": { __esModule: true, default: () => null },
+    "../components/CupCompetition.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-cup-id": competition.id }, competition.name) },
     "../components/CompetitionHighlights.jsx": { __esModule: true, default: ({ season }) => elem("aside", { "data-highlights-season": season }, "Prochains matchs et derniers résultats") },
     "../components/HistoricalGoalsArchive.jsx": { __esModule: true, default: () => null },
-    "../components/Layout.jsx": { __esModule: true, default: ({ children }) => elem("main", null, children) },
+    "../components/Layout.jsx": { __esModule: true, default: ({ children, showSeasonContext = true, showDataContext = true }) => elem("main", { "data-season-context": String(showSeasonContext), "data-data-context": String(showDataContext) }, children) },
     "../hooks/FootballContext.jsx": { useFootball: () => context }, "../components/UI.jsx": UI,
     "../components/MatchLink.jsx": { MatchLink: ({ match }) => elem("p", { "data-match": match.id }, match.id) },
     "../components/MatchdaySchedule.jsx": { __esModule: true, default: ({ matches, initialStatus }) => elem("section", { "data-matchday-status": initialStatus }, matches.map((match) => elem("p", { key: match.id, "data-match": match.id }, match.id))) },
     "../services/format.js": { normalizeText: String, seasonLabel: String, number: String, date: String },
-    "../services/resources.js": { useResource: (key, _loader, enabled = true) => ({ value: key.startsWith("sportscore-standings:") && enabled && externalTable ? externalTable : { matches, source: "snapshot" } }), json: () => {}, download: () => {} },
+    "../services/resources.js": { useResource: (key, _loader, enabled = true) => ({ value: key === "supplemental-cup-index" ? { competitions: [{ folder: "ESP_CUP_copa-del-rey", name: "Copa del Rey", country_code: "ESP", tables: { results: { path: "raw/seasons/2026-2027/x.gz", rows: 1 } } }, { folder: "SUI_CUP_swiss-cup", name: "Swiss Cup", country_code: "SUI", tables: { results: { path: "raw/seasons/2026-2027/y.gz", rows: 1 } } }] } : key.startsWith("sportscore-standings:") && enabled && externalTable ? externalTable : { matches, source: "snapshot" } }), json: () => {}, download: () => {} },
     "../model.js": { csvString: () => "" }, "../data-url.js": { dataUrl: (x) => x },
     "../components/CompetitionScope.jsx": { __esModule: true, default: () => null },
     "../../../shared/competition-scope.js": { EUROPE_FOCUS_IDS: new Set() },
     "../services/competition-standings.js": standings,
     "../services/competition-selector.js": selector,
+    "../services/cup-catalog.js": cups,
     "../services/sportscore-standings.js": sportscore,
     "../services/competition-matches.js": ordering,
   };
@@ -74,6 +78,18 @@ test("competition page renders a result-derived league table and its limits", as
   const html = renderToStaticMarkup(elem(mod.exports.default));
   assert.match(html, /Classement calculé à partir des résultats disponibles/);
   assert.match(html, /Championnats à la une/);
+  assert.match(html, /Coupes internationales/);
+  assert.match(html, /Coupe du monde/);
+  assert.match(html, /Euro/);
+  assert.match(html, /Coupe du Roi/);
+  assert.match(html, /Coupe de France/);
+  const nationalPicker = html.match(/<select aria-labelledby="national-cups-label"[\s\S]*?<\/select>/)?.[0];
+  assert.ok(nationalPicker, "national cups have a labelled selector");
+  assert.match(nationalPicker, /<optgroup label="Espagne">[\s\S]*Coupe du Roi/);
+  assert.match(nationalPicker, /<optgroup label="France">[\s\S]*Coupe de France · Archive 2024\/2025/);
+  assert.match(nationalPicker, /<optgroup label="Suisse">[\s\S]*Coupe de Suisse/);
+  assert.ok(nationalPicker.indexOf("Espagne") < nationalPicker.indexOf("France"));
+  assert.ok(nationalPicker.indexOf("France") < nationalPicker.indexOf("Suisse"));
   assert.match(html, /Archives de résultats/);
   assert.match(html, /Archives de buts/);
   assert.match(html, /France/);
@@ -95,6 +111,19 @@ test("competition page renders a result-derived league table and its limits", as
   const historic = renderToStaticMarkup(elem(mod.exports.default));
   assert.doesNotMatch(historic, /Groupe A/);
   assert.match(historic, /Classement calculé à partir des résultats disponibles/);
+
+  requestedId = "open-cup:euro";
+  context.focus = "europe";
+  const euro = renderToStaticMarkup(elem(mod.exports.default));
+  assert.match(euro, /data-cup-id="open-cup:euro"/);
+  assert.match(euro, /data-season-context="false"/);
+  assert.match(euro, /data-data-context="false"/);
+  requestedId = "open-matchday:ESP_CUP_copa-del-rey";
+  context.focus = "all";
+  const spanishCup = renderToStaticMarkup(elem(mod.exports.default));
+  assert.match(spanishCup, /data-cup-id="open-matchday:ESP_CUP_copa-del-rey"/);
+  assert.match(spanishCup, /<option value="open-matchday:ESP_CUP_copa-del-rey" selected=""/);
+  requestedId = "l_3FJFUl";
 
   forceMatchView = true;
   context.season = "2026/2027";

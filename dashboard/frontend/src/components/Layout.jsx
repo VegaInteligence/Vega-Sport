@@ -247,6 +247,7 @@ export default function Layout({
   filterKind = "performances",
   hideHeading = false,
   showSeasonContext = true,
+  showDataContext = true,
   className = "",
   subnav,
   onExport,
@@ -279,12 +280,12 @@ export default function Layout({
                   )}
                 </h1>
                 {((showSeasonContext && f.season) ||
-                  f.data.meta.retrievedAt) && (
+                  (showDataContext && f.data.meta.retrievedAt)) && (
                   <p className="page-context">
                     {showSeasonContext && f.season && (
                       <span>Saison {f.season}</span>
                     )}
-                    {f.data.meta.retrievedAt && (
+                    {showDataContext && f.data.meta.retrievedAt && (
                       <span>Données au {date(f.data.meta.retrievedAt)}</span>
                     )}
                     {f.partial && (
