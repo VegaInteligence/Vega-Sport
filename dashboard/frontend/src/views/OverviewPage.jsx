@@ -10,7 +10,6 @@ import { number, date } from "../services/format.js";
 import { isNumber, topRows } from "../model.js";
 import { MatchLink } from "../components/MatchLink.jsx";
 import UpcomingMatches from "../components/UpcomingMatches.jsx";
-import HomePreferences from "../components/HomePreferences.jsx";
 import {
   followedRecords,
   recentFinishedMatches,
@@ -31,7 +30,8 @@ export default function OverviewPage() {
       document.removeEventListener("visibilitychange", update);
     };
   }, []);
-  const favoriteLeagueIds = f.preferences.favoriteLeagueIds,
+  const favoriteLeagueIds =
+      f.filters.league !== "all" ? [] : f.preferences.favoriteLeagueIds,
     matches = f.matches;
   const homeRows = useMemo(
     () => followedRecords(f.rows, favoriteLeagueIds),
@@ -74,8 +74,7 @@ export default function OverviewPage() {
   }, [homeMatches]);
   const featured = recentMatches[0];
   return (
-    <Layout path="/" title="Vue d’ensemble" filters>
-      <HomePreferences f={f} />
+    <Layout path="/" title="Vue d’ensemble" filters filterKind="home">
       <UpcomingMatches compact />
       {featured && (
         <section

@@ -4,15 +4,14 @@ import React, { useMemo, useState } from "react";
 import Icon from "./Icon.jsx";
 import { Media, Modal } from "./UI.jsx";
 import { normalizeText } from "../model.js";
+import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
 import {
   FEATURED_LEAGUE_IDS,
   countryLabel,
 } from "../services/competition-selector.js";
 
-function CompetitionPicker({ f, competitions, onClose }) {
-  const [selected, setSelected] = useState(
-    () => new Set(f.preferences.favoriteLeagueIds),
-  );
+function CompetitionPicker({ f, competitions, initialIds, onClose }) {
+  const [selected, setSelected] = useState(() => new Set(initialIds));
   const [query, setQuery] = useState("");
   const search = normalizeText(query).trim();
   const visible = competitions.filter((c) =>
@@ -20,65 +19,86 @@ function CompetitionPicker({ f, competitions, onClose }) {
       [c.name, c.country, countryLabel(c.country)].filter(Boolean).join(" "),
     ).includes(search),
   );
+  const europe = competitions
+    .filter((c) => EUROPE_FOCUS_IDS.has(c.id))
+    .map((c) => c.id);
+  const isEurope =
+    selected.size === europe.length && europe.every((id) => selected.has(id));
 
-  function save(ids) {
+  function apply() {
+    const ids = [...selected];
+    // One selection owns the whole home scope. Remove the former single-league
+    // and Europe constraints before applying the saved custom/all selection.
+    f.changeFocus(isEurope && ids.length ? "europe" : "all");
+    f.setFilters((current) => ({ ...current, league: "all", match: "all" }));
     f.savePreferences({ favoriteLeagueIds: ids, onboardingComplete: true });
-    if (ids.length && f.focus === "europe") f.changeFocus("all");
-    if (
-      ids.length &&
-      f.filters.league !== "all" &&
-      !ids.includes(f.filters.league)
-    )
-      f.setFilters((current) => ({ ...current, league: "all", match: "all" }));
     onClose();
   }
 
   return (
     <Modal
-      title="Personnaliser votre accueil"
+      title="Compétitions"
       className="home-preferences-modal"
       onClose={onClose}
       footer={
         <>
+          <span className="competition-selection-count" role="status">
+            {selected.size
+              ? `${selected.size} sélectionnée${selected.size > 1 ? "s" : ""}`
+              : "Toutes les compétitions"}
+          </span>
           <button
             className="button button-secondary"
             type="button"
-            onClick={() => save([])}
+            onClick={onClose}
           >
-            Suivre toutes les compétitions
+            Annuler
           </button>
           <button
             className="button button-primary"
             type="button"
-            disabled={!selected.size}
-            onClick={() => save([...selected])}
+            onClick={apply}
           >
-            Enregistrer {selected.size ? "(" + selected.size + ")" : ""}
+            Appliquer
           </button>
         </>
       }
     >
-      <p>
-        Choisissez les compétitions qui vous intéressent pour retrouver leurs
-        matchs et performances sur l’accueil.
-      </p>
-      <p className="home-preferences-storage">
-        Votre sélection est enregistrée sur cet appareil. Elle reste modifiable
-        à tout moment.
-      </p>
+      <div
+        className="competition-presets"
+        role="group"
+        aria-label="Sélections de compétitions"
+      >
+        <button
+          type="button"
+          className="competition-scope-button"
+          aria-pressed={selected.size === 0}
+          onClick={() => setSelected(new Set())}
+        >
+          Toutes les compétitions
+        </button>
+        <button
+          type="button"
+          className="competition-scope-button"
+          aria-pressed={isEurope && selected.size > 0}
+          onClick={() => setSelected(new Set(europe))}
+        >
+          Top 7 Europe + UEFA
+        </button>
+      </div>
       <div className="filter-input-wrap home-preferences-search">
         <Icon name="search" />
         <input
           aria-label="Rechercher une compétition"
           type="search"
-          placeholder="Rechercher une compétition ou un pays…"
+          placeholder="Compétition ou pays…"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
       </div>
       {[
         [
-          "Championnats à la une",
+          "Championnats",
           visible
             .filter((c) => FEATURED_LEAGUE_IDS.includes(c.id))
             .sort(
@@ -88,8 +108,15 @@ function CompetitionPicker({ f, competitions, onClose }) {
             ),
         ],
         [
+          "Coupes européennes",
+          visible.filter(
+            (c) =>
+              EUROPE_FOCUS_IDS.has(c.id) && !FEATURED_LEAGUE_IDS.includes(c.id),
+          ),
+        ],
+        [
           "Autres compétitions",
-          visible.filter((c) => !FEATURED_LEAGUE_IDS.includes(c.id)),
+          visible.filter((c) => !EUROPE_FOCUS_IDS.has(c.id)),
         ],
       ].map(([title, items]) =>
         items.length ? (
@@ -98,7 +125,7 @@ function CompetitionPicker({ f, competitions, onClose }) {
             <div
               className="home-competition-list"
               role="group"
-              aria-label="Compétitions à suivre"
+              aria-label={title}
             >
               {items.map((competition) => (
                 <label className="home-competition-option" key={competition.id}>
@@ -127,14 +154,14 @@ function CompetitionPicker({ f, competitions, onClose }) {
         ) : null,
       )}
       {!visible.length && (
-        <p>Aucune compétition ne correspond à cette recherche.</p>
+        <p className="empty-state">Aucune compétition pour cette recherche.</p>
       )}
     </Modal>
   );
 }
 
 export default function HomePreferences({ f }) {
-  const [editorOpen, setEditorOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const competitions = useMemo(() => {
     const byId = new Map();
     for (const season of f.manifest.seasons || [])
@@ -150,42 +177,60 @@ export default function HomePreferences({ f }) {
         (a.country || "").localeCompare(b.country || "", "fr"),
     );
   }, [f.manifest, f.competitions]);
-  const favorites = f.preferences.favoriteLeagueIds;
-  const open =
-    editorOpen || (f.preferencesReady && !f.preferences.onboardingComplete);
-
-  function close() {
-    if (!f.preferences.onboardingComplete)
-      f.savePreferences({ onboardingComplete: true });
-    setEditorOpen(false);
-  }
+  const ids =
+    f.filters.league !== "all"
+      ? [f.filters.league]
+      : f.preferences.favoriteLeagueIds.length
+        ? f.preferences.favoriteLeagueIds
+        : f.focus === "europe"
+          ? competitions
+              .filter((c) => EUROPE_FOCUS_IDS.has(c.id))
+              .map((c) => c.id)
+          : [];
+  const effectiveIds =
+    f.focus === "europe" ? ids.filter((id) => EUROPE_FOCUS_IDS.has(id)) : ids;
+  const europe = competitions.filter((c) => EUROPE_FOCUS_IDS.has(c.id));
+  const isEurope =
+    effectiveIds.length === europe.length &&
+    europe.every((c) => effectiveIds.includes(c.id));
+  const label =
+    ids.length && !effectiveIds.length
+      ? "Aucune compétition"
+      : isEurope && effectiveIds.length
+        ? "Top 7 Europe + UEFA"
+        : effectiveIds.length === 1
+          ? competitions.find((c) => c.id === effectiveIds[0])?.name ||
+            "1 compétition"
+          : effectiveIds.length
+            ? `${effectiveIds.length} compétitions`
+            : "Toutes les compétitions";
 
   return (
-    <>
-      <section className="home-personalization" aria-label="Vos compétitions">
-        <div>
-          <strong>Votre accueil</strong>
-          <span>
-            {favorites.length
-              ? favorites.length +
-                " compétition" +
-                (favorites.length > 1 ? "s" : "") +
-                " suivie" +
-                (favorites.length > 1 ? "s" : "")
-              : "Toutes les compétitions"}
-          </span>
-        </div>
-        <button
-          type="button"
-          className="button button-secondary"
-          onClick={() => setEditorOpen(true)}
-        >
-          <Icon name="trophy" /> Personnaliser
-        </button>
-      </section>
+    <div className="filter-field home-competition-filter">
+      <span className="sr-only" id="home-competition-label">
+        Compétitions
+      </span>
+      <button
+        type="button"
+        id="home-competition-filter"
+        className="filter-input-wrap home-competition-trigger"
+        aria-label={`Compétitions : ${label}`}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+      >
+        <Icon name="trophy" />
+        <span>{label}</span>
+        <Icon name="chevron" className="select-chevron" />
+      </button>
       {open && (
-        <CompetitionPicker f={f} competitions={competitions} onClose={close} />
+        <CompetitionPicker
+          f={f}
+          competitions={competitions}
+          initialIds={ids}
+          onClose={() => setOpen(false)}
+        />
       )}
-    </>
+    </div>
   );
 }

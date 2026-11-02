@@ -11,19 +11,26 @@ import { advancedChips, countAdvanced } from "../services/advanced-filters.js";
 import SiteHeader from "./SiteHeader.jsx";
 import SiteFooter from "./SiteFooter.jsx";
 import PlayerSearchResults from "./PlayerSearchResults.jsx";
+import HomePreferences from "./HomePreferences.jsx";
 export const navigation = pages
   .filter((page) => page.navigation !== false)
   .map((page) => [page.path, page.title]);
 export function Filters({ kind = "performances" }) {
   const f = useFootball(),
     fixtures = kind === "fixtures",
+    home = kind === "home",
     // Playing time and advanced filters only make sense on the players page.
     players = kind === "players",
     advancedCount = players ? countAdvanced(f.filters.advanced) : 0,
     [advancedOpen, setAdvancedOpen] = useState(advancedCount > 0),
     panelId = useId();
-  const reset = () =>
+  const reset = () => {
     f.setFilters({ query: "", league: "all", minutes: 1, match: "all" });
+    if (home) {
+      f.changeFocus("all");
+      f.savePreferences({ favoriteLeagueIds: [], onboardingComplete: true });
+    }
+  };
   const minutes = [
     [1, "Joueurs entrés en jeu"],
     [30, "Moyenne ≥ 30 min"],
@@ -34,6 +41,8 @@ export function Filters({ kind = "performances" }) {
   const active =
     f.filters.query ||
     f.filters.league !== "all" ||
+    (home &&
+      (f.preferences.favoriteLeagueIds.length > 0 || f.focus === "europe")) ||
     (players && (f.filters.minutes !== 1 || advancedCount > 0)) ||
     (!fixtures && f.filters.match !== "all");
   const selected = f.competitions.find((c) => c.id === f.filters.league);
@@ -65,32 +74,36 @@ export function Filters({ kind = "performances" }) {
             />
           </div>
         </div>
-        <div className="filter-field">
-          <label htmlFor="league-filter">Compétition</label>
-          <div className="filter-input-wrap">
-            <Icon name="trophy" />
-            <select
-              id="league-filter"
-              value={f.filters.league}
-              onChange={(e) =>
-                f.setFilters((v) => ({
-                  ...v,
-                  league: e.target.value,
-                  match: "all",
-                }))
-              }
-            >
-              <option value="all">Toutes les compétitions</option>
-              {f.competitions.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                  {names.get(c.name) > 1 ? ` · ${c.country || c.id}` : ""}
-                </option>
-              ))}
-            </select>
-            <Icon name="chevron" className="select-chevron" />
+        {home ? (
+          <HomePreferences f={f} />
+        ) : (
+          <div className="filter-field">
+            <label htmlFor="league-filter">Compétition</label>
+            <div className="filter-input-wrap">
+              <Icon name="trophy" />
+              <select
+                id="league-filter"
+                value={f.filters.league}
+                onChange={(e) =>
+                  f.setFilters((v) => ({
+                    ...v,
+                    league: e.target.value,
+                    match: "all",
+                  }))
+                }
+              >
+                <option value="all">Toutes les compétitions</option>
+                {f.competitions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                    {names.get(c.name) > 1 ? ` · ${c.country || c.id}` : ""}
+                  </option>
+                ))}
+              </select>
+              <Icon name="chevron" className="select-chevron" />
+            </div>
           </div>
-        </div>
+        )}
         <div className="filter-field filter-season">
           <label htmlFor="season-filter">Saison</label>
           <div className="filter-input-wrap">
@@ -141,13 +154,18 @@ export function Filters({ kind = "performances" }) {
             onToggle={() => setAdvancedOpen((open) => !open)}
           />
         )}
-        <CompetitionScope />
+        {!home && <CompetitionScope />}
+        {home && active && (
+          <button className="filter-reset-button" onClick={reset}>
+            <Icon name="reset" /> Réinitialiser
+          </button>
+        )}
       </div>
       {players && advancedOpen && <AdvancedPanel id={panelId} />}
-      {active && (
+      {active && !home && (
         <div className="filter-panel-footer">
           <div className="filter-applied">
-            {selected && (
+            {selected && !home && (
               <button
                 className="filter-chip"
                 aria-label={`Retirer la compétition ${selected.name}`}

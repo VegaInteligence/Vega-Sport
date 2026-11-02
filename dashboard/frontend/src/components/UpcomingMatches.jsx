@@ -82,7 +82,10 @@ export default function UpcomingMatches({ compact = false }) {
   // Follows the search without blocking the keystroke that changed it.
   const query = useDeferredValue(f.filters.query),
     league = useDeferredValue(f.filters.league),
-    favoriteLeagueIds = compact ? f.preferences.favoriteLeagueIds : undefined;
+    favoriteLeagueIds =
+      compact && f.filters.league === "all"
+        ? f.preferences.favoriteLeagueIds
+        : undefined;
   const entries = useMemo(
     () =>
       upcomingFixtures(f.data.fixtures, {

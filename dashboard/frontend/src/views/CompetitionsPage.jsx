@@ -170,7 +170,7 @@ function ResultStandings({ matches, source }) {
         <span>{number(table.played)} matchs pris en compte{table.lastDate ? " · dernier match le " + date(table.lastDate) : ""}</span>
         <span>{source === "api" ? "Résultats PitchAPI" : "Archive PitchAPI"}</span>
       </div>
-      <div className="table-scroll">
+      <div className="table-scroll standings-scroll" role="region" aria-label="Classement de la compétition" tabIndex={0}>
         <table className="data-table standings-table">
           <caption className="sr-only">Classement calculé à partir des résultats disponibles</caption>
           <thead><tr><th scope="col">#</th><th scope="col">Équipe</th><th scope="col" title="Points">Pts</th><th scope="col" title="Matchs joués">J</th><th scope="col" title="Victoires">G</th><th scope="col" title="Matchs nuls">N</th><th scope="col" title="Défaites">D</th><th scope="col" title="Buts pour">BP</th><th scope="col" title="Buts contre">BC</th><th scope="col" title="Différence de buts">Diff.</th></tr></thead>
@@ -209,7 +209,7 @@ function SportscoreTable({ table, index, multiple, matches }) {
       {(table.name || multiple) && (
         <h3>{table.name || "Tableau " + (index + 1)}</h3>
       )}
-      <div className="table-scroll">
+      <div className="table-scroll standings-scroll" role="region" aria-label={table.name ? `Classement ${table.name}` : "Classement de la compétition"} tabIndex={0}>
         <table className="data-table standings-table">
           <caption className="sr-only">
             Classement SportScore{table.name ? " : " + table.name : ""}
@@ -312,18 +312,6 @@ function Standings({ competition, season, matches, source }) {
     const tables = external.value.tables;
     return (
       <div className="competition-standings">
-        <div className="standings-meta">
-          <span>
-            Dernier tableau disponible · saison non précisée par la source
-          </span>
-          <a
-            href="https://sportscore.com/"
-            rel="dofollow"
-            title="Sports data by SportScore"
-          >
-            SportScore
-          </a>
-        </div>
         {tables.map((table, index) => (
           <SportscoreTable
             key={index}

@@ -1766,24 +1766,163 @@ th[aria-sort="descending"] .sort-indicator {
 }
 
 /* Competition selection and result-derived standings */
-.competition-picker { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
-.competition-picker-field { display: grid; gap: 6px; width: min(100%, 440px); color: var(--muted); font-size: var(--text-sm); }
-.competition-picker-field select { width: 100%; }
-.competition-back { margin-bottom: 16px; }
-.competition-card-button { width: 100%; color: var(--ink); text-align: left; cursor: pointer; }
-.competition-detail { max-width: 1040px; margin-inline: auto; }
-.competition-matches-order { margin: 10px 0 4px; color: var(--muted); font-size: var(--text-sm); }
-.competition-detail-controls { display: flex; align-items: end; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
-.competition-detail-controls label { display: grid; gap: 6px; color: var(--muted); font-size: var(--text-sm); }
-.competition-detail-controls select { min-width: 150px; }
-.standings-meta { display: flex; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; margin-bottom: 10px; color: var(--muted); font-size: var(--text-xs); }
-.standings-table { min-width: 650px; font-variant-numeric: tabular-nums; }
-.standings-table th:not(:nth-child(2)), .standings-table td:not(:nth-child(2)) { text-align: center; }
-.standings-table tbody th { background: transparent; color: var(--ink); font-size: var(--text-md); font-weight: 500; }
-.standings-table .standings-points { color: var(--accent); font-weight: 700; }
-.standings-team { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); white-space: nowrap; }
-.standings-team:hover { color: var(--accent); }
-.standings-team .crest { flex: 0 0 24px; width: 24px; height: 24px; }
-.standings-note { margin-top: 12px; color: var(--muted); font-size: var(--text-sm); line-height: 1.5; }
-.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-@media (max-width: 600px) { .competition-picker-field { width: 100%; } .competition-detail-controls { align-items: start; flex-direction: column; } .standings-meta { flex-direction: column; } }
+.competition-picker {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.competition-picker-field {
+  display: grid;
+  gap: 6px;
+  width: min(100%, 440px);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.competition-picker-field select {
+  width: 100%;
+}
+.competition-back {
+  margin-bottom: 16px;
+}
+.competition-card-button {
+  width: 100%;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.competition-detail {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+}
+.competition-matches-order {
+  margin: 10px 0 4px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.competition-detail-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.competition-detail-controls label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.competition-detail-controls select {
+  min-width: 150px;
+}
+.standings-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.standings-table {
+  min-width: 760px;
+  table-layout: fixed;
+  font-variant-numeric: tabular-nums;
+}
+.standings-table th:first-child {
+  width: 3.5rem;
+}
+.standings-table th:nth-child(2) {
+  width: 30%;
+}
+.standings-table thead th:nth-child(3) {
+  width: 4.5rem;
+}
+.standings-table th:nth-child(2) {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+.standings-table thead th:nth-child(2) {
+  z-index: 2;
+}
+.standings-table tbody tr:hover th:nth-child(2) {
+  background: var(--surface-hover);
+}
+.standings-table .standings-team {
+  display: flex;
+  min-width: 0;
+}
+.standings-team > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.standings-scroll {
+  overscroll-behavior-inline: contain;
+}
+.standings-scroll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.standings-table th:not(:nth-child(2)),
+.standings-table td:not(:nth-child(2)) {
+  text-align: center;
+}
+.standings-table tbody th {
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-md);
+  font-weight: 500;
+}
+.standings-table .standings-points {
+  color: var(--accent);
+  font-weight: 700;
+}
+.standings-team {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.standings-team:hover {
+  color: var(--accent);
+}
+.standings-team .crest {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+}
+.standings-note {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 600px) {
+  .competition-picker-field {
+    width: 100%;
+  }
+  .competition-detail-controls {
+    align-items: start;
+    flex-direction: column;
+  }
+  .standings-meta {
+    flex-direction: column;
+  }
+}
