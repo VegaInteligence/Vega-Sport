@@ -2178,3 +2178,15 @@ th[aria-sort="descending"] .sort-indicator {
   .stadium-plan-link { gap: 8px; padding: 11px; }
   .stadium-plan-open { font-size: var(--text-xs); }
 }
+
+/* Embedded official plan */
+.stadium-dialog .modal-header { position: sticky; top: 0; z-index: 3; background: var(--surface-raised); }
+.stadium-embedded-plan { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.stadium-embedded-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; }
+.stadium-embedded-heading a { flex: 0 0 auto; color: var(--accent); font-size: var(--text-sm); font-weight: 600; text-decoration: none; }
+.stadium-embedded-heading a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.stadium-official-frame { display: block; width: 100%; height: min(60vh, 560px); min-height: 360px; border: 0; border-top: 1px solid var(--border); background: var(--surface-subtle); }
+@media (max-width: 480px) {
+  .stadium-embedded-heading { align-items: flex-start; flex-wrap: wrap; }
+  .stadium-official-frame { height: 460px; min-height: 0; }
+}

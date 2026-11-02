@@ -35,30 +35,59 @@ function StadiumPlans({ id }) {
           <ul className="stadium-plan-list">
             {plans.map((plan) => (
               <li key={plan.url}>
-                <a
-                  className="stadium-plan-link"
-                  href={plan.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`${plan.title} : ${plan.source}, ouvre un nouvel onglet`}
-                >
-                  <span className="stadium-plan-format">{plan.format}</span>
-                  <span className="stadium-plan-copy">
-                    <strong>{plan.title}</strong>
-                    <small>
-                      {plan.source} · {plan.detail}
-                    </small>
-                  </span>
-                  <span className="stadium-plan-open">
-                    Ouvrir <span aria-hidden="true">↗</span>
-                  </span>
-                </a>
+                {plan.embedded ? (
+                  <div className="stadium-embedded-plan">
+                    <div className="stadium-embedded-heading">
+                      <div className="stadium-plan-copy">
+                        <strong>{plan.title}</strong>
+                        <small>
+                          {plan.source} · {plan.detail}
+                        </small>
+                      </div>
+                      <a
+                        href={plan.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Ouvrir en grand <span aria-hidden="true">↗</span>
+                      </a>
+                    </div>
+                    <iframe
+                      className="stadium-official-frame"
+                      src={plan.url}
+                      title={`${plan.title} — ${plan.source}`}
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      allow="geolocation"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : (
+                  <a
+                    className="stadium-plan-link"
+                    href={plan.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${plan.title} : ${plan.source}, ouvre un nouvel onglet`}
+                  >
+                    <span className="stadium-plan-format">{plan.format}</span>
+                    <span className="stadium-plan-copy">
+                      <strong>{plan.title}</strong>
+                      <small>
+                        {plan.source} · {plan.detail}
+                      </small>
+                    </span>
+                    <span className="stadium-plan-open">
+                      Ouvrir <span aria-hidden="true">↗</span>
+                    </span>
+                  </a>
+                )}
               </li>
             ))}
           </ul>
           <p>
-            Le plan s’ouvre sur le site de son éditeur. Les secteurs peuvent
-            varier selon le match ou les travaux.
+            Les plans sont fournis par leur éditeur. Les secteurs peuvent varier
+            selon le match ou les travaux.
           </p>
         </>
       ) : (

@@ -60,3 +60,5 @@ Si des coordonnées terrestres sont disponibles, une carte interactive utilise M
 ### Plans officiels des tribunes
 
 Quand une source officielle a été vérifiée, la fiche propose un lien vers le plan du stade ou sa visite des tribunes. Les plans restent hébergés par leur éditeur ; leur présentation et leur disponibilité peuvent varier. Certaines vues 3D, notamment celles de la billetterie Juventus, dépendent des matchs en vente ou d'une connexion. Le catalogue est relié à l'identifiant du stade, et aucune correspondance n'est supposée lorsqu'elle est absente.
+
+Le plan interactif officiel du Parc des Princes est également affiché directement dans la fiche ; il reste hébergé par le PSG et peut être ouvert séparément.

@@ -83,6 +83,11 @@ test("stadium dialog renders sourced dates, capacity and a map only with coordin
   assert.match(html, /sansirostadium\.com/);
   assert.match(render("Q270474"), /legaseriea\.it\/team\/fiorentina\/stadium/);
   assert.match(render("Q55074091"), /tottenhamhotspur\.io-media\.com/);
+  const psg = render("Q193431");
+  assert.match(psg, /<iframe[^>]+src="https:\/\/map\.psg\.fr\/"/);
+  assert.match(psg, /title="Plan interactif des accès — Paris Saint-Germain"/);
+  assert.match(psg, /Ouvrir en grand/);
+  assert.doesNotMatch(render("Q270474"), /<iframe/);
   assert.match(render("Q999999999"), /Pas encore de plan officiel référencé/);
   assert.doesNotMatch(render("Q999999999"), /sansirostadium|tottenhamhotspur/);
   assert.match(

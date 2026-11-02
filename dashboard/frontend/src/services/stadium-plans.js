@@ -101,6 +101,7 @@ const PLANS = {
       source: "Paris Saint-Germain",
       detail: "Portes, tribunes et services du Parc des Princes.",
       url: "https://map.psg.fr/",
+      embedded: true,
       format: "Plan",
     },
   ],
