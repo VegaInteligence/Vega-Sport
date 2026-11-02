@@ -50,7 +50,10 @@ export function FootballProvider({ children, loadData = true }) {
   const [preferences, setPreferences] = useState({
     focus: "all",
     defaultSeason: "",
+    favoriteLeagueIds: [],
+    onboardingComplete: false,
   });
+  const [preferencesReady, setPreferencesReady] = useState(false);
   const focus =
     initial.get("focus") === "europe"
       ? "europe"
@@ -75,8 +78,20 @@ export function FootballProvider({ children, loadData = true }) {
         focus: saved.focus === "europe" ? "europe" : "all",
         defaultSeason:
           typeof saved.defaultSeason === "string" ? saved.defaultSeason : "",
+        favoriteLeagueIds: Array.isArray(saved.favoriteLeagueIds)
+          ? [
+              ...new Set(
+                saved.favoriteLeagueIds.filter((id) => typeof id === "string"),
+              ),
+            ]
+          : [],
+        onboardingComplete: saved.onboardingComplete === true,
       });
-    } catch {}
+    } catch {
+      // An unavailable or invalid local preference must not prevent browsing.
+    } finally {
+      setPreferencesReady(true);
+    }
   }, []);
   const season = initial.get("season") || "";
   // Playing time and advanced filters belong to the players page: they stay
@@ -446,8 +461,9 @@ export function FootballProvider({ children, loadData = true }) {
     );
   }
   useEffect(() => {
-    if (chosen && !initial.get("season")) updateQuery({ season: chosen });
-  }, [chosen, initial]);
+    if (preferencesReady && chosen && !initial.get("season"))
+      updateQuery({ season: chosen });
+  }, [preferencesReady, chosen, initial]);
   const value = {
     data,
     focus,
@@ -455,6 +471,7 @@ export function FootballProvider({ children, loadData = true }) {
     competitions,
     catalog,
     preferences,
+    preferencesReady,
     savePreferences,
     manifest: manifest.value,
     season: chosen,

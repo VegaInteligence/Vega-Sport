@@ -126,6 +126,7 @@ export function PlayerDialog() {
               <h2>{row.name}</h2>
               <p className="pc-meta">
                 <span className="pc-club">
+                  <span>Club lors de ce match :</span>
                   {match && (
                     <Media
                       name={row.team}

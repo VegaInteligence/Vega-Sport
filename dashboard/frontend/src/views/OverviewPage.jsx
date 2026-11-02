@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Layout from "../components/Layout.jsx";
 import Icon from "../components/Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -10,18 +10,53 @@ import { number, date } from "../services/format.js";
 import { isNumber, topRows } from "../model.js";
 import { MatchLink } from "../components/MatchLink.jsx";
 import UpcomingMatches from "../components/UpcomingMatches.jsx";
+import HomePreferences from "../components/HomePreferences.jsx";
+import {
+  followedRecords,
+  recentFinishedMatches,
+  recentRecords,
+  RECENT_PERFORMANCE_DAYS,
+} from "../services/home.js";
 export default function OverviewPage() {
   const f = useFootball(),
     [scatter, setScatter] = useState("attack"),
-    [metric, setMetric] = useState("rating");
+    [metric, setMetric] = useState("rating"),
+    [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const update = () => setNow(Date.now());
+    const timer = window.setInterval(update, 60_000);
+    document.addEventListener("visibilitychange", update);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", update);
+    };
+  }, []);
+  const favoriteLeagueIds = f.preferences.favoriteLeagueIds,
+    matches = f.matches;
+  const homeRows = useMemo(
+    () => followedRecords(f.rows, favoriteLeagueIds),
+    [f.rows, favoriteLeagueIds],
+  );
+  const homeMatches = useMemo(
+    () => followedRecords(matches, favoriteLeagueIds),
+    [matches, favoriteLeagueIds],
+  );
+  const recentMatches = useMemo(
+    () => recentFinishedMatches(homeMatches, now),
+    [homeMatches, now],
+  );
+  const recentPerformances = useMemo(
+    () => recentRecords(homeRows, now, RECENT_PERFORMANCE_DAYS),
+    [homeRows, now],
+  );
   const leaders = useMemo(
     () =>
       topRows(
-        f.rows.filter((r) => isNumber(r[metric])),
+        recentPerformances.filter((r) => isNumber(r[metric])),
         metric,
         5,
       ),
-    [f.rows, metric],
+    [recentPerformances, metric],
   );
   const coverage = useMemo(() => {
     const result = {
@@ -30,19 +65,17 @@ export default function OverviewPage() {
       xg: 0,
       ratings: 0,
     };
-    for (const m of f.matches) {
+    for (const m of homeMatches) {
       for (const key of ["players", "xg", "ratings"])
         if (m.coverage?.[key]) result[key]++;
       if (m.coverage?.shots) result.shotMatches++;
     }
     return result;
-  }, [f.matches]);
-  const featured = f.matches.find(
-    (m) =>
-      m.finished !== false && m.home?.score != null && m.away?.score != null,
-  );
+  }, [homeMatches]);
+  const featured = recentMatches[0];
   return (
     <Layout path="/" title="Vue d’ensemble" filters>
+      <HomePreferences f={f} />
       <UpcomingMatches compact />
       {featured && (
         <section
@@ -51,7 +84,7 @@ export default function OverviewPage() {
         >
           <div className="hero-copy">
             <div className="featured-meta">
-              <span>Match à explorer</span>
+              <span>Match récent à explorer</span>
               <span>
                 {featured.league} · {date(featured.date)}
               </span>
@@ -107,7 +140,7 @@ export default function OverviewPage() {
           }
         >
           <DeferredScatterPlot
-            appearances={f.rows}
+            appearances={homeRows}
             {...(scatter === "balance"
               ? {
                   xKey: "chancesCreated",
@@ -120,7 +153,7 @@ export default function OverviewPage() {
           />
         </Card>
         <Card
-          title="Performances observées"
+          title="Performances récentes"
           className="span-4 leaders-card"
           footer={
             <Link className="inline-link" href={f.href("/joueurs/")}>
@@ -128,6 +161,9 @@ export default function OverviewPage() {
             </Link>
           }
         >
+          <p className="home-card-caption">
+            Meilleures performances des 30 derniers jours
+          </p>
           <div className="leader-controls">
             <Segments
               label="Trier les performances"
@@ -158,7 +194,8 @@ export default function OverviewPage() {
                   <span className="player-copy">
                     <strong className="player-name">{r.name}</strong>
                     <span className="player-meta">
-                      {r.team} · {number(r.minutes)} min
+                      Club du match : {r.team} · {date(r.date)} ·{" "}
+                      {number(r.minutes)} min
                     </span>
                   </span>
                   <span className="leader-value">
@@ -173,11 +210,14 @@ export default function OverviewPage() {
             ))}
           </ol>
           {!leaders.length && (
-            <Empty>Aucune performance pour ces filtres.</Empty>
+            <Empty>
+              Aucune performance collectée durant les 30 derniers jours pour
+              cette sélection.
+            </Empty>
           )}
         </Card>
         <Card
-          title="Matchs collectés"
+          title="Matchs récents"
           className="span-8 match-list-card"
           action={
             <Link
@@ -188,10 +228,33 @@ export default function OverviewPage() {
             </Link>
           }
         >
-          {f.matches.slice(0, 5).map((m) => (
+          <p className="home-card-caption">
+            Matchs terminés collectés au cours des 14 derniers jours
+          </p>
+          {recentMatches.slice(0, 5).map((m) => (
             <MatchLink key={m.id} match={m} />
           ))}
-          {!f.matches.length && <Empty>Aucun match pour ces filtres.</Empty>}
+          {!recentMatches.length && (
+            <Empty>
+              Aucun match collecté ces 14 derniers jours pour cette sélection.
+              {f.season !== f.manifest.defaultSeason && (
+                <>
+                  {" "}
+                  <Link
+                    className="inline-link"
+                    href={f.href("/", {
+                      season: f.manifest.defaultSeason,
+                      league: "",
+                      q: "",
+                    })}
+                  >
+                    Voir la saison en cours
+                  </Link>
+                  .
+                </>
+              )}
+            </Empty>
+          )}
         </Card>
         <Card title="Couverture" className="span-4">
           <div className="coverage-list">
@@ -205,13 +268,13 @@ export default function OverviewPage() {
                 <span className="coverage-label">{label}</span>
                 <strong className="coverage-value">
                   {number(coverage[key])}{" "}
-                  <span>/ {number(f.matches.length)}</span>
+                  <span>/ {number(homeMatches.length)}</span>
                 </strong>
                 <span className="coverage-track">
                   <span
-                    className={`coverage-fill${coverage[key] < f.matches.length ? " partial" : ""}`}
+                    className={`coverage-fill${coverage[key] < homeMatches.length ? " partial" : ""}`}
                     style={{
-                      width: `${f.matches.length ? (coverage[key] / f.matches.length) * 100 : 0}%`,
+                      width: `${homeMatches.length ? (coverage[key] / homeMatches.length) * 100 : 0}%`,
                     }}
                   />
                 </span>
@@ -219,9 +282,8 @@ export default function OverviewPage() {
             ))}
           </div>
           <p className="coverage-footnote">
-            {number(f.data.meta.collectedMatches)} /{" "}
-            {number(f.data.meta.expectedFinishedMatches)} matchs terminés
-            collectés.
+            {number(homeMatches.length)} matchs collectés dans la sélection de
+            cette saison.
           </p>
         </Card>
       </div>

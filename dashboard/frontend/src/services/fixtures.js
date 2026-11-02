@@ -85,15 +85,20 @@ function fixtureText(fixture) {
   }
   return text;
 }
-export function upcomingFixtures(fixtures, { week, now, league, query }) {
+export function upcomingFixtures(
+  fixtures,
+  { week, now, league, query, favoriteLeagueIds = [] },
+) {
   const today = parisDay(now),
     search = normalizeText(query || ""),
-    seen = new Set();
+    seen = new Set(),
+    favorites = new Set(favoriteLeagueIds);
   const result = [];
   for (const fixture of fixtures) {
     if (!fixture.id || fixture.status !== "not_started" || seen.has(fixture.id))
       continue;
     if (league && league !== "all" && fixture.league?.id !== league) continue;
+    if (favorites.size && !favorites.has(fixture.league?.id)) continue;
     if (search && !fixtureText(fixture).includes(search)) continue;
     const { kickoff, day } = fixtureTime(fixture);
     if (!validDay(day) || day < today || day < week.start || day > week.end)

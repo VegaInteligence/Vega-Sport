@@ -81,7 +81,8 @@ export default function UpcomingMatches({ compact = false }) {
   const [page, setPage] = useState(1);
   // Follows the search without blocking the keystroke that changed it.
   const query = useDeferredValue(f.filters.query),
-    league = useDeferredValue(f.filters.league);
+    league = useDeferredValue(f.filters.league),
+    favoriteLeagueIds = compact ? f.preferences.favoriteLeagueIds : undefined;
   const entries = useMemo(
     () =>
       upcomingFixtures(f.data.fixtures, {
@@ -89,8 +90,9 @@ export default function UpcomingMatches({ compact = false }) {
         now,
         league,
         query,
+        favoriteLeagueIds,
       }),
-    [f.data.fixtures, week.start, now, league, query],
+    [f.data.fixtures, week.start, now, league, query, favoriteLeagueIds],
   );
   const pageCount = Math.max(1, Math.ceil(entries.length / 40));
   const selectedPage = Math.min(page, pageCount);
@@ -210,7 +212,9 @@ export default function UpcomingMatches({ compact = false }) {
           <p>
             {f.season !== f.manifest.defaultSeason
               ? "Aucun match à venir dans cette saison pour cette semaine."
-              : "Aucun match à venir cette semaine pour ces filtres."}
+              : compact && favoriteLeagueIds?.length
+                ? "Aucun match à venir cette semaine pour vos compétitions et ces filtres."
+                : "Aucun match à venir cette semaine pour ces filtres."}
           </p>
           {f.season !== f.manifest.defaultSeason ? (
             <Link
