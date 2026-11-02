@@ -34,7 +34,8 @@
   color: var(--muted);
   font-size: var(--text-sm);
 }
-.historical-results td:nth-child(4) {
+.historical-results:not(.historical-goal-results) td:nth-child(4),
+.historical-goal-results td:nth-child(6) {
   color: var(--ink-strong);
   font-weight: 600;
   white-space: nowrap;
@@ -50,6 +51,9 @@
 }
 
 .historical-archive-entry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin: 12px 0 16px;
 }
 

@@ -178,3 +178,112 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Match context alongside the selected competition's standings. */
+.competition-detail-layout {
+  margin-bottom: 16px;
+}
+.competition-detail-layout--overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 370px);
+  align-items: stretch;
+  gap: 18px;
+}
+.competition-detail-layout > .competition-detail {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+.competition-highlights {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.competition-highlights-card .card-header {
+  border-bottom: 1px solid var(--border);
+}
+.competition-highlights-card .card-body {
+  padding: 0 16px 8px;
+}
+.competition-highlights-more {
+  padding: 4px 0;
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.competition-highlights-more:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.competition-highlights-card .competition-highlights-caption {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+.competition-highlights-card .competition-highlights-empty {
+  margin: 12px 0 4px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.competition-highlight-match {
+  display: grid;
+  gap: 6px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink);
+}
+.competition-highlight-match:last-child {
+  border-bottom: 0;
+}
+.competition-highlight-match:hover .competition-highlight-name {
+  color: var(--accent);
+}
+.competition-highlight-date {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.competition-highlight-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ink-strong);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.competition-highlight-team .crest {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+}
+.competition-highlight-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.competition-highlight-team strong {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 1051px) {
+  .competition-highlights {
+    grid-template-rows: auto 1fr;
+  }
+}
+@media (max-width: 1050px) {
+  .competition-detail-layout--overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .competition-highlights {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .competition-highlights {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

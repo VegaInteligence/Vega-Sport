@@ -149,6 +149,10 @@ export async function fetchWikidataClub(
     sourceUrl: clubs[0].replace(/^http:/, "https:"),
     fetchedAt: now().toISOString(),
     stadium: stadium?.name || null,
+    stadiumId:
+      stadium?.id?.match(
+        /^https?:\/\/www\.wikidata\.org\/entity\/(Q[1-9]\d*)$/,
+      )?.[1] || null,
     stadiumAlias:
       stadium?.id === "http://www.wikidata.org/entity/Q133566" &&
       rows.some((row) => row.stadiumAlias?.value === "San Siro")

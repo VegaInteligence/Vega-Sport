@@ -21,6 +21,8 @@ import { csvString } from "../model.js";
 import { dataUrl } from "../data-url.js";
 import CompetitionScope from "../components/CompetitionScope.jsx";
 import OpenFootballArchive from "../components/OpenFootballArchive.jsx";
+import CompetitionHighlights from "../components/CompetitionHighlights.jsx";
+import HistoricalGoalsArchive from "../components/HistoricalGoalsArchive.jsx";
 import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
 import CompetitionStandings from "../components/CompetitionStandings.jsx";
 import { FEATURED_EUROPE_IDS, FEATURED_LEAGUE_IDS, countryLabel, orderedFeatured, orderedCountryCodes, competitionGroups, orderedCompetitions, competitionLabel, competitionCountry, competitionCountryLabel } from "../services/competition-selector.js";
@@ -180,7 +182,9 @@ function Fixtures({ competition, day }) {
     },
     f.statusKnown,
   );
+  const showHighlights = supported && view === "standings";
   return (
+    <div className={"competition-detail-layout" + (showHighlights ? " competition-detail-layout--overview" : "")}>
     <Card title={competition ? <span className="competition-detail-title"><Media name={competition.name} url={competition.imageUrl} /><span><strong>{competition.name}</strong><small>{competitionCountryLabel(competition)}</small></span></span> : "Calendrier par date"} className="competition-detail">
       {!day && (
         <div className="competition-detail-controls">
@@ -217,6 +221,15 @@ function Fixtures({ competition, day }) {
         }}
       </AsyncState>
     </Card>
+    {showHighlights && resource.value && (
+      <CompetitionHighlights
+        matches={resource.value.matches || []}
+        competition={competition}
+        season={season}
+        onShowMatches={(next) => { setStatus(next); setPage(1); setView("matches"); }}
+      />
+    )}
+    </div>
   );
 }
 export default function CompetitionsPage() {
@@ -294,7 +307,7 @@ export default function CompetitionsPage() {
     <Layout path="/competitions/" title="Compétitions">
       {historical ? <>
         <button className="inline-link competition-back" onClick={() => setHistorical(false)}>← Retour aux compétitions</button>
-        <OpenFootballArchive />
+        {historical === "goals" ? <HistoricalGoalsArchive /> : <OpenFootballArchive />}
       </> : <>
       {!directory ? <>
         <section
@@ -352,7 +365,7 @@ export default function CompetitionsPage() {
               </div>
             )}
           </section>
-        <div className="historical-archive-entry"><button className="button button-secondary" onClick={() => setHistorical(true)}>Archives de résultats</button></div>
+        <div className="historical-archive-entry"><button className="button button-secondary" onClick={() => setHistorical("results")}>Archives de résultats</button>{" "}<button className="button button-secondary" onClick={() => setHistorical("goals")}>Archives de buts</button></div>
         {selected ? <Fixtures key={selected.id} competition={selected} /> : !id && !choice.ready ? <div className="loading-state" role="status">Choix du championnat…</div> : <Empty>Compétition inconnue ou indisponible.</Empty>}
       </> : <>
         <button className="inline-link competition-back" onClick={() => setDirectory(false)}>← Retour à la compétition</button>
