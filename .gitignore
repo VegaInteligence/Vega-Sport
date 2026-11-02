@@ -25,3 +25,6 @@ dashboard/dist/
 next-env.d.ts
 .vercel/
 dashboard/outputs/daily-refresh/
+
+# Local resumable worldwide collection queue
+data/computed/pitchapi-world/
