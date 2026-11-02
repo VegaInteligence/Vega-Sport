@@ -1,11 +1,13 @@
 import Link from "next/link";
 import Icon from "./Icon.jsx";
 import { pages } from "../../../shared/pages.js";
-import React from "react";
+import React, { useId, useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { PlayerDialog, Comparison } from "./PlayerDetails.jsx";
 import { date } from "../services/format.js";
 import CompetitionScope from "./CompetitionScope.jsx";
+import { AdvancedPanel, AdvancedToggle } from "./AdvancedFilters.jsx";
+import { advancedChips, countAdvanced } from "../services/advanced-filters.js";
 import SiteHeader from "./SiteHeader.jsx";
 import SiteFooter from "./SiteFooter.jsx";
 export const navigation = pages
@@ -14,8 +16,11 @@ export const navigation = pages
 export function Filters({ kind = "performances" }) {
   const f = useFootball(),
     fixtures = kind === "fixtures",
-    // Playing time only makes sense on the players page.
-    players = kind === "players";
+    // Playing time and advanced filters only make sense on the players page.
+    players = kind === "players",
+    advancedCount = players ? countAdvanced(f.filters.advanced) : 0,
+    [advancedOpen, setAdvancedOpen] = useState(advancedCount > 0),
+    panelId = useId();
   const reset = () =>
     f.setFilters({ query: "", league: "all", minutes: 1, match: "all" });
   const minutes = [
@@ -28,7 +33,7 @@ export function Filters({ kind = "performances" }) {
   const active =
     f.filters.query ||
     f.filters.league !== "all" ||
-    (players && f.filters.minutes !== 1) ||
+    (players && (f.filters.minutes !== 1 || advancedCount > 0)) ||
     (!fixtures && f.filters.match !== "all");
   const selected = f.competitions.find((c) => c.id === f.filters.league);
   const names = new Map();
@@ -128,8 +133,16 @@ export function Filters({ kind = "performances" }) {
             </div>
           </div>
         )}
+        {players && (
+          <AdvancedToggle
+            open={advancedOpen}
+            controls={panelId}
+            onToggle={() => setAdvancedOpen((open) => !open)}
+          />
+        )}
         <CompetitionScope />
       </div>
+      {players && advancedOpen && <AdvancedPanel id={panelId} />}
       {active && (
         <div className="filter-panel-footer">
           <div className="filter-applied">
@@ -166,6 +179,23 @@ export function Filters({ kind = "performances" }) {
                 <Icon name="close" />
               </button>
             )}
+            {players &&
+              advancedChips(f.filters.advanced).map((chip) => (
+                <button
+                  key={chip.key}
+                  className="filter-chip"
+                  aria-label={`Retirer le filtre ${chip.label}`}
+                  onClick={() =>
+                    f.setFilters((v) => ({
+                      ...v,
+                      advanced: chip.clear(v.advanced),
+                    }))
+                  }
+                >
+                  {chip.label}
+                  <Icon name="close" />
+                </button>
+              ))}
             {!fixtures && f.filters.match !== "all" && (
               <button
                 className="filter-chip"

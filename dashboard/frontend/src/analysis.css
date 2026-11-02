@@ -1602,6 +1602,20 @@ select optgroup {
   .filter-fields > .competition-scope-button {
     grid-column: 1/-1;
   }
+  .advanced-panel {
+    padding: 12px;
+  }
+  .advanced-field,
+  .advanced-dates {
+    width: 100%;
+  }
+  .advanced-dates .advanced-input {
+    flex: 1 1 0;
+    width: auto;
+  }
+  .advanced-condition {
+    grid-template-columns: minmax(0, 1fr) auto 72px auto;
+  }
   .player-performance {
     width: calc(100vw - 16px);
     max-height: calc(100dvh - 16px);
@@ -1909,6 +1923,104 @@ select optgroup {
   color: var(--accent-dark);
   border-color: var(--accent-line);
   background: var(--accent-soft);
+}
+/* Advanced filters of the players page: a toggle in the filter row and a
+   panel of extra criteria below it. */
+.advanced-toggle[aria-expanded="true"]:not([aria-pressed="true"]) {
+  border-color: var(--muted-light);
+  color: var(--ink);
+  background: var(--surface-subtle);
+}
+.advanced-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+.advanced-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px 32px;
+  margin-top: 10px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.advanced-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+.advanced-label {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.advanced-label small {
+  margin-left: 8px;
+  color: var(--muted-light);
+  font-size: var(--text-xs);
+  font-weight: 400;
+}
+.advanced-field .segmented-control {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.advanced-field > .advanced-input {
+  width: 120px;
+}
+.advanced-dates {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  color: var(--muted-light);
+}
+.advanced-dates .advanced-input {
+  width: 150px;
+  min-width: 0;
+}
+.advanced-conditions {
+  flex-basis: 100%;
+}
+.advanced-condition {
+  display: grid;
+  grid-template-columns: minmax(0, 260px) auto 110px auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+.advanced-condition .advanced-input {
+  width: 100%;
+}
+.advanced-remove {
+  display: grid;
+  place-items: center;
+  width: var(--control-h);
+  height: var(--control-h);
+  border-radius: var(--radius);
+  color: var(--muted);
+}
+.advanced-remove:hover {
+  background: var(--surface-subtle);
+  color: var(--ink);
+}
+.advanced-remove .icon {
+  width: 14px;
+  height: 14px;
+}
+.advanced-add {
+  font-size: var(--text-md);
 }
 .filter-panel-footer .filter-applied {
   flex: 1;

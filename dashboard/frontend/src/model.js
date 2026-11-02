@@ -98,6 +98,7 @@ export function filterAppearances(appearances, filters) {
       (filters.season === "all" ||
         cachedSeasonLabel(row.season) === filters.season) &&
       (minutes === 0 || (isNumber(row.minutes) && row.minutes >= minutes)) &&
+      (!filters.test || filters.test(row)) &&
       (!search || searchText(row, appearanceParts).includes(search)),
   );
 }

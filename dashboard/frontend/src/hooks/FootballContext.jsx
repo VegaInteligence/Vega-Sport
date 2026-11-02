@@ -26,6 +26,13 @@ import {
   primeResource,
 } from "../services/resources.js";
 import { warmProfiles } from "../services/player-profile.js";
+import {
+  advancedKey,
+  advancedQuery,
+  advancedTest,
+  EMPTY_ADVANCED,
+  parseAdvanced,
+} from "../services/advanced-filters.js";
 import { FootballDataClient } from "../services/football-client.js";
 import { AsyncState } from "../components/UI.jsx";
 import LoadingPage from "../components/LoadingPage.jsx";
@@ -72,8 +79,8 @@ export function FootballProvider({ children, loadData = true }) {
     } catch {}
   }, []);
   const season = initial.get("season") || "";
-  // Playing time belongs to the players page: it stays in the URL across
-  // pages but only narrows the data there.
+  // Playing time and advanced filters belong to the players page: they stay
+  // in the URL across pages but only narrow the data there.
   const pathname = usePathname() || "",
     playerScope = pathname.startsWith("/joueurs");
   const urlFilters = useMemo(
@@ -82,11 +89,15 @@ export function FootballProvider({ children, loadData = true }) {
       league: initial.get("league") || "all",
       minutes: Number(initial.get("minutes") ?? 1),
       match: matchFilter,
+      advanced: parseAdvanced(initial),
     }),
     [initial, matchFilter],
   );
   const filters = useMemo(
-    () => (playerScope ? urlFilters : { ...urlFilters, minutes: 1 }),
+    () =>
+      playerScope
+        ? urlFilters
+        : { ...urlFilters, minutes: 1, advanced: EMPTY_ADVANCED },
     [urlFilters, playerScope],
   );
   function updateQuery(values) {
@@ -106,6 +117,7 @@ export function FootballProvider({ children, loadData = true }) {
       query: current.get("q") || "",
       league: current.get("league") || "all",
       minutes: Number(current.get("minutes") ?? 1),
+      advanced: parseAdvanced(current),
     };
     const next = typeof action === "function" ? action(latest) : action;
     setMatchFilter(next.match || "all");
@@ -113,6 +125,7 @@ export function FootballProvider({ children, loadData = true }) {
       q: next.query,
       league: next.league === "all" ? "" : next.league,
       minutes: next.minutes === 1 ? "" : next.minutes,
+      ...advancedQuery(next.advanced || EMPTY_ADVANCED),
     });
   }
   const [comparison, setComparison] = useState([]),
@@ -227,9 +240,18 @@ export function FootballProvider({ children, loadData = true }) {
       ),
     [client, data, focus, status.value, status.loading],
   );
+  const matchIndex = useMemo(
+    () => new Map((data?.matches || []).map((m) => [m.id, m])),
+    [data],
+  );
   const scope = useMemo(
-    () => ({ ...filters, season: chosen }),
-    [filters, chosen],
+    () => ({
+      ...filters,
+      season: chosen,
+      test: advancedTest(filters.advanced, matchIndex),
+      advancedKey: advancedKey(filters.advanced),
+    }),
+    [filters, chosen, matchIndex],
   );
   // Inputs update at once; the filtered lists follow in a deferred render.
   const deferredScope = useDeferredValue(scope);
@@ -243,6 +265,7 @@ export function FootballProvider({ children, loadData = true }) {
         deferredScope.season,
         deferredScope.minutes,
         deferredScope.match,
+        deferredScope.advancedKey,
       ].join("|"),
       recent = recentRows.current;
     // Going back to a recent filter returns the same list (and its sorts).
@@ -334,6 +357,11 @@ export function FootballProvider({ children, loadData = true }) {
       ...(urlFilters.minutes !== 1
         ? { minutes: String(urlFilters.minutes) }
         : {}),
+      ...Object.fromEntries(
+        Object.entries(advancedQuery(urlFilters.advanced)).filter(
+          ([, value]) => value,
+        ),
+      ),
       ...params,
     });
     return `${page}${query.size ? "?" + query : ""}`;
