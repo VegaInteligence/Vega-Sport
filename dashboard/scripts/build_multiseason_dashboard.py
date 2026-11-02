@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Build small, resumable competition-season snapshots for the dashboard."""
+import gzip
 import hashlib
 import json
 from pathlib import Path
@@ -31,6 +32,29 @@ def fingerprint(archive, competitions, retrieved_at, builder_digest):
                 continue
             digest.update(f'{match_id}:{stat.st_size}:{stat.st_mtime_ns}\n'.encode())
     return digest.hexdigest()
+
+
+def can_reuse_snapshot(archive, competitions, current_stamp, builder_digest, old, output):
+    """Keep a verified snapshot if only an unrelated inventory timestamp changed."""
+    if not old or not output.is_file() or output.stat().st_size != old.get('bytes'):
+        return False
+    if old.get('fingerprint') == current_stamp:
+        return True
+    try:
+        body = output.read_bytes()
+        if hashlib.sha256(body).hexdigest() != old.get('sha256'):
+            return False
+        snapshot = json.loads(gzip.decompress(body))
+        meta = snapshot['meta']
+        previous_retrieved = meta['retrievedAt']
+        expected_source = f'data/sources/pitchapi/archives/{archive.name}/inventory.json'
+        if not isinstance(previous_retrieved, str) or expected_source not in meta.get('sourceFiles', []):
+            return False
+        # Retain the original retrieval time and source hash: they describe the
+        # verified snapshot that produced these unchanged match observations.
+        return fingerprint(archive, competitions, previous_retrieved, builder_digest) == old.get('fingerprint')
+    except (OSError, EOFError, ValueError, KeyError, TypeError):
+        return False
 
 
 def main():
@@ -70,7 +94,7 @@ def main():
         retrieved = archive_retrieved[archive]
         stamp = fingerprint(archive, competitions, retrieved, builder_digest)
         old = cached.get(key)
-        if old and old.get('fingerprint') == stamp and output.is_file() and output.stat().st_size == old.get('bytes'):
+        if can_reuse_snapshot(archive, competitions, stamp, builder_digest, old, output):
             item = old
         else:
             metadata = {}

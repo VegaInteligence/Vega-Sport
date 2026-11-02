@@ -1,5 +1,6 @@
 """Historical season imports must preserve older and current datasets."""
 import gzip
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -39,6 +40,51 @@ class HistoricalBuilderTests(unittest.TestCase):
             older = result['seasons'][1]
             self.assertEqual(len(older['chunks']), 2)
             self.assertEqual((older['collectedMatches'], older['expectedFinishedMatches']), (2, 2))
+
+    def test_inventory_refresh_reuses_unchanged_snapshot_but_rebuilds_changed_match(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            archive = base / 'europe_2021_2026'
+            match_dir = archive / 'matches' / 'l_1'
+            match_dir.mkdir(parents=True)
+            match = match_dir / ('m_1--' + 'm_1'.encode().hex() + '.json')
+            match.write_text('{"value":1}', encoding='utf-8')
+            competition = {'id':'l_1', 'name':'League', 'season':'2023/2024',
+                           'matches':[{'id':'m_1', 'status':'finished'}]}
+            inventory = {'retrieved_at_utc':'2026-01-01T00:00:00Z', 'competitions':[competition]}
+            source = archive / 'inventory.json'
+            source.write_text(json.dumps(inventory), encoding='utf-8')
+            out = base / 'dashboard'
+            manifest = out / 'football-manifest.json'
+            calls = []
+            def fake_build(output, **kwargs):
+                calls.append(1)
+                current = json.loads(source.read_text(encoding='utf-8'))
+                snapshot = {'meta':{'retrievedAt':current['retrieved_at_utc'],
+                                    'sourceFiles':['data/sources/pitchapi/archives/europe_2021_2026/inventory.json'],
+                                    'sourceSha256':{'inventory.json':hashlib.sha256(source.read_bytes()).hexdigest()}},
+                            'matches':[json.loads(match.read_text(encoding='utf-8'))]}
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_bytes(gzip.compress(json.dumps(snapshot).encode(), mtime=0))
+                kwargs['metadata_out'].update(collectedMatches=1, expectedFinishedMatches=1)
+                return []
+            with patch.object(multiseason, 'ARCHIVES', [archive]), patch.object(multiseason, 'DASHBOARD', out), \
+                 patch.object(multiseason, 'MANIFEST', manifest), patch.object(multiseason, 'build', side_effect=fake_build):
+                self.assertEqual(multiseason.main(), 0)
+                first = json.loads(manifest.read_text(encoding='utf-8'))['seasons'][0]['chunks'][0]
+                first_bytes = (out / first['path']).read_bytes()
+                inventory['retrieved_at_utc'] = '2026-02-01T00:00:00Z'
+                source.write_text(json.dumps(inventory), encoding='utf-8')
+                self.assertEqual(multiseason.main(), 0)
+                second = json.loads(manifest.read_text(encoding='utf-8'))['seasons'][0]['chunks'][0]
+                self.assertEqual(len(calls), 1)
+                self.assertEqual((out / second['path']).read_bytes(), first_bytes)
+                self.assertEqual(json.loads(gzip.decompress(first_bytes))['meta']['retrievedAt'], '2026-01-01T00:00:00Z')
+                match.write_text('{"value":12345}', encoding='utf-8')
+                self.assertEqual(multiseason.main(), 0)
+                self.assertEqual(len(calls), 2)
+                changed = json.loads(manifest.read_text(encoding='utf-8'))['seasons'][0]['chunks'][0]
+                self.assertEqual(json.loads(gzip.decompress((out / changed['path']).read_bytes()))['matches'][0]['value'], 12345)
 
     def test_canonical_tables_keep_both_new_and_existing_seasons(self):
         with tempfile.TemporaryDirectory() as directory:
