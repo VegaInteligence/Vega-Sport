@@ -29,7 +29,7 @@ def build(source,output):
                                     'score':{'ft':[int(row['gh']),int(row['ga'])]},'sourceFields':row})
     info={'name':manifest['name'],'url':manifest['url'],'license':manifest['license'],'revision':manifest['revision'],
           'sourceManifest':'sources/worldclub/scotland-manifest.json',
-          'usage':'couverture variable ; Écosse 1915/1916 : 379 résultats sur 380 attendus'}
+          'usage':'couverture variable ; en 1915/1916, Morton–Hearts ne fut pas disputé (379 matchs joués)'}
     sources=index['source'].setdefault('additionalSources',[])
     sources[:]=[s for s in sources if s.get('name')!=info['name']]+[info]
     previous={x['id']:x for x in index['seasons']};changed=[];new=[]

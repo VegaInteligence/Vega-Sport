@@ -11,7 +11,7 @@ Sources et conditions :
 - [footballcsv/cache.soccerdata](https://github.com/footballcsv/cache.soccerdata)
   indique CC0-1.0 pour son cache et reprend des données de
   [engsoccerdata](https://github.com/jalapic/engsoccerdata).
-- [schochastics/football-data (World Club Ratings)](https://github.com/schochastics/football-data) est publié sous ODC-BY 1.0 ; les résultats écossais 1890/1891–1993/1994 sont ajoutés aux saisons concernées. La source est partielle pour 1915/1916 (379 résultats pour 380 matchs attendus).
+- [schochastics/football-data (World Club Ratings)](https://github.com/schochastics/football-data) est publié sous ODC-BY 1.0 ; les résultats écossais 1890/1891–1993/1994 sont ajoutés aux saisons concernées. En 1915/1916, 379 matchs ont été disputés : Morton–Hearts ne fut pas joué, comme le confirment l’[archive officielle de la SPFL](https://spfl.co.uk/league/premiership/archive/77) et l’[histoire de Hearts](https://www.heartsfc.co.uk/pages/club-history).
 - Le paquet engsoccerdata indique GPL-2.0 ou ultérieure ; son auteur précise un
   usage gratuit non commercial et demande une attribution. Les fichiers source,
   révisions, empreintes, licences et attribution sont conservés dans
