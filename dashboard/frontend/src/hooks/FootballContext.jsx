@@ -98,7 +98,9 @@ export function FootballProvider({ children, loadData = true }) {
   // Playing time and advanced filters belong to the players page: they stay
   // in the URL across pages but only narrow the data there.
   const pathname = usePathname() || "",
-    playerScope = pathname.startsWith("/joueurs");
+    playerScope = pathname.startsWith("/joueurs"),
+    // The home page has no list filter: the navbar search navigates instead.
+    homeScope = pathname === "/" || pathname === "";
   const urlFilters = useMemo(
     () => ({
       query: initial.get("q") || "",
@@ -110,13 +112,12 @@ export function FootballProvider({ children, loadData = true }) {
     }),
     [initial, matchFilter],
   );
-  const filters = useMemo(
-    () =>
-      playerScope
-        ? urlFilters
-        : { ...urlFilters, minutes: 1, advanced: EMPTY_ADVANCED },
-    [urlFilters, playerScope],
-  );
+  const filters = useMemo(() => {
+    const scoped = playerScope
+      ? urlFilters
+      : { ...urlFilters, minutes: 1, advanced: EMPTY_ADVANCED };
+    return homeScope && scoped.query ? { ...scoped, query: "" } : scoped;
+  }, [urlFilters, playerScope, homeScope]);
   function updateQuery(values) {
     const url = new URL(window.location.href);
     for (const [key, value] of Object.entries(values)) {
@@ -395,6 +396,8 @@ export function FootballProvider({ children, loadData = true }) {
       ),
       ...params,
     });
+    // An emptied parameter means "absent", not "empty value".
+    for (const [key, value] of [...query]) if (value === "") query.delete(key);
     return `${page}${query.size ? "?" + query : ""}`;
   };
   function changeFocus(next) {

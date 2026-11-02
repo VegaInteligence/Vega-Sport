@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Icon from "./Icon.jsx";
 import { pages } from "../../../shared/pages.js";
-import React, { useId, useState, useMemo } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
 import { PlayerDialog, Comparison } from "./PlayerDetails.jsx";
@@ -20,6 +20,57 @@ import {
 export const navigation = pages
   .filter((page) => page.navigation !== false)
   .map((page) => [page.path, page.title]);
+/**
+ * The list filter keeps its own text so fast typing is never overwritten by
+ * a URL update still in flight. The URL follows after a short pause; outside
+ * changes (chip removal, reset, navigation) still replace the text.
+ */
+function QueryField({ label, placeholder }) {
+  const f = useFootball(),
+    external = f.filters.query;
+  const [value, setValue] = useState(external),
+    committed = useRef(external),
+    timer = useRef(null);
+  useEffect(() => {
+    if (external === committed.current) return;
+    committed.current = external;
+    window.clearTimeout(timer.current);
+    setValue(external);
+  }, [external]);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const commit = (text) => {
+    window.clearTimeout(timer.current);
+    if (text === committed.current) return;
+    committed.current = text;
+    f.setFilters((v) => ({ ...v, query: text }));
+  };
+  return (
+    <div className="filter-input-wrap">
+      <Icon name="search" />
+      <input
+        id="player-search"
+        type="search"
+        aria-label={label}
+        placeholder={placeholder}
+        autoComplete="off"
+        spellCheck="false"
+        value={value}
+        onChange={(e) => {
+          const text = e.target.value;
+          setValue(text);
+          window.clearTimeout(timer.current);
+          // Clearing applies at once; typing waits for a short pause.
+          if (!text) commit(text);
+          else timer.current = window.setTimeout(() => commit(text), 180);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit(value);
+        }}
+        onBlur={() => commit(value)}
+      />
+    </div>
+  );
+}
 export function Filters({ kind = "performances" }) {
   const f = useFootball(),
     fixtures = kind === "fixtures",
@@ -44,7 +95,7 @@ export function Filters({ kind = "performances" }) {
     [0, "Inclure le banc"],
   ];
   const active =
-    f.filters.query ||
+    (!home && f.filters.query) ||
     f.filters.league !== "all" ||
     (home &&
       (f.preferences.favoriteLeagueIds.length > 0 || f.focus === "europe")) ||
@@ -60,26 +111,27 @@ export function Filters({ kind = "performances" }) {
       <div
         className={`filter-fields${fixtures ? " fixture-filter-fields" : ""}`}
       >
-        <div className="filter-field filter-search">
-          <label htmlFor="player-search">Recherche</label>
-          <div className="filter-input-wrap">
-            <Icon name="search" />
-            <input
-              id="player-search"
-              type="search"
-              aria-label={
+        {!home && (
+          <div className="filter-field filter-search">
+            <label htmlFor="player-search">Recherche</label>
+            <QueryField
+              label={
                 fixtures
-                  ? "Rechercher un club ou une compétition"
-                  : "Rechercher un joueur ou un club"
+                  ? "Filtrer par club ou compétition"
+                  : players
+                    ? "Filtrer les joueurs par nom ou club"
+                    : "Filtrer par joueur ou club"
               }
-              placeholder={fixtures ? "Club, compétition…" : "Joueur, club…"}
-              value={f.filters.query}
-              onChange={(e) =>
-                f.setFilters((v) => ({ ...v, query: e.target.value }))
+              placeholder={
+                fixtures
+                  ? "Club, compétition…"
+                  : players
+                    ? "Filtrer les joueurs…"
+                    : "Joueur, club…"
               }
             />
           </div>
-        </div>
+        )}
         {home ? (
           <HomePreferences f={f} />
         ) : (
@@ -109,24 +161,26 @@ export function Filters({ kind = "performances" }) {
             </div>
           </div>
         )}
-        <div className="filter-field filter-season">
-          <label htmlFor="season-filter">Saison</label>
-          <div className="filter-input-wrap">
-            <Icon name="calendar" />
-            <select
-              id="season-filter"
-              value={f.season}
-              onChange={(e) => f.changeSeason(e.target.value)}
-            >
-              {f.manifest.seasons.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.id}
-                </option>
-              ))}
-            </select>
-            <Icon name="chevron" className="select-chevron" />
+        {!home && (
+          <div className="filter-field filter-season">
+            <label htmlFor="season-filter">Saison</label>
+            <div className="filter-input-wrap">
+              <Icon name="calendar" />
+              <select
+                id="season-filter"
+                value={f.season}
+                onChange={(e) => f.changeSeason(e.target.value)}
+              >
+                {f.manifest.seasons.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.id}
+                  </option>
+                ))}
+              </select>
+              <Icon name="chevron" className="select-chevron" />
+            </div>
           </div>
-        </div>
+        )}
         {players && (
           <div className="filter-field">
             <label htmlFor="minutes-filter">Temps de jeu moyen</label>
@@ -297,7 +351,7 @@ export default function Layout({
                   </p>
                 )}
               </div>
-              {filters && filterKind !== "fixtures" && (
+              {filters && !["fixtures", "home"].includes(filterKind) && (
                 <div className="heading-actions">
                   <button
                     className="button button-secondary"
@@ -311,9 +365,7 @@ export default function Layout({
           )}
           {subnav}
           {filters && <Filters kind={filterKind} />}
-          {filters && filterKind !== "fixtures" && filterKind !== "players" && (
-            <PlayerSearchResults />
-          )}
+          {filters && filterKind === "performances" && <PlayerSearchResults />}
           {f.notice && (
             <div role="status" className="notice">
               {f.notice}

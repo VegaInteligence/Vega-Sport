@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import ThemeToggle from "./ThemeToggle.jsx";
 import StatarenaLogo from "./StatarenaLogo.jsx";
+import GlobalSearch from "./GlobalSearch.jsx";
 import { pages } from "../../../shared/pages.js";
 const navigation = pages
   .filter((page) => page.navigation !== false)
@@ -34,6 +35,7 @@ export default function SiteHeader({ path, href }) {
         ))}
       </nav>
       <div className="topbar-actions">
+        <GlobalSearch />
         <ThemeToggle />
       </div>
     </header>
