@@ -37,6 +37,7 @@ test("competition page renders a result-derived league table and its limits", as
     "react": reactStub, "next/navigation": { useSearchParams: () => new URLSearchParams("id=l_3FJFUl") },
     "next/link": { __esModule: true, default: Link },
     "../components/Icon.jsx": { __esModule: true, default: () => null },
+    "../components/OpenFootballArchive.jsx": { __esModule: true, default: () => null },
     "../components/Layout.jsx": { __esModule: true, default: ({ children }) => elem("main", null, children) },
     "../hooks/FootballContext.jsx": { useFootball: () => context }, "../components/UI.jsx": UI,
     "../components/MatchLink.jsx": { MatchLink: ({ match }) => elem("p", { "data-match": match.id }, match.id) },
@@ -59,6 +60,7 @@ test("competition page renders a result-derived league table and its limits", as
   const html = renderToStaticMarkup(elem(mod.exports.default));
   assert.match(html, /Classement calculé à partir des résultats disponibles/);
   assert.match(html, /Championnats à la une/);
+  assert.match(html, /Archives de résultats/);
   assert.match(html, /France/);
   assert.match(html, /Paris/);
   assert.match(html, /Lille/);

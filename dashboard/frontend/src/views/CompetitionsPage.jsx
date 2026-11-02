@@ -20,6 +20,7 @@ import { useResource, json, download } from "../services/resources.js";
 import { csvString } from "../model.js";
 import { dataUrl } from "../data-url.js";
 import CompetitionScope from "../components/CompetitionScope.jsx";
+import OpenFootballArchive from "../components/OpenFootballArchive.jsx";
 import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
 import { SPORTSCORE_LEAGUES } from "../services/sportscore-standings.js";
 import { FEATURED_EUROPE_IDS, FEATURED_LEAGUE_IDS, countryLabel, orderedFeatured } from "../services/competition-selector.js";
@@ -430,6 +431,7 @@ export default function CompetitionsPage() {
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("all");
   const [directory, setDirectory] = useState(false);
+  const [historical, setHistorical] = useState(false);
   const [supplemental, setSupplemental] = useState(false);
   const [day, setDay] = useState("");
   const [choice, setChoice] = useState({ ready: false, saved: null, country: null });
@@ -479,6 +481,10 @@ export default function CompetitionsPage() {
   }
   return (
     <Layout path="/competitions/" title="Compétitions">
+      {historical ? <>
+        <button className="inline-link competition-back" onClick={() => setHistorical(false)}>← Retour aux compétitions</button>
+        <OpenFootballArchive />
+      </> : <>
       {!directory ? <>
         <section
             className="league-spotlight"
@@ -535,11 +541,13 @@ export default function CompetitionsPage() {
               </div>
             )}
           </section>
+        <div className="historical-archive-entry"><button className="button button-secondary" onClick={() => setHistorical(true)}>Archives de résultats</button></div>
         {selected ? <Fixtures key={selected.id} competition={selected} /> : !id && !choice.ready ? <div className="loading-state" role="status">Choix du championnat…</div> : <Empty>Compétition inconnue ou indisponible.</Empty>}
       </> : <>
         <button className="inline-link competition-back" onClick={() => setDirectory(false)}>← Retour à la compétition</button>
         <div className="clubs-toolbar">
           <CompetitionScope />
+          <button className="button button-secondary" onClick={() => setHistorical(true)}>Archives de résultats</button>
           <input type="search" placeholder="Rechercher une compétition…" aria-label="Rechercher une compétition" value={query} onChange={(e) => { setQuery(e.target.value); }} />
           <select aria-label="Filtrer par pays" value={country} onChange={(e) => { setCountry(e.target.value); }}>
             <option value="all">Tous les pays</option>
@@ -558,6 +566,7 @@ export default function CompetitionsPage() {
           </div>
           {!rows.length && <Empty>Aucune compétition ne correspond à la recherche.</Empty>}
         </>}
+      </>}
       </>}
     </Layout>
   );
