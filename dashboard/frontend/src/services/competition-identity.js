@@ -1,5 +1,24 @@
 import { countryLabel } from "./competition-selector.js";
 
+/** Fill missing season metadata from the provider catalogue using stable IDs. */
+export function enrichSeasonCompetitions(competitions, catalogue) {
+  const byId = new Map((catalogue || []).map((item) => [item.id, item]));
+  return (competitions || []).map((item) => {
+    const reference = byId.get(item.id) || {};
+    return {
+      ...item,
+      country:
+        item.country ||
+        item.providerCountry ||
+        reference.country ||
+        reference.country_code ||
+        "",
+      imageUrl:
+        item.imageUrl || reference.imageUrl || reference.image_url || "",
+    };
+  });
+}
+
 /** Merge competition metadata by stable provider ID, never by display name. */
 export function competitionIndex(...collections) {
   const index = new Map();

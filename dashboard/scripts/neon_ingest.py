@@ -21,6 +21,7 @@ ENDPOINTS = [
     "advanced/network",
     "heatmaps",
 ]
+PRIORITY_CORE = {"": 0, "players": 1, "lineups": 2, "shots": 3, "stats": 4}
 
 
 def identities(value):
@@ -348,6 +349,40 @@ def seed(store, mode):
             discover(store, "/leagues", data, mode)
 
 
+def prioritize_league(store, league_id):
+    """Queue a league's observed finished matches, newest season first."""
+    if not re.fullmatch(r"l_[A-Za-z0-9]{6}", league_id or ""):
+        raise ValueError("Invalid league ID")
+    rows = store.db.execute(
+        "select id,season from statarena.fixtures where league_id=%s and status='finished' order by season desc,day desc,id",
+        (league_id,),
+    ).fetchall()
+    if not rows:
+        raise ValueError("No finished fixtures are indexed for this league")
+    seasons = sorted({str(season or "") for _, season in rows}, reverse=True)
+    priority = {season: -300 + 8 * i for i, season in enumerate(seasons)}
+    for mid, season in rows:
+        base = priority[str(season or "")]
+        for suffix in ENDPOINTS:
+            store.enqueue(
+                "/matches/" + mid + ("/" + suffix if suffix else ""),
+                priority=base + PRIORITY_CORE.get(suffix, 5),
+            )
+        store.enqueue("/matches/" + mid + "/heatmaps", {"frame": "home_ltr"}, priority=base + 5)
+    return {"league": league_id, "matches": len(rows), "seasons": seasons}
+
+
+def claim_job(store, league_id=None):
+    if league_id:
+        return store.db.execute(
+            "with next as(select j.endpoint,j.params from statarena.jobs j join statarena.fixtures f on f.id=split_part(j.endpoint,'/',3) where j.endpoint like '/matches/%%' and f.league_id=%s and f.status='finished' and j.state='pending' and j.available_at<=now() order by j.priority,j.available_at limit 1 for update of j skip locked) update statarena.jobs j set state='running',attempts=attempts+1,lease_until=now()+interval '10 minutes' from next where j.endpoint=next.endpoint and j.params=next.params returning j.endpoint,j.params,j.attempts",
+            (league_id,),
+        ).fetchone()
+    return store.db.execute(
+        "with next as(select endpoint,params from statarena.jobs where state='pending' and available_at<=now() order by priority,available_at limit 1 for update skip locked) update statarena.jobs j set state='running',attempts=attempts+1,lease_until=now()+interval '10 minutes' from next where j.endpoint=next.endpoint and j.params=next.params returning j.endpoint,j.params,j.attempts"
+    ).fetchone()
+
+
 def capacity(store):
     size = store.db.execute("select pg_database_size(current_database())").fetchone()[0]
     objects = store.db.execute(
@@ -366,6 +401,7 @@ def main():
     p.add_argument("--minutes", type=float, default=45)
     p.add_argument("--max-requests", type=int, default=10000)
     p.add_argument("--seed-endpoint")
+    p.add_argument("--priority-league", help="Collect indexed finished matches for one league first")
     p.add_argument("--skip-materialize", action="store_true")
     a = p.parse_args()
     base = os.environ.get("PITCHAPI_BASE_URL", "https://api.pitchapi.dev/v1").rstrip(
@@ -394,7 +430,9 @@ def main():
         store.db.execute(
             "update statarena.jobs set state='pending',lease_until=null where state='running' and lease_until<now()"
         )
-        if a.seed_endpoint:
+        if a.priority_league:
+            print(canonical({"prioritized": prioritize_league(store, a.priority_league)}), flush=True)
+        elif a.seed_endpoint:
             store.enqueue(a.seed_endpoint, priority=0, refresh=True)
         else:
             seed(store, a.mode)
@@ -408,9 +446,7 @@ def main():
                     paused = True
                     store.state(a.mode, {"state": "paused_capacity", **cap})
                     break
-            row = store.db.execute(
-                "with next as(select endpoint,params from statarena.jobs where state='pending' and available_at<=now() order by priority,available_at limit 1 for update skip locked) update statarena.jobs j set state='running',attempts=attempts+1,lease_until=now()+interval '10 minutes' from next where j.endpoint=next.endpoint and j.params=next.params returning j.endpoint,j.params,j.attempts"
-            ).fetchone()
+            row = claim_job(store, a.priority_league)
             if not row:
                 break
             endpoint, encoded, attempts = row
@@ -483,9 +519,10 @@ def main():
         if not a.skip_materialize:
             from neon_materialize import materialize
 
-            materialize(store, max_partitions=20)
+            materialize(store, max_partitions=20, league_id=a.priority_league)
         report = {
             "state": "paused_capacity" if paused else "success",
+            **({"priorityLeague": a.priority_league} if a.priority_league else {}),
             "processed": processed,
             "reused": reused,
             "downloaded": processed - reused,

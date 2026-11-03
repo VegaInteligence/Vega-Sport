@@ -9,7 +9,23 @@ from neon_ingest import saved
 from functools import lru_cache
 
 
-def _materialize(store, max_partitions=20):
+def competition_metadata(existing, profile, league, label, fixtures):
+    """Fill missing identity fields from the saved provider league profile."""
+    competition = dict(existing or {})
+    fixture_league = (fixtures[0].get("league") or {}) if fixtures else {}
+    competition.setdefault("id", league)
+    if not competition.get("name") or competition["name"] == league:
+        competition["name"] = profile.get("name") or fixture_league.get("name") or league
+    for field in ("country", "providerCountry"):
+        if not competition.get(field) and profile.get("country_code"):
+            competition[field] = profile["country_code"]
+    if not competition.get("imageUrl"):
+        competition["imageUrl"] = profile.get("image_url") or fixture_league.get("image_url")
+    competition["seasons"] = sorted(set(competition.get("seasons", []) + [label]))
+    return competition
+
+
+def _materialize(store, max_partitions=20, league_id=None):
     manifest = store.json("computed/dashboard/index.json")
     raw = store.json("raw/index.json")
     changed = 0
@@ -41,10 +57,13 @@ def _materialize(store, max_partitions=20):
         )
         return item.get("response") if item else None
 
-    for label, league, marked in store.db.execute(
-        "select season,league_id,changed_at from statarena.dirty_partitions order by changed_at limit %s",
-        (max_partitions,),
-    ).fetchall():
+    partitions_query = "select season,league_id,changed_at from statarena.dirty_partitions"
+    params = (max_partitions,)
+    if league_id:
+        partitions_query += " where league_id=%s"
+        params = (league_id, max_partitions)
+    partitions_query += " order by changed_at limit %s"
+    for label, league, marked in store.db.execute(partitions_query, params).fetchall():
         season = next((s for s in manifest["seasons"] if s["id"] == label), None)
         if not season:
             season = {"id": label, "chunks": []}
@@ -96,22 +115,9 @@ def _materialize(store, max_partitions=20):
         ).fetchone()
         profile = saved(store, profile_row[0]) if profile_row else {}
         profile = profile or {}
-        competition = (
-            tables["competitions"][0]
-            if tables["competitions"]
-            else {
-                "id": league,
-                "name": profile.get("name")
-                or (
-                    (fixtures[0].get("league") or {}).get("name")
-                    if fixtures
-                    else league
-                ),
-                "country": profile.get("country_code", ""),
-                "providerCountry": profile.get("country_code", ""),
-                "imageUrl": profile.get("image_url"),
-                "seasons": [label],
-            }
+        competition = competition_metadata(
+            tables["competitions"][0] if tables["competitions"] else None,
+            profile, league, label, fixtures,
         )
         if competition["name"] == "1. Lig" and competition.get("country") == "INT":
             competition["country"] = "TUR"
@@ -362,7 +368,7 @@ def _materialize(store, max_partitions=20):
     return changed
 
 
-def materialize(store, max_partitions=20):
+def materialize(store, max_partitions=20, league_id=None):
     # Catalog, manifests, routes and completion markers become visible atomically.
     with store.db.transaction():
-        return _materialize(store, max_partitions)
+        return _materialize(store, max_partitions, league_id)

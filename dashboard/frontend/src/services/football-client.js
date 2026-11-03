@@ -1,6 +1,7 @@
 import { normalizeArchive } from "./format.js";
 import { dataUrl } from "../data-url.js";
 import { cupWorkerSnapshot } from "./cup-worker-client.js";
+import { SAUDI_PRO_LEAGUE, reconcileSaudiFixtures } from "./saudi-fixtures.js";
 /** Data access only: no view builders, document selectors or event delegation. */
 let clientSequence = 0;
 export class FootballDataClient {
@@ -153,6 +154,8 @@ export class FootballDataClient {
         result = { matches, source: "snapshot", error: error.message };
       }
     }
+    if (browseMode !== "day" && competitionId === SAUDI_PRO_LEAGUE)
+      result.matches = reconcileSaudiFixtures(result.matches);
     for (const match of result.matches) this.fixtureIndex.set(match.id, match);
     this.fixtures.set(key, result);
     this.redraw();

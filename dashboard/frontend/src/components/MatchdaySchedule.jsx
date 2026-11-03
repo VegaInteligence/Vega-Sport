@@ -208,6 +208,12 @@ export default function MatchdaySchedule({
           </button>
         </nav>
       </div>
+      {selected.matches.some((match) => match.fixtureIdentityUncertain) && (
+        <p className="matchday-note">
+          Certaines rencontres apparaissent plusieurs fois dans la source ; leur
+          fiche et leur horaire restent à confirmer.
+        </p>
+      )}
       {selected.key === "unknown" && (
         <p className="matchday-note">
           {loadingMore

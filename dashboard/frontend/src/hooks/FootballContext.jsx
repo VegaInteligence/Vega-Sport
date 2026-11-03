@@ -35,6 +35,7 @@ import {
   parseAdvanced,
 } from "../services/advanced-filters.js";
 import { FootballDataClient } from "../services/football-client.js";
+import { enrichSeasonCompetitions } from "../services/competition-identity.js";
 import { AsyncState } from "../components/UI.jsx";
 import LoadingPage from "../components/LoadingPage.jsx";
 import {
@@ -170,10 +171,14 @@ export function FootballProvider({ children, loadData = true }) {
   // A competition filter only narrows the download when the whole scope has
   // not been loaded yet (deep link). Once it has, the filter runs in memory:
   // no second download, no re-merge, no loading screen.
-  const clubDetail = pathname.startsWith("/clubs") && Boolean(initial.get("id"));
+  const clubDetail =
+    pathname.startsWith("/clubs") && Boolean(initial.get("id"));
   const dataFocus = clubDetail ? "all" : focus;
   const scopeKey = `${chosen}:${dataFocus}`,
-    leagueOnly = !pathname.startsWith("/clubs") && filters.league !== "all" && !loadedScopes.has(scopeKey),
+    leagueOnly =
+      !pathname.startsWith("/clubs") &&
+      filters.league !== "all" &&
+      !loadedScopes.has(scopeKey),
     // "All competitions" first shows the Top 7 + UEFA chunks (a quarter of
     // the bytes), then merges the other leagues loaded in the background.
     // Pages opened on a specific record wait for the full scope instead.
@@ -197,7 +202,8 @@ export function FootballProvider({ children, loadData = true }) {
               fetch,
               leagueOnly
                 ? new Set(
-                    dataFocus !== "europe" || EUROPE_FOCUS_IDS.has(filters.league)
+                    dataFocus !== "europe" ||
+                      EUROPE_FOCUS_IDS.has(filters.league)
                       ? [filters.league]
                       : [],
                   )
@@ -247,13 +253,14 @@ export function FootballProvider({ children, loadData = true }) {
   const seasonCompetitions = useMemo(
     () =>
       manifest.value?.storage === "json-packed"
-        ? manifest.value.seasons
-            .find((s) => s.id === chosen)
-            ?.chunks.flatMap((c) => c.competitions)
-            .sort((a, b) => (a.name || "").localeCompare(b.name || "", "fr")) ||
-          []
+        ? enrichSeasonCompetitions(
+            manifest.value.seasons
+              .find((s) => s.id === chosen)
+              ?.chunks.flatMap((c) => c.competitions) || [],
+            client?.catalog,
+          ).sort((a, b) => (a.name || "").localeCompare(b.name || "", "fr"))
         : data?.competitions || [],
-    [manifest.value, chosen, data],
+    [manifest.value, chosen, data, client, status.value, status.loading],
   );
   // The navbar search and the competition directory ignore the selected
   // scope: they always see every competition of the season.
@@ -266,7 +273,8 @@ export function FootballProvider({ children, loadData = true }) {
       if (c?.id && !byId.has(c.id)) byId.set(c.id, c);
     return [...byId.values()];
   }, [client, data, seasonCompetitions, status.value, status.loading]);
-  const fullSeason = loadData && dataFocus === "all" && !leagueOnly && !progressive;
+  const fullSeason =
+    loadData && dataFocus === "all" && !leagueOnly && !progressive;
   function searchData() {
     if (fullSeason && data) return Promise.resolve(data);
     return primeResource(`season:${chosen}:all:all:full`, () =>
@@ -278,9 +286,7 @@ export function FootballProvider({ children, loadData = true }) {
   }
   const competitions = useMemo(
     () =>
-      seasonCompetitions.filter(
-        (c) => focus !== "europe" || inEuropeFocus(c),
-      ),
+      seasonCompetitions.filter((c) => focus !== "europe" || inEuropeFocus(c)),
     [seasonCompetitions, focus],
   );
   const catalog = useMemo(
