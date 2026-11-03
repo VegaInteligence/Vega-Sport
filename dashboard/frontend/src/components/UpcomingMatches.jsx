@@ -19,6 +19,7 @@ import {
   validDay,
 } from "../services/fixtures.js";
 
+const CHAMPIONS_LEAGUE_ID = "l_0bfbkO";
 function useClock() {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -120,6 +121,18 @@ export default function UpcomingMatches({ compact = false }) {
       }),
     [f.data.fixtures, week.start, now, league, query, favoriteLeagueIds],
   );
+  // The home preview always lists Champions League matches first.
+  const preview = useMemo(
+    () =>
+      compact
+        ? [...entries].sort(
+            (a, b) =>
+              (b.fixture.league?.id === CHAMPIONS_LEAGUE_ID) -
+              (a.fixture.league?.id === CHAMPIONS_LEAGUE_ID),
+          )
+        : entries,
+    [compact, entries],
+  );
   const pageCount = Math.max(1, Math.ceil(entries.length / 40));
   const selectedPage = Math.min(page, pageCount);
   useEffect(
@@ -127,7 +140,7 @@ export default function UpcomingMatches({ compact = false }) {
     [week.start, f.filters.league, f.filters.query, f.focus, f.season],
   );
   const visible = compact
-    ? entries.slice(0, 6)
+    ? preview.slice(0, 6)
     : entries.slice((selectedPage - 1) * 40, selectedPage * 40);
   const groups = new Map();
   for (const entry of visible) {

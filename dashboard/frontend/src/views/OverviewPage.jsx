@@ -10,6 +10,7 @@ import { number, date } from "../services/format.js";
 import { isNumber, topRows } from "../model.js";
 import { MatchLink } from "../components/MatchLink.jsx";
 import UpcomingMatches from "../components/UpcomingMatches.jsx";
+import HomePreferences from "../components/HomePreferences.jsx";
 import {
   followedRecords,
   recentFinishedMatches,
@@ -78,7 +79,7 @@ export default function OverviewPage() {
     [recentMatches, now],
   );
   return (
-    <Layout path="/" title="Vue d’ensemble" filters filterKind="home">
+    <Layout path="/" title="Vue d’ensemble" actions={<HomePreferences f={f} />}>
       <UpcomingMatches compact />
       {featured && (
         <section
@@ -156,7 +157,7 @@ export default function OverviewPage() {
           />
         </Card>
         <Card
-          title="Performances récentes"
+          title="Performances des 30 derniers jours"
           className="span-4 leaders-card"
           footer={
             <Link className="inline-link" href={f.href("/joueurs/")}>
@@ -164,9 +165,6 @@ export default function OverviewPage() {
             </Link>
           }
         >
-          <p className="home-card-caption">
-            Meilleures performances des 30 derniers jours
-          </p>
           <div className="leader-controls">
             <Segments
               label="Trier les performances"
@@ -220,7 +218,7 @@ export default function OverviewPage() {
           )}
         </Card>
         <Card
-          title="Matchs récents"
+          title="Matchs des 14 derniers jours"
           className="span-8 match-list-card"
           action={
             <Link
@@ -231,9 +229,6 @@ export default function OverviewPage() {
             </Link>
           }
         >
-          <p className="home-card-caption">
-            Matchs terminés collectés au cours des 14 derniers jours
-          </p>
           {recentMatches.slice(0, 5).map((m) => (
             <MatchLink key={m.id} match={m} />
           ))}

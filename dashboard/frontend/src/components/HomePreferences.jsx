@@ -177,23 +177,21 @@ export default function HomePreferences({ f }) {
             ? `${effectiveIds.length} compétitions`
             : "Toutes les compétitions";
 
+  const active = effectiveIds.length > 0 || ids.length > 0;
   return (
-    <div className="filter-field home-competition-filter">
-      <span className="sr-only" id="home-competition-label">
-        Compétitions
-      </span>
+    <>
       <button
         type="button"
         id="home-competition-filter"
-        className="filter-input-wrap home-competition-trigger"
-        aria-label={`Compétitions : ${label}`}
+        className={`button button-secondary home-filter-button${active ? " is-active" : ""}`}
+        aria-label={`Filtrer les compétitions : ${label}`}
         aria-haspopup="dialog"
         aria-expanded={open}
+        title={label}
         onClick={() => setOpen(true)}
       >
-        <Icon name="trophy" />
-        <span>{label}</span>
-        <Icon name="chevron" className="select-chevron" />
+        <Icon name="filters" />
+        <span>{active ? label : "Filtrer"}</span>
       </button>
       {open && (
         <CompetitionPicker
@@ -203,6 +201,6 @@ export default function HomePreferences({ f }) {
           onClose={() => setOpen(false)}
         />
       )}
-    </div>
+    </>
   );
 }
