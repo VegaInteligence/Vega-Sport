@@ -40,23 +40,16 @@ def _materialize(store, max_partitions=20, league_id=None, recent_first=False):
     def source_table(path):
         return store.json(path)
 
+    @lru_cache(maxsize=16)
+    def response_table(path):
+        return {row["documentId"]: row.get("response") for row in source_table(path)}
+
     def prior_response(mid, family):
-        row = store.db.execute(
-            "select o.ordinal,s.ref from statarena.observations o join statarena.shards s on s.id=o.shard where o.id=%s",
-            (mid,),
-        ).fetchone()
+        row = archived.get(mid)
         if not row or family not in row[1]["tables"]:
             return None
         doc = source_table(row[1]["document"]["path"])[row[0]]
-        item = next(
-            (
-                r
-                for r in source_table(row[1]["tables"][family]["path"])
-                if r["documentId"] == doc["id"]
-            ),
-            None,
-        )
-        return item.get("response") if item else None
+        return response_table(row[1]["tables"][family]["path"]).get(doc["id"])
 
     partitions_query = "select season,league_id,changed_at from statarena.dirty_partitions"
     params = (max_partitions,)
@@ -122,12 +115,29 @@ def _materialize(store, max_partitions=20, league_id=None, recent_first=False):
         )
         if competition["name"] == "1. Lig" and competition.get("country") == "INT":
             competition["country"] = "TUR"
-        detail_refs = {
-            endpoint.split("/")[2]: ref
-            for endpoint, ref in store.db.execute(
-                "select r.endpoint,r.ref from statarena.resources r join statarena.fixtures f on r.endpoint='/matches/'||f.id where r.status=200 and f.league_id=%s and f.season=any(%s)",
-                (league, [label, label.split("/")[0]]),
-            )
+        finished_ids = [f["id"] for f in fixtures if f.get("status") == "finished"]
+        # Imported archives live in observation shards, while recent collection
+        # uses standalone resources. Load both indexes once for this partition.
+        observations = store.db.execute(
+            "select id,shard,ordinal from statarena.observations where id=any(%s)",
+            (finished_ids,),
+        ).fetchall()
+        shards = dict(store.db.execute(
+            "select id,ref from statarena.shards where id=any(%s)",
+            (list({row[1] for row in observations}),),
+        ).fetchall())
+        archived = {mid: (ordinal, shards[shard]) for mid, shard, ordinal in observations}
+        endpoints = [
+            "/matches/" + mid + suffix
+            for mid in finished_ids
+            for suffix in ("", "/players", "/shots", "/lineups", "/stats")
+        ]
+        resources = {
+            endpoint: (status, ref)
+            for endpoint, status, ref in store.db.execute(
+                "select endpoint,status,ref from statarena.resources where params='{}' and endpoint=any(%s)",
+                (endpoints,),
+            ).fetchall()
         }
         normalized = []
         rounds = {}
@@ -138,9 +148,14 @@ def _materialize(store, max_partitions=20, league_id=None, recent_first=False):
             pass
         for fixture in fixtures:
             mid = fixture["id"]
-            if mid not in detail_refs or fixture.get("status") != "finished":
+            if fixture.get("status") != "finished":
                 continue
-            detail = saved(store, detail_refs[mid])
+            resource = resources.get("/matches/" + mid)
+            if resource and resource[0] == 200:
+                detail = saved(store, resource[1])
+            else:
+                previous = prior_response(mid, "match")
+                detail = previous.get("data") if previous and previous.get("status") == 200 else None
             if (
                 detail
                 and detail.get("id") == mid
@@ -169,10 +184,7 @@ def _materialize(store, max_partitions=20, league_id=None, recent_first=False):
                 ("lineups", "lineups"),
                 ("team_stats", "stats"),
             ]:
-                row = store.db.execute(
-                    "select status,ref from statarena.resources where endpoint=%s and params='{}'",
-                    ("/matches/" + mid + "/" + endpoint,),
-                ).fetchone()
+                row = resources.get("/matches/" + mid + "/" + endpoint)
                 if row and row[0] == 200:
                     sample[name] = {"ok": True, "data": saved(store, row[1])}
                 else:
@@ -181,14 +193,26 @@ def _materialize(store, max_partitions=20, league_id=None, recent_first=False):
                     )
                     if previous and previous.get("status") == 200:
                         sample[name] = {"ok": True, "data": previous.get("data")}
-            one = build_snapshot({"samples": [sample]}, {"data": {"leagues": []}})
             # Replacing a partial response must not erase already normalized statistics.
             available = {
                 k
                 for k in ["players", "shots", "team_stats"]
                 if sample.get(k, {}).get("ok")
             }
+            if not available:
+                continue
+            one = build_snapshot({"samples": [sample]}, {"data": {"leagues": []}})
             for m in one["matches"]:
+                previous = next((v for v in tables["matches"] if v["id"] == mid), {})
+                if "players" not in available:
+                    m["players"] = previous.get("players", [])
+                if "team_stats" not in available or not sample.get("lineups", {}).get("ok"):
+                    for side in ("home", "away"):
+                        old_side = previous.get(side, {})
+                        m[side] = {
+                            **old_side,
+                            **{k: v for k, v in m[side].items() if v is not None or k not in old_side},
+                        }
                 if "shots" not in available:
                     m["shots"] = []
                 m["detailCollected"] = all(
