@@ -139,3 +139,37 @@ test("a refreshed Messi projection adds new titles and retains the verified base
   );
   assert.match(result.sourceUrl, /^https:\/\/en\.wikipedia\.org\//);
 });
+
+test("a newly sourced edition extends known years without double-counting season formats", async () => {
+  const fetcher = async () => ({
+    ok: true,
+    json: async () => ({
+      available: true,
+      honours: [
+        {
+          name: "MLS Cup",
+          team: "Inter Miami",
+          category: "team",
+          seasons: ["2026"],
+        },
+        {
+          name: "UEFA Champions League",
+          team: "Barcelona",
+          category: "team",
+          seasons: ["2005–06", "2008–09", "2010–11", "2014–15"],
+        },
+      ],
+    }),
+  });
+  const result = await loadPlayerHonours(MESSI_ID, "Lionel Messi", fetcher);
+  const mls = result.groups
+    .find((g) => g.group === "Inter Miami")
+    .items.find((i) => i.title === "MLS Cup");
+  const champions = result.groups
+    .find((g) => g.group === "FC Barcelone")
+    .items.find((i) => i.title === "Ligue des champions");
+  assert.equal(mls.count, 2);
+  assert.match(mls.years, /2025/);
+  assert.match(mls.years, /2026/);
+  assert.equal(champions.count, 4);
+});

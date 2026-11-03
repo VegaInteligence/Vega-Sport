@@ -195,6 +195,18 @@ export function projectionGroups(rows = []) {
     .filter((group) => group.items.length);
 }
 
+function editionKey(value) {
+  const match = /^(\d{4})[–—/-](\d{2}|\d{4})$/.exec(value.trim());
+  if (!match) return value.trim();
+  const start = Number(match[1]);
+  let end = Number(match[2]);
+  if (match[2].length === 2) {
+    end += Math.floor(start / 100) * 100;
+    if (end < start) end += 100;
+  }
+  return String(end);
+}
+
 /** Preserve the verified Messi baseline while admitting newly sourced editions. */
 export function mergeMessiHonours(extra) {
   const groups = MESSI_HONOURS.map((group) => ({
@@ -214,7 +226,19 @@ export function mergeMessiHonours(extra) {
         (value) => normalized(value.title) === normalized(item.title),
       );
       if (!existing) group.items.push({ ...item });
-      else if (item.count > existing.count) Object.assign(existing, item);
+      else if (existing.years && item.years) {
+        const editions = new Map();
+        for (const year of [
+          ...existing.years.split(","),
+          ...item.years.split(","),
+        ]) {
+          const value = year.trim();
+          if (value && !editions.has(editionKey(value)))
+            editions.set(editionKey(value), value);
+        }
+        existing.count = Math.max(existing.count, item.count, editions.size);
+        existing.years = [...editions.values()].sort().reverse().join(", ");
+      } else if (item.count > existing.count) Object.assign(existing, item);
       else if (!existing.years && item.count === existing.count)
         existing.years = item.years;
     }
