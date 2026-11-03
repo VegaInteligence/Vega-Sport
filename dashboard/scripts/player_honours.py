@@ -306,7 +306,11 @@ def run(limit=100, player_id=None):
     else:
         players = candidates_from_manifest(store, seasons)
         if MESSI_ID not in players:
-            candidate = player_candidate(store, manifest, MESSI_ID)
+            try:
+                candidate = player_candidate(store, manifest, MESSI_ID)
+            except Exception as error:
+                print(json.dumps({"player": MESSI_ID, "error": type(error).__name__}), flush=True)
+                candidate = None
             if candidate:
                 players[MESSI_ID] = candidate
     # Prioritise frequently observed players, while moving past every attempted
