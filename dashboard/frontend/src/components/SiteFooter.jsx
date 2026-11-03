@@ -29,7 +29,6 @@ const groups = [
         "Modèle mathématique",
         `${repository}/blob/main/docs/METHODE_CLASSEMENT_BALLON_D_OR.md`,
       ],
-      ["Base JSON", `${repository}/blob/main/docs/JSON_DATABASE.md`],
     ],
   },
   {

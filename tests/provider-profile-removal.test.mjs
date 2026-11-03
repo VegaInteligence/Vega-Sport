@@ -106,14 +106,19 @@ test("player data retains match observations but no provider profile source", as
   const stubs = {
     react: React,
     "./UI.jsx": {
-      AsyncState: () => null,
+      AsyncState: ({ children }) =>
+        children({
+          endpoints: {
+            players: { data: [{ player: { id: "p_1" }, stats: [] }] },
+          },
+        }),
       Empty: () => null,
       Segments: () => null,
     },
     "./DataExplorer.jsx": { __esModule: true, default: () => null },
     "./PlayerMetrics.jsx": {
       __esModule: true,
-      default: () => null,
+      default: () => e("div", null, "Statistiques du joueur"),
       periodShort: String,
     },
     "../services/resources.js": {
@@ -135,9 +140,8 @@ test("player data retains match observations but no provider profile source", as
       mode: "data",
     }),
   );
-  assert.match(html, />Statistiques</);
-  assert.match(html, />Composition</);
-  assert.doesNotMatch(html, /Fiche du joueur|Fiche PitchAPI/);
+  assert.match(html, /Statistiques du joueur/);
+  assert.doesNotMatch(html, /Données brutes|Télécharger JSON|playerId|teamId/);
   assert.deepEqual(requested, ["player-match-source:m_1"]);
 });
 
@@ -196,11 +200,11 @@ test("match data keeps its analyses and omits the raw provider match profile", a
     stubs,
   );
   const html = renderToStaticMarkup(
-    e(MatchSections, { match: { id: "m_123456" }, initialSection: "archive" }),
+    e(MatchSections, { match: { id: "m_123456" }, initialSection: "events" }),
   );
   assert.match(html, />Événements</);
   assert.match(html, />Compositions</);
-  assert.match(html, />Archive complète</);
+  assert.doesNotMatch(html, /Archive complète|Données brutes|Télécharger JSON/);
   assert.match(html, /2 analyses/);
   assert.doesNotMatch(html, /Fiche du match/);
 });

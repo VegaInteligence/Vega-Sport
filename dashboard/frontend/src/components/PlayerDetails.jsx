@@ -5,6 +5,7 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { number, date, isNumber } from "../services/format.js";
 import { Modal, Rating, Media, Segments } from "./UI.jsx";
 import PlayerData from "./PlayerData.jsx";
+import MessiGoats from "./MessiGoats.jsx";
 import {
   keyFigures,
   matchRatingRank,
@@ -207,6 +208,7 @@ export function PlayerDialog() {
         </>
       }
     >
+      <MessiGoats id={row.playerId} />
       <div className="pc-tabs">
         <Segments
           label="Vue de la performance"
@@ -215,7 +217,6 @@ export function PlayerDialog() {
           items={[
             ["overview", "Synthèse"],
             ["stats", "Toutes les stats"],
-            ["data", "Données brutes"],
           ]}
         />
       </div>

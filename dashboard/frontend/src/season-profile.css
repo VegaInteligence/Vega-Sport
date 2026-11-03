@@ -64,6 +64,134 @@
 .player-season-card > .card-body {
   padding: 22px;
 }
+
+.player-honours {
+  margin-top: 24px;
+}
+.player-honours-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.player-honours-group {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+.player-honours-group h4 {
+  margin: 0 0 10px;
+  color: var(--ink-strong);
+  font-size: var(--text-lg);
+}
+.player-honours-group ul {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.player-honours-group li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--border);
+}
+.player-honours-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: var(--radius);
+  background: var(--surface-subtle);
+  color: var(--gold);
+}
+.player-honours-icon .icon {
+  width: 17px;
+  height: 17px;
+}
+.player-honours-name {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.player-honours-name strong {
+  color: var(--ink-strong);
+  font-size: var(--text-md);
+}
+.player-honours-name small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+.player-honours-count {
+  color: var(--ink-strong);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.player-honours-teaser {
+  margin-top: 22px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+.player-honours-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.player-honours-highlights span {
+  padding: 7px 10px;
+  border-radius: var(--radius);
+  color: var(--ink);
+  background: var(--surface-subtle);
+  font-size: var(--text-sm);
+}
+.messi-goats {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  overflow: hidden;
+  pointer-events: none;
+}
+.messi-goats span {
+  position: absolute;
+  bottom: -80px;
+  left: var(--goat-left);
+  font-size: clamp(32px, 4vw, 58px);
+  opacity: 0;
+  animation: messi-goat-arrive 4s ease-out var(--goat-delay) both;
+}
+@keyframes messi-goat-arrive {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(-15deg) scale(0.7);
+  }
+  18% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--goat-drift), -110vh, 0) rotate(15deg)
+      scale(1.1);
+  }
+}
+@media (max-width: 760px) {
+  .player-honours-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .messi-goats {
+    display: none;
+  }
+}
 .season-player-heading,
 .season-player-identity,
 .season-player-sample,

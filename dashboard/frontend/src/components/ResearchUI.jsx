@@ -6,11 +6,9 @@ import { useResearch } from "../hooks/ResearchContext.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { SCOUT_METRICS, SCOUTING_VERSION } from "../services/scouting.js";
 import {
-  cleanResearch,
   comparisonKey,
   playerSelection,
 } from "../services/research-storage.js";
-import { download } from "../services/resources.js";
 import { number } from "../services/format.js";
 import { Card, Empty, Modal } from "./UI.jsx";
 import Icon from "./Icon.jsx";
@@ -346,73 +344,10 @@ export function SavedViews() {
 export function ResearchLists({ kind = "players" }) {
   const r = useResearch(),
     f = useFootball();
-  const [name, setName] = useState(""),
-    [error, setError] = useState("");
-  const input = useRef();
+  const [name, setName] = useState("");
   const entries = r.currentList.entries.filter((item) => item.kind === kind);
   return (
-    <Card
-      title="Mes listes"
-      action={
-        <>
-          <button
-            className="button button-secondary"
-            onClick={() =>
-              download(
-                "statarena-recherches.json",
-                JSON.stringify(r.data, null, 2),
-              )
-            }
-          >
-            <Icon name="download" />
-            Exporter JSON
-          </button>
-          <button
-            className="button button-secondary"
-            onClick={() => input.current.click()}
-          >
-            Importer
-          </button>
-          <input
-            ref={input}
-            className="sr-only"
-            type="file"
-            accept="application/json,.json"
-            aria-label="Importer des recherches"
-            onChange={async (event) => {
-              const file = event.target.files?.[0];
-              if (!file) return;
-              try {
-                if (file.size > 10 * 1024 * 1024)
-                  throw new Error("Le fichier dépasse 10 Mo.");
-                const imported = cleanResearch(JSON.parse(await file.text()));
-                // Keep existing lists when importing; imported names are independently removable.
-                r.update((previous) => ({
-                  ...previous,
-                  lists: [
-                    ...previous.lists,
-                    ...imported.lists.map((list, i) => ({
-                      ...list,
-                      id: `import-${Date.now()}-${i}`,
-                    })),
-                  ],
-                  templates: [...previous.templates, ...imported.templates],
-                  views: [...previous.views, ...imported.views],
-                }));
-                setError("");
-              } catch (issue) {
-                setError(
-                  issue instanceof SyntaxError
-                    ? "Ce fichier n’est pas un JSON valide."
-                    : issue.message,
-                );
-              }
-              event.target.value = "";
-            }}
-          />
-        </>
-      }
-    >
+    <Card title="Mes listes">
       <div className="research-toolbar">
         <label>
           Liste
@@ -478,11 +413,6 @@ export function ResearchLists({ kind = "players" }) {
           </button>
         )}
       </div>
-      {error && (
-        <p role="alert" className="notice notice-warning">
-          {error}
-        </p>
-      )}
       {entries.length ? (
         <ul className="research-saved-list">
           {entries.map((entry) => (
@@ -522,7 +452,7 @@ export function ResearchLists({ kind = "players" }) {
   );
 }
 
-export function ReportButton({ title, context, children, data }) {
+export function ReportButton({ title, context, children }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -551,27 +481,6 @@ export function ReportButton({ title, context, children, data }) {
                   onClick={() => window.print()}
                 >
                   Imprimer / PDF
-                </button>
-                <button
-                  className="button button-secondary"
-                  onClick={() =>
-                    download(
-                      "statarena-rapport.json",
-                      JSON.stringify(
-                        {
-                          version: SCOUTING_VERSION,
-                          title,
-                          context,
-                          generatedAt: new Date().toISOString(),
-                          data,
-                        },
-                        null,
-                        2,
-                      ),
-                    )
-                  }
-                >
-                  Exporter JSON
                 </button>
               </div>
             </Modal>

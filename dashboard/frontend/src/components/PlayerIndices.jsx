@@ -11,8 +11,6 @@ import {
   SCOUTING_VERSION,
 } from "../services/scouting.js";
 import { cleanIndex } from "../services/research-storage.js";
-import { csvString } from "../model.js";
-import { download } from "../services/resources.js";
 import { number } from "../services/format.js";
 import { Card, Empty, Modal, Pager } from "./UI.jsx";
 import { BookmarkButton, MetricInfo, SavedViews } from "./ResearchUI.jsx";
@@ -78,39 +76,6 @@ export default function PlayerIndices({ rows, profiles }) {
             onClick={() => setMethod(true)}
           >
             Méthode
-          </button>
-          <button
-            className="button button-secondary"
-            onClick={() =>
-              download(
-                "statarena-indice.csv",
-                csvString(
-                  [
-                    "joueur_id",
-                    "joueur",
-                    "saison",
-                    "modele",
-                    "version",
-                    "score",
-                    "minutes",
-                    "indicateurs",
-                  ],
-                  visible.map((item) => [
-                    item.row.playerId,
-                    item.row.name,
-                    f.season,
-                    config.name,
-                    SCOUTING_VERSION,
-                    item.index.value,
-                    item.row.profile.minutes,
-                    JSON.stringify(item.index.parts),
-                  ]),
-                ),
-                "text/csv;charset=utf-8",
-              )
-            }
-          >
-            Exporter CSV
           </button>
         </>
       }

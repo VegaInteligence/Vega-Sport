@@ -12,14 +12,12 @@ import PlayerWorkspace from "../components/PlayerWorkspace.jsx";
 import { ResearchComparisonTray } from "../components/ResearchUI.jsx";
 import { aggregateSeasonPlayers } from "../services/season-player.js";
 import {
-  directoryCSV,
   filterPlayerAverages,
   playerAverage,
   playerDirectoryScope,
   searchPlayerAverages,
   sortPlayerAverages,
 } from "../services/player-directory.js";
-import { download } from "../services/resources.js";
 import {
   Card,
   Rating,
@@ -105,21 +103,12 @@ export default function PlayersPage() {
     ["saves", "Arrêts"],
     ["goalsPrevented", "Buts évités"],
   ];
-  const exportCurrent = () =>
-    id
-      ? f.exportRows(mode, rows)
-      : download(
-          "statarena-joueurs-moyennes.csv",
-          directoryCSV(directoryRows, mode, research.data.settings.columns),
-          "text/csv;charset=utf-8",
-        );
   return (
     <Layout
       path="/joueurs/"
       title="Joueurs"
       filters
       filterKind="players"
-      onExport={exportCurrent}
       performanceComparison={Boolean(id)}
     >
       {id && (
@@ -140,19 +129,7 @@ export default function PlayersPage() {
       )}
       {id ? (
         profileView === "matches" && (
-          <Card
-            title={`Matchs de ${rows[0]?.name || id}`}
-            action={
-              <>
-                <button
-                  className="button button-secondary"
-                  onClick={exportCurrent}
-                >
-                  Exporter CSV
-                </button>
-              </>
-            }
-          >
+          <Card title={`Matchs de ${rows[0]?.name || "ce joueur"}`}>
             <Segments
               label="Mode des statistiques"
               value={mode}
@@ -273,7 +250,6 @@ export default function PlayersPage() {
           onSort={setSort}
           mode={mode}
           onMode={setMode}
-          onExport={exportCurrent}
         />
       )}
       <ResearchComparisonTray performanceComparison={Boolean(id)} />

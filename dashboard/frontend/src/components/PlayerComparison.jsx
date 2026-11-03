@@ -22,8 +22,7 @@ import {
   loadPlayerSeason,
   playerRoutes,
 } from "../services/scouting-history.js";
-import { useResource, download } from "../services/resources.js";
-import { csvString } from "../model.js";
+import { useResource } from "../services/resources.js";
 import { isNumber, number } from "../services/format.js";
 import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
 import { AsyncState, Empty, Modal, Segments } from "./UI.jsx";
@@ -179,10 +178,6 @@ function ComparisonContent({ samples, basis, keys, withMedian, minMinutes }) {
       </table>
     </div>
   );
-  const exportRows = [
-    "indicateur",
-    ...samples.map((s) => `${s.name} ${s.season}`),
-  ];
   return (
     <>
       {keys.length >= 3 && (
@@ -217,24 +212,6 @@ function ComparisonContent({ samples, basis, keys, withMedian, minMinutes }) {
       )}
       {table}
       <div className="research-toolbar">
-        <button
-          className="button button-secondary"
-          onClick={() =>
-            download(
-              "statarena-comparaison-joueurs.csv",
-              csvString(
-                exportRows,
-                keys.map((key) => [
-                  SCOUT_METRICS[key].label,
-                  ...samples.map((sample, i) => value(sample, i, key)),
-                ]),
-              ),
-              "text/csv;charset=utf-8",
-            )
-          }
-        >
-          Exporter CSV
-        </button>
         <ReportButton
           title="Comparaison de joueurs"
           context={`${basis} · ${minMinutes} minutes minimum · ${samples.map((item) => item.season).join(" / ")}`}

@@ -302,7 +302,6 @@ export default function Layout({
   actions,
   className = "",
   subnav,
-  onExport,
   performanceComparison = true,
   children,
 }) {
@@ -340,20 +339,7 @@ export default function Layout({
                   </p>
                 )}
               </div>
-              {(actions ||
-                (filters && !["fixtures", "home"].includes(filterKind))) && (
-                <div className="heading-actions">
-                  {actions}
-                  {filters && !["fixtures", "home"].includes(filterKind) && (
-                    <button
-                      className="button button-secondary"
-                      onClick={onExport || (() => f.exportRows())}
-                    >
-                      <Icon name="download" /> Exporter les données
-                    </button>
-                  )}
-                </div>
-              )}
+              {actions && <div className="heading-actions">{actions}</div>}
             </div>
           )}
           {subnav}
@@ -374,7 +360,13 @@ export default function Layout({
         />
       </div>
       <PlayerDialog />
-      {performanceComparison && (!(path === "/joueurs/" && research?.data.comparison.length && research.comparisonKind === "players") || f.comparing) && <Comparison />}
+      {performanceComparison &&
+        (!(
+          path === "/joueurs/" &&
+          research?.data.comparison.length &&
+          research.comparisonKind === "players"
+        ) ||
+          f.comparing) && <Comparison />}
     </>
   );
 }

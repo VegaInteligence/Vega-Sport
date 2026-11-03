@@ -35,19 +35,22 @@ import {
   ResearchTabs,
 } from "./ResearchUI.jsx";
 import { ResearchRadar } from "./ResearchCharts.jsx";
+import PlayerHonours from "./PlayerHonours.jsx";
+import MessiGoats from "./MessiGoats.jsx";
+import { MESSI_ID } from "../services/player-honours.js";
+import { useResource } from "../services/resources.js";
 
 const Evolution = lazy(() => import("./PlayerEvolution.jsx"));
 const Similarity = lazy(() => import("./PlayerSimilarity.jsx"));
 const SeasonShots = lazy(() => import("./SeasonShots.jsx"));
-const PlayerData = lazy(() => import("./PlayerData.jsx"));
 const TABS = [
   ["overview", "Vue d’ensemble"],
+  ["honours", "Palmarès"],
   ["stats", "Statistiques"],
   ["similar", "Profils similaires"],
   ["evolution", "Évolution"],
   ["compare", "Comparer"],
   ["matches", "Matchs"],
-  ["data", "Données"],
 ];
 
 export function PlayerMetricTable({ profile, keys, mode, cohorts }) {
@@ -214,6 +217,12 @@ export default function PlayerSeasonProfile({
   const f = useFootball(),
     params = useSearchParams();
   const profile = useMemo(() => aggregateSeason(rows, id), [rows, id]);
+  const missingIdentity = useResource(
+    `player-identity:${id}`,
+    async () =>
+      (await f.client.request(`players/${encodeURIComponent(id)}`)).data,
+    !profile.matches && id !== MESSI_ID && Boolean(f.client),
+  );
   const profiles = useMemo(
     () => allProfiles || aggregateSeasonPlayers(scopeRows),
     [allProfiles, scopeRows],
@@ -289,14 +298,32 @@ export default function PlayerSeasonProfile({
       profile: aggregateSeason(values, id),
     }));
   }, [profile.rows, id]);
-  if (!profile.matches)
+  if (!profile.matches) {
+    const identity =
+      id === MESSI_ID
+        ? { name: "Lionel Messi" }
+        : missingIdentity.value ||
+          f.data.appearances?.find((row) => row.playerId === id);
     return (
-      <Card title="Fiche joueur">
+      <Card className="player-season-card research-player-profile">
+        <MessiGoats id={id} />
+        {identity?.name && (
+          <div className="season-player-identity">
+            <Media
+              name={identity.name}
+              url={identity.image_url || identity.imageUrl}
+              className="player-avatar season-player-portrait"
+            />
+            <h2>{identity.name}</h2>
+          </div>
+        )}
         <Empty>
           Aucune performance avec des minutes connues pour ces filtres.
         </Empty>
+        {identity?.name && <PlayerHonours id={id} name={identity.name} />}
       </Card>
     );
+  }
   const metricTable = (
     <PlayerMetricTable
       profile={profile}
@@ -311,6 +338,7 @@ export default function PlayerSeasonProfile({
       : ["goals", "assists", "xg", "xa"];
   return (
     <Card className="player-season-card research-player-profile">
+      <MessiGoats id={id} />
       <div className="season-player-heading">
         <div className="season-player-identity">
           <Media
@@ -536,6 +564,24 @@ export default function PlayerSeasonProfile({
                   )}
                 </div>
               </div>
+              {id === MESSI_ID && (
+                <section className="player-honours-teaser">
+                  <div className="season-section-heading">
+                    <h3>Palmarès</h3>
+                    <button
+                      className="inline-link"
+                      onClick={() => change("honours")}
+                    >
+                      Voir le palmarès
+                    </button>
+                  </div>
+                  <div className="player-honours-highlights">
+                    <span>Coupe du monde 2022</span>
+                    <span>4 Ligues des champions</span>
+                    <span>8 Ballons d’Or</span>
+                  </div>
+                </section>
+              )}
               <section className="season-recent">
                 <div className="season-section-heading">
                   <h3>Dernières performances</h3>
@@ -647,6 +693,7 @@ export default function PlayerSeasonProfile({
           {view === "similar" && (
             <Similarity profile={profile} cohorts={cohorts} />
           )}
+          {view === "honours" && <PlayerHonours id={id} name={profile.name} />}
           {view === "evolution" && <Evolution id={id} profile={profile} />}
           {view === "compare" && (
             <ProfileComparison
@@ -665,7 +712,6 @@ export default function PlayerSeasonProfile({
               </span>
             </div>
           )}
-          {view === "data" && <PlayerData row={profile.rows[0]} mode="data" />}
         </Suspense>
       </div>
     </Card>

@@ -26,8 +26,7 @@ import {
   orderCompetitionMatches,
 } from "../services/competition-matches.js";
 import { normalizeText, seasonLabel } from "../services/format.js";
-import { useResource, json, download } from "../services/resources.js";
-import { csvString } from "../model.js";
+import { useResource, json } from "../services/resources.js";
 import { dataUrl } from "../data-url.js";
 import CompetitionHighlights from "../components/CompetitionHighlights.jsx";
 import SeasonSelect from "../components/SeasonSelect.jsx";
@@ -98,22 +97,6 @@ export function SupplementalPanel({
               ["goals", "Buts"],
             ]}
           />
-          <button
-            className="button button-secondary"
-            onClick={() => {
-              const keys = [...new Set(rows.flatMap((r) => Object.keys(r)))];
-              download(
-                `autres-competitions-${id}-${kind}.csv`,
-                csvString(
-                  keys,
-                  rows.map((r) => keys.map((k) => r[k])),
-                ),
-                "text/csv;charset=utf-8",
-              );
-            }}
-          >
-            Exporter CSV
-          </button>
           <div className="table-scroll">
             {rows.length ? (
               <table className="data-table">

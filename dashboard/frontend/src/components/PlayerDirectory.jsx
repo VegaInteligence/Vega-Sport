@@ -13,14 +13,7 @@ import {
   SavedViews,
 } from "./ResearchUI.jsx";
 const labels = { matches: "Matchs", minutes: "Min. moy.", rating: "Note" };
-export default function PlayerDirectory({
-  rows,
-  sort,
-  onSort,
-  mode,
-  onMode,
-  onExport,
-}) {
+export default function PlayerDirectory({ rows, sort, onSort, mode, onMode }) {
   const f = useFootball(),
     r = useResearch();
   const [page, setPage] = useState({ rows: null, value: 1 });
@@ -42,9 +35,6 @@ export default function PlayerDirectory({
             includeMeta
             onChange={(columns) => r.setSettings({ columns })}
           />
-          <button className="button button-secondary" onClick={onExport}>
-            Exporter CSV
-          </button>
         </>
       }
     >

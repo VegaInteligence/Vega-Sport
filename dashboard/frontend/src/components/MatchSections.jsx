@@ -9,13 +9,24 @@ import {
   Media,
 } from "./UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
-import { useResource, download, json } from "../services/resources.js";
-import DataExplorer from "./DataExplorer.jsx";
+import { useResource } from "../services/resources.js";
 import PlayerMetrics, { periodLabel } from "./PlayerMetrics.jsx";
 import { MATCH_SECTIONS, number, isNumber } from "../services/format.js";
 import { ShotMap, XgTimeline } from "./Charts.jsx";
 import { MatchLink } from "./MatchLink.jsx";
-const MATCH_ANALYSES = MATCH_SECTIONS.filter(([key]) => key !== "match");
+const MATCH_ANALYSES = MATCH_SECTIONS.filter(([key]) =>
+  [
+    "lineups",
+    "players",
+    "players/halves",
+    "shots",
+    "events",
+    "momentum",
+    "heatmaps",
+    "advanced/network",
+    "h2h",
+  ].includes(key),
+);
 export function Lineups({ payload }) {
   const f = useFootball();
   return (
@@ -595,18 +606,16 @@ export function SectionContent({
     case "h2h":
       return (
         <>
-          <StructuredData
-            value={Object.fromEntries(
-              Object.entries(payload).filter(([k]) => k !== "recent_matches"),
-            )}
-          />
           {(payload.recent_matches || []).map((m, i) => (
             <MatchLink key={m.id || m.match?.id || i} match={m} />
           ))}
+          {!payload.recent_matches?.length && (
+            <Empty>Aucune confrontation disponible.</Empty>
+          )}
         </>
       );
     default:
-      return <StructuredData value={payload} />;
+      return <Empty>Cette analyse n’est pas disponible.</Empty>;
   }
 }
 export function MatchSections({
@@ -616,16 +625,10 @@ export function MatchSections({
 }) {
   const f = useFootball(),
     [section, setSection] = useState(initialSection),
-    [mode, setMode] = useState("analysis"),
     [version, setVersion] = useState(0);
   const result = useResource(
     `section:${match.id}:${section}:${f.configured}:${version}`,
     async () => {
-      if (section === "archive")
-        return {
-          data: await json(`/api/archive/matches/${match.id}`),
-          source: "snapshot",
-        };
       await f.client.ensureEndpoint(match, section, version > 0);
       const entry = f.client.payloads.get(`${match.id}:${section}`);
       if (entry.error) throw new Error(entry.error);
@@ -635,15 +638,15 @@ export function MatchSections({
   );
   return (
     <Card
-      title={showNavigation ? "Données détaillées du match" : "Compositions"}
+      title={showNavigation ? "Analyses du match" : "Compositions"}
       className="match-archive-card"
     >
       {showNavigation && (
         <div className="archive-select">
-          <label htmlFor="match-data-section">Type de données</label>
+          <label htmlFor="match-data-section">Analyse</label>
           <select
             id="match-data-section"
-            aria-label="Données détaillées du match"
+            aria-label="Analyse du match"
             value={section}
             onChange={(e) => {
               setSection(e.target.value);
@@ -655,7 +658,6 @@ export function MatchSections({
                 {label}
               </option>
             ))}
-            <option value="archive">Archive complète</option>
           </select>
           <span>{MATCH_ANALYSES.length} analyses</span>
         </div>
@@ -665,52 +667,14 @@ export function MatchSections({
       >
         {(value) => (
           <div className="archive-payload" data-section={section}>
-            <div className="table-toolbar">
-              <span />
-              <button
-                className="button button-secondary"
-                onClick={() =>
-                  download(
-                    `statarena-${match.id}-${section.replaceAll("/", "-")}.json`,
-                    JSON.stringify(
-                      {
-                        source: value.source,
-                        matchId: match.id,
-                        section,
-                        data: value.data,
-                      },
-                      null,
-                      2,
-                    ),
-                  )
-                }
-              >
-                Télécharger JSON
-              </button>
-            </div>
             {value.warning && <p role="status">{value.warning}</p>}
-            {showNavigation && section !== "archive" && (
-              <Segments
-                label="Affichage des données du match"
-                value={mode}
-                items={[
-                  ["analysis", "Analyse"],
-                  ["source", "Données brutes"],
-                ]}
-                onChange={setMode}
-              />
-            )}
-            {section === "archive" || mode === "source" ? (
-              <DataExplorer key={section} value={value.data} />
-            ) : (
-              <SectionContent
-                key={match.id + section}
-                match={match}
-                section={section}
-                payload={value.data}
-                onPlayer={f.setPlayer}
-              />
-            )}
+            <SectionContent
+              key={match.id + section}
+              match={match}
+              section={section}
+              payload={value.data}
+              onPlayer={f.setPlayer}
+            />
           </div>
         )}
       </AsyncState>

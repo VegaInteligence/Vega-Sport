@@ -5,8 +5,6 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
 import { profileValue, SCOUT_METRICS } from "../services/scouting.js";
 import { isNumber, number } from "../services/format.js";
-import { csvString } from "../model.js";
-import { download } from "../services/resources.js";
 import { Card, Empty, Pager, Segments } from "./UI.jsx";
 import {
   BookmarkButton,
@@ -110,35 +108,6 @@ export default function PlayerExplorer({ rows, mode, onMode }) {
             onClick={() => exportChart(chart, "statarena-exploration")}
           >
             Exporter SVG
-          </button>
-          <button
-            className="button button-secondary"
-            onClick={() =>
-              download(
-                "statarena-exploration.csv",
-                csvString(
-                  [
-                    "player_id",
-                    "joueur",
-                    "saison",
-                    "base",
-                    xKey,
-                    ...(view === "scatter" ? [yKey] : []),
-                  ],
-                  points.map((p) => [
-                    p.row.playerId,
-                    p.row.name,
-                    f.season,
-                    mode,
-                    p.x,
-                    ...(view === "scatter" ? [p.y] : []),
-                  ]),
-                ),
-                "text/csv;charset=utf-8",
-              )
-            }
-          >
-            Exporter CSV
           </button>
         </>
       }

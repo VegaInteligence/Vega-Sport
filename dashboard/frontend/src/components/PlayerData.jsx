@@ -1,174 +1,55 @@
 import React, { useState } from "react";
 import { AsyncState, Empty, Segments } from "./UI.jsx";
-import DataExplorer from "./DataExplorer.jsx";
 import PlayerMetrics, { periodShort } from "./PlayerMetrics.jsx";
-import { useResource, json, download } from "../services/resources.js";
+import { useResource, json } from "../services/resources.js";
 
-const sources = [
-  ["performance", "Performance"],
-  ["players", "Statistiques"],
-  ["player_halves", "Par mi-temps"],
-  ["advanced_players", "Analyse avancée"],
-  ["shots", "Tirs"],
-  ["heatmaps", "Carte d’activité"],
-  ["events", "Événements"],
-  ["lineups", "Composition"],
-  ["pass_networks", "Réseau de passes de l’équipe"],
-];
-function containsPlayer(value, id) {
-  if (value === id) return true;
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    Object.values(value).some((v) => containsPlayer(v, id))
+export default function PlayerData({ row }) {
+  const [period, setPeriod] = useState("All");
+  const resource = useResource(`player-match-source:${row.matchId}`, () =>
+    json(`/api/archive/matches/${row.matchId}`),
   );
-}
-function playerSource(archive, source, row) {
-  const entry = archive.endpoints?.[source];
-  if (!entry)
-    return { status: null, data: null, error: "Données non collectées." };
-  const data = entry.data,
-    id = row.playerId;
-  let selected = data;
-  if (Array.isArray(data))
-    selected = data.filter((item) => item.player?.id === id);
-  else if (data && typeof data === "object") {
-    selected = { ...data };
-    if (Array.isArray(data.players))
-      selected.players = data.players.filter((p) => p.player?.id === id);
-    if (source === "shots")
-      selected.periods = (data.periods || []).map((p) => ({
-        ...p,
-        shots: (p.shots || []).filter((s) => s.player?.id === id),
-      }));
-    if (source === "heatmaps")
-      selected.teams = (data.teams || []).filter(
-        (t) => t.team?.id === row.teamId,
-      );
-    if (source === "events")
-      selected.events = (data.events || []).filter((e) =>
-        containsPlayer(e, id),
-      );
-    if (source === "pass_networks")
-      selected.networks = (data.networks || []).filter(
-        (n) => n.team?.id === row.teamId,
-      );
-    if (source === "lineups") {
-      for (const side of ["home", "away"]) {
-        const lineup = data[side];
-        if (lineup)
-          selected[side] = {
-            ...lineup,
-            starters: (lineup.starters || []).filter((p) => p.player_id === id),
-            subs: (lineup.subs || []).filter((p) => p.player_id === id),
-          };
-      }
-    }
-  }
-  return { ...entry, data: selected };
-}
-
-export default function PlayerData({ row, mode }) {
-  const [period, setPeriod] = useState("All"),
-    [source, setSource] = useState("performance"),
-    resource = useResource(`player-match-source:${row.matchId}`, () =>
-      json(`/api/archive/matches/${row.matchId}`),
-    );
-  if (mode === "stats")
-    return (
-      <AsyncState resource={resource}>
-        {(archive) => {
-          const full = archive.endpoints?.players?.data,
-            player = (Array.isArray(full) ? full : full?.players || []).find(
-              (p) => p.player?.id === row.playerId,
-            ),
-            halves =
-              archive.endpoints?.player_halves?.data?.players?.find(
-                (p) => p.player?.id === row.playerId,
-              )?.periods || [],
-            periods = [
-              ...(player ? [{ ...player, period: "All" }] : []),
-              ...halves,
-            ],
-            selected = periods.find((p) => p.period === period) || periods[0];
-          if (!selected)
-            return (
-              <Empty>Statistiques détaillées non collectées pour ce joueur.</Empty>
-            );
+  return (
+    <AsyncState resource={resource}>
+      {(archive) => {
+        const full = archive.endpoints?.players?.data;
+        const player = (Array.isArray(full) ? full : full?.players || []).find(
+          (item) => item.player?.id === row.playerId,
+        );
+        const halves =
+          archive.endpoints?.player_halves?.data?.players?.find(
+            (item) => item.player?.id === row.playerId,
+          )?.periods || [];
+        const periods = [
+          ...(player ? [{ ...player, period: "All" }] : []),
+          ...halves,
+        ];
+        const selected =
+          periods.find((item) => item.period === period) || periods[0];
+        if (!selected)
           return (
-            <>
-              {periods.length > 1 && (
-                <div className="pc-period">
-                  <Segments
-                    label="Période des statistiques"
-                    value={selected.period}
-                    onChange={setPeriod}
-                    items={periods.map((p) => [
-                      p.period,
-                      periodShort(p.period),
-                    ])}
-                  />
-                </div>
-              )}
-              <PlayerMetrics row={selected} />
-            </>
+            <Empty>
+              Statistiques détaillées non collectées pour ce joueur.
+            </Empty>
           );
-        }}
-      </AsyncState>
-    );
-  const display = (value) => (
-    <>
-      <div className="table-toolbar">
-        <button
-          className="button button-secondary"
-          onClick={() =>
-            download(
-              `statarena-${row.id}-${source}.json`,
-              JSON.stringify(value, null, 2),
-            )
-          }
-        >
-          Télécharger JSON
-        </button>
-      </div>
-      <DataExplorer
-        key={source}
-        value={value}
-        label="Format des données du joueur"
-      />
-    </>
-  );
-  return (
-    <>
-      <div className="table-toolbar">
-        <label htmlFor="player-data-source">Type de données</label>
-        <select
-          id="player-data-source"
-          value={source}
-          onChange={(e) => setSource(e.target.value)}
-        >
-          {sources.map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
-      {source === "performance" ? (
-        display(row)
-      ) : (
-        <AsyncState resource={resource}>
-          {(archive) =>
-            display({
-              matchId: row.matchId,
-              playerId: row.playerId,
-              season: archive.season,
-              retrieved_at_utc: archive.retrieved_at_utc,
-              ...playerSource(archive, source, row),
-            })
-          }
-        </AsyncState>
-      )}
-    </>
+        return (
+          <>
+            {periods.length > 1 && (
+              <div className="pc-period">
+                <Segments
+                  label="Période des statistiques"
+                  value={selected.period}
+                  onChange={setPeriod}
+                  items={periods.map((item) => [
+                    item.period,
+                    periodShort(item.period),
+                  ])}
+                />
+              </div>
+            )}
+            <PlayerMetrics row={selected} />
+          </>
+        );
+      }}
+    </AsyncState>
   );
 }

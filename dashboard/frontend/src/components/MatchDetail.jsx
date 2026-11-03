@@ -18,8 +18,8 @@ import {
   overviewStats,
   statValue,
 } from "../services/match-data.js";
-import { download, useResource } from "../services/resources.js";
-import { csvString, seasonLabel } from "../model.js";
+import { useResource } from "../services/resources.js";
+import { seasonLabel } from "../model.js";
 import { BookmarkButton } from "./ResearchUI.jsx";
 const views = [
   ["overview", "Vue d’ensemble", "activity"],
@@ -29,7 +29,7 @@ const views = [
   ["shots", "Tirs & xG", "target"],
   ["lineups", "Compositions", "pitch"],
   ["players", "Joueurs", "players"],
-  ["data", "Données complètes", "json"],
+  ["analyses", "Analyses", "activity"],
 ];
 function MatchStatistics({ match }) {
   const f = useFootball(),
@@ -198,26 +198,6 @@ function MatchPlayer({ row, rank }) {
 function MatchPlayers({ match, players }) {
   const [scope, setScope] = useState("played");
   const rows = players.filter((r) => scope === "all" || r.minutes > 0);
-  const exportCsv = () => {
-    const fields = [
-      "name",
-      "team",
-      "minutes",
-      "rating",
-      "goals",
-      "assists",
-      "xg",
-      "xa",
-    ];
-    download(
-      `statarena-${match.id}-joueurs.csv`,
-      csvString(
-        fields,
-        rows.map((r) => fields.map((k) => r[k])),
-      ),
-      "text/csv;charset=utf-8",
-    );
-  };
   return (
     <>
       <div className="match-section-toolbar">
@@ -230,10 +210,6 @@ function MatchPlayers({ match, players }) {
             ["all", "Tous les joueurs"],
           ]}
         />
-        <button className="button button-secondary" onClick={exportCsv}>
-          <Icon name="download" />
-          Exporter CSV
-        </button>
       </div>
       <div className="match-team-players">
         {[match.home, match.away].map((team) => (
@@ -413,18 +389,6 @@ export default function MatchDetail({ match }) {
             name={`${match.home.name} – ${match.away.name}`}
             season={seasonLabel(match.season || f.season)}
           />
-          <button
-            className="button button-secondary"
-            onClick={() =>
-              download(
-                `statarena-${match.id}.json`,
-                JSON.stringify(match, null, 2),
-              )
-            }
-          >
-            <Icon name="download" />
-            Exporter le match
-          </button>
         </div>
       </div>
       <section className="match-scoreboard" aria-label="Résumé du match">
@@ -589,9 +553,9 @@ export default function MatchDetail({ match }) {
           />
         )}
         {view === "players" && <MatchPlayers match={match} players={players} />}
-        {view === "data" && (
+        {view === "analyses" && (
           <MatchSections
-            key={`${match.id}:data`}
+            key={`${match.id}:analyses`}
             match={match}
             initialSection="events"
           />

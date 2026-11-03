@@ -65,7 +65,10 @@ export default function MethodPage() {
               <a href="https://github.com/oladeeayo/open-matchday">
                 open-matchday
               </a>{" "}
-              (usage non commercial avec attribution). Fonds de carte ©{" "}
+              (usage non commercial avec attribution). Les titres de joueurs
+              disponibles proviennent aussi de{" "}
+              <a href="https://www.thesportsdb.com/">TheSportsDB</a>. Fonds de
+              carte ©{" "}
               <a href="https://www.openstreetmap.org/copyright">
                 contributeurs OpenStreetMap
               </a>
