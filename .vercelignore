@@ -1,5 +1,5 @@
 .git/
-data/
+/data/
 dashboard/node_modules/
 dashboard/frontend/node_modules/
 dashboard/frontend/.next/
