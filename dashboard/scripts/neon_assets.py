@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Copy display images into Neon; backend asset requests never fetch the CDN."""
 
-import argparse, base64, concurrent.futures, gzip, hashlib, json, re, urllib.request, urllib.error
+import argparse, base64, concurrent.futures, gzip, hashlib, json, re, time, urllib.request, urllib.error
+from collections import Counter
 from contextlib import nullcontext
 from pathlib import Path
-from threading import BoundedSemaphore
+from threading import Lock
 from neon_store import Store
 
-commons_requests = BoundedSemaphore(3)
+commons_requests = Lock()
+last_commons_request = 0.0
 
 def urls(value):
     found = set()
@@ -38,6 +40,7 @@ def main():
     p.add_argument("--files")
     p.add_argument("--count-only", action="store_true")
     p.add_argument("--limit", type=int, default=2000)
+    p.add_argument("--retry-commons", action="store_true")
     a = p.parse_args()
     found = set()
     if a.files:
@@ -60,6 +63,10 @@ def main():
         store.db.execute(
             "insert into statarena.asset_jobs(url) select url from seed_assets s where not exists(select 1 from statarena.assets a where a.url=s.url) on conflict do nothing"
         )
+        if a.retry_commons:
+            store.db.execute(
+                "update statarena.asset_jobs set next_attempt=now() where url like 'https://upload.wikimedia.org/wikipedia/commons/thumb/%'"
+            )
     rows = store.db.execute(
         "select j.url from statarena.asset_jobs j left join statarena.assets a on a.url=j.url where a.url is null and next_attempt<=now() order by attempts,url limit %s",
         (a.limit,),
@@ -67,16 +74,28 @@ def main():
     print("Pending asset batch:", len(rows), flush=True)
 
     def transfer(row):
+        global last_commons_request
         url = row[0]
         try:
             req = urllib.request.Request(
                 url, headers={"User-Agent": "StatArena/1.0 (https://github.com/OrionQuantPlatform/STATARENA)"}
             )
-            limit = commons_requests if url.startswith("https://upload.wikimedia.org/") else nullcontext()
+            is_commons = url.startswith("https://upload.wikimedia.org/")
+            limit = commons_requests if is_commons else nullcontext()
             with limit:
-                with urllib.request.urlopen(req, timeout=20) as response:
-                    content_type = response.headers.get_content_type()
-                    body = response.read(4 * 1024 * 1024 + 1)
+                for attempt in range(4):
+                    if is_commons:
+                        time.sleep(max(0, 0.3 - (time.monotonic() - last_commons_request)))
+                        last_commons_request = time.monotonic()
+                    try:
+                        with urllib.request.urlopen(req, timeout=20) as response:
+                            content_type = response.headers.get_content_type()
+                            body = response.read(4 * 1024 * 1024 + 1)
+                        break
+                    except urllib.error.HTTPError as e:
+                        if not is_commons or e.code not in (429, 500, 502, 503, 504) or attempt == 3:
+                            raise
+                        time.sleep(min(8, 2 ** attempt))
             if not content_type.startswith("image/") or len(body) > 4 * 1024 * 1024:
                 raise ValueError("Invalid image response")
             sha = hashlib.sha256(body).hexdigest()
@@ -99,9 +118,13 @@ def main():
                 raise ValueError("Image server checksum mismatch")
             return url, path, len(body), bytes.fromhex(sha), md5, content_type, None
         except Exception as e:
-            return url, None, 0, None, None, None, type(e).__name__
+            error = type(e).__name__
+            if isinstance(e, urllib.error.HTTPError):
+                error += ":" + str(e.code)
+            return url, None, 0, None, None, None, error
 
     success = failed = total = 0
+    errors = Counter()
     batch = []
 
     def flush():
@@ -128,12 +151,13 @@ def main():
             for url, path, size, sha, etag, ctype, error in batch:
                 if error:
                     failed += 1
+                    errors[error] += 1
                 else:
                     success += 1
                     total += size
         batch.clear()
         print(
-            json.dumps({"images": success, "failed": failed, "bytes": total}),
+            json.dumps({"images": success, "failed": failed, "bytes": total, "errors": dict(errors)}),
             flush=True,
         )
 

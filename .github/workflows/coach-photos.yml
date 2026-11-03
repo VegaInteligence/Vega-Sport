@@ -42,8 +42,8 @@ jobs:
       - name: Refresh priority club portraits
         run: node dashboard/scripts/neon_coach_photos.mjs --priority-only
       - name: Store priority portraits
-        run: python dashboard/scripts/neon_assets.py --limit 3000
+        run: python dashboard/scripts/neon_assets.py --limit 3000 --retry-commons
       - name: Refresh remaining coach portraits
         run: node dashboard/scripts/neon_coach_photos.mjs --remaining-only
       - name: Store remaining portraits
-        run: python dashboard/scripts/neon_assets.py --limit 3000
+        run: python dashboard/scripts/neon_assets.py --limit 3000 --retry-commons
