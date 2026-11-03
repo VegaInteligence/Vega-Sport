@@ -1,4 +1,19 @@
 import { EUROPE_FOCUS } from "../../../shared/competition-scope.js";
+import { seasonLabel } from "./format.js";
+
+// A calendar-year season and its archive bucket describe the same edition.
+// Keep the provider's season identifier for fixture requests.
+export function mergeCompetitionSeasons(provider = [], archived = []) {
+  const represented = new Set(provider.map(seasonLabel));
+  return [
+    ...new Set([
+      ...provider,
+      ...archived.filter((season) => !represented.has(seasonLabel(season))),
+    ]),
+  ]
+    .sort()
+    .reverse();
+}
 
 export const FEATURED_LEAGUE_IDS = EUROPE_FOCUS.slice(0, 7).map(
   (item) => item.id,

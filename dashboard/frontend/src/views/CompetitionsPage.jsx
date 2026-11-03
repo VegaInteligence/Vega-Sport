@@ -56,6 +56,7 @@ import {
   competitionLabel,
   competitionCountry,
   competitionCountryLabel,
+  mergeCompetitionSeasons,
 } from "../services/competition-selector.js";
 import {
   PREFERRED_COMPETITION_KEY,
@@ -167,6 +168,13 @@ function Fixtures({ competition, day, initialSeason }) {
       competition.cupWorker),
   );
   const [view, setView] = useState(supported ? "standings" : "matches");
+  useEffect(() => {
+    if (competition?.seasons?.includes(season)) return;
+    const equivalent = competition?.seasons?.find(
+      (item) => seasonLabel(item) === seasonLabel(season),
+    );
+    if (equivalent) setSeason(equivalent);
+  }, [competition?.seasons, season]);
   const [status, setStatus] = useState(() =>
     defaultCompetitionMatchStatus(day),
   );
@@ -451,24 +459,20 @@ export default function CompetitionsPage() {
   const nativeCatalog = (f.allCatalog || f.catalog).map((c) => ({
     ...c,
     country: referenceCountries.get(c.id) || c.country,
-    seasons: [
-      ...new Set([
-        ...(c.seasons || []),
-        ...f.manifest.seasons.flatMap((s) =>
-          s.chunks
-            .filter((chunk) => chunk.leagueId === c.id)
-            .flatMap(
-              (chunk) =>
-                chunk.competitions?.find((item) => item.id === c.id)?.seasons ||
-                chunk.meta?.catalogSeasons ||
-                chunk.meta?.seasons ||
-                [],
-            ),
-        ),
-      ]),
-    ]
-      .sort()
-      .reverse(),
+    seasons: mergeCompetitionSeasons(
+      c.seasons || [],
+      f.manifest.seasons.flatMap((s) =>
+        s.chunks
+          .filter((chunk) => chunk.leagueId === c.id)
+          .flatMap(
+            (chunk) =>
+              chunk.competitions?.find((item) => item.id === c.id)?.seasons ||
+              chunk.meta?.catalogSeasons ||
+              chunk.meta?.seasons ||
+              [],
+          ),
+      ),
+    ),
   }));
   const expandedCatalog = mergeCupCatalog(
     nativeCatalog,

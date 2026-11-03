@@ -2,7 +2,12 @@ import React, { useMemo } from "react";
 import Link from "next/link";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { Empty, Media } from "./UI.jsx";
-import { normalizeText, number, date } from "../services/format.js";
+import {
+  normalizeText,
+  number,
+  date,
+  seasonLabel,
+} from "../services/format.js";
 import { useResource, json } from "../services/resources.js";
 import { SPORTSCORE_LEAGUES } from "../services/sportscore-standings.js";
 import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
@@ -29,6 +34,7 @@ import {
   standingsFromFixtures,
   hasCompleteHomeAwaySchedule,
 } from "../services/competition-standings.js";
+import { matchStandingsClubs } from "../services/standings-clubs.js";
 const teamKey = (name) => normalizeText(name).replace(/[^a-z0-9]/g, "");
 const isMatchTeam = (row, club, teams) =>
   teams.some(
@@ -110,6 +116,20 @@ function ZoneLegend({ zones, places }) {
 }
 const followedTeam = (row, club, followed) =>
   followed.length > 0 && isMatchTeam(row, club, followed);
+function clubHref(f, competition, season, cup, row, club) {
+  const bucket = seasonLabel(season);
+  return f.href("/clubs/", {
+    id: club?.id || "",
+    clubLeague: competition.id,
+    clubLeagueName: competition.name || "",
+    clubSeason: String(season),
+    clubTeam: row.name,
+    clubCup: cup ? "1" : "",
+    season: f.manifest?.seasons?.some((item) => item.id === bucket)
+      ? bucket
+      : f.season,
+  });
+}
 function ResultStandings({
   matches,
   source,
@@ -201,7 +221,7 @@ function ResultStandings({
                 <th scope="row">
                   <Link
                     className="standings-team"
-                    href={f.href("/clubs/", { id: row.id })}
+                    href={clubHref(f, competition, season, false, row, row)}
                   >
                     <Media name={row.name} url={row.imageUrl} />{" "}
                     <span>{row.name}</span>
@@ -243,29 +263,21 @@ function SportscoreTable({
   matches,
   highlightTeams,
   places,
-  competitionId,
+  competition,
+  season,
+  cup,
 }) {
   const f = useFootball();
   const followed = useFollowedClubs();
   // European places only apply to a single league table.
   const zones = tableZones(table.rows.length, {
     european: multiple ? [] : places?.places || [],
-    league: multiple ? [] : leagueZones(competitionId, table.rows.length),
+    league: multiple ? [] : leagueZones(competition.id, table.rows.length),
   });
-  const teams = useMemo(() => {
-    const result = new Map();
-    for (const match of matches) {
-      for (const team of [match.home_team, match.away_team]) {
-        if (!team?.id || !team.name) continue;
-        const key = normalizeText(team.name).replace(/[^a-z0-9]/g, "");
-        if (!key) continue;
-        if (result.has(key) && result.get(key)?.id !== team.id)
-          result.set(key, null);
-        else if (!result.has(key)) result.set(key, team);
-      }
-    }
-    return result;
-  }, [matches]);
+  const clubs = useMemo(
+    () => matchStandingsClubs(table.rows, matches),
+    [table.rows, matches],
+  );
   const display = (value) => (value == null ? "—" : number(value));
   return (
     <section className="standings-group">
@@ -319,7 +331,7 @@ function SportscoreTable({
           <tbody>
             {table.rows.map((row, i) => {
               const key = normalizeText(row.name).replace(/[^a-z0-9]/g, "");
-              const club = teams.get(key);
+              const club = clubs[i];
               const identity = (
                 <>
                   <Media name={row.name} url={row.imageUrl} />
@@ -338,16 +350,12 @@ function SportscoreTable({
                 >
                   <td>{display(row.position)}</td>
                   <th scope="row">
-                    {club ? (
-                      <Link
-                        className="standings-team"
-                        href={f.href("/clubs/", { id: club.id })}
-                      >
-                        {identity}
-                      </Link>
-                    ) : (
-                      <span className="standings-team">{identity}</span>
-                    )}
+                    <Link
+                      className="standings-team"
+                      href={clubHref(f, competition, season, cup, row, club)}
+                    >
+                      {identity}
+                    </Link>
                   </th>
                   <td className="standings-points">{display(row.points)}</td>
                   <td>{display(row.played)}</td>
@@ -421,7 +429,9 @@ export default function CompetitionStandings({
             matches={matches}
             highlightTeams={highlightTeams}
             places={places}
-            competitionId={competition.id}
+            competition={competition}
+            season={season}
+            cup={cup}
           />
         ))}
         {tables.length > 1 && tables.some((table) => !table.name) && (

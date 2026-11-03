@@ -11,11 +11,14 @@ import React, {
 } from "react";
 import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
-import { useFootball } from "../hooks/FootballContext.jsx";
+import { FootballContext, useFootball } from "../hooks/FootballContext.jsx";
 import { Media, Pager, Empty } from "../components/UI.jsx";
 import ClubWorkspace from "../components/ClubWorkspace.jsx";
+import StandingsClubProfile from "../components/StandingsClubProfile.jsx";
 import { ResearchLists, useHasSaved } from "../components/ResearchUI.jsx";
 import { clubMatchHistory } from "../services/club-matches.js";
+import { fixtureClub } from "../services/club-fixtures.js";
+import { useResource } from "../services/resources.js";
 import { normalizeText, number } from "../services/format.js";
 import {
   countryLabel,
@@ -23,6 +26,7 @@ import {
   competitionLabel,
   orderedCompetitions,
 } from "../services/competition-selector.js";
+const EMPTY_FIXTURES = [];
 
 function useDirectoryCapacity(gridRef, active, scope) {
   const [layout, setLayout] = useState({ capacity: 12, height: undefined });
@@ -90,6 +94,11 @@ export default function ClubsPage() {
   const params = useSearchParams(),
     id = params.get("id"),
     hasSavedClubs = useHasSaved("clubs");
+  const clubLeague = params.get("clubLeague") || "",
+    clubLeagueName = params.get("clubLeagueName") || "",
+    clubSeason = params.get("clubSeason") || "",
+    clubTeam = params.get("clubTeam") || "";
+  const fromStandings = Boolean(clubLeague && clubSeason && clubTeam);
   const gridRef = useRef(null);
   const clubs = useMemo(() => {
     const map = new Map();
@@ -148,8 +157,64 @@ export default function ClubsPage() {
   }, [clubs, f.data.competitions, activeCountry]);
   const activeCompetition = competitions.find((c) => c.id === competitionId);
   const activeCompetitionId = activeCompetition?.id || "all";
+  const localSelected = useMemo(
+    () =>
+      clubs.find((club) => club.id === id) ||
+      fixtureClub(f.data.fixtures, id, f.manifest.clubCountries, f.allCatalog),
+    [clubs, f.data.fixtures, f.manifest.clubCountries, f.allCatalog, id],
+  );
+  const hasLeagueFixtures = useMemo(
+    () =>
+      (f.data.fixtures || []).some(
+        (match) =>
+          (match.league?.id || match.leagueId) === clubLeague &&
+          (match.home_team?.id === id || match.away_team?.id === id),
+      ),
+    [f.data.fixtures, id, clubLeague],
+  );
+  const loadFixtures = Boolean(
+    id &&
+    !hasLeagueFixtures &&
+    fromStandings &&
+    /^l_[A-Za-z0-9]{6}$/.test(clubLeague),
+  );
+  const additional = useResource(
+    `club-fixtures:${clubLeague}:${clubSeason}`,
+    async () => {
+      const query = new URLSearchParams({ season: clubSeason, status: "all" });
+      const response = await f.client.request(
+        `leagues/${clubLeague}/matches?${query}`,
+      );
+      return (response.data?.matches || []).map((match) => ({
+        ...match,
+        season: match.season || clubSeason,
+        league: match.league || { id: clubLeague, name: clubLeagueName },
+      }));
+    },
+    loadFixtures,
+  );
+  const extraFixtures = additional.value || EMPTY_FIXTURES;
+  const selected =
+    localSelected ||
+    fixtureClub(extraFixtures, id, f.manifest.clubCountries, f.allCatalog);
+  const profileData = useMemo(
+    () =>
+      extraFixtures.length
+        ? {
+            ...f.data,
+            fixtures: [...(f.data.fixtures || []), ...extraFixtures],
+          }
+        : f.data,
+    [f.data, extraFixtures],
+  );
+  const profileContext = useMemo(
+    () =>
+      profileData === f.data
+        ? f
+        : Object.assign(Object.create(f), { data: profileData }),
+    [f, profileData],
+  );
   const search = normalizeText(useDeferredValue(query)),
-    selected = clubs.find((c) => c.id === id),
     visible = useMemo(
       () =>
         clubs.filter(
@@ -185,8 +250,8 @@ export default function ClubsPage() {
     setPaging({ key: pageKey, data: f.data, page: 1 });
   }, [pageKey, f.data]);
   const clubMatches = useMemo(
-    () => clubMatchHistory(f.data.matches, f.data.fixtures, id),
-    [f.data.matches, f.data.fixtures, id],
+    () => clubMatchHistory(profileData.matches, profileData.fixtures, id),
+    [profileData.matches, profileData.fixtures, id],
   );
   return (
     <Layout path="/clubs/" title="Clubs">
@@ -198,18 +263,34 @@ export default function ClubsPage() {
           >
             ← Tous les clubs
           </Link>
-          <ClubWorkspace
-            key={selected.id}
-            club={{
-              ...selected,
-              countryLabel:
-                selected.country === "unknown"
-                  ? ""
-                  : countryLabel(selected.country),
-            }}
-            history={clubMatches}
-          />
+          <FootballContext.Provider value={profileContext}>
+            <ClubWorkspace
+              key={selected.id}
+              club={{
+                ...selected,
+                countryLabel:
+                  selected.country === "unknown"
+                    ? ""
+                    : countryLabel(selected.country),
+              }}
+              history={clubMatches}
+            />
+          </FootballContext.Provider>
         </>
+      ) : fromStandings ? (
+        loadFixtures && additional.loading ? (
+          <div className="loading-state" role="status">
+            Chargement de l’équipe…
+          </div>
+        ) : (
+          <StandingsClubProfile
+            leagueId={clubLeague}
+            leagueName={clubLeagueName}
+            season={clubSeason}
+            name={clubTeam}
+            cup={params.get("clubCup") === "1"}
+          />
+        )
       ) : params.get("clubsView") === "saved" ||
         (!params.get("clubsView") && hasSavedClubs) ? (
         <>
