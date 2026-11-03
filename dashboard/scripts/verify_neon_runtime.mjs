@@ -76,7 +76,10 @@ try {
   );
   const head = await get("/data/dashboard-manifest.json", { method: "HEAD" });
   assert.equal(head.body.length, 0);
-  assert.equal(Number(head.r.headers.get("content-length")), body.length);
+  // The hosting proxy may omit Content-Length on HEAD; the ETag remains required.
+  const length = head.r.headers.get("content-length");
+  if (length !== null) assert.equal(Number(length), body.length);
+  assert.ok(head.r.headers.get("etag"));
   let sample;
   for (const season of manifest.seasons) {
     const chunk = season.chunks[0];

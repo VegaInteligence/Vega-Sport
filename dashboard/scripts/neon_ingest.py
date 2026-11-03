@@ -52,7 +52,7 @@ def saved(store, row):
     return value.get("data")
 
 
-def matches(store, items):
+def matches(store, items, priority=3):
     rows = []
     for m in items:
         if not isinstance(m, dict) or not re.fullmatch(
@@ -75,11 +75,18 @@ def matches(store, items):
             }
         )
         for suffix in ENDPOINTS:
-            store.enqueue("/matches/" + m["id"] + ("/" + suffix if suffix else ""))
-        store.enqueue("/matches/" + m["id"] + "/heatmaps", {"frame": "home_ltr"})
+            store.enqueue(
+                "/matches/" + m["id"] + ("/" + suffix if suffix else ""),
+                priority=priority,
+            )
+        store.enqueue(
+            "/matches/" + m["id"] + "/heatmaps",
+            {"frame": "home_ltr"},
+            priority=priority,
+        )
     if rows:
         changed = store.db.execute(
-            "insert into statarena.fixtures(id,league_id,season,day,status,body) select id,league_id,season,day,status,body from jsonb_to_recordset(%s) as r(id text,league_id text,season text,day date,status text,body jsonb) on conflict(id) do update set body=excluded.body,day=excluded.day,status=excluded.status,updated_at=now() where statarena.fixtures.body is distinct from excluded.body returning season,league_id",
+            "insert into statarena.fixtures(id,league_id,season,day,status,body) select id,league_id,season,day,status,body from jsonb_to_recordset(%s) as r(id text,league_id text,season text,day date,status text,body jsonb) on conflict(id) do update set body=statarena.fixtures.body||excluded.body,league_id=excluded.league_id,season=case when excluded.season<>'' then excluded.season else statarena.fixtures.season end,day=coalesce(excluded.day,statarena.fixtures.day),status=excluded.status,updated_at=now() where statarena.fixtures.body is distinct from statarena.fixtures.body||excluded.body or (excluded.season<>'' and statarena.fixtures.season<>excluded.season) or statarena.fixtures.league_id<>excluded.league_id returning season,league_id",
             (Jsonb(rows),),
         ).fetchall()
         partitions = set(
@@ -127,11 +134,11 @@ def discover(store, endpoint, data, mode, params=None):
             )
             for m in data.get("matches", [])
         ]
-        matches(store, items)
+        matches(store, items, priority=1 if mode == "daily" else 3)
     elif endpoint.startswith("/date/"):
-        matches(store, data.get("matches", []))
+        matches(store, data.get("matches", []), priority=1 if mode == "daily" else 3)
     elif re.fullmatch("/matches/m_[A-Za-z0-9]{6}", endpoint):
-        matches(store, [data])
+        matches(store, [data], priority=1 if mode == "daily" else 3)
     ids = identities(data)
     for identity in ids:
         kind = {"p": "players", "t": "teams"}.get(identity[0])

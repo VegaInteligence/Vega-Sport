@@ -28,7 +28,7 @@ export async function publicFile(relative, request) {
         : meta.content_type,
       "Cache-Control":
         /(?:-|\/)[a-f0-9]{24,64}\.(?:json\.gz|webp|png|jpg)$/.test(relative)
-          ? "public, max-age=31536000, immutable"
+          ? "public, max-age=31536000, s-maxage=31536000, immutable"
           : "public, max-age=0, s-maxage=60, stale-while-revalidate=30",
     };
     if (
