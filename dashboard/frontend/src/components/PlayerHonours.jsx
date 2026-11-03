@@ -40,7 +40,7 @@ export default function PlayerHonours({ id, name }) {
             <h4>{group.group}</h4>
             <ul>
               {group.items.map((item) => {
-                const image = trophyArt(item, id);
+                const image = trophyArt(item);
                 return (
                   <li key={item.title}>
                     {image && (

@@ -24,7 +24,7 @@ export const MESSI_HONOURS = [
         count: 4,
         years: "2006, 2009, 2011, 2015",
       },
-      { title: "Liga", count: 10 },
+      { title: "Liga", count: 10, trophyYear: 2018 },
       { title: "Coupe du Roi", count: 7 },
       { title: "Supercoupe d’Espagne", count: 8 },
       {
