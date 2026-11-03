@@ -68,6 +68,16 @@ class CountryWorker(Worker):
         self.todo, self.seen = deque(), set()
         self.country = 'catalogue'
         self.countries = json.loads(PROGRESS.read_text()) if PROGRESS.exists() else {}
+        self.failed_requests = []
+        self.recoveries = {}
+        # Independent retries write new archives, never the active runner's buckets.
+        for path in sorted((DATA / 'raw/pitchapi-world/refusal-retries').glob('*.json.gz')):
+            relative = path.relative_to(DATA).as_posix()
+            for ordinal, record in enumerate(read(relative)):
+                if record.get('ok') and record.get('status') == 200:
+                    request = record['request']
+                    key = request['endpoint'] + '?' + json.dumps(request.get('params', {}), sort_keys=True, separators=(',', ':'))
+                    self.recoveries[key] = (record['response']['data'], {'path': relative, 'ordinal': ordinal})
 
     def add(self, endpoint, params=None, priority=3):
         params = params or {}
@@ -101,7 +111,7 @@ class CountryWorker(Worker):
         previous = self.db.execute('select state,status,ref from jobs where url=?', (key,)).fetchone()
         if previous and previous[0] in ('downloaded','reused','unavailable'):
             return decode(json.loads(previous[2])) if previous[1] == 200 else None
-        old = self.existing(endpoint, params)
+        old = self.recoveries.get(key) or self.existing(endpoint, params)
         if old:
             value, ref = old; status, state, error = 200, 'reused', None
         else:
@@ -117,19 +127,24 @@ class CountryWorker(Worker):
         self.db.execute('update jobs set state=?,status=?,ref=?,error=? where url=?',
             (state,status,json.dumps(ref),json.dumps(error),key)); self.db.commit()
         if status == 401: raise RuntimeError('PitchAPI authentication refused')
-        if state in ('failed','blocked'): self.failures += 1
+        if state in ('failed','blocked'):
+            self.failures += 1
+            self.failed_requests.append({'endpoint':endpoint, 'params':params,
+                'status':status, 'state':state, 'error':error})
         return value
 
-    def save(self, complete=False):
+    def save(self, finished=False):
         self.db.commit()
         count = export(self.db)
-        self.countries[self.country] = {'state':'complete' if complete else 'partial',
+        state = ('complete_with_errors' if self.failures else 'complete') if finished else 'partial'
+        self.countries[self.country] = {'state':state,
             'requestsVisited':self.visited, 'failures':self.failures,
+            'failedRequests':self.failed_requests,
             'updatedAt':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())}
         atomic_json(PROGRESS,self.countries)
         print(json.dumps({'country':self.country, **self.countries[self.country],
             'globalCheckpointRequests':count,'networkRequests':self.client.requests}),flush=True)
-        if self.publishing: publish(self.country,complete)
+        if self.publishing: publish(self.country,finished)
         self.last_save = time.monotonic()
 
     def run_countries(self, selected=None):
@@ -144,10 +159,11 @@ class CountryWorker(Worker):
             groups.setdefault(league.get('country_code') or 'INT',[]).append(league)
         for country, leagues in sorted(groups.items()):
             if selected and country != selected: continue
-            if self.countries.get(country,{}).get('state') == 'complete': continue
+            if self.countries.get(country,{}).get('state') in ('complete','complete_with_errors'): continue
             self.country = country
             self.todo, self.seen = deque(), set()
             self.visited, self.failures = 0, 0
+            self.failed_requests = []
             print('Starting country '+country,flush=True)
             for league in sorted(leagues,key=lambda x:x['id']):
                 self.add('/leagues/'+league['id'])
@@ -163,8 +179,9 @@ class CountryWorker(Worker):
                 if self.visited % 100 == 0:
                     print(f'{country}: {self.visited} requests visited; {len(self.todo)} pending; {self.client.requests} HTTP',flush=True)
                 if time.monotonic()-self.last_save > 900: self.save()
-            self.save(complete=self.failures == 0)
-            if self.failures: return False
+            # Exhausting the country's queue is terminal even with recorded gaps.
+            # Only interruption (deadline/storage) requests another traversal.
+            self.save(finished=True)
         return True
 
 def main():
