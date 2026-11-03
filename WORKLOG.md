@@ -1,5 +1,20 @@
 # Worklog
 
+## Backend/cache publication and P1 — 2026-11-03
+- Current user authorization: commit/push P0, verify its actual Vercel deployment, then implement P1 match summaries, pagination and immutable publication. Preserve the parallel rematerialization operation and all existing consumers/data. No provider migration or data deletion.
+- Direction: publish only verified P0 files first; match the deployed Git SHA and check real HTTP headers/content. Isolate P1 on the resulting revision; document failure modes and write HTTP/SQL/browser workflows before changing behavior. Keep legacy routes compatible, migrate interactive consumers to bounded contracts, and retain old object versions/readers while introducing immutable storage references.
+- UX: smaller first-screen responses and explicit pagination/lazy details. DX: additive contracts and shared projections/publication helpers. AX: stable cursor/version fields, typed errors and reproducible evidence. Tradeoffs and any compatibility transition will be documented rather than hidden.
+- Next: publish P0 and verify Vercel, then finalize the P1 data contract and regression protocol. Suggested commits: `fix: avoid redundant Neon reads and apply backend cache policy`, then focused P1 feature/publication commits.
+
+## Backend/cache audit P0 — verified delivery
+- Delivered locally: A00 sampled origin/stage/cache metrics, A01 metadata/body separation with SHA-pinned inline reads, A02 file validators/HEAD and projection HEAD, A03 effective route TTLs with separate browser/CDN SWR, A06 oversized rejection before eviction. One bounded metadata retry handles completed inline publications; repeated races fail closed. Neon + Vercel, data contracts and integrity checks preserved.
+- Implemented/tested in `/tmp/statarena-backend-cache-20261103` from bb7812bd1e, then copied only the reviewed files into this checkout at 6b710d610e. Eleven source hashes match the tested delivery. Preserved the independently modified materializer, its integration test, runtime environment and existing worklog context; no production deployment, ingestion or Neon write performed by this delivery.
+- Verification: 21 HTTP scenarios pass on actual disposable PostgreSQL 18/TLS and the S3 SDK, including both built Next transports. The same 197 fixture HTTP requests were executed before/after. Conditional/retained-version reads transfer zero source body bytes after correction; fully cold inline GET adds one SQL round trip. Production build/format checks pass; 50 read-only HTTP checks on real Neon data also pass.
+- Evidence, exact reruns and limitations: `docs/verification/backend-cache-20261103/RESULTS.md`, comparison/source manifests, SQL/app logs and integration receipt. Policy and remaining audit lots: `docs/BACKEND_CACHE.md`.
+- Limits/tradeoffs: dynamic referenced HEAD still resolves needed content; mutable S3 publication, 13-resource match assembly, full-season lists and heavy-load limits remain P1. Identity cache correction lag can reach 61 min 30 s after publication across HTTP/app caches. No live Vercel HIT/p95/egress gain claimed.
+- Next for this delivery: review/publish P0, measure representative origin/CDN behavior, then deliver the independent P1 summary/pagination/immutable-publication work. Parallel rematerialization state below remains owned by its existing operation.
+- Suggested commit: `fix: avoid redundant Neon reads and apply backend cache policy`.
+
 ## Goal and constraints
 Complete the user-authorized rematerialization until `remaining: 0`, resuming with queue_all=false only after an incomplete run. Then verify the new fields through the deployed STATARENA site, including actual browser rendering and inspectable E2E evidence. Keep the shared ingestion queue/lock and use stored responses; no new source collection is needed. Read Neon diagnostics through the runtime role. Previous code and launch records are pushed in 25033cbaa8 and bb7812bd1e.
 
