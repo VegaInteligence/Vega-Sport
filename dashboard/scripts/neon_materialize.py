@@ -26,7 +26,7 @@ def competition_metadata(existing, profile, league, label, fixtures):
     return competition
 
 
-def _materialize(store, max_partitions=20, league_id=None):
+def _materialize(store, max_partitions=20, league_id=None, recent_first=False):
     manifest = store.json("computed/dashboard/index.json")
     raw = store.json("raw/index.json")
     changed = 0
@@ -63,7 +63,7 @@ def _materialize(store, max_partitions=20, league_id=None):
     if league_id:
         partitions_query += " where league_id=%s"
         params = (league_id, max_partitions)
-    partitions_query += " order by changed_at limit %s"
+    partitions_query += " order by changed_at " + ("desc" if recent_first else "asc") + " limit %s"
     for label, league, marked in store.db.execute(partitions_query, params).fetchall():
         season = next((s for s in manifest["seasons"] if s["id"] == label), None)
         if not season:
@@ -370,7 +370,7 @@ def _materialize(store, max_partitions=20, league_id=None):
     return changed
 
 
-def materialize(store, max_partitions=20, league_id=None):
+def materialize(store, max_partitions=20, league_id=None, recent_first=False):
     # Catalog, manifests, routes and completion markers become visible atomically.
     with store.db.transaction():
-        return _materialize(store, max_partitions, league_id)
+        return _materialize(store, max_partitions, league_id, recent_first)

@@ -69,3 +69,11 @@ test("season card renders observed totals, average controls, sample warning and 
   assert.match(html, /29 juin 2026/);
   assert.doesNotMatch(html, /NaN|Infinity/);
 });
+
+test("Messi keeps his portrait next to his honours when filters leave no matches", () => {
+  const html = renderSeasonProfile([], [], "p_1mZO3B");
+  assert.match(html, /Lionel Messi/);
+  assert.match(html, /<img[^>]+api\/assets\?url=/);
+  assert.match(html, /Palmarès/);
+  assert.match(html, /Coupe du monde/);
+});

@@ -39,6 +39,7 @@ import PlayerHonours from "./PlayerHonours.jsx";
 import MessiGoats from "./MessiGoats.jsx";
 import { MESSI_ID } from "../services/player-honours.js";
 import { useResource } from "../services/resources.js";
+import { resolvePlayerIdentity } from "../services/player-identity.js";
 
 const Evolution = lazy(() => import("./PlayerEvolution.jsx"));
 const Similarity = lazy(() => import("./PlayerSimilarity.jsx"));
@@ -217,11 +218,28 @@ export default function PlayerSeasonProfile({
   const f = useFootball(),
     params = useSearchParams();
   const profile = useMemo(() => aggregateSeason(rows, id), [rows, id]);
+  const knownIdentity = useMemo(
+    () => resolvePlayerIdentity(id, profile, f.data?.appearances),
+    [id, profile, f.data?.appearances],
+  );
   const missingIdentity = useResource(
     `player-identity:${id}`,
     async () =>
       (await f.client.request(`players/${encodeURIComponent(id)}`)).data,
-    !profile.matches && id !== MESSI_ID && Boolean(f.client),
+    Boolean(
+      f.client &&
+      (!profile.matches || !profile.imageUrl || !knownIdentity.name),
+    ),
+  );
+  const identity = useMemo(
+    () =>
+      resolvePlayerIdentity(
+        id,
+        profile,
+        f.data?.appearances,
+        missingIdentity.value,
+      ),
+    [id, profile, f.data?.appearances, missingIdentity.value],
   );
   const profiles = useMemo(
     () => allProfiles || aggregateSeasonPlayers(scopeRows),
@@ -299,11 +317,6 @@ export default function PlayerSeasonProfile({
     }));
   }, [profile.rows, id]);
   if (!profile.matches) {
-    const identity =
-      id === MESSI_ID
-        ? { name: "Lionel Messi" }
-        : missingIdentity.value ||
-          f.data.appearances?.find((row) => row.playerId === id);
     return (
       <Card className="player-season-card research-player-profile">
         <MessiGoats id={id} />
@@ -311,7 +324,7 @@ export default function PlayerSeasonProfile({
           <div className="season-player-identity">
             <Media
               name={identity.name}
-              url={identity.image_url || identity.imageUrl}
+              url={identity.imageUrl}
               className="player-avatar season-player-portrait"
             />
             <h2>{identity.name}</h2>
@@ -342,8 +355,8 @@ export default function PlayerSeasonProfile({
       <div className="season-player-heading">
         <div className="season-player-identity">
           <Media
-            name={profile.name}
-            url={profile.imageUrl}
+            name={identity.name}
+            url={identity.imageUrl}
             className="player-avatar season-player-portrait"
           />
           <div>

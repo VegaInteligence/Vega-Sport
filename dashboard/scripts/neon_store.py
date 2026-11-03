@@ -20,6 +20,8 @@ class Store:
             application_name="statarena-ingestion",
             options="-c statement_timeout=120000",
         )
+        # A forced refresh is performed at most once in each worker run.
+        self.refresh_since = self.db.execute("select clock_timestamp()").fetchone()[0]
         self.s3 = boto3.client(
             "s3",
             endpoint_url=os.environ["NEON_STORAGE_ENDPOINT"],
@@ -103,7 +105,7 @@ class Store:
         )
         return {"path": path, "sha256": hashlib.sha256(body).hexdigest()}
 
-    def enqueue(self, endpoint, params=None, priority=3, refresh=False):
+    def enqueue(self, endpoint, params=None, priority=3, refresh=False, force=False):
         p = canonical(params)
         key = (endpoint, p)
         old = self.queue.get(key)
@@ -111,28 +113,29 @@ class Store:
             "endpoint": endpoint,
             "params": p,
             "priority": min(priority, old["priority"]) if old else priority,
-            "refresh": refresh or bool(old and old["refresh"]),
+            "refresh": refresh or force or bool(old and old["refresh"]),
+            "force": force or bool(old and old["force"]),
         }
 
     def flush(self):
-        for refresh in [False, True]:
+        for refresh, force in [(False, False), (True, False), (True, True)]:
             rows = [
-                {k: v for k, v in row.items() if k != "refresh"}
+                {k: v for k, v in row.items() if k not in {"refresh", "force"}}
                 for row in self.queue.values()
-                if row["refresh"] == refresh
+                if row["refresh"] == refresh and row["force"] == force
             ]
             if not rows:
                 continue
             condition = (
                 "WHERE NOT EXISTS(SELECT 1 FROM statarena.resources r WHERE r.endpoint=i.endpoint AND r.params=i.params AND r.status IN(200,400,403,404,410,422)"
-                + (" AND r.updated_at>now()-interval '6 hours'" if refresh else "")
+                + (" AND r.updated_at >= %s" if force else " AND r.updated_at>now()-interval '6 hours'" if refresh else "")
                 + ")"
             )
             self.db.execute(
                 "INSERT INTO statarena.jobs(endpoint,params,priority) SELECT i.endpoint,i.params,i.priority FROM jsonb_to_recordset(%s) AS i(endpoint text,params text,priority smallint) "
                 + condition
                 + " ON CONFLICT(endpoint,params) DO UPDATE SET priority=least(statarena.jobs.priority,excluded.priority),state=case when %s and statarena.jobs.state!='running' then 'pending' else statarena.jobs.state end,available_at=case when %s then now() else statarena.jobs.available_at end",
-                (Jsonb(rows), refresh, refresh),
+                (Jsonb(rows), *([self.refresh_since] if force else []), refresh, refresh),
             )
         self.queue.clear()
 

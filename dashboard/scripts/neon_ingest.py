@@ -22,6 +22,11 @@ ENDPOINTS = [
     "heatmaps",
 ]
 PRIORITY_CORE = {"": 0, "players": 1, "lineups": 2, "shots": 3, "stats": 4}
+DAILY_DISCOVERY_PRIORITY = -32760
+DAILY_MATCH_PRIORITY = -32750
+DAILY_AUX_PRIORITY = -32740
+DAILY_INVENTORY_PRIORITY = -32730
+DAILY_TARGET_LEAGUES = ("l_0eg6C9", "l_0Lpz1f")
 
 
 def identities(value):
@@ -102,6 +107,35 @@ def matches(store, items, priority=3):
             )
 
 
+def enqueue_daily_match(store, match_id):
+    for suffix in ENDPOINTS:
+        store.enqueue(
+            "/matches/" + match_id + ("/" + suffix if suffix else ""),
+            priority=DAILY_MATCH_PRIORITY if suffix in {"", "players"} else DAILY_AUX_PRIORITY,
+            force=True,
+        )
+    store.enqueue(
+        "/matches/" + match_id + "/heatmaps",
+        {"frame": "home_ltr"},
+        priority=DAILY_AUX_PRIORITY,
+        force=True,
+    )
+
+
+def enqueue_recent_matches(store, items, today=None):
+    today = today or dt.datetime.now(dt.timezone.utc).date()
+    for match in items:
+        if not isinstance(match, dict) or not re.fullmatch(r"m_[A-Za-z0-9]{6}", match.get("id", "")):
+            continue
+        raw = match.get("date") or str(match.get("time_utc") or "")[:10]
+        try:
+            day = dt.date.fromisoformat(raw)
+        except (TypeError, ValueError):
+            continue
+        if today - dt.timedelta(days=3) <= day <= today + dt.timedelta(days=2):
+            enqueue_daily_match(store, match["id"])
+
+
 def discover(store, endpoint, data, mode, params=None):
     if not isinstance(data, (dict, list)):
         return
@@ -119,8 +153,9 @@ def discover(store, endpoint, data, mode, params=None):
                 store.enqueue(
                     "/leagues/" + league["id"] + "/matches",
                     {"season": season, "status": "all"},
-                    priority=1,
+                    priority=DAILY_INVENTORY_PRIORITY if mode == "daily" else 1,
                     refresh=mode == "daily",
+                    force=mode == "daily",
                 )
     if "/matches" in endpoint and endpoint.startswith("/leagues/"):
         items = [
@@ -136,8 +171,12 @@ def discover(store, endpoint, data, mode, params=None):
             for m in data.get("matches", [])
         ]
         matches(store, items, priority=1 if mode == "daily" else 3)
+        if mode == "daily":
+            enqueue_recent_matches(store, items)
     elif endpoint.startswith("/date/"):
         matches(store, data.get("matches", []), priority=1 if mode == "daily" else 3)
+        if mode == "daily":
+            enqueue_recent_matches(store, data.get("matches", []))
     elif re.fullmatch("/matches/m_[A-Za-z0-9]{6}", endpoint):
         matches(store, [data], priority=1 if mode == "daily" else 3)
     ids = identities(data)
@@ -281,26 +320,25 @@ def request(endpoint, params, key, base):
 
 
 def seed(store, mode):
-    store.enqueue("/leagues", priority=0, refresh=mode == "daily")
+    store.enqueue(
+        "/leagues",
+        priority=DAILY_DISCOVERY_PRIORITY if mode == "daily" else 0,
+        force=mode == "daily",
+    )
     if mode == "daily":
         today = dt.datetime.now(dt.timezone.utc).date()
         for delta in range(-2, 3):
             store.enqueue(
                 "/date/" + str(today + dt.timedelta(days=delta)),
                 {"status": "all"},
-                priority=0,
-                refresh=True,
+                priority=DAILY_DISCOVERY_PRIORITY,
+                force=True,
             )
         # Refresh recently changed and upcoming games even if already collected.
         for (mid,) in store.db.execute(
             "select id from statarena.fixtures where day between current_date-3 and current_date+2"
         ):
-            for suffix in ENDPOINTS:
-                store.enqueue(
-                    "/matches/" + mid + ("/" + suffix if suffix else ""),
-                    priority=1,
-                    refresh=True,
-                )
+            enqueue_daily_match(store, mid)
     else:
         backlog = store.db.execute(
             "select count(*) from statarena.jobs where state in('pending','running')"
@@ -400,6 +438,17 @@ def capacity(store):
         "objectBytes": int(objects),
         "paused": size > 900_000_000 or objects > 4_750_000_000,
     }
+
+
+def publish_pending(store, mode, league_id=None):
+    from neon_materialize import materialize
+
+    if mode == "daily" and not league_id:
+        for league in DAILY_TARGET_LEAGUES:
+            materialize(store, max_partitions=1, league_id=league, recent_first=True)
+        materialize(store, max_partitions=20, recent_first=True)
+    else:
+        materialize(store, max_partitions=20, league_id=league_id)
 
 
 def main():
@@ -524,9 +573,7 @@ def main():
                 )
                 raise
         if not a.skip_materialize:
-            from neon_materialize import materialize
-
-            materialize(store, max_partitions=20, league_id=a.priority_league)
+            publish_pending(store, a.mode, a.priority_league)
         report = {
             "state": "paused_capacity" if paused else "success",
             **({"priorityLeague": a.priority_league} if a.priority_league else {}),

@@ -7,12 +7,11 @@ import {
   MESSI_ID,
 } from "../services/player-honours.js";
 import Icon from "./Icon.jsx";
+import { date } from "../services/format.js";
 
 export default function PlayerHonours({ id, name }) {
-  const result = useResource(
-    `player-honours:${id}:${name}`,
-    () => loadPlayerHonours(id, name),
-    id !== MESSI_ID,
+  const result = useResource(`player-honours:${id}:${name}`, () =>
+    loadPlayerHonours(id, name),
   );
   if (id !== MESSI_ID && result.loading)
     return (
@@ -22,7 +21,7 @@ export default function PlayerHonours({ id, name }) {
     );
   if (id !== MESSI_ID && result.error)
     return <Empty>Le palmarès est momentanément indisponible.</Empty>;
-  const groups = id === MESSI_ID ? MESSI_HONOURS : result.value?.groups || [];
+  const groups = result.value?.groups || (id === MESSI_ID ? MESSI_HONOURS : []);
   if (!groups.length)
     return (
       <Empty>
@@ -58,7 +57,26 @@ export default function PlayerHonours({ id, name }) {
           </section>
         ))}
       </div>
-      {id !== MESSI_ID && (
+      {result.value?.sourceUrl ? (
+        <p className="club-note">
+          Palmarès partiel :{" "}
+          <a href={result.value.sourceUrl} target="_blank" rel="noreferrer">
+            Wikipédia
+          </a>
+          , contributeurs,{" "}
+          <a
+            href="https://creativecommons.org/licenses/by-sa/4.0/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            CC BY-SA
+          </a>
+          {result.value.fetchedAt
+            ? ` · mis à jour le ${date(result.value.fetchedAt)}`
+            : ""}
+          .
+        </p>
+      ) : (
         <p className="club-note">
           Palmarès partiel selon les informations disponibles.
         </p>

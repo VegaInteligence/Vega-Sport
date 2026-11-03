@@ -21,6 +21,7 @@ permissions:
 concurrency:
   group: statarena-neon-ingestion
   cancel-in-progress: false
+  queue: max
 jobs:
   backfill:
     runs-on: ubuntu-latest

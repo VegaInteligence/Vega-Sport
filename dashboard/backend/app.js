@@ -37,6 +37,7 @@ export async function handleRequest(request) {
           configured: configured(),
           schedule: {
             cron: "0 0 * * *",
+            crons: ["0 0 * * *", "30 8 * * *"],
             timezone: "UTC",
             runner: "GitHub Actions",
           },
@@ -61,7 +62,7 @@ export async function handleRequest(request) {
       return row ? publicFile(row.path, request) : response("Not found", 404);
     }
     if (
-      /^\/api\/(standings|open-cups|openligadb|nations-results|club-wikidata|coach-portrait|stadium)$/.test(
+      /^\/api\/(standings|open-cups|openligadb|nations-results|club-wikidata|coach-portrait|stadium|player-honours)$/.test(
         pathname,
       )
     ) {
