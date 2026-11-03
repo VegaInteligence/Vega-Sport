@@ -48,9 +48,9 @@ import {
 const Evolution = lazy(() => import("./PlayerEvolution.jsx"));
 const Similarity = lazy(() => import("./PlayerSimilarity.jsx"));
 const SeasonShots = lazy(() => import("./SeasonShots.jsx"));
+const SeasonStats = lazy(() => import("./PlayerSeasonStats.jsx"));
 const TABS = [
   ["overview", "Vue d’ensemble"],
-  ["honours", "Palmarès"],
   ["stats", "Statistiques"],
   ["similar", "Profils similaires"],
   ["evolution", "Évolution"],
@@ -325,20 +325,22 @@ export default function PlayerSeasonProfile({
       <Card className="player-season-card research-player-profile">
         <MessiGoats id={id} />
         {identity?.name && (
-          <div className="season-player-identity">
-            <Media
-              name={identity.name}
-              url={identity.imageUrl}
-              fallbackUrl={id === MESSI_ID ? MESSI_PORTRAIT : undefined}
-              className="player-avatar season-player-portrait"
-            />
-            <h2>{identity.name}</h2>
+          <div className="season-player-heading">
+            <div className="season-player-identity">
+              <Media
+                name={identity.name}
+                url={identity.imageUrl}
+                fallbackUrl={id === MESSI_ID ? MESSI_PORTRAIT : undefined}
+                className="player-avatar season-player-portrait"
+              />
+              <h2>{identity.name}</h2>
+            </div>
+            <PlayerHonours key={id} id={id} name={identity.name} />
           </div>
         )}
         <Empty>
           Aucune performance avec des minutes connues pour ces filtres.
         </Empty>
-        {identity?.name && <PlayerHonours id={id} name={identity.name} />}
       </Card>
     );
   }
@@ -374,6 +376,7 @@ export default function PlayerSeasonProfile({
             </p>
           </div>
         </div>
+        <PlayerHonours key={id} id={id} name={identity.name || profile.name} />
         <div className="research-toolbar">
           <BookmarkButton
             kind="players"
@@ -422,6 +425,23 @@ export default function PlayerSeasonProfile({
         role="tabpanel"
         aria-label={TABS.find(([key]) => key === view)[1]}
       >
+        {view === "stats" && (
+          <>
+            <Suspense
+              fallback={
+                <div className="loading-state" role="status">
+                  Chargement des saisons…
+                </div>
+              }
+            >
+              <SeasonStats id={id} />
+            </Suspense>
+            <div className="season-section-heading">
+              <h3>Statistiques détaillées</h3>
+              <span>{f.season}</span>
+            </div>
+          </>
+        )}
         {["overview", "stats"].includes(view) && (
           <div className="research-toolbar">
             <Segments
@@ -583,24 +603,6 @@ export default function PlayerSeasonProfile({
                   )}
                 </div>
               </div>
-              {id === MESSI_ID && (
-                <section className="player-honours-teaser">
-                  <div className="season-section-heading">
-                    <h3>Palmarès</h3>
-                    <button
-                      className="inline-link"
-                      onClick={() => change("honours")}
-                    >
-                      Voir le palmarès
-                    </button>
-                  </div>
-                  <div className="player-honours-highlights">
-                    <span>Coupe du monde 2022</span>
-                    <span>4 Ligues des champions</span>
-                    <span>8 Ballons d’Or</span>
-                  </div>
-                </section>
-              )}
               <section className="season-recent">
                 <div className="season-section-heading">
                   <h3>Dernières performances</h3>
@@ -714,6 +716,7 @@ export default function PlayerSeasonProfile({
               </div>
               <h3>Tirs de la saison</h3>
               <SeasonShots
+                key={id}
                 shots={shots}
                 title={`${profile.name} · tirs de la saison`}
               />
@@ -722,8 +725,9 @@ export default function PlayerSeasonProfile({
           {view === "similar" && (
             <Similarity profile={profile} cohorts={cohorts} />
           )}
-          {view === "honours" && <PlayerHonours id={id} name={profile.name} />}
-          {view === "evolution" && <Evolution id={id} profile={profile} />}
+          {view === "evolution" && (
+            <Evolution key={id} id={id} profile={profile} />
+          )}
           {view === "compare" && (
             <ProfileComparison
               profile={profile}

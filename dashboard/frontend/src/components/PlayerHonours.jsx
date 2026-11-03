@@ -1,98 +1,99 @@
-import React from "react";
-import { Empty } from "./UI.jsx";
+"use client";
+import React, { useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useResource } from "../services/resources.js";
 import {
   loadPlayerHonours,
   MESSI_HONOURS,
   MESSI_ID,
 } from "../services/player-honours.js";
-import { date } from "../services/format.js";
 import { trophyArt } from "../services/trophy-art.js";
 
+/** A compact shelf belongs to the player header, independent of the active tab. */
 export default function PlayerHonours({ id, name }) {
-  const result = useResource(`player-honours:${id}:${name}`, () =>
-    loadPlayerHonours(id, name),
+  const rail = useRef(null);
+  const [selected, setSelected] = useState(0);
+  const result = useResource(
+    `player-honours:${id}:${name}`,
+    () => loadPlayerHonours(id, name),
+    Boolean(id && name),
   );
-  if (id !== MESSI_ID && result.loading)
-    return (
-      <div className="loading-state" role="status">
-        Chargement du palmarès…
-      </div>
-    );
-  if (id !== MESSI_ID && result.error)
-    return <Empty>Le palmarès est momentanément indisponible.</Empty>;
   const groups = result.value?.groups || (id === MESSI_ID ? MESSI_HONOURS : []);
-  if (!groups.length)
-    return (
-      <Empty>
-        Le palmarès de ce joueur n’est pas disponible pour le moment.
-      </Empty>
-    );
+  const trophies = groups.flatMap((group) =>
+    group.items.flatMap((item) => {
+      const image = trophyArt(item);
+      return image ? [{ ...item, image, group: group.group }] : [];
+    }),
+  );
+  if (!trophies.length) {
+    if (result.loading)
+      return (
+        <div className="player-trophy-loading">Chargement du palmarès…</div>
+      );
+    return null;
+  }
+  const current = trophies[Math.min(selected, trophies.length - 1)];
+  const scroll = (direction) => {
+    const width = rail.current?.clientWidth || 300;
+    rail.current?.scrollBy({
+      left: direction * Math.max(120, width * 0.75),
+      behavior: "auto",
+    });
+  };
   return (
-    <section className="player-honours" aria-label="Palmarès du joueur">
-      <div className="season-section-heading">
-        <h3>Palmarès</h3>
-        <span>Principaux titres disponibles</span>
+    <section className="player-trophy-shelf" aria-label={`Palmarès de ${name}`}>
+      <div className="player-trophy-shelf-top">
+        <span className="player-trophy-label">Palmarès</span>
+        <div className="player-trophy-controls">
+          <button
+            type="button"
+            aria-label="Trophées précédents"
+            onClick={() => scroll(-1)}
+          >
+            <ChevronLeft size={16} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            aria-label="Trophées suivants"
+            onClick={() => scroll(1)}
+          >
+            <ChevronRight size={16} aria-hidden="true" />
+          </button>
+        </div>
       </div>
-      <div className="player-honours-grid">
-        {groups.map((group) => (
-          <section className="player-honours-group" key={group.group}>
-            <h4>{group.group}</h4>
-            <ul>
-              {group.items.map((item) => {
-                const image = trophyArt(item);
-                return (
-                  <li key={item.title}>
-                    {image && (
-                      <span className="player-honours-trophy">
-                        <img
-                          src={image}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      </span>
-                    )}
-                    <span className="player-honours-name">
-                      <strong>{item.title}</strong>
-                      {item.years && <small>{item.years}</small>}
-                    </span>
-                    {item.count > 1 && (
-                      <span className="player-honours-count">
-                        ×{item.count}
-                      </span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
+      <div
+        className="player-trophy-rail"
+        ref={rail}
+        tabIndex={0}
+        aria-label="Faire défiler les trophées"
+      >
+        {trophies.map((item, index) => (
+          <button
+            type="button"
+            className="player-trophy-item"
+            key={`${item.group}:${item.title}`}
+            onClick={() => setSelected(index)}
+            aria-pressed={current === item}
+            aria-label={`${item.title}${item.count > 1 ? `, ${item.count} titres` : ""}, ${item.group}`}
+            title={`${item.title} · ${item.group}`}
+          >
+            <img src={item.image} alt="" loading="lazy" decoding="async" />
+            {item.count > 1 && <span>×{item.count}</span>}
+          </button>
         ))}
       </div>
-      {result.value?.sourceUrl ? (
-        <p className="club-note">
-          Palmarès partiel :{" "}
+      <div className="player-trophy-caption" aria-live="polite">
+        <strong>{current.title}</strong>
+        <span>
+          {current.group}
+          {current.years ? ` · ${current.years}` : ""}
+        </span>
+        {result.value?.sourceUrl && (
           <a href={result.value.sourceUrl} target="_blank" rel="noreferrer">
-            Wikipédia
+            Source
           </a>
-          , contributeurs,{" "}
-          <a
-            href="https://creativecommons.org/licenses/by-sa/4.0/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            CC BY-SA
-          </a>
-          {result.value.fetchedAt
-            ? ` · mis à jour le ${date(result.value.fetchedAt)}`
-            : ""}
-          .
-        </p>
-      ) : (
-        <p className="club-note">
-          Palmarès partiel selon les informations disponibles.
-        </p>
-      )}
+        )}
+      </div>
     </section>
   );
 }

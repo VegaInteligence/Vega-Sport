@@ -65,106 +65,6 @@
   padding: 22px;
 }
 
-.player-honours {
-  margin-top: 24px;
-}
-.player-honours-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  align-items: start;
-}
-.player-honours-group {
-  min-width: 0;
-  padding: 18px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface-raised);
-}
-.player-honours-group h4 {
-  margin: 0 0 10px;
-  color: var(--ink-strong);
-  font-size: var(--text-lg);
-}
-.player-honours-group ul {
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-.player-honours-group li {
-  display: grid;
-  grid-template-columns: 76px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 0;
-  border-top: 1px solid var(--border);
-}
-.player-honours-trophy {
-  grid-column: 1;
-  grid-row: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 76px;
-  height: 88px;
-  overflow: hidden;
-}
-.player-honours-trophy img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  filter: drop-shadow(0 4px 7px rgb(0 0 0 / 20%));
-}
-.player-honours-name {
-  display: grid;
-  grid-column: 2;
-  grid-row: 1;
-  gap: 3px;
-  min-width: 0;
-  flex: 1;
-}
-.player-honours-name strong {
-  color: var(--ink-strong);
-  font-size: var(--text-md);
-}
-.player-honours-name small {
-  color: var(--muted);
-  font-size: var(--text-xs);
-  line-height: 1.45;
-}
-.player-honours-count {
-  grid-column: 3;
-  grid-row: 1;
-  color: var(--ink-strong);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: var(--surface-subtle);
-  white-space: nowrap;
-}
-.player-honours-teaser {
-  margin-top: 22px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface-raised);
-}
-.player-honours-highlights {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.player-honours-highlights span {
-  padding: 7px 10px;
-  border-radius: var(--radius);
-  color: var(--ink);
-  background: var(--surface-subtle);
-  font-size: var(--text-sm);
-}
 .messi-goats {
   position: fixed;
   inset: 0;
@@ -213,19 +113,6 @@
     opacity: 0;
     transform: translate3d(var(--goat-drift), -110vh, 0) rotate(15deg)
       scale(1.1);
-  }
-}
-@media (max-width: 760px) {
-  .player-honours-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .player-honours-trophy {
-    width: 58px;
-    height: 68px;
-    flex-basis: 58px;
-  }
-  .player-honours-group li {
-    grid-template-columns: 58px minmax(0, 1fr) auto;
   }
 }
 @media (prefers-reduced-motion: reduce) {
