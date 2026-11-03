@@ -2,20 +2,22 @@
 import React, { lazy, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import PlayerDirectory from "./PlayerDirectory.jsx";
-import { ResearchLists, ResearchTabs } from "./ResearchUI.jsx";
+import { ResearchLists, ResearchTabs, useHasSaved } from "./ResearchUI.jsx";
 const PlayerExplorer = lazy(() => import("./PlayerExplorer.jsx"));
 const PlayerIndices = lazy(() => import("./PlayerIndices.jsx"));
 export default function PlayerWorkspace({ profiles, ...props }) {
-  const params = useSearchParams();
+  const params = useSearchParams(),
+    hasSaved = useHasSaved("players");
   const items = [
+    ...(hasSaved ? [["lists", "Mes listes"]] : []),
     ["table", "Performances"],
     ["explore", "Explorer"],
     ["indices", "Indices"],
-    ["lists", "Mes listes"],
+    ...(hasSaved ? [] : [["lists", "Mes listes"]]),
   ];
   const view = items.some(([key]) => key === params.get("playersView"))
     ? params.get("playersView")
-    : "table";
+    : items[0][0];
   const change = (value) => {
     const url = new URL(window.location.href);
     url.searchParams.set("playersView", value);

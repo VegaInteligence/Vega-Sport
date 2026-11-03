@@ -14,7 +14,7 @@ import Layout from "../components/Layout.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { Media, Pager, Empty } from "../components/UI.jsx";
 import ClubWorkspace from "../components/ClubWorkspace.jsx";
-import { ResearchLists } from "../components/ResearchUI.jsx";
+import { ResearchLists, useHasSaved } from "../components/ResearchUI.jsx";
 import { clubMatchHistory } from "../services/club-matches.js";
 import { normalizeText, number } from "../services/format.js";
 import {
@@ -60,21 +60,23 @@ function useDirectoryCapacity(gridRef, active, scope) {
   return layout;
 }
 
-function ClubsViewSwitch({ saved = false, href }) {
+function ClubsViewSwitch({ saved = false, savedFirst = false, href }) {
+  const tabs = [
+    ["explore", "Explorer", !saved],
+    ["saved", "Mes clubs", saved],
+  ];
+  if (savedFirst) tabs.reverse();
   return (
     <nav className="matches-view-switch" aria-label="Vue des clubs">
-      <Link
-        href={href("/clubs/", { clubsView: "" })}
-        aria-current={saved ? undefined : "page"}
-      >
-        Explorer
-      </Link>
-      <Link
-        href={href("/clubs/", { clubsView: "saved" })}
-        aria-current={saved ? "page" : undefined}
-      >
-        Mes clubs
-      </Link>
+      {tabs.map(([view, label, current]) => (
+        <Link
+          key={view}
+          href={href("/clubs/", { clubsView: view })}
+          aria-current={current ? "page" : undefined}
+        >
+          {label}
+        </Link>
+      ))}
     </nav>
   );
 }
@@ -86,7 +88,8 @@ export default function ClubsPage() {
     [competitionId, setCompetitionId] = useState("all"),
     [paging, setPaging] = useState({ key: "", page: 1 });
   const params = useSearchParams(),
-    id = params.get("id");
+    id = params.get("id"),
+    hasSavedClubs = useHasSaved("clubs");
   const gridRef = useRef(null);
   const clubs = useMemo(() => {
     const map = new Map();
@@ -207,14 +210,15 @@ export default function ClubsPage() {
             history={clubMatches}
           />
         </>
-      ) : params.get("clubsView") === "saved" ? (
+      ) : params.get("clubsView") === "saved" ||
+        (!params.get("clubsView") && hasSavedClubs) ? (
         <>
-          <ClubsViewSwitch saved href={f.href} />
+          <ClubsViewSwitch saved savedFirst={hasSavedClubs} href={f.href} />
           <ResearchLists kind="clubs" />
         </>
       ) : (
         <>
-          <ClubsViewSwitch href={f.href} />
+          <ClubsViewSwitch savedFirst={hasSavedClubs} href={f.href} />
           <div className="clubs-toolbar club-directory-toolbar">
             <div className="filter-input-wrap club-directory-search">
               <Icon name="search" />

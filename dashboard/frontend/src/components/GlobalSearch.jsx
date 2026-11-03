@@ -90,7 +90,7 @@ export default function GlobalSearch() {
       ? f.href("/joueurs/", {
           id: "",
           q: query.trim(),
-          playersView: "",
+          playersView: "table",
           league: "",
           focus: "all",
         })

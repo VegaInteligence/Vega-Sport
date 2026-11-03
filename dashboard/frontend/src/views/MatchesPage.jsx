@@ -10,7 +10,7 @@ import MatchDetail from "../components/MatchDetail.jsx";
 import UpcomingMatches from "../components/UpcomingMatches.jsx";
 import { useResource, json } from "../services/resources.js";
 import { loadRemoteMatch } from "../services/remote-match.js";
-import { ResearchLists } from "../components/ResearchUI.jsx";
+import { ResearchLists, useHasSaved } from "../components/ResearchUI.jsx";
 function RemoteDetail({ id }) {
   const f = useFootball(),
     resource = useResource(`remote-match:${id}`, () =>
@@ -27,8 +27,10 @@ export default function MatchesPage() {
     [page, setPage] = useState(1),
     search = useSearchParams(),
     id = search.get("id"),
-    saved = search.get("tab") === "saved",
-    upcoming = !saved && search.get("tab") !== "results",
+    hasSaved = useHasSaved("matches"),
+    tab = search.get("tab"),
+    saved = tab === "saved" || (!tab && hasSaved),
+    upcoming = !saved && tab !== "results",
     selected = f.data.matches.find((m) => m.id === id),
     fixture = f.data.fixtures?.find((m) => m.id === id),
     pages = Math.max(1, Math.ceil(f.matches.length / 30)),
@@ -36,7 +38,7 @@ export default function MatchesPage() {
   return (
     <Layout
       path="/matchs/"
-      title="Matchs"
+      title="Calendrier"
       filters={!id && !saved}
       filterKind={upcoming ? "fixtures" : "performances"}
       hideHeading={!!id}
@@ -45,9 +47,10 @@ export default function MatchesPage() {
         !id && (
           <nav className="matches-view-switch" aria-label="Vue des matchs">
             {[
+              ...(hasSaved ? [["saved", "Mes matchs"]] : []),
               ["upcoming", "À venir"],
               ["results", "Résultats"],
-              ["saved", "Mes matchs"],
+              ...(hasSaved ? [] : [["saved", "Mes matchs"]]),
             ].map(([tab, label]) => (
               <Link
                 key={tab}

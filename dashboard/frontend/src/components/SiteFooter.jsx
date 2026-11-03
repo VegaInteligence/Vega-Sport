@@ -11,7 +11,7 @@ const groups = [
       ["Vue d’ensemble", "/"],
       ["Compétitions", "/competitions/"],
       ["Clubs", "/clubs/"],
-      ["Matchs", "/matchs/"],
+      ["Calendrier", "/matchs/"],
     ],
   },
   {

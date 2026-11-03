@@ -15,6 +15,19 @@ import { number } from "../services/format.js";
 import { Card, Empty, Modal } from "./UI.jsx";
 import Icon from "./Icon.jsx";
 
+/**
+ * True once the visitor has saved at least one record of this kind. A
+ * non-empty saved list becomes the first tab, and the default one, of its page.
+ */
+export function useHasSaved(kind) {
+  const r = useResearch();
+  return Boolean(
+    r?.ready &&
+    r.data.lists.some((list) =>
+      list.entries.some((entry) => entry.kind === kind),
+    ),
+  );
+}
 export function ResearchTabs({ label, value, items, onChange, panelId }) {
   const id = useId(),
     refs = useRef([]);
