@@ -28,3 +28,8 @@ dashboard/outputs/daily-refresh/
 
 # Local resumable worldwide collection queue
 data/computed/pitchapi-world/
+
+# Durable football data lives in Neon, not in working trees.
+/data/
+dashboard/outputs/neon-runtime/
+output/playwright/

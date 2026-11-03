@@ -1,5 +1,7 @@
 # Architecture
 
+> Stockage et ingestion actuels : [architecture Neon](NEON_STORAGE.md). Les anciennes commandes de collecte locale et de publication Git ci-dessous sont historiques. Le site utilise exclusivement le backend Neon.
+
 STATARENA est une application **Next.js App Router** avec un backend de données **Bun.serve**. Les routes sont définies par les fichiers `app/**/page.jsx`. Le layout Next partage le contexte React et les liens Next assurent la navigation sans rechargement du document.
 
 ```text

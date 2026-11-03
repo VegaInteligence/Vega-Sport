@@ -102,4 +102,4 @@ async (page) => {
       ? "passed"
       : "failed";
   return report;
-};
+}

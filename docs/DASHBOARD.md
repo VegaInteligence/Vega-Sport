@@ -1,5 +1,7 @@
 # Dashboard STATARENA
 
+> Stockage et ingestion actuels : [architecture Neon](NEON_STORAGE.md). Les anciennes commandes de collecte locale et de publication Git ci-dessous sont historiques. Le site utilise exclusivement le backend Neon.
+
 Application Next.js App Router avec backend Bun et base JSON locale. Sept sections : vue d’ensemble, compétitions, clubs, joueurs, classement Ballon d’Or, matchs et réglages. La méthode reste accessible dans le pied de page. Les données disponibles restent consultables sans clé API.
 
 ```sh

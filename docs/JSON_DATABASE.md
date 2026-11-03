@@ -1,5 +1,7 @@
 # Base de données JSON
 
+> Stockage et ingestion actuels : [architecture Neon](NEON_STORAGE.md). Les anciennes commandes de collecte locale et de publication Git ci-dessous sont historiques. Le site utilise exclusivement le backend Neon.
+
 Le dossier `data/` est le stockage du projet. Le dashboard est un client de cette base : son interface et son serveur restent dans `dashboard/`, ses observations sont lues dans `data/raw/` et les futurs résultats de modèle dans `data/computed/`.
 
 ## Analyse des données existantes

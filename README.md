@@ -18,15 +18,11 @@ Les formules, pondérations et limites sont détaillées dans la [documentation 
 
 [Ouvrir le dashboard STATARENA](https://statarena-analytics.vercel.app).
 
-Le stockage est une [base JSON](docs/JSON_DATABASE.md) dans `data/raw/`, organisée par saison et par entité : joueurs, équipes, matchs, performances et tirs. Le dashboard utilise les vues optimisées de `data/computed/` et accède aux tables brutes pour les détails complets.
+Les données de football sont centralisées dans Neon : PostgreSQL indexe les ressources et le stockage objet privé conserve les fichiers. Le backend sert les pages, les observations et les images ; le site n’appelle pas directement Pitch API. Le format des tables et des vues calculées est conservé dans Neon.
 
-Le [dashboard STATARENA](docs/DASHBOARD.md) propose une interface claire ou sombre pour parcourir les compétitions et les clubs, comparer les joueurs et explorer les données complètes des matchs. La connexion à PitchAPI ouvre les saisons et les analyses à la demande. Les notes affichées proviennent de PitchAPI ; le classement STATARENA reste à calibrer et à valider.
+Le [dashboard STATARENA](docs/DASHBOARD.md) permet de parcourir les compétitions et les clubs, comparer les joueurs et explorer les matchs. Les valeurs absentes restent distinctes des zéros. Le classement STATARENA reste à calibrer et à valider.
 
-L'archive locale couvre les compétitions européennes PitchAPI disponibles de
-2024/25 à 2026/27, ainsi que les saisons civiles 2024 à 2026. Des résultats et calendriers complémentaires
-proviennent d'[open-matchday](https://github.com/oladeeayo/open-matchday), sous
-conditions d'usage non commercial et avec attribution. Les deux sources peuvent
-contenir les mêmes matchs et restent séparées.
+Pour développer, utiliser Node.js 26 et Bun 1.4.4. Configurer les identifiants Neon en lecture seule à partir de `dashboard/.env.example`, puis :
 
 ```sh
 cd dashboard
@@ -35,9 +31,11 @@ bun run build
 bun start
 ```
 
-Ouvrir http://127.0.0.1:3000/. Le site utilise Next.js App Router pour les pages et la navigation ; le backend de données utilise Bun. La [structure de l’application](docs/ARCHITECTURE.md) décrit les dossiers et les commandes de développement.
+Ouvrir http://127.0.0.1:3000/. `bun run verify` lance les vérifications E2E du serveur de production et enregistre les preuves. Aucun dossier local `data` ni clé Pitch n’est nécessaire au site.
 
-Les clés facultatives se configurent dans `dashboard/.env`, à partir de `dashboard/.env.example`. Les données locales restent consultables sans clé.
+Les deux workflows **Daily Sync** et **Historical Backfill** ingèrent les données directement dans Neon. La clé Pitch est conservée dans les secrets GitHub Actions. L’[architecture Neon](docs/NEON_STORAGE.md) décrit les connexions, le cache, la reprise et les limites de couverture.
+
+Les sources complémentaires conservent leur attribution et leurs conditions d’usage, notamment [open-matchday](https://github.com/oladeeayo/open-matchday). Les refus des sources restent enregistrés ; une collecte bornée ne signifie pas que toute l’histoire mondiale est déjà disponible.
 
 ## Licence
 
