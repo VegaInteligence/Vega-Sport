@@ -93,30 +93,30 @@
 }
 .player-honours-group li {
   display: grid;
-  grid-template-columns: 68px minmax(0, 1fr) auto;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  padding: 11px 0;
+  gap: 16px;
+  padding: 14px 0;
   border-top: 1px solid var(--border);
 }
 .player-honours-trophy {
   grid-column: 1;
   grid-row: 1;
-  display: grid;
-  place-items: center;
-  width: 68px;
-  height: 78px;
-  flex: 0 0 68px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 88px;
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
 }
 .player-honours-trophy img {
   display: block;
   width: 100%;
   height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
+  filter: drop-shadow(0 4px 7px rgb(0 0 0 / 20%));
 }
 .player-honours-name {
   display: grid;
@@ -141,6 +141,10 @@
   color: var(--ink-strong);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--surface-subtle);
+  white-space: nowrap;
 }
 .player-honours-teaser {
   margin-top: 22px;
@@ -175,6 +179,17 @@
   font-size: clamp(32px, 4vw, 58px);
   opacity: 0;
   animation: messi-goat-arrive 4s ease-out var(--goat-delay) both;
+}
+.messi-goats span img {
+  display: block;
+  width: clamp(40px, 4vw, 58px);
+  height: clamp(40px, 4vw, 58px);
+  object-fit: contain;
+  padding: 4px;
+  border: 2px solid rgb(255 255 255 / 80%);
+  border-radius: 50%;
+  background: #f7f4eb;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 30%);
 }
 @keyframes messi-goat-arrive {
   0% {
