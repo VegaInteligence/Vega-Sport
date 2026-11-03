@@ -162,7 +162,7 @@ button:disabled {
 /* Navbar search: local text, results in a popover under the field. */
 .global-search {
   position: relative;
-  width: clamp(200px, 22vw, 300px);
+  width: clamp(260px, 30vw, 460px);
 }
 .global-search-field {
   position: relative;
@@ -1860,7 +1860,7 @@ th[aria-sort="descending"] .sort-indicator {
     gap: 22px;
   }
   .global-search {
-    width: clamp(180px, 18vw, 240px);
+    width: clamp(220px, 26vw, 340px);
   }
   .main-nav {
     gap: 18px;

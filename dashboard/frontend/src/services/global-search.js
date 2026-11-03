@@ -1,8 +1,13 @@
 import { normalizeText } from "../model.js";
 import { positionOf } from "./player-profile.js";
 import { competitionCountryLabel } from "./competition-selector.js";
+import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
 
-/** Navbar search: one compact index per loaded season, built on first use. */
+/**
+ * Navbar search: one compact index per season, built on first use from the
+ * whole season, whatever competitions the pages are filtered on. Records
+ * outside the Top 7 + UEFA scope are flagged so links can widen the scope.
+ */
 const INDEXES = new WeakMap();
 const LIMITS = { players: 6, clubs: 4, competitions: 3 };
 const CATEGORIES = Object.keys(LIMITS);
@@ -45,9 +50,11 @@ export function buildSearchIndex(data, competitions = []) {
         minutes: 0,
         matches: 0,
         position: positionOf(row)?.label || null,
+        europe: false,
       };
       players.set(row.playerId, player);
     }
+    if (EUROPE_FOCUS_IDS.has(row.leagueId)) player.europe = true;
     if (row.minutes > 0) {
       player.minutes += row.minutes;
       player.matches++;
@@ -72,8 +79,10 @@ export function buildSearchIndex(data, competitions = []) {
         imageUrl: side.imageUrl,
         leagues: new Map(),
         matches: 0,
+        europe: false,
       };
       club.matches++;
+      if (EUROPE_FOCUS_IDS.has(match.leagueId)) club.europe = true;
       club.imageUrl ||= side.imageUrl;
       if (match.league)
         club.leagues.set(
@@ -89,6 +98,7 @@ export function buildSearchIndex(data, competitions = []) {
         meta: [p.position, p.team].filter(Boolean).join(" · ") || "Joueur",
         context: normalizeText(p.team || ""),
         weight: p.minutes,
+        outside: !p.europe,
       }),
     ),
     clubs: [...clubs.values()].map((c) =>
@@ -99,6 +109,7 @@ export function buildSearchIndex(data, competitions = []) {
           `${c.matches} matchs`,
         context: "",
         weight: c.matches,
+        outside: !c.europe,
       }),
     ),
     competitions: competitions.map((c) =>
@@ -107,6 +118,7 @@ export function buildSearchIndex(data, competitions = []) {
         meta: competitionCountryLabel(c),
         context: normalizeText(competitionCountryLabel(c)),
         weight: 0,
+        outside: !EUROPE_FOCUS_IDS.has(c.id),
       }),
     ),
   };

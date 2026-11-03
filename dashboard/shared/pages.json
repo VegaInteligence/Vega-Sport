@@ -31,16 +31,16 @@
     "component": "PlayersPage"
   },
   {
-    "key": "player-ranking",
-    "path": "/classement-joueurs/",
-    "title": "Classement Ballon d’Or",
-    "component": "PlayerRankingPage"
-  },
-  {
     "key": "matches",
     "path": "/matchs/",
     "title": "Matchs",
     "component": "MatchesPage"
+  },
+  {
+    "key": "player-ranking",
+    "path": "/classement-joueurs/",
+    "title": "Classement Ballon d’Or",
+    "component": "PlayerRankingPage"
   },
   {
     "key": "calendar",

@@ -248,6 +248,27 @@ export function FootballProvider({ children, loadData = true }) {
         : data?.competitions || [],
     [manifest.value, chosen, data],
   );
+  // The navbar search and the competition directory ignore the selected
+  // scope: they always see every competition of the season.
+  const allCatalog = useMemo(() => {
+    const byId = new Map();
+    for (const c of [
+      ...(client?.catalog || data?.competitions || []),
+      ...seasonCompetitions,
+    ])
+      if (c?.id && !byId.has(c.id)) byId.set(c.id, c);
+    return [...byId.values()];
+  }, [client, data, seasonCompetitions, status.value, status.loading]);
+  const fullSeason = loadData && dataFocus === "all" && !leagueOnly && !progressive;
+  function searchData() {
+    if (fullSeason && data) return Promise.resolve(data);
+    return primeResource(`season:${chosen}:all:all:full`, () =>
+      loadSeason(manifest.value, chosen, fetch, null).then((value) => {
+        loadedScopes.add(`${chosen}:all`);
+        return value;
+      }),
+    );
+  }
   const competitions = useMemo(
     () =>
       seasonCompetitions.filter(
@@ -489,6 +510,9 @@ export function FootballProvider({ children, loadData = true }) {
     changeFocus,
     competitions,
     catalog,
+    allCatalog,
+    allCompetitions: seasonCompetitions,
+    searchData,
     preferences,
     preferencesReady,
     savePreferences,

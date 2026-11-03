@@ -28,7 +28,8 @@ const PAGES = {
 /**
  * Navbar search. The typed text lives only in this component: no URL write
  * and no app-wide render per keystroke. Results follow in a deferred render
- * from an index built once per loaded season.
+ * from an index built once per season over every competition, independent of
+ * the competitions the pages are filtered on.
  */
 export default function GlobalSearch() {
   const f = useContext(FootballContext),
@@ -39,10 +40,27 @@ export default function GlobalSearch() {
   const [query, setQuery] = useState(""),
     [open, setOpen] = useState(false),
     [armed, setArmed] = useState(false),
-    [active, setActive] = useState(0);
+    [active, setActive] = useState(0),
+    [source, setSource] = useState(null);
   const deferred = useDeferredValue(query);
-  const data = f?.data,
-    competitions = f?.competitions;
+  const season = f?.season;
+  // The whole season is loaded on first use (shared with the pages when they
+  // already show every competition).
+  useEffect(() => {
+    if (!armed || !f?.searchData || (source && source.season === season))
+      return;
+    let active = true;
+    f.searchData()
+      .then((value) => active && setSource({ season, data: value }))
+      .catch(() => active && setSource({ season, data: f.data }));
+    return () => {
+      active = false;
+    };
+  }, [armed, season, source?.season]);
+  const data = source && source.season === season ? source.data : null,
+    competitions = f?.allCompetitions?.length
+      ? f.allCompetitions
+      : f?.competitions;
   const index = useMemo(
     () => (armed && data ? buildSearchIndex(data, competitions || []) : null),
     [armed, data, competitions],
@@ -63,11 +81,19 @@ export default function GlobalSearch() {
           q: "",
           league: "",
           ...(item.kind === "players" ? { playerView: "" } : {}),
+          // A result outside the Top 7 + UEFA scope opens with every competition.
+          ...(f.focus === "europe" && item.outside ? { focus: "all" } : {}),
         })
       : `${PAGES[item.kind]}?id=${encodeURIComponent(item.id)}`;
   const allPlayers = () =>
     f?.href
-      ? f.href("/joueurs/", { id: "", q: query.trim(), playersView: "" })
+      ? f.href("/joueurs/", {
+          id: "",
+          q: query.trim(),
+          playersView: "",
+          league: "",
+          focus: "all",
+        })
       : `/joueurs/?q=${encodeURIComponent(query.trim())}`;
 
   useEffect(() => setActive(0), [results]);
@@ -157,7 +183,7 @@ export default function GlobalSearch() {
           }
           autoComplete="off"
           spellCheck="false"
-          placeholder="Rechercher…"
+          placeholder="Rechercher un joueur, un club…"
           value={query}
           onFocus={() => {
             setArmed(true);
@@ -267,11 +293,6 @@ export default function GlobalSearch() {
                   Voir les {number(results.playersCount)} joueurs
                   <Icon name="arrow" />
                 </Link>
-              )}
-              {f?.partial && (
-                <p className="global-search-note">
-                  Autres compétitions en cours de chargement…
-                </p>
               )}
             </>
           )}
