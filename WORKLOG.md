@@ -1,7 +1,7 @@
 # Worklog
 
 ## Goal and constraints
-Refine the STATARENA home and its filters, remove redundant project copies, then commit and push all requested work in one commit. Keep canonical files, explicit preferences, historical links and existing data. Use browser E2E for behavior and retain reproducible evidence. Neon checks are read-only; do not dispatch the rematerialization workflow as part of this task.
+The home/filter changes and cleanup are pushed in 25033cbaa8 on main. Current user request: verify publication and launch the full Rematerialize Dashboard workflow. The user explicitly authorized this production publication on 2026-11-03; the previous read-only/no-dispatch constraint belonged to the earlier delivery. Use stored Neon responses, the existing shared queue/advisory lock, and no provider collection. Record the launch and observed status; do not equate launch with completion.
 
 ## Decisions and implemented behavior — 2026-11-03
 - Each page remembers its season in the browser tab. Header/loading navigation restores the destination page’s season; explicit match/player links retain their source season. Invalid or blocked storage falls back safely.
@@ -30,5 +30,5 @@ Refine the STATARENA home and its filters, remove redundant project copies, then
 - Working evidence: `output/playwright/page-seasons-layout-20261103`. Durable scripts, logs, reports, screenshots and exact rerun instructions: `docs/verification/page-seasons-layout-20261103`.
 - Suggested commit: `fix: refine home widgets and grouped competition filters`.
 
-## Final verification and next action
-The final combined run passed all 10 browser workflows and 131 assertions. Build exited 0; cleanup confirms all 42 reviewed copies absent. Durable evidence is saved. Create the single commit, push main normally, then verify the remote commit and clean worktree.
+## Current operation and next action
+Previous delivery: 25033cbaa8 is pushed, with 10 passing browser workflows / 131 assertions, successful build and all 42 reviewed copies removed. Initial check found a clean worktree and exact local/remote commit match. GitHub reports zero prior Rematerialize Dashboard runs. Launched exactly once on main with queue_all=true, minutes=100 and batch=10. Run 41711363014 is verified pending behind Daily Sync 41690340992 in the shared ingestion queue; no rematerialization job has started and completion is not claimed. Receipt: `docs/verification/rematerialization-launch-20261103/launch.json`; the runbook records this launch. Two unused numbered copies reappeared during the operation; both matched committed canonical bytes, were externally archived/hash-verified and removed. Their receipt is alongside the launch record. Publish these operation records, then verify the clean worktree and remote commit. Suggested commit: `docs: record dashboard rematerialization launch`.
