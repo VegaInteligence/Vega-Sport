@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accueil STATARENA — v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@font-face{font-family:Inter;src:url("../../dashboard/frontend/public/fonts/inter-latin.woff2") format("woff2");font-weight:100 900;font-display:swap}
+:root{
+  --bg:#0e0f12;--surface:#15171b;--raised:#1a1c21;--subtle:#1d2025;--hover:#1f2228;
+  --ink:#e4e7ec;--strong:#f8f9fb;--muted:#9aa1ad;--muted2:#6e7581;
+  --border:#25282e;--border2:#363a43;--accent:#3b8eff;--accent-soft:#14233a;--accent-line:#264a77;
+  --home:#7fb0ff;--away:#f2c14e;--green:#3ccf8e;--gold:#d9b45a;--silver:#c3cad4;--bronze:#c98b5b;--danger:#ff8a80;--draw:#6e7581;
+  --c1:#7fb0ff;--c2:#f2c14e;--c3:#3ccf8e;--c4:#e58cf2;
+  --r:14px;--disp:"Barlow Condensed",Inter,system-ui,sans-serif;
+  font-family:Inter,system-ui,-apple-system,sans-serif;color:var(--ink);
+}
+:root[data-theme="light"]{
+  --bg:#f6f8fb;--surface:#fff;--raised:#fff;--subtle:#eff2f6;--hover:#f3f6fa;
+  --ink:#0d2134;--strong:#081726;--muted:#55677b;--muted2:#6f8094;
+  --border:#e2e7ee;--border2:#ccd4df;--accent:#1d6fd6;--accent-soft:#eaf2fd;--accent-line:#bcd5f5;
+  --home:#1d6fd6;--away:#c48a00;--green:#14935b;--gold:#a97c12;--silver:#75808e;--bronze:#99592b;--danger:#b53630;--draw:#a3adba;
+  --c1:#1d6fd6;--c2:#c48a00;--c3:#14935b;--c4:#a43fb8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+img{display:block}
+.tnum{font-variant-numeric:tabular-nums}
+.disp{font-family:var(--disp);letter-spacing:-.01em}
+
+/* ---- prototype bar ---- */
+.proto{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--accent) 12%,var(--bg));border-bottom:1px solid var(--accent-line);backdrop-filter:blur(8px)}
+.proto-in{max-width:1392px;margin:0 auto;padding:8px 24px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.proto-label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.seg{display:flex;gap:3px;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:3px}
+.seg button{padding:5px 11px;border-radius:6px;font-weight:500;color:var(--muted);white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.proto-btn{border:1px solid var(--border2);border-radius:7px;padding:5px 10px;color:var(--muted);background:var(--surface);white-space:nowrap}
+.proto-btn:hover{color:var(--strong)}
+.sp{flex:1}
+.notes{max-width:1392px;margin:0 auto;padding:0 24px 12px;display:none}
+.notes.open{display:block}
+.notes-grid{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.notes h4{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.notes p{margin:0}.notes ul{margin:0;padding-left:16px}.notes li{margin:2px 0}
+.n-in h4{color:var(--accent)}.n-add h4{color:var(--green)}.n-drop h4{color:var(--danger)}
+
+/* ---- shell ---- */
+.site-header{height:56px;border-bottom:1px solid var(--border)}
+.sh-in{max-width:1392px;margin:0 auto;height:100%;padding:0 24px;display:flex;align-items:center;gap:28px}
+.sh-in img{height:22px}
+.nav{display:flex;gap:22px;height:100%;overflow-x:auto;scrollbar-width:none}
+.nav a{display:flex;align-items:center;color:var(--muted);font-size:13.5px;white-space:nowrap;border-bottom:2px solid transparent}
+.nav a.on{color:var(--strong);border-color:var(--accent)}
+.sh-search{margin-left:auto;display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:8px;height:32px;padding:0 10px;color:var(--muted2);min-width:220px}
+.sh-search kbd{margin-left:auto;font:11px Inter;border:1px solid var(--border2);border-radius:4px;padding:0 5px;color:var(--muted)}
+
+/* ---- ticker ---- */
+.ticker{border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--surface) 60%,var(--bg))}
+.ticker-in{max-width:1392px;margin:0 auto;display:flex;overflow-x:auto;scrollbar-width:none}
+.tk{flex:none;width:184px;padding:9px 14px 8px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:3px}
+.tk:hover{background:var(--hover)}
+.tk-top{display:flex;justify-content:space-between;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2)}
+.tk-row{display:flex;align-items:center;gap:7px;font-size:12.5px}
+.tk-row span{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tk-row b{font-family:var(--disp);font-size:16px;color:var(--strong);font-weight:700}
+.tk-row.lose{color:var(--muted)}.tk-row.lose b{color:var(--muted)}
+.tk-xg{display:flex;height:3px;border-radius:2px;overflow:hidden;background:var(--subtle);margin-top:3px}
+.tk-xg i:first-child{background:var(--home)}.tk-xg i:last-child{background:var(--away);margin-left:auto}
+.tk-cap{font-size:10px;color:var(--muted2);display:flex;justify-content:space-between}
+.tk-day{flex:none;writing-mode:vertical-rl;transform:rotate(180deg);font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--muted2);padding:6px 4px;border-right:1px solid var(--border);text-transform:uppercase;text-align:center}
+
+main{max-width:1392px;margin:0 auto;padding:22px 24px 64px}
+.intro{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.intro h1{margin:0;font-size:26px;letter-spacing:-.02em;color:var(--strong)}
+.intro .sub{color:var(--muted);margin-top:3px}
+.intro .sub b{color:var(--strong);font-weight:600}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{height:28px;padding:0 10px;border-radius:7px;border:1px solid var(--border);color:var(--muted);display:inline-flex;align-items:center;gap:6px;font-weight:500;white-space:nowrap}
+.chip[aria-pressed="true"]{border-color:var(--accent-line);background:var(--accent-soft);color:var(--strong)}
+.bento{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);position:relative;overflow:hidden;min-width:0}
+.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:span 12}
+.kicker{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted2);display:flex;align-items:center;gap:8px}
+.kicker .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.ch{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 18px 0}
+.ch h2{margin:4px 0 0;font-size:16px;letter-spacing:-.01em;color:var(--strong)}
+.link{color:var(--accent);font-weight:500;white-space:nowrap;font-size:12.5px}
+.link:hover{text-decoration:underline}
+.crest{width:20px;height:20px;object-fit:contain;flex:none}
+.crest.xs{width:15px;height:15px}.crest.md{width:28px;height:28px}.crest.lg{width:64px;height:64px}
+.fallback{display:inline-grid;place-items:center;border-radius:50%;background:var(--subtle);color:var(--muted);font-size:9px;font-weight:600}
+.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:var(--subtle);flex:none}
+.avatar.sm{width:28px;height:28px}.avatar.xl{width:104px;height:104px}
+.muted{color:var(--muted)}.m2{color:var(--muted2)}
+.row{display:flex;align-items:center;gap:8px;min-width:0}
+.form{display:inline-flex;gap:3px}
+.form i{width:7px;height:7px;border-radius:50%;background:var(--draw)}
+.form i.W{background:var(--green)}.form i.L{background:var(--danger)}
+.pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;background:var(--subtle);color:var(--muted);font-size:11.5px;font-weight:500;white-space:nowrap}
+.pill.gold{background:color-mix(in srgb,var(--gold) 16%,transparent);color:var(--gold)}
+.pill.green{background:color-mix(in srgb,var(--green) 15%,transparent);color:var(--green)}
+.pill.blue{background:var(--accent-soft);color:var(--accent)}
+.btn{height:34px;padding:0 14px;border-radius:8px;display:inline-flex;align-items:center;gap:8px;font-weight:600;border:1px solid var(--border2);white-space:nowrap}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+svg text{font-family:Inter,system-ui,sans-serif}
+
+/* ---- featured match ---- */
+.feat{display:flex;flex-direction:column;background:radial-gradient(90% 120% at 0% 0%,color-mix(in srgb,var(--home) 12%,transparent),transparent 55%),radial-gradient(90% 120% at 100% 0%,color-mix(in srgb,var(--away) 10%,transparent),transparent 55%),var(--surface)}
+.feat-top{padding:18px 22px 0;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.score{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;padding:14px 22px 4px}
+.side{display:flex;align-items:center;gap:14px;min-width:0}
+.side.h{justify-content:flex-end;text-align:right}
+.side strong{display:block;font-size:19px;color:var(--strong);letter-spacing:-.01em}
+.side small{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px;margin-top:3px}
+.side.h small{justify-content:flex-end}
+.num{font-family:var(--disp);font-size:76px;font-weight:700;line-height:.9;color:var(--strong);letter-spacing:-.02em;display:flex;align-items:center;gap:14px}
+.num i{font-style:normal;color:var(--muted2);font-weight:500;font-size:48px}
+.scorers{display:grid;grid-template-columns:1fr auto 1fr;gap:18px;padding:0 22px 12px;color:var(--muted);font-size:12px}
+.scorers div:first-child{text-align:right}
+.scorers .ft{width:120px;text-align:center;color:var(--muted2);font-size:11px;font-weight:600;letter-spacing:.05em}
+.verdict{margin:0 22px;padding:10px 12px;border-radius:10px;background:var(--subtle);color:var(--ink);font-size:13px}
+.verdict b{color:var(--strong)}
+.feat-viz{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;padding:14px 22px 0}
+.viz-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted2);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px}
+.legend{display:flex;gap:12px;text-transform:none;letter-spacing:0;font-weight:500}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend i{width:8px;height:8px;border-radius:50%}
+.feat-foot{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;padding:14px 22px 18px;align-items:center;margin-top:auto}
+.bars{display:grid;gap:7px}
+.bar{display:grid;grid-template-columns:44px 1fr 92px 1fr 44px;align-items:center;gap:8px;font-size:12px}
+.bar b{color:var(--strong);font-weight:600}
+.bar b:last-child{text-align:right}
+.bar span{text-align:center;color:var(--muted);font-size:11.5px}
+.bar .l,.bar .r{height:6px;border-radius:3px;background:var(--subtle);display:flex;overflow:hidden}
+.bar .l{justify-content:flex-end}
+.bar .l i{background:var(--home);border-radius:3px}.bar .r i{background:var(--away);border-radius:3px}
+.motm{display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:var(--raised)}
+.motm strong{color:var(--strong);display:block}
+.motm .rt{margin-left:auto;font-family:var(--disp);font-size:28px;font-weight:700;color:var(--green)}
+
+/* ---- player of the week ---- */
+.potw{padding:18px;display:flex;flex-direction:column;gap:12px;flex:1;background:radial-gradient(120% 70% at 100% 0%,color-mix(in srgb,var(--green) 14%,transparent),transparent 60%),var(--surface)}
+.ghost{position:absolute;left:-6px;right:-6px;top:52px;font-family:var(--disp);font-weight:800;font-size:132px;line-height:.82;text-transform:uppercase;color:transparent;-webkit-text-stroke:1.2px color-mix(in srgb,var(--strong) 14%,transparent);pointer-events:none;white-space:nowrap;overflow:hidden;letter-spacing:-.02em}
+.potw-id{position:relative;display:flex;align-items:flex-end;gap:14px;margin-top:22px}
+.potw-id .avatar{box-shadow:0 0 0 4px var(--surface),0 0 0 5px color-mix(in srgb,var(--green) 50%,transparent)}
+.potw-id strong{display:block;font-size:22px;color:var(--strong);letter-spacing:-.02em;line-height:1.1}
+.potw-id small{display:flex;gap:6px;align-items:center;color:var(--muted);margin-top:4px}
+.potw-big{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:8px;position:relative}
+.potw-big div{background:var(--subtle);border-radius:10px;padding:8px 10px}
+.potw-big b{display:block;font-family:var(--disp);font-size:34px;line-height:1;color:var(--strong);font-weight:700}
+.potw-big div:first-child b{color:var(--green)}
+.potw-big span{font-size:11px;color:var(--muted)}
+.potw-mini{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:11.5px;color:var(--muted);text-align:center}
+.potw-mini b{display:block;color:var(--strong);font-size:14px}
+.potw-match{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:10px;margin-top:auto;font-size:12.5px}
+.potw-season{font-size:12px;color:var(--muted)}
+.potw-season b{color:var(--strong);font-weight:600}
+
+/* ---- number of the week ---- */
+.number{padding:16px 18px;display:flex;gap:16px;align-items:center}
+.number .big{font-family:var(--disp);font-size:96px;font-weight:800;line-height:.8;color:var(--accent);letter-spacing:-.03em}
+.number p{margin:6px 0 0;color:var(--muted)}
+.number p b{color:var(--strong)}
+
+/* ---- title race ---- */
+.tabs{display:flex;gap:2px;padding:8px 10px 0;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.tabs button{padding:9px 9px;color:var(--muted);border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px;white-space:nowrap;font-weight:500;font-size:12.5px}
+.tabs button[aria-pressed="true"]{color:var(--strong);border-color:var(--accent)}
+.race{display:grid;grid-template-columns:1fr 210px;gap:12px;padding:14px 18px 16px}
+.race-leg{display:flex;flex-direction:column;gap:8px}
+.rl{display:grid;grid-template-columns:4px 20px 1fr auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)}
+.rl:last-of-type{border-bottom:0}
+.rl>i{height:22px;border-radius:2px}
+.rl strong{color:var(--strong);font-weight:600;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rl b{font-family:var(--disp);font-size:22px;color:var(--strong)}
+.rl small{display:block;color:var(--muted2);font-size:11px}
+.progress{margin-top:auto;font-size:11.5px;color:var(--muted)}
+.progress .track{height:5px;border-radius:3px;background:var(--subtle);margin-top:6px;overflow:hidden}
+.progress .track i{display:block;height:100%;background:var(--accent);border-radius:3px}
+
+/* ---- upcoming ---- */
+.next-hero{margin:14px 18px 0;padding:14px;border-radius:12px;background:var(--raised);border:1px solid var(--border)}
+.next-hero .when{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
+.cd{font-family:var(--disp);font-size:20px;font-weight:700;color:var(--strong)}
+.vs{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-top:10px}
+.vs .t{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.vs .t strong{color:var(--strong);font-size:14px}
+.vs .t small{color:var(--muted);font-size:11.5px}
+.vs em{font-style:normal;font-family:var(--disp);font-size:22px;color:var(--muted2);font-weight:600}
+.urow{display:grid;grid-template-columns:62px 1fr;gap:10px;align-items:center;padding:9px 18px;border-top:1px solid var(--border)}
+.urow:hover{background:var(--hover)}
+.urow .tm{font-size:11.5px;color:var(--muted);line-height:1.25}
+.urow .tm b{display:block;color:var(--strong);font-size:13px}
+.urow .ts{display:grid;gap:4px}
+.urow .ts span{display:flex;align-items:center;gap:7px;min-width:0}
+.urow .ts em{font-style:normal;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.urow .ts small{margin-left:auto;color:var(--muted2);font-size:11px;flex:none}
+
+/* ---- trends ---- */
+.trend{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.trend h3{margin:2px 0 0;font-size:15px;color:var(--strong);letter-spacing:-.01em}
+.trend .lead{margin:0;color:var(--muted);font-size:12px}
+.db{display:grid;grid-template-columns:28px 1fr;gap:8px;align-items:center}
+.db strong{color:var(--strong);font-weight:600;font-size:12.5px}
+.db small{color:var(--muted2);font-size:11px}
+.db-track{position:relative;height:16px;margin-top:2px}
+.db-track .ln{position:absolute;top:7px;height:2px;background:var(--border2)}
+.db-track .p{position:absolute;top:3px;width:10px;height:10px;border-radius:50%;transform:translateX(-50%)}
+.db-track .p.xg{background:var(--surface);border:2px solid var(--muted)}
+.db-track .p.g{background:var(--green)}
+.db-track .p.g.neg{background:var(--danger)}
+.db-val{font-family:var(--disp);font-size:18px;font-weight:700}
+.streak-n{font-family:var(--disp);font-size:72px;font-weight:800;line-height:.85;color:var(--green)}
+.streak-dots{display:flex;gap:5px;flex-wrap:wrap}
+.streak-dots i{width:14px;height:14px;border-radius:4px;background:var(--green)}
+.scorer{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+.scorer:last-child{border-bottom:0}
+.scorer strong{color:var(--strong);font-weight:600;display:block;font-size:12.5px}
+.scorer small{color:var(--muted2);font-size:11px}
+.scorer b{font-family:var(--disp);font-size:24px;color:var(--strong)}
+
+/* ---- ballon d'or ---- */
+.bdo-slim{padding:16px 18px;display:flex;flex-direction:column;gap:10px;background:radial-gradient(110% 80% at 100% 100%,color-mix(in srgb,var(--gold) 13%,transparent),transparent 60%),var(--surface)}
+.bdo-slim h3{margin:0;font-size:15px;color:var(--strong)}
+.bdo-slim p{margin:0;color:var(--muted);font-size:12px}
+.ring{display:flex;align-items:center;gap:14px}
+.ring b{font-family:var(--disp);font-size:30px;color:var(--strong);line-height:1}
+.peek{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
+.peek .avatar{width:26px;height:26px;margin-left:-8px;box-shadow:0 0 0 2px var(--surface)}
+.peek .avatar:first-child{margin-left:0}
+.bdo{padding:22px;display:grid;grid-template-columns:1fr 1.1fr;gap:24px;background:radial-gradient(70% 120% at 0% 0%,color-mix(in srgb,var(--gold) 14%,transparent),transparent 60%),var(--surface)}
+.bdo>*{min-width:0}.bdo .pill{white-space:normal;height:auto;min-height:22px;padding:3px 8px}.bdo h2{font-size:30px;letter-spacing:-.025em;margin:10px 0 6px;color:var(--strong)}
+.bdo .lead{color:var(--muted);margin:0;max-width:52ch}
+.podium{display:grid;grid-template-columns:1fr 1.1fr 1fr;gap:10px;align-items:end;margin-top:18px}
+.pod{border:1px solid var(--border);border-radius:12px;padding:12px 10px;text-align:center;background:var(--raised);display:flex;flex-direction:column;align-items:center;gap:6px}
+.pod.p1{padding-top:20px;border-color:color-mix(in srgb,var(--gold) 45%,var(--border));background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 12%,transparent),var(--raised) 70%)}
+.pod .medal{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:11px;color:#111}
+.pod.p1 .medal{background:var(--gold)}.pod.p2 .medal{background:var(--silver)}.pod.p3 .medal{background:var(--bronze)}
+.pod strong{color:var(--strong);font-size:13.5px}
+.pod .val{font-family:var(--disp);font-size:30px;font-weight:700;color:var(--strong);line-height:1}
+.bdo-list .r{display:grid;grid-template-columns:22px 28px 1fr 64px 44px 44px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.bdo-list .r.h{color:var(--muted2);font-size:11px;padding-top:0}
+.bdo-list .r strong{color:var(--strong);font-weight:600;display:block}
+.bdo-list .r small{color:var(--muted);font-size:11.5px}
+.bdo-list .r .n{text-align:right}
+.trend-delta{font-size:11px;font-weight:600}
+.up{color:var(--green)}.down{color:var(--danger)}
+
+/* ---- rail ---- */
+.rail{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory;scrollbar-width:thin}
+.pc{flex:none;width:220px;scroll-snap-align:start;padding:14px;display:flex;flex-direction:column;gap:8px}
+.pc .top{display:flex;justify-content:space-between;align-items:flex-start}
+.pc .rt{font-family:var(--disp);font-size:26px;font-weight:700;color:var(--strong);line-height:1}
+.pc strong{color:var(--strong);display:block}
+.pc small{color:var(--muted);font-size:11.5px;display:flex;align-items:center;gap:6px}
+.pc .line{font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px}
+.pc .line b{color:var(--strong)}
+.sec{margin-top:26px}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.sec-head h2{margin:0;font-size:16px;color:var(--strong)}
+.sec-head .cap{color:var(--muted);font-size:12px;margin-left:8px;font-weight:400}
+.foot-note{margin-top:30px;color:var(--muted2);font-size:12px;display:flex;gap:16px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:14px}
+.foot-note a{color:var(--muted)}
+.foot-note a:hover{color:var(--strong)}
+[hidden]{display:none!important}
+
+@media (max-width:1180px){
+  .c3{grid-column:span 6}.c4,.c5,.c7,.c8{grid-column:span 12}
+  .feat-viz,.feat-foot{grid-template-columns:1fr}
+  .bdo{grid-template-columns:1fr}
+  .notes-grid{grid-template-columns:1fr 1fr}
+  .sh-search{display:none}
+}
+@media (max-width:640px){
+  main{padding:16px 16px 48px}.proto-in,.sh-in,.notes{padding-left:16px;padding-right:16px}
+  .c3,.c6{grid-column:span 12}
+  .score{gap:8px;padding:12px 14px 4px;grid-template-columns:1fr auto 1fr}
+  .side{flex-direction:column;gap:6px;text-align:center!important}.side.h{flex-direction:column-reverse}
+  .side strong{font-size:14px}.side small{justify-content:center!important}
+  .crest.lg{width:44px;height:44px}.num{font-size:52px;gap:8px}.num i{font-size:32px}
+  .scorers{padding:0 14px 10px;gap:8px;font-size:11px}.scorers .ft{width:auto}
+  .feat-top,.feat-viz,.feat-foot{padding-left:14px;padding-right:14px}.verdict{margin:0 14px}
+  .race{grid-template-columns:1fr}
+  .notes-grid{grid-template-columns:1fr}
+  .ghost{font-size:96px}
+  .bdo{padding:16px}.bdo h2{font-size:24px}
+  .bdo-list .r{grid-template-columns:22px 28px 1fr 56px 34px}
+  .bdo-list .r>:last-child{display:none}
+  .bar{grid-template-columns:36px 1fr 78px 1fr 36px}
+}
+</style>
+</head>
+<body>
+
+<div class="proto">
+  <div class="proto-in">
+    <span class="proto-label">Prototype accueil v2 · mix A + B</span>
+    <div class="seg" id="monthSeg" role="group" aria-label="Date simulée">
+      <button data-m="nov" aria-pressed="true">Aujourd’hui · 2 nov.</button>
+      <button data-m="mar" aria-pressed="false">Simuler mi-mars</button>
+    </div>
+    <span class="sp"></span>
+    <a class="proto-btn" href="index.html">Anciennes options A/B/C</a>
+    <button class="proto-btn" id="notesBtn" aria-expanded="true">Ce qui change</button>
+    <button class="proto-btn" id="themeBtn">Thème clair</button>
+  </div>
+  <div class="notes open" id="notes"><div class="notes-grid">
+    <div class="n-in"><h4>Idée</h4><p>Une « une » de matchday construite comme une grille bento : le choc de la semaine raconté par les données (courbe xG, carte des tirs), le joueur de la semaine en affiche, puis la course au titre et les tendances. Le Ballon d’Or est <b>saisonnier</b> : une petite tuile jusqu’en février, puis une section complète à partir de mars (bouton « Simuler mi-mars »).</p></div>
+    <div><h4>Inspirations</h4><ul><li>Bandeau de scores avec barre de probabilité : Opta Analyst</li><li>Momentum du match, « best player of the match » : Matchly (Rylic Studio, Dribbble)</li><li>Nom géant en fond, gros chiffres : dashboards FIFA et Matchday (Dribbble)</li><li>Grilles bento : concepts football sur Dribbble</li></ul></div>
+    <div class="n-add"><h4>Nouveau</h4><ul><li>Bandeau des scores + part d’xG</li><li>Courbe xG cumulée et carte des tirs</li><li>Course au titre journée par journée</li><li>Efficacité devant le but (buts − xG)</li><li>Chiffre de la semaine, meilleure série</li></ul></div>
+    <div class="n-drop"><h4>Retiré</h4><ul><li>Nuage de 35 000 points</li><li>Carte « Couverture » (va dans Méthode)</li><li>Export, recherche et saison en haut</li><li>Matchs obscurs en tête des « à venir »</li></ul></div>
+  </div></div>
+</div>
+
+<header class="site-header">
+  <div class="sh-in">
+    <img src="../../dashboard/frontend/public/branding/green/logos/svg/statarena-horizontal-dark.svg" alt="STATARENA" id="logo" onerror="this.replaceWith(Object.assign(document.createElement('strong'),{textContent:'STATARENA'}))">
+    <nav class="nav"><a class="on" href="#">Vue d’ensemble</a><a href="#">Compétitions</a><a href="#">Clubs</a><a href="#">Joueurs</a><a href="#">Classement Ballon d’Or</a><a href="#">Matchs</a></nav>
+    <div class="sh-search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Rechercher<kbd>⌘K</kbd></div>
+  </div>
+</header>
+<div class="ticker" aria-label="Résultats de la semaine"><div class="ticker-in" id="ticker"></div></div>
+
+<main id="app"></main>
+
+<script>const DATA = /*__DATA__*/null;</script>
+<script>
+(() => {
+const D = DATA, $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const L = Object.fromEntries(D.leagues.map(l => [l.id, l]));
+const BIG5 = ["l_4WFCIZ","l_0ErfuF","l_1Isor4","l_0ALvwF","l_3FJFUl"], DOM = BIG5.concat(["l_4QexZg","l_4H43wr"]), UEFA = ["l_0bfbkO","l_38d9HA","l_2WZ2tt"];
+const TZ = "Europe/Paris", NOW = Date.parse("2026-11-02T16:00:00Z");
+const nf2 = new Intl.NumberFormat("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const nf1 = new Intl.NumberFormat("fr-FR",{minimumFractionDigits:1,maximumFractionDigits:1});
+const n2 = v => v == null ? "–" : nf2.format(v), n1 = v => v == null ? "–" : nf1.format(v);
+const time = t => new Intl.DateTimeFormat("fr-FR",{timeZone:TZ,hour:"2-digit",minute:"2-digit"}).format(new Date(t));
+const dayKey = t => new Intl.DateTimeFormat("fr-CA",{timeZone:TZ}).format(new Date(t));
+const shortDay = d => new Intl.DateTimeFormat("fr-FR",{weekday:"short",day:"numeric",month:"short",timeZone:"UTC"}).format(new Date(d+"T12:00:00Z"));
+const dayName = d => d === "2026-11-02" ? "Ce soir" : d === "2026-11-03" ? "Demain" : new Intl.DateTimeFormat("fr-FR",{weekday:"long",timeZone:"UTC"}).format(new Date(d+"T12:00:00Z"));
+const until = t => { const h = Math.round((Date.parse(t) - NOW) / 36e5); return h < 1 ? "bientôt" : h < 36 ? `dans ${h} h` : `dans ${Math.round(h/24)} j`; };
+const initials = n => esc(String(n||"?").split(/\s+/).map(w => w[0]).slice(0,2).join("").toUpperCase());
+const crest = (img, name, cls = "") => img ? `<img class="crest ${cls}" src="${esc(img)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=&quot;crest ${cls} fallback&quot;>${initials(name)}</span>'">` : `<span class="crest ${cls} fallback">${initials(name)}</span>`;
+const avatar = (img, name, cls = "") => img ? `<img class="avatar ${cls}" src="${esc(img)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=&quot;avatar ${cls} fallback&quot;>${initials(name)}</span>'">` : `<span class="avatar ${cls} fallback">${initials(name)}</span>`;
+const lg = lid => `<span class="row" style="gap:6px">${crest(L[lid].img, L[lid].name, "xs")}<span>${esc(L[lid].name)}</span></span>`;
+const form = f => `<span class="form">${(f||[]).map(x => `<i class="${x}"></i>`).join("")}</span>`;
+const ord = n => n === 1 ? "1er" : n + "e";
+const arrow = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-2px"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`;
+const weight = m => (m.home.big ? 2 : 0) + (m.away.big ? 2 : 0) + (BIG5.includes(m.lid) ? 1 : 0) + (m.lid === "l_0bfbkO" ? 2 : 0)
+  + (m.home.rank && m.home.rank <= 3 ? 1 : 0) + (m.away.rank && m.away.rank <= 3 ? 1 : 0);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+let month = "nov";
+
+/* ---------- ticker ---------- */
+function renderTicker() {
+  const items = D.results.filter(m => weight(m) >= 2 || DOM.includes(m.lid)).sort((a,b) => (b.t||"").localeCompare(a.t||"") || weight(b) - weight(a));
+  const byDay = {};
+  items.forEach(m => (byDay[m.date] ||= []).push(m));
+  $("#ticker").innerHTML = Object.keys(byDay).sort().reverse().slice(0, 4).map(d =>
+    `<span class="tk-day">${shortDay(d)}</span>` + byDay[d].sort((a,b) => weight(b) - weight(a)).slice(0, 8).map(m => {
+      const hx = m.home.xg || 0, ax = m.away.xg || 0, tot = hx + ax || 1, hs = m.home.score, as = m.away.score;
+      return `<a href="#" class="tk">
+        <span class="tk-top"><span>${L[m.lid].abbr}</span><span>TER</span></span>
+        <span class="tk-row ${hs < as ? "lose" : ""}">${crest(m.home.img, m.home.name, "xs")}<span>${esc(m.home.name)}</span><b>${hs}</b></span>
+        <span class="tk-row ${as < hs ? "lose" : ""}">${crest(m.away.img, m.away.name, "xs")}<span>${esc(m.away.name)}</span><b>${as}</b></span>
+        <span class="tk-xg"><i style="width:${hx/tot*100}%"></i><i style="width:${ax/tot*100}%"></i></span>
+        <span class="tk-cap tnum"><span>${n2(hx)} xG</span><span>${n2(ax)}</span></span></a>`;
+    }).join("")).join("");
+}
+
+/* ---------- featured match charts ---------- */
+function xgRace(f) {
+  const W = 560, H = 215, P = {l: 30, r: 12, t: 16, b: 22};
+  const ser = {h: [[0,0]], a: [[0,0]]}, goals = [];
+  let c = {h: 0, a: 0};
+  for (const s of f.shots) {
+    const side = s.own ? (s.side === "h" ? "a" : "h") : s.side, m = Math.min(s.m ?? 0, 95);
+    ser[s.side].push([m, c[s.side]]); c[s.side] += s.xg || 0; ser[s.side].push([m, c[s.side]]);
+    if (s.goal) goals.push({side, m, y: c[s.side], p: s.p});
+  }
+  const end = Math.max(95, ...f.shots.map(s => s.m || 0));
+  ser.h.push([end, c.h]); ser.a.push([end, c.a]);
+  const ymax = Math.max(1, c.h, c.a) * 1.12;
+  const X = m => P.l + m / end * (W - P.l - P.r), Y = v => H - P.b - v / ymax * (H - P.t - P.b);
+  const path = pts => pts.map((p, i) => `${i ? "L" : "M"}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("");
+  const area = pts => path(pts) + `L${X(end)},${Y(0)}L${X(0)},${Y(0)}Z`;
+  const yt = [0, 1, 2, 3, 4, 5].filter(v => v <= ymax);
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="xG cumulés au fil du match">
+    <defs><linearGradient id="gh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--home)" stop-opacity=".28"/><stop offset="1" stop-color="var(--home)" stop-opacity="0"/></linearGradient>
+    <linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--away)" stop-opacity=".22"/><stop offset="1" stop-color="var(--away)" stop-opacity="0"/></linearGradient></defs>
+    ${yt.map(v => `<line x1="${P.l}" x2="${W-P.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--border)"/><text x="${P.l-8}" y="${Y(v)+3.5}" fill="var(--muted2)" font-size="10" text-anchor="end">${v}</text>`).join("")}
+    ${[0,15,30,45,60,75,90].map(m => `<text x="${X(m)}" y="${H-6}" fill="var(--muted2)" font-size="10" text-anchor="middle">${m}′</text>`).join("")}
+    <line x1="${X(45)}" x2="${X(45)}" y1="${P.t}" y2="${H-P.b}" stroke="var(--border2)" stroke-dasharray="2 3"/>
+    <path d="${area(ser.h)}" fill="url(#gh)"/><path d="${area(ser.a)}" fill="url(#ga)"/>
+    <path d="${path(ser.h)}" fill="none" stroke="var(--home)" stroke-width="2"/><path d="${path(ser.a)}" fill="none" stroke="var(--away)" stroke-width="2"/>
+    ${goals.map(g => { const x = X(g.m), y = Y(ser[g.side === "h" ? "h" : "a"].find(p => p[0] >= g.m)?.[1] ?? g.y), up = g.side === "h";
+      return `<g><circle cx="${x}" cy="${Y(g.y)}" r="5" fill="var(--surface)" stroke="${up ? "var(--home)" : "var(--away)"}" stroke-width="2"/>
+      <text x="${x}" y="${Y(g.y) - 9}" fill="var(--strong)" font-size="10.5" font-weight="600" text-anchor="${x > W - 80 ? "end" : "middle"}">${esc(g.p.split(" ").slice(-1)[0])} ${g.m}′</text></g>`; }).join("")}
+  </svg>`;
+}
+function shotMap(f) {
+  // Both teams attack towards x = 105 in the source; the home side is mirrored to the left half.
+  const pitch = `<rect x="0" y="0" width="105" height="68" rx="1.5" fill="none" stroke="var(--border2)" stroke-width=".35"/>
+    <line x1="52.5" y1="0" x2="52.5" y2="68" stroke="var(--border2)" stroke-width=".35"/><circle cx="52.5" cy="34" r="9.15" fill="none" stroke="var(--border2)" stroke-width=".35"/>
+    <rect x="0" y="13.85" width="16.5" height="40.3" fill="none" stroke="var(--border2)" stroke-width=".35"/><rect x="88.5" y="13.85" width="16.5" height="40.3" fill="none" stroke="var(--border2)" stroke-width=".35"/>
+    <rect x="0" y="24.85" width="5.5" height="18.3" fill="none" stroke="var(--border2)" stroke-width=".35"/><rect x="99.5" y="24.85" width="5.5" height="18.3" fill="none" stroke="var(--border2)" stroke-width=".35"/>`;
+  const dots = f.shots.map(s => {
+    const h = s.side === "h", x = h ? 105 - s.x : s.x, y = h ? 68 - s.y : s.y, r = Math.min(3.6, 1.1 + Math.sqrt(s.xg || 0) * 3.2), col = h ? "var(--home)" : "var(--away)";
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(2)}" fill="${s.goal ? col : "none"}" fill-opacity="${s.goal ? .95 : 0}" stroke="${col}" stroke-width="${s.goal ? .5 : .45}" opacity="${s.goal ? 1 : .8}"><title>${esc(s.p)} · ${s.m}′ · ${n2(s.xg)} xG${s.goal ? " · but" : ""}</title></circle>`;
+  }).join("");
+  return `<svg viewBox="-1 -1 107 70" width="100%" role="img" aria-label="Carte des tirs">${pitch}${dots}</svg>`;
+}
+
+/* ---------- title race chart ---------- */
+function raceChart(lid) {
+  const r = D.race[lid], cols = ["var(--c1)","var(--c2)","var(--c3)","var(--c4)"];
+  const W = 520, H = 250, P = {l: 26, r: 34, t: 12, b: 22};
+  const n = Math.max(...r.teams.map(t => t.cum.length)), ymax = Math.max(...r.teams.map(t => t.cum.at(-1))) + 2;
+  const X = i => P.l + i / n * (W - P.l - P.r), Y = v => H - P.b - v / ymax * (H - P.t - P.b);
+  const grid = [0, 5, 10, 15, 20, 25, 30, 35].filter(v => v <= ymax);
+  const ends = r.teams.map((t, i) => ({i, y: Y(t.cum.at(-1))})).sort((a, b) => a.y - b.y);
+  for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k-1].y < 16) ends[k].y = ends[k-1].y + 16;
+  const endY = Object.fromEntries(ends.map(e => [e.i, e.y]));
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Points cumulés par journée">
+    ${grid.map(v => `<line x1="${P.l}" x2="${W-P.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--border)"/><text x="${P.l-7}" y="${Y(v)+3.5}" font-size="10" fill="var(--muted2)" text-anchor="end">${v}</text>`).join("")}
+    ${Array.from({length: n + 1}, (_, i) => i).filter(i => i % (n > 10 ? 2 : 1) === 0).map(i => `<text x="${X(i)}" y="${H-6}" font-size="10" fill="var(--muted2)" text-anchor="middle">${i ? "J" + i : ""}</text>`).join("")}
+    ${r.teams.map((t, i) => `<path d="${[0, ...t.cum].map((v, j) => `${j ? "L" : "M"}${X(j).toFixed(1)},${Y(v).toFixed(1)}`).join("")}" fill="none" stroke="${cols[i]}" stroke-width="${i ? 1.8 : 2.6}" stroke-linejoin="round" opacity="${i ? .85 : 1}"/>
+      <circle cx="${X(t.cum.length)}" cy="${Y(t.cum.at(-1))}" r="3.5" fill="${cols[i]}"/>
+      <image href="${esc(t.img)}" x="${W-P.r+8}" y="${endY[i]-8}" width="16" height="16"/>`).join("")}
+  </svg>`;
+}
+
+/* ---------- sections ---------- */
+function featuredCard() {
+  const f = D.featured, h = f.home, a = f.away;
+  const goals = side => f.shots.filter(s => s.goal && ((s.own ? (s.side === "h" ? "a" : "h") : s.side) === side)).map(s => `${esc(s.p.split(" ").slice(-1)[0])} ${s.m}′`).join(" · ") || "&nbsp;";
+  const stat = (label, hv, av, fmt = x => x) => { const t = (hv + av) || 1; return `<div class="bar tnum"><b>${fmt(hv)}</b><span class="l"><i style="width:${hv/t*100}%"></i></span><span>${label}</span><span class="r"><i style="width:${av/t*100}%"></i></span><b>${fmt(av)}</b></div>`; };
+  const diff = (h.xg || 0) - (a.xg || 0), m = f.motm[0];
+  const verdict = h.score === a.score && Math.abs(diff) > 1.5
+    ? `<b>${esc(diff > 0 ? h.name : a.name)}</b> a créé ${n1(Math.max(h.xg, a.xg))} xG contre ${n1(Math.min(h.xg, a.xg))}, mais repart avec un nul. Le gardien adverse a fait la différence.`
+    : `Le score reflète la physionomie du match : ${n1(h.xg)} xG contre ${n1(a.xg)}.`;
+  return `<article class="card feat c8">
+    <div class="feat-top"><span class="kicker"><span class="dot"></span>Le choc de la semaine</span><span class="row muted">${lg(f.lid)}<span>· ${shortDay(f.date)}</span></span></div>
+    <div class="score">
+      <div class="side h"><div><strong>${esc(h.name)}</strong><small>${ord(h.rank)} · ${form(h.form)}</small></div>${crest(h.img, h.name, "lg")}</div>
+      <div class="num tnum">${h.score}<i>–</i>${a.score}</div>
+      <div class="side">${crest(a.img, a.name, "lg")}<div><strong>${esc(a.name)}</strong><small>${ord(a.rank)} · ${form(a.form)}</small></div></div>
+    </div>
+    <div class="scorers"><div>${goals("h")}</div><div class="ft">TERMINÉ</div><div>${goals("a")}</div></div>
+    <p class="verdict">${verdict}</p>
+    <div class="feat-viz">
+      <div><div class="viz-label"><span>xG cumulés</span><span class="legend"><span><i style="background:var(--home)"></i>${esc(h.name)}</span><span><i style="background:var(--away)"></i>${esc(a.name)}</span></span></div>${xgRace(f)}</div>
+      <div><div class="viz-label"><span>Carte des tirs</span><span class="legend"><span>● but</span><span>○ tir · taille = xG</span></span></div>${shotMap(f)}</div>
+    </div>
+    <div class="feat-foot">
+      <div class="bars">${stat("Possession", h.possession, a.possession, x => x + " %")}${stat("Tirs", h.shots, a.shots)}${stat("Cadrés", h.shotsOnTarget, a.shotsOnTarget)}${stat("xG", h.xg, a.xg, n2)}</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <a href="#" class="motm">${avatar(m.img, m.name)}<div><span class="m2" style="font-size:11px">Homme du match</span><strong>${esc(m.name)}</strong><span class="muted" style="font-size:12px">${esc(m.team)}</span></div><span class="rt tnum">${n2(m.rating)}</span></a>
+        <a class="btn primary" href="#" style="justify-content:center">Analyse complète du match ${arrow}</a>
+      </div>
+    </div>
+  </article>`;
+}
+function potwCard() {
+  const p = D.potw, s = p.season, last = p.name.split(" ").slice(-1)[0];
+  return `<article class="card potw">
+    <div class="ghost" aria-hidden="true">${esc(last)}</div>
+    <div class="row" style="justify-content:space-between;position:relative"><span class="kicker"><span class="dot" style="background:var(--green)"></span>Joueur de la semaine</span><span class="pill">${shortDay(p.date)}</span></div>
+    <div class="potw-id">${avatar(p.img, p.name, "xl")}<div><strong>${esc(p.name)}</strong><small>${crest(p.teamImg, p.team, "xs")}${esc(p.team)}</small></div></div>
+    <div class="potw-big tnum"><div><b>${n2(p.rating)}</b><span>Note du match</span></div><div><b>${p.g}</b><span>Buts</span></div><div><b>${p.a}</b><span>Passes déc.</span></div></div>
+    <div class="potw-mini tnum"><div><b>${n2(p.xg)}</b>xG</div><div><b>${p.shots ?? "–"}</b>tirs</div><div><b>${p.chances ?? "–"}</b>occasions</div><div><b>${p.min}′</b>joué</div></div>
+    <div class="potw-season">Sur la saison : <b>${s.g} buts</b>, <b>${s.a} passes</b>, note moyenne <b>${n2(s.rating)}</b> en ${s.apps} matchs.</div>
+    <div class="potw-match"><span>${esc(p.home)} <b style="color:var(--strong)">${esc(p.score)}</b> ${esc(p.away)}</span><a class="link" href="#">Sa fiche ${arrow}</a></div>
+  </article>`;
+}
+function numberCard() {
+  const m = D.bigwin, w = m.home.score > m.away.score ? m.home : m.away, l = w === m.home ? m.away : m.home, n = Math.abs(m.home.score - m.away.score);
+  return `<article class="card number"><span class="big disp tnum">${n}</span><div><span class="kicker">Le chiffre de la semaine</span>
+    <p>buts d’écart : <b>${esc(m.home.name)} ${m.home.score}–${m.away.score} ${esc(m.away.name)}</b> en ${esc(L[m.lid].name)}. Le plus large score de la semaine dans le Top 7 et en Europe.</p></div></article>`;
+}
+function raceCard() {
+  return `<article class="card c7">
+    <div class="ch"><div><span class="kicker">Course au titre</span><h2>Qui décroche en tête ?</h2></div><a class="link" href="#">Classements complets ${arrow}</a></div>
+    <div class="tabs" id="raceTabs">${DOM.map((lid, i) => `<button data-lid="${lid}" aria-pressed="${lid === "l_3FJFUl"}">${crest(L[lid].img, L[lid].name, "xs")}${esc(L[lid].name)}</button>`).join("")}</div>
+    <div class="race" id="race"></div>
+  </article>`;
+}
+function raceBody(lid) {
+  const r = D.race[lid], st = D.standings[lid], cols = ["var(--c1)","var(--c2)","var(--c3)","var(--c4)"];
+  const lead = r.teams[0], gap = lead.cum.at(-1) - r.teams[1].cum.at(-1);
+  return `<div>${raceChart(lid)}</div>
+    <div class="race-leg">
+      ${r.teams.map((t, i) => `<div class="rl"><i style="background:${cols[i]}"></i>${crest(t.img, t.name)}<span style="min-width:0"><strong>${esc(t.name)}</strong><small>${i ? `−${lead.cum.at(-1) - t.cum.at(-1)} pts` : (gap ? `+${gap} pts d’avance` : "à égalité")} · ${form(st[i].form)}</small></span><b class="tnum">${t.cum.at(-1)}</b></div>`).join("")}
+      <div class="progress">Journée ${r.played} sur ${r.games}<div class="track"><i style="width:${r.played / r.games * 100}%"></i></div></div>
+    </div>`;
+}
+function nextCard() {
+  const ups = D.upcoming.filter(m => weight(m) >= 3).sort((a,b) => weight(b) - weight(a) || a.t.localeCompare(b.t));
+  const hero = ups[0], rest = D.upcoming.filter(m => m !== hero && weight(m) >= 3).sort((a,b) => a.t.localeCompare(b.t)).slice(0, 5);
+  const tt = t => `<div class="t">${crest(t.img, t.name, "md")}<strong>${esc(t.name)}</strong><small>${t.rank ? ord(t.rank) + " en championnat" : "&nbsp;"}</small>${form(t.form)}</div>`;
+  return `<article class="card c5">
+    <div class="ch"><div><span class="kicker">À ne pas manquer</span><h2>Cette semaine</h2></div><a class="link" href="#">Calendrier ${arrow}</a></div>
+    <div class="next-hero">
+      <div class="when">${lg(hero.lid)}<span class="cd tnum">${until(hero.t)}</span></div>
+      <div class="vs">${tt(hero.home)}<em>${time(hero.t)}</em>${tt(hero.away)}</div>
+    </div>
+    <div style="margin-top:12px">${rest.map(m => `<a href="#" class="urow"><span class="tm"><b>${time(m.t)}</b>${dayName(dayKey(m.t))}</span>
+      <span class="ts"><span>${crest(m.home.img, m.home.name, "xs")}<em>${esc(m.home.name)}</em><small>${m.home.rank ? ord(m.home.rank) : ""}</small></span><span>${crest(m.away.img, m.away.name, "xs")}<em>${esc(m.away.name)}</em><small>${L[m.lid].abbr}</small></span></span></a>`).join("")}</div>
+  </article>`;
+}
+function clinicalCard() {
+  return `<article class="card trend c5">
+    <div class="row" style="justify-content:space-between"><span class="kicker">Devant le but</span>
+      <div class="seg" id="clinSeg" style="padding:2px"><button data-k="c" aria-pressed="true" style="padding:3px 8px;font-size:12px">Efficaces</button><button data-k="w" aria-pressed="false" style="padding:3px 8px;font-size:12px">Maladroits</button></div></div>
+    <div id="clinBody" style="display:flex;flex-direction:column;gap:10px"></div>
+  </article>`;
+}
+function clinicalBody(k) {
+  const list = k === "c" ? D.leaders.clinical : D.leaders.wasteful;
+  const max = Math.max(...list.map(p => Math.max(p.g, p.xg))) * 1.08;
+  const title = k === "c" ? "Ils marquent plus que prévu" : "Ils devraient avoir plus de buts";
+  const lead = k === "c" ? "Buts marqués (●) comparés aux buts attendus (○ xG) sur la saison." : "Les plus grosses occasions gâchées par rapport à leurs xG.";
+  return `<h3>${title}</h3><p class="lead">${lead}</p>` + list.map(p => { const d = p.g - p.xg, a = Math.min(p.g, p.xg) / max * 100, b = Math.max(p.g, p.xg) / max * 100;
+    return `<div class="db">${avatar(p.img, p.name, "sm")}<div><div class="row" style="justify-content:space-between"><span style="min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><strong>${esc(p.name)}</strong> <small>${esc(p.team)} · ${p.g} buts, ${n1(p.xg)} xG</small></span><span class="db-val tnum ${d >= 0 ? "up" : "down"}">${d >= 0 ? "+" : "−"}${n1(Math.abs(d))}</span></div>
+    <div class="db-track"><span class="ln" style="left:${a}%;width:${b - a}%"></span><span class="p xg" style="left:${p.xg / max * 100}%"></span><span class="p g ${d < 0 ? "neg" : ""}" style="left:${p.g / max * 100}%"></span></div></div></div>`; }).join("");
+}
+function streakCard() {
+  const s = D.streak, nx = D.upcoming.find(m => m.home.name === s.name || m.away.name === s.name);
+  return `<article class="card trend c3"><span class="kicker">En série</span>
+    <div class="row" style="gap:14px;align-items:flex-end"><span class="streak-n disp tnum">${s.streak}</span><div style="padding-bottom:4px"><strong style="color:var(--strong);font-size:15px">victoires d’affilée</strong><div class="row muted" style="margin-top:4px">${crest(s.img, s.name, "xs")}${esc(s.name)} · ${esc(L[s.lid].name)}</div></div></div>
+    <div class="streak-dots">${Array.from({length: s.streak}, () => "<i></i>").join("")}</div>
+    <p class="lead">Meilleure série en cours dans les 7 championnats suivis, ${ord(s.rank)} du classement.</p>
+    ${nx ? `<a href="#" class="next-hero" style="margin:auto 0 0;display:block"><div class="when"><span>Prochain test</span><span class="tnum">${dayName(dayKey(nx.t))} · ${time(nx.t)}</span></div>
+      <div class="row" style="margin-top:8px;justify-content:space-between"><span class="row">${crest(nx.home.img, nx.home.name)}<strong style="color:var(--strong)">${esc(nx.home.name)}</strong></span><span class="m2">–</span><span class="row"><strong style="color:var(--strong)">${esc(nx.away.name)}</strong>${crest(nx.away.img, nx.away.name)}</span></div>
+      <div class="m2" style="font-size:11.5px;margin-top:6px">${esc(L[nx.lid].name)}</div></a>` : ""}</article>`;
+}
+function scorersCard() {
+  return `<article class="card trend c4"><div class="row" style="justify-content:space-between"><span class="kicker">Buteurs de la saison</span><a class="link" href="#">Tous ${arrow}</a></div>
+    <div>${D.leaders.goals.slice(0, 5).map(p => `<a href="#" class="scorer">${avatar(p.img, p.name, "sm")}<span><strong>${esc(p.name)}</strong><small>${esc(p.team)} · ${n1(p.xg)} xG · ${p.apps} matchs</small></span><b class="tnum">${p.g}</b></a>`).join("")}</div></article>`;
+}
+function bdoSlim() {
+  const prog = Math.round(BIG5.reduce((s, l) => s + D.race[l].played / D.race[l].games, 0) / BIG5.length * 100);
+  const top = D.leaders.rating.slice(0, 3);
+  const R = 26, C = 2 * Math.PI * R;
+  return `<article class="card bdo-slim c12" style="flex-direction:row;align-items:center;gap:20px;flex-wrap:wrap">
+    <div class="ring"><svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="${R}" fill="none" stroke="var(--subtle)" stroke-width="6"/><circle cx="32" cy="32" r="${R}" fill="none" stroke="var(--gold)" stroke-width="6" stroke-linecap="round" stroke-dasharray="${C * prog / 100} ${C}" transform="rotate(-90 32 32)"/></svg>
+      <div><b class="tnum">${prog} %</b><span class="m2" style="font-size:11px;display:block">de la saison jouée</span></div></div>
+    <div style="flex:1;min-width:240px"><span class="pill gold">Ballon d’Or STATARENA · ouverture en mars</span><h3 style="margin-top:8px">Trop tôt pour un classement, pas pour suivre la tendance</h3>
+      <p>Notre classement compare chaque joueur à son poste, match par match. Il devient significatif avec assez de matchs : la course s’affiche ici à partir de mars.</p></div>
+    <div class="peek">${top.map(p => avatar(p.img, p.name)).join("")}<span style="margin-left:6px">En tête des notes : <b style="color:var(--strong)">${top.map(p => esc(p.name.split(" ").slice(-1)[0])).join(", ")}</b></span></div>
+    <a class="btn" href="#">Lire la méthode</a>
+  </article>`;
+}
+function bdoFull() {
+  const r = D.leaders.rating, [p1, p2, p3] = r;
+  const pod = (p, k) => `<div class="pod p${k}"><span class="medal">${k}</span>${avatar(p.img, p.name, k === 1 ? "xl" : "")}<strong>${esc(p.name)}</strong><span class="row muted" style="font-size:12px">${crest(p.teamImg, p.team, "xs")}${esc(p.team)}</span><span class="val tnum">${n2(p.rating)}</span><span class="m2" style="font-size:11px">${p.g} buts · ${p.a} passes</span></div>`;
+  return `<section class="card bdo c12">
+    <div>
+      <div class="row" style="flex-wrap:wrap"><span class="pill gold">La course est lancée</span><span class="pill">Simulation : données actuelles, note moyenne PitchAPI en attendant le vrai classement</span></div>
+      <h2>La course au Ballon d’Or</h2>
+      <p class="lead">Chaque joueur est comparé à ce qu’on attend à son poste, match par match, puis classé sur la saison. Mise à jour après chaque journée.</p>
+      <div class="podium">${pod(p2, 2)}${pod(p1, 1)}${pod(p3, 3)}</div>
+    </div>
+    <div class="bdo-list tnum">
+      <div class="r h"><span>#</span><span></span><span>Joueur</span><span class="n">Note moy.</span><span class="n">Buts</span><span class="n">P.d.</span></div>
+      ${r.slice(3, 10).map((p, i) => `<a href="#" class="r"><span class="m2">${i + 4}</span>${avatar(p.img, p.name, "sm")}<span><strong>${esc(p.name)}</strong><small>${esc(p.team)}</small></span><span class="n"><b>${n2(p.rating)}</b></span><span class="n">${p.g}</span><span class="n">${p.a}</span></a>`).join("")}
+      <div class="row" style="margin-top:14px;gap:8px"><a class="btn primary" href="#">Classement complet ${arrow}</a><a class="btn" href="#">La méthode</a></div>
+    </div>
+  </section>`;
+}
+function railSec() {
+  const others = D.top.filter(p => p.pid !== D.potw.pid).slice(0, 9);
+  return `<div class="sec"><div class="sec-head"><h2>Ils ont aussi brillé <span class="cap">Meilleures notes de la semaine, 60 min minimum</span></h2><a class="link" href="#">Tous les joueurs ${arrow}</a></div>
+    <div class="rail">${others.map(p => `<a href="#" class="card pc"><div class="top">${avatar(p.img, p.name)}<span class="rt tnum">${n2(p.rating)}</span></div>
+      <div><strong>${esc(p.name)}</strong><small>${crest(p.teamImg, p.team, "xs")}${esc(p.team)}</small></div>
+      <div class="line"><b>${p.g}</b> but${p.g > 1 ? "s" : ""} · <b>${p.a}</b> passe${p.a > 1 ? "s" : ""} · ${esc(p.home)} ${esc(p.score)} ${esc(p.away)}</div></a>`).join("")}</div></div>`;
+}
+
+function render() {
+  const s = D.stats;
+  $("#app").innerHTML = `
+  <div class="intro">
+    <div><h1>Vue d’ensemble</h1><div class="sub">Semaine du 27 oct. au 2 nov. · <b>${s.weekMatches} matchs</b>, <b>${s.weekGoals} buts</b>, ${n1(s.weekXg)} xG dans le Top 7 et en coupes d’Europe</div></div>
+    <div class="chips"><button class="chip" aria-pressed="true">Top 7 + Europe</button><button class="chip">Mes clubs</button><button class="chip">Toutes</button></div>
+  </div>
+  <div class="bento">
+    ${featuredCard()}
+    <div class="c4" style="display:flex;flex-direction:column;gap:14px;min-width:0">${potwCard()}${numberCard()}</div>
+    ${month === "mar" ? bdoFull() : ""}
+    ${raceCard()}
+    ${nextCard()}
+    ${clinicalCard()}
+    ${scorersCard()}
+    ${streakCard()}
+    ${month === "nov" ? bdoSlim() : ""}
+  </div>
+  ${railSec()}
+  <div class="foot-note"><span>Notes : PitchAPI · xG et tirs : PitchAPI · Calendriers : PitchAPI et open-matchday</span><a href="#">Données & méthode (couverture, sources, limites)</a></div>`;
+  $("#race").innerHTML = raceBody("l_3FJFUl");
+  $("#raceTabs").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+    $("#raceTabs").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); $("#race").innerHTML = raceBody(b.dataset.lid); });
+  $("#clinBody").innerHTML = clinicalBody("c");
+  $("#clinSeg").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+    $("#clinSeg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); $("#clinBody").innerHTML = clinicalBody(b.dataset.k); });
+}
+
+renderTicker(); render();
+if (innerWidth < 700) { $("#notes").classList.remove("open"); $("#notesBtn").setAttribute("aria-expanded", "false"); }
+$("#monthSeg").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+  month = b.dataset.m; $("#monthSeg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); render();
+  if (month === "mar") document.querySelector(".bdo")?.scrollIntoView({behavior: "smooth", block: "center"}); });
+$("#notesBtn").addEventListener("click", e => { const o = $("#notes").classList.toggle("open"); e.currentTarget.setAttribute("aria-expanded", o); });
+$("#themeBtn").addEventListener("click", e => {
+  const light = document.documentElement.dataset.theme !== "light";
+  document.documentElement.dataset.theme = light ? "light" : "dark";
+  e.currentTarget.textContent = light ? "Thème sombre" : "Thème clair";
+  const lg = $("#logo"); if (lg && lg.src) lg.src = lg.src.replace(light ? "-dark.svg" : "-light.svg", light ? "-light.svg" : "-dark.svg");
+});
+})();
+</script>
+</body>
+</html>

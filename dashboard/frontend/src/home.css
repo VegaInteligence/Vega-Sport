@@ -1552,22 +1552,6 @@ html[data-theme="light"] {
   }
 }
 
-/* Top bar: ticker and the competition filter */
-.home-topbar {
-  display: flex;
-  align-items: stretch;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-.home-topbar .home-ticker {
-  flex: 1;
-  min-width: 0;
-  margin-bottom: 0;
-}
-.home-topbar-actions {
-  display: flex;
-  align-items: center;
-}
 .home-tick-top,
 .home-tick-foot,
 .home-tick-team {
@@ -1856,17 +1840,80 @@ html[data-theme="light"] {
 .home-scorers-list button {
   grid-template-columns: 16px 28px minmax(0, 1fr) auto;
 }
-@media (max-width: 640px) {
-  .home-topbar {
-    flex-direction: column-reverse;
-  }
-  .home-topbar-actions {
-    justify-content: flex-end;
-  }
-}
 .home-tip {
   min-width: 190px;
 }
 .home-tip-row b {
   white-space: nowrap;
+}
+/* Shot path towards the goal, drawn on hover */
+.home-shot-path {
+  stroke-width: 0.6;
+  stroke-dasharray: 1.4 1;
+  stroke-linecap: round;
+  pointer-events: none;
+  animation: home-shot-path 0.35s ease-out;
+}
+.home-shot-path.is-home {
+  stroke: var(--home);
+}
+.home-shot-path.is-away {
+  stroke: var(--away);
+}
+.home-shot-path.is-goal {
+  stroke-dasharray: none;
+  stroke-width: 0.8;
+}
+@keyframes home-shot-path {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.home-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+.home-bdo-empty {
+  display: inline-block;
+  width: 26px;
+  height: 26px;
+  margin-left: -8px;
+  border: 1px dashed color-mix(in srgb, var(--gold) 55%, var(--border-strong));
+  border-radius: 50%;
+  background: var(--surface-subtle);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.home-bdo-empty:first-child {
+  margin-left: 0;
+}
+.home-trend-more {
+  margin-top: auto;
+}
+.home-bdo-row {
+  grid-template-columns: 22px 28px minmax(0, 1fr) 110px 56px;
+}
+.home-bdo-row > :nth-child(4) {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .home-bdo-row {
+    grid-template-columns: 22px 28px minmax(0, 1fr) 56px;
+  }
+  .home-bdo-row > :nth-child(4) {
+    display: none;
+  }
+  .home-bdo-row > :last-child {
+    display: block;
+  }
+}
+.home-shot-path.is-estimated {
+  opacity: 0.45;
 }

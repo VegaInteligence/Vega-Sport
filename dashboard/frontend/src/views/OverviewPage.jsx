@@ -27,6 +27,7 @@ import {
 } from "../components/HomeSeason.jsx";
 import { json, useResource } from "../services/resources.js";
 import { ballonDorRanking } from "../services/ballon-dor.js";
+import { dataUrl } from "../data-url.js";
 import { competitionIndex } from "../services/competition-identity.js";
 import { europeFocusIds } from "../../../shared/competition-scope.js";
 import {
@@ -38,6 +39,7 @@ import {
   biggestWin,
   leagueOf,
   leagueProgress,
+  manifestSignature,
   matchdayWindow,
   playerOfTheWeek,
   recentRatings,
@@ -46,10 +48,55 @@ import {
   seasonTotals,
   selectMatchOfTheWeek,
   teamRanks,
+  untilParisMidnight,
   upcomingHighlights,
   weekPerformances,
   weekResults,
 } from "../services/home-insights.js";
+
+/**
+ * The data is refreshed every night. From midnight (Paris), the home checks
+ * every 30 minutes for a newly published season and reloads itself once it
+ * is there, so a page left open shows the new day without any action.
+ */
+function useNightlyRefresh(manifest) {
+  useEffect(() => {
+    if (!manifest) return;
+    const current = manifestSignature(manifest);
+    let timer,
+      pending = false,
+      stopped = false;
+    const reload = () => window.location.reload();
+    const check = async () => {
+      try {
+        const response = await fetch(dataUrl("dashboard-manifest.json"), {
+          cache: "no-store",
+        });
+        if (
+          response.ok &&
+          manifestSignature(await response.json()) !== current
+        ) {
+          if (document.visibilityState === "visible") return reload();
+          pending = true;
+          return;
+        }
+      } catch {
+        // A failed check is retried at the next interval.
+      }
+      if (!stopped) timer = window.setTimeout(check, 30 * 60_000);
+    };
+    timer = window.setTimeout(check, untilParisMidnight(Date.now()) + 60_000);
+    const visible = () => {
+      if (pending && document.visibilityState === "visible") reload();
+    };
+    document.addEventListener("visibilitychange", visible);
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", visible);
+    };
+  }, [manifest]);
+}
 
 function useClock() {
   const [now, setNow] = useState(() => Date.now());
@@ -88,6 +135,7 @@ export default function OverviewPage() {
   const f = useFootball(),
     params = useSearchParams(),
     now = useClock();
+  useNightlyRefresh(f.manifest);
   const focusIds = useMemo(() => europeFocusIds(f.manifest), [f.manifest]);
   const scope = homeScope(f, focusIds),
     scopeKey = scope.ids ? [...scope.ids].sort().join(",") : "all",
@@ -185,6 +233,8 @@ export default function OverviewPage() {
         .catch(() => ({})),
   );
   const override = params.get("ballondor");
+  // The Ballon d'Or blocks show only the STATARENA ranking, never a stand-in list.
+  const ranking = ballonDorRanking(f.season);
   const raceOpen =
     override === "ouvert"
       ? true
@@ -244,16 +294,10 @@ export default function OverviewPage() {
   return (
     <Layout path="/" title="Vue d’ensemble" hideHeading className="home-page">
       <h1 className="sr-only">Vue d’ensemble</h1>
-      <div className="home-topbar">
-        <HomeTicker
-          results={results}
-          ranks={ranks}
-          competitions={competitions}
-        />
-        <div className="home-topbar-actions">
-          <HomePreferences f={f} />
-        </div>
+      <div className="home-toolbar">
+        <HomePreferences f={f} />
       </div>
+      <HomeTicker results={results} ranks={ranks} competitions={competitions} />
       <div className="home-bento">
         {featured && (
           <div className="home-span-8">
@@ -279,13 +323,9 @@ export default function OverviewPage() {
             competition={win && competitions.get(leagueOf(win.match))}
           />
         </div>
-        {raceOpen && (
+        {raceOpen && ranking?.length >= 3 && (
           <div className="home-span-12">
-            <BallonDorRace
-              leaders={leaders.rating}
-              ratedMin={leaders.ratedMin}
-              ranking={ballonDorRanking(f.season)}
-            />
+            <BallonDorRace ranking={ranking} />
           </div>
         )}
         {tables.length > 0 && (
@@ -315,7 +355,7 @@ export default function OverviewPage() {
         )}
         {leaders.goals.length > 0 && (
           <div className="home-span-4">
-            <SeasonScorers leaders={leaders.goals} />
+            <SeasonScorers leaders={leaders} />
           </div>
         )}
         {(streak || defence) && (
@@ -329,12 +369,12 @@ export default function OverviewPage() {
             <BestDefence defence={defence} competitions={competitions} />
           </div>
         )}
-        {!raceOpen && (
+        {!(raceOpen && ranking?.length >= 3) && (
           <div className="home-span-12">
             <BallonDorTeaser
               progress={seasonProgress(progress)}
-              leaders={leaders.rating}
-              ranking={ballonDorRanking(f.season)}
+              ranking={ranking}
+              raceOpen={raceOpen}
             />
           </div>
         )}

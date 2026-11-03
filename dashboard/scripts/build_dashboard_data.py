@@ -55,6 +55,61 @@ PLAYER_METRICS = {
     "saves": "saves",
     "goalsPrevented": "goals_prevented",
 }
+# Every other provider metric is kept as well, under a stable name, so no
+# collected player statistic is lost between Neon and the site.
+EXTRA_PLAYER_METRICS = {
+    "shotsOffTarget": "ShotsOffTarget",
+    "blockedShots": "blocked_shots",
+    "shotsWoodwork": "shots_woodwork",
+    "shotAccuracy": "shot_accuracy",
+    "bigChancesMissed": "big_chance_missed_title",
+    "xgPlusXa": "xg_and_xa",
+    "longBallsAccurate": "long_balls_accurate",
+    "lineBreakingPasses": "line_breaking_passes",
+    "accurateCrosses": "accurate_crosses",
+    "corners": "corners",
+    "throws": "player_throws",
+    "offsides": "Offsides",
+    "dispossessed": "dispossessed",
+    "dribbledPast": "dribbled_past",
+    "headedClearances": "headed_clearance",
+    "aerialsWon": "aerials_won",
+    "groundDuelsWon": "ground_duels_won",
+    "fouls": "fouls",
+    "wasFouled": "was_fouled",
+    "errorsLedToGoal": "errors_led_to_goal",
+    "goalsConceded": "goals_conceded",
+    "savesInsideBox": "saves_inside_box",
+    "diveSaves": "keeper_diving_save",
+    "sweeperActions": "keeper_sweeper",
+    "highClaims": "keeper_high_claim",
+    "punches": "punches",
+    "xgotFaced": "expected_goals_on_target_faced",
+    "distanceCovered": "physical_metrics_distance_covered",
+    "topSpeed": "physical_metrics_topspeed",
+    "sprints": "physical_metrics_number_of_sprints",
+    "runningDistance": "physical_metrics_running",
+    "sprintingDistance": "physical_metrics_sprinting",
+    "fantasyPoints": "fantasy_points",
+}
+# Fraction metrics also keep their number of attempts ("value/total").
+ATTEMPTED_METRICS = {
+    "passesAttempted": "accurate_passes",
+    "longBallsAttempted": "long_balls_accurate",
+    "crossesAttempted": "accurate_crosses",
+    "groundDuels": "ground_duels_won",
+    "aerialDuels": "aerials_won",
+    "dribblesAttempted": "dribbles_succeeded",
+}
+# Results that stay reliable even when action statistics are placeholders.
+RELIABLE_METRICS = {"minutes", "goals", "assists"}
+KNOWN_STATS = set(PLAYER_METRICS.values()) | set(EXTRA_PLAYER_METRICS.values())
+
+
+def camel_key(key):
+    """Stable column name for a provider metric that has no explicit mapping."""
+    words = [w for w in re.split(r"[^A-Za-z0-9]+", key.split(".")[-1]) if w]
+    return (words[0][0].lower() + words[0][1:] + "".join(w[0].upper() + w[1:] for w in words[1:])) if words else key
 
 METRICS = [
     {"key": "minutes", "label": "Minutes", "unit": "min", "decimals": 0},
@@ -163,7 +218,7 @@ def build_snapshot(raw, catalog):
         source_stats = flatten_team_stats(sample)
         source_periods = endpoint(sample, "shots", {}).get("periods")
         source_shots = unique_rows(
-            [shot for period in source_periods or [] for shot in period.get("shots") or []],
+            [dict(shot, period=period.get("period")) for period in source_periods or [] for shot in period.get("shots") or []],
             lambda shot: shot["id"],
         )
         team_shots = source_stats.get("total_shots") or {}
@@ -215,10 +270,16 @@ def build_snapshot(raw, catalog):
                 "shirtNumber": position.get("shirt_number"),
                 "statsReliable": not suspicious,
             }
-            for target, source in PLAYER_METRICS.items():
+            for target, source in {**PLAYER_METRICS, **EXTRA_PLAYER_METRICS}.items():
                 value = number((stats.get(source) or {}).get("value"))
-                record[target] = None if suspicious and target not in {"minutes", "goals", "assists"} else value
-            record["passesAttempted"] = None if suspicious else number((stats.get("accurate_passes") or {}).get("total"))
+                record[target] = None if suspicious and target not in RELIABLE_METRICS else value
+            for target, source in ATTEMPTED_METRICS.items():
+                record[target] = None if suspicious else number((stats.get(source) or {}).get("total"))
+            for source in sorted(set(stats) - KNOWN_STATS):
+                target = camel_key(source)
+                if target not in record:
+                    record[target] = None if suspicious else number((stats.get(source) or {}).get("value"))
+            record["isCaptain"] = position.get("is_captain") is True
             match_appearances.append(record)
         appearances.extend(match_appearances)
         shots = [
@@ -238,6 +299,17 @@ def build_snapshot(raw, catalog):
                 "isGoal": shot.get("event_type") == "Goal" and shot.get("is_own_goal") is not True,
                 "isOwnGoal": shot.get("is_own_goal") is True or shot.get("event_type") == "OwnGoal",
                 "isOnTarget": shot.get("is_on_target"),
+                # Where the ball crossed the goal line (y across, z height), or was blocked.
+                "goalCrossedY": number(shot.get("goal_crossed_y")),
+                "goalCrossedZ": number(shot.get("goal_crossed_z")),
+                "isBlocked": shot.get("is_blocked") is True,
+                "blockedX": number(shot.get("blocked_x")),
+                "blockedY": number(shot.get("blocked_y")),
+                "insideBox": shot.get("is_inside_box"),
+                "keeperId": (shot.get("keeper") or {}).get("id"),
+                "keeperName": (shot.get("keeper") or {}).get("name"),
+                "minuteAdded": number(shot.get("minute_added")),
+                "period": shot.get("period"),
             }
             for shot in source_shots
         ]
@@ -263,6 +335,10 @@ def build_snapshot(raw, catalog):
             "date": source_match.get("date"),
             "timeUtc": source_match.get("time_utc"),
             "status": source_match.get("status"),
+            "roundName": None if source_match.get("round_name") is None else str(source_match.get("round_name")),
+            "hasPlayoff": source_match.get("has_playoff") is True,
+            "referee": source_match.get("referee"),
+            "stadium": source_match.get("stadium"),
             "players": [p["id"] for p in match_appearances],
             "shots": shots,
             "stats": team_stats,
@@ -282,6 +358,8 @@ def build_snapshot(raw, catalog):
                 "shotsOnTarget": lookup.get("ShotsOnTarget"),
                 "possession": lookup.get("BallPossesion"),
                 "formation": (endpoint(sample, "lineups", {}).get(side) or {}).get("formation"),
+                "coach": ((endpoint(sample, "lineups", {}).get(side) or {}).get("coach") or {}).get("name"),
+                "lineupConfirmed": (endpoint(sample, "lineups", {}).get(side) or {}).get("confirmed"),
             }
         played = [p for p in match_appearances if p["minutes"] is not None and p["minutes"] > 0]
         match_record["coverage"] = {

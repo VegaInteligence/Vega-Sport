@@ -229,6 +229,7 @@ export function shotOutcome(shot) {
   if (shot.isOwnGoal) return "Contre son camp";
   if (shot.isGoal) return "But";
   if (shot.type === "Post") return "Sur le poteau";
+  if (shot.isBlocked) return "Contré";
   if (shot.type === "AttemptSaved" || shot.isOnTarget)
     return shot.isOnTarget === false ? "Contré" : "Arrêté";
   return "Non cadré";
@@ -244,11 +245,27 @@ export function shotMapPoints(match) {
         Number.isFinite(s.y),
     )
     .map((s) => {
-      const home = shotSide(s, match) === "home";
+      const home = shotSide(s, match) === "home",
+        flip = (x, y) => (home ? [105 - x, 68 - y] : [x, y]);
+      // The real end of the shot: where it was blocked, else where it crossed the goal line.
+      const end =
+        s.isBlocked &&
+        Number.isFinite(s.blockedX) &&
+        Number.isFinite(s.blockedY)
+          ? flip(s.blockedX, s.blockedY)
+          : Number.isFinite(s.goalCrossedY)
+            ? flip(105, s.goalCrossedY)
+            : null;
       return {
         side: home ? "home" : "away",
         x: home ? 105 - s.x : s.x,
         y: home ? 68 - s.y : s.y,
+        end,
+        measured: Boolean(end),
+        height:
+          Number.isFinite(s.goalCrossedZ) && !s.isBlocked
+            ? s.goalCrossedZ
+            : null,
         xg: Number.isFinite(s.xg) ? s.xg : 0,
         goal: Boolean(s.isGoal),
         minute: s.minute,
@@ -528,6 +545,11 @@ export function seasonLeaders(totals) {
       (a, b) => b.goals - a.goals || b.xg - a.xg,
       8,
     ),
+    assists: top(
+      totals.filter((p) => p.assists > 0),
+      (a, b) => b.assists - a.assists || b.xa - a.xa,
+      8,
+    ),
     clinical: top(
       totals.filter((p) => p.goals >= 4),
       (a, b) => b.goals - b.xg - (a.goals - a.xg),
@@ -654,3 +676,24 @@ export function recentRatings(appearances, playerId, season, count = 6) {
     .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
     .slice(-count);
 }
+
+const parisClock = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/Paris",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
+/** Milliseconds until the next midnight in Paris. */
+export function untilParisMidnight(now) {
+  const [h, m, s] = parisClock.format(new Date(now)).split(":").map(Number);
+  return ((24 - h) * 3600 - m * 60 - s) * 1000;
+}
+/** Identity of the published data: changes when any season chunk changes. */
+export const manifestSignature = (manifest) =>
+  JSON.stringify(
+    (manifest?.seasons || []).map((season) => [
+      season.id,
+      (season.chunks || []).map((c) => c.sha256 || c.path),
+    ]),
+  );

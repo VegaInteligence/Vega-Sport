@@ -1,8 +1,17 @@
 # Worklog
 
 ## Goal / constraints
-Publish the new committed homepage changes without pulling raw data into the original checkout; preserve remote club-profile fixes and the Neon runtime.
-Complete the Neon-only migration, preserve all user UI commits, keep two ingestion workflows, and free SSD space only after exact backups and live validation. Preserve unknown iCloud files and unrelated worktrees. Runtime is read-only; Pitch credentials belong only to GitHub Actions. Use reproducible E2E evidence.
+Publish all current STATARENA work in a single commit on main, preserving the latest remote changes, all nonignored local files and the existing Neon data. Runtime remains read-only; no rematerialization or provider collection is requested. Use reproducible E2E evidence.
+
+## Current publication — 2026-11-03
+- Local input: three unpublished commits through 40ba389e39 plus 87 nonignored untracked files, including prototypes, screenshots and numbered copies. One homepage commit is already present remotely under another SHA.
+- Integration base: origin/main a7b9abb092. Resolved nine overlapping files, preserving local homepage/data enrichment and remote targeted-league materialization, MLS mapping, player honours and navigation fixes.
+- Recovery: original local commits retained on codex/pre-consolidation-20261103; all 87 untracked files backed up before integration. Sport Prediction is a separate repository and retains its original uncommitted documentation.
+- Verification passed: production build, 26 existing JavaScript checks, 11 data checks, three MLS checks and 50 read-only Neon production HTTP checks. The MLS check first lacked boto3 in system Python, then passed in an isolated environment using the pinned ingestion dependencies. Evidence: docs/verification/worktree-publication-20261103/.
+- All 87 original nonignored untracked files are staged byte-for-byte. Source whitespace validation passes; full validation reports only whitespace retained in three raw build logs.
+- The rematerialization CLI is included; no rematerialize.yml file was present. Publishing code alone does not regenerate existing Neon partitions.
+- Suggested commit: feat: publish StatArena data enrichment and homepage updates.
+- Next action: create one commit atop the current remote main, push normally and confirm a clean worktree. No additional product changes are part of this publication.
 
 ## State — 2026-11-03
 - Live Neon runtime deployed and promoted. All 250,748 original files / 2,692,640,453 bytes verified by path, size and SHA-256; no missing resource references. Original mutable manifests retained as versions.
