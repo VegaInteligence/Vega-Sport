@@ -5,6 +5,7 @@ import { useResource } from "../services/resources.js";
 import { loadPlayerHistory } from "../services/scouting-history.js";
 import { profileValue, SCOUT_METRICS } from "../services/scouting.js";
 import { number } from "../services/format.js";
+import { observedMinutes } from "../services/trend-chart.js";
 import { AsyncState, Segments } from "./UI.jsx";
 import { ComparePlayerButton } from "./ResearchUI.jsx";
 import { ResearchTrend } from "./ResearchCharts.jsx";
@@ -16,6 +17,10 @@ export default function PlayerEvolution({ id, profile }) {
     `player-history:${id}:${f.manifest.scouting?.sourceDigest}`,
     () => loadPlayerHistory(f.manifest, id),
   );
+  const valueFor = (seasonProfile) =>
+    metric === "minutes"
+      ? observedMinutes(seasonProfile)
+      : profileValue(seasonProfile, metric, mode);
   return (
     <>
       <div className="research-toolbar">
@@ -53,12 +58,12 @@ export default function PlayerEvolution({ id, profile }) {
           <>
             <ResearchTrend
               label={`${metric === "rating" ? "Note" : metric === "minutes" ? "Minutes jouées" : SCOUT_METRICS[metric].label} · saisons collectées`}
-              points={[...seasons]
-                .reverse()
-                .map((s) => ({
-                  label: s.season,
-                  value: profileValue(s.profile, metric, mode),
-                }))}
+              bounds={metric === "rating" ? [0, 10] : undefined}
+              decimals={metric === "minutes" ? 0 : 2}
+              points={[...seasons].reverse().map((s) => ({
+                label: s.season,
+                value: valueFor(s.profile),
+              }))}
             />
             <div className="table-scroll">
               <table className="data-table">
@@ -78,11 +83,13 @@ export default function PlayerEvolution({ id, profile }) {
                     <tr key={s.season}>
                       <th>{s.season}</th>
                       <td>{s.profile.teams.join(" · ") || "—"}</td>
-                      <td>{number(s.profile.matches)}</td>
-                      <td>{number(s.profile.minutes)}</td>
+                      <td>
+                        {s.profile.matches ? number(s.profile.matches) : "—"}
+                      </td>
+                      <td>{number(observedMinutes(s.profile))}</td>
                       <td>
                         {number(
-                          profileValue(s.profile, metric, mode),
+                          valueFor(s.profile),
                           metric === "minutes" ? 0 : 2,
                         )}
                       </td>
@@ -115,11 +122,17 @@ export default function PlayerEvolution({ id, profile }) {
         <>
           <h3>Forme récente</h3>
           <ResearchTrend
-            label="Notes des dix derniers matchs renseignés"
+            label="Notes des dix derniers matchs"
+            bounds={[0, 10]}
             points={profile.rows
               .slice(0, 10)
               .reverse()
-              .map((row) => ({ label: row.date.slice(5), value: row.rating }))}
+              .map((row) => ({
+                label: row.date
+                  ? row.date.slice(5).split("-").reverse().join("/")
+                  : "Match",
+                value: row.rating,
+              }))}
           />
         </>
       )}

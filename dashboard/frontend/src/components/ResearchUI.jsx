@@ -457,7 +457,7 @@ export function ReportButton({ title, context, children }) {
   return (
     <>
       <button className="button button-secondary" onClick={() => setOpen(true)}>
-        <Icon name="download" />
+        <Icon name="eye" />
         Rapport
       </button>
       {open &&
@@ -475,14 +475,6 @@ export function ReportButton({ title, context, children }) {
                 </header>
                 {children}
               </article>
-              <div className="research-toolbar no-print">
-                <button
-                  className="button button-primary"
-                  onClick={() => window.print()}
-                >
-                  Imprimer / PDF
-                </button>
-              </div>
             </Modal>
           </div>,
           document.body,

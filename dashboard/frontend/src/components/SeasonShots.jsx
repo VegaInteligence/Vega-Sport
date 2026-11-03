@@ -1,15 +1,13 @@
-import React, { useRef } from "react";
+import React from "react";
 import Link from "next/link";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { isNumber, number } from "../services/format.js";
 import { Empty, Pager } from "./UI.jsx";
-import { exportChart } from "./ResearchCharts.jsx";
 import { useState } from "react";
 
 /** Preserve the provider's coordinates; no inferred pitch direction or tracking. */
 export default function SeasonShots({ shots, title = "Tirs de la saison" }) {
   const f = useFootball(),
-    ref = useRef(),
     [page, setPage] = useState(1);
   const located = shots.filter(
     (s) =>
@@ -26,11 +24,11 @@ export default function SeasonShots({ shots, title = "Tirs de la saison" }) {
   return (
     <>
       <figure className="research-chart">
-        <svg ref={ref} viewBox="0 0 680 470" role="img" aria-label={title}>
+        <svg viewBox="0 0 680 470" role="img" aria-label={title}>
           <title>{title}</title>
           <desc>
-            Buts en plein, autres tirs en contour ;
-            les valeurs absentes ne sont pas placées sur le terrain.
+            Buts en plein, autres tirs en contour ; les valeurs absentes ne sont
+            pas placées sur le terrain.
           </desc>
           <rect
             x="25"
@@ -75,12 +73,6 @@ export default function SeasonShots({ shots, title = "Tirs de la saison" }) {
             {number(located.length)} / {number(shots.length)} tirs placés ·{" "}
             {number(shots.filter((s) => isNumber(s.xg)).length)} xG renseignés
           </span>
-          <button
-            className="inline-link"
-            onClick={() => exportChart(ref, "statarena-tirs")}
-          >
-            Exporter SVG
-          </button>
         </figcaption>
       </figure>
       <details className="research-details">

@@ -1,38 +1,13 @@
-import React, { useRef } from "react";
+import React from "react";
 import { isNumber, number } from "../services/format.js";
-import { download } from "../services/resources.js";
+import { trendExtent } from "../services/trend-chart.js";
 const COLORS = ["#3b8eff", "#bc8a37", "#a579df", "#dc6d7a"];
-export function exportChart(ref, name) {
-  if (!ref.current) return;
-  const copy = ref.current.cloneNode(true);
-  const original = [ref.current, ...ref.current.querySelectorAll("*")];
-  const cloned = [copy, ...copy.querySelectorAll("*")];
-  original.forEach((node, i) => {
-    const style = getComputedStyle(node);
-    for (const key of [
-      "fill",
-      "stroke",
-      "font-family",
-      "font-size",
-      "font-weight",
-      "opacity",
-    ])
-      cloned[i].style.setProperty(key, style.getPropertyValue(key));
-  });
-  copy.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  download(
-    name + ".svg",
-    new XMLSerializer().serializeToString(copy),
-    "image/svg+xml;charset=utf-8",
-  );
-}
 export function ResearchRadar({
   axes,
   series,
   title = "Profil en centiles",
   context = "",
 }) {
-  const ref = useRef();
   const cx = 200,
     cy = 170,
     radius = 112,
@@ -47,7 +22,7 @@ export function ResearchRadar({
   ];
   return (
     <figure className="research-chart">
-      <svg ref={ref} viewBox="0 0 400 350" role="img" aria-label={title}>
+      <svg viewBox="0 0 400 350" role="img" aria-label={title}>
         <title>{title}</title>
         <desc>{context}. Les valeurs absentes ne sont pas tracées.</desc>
         {[25, 50, 75, 100].map((level) => (
@@ -131,92 +106,104 @@ export function ResearchRadar({
             </span>
           ))}
         </span>
-        <button
-          className="inline-link"
-          onClick={() => exportChart(ref, "statarena-profil")}
-        >
-          Exporter SVG
-        </button>
       </figcaption>
     </figure>
   );
 }
-export function ResearchTrend({ points, label }) {
-  const ref = useRef();
-  const observed = points.filter((p) => isNumber(p.value));
-  if (!observed.length) return null;
-  const low = Math.min(0, ...observed.map((p) => p.value)),
-    high = Math.max(low + 1, ...observed.map((p) => p.value));
-  const x = (i) => 55 + (i * 490) / Math.max(1, points.length - 1),
-    y = (v) => 180 - ((v - low) / (high - low)) * 135;
+export function ResearchTrend({ points, label, bounds, decimals = 2 }) {
+  const extent = trendExtent(points, bounds);
+  if (!extent)
+    return (
+      <p className="club-note">Aucune valeur renseignée pour ce graphique.</p>
+    );
+  const { low, high } = extent;
+  const x = (i) =>
+      points.length === 1 ? 360 : 65 + (i * 590) / (points.length - 1),
+    y = (v) => 195 - ((v - low) / (high - low)) * 150;
+  const step = Math.max(1, Math.ceil((points.length - 1) / 5));
+  const tickDecimals = Math.min(
+    4,
+    Math.max(0, Math.ceil(-Math.log10((high - low) / 3)) + 1),
+  );
+  const description = points
+    .map(
+      (p) =>
+        `${p.label} : ${isNumber(p.value) ? number(p.value, decimals) : "non renseigné"}`,
+    )
+    .join(" ; ");
   return (
-    <figure className="research-chart">
-      <svg ref={ref} viewBox="0 0 600 230" role="img" aria-label={label}>
-        <title>{label}</title>
-        {[0, 1, 2, 3].map((i) => {
-          const value = low + ((high - low) * i) / 3;
-          return (
-            <g key={i}>
-              <line
-                x1="55"
-                y1={y(value)}
-                x2="555"
-                y2={y(value)}
-                className="radar-grid"
-              />
-              <text
-                x="46"
-                y={y(value)}
-                textAnchor="end"
-                dominantBaseline="central"
-                className="research-chart-label"
-              >
-                {number(value, 1)}
-              </text>
-            </g>
-          );
-        })}
-        {points.map((p, i) => (
-          <g key={p.label}>
-            {isNumber(p.value) && (
-              <>
-                {i > 0 && isNumber(points[i - 1].value) && (
-                  <line
-                    x1={x(i - 1)}
-                    y1={y(points[i - 1].value)}
-                    x2={x(i)}
-                    y2={y(p.value)}
-                    stroke={COLORS[0]}
-                    strokeWidth="2"
-                  />
-                )}
-                <circle cx={x(i)} cy={y(p.value)} r="4" fill={COLORS[0]}>
-                  <title>
-                    {p.label} : {number(p.value, 2)}
-                  </title>
-                </circle>
-              </>
-            )}
-            <text
-              x={x(i)}
-              y="211"
-              textAnchor="middle"
-              className="research-chart-label"
-            >
-              {p.label}
-            </text>
-          </g>
-        ))}
-      </svg>
+    <figure className="research-chart research-trend">
       <figcaption>
-        <span>{label}</span>
-        <button
-          className="inline-link"
-          onClick={() => exportChart(ref, "statarena-evolution")}
-        >
-          Exporter SVG
-        </button>
+        <strong>{label}</strong>
+        <span>Échelle adaptée aux valeurs renseignées</span>
       </figcaption>
+      <div className="research-trend-plot" tabIndex={0}>
+        <svg viewBox="0 0 720 240" role="img" aria-label={label}>
+          <title>{label}</title>
+          <desc>
+            {description}. Les valeurs manquantes interrompent la courbe.
+          </desc>
+          {[0, 1, 2, 3].map((i) => {
+            const value = low + ((high - low) * i) / 3;
+            return (
+              <g key={i}>
+                <line
+                  x1="65"
+                  y1={y(value)}
+                  x2="655"
+                  y2={y(value)}
+                  className="radar-grid"
+                />
+                <text
+                  x="54"
+                  y={y(value)}
+                  textAnchor="end"
+                  dominantBaseline="central"
+                  className="research-chart-label"
+                >
+                  {number(value, tickDecimals)}
+                </text>
+              </g>
+            );
+          })}
+          {points.map((p, i) => (
+            <g key={`${p.label}:${i}`}>
+              {isNumber(p.value) && (
+                <>
+                  {i > 0 && isNumber(points[i - 1].value) && (
+                    <line
+                      x1={x(i - 1)}
+                      y1={y(points[i - 1].value)}
+                      x2={x(i)}
+                      y2={y(p.value)}
+                      stroke="var(--accent)"
+                      strokeWidth="2.5"
+                    />
+                  )}
+                  <circle
+                    cx={x(i)}
+                    cy={y(p.value)}
+                    r="4.5"
+                    fill="var(--accent)"
+                  >
+                    <title>{`${p.label} : ${number(p.value, decimals)}`}</title>
+                  </circle>
+                </>
+              )}
+              {(i === 0 || i === points.length - 1 || i % step === 0) && (
+                <text
+                  x={x(i)}
+                  y="220"
+                  textAnchor="middle"
+                  className="research-chart-label"
+                >
+                  {p.label}
+                </text>
+              )}
+            </g>
+          ))}
+        </svg>
+      </div>
     </figure>
   );
 }

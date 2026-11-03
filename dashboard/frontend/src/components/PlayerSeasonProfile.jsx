@@ -36,6 +36,7 @@ import {
 } from "./ResearchUI.jsx";
 import { ResearchRadar } from "./ResearchCharts.jsx";
 import PlayerHonours from "./PlayerHonours.jsx";
+import PerformanceContext from "./PerformanceContext.jsx";
 import MessiGoats from "./MessiGoats.jsx";
 import { MESSI_ID } from "../services/player-honours.js";
 import { useResource } from "../services/resources.js";
@@ -601,7 +602,12 @@ export default function PlayerSeasonProfile({
                     >
                       <span>
                         <strong>
-                          {row.team} · {row.league}
+                          <PerformanceContext
+                            teamIds={[row.teamId]}
+                            leagueIds={[row.leagueId]}
+                            team={row.team}
+                            league={row.league}
+                          />
                         </strong>
                         <small>{date(row.date)}</small>
                       </span>
@@ -647,7 +653,12 @@ export default function PlayerSeasonProfile({
                       <tbody>
                         {splits.map((split) => (
                           <tr key={split.leagueId}>
-                            <th>{split.name}</th>
+                            <th>
+                              <PerformanceContext
+                                leagueIds={[split.leagueId]}
+                                league={split.name}
+                              />
+                            </th>
                             <td>{number(split.profile.matches)}</td>
                             <td>{number(split.profile.minutes)}</td>
                             <td>{number(split.profile.rating, 2)}</td>

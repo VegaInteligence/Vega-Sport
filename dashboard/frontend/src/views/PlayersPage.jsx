@@ -9,6 +9,7 @@ import { number, isNumber } from "../services/format.js";
 import { sortRows, per90 } from "../model.js";
 import PlayerSeasonProfile from "../components/PlayerSeasonProfile.jsx";
 import PlayerWorkspace from "../components/PlayerWorkspace.jsx";
+import PerformanceContext from "../components/PerformanceContext.jsx";
 import { ResearchComparisonTray } from "../components/ResearchUI.jsx";
 import { aggregateSeasonPlayers } from "../services/season-player.js";
 import {
@@ -208,7 +209,12 @@ export default function PlayersPage() {
                             <span className="player-copy">
                               <strong className="player-name">{r.name}</strong>
                               <span className="player-meta">
-                                {r.team} · {r.league}
+                                <PerformanceContext
+                                  teamIds={[r.teamId]}
+                                  leagueIds={[r.leagueId]}
+                                  team={r.team}
+                                  league={r.league}
+                                />
                               </span>
                             </span>
                           </button>
