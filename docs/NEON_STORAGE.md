@@ -22,6 +22,8 @@ Supplemental results, standings, club and stadium facts are refreshed in Actions
 
 Historical Backfill accepts an optional `priority_league` provider ID. It collects the indexed finished fixtures for that competition, starting with the newest season and match/player data, then publishes that league's changed partitions. The Saudi Pro League uses `l_0Lpz1f`; other leagues remain in the ordinary queue.
 
+MLS (`l_0eg6C9`) uses calendar-year seasons such as `2026`. The dashboard groups those records in `2026/2027`; materialization publishes a fixture-query alias for that bucket using the original fixture rows, while preserving their native season values.
+
 ## Verification
 
 With read-only production variables configured, run:
