@@ -1,3 +1,4 @@
+import { stadiumPlans } from "../../frontend/src/services/stadium-plans.js";
 import { fetchWikidataStadium } from "../../frontend/src/services/wikidata-stadium.js";
 
 export const dynamic = "force-dynamic";
@@ -9,11 +10,15 @@ export async function GET(request) {
   try {
     const stadium = await fetchWikidataStadium(id);
     if (!stadium) return Response.json({ available: false }, { status: 404 });
-    return Response.json(stadium, {
-      headers: {
-        "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400",
+    return Response.json(
+      { ...stadium, plans: stadiumPlans(id) },
+      {
+        headers: {
+          "Cache-Control":
+            "public, s-maxage=21600, stale-while-revalidate=86400",
+        },
       },
-    });
+    );
   } catch {
     return Response.json({ available: false }, { status: 502 });
   }

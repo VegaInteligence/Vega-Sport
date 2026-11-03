@@ -4,7 +4,6 @@ import { Modal, AsyncState } from "./UI.jsx";
 import { useResource, json } from "../services/resources.js";
 import { number } from "../services/format.js";
 import StadiumMap from "./StadiumMap.jsx";
-import { stadiumPlans } from "../services/stadium-plans.js";
 
 function stadiumDate(value) {
   if (!value) return "Non renseignée";
@@ -39,14 +38,14 @@ function PlanImage({ plan }) {
   return (
     <a
       className="stadium-plan-image-link"
-      href={plan.imageUrl}
+      href={`/api/assets?url=${encodeURIComponent(plan.imageUrl)}`}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Agrandir le plan des tribunes"
     >
       <img
         className="stadium-plan-image"
-        src={plan.imageUrl}
+        src={`/api/assets?url=${encodeURIComponent(plan.imageUrl)}`}
         alt="Plan des tribunes"
         loading="lazy"
         onError={() => setFailed(true)}
@@ -55,8 +54,7 @@ function PlanImage({ plan }) {
   );
 }
 
-function StadiumPlans({ id }) {
-  const plans = stadiumPlans(id);
+function StadiumPlans({ plans }) {
   return (
     <section className="stadium-plans">
       <h3>Plans officiels</h3>
@@ -120,10 +118,7 @@ function StadiumPlans({ id }) {
               </li>
             ))}
           </ul>
-          <p>
-            Les secteurs peuvent varier
-            selon le match ou les travaux.
-          </p>
+          <p>Les secteurs peuvent varier selon le match ou les travaux.</p>
         </>
       ) : (
         <p>Pas encore de plan officiel référencé pour ce stade.</p>
@@ -140,7 +135,6 @@ export default function StadiumDialog({ name, id, onClose }) {
   );
   return (
     <Modal title={name} onClose={onClose} className="stadium-dialog">
-      {id && <StadiumPlans id={id} />}
       {!id ? (
         <p>
           Les informations détaillées de ce stade ne sont pas encore
@@ -150,6 +144,7 @@ export default function StadiumDialog({ name, id, onClose }) {
         <AsyncState resource={resource}>
           {(stadium) => (
             <>
+              <StadiumPlans plans={stadium.plans || []} />
               <div className="stadium-overview">
                 <div className="stadium-capacity">
                   <span>Capacité maximale référencée</span>

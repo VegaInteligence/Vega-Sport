@@ -6,7 +6,15 @@ export async function proxy(request) {
       const { handleRequest } = await import("../../../backend/app.js");
       return await handleRequest(request);
     } catch (error) {
-      console.error("Neon API request failed", error.name, error.code || "", String(error.message).replace(/postgres(?:ql)?:\/\/\S+/g,"[redacted connection]"));
+      console.error(
+        "Neon API request failed",
+        error.name,
+        error.code || "",
+        String(error.message).replace(
+          /postgres(?:ql)?:\/\/\S+/g,
+          "[redacted connection]",
+        ),
+      );
       return Response.json(
         {
           error: {
@@ -24,7 +32,7 @@ export async function proxy(request) {
       cache: "no-store",
       redirect: "manual",
       signal: request.signal,
-      headers: {"If-None-Match": request.headers.get("if-none-match") || ""},
+      headers: { "If-None-Match": request.headers.get("if-none-match") || "" },
     });
     const headers = new Headers();
     for (const key of [

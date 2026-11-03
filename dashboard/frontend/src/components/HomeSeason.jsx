@@ -5,7 +5,7 @@ import Icon from "./Icon.jsx";
 import BallonDorIcon from "./BallonDorIcon.jsx";
 import { Media } from "./UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
-import { number } from "../services/format.js";
+import { number, safeImageUrl } from "../services/format.js";
 import { kickoffFormatter } from "../services/fixtures.js";
 import { leagueOf, shortCompetition } from "../services/home-insights.js";
 import {
@@ -109,7 +109,7 @@ function RaceChart({ table }) {
           />
           {t.imageUrl && (
             <image
-              href={t.imageUrl}
+              href={safeImageUrl(t.imageUrl)}
               x={W - P.r + 8}
               y={endY[i] - 8}
               width="16"

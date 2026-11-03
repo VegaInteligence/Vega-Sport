@@ -1,6 +1,10 @@
 /** Read-only PitchAPI gateway shared by the hosted Worker and local server. */
-import { savedResource, fixtureResource, archivedResource } from './database.js';
-import { configured, query } from './neon.js';
+import {
+  savedResource,
+  fixtureResource,
+  archivedResource,
+} from "./database.js";
+import { configured, query } from "./neon.js";
 const API_PREFIX = "/api/pitchapi";
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const ID = "[A-Za-z0-9]{6}";
@@ -134,29 +138,66 @@ function validateResource(url) {
   return { resource, query: query ? `?${query}` : "", ttl: route.ttl };
 }
 
-
 /** Compatibility routes backed exclusively by indexed Neon observations. */
 export async function handlePitchApi(request) {
-  const url=new URL(request.url);
-  if(!['GET','HEAD'].includes(request.method))return apiError('METHOD_NOT_ALLOWED',405);
-  if(url.pathname==='/api/status')return jsonResponse({configured:configured(),source:'Neon',basePath:API_PREFIX});
-  if(!url.pathname.startsWith(API_PREFIX+'/'))return apiError('ROUTE_NOT_FOUND',404);
-  const checked=validateResource(url);if(checked.error)return checked.error;
-  if(!configured())return apiError('PITCHAPI_NOT_CONFIGURED',503);
+  const url = new URL(request.url);
+  if (!["GET", "HEAD"].includes(request.method))
+    return apiError("METHOD_NOT_ALLOWED", 405);
+  if (url.pathname === "/api/status")
+    return jsonResponse({
+      configured: configured(),
+      source: "Neon",
+      basePath: API_PREFIX,
+    });
+  if (!url.pathname.startsWith(API_PREFIX + "/"))
+    return apiError("ROUTE_NOT_FOUND", 404);
+  const checked = validateResource(url);
+  if (checked.error) return checked.error;
+  if (!configured()) return apiError("PITCHAPI_NOT_CONFIGURED", 503);
   try {
-    const params=Object.fromEntries(url.searchParams);
-    let saved=await savedResource(checked.resource,params);
-    if(!saved&&!Object.keys(params).length)saved=await archivedResource(checked.resource);
-    if(!saved)saved=await fixtureResource(checked.resource,params);
-    if(!saved&&checked.resource==='/leagues'){
-      const manifest=(await import('./data-store.js')).dataJson;
-      const index=await manifest('computed/dashboard/index.json');
-      const leagues=[...new Map(index.seasons.flatMap(s=>s.chunks.flatMap(c=>c.competitions||[])).map(c=>[c.id,c])).values()];
-      saved={status:200,data:{leagues}};
+    const params = Object.fromEntries(url.searchParams);
+    const indexed = await fixtureResource(checked.resource, params);
+    let saved = indexed?.data?.matches?.length
+      ? indexed
+      : await savedResource(checked.resource, params);
+    if (!saved && !Object.keys(params).length)
+      saved = await archivedResource(checked.resource);
+    if (!saved) saved = indexed;
+    if (!saved && checked.resource === "/leagues") {
+      const manifest = (await import("./data-store.js")).dataJson;
+      const index = await manifest("computed/dashboard/index.json");
+      const leagues = [
+        ...new Map(
+          index.seasons
+            .flatMap((s) => s.chunks.flatMap((c) => c.competitions || []))
+            .map((c) => [c.id, c]),
+        ).values(),
+      ];
+      saved = { status: 200, data: { leagues } };
     }
-    if(!saved)return apiError('RESOURCE_NOT_FOUND',404);
-    const payload=saved.status===200?{data:saved.data}:{ok:false,error:saved.error||{code:'RESOURCE_NOT_FOUND',message:'Donnée indisponible dans Neon.'}};
-    const out=jsonResponse(payload,saved.status,{'X-Data-Source':'Neon','Cache-Control':saved.status===200?'public, max-age=0, s-maxage=60, stale-while-revalidate=30':'no-store'});
-    return request.method==='HEAD'?new Response(null,{status:out.status,headers:out.headers}):out;
-  } catch(e){console.error('Neon resource unavailable',e.name);return apiError('PITCHAPI_UNAVAILABLE',503);}
+    if (!saved) return apiError("RESOURCE_NOT_FOUND", 404);
+    const payload =
+      saved.status === 200
+        ? { data: saved.data }
+        : {
+            ok: false,
+            error: saved.error || {
+              code: "RESOURCE_NOT_FOUND",
+              message: "Donnée indisponible dans Neon.",
+            },
+          };
+    const out = jsonResponse(payload, saved.status, {
+      "X-Data-Source": "Neon",
+      "Cache-Control":
+        saved.status === 200
+          ? "public, max-age=0, s-maxage=60, stale-while-revalidate=30"
+          : "no-store",
+    });
+    return request.method === "HEAD"
+      ? new Response(null, { status: out.status, headers: out.headers })
+      : out;
+  } catch (e) {
+    console.error("Neon resource unavailable", e.name);
+    return apiError("PITCHAPI_UNAVAILABLE", 503);
+  }
 }

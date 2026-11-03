@@ -1,37 +1,24 @@
 # Worklog
 
 ## Goal
-- Finish the Neon migration: Neon-only runtime, two direct-ingestion workflows, integrity/performance/E2E validation, then remove verified migration dumps and redundant local data.
+Complete the Neon-only migration, publish the user's latest homepage, keep two ingestion workflows, then free SSD space only after verified backups.
 
-## Decisions and constraints
-- Archive-only presentation was the wrong format for the user's request. Replaced our generated archive objects with one private object at each original repository-relative path in the existing statarena-data bucket.
-- Preserved GitHub/local source copies, original compressed source files, Postgres data, app read paths and unrelated UI changes. No extra buckets or public access.
-- Replaced cloud archives part by part after verifying their members; stayed within the 5 GB free allowance.
+## Constraints / decisions
+- Preserve all user UI edits and data. Isolated branch codex/neon-central-data-runtime; primary checkout main retained.
+- Raw files stay private in Neon Object Storage; indexed PostgreSQL catalog/resources/fixtures and hot compressed views stay below 1 GB SQL / 5 GB objects.
+- Runtime uses read-only pooled SQL and read-only S3. Pitch credentials belong only to GitHub Actions. No GitHub/local/provider data fallback.
+- E2E-only changes: acceptance plan written first; reproducible evidence under docs/verification/neon-runtime-20261103.
 
-## Current state — 2026-11-03
-- Target: Orion / Orion Tech Sport, project sweet-queen-11955006, production br-mute-bonus-be23014e, private statarena-data bucket.
-- Exact source: 579b47107e0cd4fa4f9a12a5a95dd6a1be274ed9. Bucket now contains only data/ and all 250,748 original files (2,692,640,453 bytes). No generated snapshots/ objects remain.
-- Structure: data/README.md (1 file), computed/ (200), raw/ (245,215), sources/ (5,332).
-- Every source SHA-256 checked; every upload's Content-MD5/server ETag matched. Independently downloaded 63 samples. Full paginated whole-bucket inventory matched every key, size and ETag; final live E2E succeeded.
-- Grouped listing returned 504 and one intermediate audit hit a connection error; final flat audit succeeded without reuploading. Browser UI rendering was not tested. Evidence: docs/verification/neon-file-layout-20261103/RESULTS.md and VERIFIED.json.
-- Temporary scoped credential revoked; local credential file removed. Local resume state and archives remain outside Git for inspection. No uploader remains active.
-- All five StatArena workflows are disabled; no active/queued runs. No further collection or profile retries requested.
+## Progress — 2026-11-03
+- Imported and compared every original path/size/SHA-256: 250,748 files / 2,692,640,453 bytes; 401,180 resource references; 53,854 fixtures. No missing resource objects. SQL initially 439 MB.
+- HTTP E2E: 50 checks passed, all nine pages, archive/profile/fixture contracts, gzip hashes, HEAD/304, validation and concurrent warm loads.
+- Real Neon ingestion E2E passed on isolated branch storage: 403/404 continuation, fatal 401, 429 retries, dedupe, lease recovery, locking, normalized views. Preserve failed fixture attempts as evidence.
+- Copied all 32,298 display image URLs (272.5 MB), no failures, plus 730 supplemental projections; unknown source profiles remain unavailable.
+- User's local homepage commit 00be3aa integrated as c9ffb5c. Adapted its SVG logos to Neon; all other homepage behavior preserved. Local main fetched for ancestry-preserving integration.
+- Runtime secrets configured in Vercel and separate ingestion secrets in GitHub. Existing Pitch secret untouched; remove obsolete Vercel/local key after successful cutover.
+- Additional local files inventoried (~592 MB), backing up at original Neon keys with server MD5 and independent GET SHA-256. First catalog finalization lost an idle connection; reconnect/resumable retry underway. Nothing deleted.
 
-## Prior continuity
-- Second concurrent UI publication preserved at aae6fcd: five local UI commits f75d670a30, 154820751e, b2ec625a71, b9a2418a56 and 8f2d6c17e2 replayed onto 0aad2d5. Production build and seven existing targeted checks passed; no new browser E2E. Evidence: docs/verification/ui-publication-second-20261103/RESULTS.md.
-- Concurrent UI publication and verification remain preserved: 472cf06 / 3222283; docs/verification/ui-publication-20261103/RESULTS.md. Preserve neutral/blue palette, Inter, green branding and SportScore attribution; XI builder remains excluded.
-- DataScout coverage and earlier UI evidence: docs/DATASCOUT_IMPLEMENTATION.md and dashboard/outputs/datascout-enrichment/.
-- The original archive-delivery report is marked superseded, retaining historical provenance. The user-selected PitchAPI key remains only in the encrypted GitHub secret; Actions are disabled.
+## Next actions
+Finish browser/production E2E, publish and validate the new Actions, retire old workflows and repository data, then delete verified local migration artifacts and redundant data. Save cleanup and performance receipts.
 
-## Current direction
-- Work in isolated codex/neon-central-data-runtime; preserve active UI work in the original checkout.
-- Keep the verified original files in private Neon Object Storage, with a compact indexed PostgreSQL catalog, ingestion queue and hot documents. Respect the Free plan's 1 GB SQL / 5 GB objects limits.
-- Runtime gets read-only Neon credentials, no Pitch key, GitHub data URLs or filesystem fallback. Provider calls and supplemental source refreshes belong only to Actions.
-- Validate a Neon test branch before production. Old workflows remain disabled until the replacement passes; delete redundant files only after backup/hash verification and cutover.
-- Vercel connector can inspect the project but env listing returned 403; check the authorized CLI fallback before deployment.
-
-- New steering: integrate the user's newly committed local main homepage changes before publication, preserving uncommitted work.
-
-## Next action
-- Document E2E failure modes, implement catalog/bootstrap and read-only backend; validate real data before enabling Daily Sync and Historical Backfill.
-- Suggested commit: feat: centralize StatArena runtime and ingestion on Neon.
+Suggested commit: feat: publish Neon ingestion workflows and preserve the updated homepage.

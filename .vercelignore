@@ -1,0 +1,13 @@
+.git/
+data/
+dashboard/node_modules/
+dashboard/frontend/node_modules/
+dashboard/frontend/.next/
+dashboard/frontend/.next-dev/
+dashboard/outputs/
+docs/
+tests/
+output/
+*.log
+.env
+.env.*
