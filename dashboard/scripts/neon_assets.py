@@ -2,9 +2,12 @@
 """Copy display images into Neon; backend asset requests never fetch the CDN."""
 
 import argparse, base64, concurrent.futures, gzip, hashlib, json, re, urllib.request, urllib.error
+from contextlib import nullcontext
 from pathlib import Path
+from threading import BoundedSemaphore
 from neon_store import Store
 
+commons_requests = BoundedSemaphore(3)
 
 def urls(value):
     found = set()
@@ -67,11 +70,13 @@ def main():
         url = row[0]
         try:
             req = urllib.request.Request(
-                url, headers={"User-Agent": "STATARENA-Neon-Ingestion/1.0"}
+                url, headers={"User-Agent": "StatArena/1.0 (https://github.com/OrionQuantPlatform/STATARENA)"}
             )
-            with urllib.request.urlopen(req, timeout=20) as response:
-                content_type = response.headers.get_content_type()
-                body = response.read(4 * 1024 * 1024 + 1)
+            limit = commons_requests if url.startswith("https://upload.wikimedia.org/") else nullcontext()
+            with limit:
+                with urllib.request.urlopen(req, timeout=20) as response:
+                    content_type = response.headers.get_content_type()
+                    body = response.read(4 * 1024 * 1024 + 1)
             if not content_type.startswith("image/") or len(body) > 4 * 1024 * 1024:
                 raise ValueError("Invalid image response")
             sha = hashlib.sha256(body).hexdigest()

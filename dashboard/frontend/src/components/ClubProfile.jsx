@@ -35,6 +35,9 @@ export function ClubFacts({ club, matches }) {
     normalizeText(wiki.coach.name) !== normalizeText(value.observedCoach.name);
   const stadium = wiki?.stadium || value?.observedStadium?.name;
   const photo = isWikiCoach ? wiki.coach.photo : null;
+  const photoCredit = /^https:\/\/commons\.wikimedia\.org\/wiki\/File:/.test(
+    photo?.sourceUrl || "",
+  ) ? photo.sourceUrl : null;
   const alias = wiki?.stadiumAlias;
   return (
     <Card title="Le club en bref" className="club-facts-card">
@@ -65,6 +68,16 @@ export function ClubFacts({ club, matches }) {
                   <small>
                     Dernier match de la saison : {value.observedCoach.name} ·{" "}
                     {date(value.observedCoach.date)}
+                  </small>
+                )}
+                {photoCredit && (photo.author || photo.license) && (
+                  <small>
+                    <a href={photoCredit} target="_blank" rel="noreferrer">
+                      Photo :{" "}
+                      {[photo.author, photo.license]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </a>
                   </small>
                 )}
               </div>
@@ -136,8 +149,8 @@ export function ClubRoster({ clubId, appearances, href, season }) {
       }
     >
       <p className="club-roster-note">
-        Le poste indiqué est le dernier renseigné ; l’effectif affiché peut
-        être incomplet.
+        Le poste indiqué est le dernier renseigné ; l’effectif affiché peut être
+        incomplet.
       </p>
       {total ? (
         ROSTER_GROUPS.filter(([key]) => groups[key].length > 0).map(

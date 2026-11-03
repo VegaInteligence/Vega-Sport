@@ -32,19 +32,17 @@ const plainText = (value) =>
     .replace(/\s+/g, " ")
     .trim();
 
-async function commonsPhoto(filePath, fetcher) {
+export async function commonsPhoto(filePath, fetcher = fetch) {
   if (!filePath) return null;
   let name;
   try {
     const url = new URL(filePath);
-    if (
-      url.hostname !== "commons.wikimedia.org" ||
-      !url.pathname.startsWith("/wiki/Special:FilePath/")
-    )
-      return null;
-    name = decodeURIComponent(
-      url.pathname.slice("/wiki/Special:FilePath/".length),
+    if (url.hostname !== "commons.wikimedia.org") return null;
+    const prefix = ["/wiki/Special:FilePath/", "/wiki/File:"].find((part) =>
+      url.pathname.startsWith(part),
     );
+    if (!prefix) return null;
+    name = decodeURIComponent(url.pathname.slice(prefix.length));
   } catch {
     return null;
   }
@@ -54,25 +52,41 @@ async function commonsPhoto(filePath, fetcher) {
     format: "json",
     prop: "imageinfo",
     iiprop: "url|extmetadata",
+    iiurlwidth: "320",
     titles: `File:${name}`,
   }))
     url.searchParams.set(key, value);
   const response = await fetcher(url.href, {
     signal: AbortSignal.timeout(8000),
+    headers: {
+      "User-Agent":
+        "StatArena/1.0 (https://github.com/OrionQuantPlatform/STATARENA)",
+    },
   });
   if (!response.ok) return null;
   const page = Object.values((await response.json()).query?.pages || {})[0];
   const info = page?.imageinfo?.[0],
     metadata = info?.extmetadata || {};
+  // Commons may advertise its thumbnail host; its upload host serves the same
+  // path and is already supported by the site's image ingestion pipeline.
+  let imageUrl = info?.thumburl || info?.url;
+  try {
+    const image = new URL(imageUrl);
+    if (image.hostname === "thumb.wikimedia.org")
+      image.hostname = "upload.wikimedia.org";
+    imageUrl = image.href;
+  } catch {
+    return null;
+  }
   if (
     !/^https:\/\/upload\.wikimedia\.org\/wikipedia\/commons\//.test(
-      info?.url || "",
+      imageUrl || "",
     ) ||
     !/^https:\/\/commons\.wikimedia\.org\//.test(info?.descriptionurl || "")
   )
     return null;
   return {
-    url: info.url,
+    url: imageUrl,
     sourceUrl: info.descriptionurl,
     author: plainText(metadata.Artist?.value),
     license: plainText(metadata.LicenseShortName?.value),

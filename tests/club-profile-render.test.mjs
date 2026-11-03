@@ -16,7 +16,7 @@ const babel = requireLocal("next/dist/compiled/babel/core"),
   );
 const e = React.createElement;
 
-test("club cards render coach, photo without credit, stadium and four player lines", async () => {
+test("club cards render coach, credited photo, stadium and four player lines", async () => {
   const roster =
     await import("../dashboard/frontend/src/services/club-roster.js");
   const format = await import("../dashboard/frontend/src/services/format.js");
@@ -90,7 +90,8 @@ test("club cards render coach, photo without credit, stadium and four player lin
   assert.match(facts, /Rúben Amorim/);
   assert.match(facts, /San Siro/);
   assert.match(facts, /<button[^>]*class="stadium-link"[^>]*>/);
-  assert.doesNotMatch(facts, /Photographer|Wikimedia|PitchAPI/);
+  assert.match(facts, /Photo : Photographer · CC BY 3\.0/);
+  assert.doesNotMatch(facts, /Wikidata|PitchAPI/);
   const rows = [
     [11, "Gardien"],
     [1, "Défenseur"],
@@ -114,8 +115,5 @@ test("club cards render coach, photo without credit, stadium and four player lin
   for (const label of ["Gardiens", "Défenseurs", "Milieux", "Attaquants"])
     assert.match(html, new RegExp(label));
   assert.equal((html.match(/class="roster-player"/g) || []).length, 4);
-  assert.match(
-    html,
-    /l’effectif affiché peut être incomplet/,
-  );
+  assert.match(html, /l’effectif affiché peut être incomplet/);
 });

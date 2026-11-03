@@ -56,7 +56,7 @@ export async function handleRequest(request) {
           (
             await query("SELECT path FROM statarena.assets WHERE url=$1", [url])
           )[0] || null,
-        15 * 60 * 1000,
+        60 * 1000,
       );
       return row ? publicFile(row.path, request) : response("Not found", 404);
     }

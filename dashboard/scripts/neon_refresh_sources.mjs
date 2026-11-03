@@ -3,6 +3,7 @@ import { query, database, canonical } from "../backend/services/neon.js";
 import { dataJson } from "../backend/services/data-store.js";
 import { SPORTSCORE_LEAGUES } from "../frontend/src/services/sportscore-standings.js";
 import { NATIONAL_CUP_ARCHIVES } from "../frontend/src/services/cup-archives.js";
+import { normalizeText } from "../frontend/src/services/format.js";
 const mode = process.argv.includes("--all-clubs") ? "all" : "daily";
 let success = 0,
   failed = 0;
@@ -19,6 +20,19 @@ async function refresh(name, params) {
       return null;
     }
     const body = await response.json();
+    // A transient Commons failure must not erase a previously known portrait.
+    if (name === "club-wikidata" && body.coach && !body.coach.photo) {
+      const [previous] = await query(
+        "SELECT body FROM statarena.projections WHERE name=$1 AND params=$2",
+        [name, canonical(params)],
+      );
+      const coach = previous?.body?.coach;
+      if (
+        coach?.photo &&
+        normalizeText(coach.name) === normalizeText(body.coach.name)
+      )
+        body.coach.photo = coach.photo;
+    }
     await query(
       "INSERT INTO statarena.projections(name,params,body) VALUES($1,$2,$3) ON CONFLICT(name,params) DO UPDATE SET body=excluded.body,updated_at=now()",
       [name, canonical(params), body],

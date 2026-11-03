@@ -157,7 +157,7 @@ test("missing identity or mismatched team does not assign another team's coach",
 });
 
 test("Wikidata identity, temporal selection and Commons credits are preserved", async () => {
-  let query;
+  let query, imageQuery;
   const fetcher = async (url) => {
     if (url.startsWith("https://query.wikidata.org/")) {
       query = new URL(url).searchParams.get("query");
@@ -177,6 +177,7 @@ test("Wikidata identity, temporal selection and Commons credits are preserved", 
       };
       return Response.json({ results: { bindings: [row, row] } });
     }
+    imageQuery = new URL(url).searchParams;
     return Response.json({
       query: {
         pages: {
@@ -184,6 +185,8 @@ test("Wikidata identity, temporal selection and Commons credits are preserved", 
             imageinfo: [
               {
                 url: "https://upload.wikimedia.org/wikipedia/commons/a/ab/Coach.jpg",
+                thumburl:
+                  "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Coach.jpg/320px-Coach.jpg",
                 descriptionurl:
                   "https://commons.wikimedia.org/wiki/File:Coach.jpg",
                 extmetadata: {
@@ -206,6 +209,11 @@ test("Wikidata identity, temporal selection and Commons credits are preserved", 
   assert.equal(result.stadiumAlias, "San Siro");
   assert.equal(result.stadiumId, "Q133566");
   assert.equal(result.coach.name, "Coach");
+  assert.equal(imageQuery.get("iiurlwidth"), "320");
+  assert.match(
+    result.coach.photo.url,
+    /^https:\/\/upload\.wikimedia\.org\/.*\/320px-Coach\.jpg$/,
+  );
   assert.equal(result.coach.photo.author, "Photographer");
   assert.equal(result.coach.photo.license, "CC BY 3.0");
   assert.equal(result.founded, "1899");
@@ -277,21 +285,41 @@ test("name fallback declines an ambiguous same-country club", async () => {
 });
 
 test("roster orders players by unique matches played, then starts", () => {
-  const row = (playerId, matchId, minutes, starter = false, name = playerId) => ({
-    playerId, teamId: "club", positionId: 11, date: "2026-10-01",
-    matchId, minutes, starter, name,
+  const row = (
+    playerId,
+    matchId,
+    minutes,
+    starter = false,
+    name = playerId,
+  ) => ({
+    playerId,
+    teamId: "club",
+    positionId: 11,
+    date: "2026-10-01",
+    matchId,
+    minutes,
+    starter,
+    name,
   });
-  const players = clubRoster([
-    row("bench", "m1", null, false, "Aaa Bench"),
-    row("second", "m1", 90, true, "Bbb Second"),
-    row("second", "m2", 90, true, "Bbb Second"),
-    row("first", "m1", 90, true, "Zzz First"),
-    row("first", "m2", 90, true, "Zzz First"),
-    row("first", "m3", 90, true, "Zzz First"),
-    row("first", "m3", 90, true, "Zzz First"),
-    row("bench", "m2", null, false, "Aaa Bench"),
-  ], "club").G;
-  assert.deepEqual(players.map((p) => [p.row.playerId, p.played]), [
-    ["first", 3], ["second", 2], ["bench", 0],
-  ]);
+  const players = clubRoster(
+    [
+      row("bench", "m1", null, false, "Aaa Bench"),
+      row("second", "m1", 90, true, "Bbb Second"),
+      row("second", "m2", 90, true, "Bbb Second"),
+      row("first", "m1", 90, true, "Zzz First"),
+      row("first", "m2", 90, true, "Zzz First"),
+      row("first", "m3", 90, true, "Zzz First"),
+      row("first", "m3", 90, true, "Zzz First"),
+      row("bench", "m2", null, false, "Aaa Bench"),
+    ],
+    "club",
+  ).G;
+  assert.deepEqual(
+    players.map((p) => [p.row.playerId, p.played]),
+    [
+      ["first", 3],
+      ["second", 2],
+      ["bench", 0],
+    ],
+  );
 });
