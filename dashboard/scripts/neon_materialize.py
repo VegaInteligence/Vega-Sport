@@ -7,6 +7,7 @@ from build_dashboard_data import build_snapshot, METRICS
 from build_dashboard_views import pack_table
 from neon_ingest import saved
 from functools import lru_cache
+from mls_fixture_alias import publish_mls_fixture_alias
 
 
 def competition_metadata(existing, profile, league, label, fixtures):
@@ -332,6 +333,7 @@ def _materialize(store, max_partitions=20, league_id=None):
                         routes[label] = sorted(set(routes.get(label, []) + [league]))
             if rounds:
                 store.put_json(round_path, rounds, hot=True)
+            publish_mls_fixture_alias(store, league, label, fixtures)
             store.put_json("raw/index.json", raw, hot=True)
             store.put_json("computed/dashboard/index.json", manifest, hot=True)
             store.db.execute(
