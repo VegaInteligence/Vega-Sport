@@ -35,6 +35,18 @@ export function safeImageUrl(value) {
     return "";
   }
 }
+export function mediaImageSource(
+  url,
+  fallbackUrl,
+  primaryFailed = false,
+  fallbackFailed = false,
+) {
+  const primary = safeImageUrl(url),
+    fallback = safeImageUrl(fallbackUrl);
+  if (primary && !primaryFailed) return primary;
+  if (fallback && fallback !== primary && !fallbackFailed) return fallback;
+  return "";
+}
 export const title = (value) =>
   String(value)
     .replaceAll("_", " ")

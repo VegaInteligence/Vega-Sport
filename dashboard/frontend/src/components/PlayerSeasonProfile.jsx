@@ -40,7 +40,10 @@ import PerformanceContext from "./PerformanceContext.jsx";
 import MessiGoats from "./MessiGoats.jsx";
 import { MESSI_ID } from "../services/player-honours.js";
 import { useResource } from "../services/resources.js";
-import { resolvePlayerIdentity } from "../services/player-identity.js";
+import {
+  MESSI_PORTRAIT,
+  resolvePlayerIdentity,
+} from "../services/player-identity.js";
 
 const Evolution = lazy(() => import("./PlayerEvolution.jsx"));
 const Similarity = lazy(() => import("./PlayerSimilarity.jsx"));
@@ -326,6 +329,7 @@ export default function PlayerSeasonProfile({
             <Media
               name={identity.name}
               url={identity.imageUrl}
+              fallbackUrl={id === MESSI_ID ? MESSI_PORTRAIT : undefined}
               className="player-avatar season-player-portrait"
             />
             <h2>{identity.name}</h2>
@@ -358,6 +362,7 @@ export default function PlayerSeasonProfile({
           <Media
             name={identity.name}
             url={identity.imageUrl}
+            fallbackUrl={id === MESSI_ID ? MESSI_PORTRAIT : undefined}
             className="player-avatar season-player-portrait"
           />
           <div>

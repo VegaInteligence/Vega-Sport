@@ -1,20 +1,32 @@
 import Icon from "./Icon.jsx";
 import React, { useEffect, useRef, useState } from "react";
-import { number, safeImageUrl, title } from "../services/format.js";
-export function Media({ name = "", url, className = "crest" }) {
+import {
+  number,
+  safeImageUrl,
+  mediaImageSource,
+  title,
+} from "../services/format.js";
+export function Media({ name = "", url, fallbackUrl, className = "crest" }) {
   const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [url]);
-  const src = safeImageUrl(url);
+  const [fallbackFailed, setFallbackFailed] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+    setFallbackFailed(false);
+  }, [url, fallbackUrl]);
+  const src = mediaImageSource(url, fallbackUrl, failed, fallbackFailed);
   return (
     <span className={className} aria-hidden="true">
-      {src && !failed ? (
+      {src ? (
         <img
           src={src}
           alt=""
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
-          onError={() => setFailed(true)}
+          onError={() => {
+            if (!failed && src === safeImageUrl(url)) setFailed(true);
+            else setFallbackFailed(true);
+          }}
         />
       ) : (
         <span className="image-fallback">
