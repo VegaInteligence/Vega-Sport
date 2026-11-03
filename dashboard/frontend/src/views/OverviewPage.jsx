@@ -1,28 +1,57 @@
 "use client";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import Layout from "../components/Layout.jsx";
-import Icon from "../components/Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
-import { Card, Segments, Rating, Media, Empty } from "../components/UI.jsx";
-import { DeferredScatterPlot } from "../components/Charts.jsx";
-import { number, date } from "../services/format.js";
-import { isNumber, topRows } from "../model.js";
-import { MatchLink } from "../components/MatchLink.jsx";
-import UpcomingMatches from "../components/UpcomingMatches.jsx";
+import { Empty } from "../components/UI.jsx";
 import HomePreferences from "../components/HomePreferences.jsx";
 import {
-  followedRecords,
-  recentFinishedMatches,
-  recentRecords,
-  RECENT_PERFORMANCE_DAYS,
-  selectFeaturedMatch,
-} from "../services/home.js";
-export default function OverviewPage() {
-  const f = useFootball(),
-    [scatter, setScatter] = useState("attack"),
-    [metric, setMetric] = useState("rating"),
-    [now, setNow] = useState(() => Date.now());
+  HomeTicker,
+  MatchOfTheWeek,
+  NumberOfTheWeek,
+} from "../components/HomeMatchday.jsx";
+import {
+  AlsoShone,
+  Finishing,
+  PlayerOfTheWeek,
+  SeasonScorers,
+} from "../components/HomePlayers.jsx";
+import {
+  BallonDorRace,
+  BallonDorTeaser,
+  NextMatches,
+  TitleRace,
+  WinStreak,
+} from "../components/HomeSeason.jsx";
+import { number } from "../services/format.js";
+import { json, useResource } from "../services/resources.js";
+import { competitionIndex } from "../services/competition-identity.js";
+import { dayLabel } from "../services/fixtures.js";
+import { europeFocusIds } from "../../../shared/competition-scope.js";
+import {
+  CHAMPIONS_LEAGUE_ID,
+  TOP_SEVEN_IDS,
+  ballonDorRaceOpen,
+  bestWinStreak,
+  biggestWin,
+  leagueOf,
+  leagueProgress,
+  matchdayWindow,
+  playerOfTheWeek,
+  seasonLeaders,
+  seasonProgress,
+  seasonTotals,
+  selectMatchOfTheWeek,
+  teamRanks,
+  upcomingHighlights,
+  weekPerformances,
+  weekResults,
+  weekTotals,
+} from "../services/home-insights.js";
+
+function useClock() {
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const update = () => setNow(Date.now());
     const timer = window.setInterval(update, 60_000);
@@ -32,259 +61,283 @@ export default function OverviewPage() {
       document.removeEventListener("visibilitychange", update);
     };
   }, []);
-  const favoriteLeagueIds =
-      f.filters.league !== "all" ? [] : f.preferences.favoriteLeagueIds,
-    matches = f.matches;
-  const homeRows = useMemo(
-    () => followedRecords(f.rows, favoriteLeagueIds),
-    [f.rows, favoriteLeagueIds],
-  );
-  const homeMatches = useMemo(
-    () => followedRecords(matches, favoriteLeagueIds),
-    [matches, favoriteLeagueIds],
-  );
-  const recentMatches = useMemo(
-    () => recentFinishedMatches(homeMatches, now),
-    [homeMatches, now],
-  );
-  const recentPerformances = useMemo(
-    () => recentRecords(homeRows, now, RECENT_PERFORMANCE_DAYS),
-    [homeRows, now],
-  );
-  const leaders = useMemo(
-    () =>
-      topRows(
-        recentPerformances.filter((r) => isNumber(r[metric])),
-        metric,
-        5,
-      ),
-    [recentPerformances, metric],
-  );
-  const coverage = useMemo(() => {
-    const result = {
-      players: 0,
-      shotMatches: 0,
-      xg: 0,
-      ratings: 0,
+  return now;
+}
+
+/**
+ * The home follows the saved competitions. Without a choice it shows the
+ * Top 7 Europe leagues and the European cups; "all competitions" chosen in
+ * the filter opens it to every league.
+ */
+function homeScope(f, focusIds) {
+  if (f.filters.league !== "all")
+    return { ids: new Set([f.filters.league]), label: null };
+  const favorites = f.preferences.favoriteLeagueIds;
+  if (favorites.length)
+    return {
+      ids: new Set(favorites),
+      label: `${favorites.length} compétition${favorites.length > 1 ? "s" : ""} suivie${favorites.length > 1 ? "s" : ""}`,
     };
-    for (const m of homeMatches) {
-      for (const key of ["players", "xg", "ratings"])
-        if (m.coverage?.[key]) result[key]++;
-      if (m.coverage?.shots) result.shotMatches++;
-    }
-    return result;
-  }, [homeMatches]);
-  const featured = useMemo(
-    () => selectFeaturedMatch(recentMatches, now),
-    [recentMatches, now],
+  if (f.focus === "all" && f.preferences.onboardingComplete)
+    return { ids: null, label: "toutes les compétitions" };
+  return { ids: focusIds, label: "Top 7 Europe et coupes d’Europe" };
+}
+
+export default function OverviewPage() {
+  const f = useFootball(),
+    params = useSearchParams(),
+    now = useClock();
+  const focusIds = useMemo(() => europeFocusIds(f.manifest), [f.manifest]);
+  const scope = homeScope(f, focusIds),
+    scopeKey = scope.ids ? [...scope.ids].sort().join(",") : "all",
+    inScope = (record) => !scope.ids || scope.ids.has(leagueOf(record));
+  const competitions = useMemo(
+    () =>
+      competitionIndex(
+        f.competitions,
+        f.data.competitions,
+        f.catalog,
+        f.allCompetitions,
+      ),
+    [f.competitions, f.data.competitions, f.catalog, f.allCompetitions],
   );
-  return (
-    <Layout path="/" title="Vue d’ensemble" actions={<HomePreferences f={f} />}>
-      <UpcomingMatches compact />
-      {featured && (
-        <section
-          className="hero-strip featured-match"
-          aria-label="Match à explorer"
-        >
-          <div className="hero-copy">
-            <div className="featured-meta">
-              <span>Match récent à explorer</span>
-              <span>
-                {featured.league} · {date(featured.date)}
-              </span>
-            </div>
-            <div className="featured-score">
-              <span>
-                <Media
-                  name={featured.home.name}
-                  url={featured.home.imageUrl}
-                  className="crest featured-crest"
-                />
-                <strong>{featured.home.name}</strong>
-              </span>
-              <b>
-                {number(featured.home.score)}
-                <i>:</i>
-                {number(featured.away.score)}
-              </b>
-              <span>
-                <Media
-                  name={featured.away.name}
-                  url={featured.away.imageUrl}
-                  className="crest featured-crest"
-                />
-                <strong>{featured.away.name}</strong>
-              </span>
-            </div>
-          </div>
-          <div className="featured-action">
-            <Link
-              className="button button-primary"
-              href={f.href("/matchs/", { id: featured.id })}
-            >
-              Explorer le match <Icon name="arrow" />
-            </Link>
-          </div>
-        </section>
-      )}
-      <div className="dashboard-grid">
-        <Card
-          title="Performances"
-          className="span-8"
-          action={
-            <Segments
-              label="Dimensions du graphique"
-              value={scatter}
-              items={[
-                ["attack", "Attaque"],
-                ["balance", "Création & défense"],
-              ]}
-              onChange={setScatter}
-            />
-          }
-        >
-          <DeferredScatterPlot
-            appearances={homeRows}
-            {...(scatter === "balance"
-              ? {
-                  xKey: "chancesCreated",
-                  yKey: "defensiveActions",
-                  xLabel: "Occasions créées",
-                  yLabel: "Actions défensives",
-                }
-              : {})}
-            onPlayer={f.setPlayer}
-          />
-        </Card>
-        <Card
-          title="Performances des 30 derniers jours"
-          className="span-4 leaders-card"
-          footer={
-            <Link className="inline-link" href={f.href("/joueurs/")}>
-              Tous les joueurs <Icon name="arrow" />
-            </Link>
-          }
-        >
-          <div className="leader-controls">
-            <Segments
-              label="Trier les performances"
-              value={metric}
-              items={[
-                ["rating", "Note"],
-                ["xg", "xG"],
-                ["chancesCreated", "Création"],
-              ]}
-              onChange={setMetric}
-            />
-          </div>
-          <ol className="leaderboard">
-            {leaders.map((r, i) => (
-              <li key={r.id}>
-                <button
-                  className="leader-row"
-                  onClick={() => f.setPlayer(r.id)}
-                >
-                  <span className="leader-rank">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <Media
-                    name={r.name}
-                    url={r.imageUrl}
-                    className="player-avatar"
-                  />
-                  <span className="player-copy">
-                    <strong className="player-name">{r.name}</strong>
-                    <span className="player-meta">
-                      Club du match : {r.team} · {date(r.date)} ·{" "}
-                      {number(r.minutes)} min
-                    </span>
-                  </span>
-                  <span className="leader-value">
-                    {metric === "rating" ? (
-                      <Rating value={r.rating} />
-                    ) : (
-                      number(r[metric], 2)
-                    )}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ol>
-          {!leaders.length && (
-            <Empty>
-              Aucune performance collectée durant les 30 derniers jours pour
-              cette sélection.
-            </Empty>
-          )}
-        </Card>
-        <Card
-          title="Matchs des 14 derniers jours"
-          className="span-8 match-list-card"
-          action={
+  const matches = f.matches;
+  const scopedMatches = useMemo(
+    () => matches.filter(inScope),
+    [matches, scopeKey],
+  );
+  const scopedRows = useMemo(() => f.rows.filter(inScope), [f.rows, scopeKey]);
+  const fixtures = f.data.fixtures;
+
+  const matchWeek = useMemo(
+    () => matchdayWindow(scopedMatches, now),
+    [scopedMatches, now],
+  );
+  const results = useMemo(
+    () => weekResults(scopedMatches, matchWeek),
+    [scopedMatches, matchWeek],
+  );
+  const progress = useMemo(
+    () => leagueProgress(fixtures, scope.ids),
+    [fixtures, scopeKey],
+  );
+  const ranks = useMemo(() => teamRanks(progress), [progress]);
+  const featured = useMemo(
+    () => selectMatchOfTheWeek(results, ranks),
+    [results, ranks],
+  );
+  const performances = useMemo(
+    () => weekPerformances(scopedRows, matchWeek),
+    [scopedRows, matchWeek],
+  );
+  const potw = playerOfTheWeek(performances);
+  const totals = useMemo(() => seasonTotals(scopedRows), [scopedRows]);
+  const leaders = useMemo(() => seasonLeaders(totals), [totals]);
+  const highlights = useMemo(
+    () => upcomingHighlights(fixtures, now, scope.ids, ranks),
+    [fixtures, now, scopeKey, ranks],
+  );
+  const streak = useMemo(() => bestWinStreak(progress), [progress]);
+  const matchIndex = useMemo(
+    () => new Map(scopedMatches.map((m) => [m.id, m])),
+    [scopedMatches],
+  );
+  const bestOfFeatured = useMemo(
+    () =>
+      featured
+        ? scopedRows
+            .filter(
+              (r) => r.matchId === featured.id && Number.isFinite(r.rating),
+            )
+            .sort((a, b) => b.rating - a.rating)[0]
+        : null,
+    [featured, scopedRows],
+  );
+  const tables = useMemo(() => {
+    const order = (id) =>
+      TOP_SEVEN_IDS.includes(id) ? TOP_SEVEN_IDS.indexOf(id) : 99;
+    return [...progress.values()]
+      .filter((t) => t.played > 0 && t.rows.length >= 4)
+      .sort(
+        (a, b) =>
+          order(a.leagueId) - order(b.leagueId) ||
+          (competitions.get(a.leagueId)?.name || "").localeCompare(
+            competitions.get(b.leagueId)?.name || "",
+            "fr",
+          ),
+      )
+      .slice(0, 8);
+  }, [progress, competitions]);
+
+  // The Ballon d'Or race takes the stage once the Champions League quarter-final second legs are played.
+  const rounds = useResource(
+    `home-rounds:${CHAMPIONS_LEAGUE_ID}:${f.season}`,
+    () =>
+      json(
+        `/api/matchdays?competition=${CHAMPIONS_LEAGUE_ID}&season=${encodeURIComponent(f.season)}`,
+      )
+        .then((d) => d.matches || {})
+        .catch(() => ({})),
+  );
+  const override = params.get("ballondor");
+  const raceOpen =
+    override === "ouvert"
+      ? true
+      : override === "ferme"
+        ? false
+        : ballonDorRaceOpen({
+            fixtures,
+            matches: f.data.matches,
+            rounds: rounds.value || {},
+          });
+
+  if (!matchWeek)
+    return (
+      <Layout
+        path="/"
+        title="Vue d’ensemble"
+        actions={<HomePreferences f={f} />}
+      >
+        <Empty>
+          Aucun match terminé pour cette sélection.{" "}
+          {f.season !== f.manifest.defaultSeason && (
             <Link
               className="inline-link"
-              href={f.href("/matchs/", { tab: "results" })}
+              href={f.href("/", {
+                season: f.manifest.defaultSeason,
+                league: "",
+              })}
             >
-              Tous les matchs <Icon name="arrow" />
+              Voir la saison en cours
             </Link>
-          }
-        >
-          {recentMatches.slice(0, 5).map((m) => (
-            <MatchLink key={m.id} match={m} />
-          ))}
-          {!recentMatches.length && (
-            <Empty>
-              Aucun match collecté ces 14 derniers jours pour cette sélection.
-              {f.season !== f.manifest.defaultSeason && (
-                <>
-                  {" "}
-                  <Link
-                    className="inline-link"
-                    href={f.href("/", {
-                      season: f.manifest.defaultSeason,
-                      league: "",
-                      q: "",
-                    })}
-                  >
-                    Voir la saison en cours
-                  </Link>
-                  .
-                </>
-              )}
-            </Empty>
           )}
-        </Card>
-        <Card title="Couverture" className="span-4">
-          <div className="coverage-list">
-            {[
-              ["players", "Statistiques joueurs"],
-              ["shotMatches", "Tirs"],
-              ["xg", "xG"],
-              ["ratings", "Notes"],
-            ].map(([key, label]) => (
-              <div className="coverage-row" key={key}>
-                <span className="coverage-label">{label}</span>
-                <strong className="coverage-value">
-                  {number(coverage[key])}{" "}
-                  <span>/ {number(homeMatches.length)}</span>
-                </strong>
-                <span className="coverage-track">
-                  <span
-                    className={`coverage-fill${coverage[key] < homeMatches.length ? " partial" : ""}`}
-                    style={{
-                      width: `${homeMatches.length ? (coverage[key] / homeMatches.length) * 100 : 0}%`,
-                    }}
-                  />
-                </span>
-              </div>
-            ))}
+        </Empty>
+      </Layout>
+    );
+  const week = weekTotals(results),
+    win = biggestWin(results);
+  const streakNext =
+    streak &&
+    highlights
+      .filter(
+        (h) =>
+          h.fixture.home_team.id === streak.id ||
+          h.fixture.away_team.id === streak.id,
+      )
+      .sort((a, b) => a.time - b.time)[0];
+  const potwMatch = potw && matchIndex.get(potw.matchId);
+  const potwSeason = potw && totals.find((p) => p.playerId === potw.playerId);
+  const others = performances
+    .filter((p) => p.playerId !== potw?.playerId)
+    .slice(0, 9);
+  const initialTable = tables.some((t) => t.leagueId === "l_3FJFUl")
+    ? "l_3FJFUl"
+    : tables[0]?.leagueId;
+
+  return (
+    <Layout
+      path="/"
+      title="Vue d’ensemble"
+      actions={<HomePreferences f={f} />}
+      className="home-page"
+    >
+      <p className="home-intro">
+        {matchWeek.current ? "Semaine" : "Dernière semaine jouée"} du{" "}
+        {dayLabel(matchWeek.start, { month: "short" })} au{" "}
+        {dayLabel(matchWeek.end, { month: "short" })} ·{" "}
+        <b>{number(week.matches)} matchs</b>, <b>{number(week.goals)} buts</b>
+        {week.xg > 0 && <>, {number(week.xg, 1)} xG</>}
+        {scope.label && <> · {scope.label}</>}
+      </p>
+      <HomeTicker results={results} ranks={ranks} competitions={competitions} />
+      <div className="home-bento">
+        {featured && (
+          <div className="home-span-8">
+            <MatchOfTheWeek
+              match={featured}
+              ranks={ranks}
+              competition={competitions.get(leagueOf(featured))}
+              bestPlayer={bestOfFeatured}
+            />
           </div>
-          <p className="coverage-footnote">
-            {number(homeMatches.length)} matchs collectés dans la sélection de
-            cette saison.
-          </p>
-        </Card>
+        )}
+        <div
+          className={`home-stack ${featured ? "home-span-4" : "home-span-12"}`}
+        >
+          <PlayerOfTheWeek
+            performance={potw}
+            match={potwMatch}
+            season={potwSeason}
+          />
+          <NumberOfTheWeek
+            win={win}
+            competition={win && competitions.get(leagueOf(win.match))}
+          />
+        </div>
+        {raceOpen && (
+          <div className="home-span-12">
+            <BallonDorRace
+              leaders={leaders.rating}
+              ratedMin={leaders.ratedMin}
+            />
+          </div>
+        )}
+        {tables.length > 0 && (
+          <div className={highlights.length ? "home-span-7" : "home-span-12"}>
+            <TitleRace
+              key={scopeKey}
+              tables={tables}
+              competitions={competitions}
+              initial={initialTable}
+            />
+          </div>
+        )}
+        {highlights.length > 0 && (
+          <div className={tables.length ? "home-span-5" : "home-span-12"}>
+            <NextMatches
+              highlights={highlights}
+              ranks={ranks}
+              competitions={competitions}
+              now={now}
+            />
+          </div>
+        )}
+        {(leaders.clinical.length > 0 || leaders.wasteful.length > 0) && (
+          <div className="home-span-5">
+            <Finishing leaders={leaders} />
+          </div>
+        )}
+        {leaders.goals.length > 0 && (
+          <div className="home-span-4">
+            <SeasonScorers leaders={leaders.goals} />
+          </div>
+        )}
+        {streak && (
+          <div className="home-span-3">
+            <WinStreak
+              streak={streak}
+              competitions={competitions}
+              next={streakNext}
+              now={now}
+            />
+          </div>
+        )}
+        {!raceOpen && (
+          <div className="home-span-12">
+            <BallonDorTeaser
+              progress={seasonProgress(progress)}
+              leaders={leaders.rating}
+            />
+          </div>
+        )}
       </div>
+      <AlsoShone performances={others} matches={matchIndex} />
+      <p className="home-footnote">
+        Couverture des données, sources et limites :{" "}
+        <Link className="inline-link" href={f.href("/methode/")}>
+          Données & méthode
+        </Link>
+      </p>
     </Layout>
   );
 }
