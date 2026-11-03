@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { findCoachPortrait } from "../dashboard/scripts/coach-portrait-source.mjs";
+import {
+  findCoachPortrait,
+  findCoachPortraitBatch,
+} from "../dashboard/scripts/coach-portrait-source.mjs";
 import {
   recentLineupIds,
   lineupCoaches,
@@ -62,6 +65,75 @@ test("a portrait requires one exact football-manager identity", async () => {
   assert.equal(
     await findCoachPortrait("Didier Digard", source(["Q267128", "Q2"])),
     null,
+  );
+});
+
+test("temporary image-source failures stay eligible for a later retry", async () => {
+  const fetcher = source(["Q267128"]);
+  await assert.rejects(
+    findCoachPortrait("Didier Digard", async (url, options) =>
+      new URL(url).hostname === "commons.wikimedia.org"
+        ? new Response(null, { status: 429 })
+        : fetcher(url, options),
+    ),
+    /429/,
+  );
+});
+
+test("batch lookup keeps exact unambiguous names and photo credits", async () => {
+  const binding = (name, id, file) => ({
+    label: { value: name },
+    person: { value: `http://www.wikidata.org/entity/${id}` },
+    image: {
+      value: `http://commons.wikimedia.org/wiki/Special:FilePath/${file}`,
+    },
+  });
+  const fetcher = async (url) =>
+    url.includes("sparql")
+      ? Response.json({
+          results: {
+            bindings: [
+              binding("Didier Digard", "Q1", "Digard.jpg"),
+              binding("Didier Digard", "Q1", "Digard.jpg"),
+              binding("Alex Coach", "Q2", "One.jpg"),
+              binding("Alex Coach", "Q3", "Two.jpg"),
+            ],
+          },
+        })
+      : Response.json({
+          query: {
+            pages: {
+              1: {
+                title: "File:Digard.jpg",
+                imageinfo: [
+                  {
+                    thumburl:
+                      "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/af/Digard.jpg/320px-Digard.jpg",
+                    descriptionurl:
+                      "https://commons.wikimedia.org/wiki/File:Digard.jpg",
+                    extmetadata: {
+                      Artist: { value: "Mirasol" },
+                      LicenseShortName: { value: "CC BY-SA 3.0" },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        });
+  const photos = await findCoachPortraitBatch(
+    ["Didier Digard", "Alex Coach"],
+    fetcher,
+  );
+  assert.equal(photos.get("Didier Digard").author, "Mirasol");
+  assert.match(
+    photos.get("Didier Digard").url,
+    /^https:\/\/upload\.wikimedia\.org\//,
+  );
+  assert.equal(photos.get("Alex Coach"), null);
+  await assert.rejects(
+    findCoachPortraitBatch(["Didier Digard"], async () => new Response(null, { status: 429 })),
+    /429/,
   );
 });
 

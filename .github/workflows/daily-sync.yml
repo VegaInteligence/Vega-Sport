@@ -97,7 +97,7 @@ jobs:
         run: node dashboard/scripts/neon_observed_coaches.mjs --name 'Didier Digard'
       - name: Store the first portraits
         run: python dashboard/scripts/neon_assets.py --limit 3000 --retry-commons
-      - name: Discover other observed coach portraits
+      - name: Discover observed coach portraits in batches
         run: node dashboard/scripts/neon_observed_coaches.mjs --all
       - name: Store all discovered portraits
         run: python dashboard/scripts/neon_assets.py --limit 3000 --retry-commons

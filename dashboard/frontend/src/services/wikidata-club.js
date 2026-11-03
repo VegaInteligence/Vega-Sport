@@ -65,8 +65,11 @@ export async function commonsPhoto(filePath, fetcher = fetch) {
   });
   if (!response.ok) return null;
   const page = Object.values((await response.json()).query?.pages || {})[0];
-  const info = page?.imageinfo?.[0],
-    metadata = info?.extmetadata || {};
+  return commonsPhotoFromInfo(page?.imageinfo?.[0]);
+}
+
+export function commonsPhotoFromInfo(info) {
+  const metadata = info?.extmetadata || {};
   // Commons may advertise its thumbnail host; its upload host serves the same
   // path and is already supported by the site's image ingestion pipeline.
   let imageUrl = info?.thumburl || info?.url;

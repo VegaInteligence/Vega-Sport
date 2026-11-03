@@ -1,7 +1,7 @@
 /** Discover portraits for coaches observed in match lineups, during ingestion. */
 import { pathToFileURL } from "node:url";
 import { normalizeText } from "../frontend/src/services/format.js";
-import { findCoachPortrait } from "./coach-portrait-source.mjs";
+import { findCoachPortraitBatch } from "./coach-portrait-source.mjs";
 
 export function recentLineupIds(fixtures, maxPerClub = 2) {
   const counts = new Map(),
@@ -101,43 +101,59 @@ async function main() {
     return (
       specific ||
       !row ||
-      (!row.body?.photo && Date.parse(row.updated_at) < cutoff)
+      (!row.body?.photo &&
+        (row.body?.lookupVersion !== 3 || Date.parse(row.updated_at) < cutoff))
     );
   });
   if (!all && !specific) candidates = candidates.slice(0, 75);
-  let cursor = 0,
-    updated = 0,
+  let updated = 0,
     unavailable = 0,
     failed = 0;
-  await Promise.all(
-    Array.from({ length: 2 }, async () => {
-      while (cursor < candidates.length) {
-        const name = candidates[cursor++];
+  let consecutiveFailures = 0;
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  for (let start = 0; start < candidates.length; start += 20) {
+    const batch = candidates.slice(start, start + 20);
+    try {
+      let portraits;
+      for (let attempt = 0; attempt < 4; attempt++) {
         try {
-          const photo = await findCoachPortrait(name);
-          await query(
-            "INSERT INTO statarena.projections(name,params,body) VALUES('coach-portrait',$1,$2::jsonb) ON CONFLICT(name,params) DO UPDATE SET body=excluded.body,updated_at=now()",
-            [canonical({ name }), JSON.stringify({ name, photo })],
-          );
-          if (photo) updated++;
-          else unavailable++;
+          portraits = await findCoachPortraitBatch(batch);
+          break;
         } catch (error) {
-          failed++;
-          console.error("Portrait lookup failed", error.name);
+          if (attempt === 3) throw error;
+          await wait(2000 * 2 ** attempt);
         }
-        if ((updated + unavailable + failed) % 25 === 0)
-          console.log(
-            JSON.stringify({
-              checked: updated + unavailable + failed,
-              updated,
-              unavailable,
-              failed,
-              total: candidates.length,
-            }),
-          );
       }
-    }),
-  );
+      consecutiveFailures = 0;
+      for (const name of batch) {
+        const photo = portraits.get(name);
+        await query(
+          "INSERT INTO statarena.projections(name,params,body) VALUES('coach-portrait',$1,$2::jsonb) ON CONFLICT(name,params) DO UPDATE SET body=excluded.body,updated_at=now()",
+          [
+            canonical({ name }),
+            JSON.stringify({ name, photo, lookupVersion: 3 }),
+          ],
+        );
+        if (photo) updated++;
+        else unavailable++;
+      }
+    } catch (error) {
+      failed += batch.length;
+      consecutiveFailures++;
+      console.error("Portrait batch failed", error.message);
+      if (consecutiveFailures >= 3) break;
+    }
+    console.log(
+      JSON.stringify({
+        checked: updated + unavailable + failed,
+        updated,
+        unavailable,
+        failed,
+        total: candidates.length,
+      }),
+    );
+    await wait(300);
+  }
   console.log(
     JSON.stringify({
       observedCoachPortraits: {
