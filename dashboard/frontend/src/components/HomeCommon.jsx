@@ -69,3 +69,22 @@ export function fixtureHref(f, fixture) {
     tab: "upcoming",
   });
 }
+/** Tooltip placed in percent of its positioned parent, flipped near the edges. */
+export function ChartTip({ x, y, children }) {
+  if (x == null) return null;
+  const side = x > 62 ? " is-left" : x < 18 ? " is-right" : "";
+  return (
+    <span
+      className={`home-tip${side}${y < 30 ? " is-below" : ""}`}
+      style={{ left: `${x}%`, top: `${y}%` }}
+      role="status"
+    >
+      {children}
+    </span>
+  );
+}
+/** Opens the performance card of a player in a given match when it is loaded. */
+export function openPerformance(f, matchId, playerId) {
+  const id = `${matchId}:${playerId}`;
+  if (playerId && f.byAppearance.has(id)) f.setPlayer(id);
+}

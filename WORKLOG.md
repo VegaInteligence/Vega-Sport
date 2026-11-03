@@ -1,6 +1,7 @@
 # Worklog
 
 ## Goal / constraints
+Publish the new committed homepage changes without pulling raw data into the original checkout; preserve remote club-profile fixes and the Neon runtime.
 Complete the Neon-only migration, preserve all user UI commits, keep two ingestion workflows, and free SSD space only after exact backups and live validation. Preserve unknown iCloud files and unrelated worktrees. Runtime is read-only; Pitch credentials belong only to GitHub Actions. Use reproducible E2E evidence.
 
 ## State — 2026-11-03
@@ -24,3 +25,5 @@ Latest user check: measured live browser transfer across the nine main URLs (cur
 Next operational check: the live Historical Backfill run and storage guards; no claim of exhaustive provider history.
 
 Suggested commit: docs: measure site navigation transfer usage.
+
+Homepage publication: local 1a745e8b06 replayed without conflict onto remote 66f6ca8 in isolated sparse clone /tmp/statarena-push-home-20261103. Production build and 14 existing targeted checks passed; no new tests or browser E2E. No data downloaded into the original checkout. Evidence: docs/verification/home-publication-20261103/RESULTS.md. Next: normal push and remote-head verification. Suggested commit: docs: record homepage publication verification.

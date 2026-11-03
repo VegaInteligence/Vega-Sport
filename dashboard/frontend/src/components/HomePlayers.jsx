@@ -8,12 +8,15 @@ import { number } from "../services/format.js";
 import { Kicker, lastName, matchHref, shortDay } from "./HomeCommon.jsx";
 
 const plural = (n, word) => `${number(n)} ${word}${n > 1 ? "s" : ""}`;
+const share = (a, b) =>
+  Number.isFinite(a) && b > 0 ? `${number((a / b) * 100)} %` : "—";
 
-/** Poster-style card of the week's best performance, with its season context. */
-export function PlayerOfTheWeek({ performance, match, season }) {
+/** Poster-style card of the week's best performance, with its recent form and season. */
+export function PlayerOfTheWeek({ performance, match, season, recent = [] }) {
   const f = useFootball(),
     p = performance;
   if (!p) return null;
+  const duels = (p.duelsWon || 0) + (p.duelsLost || 0);
   return (
     <article className="card home-potw">
       <span className="home-potw-ghost" aria-hidden="true">
@@ -52,20 +55,63 @@ export function PlayerOfTheWeek({ performance, match, season }) {
           <span>Passes déc.</span>
         </div>
       </div>
-      <div className="home-potw-mini">
+      <dl className="home-potw-stats">
         <div>
-          <b>{number(p.xg, 2)}</b>xG
+          <dt>xG</dt>
+          <dd>{number(p.xg, 2)}</dd>
         </div>
         <div>
-          <b>{number(p.shots)}</b>tirs
+          <dt>Tirs (cadrés)</dt>
+          <dd>
+            {number(p.shots)} ({number(p.shotsOnTarget)})
+          </dd>
         </div>
         <div>
-          <b>{number(p.chancesCreated)}</b>occasions
+          <dt>Occasions créées</dt>
+          <dd>{number(p.chancesCreated)}</dd>
         </div>
         <div>
-          <b>{number(p.minutes)}′</b>joué
+          <dt>Passes réussies</dt>
+          <dd>{share(p.passesAccurate, p.passesAttempted)}</dd>
         </div>
-      </div>
+        <div>
+          <dt>Duels gagnés</dt>
+          <dd>{duels ? `${number(p.duelsWon || 0)}/${number(duels)}` : "—"}</dd>
+        </div>
+        <div>
+          <dt>Touches</dt>
+          <dd>{number(p.touches)}</dd>
+        </div>
+        <div>
+          <dt>Actions défensives</dt>
+          <dd>{number(p.defensiveActions)}</dd>
+        </div>
+        <div>
+          <dt>Temps de jeu</dt>
+          <dd>{number(p.minutes)}′</dd>
+        </div>
+      </dl>
+      {recent.length > 1 && (
+        <div className="home-potw-form">
+          <span className="home-potw-label">Ses derniers matchs</span>
+          <ol>
+            {recent.map((r) => (
+              <li
+                key={r.id}
+                title={`${shortDay(r.date)} · ${number(r.rating, 2)}`}
+              >
+                <i
+                  className={r.id === p.id ? "is-current" : ""}
+                  style={{
+                    height: `${Math.max(8, ((r.rating - 5) / 5) * 100)}%`,
+                  }}
+                />
+                <span>{number(r.rating, 1)}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
       {season && (
         <p className="home-potw-season">
           Sur la saison : <b>{plural(season.goals, "but")}</b>,{" "}
@@ -243,9 +289,10 @@ export function SeasonScorers({ leaders }) {
         </Link>
       </div>
       <ol className="home-scorers-list">
-        {leaders.map((p) => (
+        {leaders.map((p, i) => (
           <li key={p.playerId}>
             <button type="button" onClick={() => f.setPlayer(p.lastId)}>
+              <span className="home-scorer-rank">{i + 1}</span>
               <Media
                 name={p.name}
                 url={p.imageUrl}

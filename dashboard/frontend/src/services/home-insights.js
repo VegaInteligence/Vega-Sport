@@ -168,7 +168,8 @@ export function xgTimeline(match) {
     .sort((a, b) => a.minute - b.minute);
   const lines = { home: [[0, 0]], away: [[0, 0]] },
     total = { home: 0, away: 0 },
-    goals = [];
+    goals = [],
+    events = [];
   for (const shot of shots) {
     const side = shotSide(shot, match),
       minute = Math.max(0, shot.minute);
@@ -176,6 +177,16 @@ export function xgTimeline(match) {
       lines[side].push([minute, total[side]]);
       total[side] += shot.xg;
       lines[side].push([minute, total[side]]);
+      events.push({
+        id: shot.id || "",
+        side,
+        minute,
+        xg: shot.xg,
+        total: total[side],
+        player: shot.playerName || "",
+        playerId: shot.playerId || "",
+        outcome: shotOutcome(shot),
+      });
     }
     if (shot.isGoal || shot.isOwnGoal) {
       const scorer = shot.isOwnGoal
@@ -187,6 +198,8 @@ export function xgTimeline(match) {
         side: scorer,
         minute,
         player: shot.playerName || "",
+        playerId: shot.playerId || "",
+        shotId: shot.id || "",
         ownGoal: Boolean(shot.isOwnGoal),
         penalty: shot.situation === "Penalty",
         xg: total[scorer],
@@ -196,7 +209,29 @@ export function xgTimeline(match) {
   const end = Math.max(90, ...shots.map((s) => s.minute));
   lines.home.push([end, total.home]);
   lines.away.push([end, total.away]);
-  return { lines, total, goals, end };
+  return { lines, total, goals, events, end };
+}
+const SITUATIONS = {
+  RegularPlay: "Jeu placé",
+  FastBreak: "Contre-attaque",
+  SetPiece: "Coup de pied arrêté",
+  FromCorner: "Sur corner",
+  FreeKick: "Coup franc direct",
+  Penalty: "Penalty",
+};
+const BODY_PARTS = {
+  RightFoot: "pied droit",
+  LeftFoot: "pied gauche",
+  Header: "de la tête",
+  OtherBodyParts: "autre surface",
+};
+export function shotOutcome(shot) {
+  if (shot.isOwnGoal) return "Contre son camp";
+  if (shot.isGoal) return "But";
+  if (shot.type === "Post") return "Sur le poteau";
+  if (shot.type === "AttemptSaved" || shot.isOnTarget)
+    return shot.isOnTarget === false ? "Contré" : "Arrêté";
+  return "Non cadré";
 }
 /** Shots placed on one pitch: the home team attacks left, the visitors right. */
 export function shotMapPoints(match) {
@@ -218,6 +253,11 @@ export function shotMapPoints(match) {
         goal: Boolean(s.isGoal),
         minute: s.minute,
         player: s.playerName || "",
+        playerId: s.playerId || "",
+        id: s.id || "",
+        outcome: shotOutcome(s),
+        situation: SITUATIONS[s.situation] || "",
+        body: BODY_PARTS[s.shotType] || "",
       };
     });
 }
@@ -267,6 +307,7 @@ export function leagueProgress(fixtures, leagueIds) {
           goalsAgainst: 0,
           results: [],
           cumulative: [],
+          cleanSheets: 0,
         });
       return teams.get(team.id);
     };
@@ -300,6 +341,7 @@ export function leagueProgress(fixtures, leagueIds) {
         r.points += outcome === "W" ? 3 : outcome === "D" ? 1 : 0;
         r.results.push(outcome);
         r.cumulative.push(r.points);
+        if (ga === 0) r.cleanSheets++;
       }
     }
     const rows = [...teams.values()].map((r) => {
@@ -364,6 +406,23 @@ export function bestWinStreak(progress) {
   return best;
 }
 
+/** The meanest defence of the followed leagues, after at least five games. */
+export function bestDefence(progress) {
+  let best = null;
+  for (const table of progress.values())
+    for (const row of table.rows) {
+      if (row.played < 5) continue;
+      const perGame = row.goalsAgainst / row.played;
+      if (
+        !best ||
+        perGame < best.perGame ||
+        (perGame === best.perGame && row.cleanSheets > best.cleanSheets)
+      )
+        best = { ...row, perGame };
+    }
+  return best;
+}
+
 /** Best rated performance per player in the window, 60 minutes or more. */
 export function weekPerformances(appearances, window, minMinutes = 60) {
   const best = new Map();
@@ -393,11 +452,25 @@ export function playerOfTheWeek(performances) {
   );
 }
 
+const INTERNATIONAL = new Set(["INT", "INT-2", "UEFA", "WORLD"]);
+/**
+ * A season shows its own games. Calendar-year leagues keep their year label,
+ * but an international tournament of another label, such as the World Cup
+ * played before a split season, belongs to the previous season.
+ */
+export function inSeason(row, season) {
+  return (
+    !season ||
+    !row?.season ||
+    row.season === season ||
+    !INTERNATIONAL.has(row.country)
+  );
+}
 /** Season totals per player within the selection. */
-export function seasonTotals(appearances) {
+export function seasonTotals(appearances, season) {
   const players = new Map();
   for (const row of appearances || []) {
-    if (!(row.minutes > 0)) continue;
+    if (!(row.minutes > 0) || !inSeason(row, season)) continue;
     let p = players.get(row.playerId);
     if (!p)
       players.set(
@@ -453,14 +526,17 @@ export function seasonLeaders(totals) {
     goals: top(
       totals.filter((p) => p.goals > 0),
       (a, b) => b.goals - a.goals || b.xg - a.xg,
+      8,
     ),
     clinical: top(
       totals.filter((p) => p.goals >= 4),
       (a, b) => b.goals - b.xg - (a.goals - a.xg),
+      6,
     ),
     wasteful: top(
       totals.filter((p) => p.xg >= 3),
       (a, b) => a.goals - a.xg - (b.goals - b.xg),
+      6,
     ),
     rating: top(
       totals.filter((p) => p.rating != null && p.minutes >= ratedMin),
@@ -563,4 +639,18 @@ export function ballonDorRaceOpen({
   }
   if (stages.later.some(Boolean)) return true;
   return stages.quarter.length >= 8 && stages.quarter.every(Boolean);
+}
+
+/** Ratings of a player's last games of the season, oldest first. */
+export function recentRatings(appearances, playerId, season, count = 6) {
+  return (appearances || [])
+    .filter(
+      (row) =>
+        row.playerId === playerId &&
+        row.minutes > 0 &&
+        Number.isFinite(row.rating) &&
+        inSeason(row, season),
+    )
+    .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
+    .slice(-count);
 }

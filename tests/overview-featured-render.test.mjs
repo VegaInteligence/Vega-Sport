@@ -110,6 +110,7 @@ async function overview({ context, params = "", rounds = {} }) {
     "../components/HomeSeason.jsx": {
       BallonDorRace: () => h("div", { "data-race": "" }),
       BallonDorTeaser: () => h("div", { "data-teaser": "" }),
+      BestDefence: () => null,
       NextMatches: () => null,
       TitleRace: () => null,
       WinStreak: () => null,
@@ -122,7 +123,7 @@ async function overview({ context, params = "", rounds = {} }) {
     "../services/competition-identity.js": await src(
       "services/competition-identity.js",
     ),
-    "../services/fixtures.js": await src("services/fixtures.js"),
+    "../services/ballon-dor.js": await src("services/ballon-dor.js"),
     "../services/home-insights.js": await src("services/home-insights.js"),
     "../../../shared/competition-scope.js": await import(
       path.join(root, "dashboard/shared/competition-scope.js")

@@ -20,25 +20,27 @@ import {
 import {
   BallonDorRace,
   BallonDorTeaser,
+  BestDefence,
   NextMatches,
   TitleRace,
   WinStreak,
 } from "../components/HomeSeason.jsx";
-import { number } from "../services/format.js";
 import { json, useResource } from "../services/resources.js";
+import { ballonDorRanking } from "../services/ballon-dor.js";
 import { competitionIndex } from "../services/competition-identity.js";
-import { dayLabel } from "../services/fixtures.js";
 import { europeFocusIds } from "../../../shared/competition-scope.js";
 import {
   CHAMPIONS_LEAGUE_ID,
   TOP_SEVEN_IDS,
   ballonDorRaceOpen,
+  bestDefence,
   bestWinStreak,
   biggestWin,
   leagueOf,
   leagueProgress,
   matchdayWindow,
   playerOfTheWeek,
+  recentRatings,
   seasonLeaders,
   seasonProgress,
   seasonTotals,
@@ -47,7 +49,6 @@ import {
   upcomingHighlights,
   weekPerformances,
   weekResults,
-  weekTotals,
 } from "../services/home-insights.js";
 
 function useClock() {
@@ -131,13 +132,17 @@ export default function OverviewPage() {
     [scopedRows, matchWeek],
   );
   const potw = playerOfTheWeek(performances);
-  const totals = useMemo(() => seasonTotals(scopedRows), [scopedRows]);
+  const totals = useMemo(
+    () => seasonTotals(scopedRows, f.season),
+    [scopedRows, f.season],
+  );
   const leaders = useMemo(() => seasonLeaders(totals), [totals]);
   const highlights = useMemo(
     () => upcomingHighlights(fixtures, now, scope.ids, ranks),
     [fixtures, now, scopeKey, ranks],
   );
   const streak = useMemo(() => bestWinStreak(progress), [progress]);
+  const defence = useMemo(() => bestDefence(progress), [progress]);
   const matchIndex = useMemo(
     () => new Map(scopedMatches.map((m) => [m.id, m])),
     [scopedMatches],
@@ -214,8 +219,7 @@ export default function OverviewPage() {
         </Empty>
       </Layout>
     );
-  const week = weekTotals(results),
-    win = biggestWin(results);
+  const win = biggestWin(results);
   const streakNext =
     streak &&
     highlights
@@ -227,6 +231,9 @@ export default function OverviewPage() {
       .sort((a, b) => a.time - b.time)[0];
   const potwMatch = potw && matchIndex.get(potw.matchId);
   const potwSeason = potw && totals.find((p) => p.playerId === potw.playerId);
+  const potwRecent = potw
+    ? recentRatings(scopedRows, potw.playerId, f.season)
+    : [];
   const others = performances
     .filter((p) => p.playerId !== potw?.playerId)
     .slice(0, 9);
@@ -235,21 +242,18 @@ export default function OverviewPage() {
     : tables[0]?.leagueId;
 
   return (
-    <Layout
-      path="/"
-      title="Vue d’ensemble"
-      actions={<HomePreferences f={f} />}
-      className="home-page"
-    >
-      <p className="home-intro">
-        {matchWeek.current ? "Semaine" : "Dernière semaine jouée"} du{" "}
-        {dayLabel(matchWeek.start, { month: "short" })} au{" "}
-        {dayLabel(matchWeek.end, { month: "short" })} ·{" "}
-        <b>{number(week.matches)} matchs</b>, <b>{number(week.goals)} buts</b>
-        {week.xg > 0 && <>, {number(week.xg, 1)} xG</>}
-        {scope.label && <> · {scope.label}</>}
-      </p>
-      <HomeTicker results={results} ranks={ranks} competitions={competitions} />
+    <Layout path="/" title="Vue d’ensemble" hideHeading className="home-page">
+      <h1 className="sr-only">Vue d’ensemble</h1>
+      <div className="home-topbar">
+        <HomeTicker
+          results={results}
+          ranks={ranks}
+          competitions={competitions}
+        />
+        <div className="home-topbar-actions">
+          <HomePreferences f={f} />
+        </div>
+      </div>
       <div className="home-bento">
         {featured && (
           <div className="home-span-8">
@@ -268,6 +272,7 @@ export default function OverviewPage() {
             performance={potw}
             match={potwMatch}
             season={potwSeason}
+            recent={potwRecent}
           />
           <NumberOfTheWeek
             win={win}
@@ -279,6 +284,7 @@ export default function OverviewPage() {
             <BallonDorRace
               leaders={leaders.rating}
               ratedMin={leaders.ratedMin}
+              ranking={ballonDorRanking(f.season)}
             />
           </div>
         )}
@@ -312,14 +318,15 @@ export default function OverviewPage() {
             <SeasonScorers leaders={leaders.goals} />
           </div>
         )}
-        {streak && (
-          <div className="home-span-3">
+        {(streak || defence) && (
+          <div className="home-span-3 home-stack">
             <WinStreak
               streak={streak}
               competitions={competitions}
               next={streakNext}
               now={now}
             />
+            <BestDefence defence={defence} competitions={competitions} />
           </div>
         )}
         {!raceOpen && (
@@ -327,17 +334,12 @@ export default function OverviewPage() {
             <BallonDorTeaser
               progress={seasonProgress(progress)}
               leaders={leaders.rating}
+              ranking={ballonDorRanking(f.season)}
             />
           </div>
         )}
       </div>
       <AlsoShone performances={others} matches={matchIndex} />
-      <p className="home-footnote">
-        Couverture des données, sources et limites :{" "}
-        <Link className="inline-link" href={f.href("/methode/")}>
-          Données & méthode
-        </Link>
-      </p>
     </Layout>
   );
 }

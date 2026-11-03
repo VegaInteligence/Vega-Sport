@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   ballonDorRaceOpen,
+  bestDefence,
+  inSeason,
   bestWinStreak,
   biggestWin,
   leagueProgress,
@@ -354,4 +356,67 @@ test("the Ballon d'Or race opens once every Champions League quarter-final is pl
     }),
     false,
   );
+});
+
+test("season totals leave out an international tournament of the previous season", () => {
+  const club = {
+    id: "c",
+    playerId: "p",
+    name: "Mbappé",
+    leagueId: "l_0ErfuF",
+    country: "ESP",
+    season: "2026/2027",
+    date: "2026-09-01",
+    minutes: 90,
+    goals: 1,
+  };
+  const worldCup = {
+    ...club,
+    id: "w",
+    leagueId: "l_1XLtP0",
+    country: "INT",
+    season: "2026",
+    date: "2026-07-01",
+    goals: 5,
+  };
+  const ucl = {
+    ...club,
+    id: "u",
+    leagueId: "l_0bfbkO",
+    country: "INT",
+    season: "2026/2027",
+    goals: 2,
+  };
+  const sweden = {
+    ...club,
+    id: "s",
+    leagueId: "l_1XsMdH",
+    country: "SWE",
+    season: "2026",
+    goals: 3,
+  };
+  assert.equal(inSeason(worldCup, "2026/2027"), false);
+  assert.equal(inSeason(ucl, "2026/2027"), true);
+  assert.equal(inSeason(sweden, "2026/2027"), true);
+  assert.equal(seasonTotals([club, worldCup, ucl], "2026/2027")[0].goals, 3);
+});
+
+test("the meanest defence concedes the fewest goals per game after five games", () => {
+  const games = [];
+  for (let i = 0; i < 6; i++)
+    games.push(
+      fixture(
+        "g" + i,
+        L1,
+        "2026-08-0" + (i + 1),
+        i % 2 ? "wall" : "other" + i,
+        i % 2 ? "other" + i : "wall",
+        i === 0 ? 0 : 1,
+        i === 0 ? 2 : 0,
+      ),
+    );
+  const defence = bestDefence(leagueProgress(games));
+  assert.equal(defence.id, "wall");
+  assert.equal(defence.cleanSheets, 4);
+  assert.equal(defence.goalsAgainst, 2);
 });

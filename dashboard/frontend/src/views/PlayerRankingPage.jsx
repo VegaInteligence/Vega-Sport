@@ -7,11 +7,7 @@ import { Media } from "../components/UI.jsx";
 import SeasonSelect from "../components/SeasonSelect.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
-
-// The ranking is not computed yet: every place renders as a placeholder.
-// When a season ranking exists, pass its 30 entries here
-// ({ rank, name, imageUrl, team, teamImageUrl, position, score }).
-const ranking = null;
+import { ballonDorRanking } from "../services/ballon-dor.js";
 
 const PODIUM = [
   { rank: 2, medal: "silver" },
@@ -130,7 +126,7 @@ function RankRow({ rank, entry }) {
   );
 }
 
-function RankColumn({ from, to }) {
+function RankColumn({ from, to, ranking }) {
   return (
     <div className="rank-column">
       <div className="rank-head" aria-hidden="true">
@@ -157,7 +153,8 @@ function RankColumn({ from, to }) {
 
 export default function PlayerRankingPage() {
   const f = useFootball(),
-    seasons = f.manifest?.seasons || [];
+    seasons = f.manifest?.seasons || [],
+    ranking = ballonDorRanking(f.season);
   return (
     <Layout
       path="/classement-joueurs/"
@@ -190,8 +187,8 @@ export default function PlayerRankingPage() {
       <section className="rank-board" aria-label="Rangs 4 à 30">
         <h2>Rangs 4 à 30</h2>
         <div className="rank-columns">
-          <RankColumn from={4} to={17} />
-          <RankColumn from={18} to={30} />
+          <RankColumn from={4} to={17} ranking={ranking} />
+          <RankColumn from={18} to={30} ranking={ranking} />
         </div>
       </section>
 
