@@ -1,27 +1,28 @@
 # Worklog
 
 ## Goal
-- Publish the five new local UI commits to main without pulling raw data into Football_ranking. Preserve the completed Neon transfer, disabled collection workflows, remote history and unrelated local files.
+- Completed: correct the Neon migration to preserve the directly browsable original data/ file tree. Keep every StatArena GitHub Action stopped.
 
-## Constraints and decisions
-- Preserve source files, existing app contracts, Postgres data and unrelated local UI changes. No source deletion or app read-path cutover.
-- Use the final published GitHub commit as authoritative. Local untracked/iCloud duplicates remain in place; unpublished cancelled-runner work is not claimed recovered.
-- Archive parts retain original data/ paths and exact bytes. Manifest maps files to parts, sizes, SHA-256 and Git blob hashes. Tradeoff: individual files require extracting their part; this is Object Storage delivery, not a SQL-table import.
+## Decisions and constraints
+- Archive-only presentation was the wrong format for the user's request. Replaced our generated archive objects with one private object at each original repository-relative path in the existing statarena-data bucket.
+- Preserved GitHub/local source copies, original compressed source files, Postgres data, app read paths and unrelated UI changes. No extra buckets or public access.
+- Replaced cloud archives part by part after verifying their members; stayed within the 5 GB free allowance.
 
 ## Current state — 2026-11-03
-- UI publication: five local commits f75d670a30, 154820751e, b2ec625a71, b9a2418a56 and 8f2d6c17e2 replayed without conflict onto remote main 0aad2d5 in isolated sparse/partial worktree /tmp/statarena-push-ui-second-20261103. Raw data excluded; only the computed dashboard manifest materialized. Production build passed and 7 existing targeted checks passed. No new tests or browser E2E. Evidence: docs/verification/ui-publication-second-20261103/RESULTS.md.
-- Five workflows disabled: historical catch-up, daily refresh, cups, profile retries, PostgreSQL measurement. Active runs 41605061706 and 41612686123 cancelled; final scan found no active/queued StatArena runs.
-- Source commit: 579b47107e0cd4fa4f9a12a5a95dd6a1be274ed9. All 250,748 tracked data files transferred (2,692,640,453 original bytes).
-- Target: project sweet-queen-11955006, production branch br-mute-bonus-be23014e, private bucket statarena-data, prefix snapshots/579b47107e0cd4fa4f9a12a5a95dd6a1be274ed9/.
-- Neon contains 25 objects totaling 2,691,390,896 bytes, within the 5 GB free object allowance: 21 tar.gz parts, per-file manifest, README, snapshot inventory and VERIFIED receipt.
-- Verified every source Git blob, reopened all archive members, then independently downloaded/hash-checked every remote object. Connector key/size inventory exactly matches all expected objects. Signed URL material removed; no reusable credential created.
-- Evidence and exact rerun/restore commands: docs/verification/neon-data-migration-20261103/RESULTS.md. Failure modes were documented before implementation; no post-implementation unit tests.
+- Target: Orion / Orion Tech Sport, project sweet-queen-11955006, production br-mute-bonus-be23014e, private statarena-data bucket.
+- Exact source: 579b47107e0cd4fa4f9a12a5a95dd6a1be274ed9. Bucket now contains only data/ and all 250,748 original files (2,692,640,453 bytes). No generated snapshots/ objects remain.
+- Structure: data/README.md (1 file), computed/ (200), raw/ (245,215), sources/ (5,332).
+- Every source SHA-256 checked; every upload's Content-MD5/server ETag matched. Independently downloaded 63 samples. Full paginated whole-bucket inventory matched every key, size and ETag; final live E2E succeeded.
+- Grouped listing returned 504 and one intermediate audit hit a connection error; final flat audit succeeded without reuploading. Browser UI rendering was not tested. Evidence: docs/verification/neon-file-layout-20261103/RESULTS.md and VERIFIED.json.
+- Temporary scoped credential revoked; local credential file removed. Local resume state and archives remain outside Git for inspection. No uploader remains active.
+- All five StatArena workflows are disabled; no active/queued runs. No further collection or profile retries requested.
 
-## Prior project continuity
-- Concurrent UI publication preserved: four local UI commits replayed onto data checkpoint 579b471 and published at 472cf06; verification artifacts published at 3222283. Production build and existing competition-render check passed; no new full browser E2E was claimed. Evidence: docs/verification/ui-publication-20261103/RESULTS.md.
-- DataScout player/club/match enrichment remains delivered; preserve the neutral/blue palette, Inter, green branding and SportScore attribution. XI builder/transfer-squad simulator remains excluded. Prior coverage and UI verification: docs/DATASCOUT_IMPLEMENTATION.md and dashboard/outputs/datascout-enrichment/.
-- Historical collector supports complete_with_errors terminal country traversal; refused resources retain evidence. Latest user-selected API key stays in the encrypted GitHub secret, but all actions are now disabled at user request.
+## Prior continuity
+- Second concurrent UI publication preserved at aae6fcd: five local UI commits f75d670a30, 154820751e, b2ec625a71, b9a2418a56 and 8f2d6c17e2 replayed onto 0aad2d5. Production build and seven existing targeted checks passed; no new browser E2E. Evidence: docs/verification/ui-publication-second-20261103/RESULTS.md.
+- Concurrent UI publication and verification remain preserved: 472cf06 / 3222283; docs/verification/ui-publication-20261103/RESULTS.md. Preserve neutral/blue palette, Inter, green branding and SportScore attribution; XI builder remains excluded.
+- DataScout coverage and earlier UI evidence: docs/DATASCOUT_IMPLEMENTATION.md and dashboard/outputs/datascout-enrichment/.
+- The original archive-delivery report is marked superseded, retaining historical provenance. The user-selected PitchAPI key remains only in the encrypted GitHub secret; Actions are disabled.
 
 ## Next action
-- Publish the five UI commits and verification receipt with a normal fast-forward push, then verify the remote head. Original local main and untracked files remain unchanged; no pull/reset. Neon transfer is complete and collection workflows stay disabled.
-- Suggested commit: docs: record second UI publication verification.
+- Corrective transfer and verification are complete. Publish the scoped evidence and report the corrected layout. Any database import, app storage cutover or new collection is separate work.
+- Suggested commits: fix: preserve original data paths in Neon storage; docs: verify corrected Neon file layout.
