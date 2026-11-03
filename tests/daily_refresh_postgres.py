@@ -89,7 +89,7 @@ def main():
 
     def published_goal():
         manifest = store.objects["computed/dashboard/index.json"]
-        chunk = manifest["seasons"][0]["chunks"][0]
+        chunk = next(c for c in manifest["seasons"][0]["chunks"] if c["leagueId"] == "l_0eg6C9")
         rows = unpack(store.objects[chunk["path"]]["tables"]["performances"])
         return next(row["goals"] for row in rows if row["playerId"] == "p_1mZO3B")
 
