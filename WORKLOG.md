@@ -16,7 +16,9 @@ Complete the Neon-only migration, preserve all user UI commits, keep two ingesti
 ## Final cutover
 Latest UI deployed and promoted with 50 HTTP checks, nine browser pages and 11 interactions passed. Actual functions pinned to cle1 near Neon after verifying deployed metadata. Historical run 41664756751 collecting (60-minute budget); both scheduled workflows active. Exactly two repository workflow files; GitHub's public-repository Dependency Graph system workflow is independently managed.
 
-## Next action
-Persist the final evidence on main and remove the now-redundant owned migration checkout. No implementation work remains; historical discovery continues through the ingestion jobs.
+## Completion
+All source and evidence pushed to main and synchronized locally. Removed the disposable clone, Vercel export, migration caches and ephemeral secret files; removed file footprints total 11,354,628,096 allocated bytes (APFS sharing may affect physical savings). One zero-allocation iCloud placeholder and unrelated worktrees remain preserved. No implementation work remains. Historical discovery continues through the active ingestion workflows.
+
+Next operational check: the live Historical Backfill run and storage guards; no claim of exhaustive provider history.
 
 Suggested commit: chore: finish Neon cutover and verified SSD cleanup.
