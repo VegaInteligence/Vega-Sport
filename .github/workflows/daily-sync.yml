@@ -1,8 +1,8 @@
 name: Daily Sync
 on:
   schedule:
-    - cron: "0 0 * * *"
-    - cron: "30 8 * * *"
+    - cron: "35 22 * * *"
+    - cron: "10 6 * * *"
   workflow_dispatch:
     inputs:
       minutes:
@@ -52,14 +52,20 @@ jobs:
       - name: Sync current matches directly into Neon
         env:
           PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
-          SYNC_MINUTES: ${{ inputs.minutes || '60' }}
+          SYNC_MODE: ${{ github.event_name == 'schedule' && github.event.schedule == '10 6 * * *' && 'pulse' || 'daily' }}
+          SYNC_MINUTES: ${{ github.event_name == 'schedule' && github.event.schedule == '10 6 * * *' && '25' || inputs.minutes || '60' }}
           SYNC_REQUESTS: ${{ inputs.max_requests || '20000' }}
-        run: python dashboard/scripts/neon_ingest.py --mode daily --minutes "$SYNC_MINUTES" --max-requests "$SYNC_REQUESTS"
+        run: python dashboard/scripts/neon_ingest.py --mode "$SYNC_MODE" --minutes "$SYNC_MINUTES" --max-requests "$SYNC_REQUESTS"
       - name: Refresh supplemental records in Neon
+        if: github.event_name != 'schedule' || github.event.schedule != '10 6 * * *'
         run: node dashboard/scripts/neon_refresh_sources.mjs
       - name: Refresh player honours in Neon
+        if: github.event_name != 'schedule' || github.event.schedule != '10 6 * * *'
         run: python dashboard/scripts/player_honours.py --limit 100
       - name: Refresh portraits for observed coaches
+        if: github.event_name != 'schedule' || github.event.schedule != '10 6 * * *'
         run: node dashboard/scripts/neon_observed_coaches.mjs
       - name: Store new display images in Neon
-        run: python dashboard/scripts/neon_assets.py --limit 3000
+        env:
+          ASSET_LIMIT: ${{ github.event_name == 'schedule' && github.event.schedule == '10 6 * * *' && '1000' || '3000' }}
+        run: python dashboard/scripts/neon_assets.py --limit "$ASSET_LIMIT"

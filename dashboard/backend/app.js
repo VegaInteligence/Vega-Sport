@@ -29,15 +29,15 @@ export async function handleRequest(request) {
     }
     if (pathname === "/api/settings") {
       const rows = await query(
-        "SELECT name,value,updated_at FROM statarena.state WHERE name IN('daily','historical','revision')",
+        "SELECT name,value,updated_at FROM statarena.state WHERE name IN('daily','pulse','historical','revision')",
       );
       return Response.json(
         {
           provider: "Neon",
           configured: configured(),
           schedule: {
-            cron: "0 0 * * *",
-            crons: ["0 0 * * *", "30 8 * * *"],
+            cron: "35 22 * * *",
+            crons: ["35 22 * * *", "10 6 * * *"],
             timezone: "UTC",
             runner: "GitHub Actions",
           },

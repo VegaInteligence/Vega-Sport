@@ -1,7 +1,9 @@
 name: Historical Backfill
 on:
   schedule:
-    - cron: '15 */6 * * *'
+    - cron: '15 0,12 * * *'
+    - cron: '50 6 * * *'
+    - cron: '15 18 * * *'
   workflow_dispatch:
     inputs:
       minutes:
@@ -55,7 +57,7 @@ jobs:
       - name: Complete missing resources without Git data commits
         env:
           PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
-          SYNC_MINUTES: ${{ inputs.minutes || '280' }}
+          SYNC_MINUTES: ${{ github.event_name == 'schedule' && github.event.schedule == '15 18 * * *' && '210' || inputs.minutes || '280' }}
           SYNC_REQUESTS: ${{ inputs.max_requests || '100000' }}
           PRIORITY_LEAGUE: ${{ inputs.priority_league || '' }}
         run: |

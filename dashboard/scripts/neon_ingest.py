@@ -27,6 +27,11 @@ DAILY_MATCH_PRIORITY = -32750
 DAILY_AUX_PRIORITY = -32740
 DAILY_INVENTORY_PRIORITY = -32730
 DAILY_TARGET_LEAGUES = ("l_0eg6C9", "l_0Lpz1f")
+PULSE_DISCOVERY_PRIORITY = -32768
+PULSE_MATCH_PRIORITY = -32767
+PULSE_AUX_PRIORITY = -32766
+PULSE_LOOKBACK_HOURS = 14
+MATCH_READY_MINUTES = 135
 
 
 def identities(value):
@@ -58,7 +63,7 @@ def saved(store, row):
     return value.get("data")
 
 
-def matches(store, items, priority=3):
+def matches(store, items, priority=3, enqueue_details=True):
     rows = []
     for m in items:
         if not isinstance(m, dict) or not re.fullmatch(
@@ -80,16 +85,17 @@ def matches(store, items, priority=3):
                 "body": m,
             }
         )
-        for suffix in ENDPOINTS:
+        if enqueue_details:
+            for suffix in ENDPOINTS:
+                store.enqueue(
+                    "/matches/" + m["id"] + ("/" + suffix if suffix else ""),
+                    priority=priority,
+                )
             store.enqueue(
-                "/matches/" + m["id"] + ("/" + suffix if suffix else ""),
+                "/matches/" + m["id"] + "/heatmaps",
+                {"frame": "home_ltr"},
                 priority=priority,
             )
-        store.enqueue(
-            "/matches/" + m["id"] + "/heatmaps",
-            {"frame": "home_ltr"},
-            priority=priority,
-        )
     if rows:
         changed = store.db.execute(
             "insert into statarena.fixtures(id,league_id,season,day,status,body) select id,league_id,season,day,status,body from jsonb_to_recordset(%s) as r(id text,league_id text,season text,day date,status text,body jsonb) on conflict(id) do update set body=statarena.fixtures.body||excluded.body,league_id=excluded.league_id,season=case when excluded.season<>'' then excluded.season else statarena.fixtures.season end,day=coalesce(excluded.day,statarena.fixtures.day),status=excluded.status,updated_at=now() where statarena.fixtures.body is distinct from statarena.fixtures.body||excluded.body or (excluded.season<>'' and statarena.fixtures.season<>excluded.season) or statarena.fixtures.league_id<>excluded.league_id returning season,league_id",
@@ -107,17 +113,19 @@ def matches(store, items, priority=3):
             )
 
 
-def enqueue_daily_match(store, match_id):
+def enqueue_daily_match(store, match_id, pulse=False):
     for suffix in ENDPOINTS:
         store.enqueue(
             "/matches/" + match_id + ("/" + suffix if suffix else ""),
-            priority=DAILY_MATCH_PRIORITY if suffix in {"", "players"} else DAILY_AUX_PRIORITY,
+            priority=(PULSE_MATCH_PRIORITY if pulse else DAILY_MATCH_PRIORITY)
+            if suffix in {"", "players"}
+            else (PULSE_AUX_PRIORITY if pulse else DAILY_AUX_PRIORITY),
             force=True,
         )
     store.enqueue(
         "/matches/" + match_id + "/heatmaps",
         {"frame": "home_ltr"},
-        priority=DAILY_AUX_PRIORITY,
+        priority=PULSE_AUX_PRIORITY if pulse else DAILY_AUX_PRIORITY,
         force=True,
     )
 
@@ -134,6 +142,33 @@ def enqueue_recent_matches(store, items, today=None):
             continue
         if today - dt.timedelta(days=3) <= day <= today + dt.timedelta(days=2):
             enqueue_daily_match(store, match["id"])
+
+
+def enqueue_pulse_matches(store, items, now=None):
+    """Refresh likely completed games from the previous 14 hours, across leagues."""
+    now = now or dt.datetime.now(dt.timezone.utc)
+    for match in items:
+        if not isinstance(match, dict) or not re.fullmatch(r"m_[A-Za-z0-9]{6}", match.get("id", "")):
+            continue
+        status = str(match.get("status") or "").lower()
+        if status in {"cancelled", "canceled", "postponed", "abandoned"}:
+            continue
+        try:
+            kickoff = dt.datetime.fromisoformat(str(match.get("time_utc") or "").replace("Z", "+00:00"))
+            if kickoff.tzinfo is None:
+                raise ValueError("Kickoff has no timezone")
+        except ValueError:
+            # A finished match with no usable kickoff still gets one morning retry.
+            try:
+                day = dt.date.fromisoformat(match.get("date") or "")
+            except (TypeError, ValueError):
+                continue
+            if status == "finished" and day == now.date() - dt.timedelta(days=1):
+                enqueue_daily_match(store, match["id"], pulse=True)
+            continue
+        age = now - kickoff
+        if dt.timedelta(minutes=MATCH_READY_MINUTES) <= age <= dt.timedelta(hours=PULSE_LOOKBACK_HOURS):
+            enqueue_daily_match(store, match["id"], pulse=True)
 
 
 def discover(store, endpoint, data, mode, params=None):
@@ -170,15 +205,19 @@ def discover(store, endpoint, data, mode, params=None):
             )
             for m in data.get("matches", [])
         ]
-        matches(store, items, priority=1 if mode == "daily" else 3)
+        matches(store, items, priority=1 if mode == "daily" else 3, enqueue_details=mode != "pulse")
         if mode == "daily":
             enqueue_recent_matches(store, items)
+        elif mode == "pulse":
+            enqueue_pulse_matches(store, items)
     elif endpoint.startswith("/date/"):
-        matches(store, data.get("matches", []), priority=1 if mode == "daily" else 3)
+        matches(store, data.get("matches", []), priority=1 if mode == "daily" else 3, enqueue_details=mode != "pulse")
         if mode == "daily":
             enqueue_recent_matches(store, data.get("matches", []))
+        elif mode == "pulse":
+            enqueue_pulse_matches(store, data.get("matches", []))
     elif re.fullmatch("/matches/m_[A-Za-z0-9]{6}", endpoint):
-        matches(store, [data], priority=1 if mode == "daily" else 3)
+        matches(store, [data], priority=1 if mode == "daily" else 3, enqueue_details=mode != "pulse")
     ids = identities(data)
     for identity in ids:
         kind = {"p": "players", "t": "teams"}.get(identity[0])
@@ -320,11 +359,18 @@ def request(endpoint, params, key, base):
 
 
 def seed(store, mode):
-    store.enqueue(
-        "/leagues",
-        priority=DAILY_DISCOVERY_PRIORITY if mode == "daily" else 0,
-        force=mode == "daily",
-    )
+    if mode in {"daily", "pulse"}:
+        # Priorities reserved for a morning pass should not outrank the next run.
+        store.db.execute(
+            "update statarena.jobs set priority=case when priority=%s then %s when priority=%s then %s else %s end where state='pending' and priority<=%s",
+            (PULSE_DISCOVERY_PRIORITY, DAILY_DISCOVERY_PRIORITY, PULSE_MATCH_PRIORITY, DAILY_MATCH_PRIORITY, DAILY_AUX_PRIORITY, PULSE_AUX_PRIORITY),
+        )
+    if mode != "pulse":
+        store.enqueue(
+            "/leagues",
+            priority=DAILY_DISCOVERY_PRIORITY if mode == "daily" else 0,
+            force=mode == "daily",
+        )
     if mode == "daily":
         today = dt.datetime.now(dt.timezone.utc).date()
         for delta in range(-2, 3):
@@ -339,6 +385,19 @@ def seed(store, mode):
             "select id from statarena.fixtures where day between current_date-3 and current_date+2"
         ):
             enqueue_daily_match(store, mid)
+    elif mode == "pulse":
+        today = dt.datetime.now(dt.timezone.utc).date()
+        for delta in (-1, 0):
+            store.enqueue(
+                "/date/" + str(today + dt.timedelta(days=delta)),
+                {"status": "all"},
+                priority=PULSE_DISCOVERY_PRIORITY,
+                force=True,
+            )
+        rows = store.db.execute(
+            "select body from statarena.fixtures where day between (now() at time zone 'utc')::date-1 and (now() at time zone 'utc')::date"
+        )
+        enqueue_pulse_matches(store, [row[0] for row in rows])
     else:
         backlog = store.db.execute(
             "select count(*) from statarena.jobs where state in('pending','running')"
@@ -417,11 +476,16 @@ def prioritize_league(store, league_id):
     return {"league": league_id, "matches": len(rows), "seasons": seasons}
 
 
-def claim_job(store, league_id=None):
+def claim_job(store, league_id=None, pulse_only=False):
     if league_id:
         return store.db.execute(
             "with next as(select j.endpoint,j.params from statarena.jobs j join statarena.fixtures f on f.id=split_part(j.endpoint,'/',3) where j.endpoint like '/matches/%%' and f.league_id=%s and f.status='finished' and j.state='pending' and j.available_at<=now() order by j.priority,j.available_at limit 1 for update of j skip locked) update statarena.jobs j set state='running',attempts=attempts+1,lease_until=now()+interval '10 minutes' from next where j.endpoint=next.endpoint and j.params=next.params returning j.endpoint,j.params,j.attempts",
             (league_id,),
+        ).fetchone()
+    if pulse_only:
+        return store.db.execute(
+            "with next as(select endpoint,params from statarena.jobs where state='pending' and available_at<=now() and priority<=%s order by priority,available_at limit 1 for update skip locked) update statarena.jobs j set state='running',attempts=attempts+1,lease_until=now()+interval '10 minutes' from next where j.endpoint=next.endpoint and j.params=next.params returning j.endpoint,j.params,j.attempts",
+            (PULSE_AUX_PRIORITY,),
         ).fetchone()
     return store.db.execute(
         "with next as(select endpoint,params from statarena.jobs where state='pending' and available_at<=now() order by priority,available_at limit 1 for update skip locked) update statarena.jobs j set state='running',attempts=attempts+1,lease_until=now()+interval '10 minutes' from next where j.endpoint=next.endpoint and j.params=next.params returning j.endpoint,j.params,j.attempts"
@@ -443,7 +507,7 @@ def capacity(store):
 def publish_pending(store, mode, league_id=None):
     from neon_materialize import materialize
 
-    if mode == "daily" and not league_id:
+    if mode in {"daily", "pulse"} and not league_id:
         for league in DAILY_TARGET_LEAGUES:
             materialize(store, max_partitions=1, league_id=league, recent_first=True)
         materialize(store, max_partitions=20, recent_first=True)
@@ -453,7 +517,7 @@ def publish_pending(store, mode, league_id=None):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--mode", choices=["daily", "historical"], required=True)
+    p.add_argument("--mode", choices=["daily", "pulse", "historical"], required=True)
     p.add_argument("--minutes", type=float, default=45)
     p.add_argument("--max-requests", type=int, default=10000)
     p.add_argument("--seed-endpoint")
@@ -502,7 +566,7 @@ def main():
                     paused = True
                     store.state(a.mode, {"state": "paused_capacity", **cap})
                     break
-            row = claim_job(store, a.priority_league)
+            row = claim_job(store, a.priority_league, pulse_only=a.mode == "pulse")
             if not row:
                 break
             endpoint, encoded, attempts = row

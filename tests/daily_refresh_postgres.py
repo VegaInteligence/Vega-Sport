@@ -14,7 +14,7 @@ from psycopg.types.json import Jsonb
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "dashboard/scripts"))
 from bootstrap_neon import unpack
-from neon_ingest import DAILY_MATCH_PRIORITY, claim_job, discover, seed
+from neon_ingest import DAILY_MATCH_PRIORITY, PULSE_AUX_PRIORITY, PULSE_MATCH_PRIORITY, claim_job, discover, seed
 from neon_materialize import materialize
 from neon_store import Store, canonical
 from test_dashboard_data import synthetic
@@ -152,8 +152,35 @@ def main():
     store.flush()
     materialize(store, max_partitions=1, league_id="l_0Lpz1f")
     assert published_saudi_goal() == 1
+
+    # The shorter morning pass must pick a recent MLS game ahead of historical
+    # work and publish an updated goal, even when the old record is under 6h old.
+    kickoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=3)
+    fixture.update(time_utc=kickoff.isoformat(), date=str(kickoff.date()), status="finished")
+    db.execute("update statarena.fixtures set day=%s,body=%s where id='m_TEST01'", (kickoff.date(), Jsonb(fixture)))
+    db.execute("update statarena.resources set ref=%s,updated_at=now()-interval '1 hour' where endpoint='/matches/m_TEST01/players'", (Jsonb({"path": "players-before"}),))
+    db.execute("insert into statarena.dirty_partitions(season,league_id) values(%s,'l_0eg6C9') on conflict do nothing", (label,))
+    materialize(store, max_partitions=1, league_id="l_0eg6C9")
+    assert published_goal() == 0
+    db.execute("delete from statarena.jobs")
+    db.execute("insert into statarena.jobs(endpoint,params,priority) values('/matches/m_OLD001','{}',-30000)")
+    store = MemoryStore(db, objects)
+    seed(store, "pulse")
+    store.flush()
+    assert db.execute("select priority from statarena.jobs where endpoint='/matches/m_TEST01/players'").fetchone() == (PULSE_MATCH_PRIORITY,)
+    assert claim_job(store, pulse_only=True)[0].startswith("/date/")
+    assert claim_job(store, pulse_only=True)[0].startswith("/date/")
+    assert claim_job(store, pulse_only=True)[0].startswith("/matches/m_TEST01")
+    db.execute("update statarena.resources set ref=%s,updated_at=clock_timestamp() where endpoint='/matches/m_TEST01/players'", (Jsonb({"path": "players-after"}),))
+    discover(store, "/matches/m_TEST01/players", [player], "pulse")
+    store.flush()
+    materialize(store, max_partitions=1, league_id="l_0eg6C9")
+    assert published_goal() == 1
+    db.execute("delete from statarena.jobs where priority<=%s", (PULSE_AUX_PRIORITY,))
+    assert claim_job(store, pulse_only=True) is None
+    assert db.execute("select count(*) from statarena.jobs where endpoint='/matches/m_OLD001' and state='pending'").fetchone() == (1,)
     db.close()
-    print(json.dumps({"daily_refresh": "passed", "goal_before": 0, "goal_after": 1, "leagues": ["MLS", "Saudi Pro League"]}))
+    print(json.dumps({"daily_refresh": "passed", "pulse_refresh": "passed", "goal_before": 0, "goal_after": 1, "leagues": ["MLS", "Saudi Pro League"]}))
 
 
 if __name__ == "__main__":
