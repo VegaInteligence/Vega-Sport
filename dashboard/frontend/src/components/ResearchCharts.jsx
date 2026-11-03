@@ -20,6 +20,11 @@ export function ResearchRadar({
       (Math.sin(-Math.PI / 2 + (2 * Math.PI * i) / count) * radius * value) /
         100,
   ];
+  const hasGaps = series.some(
+    (item) =>
+      axes.some((axis) => isNumber(item.values[axis.key])) &&
+      axes.some((axis) => !isNumber(item.values[axis.key])),
+  );
   return (
     <figure className="research-chart">
       <svg viewBox="0 0 400 350" role="img" aria-label={title}>
@@ -78,6 +83,27 @@ export function ResearchRadar({
                 strokeWidth="2"
               />
             )}
+            {!axes.every((axis) => isNumber(item.values[axis.key])) &&
+              axes.map((axis, i) => {
+                const next = (i + 1) % axes.length;
+                const from = item.values[axis.key];
+                const to = item.values[axes[next].key];
+                if (!isNumber(from) || !isNumber(to)) return null;
+                const start = point(i, from),
+                  end = point(next, to);
+                return (
+                  <line
+                    key={`${axis.key}:${axes[next].key}`}
+                    x1={start[0]}
+                    y1={start[1]}
+                    x2={end[0]}
+                    y2={end[1]}
+                    stroke={COLORS[n % 4]}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                );
+              })}
             {axes.map((axis, i) =>
               isNumber(item.values[axis.key]) ? (
                 <circle
@@ -87,10 +113,7 @@ export function ResearchRadar({
                   r="3"
                   fill={COLORS[n % 4]}
                 >
-                  <title>
-                    {item.name} · {axis.label} : {number(item.values[axis.key])}
-                    e centile
-                  </title>
+                  <title>{`${item.name} · ${axis.label} : ${number(item.values[axis.key])}e centile`}</title>
                 </circle>
               ) : null,
             )}
@@ -106,6 +129,7 @@ export function ResearchRadar({
             </span>
           ))}
         </span>
+        {hasGaps && <small>Le tracé s’interrompt si une donnée manque.</small>}
       </figcaption>
     </figure>
   );

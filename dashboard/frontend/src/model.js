@@ -1,3 +1,5 @@
+import { playerSearchAliases } from "./services/player-aliases.js";
+
 /** Pure, null-aware helpers shared by the views and regression tests. */
 export const isNumber = (value) =>
   typeof value === "number" && Number.isFinite(value);
@@ -39,7 +41,12 @@ function searchText(record, parts) {
   }
   return text;
 }
-const appearanceParts = (row) => [row.name, row.team, row.league];
+const appearanceParts = (row) => [
+  row.name,
+  row.team,
+  row.league,
+  ...playerSearchAliases(row.playerId),
+];
 const matchParts = (match) => [match.home.name, match.away.name, match.league];
 // Calendar-year competitions are grouped by their starting year in the UI;
 // the original season remains unchanged on every source record.

@@ -11,6 +11,7 @@ import {
   CONDITION_METRICS,
 } from "./advanced-filters.js";
 import { SEASON_METRICS, seasonMetric } from "./season-player.js";
+import { playerSearchAliases } from "./player-aliases.js";
 
 export const DIRECTORY_FIELDS = [
   ["matches", "Matchs"],
@@ -106,9 +107,14 @@ export function searchPlayerAverages(rows, query) {
   const needle = normalizeText(query).trim();
   return needle
     ? rows.filter((row) =>
-        normalizeText([row.name, row.team, row.league].join(" ")).includes(
-          needle,
-        ),
+        normalizeText(
+          [
+            row.name,
+            row.team,
+            row.league,
+            ...playerSearchAliases(row.playerId || row.id),
+          ].join(" "),
+        ).includes(needle),
       )
     : rows;
 }

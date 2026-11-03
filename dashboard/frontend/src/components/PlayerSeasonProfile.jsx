@@ -10,6 +10,7 @@ import {
 } from "../services/season-player.js";
 import {
   buildCohorts,
+  cohortMedianPercentiles,
   metricAxes,
   playerSnapshot,
   cohortTraits,
@@ -541,10 +542,10 @@ export default function PlayerSeasonProfile({
                     { name: profile.name, values: rankings },
                     {
                       name: "Médiane au poste",
-                      values: Object.fromEntries(
-                        metricKeys
-                          .filter((key) => rankings[key] != null)
-                          .map((key) => [key, 50]),
+                      values: cohortMedianPercentiles(
+                        metricKeys,
+                        profile,
+                        cohorts,
                       ),
                     },
                   ]}

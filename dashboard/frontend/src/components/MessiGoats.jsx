@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { MESSI_ID } from "../services/player-honours.js";
 
 const GOATS = [4, 12, 20, 28, 36, 44, 52, 60, 68, 76, 84, 92, 97];
+const RONALDO_POSITIONS = [1, 15, 29, 43, 57, 71, 85];
 const MBAPPE_ID = "p_217YMB";
 const RONALDO_ID = "p_3yEwhj";
 const CELEBRATION_IDS = new Set([MESSI_ID, MBAPPE_ID, RONALDO_ID]);
@@ -28,7 +29,7 @@ export default function MessiGoats({ id }) {
       }
       aria-hidden="true"
     >
-      {GOATS.map((left, i) => (
+      {(id === RONALDO_ID ? RONALDO_POSITIONS : GOATS).map((left, i) => (
         <span
           key={left}
           style={{
@@ -40,7 +41,7 @@ export default function MessiGoats({ id }) {
           {id === MESSI_ID ? (
             "🐐"
           ) : id === RONALDO_ID ? (
-            "SU"
+            "SUUUU"
           ) : (
             <img src="/celebrations/mao-zedong.webp" alt="" />
           )}

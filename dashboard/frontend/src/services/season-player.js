@@ -1,5 +1,6 @@
 import { filterAppearances, isNumber, normalizeText } from "../model.js";
 import { percentile, positionOf } from "./player-profile.js";
+import { playerSearchAliases } from "./player-aliases.js";
 
 // A season percentile is useful only when both the player and the comparison
 // group have accumulated a meaningful amount of observed playing time.
@@ -110,7 +111,10 @@ export function playerSearchResults(rows, query, limit = 6) {
     if (
       !row.playerId ||
       !row.name ||
-      !normalizedName(row.name).includes(needle)
+      (!normalizedName(row.name).includes(needle) &&
+        !playerSearchAliases(row.playerId).some((alias) =>
+          alias.includes(needle),
+        ))
     )
       continue;
     if (!players.has(row.playerId)) {

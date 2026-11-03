@@ -233,6 +233,19 @@ export function rankMetric(profile, key, cohorts) {
   };
 }
 
+/** The cohort median exists independently of the selected player's coverage. */
+export function cohortMedianPercentiles(keys, profile, cohorts) {
+  const cohort = cohorts.groups.get(profile.role?.group);
+  return Object.fromEntries(
+    keys
+      .filter((key) =>
+        SCOUT_METRICS[key]?.rankable &&
+        (cohort?.distributions[key]?.length || 0) >= cohorts.minPeers,
+      )
+      .map((key) => [key, 50]),
+  );
+}
+
 export function customIndex(profile, cohorts, config = DEFAULT_INDEX) {
   if (
     config.weights.some((w) => w.weight > 0 && !SCOUT_METRICS[w.key]?.rankable)

@@ -81,11 +81,28 @@
   animation: messi-goat-arrive 4s ease-out var(--goat-delay) both;
 }
 .messi-goats[data-celebration="ronaldo"] span {
-  color: #ffd55a;
+  color: #ffdc45;
+  font-family: "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
+  font-size: clamp(18px, 3.6vw, 52px);
   font-style: italic;
   font-weight: 900;
-  letter-spacing: -0.04em;
-  text-shadow: 0 2px 0 #795000, 0 5px 14px rgb(0 0 0 / 55%);
+  letter-spacing: -0.06em;
+  line-height: 1;
+  -webkit-text-stroke: 1.5px #402200;
+  paint-order: stroke fill;
+  text-shadow: 2px 3px 0 #a94412, 4px 5px 0 #402200,
+    0 7px 14px rgb(0 0 0 / 45%);
+  animation-name: ronaldo-cartoon-arrive;
+}
+.messi-goats[data-celebration="ronaldo"] span::after {
+  content: "✦";
+  position: absolute;
+  top: -0.5em;
+  right: -0.3em;
+  color: #fff6c2;
+  font-size: 0.42em;
+  -webkit-text-stroke: 0;
+  text-shadow: 0 0 8px #ffb33d;
 }
 .messi-goats span img {
   display: block;
@@ -113,6 +130,26 @@
     opacity: 0;
     transform: translate3d(var(--goat-drift), -110vh, 0) rotate(15deg)
       scale(1.1);
+  }
+}
+@keyframes ronaldo-cartoon-arrive {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(-12deg) scale(0.45);
+  }
+  16% {
+    opacity: 1;
+    transform: translate3d(0, -20vh, 0) rotate(7deg) scale(1.12);
+  }
+  34% {
+    transform: translate3d(0, -40vh, 0) rotate(-5deg) scale(0.95);
+  }
+  72% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--goat-drift), -110vh, 0) rotate(10deg) scale(1.05);
   }
 }
 @media (prefers-reduced-motion: reduce) {

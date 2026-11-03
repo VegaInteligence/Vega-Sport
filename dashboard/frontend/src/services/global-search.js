@@ -2,6 +2,7 @@ import { normalizeText } from "../model.js";
 import { positionOf } from "./player-profile.js";
 import { competitionCountryLabel } from "./competition-selector.js";
 import { mergeCupCatalog } from "./cup-catalog.js";
+import { playerSearchAliases } from "./player-aliases.js";
 import {
   EUROPE_FOCUS_IDS,
   inEuropeFocus,
@@ -133,6 +134,7 @@ export function buildSearchIndex(data, competitions = []) {
         imageUrl: p.imageUrl,
         meta: [p.position, p.team].filter(Boolean).join(" · ") || "Joueur",
         context: normalizeText(p.team || ""),
+        aliases: playerSearchAliases(p.id),
         weight: p.minutes,
         outside: !p.europe,
       }),
