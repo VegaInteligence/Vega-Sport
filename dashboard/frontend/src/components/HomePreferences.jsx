@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import Icon from "./Icon.jsx";
 import { Media, Modal } from "./UI.jsx";
 import { normalizeText } from "../model.js";
-import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
+import { inEuropeFocus } from "../../../shared/competition-scope.js";
 import {
   competitionCountryLabel,
   competitionLabel,
@@ -20,9 +20,7 @@ function CompetitionPicker({ f, competitions, initialIds, onClose }) {
       [c.name, c.country, competitionCountryLabel(c)].filter(Boolean).join(" "),
     ).includes(search),
   );
-  const europe = competitions
-    .filter((c) => EUROPE_FOCUS_IDS.has(c.id))
-    .map((c) => c.id);
+  const europe = competitions.filter(inEuropeFocus).map((c) => c.id);
   const isEurope =
     selected.size === europe.length && europe.every((id) => selected.has(id));
 
@@ -152,13 +150,15 @@ export default function HomePreferences({ f }) {
       : f.preferences.favoriteLeagueIds.length
         ? f.preferences.favoriteLeagueIds
         : f.focus === "europe"
-          ? competitions
-              .filter((c) => EUROPE_FOCUS_IDS.has(c.id))
-              .map((c) => c.id)
+          ? competitions.filter(inEuropeFocus).map((c) => c.id)
           : [];
   const effectiveIds =
-    f.focus === "europe" ? ids.filter((id) => EUROPE_FOCUS_IDS.has(id)) : ids;
-  const europe = competitions.filter((c) => EUROPE_FOCUS_IDS.has(c.id));
+    f.focus === "europe"
+      ? ids.filter((id) =>
+          inEuropeFocus(competitions.find((c) => c.id === id) || { id }),
+        )
+      : ids;
+  const europe = competitions.filter(inEuropeFocus);
   const isEurope =
     effectiveIds.length === europe.length &&
     europe.every((c) => effectiveIds.includes(c.id));

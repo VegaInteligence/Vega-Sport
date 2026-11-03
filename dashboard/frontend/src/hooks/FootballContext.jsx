@@ -38,7 +38,8 @@ import { FootballDataClient } from "../services/football-client.js";
 import { AsyncState } from "../components/UI.jsx";
 import LoadingPage from "../components/LoadingPage.jsx";
 import {
-  EUROPE_FOCUS_IDS,
+  europeFocusIds,
+  inEuropeFocus,
   PREFERENCES_KEY,
 } from "../../../shared/competition-scope.js";
 export const FootballContext = createContext(null);
@@ -154,6 +155,12 @@ export function FootballProvider({ children, loadData = true }) {
     [notice, setNotice] = useState("");
   const manifest = useResource("manifest", () =>
     json(dataUrl("dashboard-manifest.json")),
+  );
+  // Top 7 Europe + UEFA, extended to the national and super cups of the
+  // seven countries present in the manifest.
+  const EUROPE_FOCUS_IDS = useMemo(
+    () => europeFocusIds(manifest.value),
+    [manifest.value],
   );
   const chosen = manifest.value?.seasons.some((s) => s.id === season)
     ? season
@@ -272,14 +279,14 @@ export function FootballProvider({ children, loadData = true }) {
   const competitions = useMemo(
     () =>
       seasonCompetitions.filter(
-        (c) => focus !== "europe" || EUROPE_FOCUS_IDS.has(c.id),
+        (c) => focus !== "europe" || inEuropeFocus(c),
       ),
     [seasonCompetitions, focus],
   );
   const catalog = useMemo(
     () =>
       (client?.catalog || data?.competitions || []).filter(
-        (c) => focus !== "europe" || EUROPE_FOCUS_IDS.has(c.id),
+        (c) => focus !== "europe" || inEuropeFocus(c),
       ),
     [client, data, focus, status.value, status.loading],
   );
@@ -433,7 +440,8 @@ export function FootballProvider({ children, loadData = true }) {
       ...(value === "europe" &&
       window.location.pathname.startsWith("/competitions") &&
       params.get("id") &&
-      !EUROPE_FOCUS_IDS.has(params.get("id"))
+      !EUROPE_FOCUS_IDS.has(params.get("id")) &&
+      !inEuropeFocus({ id: params.get("id") })
         ? { id: "" }
         : {}),
     });

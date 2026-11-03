@@ -5,7 +5,7 @@ import Providers from "./providers.jsx";
 import ShellFallback from "./shell-fallback.jsx";
 import manifest from "../../../data/computed/dashboard/index.json";
 import { dataUrl } from "../src/data-url.js";
-import { EUROPE_FOCUS_IDS } from "../../shared/competition-scope.js";
+import { europeFocusIds } from "../../shared/competition-scope.js";
 import "../src/brand-tokens.css";
 import "../src/fonts.css";
 import "../src/theme.css";
@@ -72,7 +72,7 @@ const firstChunks =
         manifest.seasons.find((s) => s.id === manifest.defaultSeason)?.chunks ||
         []
       )
-        .filter((chunk) => EUROPE_FOCUS_IDS.has(chunk.leagueId))
+        .filter((chunk) => europeFocusIds(manifest).has(chunk.leagueId))
         .map((chunk) => dataUrl(chunk.path))
     : [];
 const dataOrigin = manifestUrl.startsWith("https://")

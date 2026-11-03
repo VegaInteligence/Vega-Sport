@@ -1,7 +1,10 @@
 import { normalizeText } from "../model.js";
 import { positionOf } from "./player-profile.js";
 import { competitionCountryLabel } from "./competition-selector.js";
-import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
+import {
+  EUROPE_FOCUS_IDS,
+  inEuropeFocus,
+} from "../../../shared/competition-scope.js";
 
 /**
  * Navbar search: one compact index per season, built on first use from the
@@ -118,7 +121,7 @@ export function buildSearchIndex(data, competitions = []) {
         meta: competitionCountryLabel(c),
         context: normalizeText(competitionCountryLabel(c)),
         weight: 0,
-        outside: !EUROPE_FOCUS_IDS.has(c.id),
+        outside: !inEuropeFocus(c),
       }),
     ),
   };
