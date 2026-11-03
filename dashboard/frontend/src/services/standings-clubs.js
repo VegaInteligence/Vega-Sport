@@ -72,6 +72,15 @@ const NAME_ALIASES = {
   "khor fakkan ssc": "khorfakkan",
   "baniyas club": "bani yas",
   "ham kam": "hamarkameratene",
+  copenhagen: "kobenhavn",
+  "gnk dinamo": "dinamo zagreb",
+  "union sg": "union st gilloise",
+  "m tel aviv": "maccabi tel aviv",
+  tsc: "tsc backa topola",
+  hearts: "heart of midlothian",
+  "vikingur r": "vikingur reykjavik",
+  "the new saints": "tns",
+  "l red imps": "lincoln red imps",
   amedspor: "amed sportif",
 };
 
@@ -79,7 +88,7 @@ function words(value) {
   const text = String(value || "")
     .toLowerCase()
     .replace(/ß/g, "ss")
-    .replace(/[ıłø]/g, (c) => ({ ı: "i", ł: "l", ø: "o" })[c])
+    .replace(/[ıłøð]/g, (c) => ({ ı: "i", ł: "l", ø: "o", ð: "d" })[c])
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, " ")

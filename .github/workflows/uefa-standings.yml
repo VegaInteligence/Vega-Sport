@@ -4,7 +4,11 @@ on:
     paths:
       - '.github/workflows/uefa-standings.yml'
       - 'dashboard/frontend/src/services/uefa-standings.js'
+      - 'dashboard/frontend/src/services/standings-clubs.js'
+      - 'dashboard/frontend/src/components/CompetitionStandings.jsx'
       - 'dashboard/scripts/neon_refresh_uefa_standings.mjs'
+      - 'tests/competition-render.test.mjs'
+      - 'tests/standings-clubs.test.mjs'
       - 'tests/uefa-standings.test.mjs'
   schedule:
     - cron: '25 5 * * 2'
@@ -19,7 +23,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '26'
-      - run: node --test tests/uefa-standings.test.mjs
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - run: bun install --frozen-lockfile
+        working-directory: dashboard
+      - run: node --test tests/uefa-standings.test.mjs tests/standings-clubs.test.mjs tests/competition-render.test.mjs
       - run: node dashboard/scripts/neon_refresh_uefa_standings.mjs --check-source
   refresh:
     if: github.ref == 'refs/heads/main'

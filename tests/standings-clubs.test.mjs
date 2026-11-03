@@ -78,6 +78,26 @@ test("does not confuse teams with similar names, reserve sides or missing fixtur
   );
 });
 
+test("matches UEFA's abbreviated historic club names to the fixture teams", () => {
+  const pairs = [
+    ["Copenhagen", "FC København"],
+    ["GNK Dinamo", "Dinamo Zagreb"],
+    ["Union SG", "Union St.Gilloise"],
+    ["M. Tel-Aviv", "Maccabi Tel Aviv"],
+    ["TSC", "TSC Bačka Topola"],
+    ["Hearts", "Heart of Midlothian"],
+    ["Víkingur R.", "Vikingur Reykjavik"],
+    ["The New Saints", "TNS"],
+    ["L. Red Imps", "Lincoln Red Imps FC"],
+    ["Breiðablik", "Breidablik"],
+  ];
+  const matches = pairs.map(([, name], i) => ({ home_team: { id: `club-${i}`, name } }));
+  assert.deepEqual(
+    matchStandingsClubs(pairs.map(([name]) => ({ name })), matches).map((team) => team?.id),
+    pairs.map((_, i) => `club-${i}`),
+  );
+});
+
 test("two distinct rows cannot claim the same fixture club", () => {
   const rows = [{ name: "AS Monaco" }, { name: "Monaco FC" }];
   const matches = [{ home_team: { id: "monaco", name: "Monaco" } }];
