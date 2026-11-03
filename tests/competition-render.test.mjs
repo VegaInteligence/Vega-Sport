@@ -19,6 +19,7 @@ test("competition page renders a result-derived league table and its limits", as
   const standings = await import("../dashboard/frontend/src/services/competition-standings.js");
   const selector = await import("../dashboard/frontend/src/services/competition-selector.js");
   const sportscore = await import("../dashboard/frontend/src/services/sportscore-standings.js");
+  const uefa = await import("../dashboard/frontend/src/services/uefa-standings.js");
   const ordering = await import("../dashboard/frontend/src/services/competition-matches.js");
   const cups = await import("../dashboard/frontend/src/services/cup-catalog.js");
   let requestedId = "l_3FJFUl";
@@ -26,6 +27,7 @@ test("competition page renders a result-derived league table and its limits", as
   let forceDirectory = false, hookCount = 0;
   const reactStub = { ...React, useState: (initial) => { const [value, setValue] = React.useState(initial); hookCount++; if (forceDirectory && hookCount === 3) return [true, setValue]; return [forceBracketView && initial === "standings" ? "bracket" : forceMatchView && initial === "standings" ? "matches" : value, setValue]; } };
   let externalTable = null;
+  const requestedStandings = [];
   const league = { id: "l_3FJFUl", name: "Ligue 1", country: "FRA", seasons: ["2026/2027", "2025/2026"] };
   const matches = [
     { id: "m_old", status: "finished", date: "2026-08-01", home_team: { id: "c", name: "Reims" }, away_team: { id: "d", name: "Nice" }, score_home: 1, score_away: 0 },
@@ -40,6 +42,7 @@ test("competition page renders a result-derived league table and its limits", as
     "react": reactStub, "next/navigation": { useSearchParams: () => new URLSearchParams({ id: requestedId }) },
     "next/link": { __esModule: true, default: Link },
     "../components/Icon.jsx": { __esModule: true, default: () => null },
+    "../components/CompetitionOptions.jsx": { __esModule: true, default: () => null },
     "../components/CupCompetition.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-cup-id": competition.id }, competition.name) },
     "../components/CupDirectory.jsx": { __esModule: true, default: () => elem("section", { "data-cup-directory": true }, "Coupes") },
     "../components/NationsCompetition.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-nations-id": competition.id }, competition.name) },
@@ -50,7 +53,7 @@ test("competition page renders a result-derived league table and its limits", as
     "../components/MatchLink.jsx": { MatchLink: ({ match }) => elem("p", { "data-match": match.id }, match.id) },
     "../components/MatchdaySchedule.jsx": { __esModule: true, default: ({ matches, initialStatus }) => elem("section", { "data-matchday-status": initialStatus }, matches.map((match) => elem("p", { key: match.id, "data-match": match.id }, match.id))) },
     "../services/format.js": { normalizeText: String, seasonLabel: String, number: String, date: String },
-    "../services/resources.js": { useResource: (key, _loader, enabled = true) => ({ value: key === "supplemental-cup-index" ? { competitions: [{ folder: "ESP_CUP_copa-del-rey", name: "Copa del Rey", country_code: "ESP", tables: { results: { path: "raw/seasons/2026-2027/x.gz", rows: 1 } } }, { folder: "SUI_CUP_swiss-cup", name: "Swiss Cup", country_code: "SUI", tables: { results: { path: "raw/seasons/2026-2027/y.gz", rows: 1 } } }] } : key.startsWith("sportscore-standings:") && enabled && externalTable ? externalTable : { matches, source: "snapshot" } }), json: () => {}, download: () => {} },
+    "../services/resources.js": { useResource: (key, loader, enabled = true) => { if (key.startsWith("sportscore-standings:") && enabled) loader(); return { value: key === "supplemental-cup-index" ? { competitions: [{ folder: "ESP_CUP_copa-del-rey", name: "Copa del Rey", country_code: "ESP", tables: { results: { path: "raw/seasons/2026-2027/x.gz", rows: 1 } } }, { folder: "SUI_CUP_swiss-cup", name: "Swiss Cup", country_code: "SUI", tables: { results: { path: "raw/seasons/2026-2027/y.gz", rows: 1 } } }] } : key.startsWith("sportscore-standings:") && enabled && externalTable ? externalTable : { matches, source: "snapshot" } }; }, json: (url) => { requestedStandings.push(url); return Promise.resolve({}); }, download: () => {} },
     "../model.js": { csvString: () => "" }, "../data-url.js": { dataUrl: (x) => x },
     "../components/SeasonSelect.jsx": { __esModule: true, default: ({ label, allLabel, seasons }) => elem("select", { "aria-label": label }, allLabel && elem("option", { value: "all" }, allLabel), seasons.map((value) => elem("option", { key: value, value }, value))) },
     "../../../shared/competition-scope.js": { EUROPE_FOCUS_IDS: new Set(), inEuropeFocus: () => false },
@@ -60,6 +63,7 @@ test("competition page renders a result-derived league table and its limits", as
     "../services/competition-selector.js": selector,
     "../services/cup-catalog.js": cups,
     "../services/sportscore-standings.js": sportscore,
+    "../services/uefa-standings.js": uefa,
     "../services/standings-clubs.js": await import("../dashboard/frontend/src/services/standings-clubs.js"),
     "../services/cup-worker-client.js": { cupWorkerSnapshot: async () => ({ tables: [] }) },
     "../services/competition-matches.js": ordering,
@@ -107,6 +111,13 @@ test("competition page renders a result-derived league table and its limits", as
   const historic = renderToStaticMarkup(elem(mod.exports.default));
   assert.doesNotMatch(historic, /Groupe A/);
   assert.match(historic, /Classement calculé à partir des résultats disponibles/);
+
+  context.catalog = [{ id: "l_0bfbkO", name: "Champions League", country: "INT", seasons: ["2026/2027", "2025/2026"] }];
+  requestedId = "l_0bfbkO";
+  const historicChampions = renderToStaticMarkup(elem(mod.exports.default));
+  assert.match(historicChampions, /Groupe A/);
+  assert.ok(requestedStandings.includes("/api/standings?competition=l_0bfbkO&season=2025%2F2026"));
+  context.catalog = [league];
 
   requestedId = "openligadb:nations-league";
   const nations = renderToStaticMarkup(elem(mod.exports.default));

@@ -10,6 +10,7 @@ import {
 } from "../services/format.js";
 import { useResource, json } from "../services/resources.js";
 import { SPORTSCORE_LEAGUES } from "../services/sportscore-standings.js";
+import { hasUefaStandings } from "../services/uefa-standings.js";
 import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { WORLD_CUP_ID } from "../services/cup-catalog.js";
 import {
@@ -274,10 +275,14 @@ function SportscoreTable({
     european: multiple ? [] : places?.places || [],
     league: multiple ? [] : leagueZones(competition.id, table.rows.length),
   });
-  const clubs = useMemo(
-    () => matchStandingsClubs(table.rows, matches),
-    [table.rows, matches],
-  );
+  const clubs = useMemo(() => {
+    const resolved = matchStandingsClubs(table.rows, matches);
+    const indexed = new Map();
+    for (const match of matches || [])
+      for (const team of [match.home_team, match.away_team])
+        if (team?.id) indexed.set(team.id, team);
+    return table.rows.map((row, i) => indexed.get(row.id) || resolved[i]);
+  }, [table.rows, matches]);
   const display = (value) => (value == null ? "—" : number(value));
   return (
     <section className="standings-group">
@@ -334,7 +339,11 @@ function SportscoreTable({
               const club = clubs[i];
               const identity = (
                 <>
-                  <Media name={row.name} url={row.imageUrl} />
+                  <Media
+                    name={row.name}
+                    url={row.imageUrl}
+                    fallbackUrl={club?.image_url || club?.imageUrl}
+                  />
                   <span>{row.name}</span>
                 </>
               );
@@ -393,7 +402,8 @@ export default function CompetitionStandings({
 }) {
   const latest = competition?.seasons?.[0];
   const current = Boolean(latest) && String(latest) === String(season);
-  const enabled = current && Boolean(SPORTSCORE_LEAGUES[competition.id]);
+  const historicUefa = !current && hasUefaStandings(competition.id, season);
+  const enabled = historicUefa || (current && Boolean(SPORTSCORE_LEAGUES[competition.id]));
   const cup =
     competition.id === WORLD_CUP_ID ||
     FEATURED_EUROPE_IDS.includes(competition.id) ||
@@ -403,8 +413,9 @@ export default function CompetitionStandings({
     "sportscore-standings:" + competition.id + ":" + season,
     () => {
       const url =
-        "/api/standings?competition=" + encodeURIComponent(competition.id);
-      return cup
+        "/api/standings?competition=" + encodeURIComponent(competition.id) +
+        (historicUefa ? "&season=" + encodeURIComponent(season) : "");
+      return cup && !historicUefa
         ? cupWorkerSnapshot("standings", competition.id, String(season), url)
         : json(url);
     },
