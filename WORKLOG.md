@@ -19,6 +19,8 @@ Latest UI deployed and promoted with 50 HTTP checks, nine browser pages and 11 i
 ## Completion
 All source and evidence pushed to main and synchronized locally. Removed the disposable clone, Vercel export, migration caches and ephemeral secret files; removed file footprints total 11,354,628,096 allocated bytes (APFS sharing may affect physical savings). One zero-allocation iCloud placeholder and unrelated worktrees remain preserved. No implementation work remains. Historical discovery continues through the active ingestion workflows.
 
+Latest user check: measured live browser transfer across the nine main URLs (current season, focus=all). Eight pages via client navigation: ~15.9 MB; including a full navigation to the /calendrier alias: 29,766,650 bytes (~0.030 GB). Unique football response payload ~15.9 MB decoded. These are browser metrics, not exact Neon billing; concurrent ingestion and caches prevent that attribution. Evidence and rerun cells: docs/verification/neon-runtime-20261103/bandwidth-20261103.json and bandwidth-method-20261103.md.
+
 Next operational check: the live Historical Backfill run and storage guards; no claim of exhaustive provider history.
 
-Suggested commit: chore: finish Neon cutover and verified SSD cleanup.
+Suggested commit: docs: measure site navigation transfer usage.
