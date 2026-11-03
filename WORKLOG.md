@@ -20,13 +20,15 @@
 ## Current goal and authorization
 Finish Rematerialize Dashboard until `remaining: 0`, resume incomplete runs, then verify enriched data through the public site and save/commit/push final evidence. User explicitly authorized the workflow and repeated resumptions. Use stored Neon responses and the existing ingestion queue/advisory lock; no provider collection. Neon diagnostics are read-only via statarena_runtime. Do not equate dispatch or a partial sample with completion.
 
-## Current operation — 2026-11-03
-- Active run: https://github.com/OrionQuantPlatform/STATARENA/actions/runs/41723613754, on commit 58acaf14288a939ee0d3843316f54be877fab74a. Inputs: queue_all=false, minutes=100, batch=10.
-- Latest measured SQL checkpoint: 220 dirty partitions, oldest 2021/2022, at 21:42 UTC. First ten partitions of this resumed run committed successfully.
+## Current operation — 2026-11-03 23:09 UTC / 4 November 00:09 Paris
+- Run https://github.com/OrionQuantPlatform/STATARENA/actions/runs/41723613754 FAILED at 22:59 UTC, on 58acaf14288a939ee0d3843316f54be877fab74a (queue_all=false, minutes=100, batch=10). Neon terminated the connection at 22:59:15; cleanup then found the connection closed. No final remaining receipt was emitted. Job logs and downloaded stdout artifact are preserved in docs/verification/rematerialization-completion-20261103/quota-incident.
+- Last successful SQL checkpoint: 100 dirty partitions, oldest 2025/2026, at 22:59 UTC. Current SELECT is denied with HTTP 402: account/project quota exceeded. A fresh exact count is unavailable. Neon reports Free plan, 5,964,464,180 transferred bytes and a suspended compute. Public network transfer is the probable exhausted quota; the generic error does not name the resource. No plan or billing change was made.
+- Read-only public availability verification at 23:09 UTC FAILED as expected for this incident: /api/health and /data/dashboard-manifest.json both return 503, Neon data unavailable. Full six-season/default-Europe UI verification remains pending. Earlier historical publication is real: the 2021/2022 Ligue 1 checkpoint has enriched shots/matches and 92 player columns including captain. It does not prove completion.
 - Monitor every five minutes in this chat: heartbeat `terminer-la-r-g-n-ration-statarena`, ACTIVE. Stay quiet on unchanged/non-actionable state; report verified completion, significant failure or required action. Disable it after completion. Do not create another monitor.
-- When the active run ends, inspect its logs/artefact for the final remaining count and query Neon's dirty queue. If nonzero, dispatch on main with queue_all=false only. Never requeue all seasons merely to resume; do not cancel an active run without a confirmed defect. Keep other ingestion workflows intact.
+- While quota denial persists, check public health once per heartbeat and do not dispatch failing retries. Availability/quota must be restored before resuming; paid upgrades require the user's decision. Once healthy, recheck the SQL queue and active workflows; only if nonzero and no active/pending run, resume on main with queue_all=false. Never requeue all seasons merely to resume. Keep other ingestion workflows intact. Monitor prompt updated to this incident; repeated identical alerts are suppressed.
 - Neon project sweet-queen-11955006, production branch br-mute-bonus-be23014e, role statarena_runtime. Read query: SELECT count(*) FROM statarena.dirty_partitions. The materialize state receipt updates only at the end of a run.
-- Public origin: https://statarena-analytics.vercel.app. Last inspected production deployment was READY on bb7812bd1e; subsequent changes affect the materializer, while the home UI code is already deployed.
+- Public origin: https://statarena-analytics.vercel.app. The parallel task verified P0 deployment 6bea1b950a; the present failure is Neon's quota denial, not an established frontend deployment defect.
+- Incident evidence/setup/reruns: docs/verification/rematerialization-completion-20261103/quota-incident/README.md. Suggested commit: docs: record Neon quota interruption and public outage. Next: restore availability, resume the existing queue, then finish all required public checks before claiming completion.
 
 ## Required final verification
 - Obtain workflow `remaining:0`, a successful conclusion and an empty SQL dirty queue. Capture all resumed run IDs/logs/artefacts.
@@ -48,4 +50,4 @@ Finish Rematerialize Dashboard until `remaining: 0`, resume incomplete runs, the
 - Preserve remote work; normal pushes only. Sport Prediction is a separate repository whose original uncommitted work is untouched.
 
 ## Parallel work preservation
-Backend/cache publication and P1 remain owned by their parallel task. Preserve commits 5510ca4bee and 6bea1b950a and its sections above. Its untracked docs/verification/backend-cache-20261103/deployment receipt is unrelated; do not stage, edit or delete it. Only require this operation’s own files to be published.
+Backend/cache publication and P1 remain owned by their parallel task. Preserve commits 5510ca4bee, 6bea1b950a and their successors, plus its sections above. Do not stage, edit or delete its unrelated files. Only require this operation’s own files to be published.
