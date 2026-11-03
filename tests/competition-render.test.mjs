@@ -23,6 +23,7 @@ test("competition page renders a result-derived league table and its limits", as
   const ordering = await import("../dashboard/frontend/src/services/competition-matches.js");
   const cups = await import("../dashboard/frontend/src/services/cup-catalog.js");
   let requestedId = "l_3FJFUl";
+  let requestedEdition = "";
   let forceMatchView = false, forceBracketView = false;
   let forceDirectory = false, hookCount = 0;
   const reactStub = { ...React, useState: (initial) => { const [value, setValue] = React.useState(initial); hookCount++; if (forceDirectory && hookCount === 3) return [true, setValue]; return [forceBracketView && initial === "standings" ? "bracket" : forceMatchView && initial === "standings" ? "matches" : value, setValue]; } };
@@ -39,11 +40,11 @@ test("competition page renders a result-derived league table and its limits", as
   const Card = ({ title, children }) => elem("section", null, elem("h2", null, title), children);
   const UI = { Card, Media: () => null, Pager: () => null, Segments: ({ items, value }) => elem("div", null, items.map(([id, text]) => elem("button", { key: id, "aria-pressed": value === id }, text))), Empty: ({ children }) => elem("div", null, children), AsyncState: ({ resource, children }) => children(resource.value) };
   const stubs = {
-    "react": reactStub, "next/navigation": { useSearchParams: () => new URLSearchParams({ id: requestedId }) },
+    "react": reactStub, "next/navigation": { useSearchParams: () => new URLSearchParams({ id: requestedId, edition: requestedEdition }) },
     "next/link": { __esModule: true, default: Link },
     "../components/Icon.jsx": { __esModule: true, default: () => null },
     "../components/CompetitionOptions.jsx": { __esModule: true, default: () => null },
-    "../components/CupCompetition.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-cup-id": competition.id }, competition.name) },
+    "../components/CupCompetition.jsx": { __esModule: true, default: ({ competition, initialSeason }) => elem("section", { "data-cup-id": competition.id, "data-edition": initialSeason }, competition.name) },
     "../components/CupDirectory.jsx": { __esModule: true, default: () => elem("section", { "data-cup-directory": true }, "Coupes") },
     "../components/NationsCompetition.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-nations-id": competition.id }, competition.name) },
     "../components/NativeKnockoutBracket.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-native-bracket": competition.id }, "Tableau éliminatoire") },
@@ -69,6 +70,8 @@ test("competition page renders a result-derived league table and its limits", as
     "../services/competition-matches.js": ordering,
   };
   stubs["./UI.jsx"] = UI;
+  stubs["./NationalFlag.jsx"] = { __esModule: true, default: () => null };
+  stubs["../services/national-flags.js"] = { nationalFlagCode: () => null };
   const standingsFile = path.join(root, "dashboard/frontend/src/components/CompetitionStandings.jsx");
   const standingsSource = await fs.readFile(standingsFile, "utf8");
   const standingsCode = babel.transformSync(standingsSource, { presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename: standingsFile }).code;
@@ -123,9 +126,12 @@ test("competition page renders a result-derived league table and its limits", as
   const nations = renderToStaticMarkup(elem(mod.exports.default));
   assert.match(nations, /data-nations-id="openligadb:nations-league"/);
   requestedId = "open-cup:euro";
+  requestedEdition = "2024";
   context.focus = "europe";
   const euro = renderToStaticMarkup(elem(mod.exports.default));
   assert.match(euro, /data-cup-id="open-cup:euro"/);
+  assert.match(euro, /data-edition="2024"/);
+  requestedEdition = "";
   requestedId = "open-matchday:ESP_CUP_copa-del-rey";
   context.focus = "all";
   const spanishCup = renderToStaticMarkup(elem(mod.exports.default));

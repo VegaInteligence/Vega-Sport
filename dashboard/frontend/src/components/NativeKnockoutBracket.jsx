@@ -38,6 +38,6 @@ export default function NativeKnockoutBracket({ competition, season, matches, ro
     sourceSeason: season,
   });
   return <AsyncState resource={resource}>{() => <>
-    <KnockoutBracket matches={bracketMatches} hrefForMatch={hrefForMatch} />
+    <KnockoutBracket matches={bracketMatches} hrefForMatch={hrefForMatch} nationalTeams={worldCup} season={season} />
   </>}</AsyncState>;
 }

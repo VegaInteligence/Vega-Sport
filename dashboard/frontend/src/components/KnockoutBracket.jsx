@@ -5,8 +5,10 @@ import { Empty, Media } from "./UI.jsx";
 import { date } from "../services/format.js";
 import { normalizeText } from "../model.js";
 import { bracketTeamLabel, bracketWinner, buildKnockoutBracket } from "../services/knockout-bracket.js";
+import { nationalFlagCode } from "../services/national-flags.js";
+import NationalFlag from "./NationalFlag.jsx";
 
-function MatchCard({ match, hrefForMatch }) {
+function MatchCard({ match, hrefForMatch, nationalTeams, season }) {
   const winner = bracketWinner(match);
   const href = match.id && hrefForMatch ? hrefForMatch(match.id, match.status) : null;
   const Tag = href ? Link : "div";
@@ -22,7 +24,7 @@ function MatchCard({ match, hrefForMatch }) {
       </div>
       {teams.map((team, index) => (
         <div key={index} className={"knockout-team" + (winner && winner === normalizeText(team.name).trim().replace(/\s+/g, " ") ? " knockout-winner" : "")}>
-          {team.image && <Media name={team.name} url={team.image} className="knockout-crest" />}
+          {nationalTeams && nationalFlagCode(team.name, season || match.date) ? <NationalFlag name={team.name} season={season || match.date} /> : team.image ? <Media name={team.name} url={team.image} className="knockout-crest" /> : null}
           <span className="knockout-team-name" title={bracketTeamLabel(team.name)}>{bracketTeamLabel(team.name)}</span>
           <strong>{match.score ? match.score[index] : "–"}</strong>
           {match.penalties && <small aria-label={match.penalties[index] + " tirs au but"}>({match.penalties[index]})</small>}
@@ -41,7 +43,7 @@ function MatchCard({ match, hrefForMatch }) {
   );
 }
 
-export default function KnockoutBracket({ matches, hrefForMatch }) {
+export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams = false, season }) {
   const bracket = useMemo(() => buildKnockoutBracket(matches), [matches]);
   const early = bracket.rounds.length > 1 && bracket.rounds[0].key === "round64" ? bracket.rounds[0] : null;
   const rounds = early ? bracket.rounds.slice(1) : bracket.rounds;
@@ -49,8 +51,8 @@ export default function KnockoutBracket({ matches, hrefForMatch }) {
     return <Empty>Le tableau apparaîtra lorsque les matchs à élimination directe seront disponibles.</Empty>;
   return (
     <section className="knockout-section" aria-label="Tableau éliminatoire">
-      {early && <details className="knockout-early"><summary>Trente-deuxièmes de finale · {early.matches.length} matchs</summary><div className="knockout-preliminary-grid">{early.matches.map((match) => <MatchCard key={match.key} match={match} hrefForMatch={hrefForMatch} />)}</div></details>}
-      {bracket.preliminary && <section className="knockout-preliminary"><h3>{bracket.preliminary.label}</h3><div className="knockout-preliminary-grid">{bracket.preliminary.matches.map((match) => <MatchCard key={match.key} match={match} hrefForMatch={hrefForMatch} />)}</div></section>}
+      {early && <details className="knockout-early"><summary>Trente-deuxièmes de finale · {early.matches.length} matchs</summary><div className="knockout-preliminary-grid">{early.matches.map((match) => <MatchCard key={match.key} match={match} hrefForMatch={hrefForMatch} nationalTeams={nationalTeams} season={season} />)}</div></details>}
+      {bracket.preliminary && <section className="knockout-preliminary"><h3>{bracket.preliminary.label}</h3><div className="knockout-preliminary-grid">{bracket.preliminary.matches.map((match) => <MatchCard key={match.key} match={match} hrefForMatch={hrefForMatch} nationalTeams={nationalTeams} season={season} />)}</div></section>}
       {rounds.length > 0 && <>
         {!bracket.connected && rounds.length > 1 && <p className="knockout-note">Les matchs sont regroupés par tour lorsque leurs croisements ne sont pas précisés par la source.</p>}
         <p className="knockout-scroll-hint" aria-hidden="true">Faites défiler pour voir les autres tours.</p>
@@ -62,7 +64,7 @@ export default function KnockoutBracket({ matches, hrefForMatch }) {
                 <div className="knockout-track">
                   {round.matches.map((match) => (
                     <div className="knockout-slot" key={match.key} style={bracket.connected ? { gridRow: "span " + 2 ** index } : undefined}>
-                      <MatchCard match={match} hrefForMatch={hrefForMatch} />
+                      <MatchCard match={match} hrefForMatch={hrefForMatch} nationalTeams={nationalTeams} season={season} />
                     </div>
                   ))}
                 </div>
@@ -71,7 +73,7 @@ export default function KnockoutBracket({ matches, hrefForMatch }) {
           </div>
         </div>
       </>}
-      {bracket.thirdPlace.length > 0 && <section className="knockout-third"><h3>Match pour la troisième place</h3><div className="knockout-third-grid">{bracket.thirdPlace.map((match) => <MatchCard key={match.key} match={match} hrefForMatch={hrefForMatch} />)}</div></section>}
+      {bracket.thirdPlace.length > 0 && <section className="knockout-third"><h3>Match pour la troisième place</h3><div className="knockout-third-grid">{bracket.thirdPlace.map((match) => <MatchCard key={match.key} match={match} hrefForMatch={hrefForMatch} nationalTeams={nationalTeams} season={season} />)}</div></section>}
     </section>
   );
 }

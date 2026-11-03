@@ -79,6 +79,12 @@ export default function MethodPage() {
                 Crédits des images de trophées
               </a>
             </p>
+            <p>
+              Drapeaux :{" "}
+              <a href="https://github.com/lipis/flag-icons">flag-icons</a>,
+              Panayiotis Lipiridis (
+              <a href="/flag-icons-LICENSE.txt">licence MIT</a>).
+            </p>
           </section>
           <Link
             className="inline-link"

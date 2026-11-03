@@ -16,6 +16,8 @@ La liste Joueurs affiche une ligne par identifiant joueur. Les statistiques repr
 
 Sur l’accueil, le contrôle Compétitions réunit toutes les compétitions, le préréglage Top 7 Europe + UEFA et la sélection personnalisée enregistrée sur l’appareil. La page Clubs combine recherche, pays et saison ; ses pages s’adaptent aux dimensions de l’écran. Les classements de compétitions utilisent la largeur disponible avec défilement horizontal du tableau sur mobile.
 
+La recherche générale comprend aussi les coupes, dont l’Euro et ses éditions disponibles. Les matchs et tableaux de sélections affichent les drapeaux des pays identifiés à partir de 1994 ; les équipes indéterminées et les éditions plus anciennes ne reçoivent pas de drapeau déduit. Les visuels proviennent de [flag-icons](https://github.com/lipis/flag-icons), sous licence MIT.
+
 Les statistiques des matchs et des joueurs proposent les périodes collectées sous forme lisible. Les fiches joueurs conservent leurs synthèses et leurs statistiques détaillées par match.
 
 Dans **Analyses**, les compositions, statistiques, tirs, événements, cartes d’activité, réseaux de passes et confrontations disponibles restent consultables. Une absence reste distincte de zéro.

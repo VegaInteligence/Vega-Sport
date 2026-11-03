@@ -38,6 +38,8 @@ test("each standings team links to its matching profile or a source-backed fallb
       Empty: ({ children }) => e("div", null, children),
       Media: () => null,
     },
+    "./NationalFlag.jsx": { __esModule: true, default: () => null },
+    "../services/national-flags.js": { nationalFlagCode: () => null },
     "../services/format.js": {
       normalizeText: (value) => String(value).toLowerCase(),
       number: String,
@@ -51,6 +53,8 @@ test("each standings team links to its matching profile or a source-backed fallb
     },
     "../services/sportscore-standings.js":
       await import("../dashboard/frontend/src/services/sportscore-standings.js"),
+    "../services/uefa-standings.js":
+      await import("../dashboard/frontend/src/services/uefa-standings.js"),
     "../services/standings-clubs.js":
       await import("../dashboard/frontend/src/services/standings-clubs.js"),
     "../services/cup-worker-client.js": {

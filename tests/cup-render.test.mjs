@@ -24,7 +24,8 @@ test("cup view identifies the edition and preserves penalty shootouts", async ()
     "react": React,
     "./UI.jsx": { Card, Media: () => null, Pager: () => null, Segments: ({ items }) => elem("div", null, items.map(([id, text]) => elem("button", { key: id }, text))), AsyncState: ({ resource, children }) => children(resource.value), Empty: ({ children }) => elem("p", null, children) },
     "./KnockoutBracket.jsx": { __esModule: true, default: () => elem("div", null, "Tableau éliminatoire") },
-    "../services/format.js": { date: String },
+    "./NationalFlag.jsx": { __esModule: true, default: () => null },
+    "../services/format.js": { date: String, seasonLabel: (value) => /^\d{4}$/.test(value) ? `${value}/${Number(value) + 1}` : value },
     "../services/fixtures.js": { parisDay: () => "2026-11-02" },
     "../services/resources.js": { useResource: () => ({ value: { matches: rows } }), json: () => {} },
     "../data-url.js": { dataUrl: (path) => path },
@@ -46,4 +47,6 @@ test("cup view identifies the edition and preserves penalty shootouts", async ()
   assert.match(html, /1 – 1/);
   assert.match(html, /tirs au but 2 – 4/);
   assert.match(html, /Tour 7/);
+  const euro = renderToStaticMarkup(elem(mod.exports.default, { competition: { id: "open-cup:euro", name: "Euro", country: "UEFA", source: "openfootball", sourceKey: "euro", seasons: ["2028", "2024", "2020"], defaultSeason: "2024" }, initialSeason: "2020" }));
+  assert.match(euro, /<option value="2020" selected="">/);
 });

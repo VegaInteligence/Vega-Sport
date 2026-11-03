@@ -2,6 +2,8 @@ import React, { useMemo } from "react";
 import Link from "next/link";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { Empty, Media } from "./UI.jsx";
+import NationalFlag from "./NationalFlag.jsx";
+import { nationalFlagCode } from "../services/national-flags.js";
 import {
   normalizeText,
   number,
@@ -224,7 +226,12 @@ function ResultStandings({
                     className="standings-team"
                     href={clubHref(f, competition, season, false, row, row)}
                   >
-                    <Media name={row.name} url={row.imageUrl} />{" "}
+                    {competition.id === WORLD_CUP_ID &&
+                    nationalFlagCode(row.name, season) ? (
+                      <NationalFlag name={row.name} season={season} />
+                    ) : (
+                      <Media name={row.name} url={row.imageUrl} />
+                    )}{" "}
                     <span>{row.name}</span>
                   </Link>
                 </th>
@@ -339,11 +346,16 @@ function SportscoreTable({
               const club = clubs[i];
               const identity = (
                 <>
-                  <Media
-                    name={row.name}
-                    url={row.imageUrl}
-                    fallbackUrl={club?.image_url || club?.imageUrl}
-                  />
+                  {competition.id === WORLD_CUP_ID &&
+                  nationalFlagCode(row.name, season) ? (
+                    <NationalFlag name={row.name} season={season} />
+                  ) : (
+                    <Media
+                      name={row.name}
+                      url={row.imageUrl}
+                      fallbackUrl={club?.image_url || club?.imageUrl}
+                    />
+                  )}
                   <span>{row.name}</span>
                 </>
               );
@@ -403,7 +415,8 @@ export default function CompetitionStandings({
   const latest = competition?.seasons?.[0];
   const current = Boolean(latest) && String(latest) === String(season);
   const historicUefa = !current && hasUefaStandings(competition.id, season);
-  const enabled = historicUefa || (current && Boolean(SPORTSCORE_LEAGUES[competition.id]));
+  const enabled =
+    historicUefa || (current && Boolean(SPORTSCORE_LEAGUES[competition.id]));
   const cup =
     competition.id === WORLD_CUP_ID ||
     FEATURED_EUROPE_IDS.includes(competition.id) ||
@@ -413,7 +426,8 @@ export default function CompetitionStandings({
     "sportscore-standings:" + competition.id + ":" + season,
     () => {
       const url =
-        "/api/standings?competition=" + encodeURIComponent(competition.id) +
+        "/api/standings?competition=" +
+        encodeURIComponent(competition.id) +
         (historicUefa ? "&season=" + encodeURIComponent(season) : "");
       return cup && !historicUefa
         ? cupWorkerSnapshot("standings", competition.id, String(season), url)

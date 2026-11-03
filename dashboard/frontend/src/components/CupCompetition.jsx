@@ -11,6 +11,7 @@ import { normalizeOpenCup, normalizeSupplementalCup, filterCupMatches } from "..
 import { combineCupLegs, knockoutStage } from "../services/knockout-bracket.js";
 import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, isGermanCupSeason } from "../services/cup-archives.js";
+import NationalFlag from "./NationalFlag.jsx";
 
 async function compressedRows(ref) {
   if (!ref || Number(ref.rows) === 0) return [];
@@ -24,14 +25,14 @@ async function compressedRows(ref) {
 function editionLabel(competition, season) {
   return competition.sourceKey === "euro" && season === "2020" ? "2020 (joué en 2021)" : season;
 }
-function CupMatch({ match }) {
+function CupMatch({ match, nationalTeams, season }) {
   return (
     <div className="cup-match">
       <div className="cup-match-meta"><time dateTime={match.date || undefined}>{match.date ? date(match.date) : "Date à préciser"}</time>{match.round && <span>{match.round}</span>}</div>
       <div className="cup-match-teams">
-        <span>{match.home}</span>
+        <span className="cup-match-team">{nationalTeams && <NationalFlag name={match.home} season={season || match.date} />}<span>{match.home}</span></span>
         <strong>{match.score ? match.score[0] + " – " + match.score[1] : "—"}</strong>
-        <span>{match.away}</span>
+        <span className="cup-match-team">{nationalTeams && <NationalFlag name={match.away} season={season || match.date} />}<span>{match.away}</span></span>
       </div>
       {match.notes?.length > 0 && <p className="cup-match-notes">{match.notes.join(" · ")}</p>}
     </div>
@@ -42,11 +43,12 @@ export default function CupCompetition({ competition, initialSeason }) {
   const [season, setSeason] = useState(
     () =>
       (initialSeason &&
-        competition.seasons?.find((value) => seasonLabel(value) === initialSeason)) ||
+        competition.seasons?.find((value) => String(value) === initialSeason || seasonLabel(value) === initialSeason)) ||
       competition.defaultSeason,
   );
   const [view, setView] = useState("matches");
   const supportsBracket = competition.source === "openfootball" || competition.source === "open-matchday";
+  const nationalTeams = ["euro", "world-cup-history"].includes(competition.sourceKey);
   const archive = NATIONAL_CUP_ARCHIVES[competition.folder];
   const germany = competition.folder === GERMAN_CUP_FOLDER;
   const [status, setStatus] = useState(competition.source === "open-matchday" && !Number(competition.tables?.results?.rows) ? "scheduled" : "finished");
@@ -93,17 +95,17 @@ export default function CupCompetition({ competition, initialSeason }) {
       <AsyncState resource={resource}>
         {(value) => value.unavailable ? <div className="cup-bracket-unavailable"><Empty>Les tours de cette édition ne sont pas disponibles dans la source.</Empty>{archive && season !== archive.season && <button className="button button-secondary" onClick={() => setSeason(archive.season)}>Voir le tableau {archive.season}</button>}</div> : <>
           {value.matches.some((match) => match.status === "scheduled" && match.date && match.date < parisDay(Date.now())) && <p className="cup-source">Certains scores de cette édition ne sont pas renseignés dans la source.</p>}
-          {view === "bracket" ? <KnockoutBracket matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} />}
+          {view === "bracket" ? <KnockoutBracket matches={value.matches} nationalTeams={nationalTeams} season={season} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} />}
         </>}
       </AsyncState>
     </Card>
   );
 }
-export function CupMatchList({ matches, status, query, page, onPage }) {
+export function CupMatchList({ matches, status, query, page, onPage, nationalTeams = false, season }) {
   const rows = useMemo(() => filterCupMatches(matches, status, query), [matches, status, query]);
   const pages = Math.max(1, Math.ceil(rows.length / 30)), current = Math.min(page, pages);
   return <>
-    <div className="cup-match-list">{rows.slice((current - 1) * 30, current * 30).map((match) => <CupMatch key={match.key} match={match} />)}</div>
+    <div className="cup-match-list">{rows.slice((current - 1) * 30, current * 30).map((match) => <CupMatch key={match.key} match={match} nationalTeams={nationalTeams} season={season} />)}</div>
     {!rows.length && <Empty>{status === "scheduled" ? "Aucune rencontre à venir disponible dans cette source." : "Aucun résultat disponible pour cette sélection."}</Empty>}
     <Pager page={current} total={pages} onChange={onPage} />
   </>;

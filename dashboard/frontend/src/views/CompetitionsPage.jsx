@@ -357,6 +357,7 @@ export default function CompetitionsPage() {
   const f = useFootball();
   const params = useSearchParams();
   const id = params.get("id");
+  const requestedEdition = params.get("edition") || "";
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("all");
   const [directory, setDirectory] = useState(false);
@@ -526,6 +527,7 @@ export default function CompetitionsPage() {
       "",
       f.href("/competitions/", {
         id: next,
+        edition: "",
         ...(f.focus === "europe" &&
         !inEuropeFocus(
           expandedCatalog.find((c) => c.id === next) || { id: next },
@@ -607,9 +609,9 @@ export default function CompetitionsPage() {
               <NationsCompetition key={selected.id} competition={selected} />
             ) : selected.source ? (
               <CupCompetition
-                key={selected.id}
+                key={`${selected.id}:${requestedEdition}`}
                 competition={selected}
-                initialSeason={openSeason}
+                initialSeason={requestedEdition || openSeason}
               />
             ) : (
               <Fixtures

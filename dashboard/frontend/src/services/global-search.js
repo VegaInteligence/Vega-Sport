@@ -1,6 +1,7 @@
 import { normalizeText } from "../model.js";
 import { positionOf } from "./player-profile.js";
 import { competitionCountryLabel } from "./competition-selector.js";
+import { mergeCupCatalog } from "./cup-catalog.js";
 import {
   EUROPE_FOCUS_IDS,
   inEuropeFocus,
@@ -14,16 +15,48 @@ import {
 const INDEXES = new WeakMap();
 const LIMITS = { players: 6, clubs: 4, competitions: 3 };
 const CATEGORIES = Object.keys(LIMITS);
+const EMPTY_WORDS = [];
+const searchText = (value) => normalizeText(value).replace(/[’‘]/g, "'").trim();
+
+/** Use the same cup catalogue as the competitions page, once per identity. */
+export function globalCompetitionCatalog(
+  native = [],
+  supplemental,
+  workerNative,
+) {
+  const seen = new Set();
+  return mergeCupCatalog(native, supplemental, workerNative).filter((item) => {
+    if (!item?.id || seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
+export function searchedEdition(item, query) {
+  if (item?.kind !== "competitions") return "";
+  const year = /(?:^|\D)((?:19|20)\d{2})(?!\d)/.exec(String(query || ""))?.[1];
+  return year
+    ? (item.seasons || []).find(
+        (season) => String(season).slice(0, 4) === year,
+      ) || ""
+    : "";
+}
 
 function entry(kind, id, name, extra) {
-  const key = normalizeText(name).trim(),
-    words = key.split(/[\s\-'’.]+/).filter(Boolean);
+  const key = searchText(name),
+    words = key.split(/[\s\-'’.]+/).filter(Boolean),
+    aliases = extra.aliases || EMPTY_WORDS,
+    aliasWords = aliases.length
+      ? aliases.flatMap((name) => name.split(/[\s\-'’.]+/).filter(Boolean))
+      : EMPTY_WORDS;
   return {
     kind,
     id,
     name,
     key,
     words,
+    aliases,
+    aliasWords,
     // "psg", "fcb": initials of multi-word club and competition names.
     initials:
       kind !== "players" && words.length > 1
@@ -119,7 +152,11 @@ export function buildSearchIndex(data, competitions = []) {
       entry("competitions", c.id, c.name, {
         imageUrl: c.imageUrl,
         meta: competitionCountryLabel(c),
-        context: normalizeText(competitionCountryLabel(c)),
+        aliases: (c.aliases || []).map(searchText).filter(Boolean),
+        seasons: c.seasons || [],
+        context: searchText(
+          [competitionCountryLabel(c), ...(c.seasons || [])].join(" "),
+        ),
         weight: 0,
         outside: !inEuropeFocus(c),
       }),
@@ -131,21 +168,32 @@ export function buildSearchIndex(data, competitions = []) {
 
 /** Lower is better; null when the record does not match every search word. */
 function score(item, needle, tokens) {
-  if (item.key === needle) return 0;
-  if (item.key.startsWith(needle) || item.initials === needle) return 1;
+  if (item.key === needle || item.aliases.includes(needle)) return 0;
+  if (
+    item.key.startsWith(needle) ||
+    item.aliases.some((name) => name.startsWith(needle)) ||
+    item.initials === needle
+  )
+    return 1;
   // Prefix of the initials too, so that narrowing "ps" → "psg" keeps PSG.
   if (
     item.words.some((word) => word.startsWith(needle)) ||
+    item.aliasWords.some((word) => word.startsWith(needle)) ||
     item.initials.startsWith(needle)
   )
     return 2;
-  if (item.key.includes(needle)) return 3;
+  if (
+    item.key.includes(needle) ||
+    item.aliases.some((name) => name.includes(needle))
+  )
+    return 3;
   // "mbappe real": every word must appear in the name or its context.
   if (
     tokens.length > 1 &&
     tokens.every(
       (token) =>
         item.words.some((word) => word.startsWith(token)) ||
+        item.aliasWords.some((word) => word.startsWith(token)) ||
         item.context.includes(token),
     )
   )
@@ -156,7 +204,9 @@ function score(item, needle, tokens) {
 const previous = { index: null, needle: "", tokens: 0, candidates: null };
 
 export function searchIndex(index, query) {
-  const needle = normalizeText(query).trim().replace(/\s+/g, " ");
+  const needle = searchText(query)
+    .replace(/([a-z])((?:19|20)\d{2})\b/g, "$1 $2")
+    .replace(/\s+/g, " ");
   const empty = {
     needle,
     players: [],

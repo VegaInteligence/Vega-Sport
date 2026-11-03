@@ -16,14 +16,20 @@ import { number } from "../services/format.js";
 import {
   buildSearchIndex,
   searchIndex,
+  globalCompetitionCatalog,
+  searchedEdition,
   SEARCH_LABELS,
 } from "../services/global-search.js";
+import { json, useResource } from "../services/resources.js";
+import { dataUrl } from "../data-url.js";
 
 const PAGES = {
   players: "/joueurs/",
   clubs: "/clubs/",
   competitions: "/competitions/",
 };
+const EMPTY_DATA = { appearances: [], matches: [] };
+const EMPTY_COMPETITIONS = [];
 
 /**
  * Navbar search. The typed text lives only in this component: no URL write
@@ -44,6 +50,16 @@ export default function GlobalSearch() {
     [source, setSource] = useState(null);
   const deferred = useDeferredValue(query);
   const season = f?.season;
+  const legacyCups = useResource(
+    "supplemental-cup-index",
+    () => json(dataUrl("raw/supplemental-index.json")),
+    armed,
+  );
+  const workerCups = useResource(
+    "cup-worker-index",
+    () => json(dataUrl("raw/cup-worker/index.json")),
+    armed,
+  );
   // The whole season is loaded on first use (shared with the pages when they
   // already show every competition).
   useEffect(() => {
@@ -57,12 +73,26 @@ export default function GlobalSearch() {
       active = false;
     };
   }, [armed, season, source?.season]);
-  const data = source && source.season === season ? source.data : null,
-    competitions = f?.allCompetitions?.length
+  const data = source && source.season === season ? source.data : null;
+  const baseCompetitions = f?.allCatalog?.length
+    ? f.allCatalog
+    : f?.allCompetitions?.length
       ? f.allCompetitions
-      : f?.competitions;
+      : f?.competitions || EMPTY_COMPETITIONS;
+  const supplemental = workerCups.value?.competitions?.length
+    ? workerCups.value
+    : legacyCups.value;
+  const competitions = useMemo(
+    () =>
+      globalCompetitionCatalog(
+        baseCompetitions,
+        supplemental,
+        workerCups.value?.native,
+      ),
+    [baseCompetitions, supplemental, workerCups.value?.native],
+  );
   const index = useMemo(
-    () => (armed && data ? buildSearchIndex(data, competitions || []) : null),
+    () => (armed ? buildSearchIndex(data || EMPTY_DATA, competitions) : null),
     [armed, data, competitions],
   );
   const results = useMemo(
@@ -81,6 +111,9 @@ export default function GlobalSearch() {
           q: "",
           league: "",
           ...(item.kind === "players" ? { playerView: "" } : {}),
+          ...(item.kind === "competitions"
+            ? { edition: searchedEdition(item, query) }
+            : {}),
           // A result outside the Top 7 + UEFA scope opens with every competition.
           ...(f.focus === "europe" && item.outside ? { focus: "all" } : {}),
         })
@@ -221,7 +254,7 @@ export default function GlobalSearch() {
           role="listbox"
           aria-label="Résultats de recherche"
         >
-          {!data ? (
+          {!data && !results.total ? (
             <p className="global-search-note" role="status">
               Chargement des données…
             </p>
@@ -274,6 +307,11 @@ export default function GlobalSearch() {
                     })}
                   </div>
                 ) : null,
+              )}
+              {!data && results.total > 0 && (
+                <p className="global-search-note" role="status">
+                  Recherche des joueurs et clubs…
+                </p>
               )}
               {!results.total && (
                 <p className="global-search-note" role="status">

@@ -364,6 +364,26 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.cup-match-team, .national-team {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.cup-match-teams > .cup-match-team:first-child {
+  justify-content: flex-end;
+}
+.fi.national-flag {
+  display: inline-block;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 15px;
+  line-height: 15px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px var(--border);
+  vertical-align: middle;
+}
+.fi.national-flag::before { content: none; }
 .cup-match-teams > strong {
   min-width: 48px;
   text-align: center;

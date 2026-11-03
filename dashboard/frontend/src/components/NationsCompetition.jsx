@@ -6,6 +6,7 @@ import KnockoutBracket from "./KnockoutBracket.jsx";
 import { useResource } from "../services/resources.js";
 import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { nationsStandings } from "../services/nations-standings.js";
+import NationalFlag from "./NationalFlag.jsx";
 
 function Groups({ matches }) {
   const groups = useMemo(() => nationsStandings(matches), [matches]);
@@ -15,7 +16,7 @@ function Groups({ matches }) {
         <h3>Groupe {group.group}</h3>
         <div className="table-scroll"><table className="data-table nations-table" aria-label={"Classement du groupe " + group.group}>
           <thead><tr><th scope="col">#</th><th scope="col">Équipe</th><th scope="col">J</th><th scope="col">G</th><th scope="col">N</th><th scope="col">D</th><th scope="col">BP</th><th scope="col">BC</th><th scope="col">Diff.</th><th scope="col">Pts</th></tr></thead>
-          <tbody>{group.rows.map((team) => <tr key={team.id}><td>{team.position}</td><th scope="row">{team.name}</th><td>{team.played}</td><td>{team.wins}</td><td>{team.draws}</td><td>{team.losses}</td><td>{team.goals}</td><td>{team.against}</td><td>{team.difference > 0 ? "+" : ""}{team.difference}</td><td><strong>{team.points}</strong></td></tr>)}</tbody>
+          <tbody>{group.rows.map((team) => <tr key={team.id}><td>{team.position}</td><th scope="row"><span className="national-team"><NationalFlag name={team.name} season="2026/2027" />{team.name}</span></th><td>{team.played}</td><td>{team.wins}</td><td>{team.draws}</td><td>{team.losses}</td><td>{team.goals}</td><td>{team.against}</td><td>{team.difference > 0 ? "+" : ""}{team.difference}</td><td><strong>{team.points}</strong></td></tr>)}</tbody>
         </table></div>
       </section>)}
     </div>
@@ -34,6 +35,6 @@ export default function NationsCompetition({ competition }) {
       {view === "matches" && <><Segments label="Vue des matchs" value={status} onChange={(next) => { setStatus(next); setPage(1); }} items={[["finished", "Résultats"], ["scheduled", "À venir"], ["all", "Tous"]]} /><input type="search" aria-label="Rechercher une sélection" placeholder="Rechercher une sélection…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></>}
     </div>
     {league !== "A" && <p className="cup-source">Résultats disponibles ; les rencontres à venir ne sont pas fournies pour cette ligue.</p>}
-    <AsyncState resource={resource}>{(value) => { const matches = league === "A" ? value.matches : value.matches.filter((match) => match.league === league); return view === "standings" ? <Groups matches={matches} /> : view === "matches" ? <CupMatchList matches={matches} status={status} query={query} page={page} onPage={setPage} /> : <KnockoutBracket matches={matches} />; }}</AsyncState>
+    <AsyncState resource={resource}>{(value) => { const matches = league === "A" ? value.matches : value.matches.filter((match) => match.league === league); return view === "standings" ? <Groups matches={matches} /> : view === "matches" ? <CupMatchList matches={matches} status={status} query={query} page={page} onPage={setPage} nationalTeams season="2026/2027" /> : <KnockoutBracket matches={matches} nationalTeams season="2026/2027" />; }}</AsyncState>
   </Card>;
 }
