@@ -12,6 +12,10 @@ on:
         description: Maximum provider requests
         default: '100000'
         required: true
+      priority_league:
+        description: Optional provider league ID to collect first
+        required: false
+        default: ''
 permissions:
   contents: read
 concurrency:
@@ -52,6 +56,10 @@ jobs:
           PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
           SYNC_MINUTES: ${{ inputs.minutes || '280' }}
           SYNC_REQUESTS: ${{ inputs.max_requests || '100000' }}
-        run: python dashboard/scripts/neon_ingest.py --mode historical --minutes "$SYNC_MINUTES" --max-requests "$SYNC_REQUESTS"
+          PRIORITY_LEAGUE: ${{ inputs.priority_league || '' }}
+        run: |
+          args=()
+          if [ -n "$PRIORITY_LEAGUE" ]; then args+=(--priority-league "$PRIORITY_LEAGUE"); fi
+          python dashboard/scripts/neon_ingest.py --mode historical --minutes "$SYNC_MINUTES" --max-requests "$SYNC_REQUESTS" "${args[@]}"
       - name: Store newly discovered images in Neon
         run: python dashboard/scripts/neon_assets.py --limit 3000

@@ -20,6 +20,8 @@ Unique `(endpoint, params)` and fixture IDs prevent logical duplicates. Identica
 
 Supplemental results, standings, club and stadium facts are refreshed in Actions and stored as projections. Unresolved identities and source refusals stay unavailable. External image failures remain queued for later retry.
 
+Historical Backfill accepts an optional `priority_league` provider ID. It collects the indexed finished fixtures for that competition, starting with the newest season and match/player data, then publishes that league's changed partitions. The Saudi Pro League uses `l_0Lpz1f`; other leagues remain in the ordinary queue.
+
 ## Verification
 
 With read-only production variables configured, run:
