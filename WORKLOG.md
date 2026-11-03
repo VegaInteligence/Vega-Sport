@@ -1,24 +1,19 @@
 # Worklog
 
-## Goal
-Complete the Neon-only migration, publish the user's latest homepage, keep two ingestion workflows, then free SSD space only after verified backups.
+## Goal / constraints
+Complete the Neon-only migration, preserve all user UI commits, keep two ingestion workflows, and free SSD space only after exact backups and live validation. Preserve unknown iCloud files and unrelated worktrees. Runtime is read-only; Pitch credentials belong only to GitHub Actions. Use reproducible E2E evidence.
 
-## Constraints / decisions
-- Preserve all user UI edits and data. Isolated branch codex/neon-central-data-runtime; primary checkout main retained.
-- Raw files stay private in Neon Object Storage; indexed PostgreSQL catalog/resources/fixtures and hot compressed views stay below 1 GB SQL / 5 GB objects.
-- Runtime uses read-only pooled SQL and read-only S3. Pitch credentials belong only to GitHub Actions. No GitHub/local/provider data fallback.
-- E2E-only changes: acceptance plan written first; reproducible evidence under docs/verification/neon-runtime-20261103.
+## State — 2026-11-03
+- Live Neon runtime deployed and promoted. All 250,748 original files / 2,692,640,453 bytes verified by path, size and SHA-256; no missing resource references. Original mutable manifests retained as versions.
+- Indexed PostgreSQL plus private object storage; bounded pooled connections, coalesced caches, ETags and same-region functions. No disk/GitHub/Pitch fallback.
+- HTTP E2E 50 checks, nine browser pages, match/profile interactions and isolated ingestion failure/retry/dedupe tests passed. Evidence: docs/verification/neon-runtime-20261103.
+- Daily Sync and Historical Backfill both passed on GitHub; all legacy ingestion workflows and Git data files retired. Latest Pitch secret preserved. Runtime secrets are read-only; Pitch removed from Vercel and local environment.
+- User homepage 00be3aa preserved as c9ffb5c; new club layout 2186cc1 and coach portraits 0eb953a integrated. Their completed one-off portrait workflow is retired; Daily Sync retains portrait refresh.
+- Deleted 126,205 local files after exact Neon verification (3,507,556,352 allocated bytes) and 21 verified generated archives (2,665,742,336 allocated bytes). One unverified iCloud WAL remains, occupying zero SSD bytes.
+- User authorized deleting validation branch br-frosty-sunset-bejbcw5o; deleted. Only production remains. Latest SQL ~569 MB; catalog objects ~3.90 GB.
+- Original local main saved at codex/pre-neon-local-main-20261103, then synchronized without overwriting user commits. Unrelated numbered copies and other worktrees preserved.
 
-## Progress — 2026-11-03
-- Imported and compared every original path/size/SHA-256: 250,748 files / 2,692,640,453 bytes; 401,180 resource references; 53,854 fixtures. No missing resource objects. SQL initially 439 MB.
-- HTTP E2E: 50 checks passed, all nine pages, archive/profile/fixture contracts, gzip hashes, HEAD/304, validation and concurrent warm loads.
-- Real Neon ingestion E2E passed on isolated branch storage: 403/404 continuation, fatal 401, 429 retries, dedupe, lease recovery, locking, normalized views. Preserve failed fixture attempts as evidence.
-- Copied all 32,298 display image URLs (272.5 MB), no failures, plus 730 supplemental projections; unknown source profiles remain unavailable.
-- User's local homepage commit 00be3aa integrated as c9ffb5c. Adapted its SVG logos to Neon; all other homepage behavior preserved. Local main fetched for ancestry-preserving integration.
-- Runtime secrets configured in Vercel and separate ingestion secrets in GitHub. Existing Pitch secret untouched; remove obsolete Vercel/local key after successful cutover.
-- Additional local files inventoried (~592 MB), backing up at original Neon keys with server MD5 and independent GET SHA-256. First catalog finalization lost an idle connection; reconnect/resumable retry underway. Nothing deleted.
+## Next action
+Validate and publish the latest user UI commits, persist cleanup receipts, remove owned temporary migration caches/credentials, synchronize local main, then leave a bounded historical backfill running. Exactly two repository workflow files; GitHub's public-repository Dependency Graph system workflow is independently managed.
 
-## Next actions
-Finish browser/production E2E, publish and validate the new Actions, retire old workflows and repository data, then delete verified local migration artifacts and redundant data. Save cleanup and performance receipts.
-
-Suggested commit: feat: publish Neon ingestion workflows and preserve the updated homepage.
+Suggested commit: chore: finish Neon cutover and verified SSD cleanup.

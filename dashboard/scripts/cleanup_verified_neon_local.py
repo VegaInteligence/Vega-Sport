@@ -63,6 +63,8 @@ def inspect(row):
         "sha256": row["sha256"],
         "size": st.st_size,
         "allocated": st.st_blocks * 512,
+        "mtimeNs": st.st_mtime_ns,
+        "inode": st.st_ino,
     }
 
 
@@ -78,6 +80,14 @@ removed = removed_bytes = 0
 if a.delete:
     for row in rows:
         if row["state"] == "verified":
+            current = Path(row["path"]).stat()
+            if (
+                current.st_mtime_ns != row["mtimeNs"]
+                or current.st_ino != row["inode"]
+                or current.st_size != row["size"]
+            ):
+                row["state"] = "preserved-changed"
+                continue
             Path(row["path"]).unlink()
             removed += 1
             removed_bytes += row["allocated"]
@@ -99,6 +109,7 @@ for base, dirs, files in os.walk(root):
         remaining.append(
             {"path": str(f), "size": st.st_size, "allocated": st.st_blocks * 512}
         )
+changed = [r for r in rows if r["state"] == "preserved-changed"]
 result = {
     "command": "python dashboard/scripts/cleanup_verified_neon_local.py --root <Football_ranking/data> --canonical /tmp/statarena-neon-local-canonical-verified.json --extras docs/verification/neon-runtime-20261103/local-extra-backup.json --versions docs/verification/neon-runtime-20261103/local-versions-backup.json --report docs/verification/neon-runtime-20261103/local-cleanup.json --delete",
     "expected": "Delete only exact verified backups after live Neon validation; preserve changes and unverified iCloud material.",
