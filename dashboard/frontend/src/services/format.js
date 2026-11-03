@@ -24,7 +24,7 @@ export function safeImageUrl(value) {
         (u.hostname === "upload.wikimedia.org" &&
           /^\/wikipedia\/commons\//.test(u.pathname)) ||
         (u.hostname === "img.thesports.com" &&
-          /^\/football\/team\/[a-z0-9]+\.(?:png|webp|jpe?g)$/i.test(
+          /^\/football\/(?:team|competition)\/[a-z0-9]+\.(?:png|webp|jpe?g)$/i.test(
             u.pathname,
           ))) &&
       !u.username &&

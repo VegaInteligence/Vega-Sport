@@ -45,14 +45,14 @@ test("competition page renders a result-derived league table and its limits", as
     "../components/NationsCompetition.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-nations-id": competition.id }, competition.name) },
     "../components/NativeKnockoutBracket.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-native-bracket": competition.id }, "Tableau éliminatoire") },
     "../components/CompetitionHighlights.jsx": { __esModule: true, default: ({ season }) => elem("aside", { "data-highlights-season": season }, "Prochains matchs et derniers résultats") },
-    "../components/Layout.jsx": { __esModule: true, default: ({ children, showSeasonContext = true, showDataContext = true }) => elem("main", { "data-season-context": String(showSeasonContext), "data-data-context": String(showDataContext) }, children) },
+    "../components/Layout.jsx": { __esModule: true, default: ({ children, title, actions }) => elem("main", null, elem("h1", null, title), actions, children) },
     "../hooks/FootballContext.jsx": { useFootball: () => context }, "../components/UI.jsx": UI,
     "../components/MatchLink.jsx": { MatchLink: ({ match }) => elem("p", { "data-match": match.id }, match.id) },
     "../components/MatchdaySchedule.jsx": { __esModule: true, default: ({ matches, initialStatus }) => elem("section", { "data-matchday-status": initialStatus }, matches.map((match) => elem("p", { key: match.id, "data-match": match.id }, match.id))) },
     "../services/format.js": { normalizeText: String, seasonLabel: String, number: String, date: String },
     "../services/resources.js": { useResource: (key, _loader, enabled = true) => ({ value: key === "supplemental-cup-index" ? { competitions: [{ folder: "ESP_CUP_copa-del-rey", name: "Copa del Rey", country_code: "ESP", tables: { results: { path: "raw/seasons/2026-2027/x.gz", rows: 1 } } }, { folder: "SUI_CUP_swiss-cup", name: "Swiss Cup", country_code: "SUI", tables: { results: { path: "raw/seasons/2026-2027/y.gz", rows: 1 } } }] } : key.startsWith("sportscore-standings:") && enabled && externalTable ? externalTable : { matches, source: "snapshot" } }), json: () => {}, download: () => {} },
     "../model.js": { csvString: () => "" }, "../data-url.js": { dataUrl: (x) => x },
-    "../components/CompetitionScope.jsx": { __esModule: true, default: () => null },
+    "../components/SeasonSelect.jsx": { __esModule: true, default: ({ label, allLabel, seasons }) => elem("select", { "aria-label": label }, allLabel && elem("option", { value: "all" }, allLabel), seasons.map((value) => elem("option", { key: value, value }, value))) },
     "../../../shared/competition-scope.js": { EUROPE_FOCUS_IDS: new Set() },
     "../services/competition-standings.js": standings,
     "../services/competition-selector.js": selector,
@@ -80,7 +80,8 @@ test("competition page renders a result-derived league table and its limits", as
   const html = renderToStaticMarkup(elem(mod.exports.default));
   assert.match(html, /Classement calculé à partir des résultats disponibles/);
   assert.match(html, /Championnats à la une/);
-  assert.match(html, /Explorer les coupes/);
+  assert.doesNotMatch(html, /Explorer les coupes/);
+  assert.doesNotMatch(html, /Retrouvez les sept grandes ligues/);
   assert.match(html, /<a[^>]*href="\/archives\/"[^>]*>Archives<\/a>/);
   assert.doesNotMatch(html, /Archives de buts/);
   assert.ok(html.indexOf(">Archives</a>") < html.indexOf("Toutes les compétitions"));
@@ -111,8 +112,6 @@ test("competition page renders a result-derived league table and its limits", as
   context.focus = "europe";
   const euro = renderToStaticMarkup(elem(mod.exports.default));
   assert.match(euro, /data-cup-id="open-cup:euro"/);
-  assert.match(euro, /data-season-context="false"/);
-  assert.match(euro, /data-data-context="false"/);
   requestedId = "open-matchday:ESP_CUP_copa-del-rey";
   context.focus = "all";
   const spanishCup = renderToStaticMarkup(elem(mod.exports.default));
@@ -152,6 +151,11 @@ test("competition page renders a result-derived league table and its limits", as
   assert.ok(directory.indexOf(">Premier League</h3>") < directory.indexOf(">Championship</h3>"));
   assert.ok(directory.indexOf(">Angleterre</h2>") < directory.indexOf(">Australie</h2>"));
   assert.ok(directory.indexOf(">Turquie</h2>") < directory.indexOf(">1. Lig</h3>"));
+  assert.match(directory, /<h1>Toutes les compétitions<\/h1>/);
+  assert.match(directory, /aria-label="Filtrer par saison"/);
+  assert.match(directory, /Toutes les saisons/);
+  assert.doesNotMatch(directory, /Autres ligues et coupes/);
+  assert.doesNotMatch(directory, /Calendrier par date/);
 
 
 });

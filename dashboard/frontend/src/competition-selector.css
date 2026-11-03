@@ -2,29 +2,6 @@
 .league-spotlight {
   margin-bottom: 22px;
 }
-.league-spotlight-heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-.league-spotlight-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.league-spotlight-heading h2 {
-  color: var(--ink-strong);
-  font-size: var(--text-lg);
-  font-weight: 650;
-}
-.league-spotlight-heading p {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
 .league-spotlight-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -189,9 +166,6 @@
   }
   .league-spotlight-item {
     min-height: 70px;
-  }
-  .league-spotlight-heading {
-    align-items: start;
   }
 }
 
@@ -482,24 +456,16 @@
   .knockout-preliminary-grid, .knockout-third-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
 }
 
-/* Cups are browsed by category and country, separate from the selected table. */
-.cup-explore-entry {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 14px;
-  padding: 13px 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+/* Directory filters share the site's field styling and stay on the page. */
+.competition-directory-toolbar {
+  margin-bottom: 18px;
 }
-.cup-explore-copy { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.cup-explore-copy > span:last-child { display: grid; gap: 4px; min-width: 0; }
-.cup-explore-copy strong { color: var(--ink-strong); font-size: var(--text-md); }
-.cup-explore-copy small { color: var(--muted); font-size: var(--text-xs); }
-.cup-explore-icon { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px; color: var(--accent); background: var(--accent-soft); border-radius: var(--radius); }
-.cup-explore-icon .icon { width: 18px; height: 18px; }
+.competition-directory-toolbar .competition-directory-search {
+  flex: 2 1 260px;
+}
+/* Cups sit in the competition directory, with their logos. */
+.competition-card-fallback { display: grid; place-items: center; color: var(--muted); background: var(--surface-subtle); }
+.competition-card-fallback .icon { width: 18px; height: 18px; }
 .cup-directory-heading { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin: 0 0 22px; }
 .cup-directory-heading h2 { margin: 0; color: var(--ink-strong); font-size: var(--text-xl); }
 .cup-directory-heading p { margin: 5px 0 0; color: var(--muted); font-size: var(--text-sm); }
@@ -536,6 +502,6 @@
 .nations-table td:last-child { color: var(--accent); }
 .nations-note { margin: 12px 0 0; color: var(--muted); font-size: var(--text-xs); }
 @media (max-width: 900px) { .cup-country-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .nations-groups { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 600px) { .cup-explore-entry { align-items: flex-start; flex-direction: column; } .cup-directory-heading input { width: 100%; } .cup-country-list { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) { .cup-directory-heading input { width: 100%; } .cup-country-list { grid-template-columns: minmax(0, 1fr); } }
 .cup-return { display: inline-block; margin: 0 0 12px; }
 .nations-league-switch { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; color: var(--muted); font-size: var(--text-sm); }

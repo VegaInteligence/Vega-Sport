@@ -1,7 +1,7 @@
 "use client";
 import React, { useMemo, useState } from "react";
 import { Card, Media, Pager, Segments, AsyncState, Empty } from "./UI.jsx";
-import { date } from "../services/format.js";
+import { date, seasonLabel } from "../services/format.js";
 import { parisDay } from "../services/fixtures.js";
 import KnockoutBracket from "./KnockoutBracket.jsx";
 import { useResource } from "../services/resources.js";
@@ -38,8 +38,13 @@ function CupMatch({ match }) {
   );
 }
 
-export default function CupCompetition({ competition }) {
-  const [season, setSeason] = useState(competition.defaultSeason);
+export default function CupCompetition({ competition, initialSeason }) {
+  const [season, setSeason] = useState(
+    () =>
+      (initialSeason &&
+        competition.seasons?.find((value) => seasonLabel(value) === initialSeason)) ||
+      competition.defaultSeason,
+  );
   const [view, setView] = useState("matches");
   const supportsBracket = competition.source === "openfootball" || competition.source === "open-matchday";
   const archive = NATIONAL_CUP_ARCHIVES[competition.folder];

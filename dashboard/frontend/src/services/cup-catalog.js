@@ -1,5 +1,10 @@
 import { normalizeText } from "../model.js";
 import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, GERMAN_CUP_SEASONS } from "./cup-archives.js";
+import cupLogos from "../../../shared/cup-logos.json" with { type: "json" };
+
+/** Cup logos refreshed by dashboard/scripts/refresh_cup_logos.mjs. */
+const CUP_LOGOS = cupLogos.logos || {};
+const withLogo = (competition) => competition.imageUrl || !CUP_LOGOS[competition.id]?.imageUrl ? competition : { ...competition, imageUrl: CUP_LOGOS[competition.id].imageUrl };
 
 export const WORLD_CUP_ID = "l_1XLtP0";
 export const WORLD_CUP_FALLBACK = { id: WORLD_CUP_ID, name: "Coupe du monde", country: "INT", seasons: ["2026", "2022"] };
@@ -60,5 +65,5 @@ export function mergeCupCatalog(nativeCompetitions, supplementalIndex, workerNat
   const ids = new Set(native.map((competition) => competition.id));
   const world = ids.has(WORLD_CUP_ID) ? [] : [WORLD_CUP_FALLBACK];
   const extras = supplementalCupCatalog(supplementalIndex);
-  return [...native, ...world, ...OPEN_CUP_CATALOG, ...extras.filter((cup) => !ids.has(cup.id))];
+  return [...native, ...world, ...OPEN_CUP_CATALOG, ...extras.filter((cup) => !ids.has(cup.id))].map(withLogo);
 }

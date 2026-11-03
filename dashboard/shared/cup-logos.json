@@ -1,0 +1,107 @@
+{
+  "retrievedAt": "2026-11-03T08:18:40.373Z",
+  "logos": {
+    "l_1XLtP0": {
+      "imageUrl": "https://img.thesports.com/football/competition/da617cd58cd9cffaae0daec865457fb5.png",
+      "source": "SportScore",
+      "slug": "fifa-world-cup",
+      "name": "FIFA World Cup"
+    },
+    "open-cup:world-cup-history": {
+      "imageUrl": "https://img.thesports.com/football/competition/da617cd58cd9cffaae0daec865457fb5.png",
+      "source": "SportScore",
+      "slug": "fifa-world-cup",
+      "name": "FIFA World Cup"
+    },
+    "open-cup:club-world-cup": {
+      "imageUrl": "https://img.thesports.com/football/competition/ceac41ef85151074cdbfc87f09e1b8a9.png",
+      "source": "SportScore",
+      "slug": "fifa-club-world-cup",
+      "name": "FIFA Club World Cup"
+    },
+    "open-cup:euro": {
+      "imageUrl": "https://img.thesports.com/football/competition/5327c6d554c3a39099cdec6f558f9c72.png",
+      "source": "SportScore",
+      "slug": "uefa-european-championship",
+      "name": "UEFA European Championship"
+    },
+    "openligadb:nations-league": {
+      "imageUrl": "https://img.thesports.com/football/competition/245bff452fbdc34d417164e361097ae7.png",
+      "source": "SportScore",
+      "slug": "uefa-nations-league",
+      "name": "UEFA Nations League"
+    },
+    "open-cup:france-cup": {
+      "imageUrl": "https://img.thesports.com/football/competition/5598719801fa02e53b44827f791be316.png",
+      "source": "SportScore",
+      "slug": "coupe-de-france",
+      "name": "Coupe de France"
+    },
+    "open-matchday:AUT_CUP_ofb-cup": {
+      "imageUrl": "https://img.thesports.com/football/competition/6f803b0ca5b52b392cb3fb4225ad7186.png",
+      "source": "SportScore",
+      "slug": "austrian-cup",
+      "name": "Austrian Cup"
+    },
+    "open-matchday:ENG_CUP_efl-cup": {
+      "imageUrl": "https://img.thesports.com/football/competition/8aa596d6e755efdca6776d946ebfcd32.png",
+      "source": "SportScore",
+      "slug": "english-football-league-cup",
+      "name": "English Football League Cup"
+    },
+    "open-matchday:ENG_CUP_fa-cup": {
+      "imageUrl": "https://img.thesports.com/football/competition/184d1f93aac0dd0326583286c208c8cc.png",
+      "source": "SportScore",
+      "slug": "fa-cup",
+      "name": "FA Cup"
+    },
+    "open-matchday:ESP_CUP_copa-del-rey": {
+      "imageUrl": "https://img.thesports.com/football/competition/7067abeb61660895f3ca0227675ef16f.png",
+      "source": "SportScore",
+      "slug": "copa-del-rey",
+      "name": "Copa del Rey"
+    },
+    "open-matchday:GER_CUP_dfb-pokal": {
+      "imageUrl": "https://img.thesports.com/football/competition/1cded13e781ed1f7c2514a3413506960.png",
+      "source": "SportScore",
+      "slug": "dfb-pokal",
+      "name": "DFB Pokal"
+    },
+    "open-matchday:ITA_CUP_coppa-italia": {
+      "imageUrl": "https://img.thesports.com/football/competition/e7d8a305f30ef391501720bf30326072.png",
+      "source": "SportScore",
+      "slug": "coppa-italia",
+      "name": "Coppa Italia"
+    },
+    "open-matchday:NED_CUP_knvb-beker": {
+      "imageUrl": "https://img.thesports.com/football/competition/586b92fac30a40698596b596577f4121.png",
+      "source": "SportScore",
+      "slug": "netherlands-knvb-cup",
+      "name": "Netherlands KNVB Cup"
+    },
+    "open-matchday:POR_CUP_taca-de-portugal": {
+      "imageUrl": "https://img.thesports.com/football/competition/8a441eec56ff81f47f8e927fe2708587.png",
+      "source": "SportScore",
+      "slug": "portuguese-cup",
+      "name": "Portuguese Cup"
+    },
+    "open-matchday:SCO_CUP_league-cup": {
+      "imageUrl": "https://img.thesports.com/football/competition/0dba3e58b18a4e9b9dd3c287e9abcccd.png",
+      "source": "SportScore",
+      "slug": "scottish-league-cup",
+      "name": "Scottish League Cup"
+    },
+    "open-matchday:SCO_CUP_scottish-cup": {
+      "imageUrl": "https://img.thesports.com/football/competition/eefcb931a53e8505e956fd20678918f6.png",
+      "source": "SportScore",
+      "slug": "scottish-cup",
+      "name": "Scottish Cup"
+    },
+    "open-matchday:SUI_CUP_swiss-cup": {
+      "imageUrl": "https://img.thesports.com/football/competition/9be46b717fad6d632b37c9f8b0155a0e.png",
+      "source": "SportScore",
+      "slug": "switzerland-cup",
+      "name": "Switzerland Cup"
+    }
+  }
+}
