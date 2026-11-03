@@ -112,7 +112,24 @@ function MatchStatistics({ match }) {
     );
   return <AsyncState resource={resource}>{display}</AsyncState>;
 }
-function MatchViewTabs({ view, onChange, panelId }) {
+// Before kick-off the context comes first: the other views fill in later.
+const upcomingViews = [
+  ...views.filter(([key]) => key === "context"),
+  ...views.filter(([key]) => key !== "context"),
+];
+/** A match that has not kicked off yet, even if the status lags behind. */
+export function isUpcomingMatch(match, now = Date.now()) {
+  if (match.status === "not_started") return true;
+  if (match.status === "finished" || match.status === "postponed") return false;
+  const kickoff = Date.parse(match.timeUtc || match.date || "");
+  return (
+    Number.isFinite(kickoff) &&
+    kickoff > now &&
+    match.home?.score == null &&
+    match.away?.score == null
+  );
+}
+function MatchViewTabs({ view, onChange, panelId, views }) {
   const refs = useRef([]);
   return (
     <div
@@ -325,7 +342,9 @@ export default function MatchDetail({ match }) {
     search = useSearchParams(),
     panelId = useId();
   // Before kick-off there is nothing to analyse yet: open on the context.
-  const defaultView = match.status === "not_started" ? "context" : "overview";
+  const upcoming = isUpcomingMatch(match);
+  const tabs = upcoming ? upcomingViews : views;
+  const defaultView = upcoming ? "context" : "overview";
   const view = views.some(([key]) => key === search.get("view"))
     ? search.get("view")
     : defaultView;
@@ -349,7 +368,7 @@ export default function MatchDetail({ match }) {
   const status =
     match.status === "finished"
       ? "Terminé"
-      : match.status === "not_started"
+      : upcoming
         ? "À venir"
         : "Score collecté";
   const time =
@@ -361,8 +380,7 @@ export default function MatchDetail({ match }) {
         }).format(new Date(match.timeUtc))
       : null;
   const fromUpcoming =
-    ["upcoming", "calendar"].includes(search.get("from")) ||
-    match.status === "not_started";
+    ["upcoming", "calendar"].includes(search.get("from")) || upcoming;
   return (
     <div className="match-detail">
       <div className="match-breadcrumb-row">
@@ -447,7 +465,7 @@ export default function MatchDetail({ match }) {
               {status}
             </span>
             <div className="scoreboard-score">
-              {match.status === "not_started" ? (
+              {upcoming ? (
                 <span className="scoreboard-upcoming">{time || "—"}</span>
               ) : (
                 <>
@@ -472,27 +490,34 @@ export default function MatchDetail({ match }) {
             </div>
           </Link>
         </div>
-        <div className="match-kpis">
-          {overviewStats(match)
-            .slice(0, 4)
-            .map((s) => (
-              <div key={s.key}>
-                <span>{s.label}</span>
-                <strong>
-                  <b className="home-number">{statValue(s, "home")}</b>
-                  <i>–</i>
-                  <b className="away-number">{statValue(s, "away")}</b>
-                </strong>
-              </div>
-            ))}
-        </div>
+        {!upcoming && (
+          <div className="match-kpis">
+            {overviewStats(match)
+              .slice(0, 4)
+              .map((s) => (
+                <div key={s.key}>
+                  <span>{s.label}</span>
+                  <strong>
+                    <b className="home-number">{statValue(s, "home")}</b>
+                    <i>–</i>
+                    <b className="away-number">{statValue(s, "away")}</b>
+                  </strong>
+                </div>
+              ))}
+          </div>
+        )}
       </section>
       {match.coverage?.teamStatsReliable === false && (
         <p role="status" className="notice notice-warning">
           Statistiques d’équipe signalées comme incohérentes.
         </p>
       )}
-      <MatchViewTabs view={view} onChange={selectView} panelId={panelId} />
+      <MatchViewTabs
+        view={view}
+        onChange={selectView}
+        panelId={panelId}
+        views={tabs}
+      />
       <div
         id={panelId}
         className="match-view-panel"
