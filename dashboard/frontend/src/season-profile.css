@@ -180,6 +180,13 @@
   opacity: 0;
   animation: messi-goat-arrive 4s ease-out var(--goat-delay) both;
 }
+.messi-goats[data-celebration="ronaldo"] span {
+  color: #ffd55a;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  text-shadow: 0 2px 0 #795000, 0 5px 14px rgb(0 0 0 / 55%);
+}
 .messi-goats span img {
   display: block;
   width: clamp(40px, 4vw, 58px);
