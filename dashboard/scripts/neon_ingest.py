@@ -360,15 +360,22 @@ def prioritize_league(store, league_id):
     if not rows:
         raise ValueError("No finished fixtures are indexed for this league")
     seasons = sorted({str(season or "") for _, season in rows}, reverse=True)
-    priority = {season: -300 + 8 * i for i, season in enumerate(seasons)}
+    # Complete recent blocks of matches before moving backwards in time.
+    # Keep the ordering in indexed job priority, avoiding a database sort of
+    # every pending match on each claim.
+    priority = {season: -30000 + 4000 * min(i, 7) for i, season in enumerate(seasons)}
+    offsets = {season: 0 for season in seasons}
     for mid, season in rows:
-        base = priority[str(season or "")]
+        season = str(season or "")
+        base = priority[season]
+        batch = min(offsets[season] // 32, 399)
+        offsets[season] += 1
         for suffix in ENDPOINTS:
             store.enqueue(
                 "/matches/" + mid + ("/" + suffix if suffix else ""),
-                priority=base + PRIORITY_CORE.get(suffix, 5),
+                priority=base + batch * 8 + PRIORITY_CORE[suffix] if suffix in PRIORITY_CORE else base + 3500,
             )
-        store.enqueue("/matches/" + mid + "/heatmaps", {"frame": "home_ltr"}, priority=base + 5)
+        store.enqueue("/matches/" + mid + "/heatmaps", {"frame": "home_ltr"}, priority=base + 3500)
     return {"league": league_id, "matches": len(rows), "seasons": seasons}
 
 

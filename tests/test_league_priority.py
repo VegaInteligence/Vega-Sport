@@ -56,6 +56,14 @@ class LeaguePriorityTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             prioritize_league(Store([]), "invalid")
 
+    def test_recent_match_blocks_have_full_core_data_before_older_matches(self):
+        rows = [(f"m_{i:06d}", "2026") for i in range(33)]
+        store = Store(rows)
+        prioritize_league(store, "l_0eg6C9")
+        jobs = {(endpoint, str(params)): priority for endpoint, params, priority, _ in store.jobs}
+        self.assertLess(jobs[("/matches/m_000000/stats", "None")], jobs[("/matches/m_000032", "None")])
+        self.assertLess(jobs[("/matches/m_000032/stats", "None")], jobs[("/matches/m_000000/events", "None")])
+
     def test_claim_is_limited_to_finished_matches_in_the_requested_league(self):
         store = Store([])
         self.assertIsNone(claim_job(store, "l_0Lpz1f"))
