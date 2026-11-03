@@ -1323,7 +1323,22 @@
   font-size: var(--text-xs);
   font-weight: 400;
 }
-/* Trends keep a readable type size on wide screens. */
-.research-chart:has(> svg[viewBox="0 0 600 230"]) {
+/* Keep trend labels legible on wide screens. */
+.research-trend {
   max-width: 860px;
+}
+.research-trend figcaption strong {
+  color: var(--ink-strong);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.research-trend-plot {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.research-trend-plot svg {
+  min-width: 560px;
+}
+.research-trend-plot .research-chart-label {
+  font-size: 14px;
 }

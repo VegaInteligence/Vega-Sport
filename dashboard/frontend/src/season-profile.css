@@ -421,14 +421,14 @@
   border-color: var(--accent-line);
   background: var(--surface-hover);
 }
-.season-match span {
+.season-match > span {
   display: flex;
   flex-direction: column;
   min-width: 0;
   gap: 4px;
   font-size: var(--text-sm);
 }
-.season-match span:last-child {
+.season-match > span:last-child {
   flex: 0 0 auto;
   text-align: right;
 }
@@ -439,6 +439,30 @@
 .season-match small {
   color: var(--muted);
   font-size: var(--text-xs);
+}
+.performance-context {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+}
+.performance-context-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.performance-context-logo {
+  display: inline-flex;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+}
+.performance-context-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 @media (max-width: 700px) {
   .player-season-card > .card-body {

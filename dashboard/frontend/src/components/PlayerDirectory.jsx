@@ -6,6 +6,7 @@ import { playerSelection } from "../services/research-storage.js";
 import { SCOUT_METRICS } from "../services/scouting.js";
 import { number } from "../services/format.js";
 import { Card, Empty, Media, Pager, Rating, Segments } from "./UI.jsx";
+import PerformanceContext from "./PerformanceContext.jsx";
 import {
   BookmarkButton,
   MetricInfo,
@@ -141,7 +142,21 @@ export default function PlayerDirectory({ rows, sort, onSort, mode, onMode }) {
                         <span className="player-copy">
                           <strong className="player-name">{row.name}</strong>
                           <span className="player-meta">
-                            {row.position} · {row.team}
+                            <PerformanceContext
+                              position={row.position}
+                              teamIds={
+                                row.profile.teamIds.length
+                                  ? row.profile.teamIds
+                                  : [row.profile.identity?.teamId]
+                              }
+                              leagueIds={
+                                row.profile.leagueIds.length
+                                  ? row.profile.leagueIds
+                                  : [row.profile.identity?.leagueId]
+                              }
+                              team={row.team}
+                              league={row.league}
+                            />
                           </span>
                         </span>
                       </Link>

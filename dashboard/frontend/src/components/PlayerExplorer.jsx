@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
@@ -12,12 +12,10 @@ import {
   MetricInfo,
   SavedViews,
 } from "./ResearchUI.jsx";
-import { exportChart } from "./ResearchCharts.jsx";
 
 export default function PlayerExplorer({ rows, mode, onMode }) {
   const f = useFootball(),
-    r = useResearch(),
-    chart = useRef();
+    r = useResearch();
   const { x: xKey, y: yKey } = r.data.settings.scatter;
   const [view, setView] = useState("scatter"),
     [highlight, setHighlight] = useState("all"),
@@ -98,20 +96,7 @@ export default function PlayerExplorer({ rows, mode, onMode }) {
     </label>
   );
   return (
-    <Card
-      title="Explorateur statistique"
-      action={
-        <>
-          <SavedViews />
-          <button
-            className="button button-secondary"
-            onClick={() => exportChart(chart, "statarena-exploration")}
-          >
-            Exporter SVG
-          </button>
-        </>
-      }
-    >
+    <Card title="Explorateur statistique" action={<SavedViews />}>
       <div className="research-toolbar">
         {axis("x", xKey)}
         {axis("y", yKey)}
@@ -186,7 +171,6 @@ export default function PlayerExplorer({ rows, mode, onMode }) {
       {points.length ? (
         <figure className="research-chart research-scatter">
           <svg
-            ref={chart}
             viewBox="0 0 680 390"
             role="img"
             aria-label={`${SCOUT_METRICS[xKey].label}${view === "scatter" ? ` et ${SCOUT_METRICS[yKey].label}` : " · distribution des joueurs"}`}
