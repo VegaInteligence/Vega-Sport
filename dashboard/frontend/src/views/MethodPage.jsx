@@ -74,6 +74,11 @@ export default function MethodPage() {
               </a>
               .
             </p>
+            <p>
+              <a href="https://github.com/OrionQuantPlatform/STATARENA/blob/main/docs/TROPHY_IMAGE_CREDITS.md">
+                Crédits des images de trophées
+              </a>
+            </p>
           </section>
           <Link
             className="inline-link"
