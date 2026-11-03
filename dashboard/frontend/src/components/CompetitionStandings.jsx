@@ -7,7 +7,23 @@ import { useResource, json } from "../services/resources.js";
 import { SPORTSCORE_LEAGUES } from "../services/sportscore-standings.js";
 import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { WORLD_CUP_ID } from "../services/cup-catalog.js";
-import { FEATURED_EUROPE_IDS } from "../services/competition-selector.js";
+import {
+  FEATURED_EUROPE_IDS,
+  competitionCountry,
+  isTopFlight,
+} from "../services/competition-selector.js";
+import { dataUrl } from "../data-url.js";
+import { useResearch } from "../hooks/ResearchContext.jsx";
+import {
+  ZONES,
+  associationRanks,
+  europeanPlaces,
+  legendZones,
+  performanceSpots,
+  seasonStartYear,
+  leagueZones,
+  tableZones,
+} from "../services/standings-zones.js";
 import {
   SIMPLE_LEAGUES,
   standingsFromFixtures,
@@ -20,9 +36,95 @@ const isMatchTeam = (row, club, teams) =>
       (team.id && (team.id === row.id || team.id === club?.id)) ||
       (team.name && teamKey(team.name) === teamKey(row.name)),
   );
-function ResultStandings({ matches, source, highlightTeams }) {
+/** Clubs the visitor saved, from every list. */
+function useFollowedClubs() {
+  const r = useResearch();
+  return useMemo(
+    () =>
+      (r?.data.lists || []).flatMap((list) =>
+        list.entries.filter((entry) => entry.kind === "clubs"),
+      ),
+    [r?.data],
+  );
+}
+/**
+ * European places of the competition's country, from the UEFA association
+ * ranking of the season (edition = first year of the season) and the
+ * performance spots of the season itself.
+ */
+function useEuropeanPlaces(competition, season) {
+  const f = useFootball();
+  const year = seasonStartYear(season),
+    country = competitionCountry(competition),
+    top = isTopFlight(competition, f.allCatalog || f.catalog || []),
+    enabled = Boolean(top && year && country);
+  const edition = (value) => () =>
+    json(dataUrl(`raw/rankings/uefa-associations/${value}.uefa.json`));
+  const ranking = useResource(
+    `uefa-associations:${year}`,
+    edition(year),
+    enabled,
+  );
+  const running = useResource(
+    `uefa-associations:${year + 1}`,
+    edition(year + 1),
+    enabled,
+  );
+  return useMemo(() => {
+    const rank = associationRanks(ranking.value).get(country);
+    if (!rank) return { places: [] };
+    const spots = running.value
+      ? performanceSpots(running.value, year + 1)
+      : null;
+    return {
+      places: europeanPlaces(rank, { eps: Boolean(spots?.has(country)) }),
+      rank,
+      performanceSpot: Boolean(spots?.has(country)),
+      provisional: running.value?.rows?.some(
+        (row) => row.sourceRow?.overallRanking?.numberOfTeamsStillInPlaying > 0,
+      ),
+    };
+  }, [ranking.value, running.value, country, year]);
+}
+function ZoneLegend({ zones, places }) {
+  const items = legendZones(zones);
+  if (!items.length) return null;
+  return (
+    <div className="standings-legend" aria-label="Légende du classement">
+      {items.map((zone) => (
+        <span key={zone} data-zone={zone}>
+          <i aria-hidden="true" />
+          {ZONES[zone].label}
+        </span>
+      ))}
+      {places?.rank && (
+        <small>
+          Places européennes selon le classement UEFA des pays ({places.rank}
+          <sup>{places.rank === 1 ? "er" : "e"}</sup>
+          {places.performanceSpot ? ", place de performance européenne" : ""}
+          {places.provisional ? ", provisoire" : ""}), hors vainqueurs de coupe.
+        </small>
+      )}
+    </div>
+  );
+}
+const followedTeam = (row, club, followed) =>
+  followed.length > 0 && isMatchTeam(row, club, followed);
+function ResultStandings({
+  matches,
+  source,
+  highlightTeams,
+  competition,
+  season,
+}) {
   const f = useFootball();
   const table = useMemo(() => standingsFromFixtures(matches), [matches]);
+  const followed = useFollowedClubs();
+  const places = useEuropeanPlaces(competition, season);
+  const zones = tableZones(table.rows?.length || 0, {
+    european: places.places,
+    league: leagueZones(competition?.id, table.rows?.length || 0),
+  });
   if (table.complexSchedule)
     return (
       <Empty>
@@ -91,6 +193,9 @@ function ResultStandings({ matches, source, highlightTeams }) {
                 data-match-team={
                   isMatchTeam(row, null, highlightTeams) || undefined
                 }
+                data-followed={followedTeam(row, null, followed) || undefined}
+                data-zone={zones[index] || undefined}
+                title={zones[index] ? ZONES[zones[index]].label : undefined}
               >
                 <td>{index + 1}</td>
                 <th scope="row">
@@ -118,6 +223,7 @@ function ResultStandings({ matches, source, highlightTeams }) {
           </tbody>
         </table>
       </div>
+      <ZoneLegend zones={zones} places={places} />
       <p className="standings-note">
         Classement calculé à partir des résultats disponibles. Les sanctions et
         certains critères de départage ne sont pas pris en compte.
@@ -130,8 +236,22 @@ function ResultStandings({ matches, source, highlightTeams }) {
     </div>
   );
 }
-function SportscoreTable({ table, index, multiple, matches, highlightTeams }) {
+function SportscoreTable({
+  table,
+  index,
+  multiple,
+  matches,
+  highlightTeams,
+  places,
+  competitionId,
+}) {
   const f = useFootball();
+  const followed = useFollowedClubs();
+  // European places only apply to a single league table.
+  const zones = tableZones(table.rows.length, {
+    european: multiple ? [] : places?.places || [],
+    league: multiple ? [] : leagueZones(competitionId, table.rows.length),
+  });
   const teams = useMemo(() => {
     const result = new Map();
     for (const match of matches) {
@@ -212,6 +332,9 @@ function SportscoreTable({ table, index, multiple, matches, highlightTeams }) {
                   data-match-team={
                     isMatchTeam(row, club, highlightTeams) || undefined
                   }
+                  data-followed={followedTeam(row, club, followed) || undefined}
+                  data-zone={zones[i] || undefined}
+                  title={zones[i] ? ZONES[zones[i]].label : undefined}
                 >
                   <td>{display(row.position)}</td>
                   <th scope="row">
@@ -245,6 +368,7 @@ function SportscoreTable({ table, index, multiple, matches, highlightTeams }) {
           </tbody>
         </table>
       </div>
+      <ZoneLegend zones={zones} places={multiple ? null : places} />
     </section>
   );
 }
@@ -262,12 +386,19 @@ export default function CompetitionStandings({
   const latest = competition?.seasons?.[0];
   const current = Boolean(latest) && String(latest) === String(season);
   const enabled = current && Boolean(SPORTSCORE_LEAGUES[competition.id]);
-  const cup = competition.id === WORLD_CUP_ID || FEATURED_EUROPE_IDS.includes(competition.id) || competition.cupWorker;
+  const cup =
+    competition.id === WORLD_CUP_ID ||
+    FEATURED_EUROPE_IDS.includes(competition.id) ||
+    competition.cupWorker;
+  const places = useEuropeanPlaces(competition, season);
   const external = useResource(
     "sportscore-standings:" + competition.id + ":" + season,
     () => {
-      const url = "/api/standings?competition=" + encodeURIComponent(competition.id);
-      return cup ? cupWorkerSnapshot("standings", competition.id, String(season), url) : json(url);
+      const url =
+        "/api/standings?competition=" + encodeURIComponent(competition.id);
+      return cup
+        ? cupWorkerSnapshot("standings", competition.id, String(season), url)
+        : json(url);
     },
     enabled,
   );
@@ -289,6 +420,8 @@ export default function CompetitionStandings({
             multiple={tables.length > 1}
             matches={matches}
             highlightTeams={highlightTeams}
+            places={places}
+            competitionId={competition.id}
           />
         ))}
         {tables.length > 1 && tables.some((table) => !table.name) && (
@@ -323,6 +456,8 @@ export default function CompetitionStandings({
         matches={matches}
         source={source}
         highlightTeams={highlightTeams}
+        competition={competition}
+        season={season}
       />
     );
   if (enabled && external.error)

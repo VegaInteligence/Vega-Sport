@@ -2220,6 +2220,65 @@ th[aria-sort="descending"] .sort-indicator {
 .standings-table tr[data-match-team="true"] th:nth-child(2) {
   background: var(--accent-soft);
 }
+/* Qualification and relegation zones: a coloured bar on the position. */
+.standings-table,
+.standings-legend {
+  --zone-cl: var(--accent);
+  --zone-cl-q: color-mix(in srgb, var(--accent) 55%, transparent);
+  --zone-el: #e8590c;
+  --zone-el-q: color-mix(in srgb, #e8590c 55%, transparent);
+  --zone-ecl: #2f9e44;
+  --zone-promotion: #2f9e44;
+  --zone-promotion-po: color-mix(in srgb, #2f9e44 55%, transparent);
+  --zone-relegation-po: color-mix(in srgb, #e03131 55%, transparent);
+  --zone-relegation: #e03131;
+}
+.standings-table tr[data-zone] td:first-child {
+  box-shadow: inset 3px 0 0 var(--zone);
+  font-weight: 600;
+}
+:is(.standings-table tr, .standings-legend span)[data-zone="cl"] { --zone: var(--zone-cl); }
+:is(.standings-table tr, .standings-legend span)[data-zone="cl-q"] { --zone: var(--zone-cl-q); }
+:is(.standings-table tr, .standings-legend span)[data-zone="el"] { --zone: var(--zone-el); }
+:is(.standings-table tr, .standings-legend span)[data-zone="el-q"] { --zone: var(--zone-el-q); }
+:is(.standings-table tr, .standings-legend span)[data-zone="ecl"] { --zone: var(--zone-ecl); }
+:is(.standings-table tr, .standings-legend span)[data-zone="promotion"] { --zone: var(--zone-promotion); }
+:is(.standings-table tr, .standings-legend span)[data-zone="promotion-po"] { --zone: var(--zone-promotion-po); }
+:is(.standings-table tr, .standings-legend span)[data-zone="relegation-po"] { --zone: var(--zone-relegation-po); }
+:is(.standings-table tr, .standings-legend span)[data-zone="relegation"] { --zone: var(--zone-relegation); }
+/* The visitor's saved clubs. */
+.standings-table tr[data-followed="true"],
+.standings-table tr[data-followed="true"] th:nth-child(2) {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+.standings-table tr[data-followed="true"] .standings-team span {
+  color: var(--ink-strong);
+  font-weight: 650;
+}
+.standings-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.standings-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.standings-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--zone);
+}
+.standings-legend small {
+  flex-basis: 100%;
+  font-size: var(--text-2xs, 11px);
+}
 .standings-table .standings-team {
   display: flex;
   min-width: 0;

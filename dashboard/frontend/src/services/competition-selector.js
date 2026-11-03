@@ -126,6 +126,25 @@ const LEAGUE_ORDER = {
   USA: ["MLS", "USL Championship", "USL League One", "MLS Next Pro"],
 };
 
+/**
+ * Whether a league is its country's top flight: the head of the known league
+ * pyramid, or the country's only league in the catalogue.
+ */
+export function isTopFlight(competition, catalog = []) {
+  if (!competition || competition.source || competition.cupWorker) return false;
+  const country = competitionCountry(competition);
+  if (!country || ["UEFA", "INT", "INT-2", "FIFA"].includes(country))
+    return false;
+  const pyramid = LEAGUE_ORDER[country];
+  if (pyramid)
+    return frenchOrder.compare(pyramid[0], competition.name || "") === 0;
+  const leagues = catalog.filter(
+    (item) =>
+      competitionCountry(item) === country && !item.source && !item.cupWorker,
+  );
+  return leagues.length === 1 && leagues[0].id === competition.id;
+}
+
 /** Country options use their visible French labels, not provider codes. */
 export function orderedCountryCodes(catalog) {
   return [...new Set(catalog.map(competitionCountry).filter(Boolean))].sort(

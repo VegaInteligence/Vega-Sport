@@ -1,0 +1,474 @@
+{
+  "retrievedAt": "2026-11-03T10:46:43.358Z",
+  "leagues": {
+    "l_0275VP": {
+      "teams": 18,
+      "promotion": 2,
+      "promotionPlayoff": 3,
+      "relegationPlayoff": 1,
+      "relegation": 2
+    },
+    "l_0aEfof": {
+      "teams": 14,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 2
+    },
+    "l_0ahLw8": {
+      "teams": 24,
+      "promotion": 2,
+      "promotionPlayoff": 4,
+      "relegationPlayoff": 0,
+      "relegation": 4
+    },
+    "l_0ALvwF": {
+      "teams": 20,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 3
+    },
+    "l_0bfbkO": {
+      "teams": 36,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_0ErfuF": {
+      "teams": 20,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 3
+    },
+    "l_0F4I4F": {
+      "teams": 16,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_0jy5yE": {
+      "teams": 20,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_0kSJLz": {
+      "teams": 16,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_0Lpz1f": {
+      "teams": 18,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 3
+    },
+    "l_0S1uaf": {
+      "teams": 18,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 3
+    },
+    "l_0uqFK8": {
+      "teams": 16,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 1,
+      "relegation": 2
+    },
+    "l_16Sq13": {
+      "teams": 14,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_1BFfna": {
+      "teams": 20,
+      "promotion": 2,
+      "promotionPlayoff": 5,
+      "relegationPlayoff": 0,
+      "relegation": 4
+    },
+    "l_1D8Xrl": {
+      "teams": 20,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 4
+    },
+    "l_1dmt9H": {
+      "teams": 16,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_1eJSA7": {
+      "teams": 10,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 1,
+      "relegation": 1
+    },
+    "l_1Isor4": {
+      "teams": 18,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 1,
+      "relegation": 2
+    },
+    "l_1Kknkl": {
+      "teams": 16,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_1LMdEO": {
+      "teams": 12,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_1pQOHK": {
+      "teams": 15,
+      "promotion": 1,
+      "promotionPlayoff": 4,
+      "relegationPlayoff": 0,
+      "relegation": 2
+    },
+    "l_1qpFVw": {
+      "teams": 13,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_1rPvVD": {
+      "teams": 12,
+      "promotion": 0,
+      "promotionPlayoff": 6,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_1TTHxD": {
+      "teams": 12,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_1TVRZW": {
+      "teams": 14,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_1W6idJ": {
+      "teams": 24,
+      "promotion": 3,
+      "promotionPlayoff": 4,
+      "relegationPlayoff": 0,
+      "relegation": 2
+    },
+    "l_1XsMdH": {
+      "teams": 16,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 1,
+      "relegation": 2
+    },
+    "l_20pNSc": {
+      "teams": 16,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 2
+    },
+    "l_214sqK": {
+      "teams": 18,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 3
+    },
+    "l_271pqa": {
+      "teams": 17,
+      "promotion": 2,
+      "promotionPlayoff": 4,
+      "relegationPlayoff": 0,
+      "relegation": 1
+    },
+    "l_2ApGa4": {
+      "teams": 20,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 3
+    },
+    "l_2L6d1F": {
+      "teams": 18,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 2
+    },
+    "l_2Mh0jT": {
+      "teams": 16,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 2,
+      "relegation": 2
+    },
+    "l_2tFk9k": {
+      "teams": 10,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 1
+    },
+    "l_2WZ2tt": {
+      "teams": 36,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_2xBPKk": {
+      "teams": 14,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_38d9HA": {
+      "teams": 36,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_3CB6qX": {
+      "teams": 18,
+      "promotion": 2,
+      "promotionPlayoff": 4,
+      "relegationPlayoff": 0,
+      "relegation": 3
+    },
+    "l_3fglZv": {
+      "teams": 20,
+      "promotion": 2,
+      "promotionPlayoff": 4,
+      "relegationPlayoff": 1,
+      "relegation": 1
+    },
+    "l_3FJFUl": {
+      "teams": 18,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 1,
+      "relegation": 2
+    },
+    "l_3hvsne": {
+      "teams": 18,
+      "promotion": 2,
+      "promotionPlayoff": 1,
+      "relegationPlayoff": 1,
+      "relegation": 2
+    },
+    "l_3hW1NO": {
+      "teams": 16,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 3
+    },
+    "l_3Kf7Ni": {
+      "teams": 18,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_3kyHLd": {
+      "teams": 22,
+      "promotion": 2,
+      "promotionPlayoff": 4,
+      "relegationPlayoff": 0,
+      "relegation": 4
+    },
+    "l_3qNjzC": {
+      "teams": 16,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_3qUkB8": {
+      "teams": 20,
+      "promotion": 2,
+      "promotionPlayoff": 4,
+      "relegationPlayoff": 0,
+      "relegation": 4
+    },
+    "l_3Tn1kG": {
+      "teams": 25,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_3UiOcj": {
+      "teams": 8,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_3v84VE": {
+      "teams": 18,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_3wr44B": {
+      "teams": 12,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 1,
+      "relegation": 1
+    },
+    "l_3xwVF2": {
+      "teams": 14,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_3zsMpo": {
+      "teams": 12,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_45xKXM": {
+      "teams": 10,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_46aZMC": {
+      "teams": 20,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_47077Y": {
+      "teams": 20,
+      "promotion": 2,
+      "promotionPlayoff": 1,
+      "relegationPlayoff": 0,
+      "relegation": 4
+    },
+    "l_49KZaB": {
+      "teams": 20,
+      "promotion": 2,
+      "promotionPlayoff": 6,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_49Zmno": {
+      "teams": 12,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_4auCPk": {
+      "teams": 10,
+      "promotion": 1,
+      "promotionPlayoff": 1,
+      "relegationPlayoff": 0,
+      "relegation": 1
+    },
+    "l_4d6Bwl": {
+      "teams": 12,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_4DWyTT": {
+      "teams": 24,
+      "promotion": 2,
+      "promotionPlayoff": 6,
+      "relegationPlayoff": 0,
+      "relegation": 3
+    },
+    "l_4dzm4e": {
+      "teams": 16,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_4H43wr": {
+      "teams": 18,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 1,
+      "relegation": 2
+    },
+    "l_4MPd7x": {
+      "teams": 12,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_4MU9Yh": {
+      "teams": 12,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_4QexZg": {
+      "teams": 18,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 1,
+      "relegation": 2
+    },
+    "l_4V6jPs": {
+      "teams": 16,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 0
+    },
+    "l_4WFCIZ": {
+      "teams": 20,
+      "promotion": 0,
+      "promotionPlayoff": 0,
+      "relegationPlayoff": 0,
+      "relegation": 3
+    }
+  }
+}
