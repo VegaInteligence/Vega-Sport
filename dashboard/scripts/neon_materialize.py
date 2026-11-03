@@ -68,6 +68,20 @@ def _materialize(store, max_partitions=20):
                 ]
             }
         )
+        original_digests = {
+            name: hashlib.sha256(canonical(rows).encode()).hexdigest()
+            for name, rows in tables.items()
+        }
+        previous_raw = next(
+            (
+                c
+                for season in raw["seasons"]
+                if season["id"] == label
+                for c in season["chunks"]
+                if c["leagueId"] == league
+            ),
+            None,
+        )
         fixtures = [
             r[0]
             for r in store.db.execute(
@@ -257,7 +271,11 @@ def _materialize(store, max_partitions=20):
         with store.db.transaction():
             refs = {}
             for name, rows in tables.items():
-                digest = hashlib.sha256(canonical(rows).encode()).hexdigest()[:24]
+                full_digest = hashlib.sha256(canonical(rows).encode()).hexdigest()
+                if previous_raw and full_digest == original_digests[name]:
+                    refs[name] = previous_raw["tables"][name]
+                    continue
+                digest = full_digest[:24]
                 refs[name] = store.put_json(
                     f"raw/neon/seasons/{label.replace('/', '-')}/{league}/{name}-{digest}.json.gz",
                     rows,

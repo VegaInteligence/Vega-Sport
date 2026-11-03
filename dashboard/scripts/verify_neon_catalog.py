@@ -18,6 +18,7 @@ actual = {
     )
 }
 errors = []
+versioned = []
 count = total = 0
 for path, size, sha in source.execute(
     "select path,size,sha256 from files order by path"
@@ -26,6 +27,14 @@ for path, size, sha in source.execute(
     count += 1
     total += size
     if actual.get(path) != (size, sha):
+        archive = (
+            "raw/neon/versions/"
+            + sha
+            + (".json.gz" if path.endswith(".gz") else ".json")
+        )
+        if actual.get(archive) == (size, sha):
+            versioned.append({"sourcePath": path, "archivePath": archive})
+            continue
         errors.append(
             {"path": path, "expected": [size, sha], "actual": actual.get(path)}
         )
@@ -37,6 +46,7 @@ report = {
     "originalBytes": total,
     "catalogFiles": len(actual),
     "mismatches": errors,
+    "versionedSources": versioned,
 }
 report["missingResourceObjects"] = db.execute(
     "select count(*) from statarena.resources r left join statarena.objects o on o.path=r.ref->>'path' where r.ref->>'path' is not null and o.path is null"

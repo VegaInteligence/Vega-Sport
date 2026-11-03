@@ -294,6 +294,11 @@ def seed(store, mode):
                     refresh=True,
                 )
     else:
+        backlog = store.db.execute(
+            "select count(*) from statarena.jobs where state in('pending','running')"
+        ).fetchone()[0]
+        if backlog >= 5000:
+            return
         # Resume discovery from cached successful inventory responses; never re-request them.
         cursor = (
             store.db.execute(
@@ -307,9 +312,11 @@ def seed(store, mode):
         ).fetchall()
         for endpoint, params, ref in rows:
             data = saved(store, ref)
-            if data:
-                discover(store, endpoint, data, mode, json.loads(params))
-            store.state("historical_inventory_cursor", endpoint + params)
+            with store.db.transaction():
+                if data:
+                    discover(store, endpoint, data, mode, json.loads(params))
+                store.flush()
+                store.state("historical_inventory_cursor", endpoint + params)
         cursor = (
             store.db.execute(
                 "select value from statarena.state where name='historical_fixture_cursor'"
@@ -321,8 +328,10 @@ def seed(store, mode):
             (cursor,),
         ).fetchall()
         if rows:
-            matches(store, [r[0] for r in rows])
-            store.state("historical_fixture_cursor", rows[-1][0]["id"])
+            with store.db.transaction():
+                matches(store, [r[0] for r in rows])
+                store.flush()
+                store.state("historical_fixture_cursor", rows[-1][0]["id"])
         # Catalogue may predate this worker, so expand its cached seasons once too.
         row = store.db.execute(
             "select ref from statarena.resources where endpoint='/leagues' and params='{}' and status=200"
