@@ -34,10 +34,12 @@ export function ClubFacts({ club, matches }) {
     value?.observedCoach &&
     normalizeText(wiki.coach.name) !== normalizeText(value.observedCoach.name);
   const stadium = wiki?.stadium || value?.observedStadium?.name;
-  const photo = isWikiCoach ? wiki.coach.photo : null;
+  const photo = (isWikiCoach ? wiki.coach.photo : null) || value?.coachPhoto;
   const photoCredit = /^https:\/\/commons\.wikimedia\.org\/wiki\/File:/.test(
     photo?.sourceUrl || "",
-  ) ? photo.sourceUrl : null;
+  )
+    ? photo.sourceUrl
+    : null;
   const alias = wiki?.stadiumAlias;
   return (
     <Card title="Le club en bref" className="club-facts-card">

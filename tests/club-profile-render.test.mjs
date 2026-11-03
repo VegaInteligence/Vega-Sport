@@ -92,6 +92,16 @@ test("club cards render coach, credited photo, stadium and four player lines", a
   assert.match(facts, /<button[^>]*class="stadium-link"[^>]*>/);
   assert.match(facts, /Photo : Photographer · CC BY 3\.0/);
   assert.doesNotMatch(facts, /Wikidata|PitchAPI/);
+  payload.wiki = null;
+  payload.observedCoach = { name: "Didier Digard", date: "2026-10-30" };
+  payload.coachPhoto = {
+    url: "https://upload.wikimedia.org/wikipedia/commons/a/af/digard.jpg",
+  };
+  const observedFacts = renderToStaticMarkup(
+    e(mod.exports.ClubFacts, { club: { id: "club" }, matches: [] }),
+  );
+  assert.match(observedFacts, /Didier Digard/);
+  assert.match(observedFacts, /digard\.jpg/);
   const rows = [
     [11, "Gardien"],
     [1, "Défenseur"],

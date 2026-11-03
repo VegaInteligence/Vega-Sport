@@ -117,6 +117,13 @@ test("club facts use the latest completed lineup and the latest home venue", asy
       });
     if (url.includes("club-wikidata?uefa=50058"))
       return Response.json({ coach: { name: "Coach" }, stadium: "Stade" });
+    if (url.includes("coach-portrait?name=Coach"))
+      return Response.json({
+        name: "Coach",
+        photo: {
+          url: "https://upload.wikimedia.org/wikipedia/commons/a/ab/coach.jpg",
+        },
+      });
     throw Error("Unexpected request " + url);
   };
   const result = await loadClubFacts("club", matches, fetcher);
@@ -124,7 +131,36 @@ test("club facts use the latest completed lineup and the latest home venue", asy
   assert.equal(result.observedCoach.date, "2026-10-01");
   assert.equal(result.observedStadium.name, "Stade");
   assert.equal(result.wiki.coach.name, "Coach");
-  assert.equal(calls.length, 4);
+  assert.ok(result.coachPhoto.url.endsWith("coach.jpg"));
+  assert.equal(calls.length, 5);
+});
+
+test("observed coach photo is accepted only for the displayed coach", async () => {
+  const matches = [
+    {
+      id: "m_1",
+      status: "finished",
+      date: "2026-10-30",
+      home: { id: "club" },
+      away: { id: "other" },
+    },
+  ];
+  const fetcher = async (url) => {
+    if (url.includes("club-links")) return Response.json({ links: {} });
+    if (url.includes("lineups"))
+      return Response.json({
+        data: {
+          home_team: { id: "club" },
+          home: { coach: { name: "Didier Digard" } },
+        },
+      });
+    if (url.includes("coach-portrait"))
+      return Response.json({ name: "Someone Else", photo: { url: "wrong" } });
+    return Response.json({ data: {} });
+  };
+  const result = await loadClubFacts("club", matches, fetcher);
+  assert.equal(result.observedCoach.name, "Didier Digard");
+  assert.equal(result.coachPhoto, null);
 });
 
 test("missing identity or mismatched team does not assign another team's coach", async () => {

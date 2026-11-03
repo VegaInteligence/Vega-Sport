@@ -61,7 +61,7 @@ export async function handleRequest(request) {
       return row ? publicFile(row.path, request) : response("Not found", 404);
     }
     if (
-      /^\/api\/(standings|open-cups|openligadb|nations-results|club-wikidata|stadium)$/.test(
+      /^\/api\/(standings|open-cups|openligadb|nations-results|club-wikidata|coach-portrait|stadium)$/.test(
         pathname,
       )
     ) {

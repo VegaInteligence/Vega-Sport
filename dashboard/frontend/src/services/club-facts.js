@@ -1,4 +1,5 @@
 import { dataUrl } from "../data-url.js";
+import { normalizeText } from "./format.js";
 
 async function readJson(url, fetcher) {
   try {
@@ -60,6 +61,14 @@ export async function loadClubFacts(
   const lineupTeam = lineupData?.[`${side}_team`];
   const observedCoach =
     lineupTeam?.id === clubId ? lineupData?.[side]?.coach?.name : null;
+  const coachName = wiki?.coach?.name || observedCoach;
+  const portrait =
+    coachName && !wiki?.coach?.photo
+      ? await readJson(
+          `/api/coach-portrait?${new URLSearchParams({ name: coachName })}`,
+          fetcher,
+        )
+      : null;
   const matchData = match?.data;
   const observedStadium =
     matchData?.home_team?.id === clubId && typeof matchData.stadium === "string"
@@ -70,6 +79,11 @@ export async function loadClubFacts(
     observedCoach: observedCoach
       ? { name: observedCoach, date: latest.date }
       : null,
+    coachPhoto:
+      portrait?.photo &&
+      normalizeText(portrait.name) === normalizeText(coachName)
+        ? portrait.photo
+        : null,
     observedStadium: observedStadium
       ? { name: observedStadium, date: home.date }
       : null,
