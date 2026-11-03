@@ -1,0 +1,3 @@
+[install]
+# Next's server dependency tracing resolves standard package paths on Vercel.
+linker = "hoisted"

@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+"""Durable, idempotent Daily Sync / Historical Backfill; Pitch is ingestion-only."""
+import argparse,datetime as dt,gzip,hashlib,json,os,re,time,urllib.parse,urllib.request,urllib.error
+from psycopg.types.json import Jsonb
+from neon_store import Store,canonical
+ENDPOINTS=['','shots','momentum','events','players','players/halves','lineups','h2h','stats','advanced','advanced/players','advanced/network','heatmaps']
+
+def identities(value):
+ found=set()
+ def walk(v):
+  if isinstance(v,str) and re.fullmatch('[ltpms]_[A-Za-z0-9]{6}',v):found.add(v)
+  elif isinstance(v,dict):
+   for x in v.values():walk(x)
+  elif isinstance(v,list):
+   for x in v:walk(x)
+ walk(value);return found
+
+def saved(store,row):
+ if not row:return None
+ value=store.json(row['path'])
+ if 'ordinal' in row:value=value[row['ordinal']]
+ if 'documentId' in row:value=next(v for v in value if v['documentId']==row['documentId'])
+ value=value.get('observation',value.get('response',value))
+ return value.get('data')
+
+def matches(store,items):
+ rows=[]
+ for m in items:
+  if not isinstance(m,dict) or not re.fullmatch('m_[A-Za-z0-9]{6}',m.get('id','')):continue
+  league=(m.get('league') or {}).get('id') or m.get('league_id')
+  if not league:continue
+  season=str(m.get('season') or '');day=m.get('date') or str(m.get('time_utc') or '')[:10] or None
+  rows.append({'id':m['id'],'league_id':league,'season':season,'day':day,'status':m.get('status'),'body':m})
+  for suffix in ENDPOINTS:store.enqueue('/matches/'+m['id']+('/'+suffix if suffix else ''))
+  store.enqueue('/matches/'+m['id']+'/heatmaps',{'frame':'home_ltr'})
+ if rows:
+  changed=store.db.execute('insert into statarena.fixtures(id,league_id,season,day,status,body) select id,league_id,season,day,status,body from jsonb_to_recordset(%s) as r(id text,league_id text,season text,day date,status text,body jsonb) on conflict(id) do update set body=excluded.body,day=excluded.day,status=excluded.status,updated_at=now() where statarena.fixtures.body is distinct from excluded.body returning season,league_id',(Jsonb(rows),)).fetchall()
+  partitions=set((season if '/' in season else season+'/'+str(int(season)+1),league) for season,league in changed if re.fullmatch(r'\d{4}(?:/\d{4})?',season))
+  with store.db.cursor() as c:c.executemany('insert into statarena.dirty_partitions(season,league_id) values(%s,%s) on conflict(season,league_id) do update set changed_at=now()',list(partitions))
+
+def discover(store,endpoint,data,mode,params=None):
+ if not isinstance(data,(dict,list)):return
+ if endpoint=='/leagues':
+  today=dt.datetime.now(dt.timezone.utc);start=today.year if today.month>=7 else today.year-1
+  for league in data.get('leagues',[]):
+   store.enqueue('/leagues/'+league['id'],priority=2)
+   for season in league.get('seasons',[]):
+    if mode=='daily' and str(season).split('/')[0] not in {str(start),str(today.year)}:continue
+    store.enqueue('/leagues/'+league['id']+'/matches',{'season':season,'status':'all'},priority=1,refresh=mode=='daily')
+ if '/matches' in endpoint and endpoint.startswith('/leagues/'):
+  items=[dict(m,league=m.get('league') or data.get('league') or {'id':endpoint.split('/')[2]},season=m.get('season') or data.get('season') or (params or {}).get('season')) for m in data.get('matches',[])]
+  matches(store,items)
+ elif endpoint.startswith('/date/'):matches(store,data.get('matches',[]))
+ elif re.fullmatch('/matches/m_[A-Za-z0-9]{6}',endpoint):matches(store,[data])
+ ids=identities(data)
+ for identity in ids:
+  kind={'p':'players','t':'teams'}.get(identity[0])
+  if kind:store.enqueue('/'+kind+'/'+identity,priority=4)
+ parts=endpoint.strip('/').split('/')
+ if len(parts)==3 and parts[0]=='matches' and parts[2] in {'players','lineups','shots'}:
+  for identity in ids:
+   if identity.startswith('p_'):
+    for suffix in ['','/halves','/shots']:store.enqueue('/matches/'+parts[1]+'/players/'+identity+suffix,priority=5)
+    store.enqueue('/matches/'+parts[1]+'/advanced/players/'+identity,priority=5)
+   if identity.startswith('s_'):store.enqueue('/matches/'+parts[1]+'/shots/'+identity,priority=5)
+ if parts[0]=='matches' and len(parts)>=2:
+  store.db.execute("insert into statarena.dirty_partitions(season,league_id) select case when position('/' in season)>0 then season else season||'/'||(season::int+1)::text end,league_id from statarena.fixtures where id=%s and season ~ '^[0-9]{4}(/[0-9]{4})?$' on conflict(season,league_id) do update set changed_at=now()",(parts[1],))
+
+def request(endpoint,params,key,base):
+ for attempt in range(5):
+  req=urllib.request.Request(base+endpoint+('?' + urllib.parse.urlencode(params) if params else ''),headers={'X-API-KEY':key,'Accept':'application/json','User-Agent':'STATARENA-Neon-Ingestion/1.0'})
+  try:
+   with urllib.request.urlopen(req,timeout=30) as r:status,body,headers=r.status,r.read(32*1024*1024+1),r.headers
+  except urllib.error.HTTPError as r:status,body,headers=r.code,r.read(32*1024*1024+1),r.headers
+  except (OSError,TimeoutError):
+   if attempt==4:raise RuntimeError('Provider network failure') from None
+   time.sleep(2**attempt);continue
+  if len(body)>32*1024*1024:raise RuntimeError('Provider response too large')
+  if key.encode() in body or re.search(rb'pk_(?:live|test)_[A-Za-z0-9_-]{12,}',body):raise RuntimeError('Provider echoed credential; refusing persistence')
+  if status==401:raise RuntimeError('Pitch authentication refused (401)')
+  if status==429 or status>=500:
+   if attempt==4:raise RuntimeError('Provider transient HTTP '+str(status))
+   retry=headers.get('Retry-After','');delay=min(60,float(retry)) if retry.isdigit() else 2**attempt;time.sleep(delay);continue
+  value=json.loads(body)
+  if status==200 and 'data' not in value:raise RuntimeError('Provider response missing data envelope')
+  return status,value
+
+def seed(store,mode):
+ store.enqueue('/leagues',priority=0,refresh=mode=='daily')
+ if mode=='daily':
+  today=dt.datetime.now(dt.timezone.utc).date()
+  for delta in range(-2,3):store.enqueue('/date/'+str(today+dt.timedelta(days=delta)),{'status':'all'},priority=0,refresh=True)
+  # Refresh recently changed and upcoming games even if already collected.
+  for mid, in store.db.execute("select id from statarena.fixtures where day between current_date-3 and current_date+2"):
+   for suffix in ENDPOINTS:store.enqueue('/matches/'+mid+('/'+suffix if suffix else ''),priority=1,refresh=True)
+ else:
+  # Resume discovery from cached successful inventory responses; never re-request them.
+  cursor=(store.db.execute("select value from statarena.state where name='historical_inventory_cursor'").fetchone() or [''])[0]
+  rows=store.db.execute("select endpoint,params,ref from statarena.resources where status=200 and endpoint like '/leagues/%%/matches' and endpoint||params>%s order by endpoint,params limit 50",(cursor,)).fetchall()
+  for endpoint,params,ref in rows:
+   data=saved(store,ref)
+   if data:discover(store,endpoint,data,mode,json.loads(params))
+   store.state('historical_inventory_cursor',endpoint+params)
+  cursor=(store.db.execute("select value from statarena.state where name='historical_fixture_cursor'").fetchone() or [''])[0]
+  rows=store.db.execute('select body from statarena.fixtures where id>%s order by id limit 100',(cursor,)).fetchall()
+  if rows:matches(store,[r[0] for r in rows]);store.state('historical_fixture_cursor',rows[-1][0]['id'])
+  # Catalogue may predate this worker, so expand its cached seasons once too.
+  row=store.db.execute("select ref from statarena.resources where endpoint='/leagues' and params='{}' and status=200").fetchone()
+  if row:
+   data=saved(store,row[0]);discover(store,'/leagues',data,mode)
+
+def capacity(store):
+ size=store.db.execute('select pg_database_size(current_database())').fetchone()[0]
+ objects=store.db.execute('select coalesce(sum(size),0) from statarena.objects').fetchone()[0]
+ return {'sqlBytes':size,'objectBytes':int(objects),'paused':size>900_000_000 or objects>4_750_000_000}
+
+def main():
+ p=argparse.ArgumentParser();p.add_argument('--mode',choices=['daily','historical'],required=True);p.add_argument('--minutes',type=float,default=45);p.add_argument('--max-requests',type=int,default=10000);p.add_argument('--seed-endpoint');p.add_argument('--skip-materialize',action='store_true');a=p.parse_args()
+ base=os.environ.get('PITCHAPI_BASE_URL','https://api.pitchapi.dev/v1').rstrip('/')
+ test=base.startswith('http://127.0.0.1:') and os.environ.get('NEON_TEST_INGEST')=='1'
+ if base!='https://api.pitchapi.dev/v1' and not test:raise RuntimeError('Unapproved provider origin')
+ if not os.environ.get('GITHUB_ACTIONS') and not test:raise RuntimeError('Pitch collection must run in GitHub Actions')
+ key=os.environ['PITCHAPI_API_KEY'];store=Store();started=time.monotonic();counts={};processed=0;paused=False
+ # A session lock serializes materialization and both workflow modes.
+ if not store.db.execute('select pg_try_advisory_lock(97813003)').fetchone()[0]:print('Another ingestion owns the lease; leaving pending work intact');return
+ try:
+  store.db.execute("update statarena.jobs set state='pending',lease_until=null where state='running' and lease_until<now()")
+  if a.seed_endpoint:store.enqueue(a.seed_endpoint,priority=0,refresh=True)
+  else:seed(store,a.mode)
+  store.flush()
+  while processed<a.max_requests and time.monotonic()-started<a.minutes*60:
+   if processed%100==0:
+    cap=capacity(store)
+    if cap['paused']:paused=True;store.state(a.mode,{'state':'paused_capacity',**cap});break
+   row=store.db.execute("with next as(select endpoint,params from statarena.jobs where state='pending' and available_at<=now() order by priority,available_at limit 1 for update skip locked) update statarena.jobs j set state='running',attempts=attempts+1,lease_until=now()+interval '10 minutes' from next where j.endpoint=next.endpoint and j.params=next.params returning j.endpoint,j.params,j.attempts").fetchone()
+   if not row:break
+   endpoint,encoded,attempts=row;params=json.loads(encoded)
+   try:
+    status,body=request(endpoint,params,key,base)
+    with store.db.transaction():
+     raw=canonical(body).encode();compressed=gzip.compress(raw,mtime=0);digest=hashlib.sha256(compressed).hexdigest();path='raw/neon/blobs/'+digest+'.json.gz';store.put(path,compressed,'application/gzip')
+     store.db.execute('insert into statarena.resources(endpoint,params,status,ref,error) values(%s,%s,%s,%s,%s) on conflict(endpoint,params) do update set status=excluded.status,ref=excluded.ref,error=excluded.error,updated_at=now() where statarena.resources.status<>200 or excluded.status=200',(endpoint,encoded,status,Jsonb({'path':path}),Jsonb(body.get('error'))))
+     if status!=200:store.db.execute('insert into statarena.ingest_failures(endpoint,params,status,error) values(%s,%s,%s,%s) on conflict(endpoint,params) do update set status=excluded.status,error=excluded.error,updated_at=now()',(endpoint,encoded,status,Jsonb(body.get('error'))))
+     if status==200:
+      discover(store,endpoint,body.get('data'),a.mode,params)
+      store.flush()
+      from neon_assets import urls
+      with store.db.cursor() as c:c.executemany('insert into statarena.asset_jobs(url) values(%s) on conflict do nothing',[(url,) for url in urls(body.get('data'))])
+     store.db.execute('delete from statarena.jobs where endpoint=%s and params=%s',(endpoint,encoded))
+    counts[str(status)]=counts.get(str(status),0)+1;processed+=1
+    if processed%25==0:print(canonical({'mode':a.mode,'processed':processed,'statuses':counts}),flush=True)
+    time.sleep(float(os.environ.get('PITCH_REQUEST_INTERVAL','0.2')))
+   except Exception:
+    store.db.execute("update statarena.jobs set state='pending',available_at=now()+interval '15 minutes',lease_until=null,last_error='Collection interrupted or transient failure' where endpoint=%s and params=%s",(endpoint,encoded));raise
+  if not a.skip_materialize:
+   from neon_materialize import materialize
+   materialize(store,max_partitions=20)
+  report={'state':'paused_capacity' if paused else 'success','processed':processed,'statuses':counts,'elapsedSeconds':round(time.monotonic()-started,2),**capacity(store)}
+  store.state(a.mode,report);store.revision();print(canonical(report),flush=True)
+ finally:store.db.execute('select pg_advisory_unlock(97813003)');store.db.close()
+if __name__=='__main__':main()

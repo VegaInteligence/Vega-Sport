@@ -1,5 +1,6 @@
 /** Read-only PitchAPI gateway shared by the hosted Worker and local server. */
-const PROVIDER_ORIGIN = "https://api.pitchapi.dev";
+import { savedResource, fixtureResource, archivedResource } from './database.js';
+import { configured, query } from './neon.js';
 const API_PREFIX = "/api/pitchapi";
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const ID = "[A-Za-z0-9]{6}";
@@ -97,15 +98,6 @@ function apiError(code, status, retryAfter) {
   return jsonResponse({ ok: false, error }, status, headers);
 }
 
-function configuredKey(env) {
-  const key = env?.PITCHAPI_API_KEY;
-  return typeof key === "string" &&
-    key.length <= 512 &&
-    /^pk_(?:live|test)_[A-Za-z0-9_-]+$/.test(key)
-    ? key
-    : null;
-}
-
 function validDate(value) {
   const timestamp = Date.parse(`${value}T00:00:00Z`);
   return (
@@ -142,249 +134,29 @@ function validateResource(url) {
   return { resource, query: query ? `?${query}` : "", ttl: route.ttl };
 }
 
-/** A bounded fallback for local development; Cloudflare uses caches.default. */
-export function createMemoryCache({
-  maxEntries = 48,
-  maxBytes = 8 * 1024 * 1024,
-  now = Date.now,
-} = {}) {
-  const entries = new Map();
-  let bytes = 0;
-  function remove(key) {
-    const entry = entries.get(key);
-    if (entry) bytes -= entry.size;
-    entries.delete(key);
-  }
-  return {
-    async match(request) {
-      const entry = entries.get(request.url);
-      if (!entry) return undefined;
-      if (entry.expires <= now()) {
-        remove(request.url);
-        return undefined;
-      }
-      entries.delete(request.url);
-      entries.set(request.url, entry);
-      return new Response(entry.body, { status: 200, headers: entry.headers });
-    },
-    async put(request, response) {
-      if (response.status !== 200) return;
-      const ttl = Number(
-        response.headers.get("Cache-Control")?.match(/\bmax-age=(\d+)/)?.[1] ||
-          0,
-      );
-      if (!ttl) return;
-      const body = await response.text();
-      const size = new TextEncoder().encode(body).byteLength;
-      if (size > maxBytes) return;
-      remove(request.url);
-      for (const [key, entry] of entries)
-        if (entry.expires <= now()) remove(key);
-      while (
-        entries.size &&
-        (entries.size >= maxEntries || bytes + size > maxBytes)
-      )
-        remove(entries.keys().next().value);
-      if (maxEntries < 1) return;
-      entries.set(request.url, {
-        body,
-        headers: [...response.headers],
-        size,
-        expires: now() + ttl * 1000,
-      });
-      bytes += size;
-    },
-  };
-}
 
-function retryDelay(header, now) {
-  if (!header) return 30;
-  const seconds = /^\d+$/.test(header.trim())
-    ? Number(header)
-    : Math.ceil((Date.parse(header) - now()) / 1000);
-  return Number.isFinite(seconds) ? Math.max(1, Math.min(seconds, 86400)) : 30;
-}
-
-async function readBounded(response) {
-  if (Number(response.headers.get("Content-Length")) > MAX_RESPONSE_BYTES) {
-    await response.body?.cancel();
-    throw new Error("Response limit");
-  }
-  if (!response.body) return "";
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let body = "";
-  let bytes = 0;
+/** Compatibility routes backed exclusively by indexed Neon observations. */
+export async function handlePitchApi(request) {
+  const url=new URL(request.url);
+  if(!['GET','HEAD'].includes(request.method))return apiError('METHOD_NOT_ALLOWED',405);
+  if(url.pathname==='/api/status')return jsonResponse({configured:configured(),source:'Neon',basePath:API_PREFIX});
+  if(!url.pathname.startsWith(API_PREFIX+'/'))return apiError('ROUTE_NOT_FOUND',404);
+  const checked=validateResource(url);if(checked.error)return checked.error;
+  if(!configured())return apiError('PITCHAPI_NOT_CONFIGURED',503);
   try {
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      bytes += value.byteLength;
-      if (bytes > MAX_RESPONSE_BYTES) {
-        await reader.cancel();
-        throw new Error("Response limit");
-      }
-      body += decoder.decode(value, { stream: true });
+    const params=Object.fromEntries(url.searchParams);
+    let saved=await savedResource(checked.resource,params);
+    if(!saved&&!Object.keys(params).length)saved=await archivedResource(checked.resource);
+    if(!saved)saved=await fixtureResource(checked.resource,params);
+    if(!saved&&checked.resource==='/leagues'){
+      const manifest=(await import('./data-store.js')).dataJson;
+      const index=await manifest('computed/dashboard/index.json');
+      const leagues=[...new Map(index.seasons.flatMap(s=>s.chunks.flatMap(c=>c.competitions||[])).map(c=>[c.id,c])).values()];
+      saved={status:200,data:{leagues}};
     }
-    return body + decoder.decode();
-  } finally {
-    reader.releaseLock();
-  }
+    if(!saved)return apiError('RESOURCE_NOT_FOUND',404);
+    const payload=saved.status===200?{data:saved.data}:{ok:false,error:saved.error||{code:'RESOURCE_NOT_FOUND',message:'Donnée indisponible dans Neon.'}};
+    const out=jsonResponse(payload,saved.status,{'X-Data-Source':'Neon','Cache-Control':saved.status===200?'public, max-age=0, s-maxage=60, stale-while-revalidate=30':'no-store'});
+    return request.method==='HEAD'?new Response(null,{status:out.status,headers:out.headers}):out;
+  } catch(e){console.error('Neon resource unavailable',e.name);return apiError('PITCHAPI_UNAVAILABLE',503);}
 }
-
-/** Dependencies can be injected for deterministic tests without API requests. */
-export function createPitchApiHandler({
-  fetcher = globalThis.fetch,
-  cache,
-  now = Date.now,
-  timeoutMs = 15000,
-} = {}) {
-  const memoryCache = createMemoryCache({ now });
-  const pending = new Map();
-
-  async function upstream(resource, key) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      const response = await fetcher(
-        `${PROVIDER_ORIGIN}/v1${resource.resource}${resource.query}`,
-        {
-          method: "GET",
-          headers: { Accept: "application/json", "X-API-KEY": key },
-          redirect: "error",
-          signal: controller.signal,
-        },
-      );
-      if (response.status === 429) {
-        await response.body?.cancel();
-        return apiError(
-          "RATE_LIMIT_EXCEEDED",
-          429,
-          retryDelay(response.headers.get("Retry-After"), now),
-        );
-      }
-      if (response.status === 401 || response.status === 403) {
-        await response.body?.cancel();
-        return apiError("PITCHAPI_AUTH_FAILED", 502);
-      }
-      if (
-        response.status >= 500 ||
-        (response.status >= 300 && response.status < 400)
-      ) {
-        await response.body?.cancel();
-        return apiError("PITCHAPI_UNAVAILABLE", 502);
-      }
-      let payload;
-      let body;
-      try {
-        body = await readBounded(response);
-        // Refuse unexpected credential-bearing responses; never echo provider errors.
-        if (
-          body.includes(key) ||
-          /pk_(?:live|test)_[A-Za-z0-9_-]+/.test(body)
-        ) {
-          return apiError("PITCHAPI_INVALID_RESPONSE", 502);
-        }
-        payload = JSON.parse(body);
-      } catch {
-        return apiError("PITCHAPI_INVALID_RESPONSE", 502);
-      }
-      if (response.status === 404) {
-        const code = [
-          "RESOURCE_NOT_FOUND",
-          "ANALYTICS_UNAVAILABLE",
-          "HALVES_UNAVAILABLE",
-        ].includes(payload?.error?.code)
-          ? payload.error.code
-          : "RESOURCE_NOT_FOUND";
-        return apiError(code, 404);
-      }
-      if (response.status === 400) return apiError("INVALID_PARAMETER", 400);
-      if (
-        !response.ok ||
-        !payload ||
-        typeof payload !== "object" ||
-        Array.isArray(payload) ||
-        !Object.hasOwn(payload, "data") ||
-        Object.hasOwn(payload, "error")
-      ) {
-        return apiError("PITCHAPI_INVALID_RESPONSE", 502);
-      }
-      return jsonResponse({ data: payload.data }, 200, {
-        "Cache-Control": `public, max-age=${resource.ttl}`,
-        "X-PitchAPI-Fetched-At": new Date(now()).toISOString(),
-      });
-    } catch {
-      // Fetch/timeout exceptions can contain URLs or headers. Do not serialize them.
-      return apiError("PITCHAPI_UNAVAILABLE", 502);
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
-  return async function handle(request, env = {}) {
-    if (request.method !== "GET") return apiError("METHOD_NOT_ALLOWED", 405);
-    let url;
-    try {
-      url = new URL(request.url);
-    } catch {
-      return apiError("INVALID_PARAMETER", 400);
-    }
-    if (url.pathname === "/api/status") {
-      return jsonResponse({
-        ok: true,
-        source: "PitchAPI",
-        configured: Boolean(configuredKey(env)),
-        basePath: API_PREFIX,
-        documentation: "https://pitchapi.dev/",
-      });
-    }
-    if (!url.pathname.startsWith(`${API_PREFIX}/`))
-      return apiError("ROUTE_NOT_FOUND", 404);
-    const resource = validateResource(url);
-    if (resource.error) return resource.error;
-    const key = configuredKey(env);
-    if (!key) return apiError("PITCHAPI_NOT_CONFIGURED", 503);
-
-    // Same-origin cache keys contain public resource parameters, never credentials.
-    const cacheRequest = new Request(
-      `${url.origin}${API_PREFIX}${resource.resource}${resource.query}`,
-    );
-    const responseCache =
-      cache === undefined ? globalThis.caches?.default || memoryCache : cache;
-    try {
-      const cached = await responseCache?.match(cacheRequest);
-      if (cached?.status === 200) {
-        const result = new Response(cached.body, cached);
-        result.headers.set("X-PitchAPI-Cache", "HIT");
-        return result;
-      }
-    } catch {
-      /* A cache failure must not disable data access. */
-    }
-
-    const existing = pending.get(cacheRequest.url);
-    if (existing) return (await existing).clone();
-    if (pending.size >= 8) return apiError("GATEWAY_BUSY", 503, 1);
-    const operation = (async () => {
-      const response = await upstream(resource, key);
-      if (response.status === 200) {
-        try {
-          await responseCache?.put(cacheRequest, response.clone());
-        } catch {
-          /* Best-effort cache. */
-        }
-      }
-      response.headers.set("X-PitchAPI-Cache", "MISS");
-      return response;
-    })();
-    pending.set(cacheRequest.url, operation);
-    try {
-      return (await operation).clone();
-    } finally {
-      pending.delete(cacheRequest.url);
-    }
-  };
-}
-
-export const handlePitchApi = createPitchApiHandler();

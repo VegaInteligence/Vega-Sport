@@ -3,9 +3,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import Providers from "./providers.jsx";
 import ShellFallback from "./shell-fallback.jsx";
-import manifest from "../../../data/computed/dashboard/index.json";
 import { dataUrl } from "../src/data-url.js";
-import { europeFocusIds } from "../../shared/competition-scope.js";
 import "../src/brand-tokens.css";
 import "../src/fonts.css";
 import "../src/theme.css";
@@ -66,18 +64,6 @@ export const viewport = { themeColor: "#0E0F12", colorScheme: "dark light" };
 // the manifest, then the Top 7 + UEFA chunks of the default season, which
 // both scopes display first.
 const manifestUrl = dataUrl("dashboard-manifest.json");
-const firstChunks =
-  manifest.storage === "json-packed"
-    ? (
-        manifest.seasons.find((s) => s.id === manifest.defaultSeason)?.chunks ||
-        []
-      )
-        .filter((chunk) => europeFocusIds(manifest).has(chunk.leagueId))
-        .map((chunk) => dataUrl(chunk.path))
-    : [];
-const dataOrigin = manifestUrl.startsWith("https://")
-  ? new URL(manifestUrl).origin
-  : null;
 export default function RootLayout({ children }) {
   return (
     <html lang="fr" data-theme="dark" suppressHydrationWarning>
@@ -89,25 +75,12 @@ export default function RootLayout({ children }) {
           type="font/woff2"
           crossOrigin="anonymous"
         />
-        {dataOrigin && (
-          <link rel="preconnect" href={dataOrigin} crossOrigin="anonymous" />
-        )}
         <link
           rel="preload"
           href={manifestUrl}
           as="fetch"
           crossOrigin="anonymous"
         />
-        {firstChunks.map((href) => (
-          <link
-            key={href}
-            rel="preload"
-            href={href}
-            as="fetch"
-            crossOrigin="anonymous"
-            fetchPriority="low"
-          />
-        ))}
         <script
           id="statarena-theme"
           dangerouslySetInnerHTML={{

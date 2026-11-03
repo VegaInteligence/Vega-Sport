@@ -1,254 +1,44 @@
-import path from "node:path";
-import { readFile, realpath } from "node:fs/promises";
-import { existsSync } from "node:fs";
-import { appRoot, databaseRoot } from "./config.js";
-import { matchObservation, profileObservation } from "./services/database.js";
-import { publicFile, response, contained } from "./services/files.js";
-import { handlePitchApi } from "./services/pitchapi.js";
-import { dataJson, remoteData } from "./services/data-store.js";
-
-let credentials;
-async function environment() {
-  if (!credentials)
-    credentials = (async () => {
-      if (process.env.PITCHAPI_API_KEY)
-        return { PITCHAPI_API_KEY: process.env.PITCHAPI_API_KEY };
-      try {
-        const text = await readFile(path.join(appRoot, ".env"), "utf8");
-        const value = text.match(/^\s*PITCHAPI_API_KEY\s*=\s*(.*?)\s*$/m)?.[1];
-        return value
-          ? { PITCHAPI_API_KEY: value.replace(/^(['"])(.*)\1$/, "$2") }
-          : {};
-      } catch {
-        return {};
-      }
-    })();
-  return credentials;
-}
+import {matchObservation,profileObservation} from './services/database.js';
+import {publicFile,response} from './services/files.js';
+import {handlePitchApi} from './services/pitchapi.js';
+import {query,canonical,configured} from './services/neon.js';
 export async function handleRequest(request) {
-  const head = request.method === "HEAD";
-  let pathname;
-  try {
-    pathname = decodeURIComponent(
-      request.url.replace(/^https?:\/\/[^/]+/, "").split(/[?#]/, 1)[0] || "/",
-    );
-  } catch {
-    return response("Invalid path", 400);
-  }
-  if (!pathname.startsWith("/") || /[\u0000-\u001f\u007f\\]/.test(pathname))
-    return response("Invalid path", 400);
-  if (pathname.split("/").some((x) => x.startsWith(".")))
-    return response("Forbidden", 403);
-  if (pathname === "/api/health")
-    return Response.json({
-      status: "ok",
-      runtime: typeof Bun !== "undefined" ? "bun" : "node",
-    });
-  if (pathname === "/api/settings") {
-    if (request.method !== "GET" && !head)
-      return response("Method not allowed", 405, { Allow: "GET, HEAD" });
-    let sync = null;
-    try {
-      sync = await dataJson("raw/sync.json");
-    } catch {}
-    const config = await environment();
-    return response(
-      head
-        ? null
-        : JSON.stringify({
-            provider: "PitchAPI Soccer",
-            configured: Boolean(config.PITCHAPI_API_KEY),
-            schedule: {
-              cron: "0 0 * * *",
-              timezone: "Europe/Paris",
-              runner: "GitHub Actions",
-            },
-            sync,
-            revision:
-              (process.env.VERCEL_GIT_COMMIT_SHA || "").slice(0, 7) || null,
-            workflowUrl:
-              "https://github.com/OrionQuantPlatform/STATARENA/actions/workflows/daily-data.yml",
-          }),
-      200,
-      { "Content-Type": "application/json; charset=utf-8" },
-    );
-  }
-  const profile = pathname.match(
-    /^\/api\/archive\/profiles\/(leagues|teams|players)\/([ltp]_[A-Za-z0-9]{6})$/,
-  );
-  const match = pathname.match(/^\/api\/archive\/matches\/(m_[A-Za-z0-9]{6})$/);
-  if ((profile || match) && (request.method === "GET" || head)) {
-    if (
-      profile &&
-      profile[2][0] !== { leagues: "l", teams: "t", players: "p" }[profile[1]]
-    )
-      return response("Not found", 404);
-    try {
-      let record;
-      if (remoteData || existsSync(path.join(databaseRoot, "raw/index.json")))
-        record = profile
-          ? await profileObservation(profile[1], profile[2])
-          : await matchObservation(match[1]);
-      else record = await legacyArchive(profile, match);
-      return record
-        ? response(head ? null : JSON.stringify(record), 200, {
-            "Content-Type": "application/json; charset=utf-8",
-          })
-        : response("Not found", 404);
-    } catch {
-      return response("Observation unavailable", 500);
+  const head=request.method==='HEAD';let pathname;
+  try{pathname=decodeURIComponent(new URL(request.url).pathname);}catch{return response('Invalid path',400);}
+  if(!pathname.startsWith('/')||/[\u0000-\u001f\u007f\\]/.test(pathname))return response('Invalid path',400);
+  if(pathname.split('/').some(x=>x.startsWith('.')))return response('Forbidden',403);
+  if(!['GET','HEAD'].includes(request.method))return response('Method not allowed',405,{Allow:'GET, HEAD'});
+  try{
+    if(pathname==='/api/health'){
+      const [state]=await query("SELECT value,updated_at FROM statarena.state WHERE name='revision'");
+      return Response.json({status:'ok',source:'Neon',revision:state?.value},{headers:{'Cache-Control':'no-store'}});
     }
-  }
-  if (pathname === "/api" || pathname.startsWith("/api/"))
-    return handlePitchApi(request, await environment());
-  if (request.method !== "GET" && !head)
-    return response("Method not allowed", 405, { Allow: "GET, HEAD" });
-  if (pathname === "/dashboard") pathname = "/";
-  else if (pathname.startsWith("/dashboard/")) pathname = pathname.slice(10);
-  if (pathname === "/data/dashboard-manifest.json")
-    return publicFile(
-      databaseRoot,
-      remoteData ||
-        existsSync(path.join(databaseRoot, "computed/dashboard/index.json"))
-        ? "computed/dashboard/index.json"
-        : "raw/index.json",
-      head,
-    );
-  if (pathname === "/data/football-manifest.json")
-    return publicFile(
-      databaseRoot,
-      remoteData || existsSync(path.join(databaseRoot, "raw/index.json"))
-        ? "raw/index.json"
-        : "staging/dashboard/football-manifest.json",
-      head,
-    );
-  if (
-    pathname.startsWith("/data/raw/") ||
-    pathname.startsWith("/data/computed/")
-  )
-    return publicFile(databaseRoot, pathname.slice(6), head);
-  if (pathname.startsWith("/data/")) {
-    if (remoteData || existsSync(path.join(databaseRoot, "raw/index.json")))
-      return response("Not found", 404);
-    const name = pathname.slice(6);
-    const samples = [
-      "pitchapi_championnats.json",
-      "pitchapi_premiers_matchs.json",
-    ];
-    return publicFile(
-      databaseRoot,
-      (samples.includes(name)
-        ? "sources/pitchapi/samples/"
-        : "staging/dashboard/") + name,
-      head,
-    );
-  }
-  return response(
-    pathname.includes(".") ||
-      /^\/(backend|frontend|scripts|shared|node_modules)(?:\/|$)/.test(pathname)
-      ? "Forbidden"
-      : "Not found",
-    pathname.includes(".") ||
-      /^\/(backend|frontend|scripts|shared|node_modules)(?:\/|$)/.test(pathname)
-      ? 403
-      : 404,
-  );
-}
-
-async function legacyArchive(profile, match) {
-  for (const archive of ["europe_2026_2027", "europe_2021_2026"])
-    try {
-      const base = path.join(
-        databaseRoot,
-        "sources/pitchapi/archives",
-        archive,
-      );
-      if (profile) {
-        const [, kind, id] = profile;
-        let record;
-        for (const name of [
-          `${id}--${Buffer.from(id).toString("hex")}.json`,
-          `${id}.json`,
-        ])
-          try {
-            record = await archiveJson(base, path.join("profiles", kind, name));
-            break;
-          } catch {}
-        if (record?.status === 200 && record.data?.id === id) return record;
-        continue;
-      }
-      const id = match[1];
-      let entry,
-        folder = "matches";
-      try {
-        entry = (await archiveJson(base, "index.json")).matches?.find(
-          (x) => x.match?.id === id,
-        );
-      } catch {}
-      if (!entry) {
-        const inventory = await archiveJson(base, "inventory.json");
-        const competition = inventory.competitions.find((x) =>
-          x.matches.some((m) => m.id === id),
-        );
-        if (competition) {
-          entry = { competition_id: competition.id };
-          folder =
-            competition.matches.find((m) => m.id === id).status === "finished"
-              ? "matches"
-              : "fixtures";
-        }
-      }
-      if (!entry || !/^l_[A-Za-z0-9]{6}$/.test(entry.competition_id)) continue;
-      const name =
-        archive === "europe_2021_2026"
-          ? `${id}--${Buffer.from(id).toString("hex")}.json`
-          : `${id}.json`;
-      const record = await archiveJson(
-        base,
-        path.join(/*turbopackIgnore: true*/ folder, entry.competition_id, name),
-      );
-      if (record.fixture?.id && record.fixture.id !== id) continue;
-      const mapping = {
-        match: "match",
-        shots: "shots",
-        momentum: "momentum",
-        events: "events",
-        players: "players",
-        "players/halves": "player_halves",
-        lineups: "lineups",
-        h2h: "h2h",
-        stats: "stats",
-        advanced: "advanced_teams",
-        "advanced/players": "advanced_players",
-        "advanced/network": "pass_networks",
-        heatmaps: "heatmaps",
-      };
-      const result = {
-        meta: {
-          retrievedAt: record.retrieved_at_utc,
-          source: "Archive PitchAPI locale",
-        },
-        availability: {},
-      };
-      for (const [key, value] of Object.entries(mapping)) {
-        const item = record.endpoints?.[value];
-        result.availability[key] = {
-          state: item?.status === 200 ? "collected" : "error",
-          status: item?.status ?? null,
-        };
-        if (item?.status === 200)
-          result[key] = { data: item.data, status: item.status };
-      }
-      return result;
-    } catch {}
-  return null;
-}
-
-async function archiveJson(base, relative) {
-  const [root, file] = await Promise.all([
-    realpath(base),
-    realpath(path.join(base, relative)),
-  ]);
-  if (!contained(root, file)) throw new Error("Forbidden archive path");
-  return JSON.parse(await readFile(file, "utf8"));
+    if(pathname==='/api/settings'){
+      const rows=await query("SELECT name,value,updated_at FROM statarena.state WHERE name IN('daily','historical','revision')");
+      return Response.json({provider:'Neon',configured:configured(),schedule:{cron:'0 0 * * *',timezone:'UTC',runner:'GitHub Actions'},sync:rows,workflowUrl:'https://github.com/OrionQuantPlatform/STATARENA/actions/workflows/daily-sync.yml'},{headers:{'Cache-Control':'no-store'}});
+    }
+    if(pathname==='/api/assets'){
+      const url=new URL(request.url).searchParams.get('url');if(!url||url.length>2048)return response('Invalid asset',400);
+      const row=(await query('SELECT path FROM statarena.assets WHERE url=$1',[url]))[0];
+      return row?publicFile(row.path,request):response('Not found',404);
+    }
+    if(/^\/api\/(standings|open-cups|openligadb|nations-results|club-wikidata|stadium)$/.test(pathname)){
+      const params=new URL(request.url).searchParams;
+      if([...params].length>4||[...params].some(([k,v])=>k.length>40||v.length>200)||new Set(params.keys()).size!==[...params].length)return response('Invalid parameters',400);
+      const row=(await query('SELECT body FROM statarena.projections WHERE name=$1 AND params=$2',[pathname.slice(5),canonical(Object.fromEntries(params))]))[0];
+      return row?response(head?null:JSON.stringify(row.body),200,{'Content-Type':'application/json','X-Data-Source':'Neon','Cache-Control':'public, max-age=0, s-maxage=300, stale-while-revalidate=60'}):response(JSON.stringify({available:false,error:'Donnée absente de Neon.'}),404,{'Content-Type':'application/json'});
+    }
+    const profile=pathname.match(/^\/api\/archive\/profiles\/(leagues|teams|players)\/([ltp]_[A-Za-z0-9]{6})$/);
+    const match=pathname.match(/^\/api\/archive\/matches\/(m_[A-Za-z0-9]{6})$/);
+    if(profile||match){
+      if(profile&&profile[2][0]!=={leagues:'l',teams:'t',players:'p'}[profile[1]])return response('Not found',404);
+      const record=profile?await profileObservation(profile[1],profile[2]):await matchObservation(match[1]);
+      return record?response(head?null:JSON.stringify(record),200,{'Content-Type':'application/json','X-Data-Source':'Neon','Cache-Control':'public, max-age=0, s-maxage=60'}):response('Not found',404);
+    }
+    if(pathname==='/api'||pathname.startsWith('/api/'))return handlePitchApi(request);
+    if(pathname==='/data/dashboard-manifest.json')return publicFile('computed/dashboard/index.json',request);
+    if(pathname==='/data/football-manifest.json')return publicFile('raw/index.json',request);
+    if(/^\/data\/(raw|computed)\//.test(pathname))return publicFile(pathname.slice(6),request);
+    return response('Not found',404);
+  }catch(e){console.error('Neon request failed',e.name);return response('Neon data unavailable',503);}
 }

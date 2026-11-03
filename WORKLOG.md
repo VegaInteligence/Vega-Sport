@@ -1,7 +1,7 @@
 # Worklog
 
 ## Goal
-- Completed: correct the Neon migration to preserve the directly browsable original data/ file tree. Keep every StatArena GitHub Action stopped.
+- Finish the Neon migration: Neon-only runtime, two direct-ingestion workflows, integrity/performance/E2E validation, then remove verified migration dumps and redundant local data.
 
 ## Decisions and constraints
 - Archive-only presentation was the wrong format for the user's request. Replaced our generated archive objects with one private object at each original repository-relative path in the existing statarena-data bucket.
@@ -23,6 +23,15 @@
 - DataScout coverage and earlier UI evidence: docs/DATASCOUT_IMPLEMENTATION.md and dashboard/outputs/datascout-enrichment/.
 - The original archive-delivery report is marked superseded, retaining historical provenance. The user-selected PitchAPI key remains only in the encrypted GitHub secret; Actions are disabled.
 
+## Current direction
+- Work in isolated codex/neon-central-data-runtime; preserve active UI work in the original checkout.
+- Keep the verified original files in private Neon Object Storage, with a compact indexed PostgreSQL catalog, ingestion queue and hot documents. Respect the Free plan's 1 GB SQL / 5 GB objects limits.
+- Runtime gets read-only Neon credentials, no Pitch key, GitHub data URLs or filesystem fallback. Provider calls and supplemental source refreshes belong only to Actions.
+- Validate a Neon test branch before production. Old workflows remain disabled until the replacement passes; delete redundant files only after backup/hash verification and cutover.
+- Vercel connector can inspect the project but env listing returned 403; check the authorized CLI fallback before deployment.
+
+- New steering: integrate the user's newly committed local main homepage changes before publication, preserving uncommitted work.
+
 ## Next action
-- Corrective transfer and verification are complete. Publish the scoped evidence and report the corrected layout. Any database import, app storage cutover or new collection is separate work.
-- Suggested commits: fix: preserve original data paths in Neon storage; docs: verify corrected Neon file layout.
+- Document E2E failure modes, implement catalog/bootstrap and read-only backend; validate real data before enabling Daily Sync and Historical Backfill.
+- Suggested commit: feat: centralize StatArena runtime and ingestion on Neon.

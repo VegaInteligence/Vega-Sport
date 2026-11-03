@@ -1,62 +1,14 @@
-import path from "node:path";
-import { realpath, stat } from "node:fs/promises";
-import { databaseRoot } from "../config.js";
-import { remoteData, remoteDataUrl } from "./data-store.js";
-export const response = (body, status = 200, headers = {}) =>
-  new Response(body, {
-    status,
-    headers: {
-      "X-Content-Type-Options": "nosniff",
-      "Cache-Control": "no-store",
-      ...headers,
-    },
-  });
-export function contained(root, file) {
-  const rel = path.relative(root, file);
-  return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
-}
-export async function publicFile(root, relative, head = false) {
-  if (
-    relative.split("/").some((x) => x.startsWith(".")) ||
-    !contained(root, path.resolve(root, relative))
-  )
-    return response("Forbidden", 403);
-  if (remoteData && root === databaseRoot) {
-    try {
-      return response(null, 307, {
-        Location: remoteDataUrl(relative),
-        "Cache-Control": "no-store",
-      });
-    } catch {
-      return response("Data revision unavailable", 503);
-    }
-  }
-  try {
-    const [base, file] = await Promise.all([
-      realpath(root),
-      realpath(path.resolve(root, relative)),
-    ]);
-    if (
-      !contained(base, file) ||
-      path
-        .relative(base, file)
-        .split(path.sep)
-        .some((x) => x.startsWith("."))
-    )
-      return response("Forbidden", 403);
-    if (!(await stat(file)).isFile()) return response("Not found", 404);
-    const body = Bun.file(file);
-    return response(head ? null : body, 200, {
-      "Content-Type": relative.endsWith(".gz") ? "application/gzip" : body.type,
-      "Content-Length": String(body.size),
-      "Cache-Control": "no-cache",
-    });
-  } catch (error) {
-    return response(
-      error.code === "ENOENT" || error.code === "ENOTDIR"
-        ? "Not found"
-        : "Unable to read asset",
-      error.code === "ENOENT" || error.code === "ENOTDIR" ? 404 : 500,
-    );
-  }
+import {objectMeta,objectBody} from './neon.js';
+export const response=(body,status=200,headers={})=>new Response(body,{status,headers:{'X-Content-Type-Options':'nosniff','Cache-Control':'no-store',...headers}});
+export async function publicFile(relative,request) {
+  if(!/^(raw|computed|sources)\/[A-Za-z0-9_./-]+$/.test(relative)||relative.split('/').some(x=>x.startsWith('.')))return response('Forbidden',403);
+  try{
+    const meta=await objectMeta(relative,request.method!=='HEAD');if(!meta)return response('Not found',404);
+    const etag='"'+meta.sha256+'"';
+    const headers={'ETag':etag,'X-Data-Source':'Neon','Content-Type':relative.endsWith('.gz')?'application/gzip':meta.content_type,
+      'Cache-Control': /(?:-|\/)[a-f0-9]{24,64}\.(?:json\.gz|webp|png|jpg)$/.test(relative)?'public, max-age=31536000, immutable':'public, max-age=0, s-maxage=60, stale-while-revalidate=30'};
+    if((request.headers.get('if-none-match')||'').split(',').map(s=>s.trim()).includes(etag))return response(null,304,headers);
+    headers['Content-Length']=String(meta.size);
+    return response(request.method==='HEAD'?null:await objectBody(meta),200,headers);
+  }catch(e){console.error('Neon object unavailable',e.name);return response('Neon data unavailable',503);}
 }

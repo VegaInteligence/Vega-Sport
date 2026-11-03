@@ -29,7 +29,7 @@ export function safeImageUrl(value) {
           ))) &&
       !u.username &&
       !u.password
-      ? u.href
+      ? `/api/assets?url=${encodeURIComponent(u.href)}`
       : "";
   } catch {
     return "";

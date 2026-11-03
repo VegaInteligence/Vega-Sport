@@ -21,8 +21,8 @@ const commands = [
     webPort,
   ],
 ];
-const children = commands.map((args) =>
-  Bun.spawn([process.execPath, ...args], {
+const children = commands.map((args,index) =>
+  Bun.spawn([index===0?process.execPath:"node", ...args], {
     cwd,
     env,
     stdin: "inherit",
