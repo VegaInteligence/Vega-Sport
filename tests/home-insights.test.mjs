@@ -420,3 +420,26 @@ test("the meanest defence concedes the fewest goals per game after five games", 
   assert.equal(defence.cleanSheets, 4);
   assert.equal(defence.goalsAgainst, 2);
 });
+
+test("the nightly refresh waits for the next midnight in Paris and notices new data", async () => {
+  const { untilParisMidnight, manifestSignature } =
+    await import("../dashboard/frontend/src/services/home-insights.js");
+  // 23:30 in Paris in winter (UTC+1) is 22:30 UTC: midnight is 30 minutes away.
+  assert.equal(
+    untilParisMidnight(Date.parse("2026-11-03T22:30:00Z")),
+    30 * 60_000,
+  );
+  // 23:30 in Paris in summer (UTC+2).
+  assert.equal(
+    untilParisMidnight(Date.parse("2026-07-03T21:30:00Z")),
+    30 * 60_000,
+  );
+  const a = { seasons: [{ id: "2026/2027", chunks: [{ sha256: "x" }] }] };
+  assert.equal(manifestSignature(a), manifestSignature(structuredClone(a)));
+  assert.notEqual(
+    manifestSignature(a),
+    manifestSignature({
+      seasons: [{ id: "2026/2027", chunks: [{ sha256: "y" }] }],
+    }),
+  );
+});

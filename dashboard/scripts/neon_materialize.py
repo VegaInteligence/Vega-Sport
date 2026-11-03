@@ -150,8 +150,14 @@ def _materialize(store, max_partitions=20, league_id=None, recent_first=False):
                     "name": str(detail["round_name"]),
                     "playoff": detail.get("has_playoff") is True,
                 }
+            # The match detail adds the referee, the stadium and the round to the fixture.
+            details = {
+                k: detail.get(k)
+                for k in ("round_name", "has_playoff", "referee", "stadium")
+                if detail and detail.get("id") == mid and k in detail
+            }
             sample = {
-                "match": fixture,
+                "match": dict(fixture, **details),
                 "country": competition.get("country"),
                 "league": competition["name"],
                 "league_id": league,
@@ -374,3 +380,58 @@ def materialize(store, max_partitions=20, league_id=None, recent_first=False):
     # Catalog, manifests, routes and completion markers become visible atomically.
     with store.db.transaction():
         return _materialize(store, max_partitions, league_id, recent_first)
+
+
+def mark_all(store):
+    """Queue every published season and competition for a fresh materialization."""
+    manifest = store.json("computed/dashboard/index.json")
+    pairs = sorted(
+        {(s["id"], c["leagueId"]) for s in manifest["seasons"] for c in s["chunks"]}
+    )
+    for season, league in pairs:
+        store.db.execute(
+            "insert into statarena.dirty_partitions(season,league_id) values(%s,%s) on conflict(season,league_id) do update set changed_at=now()",
+            (season, league),
+        )
+    return len(pairs)
+
+
+def main():
+    import argparse, os, time
+    from neon_store import Store
+
+    p = argparse.ArgumentParser(
+        description="Rebuild the published dashboard partitions from the responses stored in Neon."
+    )
+    p.add_argument("--all", action="store_true", help="queue every published partition first")
+    p.add_argument("--batch", type=int, default=10)
+    p.add_argument("--minutes", type=float, default=100)
+    a = p.parse_args()
+    if not os.environ.get("GITHUB_ACTIONS"):
+        raise RuntimeError("Materialization writes to Neon and must run in GitHub Actions")
+    store = Store()
+    if not store.db.execute("select pg_try_advisory_lock(97813003)").fetchone()[0]:
+        print("Another ingestion owns the lease; nothing was queued")
+        return
+    try:
+        if a.all:
+            print(canonical({"queued": mark_all(store)}), flush=True)
+        stop = time.monotonic() + a.minutes * 60
+        while time.monotonic() < stop:
+            left = store.db.execute(
+                "select count(*) from statarena.dirty_partitions"
+            ).fetchone()[0]
+            if not left:
+                break
+            materialize(store, max_partitions=a.batch)
+        left = store.db.execute("select count(*) from statarena.dirty_partitions").fetchone()[0]
+        store.state("materialize", {"remaining": left})
+        store.revision()
+        print(canonical({"remaining": left}), flush=True)
+    finally:
+        store.db.execute("select pg_advisory_unlock(97813003)")
+        store.db.close()
+
+
+if __name__ == "__main__":
+    main()

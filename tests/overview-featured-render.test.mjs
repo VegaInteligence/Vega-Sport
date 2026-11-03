@@ -61,7 +61,7 @@ const quarterLegs = Array.from({ length: 8 }, (_, i) => ({
   score_away: 0,
 }));
 
-async function overview({ context, params = "", rounds = {} }) {
+async function overview({ context, params = "", rounds = {}, ranking = null }) {
   const stubs = {
     react: {
       ...React,
@@ -123,7 +123,8 @@ async function overview({ context, params = "", rounds = {} }) {
     "../services/competition-identity.js": await src(
       "services/competition-identity.js",
     ),
-    "../services/ballon-dor.js": await src("services/ballon-dor.js"),
+    "../services/ballon-dor.js": { ballonDorRanking: () => ranking },
+    "../data-url.js": { dataUrl: (file) => "/data/" + file },
     "../services/home-insights.js": await src("services/home-insights.js"),
     "../../../shared/competition-scope.js": await import(
       path.join(root, "dashboard/shared/competition-scope.js")
@@ -215,30 +216,41 @@ test("the default home leaves out leagues outside the Top 7 Europe and the Europ
   assert.match(everything, /swede/);
 });
 
-test("the Ballon d'Or race replaces the teaser after the Champions League quarter-finals", async () => {
-  const before = await overview({ context: context() });
-  assert.match(before, /data-teaser/);
-  assert.doesNotMatch(before, /data-race/);
-
+test("the Ballon d'Or race needs both the end of the quarter-finals and the STATARENA ranking", async () => {
+  const ranking = [1, 2, 3].map((rank) => ({
+    rank,
+    name: "Joueur " + rank,
+    team: "Club",
+    score: 90 - rank,
+  }));
   const rounds = Object.fromEntries(
     quarterLegs.map((f) => [f.id, { name: "1/4" }]),
   );
-  const after = await overview({
-    context: context({
-      data: {
-        fixtures: quarterLegs,
-        matches: [braga, arsenal],
-        competitions: [],
-      },
-    }),
-    rounds,
+  const played = context({
+    data: {
+      fixtures: quarterLegs,
+      matches: [braga, arsenal],
+      competitions: [],
+    },
   });
+
+  const before = await overview({ context: context(), ranking });
+  assert.match(before, /data-teaser/);
+  assert.doesNotMatch(before, /data-race/);
+
+  // The ranking is empty: the banner stays, no stand-in list replaces it.
+  const empty = await overview({ context: played, rounds });
+  assert.match(empty, /data-teaser/);
+  assert.doesNotMatch(empty, /data-race/);
+
+  const after = await overview({ context: played, rounds, ranking });
   assert.match(after, /data-race/);
   assert.doesNotMatch(after, /data-teaser/);
 
   const forced = await overview({
     context: context(),
     params: "ballondor=ouvert",
+    ranking,
   });
   assert.match(forced, /data-race/);
 });

@@ -6,8 +6,8 @@ import {
   MESSI_HONOURS,
   MESSI_ID,
 } from "../services/player-honours.js";
-import Icon from "./Icon.jsx";
 import { date } from "../services/format.js";
+import { trophyArt } from "../services/trophy-art.js";
 
 export default function PlayerHonours({ id, name }) {
   const result = useResource(`player-honours:${id}:${name}`, () =>
@@ -39,20 +39,32 @@ export default function PlayerHonours({ id, name }) {
           <section className="player-honours-group" key={group.group}>
             <h4>{group.group}</h4>
             <ul>
-              {group.items.map((item) => (
-                <li key={item.title}>
-                  <span className="player-honours-icon">
-                    <Icon name="trophy" />
-                  </span>
-                  <span className="player-honours-name">
-                    <strong>{item.title}</strong>
-                    {item.years && <small>{item.years}</small>}
-                  </span>
-                  {item.count > 1 && (
-                    <span className="player-honours-count">×{item.count}</span>
-                  )}
-                </li>
-              ))}
+              {group.items.map((item) => {
+                const image = trophyArt(item, id);
+                return (
+                  <li key={item.title}>
+                    {image && (
+                      <span className="player-honours-trophy">
+                        <img
+                          src={image}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </span>
+                    )}
+                    <span className="player-honours-name">
+                      <strong>{item.title}</strong>
+                      {item.years && <small>{item.years}</small>}
+                    </span>
+                    {item.count > 1 && (
+                      <span className="player-honours-count">
+                        ×{item.count}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </section>
         ))}

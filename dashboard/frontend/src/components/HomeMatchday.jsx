@@ -325,6 +325,16 @@ function ShotMap({ match, active, onActive }) {
           <rect x="0" y="24.85" width="5.5" height="18.3" />
           <rect x="99.5" y="24.85" width="5.5" height="18.3" />
         </g>
+        {shown && (
+          <line
+            key={shown.id}
+            className={`home-shot-path is-${shown.side}${shown.goal ? " is-goal" : ""}${shown.measured ? "" : " is-estimated"}`}
+            x1={shown.x}
+            y1={shown.y}
+            x2={shown.end ? shown.end[0] : shown.side === "home" ? 0 : 105}
+            y2={shown.end ? shown.end[1] : 34}
+          />
+        )}
         {points.map((s, i) => {
           const r = Math.min(3.6, 1.1 + Math.sqrt(s.xg) * 3.2),
             on = s.id && s.id === active;
@@ -360,6 +370,9 @@ function ShotMap({ match, active, onActive }) {
           <span>
             {shown.minute}′ · {number(shown.xg, 2)} xG
             {shown.body ? ` · ${shown.body}` : ""}
+            {shown.height != null
+              ? ` · à ${number(shown.height, 1)} m de haut`
+              : ""}
           </span>
           <span>
             {shown.situation ? `${shown.situation} · ` : ""}

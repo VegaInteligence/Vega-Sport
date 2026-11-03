@@ -277,19 +277,31 @@ export function Finishing({ leaders }) {
   );
 }
 
+/** Season scorers and assist providers, switched like the finishing card. */
 export function SeasonScorers({ leaders }) {
-  const f = useFootball();
-  if (!leaders.length) return null;
+  const f = useFootball(),
+    [mode, setMode] = useState("goals");
+  const list = leaders[mode] || [];
+  if (!leaders.goals.length && !leaders.assists?.length) return null;
+  const goals = mode === "goals";
   return (
     <article className="card home-trend">
       <div className="home-trend-head">
-        <Kicker>Buteurs de la saison</Kicker>
-        <Link className="inline-link" href={f.href("/joueurs/")}>
-          Tous <Icon name="arrow" />
-        </Link>
+        <Kicker>
+          {goals ? "Buteurs de la saison" : "Passeurs de la saison"}
+        </Kicker>
+        <Segments
+          label="Classement"
+          value={mode}
+          items={[
+            ["goals", "Buteurs"],
+            ["assists", "Passeurs"],
+          ]}
+          onChange={setMode}
+        />
       </div>
       <ol className="home-scorers-list">
-        {leaders.map((p, i) => (
+        {list.map((p, i) => (
           <li key={p.playerId}>
             <button type="button" onClick={() => f.setPlayer(p.lastId)}>
               <span className="home-scorer-rank">{i + 1}</span>
@@ -301,14 +313,19 @@ export function SeasonScorers({ leaders }) {
               <span>
                 <strong>{p.name}</strong>
                 <small>
-                  {p.team} · {number(p.xg, 1)} xG · {plural(p.apps, "match")}
+                  {p.team} ·{" "}
+                  {goals ? `${number(p.xg, 1)} xG` : `${number(p.xa, 1)} xA`} ·{" "}
+                  {plural(p.apps, "match")}
                 </small>
               </span>
-              <b>{number(p.goals)}</b>
+              <b>{number(goals ? p.goals : p.assists)}</b>
             </button>
           </li>
         ))}
       </ol>
+      <Link className="inline-link home-trend-more" href={f.href("/joueurs/")}>
+        Tous les joueurs <Icon name="arrow" />
+      </Link>
     </article>
   );
 }

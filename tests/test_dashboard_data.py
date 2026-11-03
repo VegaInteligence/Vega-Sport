@@ -113,3 +113,43 @@ class DashboardDataTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class ProviderFieldTests(unittest.TestCase):
+    """Every field the provider sends reaches the published tables."""
+
+    def setUp(self):
+        self.raw, self.catalog = synthetic()
+        sample = self.raw['samples'][0]
+        sample['match'].update({'referee': 'Referee', 'stadium': 'Stadium', 'round_name': 9, 'has_playoff': False})
+        sample['lineups']['data']['home'].update({'coach': {'name': 'Coach'}, 'confirmed': True, 'formation': '4-3-3'})
+        sample['lineups']['data']['home']['starters'][0]['is_captain'] = True
+        sample['shots']['data']['periods'][0]['period'] = 'SecondHalf'
+        sample['shots']['data']['periods'][0]['shots'].append({
+            'id': 's_000002', 'event_type': 'AttemptSaved', 'player': {'id': 'p_000001', 'name': 'Player'}, 'team_id': 't_000001',
+            'x': 94.2, 'y': 26.1, 'expected_goals': 0.04, 'is_on_target': True, 'goal_crossed_y': 35.98, 'goal_crossed_z': 1.22,
+            'is_inside_box': True, 'is_blocked': True, 'blocked_x': 95.16, 'blocked_y': 26.77, 'minute': 27, 'minute_added': 2,
+            'keeper': {'id': 'p_000009', 'name': 'Keeper'}})
+        stats = self.raw['samples'][0]['players']['data'][0]['stats']
+        stats.append({'key': 'extra', 'stats': {
+            'Long': metric('long_balls_accurate', 2, 8), 'Speed': metric('physical_metrics_topspeed', 29.1),
+            'Unknown': metric('brand_new_metric', 3)}})
+        self.snapshot = builder.build_snapshot(self.raw, self.catalog)
+        self.match = next(m for m in self.snapshot['matches'] if m['id'] == 'm_000001')
+
+    def test_shot_end_point_height_and_keeper_are_kept(self):
+        shot = next(s for s in self.match['shots'] if s['id'] == 's_000002')
+        self.assertEqual((shot['goalCrossedY'], shot['goalCrossedZ']), (35.98, 1.22))
+        self.assertEqual((shot['isBlocked'], shot['blockedX'], shot['blockedY']), (True, 95.16, 26.77))
+        self.assertEqual((shot['insideBox'], shot['keeperId'], shot['minuteAdded'], shot['period']), (True, 'p_000009', 2, 'SecondHalf'))
+
+    def test_all_player_metrics_and_attempts_are_kept(self):
+        row = next(p for p in self.snapshot['appearances'] if p['matchId'] == 'm_000001')
+        self.assertEqual((row['longBallsAccurate'], row['longBallsAttempted']), (2, 8))
+        self.assertEqual(row['topSpeed'], 29.1)
+        self.assertEqual(row['brandNewMetric'], 3)
+        self.assertTrue(row['isCaptain'])
+
+    def test_match_detail_and_lineup_fields_are_kept(self):
+        self.assertEqual((self.match['referee'], self.match['stadium'], self.match['roundName'], self.match['hasPlayoff']), ('Referee', 'Stadium', '9', False))
+        self.assertEqual((self.match['home']['coach'], self.match['home']['lineupConfirmed']), ('Coach', True))

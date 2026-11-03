@@ -238,18 +238,6 @@ export function TitleRace({ tables, competitions, initial }) {
               <b>{t.points}</b>
             </Link>
           ))}
-          {table.games > 0 && (
-            <div className="home-progress">
-              Journée {table.played} sur {table.games}
-              <span>
-                <i
-                  style={{
-                    width: `${Math.min(100, (table.played / table.games) * 100)}%`,
-                  }}
-                />
-              </span>
-            </div>
-          )}
         </div>
       </div>
     </article>
@@ -467,12 +455,16 @@ export function BestDefence({ defence, competitions }) {
   );
 }
 
-/** Before the Champions League quarter-finals are over: a link to the ranking with the season progress and current leaders. */
-export function BallonDorTeaser({ progress, leaders, ranking }) {
+/**
+ * Banner to the Ballon d'Or page. It only shows what the STATARENA ranking
+ * holds: while the ranking is empty, its places stay empty here too.
+ */
+export function BallonDorTeaser({ progress, ranking, raceOpen }) {
   const f = useFootball(),
     share = Math.round(progress * 100),
     R = 26,
-    C = 2 * Math.PI * R;
+    C = 2 * Math.PI * R,
+    top = ranking?.length ? ranking.slice(0, 3) : null;
   return (
     <Link
       className="card home-bdo-teaser"
@@ -498,76 +490,75 @@ export function BallonDorTeaser({ progress, leaders, ranking }) {
       <span className="home-bdo-copy">
         <span className="home-chip home-chip-gold">
           <BallonDorIcon className="home-bdo-icon" />
-          Ballon d’Or STATARENA · après les quarts de finale
+          {raceOpen
+            ? "Ballon d’Or STATARENA · la course est lancée"
+            : "Ballon d’Or STATARENA · après les quarts de finale"}
         </span>
         <span className="home-bdo-title">
-          Trop tôt pour un classement, pas pour suivre la tendance
+          {top
+            ? "Le classement STATARENA de la saison"
+            : "Le classement n’est pas encore publié"}
         </span>
         <span className="home-bdo-text">
           Chaque joueur est comparé à ce qu’on attend à son poste, match par
-          match. La course s’affiche ici dès la fin des quarts de finale retour
-          de la Ligue des champions.
+          match.{" "}
+          {raceOpen
+            ? "Les quarts de finale de la Ligue des champions sont joués : la course s’affiche ici dès que le classement est calculé."
+            : "La course s’affiche ici dès la fin des quarts de finale retour de la Ligue des champions."}
         </span>
       </span>
-      {(ranking?.length || leaders.length) > 0 && (
-        <span className="home-bdo-peek">
-          <span>
-            {(ranking || leaders).slice(0, 3).map((p) => (
-              <Media
-                key={p.playerId || p.name}
-                name={p.name}
-                url={p.imageUrl}
-                className="player-avatar"
-              />
-            ))}
-          </span>
-          {ranking ? "En tête du classement" : "En tête des notes"} :{" "}
-          <b>
-            {(ranking || leaders)
-              .slice(0, 3)
-              .map((p) => lastName(p.name))
-              .join(", ")}
-          </b>
+      <span className="home-bdo-peek">
+        <span>
+          {top
+            ? top.map((p) => (
+                <Media
+                  key={p.rank}
+                  name={p.name}
+                  url={p.imageUrl}
+                  className="player-avatar"
+                />
+              ))
+            : [1, 2, 3].map((rank) => (
+                <i key={rank} className="home-bdo-empty" aria-hidden="true" />
+              ))}
         </span>
-      )}
+        {top ? (
+          <>
+            En tête du classement :{" "}
+            <b>{top.map((p) => lastName(p.name)).join(", ")}</b>
+          </>
+        ) : (
+          "Podium à révéler"
+        )}
+      </span>
       <Icon name="arrow" className="home-bdo-arrow" />
     </Link>
   );
 }
 
-/** From the end of the Champions League quarter-finals: podium and top ten. */
-export function BallonDorRace({ leaders: rated, ratedMin, ranking }) {
+/** From the end of the Champions League quarter-finals, once the ranking exists: podium and top ten. */
+export function BallonDorRace({ ranking }) {
   const f = useFootball();
-  // The STATARENA ranking replaces the provisional list as soon as it exists.
-  const leaders = ranking?.length
-    ? ranking.map((e) => ({
-        ...e,
-        playerId: e.playerId || e.name,
-        rating: e.score,
-      }))
-    : rated;
-  if (leaders.length < 3) return null;
-  const [first, second, third] = leaders;
-  const podium = (p, rank) => (
-    <button
-      type="button"
-      className={`home-pod home-pod-${rank}`}
-      onClick={() => f.setPlayer(p.lastId)}
-    >
-      <span className="home-pod-medal">{rank}</span>
-      <Media
-        name={p.name}
-        url={p.imageUrl}
-        className={`player-avatar${rank === 1 ? " home-avatar-xl" : " home-avatar-lg"}`}
-      />
-      <strong>{p.name}</strong>
-      <small>{p.team}</small>
-      <b>{number(p.rating, 2)}</b>
-      <small>
-        {number(p.goals)} buts · {number(p.assists)} passes
-      </small>
-    </button>
-  );
+  if (!ranking || ranking.length < 3) return null;
+  const at = (rank) => ranking.find((e) => e.rank === rank);
+  const podium = (p, rank) =>
+    p && (
+      <Link
+        className={`home-pod home-pod-${rank}`}
+        href={f.href("/classement-joueurs/")}
+      >
+        <span className="home-pod-medal">{rank}</span>
+        <Media
+          name={p.name}
+          url={p.imageUrl}
+          className={`player-avatar${rank === 1 ? " home-avatar-xl" : " home-avatar-lg"}`}
+        />
+        <strong>{p.name}</strong>
+        <small>{p.team}</small>
+        <b>{number(p.score, 1)}</b>
+        {p.position && <small>{p.position}</small>}
+      </Link>
+    );
   return (
     <section className="card home-bdo">
       <div className="home-bdo-intro">
@@ -578,15 +569,12 @@ export function BallonDorRace({ leaders: rated, ratedMin, ranking }) {
         <h2>La course au Ballon d’Or</h2>
         <p>
           Les quarts de finale de la Ligue des champions sont joués : place au
-          sprint final.{" "}
-          {ranking?.length
-            ? "Voici le classement STATARENA de la saison."
-            : `En attendant le classement STATARENA, voici les joueurs les mieux notés de la saison (${number(ratedMin)} minutes minimum).`}
+          sprint final. Voici le classement STATARENA de la saison.
         </p>
         <div className="home-podium">
-          {podium(second, 2)}
-          {podium(first, 1)}
-          {podium(third, 3)}
+          {podium(at(2), 2)}
+          {podium(at(1), 1)}
+          {podium(at(3), 3)}
         </div>
       </div>
       <div className="home-bdo-list">
@@ -594,38 +582,38 @@ export function BallonDorRace({ leaders: rated, ratedMin, ranking }) {
           <span>#</span>
           <span />
           <span>Joueur</span>
-          <span>{ranking?.length ? "Score" : "Note moy."}</span>
-          <span>Buts</span>
-          <span>P.d.</span>
+          <span>Poste</span>
+          <span>Score</span>
         </div>
-        {leaders.slice(3, 10).map((p, i) => (
-          <button
-            type="button"
-            key={p.playerId}
-            className="home-bdo-row"
-            onClick={() => f.setPlayer(p.lastId)}
-          >
-            <span>{i + 4}</span>
-            <Media
-              name={p.name}
-              url={p.imageUrl}
-              className="player-avatar home-avatar-sm"
-            />
-            <span>
-              <strong>{p.name}</strong>
-              <small>{p.team}</small>
-            </span>
-            <b>{number(p.rating, 2)}</b>
-            <span>{number(p.goals)}</span>
-            <span>{number(p.assists)}</span>
-          </button>
-        ))}
+        {ranking
+          .filter((e) => e.rank >= 4 && e.rank <= 10)
+          .sort((a, b) => a.rank - b.rank)
+          .map((p) => (
+            <Link
+              key={p.rank}
+              className="home-bdo-row"
+              href={f.href("/classement-joueurs/")}
+            >
+              <span>{p.rank}</span>
+              <Media
+                name={p.name}
+                url={p.imageUrl}
+                className="player-avatar home-avatar-sm"
+              />
+              <span>
+                <strong>{p.name}</strong>
+                <small>{p.team}</small>
+              </span>
+              <span>{p.position || ""}</span>
+              <b>{number(p.score, 1)}</b>
+            </Link>
+          ))}
         <div className="home-bdo-actions">
           <Link
             className="button button-primary"
             href={f.href("/classement-joueurs/")}
           >
-            Classement Ballon d’Or <Icon name="arrow" />
+            Classement complet <Icon name="arrow" />
           </Link>
           <Link className="button button-secondary" href={f.href("/methode/")}>
             La méthode
