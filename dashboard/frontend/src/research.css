@@ -967,6 +967,124 @@
 .club-workspace .card-body:first-child {
   padding: 0;
 }
+
+/* Keep the overview's results, fixtures and club information easy to scan. */
+.club-overview {
+  display: grid;
+  gap: 20px;
+}
+.club-overview .club-figures {
+  margin: 0;
+}
+.club-overview-matches,
+.club-overview-info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.club-overview-panel,
+.club-workspace .club-overview-info > .card {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+.club-overview-panel {
+  padding: 20px;
+}
+.club-overview-panel .season-section-heading {
+  margin-bottom: 16px;
+}
+.club-overview-scroll-hint {
+  display: none;
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+.club-overview-record .data-table th,
+.club-overview-info .data-table th {
+  background: transparent;
+}
+.club-overview-record .data-table th,
+.club-overview-record .data-table td,
+.club-overview-info .data-table th,
+.club-overview-info .data-table td {
+  padding-block: 11px;
+}
+.club-overview .club-match-list .match-row {
+  min-height: 58px;
+}
+.club-overview .club-form {
+  margin-bottom: 16px;
+  background: var(--surface);
+}
+.club-workspace .club-overview-info > .card {
+  overflow: hidden;
+}
+.club-workspace .club-overview-info > .card > .card-header {
+  padding: 20px 20px 0;
+}
+.club-workspace .club-overview-info > .card > .card-body {
+  padding: 20px;
+}
+.club-overview-info .club-facts-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.club-overview-info .club-coach {
+  grid-column: 1 / -1;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.club-overview-info .club-coach-photo {
+  flex-basis: 64px;
+  width: 64px;
+  height: 64px;
+}
+.club-overview-info .club-fact-label {
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.club-overview-info :is(.club-fact, .club-fact-copy) {
+  overflow-wrap: anywhere;
+}
+.club-overview-info .club-facts-source {
+  margin: 20px 0 0;
+}
+@media (max-width: 1200px) {
+  .club-overview-matches {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 900px) {
+  .club-overview-info {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 700px) {
+  .club-overview-scroll-hint {
+    display: block;
+  }
+}
+@media (max-width: 640px) {
+  .club-overview,
+  .club-overview-matches,
+  .club-overview-info {
+    gap: 14px;
+  }
+  .club-overview-panel {
+    padding: 16px;
+  }
+  .club-workspace .club-overview-info > .card > .card-header {
+    padding: 16px 16px 0;
+  }
+  .club-workspace .club-overview-info > .card > .card-body {
+    padding: 16px;
+  }
+}
 @media (max-width: 640px) {
   .club-scope {
     width: 100%;

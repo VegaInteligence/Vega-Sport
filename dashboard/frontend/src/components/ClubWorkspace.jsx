@@ -168,7 +168,7 @@ function Overview({ club, summary, history, allHistory, competitionName }) {
     ["possession", "Possession"],
   ];
   return (
-    <>
+    <div className="club-overview">
       <div className="season-player-figures club-figures">
         {figures.map(([key, label]) => {
           const metric = clubMetric(summary, key);
@@ -189,7 +189,7 @@ function Overview({ club, summary, history, allHistory, competitionName }) {
           );
         })}
       </div>
-      <section className="club-section">
+      <section className="club-overview-panel club-overview-record">
         <div className="season-section-heading">
           <h3>Bilan · {competitionName}</h3>
           {summary.unscored > 0 && (
@@ -197,13 +197,18 @@ function Overview({ club, summary, history, allHistory, competitionName }) {
           )}
         </div>
         {summary.matches ? (
-          <RecordTable club={summary} />
+          <>
+            <p className="club-overview-scroll-hint">
+              Faites défiler le tableau pour voir toutes les statistiques.
+            </p>
+            <RecordTable club={summary} />
+          </>
         ) : (
           <Empty>Aucun match terminé pour ce périmètre.</Empty>
         )}
       </section>
-      <div className="research-two-columns club-section">
-        <section>
+      <div className="club-overview-matches">
+        <section className="club-overview-panel">
           <div className="season-section-heading">
             <h3>Derniers résultats</h3>
           </div>
@@ -214,7 +219,7 @@ function Overview({ club, summary, history, allHistory, competitionName }) {
             ))}
           </div>
         </section>
-        <section>
+        <section className="club-overview-panel">
           <div className="season-section-heading">
             <h3>Prochains matchs</h3>
           </div>
@@ -229,9 +234,11 @@ function Overview({ club, summary, history, allHistory, competitionName }) {
           )}
         </section>
       </div>
-      <ClubFacts club={club} matches={allHistory} />
-      <ClubRanking clubId={club.id} />
-    </>
+      <div className="club-overview-info">
+        <ClubFacts club={club} matches={allHistory} />
+        <ClubRanking clubId={club.id} />
+      </div>
+    </div>
   );
 }
 
