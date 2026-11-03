@@ -10,11 +10,9 @@ import {
 } from "../services/archive.js";
 import { date } from "../services/format.js";
 import { json, useResource } from "../services/resources.js";
-import {
-  competitionLabel,
-  orderedCompetitions,
-} from "../services/competition-selector.js";
+import { orderedCompetitions } from "../services/competition-selector.js";
 import { AsyncState, Card, Empty, Pager } from "./UI.jsx";
+import CompetitionOptions from "./CompetitionOptions.jsx";
 
 const PAGE_SIZE = 50;
 
@@ -244,11 +242,7 @@ function SeasonArchive({ seasons, entry, params, setParams, hrefWith }) {
             }
           >
             <option value="all">Toutes les compétitions</option>
-            {competitions.map((league) => (
-              <option key={league.id} value={league.id}>
-                {competitionLabel(league)}
-              </option>
-            ))}
+            <CompetitionOptions competitions={competitions} />
           </select>
         </label>
         <label>

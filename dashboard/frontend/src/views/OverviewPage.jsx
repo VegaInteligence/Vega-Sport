@@ -4,8 +4,10 @@ import { useSearchParams } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import Layout from "../components/Layout.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
+import { useResearch } from "../hooks/ResearchContext.jsx";
 import { Empty } from "../components/UI.jsx";
 import HomePreferences from "../components/HomePreferences.jsx";
+import SeasonFilter from "../components/SeasonFilter.jsx";
 import {
   HomeTicker,
   MatchOfTheWeek,
@@ -34,7 +36,7 @@ import {
   CHAMPIONS_LEAGUE_ID,
   TOP_SEVEN_IDS,
   ballonDorRaceOpen,
-  bestDefence,
+  bestDefences,
   bestWinStreak,
   biggestWin,
   leagueOf,
@@ -42,6 +44,7 @@ import {
   manifestSignature,
   matchdayWindow,
   playerOfTheWeek,
+  personalClubIds,
   recentRatings,
   seasonLeaders,
   seasonProgress,
@@ -133,6 +136,7 @@ function homeScope(f, focusIds) {
 
 export default function OverviewPage() {
   const f = useFootball(),
+    research = useResearch(),
     params = useSearchParams(),
     now = useClock();
   useNightlyRefresh(f.manifest);
@@ -185,12 +189,17 @@ export default function OverviewPage() {
     [scopedRows, f.season],
   );
   const leaders = useMemo(() => seasonLeaders(totals), [totals]);
+  const personalClubs = useMemo(
+    () => personalClubIds(research?.data.lists, f.rows, f.season),
+    [research?.data.lists, f.rows, f.season],
+  );
   const highlights = useMemo(
-    () => upcomingHighlights(fixtures, now, scope.ids, ranks),
-    [fixtures, now, scopeKey, ranks],
+    () => upcomingHighlights(fixtures, now, scope.ids, ranks, 7, personalClubs),
+    [fixtures, now, scopeKey, ranks, personalClubs],
   );
   const streak = useMemo(() => bestWinStreak(progress), [progress]);
-  const defence = useMemo(() => bestDefence(progress), [progress]);
+  const defences = useMemo(() => bestDefences(progress), [progress]);
+  const defence = defences[0];
   const matchIndex = useMemo(
     () => new Map(scopedMatches.map((m) => [m.id, m])),
     [scopedMatches],
@@ -246,12 +255,17 @@ export default function OverviewPage() {
             rounds: rounds.value || {},
           });
 
-  if (!matchWeek)
+  if (!matchWeek && !tables.length && !highlights.length && !totals.length)
     return (
       <Layout
         path="/"
         title="Vue d’ensemble"
-        actions={<HomePreferences f={f} />}
+        actions={
+          <>
+            <SeasonFilter f={f} compact />
+            <HomePreferences f={f} />
+          </>
+        }
       >
         <Empty>
           Aucun match terminé pour cette sélection.{" "}
@@ -290,17 +304,32 @@ export default function OverviewPage() {
   const initialTable = tables.some((t) => t.leagueId === "l_3FJFUl")
     ? "l_3FJFUl"
     : tables[0]?.leagueId;
+  const hasWeekSummary = Boolean(potw || win);
+  const hasFinishing =
+    leaders.clinical.length > 0 || leaders.wasteful.length > 0;
+  const hasScorers = leaders.goals.length > 0 || leaders.assists.length > 0;
+  const seasonCards =
+    Number(hasFinishing) +
+    Number(hasScorers) +
+    Number(Boolean(streak || defence));
+  const seasonSpan = (usual) =>
+    seasonCards === 1
+      ? "home-span-12"
+      : seasonCards === 2
+        ? "home-span-6"
+        : usual;
 
   return (
     <Layout path="/" title="Vue d’ensemble" hideHeading className="home-page">
       <h1 className="sr-only">Vue d’ensemble</h1>
       <div className="home-toolbar">
+        <SeasonFilter f={f} compact />
         <HomePreferences f={f} />
       </div>
       <HomeTicker results={results} ranks={ranks} competitions={competitions} />
       <div className="home-bento">
         {featured && (
-          <div className="home-span-8">
+          <div className={hasWeekSummary ? "home-span-8" : "home-span-12"}>
             <MatchOfTheWeek
               match={featured}
               ranks={ranks}
@@ -309,20 +338,22 @@ export default function OverviewPage() {
             />
           </div>
         )}
-        <div
-          className={`home-stack ${featured ? "home-span-4" : "home-span-12"}`}
-        >
-          <PlayerOfTheWeek
-            performance={potw}
-            match={potwMatch}
-            season={potwSeason}
-            recent={potwRecent}
-          />
-          <NumberOfTheWeek
-            win={win}
-            competition={win && competitions.get(leagueOf(win.match))}
-          />
-        </div>
+        {hasWeekSummary && (
+          <div
+            className={`home-stack ${featured ? "home-span-4" : "home-span-12"}`}
+          >
+            <PlayerOfTheWeek
+              performance={potw}
+              match={potwMatch}
+              season={potwSeason}
+              recent={potwRecent}
+            />
+            <NumberOfTheWeek
+              win={win}
+              competition={win && competitions.get(leagueOf(win.match))}
+            />
+          </div>
+        )}
         {raceOpen && ranking?.length >= 3 && (
           <div className="home-span-12">
             <BallonDorRace ranking={ranking} />
@@ -331,7 +362,7 @@ export default function OverviewPage() {
         {tables.length > 0 && (
           <div className={highlights.length ? "home-span-7" : "home-span-12"}>
             <TitleRace
-              key={scopeKey}
+              key={`${scopeKey}:${f.season}`}
               tables={tables}
               competitions={competitions}
               initial={initialTable}
@@ -348,25 +379,35 @@ export default function OverviewPage() {
             />
           </div>
         )}
-        {(leaders.clinical.length > 0 || leaders.wasteful.length > 0) && (
-          <div className="home-span-5">
-            <Finishing leaders={leaders} />
+        {hasFinishing && (
+          <div className={seasonSpan("home-span-5")}>
+            <Finishing
+              leaders={leaders}
+              scopeIds={scope.ids ? [...scope.ids] : null}
+            />
           </div>
         )}
-        {leaders.goals.length > 0 && (
-          <div className="home-span-4">
-            <SeasonScorers leaders={leaders} />
+        {hasScorers && (
+          <div className={seasonSpan("home-span-4")}>
+            <SeasonScorers
+              leaders={leaders}
+              scopeIds={scope.ids ? [...scope.ids] : null}
+            />
           </div>
         )}
         {(streak || defence) && (
-          <div className="home-span-3 home-stack">
+          <div className={`${seasonSpan("home-span-3")} home-stack`}>
             <WinStreak
               streak={streak}
               competitions={competitions}
               next={streakNext}
               now={now}
             />
-            <BestDefence defence={defence} competitions={competitions} />
+            <BestDefence
+              defence={defence}
+              contenders={defences.slice(1)}
+              competitions={competitions}
+            />
           </div>
         )}
         {!(raceOpen && ranking?.length >= 3) && (

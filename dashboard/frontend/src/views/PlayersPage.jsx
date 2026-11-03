@@ -13,6 +13,10 @@ import PerformanceContext from "../components/PerformanceContext.jsx";
 import { ResearchComparisonTray } from "../components/ResearchUI.jsx";
 import { aggregateSeasonPlayers } from "../services/season-player.js";
 import {
+  PLAYER_RANKINGS,
+  rankSeasonPlayers,
+} from "../services/player-leaderboard.js";
+import {
   filterPlayerAverages,
   playerAverage,
   playerDirectoryScope,
@@ -32,9 +36,18 @@ export default function PlayersPage() {
     params = useSearchParams();
   const profileView = params.get("playerView") || "overview";
   const f = useFootball(),
-    [sort, setSort] = useState({ key: "rating", direction: "desc" }),
+    [manualSort, setManualSort] = useState({
+      key: "rating",
+      direction: "desc",
+    }),
     [page, setPage] = useState(1);
   const filters = useDeferredValue(f.filters);
+  const ranking = f.filters.ranking;
+  const sort = PLAYER_RANKINGS[ranking]?.sort || manualSort;
+  const setSort = (next) => {
+    setManualSort(next);
+    if (ranking) f.setFilters((current) => ({ ...current, ranking: "" }));
+  };
   const mode = f.filters.basis;
   const setMode = (basis) => f.setFilters((v) => ({ ...v, basis }));
   const id = params.get("id");
@@ -56,6 +69,7 @@ export default function PlayersPage() {
       filters.advanced.result,
       filters.advanced.from,
       filters.advanced.to,
+      filters.leagues,
     ],
   );
   const profiles = useMemo(
@@ -63,7 +77,24 @@ export default function PlayersPage() {
     [contextRows],
   );
   const averages = useMemo(
-    () => profiles.map((value) => playerAverage(value, mode)),
+    () =>
+      profiles.map((profile) => {
+        const value = playerAverage(profile, mode);
+        return {
+          ...value,
+          finishingDelta:
+            Number.isFinite(value.goals) && Number.isFinite(value.xg)
+              ? value.goals - value.xg
+              : null,
+          totals: {
+            goals: profile.stats.goals?.count ? profile.stats.goals.sum : null,
+            assists: profile.stats.assists?.count
+              ? profile.stats.assists.sum
+              : null,
+            xg: profile.stats.xg?.count ? profile.stats.xg.sum : null,
+          },
+        };
+      }),
     [profiles, mode],
   );
   const eligible = useMemo(
@@ -72,8 +103,16 @@ export default function PlayersPage() {
   );
   const directoryRows = useMemo(
     () =>
-      sortPlayerAverages(searchPlayerAverages(eligible, filters.query), sort),
-    [eligible, filters.query, sort],
+      ranking
+        ? rankSeasonPlayers(
+            searchPlayerAverages(eligible, filters.query),
+            ranking,
+          )
+        : sortPlayerAverages(
+            searchPlayerAverages(eligible, filters.query),
+            sort,
+          ),
+    [eligible, filters.query, sort, ranking],
   );
   const scopeRows = useMemo(() => {
     if (!id) return [];
@@ -136,6 +175,7 @@ export default function PlayersPage() {
               value={mode}
               onChange={setMode}
               items={[
+                ["total", "Total"],
                 ["perMatch", "Par match"],
                 ["per90", "Par 90 minutes"],
               ]}
@@ -254,6 +294,14 @@ export default function PlayersPage() {
           players={averages}
           sort={sort}
           onSort={setSort}
+          ranking={ranking}
+          onRanking={(value) =>
+            f.setFilters((current) => ({
+              ...current,
+              ranking: value,
+              basis: value ? "total" : current.basis,
+            }))
+          }
           mode={mode}
           onMode={setMode}
         />

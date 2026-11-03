@@ -2,6 +2,7 @@ import { parisDay, shiftDay, validDay } from "./fixtures.js";
 import { FEATURED_CLUB_IDS } from "./home.js";
 import { knockoutStage } from "./knockout-bracket.js";
 import { SIMPLE_LEAGUES } from "./competition-standings.js";
+import { rankSeasonPlayers } from "./player-leaderboard.js";
 
 export const CHAMPIONS_LEAGUE_ID = "l_0bfbkO";
 export const EUROPA_LEAGUE_ID = "l_38d9HA";
@@ -425,19 +426,26 @@ export function bestWinStreak(progress) {
 
 /** The meanest defence of the followed leagues, after at least five games. */
 export function bestDefence(progress) {
-  let best = null;
+  return bestDefences(progress, 1)[0] || null;
+}
+
+export function bestDefences(progress, limit = 3) {
+  const rows = [];
   for (const table of progress.values())
     for (const row of table.rows) {
       if (row.played < 5) continue;
       const perGame = row.goalsAgainst / row.played;
-      if (
-        !best ||
-        perGame < best.perGame ||
-        (perGame === best.perGame && row.cleanSheets > best.cleanSheets)
-      )
-        best = { ...row, perGame };
+      rows.push({ ...row, perGame });
     }
-  return best;
+  const seen = new Set();
+  return rows
+    .sort((a, b) => a.perGame - b.perGame || b.cleanSheets - a.cleanSheets)
+    .filter((row) => {
+      if (seen.has(row.id)) return false;
+      seen.add(row.id);
+      return true;
+    })
+    .slice(0, limit);
 }
 
 /** Best rated performance per player in the window, 60 minutes or more. */
@@ -540,26 +548,10 @@ export function seasonLeaders(totals) {
   const maxMinutes = Math.max(0, ...totals.map((p) => p.minutes));
   const ratedMin = Math.max(450, Math.round(maxMinutes * 0.4));
   return {
-    goals: top(
-      totals.filter((p) => p.goals > 0),
-      (a, b) => b.goals - a.goals || b.xg - a.xg,
-      8,
-    ),
-    assists: top(
-      totals.filter((p) => p.assists > 0),
-      (a, b) => b.assists - a.assists || b.xa - a.xa,
-      8,
-    ),
-    clinical: top(
-      totals.filter((p) => p.goals >= 4),
-      (a, b) => b.goals - b.xg - (a.goals - a.xg),
-      6,
-    ),
-    wasteful: top(
-      totals.filter((p) => p.xg >= 3),
-      (a, b) => a.goals - a.xg - (b.goals - b.xg),
-      6,
-    ),
+    goals: rankSeasonPlayers(totals, "goals").slice(0, 10),
+    assists: rankSeasonPlayers(totals, "assists").slice(0, 10),
+    clinical: rankSeasonPlayers(totals, "clinical").slice(0, 8),
+    wasteful: rankSeasonPlayers(totals, "wasteful").slice(0, 8),
     rating: top(
       totals.filter((p) => p.rating != null && p.minutes >= ratedMin),
       (a, b) => b.rating - a.rating,
@@ -597,13 +589,54 @@ export function weekTotals(results) {
   };
 }
 
-/** Upcoming fixtures of the next week in the selection, most important first. */
+/** Saved clubs plus the latest observed club of every saved player. */
+export function personalClubIds(lists, appearances, season) {
+  const clubs = new Set(),
+    players = new Set(),
+    latest = new Map();
+  for (const list of lists || [])
+    for (const entry of list.entries || []) {
+      if (entry.kind === "clubs") clubs.add(entry.id);
+      if (entry.kind === "players") players.add(entry.id);
+    }
+  for (const row of appearances || []) {
+    if (
+      !players.has(row.playerId) ||
+      !row.teamId ||
+      !row.date ||
+      !(row.minutes > 0) ||
+      !inSeason(row, season) ||
+      (INTERNATIONAL.has(row.country) && !UEFA_IDS.includes(row.leagueId))
+    )
+      continue;
+    const previous = latest.get(row.playerId);
+    if (
+      !previous ||
+      row.date > previous.date ||
+      (row.date === previous.date && row.id > previous.id)
+    )
+      latest.set(row.playerId, row);
+  }
+  for (const row of latest.values()) clubs.add(row.teamId);
+  return clubs;
+}
+
+/** Within a day, personal European games precede personal domestic games. */
+export const upcomingDayOrder = (a, b) =>
+  a.day.localeCompare(b.day) ||
+  b.personal - a.personal ||
+  b.europePriority - a.europePriority ||
+  a.time - b.time ||
+  a.fixture.id.localeCompare(b.fixture.id);
+
+/** Upcoming fixtures in scope: personal clubs first, then editorial choices. */
 export function upcomingHighlights(
   fixtures,
   now,
   leagueIds,
   ranks = new Map(),
   days = 7,
+  clubIds = new Set(),
 ) {
   const limit = now + days * 864e5,
     seen = new Set(),
@@ -626,10 +659,24 @@ export function upcomingHighlights(
     )
       continue;
     seen.add(f.id);
-    list.push({ fixture: f, time, weight: matchWeight(f, ranks) });
+    const personal = Number(
+      clubIds.has(f.home_team.id) || clubIds.has(f.away_team.id),
+    );
+    const european = UEFA_IDS.indexOf(leagueOf(f));
+    list.push({
+      fixture: f,
+      time,
+      day: parisDay(time),
+      personal,
+      europePriority:
+        personal && european >= 0 ? UEFA_IDS.length - european : 0,
+      weight: matchWeight(f, ranks),
+    });
   }
   return list.sort(
     (a, b) =>
+      b.personal - a.personal ||
+      (a.personal ? upcomingDayOrder(a, b) : 0) ||
       b.weight - a.weight ||
       a.time - b.time ||
       a.fixture.id.localeCompare(b.fixture.id),

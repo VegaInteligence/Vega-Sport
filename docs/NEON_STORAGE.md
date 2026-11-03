@@ -30,6 +30,8 @@ MLS (`l_0eg6C9`) uses calendar-year seasons such as `2026`. The dashboard groups
 
 ## Verification
 
+To rebuild published seasons from existing responses without provider collection, use the manual **Rematerialize Dashboard** workflow. First-run and resume instructions are in [REMATERIALIZE.md](REMATERIALIZE.md).
+
 With read-only production variables configured, run:
 
 ```sh

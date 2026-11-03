@@ -9,9 +9,11 @@ import CompetitionScope from "./CompetitionScope.jsx";
 import { AdvancedPanel, AdvancedToggle } from "./AdvancedFilters.jsx";
 import { advancedChips, countAdvanced } from "../services/advanced-filters.js";
 import SiteHeader from "./SiteHeader.jsx";
-import SiteFooter from "./SiteFooter.jsx";
 import PlayerSearchResults from "./PlayerSearchResults.jsx";
 import HomePreferences from "./HomePreferences.jsx";
+import SeasonFilter from "./SeasonFilter.jsx";
+import CompetitionOptions from "./CompetitionOptions.jsx";
+import { PLAYER_RANKINGS } from "../services/player-leaderboard.js";
 import {
   competitionLabel,
   orderedCompetitions,
@@ -98,7 +100,11 @@ export function Filters({ kind = "performances" }) {
     f.filters.league !== "all" ||
     (home &&
       (f.preferences.favoriteLeagueIds.length > 0 || f.focus === "europe")) ||
-    (players && (f.filters.minutes !== 1 || advancedCount > 0)) ||
+    (players &&
+      (f.filters.minutes !== 1 ||
+        advancedCount > 0 ||
+        f.filters.ranking ||
+        f.filters.leagues?.length)) ||
     (!fixtures && f.filters.match !== "all");
   const competitions = useMemo(
     () => orderedCompetitions(f.competitions),
@@ -145,41 +151,19 @@ export function Filters({ kind = "performances" }) {
                   f.setFilters((v) => ({
                     ...v,
                     league: e.target.value,
+                    leagues: [],
                     match: "all",
                   }))
                 }
               >
                 <option value="all">Toutes les compétitions</option>
-                {competitions.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {competitionLabel(c)}
-                  </option>
-                ))}
+                <CompetitionOptions competitions={competitions} />
               </select>
               <Icon name="chevron" className="select-chevron" />
             </div>
           </div>
         )}
-        {!home && (
-          <div className="filter-field filter-season">
-            <label htmlFor="season-filter">Saison</label>
-            <div className="filter-input-wrap">
-              <Icon name="calendar" />
-              <select
-                id="season-filter"
-                value={f.season}
-                onChange={(e) => f.changeSeason(e.target.value)}
-              >
-                {f.manifest.seasons.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.id}
-                  </option>
-                ))}
-              </select>
-              <Icon name="chevron" className="select-chevron" />
-            </div>
-          </div>
-        )}
+        {!home && <SeasonFilter f={f} />}
         {players && (
           <div className="filter-field">
             <label htmlFor="minutes-filter">Temps de jeu moyen</label>
@@ -223,6 +207,26 @@ export function Filters({ kind = "performances" }) {
       {active && !home && (
         <div className="filter-panel-footer">
           <div className="filter-applied">
+            {players && f.filters.ranking && (
+              <button
+                className="filter-chip"
+                aria-label={`Retirer le classement ${PLAYER_RANKINGS[f.filters.ranking].label}`}
+                onClick={() => f.setFilters((v) => ({ ...v, ranking: "" }))}
+              >
+                {PLAYER_RANKINGS[f.filters.ranking].label}
+                <Icon name="close" />
+              </button>
+            )}
+            {players && f.filters.leagues?.length > 1 && (
+              <button
+                className="filter-chip"
+                aria-label="Retirer les compétitions de l’accueil"
+                onClick={() => f.setFilters((v) => ({ ...v, leagues: [] }))}
+              >
+                {f.filters.leagues.length} compétitions
+                <Icon name="close" />
+              </button>
+            )}
             {selected && !home && (
               <button
                 className="filter-chip"
@@ -313,7 +317,7 @@ export default function Layout({
         Aller au contenu
       </Link>
       <div className="app-shell">
-        <SiteHeader path={path} href={f.href} />
+        <SiteHeader path={path} href={f.navigationHref || f.href} />
         <main id="main" className={`workspace ${className}`} tabIndex="-1">
           {!hideHeading && (
             <div className="page-heading">
@@ -353,11 +357,6 @@ export default function Layout({
           )}
           {children}
         </main>
-        <SiteFooter
-          href={f.href}
-          path={path}
-          updatedAt={f.data?.meta?.retrievedAt}
-        />
       </div>
       <PlayerDialog />
       {performanceComparison &&

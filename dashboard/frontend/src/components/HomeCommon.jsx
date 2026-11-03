@@ -72,7 +72,7 @@ export function fixtureHref(f, fixture) {
 /** Tooltip placed in percent of its positioned parent, flipped near the edges. */
 export function ChartTip({ x, y, children }) {
   if (x == null) return null;
-  const side = x > 62 ? " is-left" : x < 18 ? " is-right" : "";
+  const side = x > 65 ? " is-left" : x < 35 ? " is-right" : "";
   return (
     <span
       className={`home-tip${side}${y < 30 ? " is-below" : ""}`}

@@ -9,6 +9,7 @@ html[data-theme="dark"] {
   --home-c3: #3ccf8e;
   --home-c4: #e58cf2;
   --home-c5: #ff9f6b;
+  --home-c6: #6ed4d4;
 }
 html[data-theme="light"] {
   --home-win: #14935b;
@@ -19,6 +20,7 @@ html[data-theme="light"] {
   --home-c3: #14935b;
   --home-c4: #a43fb8;
   --home-c5: #c45a1c;
+  --home-c6: #0c8181;
 }
 .home-kicker {
   display: inline-flex;
@@ -236,6 +238,9 @@ html[data-theme="light"] {
 .home-span-5 {
   grid-column: span 5;
 }
+.home-span-6 {
+  grid-column: span 6;
+}
 .home-span-7 {
   grid-column: span 7;
 }
@@ -272,6 +277,7 @@ html[data-theme="light"] {
 .home-motw {
   display: flex;
   flex-direction: column;
+  container-type: inline-size;
   background:
     radial-gradient(
       90% 120% at 0% 0%,
@@ -290,14 +296,14 @@ html[data-theme="light"] {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 22px 0;
+  padding: 14px 18px 0;
 }
 .home-score {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 18px;
-  padding: 14px 22px 4px;
+  padding: 10px 18px 2px;
 }
 .home-match-side {
   display: flex;
@@ -335,7 +341,7 @@ html[data-theme="light"] {
   align-items: center;
   gap: 14px;
   color: var(--ink-strong);
-  font-size: 68px;
+  font-size: 60px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.04em;
@@ -351,7 +357,7 @@ html[data-theme="light"] {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 18px;
-  padding: 0 22px 12px;
+  padding: 0 18px 10px;
   color: var(--muted);
   font-size: var(--text-sm);
 }
@@ -368,26 +374,33 @@ html[data-theme="light"] {
   text-transform: uppercase;
 }
 .home-verdict {
-  margin: 0 22px;
-  padding: 10px 12px;
+  margin: 0 18px;
+  padding: 8px 10px;
   border-radius: 10px;
   background: var(--surface-subtle);
 }
 .home-verdict b {
   color: var(--ink-strong);
 }
-.home-motw-viz {
+.home-motw-content {
   display: grid;
-  grid-template-columns: 1.25fr 1fr;
-  gap: 14px;
-  padding: 14px 22px 0;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 18px;
+  padding: 12px 18px 16px;
 }
-.home-motw-viz figure {
+.home-motw-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.home-motw-content figure {
   margin: 0;
   min-width: 0;
 }
-.home-motw-viz figcaption {
+.home-motw-content figcaption {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 6px;
@@ -399,6 +412,7 @@ html[data-theme="light"] {
 }
 .home-legend {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   font-weight: 500;
   letter-spacing: 0;
@@ -475,17 +489,9 @@ html[data-theme="light"] {
   fill-opacity: 0.95;
   opacity: 1;
 }
-.home-motw-foot {
-  display: grid;
-  grid-template-columns: 1.25fr 1fr;
-  gap: 14px;
-  align-items: center;
-  margin-top: auto;
-  padding: 14px 22px 18px;
-}
 .home-stat-bars {
   display: grid;
-  gap: 7px;
+  gap: 5px;
 }
 .home-stat-bar {
   display: grid;
@@ -579,8 +585,8 @@ html[data-theme="light"] {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px;
+  gap: 10px;
+  padding: 16px;
   background:
     radial-gradient(
       120% 70% at 100% 0%,
@@ -617,7 +623,7 @@ html[data-theme="light"] {
   display: flex;
   align-items: flex-end;
   gap: 14px;
-  margin-top: 20px;
+  margin-top: 10px;
   padding: 0;
   border: 0;
   background: none;
@@ -767,15 +773,31 @@ html[data-theme="light"] {
   border-color: var(--accent);
   color: var(--ink-strong);
 }
+.home-race {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+}
 .home-race-body {
   display: grid;
+  flex: 1;
   grid-template-columns: minmax(0, 1fr) 232px;
   gap: 12px;
   padding: 14px 18px 16px;
 }
+.home-race-body > .home-viz {
+  min-width: 0;
+}
+@container (max-width: 620px) {
+  .home-race-body {
+    grid-template-columns: 1fr;
+  }
+}
 .home-race-legend {
   display: flex;
   flex-direction: column;
+  align-self: stretch;
+  justify-content: space-between;
   gap: 4px;
 }
 .home-race-row {
@@ -969,6 +991,52 @@ html[data-theme="light"] {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+.home-finishing .home-dumbbells {
+  flex: 1;
+  align-content: space-between;
+}
+.home-season-scorers .home-scorers-list {
+  flex: 1;
+  align-content: space-between;
+}
+.home-defence-main {
+  color: inherit;
+}
+.home-defence-rivals {
+  display: grid;
+  gap: 4px;
+  margin: auto 0 0;
+  padding: 0;
+  list-style: none;
+}
+.home-defence-rivals a {
+  display: grid;
+  grid-template-columns: 12px 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 4px;
+  border-top: 1px solid var(--border);
+  color: inherit;
+}
+.home-defence-rivals strong,
+.home-defence-rivals small {
+  display: block;
+}
+.home-defence-rivals strong {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-defence-rivals small,
+.home-defence-rank {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.home-defence-rate {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 .home-dumbbells button,
 .home-scorers-list button {
@@ -1437,12 +1505,13 @@ html[data-theme="light"] {
 @media (max-width: 1180px) {
   .home-span-4,
   .home-span-5,
+  .home-span-6,
   .home-span-7,
   .home-span-8 {
     grid-column: span 12;
   }
   .home-span-3 {
-    grid-column: span 6;
+    grid-column: span 12;
   }
   .home-stack {
     flex-direction: row;
@@ -1451,8 +1520,6 @@ html[data-theme="light"] {
   .home-stack > * {
     flex: 1 1 320px;
   }
-  .home-motw-viz,
-  .home-motw-foot,
   .home-bdo {
     grid-template-columns: 1fr;
   }
@@ -1499,8 +1566,7 @@ html[data-theme="light"] {
     width: auto;
   }
   .home-motw-top,
-  .home-motw-viz,
-  .home-motw-foot {
+  .home-motw-content {
     padding-right: 14px;
     padding-left: 14px;
   }
@@ -1534,7 +1600,7 @@ html[data-theme="light"] {
   }
 }
 .home-race-chart {
-  max-height: 300px;
+  max-height: none;
 }
 .home-number > span:last-child {
   min-width: 0;
@@ -1615,8 +1681,8 @@ html[data-theme="light"] {
   z-index: 5;
   display: grid;
   gap: 3px;
-  min-width: 150px;
-  max-width: 240px;
+  width: 250px;
+  max-width: calc(100vw - 32px);
   padding: 8px 10px;
   border: 1px solid var(--border-strong);
   border-radius: 9px;
@@ -1704,7 +1770,7 @@ html[data-theme="light"] {
   align-items: center;
 }
 .home-race-chart {
-  max-height: 300px;
+  max-height: none;
 }
 
 /* Player of the week, extra figures */
@@ -1803,7 +1869,7 @@ html[data-theme="light"] {
 }
 .home-stack > .home-streak,
 .home-stack > .home-defence {
-  flex: 1;
+  flex: 1 0 auto;
 }
 
 /* Ballon d'Or teaser link */
@@ -1840,9 +1906,6 @@ html[data-theme="light"] {
 .home-scorers-list button {
   grid-template-columns: 16px 28px minmax(0, 1fr) auto;
 }
-.home-tip {
-  min-width: 190px;
-}
 .home-tip-row b {
   white-space: nowrap;
 }
@@ -1874,8 +1937,14 @@ html[data-theme="light"] {
 }
 .home-toolbar {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
+  gap: 10px;
   margin-bottom: 10px;
+}
+.home-toolbar .filter-season {
+  flex: 0 0 140px;
 }
 .home-bdo-empty {
   display: inline-block;
@@ -1916,4 +1985,9 @@ html[data-theme="light"] {
 }
 .home-shot-path.is-estimated {
   opacity: 0.45;
+}
+@container (max-width: 680px) {
+  .home-motw-content {
+    grid-template-columns: 1fr;
+  }
 }

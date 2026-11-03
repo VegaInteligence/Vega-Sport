@@ -1,13 +1,17 @@
 "use client";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
 import BallonDorIcon from "./BallonDorIcon.jsx";
 import { Media } from "./UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
 import { kickoffFormatter } from "../services/fixtures.js";
-import { leagueOf, shortCompetition } from "../services/home-insights.js";
+import {
+  leagueOf,
+  shortCompetition,
+  upcomingDayOrder,
+} from "../services/home-insights.js";
 import {
   ChartTip,
   countdown,
@@ -25,15 +29,27 @@ const RACE_COLORS = [
   "var(--home-c3)",
   "var(--home-c4)",
   "var(--home-c5)",
+  "var(--home-c6)",
 ];
-const RACE_SIZE = 5;
-const W = 520,
-  H = 290,
-  P = { l: 26, r: 30, t: 12, b: 22 };
+const RACE_SIZE = 6;
+const P = { l: 26, r: 30, t: 12, b: 22 };
 
 /** Points after every matchday; hovering shows the table at that matchday. */
 function RaceChart({ table, focus, onFocus }) {
   const [day, setDay] = useState(null);
+  const container = useRef(null);
+  const [width, setWidth] = useState(520);
+  useEffect(() => {
+    const node = container.current;
+    if (!node) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setWidth(Math.max(280, Math.round(entry.contentRect.width)));
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  const W = width,
+    H = Math.round(Math.max(210, Math.min(360, width * 0.56)));
   const teams = table.rows.slice(0, RACE_SIZE);
   const n = Math.max(1, ...teams.map((t) => t.cumulative.length)),
     top = Math.max(3, ...teams.map((t) => t.points)) + 2;
@@ -60,7 +76,7 @@ function RaceChart({ table, focus, onFocus }) {
       .map((t, i) => ({ t, i, points: points(t, day) }))
       .sort((a, b) => b.points - a.points);
   return (
-    <div className="home-viz">
+    <div className="home-viz" ref={container}>
       <svg
         className="home-race-chart"
         viewBox={`0 0 ${W} ${H}`}
@@ -163,7 +179,7 @@ function RaceChart({ table, focus, onFocus }) {
   );
 }
 
-/** Points after every game for the top five of each followed league. */
+/** Points after every game for the top six of each followed league. */
 export function TitleRace({ tables, competitions, initial }) {
   const f = useFootball(),
     [league, setLeague] = useState(initial),
@@ -195,7 +211,10 @@ export function TitleRace({ tables, competitions, initial }) {
                 key={t.leagueId}
                 type="button"
                 aria-pressed={t.leagueId === table.leagueId}
-                onClick={() => setLeague(t.leagueId)}
+                onClick={() => {
+                  setLeague(t.leagueId);
+                  setFocus(null);
+                }}
               >
                 <Media
                   name={c?.name || ""}
@@ -209,7 +228,12 @@ export function TitleRace({ tables, competitions, initial }) {
         </div>
       )}
       <div className="home-race-body">
-        <RaceChart table={table} focus={focus} onFocus={setFocus} />
+        <RaceChart
+          key={table.leagueId}
+          table={table}
+          focus={focus}
+          onFocus={setFocus}
+        />
         <div className="home-race-legend">
           {table.rows.slice(0, RACE_SIZE).map((t, i) => (
             <Link
@@ -249,7 +273,7 @@ export function NextMatches({ highlights, ranks, competitions, now }) {
   const f = useFootball();
   if (!highlights.length) return null;
   const [main] = highlights,
-    rest = highlights.slice(1, 5).sort((a, b) => a.time - b.time);
+    rest = highlights.slice(1, 5).sort(upcomingDayOrder);
   const competition = (fixture) =>
     competitions.get(leagueOf(fixture)) || { name: fixture.league?.name };
   const side = (team) => {
@@ -409,32 +433,38 @@ export function WinStreak({ streak, competitions, next, now }) {
 }
 
 /** The meanest defence of the followed leagues. */
-export function BestDefence({ defence, competitions }) {
+export function BestDefence({ defence, contenders = [], competitions }) {
   const f = useFootball();
   if (!defence) return null;
   const c = competitions.get(defence.leagueId);
   return (
-    <Link
-      className="card home-trend home-defence"
-      href={f.href("/clubs/", { id: defence.id })}
-      prefetch={false}
-    >
+    <article className="card home-trend home-defence" aria-label="Le mur">
       <Kicker>Le mur</Kicker>
-      <div className="home-streak-head">
-        <b>{number(defence.perGame, 2)}</b>
-        <span>
-          <strong>but encaissé par match</strong>
-          <span className="home-meta">
-            <Media
-              name={defence.name}
-              url={defence.imageUrl}
-              className="crest home-crest-xs"
-            />
-            {defence.name}
+      <Link
+        className="home-defence-main"
+        href={f.href("/clubs/", { id: defence.id })}
+        prefetch={false}
+      >
+        <div className="home-streak-head">
+          <b>{number(defence.perGame, 2)}</b>
+          <span>
+            <strong>but encaissé par match</strong>
+            <span className="home-meta">
+              <Media
+                name={defence.name}
+                url={defence.imageUrl}
+                className="crest home-crest-xs"
+              />
+              {defence.name}
+            </span>
           </span>
-        </span>
-      </div>
+        </div>
+      </Link>
       <dl className="home-defence-stats">
+        <div>
+          <dt>Matchs joués</dt>
+          <dd>{number(defence.played)}</dd>
+        </div>
         <div>
           <dt>Buts encaissés</dt>
           <dd>{number(defence.goalsAgainst)}</dd>
@@ -444,6 +474,10 @@ export function BestDefence({ defence, competitions }) {
           <dd>{number(defence.cleanSheets)}</dd>
         </div>
         <div>
+          <dt>Sans encaisser</dt>
+          <dd>{number((100 * defence.cleanSheets) / defence.played)} %</dd>
+        </div>
+        <div>
           <dt>Classement</dt>
           <dd>
             {ordinal(defence.rank)}
@@ -451,7 +485,33 @@ export function BestDefence({ defence, competitions }) {
           </dd>
         </div>
       </dl>
-    </Link>
+      {contenders.length > 0 && (
+        <ol className="home-defence-rivals" start={2}>
+          {contenders.map((team, index) => (
+            <li key={team.id}>
+              <Link href={f.href("/clubs/", { id: team.id })} prefetch={false}>
+                <span className="home-defence-rank">{index + 2}</span>
+                <Media
+                  name={team.name}
+                  url={team.imageUrl}
+                  className="crest home-crest-md"
+                />
+                <span>
+                  <strong>{team.name}</strong>
+                  <small>
+                    {team.goalsAgainst} buts · {team.played} matchs
+                  </small>
+                </span>
+                <span className="home-defence-rate">
+                  <b>{number(team.perGame, 2)}</b>
+                  <small>but/match</small>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      )}
+    </article>
   );
 }
 

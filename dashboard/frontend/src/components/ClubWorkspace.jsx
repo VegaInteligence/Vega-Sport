@@ -1,5 +1,6 @@
 "use client";
 import React, { useDeferredValue, useMemo, useState } from "react";
+import CompetitionOptions from "./CompetitionOptions.jsx";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -1064,11 +1065,13 @@ export default function ClubWorkspace({ club, history }) {
                 <option value="all">
                   Toutes les compétitions ({total.matches})
                 </option>
-                {competitions.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.finished})
-                  </option>
-                ))}
+                <CompetitionOptions
+                  competitions={competitions.map((c) => ({
+                    ...f.allCatalog.find((item) => item.id === c.id),
+                    ...c,
+                  }))}
+                  label={(c) => `${c.name} (${c.finished})`}
+                />
               </select>
               <Icon name="chevron" className="select-chevron" />
             </span>

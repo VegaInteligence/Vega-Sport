@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
+import CompetitionOptions from "../components/CompetitionOptions.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import {
   Card,
@@ -52,7 +53,6 @@ import {
   orderedCountryCodes,
   competitionGroups,
   orderedCompetitions,
-  competitionLabel,
   competitionCountry,
   competitionCountryLabel,
   mergeCompetitionSeasons,
@@ -78,11 +78,10 @@ export function SupplementalPanel({
         Compétition
         <select value={id} onChange={(e) => onId(e.target.value)}>
           <option value="">Choisir</option>
-          {orderedCompetitions(value.competitions).map((c) => (
-            <option key={c.folder} value={c.folder}>
-              {competitionLabel({ ...c, name: c.name || c.folder })}
-            </option>
-          ))}
+          <CompetitionOptions
+            competitions={value.competitions}
+            valueKey="folder"
+          />
         </select>
       </label>
       {selected && (

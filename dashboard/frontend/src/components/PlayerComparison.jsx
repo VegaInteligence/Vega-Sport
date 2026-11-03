@@ -28,6 +28,7 @@ import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
 import { AsyncState, Empty, Modal, Segments } from "./UI.jsx";
 import { MetricInfo, MetricPicker, ReportButton } from "./ResearchUI.jsx";
 import { ResearchRadar } from "./ResearchCharts.jsx";
+import CompetitionOptions from "./CompetitionOptions.jsx";
 
 export async function comparisonSamples(f, entries) {
   const routing = await playerRoutes(f.manifest);
@@ -37,6 +38,7 @@ export async function comparisonSamples(f, entries) {
       const selectedIds = available.filter(
         (id) =>
           (entry.scope.league === "all" || entry.scope.league === id) &&
+          (!entry.scope.leagues?.length || entry.scope.leagues.includes(id)) &&
           (entry.scope.focus !== "europe" || EUROPE_FOCUS_IDS.has(id)),
       );
       const loaded = new Set(f.data.competitions.map((c) => c.id));
@@ -299,23 +301,30 @@ export default function PlayerComparison({ onClose }) {
                     value={entry.scope.league}
                     onChange={(e) =>
                       change(i, {
-                        scope: { ...entry.scope, league: e.target.value },
+                        scope: {
+                          ...entry.scope,
+                          league: e.target.value,
+                          leagues: [],
+                        },
                       })
                     }
                   >
                     <option value="all">Toutes ses compétitions</option>
-                    {(resource.value?.[i]?.available || [entry.scope.league])
-                      .filter((id) => id !== "all")
-                      .map((id) => (
-                        <option key={id} value={id}>
-                          {f.manifest.seasons
+                    <CompetitionOptions
+                      competitions={(
+                        resource.value?.[i]?.available || [entry.scope.league]
+                      )
+                        .filter((id) => id !== "all")
+                        .map((id) => ({
+                          id,
+                          name: "Compétition archivée",
+                          ...f.manifest.seasons
                             .flatMap((s) =>
                               s.chunks.flatMap((c) => c.competitions || []),
                             )
-                            .find((c) => c.id === id)?.name ||
-                            "Compétition archivée"}
-                        </option>
-                      ))}
+                            .find((c) => c.id === id),
+                        }))}
+                    />
                   </select>
                 </label>
                 <button

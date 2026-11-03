@@ -34,13 +34,17 @@ export function playerDirectoryScope(rows, season, filters, matches) {
     rating: null,
     conditions: [],
   };
-  return filterAppearances(rows, {
+  const sample = filterAppearances(rows, {
     ...filters,
     season,
     query: "",
     minutes: 0,
     test: advancedTest(context, matches),
   });
+  const leagues = new Set(filters.leagues || []);
+  return leagues.size
+    ? sample.filter((row) => leagues.has(row.leagueId))
+    : sample;
 }
 
 export function playerAverage(profile, basis) {
@@ -131,10 +135,12 @@ export function sortPlayerAverages(rows, { key, direction }) {
 export function directoryCSV(rows, basis, columns) {
   const metrics = [
     ...new Set([
-      ...(columns ? columns.filter(key => SEASON_METRICS[key]) : [
-        ...DIRECTORY_FIELDS.slice(3).map(([key]) => key),
-        ...CONDITION_METRICS.map(([key]) => key),
-      ]),
+      ...(columns
+        ? columns.filter((key) => SEASON_METRICS[key])
+        : [
+            ...DIRECTORY_FIELDS.slice(3).map(([key]) => key),
+            ...CONDITION_METRICS.map(([key]) => key),
+          ]),
     ]),
   ];
   const fields = [

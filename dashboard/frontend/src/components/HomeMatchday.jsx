@@ -512,101 +512,105 @@ export function MatchOfTheWeek({ match, ranks, competition, bestPlayer }) {
         <span>{scorers("away")}</span>
       </div>
       {text && <p className="home-verdict">{text}</p>}
-      {hasShots && (
-        <div className="home-motw-viz">
-          <figure>
-            <figcaption>
-              <span>xG cumulés</span>
-              <span className="home-legend">
-                <span>
-                  <i className="is-home" />
-                  {h.name}
+      <div className="home-motw-content">
+        <div className="home-motw-column">
+          {hasShots && (
+            <figure>
+              <figcaption>
+                <span>xG cumulés</span>
+                <span className="home-legend">
+                  <span>
+                    <i className="is-home" />
+                    {h.name}
+                  </span>
+                  <span>
+                    <i className="is-away" />
+                    {a.name}
+                  </span>
                 </span>
-                <span>
-                  <i className="is-away" />
-                  {a.name}
-                </span>
-              </span>
-            </figcaption>
-            <XgRace
-              match={match}
-              timeline={timeline}
-              active={active}
-              onActive={setActive}
-            />
-          </figure>
-          <figure>
-            <figcaption>
-              <span>Carte des tirs</span>
-              <span className="home-legend">
-                <span>● but</span>
-                <span>○ tir · taille = xG</span>
-              </span>
-            </figcaption>
-            <ShotMap match={match} active={active} onActive={setActive} />
-          </figure>
-        </div>
-      )}
-      <div className="home-motw-foot">
-        <div className="home-stat-bars">
-          <StatBar
-            label="Possession"
-            home={h.possession}
-            away={a.possession}
-            format={(v) => `${number(v)} %`}
-          />
-          <StatBar label="Tirs" home={h.shots} away={a.shots} />
-          <StatBar
-            label="Cadrés"
-            home={h.shotsOnTarget}
-            away={a.shotsOnTarget}
-          />
-          <StatBar
-            label="xG"
-            home={h.xg}
-            away={a.xg}
-            format={(v) => number(v, 2)}
-          />
-          {[
-            ["big_chance", "Grosses occasions"],
-            ["duel_won", "Duels gagnés"],
-            ["corners", "Corners"],
-            ["keeper_saves", "Arrêts"],
-          ].map(([key, label]) => {
-            const stat = match.stats?.find((s) => s.key === key);
-            return stat ? (
-              <StatBar
-                key={key}
-                label={label}
-                home={stat.home}
-                away={stat.away}
+              </figcaption>
+              <XgRace
+                match={match}
+                timeline={timeline}
+                active={active}
+                onActive={setActive}
               />
-            ) : null;
-          })}
-        </div>
-        <div className="home-motw-actions">
-          {bestPlayer && (
-            <button
-              type="button"
-              className="home-motm"
-              onClick={() => f.setPlayer(bestPlayer.id)}
-            >
-              <Media
-                name={bestPlayer.name}
-                url={bestPlayer.imageUrl}
-                className="player-avatar"
-              />
-              <span>
-                <small>Meilleure note du match</small>
-                <strong>{bestPlayer.name}</strong>
-                <span>{bestPlayer.team}</span>
-              </span>
-              <b>{number(bestPlayer.rating, 2)}</b>
-            </button>
+            </figure>
           )}
-          <Link className="button button-primary" href={matchHref(f, match)}>
-            Analyse complète du match <Icon name="arrow" />
-          </Link>
+          <div className="home-stat-bars">
+            <StatBar
+              label="Possession"
+              home={h.possession}
+              away={a.possession}
+              format={(v) => `${number(v)} %`}
+            />
+            <StatBar label="Tirs" home={h.shots} away={a.shots} />
+            <StatBar
+              label="Cadrés"
+              home={h.shotsOnTarget}
+              away={a.shotsOnTarget}
+            />
+            <StatBar
+              label="xG"
+              home={h.xg}
+              away={a.xg}
+              format={(v) => number(v, 2)}
+            />
+            {[
+              ["big_chance", "Grosses occasions"],
+              ["duel_won", "Duels gagnés"],
+              ["corners", "Corners"],
+              ["keeper_saves", "Arrêts"],
+            ].map(([key, label]) => {
+              const stat = match.stats?.find((s) => s.key === key);
+              return stat ? (
+                <StatBar
+                  key={key}
+                  label={label}
+                  home={stat.home}
+                  away={stat.away}
+                />
+              ) : null;
+            })}
+          </div>
+        </div>
+        <div className="home-motw-column">
+          {hasShots && (
+            <figure>
+              <figcaption>
+                <span>Carte des tirs</span>
+                <span className="home-legend">
+                  <span>● but</span>
+                  <span>○ tir · taille = xG</span>
+                </span>
+              </figcaption>
+              <ShotMap match={match} active={active} onActive={setActive} />
+            </figure>
+          )}
+          <div className="home-motw-actions">
+            {bestPlayer && (
+              <button
+                type="button"
+                className="home-motm"
+                onClick={() => f.setPlayer(bestPlayer.id)}
+              >
+                <Media
+                  name={bestPlayer.name}
+                  url={bestPlayer.imageUrl}
+                  className="player-avatar"
+                />
+                <span>
+                  <small>Meilleure note du match</small>
+                  <strong>{bestPlayer.name}</strong>
+                  <span>{bestPlayer.team}</span>
+                </span>
+                <b>{number(bestPlayer.rating, 2)}</b>
+              </button>
+            )}
+            <Link className="button button-primary" href={matchHref(f, match)}>
+              Analyse complète du match <Icon name="arrow" />
+            </Link>
+          </div>
         </div>
       </div>
     </article>

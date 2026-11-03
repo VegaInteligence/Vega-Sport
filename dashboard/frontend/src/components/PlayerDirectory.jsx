@@ -7,18 +7,38 @@ import { SCOUT_METRICS } from "../services/scouting.js";
 import { number } from "../services/format.js";
 import { Card, Empty, Media, Pager, Rating, Segments } from "./UI.jsx";
 import PerformanceContext from "./PerformanceContext.jsx";
+import { PLAYER_RANKINGS } from "../services/player-leaderboard.js";
 import {
   BookmarkButton,
   MetricInfo,
   MetricPicker,
   SavedViews,
 } from "./ResearchUI.jsx";
-const labels = { matches: "Matchs", minutes: "Min. moy.", rating: "Note" };
-export default function PlayerDirectory({ rows, sort, onSort, mode, onMode }) {
+const labels = {
+  matches: "Matchs",
+  minutes: "Min. moy.",
+  rating: "Note",
+  finishingDelta: "Écart buts − xG",
+};
+export default function PlayerDirectory({
+  rows,
+  sort,
+  onSort,
+  mode,
+  onMode,
+  ranking = "",
+  onRanking,
+}) {
   const f = useFootball(),
     r = useResearch();
   const [page, setPage] = useState({ rows: null, value: 1 });
-  const fields = r.data.settings.columns.map((key) => [
+  const columns = [
+    ...new Set([
+      ...(PLAYER_RANKINGS[ranking]?.columns || []),
+      ...r.data.settings.columns,
+    ]),
+  ];
+  const fields = columns.map((key) => [
     key,
     labels[key] || SCOUT_METRICS[key]?.label || key,
   ]);
@@ -40,11 +60,29 @@ export default function PlayerDirectory({ rows, sort, onSort, mode, onMode }) {
       }
     >
       <div className="player-directory-toolbar">
+        {onRanking && (
+          <label className="player-ranking-field">
+            Classement
+            <select
+              id="player-ranking-filter"
+              value={ranking}
+              onChange={(event) => onRanking(event.target.value)}
+            >
+              <option value="">Tous les joueurs</option>
+              {Object.entries(PLAYER_RANKINGS).map(([key, value]) => (
+                <option key={key} value={key}>
+                  {value.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <Segments
           label="Calcul des performances"
           value={mode}
           onChange={onMode}
           items={[
+            ["total", "Total"],
             ["perMatch", "Par match"],
             ["per90", "Par 90 minutes"],
           ]}
@@ -58,7 +96,11 @@ export default function PlayerDirectory({ rows, sort, onSort, mode, onMode }) {
           <table className="data-table player-directory-table">
             <caption className="sr-only">
               Un joueur par ligne, valeurs{" "}
-              {mode === "per90" ? "par 90 minutes" : "par match"}
+              {mode === "total"
+                ? "sur la saison"
+                : mode === "per90"
+                  ? "par 90 minutes"
+                  : "par match"}
             </caption>
             <thead>
               <tr>

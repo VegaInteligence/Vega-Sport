@@ -157,6 +157,7 @@ export default function PlayerExplorer({ rows, mode, onMode }) {
           value={mode}
           onChange={onMode}
           items={[
+            ["total", "Total"],
             ["perMatch", "Par match"],
             ["per90", "Par 90"],
           ]}

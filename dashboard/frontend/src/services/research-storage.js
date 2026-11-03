@@ -1,4 +1,5 @@
 import { SCOUT_METRICS, DEFAULT_INDEX, METRIC_PRESETS } from "./scouting.js";
+import { playerLeagueIds } from "./player-leaderboard.js";
 export const RESEARCH_KEY = "statarena.research.v1";
 const idPattern = /^(p|t|m)_[A-Za-z0-9]+$/;
 const kinds = { players: "p", clubs: "t", matches: "m" };
@@ -38,6 +39,9 @@ export const DEFAULT_SAMPLE = {
   to: "",
 };
 export function cleanSample(value = {}) {
+  const leagues = playerLeagueIds(
+    Array.isArray(value.leagues) ? value.leagues.join(",") : value.leagues,
+  ).sort();
   return {
     league: /^l_[A-Za-z0-9]+$/.test(value.league || "") ? value.league : "all",
     focus: value.focus === "europe" ? "europe" : "all",
@@ -48,6 +52,7 @@ export function cleanSample(value = {}) {
       : "all",
     from: /^\d{4}-\d{2}-\d{2}$/.test(value.from || "") ? value.from : "",
     to: /^\d{4}-\d{2}-\d{2}$/.test(value.to || "") ? value.to : "",
+    ...(leagues.length ? { leagues } : {}),
   };
 }
 export const comparisonKey = (entry) =>
@@ -66,6 +71,7 @@ export function playerSelection(profile, f, season = f.season) {
         ? cleanSample({
             ...f.filters.advanced,
             league: f.filters.league,
+            leagues: f.filters.leagues,
             focus: f.focus,
           })
         : DEFAULT_SAMPLE,

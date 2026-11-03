@@ -6,6 +6,7 @@ import { Media, Segments } from "./UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
 import { Kicker, lastName, matchHref, shortDay } from "./HomeCommon.jsx";
+import { playerLeaderboardHref } from "../services/player-leaderboard.js";
 
 const plural = (n, word) => `${number(n)} ${word}${n > 1 ? "s" : ""}`;
 const share = (a, b) =>
@@ -201,14 +202,17 @@ export function AlsoShone({ performances, matches }) {
 }
 
 /** Goals scored against expected goals: who finishes above or below their chances. */
-export function Finishing({ leaders }) {
+export function Finishing({ leaders, scopeIds }) {
   const f = useFootball(),
     [mode, setMode] = useState("clinical");
   const list = leaders[mode];
   if (!leaders.clinical.length && !leaders.wasteful.length) return null;
   const max = Math.max(1, ...list.map((p) => Math.max(p.goals, p.xg))) * 1.08;
   return (
-    <article className="card home-trend home-finishing">
+    <article
+      className="card home-trend home-finishing"
+      aria-label="Devant le but"
+    >
       <div className="home-trend-head">
         <Kicker>Devant le but</Kicker>
         <Segments
@@ -235,7 +239,7 @@ export function Finishing({ leaders }) {
             lo = (Math.min(p.goals, p.xg) / max) * 100,
             hi = (Math.max(p.goals, p.xg) / max) * 100;
           return (
-            <li key={p.playerId}>
+            <li key={p.playerId} data-player-id={p.playerId}>
               <button type="button" onClick={() => f.setPlayer(p.lastId)}>
                 <Media
                   name={p.name}
@@ -273,19 +277,28 @@ export function Finishing({ leaders }) {
           );
         })}
       </ol>
+      <Link
+        className="inline-link home-trend-more"
+        href={playerLeaderboardHref(f, mode, scopeIds)}
+      >
+        Tous les joueurs <Icon name="arrow" />
+      </Link>
     </article>
   );
 }
 
 /** Season scorers and assist providers, switched like the finishing card. */
-export function SeasonScorers({ leaders }) {
+export function SeasonScorers({ leaders, scopeIds }) {
   const f = useFootball(),
     [mode, setMode] = useState("goals");
   const list = leaders[mode] || [];
   if (!leaders.goals.length && !leaders.assists?.length) return null;
   const goals = mode === "goals";
   return (
-    <article className="card home-trend">
+    <article
+      className="card home-trend home-season-scorers"
+      aria-label={goals ? "Buteurs de la saison" : "Passeurs de la saison"}
+    >
       <div className="home-trend-head">
         <Kicker>
           {goals ? "Buteurs de la saison" : "Passeurs de la saison"}
@@ -302,7 +315,7 @@ export function SeasonScorers({ leaders }) {
       </div>
       <ol className="home-scorers-list">
         {list.map((p, i) => (
-          <li key={p.playerId}>
+          <li key={p.playerId} data-player-id={p.playerId}>
             <button type="button" onClick={() => f.setPlayer(p.lastId)}>
               <span className="home-scorer-rank">{i + 1}</span>
               <Media
@@ -323,7 +336,10 @@ export function SeasonScorers({ leaders }) {
           </li>
         ))}
       </ol>
-      <Link className="inline-link home-trend-more" href={f.href("/joueurs/")}>
+      <Link
+        className="inline-link home-trend-more"
+        href={playerLeaderboardHref(f, mode, scopeIds)}
+      >
         Tous les joueurs <Icon name="arrow" />
       </Link>
     </article>

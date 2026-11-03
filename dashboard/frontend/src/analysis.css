@@ -2258,6 +2258,22 @@ select optgroup {
   color: var(--muted);
   font-size: var(--text-sm);
 }
+.player-ranking-field {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.player-ranking-field select {
+  min-width: 170px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink-strong);
+  font: inherit;
+  font-size: var(--text-sm);
+}
 .player-directory-table .table-player {
   min-width: 240px;
   max-width: 320px;

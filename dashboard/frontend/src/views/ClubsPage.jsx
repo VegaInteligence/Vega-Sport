@@ -11,6 +11,7 @@ import React, {
 } from "react";
 import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
+import CompetitionOptions from "../components/CompetitionOptions.jsx";
 import { FootballContext, useFootball } from "../hooks/FootballContext.jsx";
 import { Media, Pager, Empty } from "../components/UI.jsx";
 import ClubWorkspace from "../components/ClubWorkspace.jsx";
@@ -23,7 +24,6 @@ import { normalizeText, number } from "../services/format.js";
 import {
   countryLabel,
   competitionCountry,
-  competitionLabel,
   orderedCompetitions,
 } from "../services/competition-selector.js";
 const EMPTY_FIXTURES = [];
@@ -339,11 +339,7 @@ export default function ClubsPage() {
                 onChange={(e) => setCompetitionId(e.target.value)}
               >
                 <option value="all">Toutes les compétitions</option>
-                {competitions.map((competition) => (
-                  <option key={competition.id} value={competition.id}>
-                    {competitionLabel(competition)}
-                  </option>
-                ))}
+                <CompetitionOptions competitions={competitions} />
               </select>
             </label>
             <label className="club-directory-select">

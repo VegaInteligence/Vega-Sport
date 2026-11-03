@@ -1,38 +1,34 @@
 # Worklog
 
-## Goal / constraints
-Publish all current STATARENA work in a single commit on main, preserving the latest remote changes, all nonignored local files and the existing Neon data. Runtime remains read-only; no rematerialization or provider collection is requested. Use reproducible E2E evidence.
+## Goal and constraints
+Refine the STATARENA home and its filters, remove redundant project copies, then commit and push all requested work in one commit. Keep canonical files, explicit preferences, historical links and existing data. Use browser E2E for behavior and retain reproducible evidence. Neon checks are read-only; do not dispatch the rematerialization workflow as part of this task.
 
-## Current publication — 2026-11-03
-- Local input: three unpublished commits through 40ba389e39 plus 87 nonignored untracked files, including prototypes, screenshots and numbered copies. One homepage commit is already present remotely under another SHA.
-- Integration base: origin/main a7b9abb092. Resolved nine overlapping files, preserving local homepage/data enrichment and remote targeted-league materialization, MLS mapping, player honours and navigation fixes.
-- Recovery: original local commits retained on codex/pre-consolidation-20261103; all 87 untracked files backed up before integration. Sport Prediction is a separate repository and retains its original uncommitted documentation.
-- Verification passed: production build, 26 existing JavaScript checks, 11 data checks, three MLS checks and 50 read-only Neon production HTTP checks. The MLS check first lacked boto3 in system Python, then passed in an isolated environment using the pinned ingestion dependencies. Evidence: docs/verification/worktree-publication-20261103/.
-- All 87 original nonignored untracked files are staged byte-for-byte. Source whitespace validation passes; full validation reports only whitespace retained in three raw build logs.
-- The rematerialization CLI is included; no rematerialize.yml file was present. Publishing code alone does not regenerate existing Neon partitions.
-- Suggested commit: feat: publish StatArena data enrichment and homepage updates.
-- Next action: create one commit atop the current remote main, push normally and confirm a clean worktree. No additional product changes are part of this publication.
+## Decisions and implemented behavior — 2026-11-03
+- Each page remembers its season in the browser tab. Header/loading navigation restores the destination page’s season; explicit match/player links retain their source season. Invalid or blocked storage falls back safely.
+- New profiles start with Top 7 Europe + UEFA enabled. Explicit All/custom preferences remain available. Footer removed from rendered pages and loading shells.
+- Shared country groups now organize competition selectors in players, calendar, clubs, club analysis, archives, comparisons, supplemental competitions and the home picker. Existing country names and league pyramids are reused; option values and selection handlers are preserved.
+- Home omits empty weekly wrappers and redistributes available cards. The title-race chart measures its real container, shows six teams and fills its width. The weekly match uses independent chart/stat columns; the player card and wider xG tooltip stay compact.
+- Finishing shows eight real players in each mode; scorers/assists show ten. All four modes link to the complete player directory with the same season, competition cohort, ranking and totals active. Ranking definitions and eligibility are shared; cohorts survive profile/comparison navigation.
+- Le mur shows three distinct defensive clubs and actual played/conceded/clean-sheet statistics. Its stack respects content height so the final team is not clipped.
+- User clarified À ne pas manquer: include saved clubs and current clubs of saved players from every saved list. Personal matches lead; within a Paris day, order Champions League, Europa League, Conference League, then domestic. Preserve active competition scope and seven-day horizon. Current player clubs use the latest observed club performance in the loaded season; old and national-team affiliations are excluded. No personal choices retains editorial fallback.
+- Enrichment normalizer, match-detail merge, nightly reload and `neon_materialize.py --all` already existed. Added the missing manual `rematerialize.yml` and `docs/REMATERIALIZE.md`, sharing the ingestion queue/lock. Production execution is not claimed. Read-only samples of Ligue 1 across six seasons still lack the new columns.
+- UX: independent filters, clear country groups, compact data-filled cards and relevant fixtures. DX: shared selector/ranking functions and the existing publication command. AX: explicit URL state, accessible controls and inspectable receipts. Personalization cannot infer an affiliation absent from loaded observations.
 
-## State — 2026-11-03
-- Live Neon runtime deployed and promoted. All 250,748 original files / 2,692,640,453 bytes verified by path, size and SHA-256; no missing resource references. Original mutable manifests retained as versions.
-- Indexed PostgreSQL plus private object storage; bounded pooled connections, coalesced caches, ETags and same-region functions. No disk/GitHub/Pitch fallback.
-- HTTP E2E 50 checks, nine browser pages, match/profile interactions and isolated ingestion failure/retry/dedupe tests passed. Evidence: docs/verification/neon-runtime-20261103.
-- Daily Sync and Historical Backfill both passed on GitHub; all legacy ingestion workflows and Git data files retired. Latest Pitch secret preserved. Runtime secrets are read-only; Pitch removed from Vercel and local environment.
-- User homepage 00be3aa preserved as c9ffb5c; new club layout 2186cc1, coach portraits 0eb953a and retry c21380d integrated. Their completed one-off portrait workflow is retired; Daily Sync retains portrait refresh.
-- Deleted 126,205 local files after exact Neon verification (3,507,556,352 allocated bytes) and 21 verified generated archives (2,665,742,336 allocated bytes). One unverified iCloud WAL remains, occupying zero SSD bytes.
-- User authorized deleting validation branch br-frosty-sunset-bejbcw5o; deleted. Only production remains. Latest checked SQL ~570 MB; catalog objects ~3.93 GB; zero missing resource references.
-- Original local main saved at codex/pre-neon-local-main-20261103, then synchronized without overwriting user commits. Unrelated numbered copies and other worktrees preserved.
+## Cleanup and integration
+- Removed 42 reviewed unused copies: 39 tracked numbered files, one identical prototype alias, and two subsequently reappearing untracked numbered variants. Byte-identical and differing historical variants were distinguished before deletion. All were externally archived and hash-verified; tracked copies remain recoverable from ce21ca42a1. Canonical files and distinct prototype options B/C remain.
+- The unpaired `data/computed/pitchapi-world/queue 2.sqlite-wal` is not an established duplicate and remains. No numbered source copies remain in the final scan.
+- Two invalid iCloud Git ref placeholders named `main 2` were moved outside the active ref namespace without hydration or deletion. Recovery metadata lives in `.git/codex-ref-quarantine-20261103`.
+- Preserved and fast-forwarded remote work through 830c82e6c6 without overlapping application edits. No force push or rewritten remote history.
+- Sport Prediction is a separate repository; its original uncommitted work is untouched.
 
-## Final cutover
-Latest UI deployed and promoted with 50 HTTP checks, nine browser pages and 11 interactions passed. Actual functions pinned to cle1 near Neon after verifying deployed metadata. Historical run 41664756751 collecting (60-minute budget); both scheduled workflows active. Exactly two repository workflow files; GitHub's public-repository Dependency Graph system workflow is independently managed.
+## Verification and evidence
+- Before implementation, recorded failure modes for per-page seasons, invalid storage, active/default filters, empty widgets, preserved interactions, ranking/cohort navigation, personal fixture priorities, country grouping and recoverable cleanup.
+- Browser workflows cover navigation/reload/history, new and saved preferences, loading shells, archived/current home at desktop/tablet/mobile in both themes, ranking shortcuts/profile/comparison scope, all affected country selectors and controlled personal fixtures.
+- A manual screenshot review caught a negative defence bottom gap in an earlier passing layout run. Fixed the stack’s flex sizing and strengthened assertions to reject clipping as well as blank space. Final measured bottom padding: 17px for defence/title/scorers; weekly match 681px versus 796px before.
+- Earlier harness failures (transient navigation reads, wrong native-dialog/searchbox selectors and unsupported dynamic import) are retained alongside corrected runs; they are not counted as product passes.
+- Production build passed after the final application changes. Workflow YAML/Bash and the real materialization CLI help/local-write guard passed; GitHub execution and full historic regeneration remain unverified.
+- Working evidence: `output/playwright/page-seasons-layout-20261103`. Durable scripts, logs, reports, screenshots and exact rerun instructions: `docs/verification/page-seasons-layout-20261103`.
+- Suggested commit: `fix: refine home widgets and grouped competition filters`.
 
-## Completion
-All source and evidence pushed to main and synchronized locally. Removed the disposable clone, Vercel export, migration caches and ephemeral secret files; removed file footprints total 11,354,628,096 allocated bytes (APFS sharing may affect physical savings). One zero-allocation iCloud placeholder and unrelated worktrees remain preserved. No implementation work remains. Historical discovery continues through the active ingestion workflows.
-
-Latest user check: measured live browser transfer across the nine main URLs (current season, focus=all). Eight pages via client navigation: ~15.9 MB; including a full navigation to the /calendrier alias: 29,766,650 bytes (~0.030 GB). Unique football response payload ~15.9 MB decoded. These are browser metrics, not exact Neon billing; concurrent ingestion and caches prevent that attribution. Evidence and rerun cells: docs/verification/neon-runtime-20261103/bandwidth-20261103.json and bandwidth-method-20261103.md.
-
-Next operational check: the live Historical Backfill run and storage guards; no claim of exhaustive provider history.
-
-Suggested commit: docs: measure site navigation transfer usage.
-
-Homepage publication: local 1a745e8b06 replayed without conflict onto remote 66f6ca8 in isolated sparse clone /tmp/statarena-push-home-20261103. Production build and 14 existing targeted checks passed; no new tests or browser E2E. No data downloaded into the original checkout. Evidence: docs/verification/home-publication-20261103/RESULTS.md. Next: normal push and remote-head verification. Suggested commit: docs: record homepage publication verification.
+## Final verification and next action
+The final combined run passed all 10 browser workflows and 131 assertions. Build exited 0; cleanup confirms all 42 reviewed copies absent. Durable evidence is saved. Create the single commit, push main normally, then verify the remote commit and clean worktree.

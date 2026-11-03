@@ -7,6 +7,7 @@ import { normalizeText } from "../model.js";
 import { inEuropeFocus } from "../../../shared/competition-scope.js";
 import {
   competitionCountryLabel,
+  competitionGroups,
   competitionLabel,
   orderedCompetitions,
 } from "../services/competition-selector.js";
@@ -95,35 +96,41 @@ function CompetitionPicker({ f, competitions, initialIds, onClose }) {
           onChange={(event) => setQuery(event.target.value)}
         />
       </div>
-      <section className="home-competition-section">
-        <div
-          className="home-competition-list"
-          role="group"
-          aria-label="Compétitions"
+      {competitionGroups(visible).map((group) => (
+        <section
+          className="home-competition-section"
+          key={group.key}
+          aria-label={group.label}
         >
-          {visible.map((competition) => (
-            <label className="home-competition-option" key={competition.id}>
-              <input
-                type="checkbox"
-                checked={selected.has(competition.id)}
-                onChange={() =>
-                  setSelected((previous) => {
-                    const next = new Set(previous);
-                    if (next.has(competition.id)) next.delete(competition.id);
-                    else next.add(competition.id);
-                    return next;
-                  })
-                }
-              />
-              <Media name={competition.name} url={competition.imageUrl} />
-              <span>
-                <strong>{competition.name}</strong>
-                <small>{competitionCountryLabel(competition)}</small>
-              </span>
-            </label>
-          ))}
-        </div>
-      </section>
+          <h3>{group.label}</h3>
+          <div
+            className="home-competition-list"
+            role="group"
+            aria-label={group.label}
+          >
+            {group.competitions.map((competition) => (
+              <label className="home-competition-option" key={competition.id}>
+                <input
+                  type="checkbox"
+                  checked={selected.has(competition.id)}
+                  onChange={() =>
+                    setSelected((previous) => {
+                      const next = new Set(previous);
+                      if (next.has(competition.id)) next.delete(competition.id);
+                      else next.add(competition.id);
+                      return next;
+                    })
+                  }
+                />
+                <Media name={competition.name} url={competition.imageUrl} />
+                <span>
+                  <strong>{competition.name}</strong>
+                </span>
+              </label>
+            ))}
+          </div>
+        </section>
+      ))}
       {!visible.length && (
         <p className="empty-state">Aucune compétition pour cette recherche.</p>
       )}

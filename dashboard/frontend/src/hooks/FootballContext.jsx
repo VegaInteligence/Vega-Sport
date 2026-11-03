@@ -28,6 +28,10 @@ import {
 import { warmProfiles } from "../services/player-profile.js";
 import { filterSeasonPlayerScope } from "../services/season-player.js";
 import {
+  playerLeagueIds,
+  playerRankingKey,
+} from "../services/player-leaderboard.js";
+import {
   advancedKey,
   advancedQuery,
   advancedTest,
@@ -45,17 +49,22 @@ import {
 } from "../../../shared/competition-scope.js";
 export const FootballContext = createContext(null);
 const loadedScopes = new Set();
+const PAGE_SEASONS_KEY = "statarena:page-seasons:v1";
+const seasonPage = (path) => path.replace(/\/$/, "") || "/";
+const metricBasis = (value) =>
+  value === "per90" || value === "total" ? value : "perMatch";
 const Context = FootballContext;
 export const useFootball = () => useContext(Context);
 export function FootballProvider({ children, loadData = true }) {
   const initial = useSearchParams();
   const [matchFilter, setMatchFilter] = useState("all");
   const [preferences, setPreferences] = useState({
-    focus: "all",
+    focus: "europe",
     defaultSeason: "",
     favoriteLeagueIds: [],
     onboardingComplete: false,
   });
+  const [pageSeasons, setPageSeasons] = useState({});
   const [preferencesReady, setPreferencesReady] = useState(false);
   const focus =
     initial.get("focus") === "europe"
@@ -78,7 +87,7 @@ export function FootballProvider({ children, loadData = true }) {
         window.localStorage.getItem(PREFERENCES_KEY) || "{}",
       );
       setPreferences({
-        focus: saved.focus === "europe" ? "europe" : "all",
+        focus: saved.focus === "all" ? "all" : "europe",
         defaultSeason:
           typeof saved.defaultSeason === "string" ? saved.defaultSeason : "",
         favoriteLeagueIds: Array.isArray(saved.favoriteLeagueIds)
@@ -93,6 +102,22 @@ export function FootballProvider({ children, loadData = true }) {
     } catch {
       // An unavailable or invalid local preference must not prevent browsing.
     } finally {
+      try {
+        const saved = JSON.parse(
+          window.sessionStorage.getItem(PAGE_SEASONS_KEY) || "{}",
+        );
+        if (saved && typeof saved === "object" && !Array.isArray(saved))
+          setPageSeasons(
+            Object.fromEntries(
+              Object.entries(saved).filter(
+                ([path, value]) =>
+                  path.startsWith("/") && typeof value === "string",
+              ),
+            ),
+          );
+      } catch {
+        // Page selections still work in memory when browser storage is unavailable.
+      }
       setPreferencesReady(true);
     }
   }, []);
@@ -103,12 +128,15 @@ export function FootballProvider({ children, loadData = true }) {
     playerScope = pathname.startsWith("/joueurs"),
     // The home page has no list filter: the navbar search navigates instead.
     homeScope = pathname === "/" || pathname === "";
+  const currentPage = seasonPage(pathname);
   const urlFilters = useMemo(
     () => ({
       query: initial.get("q") || "",
       league: initial.get("league") || "all",
       minutes: Number(initial.get("minutes") ?? 1),
-      basis: initial.get("basis") === "per90" ? "per90" : "perMatch",
+      basis: metricBasis(initial.get("basis")),
+      ranking: playerRankingKey(initial.get("ranking")),
+      leagues: playerLeagueIds(initial.get("leagues")),
       match: matchFilter,
       advanced: parseAdvanced(initial),
     }),
@@ -137,7 +165,9 @@ export function FootballProvider({ children, loadData = true }) {
       query: current.get("q") || "",
       league: current.get("league") || "all",
       minutes: Number(current.get("minutes") ?? 1),
-      basis: current.get("basis") === "per90" ? "per90" : "perMatch",
+      basis: metricBasis(current.get("basis")),
+      ranking: playerRankingKey(current.get("ranking")),
+      leagues: playerLeagueIds(current.get("leagues")),
       advanced: parseAdvanced(current),
     };
     const next = typeof action === "function" ? action(latest) : action;
@@ -146,7 +176,9 @@ export function FootballProvider({ children, loadData = true }) {
       q: next.query,
       league: next.league === "all" ? "" : next.league,
       minutes: next.minutes === 1 ? "" : next.minutes,
-      basis: next.basis === "per90" ? "per90" : "",
+      basis: metricBasis(next.basis) === "perMatch" ? "" : next.basis,
+      ranking: playerRankingKey(next.ranking),
+      leagues: Array.isArray(next.leagues) ? next.leagues.join(",") : "",
       ...advancedQuery(next.advanced || EMPTY_ADVANCED),
     });
   }
@@ -163,10 +195,12 @@ export function FootballProvider({ children, loadData = true }) {
     () => europeFocusIds(manifest.value),
     [manifest.value],
   );
-  const chosen = manifest.value?.seasons.some((s) => s.id === season)
+  const validSeason = (value) =>
+    manifest.value?.seasons.some((s) => s.id === value);
+  const chosen = validSeason(season)
     ? season
-    : manifest.value?.seasons.some((s) => s.id === preferences.defaultSeason)
-      ? preferences.defaultSeason
+    : validSeason(pageSeasons[currentPage])
+      ? pageSeasons[currentPage]
       : manifest.value?.defaultSeason;
   // A competition filter only narrows the download when the whole scope has
   // not been loaded yet (deep link). Once it has, the filter runs in memory:
@@ -408,7 +442,7 @@ export function FootballProvider({ children, loadData = true }) {
     };
   }, [data, loadData, appearanceIndex]);
   function changeSeason(value) {
-    updateQuery({ season: value, league: "" });
+    updateQuery({ season: value, league: "", leagues: "" });
     setMatchFilter("all");
     setComparison([]);
     setPlayer(null);
@@ -422,7 +456,14 @@ export function FootballProvider({ children, loadData = true }) {
       ...(urlFilters.minutes !== 1
         ? { minutes: String(urlFilters.minutes) }
         : {}),
-      ...(urlFilters.basis === "per90" ? { basis: "per90" } : {}),
+      ...(urlFilters.basis !== "perMatch" ? { basis: urlFilters.basis } : {}),
+      ...(seasonPage(page) === "/joueurs"
+        ? {
+            ranking: urlFilters.ranking,
+            leagues: urlFilters.leagues.join(","),
+            playersView: initial.get("playersView") || "",
+          }
+        : {}),
       ...Object.fromEntries(
         Object.entries(advancedQuery(urlFilters.advanced)).filter(
           ([, value]) => value,
@@ -434,12 +475,23 @@ export function FootballProvider({ children, loadData = true }) {
     for (const [key, value] of [...query]) if (value === "") query.delete(key);
     return `${page}${query.size ? "?" + query : ""}`;
   };
+  // Site navigation restores the destination page's selection. Links to a
+  // specific match, player or club keep using href with their source context.
+  const navigationHref = (page) => {
+    const destination = seasonPage(page);
+    const saved =
+      destination === currentPage ? chosen : pageSeasons[destination];
+    return href(page, {
+      season: validSeason(saved) ? saved : manifest.value?.defaultSeason || "",
+    });
+  };
   function changeFocus(next) {
     const value = next === "europe" ? "europe" : "all";
     const params = new URLSearchParams(window.location.search);
     const league = params.get("league");
     updateQuery({
       focus: value,
+      leagues: "",
       ...(value === "europe" && league && !EUROPE_FOCUS_IDS.has(league)
         ? { league: "" }
         : {}),
@@ -515,9 +567,23 @@ export function FootballProvider({ children, loadData = true }) {
     );
   }
   useEffect(() => {
-    if (preferencesReady && chosen && !initial.get("season"))
-      updateQuery({ season: chosen });
-  }, [preferencesReady, chosen, initial]);
+    if (!preferencesReady || !chosen) return;
+    setPageSeasons((previous) =>
+      previous[currentPage] === chosen
+        ? previous
+        : { ...previous, [currentPage]: chosen },
+    );
+    if (initial.get("season") !== chosen) updateQuery({ season: chosen });
+  }, [preferencesReady, chosen, initial, currentPage]);
+  useEffect(() => {
+    if (!preferencesReady) return;
+    try {
+      window.sessionStorage.setItem(
+        PAGE_SEASONS_KEY,
+        JSON.stringify(pageSeasons),
+      );
+    } catch {}
+  }, [preferencesReady, pageSeasons]);
   const value = {
     data,
     focus,
@@ -547,6 +613,7 @@ export function FootballProvider({ children, loadData = true }) {
     configured: status.value === true,
     statusKnown: !status.loading,
     href,
+    navigationHref,
     comparison,
     setComparison,
     toggle,
@@ -563,9 +630,15 @@ export function FootballProvider({ children, loadData = true }) {
   };
   return (
     <Context.Provider value={value}>
-      <AsyncState resource={manifest} loading={<LoadingPage href={href} />}>
+      <AsyncState
+        resource={manifest}
+        loading={<LoadingPage href={navigationHref} />}
+      >
         {() => (
-          <AsyncState resource={dataset} loading={<LoadingPage href={href} />}>
+          <AsyncState
+            resource={dataset}
+            loading={<LoadingPage href={navigationHref} />}
+          >
             {(value) =>
               value ? (
                 children
