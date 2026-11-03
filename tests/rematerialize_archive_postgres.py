@@ -2,7 +2,7 @@
 
 Run only through the temporary-local-Postgres runner. No production fixture writes.
 """
-import argparse,copy,json,os,sys
+import argparse,copy,json,os,sys,datetime as dt
 from pathlib import Path
 from urllib.parse import urlparse
 import psycopg
@@ -22,7 +22,7 @@ assert target.hostname=='127.0.0.1' and target.path=='/archive_materialization_e
 report={'setup':'Isolated temporary PostgreSQL 18, actual schema/materializer/normalizer/packing; stored object fixtures implement the same JSON/SQL publication contract. No provider or production writes.','command':'node output/playwright/rematerialization-completion-20261103/run_archive_postgres.mjs <before|after>','expected':'Archived-only and recent responses rebuild enrichment with correct precedence; partial families preserve old data and references.','cases':[],'status':'failed'}
 with psycopg.connect(url,autocommit=True) as db:
  db.execute((ROOT/'dashboard/backend/migrations/001_neon.sql').read_text())
- for kind in ['archive-only','fixture-without-summary','recent-precedence','partial-families']:
+ for kind in ['archive-only','fixture-without-summary','recent-precedence','partial-families','archive-shard-reuse']:
   case={'name':kind,'checks':[],'status':'failed'};report['cases'].append(case)
   def check(name,passed,actual):
    case['checks'].append({'name':name,'passed':passed,'actual':actual})
@@ -63,6 +63,29 @@ with psycopg.connect(url,autocommit=True) as db:
     for suffix,data in [('/players',fresh),('',{**fixture,'stadium':{'name':'Recent Stadium'},'referee':{'name':'Recent Referee'},'round_name':'13'})]:
      path='recent'+suffix;objects[path]={'data':data};store.objects[path]=copy.deepcopy(objects[path]);db.execute('INSERT INTO statarena.resources(endpoint,params,status,ref) VALUES(%s,\'{}\',200,%s)',('/matches/'+mid+suffix,Jsonb({'path':path})))
     db.execute('INSERT INTO statarena.resources(endpoint,params,status) VALUES(%s,\'{}\',404)',('/matches/'+mid+'/lineups',))
+   reads={}
+   if kind=='archive-shard-reuse':
+    db.execute('TRUNCATE statarena.observations,statarena.shards CASCADE')
+    grouped={}
+    for i in range(32):
+     key=i%16;fid=f"m_{i+1:06d}";f=copy.deepcopy(fixture);f.update(id=fid,date=str(dt.date(2022,1,1)+dt.timedelta(days=i)),time_utc=str(dt.date(2022,1,1)+dt.timedelta(days=i))+'T12:00:00Z')
+     db.execute('INSERT INTO statarena.fixtures(id,league_id,season,day,status,body) VALUES(%s,%s,%s,%s,%s,%s) ON CONFLICT(id) DO UPDATE SET body=excluded.body,day=excluded.day',(fid,league,sid,f['date'],'finished',Jsonb(f)))
+     grouped.setdefault(key,[]).append((fid,f))
+    for key,fixtures in grouped.items():
+     prefix=f'reused-{key}-';docs=[];family_rows={family:[] for family in ['players','shots','lineups','stats','match']}
+     for fid,f in fixtures:
+      docid='doc-'+fid;docs.append({'id':docid,'metadata':{'fixture':f,'season':sid}})
+      for family,source in [('players','players'),('shots','shots'),('lineups','lineups'),('stats','team_stats')]:family_rows[family].append({'documentId':docid,'response':{'status':200,'data':copy.deepcopy(sample[source]['data'])}})
+      family_rows['match'].append({'documentId':docid,'response':{'status':200,'data':{**f,'stadium':{'name':'Archive Stadium'},'referee':{'name':'Archive Referee'}}}})
+     store.objects[prefix+'documents']=docs
+     for family,rows in family_rows.items():store.objects[prefix+family]=rows
+     db.execute('INSERT INTO statarena.shards(id,ref) VALUES(%s,%s)',(prefix,Jsonb({'document':{'path':prefix+'documents'},'tables':{family:{'path':prefix+family} for family in family_rows}})))
+     for ordinal,(fid,_) in enumerate(fixtures):db.execute('INSERT INTO statarena.observations(id,shard,ordinal) VALUES(%s,%s,%s)',(fid,prefix,ordinal))
+    read=store.json
+    def counted(path):
+     if path.startswith('reused-'):reads[path]=reads.get(path,0)+1
+     return read(path)
+    store.json=counted
    db.execute('INSERT INTO statarena.dirty_partitions(season,league_id) VALUES(%s,%s)',(sid,league))
    materialize(store,max_partitions=1)
    manifest=store.objects['computed/dashboard/index.json'];chunk=manifest['seasons'][0]['chunks'][0];published=store.objects[chunk['path']];rows={k:unpack(t) for k,t in published['tables'].items()}
@@ -70,12 +93,16 @@ with psycopg.connect(url,autocommit=True) as db:
    check('published shot endpoint and height',s_row.get('goalCrossedY')==32.2 and s_row.get('goalCrossedZ')==1.4,{k:s_row.get(k) for k in ['goalCrossedY','goalCrossedZ']})
    if kind!='partial-families':
     check('published physical statistic, attempts and captain',p_row.get('topSpeed')==33.2 and p_row.get('passesAttempted')==5 and p_row.get('isCaptain') is True,{k:p_row.get(k) for k in ['topSpeed','passesAttempted','isCaptain']})
-   check('player references remain consistent',m_row['players']==[p_row['id']],m_row['players'])
+   refs_ok=all(set(m['players'])=={r['id'] for r in rows['performances'] if r['matchId']==m['id']} for m in rows['matches'])
+   check('player references remain consistent',refs_ok,{'matches':len(rows['matches']),'performances':len(rows['performances'])})
    if kind!='fixture-without-summary':
     expected='Recent Stadium' if kind=='recent-precedence' else 'Archive Stadium';check('stored summary metadata merged',m_row.get('stadium',{}).get('name')==expected,m_row.get('stadium'))
    else:check('missing summary remains unknown',m_row.get('stadium') is None,m_row.get('stadium'))
    check('current successful response wins / previous players preserved',p_row['goals']==(2 if kind=='recent-precedence' else 1),p_row['goals'])
    check('dirty queue cleared after actual publication',db.execute('SELECT count(*) FROM statarena.dirty_partitions').fetchone()[0]==0,db.execute('SELECT count(*) FROM statarena.dirty_partitions').fetchone()[0])
+   if kind=='archive-shard-reuse':
+    check('each source archive file read once',len(reads)==96 and max(reads.values())==1,{'files':len(reads),'reads':sum(reads.values()),'maxReadsPerFile':max(reads.values())})
+    check('all interleaved matches normalized',len(rows['matches'])==32,len(rows['matches']))
    check('no provider jobs created',db.execute('SELECT count(*) FROM statarena.jobs').fetchone()[0]==0,db.execute('SELECT count(*) FROM statarena.jobs').fetchone()[0]);case['status']='passed'
   except Exception as error:case['error']=str(error)
 report['status']='passed' if all(c['status']=='passed' for c in report['cases']) else 'failed'

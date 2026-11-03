@@ -6,7 +6,6 @@ from bootstrap_neon import unpack
 from build_dashboard_data import build_snapshot, METRICS
 from build_dashboard_views import pack_table
 from neon_ingest import saved
-from functools import lru_cache
 from mls_fixture_alias import publish_mls_fixture_alias
 
 
@@ -36,20 +35,8 @@ def _materialize(store, max_partitions=20, league_id=None, recent_first=False):
         else {"version": 1, "routes": {}, "clubRoutes": {}}
     )
 
-    @lru_cache(maxsize=16)
-    def source_table(path):
-        return store.json(path)
-
-    @lru_cache(maxsize=16)
-    def response_table(path):
-        return {row["documentId"]: row.get("response") for row in source_table(path)}
-
     def prior_response(mid, family):
-        row = archived.get(mid)
-        if not row or family not in row[1]["tables"]:
-            return None
-        doc = source_table(row[1]["document"]["path"])[row[0]]
-        return response_table(row[1]["tables"][family]["path"]).get(doc["id"])
+        return archive_responses.get(mid, {}).get(family)
 
     partitions_query = "select season,league_id,changed_at from statarena.dirty_partitions"
     params = (max_partitions,)
@@ -126,7 +113,6 @@ def _materialize(store, max_partitions=20, league_id=None, recent_first=False):
             "select id,ref from statarena.shards where id=any(%s)",
             (list({row[1] for row in observations}),),
         ).fetchall())
-        archived = {mid: (ordinal, shards[shard]) for mid, shard, ordinal in observations}
         endpoints = [
             "/matches/" + mid + suffix
             for mid in finished_ids
@@ -139,6 +125,33 @@ def _materialize(store, max_partitions=20, league_id=None, recent_first=False):
                 (endpoints,),
             ).fetchall()
         }
+        # Process one shard at a time, retaining only this partition's missing
+        # responses. Interleaved match dates must not repeatedly evict/reload
+        # entire archive tables or retain other leagues' decoded payloads.
+        archive_responses = {}
+        by_shard = {}
+        for mid, shard, ordinal in observations:
+            by_shard.setdefault(shard, []).append((mid, ordinal))
+        for shard, entries in by_shard.items():
+            ref = shards[shard]
+            documents = store.json(ref["document"]["path"])
+            identities = {documents[ordinal]["id"]: mid for mid, ordinal in entries}
+            for family, suffix in (
+                ("match", ""), ("players", "/players"), ("shots", "/shots"),
+                ("lineups", "/lineups"), ("stats", "/stats"),
+            ):
+                if family not in ref["tables"]:
+                    continue
+                needed = {
+                    docid: mid for docid, mid in identities.items()
+                    if resources.get("/matches/" + mid + suffix, (None,))[0] != 200
+                }
+                if not needed:
+                    continue
+                for row in store.json(ref["tables"][family]["path"]):
+                    mid = needed.get(row["documentId"])
+                    if mid:
+                        archive_responses.setdefault(mid, {})[family] = row.get("response")
         normalized = []
         rounds = {}
         round_path = "computed/matchdays/" + label.replace("/", "-") + ".json.gz"
