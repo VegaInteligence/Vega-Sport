@@ -1,6 +1,6 @@
 import { dataJson } from "./data-store.js";
 import { query, canonical, cache } from "./neon.js";
-const resources = cache(16 * 1024 * 1024);
+const resources = cache(16 * 1024 * 1024, { name: "resource" });
 export async function savedResource(endpoint, params = {}) {
   return resources(endpoint + "?" + canonical(params), async () => {
     const row = (

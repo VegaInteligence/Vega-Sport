@@ -21,7 +21,13 @@ export async function proxy(request) {
             message: "Le service de données est indisponible. Réessayez.",
           },
         },
-        { status: 503 },
+        {
+          status: 503,
+          headers: {
+            "Cache-Control": "no-store",
+            "Vercel-CDN-Cache-Control": "no-store",
+          },
+        },
       );
     }
   }
@@ -38,12 +44,15 @@ export async function proxy(request) {
     for (const key of [
       "content-type",
       "cache-control",
+      "vercel-cdn-cache-control",
+      "cdn-cache-control",
       "content-disposition",
       "allow",
       "retry-after",
       "etag",
       "content-length",
       "x-data-source",
+      "server-timing",
     ])
       if (upstream.headers.has(key))
         headers.set(key, upstream.headers.get(key));
@@ -61,7 +70,13 @@ export async function proxy(request) {
             "Le service de données est indisponible. Réessayez dans un instant.",
         },
       },
-      { status: 502 },
+      {
+        status: 502,
+        headers: {
+          "Cache-Control": "no-store",
+          "Vercel-CDN-Cache-Control": "no-store",
+        },
+      },
     );
   }
 }

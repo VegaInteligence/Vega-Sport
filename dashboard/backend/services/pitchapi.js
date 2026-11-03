@@ -5,6 +5,8 @@ import {
   archivedResource,
 } from "./database.js";
 import { configured, query } from "./neon.js";
+import { cacheHeaders, noStoreHeaders } from "./cache-policy.js";
+import { serializeJson, responseBytes } from "./metrics.js";
 const API_PREFIX = "/api/pitchapi";
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const ID = "[A-Za-z0-9]{6}";
@@ -76,12 +78,14 @@ const ERROR_MESSAGES = {
     "Plusieurs données sont en cours de chargement. Réessayez dans un instant.",
 };
 
-function jsonResponse(value, status = 200, extraHeaders = {}) {
-  return new Response(JSON.stringify(value), {
+function jsonResponse(value, status = 200, extraHeaders = {}, head = false) {
+  const body = head ? null : serializeJson(value);
+  responseBytes(body);
+  return new Response(body, {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store",
+      ...noStoreHeaders,
       "X-Content-Type-Options": "nosniff",
       ...extraHeaders,
     },
@@ -144,11 +148,16 @@ export async function handlePitchApi(request) {
   if (!["GET", "HEAD"].includes(request.method))
     return apiError("METHOD_NOT_ALLOWED", 405);
   if (url.pathname === "/api/status")
-    return jsonResponse({
-      configured: configured(),
-      source: "Neon",
-      basePath: API_PREFIX,
-    });
+    return jsonResponse(
+      {
+        configured: configured(),
+        source: "Neon",
+        basePath: API_PREFIX,
+      },
+      200,
+      {},
+      request.method === "HEAD",
+    );
   if (!url.pathname.startsWith(API_PREFIX + "/"))
     return apiError("ROUTE_NOT_FOUND", 404);
   const checked = validateResource(url);
@@ -186,16 +195,17 @@ export async function handlePitchApi(request) {
               message: "Donnée indisponible dans Neon.",
             },
           };
-    const out = jsonResponse(payload, saved.status, {
-      "X-Data-Source": "Neon",
-      "Cache-Control":
-        saved.status === 200
-          ? "public, max-age=0, s-maxage=60, stale-while-revalidate=30"
-          : "no-store",
-    });
-    return request.method === "HEAD"
-      ? new Response(null, { status: out.status, headers: out.headers })
-      : out;
+    return jsonResponse(
+      payload,
+      saved.status,
+      {
+        "X-Data-Source": "Neon",
+        ...(saved.status === 200
+          ? cacheHeaders(checked.ttl, 30)
+          : noStoreHeaders),
+      },
+      request.method === "HEAD",
+    );
   } catch (e) {
     console.error("Neon resource unavailable", e.name);
     return apiError("PITCHAPI_UNAVAILABLE", 503);

@@ -2,8 +2,23 @@ import { matchObservation, profileObservation } from "./services/database.js";
 import { publicFile, response } from "./services/files.js";
 import { handlePitchApi } from "./services/pitchapi.js";
 import { query, canonical, configured, cache } from "./services/neon.js";
-const assetLookup = cache(4 * 1024 * 1024);
-export async function handleRequest(request) {
+import { instrumentRequest, serializeJson } from "./services/metrics.js";
+import { cacheHeaders, noStoreHeaders } from "./services/cache-policy.js";
+const assetLookup = cache(4 * 1024 * 1024, { name: "asset" });
+export function handleRequest(request) {
+  return instrumentRequest(request, async () => {
+    const out = await routeRequest(request);
+    if (request.method !== "HEAD" || !out.body) return out;
+    await out.body.cancel();
+    return new Response(null, { status: out.status, headers: out.headers });
+  });
+}
+const json = (value, head, status = 200, headers = {}) =>
+  response(head ? null : serializeJson(value), status, {
+    "Content-Type": "application/json; charset=utf-8",
+    ...headers,
+  });
+async function routeRequest(request) {
   const head = request.method === "HEAD";
   let pathname;
   try {
@@ -22,16 +37,16 @@ export async function handleRequest(request) {
       const [state] = await query(
         "SELECT value,updated_at FROM statarena.state WHERE name='revision'",
       );
-      return Response.json(
+      return json(
         { status: "ok", source: "Neon", revision: state?.value },
-        { headers: { "Cache-Control": "no-store" } },
+        head,
       );
     }
     if (pathname === "/api/settings") {
       const rows = await query(
         "SELECT name,value,updated_at FROM statarena.state WHERE name IN('daily','pulse','historical','revision')",
       );
-      return Response.json(
+      return json(
         {
           provider: "Neon",
           configured: configured(),
@@ -45,7 +60,7 @@ export async function handleRequest(request) {
           workflowUrl:
             "https://github.com/OrionQuantPlatform/STATARENA/actions/workflows/daily-sync.yml",
         },
-        { headers: { "Cache-Control": "no-store" } },
+        head,
       );
     }
     if (pathname === "/api/assets") {
@@ -59,7 +74,9 @@ export async function handleRequest(request) {
           )[0] || null,
         60 * 1000,
       );
-      return row ? publicFile(row.path, request) : response("Not found", 404);
+      return row
+        ? publicFile(row.path, request, { mutableAlias: true })
+        : response("Not found", 404);
     }
     if (
       /^\/api\/(standings|open-cups|openligadb|nations-results|club-wikidata|coach-portrait|stadium|player-honours)$/.test(
@@ -75,24 +92,23 @@ export async function handleRequest(request) {
         return response("Invalid parameters", 400);
       const row = (
         await query(
-          "SELECT body FROM statarena.projections WHERE name=$1 AND params=$2",
+          `SELECT ${head ? "1 AS present" : "body"} FROM statarena.projections WHERE name=$1 AND params=$2`,
           [pathname.slice(5), canonical(Object.fromEntries(params))],
         )
       )[0];
       return row
-        ? response(head ? null : JSON.stringify(row.body), 200, {
+        ? json(row.body, head, 200, {
             "Content-Type": "application/json",
             "X-Data-Source": "Neon",
-            "Cache-Control":
-              "public, max-age=0, s-maxage=300, stale-while-revalidate=60",
+            ...cacheHeaders(300, 60),
           })
-        : response(
-            JSON.stringify({
+        : json(
+            {
               available: false,
               error: "Donnée absente de Neon.",
-            }),
+            },
+            head,
             404,
-            { "Content-Type": "application/json" },
           );
     }
     const profile = pathname.match(
@@ -111,10 +127,12 @@ export async function handleRequest(request) {
         ? await profileObservation(profile[1], profile[2])
         : await matchObservation(match[1]);
       return record
-        ? response(head ? null : JSON.stringify(record), 200, {
+        ? json(record, head, 200, {
             "Content-Type": "application/json",
             "X-Data-Source": "Neon",
-            "Cache-Control": "public, max-age=0, s-maxage=60",
+            ...(profile && record.status !== 200
+              ? noStoreHeaders
+              : cacheHeaders(60, 30)),
           })
         : response("Not found", 404);
     }
