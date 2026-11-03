@@ -384,6 +384,9 @@
   vertical-align: middle;
 }
 .fi.national-flag::before { content: none; }
+.fi.national-flag.fi-yu-1992 {
+  background-image: linear-gradient(to bottom, #003893 33.333%, #fff 33.333%, #fff 66.667%, #de0000 66.667%);
+}
 .cup-match-teams > strong {
   min-width: 48px;
   text-align: center;

@@ -59,5 +59,18 @@ for (const [name, code] of Object.entries({
 export function nationalFlagCode(name, season) {
   const year = /(?:19|20)\d{2}/.exec(String(season || ""));
   if (year && Number(year[0]) < 1994) return null;
-  return names.get(key(name)) || null;
+  const normalized = key(name);
+  // The 1992–2006 federation used the same blue, white and red tricolour.
+  if (
+    year &&
+    Number(year[0]) <= 2006 &&
+    [
+      "yugoslavia",
+      "yougoslavie",
+      "serbia and montenegro",
+      "serbie et montenegro",
+    ].includes(normalized)
+  )
+    return "yu-1992";
+  return names.get(normalized) || null;
 }

@@ -115,6 +115,10 @@ test("all 24 Euro 2024 countries resolve to locally available flags", async () =
   }
   assert.equal(nationalFlagCode("Espagne", "2024"), "es");
   assert.equal(nationalFlagCode("Géorgie", "2024"), "ge");
+  assert.equal(nationalFlagCode("Yugoslavia", "1998"), "yu-1992");
+  assert.equal(nationalFlagCode("Serbia and Montenegro", "2006"), "yu-1992");
+  assert.equal(nationalFlagCode("Yugoslavia", "1990"), null);
+  assert.equal(nationalFlagCode("Yugoslavia", "2018"), null);
   assert.equal(nationalFlagCode("Winner Match 45", "2028"), null);
   assert.equal(nationalFlagCode("Unknown", "2028"), null);
   assert.equal(nationalFlagCode("Spain", "1950"), null);
