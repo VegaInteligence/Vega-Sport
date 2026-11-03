@@ -30,12 +30,8 @@
   gap: 16px 32px;
   margin-bottom: 14px;
 }
-.award-season {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted);
-  font-size: var(--text-sm);
+.award-intro .award-season {
+  flex: 0 0 180px;
 }
 .podium {
   display: grid;
@@ -280,12 +276,8 @@
   }
 }
 @media (max-width: 640px) {
-  .award-season {
-    width: 100%;
-  }
-  .award-season .segmented-control {
-    flex: 1;
-    overflow-x: auto;
+  .award-intro .award-season {
+    flex-basis: 100%;
   }
   .podium {
     grid-template-columns: minmax(0, 1fr);
@@ -400,6 +392,8 @@ button.filter-input-wrap:focus-visible {
 :is(
     .filter-panel,
     .clubs-toolbar,
+    .competition-directory-toolbar,
+    .award-intro,
     .competition-picker,
     .competition-detail-controls,
     .home-preferences-modal
@@ -2624,6 +2618,43 @@ select optgroup {
   aspect-ratio: 640 / 340;
   border-radius: var(--radius);
   background: var(--surface-subtle);
+}
+
+/* Home: one compact filter button on the title line opens the picker. */
+.page-heading:has(> .heading-actions .home-filter-button) {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+.page-heading:has(> .heading-actions .home-filter-button) .page-heading-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.page-heading > .heading-actions:has(.home-filter-button) {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+}
+.home-filter-button {
+  max-width: min(280px, 100%);
+}
+.home-filter-button > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-filter-button .icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+.home-filter-button.is-active {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+}
+.home-filter-button.is-active:hover {
+  border-color: var(--accent);
+  color: var(--accent-dark);
 }
 
 /* One home competition control, with presets and custom selection together. */

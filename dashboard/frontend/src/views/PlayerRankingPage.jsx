@@ -3,7 +3,8 @@ import React from "react";
 import Layout from "../components/Layout.jsx";
 import Icon from "../components/Icon.jsx";
 import BallonDorIcon from "../components/BallonDorIcon.jsx";
-import { Media, Segments } from "../components/UI.jsx";
+import { Media } from "../components/UI.jsx";
+import SeasonSelect from "../components/SeasonSelect.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
 
@@ -163,21 +164,18 @@ export default function PlayerRankingPage() {
       title="Classement Ballon d’Or"
       titleIcon={<BallonDorIcon />}
       className="ranking-page"
-      showSeasonContext={false}
     >
-      <div className="award-intro">
-        {seasons.length > 1 && (
-          <div className="award-season">
-            <span>Saison</span>
-            <Segments
-              label="Saison du classement"
-              value={f.season}
-              items={seasons.map((s) => [s.id, s.id])}
-              onChange={f.changeSeason}
-            />
-          </div>
-        )}
-      </div>
+      {seasons.length > 1 && (
+        <div className="award-intro">
+          <SeasonSelect
+            label="Saison du classement"
+            className="award-season"
+            value={f.season}
+            seasons={seasons.map((s) => s.id)}
+            onChange={f.changeSeason}
+          />
+        </div>
+      )}
 
       <ol className="podium" role="list" aria-label="Podium">
         {PODIUM.map((place) => (

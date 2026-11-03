@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Icon from "./Icon.jsx";
 import StatarenaLogo from "./StatarenaLogo.jsx";
+import { date } from "../services/format.js";
 
 const repository = "https://github.com/OrionQuantPlatform/STATARENA";
 const groups = [
@@ -41,7 +42,7 @@ const groups = [
   },
 ];
 
-export default function SiteFooter({ href, path }) {
+export default function SiteFooter({ href, path, updatedAt }) {
   return (
     <footer className="site-footer" aria-label="Pied de page">
       <div className="site-footer-inner">
@@ -105,6 +106,7 @@ export default function SiteFooter({ href, path }) {
               GitHub <Icon name="external" />
             </a>
             <span>© {new Date().getFullYear()} STATARENA</span>
+            {updatedAt && <span>Données au {date(updatedAt)}</span>}
           </div>
         </div>
       </div>

@@ -67,7 +67,7 @@ function ClubsViewSwitch({ saved = false, href }) {
         href={href("/clubs/", { clubsView: "" })}
         aria-current={saved ? undefined : "page"}
       >
-        Annuaire
+        Explorer
       </Link>
       <Link
         href={href("/clubs/", { clubsView: "saved" })}

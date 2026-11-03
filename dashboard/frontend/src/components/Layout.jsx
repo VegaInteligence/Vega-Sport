@@ -5,7 +5,6 @@ import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
 import { PlayerDialog, Comparison } from "./PlayerDetails.jsx";
-import { date } from "../services/format.js";
 import CompetitionScope from "./CompetitionScope.jsx";
 import { AdvancedPanel, AdvancedToggle } from "./AdvancedFilters.jsx";
 import { advancedChips, countAdvanced } from "../services/advanced-filters.js";
@@ -300,8 +299,7 @@ export default function Layout({
   filters = false,
   filterKind = "performances",
   hideHeading = false,
-  showSeasonContext = true,
-  showDataContext = true,
+  actions,
   className = "",
   subnav,
   onExport,
@@ -333,32 +331,27 @@ export default function Layout({
                     title
                   )}
                 </h1>
-                {((showSeasonContext && f.season) ||
-                  (showDataContext && f.data.meta.retrievedAt)) && (
+                {f.partial && (
                   <p className="page-context">
-                    {showSeasonContext && f.season && (
-                      <span>Saison {f.season}</span>
-                    )}
-                    {showDataContext && f.data.meta.retrievedAt && (
-                      <span>Données au {date(f.data.meta.retrievedAt)}</span>
-                    )}
-                    {f.partial && (
-                      <span className="page-progress" role="status">
-                        Top 7 + UEFA affichés, autres compétitions en cours de
-                        chargement…
-                      </span>
-                    )}
+                    <span className="page-progress" role="status">
+                      Top 7 + UEFA affichés, autres compétitions en cours de
+                      chargement…
+                    </span>
                   </p>
                 )}
               </div>
-              {filters && !["fixtures", "home"].includes(filterKind) && (
+              {(actions ||
+                (filters && !["fixtures", "home"].includes(filterKind))) && (
                 <div className="heading-actions">
-                  <button
-                    className="button button-secondary"
-                    onClick={onExport || (() => f.exportRows())}
-                  >
-                    <Icon name="download" /> Exporter les données
-                  </button>
+                  {actions}
+                  {filters && !["fixtures", "home"].includes(filterKind) && (
+                    <button
+                      className="button button-secondary"
+                      onClick={onExport || (() => f.exportRows())}
+                    >
+                      <Icon name="download" /> Exporter les données
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -374,7 +367,11 @@ export default function Layout({
           )}
           {children}
         </main>
-        <SiteFooter href={f.href} path={path} />
+        <SiteFooter
+          href={f.href}
+          path={path}
+          updatedAt={f.data?.meta?.retrievedAt}
+        />
       </div>
       <PlayerDialog />
       {performanceComparison && (!(path === "/joueurs/" && research?.data.comparison.length && research.comparisonKind === "players") || f.comparing) && <Comparison />}
