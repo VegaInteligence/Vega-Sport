@@ -20,14 +20,6 @@ export default function MethodPage() {
             </p>
           </section>
           <section>
-            <h2>Données de compétitions</h2>
-            <p>
-              Les résultats de la Ligue A de la Ligue des Nations et de la Coupe
-              d’Allemagne comprennent des données d’<a href="https://www.openligadb.de/">OpenLigaDB</a>,
-              mises à disposition sous <a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL 1.0</a>.
-            </p>
-          </section>
-          <section>
             <h2>Notes et classement</h2>
             <p>
               Les notes affichées sont les notes de match. Le classement
@@ -46,6 +38,38 @@ export default function MethodPage() {
               Les tableaux historiques UEFA ne garantissent pas la valeur connue
               avant chaque match. Les périodes et dates de mise à jour restent
               distinctes.
+            </p>
+          </section>
+          {/* Credits that the data licences require; the only place they appear. */}
+          <section>
+            <h2>Licences</h2>
+            <p>
+              Certaines archives sont réutilisées sous licence :{" "}
+              <a href="https://www.openligadb.de/">OpenLigaDB</a> (
+              <a href="https://opendatacommons.org/licenses/odbl/1-0/">
+                ODbL 1.0
+              </a>
+              ),{" "}
+              <a href="https://github.com/schochastics/football-data">
+                schochastics/football-data
+              </a>{" "}
+              (
+              <a href="https://opendatacommons.org/licenses/by/1-0/">
+                ODC-BY 1.0
+              </a>
+              ),{" "}
+              <a href="https://github.com/jalapic/engsoccerdata">
+                engsoccerdata
+              </a>{" "}
+              et{" "}
+              <a href="https://github.com/oladeeayo/open-matchday">
+                open-matchday
+              </a>{" "}
+              (usage non commercial avec attribution). Fonds de carte ©{" "}
+              <a href="https://www.openstreetmap.org/copyright">
+                contributeurs OpenStreetMap
+              </a>
+              .
             </p>
           </section>
           <Link

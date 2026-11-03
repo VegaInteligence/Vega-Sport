@@ -52,19 +52,19 @@ const ROUTES = [
 
 const ERROR_MESSAGES = {
   INVALID_PARAMETER: "Un paramètre de la requête est invalide.",
-  RESOURCE_NOT_FOUND: "Cette ressource est introuvable dans PitchAPI.",
+  RESOURCE_NOT_FOUND: "Cette ressource est introuvable.",
   ANALYTICS_UNAVAILABLE:
-    "PitchAPI ne fournit pas d’analyse avancée pour ce match.",
+    "L’analyse avancée n’est pas disponible pour ce match.",
   HALVES_UNAVAILABLE:
-    "PitchAPI ne fournit pas de statistiques par mi-temps pour ce match.",
-  RATE_LIMIT_EXCEEDED:
-    "PitchAPI demande de patienter avant la prochaine requête.",
+    "Les statistiques par mi-temps ne sont pas disponibles pour ce match.",
+  RATE_LIMIT_EXCEEDED: "Trop de requêtes : réessayez dans un instant.",
   PITCHAPI_NOT_CONFIGURED:
-    "La connexion PitchAPI attend sa clé dans la configuration du serveur.",
-  PITCHAPI_AUTH_FAILED: "La clé PitchAPI du serveur doit être vérifiée.",
+    "Les données en direct ne sont pas disponibles pour le moment.",
+  PITCHAPI_AUTH_FAILED:
+    "Les données en direct ne sont pas disponibles pour le moment.",
   PITCHAPI_UNAVAILABLE:
-    "PitchAPI est temporairement indisponible. Réessayez dans un instant.",
-  PITCHAPI_INVALID_RESPONSE: "PitchAPI a renvoyé une réponse inexploitable.",
+    "Les données en direct sont temporairement indisponibles. Réessayez dans un instant.",
+  PITCHAPI_INVALID_RESPONSE: "Les données reçues sont inexploitables.",
   ROUTE_NOT_FOUND: "Cette route de données n’est pas disponible.",
   METHOD_NOT_ALLOWED: "Seules les requêtes GET sont acceptées.",
   GATEWAY_BUSY:

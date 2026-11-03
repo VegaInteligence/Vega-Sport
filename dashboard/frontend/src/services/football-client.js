@@ -100,7 +100,8 @@ export class FootballDataClient {
   }
   async loadFixtures() {
     const { browseMode, day, competitionId, season } = this;
-    const league = this.catalog.find((x) => x.id === competitionId) || this.competition;
+    const league =
+      this.catalog.find((x) => x.id === competitionId) || this.competition;
     const key =
       browseMode === "day" ? `date:${day}` : `${competitionId}:${season}`;
     if (this.fixtures.has(key)) return;
@@ -110,13 +111,19 @@ export class FootballDataClient {
     if (browseMode !== "day" && this.useCupSnapshot) {
       try {
         const saved = await cupWorkerSnapshot("native", competitionId, season);
-        result = { matches: saved.matches, rounds: saved.rounds || {}, source: "snapshot" };
-      } catch { /* Older editions can still use the provider or local archive. */ }
+        result = {
+          matches: saved.matches,
+          rounds: saved.rounds || {},
+          source: "snapshot",
+        };
+      } catch {
+        /* Older editions can still use the provider or local archive. */
+      }
     }
     if (!result) {
       try {
         if (!this.configured)
-          throw new Error("La connexion API n’est pas encore activée.");
+          throw new Error("Les données en direct ne sont pas disponibles.");
         const payload = await this.request(
           browseMode === "day"
             ? `date/${day}?status=all`
