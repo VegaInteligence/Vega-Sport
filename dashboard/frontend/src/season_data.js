@@ -1,3 +1,4 @@
+import { decodeTables } from "./packed_data.js";
 import { apiUrl } from "./data-url.js";
 const chunkCaches = new WeakMap();
 function cachedPart(key, fetcher, loader) {
@@ -185,7 +186,40 @@ export async function readPages(path, filters, fetcher = fetch) {
   }
 }
 
-function mergePartition(pages) {
+export function decodePartition(data) {
+  if (!data.format) return data;
+  const decoded = decodeTables(data);
+  for (const [name, table] of Object.entries(data.tables)) {
+    const constants = table.constants || {};
+    if (Object.hasOwn(constants, "__proto__")) {
+      const descriptors = Object.getOwnPropertyDescriptors(constants);
+      for (const row of decoded[name])
+        Object.defineProperties(row, descriptors);
+    } else if (Object.keys(constants).length) {
+      for (const row of decoded[name]) Object.assign(row, constants);
+    }
+  }
+  const { shots, stats, matches, ...tables } = decoded;
+  let shotOffset = 0,
+    statOffset = 0;
+  for (const match of matches) {
+    match.players = match.players.map((ref) =>
+      typeof ref === "number" ? tables.appearances[ref].id : ref,
+    );
+    const shotCount = match.shots,
+      statCount = match.stats;
+    match.shots = shots.slice(shotOffset, shotOffset + shotCount);
+    match.stats = stats.slice(statOffset, statOffset + statCount);
+    shotOffset += shotCount;
+    statOffset += statCount;
+  }
+  if (shotOffset !== shots.length || statOffset !== stats.length)
+    throw new Error("Page de saison incomplète.");
+  return { meta: data.meta, metrics: data.metrics, ...tables, matches };
+}
+
+function mergePartition(packedPages) {
+  const pages = packedPages.map(decodePartition);
   const first = pages[0],
     teams = new Map(),
     competitions = new Map();
@@ -250,7 +284,7 @@ export async function loadSeason(
           mergePartition(
             await readPages(
               "/api/seasons/partition",
-              { season: selected, league: chunk.leagueId },
+              { season: selected, league: chunk.leagueId, format: "columns" },
               fetcher,
             ),
           ),

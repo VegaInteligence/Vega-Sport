@@ -46,8 +46,27 @@ export function decodeTables(payload) {
     throw new Error("Format des données indisponible");
   return Object.fromEntries(
     Object.entries(payload.tables).map(([name, table]) => {
-      const { keys, dictionaries = {}, missing = {} } = table,
-        make = rowFactory(keys, dictionaries),
+      const { keys, dictionaries = {}, missing = {} } = table;
+      // This SQL metric name invokes a setter on ordinary objects. Construct
+      // its rare table through data properties, preserving missing fields too.
+      if (keys.includes("__proto__")) {
+        return [
+          name,
+          table.rows.map((values, i) => {
+            const entries = [];
+            for (const [j, key] of keys.entries()) {
+              if (missing[i]?.includes(j)) continue;
+              const v = values[j];
+              entries.push([
+                key,
+                v !== null && dictionaries[j] ? dictionaries[j][v] : v,
+              ]);
+            }
+            return Object.fromEntries(entries);
+          }),
+        ];
+      }
+      const make = rowFactory(keys, dictionaries),
         rows = table.rows,
         out = new Array(rows.length);
       for (let i = 0; i < rows.length; i++) {
