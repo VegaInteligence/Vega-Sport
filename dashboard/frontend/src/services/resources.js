@@ -1,10 +1,11 @@
+import { apiUrl } from "../data-url.js";
 import { useEffect, useState } from "react";
 const cache = new Map();
 // Values of promises that already resolved: a component asking again for a
 // loaded resource gets it in the same render, without a loading frame.
 const settled = new Map();
 export async function json(url) {
-  const response = await fetch(url);
+  const response = await fetch(apiUrl(url));
   if (!response.ok)
     throw new Error(`Données indisponibles (HTTP ${response.status})`);
   return response.json();

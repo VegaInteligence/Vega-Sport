@@ -20,7 +20,7 @@ import {
   competitionCountry,
   isTopFlight,
 } from "../services/competition-selector.js";
-import { dataUrl } from "../data-url.js";
+import { associationRanking } from "../services/catalog-client.js";
 import { useResearch } from "../hooks/ResearchContext.jsx";
 import {
   ZONES,
@@ -68,7 +68,7 @@ function useEuropeanPlaces(competition, season) {
     top = isTopFlight(competition, f.allCatalog || f.catalog || []),
     enabled = Boolean(top && year && country);
   const edition = (value) => () =>
-    json(dataUrl(`raw/rankings/uefa-associations/${value}.uefa.json`));
+    associationRanking(value);
   const ranking = useResource(
     `uefa-associations:${year}`,
     edition(year),

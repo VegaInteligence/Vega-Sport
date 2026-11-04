@@ -1,175 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  loadPlayerHonours,
-  MESSI_HONOURS,
-  MESSI_ID,
-} from "../dashboard/frontend/src/services/player-honours.js";
+import {loadPlayerHonours} from "../dashboard/frontend/src/services/player-honours.js";
+import {curatedProjections,MESSI_ID} from "../dashboard/scripts/materialize_curated.mjs";
 
-test("Messi's verified honours are available independent of the selected season", async () => {
-  const result = await loadPlayerHonours(
-    MESSI_ID,
-    "Lionel Messi",
-    async () => ({ ok: false }),
-  );
-  assert.equal(result.groups, MESSI_HONOURS);
-  const items = result.groups.flatMap((group) => group.items);
-  assert.equal(
-    items.find((item) => item.title === "Coupe du monde").years,
-    "2022",
-  );
-  assert.equal(items.find((item) => item.title === "Ballon d’Or").count, 8);
-  assert.equal(
-    items.find((item) => item.title === "Ligue des champions").count,
-    4,
-  );
-  assert.equal(
-    items.find((item) => item.title === "Campeones Cup").years,
-    "2026",
-  );
+test("published honours preserve curated editions and verified source identity",async()=>{
+  const source={available:true,sourceUrl:"https://en.wikipedia.org/wiki/Lionel_Messi",honours:[{name:"MLS Cup",team:"Inter Miami",category:"team",seasons:["2025"]}]};
+  const [{body}]=curatedProjections(source);
+  const {groups,sourceUrl}=await loadPlayerHonours(MESSI_ID,"Lionel Messi",async()=>Response.json(body));
+  assert.deepEqual(groups,body.displayGroups);assert.equal(sourceUrl,source.sourceUrl);
+  const items=groups.flatMap(g=>g.items);
+  assert.equal(items.find(item=>item.title==="Ballon d’Or").count,8);
+  assert.equal(items.find(item=>item.title==="Coupe du monde").years,"2022");
+  assert.ok(items.find(item=>item.title==="MLS Cup").years.includes("2025"));
 });
-
-test("other players require an exact identity and nationality before their honours are shown", async () => {
-  const calls = [];
-  const fetcher = async (url) => {
-    calls.push(String(url));
-    if (String(url).startsWith("/api/player-honours")) return { ok: false };
-    const body = String(url).includes("pitchapi")
-      ? { data: { name: "Kylian Mbappé", country_code: "FRA" } }
-      : String(url).includes("searchplayers")
-        ? {
-            player: [
-              {
-                idPlayer: "1234",
-                strPlayer: "Kylian Mbappé",
-                strNationality: "France",
-                strSport: "Soccer",
-              },
-            ],
-          }
-        : {
-            honours: [
-              {
-                idPlayer: "1234",
-                strSport: "Soccer",
-                strTeam: "France",
-                strHonour: "FIFA World Cup",
-                strSeason: "2018",
-              },
-            ],
-          };
-    return { ok: true, json: async () => body };
-  };
-  const result = await loadPlayerHonours("p_123456", "Kylian Mbappé", fetcher);
-  assert.deepEqual(result.groups, [
-    {
-      group: "France",
-      items: [{ title: "Coupe du monde", count: 1, years: "2018" }],
-    },
-  ]);
-  assert.equal(calls.length, 4);
-  assert.equal(JSON.stringify(result).includes("1234"), false);
-  assert.deepEqual(
-    (await loadPlayerHonours("p_123456", "Different Player", fetcher)).groups,
-    [],
-  );
-});
-
-test("a namesake from another country is never assigned the player's trophies", async () => {
-  let calls = 0;
-  const fetcher = async (url) => ({
-    ok: !String(url).startsWith("/api/player-honours"),
-    json: async () =>
-      ++calls === 1
-        ? { data: { name: "Alex Martin", country_code: "FRA" } }
-        : {
-            player: [
-              {
-                idPlayer: "44",
-                strPlayer: "Alex Martin",
-                strNationality: "England",
-                strSport: "Soccer",
-              },
-            ],
-          },
-  });
-  assert.deepEqual(
-    (await loadPlayerHonours("p_123456", "Alex Martin", fetcher)).groups,
-    [],
-  );
-  assert.equal(calls, 2);
-});
-
-test("a refreshed Messi projection adds new titles and retains the verified baseline", async () => {
-  const fetcher = async () => ({
-    ok: true,
-    json: async () => ({
-      available: true,
-      sourceUrl:
-        "https://en.wikipedia.org/w/index.php?title=Lionel_Messi&oldid=123",
-      fetchedAt: "2026-11-03T12:00:00Z",
-      honours: [
-        {
-          name: "MLS Cup",
-          team: "Inter Miami",
-          category: "team",
-          seasons: ["2025", "2026"],
-        },
-        {
-          name: "Supercopa de España",
-          team: "Barcelona",
-          category: "team",
-          seasons: ["2006"],
-        },
-      ],
-    }),
-  });
-  const result = await loadPlayerHonours(MESSI_ID, "Lionel Messi", fetcher);
-  assert.equal(
-    result.groups
-      .find((g) => g.group === "Inter Miami")
-      .items.find((i) => i.title === "MLS Cup").count,
-    2,
-  );
-  assert.equal(
-    result.groups
-      .find((g) => g.group === "FC Barcelone")
-      .items.find((i) => i.title === "Supercoupe d’Espagne").count,
-    8,
-  );
-  assert.match(result.sourceUrl, /^https:\/\/en\.wikipedia\.org\//);
-});
-
-test("a newly sourced edition extends known years without double-counting season formats", async () => {
-  const fetcher = async () => ({
-    ok: true,
-    json: async () => ({
-      available: true,
-      honours: [
-        {
-          name: "MLS Cup",
-          team: "Inter Miami",
-          category: "team",
-          seasons: ["2026"],
-        },
-        {
-          name: "UEFA Champions League",
-          team: "Barcelona",
-          category: "team",
-          seasons: ["2005–06", "2008–09", "2010–11", "2014–15"],
-        },
-      ],
-    }),
-  });
-  const result = await loadPlayerHonours(MESSI_ID, "Lionel Messi", fetcher);
-  const mls = result.groups
-    .find((g) => g.group === "Inter Miami")
-    .items.find((i) => i.title === "MLS Cup");
-  const champions = result.groups
-    .find((g) => g.group === "FC Barcelone")
-    .items.find((i) => i.title === "Ligue des champions");
-  assert.equal(mls.count, 2);
-  assert.match(mls.years, /2025/);
-  assert.match(mls.years, /2026/);
-  assert.equal(champions.count, 4);
+test("a database miss cannot trigger a client-side identity or provider lookup",async()=>{
+  for(const player of [MESSI_ID,"p_123456"]){
+    const calls=[];
+    const result=await loadPlayerHonours(player,"Unknown",async url=>{calls.push(url);return new Response(null,{status:404});});
+    assert.deepEqual(result.groups,[]);assert.deepEqual(calls,["/api/player-honours?id="+player]);
+  }
 });

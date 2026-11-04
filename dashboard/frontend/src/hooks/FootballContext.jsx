@@ -10,7 +10,6 @@ import React, {
   useEffect,
 } from "react";
 import { loadSeason } from "../season_data.js";
-import { dataUrl } from "../data-url.js";
 import {
   filterAppearances,
   filterMatches,
@@ -187,7 +186,7 @@ export function FootballProvider({ children, loadData = true }) {
     [comparing, setComparing] = useState(false),
     [notice, setNotice] = useState("");
   const manifest = useResource("manifest", () =>
-    json(dataUrl("dashboard-manifest.json")),
+    json("/api/dashboard/manifest"),
   );
   // Top 7 Europe + UEFA, extended to the national and super cups of the
   // seven countries present in the manifest.
@@ -285,15 +284,16 @@ export function FootballProvider({ children, loadData = true }) {
     return client.configured;
   });
   const seasonCompetitions = useMemo(
-    () =>
-      manifest.value?.storage === "json-packed"
-        ? enrichSeasonCompetitions(
-            manifest.value.seasons
-              .find((s) => s.id === chosen)
-              ?.chunks.flatMap((c) => c.competitions) || [],
-            client?.catalog,
-          ).sort((a, b) => (a.name || "").localeCompare(b.name || "", "fr"))
-        : data?.competitions || [],
+    () => {
+      const season=manifest.value?.seasons.find(item=>item.id===chosen);
+      if(!season)return data?.competitions || [];
+      const ids=new Set(season.chunks.map(chunk=>chunk.leagueId));
+      const byId=new Map((manifest.value.competitions||[]).filter(c=>ids.has(c.id)).map(c=>[c.id,c]));
+      // A loaded competition has more precise, season-specific coverage counts.
+      for(const item of data?.competitions||[])byId.set(item.id,item);
+      return enrichSeasonCompetitions([...byId.values()], client?.catalog)
+        .sort((a,b)=>(a.name||"").localeCompare(b.name||"","fr"));
+    },
     [manifest.value, chosen, data, client, status.value, status.loading],
   );
   // The navbar search and the competition directory ignore the selected

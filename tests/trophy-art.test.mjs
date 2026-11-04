@@ -5,7 +5,7 @@ import { trophyArt } from "../dashboard/frontend/src/services/trophy-art.js";
 import {
   MESSI_HONOURS,
   MESSI_ID,
-} from "../dashboard/frontend/src/services/player-honours.js";
+} from "../dashboard/scripts/materialize_curated.mjs";
 
 test("Messi's major trophies use distinct, available images", async () => {
   const items = MESSI_HONOURS.flatMap((group) => group.items);

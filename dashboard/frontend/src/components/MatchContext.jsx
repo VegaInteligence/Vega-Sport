@@ -22,7 +22,7 @@ import { StatRows } from "./StatRows.jsx";
 
 async function contextData(f, match) {
   const season = seasonLabel(match.season || f.season);
-  const index = await playerRoutes(f.manifest);
+  const index = await playerRoutes(f.manifest,{teams:[match.home.id,match.away.id]});
   const home = index.clubRoutes?.[match.home.id] || {},
     away = index.clubRoutes?.[match.away.id] || {};
   const leagues = new Set(

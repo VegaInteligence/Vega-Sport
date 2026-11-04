@@ -29,7 +29,7 @@ import {
 } from "../components/HomeSeason.jsx";
 import { json, useResource } from "../services/resources.js";
 import { ballonDorRanking } from "../services/ballon-dor.js";
-import { dataUrl } from "../data-url.js";
+import { apiUrl } from "../data-url.js";
 import { competitionIndex } from "../services/competition-identity.js";
 import { europeFocusIds } from "../../../shared/competition-scope.js";
 import {
@@ -72,7 +72,7 @@ function useNightlyRefresh(manifest) {
     const reload = () => window.location.reload();
     const check = async () => {
       try {
-        const response = await fetch(dataUrl("dashboard-manifest.json"), {
+        const response = await fetch(apiUrl("/api/dashboard/manifest"), {
           cache: "no-store",
         });
         if (

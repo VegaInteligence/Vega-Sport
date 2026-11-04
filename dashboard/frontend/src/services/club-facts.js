@@ -1,9 +1,9 @@
-import { dataUrl } from "../data-url.js";
+import { apiUrl } from "../data-url.js";
 import { normalizeText } from "./format.js";
 
 async function readJson(url, fetcher) {
   try {
-    const response = await fetcher(url);
+    const response = await fetcher(apiUrl(url));
     return response.ok ? await response.json() : null;
   } catch {
     return null;
@@ -29,7 +29,7 @@ export async function loadClubFacts(
   const latest = finished[0],
     home = finished.find((m) => m.home?.id === clubId);
   const [links, lineup, match] = await Promise.all([
-    readJson(dataUrl("raw/rankings/club-links.json"), fetcher),
+    readJson("/api/club-links?club=" + encodeURIComponent(clubId), fetcher),
     latest
       ? readJson(
           `/api/pitchapi/matches/${encodeURIComponent(latest.id)}/lineups`,

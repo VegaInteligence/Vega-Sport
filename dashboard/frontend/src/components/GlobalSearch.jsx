@@ -20,8 +20,8 @@ import {
   searchedEdition,
   SEARCH_LABELS,
 } from "../services/global-search.js";
-import { json, useResource } from "../services/resources.js";
-import { dataUrl } from "../data-url.js";
+import { useResource } from "../services/resources.js";
+import { cupIndex } from "../services/catalog-client.js";
 
 const PAGES = {
   players: "/joueurs/",
@@ -52,12 +52,12 @@ export default function GlobalSearch() {
   const season = f?.season;
   const legacyCups = useResource(
     "supplemental-cup-index",
-    () => json(dataUrl("raw/supplemental-index.json")),
+    () => cupIndex("supplemental"),
     armed,
   );
   const workerCups = useResource(
     "cup-worker-index",
-    () => json(dataUrl("raw/cup-worker/index.json")),
+    () => cupIndex("worker"),
     armed,
   );
   // The whole season is loaded on first use (shared with the pages when they

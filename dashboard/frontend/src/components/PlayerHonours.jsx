@@ -4,8 +4,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useResource } from "../services/resources.js";
 import {
   loadPlayerHonours,
-  MESSI_HONOURS,
-  MESSI_ID,
 } from "../services/player-honours.js";
 import { trophyArt } from "../services/trophy-art.js";
 
@@ -18,7 +16,7 @@ export default function PlayerHonours({ id, name }) {
     () => loadPlayerHonours(id, name),
     Boolean(id && name),
   );
-  const groups = result.value?.groups || (id === MESSI_ID ? MESSI_HONOURS : []);
+  const groups = result.value?.groups || [];
   const trophies = groups.flatMap((group) =>
     group.items.flatMap((item) => {
       const image = trophyArt(item);

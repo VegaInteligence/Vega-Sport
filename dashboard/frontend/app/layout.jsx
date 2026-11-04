@@ -3,7 +3,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import Providers from "./providers.jsx";
 import ShellFallback from "./shell-fallback.jsx";
-import { dataUrl } from "../src/data-url.js";
+import { apiUrl } from "../src/data-url.js";
 import "../src/brand-tokens.css";
 import "../src/fonts.css";
 import "../src/theme.css";
@@ -65,7 +65,7 @@ export const viewport = { themeColor: "#0E0F12", colorScheme: "dark light" };
 // Start the downloads every page needs while the scripts are still loading:
 // the manifest, then the Top 7 + UEFA chunks of the default season, which
 // both scopes display first.
-const manifestUrl = dataUrl("dashboard-manifest.json");
+const manifestUrl = apiUrl("/api/dashboard/manifest");
 export default function RootLayout({ children }) {
   return (
     <html lang="fr" data-theme="dark" suppressHydrationWarning>

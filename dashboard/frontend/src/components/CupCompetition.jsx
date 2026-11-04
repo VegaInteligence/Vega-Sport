@@ -5,7 +5,7 @@ import { date, seasonLabel } from "../services/format.js";
 import { parisDay } from "../services/fixtures.js";
 import KnockoutBracket from "./KnockoutBracket.jsx";
 import { useResource } from "../services/resources.js";
-import { dataUrl } from "../data-url.js";
+import { cupTable } from "../services/catalog-client.js";
 import { competitionCountryLabel } from "../services/competition-selector.js";
 import { normalizeOpenCup, normalizeSupplementalCup, filterCupMatches } from "../services/cup-matches.js";
 import { combineCupLegs, knockoutStage } from "../services/knockout-bracket.js";
@@ -13,15 +13,6 @@ import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, isGermanCupSeason } from "../services/cup-archives.js";
 import NationalFlag from "./NationalFlag.jsx";
 
-async function compressedRows(ref) {
-  if (!ref || Number(ref.rows) === 0) return [];
-  const response = await fetch(dataUrl(ref.path));
-  if (!response.ok) throw new Error("Données de coupe indisponibles (HTTP " + response.status + ")");
-  if (ref.format !== "json" && typeof DecompressionStream === "undefined") throw new Error("Ce navigateur ne peut pas lire ces données de coupe.");
-  const rows = ref.format === "json" ? await response.json() : await new Response(response.body.pipeThrough(new DecompressionStream("gzip"))).json();
-  if (!Array.isArray(rows)) throw new Error("Format de coupe invalide.");
-  return rows;
-}
 function editionLabel(competition, season) {
   return competition.sourceKey === "euro" && season === "2020" ? "2020 (joué en 2021)" : season;
 }
@@ -65,7 +56,7 @@ export default function CupCompetition({ competition, initialSeason }) {
     : "unavailable";
   const resource = useResource("cup:" + competition.id + ":" + mode + ":" + view + ":" + season + ":" + version, async () => {
     if (mode === "supplemental") {
-      const [results, fixtures] = await Promise.all([compressedRows(tables?.results), compressedRows(tables?.fixtures)]);
+      const [results, fixtures] = await Promise.all(["results", "fixtures"].map(kind => tables?.[kind] && Number(tables[kind].rows) !== 0 ? cupTable(competition.folder,season,kind) : []));
       const matches = normalizeSupplementalCup(results, fixtures);
       return view === "bracket" && !matches.some((match) => knockoutStage(match.roundName)) ? { matches, unavailable: true } : { matches };
     }

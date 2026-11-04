@@ -5,7 +5,7 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { Card, Media, Rating, Segments, Empty, AsyncState } from "./UI.jsx";
 import Icon from "./Icon.jsx";
 import { XgTimeline, ShotMap } from "./Charts.jsx";
-import { MatchSections } from "./MatchSections.jsx";
+import { MatchSections, normalizeShots } from "./MatchSections.jsx";
 import MatchStandings from "./MatchStandings.jsx";
 import MatchEventHighlights from "./MatchEventHighlights.jsx";
 import { StatRow, StatRows } from "./StatRows.jsx";
@@ -313,6 +313,28 @@ function MatchShots({ match }) {
     </div>
   );
 }
+function SummaryShots({ match }) {
+  const f = useFootball();
+  const resource = useResource(
+    `summary-shots:${f.client.id}:${match.id}`,
+    async () => {
+      await f.client.ensureEndpoint(
+        match,
+        "shots",
+        Boolean(f.client.payloads.get(`${match.id}:shots`)?.error),
+      );
+      const value = f.client.payloads.get(`${match.id}:shots`);
+      if (value?.error) throw new Error(value.error);
+      return { ...match, shots: normalizeShots(value.data) };
+    },
+    f.statusKnown,
+  );
+  return (
+    <AsyncState resource={resource}>
+      {(value) => <MatchShots match={value} />}
+    </AsyncState>
+  );
+}
 export default function MatchDetail({ match }) {
   const f = useFootball(),
     search = useSearchParams(),
@@ -337,7 +359,7 @@ export default function MatchDetail({ match }) {
         .sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1)),
     [f.data, match.id],
   );
-  const leading = players
+  const leading = (players.length ? players : match.leadingPlayers || [])
     .filter((r) => r.minutes > 0 && isNumber(r.rating))
     .slice(0, 5);
   const competition = f.data.competitions.find((c) => c.id === match.leagueId);
@@ -543,7 +565,12 @@ export default function MatchDetail({ match }) {
         )}
         {view === "stats" && <MatchStatistics match={match} />}
         {view === "standings" && <MatchStandings match={match} />}
-        {view === "shots" && <MatchShots match={match} />}
+        {view === "shots" &&
+          (match.summaryVersion ? (
+            <SummaryShots match={match} />
+          ) : (
+            <MatchShots match={match} />
+          ))}
         {view === "lineups" && (
           <MatchSections
             key={`${match.id}:lineups`}
@@ -552,7 +579,16 @@ export default function MatchDetail({ match }) {
             initialSection="lineups"
           />
         )}
-        {view === "players" && <MatchPlayers match={match} players={players} />}
+        {view === "players" &&
+          (match.summaryVersion && !players.length ? (
+            <MatchSections
+              match={match}
+              showNavigation={false}
+              initialSection="players"
+            />
+          ) : (
+            <MatchPlayers match={match} players={players} />
+          ))}
         {view === "analyses" && (
           <MatchSections
             key={`${match.id}:analyses`}

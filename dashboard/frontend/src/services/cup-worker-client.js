@@ -1,14 +1,15 @@
-import { cupSnapshotPath } from "../../../shared/cup-worker.js";
-import { dataUrl } from "../data-url.js";
+import { apiUrl } from "../data-url.js";
 
-/** Both the stored publication and fresh indexed views come from Neon. */
+/** Read the published edition and merge newer native fixtures from the same backend. */
 export async function cupWorkerSnapshot(
   kind,
   competition,
   season,
   fallbackUrl = null,
 ) {
-  const path = dataUrl(cupSnapshotPath(kind, competition, season));
+  const path = apiUrl(
+    "/api/cup-snapshot?" + new URLSearchParams({ kind, competition, season }),
+  );
   const api =
     fallbackUrl ||
     (kind === "native"
@@ -18,7 +19,7 @@ export async function cupWorkerSnapshot(
     throw new Error("Route de données invalide.");
   const requests = await Promise.allSettled([
     fetch(path),
-    api ? fetch(api) : Promise.resolve(null),
+    api ? fetch(apiUrl(api)) : Promise.resolve(null),
   ]);
   let saved = null,
     fresh = null,

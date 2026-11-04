@@ -5,8 +5,24 @@ import { useResource, json } from "../services/resources.js";
 
 export default function PlayerData({ row }) {
   const [period, setPeriod] = useState("All");
-  const resource = useResource(`player-match-source:${row.matchId}`, () =>
-    json(`/api/archive/matches/${row.matchId}`),
+  const resource = useResource(
+    `player-match-source:${row.matchId}`,
+    async () => {
+      const base = `/api/pitchapi/matches/${encodeURIComponent(row.matchId)}`;
+      const results = await Promise.allSettled([
+        json(base + "/players"),
+        json(base + "/players/halves"),
+      ]);
+      if (results.every((r) => r.status === "rejected"))
+        throw new Error("Statistiques détaillées indisponibles. Réessayez.");
+      return {
+        endpoints: {
+          players: results[0].status === "fulfilled" ? results[0].value : null,
+          player_halves:
+            results[1].status === "fulfilled" ? results[1].value : null,
+        },
+      };
+    },
   );
   return (
     <AsyncState resource={resource}>
