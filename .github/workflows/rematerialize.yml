@@ -1,4 +1,4 @@
-name: Rematerialize Dashboard
+name: Build serving tables (AWS)
 on:
   workflow_dispatch:
     inputs:
@@ -7,11 +7,11 @@ on:
         type: boolean
         default: false
       minutes:
-        description: Maximum publication minutes
+        description: Maximum serving-table build minutes
         default: "100"
         required: true
       batch:
-        description: Partitions per transaction
+        description: Queue fetch size (each partition commits separately)
         default: "10"
         required: true
 permissions:
@@ -22,7 +22,7 @@ concurrency:
   queue: max
 jobs:
   rematerialize:
-    if: github.repository == 'OrionQuantPlatform/STATARENA' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/aws-backend-20261104')
+    if: github.repository == 'OrionQuantPlatform/STATARENA' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
       id-token: write

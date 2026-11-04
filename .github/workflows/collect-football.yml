@@ -1,0 +1,164 @@
+name: Collect football (AWS)
+on:
+  schedule:
+    - cron: '35 22 * * *'
+    - cron: '10 6 * * *'
+    - cron: '15 0,12 * * *'
+    - cron: '50 6 * * *'
+    - cron: '15 18 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Collection mode
+        type: choice
+        options: [daily, pulse, historical]
+        default: daily
+      minutes:
+        description: Collection minutes (blank uses mode default)
+        default: ''
+      max_requests:
+        description: Provider request limit (blank uses mode default)
+        default: ''
+      priority_league:
+        description: Optional provider league ID
+        default: ''
+      collect_assets:
+        description: Collect newly discovered images
+        type: boolean
+        default: true
+permissions:
+  contents: read
+concurrency:
+  group: statarena-aws-ingestion
+  cancel-in-progress: false
+  queue: max
+jobs:
+  collect:
+    if: github.repository == 'OrionQuantPlatform/STATARENA' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ${{ vars.STATARENA_AWS_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 330
+    env:
+      STATARENA_OBJECT_LIMIT_BYTES: ${{ vars.STATARENA_OBJECT_LIMIT_BYTES }}
+      STATARENA_SQL_LIMIT_BYTES: ${{ vars.STATARENA_SQL_LIMIT_BYTES }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            dashboard
+            .github/actions/aws-database
+          filter: blob:none
+      - name: Select bounded collection plan
+        id: plan
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          MODE_INPUT: ${{ inputs.mode }}
+          MINUTES_INPUT: ${{ inputs.minutes }}
+          REQUESTS_INPUT: ${{ inputs.max_requests }}
+          PRIORITY_INPUT: ${{ inputs.priority_league }}
+          ASSETS_INPUT: ${{ inputs.collect_assets }}
+        run: |
+          set -euo pipefail
+          mode="${MODE_INPUT:-daily}"
+          if [ "$EVENT_NAME" = schedule ]; then
+            case "$SCHEDULE" in
+              '35 22 * * *') mode=daily ;;
+              '10 6 * * *') mode=pulse ;;
+              '15 0,12 * * *'|'50 6 * * *'|'15 18 * * *') mode=historical ;;
+              *) echo 'Unknown collection schedule' >&2; exit 1 ;;
+            esac
+          elif [ "$EVENT_NAME" != workflow_dispatch ]; then
+            echo 'Unsupported collection event' >&2; exit 1
+          fi
+          case "$mode" in
+            daily) minutes=60; requests=20000; assets=3000; supplemental=true ;;
+            pulse) minutes=25; requests=20000; assets=1000; supplemental=false ;;
+            historical) minutes=280; requests=100000; assets=3000; supplemental=false ;;
+            *) echo 'Invalid collection mode' >&2; exit 1 ;;
+          esac
+          if [ "$EVENT_NAME" = schedule ] && [ "$SCHEDULE" = '15 18 * * *' ]; then minutes=210; fi
+          minutes="${MINUTES_INPUT:-$minutes}"
+          requests="${REQUESTS_INPUT:-$requests}"
+          if [[ ! "$minutes" =~ ^[1-9][0-9]{0,2}$ ]] || (( 10#$minutes > 300 )); then
+            echo 'Collection minutes must be between 1 and 300' >&2; exit 1
+          fi
+          if [[ ! "$requests" =~ ^[1-9][0-9]{0,5}$ ]] || (( 10#$requests > 100000 )); then
+            echo 'Provider request limit must be between 1 and 100000' >&2; exit 1
+          fi
+          priority="${PRIORITY_INPUT:-}"
+          if [ -n "$priority" ] && [[ ! "$priority" =~ ^l_[A-Za-z0-9]{6}$ ]]; then
+            echo 'Invalid provider league ID' >&2; exit 1
+          fi
+          case "${ASSETS_INPUT:-true}" in
+            true) ;;
+            false) assets=0 ;;
+            *) echo 'Invalid image collection flag' >&2; exit 1 ;;
+          esac
+          {
+            printf 'mode=%s\nminutes=%s\nrequests=%s\n' "$mode" "$minutes" "$requests"
+            printf 'priority_league=%s\nasset_limit=%s\nsupplemental=%s\n' "$priority" "$assets" "$supplemental"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: dashboard/scripts/neon-requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - run: pip install -r dashboard/scripts/neon-requirements.txt
+      - run: bun install --frozen-lockfile
+        working-directory: dashboard
+      - name: Load AWS staging credentials
+        uses: ./.github/actions/aws-database
+        with:
+          mode: ingest
+          role-arn: ${{ vars.STATARENA_AWS_INGEST_ROLE_ARN }}
+      - name: Collect provider records into AWS staging
+        env:
+          PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
+          COLLECT_MODE: ${{ steps.plan.outputs.mode }}
+          COLLECT_MINUTES: ${{ steps.plan.outputs.minutes }}
+          COLLECT_REQUESTS: ${{ steps.plan.outputs.requests }}
+          PRIORITY_LEAGUE: ${{ steps.plan.outputs.priority_league }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          if [ -n "$PRIORITY_LEAGUE" ]; then args+=(--priority-league "$PRIORITY_LEAGUE"); fi
+          python dashboard/scripts/neon_ingest.py --skip-materialize --mode "$COLLECT_MODE" --minutes "$COLLECT_MINUTES" --max-requests "$COLLECT_REQUESTS" "${args[@]}" | tee collection.log
+      - name: Refresh supplemental records in AWS staging
+        if: steps.plan.outputs.supplemental == 'true'
+        run: node dashboard/scripts/neon_refresh_sources.mjs
+      - name: Refresh player honours in AWS staging
+        if: steps.plan.outputs.supplemental == 'true'
+        run: python dashboard/scripts/player_honours.py --limit 100
+      - name: Refresh portraits for observed coaches
+        if: steps.plan.outputs.supplemental == 'true'
+        run: node dashboard/scripts/neon_observed_coaches.mjs
+      - name: Store new display images in AWS staging
+        if: steps.plan.outputs.asset_limit != '0'
+        env:
+          ASSET_LIMIT: ${{ steps.plan.outputs.asset_limit }}
+        run: python dashboard/scripts/neon_assets.py --limit "$ASSET_LIMIT"
+      - name: Build serving tables from AWS staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          python dashboard/scripts/relational_materialize.py --minutes 15 --batch 10 | tee serving-tables.log
+      - name: Save collection and serving-table receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: football-collection-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            collection.log
+            serving-tables.log
+          if-no-files-found: ignore

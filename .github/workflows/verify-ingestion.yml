@@ -29,8 +29,8 @@ on:
       - 'docs/verification/relational-match-20261104/**'
       - 'docs/verification/aws-frontend-20261104/curated-*'
       - 'dashboard/outputs/data-completeness/*.json'
-      - '.github/workflows/daily-sync.yml'
-      - '.github/workflows/historical-backfill.yml'
+      - '.github/workflows/collect-football.yml'
+      - 'docs/verification/aws-workflow-consolidation-20261104/*.py'
       - 'tests/daily_refresh_postgres.py'
       - 'tests/test_daily_refresh.py'
   pull_request:
@@ -62,8 +62,8 @@ on:
       - 'docs/verification/relational-match-20261104/**'
       - 'docs/verification/aws-frontend-20261104/curated-*'
       - 'dashboard/outputs/data-completeness/*.json'
-      - '.github/workflows/daily-sync.yml'
-      - '.github/workflows/historical-backfill.yml'
+      - '.github/workflows/collect-football.yml'
+      - 'docs/verification/aws-workflow-consolidation-20261104/*.py'
       - 'tests/daily_refresh_postgres.py'
       - 'tests/test_daily_refresh.py'
   workflow_dispatch:
@@ -105,6 +105,8 @@ jobs:
           python docs/verification/aws-actions-20261104/verify.py ci
       - name: Exercise temporary runner ingress and post cleanup
         run: python docs/verification/aws-actions-20261104/ingress_e2e.py ingress-ci
+      - name: Execute scheduled and manual football collection plans
+        run: python docs/verification/aws-workflow-consolidation-20261104/verify_plan.py ci
       - name: Save AWS Actions verification receipts
         if: always()
         uses: actions/upload-artifact@v4
@@ -113,6 +115,7 @@ jobs:
           path: |
             docs/verification/aws-actions-20261104/ci/results.json
             docs/verification/aws-actions-20261104/ingress-ci/results.json
+            docs/verification/aws-workflow-consolidation-20261104/ci.json
           if-no-files-found: warn
 
   relational:

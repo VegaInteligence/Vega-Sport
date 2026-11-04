@@ -1,4 +1,4 @@
-name: UEFA historical standings
+name: Collect standings (AWS)
 on:
   push:
     paths:
@@ -31,7 +31,7 @@ jobs:
       - run: node --test tests/uefa-standings.test.mjs tests/standings-clubs.test.mjs tests/competition-render.test.mjs
       - run: node dashboard/scripts/neon_refresh_uefa_standings.mjs --check-source
   refresh:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'push'
     needs: verify
     permissions:
       contents: read
