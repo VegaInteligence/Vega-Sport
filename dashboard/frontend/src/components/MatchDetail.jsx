@@ -1,4 +1,12 @@
-import React, { lazy, Suspense, useMemo, useRef, useId, useState } from "react";
+import React, {
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useId,
+  useState,
+} from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -19,6 +27,7 @@ import {
   statValue,
 } from "../services/match-data.js";
 import { useResource } from "../services/resources.js";
+import { useProResource } from "../hooks/useProResource.js";
 import { seasonLabel } from "../model.js";
 import { BookmarkButton } from "./ResearchUI.jsx";
 const views = [
@@ -131,6 +140,29 @@ export function isUpcomingMatch(match, now = Date.now()) {
 }
 function MatchViewTabs({ view, onChange, panelId, views }) {
   const refs = useRef([]);
+  useEffect(() => {
+    const active = refs.current[views.findIndex(([key]) => key === view)];
+    const strip = active?.parentElement;
+    if (!strip) return;
+    const reveal = () => {
+      const bounds = strip.getBoundingClientRect();
+      const button = active.getBoundingClientRect();
+      const left = bounds.left + strip.clientLeft;
+      const right = left + strip.clientWidth;
+      if (button.left < left) strip.scrollLeft -= left - button.left + 8;
+      else if (button.right > right)
+        strip.scrollLeft += button.right - right + 8;
+    };
+    reveal();
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(reveal);
+    observer?.observe(strip);
+    window.addEventListener("resize", reveal);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", reveal);
+    };
+  }, [view, views]);
   return (
     <div
       className="match-view-tabs"
@@ -323,6 +355,32 @@ function MatchShots({ match }) {
 }
 function SummaryShots({ match }) {
   const f = useFootball();
+  return f.pro ? (
+    <ProSummaryShots match={match} />
+  ) : (
+    <LegacySummaryShots match={match} />
+  );
+}
+function ProSummaryShots({ match }) {
+  const f = useFootball();
+  const client = f.client.edition(match.leagueId, match.season);
+  const resource = useProResource(
+    client.resourceKey("shots", match.id),
+    async () => {
+      if (match.representationToken !== client.representationToken)
+        throw new Error("La version du match est indisponible.");
+      const data = await client.shots(match.id);
+      return { ...match, shots: normalizeShots(data) };
+    },
+  );
+  return (
+    <AsyncState resource={resource}>
+      {(value) => <MatchShots match={value} />}
+    </AsyncState>
+  );
+}
+function LegacySummaryShots({ match }) {
+  const f = useFootball();
   const resource = useResource(
     `summary-shots:${f.client.id}:${match.id}`,
     async () => {
@@ -371,6 +429,8 @@ export default function MatchDetail({ match }) {
     .filter((r) => r.minutes > 0 && isNumber(r.rating))
     .slice(0, 5);
   const competition = f.allCompetitions.find((c) => c.id === match.leagueId);
+  const homeName = match.home.name ?? "Équipe non renseignée";
+  const awayName = match.away.name ?? "Équipe non renseignée";
   const status =
     match.status === "finished"
       ? "Terminé"
@@ -416,7 +476,7 @@ export default function MatchDetail({ match }) {
           <BookmarkButton
             kind="matches"
             id={match.id}
-            name={`${match.home.name} – ${match.away.name}`}
+            name={`${homeName} – ${awayName}`}
             season={seasonLabel(match.season || f.season)}
           />
         </div>
@@ -435,16 +495,16 @@ export default function MatchDetail({ match }) {
           </span>
         </div>
         <h1 className="sr-only">
-          {match.home.name} — {match.away.name}
+          {homeName} — {awayName}
         </h1>
         <div className="scoreboard-main">
           <Link
             className="scoreboard-team"
             href={f.href("/clubs/", { id: match.home.id })}
           >
-            <Media name={match.home.name} url={match.home.imageUrl} />
+            <Media name={homeName} url={match.home.imageUrl} />
             <div>
-              <strong>{match.home.name}</strong>
+              <strong>{homeName}</strong>
               <span>
                 Domicile
                 {match.home.formation ? ` · ${match.home.formation}` : ""}
@@ -474,9 +534,9 @@ export default function MatchDetail({ match }) {
             className="scoreboard-team scoreboard-away"
             href={f.href("/clubs/", { id: match.away.id })}
           >
-            <Media name={match.away.name} url={match.away.imageUrl} />
+            <Media name={awayName} url={match.away.imageUrl} />
             <div>
-              <strong>{match.away.name}</strong>
+              <strong>{awayName}</strong>
               <span>
                 Extérieur
                 {match.away.formation ? ` · ${match.away.formation}` : ""}

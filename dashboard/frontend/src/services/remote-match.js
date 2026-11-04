@@ -1,5 +1,6 @@
 /** Prefer the bounded summary, retaining established archive/API fallbacks. */
 export async function loadRemoteMatch(id, client, readArchive) {
+  if (client.pro) return client.summary(id);
   try {
     const summary = await readArchive(
       "/api/matches/" + encodeURIComponent(id) + "/summary",

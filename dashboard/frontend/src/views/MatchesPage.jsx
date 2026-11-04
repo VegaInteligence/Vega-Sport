@@ -11,6 +11,7 @@ import UpcomingMatches from "../components/UpcomingMatches.jsx";
 import { useResource, json } from "../services/resources.js";
 import { loadRemoteMatch } from "../services/remote-match.js";
 import { ResearchLists, useHasSaved } from "../components/ResearchUI.jsx";
+import ProMatchesPage from "./ProMatchesPage.jsx";
 function RemoteDetail({ id }) {
   const f = useFootball(),
     resource = useResource(`remote-match:${id}`, () =>
@@ -23,6 +24,10 @@ function RemoteDetail({ id }) {
   );
 }
 export default function MatchesPage() {
+  const f = useFootball();
+  return f.pro ? <ProMatchesPage /> : <LegacyMatchesPage />;
+}
+function LegacyMatchesPage() {
   const f = useFootball(),
     [page, setPage] = useState(1),
     search = useSearchParams(),

@@ -53,7 +53,7 @@ export function MatchLink({ match, week, showKickoff = false }) {
       <span className="match-date">{date(m.date)}</span>
       <span className="match-teams">
         <span className="team-name home-team">
-          <span>{m.home?.name}</span>
+          <span>{m.home?.name ?? "Équipe non renseignée"}</span>
           <Media name={m.home?.name} url={m.home?.imageUrl} />
         </span>
         <strong className="score">
@@ -65,7 +65,7 @@ export function MatchLink({ match, week, showKickoff = false }) {
         </strong>
         <span className="team-name">
           <Media name={m.away?.name} url={m.away?.imageUrl} />
-          <span>{m.away?.name}</span>
+          <span>{m.away?.name ?? "Équipe non renseignée"}</span>
         </span>
       </span>
       <span className="match-league">

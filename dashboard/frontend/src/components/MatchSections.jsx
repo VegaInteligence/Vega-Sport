@@ -236,8 +236,15 @@ export function normalizeShots(payload) {
       xgot: s.expected_goals_on_target,
       minute: s.minute,
       type: s.is_own_goal ? "OwnGoal" : s.event_type,
-      isGoal: ["Goal", "OwnGoal"].includes(s.event_type),
-      isOwnGoal: s.is_own_goal === true || s.event_type === "OwnGoal",
+      isGoal:
+        typeof s.is_goal === "boolean"
+          ? s.is_goal
+          : ["Goal", "OwnGoal"].includes(s.event_type),
+      isOwnGoal:
+        typeof s.is_own_goal === "boolean"
+          ? s.is_own_goal
+          : s.event_type === "OwnGoal",
+      isOnTarget: s.is_on_target,
     }));
 }
 export function Shots({ match, payload, onPlayer = () => {} }) {

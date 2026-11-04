@@ -53,12 +53,12 @@ export default function GlobalSearch() {
   const legacyCups = useResource(
     "supplemental-cup-index",
     () => cupIndex("supplemental"),
-    armed,
+    armed && !f?.pro,
   );
   const workerCups = useResource(
     "cup-worker-index",
     () => cupIndex("worker"),
-    armed,
+    armed && !f?.pro,
   );
   // The whole season is loaded on first use (shared with the pages when they
   // already show every competition).

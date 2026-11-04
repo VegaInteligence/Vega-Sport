@@ -30,7 +30,7 @@ export function Media({ name = "", url, fallbackUrl, className = "crest" }) {
         />
       ) : (
         <span className="image-fallback">
-          {name
+          {(typeof name === "string" ? name : "")
             .split(/\s+/)
             .slice(0, 2)
             .map((x) => x[0])
