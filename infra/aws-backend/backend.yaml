@@ -119,10 +119,14 @@ Resources:
         Name: statarena-backend
         SecurityHeadersConfig:
           ContentTypeOptions: {Override: true}
-        CustomHeadersConfig:
-          Items:
-            - {Header: Access-Control-Allow-Origin, Value: '*', Override: true}
-            - {Header: Access-Control-Expose-Headers, Value: 'ETag, Content-Length, Cache-Control, Age, X-Cache, X-Data-Source, Server-Timing', Override: true}
+        CorsConfig:
+          AccessControlAllowCredentials: false
+          AccessControlAllowHeaders: {Items: ['*']}
+          AccessControlAllowMethods: {Items: [GET, HEAD, OPTIONS]}
+          AccessControlAllowOrigins: {Items: ['*']}
+          AccessControlExposeHeaders:
+            Items: [ETag, Content-Length, Cache-Control, Age, X-Cache, X-Data-Source, Server-Timing]
+          OriginOverride: true
   Distribution:
     Type: AWS::CloudFront::Distribution
     Properties:
