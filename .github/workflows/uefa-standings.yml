@@ -37,7 +37,7 @@ jobs:
       contents: read
       id-token: write
     concurrency:
-      group: statarena-neon-ingestion
+      group: statarena-aws-ingestion
       cancel-in-progress: false
       queue: max
     runs-on: ${{ vars.STATARENA_AWS_RUNNER || 'ubuntu-latest' }}

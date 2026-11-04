@@ -16,7 +16,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: statarena-neon-ingestion
+  group: statarena-aws-ingestion
   cancel-in-progress: false
   queue: max
 jobs:
