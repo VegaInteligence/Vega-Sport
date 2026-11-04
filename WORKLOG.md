@@ -31,5 +31,5 @@
 ## Next action
 - Review/publish coherent Pro plan on main; obtain required revised-schema validation before RDS reorganization.
 - Dense-reader code committed/pushed eda0ce3e50 and deployed; publish exact release evidence. No timeout-elimination claim from bounded samples.
-- Publish bridge production acceptance/evidence on main; keep missing-source404s explicit. DenseCI passed; frontendCI queued at lastcheck. Final model028c221d… reviewed with3boundedkey/provenance fixes; allfreshproofs complete; obtain revised-schema approval before remote normalization.
+- Publish bridge production acceptance/evidence on main; keep missing-source404s explicit. DenseCI and frontendCI both completed successfully. Final model028c221d… reviewed with3boundedkey/provenance fixes; allfreshproofs complete; obtain revised-schema approval before remote normalization.
 - Suggested commits: `perf: batch appearance metrics while preserving match membership`; `fix: bridge the current frontend to saved Neon data`; `docs: align the Orion schema and pilot with the Pro review`.
