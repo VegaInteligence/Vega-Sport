@@ -1,4 +1,10 @@
-import { objectMeta, objectBody } from "./neon.js";
+import {
+  objectMeta,
+  objectBody,
+  externalStorage,
+  dataProvider,
+} from "./neon.js";
+import { immutableFile, cloudFrontObjectUrl } from "./cdn.js";
 import { cacheHeaders, matchesEtag, noStoreHeaders } from "./cache-policy.js";
 import { responseBytes } from "./metrics.js";
 export const response = (body, status = 200, headers = {}) => {
@@ -31,20 +37,29 @@ export async function publicFile(
       const etag = '"' + meta.sha256 + '"';
       const headers = {
         ETag: etag,
-        "X-Data-Source": "Neon",
+        "X-Data-Source": dataProvider(),
         "Content-Type": relative.endsWith(".gz")
           ? "application/gzip"
           : meta.content_type,
         ...cacheHeaders(60, 30, {
-          immutable:
-            !mutableAlias &&
-            /(?:-|\/)[a-f0-9]{24,64}\.(?:json(?:\.gz)?|webp|png|jpe?g)$/.test(
-              relative,
-            ),
+          immutable: !mutableAlias && immutableFile(relative),
         }),
       };
       if (matchesEtag(request.headers.get("if-none-match"), etag))
         return response(null, 304, headers);
+      if (
+        request.method === "GET" &&
+        externalStorage() &&
+        process.env.STATARENA_CLOUDFRONT_URL &&
+        immutableFile(relative)
+      )
+        return response(null, 307, {
+          Location: cloudFrontObjectUrl(
+            relative,
+            process.env.STATARENA_CLOUDFRONT_URL,
+          ),
+          "Cache-Control": "private, no-store",
+        });
       headers["Content-Length"] = String(meta.size);
       if (request.method === "HEAD") return response(null, 200, headers);
       try {
@@ -56,6 +71,6 @@ export async function publicFile(
     }
   } catch (e) {
     console.error("Neon object unavailable", e.name);
-    return response("Neon data unavailable", 503);
+    return response(dataProvider() + " data unavailable", 503);
   }
 }

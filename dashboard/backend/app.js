@@ -1,7 +1,13 @@
 import { matchObservation, profileObservation } from "./services/database.js";
 import { publicFile, response } from "./services/files.js";
 import { handlePitchApi } from "./services/pitchapi.js";
-import { query, canonical, configured, cache } from "./services/neon.js";
+import {
+  query,
+  canonical,
+  configured,
+  cache,
+  dataProvider,
+} from "./services/neon.js";
 import { instrumentRequest, serializeJson } from "./services/metrics.js";
 import { cacheHeaders, noStoreHeaders } from "./services/cache-policy.js";
 const assetLookup = cache(4 * 1024 * 1024, { name: "asset" });
@@ -38,7 +44,7 @@ async function routeRequest(request) {
         "SELECT value,updated_at FROM statarena.state WHERE name='revision'",
       );
       return json(
-        { status: "ok", source: "Neon", revision: state?.value },
+        { status: "ok", source: dataProvider(), revision: state?.value },
         head,
       );
     }
@@ -48,7 +54,7 @@ async function routeRequest(request) {
       );
       return json(
         {
-          provider: "Neon",
+          provider: dataProvider(),
           configured: configured(),
           schedule: {
             cron: "35 22 * * *",
@@ -99,13 +105,13 @@ async function routeRequest(request) {
       return row
         ? json(row.body, head, 200, {
             "Content-Type": "application/json",
-            "X-Data-Source": "Neon",
+            "X-Data-Source": dataProvider(),
             ...cacheHeaders(300, 60),
           })
         : json(
             {
               available: false,
-              error: "Donnée absente de Neon.",
+              error: "Donnée indisponible.",
             },
             head,
             404,
@@ -129,7 +135,7 @@ async function routeRequest(request) {
       return record
         ? json(record, head, 200, {
             "Content-Type": "application/json",
-            "X-Data-Source": "Neon",
+            "X-Data-Source": dataProvider(),
             ...(profile && record.status !== 200
               ? noStoreHeaders
               : cacheHeaders(60, 30)),
@@ -147,6 +153,6 @@ async function routeRequest(request) {
     return response("Not found", 404);
   } catch (e) {
     console.error("Neon request failed", e.name);
-    return response("Neon data unavailable", 503);
+    return response(dataProvider() + " data unavailable", 503);
   }
 }

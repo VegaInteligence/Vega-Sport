@@ -54,12 +54,17 @@ def main():
                     size,
                     bytes.fromhex(sha),
                     etag,
-                    b,
+                    None if os.environ.get("STATARENA_EXTERNAL_STORAGE") == "1" else b,
                     "application/gzip" if path.endswith(".gz") else "application/json",
                 )
             )
     db.execute(
-        "insert into statarena.objects select * from import_objects on conflict(path) do update set body=excluded.body where statarena.objects.sha256=excluded.sha256"
+        "insert into statarena.objects select * from import_objects on conflict(path) "
+        + (
+            "do nothing"
+            if os.environ.get("STATARENA_EXTERNAL_STORAGE") == "1"
+            else "do update set body=excluded.body where statarena.objects.sha256=excluded.sha256"
+        )
     )
     db.commit()
     print("catalog imported", flush=True)
