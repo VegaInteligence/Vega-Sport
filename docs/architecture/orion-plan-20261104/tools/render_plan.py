@@ -65,7 +65,7 @@ COMMON = {
     "participation_evidence": "Preuve explicite qui justifie played ; une ligne de performance ne suffit pas.",
     "squad_status": "Titulaire, remplaçant, remplaçant inutilisé, observation ou état inconnu.",
     "is_starter": "Statut titulaire observé ; ne pas le déduire de statistiques manquantes.",
-    "shirt_number": "Numéro natif conservé en texte ; la forme et le type d’origine sont traçables par field_states.",
+    "shirt_number": "Numéro natif conservé en texte ; forme et type d’origine distingués par les états locaux inventoriés.",
     "is_captain": "Capitanat explicitement indiqué dans la composition.",
     "confirmed": "Confirmation explicite de la composition ; une prédiction ne vaut pas confirmation.",
     "formation": "Formation observée, conservée comme libellé.",
@@ -298,8 +298,8 @@ def domain(t):
     if name.startswith("ingest."):
         if n in ("sources", "source_datasets", "source_documents", "source_records", "document_lineage", "resource_fetches", "media_assets"):
             return "01-sources-medias"
-        if n in ("relation_contracts", "row_versions", "dataset_snapshots", "dataset_snapshot_documents", "dataset_snapshot_rows", "field_contracts", "field_states", "record_row_links"):
-            return "02-historique-instantanes"
+        if n in ("relation_contracts", "dataset_snapshots", "dataset_snapshot_documents", "field_contracts"):
+            return "02-provenance-publications"
         if n in ("import_runs", "collection_jobs", "asset_jobs", "dirty_editions", "match_coverage", "schema_migrations"):
             return "03-ingestion-reprise"
         return "04-qualite-identites-nettoyage"
@@ -319,22 +319,16 @@ def domain(t):
 
 
 groups = collections.defaultdict(list)
-history = []
 for name, t in tables.items():
-    if domain(t) == "historique":
-        history.append(name)
-    else:
-        groups[domain(t)].append(name)
-for i in range(0, len(history), 6):
-    groups[f"{14+i//6:02d}-historiques-{i//6+1:02d}"] = history[i:i+6]
+    groups[domain(t)].append(name)
 titles = {
-    "01-sources-medias": "Sources et médias", "02-historique-instantanes": "Historique et instantanés SQL", "03-ingestion-reprise": "Ingestion et reprise",
+    "01-sources-medias": "Sources et médias", "02-provenance-publications": "Provenance et publications", "03-ingestion-reprise": "Ingestion et reprise",
     "04-qualite-identites-nettoyage": "Qualité, alias et nettoyage", "05-competitions-referentiels": "Compétitions et référentiels", "06-identites-profils": "Identités et profils",
     "07-matchs-participations": "Matchs et participations", "08-statistiques-periodes": "Statistiques et périodes", "09-tirs-spatial": "Tirs et analyses spatiales",
     "10-classements": "Classements", "11-entraineurs-palmares": "Entraîneurs et palmarès", "12-lectures-publication": "Lectures et publication", "13-modeles-reserves": "Modèles : réserve hors nouvelles formules",
 }
 for key in groups:
-    titles.setdefault(key, "Historiques SQL typés " + key.rsplit("-", 1)[-1])
+    assert key in titles, key
 
 mapping = []
 def target_for(schema, name):
@@ -342,33 +336,33 @@ def target_for(schema, name):
         return ["authentification existante — contrôle d’usage préalable"], "conserver provisoirement", "Aucune suppression déduite du nom du schéma ou de statistiques estimées."
     if schema == "statarena":
         known = {
-            "objects": ["ingest.source_documents", "ingest.media_assets"], "file_documents": ["ingest.source_records", "ingest.record_row_links", "football.* selon famille"],
-            "current_file_documents": ["football.* et historiques typés"], "file_document_sources": ["ingest.document_reconciliations"],
+            "objects": ["ingest.source_documents", "ingest.media_assets"], "file_documents": ["ingest.source_records", "football.* selon famille, provenance typée directe"],
+            "current_file_documents": ["football.* selon famille, versions typées retenues"], "file_document_sources": ["ingest.document_reconciliations"],
             "file_payloads": ["ingest.source_documents", "ingest.cleanup_items"], "file_payload_chunks": ["ingest.cleanup_items"],
             "fixtures": ["football.matches", "football.match_teams", "football.match_scores", "football.match_source_ids"],
             "resources": ["ingest.resource_fetches", "ingest.match_coverage"], "shards": ["ingest.source_documents", "ingest.source_records"],
-            "observations": ["ingest.source_records", "ingest.record_row_links"], "projections": ["football.standing_snapshots", "football.ranking_snapshots", "football.venues", "football.coaches", "football.player_honours"],
+            "observations": ["ingest.source_records", "football.* selon famille, provenance typée directe"], "projections": ["football.standing_snapshots", "football.ranking_snapshots", "football.venues", "football.coaches", "football.player_honours"],
             "jobs": ["ingest.collection_jobs"], "asset_jobs": ["ingest.asset_jobs"], "assets": ["ingest.media_assets"],
             "dirty_partitions": ["ingest.dirty_editions"], "ingest_failures": ["ingest.resource_fetches", "ingest.quality_issues"],
             "state": ["ingest.import_runs", "analytics.publication_versions"], "archive_audits": ["ingest.document_reconciliations"],
         }
         if name.startswith("neon_"):
-            return ["ingest.record_row_links", "ingest.document_reconciliations", "football.* selon contenu"], "réconcilier puis retirer", "Tables de delta du transfert : ne pas consommer/supprimer en concurrence avec son propriétaire."
+            return ["ingest.source_records", "ingest.document_reconciliations", "football.* selon contenu, provenance typée directe"], "réconcilier puis retirer", "Tables de delta du transfert : ne pas consommer/supprimer en concurrence avec son propriétaire."
         return known.get(name, ["REVUE EXPLICITE REQUISE"]), "fusionner/remplacer puis retirer", "Corps source supprimés seulement après correspondance exhaustive ; métadonnées utiles conservées sans payload."
     core = {
         "players": ["football.players", "football.player_profile_versions", "football.player_source_ids"], "teams": ["football.teams", "football.team_profile_versions", "football.team_source_ids"],
         "matches": ["football.matches", "football.match_teams", "football.match_scores"], "fixtures": ["football.matches", "football.match_teams", "football.match_scores"],
         "competitions": ["football.competitions", "football.competition_source_ids"], "competition_seasons": ["football.competition_seasons"], "competition_catalog_seasons": ["football.competition_seasons"],
-        "team_seasons": ["football.competition_teams"], "appearances": ["football.match_players", "football.player_match_stats"], "appearance_shirt_numbers": ["football.match_players", "ingest.field_states"],
+        "team_seasons": ["football.competition_teams"], "appearances": ["football.match_players", "football.player_match_stats"], "appearance_shirt_numbers": ["football.match_players"],
         "appearance_metrics": ["football.player_match_metric_values"], "shots": ["football.shots"], "team_statistics": ["football.team_match_stats", "football.team_match_metric_values"],
         "assets": ["ingest.media_assets"], "metric_definitions": ["football.metric_definitions", "football.source_metric_mappings"],
     }
     if name in core:
         return core[name], "normaliser puis remplacer", "Préserver types natifs, état des champs, identité et compatibilité publique ; jamais compter toutes les performances comme apparitions."
     if name.startswith("compact_"):
-        return ["football.player_match_stats", "football.player_match_metric_values", "ingest.field_states"], "décompacter en faits puis retirer", "Conserver toutes les métriques, périodes et exceptions ; réutiliser seulement le format compact de transport utile au frontend."
+        return ["football.player_match_stats", "football.player_match_metric_values"], "décompacter en faits puis retirer", "Conserver toutes les métriques, périodes et exceptions dans des états locaux inventoriés ; réutiliser seulement le format compact de transport utile au frontend."
     if name in ("match_families", "match_coverage", "match_warnings", "match_details", "match_detail_versions"):
-        return ["ingest.match_coverage", "ingest.source_records", "ingest.row_versions", "ingest.quality_issues"], "remplacer", "Statut de collecte, disponibilité, fraîcheur et validité restent indépendants."
+        return ["ingest.match_coverage", "ingest.source_records", "ingest.quality_issues", "football.* selon famille, versions typées retenues"], "remplacer", "Statut de collecte, disponibilité, fraîcheur et validité restent indépendants."
     if name.startswith(("partition_", "partitions", "publications", "publication_jobs", "worker_", "workflow_")):
         return ["ingest.import_runs", "ingest.dirty_editions", "ingest.document_reconciliations", "analytics.aggregation_builds", "analytics.publication_versions"], "réutiliser les mécanismes puis remplacer", "Conserver baux, idempotence, capacité, checkpoints et preuves ; supprimer les marqueurs running périmés par une transition contrôlée."
     if name.startswith("cat_") or name == "catalog_editions":
@@ -399,9 +393,9 @@ def target_for(schema, name):
     elif "team_stat" in name: targets = ["football.team_match_stats", "football.team_match_metric_values"]
     elif "player" in name or name.startswith("half_"): targets = ["football.match_players", "football.player_match_stats", "football.player_match_metric_values"]
     elif "match_summar" in name: targets = ["football.matches", "football.match_teams", "football.match_scores", "analytics.match_summary"]
-    elif name == "match_appearance_members": targets = ["football.match_players", "ingest.field_states"]
+    elif name == "match_appearance_members": targets = ["football.match_players"]
     else: return ["REVUE EXPLICITE REQUISE"], "non résolu", "La purge reste interdite tant que cette structure n’est pas cartographiée."
-    return targets, "fusionner en faits métier", "Métadonnées resource_id/record_no/parent_no/position → provenance et ordinal ; missing/null_groups → field_states ; valeurs → colonnes et relations typées."
+    return targets, "fusionner en faits métier", "Métadonnées resource_id/record_no/parent_no/position → provenance directe et ordinal ; missing/null_groups → états locaux inventoriés ; valeurs et variantes → colonnes et relations typées. Un champ non couvert bloque la purge."
 
 
 for database, data in dbs.items():
@@ -427,6 +421,11 @@ def dot_label(table, stub=False, referenced=None):
     return "<" + "".join(lines) + "</TABLE>>"
 
 
+# Remove obsolete generated diagrams as well as their index entries.
+expected_diagrams = set(groups) | {"architecture-cible", "architecture-actuelle", "schema-overview"}
+for stale in diagram_dir.iterdir():
+    if stale.suffix in {".dot", ".svg"} and stale.stem not in expected_diagrams:
+        stale.unlink()
 graph_data = []
 for key, names in sorted(groups.items()):
     names = sorted(names)
@@ -477,27 +476,28 @@ overview = '''digraph architecture {
 }'''
 (diagram_dir / "architecture-cible.dot").write_text(overview)
 current = r'''digraph current_architecture {
- graph [rankdir=LR,bgcolor="white",pad="0.4",nodesep="0.5",ranksep="0.8"];
+ graph [rankdir=LR,bgcolor="white",pad="0.4",nodesep="0.5",ranksep="0.8",label="Production rétablie · reçus du 4 novembre 2026 à 18:38–18:41 Paris",labelloc=t,fontname="Helvetica"];
  node [shape=box,style="rounded,filled",fillcolor="#edf2f7",color="#bcc7d2",fontname="Helvetica",fontsize=14,margin="0.2,0.15"];
  edge [fontname="Helvetica",fontsize=11,color="#738397"];
  Browser [label="Navigateur\nDesktop / mobile"];
- Vercel [label="Vercel • frontend b2ec973d2d\nAccueil 200 • API 503",fillcolor="#e4edf9"];
- Neon [label="Neon existant\nDonnées et configuration héritées",fillcolor="#f6eddc"];
- API [label="CloudFront API AWS\nOrigine Lambda signée OAC"];
+ Vercel [label="Vercel • frontend f65036cdb9\nProduction rétablie • API 200",fillcolor="#e4edf9"];
+ Neon [label="Neon existant • corpus sauvegardé\n6 saisons • 230 partitions référencées",fillcolor="#f6eddc"];
+ API [label="Preview CloudFront API AWS\nCouverture encore partielle\nOrigine Lambda signée OAC"];
  Lambda [label="Lambda Node 24 • 512 Mio\nLectures SQL et projections partielles",fillcolor="#e6f1e9"];
  RDS [label="Une instance RDS PostgreSQL 18.6\nstatarena_prod : statarena + statarena_app\nstatarena : ancien import distinct",fillcolor="#e6f1e9"];
  Assets [label="CloudFront fichiers / médias\nImages et certains JSON immuables"];
- S3 [label="S3 privé • 4,89 Go\nJSON / CSV / SQLite / archives\net médias",fillcolor="#f6eddc"];
- Jobs [label="Pipeline AWS existant • en pause\nFichiers + index documentaire\nConstruction SQL partielle"];
+ S3 [label="S3 privé • relevé initial 4,89 Go\nJSON / CSV / SQLite / archives\net médias",fillcolor="#f6eddc"];
+ Jobs [label="Pipeline AWS existant\nEn pause au relevé initial\nFichiers + construction SQL partielle"];
  Pitch [label="PitchAPI et autres sources"];
  Transfer [label="Transfert initial Neon → AWS\nPropriété de l’autre Codex\nNon relancé par ce plan"];
  Browser -> Vercel [label="domaine public canonique"];
- Proxy [label="Proxy Next.js en production\nNEXT_PUBLIC_API_ORIGIN absente\n503 sans corps",fillcolor="#f6eddc"];
- Vercel -> Proxy [label="routes /api"];
- Browser -> API [label="preview AWS historique",style=dashed];
+ Bridge [label="Pont legacy temporaire\nVrai runtime Node Vercel\nLectures du corpus existant",fillcolor="#f6eddc"];
+ Vercel -> Bridge [label="routes /api et /data"];
+ Bridge -> Neon [label="données sauvegardées"];
+ Browser -> API [label="preview AWS partielle",style=dashed];
  API -> Lambda [label="MISS / revalidation"];
  Lambda -> RDS [label="statarena_prod • TLS"];
- Browser -> Assets [label="fichiers référencés"];
+ Browser -> Assets [label="fichiers AWS existants / preview",style=dashed];
  Assets -> S3 [label="OAC • chemin autorisé"];
  Pitch -> Jobs [label="collectes désactivées",style=dashed];
  Jobs -> S3 [label="ancien stockage de données",style=dashed];
@@ -507,11 +507,15 @@ current = r'''digraph current_architecture {
  Transfer -> S3 [label="copies existantes",style=dashed];
 }'''
 (diagram_dir / "architecture-actuelle.dot").write_text(current)
-core_names = ["football.competitions", "football.competition_seasons", "football.matches", "football.teams", "football.match_teams", "football.players", "football.match_players", "football.player_match_stats", "football.shots", "ingest.row_versions", "ingest.dataset_snapshot_rows", "analytics.aggregation_builds", "analytics.publication_versions"]
+core_names = ["football.competitions", "football.competition_seasons", "football.matches", "football.teams", "football.match_teams", "football.players", "football.match_players", "football.player_match_stats", "football.shots", "ingest.dataset_snapshots", "analytics.aggregation_builds", "analytics.publication_versions"]
 core_dot = ['digraph core {graph [rankdir=LR,bgcolor="white",pad="0.4",nodesep="0.5",ranksep="0.8"]; node [shape=box,style="rounded,filled",fillcolor="#e6f1e9",color="#bcc7d2",fontname="Helvetica",fontsize=14,margin="0.18,0.12"]; edge [color="#738397",fontname="Helvetica",fontsize=10];']
 for name in core_names:
-    core_dot.append(q(name) + " [label=" + q(name + "\n" + tables[name]["grain"]) + ',URL=' + q("../index.html#table=" + name) + ',target="_top"];')
-for a,b,label in [("football.competitions","football.competition_seasons","éditions"),("football.competition_seasons","football.matches","rencontres"),("football.matches","football.match_teams","deux places"),("football.teams","football.match_teams","équipe"),("football.match_teams","football.match_players","feuille"),("football.players","football.match_players","identité"),("football.match_players","football.player_match_stats","périodes"),("football.match_teams","football.shots","tirs"),("ingest.row_versions","ingest.dataset_snapshot_rows","versions typées"),("ingest.dataset_snapshot_rows","analytics.aggregation_builds","instantané scellé"),("analytics.aggregation_builds","analytics.publication_versions","activation")]:
+    t = tables[name]
+    label = name + "\nPK : " + ", ".join(t["primary_key"]["columns"])
+    if t.get("versioning", {}).get("logical_key"):
+        label += "\nClé logique : " + ", ".join(t["versioning"]["logical_key"])
+    core_dot.append(q(name) + " [label=" + q(label) + ',URL=' + q("../index.html#table=" + name) + ',target="_top"];')
+for a,b,label in [("football.competitions","football.competition_seasons","éditions"),("football.competition_seasons","football.matches","rencontres"),("football.matches","football.match_teams","deux places"),("football.teams","football.match_teams","équipe stable"),("football.match_teams","football.match_players","feuille"),("football.players","football.match_players","identité stable"),("football.match_players","football.player_match_stats","périodes / révisions"),("football.match_teams","football.shots","tirs / révisions"),("ingest.dataset_snapshots","football.player_match_stats","valeurs visibles à g"),("ingest.dataset_snapshots","analytics.aggregation_builds","instantané scellé"),("analytics.aggregation_builds","analytics.publication_versions","activation datée")]:
     core_dot.append(q(a) + " -> " + q(b) + " [label=" + q(label) + "];")
 core_dot.append("}")
 (diagram_dir / "schema-overview.dot").write_text("\n".join(core_dot))
@@ -524,7 +528,21 @@ for key, names in sorted(groups.items()):
     dictionary += ["## " + titles[key], ""]
     for name in sorted(names):
         t = tables[name]
-        dictionary += ["### " + name, "", t["description"], "", "Grain : " + t["grain"], "", "Écriture : `" + t["write_mode"] + "` ; phase : `" + t["phase"] + "`.", "", "| Colonne | Type | NULL | Clés | Signification |", "|---|---|---|---|---|"]
+        versioning = t.get("versioning", {})
+        dictionary += ["### " + name, "", t["description"], "", "Grain physique : " + t["grain"], ""]
+        if versioning:
+            dictionary += ["Classe de version : `" + versioning["kind"] + "`.", ""]
+            if versioning.get("logical_key"):
+                dictionary += ["Clé logique : `" + ", ".join(versioning["logical_key"]) + "`.", ""]
+            if versioning.get("version_key"):
+                dictionary += ["Clé de version : `" + ", ".join(versioning["version_key"]) + "`.", ""]
+            if versioning.get("historical_selection"):
+                dictionary += ["Sélection historique : `" + versioning["historical_selection"] + "`.", ""]
+            if versioning.get("logical_grain_description"):
+                dictionary += ["Responsabilité métier : " + versioning["logical_grain_description"], ""]
+            if versioning.get("parent_version_binding"):
+                dictionary += ["Ancrage de version parente : `" + json.dumps(versioning["parent_version_binding"], ensure_ascii=False) + "`.", ""]
+        dictionary += ["Écriture : `" + t["write_mode"] + "` ; phase : `" + t["phase"] + "`.", "", "| Colonne | Type | NULL | Clés | Signification |", "|---|---|---|---|---|"]
         pk = set(t["primary_key"]["columns"])
         foreign = {c for f in t["foreign_keys"] for c in f["columns"]}
         columns = []
@@ -539,11 +557,11 @@ for key, names in sorted(groups.items()):
             for e in entries:
                 if label == "CHECK": text = e["sql"]
                 elif label == "FK": text = ", ".join(e["columns"]) + " → " + e["references"]["table"] + "(" + ", ".join(e["references"]["columns"]) + ") ; ON DELETE " + e["on_delete"]
-                elif label == "UNIQUE": text = ", ".join(e["columns"]) + (" ; NULLS NOT DISTINCT" if e.get("nulls_not_distinct") else "")
-                else: text = e["method"] + " : " + json.dumps(e["keys"], ensure_ascii=False) + (" WHERE " + e["where_sql"] if e.get("where_sql") else "")
-                dictionary.append("- " + label + " `" + text + "`.")
+                elif label == "UNIQUE": text = ", ".join(e["columns"]) + (" ; NULLS NOT DISTINCT" if e.get("nulls_not_distinct") else "") + (" WHERE " + e["where_sql"] if e.get("where_sql") else "")
+                else: text = ("UNIQUE " if e.get("unique") else "") + e["method"] + " : " + json.dumps(e["keys"], ensure_ascii=False) + (" NULLS NOT DISTINCT" if e.get("nulls_not_distinct") else "") + (" WHERE " + e["where_sql"] if e.get("where_sql") else "")
+                dictionary.append("- " + label + " `" + e["name"] + "` : `" + text + "`.")
         dictionary += ["", *["- " + note for note in t.get("notes", [])], ""]
-        viewer_tables.append(dict(name=name, domain=key, description=t["description"], grain=t["grain"], phase=t["phase"], write_mode=t["write_mode"], origin="historique" if t.get("history_of") else "socle JSON" if name in baseline_names else "ajout", columns=columns, primary_key=t["primary_key"], foreign_keys=t["foreign_keys"], checks=t["checks"], unique_constraints=t["unique_constraints"], indexes=t["indexes"], notes=t.get("notes", [])))
+        viewer_tables.append(dict(name=name, domain=key, description=t["description"], grain=t["grain"], versioning=versioning, historical_read_policy=t.get("historical_read_policy"), phase=t["phase"], write_mode=t["write_mode"], origin="socle JSON" if name in baseline_names else "ajout", columns=columns, primary_key=t["primary_key"], foreign_keys=t["foreign_keys"], checks=t["checks"], unique_constraints=t["unique_constraints"], indexes=t["indexes"], notes=t.get("notes", [])))
 (OUT / "DICTIONNAIRE.md").write_text("\n".join(dictionary).rstrip() + "\n")
 with (OUT / "current-to-target.csv").open("w", newline="") as f:
     writer = csv.DictWriter(f, fieldnames=["database", "current", "kind", "targets", "action", "reason"], lineterminator="\n")

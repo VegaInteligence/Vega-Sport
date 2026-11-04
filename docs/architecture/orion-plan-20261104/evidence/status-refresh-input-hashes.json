@@ -1,0 +1,5 @@
+{
+  "target-schema.proposed.json": "028c221d4cd45ad809a2340e62f34ab9df191c593b23c0c45d5f44587eb35a8c",
+  "tools/apply_pro_versions.py": "6470475eeec92d17fdd2bfb6b8bd3e4ef4a87e6260148bccabe19f9f32e500b3",
+  "tools/apply_pro_constraints.py": "f67ae4153f2986a0e636b6b0900082a4a6ab9693f1872a14b3a9d41121406d3a"
+}

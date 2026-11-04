@@ -1,0 +1,24 @@
+{
+  "atUtc": "2026-11-04T17:41:20.154893+00:00",
+  "scope": "Whole-model pre-transform fixture acceptance and idempotent serialization only; no SQL execution or remote writes. Input hashes in stdout refer to temporary pre-transform fixtures, not the final model.",
+  "finalModelSha256": "028c221d4cd45ad809a2340e62f34ab9df191c593b23c0c45d5f44587eb35a8c",
+  "results": [
+    {
+      "protocol": "tools/PRO_CONSTRAINT_PROTOCOL.md",
+      "command": "python3 -B - <<'PY'\nfrom pathlib import Path\nimport re\np = Path('docs/architecture/orion-plan-20261104/tools/PRO_CONSTRAINT_PROTOCOL.md')\ncode = re.search(r'```python\\n(.*?)\\n```', p.read_text(), re.S).group(1)\nexec(compile(code, str(p), 'exec'))\nPY",
+      "exitCode": 0,
+      "stdout": "{\n  \"result\": \"passed_static_transform_checks_only\",\n  \"input_sha256\": \"d4813f305d90b6b8fb5ee9f2737d36cb593e1db67af3ba1f6ff4cd27e34ed047\",\n  \"helper_sha256\": \"f67ae4153f2986a0e636b6b0900082a4a6ab9693f1872a14b3a9d41121406d3a\",\n  \"tables_preserved\": 107,\n  \"changes_first_apply\": 22,\n  \"changes_second_apply\": 0,\n  \"future_profile_names\": \"passed\",\n  \"bad_fk_rejected_before_mutation\": \"passed\",\n  \"sql_executed\": false,\n  \"database_or_remote_writes\": false\n}\n",
+      "stderr": "",
+      "scriptSha256": "a34a12e1804201fbf3c3745af9d20184691e5f192196ba29a76552a541db49a2"
+    },
+    {
+      "protocol": "tools/PRO_VERSION_PROTOCOL.md",
+      "command": "python3 -B - <<'PY'\nfrom pathlib import Path\nimport re\np = Path('docs/architecture/orion-plan-20261104/tools/PRO_VERSION_PROTOCOL.md')\ncode = re.search(r'```python\\n(.*?)\\n```', p.read_text(), re.S).group(1)\nexec(compile(code, str(p), 'exec'))\nPY",
+      "exitCode": 0,
+      "stdout": "{\n  \"result\": \"passed_static_selective_version_transform_only\",\n  \"input_sha256\": \"17562056da7f3907c542d64fcf8f11c04dd99822c4cc14416044de2b94b6cfd6\",\n  \"helper_sha256\": \"6470475eeec92d17fdd2bfb6b8bd3e4ef4a87e6260148bccabe19f9f32e500b3\",\n  \"tables\": 103,\n  \"selected\": 46,\n  \"children\": 6,\n  \"append_only\": 9,\n  \"stable\": 3,\n  \"changes_first_apply\": 1280,\n  \"second_apply_changes\": 0,\n  \"invalid_fk_atomic_rejection\": true,\n  \"sql_executed\": false,\n  \"source_inventory_complete\": false,\n  \"purge_authorized\": false\n}\n",
+      "stderr": "",
+      "scriptSha256": "d1cebfe5388bc651a2ca9e55642bc49a1d0e5a23ca033da4a26b95c80b90e6d5"
+    }
+  ],
+  "passed": true
+}

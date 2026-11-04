@@ -1,5 +1,5 @@
 {
-  "atUtc": "2026-11-04T15:20:03.747Z",
+  "atUtc": "2026-11-04T17:47:09.331Z",
   "command": "node docs/architecture/orion-plan-20261104/tools/render_diagrams.mjs",
   "renderer": "@viz-js/viz@3.31.0",
   "graphviz": "16.1.0",
@@ -15,7 +15,7 @@
       ]
     },
     {
-      "file": "02-historique-instantanes.dot",
+      "file": "02-provenance-publications.dot",
       "status": "success",
       "warnings": []
     },
@@ -71,51 +71,6 @@
     },
     {
       "file": "13-modeles-reserves.dot",
-      "status": "success",
-      "warnings": []
-    },
-    {
-      "file": "14-historiques-01.dot",
-      "status": "success",
-      "warnings": []
-    },
-    {
-      "file": "15-historiques-02.dot",
-      "status": "success",
-      "warnings": []
-    },
-    {
-      "file": "16-historiques-03.dot",
-      "status": "success",
-      "warnings": []
-    },
-    {
-      "file": "17-historiques-04.dot",
-      "status": "success",
-      "warnings": []
-    },
-    {
-      "file": "18-historiques-05.dot",
-      "status": "success",
-      "warnings": []
-    },
-    {
-      "file": "19-historiques-06.dot",
-      "status": "success",
-      "warnings": []
-    },
-    {
-      "file": "20-historiques-07.dot",
-      "status": "success",
-      "warnings": []
-    },
-    {
-      "file": "21-historiques-08.dot",
-      "status": "success",
-      "warnings": []
-    },
-    {
-      "file": "22-historiques-09.dot",
       "status": "success",
       "warnings": []
     },

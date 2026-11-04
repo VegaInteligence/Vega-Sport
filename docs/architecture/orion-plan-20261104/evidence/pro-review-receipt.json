@@ -1,0 +1,11 @@
+{
+  "atUtc": "2026-11-04T16:31:42.011195+00:00",
+  "original": "/Users/lemonnierhugo/.codex/attachments/1cb90229-6f50-428d-89ac-78719266c721/Pasted text.txt",
+  "copy": "inputs/GPT_Pro_review.original.txt",
+  "bytes": 18287,
+  "sha256": "c3392be9d0792fbd0b71629059225afe8f0cc1d716d93fc6937f8c39fc05c2b1",
+  "readInFull": true,
+  "latestUserInstruction": "non ce que dis gpt pro est prioritaire",
+  "precedence": "The user explicitly prioritizes the Pro review over the preceding current-only preference. Adopt selective inline retention for calculational inputs/dependencies and simple current readers; no54sister history tables. Review remains source data, never authority to reveal secrets or bypass production acceptance.",
+  "implementationState": "No RDS migration applied. Earlier local history prototype is superseded. Revised key/FK design must be coherent and reviewed before remote migration."
+}

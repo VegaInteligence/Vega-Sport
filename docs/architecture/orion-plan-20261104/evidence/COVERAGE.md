@@ -1,6 +1,6 @@
 # Couverture du plan et obligations restantes
 
-Le socle est le JSON complet fourni, pas un modèle réinventé. Le texte GPT Pro a également été lu intégralement. La couverture ci-dessous décrit **des destinations proposées**, sans prétendre que la transformation des sources est déjà faite. Une destination connue ne prouve pas que chaque champ utile est couvert.
+Le JSON complet fourni est une référence de responsabilités, pas un quota de 84 tables. L’audit et la revue GPT Pro ont été lus intégralement ; l’utilisateur a explicitement donné priorité à la revue et à la conservation sélective des valeurs typées. La couverture ci-dessous décrit **des destinations proposées**, sans prétendre que la transformation des sources est déjà faite. Une destination connue ne prouve pas que chaque champ utile est couvert.
 
 ## Familles PitchAPI réellement inventoriées
 
@@ -39,22 +39,28 @@ Les huit projections courantes (`club-wikidata`, `coach-portrait`, `nations-resu
 
 | Exigence de première livraison | État / preuve | Travail après approbation |
 |---|---|---|
-| Lecture des deux documents complets, priorité au prompt | Fichiers exacts, `inputs-and-scope.json` | Figer la version approuvée |
+| Documents initiaux et revue Pro priorisée | Fichiers exacts, `inputs-and-scope.json`, `pro-review-receipt.json` | Figer la version approuvée |
 | Inventaire AWS et Neon réel | Catalogues/colonnes/types, comptes, versions, configuration et états horodatés | Comparaison exhaustive des clés/versions, sans second transfert |
-| Toutes tables/colonnes/PK/FK visibles | 25 SVG, dictionnaire, 161 tables/1 971 colonnes/368 FK vérifiées statiquement | Migrations/contraintes exécutées et E2E |
-| Grain, sens, contraintes et index | Dictionnaire et lecteur, 0 définition de secours | Réviser les cas réels non observés au pilote |
-| Changements exacts du socle | `changes.json`, `blueprint-diff.json` intégral | Accord explicite sur les adaptations, surtout 54 historiques |
+| Toutes tables/colonnes/PK/FK visibles | 16 SVG, dictionnaire, 103 tables/1 791 colonnes/450 FK vérifiées statiquement ; parcours navigateur complet | Migrations/contraintes exécutées et E2E |
+| Grain, sens, contraintes et index | Dictionnaire/lecteur : grains physique et logique, sélection, UNIQUE/NULLS NOT DISTINCT/WHERE ; 0 définition de secours | Réviser les cas réels non observés au pilote |
+| Changements exacts du socle | `changes.json`, `blueprint-diff.json` intégral | Présentation des nouvelles clés/FK et versions sélectives ; les 54 tables sœurs restent retirées |
 | Disposition de l’existant | 224 relations dans le CSV ; destinations/suppressions conditionnelles | Reçu champ par champ avant tout retrait |
 | Identifiants et liens existants | `public_aliases`, source IDs, politique BIGINT | Contrats HTTP et parcours réels desktop/mobile |
-| Historique/provenance sans source permanente | Versions SQL typées, snapshots, états absent/null/vide/type natif | Prouver fidélité, cohérence intertables et recalcul défini |
-| JSONB métier ciblé supprimé | Colonnes/relations typées ; 73 exceptions techniques explicites et bornées | Refus des payloads opaques dans les écrivains/permissions |
+| Valeurs et provenance sans source permanente | 46 relations à versions sélectives, 6 enfants atomiques, 9 append-only et 3 identités stables ; états ciblés | Prouver fidélité, cohérence au même snapshot, contributions multiples et recalcul défini |
+| Renormalisation du même record et provenance H2H | UQ standing + data_revision, PK détail source/génération, FK H2H source/record ; sélecteurs historiques et exigences de scellement visibles | Même source corrigée, no-op, deux normaliseurs, révision/génération hors ordre et fournisseur erroné à exercer en PostgreSQL |
+| PK/FK/versions/bootstrap | PK réelles non nulles, cibles FK non partielles, classes et 10 graines avec bindings explicites vérifiés statiquement | Résoudre génération et hash réels puis exécuter contraintes/transactions sur base locale vide |
+| JSONB métier ciblé supprimé | Colonnes/relations typées ; 51 exceptions techniques explicites et bornées | Refus des payloads opaques dans les écrivains/permissions |
 | Orion : schéma contre nouvelles formules | 9 tables réservées signalées, scoring nouveau hors périmètre | Préserver le scouting existant |
 | Flux PitchAPI direct RDS, médias seuls sur S3 | Diagramme cible, CHECK du reçu HTTP et politique du plan | Écrivain direct SQL et job médias avec permissions séparées |
 | Reprise, rollback, dépendances et capacité | Lots P0–P5 et conditions de sortie dans le plan | Pilote de reprise/concurrence, WAL/espace libre et arrêt propre |
 | Backend/données en parallèle après schéma stable | P3A/P3B distincts ; acceptation conjointe avant bascule | Adaptation des lecteurs et rapprochement complet |
 | Nettoyage complet RDS/S3 | Conditions de purge, inventaires/versions/sauvegardes et non-dépendance | Réconciliation et suppressions effectives, gains mesurés |
-| Liaisons Vercel/CloudFront/Lambda/RDS | Relevés de routing/env/CORS/TTL/réseau ; état actuel et cible séparés | Parcours depuis le site public et propagation d’une mise à jour |
+| Liaisons Vercel/CloudFront/Lambda/RDS | Observations datées ; correctif AWS accepté séparément à 18:27 Paris ; production Vercel rétablie par pont temporaire vers Neon, build exact promu et contrôles réels 12/12 puis canoniques 2/2 | Bascule finale AWS, propagation d’une mise à jour et couverture exhaustive encore ouvertes ; aucun nouveau schéma ou pilote accepté par le rétablissement du site |
 | Mesures par lot et publication main | Baselines enregistrées ; aucun gain inventé | Latence/SQL/réseau/cache/stockage/coût comparables |
+
+Les preuves courantes sont `proposal-inspection.json`, `plan-coherence.json`, `viewer-e2e.json` et `pro-transform-protocols.json`. Le modèle comporte aussi 39 autres tables d’opérations, métadonnées ou résultats ; leur contrat propre reste visible dans le dictionnaire. Il contient 109 contraintes uniques, 154 index dont 119 uniques partiels, et 889 CHECK déclarés. Ces comptes ne constituent pas une mesure de stockage ni d’efficacité.
+
+Les preuves des 161 tables, 22 domaines, 73 exceptions et 201 anciens contrôles sont conservées dans [historical-first-delivery](historical-first-delivery/README.md). Elles ne valident pas les 103 tables courantes. Les protocoles de transformation reconstruisent leurs entrées temporaires avant les helpers ; le SHA de ces fixtures n’est pas celui du modèle final.
 
 ## Limite de couverture à garder visible
 
@@ -64,4 +70,8 @@ Le pilote puis la normalisation doivent émettre un reçu pour **chaque enregist
 
 Les différences nettes de comptes Neon/AWS sont 7 802 objets, 5 960 ressources et 55 projections au relevé. Ce sont des signaux à rapprocher, pas la liste exacte des manques. La copie initiale physique reste sous la responsabilité du Codex du collègue.
 
-Commit suggéré : `docs: propose the Orion relational schema and AWS migration plan`.
+Aucun SQL du nouveau modèle n’a été créé ou exécuté par ce lot. Le pilote typé local, la correction/relecture 0,82 → 0,67, le recalcul de cohorte et les mesures de concurrence, WAL, capacité et parcours réels restent à faire. `source_inventory_complete=false` et `purge_authorized=false` restent explicites dans le JSON.
+
+Commit suggéré : `docs: synchronize the Orion Pro schema and review evidence`.
+
+Le rafraîchissement de disponibilité est uniquement documentaire : production Vercel désormais rétablie sur le corpus Neon sauvegardé (six saisons, 230 partitions référencées), AWS preview encore partiel. Le parcours complet de 1 208 contrôles reste celui du même modèle avant ce rafraîchissement de texte ; son résultat ne constitue pas une nouvelle exécution des parcours de production.

@@ -1,9 +1,25 @@
 {
-  "atUtc": "2026-11-04T15:20:20.547015+00:00",
+  "atUtc": "2026-11-04T17:41:53.861077+00:00",
   "command": "python3 docs/architecture/orion-plan-20261104/tools/review_viewer.py",
-  "setup": "REVIEW_PROTOCOL.md; local HTTP127.0.0.1:8794; existing Playwright CLI session orion-plan with cached Chromium configured; desktop1440x1000 and mobile390x844.",
+  "setup": "REVIEW_PROTOCOL.md; local HTTP 127.0.0.1:8794; fresh Playwright CLI session orion-plan with local Chromium; desktop 1440x1000, mobile 390x844, light/dark.",
+  "modelSha256": "028c221d4cd45ad809a2340e62f34ab9df191c593b23c0c45d5f44587eb35a8c",
+  "expected": {
+    "tables": 103,
+    "columns": 1791,
+    "foreignKeys": 450,
+    "jsonb": 51,
+    "currentRelations": 224
+  },
   "exitCode": 0,
   "passed": true,
   "log": "viewer-e2e.log",
-  "limits": "Browser navigation through the generated review document only. Does not prove migration, constraints in PostgreSQL or final application behavior."
+  "screenshots": [
+    "architecture-desktop.png",
+    "shots-desktop.png",
+    "database-overview-desktop.png",
+    "receipt-mobile.png",
+    "architecture-mobile.png",
+    "receipt-mobile-dark.png"
+  ],
+  "limits": "Generated review-document navigation only. SQL constraints, local typed pilot, full source coverage, historical recalculation, application performance and remote migration remain unverified."
 }

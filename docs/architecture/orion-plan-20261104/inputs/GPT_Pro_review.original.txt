@@ -1,0 +1,345 @@
+**La direction est bonne, mais je ne lancerais pas la migration avec ces deux fichiers en l’état.** Le modèle métier contient des améliorations utiles. En revanche, le plan et le JSON décrivent désormais deux versions différentes, et la question centrale — **quelles anciennes valeurs conserver lorsqu’une donnée est corrigée** — reste ouverte.
+
+J’ai comparé le [PLAN.md](https://chatgpt.com/library?file_id=libfile_aa122395abfc81919cbd8197a44a0871&account_id=personal), le [JSON proposé](https://chatgpt.com/library?file_id=libfile_4631416029dc819189c366dde06af4a1&account_id=personal) et mon fichier initial. J’ai également contrôlé les références du JSON par programme. Mon avis sur l’infrastructure repose sur les constats rapportés dans le plan ; je n’ai pas refait un audit AWS en direct.
+
+## 1. Première correction indispensable : remettre le plan et le JSON d’accord
+
+Voici ce que contiennent réellement les documents :
+
+| Élément | `PLAN.md` | JSON joint |
+|---|---:|---:|
+| Tables proposées | 161 | **107** |
+| Colonnes | 1 971 | **1 256** |
+| Clés étrangères | 368 | **314** |
+| Tables supplémentaires `*_history` | 54 | **0** |
+| Colonnes JSONB | 73 | **51** |
+| Conservation des anciennes valeurs | Historique SQL présenté comme solution recommandée | **Politique encore à décider** |
+
+Le JSON porte explicitement le statut :
+
+```text
+revised_without_history_tables_version_policy_pending
+```
+
+Et sa politique de versionnement est :
+
+```text
+awaiting_user_choice_current_only_or_versions_in_business_tables
+```
+
+Pourtant, la dernière section du plan demande toujours de valider **54 tables sœurs d’historique**, et plusieurs sections promettent que les anciennes versions SQL resteront accessibles.
+
+**Il semble donc que le JSON ait été révisé après le plan.** Ce n’est pas seulement une question de chiffres : les garanties de recalcul, les snapshots, le cache des URLs versionnées et le retour arrière dépendent de cette décision.
+
+Je demanderais une version unique et cohérente des deux documents avant d’approuver l’implémentation.
+
+## 2. Ce que je garderais dans leur proposition
+
+Plusieurs adaptations améliorent effectivement le premier schéma.
+
+### Les ajouts fondés sur un inventaire plus large des données
+
+Le JSON enrichit notamment :
+
+- **Les tirs** : gardien, versions des profils des acteurs, coordonnées de blocage, sauvetage sur la ligne, ordre source.
+- **Les profils d’équipes et de fédérations** : noms et attributs observés à différentes dates.
+- **Les événements** : scores présents dans le flux.
+- **Les statistiques avancées** : décomposition explicite des actions créant des tirs.
+- **Les classements UEFA** : contributions et bonus supplémentaires.
+
+Ce sont des ajouts raisonnables lorsqu’ils correspondent aux champs effectivement présents. Mon premier audit était fondé sur un inventaire et des payloads représentatifs ; ces enrichissements répondent à ses limites plutôt que de contredire son architecture.
+
+### La protection des identifiants publics
+
+La table `ingest.public_aliases` et les règles de sérialisation des identifiants répondent à un vrai besoin : changer les clés internes de la base sans casser les routes existantes du site.
+
+### La publication cohérente des données
+
+L’ajout d’une version de catalogue partagée est pertinent. Une correction du nom d’une équipe, d’un profil ou d’une définition de métrique peut affecter plusieurs pages et plusieurs éditions.
+
+**Versionner uniquement les statistiques d’une saison ne suffit pas à identifier toute la réponse affichée.** Le plan prend ce problème au sérieux.
+
+### L’approche de migration
+
+Je garderais également :
+
+- Le pilote sur une compétition et deux saisons.
+- La réconciliation par identifiants et contenu, au-delà de la comparaison des compteurs.
+- La reprise après interruption et l’idempotence.
+- La séparation entre adaptation du backend et reprise des données.
+- La bascule après acceptation commune.
+- Les mesures avant/après sur les mêmes requêtes et volumes.
+
+Le passage à RDS est compatible avec cette architecture PostgreSQL. Il ne nécessite pas, à lui seul, de revoir le modèle métier.
+
+## 3. Le vrai sujet à trancher : les snapshots doivent conserver des valeurs
+
+C’est le point le plus important.
+
+Dans le JSON actuel, on trouve cette organisation :
+
+```text
+table métier courante → row_version_id
+dataset_snapshot_rows → row_version_id
+row_versions → clé logique, numéro de révision, hash, provenance
+```
+
+Mais **`row_versions` ne contient pas les valeurs métier**. Et les tables métier courantes conservent généralement leur clé initiale, par exemple :
+
+```text
+player_match_stats :
+(match_id, player_id, period_code)
+```
+
+Cette clé ne permet de conserver qu’une ligne pour ce joueur, ce match et cette période.
+
+### Exemple concret
+
+Supposons qu’un fournisseur donne initialement :
+
+```text
+xG = 0,82
+```
+
+Un calcul utilise cette observation. Le fournisseur corrige ensuite la valeur :
+
+```text
+xG = 0,67
+```
+
+Si la ligne courante est mise à jour, que l’ancien payload est supprimé et qu’aucune ancienne ligne typée n’est conservée, le registre pourra encore indiquer :
+
+> « Le calcul utilisait la révision 12 et son hash était … »
+
+Mais **il ne permettra plus de retrouver 0,82**.
+
+Le JSON reconnaît cette limite. Le plan doit maintenant en tirer les conséquences.
+
+### Deux solutions cohérentes
+
+| Choix | Fonctionnement | Conséquence |
+|---|---|---|
+| **État courant uniquement** | Les corrections remplacent les anciennes valeurs. Les résultats déjà calculés peuvent rester stockés. | Plus simple, mais on ne garantit pas le recalcul exact d’un ancien résultat. |
+| **Versions dans les tables métier concernées** | Les observations nécessaires restent conservées avec leur version ; une sélection désigne l’état courant. | Permet un recalcul historique, avec des clés, des FK et des lecteurs adaptés. |
+
+**Pour Orion et ton objectif de scoring, je choisirais la deuxième solution sur les données nécessaires aux calculs et à leurs dépendances.** Cela comprend aussi les définitions de métriques, classements adverses et mappings réellement utilisés lorsqu’ils peuvent évoluer.
+
+Je ne rétablirais pas automatiquement 54 tables d’historique. En revanche, je ne supprimerais pas les anciennes valeurs tout en maintenant une promesse de reproductibilité.
+
+Cette décision demande une vraie modification des clés et des relations. Ajouter un numéro de révision à côté d’une ligne écrasée ne suffit pas.
+
+**Même conséquence pour le cache :** une URL contenant un `snapshot_id` ne devient immuable que si les valeurs qu’elle sert restent effectivement accessibles sous cette version.
+
+## 4. Des corrections concrètes à apporter au JSON
+
+Mon contrôle structurel n’a trouvé **aucune référence de FK vers une table absente, aucune incompatibilité de types entre les colonnes liées, et aucune cible de FK dépourvue de la clé unique déclarée attendue**.
+
+C’est positif. Mais plusieurs garanties métier ne sont pas encore portées par les contraintes proposées.
+
+### A. L’unicité des nouvelles réponses HTTP est à redéfinir
+
+Dans `ingest.source_documents`, l’unicité reste fondée sur :
+
+```text
+(dataset_id, storage_bucket, storage_key, content_sha256)
+```
+
+Or les nouvelles collectes HTTP imposent :
+
+```text
+storage_bucket = NULL
+storage_key = NULL
+```
+
+La contrainte est déclarée avec `nulls_not_distinct: false`. Elle permet donc plusieurs lignes contenant ces mêmes valeurs et le même hash. PostgreSQL considère par défaut les `NULL` comme distincts pour une contrainte unique. [postgresql.org](https://www.postgresql.org/docs/18/ddl-constraints.html?utm_source=chatgpt.com)
+
+**Correction recommandée :** définir l’identité d’une réponse directe à partir du corpus, de la requête canonique et du contenu, par exemple :
+
+```text
+(dataset_id, request_fingerprint, content_sha256)
+```
+
+Les tentatives de collecte restent séparées dans `resource_fetches`.
+
+Cela ne prouve pas que l’application créera des doublons, mais **la contrainte actuelle ne garantit plus la déduplication attendue pour ce nouveau mode de collecte**.
+
+### B. Les profils associés aux tirs peuvent contourner leur FK
+
+Dans `football.shots`, les relations suivantes utilisent `MATCH SIMPLE` :
+
+```text
+(player_profile_version_id, player_id)
+(keeper_profile_version_id, keeper_id)
+```
+
+Les deux colonnes de chaque paire sont facultatives. Avec cette règle, un identifiant de profil renseigné accompagné d’un identifiant de personne `NULL` échappe à la vérification de la FK. C’est le comportement documenté de PostgreSQL. [postgresql.org](https://www.postgresql.org/docs/18/ddl-constraints.html?utm_source=chatgpt.com)
+
+Il faut notamment ajouter :
+
+```sql
+CHECK (
+  player_profile_version_id IS NULL
+  OR player_id IS NOT NULL
+);
+
+CHECK (
+  keeper_profile_version_id IS NULL
+  OR keeper_id IS NOT NULL
+);
+```
+
+Cela conserve la possibilité d’avoir un joueur connu sans profil détaillé, tout en empêchant un profil sans identité correspondante.
+
+### C. Le registre des contrats n’est pas encore correctement versionnable
+
+`ingest.relation_contracts` est déclaré `append_only`, avec :
+
+```text
+PK : relation_code
+Colonne : contract_version
+```
+
+Cela pose un problème d’évolution : **comment enregistrer une version 2 du contrat de la même relation, en conservant la version 1 ?**
+
+La clé actuelle empêche une seconde ligne pour cette relation, et le mode annoncé interdit de remplacer la première.
+
+Il faut choisir un contrat cohérent, par exemple :
+
+```text
+PK : (relation_code, contract_version)
+```
+
+Puis faire référencer cette version par les contrats de champs et les versions de lignes concernées. C’est particulièrement important puisque l’objectif est une base évolutive.
+
+### D. Un `row_version_id` existant ne prouve pas qu’il appartient à la bonne ligne
+
+Les tables métier référencent généralement :
+
+```text
+row_version_id → ingest.row_versions.id
+```
+
+Cette FK vérifie l’existence du registre. Elle ne garantit pas, à elle seule, que la version désigne :
+
+- La bonne table.
+- La bonne clé métier.
+- La bonne observation source.
+
+Par exemple, les contraintes déclarées sur une ligne de joueur ne suffisent pas à empêcher qu’elle pointe vers une version enregistrée pour une autre relation.
+
+Le plan annonce des contrôles différés pour cela. **Il faut les spécifier précisément et les tester**, ou renforcer les relations avec un discriminant et une clé composite adaptés. Cette garantie ne doit pas rester dans une phrase générale sur le versionnement.
+
+### E. Les états de champs acceptent encore des combinaisons incohérentes
+
+Dans `ingest.field_states`, la contrainte principale impose au maximum un scalaire renseigné :
+
+```sql
+num_nonnulls(source_text, source_number, source_boolean) <= 1
+```
+
+Elle n’interdit pas, par exemple :
+
+```text
+source_state = 'null'
+source_number = 42
+```
+
+Il faut un contrôle de correspondance entre l’état et le type du scalaire éventuellement conservé. Les états `absent`, `null`, `empty_array` et `empty_object` doivent notamment interdire une valeur scalaire.
+
+### F. Les données d’initialisation ne correspondent plus aux colonnes obligatoires
+
+Les tables `football.periods` et `football.positions` ont maintenant un `row_version_id` obligatoire.
+
+Pourtant, leurs lignes présentes dans `seed_data` ne le fournissent pas.
+
+Le bootstrap doit donc créer les versions de référence et injecter leurs identifiants avant de charger ces lignes. **Le fichier n’est pas directement utilisable comme jeu d’initialisation complet en l’état.**
+
+### G. Quelques ajouts restent insuffisamment contraints ou indexés
+
+Deux exemples simples :
+
+- `match_heatmap_cells` décrit l’unicité des coordonnées dans une note, mais ne possède pas de `UNIQUE(heatmap_id, column_index, row_index)`. Les bornes dépendant de la grille demandent un contrôle supplémentaire ; l’unicité, elle, peut être déclarée directement.
+- `collection_jobs` n’a ni contrainte sur les états et tentatives, ni index explicite pour sélectionner les tâches disponibles. Il faut définir la requête d’acquisition et son index avant de migrer une grosse file.
+
+Ce sont des corrections précises à intégrer au pilote, pas des raisons de jeter le schéma.
+
+## 5. Là où je simplifierais : la conservation universelle de chaque détail technique
+
+Le nombre de tables ne mesure pas la qualité d’une base. **107 tables peuvent être justifiées.** Ce qui m’interroge davantage, c’est la généralisation d’un système de versionnement et de conservation des détails source à presque toutes les lignes.
+
+Le JSON impose un `row_version_id` non nul dans **68 tables**, en comptant les tables techniques qui utilisent cette colonne. Il ajoute aussi :
+
+- Un registre des relations.
+- Un registre des champs.
+- Des états de champs.
+- Des liens entre observations et versions.
+- Des sélections de versions par snapshot.
+
+Cette architecture a un coût en écritures, en index, en maintenance et en complexité des transactions. **Ce coût doit correspondre à une garantie produit ou analytique précise.**
+
+### Les états de champs
+
+Distinguer « valeur absente » et « zéro observé » est essentiel.
+
+Conserver partout la différence entre un nombre natif, sa représentation en chaîne, une chaîne vide et toutes les variantes de forme source est une exigence supplémentaire.
+
+Je réserverais cette conservation détaillée aux cas où elle sert réellement :
+
+- La fidélité d’un contrat API existant.
+- La résolution d’une ambiguïté métier.
+- Une preuve de migration.
+- Un calcul reproductible.
+
+Les preuves nécessaires pour accepter la migration n’ont pas toutes besoin d’être relues sur chaque requête du site.
+
+### Les heatmaps
+
+Une ligne par cellule est cohérente si tu veux agréger et filtrer spatialement en SQL. Pour afficher une petite carte entière, une représentation compacte peut aussi être appropriée.
+
+PostgreSQL permet de combiner relations typées et petits documents JSONB structurés ; l’usage de JSONB n’annule pas le caractère relationnel du modèle. [postgresql.org](https://www.postgresql.org/docs/18/datatype-json.html?utm_source=chatgpt.com)
+
+**Si l’interdiction de tout JSONB sportif est bien une contrainte volontaire, je conserverais les cellules relationnelles.** Mais je mesurerais leur volume et je privilégierais une révision de la carte entière, plutôt qu’un mécanisme de versionnement indépendant pour chaque cellule sans besoin identifié.
+
+### Les H2H
+
+`match_h2h_entries` peut être utile pour conserver les observations fournisseur et les rencontres non résolues.
+
+Pour les rencontres déjà identifiées, le site devrait continuer à calculer les confrontations depuis les matchs canoniques. Sinon, deux représentations d’un même résultat peuvent diverger après correction.
+
+## 6. La vitesse du site doit garder son propre chantier
+
+Le plan rapporte deux problèmes opérationnels :
+
+- Un `/api/health` renvoyant 503 sur le frontend, associé à une configuration d’origine absente.
+- Une page dense de 100 matchs provoquant un timeout SQL.
+
+**S’ils sont toujours présents, je les traiterais dans un lot immédiat et distinct de la refonte complète.** La disponibilité du site ne doit pas attendre que toute la politique de versionnement soit résolue.
+
+Sur le cache, le raisonnement du plan est pertinent : routes mutables avec fraîcheur définie, réponses réellement versionnées pouvant être conservées plus longtemps. Le point sur `MaxTTL` est également juste : CloudFront borne la durée de cache selon sa configuration, même si l’origine en demande davantage. [Amazon CloudFront](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Expiration.html?utm_source=chatgpt.com)
+
+Pour décider si la nouvelle base répond à ton objectif, je demanderais au pilote de mesurer au minimum :
+
+| Parcours | Ce qu’il faut vérifier |
+|---|---|
+| Liste de matchs | Pagination, nombre de requêtes, volume retourné, latence hors cache. |
+| Page joueur | Agrégats déjà calculés, historique borné, absence de requêtes répétées par métrique. |
+| Page club | Calendrier, classements et statistiques lus sans reconstruction documentaire. |
+| Détail de match | Chargement séparé des familles lourdes. |
+| Correction fournisseur | Mise à jour visible, cache invalidé, anciennes versions conformes à la politique choisie. |
+| Réimport identique | Aucun doublon de faits, aucune nouvelle publication inutile. |
+
+Le plan prévoit déjà une partie de ces mesures. Il faut en faire les critères d’acceptation effectifs.
+
+## Ce que je demanderais avant de valider
+
+Je garderais l’architecture `ingest / football / analytics` et les enrichissements justifiés par les données. Je demanderais ensuite une révision avec cinq livrables précis :
+
+1. **Un plan et un JSON synchronisés**, avec les mêmes tables, chiffres et garanties.
+2. **Une politique explicite de conservation des corrections**, traduite dans les clés et les lecteurs, avec un exemple de correction puis de recalcul.
+3. **Les corrections de contraintes et de bootstrap** relevées ci-dessus.
+4. **Une séparation claire entre mécanismes permanents et preuves de migration**, pour maîtriser la complexité.
+5. **Un pilote mesuré**, avant la reprise complète et avant toute suppression des sources.
+
+Et je corrigerais aussi la manière dont mon premier fichier a été repris : **les 84 tables étaient un modèle cible complet, pas un nombre à préserver coûte que coûte.** On peut fusionner, différer ou simplifier des éléments lorsque leur responsabilité est couverte proprement.
+
+**Ma recommandation pour Orion : conserver les ajouts métier utiles, versionner les données nécessaires aux calculs reproductibles et garder des lectures courantes simples. Le point à résoudre maintenant est la conservation des valeurs ; le reste du schéma doit découler de ce choix.**

@@ -1,0 +1,26 @@
+{
+  "atUtc": "2026-11-04T17:34:03.863906+00:00",
+  "command": "python3 docs/architecture/orion-plan-20261104/tools/render_plan_text.py",
+  "modelSha256": "08d21224f5512c21af75fd5dcc1a554840977c576d1319cefb14f09b6136a23a",
+  "planSha256": "c254fe030b7e6d01a5bb9831f1e4e37eb9d69c6a6ee5f99c9996b060deda98be",
+  "counts": {
+    "tables": 103,
+    "columns": 1791,
+    "foreign_keys": 450,
+    "jsonb": 51,
+    "active_tables": 94,
+    "baseline_tables": 84,
+    "domain_diagrams": 13,
+    "separate_history_tables": 0,
+    "version_classes": {
+      "selected_relations": 46,
+      "parent_version_children": 6,
+      "existing_append_only": 9,
+      "stable_identities": 3
+    },
+    "other_operational_or_derived_tables": 39
+  },
+  "policy": "selective_inline_versions_per_pro",
+  "scope": "Plan text, JSON counts and domain index share one model. No SQL execution or service acceptance.",
+  "passed": true
+}

@@ -1,18 +1,50 @@
 {
-  "atUtc": "2026-11-04T15:20:03.920352+00:00",
+  "atUtc": "2026-11-04T17:50:17.506544+00:00",
   "command": "python3 docs/architecture/orion-plan-20261104/tools/inspect_proposal.py",
-  "scope": "Static proposal: table preservation, key/FK targets and types, removed-column CHECK references, complete diagrams/dictionary/current relation inventory. No database execution.",
+  "modelSha256": "028c221d4cd45ad809a2340e62f34ab9df191c593b23c0c45d5f44587eb35a8c",
+  "scope": "Static responsibilities/dispositions, actual nonnullable PK/nonpartial UQ FK targets/types, version classes, seed templates/bindings, rendered dictionary and complete domain diagrams. No SQL execution.",
   "counts": {
-    "baselineTables": 84,
+    "baselineResponsibilities": 84,
     "baselineColumns": 943,
-    "tables": 161,
-    "columns": 1971,
-    "foreignKeys": 368,
-    "domainDiagrams": 22,
-    "currentRelations": 224
+    "dispositions": 84,
+    "tables": 103,
+    "columns": 1791,
+    "foreignKeys": 450,
+    "uniqueConstraints": 109,
+    "indexes": 154,
+    "uniquePartialIndexes": 119,
+    "checks": 889,
+    "jsonb": 51,
+    "domainDiagrams": 13,
+    "currentRelations": 224,
+    "versionClasses": {
+      "selected_relations": 46,
+      "parent_version_children": 6,
+      "existing_append_only": 9,
+      "stable_identities": 3
+    },
+    "otherOperationalOrDerivedTables": 39,
+    "separateHistoryTables": 0
   },
+  "seedTemplates": [
+    {
+      "table": "football.periods",
+      "rows": 6,
+      "runtimeBindings": {
+        "recorded_from_gen": "bootstrap_generation",
+        "transform_code_sha256": "bootstrap_code_sha256"
+      }
+    },
+    {
+      "table": "football.positions",
+      "rows": 4,
+      "runtimeBindings": {
+        "recorded_from_gen": "bootstrap_generation",
+        "transform_code_sha256": "bootstrap_code_sha256"
+      }
+    }
+  ],
   "violations": [],
-  "indexNameWarnings": [],
   "passed": true,
-  "limits": "Does not validate SQL execution, intertable triggers, data migration, source reconciliation or application acceptance. Those require the user's plan approval first."
+  "limits": "Bindings still require real generation/code digest at bootstrap. SQL/triggers, numeric fidelity, complete source-field/variant reconciliation, local typed pilot, historical recalculation, application performance and remote migration are unverified."
 }

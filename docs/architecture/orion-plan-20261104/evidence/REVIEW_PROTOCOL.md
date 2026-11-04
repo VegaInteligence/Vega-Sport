@@ -30,3 +30,15 @@ Les commandes exactes de génération, les résultats réels, les logs et captur
 ## Clarification utilisateur appliquée avant validation finale
 
 Les nouvelles données PitchAPI vont directement dans les tables RDS après décodage en mémoire ; aucun fichier/document brut n’est créé dans S3 ou SQL. Les diagrammes doivent montrer une collecte médias séparée et aucune arête du job de données vers S3. Les seules sources temporaires sont les fichiers historiques déjà présents. Cette propriété du plan sera contrôlée en plus des références et de la navigation.
+
+## Révision Pro — attendus avant le nouveau parcours
+
+La revue Pro priorisée remplace les tables sœurs d’historique par des versions sélectives dans les tables métier. L’ancien parcours et ses 201 contrôles sont archivés dans `historical-first-delivery/` et ne valident pas ce modèle. Les limites des sources distantes restent celles des observations datées.
+
+Le nouveau parcours doit retrouver tous les chiffres depuis le JSON courant, chaque table/colonne/type/nullabilité, chaque FK et sa navigation, chaque PK/UQ/CHECK/index ainsi que les prédicats WHERE, UNIQUE et NULLS NOT DISTINCT. Le dictionnaire doit afficher grain physique, grain logique, classe de version et ancre parente lorsqu’elle existe. Toutes les planches courantes doivent charger ; les quatre registres retirés et les tables sœurs sont interdits dans le modèle, ses relations, ses destinations et sa vue d’ensemble.
+
+L’inspection statique doit refuser une PK vide/nullable, une FK ciblant un index partiel ou une clé différable/incomplète, une responsabilité initiale sans disposition/raison/destination, une classe de version incohérente, ou une graine obligatoire sans valeur/default/binding explicite. Les bindings sont des exigences d’exécution : leur présence ne vaut pas bootstrap SQL réussi.
+
+Attendus E2E : desktop 1440×1000 et mobile 390×844, recherche/filtre, navigation FK, liens profonds, diagrammes/zoom, dispositions et exceptions complètes, thème sombre, zéro erreur JS/HTTP et zéro requête extérieure. Les captures de ce parcours doivent être copiées dans le dossier de preuves courant avec le SHA-256 du modèle. Un échec est conservé avant toute relance ; les compteurs proviennent des données injectées, jamais d’un ancien nombre fixé dans le script.
+
+Ce contrôle reste documentaire. Le pilote typé local, les contraintes PostgreSQL, la correction 0,82 → 0,67, le recalcul historique, la matrice exhaustive des champs et les mesures applicatives/capacité restent à faire.

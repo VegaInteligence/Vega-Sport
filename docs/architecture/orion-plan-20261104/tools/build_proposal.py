@@ -1,4 +1,5 @@
 """Build a REVIEW-ONLY blueprint from the untouched user JSON. Never connects to DB."""
+import argparse
 import copy
 import hashlib
 import json
@@ -6,6 +7,20 @@ from pathlib import Path
 import re
 
 OUT = Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--fixture-phase", choices=("before_constraints", "before_versions"))
+parser.add_argument("--output", type=Path, help="Explicit temporary fixture destination; never overwrites the published model")
+args = parser.parse_args()
+if bool(args.fixture_phase) != bool(args.output):
+    parser.error("--fixture-phase and --output must be supplied together")
+if args.output and (args.output.resolve() == OUT or OUT in args.output.resolve().parents):
+    parser.error("A fixture destination must be outside the review folder")
+
+def write_fixture():
+    body = json.dumps(proposal, indent=2, ensure_ascii=False) + "\n"
+    args.output.write_text(body)
+    print(json.dumps({"fixture_phase": args.fixture_phase, "sha256": hashlib.sha256(body.encode()).hexdigest(), "tables": sum(len(s["tables"]) for s in proposal["schemas"]), "scope": "Pre-transform in-memory fixture only; published artifacts and services unchanged."}))
+
 original = json.loads((OUT / "inputs/Orion_schema_bdd.original.json").read_text())
 proposal = copy.deepcopy(original)
 proposal.update(status="proposal_awaiting_user_approval", title="StatArena — proposition Orion adaptée à AWS", format_version="1.1.0-proposed")
@@ -13,7 +28,7 @@ proposal["validation"] = {"implementation": "not_performed", "migrations": "not_
 proposal["database"].update(provider="AWS RDS", existing_database="statarena_prod", project_name="StatArena", observed_engine_version="18.6", target_major_version=18)
 proposal["database"]["object_storage"] = {"existing_bucket": "statarena-football-333rosky-70db6e5f", "permanent_purpose": ["referenced_essential_media"], "temporary_purpose": ["EXISTING legacy sources only, pending reconciliation and deletion"], "new_pitchapi_data": "response in memory -> typed RDS transaction; never S3, never raw response document in SQL", "structured_sources": "delete_existing_sources_after_complete_reconciliation; prohibit new structured file writes", "code_release_bucket": "deployment artifacts, outside football source retention"}
 proposal["database"]["existing_schemas_preserved"] = ["statarena and statarena_app temporarily until accepted replacement", "neon_auth pending usage verification"]
-proposal["conventions"].update(nulls="SQL NULL is supplemented by registered field states to distinguish absent, explicit null, empty string, native type and unavailable observations. Zero remains an observed value.", provenance="Source document/record identifiers become immutable metadata of removed originals; typed SQL row histories and snapshot membership retain reproducible accepted facts.", revisions="Snapshots select immutable typed row versions; a hash does not restore deleted bytes.", jsonb="Only listed bounded technical configuration, quality annotations and deferred model vectors. No sports facts or archived source bodies.")
+proposal["conventions"].update(nulls="SQL NULL is supplemented by registered field states to distinguish absent, explicit null, empty string, native type and unavailable observations. Zero remains an observed value.", provenance="Source/record identifiers and hashes are metadata only. No separate history table or hidden replacement store. Policy for prior corrected values remains to be chosen.", revisions="No separate history tables. A revision hash does not retain prior values; snapshot reproducibility awaits the explicit version-retention policy.", jsonb="Only listed bounded technical configuration, quality annotations and deferred model vectors. No sports facts or archived source bodies.")
 tables = {t["qualified_name"]: t for s in proposal["schemas"] for t in s["tables"]}
 changes = []
 
@@ -95,15 +110,15 @@ for c in t["checks"]:
 for name in ("ingest.dataset_snapshots", "ingest.dataset_snapshot_documents"):
     t = tables[name]
     remove(t, "selection_manifest" if name.endswith("dataset_snapshots") else "selection", "Sélection des faits exprimée par dataset_snapshot_rows et des références SQL")
-    t["description"] = "Instantané logique de faits SQL typés et de leur provenance." if name.endswith("dataset_snapshots") else "Provenance des documents ayant contribué à un instantané SQL ; aucun fichier requis après purge."
+    t["description"] = "Manifeste de publication SQL et de provenance ; aucune ancienne valeur conservée par ce manifeste seul." if name.endswith("dataset_snapshots") else "Provenance des documents ayant contribué à un instantané SQL ; aucun fichier requis après purge."
 
-# Registry and typed history membership; no source documents are stored here.
-t = new("ingest.relation_contracts", "Catalogue des relations métier/historiques autorisées.", "Une relation enregistrée.", {
+# Technical revision metadata only; never prior business-row copies.
+t = new("ingest.relation_contracts", "Catalogue des relations métier et de leurs grains autorisés.", "Une relation enregistrée.", {
     "relation_code": col("text", "Nom SQL qualifié autorisé, stable dans une version du contrat.", False),
-    "history_relation": col("text", "Relation SQL typée qui conserve ses versions immuables.", False),
+    "relation_name": col("text", "Relation métier concernée ; aucune table sœur history.", False),
     "contract_version": col("text", "Version du contrat de colonnes, clés et sémantique.", False),
     "grain_definition": col("text", "Définition explicite de la clé logique.", False)}, ["relation_code"], write="append_only")
-t = new("ingest.row_versions", "Identités des versions de lignes ; leurs valeurs sont dans les tables historiques typées.", "Relation × clé logique × numéro de révision.", {
+t = new("ingest.row_versions", "Registre technique de révisions et de provenance ; ne contient aucune ancienne valeur métier.", "Relation × clé logique × numéro de révision.", {
     "id": identity(), "relation_code": col("text", "Relation métier concernée.", False),
     "logical_key": col("text", "Encodage canonique des colonnes de clé ; aucun document source.", False),
     "revision_no": col("bigint", "Révision croissante de cette clé logique.", False),
@@ -112,7 +127,7 @@ t = new("ingest.row_versions", "Identités des versions de lignes ; leurs valeur
     "transform_version": col("text", "Version du code de normalisation.", False),
     "content_sha256": col("text", "Hash sémantique de la ligne typée, de ses états et des enfants référencés.", False),
     "recorded_at": col("timestamptz", "Instant d’enregistrement de cette version SQL.", False, default_sql="CURRENT_TIMESTAMP"),
-    "is_tombstone": col("boolean", "Retrait logique ; les anciennes valeurs restent dans l’historique.", False, default_sql="false")}, ["id"], write="append_only", reason="Ajustement substantiel nécessaire à la reproductibilité sans originaux")
+    "is_tombstone": col("boolean", "Marqueur de retrait logique ; ne conserve aucune ancienne valeur métier.", False, default_sql="false")}, ["id"], write="append_only", reason="Provenance et révisions techniques, sans promettre de reconstruction de valeurs remplacées")
 fk(t, ["relation_code"], "ingest.relation_contracts", ["relation_code"])
 fk(t, ["source_record_id"], "ingest.source_records", ["id"])
 unique(t, ["relation_code", "logical_key", "revision_no"], "logical_revision")
@@ -120,11 +135,11 @@ unique(t, ["id", "relation_code", "logical_key"], "version_binding")
 unique(t, ["id", "relation_code"], "relation_binding")
 check(t, "revision_no > 0 AND content_sha256 ~ '^[0-9a-f]{64}$'", "revision_hash")
 check(t, "provenance_kind IN ('provider','derived','manual')", "provenance_kind")
-t = new("ingest.dataset_snapshot_rows", "Composition exacte et immuable des instantanés en versions de faits SQL.", "Instantané × relation × clé logique.", {
+t = new("ingest.dataset_snapshot_rows", "Sélection de clés et révisions dans un manifeste ; conservation des anciennes valeurs à trancher.", "Instantané × relation × clé logique.", {
     "snapshot_id": col("bigint", "Instantané qui sélectionne cette valeur.", False),
     "relation_code": col("text", "Relation métier sélectionnée.", False),
     "logical_key": col("text", "Clé métier de la ligne sélectionnée.", False),
-    "row_version_id": col("bigint", "Version SQL typée retenue.", False)}, ["snapshot_id", "relation_code", "logical_key"], write="immutable_after_snapshot_seal")
+    "row_version_id": col("bigint", "Identifiant de révision sélectionné ; son hash ne constitue pas une copie des valeurs.", False)}, ["snapshot_id", "relation_code", "logical_key"], write="immutable_after_snapshot_seal")
 fk(t, ["snapshot_id"], "ingest.dataset_snapshots", ["id"])
 fk(t, ["row_version_id", "relation_code", "logical_key"], "ingest.row_versions", ["id", "relation_code", "logical_key"])
 t = new("ingest.field_contracts", "Champs sémantiques enregistrés et leur destination ; aucun chemin arbitraire autorisé.", "Relation × code de champ.", {
@@ -144,7 +159,7 @@ check(t, "source_state IN ('absent','null','number','string','boolean','empty_ar
 check(t, "num_nonnulls(source_text,source_number,source_boolean) <= 1", "scalar_exclusive")
 t["notes"] = ["Validation différée : relation_code doit être celui de row_versions ; la valeur scalaire doit correspondre à source_state.", "Objets/arrays complets interdits ; aucun ancien document, sérialisation de sous-arbre ou attribut arbitraire. Les tableaux non vides sont des relations métier."]
 t = new("ingest.record_row_links", "Correspondance vérifiable des observations vers toutes leurs représentations métier typées.", "Enregistrement source × version de fait.", {
-    "source_record_id": col("bigint", "Observation source concernée.", False), "row_version_id": col("bigint", "Fait typé conservé, canonique ou variante source.", False),
+    "source_record_id": col("bigint", "Observation source concernée.", False), "row_version_id": col("bigint", "Révision de fait liée à cette observation ; ce lien ne stocke pas les anciennes valeurs.", False),
     "mapping_version": col("text", "Version vérifiable de la correspondance des champs.", False)}, ["source_record_id", "row_version_id"], write="append_only")
 fk(t, ["source_record_id"], "ingest.source_records", ["id"])
 fk(t, ["row_version_id"], "ingest.row_versions", ["id"])
@@ -388,22 +403,11 @@ for table in tables.values():
         for name, value in table["columns"].items():
             if value["type"] == "double precision":
                 check(table, name + " NOT IN ('NaN'::double precision,'Infinity'::double precision,'-Infinity'::double precision)", name + "_finite")
-history_sources = [t for t in list(tables.values()) if (t["qualified_name"].startswith("football.") and t["write_mode"] != "append_only") or t["qualified_name"] in ("ingest.sources", "ingest.source_datasets", "ingest.media_assets", "ingest.match_coverage")]
 for t in list(tables.values()):
     if t["qualified_name"].startswith("football.") or t["qualified_name"] in ("ingest.sources", "ingest.source_datasets", "ingest.media_assets", "ingest.match_coverage"):
-        add(t, "row_version_id", col("bigint", "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only.", False), "Snapshots SQL indépendants des fichiers")
+        add(t, "row_version_id", col("bigint", "Révision de la ligne métier ; aucune copie dans une table history. La politique des anciennes valeurs reste à décider.", False), "Snapshots SQL indépendants des fichiers")
         unique(t, ["row_version_id"], "row_version")
         fk(t, ["row_version_id"], "ingest.row_versions", ["id"])
-for t in history_sources:
-    hcols = copy.deepcopy(t["columns"])
-    for v in hcols.values():
-        for key in ("identity", "generated_sql", "generated_storage", "default_sql"):
-            v.pop(key, None)
-    h = new(t["qualified_name"] + "_history", "Versions immuables typées de " + t["qualified_name"] + ".", "Une révision SQL de la clé logique de " + t["qualified_name"] + ".", hcols, ["row_version_id"], phase=t["phase"], write="append_only", reason="Historique SQL typé nécessaire après suppression des originaux")
-    fk(h, ["row_version_id"], "ingest.row_versions", ["id"])
-    h["history_of"] = t["qualified_name"]
-    h["notes"] = ["Toutes les colonnes métier sont copiées avec leurs types ; aucun document ou payload archivé.", "Pas de FK vers un fait courant corrigible : la cohérence historique est contrôlée entre versions appartenant au même snapshot.", "Trigger différé : relation_code, clé logique et existence de cette ligne doivent correspondre à row_versions ; une version ne possède qu’une représentation typée."]
-
 # Mark permitted JSONB exceptions individually, bounded and prohibited from storing source payloads.
 jsonb_exceptions = []
 for t in tables.values():
@@ -426,17 +430,82 @@ for rule in proposal["required_cross_row_rules"]:
         rule["tables"].append("football.match_heatmap_cells")
         rule["rule"] = "Repères distincts par famille ; coordonnées finies et bornes selon repère. Les cellules sont des colonnes entières liées à leur grille, avec contrôles intertables des indices, compteurs et doublons. Un vide ne devient pas une grille de zéros."
     if rule["id"] == "family_selection":
-        rule["implementation"] = "Verrouiller le périmètre, conserver les observations utiles comme versions SQL typées, remplacer atomiquement la famille courante, mettre à jour couverture et éditions sales puis COMMIT."
+        rule["implementation"] = "Verrouiller le périmètre, remplacer atomiquement la famille courante et mettre à jour couverture/éditions sales. La conservation des valeurs antérieures dépend du choix de versionnement, sans table history."
 for mapping in proposal["migration_mapping"]:
     if mapping["source"] == "statarena.objects + bucket data/<path>":
         mapping["transformation"] = "Conserver les métadonnées et relations aux faits SQL ; originaux temporaires jusqu’à réconciliation, puis suppression des octets et copies."
     if mapping["source"] == "observations/events":
-        mapping["transformation"] = "Versions de flux SQL typées, ordre et scores conservés ; remplacement courant atomique, anciennes versions dans l’historique SQL."
-proposal["format_notes"] = ["Proposition documentaire non déployée, construite depuis le JSON utilisateur intégral.", "Core et enrichment restent obligatoires pour la mission complète ; les neuf tables de modèles sont une réserve sans nouvelle formule.", "PK/FK/CHECK sont décrits ; les règles intertables, migrations et parcours devront être effectivement implémentés et testés après approbation.", "Les fichiers structurés sont temporaires ; la reproductibilité finale porte sur les faits SQL typés, sans promesse de restauration des octets supprimés."]
-proposal["required_cross_row_rules"].append({"id": "sql_history_without_originals", "enforcement": "deferred_constraint_triggers_and_reconciliation_gate", "rule": "Every retained row version has exactly one immutable typed representation; snapshots select a consistent version per logical key; field states bind to the registered relation. Snapshot sealing never requires a source file to remain readable. Source deletion requires accepted per-document reconciliation, no unmapped useful field and no outstanding transfer dependency."})
-proposal["implementation_order"] = {"procedure": ["Documentation only until explicit user approval.", "Create versioned migrations and E2E failure cases before implementation; test on disposable local PostgreSQL18.6, no new RDS or Neon branch.", "Create tables/keys/checks first, then FK and deferred cross-row rules; resolve the source_records/row_versions cycle in the FK installation stage.", "Normalize and reconcile existing AWS sources; do not start another Neon-to-AWS transfer.", "Stabilize schema, then advance backend adaptation and data reconciliation independently.", "Publish complete immutable SQL snapshots and coherent aggregates; verify Vercel-to-RDS through CloudFront.", "Only then cut over, remove structured source files/copies and unused old relations, verify recovered space and continued SQL-only operation."]}
-proposal["operational_decisions"].update(new_collection="PitchAPI -> in-memory decode/validation -> typed RDS facts and histories in a transaction. No raw response file/document persisted. Data collector has no S3 data credentials; media worker is separate.", retention="EXISTING raw originals only until complete accepted reconciliation. New collections never create raw files. Remove legacy RDS/S3 copies and retain typed SQL histories plus provenance metadata. Exact raw bytes and arbitrary future reparsing cannot be reproduced.", rollout="Single existing RDS. Git main only. User-approved plan gate first. Existing originals/reader retained for bounded migration rollback; after purge rollback uses retained SQL versions only.")
-proposal["planning"] = {"baseline_sha256": hashlib.sha256((OUT / "inputs/Orion_schema_bdd.original.json").read_bytes()).hexdigest(), "baseline_tables": 84, "baseline_columns": 943, "history_tables": len(history_sources), "models_scope": "9 original model tables shown as deferred preparation only; preserve existing client scouting formulas without inventing a new Orion model.", "jsonb_exceptions": jsonb_exceptions}
+        mapping["transformation"] = "Flux SQL typés, ordre et scores conservés ; remplacement courant atomique. Aucune copie technique history ; conservation des corrections antérieures à trancher."
+proposal["format_notes"] = ["Proposition documentaire non déployée, construite depuis le JSON utilisateur intégral.", "Core et enrichment restent obligatoires pour la mission complète ; les neuf tables de modèles sont une réserve sans nouvelle formule.", "PK/FK/CHECK sont décrits ; les règles intertables, migrations et parcours devront être effectivement implémentés et testés après approbation.", "Les54tables history ont été retirées sur instruction utilisateur ; aucun stockage équivalent renommé ou opaque. La conservation des anciennes valeurs reste à trancher avant reprise du pilote."]
+proposal["required_cross_row_rules"].append({"id": "no_separate_history_tables", "enforcement": "schema_generation_and_review", "rule": "No table named *_history, no history_of relation and no renamed/opaque replacement copy store. Revision/provenance metadata never replaces retained values. Version retention inside business tables versus current-state-only remains a user decision before pilot restart."})
+proposal["implementation_order"] = {"procedure": ["User removed all54separate history tables after initial pilot approval. Resolve the remaining version-retention policy before restarting the dependent implementation.", "Create versioned migrations and E2E failure cases before implementation; test on disposable local PostgreSQL18.6, no new RDS or Neon branch.", "Create tables/keys/checks first, then FK and deferred cross-row rules; resolve the source_records/row_versions cycle in the FK installation stage.", "Normalize and reconcile existing AWS sources; do not start another Neon-to-AWS transfer.", "Stabilize schema, then advance backend adaptation and data reconciliation independently.", "Finalize publication/snapshot guarantees according to the chosen retention policy; do not claim old values are reproducible from hashes alone. Verify coherent aggregates and Vercel-to-RDS through CloudFront.", "Only then cut over, remove structured source files/copies and unused old relations, verify recovered space and continued SQL-only operation."]}
+proposal["operational_decisions"].update(new_collection="PitchAPI -> in-memory decode/validation -> typed RDS facts in a transaction, without separate history tables. No raw response file/document persisted. Data collector has no S3 data credentials; media worker is separate.", retention="EXISTING raw originals only until complete accepted reconciliation. New collections never create raw files. Remove legacy RDS/S3 copies only after reconciliation under the chosen value-retention policy; provenance metadata is not a replay store. Exact raw bytes and arbitrary future reparsing cannot be reproduced.", rollout="Single existing RDS. Git main only. User-approved plan gate first. Existing originals/reader retained for bounded migration rollback; post-purge rollback depends on the explicit retention choice and must not assume unavailable prior facts.")
+# Pro review is now the user's explicit priority. Apply constraints before the
+# selective transform, which removes the universal registry/state/link tables.
+from apply_pro_constraints import apply as apply_pro_constraints
+from apply_pro_versions import apply as apply_pro_versions
+if args.fixture_phase == "before_constraints":
+    write_fixture()
+    raise SystemExit(0)
+apply_pro_constraints(proposal, changes)
+if args.fixture_phase == "before_versions":
+    write_fixture()
+    raise SystemExit(0)
+apply_pro_versions(proposal, changes)
+tables = {t["qualified_name"]: t for schema in proposal["schemas"] for t in schema["tables"]}
+proposal["format_version"] = "1.2.0-pro-review"
+proposal["conventions"].update(
+    canonical_grain="Une sélection canonique par grain/périmètre/génération ; variantes utiles dans les tables métier typées, sans magasin documentaire.",
+    nulls="États locaux typés inventoriés pour distinguer absence, null explicite, chaîne vide et type natif lorsque nécessaire ; zéro reste une valeur observée. La matrice exhaustive reste à terminer avant purge.",
+    provenance="Provenance directe et typée ; les valeurs nécessaires restent dans les tables métier avec leurs dépendances. Les hashes ne remplacent pas les valeurs.",
+    revisions="Versions sélectives à bornes de génération, enfants versionnés par leur parent lorsqu’une famille est atomique ; aucun registre universel row_versions ni table sœur history.",
+    updated_at="Pour une version retenue, insérer une nouvelle ligne lors d’une correction et fermer seulement la borne de l’ancienne. Pour les états opérationnels courants, UPDATE explicite de updated_at.")
+proposal["required_cross_row_rules"] = [r for r in proposal["required_cross_row_rules"] if r["id"] != "no_separate_history_tables"]
+proposal["required_cross_row_rules"].append({"id":"selective_inline_versions","enforcement":"transactional_generation_and_typed_fk_gates","rule":"Retain actual typed values and dependencies inside selected business tables. Serialize generation allocation through commit, prohibit overlaps/sealed reuse/value mutation, validate selected parent membership at the same generation, and freeze builds/representations. Current views are internal; public reads resolve the published build first. No universal row registry or hidden history copies."})
+for rule in proposal["required_cross_row_rules"]:
+    if rule["id"] == "family_selection":
+        rule["rule"] = "Sélectionner une famille canonique au périmètre déclaré et à la même génération que ses dépendances. Conserver les variantes et valeurs retenues dans leurs tables métier typées ; les enfants atomiques appartiennent à une version parente immuable. Une réponse partielle ou une tentative échouée n'est pas une liste vide ni une suppression."
+        rule["implementation"] = "Sous verrou transactionnel de génération, fermer les sélections remplacées et insérer les nouvelles versions/collections sans effacer les anciennes ; contrôler complétude, appartenance, absence de chevauchement et publication avant scellement/commit."
+for mapping in proposal["migration_mapping"]:
+    if mapping["source"] == "observations/events":
+        mapping["transformation"] = "Flux typés immuables liés à la version complète de collection ; ordre, scores et anciennes collections conservés, sélection canonique à une génération donnée."
+proposal["format_notes"] = ["Revue GPT Pro explicitement prioritaire sur le choix intermédiaire état courant seul.", "Versions sélectives dans les tables métier, sans54tables sœurs history ni registre universel de versions par cellule.", "Modèle de conception à vérifier dans PostgreSQL : aucun statut de ce JSON ne vaut preuve d’exécution ou de migration.", "Le socle84tables est une référence de responsabilités, pas un quota ; les9tables de modèles restent une réserve sans nouvelle formule.", "Matrice exhaustive des champs/variantes et contributions encore requise avant purge ; les seuls états ciblés présents ne prouvent pas la couverture complète."]
+proposal["operational_decisions"].update(
+    new_collection="PitchAPI -> in-memory decode/validation -> selected typed RDS facts/dependencies in one bounded generation transaction. No raw response file/document persisted; separate essential-media worker.",
+    retention="Retain accepted typed inputs, variants and dependencies needed for reproducibility; existing raw originals only until full reconciliation, then remove RDS/S3 copies. A hash never restores deleted bytes.",
+    rollout="One existing RDS, main only. Present the materially revised inline key model before remote reorganization. Availability repair is a separate lot; public partialAWS cutover is not justified by health200.")
+proposal["implementation_order"]["procedure"][0] = "Coherent revised Pro model must be presented before remote reorganization; the old54history approval is superseded. Run meaningful bounded local pilot and actual integrity checks before full migration or purge."
+proposal["implementation_order"]["procedure"][2] = "Create schemas/sequences and actual nonnullable PK/nonpartial unique keys, then typed version-anchor FK and deferred cross-row gates; bind bootstrap generations/code digests before dependent seed rows. No universal row registry."
+proposal["implementation_order"]["procedure"][5] = "Build/publish against retained data, shared dependencies and code/numeric contracts; verify full Vercel-to-RDS flows and immutable representations."
+# Recompute exceptions after all transforms; never report removed tables or columns.
+jsonb_exceptions = [dict(table=t["qualified_name"],column=n,phase=t["phase"],purpose=c["jsonb_exception"],max_bytes=c["maximum_encoded_bytes"])
+    for t in tables.values() for n,c in t["columns"].items() if c["type"]=="jsonb"]
+# The review follows responsibilities; retaining an arbitrary table count is not a gate.
+baseline_tables = {t["qualified_name"]:t for schema in original["schemas"] for t in schema["tables"]}
+baseline_dispositions = {name:dict(action="deferred" if t["phase"]=="models" else "retained_adapted",targets=[name],reason="Réserve de modèles sans nouvelle formule." if t["phase"]=="models" else "Responsabilité du socle couverte ; clés/contraintes adaptées selon la revue Pro.")
+    for name,t in baseline_tables.items() if name in tables}
+# Avoid presenting temporary builder steps (e.g. add then remove row_version_id)
+# as final schema amendments. The full recursive diff is generated separately.
+prior_reasons = {}
+for item in changes:
+    prior_reasons.setdefault((item["table"],item.get("column")),item.get("reason","Adaptation à la revue Pro."))
+final_changes=[]
+for name,t in tables.items():
+    old=baseline_tables.get(name)
+    if old is None:
+        final_changes.append(dict(table=name,operation="add_table",column=None,reason=prior_reasons.get((name,None),t["description"])))
+        continue
+    for n in sorted(set(old["columns"])|set(t["columns"])):
+        a,b=old["columns"].get(n),t["columns"].get(n)
+        semantic=lambda v: None if v is None else {k:x for k,x in v.items() if k!="description"}
+        if semantic(a)!=semantic(b):
+            final_changes.append(dict(table=name,operation="add_column" if a is None else "remove_column" if b is None else "change_column",column=n,before=a,after=b,reason=prior_reasons.get((name,n),"Versions sélectives, dépendances et contraintes précisées par la revue Pro.")))
+    for section in ("primary_key","unique_constraints","foreign_keys","checks","indexes","write_mode","versioning","historical_read_policy","grain","description"):
+        if old.get(section)!=t.get(section):
+            final_changes.append(dict(table=name,operation="change_"+section,column=None,before=old.get(section),after=t.get(section),reason="Clés physiques, ancres de versions et contraintes de la revue Pro ; voir le diff intégral."))
+changes=final_changes
+proposal["planning"] = {"baseline_sha256": hashlib.sha256((OUT / "inputs/Orion_schema_bdd.original.json").read_bytes()).hexdigest(), "baseline_tables": len(baseline_tables), "baseline_columns": sum(len(t["columns"]) for t in baseline_tables.values()), "history_tables": 0, "version_policy": "selective_inline_versions_per_pro", "baseline_dispositions": baseline_dispositions, "models_scope": "9 original model tables shown as deferred preparation only; preserve existing client scouting formulas without inventing a new Orion model.", "jsonb_exceptions": jsonb_exceptions}
+proposal["planning"]["version_classes"] = {key: len(proposal["selective_versioning"][key]) for key in ("selected_relations", "parent_version_children", "existing_append_only", "stable_identities")}
 proposal["planning"]["tables"] = len(tables)
 proposal["planning"]["columns"] = sum(len(t["columns"]) for t in tables.values())
 proposal["planning"]["foreign_keys"] = sum(len(t["foreign_keys"]) for t in tables.values())
@@ -444,6 +513,8 @@ for phase in proposal["delivery_phases"]:
     phase["tables_count"] = sum(t["phase"] == phase["code"] for t in tables.values())
     phase["in_mission_scope"] = phase["code"] != "models"
 proposal["delivery_phases"][1]["objective"] += " — obligatoire pour la livraison complète, pas hors périmètre."
+proposal["status"] = "pro_review_selective_inline_proposal_not_deployed"
+assert not any(t.get("history_of") or t["name"].endswith("_history") for t in tables.values())
 (OUT / "target-schema.proposed.json").write_text(json.dumps(proposal, indent=2, ensure_ascii=False) + "\n")
 (OUT / "changes.json").write_text(json.dumps(changes, indent=2, ensure_ascii=False) + "\n")
-print(json.dumps(proposal["planning"] | {"jsonb_exceptions": len(jsonb_exceptions)}, ensure_ascii=False))
+print(json.dumps({k:v for k,v in proposal["planning"].items() if k not in ("baseline_dispositions", "jsonb_exceptions")} | {"jsonb_exceptions": len(jsonb_exceptions), "baseline_dispositions": len(baseline_dispositions)}, ensure_ascii=False))

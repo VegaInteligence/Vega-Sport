@@ -1,0 +1,3 @@
+# Modèle Pro avant revue des clés append-only
+
+Modèle de 103 tables au SHA-256 `08d21224f5512c21af75fd5dcc1a554840977c576d1319cefb14f09b6136a23a`. Sa navigation documentaire avait réussi, mais la revue indépendante a ensuite trouvé deux clés empêchant la conservation d’une renormalisation du même record : UQ de standing_snapshots sans data_revision et PK de match_observation_details limitée au record. Ces contrôles de présentation ne prouvaient donc pas cette garantie métier. Le helper exact antérieur est conservé comme texte ; ses preuves ne sont pas celles du modèle corrigé. Conclusions courantes dans [RESULTS.md](../RESULTS.md).

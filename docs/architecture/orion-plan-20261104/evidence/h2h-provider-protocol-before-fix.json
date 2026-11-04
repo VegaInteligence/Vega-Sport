@@ -1,0 +1,12 @@
+{
+  "atUtc": "2026-11-04T17:38:21.659290+00:00",
+  "scope": "New whole-model H2H provider-binding assertion written before helper change; expected structural failure only, no SQL.",
+  "protocol": "tools/PRO_VERSION_PROTOCOL.md",
+  "scriptSha256": "d1cebfe5388bc651a2ca9e55642bc49a1d0e5a23ca033da4a26b95c80b90e6d5",
+  "helperSha256": "592a46e6d3d89fbf9b45364985c96086e0837ee8fe1d8910ae999cf86e35fd66",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 116, in <module>\n    assert any(f['columns']==['source_id','source_record_id'] and f['references']=={'table':'ingest.source_records','columns':['source_id','id']}\n           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n               for f in h2h['foreign_keys']), 'H2H wrong-provider provenance remains structurally possible'\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: H2H wrong-provider provenance remains structurally possible\n",
+  "expectedFailure": "H2H wrong-provider provenance remains structurally possible",
+  "observedExpectedFailure": true
+}

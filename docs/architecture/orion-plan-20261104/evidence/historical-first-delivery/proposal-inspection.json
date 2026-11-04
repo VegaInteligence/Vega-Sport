@@ -1,0 +1,18 @@
+{
+  "atUtc": "2026-11-04T15:20:03.920352+00:00",
+  "command": "python3 docs/architecture/orion-plan-20261104/tools/inspect_proposal.py",
+  "scope": "Static proposal: table preservation, key/FK targets and types, removed-column CHECK references, complete diagrams/dictionary/current relation inventory. No database execution.",
+  "counts": {
+    "baselineTables": 84,
+    "baselineColumns": 943,
+    "tables": 161,
+    "columns": 1971,
+    "foreignKeys": 368,
+    "domainDiagrams": 22,
+    "currentRelations": 224
+  },
+  "violations": [],
+  "indexNameWarnings": [],
+  "passed": true,
+  "limits": "Does not validate SQL execution, intertable triggers, data migration, source reconciliation or application acceptance. Those require the user's plan approval first."
+}

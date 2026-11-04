@@ -1,0 +1,722 @@
+"""Pure selective inline-version proposal transform; no I/O or SQL execution.
+
+Failure cases and independent static acceptance precede this implementation in
+PRO_VERSION_PROTOCOL.md. Apply Pro A/B/E/G first, then this transform.
+"""
+from copy import deepcopy
+import hashlib
+import re
+
+
+FACT_KEYS = {"football." + name: ["id"] for name in (
+    "countries", "venues", "coaches", "competitions", "competition_seasons",
+    "competition_stages", "competition_groups", "player_team_memberships",
+    "team_aliases", "matches", "shots", "team_coach_tenures",
+    "honour_definitions", "player_honours", "team_honours")}
+FACT_KEYS.update({"football." + name: key for name, key in (
+    ("competition_teams", ["competition_season_id", "team_id"]),
+    ("match_teams", ["match_id", "side"]),
+    ("match_scores", ["match_id", "side", "score_scope"]),
+    ("match_lineups", ["match_id", "team_id"]),
+    ("match_players", ["match_id", "player_id"]),
+    ("player_match_stats", ["match_id", "player_id", "period_code"]),
+    ("player_match_advanced", ["match_id", "player_id", "period_code"]),
+    ("team_match_stats", ["match_id", "team_id", "period_code"]),
+    ("team_match_advanced", ["match_id", "team_id", "period_code"]),
+    ("player_match_metric_values", ["match_id", "player_id", "period_code", "family_code", "metric_code"]),
+    ("team_match_metric_values", ["match_id", "team_id", "period_code", "family_code", "metric_code"]))})
+SOURCE_MAPPINGS = tuple("football." + entity + "_source_ids" for entity in (
+    "competition", "team", "player", "association", "venue", "coach", "match"))
+DEFINITIONS = ("football.metric_definitions", "football.positions", "football.periods")
+MAPPINGS = ("football.position_mappings", "football.source_metric_mappings")
+PROFILES = {"football." + entity + "_profile_versions": entity + "_id"
+            for entity in ("player", "team", "association")}
+VERSIONED_TABLES = tuple(FACT_KEYS) + ("ingest.public_aliases",) + SOURCE_MAPPINGS + DEFINITIONS + MAPPINGS + tuple(PROFILES) + (
+    "ingest.match_coverage", "football.match_heatmaps", "football.pass_networks", "analytics.publication_versions")
+CHILD_TABLES = tuple("football." + name for name in (
+    "match_events", "match_momentum", "match_h2h_entries", "pass_network_nodes",
+    "pass_network_edges", "match_heatmap_cells"))
+APPEND_ONLY_TABLES = tuple("football." + name for name in (
+    "standing_snapshots", "standing_rows", "ranking_systems", "ranking_snapshots",
+    "team_ranking_entries", "team_ranking_components", "association_ranking_entries",
+    "association_ranking_components", "match_observation_details"))
+STABLE_IDENTITIES = ("football.players", "football.teams", "football.associations")
+REMOVED = {"ingest.row_versions", "ingest.dataset_snapshot_rows",
+           "ingest.field_states", "ingest.record_row_links"}
+POLICY = "selective_inline_versions_v1"
+
+
+def _tables(model):
+    answer = {}
+    for schema in model["schemas"]:
+        for table in schema["tables"]:
+            name = table["qualified_name"]
+            if name in answer:
+                raise ValueError(f"Duplicate table {name}")
+            answer[name] = table
+    return answer
+
+
+def _short(name):
+    raw = name.encode()
+    return name if len(raw) <= 63 else raw[:52].decode(errors="ignore") + "_" + hashlib.sha256(raw).hexdigest()[:10]
+
+
+def _name(table, label):
+    return _short(table["qualified_name"].replace(".", "_") + "_sv_" + label)
+
+
+def _col(table, name, kind, nullable=True, **properties):
+    value = table["columns"].setdefault(name, dict(type=kind, nullable=nullable,
+        description="Valeur typée du contrat de versions sélectives ; aucune copie documentaire."))
+    if value["type"] != kind:
+        raise ValueError(f"Unexpected type for {table['qualified_name']}.{name}: {value['type']} vs {kind}")
+    value.update(nullable=nullable, **properties)
+    return value
+
+
+def _pk(table, columns):
+    for column in columns:
+        table["columns"][column]["nullable"] = False
+    table["primary_key"] = dict(name=_name(table, "pk"), columns=list(columns))
+
+
+def _uq(table, columns, label=None, nulls=False):
+    if table["primary_key"]["columns"] == columns:
+        return
+    if any(u["columns"] == columns and not u.get("deferrable", False)
+           and not u.get("where_sql") and u.get("nulls_not_distinct", False) == nulls
+           for u in table["unique_constraints"]):
+        return
+    table["unique_constraints"].append(dict(name=_name(table, (label or "_".join(columns)) + "_uq"),
+                                           columns=list(columns), nulls_not_distinct=nulls))
+
+
+def _index(table, columns, predicate, label, nulls=False):
+    table["indexes"].append(dict(name=_name(table, label + "_idx"), method="btree", unique=True,
+        keys=[dict(column=c, order="ASC") for c in columns], where_sql=predicate,
+        nulls_not_distinct=nulls,
+        description="Unicité de sélection courante ; les chevauchements historiques demandent un contrôle différé."))
+
+
+def _check(table, expression, label):
+    if not any(re.sub(r"\s+", "", c["sql"]) == re.sub(r"\s+", "", expression) for c in table["checks"]):
+        table["checks"].append(dict(name=_name(table, label + "_ck"), sql=expression))
+
+
+def _fk(table, columns, parent, target):
+    if any(f["columns"] == columns and f["references"] == dict(table=parent, columns=target)
+           for f in table["foreign_keys"]):
+        return
+    table["foreign_keys"].append(dict(name=_name(table, "_".join(columns) + "_" + parent.split(".")[-1] + "_fk"),
+        columns=list(columns), references=dict(table=parent, columns=list(target)),
+        match="SIMPLE", on_delete="RESTRICT", on_update="NO ACTION", deferrable=False))
+
+
+def _interval(table, start="recorded_from_gen", end="recorded_to_gen"):
+    _col(table, start, "bigint", False, description="Première génération de connaissance, incluse ; allouée après verrou transactionnel global.")
+    _col(table, end, "bigint", True, description="Fin exclusive de connaissance ; seule fermeture unique autorisée.")
+    _fk(table, [start], "ingest.dataset_snapshots", ["generation"])
+    _fk(table, [end], "ingest.dataset_snapshots", ["generation"])
+    _check(table, f"{end} IS NULL OR {end} > {start}", "interval")
+    table["write_mode"] = "immutable_values_close_interval_once"
+
+
+def _current(table, key, variant=False, nulls=False):
+    if variant:
+        _index(table, key + ["variant_key"], "recorded_to_gen IS NULL", "variant_current", nulls)
+        _index(table, key, "recorded_to_gen IS NULL AND is_canonical", "canonical_current", nulls)
+    else:
+        _index(table, key, "recorded_to_gen IS NULL", "current", nulls)
+
+
+def _variant(table, deleted=True):
+    _col(table, "variant_key", "text", False, description="Discriminant stable fournisseur/contexte ; jamais un nouvel identifiant à chaque réponse.")
+    _col(table, "is_canonical", "boolean", False)
+    if deleted:
+        _col(table, "is_deleted", "boolean", False, default_sql="false")
+
+
+def _natural_history(table, old, variant=True, physical_id=False):
+    table["unique_constraints"] = []
+    for number, unique in enumerate(old):
+        key = unique["columns"]
+        if physical_id and "id" in key:
+            table["unique_constraints"].append(deepcopy(unique))
+            continue
+        scoped = key + (["variant_key"] if variant and "variant_key" not in key else [])
+        _uq(table, scoped + ["recorded_from_gen"], f"natural_{number}_generation", unique.get("nulls_not_distinct", False))
+        _index(table, scoped, "recorded_to_gen IS NULL", f"natural_{number}_variant_current", unique.get("nulls_not_distinct", False))
+        if variant:
+            _index(table, key, "recorded_to_gen IS NULL AND is_canonical", f"natural_{number}_canonical_current", unique.get("nulls_not_distinct", False))
+
+
+def _provenance(table, logical_source=False):
+    _col(table, "source_id", "bigint", not logical_source)
+    _col(table, "source_record_id", "bigint", True)
+    _col(table, "provenance_kind", "text", False, allowed_values=["provider", "manual", "derived"])
+    _fk(table, ["source_id"], "ingest.sources", ["id"])
+    _fk(table, ["source_id", "source_record_id"], "ingest.source_records", ["source_id", "id"])
+    _check(table, "provenance_kind IN ('provider','manual','derived')", "provenance_kind")
+    _check(table, "provenance_kind <> 'provider' OR (source_id IS NOT NULL AND source_record_id IS NOT NULL)", "provider_observation")
+    if not logical_source:
+        _check(table, "(source_id IS NULL) = (source_record_id IS NULL)", "provenance_pair")
+    else:
+        table.setdefault("notes", []).append("source_id appartient ici au grain de résolution fournisseur, même pour une correspondance manuelle ; source_record_id est requis pour une provenance provider.")
+
+
+def _binding(table):
+    name = table["qualified_name"]
+    _col(table, "relation_code", "text", False, default_sql="'" + name + "'")
+    _col(table, "contract_version", "text", False)
+    _col(table, "transform_version", "text", False)
+    _col(table, "transform_code_sha256", "text", False)
+    _check(table, f"relation_code = '{name}'", "relation_binding")
+    _check(table, "contract_version <> '' AND transform_version <> '' AND transform_code_sha256 ~ '^[0-9a-f]{64}$'", "code_binding")
+    _fk(table, ["relation_code", "contract_version"], "ingest.relation_contracts", ["relation_code", "contract_version"])
+
+
+def _pair_guard(table, original, anchor, logical_id=False):
+    # For a nullable dimension id, other context columns may still be present.
+    if logical_id:
+        absent = original[0] + " IS NULL"
+    else:
+        absent = " OR ".join(c + " IS NULL" for c in original)
+    present = " AND ".join(c + " IS NOT NULL" for c in original)
+    _check(table, f"({anchor} IS NULL AND ({absent})) OR ({anchor} IS NOT NULL AND {present})", anchor + "_pair")
+
+
+def _native_form(table, field):
+    _col(table, field + "_state", "text", False, allowed_values=["absent", "null", "string", "number"])
+    _col(table, field + "_source_number", "numeric", True,
+         description="Valeur native exacte si le champ source est un nombre ; aucune réponse ou sous-arbre sérialisé.")
+    table["columns"][field]["description"] = "Texte natif (y compris chaîne vide et 07) ou représentation textuelle du nombre natif ; type/absence/null distingués par l’état local."
+    state, number = field + "_state", field + "_source_number"
+    numeric_text = "^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][+-]?[0-9]+)?$"
+    _check(table, f"({state} IN ('absent','null') AND {field} IS NULL AND {number} IS NULL) OR ({state} = 'string' AND {field} IS NOT NULL AND {number} IS NULL) OR ({state} = 'number' AND {field} IS NOT NULL AND {number} IS NOT NULL AND {number} NOT IN ('NaN'::numeric,'Infinity'::numeric,'-Infinity'::numeric) AND CASE WHEN {field} ~ '{numeric_text}' THEN {field}::numeric = {number} ELSE false END)", field + "_native_state")
+
+
+def _validate(model):
+    tables = _tables(model)
+    indexed_names = set()
+    for name, table in tables.items():
+        columns = table["columns"]
+        pk = table["primary_key"]
+        if not pk["columns"] or any(c not in columns or columns[c].get("nullable", True) for c in pk["columns"]):
+            raise ValueError(f"Invalid nullable/missing primary key in {name}")
+        names = set()
+        for group in ([pk], table["unique_constraints"], table["foreign_keys"], table["checks"], table["indexes"]):
+            for entry in group:
+                if len(entry["name"].encode()) > 63 or entry["name"] in names:
+                    raise ValueError(f"Invalid/duplicate identifier in {name}: {entry['name']}")
+                names.add(entry["name"])
+        for entry in [pk] + table["unique_constraints"] + table["indexes"]:
+            scoped = (name.split(".")[0], entry["name"])
+            if scoped in indexed_names:
+                raise ValueError(f"Schema index-name collision: {scoped}")
+            indexed_names.add(scoped)
+        for key in table["unique_constraints"]:
+            if any(c not in columns for c in key["columns"]):
+                raise ValueError(f"Missing unique column in {name}")
+        for index in table["indexes"]:
+            if any(k["column"] not in columns for k in index["keys"] if "column" in k):
+                raise ValueError(f"Missing index column in {name}")
+        for column, value in columns.items():
+            if "identity" in value and (value["type"] not in ("smallint", "integer", "bigint") or value.get("nullable", True)):
+                raise ValueError(f"Invalid identity {name}.{column}")
+        for fk in table["foreign_keys"]:
+            parent = tables.get(fk["references"]["table"])
+            local, remote = fk["columns"], fk["references"]["columns"]
+            if parent is None or not local or len(local) != len(remote):
+                raise ValueError(f"Invalid FK target/arity {name}.{fk['name']}")
+            for a, b in zip(local, remote):
+                if a not in columns or b not in parent["columns"] or columns[a]["type"] != parent["columns"][b]["type"]:
+                    raise ValueError(f"Incompatible FK {name}.{fk['name']}")
+            if not any(k["columns"] == remote and not k.get("deferrable", False) and not k.get("where_sql")
+                       for k in [parent["primary_key"]] + parent["unique_constraints"]):
+                raise ValueError(f"FK lacks an actual nonpartial key {name}.{fk['name']}")
+
+
+def _strip_universal(model):
+    for schema in model["schemas"]:
+        schema["tables"] = [t for t in schema["tables"] if t["qualified_name"] not in REMOVED]
+        for table in schema["tables"]:
+            table["columns"].pop("row_version_id", None)
+            for label in ("unique_constraints", "foreign_keys", "indexes"):
+                table[label] = [x for x in table[label] if "row_version_id" not in x.get("columns", [])
+                    and not any(k.get("column") == "row_version_id" for k in x.get("keys", []))
+                    and x.get("references", {}).get("table") not in REMOVED]
+            table["checks"] = [c for c in table["checks"] if not re.search(r"\brow_version_id\b", c["sql"])]
+            for value in table["columns"].values():
+                if "description" in value:
+                    value["description"] = value["description"].replace("field_states", "états locaux explicitement inventoriés")
+            table["notes"] = [n for n in table.get("notes", []) if not any(word in n for word in ("row_versions", "dataset_snapshot_rows", "record_row_links", "field_states"))]
+    for mapping in model.get("migration_mapping", []):
+        mapping["targets"] = [n for n in mapping.get("targets", []) if n not in REMOVED]
+
+
+def _enrich_profiles(tables):
+    attributes = {
+        "player": ["nationality_country_id", "primary_position_code"],
+        "team": ["slug", "team_type", "gender", "age_category", "country_id", "founded_year"],
+        "association": ["federation_code", "country_id", "confederation_code"],
+    }
+    for entity, fields in attributes.items():
+        identity = tables["football." + ("associations" if entity == "association" else entity + "s")]
+        profile = tables["football." + entity + "_profile_versions"]
+        for column in fields:
+            if column not in profile["columns"]:
+                profile["columns"][column] = deepcopy(identity["columns"][column])
+                profile["columns"][column]["nullable"] = True
+                profile["columns"][column].pop("default_sql", None)
+            for fk in identity["foreign_keys"]:
+                if fk["columns"] == [column]:
+                    _fk(profile, fk["columns"], fk["references"]["table"], fk["references"]["columns"])
+        identity["historical_read_policy"] = "Attributs courants en cache transactionnel uniquement ; les réponses figées utilisent les profils retenus à leur génération."
+
+
+def _describe_physical_grains(tables):
+    """Describe physical rows using declared keys, keeping the logical grain.
+
+    Saved business text is the source on every call, so rendering/reapplication
+    cannot stack prefixes or turn a source ordinal into a stable entity id.
+    """
+    def key(columns):
+        return "(" + ", ".join(columns) + ")"
+
+    for name in VERSIONED_TABLES + CHILD_TABLES:
+        table = tables[name]
+        meta = table["versioning"]
+        meta.setdefault("logical_grain_description", table["grain"])
+        meta.setdefault("business_description", table["description"])
+        if name == "football.match_heatmaps":
+            meta["business_description"] = "Cartes spatiales typées : grille et repère ici, cellules dans football.match_heatmap_cells"
+        physical = list(table["primary_key"]["columns"])
+        meta["physical_key"] = physical
+        if name in CHILD_TABLES:
+            parent_name = meta["parent"]
+            parent = tables[parent_name]
+            direct = [f for f in table["foreign_keys"]
+                      if f["references"]["table"] == parent_name
+                      and f["references"]["columns"] == parent["primary_key"]["columns"]]
+            if direct:
+                binding = dict(columns=list(direct[0]["columns"]),
+                               references=deepcopy(direct[0]["references"]),
+                               enforced_by=[direct[0]["name"]])
+            elif name == "football.pass_network_edges":
+                # Both node FKs include the SAME network_id, whose node parent
+                # FK already identifies one immutable pass_networks(id).
+                via = [f for f in table["foreign_keys"]
+                       if f["references"]["table"] == "football.pass_network_nodes"]
+                node_parent = [f for f in tables["football.pass_network_nodes"]["foreign_keys"]
+                               if f["references"]["table"] == parent_name]
+                if len(via) != 2 or not node_parent or any(f["columns"][0] != "network_id" for f in via):
+                    raise ValueError("Network edge parent-version binding is not ready")
+                binding = dict(columns=["network_id"], references=dict(table=parent_name, columns=["id"]),
+                               via="football.pass_network_nodes",
+                               enforced_by=[f["name"] for f in via] + [node_parent[0]["name"]])
+            else:
+                raise ValueError(f"No concrete parent-version binding for {name}")
+            local_key = [c for c in physical if c not in binding["columns"]]
+            if not local_key:
+                raise ValueError(f"No child-local grain for {name}")
+            meta["parent_version_binding"] = binding
+            meta["parent_key"] = list(binding["columns"])
+            meta["logical_key"] = local_key
+            meta["logical_key_scope"] = "within_parent_version_only; source ordinals need not identify the same item after correction"
+            grain = (f"Ligne physique : un enfant {key(local_key)} de la version parente "
+                     f"{parent_name}{key(binding['references']['columns'])}, liée par "
+                     f"{key(binding['columns'])} ; PK {key(physical)}. "
+                     "Aucune révision indépendante de cet enfant ni stabilité interversions de son ordinal supposée.")
+        else:
+            logical = meta["logical_key"]
+            selection = [dict(name=i["name"], columns=[k["column"] for k in i["keys"]],
+                              where_sql=i["where_sql"], nulls_not_distinct=i.get("nulls_not_distinct", False))
+                         for i in table["indexes"] if i.get("unique") and i.get("where_sql")]
+            meta["selection_indexes"] = selection
+            start = "published_from_gen" if name == "analytics.publication_versions" else "recorded_from_gen"
+            end = "published_to_gen" if name == "analytics.publication_versions" else "recorded_to_gen"
+            context = ""
+            if "variant_key" in table["columns"]:
+                variant = logical if "variant_key" in logical else logical + ["variant_key"]
+                canonical = ["match_id", "feature_code"] if name == "ingest.match_coverage" else logical
+                meta["variant_selection"] = dict(current_variant_key=list(variant),
+                                                  current_canonical_key=list(canonical),
+                                                  canonical_predicate="recorded_to_gen IS NULL AND is_canonical")
+                context = f", variante variant_key ; sélection canonique {key(canonical)}"
+            else:
+                meta["variant_selection"] = dict(current_key=list(logical),
+                                                  current_predicate=f"{end} IS NULL")
+            kind = {
+                "inline_fact": "une révision typée",
+                "inline_resolution": "une résolution datée",
+                "inline_definition": "une définition immuable identifiée par definition_version",
+                "inline_mapping": "un mapping immuable identifié par mapping_version",
+                "profile_observation": "une observation de profil immuable identifiée par id",
+                "atomic_collection": "une observation complète de collection, y compris son état vide/null/absent",
+                "immutable_family_parent": "une version complète immuable de famille identifiée par un nouvel id",
+                "inline_publication_pointer": "un pointeur de publication daté",
+            }[meta["kind"]]
+            grain = (f"Ligne physique : {kind}, PK {key(physical)} ; clé logique "
+                     f"{key(logical)}{context} ; intervalle de connaissance "
+                     f"[{start}, {end}), fin NULL pour la version courante.")
+        meta["physical_grain"] = grain
+        table["grain"] = grain
+        business = meta["business_description"].rstrip(" .")
+        table["description"] = business + ". Grain physique : " + grain.removeprefix("Ligne physique : ")
+
+
+def _reviewed_revision_keys(model, tables):
+    """Retain same-record normalizer corrections and bind H2H to its supplier.
+
+    These three bounded amendments were specified and asserted in the protocol
+    before implementation. No extra table, column or runtime SQL is introduced.
+    """
+    standing = tables["football.standing_snapshots"]
+    context = ["source_record_id", "competition_season_id", "stage_id", "group_id", "group_label", "scope"]
+    if not any(u["columns"] in (context, context + ["data_revision"]) for u in standing["unique_constraints"]):
+        raise ValueError("Standing normalization context key is not ready")
+    standing["unique_constraints"] = [u for u in standing["unique_constraints"] if u["columns"] != context]
+    _uq(standing, context + ["data_revision"], "normalization_revision", True)
+    standing["columns"]["data_revision"]["description"] = "Révision interne de normalisation du tableau complet, couvrant corrections fournisseur, parseur et mapping ; strictement croissante avec sa génération. Un réimport identique réutilise la révision existante."
+    standing["grain"] = "Une révision interne de normalisation d’un tableau source/contextuel ; nouvel id physique et nouvelles lignes enfants pour chaque correction retenue."
+    standing["versioning"].update(logical_key=context, physical_key=["id"], version_key=["data_revision"],
+        historical_selection="latest data_revision per source context with recorded_from_gen <= g")
+
+    ranking = tables["football.ranking_snapshots"]
+    ranking["columns"]["revision"]["description"] = "Révision interne retenue de l’édition du système, couvrant corrections fournisseur, parseur et mapping ; strictement croissante avec sa génération, jamais limitée au numéro du fournisseur."
+    ranking["versioning"].update(logical_key=["system_id", "edition_key"], physical_key=["id"], version_key=["revision"],
+        historical_selection="latest revision per system_id, edition_key with recorded_from_gen <= g")
+
+    details = tables["football.match_observation_details"]
+    key = ["source_record_id", "recorded_from_gen"]
+    if details["primary_key"]["columns"] not in (["source_record_id"], key):
+        raise ValueError("Match observation normalization key is not ready")
+    _pk(details, key)
+    details["grain"] = "Un enregistrement source × génération de normalisation ; une correction conserve la ligne antérieure et sélectionne la nouvelle à partir de sa génération."
+    details["versioning"].update(logical_key=["source_record_id"], physical_key=key, version_key=["recorded_from_gen"],
+        historical_selection="latest recorded_from_gen <= g per source_record_id")
+
+    h2h = tables["football.match_h2h_entries"]
+    h2h["foreign_keys"] = [f for f in h2h["foreign_keys"] if not
+        (f["columns"] == ["source_record_id"] and f["references"] == dict(table="ingest.source_records", columns=["id"]))]
+    _fk(h2h, ["source_id", "source_record_id"], "ingest.source_records", ["source_id", "id"])
+
+    rules = {}
+    for name, context_key, revision in (("football.standing_snapshots", context, "data_revision"),
+                                        ("football.ranking_snapshots", ["system_id", "edition_key"], "revision"),
+                                        ("football.match_observation_details", ["source_record_id"], "recorded_from_gen")):
+        rules[name] = dict(logical_key=context_key, revision_column=revision,
+            historical_selection=tables[name]["versioning"]["historical_selection"],
+            seal_gate="strict_revision_generation_order_and_immutable_prior_rows",
+            no_op_reimport="reuse_existing_revision_and_generation",
+            enforcement="Pending local typed pilot: serialize same-grain corrections; require strictly increasing normalization revision and recorded_from_gen, no same-grain duplicate generation/backdating; keep old values/children immutable.")
+    model["selective_versioning"]["append_only_revision_rules"] = rules
+
+
+def _amend(model):
+    _validate(model)
+    tables = _tables(model)
+    missing = set(VERSIONED_TABLES + CHILD_TABLES + APPEND_ONLY_TABLES + STABLE_IDENTITIES) - set(tables)
+    if missing:
+        raise ValueError(f"Missing design relations: {sorted(missing)}")
+    if model.get("selective_versioning", {}).get("policy") == POLICY:
+        if set(tables) & REMOVED or any("row_version_id" in t["columns"] for t in tables.values()):
+            raise ValueError("Selective-version marker conflicts with universal registry remnants")
+        _reviewed_revision_keys(model, tables)
+        _describe_physical_grains(tables)
+        _validate(model)
+        return
+    _strip_universal(model)
+    tables = _tables(model)
+    _enrich_profiles(tables)
+    sequences = model["database"].setdefault("sequences", [])
+    if not isinstance(sequences, list):
+        raise ValueError("database.sequences must be a list")
+    sequences.append(dict(qualified_name="ingest.commit_generation_seq", type="bigint", minimum=1,
+        allocation="Only after transaction advisory lock pg_advisory_xact_lock(20261104,1); hold through commit, allow gaps, prohibit sealed-generation reuse."))
+    snapshots = tables["ingest.dataset_snapshots"]
+    _col(snapshots, "generation", "bigint", False)
+    _uq(snapshots, ["generation"])
+    _check(snapshots, "generation > 0", "generation_positive")
+    snapshots["description"] = "Registre léger des générations de commit et de leur scellement ; aucune copie de lignes ni sélection universelle."
+
+    relation = tables["ingest.relation_contracts"]
+    _pk(relation, ["relation_code", "contract_version"])
+    relation["write_mode"] = "append_only"
+    fields = tables["ingest.field_contracts"]
+    _col(fields, "contract_version", "text", False)
+    _pk(fields, ["relation_code", "contract_version", "field_code"])
+    fields["foreign_keys"] = [f for f in fields["foreign_keys"] if f["references"]["table"] != "ingest.relation_contracts"]
+    _fk(fields, ["relation_code", "contract_version"], "ingest.relation_contracts", ["relation_code", "contract_version"])
+
+    for name, key in FACT_KEYS.items():
+        table = tables[name]
+        if table["primary_key"]["columns"] != key:
+            raise ValueError(f"Original logical grain changed for {name}")
+        old = deepcopy(table["unique_constraints"])
+        _col(table, "revision_id", "bigint", False, identity="GENERATED ALWAYS AS IDENTITY")
+        _pk(table, ["revision_id"])
+        for column in key:
+            table["columns"][column]["nullable"] = False
+        if key == ["id"]:
+            table["columns"]["id"].pop("identity", None)
+            seq = _short(table["name"] + "_logical_id_seq")
+            qualified = name.split(".")[0] + "." + seq
+            table["columns"]["id"]["default_sql"] = "nextval('" + qualified + "'::regclass)"
+            sequences.append(dict(qualified_name=qualified, type="bigint", minimum=1,
+                logical_identity_for=name + ".id", allocation="Allocate once for a new logical entity; corrections must explicitly reuse id."))
+        _interval(table)
+        _variant(table)
+        _natural_history(table, old)
+        _uq(table, key + ["revision_id"], "logical_revision")
+        _uq(table, key + ["variant_key", "recorded_from_gen"], "variant_generation")
+        _current(table, key, True)
+        table["versioning"] = dict(kind="inline_fact", logical_key=key,
+            physical_key=["revision_id"], current_view=dict(name=name + "_current", where_sql="recorded_to_gen IS NULL AND is_canonical AND NOT is_deleted"))
+
+    for name in ("ingest.public_aliases",) + SOURCE_MAPPINGS:
+        table = tables[name]
+        key = deepcopy(table["primary_key"]["columns"])
+        _interval(table)
+        _col(table, "is_deleted", "boolean", False, default_sql="false")
+        _pk(table, key + ["recorded_from_gen"])
+        _current(table, key)
+        table["versioning"] = dict(kind="inline_resolution", logical_key=key)
+    for name in DEFINITIONS:
+        table = tables[name]
+        _col(table, "definition_version", "text", False)
+        _pk(table, ["code", "definition_version"])
+        _interval(table)
+        _current(table, ["code"])
+        table["versioning"] = dict(kind="inline_definition", logical_key=["code"], version_key=["definition_version"])
+    for name in MAPPINGS:
+        table = tables[name]
+        _interval(table)
+        key = [c for c in table["primary_key"]["columns"] if c != "mapping_version"]
+        _current(table, key)
+        table["versioning"] = dict(kind="inline_mapping", logical_key=key, version_key=["mapping_version"])
+    for name, actor in PROFILES.items():
+        table = tables[name]
+        old = deepcopy(table["unique_constraints"])
+        _interval(table)
+        _variant(table)
+        _col(table, "profile_context", "text", False)
+        _natural_history(table, old, physical_id=True)
+        _uq(table, ["id", actor], "profile_actor")
+        _uq(table, [actor, "profile_context", "variant_key", "recorded_from_gen"], "profile_generation")
+        _current(table, [actor, "profile_context"], True)
+        table["versioning"] = dict(kind="profile_observation", logical_key=[actor, "profile_context"], physical_key=["id"])
+
+    coverage = tables["ingest.match_coverage"]
+    _interval(coverage)
+    _variant(coverage, deleted=False)
+    parent_key = ["match_id", "source_id", "feature_code", "variant_key", "recorded_from_gen"]
+    _pk(coverage, parent_key)
+    _current(coverage, ["match_id", "source_id", "feature_code"], True)
+    # Canonical family selection spans sources, unlike the source variant key.
+    coverage["indexes"][-1]["keys"] = [dict(column=c, order="ASC") for c in ["match_id", "feature_code"]]
+    _col(coverage, "collection_state", "text", False, allowed_values=["absent", "null", "empty", "present", "unavailable"])
+    _check(coverage, "(collection_state IN ('absent','null','unavailable') AND observed_row_count IS NULL) OR (collection_state = 'empty' AND observed_row_count IS NOT NULL AND observed_row_count = 0) OR (collection_state = 'present' AND observed_row_count IS NOT NULL AND observed_row_count > 0)", "collection_shape")
+    coverage["versioning"] = dict(kind="atomic_collection", logical_key=parent_key[:-1])
+    for name, feature, suffix in (("football.match_events", "events", ["event_seq"]),
+                                  ("football.match_momentum", "momentum", ["series_code", "sample_index"]),
+                                  ("football.match_h2h_entries", "h2h", ["entry_ordinal"])):
+        table = tables[name]
+        for column in parent_key:
+            _col(table, column, coverage["columns"][column]["type"], False)
+        _check(table, f"feature_code = '{feature}'", "collection_family")
+        _pk(table, parent_key + suffix)
+        _fk(table, parent_key, "ingest.match_coverage", parent_key)
+        table["write_mode"] = "immutable_with_parent"
+        table["versioning"] = dict(kind="parent_version_child", parent="ingest.match_coverage", parent_key=parent_key)
+    for name, key in (("football.match_heatmaps", ["match_id", "team_id", "player_id", "period_code", "map_kind"]),
+                      ("football.pass_networks", ["match_id", "team_id", "window_kind", "from_seconds", "until_seconds"])):
+        table = tables[name]
+        old = deepcopy(table["unique_constraints"])
+        _interval(table)
+        _variant(table, deleted=False)
+        _natural_history(table, old)
+        _uq(table, key + ["variant_key", "recorded_from_gen"], "family_generation", True)
+        _current(table, key, True, True)
+        table["versioning"] = dict(kind="immutable_family_parent", logical_key=key, physical_key=["id"], new_id_on_correction=True)
+    for name in ("football.pass_network_nodes", "football.pass_network_edges", "football.match_heatmap_cells"):
+        tables[name]["write_mode"] = "immutable_with_parent"
+        tables[name]["versioning"] = dict(kind="parent_version_child",
+            parent="football.match_heatmaps" if "heatmap" in name else "football.pass_networks")
+    _uq(tables["football.match_heatmap_cells"], ["heatmap_id", "column_index", "row_index"], "grid_coordinate")
+
+    publication = tables["analytics.publication_versions"]
+    _interval(publication, "published_from_gen", "published_to_gen")
+    _pk(publication, ["competition_season_id", "published_from_gen"])
+    _index(publication, ["competition_season_id"], "published_to_gen IS NULL", "publication_current")
+    publication["versioning"] = dict(kind="inline_publication_pointer", logical_key=["competition_season_id"])
+    for name in VERSIONED_TABLES:
+        table = tables[name]
+        _binding(table)
+        _provenance(table, logical_source=name in SOURCE_MAPPINGS + MAPPINGS or name == "ingest.match_coverage")
+    for name in APPEND_ONLY_TABLES:
+        table = tables[name]
+        table["write_mode"] = "append_only"
+        table["versioning"] = dict(kind="existing_append_only")
+        if name in ("football.standing_snapshots", "football.ranking_systems", "football.ranking_snapshots", "football.match_observation_details"):
+            _col(table, "recorded_from_gen", "bigint", False)
+            _fk(table, ["recorded_from_gen"], "ingest.dataset_snapshots", ["generation"])
+    ranking = tables["football.ranking_systems"]
+    _col(ranking, "methodology_version", "text", False,
+         description="Version immuable de méthode ; une nouvelle méthode conserve un nouvel id de système sous le même code.")
+    ranking["unique_constraints"] = [u for u in ranking["unique_constraints"] if u["columns"] != ["code"]]
+    ranking["indexes"] = [i for i in ranking["indexes"] if not
+        (i.get("unique") and [k.get("column") for k in i["keys"]] == ["code"] and not i.get("where_sql"))]
+    _uq(ranking, ["code", "methodology_version"], "method_identity")
+    ranking["versioning"].update(logical_key=["code", "methodology_version"], physical_key=["id"],
+        snapshot_binding="ranking_snapshots retains (system_id, subject_kind); method rows cannot be updated or deleted.")
+    for name in STABLE_IDENTITIES:
+        tables[name]["versioning"] = dict(kind="stable_identity", historical_attributes="Read retained profiles at the selected generation; current identity attributes are transactional caches.")
+
+    # Resolve every original/new typed reference to the actual physical target.
+    for table in tables.values():
+        for fk in table["foreign_keys"]:
+            parent_name = fk["references"]["table"]
+            old_local = list(fk["columns"])
+            old_remote = list(fk["references"]["columns"])
+            if parent_name in FACT_KEYS and "revision_id" not in old_remote:
+                parent = tables[parent_name]
+                if parent_name in ("football.match_teams", "football.match_players"):
+                    anchor = "match_team_revision_id" if parent_name.endswith("match_teams") else "match_player_revision_id"
+                else:
+                    anchor = old_local[old_remote.index("id")].removesuffix("_id") + "_revision_id"
+                nullable = any(table["columns"][c]["nullable"] for c in old_local)
+                _col(table, anchor, "bigint", nullable)
+                fk["columns"] = old_local + [anchor]
+                fk["references"]["columns"] = old_remote + ["revision_id"]
+                _uq(parent, old_remote + ["revision_id"], "anchor_" + "_".join(old_remote))
+                if nullable:
+                    identity_first = FACT_KEYS[parent_name] == ["id"] and old_remote[0] == "id"
+                    _pair_guard(table, old_local, anchor, identity_first)
+            elif parent_name in DEFINITIONS and "definition_version" not in old_remote:
+                if old_remote != ["code"] or len(old_local) != 1:
+                    raise ValueError(f"Unsupported definition FK shape in {table['qualified_name']}")
+                local_code = old_local[0]
+                version = local_code.removesuffix("_code") + "_definition_version"
+                _col(table, version, "text", table["columns"][local_code]["nullable"])
+                fk["columns"] = [local_code, version]
+                fk["references"]["columns"] = ["code", "definition_version"]
+                if table["columns"][local_code]["nullable"]:
+                    _check(table, f"({local_code} IS NULL) = ({version} IS NULL)", version + "_pair")
+    # Binding to the mapping's exact output supplements its nullable resolution.
+    positions = tables["football.position_mappings"]
+    mapping_anchor = ["source_id", "raw_position_code", "mapping_version", "position_code", "position_definition_version"]
+    _uq(positions, mapping_anchor, "mapped_definition_anchor")
+    _fk(tables["football.match_players"], ["source_id", "raw_position_code", "position_mapping_version", "position_code", "position_definition_version"], "football.position_mappings", mapping_anchor)
+    _check(tables["football.match_players"], "position_mapping_version IS NULL OR (raw_position_code IS NOT NULL AND source_id IS NOT NULL)", "mapping_source_context")
+
+    # These are chosen identity/selection labels, not raw source scalar values.
+    # Optional exact-version FK components remain nullable, never blank.
+    for table in tables.values():
+        for column, spec in table["columns"].items():
+            if column in ("variant_key", "profile_context", "definition_version", "mapping_version", "methodology_version") or column.endswith(("_definition_version", "_mapping_version")):
+                expression = f"btrim({column}) <> ''"
+                if spec["nullable"]:
+                    expression = f"{column} IS NULL OR ({expression})"
+                _check(table, expression, column + "_nonempty")
+
+    for name in ("football.match_players", "football.player_profile_versions"):
+        for column in ("raw_position_code", "shirt_number"):
+            _native_form(tables[name], column)
+    stats = tables["football.player_match_stats"]
+    stats["columns"]["xg"]["type"] = "numeric"
+    for check in stats["checks"]:
+        if re.search(r"\bxg\b", check["sql"]) and "double precision" in check["sql"]:
+            check["sql"] = check["sql"].replace("::double precision", "::numeric")
+
+    for name in ("analytics.aggregation_builds", "analytics.scoring_runs"):
+        table = tables[name]
+        for column, kind in (("catalog_snapshot_id", "bigint"), ("representation_version", "text"),
+                             ("code_commit", "text"), ("code_content_sha256", "text"),
+                             ("dependencies_sha256", "text"), ("environment_sha256", "text")):
+            _col(table, column, kind, False)
+        _fk(table, ["catalog_snapshot_id"], "ingest.dataset_snapshots", ["id"])
+        for column in ("code_content_sha256", "dependencies_sha256", "environment_sha256"):
+            _check(table, f"{column} ~ '^[0-9a-f]{{64}}$'", column)
+
+    # Design §4 requests a partial HTTP key; retain the independent legacy UQ.
+    documents = tables["ingest.source_documents"]
+    http_key = ["dataset_id", "request_fingerprint", "content_sha256"]
+    if "request_fingerprint" not in documents["columns"]:
+        raise ValueError("Apply Pro constraints before selective versions")
+    documents["unique_constraints"] = [u for u in documents["unique_constraints"] if u["columns"] != http_key]
+    _index(documents, http_key, "origin_kind = 'http_response'", "http_request_content")
+
+    bindings = {}
+    for name in ("football.periods", "football.positions"):
+        for row in model["seed_data"][name]:
+            row.update(definition_version="bootstrap_v1", relation_code=name,
+                       contract_version="bootstrap_v1", transform_version="bootstrap_v1", provenance_kind="manual")
+        bindings[name] = dict(recorded_from_gen="bootstrap_generation", transform_code_sha256="bootstrap_code_sha256")
+    model["bootstrap"] = dict(status="templates_require_runtime_bindings_not_a_complete_sql_seed",
+        bindings=dict(bootstrap_generation="Allocate after global transaction lock; create draft generation receipt; never hardcode an existing sealed id.", bootstrap_code_sha256="Actual immutable bootstrap artifact digest; never a made-up placeholder hash."),
+        seed_bindings=bindings,
+        relation_contracts=[dict(relation_code=n, contract_version="bootstrap_v1", relation_name=n,
+                                grain_definition="code logique ; definition_version identifie une définition immuable")
+                            for n in ("football.periods", "football.positions")],
+        order=["Create schema/sequences/keys/FKs/gates", "Lock globally then allocate and create bootstrap generation", "Register immutable bootstrap contracts", "Resolve seed bindings and insert versioned periods/positions", "Insert dependent typed rows with exact version anchors", "Validate coverage and gates then seal/commit"],
+        restart="Reuse committed bootstrap contract/definition keys after content equality check; do not recreate a sealed generation or overwrite content.")
+    model["selective_versioning"] = dict(policy=POLICY,
+        selected_relations=list(VERSIONED_TABLES), parent_version_children=list(CHILD_TABLES),
+        existing_append_only=list(APPEND_ONLY_TABLES), stable_identities=list(STABLE_IDENTITIES),
+        source_inventory_complete=False, purge_authorized=False,
+        blockers=["Complete source-field/type/order/variant to typed destination/state matrix before any acceptance or purge; four targeted native fields are not exhaustive.",
+                  "Inventory multi-record contributions and add targeted typed source references where one source_record_id is insufficient; do not silently discard removed generic links.",
+                  "Verify native numeric/text position and shirt contracts from exact fixtures and remaining source families; unknown conversions block normalization.",
+                  "Map unavailable/transient legacy coverage distinctly; failed attempts must not clear accepted collections.",
+                  "Implement global generation serialization, close-once immutability, historical non-overlap, same-generation membership and sealed-snapshot/build gates; no runtime enforcement claimed.",
+                  "Retain code artifacts, parameters/cohort/dependencies, environment and deterministic numeric/aggregation rules; measure decimals and pilot WAL/capacity/latency."],
+        generation_protocol=dict(lock_sql="SELECT pg_advisory_xact_lock(20261104, 1)", sequence="ingest.commit_generation_seq", order="Acquire transaction lock, allocate generation, create receipt, close/insert typed versions and dependencies, validate, seal, commit while holding lock.", sealed_reuse="forbidden", failed_transactions="sequence gaps allowed"),
+        historical_selection="recorded_from_gen <= g AND (recorded_to_gen IS NULL OR g < recorded_to_gen); select canonical nondeleted logical parents at the same g; anchors alone do not prove selection.",
+        sql_execution="not_performed")
+    _reviewed_revision_keys(model, tables)
+    _describe_physical_grains(tables)
+    _validate(model)
+
+
+def apply(model, changes):
+    """Atomic/idempotent caller-owned transform; no database/file/remote effects."""
+    if not isinstance(model, dict) or not isinstance(changes, list):
+        raise ValueError("apply expects a model dict and a change-log list")
+    draft = deepcopy(model)
+    _amend(draft)
+    old, new = _tables(model), _tables(draft)
+    amendments = []
+    reason = "Pro selective inline design: retain typed values/dependencies with concrete version keys; no universal registry or history copies"
+    for name in old:
+        if name not in new:
+            amendments.append(dict(table=name, operation="remove_table", column=None, reason=reason))
+            continue
+        before, after = old[name], new[name]
+        for column in sorted(set(before["columns"]) | set(after["columns"])):
+            a, b = before["columns"].get(column), after["columns"].get(column)
+            if a != b:
+                operation = "add_column" if a is None else "remove_column" if b is None else "change_column"
+                amendments.append(dict(table=name, operation=operation, column=column, before=a, after=b, reason=reason))
+        for section in ("primary_key", "unique_constraints", "foreign_keys", "checks", "indexes", "versioning", "write_mode", "historical_read_policy", "grain", "description"):
+            if before.get(section) != after.get(section):
+                amendments.append(dict(table=name, operation="change_" + section, column=None,
+                                       before=before.get(section), after=after.get(section), reason=reason))
+    for key in ("database", "bootstrap", "seed_data", "selective_versioning", "migration_mapping"):
+        if model.get(key) != draft.get(key):
+            amendments.append(dict(table="__model__", operation="change_" + key, column=None, reason=reason))
+    if not amendments:
+        return model
+    # Keep surviving table dicts alive for references; remove universal tables
+    # from each schema list. The caller must refresh its inventory after removal.
+    for name, table in new.items():
+        old[name].clear()
+        old[name].update(table)
+    for schema in model["schemas"]:
+        schema["tables"][:] = [t for t in schema["tables"] if t["qualified_name"] not in REMOVED]
+    for key in ("database", "bootstrap", "seed_data", "selective_versioning", "migration_mapping"):
+        if key in draft:
+            model[key] = draft[key]
+    changes.extend(deepcopy(amendments))
+    return model

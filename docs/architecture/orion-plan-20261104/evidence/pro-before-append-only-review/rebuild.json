@@ -1,0 +1,91 @@
+{
+  "atUtc": "2026-11-04T17:34:03.356853+00:00",
+  "command": "python3 -B docs/architecture/orion-plan-20261104/tools/rebuild_plan.py",
+  "sourceSha256": {
+    "PRO_REVIEW_RESPONSE.md": "58d230da8f6157ed64e2cd6695a71f21a021392fbbc9c391da0c6d0cb6c157ab",
+    "PRO_VERSIONING_DESIGN.md": "dac2ee8f4675a67fcbade1117c244b59d9f84b24502e7a914e62fda3e8a232e8",
+    "inputs/GPT_Pro_audit.original.txt": "4de404a58ef3cb7ae9a6c174676e4db7b9ed6b9ac080b4ab014cf98159c3975b",
+    "inputs/GPT_Pro_review.original.txt": "c3392be9d0792fbd0b71629059225afe8f0cc1d716d93fc6937f8c39fc05c2b1",
+    "inputs/Orion_schema_bdd.original.json": "40ab9b6cd8126d3bd502a94cff3ee9dfaf082ab503eaa999a3e89c4299a059c3",
+    "tools/PLAN.template.md": "3cdaa0b45e11c14798b9ca8d69909ac882259e2d3ef872e642d351a9ba8a6923",
+    "tools/PRO_CONSTRAINT_PROTOCOL.md": "8a9eef3792bc66ad563d0886ed0af1752150f680817267c7da4ed96dab0a0cf9",
+    "tools/PRO_VERSION_PROTOCOL.md": "bf3e6f4a3e0f1df31a4fccafa70fb1096c95998b87dd4d2fed3425a1d8540468",
+    "tools/apply_pro_constraints.py": "f67ae4153f2986a0e636b6b0900082a4a6ab9693f1872a14b3a9d41121406d3a",
+    "tools/apply_pro_versions.py": "592a46e6d3d89fbf9b45364985c96086e0837ee8fe1d8910ae999cf86e35fd66",
+    "tools/audit_aws.py": "5ce191bba0a7c4e8fdc3f8240d15e9c9df8fe8043bfc95a4877492ca95de1155",
+    "tools/audit_s3.py": "6a659026540cd731425e63037487e3084cbf8558224c95c5dea504a78af5befb",
+    "tools/build_proposal.py": "0b49bf2a36ecd0e41dd906d5bffa3edc0491d409adbd93c3ee89afe615e847ce",
+    "tools/build_viewer.py": "b39af0e9f17fb93ebee953c86c38a7b15c3fab447026275ff9ddd71e38d71e36",
+    "tools/capture_runtime.py": "86579d1aa6715a3a73c6ae2b3c24979dcf988a0a29ec3eb81a3f78e94fb36922",
+    "tools/capture_vercel.py": "81cc2ca1adc1cd55c2fe7a83dd279aab79afda65cb2ee38f04e70beef2c8eb8a",
+    "tools/delivery_readback.py": "3c84d0db825584e10ee785fc139f69f46ce84616d7cc08cf8a1f726e5527ab29",
+    "tools/inspect_proposal.py": "202ffb997ac7a71529fd74c40b68d50417c4fdb0493295136aec97706498986e",
+    "tools/rebuild_plan.py": "450d77bb51d6b14c0d010691625f71ff1d655395c3dcf8cf14c44cfa5901391e",
+    "tools/render_diagrams.mjs": "447969776ed7c77a6fd8abd890ee66a87c40815df7770fa11a71c63ac0e236a5",
+    "tools/render_plan.py": "a9ae67882c8dc73ed8e29df7951d5a4c64f25492fa268be45d8bfec941895f25",
+    "tools/render_plan_text.py": "91ab7583f8c793837fd4eb83cfd469295e86ba61be9e52bf78ea0adf5e283386",
+    "tools/review-viewer.js": "2a0b0a9d8fc445d40d95c4deeeff0cdf05fb7e6991e507943d5bc1a464d45995",
+    "tools/review_viewer.py": "d3e369b062ae04d329e59403a5d7f2edcb38135f534943fff4c6956bf92e78e3",
+    "tools/verify_artifacts.py": "4806a445aa99853653d0b770830c0c3858086a975e9ae8aa033f924a1568989b",
+    "tools/viewer.template.html": "19a2c2100b50b44e2bf9f649c646f92d7359cf93da1fca4851d861cd3312b1f0"
+  },
+  "steps": [
+    {
+      "command": [
+        "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+        "build_proposal.py"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"baseline_sha256\": \"40ab9b6cd8126d3bd502a94cff3ee9dfaf082ab503eaa999a3e89c4299a059c3\", \"baseline_tables\": 84, \"baseline_columns\": 943, \"history_tables\": 0, \"version_policy\": \"selective_inline_versions_per_pro\", \"models_scope\": \"9 original model tables shown as deferred preparation only; preserve existing client scouting formulas without inventing a new Orion model.\", \"version_classes\": {\"selected_relations\": 46, \"parent_version_children\": 6, \"existing_append_only\": 9, \"stable_identities\": 3}, \"tables\": 103, \"columns\": 1791, \"foreign_keys\": 450, \"jsonb_exceptions\": 51, \"baseline_dispositions\": 84}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+        "render_plan.py"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"tables\": 103, \"columns\": 1791, \"domains\": 13, \"current_relations\": 224, \"unmapped_relations\": [], \"dictionary_definitions_needing_review\": 0}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "node",
+        "render_diagrams.mjs"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"rendered\":16,\"errors\":0}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+        "render_plan_text.py"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"atUtc\": \"2026-11-04T17:34:03.863906+00:00\", \"command\": \"python3 docs/architecture/orion-plan-20261104/tools/render_plan_text.py\", \"modelSha256\": \"08d21224f5512c21af75fd5dcc1a554840977c576d1319cefb14f09b6136a23a\", \"planSha256\": \"c254fe030b7e6d01a5bb9831f1e4e37eb9d69c6a6ee5f99c9996b060deda98be\", \"counts\": {\"tables\": 103, \"columns\": 1791, \"foreign_keys\": 450, \"jsonb\": 51, \"active_tables\": 94, \"baseline_tables\": 84, \"domain_diagrams\": 13, \"separate_history_tables\": 0, \"version_classes\": {\"selected_relations\": 46, \"parent_version_children\": 6, \"existing_append_only\": 9, \"stable_identities\": 3}, \"other_operational_or_derived_tables\": 39}, \"policy\": \"selective_inline_versions_per_pro\", \"scope\": \"Plan text, JSON counts and domain index share one model. No SQL execution or service acceptance.\", \"passed\": true}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+        "build_viewer.py"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"file\": \"/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/architecture/.orion-plan-staging-qfsnrigj/index.html\", \"bytes\": 1749459, \"remote_dependencies\": 0}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+        "inspect_proposal.py"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"passed\": true, \"counts\": {\"baselineResponsibilities\": 84, \"baselineColumns\": 943, \"dispositions\": 84, \"tables\": 103, \"columns\": 1791, \"foreignKeys\": 450, \"uniqueConstraints\": 109, \"indexes\": 154, \"uniquePartialIndexes\": 119, \"checks\": 889, \"jsonb\": 51, \"domainDiagrams\": 13, \"currentRelations\": 224, \"versionClasses\": {\"selected_relations\": 46, \"parent_version_children\": 6, \"existing_append_only\": 9, \"stable_identities\": 3}, \"otherOperationalOrDerivedTables\": 39, \"separateHistoryTables\": 0}, \"violations\": []}\n",
+      "stderr": ""
+    }
+  ],
+  "passed": true,
+  "scope": "Staged complete document generation and independent static inspection only. No SQL or service operation.",
+  "modelSha256": "08d21224f5512c21af75fd5dcc1a554840977c576d1319cefb14f09b6136a23a"
+}

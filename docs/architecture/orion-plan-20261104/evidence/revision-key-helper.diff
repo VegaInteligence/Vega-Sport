@@ -1,0 +1,75 @@
+--- apply_pro_versions.py@592a46e6
++++ apply_pro_versions.py@reviewed-revision-keys
+@@ -366,6 +366,54 @@
+         table["description"] = business + ". Grain physique : " + grain.removeprefix("Ligne physique : ")
+ 
+ 
++def _reviewed_revision_keys(model, tables):
++    """Retain same-record normalizer corrections and bind H2H to its supplier.
++
++    These three bounded amendments were specified and asserted in the protocol
++    before implementation. No extra table, column or runtime SQL is introduced.
++    """
++    standing = tables["football.standing_snapshots"]
++    context = ["source_record_id", "competition_season_id", "stage_id", "group_id", "group_label", "scope"]
++    if not any(u["columns"] in (context, context + ["data_revision"]) for u in standing["unique_constraints"]):
++        raise ValueError("Standing normalization context key is not ready")
++    standing["unique_constraints"] = [u for u in standing["unique_constraints"] if u["columns"] != context]
++    _uq(standing, context + ["data_revision"], "normalization_revision", True)
++    standing["columns"]["data_revision"]["description"] = "Révision interne de normalisation du tableau complet, couvrant corrections fournisseur, parseur et mapping ; strictement croissante avec sa génération. Un réimport identique réutilise la révision existante."
++    standing["grain"] = "Une révision interne de normalisation d’un tableau source/contextuel ; nouvel id physique et nouvelles lignes enfants pour chaque correction retenue."
++    standing["versioning"].update(logical_key=context, physical_key=["id"], version_key=["data_revision"],
++        historical_selection="latest data_revision per source context with recorded_from_gen <= g")
++
++    ranking = tables["football.ranking_snapshots"]
++    ranking["columns"]["revision"]["description"] = "Révision interne retenue de l’édition du système, couvrant corrections fournisseur, parseur et mapping ; strictement croissante avec sa génération, jamais limitée au numéro du fournisseur."
++    ranking["versioning"].update(logical_key=["system_id", "edition_key"], physical_key=["id"], version_key=["revision"],
++        historical_selection="latest revision per system_id, edition_key with recorded_from_gen <= g")
++
++    details = tables["football.match_observation_details"]
++    key = ["source_record_id", "recorded_from_gen"]
++    if details["primary_key"]["columns"] not in (["source_record_id"], key):
++        raise ValueError("Match observation normalization key is not ready")
++    _pk(details, key)
++    details["grain"] = "Un enregistrement source × génération de normalisation ; une correction conserve la ligne antérieure et sélectionne la nouvelle à partir de sa génération."
++    details["versioning"].update(logical_key=["source_record_id"], physical_key=key, version_key=["recorded_from_gen"],
++        historical_selection="latest recorded_from_gen <= g per source_record_id")
++
++    h2h = tables["football.match_h2h_entries"]
++    h2h["foreign_keys"] = [f for f in h2h["foreign_keys"] if not
++        (f["columns"] == ["source_record_id"] and f["references"] == dict(table="ingest.source_records", columns=["id"]))]
++    _fk(h2h, ["source_id", "source_record_id"], "ingest.source_records", ["source_id", "id"])
++
++    rules = {}
++    for name, context_key, revision in (("football.standing_snapshots", context, "data_revision"),
++                                        ("football.ranking_snapshots", ["system_id", "edition_key"], "revision"),
++                                        ("football.match_observation_details", ["source_record_id"], "recorded_from_gen")):
++        rules[name] = dict(logical_key=context_key, revision_column=revision,
++            historical_selection=tables[name]["versioning"]["historical_selection"],
++            seal_gate="strict_revision_generation_order_and_immutable_prior_rows",
++            no_op_reimport="reuse_existing_revision_and_generation",
++            enforcement="Pending local typed pilot: serialize same-grain corrections; require strictly increasing normalization revision and recorded_from_gen, no same-grain duplicate generation/backdating; keep old values/children immutable.")
++    model["selective_versioning"]["append_only_revision_rules"] = rules
++
++
+ def _amend(model):
+     _validate(model)
+     tables = _tables(model)
+@@ -375,7 +423,9 @@
+     if model.get("selective_versioning", {}).get("policy") == POLICY:
+         if set(tables) & REMOVED or any("row_version_id" in t["columns"] for t in tables.values()):
+             raise ValueError("Selective-version marker conflicts with universal registry remnants")
++        _reviewed_revision_keys(model, tables)
+         _describe_physical_grains(tables)
++        _validate(model)
+         return
+     _strip_universal(model)
+     tables = _tables(model)
+@@ -625,6 +675,7 @@
+         generation_protocol=dict(lock_sql="SELECT pg_advisory_xact_lock(20261104, 1)", sequence="ingest.commit_generation_seq", order="Acquire transaction lock, allocate generation, create receipt, close/insert typed versions and dependencies, validate, seal, commit while holding lock.", sealed_reuse="forbidden", failed_transactions="sequence gaps allowed"),
+         historical_selection="recorded_from_gen <= g AND (recorded_to_gen IS NULL OR g < recorded_to_gen); select canonical nondeleted logical parents at the same g; anchors alone do not prove selection.",
+         sql_execution="not_performed")
++    _reviewed_revision_keys(model, tables)
+     _describe_physical_grains(tables)
+     _validate(model)
+ 

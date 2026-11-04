@@ -1,96 +1,94 @@
-# Première livraison — plan à valider
+# Proposition Pro — résultats documentaires courants
 
-4 novembre 2026, Europe/Paris. **Documentation et lectures uniquement. Aucun schéma créé, aucune donnée déplacée/supprimée, aucun workflow relancé, aucune bascule.** Le but final AWS reste ouvert.
+4 novembre 2026, Europe/Paris. **Le plan, le JSON, le lecteur, le dictionnaire, les diagrammes et les correspondances décrivent le même modèle de 103 tables.** Ce lot reste documentaire : aucun SQL du nouveau modèle créé/appliqué, aucune migration ou purge distante, aucun pilote typé local accepté.
 
-## Entrées et attendus
+La revue Pro est prioritaire. Les anciennes valeurs nécessaires et leurs dépendances sont conservées sélectivement dans les tables métier ; les tables sœurs d’historique et les quatre registres universels restent retirés. Les 84 tables initiales sont une référence de responsabilités, sans quota de nombre ou de découpage.
 
-Le [protocole préalable](REVIEW_PROTOCOL.md) décrit les résultats attendus et les échecs à conserver. Le prompt de mission prime sur les recommandations des documents joints. Le JSON fourni est le socle ; les deux documents sont copiés intégralement dans `../inputs/`. Le [reçu des entrées](inputs-and-scope.json) donne tailles, empreintes et comptages, sans prétendre que des empreintes prouvent la complétude des données football.
+## Preuves courantes
 
-Le [plan](../PLAN.md), les 25 SVG et le [dictionnaire](../DICTIONNAIRE.md) couvrent les propositions. Le [mapping des familles](COVERAGE.md) distingue destination prévue et reprise non exécutée. Le [CSV](../current-to-target.csv) classe les 224 relations des deux bases inspectées ; il ne prouve pas encore chaque champ de chaque source.
+SHA-256 du modèle : `028c221d4cd45ad809a2340e62f34ab9df191c593b23c0c45d5f44587eb35a8c`. Les reçus de cohérence, inspection et navigateur portent cette même empreinte. Les fichiers initiaux sont inchangés ; `inputs-and-scope.json` et `pro-review-receipt.json` conservent leurs tailles et empreintes.
 
-## Résultats observés
-
-| Vérification | Résultat réel | Preuve |
+| Vérification | Résultat observé | Preuve |
 |---|---|---|
-| Conservation du socle | 84 tables initiales conservées ; 943 colonnes dans l’original | `inputs-and-scope.json`, `proposal-inspection.json` |
-| Catalogue proposé | 161 tables, 1 971 colonnes, 368 FK ; aucune cible/type de FK invalide détectée statiquement | `proposal-inspection.json` |
-| Rendu | 22 domaines, 2 architectures, 1 vue métier ; toutes les tables et colonnes retrouvées dans leurs nœuds SVG | `diagram-rendering.json`, `proposal-inspection.json` |
-| Dictionnaire / correspondances | 0 définition de secours à revoir ; 224 relations classées ; 0 relation sans destination/disposition | `dictionary-review.json`, `current-to-target.csv` |
-| Nouvelles collectes | Flux proposé PitchAPI → mémoire → RDS ; job médias séparé ; aucun lien du job de données vers S3 | `architecture-cible.svg`, `proposal-inspection.json` |
-| Lecteur dans Chromium | 201 contrôles réussis : 161 tables/1 971 colonnes, FK, recherche, 23 choix de diagramme, zoom, 73 exceptions JSONB, 224 correspondances, liens profonds, mobile et thème sombre | `viewer-e2e.json`, `viewer-checks.json`, `viewer-e2e.log` |
-| Réseau du lecteur | 0 requête vers AWS/Neon/PitchAPI ou autre service, 0 erreur JS et 0 ressource HTTP en échec durant le parcours enregistré | `viewer-checks.json` |
-| S3 existant | 307 pages, 306 124 objets, 4 890 689 338 octets ; 37 859 images / 401 928 242 octets | `s3.json`, scan complet 15:51–15:58 Paris |
-| PostgreSQL | Deux bases applicatives inspectées en lecture seule, PostgreSQL 18.6 ; une instance RDS existante | `databases.json`, `runtime-current.json` |
-| Production, contrôle final | Vercel READY commit b2ec973d2d créé à15:44Paris ; accueil200 mais health503. Origine API absente en production ; AWShealth200/rév43 et Lambda inchangée ; trois workflows toujours désactivés | `vercel-current-initial.json`, `vercel-current.json`, `delivery-readback.json` |
+| Modèle rendu | 103 tables, 1 791 colonnes, 450 FK ; 94 tables actives et 9 réserves de modèles | [proposal-inspection.json](proposal-inspection.json), [plan-coherence.json](plan-coherence.json) |
+| Classes | 46 sélectives, 6 enfants atomiques, 9 append-only, 3 identités stables, 39 autres opérations/métadonnées/résultats ; 0 table sœur d’historique | JSON et inspection |
+| Clés et contraintes déclarées | PK non nulles, cibles FK réelles non partielles et non différables ; 109 UQ, 154 index dont 119 uniques partiels, 889 CHECK ; 0 violation statique | Inspection indépendante, sans exécution SQL |
+| Responsabilités et bootstrap | 84 dispositions motivées ; 10 graines périodes/positions avec contrat, définition et bindings explicites de génération/hash | Inspection ; bindings réels encore à fournir à l’exécution |
+| Rendu complet | 13 domaines + 2 architectures + 1 vue métier = 16 SVG ; chaque table/colonne et chaque FK sortante retrouvée dans son domaine | [diagram-rendering.json](diagram-rendering.json), inspection |
+| Dictionnaire et correspondances | Grains physiques/logiques, classes, clés de version, sélecteurs historiques, ancres parentes, UNIQUE, NULLS NOT DISTINCT et WHERE visibles ; 224 structures classées ; 0 définition de secours et 0 relation sans disposition | [dictionary-review.json](dictionary-review.json), [CSV](../current-to-target.csv) |
+| JSONB | 51 exceptions listées, bornées à 16 Kio, pour configuration/qualité/diagnostics ou réserves de modèles ; aucun nouveau corps source | Dictionnaire et lecteur |
+| Transformations en mémoire | Protocoles de première application, seconde application/roundtrip idempotents, noms futurs et rejet atomique de FK invalide réussis | [pro-transform-protocols.json](pro-transform-protocols.json) |
+| Chromium, dernière exécution | 1208 contrôles réussis ; 103 tables, 1 791 colonnes et 450 liens FK parcourus, 14 choix de diagramme chargés ; recherche, contraintes, zoom, exceptions/dispositions, mobile et thème sombre | [viewer-e2e.json](viewer-e2e.json), [détails](viewer-checks.json), [log](viewer-e2e.log) |
+| Réseau du lecteur | 0 requête extérieure, 0 erreur JavaScript, 0 ressource HTTP en échec | Dernier parcours navigateur |
 
-Les captures [desktop](architecture-desktop.png), [table de tirs](shots-desktop.png), [vue BDD](database-overview-desktop.png), [mobile](receipt-mobile.png) et [mobile sombre](receipt-mobile-dark.png) sont inspectables. L’écran mobile défile vers le détail ; les tableaux/diagrammes gardent leur défilement local.
+Dernier reçu du parcours complet du modèle, antérieur au rafraîchissement du texte de disponibilité : `2026-11-04T17:41:53.861077+00:00`. Captures : [architecture desktop](architecture-desktop.png), [tirs](shots-desktop.png), [vue BDD](database-overview-desktop.png), [mobile](receipt-mobile.png), [architecture mobile](architecture-mobile.png), [mobile sombre](receipt-mobile-dark.png).
 
-## Reproduction de la génération et du parcours
+Les 201 contrôles de l’ancienne livraison de 161 tables/1 971 colonnes/368 FK, 22 domaines et 73 exceptions sont conservés dans [historical-first-delivery](historical-first-delivery/README.md). Ils ne prouvent rien sur les 103 tables actuelles. Le premier parcours Pro, avant ajout du reçu de disponibilité au plan, reste dans [pro-before-availability-refresh](pro-before-availability-refresh/README.md). Les protocoles originaux restent dans [historical-pre-pro-protocols](historical-pre-pro-protocols/README.md). Le modèle et les 1 208 contrôles précédant la revue des clés sont conservés dans [pro-before-append-only-review](pro-before-append-only-review/README.md) ; la navigation réussie n’avait pas prouvé ces garanties métier.
 
-Répertoire de départ : `/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking`. Environnement exécuté : Python 3.14.6, `markdown-it-py` 4.2.0, Node 26.4.0, `@viz-js/viz` 3.31.0 / Graphviz 16.1.0 et Chromium déjà installé. Les dépendances de rendu sont locales et ne deviennent pas des dépendances de l’application. Le CLI Playwright existant est utilisé ; aucun test unitaire n’a été ajouté.
+La revue indépendante a relevé trois corrections bornées : UQ de standing incluant la révision de normalisation, PK des détails de match incluant la génération, et FK source/record des H2H appartenant au même fournisseur que le parent. Les modes d’échec et assertions ont précédé le changement du helper ; les échecs attendus sont dans [append-only-key-protocol-before-fix.json](append-only-key-protocol-before-fix.json) et [h2h-provider-protocol-before-fix.json](h2h-provider-protocol-before-fix.json). Le [diff exact du helper](revision-key-helper.diff) porte ces corrections et leurs sélecteurs/garde de scellement, sans colonne ou table nouvelle. SHA du helper corrigé : `6470475eeec92d17fdd2bfb6b8bd3e4ef4a87e6260148bccabe19f9f32e500b3`. Les protocoles courants passent ensuite avec 1 280 changements de première application et zéro à la seconde pour les versions ; 22 puis zéro pour les contraintes. Cela ne démontre pas encore leur enforcement SQL.
 
-Si le dossier temporaire du moteur de rendu a disparu, le préparer avec `npm install --prefix /tmp/statarena-plan-tools-20261104 --no-save @viz-js/viz@3.31.0`. Installer `markdown-it-py==4.2.0` dans l’environnement Python utilisé si nécessaire. Puis, dans cet ordre :
+Le premier validateur de liens traitait à tort `tools/PLAN.template.md` comme un document publié dans `tools/` ; son faux échec est conservé dans [artifact-validation-template-link-failure.json](artifact-validation-template-link-failure.json). Il résout maintenant les liens du template à l’emplacement réel de `PLAN.md` et vérifie aussi le plan et les données embarqués dans le HTML.
+
+## Reproduction locale
+
+Racine : `/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking`. Environnement existant : Python 3.14.6, `markdown-it-py` 4.2.0, Node 26.4.0, `@viz-js/viz` 3.31.0 / Graphviz 16.1.0 et Chromium local. Les dépendances ne deviennent pas celles de l’application.
+
+Si nécessaire, préparer le moteur avec `npm install --prefix /tmp/statarena-plan-tools-20261104 --no-save @viz-js/viz@3.31.0` et installer `markdown-it-py==4.2.0` dans l’environnement Python utilisé. Générer et promouvoir le dossier entier seulement après les contrôles statiques :
 
 ```bash
-python3 docs/architecture/orion-plan-20261104/tools/build_proposal.py
-python3 docs/architecture/orion-plan-20261104/tools/render_plan.py
-node docs/architecture/orion-plan-20261104/tools/render_diagrams.mjs
-python3 docs/architecture/orion-plan-20261104/tools/build_viewer.py
-python3 docs/architecture/orion-plan-20261104/tools/inspect_proposal.py
-python3 docs/architecture/orion-plan-20261104/tools/verify_artifacts.py
+python3 -B docs/architecture/orion-plan-20261104/tools/rebuild_plan.py
 ```
 
-Dans un terminal distinct, servir uniquement ce document :
+[rebuild.json](rebuild.json) conserve sources SHA-256, commandes, sorties et codes retour des six étapes. Le staging laisse la livraison précédente en place en cas d’échec ; un reçu d’échec est sauvegardé avant suppression du dossier temporaire. Aucune opération SQL ou distante n’existe dans cette commande.
+
+Les deux scripts de protocole reconstruisent une fixture temporaire au bon stade du générateur, puis gardent leurs assertions de première application. L’entrée de contraintes comporte 107 tables avant retrait des registres ; celle des versions aboutit aux 103 tables. Le SHA de fixture est distinct du modèle final. Rerun exact des deux protocoles :
+
+```bash
+python3 -B - <<'PYCODE'
+from pathlib import Path
+import re
+for name in ('CONSTRAINT', 'VERSION'):
+    p = Path(f'docs/architecture/orion-plan-20261104/tools/PRO_{name}_PROTOCOL.md')
+    code = re.search(r'```python\n(.*?)\n```', p.read_text(), re.S).group(1)
+    exec(compile(code, str(p), 'exec'), {'__name__': '__main__'})
+PYCODE
+```
+
+Servir uniquement le dossier documentaire dans un terminal distinct :
 
 ```bash
 python3 -m http.server 8794 --bind 127.0.0.1 --directory docs/architecture/orion-plan-20261104
 ```
 
-La [configuration navigateur](browser-config.json) contient le chemin Chromium de cette machine ; l’adapter si nécessaire. Préparer le dossier et démarrer le navigateur depuis celui-ci, puis lancer le parcours depuis la racine du dépôt :
+Adapter le chemin Chromium dans [browser-config.json](browser-config.json) si nécessaire. Créer le dossier et ouvrir une session neuve depuis celui-ci :
 
 ```bash
 mkdir -p output/playwright/orion-plan
 cp docs/architecture/orion-plan-20261104/evidence/browser-config.json output/playwright/orion-plan/browser-config.json
 cd output/playwright/orion-plan
+/Users/lemonnierhugo/.codex/skills/playwright/scripts/playwright_cli.sh -s=orion-plan close
 /Users/lemonnierhugo/.codex/skills/playwright/scripts/playwright_cli.sh -s=orion-plan open http://127.0.0.1:8794 --config browser-config.json
 cd ../../..
-python3 docs/architecture/orion-plan-20261104/tools/review_viewer.py
+python3 -B docs/architecture/orion-plan-20261104/tools/review_viewer.py
+python3 -B docs/architecture/orion-plan-20261104/tools/verify_artifacts.py
 ```
 
-Le parcours exact se trouve dans `../tools/review-viewer.js` ; le wrapper injecte toutes les colonnes attendues du JSON proposé, puis conserve sortie et résultats. Il ne dispose d’aucune opération de migration ou de déploiement.
+Le navigateur est préparé à 1440×1000 puis 390×844, clair/sombre. `review-viewer.js` charge le modèle local, vérifie son SHA-256 indépendant, chaque colonne/type/nullabilité/description, toutes les contraintes et chacun des 450 liens FK ; les captures sont copiées dans ce dossier. Les attendus de la dernière exécution sont dans le reçu E2E ; la matrice préalable figure dans [REVIEW_PROTOCOL.md](REVIEW_PROTOCOL.md). Aucun test unitaire n’a été ajouté.
 
-## Reproduction des lectures distantes
+## Observations distantes et disponibilité
 
-Ces commandes remplacent les reçus locaux : conserver une copie avant tout nouveau relevé. Elles exigent les accès existants, AWS CLI connecté sur `statarena`, le certificat RDS du dépôt et la configuration libpq locale. Aucun mot de passe n’est copié dans les preuves.
+Les inventaires `databases.json`, `s3.json`, `neon-current.json`, `runtime-current.json` et `vercel-current.json` restent des observations datées de la première livraison. Aucun nouveau relevé distant n’a été lancé par ce lot. Le scan S3 de 15:51–15:58 Paris comptait 306 124 objets / 4 890 689 338 octets, dont 37 859 images / 401 928 242 octets ; il ne mesure pas l’espace récupéré.
 
-```bash
-PYTHONPATH=/tmp/statarena-publication-test-python python3 docs/architecture/orion-plan-20261104/tools/audit_aws.py --pgpass
-python3 docs/architecture/orion-plan-20261104/tools/capture_runtime.py
-python3 docs/architecture/orion-plan-20261104/tools/capture_vercel.py
-python3 docs/architecture/orion-plan-20261104/tools/audit_s3.py
-python3 docs/architecture/orion-plan-20261104/tools/delivery_readback.py
-python3 docs/verification/aws-release-20261104/scan_credentials.py
-```
+Le relevé de 17:27 Paris montrait Vercel API 503 et AWS partiel. Un lot disponibilité séparé a ensuite déployé le correctif AWS et enregistré [le reçu à 18:27 Paris](../../../verification/orion-availability-20261104/aws-dense-release-20261104T172730943519Z.json) : ZIP exact, stack UPDATE_COMPLETE, trois GET de 100 matchs en 200 avec même génération/contenu, HEAD 200 et conditionnel 304. Le plan rapporte les échantillons 4 008,62 / 3 575,56 / 3 034,98 ms sans p95 ni suppression générale des timeouts. Les réponses `no-store` sont des MISS attendus. Le lot disponibilité a ensuite rétabli la production Vercel : le [reçu de 18:38 Paris](../../../verification/orion-availability-20261104/vercel-production-readback.json) confirme le build exact `dpl_2YjDXsva7FBr4yDnzRShmZ776MbA`, commit `f65036cdb9273654614354cc083039d2a200a491`, promu sans reconstruction après [12 parcours réussis sur le runtime Vercel réel](../../../verification/orion-availability-20261104/vercel-browser-20261104T173656163590Z.json). Health/manifeste/archive canoniques répondent 200, avec six saisons et 230 partitions référencées dans le corpus existant. Le [contrôle canonique de 18:41 Paris](../../../verification/orion-availability-20261104/canonical-browser.json) réussit ses deux parcours desktop et historique mobile. Ce pont legacy temporaire Vercel → Neon restaure le site ; l’AWS preview reste partiel et la bascule finale vers AWS demeure ouverte. Ces parcours représentatifs ne vérifient pas chaque ligne, média ou partition et n’acceptent ni le nouveau schéma ni le pilote. L’ancien diagramme de 17:27/API 503 est [conservé comme historique](architecture-1727-historical.svg).
 
-`psycopg` est fourni par l’environnement temporaire existant ; s’il manque, le préparer dans un environnement Python séparé. Vercel CLI utilisé : 65.11.0. La requête Neon est conservée exactement dans `neon-current.json.sql` : outil connecté `neon_run_sql`, projet `sweet-queen-11955006`, branche `br-mute-bonus-be23014e`, base `neondb`. L’API n’est pas appelée par la génération locale du plan. Les métadonnées de réseau publiées masquent les IP administratives personnelles `/32`.
+Le rafraîchissement de statut conserve exactement le modèle et les helpers. Les 1 208 contrôles de tables/colonnes/FK ci-dessus n’ont pas été relancés pour ce seul changement de récit et d’architecture ; seuls la génération statique, les liens/empreintes et l’image d’architecture modifiée sont revérifiés. Le [reçu du rafraîchissement](status-refresh.json) précise l’heure, la commande exacte, les sources de statut et cette limite ; les nouvelles captures [desktop](architecture-status-desktop.png) et [mobile](architecture-status-mobile.png) montrent l’architecture rétablie, distincte des captures du parcours complet antérieur.
 
-## Échecs et limites conservés
+## Limites et prochaine action
 
-- Le contrôle final qui supposait Vercel inchangé a échoué : une nouvelle production b2ec973d2d avait été créée à15:44Paris avant les commits de documentation. Deux sondes health ont renvoyé503 sans corps ; la page d’accueil a répondu200 et AWShealth200. Le code `frontend/src/server/bun-proxy.js` retourne exactement cette réponse lorsque VERCEL est actif sans NEXT_PUBLIC_API_ORIGIN ; l’origine n’est configurée que pour preview. Le diagnostic est consigné sans correction/bascule ; aucune disponibilité complète du site n’est revendiquée. Le relevé initial est conservé et le diagramme actuel a été actualisé.
+La couverture [COVERAGE.md](COVERAGE.md) distingue destination proposée et source réellement rapprochée. Les champs/variantes, types natifs, ordre et contributions de plusieurs records restent à inventorier exhaustivement ; quatre champs ciblés et un exemple xG ne prouvent pas l’ensemble. Le JSON conserve `source_inventory_complete=false`, `purge_authorized=false` et `sql_execution=not_performed`.
 
-- L’inspection statique initiale utilisait `Counter(dict)` au lieu des clés ; le faux échec de couverture est conservé dans `proposal-inspection-initial.json`. Le contrôle corrigé inspecte chaque nœud SVG et toutes ses colonnes.
-- Le navigateur par défaut Chrome n’était pas installé ; le parcours utilise le Chromium local indiqué dans `browser-config.json`. Le premier favicon a répondu 404 ; l’icône est désormais embarquée.
-- Le premier parcours complet a trouvé un débordement mobile réel de 18 px. Après correction de la grille, un libellé technique non sécable restait en dépassement. Les deux échecs sont conservés dans `viewer-e2e-initial.*`, `viewer-e2e-after-grid-fix.*` et `mobile-overflow-initial.png`. La grille et le retour à la ligne ont ensuite été corrigés.
-- La revue visuelle a repéré une substitution de labels inopérante dans le diagramme « actuel ». Il est maintenant construit séparément du diagramme cible et montre les sources structurées existantes, les collectes désactivées et la production encore sur Neon. Le contrôle statique vérifie aussi cette distinction.
-- AWS CLI avait expiré pendant l’inventaire : la requête de configuration a échoué, tandis que les lectures SQL sont restées disponibles. La reconnexion explicitement autorisée a permis `runtime-current.json`. Aucun échec n’est présenté comme un défaut de RDS.
-- La première requête Neon utilisait `projections.kind` au lieu de `name`. Le relevé corrigé et le catalogue réel sont conservés. Le regroupement des URLs omettait ensuite les identifiants de tirs `s_` ; le résultat initial compressé est conservé et regroupé hors ligne en 24 familles, sans nouvelle lecture de données.
-- Les totaux Neon/AWS diffèrent, mais leurs différences nettes ne donnent pas encore la liste exacte des données manquantes. Les relevés ne constituent pas un instantané distribué figé.
-- Aucune contrainte n’a été exécutée dans PostgreSQL pour ce nouveau modèle ; aucun parseur de migration ni E2E applicatif n’a été lancé. L’historique SQL ajoute du stockage et doit être mesuré au pilote. L’absence de réponses brutes futures implique l’impossibilité de rejouer leurs octets ou de reparcourir des champs non conservés.
+Aucune PK/FK/CHECK, règle intertable ou contrainte de génération de ce modèle n’a été exécutée dans PostgreSQL. Restent à vérifier sur le pilote typé local : correction 0,82 → 0,67 et recalcul de l’ancien snapshot avec cohorte/dépendances, concurrence, intervalles, fermeture unique, bootstrap réel/reprise, collections vides/partielles, sélection commune, droits immuables, cache/publication, fidélité numérique, puis WAL/espace libre/latences sur volumes comparables. Les promesses d’URL immuable et de recalcul exact restent conditionnées à ces preuves.
 
-**Avant/après de ce lot documentaire : 0 modification de service, 0 octet supprimé et aucun gain de latence/coût revendiqué.** Les allocations et inventaires sont des baselines, pas des économies obtenues. Les métriques d’exploitation seront comparées sur le même corpus après implémentation approuvée.
+La revue du modèle révisé précède toute réorganisation distante. Le pilote et la réconciliation précèdent migration complète et purge. Les hashes ne rétablissent pas les octets supprimés. Aucun gain de stockage/coût/latence n’est attribué à ce lot documentaire.
 
-`artifact-validation.json` contrôle la syntaxe et les liens locaux. `credential-scan.json` conserve le dernier contrôle exact des identifiants connus :2 907 fichiers et 63 contenus gzip inspectés, aucune correspondance ; il ne couvre pas tous les secrets possibles ni l’historique Git.
-
-La prochaine étape est la validation explicite du plan par l’utilisateur, demandée dans le prompt de mission. Les schémas, normalisations, collectes, suppression et production restent inchangés dans l’attente.
-
-Commit suggéré : `docs: propose the Orion relational schema and AWS migration plan`.
+Commit suggéré : `docs: synchronize the Orion Pro schema and review evidence`.

@@ -1,0 +1,273 @@
+# Pro constraint revision protocol — 2026-11-04
+
+Scope: a deterministic, local schema-model transform for Pro A, B, E and G. The parent integrates it into the proposal. No migration, collector, deployed service or existing file is changed by this helper. It contains no response body or sports JSON store. Contract versions and retained typed values remain owned by the version-model revision.
+
+This failure matrix and the static verification script were written **before** `apply_pro_constraints.py`. SQL cases below are acceptance requirements, not executed results.
+
+## Failure modes and expected outcomes
+
+| Area | Input or action | Required outcome |
+| --- | --- | --- |
+| A | Two HTTP receipts have the same dataset, canonical request and content hash. | One content receipt; separate attempts stay in `resource_fetches`. |
+| A | Same response bytes from different requests or datasets; same request with corrected content. | Distinct receipts are accepted. |
+| A | HTTP request fingerprint, dataset or content hash is NULL; fingerprint is malformed. | Reject; a nullable unique key must not bypass HTTP identity. |
+| A | Legacy receipt has unknown/non-S3 storage coordinates. | Preserve provider-neutral provenance; do not invent a bucket or reject an otherwise identified original. Original legacy uniqueness is retained with its NULL semantics. |
+| A | Legacy receipts have distinct storage provenance and identical content. | Accept; preserve the original legacy unique constraint and leave the HTTP fingerprint NULL. |
+| A | A new HTTP receipt names a storage object. | Reject; fingerprint/hash are metadata calculated in memory, never a new source file. |
+| B | Shot profile is supplied with NULL player/keeper identity. | Reject despite `MATCH SIMPLE`. A known actor without a detailed profile remains valid. |
+| B | Profile belongs to a different actor. | Reject through the existing composite FK, whose full target must be an actual compatible nondeferrable key. |
+| B | Profile columns change from `*_profile_version_id` to `*_profile_id`. | Derive guards from actual columns/FKs; retain the same identity guarantee. |
+| E | `absent`, `null`, `empty_array` or `empty_object` has any source scalar. | Reject. |
+| E | Native string/number/boolean supplies another type's scalar. | Reject. Matching scalar or no redundant scalar is accepted; empty string, zero and false remain observed values. |
+| E | An object/array body is offered as a field-state scalar. | Not part of this contract; no new body, subtree or arbitrary property store. |
+| G | Same heatmap coordinate is supplied under two source ordinals. | Reject via coordinate uniqueness. Negative indices/counts/ordinals are rejected locally. |
+| G | Coordinate equals/exceeds its parent's grid dimensions. | Reject through the separately specified parent/child gate; a row-local CHECK cannot read another table. |
+| Queue | Unknown state, negative attempts, running without complete nonempty lease, nonrunning with lease. | Reject; preserve existing `pending/running/done/unavailable` state vocabulary. |
+| Queue | Two workers acquire a pending job concurrently. | One claim per primary key using row locks and `SKIP LOCKED`, incrementing attempts once. |
+| Queue | A worker crashes, lease expires, another worker reclaims, original worker completes late. | Clear the expired lease atomically, claim with a new owner/attempt token, reject stale completion. |
+| Queue | A pending job has `attempts=2147483647`. | Do not acquire and overflow PostgreSQL integer; operator policy is separate, not a newly invented queue state. |
+| Helper | Apply twice or serialize and reload between calls. | Identical model on the second call, no duplicate checks/indexes/change records. |
+| Helper | Missing required columns, wrong FK target/type or nonunique FK target. | Explicit `ValueError` before any mutation. No guessed replacement FK or universal revision key. |
+| Helper | Long constraint/index names. | Deterministic names at most 63 UTF-8 bytes; no PostgreSQL truncation collision. |
+| Scope | Apply to a complete model of any justified table count. | Preserve table inventory and version-design tables. No fixed 84-table requirement. |
+
+## Identity and local constraints
+
+`request_fingerprint` is a lowercase SHA-256 digest of a versioned canonical request identity: source, HTTP method, normalized origin/path and sorted query/body parameters that determine the response. Authentication and volatile tracing are excluded. The acquisition adapter owns canonicalization and collision checks; this schema transform does not hash a response or persist request/response bodies. Dataset and response content hash are required. The fingerprint is required only for HTTP receipts and NULL for legacy receipts, so a normal UNIQUE on `(dataset_id, request_fingerprint, content_sha256)` is effective for HTTP while preserving the existing legacy provenance uniqueness and its NULL semantics. Legacy SQL/local originals need not have S3 coordinates. Exact legacy deduplication still needs the provider-neutral source inventory; no location is invented here.
+
+The existing `resource_fetches(document_id, source_id)` FK verifies the supplier, not equality of the attempt/receipt request fingerprints. The ingestion transaction must enforce that equality when the linked receipt is HTTP; durable database enforcement would need a separate conditional trigger. A guessed composite FK including the attempt fingerprint would incorrectly reject legacy receipts whose document fingerprint is NULL. This helper does not add that incompatible FK.
+
+The helper checks the actual shot composite profile FK, including target existence, column types and a usable primary/unique key, before adding `profile IS NULL OR actor IS NOT NULL`. It supports both profile naming conventions and does not rename the parent table. `MATCH FULL` would incorrectly forbid the allowed known actor without profile case.
+
+`field_states` scalars remain optional when their typed value already preserves the observation. Any supplied scalar must match `source_state`. The four structural states forbid all three scalars. This is a source-shape exception, not an archive of old business rows or HTTP payloads.
+
+Heatmap coordinate uniqueness is `(heatmap_id, column_index, row_index)` and requires all three columns NOT NULL. The parent ID must identify the immutable grid revision when old grids are retained. Do not bind cells from two retained grids to the same parent ID. The version-model owner must supply the final parent identity before migration.
+
+The separate grid-bounds rule must run for INSERT/UPDATE/DELETE of cells and UPDATE of parent dimensions, locking the same parent row first. For each affected old and new parent, validate `0 <= column_index < grid_columns` and `0 <= row_index < grid_rows` against that exact retained parent. If constraints are deferred, use `DEFERRABLE INITIALLY DEFERRED` constraint triggers and serialize every parent/child write on the parent row. Reject any cell for a parent whose `cells_state` is absent/null/empty. Derive any cell-count/action-total equality from the explicit sparse/dense provider contract; do not silently fill missing cells with zero. These triggers/gates are **not implemented by this helper**.
+
+## Existing queue and exact acquisition contract
+
+The source is `statarena.jobs` in `dashboard/backend/migrations/001_neon.sql` and `claim_job` in `dashboard/scripts/neon_ingest.py`. The target already has `source_id, endpoint, params, priority, state, attempts, available_at, lease_owner, lease_expires_at` and primary key `(source_id, endpoint, params)`. Lower numeric priority comes first, including existing negative historical priorities. This is the same queue being migrated, with owner fencing; no second queue is introduced.
+
+The helper exports `COLLECTION_ACQUIRE_SQL`, `COLLECTION_RECLAIM_SQL` and `COLLECTION_COMPLETE_SQL` and records this operational contract on the target table. The concrete acquisition is:
+
+```sql
+WITH candidate AS (
+    SELECT source_id, endpoint, params
+    FROM ingest.collection_jobs
+    WHERE state = 'pending'
+      AND available_at <= statement_timestamp()
+      AND attempts < 2147483647
+    ORDER BY priority, available_at, source_id, endpoint, params
+    LIMIT 1
+    FOR UPDATE SKIP LOCKED
+)
+UPDATE ingest.collection_jobs AS job
+SET state = 'running', attempts = job.attempts + 1,
+    lease_owner = $1::text,
+    lease_expires_at = statement_timestamp() + interval '10 minutes'
+FROM candidate
+WHERE (job.source_id, job.endpoint, job.params) =
+      (candidate.source_id, candidate.endpoint, candidate.params)
+RETURNING job.*;
+```
+
+The pending partial B-tree is `(priority, available_at, source_id, endpoint, params) WHERE state = 'pending'`. A second partial index on `lease_expires_at WHERE state = 'running'` supports expired-lease reclamation. Neither predicate contains a clock function. This preserves current priority semantics; realistic future-heavy backlog EXPLAIN/latency measurements are required before claiming its cost is acceptable. There is no measured performance claim.
+
+Lease expiry may lie in the past while waiting for reclamation, so no `now()` CHECK is used. Claim increments the existing integer attempt counter. Complete/retry/unavailable updates must filter on the full primary key, `state='running'`, owner, claimed attempt number and an unexpired lease; an affected-row count of zero is lost ownership. Typed result writes and the fenced completion must share a transaction, rolled back on lost ownership. The completion constant demonstrates this fence for `done`. Retry sets `pending`, moves `available_at`, and clears both lease fields in one statement; unavailable also clears them. Reclaim clears both lease fields atomically and leaves attempts unchanged. Before migrating any old running job without an owner receipt, verify that its actual prior worker is terminal or quiesced and preserve expiry/orphan evidence. Only then may the owned migration requeue/clear that job. Another transfer's jobs must not be blindly replayed; never invent an owner receipt.
+
+## Pro C — contract version recommendation only
+
+1. Make `relation_contracts` append-only with primary key `(relation_code, contract_version)`, both NOT NULL. Do not retain a unique constraint on `relation_code` alone; that would still block v2.
+2. Add matching NOT NULL `contract_version` to `field_contracts`; use primary key `(relation_code, contract_version, field_code)` and FK `(relation_code, contract_version)` to the real contract key.
+3. Add the exact contract version to `row_versions`, FK `(relation_code, contract_version)` to the same registry. Existing logical-revision identity must be reviewed for whether revision numbers span contract versions; choose and document one sequence scope.
+4. Bind `field_states` both to `(row_version_id, relation_code, contract_version)` in `row_versions` and `(relation_code, contract_version, field_code)` in `field_contracts`; declare the exact referenced unique key before the FK. Keep field states aligned with the contract that interpreted the observed row.
+5. Snapshots already choose immutable row-version IDs. They need not duplicate contract version if those IDs can never change contract; readers must resolve that retained contract. Append-only enforcement and seed bootstrap must be executable, not only `write_mode` metadata.
+
+This helper deliberately does not change these tables. The inline-version revision must implement and verify these changes together; merely adding a version column beside the old PK is insufficient.
+
+## Pro D — precise row/relation binding recommendation only
+
+A bare FK to `row_versions.id` proves existence only. For each actually retained typed relation, choose a concrete logical grain independent of its physical revision PK, plus a canonical encoding version (typed, unambiguous, NULL-distinguishing, independent of locale). Require a fixed relation discriminant, contract version and that logical key on the typed row, and bind `(row_version_id, relation_code, contract_version, logical_key)` to an explicit real unique key in the registry. The discriminant must be a generated literal or a NOT NULL column with a table-specific CHECK; callers cannot choose another table's code.
+
+If these columns would be redundant or the key cannot be generated safely, use a per-relation deferred binding trigger instead. It must compare the registered relation, exact contract, canonical key computed from that table's actual grain, and source observation using `IS NOT DISTINCT FROM`; provider rows must have a source record, manual/derived cases need explicit provenance. Lock the registry/binding rows and forbid later mutation of registry identity or sealed typed versions. Run it on INSERT/UPDATE/DELETE of the typed row and relevant registry changes, checking old and new identities. Add uniqueness so one registered revision cannot be consumed by two distinct rows. The row's source-record FK must also enforce supplier identity.
+
+Do not put a nullable source record in the only composite binding FK: `MATCH SIMPLE` would allow NULL to bypass the entire tuple. Keep the mandatory relation/key/contract binding independent, then enforce null-safe provenance in the trigger. Two registry IDs for the same logical key or unrelated tables must fail explicit adversarial E2E cases. Retained typed values, family children and metric/mapping dependencies must be addressed by the version model; these binding checks cannot restore overwritten values.
+
+## Static verification written before implementation
+
+Run from the repository root. This exercises the whole in-memory transform and JSON roundtrip, a future naming variant, rejection without partial mutation, and structural FK/key compatibility. It does **not** execute SQL or validate row-level rejection, concurrency, triggers, backfill, ingestion or serving behavior.
+
+Exact rerun command:
+
+```sh
+python3 -B - <<'PY'
+from pathlib import Path
+import re
+p = Path('docs/architecture/orion-plan-20261104/tools/PRO_CONSTRAINT_PROTOCOL.md')
+code = re.search(r'```python\n(.*?)\n```', p.read_text(), re.S).group(1)
+exec(compile(code, str(p), 'exec'))
+PY
+```
+
+The rerun now builds a fresh temporary `before_constraints` fixture from the immutable original input through the same builder. This keeps the first-application assertions meaningful after the published target has already become the final 103-table model. The original protocol and historical stdout are preserved in `../evidence/historical-pre-pro-protocols/`; their earlier input hash is not current-model proof. No helper code or original assertions have changed. The fixture is removed on interpreter exit and cannot overwrite this review folder.
+
+```python
+import copy
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+
+root = Path('docs/architecture/orion-plan-20261104')
+fixture_directory = tempfile.TemporaryDirectory(prefix='orion-before-constraints-')
+source = Path(fixture_directory.name) / 'before-constraints.json'
+subprocess.run([sys.executable, '-B', str(root / 'tools/build_proposal.py'),
+                '--fixture-phase', 'before_constraints', '--output', str(source)],
+               check=True, capture_output=True, text=True)
+helper = root / 'tools/apply_pro_constraints.py'
+spec = importlib.util.spec_from_file_location('apply_pro_constraints', helper)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+model = json.loads(source.read_text())
+before = copy.deepcopy(model)
+def tables(m):
+    return {t['qualified_name']: t for s in m['schemas'] for t in s['tables']}
+def stable(m):
+    return json.dumps(m, sort_keys=True, ensure_ascii=False)
+old = tables(before)
+changes = []
+assert module.apply(model, changes) is model
+t = tables(model)
+assert set(t) == set(old)
+assert not any(name.endswith('_history') for name in t)
+for name in ('ingest.relation_contracts', 'ingest.field_contracts',
+             'ingest.row_versions', 'ingest.record_row_links',
+             'ingest.dataset_snapshot_rows'):
+    assert t[name] == old[name], name
+legacy_key = ['dataset_id', 'storage_bucket', 'storage_key', 'content_sha256']
+legacy_before = [u for u in old['ingest.source_documents']['unique_constraints']
+                 if u['columns'] == legacy_key]
+assert legacy_before
+assert all(u in t['ingest.source_documents']['unique_constraints'] for u in legacy_before)
+receipt = t['ingest.source_documents']
+assert receipt['columns']['request_fingerprint']['nullable'] is True
+assert receipt['columns']['dataset_id']['nullable'] is False
+assert receipt['columns']['content_sha256']['nullable'] is False
+assert any(u['columns'] == ['dataset_id', 'request_fingerprint', 'content_sha256']
+           and not u.get('nulls_not_distinct', False) for u in receipt['unique_constraints'])
+assert set(receipt['columns']) - set(old['ingest.source_documents']['columns']) <= {'request_fingerprint'}
+assert any('request_fingerprint IS NOT NULL' in c['sql']
+           and "origin_kind = 'legacy_file' AND request_fingerprint IS NULL AND retention_state IN" in c['sql']
+           and 'storage_bucket IS NOT NULL' not in c['sql'] for c in receipt['checks'])
+state_sql = ' '.join(c['sql'] for c in t['ingest.field_states']['checks'])
+assert "source_state = 'string' OR source_text IS NULL" in state_sql
+assert "source_state = 'number' OR source_number IS NULL" in state_sql
+assert "source_state = 'boolean' OR source_boolean IS NULL" in state_sql
+cells = t['football.match_heatmap_cells']
+assert any(u['columns'] == ['heatmap_id', 'column_index', 'row_index'] for u in cells['unique_constraints'])
+queue = t['ingest.collection_jobs']
+assert queue['columns']['state']['allowed_values'] == ['pending', 'running', 'done', 'unavailable']
+assert any(i.get('where_sql') == "state = 'pending'" and
+           [k['column'] for k in i['keys']] == ['priority','available_at','source_id','endpoint','params']
+           for i in queue['indexes'])
+assert any(i.get('where_sql') == "state = 'running'" and
+           [k['column'] for k in i['keys']] == ['lease_expires_at'] for i in queue['indexes'])
+assert 'FOR UPDATE SKIP LOCKED' in module.COLLECTION_ACQUIRE_SQL
+assert 'job.attempts = $5::integer' in module.COLLECTION_COMPLETE_SQL
+assert 'lease_expires_at > statement_timestamp()' in module.COLLECTION_COMPLETE_SQL
+for table in t.values():
+    for label in ('unique_constraints','foreign_keys','checks','indexes'):
+        assert len({c['name'] for c in table[label]}) == len(table[label]), (table['qualified_name'], label)
+        assert all(len(c['name'].encode()) <= 63 for c in table[label])
+    for fk in table['foreign_keys']:
+        parent = t[fk['references']['table']]
+        cols, refs = fk['columns'], fk['references']['columns']
+        assert len(cols) == len(refs)
+        assert all(table['columns'][a]['type'].lower() == parent['columns'][b]['type'].lower()
+                   for a,b in zip(cols,refs))
+        keys = [parent['primary_key']] + parent['unique_constraints']
+        assert any(k['columns'] == refs and not k.get('deferrable',False) for k in keys)
+assert all({'table','operation','column','reason'} <= set(c) and c['reason'] for c in changes)
+first = stable(model)
+count = len(changes)
+assert module.apply(model, changes) is model
+assert stable(model) == first and len(changes) == count
+roundtrip = json.loads(json.dumps(model))
+again = []
+module.apply(roundtrip, again)
+assert stable(roundtrip) == first and not again
+future = copy.deepcopy(before)
+shots = tables(future)['football.shots']
+renames = {name: name.replace('_profile_version_id','_profile_id')
+           for name in list(shots['columns']) if name.endswith('_profile_version_id')}
+for old_name, new_name in renames.items():
+    shots['columns'][new_name] = shots['columns'].pop(old_name)
+    for fk in shots['foreign_keys']:
+        fk['columns'] = [new_name if c == old_name else c for c in fk['columns']]
+    for check in shots['checks']:
+        check['sql'] = check['sql'].replace(old_name, new_name)
+module.apply(future, [])
+for profile in ('player_profile_id','keeper_profile_id'):
+    actor = 'player_id' if profile.startswith('player_') else 'keeper_id'
+    assert any(c['sql'] == f'{profile} IS NULL OR {actor} IS NOT NULL' for c in shots['checks'])
+broken = copy.deepcopy(before)
+broken_shots = tables(broken)['football.shots']
+profile = next(c for c in broken_shots['columns'] if c.startswith('player_profile') and c.endswith('_id'))
+binding = next(f for f in broken_shots['foreign_keys'] if profile in f['columns'] and 'player_id' in f['columns'])
+parent = tables(broken)[binding['references']['table']]
+position = binding['columns'].index(profile)
+parent['columns'][binding['references']['columns'][position]]['type'] = 'text'
+invalid_before = stable(broken)
+invalid_changes = []
+try:
+    module.apply(broken, invalid_changes)
+except ValueError:
+    pass
+else:
+    raise AssertionError('incompatible profile FK accepted')
+assert stable(broken) == invalid_before and not invalid_changes
+print(json.dumps({
+    'result':'passed_static_transform_checks_only',
+    'input_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),
+    'helper_sha256':hashlib.sha256(helper.read_bytes()).hexdigest(),
+    'tables_preserved':len(t), 'changes_first_apply':count,
+    'changes_second_apply':len(again),
+    'future_profile_names':'passed', 'bad_fk_rejected_before_mutation':'passed',
+    'sql_executed':False, 'database_or_remote_writes':False,
+}, indent=2))
+```
+
+## Pending PostgreSQL and workflow acceptance
+
+Use an owned disposable PostgreSQL 18 instance with an isolated data directory/socket/port and only owned PIDs. Create the generated proposal, load minimal actual FK parents, and run every SQL row in the matrix with expected SQLSTATE and successful control rows. Preserve setup, immutable generated SQL/hash, commands, input rows and readbacks. Use two separate transactions to exercise `SKIP LOCKED`, expiry/reclaim and stale completion; prove exactly one attempt receipt per claimed attempt and no duplicate content receipt for repeated HTTP content. Add parent-dimension/cell mutation cases after the version model and triggers exist. A static check or successful DDL alone does not close those acceptance cases.
+
+Suggested commit name: `fix: define Pro constraints for Orion ingestion and spatial facts`
+
+## Recorded static evidence — historical pre-integration run
+
+The preimplementation run of the documented script failed as expected with `FileNotFoundError` for the absent `tools/apply_pro_constraints.py`. After implementation, a small change corrected the change-log operation name from `add_indexe` to `add_index`; the documented verification was rerun after code review.
+
+Final observed stdout (input is the 107-table work-in-progress proposal; the number is informational, not an acceptance requirement):
+
+```json
+{
+  "result": "passed_static_transform_checks_only",
+  "input_sha256": "b9f48815ed072009c0af9a8e433d5059f3222d826b135ae78fe91bae6f145227",
+  "helper_sha256": "f67ae4153f2986a0e636b6b0900082a4a6ab9693f1872a14b3a9d41121406d3a",
+  "tables_preserved": 107,
+  "changes_first_apply": 22,
+  "changes_second_apply": 0,
+  "future_profile_names": "passed",
+  "bad_fk_rejected_before_mutation": "passed",
+  "sql_executed": false,
+  "database_or_remote_writes": false
+}
+```
+
+Expected outcomes observed: table inventory and contract/version-design tables preserved; legacy unique preserved; HTTP identity/check definitions added; optional field scalars constrained by state; heatmap coordinate key added; queue query, two matching index definitions and lease checks present; all declared FK targets/types/keys remained structurally compatible; generated names fit 63 bytes; second application and JSON roundtrip add no amendments; future profile names work; incompatible FK leaves model/change log untouched. No SQL row acceptance/rejection, index plan, concurrency, application E2E, RDS migration, remote change or measured improvement was executed or claimed. The Python import bytecode generated by the first run was removed; the rerun uses `-B` and leaves only the two authorized source/protocol files.
+
+Independent review refined the legacy acceptance before the correction: SQL/local legacy originals may have unknown bucket/key, so the helper now preserves their existing NULL semantics instead of requiring invented S3 coordinates. The queue migration contract requires verified terminal/quiesced prior ownership and expiry/orphan evidence before requeueing any old ownerless running job. The documented static command was rerun after both changes; stdout above reflects the final helper hash.

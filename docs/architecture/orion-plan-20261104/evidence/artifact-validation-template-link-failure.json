@@ -1,0 +1,107 @@
+{
+  "atUtc": "2026-11-04T17:33:42.553189+00:00",
+  "command": "python3 docs/architecture/orion-plan-20261104/tools/verify_artifacts.py",
+  "modelSha256": "08d21224f5512c21af75fd5dcc1a554840977c576d1319cefb14f09b6136a23a",
+  "scope": "Syntax, local document links, unchanged input copies, completed browser receipt/screenshots and S3 metadata totals. No application or database acceptance.",
+  "counts": {
+    "json": 38,
+    "gzipJson": 1,
+    "python": 15,
+    "localLinks": 99
+  },
+  "failures": [
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "index.html"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "target-schema.proposed.json"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "DICTIONNAIRE.md"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "blueprint-diff.json"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "current-to-target.csv"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "inputs/Orion_schema_bdd.original.json"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "inputs/GPT_Pro_audit.original.txt"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "inputs/GPT_Pro_review.original.txt"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "PRO_VERSIONING_DESIGN.md"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "evidence/COVERAGE.md"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "../../verification/aws-architecture-audit-20261104/README.md"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "../../verification/orion-availability-20261104/"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "../../verification/orion-availability-20261104/aws-dense-release-20261104T172730943519Z.json"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "diagrams/architecture-actuelle.svg"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "diagrams/architecture-cible.svg"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "current-to-target.csv"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "blueprint-diff.json"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "PRO_VERSIONING_DESIGN.md"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "tools/PRO_CONSTRAINT_PROTOCOL.md"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "PRO_VERSIONING_DESIGN.md"
+    },
+    {
+      "file": "tools/PLAN.template.md",
+      "missing": "../../verification/orion-schema-pilot-20261104/superseded-prototype/"
+    }
+  ],
+  "passed": false,
+  "screenshotsSha256": {
+    "architecture-desktop.png": "2124c84f83e8823c084454e25700184551bb48bcc623956606ee31147dd94917",
+    "shots-desktop.png": "06bce2377b8f6588f28d09bbc1ccc9c743628ca204f56b96b96d3d88ea6d08f3",
+    "database-overview-desktop.png": "1e6752491e341bf593ff0923e633feaedca7bba479a4e989dc513b045e8a2a4f",
+    "receipt-mobile.png": "b7146fb8321cb84737555f425e1459a45cd32c5d5ff352643e6fc0ee5694e166",
+    "architecture-mobile.png": "61443e57260a4ffcb742af6a5c270d323e96ee27e613e35f87a061289d3aec42",
+    "receipt-mobile-dark.png": "33b1f78a2b38fb9db2bdf7efe999e58d577e9a2dfc66cad8e6a2a2597126dc25"
+  }
+}

@@ -1,0 +1,30 @@
+digraph current_architecture {
+ graph [rankdir=LR,bgcolor="white",pad="0.4",nodesep="0.5",ranksep="0.8",label="Observation du 4 novembre 2026 · 17:27 Paris",labelloc=t,fontname="Helvetica"];
+ node [shape=box,style="rounded,filled",fillcolor="#edf2f7",color="#bcc7d2",fontname="Helvetica",fontsize=14,margin="0.2,0.15"];
+ edge [fontname="Helvetica",fontsize=11,color="#738397"];
+ Browser [label="Navigateur\nDesktop / mobile"];
+ Vercel [label="Vercel • frontend b2ec973d2d\nAccueil 200 • API 503",fillcolor="#e4edf9"];
+ Neon [label="Neon existant\nDonnées et configuration héritées",fillcolor="#f6eddc"];
+ API [label="CloudFront API AWS\nOrigine Lambda signée OAC"];
+ Lambda [label="Lambda Node 24 • 512 Mio\nLectures SQL et projections partielles",fillcolor="#e6f1e9"];
+ RDS [label="Une instance RDS PostgreSQL 18.6\nstatarena_prod : statarena + statarena_app\nstatarena : ancien import distinct",fillcolor="#e6f1e9"];
+ Assets [label="CloudFront fichiers / médias\nImages et certains JSON immuables"];
+ S3 [label="S3 privé • 4,89 Go\nJSON / CSV / SQLite / archives\net médias",fillcolor="#f6eddc"];
+ Jobs [label="Pipeline AWS existant • en pause\nFichiers + index documentaire\nConstruction SQL partielle"];
+ Pitch [label="PitchAPI et autres sources"];
+ Transfer [label="Transfert initial Neon → AWS\nPropriété de l’autre Codex\nNon relancé par ce plan"];
+ Browser -> Vercel [label="domaine public canonique"];
+ Proxy [label="Proxy Next.js en production\nNEXT_PUBLIC_API_ORIGIN absente\n503 sans corps",fillcolor="#f6eddc"];
+ Vercel -> Proxy [label="routes /api"];
+ Browser -> API [label="preview AWS historique",style=dashed];
+ API -> Lambda [label="MISS / revalidation"];
+ Lambda -> RDS [label="statarena_prod • TLS"];
+ Browser -> Assets [label="fichiers référencés"];
+ Assets -> S3 [label="OAC • chemin autorisé"];
+ Pitch -> Jobs [label="collectes désactivées",style=dashed];
+ Jobs -> S3 [label="ancien stockage de données",style=dashed];
+ Jobs -> RDS [label="index / faits / agrégats partiels",style=dashed];
+ Neon -> Transfer [label="périmètre existant",style=dashed];
+ Transfer -> RDS [label="import déjà engagé",style=dashed];
+ Transfer -> S3 [label="copies existantes",style=dashed];
+}

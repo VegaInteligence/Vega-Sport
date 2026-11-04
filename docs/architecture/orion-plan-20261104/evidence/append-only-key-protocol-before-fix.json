@@ -1,0 +1,12 @@
+{
+  "atUtc": "2026-11-04T17:36:16.828391+00:00",
+  "scope": "New whole-model append-only correction assertions written before helper change; expected structural failure only, no SQL.",
+  "protocol": "tools/PRO_VERSION_PROTOCOL.md",
+  "scriptSha256": "77ff8c19672ff407f299a54595c6b84c7119667182d03cf56f40f072b4d71beb",
+  "helperSha256": "592a46e6d3d89fbf9b45364985c96086e0837ee8fe1d8910ae999cf86e35fd66",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 119, in <module>\n    assert any(u['columns']==standing_logical+['data_revision'] and u.get('nulls_not_distinct')\n           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n               for u in standing['unique_constraints']), 'standing same-record correction blocked'\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: standing same-record correction blocked\n",
+  "expectedFailure": "standing same-record correction blocked",
+  "observedExpectedFailure": true
+}

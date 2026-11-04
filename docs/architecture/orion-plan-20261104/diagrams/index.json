@@ -11,26 +11,22 @@
       "ingest.source_records",
       "ingest.sources"
     ],
-    "columns": 75,
-    "outgoing_fks": 13,
+    "columns": 73,
+    "outgoing_fks": 10,
     "file": "diagrams/01-sources-medias.svg"
   },
   {
-    "id": "02-historique-instantanes",
-    "title": "Historique et instantanés SQL",
+    "id": "02-provenance-publications",
+    "title": "Provenance et publications",
     "tables": [
       "ingest.dataset_snapshot_documents",
-      "ingest.dataset_snapshot_rows",
       "ingest.dataset_snapshots",
       "ingest.field_contracts",
-      "ingest.field_states",
-      "ingest.record_row_links",
-      "ingest.relation_contracts",
-      "ingest.row_versions"
+      "ingest.relation_contracts"
     ],
-    "columns": 43,
-    "outgoing_fks": 11,
-    "file": "diagrams/02-historique-instantanes.svg"
+    "columns": 21,
+    "outgoing_fks": 3,
+    "file": "diagrams/02-provenance-publications.svg"
   },
   {
     "id": "03-ingestion-reprise",
@@ -43,8 +39,8 @@
       "ingest.match_coverage",
       "ingest.schema_migrations"
     ],
-    "columns": 44,
-    "outgoing_fks": 6,
+    "columns": 56,
+    "outgoing_fks": 9,
     "file": "diagrams/03-ingestion-reprise.svg"
   },
   {
@@ -58,8 +54,8 @@
       "ingest.quality_issues",
       "ingest.reconciliation_runs"
     ],
-    "columns": 59,
-    "outgoing_fks": 16,
+    "columns": 73,
+    "outgoing_fks": 21,
     "file": "diagrams/04-qualite-identites-nettoyage.svg"
   },
   {
@@ -75,8 +71,8 @@
       "football.countries",
       "football.venues"
     ],
-    "columns": 59,
-    "outgoing_fks": 19,
+    "columns": 150,
+    "outgoing_fks": 46,
     "file": "diagrams/05-competitions-referentiels.svg"
   },
   {
@@ -100,8 +96,8 @@
       "football.teams",
       "football.venue_source_ids"
     ],
-    "columns": 164,
-    "outgoing_fks": 59,
+    "columns": 307,
+    "outgoing_fks": 99,
     "file": "diagrams/06-identites-profils.svg"
   },
   {
@@ -117,8 +113,8 @@
       "football.match_teams",
       "football.matches"
     ],
-    "columns": 143,
-    "outgoing_fks": 42,
+    "columns": 218,
+    "outgoing_fks": 58,
     "file": "diagrams/07-matchs-participations.svg"
   },
   {
@@ -135,8 +131,8 @@
       "football.team_match_metric_values",
       "football.team_match_stats"
     ],
-    "columns": 218,
-    "outgoing_fks": 33,
+    "columns": 322,
+    "outgoing_fks": 64,
     "file": "diagrams/08-statistiques-periodes.svg"
   },
   {
@@ -151,8 +147,8 @@
       "football.pass_networks",
       "football.shots"
     ],
-    "columns": 111,
-    "outgoing_fks": 28,
+    "columns": 143,
+    "outgoing_fks": 34,
     "file": "diagrams/09-tirs-spatial.svg"
   },
   {
@@ -168,8 +164,8 @@
       "football.team_ranking_components",
       "football.team_ranking_entries"
     ],
-    "columns": 97,
-    "outgoing_fks": 24,
+    "columns": 95,
+    "outgoing_fks": 19,
     "file": "diagrams/10-classements.svg"
   },
   {
@@ -182,8 +178,8 @@
       "football.team_coach_tenures",
       "football.team_honours"
     ],
-    "columns": 57,
-    "outgoing_fks": 20,
+    "columns": 118,
+    "outgoing_fks": 37,
     "file": "diagrams/11-entraineurs-palmares.svg"
   },
   {
@@ -201,8 +197,8 @@
       "analytics.publication_versions",
       "analytics.team_competition_stats"
     ],
-    "columns": 112,
-    "outgoing_fks": 25,
+    "columns": 133,
+    "outgoing_fks": 31,
     "file": "diagrams/12-lectures-publication.svg"
   },
   {
@@ -219,143 +215,8 @@
       "analytics.scouting_features",
       "analytics.team_match_scores"
     ],
-    "columns": 74,
-    "outgoing_fks": 18,
+    "columns": 82,
+    "outgoing_fks": 19,
     "file": "diagrams/13-modeles-reserves.svg"
-  },
-  {
-    "id": "14-historiques-01",
-    "title": "Historiques SQL typés 01",
-    "tables": [
-      "football.associations_history",
-      "football.countries_history",
-      "ingest.match_coverage_history",
-      "ingest.media_assets_history",
-      "ingest.source_datasets_history",
-      "ingest.sources_history"
-    ],
-    "columns": 51,
-    "outgoing_fks": 6,
-    "file": "diagrams/14-historiques-01.svg"
-  },
-  {
-    "id": "15-historiques-02",
-    "title": "Historiques SQL typés 02",
-    "tables": [
-      "football.coaches_history",
-      "football.competition_seasons_history",
-      "football.competitions_history",
-      "football.periods_history",
-      "football.positions_history",
-      "football.venues_history"
-    ],
-    "columns": 46,
-    "outgoing_fks": 6,
-    "file": "diagrams/15-historiques-02.svg"
-  },
-  {
-    "id": "16-historiques-03",
-    "title": "Historiques SQL typés 03",
-    "tables": [
-      "football.competition_groups_history",
-      "football.competition_stages_history",
-      "football.competition_teams_history",
-      "football.players_history",
-      "football.position_mappings_history",
-      "football.teams_history"
-    ],
-    "columns": 48,
-    "outgoing_fks": 6,
-    "file": "diagrams/16-historiques-03.svg"
-  },
-  {
-    "id": "17-historiques-04",
-    "title": "Historiques SQL typés 04",
-    "tables": [
-      "football.association_source_ids_history",
-      "football.competition_source_ids_history",
-      "football.player_source_ids_history",
-      "football.player_team_memberships_history",
-      "football.team_aliases_history",
-      "football.team_source_ids_history"
-    ],
-    "columns": 49,
-    "outgoing_fks": 6,
-    "file": "diagrams/17-historiques-04.svg"
-  },
-  {
-    "id": "18-historiques-05",
-    "title": "Historiques SQL typés 05",
-    "tables": [
-      "football.coach_source_ids_history",
-      "football.match_scores_history",
-      "football.match_source_ids_history",
-      "football.match_teams_history",
-      "football.matches_history",
-      "football.venue_source_ids_history"
-    ],
-    "columns": 65,
-    "outgoing_fks": 6,
-    "file": "diagrams/18-historiques-05.svg"
-  },
-  {
-    "id": "19-historiques-06",
-    "title": "Historiques SQL typés 06",
-    "tables": [
-      "football.match_lineups_history",
-      "football.match_players_history",
-      "football.metric_definitions_history",
-      "football.player_match_stats_history",
-      "football.source_metric_mappings_history",
-      "football.team_match_stats_history"
-    ],
-    "columns": 132,
-    "outgoing_fks": 6,
-    "file": "diagrams/19-historiques-06.svg"
-  },
-  {
-    "id": "20-historiques-07",
-    "title": "Historiques SQL typés 07",
-    "tables": [
-      "football.match_events_history",
-      "football.match_momentum_history",
-      "football.pass_networks_history",
-      "football.player_match_advanced_history",
-      "football.shots_history",
-      "football.team_match_advanced_history"
-    ],
-    "columns": 179,
-    "outgoing_fks": 6,
-    "file": "diagrams/20-historiques-07.svg"
-  },
-  {
-    "id": "21-historiques-08",
-    "title": "Historiques SQL typés 08",
-    "tables": [
-      "football.honour_definitions_history",
-      "football.match_heatmaps_history",
-      "football.pass_network_edges_history",
-      "football.pass_network_nodes_history",
-      "football.player_honours_history",
-      "football.team_coach_tenures_history"
-    ],
-    "columns": 72,
-    "outgoing_fks": 6,
-    "file": "diagrams/21-historiques-08.svg"
-  },
-  {
-    "id": "22-historiques-09",
-    "title": "Historiques SQL typés 09",
-    "tables": [
-      "football.match_h2h_entries_history",
-      "football.match_heatmap_cells_history",
-      "football.player_match_metric_values_history",
-      "football.ranking_systems_history",
-      "football.team_honours_history",
-      "football.team_match_metric_values_history"
-    ],
-    "columns": 73,
-    "outgoing_fks": 6,
-    "file": "diagrams/22-historiques-09.svg"
   }
 ]
