@@ -433,11 +433,19 @@ export async function partitionPage(req, p) {
  UNION ALL (SELECT m.id,m.day FROM statarena_app.matches m WHERE m.season=$1 AND m.league_id=$2 ${pred("m")}
  AND NOT EXISTS(SELECT 1 FROM statarena_app.fixtures f WHERE f.id=m.id AND f.season=m.season AND f.league_id=m.league_id)
  ORDER BY m.day NULLS LAST,m.id LIMIT ($3::int+1))),
- keys AS (SELECT * FROM candidates ORDER BY day NULLS LAST,id LIMIT ($3::int+1)), page AS (SELECT id FROM keys ORDER BY day NULLS LAST,id LIMIT $3)
+ keys AS (SELECT * FROM candidates ORDER BY day NULLS LAST,id LIMIT ($3::int+1)), page AS (SELECT id FROM keys ORDER BY day NULLS LAST,id LIMIT $3),
+ page_appearances AS MATERIALIZED (
+ SELECT a.*,p.name,p.image_url,s.value_text AS shirt_number_raw,s.value_type AS shirt_number_type
+ FROM statarena_app.appearances a JOIN statarena_app.players p ON p.id=a.player_ref
+ LEFT JOIN statarena_app.appearance_shirt_numbers s ON s.appearance_id=a.id
+ WHERE a.match_id IN(SELECT id FROM page)),
+ appearance_extras AS (
+ SELECT e.appearance_id,json_object_agg(e.metric_key,e.value ORDER BY e.metric_key) extras
+ FROM statarena_app.appearance_metrics e JOIN page_appearances a ON a.id=e.appearance_id GROUP BY e.appearance_id)
  SELECT s.*, ${jsonRows("SELECT id,day::text FROM keys ORDER BY day NULLS LAST,id")} keys,
  ${jsonRows("SELECT m.* FROM statarena_app.matches m JOIN page USING(id) ORDER BY m.day NULLS LAST,m.id")} matches,
  ${jsonRows("SELECT f.* FROM statarena_app.fixtures f JOIN page USING(id) ORDER BY f.day NULLS LAST,f.id")} fixtures,
- ${jsonRows("SELECT a.*,p.name,p.image_url,(SELECT json_object_agg(metric_key,value) FROM statarena_app.appearance_metrics e WHERE e.appearance_id=a.id) extras,s.value_text AS shirt_number_raw,s.value_type AS shirt_number_type FROM statarena_app.appearances a JOIN statarena_app.players p ON p.id=a.player_ref LEFT JOIN statarena_app.appearance_shirt_numbers s ON s.appearance_id=a.id WHERE a.match_id IN(SELECT id FROM page) ORDER BY a.match_id,a.ordinal,a.id", appearanceProjection)} appearances,
+ ${jsonRows("SELECT a.*,e.extras FROM page_appearances a LEFT JOIN appearance_extras e ON e.appearance_id=a.id ORDER BY a.match_id,a.ordinal,a.id", appearanceProjection)} appearances,
  ${jsonRows("SELECT * FROM statarena_app.shots WHERE match_id IN(SELECT id FROM page) ORDER BY match_id,ordinal,id")} shots,
  ${jsonRows("SELECT * FROM statarena_app.team_statistics WHERE match_id IN(SELECT id FROM page) ORDER BY match_id,ordinal")} stats,
  ${byPage("SELECT * FROM statarena_app.match_coverage")} cover,
