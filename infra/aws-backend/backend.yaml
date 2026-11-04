@@ -1,0 +1,177 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: StatArena read-only API. Existing database, subnets and public asset distribution are external.
+Parameters:
+  ReleaseKey: {Type: String, AllowedPattern: 'releases/[a-f0-9]{64}\.zip'}
+  DatabaseUrl: {Type: String, NoEcho: true, MaxLength: 2000}
+  ReservedConcurrency:
+    Type: Number
+    Default: 0
+    AllowedValues: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    Description: Zero omits the reservation; deployment preflight must verify account limit <=10 in that case.
+Conditions:
+  Reserve: !Not [!Equals [!Ref ReservedConcurrency, '0']]
+Resources:
+  RuntimeSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: StatArena Lambda egress only to existing PostgreSQL SG
+      VpcId: vpc-08e400afa07fc1812
+      SecurityGroupEgress:
+        - {IpProtocol: tcp, FromPort: 5432, ToPort: 5432, DestinationSecurityGroupId: sg-0667c20e8ff5d2431}
+      Tags: [{Key: Name, Value: statarena-backend-runtime}]
+  DatabaseIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: sg-0667c20e8ff5d2431
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref RuntimeSG
+      Description: statarena-backend runtime only
+  Logs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/statarena-backend
+      RetentionInDays: 14
+  RuntimeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: [{Effect: Allow, Principal: {Service: lambda.amazonaws.com}, Action: 'sts:AssumeRole'}]
+      Policies:
+        - PolicyName: Runtime
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['logs:CreateLogStream','logs:PutLogEvents']
+                Resource: !GetAtt Logs.Arn
+              - Effect: Allow
+                Action: ['ec2:CreateNetworkInterface','ec2:DescribeNetworkInterfaces','ec2:DescribeSubnets','ec2:DeleteNetworkInterface','ec2:AssignPrivateIpAddresses','ec2:UnassignPrivateIpAddresses']
+                Resource: '*'
+              - Effect: Deny
+                Action: 'ec2:*'
+                Resource: '*'
+                Condition:
+                  ArnEquals:
+                    'lambda:SourceFunctionArn': !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:statarena-backend'
+  Backend:
+    Type: AWS::Lambda::Function
+    DependsOn: DatabaseIngress
+    Properties:
+      FunctionName: statarena-backend
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      Handler: index.handler
+      MemorySize: 512
+      Timeout: 25
+      ReservedConcurrentExecutions: !If [Reserve, !Ref ReservedConcurrency, !Ref 'AWS::NoValue']
+      Role: !GetAtt RuntimeRole.Arn
+      Code: {S3Bucket: !Sub 'statarena-backend-releases-${AWS::AccountId}-${AWS::Region}', S3Key: !Ref ReleaseKey}
+      Environment:
+        Variables:
+          STATARENA_RELEASE: !Ref ReleaseKey
+          DATABASE_URL: !Ref DatabaseUrl
+          DATABASE_POOL_MAX: '1'
+          STATARENA_DATA_PROVIDER: aws
+          STATARENA_CLOUDFRONT_URL: 'https://d2clu0phovomb8.cloudfront.net'
+      VpcConfig:
+        SecurityGroupIds: [!Ref RuntimeSG]
+        SubnetIds: [subnet-0233a9567335f56ce, subnet-04c9af303f55d9718, subnet-0e72516f361932c15]
+  Origin:
+    Type: AWS::Lambda::Url
+    Properties: {AuthType: AWS_IAM, TargetFunctionArn: !GetAtt Backend.Arn, InvokeMode: BUFFERED}
+  OAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: statarena-backend
+        OriginAccessControlOriginType: lambda
+        SigningBehavior: always
+        SigningProtocol: sigv4
+  Cache:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: statarena-backend
+        MinTTL: 0
+        DefaultTTL: 0
+        MaxTTL: 60
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig: {CookieBehavior: none}
+          HeadersConfig: {HeaderBehavior: none}
+          QueryStringsConfig: {QueryStringBehavior: all}
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
+  Validators:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: statarena-backend-validators
+        HeadersConfig: {HeaderBehavior: whitelist, Headers: [If-None-Match, If-Modified-Since]}
+        CookiesConfig: {CookieBehavior: none}
+        QueryStringsConfig: {QueryStringBehavior: none}
+  ViewerHeaders:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: statarena-backend
+        SecurityHeadersConfig:
+          ContentTypeOptions: {Override: true}
+        CustomHeadersConfig:
+          Items:
+            - {Header: Access-Control-Allow-Origin, Value: '*', Override: true}
+            - {Header: Access-Control-Expose-Headers, Value: 'ETag, Content-Length, Cache-Control, Age, X-Cache, X-Data-Source, Server-Timing', Override: true}
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: statarena-backend public API (dedicated Lambda origin)
+        Enabled: true
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: api
+            DomainName: !Select [2, !Split ['/', !GetAtt Origin.FunctionUrl]]
+            OriginAccessControlId: !GetAtt OAC.Id
+            CustomOriginConfig: {OriginProtocolPolicy: https-only, OriginSSLProtocols: [TLSv1.2], OriginReadTimeout: 29}
+        DefaultCacheBehavior:
+          TargetOriginId: api
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          CachePolicyId: !Ref Cache
+          OriginRequestPolicyId: !Ref Validators
+          ResponseHeadersPolicyId: !Ref ViewerHeaders
+        CustomErrorResponses:
+          - {ErrorCode: 400, ErrorCachingMinTTL: 0}
+          - {ErrorCode: 403, ErrorCachingMinTTL: 0}
+          - {ErrorCode: 404, ErrorCachingMinTTL: 0}
+          - {ErrorCode: 405, ErrorCachingMinTTL: 0}
+          - {ErrorCode: 500, ErrorCachingMinTTL: 0}
+          - {ErrorCode: 502, ErrorCachingMinTTL: 0}
+          - {ErrorCode: 503, ErrorCachingMinTTL: 0}
+          - {ErrorCode: 504, ErrorCachingMinTTL: 0}
+  InvokeUrl:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Backend
+      Action: lambda:InvokeFunctionUrl
+      FunctionUrlAuthType: AWS_IAM
+      Principal: cloudfront.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+  Invoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Backend
+      Action: lambda:InvokeFunction
+      InvokedViaFunctionUrl: true
+      Principal: cloudfront.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+Outputs:
+  ApiOrigin: {Value: !Sub 'https://${Distribution.DomainName}'}
+  DistributionId: {Value: !Ref Distribution}
+  SignedOrigin: {Value: !GetAtt Origin.FunctionUrl}
