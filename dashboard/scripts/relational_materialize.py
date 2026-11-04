@@ -69,7 +69,7 @@ def install(db):
         db.execute(
             "CREATE TABLE IF NOT EXISTS statarena_app.worker_schema(version text PRIMARY KEY,digest text NOT NULL)"
         )
-        for prefix in ("003_", "004_", "005_", "006_", "007_", "008_", "009_"):
+        for prefix in ("003_", "004_", "005_", "006_", "007_", "008_", "009_", "010_"):
             (path,) = SCHEMA.glob(prefix + "*.sql")
             source = path.read_bytes()
             digest = hashlib.sha256(source).hexdigest()
@@ -108,6 +108,9 @@ class Inputs:
         self.store, self.db = store, store.db
 
     def read(self, path, expected=None):
+        return self.read_version(path, expected)[0]
+
+    def read_version(self, path, expected=None):
         row = self.db.execute(
             """SELECT encode(o.sha256,'hex'),d.document FROM statarena.objects o
           LEFT JOIN statarena.current_file_documents d ON d.document_path=o.path AND d.source_path=o.path
@@ -135,7 +138,7 @@ class Inputs:
                 raise ValueError("Staging input changed during fallback: " + path)
         if logical and hashlib.sha256(compact(value).encode()).hexdigest() != expected:
             raise ValueError("Staging logical checksum mismatch: " + path)
-        return value
+        return value, row[0]
 
     def ref(self, ref):
         return self.read(ref["path"], ref.get("sha256"))
@@ -247,6 +250,11 @@ def prepare(inputs, manifest, queue_all):
             WHERE i.digest IS DISTINCT FROM w.digest ON CONFLICT DO NOTHING""")
         db.execute("""INSERT INTO statarena_app.publication_jobs(season,league_id,changed_at) SELECT season,league_id,changed_at FROM work_dirty
             ON CONFLICT(season,league_id) DO UPDATE SET changed_at=excluded.changed_at WHERE publication_jobs.changed_at<excluded.changed_at""")
+        # A migrated seed can be the sole source of a historical season. Discover
+        # new scopes without forcing every already-published partition to rebuild.
+        db.execute("""INSERT INTO statarena_app.publication_jobs(season,league_id)
+            SELECT k.season,k.league_id FROM work_known k LEFT JOIN statarena_app.partitions p USING(season,league_id)
+            WHERE p.season IS NULL ON CONFLICT DO NOTHING""")
         if queue_all:
             db.execute("""INSERT INTO statarena_app.publication_jobs(season,league_id)
                 SELECT season,league_id FROM work_known UNION SELECT season,league_id FROM work_scopes
@@ -527,6 +535,7 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
     detail_seconds = 0.0
     batches = 0
     requested_families = 0
+    bootstrap_source = None
     db = inputs.db
     marker = db.execute(
         "SELECT changed_at FROM work_dirty WHERE season=%s AND league_id=%s",
@@ -557,7 +566,11 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
                 ),
                 None,
             )
-            packed = inputs.ref(chunk) if chunk else {}
+            if chunk:
+                packed, source_sha = inputs.read_version(chunk["path"], chunk.get("sha256"))
+                bootstrap_source = (chunk["path"], source_sha)
+            else:
+                packed = {}
             old = {
                 "meta": packed.get("meta", {}),
                 "metrics": packed.get("metrics", METRICS),
@@ -737,6 +750,11 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
         capacity(db, len(compact(result).encode()) * 2)
         publish_snapshot(db, label, league, result)
         partition_calendar(inputs, label, league)
+        if bootstrap_source is not None:
+            db.execute("""INSERT INTO statarena_app.partition_bootstrap_sources(season,league_id,source_path,sha256)
+                VALUES(%s,%s,%s,%s) ON CONFLICT(season,league_id) DO UPDATE
+                SET source_path=excluded.source_path,sha256=excluded.sha256,recorded_at=excluded.recorded_at""",
+                (label, league, *bootstrap_source))
     if digest:
         receipt(db, "partition", label + ":" + league, digest[0])
     if marker:
