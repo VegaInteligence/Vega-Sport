@@ -48,7 +48,7 @@ Le filtre DataGrip production masque `statarena_app`. L’affichage doit montrer
 
 ![Architecture actuelle](diagrams/architecture-actuelle.svg)
 
-Le domaine public Vercel est encore sur Neon (`source: Neon`, révision 18). L’API AWS répond `source: AWS`, révision 43, via CloudFront puis Lambda ; elle vise `statarena_prod`, rôle `statarena_runtime`. L’origine AWS du frontend n’est configurée que pour une preview historique. La protection de déploiement `main=false` reste en place pendant cette préparation.
+Au premier relevé, le domaine public Vercel lisait encore Neon (`source: Neon`, révision 18). **Un contrôle final a constaté un autre déploiement production READY, commit `b2ec973d2d`, créé à 15:44 Paris avant les commits documentaires : accueil 200, `/api/health` 503 sans corps.** Le proxy de ce commit exige `NEXT_PUBLIC_API_ORIGIN` sur Vercel ; la configuration observée ne définit cette variable que pour une preview. Il renvoie explicitement 503 en son absence. Les anciens identifiants Neon existent encore, mais ils ne prouvent donc plus un chemin fonctionnel depuis ce frontend. L’API AWS répond toujours `source: AWS`, révision 43, via CloudFront puis Lambda et `statarena_prod`, rôle `statarena_runtime` ; son code et ses 512 Mio sont inchangés. Les trois workflows de collecte/construction restent désactivés. `git.deploymentEnabled.main=false` est présent dans le dépôt ; il ne suffit pas à prouver l’absence d’un déploiement réalisé par un autre chemin. Aucun rollback, changement de variable ou basculement n’a été exécuté par ce lot. Les relevés initial et final sont tous deux conservés dans les preuves.
 
 ### Cible proposée
 

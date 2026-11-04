@@ -481,8 +481,8 @@ current = r'''digraph current_architecture {
  node [shape=box,style="rounded,filled",fillcolor="#edf2f7",color="#bcc7d2",fontname="Helvetica",fontsize=14,margin="0.2,0.15"];
  edge [fontname="Helvetica",fontsize=11,color="#738397"];
  Browser [label="Navigateur\nDesktop / mobile"];
- Vercel [label="Vercel • frontend et API actuelle\nProduction encore sur Neon",fillcolor="#e4edf9"];
- Neon [label="Neon existant\nPostgreSQL + objets sources",fillcolor="#f6eddc"];
+ Vercel [label="Vercel • frontend b2ec973d2d\nAccueil 200 • API 503",fillcolor="#e4edf9"];
+ Neon [label="Neon existant\nDonnées et configuration héritées",fillcolor="#f6eddc"];
  API [label="CloudFront API AWS\nOrigine Lambda signée OAC"];
  Lambda [label="Lambda Node 24 • 512 Mio\nLectures SQL et projections partielles",fillcolor="#e6f1e9"];
  RDS [label="Une instance RDS PostgreSQL 18.6\nstatarena_prod : statarena + statarena_app\nstatarena : ancien import distinct",fillcolor="#e6f1e9"];
@@ -492,7 +492,8 @@ current = r'''digraph current_architecture {
  Pitch [label="PitchAPI et autres sources"];
  Transfer [label="Transfert initial Neon → AWS\nPropriété de l’autre Codex\nNon relancé par ce plan"];
  Browser -> Vercel [label="domaine public canonique"];
- Vercel -> Neon [label="lectures production"];
+ Proxy [label="Proxy Next.js en production\nNEXT_PUBLIC_API_ORIGIN absente\n503 sans corps",fillcolor="#f6eddc"];
+ Vercel -> Proxy [label="routes /api"];
  Browser -> API [label="preview AWS historique",style=dashed];
  API -> Lambda [label="MISS / revalidation"];
  Lambda -> RDS [label="statarena_prod • TLS"];

@@ -1,0 +1,75 @@
+{
+  "atUtc": "2026-11-04T15:19:59.371250+00:00",
+  "command": "python3 docs/architecture/orion-plan-20261104/tools/delivery_readback.py",
+  "scope": "Read-only public probes, existing AWS/Vercel/GitHub credentials. No deployment, SQL write or workflow mutation.",
+  "endpoints": {
+    "vercelHealth": {
+      "url": "https://statarena-analytics.vercel.app/api/health",
+      "status": 503,
+      "headers": {
+        "Age": "0",
+        "Cache-Control": "no-store",
+        "X-Vercel-Cache": "MISS"
+      },
+      "bodyExcerpt": ""
+    },
+    "vercelHome": {
+      "url": "https://statarena-analytics.vercel.app/",
+      "status": 200,
+      "headers": {
+        "Age": "197",
+        "Cache-Control": "public, max-age=0, must-revalidate",
+        "Content-Type": "text/html; charset=utf-8",
+        "X-Vercel-Cache": "HIT"
+      }
+    },
+    "awsHealth": {
+      "url": "https://d317dq37z1tacb.cloudfront.net/api/health",
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "X-Cache": "Miss from cloudfront"
+      },
+      "body": {
+        "source": "AWS",
+        "status": "ok",
+        "revision": "43"
+      }
+    }
+  },
+  "lambda": {
+    "CodeSha256": "Im/z7r7PPFeNjjXWB7CtMufgNBZRpz6bJ+NA7l4s+4k=",
+    "MemorySize": 512,
+    "State": "Active",
+    "LastUpdateStatus": "Successful"
+  },
+  "lambdaUnchanged": true,
+  "vercelProduction": {
+    "id": "dpl_H1BPDyH7ppFrBA1KjwZMGT1U8kPv",
+    "url": "statarena-analytics-f36x89qo0-hlemonniers-projects.vercel.app",
+    "readyState": "READY",
+    "createdAt": 1793803497383,
+    "commit": "b2ec973d2d4aa9b25f66b58c32c9806d13e23a51",
+    "createdParis": "2026-11-04T15:44:57.383000+01:00"
+  },
+  "vercelChangedSinceInitialInventory": true,
+  "workflows": [
+    {
+      "name": "Build serving tables (AWS)",
+      "path": ".github/workflows/rematerialize.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "name": "Collect standings (AWS)",
+      "path": ".github/workflows/uefa-standings.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "name": "Collect football (AWS)",
+      "path": ".github/workflows/collect-football.yml",
+      "state": "disabled_manually"
+    }
+  ],
+  "interpretation": "The unchanged-Vercel assumption failed. The deployment changed at15:44Paris before the documentation commits; homepage200, public health503 at delivery. Existing source explicitly returns503 when VERCEL is set and NEXT_PUBLIC_API_ORIGIN is absent; current env metadata scopes that origin to preview only. AWS health200 does not validate the public site's data flows. No rollback or cutover performed."
+}

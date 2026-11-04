@@ -21,7 +21,7 @@ Le [plan](../PLAN.md), les 25 SVG et le [dictionnaire](../DICTIONNAIRE.md) couvr
 | Réseau du lecteur | 0 requête vers AWS/Neon/PitchAPI ou autre service, 0 erreur JS et 0 ressource HTTP en échec durant le parcours enregistré | `viewer-checks.json` |
 | S3 existant | 307 pages, 306 124 objets, 4 890 689 338 octets ; 37 859 images / 401 928 242 octets | `s3.json`, scan complet 15:51–15:58 Paris |
 | PostgreSQL | Deux bases applicatives inspectées en lecture seule, PostgreSQL 18.6 ; une instance RDS existante | `databases.json`, `runtime-current.json` |
-| Production | Vercel READY encore sur Neon, API AWS sur `statarena_prod` ; collectes/build toujours désactivés au relevé | `vercel-current.json`, `runtime-current.json` |
+| Production, contrôle final | Vercel READY commit b2ec973d2d créé à15:44Paris ; accueil200 mais health503. Origine API absente en production ; AWShealth200/rév43 et Lambda inchangée ; trois workflows toujours désactivés | `vercel-current-initial.json`, `vercel-current.json`, `delivery-readback.json` |
 
 Les captures [desktop](architecture-desktop.png), [table de tirs](shots-desktop.png), [vue BDD](database-overview-desktop.png), [mobile](receipt-mobile.png) et [mobile sombre](receipt-mobile-dark.png) sont inspectables. L’écran mobile défile vers le détail ; les tableaux/diagrammes gardent leur défilement local.
 
@@ -68,12 +68,15 @@ PYTHONPATH=/tmp/statarena-publication-test-python python3 docs/architecture/orio
 python3 docs/architecture/orion-plan-20261104/tools/capture_runtime.py
 python3 docs/architecture/orion-plan-20261104/tools/capture_vercel.py
 python3 docs/architecture/orion-plan-20261104/tools/audit_s3.py
+python3 docs/architecture/orion-plan-20261104/tools/delivery_readback.py
 python3 docs/verification/aws-release-20261104/scan_credentials.py
 ```
 
 `psycopg` est fourni par l’environnement temporaire existant ; s’il manque, le préparer dans un environnement Python séparé. Vercel CLI utilisé : 65.11.0. La requête Neon est conservée exactement dans `neon-current.json.sql` : outil connecté `neon_run_sql`, projet `sweet-queen-11955006`, branche `br-mute-bonus-be23014e`, base `neondb`. L’API n’est pas appelée par la génération locale du plan. Les métadonnées de réseau publiées masquent les IP administratives personnelles `/32`.
 
 ## Échecs et limites conservés
+
+- Le contrôle final qui supposait Vercel inchangé a échoué : une nouvelle production b2ec973d2d avait été créée à15:44Paris avant les commits de documentation. Deux sondes health ont renvoyé503 sans corps ; la page d’accueil a répondu200 et AWShealth200. Le code `frontend/src/server/bun-proxy.js` retourne exactement cette réponse lorsque VERCEL est actif sans NEXT_PUBLIC_API_ORIGIN ; l’origine n’est configurée que pour preview. Le diagnostic est consigné sans correction/bascule ; aucune disponibilité complète du site n’est revendiquée. Le relevé initial est conservé et le diagramme actuel a été actualisé.
 
 - L’inspection statique initiale utilisait `Counter(dict)` au lieu des clés ; le faux échec de couverture est conservé dans `proposal-inspection-initial.json`. Le contrôle corrigé inspecte chaque nœud SVG et toutes ses colonnes.
 - Le navigateur par défaut Chrome n’était pas installé ; le parcours utilise le Chromium local indiqué dans `browser-config.json`. Le premier favicon a répondu 404 ; l’icône est désormais embarquée.
@@ -86,7 +89,7 @@ python3 docs/verification/aws-release-20261104/scan_credentials.py
 
 **Avant/après de ce lot documentaire : 0 modification de service, 0 octet supprimé et aucun gain de latence/coût revendiqué.** Les allocations et inventaires sont des baselines, pas des économies obtenues. Les métriques d’exploitation seront comparées sur le même corpus après implémentation approuvée.
 
-`artifact-validation.json` contrôle la syntaxe et les liens locaux. `credential-scan.json` conserve le dernier contrôle exact des identifiants connus : 2 904 fichiers et 63 contenus gzip inspectés, aucune correspondance ; il ne couvre pas tous les secrets possibles ni l’historique Git.
+`artifact-validation.json` contrôle la syntaxe et les liens locaux. `credential-scan.json` conserve le dernier contrôle exact des identifiants connus :2 907 fichiers et 63 contenus gzip inspectés, aucune correspondance ; il ne couvre pas tous les secrets possibles ni l’historique Git.
 
 La prochaine étape est la validation explicite du plan par l’utilisateur, demandée dans le prompt de mission. Les schémas, normalisations, collectes, suppression et production restent inchangés dans l’attente.
 

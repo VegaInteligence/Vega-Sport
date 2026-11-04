@@ -33,7 +33,7 @@
  <section class="view" id="architecture" role="tabpanel" aria-labelledby="tab-architecture">
   <div class="architectures">
    <div><h2>Cible proposée</h2><img class="architecture" src="diagrams/architecture-cible.svg" alt="Chemins cibles : Vercel, navigateur, CloudFront API, Lambda et RDS, CDN médias et collecte GitHub Actions."></div>
-   <div><h2>État actuel</h2><img class="architecture" src="diagrams/architecture-actuelle.svg" alt="État actuel : site public Vercel sur Neon ; API AWS partielle et stockage de sources encore présents."></div>
+   <div><h2>État actuel</h2><img class="architecture" src="diagrams/architecture-actuelle.svg" alt="État actuel : frontend public Vercel avec API 503, origine API absente ; API AWS partielle et sources encore présentes."></div>
   </div>
  </section>
  <section class="view" id="tables" role="tabpanel" aria-labelledby="tab-tables" hidden>
@@ -169,7 +169,7 @@
 <h2>3. Architecture actuelle et cible</h2>
 <h3>État actuel</h3>
 <p><img src="diagrams/architecture-actuelle.svg" alt="Architecture actuelle" /></p>
-<p>Le domaine public Vercel est encore sur Neon (<code>source: Neon</code>, révision 18). L’API AWS répond <code>source: AWS</code>, révision 43, via CloudFront puis Lambda ; elle vise <code>statarena_prod</code>, rôle <code>statarena_runtime</code>. L’origine AWS du frontend n’est configurée que pour une preview historique. La protection de déploiement <code>main=false</code> reste en place pendant cette préparation.</p>
+<p>Au premier relevé, le domaine public Vercel lisait encore Neon (<code>source: Neon</code>, révision 18). <strong>Un contrôle final a constaté un autre déploiement production READY, commit <code>b2ec973d2d</code>, créé à 15:44 Paris avant les commits documentaires : accueil 200, <code>/api/health</code> 503 sans corps.</strong> Le proxy de ce commit exige <code>NEXT_PUBLIC_API_ORIGIN</code> sur Vercel ; la configuration observée ne définit cette variable que pour une preview. Il renvoie explicitement 503 en son absence. Les anciens identifiants Neon existent encore, mais ils ne prouvent donc plus un chemin fonctionnel depuis ce frontend. L’API AWS répond toujours <code>source: AWS</code>, révision 43, via CloudFront puis Lambda et <code>statarena_prod</code>, rôle <code>statarena_runtime</code> ; son code et ses 512 Mio sont inchangés. Les trois workflows de collecte/construction restent désactivés. <code>git.deploymentEnabled.main=false</code> est présent dans le dépôt ; il ne suffit pas à prouver l’absence d’un déploiement réalisé par un autre chemin. Aucun rollback, changement de variable ou basculement n’a été exécuté par ce lot. Les relevés initial et final sont tous deux conservés dans les preuves.</p>
 <h3>Cible proposée</h3>
 <p><img src="diagrams/architecture-cible.svg" alt="Architecture cible" /></p>
 <ol>

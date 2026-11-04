@@ -1,15 +1,15 @@
 {
-  "atUtc": "2026-11-04T14:39:51.886591+00:00",
+  "atUtc": "2026-11-04T15:16:46.034211+00:00",
   "command": "python3 docs/architecture/orion-plan-20261104/tools/capture_vercel.py",
   "setup": "Authenticated existing Vercel CLI65.11.0; read-only GET. Source API response remains private; only deployment fields and env names/targets are saved.",
   "project": "statarena-analytics",
   "root": "dashboard/frontend",
   "production": {
-    "id": "dpl_5WKUEwBpNkr3hUEk9Fk8qF8EVFBe",
-    "url": "statarena-analytics-jumo9il0b-hlemonniers-projects.vercel.app",
+    "id": "dpl_H1BPDyH7ppFrBA1KjwZMGT1U8kPv",
+    "url": "statarena-analytics-f36x89qo0-hlemonniers-projects.vercel.app",
     "readyState": "READY",
-    "createdAt": 1793748112864,
-    "commit": "0aaf316e0aa525c90b3787df623bb5bfcc2936c8"
+    "createdAt": 1793803497383,
+    "commit": "b2ec973d2d4aa9b25f66b58c32c9806d13e23a51"
   },
   "environment": [
     {

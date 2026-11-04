@@ -1,5 +1,5 @@
 {
-  "atUtc": "2026-11-04T15:09:37.064886+00:00",
+  "atUtc": "2026-11-04T15:20:03.920352+00:00",
   "command": "python3 docs/architecture/orion-plan-20261104/tools/inspect_proposal.py",
   "scope": "Static proposal: table preservation, key/FK targets and types, removed-column CHECK references, complete diagrams/dictionary/current relation inventory. No database execution.",
   "counts": {
