@@ -27,7 +27,7 @@ from psycopg.types.json import Jsonb
 
 ROOT = Path(__file__).resolve().parents[2]
 MODEL = ROOT / "docs/architecture/orion-plan-20261104/target-schema.proposed.json"
-VERSION = "real_source_core_v1"
+VERSION = "real_source_core_v2_native31"
 SHA = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 MISSING = object()
 CORE_METRICS = {
@@ -45,7 +45,9 @@ SHOT_MAP = {"xg":"xg", "xgot":"xgot", "minute":"minute", "minuteAdded":"minute_a
             "isGoal":"is_goal", "isOwnGoal":"is_own_goal", "isOnTarget":"is_on_target",
             "isBlocked":"is_blocked", "insideBox":"is_inside_box", "shotType":"source_shot_type",
             "type":"source_event_type", "situation":"situation"}
-COMMON_NATIVE = {"xg":"xg","xa":"xa","xgot":"xgot","minutes":"minutes_played"}
+HISTORICAL_NATIVE_FIELDS = ("xg","xa","xgot","minutes")
+COMMON_NATIVE = dict(CORE_METRICS)
+SIGNED_COMMON_NATIVE = {"rating","goalsPrevented"}
 PERFORMANCE_STRUCTURAL = {"id","playerRef","playerId","teamId","team","matchId","leagueId","league","country","season","date","role","positionId","rawPitchX","rawPitchY","shirtNumber","starter","statsReliable","isCaptain"}
 PERIODS = {"1":"first_half", "1st":"first_half", "first_half":"first_half", "2":"second_half", "2nd":"second_half", "second_half":"second_half",
            "ALL":"full_match", "all":"full_match", "All":"full_match", "full_match":"full_match", "1H":"first_half", "2H":"second_half",
@@ -521,30 +523,60 @@ class TypedCore:
         record = self.record(path,"/tables/performances","accepted_normalized_metric_slot_contract",VERSION)
         for field in COMMON_NATIVE:
             code = "legacy_normalized_"+field
+            common_type=self.tables['football.player_match_stats']['columns'][COMMON_NATIVE[field]]['type']
+            number_rule={'integer':'exact nonnegative int32','numeric':'exact finite unconstrained numeric','double precision':'finite Decimal(str(float(native))) == native'}[common_type]
             self.insert("football.metric_definitions",code=code,label=field,
-                definition="Native property of an accepted complete packed normalized performance; exact nullable common projection. A missing SQL metric row is unknown.",
-                unit="source_native",scope="player",aggregation="none",allows_negative=False,definition_version=VERSION,source_record_id=record)
+                definition="Native scalar property of an accepted complete packed normalized performance. Numeric projection only for exactly representable native numbers; other native kinds retain their exact scalar and NULL common value. A missing SQL metric row is unknown.",
+                unit="source_native",scope="player",aggregation="none",allows_negative=field in SIGNED_COMMON_NATIVE,definition_version=VERSION,source_record_id=record)
             self.insert("football.source_metric_mappings",source_id=self.ids["source"],family_code="normalized_performance",raw_key=field,
                 mapping_version=VERSION,metric_code=code,metric_definition_version=VERSION,source_record_id=record,
-                parse_rule={"property":field,"accepted_record":"complete packed normalized performance","absent":"property missing from decoded row, not missing SQL row","null":"explicit source null","value":"exact native number"},
+                parse_rule={"property":field,"accepted_record":"complete packed normalized performance","absent":"property missing from decoded row, not missing SQL row","null":"explicit source null",
+                    "scalar":"number/string/boolean exact, without parsing or coercion","common_column":COMMON_NATIVE[field],'common_sql_type':common_type,
+                    "number_projection":number_rule,
+                    "nonnumeric_projection":"NULL; native text including empty or boolean retained in typed scalar"},
                 period_rule={"period":"full_match","definition":"bootstrap_v1"})
 
+    def common_native_value(self,row,field):
+        value=row.get(field,MISSING)
+        if value is MISSING:return 'absent',{},None
+        if value is None:return 'null',{},None
+        if isinstance(value,bool):return 'boolean',{'boolean_value':value},None
+        if isinstance(value,str):return 'string',{'text_value':value},None
+        if not isinstance(value,(Decimal,int,float)):
+            raise MappingError('Unsupported registered common native scalar: '+field)
+        exact=self.number(value,'numeric','normalized_performance.'+field)
+        if field not in SIGNED_COMMON_NATIVE and exact<0:
+            raise MappingError('Negative number violates common metric contract: '+field)
+        target=COMMON_NATIVE[field]
+        projection=self.number(exact,self.tables['football.player_match_stats']['columns'][target]['type'],'normalized_performance.'+field+' -> '+target)
+        return 'number',{'numeric_value':exact},projection
+
     def insert_common_native_states(self, source_row, stats, prior=None):
+        contract={'contract_version':VERSION,'transform_version':VERSION,'transform_code_sha256':SHA}
+        mismatch=[key for key,expected in contract.items() if stats.get(key)!=expected]
+        if mismatch:
+            raise MappingError('Common target contract/transform mismatch; explicit reconciliation required: '+','.join(mismatch))
+        for field in COMMON_NATIVE:
+            old=prior.get(field) if prior else None
+            if old is None:continue
+            expected={**contract,'metric_definition_version':VERSION,'metric_code':'legacy_normalized_'+field,'family_code':'standard'}
+            mismatch=[key for key,value in expected.items() if old.get(key)!=value]
+            if mismatch:
+                raise MappingError('Prior common scalar contract/transform mismatch: '+field+' ['+','.join(mismatch)+']')
+        # Validate the whole observation before closing or inserting any scalar.
+        plan={field:self.common_native_value(source_row,field) for field in COMMON_NATIVE}
+        for field,(_,_,projection) in plan.items():
+            actual=stats[COMMON_NATIVE[field]]
+            equal=actual is None if projection is None else actual is not None and Decimal(str(actual))==Decimal(str(projection))
+            if not equal:raise MappingError('Common projection/native scalar mismatch: '+field)
         result = {}
         for field in COMMON_NATIVE:
-            value = source_row.get(field,MISSING)
-            if value is MISSING:
-                kind,numeric = "absent",None
-            elif value is None:
-                kind,numeric = "null",None
-            elif isinstance(value,(Decimal,int,float)) and not isinstance(value,bool):
-                kind,numeric = "number",self.number(value,"numeric","normalized_performance."+field)
-            else:
-                raise MappingError("Unrepresentable common metric native scalar: "+field)
+            kind,values,_=plan[field]
             old = prior.get(field) if prior else None
-            bindings = ("match_id","player_id","team_id","match_player_revision_id","source_id","source_record_id","period_code","period_definition_version","variant_key")
+            bindings = ("match_id","player_id","team_id","match_player_revision_id","source_id","source_record_id","period_code","period_definition_version","variant_key","is_canonical")
             same_binding = old is not None and all(old[k]==stats[k] for k in bindings)
-            if old is not None and old["value_kind"]==kind and old["numeric_value"]==numeric and same_binding and old["recorded_from_gen"]<=stats["recorded_from_gen"] and old["recorded_to_gen"] is None:
+            same_scalar=old is not None and old['value_kind']==kind and all(old[k]==values.get(k) for k in ['numeric_value','text_value','boolean_value']) and all(old[k] is None for k in ['numerator','denominator','source_display'])
+            if same_scalar and same_binding and old["recorded_from_gen"]<=stats["recorded_from_gen"] and old["recorded_to_gen"] is None:
                 result[field] = old
                 continue
             if old is not None:
@@ -552,9 +584,9 @@ class TypedCore:
             result[field] = self.insert("football.player_match_metric_values",match_id=stats["match_id"],player_id=stats["player_id"],team_id=stats["team_id"],
                 match_player_revision_id=stats["match_player_revision_id"],source_id=stats["source_id"],source_record_id=stats["source_record_id"],
                 period_code=stats["period_code"],period_definition_version=stats["period_definition_version"],variant_key=stats["variant_key"],
-                metric_code="legacy_normalized_"+field,metric_definition_version=VERSION,family_code="standard",value_kind=kind,numeric_value=numeric,
-                provenance_kind=stats["provenance_kind"])
-        self.common_native[source_row["id"]] = result
+                metric_code="legacy_normalized_"+field,metric_definition_version=VERSION,family_code="standard",value_kind=kind,**values,
+                is_canonical=stats['is_canonical'],provenance_kind=stats["provenance_kind"])
+        if stats["is_canonical"]:self.common_native[source_row["id"]] = result
         return result
 
     def alias(self, kind, key, **binding):
@@ -566,8 +598,10 @@ class TypedCore:
         result = {}
         for source,target in CORE_METRICS.items():
             self.field_counts[("performances."+source,"absent" if source not in row else "null" if row[source] is None else "present")] += 1
-            if source in row:
-                result[target] = row[source]
+            result[target]=self.common_native_value(row,source)[2]
+        for completed,attempted in [('passes_completed','passes_attempted'),('aerial_duels_won','aerial_duels_attempted'),('dribbles_completed','dribbles_attempted')]:
+            if result[completed] is not None and result[attempted] is not None and result[completed]>result[attempted]:
+                raise MappingError('Inconsistent common count projection: '+completed+' > '+attempted)
         for key in set(row)-set(CORE_METRICS)-PERFORMANCE_STRUCTURAL:
             self.unverified["performances."+key] += 1
         return result
@@ -1122,35 +1156,45 @@ def oracle_comparisons(conn, parts):
 
 
 def common_native_oracle(conn, parts, changed=None):
-    """Independent LEFT JOIN: absent SQL state row is unknown, never source absent."""
-    changed = changed or {}
-    expected = []
-    states = Counter()
-    for part in parts:
-        for original in part["tables"]["performances"]:
-            row = changed.get(original["id"],original)
-            for field in ("xg","xa","xgot","minutes"):
-                state = "absent" if field not in row else "null" if row[field] is None else "number"
-                value = row.get(field)
-                expected.append((row["id"],field,state,value,value,True))
-                states[(field,state)] += 1
-    sql = """SELECT r.external_key,k.field,v.value_kind,v.numeric_value,
-        CASE k.field WHEN 'xg' THEN s.xg WHEN 'xa' THEN s.xa::numeric WHEN 'xgot' THEN s.xgot::numeric WHEN 'minutes' THEN s.minutes_played::numeric END common_value,
-        coalesce(v.source_record_id=s.source_record_id AND v.source_id=s.source_id AND v.team_id=s.team_id
-          AND v.match_player_revision_id=s.match_player_revision_id AND v.period_definition_version=s.period_definition_version
-          AND ingest.selected_at(s.recorded_from_gen,v.recorded_from_gen,v.recorded_to_gen)
-          AND v.text_value IS NULL AND v.boolean_value IS NULL AND v.numerator IS NULL AND v.denominator IS NULL AND v.source_display IS NULL,false) binding_and_cohort_match
-        FROM football.player_match_stats_current s JOIN ingest.source_records r ON r.id=s.source_record_id
-        CROSS JOIN (VALUES ('xg','legacy_normalized_xg'),('xa','legacy_normalized_xa'),('xgot','legacy_normalized_xgot'),('minutes','legacy_normalized_minutes')) k(field,metric)
-        LEFT JOIN football.player_match_metric_values_current v ON v.match_id=s.match_id AND v.player_id=s.player_id AND v.period_code=s.period_code
-          AND v.family_code='standard' AND v.metric_code=k.metric AND v.variant_key=s.variant_key
-        ORDER BY r.external_key,k.field"""
-    rows = list(conn.execute(sql))
-    expected.sort(key=lambda r:(r[0],r[1]))
-    return {"sourceRows":len(expected),"typedRows":len(rows),"sourceSha256":hashed(expected),"typedSha256":hashed(rows),
-        "unknownMissingRows":sum(r[2] is None for r in rows),"bindingOrCohortMismatchRows":sum(r[5] is not True for r in rows),
-        "sourceStateCounts":[{"field":field,"state":state,"count":n} for (field,state),n in sorted(states.items())],"sql":sql,
-        "sourceContract":"Exact property state of accepted complete packed normalized row; not an inference from missing metric SQL rows or provider failure"}
+    """v2 native/common report; frozen v1 four-slot proofs remain historical."""
+    changed=changed or {}
+    source_rows={r['id']:changed.get(r['id'],r) for p in parts for r in p['tables']['performances']}
+    def rows(sql,params):
+        cursor=conn.execute(sql,params);names=[c.name for c in cursor.description]
+        return [dict(zip(names,row)) for row in cursor.fetchall()]
+    wide_sql="""SELECT r.external_key performance_key,s.* FROM football.player_match_stats_current s
+        JOIN ingest.source_records r ON r.id=s.source_record_id JOIN ingest.source_documents d ON d.id=r.document_id
+        WHERE r.external_key=ANY(%s) AND d.legacy_object_path=ANY(%s)"""
+    wide=rows(wide_sql,(list(source_rows),[p['path'] for p in parts]))
+    metric_sql="""SELECT * FROM football.player_match_metric_values_current
+        WHERE source_record_id=ANY(%s) AND metric_definition_version=%s"""
+    metrics=rows(metric_sql,([r['source_record_id'] for r in wide],VERSION))
+    by_key={(r['source_record_id'],r['metric_code'],r['period_code'],r['period_definition_version'],r['variant_key']):r for r in metrics}
+    expected=[];typed=[];states=Counter();unknown=0;mismatch=0
+    for row in source_rows.values():
+        for field in COMMON_NATIVE:
+            value=row.get(field,MISSING)
+            kind='absent' if value is MISSING else 'null' if value is None else 'boolean' if isinstance(value,bool) else 'string' if isinstance(value,str) else 'number'
+            numeric=value if kind=='number' else None;text=value if kind=='string' else None;boolean=value if kind=='boolean' else None
+            expected.append((row['id'],field,kind,numeric,text,boolean,numeric,True));states[(field,kind)]+=1
+    bindings=('source_record_id','source_id','match_id','player_id','team_id','match_player_revision_id','period_code','period_definition_version','variant_key','is_canonical')
+    for stat in wide:
+        for field,target in COMMON_NATIVE.items():
+            value=by_key.get((stat['source_record_id'],'legacy_normalized_'+field,stat['period_code'],stat['period_definition_version'],stat['variant_key']))
+            if value is None:
+                unknown+=1;typed.append((stat['performance_key'],field,None,None,None,None,stat[target],False));continue
+            native=value['numeric_value']
+            projection_ok=stat[target] is None if value['value_kind']!='number' else stat[target] is not None and native is not None and Decimal(str(stat[target]))==native
+            binding_ok=all(value[k]==stat[k] for k in bindings) and value['recorded_from_gen']<=stat['recorded_from_gen'] and (value['recorded_to_gen'] is None or stat['recorded_from_gen']<value['recorded_to_gen'])
+            exact=projection_ok and binding_ok and all(value[k] is None for k in ('numerator','denominator','source_display'))
+            mismatch+=not exact
+            typed.append((stat['performance_key'],field,value['value_kind'],native,value['text_value'],value['boolean_value'],stat[target],exact))
+    expected.sort(key=lambda r:(r[0],r[1]));typed.sort(key=lambda r:(r[0],r[1]))
+    return {'transformVersion':VERSION,'registeredSlots':len(COMMON_NATIVE),'sourceRows':len(expected),'typedRows':len(typed),
+        'sourceSha256':hashed(expected),'typedSha256':hashed(typed),'unknownMissingRows':unknown,'bindingOrCohortMismatchRows':mismatch,
+        'sourceStateCounts':[{'field':field,'state':state,'count':n} for (field,state),n in sorted(states.items())],
+        'sql':{'common':wide_sql,'native':metric_sql},'sourceContract':'Accepted complete normalized row property; exact native scalar; numeric common projection only; missing SQL row is UNKNOWN',
+        'doubleRule':'Decimal(str(float(native_decimal))) == native_decimal; native numeric_value is never replaced by the float'}
 
 
 def fact_counts(conn):
@@ -1213,7 +1257,7 @@ def run_real_pilot(conn, evidence, source_scope, phase="core", *, source_provide
             result["reads"] = measured_reads(conn)
             result["mapping"] = {"unknownUsefulFieldsSilentlyDropped":0,
                 "dispositions":[{"field":field,"status":"unverified","observations":n} for field,n in sorted(importer.unverified.items())],
-                "rejected":result.get("families",{}).get("rejected",[]),"unverified":["Common metrics outside registered xg/xa/xgot/minutes still need explicit native-state contracts", "Original13-family observations are representative two-match typed projections; full leaf fidelity/all512source files remain unaccepted", "Shot coordinate units/frame and source-profile/media fields require approved mapping", "Changed source/transform receipts require explicit reconciliation rather than an automatic bulk repair"]}
+                "rejected":result.get("families",{}).get("rejected",[]),"unverified":["Metrics outside the31 registered normalized slots still need contracts; real-source acceptance needs independent native-state and precision reconciliation", "Original13-family observations are representative two-match typed projections; full leaf fidelity/all512source files remain unaccepted", "Shot coordinate units/frame and source-profile/media fields require approved mapping", "Changed source/transform receipts require explicit reconciliation rather than an automatic bulk repair"]}
             result['oracleScope']={'retainedSourceGeneration':result['import']['generation'],'currentSelectionMayContainLaterIndependentCorrections':bool(result['import']['reused'])}
         except Exception as error:
             result["failure"] = {"class":type(error).__name__,"sqlstate":getattr(error,"sqlstate",None),
@@ -1229,7 +1273,7 @@ def run_real_pilot(conn, evidence, source_scope, phase="core", *, source_provide
 
 def exercise_correction(importer, parts):
     # A labelled in-memory mutation of an actual source performance; same mapper.
-    row = next(r for p in parts for r in p["tables"]["performances"] if all(r.get(field) is not None for field in COMMON_NATIVE))
+    row = next(r for p in parts for r in p["tables"]["performances"] if all(isinstance(r.get(field),(Decimal,int,float)) and not isinstance(r.get(field),bool) for field in HISTORICAL_NATIVE_FIELDS))
     prior = importer.stats[row["id"]]
     old_value = Decimal(str(row["xg"]))
     new_value = old_value + Decimal("0.01")
@@ -1240,7 +1284,6 @@ def exercise_correction(importer, parts):
         importer.conn.execute("UPDATE football.player_match_stats SET recorded_to_gen=%s WHERE revision_id=%s",(importer.g,prior["revision_id"]))
         base = {key:value for key,value in prior.items() if not importer.tables["football.player_match_stats"]["columns"][key].get("identity")}
         base.update(importer.stats_values(changed),recorded_from_gen=importer.g,recorded_to_gen=None,provenance_kind="manual")
-        for field,target in COMMON_NATIVE.items():base[target] = changed.get(field)
         fresh = importer.insert("football.player_match_stats",**base)
         new_states = importer.insert_common_native_states(changed,fresh,prior=importer.common_native[row["id"]])
         importer.conn.execute("SELECT ingest.seal_generation(%s,%s)",(importer.g,hashed({"label":"simulated actual source performance correction","field":"xg","record":row["id"],"new":new_value})))
