@@ -1,3 +1,4 @@
+import { packPartition } from "./partition-wire.js";
 import { createHash } from "node:crypto";
 import { query, cache } from "./postgres.js";
 import { cacheHeaders, matchesEtag, noStoreHeaders } from "./cache-policy.js";
@@ -303,12 +304,18 @@ export async function manifest(req) {
   );
 }
 export async function partitionPage(req, p) {
-  validateParams(p, ["season", "league", "limit", "cursor"]);
+  validateParams(p, ["season", "league", "limit", "cursor", "format"]);
+  const columns = p.get("format") === "columns";
+  if (p.has("format") && !columns) reject(400, "Format invalide.");
   const y = p.get("season"),
     l = p.get("league");
   if (!season.test(y) || !league.test(l))
     reject(400, "Saison ou compétition invalide.");
-  const args = pageArgs(p, 25, ["partition", y, l]),
+  const args = pageArgs(
+      p,
+      25,
+      columns ? ["partition", y, l, "columns"] : ["partition", y, l],
+    ),
     c = args.cursor;
   const metaSql = `SELECT p.*,source_digest AS version, EXISTS(SELECT 1 FROM statarena_app.publication_jobs j WHERE j.season=p.season AND j.league_id=p.league_id) dirty FROM statarena_app.partitions p WHERE season=$1 AND league_id=$2`;
   if (req.method === "HEAD" || req.headers.has("if-none-match")) {
@@ -385,10 +392,15 @@ export async function partitionPage(req, p) {
       }),
     ),
   };
-  return send(req, { data, pagination }, 200, {
-    etag: tag(req, r.version),
-    maxBytes: 2 * 1024 * 1024,
-  });
+  return send(
+    req,
+    { data: columns ? packPartition(data) : data, pagination },
+    200,
+    {
+      etag: tag(req, r.version),
+      maxBytes: 2 * 1024 * 1024,
+    },
+  );
 }
 
 function list(p, key, pattern, max) {
