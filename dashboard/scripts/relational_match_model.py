@@ -5,6 +5,7 @@ definition) become typed columns on their event. Repeated entities are separate
 tables with foreign keys to their parent and an explicit provider ordinal.
 """
 
+from copy import deepcopy
 from dataclasses import dataclass
 
 
@@ -281,3 +282,9 @@ nested_families = {
     "single_advanced": "advanced_players",
     "player_shots": "player_shots",
 }
+
+
+# The first four migrations were already published. Retain the 004 contract so
+# its original DDL is reproducible and 007 can upgrade previously populated rows.
+families_v004 = deepcopy(families)
+shot.update(columns(boolean="is_own_goal is_saved_off_line"))
