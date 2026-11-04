@@ -3,7 +3,7 @@ function packTable(records) {
   const fields = new Set();
   for (const record of records)
     for (const key of Object.keys(record)) fields.add(key);
-  const constants = {};
+  const constants = Object.create(null);
   const keys = [];
   for (const key of fields) {
     const value = records[0][key];
