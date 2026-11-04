@@ -1,6 +1,6 @@
 # Backend AWS : bilan chiffré du 4 novembre 2026
 
-La lecture SQL et les optimisations ci-dessous sont implémentées, poussées sur `codex/aws-backend-20261104` et testées. L’API AWS est déployée. La migration complète et la bascule de production restent ouvertes : seules deux partitions sont publiées, le volume RDS actuel ne suffit pas au périmètre complet estimé, et Vercel refuse les nouveaux déploiements après sa limite quotidienne.
+La lecture SQL et les optimisations ci-dessous sont implémentées, poussées sur `codex/aws-backend-20261104` et testées. L’API AWS est déployée. La migration complète et la bascule de production restent ouvertes : seules deux partitions sont publiées, le volume RDS actuel ne suffit pas au périmètre complet estimé, et la bascule de production doit attendre cette publication complète. La prévisualisation Git Vercel du commit exact a ensuite été déployée et vérifiée.
 
 ## Lecture relationnelle et cache
 
@@ -45,15 +45,30 @@ Le format HTTP compact optionnel enlève les valeurs répétées, puis le client
 | Tentatives de partitions, trois parcours navigateur | 99 | 11 | −88,9 % |
 | Réponses 413 sur ces trois parcours | 9 | 0 | supprimées sur cet échantillon |
 
-Les deux saisons reconstruites sont identiques aux références. Les tests isolés préservent aussi les positions numériques et textuelles, les champs absents, nulls et les noms de mesures réservés. La CI Linux du commit `d5df4c5a9a` est verte, dont le parcours PostgreSQL→HTTP→décodeur.
+Les deux saisons reconstruites sont identiques aux références. Les tests isolés préservent aussi les positions numériques et textuelles, les champs absents, nulls et les noms de mesures réservés. La CI Linux du commit `d17473058f` est verte, dont le parcours PostgreSQL→HTTP→décodeur et le repli après ajout de colonne.
 
-Le build Next de production exact passe **22/22 contrôles Chromium contre l’API AWS réelle** : score 1–1, 23 tirs, interceptions 10–8, joueur à 10 matchs et 804 minutes, vues bureau et mobile. L’ancienne mesure navigateur vient d’une prévisualisation Vercel, la nouvelle d’un serveur local de production : la baisse des requêtes est observable, une amélioration de latence hébergée reste à mesurer. [Transport](verification/aws-wire-pages/RESULTS.md), [navigateur, captures et commande](verification/aws-compact-preview-20261104/RESULTS.md), [CI](https://github.com/OrionQuantPlatform/STATARENA/actions/runs/41774754578).
+Le build Next de production exact passe **22/22 contrôles Chromium contre l’API AWS réelle** : score 1–1, 23 tirs, interceptions 10–8, joueur à 10 matchs et 804 minutes, vues bureau et mobile. L’ancienne mesure navigateur vient d’une prévisualisation Vercel, la nouvelle d’un serveur local de production : la baisse des requêtes est observable, une amélioration de latence hébergée reste à mesurer. [Transport](verification/aws-wire-pages/RESULTS.md), [navigateur, captures et commande](verification/aws-compact-preview-20261104/RESULTS.md), [CI](https://github.com/OrionQuantPlatform/STATARENA/actions/runs/41779279990).
 
 ## Fiche match : charger les saisons au clic
 
-Une fiche terminée peut afficher son résumé sans télécharger les saisons. Sur le rejeu local de réponses AWS conservées pour Reims–Sochaux, les lectures initiales passent de **7 à 0** et le contenu structuré de **3,74 Mo à 10,7 Ko, soit −99,7 %**. Le clic joueur charge ensuite le cohort nécessaire à sa performance et aux comparaisons. Les sélections existantes survivent à un changement de compétition ; les erreurs proposent une reprise et le chargement peut être fermé.
+Une fiche terminée peut afficher son résumé sans télécharger les saisons. Sur le rejeu local de réponses AWS conservées pour Reims–Sochaux, les lectures initiales passent de **7 à 0** et le contenu structuré de **3,74 Mo à 10,7 Ko, soit −99,7 %**. Le clic joueur charge ensuite la cohorte nécessaire à sa performance et aux comparaisons. Les sélections existantes survivent à un changement de compétition ; les erreurs proposent une reprise et le chargement peut être fermé.
 
-Le parent a vérifié le code final avec le build Next de production contre l’API AWS réelle : **26/26 contrôles**, plus **6/6** sur une comparaison conservée entre Serie A et Ligue 2. Sept scénarios complémentaires sur les réponses conservées passent aussi, dont l’erreur 503, l’annulation et les cas de saison/compétition différentes. Le résumé bureau/mobile demande zéro partition ; les vues de contexte d’un match à venir conservent leurs lectures ciblées. Ces mesures portent sur les requêtes et les valeurs ; la latence hébergée attend toujours le déploiement Vercel. [Résultats, scripts et captures](verification/aws-deferred-match-20261104/RESULTS.md).
+Le parent a vérifié le code final avec le build Next de production contre l’API AWS réelle : **26/26 contrôles**, plus **6/6** sur une comparaison conservée entre Serie A et Ligue 2. Sept scénarios complémentaires sur les réponses conservées passent aussi, dont l’erreur 503, l’annulation et les cas de saison/compétition différentes. Le résumé bureau/mobile demande zéro partition ; les vues de contexte d’un match à venir conservent leurs lectures ciblées. Ces mesures portent sur les requêtes et les valeurs ; la latence avant/après hébergée reste à mesurer. Une prévisualisation Git a ensuite passé les mêmes 26 contrôles et les six contrôles de comparaison : [preuve hébergée](verification/aws-deferred-preview-20261104/RESULTS.md). [Résultats, scripts et captures](verification/aws-deferred-match-20261104/RESULTS.md).
+
+## P2 : transfert PostgreSQL et coût des pages denses
+
+La nouvelle lecture est déployée sur l’API AWS, avec la même mémoire Lambda de 512 Mio et le même RDS micro. Elle transmet les valeurs typées des apparitions sans répéter leurs 90 noms de champs à chaque ligne, puis construit directement les objets attendus. Le schéma SQL ne change pas.
+
+| Même page de 100 matchs | Avant | Après | Évolution |
+|---|---:|---:|---:|
+| Champs renvoyés par PostgreSQL | 11,74 Mo | 6,24 Mo | −46,8 % |
+| Médiane HTTP, cinq appels chauds | 4,02 s | 2,73 s | −32,1 % |
+| Médiane d’exécution Lambda, mêmes identifiants | 3,61 s | 2,39 s | −33,8 % |
+| Go-secondes facturées médianes par appel | 1,8075 | 1,1970 | −33,8 % |
+
+Les douze réponses avant/après ont les mêmes 1 973 314 octets décodés, la même compression et le même ETag. La première observation est séparée : 5,03→4,52 s. La mémoire maximale observée n’a pas baissé ; aucun gain mémoire n’est annoncé. Les chiffres de latence et de calcul proviennent d’un petit essai séquentiel sur une seule page, sans estimation de p95 ou de facture mensuelle. Les plans des deux pages de fixtures restent sous 0,7 ms sur les données actuellement publiées, avec les index existants ; aucun index spéculatif n’a été ajouté.
+
+Le parcours public complet des deux partitions retrouve toutes les valeurs précédentes pour 189 matchs, 677 fixtures et 8 304 apparitions. Les 26 contrôles Vercel ont été rejoués avec ce nouveau backend. Le transport utilise une liste explicite de champs liée au modèle scellé ; un ajout de colonne bascule vers les lignes nommées pour préserver les nouvelles valeurs, au prix d’une maintenance de cette liste pour retrouver ensuite le chemin rapide. [Résultats déployés, échantillons et commandes](verification/aws-pg-transport-release-20261104/RESULTS.md).
 
 ## Dimensionnement Lambda
 
@@ -62,8 +77,8 @@ Un essai réel et réversible sur la page dense a conservé toutes les réponses
 ## Reste à terminer
 
 - **Couverture** : 2 partitions, 189 matchs enrichis, 1 880 projections de support et 37 867 références d’images ont été publiés. Il reste 484 partitions et environ 36 700 travaux au total. L’audit API partiel garde ses neuf échecs liés à cette publication incomplète ; la migration n’est pas déclarée terminée.
-- **Capacité** : après compaction, le périmètre complet est estimé autour de 27,8 Go avant réserve, en conservant les sources existantes. Le disque RDS est de 20 Gio, avec une admission SQL à 16 Go. Le backfill massif reste suspendu. L’extension proposée à 64 Gio ajoute 5,06 USD HT/mois au tarif régional vérifié et attend ton accord explicite, car le volume alloué ne peut ensuite pas être réduit sur cette instance. [Calcul et demande exacte](verification/aws-capacity-20261104/storage-change-plan.json).
-- **Vercel** : la dernière prévisualisation hébergée vérifiée est au commit `6335ac6e5f`. Deux tentatives concordantes, connecteur puis CLI, refusent le commit suivant avec HTTP 402, `api-deployments-free-per-day`, plus de 100 déploiements. Aucun changement de forfait ou de protection. Le dernier front est testé localement en mode production, mais son déploiement hébergé reste à vérifier.
+- **Capacité** : après compaction, le périmètre complet est estimé autour de 27,8 Go avant réserve, en conservant les sources existantes. Le disque RDS est de 20 Gio, avec une admission SQL à 16 Go. Le backfill massif n’a pas repris. L’extension proposée à 64 Gio ajoute 5,06 USD HT/mois au tarif régional vérifié et attend ton accord explicite, car le volume alloué ne peut ensuite pas être réduit sur cette instance. [Calcul et demande exacte](verification/aws-capacity-20261104/storage-change-plan.json).
+- **Vercel** : la prévisualisation Git du commit `e1771cc437` est `READY` et passe **26+6 contrôles hébergés**. Les 84 requêtes AWS observées suivent la bonne origine, sans transmettre les identifiants de prévisualisation. Les deux refus manuels HTTP 402 précédents sont conservés ; le déploiement Git automatique a ensuite réussi, sans changement de forfait ou de protection. Cette preuve porte sur les données déjà publiées, et non sur une bascule de production. [Résultats](verification/aws-deferred-preview-20261104/RESULTS.md).
 - **Bascule finale** : reprendre la publication dans la capacité autorisée, terminer la couverture des sources et tous les parcours métier, déployer le front, puis retirer les dépendances Neon obsolètes. Main et la production n’ont pas été basculés sur ce jeu partiel.
 
 Chaque dossier de preuve contient ses entrées, commandes de relance et résultats observés. Les gains rapportés ne sont pas extrapolés à l’ensemble des utilisateurs ni transformés en économies mensuelles non mesurées.
