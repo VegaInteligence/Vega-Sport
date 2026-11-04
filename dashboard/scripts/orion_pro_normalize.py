@@ -17,6 +17,10 @@ import os
 from pathlib import Path
 import re
 import time
+import pickle
+import socket
+import stat
+import sys
 
 import psycopg
 from psycopg.types.json import Jsonb
@@ -98,12 +102,13 @@ class MappingError(ValueError):
 
 
 class SourceReader:
-    def __init__(self, evidence):
+    def __init__(self, evidence, *, max_run_queries=None, max_run_decoded_bytes=None):
         self.evidence = Path(evidence)
         self.ledger = self.evidence.parents[1] / "real-source-budget.json"
         self.total = json.loads(self.ledger.read_text()) if self.ledger.exists() else {"queries":0,"decodedBytes":0,"runs":[]}
         self.start_queries, self.start_bytes = self.total["queries"], self.total["decodedBytes"]
         self.receipts, self.cache, self.meta = [], {}, {}
+        self.max_run_queries,self.max_run_decoded_bytes=max_run_queries,max_run_decoded_bytes
 
     def __enter__(self):
         self.db = psycopg.connect(host="statarena-postgres.clcy2iqyajbl.us-east-2.rds.amazonaws.com", dbname="statarena_prod", user="statarena_ingest",
@@ -119,6 +124,8 @@ class SourceReader:
     def query(self, name, sql, params=(), *, body_column=None):
         if self.total["queries"] >= 100:
             raise MappingError("Cumulative100-query AWS source budget exhausted")
+        if self.max_run_queries is not None and self.total['queries']-self.start_queries>=self.max_run_queries:
+            raise MappingError('Per-capture11-query source budget exhausted')
         self.total["queries"] += 1
         self.ledger.write_text(json.dumps(self.total,indent=2)+"\n")
         started = time.monotonic()
@@ -131,6 +138,8 @@ class SourceReader:
                     text = row[body_column]
                     amount = len(text.encode()) if text is not None else 0
                     self.total["decodedBytes"] += amount
+                    if self.max_run_decoded_bytes is not None and self.total['decodedBytes']-self.start_bytes>self.max_run_decoded_bytes:
+                        raise MappingError('Per-capture32MiB decoded source budget exhausted')
                     if self.total["decodedBytes"] > 256*1024*1024:
                         raise MappingError("Cumulative256MiB decoded AWS source budget exhausted")
                     safe.append(list(row[:body_column])+[{"decodedBytes":amount,"decodedSha256":hashlib.sha256(text.encode()).hexdigest() if text else None}]+list(row[body_column+1:]))
@@ -164,7 +173,14 @@ class SourceReader:
                     raise MappingError("Current source version mismatch/unavailable: " + path)
                 self.cache[path] = json.loads(text,parse_float=Decimal,parse_int=Decimal)
                 self.meta[path] = {"path":path,"physicalSha256":sha,"bytes":size,"updatedAt":updated}
+        for path,digest in expected.items():
+            if self.meta[path]['physicalSha256']!=digest:raise MappingError('Cached source version differs: '+path)
         return {p:self.cache[p] for p in expected}
+
+    def export_snapshot(self):
+        for path,value in self.cache.items():self.meta[path]['decodedCanonicalSha256']=hashed(value)
+        return {'format':'orion_source_memory_v1','cache':self.cache,'meta':self.meta,'profile_metadata':self.profile_metadata,
+                'profile_gaps':self.profile_gaps,'sourceBudget':self.budget(),'captureCodeSha256':SHA}
 
     def profile_versions(self, parts, scope):
         provider_ids = {r["playerId"] for p in parts for r in p["tables"]["players"]}
@@ -182,9 +198,12 @@ class SourceReader:
         return gaps
 
     def budget(self):
-        return {"queries":self.total["queries"],"decodedBytes":self.total["decodedBytes"],
+        result={"queries":self.total["queries"],"decodedBytes":self.total["decodedBytes"],
                 "runQueries":self.total["queries"]-self.start_queries,"runDecodedBytes":self.total["decodedBytes"]-self.start_bytes,
                 "limits":{"queries":100,"decodedBytes":256*1024*1024},"sourceConnection":"one verified-TLS repeatable-read READ ONLY connection"}
+        if self.max_run_queries is not None:
+            result['captureLimits']={'queries':self.max_run_queries,'decodedBytes':self.max_run_decoded_bytes}
+        return result
 
     def __exit__(self, typ, value, traceback):
         try:
@@ -193,6 +212,110 @@ class SourceReader:
             self.db.close()
             self.total["runs"].append({"evidence":self.evidence.name,"queries":self.total["queries"]-self.start_queries,"decodedBytes":self.total["decodedBytes"]-self.start_bytes})
             self.ledger.write_text(json.dumps(self.total,indent=2)+"\n")
+
+
+class MemorySource:
+    """Trusted same-user Unix IPC source snapshot; never an AWS fallback."""
+    def __init__(self,snapshot):
+        if snapshot.get('format')!='orion_source_memory_v1':raise MappingError('Unknown memory source snapshot format')
+        self.cache=snapshot['cache'];self.meta=snapshot['meta'];self.profile_metadata=snapshot['profile_metadata'];self.profile_gaps=snapshot['profile_gaps']
+        self.captured_budget=snapshot['sourceBudget'];self.validated=set()
+
+    @classmethod
+    def from_socket(cls,path):
+        path=Path(path)
+        info=path.stat(follow_symlinks=False);parent=path.parent.stat()
+        if not stat.S_ISSOCK(info.st_mode) or info.st_uid!=os.getuid() or parent.st_uid!=os.getuid() or parent.st_mode&0o077:
+            raise MappingError('Source IPC endpoint is not an owned private Unix socket')
+        with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as client:
+            client.connect(str(path));client.sendall(b'GET\n')
+            with client.makefile('rb') as stream:snapshot=pickle.load(stream)
+        return cls(snapshot)
+
+    def __enter__(self):return self
+    def __exit__(self,*args):return False
+
+    def documents(self,expected,batch_size=16):
+        for path,digest in expected.items():
+            if path not in self.cache or path not in self.meta or self.meta[path]['physicalSha256']!=digest:
+                raise MappingError('Required source version is absent from the memory snapshot: '+path)
+            if path not in self.validated:
+                if hashed(self.cache[path])!=self.meta[path].get('decodedCanonicalSha256'):
+                    raise MappingError('Memory source content digest differs: '+path)
+                self.validated.add(path)
+        return {path:self.cache[path] for path in expected}
+
+    def profile_versions(self,parts,scope):
+        players={r['playerId'] for p in parts for r in p['tables']['players']}
+        endpoints=[r['endpoint'] for r in self.profile_metadata]
+        if len(endpoints)!=len(set(endpoints)):raise MappingError('Duplicate source profile selectors in memory snapshot')
+        available={r['endpoint'].split('/')[-1] for r in self.profile_metadata if r['endpoint'].startswith('/players/') and r['status']==200 and r['ready']}
+        if set(self.profile_gaps)!=players-available or set(self.profile_gaps)!=set(scope['sourceSummary']['missingPlayerResourceLookupIds']):
+            raise MappingError('Memory snapshot profile lookup membership differs from the pinned scope')
+        return self.profile_gaps
+
+    def budget(self):
+        return {**self.captured_budget,'runQueries':0,'runDecodedBytes':0,'sourceConnection':'memory-only Unix IPC snapshot; no AWS connection'}
+
+
+def source_memory_server(scope_path,evidence,socket_path,*,expected_queries=None,expected_decoded_bytes=None,check_only=False):
+    """One approved real capture survives local iterations solely in RAM."""
+    evidence=Path(evidence);evidence.mkdir(parents=True,exist_ok=True)
+    endpoint=Path(socket_path)
+    if endpoint.exists() or endpoint.parent.stat().st_uid!=os.getuid() or endpoint.parent.stat().st_mode&0o077:
+        raise MappingError('Memory capture requires a fresh owned private socket directory')
+    if expected_queries is None or expected_decoded_bytes is None:
+        raise MappingError('Explicit expected source checkpoint requires both queries and decoded bytes')
+    if any(not isinstance(v,int) or isinstance(v,bool) or v<0 for v in (expected_queries,expected_decoded_bytes)):
+        raise MappingError('Expected source checkpoint counters must be nonnegative integers')
+    reader=SourceReader(evidence,max_run_queries=11,max_run_decoded_bytes=32*1024*1024)
+    if not reader.ledger.is_file():
+        raise MappingError('Source budget ledger is missing; refusing an invented/reset checkpoint')
+    actual=(reader.total['queries'],reader.total['decodedBytes'])
+    if actual!=(expected_queries,expected_decoded_bytes):
+        raise MappingError('Source budget checkpoint mismatch; pass the exact current ledger counters')
+    if expected_queries+11>100 or expected_decoded_bytes+32*1024*1024>256*1024*1024:
+        raise MappingError('Insufficient remaining source budget for the bounded11-query/32MiB capture')
+    checkpoint={'status':'capture_checkpoint_valid','expectedCheckpoint':{'queries':expected_queries,'decodedBytes':expected_decoded_bytes},
+                'captureLimits':{'queries':11,'decodedBytes':32*1024*1024},'hardLimits':{'queries':100,'decodedBytes':256*1024*1024},
+                'remainingBudget':{'queries':100-expected_queries,'decodedBytes':256*1024*1024-expected_decoded_bytes},
+                'ledger':str(reader.ledger),'ledgerSha256':hashlib.sha256(reader.ledger.read_bytes()).hexdigest(),'sourceConnections':0}
+    if check_only:
+        print(json.dumps(checkpoint),flush=True)
+        return 0
+    (evidence/'capture-checkpoint.json').write_text(json.dumps(checkpoint,indent=2)+'\n')
+    scope=json.loads(Path(scope_path).read_text())
+    with reader as source:
+        parts=load_parts(source,scope);source.profile_gaps=source.profile_versions(parts,scope)
+        queries={q['name']:q for q in scope['queries']}
+        family_hashes={r['path']:r['sha256'] for r in queries['archive_relation_source_versions']['rows']}
+        source.documents({c['path']:family_hashes[c['path']] for c in scope['archiveShapeChoices']})
+        source.documents({r['path']:r['sha256'] for r in source.profile_metadata},batch_size=64)
+        snapshot=source.export_snapshot()
+        if snapshot['sourceBudget']['runQueries']>11 or snapshot['sourceBudget']['runDecodedBytes']>32*1024*1024:
+            raise MappingError('Single approved real-source capture exceeded its bounded pass')
+    receipt={'kind':'memory_only_source_capture','pid':os.getpid(),'socket':str(endpoint),'sourceBudget':snapshot['sourceBudget'],
+             'expectedCheckpoint':checkpoint['expectedCheckpoint'],'captureLimits':checkpoint['captureLimits'],
+             'captureCodeSha256':SHA,'argv':[sys.executable,*sys.argv],
+             'documentCount':len(snapshot['cache']),'cacheManifestSha256':hashed(sorted((p,m['physicalSha256'],m['decodedCanonicalSha256']) for p,m in snapshot['meta'].items())),
+             'rawBodiesPersisted':False,'ready':True}
+    (evidence/'capture.json').write_text(json.dumps(receipt,indent=2)+'\n')
+    try:
+        with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as server:
+            server.bind(str(endpoint));os.chmod(endpoint,0o600);server.listen(4)
+            print(json.dumps(receipt),flush=True)
+            while True:
+                client,_=server.accept()
+                with client:
+                    with client.makefile('rb') as request:command=request.readline(32)
+                    if command==b'STOP\n':break
+                    if command!=b'GET\n':continue
+                    with client.makefile('wb') as output:pickle.dump(snapshot,output,protocol=5)
+    finally:
+        if endpoint.exists():endpoint.unlink()
+        receipt.update(ready=False,stoppedAt=datetime.now(timezone.utc).isoformat(),socketRemoved=not endpoint.exists())
+        (evidence/'capture.json').write_text(json.dumps(receipt,indent=2)+'\n')
+    return 0
 
 
 def unpack(table):
@@ -215,7 +338,108 @@ class TypedCore:
         self.field_counts, self.numeric, self.unverified = Counter(), defaultdict(Counter), Counter()
         self.metric_contracts = set()
         self.common_native, self.record_locations = {}, {}
+        self.active_run = None
         self.g = None
+
+    def phase_binding(self, phase, paths, selectors):
+        documents=sorted((path,self.source.meta[path]['physicalSha256']) for path in set(paths))
+        binding={'kind':'orion_pro_phase_receipt_v2','phase':phase,'transform_sha256':SHA,'transform_version':VERSION,
+                 'model_sha256':hashlib.sha256(MODEL.read_bytes()).hexdigest(),'source_document_count':len(documents),
+                 'source_document_manifest_sha256':hashed(documents),'selector_manifest_sha256':hashed(selectors)}
+        binding['input_manifest_sha256']=hashed(binding)
+        return binding
+
+    def phase_receipt(self,binding):
+        key='real-source-v2:'+binding['phase']+':'+binding['input_manifest_sha256']
+        snapshots=list(self.conn.execute('SELECT id,generation,status,manifest_sha256,transform_version,source_priority_version FROM ingest.dataset_snapshots WHERE snapshot_key=%s',(key,)))
+        if not snapshots:
+            prior=self.conn.execute("SELECT id FROM ingest.import_runs WHERE checkpoint->>'kind'='orion_pro_phase_receipt_v2' AND checkpoint->>'phase'=%s LIMIT 1",(binding['phase'],)).fetchone()
+            if prior:raise MappingError('Different source/transform binding requires explicit reconciliation before phase '+binding['phase'])
+            return None
+        snapshot=snapshots[0]
+        if snapshot[2]!='sealed' or snapshot[4:]!=(VERSION,VERSION):
+            raise MappingError('Phase snapshot is not sealed with the exact source/transform binding: '+binding['phase'])
+        runs=list(self.conn.execute("SELECT id,status,transform_version,code_commit,checkpoint FROM ingest.import_runs WHERE checkpoint->>'receipt_key'=%s",(key,)))
+        if len(runs)!=1:raise MappingError('Phase has no unique persisted import receipt: '+binding['phase'])
+        run=runs[0]; checkpoint=run[4]
+        if run[1:4]!=('partial',VERSION,SHA) or checkpoint.get('binding')!=binding or checkpoint.get('generation')!=snapshot[1] or checkpoint.get('snapshot_id')!=snapshot[0]:
+            raise MappingError('Phase receipt metadata differs from the exact binding: '+binding['phase'])
+        report_digest=hashed(checkpoint['report'])
+        if checkpoint.get('report_sha256')!=report_digest or snapshot[3]!=hashed({'input_manifest_sha256':binding['input_manifest_sha256'],'report_sha256':report_digest}):
+            raise MappingError('Phase report metadata differs from its immutable sealed digest: '+binding['phase'])
+        documents=list(self.conn.execute('SELECT d.legacy_object_path,d.content_sha256 FROM ingest.dataset_snapshot_documents l JOIN ingest.source_documents d ON d.id=l.document_id WHERE l.snapshot_id=%s ORDER BY d.legacy_object_path,d.content_sha256',(snapshot[0],)))
+        if len(documents)!=binding['source_document_count'] or hashed(documents)!=binding['source_document_manifest_sha256']:
+            raise MappingError('Phase receipt source-document membership differs: '+binding['phase'])
+        return {'snapshotKey':key,'snapshotId':snapshot[0],'generation':snapshot[1],'runId':run[0],'binding':binding,'sealedManifestSha256':snapshot[3],
+                'report':checkpoint['report'],'reused':True,'newFactRevisions':0,'duplicateRows':0}
+
+    def begin_phase(self,binding):
+        key='real-source-v2:'+binding['phase']+':'+binding['input_manifest_sha256']
+        self.g=self.conn.execute('SELECT ingest.begin_generation(%s,%s,%s)',(key,VERSION,VERSION)).fetchone()[0]
+        return key
+
+    def finish_phase(self,binding,report,paths,run_id):
+        snapshot=self.conn.execute('SELECT id,snapshot_key FROM ingest.dataset_snapshots WHERE generation=%s',(self.g,)).fetchone()
+        compact={k:v for k,v in report.items() if k not in {'leafDispositions','selectors'}}
+        if 'leafDispositions' in report:
+            compact['leafDispositionCount']=len(report['leafDispositions']);compact['leafDispositionSha256']=hashed(report['leafDispositions'])
+        if 'selectors' in report:
+            compact['selectorCount']=len(report['selectors']);compact['selectorSha256']=hashed(report['selectors'])
+        checkpoint={'kind':binding['kind'],'phase':binding['phase'],'receipt_key':snapshot[1],'binding':binding,
+                    'generation':self.g,'snapshot_id':snapshot[0],'report':compact,'report_sha256':hashed(compact)}
+        if len(json.dumps(checkpoint,separators=(',',':'),default=str).encode())>15000:
+            raise MappingError('Phase metadata-only receipt exceeds its bounded checkpoint size')
+        for path in sorted(set(paths)):
+            document=self.documents.get(path)
+            if document is None:raise MappingError('Phase source document was not represented as metadata: '+path)
+            self.conn.execute('INSERT INTO ingest.dataset_snapshot_documents(snapshot_id,document_id) VALUES(%s,%s)',(snapshot[0],document))
+        self.conn.execute("UPDATE ingest.import_runs SET status='partial',finished_at=CURRENT_TIMESTAMP,checkpoint=%s,counters=%s WHERE id=%s",
+            (Jsonb(checkpoint),Jsonb({'full_acceptance':False,'local_only':True,'source_document_count':len(set(paths))}),run_id))
+        sealed=hashed({'input_manifest_sha256':binding['input_manifest_sha256'],'report_sha256':checkpoint['report_sha256']})
+        self.conn.execute('SELECT ingest.seal_generation(%s,%s)',(self.g,sealed))
+        return {'snapshotKey':snapshot[1],'snapshotId':snapshot[0],'generation':self.g,'runId':run_id,'binding':binding,'sealedManifestSha256':sealed}
+
+    def rows(self,sql,params=()):
+        cursor=self.conn.execute(sql,params)
+        names=[c.name for c in cursor.description]
+        return [dict(zip(names,row)) for row in cursor.fetchall()]
+
+    def hydrate_core(self,parts,receipt):
+        expected={'people':{r['playerId'] for p in parts for r in p['tables']['players']},'teams':{r['id'] for p in parts for r in p['tables']['teams']},
+                  'matches':{r['id'] for p in parts for r in p['tables']['fixtures']},'stats':{r['id'] for p in parts for r in p['tables']['performances']},
+                  'profiles':{r['id'] for p in parts for r in p['tables']['players']}}
+        alias_keys=sorted({(kind,r[key]) for p in parts for kind,table,key in [('player','players','playerId'),('team','teams','id'),
+            ('match','fixtures','id'),('profile','players','id'),('competition','competitions','id')] for r in p['tables'][table]})
+        source=self.conn.execute("SELECT id FROM ingest.sources WHERE code='pitchapi_saved'").fetchone()
+        if source is None:raise MappingError('Sealed core receipt has no stable source identity')
+        dataset=self.conn.execute("SELECT id FROM ingest.source_datasets WHERE source_id=%s AND dataset_key='ligue1-two-seasons-normalized-comparison' AND contract_version=%s",(source[0],VERSION)).fetchone()
+        if dataset is None:raise MappingError('Sealed core receipt has no stable dataset identity')
+        self.ids.update(source=source[0],dataset=dataset[0],run=receipt['runId'])
+        self.active_run=receipt['runId'];self.g=receipt['generation']
+        alias_rows=self.rows('SELECT a.route_kind,a.public_key FROM ingest.public_aliases_current a JOIN unnest(%s::text[],%s::text[]) w(kind,key) ON a.route_kind=w.kind AND a.public_key=w.key',
+            ([k[0] for k in alias_keys],[k[1] for k in alias_keys]))
+        self.aliases={(r['route_kind'],r['public_key']) for r in alias_rows}
+        for table,kind,target,name in [('football.players','player',self.people,'people'),('football.teams','team',self.teams,'teams'),('football.matches_current','match',self.matches,'matches')]:
+            extra=' AND r.source_id=%s' if kind=='match' else ''
+            params=(kind,sorted(expected[name]),source[0]) if kind=='match' else (kind,sorted(expected[name]))
+            for row in self.rows(f"SELECT a.public_key public_key,r.* FROM ingest.public_aliases_current a JOIN {table} r ON r.id=a.{kind}_id WHERE a.route_kind=%s AND a.public_key=ANY(%s)"+extra,params):
+                key=row.pop('public_key');target[key]=row
+        for row in self.rows("SELECT a.public_key public_key,p.* FROM ingest.public_aliases_current a JOIN football.player_profile_versions p ON p.id=a.profile_version_id JOIN ingest.source_records sr ON sr.id=p.source_record_id JOIN ingest.dataset_snapshot_documents sd ON sd.document_id=sr.document_id AND sd.snapshot_id=%s WHERE a.route_kind='profile' AND a.public_key=ANY(%s) AND p.source_id=%s",(receipt['snapshotId'],sorted(expected['profiles']),source[0])):
+            key=row.pop('public_key');self.profiles[key]=row
+        for row in self.rows("SELECT a.public_key match_key,b.public_key team_key,t.* FROM football.match_teams_current t JOIN ingest.public_aliases_current a ON a.route_kind='match' AND a.match_id=t.match_id JOIN ingest.public_aliases_current b ON b.route_kind='team' AND b.team_id=t.team_id JOIN ingest.source_records sr ON sr.id=t.source_record_id JOIN ingest.dataset_snapshot_documents sd ON sd.document_id=sr.document_id AND sd.snapshot_id=%s WHERE t.source_id=%s AND a.public_key=ANY(%s) AND b.public_key=ANY(%s)",(receipt['snapshotId'],source[0],sorted(expected['matches']),sorted(expected['teams']))):
+            key=(row.pop('match_key'),row.pop('team_key'));self.sides[key]=row
+        for row in self.rows('SELECT r.external_key performance_key,s.* FROM football.player_match_stats_current s JOIN ingest.source_records r ON r.id=s.source_record_id JOIN ingest.dataset_snapshot_documents sd ON sd.document_id=r.document_id AND sd.snapshot_id=%s WHERE s.source_id=%s AND r.external_key=ANY(%s)',(receipt['snapshotId'],source[0],sorted(expected['stats']))):
+            key=row.pop('performance_key');self.stats[key]=row
+        for row in self.rows("SELECT r.external_key performance_key,v.* FROM football.player_match_metric_values_current v JOIN ingest.source_records r ON r.id=v.source_record_id JOIN ingest.dataset_snapshot_documents sd ON sd.document_id=r.document_id AND sd.snapshot_id=%s WHERE v.source_id=%s AND r.external_key=ANY(%s) AND v.metric_code=ANY(%s)",(receipt['snapshotId'],source[0],sorted(expected['stats']),['legacy_normalized_'+f for f in COMMON_NATIVE])):
+            key=row.pop('performance_key');self.common_native.setdefault(key,{})[row['metric_code'].removeprefix('legacy_normalized_')]=row
+        for row in self.rows('SELECT r.id,r.locator,d.id document_id,d.legacy_object_path,d.content_sha256 FROM ingest.source_records r JOIN ingest.source_documents d ON d.id=r.document_id JOIN ingest.dataset_snapshot_documents sd ON sd.document_id=d.id AND sd.snapshot_id=%s WHERE r.source_id=%s',(receipt['snapshotId'],source[0])):
+            path=row['legacy_object_path']
+            if path in self.source.meta and self.source.meta[path]['physicalSha256']!=row['content_sha256']:
+                raise MappingError('Persisted source metadata differs from captured input: '+path)
+            self.documents[path]=row['document_id'];self.records[(path,row['locator'])]=row['id'];self.record_locations[row['id']]=(path,row['locator'])
+        for name,keys in expected.items():
+            if set(getattr(self,name))!=keys:raise MappingError('SQL rehydration identity membership differs: '+name)
+        self.metric_contracts={r[0] for r in self.conn.execute('SELECT code FROM football.metric_definitions WHERE definition_version=%s',(VERSION,))}
 
     def number(self, value, sql_type, path):
         if value is None:
@@ -283,7 +507,7 @@ class TypedCore:
                 self.documents[path] = self.insert("ingest.source_documents",source_id=self.ids["source"],dataset_id=dataset,
                     content_sha256=meta["physicalSha256"],retrieved_at=meta["updatedAt"],source_updated_at=meta["updatedAt"],
                     storage_provider="aws_s3",origin_kind="legacy_file",retention_state="staged",legacy_object_path=path,
-                    byte_length=meta["bytes"],import_run_id=self.ids["run"])["id"]
+                    byte_length=meta["bytes"],import_run_id=self.active_run or self.ids["run"])["id"]
             self.records[cache] = self.insert("ingest.source_records",source_id=self.ids["source"],document_id=self.documents[path],
                 locator_kind="json_pointer",locator=locator,record_kind=kind,external_key=key)["id"]
             self.record_locations[self.records[cache]] = cache
@@ -349,21 +573,26 @@ class TypedCore:
         return result
 
     def import_core(self, parts):
-        manifest = hashed({"source":[(p["path"],self.source.meta[p["path"]]["physicalSha256"]) for p in parts],"transform":SHA})
-        snapshot_key = "real-source:"+manifest
-        existing = self.conn.execute("SELECT generation,status FROM ingest.dataset_snapshots WHERE snapshot_key=%s",(snapshot_key,)).fetchone()
-        if existing:
-            if existing[1] != "sealed":
-                raise MappingError("Existing real-source generation is not sealed")
-            return {"generation":existing[0],"reused":True,"newFactRevisions":0,"duplicateRows":0}
+        paths=[p['path'] for p in parts]
+        binding=self.phase_binding('core',paths,{'editions':[(p['season'],p['path']) for p in parts],
+            'profile_resources':self.source.profile_metadata,'profile_lookup_gaps':self.source.profile_gaps})
+        self.core_binding=binding
         with self.conn.transaction():
-            self.g = self.conn.execute("SELECT ingest.begin_generation(%s,%s,%s)",(snapshot_key,VERSION,VERSION)).fetchone()[0]
+            self.conn.execute('SELECT pg_advisory_xact_lock(20261104,1)')
+            existing=self.phase_receipt(binding)
+            if existing:
+                self.hydrate_core(parts,existing)
+                return {**existing['report'],'reused':True,'newFactRevisions':0,'duplicateRows':0,'phaseReceipt':{k:v for k,v in existing.items() if k!='report'}}
+            if self.conn.execute("SELECT 1 FROM ingest.sources WHERE code='pitchapi_saved'").fetchone():
+                raise MappingError('Existing typed source has no exact v2 phase receipt; explicit reconciliation is required')
+            self.begin_phase(binding)
             for name,table in self.tables.items():
                 if "relation_code" in table["columns"] and table["phase"] != "models":
                     self.conn.execute("INSERT INTO ingest.relation_contracts(relation_code,relation_name,contract_version,grain_definition) VALUES(%s,%s,%s,%s) ON CONFLICT DO NOTHING",(name,name,VERSION,table["grain"]))
             self.ids["source"] = self.insert("ingest.sources",code="pitchapi_saved",name="PitchAPI existing legacy observations")["id"]
             self.ids["dataset"] = self.insert("ingest.source_datasets",source_id=self.ids["source"],dataset_key="ligue1-two-seasons-normalized-comparison",contract_version=VERSION)["id"]
             self.ids["run"] = self.insert("ingest.import_runs",mode="rebuild",transform_version=VERSION,code_commit=SHA)["id"]
+            self.active_run=self.ids['run']
             self.prepare_common_native_contract(parts[0]["path"])
             league_record = self.record(parts[0]["path"],"/tables/competitions","competition","l_3FJFUl")
             competition = self.insert("football.competitions",name="Ligue 1",slug="l_3FJFUl",competition_type="league",gender="unknown",source_record_id=league_record)
@@ -465,8 +694,9 @@ class TypedCore:
             for pid in self.source.profile_gaps:
                 self.insert("ingest.quality_issues",run_id=self.ids["run"],rule_code="missing_full_profile_resource_lookup",severity="warning",
                     context={"provider_id":pid,"source_lookup":"/players/{id},{}","scope":"Missing exact resource lookup; not global AWS absence"})
-            self.conn.execute("SELECT ingest.seal_generation(%s,%s)",(self.g,manifest))
-        return {"generation":self.g,"reused":False,"facts":{"fixtures":len(self.matches),"performances":len(self.stats)},"manifestSha256":manifest}
+            report={"generation":self.g,"reused":False,"facts":{"fixtures":len(self.matches),"performances":len(self.stats)},'manifestSha256':binding['input_manifest_sha256']}
+            receipt=self.finish_phase(binding,report,paths,self.ids['run'])
+        return {**report,'phaseReceipt':receipt}
 
     def collection(self, mid, feature, count, record, variant):
         return self.insert("ingest.match_coverage",match_id=self.matches[mid]["id"],match_revision_id=self.matches[mid]["revision_id"],
@@ -528,12 +758,15 @@ class TypedCore:
 
     def import_original_families(self, scope):
         """Representative two-season original observations, with explicit gaps."""
-        if hasattr(self,"family_report"):
-            return {**self.family_report,"reused":True,"newFactRevisions":0}
         query_map = {q["name"]:q for q in scope["queries"]}
         hashes = {r["path"]:r["sha256"] for r in query_map["archive_relation_source_versions"]["rows"]}
         choices = scope["archiveShapeChoices"]
+        for chosen in choices:
+            if chosen['path'] in self.source.meta and self.source.meta[chosen['path']]['physicalSha256']!=hashes[chosen['path']]:
+                raise MappingError('Original family captured source hash differs from required version: '+chosen['path'])
         docs = self.source.documents({c["path"]:hashes[c["path"]] for c in choices})
+        paths=sorted({c['path'] for c in choices})
+        binding=self.phase_binding('families',paths,{'members':choices,'core_input_manifest':self.core_binding['input_manifest_sha256']})
         report = {"scope":"two real archived matches, thirteen original families each; canonical normalized comparison remains separate",
             "sourceMembers":0,"uniqueMemberFailures":0,"opaqueSourceBodiesStored":0,"typedRows":0,"dispositions":[],"leafDispositions":[],
             "repeatedMetricPolicy":"retain_each_group_item_as_explicit_noncanonical_source_record_variant"}
@@ -551,7 +784,11 @@ class TypedCore:
                 yield path,kind
 
         with self.conn.transaction():
-            self.g = self.conn.execute("SELECT ingest.begin_generation(%s,%s,%s)",("real-source-original-families:"+SHA,VERSION,VERSION)).fetchone()[0]
+            self.conn.execute('SELECT pg_advisory_xact_lock(20261104,1)')
+            existing=self.phase_receipt(binding)
+            if existing:return {**existing['report'],'reused':True,'newFactRevisions':0,'phaseReceipt':{k:v for k,v in existing.items() if k!='report'}}
+            self.begin_phase(binding)
+            self.active_run=self.insert('ingest.import_runs',mode='rebuild',transform_version=VERSION,code_commit=SHA)['id']
             self.ids["raw_dataset"] = self.insert("ingest.source_datasets",source_id=self.ids["source"],dataset_key="ligue1-two-seasons-original-archive",contract_version=VERSION)["id"]
             for chosen in choices:
                 mid,family,path = chosen["matchId"],chosen["family"],chosen["path"]
@@ -583,16 +820,13 @@ class TypedCore:
                     family_counts[family]["rejectedMembers"] += 1
                     report.setdefault("rejected",[]).append({"matchId":mid,"family":family,"sqlstate":error.sqlstate,"constraint":error.diag.constraint_name,"reason":error.diag.message_primary})
                     self.metric_contracts = {r[0] for r in self.conn.execute("SELECT code FROM football.metric_definitions WHERE definition_version=%s",(VERSION,))}
-            self.conn.execute("SELECT ingest.seal_generation(%s,%s)",(self.g,hashed({"choices":choices,"transform":SHA})))
-        report["dispositions"] = [{"family":family,"status":"partial" if counts["mappedMembers"] else "rejected",**dict(counts)} for family,counts in sorted(family_counts.items())]
-        report["typedRows"] = sum(c["typedRows"] for c in family_counts.values())
-        report["generation"] = self.g
-        self.family_report = report
-        return report
+            report["dispositions"] = [{"family":family,"status":"partial" if counts["mappedMembers"] else "rejected",**dict(counts)} for family,counts in sorted(family_counts.items())]
+            report["typedRows"] = sum(c["typedRows"] for c in family_counts.values())
+            report["generation"] = self.g
+            receipt=self.finish_phase(binding,report,paths,self.active_run)
+        return {**report,'phaseReceipt':receipt}
 
     def import_source_profiles(self, scope):
-        if hasattr(self,"profile_report"):
-            return {**self.profile_report,"reused":True,"newFactRevisions":0}
         expected_rows = next(q["rows"] for q in scope["queries"] if q["name"]=="all_scoped_player_team_profile_source_versions")
         pinned = {r["provider_id"]:r for r in expected_rows if r["status"]==200}
         metadata = self.source.profile_metadata
@@ -605,11 +839,17 @@ class TypedCore:
                 raise MappingError("Full profile resource version differs from the pinned source audit: "+pid)
             expected[row["path"]] = row["sha256"]
         docs = self.source.documents(expected,batch_size=64)
+        binding=self.phase_binding('profiles',sorted(expected),{'resources':metadata,'missing_resource_keys':self.source.profile_gaps,
+            'core_input_manifest':self.core_binding['input_manifest_sha256']})
         report = {"candidatePlayerResourceRows":sum(m["endpoint"].startswith('/players/') for m in metadata),
                   "selectedPlayerObservations":0,"selectedTeamObservations":0,"mismatchedIds":0,"rejectedProviderIds":[],"conflicts":[],"missingPlayerResourceKeys":len(self.source.profile_gaps),
                   "opaqueSourceBodiesStored":0,"selectors":[],"unverifiedUsefulFields":Counter()}
         with self.conn.transaction():
-            self.g = self.conn.execute("SELECT ingest.begin_generation(%s,%s,%s)",("real-source-profile-members:"+SHA,VERSION,VERSION)).fetchone()[0]
+            self.conn.execute('SELECT pg_advisory_xact_lock(20261104,1)')
+            existing=self.phase_receipt(binding)
+            if existing:return {**existing['report'],'reused':True,'newFactRevisions':0,'phaseReceipt':{k:v for k,v in existing.items() if k!='report'}}
+            self.begin_phase(binding)
+            self.active_run=self.insert('ingest.import_runs',mode='rebuild',transform_version=VERSION,code_commit=SHA)['id']
             self.ids["raw_dataset"] = self.insert("ingest.source_datasets",source_id=self.ids["source"],dataset_key="exact-legacy-global-profile-observations",contract_version=VERSION)["id"]
             for meta in metadata:
                 pid,path,ordinal = meta["endpoint"].split('/')[-1],meta["path"],meta["ordinal"]
@@ -650,11 +890,10 @@ class TypedCore:
                 for field in set(data)-handled:report["unverifiedUsefulFields"][field] += 1
                 report["selectors"].append({"providerId":pid,"path":path,"ordinal":ordinal,"physicalSha256":meta["sha256"],"selectedIdMatches":True,
                     "sourceRecordId":record,"decodedProfileSha256":hashed(data)})
-            self.conn.execute("SELECT ingest.seal_generation(%s,%s)",(self.g,hashed({"profiles":report["selectors"],"transform":SHA})))
-        report["unverifiedUsefulFields"] = dict(report["unverifiedUsefulFields"])
-        report["generation"] = self.g
-        self.profile_report = report
-        return report
+            report["unverifiedUsefulFields"] = dict(report["unverifiedUsefulFields"])
+            report["generation"] = self.g
+            receipt=self.finish_phase(binding,report,sorted(expected),self.active_run)
+        return {**report,'phaseReceipt':receipt}
 
     def transform_family(self, family, mid, data, record, variant):
         match = self.matches[mid]
@@ -856,24 +1095,29 @@ def load_parts(source, scope):
 def oracle_comparisons(conn, parts):
     """Read explicit typed SQL projections, separate from insert/mapper functions."""
     comparisons = []
-    for kind,expected,sql in [
+    paths=[p['path'] for p in parts]
+    match_keys=sorted({r['id'] for p in parts for r in p['tables']['fixtures']})
+    for kind,expected,sql,params in [
         ("fixtures",[(r["id"],r.get("status"),r.get("date")) for p in parts for r in p["tables"]["fixtures"]],
-         "SELECT a.public_key,m.status,m.match_date::text FROM ingest.public_aliases_current a JOIN football.matches_current m ON m.id=a.match_id WHERE a.route_kind='match' ORDER BY a.public_key"),
+         "SELECT a.public_key,m.status,m.match_date::text FROM ingest.public_aliases_current a JOIN football.matches_current m ON m.id=a.match_id WHERE a.route_kind='match' AND a.public_key=ANY(%s) ORDER BY a.public_key",(match_keys,)),
         ("performances",[(r["id"],r.get("xg"),r.get("minutes"),r.get("goals"),r.get("assists")) for p in parts for r in p["tables"]["performances"]],
-         "SELECT r.external_key,s.xg,s.minutes_played,s.goals,s.assists FROM football.player_match_stats_current s JOIN ingest.source_records r ON r.id=s.source_record_id ORDER BY r.external_key"),
+         "SELECT r.external_key,s.xg,s.minutes_played,s.goals,s.assists FROM football.player_match_stats_current s JOIN ingest.source_records r ON r.id=s.source_record_id JOIN ingest.source_documents d ON d.id=r.document_id WHERE r.external_key=ANY(%s) AND d.legacy_object_path=ANY(%s) ORDER BY r.external_key",(sorted({r['id'] for p in parts for r in p['tables']['performances']}),paths)),
         ("shots",[(str(r["id"]),r["matchId"],r.get("xg"),r.get("xgot"),r.get("minute")) for p in parts for r in p["tables"]["shots"]],
-         "SELECT s.external_shot_id,a.public_key,s.xg,s.xgot,s.minute FROM football.shots_current s JOIN ingest.public_aliases_current a ON a.match_id=s.match_id AND a.route_kind='match' ORDER BY a.public_key,s.external_shot_id"),
+         "SELECT s.external_shot_id,a.public_key,s.xg,s.xgot,s.minute FROM football.shots_current s JOIN ingest.public_aliases_current a ON a.match_id=s.match_id AND a.route_kind='match' JOIN ingest.source_records sr ON sr.id=s.source_record_id JOIN ingest.source_documents d ON d.id=sr.document_id WHERE a.public_key=ANY(%s) AND d.legacy_object_path=ANY(%s) ORDER BY a.public_key,s.external_shot_id",(match_keys,paths)),
     ]:
-        rows = list(conn.execute(sql))
+        rows = list(conn.execute(sql,params))
         order = lambda r:json.dumps(normalized(r[:2]),sort_keys=True)
         expected,rows = sorted(expected,key=order),sorted(rows,key=order)
-        comparisons.append({"kind":kind,"sourceRows":len(expected),"typedRows":len(rows),"sourceSha256":hashed(expected),"typedSha256":hashed(rows),"sql":sql})
+        comparisons.append({"kind":kind,"sourceRows":len(expected),"typedRows":len(rows),"sourceSha256":hashed(expected),"typedSha256":hashed(rows),"sql":sql,'parameterManifestSha256':hashed(params)})
     expected_aliases = set()
     for p in parts:
         for kind,table,key in (("match","fixtures","id"),("player","players","playerId"),("profile","players","id"),("team","teams","id"),("competition","competitions","id")):
             expected_aliases.update((kind,r[key]) for r in p["tables"][table])
-    rows = list(conn.execute("SELECT route_kind,public_key FROM ingest.public_aliases_current ORDER BY route_kind,public_key"))
-    comparisons.append({"kind":"public_aliases","sourceRows":len(expected_aliases),"typedRows":len(rows),"sourceSha256":hashed(sorted(expected_aliases)),"typedSha256":hashed(sorted(rows))})
+    pairs=sorted(expected_aliases)
+    sql='SELECT a.route_kind,a.public_key FROM ingest.public_aliases_current a JOIN unnest(%s::text[],%s::text[]) w(kind,key) ON a.route_kind=w.kind AND a.public_key=w.key ORDER BY a.route_kind,a.public_key'
+    rows = list(conn.execute(sql,([k[0] for k in pairs],[k[1] for k in pairs])))
+    comparisons.append({"kind":"public_aliases","sourceRows":len(expected_aliases),"typedRows":len(rows),"sourceSha256":hashed(sorted(expected_aliases)),"typedSha256":hashed(sorted(rows)),
+                        'sql':sql,'parameterManifestSha256':hashed(pairs),'scope':'Exact route-kind/public-key pairs from pinned source parts'})
     return comparisons
 
 
@@ -916,7 +1160,7 @@ def fact_counts(conn):
     return {name:conn.execute("SELECT count(*) FROM "+name).fetchone()[0] for name in names}
 
 
-def run_real_pilot(conn, evidence, source_scope, phase="core"):
+def run_real_pilot(conn, evidence, source_scope, phase="core", *, source_provider=None, exercise_demo=False):
     evidence = Path(evidence)
     scope = json.loads(Path(source_scope).read_text())
     from orion_pro_schema import approved_model, APPROVAL
@@ -932,13 +1176,17 @@ def run_real_pilot(conn, evidence, source_scope, phase="core"):
         raise MappingError("Refusing an unowned local PostgreSQL directory")
     conn.execute("SET ROLE orion_pro_ingest")
     role = conn.execute("SELECT current_user").fetchone()[0]
-    with SourceReader(evidence) as source:
+    with (source_provider if source_provider is not None else SourceReader(evidence)) as source:
         parts = load_parts(source,scope)
         source.profile_gaps = source.profile_versions(parts,scope)
         importer = TypedCore(conn,evidence,source)
-        result = {"role":role,"phase":phase,"transformSha256":SHA,"fullAcceptance":False}
+        result = {"role":role,"phase":phase,"transformSha256":SHA,"fullAcceptance":False,'mode':'import_only','demoCorrectionExecuted':False,'processId':os.getpid()}
         try:
             result["import"] = importer.import_core(parts)
+            result['rehydration']={'fromSql':bool(result['import']['reused']),'sourceId':importer.ids['source'],'coreRunId':importer.ids['run'],
+                'players':len(importer.people),'teams':len(importer.teams),'matches':len(importer.matches),'performances':len(importer.stats),'normalizedProfiles':len(importer.profiles),
+                'identitySha256':hashed({'players':sorted((k,v['id']) for k,v in importer.people.items()),'teams':sorted((k,v['id']) for k,v in importer.teams.items()),
+                    'matches':sorted((k,v['id'],v['revision_id']) for k,v in importer.matches.items()),'stats':sorted((k,v['revision_id']) for k,v in importer.stats.items())})}
             if phase == "families":
                 result["families"] = importer.import_original_families(scope)
                 result["fullProfiles"] = importer.import_source_profiles(scope)
@@ -952,18 +1200,21 @@ def run_real_pilot(conn, evidence, source_scope, phase="core"):
             counts_after = fact_counts(conn)
             result["noop"].update(duplicateRows=sum(max(0,counts_after[k]-v) for k,v in counts_before.items()),
                 newFactRevisions=sum(max(0,counts_after[k]-v) for k,v in counts_before.items()),countsBefore=counts_before,countsAfter=counts_after,
-                scope="Same parsed-source cache and importer instance; fresh-process restart/recovery remains unverified")
+                scope="SQL phase receipts and source/transform bindings; importer maps are rehydrated from SQL")
             result["nativeShapes"] = {"missingProfileResourceCount":conn.execute("SELECT count(*) FROM ingest.quality_issues WHERE rule_code='missing_full_profile_resource_lookup'").fetchone()[0],
                 "missingToZeroCoercions":0,"opaqueSourceBodiesStored":0,"numericRoundingCoercions":0,
                 "numericPolicy":"Decimal parse; unconstrained numeric exact; double precision only if Decimal(str(float(v)))==v; fixed scale rejects rounding",
                 "stateCounts":[{"path":k[0],"state":k[1],"count":v} for k,v in sorted(importer.field_counts.items())]}
-            result["correction"] = exercise_correction(importer,parts)
+            if exercise_demo:
+                if result['import']['reused']:
+                    raise MappingError('Demonstration correction requires a newly imported owned E2E database; never replay it on a reused import')
+                result["correction"] = exercise_correction(importer,parts)
+                result['demoCorrectionExecuted']=True
             result["reads"] = measured_reads(conn)
             result["mapping"] = {"unknownUsefulFieldsSilentlyDropped":0,
                 "dispositions":[{"field":field,"status":"unverified","observations":n} for field,n in sorted(importer.unverified.items())],
-                "rejected":result.get("families",{}).get("rejected",[]),"unverified":["Common metrics outside registered xg/xa/xgot/minutes still need explicit native-state contracts", "Original13-family observations are representative two-match typed projections; full leaf fidelity/all512source files remain unaccepted", "Shot coordinate units/frame and source-profile/media fields require approved mapping", "Fresh-process normalizer restart/recovery remains unverified"]}
-            conn.execute("UPDATE ingest.import_runs SET status='partial',finished_at=CURRENT_TIMESTAMP,counters=%s WHERE id=%s",
-                (Jsonb({"local_only":True,"full_acceptance":False,"canonical_matches":612,"canonical_performances":15437,"canonical_shots":9795,"native_metric_slots":61748}),importer.ids["run"]))
+                "rejected":result.get("families",{}).get("rejected",[]),"unverified":["Common metrics outside registered xg/xa/xgot/minutes still need explicit native-state contracts", "Original13-family observations are representative two-match typed projections; full leaf fidelity/all512source files remain unaccepted", "Shot coordinate units/frame and source-profile/media fields require approved mapping", "Changed source/transform receipts require explicit reconciliation rather than an automatic bulk repair"]}
+            result['oracleScope']={'retainedSourceGeneration':result['import']['generation'],'currentSelectionMayContainLaterIndependentCorrections':bool(result['import']['reused'])}
         except Exception as error:
             result["failure"] = {"class":type(error).__name__,"sqlstate":getattr(error,"sqlstate",None),
                 "reason":str(error) if isinstance(error,MappingError) else getattr(getattr(error,"diag",None),"message_primary",None),
@@ -1022,12 +1273,25 @@ def main():
     parser.add_argument("--source-scope",type=Path,required=True)
     parser.add_argument("--phase",choices=["core","families"],default="core")
     parser.add_argument("--evidence",type=Path,required=True)
+    parser.add_argument('--source-socket',type=Path,help='Owned memory-only source snapshot; failure never falls back to AWS')
+    parser.add_argument('--memory-source-server',action='store_true',help='Perform the single approved capture and retain it only in process memory')
+    parser.add_argument('--expected-source-queries',type=int,help='Exact existing source ledger query checkpoint; required by capture mode')
+    parser.add_argument('--expected-source-bytes',type=int,help='Exact existing decoded-byte checkpoint; required by capture mode')
+    parser.add_argument('--capture-check-only',action='store_true',help='Validate capture checkpoint offline without ledger writes or a source connection')
+    parser.add_argument('--exercise-demo-correction',action='store_true',help='Explicit synthetic E2E exercise, refused for an already imported database')
     args = parser.parse_args()
     from orion_pro_migrate import local_connection
     args.evidence.mkdir(parents=True,exist_ok=True)
     try:
+        if not args.memory_source_server and (args.capture_check_only or args.expected_source_queries is not None or args.expected_source_bytes is not None):
+            raise MappingError('Capture checkpoint flags are only valid with --memory-source-server')
+        if args.memory_source_server:
+            if args.source_socket is None:raise MappingError('Memory source server needs a private Unix socket path')
+            return source_memory_server(args.source_scope,args.evidence,args.source_socket,expected_queries=args.expected_source_queries,
+                expected_decoded_bytes=args.expected_source_bytes,check_only=args.capture_check_only)
         with local_connection(psycopg) as conn:
-            result = run_real_pilot(conn,args.evidence,args.source_scope,args.phase)
+            source=MemorySource.from_socket(args.source_socket) if args.source_socket else None
+            result = run_real_pilot(conn,args.evidence,args.source_scope,args.phase,source_provider=source,exercise_demo=args.exercise_demo_correction)
         print(json.dumps({"status":"local_typed_projection_with_mapping_gaps","phase":args.phase,"fullAcceptance":result["fullAcceptance"],"sourceBudget":result["sourceBudget"]}))
         return 0
     except Exception as error:
