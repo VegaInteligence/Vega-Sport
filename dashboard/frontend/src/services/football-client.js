@@ -1,5 +1,6 @@
 import { normalizeArchive } from "./format.js";
 import { apiUrl } from "../data-url.js";
+import { completeFixtures } from "./fixture-pages.js";
 import { cupWorkerSnapshot } from "./cup-worker-client.js";
 import { SAUDI_PRO_LEAGUE, reconcileSaudiFixtures } from "./saudi-fixtures.js";
 /** Data access only: no view builders, document selectors or event delegation. */
@@ -125,23 +126,19 @@ export class FootballDataClient {
       try {
         if (!this.configured)
           throw new Error("Les données en direct ne sont pas disponibles.");
-        const payload = await this.request(
-          browseMode === "day"
-            ? `date/${day}?status=all`
-            : `leagues/${league.id}/matches?season=${encodeURIComponent(season)}&status=all`,
+        const matches = await completeFixtures(
+          browseMode === "day" ? { day } : { league: league.id, season },
         );
-        const matches = payload.data?.matches || [];
         result = {
           matches:
             browseMode === "day"
               ? matches
               : matches.map((match) => ({
                   ...match,
-                  league: match.league ||
-                    payload.data?.league || {
-                      id: league.id,
-                      name: league.name,
-                    },
+                  league: match.league || {
+                    id: league.id,
+                    name: league.name,
+                  },
                   season: match.season ?? season,
                 })),
           source: "api",
@@ -212,7 +209,10 @@ export class FootballDataClient {
         apiError = error;
       }
     }
-    if (apiError && [400, 403, 404, 410, 413, 422, 429].includes(apiError.status)) {
+    if (
+      apiError &&
+      [400, 403, 404, 410, 413, 422, 429].includes(apiError.status)
+    ) {
       this.payloads.set(key, { error: apiError.message, code: apiError.code });
       this.redraw();
       return;
