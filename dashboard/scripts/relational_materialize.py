@@ -21,8 +21,8 @@ from relational_catalog_keys import records as catalog_records
 from relational_core import publish_snapshot
 from relational_match import (
     _PARENT_SUFFIXES,
-    publish_match_details,
-    publish_match_resource,
+    _resource_address,
+    publish_match_batch,
 )
 from relational_snapshot import TABLES, read_partition, snapshot
 from relational_support import FAMILIES, publish_supporting
@@ -563,6 +563,7 @@ def publish_partition(inputs, manifest, label, league, marked):
         for start in range(0, len(mids), 16):
             headroom = capacity(db)
             estimated = 0
+            batch_details = []
             for mid in mids[start : start + 16]:
                 context = scratch.execute(
                     "SELECT body FROM context WHERE mid=?", (mid,)
@@ -622,13 +623,18 @@ def publish_partition(inputs, manifest, label, league, marked):
                     raise RuntimeError(
                         "Match details exceed available RDS publication capacity"
                     )
-                if detail or context:
-                    publish_match_details(
-                        db, mid, detail, json.loads(context[0]) if context else None
-                    )
-                for endpoint, params, response in variants:
-                    if not publish_match_resource(db, endpoint, params, response):
+                for endpoint, _, _ in variants:
+                    if _resource_address(endpoint) is None:
                         raise ValueError("Unmapped saved match endpoint: " + endpoint)
+                if detail or context or variants:
+                    batch_details.append(
+                        (
+                            mid,
+                            detail,
+                            json.loads(context[0]) if context else None,
+                            variants,
+                        )
+                    )
                 f = fixtures[mid]
                 if is_orphan or not f or f.get("status") != "finished":
                     continue
@@ -656,6 +662,7 @@ def publish_partition(inputs, manifest, label, league, marked):
                         sample[target] = {"ok": True, "data": value.get("data")}
                 if merge_sample(tables, sample, mid):
                     count += 1
+            publish_match_batch(db, batch_details)
     if not is_orphan:
         matches = tables["matches"]
         perform = tables["performances"]

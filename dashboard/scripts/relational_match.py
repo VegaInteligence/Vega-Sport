@@ -5,6 +5,7 @@ import math
 import re
 from collections import defaultdict
 from hashlib import sha256
+from itertools import islice
 
 from relational_match_ddl import dbname, leaves, quoted
 from relational_match_model import Children, context, families, nested_families
@@ -154,12 +155,12 @@ def prepare(family, response):
     return header, batches
 
 
-def save_rows(db, resource, spec, rows):
+def _copy_rows(db, spec, parts):
     keys = ["record_no", "missing", "null_groups"]
-    if rows[0]["parent_no"] is not None:
+    if parts[0][1][0]["parent_no"] is not None:
         keys += ["parent_no", "position"]
     if spec.keyed:
-        keys += ["metric_label"]
+        keys.append("metric_label")
     keys += [dbname(p) for p, _ in leaves(spec.fields)]
     sql = (
         f"COPY statarena_app.{spec.table} (resource_id,"
@@ -167,8 +168,13 @@ def save_rows(db, resource, spec, rows):
         + ") FROM STDIN"
     )
     with db.cursor() as cursor, cursor.copy(sql) as stream:
-        for row in rows:
-            stream.write_row((resource, *(row.get(key) for key in keys)))
+        for resource, rows in parts:
+            for row in rows:
+                stream.write_row((resource, *(row.get(k) for k in keys)))
+
+
+def save_rows(db, resource, spec, rows):
+    _copy_rows(db, spec, [(resource, rows)])
 
 
 def publish_match_details(
@@ -179,65 +185,9 @@ def publish_match_details(
     Input is an archive's endpoints mapping or overlaid saved responses, already
     selected for freshness by the importer. params selects a separate endpoint variant.
     """
-    variant = canonical(params or {})
-    if metadata is not None:
-        record = unpack_record(context, metadata, None, "metadata")
-    with db.transaction():
-        db.execute(
-            "INSERT INTO statarena_app.match_details(match_id) VALUES(%s) ON CONFLICT DO NOTHING",
-            (match_id,),
-        )
-        db.execute(
-            "SELECT match_id FROM statarena_app.match_details WHERE match_id=%s FOR UPDATE",
-            (match_id,),
-        )
-        if metadata is not None:
-            record["context_digest"] = sha256(canonical(metadata).encode()).hexdigest()
-            keys = [
-                "context_digest",
-                "missing",
-                "null_groups",
-                *[dbname(p) for p, _ in leaves(context)],
-            ]
-            updates = ",".join(quoted(key) + "=%s" for key in keys)
-            db.execute(
-                "UPDATE statarena_app.match_details SET has_context=true,"
-                + updates
-                + " WHERE match_id=%s AND context_digest IS DISTINCT FROM %s",
-                (
-                    *[record.get(key) for key in keys],
-                    match_id,
-                    record["context_digest"],
-                ),
-            )
-        existing = dict(
-            db.execute(
-                "SELECT family,source_digest FROM statarena_app.match_families WHERE match_id=%s AND params=%s AND subject_id=%s",
-                (match_id, variant, subject_id),
-            )
-        )
-        for family, source in endpoints.items():
-            response = (
-                source.get("response", source) if isinstance(source, dict) else source
-            )
-            digest = sha256(canonical(response).encode()).hexdigest()
-            if existing.get(family) == digest:
-                continue
-            header, batches = prepare(family, response)
-            if family in existing:
-                db.execute(
-                    "DELETE FROM statarena_app.match_families WHERE match_id=%s AND family=%s AND params=%s AND subject_id=%s",
-                    (match_id, family, variant, subject_id),
-                )
-            resource = db.execute(
-                """INSERT INTO statarena_app.match_families
-                (match_id,family,params,subject_id,status,has_data,has_error,error_object,error_code,error_message,
-                 error_has_code,error_has_message,source_digest) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                RETURNING resource_id""",
-                (match_id, family, variant, subject_id, *header, digest),
-            ).fetchone()[0]
-            for spec, rows in batches:
-                save_rows(db, resource, spec, rows)
+    _publish_bounded(
+        db, [(match_id, endpoints, metadata, ())], canonical(params or {}), subject_id
+    )
 
 
 _MATCH = re.compile(r"/matches/(m_[A-Za-z0-9]{6})(?:/(.+))?")
@@ -271,21 +221,230 @@ _NESTED_SUFFIXES = [
 
 
 def publish_match_resource(db, endpoint, params, response):
-    match = _MATCH.fullmatch(endpoint)
-    if not match:
+    address = _resource_address(endpoint)
+    if address is None:
         return False
-    mid, suffix = match[1], match[2] or ""
-    family = _PARENT_SUFFIXES.get(suffix)
-    subject = ""
-    if family is None:
-        for pattern, family_name in _NESTED_SUFFIXES:
-            nested = pattern.fullmatch(suffix)
-            if nested:
-                family, subject = family_name, nested[1]
-                break
-    if family is None:
-        return False
+    mid, family, subject = address
     publish_match_details(
         db, mid, {family: response}, params=params, subject_id=subject
     )
     return True
+
+
+# The rematerialization worker holds at most 16 matches at a time. Accept two
+# such groups for callers replaying a larger batch without retaining all typed rows.
+_MAX_MATCH_RECORDS = 32
+_MAX_COPY_MATCHES = 16
+_MAX_COPY_SOURCE_BYTES = 8 * 1024 * 1024
+
+
+def _resource_address(endpoint):
+    match = _MATCH.fullmatch(endpoint)
+    if not match:
+        return None
+    suffix = match[2] or ""
+    parent = _PARENT_SUFFIXES.get(suffix)
+    if parent:
+        return match[1], parent, ""
+    for pattern, family in _NESTED_SUFFIXES:
+        nested = pattern.fullmatch(suffix)
+        if nested:
+            return match[1], family, nested[1]
+    return None
+
+
+def _family_sources(record, base_params, base_subject):
+    mid, endpoints, _, variants = record
+    for family, response in endpoints.items():
+        yield (mid, base_params, base_subject, family), response
+    for endpoint, params, response in variants:
+        address = _resource_address(endpoint)
+        if address:
+            variant_mid, family, subject = address
+            if variant_mid != mid:
+                raise ValueError("Variant belongs to a different match")
+            yield (mid, canonical(params or {}), subject, family), response
+
+
+def _values_sql(rows, types):
+    """Explicit types also cover batches containing only NULL in a column."""
+    placeholders = "(" + ",".join("%s::" + kind for kind in types) + ")"
+    return ",".join([placeholders] * len(rows)), [
+        value for row in rows for value in row
+    ]
+
+
+def _context_updates(db, records, previous):
+    types = ["text", "text", "text[]", "text[]", *[kind for _, kind in leaves(context)]]
+    keys = [
+        "context_digest",
+        "missing",
+        "null_groups",
+        *[dbname(p) for p, _ in leaves(context)],
+    ]
+    updates = []
+    for mid, _, meta, _ in records:
+        if meta is None:
+            continue
+        digest = sha256(canonical(meta).encode()).hexdigest()
+        if previous[mid] == digest:
+            continue
+        value = unpack_record(context, meta, None, "metadata")
+        value["context_digest"] = digest
+        updates.append((mid, *(value.get(k) for k in keys)))
+    if updates:
+        values, bindings = _values_sql(updates, types)
+        assignments = ",".join(f"{quoted(k)}=v.{quoted(k)}" for k in keys)
+        columns = ",".join(map(quoted, ["match_id", *keys]))
+        db.execute(
+            f"UPDATE statarena_app.match_details d SET has_context=true,{assignments} FROM (VALUES {values}) v({columns}) WHERE d.match_id=v.match_id",
+            bindings,
+        )
+
+
+def _known_families(db, addresses):
+    columns = list(zip(*addresses))
+    return {
+        (mid, params, subject, family): (rid, digest)
+        for mid, params, subject, family, rid, digest in db.execute(
+            """SELECT f.match_id,f.params,f.subject_id,f.family,f.resource_id,f.source_digest
+            FROM unnest(%s::text[],%s::text[],%s::text[],%s::text[]) requested(match_id,params,subject_id,family)
+            JOIN statarena_app.match_families f USING(match_id,params,subject_id,family)""",
+            tuple(list(col) for col in columns),
+        )
+    }
+
+
+def _insert_headers(db, rows):
+    keys = "match_id,params,subject_id,family,status,has_data,has_error,error_object,error_code,error_message,error_has_code,error_has_message,source_digest"
+    types = [
+        "text",
+        "text",
+        "text",
+        "text",
+        "integer",
+        "boolean",
+        "boolean",
+        "boolean",
+        "text",
+        "text",
+        "boolean",
+        "boolean",
+        "text",
+    ]
+    ids = {}
+    for start in range(0, len(rows), 256):
+        values, bindings = _values_sql(rows[start : start + 256], types)
+        inserted = db.execute(
+            "INSERT INTO statarena_app.match_families ("
+            + keys
+            + ") VALUES "
+            + values
+            + " RETURNING match_id,params,subject_id,family,resource_id",
+            bindings,
+        )
+        for mid, params, subject, family, rid in inserted:
+            ids[mid, params, subject, family] = rid
+    return ids
+
+
+def _copy_group(db, sources):
+    if not sources:
+        return
+    existing = _known_families(db, list(sources))
+    headers = []
+    changed = []
+    replace = []
+    for address, (response, digest) in sources.items():
+        old = existing.get(address)
+        if old and old[1] == digest:
+            continue
+        header, batches = prepare(address[3], response)
+        headers.append((*address, *header, digest))
+        changed.append((address, batches))
+        if old:
+            replace.append(old[0])
+    if not headers:
+        return
+    if replace:
+        db.execute(
+            "DELETE FROM statarena_app.match_families WHERE resource_id=ANY(%s::bigint[])",
+            (replace,),
+        )
+    ids = _insert_headers(db, headers)
+    # Each table is copied once. Parent tables precede their children within
+    # every family's traversal, including children absent from earlier matches.
+    groups = {}
+    for address, batches in changed:
+        for spec, rows in batches:
+            if spec.table not in groups:
+                groups[spec.table] = (spec, [])
+            groups[spec.table][1].append((ids[address], rows))
+    for spec, parts in groups.values():
+        _copy_rows(db, spec, parts)
+
+
+def publish_match_batch(db, records):
+    """Publish up to 32 distinct matches and their saved variants atomically.
+
+    Each input is (match_id, family_responses, optional_metadata, saved_variants).
+    A saved variant is (endpoint, params, response). The importer selects source
+    precedence. Absent families and metadata retain their previous published values.
+    """
+    _publish_bounded(db, records, "{}", "")
+
+
+def _publish_bounded(db, records, base_params, base_subject):
+    records = list(islice(records, _MAX_MATCH_RECORDS + 1))
+    if not records:
+        return
+    if len(records) > _MAX_MATCH_RECORDS:
+        raise ValueError("A match publication batch accepts at most 32 records")
+    mids = sorted(row[0] for row in records)
+    if len(set(mids)) != len(mids):
+        raise ValueError("A match may appear only once per batch")
+    with db.transaction():
+        db.execute(
+            """INSERT INTO statarena_app.match_details(match_id)
+                      SELECT mid FROM unnest(%s::text[]) mid ORDER BY mid ON CONFLICT DO NOTHING""",
+            (mids,),
+        )
+        previous = dict(
+            db.execute(
+                """SELECT match_id,context_digest FROM statarena_app.match_details
+                   WHERE match_id=ANY(%s::text[]) ORDER BY match_id FOR UPDATE""",
+                (mids,),
+            )
+        )
+        _context_updates(db, records, previous)
+        group = {}
+        size = 0
+        count = 0
+        for record in records:
+            if count == _MAX_COPY_MATCHES:
+                _copy_group(db, group)
+                group = {}
+                size = 0
+                count = 0
+            count += 1
+            for address, source in _family_sources(record, base_params, base_subject):
+                if address in group:
+                    # Preserve sequential precedence for equivalent parameter encodings.
+                    _copy_group(db, group)
+                    group = {}
+                    size = 0
+                    count = 1
+                response = (
+                    source.get("response", source)
+                    if isinstance(source, dict)
+                    else source
+                )
+                raw = canonical(response).encode()
+                if group and size + len(raw) > _MAX_COPY_SOURCE_BYTES:
+                    _copy_group(db, group)
+                    group = {}
+                    size = 0
+                    count = 1
+                group[address] = (response, sha256(raw).hexdigest())
+                size += len(raw)
+        _copy_group(db, group)
