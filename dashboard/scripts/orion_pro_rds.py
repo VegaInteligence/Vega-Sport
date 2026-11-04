@@ -35,7 +35,7 @@ EXECUTION_PATHS = [SPEC, CA, BASE / 'approval.json', BASE / 'model-amendments.js
     *SQL_PATHS.values(), *[ROOT / 'dashboard/scripts' / name for name in
     ('orion_pro_schema.py', 'orion_pro_integrity.py', 'orion_pro_migrate.py', 'orion_pro_normalize.py', 'orion_pro_rds.py')],
     *[ROOT / 'tests' / name for name in ('orion_pro_pilot_postgres.py', 'orion_pro_metric_states_postgres.py',
-                                      'orion_pro_real_pilot.py', 'orion_pro_rds_gate.py')], BASE / 'harness.py', BASE / 'fixtures.py']
+                                      'orion_pro_real_pilot.py', 'orion_pro_rds_gate.py', 'orion_pro_rds_apply_local.py')], BASE / 'harness.py', BASE / 'fixtures.py']
 
 
 class GateError(Exception):
@@ -232,7 +232,7 @@ def target_state(q, model, migrations):
     if {r['version']: r['content_sha256'] for r in journal} != migrations or len(journal) != 2:
         raise GateError('Target journal versions/checksums differ; no remote rollback or repair is permitted')
     catalogue = q.run('target_catalogue', "SELECT n.nspname||'.'||c.relname AS name,c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=ANY(%s) AND c.relkind IN ('r','p') ORDER BY 1", (list(SCHEMAS),))
-    expected = {t['qualified_name'] for t in active_tables(model)}
+    expected = set(active_tables(model))
     if {r['name'] for r in catalogue} != expected:
         raise GateError('Journalled target table set differs from the current model')
     allowed = {'ingest.schema_migrations', 'ingest.dataset_snapshots', 'ingest.relation_contracts', *model['seed_data']}
@@ -378,7 +378,14 @@ def apply_schema_bootstrap(report, model, artifacts, grants):
         raise GateError('Existing admin parameter is not SecureString')
     secret = json.loads(parameter['Value'])
     del secret_response, parameter
-    if secret.get('host') != HOST or secret.get('database') != DATABASE or not secret.get('username') or not secret.get('password'):
+    # This existing instance-wide credential retains its historical database
+    # label and may omit host. It never supplies the connection destination.
+    allowed_fields = {'database', 'password', 'security_group', 'username', 'host'}
+    if (not isinstance(secret, dict) or set(secret) - allowed_fields
+            or secret.get('username') != 'statarena_admin'
+            or secret.get('database') not in ('statarena', DATABASE)
+            or ('host' in secret and secret['host'] != HOST)
+            or not isinstance(secret.get('password'), str) or not secret['password']):
         raise GateError('Existing admin parameter target mismatch')
     kwargs = dict(host=HOST, port=5432, dbname=DATABASE, user=secret['username'], password=secret['password'],
                   sslmode='verify-full', sslrootcert=str(CA), connect_timeout=7, autocommit=True,
