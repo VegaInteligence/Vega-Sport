@@ -14,6 +14,8 @@ on:
       - 'dashboard/frontend/src/services/**'
       - 'dashboard/frontend/src/hooks/FootballContext.jsx'
       - 'dashboard/frontend/src/season_data.js'
+      - 'dashboard/frontend/src/packed_data.js'
+      - 'docs/verification/aws-wire-pages/disposable.mjs'
       - 'dashboard/frontend/src/data-url.js'
       - 'dashboard/frontend/src/server/**'
       - 'dashboard/shared/**'
@@ -45,6 +47,8 @@ on:
       - 'dashboard/frontend/src/services/**'
       - 'dashboard/frontend/src/hooks/FootballContext.jsx'
       - 'dashboard/frontend/src/season_data.js'
+      - 'dashboard/frontend/src/packed_data.js'
+      - 'docs/verification/aws-wire-pages/disposable.mjs'
       - 'dashboard/frontend/src/data-url.js'
       - 'dashboard/frontend/src/server/**'
       - 'dashboard/shared/**'
@@ -141,6 +145,7 @@ jobs:
             docs/verification/aws-actions-20261104
             docs/verification/aws-rematerialize-20261104
             docs/verification/aws-relational-core-20261104
+            docs/verification/aws-wire-pages
             docs/verification/aws-frontend-20261104
             docs/verification/relational-match-20261104
             docs/verification/aws-support-20261104
@@ -178,6 +183,8 @@ jobs:
         run: node docs/verification/aws-rematerialize-20261104/run.mjs ci
       - name: Exercise core publisher and HTTP read contracts
         run: bun dashboard/scripts/verify_relational_core.mjs
+      - name: Verify compact and default HTTP partition representations
+        run: bun docs/verification/aws-wire-pages/disposable.mjs --ci
       - name: Exercise captured match detail HTTP contracts
         run: python3 docs/verification/aws-actions-20261104/capture_ci.py match
       - name: Exercise captured support HTTP contracts
