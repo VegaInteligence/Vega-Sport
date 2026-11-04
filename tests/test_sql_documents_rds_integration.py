@@ -62,6 +62,23 @@ class SqlDocumentRdsIntegrationTest(unittest.TestCase):
                     store.put(csv_path, b'team,score\nCaen,2\n')
                     csv_value = db.execute("select document->'rows'->0->>0 from statarena.current_file_documents where source_path=%s", (csv_path,)).fetchone()
                     self.assertEqual(csv_value, ("Caen",))
+                    clean_lines_path = path + ".clean.jsonl"
+                    store.put(clean_lines_path, b'{"team":"Caen"}\n{"team":"Bristol"}\n')
+                    clean_names = db.execute("select document->>'team' from statarena.current_file_documents where source_path=%s order by document_path", (clean_lines_path,)).fetchall()
+                    self.assertEqual(clean_names, [("Caen",), ("Bristol",)])
+                    lines_path = path + ".jsonl"
+                    other_path = path + ".txt"
+                    store.put(other_path, b"other file")
+                    other_sha = hashlib.sha256(b"other file").digest()
+                    db.execute("""insert into statarena.file_documents
+                        (document_path,source_path,source_sha256,format,document,error)
+                        values(%s,%s,%s,'json',%s::jsonb,null)""",
+                        (lines_path + "!line/1", other_path, other_sha, '{"old":true}'))
+                    # The first line collides with another virtual path. COPY
+                    # rolls back to a savepoint and the upsert fallback handles it.
+                    store.put(lines_path, b'{"team":"Caen"}\n{"team":"Bristol"}\n')
+                    names = db.execute("select document->>'team' from statarena.current_file_documents where source_path=%s order by document_path", (lines_path,)).fetchall()
+                    self.assertEqual(names, [("Caen",), ("Bristol",)])
                     raise Rollback()
             self.assertIsNone(db.execute("select 1 from statarena.objects where path=%s", (path,)).fetchone())
         finally:
