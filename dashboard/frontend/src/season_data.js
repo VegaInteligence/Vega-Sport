@@ -1,5 +1,5 @@
-import { decodeTables } from "./packed_data.js";
-import { apiUrl } from "./data-url.js";
+import { decodeTables, rowCopier } from "./packed_data.js";
+import { apiUrl, dataUrl } from "./data-url.js";
 const chunkCaches = new WeakMap();
 function cachedPart(key, fetcher, loader) {
   if (!chunkCaches.has(fetcher)) chunkCaches.set(fetcher, new Map());
@@ -100,7 +100,8 @@ export function mergeSeason(manifest, selected, parts) {
   return {
     meta: {
       schemaVersion: 2,
-      source: "PitchAPI · archive européenne locale",
+      source: manifest.storage === "json-packed" ? "PitchAPI · archives Neon" : "PitchAPI · archive européenne locale",
+      storage: manifest.storage,
       retrievedAt: retrieved,
       currentSeason: selected,
       seasons: manifest.seasons.map((s) => s.id),
@@ -266,12 +267,61 @@ function scheduled(loader) {
     else pending.push(start);
   });
 }
+
+export function restoreLegacyTables(tables, chunk) {
+  const players = new Map(tables.players.map((player) => [player.id, player]));
+  const shots = new Map(), stats = new Map(tables.team_statistics.map((row) => [row.matchId, row.values]));
+  for (const shot of tables.shots) {
+    const { matchId, ...value } = shot;
+    if (!shots.has(matchId)) shots.set(matchId, []);
+    shots.get(matchId).push(value);
+  }
+  const packed = chunk?.tables?.performances;
+  const uniform = packed?.keys && !Object.values(packed.missing || {}).some((absent) => absent?.length);
+  const copy = uniform ? rowCopier(packed.keys.filter((key) => key !== "playerRef"), ["name", "imageUrl"]) : null;
+  const appearances = tables.performances.map((row) => {
+    const player = players.get(row.playerRef);
+    if (!player) throw new Error("Référence joueur absente");
+    if (copy) return copy(row, player);
+    const { playerRef, ...value } = row;
+    return { ...value, name: player.name, imageUrl: player.imageUrl };
+  });
+  return {
+    meta: chunk.meta,
+    metrics: chunk.metrics,
+    fixtures: tables.fixtures,
+    competitions: tables.competitions,
+    teams: tables.teams,
+    matches: tables.matches.map((row) => ({ ...row, shots: shots.get(row.id) || [], stats: stats.get(row.id) || [] })),
+    appearances,
+  };
+}
+
+async function loadLegacySeason(manifest, selected, fetcher, leagueIds) {
+  const season = manifest.seasons.find((item) => item.id === selected);
+  if (!season) throw new Error("Saison indisponible");
+  const chunks = season.chunks.filter((chunk) => !leagueIds || leagueIds.has(chunk.leagueId));
+  const parts = await Promise.all(chunks.map((chunk) => {
+    const load = () => scheduled(async () => {
+      const result = await fetcher(dataUrl(chunk.path));
+      if (!result.ok) throw new Error(`Données indisponibles (HTTP ${result.status})`);
+      if (typeof DecompressionStream === "undefined") throw new Error("Ce navigateur ne peut pas décompresser les données de saison.");
+      const packed = await new Response(result.body.pipeThrough(new DecompressionStream("gzip"))).json();
+      return restoreLegacyTables(decodeTables(packed), packed);
+    });
+    return chunk.sourceDigest ? cachedPart(JSON.stringify(["neon", selected, chunk.leagueId, chunk.sourceDigest]), fetcher, load) : load();
+  }));
+  return mergeSeason(manifest, selected, parts);
+}
+
 export async function loadSeason(
   manifest,
   selected,
   fetcher = fetch,
   leagueIds = null,
 ) {
+  if (manifest.storage === "json-packed")
+    return loadLegacySeason(manifest, selected, fetcher, leagueIds);
   const season = manifest.seasons.find((item) => item.id === selected);
   if (!season) throw new Error("Saison indisponible");
   const chunks = season.chunks.filter(

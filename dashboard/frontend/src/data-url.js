@@ -33,3 +33,14 @@ export function apiUrl(path) {
     throw new Error("Route API invalide.");
   return origin + path;
 }
+
+/** Existing saved Neon objects are read only while the legacy backend is active. */
+export function dataUrl(path) {
+  if (
+    typeof path !== "string" ||
+    !/^(raw|computed)\/[A-Za-z0-9_./-]+$/.test(path) ||
+    path.split("/").some((part) => part.startsWith("."))
+  )
+    throw new Error("Route de données invalide.");
+  return "/data/" + path;
+}

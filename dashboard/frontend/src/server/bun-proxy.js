@@ -2,14 +2,19 @@
 export async function proxy(request) {
   const url = new URL(request.url);
   if (process.env.NEXT_PUBLIC_API_ORIGIN) {
+    if (url.pathname.startsWith("/data/"))
+      return new Response(null, { status: 410, headers: { "Cache-Control": "no-store" } });
     const { apiUrl } = await import("../data-url.js");
     return Response.redirect(apiUrl(url.pathname + url.search), 307);
   }
-  if (process.env.VERCEL)
-    return new Response(null, {
-      status: 503,
-      headers: { "Cache-Control": "no-store" },
-    });
+  if (process.env.VERCEL) {
+    const [{ legacyCompatibility }, { handleRequest }, { dataJson }] = await Promise.all([
+      import("./legacy-compat.js"),
+      import("../../../backend/legacy-app.js"),
+      import("../../../backend/services/data-store.js"),
+    ]);
+    return legacyCompatibility(request, { handleLegacy: handleRequest, readJson: dataJson });
+  }
   const origin = process.env.ORION_API_ORIGIN || "http://127.0.0.1:8765";
   try {
     const validator = request.headers.get("if-none-match");

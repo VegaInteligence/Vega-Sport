@@ -1,5 +1,5 @@
 import { normalizeArchive } from "./format.js";
-import { apiUrl } from "../data-url.js";
+import { apiUrl, dataUrl } from "../data-url.js";
 import { completeFixtures } from "./fixture-pages.js";
 import { cupWorkerSnapshot } from "./cup-worker-client.js";
 import { SAUDI_PRO_LEAGUE, reconcileSaudiFixtures } from "./saudi-fixtures.js";
@@ -161,6 +161,30 @@ export class FootballDataClient {
     this.supplementalLoading = true;
     this.supplementalError = null;
     try {
+      if (this.data.meta?.storage === "json-packed") {
+        const indexResponse = await fetch(dataUrl("raw/supplemental-index.json"));
+        if (!indexResponse.ok) throw new Error(`HTTP ${indexResponse.status}`);
+        const index = await indexResponse.json();
+        if (!Array.isArray(index.competitions) || !index.meta) throw new Error("Format de données invalide");
+        const competitions = new Array(index.competitions.length);
+        let cursor = 0;
+        await Promise.all(Array.from({ length: Math.min(4, competitions.length) }, async () => {
+          while (cursor < competitions.length) {
+            const position = cursor++, { tables, ...item } = index.competitions[position];
+            for (const [kind, ref] of Object.entries(tables || {})) {
+              const response = await fetch(dataUrl(ref.path));
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              if (typeof DecompressionStream === "undefined") throw new Error("Ce navigateur ne peut pas décompresser les données.");
+              item[kind] = await new Response(response.body.pipeThrough(new DecompressionStream("gzip"))).json();
+            }
+            competitions[position] = item;
+          }
+        }));
+        this.supplementalData = { meta: index.meta, competitions };
+        this.supplementalLoading = false;
+        this.redraw();
+        return;
+      }
       const response = await fetch(apiUrl("/api/supplemental"));
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const value = await response.json();
