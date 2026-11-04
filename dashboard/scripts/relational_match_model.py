@@ -288,3 +288,8 @@ nested_families = {
 # its original DDL is reproducible and 007 can upgrade previously populated rows.
 families_v004 = deepcopy(families)
 shot.update(columns(boolean="is_own_goal is_saved_off_line"))
+
+
+# Match-level playing position is independent of the player's identity metadata.
+# Individually saved player responses reuse this same table.
+families["players"].fields["players"].fields["position_id"] = "integer"
