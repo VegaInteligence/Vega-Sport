@@ -41,7 +41,7 @@ receipt = {"atUtc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
            "modelSha256":expected["modelSha256"], "expected":expected["counts"],
            "exitCode":process.returncode, "passed":process.returncode==0 and bool(result and result.get("passed") and result.get("modelSha256")==expected["modelSha256"]),
            "log":"viewer-e2e.log", "screenshots":result.get("artifacts", []) if result else [],
-           "limits":"Generated review-document navigation only. SQL constraints, local typed pilot, full source coverage, historical recalculation, application performance and remote migration remain unverified."}
+           "limits":"Generated review-document navigation only. It does not assess SQL/pilot acceptance; separate bounded local pilot receipts exist. Complete source fidelity, public parity, RDS performance and global acceptance remain open."}
 (OUT / "evidence/viewer-e2e.json").write_text(json.dumps(receipt,indent=2)+'\n')
 print(json.dumps(receipt))
 if not receipt["passed"]:

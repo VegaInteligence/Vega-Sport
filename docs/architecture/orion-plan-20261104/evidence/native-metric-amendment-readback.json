@@ -1,0 +1,52 @@
+{
+  "atUtc": "2026-11-04T18:37:40.918377+00:00",
+  "command": "Read-only git show approvedPlanCommit:model, JSON recursive comparison against current target; no source/model write.",
+  "baselineModelSha256": "028c221d4cd45ad809a2340e62f34ab9df191c593b23c0c45d5f44587eb35a8c",
+  "modelSha256": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08",
+  "baselineCommit": "411207645f61f9fa0a9e31680edbe475a0432868",
+  "changedPaths": [
+    {
+      "path": "/schemas/1/tables/54/checks/0/sql",
+      "before": "num_nonnulls(numeric_value,text_value,boolean_value)=1",
+      "after": "(value_kind IN ('null','absent') AND num_nonnulls(numeric_value,text_value,boolean_value,numerator,denominator,source_display)=0) OR (value_kind IN ('number','string','boolean') AND num_nonnulls(numeric_value,text_value,boolean_value)=1)"
+    },
+    {
+      "path": "/schemas/1/tables/54/checks/2/sql",
+      "before": "(value_kind='number' AND numeric_value IS NOT NULL) OR (value_kind='string' AND text_value IS NOT NULL) OR (value_kind='boolean' AND boolean_value IS NOT NULL)",
+      "after": "(value_kind='number' AND numeric_value IS NOT NULL) OR (value_kind='string' AND text_value IS NOT NULL) OR (value_kind='boolean' AND boolean_value IS NOT NULL) OR (value_kind IN ('null','absent') AND num_nonnulls(numeric_value,text_value,boolean_value,numerator,denominator,source_display)=0)"
+    },
+    {
+      "path": "/schemas/1/tables/54/columns/value_kind/description",
+      "before": "number, string ou boolean ; NULL/absence distingués par les états de champ.",
+      "after": "number, string, boolean, null ou absent. null/absent n’ont ni scalaire primaire, ni fraction, ni affichage source. Une ligne absente signifie une observation inconnue ; absent exige un champ attendu et une couverture acceptée prouvés."
+    },
+    {
+      "path": "/schemas/1/tables/54/description",
+      "before": "Métriques secondaires enregistrées, avec types, unité et fractions explicites. Grain physique : une révision typée, PK (revision_id) ; clé logique (match_id, player_id, period_code, family_code, metric_code), variante variant_key ; sélection canonique (match_id, player_id, period_code, family_code, metric_code) ; intervalle de connaissance [recorded_from_gen, recorded_to_gen), fin NULL pour la version courante.",
+      "after": "Observations typées de métriques enregistrées et de leur état natif, avec unité et fractions explicites ; une projection numérique commune ne remplace pas cet état. Grain physique : une révision typée, PK (revision_id) ; clé logique (match_id, player_id, period_code, family_code, metric_code), variante variant_key ; sélection canonique (match_id, player_id, period_code, family_code, metric_code) ; intervalle de connaissance [recorded_from_gen, recorded_to_gen), fin NULL pour la version courante."
+    },
+    {
+      "path": "/schemas/1/tables/55/checks/0/sql",
+      "before": "num_nonnulls(numeric_value,text_value,boolean_value)=1",
+      "after": "(value_kind IN ('null','absent') AND num_nonnulls(numeric_value,text_value,boolean_value,numerator,denominator,source_display)=0) OR (value_kind IN ('number','string','boolean') AND num_nonnulls(numeric_value,text_value,boolean_value)=1)"
+    },
+    {
+      "path": "/schemas/1/tables/55/checks/2/sql",
+      "before": "(value_kind='number' AND numeric_value IS NOT NULL) OR (value_kind='string' AND text_value IS NOT NULL) OR (value_kind='boolean' AND boolean_value IS NOT NULL)",
+      "after": "(value_kind='number' AND numeric_value IS NOT NULL) OR (value_kind='string' AND text_value IS NOT NULL) OR (value_kind='boolean' AND boolean_value IS NOT NULL) OR (value_kind IN ('null','absent') AND num_nonnulls(numeric_value,text_value,boolean_value,numerator,denominator,source_display)=0)"
+    },
+    {
+      "path": "/schemas/1/tables/55/columns/value_kind/description",
+      "before": "number, string ou boolean ; NULL/absence distingués par les états de champ.",
+      "after": "number, string, boolean, null ou absent. null/absent n’ont ni scalaire primaire, ni fraction, ni affichage source. Une ligne absente signifie une observation inconnue ; absent exige un champ attendu et une couverture acceptée prouvés."
+    },
+    {
+      "path": "/schemas/1/tables/55/description",
+      "before": "Métriques secondaires enregistrées, avec types, unité et fractions explicites. Grain physique : une révision typée, PK (revision_id) ; clé logique (match_id, team_id, period_code, family_code, metric_code), variante variant_key ; sélection canonique (match_id, team_id, period_code, family_code, metric_code) ; intervalle de connaissance [recorded_from_gen, recorded_to_gen), fin NULL pour la version courante.",
+      "after": "Observations typées de métriques enregistrées et de leur état natif, avec unité et fractions explicites ; une projection numérique commune ne remplace pas cet état. Grain physique : une révision typée, PK (revision_id) ; clé logique (match_id, team_id, period_code, family_code, metric_code), variante variant_key ; sélection canonique (match_id, team_id, period_code, family_code, metric_code) ; intervalle de connaissance [recorded_from_gen, recorded_to_gen), fin NULL pour la version courante."
+    }
+  ],
+  "changeCount": 8,
+  "passed": true,
+  "scope": "Exact immutable-approved-to-candidate8-path documentary readback, not SQL acceptance."
+}

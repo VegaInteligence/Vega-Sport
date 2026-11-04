@@ -1,0 +1,66 @@
+{
+  "atUtc": "2026-11-04T17:48:06.596773+00:00",
+  "setup": "Existing local HTTP127.0.0.1:8794 and Playwright CLI orion-plan; desktop1440x1000 and mobile390x844; no external service/environment operations.",
+  "rerun": "python3 -B - <<'PYCODE'\nfrom pathlib import Path\nimport subprocess\nroot = Path('/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking')\ncode = (root / 'docs/architecture/orion-plan-20261104/evidence/status-architecture-workflow.js').read_text()\nsubprocess.run(['/Users/lemonnierhugo/.codex/skills/playwright/scripts/playwright_cli.sh', '-s=orion-plan', 'run-code', code], cwd=root / 'output/playwright/orion-plan', check=True)\nPYCODE\npython3 -B docs/architecture/orion-plan-20261104/tools/inspect_proposal.py\npython3 -B docs/architecture/orion-plan-20261104/tools/verify_artifacts.py",
+  "workflow": "status-architecture-workflow.js",
+  "sourceReceipts": [
+    "../../../verification/orion-availability-20261104/vercel-production-readback.json",
+    "../../../verification/orion-availability-20261104/vercel-browser-20261104T173656163590Z.json",
+    "../../../verification/orion-availability-20261104/canonical-browser.json"
+  ],
+  "modelAndHelpersUnchanged": true,
+  "modelSha256": "028c221d4cd45ad809a2340e62f34ab9df191c593b23c0c45d5f44587eb35a8c",
+  "fullModelE2E": "viewer-e2e.json at2026-11-04T17:41:53.861077Z;1208checks were not repeated for this later prose/architecture refresh.",
+  "architecture": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "restored production heading visible",
+        "passed": true
+      },
+      {
+        "name": "current architecture labels real restored build, bridge and Neon",
+        "passed": true
+      },
+      {
+        "name": "AWS preview remains partial",
+        "passed": true
+      },
+      {
+        "name": "old503 not presented as current architecture",
+        "passed": true
+      },
+      {
+        "name": "mobile no global overflow",
+        "passed": true
+      },
+      {
+        "name": "no JavaScript errors",
+        "passed": true
+      },
+      {
+        "name": "no external requests",
+        "passed": true
+      }
+    ],
+    "errors": [],
+    "requests": [],
+    "artifacts": [
+      "architecture-status-desktop.png",
+      "architecture-status-mobile.png"
+    ],
+    "scope": "Focused changed architecture only; no rerun of the unchanged model1208checks and no external service operations."
+  },
+  "exitCode": 0,
+  "passed": true,
+  "screenshotsSha256": {
+    "architecture-status-desktop.png": "2530bdcb37f2aa0c5ef045fc16ed00469aafe9841cb873627c8f873ab0bc8379",
+    "architecture-status-mobile.png": "0b6b3a45acc56edfa1269ec6072b42d317764f7e6d292dc38b3793ea46c73655"
+  },
+  "documentSha256": {
+    "PLAN.md": "33c33334a08f31790fb62e439b49b63648414f5a3370b78a2c10b53c6624798c",
+    "index.html": "eb2eaf985b3bae6e16210209c786e1a5a16508a5f89f99fc5c8d48c034edcf25",
+    "diagrams/architecture-actuelle.dot": "17bde0130ff2fca856226237d5a1d1050fda8e4d3e41d847d4e405bf85883f04",
+    "diagrams/architecture-actuelle.svg": "1eb8590bc997d5613dbc6c8a715c4e0dd71c5e73edf535a4cc8c348c201bd145"
+  }
+}

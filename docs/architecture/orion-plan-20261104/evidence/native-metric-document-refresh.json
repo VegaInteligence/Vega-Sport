@@ -1,0 +1,33 @@
+{
+  "atUtc": "2026-11-04T18:42:18.094304+00:00",
+  "scope": "Approved-pilot documentary candidate refresh; fresh browser on18da, static inspection and immutable source readbacks only. Existing separate localSQL receipts are linked, not rerun here.",
+  "modelSha256": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08",
+  "baseApprovedModelSha256": "028c221d4cd45ad809a2340e62f34ab9df191c593b23c0c45d5f44587eb35a8c",
+  "protectedSourcesUnchanged": true,
+  "checks": {
+    "candidateBrowser": true,
+    "candidateModelPathsExactly8": true,
+    "staticInspection": true,
+    "originalApprovalPreserved": true
+  },
+  "proofsSha256": {
+    "proposal-inspection.json": "7de940b89167e39e810c50591396caecebe67f3384d38024947603efa33e4647",
+    "plan-coherence.json": "6522903cea1a4a91ee61d5c8b0206fc72ff40404df7decbb2499a9e5f8ed6ab5",
+    "viewer-e2e.json": "e0a81630cb74f107990f38e0ee6c8eb3d547b8dc0d89eaa0115addefb40a32a6",
+    "viewer-checks.json": "46cfc3c70c7d1d7bb1210f37954855718e6b601c5e181383e924145d41be7e5a",
+    "rebuild.json": "9dc0c570dd18097388adb6bcd506440d1604726683dfe5385b306ee1800ccb6d",
+    "pro-transform-protocols.json": "8088f9ddd2b001ff0480af8ac065e9ef9c33e193d3e621b07a70733c8027c614",
+    "native-metric-amendment-readback.json": "fc8e9cd7b72bf7416ea08df376ba4b66986ebea9d49aeade9bb48b7cfaf5ead7"
+  },
+  "passed": true,
+  "separatePilotEvidence": {
+    "metricStatesCandidate": "../../../verification/orion-pro-pilot-20261104/metric-state-runs/20261104T183139777229Z-targeted-native-metric-candidate/result.json",
+    "baseRegressionCandidate": "../../../verification/orion-pro-pilot-20261104/runs/20261104T183222785812Z-recorded-metric-amendment-regression/result.json",
+    "realCoreOriginalModel": "../../../verification/orion-pro-pilot-20261104/real-source-runs/20261104T182830125656Z-core-shot-family-coverage/result.json"
+  },
+  "limits": [
+    "Native-metric25cases do not prove wide/common xG source-state fidelity or full source inventory.",
+    "Realcore9/9 is baseline028proof with fullAcceptancefalse, not candidate-wide acceptance.",
+    "No new RDS writes, deployments, source purge or final cutover."
+  ]
+}

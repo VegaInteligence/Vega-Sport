@@ -1,5 +1,5 @@
 {
-  "atUtc": "2026-11-04T17:47:09.331Z",
+  "atUtc": "2026-11-04T18:30:14.633Z",
   "command": "node docs/architecture/orion-plan-20261104/tools/render_diagrams.mjs",
   "renderer": "@viz-js/viz@3.31.0",
   "graphviz": "16.1.0",

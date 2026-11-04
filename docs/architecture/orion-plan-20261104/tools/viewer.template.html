@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>StatArena — plan de données à valider</title>
+<title>StatArena — plan Pro et pilote en cours</title>
 <link rel="icon" href="data:,">
 <style>
 :root{font-family:Inter,system-ui,-apple-system,sans-serif;color-scheme:light dark;--bg:#fafbfc;--fg:#18212c;--muted:#526174;--line:#d7dee8;--surface:#fff;--active:#1d416c;--active-fg:#fff;--soft:#edf3fa;--warn:#765214}
@@ -17,7 +17,7 @@
 <body>
 <header>
  <h1>StatArena · données et architecture</h1>
- <div><span class="status">Proposition à valider</span><span class="muted">4 novembre 2026</span></div>
+ <div><span class="status">Pilote autorisé</span><span class="muted">4 novembre 2026</span></div>
  <div class="meta" id="counts"></div>
  <div class="links"><a href="DICTIONNAIRE.md">Dictionnaire complet</a><a href="target-schema.proposed.json">Schéma JSON proposé</a><a href="evidence/RESULTS.md">Preuves de vérification</a></div>
  <nav role="tablist" aria-label="Plan de données">
@@ -68,7 +68,7 @@
   <div class="table-scroll"><table><thead><tr><th>Base · structure actuelle</th><th>Destination</th><th>Traitement</th><th>Raison / conditions</th></tr></thead><tbody id="mapping-list"></tbody></table></div>
  </section>
  <section class="view" id="plan" role="tabpanel" aria-labelledby="tab-plan" hidden><article class="plan-content"><!--PLAN--></article></section>
- <div class="footer">Aucune réorganisation appliquée. L’accord de reconnexion AWS et la consultation de ces diagrammes ne valent pas validation du plan.</div>
+ <div class="footer">Plan Pro approuvé pour le pilote borné. Nouveau schéma non appliqué sur RDS ; bascule finale et purge soumises à leur acceptation.</div>
 </main>
 <script id="plan-data" type="application/json"><!--DATA--></script>
 <script>
@@ -101,7 +101,7 @@
  const indexes=t.indexes.map(i=>`<li data-index="${escape(i.name)}"><code>${escape((i.unique?'UNIQUE ':'')+i.method+' ('+i.keys.map(k=>(k.column??k.expression_sql)+(k.order?' '+k.order:'')).join(', ')+')'+(i.nulls_not_distinct?' NULLS NOT DISTINCT':'')+(i.where_sql?' WHERE '+i.where_sql:''))}</code></li>`).join('');
  const v=t.versioning;
  const version=v.kind?`<p id="version-class"><strong>Version :</strong> <code>${escape(v.kind)}</code></p>${v.logical_key?'<p id="logical-key"><strong>Clé logique :</strong> <code>'+escape(v.logical_key.join(', '))+'</code></p>':''}${v.version_key?'<p id="version-key"><strong>Clé de version :</strong> <code>'+escape(v.version_key.join(', '))+'</code></p>':''}${v.historical_selection?'<p id="historical-selection"><strong>Sélection historique :</strong> <code>'+escape(v.historical_selection)+'</code></p>':''}${v.logical_grain_description?'<p id="logical-grain"><strong>Responsabilité métier :</strong> '+escape(v.logical_grain_description)+'</p>':''}${v.parent_version_binding?'<details id="parent-version"><summary>Ancrage de version parente</summary><pre>'+escape(JSON.stringify(v.parent_version_binding,null,2))+'</pre></details>':''}`:'';
- $('table-detail').innerHTML=`<h2 class="table-title">${escape(t.name)}</h2><div class="table-meta"><span>${escape(t.origin)}</span><span>${t.columns.length} colonnes</span><span>${escape(t.phase==='models'?'réserve hors nouvelles formules':t.phase)}</span><span>${escape(t.write_mode)}</span></div><p>${escape(t.description)}</p><p id="physical-grain"><strong>Grain physique :</strong> ${escape(t.grain)}</p>${version}${t.historical_read_policy?'<p>'+escape(t.historical_read_policy)+'</p>':''}<div class="table-scroll"><table class="columns-table"><thead><tr><th>Colonne</th><th>Type</th><th>NULL</th><th>Clés</th><th>Signification</th></tr></thead><tbody id="column-list">${columns}</tbody></table></div><h3>Clé primaire</h3><code id="primary-key">${escape(t.primary_key.columns.join(', '))}</code><div class="details-grid"><div><h3>Clés étrangères</h3><ul class="constraint-list" id="foreign-keys">${fks||'<li>Aucune.</li>'}</ul><h3>Unicités</h3><ul class="constraint-list" id="unique-keys">${uniques||'<li>Clé primaire uniquement.</li>'}</ul></div><div><h3>Contraintes CHECK</h3><ul class="constraint-list" id="check-constraints">${checks||'<li>Aucune contrainte locale supplémentaire.</li>'}</ul><h3>Index explicites</h3><ul class="constraint-list" id="explicit-indexes">${indexes||'<li>Index des clés et contraintes uniques.</li>'}</ul></div></div>${t.notes.length?'<h3>Règles et limites</h3><ul>'+t.notes.map(n=>'<li>'+escape(n)+'</li>').join('')+'</ul>':''}`;
+ $('table-detail').innerHTML=`<h2 class="table-title">${escape(t.name)}</h2><div class="table-meta"><span>${escape(t.origin)}</span><span>${t.columns.length} colonnes</span><span>${escape(t.phase==='models'?'réserve hors nouvelles formules':t.phase)}</span><span>${escape(t.write_mode)}</span></div><p id="table-description">${escape(t.description)}</p><p id="physical-grain"><strong>Grain physique :</strong> ${escape(t.grain)}</p>${version}${t.historical_read_policy?'<p>'+escape(t.historical_read_policy)+'</p>':''}<div class="table-scroll"><table class="columns-table"><thead><tr><th>Colonne</th><th>Type</th><th>NULL</th><th>Clés</th><th>Signification</th></tr></thead><tbody id="column-list">${columns}</tbody></table></div><h3>Clé primaire</h3><code id="primary-key">${escape(t.primary_key.columns.join(', '))}</code><div class="details-grid"><div><h3>Clés étrangères</h3><ul class="constraint-list" id="foreign-keys">${fks||'<li>Aucune.</li>'}</ul><h3>Unicités</h3><ul class="constraint-list" id="unique-keys">${uniques||'<li>Clé primaire uniquement.</li>'}</ul></div><div><h3>Contraintes CHECK</h3><ul class="constraint-list" id="check-constraints">${checks||'<li>Aucune contrainte locale supplémentaire.</li>'}</ul><h3>Index explicites</h3><ul class="constraint-list" id="explicit-indexes">${indexes||'<li>Index des clés et contraintes uniques.</li>'}</ul></div></div>${t.notes.length?'<h3>Règles et limites</h3><ul>'+t.notes.map(n=>'<li>'+escape(n)+'</li>').join('')+'</ul>':''}`;
  list();if(currentDomain!==t.domain||!$('er-image').src)setGraph(t.domain);history.replaceState(null,'','#table='+encodeURIComponent(name));}
  document.addEventListener('click',event=>{const target=event.target.closest('[data-table]');if(target){view('tables');select(target.dataset.table)}});
  $('table-search').addEventListener('input',list);$('domain-select').addEventListener('change',()=>{list();if($('domain-select').value!=='all')setGraph($('domain-select').value)});

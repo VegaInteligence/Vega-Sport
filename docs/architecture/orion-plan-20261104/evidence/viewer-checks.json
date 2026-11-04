@@ -1,6 +1,6 @@
 {
   "passed": true,
-  "modelSha256": "028c221d4cd45ad809a2340e62f34ab9df191c593b23c0c45d5f44587eb35a8c",
+  "modelSha256": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08",
   "counts": {
     "tables": 103,
     "columns": 1791,
@@ -6320,7 +6320,7 @@
       "details": null
     },
     {
-      "name": "revised approval and unverified pilot visible",
+      "name": "approved bounded pilot and open full acceptance visible",
       "passed": true,
       "details": null
     },

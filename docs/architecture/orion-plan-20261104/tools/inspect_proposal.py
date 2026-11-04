@@ -176,7 +176,7 @@ if set(vt) != set(tables):
     fail("viewer_table_coverage")
 for name, t in tables.items():
     rendered = vt.get(name, {})
-    for section in ("primary_key", "unique_constraints", "foreign_keys", "checks", "indexes", "grain", "versioning"):
+    for section in ("primary_key", "unique_constraints", "foreign_keys", "checks", "indexes", "grain", "versioning", "description"):
         if rendered.get(section) != t.get(section, {} if section == "versioning" else None):
             fail("viewer_model_mismatch", table=name, section=section)
     if [{k:v for k,v in c.items() if k not in ("name", "keys")} for c in rendered.get("columns", [])] != list(t["columns"].values()) or [c["name"] for c in rendered.get("columns", [])] != list(t["columns"]):
@@ -233,6 +233,9 @@ if tables["ingest.source_documents"]["columns"]["storage_provider"].get("default
     fail("new_source_receipt_defaults_to_file_storage")
 counts = dict(baselineResponsibilities=len(original), baselineColumns=sum(len(t["columns"]) for t in original.values()),
               dispositions=len(dispositions), tables=len(tables), columns=seen_columns,
+              activeTables=sum(t["phase"] != "models" for t in tables.values()),
+              activeColumns=sum(len(t["columns"]) for t in tables.values() if t["phase"] != "models"),
+              activeForeignKeys=sum(len(t["foreign_keys"]) for t in tables.values() if t["phase"] != "models"),
               foreignKeys=sum(len(t["foreign_keys"]) for t in tables.values()),
               uniqueConstraints=sum(len(t["unique_constraints"]) for t in tables.values()),
               indexes=sum(len(t["indexes"]) for t in tables.values()),
@@ -248,7 +251,7 @@ receipt = {"atUtc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
            "modelSha256": hashlib.sha256((OUT / "target-schema.proposed.json").read_bytes()).hexdigest(),
            "scope": "Static responsibilities/dispositions, actual nonnullable PK/nonpartial UQ FK targets/types, version classes, seed templates/bindings, rendered dictionary and complete domain diagrams. No SQL execution.",
            "counts": counts, "seedTemplates": seed_details, "violations": violations, "passed": not violations,
-           "limits": "Bindings still require real generation/code digest at bootstrap. SQL/triggers, numeric fidelity, complete source-field/variant reconciliation, local typed pilot, historical recalculation, application performance and remote migration are unverified."}
+           "limits": "This static inspection does not execute bootstrap or SQL. Separate bounded local pilot receipts now exist; complete source reconciliation, numeric/state fidelity, public application/cache parity, RDS performance and full acceptance remain open."}
 (OUT / "evidence/proposal-inspection.json").write_text(json.dumps(receipt, indent=2, ensure_ascii=False) + "\n")
 print(json.dumps({"passed": receipt["passed"], "counts": counts, "violations": violations}, ensure_ascii=False))
 raise SystemExit(bool(violations))

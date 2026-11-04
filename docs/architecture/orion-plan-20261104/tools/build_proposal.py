@@ -444,6 +444,7 @@ proposal["operational_decisions"].update(new_collection="PitchAPI -> in-memory d
 # selective transform, which removes the universal registry/state/link tables.
 from apply_pro_constraints import apply as apply_pro_constraints
 from apply_pro_versions import apply as apply_pro_versions
+from apply_pro_metric_states import apply as apply_pro_metric_states
 if args.fixture_phase == "before_constraints":
     write_fixture()
     raise SystemExit(0)
@@ -452,6 +453,7 @@ if args.fixture_phase == "before_versions":
     write_fixture()
     raise SystemExit(0)
 apply_pro_versions(proposal, changes)
+apply_pro_metric_states(proposal, changes)
 tables = {t["qualified_name"]: t for schema in proposal["schemas"] for t in schema["tables"]}
 proposal["format_version"] = "1.2.0-pro-review"
 proposal["conventions"].update(

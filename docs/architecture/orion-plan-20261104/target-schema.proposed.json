@@ -24926,7 +24926,7 @@
           "name": "player_match_metric_values",
           "qualified_name": "football.player_match_metric_values",
           "phase": "core",
-          "description": "Métriques secondaires enregistrées, avec types, unité et fractions explicites. Grain physique : une révision typée, PK (revision_id) ; clé logique (match_id, player_id, period_code, family_code, metric_code), variante variant_key ; sélection canonique (match_id, player_id, period_code, family_code, metric_code) ; intervalle de connaissance [recorded_from_gen, recorded_to_gen), fin NULL pour la version courante.",
+          "description": "Observations typées de métriques enregistrées et de leur état natif, avec unité et fractions explicites ; une projection numérique commune ne remplace pas cet état. Grain physique : une révision typée, PK (revision_id) ; clé logique (match_id, player_id, period_code, family_code, metric_code), variante variant_key ; sélection canonique (match_id, player_id, period_code, family_code, metric_code) ; intervalle de connaissance [recorded_from_gen, recorded_to_gen), fin NULL pour la version courante.",
           "grain": "Ligne physique : une révision typée, PK (revision_id) ; clé logique (match_id, player_id, period_code, family_code, metric_code), variante variant_key ; sélection canonique (match_id, player_id, period_code, family_code, metric_code) ; intervalle de connaissance [recorded_from_gen, recorded_to_gen), fin NULL pour la version courante.",
           "write_mode": "immutable_values_close_interval_once",
           "columns": {
@@ -24963,7 +24963,7 @@
             "value_kind": {
               "type": "text",
               "nullable": false,
-              "description": "number, string ou boolean ; NULL/absence distingués par les états de champ."
+              "description": "number, string, boolean, null ou absent. null/absent n’ont ni scalaire primaire, ni fraction, ni affichage source. Une ligne absente signifie une observation inconnue ; absent exige un champ attendu et une couverture acceptée prouvés."
             },
             "numeric_value": {
               "type": "numeric",
@@ -25280,7 +25280,7 @@
           "checks": [
             {
               "name": "football_player_match_metric_values_one_value_ck",
-              "sql": "num_nonnulls(numeric_value,text_value,boolean_value)=1"
+              "sql": "(value_kind IN ('null','absent') AND num_nonnulls(numeric_value,text_value,boolean_value,numerator,denominator,source_display)=0) OR (value_kind IN ('number','string','boolean') AND num_nonnulls(numeric_value,text_value,boolean_value)=1)"
             },
             {
               "name": "football_player_match_metric_values_family_ck",
@@ -25288,7 +25288,7 @@
             },
             {
               "name": "football_player_match_metric_values_value_kind_ck",
-              "sql": "(value_kind='number' AND numeric_value IS NOT NULL) OR (value_kind='string' AND text_value IS NOT NULL) OR (value_kind='boolean' AND boolean_value IS NOT NULL)"
+              "sql": "(value_kind='number' AND numeric_value IS NOT NULL) OR (value_kind='string' AND text_value IS NOT NULL) OR (value_kind='boolean' AND boolean_value IS NOT NULL) OR (value_kind IN ('null','absent') AND num_nonnulls(numeric_value,text_value,boolean_value,numerator,denominator,source_display)=0)"
             },
             {
               "name": "football_player_match_metric_values_sv_interval_ck",
@@ -25464,7 +25464,7 @@
           "name": "team_match_metric_values",
           "qualified_name": "football.team_match_metric_values",
           "phase": "core",
-          "description": "Métriques secondaires enregistrées, avec types, unité et fractions explicites. Grain physique : une révision typée, PK (revision_id) ; clé logique (match_id, team_id, period_code, family_code, metric_code), variante variant_key ; sélection canonique (match_id, team_id, period_code, family_code, metric_code) ; intervalle de connaissance [recorded_from_gen, recorded_to_gen), fin NULL pour la version courante.",
+          "description": "Observations typées de métriques enregistrées et de leur état natif, avec unité et fractions explicites ; une projection numérique commune ne remplace pas cet état. Grain physique : une révision typée, PK (revision_id) ; clé logique (match_id, team_id, period_code, family_code, metric_code), variante variant_key ; sélection canonique (match_id, team_id, period_code, family_code, metric_code) ; intervalle de connaissance [recorded_from_gen, recorded_to_gen), fin NULL pour la version courante.",
           "grain": "Ligne physique : une révision typée, PK (revision_id) ; clé logique (match_id, team_id, period_code, family_code, metric_code), variante variant_key ; sélection canonique (match_id, team_id, period_code, family_code, metric_code) ; intervalle de connaissance [recorded_from_gen, recorded_to_gen), fin NULL pour la version courante.",
           "write_mode": "immutable_values_close_interval_once",
           "columns": {
@@ -25496,7 +25496,7 @@
             "value_kind": {
               "type": "text",
               "nullable": false,
-              "description": "number, string ou boolean ; NULL/absence distingués par les états de champ."
+              "description": "number, string, boolean, null ou absent. null/absent n’ont ni scalaire primaire, ni fraction, ni affichage source. Une ligne absente signifie une observation inconnue ; absent exige un champ attendu et une couverture acceptée prouvés."
             },
             "numeric_value": {
               "type": "numeric",
@@ -25811,7 +25811,7 @@
           "checks": [
             {
               "name": "football_team_match_metric_values_one_value_ck",
-              "sql": "num_nonnulls(numeric_value,text_value,boolean_value)=1"
+              "sql": "(value_kind IN ('null','absent') AND num_nonnulls(numeric_value,text_value,boolean_value,numerator,denominator,source_display)=0) OR (value_kind IN ('number','string','boolean') AND num_nonnulls(numeric_value,text_value,boolean_value)=1)"
             },
             {
               "name": "football_team_match_metric_values_family_ck",
@@ -25819,7 +25819,7 @@
             },
             {
               "name": "football_team_match_metric_values_value_kind_ck",
-              "sql": "(value_kind='number' AND numeric_value IS NOT NULL) OR (value_kind='string' AND text_value IS NOT NULL) OR (value_kind='boolean' AND boolean_value IS NOT NULL)"
+              "sql": "(value_kind='number' AND numeric_value IS NOT NULL) OR (value_kind='string' AND text_value IS NOT NULL) OR (value_kind='boolean' AND boolean_value IS NOT NULL) OR (value_kind IN ('null','absent') AND num_nonnulls(numeric_value,text_value,boolean_value,numerator,denominator,source_display)=0)"
             },
             {
               "name": "football_team_match_metric_values_sv_interval_ck",

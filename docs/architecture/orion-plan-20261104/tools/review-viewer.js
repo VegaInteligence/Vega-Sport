@@ -38,6 +38,7 @@ async (page) => {
       const actual = await page.locator('#table-detail').evaluate(detail=>({
         columns:[...detail.querySelectorAll('#column-list tr')].map(row=>({name:row.dataset.column,type:row.cells[1].textContent.trim(),nullable:row.cells[2].textContent.trim(),description:row.cells[4].textContent.trim()})),
         pk:detail.querySelector('#primary-key').textContent,
+        description:detail.querySelector('#table-description').textContent,
         grain:detail.querySelector('#physical-grain').textContent,
         kind:detail.querySelector('#version-class code')?.textContent??null,
         logical:detail.querySelector('#logical-key code')?.textContent??null,
@@ -51,7 +52,7 @@ async (page) => {
       }));
       check('all columns '+table.name,actual.columns.length===table.columns.length&&actual.columns.every((a,i)=>a.name===table.columns[i].name&&a.type===table.columns[i].type&&a.nullable===(table.columns[i].nullable?'oui':'non')&&a.description===table.columns[i].description),{expected:table.columns.length,actual:actual.columns.length});
       seenColumns+=actual.columns.length;seenTables++;
-      check('physical key and grain '+table.name,actual.pk===table.primary_key.columns.join(', ')&&actual.grain===('Grain physique : '+table.grain));
+      check('physical key and grain '+table.name,actual.pk===table.primary_key.columns.join(', ')&&actual.grain===('Grain physique : '+table.grain)&&actual.description===table.description);
       check('version contract '+table.name,actual.kind===(table.versioning?.kind??null)&&actual.logical===(table.versioning?.logical_key?.join(', ')??null)&&actual.versionKey===(table.versioning?.version_key?.join(', ')??null)&&actual.historicalSelection===(table.versioning?.historical_selection??null)&&same(actual.binding?JSON.parse(actual.binding):null,table.versioning?.parent_version_binding??null));
       check('all FK declarations '+table.name,actual.fks.length===table.foreign_keys.length&&actual.fks.every((a,i)=>{const f=table.foreign_keys[i];return a.name===f.name&&a.target===f.references.table&&normalize(a.text).includes(f.columns.join(', '))&&normalize(a.text).includes('('+f.references.columns.join(', ')+')');}));
       check('all unique constraints '+table.name,same(actual.unique,table.unique_constraints.map(u=>({name:u.name,text:'UNIQUE ('+u.columns.join(', ')+')'+(u.nulls_not_distinct?' NULLS NOT DISTINCT':'')+(u.where_sql?' WHERE '+u.where_sql:'')}))));
@@ -95,7 +96,7 @@ async (page) => {
     await page.getByRole('tab',{name:'Plan d’exécution',exact:true}).click();
     const plan=await page.locator('#plan article').textContent();
     check('direct RDS collection visible',plan.includes('PitchAPI → réponse décodée en mémoire')&&plan.includes('aucun corps brut JSON, CSV ou archive en S3'));
-    check('revised approval and unverified pilot visible',plan.includes('validation explicite')&&plan.includes('pilote typé local restent ouverts')&&plan.includes('Ce résultat reste une exigence, pas une preuve'));
+    check('approved bounded pilot and open full acceptance visible',plan.includes('plan Pro a été explicitement approuvé')&&plan.includes('L’acceptation complète reste ouverte')&&(await page.locator('.status').textContent())==='Pilote autorisé');
     check('plan matches current model',normalize(plan).includes(expected.tables.length+' tables, '+expected.counts.columns.toLocaleString('fr-FR').replace(/\s/g,' ')+' colonnes et '+expected.counts.foreignKeys+' clés étrangères'));
     await page.goto('http://127.0.0.1:8794/index.html?deep=pro#table=ingest.source_documents');
     check('deep link resolves',(await page.locator('#table-detail h2').textContent())==='ingest.source_documents');

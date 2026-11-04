@@ -1,0 +1,53 @@
+### Result
+{"passed":true,"checks":[{"name":"restored production heading visible","passed":true},{"name":"current architecture labels real restored build, bridge and Neon","passed":true},{"name":"AWS preview remains partial","passed":true},{"name":"old503 not presented as current architecture","passed":true},{"name":"mobile no global overflow","passed":true},{"name":"no JavaScript errors","passed":true},{"name":"no external requests","passed":true}],"errors":[],"requests":[],"artifacts":["architecture-status-desktop.png","architecture-status-mobile.png"],"scope":"Focused changed architecture only; no rerun of the unchanged model1208checks and no external service operations."}
+### Ran Playwright code
+```js
+await (async (page) => {
+ const errors=[],requests=[],checks=[];
+ page.on('pageerror',e=>errors.push(String(e)));
+ page.on('request',r=>{if(!r.url().startsWith('http://127.0.0.1:8794/')&&!r.url().startsWith('data:'))requests.push(r.url());});
+ const check=(name,passed)=>checks.push({name,passed:!!passed});
+ await page.setViewportSize({width:1440,height:1000});
+ await page.goto('http://127.0.0.1:8794/index.html?status=restored');
+ await page.getByRole('tab',{name:'Architecture',exact:true}).click();
+ await page.waitForFunction(()=>[...document.querySelectorAll('.architecture')].every(img=>img.complete&&img.naturalWidth>0));
+ check('restored production heading visible',await page.getByRole('heading',{name:'Production rétablie · 4 novembre, 18:41 Paris',exact:true}).isVisible());
+ const svg=await page.evaluate(async()=>await (await fetch('diagrams/architecture-actuelle.svg')).text());
+ check('current architecture labels real restored build, bridge and Neon',svg.includes('f65036cdb9')&&svg.includes('Pont legacy temporaire')&&svg.includes('Neon existant'));
+ check('AWS preview remains partial',svg.includes('Preview CloudFront API AWS')&&svg.includes('Couverture encore partielle'));
+ check('old503 not presented as current architecture',!svg.includes('API 503')&&!svg.includes('503 sans corps'));
+ await page.screenshot({path:'architecture-status-desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});
+ check('mobile no global overflow',await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+ await page.screenshot({path:'architecture-status-mobile.png',fullPage:true});
+ check('no JavaScript errors',errors.length===0);
+ check('no external requests',requests.length===0);
+ return {passed:checks.every(c=>c.passed),checks,errors,requests,artifacts:['architecture-status-desktop.png','architecture-status-mobile.png'],scope:'Focused changed architecture only; no rerun of the unchanged model1208checks and no external service operations.'};
+})(page);
+```
+### Page
+- Page URL: http://127.0.0.1:8794/index.html?status=restored#architecture
+- Page Title: StatArena — plan de données à valider
+npm notice run npx
+npm notice run 'playwright-cli' -s=orion-plan run-code async (page) => {
+npm notice run  const errors=[],requests=[],checks=[];
+npm notice run  page.on('pageerror',e=>errors.push(String(e)));
+npm notice run  page.on('request',r=>{if(!r.url().startsWith('http://127.0.0.1:8794/')&&!r.url().startsWith('data:'))requests.push(r.url());});
+npm notice run  const check=(name,passed)=>checks.push({name,passed:!!passed});
+npm notice run  await page.setViewportSize({width:1440,height:1000});
+npm notice run  await page.goto('http://127.0.0.1:8794/index.html?status=restored');
+npm notice run  await page.getByRole('tab',{name:'Architecture',exact:true}).click();
+npm notice run  await page.waitForFunction(()=>[...document.querySelectorAll('.architecture')].every(img=>img.complete&&img.naturalWidth>0));
+npm notice run  check('restored production heading visible',await page.getByRole('heading',{name:'Production rétablie · 4 novembre, 18:41 Paris',exact:true}).isVisible());
+npm notice run  const svg=await page.evaluate(async()=>await (await fetch('diagrams/architecture-actuelle.svg')).text());
+npm notice run  check('current architecture labels real restored build, bridge and Neon',svg.includes('f65036cdb9')&&svg.includes('Pont legacy temporaire')&&svg.includes('Neon existant'));
+npm notice run  check('AWS preview remains partial',svg.includes('Preview CloudFront API AWS')&&svg.includes('Couverture encore partielle'));
+npm notice run  check('old503 not presented as current architecture',!svg.includes('API 503')&&!svg.includes('503 sans corps'));
+npm notice run  await page.screenshot({path:'architecture-status-desktop.png',fullPage:true});
+npm notice run  await page.setViewportSize({width:390,height:844});
+npm notice run  check('mobile no global overflow',await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+npm notice run  await page.screenshot({path:'architecture-status-mobile.png',fullPage:true});
+npm notice run  check('no JavaScript errors',errors.length===0);
+npm notice run  check('no external requests',requests.length===0);
+npm notice run  return {passed:checks.every(c=>c.passed),checks,errors,requests,artifacts:['architecture-status-desktop.png','architecture-status-mobile.png'],scope:'Focused changed architecture only; no rerun of the unchanged model1208checks and no external service operations.'};
+npm notice run }

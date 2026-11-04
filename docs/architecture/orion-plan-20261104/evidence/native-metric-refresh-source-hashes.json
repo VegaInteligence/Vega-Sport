@@ -1,0 +1,19 @@
+{
+  "protectedBefore": {
+    "target-schema.proposed.json": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08",
+    "tools/build_proposal.py": "423e44b7f026998f3d48a0afbd639b61ce1ad0d24d7434fe4035d80721ba23cc",
+    "tools/apply_pro_constraints.py": "f67ae4153f2986a0e636b6b0900082a4a6ab9693f1872a14b3a9d41121406d3a",
+    "tools/apply_pro_versions.py": "6470475eeec92d17fdd2bfb6b8bd3e4ef4a87e6260148bccabe19f9f32e500b3",
+    "tools/apply_pro_metric_states.py": "e670ba3a374935d41acce1d0f5dea06fdd0b76f30627291a88e1bad62fb8dbcc"
+  },
+  "protectedAfter": {
+    "target-schema.proposed.json": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08",
+    "tools/build_proposal.py": "423e44b7f026998f3d48a0afbd639b61ce1ad0d24d7434fe4035d80721ba23cc",
+    "tools/apply_pro_constraints.py": "f67ae4153f2986a0e636b6b0900082a4a6ab9693f1872a14b3a9d41121406d3a",
+    "tools/apply_pro_versions.py": "6470475eeec92d17fdd2bfb6b8bd3e4ef4a87e6260148bccabe19f9f32e500b3",
+    "tools/apply_pro_metric_states.py": "e670ba3a374935d41acce1d0f5dea06fdd0b76f30627291a88e1bad62fb8dbcc"
+  },
+  "unchanged": true,
+  "atUtc": "2026-11-04T18:42:18.091650+00:00",
+  "scope": "Read-only model/build/helper fingerprints before and after documentation/browser work. No compiler, SQL, service, git or WORKLOG edit performed by this refresh."
+}

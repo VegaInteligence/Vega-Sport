@@ -1,8 +1,8 @@
 {
-  "atUtc": "2026-11-04T17:41:53.861077+00:00",
+  "atUtc": "2026-11-04T18:37:57.207431+00:00",
   "command": "python3 docs/architecture/orion-plan-20261104/tools/review_viewer.py",
   "setup": "REVIEW_PROTOCOL.md; local HTTP 127.0.0.1:8794; fresh Playwright CLI session orion-plan with local Chromium; desktop 1440x1000, mobile 390x844, light/dark.",
-  "modelSha256": "028c221d4cd45ad809a2340e62f34ab9df191c593b23c0c45d5f44587eb35a8c",
+  "modelSha256": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08",
   "expected": {
     "tables": 103,
     "columns": 1791,
@@ -21,5 +21,6 @@
     "architecture-mobile.png",
     "receipt-mobile-dark.png"
   ],
-  "limits": "Generated review-document navigation only. SQL constraints, local typed pilot, full source coverage, historical recalculation, application performance and remote migration remain unverified."
+  "limits": "Generated review-document navigation only. SQL and bounded pilot results are separate evidence; this browser run does not assess them. Complete source fidelity, public parity, RDS performance and global acceptance remain open.",
+  "metadataClarification": "Documentation refresh clarified scope wording after the run; recorded checks, model SHA, screenshots and atUtc are unchanged."
 }

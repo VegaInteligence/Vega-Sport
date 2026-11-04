@@ -1,5 +1,5 @@
 {
-  "atUtc": "2026-11-04T17:40:06.443686+00:00",
+  "atUtc": "2026-11-04T18:30:14.091424+00:00",
   "command": "python3 -B docs/architecture/orion-plan-20261104/tools/rebuild_plan.py",
   "sourceSha256": {
     "PRO_REVIEW_RESPONSE.md": "8ae48b86a3dfb8877d0f0ac9e0ffbced12905a44a25b168fedd370f2e2d77198",
@@ -7,14 +7,15 @@
     "inputs/GPT_Pro_audit.original.txt": "4de404a58ef3cb7ae9a6c174676e4db7b9ed6b9ac080b4ab014cf98159c3975b",
     "inputs/GPT_Pro_review.original.txt": "c3392be9d0792fbd0b71629059225afe8f0cc1d716d93fc6937f8c39fc05c2b1",
     "inputs/Orion_schema_bdd.original.json": "40ab9b6cd8126d3bd502a94cff3ee9dfaf082ab503eaa999a3e89c4299a059c3",
-    "tools/PLAN.template.md": "28824ff839e191f989dc1e2f87c197963a8f36ab5f0e70fd01cb4c6c01bc61a6",
+    "tools/PLAN.template.md": "50e29ba98e0a17256d02be93c47ec1d996c8965b6ef3bae4e96b4b1665a3a68f",
     "tools/PRO_CONSTRAINT_PROTOCOL.md": "8a9eef3792bc66ad563d0886ed0af1752150f680817267c7da4ed96dab0a0cf9",
     "tools/PRO_VERSION_PROTOCOL.md": "830b7650128bde1a66ddd6273ffb2b0e6e7a1bb977a869080ee7bd69c8404075",
     "tools/apply_pro_constraints.py": "f67ae4153f2986a0e636b6b0900082a4a6ab9693f1872a14b3a9d41121406d3a",
+    "tools/apply_pro_metric_states.py": "e670ba3a374935d41acce1d0f5dea06fdd0b76f30627291a88e1bad62fb8dbcc",
     "tools/apply_pro_versions.py": "6470475eeec92d17fdd2bfb6b8bd3e4ef4a87e6260148bccabe19f9f32e500b3",
     "tools/audit_aws.py": "5ce191bba0a7c4e8fdc3f8240d15e9c9df8fe8043bfc95a4877492ca95de1155",
     "tools/audit_s3.py": "6a659026540cd731425e63037487e3084cbf8558224c95c5dea504a78af5befb",
-    "tools/build_proposal.py": "0b49bf2a36ecd0e41dd906d5bffa3edc0491d409adbd93c3ee89afe615e847ce",
+    "tools/build_proposal.py": "423e44b7f026998f3d48a0afbd639b61ce1ad0d24d7434fe4035d80721ba23cc",
     "tools/build_viewer.py": "b39af0e9f17fb93ebee953c86c38a7b15c3fab447026275ff9ddd71e38d71e36",
     "tools/capture_runtime.py": "86579d1aa6715a3a73c6ae2b3c24979dcf988a0a29ec3eb81a3f78e94fb36922",
     "tools/capture_vercel.py": "81cc2ca1adc1cd55c2fe7a83dd279aab79afda65cb2ee38f04e70beef2c8eb8a",
@@ -22,12 +23,12 @@
     "tools/inspect_proposal.py": "3ae677bd451f8c166efd907838a53a4879b4bfb5f04f495a20ab33d3a8772d03",
     "tools/rebuild_plan.py": "450d77bb51d6b14c0d010691625f71ff1d655395c3dcf8cf14c44cfa5901391e",
     "tools/render_diagrams.mjs": "447969776ed7c77a6fd8abd890ee66a87c40815df7770fa11a71c63ac0e236a5",
-    "tools/render_plan.py": "7cc99960a3203b9f44236110251c825f138efcc4ec22c3d8d34eab2df5f7d521",
+    "tools/render_plan.py": "a20b1034f9422fa49961d05e871084bec0352c5fba358d52c9cb3ff11c28f230",
     "tools/render_plan_text.py": "91ab7583f8c793837fd4eb83cfd469295e86ba61be9e52bf78ea0adf5e283386",
     "tools/review-viewer.js": "5e08543da19d80d47a25024015388d784d23b26df87a8337a2652a7fd75b25b9",
     "tools/review_viewer.py": "d3e369b062ae04d329e59403a5d7f2edcb38135f534943fff4c6956bf92e78e3",
     "tools/verify_artifacts.py": "4806a445aa99853653d0b770830c0c3858086a975e9ae8aa033f924a1568989b",
-    "tools/viewer.template.html": "892534cce4e23f28167467cf5d051dd17dbff8a06ecbbfe102f029a986d6ea1d"
+    "tools/viewer.template.html": "427e6acbe450fb3831b80cb0ac60714157fe3d13cdd9fba1d7d7dbec398bb771"
   },
   "steps": [
     {
@@ -63,7 +64,7 @@
         "render_plan_text.py"
       ],
       "exitCode": 0,
-      "stdout": "{\"atUtc\": \"2026-11-04T17:40:06.990572+00:00\", \"command\": \"python3 docs/architecture/orion-plan-20261104/tools/render_plan_text.py\", \"modelSha256\": \"028c221d4cd45ad809a2340e62f34ab9df191c593b23c0c45d5f44587eb35a8c\", \"planSha256\": \"2f690d0086b15f939bfb444f202a61cb74b52d6ebd0795cb5a8f92e80ded0333\", \"counts\": {\"tables\": 103, \"columns\": 1791, \"foreign_keys\": 450, \"jsonb\": 51, \"active_tables\": 94, \"baseline_tables\": 84, \"domain_diagrams\": 13, \"separate_history_tables\": 0, \"version_classes\": {\"selected_relations\": 46, \"parent_version_children\": 6, \"existing_append_only\": 9, \"stable_identities\": 3}, \"other_operational_or_derived_tables\": 39}, \"policy\": \"selective_inline_versions_per_pro\", \"scope\": \"Plan text, JSON counts and domain index share one model. No SQL execution or service acceptance.\", \"passed\": true}\n",
+      "stdout": "{\"atUtc\": \"2026-11-04T18:30:14.686963+00:00\", \"command\": \"python3 docs/architecture/orion-plan-20261104/tools/render_plan_text.py\", \"modelSha256\": \"18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08\", \"planSha256\": \"e6fd594f4184d20f02eaeda0788f10d8a5205314afa8d3ab6790a5852271f8a0\", \"counts\": {\"tables\": 103, \"columns\": 1791, \"foreign_keys\": 450, \"jsonb\": 51, \"active_tables\": 94, \"baseline_tables\": 84, \"domain_diagrams\": 13, \"separate_history_tables\": 0, \"version_classes\": {\"selected_relations\": 46, \"parent_version_children\": 6, \"existing_append_only\": 9, \"stable_identities\": 3}, \"other_operational_or_derived_tables\": 39}, \"policy\": \"selective_inline_versions_per_pro\", \"scope\": \"Plan text, JSON counts and domain index share one model. No SQL execution or service acceptance.\", \"passed\": true}\n",
       "stderr": ""
     },
     {
@@ -72,7 +73,7 @@
         "build_viewer.py"
       ],
       "exitCode": 0,
-      "stdout": "{\"file\": \"/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/architecture/.orion-plan-staging-22sd9o1w/index.html\", \"bytes\": 1753199, \"remote_dependencies\": 0}\n",
+      "stdout": "{\"file\": \"/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/architecture/.orion-plan-staging-gqd1t92w/index.html\", \"bytes\": 1756277, \"remote_dependencies\": 0}\n",
       "stderr": ""
     },
     {
@@ -87,5 +88,5 @@
   ],
   "passed": true,
   "scope": "Staged complete document generation and independent static inspection only. No SQL or service operation.",
-  "modelSha256": "028c221d4cd45ad809a2340e62f34ab9df191c593b23c0c45d5f44587eb35a8c"
+  "modelSha256": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08"
 }

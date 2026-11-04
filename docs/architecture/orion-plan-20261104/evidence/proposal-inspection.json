@@ -1,7 +1,7 @@
 {
-  "atUtc": "2026-11-04T17:50:17.506544+00:00",
+  "atUtc": "2026-11-04T18:36:45.906569+00:00",
   "command": "python3 docs/architecture/orion-plan-20261104/tools/inspect_proposal.py",
-  "modelSha256": "028c221d4cd45ad809a2340e62f34ab9df191c593b23c0c45d5f44587eb35a8c",
+  "modelSha256": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08",
   "scope": "Static responsibilities/dispositions, actual nonnullable PK/nonpartial UQ FK targets/types, version classes, seed templates/bindings, rendered dictionary and complete domain diagrams. No SQL execution.",
   "counts": {
     "baselineResponsibilities": 84,
@@ -9,6 +9,9 @@
     "dispositions": 84,
     "tables": 103,
     "columns": 1791,
+    "activeTables": 94,
+    "activeColumns": 1709,
+    "activeForeignKeys": 431,
     "foreignKeys": 450,
     "uniqueConstraints": 109,
     "indexes": 154,
@@ -46,5 +49,5 @@
   ],
   "violations": [],
   "passed": true,
-  "limits": "Bindings still require real generation/code digest at bootstrap. SQL/triggers, numeric fidelity, complete source-field/variant reconciliation, local typed pilot, historical recalculation, application performance and remote migration are unverified."
+  "limits": "This static inspection does not execute bootstrap or SQL. Separate bounded local pilot receipts now exist; complete source reconciliation, numeric/state fidelity, public application/cache parity, RDS performance and full acceptance remain open."
 }

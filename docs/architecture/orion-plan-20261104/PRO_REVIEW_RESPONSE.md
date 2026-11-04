@@ -1,32 +1,31 @@
 # Prise en compte de la revue GPT Pro
 
-La revue complète est conservée dans `inputs/GPT_Pro_review.original.txt`. L'utilisateur lui a explicitement donné priorité sur son choix intermédiaire « état courant seulement ». La cible est donc une conservation **sélective des valeurs nécessaires dans les tables métier elles-mêmes**, avec des lecteurs courants simples. Les 54 tables sœurs `_history` restent supprimées. Aucune réorganisation n'a été appliquée au RDS.
+La revue complète est conservée dans `inputs/GPT_Pro_review.original.txt`. L’utilisateur l’a priorisée, puis a explicitement choisi « Valider et lancer le pilote ». Le [reçu d’approbation](../../verification/orion-pro-pilot-20261104/approval.json) conserve le plan et le modèle `028c221d…` du commit `4112076…`. Le [reçu d’amendement](../../verification/orion-pro-pilot-20261104/model-amendments.json) relie ce modèle au candidat courant `18da43f9…` par huit chemins ciblés, sans seconde approbation revendiquée ni ajout de table, colonne ou clé.
 
-Ce document sert de matrice de suivi. « Décrit » ou « vérifié statiquement » ne signifie ni exécuté dans PostgreSQL ni accepté sur le site.
+La conservation reste sélective dans les tables métier, avec lecteurs courants simples, zéro table sœur d’historique et quatre registres universels retirés. Le pilote local est autorisé et en cours ; aucune application du nouveau schéma sur RDS, purge ou bascule finale n’est revendiquée. Un statut de conception n’est pas un reçu d’exécution.
 
-| Point de la revue | Traitement retenu | Preuve ou vérification encore nécessaire |
+| Point | Traitement et preuve bornée | Limite restante |
 |---|---|---|
-| Plan et JSON divergents | Générer les chiffres et le texte depuis le même modèle, puis promouvoir ensemble le document complet | `tools/render_plan_text.py`, `tools/rebuild_plan.py` ; reçu de cohérence et navigation du modèle final |
-| Politique des anciennes valeurs | Versions sélectives dans les tables métier ; identités stables, profils/dépendances figés et collections atomiques | `PRO_VERSIONING_DESIGN.md` ; transformation réelle des PK/FK puis E2E correction/recalcul |
-| A — unicité HTTP | Empreinte de requête obligatoire en HTTP ; unicité requête/corpus/contenu, tentatives séparées | Helper de contraintes ; doublons et requêtes distinctes à exercer dans PostgreSQL |
-| B — profils des tirs | Profil présent ⇒ identité présente, puis FK composite de bonne appartenance | CHECK et FK réels, cas NULL et mauvais joueur/gardien |
-| C — contrats | PK de relation/contrat et de champ versionnées, références composites | Helper de versions ; enregistrer deux contrats et refuser les références incompatibles |
-| D — liaison d'une version à son fait | Retirer le registre universel ; versions locales et ancres de FK typées | Vérifier les clés réelles et la cohérence du même snapshot, pas seulement l'existence d'un ID |
-| E — états des champs | États ciblés et CHECK de type ; supprimer le mécanisme universel par cellule | Inventaire exhaustif des ambiguïtés ; fidélité API et absence/null/zéro/vide avant purge |
-| F — initialisation | Bootstrap explicite des générations, définitions, contrats et provenance | Base PostgreSQL vide, interruption/reprise et journal ; aucun `passed` de conception comme substitut |
-| G — cellules | UQ de coordonnées par version immuable de grille ; bornes sous contrôle parent | SQL réel, doublon/hors-grille, deux révisions et enfants immuables |
-| G — file de collecte | Une file issue de l'existant, états/tentatives/baux bornés, acquisition atomique et index lié à la requête | `FOR UPDATE SKIP LOCKED`, concurrence, expiration et achèvement avec propriétaire/tentative valides |
-| Complexité permanente / preuve | Provenance technique distincte des valeurs retenues et des artefacts de migration | Quatre registres universels retirés ; aucune preuve de migration lue dans chaque requête web |
-| Heatmaps | Parent de version de carte, cellules relationnelles typées sans révision individuelle | Volume/index/temps comparés sur les cartes réelles du pilote |
-| H2H | Résultats résolus lus dans les matchs canoniques ; observations non résolues conservées explicitement | Corriger un match et vérifier les confrontations sans divergence |
-| Disponibilité et timeout | Lot opérationnel distinct, sans attendre la refonte ; couverture et UI à préserver | Dossier `../../verification/orion-availability-20261104/` ; aucune mise en production déduite de health200 |
-| Reproductibilité d'un calcul | Figer cohorte, valeurs, dépendances, code, paramètres et règles numériques | Exemple 0,82 → 0,67 puis recalcul ; rester explicite sur l'état navigateur et les données manquantes |
-| Corrections append-only d’un même record | Standing : UQ de contexte + data_revision interne ; détails : PK source_record_id + recorded_from_gen ; ranking : révision interne de normalisation | Sélection à g, égalité/no-op, révisions/générations strictement ordonnées, deux normaliseurs et recalcul antérieur ; aucune SQL exécutée |
-| Provenance H2H | FK composite source_id/source_record_id vers le record du fournisseur déjà fixé par le parent | Record d’un autre fournisseur refusé en PostgreSQL, cas positif même fournisseur |
-| Référence des 84 tables | Suivre les responsabilités et le diff ; aucun quota de tables | Correspondance du socle, raisons de fusion/retrait/report et contraintes effectivement cohérentes |
+| Plan et JSON divergents | Modèle courant, dictionnaire, diagrammes et texte générés ensemble ; navigateur vérifié séparément pour le SHA courant | Les anciens 1 208 contrôles `028c…` restent historiques, sans réattribution au candidat |
+| Valeurs corrigées | Versions typées, ancres et snapshots ; régression locale candidat 23/23, dont correction/relecture et cohorte | Périmètre réel complet, lecteurs publics et fidélité numérique générale |
+| A — réponses HTTP | Cas `http_dedup` et gardes des reçus réussis dans la régression locale | Collecteur de production, volumes et exploitation RDS |
+| B — profils des tirs | FK composite et CHECK ; cas `shot_profiles` local réussi | Toutes variantes réelles, médias et contrats publics |
+| C — contrats | PK versionnées et cas `contract_and_seed_versions` local réussi | Évolution complète des contrats et déploiement distant |
+| D — version du bon fait | Registre universel retiré ; cas de mauvais parent/fournisseur et cohérence de sélection réussis localement | Exhaustivité des rattachements et lecture applicative |
+| E — états source | Quatre CHECK et quatre descriptions amendés dans les deux tables de métriques enregistrées ; PostgreSQL candidat 25/25 | Les colonnes statistiques communes, notamment xG, exigent mapping et cohérence avec ces observations ; inventaire exhaustif non acquis |
+| F — bootstrap | Cas de bindings, reprise et migrations idempotentes réussis dans PostgreSQL jetable | Préflight et acceptation du pilote RDS borné |
+| G — cartes/réseaux | Cas `atomic_heatmaps_networks` et collections réussis sur fixtures locales | Volumes réels, repères spatiaux, index et temps mesurés |
+| G — file | Cas `queue_lease` et concurrence/générations réussis localement | Workers et reprise de production |
+| Append-only | Clés de normalisation, sélecteurs à g et cas de correction du même record réussis localement | Transformateurs et familles réelles complètes |
+| H2H | Source/record lié au fournisseur du parent ; cas adversarial local réussi | Réponses publiques depuis matchs canoniques et familles source réelles |
+| Complexité | Aucune table/cellule de registre universel ajoutée ; provenance distincte des preuves | Contributions de plusieurs records encore à inventorier |
+| Disponibilité | Vercel rétabli sur le même build, pont temporaire Neon ; correctif AWS séparé | AWS preview partiel, bascule finale et acceptation conjointe ouvertes |
+| Référence des 84 tables | Responsabilités et dispositions conservées, aucun quota de découpage | Réconciliation de tous les champs/variantes avant retrait |
 
-Le pilote doit conserver préparation, entrées, commandes, résultats attendus/réels et journaux. Les inventaires plus anciens et le prototype local abandonné restent des preuves datées ; ils ne valident pas ce nouveau schéma.
+Le [run métriques initial](../../verification/orion-pro-pilot-20261104/metric-state-runs/20261104T182823662466Z-original-approved-null-absent-red/result.json) conserve **19 réussites, 4 échecs, 2 non vérifiés**. Le [run candidat](../../verification/orion-pro-pilot-20261104/metric-state-runs/20261104T183139777229Z-targeted-native-metric-candidate/result.json) passe **25/25** sur entrées synthétiques : zéro, chaîne vide, faux, null, absent, combinaisons contradictoires et lecture figée. Une ligne manquante reste inconnue ; `absent` exige un champ attendu et une couverture acceptée prouvés. Ce succès ne prouve pas l’état natif de `player_match_stats.xg` ou d’autres projections communes.
 
-Les nouvelles données suivent PitchAPI → mémoire → RDS typé. Aucun nouveau corps de réponse n'est stocké dans S3 ou SQL documentaire. Les anciens fichiers restent temporairement jusqu'à la réconciliation ; leur suppression ne précède ni la couverture complète ni la fin des dépendances du transfert du partenaire.
+La [régression SQL du candidat](../../verification/orion-pro-pilot-20261104/runs/20261104T183222785812Z-recorded-metric-amendment-regression/result.json) passe **23/23**. Le [core issu de sources réelles](../../verification/orion-pro-pilot-20261104/real-source-runs/20261104T182830125656Z-core-shot-family-coverage/result.json) passe **9/9 sur `028c…`**, avec `fullAcceptance=false` et des dispositions de champs encore non vérifiées. Ces preuves restent distinctes ; les familles supplémentaires du candidat sont en cours. Aucun résultat ne clôt l’inventaire des sources, la parité publique, les performances/capacité RDS ou les conditions de purge.
 
-Commit suggéré : `docs: align the Orion schema and pilot with the Pro review`.
+Les nouvelles données suivent PitchAPI → mémoire → SQL typé ; aucun nouveau corps de réponse ou document sportif opaque n’est autorisé. Les sources historiques restent temporairement jusqu’à réconciliation et fin des dépendances du transfert. Préparation, entrées, commandes, résultats et journaux du pilote sont conservés dans les reçus liés ; les anciens inventaires et prototypes ne sont pas des preuves actuelles.
+
+Commit suggéré : `docs: refresh approved Orion pilot and native metric evidence`.

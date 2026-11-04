@@ -1,7 +1,7 @@
 {
-  "atUtc": "2026-11-04T17:41:20.154893+00:00",
-  "scope": "Whole-model pre-transform fixture acceptance and idempotent serialization only; no SQL execution or remote writes. Input hashes in stdout refer to temporary pre-transform fixtures, not the final model.",
-  "finalModelSha256": "028c221d4cd45ad809a2340e62f34ab9df191c593b23c0c45d5f44587eb35a8c",
+  "atUtc": "2026-11-04T18:37:40.873639+00:00",
+  "scope": "Existing Pro constraint/version pure-helper whole-model protocols on temporary pre-transform fixtures; idempotent serialization only, no SQL or remote writes. The native-metric helper is not covered by these two legacy component protocols; its separate PG25/25 and exact8-path amendment evidence are linked below.",
+  "finalModelSha256": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08",
   "results": [
     {
       "protocol": "tools/PRO_CONSTRAINT_PROTOCOL.md",
@@ -20,5 +20,10 @@
       "scriptSha256": "d1cebfe5388bc651a2ca9e55642bc49a1d0e5a23ca033da4a26b95c80b90e6d5"
     }
   ],
+  "nativeMetricEvidence": {
+    "amendment": "../../../verification/orion-pro-pilot-20261104/model-amendments.json",
+    "postgresResult": "../../../verification/orion-pro-pilot-20261104/metric-state-runs/20261104T183139777229Z-targeted-native-metric-candidate/result.json",
+    "scope": "Four CHECK and four description changes in existing two tables; no new isolated tests written by documentation refresh."
+  },
   "passed": true
 }

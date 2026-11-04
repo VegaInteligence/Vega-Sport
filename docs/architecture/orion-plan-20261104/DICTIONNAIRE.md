@@ -3015,7 +3015,7 @@ PK : `revision_id`.
 
 ### football.player_match_metric_values
 
-Métriques secondaires enregistrées, avec types, unité et fractions explicites. Grain physique : une révision typée, PK (revision_id) ; clé logique (match_id, player_id, period_code, family_code, metric_code), variante variant_key ; sélection canonique (match_id, player_id, period_code, family_code, metric_code) ; intervalle de connaissance [recorded_from_gen, recorded_to_gen), fin NULL pour la version courante.
+Observations typées de métriques enregistrées et de leur état natif, avec unité et fractions explicites ; une projection numérique commune ne remplace pas cet état. Grain physique : une révision typée, PK (revision_id) ; clé logique (match_id, player_id, period_code, family_code, metric_code), variante variant_key ; sélection canonique (match_id, player_id, period_code, family_code, metric_code) ; intervalle de connaissance [recorded_from_gen, recorded_to_gen), fin NULL pour la version courante.
 
 Grain physique : Ligne physique : une révision typée, PK (revision_id) ; clé logique (match_id, player_id, period_code, family_code, metric_code), variante variant_key ; sélection canonique (match_id, player_id, period_code, family_code, metric_code) ; intervalle de connaissance [recorded_from_gen, recorded_to_gen), fin NULL pour la version courante.
 
@@ -3035,7 +3035,7 @@ Responsabilité métier : Match × player × période × famille standard/advanc
 | `period_code` | `text` | non | FK | Période explicitement définie. |
 | `family_code` | `text` | non |  | standard ou advanced. |
 | `metric_code` | `text` | non | FK | Métrique enregistrée et définie ; aucune clé arbitraire. |
-| `value_kind` | `text` | non |  | number, string ou boolean ; NULL/absence distingués par les états de champ. |
+| `value_kind` | `text` | non |  | number, string, boolean, null ou absent. null/absent n’ont ni scalaire primaire, ni fraction, ni affichage source. Une ligne absente signifie une observation inconnue ; absent exige un champ attendu et une couverture acceptée prouvés. |
 | `numeric_value` | `numeric` | oui |  | Valeur numérique exacte de cette métrique. |
 | `text_value` | `text` | oui |  | Valeur textuelle si le contrat de métrique l’autorise. |
 | `boolean_value` | `boolean` | oui |  | Valeur booléenne si définie comme telle. |
@@ -3072,9 +3072,9 @@ PK : `revision_id`.
 - FK `football_player_match_metric_values_sv_relation_code_728ccb3f5f` : `relation_code, contract_version → ingest.relation_contracts(relation_code, contract_version) ; ON DELETE RESTRICT`.
 - FK `football_player_match_metric_values_sv_source_id_sources_fk` : `source_id → ingest.sources(id) ; ON DELETE RESTRICT`.
 - FK `football_player_match_metric_values_sv_source_id_sou_1409e98f9a` : `source_id, source_record_id → ingest.source_records(source_id, id) ; ON DELETE RESTRICT`.
-- CHECK `football_player_match_metric_values_one_value_ck` : `num_nonnulls(numeric_value,text_value,boolean_value)=1`.
+- CHECK `football_player_match_metric_values_one_value_ck` : `(value_kind IN ('null','absent') AND num_nonnulls(numeric_value,text_value,boolean_value,numerator,denominator,source_display)=0) OR (value_kind IN ('number','string','boolean') AND num_nonnulls(numeric_value,text_value,boolean_value)=1)`.
 - CHECK `football_player_match_metric_values_family_ck` : `family_code IN ('standard','advanced')`.
-- CHECK `football_player_match_metric_values_value_kind_ck` : `(value_kind='number' AND numeric_value IS NOT NULL) OR (value_kind='string' AND text_value IS NOT NULL) OR (value_kind='boolean' AND boolean_value IS NOT NULL)`.
+- CHECK `football_player_match_metric_values_value_kind_ck` : `(value_kind='number' AND numeric_value IS NOT NULL) OR (value_kind='string' AND text_value IS NOT NULL) OR (value_kind='boolean' AND boolean_value IS NOT NULL) OR (value_kind IN ('null','absent') AND num_nonnulls(numeric_value,text_value,boolean_value,numerator,denominator,source_display)=0)`.
 - CHECK `football_player_match_metric_values_sv_interval_ck` : `recorded_to_gen IS NULL OR recorded_to_gen > recorded_from_gen`.
 - CHECK `football_player_match_metric_values_sv_relation_binding_ck` : `relation_code = 'football.player_match_metric_values'`.
 - CHECK `football_player_match_metric_values_sv_code_binding_ck` : `contract_version <> '' AND transform_version <> '' AND transform_code_sha256 ~ '^[0-9a-f]{64}$'`.
@@ -3420,7 +3420,7 @@ PK : `revision_id`.
 
 ### football.team_match_metric_values
 
-Métriques secondaires enregistrées, avec types, unité et fractions explicites. Grain physique : une révision typée, PK (revision_id) ; clé logique (match_id, team_id, period_code, family_code, metric_code), variante variant_key ; sélection canonique (match_id, team_id, period_code, family_code, metric_code) ; intervalle de connaissance [recorded_from_gen, recorded_to_gen), fin NULL pour la version courante.
+Observations typées de métriques enregistrées et de leur état natif, avec unité et fractions explicites ; une projection numérique commune ne remplace pas cet état. Grain physique : une révision typée, PK (revision_id) ; clé logique (match_id, team_id, period_code, family_code, metric_code), variante variant_key ; sélection canonique (match_id, team_id, period_code, family_code, metric_code) ; intervalle de connaissance [recorded_from_gen, recorded_to_gen), fin NULL pour la version courante.
 
 Grain physique : Ligne physique : une révision typée, PK (revision_id) ; clé logique (match_id, team_id, period_code, family_code, metric_code), variante variant_key ; sélection canonique (match_id, team_id, period_code, family_code, metric_code) ; intervalle de connaissance [recorded_from_gen, recorded_to_gen), fin NULL pour la version courante.
 
@@ -3439,7 +3439,7 @@ Responsabilité métier : Match × team × période × famille standard/advanced
 | `period_code` | `text` | non | FK | Période explicitement définie. |
 | `family_code` | `text` | non |  | standard ou advanced. |
 | `metric_code` | `text` | non | FK | Métrique enregistrée et définie ; aucune clé arbitraire. |
-| `value_kind` | `text` | non |  | number, string ou boolean ; NULL/absence distingués par les états de champ. |
+| `value_kind` | `text` | non |  | number, string, boolean, null ou absent. null/absent n’ont ni scalaire primaire, ni fraction, ni affichage source. Une ligne absente signifie une observation inconnue ; absent exige un champ attendu et une couverture acceptée prouvés. |
 | `numeric_value` | `numeric` | oui |  | Valeur numérique exacte de cette métrique. |
 | `text_value` | `text` | oui |  | Valeur textuelle si le contrat de métrique l’autorise. |
 | `boolean_value` | `boolean` | oui |  | Valeur booléenne si définie comme telle. |
@@ -3476,9 +3476,9 @@ PK : `revision_id`.
 - FK `football_team_match_metric_values_sv_relation_code_c_63d6e251b9` : `relation_code, contract_version → ingest.relation_contracts(relation_code, contract_version) ; ON DELETE RESTRICT`.
 - FK `football_team_match_metric_values_sv_source_id_sources_fk` : `source_id → ingest.sources(id) ; ON DELETE RESTRICT`.
 - FK `football_team_match_metric_values_sv_source_id_sourc_f2c511c7e6` : `source_id, source_record_id → ingest.source_records(source_id, id) ; ON DELETE RESTRICT`.
-- CHECK `football_team_match_metric_values_one_value_ck` : `num_nonnulls(numeric_value,text_value,boolean_value)=1`.
+- CHECK `football_team_match_metric_values_one_value_ck` : `(value_kind IN ('null','absent') AND num_nonnulls(numeric_value,text_value,boolean_value,numerator,denominator,source_display)=0) OR (value_kind IN ('number','string','boolean') AND num_nonnulls(numeric_value,text_value,boolean_value)=1)`.
 - CHECK `football_team_match_metric_values_family_ck` : `family_code IN ('standard','advanced')`.
-- CHECK `football_team_match_metric_values_value_kind_ck` : `(value_kind='number' AND numeric_value IS NOT NULL) OR (value_kind='string' AND text_value IS NOT NULL) OR (value_kind='boolean' AND boolean_value IS NOT NULL)`.
+- CHECK `football_team_match_metric_values_value_kind_ck` : `(value_kind='number' AND numeric_value IS NOT NULL) OR (value_kind='string' AND text_value IS NOT NULL) OR (value_kind='boolean' AND boolean_value IS NOT NULL) OR (value_kind IN ('null','absent') AND num_nonnulls(numeric_value,text_value,boolean_value,numerator,denominator,source_display)=0)`.
 - CHECK `football_team_match_metric_values_sv_interval_ck` : `recorded_to_gen IS NULL OR recorded_to_gen > recorded_from_gen`.
 - CHECK `football_team_match_metric_values_sv_relation_binding_ck` : `relation_code = 'football.team_match_metric_values'`.
 - CHECK `football_team_match_metric_values_sv_code_binding_ck` : `contract_version <> '' AND transform_version <> '' AND transform_code_sha256 ~ '^[0-9a-f]{64}$'`.

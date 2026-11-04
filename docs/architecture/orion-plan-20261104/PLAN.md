@@ -1,6 +1,6 @@
-# StatArena — plan de BDD et d'architecture à valider
+# StatArena — plan Pro approuvé, pilote en cours
 
-**4 novembre 2026 — proposition, sans réorganisation du nouveau schéma sur RDS.**
+**4 novembre 2026 — plan approuvé pour un pilote borné, sans réorganisation du nouveau schéma sur RDS.**
 
 L'objectif reste un StatArena complet : backend AWS, PostgreSQL sur le RDS existant, frontend Vercel, CloudFront, données détaillées, fonctionnalités préservées et gains mesurés. Cette livraison présente la structure et les étapes ; elle ne démontre pas que la migration, les collectes ou le site sont terminés.
 
@@ -14,7 +14,7 @@ La cible utilise une base applicative de référence sur le RDS existant, organi
 | `football` | Identités, profils, compétitions, matchs, faits typés, classements et enrichissements |
 | `analytics` | Agrégats de lecture, builds, publication et préparation distincte des modèles Orion |
 
-Le modèle rendu annonce **103 tables, 1 791 colonnes et 450 clés étrangères**, dont **94 tables dans le périmètre actif**.
+Le modèle rendu annonce **103 tables, 1 791 colonnes et 450 clés étrangères**, dont **94 tables, 1 709 colonnes et 431 FK dans le périmètre actif**.
 Les **84 tables du JSON initial** constituent une référence : aucune obligation de conserver leur nombre ou leur découpage.
 Chaque responsabilité du socle doit néanmoins être conservée, fusionnée, renommée ou différée avec sa raison et sa destination, jamais disparaître silencieusement.
 Les neuf tables de modèles représentent une préparation distincte ; aucune nouvelle formule Orion n'est implicitement autorisée.
@@ -27,19 +27,20 @@ Les neuf tables de modèles représentent une préparation distincte ; aucune no
 | Identités stables | 3 | Attributs historiques lus dans les profils retenus |
 | Autres métadonnées, opérations et résultats | 39 | Contrat propre à la table ; résultats immuables par build/run après validation |
 
-Ces classes décrivent le modèle, sans prouver son exécution. Les quatre registres universels `row_versions`, `dataset_snapshot_rows`, `field_states` et `record_row_links` sont retirés. La matrice exhaustive des champs/variantes, les contributions de plusieurs sources et le pilote typé local restent ouverts.
+Ces classes décrivent le modèle. Les quatre registres universels `row_versions`, `dataset_snapshot_rows`, `field_states` et `record_row_links` sont retirés. Le pilote typé local est en cours ; la matrice exhaustive des champs/variantes et les contributions de plusieurs sources restent ouvertes.
 
 Le [lecteur visuel](index.html) réunit **13 planches de domaine**, architectures, dictionnaire et correspondances.
 Le [JSON cible](target-schema.proposed.json), le [dictionnaire](DICTIONNAIRE.md), le [diff du socle](blueprint-diff.json) et la [correspondance des structures actuelles](current-to-target.csv) doivent être générés et vérifiés ensemble.
 Le [JSON initial](inputs/Orion_schema_bdd.original.json), l'[audit initial](inputs/GPT_Pro_audit.original.txt) et la [revue GPT Pro](inputs/GPT_Pro_review.original.txt) sont conservés comme documents de conception.
-Le détail proposé des clés, FK, sélections et risques figure dans [PRO_VERSIONING_DESIGN.md](PRO_VERSIONING_DESIGN.md).
+Le détail des clés, FK, sélections et risques figure dans [PRO_VERSIONING_DESIGN.md](PRO_VERSIONING_DESIGN.md) ; le [suivi de la revue](PRO_REVIEW_RESPONSE.md) distingue conception et preuves locales.
 
 **Politique de révision : versions sélectives conservées dans les tables métier, conformément à la revue Pro priorisée par l'utilisateur.** Les faits nécessaires aux calculs et leurs dépendances changeantes conservent leurs valeurs dans les tables métier concernées.
 Il n'y a pas de tables sœurs `*_history`, de copies cachées renommées, ni d'engagement à versionner chaque cellule.
 Les pages de plan, le JSON et les diagrammes ne doivent pas annoncer une garantie absente des clés et règles réellement décrites par le JSON rendu.
 Une incohérence entre ces artefacts bloque la validation ; leur présence ne prouve pas que des contraintes SQL ont été exécutées.
 
-Le modèle révisé change matériellement les clés, relations, lecteurs et garanties. Il doit être présenté concrètement avant réorganisation distante ; l'accord antérieur sur une proposition comportant des tables sœurs ne vaut pas approbation implicite de ce modèle.
+Le plan Pro a été explicitement approuvé pour un pilote borné : « Valider et lancer le pilote ». Le [reçu d’approbation](../../verification/orion-pro-pilot-20261104/approval.json) conserve le plan et le modèle exacts du commit `411207645f61f9fa0a9e31680edbe475a0432868` (modèle `028c221d…`). Il autorise la base locale jetable, puis une compétition et deux saisons sur le RDS existant après acceptation locale et nouveau préflight ; la bascule finale garde ses portes d’acceptation communes.
+Le [reçu d’amendement](../../verification/orion-pro-pilot-20261104/model-amendments.json) relie cette base au candidat courant `18da43f9…` : quatre CHECK et quatre descriptions dans deux tables existantes, sans ajout de table, colonne ou clé. Il documente une correction ciblée dans le périmètre autorisé, sans prétendre à une seconde approbation utilisateur. L’acceptation complète reste ouverte.
 
 ## 2. État des lieux et portée des mesures
 
@@ -139,10 +140,10 @@ Une collection vide est distincte d'une source absente, indisponible ou d'une r�
 Un réimport identique ne crée pas de correction ni de publication superflue ; les tentatives de collecte restent traçables.
 Une correction de parseur ou de mapping sur le même record source crée aussi une nouvelle observation typée : `standing_snapshots` conserve une UQ de contexte incluant `data_revision`, et `match_observation_details` utilise `(source_record_id, recorded_from_gen)` comme PK. Les révisions internes des tableaux et rankings progressent avec les générations ; la sélection à `g` conserve la dernière normalisation connue à `g`, sous contrôle de scellement à vérifier au pilote. Les anciens instantanés et enfants restent immuables. La provenance des enfants H2H est liée au fournisseur de leur parent par une FK source/record composite.
 
-**Exemple proposé, à tester :** à la génération 41, un joueur a `xG = 0,82` ; un build utilise ce snapshot.
+**Illustration du contrat :** à la génération 41, un joueur a `xG = 0,82` ; un build utilise ce snapshot.
 Une correction insérée à la génération 58 porte `xG = 0,67`, sans effacer la première valeur.
 La lecture courante du nouveau build retourne 0,67 ; un recalcul du build 41 doit relire 0,82 et les dépendances de 41.
-Ce résultat reste une exigence, pas une preuve : le pilote doit démontrer la conservation, les contraintes et le calcul de bout en bout.
+Les générations 41 et 58 sont illustratives. La [régression locale du candidat, 23/23](../../verification/orion-pro-pilot-20261104/runs/20261104T183222785812Z-recorded-metric-amendment-regression/result.json) vérifie des corrections, relectures et cohortes sur fixtures bornées ; elle ne prouve pas la fidélité de toutes les sources, ni le recalcul et les lecteurs publics complets.
 
 Un résultat reproductible exige également le périmètre, la cohorte complète, les minutes et couvertures, seuils, paramètres, code et règles numériques réellement utilisés.
 Le scouting existant calcule notamment des centiles sur des pairs : garder seulement la ligne du joueur ne suffit pas.
@@ -158,7 +159,7 @@ La fidélité des valeurs et des états source améliore les résultats et la co
 
 ## 6. Corrections précises issues de la revue Pro
 
-Ces points sont des exigences du modèle rendu et du pilote, pas des tests déjà réussis.
+Le pilote local possède désormais des preuves bornées ; les tableaux ci-dessous restent des obligations à confronter à leur périmètre exact, sans convertir une réussite locale en acceptation globale.
 
 | Point | Décision à porter dans les contraintes et les lecteurs |
 |---|---|
@@ -169,6 +170,11 @@ Ces points sont des exigences du modèle rendu et du pilote, pas des tests déj�
 | E — états des champs | Empêcher les combinaisons contradictoires entre état et valeur scalaire ; porter les distinctions nécessaires de manière ciblée et vérifiable |
 | F — bootstrap | Initialiser les périodes et positions, leurs versions et leur provenance avant les lignes qui les référencent ; les anciennes graines seules ne suffisent pas |
 | G — heatmaps et file | Unicité des coordonnées dans **une version de grille**, bornes contrôlées sur le parent ; états, tentatives, baux, acquisition atomique et index de la file explicitement définis |
+
+Le pilote a ensuite observé des valeurs `null` dans les métriques sources. Une correction ciblée, documentée dans le reçu [model-amendments.json](../../verification/orion-pro-pilot-20261104/model-amendments.json), permet `null` et `absent` dans les deux tables de valeurs de métriques enregistrées, sans nouvelle table, colonne ou clé. Ces états interdisent les scalaires et fractions contradictoires ; zéro, chaîne vide et faux restent des valeurs. Une ligne manquante signifie inconnu, pas absent prouvé. Les colonnes statistiques communes restent des projections numériques : leur fidélité d’état requiert un mapping explicite vers ces observations et une vérification de cohérence. Les seuls CHECK modifiés ne prouvent pas cette fidélité complète.
+Le [run initial sur le modèle approuvé](../../verification/orion-pro-pilot-20261104/metric-state-runs/20261104T182823662466Z-original-approved-null-absent-red/result.json) conserve 19 cas réussis, 4 échecs et 2 non vérifiés. Après correction, le [run PostgreSQL du candidat](../../verification/orion-pro-pilot-20261104/metric-state-runs/20261104T183139777229Z-targeted-native-metric-candidate/result.json) passe **25/25** : zéro, chaîne vide, faux, null et absent, rejets des combinaisons contradictoires, valeur corrigée conservée et lecture figée joueur/équipe. Ces entrées sont synthétiques et bornées.
+Le [pilote core issu de sources réelles](../../verification/orion-pro-pilot-20261104/real-source-runs/20261104T182830125656Z-core-shot-family-coverage/result.json) a passé **9/9 sur le modèle initial `028c…`** ; ce résultat n’est pas réattribué au candidat amendé. Le traitement des autres familles reste en cours et l’acceptation exhaustive est fausse. Aucun de ces runs n’a écrit sur RDS ni déployé un service.
+
 
 Les index uniques partiels du courant ne constituent pas à eux seuls une cible de FK ni une preuve d'absence de chevauchements historiques.
 Les règles intertables exigent des contraintes adaptées, des verrous et contrôles différés, puis des tentatives de violation dans un vrai PostgreSQL.
@@ -195,19 +201,19 @@ Une correction d'une dimension partagée doit invalider les éditions concernée
 Si les dépendances d'une réponse ne peuvent pas être déterminées, invalider de manière conservatrice et ne pas promettre une isolation fine non prouvée.
 Les listes utilisent des agrégats ciblés, pagination et chargement séparé des familles lourdes ; le cache mémoire reste borné.
 
-## 8. Ordre d'exécution après validation du modèle révisé
+## 8. Exécution du pilote approuvé et portes suivantes
 
 | Lot | Travail | Porte de sortie |
 |---|---|---|
-| P0 — contrat | Figer plan, JSON, diagrammes, responsabilités et accès nécessaires | Présentation et validation explicite du nouveau modèle ; pas de réorganisation distante avant cette étape |
-| P1 — pilote | Migrations neuves, base locale jetable puis périmètre approuvé d'une compétition et deux saisons | Cas difficiles, contraintes, reprise et performance mesurés ; aucune suppression anticipée |
+| P0 — contrat | Plan Pro approuvé et reçus immuables conservés ; amendement ciblé relié au modèle initial | Approbation du pilote acquise ; aucune nouvelle confirmation globale demandée |
+| P1 — pilote en cours | Base locale jetable : régression candidat 23/23 et états de métriques 25/25 ; core réel 9/9 sur la base initiale, familles encore en cours | Acceptation locale du périmètre complet et préflight frais avant RDS borné ; performances et réconciliation encore requises, aucune purge |
 | P2 — normalisation représentative | Transformer par lots un jeu de données déjà sur AWS en faits et variantes typés | Reçus, checkpoints, rejets, rapprochement et stabilisation du schéma |
 | P3A — backend | Dès stabilisation du schéma, adapter API, agrégats, cache et parcours sur des jeux représentatifs | Contrats, identifiants, états et lectures SQL vérifiés |
 | P3B — données | En parallèle de P3A, normaliser le reste et rapprocher Neon, AWS, faits finaux et médias avec le propriétaire du transfert | Manques, différences et non-vérifiés nommés ; aucune migration physique concurrente |
 | P4 — acceptation commune | Tester collectes, publication et site complet Vercel → CloudFront → AWS → RDS | Backend et données acceptés ensemble sur la même génération |
 | P5 — bascule/nettoyage | Basculer puis retirer les anciennes dépendances et sources devenues inutiles | Inventaire, accord des dépendants, réconciliation complète et preuve de non-dépendance |
 
-Les migrations 003–011 déjà scellées ne sont pas réécrites ; une nouvelle migration porte chaque changement approuvé.
+Les migrations 003–011 déjà scellées ne sont pas réécrites. Les artefacts locaux 012/013 sont exercés dans le pilote jetable ; aucune application du nouveau schéma sur RDS n’est revendiquée.
 L'ancien prototype local interrompu est archivé dans [superseded-prototype](../../verification/orion-schema-pilot-20261104/superseded-prototype/) ; il ne constitue ni une migration RDS ni une acceptation du nouveau modèle.
 Les workflows de collecte, enrichissement, construction/publication et contrôle sont regroupés par fonction, sans doublons ; les variantes quotidienne et historique partagent les règles de reprise.
 Une seule acquisition d'un travail utilise un bail avec propriétaire et expiration ; checkpoints, transactions bornées et idempotence permettent le redémarrage sans doublon. Un bail perdu ne peut pas publier ; les échecs, indisponibilités et nouvelles tentatives restent distingués.
