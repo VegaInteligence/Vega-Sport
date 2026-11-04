@@ -26,6 +26,10 @@ function start(key, loader) {
   }
   return cache.get(key);
 }
+/** Returns an already-resolved resource without initiating a request. */
+export function cachedResource(key) {
+  return settled.get(key);
+}
 /** Starts (or reuses) a resource outside a component, e.g. a background load. */
 export function primeResource(key, loader) {
   return start(key, loader).catch((error) => {

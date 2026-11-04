@@ -173,7 +173,13 @@ function MatchViewTabs({ view, onChange, panelId, views }) {
 function MatchPlayer({ row, rank }) {
   const f = useFootball();
   return (
-    <button className="match-player-row" onClick={() => f.setPlayer(row.id)}>
+    <button
+      className="match-player-row"
+      aria-busy={
+        (f.player === row.id && f.deferredPerformance?.loading) || undefined
+      }
+      onClick={() => f.setPlayer(row.id)}
+    >
       {rank && (
         <span className="leader-rank">{String(rank).padStart(2, "0")}</span>
       )}
@@ -181,7 +187,9 @@ function MatchPlayer({ row, rank }) {
       <span className="player-copy">
         <strong className="player-name">{row.name}</strong>
         <span className="player-meta">
-          {row.team}
+          {f.player === row.id && f.deferredPerformance?.loading
+            ? "Chargement…"
+            : row.team}
           {isNumber(row.goals) && row.goals > 0
             ? ` · ${number(row.goals)} but${row.goals > 1 ? "s" : ""}`
             : ""}
@@ -362,7 +370,7 @@ export default function MatchDetail({ match }) {
   const leading = (players.length ? players : match.leadingPlayers || [])
     .filter((r) => r.minutes > 0 && isNumber(r.rating))
     .slice(0, 5);
-  const competition = f.data.competitions.find((c) => c.id === match.leagueId);
+  const competition = f.allCompetitions.find((c) => c.id === match.leagueId);
   const status =
     match.status === "finished"
       ? "Terminé"

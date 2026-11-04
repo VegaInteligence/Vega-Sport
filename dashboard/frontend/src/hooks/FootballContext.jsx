@@ -23,6 +23,7 @@ import {
   useResource,
   download,
   primeResource,
+  cachedResource,
 } from "../services/resources.js";
 import { warmProfiles } from "../services/player-profile.js";
 import { filterSeasonPlayerScope } from "../services/season-player.js";
@@ -181,7 +182,7 @@ export function FootballProvider({ children, loadData = true }) {
       ...advancedQuery(next.advanced || EMPTY_ADVANCED),
     });
   }
-  const [comparison, setComparison] = useState([]),
+  const [selectedPerformances, setSelectedPerformances] = useState([]),
     [player, setPlayer] = useState(null),
     [comparing, setComparing] = useState(false),
     [notice, setNotice] = useState("");
@@ -222,42 +223,121 @@ export function FootballProvider({ children, loadData = true }) {
       !initial.get("id") &&
       !loadedScopes.has(scopeKey),
     fullKey = `season:${chosen}:${dataFocus}:all:full`;
-  const dataset = useResource(
-    progressive
-      ? `season:${chosen}:europe:all:full`
-      : `season:${chosen}:${loadData ? `${dataFocus}:${leagueOnly ? filters.league : "all"}:full` : "catalog"}`,
+  const seasonKey = progressive
+    ? `season:${chosen}:europe:all:full`
+    : `season:${chosen}:${loadData ? `${dataFocus}:${leagueOnly ? filters.league : "all"}:full` : "catalog"}`;
+  const detailId =
+    /^\/matchs\/?$/.test(pathname) &&
+    /^m_[A-Za-z0-9]{6}$/.test(initial.get("id") || "")
+      ? initial.get("id")
+      : null;
+  // Reuse the scope that exists on entering this match. Later intent loads must not
+  // replace the rendered match, recreate its client, or discard the active tab.
+  const warmSeason = useMemo(() => {
+    const cached = detailId && cachedResource(seasonKey);
+    if (
+      cached?.matches?.some((m) => m.id === detailId) ||
+      cached?.fixtures?.some(
+        (m) => m.id === detailId && m.status !== "finished",
+      )
+    )
+      return cached;
+    return null;
+  }, [detailId, seasonKey]);
+  const deferSeason = Boolean(detailId && !warmSeason);
+  const emptySeason = useMemo(
     () =>
-      chosen
-        ? loadData
-          ? loadSeason(
-              manifest.value,
-              chosen,
-              fetch,
-              leagueOnly
-                ? new Set(
-                    dataFocus !== "europe" ||
-                      EUROPE_FOCUS_IDS.has(filters.league)
-                      ? [filters.league]
-                      : [],
-                  )
-                : dataFocus === "europe" || progressive
-                  ? EUROPE_FOCUS_IDS
-                  : null,
-            ).then((value) => {
+      !manifest.value || !chosen
+        ? null
+        : {
+            meta: { retrievedAt: manifest.value.retrievedAt },
+            competitions: [],
+            matches: [],
+            appearances: [],
+            fixtures: [],
+          },
+    [manifest.value, chosen],
+  );
+  function loadScope() {
+    return loadSeason(
+      manifest.value,
+      chosen,
+      fetch,
+      leagueOnly
+        ? new Set(
+            dataFocus !== "europe" || EUROPE_FOCUS_IDS.has(filters.league)
+              ? [filters.league]
+              : [],
+          )
+        : dataFocus === "europe" || progressive
+          ? EUROPE_FOCUS_IDS
+          : null,
+    );
+  }
+  const dataset = useResource(
+    seasonKey,
+    () =>
+      !chosen
+        ? null
+        : loadData
+          ? loadScope().then((value) => {
               if (!leagueOnly)
                 loadedScopes.add(progressive ? `${chosen}:europe` : scopeKey);
               return value;
             })
-          : Promise.resolve({
-              meta: { retrievedAt: manifest.value.retrievedAt },
-              competitions: [],
-              matches: [],
-              appearances: [],
-              fixtures: [],
-            })
-        : Promise.resolve(null),
+          : emptySeason,
+    !deferSeason,
   );
-  const data = dataset.value;
+  const data = deferSeason ? emptySeason : warmSeason || dataset.value;
+  useEffect(() => {
+    if (!detailId) return;
+    return () => setPlayer(null);
+  }, [detailId, chosen]);
+  // A retained comparison belongs to its original rows. Only a player action
+  // on the displayed match may request the new match's owning cohort.
+  const detailPlayer = Boolean(
+    detailId && typeof player === "string" && player.startsWith(detailId + ":"),
+  );
+  const selectedMatch =
+    detailPlayer && deferSeason
+      ? cachedResource(`remote-match:${detailId}`)
+      : null;
+  const perfIntent = Boolean(selectedMatch);
+  const perf = useResource(
+    `detail-cohort:${detailId}:${seasonKey}`,
+    async () => {
+      const match = selectedMatch;
+      if (!match?.leagueId) return primeResource(seasonKey, loadScope);
+      const sourceSeason = match.season || initial.get("sourceSeason");
+      const ids = sourceSeason
+        ? [sourceSeason, seasonLabel(sourceSeason)]
+        : [chosen];
+      // Match seasons may be native calendar years. Resolve against published
+      // partitions, preserving a native-year partition when one really exists.
+      const target = ids.find((id) =>
+        manifest.value.seasons.some(
+          (s) =>
+            s.id === id && s.chunks.some((c) => c.leagueId === match.leagueId),
+        ),
+      );
+      if (!target)
+        throw new Error(
+          "Les performances de cette compétition ne sont pas disponibles pour cette saison.",
+        );
+      const localScopeExcludesMatch = leagueOnly
+        ? match.leagueId !== filters.league
+        : dataFocus === "europe" && !EUROPE_FOCUS_IDS.has(match.leagueId);
+      const targetScope = () =>
+        loadSeason(manifest.value, target, fetch, new Set([match.leagueId]));
+      if (target !== chosen || localScopeExcludesMatch) return targetScope();
+      const scope = await primeResource(seasonKey, loadScope);
+      if (!scope.competitions.some((c) => c.id === match.leagueId))
+        return targetScope();
+      return scope;
+    },
+    perfIntent,
+  );
+  const performanceData = perfIntent && perf.value ? perf.value : data;
   const [, settle] = useState(0);
   useEffect(() => {
     if (!progressive || !data) return;
@@ -280,22 +360,24 @@ export function FootballProvider({ children, loadData = true }) {
   );
   const status = useResource(`status:${client?.id}`, async () => {
     if (!client) return false;
-    await (loadData ? client.init() : client.checkStatus());
+    await (loadData && !deferSeason ? client.init() : client.checkStatus());
     return client.configured;
   });
-  const seasonCompetitions = useMemo(
-    () => {
-      const season=manifest.value?.seasons.find(item=>item.id===chosen);
-      if(!season)return data?.competitions || [];
-      const ids=new Set(season.chunks.map(chunk=>chunk.leagueId));
-      const byId=new Map((manifest.value.competitions||[]).filter(c=>ids.has(c.id)).map(c=>[c.id,c]));
-      // A loaded competition has more precise, season-specific coverage counts.
-      for(const item of data?.competitions||[])byId.set(item.id,item);
-      return enrichSeasonCompetitions([...byId.values()], client?.catalog)
-        .sort((a,b)=>(a.name||"").localeCompare(b.name||"","fr"));
-    },
-    [manifest.value, chosen, data, client, status.value, status.loading],
-  );
+  const seasonCompetitions = useMemo(() => {
+    const season = manifest.value?.seasons.find((item) => item.id === chosen);
+    if (!season) return data?.competitions || [];
+    const ids = new Set(season.chunks.map((chunk) => chunk.leagueId));
+    const byId = new Map(
+      (manifest.value.competitions || [])
+        .filter((c) => ids.has(c.id))
+        .map((c) => [c.id, c]),
+    );
+    // A loaded competition has more precise, season-specific coverage counts.
+    for (const item of data?.competitions || []) byId.set(item.id, item);
+    return enrichSeasonCompetitions([...byId.values()], client?.catalog).sort(
+      (a, b) => (a.name || "").localeCompare(b.name || "", "fr"),
+    );
+  }, [manifest.value, chosen, data, client, status.value, status.loading]);
   // The navbar search and the competition directory ignore the selected
   // scope: they always see every competition of the season.
   const allCatalog = useMemo(() => {
@@ -308,7 +390,11 @@ export function FootballProvider({ children, loadData = true }) {
     return [...byId.values()];
   }, [client, data, seasonCompetitions, status.value, status.loading]);
   const fullSeason =
-    loadData && dataFocus === "all" && !leagueOnly && !progressive;
+    loadData &&
+    !deferSeason &&
+    dataFocus === "all" &&
+    !leagueOnly &&
+    !progressive;
   function searchData() {
     if (fullSeason && data) return Promise.resolve(data);
     return primeResource(`season:${chosen}:all:all:full`, () =>
@@ -402,7 +488,7 @@ export function FootballProvider({ children, loadData = true }) {
   // Index of every performance by id, filled in idle time after a load and
   // completed at once if a card opens before it is ready.
   const appearanceIndex = useMemo(() => {
-    const list = data?.appearances || [],
+    const list = performanceData?.appearances || [],
       index = new Map();
     let next = 0;
     const fill = (budget = Infinity) => {
@@ -417,9 +503,9 @@ export function FootballProvider({ children, loadData = true }) {
     const get = () => (fill(), index);
     get.fill = fill;
     return get;
-  }, [data]);
+  }, [performanceData]);
   useEffect(() => {
-    if (!loadData || !data) return;
+    if (!loadData || !data || deferSeason) return;
     const cancelProfiles = warmProfiles(data.appearances),
       idle =
         window.requestIdleCallback ||
@@ -507,6 +593,19 @@ export function FootballProvider({ children, loadData = true }) {
     setComparison([]);
     setPlayer(null);
     setMatchFilter("all");
+  }
+  const comparison = selectedPerformances.map((row) => row.id);
+  function setComparison(next) {
+    setSelectedPerformances((previous) => {
+      const ids =
+        typeof next === "function" ? next(previous.map((row) => row.id)) : next;
+      return ids
+        .map(
+          (id) =>
+            previous.find((row) => row.id === id) || appearanceIndex().get(id),
+        )
+        .filter(Boolean);
+    });
   }
   function toggle(id) {
     setComparison((list) =>
@@ -615,8 +714,19 @@ export function FootballProvider({ children, loadData = true }) {
     href,
     navigationHref,
     comparison,
+    get comparisonRows() {
+      return selectedPerformances.map(
+        (row) => appearanceIndex().get(row.id) || row,
+      );
+    },
     setComparison,
     toggle,
+    performanceData,
+    deferredPerformance: perfIntent
+      ? perf
+      : detailPlayer
+        ? { loading: false }
+        : null,
     get byAppearance() {
       return appearanceIndex();
     },
@@ -636,7 +746,7 @@ export function FootballProvider({ children, loadData = true }) {
       >
         {() => (
           <AsyncState
-            resource={dataset}
+            resource={deferSeason ? { value: data } : dataset}
             loading={<LoadingPage href={navigationHref} />}
           >
             {(value) =>
