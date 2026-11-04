@@ -39,6 +39,7 @@ on:
       - 'docs/verification/orion-pro-readers-20261104/**'
       - 'docs/verification/orion-pro-frontend-20261104/**'
       - 'docs/verification/orion-pro-native-contracts-20261104/**'
+      - 'docs/verification/orion-pro-heatmaps-20261104/**'
   pull_request:
     paths:
       - '.github/workflows/verify-ingestion.yml'
@@ -78,6 +79,7 @@ on:
       - 'docs/verification/orion-pro-readers-20261104/**'
       - 'docs/verification/orion-pro-frontend-20261104/**'
       - 'docs/verification/orion-pro-native-contracts-20261104/**'
+      - 'docs/verification/orion-pro-heatmaps-20261104/**'
   workflow_dispatch:
 permissions:
   contents: read
@@ -107,6 +109,7 @@ jobs:
             docs/verification/orion-pro-readers-20261104
             docs/verification/orion-pro-frontend-20261104
             docs/verification/orion-pro-native-contracts-20261104
+            docs/verification/orion-pro-heatmaps-20261104
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -162,6 +165,11 @@ jobs:
           python3 tests/orion_pro_native_contracts_local.py
           --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
           --label ci-${{ github.run_id }}
+      - name: Preserve sparse heatmaps, source locators and native collection states
+        run: >-
+          python3 tests/orion_pro_heatmaps_local.py
+          --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
+          --label ci-${{ github.run_id }}
       - name: Serve immutable typed pages, summaries and lazy shots over HTTP
         run: >-
           python3 tests/orion_pro_readers_local.py
@@ -190,6 +198,8 @@ jobs:
             docs/verification/orion-pro-readers-20261104/runs/*-ci-*/
             docs/verification/orion-pro-frontend-20261104/runs/*-ci-*/
             docs/verification/orion-pro-native-contracts-20261104/runs/*-ci-*/
+            docs/verification/orion-pro-heatmaps-20261104/runs/*-ci-*/
+            docs/verification/orion-pro-heatmaps-20261104/native31-regression/runs/*-heatmap-regression/
           if-no-files-found: warn
 
   verify:

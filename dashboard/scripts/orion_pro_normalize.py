@@ -737,6 +737,138 @@ class TypedCore:
             source_id=self.ids["source"],source_record_id=record,feature_code=feature,coverage_state="available" if count else "empty_response",
             collection_state="present" if count else "empty",observed_row_count=count,checked_at=datetime.now(timezone.utc),variant_key=variant)
 
+    def import_sparse_heatmaps(self,mid,data,record,variant,*,is_canonical=True,data_revision=1,data_root='/response/data'):
+        """Qualified sparse [column,row,actions]; never infer a dense matrix."""
+        if not isinstance(data,dict):raise MappingError('Heatmap response data must be an object')
+        if not isinstance(data_root,str) or data_root not in ('/response/data','/data',''):
+            raise MappingError('Heatmap data root is not an explicitly allowed relative JSON pointer')
+        location=self.record_locations.get(record)
+        if location is None:raise MappingError('Heatmap source record has no known document location')
+        path,base=location
+        if not isinstance(base,str) or (base and not base.startswith('/')) or (not data_root and not base.endswith('/data')):
+            raise MappingError('Heatmap empty data root requires a record already located at a data member')
+        try:
+            selected=self.source.cache[path]
+            for token in (base+data_root).split('/')[1:]:
+                token=token.replace('~1','/').replace('~0','~')
+                if isinstance(selected,dict):selected=selected[token]
+                elif isinstance(selected,list) and token.isascii() and token.isdecimal() and str(int(token))==token:selected=selected[int(token)]
+                else:raise KeyError(token)
+        except (KeyError,IndexError,TypeError):
+            raise MappingError('Heatmap data root does not resolve in the cached source document') from None
+        try:matches=isinstance(selected,dict) and hashed(selected)==hashed(data)
+        except (ValueError,TypeError):
+            raise MappingError('Heatmap source data cannot be compared as finite native JSON') from None
+        if not matches:
+            raise MappingError('Heatmap supplied data differs from its source record data root')
+        if not isinstance(is_canonical,bool) or not isinstance(variant,str) or not variant.strip():
+            raise MappingError('Invalid heatmap variant/canonical context')
+        revision=self.number(data_revision,'bigint','heatmaps.data_revision')
+        if revision is None or revision<=0:raise MappingError('Invalid heatmap data revision')
+        if 'match_id' in data and data['match_id']!=mid:raise MappingError('Heatmap match ID differs from request context')
+        match=self.matches[mid];collections=[];plans=[];qualified=Counter()
+        for key in set(data)-{'match_id','grid','teams','players'}:qualified['heatmaps.'+str(key)]+=1
+        for kind in ('teams','players'):
+            value=data.get(kind,MISSING)
+            if value is MISSING:state,items='absent',[]
+            elif value is None:state,items='null',[]
+            elif isinstance(value,list):state,items=('present' if value else 'empty'),value
+            else:raise MappingError('Heatmap '+kind+' collection must be absent/null/list')
+            collections.append((kind,state,items))
+            if any(not isinstance(row,dict) for row in items):raise MappingError('Heatmap collection member must be an object: '+kind)
+        has_maps=any(items for _,_,items in collections)
+        grid=data.get('grid',MISSING)
+        if grid is MISSING:
+            if has_maps:raise MappingError('Heatmap grid descriptors are required for every map')
+            dimensions=None
+        else:
+            if not isinstance(grid,dict):raise MappingError('Heatmap grid must be an explicit object')
+            needed={'length','width','cell_length_m','cell_width_m','frame'}
+            if not needed<=set(grid):raise MappingError('Heatmap grid descriptor is absent')
+            columns=self.number(grid['length'],'smallint','heatmaps.grid.length')
+            rows=self.number(grid['width'],'smallint','heatmaps.grid.width')
+            length=self.number(grid['cell_length_m'],'double precision','heatmaps.grid.cell_length_m')
+            width=self.number(grid['cell_width_m'],'double precision','heatmaps.grid.cell_width_m')
+            if any(v is None or v<=0 for v in (columns,rows,length,width)):raise MappingError('Heatmap dimensions/metres must be positive explicit numbers')
+            if grid['frame'] not in ('acting_ltr','home_ltr'):raise MappingError('Unqualified heatmap coordinate frame')
+            dimensions=(columns,rows,length,width,grid['frame'])
+            for key in set(grid)-needed:qualified['heatmaps.grid.'+str(key)]+=1
+            if not has_maps:
+                for key in needed:qualified['heatmaps.grid_without_map.'+key]+=1
+        seen_parents=set()
+        for kind,_,items in collections:
+            for index,row in enumerate(items):
+                if kind=='teams' and 'player' in row:raise MappingError('Ambiguous player reference inside a teams heatmap')
+                team=row.get('team');player=row.get('player') if kind=='players' else None
+                if not isinstance(team,dict) or not isinstance(team.get('id'),str) or team['id'] not in self.teams:
+                    raise MappingError('Heatmap team identity does not resolve')
+                tid=team['id'];pid=None
+                if kind=='players':
+                    if not isinstance(player,dict) or not isinstance(player.get('id'),str) or player['id'] not in self.people:
+                        raise MappingError('Heatmap player identity does not resolve')
+                    pid=player['id']
+                if (mid,tid) not in self.sides:raise MappingError('Heatmap team is not a scoped match side')
+                if row.get('side') not in ('home','away'):raise MappingError('Heatmap side must be an explicit qualified token')
+                if (tid,pid) in seen_parents:raise MappingError('Repeated heatmap parent in one observation')
+                seen_parents.add((tid,pid))
+                if 'actions' not in row:raise MappingError('Absent heatmap actions state has no exact typed destination')
+                actions=self.number(row['actions'],'integer','heatmaps.actions')
+                if actions is not None and actions<0:raise MappingError('Negative heatmap action total')
+                cells=row.get('cells',MISSING)
+                if cells is MISSING:cells_state,triplets='absent',[]
+                elif cells is None:cells_state,triplets='null',[]
+                elif isinstance(cells,list):cells_state,triplets=('available' if cells else 'empty'),cells
+                else:raise MappingError('Heatmap cells must be absent/null/list of sparse triplets')
+                checked=[];coordinates=set();columns,rows,_,_,_=dimensions
+                for ordinal,cell in enumerate(triplets):
+                    if not isinstance(cell,list) or len(cell)!=3:raise MappingError('Heatmap cell must be exactly [column,row,actions]')
+                    x=self.number(cell[0],'smallint','heatmaps.cells.column_index');y=self.number(cell[1],'smallint','heatmaps.cells.row_index');count=self.number(cell[2],'integer','heatmaps.cells.action_count')
+                    if x is None or y is None or count is None or not (0<=x<columns and 0<=y<rows) or count<0:
+                        raise MappingError('Heatmap sparse coordinate/count is outside its explicit bounds')
+                    if (x,y) in coordinates:raise MappingError('Duplicate heatmap sparse coordinate')
+                    coordinates.add((x,y));checked.append((ordinal,x,y,count))
+                for key in set(row)-{'team','player','side','actions','cells'}:qualified['heatmaps.'+kind+'[].'+str(key)]+=1
+                for key in set(team)-{'id'}:qualified['heatmaps.'+kind+'[].team.'+str(key)]+=1
+                if player:
+                    for key in set(player)-{'id'}:qualified['heatmaps.players[].player.'+str(key)]+=1
+                plans.append({'kind':kind,'index':index,'tid':tid,'pid':pid,'side':row['side'],'actions':actions,'state':cells_state,'cells':checked})
+        # Two bounded cohort reads per family, not one query per cell/metric.
+        requested={self.teams[p['tid']]['id']:self.sides[(mid,p['tid'])]['revision_id'] for p in plans}
+        side_rows=list(self.conn.execute("SELECT team_id,revision_id,side FROM football.match_teams WHERE match_id=%s AND revision_id=ANY(%s) AND source_id=%s AND is_canonical AND ingest.selected_at(%s,recorded_from_gen,recorded_to_gen)",
+            (match['id'],list(requested.values()),self.ids['source'],self.g))) if requested else []
+        sides={r[0]:(r[1],r[2]) for r in side_rows}
+        if set(sides)!=set(requested):raise MappingError('Heatmap match-team cohort is not selected')
+        players={self.people[p['pid']]['id'] for p in plans if p['pid'] is not None}
+        participant_rows=list(self.conn.execute("SELECT player_id,team_id,match_team_revision_id FROM football.match_players WHERE match_id=%s AND player_id=ANY(%s) AND source_id=%s AND is_canonical AND ingest.selected_at(%s,recorded_from_gen,recorded_to_gen)",
+            (match['id'],list(players),self.ids['source'],self.g))) if players else []
+        participants=defaultdict(list)
+        for pid,tid,revision_id in participant_rows:participants[pid].append((tid,revision_id))
+        for plan in plans:
+            tid=self.teams[plan['tid']]['id'];side=sides[tid]
+            if side[1]!=plan['side']:raise MappingError('Heatmap side disagrees with the selected match team')
+            if plan['pid'] is not None and participants[self.people[plan['pid']]['id']]!=[(tid,side[0])]:
+                raise MappingError('Heatmap player/team cohort is missing or ambiguous')
+        with self.conn.transaction():
+            written=0
+            for plan in plans:
+                columns,rows,length,width,frame=dimensions;tid=self.teams[plan['tid']]['id']
+                row_record=self.subrecord(record,data_root+'/'+plan['kind']+'/'+str(plan['index']),'heatmap_collection',mid+':'+plan['kind']+':'+(plan['pid'] or plan['tid']))
+                parent=self.insert('football.match_heatmaps',match_id=match['id'],team_id=tid,player_id=self.people[plan['pid']]['id'] if plan['pid'] else None,
+                    match_team_revision_id=sides[tid][0],period_code='full_match',period_definition_version='bootstrap_v1',map_kind='source_actions',
+                    grid_columns=columns,grid_rows=rows,cell_length_m=length,cell_width_m=width,coordinate_frame=frame,actions=plan['actions'],cells_state=plan['state'],
+                    source_record_id=row_record,variant_key=variant,is_canonical=is_canonical,data_revision=revision)
+                written+=1
+                for ordinal,x,y,count in plan['cells']:
+                    self.insert('football.match_heatmap_cells',heatmap_id=parent['id'],cell_ordinal=ordinal,column_index=x,row_index=y,action_count=count);written+=1
+            for kind,state,items in collections:
+                slot=self.subrecord(record,data_root+'/'+kind,'heatmap_collection_slot',mid+':heatmaps:'+kind)
+                self.insert('ingest.match_coverage',match_id=match['id'],match_revision_id=match['revision_id'],source_id=self.ids['source'],source_record_id=slot,
+                    feature_code='heatmaps.'+kind,collection_state=state,coverage_state='available' if state=='present' else 'empty_response' if state=='empty' else 'unavailable',
+                    observed_row_count=len(items) if state in ('present','empty') else None,checked_at=datetime.now(timezone.utc),variant_key=variant,is_canonical=is_canonical,data_revision=revision)
+                written+=1
+        self.unverified.update(qualified)
+        return written
+
     def metric(self, mid, provider_id, period, raw_key, stat, record, variant, *, team=False):
         from build_dashboard_data import PLAYER_METRICS, EXTRA_PLAYER_METRICS
         known = set(PLAYER_METRICS.values()) | set(EXTRA_PLAYER_METRICS.values())
@@ -1071,27 +1203,7 @@ class TypedCore:
                     count += 1
             return count
         if family=="heatmaps":
-            grid = data.get("grid") or {}
-            for kind in ("teams","players"):
-                for row in data.get(kind,[]):
-                    tid = (row.get("team") or {}).get("id")
-                    pid = (row.get("player") or {}).get("id") if kind=="players" else None
-                    cells = row.get("cells")
-                    if not isinstance(cells,list) or not cells or not isinstance(cells[0],list) or not cells[0]:
-                        raise MappingError("Unrepresented empty/null heatmap grid in selected source")
-                    rows,columns = len(cells),len(cells[0])
-                    if any(len(r)!=columns for r in cells):raise MappingError("Ragged heatmap grid")
-                    if (mid,tid) not in self.sides or (pid and pid not in self.people):raise MappingError("Heatmap identity does not resolve")
-                    parent = self.insert("football.match_heatmaps",match_id=match["id"],team_id=self.teams[tid]["id"],player_id=self.people[pid]["id"] if pid else None,
-                        match_team_revision_id=self.sides[(mid,tid)]["revision_id"],period_code="full_match",period_definition_version="bootstrap_v1",map_kind="source_actions",
-                        grid_columns=columns,grid_rows=rows,cell_length_m=grid["cell_length_m"],cell_width_m=grid["cell_width_m"],coordinate_frame=grid["frame"],actions=row.get("actions"),
-                        cells_state="available",source_record_id=record,variant_key=variant)
-                    count += 1
-                    for y,values in enumerate(cells):
-                        for x,value in enumerate(values):
-                            self.insert("football.match_heatmap_cells",heatmap_id=parent["id"],cell_ordinal=y*columns+x,column_index=x,row_index=y,action_count=value)
-                            count += 1
-            return count
+            return self.import_sparse_heatmaps(mid,data,record,variant)
         if family=="shots":
             count = 0
             for p in data.get("periods",[]):
