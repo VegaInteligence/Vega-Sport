@@ -1,0 +1,1004 @@
+{
+  "archive_goals": {
+    "competitions": {
+      "@rows": "cat_archive_goals_competitions",
+      "fields": {
+        "calendarYear": "integer",
+        "country": "text",
+        "events": {
+          "@rows": "cat_archive_goals_competitions_events",
+          "fields": {
+            "date": "text",
+            "match": "text",
+            "minute": "text",
+            "player": "text",
+            "score": "integer[]",
+            "scoreDisagreement": "boolean",
+            "sourceSeason": "text",
+            "team": "text"
+          }
+        },
+        "id": "text",
+        "name": "text"
+      }
+    },
+    "season": "text",
+    "source": {
+      "coverage": "text",
+      "license": "text",
+      "licenseUrl": "text",
+      "name": "text",
+      "revision": "text",
+      "url": "text"
+    }
+  },
+  "archive_goals_index": {
+    "duplicatesRemoved": "integer",
+    "schemaVersion": "integer",
+    "seasons": {
+      "@rows": "cat_archive_goals_index_seasons",
+      "fields": {
+        "competitions": "integer",
+        "events": "integer",
+        "id": "text",
+        "latestEvent": "text",
+        "matches": "integer",
+        "path": "text",
+        "scoreDisagreements": "integer",
+        "sha256": "text"
+      }
+    },
+    "source": {
+      "coverage": "text",
+      "license": "text",
+      "licenseUrl": "text",
+      "name": "text",
+      "revision": "text",
+      "url": "text"
+    },
+    "unassignedEvents": "integer"
+  },
+  "archive_results": {
+    "competitions": {
+      "@rows": "cat_archive_results_competitions",
+      "fields": {
+        "code": "text",
+        "country": "text",
+        "id": "text",
+        "matches": {
+          "@rows": "cat_archive_results_competitions_matches",
+          "fields": {
+            "date": "text",
+            "dateNote": "text",
+            "round": "text",
+            "score": {
+              "et": "integer[]",
+              "final": "integer[]",
+              "ft": "integer[]",
+              "ht": "integer[]",
+              "p": "integer[]"
+            },
+            "sourceFields": {
+              "Comments": "text",
+              "Date": "text",
+              "ET": "text",
+              "FT": "text",
+              "Group": "text",
+              "HT": "text",
+              "Matchday": "text",
+              "P": "text",
+              "Round": "text",
+              "Season": "text",
+              "Stage": "text",
+              "Team 1": "text",
+              "Team 2": "text",
+              "Venue": "text",
+              "aet": "text",
+              "attendance": "text",
+              "away": "text",
+              "away_code": "text",
+              "away_continent": "text",
+              "away_country": "text",
+              "away_ident": "text",
+              "competition": "text",
+              "continent": "text",
+              "date": "text",
+              "division": "text",
+              "full_time": "text",
+              "ga": "text",
+              "gh": "text",
+              "goaldif": "text",
+              "group": "text",
+              "hgoal": "text",
+              "home": "text",
+              "home_code": "text",
+              "home_continent": "text",
+              "home_country": "text",
+              "home_ident": "text",
+              "hp": "text",
+              "leg": "text",
+              "level": "text",
+              "neutral": "text",
+              "nonmatch": "text",
+              "northsouth": "text",
+              "notes": "text",
+              "pen": "text",
+              "pens": "text",
+              "result": "text",
+              "round": "text",
+              "tie": "text",
+              "tier": "text",
+              "totgoal": "text",
+              "vgoal": "text",
+              "visitor": "text",
+              "vp": "text",
+              "∑FT": "text"
+            },
+            "stage": "text",
+            "status": "text",
+            "team1": "text",
+            "team2": "text",
+            "time": "text"
+          }
+        },
+        "name": "text",
+        "sourceFile": "text",
+        "sourceRepository": "text",
+        "sourceRevision": "text",
+        "sourceSeason": "text"
+      }
+    },
+    "season": "text",
+    "source": {
+      "additionalSources": {
+        "@rows": "cat_archive_results_source_additional_sources",
+        "fields": {
+          "archiveSha256": "text",
+          "license": "text",
+          "name": "text",
+          "revision": "text",
+          "sourceManifest": "text",
+          "upstream": {
+            "license": "text",
+            "name": "text",
+            "url": "text",
+            "usage": "text"
+          },
+          "url": "text",
+          "usage": "text"
+        }
+      },
+      "archiveSha256": "text",
+      "coverage": "text",
+      "license": "text",
+      "name": "text",
+      "revision": "text",
+      "url": "text"
+    }
+  },
+  "archive_results_index": {
+    "schemaVersion": "integer",
+    "seasons": {
+      "@rows": "cat_archive_results_index_seasons",
+      "fields": {
+        "competitions": "integer",
+        "id": "text",
+        "matches": "integer",
+        "path": "text",
+        "results": "integer",
+        "sha256": "text",
+        "unplayed": "integer",
+        "unverifiedDates": "integer"
+      }
+    },
+    "source": {
+      "additionalSources": {
+        "@rows": "cat_archive_results_index_source_additional_sources",
+        "fields": {
+          "archiveSha256": "text",
+          "license": "text",
+          "name": "text",
+          "revision": "text",
+          "sourceManifest": "text",
+          "upstream": {
+            "license": "text",
+            "name": "text",
+            "url": "text",
+            "usage": "text"
+          },
+          "url": "text",
+          "usage": "text"
+        }
+      },
+      "archiveSha256": "text",
+      "coverage": "text",
+      "license": "text",
+      "name": "text",
+      "revision": "text",
+      "url": "text"
+    }
+  },
+  "club_links": {
+    "ambiguous": {
+      "@rows": "cat_club_links_ambiguous",
+      "fields": {
+        "candidates": "text[]",
+        "clubId": "text",
+        "name": "text"
+      }
+    },
+    "links": {
+      "@map": "cat_club_links_links",
+      "fields": {
+        "clubName": "text",
+        "countryCode": "text",
+        "entityId": "text",
+        "method": "text",
+        "rankingName": "text"
+      }
+    },
+    "unmatched": {
+      "@rows": "cat_club_links_unmatched",
+      "fields": {
+        "clubId": "text",
+        "name": "text"
+      }
+    }
+  },
+  "cup_nations_results": {
+    "matches": {
+      "@rows": "cat_cup_nations_results_matches",
+      "fields": {
+        "away": "text",
+        "awayId": "text",
+        "date": "text",
+        "group": "integer",
+        "home": "text",
+        "homeId": "text",
+        "key": "text",
+        "league": "text",
+        "round": "text",
+        "score": "integer[]",
+        "status": "text"
+      }
+    },
+    "season": "text",
+    "source": {
+      "license": "text",
+      "name": "text",
+      "url": "text"
+    },
+    "worker": {
+      "checkedAt": "text",
+      "updatedAt": "text"
+    }
+  },
+  "cup_native": {
+    "matches": {
+      "@rows": "cat_cup_native_matches",
+      "fields": {
+        "away_team": {
+          "id": "text",
+          "image_url": "text",
+          "name": "text"
+        },
+        "date": "text",
+        "home_team": {
+          "id": "text",
+          "image_url": "text",
+          "name": "text"
+        },
+        "id": "text",
+        "league": {
+          "id": "text",
+          "image_url": "text",
+          "name": "text",
+          "season": "text"
+        },
+        "score_away": "integer",
+        "score_home": "integer",
+        "season": "text",
+        "status": "text",
+        "time_utc": "text"
+      }
+    },
+    "rounds": {
+      "@map": "cat_cup_native_rounds",
+      "fields": {
+        "name": "text",
+        "playoff": "boolean"
+      }
+    },
+    "roundsChecked": {
+      "@map": "cat_cup_native_rounds_checked",
+      "fields": {
+        "value": "text"
+      }
+    },
+    "source": {
+      "name": "text"
+    },
+    "worker": {
+      "checkedAt": "text",
+      "updatedAt": "text"
+    }
+  },
+  "cup_open_cups": {
+    "matches": {
+      "@rows": "cat_cup_open_cups_matches",
+      "fields": {
+        "date": "text",
+        "group": "text",
+        "num": "integer",
+        "round": "text",
+        "score": {
+          "et": "integer[]",
+          "ft": "integer[]",
+          "ht": "integer[]",
+          "p": "integer[]"
+        },
+        "scoreVector": "integer[]",
+        "team1": "text",
+        "team2": "text"
+      }
+    },
+    "name": "text",
+    "season": "text",
+    "source": {
+      "license": "text",
+      "name": "text",
+      "url": "text"
+    },
+    "worker": {
+      "checkedAt": "text",
+      "updatedAt": "text"
+    }
+  },
+  "cup_openligadb": {
+    "competition": "text",
+    "matches": {
+      "@rows": "cat_cup_openligadb_matches",
+      "fields": {
+        "away": "text",
+        "awayId": "text",
+        "date": "text",
+        "group": "integer",
+        "home": "text",
+        "homeId": "text",
+        "key": "text",
+        "notes": "text[]",
+        "penalties": "integer[]",
+        "round": "text",
+        "roundName": "text",
+        "score": "integer[]",
+        "status": "text"
+      }
+    },
+    "season": "text",
+    "source": {
+      "dataUrl": "text",
+      "license": "text",
+      "name": "text",
+      "url": "text"
+    },
+    "worker": {
+      "checkedAt": "text",
+      "updatedAt": "text"
+    }
+  },
+  "cup_standings": {
+    "competition": "text",
+    "source": "text",
+    "tables": {
+      "@rows": "cat_cup_standings_tables",
+      "fields": {
+        "name": "text",
+        "rows": {
+          "@rows": "cat_cup_standings_tables_rows",
+          "fields": {
+            "difference": "integer",
+            "draws": "integer",
+            "goalsAgainst": "integer",
+            "goalsFor": "integer",
+            "imageUrl": "text",
+            "losses": "integer",
+            "name": "text",
+            "played": "integer",
+            "points": "integer",
+            "position": "integer",
+            "wins": "integer"
+          }
+        }
+      }
+    },
+    "worker": {
+      "checkedAt": "text",
+      "updatedAt": "text"
+    }
+  },
+  "cup_worker_index": {
+    "competitions": {
+      "@rows": "cat_cup_worker_index_competitions",
+      "fields": {
+        "country_code": "text",
+        "discovered": "boolean",
+        "editions": {
+          "2026/2027": {
+            "fixtures": {
+              "format": "text",
+              "path": "text",
+              "rows": "integer",
+              "sha256": "text"
+            },
+            "results": {
+              "format": "text",
+              "path": "text",
+              "rows": "integer",
+              "sha256": "text"
+            }
+          }
+        },
+        "folder": "text",
+        "name": "text",
+        "season": "text",
+        "tables": {
+          "fixtures": {
+            "format": "text",
+            "path": "text",
+            "rows": "integer",
+            "sha256": "text"
+          },
+          "results": {
+            "format": "text",
+            "path": "text",
+            "rows": "integer",
+            "sha256": "text"
+          }
+        }
+      }
+    },
+    "meta": {
+      "source": "text",
+      "source_generated_at_utc": "text",
+      "source_revision": "text",
+      "usage": "text"
+    },
+    "native": {
+      "@rows": "cat_cup_worker_index_native",
+      "fields": {
+        "country": "text",
+        "cupWorker": "boolean",
+        "id": "text",
+        "name": "text",
+        "seasons": "text[]"
+      }
+    },
+    "schemaVersion": "integer"
+  },
+  "matchdays": {
+    "matches": {
+      "@map": "cat_matchdays_matches",
+      "fields": {
+        "name": "text",
+        "playoff": "boolean"
+      }
+    }
+  },
+  "profile_catalog": {
+    "data": {
+      "leagues": {
+        "@rows": "cat_profile_catalog_data_leagues",
+        "fields": {
+          "country_code": "text",
+          "id": "text",
+          "image_url": "text",
+          "is_free": "boolean",
+          "name": "text",
+          "seasons": "text[]"
+        }
+      }
+    },
+    "error": {
+      "code": "text",
+      "message": "text"
+    },
+    "status": "integer"
+  },
+  "profile_leagues": {
+    "data": {
+      "country_code": "text",
+      "id": "text",
+      "image_url": "text",
+      "name": "text",
+      "season": "text"
+    },
+    "error": {
+      "code": "text",
+      "message": "text"
+    },
+    "status": "integer"
+  },
+  "profile_players": {
+    "data": {
+      "country_code": "text",
+      "id": "text",
+      "image_url": "text",
+      "name": "text",
+      "position_id": "integer",
+      "shirt_number": "text",
+      "short_name": "text"
+    },
+    "error": {
+      "code": "text",
+      "message": "text"
+    },
+    "status": "integer"
+  },
+  "profile_teams": {
+    "data": {
+      "id": "text",
+      "image_url": "text",
+      "name": "text"
+    },
+    "error": {
+      "code": "text",
+      "message": "text"
+    },
+    "status": "integer"
+  },
+  "ranking_fifa_men": {
+    "edition": "text",
+    "kind": "text",
+    "officialEdition": "boolean",
+    "period": "text",
+    "provider": "text",
+    "quality": {
+      "duplicateEntityIds": "text[]"
+    },
+    "retrievedAt": "text",
+    "rows": {
+      "@rows": "cat_ranking_fifa_men_rows",
+      "fields": {
+        "confederation": "text",
+        "countryCode": "text",
+        "entityId": "text",
+        "entityName": "text",
+        "imageUrl": "text",
+        "points": "double precision",
+        "position": "integer",
+        "previousPosition": "integer",
+        "sourceRow": {
+          "lastUpdateDate": "text",
+          "nativeRow": {
+            "ConfederationName": "text",
+            "Gender": "integer",
+            "IdConfederation": "text",
+            "IdCountry": "text",
+            "IdTeam": "text",
+            "IsUpdateable": "text",
+            "PrevPoints": "double precision",
+            "PrevRank": "integer",
+            "Properties": "text",
+            "Rank": "integer",
+            "RankingMovement": "integer",
+            "RankingStatus": "integer",
+            "RatedMatches": "integer",
+            "TeamName": {
+              "@rows": "cat_ranking_fifa_men_rows_source_row_native_row_team_name",
+              "fields": {
+                "Description": "text",
+                "Locale": "text"
+              }
+            },
+            "TotalPoints": "double precision"
+          },
+          "nextUpdateDate": "text",
+          "previousPoints": "double precision",
+          "rankingItem": {
+            "active": "boolean",
+            "countryCode": "text",
+            "countryURL": "text",
+            "flag": {
+              "alt": "text",
+              "height": "integer",
+              "src": "text",
+              "title": "text",
+              "width": "integer"
+            },
+            "idTeam": "text",
+            "name": "text",
+            "previousRank": "integer",
+            "rank": "integer",
+            "totalPoints": "double precision"
+          },
+          "tag": {
+            "id": "text",
+            "text": "text"
+          }
+        }
+      }
+    },
+    "sourceUpdatedAt": "text",
+    "sourceUrl": "text"
+  },
+  "ranking_index": {
+    "clubMapping": {
+      "ambiguous": "integer",
+      "linked": "integer",
+      "unmatched": "integer"
+    },
+    "editions": {
+      "@rows": "cat_ranking_index_editions",
+      "fields": {
+        "edition": "text",
+        "kind": "text",
+        "officialEdition": "boolean",
+        "path": "text",
+        "period": "text",
+        "provider": "text",
+        "retrievedAt": "text",
+        "rows": "integer",
+        "sha256": "text",
+        "sourceUpdatedAt": "text",
+        "sourceUrl": "text"
+      }
+    },
+    "errors": {
+      "@rows": "cat_ranking_index_errors",
+      "fields": {
+        "date": "text",
+        "error": "text",
+        "kind": "text",
+        "provider": "text",
+        "year": "integer"
+      }
+    },
+    "fifaCatalogueDates": "integer",
+    "notes": {
+      "historicalDates": "text",
+      "uefa-associations": "text"
+    },
+    "requestedFromYear": "integer",
+    "retrievedAt": "text",
+    "schemaVersion": "integer"
+  },
+  "ranking_sportsapi": {
+    "edition": "text",
+    "kind": "text",
+    "officialEdition": "boolean",
+    "period": "text",
+    "provider": "text",
+    "quality": {
+      "duplicateEntityIds": "text[]"
+    },
+    "retrievedAt": "text",
+    "rows": {
+      "@rows": "cat_ranking_sportsapi_rows",
+      "fields": {
+        "countryCode": "text",
+        "entityId": "text",
+        "entityName": "text",
+        "imageUrl": "text",
+        "points": "double precision",
+        "position": "integer",
+        "previousPosition": "integer",
+        "sourceRow": {
+          "bestPosition": "integer",
+          "country": {
+            "code": "text",
+            "name": "text"
+          },
+          "league": {
+            "category": "text",
+            "country": {
+              "code": "text",
+              "name": "text"
+            },
+            "id": "integer",
+            "image": "text",
+            "name": "text",
+            "slug": "text",
+            "sport": "text"
+          },
+          "points": "double precision",
+          "position": "integer",
+          "previousPoints": "double precision",
+          "previousPosition": "integer",
+          "team": {
+            "code": "text",
+            "id": "integer",
+            "image": "text",
+            "name": "text",
+            "shortName": "text",
+            "slug": "text"
+          },
+          "tournamentsPlayed": "integer"
+        }
+      }
+    },
+    "sourceUpdatedAt": "text",
+    "sourceUrl": "text"
+  },
+  "ranking_uefa_associations": {
+    "edition": "text",
+    "kind": "text",
+    "officialEdition": "boolean",
+    "period": "text",
+    "provider": "text",
+    "quality": {
+      "duplicateEntityIds": "text[]"
+    },
+    "retrievedAt": "text",
+    "rows": {
+      "@rows": "cat_ranking_uefa_associations_rows",
+      "fields": {
+        "countryCode": "text",
+        "earnedPoints": "double precision",
+        "entityId": "text",
+        "entityName": "text",
+        "imageUrl": "text",
+        "points": "double precision",
+        "position": "integer",
+        "previousPosition": "integer",
+        "sourceRow": {
+          "member": {
+            "associationId": "integer",
+            "associationLogoUrl": "text",
+            "bigLogoUrl": "text",
+            "countryCode": "text",
+            "countryName": "text",
+            "displayName": "text",
+            "displayNameShort": "text",
+            "displayOfficialName": "text",
+            "displayTeamCode": "text",
+            "history": {
+              "@rows": "cat_ranking_uefa_associations_rows_source_row_member_history",
+              "fields": {
+                "bigLogoUrl": "text",
+                "countryCode": "text",
+                "countryName": "text",
+                "displayName": "text",
+                "displayNameShort": "text",
+                "displayOfficialName": "text",
+                "displayTeamCode": "text",
+                "fromDate": "text",
+                "fromPhase": "text[]",
+                "fromYear": "integer",
+                "inheritTeamId": "text",
+                "internationalName": "text",
+                "logoUrl": "text",
+                "mediumLogoUrl": "text",
+                "teamCode": "text",
+                "toDate": "text",
+                "toPhase": "text[]",
+                "toYear": "integer"
+              }
+            },
+            "id": "text",
+            "internationalName": "text",
+            "isPlaceHolder": "boolean",
+            "logoUrl": "text",
+            "mediumLogoUrl": "text",
+            "teamCode": "text",
+            "typeIsNational": "boolean",
+            "typeTeam": "text"
+          },
+          "overallRanking": {
+            "baseSeasonYear": "integer",
+            "factorBonusForTitleHeld": "double precision",
+            "nationalAssociationPoints": "double precision",
+            "numberOfMatches": "integer",
+            "numberOfTeams": "integer",
+            "numberOfTeamsStillInPlaying": "integer",
+            "position": "integer",
+            "targetSeasonYear": "integer",
+            "totalPoints": "double precision",
+            "totalValue": "double precision",
+            "trend": "text"
+          },
+          "seasonRankings": {
+            "@rows": "cat_ranking_uefa_associations_rows_source_row_season_rankings",
+            "fields": {
+              "factorBonusForTitleHeld": "double precision",
+              "factorTotalBonus": "double precision",
+              "nationalAssociationPoints": "double precision",
+              "numberOfMatches": "integer",
+              "numberOfTeams": "integer",
+              "numberOfTeamsStillInPlaying": "integer",
+              "position": "integer",
+              "seasonYear": "integer",
+              "totalPoints": "double precision",
+              "totalPointsWithBonus": "double precision",
+              "totalValue": "double precision"
+            }
+          }
+        }
+      }
+    },
+    "sourceUpdatedAt": "text",
+    "sourceUrl": "text"
+  },
+  "ranking_uefa_clubs": {
+    "edition": "text",
+    "kind": "text",
+    "officialEdition": "boolean",
+    "period": "text",
+    "provider": "text",
+    "quality": {
+      "duplicateEntityIds": "text[]"
+    },
+    "retrievedAt": "text",
+    "rows": {
+      "@rows": "cat_ranking_uefa_clubs_rows",
+      "fields": {
+        "countryCode": "text",
+        "earnedPoints": "double precision",
+        "entityId": "text",
+        "entityName": "text",
+        "imageUrl": "text",
+        "points": "double precision",
+        "position": "integer",
+        "previousPosition": "integer",
+        "sourceRow": {
+          "competition": {
+            "age": "text",
+            "displayName": "text",
+            "id": "text",
+            "region": "text",
+            "sex": "text",
+            "sportsType": "text",
+            "type": "text"
+          },
+          "member": {
+            "associationId": "integer",
+            "associationLogoUrl": "text",
+            "bigLogoUrl": "text",
+            "countryCode": "text",
+            "countryName": "text",
+            "displayName": "text",
+            "displayNameShort": "text",
+            "displayOfficialName": "text",
+            "displayTeamCode": "text",
+            "id": "text",
+            "internationalName": "text",
+            "isPlaceHolder": "boolean",
+            "logoUrl": "text",
+            "mediumLogoUrl": "text",
+            "teamCode": "text",
+            "typeIsNational": "boolean",
+            "typeTeam": "text"
+          },
+          "overallRanking": {
+            "baseSeasonYear": "integer",
+            "factorBonusForTitleHeld": "double precision",
+            "nationalAssociationPoints": "double precision",
+            "numberOfMatches": "integer",
+            "numberOfTeams": "integer",
+            "numberOfTeamsStillInPlaying": "integer",
+            "position": "integer",
+            "targetSeasonYear": "integer",
+            "totalPoints": "double precision",
+            "totalValue": "double precision",
+            "trend": "text"
+          },
+          "seasonRankings": {
+            "@rows": "cat_ranking_uefa_clubs_rows_source_row_season_rankings",
+            "fields": {
+              "factorBonusForTitleHeld": "double precision",
+              "factorTotalBonus": "double precision",
+              "nationalAssociationPoints": "double precision",
+              "numberOfMatches": "integer",
+              "numberOfTeams": "integer",
+              "numberOfTeamsStillInPlaying": "integer",
+              "position": "integer",
+              "seasonYear": "integer",
+              "totalPoints": "double precision",
+              "totalPointsWithBonus": "double precision",
+              "totalValue": "double precision"
+            }
+          }
+        }
+      }
+    },
+    "sourceUpdatedAt": "text",
+    "sourceUrl": "text"
+  },
+  "supp_fixtures": {
+    "rows": {
+      "@rows": "cat_supp_fixtures_rows",
+      "fields": {
+        "away": "text",
+        "date": "text",
+        "gw": "text",
+        "home": "text",
+        "time": "text"
+      }
+    }
+  },
+  "supp_goals": {
+    "rows": {
+      "@rows": "cat_supp_goals_rows",
+      "fields": {
+        "away": "text",
+        "date": "text",
+        "gw": "text",
+        "home": "text",
+        "minute": "text",
+        "score_away": "text",
+        "score_home": "text",
+        "scorer": "text"
+      }
+    }
+  },
+  "supp_index": {
+    "competitions": {
+      "@rows": "cat_supp_index_competitions",
+      "fields": {
+        "country_code": "text",
+        "folder": "text",
+        "name": "text",
+        "season": "text",
+        "tables": {
+          "fixtures": {
+            "path": "text",
+            "rows": "integer",
+            "sha256": "text"
+          },
+          "goals": {
+            "path": "text",
+            "rows": "integer",
+            "sha256": "text"
+          },
+          "results": {
+            "path": "text",
+            "rows": "integer",
+            "sha256": "text"
+          }
+        }
+      }
+    },
+    "meta": {
+      "retrieved_at_utc": "text",
+      "source": "text",
+      "source_generated_at_utc": "text",
+      "terms": "text",
+      "usage": "text"
+    }
+  },
+  "supp_results": {
+    "rows": {
+      "@rows": "cat_supp_results_rows",
+      "fields": {
+        "away": "text",
+        "away_corners": "text",
+        "away_corners_1h": "text",
+        "away_corners_2h": "text",
+        "away_fouls": "text",
+        "away_red": "text",
+        "away_shots": "text",
+        "away_target": "text",
+        "away_yellow": "text",
+        "date": "text",
+        "ft_away": "text",
+        "ft_home": "text",
+        "ft_result": "text",
+        "goal_minutes": "text",
+        "gw": "text",
+        "home": "text",
+        "home_corners": "text",
+        "home_corners_1h": "text",
+        "home_corners_2h": "text",
+        "home_fouls": "text",
+        "home_red": "text",
+        "home_shots": "text",
+        "home_target": "text",
+        "home_yellow": "text",
+        "ht_away": "text",
+        "ht_home": "text",
+        "ht_result": "text",
+        "source": "text",
+        "time": "text"
+      }
+    }
+  }
+}
