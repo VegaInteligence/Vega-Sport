@@ -23,6 +23,7 @@ on:
       - 'docs/verification/aws-relational-core-20261104/**'
       - 'docs/verification/aws-support-20261104/**'
       - 'docs/verification/aws-catalog-20261104/**'
+      - 'docs/verification/aws-compact-metrics-20261104/**'
       - 'docs/verification/relational-match-20261104/**'
       - 'docs/verification/aws-frontend-20261104/curated-*'
       - 'dashboard/outputs/data-completeness/*.json'
@@ -53,6 +54,7 @@ on:
       - 'docs/verification/aws-relational-core-20261104/**'
       - 'docs/verification/aws-support-20261104/**'
       - 'docs/verification/aws-catalog-20261104/**'
+      - 'docs/verification/aws-compact-metrics-20261104/**'
       - 'docs/verification/relational-match-20261104/**'
       - 'docs/verification/aws-frontend-20261104/curated-*'
       - 'dashboard/outputs/data-completeness/*.json'
@@ -142,6 +144,7 @@ jobs:
             docs/verification/aws-frontend-20261104
             docs/verification/relational-match-20261104
             docs/verification/aws-support-20261104
+            docs/verification/aws-compact-metrics-20261104
             docs/verification/aws-catalog-20261104
       - uses: actions/setup-python@v5
         with:
@@ -166,6 +169,11 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Validate isolated CI controls
         run: python3 docs/verification/aws-actions-20261104/ci_contract.py ci-definition
+      - name: Upgrade existing metric data and verify atomic rollback and concurrent reads
+        run: |
+          python3 docs/verification/aws-compact-metrics-20261104/durable-ci/definition.py ci
+          python3 docs/verification/aws-compact-metrics-20261104/durable-ci/inputs.py
+          node docs/verification/aws-compact-metrics-20261104/run.mjs ci
       - name: Publish typed partitions, resume and roll back
         run: node docs/verification/aws-rematerialize-20261104/run.mjs ci
       - name: Exercise core publisher and HTTP read contracts
@@ -197,6 +205,8 @@ jobs:
           path: |
             docs/verification/aws-rematerialize-20261104/ci/
             docs/verification/aws-relational-core-20261104/ci/
+            docs/verification/aws-compact-metrics-20261104/ci/
+            docs/verification/aws-compact-metrics-20261104/durable-ci/ci.json
             docs/verification/aws-actions-20261104/relational-ci/
             docs/verification/aws-actions-20261104/ci-definition.json
           if-no-files-found: warn
