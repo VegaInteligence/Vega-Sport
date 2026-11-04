@@ -19,6 +19,7 @@ parser.add_argument("--workers", type=int, default=8)
 parser.add_argument("--limit", type=int)
 parser.add_argument("--prefix")
 parser.add_argument("--exclude-prefix")
+parser.add_argument("--missing-only", action="store_true")
 args = parser.parse_args()
 if not 1 <= args.workers <= 16 or (args.limit is not None and args.limit < 1):
     raise ValueError("Invalid worker count or limit")
@@ -39,7 +40,14 @@ for attempt in range(36):
             raise
         time.sleep(10)
 
-rows = control.execute("select path,size,sha256 from statarena.objects order by path").fetchall()
+if args.missing_only:
+    rows = control.execute("""select o.path,o.size,o.sha256 from statarena.objects o
+        left join statarena.file_document_sources s on s.source_path=o.path
+        where s.source_path is null or s.source_sha256<>o.sha256
+           or s.status not in ('ready','unsupported') or s.error_count>0
+        order by o.path""").fetchall()
+else:
+    rows = control.execute("select path,size,sha256 from statarena.objects order by path").fetchall()
 rows = [(path, size, bytes(sha)) for path, size, sha in rows if supports_documents(path)]
 if args.prefix:
     rows = [row for row in rows if row[0].startswith(args.prefix)]
