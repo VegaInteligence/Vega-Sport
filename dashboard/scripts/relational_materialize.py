@@ -165,6 +165,7 @@ def prepare(inputs, manifest, queue_all):
             "work_known",
             "work_matches",
             "work_resources",
+            "work_resource_stamps",
             "work_scopes",
             "work_catalog",
             "work_shards",
@@ -187,30 +188,54 @@ def prepare(inputs, manifest, queue_all):
             encode(o.sha256,'hex') AS object_digest FROM statarena.resources r LEFT JOIN statarena.objects o ON o.path=r.ref->>'path'
             WHERE starts_with(endpoint,'/matches/')""")
         db.execute("CREATE INDEX ON work_resources(mid)")
+        db.execute("ANALYZE work_resources")
+        db.execute("ANALYZE work_known")
+        db.execute(
+            "CREATE TEMP TABLE work_resource_stamps(mid text PRIMARY KEY,stamp text NOT NULL)"
+        )
+        # Fingerprint each source row once. Disjoint ranges keep a large catalog's
+        # ordered aggregation inside the existing per-statement time budget.
+        mids = [
+            row[0]
+            for row in db.execute(
+                "SELECT DISTINCT mid FROM work_resources ORDER BY mid"
+            )
+        ]
+        for start in range(0, len(mids), 256):
+            chunk = mids[start : start + 256]
+            db.execute(
+                """INSERT INTO work_resource_stamps(mid,stamp)
+                SELECT mid,md5(string_agg(md5(endpoint||params||row_revision||status::text||updated_at::text||
+                coalesce(ref::text,'')||coalesce(error::text,'')||coalesce(object_digest,'')),'' ORDER BY endpoint,params))
+                FROM work_resources WHERE mid BETWEEN %s AND %s GROUP BY mid""",
+                (chunk[0], chunk[-1]),
+            )
+        db.execute("ANALYZE work_resource_stamps")
         db.execute("""CREATE TEMP TABLE work_shards AS SELECT s.id,md5(s.ref::text || coalesce(string_agg(
             path||coalesce(encode(o.sha256,'hex'),''),'|' ORDER BY path),'')) AS stamp
             FROM statarena.shards s LEFT JOIN LATERAL (SELECT s.ref#>>'{document,path}' AS path UNION ALL
             SELECT value->>'path' FROM jsonb_each(s.ref->'tables')) refs ON true
             LEFT JOIN statarena.objects o USING(path) GROUP BY s.id,s.ref""")
+        db.execute("CREATE UNIQUE INDEX ON work_shards(id)")
+        db.execute("ANALYZE work_shards")
         db.execute("""CREATE TEMP TABLE work_matches AS SELECT f.id,f.league_id,
             CASE WHEN k.season IS NULL AND f.season ~ '^[0-9]{4}$' THEN f.season||'/'||(f.season::int+1)::text ELSE f.season END AS season,
             md5(f.xmin::text||f.updated_at::text||coalesce(o.shard,'')||coalesce(o.ordinal::text,'')||coalesce(s.stamp,'')||coalesce(r.stamp,'')) AS stamp
             FROM statarena.fixtures f LEFT JOIN work_known k ON (k.season,k.league_id)=(f.season,f.league_id)
             LEFT JOIN statarena.observations o ON o.id=f.id LEFT JOIN work_shards s ON s.id=o.shard
-            LEFT JOIN (SELECT mid,md5(string_agg(md5(endpoint||params||row_revision||status::text||updated_at::text||coalesce(ref::text,'')||
-            coalesce(error::text,'')||coalesce(object_digest,'')),'' ORDER BY endpoint,params)) AS stamp FROM work_resources GROUP BY mid) r ON r.mid=f.id
+            LEFT JOIN work_resource_stamps r ON r.mid=f.id
             WHERE f.season ~ '^[0-9]{4}(/[0-9]{4})?$'""")
         db.execute("CREATE UNIQUE INDEX ON work_matches(id)")
         db.execute("CREATE INDEX ON work_matches(season,league_id)")
         # Saved match endpoints without an eligible fixture still have typed detail readers.
         db.execute("""INSERT INTO work_matches SELECT r.mid,'@details-'||substr(md5(r.mid),1,2),'@details',
-            md5(string_agg(md5(r.endpoint||r.params||r.row_revision||r.status::text||r.updated_at::text||coalesce(r.ref::text,'')||coalesce(r.error::text,'')||coalesce(r.object_digest,'')),''
-            ORDER BY r.endpoint,r.params)) FROM work_resources r WHERE r.mid ~ '^m_[A-Za-z0-9]{6}$'
-            AND NOT EXISTS(SELECT 1 FROM work_matches f WHERE f.id=r.mid) GROUP BY r.mid""")
+            r.stamp FROM work_resource_stamps r WHERE r.mid ~ '^m_[A-Za-z0-9]{6}$'
+            AND NOT EXISTS(SELECT 1 FROM work_matches f WHERE f.id=r.mid)""")
         db.execute("""INSERT INTO work_matches SELECT o.id,'@details-'||substr(md5(o.id),1,2),'@details',
             md5(o.shard||o.ordinal::text||s.stamp) FROM statarena.observations o JOIN work_shards s ON s.id=o.shard
             WHERE NOT EXISTS(SELECT 1 FROM work_matches w WHERE w.id=o.id AND w.season<>'@details')
             ON CONFLICT(id) DO UPDATE SET stamp=md5(work_matches.stamp||excluded.stamp)""")
+        db.execute("ANALYZE work_matches")
         db.execute("""CREATE TEMP TABLE work_scopes AS SELECT w.season,w.league_id,
             md5(string_agg(w.id||w.stamp,'' ORDER BY w.id)||coalesce(p.xmin::text,'')||coalesce(encode(o.sha256,'hex'),'')) AS digest
             FROM work_matches w LEFT JOIN statarena.resources p ON p.endpoint='/leagues/'||w.league_id AND p.params='{}'
