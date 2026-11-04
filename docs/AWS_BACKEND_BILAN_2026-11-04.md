@@ -1,6 +1,6 @@
 # Backend AWS : bilan chiffré du 4 novembre 2026
 
-La lecture SQL et les optimisations ci-dessous sont implémentées, poussées sur `codex/aws-backend-20261104` et testées. L’API AWS est déployée. La migration complète et la bascule de production restent ouvertes : seules deux partitions sont publiées, le volume RDS actuel ne suffit pas au périmètre complet estimé, et la bascule de production doit attendre cette publication complète. La prévisualisation Git Vercel du commit exact a ensuite été déployée et vérifiée.
+La lecture SQL et les optimisations ci-dessous sont implémentées et intégrées à `main` (`d2a98c0d09`, puis lots `7885d54278` et `6df2acb988`). L’API AWS est déployée et les contrôles CI associés passent. L’extension approuvée à 64 Gio est disponible ; la construction du jeu complet et la bascule de production restent ouvertes. Un cas réel de numéro de maillot vide a interrompu une partition et fait l’objet du correctif typé décrit ci-dessous.
 
 ## Lecture relationnelle et cache
 
@@ -76,11 +76,24 @@ Un essai réel et réversible sur la page dense a conservé toutes les réponses
 
 ## Reste à terminer
 
-- **Couverture** : 2 partitions, 189 matchs enrichis, 1 880 projections de support et 37 867 références d’images ont été publiés. Il reste 484 partitions et environ 36 700 travaux au total. L’audit API partiel garde ses neuf échecs liés à cette publication incomplète ; la migration n’est pas déclarée terminée.
-- **Capacité** : après compaction, le périmètre complet est estimé autour de 27,8 Go avant réserve, en conservant les sources existantes. Le disque RDS est de 20 Gio, avec une admission SQL à 16 Go. Le backfill massif n’a pas repris. L’extension proposée à 64 Gio ajoute 5,06 USD HT/mois au tarif régional vérifié et attend ton accord explicite, car le volume alloué ne peut ensuite pas être réduit sur cette instance. [Calcul et demande exacte](verification/aws-capacity-20261104/storage-change-plan.json).
+- **Couverture** : l’instantané public du 2026-11-04T09:17:55.738202+00:00 contient 9 partitions et 803 matchs. Le premier run de reprise41798086770 avait ajouté4 partitions / 405 matchs. Le jeu complet reste à construire ; les neuf échecs du premier audit partiel restent conservés. La partition refusée pour un numéro de maillot vide a été annulée ; ses entrées restent à reprendre.
+- **Capacité** : extension20→64 Gio explicitement approuvée et exécutée ; RDS disponible en 64 Gio, classe micro conservée. Admission SQL partagée 52 milliards d’octets, réserve 256 Mo. L’accord n’est plus en attente. [Preuves](verification/aws-capacity-expansion-20261104/admission-guard.json).
 - **Vercel** : la prévisualisation Git du commit `e1771cc437` est `READY` et passe **26+6 contrôles hébergés**. Les 84 requêtes AWS observées suivent la bonne origine, sans transmettre les identifiants de prévisualisation. Les deux refus manuels HTTP 402 précédents sont conservés ; le déploiement Git automatique a ensuite réussi, sans changement de forfait ou de protection. Cette preuve porte sur les données déjà publiées, et non sur une bascule de production. [Résultats](verification/aws-deferred-preview-20261104/RESULTS.md).
-- **Bascule finale** : reprendre la publication dans la capacité autorisée, terminer la couverture des sources et tous les parcours métier, déployer le front, puis retirer les dépendances Neon obsolètes. Main et la production n’ont pas été basculés sur ce jeu partiel.
+- **Bascule finale** : reprendre la publication dans la capacité autorisée, terminer la couverture des sources et tous les parcours métier, déployer le front, puis retirer les dépendances Neon obsolètes. Le code est sur main. La production Vercel conserve son ancienne version disponible ; un garde temporaire empêche son déploiement automatique pendant la validation AWS complète.
+
+## Lots supplémentaires sur main
+
+| Lot | Avant | Après vérifié | Portée |
+|---|---:|---:|---|
+| Workflows de collecte | 2 définitions quotidienne/historique | 1 collecteur AWS,6 horaires quotidiens conservés | 19 scénarios de déclenchement ;13 contrôles PostgreSQL/bootstrap ;CI41804684467vert |
+| Ensemble des définitions courantes | 6 | 5 (−16,7 %) | Six anciens diagnostics ponctuels désactivés ; historiques conservés |
+| Saison uniquement dans le manifeste | 0 construction lors d’une reprise normale | 1 construction, puis0 à la reprise inchangée | Empreinte physique initiale conservée ;19/19E2E etCI41806058721verts |
+| Types des numéros de maillot | Chaîne vide : échec SQL | 8 formes natives conservées | 9 scénarios SQL,10 contrôles HTTP,20 scénarios de construction et6 contrôles de transport passent localement |
+
+Le collecteur Neon historique41784088755 a été annulé et ses anciens déclencheurs ont été retirés. Le premier essai du nouveau collecteur a échoué sur la liste des noms autorisés par OIDC ; la règle AWS actuelle autorise les trois nouveaux noms sur main. Une seconde tentative observée a validé le bootstrap AWS et réutilisé 1 source 200 en 2,98 s, avec 0 téléchargement. Sa construction SQL a ensuite échoué sur le numéro de maillot vide ; cette exécution n’est donc pas déclarée réussie. Le correctif011 et son déploiement doivent précéder la nouvelle reprise.
+
+Les corrections de découverte et de types améliorent la couverture et évitent des échecs ; aucun gain de latence du site n’est inventé pour ces changements. Le transfert des originaux Neon→AWS reste au Codex de ton pote. [Workflow et preuves](verification/aws-workflow-consolidation-20261104/RESULTS.md), [découverte initiale](verification/aws-rematerialize-20261104/BOOTSTRAP_RESULTS.md), [types et procédure011](verification/aws-relational-core-20261104/SHIRT_NUMBER_RESULTS.md).
 
 Chaque dossier de preuve contient ses entrées, commandes de relance et résultats observés. Les gains rapportés ne sont pas extrapolés à l’ensemble des utilisateurs ni transformés en économies mensuelles non mesurées.
 
-Commit suggéré : `docs: record AWS migration progress and measured performance gains`.
+Commit suggéré : `fix: preserve native shirt numbers in relational publication`.

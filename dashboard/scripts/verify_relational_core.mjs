@@ -39,7 +39,7 @@ const pg = new Postgres({
   onError: (s) => logs.push(String(s)),
 });
 let exitCode = 1;
-const command = `STATARENA_CORE_EVIDENCE=${path.relative(root, evidence)} bun dashboard/scripts/verify_relational_core.mjs`;
+const command = `${process.env.STATARENA_CORE_API === "1" ? "STATARENA_CORE_API=1 " : ""}STATARENA_CORE_EVIDENCE=${path.relative(root, evidence)} bun dashboard/scripts/verify_relational_core.mjs`;
 try {
   await pg.initialise();
   await pg.start();

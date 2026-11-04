@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS statarena_app.publication_jobs(season text NOT NULL,l
 
 def install_schema(db):
     db.execute((ROOT/'dashboard/backend/migrations/003_relational_core.sql').read_text())
+    db.execute((ROOT/'dashboard/backend/migrations/011_appearance_shirt_numbers.sql').read_text())
 
 
 def _many(db, table, rows, update=True):
@@ -92,7 +93,7 @@ def _identity(value):
 def publish_snapshot(db, season, league_id, snapshot):
     """Caller owns transaction + ingestion lease. Never publishes files or calls providers."""
     encoded = json.dumps(snapshot,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False)
-    digest = hashlib.sha256(encoded.encode()).hexdigest()
+    digest = hashlib.sha256(b'statarena-core-011\0' + encoded.encode()).hexdigest()
     prior = db.execute('SELECT source_digest FROM statarena_app.partitions WHERE season=%s AND league_id=%s',(season,league_id)).fetchone()
     if prior and prior[0] == digest: return 0
     db.execute('DELETE FROM statarena_app.matches WHERE season=%s AND league_id=%s',(season,league_id))
@@ -131,7 +132,7 @@ def publish_snapshot(db, season, league_id, snapshot):
         for i,s in enumerate(m.get('stats') or []):
             statistics.append(dict(match_id=m['id'],metric_key=s['key'],ordinal=i,label=s.get('label'),home_value=s.get('home'),away_value=s.get('away'),home_raw=None if s.get('homeRaw') is None else str(s['homeRaw']),away_raw=None if s.get('awayRaw') is None else str(s['awayRaw']),home_raw_type=type(s.get('homeRaw')).__name__,away_raw_type=type(s.get('awayRaw')).__name__,format=s.get('format'),reliable=s.get('reliable')))
     _many(db,'matches',matches); _many(db,'match_coverage',coverage);_many(db,'match_warnings',warnings);_many(db,'shots',shots);_many(db,'team_statistics',statistics)
-    appearances=[]; extras=[]; identities=[]
+    appearances=[]; extras=[]; identities=[]; shirts=[]
     reserved={'id','name','imageUrl','playerRef',*APPEARANCE_TEXT,*APPEARANCE_NUMBER,*APPEARANCE_BOOL}
     for ordinal,p in enumerate(snapshot.get('appearances') or []):
         identity=dict(playerId=p['playerId'],name=p.get('name'),imageUrl=p.get('imageUrl'))
@@ -140,9 +141,15 @@ def publish_snapshot(db, season, league_id, snapshot):
         row=dict(id=p['id'],player_ref=ref,ordinal=ordinal,position_id_type=type(p.get('positionId')).__name__,**{snake(k):p.get(k) for k in APPEARANCE_TEXT+APPEARANCE_NUMBER+APPEARANCE_BOOL})
         row['season']=season;row['league_id']=league_id
         if row.get('position_id') is not None:row['position_id']=str(row['position_id'])
+        jersey = p.get('shirtNumber')
+        if jersey is not None and type(jersey) not in (str, int, float, bool):
+            raise ValueError('Shirt number must be a native scalar')
+        shirts.append(dict(appearance_id=p['id'],value_text=None if jersey is None else str(jersey),value_type=type(jersey).__name__))
+        row['shirt_number'] = _finite(jersey)
         appearances.append(row)
         extras.extend(dict(appearance_id=p['id'],metric_key=k,value=_finite(v)) for k,v in p.items() if k not in reserved and (v is None or isinstance(v,(int,float)) and not isinstance(v,bool)))
     _many(db,'players',identities);_many(db,'appearances',appearances);_many(db,'appearance_metrics',extras)
+    _many(db,'appearance_shirt_numbers',shirts)
     _many(db,'match_appearance_members',[dict(match_id=m['id'],appearance_id=pid,ordinal=i) for m in snapshot.get('matches') or [] for i,pid in enumerate(m.get('players') or [a['id'] for a in appearances if a['match_id']==m['id']])])
     _many(db,'competition_catalog_seasons',[dict(competition_id=c['id'],native_season=native,ordinal=i) for c in competitions.values() for i,native in enumerate(c.get('seasons') or [season])])
     fixtures=snapshot.get('fixtures')

@@ -69,7 +69,7 @@ def install(db):
         db.execute(
             "CREATE TABLE IF NOT EXISTS statarena_app.worker_schema(version text PRIMARY KEY,digest text NOT NULL)"
         )
-        for prefix in ("003_", "004_", "005_", "006_", "007_", "008_", "009_", "010_"):
+        for prefix in ("003_", "004_", "005_", "006_", "007_", "008_", "009_", "010_", "011_"):
             (path,) = SCHEMA.glob(prefix + "*.sql")
             source = path.read_bytes()
             digest = hashlib.sha256(source).hexdigest()
@@ -784,7 +784,7 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
     return count
 
 
-def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None):
+def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, install_only=False):
     """Acquire the shared writer lease. Commit independent partition checkpoints and return progress."""
     db = store.db
     if not 0 < minutes <= 330 or not 1 <= batch <= 100:
@@ -797,6 +797,8 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None):
         capacity(db)
         install(db)
         installed = True
+        if install_only:
+            return {"schema_installed": True, "partitions": 0}
         inputs = Inputs(store)
         manifest = inputs.read(INDEX)
         prepare(inputs, manifest, queue_all)
@@ -911,6 +913,7 @@ def main():
     )
     parser.add_argument("--minutes", type=float, default=100)
     parser.add_argument("--batch", type=int, default=10)
+    parser.add_argument("--install-only", action="store_true", help="install sealed schemas without reading or constructing business data")
     a = parser.parse_args()
     if (
         os.environ.get("GITHUB_ACTIONS") != "true"
@@ -933,7 +936,7 @@ def main():
     store = Store()
     try:
         print(
-            compact(run(store, minutes=a.minutes, batch=a.batch, queue_all=a.all)),
+            compact(run(store, minutes=a.minutes, batch=a.batch, queue_all=a.all, install_only=a.install_only)),
             flush=True,
         )
     finally:

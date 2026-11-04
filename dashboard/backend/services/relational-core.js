@@ -153,7 +153,14 @@ saves_inside_box dive_saves sweeper_actions high_claims punches xgot_faced
 distance_covered top_speed sprints running_distance sprinting_distance fantasy_points
 passes_attempted long_balls_attempted crosses_attempted ground_duels aerial_duels
 dribbles_attempted starter stats_reliable is_captain`.split(/\s+/);
-const appearanceFields = [...appearanceColumns, "name", "image_url", "extras"];
+const appearanceFields = [
+  ...appearanceColumns,
+  "name",
+  "image_url",
+  "extras",
+  "shirt_number_raw",
+  "shirt_number_type",
+];
 const appearanceProjection = `CASE WHEN (
   SELECT array_agg(attname ORDER BY attnum) = ARRAY[${appearanceColumns.map((key) => `'${key}'`).join(",")}]::name[]
   FROM pg_catalog.pg_attribute
@@ -170,11 +177,16 @@ const appearanceOutput = appearanceFields
         "player_ref",
         "position_id",
         "position_id_type",
+        "shirt_number_raw",
+        "shirt_number_type",
       ].includes(field),
   );
 const extrasIndex = appearanceFields.indexOf("extras");
 const positionIndex = appearanceFields.indexOf("position_id");
 const positionTypeIndex = appearanceFields.indexOf("position_id_type");
+const shirtIndex = appearanceFields.indexOf("shirt_number");
+const shirtRawIndex = appearanceFields.indexOf("shirt_number_raw");
+const shirtTypeIndex = appearanceFields.indexOf("shirt_number_type");
 function appearanceRecord(row) {
   if (!Array.isArray(row)) {
     const {
@@ -183,12 +195,18 @@ function appearanceRecord(row) {
       player_ref,
       position_id,
       position_id_type,
+      shirt_number_raw,
+      shirt_number_type,
       ...values
     } = row;
     return {
       ...camelRow(values),
       ...extras,
-      positionId: nativePositionId(position_id, position_id_type),
+      positionId: nativeScalar(position_id, position_id_type),
+      shirtNumber:
+        shirt_number_type == null
+          ? row.shirt_number
+          : nativeScalar(shirt_number_raw, shirt_number_type),
     };
   }
   if (row.length !== appearanceFields.length)
@@ -196,13 +214,14 @@ function appearanceRecord(row) {
   const record = Object.create(null);
   for (const { key, index } of appearanceOutput) record[key] = row[index];
   Object.assign(record, row[extrasIndex]);
-  record.positionId = nativePositionId(
-    row[positionIndex],
-    row[positionTypeIndex],
-  );
+  record.positionId = nativeScalar(row[positionIndex], row[positionTypeIndex]);
+  record.shirtNumber =
+    row[shirtTypeIndex] == null
+      ? row[shirtIndex]
+      : nativeScalar(row[shirtRawIndex], row[shirtTypeIndex]);
   return record;
 }
-function nativePositionId(value, kind) {
+function nativeScalar(value, kind) {
   if (value == null || kind === "NoneType") return null;
   if (kind === "int" || kind === "float") return Number(value);
   if (kind === "bool") return value === "True";
@@ -418,7 +437,7 @@ export async function partitionPage(req, p) {
  SELECT s.*, ${jsonRows("SELECT id,day::text FROM keys ORDER BY day NULLS LAST,id")} keys,
  ${jsonRows("SELECT m.* FROM statarena_app.matches m JOIN page USING(id) ORDER BY m.day NULLS LAST,m.id")} matches,
  ${jsonRows("SELECT f.* FROM statarena_app.fixtures f JOIN page USING(id) ORDER BY f.day NULLS LAST,f.id")} fixtures,
- ${jsonRows("SELECT a.*,p.name,p.image_url,(SELECT json_object_agg(metric_key,value) FROM statarena_app.appearance_metrics e WHERE e.appearance_id=a.id) extras FROM statarena_app.appearances a JOIN statarena_app.players p ON p.id=a.player_ref WHERE a.match_id IN(SELECT id FROM page) ORDER BY a.match_id,a.ordinal,a.id", appearanceProjection)} appearances,
+ ${jsonRows("SELECT a.*,p.name,p.image_url,(SELECT json_object_agg(metric_key,value) FROM statarena_app.appearance_metrics e WHERE e.appearance_id=a.id) extras,s.value_text AS shirt_number_raw,s.value_type AS shirt_number_type FROM statarena_app.appearances a JOIN statarena_app.players p ON p.id=a.player_ref LEFT JOIN statarena_app.appearance_shirt_numbers s ON s.appearance_id=a.id WHERE a.match_id IN(SELECT id FROM page) ORDER BY a.match_id,a.ordinal,a.id", appearanceProjection)} appearances,
  ${jsonRows("SELECT * FROM statarena_app.shots WHERE match_id IN(SELECT id FROM page) ORDER BY match_id,ordinal,id")} shots,
  ${jsonRows("SELECT * FROM statarena_app.team_statistics WHERE match_id IN(SELECT id FROM page) ORDER BY match_id,ordinal")} stats,
  ${byPage("SELECT * FROM statarena_app.match_coverage")} cover,

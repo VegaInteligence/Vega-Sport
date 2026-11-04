@@ -66,8 +66,17 @@ export async function verify(origin) {
         assert.equal(value.data.matches.length, 1);
         ids.push(value.data.matches[0].id);
         const appearance = value.data.appearances[0];
-        assert.equal(appearance.positionId, value.data.matches[0].id === "m_000001" ? 11 : "11");
-        assert.ok(!Object.hasOwn(appearance,"positionIdType"));
+        assert.equal(
+          appearance.positionId,
+          value.data.matches[0].id === "m_000001" ? 11 : "11",
+        );
+        assert.ok(!Object.hasOwn(appearance, "positionIdType"));
+        assert.equal(
+          appearance.shirtNumber,
+          value.data.matches[0].id === "m_000001" ? "" : "07",
+        );
+        assert.ok(!Object.hasOwn(appearance, "shirtNumberRaw"));
+        assert.ok(!Object.hasOwn(appearance, "shirtNumberType"));
         if (value.data.matches[0].id === "m_000001") {
           assert.equal(value.data.appearances[0].passesAttempted, 5);
           assert.equal(value.data.matches[0].shots[0].goalCrossedZ, 1.4);

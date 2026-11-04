@@ -2,6 +2,10 @@ name: Build serving tables (AWS)
 on:
   workflow_dispatch:
     inputs:
+      schema_only:
+        description: Install schemas without building business data
+        type: boolean
+        default: false
       queue_all:
         description: Requeue every published season (first run only)
         type: boolean
@@ -53,11 +57,13 @@ jobs:
           QUEUE_ALL: ${{ inputs.queue_all }}
           MATERIALIZE_MINUTES: ${{ inputs.minutes }}
           MATERIALIZE_BATCH: ${{ inputs.batch }}
+          SCHEMA_ONLY: ${{ inputs.schema_only }}
         shell: bash
         run: |
           set -euo pipefail
           args=(--minutes "$MATERIALIZE_MINUTES" --batch "$MATERIALIZE_BATCH")
           if [ "$QUEUE_ALL" = "true" ]; then args+=(--all); fi
+          if [ "$SCHEMA_ONLY" = "true" ]; then args+=(--install-only); fi
           python dashboard/scripts/relational_materialize.py "${args[@]}" | tee rematerialize.log
       - name: Save publication receipt
         if: always()
