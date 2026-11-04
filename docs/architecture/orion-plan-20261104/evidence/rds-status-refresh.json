@@ -1,0 +1,154 @@
+{
+  "atUtc": "2026-11-04T19:53:24.188054+00:00",
+  "command": "python3 -B docs/architecture/orion-plan-20261104/evidence/run_rds_status_workflow.py",
+  "setup": "RDS_STATUS_PROTOCOL.md; existing local HTTP127.0.0.1:8794 and Playwright CLI orion-plan; desktop1440x1000, mobile390x844, light/dark; no external service or SQL operation",
+  "expected": "Applied schema/bootstrap only;94tables/1709columns/431FK/10seeds;012/013sealed;no real business data;backend/data/fullacceptance/cutover/purgeopen",
+  "exitCode": 0,
+  "result": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "current header is applied bootstrap",
+        "passed": true
+      },
+      {
+        "name": "status date uses actual Paris readback time",
+        "passed": true
+      },
+      {
+        "name": "unchanged full model counts remain distinct",
+        "passed": true
+      },
+      {
+        "name": "plan names applied schema/bootstrap",
+        "passed": true
+      },
+      {
+        "name": "active quantities and seeds match readback",
+        "passed": true
+      },
+      {
+        "name": "readback workflow is scoped and counted",
+        "passed": true
+      },
+      {
+        "name": "sealed 012 and 013 are explicit",
+        "passed": true
+      },
+      {
+        "name": "no real business data imported",
+        "passed": true
+      },
+      {
+        "name": "backend data full acceptance cutover purge remain open",
+        "passed": true
+      },
+      {
+        "name": "user pilot approval remains acquired",
+        "passed": true
+      },
+      {
+        "name": "applied receipt linked",
+        "passed": true
+      },
+      {
+        "name": "independent readback linked",
+        "passed": true
+      },
+      {
+        "name": "obsolete current no-RDS claims absent",
+        "passed": true
+      },
+      {
+        "name": "footer distinguishes bootstrap from open acceptance",
+        "passed": true
+      },
+      {
+        "name": "served model remains exact canonical SHA",
+        "passed": true
+      },
+      {
+        "name": "desktop no global overflow",
+        "passed": true
+      },
+      {
+        "name": "restored Vercel production remains dated separately",
+        "passed": true
+      },
+      {
+        "name": "mobile current status is visible",
+        "passed": true
+      },
+      {
+        "name": "mobile no global overflow",
+        "passed": true
+      },
+      {
+        "name": "dark status remains visible",
+        "passed": true
+      },
+      {
+        "name": "no JavaScript errors",
+        "passed": true
+      },
+      {
+        "name": "no failed HTTP requests",
+        "passed": true
+      },
+      {
+        "name": "no external requests",
+        "passed": true
+      }
+    ],
+    "errors": [],
+    "failedRequests": [],
+    "externalRequests": [],
+    "sourceHashes": {
+      "index.html": "6fbb21e3cca194d18e2a56e3f5c96ad496eb3635b8d088dbed204c894616f583",
+      "PLAN.md": "ccf7121ae017957392cb1bdab8a7c4f4ad3a6fbf08b02e8e3a8e3f2c168d5f7e",
+      "PRO_REVIEW_RESPONSE.md": "b415f48a6a2bc885f0553beb91098dfd1addb38572ab034fe66b7534318a2dc4",
+      "PRO_VERSIONING_DESIGN.md": "f3f29f2d82771466d26c047510f865ca899025fe6e0767c869011decc75cae28",
+      "target-schema.proposed.json": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08"
+    },
+    "artifacts": [
+      "rds-status-desktop.png",
+      "rds-status-mobile.png",
+      "rds-status-mobile-dark.png"
+    ],
+    "scope": "Focused current documentary status only; no rerun of the earlier 1208 unchanged-model checks, no SQL or external service operation."
+  },
+  "artifacts": [
+    "rds-status-desktop.png",
+    "rds-status-mobile.png",
+    "rds-status-mobile-dark.png"
+  ],
+  "log": "rds-status-workflow.log",
+  "modelSha256": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08",
+  "documentSha256": {
+    "PLAN.md": "ccf7121ae017957392cb1bdab8a7c4f4ad3a6fbf08b02e8e3a8e3f2c168d5f7e",
+    "index.html": "6fbb21e3cca194d18e2a56e3f5c96ad496eb3635b8d088dbed204c894616f583",
+    "PRO_REVIEW_RESPONSE.md": "b415f48a6a2bc885f0553beb91098dfd1addb38572ab034fe66b7534318a2dc4",
+    "PRO_VERSIONING_DESIGN.md": "f3f29f2d82771466d26c047510f865ca899025fe6e0767c869011decc75cae28",
+    "target-schema.proposed.json": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08"
+  },
+  "servedDocumentsMatchLocalBytes": true,
+  "protectedFiles": 48,
+  "protectedChangedPaths": [],
+  "sourceReceipts": {
+    "docs/verification/orion-pro-pilot-20261104/rds-runs/20261104T193736115395Z-reviewed-schema-bootstrap/result.json": "b19e9e36ba16071fa44b2889b229fb3919f9486dfee3d410c61adf829e0652a4",
+    "docs/verification/orion-pro-pilot-20261104/rds-readbacks/20261104T193830558195Z-rds-schema-bootstrap/result.json": "589bd3b918f25396826bb6eabf5e795bc25ccd484eda3abb7f6527b7d0edefe7"
+  },
+  "priorFullWorkflow": {
+    "path": "historical-before-rds-bootstrap-status",
+    "checks": 1208,
+    "atUtc": "2026-11-04T18:37:57.207431+00:00",
+    "scope": "Earlier rendering, same18da43model; does not cover current RDS status text; not rerun"
+  },
+  "scope": "Documentary verification only. Separate RDS receipts prove actual schema/bootstrap. No business import, backend/public cutover or full acceptance is inferred.",
+  "passed": true,
+  "screenshotsSha256": {
+    "rds-status-desktop.png": "31f636255d2bc12cb70ce36c23c869f50fbb95a57e8fdd117fe2bfdcc5f071b4",
+    "rds-status-mobile.png": "4737337a26048f3aeb220f2927d52d28c2f976587099a609d1502fec4e4cb5e0",
+    "rds-status-mobile-dark.png": "a1ce8f585fe055c3f94894b2d07dfa03d33be43ed5380c502399e391ea5f5850"
+  }
+}

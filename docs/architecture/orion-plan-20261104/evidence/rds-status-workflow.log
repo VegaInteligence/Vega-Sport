@@ -1,0 +1,120 @@
+### Result
+{"passed":true,"checks":[{"name":"current header is applied bootstrap","passed":true},{"name":"status date uses actual Paris readback time","passed":true},{"name":"unchanged full model counts remain distinct","passed":true},{"name":"plan names applied schema/bootstrap","passed":true},{"name":"active quantities and seeds match readback","passed":true},{"name":"readback workflow is scoped and counted","passed":true},{"name":"sealed 012 and 013 are explicit","passed":true},{"name":"no real business data imported","passed":true},{"name":"backend data full acceptance cutover purge remain open","passed":true},{"name":"user pilot approval remains acquired","passed":true},{"name":"applied receipt linked","passed":true},{"name":"independent readback linked","passed":true},{"name":"obsolete current no-RDS claims absent","passed":true},{"name":"footer distinguishes bootstrap from open acceptance","passed":true},{"name":"served model remains exact canonical SHA","passed":true},{"name":"desktop no global overflow","passed":true},{"name":"restored Vercel production remains dated separately","passed":true},{"name":"mobile current status is visible","passed":true},{"name":"mobile no global overflow","passed":true},{"name":"dark status remains visible","passed":true},{"name":"no JavaScript errors","passed":true},{"name":"no failed HTTP requests","passed":true},{"name":"no external requests","passed":true}],"errors":[],"failedRequests":[],"externalRequests":[],"sourceHashes":{"index.html":"6fbb21e3cca194d18e2a56e3f5c96ad496eb3635b8d088dbed204c894616f583","PLAN.md":"ccf7121ae017957392cb1bdab8a7c4f4ad3a6fbf08b02e8e3a8e3f2c168d5f7e","PRO_REVIEW_RESPONSE.md":"b415f48a6a2bc885f0553beb91098dfd1addb38572ab034fe66b7534318a2dc4","PRO_VERSIONING_DESIGN.md":"f3f29f2d82771466d26c047510f865ca899025fe6e0767c869011decc75cae28","target-schema.proposed.json":"18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08"},"artifacts":["rds-status-desktop.png","rds-status-mobile.png","rds-status-mobile-dark.png"],"scope":"Focused current documentary status only; no rerun of the earlier 1208 unchanged-model checks, no SQL or external service operation."}
+### Ran Playwright code
+```js
+await (async (page) => {
+  const checks=[],errors=[],externalRequests=[],failedRequests=[];
+  const check=(name,passed)=>checks.push({name,passed:!!passed});
+  const clean=s=>s.replace(/\s/g,' ');
+  page.on('pageerror',error=>errors.push(String(error)));
+  page.on('request',request=>{if(!request.url().startsWith('http://127.0.0.1:8794/')&&!request.url().startsWith('data:'))externalRequests.push(request.url());});
+  page.on('requestfailed',request=>failedRequests.push({url:request.url(),failure:request.failure()}));
+  page.on('response',response=>{if(response.status()>=400)failedRequests.push({url:response.url(),status:response.status()});});
+  await page.setViewportSize({width:1440,height:1000});
+  await page.goto('http://127.0.0.1:8794/index.html?status=rds-bootstrap');
+  check('current header is applied bootstrap',await page.locator('.status').textContent()==='Bootstrap RDS appliqué');
+  check('status date uses actual Paris readback time',(await page.locator('header').textContent()).includes('4 novembre 2026 · 20:38 Paris'));
+  check('unchanged full model counts remain distinct',await page.evaluate(()=>window.__orionPlan.tableCount===103&&window.__orionPlan.columnCount===1791));
+  await page.getByRole('tab',{name:'Plan d’exécution',exact:true}).click();
+  const plan=clean(await page.locator('#plan article').textContent());
+  const footer=clean(await page.locator('.footer').textContent());
+  check('plan names applied schema/bootstrap',plan.includes('schéma et bootstrap RDS appliqués'));
+  check('active quantities and seeds match readback',plan.includes('94 tables, 1 709 colonnes, 431 FK et 10 graines'));
+  check('readback workflow is scoped and counted',plan.includes('11/11 contrôles avec 14 SELECT en lecture seule'));
+  check('sealed 012 and 013 are explicit',plan.includes('012/013 ont été appliquées sur RDS puis relues et sont désormais scellées'));
+  check('no real business data imported',plan.includes('Aucune donnée métier réelle n’est importée dans ces nouveaux schémas'));
+  check('backend data full acceptance cutover purge remain open',plan.includes('Les lecteurs backend, la reprise des données, l’acceptation complète, la bascule et la purge restent ouverts'));
+  check('user pilot approval remains acquired',plan.includes('plan Pro a été explicitement approuvé')&&plan.includes('aucune nouvelle confirmation globale demandée'));
+  check('applied receipt linked',await page.locator('#plan a[href="../../verification/orion-pro-pilot-20261104/rds-runs/20261104T193736115395Z-reviewed-schema-bootstrap/result.json"]').count()===1);
+  check('independent readback linked',await page.locator('#plan a[href="../../verification/orion-pro-pilot-20261104/rds-readbacks/20261104T193830558195Z-rds-schema-bootstrap/result.json"]').count()===1);
+  check('obsolete current no-RDS claims absent',!plan.includes('sans réorganisation du nouveau schéma sur RDS')&&!plan.includes('aucune application du nouveau schéma sur RDS n’est revendiquée')&&!footer.includes('non appliqué sur RDS'));
+  check('footer distinguishes bootstrap from open acceptance',footer.includes('94 tables, 1 709 colonnes, 431 FK, 10 graines')&&footer.includes('012/013 scellées')&&footer.includes('Aucune donnée métier réelle importée')&&footer.includes('acceptation complète, bascule et purge restent ouverts'));
+  const sourceHashes=await page.evaluate(async()=>{
+    const result={};
+    for(const name of ['index.html','PLAN.md','PRO_REVIEW_RESPONSE.md','PRO_VERSIONING_DESIGN.md','target-schema.proposed.json']){
+      const response=await fetch(name,{cache:'no-store'});const body=await response.arrayBuffer();
+      result[name]=[...new Uint8Array(await crypto.subtle.digest('SHA-256',body))].map(n=>n.toString(16).padStart(2,'0')).join('');
+    }
+    return result;
+  });
+  check('served model remains exact canonical SHA',sourceHashes['target-schema.proposed.json']==='18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08');
+  check('desktop no global overflow',await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  await page.screenshot({path:'rds-status-desktop.png'});
+  await page.getByRole('tab',{name:'Architecture',exact:true}).click();
+  check('restored Vercel production remains dated separately',await page.getByRole('heading',{name:'Production rétablie · 4 novembre, 18:41 Paris',exact:true}).isVisible());
+  await page.getByRole('tab',{name:'Plan d’exécution',exact:true}).click();
+  await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>window.scrollTo(0,0));
+  check('mobile current status is visible',await page.locator('.status').isVisible());
+  check('mobile no global overflow',await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  await page.screenshot({path:'rds-status-mobile.png'});
+  await page.emulateMedia({colorScheme:'dark'});
+  check('dark status remains visible',await page.locator('.status').isVisible());
+  await page.screenshot({path:'rds-status-mobile-dark.png'});
+  await page.emulateMedia({colorScheme:'light'});
+  check('no JavaScript errors',errors.length===0);
+  check('no failed HTTP requests',failedRequests.length===0);
+  check('no external requests',externalRequests.length===0);
+  return {passed:checks.every(c=>c.passed),checks,errors,failedRequests,externalRequests,sourceHashes,artifacts:['rds-status-desktop.png','rds-status-mobile.png','rds-status-mobile-dark.png'],scope:'Focused current documentary status only; no rerun of the earlier 1208 unchanged-model checks, no SQL or external service operation.'};
+}
+)(page);
+```
+### Page
+- Page URL: http://127.0.0.1:8794/index.html?status=rds-bootstrap#architecture
+- Page Title: StatArena — plan Pro et bootstrap RDS appliqué
+npm notice run npx
+npm notice run 'playwright-cli' -s=orion-plan run-code async (page) => {
+npm notice run   const checks=[],errors=[],externalRequests=[],failedRequests=[];
+npm notice run   const check=(name,passed)=>checks.push({name,passed:!!passed});
+npm notice run   const clean=s=>s.replace(/\s/g,' ');
+npm notice run   page.on('pageerror',error=>errors.push(String(error)));
+npm notice run   page.on('request',request=>{if(!request.url().startsWith('http://127.0.0.1:8794/')&&!request.url().startsWith('data:'))externalRequests.push(request.url());});
+npm notice run   page.on('requestfailed',request=>failedRequests.push({url:request.url(),failure:request.failure()}));
+npm notice run   page.on('response',response=>{if(response.status()>=400)failedRequests.push({url:response.url(),status:response.status()});});
+npm notice run   await page.setViewportSize({width:1440,height:1000});
+npm notice run   await page.goto('http://127.0.0.1:8794/index.html?status=rds-bootstrap');
+npm notice run   check('current header is applied bootstrap',await page.locator('.status').textContent()==='Bootstrap RDS appliqué');
+npm notice run   check('status date uses actual Paris readback time',(await page.locator('header').textContent()).includes('4 novembre 2026 · 20:38 Paris'));
+npm notice run   check('unchanged full model counts remain distinct',await page.evaluate(()=>window.__orionPlan.tableCount===103&&window.__orionPlan.columnCount===1791));
+npm notice run   await page.getByRole('tab',{name:'Plan d’exécution',exact:true}).click();
+npm notice run   const plan=clean(await page.locator('#plan article').textContent());
+npm notice run   const footer=clean(await page.locator('.footer').textContent());
+npm notice run   check('plan names applied schema/bootstrap',plan.includes('schéma et bootstrap RDS appliqués'));
+npm notice run   check('active quantities and seeds match readback',plan.includes('94 tables, 1 709 colonnes, 431 FK et 10 graines'));
+npm notice run   check('readback workflow is scoped and counted',plan.includes('11/11 contrôles avec 14 SELECT en lecture seule'));
+npm notice run   check('sealed 012 and 013 are explicit',plan.includes('012/013 ont été appliquées sur RDS puis relues et sont désormais scellées'));
+npm notice run   check('no real business data imported',plan.includes('Aucune donnée métier réelle n’est importée dans ces nouveaux schémas'));
+npm notice run   check('backend data full acceptance cutover purge remain open',plan.includes('Les lecteurs backend, la reprise des données, l’acceptation complète, la bascule et la purge restent ouverts'));
+npm notice run   check('user pilot approval remains acquired',plan.includes('plan Pro a été explicitement approuvé')&&plan.includes('aucune nouvelle confirmation globale demandée'));
+npm notice run   check('applied receipt linked',await page.locator('#plan a[href="../../verification/orion-pro-pilot-20261104/rds-runs/20261104T193736115395Z-reviewed-schema-bootstrap/result.json"]').count()===1);
+npm notice run   check('independent readback linked',await page.locator('#plan a[href="../../verification/orion-pro-pilot-20261104/rds-readbacks/20261104T193830558195Z-rds-schema-bootstrap/result.json"]').count()===1);
+npm notice run   check('obsolete current no-RDS claims absent',!plan.includes('sans réorganisation du nouveau schéma sur RDS')&&!plan.includes('aucune application du nouveau schéma sur RDS n’est revendiquée')&&!footer.includes('non appliqué sur RDS'));
+npm notice run   check('footer distinguishes bootstrap from open acceptance',footer.includes('94 tables, 1 709 colonnes, 431 FK, 10 graines')&&footer.includes('012/013 scellées')&&footer.includes('Aucune donnée métier réelle importée')&&footer.includes('acceptation complète, bascule et purge restent ouverts'));
+npm notice run   const sourceHashes=await page.evaluate(async()=>{
+npm notice run     const result={};
+npm notice run     for(const name of ['index.html','PLAN.md','PRO_REVIEW_RESPONSE.md','PRO_VERSIONING_DESIGN.md','target-schema.proposed.json']){
+npm notice run       const response=await fetch(name,{cache:'no-store'});const body=await response.arrayBuffer();
+npm notice run       result[name]=[...new Uint8Array(await crypto.subtle.digest('SHA-256',body))].map(n=>n.toString(16).padStart(2,'0')).join('');
+npm notice run     }
+npm notice run     return result;
+npm notice run   });
+npm notice run   check('served model remains exact canonical SHA',sourceHashes['target-schema.proposed.json']==='18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08');
+npm notice run   check('desktop no global overflow',await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+npm notice run   await page.screenshot({path:'rds-status-desktop.png'});
+npm notice run   await page.getByRole('tab',{name:'Architecture',exact:true}).click();
+npm notice run   check('restored Vercel production remains dated separately',await page.getByRole('heading',{name:'Production rétablie · 4 novembre, 18:41 Paris',exact:true}).isVisible());
+npm notice run   await page.getByRole('tab',{name:'Plan d’exécution',exact:true}).click();
+npm notice run   await page.setViewportSize({width:390,height:844});
+npm notice run   await page.evaluate(()=>window.scrollTo(0,0));
+npm notice run   check('mobile current status is visible',await page.locator('.status').isVisible());
+npm notice run   check('mobile no global overflow',await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+npm notice run   await page.screenshot({path:'rds-status-mobile.png'});
+npm notice run   await page.emulateMedia({colorScheme:'dark'});
+npm notice run   check('dark status remains visible',await page.locator('.status').isVisible());
+npm notice run   await page.screenshot({path:'rds-status-mobile-dark.png'});
+npm notice run   await page.emulateMedia({colorScheme:'light'});
+npm notice run   check('no JavaScript errors',errors.length===0);
+npm notice run   check('no failed HTTP requests',failedRequests.length===0);
+npm notice run   check('no external requests',externalRequests.length===0);
+npm notice run   return {passed:checks.every(c=>c.passed),checks,errors,failedRequests,externalRequests,sourceHashes,artifacts:['rds-status-desktop.png','rds-status-mobile.png','rds-status-mobile-dark.png'],scope:'Focused current documentary status only; no rerun of the earlier 1208 unchanged-model checks, no SQL or external service operation.'};
+npm notice run }

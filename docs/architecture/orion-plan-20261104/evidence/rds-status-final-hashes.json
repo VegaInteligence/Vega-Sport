@@ -1,0 +1,33 @@
+{
+  "atUtc": "2026-11-04T19:54:34.482262+00:00",
+  "scope": "Final documentary status refresh; no model/helper/compiler/SQL/diagram/service changes; current targeted23checks separate from historical1208checks.",
+  "passed": true,
+  "protectedFiles": 48,
+  "protectedChangedPaths": [],
+  "modelSha256": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08",
+  "browserChecks": 23,
+  "localLinks": 184,
+  "filesSha256": {
+    "tools/PLAN.template.md": "0328dff6a3843c50b4981c92df8463a78216dd165115387669925c3fe6480884",
+    "PLAN.md": "ccf7121ae017957392cb1bdab8a7c4f4ad3a6fbf08b02e8e3a8e3f2c168d5f7e",
+    "tools/viewer.template.html": "13a9b1dba63346dcf9003265499728cbae2f2c4087a3914770563fe3cc6679c7",
+    "index.html": "6fbb21e3cca194d18e2a56e3f5c96ad496eb3635b8d088dbed204c894616f583",
+    "PRO_REVIEW_RESPONSE.md": "b415f48a6a2bc885f0553beb91098dfd1addb38572ab034fe66b7534318a2dc4",
+    "PRO_VERSIONING_DESIGN.md": "f3f29f2d82771466d26c047510f865ca899025fe6e0767c869011decc75cae28",
+    "tools/review-viewer.js": "d772243dcd5f762c79c7e7f1b0d5f703945c389fc52270c6027f2dded50aff0e",
+    "evidence/RESULTS.md": "75be7bd99950f31262592de53cfceeb5148792a42d00f6904ffb49b2877ae2b5",
+    "evidence/COVERAGE.md": "70db7d9bacc126c26dc781f67e46e92a6aff15561cf779188c83519be0a2b8a3",
+    "evidence/RDS_STATUS_PROTOCOL.md": "bffeed0e0731a27ef8ab85568185fc1b8b0c8081c6db7d040920040ef256cf95",
+    "evidence/rds-status-workflow.js": "f25ff550a8fce0dc43999ae6ae53b0c79acb4774362523fbda593f7c96520e13",
+    "evidence/run_rds_status_workflow.py": "f9d2122250bd07cc8b036dc66b44a77ef4894fdd69a77e2233663671a69c7e23",
+    "evidence/rds-status-refresh.json": "15008754b6c5b89e59bc63db3c383bd01a0db0a6cdeb8913e2e5c3a28e849f9c",
+    "evidence/rds-status-workflow.log": "c2ae82a52a1c17d82877a5afbe6173ac2e5891bb5a14faa388f0c7fb34ac21b4",
+    "evidence/rds-status-desktop.png": "31f636255d2bc12cb70ce36c23c869f50fbb95a57e8fdd117fe2bfdcc5f071b4",
+    "evidence/rds-status-mobile.png": "4737337a26048f3aeb220f2927d52d28c2f976587099a609d1502fec4e4cb5e0",
+    "evidence/rds-status-mobile-dark.png": "a1ce8f585fe055c3f94894b2d07dfa03d33be43ed5380c502399e391ea5f5850",
+    "evidence/plan-coherence.json": "ba601177ef960578361b0d096a5fb414ad6b0b81255391b164a0200dc69826a5",
+    "evidence/proposal-inspection.json": "d27a2e8edd7cef162fc5df42b4904837886504e1dfb9dc714a14a437b91233fe",
+    "evidence/artifact-validation.json": "dfd1629d8f7bebdff9b64eed6a0ffc6d7fdb8f89450d9fd729af146aba9e7cf6"
+  },
+  "suggestedCommit": "docs: record applied Pro RDS bootstrap and open acceptance gates"
+}

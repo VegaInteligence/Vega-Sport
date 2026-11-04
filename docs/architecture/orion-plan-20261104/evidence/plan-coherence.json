@@ -1,8 +1,8 @@
 {
-  "atUtc": "2026-11-04T18:36:45.719015+00:00",
+  "atUtc": "2026-11-04T19:53:08.697628+00:00",
   "command": "python3 docs/architecture/orion-plan-20261104/tools/render_plan_text.py",
   "modelSha256": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08",
-  "planSha256": "d50b79fe46cd141e34c6b4dcec57532ce2555ff5e2c6355051ab0cd78db9be5d",
+  "planSha256": "ccf7121ae017957392cb1bdab8a7c4f4ad3a6fbf08b02e8e3a8e3f2c168d5f7e",
   "counts": {
     "tables": 103,
     "columns": 1791,

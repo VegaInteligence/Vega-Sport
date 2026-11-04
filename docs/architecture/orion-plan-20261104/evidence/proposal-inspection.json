@@ -1,5 +1,5 @@
 {
-  "atUtc": "2026-11-04T18:36:45.906569+00:00",
+  "atUtc": "2026-11-04T19:53:37.258965+00:00",
   "command": "python3 docs/architecture/orion-plan-20261104/tools/inspect_proposal.py",
   "modelSha256": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08",
   "scope": "Static responsibilities/dispositions, actual nonnullable PK/nonpartial UQ FK targets/types, version classes, seed templates/bindings, rendered dictionary and complete domain diagrams. No SQL execution.",

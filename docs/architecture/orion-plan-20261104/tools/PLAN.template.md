@@ -1,6 +1,6 @@
-# StatArena — plan Pro approuvé, pilote en cours
+# StatArena — plan Pro, bootstrap RDS appliqué
 
-**4 novembre 2026 — plan approuvé pour un pilote borné, sans réorganisation du nouveau schéma sur RDS.**
+**4 novembre 2026, 20:38 Paris — schéma et bootstrap RDS appliqués ; données métier et backend encore à accepter.**
 
 L'objectif reste un StatArena complet : backend AWS, PostgreSQL sur le RDS existant, frontend Vercel, CloudFront, données détaillées, fonctionnalités préservées et gains mesurés. Cette livraison présente la structure et les étapes ; elle ne démontre pas que la migration, les collectes ou le site sont terminés.
 
@@ -32,7 +32,7 @@ Ces classes décrivent le modèle. Les quatre registres universels `row_versions
 Le [lecteur visuel](index.html) réunit **{{DOMAIN_DIAGRAMS}} planches de domaine**, architectures, dictionnaire et correspondances.
 Le [JSON cible](target-schema.proposed.json), le [dictionnaire](DICTIONNAIRE.md), le [diff du socle](blueprint-diff.json) et la [correspondance des structures actuelles](current-to-target.csv) doivent être générés et vérifiés ensemble.
 Le [JSON initial](inputs/Orion_schema_bdd.original.json), l'[audit initial](inputs/GPT_Pro_audit.original.txt) et la [revue GPT Pro](inputs/GPT_Pro_review.original.txt) sont conservés comme documents de conception.
-Le détail des clés, FK, sélections et risques figure dans [PRO_VERSIONING_DESIGN.md](PRO_VERSIONING_DESIGN.md) ; le [suivi de la revue](PRO_REVIEW_RESPONSE.md) distingue conception et preuves locales.
+Le détail des clés, FK, sélections et risques figure dans [PRO_VERSIONING_DESIGN.md](PRO_VERSIONING_DESIGN.md) ; le [suivi de la revue](PRO_REVIEW_RESPONSE.md) distingue conception, preuves locales et bootstrap RDS.
 
 **Politique de révision : {{REVISION_POLICY_STATUS}}.** Les faits nécessaires aux calculs et leurs dépendances changeantes conservent leurs valeurs dans les tables métier concernées.
 Il n'y a pas de tables sœurs `*_history`, de copies cachées renommées, ni d'engagement à versionner chaque cellule.
@@ -41,6 +41,8 @@ Une incohérence entre ces artefacts bloque la validation ; leur présence ne pr
 
 Le plan Pro a été explicitement approuvé pour un pilote borné : « Valider et lancer le pilote ». Le [reçu d’approbation](../../verification/orion-pro-pilot-20261104/approval.json) conserve le plan et le modèle exacts du commit `411207645f61f9fa0a9e31680edbe475a0432868` (modèle `028c221d…`). Il autorise la base locale jetable, puis une compétition et deux saisons sur le RDS existant après acceptation locale et nouveau préflight ; la bascule finale garde ses portes d’acceptation communes.
 Le [reçu d’amendement](../../verification/orion-pro-pilot-20261104/model-amendments.json) relie cette base au candidat courant `18da43f9…` : quatre CHECK et quatre descriptions dans deux tables existantes, sans ajout de table, colonne ou clé. Il documente une correction ciblée dans le périmètre autorisé, sans prétendre à une seconde approbation utilisateur. L’acceptation complète reste ouverte.
+
+Le [reçu d’application RDS](../../verification/orion-pro-pilot-20261104/rds-runs/20261104T193736115395Z-reviewed-schema-bootstrap/result.json) confirme la transaction atomique commitée des migrations **012/013**, désormais **scellées**. Le [readback indépendant](../../verification/orion-pro-pilot-20261104/rds-readbacks/20261104T193830558195Z-rds-schema-bootstrap/result.json), terminé à **20:38 Paris**, passe **11/11 contrôles avec 14 SELECT en lecture seule** : **{{ACTIVE_TABLES}} tables, {{ACTIVE_COLUMNS_FR}} colonnes, {{ACTIVE_FOREIGN_KEYS}} FK et 10 graines** sur le modèle `18da43f9…`. **Aucune donnée métier réelle n’est importée dans ces nouveaux schémas.** Les lecteurs backend, la reprise des données, l’acceptation complète, la bascule et la purge restent ouverts ; ce bootstrap ne les accepte pas.
 
 ## 2. État des lieux et portée des mesures
 
@@ -159,7 +161,7 @@ La fidélité des valeurs et des états source améliore les résultats et la co
 
 ## 6. Corrections précises issues de la revue Pro
 
-Le pilote local possède désormais des preuves bornées ; les tableaux ci-dessous restent des obligations à confronter à leur périmètre exact, sans convertir une réussite locale en acceptation globale.
+Le pilote local possède des preuves bornées et le schéma/bootstrap est appliqué sur RDS ; les tableaux ci-dessous restent des obligations à confronter à leur périmètre exact, sans convertir ces réussites en acceptation globale.
 
 | Point | Décision à porter dans les contraintes et les lecteurs |
 |---|---|
@@ -173,7 +175,7 @@ Le pilote local possède désormais des preuves bornées ; les tableaux ci-desso
 
 Le pilote a ensuite observé des valeurs `null` dans les métriques sources. Une correction ciblée, documentée dans le reçu [model-amendments.json](../../verification/orion-pro-pilot-20261104/model-amendments.json), permet `null` et `absent` dans les deux tables de valeurs de métriques enregistrées, sans nouvelle table, colonne ou clé. Ces états interdisent les scalaires et fractions contradictoires ; zéro, chaîne vide et faux restent des valeurs. Une ligne manquante signifie inconnu, pas absent prouvé. Les colonnes statistiques communes restent des projections numériques : leur fidélité d’état requiert un mapping explicite vers ces observations et une vérification de cohérence. Les seuls CHECK modifiés ne prouvent pas cette fidélité complète.
 Le [run initial sur le modèle approuvé](../../verification/orion-pro-pilot-20261104/metric-state-runs/20261104T182823662466Z-original-approved-null-absent-red/result.json) conserve 19 cas réussis, 4 échecs et 2 non vérifiés. Après correction, le [run PostgreSQL du candidat](../../verification/orion-pro-pilot-20261104/metric-state-runs/20261104T183139777229Z-targeted-native-metric-candidate/result.json) passe **25/25** : zéro, chaîne vide, faux, null et absent, rejets des combinaisons contradictoires, valeur corrigée conservée et lecture figée joueur/équipe. Ces entrées sont synthétiques et bornées.
-Le [pilote core issu de sources réelles](../../verification/orion-pro-pilot-20261104/real-source-runs/20261104T182830125656Z-core-shot-family-coverage/result.json) a passé **9/9 sur le modèle initial `028c…`** ; ce résultat n’est pas réattribué au candidat amendé. Le traitement des autres familles reste en cours et l’acceptation exhaustive est fausse. Aucun de ces runs n’a écrit sur RDS ni déployé un service.
+Le [pilote core issu de sources réelles](../../verification/orion-pro-pilot-20261104/real-source-runs/20261104T182830125656Z-core-shot-family-coverage/result.json) a passé **9/9 sur le modèle initial `028c…`** ; ce résultat n’est pas réattribué au candidat amendé. Le [run réel revu sur `18da…`](../../verification/orion-pro-pilot-20261104/real-source-runs/20261104T190755631159Z-final-reviewed-exact-numbers-and-collections/result.json) passe **15/15** dans son périmètre local borné, avec `fullAcceptance=false`. L’inventaire exhaustif reste ouvert. Ces runs locaux n’ont écrit ni sur RDS ni dans un service déployé ; l’application RDS distincte ci-dessus porte uniquement sur le schéma et le bootstrap.
 
 
 Les index uniques partiels du courant ne constituent pas à eux seuls une cible de FK ni une preuve d'absence de chevauchements historiques.
@@ -206,14 +208,14 @@ Les listes utilisent des agrégats ciblés, pagination et chargement séparé de
 | Lot | Travail | Porte de sortie |
 |---|---|---|
 | P0 — contrat | Plan Pro approuvé et reçus immuables conservés ; amendement ciblé relié au modèle initial | Approbation du pilote acquise ; aucune nouvelle confirmation globale demandée |
-| P1 — pilote en cours | Base locale jetable : régression candidat 23/23 et états de métriques 25/25 ; core réel 9/9 sur la base initiale, familles encore en cours | Acceptation locale du périmètre complet et préflight frais avant RDS borné ; performances et réconciliation encore requises, aucune purge |
+| P1 — schéma et bootstrap appliqués | Preuves locales bornées 23/23, 25/25 et réel revu 15/15 ; migrations RDS 012/013 commitées et scellées, readback 11/11 | {{ACTIVE_TABLES}} tables, {{ACTIVE_COLUMNS_FR}} colonnes, {{ACTIVE_FOREIGN_KEYS}} FK et 10 graines installées ; aucune donnée métier réelle importée, acceptation complète ouverte |
 | P2 — normalisation représentative | Transformer par lots un jeu de données déjà sur AWS en faits et variantes typés | Reçus, checkpoints, rejets, rapprochement et stabilisation du schéma |
 | P3A — backend | Dès stabilisation du schéma, adapter API, agrégats, cache et parcours sur des jeux représentatifs | Contrats, identifiants, états et lectures SQL vérifiés |
 | P3B — données | En parallèle de P3A, normaliser le reste et rapprocher Neon, AWS, faits finaux et médias avec le propriétaire du transfert | Manques, différences et non-vérifiés nommés ; aucune migration physique concurrente |
 | P4 — acceptation commune | Tester collectes, publication et site complet Vercel → CloudFront → AWS → RDS | Backend et données acceptés ensemble sur la même génération |
 | P5 — bascule/nettoyage | Basculer puis retirer les anciennes dépendances et sources devenues inutiles | Inventaire, accord des dépendants, réconciliation complète et preuve de non-dépendance |
 
-Les migrations 003–011 déjà scellées ne sont pas réécrites. Les artefacts locaux 012/013 sont exercés dans le pilote jetable ; aucune application du nouveau schéma sur RDS n’est revendiquée.
+Les migrations 003–011 restent scellées. Les migrations **012/013 ont été appliquées sur RDS puis relues et sont désormais scellées** : elles ne sont pas réécrites. Leurs empreintes exactes et leur journal figurent dans les deux reçus RDS liés ci-dessus. L’import métier et les lecteurs restent des lots suivants, sans bascule de production ni purge acquise.
 L'ancien prototype local interrompu est archivé dans [superseded-prototype](../../verification/orion-schema-pilot-20261104/superseded-prototype/) ; il ne constitue ni une migration RDS ni une acceptation du nouveau modèle.
 Les workflows de collecte, enrichissement, construction/publication et contrôle sont regroupés par fonction, sans doublons ; les variantes quotidienne et historique partagent les règles de reprise.
 Une seule acquisition d'un travail utilise un bail avec propriétaire et expiration ; checkpoints, transactions bornées et idempotence permettent le redémarrage sans doublon. Un bail perdu ne peut pas publier ; les échecs, indisponibilités et nouvelles tentatives restent distingués.

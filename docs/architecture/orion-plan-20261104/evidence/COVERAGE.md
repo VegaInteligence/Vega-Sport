@@ -39,16 +39,17 @@ Les huit projections courantes (`club-wikidata`, `coach-portrait`, `nations-resu
 
 | Exigence | État / preuve | Travail restant |
 |---|---|---|
-| Approbation | Plan Pro et pilote borné explicitement approuvés ; reçu immuable `approval.json` | Acceptation locale complète puis préflight avant RDS borné ; bascule finale conditionnelle |
+| Approbation | Plan Pro et pilote borné explicitement approuvés ; reçu immuable `approval.json` ; acceptation schéma/bootstrap distincte appliquée sur RDS | Aucun import métier accepté par ce bootstrap ; acceptation complète et bascule finale conditionnelles |
 | Chaîne du modèle | `028c…` approuvé → `18da…` candidat : huit chemins, quatre CHECK et quatre descriptions dans deux tables | Aucun ajout de table, colonne ou clé ; ne pas transformer la correction ciblée en refonte implicite |
 | Catalogue | 103 tables / 1 791 colonnes / 450 FK ; actif : 94 / 1 709 / 431 ; 16 SVG et 13 domaines | Implantation des neuf réserves de modèles hors périmètre, aucune nouvelle formule |
-| Revue documentaire courante | Nouveau parcours navigateur et inspection sur le SHA candidat ; grains, types, PK/UQ/FK/CHECK/index et descriptions complets | La navigation ne prouve pas la fidélité de toutes les sources ou les lecteurs de production |
+| Revue documentaire courante | 1208 contrôles navigateur sur `18da…` avant ce statut RDS, structure inchangée ; texte de statut actuel vérifié séparément par [E2E ciblé](rds-status-refresh.json) | L’ancien rendu est [archivé](historical-before-rds-bootstrap-status/README.md) ; aucune preuve de fidélité globale ou de lecteurs de production |
 | Régression SQL candidat | [23/23 sur PostgreSQL local jetable](../../../verification/orion-pro-pilot-20261104/runs/20261104T183222785812Z-recorded-metric-amendment-regression/result.json) | Fixtures bornées ; RDS, performance, application/cache et inventaire complet hors portée |
 | États des métriques enregistrées | [25/25 sur le candidat](../../../verification/orion-pro-pilot-20261104/metric-state-runs/20261104T183139777229Z-targeted-native-metric-candidate/result.json), après RED 19/4/2 conservé | xG et autres colonnes communes : mapping vers observation native et cohérence à vérifier ; ligne absente = inconnu |
 | Core issu de sources réelles | [9/9 sur la base `028c…`](../../../verification/orion-pro-pilot-20261104/real-source-runs/20261104T182830125656Z-core-shot-family-coverage/result.json) ; `fullAcceptance=false` explicite | Champs non vérifiés, unités, profils/médias et familles source supplémentaires ; pas une preuve attribuée à `18da…` |
 | Dictionnaire et dispositions | 84 responsabilités initiales, 224 structures actuelles, 0 définition de secours, 51 JSONB bornés | Réconciliation champ/type/ordre/variante/contribution avant purge |
 | Versions | 46 sélectives, 6 enfants atomiques, 9 append-only, 3 identités stables, 39 autres opérations/résultats | Lecture publique par build/snapshot et dépendances complètes |
 | Bootstrap et gardes | Cas locaux de bindings, reprise, parents, profils, HTTP, génération, publication et baux dans le 23/23 | Workflows de production, charge, capacité et exploitation |
+| RDS — schéma/bootstrap | [Application commitée](../../../verification/orion-pro-pilot-20261104/rds-runs/20261104T193736115395Z-reviewed-schema-bootstrap/result.json), puis [readback 11/11, 14 SELECT](../../../verification/orion-pro-pilot-20261104/rds-readbacks/20261104T193830558195Z-rds-schema-bootstrap/result.json) : 94 tables, 1 709 colonnes, 431 FK, 10 graines ; 012/013 scellées | Aucune donnée métier réelle importée ; lecteurs backend, import réel et acceptation complète ouverts |
 | Site actuel | Vercel rétabli par pont temporaire Neon, build exact ; 12 parcours réels puis 2 canoniques | AWS preview partiel ; aucun nouveau schéma accepté par le seul rétablissement du site |
 | Purge | `source_inventory_complete=false`, `purge_authorized=false` | Aucune suppression avant inventaire exhaustif, rapprochement et acceptation commune |
 
@@ -62,6 +63,6 @@ Le pilote puis la normalisation doivent émettre un reçu pour **chaque enregist
 
 Les différences nettes de comptes Neon/AWS sont 7 802 objets, 5 960 ressources et 55 projections au relevé. Ce sont des signaux à rapprocher, pas la liste exacte des manques. La copie initiale physique reste sous la responsabilité du Codex du collègue.
 
-Ce rafraîchissement documentaire n’exécute aucun SQL. Des E2E locaux bornés ont été exécutés par les lots de pilote cités ci-dessus ; ils ne valent pas acceptation complète. Les dispositions de champs réels non vérifiées, les états des projections statistiques communes, la parité publique et les mesures de concurrence/charge, WAL, capacité RDS restent ouverts. Aucun nouveau schéma appliqué sur RDS, aucune purge ni bascule finale ne sont affirmés.
+Ce rafraîchissement documentaire n’exécute aucun SQL. Les lots séparés cités ont exécuté des E2E locaux puis le schéma/bootstrap RDS seulement, sans données métier réelles. Ils ne valent pas acceptation complète. Les dispositions de champs réels non vérifiées, la fidélité générale des projections communes, les lecteurs backend, la parité publique et les mesures de concurrence/charge, WAL, capacité sur données métier restent ouverts. Aucune purge ni bascule finale n’est acquise.
 
-Commit suggéré : `docs: refresh approved Orion pilot and native metric evidence`.
+Commit suggéré : `docs: record applied Pro RDS bootstrap and open acceptance gates`.

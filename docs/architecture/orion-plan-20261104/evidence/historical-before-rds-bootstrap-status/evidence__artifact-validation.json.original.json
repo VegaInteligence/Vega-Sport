@@ -1,0 +1,31 @@
+{
+  "atUtc": "2026-11-04T18:42:18.314234+00:00",
+  "command": "python3 docs/architecture/orion-plan-20261104/tools/verify_artifacts.py",
+  "modelSha256": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08",
+  "scope": "Syntax, local document links, unchanged input copies, completed browser receipt/screenshots and S3 metadata totals. No application or database acceptance.",
+  "counts": {
+    "json": 59,
+    "gzipJson": 1,
+    "python": 16,
+    "localLinks": 159
+  },
+  "failures": [],
+  "passed": true,
+  "documentSha256": {
+    "PLAN.md": "d50b79fe46cd141e34c6b4dcec57532ce2555ff5e2c6355051ab0cd78db9be5d",
+    "index.html": "e6357c23f3d95003ac55e5904144aa23e2a983fdb1639669c9eea34ee035b081",
+    "viewer-data.json": "f9b876674e63550ad9aa295a8a933ead9ba417a5740265627451a0f00a02fe28",
+    "DICTIONNAIRE.md": "f4c4003093c0e54b263d3abc8b56d60a48b6e6729f53814ba8fdaffa9f0fc730",
+    "current-to-target.csv": "a927f3284657bf28e38b8caff05d93cc859698f3ed210edc966190994e95a4f6",
+    "blueprint-diff.json": "8f52dda034231433a4c6481950ce067ad984a3712e3e2bf0da49d67f482f5ebe",
+    "changes.json": "8e8fa5846b703af013c571f035390edcf79bdc320776befb0b0e2920944b96a3"
+  },
+  "screenshotsSha256": {
+    "architecture-desktop.png": "c19a691696bff049d88e91f4c454de92f8e9f2de5cea02dc516079213c389e8f",
+    "shots-desktop.png": "d24fc3315a8aaf2ba03495c5010681d7b6d626070ca0a5cb731e006c40ad8c3f",
+    "database-overview-desktop.png": "ee86ad4384f1e962c08cf3324275e6d57e7255eafa48ea41dd230783b5cf6fb6",
+    "receipt-mobile.png": "e4c2422b69713b56300ec1ed465255ee70b34ad12fb699cb9de21df991903ce9",
+    "architecture-mobile.png": "94866320b9cb4c47884b71e24fbc1f7a9373d924c0e4f8f8242dcff4af46a6d4",
+    "receipt-mobile-dark.png": "ee27a688db0856c374b29a9738673fa93f524148c75e70e47fd868ebc33d496a"
+  }
+}

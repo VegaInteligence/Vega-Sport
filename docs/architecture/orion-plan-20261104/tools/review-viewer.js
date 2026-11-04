@@ -96,7 +96,7 @@ async (page) => {
     await page.getByRole('tab',{name:'Plan d’exécution',exact:true}).click();
     const plan=await page.locator('#plan article').textContent();
     check('direct RDS collection visible',plan.includes('PitchAPI → réponse décodée en mémoire')&&plan.includes('aucun corps brut JSON, CSV ou archive en S3'));
-    check('approved bounded pilot and open full acceptance visible',plan.includes('plan Pro a été explicitement approuvé')&&plan.includes('L’acceptation complète reste ouverte')&&(await page.locator('.status').textContent())==='Pilote autorisé');
+    check('applied RDS bootstrap and open full acceptance visible',plan.includes('plan Pro a été explicitement approuvé')&&plan.includes('L’acceptation complète reste ouverte')&&plan.includes('Aucune donnée métier réelle n’est importée')&&(await page.locator('.status').textContent())==='Bootstrap RDS appliqué');
     check('plan matches current model',normalize(plan).includes(expected.tables.length+' tables, '+expected.counts.columns.toLocaleString('fr-FR').replace(/\s/g,' ')+' colonnes et '+expected.counts.foreignKeys+' clés étrangères'));
     await page.goto('http://127.0.0.1:8794/index.html?deep=pro#table=ingest.source_documents');
     check('deep link resolves',(await page.locator('#table-detail h2').textContent())==='ingest.source_documents');

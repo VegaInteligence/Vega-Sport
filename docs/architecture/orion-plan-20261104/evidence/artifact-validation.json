@@ -1,19 +1,19 @@
 {
-  "atUtc": "2026-11-04T18:42:18.314234+00:00",
+  "atUtc": "2026-11-04T19:54:16.255382+00:00",
   "command": "python3 docs/architecture/orion-plan-20261104/tools/verify_artifacts.py",
   "modelSha256": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08",
   "scope": "Syntax, local document links, unchanged input copies, completed browser receipt/screenshots and S3 metadata totals. No application or database acceptance.",
   "counts": {
-    "json": 59,
+    "json": 67,
     "gzipJson": 1,
-    "python": 16,
-    "localLinks": 159
+    "python": 17,
+    "localLinks": 184
   },
   "failures": [],
   "passed": true,
   "documentSha256": {
-    "PLAN.md": "d50b79fe46cd141e34c6b4dcec57532ce2555ff5e2c6355051ab0cd78db9be5d",
-    "index.html": "e6357c23f3d95003ac55e5904144aa23e2a983fdb1639669c9eea34ee035b081",
+    "PLAN.md": "ccf7121ae017957392cb1bdab8a7c4f4ad3a6fbf08b02e8e3a8e3f2c168d5f7e",
+    "index.html": "6fbb21e3cca194d18e2a56e3f5c96ad496eb3635b8d088dbed204c894616f583",
     "viewer-data.json": "f9b876674e63550ad9aa295a8a933ead9ba417a5740265627451a0f00a02fe28",
     "DICTIONNAIRE.md": "f4c4003093c0e54b263d3abc8b56d60a48b6e6729f53814ba8fdaffa9f0fc730",
     "current-to-target.csv": "a927f3284657bf28e38b8caff05d93cc859698f3ed210edc966190994e95a4f6",

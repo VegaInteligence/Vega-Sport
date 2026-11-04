@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>StatArena — plan Pro et pilote en cours</title>
+<title>StatArena — plan Pro et bootstrap RDS appliqué</title>
 <link rel="icon" href="data:,">
 <style>
 :root{font-family:Inter,system-ui,-apple-system,sans-serif;color-scheme:light dark;--bg:#fafbfc;--fg:#18212c;--muted:#526174;--line:#d7dee8;--surface:#fff;--active:#1d416c;--active-fg:#fff;--soft:#edf3fa;--warn:#765214}
@@ -17,7 +17,7 @@
 <body>
 <header>
  <h1>StatArena · données et architecture</h1>
- <div><span class="status">Pilote autorisé</span><span class="muted">4 novembre 2026</span></div>
+ <div><span class="status">Bootstrap RDS appliqué</span><span class="muted">4 novembre 2026 · 20:38 Paris</span></div>
  <div class="meta" id="counts"></div>
  <div class="links"><a href="DICTIONNAIRE.md">Dictionnaire complet</a><a href="target-schema.proposed.json">Schéma JSON proposé</a><a href="evidence/RESULTS.md">Preuves de vérification</a></div>
  <nav role="tablist" aria-label="Plan de données">
@@ -68,7 +68,7 @@
   <div class="table-scroll"><table><thead><tr><th>Base · structure actuelle</th><th>Destination</th><th>Traitement</th><th>Raison / conditions</th></tr></thead><tbody id="mapping-list"></tbody></table></div>
  </section>
  <section class="view" id="plan" role="tabpanel" aria-labelledby="tab-plan" hidden><article class="plan-content"><!--PLAN--></article></section>
- <div class="footer">Plan Pro approuvé pour le pilote borné. Nouveau schéma non appliqué sur RDS ; bascule finale et purge soumises à leur acceptation.</div>
+ <div class="footer">RDS : 94 tables, 1 709 colonnes, 431 FK, 10 graines ; 012/013 scellées. Aucune donnée métier réelle importée. Backend, données, acceptation complète, bascule et purge restent ouverts.</div>
 </main>
 <script id="plan-data" type="application/json"><!--DATA--></script>
 <script>

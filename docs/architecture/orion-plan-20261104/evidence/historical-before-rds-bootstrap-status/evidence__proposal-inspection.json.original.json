@@ -1,0 +1,53 @@
+{
+  "atUtc": "2026-11-04T18:36:45.906569+00:00",
+  "command": "python3 docs/architecture/orion-plan-20261104/tools/inspect_proposal.py",
+  "modelSha256": "18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08",
+  "scope": "Static responsibilities/dispositions, actual nonnullable PK/nonpartial UQ FK targets/types, version classes, seed templates/bindings, rendered dictionary and complete domain diagrams. No SQL execution.",
+  "counts": {
+    "baselineResponsibilities": 84,
+    "baselineColumns": 943,
+    "dispositions": 84,
+    "tables": 103,
+    "columns": 1791,
+    "activeTables": 94,
+    "activeColumns": 1709,
+    "activeForeignKeys": 431,
+    "foreignKeys": 450,
+    "uniqueConstraints": 109,
+    "indexes": 154,
+    "uniquePartialIndexes": 119,
+    "checks": 889,
+    "jsonb": 51,
+    "domainDiagrams": 13,
+    "currentRelations": 224,
+    "versionClasses": {
+      "selected_relations": 46,
+      "parent_version_children": 6,
+      "existing_append_only": 9,
+      "stable_identities": 3
+    },
+    "otherOperationalOrDerivedTables": 39,
+    "separateHistoryTables": 0
+  },
+  "seedTemplates": [
+    {
+      "table": "football.periods",
+      "rows": 6,
+      "runtimeBindings": {
+        "recorded_from_gen": "bootstrap_generation",
+        "transform_code_sha256": "bootstrap_code_sha256"
+      }
+    },
+    {
+      "table": "football.positions",
+      "rows": 4,
+      "runtimeBindings": {
+        "recorded_from_gen": "bootstrap_generation",
+        "transform_code_sha256": "bootstrap_code_sha256"
+      }
+    }
+  ],
+  "violations": [],
+  "passed": true,
+  "limits": "This static inspection does not execute bootstrap or SQL. Separate bounded local pilot receipts now exist; complete source reconciliation, numeric/state fidelity, public application/cache parity, RDS performance and full acceptance remain open."
+}
