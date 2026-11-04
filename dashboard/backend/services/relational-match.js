@@ -33,12 +33,17 @@ const representations = cache(32 * 1024 * 1024, {
   maxEntryBytes: 2 * 1024 * 1024,
 });
 
-async function readVersioned(key, head, metadata, read, withMeta) {
+async function readVersioned(key, options, metadata, read, first) {
+  const { head, withMeta, deferBody } = options;
   for (let attempt = 0; attempt < 2; attempt++) {
-    const [current] = await metadata();
+    const current = (!attempt && first) || (await metadata())[0];
     if (!current) return null;
     if (head)
       return {
+        ...(deferBody && {
+          readBody: () =>
+            readVersioned(key, { withMeta: true }, metadata, read, current),
+        }),
         status: current.status,
         etag: `W/"match-v1-${current.version}"`,
       };
@@ -71,11 +76,7 @@ async function readVersioned(key, head, metadata, read, withMeta) {
   }
 }
 
-export async function relationalResource(
-  endpoint,
-  params = {},
-  { head = false, withMeta = false } = {},
-) {
+export async function relationalResource(endpoint, params = {}, options = {}) {
   const match = /^\/matches\/(m_[A-Za-z0-9]{6})(?:\/(.+))?$/.exec(endpoint);
   if (!match) return null;
   const suffix = match[2] || "";
@@ -98,7 +99,7 @@ export async function relationalResource(
     "FROM statarena_app.match_families f WHERE match_id=$1 AND params=$2 AND family=$3 AND subject_id=$4";
   return readVersioned(
     endpoint + "?" + variant,
-    head,
+    options,
     () => query("SELECT status,source_digest AS version " + where, values),
     (version) =>
       query(
@@ -107,17 +108,13 @@ export async function relationalResource(
           " AND source_digest=$5",
         [...values, version],
       ),
-    withMeta,
   );
 }
 
-export async function relationalMatchObservation(
-  id,
-  { head = false, withMeta = false } = {},
-) {
+export async function relationalMatchObservation(id, options = {}) {
   return readVersioned(
     "/archive/matches/" + id,
-    head,
+    options,
     () =>
       query(
         "SELECT 200 AS status,version FROM statarena_app.match_detail_versions WHERE match_id=$1",
@@ -134,6 +131,5 @@ export async function relationalMatchObservation(
        WHERE v.match_id=$1 AND v.version=$2`,
         [id, version],
       ),
-    withMeta,
   );
 }

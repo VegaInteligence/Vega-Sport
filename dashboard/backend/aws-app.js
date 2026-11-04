@@ -81,17 +81,23 @@ const shareFor = (record) =>
     ? 60
     : 0;
 async function resolved(req, read, { pitch = false, maxBytes = 0 } = {}) {
-  if (req.method === "HEAD" || req.headers.has("if-none-match")) {
-    const m = await read({ head: true });
+  let metadata;
+  if (req.method === "HEAD" || req.headers.get("if-none-match")) {
+    const m = await read({ head: true, deferBody: req.method !== "HEAD" });
+    metadata = m;
     if (!m) missing();
     const status = pitch ? (m.status ?? 200) : 200;
     if (
       req.method === "HEAD" ||
-      (m.etag && matchesEtag(req.headers.get("if-none-match"), m.etag))
+      (status === 200 &&
+        m.etag &&
+        matchesEtag(req.headers.get("if-none-match"), m.etag))
     )
       return send(req, null, status, { etag: m.etag, ttl: shareFor(m) });
   }
-  const r = await read({ withMeta: true });
+  const r = metadata?.readBody
+    ? await metadata.readBody()
+    : await read({ withMeta: true });
   if (r == null) missing();
   const body = r.value;
   if (!body) missing();

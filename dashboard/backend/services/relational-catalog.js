@@ -19,12 +19,18 @@ function result(value, version, scope, { head, withMeta }, status = 200) {
 
 // The retention TTL never determines freshness. Metadata is checked for each
 // request, and the representation must be loaded at the same publication version.
-async function versioned(scope, options, metadata, read) {
+async function versioned(scope, options, metadata, read, first) {
   for (let attempt = 0; attempt < 2; attempt++) {
-    const meta = await metadata();
+    const meta = (!attempt && first) || (await metadata());
     if (!meta) return null;
     const status = meta.status === undefined ? 200 : meta.status;
-    if (options.head) return result(null, meta.version, scope, options, status);
+    if (options.head) {
+      const header = result(null, meta.version, scope, options, status);
+      if (options.deferBody)
+        header.readBody = () =>
+          versioned(scope, { withMeta: true }, metadata, read, meta);
+      return header;
+    }
     const load = async () => {
       const row = await read(meta);
       if (!row || row.version !== meta.version) {

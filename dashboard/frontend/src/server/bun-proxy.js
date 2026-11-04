@@ -2,18 +2,23 @@
 export async function proxy(request) {
   const url = new URL(request.url);
   if (process.env.NEXT_PUBLIC_API_ORIGIN) {
-    const {apiUrl}=await import("../data-url.js");
-    return Response.redirect(apiUrl(url.pathname+url.search),307);
+    const { apiUrl } = await import("../data-url.js");
+    return Response.redirect(apiUrl(url.pathname + url.search), 307);
   }
-  if(process.env.VERCEL)return new Response(null,{status:503,headers:{"Cache-Control":"no-store"}});
+  if (process.env.VERCEL)
+    return new Response(null, {
+      status: 503,
+      headers: { "Cache-Control": "no-store" },
+    });
   const origin = process.env.ORION_API_ORIGIN || "http://127.0.0.1:8765";
   try {
+    const validator = request.headers.get("if-none-match");
     const upstream = await fetch(origin + url.pathname + url.search, {
       method: request.method,
       cache: "no-store",
       redirect: "manual",
       signal: request.signal,
-      headers: { "If-None-Match": request.headers.get("if-none-match") || "" },
+      headers: validator ? { "If-None-Match": validator } : {},
     });
     const headers = new Headers();
     for (const key of [
