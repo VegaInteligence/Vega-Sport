@@ -1,0 +1,13 @@
+{
+  "atUtc": "2026-11-04T15:14:02.492912+00:00",
+  "command": "python3 docs/architecture/orion-plan-20261104/tools/verify_artifacts.py",
+  "scope": "Syntax, local document links, unchanged input copies, completed browser receipt/screenshots and S3 metadata totals. No application or database acceptance.",
+  "counts": {
+    "json": 24,
+    "gzipJson": 1,
+    "python": 10,
+    "localLinks": 45
+  },
+  "failures": [],
+  "passed": true
+}

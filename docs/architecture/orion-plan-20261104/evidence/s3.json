@@ -1,0 +1,274 @@
+{
+  "atUtc": "2026-11-04T14:51:57.486797+00:00",
+  "command": "python3 docs/architecture/orion-plan-20261104/tools/audit_s3.py",
+  "setup": "S3 ListObjectsV2 metadata only with expected bucket owner; existing CloudFront configuration. No object content downloads, source/provider calls or infrastructure/data writes.",
+  "bucket": "statarena-football-333rosky-70db6e5f",
+  "pages": 307,
+  "objects": 306124,
+  "bytes": 4890689338,
+  "groups": {
+    "_migration/control": {
+      "objects": 9,
+      "bytes": 50824
+    },
+    "_migration/neon-full-initial.dump": {
+      "objects": 1,
+      "bytes": 239026879
+    },
+    "_migration/reports": {
+      "objects": 4,
+      "bytes": 12825
+    },
+    "data/.DS_Store": {
+      "objects": 1,
+      "bytes": 14340
+    },
+    "data/README.md": {
+      "objects": 1,
+      "bytes": 1228
+    },
+    "data/computed": {
+      "objects": 558,
+      "bytes": 678130114
+    },
+    "data/raw": {
+      "objects": 297936,
+      "bytes": 2594122073
+    },
+    "data/sources": {
+      "objects": 5340,
+      "bytes": 1126391868
+    },
+    "data/staging": {
+      "objects": 2274,
+      "bytes": 252939187
+    }
+  },
+  "migrationObjects": [
+    {
+      "key": "_migration/control/backfill_s3_payloads.py",
+      "bytes": 6657,
+      "modified": "2026-11-04T09:54:59+00:00"
+    },
+    {
+      "key": "_migration/control/copy_missing_catalog.py",
+      "bytes": 2360,
+      "modified": "2026-11-04T01:09:39+00:00"
+    },
+    {
+      "key": "_migration/control/copy_object_storage.py",
+      "bytes": 6055,
+      "modified": "2026-11-04T01:09:39+00:00"
+    },
+    {
+      "key": "_migration/control/index_s3_documents.py",
+      "bytes": 5753,
+      "modified": "2026-11-04T02:11:43+00:00"
+    },
+    {
+      "key": "_migration/control/reconcile_aws_storage.py",
+      "bytes": 7367,
+      "modified": "2026-11-04T01:04:00+00:00"
+    },
+    {
+      "key": "_migration/control/sql_document_parser.py",
+      "bytes": 6374,
+      "modified": "2026-11-04T10:09:46+00:00"
+    },
+    {
+      "key": "_migration/control/sql_document_store.py",
+      "bytes": 2989,
+      "modified": "2026-11-04T02:11:44+00:00"
+    },
+    {
+      "key": "_migration/control/sql_payload_store.py",
+      "bytes": 7542,
+      "modified": "2026-11-04T09:54:59+00:00"
+    },
+    {
+      "key": "_migration/control/stage_neon_delta_worker.py",
+      "bytes": 5727,
+      "modified": "2026-11-04T10:09:46+00:00"
+    },
+    {
+      "key": "_migration/neon-full-initial.dump",
+      "bytes": 239026879,
+      "modified": "2026-11-04T00:17:23+00:00"
+    },
+    {
+      "key": "_migration/reports/recovered-uncatalogued.json",
+      "bytes": 9611,
+      "modified": "2026-11-04T01:30:02+00:00"
+    },
+    {
+      "key": "_migration/reports/source-table-comparison.json",
+      "bytes": 2678,
+      "modified": "2026-11-04T02:17:30+00:00"
+    },
+    {
+      "key": "_migration/reports/sql-documents-verification.json",
+      "bytes": 306,
+      "modified": "2026-11-04T02:17:30+00:00"
+    },
+    {
+      "key": "_migration/reports/storage-reconciliation.json",
+      "bytes": 230,
+      "modified": "2026-11-04T01:24:40+00:00"
+    }
+  ],
+  "complete": true,
+  "location": {
+    "LocationConstraint": "us-east-2"
+  },
+  "versioning": {},
+  "publicAccessBlock": {
+    "PublicAccessBlockConfiguration": {
+      "BlockPublicAcls": true,
+      "IgnorePublicAcls": true,
+      "BlockPublicPolicy": true,
+      "RestrictPublicBuckets": true
+    }
+  },
+  "distributions": [
+    {
+      "id": "E3IHCBKMHSDYC6",
+      "domain": "d2clu0phovomb8.cloudfront.net",
+      "status": "Deployed",
+      "enabled": true,
+      "origins": [
+        {
+          "id": "statarena-s3",
+          "domain": "statarena-football-333rosky-70db6e5f.s3.us-east-2.amazonaws.com",
+          "path": "",
+          "oac": "E3UKT06AKYXKQV",
+          "customHeaderNames": []
+        }
+      ],
+      "defaultBehavior": {
+        "TargetOriginId": "statarena-s3",
+        "TrustedSigners": {
+          "Enabled": false,
+          "Quantity": 0
+        },
+        "TrustedKeyGroups": {
+          "Enabled": false,
+          "Quantity": 0
+        },
+        "ViewerProtocolPolicy": "redirect-to-https",
+        "AllowedMethods": {
+          "Quantity": 2,
+          "Items": [
+            "HEAD",
+            "GET"
+          ],
+          "CachedMethods": {
+            "Quantity": 2,
+            "Items": [
+              "HEAD",
+              "GET"
+            ]
+          }
+        },
+        "SmoothStreaming": false,
+        "Compress": true,
+        "LambdaFunctionAssociations": {
+          "Quantity": 0
+        },
+        "FunctionAssociations": {
+          "Quantity": 1,
+          "Items": [
+            {
+              "FunctionARN": "arn:aws:cloudfront::361769570630:function/statarena-public-files-20261104",
+              "EventType": "viewer-request"
+            }
+          ]
+        },
+        "FieldLevelEncryptionId": "",
+        "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+        "ResponseHeadersPolicyId": "e61eb60c-9c35-4d20-a928-2b84e02af89c",
+        "GrpcConfig": {
+          "Enabled": false
+        }
+      },
+      "cacheBehaviors": {
+        "Quantity": 0
+      }
+    },
+    {
+      "id": "E26GD325YNN0LL",
+      "domain": "d317dq37z1tacb.cloudfront.net",
+      "status": "Deployed",
+      "enabled": true,
+      "origins": [
+        {
+          "id": "api",
+          "domain": "wumdyflgmedn4oepitc7runbsy0wgcgu.lambda-url.us-east-2.on.aws",
+          "path": "",
+          "oac": "E2212WS8YVNW3B",
+          "customHeaderNames": []
+        }
+      ],
+      "defaultBehavior": {
+        "TargetOriginId": "api",
+        "TrustedSigners": {
+          "Enabled": false,
+          "Quantity": 0
+        },
+        "TrustedKeyGroups": {
+          "Enabled": false,
+          "Quantity": 0
+        },
+        "ViewerProtocolPolicy": "redirect-to-https",
+        "AllowedMethods": {
+          "Quantity": 3,
+          "Items": [
+            "HEAD",
+            "GET",
+            "OPTIONS"
+          ],
+          "CachedMethods": {
+            "Quantity": 2,
+            "Items": [
+              "HEAD",
+              "GET"
+            ]
+          }
+        },
+        "SmoothStreaming": false,
+        "Compress": true,
+        "LambdaFunctionAssociations": {
+          "Quantity": 0
+        },
+        "FunctionAssociations": {
+          "Quantity": 0
+        },
+        "FieldLevelEncryptionId": "",
+        "CachePolicyId": "1bbef6a2-78d5-494c-aff5-e8bc95232a62",
+        "OriginRequestPolicyId": "6931cc5c-d07c-4146-942d-20830c3a15f8",
+        "ResponseHeadersPolicyId": "3c65ed63-db1a-4c32-92a9-29a8fe9ac32d",
+        "GrpcConfig": {
+          "Enabled": false
+        }
+      },
+      "cacheBehaviors": {
+        "Quantity": 0
+      }
+    }
+  ],
+  "classes": {
+    "images": {
+      "objects": 37859,
+      "bytes": 401928242
+    },
+    "other": {
+      "objects": 5253,
+      "bytes": 1779707934
+    },
+    "structured-json": {
+      "objects": 263012,
+      "bytes": 2709053162
+    }
+  },
+  "lastPageAt": "2026-11-04T14:58:14.863931+00:00",
+  "finishedUtc": "2026-11-04T14:58:14.864764+00:00"
+}

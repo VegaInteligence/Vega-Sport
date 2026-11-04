@@ -1,0 +1,589 @@
+{
+  "atUtc": "2026-11-04T14:39:50.978509+00:00",
+  "account": "361769570630",
+  "command": "python3 docs/architecture/orion-plan-20261104/tools/capture_runtime.py",
+  "mode": "Read-only Describe/Get/list calls and public health GETs; no deployment, credentials export or object body downloads.",
+  "rds": {
+    "DBInstanceIdentifier": "statarena-postgres",
+    "Engine": "postgres",
+    "EngineVersion": "18.6",
+    "DBInstanceClass": "db.t4g.micro",
+    "AllocatedStorage": 64,
+    "StorageType": "gp3",
+    "DBInstanceStatus": "available",
+    "PendingModifiedValues": {},
+    "DBName": "statarena",
+    "VpcSecurityGroups": [
+      {
+        "VpcSecurityGroupId": "sg-0667c20e8ff5d2431",
+        "Status": "active"
+      }
+    ],
+    "PubliclyAccessible": true,
+    "StorageEncrypted": true,
+    "BackupRetentionPeriod": 1
+  },
+  "lambda": {
+    "FunctionName": "statarena-backend",
+    "Runtime": "nodejs24.x",
+    "MemorySize": 512,
+    "Timeout": 25,
+    "CodeSha256": "Im/z7r7PPFeNjjXWB7CtMufgNBZRpz6bJ+NA7l4s+4k=",
+    "State": "Active",
+    "LastUpdateStatus": "Successful",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0233a9567335f56ce",
+        "subnet-04c9af303f55d9718",
+        "subnet-0e72516f361932c15"
+      ],
+      "SecurityGroupIds": [
+        "sg-0c96277ace8667fe3"
+      ],
+      "VpcId": "vpc-08e400afa07fc1812",
+      "Ipv6AllowedForDualStack": false
+    },
+    "databaseTarget": {
+      "host": "statarena-postgres.clcy2iqyajbl.us-east-2.rds.amazonaws.com",
+      "database": "statarena_prod",
+      "role": "statarena_runtime"
+    },
+    "environmentKeys": [
+      "DATABASE_POOL_MAX",
+      "DATABASE_URL",
+      "STATARENA_CLOUDFRONT_URL",
+      "STATARENA_DATA_PROVIDER",
+      "STATARENA_RELEASE"
+    ],
+    "assetOrigin": "https://d2clu0phovomb8.cloudfront.net",
+    "dataProvider": "aws"
+  },
+  "networkSecurityGroups": [
+    {
+      "GroupId": "sg-0667c20e8ff5d2431",
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "-1",
+          "UserIdGroupPairs": [],
+          "IpRanges": [
+            {
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": []
+        }
+      ],
+      "VpcId": "vpc-08e400afa07fc1812",
+      "SecurityGroupArn": "arn:aws:ec2:us-east-2:361769570630:security-group/sg-0667c20e8ff5d2431",
+      "OwnerId": "361769570630",
+      "GroupName": "statarena-postgres-migration",
+      "Description": "Temporary StatArena PostgreSQL migration access",
+      "IpPermissions": [
+        {
+          "IpProtocol": "tcp",
+          "FromPort": 5432,
+          "ToPort": 5432,
+          "UserIdGroupPairs": [
+            {
+              "Description": "statarena-backend runtime only",
+              "UserId": "361769570630",
+              "GroupId": "sg-0c96277ace8667fe3"
+            }
+          ],
+          "IpRanges": [
+            {
+              "Description": "StatArena migration computer",
+              "CidrPrefixLength": 32,
+              "AddressRedacted": true
+            },
+            {
+              "Description": "StatArena DataGrip - user Mac current IP 2026-11-04",
+              "CidrPrefixLength": 32,
+              "AddressRedacted": true
+            }
+          ],
+          "Ipv6Ranges": [],
+          "PrefixListIds": []
+        }
+      ]
+    },
+    {
+      "GroupId": "sg-0c96277ace8667fe3",
+      "IpPermissionsEgress": [
+        {
+          "IpProtocol": "tcp",
+          "FromPort": 5432,
+          "ToPort": 5432,
+          "UserIdGroupPairs": [
+            {
+              "UserId": "361769570630",
+              "GroupId": "sg-0667c20e8ff5d2431"
+            }
+          ],
+          "IpRanges": [],
+          "Ipv6Ranges": [],
+          "PrefixListIds": []
+        }
+      ],
+      "Tags": [
+        {
+          "Key": "aws:cloudformation:stack-id",
+          "Value": "arn:aws:cloudformation:us-east-2:361769570630:stack/statarena-backend/6d7743f0-d7f8-11f1-8dc7-02ffe7921adb"
+        },
+        {
+          "Key": "Application",
+          "Value": "statarena-backend"
+        },
+        {
+          "Key": "aws:cloudformation:logical-id",
+          "Value": "RuntimeSG"
+        },
+        {
+          "Key": "Name",
+          "Value": "statarena-backend-runtime"
+        },
+        {
+          "Key": "aws:cloudformation:stack-name",
+          "Value": "statarena-backend"
+        }
+      ],
+      "VpcId": "vpc-08e400afa07fc1812",
+      "SecurityGroupArn": "arn:aws:ec2:us-east-2:361769570630:security-group/sg-0c96277ace8667fe3",
+      "OwnerId": "361769570630",
+      "GroupName": "statarena-backend-RuntimeSG-gJ5FsYTFVdGN",
+      "Description": "StatArena Lambda egress only to existing PostgreSQL SG",
+      "IpPermissions": []
+    }
+  ],
+  "redaction": "Personal /32 administrator IP addresses are omitted from this public-repository receipt; rule descriptions/counts and SG references are retained.",
+  "apiCdn": {
+    "id": "E26GD325YNN0LL",
+    "domain": "d317dq37z1tacb.cloudfront.net",
+    "status": "Deployed",
+    "aliases": {
+      "Quantity": 0
+    },
+    "origins": {
+      "Quantity": 1,
+      "Items": [
+        {
+          "Id": "api",
+          "DomainName": "wumdyflgmedn4oepitc7runbsy0wgcgu.lambda-url.us-east-2.on.aws",
+          "OriginPath": "",
+          "CustomHeaders": {
+            "Quantity": 0
+          },
+          "CustomOriginConfig": {
+            "HTTPPort": 80,
+            "HTTPSPort": 443,
+            "OriginProtocolPolicy": "https-only",
+            "OriginSslProtocols": {
+              "Quantity": 1,
+              "Items": [
+                "TLSv1.2"
+              ]
+            },
+            "OriginReadTimeout": 29,
+            "OriginKeepaliveTimeout": 5
+          },
+          "ConnectionAttempts": 3,
+          "ConnectionTimeout": 10,
+          "OriginShield": {
+            "Enabled": false
+          },
+          "OriginAccessControlId": "E2212WS8YVNW3B"
+        }
+      ]
+    },
+    "defaultBehavior": {
+      "TargetOriginId": "api",
+      "TrustedSigners": {
+        "Enabled": false,
+        "Quantity": 0
+      },
+      "TrustedKeyGroups": {
+        "Enabled": false,
+        "Quantity": 0
+      },
+      "ViewerProtocolPolicy": "redirect-to-https",
+      "AllowedMethods": {
+        "Quantity": 3,
+        "Items": [
+          "HEAD",
+          "GET",
+          "OPTIONS"
+        ],
+        "CachedMethods": {
+          "Quantity": 2,
+          "Items": [
+            "HEAD",
+            "GET"
+          ]
+        }
+      },
+      "SmoothStreaming": false,
+      "Compress": true,
+      "LambdaFunctionAssociations": {
+        "Quantity": 0
+      },
+      "FunctionAssociations": {
+        "Quantity": 0
+      },
+      "FieldLevelEncryptionId": "",
+      "CachePolicyId": "1bbef6a2-78d5-494c-aff5-e8bc95232a62",
+      "OriginRequestPolicyId": "6931cc5c-d07c-4146-942d-20830c3a15f8",
+      "ResponseHeadersPolicyId": "3c65ed63-db1a-4c32-92a9-29a8fe9ac32d",
+      "GrpcConfig": {
+        "Enabled": false
+      }
+    },
+    "cacheBehaviors": {
+      "Quantity": 0
+    },
+    "cachePolicy": {
+      "ETag": "E23ZP02F085DFQ",
+      "CachePolicy": {
+        "Id": "1bbef6a2-78d5-494c-aff5-e8bc95232a62",
+        "LastModifiedTime": "2026-11-04T02:36:54.394000+00:00",
+        "CachePolicyConfig": {
+          "Name": "statarena-backend",
+          "DefaultTTL": 0,
+          "MaxTTL": 60,
+          "MinTTL": 0,
+          "ParametersInCacheKeyAndForwardedToOrigin": {
+            "EnableAcceptEncodingGzip": true,
+            "EnableAcceptEncodingBrotli": true,
+            "HeadersConfig": {
+              "HeaderBehavior": "none"
+            },
+            "CookiesConfig": {
+              "CookieBehavior": "none"
+            },
+            "QueryStringsConfig": {
+              "QueryStringBehavior": "all"
+            }
+          }
+        }
+      }
+    },
+    "responseHeadersPolicy": {
+      "ETag": "E23ZP02F085DFQ",
+      "ResponseHeadersPolicy": {
+        "Id": "3c65ed63-db1a-4c32-92a9-29a8fe9ac32d",
+        "LastModifiedTime": "2026-11-04T02:36:54.514000+00:00",
+        "ResponseHeadersPolicyConfig": {
+          "Name": "statarena-backend",
+          "CorsConfig": {
+            "AccessControlAllowOrigins": {
+              "Quantity": 1,
+              "Items": [
+                "*"
+              ]
+            },
+            "AccessControlAllowHeaders": {
+              "Quantity": 1,
+              "Items": [
+                "*"
+              ]
+            },
+            "AccessControlAllowMethods": {
+              "Quantity": 3,
+              "Items": [
+                "GET",
+                "HEAD",
+                "OPTIONS"
+              ]
+            },
+            "AccessControlAllowCredentials": false,
+            "AccessControlExposeHeaders": {
+              "Quantity": 7,
+              "Items": [
+                "ETag",
+                "Content-Length",
+                "Cache-Control",
+                "Age",
+                "X-Cache",
+                "X-Data-Source",
+                "Server-Timing"
+              ]
+            },
+            "OriginOverride": true
+          },
+          "SecurityHeadersConfig": {
+            "XSSProtection": {},
+            "FrameOptions": {},
+            "ReferrerPolicy": {},
+            "ContentSecurityPolicy": {},
+            "ContentTypeOptions": {
+              "Override": true
+            },
+            "StrictTransportSecurity": {}
+          }
+        }
+      }
+    }
+  },
+  "assetCdn": {
+    "id": "E3IHCBKMHSDYC6",
+    "domain": "d2clu0phovomb8.cloudfront.net",
+    "status": "Deployed",
+    "aliases": {
+      "Quantity": 0
+    },
+    "origins": {
+      "Quantity": 1,
+      "Items": [
+        {
+          "Id": "statarena-s3",
+          "DomainName": "statarena-football-333rosky-70db6e5f.s3.us-east-2.amazonaws.com",
+          "OriginPath": "",
+          "CustomHeaders": {
+            "Quantity": 0
+          },
+          "S3OriginConfig": {
+            "OriginAccessIdentity": "",
+            "OriginReadTimeout": 30
+          },
+          "ConnectionAttempts": 3,
+          "ConnectionTimeout": 10,
+          "OriginShield": {
+            "Enabled": false
+          },
+          "OriginAccessControlId": "E3UKT06AKYXKQV"
+        }
+      ]
+    },
+    "defaultBehavior": {
+      "TargetOriginId": "statarena-s3",
+      "TrustedSigners": {
+        "Enabled": false,
+        "Quantity": 0
+      },
+      "TrustedKeyGroups": {
+        "Enabled": false,
+        "Quantity": 0
+      },
+      "ViewerProtocolPolicy": "redirect-to-https",
+      "AllowedMethods": {
+        "Quantity": 2,
+        "Items": [
+          "HEAD",
+          "GET"
+        ],
+        "CachedMethods": {
+          "Quantity": 2,
+          "Items": [
+            "HEAD",
+            "GET"
+          ]
+        }
+      },
+      "SmoothStreaming": false,
+      "Compress": true,
+      "LambdaFunctionAssociations": {
+        "Quantity": 0
+      },
+      "FunctionAssociations": {
+        "Quantity": 1,
+        "Items": [
+          {
+            "FunctionARN": "arn:aws:cloudfront::361769570630:function/statarena-public-files-20261104",
+            "EventType": "viewer-request"
+          }
+        ]
+      },
+      "FieldLevelEncryptionId": "",
+      "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+      "ResponseHeadersPolicyId": "e61eb60c-9c35-4d20-a928-2b84e02af89c",
+      "GrpcConfig": {
+        "Enabled": false
+      }
+    },
+    "cacheBehaviors": {
+      "Quantity": 0
+    },
+    "cachePolicy": {
+      "ETag": "E23ZP02F085DFQ",
+      "CachePolicy": {
+        "Id": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+        "LastModifiedTime": "1970-01-01T00:00:00+00:00",
+        "CachePolicyConfig": {
+          "Comment": "Policy with caching enabled. Supports Gzip and Brotli compression.",
+          "Name": "Managed-CachingOptimized",
+          "DefaultTTL": 86400,
+          "MaxTTL": 31536000,
+          "MinTTL": 1,
+          "ParametersInCacheKeyAndForwardedToOrigin": {
+            "EnableAcceptEncodingGzip": true,
+            "EnableAcceptEncodingBrotli": true,
+            "HeadersConfig": {
+              "HeaderBehavior": "none"
+            },
+            "CookiesConfig": {
+              "CookieBehavior": "none"
+            },
+            "QueryStringsConfig": {
+              "QueryStringBehavior": "none"
+            }
+          }
+        }
+      }
+    },
+    "responseHeadersPolicy": {
+      "ETag": "E23ZP02F085DFQ",
+      "ResponseHeadersPolicy": {
+        "Id": "e61eb60c-9c35-4d20-a928-2b84e02af89c",
+        "LastModifiedTime": "1970-01-01T00:00:00+00:00",
+        "ResponseHeadersPolicyConfig": {
+          "Comment": "Allows all origins for simple CORS requests, and adds security headers",
+          "Name": "Managed-CORS-and-SecurityHeadersPolicy",
+          "CorsConfig": {
+            "AccessControlAllowOrigins": {
+              "Quantity": 1,
+              "Items": [
+                "*"
+              ]
+            },
+            "AccessControlAllowHeaders": {
+              "Quantity": 0,
+              "Items": []
+            },
+            "AccessControlAllowMethods": {
+              "Quantity": 0,
+              "Items": []
+            },
+            "AccessControlAllowCredentials": false,
+            "AccessControlExposeHeaders": {
+              "Quantity": 0,
+              "Items": []
+            },
+            "OriginOverride": false
+          },
+          "SecurityHeadersConfig": {
+            "XSSProtection": {
+              "Override": false,
+              "Protection": true,
+              "ModeBlock": true
+            },
+            "FrameOptions": {
+              "Override": false,
+              "FrameOption": "SAMEORIGIN"
+            },
+            "ReferrerPolicy": {
+              "Override": false,
+              "ReferrerPolicy": "strict-origin-when-cross-origin"
+            },
+            "ContentSecurityPolicy": {},
+            "ContentTypeOptions": {
+              "Override": true
+            },
+            "StrictTransportSecurity": {
+              "Override": false,
+              "AccessControlMaxAgeSec": 31536000
+            }
+          }
+        }
+      }
+    }
+  },
+  "publicHealth": {
+    "url": "https://statarena-analytics.vercel.app/api/health",
+    "status": 200,
+    "body": {
+      "status": "ok",
+      "source": "Neon",
+      "revision": 18
+    }
+  },
+  "awsHealth": {
+    "url": "https://d317dq37z1tacb.cloudfront.net/api/health",
+    "status": 200,
+    "body": {
+      "source": "AWS",
+      "status": "ok",
+      "revision": "43"
+    }
+  },
+  "workflows": [
+    {
+      "id": 405653901,
+      "name": "Dependency Graph",
+      "path": "dynamic/dependabot/update-graph",
+      "state": "active"
+    },
+    {
+      "id": 406061243,
+      "name": "Verify ingestion",
+      "path": ".github/workflows/verify-ingestion.yml",
+      "state": "active"
+    },
+    {
+      "id": 405512073,
+      "name": "Measure actual PostgreSQL storage",
+      "path": ".github/workflows/measure-postgres-storage.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 405911483,
+      "name": "Storage diagnostic (read only)",
+      "path": ".github/workflows/storage-diagnostic-01a1a21a.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 405979310,
+      "name": "Saudi Pro League backfill",
+      "path": ".github/workflows/saudi-pro-backfill.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 406003045,
+      "name": "MLS backfill",
+      "path": ".github/workflows/mls-backfill-once.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 406036286,
+      "name": "Verify football refresh",
+      "path": ".github/workflows/football-refresh-check-once.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 406139790,
+      "name": "Build serving tables (AWS)",
+      "path": ".github/workflows/rematerialize.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 406248463,
+      "name": "Temporary PitchAPI live match check",
+      "path": ".github/workflows/codex-pitchapi-live-check.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 406261192,
+      "name": "Published Villarreal PSG availability",
+      "path": ".github/workflows/pitchapi-villarreal-psg-availability.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 406290017,
+      "name": "Collect standings (AWS)",
+      "path": ".github/workflows/uefa-standings.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 406307949,
+      "name": "Diagnose club crests",
+      "path": ".github/workflows/club-logo-diagnostic-20261104.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 406712547,
+      "name": "Collect football (AWS)",
+      "path": ".github/workflows/collect-football.yml",
+      "state": "disabled_manually"
+    }
+  ],
+  "finishedUtc": "2026-11-04T14:39:59.698123+00:00"
+}

@@ -1,0 +1,338 @@
+[
+  {
+    "table_schema": "statarena",
+    "table_name": "asset_jobs",
+    "column_name": "url",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "asset_jobs",
+    "column_name": "attempts",
+    "data_type": "integer"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "asset_jobs",
+    "column_name": "next_attempt",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "asset_jobs",
+    "column_name": "error",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "assets",
+    "column_name": "url",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "assets",
+    "column_name": "path",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "assets",
+    "column_name": "content_type",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "dirty_partitions",
+    "column_name": "season",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "dirty_partitions",
+    "column_name": "league_id",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "dirty_partitions",
+    "column_name": "changed_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "fixtures",
+    "column_name": "id",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "fixtures",
+    "column_name": "league_id",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "fixtures",
+    "column_name": "season",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "fixtures",
+    "column_name": "day",
+    "data_type": "date"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "fixtures",
+    "column_name": "status",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "fixtures",
+    "column_name": "body",
+    "data_type": "jsonb"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "fixtures",
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "ingest_failures",
+    "column_name": "endpoint",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "ingest_failures",
+    "column_name": "params",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "ingest_failures",
+    "column_name": "status",
+    "data_type": "smallint"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "ingest_failures",
+    "column_name": "error",
+    "data_type": "jsonb"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "ingest_failures",
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "jobs",
+    "column_name": "endpoint",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "jobs",
+    "column_name": "params",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "jobs",
+    "column_name": "priority",
+    "data_type": "smallint"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "jobs",
+    "column_name": "state",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "jobs",
+    "column_name": "attempts",
+    "data_type": "integer"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "jobs",
+    "column_name": "available_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "jobs",
+    "column_name": "lease_until",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "jobs",
+    "column_name": "last_status",
+    "data_type": "smallint"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "jobs",
+    "column_name": "last_error",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "objects",
+    "column_name": "path",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "objects",
+    "column_name": "size",
+    "data_type": "bigint"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "objects",
+    "column_name": "sha256",
+    "data_type": "bytea"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "objects",
+    "column_name": "etag",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "objects",
+    "column_name": "body",
+    "data_type": "bytea"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "objects",
+    "column_name": "content_type",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "objects",
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "observations",
+    "column_name": "id",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "observations",
+    "column_name": "shard",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "observations",
+    "column_name": "ordinal",
+    "data_type": "integer"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "projections",
+    "column_name": "name",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "projections",
+    "column_name": "params",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "projections",
+    "column_name": "body",
+    "data_type": "jsonb"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "projections",
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "resources",
+    "column_name": "endpoint",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "resources",
+    "column_name": "params",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "resources",
+    "column_name": "status",
+    "data_type": "smallint"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "resources",
+    "column_name": "ref",
+    "data_type": "jsonb"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "resources",
+    "column_name": "error",
+    "data_type": "jsonb"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "resources",
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "shards",
+    "column_name": "id",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "shards",
+    "column_name": "ref",
+    "data_type": "jsonb"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "state",
+    "column_name": "name",
+    "data_type": "text"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "state",
+    "column_name": "value",
+    "data_type": "jsonb"
+  },
+  {
+    "table_schema": "statarena",
+    "table_name": "state",
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone"
+  }
+]

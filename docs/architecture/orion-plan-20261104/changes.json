@@ -1,0 +1,2179 @@
+[
+  {
+    "table": "football.players",
+    "operation": "change_column",
+    "column": "display_name",
+    "before": {
+      "type": "text",
+      "nullable": false
+    },
+    "after": {
+      "type": "text",
+      "nullable": true,
+      "description": "Nom réellement connu ; NULL si identité référencée sans nom disponible, aucun nom fictif."
+    },
+    "reason": "Préserver une identité connue même lorsque le libellé source est absent"
+  },
+  {
+    "table": "football.teams",
+    "operation": "change_column",
+    "column": "name",
+    "before": {
+      "type": "text",
+      "nullable": false
+    },
+    "after": {
+      "type": "text",
+      "nullable": true,
+      "description": "Nom réellement connu ; NULL si identité référencée sans nom disponible, aucun nom fictif."
+    },
+    "reason": "Préserver une identité connue même lorsque le libellé source est absent"
+  },
+  {
+    "table": "football.coaches",
+    "operation": "change_column",
+    "column": "display_name",
+    "before": {
+      "type": "text",
+      "nullable": false
+    },
+    "after": {
+      "type": "text",
+      "nullable": true,
+      "description": "Nom réellement connu ; NULL si identité référencée sans nom disponible, aucun nom fictif."
+    },
+    "reason": "Préserver une identité connue même lorsque le libellé source est absent"
+  },
+  {
+    "table": "football.competitions",
+    "operation": "change_column",
+    "column": "name",
+    "before": {
+      "type": "text",
+      "nullable": false
+    },
+    "after": {
+      "type": "text",
+      "nullable": true,
+      "description": "Nom réellement connu ; NULL si identité référencée sans nom disponible, aucun nom fictif."
+    },
+    "reason": "Préserver une identité connue même lorsque le libellé source est absent"
+  },
+  {
+    "table": "football.venues",
+    "operation": "change_column",
+    "column": "name",
+    "before": {
+      "type": "text",
+      "nullable": false
+    },
+    "after": {
+      "type": "text",
+      "nullable": true,
+      "description": "Nom réellement connu ; NULL si identité référencée sans nom disponible, aucun nom fictif."
+    },
+    "reason": "Préserver une identité connue même lorsque le libellé source est absent"
+  },
+  {
+    "table": "ingest.source_documents",
+    "operation": "change_column",
+    "column": "storage_bucket",
+    "before": {
+      "type": "text",
+      "nullable": false
+    },
+    "after": {
+      "type": "text",
+      "nullable": true,
+      "description": "Ancien emplacement à titre de provenance ; ne constitue pas une dépendance de lecture."
+    },
+    "reason": "Suppression finale des fichiers autorisée après réconciliation complète"
+  },
+  {
+    "table": "ingest.source_documents",
+    "operation": "change_column",
+    "column": "storage_key",
+    "before": {
+      "type": "text",
+      "nullable": false
+    },
+    "after": {
+      "type": "text",
+      "nullable": true,
+      "description": "Ancien emplacement à titre de provenance ; ne constitue pas une dépendance de lecture."
+    },
+    "reason": "Suppression finale des fichiers autorisée après réconciliation complète"
+  },
+  {
+    "table": "ingest.source_documents",
+    "operation": "change_column",
+    "column": "storage_provider",
+    "before": {
+      "type": "text",
+      "nullable": false,
+      "default_sql": "'neon'"
+    },
+    "after": {
+      "type": "text",
+      "nullable": false,
+      "description": "http_direct pour les nouvelles collectes sans fichier ; aws_s3 uniquement pour les sources historiques déjà présentes.",
+      "default_sql": "'http_direct'"
+    },
+    "reason": "Les nouvelles données PitchAPI sont normalisées directement dans RDS"
+  },
+  {
+    "table": "ingest.source_documents",
+    "operation": "add_column",
+    "column": "origin_kind",
+    "before": null,
+    "after": {
+      "type": "text",
+      "nullable": false,
+      "description": "http_response directe ou legacy_file déjà existant.",
+      "default_sql": "'http_response'"
+    },
+    "reason": "Séparer reçu HTTP sans fichier et provenance des anciens fichiers"
+  },
+  {
+    "table": "ingest.source_documents",
+    "operation": "remove_column",
+    "column": "immutable_reference",
+    "before": {
+      "type": "boolean",
+      "nullable": false,
+      "description": "Vrai après vérification que cette version reste relisible.",
+      "default_sql": "false"
+    },
+    "reason": "Une référence à un fichier supprimé ne doit plus promettre sa disponibilité"
+  },
+  {
+    "table": "ingest.source_documents",
+    "operation": "add_column",
+    "column": "content_verified_at",
+    "before": null,
+    "after": {
+      "type": "timestamptz",
+      "nullable": true,
+      "description": "Date de la dernière vérification effective des octets avant suppression."
+    },
+    "reason": "Conserver la preuve sans inventer un accès futur"
+  },
+  {
+    "table": "ingest.source_documents",
+    "operation": "add_column",
+    "column": "retention_state",
+    "before": null,
+    "after": {
+      "type": "text",
+      "nullable": false,
+      "description": "not_stored pour une nouvelle réponse HTTP ; staged/reconciled/deleted uniquement pour un ancien fichier.",
+      "default_sql": "'not_stored'"
+    },
+    "reason": "Aucune nouvelle réponse structurée stockée comme fichier ou document"
+  },
+  {
+    "table": "ingest.source_documents",
+    "operation": "add_column",
+    "column": "deleted_at",
+    "before": null,
+    "after": {
+      "type": "timestamptz",
+      "nullable": true,
+      "description": "Suppression vérifiée de l’original et des copies recensées."
+    },
+    "reason": "Traçabilité du nettoyage"
+  },
+  {
+    "table": "ingest.dataset_snapshots",
+    "operation": "remove_column",
+    "column": "selection_manifest",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "description": "Choix canoniques, exclusions et localisateurs des observations retenues.",
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Sélection des faits exprimée par dataset_snapshot_rows et des références SQL"
+  },
+  {
+    "table": "ingest.dataset_snapshot_documents",
+    "operation": "remove_column",
+    "column": "selection",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "description": "Sélecteur des enregistrements retenus; objet vide si document intégral.",
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Sélection des faits exprimée par dataset_snapshot_rows et des références SQL"
+  },
+  {
+    "table": "ingest.relation_contracts",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "ingest.row_versions",
+    "operation": "add_table",
+    "reason": "Ajustement substantiel nécessaire à la reproductibilité sans originaux"
+  },
+  {
+    "table": "ingest.dataset_snapshot_rows",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "ingest.field_contracts",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "ingest.field_states",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "ingest.record_row_links",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "ingest.reconciliation_runs",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "ingest.document_reconciliations",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "ingest.cleanup_items",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "ingest.collection_jobs",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "ingest.asset_jobs",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "ingest.dirty_editions",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "ingest.schema_migrations",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "football.player_profile_versions",
+    "operation": "remove_column",
+    "column": "profile_attributes",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Les attributs réellement présents sont explicitement typés"
+  },
+  {
+    "table": "football.player_profile_versions",
+    "operation": "add_column",
+    "column": "short_name",
+    "before": null,
+    "after": {
+      "type": "text",
+      "nullable": true,
+      "description": "Nom court fournisseur."
+    },
+    "reason": "Conservation du profil sans JSONB métier"
+  },
+  {
+    "table": "football.player_profile_versions",
+    "operation": "add_column",
+    "column": "country_code_source",
+    "before": null,
+    "after": {
+      "type": "text",
+      "nullable": true,
+      "description": "Code pays natif, distinct d’un ISO déduit."
+    },
+    "reason": "Conservation du profil sans JSONB métier"
+  },
+  {
+    "table": "football.player_profile_versions",
+    "operation": "add_column",
+    "column": "raw_position_code",
+    "before": null,
+    "after": {
+      "type": "text",
+      "nullable": true,
+      "description": "Code de poste natif avant mapping validé."
+    },
+    "reason": "Conservation du profil sans JSONB métier"
+  },
+  {
+    "table": "football.player_profile_versions",
+    "operation": "add_column",
+    "column": "shirt_number",
+    "before": null,
+    "after": {
+      "type": "text",
+      "nullable": true,
+      "description": "Numéro de profil conservé comme texte, y compris chaîne vide."
+    },
+    "reason": "Conservation du profil sans JSONB métier"
+  },
+  {
+    "table": "football.player_profile_versions",
+    "operation": "add_column",
+    "column": "birth_date",
+    "before": null,
+    "after": {
+      "type": "date",
+      "nullable": true,
+      "description": "Date de naissance observée dans cette version, si disponible."
+    },
+    "reason": "Conservation du profil sans JSONB métier"
+  },
+  {
+    "table": "football.player_profile_versions",
+    "operation": "add_column",
+    "column": "height_cm",
+    "before": null,
+    "after": {
+      "type": "smallint",
+      "nullable": true,
+      "description": "Taille observée dans cette version, en centimètres."
+    },
+    "reason": "Conservation du profil sans JSONB métier"
+  },
+  {
+    "table": "football.player_profile_versions",
+    "operation": "add_column",
+    "column": "dominant_foot",
+    "before": null,
+    "after": {
+      "type": "text",
+      "nullable": true,
+      "description": "Pied dominant observé dans cette version, si disponible."
+    },
+    "reason": "Conservation du profil sans JSONB métier"
+  },
+  {
+    "table": "football.shots",
+    "operation": "add_column",
+    "column": "keeper_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": true,
+      "description": "Gardien associé au tir dans l’observation."
+    },
+    "reason": "Champs présents dans les anciennes tables et dans l’inventaire de 1 203 718 tirs"
+  },
+  {
+    "table": "football.shots",
+    "operation": "add_column",
+    "column": "blocked_x",
+    "before": null,
+    "after": {
+      "type": "double precision",
+      "nullable": true,
+      "description": "Coordonnée du point de blocage, dans le repère source déclaré."
+    },
+    "reason": "Champs présents dans les anciennes tables et dans l’inventaire de 1 203 718 tirs"
+  },
+  {
+    "table": "football.shots",
+    "operation": "add_column",
+    "column": "blocked_y",
+    "before": null,
+    "after": {
+      "type": "double precision",
+      "nullable": true,
+      "description": "Seconde coordonnée du point de blocage."
+    },
+    "reason": "Champs présents dans les anciennes tables et dans l’inventaire de 1 203 718 tirs"
+  },
+  {
+    "table": "football.shots",
+    "operation": "add_column",
+    "column": "is_blocked",
+    "before": null,
+    "after": {
+      "type": "boolean",
+      "nullable": true,
+      "description": "Indicateur natif de tir bloqué."
+    },
+    "reason": "Champs présents dans les anciennes tables et dans l’inventaire de 1 203 718 tirs"
+  },
+  {
+    "table": "football.shots",
+    "operation": "add_column",
+    "column": "is_saved_off_line",
+    "before": null,
+    "after": {
+      "type": "boolean",
+      "nullable": true,
+      "description": "Indicateur natif de sauvetage sur la ligne."
+    },
+    "reason": "Champs présents dans les anciennes tables et dans l’inventaire de 1 203 718 tirs"
+  },
+  {
+    "table": "football.shots",
+    "operation": "add_column",
+    "column": "source_shot_type",
+    "before": null,
+    "after": {
+      "type": "text",
+      "nullable": true,
+      "description": "Type natif ; aucune confusion automatique avec la partie du corps."
+    },
+    "reason": "Champs présents dans les anciennes tables et dans l’inventaire de 1 203 718 tirs"
+  },
+  {
+    "table": "football.shots",
+    "operation": "add_column",
+    "column": "source_event_type",
+    "before": null,
+    "after": {
+      "type": "text",
+      "nullable": true,
+      "description": "Résultat/type natif du tir."
+    },
+    "reason": "Champs présents dans les anciennes tables et dans l’inventaire de 1 203 718 tirs"
+  },
+  {
+    "table": "football.shots",
+    "operation": "add_column",
+    "column": "source_ordinal",
+    "before": null,
+    "after": {
+      "type": "integer",
+      "nullable": true,
+      "description": "Ordre de présentation dans cette version de la famille."
+    },
+    "reason": "Champs présents dans les anciennes tables et dans l’inventaire de 1 203 718 tirs"
+  },
+  {
+    "table": "football.shots",
+    "operation": "add_column",
+    "column": "player_profile_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": true,
+      "description": "Profil observé de l’acteur du tir ; conserve nom, image, poste et numéro dans leur contexte."
+    },
+    "reason": "Conserver le contexte des deux acteurs sans le dupliquer dans un document"
+  },
+  {
+    "table": "football.shots",
+    "operation": "add_column",
+    "column": "keeper_profile_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": true,
+      "description": "Profil observé de l’acteur du tir ; conserve nom, image, poste et numéro dans leur contexte."
+    },
+    "reason": "Conserver le contexte des deux acteurs sans le dupliquer dans un document"
+  },
+  {
+    "table": "football.match_events",
+    "operation": "remove_column",
+    "column": "extra",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Les faits du flux sont typés ; toute nouvelle propriété bloque sa purge tant qu’elle n’a pas de destination"
+  },
+  {
+    "table": "football.match_events",
+    "operation": "add_column",
+    "column": "score_home",
+    "before": null,
+    "after": {
+      "type": "integer",
+      "nullable": true,
+      "description": "Score observé après l’événement, sans supposer sa portée si la source ne la donne pas."
+    },
+    "reason": "Champ actuel du flux à conserver"
+  },
+  {
+    "table": "football.match_events",
+    "operation": "add_column",
+    "column": "score_away",
+    "before": null,
+    "after": {
+      "type": "integer",
+      "nullable": true,
+      "description": "Score observé après l’événement, sans supposer sa portée si la source ne la donne pas."
+    },
+    "reason": "Champ actuel du flux à conserver"
+  },
+  {
+    "table": "football.player_match_advanced",
+    "operation": "remove_column",
+    "column": "sca_breakdown",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Décomposition connue en six colonnes numériques signées selon contrat"
+  },
+  {
+    "table": "football.player_match_advanced",
+    "operation": "add_column",
+    "column": "sca_pass_live",
+    "before": null,
+    "after": {
+      "type": "double precision",
+      "nullable": true,
+      "description": "Contribution SCA de type pass_live, valeur observée selon la définition fournisseur."
+    },
+    "reason": "Décomposition SCA connue dans le code actuel"
+  },
+  {
+    "table": "football.player_match_advanced",
+    "operation": "add_column",
+    "column": "sca_pass_dead",
+    "before": null,
+    "after": {
+      "type": "double precision",
+      "nullable": true,
+      "description": "Contribution SCA de type pass_dead, valeur observée selon la définition fournisseur."
+    },
+    "reason": "Décomposition SCA connue dans le code actuel"
+  },
+  {
+    "table": "football.player_match_advanced",
+    "operation": "add_column",
+    "column": "sca_take_on",
+    "before": null,
+    "after": {
+      "type": "double precision",
+      "nullable": true,
+      "description": "Contribution SCA de type take_on, valeur observée selon la définition fournisseur."
+    },
+    "reason": "Décomposition SCA connue dans le code actuel"
+  },
+  {
+    "table": "football.player_match_advanced",
+    "operation": "add_column",
+    "column": "sca_shot",
+    "before": null,
+    "after": {
+      "type": "double precision",
+      "nullable": true,
+      "description": "Contribution SCA de type shot, valeur observée selon la définition fournisseur."
+    },
+    "reason": "Décomposition SCA connue dans le code actuel"
+  },
+  {
+    "table": "football.player_match_advanced",
+    "operation": "add_column",
+    "column": "sca_foul_drawn",
+    "before": null,
+    "after": {
+      "type": "double precision",
+      "nullable": true,
+      "description": "Contribution SCA de type foul_drawn, valeur observée selon la définition fournisseur."
+    },
+    "reason": "Décomposition SCA connue dans le code actuel"
+  },
+  {
+    "table": "football.player_match_advanced",
+    "operation": "add_column",
+    "column": "sca_defensive",
+    "before": null,
+    "after": {
+      "type": "double precision",
+      "nullable": true,
+      "description": "Contribution SCA de type defensive, valeur observée selon la définition fournisseur."
+    },
+    "reason": "Décomposition SCA connue dans le code actuel"
+  },
+  {
+    "table": "football.player_match_metric_values",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "football.team_match_metric_values",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "football.player_match_stats",
+    "operation": "remove_column",
+    "column": "extra_metrics",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "description": "Métriques définies mais encore peu interrogées; leur promotion en colonne reste possible.",
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Faits secondaires déplacés vers des métriques typées et définies ; les agrégats utilisent metric_totals"
+  },
+  {
+    "table": "football.team_match_stats",
+    "operation": "remove_column",
+    "column": "extra_metrics",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "description": "Métriques définies mais encore peu interrogées; leur promotion en colonne reste possible.",
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Faits secondaires déplacés vers des métriques typées et définies ; les agrégats utilisent metric_totals"
+  },
+  {
+    "table": "football.player_match_advanced",
+    "operation": "remove_column",
+    "column": "extra_metrics",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "description": "Métriques définies mais encore peu interrogées; leur promotion en colonne reste possible.",
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Faits secondaires déplacés vers des métriques typées et définies ; les agrégats utilisent metric_totals"
+  },
+  {
+    "table": "football.team_match_advanced",
+    "operation": "remove_column",
+    "column": "extra_metrics",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "description": "Métriques définies mais encore peu interrogées; leur promotion en colonne reste possible.",
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Faits secondaires déplacés vers des métriques typées et définies ; les agrégats utilisent metric_totals"
+  },
+  {
+    "table": "analytics.team_competition_stats",
+    "operation": "remove_column",
+    "column": "extra_metrics",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Faits secondaires déplacés vers des métriques typées et définies ; les agrégats utilisent metric_totals"
+  },
+  {
+    "table": "football.match_heatmaps",
+    "operation": "remove_column",
+    "column": "cells",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "description": "Triplets [colonne, ligne, compteur], indices base zéro.",
+      "default_sql": "'[]'::jsonb",
+      "json_kind": "array"
+    },
+    "reason": "Cellules directement interrogeables et contrôlables en SQL"
+  },
+  {
+    "table": "football.match_heatmaps",
+    "operation": "add_column",
+    "column": "cells_state",
+    "before": null,
+    "after": {
+      "type": "text",
+      "nullable": false,
+      "description": "absent, null, empty ou available ; aucun tableau vide interprété comme une grille de zéros."
+    },
+    "reason": "Conserver disponibilité et forme vide"
+  },
+  {
+    "table": "football.match_heatmap_cells",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "football.match_h2h_entries",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "analytics.metric_totals",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "analytics.match_summary",
+    "operation": "remove_column",
+    "column": "coverage",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "description": "Par métrique: observations couvertes, minutes éligibles et dénominateur; incomplet ≠ zéro.",
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Couverture et dénominateurs directement interrogeables dans metric_totals"
+  },
+  {
+    "table": "analytics.player_competition_team_stats",
+    "operation": "remove_column",
+    "column": "coverage",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "description": "Par métrique: observations couvertes, minutes éligibles et dénominateur; incomplet ≠ zéro.",
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Couverture et dénominateurs directement interrogeables dans metric_totals"
+  },
+  {
+    "table": "analytics.player_competition_stats",
+    "operation": "remove_column",
+    "column": "coverage",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "description": "Par métrique: observations couvertes, minutes éligibles et dénominateur; incomplet ≠ zéro.",
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Couverture et dénominateurs directement interrogeables dans metric_totals"
+  },
+  {
+    "table": "analytics.team_competition_stats",
+    "operation": "remove_column",
+    "column": "coverage",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "description": "Par métrique: observations couvertes, minutes éligibles et dénominateur; incomplet ≠ zéro.",
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Couverture et dénominateurs directement interrogeables dans metric_totals"
+  },
+  {
+    "table": "analytics.competition_summary",
+    "operation": "remove_column",
+    "column": "coverage",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "description": "Par métrique: observations couvertes, minutes éligibles et dénominateur; incomplet ≠ zéro.",
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Couverture et dénominateurs directement interrogeables dans metric_totals"
+  },
+  {
+    "table": "analytics.aggregation_builds",
+    "operation": "remove_column",
+    "column": "coverage_summary",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Le build doit publier des compteurs de couverture typés"
+  },
+  {
+    "table": "analytics.publication_versions",
+    "operation": "add_column",
+    "column": "catalog_snapshot_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Instantané scellé des seules identités et métadonnées communes utilisées par cette édition ; réutilisé si ces dépendances restent identiques."
+    },
+    "reason": "Un ETag d’édition couvre ses dimensions partagées sans dépendre des changements sans rapport d’autres éditions"
+  },
+  {
+    "table": "analytics.publication_versions",
+    "operation": "add_column",
+    "column": "representation_version",
+    "before": null,
+    "after": {
+      "type": "text",
+      "nullable": false,
+      "description": "Version du contrat de sérialisation et du format compact."
+    },
+    "reason": "Cache et curseurs prennent toutes les dépendances en compte"
+  },
+  {
+    "table": "analytics.catalog_publication",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "ingest.public_aliases",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "football.match_observation_details",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "football.team_profile_versions",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "football.association_profile_versions",
+    "operation": "add_table",
+    "reason": "Targeted extension of supplied model"
+  },
+  {
+    "table": "football.team_ranking_components",
+    "operation": "remove_column",
+    "column": "extra",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Composantes de classement fournisseur directement typées"
+  },
+  {
+    "table": "football.team_ranking_components",
+    "operation": "add_column",
+    "column": "national_association_points",
+    "before": null,
+    "after": {
+      "type": "numeric(16,6)",
+      "nullable": true,
+      "description": "Points nationaux fournis pour la contribution."
+    },
+    "reason": "Champs des seasonRankings actuels à conserver"
+  },
+  {
+    "table": "football.team_ranking_components",
+    "operation": "add_column",
+    "column": "total_value",
+    "before": null,
+    "after": {
+      "type": "numeric(16,6)",
+      "nullable": true,
+      "description": "Valeur totale native de la contribution."
+    },
+    "reason": "Champs des seasonRankings actuels à conserver"
+  },
+  {
+    "table": "football.team_ranking_components",
+    "operation": "add_column",
+    "column": "total_points_with_bonus",
+    "before": null,
+    "after": {
+      "type": "numeric(16,6)",
+      "nullable": true,
+      "description": "Points incluant les bonus explicitement fournis."
+    },
+    "reason": "Champs des seasonRankings actuels à conserver"
+  },
+  {
+    "table": "football.team_ranking_components",
+    "operation": "add_column",
+    "column": "factor_bonus_for_title_held",
+    "before": null,
+    "after": {
+      "type": "numeric(16,6)",
+      "nullable": true,
+      "description": "Facteur natif de bonus lié au titre."
+    },
+    "reason": "Champs des seasonRankings actuels à conserver"
+  },
+  {
+    "table": "football.team_ranking_components",
+    "operation": "add_column",
+    "column": "factor_total_bonus",
+    "before": null,
+    "after": {
+      "type": "numeric(16,6)",
+      "nullable": true,
+      "description": "Total des facteurs de bonus fournis."
+    },
+    "reason": "Champs des seasonRankings actuels à conserver"
+  },
+  {
+    "table": "football.team_ranking_components",
+    "operation": "add_column",
+    "column": "matches_count",
+    "before": null,
+    "after": {
+      "type": "integer",
+      "nullable": true,
+      "description": "Nombre de matchs indiqué pour cette composante."
+    },
+    "reason": "Champs des seasonRankings actuels à conserver"
+  },
+  {
+    "table": "football.team_ranking_components",
+    "operation": "add_column",
+    "column": "teams_count",
+    "before": null,
+    "after": {
+      "type": "integer",
+      "nullable": true,
+      "description": "Nombre d’équipes indiqué."
+    },
+    "reason": "Champs des seasonRankings actuels à conserver"
+  },
+  {
+    "table": "football.team_ranking_components",
+    "operation": "add_column",
+    "column": "teams_still_playing",
+    "before": null,
+    "after": {
+      "type": "integer",
+      "nullable": true,
+      "description": "Nombre d’équipes encore engagées lors de l’observation."
+    },
+    "reason": "Champs des seasonRankings actuels à conserver"
+  },
+  {
+    "table": "football.association_ranking_components",
+    "operation": "remove_column",
+    "column": "extra",
+    "before": {
+      "type": "jsonb",
+      "nullable": false,
+      "default_sql": "'{}'::jsonb",
+      "json_kind": "object"
+    },
+    "reason": "Composantes de classement fournisseur directement typées"
+  },
+  {
+    "table": "football.association_ranking_components",
+    "operation": "add_column",
+    "column": "national_association_points",
+    "before": null,
+    "after": {
+      "type": "numeric(16,6)",
+      "nullable": true,
+      "description": "Points nationaux fournis pour la contribution."
+    },
+    "reason": "Champs des seasonRankings actuels à conserver"
+  },
+  {
+    "table": "football.association_ranking_components",
+    "operation": "add_column",
+    "column": "total_value",
+    "before": null,
+    "after": {
+      "type": "numeric(16,6)",
+      "nullable": true,
+      "description": "Valeur totale native de la contribution."
+    },
+    "reason": "Champs des seasonRankings actuels à conserver"
+  },
+  {
+    "table": "football.association_ranking_components",
+    "operation": "add_column",
+    "column": "total_points_with_bonus",
+    "before": null,
+    "after": {
+      "type": "numeric(16,6)",
+      "nullable": true,
+      "description": "Points incluant les bonus explicitement fournis."
+    },
+    "reason": "Champs des seasonRankings actuels à conserver"
+  },
+  {
+    "table": "football.association_ranking_components",
+    "operation": "add_column",
+    "column": "factor_bonus_for_title_held",
+    "before": null,
+    "after": {
+      "type": "numeric(16,6)",
+      "nullable": true,
+      "description": "Facteur natif de bonus lié au titre."
+    },
+    "reason": "Champs des seasonRankings actuels à conserver"
+  },
+  {
+    "table": "football.association_ranking_components",
+    "operation": "add_column",
+    "column": "factor_total_bonus",
+    "before": null,
+    "after": {
+      "type": "numeric(16,6)",
+      "nullable": true,
+      "description": "Total des facteurs de bonus fournis."
+    },
+    "reason": "Champs des seasonRankings actuels à conserver"
+  },
+  {
+    "table": "football.association_ranking_components",
+    "operation": "add_column",
+    "column": "matches_count",
+    "before": null,
+    "after": {
+      "type": "integer",
+      "nullable": true,
+      "description": "Nombre de matchs indiqué pour cette composante."
+    },
+    "reason": "Champs des seasonRankings actuels à conserver"
+  },
+  {
+    "table": "football.association_ranking_components",
+    "operation": "add_column",
+    "column": "teams_count",
+    "before": null,
+    "after": {
+      "type": "integer",
+      "nullable": true,
+      "description": "Nombre d’équipes indiqué."
+    },
+    "reason": "Champs des seasonRankings actuels à conserver"
+  },
+  {
+    "table": "football.association_ranking_components",
+    "operation": "add_column",
+    "column": "teams_still_playing",
+    "before": null,
+    "after": {
+      "type": "integer",
+      "nullable": true,
+      "description": "Nombre d’équipes encore engagées lors de l’observation."
+    },
+    "reason": "Champs des seasonRankings actuels à conserver"
+  },
+  {
+    "table": "football.ranking_snapshots",
+    "operation": "add_column",
+    "column": "base_season_year",
+    "before": null,
+    "after": {
+      "type": "integer",
+      "nullable": true,
+      "description": "Année de référence native base_season_year, distincte des dates de publication et récupération."
+    },
+    "reason": "Conserver le contexte des coefficients UEFA"
+  },
+  {
+    "table": "football.ranking_snapshots",
+    "operation": "add_column",
+    "column": "target_season_year",
+    "before": null,
+    "after": {
+      "type": "integer",
+      "nullable": true,
+      "description": "Année de référence native target_season_year, distincte des dates de publication et récupération."
+    },
+    "reason": "Conserver le contexte des coefficients UEFA"
+  },
+  {
+    "table": "football.player_profile_versions",
+    "operation": "add_column",
+    "column": "profile_content_sha256",
+    "before": null,
+    "after": {
+      "type": "text",
+      "nullable": false,
+      "description": "Empreinte des attributs typés du profil ; l’ancien ID peut être réutilisé avec d’autres attributs."
+    },
+    "reason": "La version historique nom/image ne versionne pas tous les attributs"
+  },
+  {
+    "table": "football.match_h2h_entries",
+    "operation": "add_column",
+    "column": "home_image_asset_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": true,
+      "description": "Média de l’équipe effectivement observé dans cette ligne H2H."
+    },
+    "reason": "Conserver les médias historiques du contrat H2H"
+  },
+  {
+    "table": "football.match_h2h_entries",
+    "operation": "add_column",
+    "column": "away_image_asset_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": true,
+      "description": "Média de l’équipe effectivement observé dans cette ligne H2H."
+    },
+    "reason": "Conserver les médias historiques du contrat H2H"
+  },
+  {
+    "table": "ingest.sources",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "ingest.source_datasets",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "ingest.media_assets",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "ingest.match_coverage",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.countries",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.associations",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.positions",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.periods",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.venues",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.coaches",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.competitions",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.competition_seasons",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.competition_stages",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.competition_groups",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.teams",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.competition_teams",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.players",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.player_profile_versions",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.position_mappings",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.player_team_memberships",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.team_aliases",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.competition_source_ids",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.team_source_ids",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.player_source_ids",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.association_source_ids",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.venue_source_ids",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.coach_source_ids",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.matches",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.match_source_ids",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.match_teams",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.match_scores",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.match_lineups",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.match_players",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.metric_definitions",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.source_metric_mappings",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.player_match_stats",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.team_match_stats",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.shots",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.player_match_advanced",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.team_match_advanced",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.match_events",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.match_momentum",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.pass_networks",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.pass_network_nodes",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.pass_network_edges",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.match_heatmaps",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.team_coach_tenures",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.honour_definitions",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.player_honours",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.team_honours",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.standing_snapshots",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.standing_rows",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.ranking_systems",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.ranking_snapshots",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.team_ranking_entries",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.team_ranking_components",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.association_ranking_entries",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.association_ranking_components",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.player_match_metric_values",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.team_match_metric_values",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.match_heatmap_cells",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.match_h2h_entries",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.match_observation_details",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.team_profile_versions",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "football.association_profile_versions",
+    "operation": "add_column",
+    "column": "row_version_id",
+    "before": null,
+    "after": {
+      "type": "bigint",
+      "nullable": false,
+      "description": "Version immuable du contenu typé ; conservée dans l’historique ou dans cette relation append-only."
+    },
+    "reason": "Snapshots SQL indépendants des fichiers"
+  },
+  {
+    "table": "ingest.sources_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "ingest.source_datasets_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "ingest.media_assets_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "ingest.match_coverage_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.countries_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.associations_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.positions_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.periods_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.venues_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.coaches_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.competitions_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.competition_seasons_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.competition_stages_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.competition_groups_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.teams_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.competition_teams_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.players_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.position_mappings_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.player_team_memberships_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.team_aliases_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.competition_source_ids_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.team_source_ids_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.player_source_ids_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.association_source_ids_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.venue_source_ids_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.coach_source_ids_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.matches_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.match_source_ids_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.match_teams_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.match_scores_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.match_lineups_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.match_players_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.metric_definitions_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.source_metric_mappings_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.player_match_stats_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.team_match_stats_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.shots_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.player_match_advanced_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.team_match_advanced_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.match_events_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.match_momentum_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.pass_networks_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.pass_network_nodes_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.pass_network_edges_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.match_heatmaps_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.team_coach_tenures_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.honour_definitions_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.player_honours_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.team_honours_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.ranking_systems_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.player_match_metric_values_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.team_match_metric_values_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.match_heatmap_cells_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  },
+  {
+    "table": "football.match_h2h_entries_history",
+    "operation": "add_table",
+    "reason": "Historique SQL typé nécessaire après suppression des originaux"
+  }
+]

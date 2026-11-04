@@ -1,0 +1,9 @@
+{
+  "atUtc": "2026-11-04T14:55:25.636435+00:00",
+  "command": "python3 docs/architecture/orion-plan-20261104/tools/review_viewer.py",
+  "setup": "REVIEW_PROTOCOL.md; local HTTP127.0.0.1:8794; existing Playwright CLI session orion-plan with cached Chromium configured; desktop1440x1000 and mobile390x844.",
+  "exitCode": 1,
+  "passed": false,
+  "log": "viewer-e2e.log",
+  "limits": "Browser navigation through the generated review document only. Does not prove migration, constraints in PostgreSQL or final application behavior."
+}

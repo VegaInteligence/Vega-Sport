@@ -1,0 +1,76 @@
+async (page) => {
+  const expected = __EXPECTED_TABLES__;
+  const errors = [], badResponses = [], externalRequests = [], checks = [];
+  page.on('pageerror', e => errors.push(String(e)));
+  page.on('response', r => { if (r.status() >= 400) badResponses.push({url:r.url(),status:r.status()}); });
+  page.on('request', r => { if (!r.url().startsWith('http://127.0.0.1:8794') && !r.url().startsWith('data:')) externalRequests.push(r.url()); });
+  const check = (name, ok, details = null) => { checks.push({name,passed:!!ok,details}); if(!ok) throw new Error(name + ': ' + JSON.stringify(details)); };
+  await page.setViewportSize({width:1440,height:1000});
+  await page.goto('http://127.0.0.1:8794/index.html?review=final');
+  await page.getByRole('tab',{name:'Architecture',exact:true}).click();
+  check('headline counts', (await page.locator('#counts').textContent()).includes('1 971') || (await page.locator('#counts').textContent()).includes('1\u202f971'));
+  await page.screenshot({path:'architecture-desktop.png',fullPage:true});
+  await page.getByRole('tab',{name:'Tables et relations',exact:true}).click();
+  let seenColumns=0;
+  for (const table of expected) {
+    await page.locator('#domain-select').selectOption('all');
+    await page.locator('#table-search').fill(table.name);
+    await page.locator('#table-list button[data-table="'+table.name+'"]').click();
+    const actual = await page.locator('#column-list tr').evaluateAll(rows=>rows.map(row=>({name:row.dataset.column,type:row.cells[1].textContent.trim(),nullable:row.cells[2].textContent.trim(),description:row.cells[4].textContent.trim()})));
+    check('all columns '+table.name, actual.length===table.columns.length && actual.every((a,i)=>a.name===table.columns[i].name && a.type===table.columns[i].type && a.nullable===(table.columns[i].nullable?'oui':'non') && a.description.length>10), {expected:table.columns.length,actual:actual.length});
+    seenColumns+=actual.length;
+  }
+  check('complete rendered dictionary',seenColumns===1971,{tables:expected.length,columns:seenColumns});
+  await page.locator('#domain-select').selectOption('all');
+  await page.locator('#table-search').fill('football.matches');
+  await page.locator('#table-list button[data-table="football.matches"]').click();
+  await page.locator('#table-detail button[data-table="football.competition_seasons"]').click();
+  check('FK navigates to target',(await page.locator('#table-detail h2').textContent())==='football.competition_seasons');
+  await page.locator('#domain-select').selectOption('all');
+  await page.locator('#table-search').fill('keeper_id');
+  check('column search includes shots',await page.locator('#table-list button[data-table="football.shots"]').count()===1);
+  await page.locator('#table-list button[data-table="football.shots"]').click();
+  await page.screenshot({path:'shots-desktop.png',fullPage:false});
+  await page.getByRole('tab',{name:'Diagrammes BDD',exact:true}).click();
+  const domains = await page.locator('#diagram-domain option').evaluateAll(options=>options.map(o=>o.value));
+  for (const domain of domains) {
+    await page.locator('#diagram-domain').selectOption(domain);
+    await page.waitForFunction(()=>{const img=document.getElementById('er-image');return img.complete&&img.naturalWidth>0;});
+    check('diagram loads '+domain,await page.locator('#er-image').evaluate(img=>img.complete&&img.naturalWidth>0));
+  }
+  await page.locator('#diagram-domain').selectOption('overview');
+  await page.waitForFunction(()=>document.getElementById('er-image').complete);
+  await page.locator('#graph-zoom').focus();
+  await page.locator('#graph-zoom').press('End');
+  check('diagram zoom responds',(await page.locator('#zoom-value').textContent()).includes('150'));
+  await page.getByRole('button',{name:'Ajuster',exact:true}).click();
+  await page.screenshot({path:'database-overview-desktop.png',fullPage:false});
+  await page.getByRole('tab',{name:'Ajustements',exact:true}).click();
+  check('all JSONB exceptions visible',await page.locator('#jsonb-list tr').count()===73);
+  await page.getByRole('tab',{name:'Existant → cible',exact:true}).click();
+  check('all current relations visible',await page.locator('#mapping-list tr').count()===224);
+  await page.locator('#mapping-search').fill('file_documents');
+  check('mapping filter works',await page.locator('#mapping-list tr').count()>0 && await page.locator('#mapping-list tr').count()<224);
+  await page.getByRole('tab',{name:'Plan d’exécution',exact:true}).click();
+  const plan = await page.locator('#plan article').textContent();
+  check('direct RDS collection clarification visible',plan.includes('PitchAPI → réponse décodée en mémoire')&&plan.includes('aucun JSON/CSV/archive dans S3'));
+  check('approval gate visible',plan.includes('validation explicite'));
+  await page.goto('http://127.0.0.1:8794/index.html?deep=1#table=ingest.source_documents');
+  check('deep link resolves',(await page.locator('#table-detail h2').textContent())==='ingest.source_documents');
+  check('direct HTTP receipt has no raw body',await page.locator('#column-list tr[data-column="origin_kind"]').count()===1 && await page.locator('#column-list tr[data-column="body"]').count()===0);
+  await page.setViewportSize({width:390,height:844});
+  check('mobile has no global horizontal overflow',await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  await page.screenshot({path:'receipt-mobile.png',fullPage:false});
+  await page.getByRole('tab',{name:'Architecture',exact:true}).click();
+  await page.screenshot({path:'architecture-mobile.png',fullPage:true});
+  check('mobile overview no global overflow',await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  await page.emulateMedia({colorScheme:'dark'});
+  await page.getByRole('tab',{name:'Tables et relations',exact:true}).click();
+  await page.screenshot({path:'receipt-mobile-dark.png',fullPage:false});
+  await page.emulateMedia({colorScheme:'light'});
+  await page.setViewportSize({width:1440,height:1000});
+  check('no JavaScript errors',errors.length===0,errors);
+  check('no failed local HTTP resources',badResponses.length===0,badResponses);
+  check('no external/service requests',externalRequests.length===0,externalRequests);
+  return {passed:checks.every(c=>c.passed),checks,errors,badResponses,externalRequests,artifacts:['architecture-desktop.png','shots-desktop.png','database-overview-desktop.png','receipt-mobile.png','architecture-mobile.png','receipt-mobile-dark.png'],scope:'Review-document E2E only; no application migration or backend acceptance.'};
+}

@@ -1,0 +1,46 @@
+digraph architecture {
+ graph [rankdir=LR,bgcolor="white",pad="0.4",nodesep="0.5",ranksep="0.8"];
+ node [shape=box,style="rounded,filled",fillcolor="#edf2f7",color="#bcc7d2",fontname="Helvetica",fontsize=14,margin="0.2,0.15"];
+ edge [fontname="Helvetica",fontsize=11,color="#738397"];
+ Browser [label="Navigateur
+Desktop / mobile"];
+ Vercel [label="Vercel
+Frontend Next.js
+aucun accès SQL navigateur",fillcolor="#e4edf9"];
+ API_CDN [label="CloudFront API
+GET / HEAD / OPTIONS
+cache par route et version"];
+ Lambda [label="Backend AWS Lambda
+Node 24 • pool PostgreSQL borné
+SQL métier uniquement",fillcolor="#e6f1e9"];
+ RDS [label="RDS existant • statarena_prod
+PostgreSQL 18.6 • Ohio
+ingest / football / analytics",fillcolor="#e6f1e9"];
+ Media_CDN [label="CloudFront médias
+URLs immuables"];
+ S3 [label="S3 privé
+Médias indispensables
+aucune source structurée après purge",fillcolor="#f6eddc"];
+ Jobs [label="GitHub Actions • données
+Réponse en mémoire → SQL typé
+baux / checkpoints / contrôles"];
+ MediaJobs [label="Collecte médias séparée
+Fichiers images uniquement"];
+ MediaUrls [label="URLs des médias référencés
+visages • écussons • trophées"];
+ Provider [label="PitchAPI et autres sources
+ingestion uniquement"];
+ Browser -> Vercel [label="HTML / JS / CSS"];
+ Browser -> API_CDN [label="requêtes métier HTTPS"];
+ API_CDN -> Lambda [label="MISS / revalidation
+origine signée OAC"];
+ Lambda -> RDS [label="TLS • SG runtime
+SELECT autorisés"];
+ Browser -> Media_CDN [label="visages / écussons / trophées"];
+ Media_CDN -> S3 [label="OAC • aucun bucket public"];
+ Provider -> Jobs [label="collecte planifiée / manuelle"];
+ Jobs -> RDS [label="écritures contrôlées"];
+ MediaUrls -> MediaJobs [label="téléchargement binaire"];
+ MediaJobs -> S3 [label="images uniquement"];
+ MediaJobs -> RDS [label="références / hashes / licences"];
+}

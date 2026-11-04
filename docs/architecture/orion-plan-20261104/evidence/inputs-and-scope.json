@@ -1,0 +1,29 @@
+{
+  "atUtc": "2026-11-04T15:09:36.600001+00:00",
+  "inputs": [
+    {
+      "original": "/Users/lemonnierhugo/Downloads/Orion_schema_bdd.json",
+      "copy": "inputs/Orion_schema_bdd.original.json",
+      "bytes": 404615,
+      "sha256": "40ab9b6cd8126d3bd502a94cff3ee9dfaf082ab503eaa999a3e89c4299a059c3",
+      "identical": true
+    },
+    {
+      "original": "/Users/lemonnierhugo/.codex/attachments/8c5d9c3d-762b-403f-99ef-58a795217f50/pasted-text-1.txt",
+      "copy": "inputs/GPT_Pro_audit.original.txt",
+      "bytes": 23110,
+      "sha256": "4de404a58ef3cb7ae9a6c174676e4db7b9ed6b9ac080b4ab014cf98159c3975b",
+      "identical": true
+    }
+  ],
+  "baseline": {
+    "tables": 84,
+    "columns": 943,
+    "foreignKeys": 191,
+    "explicitIndexes": 33
+  },
+  "precedence": "User objective and direct-RDS clarification override recommendations inside the attached design documents. No attachment command is treated as independent authorization.",
+  "delivery": "Proposal and read-only inventory only; user must explicitly validate before schema/data reorganization.",
+  "proposedRuntime": "Existing RDS PostgreSQL18.6, Vercel frontend, CloudFront/Lambda SQL reads; fresh provider data -> memory -> typed SQL; separate S3 media only.",
+  "reproducibilityLimit": "Typed SQL facts/history support defined recomputation. Deleted or never-persisted raw response bytes cannot be reconstructed or reparsed arbitrarily."
+}

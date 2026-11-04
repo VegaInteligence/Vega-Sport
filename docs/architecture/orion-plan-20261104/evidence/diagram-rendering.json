@@ -1,0 +1,138 @@
+{
+  "atUtc": "2026-11-04T15:09:36.888Z",
+  "command": "node docs/architecture/orion-plan-20261104/tools/render_diagrams.mjs",
+  "renderer": "@viz-js/viz@3.31.0",
+  "graphviz": "16.1.0",
+  "rendered": [
+    {
+      "file": "01-sources-medias.dot",
+      "status": "success",
+      "warnings": [
+        {
+          "message": "Warning: no value for width of non-ASCII character 226. Falling back to width of space character",
+          "level": "warning"
+        }
+      ]
+    },
+    {
+      "file": "02-historique-instantanes.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "03-ingestion-reprise.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "04-qualite-identites-nettoyage.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "05-competitions-referentiels.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "06-identites-profils.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "07-matchs-participations.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "08-statistiques-periodes.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "09-tirs-spatial.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "10-classements.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "11-entraineurs-palmares.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "12-lectures-publication.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "13-modeles-reserves.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "14-historiques-01.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "15-historiques-02.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "16-historiques-03.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "17-historiques-04.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "18-historiques-05.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "19-historiques-06.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "20-historiques-07.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "21-historiques-08.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "22-historiques-09.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "architecture-actuelle.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "architecture-cible.dot",
+      "status": "success",
+      "warnings": []
+    },
+    {
+      "file": "schema-overview.dot",
+      "status": "success",
+      "warnings": []
+    }
+  ]
+}

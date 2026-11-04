@@ -1,0 +1,172 @@
+{
+  "atUtc": "2026-11-04 13:42:59 UTC",
+  "source": "Neon MCP run_sql; explicit project and production branch",
+  "project": "sweet-queen-11955006",
+  "branch": "br-mute-bonus-be23014e",
+  "sql": "SELECT jsonb_build_object(\n'at_utc',clock_timestamp(),'database',current_database(),'version',version(),'bytes',pg_database_size(current_database()),\n'counts',jsonb_build_object('objects',(SELECT count(*) FROM statarena.objects),'object_bytes',(SELECT sum(size) FROM statarena.objects),'fixtures',(SELECT count(*) FROM statarena.fixtures),'resources',(SELECT count(*) FROM statarena.resources),'observations',(SELECT count(*) FROM statarena.observations),'projections',(SELECT count(*) FROM statarena.projections),'jobs',(SELECT count(*) FROM statarena.jobs)),\n'fixture_statuses',(SELECT jsonb_object_agg(status,n) FROM(SELECT status,count(*) n FROM statarena.fixtures GROUP BY status)t),\n'competition_count',(SELECT count(DISTINCT league_id) FROM statarena.fixtures),\n'competition_seasons',(SELECT count(*) FROM(SELECT DISTINCT league_id,season FROM statarena.fixtures)t),\n'resource_families',(SELECT jsonb_agg(t) FROM(SELECT regexp_replace(endpoint,'[mltp]_[A-Za-z0-9]{6}','{id}','g') family,count(*) records FROM statarena.resources GROUP BY 1 ORDER BY 1)t),\n'projections',(SELECT jsonb_agg(t) FROM(SELECT name,count(*) records FROM statarena.projections GROUP BY name ORDER BY name)t)\n) AS inventory",
+  "initialAttempt": {
+    "error": "UndefinedColumn: projections.kind; corrected to actual projections.name after column inventory",
+    "statementEffect": "Read-only SELECT failed; no writes"
+  },
+  "result": [
+    {
+      "inventory": {
+        "bytes": 740499456,
+        "at_utc": "2026-11-04T13:42:53.632829+00:00",
+        "counts": {
+          "jobs": 768069,
+          "objects": 313912,
+          "fixtures": 66205,
+          "resources": 421386,
+          "projections": 1935,
+          "object_bytes": 4688141095,
+          "observations": 53842
+        },
+        "version": "PostgreSQL 18.6 (ac70818) on aarch64-unknown-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit",
+        "database": "neondb",
+        "projections": [
+          {
+            "name": "club-wikidata",
+            "records": 325
+          },
+          {
+            "name": "coach-portrait",
+            "records": 1125
+          },
+          {
+            "name": "nations-results",
+            "records": 1
+          },
+          {
+            "name": "open-cups",
+            "records": 37
+          },
+          {
+            "name": "openligadb",
+            "records": 3
+          },
+          {
+            "name": "player-honours",
+            "records": 65
+          },
+          {
+            "name": "stadium",
+            "records": 288
+          },
+          {
+            "name": "standings",
+            "records": 91
+          }
+        ],
+        "fixture_statuses": {
+          "awarded": 24,
+          "canceled": 12,
+          "finished": 57064,
+          "postponed": 106,
+          "not_started": 8999
+        },
+        "competition_count": 77,
+        "resource_families": [
+          {
+            "family": "/date/{day}",
+            "records": 6
+          },
+          {
+            "family": "/leagues",
+            "records": 1
+          },
+          {
+            "family": "/leagues/{id}",
+            "records": 77
+          },
+          {
+            "family": "/leagues/{id}/matches",
+            "records": 309
+          },
+          {
+            "family": "/matches/{id}",
+            "records": 8488
+          },
+          {
+            "family": "/matches/{id}/advanced",
+            "records": 7789
+          },
+          {
+            "family": "/matches/{id}/advanced/network",
+            "records": 7784
+          },
+          {
+            "family": "/matches/{id}/advanced/players",
+            "records": 7785
+          },
+          {
+            "family": "/matches/{id}/advanced/players/{id}",
+            "records": 60606
+          },
+          {
+            "family": "/matches/{id}/events",
+            "records": 7806
+          },
+          {
+            "family": "/matches/{id}/h2h",
+            "records": 7795
+          },
+          {
+            "family": "/matches/{id}/heatmaps",
+            "records": 15554
+          },
+          {
+            "family": "/matches/{id}/lineups",
+            "records": 8183
+          },
+          {
+            "family": "/matches/{id}/momentum",
+            "records": 7809
+          },
+          {
+            "family": "/matches/{id}/players",
+            "records": 8368
+          },
+          {
+            "family": "/matches/{id}/players/halves",
+            "records": 7799
+          },
+          {
+            "family": "/matches/{id}/players/{id}",
+            "records": 60607
+          },
+          {
+            "family": "/matches/{id}/players/{id}/halves",
+            "records": 60607
+          },
+          {
+            "family": "/matches/{id}/players/{id}/shots",
+            "records": 60607
+          },
+          {
+            "family": "/matches/{id}/shots",
+            "records": 8184
+          },
+          {
+            "family": "/matches/{id}/shots/{id}",
+            "records": 31426
+          },
+          {
+            "family": "/matches/{id}/stats",
+            "records": 8183
+          },
+          {
+            "family": "/players/{id}",
+            "records": 34728
+          },
+          {
+            "family": "/teams/{id}",
+            "records": 885
+          }
+        ],
+        "competition_seasons": 234
+      }
+    }
+  ],
+  "normalization_note": "Initial SQL omitted shot s_ IDs from its replacement pattern; offline regrouping covers all provider IDs and dates without repeating the query. Exact original result retained compressed."
+}

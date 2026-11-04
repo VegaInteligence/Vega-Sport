@@ -1,0 +1,423 @@
+J’ai audité le projet **Orion Tech Sport** dans Neon, ses tables, ses catalogues et **36 fichiers représentatifs** du stockage.
+
+**Ma recommandation : conserver les fichiers bruts pour la traçabilité, créer un véritable modèle relationnel pour les données football, puis ajouter des tables d’agrégats pour servir rapidement le site.** Ton stockage contient déjà un modèle métier en JSON assez riche : la migration peut s’appuyer dessus, mais plusieurs points doivent être corrigés pour éviter les doublons et les erreurs de calcul.
+
+J’ai préparé la spécification complète : **[Orion_schema_bdd.md](https://chatgpt.com/library?file_id=libfile_5e226aa974c0819187a85557461b66f2&account_id=personal)**. Elle contient le dictionnaire des tables, les clés, les relations, la correspondance avec les fichiers actuels et le plan de migration. **Aucune modification n’a été effectuée dans Neon.**
+
+## 1. Ce que tu as actuellement
+
+PostgreSQL est déjà présent, mais il sert principalement de **catalogue de fichiers et de système de collecte**.
+
+| Élément audité | État observé |
+|---|---:|
+| Tables dans le schéma `statarena` | 12 |
+| Fichiers référencés dans `objects` | **313 912** |
+| Taille déclarée de ces fichiers | **4,69 Go** |
+| Taille de la base PostgreSQL | **Environ 740 Mo** |
+| Matchs référencés dans `fixtures` | **66 205** |
+| Compétitions distinctes dans `fixtures` | **77** |
+| Couples compétition–saison | **234** |
+| Matchs terminés dans `fixtures` | **57 064** |
+| Matchs sans heure de coup d’envoi renseignée | **1 208** |
+
+Ces chiffres proviennent des lectures décrites dans le document. Les **4,69 Go correspondent aux objets catalogués**, qui comprennent plusieurs représentations des données : archives, réponses API, tables JSON et fichiers calculés. Ce n’est donc pas une estimation de la taille de la future base normalisée.
+
+Les principales tables actuelles sont :
+
+- `objects` : chemins, tailles, hashes et parfois contenu binaire ;
+- `resources` : endpoints API, paramètres, statuts et références vers les réponses ;
+- `shards` et `observations` : localisation des observations dans les fichiers ;
+- `fixtures` : quelques colonnes de calendrier, puis un document `body` en JSON ;
+- `projections` : classements et enrichissements déjà préparés ;
+- `jobs`, `ingest_failures`, `dirty_partitions` : collecte et recalcul.
+
+L’étape manquante consiste à **rendre les entités et les faits sportifs directement interrogeables en SQL**, avec des relations contrôlées.
+
+### Le contenu disponible est déjà conséquent
+
+J’ai retrouvé les familles suivantes :
+
+| Domaine | Données présentes dans les fichiers ou projections |
+|---|---|
+| Référentiels | Compétitions, équipes, joueurs, profils |
+| Matchs | Calendrier, résultats, compositions, événements |
+| Statistiques | Joueurs, équipes, mi-temps, tirs, xG et statistiques avancées |
+| Analyse spatiale | Heatmaps, réseaux de passes |
+| Séries de match | Momentum |
+| Classements | Championnats, FIFA hommes, UEFA clubs, UEFA associations |
+| Enrichissements | Stades, entraîneurs, portraits, palmarès |
+| Sources complémentaires | OpenFootball, OpenMatchday, OpenLigaDB, résultats internationaux et archives historiques |
+
+Il faut prévoir ces domaines dès la conception, même si leur migration se fait progressivement.
+
+---
+
+## 2. Les corrections importantes révélées par les données
+
+### A. L’identité d’un joueur est distincte de sa version de profil
+
+Dans tes fichiers :
+
+```text
+players.id       = p_03CGS6:bd2266ca84794761
+players.playerId = p_03CGS6
+```
+
+Le premier identifie une **version de profil**, le second le **joueur**.
+
+Si on importe chaque `players.id` comme une nouvelle personne, un changement de nom ou d’image peut créer plusieurs joueurs pour la même identité.
+
+Je séparerais donc :
+
+- `players` : une ligne par personne ;
+- `player_profile_versions` : les versions de nom, photo et autres attributs observés.
+
+### B. Une ligne de `performances` ne prouve pas une apparition
+
+Dans l’échantillon Serie A 2021/2022, j’ai trouvé **16 928 lignes pour 380 matchs**, dont **5 211 avec des minutes à `NULL`**.
+
+Il faut distinguer :
+
+- un joueur présent sur la feuille de match ;
+- un joueur ayant effectivement participé ;
+- un joueur pour lequel des statistiques sont disponibles.
+
+Compter toutes les lignes de `performances` comme des apparitions fausserait les statistiques. Transformer toutes les minutes manquantes en zéro serait également incorrect.
+
+### C. Le dossier de saison n’est pas toujours la saison métier
+
+Le manifeste regroupe certaines saisons civiles dans des dossiers comme `2026-2027`, alors que la valeur métier reste `2026`.
+
+La saison doit donc venir **du contenu et de la compétition**, pas du nom du répertoire.
+
+### D. Les données détaillées dépassent les tables JSON aplaties
+
+Les observations contiennent des champs supplémentaires : périodes, temps additionnel, fractions réussites/tentatives, confirmation des compositions, trajectoire du tir vers le but, fenêtres des réseaux de passes, etc.
+
+**Importer uniquement les fichiers aplatis `performances` et `shots` ferait perdre une partie des informations déjà collectées.**
+
+### E. La couverture doit être modélisée
+
+J’ai vu des documents marqués `complete = true` qui contiennent pourtant des réponses `ANALYTICS_UNAVAILABLE` ou `HALVES_UNAVAILABLE`. J’ai aussi vu des réponses HTTP 200 avec une série vide.
+
+Il faut conserver séparément :
+
+- la réussite de la collecte ;
+- la disponibilité de la donnée ;
+- sa validité ;
+- sa fraîcheur.
+
+Un fichier présent ne signifie pas que toutes ses métriques sont disponibles.
+
+---
+
+## 3. L’architecture que je recommande
+
+Trois schémas PostgreSQL dans **la même base** :
+
+| Schéma | Fonction |
+|---|---|
+| **`ingest`** | Fournisseurs, documents sources, imports, couverture, erreurs et provenance |
+| **`football`** | Joueurs, équipes, compétitions, matchs et faits sportifs |
+| **`analytics`** | Agrégats utilisés par le site, classements et futurs scores Orion |
+
+Les fichiers bruts restent dans le bucket. Les tables techniques existantes peuvent être réutilisées progressivement : il serait inutile de recréer une deuxième file de collecte ou un deuxième catalogue d’objets uniquement pour changer leur nom.
+
+Voici les relations centrales :
+
+```mermaid
+erDiagram
+    competitions ||--o{ competition_seasons : editions
+    competition_seasons ||--o{ matches : contient
+    matches ||--o{ match_teams : participants
+    teams ||--o{ match_teams : joue
+    match_teams ||--o{ match_players : feuille
+    players ||--o{ match_players : identite
+    match_players ||--o{ player_match_stats : periodes
+    match_teams ||--o{ team_match_stats : periodes
+    matches ||--o{ shots : tirs
+```
+
+## 4. Le schéma métier proposé
+
+### A. Les identités et les compétitions
+
+| Table | Une ligne représente… | Champs structurants |
+|---|---|---|
+| `countries` | Un territoire géographique | Nom, codes géographiques lorsqu’ils existent |
+| `associations` | Une fédération sportive | Nom, code fédération, confédération |
+| `competitions` | Une compétition | Nom, type, pays/fédération, catégorie |
+| `competition_seasons` | Une édition d’une compétition | Compétition, libellé de saison, dates |
+| `competition_stages` | Une phase | Édition, type de phase, nom, ordre |
+| `competition_groups` | Un groupe d’une phase | Phase, code et nom du groupe |
+| `teams` | Une équipe participante | Nom, type club/sélection, pays, fédération |
+| `competition_teams` | L’engagement d’une équipe dans une édition | Édition + équipe |
+| `players` | Un joueur | Identité stable, attributs connus |
+| `player_profile_versions` | Une version de son profil | Joueur, nom/photo observés, source, date |
+| `player_team_memberships` | Une appartenance observée ou confirmée | Joueur, équipe, période, nature de la preuve |
+| `positions` et `position_mappings` | Un rôle et sa traduction depuis une source | Rôle interne, code fournisseur, version du mapping |
+
+**La clé d’une édition est le couple compétition + saison.** Une saison `2026` et une saison `2026/2027` peuvent donc coexister proprement.
+
+Autre distinction nécessaire : **pays, fédération et équipe nationale**. Le classement UEFA des associations concerne des fédérations ; le classement FIFA concerne des sélections. Il ne faut pas traiter ces objets comme une seule entité.
+
+Pour les appartenances aux équipes, je conserverais deux notions :
+
+- les dates de validité réellement connues ;
+- les dates auxquelles on a observé le joueur dans cette équipe.
+
+Une première apparition ne prouve pas une date de signature. Et un joueur peut appartenir simultanément à un club et à une sélection.
+
+### B. Les identifiants des fournisseurs
+
+Je créerais des tables dédiées :
+
+| Table | Correspondance |
+|---|---|
+| `player_source_ids` | Fournisseur + identifiant externe → joueur interne |
+| `team_source_ids` | Fournisseur + identifiant externe → équipe interne |
+| `competition_source_ids` | Fournisseur + identifiant externe → compétition interne |
+| `match_source_ids` | Fournisseur + identifiant externe → match interne |
+| `association_source_ids` | Fournisseur + identifiant externe → fédération interne |
+
+C’est déjà utile avec tes données actuelles, puisque tu combines PitchAPI, plusieurs sources de résultats et les classements officiels.
+
+Je prendrais des **identifiants internes `BIGINT`**, tout en conservant les identifiants externes en `TEXT`. Les liens publics actuels du site peuvent continuer à fonctionner via ces correspondances.
+
+Les rapprochements incertains doivent rester visibles. Deux clubs portant des noms proches ne doivent pas être fusionnés automatiquement.
+
+### C. Les matchs, compositions et participations
+
+| Table | Grain | Principaux champs |
+|---|---|---|
+| `matches` | Un match | Édition, phase, tour, date, heure facultative, statut, stade |
+| `match_teams` | Une place domicile/extérieur dans un match | Match, côté, équipe, entraîneur observé |
+| `match_scores` | Un score pour une base explicitement définie | Match, côté, mi-temps/90 minutes/prolongation/tirs au but |
+| `match_lineups` | Une composition par équipe | Formation, confirmation, type de composition, source |
+| `match_players` | Un joueur listé ou observé dans le match | Équipe, titulaire/remplaçant, participation, poste, numéro |
+| `match_events` | Un événement du flux courant | Type, période, minute, temps additionnel, joueurs concernés |
+
+Je placerais **les deux équipes du match dans `match_teams` comme représentation canonique**. Une vue de lecture fournira ensuite les champs domicile/extérieur attendus par le frontend.
+
+Quelques règles importantes :
+
+- `match_date` reste une date, et `kickoff_at` reste `NULL` quand l’heure est inconnue ;
+- un match reporté conserve son identité ;
+- le score à 90 minutes, le score après prolongation et la séance de tirs au but sont distingués ;
+- une composition prédite ne devient pas une composition confirmée ;
+- un remplaçant inutilisé peut être dans `match_players` sans compter comme apparition.
+
+Les événements échantillonnés n’ont pas toujours d’identifiant stable. Leur ordre doit être conservé dans une version du flux. Lors d’une correction, on remplace cette famille de données atomiquement ; on n’ajoute pas aveuglément une nouvelle copie de chaque événement.
+
+### D. Les statistiques de match
+
+Je recommande quatre tables principales :
+
+| Table | Clé métier |
+|---|---|
+| `player_match_stats` | Match + joueur + période |
+| `team_match_stats` | Match + équipe + période |
+| `player_match_advanced` | Match + joueur + période |
+| `team_match_advanced` | Match + équipe + période |
+
+La période doit être explicite : match complet, première mi-temps, deuxième mi-temps, prolongation lorsqu’elle est disponible.
+
+**Le total du match ne s’additionne jamais aux mi-temps.**
+
+Pour `player_match_stats`, je mettrais directement en colonnes les champs déjà utiles au site :
+
+| Famille | Colonnes proposées |
+|---|---|
+| Participation | `minutes_played`, `provider_rating` |
+| Production offensive | `goals`, `assists`, `xg`, `non_penalty_xg`, `xa`, `xgot` |
+| Tirs et création | `shots`, `shots_on_target`, `chances_created`, `big_chances_created` |
+| Passes | `passes_completed`, `passes_attempted`, `passes_final_third` |
+| Défense | `tackles`, `interceptions`, `recoveries`, `clearances`, `blocks` |
+| Duels et conduite | `duels_won`, `duels_lost`, `dribbles_completed`, `dribbles_attempted` |
+| Ballons touchés | `touches`, `touches_box` |
+| Gardiens | `saves`, `goals_prevented` |
+
+Les statistiques avancées recevraient notamment `xt_total`, `vaep_total`, `pv_total`, les passes et courses progressives, `sca`, `gca`, `xag`, `xg_chain`, puis les mesures collectives comme `ppda` et `field_tilt`.
+
+Je garderais aussi :
+
+- `extra_metrics JSONB` pour les métriques secondaires ;
+- des informations de qualité ;
+- une référence vers la source et la version utilisée.
+
+Cela permet d’intégrer de nouveaux champs sans migration immédiate, tout en gardant **les jointures, filtres, tris et calculs fréquents sur des colonnes typées**.
+
+Enfin, il faut conserver les numérateurs et dénominateurs lorsqu’ils existent. Un taux de passes saisonnier doit être recalculé à partir des passes réussies et tentées, plutôt que par une moyenne simple des pourcentages de chaque match. PitchAPI fournit précisément ces fractions dans certaines statistiques. [pitchapi.dev](https://pitchapi.dev/?utm_source=chatgpt.com)
+
+### E. Tirs, heatmaps et réseaux de passes
+
+| Table | Contenu |
+|---|---|
+| `shots` | Tireur, équipe, match, période, coordonnées, xG/xGOT, résultat, partie du corps, situation |
+| `match_momentum` | Points d’une série de momentum, avec ordre et minute |
+| `pass_networks` | Équipe, match, fenêtre temporelle et métadonnées |
+| `pass_network_nodes` | Joueurs et mesures de chaque nœud |
+| `pass_network_edges` | Passes dirigées entre deux joueurs |
+| `match_heatmaps` | Joueur/équipe, grille, repère, volume d’actions et cellules |
+
+Deux précautions sont particulièrement importantes :
+
+**Un tir doit être identifié dans son match.** PitchAPI précise que ses identifiants de tirs ne sont pas globalement uniques. La contrainte doit donc inclure au minimum la source, le match et l’identifiant externe. [pitchapi.dev](https://pitchapi.dev/?utm_source=chatgpt.com)
+
+**Une fenêtre de réseau doit être conservée.** Dans l’échantillon examiné, le réseau s’arrête à la première substitution, à 3 607 secondes. Il ne décrit pas l’ensemble du match.
+
+Pour les heatmaps, la grille échantillonnée fait **16 × 12 cellules**. Je garderais les métadonnées en colonnes et le petit tableau de cellules en JSONB. Créer des centaines de lignes SQL par carte n’apporte pas de bénéfice évident pour leur simple affichage.
+
+### F. Les classements et enrichissements
+
+Il faut distinguer les **classements de compétition** des **classements FIFA/UEFA** :
+
+| Domaine | Tables |
+|---|---|
+| Championnats et groupes | `standing_snapshots`, `standing_rows` |
+| Systèmes FIFA/UEFA | `ranking_systems` |
+| Éditions datées | `ranking_snapshots` |
+| Classement de clubs ou sélections | `team_ranking_entries` |
+| Classement de fédérations | `association_ranking_entries` |
+| Contributions annuelles publiées | Tables de composantes par équipe/fédération |
+
+Je conserverais, pour chaque édition :
+
+- le système concerné ;
+- la période de référence ;
+- la date d’effet lorsqu’elle est connue ;
+- la date de publication lorsqu’elle est connue ;
+- la date de mise à jour de la source ;
+- la date de récupération ;
+- les points/coefficient, pas seulement le rang.
+
+**Pour ton futur classement de joueurs, c’est essentiel : utiliser un classement d’adversaire publié après le match introduirait de l’information future dans l’évaluation historique.**
+
+Ton fichier UEFA clubs `2024` illustre le problème : sa période est `2023/2024`, sa mise à jour source est en 2025, et sa récupération en 2026. Ces dates ne sont pas interchangeables.
+
+Les enrichissements ont aussi leurs tables :
+
+- `venues` ;
+- `coaches` et `team_coach_tenures` ;
+- `honour_definitions`, `player_honours`, `team_honours` ;
+- `media_assets`, avec les attributions déjà présentes dans les projections.
+
+Le coach actuel d’une équipe ne doit pas être attribué à tous ses anciens matchs.
+
+---
+
+## 5. La couche d’ingestion doit rendre les données explicables
+
+Pour chaque fait important, on doit pouvoir répondre à quatre questions :
+
+> D’où vient-il ? Quand a-t-il été observé ? Quelle transformation l’a produit ? Pourquoi est-il éventuellement absent ou invalidé ?
+
+Les responsabilités nécessaires sont les suivantes :
+
+| Table ou responsabilité | Rôle |
+|---|---|
+| `sources`, `source_datasets` | Fournisseur, corpus et version |
+| `import_runs` | Exécution de collecte ou de reconstruction |
+| `source_documents` | Document, chemin, hash, format et dates |
+| `source_records` | Localisation d’un enregistrement dans ce document |
+| `document_lineage` | Relation entre une archive et ses transformations |
+| `resource_fetches` | Résultat d’une collecte, statut HTTP et erreur |
+| `match_coverage` | Disponibilité par match et famille de données |
+| `quality_issues` | Anomalies détectées |
+| `identity_candidates` | Correspondances encore incertaines |
+| `dataset_snapshots` | Versions exactes utilisées pour un calcul reproductible |
+
+Une partie peut s’appuyer sur les tables `statarena` actuelles.
+
+**Le même match dans un bundle, un fichier par saison et une réponse API reste un seul match.** La déduplication des fichiers par hash et la résolution des identités métier sont deux opérations différentes.
+
+La couverture devrait distinguer au minimum : non demandé, en attente, disponible, réponse vide, indisponible, échec et invalide.
+
+---
+
+## 6. Pour la rapidité du site : ajouter des agrégats ciblés
+
+Créer les bonnes relations ne suffit pas si chaque affichage recalcule toutes les statistiques.
+
+Je préparerais les tables de lecture suivantes :
+
+| Table de lecture | Utilisation |
+|---|---|
+| `analytics.match_summary` | Cartes et listes de matchs |
+| `analytics.player_competition_team_stats` | Statistiques d’un joueur dans une équipe et une édition |
+| `analytics.player_competition_stats` | Total du joueur dans une compétition, y compris après transfert |
+| `analytics.team_competition_stats` | Pages clubs et comparaisons |
+| `analytics.competition_summary` | Vue d’ensemble d’une compétition |
+| `analytics.player_search` | Recherche et filtres |
+| `analytics.publication_versions` | Version active des résultats et invalidation du cache |
+
+Par exemple, la page joueurs demanderait directement **50 lignes filtrées et triées**, avec les colonnes nécessaires.
+
+Les mises à jour d’un match marqueraient les agrégats concernés comme à recalculer. Tu possèdes déjà `dirty_partitions`, qui peut servir de point de départ.
+
+Je privilégierais des recalculs par compétition-saison touchée. Les vues matérialisées peuvent convenir à certains périmètres, mais leur rafraîchissement PostgreSQL remplace le résultat complet ; elles ne fournissent pas automatiquement un calcul incrémental. [postgresql.org](https://www.postgresql.org/docs/current/sql-refreshmaterializedview.html?utm_source=chatgpt.com)
+
+### Les premiers index
+
+Les candidats les plus utiles seraient :
+
+- matchs par édition et date ;
+- participations par joueur ;
+- participants par équipe ;
+- tirs par match ;
+- identifiants externes par fournisseur ;
+- classements par édition et métrique réellement utilisée.
+
+L’ordre des colonnes doit suivre les filtres et tris des requêtes : c’est déterminant pour l’efficacité des index multicolonnes. [postgresql.org](https://www.postgresql.org/docs/current/indexes-multicolumn.html?utm_source=chatgpt.com)
+
+**Je commencerais avec des tables ordinaires correctement indexées.** Le partitionnement se décidera après mesure des tables normalisées et des requêtes. Il a aussi un coût de conception : les clés primaires et contraintes uniques d’une table partitionnée doivent inclure la clé de partition. [postgresql.org](https://www.postgresql.org/docs/current/ddl-partitioning.html?utm_source=chatgpt.com)
+
+---
+
+## 7. Préparer les scores Orion sans les mélanger aux données fournisseur
+
+Le schéma JSON actuel indique qu’aucun score Orion n’existe encore. Je préparerais les tables suivantes :
+
+| Table | Rôle |
+|---|---|
+| `model_versions` | Formule, paramètres, version du code et des features |
+| `scoring_runs` | Exécution sur une version précise des données |
+| `player_match_scores` | Note d’un joueur pour un match, composantes et couverture |
+| `team_match_scores` | Évaluation collective si nécessaire |
+| `player_window_scores` | Agrégation sur une saison, une année civile ou un intervalle |
+| `published_score_runs` | Version publiée dans le site |
+
+La note PitchAPI reste `provider_rating`. Une note Orion possède son modèle et sa version.
+
+Cela permettra de faire évoluer ta formule, comparer deux versions et retrouver les données utilisées. Pour le Ballon d’Or, la fenêtre de calcul pourra couvrir **plusieurs compétitions et saisons sportives**, sans être enfermée dans une seule `competition_season`.
+
+---
+
+## 8. L’ordre de migration que je suivrais
+
+### Première étape : rendre le cœur du site relationnel
+
+Migrer :
+
+- identités et correspondances ;
+- compétitions et éditions ;
+- matchs, participants et scores ;
+- profils et compositions ;
+- statistiques principales ;
+- tirs ;
+- provenance et couverture ;
+- agrégats des pages principales.
+
+Commencer par un pilote sur une compétition et deux saisons, puis élargir après vérification des cas difficiles.
+
+### Deuxième étape : intégrer la richesse déjà collectée
+
+Ajouter les événements, mi-temps, statistiques avancées, réseaux, heatmaps, momentum, classements et enrichissements.
+
+### Troisième étape : calculer et publier les scores Orion
+
+Définir les modèles, figer les versions de données utilisées, puis publier les résultats avec leur traçabilité.
+
+La migration doit d’abord être validée sur une branche isolée, fonctionnalité que Neon fournit pour travailler sur une copie indépendante des données. [Neon Docs](https://neon.com/docs/introduction/branching?utm_source=chatgpt.com)
+
+**La priorité est donc d’unifier les identités, de fixer ce que représente chaque ligne et de contrôler la couverture, puis de migrer les faits et préparer les agrégats du site.** C’est ce qui permettra à ta base de rester cohérente quand tu ajouteras des saisons, des sources et tes propres modèles d’évaluation.

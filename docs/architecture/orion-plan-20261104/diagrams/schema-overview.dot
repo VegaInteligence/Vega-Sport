@@ -1,0 +1,26 @@
+digraph core {graph [rankdir=LR,bgcolor="white",pad="0.4",nodesep="0.5",ranksep="0.8"]; node [shape=box,style="rounded,filled",fillcolor="#e6f1e9",color="#bcc7d2",fontname="Helvetica",fontsize=14,margin="0.18,0.12"]; edge [color="#738397",fontname="Helvetica",fontsize=10];
+"football.competitions" [label="football.competitions\nUne compétition.",URL="../index.html#table=football.competitions",target="_top"];
+"football.competition_seasons" [label="football.competition_seasons\nCompétition × édition.",URL="../index.html#table=football.competition_seasons",target="_top"];
+"football.matches" [label="football.matches\nUn match.",URL="../index.html#table=football.matches",target="_top"];
+"football.teams" [label="football.teams\nUne équipe.",URL="../index.html#table=football.teams",target="_top"];
+"football.match_teams" [label="football.match_teams\nMatch × côté.",URL="../index.html#table=football.match_teams",target="_top"];
+"football.players" [label="football.players\nUne personne joueur.",URL="../index.html#table=football.players",target="_top"];
+"football.match_players" [label="football.match_players\nMatch × joueur.",URL="../index.html#table=football.match_players",target="_top"];
+"football.player_match_stats" [label="football.player_match_stats\nMatch × player × période.",URL="../index.html#table=football.player_match_stats",target="_top"];
+"football.shots" [label="football.shots\nUn tir de la famille canonique du match.",URL="../index.html#table=football.shots",target="_top"];
+"ingest.row_versions" [label="ingest.row_versions\nRelation × clé logique × numéro de révision.",URL="../index.html#table=ingest.row_versions",target="_top"];
+"ingest.dataset_snapshot_rows" [label="ingest.dataset_snapshot_rows\nInstantané × relation × clé logique.",URL="../index.html#table=ingest.dataset_snapshot_rows",target="_top"];
+"analytics.aggregation_builds" [label="analytics.aggregation_builds\nUne construction pour une édition.",URL="../index.html#table=analytics.aggregation_builds",target="_top"];
+"analytics.publication_versions" [label="analytics.publication_versions\nUne publication active par édition.",URL="../index.html#table=analytics.publication_versions",target="_top"];
+"football.competitions" -> "football.competition_seasons" [label="éditions"];
+"football.competition_seasons" -> "football.matches" [label="rencontres"];
+"football.matches" -> "football.match_teams" [label="deux places"];
+"football.teams" -> "football.match_teams" [label="équipe"];
+"football.match_teams" -> "football.match_players" [label="feuille"];
+"football.players" -> "football.match_players" [label="identité"];
+"football.match_players" -> "football.player_match_stats" [label="périodes"];
+"football.match_teams" -> "football.shots" [label="tirs"];
+"ingest.row_versions" -> "ingest.dataset_snapshot_rows" [label="versions typées"];
+"ingest.dataset_snapshot_rows" -> "analytics.aggregation_builds" [label="instantané scellé"];
+"analytics.aggregation_builds" -> "analytics.publication_versions" [label="activation"];
+}

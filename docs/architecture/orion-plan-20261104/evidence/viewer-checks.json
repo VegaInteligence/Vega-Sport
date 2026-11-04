@@ -1,0 +1,1508 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "name": "headline counts",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "all columns ingest.sources",
+      "passed": true,
+      "details": {
+        "expected": 7,
+        "actual": 7
+      }
+    },
+    {
+      "name": "all columns ingest.source_datasets",
+      "passed": true,
+      "details": {
+        "expected": 9,
+        "actual": 9
+      }
+    },
+    {
+      "name": "all columns ingest.import_runs",
+      "passed": true,
+      "details": {
+        "expected": 11,
+        "actual": 11
+      }
+    },
+    {
+      "name": "all columns ingest.source_documents",
+      "passed": true,
+      "details": {
+        "expected": 21,
+        "actual": 21
+      }
+    },
+    {
+      "name": "all columns ingest.source_records",
+      "passed": true,
+      "details": {
+        "expected": 8,
+        "actual": 8
+      }
+    },
+    {
+      "name": "all columns ingest.document_lineage",
+      "passed": true,
+      "details": {
+        "expected": 4,
+        "actual": 4
+      }
+    },
+    {
+      "name": "all columns ingest.resource_fetches",
+      "passed": true,
+      "details": {
+        "expected": 14,
+        "actual": 14
+      }
+    },
+    {
+      "name": "all columns ingest.media_assets",
+      "passed": true,
+      "details": {
+        "expected": 12,
+        "actual": 12
+      }
+    },
+    {
+      "name": "all columns ingest.dataset_snapshots",
+      "passed": true,
+      "details": {
+        "expected": 9,
+        "actual": 9
+      }
+    },
+    {
+      "name": "all columns ingest.dataset_snapshot_documents",
+      "passed": true,
+      "details": {
+        "expected": 2,
+        "actual": 2
+      }
+    },
+    {
+      "name": "all columns ingest.quality_issues",
+      "passed": true,
+      "details": {
+        "expected": 10,
+        "actual": 10
+      }
+    },
+    {
+      "name": "all columns ingest.identity_candidates",
+      "passed": true,
+      "details": {
+        "expected": 11,
+        "actual": 11
+      }
+    },
+    {
+      "name": "all columns ingest.match_coverage",
+      "passed": true,
+      "details": {
+        "expected": 12,
+        "actual": 12
+      }
+    },
+    {
+      "name": "all columns ingest.relation_contracts",
+      "passed": true,
+      "details": {
+        "expected": 4,
+        "actual": 4
+      }
+    },
+    {
+      "name": "all columns ingest.row_versions",
+      "passed": true,
+      "details": {
+        "expected": 10,
+        "actual": 10
+      }
+    },
+    {
+      "name": "all columns ingest.dataset_snapshot_rows",
+      "passed": true,
+      "details": {
+        "expected": 4,
+        "actual": 4
+      }
+    },
+    {
+      "name": "all columns ingest.field_contracts",
+      "passed": true,
+      "details": {
+        "expected": 4,
+        "actual": 4
+      }
+    },
+    {
+      "name": "all columns ingest.field_states",
+      "passed": true,
+      "details": {
+        "expected": 7,
+        "actual": 7
+      }
+    },
+    {
+      "name": "all columns ingest.record_row_links",
+      "passed": true,
+      "details": {
+        "expected": 3,
+        "actual": 3
+      }
+    },
+    {
+      "name": "all columns ingest.reconciliation_runs",
+      "passed": true,
+      "details": {
+        "expected": 9,
+        "actual": 9
+      }
+    },
+    {
+      "name": "all columns ingest.document_reconciliations",
+      "passed": true,
+      "details": {
+        "expected": 8,
+        "actual": 8
+      }
+    },
+    {
+      "name": "all columns ingest.cleanup_items",
+      "passed": true,
+      "details": {
+        "expected": 11,
+        "actual": 11
+      }
+    },
+    {
+      "name": "all columns ingest.collection_jobs",
+      "passed": true,
+      "details": {
+        "expected": 9,
+        "actual": 9
+      }
+    },
+    {
+      "name": "all columns ingest.asset_jobs",
+      "passed": true,
+      "details": {
+        "expected": 4,
+        "actual": 4
+      }
+    },
+    {
+      "name": "all columns ingest.dirty_editions",
+      "passed": true,
+      "details": {
+        "expected": 4,
+        "actual": 4
+      }
+    },
+    {
+      "name": "all columns ingest.schema_migrations",
+      "passed": true,
+      "details": {
+        "expected": 4,
+        "actual": 4
+      }
+    },
+    {
+      "name": "all columns ingest.public_aliases",
+      "passed": true,
+      "details": {
+        "expected": 10,
+        "actual": 10
+      }
+    },
+    {
+      "name": "all columns ingest.sources_history",
+      "passed": true,
+      "details": {
+        "expected": 7,
+        "actual": 7
+      }
+    },
+    {
+      "name": "all columns ingest.source_datasets_history",
+      "passed": true,
+      "details": {
+        "expected": 9,
+        "actual": 9
+      }
+    },
+    {
+      "name": "all columns ingest.media_assets_history",
+      "passed": true,
+      "details": {
+        "expected": 12,
+        "actual": 12
+      }
+    },
+    {
+      "name": "all columns ingest.match_coverage_history",
+      "passed": true,
+      "details": {
+        "expected": 12,
+        "actual": 12
+      }
+    },
+    {
+      "name": "all columns football.countries",
+      "passed": true,
+      "details": {
+        "expected": 5,
+        "actual": 5
+      }
+    },
+    {
+      "name": "all columns football.associations",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.positions",
+      "passed": true,
+      "details": {
+        "expected": 5,
+        "actual": 5
+      }
+    },
+    {
+      "name": "all columns football.periods",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.venues",
+      "passed": true,
+      "details": {
+        "expected": 10,
+        "actual": 10
+      }
+    },
+    {
+      "name": "all columns football.coaches",
+      "passed": true,
+      "details": {
+        "expected": 7,
+        "actual": 7
+      }
+    },
+    {
+      "name": "all columns football.competitions",
+      "passed": true,
+      "details": {
+        "expected": 10,
+        "actual": 10
+      }
+    },
+    {
+      "name": "all columns football.competition_seasons",
+      "passed": true,
+      "details": {
+        "expected": 8,
+        "actual": 8
+      }
+    },
+    {
+      "name": "all columns football.competition_stages",
+      "passed": true,
+      "details": {
+        "expected": 8,
+        "actual": 8
+      }
+    },
+    {
+      "name": "all columns football.competition_groups",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.teams",
+      "passed": true,
+      "details": {
+        "expected": 12,
+        "actual": 12
+      }
+    },
+    {
+      "name": "all columns football.competition_teams",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.players",
+      "passed": true,
+      "details": {
+        "expected": 9,
+        "actual": 9
+      }
+    },
+    {
+      "name": "all columns football.player_profile_versions",
+      "passed": true,
+      "details": {
+        "expected": 21,
+        "actual": 21
+      }
+    },
+    {
+      "name": "all columns football.position_mappings",
+      "passed": true,
+      "details": {
+        "expected": 7,
+        "actual": 7
+      }
+    },
+    {
+      "name": "all columns football.player_team_memberships",
+      "passed": true,
+      "details": {
+        "expected": 17,
+        "actual": 17
+      }
+    },
+    {
+      "name": "all columns football.team_aliases",
+      "passed": true,
+      "details": {
+        "expected": 8,
+        "actual": 8
+      }
+    },
+    {
+      "name": "all columns football.competition_source_ids",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.team_source_ids",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.player_source_ids",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.association_source_ids",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.venue_source_ids",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.coach_source_ids",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.matches",
+      "passed": true,
+      "details": {
+        "expected": 23,
+        "actual": 23
+      }
+    },
+    {
+      "name": "all columns football.match_source_ids",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.match_teams",
+      "passed": true,
+      "details": {
+        "expected": 12,
+        "actual": 12
+      }
+    },
+    {
+      "name": "all columns football.match_scores",
+      "passed": true,
+      "details": {
+        "expected": 12,
+        "actual": 12
+      }
+    },
+    {
+      "name": "all columns football.match_lineups",
+      "passed": true,
+      "details": {
+        "expected": 13,
+        "actual": 13
+      }
+    },
+    {
+      "name": "all columns football.match_players",
+      "passed": true,
+      "details": {
+        "expected": 23,
+        "actual": 23
+      }
+    },
+    {
+      "name": "all columns football.metric_definitions",
+      "passed": true,
+      "details": {
+        "expected": 12,
+        "actual": 12
+      }
+    },
+    {
+      "name": "all columns football.source_metric_mappings",
+      "passed": true,
+      "details": {
+        "expected": 9,
+        "actual": 9
+      }
+    },
+    {
+      "name": "all columns football.player_match_stats",
+      "passed": true,
+      "details": {
+        "expected": 42,
+        "actual": 42
+      }
+    },
+    {
+      "name": "all columns football.team_match_stats",
+      "passed": true,
+      "details": {
+        "expected": 33,
+        "actual": 33
+      }
+    },
+    {
+      "name": "all columns football.shots",
+      "passed": true,
+      "details": {
+        "expected": 41,
+        "actual": 41
+      }
+    },
+    {
+      "name": "all columns football.player_match_advanced",
+      "passed": true,
+      "details": {
+        "expected": 48,
+        "actual": 48
+      }
+    },
+    {
+      "name": "all columns football.team_match_advanced",
+      "passed": true,
+      "details": {
+        "expected": 39,
+        "actual": 39
+      }
+    },
+    {
+      "name": "all columns football.match_events",
+      "passed": true,
+      "details": {
+        "expected": 23,
+        "actual": 23
+      }
+    },
+    {
+      "name": "all columns football.match_momentum",
+      "passed": true,
+      "details": {
+        "expected": 13,
+        "actual": 13
+      }
+    },
+    {
+      "name": "all columns football.pass_networks",
+      "passed": true,
+      "details": {
+        "expected": 15,
+        "actual": 15
+      }
+    },
+    {
+      "name": "all columns football.pass_network_nodes",
+      "passed": true,
+      "details": {
+        "expected": 11,
+        "actual": 11
+      }
+    },
+    {
+      "name": "all columns football.pass_network_edges",
+      "passed": true,
+      "details": {
+        "expected": 5,
+        "actual": 5
+      }
+    },
+    {
+      "name": "all columns football.match_heatmaps",
+      "passed": true,
+      "details": {
+        "expected": 20,
+        "actual": 20
+      }
+    },
+    {
+      "name": "all columns football.team_coach_tenures",
+      "passed": true,
+      "details": {
+        "expected": 15,
+        "actual": 15
+      }
+    },
+    {
+      "name": "all columns football.honour_definitions",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.player_honours",
+      "passed": true,
+      "details": {
+        "expected": 15,
+        "actual": 15
+      }
+    },
+    {
+      "name": "all columns football.team_honours",
+      "passed": true,
+      "details": {
+        "expected": 14,
+        "actual": 14
+      }
+    },
+    {
+      "name": "all columns football.standing_snapshots",
+      "passed": true,
+      "details": {
+        "expected": 15,
+        "actual": 15
+      }
+    },
+    {
+      "name": "all columns football.standing_rows",
+      "passed": true,
+      "details": {
+        "expected": 13,
+        "actual": 13
+      }
+    },
+    {
+      "name": "all columns football.ranking_systems",
+      "passed": true,
+      "details": {
+        "expected": 7,
+        "actual": 7
+      }
+    },
+    {
+      "name": "all columns football.ranking_snapshots",
+      "passed": true,
+      "details": {
+        "expected": 16,
+        "actual": 16
+      }
+    },
+    {
+      "name": "all columns football.team_ranking_entries",
+      "passed": true,
+      "details": {
+        "expected": 9,
+        "actual": 9
+      }
+    },
+    {
+      "name": "all columns football.team_ranking_components",
+      "passed": true,
+      "details": {
+        "expected": 14,
+        "actual": 14
+      }
+    },
+    {
+      "name": "all columns football.association_ranking_entries",
+      "passed": true,
+      "details": {
+        "expected": 9,
+        "actual": 9
+      }
+    },
+    {
+      "name": "all columns football.association_ranking_components",
+      "passed": true,
+      "details": {
+        "expected": 14,
+        "actual": 14
+      }
+    },
+    {
+      "name": "all columns football.player_match_metric_values",
+      "passed": true,
+      "details": {
+        "expected": 15,
+        "actual": 15
+      }
+    },
+    {
+      "name": "all columns football.team_match_metric_values",
+      "passed": true,
+      "details": {
+        "expected": 14,
+        "actual": 14
+      }
+    },
+    {
+      "name": "all columns football.match_heatmap_cells",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.match_h2h_entries",
+      "passed": true,
+      "details": {
+        "expected": 17,
+        "actual": 17
+      }
+    },
+    {
+      "name": "all columns football.match_observation_details",
+      "passed": true,
+      "details": {
+        "expected": 20,
+        "actual": 20
+      }
+    },
+    {
+      "name": "all columns football.team_profile_versions",
+      "passed": true,
+      "details": {
+        "expected": 22,
+        "actual": 22
+      }
+    },
+    {
+      "name": "all columns football.association_profile_versions",
+      "passed": true,
+      "details": {
+        "expected": 21,
+        "actual": 21
+      }
+    },
+    {
+      "name": "all columns football.countries_history",
+      "passed": true,
+      "details": {
+        "expected": 5,
+        "actual": 5
+      }
+    },
+    {
+      "name": "all columns football.associations_history",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.positions_history",
+      "passed": true,
+      "details": {
+        "expected": 5,
+        "actual": 5
+      }
+    },
+    {
+      "name": "all columns football.periods_history",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.venues_history",
+      "passed": true,
+      "details": {
+        "expected": 10,
+        "actual": 10
+      }
+    },
+    {
+      "name": "all columns football.coaches_history",
+      "passed": true,
+      "details": {
+        "expected": 7,
+        "actual": 7
+      }
+    },
+    {
+      "name": "all columns football.competitions_history",
+      "passed": true,
+      "details": {
+        "expected": 10,
+        "actual": 10
+      }
+    },
+    {
+      "name": "all columns football.competition_seasons_history",
+      "passed": true,
+      "details": {
+        "expected": 8,
+        "actual": 8
+      }
+    },
+    {
+      "name": "all columns football.competition_stages_history",
+      "passed": true,
+      "details": {
+        "expected": 8,
+        "actual": 8
+      }
+    },
+    {
+      "name": "all columns football.competition_groups_history",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.teams_history",
+      "passed": true,
+      "details": {
+        "expected": 12,
+        "actual": 12
+      }
+    },
+    {
+      "name": "all columns football.competition_teams_history",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.players_history",
+      "passed": true,
+      "details": {
+        "expected": 9,
+        "actual": 9
+      }
+    },
+    {
+      "name": "all columns football.position_mappings_history",
+      "passed": true,
+      "details": {
+        "expected": 7,
+        "actual": 7
+      }
+    },
+    {
+      "name": "all columns football.player_team_memberships_history",
+      "passed": true,
+      "details": {
+        "expected": 17,
+        "actual": 17
+      }
+    },
+    {
+      "name": "all columns football.team_aliases_history",
+      "passed": true,
+      "details": {
+        "expected": 8,
+        "actual": 8
+      }
+    },
+    {
+      "name": "all columns football.competition_source_ids_history",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.team_source_ids_history",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.player_source_ids_history",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.association_source_ids_history",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.venue_source_ids_history",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.coach_source_ids_history",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.matches_history",
+      "passed": true,
+      "details": {
+        "expected": 23,
+        "actual": 23
+      }
+    },
+    {
+      "name": "all columns football.match_source_ids_history",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.match_teams_history",
+      "passed": true,
+      "details": {
+        "expected": 12,
+        "actual": 12
+      }
+    },
+    {
+      "name": "all columns football.match_scores_history",
+      "passed": true,
+      "details": {
+        "expected": 12,
+        "actual": 12
+      }
+    },
+    {
+      "name": "all columns football.match_lineups_history",
+      "passed": true,
+      "details": {
+        "expected": 13,
+        "actual": 13
+      }
+    },
+    {
+      "name": "all columns football.match_players_history",
+      "passed": true,
+      "details": {
+        "expected": 23,
+        "actual": 23
+      }
+    },
+    {
+      "name": "all columns football.metric_definitions_history",
+      "passed": true,
+      "details": {
+        "expected": 12,
+        "actual": 12
+      }
+    },
+    {
+      "name": "all columns football.source_metric_mappings_history",
+      "passed": true,
+      "details": {
+        "expected": 9,
+        "actual": 9
+      }
+    },
+    {
+      "name": "all columns football.player_match_stats_history",
+      "passed": true,
+      "details": {
+        "expected": 42,
+        "actual": 42
+      }
+    },
+    {
+      "name": "all columns football.team_match_stats_history",
+      "passed": true,
+      "details": {
+        "expected": 33,
+        "actual": 33
+      }
+    },
+    {
+      "name": "all columns football.shots_history",
+      "passed": true,
+      "details": {
+        "expected": 41,
+        "actual": 41
+      }
+    },
+    {
+      "name": "all columns football.player_match_advanced_history",
+      "passed": true,
+      "details": {
+        "expected": 48,
+        "actual": 48
+      }
+    },
+    {
+      "name": "all columns football.team_match_advanced_history",
+      "passed": true,
+      "details": {
+        "expected": 39,
+        "actual": 39
+      }
+    },
+    {
+      "name": "all columns football.match_events_history",
+      "passed": true,
+      "details": {
+        "expected": 23,
+        "actual": 23
+      }
+    },
+    {
+      "name": "all columns football.match_momentum_history",
+      "passed": true,
+      "details": {
+        "expected": 13,
+        "actual": 13
+      }
+    },
+    {
+      "name": "all columns football.pass_networks_history",
+      "passed": true,
+      "details": {
+        "expected": 15,
+        "actual": 15
+      }
+    },
+    {
+      "name": "all columns football.pass_network_nodes_history",
+      "passed": true,
+      "details": {
+        "expected": 11,
+        "actual": 11
+      }
+    },
+    {
+      "name": "all columns football.pass_network_edges_history",
+      "passed": true,
+      "details": {
+        "expected": 5,
+        "actual": 5
+      }
+    },
+    {
+      "name": "all columns football.match_heatmaps_history",
+      "passed": true,
+      "details": {
+        "expected": 20,
+        "actual": 20
+      }
+    },
+    {
+      "name": "all columns football.team_coach_tenures_history",
+      "passed": true,
+      "details": {
+        "expected": 15,
+        "actual": 15
+      }
+    },
+    {
+      "name": "all columns football.honour_definitions_history",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.player_honours_history",
+      "passed": true,
+      "details": {
+        "expected": 15,
+        "actual": 15
+      }
+    },
+    {
+      "name": "all columns football.team_honours_history",
+      "passed": true,
+      "details": {
+        "expected": 14,
+        "actual": 14
+      }
+    },
+    {
+      "name": "all columns football.ranking_systems_history",
+      "passed": true,
+      "details": {
+        "expected": 7,
+        "actual": 7
+      }
+    },
+    {
+      "name": "all columns football.player_match_metric_values_history",
+      "passed": true,
+      "details": {
+        "expected": 15,
+        "actual": 15
+      }
+    },
+    {
+      "name": "all columns football.team_match_metric_values_history",
+      "passed": true,
+      "details": {
+        "expected": 14,
+        "actual": 14
+      }
+    },
+    {
+      "name": "all columns football.match_heatmap_cells_history",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns football.match_h2h_entries_history",
+      "passed": true,
+      "details": {
+        "expected": 17,
+        "actual": 17
+      }
+    },
+    {
+      "name": "all columns analytics.aggregation_builds",
+      "passed": true,
+      "details": {
+        "expected": 9,
+        "actual": 9
+      }
+    },
+    {
+      "name": "all columns analytics.publication_versions",
+      "passed": true,
+      "details": {
+        "expected": 5,
+        "actual": 5
+      }
+    },
+    {
+      "name": "all columns analytics.match_summary",
+      "passed": true,
+      "details": {
+        "expected": 16,
+        "actual": 16
+      }
+    },
+    {
+      "name": "all columns analytics.player_competition_team_stats",
+      "passed": true,
+      "details": {
+        "expected": 18,
+        "actual": 18
+      }
+    },
+    {
+      "name": "all columns analytics.player_competition_stats",
+      "passed": true,
+      "details": {
+        "expected": 17,
+        "actual": 17
+      }
+    },
+    {
+      "name": "all columns analytics.team_competition_stats",
+      "passed": true,
+      "details": {
+        "expected": 13,
+        "actual": 13
+      }
+    },
+    {
+      "name": "all columns analytics.competition_summary",
+      "passed": true,
+      "details": {
+        "expected": 8,
+        "actual": 8
+      }
+    },
+    {
+      "name": "all columns analytics.player_search",
+      "passed": true,
+      "details": {
+        "expected": 8,
+        "actual": 8
+      }
+    },
+    {
+      "name": "all columns analytics.feature_versions",
+      "passed": true,
+      "details": {
+        "expected": 6,
+        "actual": 6
+      }
+    },
+    {
+      "name": "all columns analytics.scouting_features",
+      "passed": true,
+      "details": {
+        "expected": 10,
+        "actual": 10
+      }
+    },
+    {
+      "name": "all columns analytics.model_versions",
+      "passed": true,
+      "details": {
+        "expected": 9,
+        "actual": 9
+      }
+    },
+    {
+      "name": "all columns analytics.scoring_runs",
+      "passed": true,
+      "details": {
+        "expected": 15,
+        "actual": 15
+      }
+    },
+    {
+      "name": "all columns analytics.player_match_scores",
+      "passed": true,
+      "details": {
+        "expected": 9,
+        "actual": 9
+      }
+    },
+    {
+      "name": "all columns analytics.team_match_scores",
+      "passed": true,
+      "details": {
+        "expected": 8,
+        "actual": 8
+      }
+    },
+    {
+      "name": "all columns analytics.player_window_scores",
+      "passed": true,
+      "details": {
+        "expected": 10,
+        "actual": 10
+      }
+    },
+    {
+      "name": "all columns analytics.scoring_run_ranking_inputs",
+      "passed": true,
+      "details": {
+        "expected": 3,
+        "actual": 3
+      }
+    },
+    {
+      "name": "all columns analytics.published_score_runs",
+      "passed": true,
+      "details": {
+        "expected": 4,
+        "actual": 4
+      }
+    },
+    {
+      "name": "all columns analytics.metric_totals",
+      "passed": true,
+      "details": {
+        "expected": 14,
+        "actual": 14
+      }
+    },
+    {
+      "name": "all columns analytics.catalog_publication",
+      "passed": true,
+      "details": {
+        "expected": 4,
+        "actual": 4
+      }
+    },
+    {
+      "name": "complete rendered dictionary",
+      "passed": true,
+      "details": {
+        "tables": 161,
+        "columns": 1971
+      }
+    },
+    {
+      "name": "FK navigates to target",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "column search includes shots",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads overview",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 01-sources-medias",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 02-historique-instantanes",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 03-ingestion-reprise",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 04-qualite-identites-nettoyage",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 05-competitions-referentiels",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 06-identites-profils",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 07-matchs-participations",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 08-statistiques-periodes",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 09-tirs-spatial",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 10-classements",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 11-entraineurs-palmares",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 12-lectures-publication",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 13-modeles-reserves",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 14-historiques-01",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 15-historiques-02",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 16-historiques-03",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 17-historiques-04",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 18-historiques-05",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 19-historiques-06",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 20-historiques-07",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 21-historiques-08",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram loads 22-historiques-09",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "diagram zoom responds",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "all JSONB exceptions visible",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "all current relations visible",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "mapping filter works",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "direct RDS collection clarification visible",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "approval gate visible",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "deep link resolves",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "direct HTTP receipt has no raw body",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "mobile has no global horizontal overflow",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "mobile overview no global overflow",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "no JavaScript errors",
+      "passed": true,
+      "details": []
+    },
+    {
+      "name": "no failed local HTTP resources",
+      "passed": true,
+      "details": []
+    },
+    {
+      "name": "no external/service requests",
+      "passed": true,
+      "details": []
+    }
+  ],
+  "errors": [],
+  "badResponses": [],
+  "externalRequests": [],
+  "artifacts": [
+    "architecture-desktop.png",
+    "shots-desktop.png",
+    "database-overview-desktop.png",
+    "receipt-mobile.png",
+    "architecture-mobile.png",
+    "receipt-mobile-dark.png"
+  ],
+  "scope": "Review-document E2E only; no application migration or backend acceptance."
+}
