@@ -69,7 +69,7 @@ def install(db):
         db.execute(
             "CREATE TABLE IF NOT EXISTS statarena_app.worker_schema(version text PRIMARY KEY,digest text NOT NULL)"
         )
-        for prefix in ("003_", "004_", "005_", "006_", "007_", "008_"):
+        for prefix in ("003_", "004_", "005_", "006_", "007_", "008_", "009_"):
             (path,) = SCHEMA.glob(prefix + "*.sql")
             source = path.read_bytes()
             digest = hashlib.sha256(source).hexdigest()
@@ -129,7 +129,8 @@ class Inputs:
             # Store.json verifies length and physical SHA when the index is absent.
             value = self.store.json(path)
             if self.db.execute(
-                "SELECT encode(sha256,'hex') FROM statarena.objects WHERE path=%s", (path,)
+                "SELECT encode(sha256,'hex') FROM statarena.objects WHERE path=%s",
+                (path,),
             ).fetchone() != (row[0],):
                 raise ValueError("Staging input changed during fallback: " + path)
         if logical and hashlib.sha256(compact(value).encode()).hexdigest() != expected:
@@ -521,7 +522,11 @@ def partition_inputs(inputs, scratch, mids):
     scratch.commit()
 
 
-def publish_partition(inputs, manifest, label, league, marked):
+def publish_partition(inputs, manifest, label, league, marked, phase_report=None):
+    began = time.monotonic()
+    detail_seconds = 0.0
+    batches = 0
+    requested_families = 0
     db = inputs.db
     marker = db.execute(
         "SELECT changed_at FROM work_dirty WHERE season=%s AND league_id=%s",
@@ -593,6 +598,7 @@ def publish_partition(inputs, manifest, label, league, marked):
         closing(sqlite3.connect(Path(tmp) / "envelopes.sqlite")) as scratch,
     ):
         partition_inputs(inputs, scratch, list(fixtures))
+        source_done = time.monotonic()
         mids = list(fixtures)
         for start in range(0, len(mids), 16):
             headroom = capacity(db)
@@ -696,7 +702,14 @@ def publish_partition(inputs, manifest, label, league, marked):
                         sample[target] = {"ok": True, "data": value.get("data")}
                 if merge_sample(tables, sample, mid):
                     count += 1
+            batch_start = time.monotonic()
             publish_match_batch(db, batch_details)
+            detail_seconds += time.monotonic() - batch_start
+            batches += bool(batch_details)
+            requested_families += sum(
+                len(item[1]) + len(item[3]) for item in batch_details
+            )
+    model_done = time.monotonic()
     if not is_orphan:
         matches = tables["matches"]
         perform = tables["performances"]
@@ -736,6 +749,20 @@ def publish_partition(inputs, manifest, label, league, marked):
         (label, league, marked),
     )
     capacity(db)
+    if phase_report is not None:
+        finished = time.monotonic()
+        phase_report.update(
+            fixture_count=len(fixtures),
+            detail_batches=batches,
+            requested_families=requested_families,
+            source_and_spool_seconds=round(source_done - began, 3),
+            detail_write_seconds=round(detail_seconds, 3),
+            normalization_and_matching_seconds=round(
+                model_done - source_done - detail_seconds, 3
+            ),
+            core_publication_and_receipt_seconds=round(finished - model_done, 3),
+            total_seconds=round(finished - began, 3),
+        )
     return count
 
 
@@ -791,14 +818,24 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None):
                     and result["partitions"] >= max_partitions
                 ):
                     break
+                phase_report = {}
+                transaction_start = time.monotonic()
                 with db.transaction():
                     normalized = publish_partition(
-                        inputs, manifest, label, league, marked
+                        inputs, manifest, label, league, marked, phase_report
                     )
+                phase_report["transaction_including_commit_seconds"] = round(
+                    time.monotonic() - transaction_start, 3
+                )
                 result["partitions"] += 1
                 print(
                     compact(
-                        {"published": league, "season": label, "normalized": normalized}
+                        {
+                            "published": league,
+                            "season": label,
+                            "normalized": normalized,
+                            "timing": phase_report,
+                        }
                     ),
                     flush=True,
                 )

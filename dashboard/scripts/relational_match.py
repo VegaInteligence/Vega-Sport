@@ -162,15 +162,22 @@ def _copy_rows(db, spec, parts):
     if spec.keyed:
         keys.append("metric_label")
     keys += [dbname(p) for p, _ in leaves(spec.fields)]
-    sql = (
-        f"COPY statarena_app.{spec.table} (resource_id,"
-        + ",".join(map(quoted, keys))
-        + ") FROM STDIN"
+    # Keep the existing batched COPY protocol. For the two compact metric
+    # families, temporary typed cells feed the same SQL fold used by migration.
+    metric_kind = {"half_stat_metrics": "half", "player_stat_metrics": "player"}.get(
+        spec.table
     )
+    target = "statarena_app." + spec.table
+    if metric_kind:
+        db.execute("SELECT statarena_app.begin_metric_batch()")
+        target = "pg_temp.statarena_metric_input"
+    sql = f"COPY {target} (resource_id," + ",".join(map(quoted, keys)) + ") FROM STDIN"
     with db.cursor() as cursor, cursor.copy(sql) as stream:
         for resource, rows in parts:
             for row in rows:
                 stream.write_row((resource, *(row.get(k) for k in keys)))
+    if metric_kind:
+        db.execute(f"SELECT statarena_app.finish_{metric_kind}_metric_batch()")
 
 
 def save_rows(db, resource, spec, rows):
@@ -405,8 +412,12 @@ def _publish_bounded(db, records, base_params, base_subject):
         raise ValueError("A match may appear only once per batch")
     with db.transaction():
         db.execute(
-            """INSERT INTO statarena_app.match_details(match_id)
-                      SELECT mid FROM unnest(%s::text[]) mid ORDER BY mid ON CONFLICT DO NOTHING""",
+            """WITH dictionary_writer AS MATERIALIZED (
+                     SELECT pg_advisory_xact_lock(hashtextextended('statarena_app.match_metric_dictionary_writer',0))
+                   )
+                   INSERT INTO statarena_app.match_details(match_id)
+                   SELECT mid FROM dictionary_writer CROSS JOIN unnest(%s::text[]) mid ORDER BY mid
+                   ON CONFLICT DO NOTHING""",
             (mids,),
         )
         previous = dict(
