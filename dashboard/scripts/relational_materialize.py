@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import sys
@@ -115,16 +116,24 @@ class Inputs:
         ).fetchone()
         if not row:
             raise FileNotFoundError(path)
-        if expected and row[0] != expected:
+        # The original worldwide collector names these blobs by the uncompressed
+        # canonical JSON SHA. The staging object catalog tracks the gzip bytes.
+        logical = expected and row[0] != expected
+        if logical and not (
+            re.fullmatch(r"[0-9a-f]{64}", expected)
+            and path == f"raw/pitchapi-world/blobs/{expected}.json.gz"
+        ):
             raise ValueError("Staging reference version changed: " + path)
-        if row[1] is not None:
-            return row[1]
-        # Store.json verifies catalog length and SHA for inline/S3 fallback.
-        value = self.store.json(path)
-        if self.db.execute(
-            "SELECT encode(sha256,'hex') FROM statarena.objects WHERE path=%s", (path,)
-        ).fetchone() != (row[0],):
-            raise ValueError("Staging input changed during fallback: " + path)
+        value = row[1]
+        if value is None:
+            # Store.json verifies length and physical SHA when the index is absent.
+            value = self.store.json(path)
+            if self.db.execute(
+                "SELECT encode(sha256,'hex') FROM statarena.objects WHERE path=%s", (path,)
+            ).fetchone() != (row[0],):
+                raise ValueError("Staging input changed during fallback: " + path)
+        if logical and hashlib.sha256(compact(value).encode()).hexdigest() != expected:
+            raise ValueError("Staging logical checksum mismatch: " + path)
         return value
 
     def ref(self, ref):
