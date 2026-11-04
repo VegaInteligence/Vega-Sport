@@ -10,8 +10,20 @@ const globalState =
   "SELECT generation::text AS version, published_at, EXISTS(SELECT 1 FROM statarena_app.publication_jobs) AS dirty FROM statarena_app.publications WHERE singleton";
 const digest = (s) => createHash("sha256").update(s).digest("hex");
 const camel = (k) => k.replace(/_([a-z])/g, (_, v) => v.toUpperCase());
-const camelRow = (row) =>
-  Object.fromEntries(Object.entries(row).map(([k, v]) => [camel(k), v]));
+// Column names come from the backend's typed SQL projections.
+const fieldNames = new Map();
+function camelRow(row) {
+  const out = Object.create(null);
+  for (const field of Object.keys(row)) {
+    let key = fieldNames.get(field);
+    if (key === undefined) {
+      key = camel(field);
+      fieldNames.set(field, key);
+    }
+    out[key] = row[field];
+  }
+  return out;
+}
 const tag = (req, version) =>
   'W/"core-v1-' +
   digest(new URL(req.url).pathname + new URL(req.url).search + "|" + version) +
@@ -121,10 +133,75 @@ function keyset(alias, dayParam, idParam) {
   return `(${alias}.day > ${dayParam}::date OR (${alias}.day IS NULL AND ${dayParam}::date IS NOT NULL)
  OR (${alias}.day IS NOT DISTINCT FROM ${dayParam}::date AND ${alias}.id > ${idParam}))`;
 }
-const jsonRows = (sql) =>
-  `(SELECT coalesce(json_agg(r),'[]'::json) FROM (${sql}) r)`;
+const jsonRows = (sql, projection = "r") =>
+  `(SELECT coalesce(json_agg(${projection}),'[]'::json) FROM (${sql}) r)`;
 const byPage = (sql) =>
   jsonRows(sql + " WHERE match_id IN (SELECT id FROM page)");
+// Migration 003's appearance columns, in their published order. A newer table
+// layout travels as named records until its positional representation is reviewed.
+const appearanceColumns =
+  `id player_ref ordinal position_id_type player_id team_id team match_id league_id
+league country season date role position_id raw_pitch_x raw_pitch_y shirt_number
+minutes rating goals assists xg npxg xa xgot shots shots_on_target chances_created
+big_chances_created passes_accurate defensive_actions interceptions tackles
+recoveries duels_won duels_lost touches touches_box passes_final_third clearances
+blocks dribbles saves goals_prevented shots_off_target blocked_shots shots_woodwork
+shot_accuracy big_chances_missed xg_plus_xa long_balls_accurate line_breaking_passes
+accurate_crosses corners throws offsides dispossessed dribbled_past headed_clearances
+aerials_won ground_duels_won fouls was_fouled errors_led_to_goal goals_conceded
+saves_inside_box dive_saves sweeper_actions high_claims punches xgot_faced
+distance_covered top_speed sprints running_distance sprinting_distance fantasy_points
+passes_attempted long_balls_attempted crosses_attempted ground_duels aerial_duels
+dribbles_attempted starter stats_reliable is_captain`.split(/\s+/);
+const appearanceFields = [...appearanceColumns, "name", "image_url", "extras"];
+const appearanceProjection = `CASE WHEN (
+  SELECT array_agg(attname ORDER BY attnum) = ARRAY[${appearanceColumns.map((key) => `'${key}'`).join(",")}]::name[]
+  FROM pg_catalog.pg_attribute
+  WHERE attrelid='statarena_app.appearances'::regclass AND attnum>0 AND NOT attisdropped
+) THEN json_build_array(${appearanceFields.map((key) => "r." + key).join(",")})
+  ELSE row_to_json(r) END`;
+const appearanceOutput = appearanceFields
+  .map((field, index) => ({ field, index, key: camel(field) }))
+  .filter(
+    ({ field }) =>
+      ![
+        "extras",
+        "ordinal",
+        "player_ref",
+        "position_id",
+        "position_id_type",
+      ].includes(field),
+  );
+const extrasIndex = appearanceFields.indexOf("extras");
+const positionIndex = appearanceFields.indexOf("position_id");
+const positionTypeIndex = appearanceFields.indexOf("position_id_type");
+function appearanceRecord(row) {
+  if (!Array.isArray(row)) {
+    const {
+      extras,
+      ordinal,
+      player_ref,
+      position_id,
+      position_id_type,
+      ...values
+    } = row;
+    return {
+      ...camelRow(values),
+      ...extras,
+      positionId: nativePositionId(position_id, position_id_type),
+    };
+  }
+  if (row.length !== appearanceFields.length)
+    throw Error("Unexpected appearance projection");
+  const record = Object.create(null);
+  for (const { key, index } of appearanceOutput) record[key] = row[index];
+  Object.assign(record, row[extrasIndex]);
+  record.positionId = nativePositionId(
+    row[positionIndex],
+    row[positionTypeIndex],
+  );
+  return record;
+}
 function nativePositionId(value, kind) {
   if (value == null || kind === "NoneType") return null;
   if (kind === "int" || kind === "float") return Number(value);
@@ -341,7 +418,7 @@ export async function partitionPage(req, p) {
  SELECT s.*, ${jsonRows("SELECT id,day::text FROM keys ORDER BY day NULLS LAST,id")} keys,
  ${jsonRows("SELECT m.* FROM statarena_app.matches m JOIN page USING(id) ORDER BY m.day NULLS LAST,m.id")} matches,
  ${jsonRows("SELECT f.* FROM statarena_app.fixtures f JOIN page USING(id) ORDER BY f.day NULLS LAST,f.id")} fixtures,
- ${jsonRows("SELECT a.*,p.name,p.image_url,(SELECT json_object_agg(metric_key,value) FROM statarena_app.appearance_metrics e WHERE e.appearance_id=a.id) extras FROM statarena_app.appearances a JOIN statarena_app.players p ON p.id=a.player_ref WHERE a.match_id IN(SELECT id FROM page) ORDER BY a.match_id,a.ordinal,a.id")} appearances,
+ ${jsonRows("SELECT a.*,p.name,p.image_url,(SELECT json_object_agg(metric_key,value) FROM statarena_app.appearance_metrics e WHERE e.appearance_id=a.id) extras FROM statarena_app.appearances a JOIN statarena_app.players p ON p.id=a.player_ref WHERE a.match_id IN(SELECT id FROM page) ORDER BY a.match_id,a.ordinal,a.id", appearanceProjection)} appearances,
  ${jsonRows("SELECT * FROM statarena_app.shots WHERE match_id IN(SELECT id FROM page) ORDER BY match_id,ordinal,id")} shots,
  ${jsonRows("SELECT * FROM statarena_app.team_statistics WHERE match_id IN(SELECT id FROM page) ORDER BY match_id,ordinal")} stats,
  ${byPage("SELECT * FROM statarena_app.match_coverage")} cover,
@@ -377,20 +454,7 @@ export async function partitionPage(req, p) {
     })),
     fixtures: r.fixtures.map(fixture),
     matches: assembleMatches(r),
-    appearances: r.appearances.map(
-      ({
-        extras,
-        ordinal,
-        player_ref,
-        position_id,
-        position_id_type,
-        ...a
-      }) => ({
-        ...camelRow(a),
-        ...extras,
-        positionId: nativePositionId(position_id, position_id_type),
-      }),
-    ),
+    appearances: r.appearances.map(appearanceRecord),
   };
   return send(
     req,
