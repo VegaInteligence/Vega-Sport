@@ -96,7 +96,7 @@ L’observation de 17:27 avec API 503 demeure historique ; son [diagramme conser
 Les nouvelles collectes n'écrivent aucun corps brut JSON, CSV ou archive en S3 ou dans un document SQL, même temporairement.
 Les diagnostics, identifiants, empreintes et métadonnées de requête ne sont pas des corps de réponse ; ils ne servent pas à stocker un sous-arbre sportif opaque.
 Les anciens fichiers déjà présents restent disponibles temporairement pour la reprise, la vérification et le retour arrière, puis sont retirés après acceptation.
-Le Codex du partenaire conserve la responsabilité du transfert physique Neon → AWS : aucun second transfert concurrent n'est lancé ici.
+ROOT est responsable du transfert des données manquantes ou périmées de Neon vers le RDS typé. Chaque lot compare identifiants, versions et contenu, préserve les faits AWS plus récents et les versions nécessaires ; les copies sources restent conservées jusqu’à l’acceptation conjointe des données et du backend.
 
 Une erreur de parsing, un champ non mappé ou une conversion non représentable empêche l'acceptation de l'observation et produit un diagnostic sans réponse brute. Une réponse refusée peut nécessiter une nouvelle requête au fournisseur, dont la disponibilité future n'est pas garantie.
 Le réseau, CORS, les variables, les domaines et l'accès RDS seront vérifiés sur le chemin réel ; aucun service payant ni changement DNS n'est supposé nécessaire.
@@ -211,7 +211,7 @@ Les listes utilisent des agrégats ciblés, pagination et chargement séparé de
 | P1 — schéma et bootstrap appliqués | Preuves locales bornées 23/23, 25/25 et réel revu 15/15 ; migrations RDS 012/013 commitées et scellées, readback 11/11 | 94 tables, 1 709 colonnes, 431 FK et 10 graines installées ; aucune donnée métier réelle importée, acceptation complète ouverte |
 | P2 — normalisation représentative | Transformer par lots un jeu de données déjà sur AWS en faits et variantes typés | Reçus, checkpoints, rejets, rapprochement et stabilisation du schéma |
 | P3A — backend | Dès stabilisation du schéma, adapter API, agrégats, cache et parcours sur des jeux représentatifs | Contrats, identifiants, états et lectures SQL vérifiés |
-| P3B — données | En parallèle de P3A, normaliser le reste et rapprocher Neon, AWS, faits finaux et médias avec le propriétaire du transfert | Manques, différences et non-vérifiés nommés ; aucune migration physique concurrente |
+| P3B — données | ROOT normalise et rapproche Neon, AWS, faits typés et médias en parallèle de P3A ; transfère les données manquantes ou périmées vers le RDS typé | Identifiants, versions et contenu comparés ; faits plus récents préservés, copies sources conservées jusqu’à acceptation commune |
 | P4 — acceptation commune | Tester collectes, publication et site complet Vercel → CloudFront → AWS → RDS | Backend et données acceptés ensemble sur la même génération |
 | P5 — bascule/nettoyage | Basculer puis retirer les anciennes dépendances et sources devenues inutiles | Inventaire, accord des dépendants, réconciliation complète et preuve de non-dépendance |
 
@@ -252,7 +252,7 @@ Avant purge, les anciens lecteurs et sources restent disponibles ; un lot interr
 À la bascule, conserver les versions de code et les pointeurs précédents tant que leurs dépendances existent.
 Après purge, le retour arrière est limité aux versions SQL, médias et codes compatibles conservés : les anciens lecteurs dépendant des fichiers ne sont plus restaurables fonctionnellement.
 
-Le nettoyage attend la représentation complète de chaque champ et variante utile, la réconciliation par clés et contenu, les médias, l'acceptation conjointe et la fin des dépendances du transfert du partenaire.
+Le nettoyage attend la représentation complète de chaque champ et variante utile, la réconciliation par clés et contenu, les médias, l'acceptation conjointe et la fin des dépendances aux copies sources conservées pour la reprise.
 Supprimer alors les sources structurées et leurs copies devenues inutiles dans RDS et S3 : JSON, CSV, archives, dumps et documents stockés en base.
 Ne pas déplacer ces copies dans une autre table ou un autre emplacement pour les conserver indéfiniment.
 Les médias indispensables restent sous forme de fichier, avec type, références, justification et métadonnées appropriés.
