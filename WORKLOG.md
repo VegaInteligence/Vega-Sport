@@ -33,9 +33,9 @@
 
 Suggested current commits: test: record deployed PostgreSQL transport and compute improvements; test: verify hosted match flows after partition read optimization; docs: update quantified AWS rollout and capacity gate.
 
-## Pending-capacity audit
-- Previous goal turn: progress (P2deployment, publicbenchmark,CI/hostedacceptance). This turn: progress (required retirement rebase/tests and full-scope audit). No storage answer received; liveRDSstill20GiBavailable/Pending{}.
-- Known consecutive goal-turn capacity recurrence count:2. Meaningful independent preparation is exhausted. Next continuation must recheck user reply/actual external capacity and, if this same gate persists with no new safe work, set goal blocked at the third recurrence. Do not mark complete or paused, rerun passed tests or invent scope merely to keep active.
-- Live read-only audit:159typed base tables/5views;0json/jsonb/bytea serving columns;2partitions/189matches/8304appearances;484partition jobs. GitHub14workflow records reconcile to6current definitions; historical/dependency-generated records preserved, monitor disabled. Main remains01830e1f9b, not cut over.
+## Pending-capacity audit — blocked threshold met
+- Three consecutive goal turns confirmed the same unanswered20→64GiB decision. Latest authoritative RDS remainsmicro20GiBavailable/Pending{}. No approval received. This turn cannot make further meaningful progress without user input or an external capacity change.
+- P2/publication engineering and all independent retirement preparation complete for the current partial dataset; three subagents terminal. Do not rerun passed checks, invent scope, resize or purge sources. Full coverage/acceptance/main cutover/retirement remain unfinished.
+- Goal must now be marked blocked (not complete or paused). Full audit and exact state: docs/verification/aws-final-readiness-20261104/{requirements.json,metadata.json,blocker.json}. After explicit capacity authorization or verified external change, recheck actual capacity, align guard, resume existing queue without --all, then complete full validation and cutover.
 
-Suggested current commit: docs: audit full AWS readiness and prepare gated legacy retirement.
+Suggested commit: docs: record the verified capacity blocker for AWS publication.
