@@ -36,7 +36,7 @@
 
 ## Next action
 - Completed local lots committed/pushed on main with BILANs: readers0e0b43edf7(23/23), frontend data clientf8c49dccc4(11/11), same-input restartfc524ec8be(17/17). Keep Pro flag default OFF and preserve production bridge. The client is not yet wired into React.
-- CI now includes the eight source-free schema/CLI/resume/reader/client suites, Bun1.4.4 and dashboard dependencies; new definition parsed locally, source-free resume independently passed4/4 in205307… with zero AWS reads. Actual new GitHub result still pending.
+- CI now includes the eight source-free schema/CLI/resume/reader/client suites, Bun1.4.4 and dashboard dependencies; new definition parsed locally, source-free resume independently passed4/4 in205307… with zero AWS reads. GitHub41911385349 on523fbcb35c passed all3jobs; eight Pro suites121cases pass (23+25+7+8+20+4+23+11), job82s. Live job/readback logs retained in readers folder.
 - ROOT owns React integration after a genuine pre-code browser RED. Existing Sol max pilot_rds_gate prepares only docs/verification/orion-pro-ui-20261104 + E2E harness/61-match local fixture; no shared production changes.
 - Existing Sol max sol_plan_coherence owns a NEW separately bounded content-reconciliation folder:18 SQL instructions including controls/32MiB max; exact missing/different keys and manifests only, RO TLS, no new raw copies, DML/DDL or overwrites. Old inventory19/20 and normalizer89/100 ledgers remain frozen. ROOT reviews concrete typed-import delta.
 - Full source fidelity/native contracts, remaining routes and enrichments, bulk typed RDS importer, actual publisher and adapted collectors remain open. Latest final source proof204329…SHA c0a77ad5…; REPRISE_BILAN.md records limits and no production performance claim.
