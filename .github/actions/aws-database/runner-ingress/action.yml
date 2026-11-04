@@ -1,0 +1,7 @@
+name: Temporary StatArena runner access
+description: Permit only this runner IPv4 on the RDS port for the current job.
+runs:
+  using: node24
+  main: index.cjs
+  post: post.cjs
+  post-if: always()

@@ -72,7 +72,7 @@ export function PlayerDialog() {
   const f = useFootball(),
     [view, setView] = useState("overview"),
     row = f.byAppearance.get(f.player),
-    appearances = f.data.appearances;
+    appearances = f.performanceData.appearances;
   const profile = useMemo(
       () => (row ? performanceProfile(row, appearances) : null),
       [row, appearances],
@@ -81,9 +81,30 @@ export function PlayerDialog() {
       () => (row ? matchRatingRank(row, appearances) : null),
       [row, appearances],
     );
+  if (!row && f.player && f.deferredPerformance) {
+    const state = f.deferredPerformance;
+    if (state.loading)
+      return (
+        <Modal title="Performance du joueur" onClose={() => f.setPlayer(null)}>
+          <p role="status" aria-busy="true">
+            Chargement de la performance…
+          </p>
+        </Modal>
+      );
+    return (
+      <Modal title="Performance du joueur" onClose={() => f.setPlayer(null)}>
+        <div role="alert">
+          {state.error || "Cette performance est indisponible."}
+          {state.error && <button onClick={state.retry}>Réessayer</button>}
+        </div>
+      </Modal>
+    );
+  }
   if (!row) return null;
-  const match = f.data.matches.find((m) => m.id === row.matchId);
-  const competition = f.data.competitions.find((c) => c.id === row.leagueId);
+  const match = f.performanceData.matches.find((m) => m.id === row.matchId);
+  const competition = f.performanceData.competitions.find(
+    (c) => c.id === row.leagueId,
+  );
   const line = positionOf(row);
   const close = () => f.setPlayer(null);
   const role =
@@ -279,7 +300,7 @@ export function PlayerDialog() {
 }
 export function Comparison() {
   const f = useFootball(),
-    rows = f.comparison.map((id) => f.byAppearance.get(id)).filter(Boolean);
+    rows = f.comparisonRows;
   return (
     <>
       {rows.length > 0 && (

@@ -1,5 +1,6 @@
 import { normalizeArchive } from "./format.js";
-import { dataUrl } from "../data-url.js";
+import { apiUrl } from "../data-url.js";
+import { completeFixtures } from "./fixture-pages.js";
 import { cupWorkerSnapshot } from "./cup-worker-client.js";
 import { SAUDI_PRO_LEAGUE, reconcileSaudiFixtures } from "./saudi-fixtures.js";
 /** Data access only: no view builders, document selectors or event delegation. */
@@ -21,7 +22,7 @@ export class FootballDataClient {
   }
   async checkStatus() {
     try {
-      const r = await fetch("/api/status");
+      const r = await fetch(apiUrl("/api/status"));
       this.configured = r.ok && (await r.json()).configured === true;
     } catch {
       this.configured = false;
@@ -52,7 +53,7 @@ export class FootballDataClient {
     this.redraw();
   }
   async request(path) {
-    const response = await fetch(`/api/pitchapi/${path}`, {
+    const response = await fetch(apiUrl(`/api/pitchapi/${path}`), {
       headers: { Accept: "application/json" },
     });
     let body;
@@ -125,23 +126,19 @@ export class FootballDataClient {
       try {
         if (!this.configured)
           throw new Error("Les données en direct ne sont pas disponibles.");
-        const payload = await this.request(
-          browseMode === "day"
-            ? `date/${day}?status=all`
-            : `leagues/${league.id}/matches?season=${encodeURIComponent(season)}&status=all`,
+        const matches = await completeFixtures(
+          browseMode === "day" ? { day } : { league: league.id, season },
         );
-        const matches = payload.data?.matches || [];
         result = {
           matches:
             browseMode === "day"
               ? matches
               : matches.map((match) => ({
                   ...match,
-                  league: match.league ||
-                    payload.data?.league || {
-                      id: league.id,
-                      name: league.name,
-                    },
+                  league: match.league || {
+                    id: league.id,
+                    name: league.name,
+                  },
                   season: match.season ?? season,
                 })),
           source: "api",
@@ -164,27 +161,7 @@ export class FootballDataClient {
     this.supplementalLoading = true;
     this.supplementalError = null;
     try {
-      const indexResponse = await fetch(dataUrl("raw/supplemental-index.json"));
-      if (indexResponse.ok) {
-        const index = await indexResponse.json(),
-          competitions = [];
-        for (const item of index.competitions) {
-          const { tables, ...value } = item;
-          for (const [kind, ref] of Object.entries(tables)) {
-            const response = await fetch(dataUrl(ref.path));
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            value[kind] = await new Response(
-              response.body.pipeThrough(new DecompressionStream("gzip")),
-            ).json();
-          }
-          competitions.push(value);
-        }
-        this.supplementalData = { meta: index.meta, competitions };
-        this.supplementalLoading = false;
-        this.redraw();
-        return;
-      }
-      const response = await fetch(dataUrl("open_matchday.json"));
+      const response = await fetch(apiUrl("/api/supplemental"));
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const value = await response.json();
       if (!Array.isArray(value.competitions) || !value.meta)
@@ -201,17 +178,15 @@ export class FootballDataClient {
       this.shards.set(
         id,
         (async () => {
-          for (const url of [
-            `/api/archive/matches/${encodeURIComponent(id)}`,
-            `/data/matches/${encodeURIComponent(id)}.json`,
-          ]) {
-            try {
-              const response = await fetch(url);
-              if (response.ok) return normalizeArchive(await response.json());
-            } catch {}
-          }
+          const response = await fetch(
+            apiUrl("/api/archive/matches/" + encodeURIComponent(id)),
+          );
+          if (response.ok) return normalizeArchive(await response.json());
           return null;
-        })(),
+        })().catch(() => {
+          this.shards.delete(id);
+          return null;
+        }),
       );
     return await this.shards.get(id);
   }
@@ -221,17 +196,6 @@ export class FootballDataClient {
     this.payloads.set(key, { loading: true });
     if (force) this.shards.delete(match.id);
     await this.statusPromise;
-    if (!force) {
-      const shard = await this.loadShard(match.id);
-      if (shard?.[section] && Object.hasOwn(shard[section], "data")) {
-        this.payloads.set(key, {
-          data: shard[section].data,
-          source: "snapshot",
-        });
-        this.redraw();
-        return;
-      }
-    }
     let apiError;
     if (this.configured) {
       try {
@@ -244,6 +208,14 @@ export class FootballDataClient {
       } catch (error) {
         apiError = error;
       }
+    }
+    if (
+      apiError &&
+      [400, 403, 404, 410, 413, 422, 429].includes(apiError.status)
+    ) {
+      this.payloads.set(key, { error: apiError.message, code: apiError.code });
+      this.redraw();
+      return;
     }
     const shard = await this.loadShard(match.id);
     if (shard?.[section] && Object.hasOwn(shard[section], "data"))

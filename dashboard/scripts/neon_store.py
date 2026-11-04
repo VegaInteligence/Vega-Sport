@@ -3,7 +3,10 @@
 import os, json, gzip, hashlib, base64
 import boto3, psycopg
 from botocore.config import Config
+from botocore.exceptions import ClientError
 from psycopg.types.json import Jsonb
+from sql_document_parser import supports_documents
+from sql_document_store import publish_documents
 
 
 def canonical(params=None):
@@ -22,6 +25,8 @@ class Store:
         )
         # A forced refresh is performed at most once in each worker run.
         self.refresh_since = self.db.execute("select clock_timestamp()").fetchone()[0]
+        self.external = os.environ.get("STATARENA_EXTERNAL_STORAGE") == "1"
+        self.sql_documents = os.environ.get("STATARENA_SQL_DOCUMENTS") == "1"
         self.s3 = boto3.client(
             "s3",
             endpoint_url=os.environ["NEON_STORAGE_ENDPOINT"],
@@ -30,7 +35,7 @@ class Store:
             aws_secret_access_key=os.environ["NEON_STORAGE_SECRET_ACCESS_KEY"],
             config=Config(
                 signature_version="s3v4",
-                s3={"addressing_style": "path"},
+                s3={"addressing_style": "path" if os.environ.get("STATARENA_S3_PATH_STYLE", "1") != "0" else "virtual"},
                 request_checksum_calculation="when_required",
                 response_checksum_validation="when_required",
                 retries={"max_attempts": 4},
@@ -41,17 +46,27 @@ class Store:
 
     def bytes(self, path):
         row = self.db.execute(
-            "select body,sha256,size from statarena.objects where path=%s", (path,)
+            "select " + ("NULL" if self.external else "body")
+            + ",sha256,size from statarena.objects where path=%s", (path,)
         ).fetchone()
         if not row:
             raise FileNotFoundError(path)
-        body = (
-            bytes(row[0])
-            if row[0] is not None
-            else self.s3.get_object(Bucket=self.bucket, Key="data/" + path)[
-                "Body"
-            ].read()
-        )
+        def read(key):
+            return self.s3.get_object(Bucket=self.bucket, Key="data/" + key)["Body"].read()
+
+        mutable = path in ["raw/index.json", "computed/dashboard/index.json"] or path.startswith("computed/matchdays/")
+        extension = ".json.gz" if path.endswith(".gz") else ".json"
+        previous = "raw/neon/versions/" + bytes(row[1]).hex() + extension
+        try:
+            body = bytes(row[0]) if row[0] is not None and not self.external else read(path)
+        except ClientError as error:
+            if not self.external or not mutable or error.response["Error"].get("Code") not in ("NoSuchKey", "NotFound", "404"):
+                raise
+            body = read(previous)
+        if self.external and mutable and (
+            hashlib.sha256(body).digest() != bytes(row[1]) or len(body) != row[2]
+        ):
+            body = read(previous)
         if hashlib.sha256(body).digest() != bytes(row[1]) or len(body) != row[2]:
             raise ValueError("Neon object checksum mismatch: " + path)
         return body
@@ -66,9 +81,19 @@ class Store:
         old = self.db.execute(
             "select sha256 from statarena.objects where path=%s", (path,)
         ).fetchone()
-        if old and bytes(old[0]) == digest:
-            return False
-        if old and (
+        same_digest = bool(old and bytes(old[0]) == digest)
+        if same_digest:
+            if not self.external:
+                return False
+            try:
+                current = self.s3.get_object(Bucket=self.bucket, Key="data/" + path)["Body"].read()
+            except ClientError as error:
+                if error.response["Error"].get("Code") not in ("NoSuchKey", "NotFound", "404"):
+                    raise
+            else:
+                if len(current) == len(body) and hashlib.sha256(current).digest() == digest:
+                    return False
+        if old and not same_digest and (
             path in ["raw/index.json", "computed/dashboard/index.json"]
             or path.startswith("computed/matchdays/")
         ):
@@ -88,10 +113,14 @@ class Store:
         )
         if result["ETag"].strip('"') != etag:
             raise ValueError("Neon server MD5 mismatch")
-        self.db.execute(
-            "insert into statarena.objects(path,size,sha256,etag,body,content_type) values(%s,%s,%s,%s,%s,%s) on conflict(path) do update set size=excluded.size,sha256=excluded.sha256,etag=excluded.etag,body=excluded.body,content_type=excluded.content_type,updated_at=now()",
-            (path, len(body), digest, etag, body if hot else None, content_type),
-        )
+        statement = "insert into statarena.objects(path,size,sha256,etag,body,content_type) values(%s,%s,%s,%s,%s,%s) on conflict(path) do update set size=excluded.size,sha256=excluded.sha256,etag=excluded.etag,body=excluded.body,content_type=excluded.content_type,updated_at=now()"
+        values = (path, len(body), digest, etag, body if hot and not self.external else None, content_type)
+        if self.external and getattr(self, "sql_documents", False) and supports_documents(path):
+            with self.db.transaction():
+                self.db.execute(statement, values)
+                publish_documents(self.db, path, digest, body)
+        else:
+            self.db.execute(statement, values)
         return True
 
     def put_json(self, path, value, hot=False):

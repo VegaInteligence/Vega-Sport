@@ -31,7 +31,7 @@ import { ResearchRadar } from "./ResearchCharts.jsx";
 import CompetitionOptions from "./CompetitionOptions.jsx";
 
 export async function comparisonSamples(f, entries) {
-  const routing = await playerRoutes(f.manifest);
+  const routing = await playerRoutes(f.manifest,{players:entries.map(entry=>entry.id)});
   return Promise.all(
     entries.map(async (entry) => {
       const available = routing.routes[entry.id]?.[entry.season] || [];
@@ -46,7 +46,7 @@ export async function comparisonSamples(f, entries) {
         entry.season === f.season && selectedIds.every((id) => loaded.has(id));
       const data = canReuse
         ? f.data
-        : (await loadPlayerSeason(f.manifest, entry.id, entry.season)).data;
+        : (await loadPlayerSeason(f.manifest, entry.id, entry.season,"all",routing)).data;
       const empty = {
         ...entry,
         profile: { ...aggregateSeason([], entry.id), name: entry.name },

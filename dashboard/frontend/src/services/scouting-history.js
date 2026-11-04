@@ -1,38 +1,47 @@
-import { dataUrl } from "../data-url.js";
-import { loadSeason } from "../season_data.js";
+import { apiUrl } from "../data-url.js";
+import { loadSeason, readPages } from "../season_data.js";
 import { aggregateSeason } from "./season-player.js";
-const routing = new Map();
-async function compressed(path) {
-  const response = await fetch(dataUrl(path));
-  if (!response.ok)
-    throw new Error(`Archive indisponible (HTTP ${response.status}).`);
-  return new Response(
-    response.body.pipeThrough(new DecompressionStream("gzip")),
-  ).json();
-}
-export function playerRoutes(manifest) {
-  const path = manifest.scouting?.playerRoutes?.path;
-  if (!path)
-    return Promise.reject(
-      new Error("L’index des saisons n’est pas encore disponible."),
-    );
-  if (!routing.has(path))
-    routing.set(
-      path,
-      compressed(path).catch((error) => {
-        routing.delete(path);
+const routeCaches = new WeakMap();
+export async function playerRoutes(
+  manifest,
+  { players = [], teams = [] } = {},
+) {
+  const params = new URLSearchParams();
+  for (const [key, ids] of [
+    ["player", players],
+    ["team", teams],
+  ]) {
+    const unique = [...new Set(ids)].sort();
+    if (unique.length > 8) throw new Error("Trop de profils demandés.");
+    if (unique.length) params.set(key, unique.join(","));
+  }
+  if (!params.size) return { routes: {}, clubRoutes: {} };
+  if (!routeCaches.has(manifest)) routeCaches.set(manifest, new Map());
+  const cache = routeCaches.get(manifest),
+    key = params.toString();
+  if (!cache.has(key)) {
+    const pending = fetch(apiUrl("/api/scouting/routes?" + params))
+      .then(async (r) => {
+        if (!r.ok) throw new Error("L’index des saisons est indisponible.");
+        return r.json();
+      })
+      .catch((error) => {
+        cache.delete(key);
         throw error;
-      }),
-    );
-  return routing.get(path);
+      });
+    cache.set(key, pending);
+  }
+  return cache.get(key);
 }
+
 export async function loadPlayerSeason(
   manifest,
   id,
   season,
   competition = "all",
+  routing = null,
 ) {
-  const index = await playerRoutes(manifest);
+  const index = routing || (await playerRoutes(manifest, { players: [id] }));
   const ids = (index.routes[id]?.[season] || []).filter(
     (value) => competition === "all" || value === competition,
   );
@@ -42,36 +51,30 @@ export async function loadPlayerSeason(
   return { season, data, profile: aggregateSeason(data.appearances, id) };
 }
 export async function loadPlayerHistory(manifest, id) {
-  const index = await playerRoutes(manifest);
+  const index = await playerRoutes(manifest, { players: [id] });
   const seasons = Object.keys(index.routes[id] || {})
     .sort()
     .reverse();
   return Promise.all(
-    seasons.map((season) => loadPlayerSeason(manifest, id, season)),
+    seasons.map((season) =>
+      loadPlayerSeason(manifest, id, season, "all", index),
+    ),
   );
 }
-
-/** Fixture-only history avoids downloading player-statistic seasons for H2H. */
-let fixtureIndex;
-export async function historicalFixtures(manifest, leagueId) {
-  if (!fixtureIndex)
-    fixtureIndex = fetch(dataUrl("football-manifest.json"))
-      .then((response) => {
-        if (!response.ok)
-          throw new Error("L’archive des rencontres est indisponible.");
-        return response.json();
-      })
-      .catch((error) => {
-        fixtureIndex = null;
-        throw error;
-      });
-  const index = await fixtureIndex;
-  const refs = index.seasons.flatMap((s) =>
-    s.chunks
-      .filter((c) => c.leagueId === leagueId)
-      .map((c) => c.tables.fixtures?.path)
-      .filter(Boolean),
-  );
-  const all = await Promise.all(refs.map((path) => compressed(path)));
-  return [...new Map(all.flat().map((match) => [match.id, match])).values()];
+export async function historicalFixtures(_manifest, leagueId) {
+  const pages = await readPages("/api/fixtures", {
+    league: leagueId,
+    status: "all",
+  });
+  return [
+    ...new Map(
+      pages
+        .flatMap((page) => {
+          if (!Array.isArray(page.matches))
+            throw new Error("Page de rencontres invalide.");
+          return page.matches;
+        })
+        .map((match) => [match.id, match]),
+    ).values(),
+  ];
 }

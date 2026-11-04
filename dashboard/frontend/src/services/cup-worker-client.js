@@ -1,35 +1,44 @@
-import { cupSnapshotPath } from "../../../shared/cup-worker.js";
-import { dataUrl } from "../data-url.js";
+import { completeFixtures } from "./fixture-pages.js";
+import { apiUrl } from "../data-url.js";
 
-/** Both the stored publication and fresh indexed views come from Neon. */
+/** Read the published edition and merge newer native fixtures from the same backend. */
 export async function cupWorkerSnapshot(
   kind,
   competition,
   season,
   fallbackUrl = null,
 ) {
-  const path = dataUrl(cupSnapshotPath(kind, competition, season));
-  const api =
-    fallbackUrl ||
-    (kind === "native"
-      ? `/api/pitchapi/leagues/${encodeURIComponent(competition)}/matches?season=${encodeURIComponent(season)}&status=all`
-      : null);
-  if (api && !api.startsWith("/api/"))
+  const path = apiUrl(
+    "/api/cup-snapshot?" + new URLSearchParams({ kind, competition, season }),
+  );
+  if (fallbackUrl && !fallbackUrl.startsWith("/api/"))
     throw new Error("Route de données invalide.");
-  const requests = await Promise.allSettled([
-    fetch(path),
-    api ? fetch(api) : Promise.resolve(null),
-  ]);
-  let saved = null,
-    fresh = null,
-    status = 404;
-  if (requests[0].status === "fulfilled") {
-    const response = requests[0].value;
-    status = response.status;
-    if (response.ok) saved = await response.json();
+  async function read(url) {
+    const response = await fetch(url);
+    return {
+      status: response.status,
+      body: response.ok ? await response.json() : null,
+    };
   }
-  if (requests[1].status === "fulfilled" && requests[1].value?.ok)
-    fresh = await requests[1].value.json();
+  const [savedRequest, freshRequest] = await Promise.allSettled([
+    read(path),
+    kind === "native"
+      ? completeFixtures({ league: competition, season }).then((matches) => ({
+          status: 200,
+          body: { data: { matches } },
+        }))
+      : fallbackUrl
+        ? read(apiUrl(fallbackUrl))
+        : null,
+  ]);
+  const saved =
+    savedRequest.status === "fulfilled" ? savedRequest.value.body : null;
+  const fresh =
+    freshRequest.status === "fulfilled" ? freshRequest.value?.body : null;
+  const status =
+    (freshRequest.status === "fulfilled" && freshRequest.value?.status) ||
+    (savedRequest.status === "fulfilled" && savedRequest.value.status) ||
+    503;
   if (kind === "native" && Array.isArray(fresh?.data?.matches)) {
     const matches = [
       ...new Map(
@@ -54,6 +63,8 @@ export async function cupWorkerSnapshot(
     Array.isArray(kind === "standings" ? value.tables : value.matches)
   )
     return value;
+  if (kind === "native" && freshRequest.status === "rejected")
+    throw freshRequest.reason;
   const error = new Error(`Données de coupe indisponibles (HTTP ${status}).`);
   error.status = status;
   throw error;

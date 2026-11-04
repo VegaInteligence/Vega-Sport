@@ -2,16 +2,21 @@ import pg from "pg";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { createHash } from "node:crypto";
 import { measuring, record, timeSync, observeVersion } from "./metrics.js";
+import { databaseConnectionOptions } from "./database-connection.js";
 let pool, storage;
+export const externalStorage = () =>
+  process.env.STATARENA_EXTERNAL_STORAGE === "1";
+export const dataProvider = () => (externalStorage() ? "AWS" : "Neon");
 export const configured = () =>
   Boolean(process.env.NEON_DATABASE_URL && process.env.NEON_STORAGE_ENDPOINT);
 export function database() {
   if (!process.env.NEON_DATABASE_URL) throw new Error("Neon is not configured");
-  const url = new URL(process.env.NEON_DATABASE_URL);
-  url.searchParams.set("sslmode", "verify-full");
   if (pool) return pool;
   pool = new pg.Pool({
-    connectionString: url.href,
+    ...databaseConnectionOptions(
+      process.env.NEON_DATABASE_URL,
+      process.env.STATARENA_DATABASE_CA_PEM,
+    ),
     max: 3,
     allowExitOnIdle: true,
     connectionTimeoutMillis: 10000,
@@ -155,7 +160,7 @@ export async function objectBody(meta) {
     meta.sha256,
     async () => {
       let body;
-      if (meta.inline) {
+      if (meta.inline && !externalStorage()) {
         const row = (
           await query(
             "SELECT body FROM statarena.objects WHERE path=$1 AND sha256=decode($2,'hex') AND body IS NOT NULL",
@@ -172,7 +177,7 @@ export async function objectBody(meta) {
         storage ||= new S3Client({
           endpoint: process.env.NEON_STORAGE_ENDPOINT,
           region: process.env.NEON_STORAGE_REGION || "us-east-2",
-          forcePathStyle: true,
+          forcePathStyle: process.env.STATARENA_S3_PATH_STYLE !== "0",
           credentials: {
             accessKeyId: process.env.NEON_STORAGE_ACCESS_KEY_ID,
             secretAccessKey: process.env.NEON_STORAGE_SECRET_ACCESS_KEY,
@@ -182,16 +187,45 @@ export async function objectBody(meta) {
           maxAttempts: 3,
         });
         const objectStart = performance.now();
-        try {
+        const read = async (path) => {
           const result = await storage.send(
             new GetObjectCommand({
               Bucket: process.env.NEON_STORAGE_BUCKET || "statarena-data",
-              Key: "data/" + meta.path,
+              Key: "data/" + path,
             }),
             { abortSignal: AbortSignal.timeout(20000) },
           );
-          body = Buffer.from(await result.Body.transformToByteArray());
-          record("object_bytes", body.length);
+          const bytes = Buffer.from(await result.Body.transformToByteArray());
+          record("object_bytes", bytes.length);
+          return bytes;
+        };
+        const mutable =
+          meta.path === "raw/index.json" ||
+          meta.path === "computed/dashboard/index.json" ||
+          meta.path.startsWith("computed/matchdays/");
+        const extension = meta.path.endsWith(".gz") ? ".json.gz" : ".json";
+        const previous = () =>
+          read("raw/neon/versions/" + meta.sha256 + extension);
+        try {
+          try {
+            body = await read(meta.path);
+          } catch (error) {
+            if (
+              !externalStorage() ||
+              !mutable ||
+              (!["NoSuchKey", "NotFound"].includes(error.name) &&
+                error.$metadata?.httpStatusCode !== 404)
+            )
+              throw error;
+            body = await previous();
+          }
+          if (
+            externalStorage() &&
+            mutable &&
+            (body.length !== Number(meta.size) ||
+              createHash("sha256").update(body).digest("hex") !== meta.sha256)
+          )
+            body = await previous();
         } catch (error) {
           record("object_errors");
           throw error;

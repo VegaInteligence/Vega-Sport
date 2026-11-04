@@ -27,8 +27,8 @@ import {
   orderCompetitionMatches,
 } from "../services/competition-matches.js";
 import { normalizeText, seasonLabel } from "../services/format.js";
-import { useResource, json } from "../services/resources.js";
-import { dataUrl } from "../data-url.js";
+import { useResource } from "../services/resources.js";
+import { cupIndex } from "../services/catalog-client.js";
 import CompetitionHighlights from "../components/CompetitionHighlights.jsx";
 import SeasonSelect from "../components/SeasonSelect.jsx";
 import CupCompetition from "../components/CupCompetition.jsx";
@@ -431,10 +431,10 @@ export default function CompetitionsPage() {
     return countries;
   }, [f.manifest]);
   const legacyCupIndex = useResource("supplemental-cup-index", () =>
-    json(dataUrl("raw/supplemental-index.json")),
+    cupIndex("supplemental"),
   );
   const workerCupIndex = useResource("cup-worker-index", () =>
-    json(dataUrl("raw/cup-worker/index.json")),
+    cupIndex("worker"),
   );
   const cupIndex = workerCupIndex.value?.competitions?.length
     ? workerCupIndex

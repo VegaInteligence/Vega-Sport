@@ -4,7 +4,7 @@ import {
   fixtureResource,
   archivedResource,
 } from "./database.js";
-import { configured, query } from "./neon.js";
+import { configured, query, dataProvider } from "./neon.js";
 import { cacheHeaders, noStoreHeaders } from "./cache-policy.js";
 import { serializeJson, responseBytes } from "./metrics.js";
 const API_PREFIX = "/api/pitchapi";
@@ -151,7 +151,7 @@ export async function handlePitchApi(request) {
     return jsonResponse(
       {
         configured: configured(),
-        source: "Neon",
+        source: dataProvider(),
         basePath: API_PREFIX,
       },
       200,
@@ -192,14 +192,14 @@ export async function handlePitchApi(request) {
             ok: false,
             error: saved.error || {
               code: "RESOURCE_NOT_FOUND",
-              message: "Donnée indisponible dans Neon.",
+              message: "Donnée indisponible.",
             },
           };
     return jsonResponse(
       payload,
       saved.status,
       {
-        "X-Data-Source": "Neon",
+        "X-Data-Source": dataProvider(),
         ...(saved.status === 200
           ? cacheHeaders(checked.ttl, 30)
           : noStoreHeaders),

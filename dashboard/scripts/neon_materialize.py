@@ -25,6 +25,79 @@ def competition_metadata(existing, profile, league, label, fixtures):
     return competition
 
 
+def merge_sample(tables, sample, mid):
+    # Replacing a partial response must not erase already normalized statistics.
+    available = {
+        k
+        for k in ["players", "shots", "team_stats"]
+        if sample.get(k, {}).get("ok")
+    }
+    if not available:
+        return False
+    one = build_snapshot({"samples": [sample]}, {"data": {"leagues": []}})
+    for m in one["matches"]:
+        previous = next((v for v in tables["matches"] if v["id"] == mid), {})
+        if "players" not in available:
+            m["players"] = previous.get("players", [])
+        if "team_stats" not in available or not sample.get("lineups", {}).get("ok"):
+            for side in ("home", "away"):
+                old_side = previous.get(side, {})
+                m[side] = {
+                    **old_side,
+                    **{k: v for k, v in m[side].items() if v is not None or k not in old_side},
+                }
+        if "shots" not in available:
+            m["shots"] = []
+        m["detailCollected"] = all(
+            k in available for k in ["players", "shots", "team_stats"]
+        )
+        tables["matches"] = [v for v in tables["matches"] if v["id"] != mid] + [
+            {k: v for k, v in m.items() if k not in {"shots", "stats"}}
+        ]
+        if "shots" in available:
+            tables["shots"] = [
+                v for v in tables["shots"] if v["matchId"] != mid
+            ] + [dict(v, matchId=mid) for v in m["shots"]]
+        if "team_stats" in available:
+            tables["team_statistics"] = [
+                v for v in tables["team_statistics"] if v["matchId"] != mid
+            ] + [{"matchId": mid, "values": m["stats"]}]
+    if "players" in available:
+        tables["performances"] = [
+            v for v in tables["performances"] if v["matchId"] != mid
+        ]
+        players = {v["id"]: v for v in tables["players"]}
+        for row in one["appearances"]:
+            player = {
+                "playerId": row["playerId"],
+                "name": row.get("name"),
+                "imageUrl": row.get("imageUrl"),
+            }
+            ref = (
+                row["playerId"]
+                + ":"
+                + hashlib.sha256(canonical(player).encode()).hexdigest()[:16]
+            )
+            players[ref] = dict(id=ref, **player)
+            tables["performances"].append(
+                dict(
+                    {
+                        k: v
+                        for k, v in row.items()
+                        if k not in {"name", "imageUrl"}
+                    },
+                    playerRef=ref,
+                )
+            )
+        used = {p["playerRef"] for p in tables["performances"]}
+        tables["players"] = [v for k, v in players.items() if k in used]
+    teams = {t["id"]: t for t in tables["teams"]}
+    for team in one["teams"]:
+        teams[team["id"]] = dict(teams.get(team["id"], {}), **team)
+    tables["teams"] = list(teams.values())
+    return True
+
+
 def _materialize(store, max_partitions=20, league_id=None, recent_first=False):
     manifest = store.json("computed/dashboard/index.json")
     raw = store.json("raw/index.json")
@@ -206,76 +279,8 @@ def _materialize(store, max_partitions=20, league_id=None, recent_first=False):
                     )
                     if previous and previous.get("status") == 200:
                         sample[name] = {"ok": True, "data": previous.get("data")}
-            # Replacing a partial response must not erase already normalized statistics.
-            available = {
-                k
-                for k in ["players", "shots", "team_stats"]
-                if sample.get(k, {}).get("ok")
-            }
-            if not available:
-                continue
-            one = build_snapshot({"samples": [sample]}, {"data": {"leagues": []}})
-            for m in one["matches"]:
-                previous = next((v for v in tables["matches"] if v["id"] == mid), {})
-                if "players" not in available:
-                    m["players"] = previous.get("players", [])
-                if "team_stats" not in available or not sample.get("lineups", {}).get("ok"):
-                    for side in ("home", "away"):
-                        old_side = previous.get(side, {})
-                        m[side] = {
-                            **old_side,
-                            **{k: v for k, v in m[side].items() if v is not None or k not in old_side},
-                        }
-                if "shots" not in available:
-                    m["shots"] = []
-                m["detailCollected"] = all(
-                    k in available for k in ["players", "shots", "team_stats"]
-                )
-                tables["matches"] = [v for v in tables["matches"] if v["id"] != mid] + [
-                    {k: v for k, v in m.items() if k not in {"shots", "stats"}}
-                ]
-                if "shots" in available:
-                    tables["shots"] = [
-                        v for v in tables["shots"] if v["matchId"] != mid
-                    ] + [dict(v, matchId=mid) for v in m["shots"]]
-                if "team_stats" in available:
-                    tables["team_statistics"] = [
-                        v for v in tables["team_statistics"] if v["matchId"] != mid
-                    ] + [{"matchId": mid, "values": m["stats"]}]
-            if "players" in available:
-                tables["performances"] = [
-                    v for v in tables["performances"] if v["matchId"] != mid
-                ]
-                players = {v["id"]: v for v in tables["players"]}
-                for row in one["appearances"]:
-                    player = {
-                        "playerId": row["playerId"],
-                        "name": row.get("name"),
-                        "imageUrl": row.get("imageUrl"),
-                    }
-                    ref = (
-                        row["playerId"]
-                        + ":"
-                        + hashlib.sha256(canonical(player).encode()).hexdigest()[:16]
-                    )
-                    players[ref] = dict(id=ref, **player)
-                    tables["performances"].append(
-                        dict(
-                            {
-                                k: v
-                                for k, v in row.items()
-                                if k not in {"name", "imageUrl"}
-                            },
-                            playerRef=ref,
-                        )
-                    )
-                used = {p["playerRef"] for p in tables["performances"]}
-                tables["players"] = [v for k, v in players.items() if k in used]
-            teams = {t["id"]: t for t in tables["teams"]}
-            for team in one["teams"]:
-                teams[team["id"]] = dict(teams.get(team["id"], {}), **team)
-            tables["teams"] = list(teams.values())
-            normalized.append(mid)
+            if merge_sample(tables, sample, mid):
+                normalized.append(mid)
         for team in tables["teams"]:
             team["sampleMatches"] = sum(
                 team["id"] in {m["home"]["id"], m["away"]["id"]}

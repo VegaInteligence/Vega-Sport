@@ -51,6 +51,14 @@ function routeLabel(request) {
   } catch {
     return "/invalid";
   }
+  if (
+    /^\/api\/(?:dashboard\/manifest|seasons\/partition|fixtures|scouting\/routes|archives\/(?:index|season)|rankings\/(?:associations|club|index|edition)|club-links|cup-(?:index|snapshot|table)|matchdays|supplemental)$/.test(
+      pathname,
+    )
+  )
+    return pathname;
+  if (/^\/api\/matches\/m_[A-Za-z0-9]{6}\/summary$/.test(pathname))
+    return "/api/matches/:id/summary";
   if (pathname.startsWith("/data/")) return "/data/:file";
   if (
     /^\/api\/(health|settings|status|assets|standings|open-cups|openligadb|nations-results|club-wikidata|coach-portrait|stadium|player-honours)$/.test(
@@ -117,8 +125,13 @@ export async function instrumentRequest(request, handler) {
           status: response?.status || 500,
           duration_ms: Math.round((performance.now() - start) * 1000) / 1000,
           instance_age_ms: Math.round(performance.now() - instanceStarted),
-          deployment: process.env.VERCEL_DEPLOYMENT_ID || "local",
-          region: process.env.VERCEL_REGION || "local",
+          deployment:
+            process.env.STATARENA_RELEASE ||
+            process.env.AWS_LAMBDA_FUNCTION_VERSION ||
+            process.env.VERCEL_DEPLOYMENT_ID ||
+            "local",
+          region:
+            process.env.AWS_REGION || process.env.VERCEL_REGION || "local",
           object_versions: [...context.versions],
           metrics,
         }),

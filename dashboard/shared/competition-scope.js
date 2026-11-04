@@ -34,6 +34,8 @@ const competitionNames = (competition) =>
 /** League ids of the manifest chunks that belong to Top 7 Europe + UEFA. */
 export function europeFocusIds(manifest) {
   const ids = new Set(EUROPE_FOCUS_IDS);
+  for (const competition of manifest?.competitions || [])
+    if (inEuropeFocus(competition)) ids.add(competition.id);
   for (const season of manifest?.seasons || [])
     for (const chunk of season.chunks || [])
       if ((chunk.competitions || []).some(inEuropeFocus))

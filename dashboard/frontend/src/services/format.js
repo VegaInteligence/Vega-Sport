@@ -1,3 +1,4 @@
+import { apiUrl } from "../data-url.js";
 export {
   formatNumber as number,
   isNumber,
@@ -29,7 +30,7 @@ export function safeImageUrl(value) {
           ))) &&
       !u.username &&
       !u.password
-      ? `/api/assets?url=${encodeURIComponent(u.href)}`
+      ? apiUrl(`/api/assets?url=${encodeURIComponent(u.href)}`)
       : "";
   } catch {
     return "";

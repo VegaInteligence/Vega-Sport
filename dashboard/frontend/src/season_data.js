@@ -1,14 +1,6 @@
-import { dataUrl } from "./data-url.js";
-import { decodeTables, rowCopier } from "./packed_data.js";
+import { decodeTables } from "./packed_data.js";
+import { apiUrl } from "./data-url.js";
 const chunkCaches = new WeakMap();
-async function compressedJson(url, fetcher) {
-  const response = await fetcher(url);
-  if (!response.ok)
-    throw new Error(`Données indisponibles (HTTP ${response.status})`);
-  return new Response(
-    response.body.pipeThrough(new DecompressionStream("gzip")),
-  ).json();
-}
 function cachedPart(key, fetcher, loader) {
   if (!chunkCaches.has(fetcher)) chunkCaches.set(fetcher, new Map());
   const cache = chunkCaches.get(fetcher);
@@ -26,7 +18,7 @@ function cachedPart(key, fetcher, loader) {
   while (cache.size > 48) cache.delete(cache.keys().next().value);
   return promise;
 }
-/** Load one season from independently compressed competition snapshots. */
+/** Merge one complete partition per competition into a season. */
 export function mergeSeason(manifest, selected, parts) {
   const matches = [],
     appearances = [],
@@ -40,8 +32,9 @@ export function mergeSeason(manifest, selected, parts) {
       ids.add(match.id);
       matches.push(match);
     }
-    appearances.push(...(part.appearances || []));
-    fixtures.push(...(part.fixtures || []));
+    for (const appearance of part.appearances || [])
+      appearances.push(appearance);
+    for (const fixture of part.fixtures || []) fixtures.push(fixture);
     for (const competition of part.competitions || []) {
       const current = competitionMap.get(competition.id);
       if (!current)
@@ -143,111 +136,167 @@ export function mergeSeason(manifest, selected, parts) {
   };
 }
 
-function restoreTables(tables, chunk) {
-  const players = new Map(tables.players.map((p) => [p.id, p]));
-  const shots = new Map(),
-    stats = new Map(
-      tables.team_statistics.map((row) => [row.matchId, row.values]),
-    );
-  for (const shot of tables.shots) {
-    const { matchId, ...value } = shot;
-    if (!shots.has(matchId)) shots.set(matchId, []);
-    shots.get(matchId).push(value);
+/** Cursor traversal always returns a complete single generation or throws. */
+export async function readPages(path, filters, fetcher = fetch) {
+  let limit = 100,
+    restarted = false;
+  for (;;) {
+    const pages = [],
+      seen = new Set();
+    let cursor = null,
+      generation;
+    for (;;) {
+      const params = new URLSearchParams({ ...filters, limit: String(limit) });
+      if (cursor) params.set("cursor", cursor);
+      const response = await fetcher(apiUrl(path + "?" + params));
+      if (response.status === 409 && !restarted) {
+        restarted = true;
+        break;
+      }
+      if (response.status === 413 && limit > 1) {
+        limit = Math.max(1, Math.floor(limit / 2));
+        break;
+      }
+      if (!response.ok)
+        throw new Error(
+          "Données indisponibles (HTTP " + response.status + ").",
+        );
+      const page = await response.json(),
+        current = page.pagination?.generation;
+      if (
+        !page.data ||
+        current == null ||
+        !Object.hasOwn(page.pagination, "nextCursor")
+      )
+        throw new Error("Page de données invalide.");
+      if (generation !== undefined && generation !== current) {
+        if (restarted)
+          throw new Error("Les données ont changé pendant la lecture.");
+        restarted = true;
+        break;
+      }
+      generation = current;
+      pages.push(page.data);
+      cursor = page.pagination.nextCursor;
+      if (cursor === null) return pages;
+      if (typeof cursor !== "string" || !cursor || seen.has(cursor))
+        throw new Error("Curseur de données invalide.");
+      seen.add(cursor);
+    }
   }
-  const packed = chunk?.tables?.performances,
-    uniform =
-      packed?.keys &&
-      !Object.values(packed.missing || {}).some((absent) => absent?.length),
-    copy = uniform
-      ? rowCopier(
-          packed.keys.filter((key) => key !== "playerRef"),
-          ["name", "imageUrl"],
-        )
-      : null;
-  const appearances = tables.performances.map((row) => {
-    const player = players.get(row.playerRef);
-    if (!player) throw new Error("Référence joueur absente");
-    if (copy) return copy(row, player);
-    const { playerRef, ...value } = row;
-    return { ...value, name: player.name, imageUrl: player.imageUrl };
-  });
+}
+
+export function decodePartition(data) {
+  if (!data.format) return data;
+  const decoded = decodeTables(data);
+  for (const [name, table] of Object.entries(data.tables)) {
+    const constants = table.constants || {};
+    if (Object.hasOwn(constants, "__proto__")) {
+      const descriptors = Object.getOwnPropertyDescriptors(constants);
+      for (const row of decoded[name])
+        Object.defineProperties(row, descriptors);
+    } else if (Object.keys(constants).length) {
+      for (const row of decoded[name]) Object.assign(row, constants);
+    }
+  }
+  const { shots, stats, matches, ...tables } = decoded;
+  let shotOffset = 0,
+    statOffset = 0;
+  for (const match of matches) {
+    match.players = match.players.map((ref) =>
+      typeof ref === "number" ? tables.appearances[ref].id : ref,
+    );
+    const shotCount = match.shots,
+      statCount = match.stats;
+    match.shots = shots.slice(shotOffset, shotOffset + shotCount);
+    match.stats = stats.slice(statOffset, statOffset + statCount);
+    shotOffset += shotCount;
+    statOffset += statCount;
+  }
+  if (shotOffset !== shots.length || statOffset !== stats.length)
+    throw new Error("Page de saison incomplète.");
+  return { meta: data.meta, metrics: data.metrics, ...tables, matches };
+}
+
+function mergePartition(packedPages) {
+  const pages = packedPages.map(decodePartition);
+  const first = pages[0],
+    teams = new Map(),
+    competitions = new Map();
+  const part = {
+    meta: first.meta,
+    metrics: first.metrics,
+    fixtures: [],
+    matches: [],
+    appearances: [],
+  };
+  for (const page of pages) {
+    for (const name of ["fixtures", "matches", "appearances"]) {
+      if (!Array.isArray(page[name]))
+        throw new Error("Page de saison incomplète.");
+      for (const row of page[name]) part[name].push(row);
+    }
+    for (const team of page.teams || []) teams.set(team.id, team);
+    for (const competition of page.competitions || [])
+      competitions.set(competition.id, competition);
+  }
   return {
-    meta: chunk.meta,
-    metrics: chunk.metrics,
-    fixtures: tables.fixtures,
-    competitions: tables.competitions,
-    teams: tables.teams,
-    matches: tables.matches.map((row) => ({
-      ...row,
-      shots: shots.get(row.id) || [],
-      stats: stats.get(row.id) || [],
-    })),
-    appearances,
+    ...part,
+    teams: [...teams.values()],
+    competitions: [...competitions.values()],
   };
 }
 
+// A single queue per module prevents parallel history/compare loaders from each
+// opening their own full set of simultaneous requests to the small API pool.
+const pending = [];
+let running = 0;
+function scheduled(loader) {
+  return new Promise((resolve, reject) => {
+    function start() {
+      running++;
+      loader()
+        .then(resolve, reject)
+        .finally(() => {
+          running--;
+          pending.shift()?.();
+        });
+    }
+    if (running < 3) start();
+    else pending.push(start);
+  });
+}
 export async function loadSeason(
   manifest,
   selected,
   fetcher = fetch,
   leagueIds = null,
 ) {
-  const source = manifest.seasons.find((item) => item.id === selected);
-  if (!source) throw new Error("Saison indisponible");
-  const season = {
-    ...source,
-    chunks: source.chunks.filter(
-      (c) => !leagueIds || leagueIds.has(c.leagueId),
-    ),
-  };
-  const parts = new Array(season.chunks.length);
-  let cursor = 0;
-  async function worker() {
-    while (true) {
-      const index = cursor++;
-      if (index >= season.chunks.length) return;
-      if (manifest.storage === "json-packed") {
-        const chunk = season.chunks[index];
-        const url = dataUrl(chunk.path);
-        parts[index] = await cachedPart(url, fetcher, async () => {
-          const packed = await compressedJson(url, fetcher);
-          return restoreTables(decodeTables(packed), packed);
-        });
-        continue;
-      }
-      if (manifest.storage === "json-relational") {
-        const chunk = season.chunks[index],
-          tables = {};
-        for (const [table, ref] of Object.entries(chunk.tables)) {
-          const response = await fetcher(dataUrl(ref.path));
-          if (!response.ok)
-            throw new Error(
-              `Table indisponible : ${table} (HTTP ${response.status})`,
-            );
-          const stream = response.body.pipeThrough(
-            new DecompressionStream("gzip"),
-          );
-          tables[table] = await new Response(stream).json();
-        }
-        parts[index] = restoreTables(tables, chunk);
-        continue;
-      }
-      const chunk = season.chunks[index],
-        response = await fetcher(dataUrl(chunk.path));
-      if (!response.ok)
-        throw new Error(
-          `Données de saison indisponibles (HTTP ${response.status})`,
+  const season = manifest.seasons.find((item) => item.id === selected);
+  if (!season) throw new Error("Saison indisponible");
+  const chunks = season.chunks.filter(
+    (c) => !leagueIds || leagueIds.has(c.leagueId),
+  );
+  const parts = await Promise.all(
+    chunks.map((chunk) => {
+      const load = () =>
+        scheduled(async () =>
+          mergePartition(
+            await readPages(
+              "/api/seasons/partition",
+              { season: selected, league: chunk.leagueId, format: "columns" },
+              fetcher,
+            ),
+          ),
         );
-      if (typeof DecompressionStream === "undefined")
-        throw new Error(
-          "Ce navigateur ne peut pas décompresser les données de saison.",
-        );
-      const stream = response.body.pipeThrough(new DecompressionStream("gzip"));
-      parts[index] = await new Response(stream).json();
-    }
-  }
-  await Promise.all(
-    Array.from({ length: Math.min(6, season.chunks.length) }, worker),
+      return chunk.sourceDigest
+        ? cachedPart(
+            JSON.stringify([selected, chunk.leagueId, chunk.sourceDigest]),
+            fetcher,
+            load,
+          )
+        : load();
+    }),
   );
   return mergeSeason(manifest, selected, parts);
 }

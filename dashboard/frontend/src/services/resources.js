@@ -1,10 +1,11 @@
+import { apiUrl } from "../data-url.js";
 import { useEffect, useState } from "react";
 const cache = new Map();
 // Values of promises that already resolved: a component asking again for a
 // loaded resource gets it in the same render, without a loading frame.
 const settled = new Map();
 export async function json(url) {
-  const response = await fetch(url);
+  const response = await fetch(apiUrl(url));
   if (!response.ok)
     throw new Error(`Données indisponibles (HTTP ${response.status})`);
   return response.json();
@@ -24,6 +25,10 @@ function start(key, loader) {
     cache.set(key, promise);
   }
   return cache.get(key);
+}
+/** Returns an already-resolved resource without initiating a request. */
+export function cachedResource(key) {
+  return settled.get(key);
 }
 /** Starts (or reuses) a resource outside a component, e.g. a background load. */
 export function primeResource(key, loader) {

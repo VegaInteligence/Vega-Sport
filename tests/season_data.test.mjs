@@ -1,9 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {gzipSync} from 'node:zlib';
 import {loadSeason, mergeSeason} from '../dashboard/frontend/src/season_data.js';
 
-const manifest={defaultSeason:'2025/2026',seasons:[{id:'2025/2026',chunks:[{path:'seasons/example.json.gz'}]}]};
+const manifest={defaultSeason:'2025/2026',seasons:[{id:'2025/2026',chunks:[{leagueId:'l_000001',sourceDigest:'fixture'}]}]};
 const part={meta:{retrievedAt:'2026-10-31T00:00:00Z',collectedMatches:1,expectedFinishedMatches:2,shotCount:1,knownShotXgCount:1,ratedAppearanceCount:1},
   competitions:[{id:'l_000001',name:'League',sampleMatches:2,seasons:['2025'],sampleSeasons:['2025']}],
   teams:[{id:'t_000001',name:'Team',sampleMatches:1,leagueIds:['l_000001'],seasons:['2025']}],
@@ -20,12 +19,8 @@ test('season snapshots preserve progress and distinct player counts',()=>{
   assert.equal(value.competitions[0].seasons[0],'2025');
 });
 
-test('compressed competition snapshots load as one selected season',async()=>{
-  const compressed=gzipSync(Buffer.from(JSON.stringify(part)));
-  const value=await loadSeason(manifest,'2025/2026',async url=>{
-    assert.match(String(url),/seasons\/example\.json\.gz$/);
-    return new Response(compressed,{status:200});
-  });
-  assert.equal(value.matches[0].id,'m_000001');
+// Complete season traversal is exercised through the real browser and HTTP API
+// in docs/verification/aws-frontend-20261104.
+test('unpublished seasons are rejected',async()=>{
   await assert.rejects(()=>loadSeason(manifest,'2024/2025',async()=>new Response()),/Saison indisponible/);
 });

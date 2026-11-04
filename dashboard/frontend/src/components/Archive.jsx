@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { dataUrl } from "../data-url.js";
+import { archiveIndex, archiveSeason } from "../services/catalog-client.js";
 import {
   archiveRows,
   archiveSeasons,
@@ -9,23 +9,12 @@ import {
   teamSimilarity,
 } from "../services/archive.js";
 import { date } from "../services/format.js";
-import { json, useResource } from "../services/resources.js";
+import { useResource } from "../services/resources.js";
 import { orderedCompetitions } from "../services/competition-selector.js";
 import { AsyncState, Card, Empty, Pager } from "./UI.jsx";
 import CompetitionOptions from "./CompetitionOptions.jsx";
 
 const PAGE_SIZE = 50;
-
-async function loadGzip(path) {
-  const response = await fetch(dataUrl(path));
-  if (!response.ok)
-    throw new Error(`Données indisponibles (HTTP ${response.status})`);
-  if (typeof DecompressionStream === "undefined")
-    throw new Error("Ce navigateur ne peut pas décompresser les archives.");
-  return new Response(
-    response.body.pipeThrough(new DecompressionStream("gzip")),
-  ).json();
-}
 
 function scoreText([home, away]) {
   return home === null || away === null || home === undefined
@@ -178,8 +167,8 @@ function SeasonArchive({ seasons, entry, params, setParams, hrefWith }) {
   const router = useRouter();
   const resource = useResource(`archive:season:${entry.id}`, async () => {
     const [results, goals] = await Promise.all([
-      entry.results ? loadGzip(entry.results.path) : null,
-      entry.goals ? loadGzip(entry.goals.path) : null,
+      entry.results ? archiveSeason("results",entry.id) : null,
+      entry.goals ? archiveSeason("goals",entry.id) : null,
     ]);
     return buildArchiveSeason(results, goals);
   });
@@ -305,8 +294,8 @@ export default function Archive() {
   const params = useSearchParams();
   const indexes = useResource("archive:indexes", async () => {
     const [results, goals] = await Promise.all([
-      json(dataUrl("raw/openfootball/index.json")),
-      json(dataUrl("raw/historical-goals/index.json")),
+      archiveIndex("results"),
+      archiveIndex("goals"),
     ]);
     return archiveSeasons(results, goals);
   });

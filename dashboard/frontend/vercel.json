@@ -1,1 +1,10 @@
-{"regions":["cle1"]}
+{
+  "regions": [
+    "cle1"
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "main": false
+    }
+  }
+}

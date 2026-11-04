@@ -741,6 +741,6 @@ export const manifestSignature = (manifest) =>
   JSON.stringify(
     (manifest?.seasons || []).map((season) => [
       season.id,
-      (season.chunks || []).map((c) => c.sha256 || c.path),
+      (season.chunks || []).map((c) => c.sourceDigest || c.sha256 || c.path),
     ]),
   );

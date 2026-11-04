@@ -35,9 +35,7 @@ export function supplementalCupCatalog(index) {
   return index.competitions.flatMap((item) => {
     if (!/^[A-Z]{3}_CUP_[a-z0-9-]+$/i.test(item.folder || "")) return [];
     if (!(Number(item.tables?.results?.rows) > 0 || Number(item.tables?.fixtures?.rows) > 0) && !item.discovered) return [];
-    const ref = item.tables?.results?.path || item.tables?.fixtures?.path || "";
-    const seasonParts = ref.match(/^raw\/seasons\/(\d{4})-(\d{4})\//);
-    const season = /^\d{4}\/\d{4}$/.test(item.season || "") ? item.season : seasonParts ? seasonParts[1] + "/" + seasonParts[2] : "";
+    const season = /^\d{4}\/\d{4}$/.test(item.season || "") ? item.season : "";
     if (!season) return [];
     const labels = CUP_LABELS[item.folder] || [item.name || item.folder];
     const archive = NATIONAL_CUP_ARCHIVES[item.folder];

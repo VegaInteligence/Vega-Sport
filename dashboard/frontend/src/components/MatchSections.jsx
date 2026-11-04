@@ -638,7 +638,12 @@ export function MatchSections({
   );
   return (
     <Card
-      title={showNavigation ? "Analyses du match" : "Compositions"}
+      title={
+        showNavigation
+          ? "Analyses du match"
+          : MATCH_ANALYSES.find(([key]) => key === initialSection)?.[1] ||
+            "Compositions"
+      }
       className="match-archive-card"
     >
       {showNavigation && (

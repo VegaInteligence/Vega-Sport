@@ -1,44 +1,24 @@
 /** Next transport only; all data access and provider credentials stay in Bun. */
 export async function proxy(request) {
   const url = new URL(request.url);
-  if (process.env.VERCEL || process.env.ORION_EMBEDDED_API === "1") {
-    try {
-      const { handleRequest } = await import("../../../backend/app.js");
-      return await handleRequest(request);
-    } catch (error) {
-      console.error(
-        "Neon API request failed",
-        error.name,
-        error.code || "",
-        String(error.message).replace(
-          /postgres(?:ql)?:\/\/\S+/g,
-          "[redacted connection]",
-        ),
-      );
-      return Response.json(
-        {
-          error: {
-            message: "Le service de données est indisponible. Réessayez.",
-          },
-        },
-        {
-          status: 503,
-          headers: {
-            "Cache-Control": "no-store",
-            "Vercel-CDN-Cache-Control": "no-store",
-          },
-        },
-      );
-    }
+  if (process.env.NEXT_PUBLIC_API_ORIGIN) {
+    const { apiUrl } = await import("../data-url.js");
+    return Response.redirect(apiUrl(url.pathname + url.search), 307);
   }
+  if (process.env.VERCEL)
+    return new Response(null, {
+      status: 503,
+      headers: { "Cache-Control": "no-store" },
+    });
   const origin = process.env.ORION_API_ORIGIN || "http://127.0.0.1:8765";
   try {
+    const validator = request.headers.get("if-none-match");
     const upstream = await fetch(origin + url.pathname + url.search, {
       method: request.method,
       cache: "no-store",
       redirect: "manual",
       signal: request.signal,
-      headers: { "If-None-Match": request.headers.get("if-none-match") || "" },
+      headers: validator ? { "If-None-Match": validator } : {},
     });
     const headers = new Headers();
     for (const key of [
@@ -49,6 +29,7 @@ export async function proxy(request) {
       "content-disposition",
       "allow",
       "retry-after",
+      "location",
       "etag",
       "content-length",
       "x-data-source",
