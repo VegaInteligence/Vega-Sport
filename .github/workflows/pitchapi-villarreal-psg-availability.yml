@@ -1,132 +1,56 @@
-name: PitchAPI Villarreal PSG availability
+name: Published Villarreal PSG availability
 on:
   schedule:
     - cron: '8 * * * *'
   workflow_dispatch:
     inputs:
       verify_stop:
-        description: 'Test only: verify automatic shutdown without querying PitchAPI'
+        description: 'Test only: verify automatic shutdown without querying RDS'
         type: boolean
         default: false
 permissions:
-  actions: write
+  contents: read
 concurrency:
   group: pitchapi-villarreal-psg-availability
   cancel-in-progress: false
 jobs:
   observe:
-    runs-on: ubuntu-latest
-    timeout-minutes: 4
+    if: github.repository == 'OrionQuantPlatform/STATARENA' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/aws-backend-20261104')
+    permissions:
+      contents: read
+      id-token: write
+      actions: write
+    runs-on: ${{ vars.STATARENA_AWS_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
     steps:
-      - name: Observe PitchAPI
+      - uses: actions/checkout@v4
+        if: inputs.verify_stop != true
+        with:
+          sparse-checkout: |
+            .github/actions/aws-database
+            dashboard/backend/certs
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        if: inputs.verify_stop != true
+        with:
+          python-version: '3.13'
+      - name: Install PostgreSQL driver
+        if: inputs.verify_stop != true
+        run: pip install 'psycopg[binary]==3.3.7'
+      - name: Load read-only RDS credentials
+        if: inputs.verify_stop != true
+        uses: ./.github/actions/aws-database
+        with:
+          mode: runtime
+          role-arn: ${{ vars.STATARENA_AWS_MONITOR_ROLE_ARN }}
+      - name: Observe relational publication
         id: probe
-        env:
-          PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
-          VERIFY_STOP: ${{ inputs.verify_stop }}
-        shell: bash
-        run: |
-          if [ "$VERIFY_STOP" = "true" ]; then
-            echo 'PITCH_MONITOR_FIXTURE synthetic completion; no match data observed'
-            echo 'complete=true' >> "$GITHUB_OUTPUT"
-            echo '# Test fixture only: no match data observed' >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          python3 - <<'PYTHON'
-          #!/usr/bin/env python3
-          """Record a single PitchAPI availability observation, without logging secrets."""
-          import datetime,json,os,sys,urllib.error,urllib.parse,urllib.request
-          
-          MATCH='m_0k4IES'
-          BASE=os.environ.get('PITCHAPI_MONITOR_BASE','https://api.pitchapi.dev/v1').rstrip('/')
-          parsed=urllib.parse.urlparse(BASE)
-          if BASE!='https://api.pitchapi.dev/v1' and not (os.environ.get('PITCHAPI_MONITOR_FIXTURE')=='1' and parsed.scheme=='http' and parsed.hostname=='127.0.0.1'):
-              raise SystemExit('Refusing non-official API endpoint')
-          KEY=os.environ.get('PITCHAPI_API_KEY','')
-          if not KEY: raise SystemExit('PitchAPI secret unavailable')
-          
-          def now(): return datetime.datetime.now(datetime.timezone.utc).isoformat().replace('+00:00','Z')
-          def request(suffix):
-              req=urllib.request.Request(f'{BASE}/matches/{MATCH}{suffix}',headers={'X-API-KEY':KEY,'User-Agent':'StatArena-availability-monitor/1.0','Accept':'application/json'})
-              try:
-                  with urllib.request.urlopen(req,timeout=15) as response: status=response.status; body=response.read()
-              except urllib.error.HTTPError as e: status=e.code; body=e.read()
-              except Exception as e: return {'observed_at_utc':now(),'http':None,'error_type':type(e).__name__},None
-              stamp=now()
-              try: obj=json.loads(body)
-              except (ValueError,UnicodeDecodeError): return {'observed_at_utc':stamp,'http':status,'error_type':'invalid_json'},None
-              if not isinstance(obj,dict): return {'observed_at_utc':stamp,'http':status,'error_type':'invalid_envelope'},None
-              return {'observed_at_utc':stamp,'http':status},obj
-          
-          def parse(category,obj):
-              if 'data' not in obj: raise ValueError('data')
-              data=obj['data']
-              if category=='player_stats':
-                  if not isinstance(data,list): raise ValueError('players')
-                  count=sum(1 for p in data if isinstance(p,dict) and bool(p.get('stats')))
-                  return {'available':count>0,'player_count':count}
-              if not isinstance(data,dict): raise ValueError('object')
-              if category=='score':
-                  if 'score_home' not in data or 'score_away' not in data or 'status' not in data: raise ValueError('score')
-                  h,a=data['score_home'],data['score_away']
-                  if any(v is not None and type(v) not in (int,float) for v in (h,a)): raise ValueError('score_type')
-                  return {'available':h is not None and a is not None,'status':data['status'],'score_home':h,'score_away':a}
-              if category=='events':
-                  events=data.get('events')
-                  if not isinstance(events,list): raise ValueError('events')
-                  return {'available':len(events)>0,'count':len(events)}
-              if category in ('shots','team_stats'):
-                  periods=data.get('periods')
-                  if periods is None: periods=[]
-                  if not isinstance(periods,list): raise ValueError('periods')
-                  count=0;xg_count=0
-                  for period in periods:
-                      if not isinstance(period,dict): raise ValueError('period')
-                      groups=period.get('shots',[]) if category=='shots' else period.get('groups',[])
-                      if not isinstance(groups,list): raise ValueError('groups')
-                      if category=='shots':
-                          count+=len(groups)
-                          xg_count+=sum(1 for s in groups if isinstance(s,dict) and type(s.get('expected_goals')) in (int,float))
-                      else:
-                          for group in groups:
-                              if not isinstance(group,dict) or not isinstance(group.get('items',[]),list): raise ValueError('items')
-                              count+=len(group.get('items',[]))
-                  result={'available':count>0,'count':count}
-                  if category=='shots': result['shots_with_xg']=xg_count
-                  return result
-              return {'available':bool(data)}
-          
-          routes=[('score',''),('events','/events'),('shots','/shots'),('team_stats','/stats'),('player_stats','/players'),('advanced','/advanced')]
-          rows={}; errors=[]
-          for name,suffix in routes:
-              meta,obj=request(suffix)
-              if name=='advanced' and meta['http']==404 and isinstance(obj,dict) and obj.get('error',{}).get('code')=='ANALYTICS_UNAVAILABLE':
-                  rows[name]={**meta,'available':False,'reason':'ANALYTICS_UNAVAILABLE'};continue
-              if meta['http']!=200 or obj is None:
-                  rows[name]={**meta,'available':None};errors.append(name);continue
-              try: rows[name]={**meta,**parse(name,obj)}
-              except (TypeError,ValueError): rows[name]={**meta,'available':None,'error_type':'invalid_schema'};errors.append(name)
-          complete=not errors and all(rows[k]['available'] for k in ('score','events','shots','team_stats','player_stats'))
-          obs={'kind':'live','match_id':MATCH,'recorded_at_utc':now(),'run_id':os.getenv('GITHUB_RUN_ID'),'categories':rows,'complete':bool(complete),'errors':errors}
-          print('PITCH_MONITOR_OBSERVATION '+json.dumps(obs,ensure_ascii=False,separators=(',',':')),flush=True)
-          summary_path=os.getenv('GITHUB_STEP_SUMMARY')
-          if summary_path:
-              with open(summary_path,'a') as f:
-                  f.write('# Villarreal–PSG : disponibilité PitchAPI\n\n')
-                  f.write(f"Run UTC : {obs['recorded_at_utc']} · match {MATCH}\n\n")
-                  f.write('| Catégorie | Disponible | HTTP | Observation UTC | Détail |\n|---|---:|---:|---|---|\n')
-                  for name,row in rows.items():
-                      detail=', '.join(f'{k}={v}' for k,v in row.items() if k not in ('available','http','observed_at_utc'))
-                      f.write(f"| {name} | {row['available']} | {row['http']} | {row['observed_at_utc']} | {detail} |\n")
-                  f.write('\nLes heures sont celles des contrôles, pas l’heure exacte de publication.\n')
-          if os.getenv('GITHUB_OUTPUT'):
-              with open(os.environ['GITHUB_OUTPUT'],'a') as f: f.write('complete='+str(complete).lower()+'\n')
-          if errors: raise SystemExit('One or more PitchAPI requests failed or returned invalid data; the monitor remains active')
-          PYTHON
-      - name: Stop the schedule after all core data arrive
-        if: ${{ steps.probe.outputs.complete == 'true' }}
+        if: inputs.verify_stop != true
+        run: python .github/actions/aws-database/monitor.py
+      - name: Stop the schedule after publication
+        if: inputs.verify_stop == true || steps.probe.outputs.complete == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: bash
         run: |
           gh api --method PUT "repos/$GITHUB_REPOSITORY/actions/workflows/pitchapi-villarreal-psg-availability.yml/disable"
-          echo 'Monitor disabled after completion (or explicitly requested stop fixture).'
+          echo 'Monitor disabled after published core data or the explicit shutdown fixture.'

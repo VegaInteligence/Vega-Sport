@@ -3,17 +3,61 @@ on:
   push:
     paths:
       - '.github/workflows/verify-ingestion.yml'
+      - '.github/actions/aws-database/**'
+      - '.github/workflows/rematerialize.yml'
+      - '.github/workflows/uefa-standings.yml'
+      - '.github/workflows/pitchapi-villarreal-psg-availability.yml'
+      - 'docs/verification/aws-actions-20261104/*.py'
+      - 'docs/verification/aws-actions-20261104/*.cjs'
+      - 'dashboard/scripts/**'
+      - 'dashboard/backend/**'
+      - 'dashboard/frontend/src/services/**'
+      - 'dashboard/frontend/src/hooks/FootballContext.jsx'
+      - 'dashboard/frontend/src/season_data.js'
+      - 'dashboard/frontend/src/data-url.js'
+      - 'dashboard/frontend/src/server/**'
+      - 'dashboard/shared/**'
+      - 'dashboard/package.json'
+      - 'dashboard/bun.lock'
+      - 'docs/verification/aws-rematerialize-20261104/**'
+      - 'docs/verification/aws-relational-core-20261104/**'
+      - 'docs/verification/aws-support-20261104/**'
+      - 'docs/verification/aws-catalog-20261104/**'
+      - 'docs/verification/relational-match-20261104/**'
+      - 'docs/verification/aws-frontend-20261104/curated-*'
+      - 'dashboard/outputs/data-completeness/*.json'
       - '.github/workflows/daily-sync.yml'
       - '.github/workflows/historical-backfill.yml'
-      - 'dashboard/scripts/neon_*.py'
       - 'tests/daily_refresh_postgres.py'
       - 'tests/test_daily_refresh.py'
   pull_request:
     paths:
       - '.github/workflows/verify-ingestion.yml'
+      - '.github/actions/aws-database/**'
+      - '.github/workflows/rematerialize.yml'
+      - '.github/workflows/uefa-standings.yml'
+      - '.github/workflows/pitchapi-villarreal-psg-availability.yml'
+      - 'docs/verification/aws-actions-20261104/*.py'
+      - 'docs/verification/aws-actions-20261104/*.cjs'
+      - 'dashboard/scripts/**'
+      - 'dashboard/backend/**'
+      - 'dashboard/frontend/src/services/**'
+      - 'dashboard/frontend/src/hooks/FootballContext.jsx'
+      - 'dashboard/frontend/src/season_data.js'
+      - 'dashboard/frontend/src/data-url.js'
+      - 'dashboard/frontend/src/server/**'
+      - 'dashboard/shared/**'
+      - 'dashboard/package.json'
+      - 'dashboard/bun.lock'
+      - 'docs/verification/aws-rematerialize-20261104/**'
+      - 'docs/verification/aws-relational-core-20261104/**'
+      - 'docs/verification/aws-support-20261104/**'
+      - 'docs/verification/aws-catalog-20261104/**'
+      - 'docs/verification/relational-match-20261104/**'
+      - 'docs/verification/aws-frontend-20261104/curated-*'
+      - 'dashboard/outputs/data-completeness/*.json'
       - '.github/workflows/daily-sync.yml'
       - '.github/workflows/historical-backfill.yml'
-      - 'dashboard/scripts/neon_*.py'
       - 'tests/daily_refresh_postgres.py'
       - 'tests/test_daily_refresh.py'
   workflow_dispatch:
@@ -24,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18.6
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -48,3 +92,111 @@ jobs:
       - run: pip install -r dashboard/scripts/neon-requirements.txt
       - run: python -m unittest discover -s tests -p 'test_daily_refresh.py' -v
       - run: python tests/daily_refresh_postgres.py
+      - name: Exercise AWS bootstrap and relational publication monitor
+        run: |
+          pip install PyYAML==6.0.3
+          mkdir -p docs/verification/aws-actions-20261104/ci
+          python docs/verification/aws-actions-20261104/verify.py ci
+      - name: Exercise temporary runner ingress and post cleanup
+        run: python docs/verification/aws-actions-20261104/ingress_e2e.py ingress-ci
+      - name: Save AWS Actions verification receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aws-actions-checks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            docs/verification/aws-actions-20261104/ci/results.json
+            docs/verification/aws-actions-20261104/ingress-ci/results.json
+          if-no-files-found: warn
+
+  relational:
+    name: Relational publication and HTTP contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      STATARENA_TEST_TOOLS: /tmp/statarena-cache-test-tools
+      STATARENA_TEST_PYTHON: /tmp/statarena-ci-python
+      STATARENA_TEST_PYTHONPATH: /tmp/statarena-ci-python
+      PYTHONPATH: /tmp/statarena-ci-python
+      STATARENA_CORE_API: '1'
+      STATARENA_CORE_EVIDENCE: docs/verification/aws-relational-core-20261104/ci
+      STATARENA_CI_EVIDENCE: docs/verification/aws-actions-20261104/relational-ci
+      AWS_EC2_METADATA_DISABLED: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            .github/workflows
+            dashboard/backend
+            dashboard/scripts
+            dashboard/shared
+            dashboard/frontend/src
+            dashboard/outputs/data-completeness
+            tests
+            docs/verification/aws-actions-20261104
+            docs/verification/aws-rematerialize-20261104
+            docs/verification/aws-relational-core-20261104
+            docs/verification/aws-frontend-20261104
+            docs/verification/relational-match-20261104
+            docs/verification/aws-support-20261104
+            docs/verification/aws-catalog-20261104
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: dashboard/scripts/neon-requirements.txt
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.4.4'
+      - name: Install worker dependencies and create test-tool directory
+        run: |
+          python -m pip install --target /tmp/statarena-ci-python -r dashboard/scripts/neon-requirements.txt PyYAML==6.0.3
+          mkdir -p /tmp/statarena-cache-test-tools
+      - name: Install disposable PostgreSQL
+        working-directory: /tmp/statarena-cache-test-tools
+        run: npm install --no-save --no-package-lock --no-audit --no-fund embedded-postgres@18.6.0-beta.19
+      - name: Install dashboard dependencies
+        working-directory: dashboard
+        run: bun install --frozen-lockfile
+      - name: Validate isolated CI controls
+        run: python3 docs/verification/aws-actions-20261104/ci_contract.py ci-definition
+      - name: Publish typed partitions, resume and roll back
+        run: node docs/verification/aws-rematerialize-20261104/run.mjs ci
+      - name: Exercise core publisher and HTTP read contracts
+        run: bun dashboard/scripts/verify_relational_core.mjs
+      - name: Exercise captured match detail HTTP contracts
+        run: python3 docs/verification/aws-actions-20261104/capture_ci.py match
+      - name: Exercise captured support HTTP contracts
+        run: python3 docs/verification/aws-actions-20261104/capture_ci.py support
+      - name: Exercise catalog HTTP contracts
+        run: python3 docs/verification/aws-actions-20261104/capture_ci.py catalog
+      - name: Record setup and job outcome
+        if: always()
+        env:
+          CHECK_STATUS: ${{ job.status }}
+        run: |
+          mkdir -p "$STATARENA_CI_EVIDENCE"
+          {
+            echo "commit=$GITHUB_SHA"
+            echo "run=$GITHUB_RUN_ID attempt=$GITHUB_RUN_ATTEMPT status=$CHECK_STATUS"
+            node --version || true
+            bun --version || true
+            python3 --version || true
+          } > "$STATARENA_CI_EVIDENCE/runner.log"
+      - name: Save relational SQL and HTTP evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relational-sql-http-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            docs/verification/aws-rematerialize-20261104/ci/
+            docs/verification/aws-relational-core-20261104/ci/
+            docs/verification/aws-actions-20261104/relational-ci/
+            docs/verification/aws-actions-20261104/ci-definition.json
+          if-no-files-found: warn
