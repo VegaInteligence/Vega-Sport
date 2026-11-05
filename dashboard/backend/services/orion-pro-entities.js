@@ -199,13 +199,8 @@ function scalar(meta, key) {
   reject(503, "Valeur de profil non représentable.");
 }
 
-async function media(assetId, mediaBase) {
+function mediaValue(assetId, asset, mediaBase) {
   if (assetId === null) return { url: null, fingerprint: null };
-  const [asset] = await query(
-    `/*orion:entitymediameta*/ SELECT storage_key,content_sha256,content_type
- FROM ingest.media_assets WHERE id=$1::bigint`,
-    [assetId],
-  );
   const ext = asset?.storage_key?.split(".").at(-1)?.toLowerCase();
   if (
     !asset ||
@@ -236,6 +231,16 @@ async function media(assetId, mediaBase) {
       url,
     ],
   };
+}
+
+async function media(assetId, mediaBase) {
+  if (assetId === null) return mediaValue(assetId, null, mediaBase);
+  const [asset] = await query(
+    `/*orion:entitymediameta*/ SELECT storage_key,content_sha256,content_type
+ FROM ingest.media_assets WHERE id=$1::bigint`,
+    [assetId],
+  );
+  return mediaValue(assetId, asset, mediaBase);
 }
 
 async function entityMetadata(row, kind, publicId, options) {
@@ -416,15 +421,39 @@ async function catalogue(req, params, options) {
     .slice(0, args.limit + 1);
   const visible = page.slice(0, args.limit),
     metadata = [];
-  for (const entry of visible) {
+  if (visible.length) {
     const records = await query(
-      `/*orion:entitycataloguemeta*/ SELECT image_asset_id::text FROM football.competitions
- WHERE revision_id=$1::bigint`,
-      [entry.row.competition_revision_id],
+      `/*orion:entitycataloguemeta*/ WITH x AS (
+ SELECT * FROM jsonb_to_recordset($1::jsonb) AS x(public_id text,revision_id bigint))
+ SELECT x.public_id,c.image_asset_id::text,a.storage_key,a.content_sha256,a.content_type
+ FROM x JOIN football.competitions c ON c.revision_id=x.revision_id
+ LEFT JOIN ingest.media_assets a ON a.id=c.image_asset_id
+ ORDER BY x.public_id COLLATE "C"`,
+      [
+        JSON.stringify(
+          visible.map((entry) => ({
+            public_id: entry.row.league_id,
+            revision_id: entry.row.competition_revision_id,
+          })),
+        ),
+      ],
     );
-    if (records.length !== 1) reject(503, "Catalogue indisponible.");
-    entry.image = await media(records[0].image_asset_id, options.mediaBase);
-    metadata.push([entry.row.competition_revision_id, entry.image.fingerprint]);
+    const byId = new Map(records.map((record) => [record.public_id, record]));
+    if (records.length !== visible.length || byId.size !== visible.length)
+      reject(503, "Catalogue indisponible.");
+    for (const entry of visible) {
+      const record = byId.get(entry.row.league_id);
+      if (!record) reject(503, "Catalogue indisponible.");
+      entry.image = mediaValue(
+        record.image_asset_id,
+        record,
+        options.mediaBase,
+      );
+      metadata.push([
+        entry.row.competition_revision_id,
+        entry.image.fingerprint,
+      ]);
+    }
   }
   const precondition = validated(req, rows, metadata);
   if (precondition) return precondition;
