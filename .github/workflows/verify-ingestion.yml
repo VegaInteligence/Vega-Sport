@@ -377,6 +377,12 @@ jobs:
           --node24 /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64/bin/node
           --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
           --label shot-details-ci-${{ github.run_id }}
+      - name: Verify composite 017 player and half statistics through the actual AWS router
+        run: >-
+          python3 tests/orion_pro_player_period_local.py --phase after
+          --node24 /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64/bin/node
+          --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
+          --label player-periods-ci-${{ github.run_id }}
       - name: Preserve reproducible PostgreSQL and CLI evidence
         if: always()
         uses: actions/upload-artifact@v4
