@@ -270,7 +270,16 @@ def main():
                         if method=='GET':assert r['value']==before['value'],r
                         else:assert r['bytes']==0;meta(r)
                 elif case=='E30_closed_boundary':
-                    r=http(url('/api/pitchapi/matches/m_000001/lineups',v=values['A']));assert r['status']==501 and not r['matched'];no_sql(r)
+                    path='/api/pitchapi/matches/m_000001/lineups'
+                    r=http(url(path+'/unregistered',v=values['A']))
+                    assert r['status']==501 and not r['matched'],r
+                    no_sql(r)
+                    r=http(url(path,v=values['A']))
+                    fail(r,400);no_sql(r)
+                    assert r['value']['error']['code']=='NATIVE_MATCH_VERSION_INVALID',r
+                    r=http(url(path,v=values['A'],representation='match-native-v1'))
+                    fail(r,503)
+                    assert r['sql'] and all('/*orion:native-match:build-meta*/' in entry['sql'] for entry in r['sql']),r
                     traces=json.load(urlopen(origin+'/__e2e__/traces',timeout=5));assert traces['externalAttempts']==0
                     for r in report['requests']:
                         for entry in r['sql']:assert not FORBIDDEN.search(entry['sql'] or ''),entry['sql']
