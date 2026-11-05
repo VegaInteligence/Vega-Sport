@@ -20,6 +20,7 @@ import { orionProArchiveRoute } from "./services/orion-pro-archives.js";
 import { orionProEnrichmentRoute } from "./services/orion-pro-enrichment.js";
 import { orionProPlayerStatisticsRoute } from "./services/orion-pro-player-statistics.js";
 import { orionProMatchStatisticsRoute } from "./services/orion-pro-match-statistics.js";
+import { orionProSpatialAdvancedRoute } from "./services/orion-pro-spatial-advanced.js";
 import {
   manifest,
   partitionPage,
@@ -215,6 +216,8 @@ async function route(req) {
     if (playerStatistics) return playerStatistics;
     const matchStatistics = await orionProMatchStatisticsRoute(req, path, p);
     if (matchStatistics) return matchStatistics;
+    const spatialAdvanced = await orionProSpatialAdvancedRoute(req, path, p);
+    if (spatialAdvanced) return spatialAdvanced;
     const entity = await orionProEntityRoute(req, path, p, {
       mediaBase: process.env.STATARENA_CLOUDFRONT_URL,
     });

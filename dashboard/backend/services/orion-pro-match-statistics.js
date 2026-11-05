@@ -8,6 +8,8 @@ const variant = "source:match-statistics-v1";
 const releaseEnvironments = new Set([
   // STATISTICS_PUBLICATION.json hashes the exact composite release descriptor.
   "e5a436a88eb5f6aaa7338c91dcae57135fd3c47d16c6da2816a88436d9c3358a",
+  // FULL_STATISTICS_PUBLICATION.json retains the same player-period component.
+  "093759ba0cc39f72a1182bfb1a0d2db7d94ba3d1ec96171be57778cccbb49297",
 ]);
 const route =
   /^\/api\/pitchapi\/matches\/(m_[A-Za-z0-9]{6})\/players(?:\/(p_[A-Za-z0-9]{6}))?(\/halves)?$/;
