@@ -19,7 +19,7 @@
 - Guard897f40a5:19/19,153closed Pro requests501/no-store/0SQL+legacy+source,11nonempty ProOFF controls unchanged.57routeforms inventoried,remaining50blocked forms require implementation.
 - BulkV1f3b898c6:21/21 small native COPY/rollback/resume, not dense/remote qualified. Original dense013seal57014 at8005ms retained. Candidate3b7f3e9:9/9 with478547canonical scalars;139nonNULL comparisons optimized/46nullable retained; seal5578.437ms/commit5667.145ms separately<8s,not RDS benchmark.
 - Local append-only014 adoption85033e9:14/14functional/clocks;253artifact manifestd4e98446… resolves historical code at850. Later route/security review14/14 fixes explicit hostaddr and includes46views/3schemas/defaultACL/3roles/memberships;helper354d2857…/runner3fe82b36…/newP1manifest6ecdf33f…. No qualified importpair/RDS apply.
-- CI41942233218:3jobs/187cases; artifact238214600→7194175B−96.98%,actualSHA/CRC/878entries verified. Older archives kept; not storage reclaimed. Serializer85e59b80 pushed,CI41952093242 succeeds3jobs; actual14suite counts awaiting log extraction.
+- CI41942233218:3jobs/187cases; artifact238214600→7194175B−96.98%,actualSHA/CRC/878entries verified. Older archives kept; not storage reclaimed. Serializer85e59b80 pushed,CI41952093242 succeeds3jobs; actual14suites/203passed/4real-sourcecases deliberatelyunverified,logsarchived.
 
 ## Real source and live RAM
 - Original source ledger FROZEN89SQL/254796352B,d539243f…; failednewcapture4SQL9666054B retained. Capturev2 READY4docs/4SELECT9682314decodedB/3HTTP3961physicalB. PID54737/session70680/socket /tmp/orion-real-native-spatial-20261105-v2/source.sock MUST remain until ROOT STOP; no refetch/ledger reset.
@@ -28,9 +28,9 @@
 - Corpus612fixtures/387finished/15437performances/9795shots/839players/20teams.45591absent/188032null/175407nonzero/69517zero preserved.62exact-profile gaps/spatialnames+shirts/other detailedfamilies open. Transfer3d125825:Neon81finishedvsAWS80 in306sameIDs,H2H33vs0,lineups40vs39;onlyselectedarchive members qualified. No global source/purge acceptance.
 
 ## Active work and next
-- ROOT: archive/commit/push realv2 and expanded guard review; actualCIlogs; review/integrate next receipts. Never complete goal at pilot.
+- ROOT: realv2 committed73cd2e6d5b; expanded guard129artifacts and historical253Gitblobs independently verified. Commit/push guards, then review/integrate next receipts. Never complete goal at pilot.
 - Source Sol: approved test-first RDS adapter missing-codeRED then ONE local2DB/600s compact campaign; offline/remoteRO interface only,NO cloud/SSM/RDS/source/RAM. Future freshRDSnative owners/ACL/adminflags/clocks/67seq require separate boundedROrelease,then later014write release.
 - Publisher Sol: approved allS01–S14pre-code oracle amendments/ONEcompletePG+API+roles+deadlines run,unchangedcaps. Preserve3oldsetupfailures; publisher absent until genuine missinghelperRED and ROOTreview. No schema/grants/deploy/source.
 - Streaming Sol: approved PLAN/PROTOCOL,E2Ebeforecode/missingRED,newv2implementation/staticpairbindings. No PG yet; ROOTreview then ONE compact-then-dense20min campaign. Oldv1/scaffold/policies/design immutable.74COPY/3controls/17empty,IDpreserved,32MiBmeta16MiBtransport,sourceRRclosedbeforetargetoracle/seal;noTEMP/index/grants.
 - Open: fullnative schema/field/state reconciliation,typedstreaming/RDSdata,admission/publications/dependencies,remainingroutes/features/globalpagination,scheduled/manualcollectors+concurrency,desktop/mobileparity,livecomparablemeasures,jointAWScutover,verifiedsourcedeletion/spacereport/Neonretirement.
-- Suggested current commit: test: verify real native and sparse spatial reconciliation.
+- Suggested current commit: fix: pin local policy routes and inspect complete security catalogue.

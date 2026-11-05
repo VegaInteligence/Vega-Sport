@@ -84,7 +84,7 @@ def run_local(marker,database,actor,mode,policy_id,manifest_sha,acceptance_path=
     if connection_factory is None:
         import psycopg
         connection_factory=psycopg.connect
-    conn=connection_factory(host='127.0.0.1',port=identity['port'],dbname=database,user=actor,autocommit=True,connect_timeout=5,application_name='orion-pro-local-policy-upgrade',options='-c default_transaction_read_only=on -c statement_timeout=8000 -c lock_timeout=1000 -c idle_in_transaction_session_timeout=15000 -c search_path=pg_catalog -c timezone=UTC -c datestyle=ISO,YMD -c extra_float_digits=3')
+    conn=connection_factory(host='127.0.0.1',hostaddr='127.0.0.1',port=identity['port'],dbname=database,user=actor,autocommit=True,connect_timeout=5,application_name='orion-pro-local-policy-upgrade',options='-c default_transaction_read_only=on -c statement_timeout=8000 -c lock_timeout=1000 -c idle_in_transaction_session_timeout=15000 -c search_path=pg_catalog -c timezone=UTC -c datestyle=ISO,YMD -c extra_float_digits=3')
     try:
         policy.require(conn.info.host=='127.0.0.1' and conn.info.port==identity['port'] and conn.info.server_version==180006,'LOCAL','Connection is not the owned local engine/port')
         row=conn.execute("SELECT current_database(),current_user,pg_postmaster_start_time(),current_setting('transaction_read_only'),rolsuper,rolcreaterole,rolcreatedb,rolreplication,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()
