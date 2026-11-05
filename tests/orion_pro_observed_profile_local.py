@@ -59,7 +59,9 @@ def main():
     parser=argparse.ArgumentParser();parser.add_argument('--label',default='captured-profile-precode')
     parser.add_argument('--node24',type=Path,default=DEFAULT_NODE)
     parser.add_argument('--pg-bin',type=Path,default=Path('/tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/darwin-arm64/native/bin'))
+    parser.add_argument('--coordinate-upgrade',action='store_true')
     args=parser.parse_args()
+    cases=[*CASES,*(['P09_coordinate_upgrade_wire'] if args.coordinate_upgrade else [])]
     if not re.fullmatch('[A-Za-z0-9][A-Za-z0-9-]{0,70}',args.label):parser.error('Simple label required')
     run=BASE/'runs'/(datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')+'-'+args.label);inputs=run/'inputs';inputs.mkdir(parents=True)
     report={'kind':'source_free_actual_Node24_retained_physical_profile_e2e','startedAt':datetime.now(timezone.utc).isoformat(),
@@ -78,6 +80,9 @@ def main():
         ROOT/'dashboard/backend/services/partition-wire.js',ROOT/'dashboard/scripts/orion_pro_migrate.py',ROOT/'dashboard/scripts/orion_pro_integrity.py',MODEL,
         PILOT/'harness.py',PILOT/'fixtures.py',ROOT/'docs/verification/orion-pro-readers-20261104/fixture.py']
     paths += [ROOT/'dashboard/backend/migrations'/n for n in ['012_orion_pro_domain.sql','013_orion_pro_integrity.sql','014_orion_pro_membership_nonnull.sql']]
+    overlay=[ROOT/'dashboard/backend/migrations'/n for n in ['015_orion_pro_metric_membership_guard.sql','016_orion_pro_native_match_details.sql']]
+    if args.coordinate_upgrade:
+        paths += [BASE/'COORDINATE_UPGRADE_PROTOCOL.md',*overlay,ROOT/'dashboard/backend/services/orion-pro-match-details.js']
     paths += [ROOT/'dashboard/frontend/src'/name for name in ['model.js','packed_data.js','season_data.js','data-url.js',
         'services/player-profile.js','services/player-aliases.js','services/format.js','services/season-player.js','services/scouting.js','services/club-analysis.js']]
     for path in paths:
@@ -196,7 +201,7 @@ def main():
                 if info.get('event')=='ready':origin=f"http://127.0.0.1:{info['port']}";report['runtimeIdentity']=info['identity'];report['actualServerRuntime']=info['runtime'];runtime_sql+=1;break
         assert origin,'Node24 HTTP startup timeout'
         fixture=AppearanceFixture(admin,pg.dsn,run,psycopg);active=[t['qualified_name'] for s in model['schemas'] for t in s['tables'] if t['phase']!='models']
-        for case in CASES:
+        for case in cases:
             if blocked:report['cases'].append({'case':case,'status':'unverified','reason':blocked});continue
             started=time.monotonic()
             try:
@@ -250,6 +255,23 @@ def main():
                     for request in report['requests']:
                         for query in request['sql']:assert not FORBIDDEN.search(query['sql'] or ''),query['sql']
                     report['externalAttempts']=traces['externalAttempts'];report['finalTypedRows']=sum(admin.execute('SELECT count(*) FROM '+table).fetchone()[0] for table in active);assert report['finalTypedRows']<=8000
+                elif case=='P09_coordinate_upgrade_wire':
+                    path=route(v=values['newDataToken'],limit=100)
+                    before=http(path);okay(before)
+                    first=next(row for row in before['value']['data']['appearances'] if type(row.get('rawPitchX')) in (int,float))
+                    with admin.transaction():
+                        for migration in overlay:
+                            admin.execute(migration.read_text(),prepare=False)
+                            admin.execute('INSERT INTO ingest.schema_migrations VALUES(%s,%s,CURRENT_TIMESTAMP,%s)',(migration.name[:3],sha(migration),'owned_coordinate_upgrade'))
+                    after=http(path);okay(after)
+                    second=next(row for row in after['value']['data']['appearances'] if row['id']==first['id'])
+                    report['coordinateWireComparison']={'fixtureRowId':first['id'],'beforeType':type(first['rawPitchX']).__name__,
+                       'afterType':type(second['rawPitchX']).__name__,'beforeValue':first['rawPitchX'],'afterValue':second['rawPitchX'],
+                       'bodyBytesEqual':before['body']==after['body'],'beforeEtag':before['headers']['etag'],'afterEtag':after['headers']['etag']}
+                    assert type(second['rawPitchX']) in (int,float),'V1 coordinate became a string after016'
+                    assert after['body']==before['body'] and after['headers']['etag']==before['headers']['etag']
+                    for method,headers,status in [('HEAD',None,200),('GET',{'If-None-Match':before['headers']['etag']},304)]:
+                        checked=http(path,method=method,headers=headers);assert checked['status']==status and checked['bytes']==0;metadata(checked)
                 footprint=size(run)+(size(pg.root) if pg else 0);report['observedOwnedDiskBytes']=max(report.get('observedOwnedDiskBytes',0),footprint)
                 assert size(run)<=96*1024*1024 and footprint<=1024**3
                 report['cases'].append({'case':case,'status':'passed','elapsedMs':round((time.monotonic()-started)*1000,3)})
@@ -257,7 +279,7 @@ def main():
                 blocked=f'{case}: {type(exc).__name__}: {exc}';report['cases'].append({'case':case,'status':'failed','reason':blocked});(run/'failure.log').write_text(blocked+'\n')
     except Exception as exc:
         blocked=f'setup: {type(exc).__name__}: {exc}';report['setupFailure']=blocked;(run/'failure.log').write_text(blocked+'\n')
-        done={row['case'] for row in report['cases']};report['cases'] += [{'case':case,'status':'unverified','reason':blocked} for case in CASES if case not in done]
+        done={row['case'] for row in report['cases']};report['cases'] += [{'case':case,'status':'unverified','reason':blocked} for case in cases if case not in done]
     finally:
         signal.setitimer(signal.ITIMER_REAL,0)
         if server:
@@ -275,6 +297,6 @@ def main():
         report['finishedAt']=datetime.now(timezone.utc).isoformat();report['fullAcceptance']=False
         (run/'result.json').write_text(json.dumps(report,indent=2,default=str)+'\n')
     print(json.dumps({'run':str(run),'counts':report['counts'],'SQL':report['externalSQLCalls'],'HTTP':http_count,'cleanup':report['cleanup'],'codePinsUnchanged':report['codePinsUnchanged']}))
-    return 0 if report['counts']=={'passed':8,'failed':0,'unverified':0} and report['codePinsUnchanged'] else 1
+    return 0 if report['counts']=={'passed':len(cases),'failed':0,'unverified':0} and report['codePinsUnchanged'] else 1
 
 if __name__=='__main__':raise SystemExit(main())

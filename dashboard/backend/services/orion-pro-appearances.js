@@ -287,7 +287,8 @@ async function contents(row, args, media) {
     query(`/*orion:appearance:native*/ ${scopeSql}
  SELECT p.performance_id,p.match_public_id,p.match_date::text AS date,p.player_public_id,p.team_public_id,p.team_label,
  p.observed_name,p.external_profile_version_id,p.image_asset_id::text,p.is_starter,p.is_captain,
- p.raw_pitch_x,p.raw_pitch_y,p.coordinate_frame,p.raw_position_code,p.raw_position_code_state,p.raw_position_code_source_number,
+ p.raw_pitch_x::double precision AS raw_pitch_x,p.raw_pitch_y::double precision AS raw_pitch_y,
+ p.coordinate_frame,p.raw_position_code,p.raw_position_code_state,p.raw_position_code_source_number,
  p.shirt_number,p.shirt_number_state,p.shirt_number_source_number,p.quality_flags,p.position_code,
  (SELECT json_agg(json_build_array(substring(n.metric_code FROM 19),n.value_kind,
  CASE WHEN n.value_kind='number' THEN to_json(n.numeric_value::text)
