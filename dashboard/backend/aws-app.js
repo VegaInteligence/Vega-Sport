@@ -13,6 +13,7 @@ import { orionProRoute } from "./services/orion-pro.js";
 import { orionProEntityRoute } from "./services/orion-pro-entities.js";
 import { orionProOperationalRoute } from "./services/orion-pro-operations.js";
 import { orionProAppearanceRoute } from "./services/orion-pro-appearances.js";
+import { orionProFixtureAliasRoute } from "./services/orion-pro-fixture-aliases.js";
 import {
   manifest,
   partitionPage,
@@ -210,6 +211,8 @@ async function route(req) {
       mediaBase: process.env.STATARENA_CLOUDFRONT_URL,
     });
     if (appearance) return appearance;
+    const fixtureAlias = await orionProFixtureAliasRoute(req, path, p);
+    if (fixtureAlias) return fixtureAlias;
     if (!["/api/health", "/api/status", "/api/assets"].includes(path))
       return send(
         req,
