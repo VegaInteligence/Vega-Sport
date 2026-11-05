@@ -42,6 +42,7 @@ on:
       - 'docs/verification/orion-pro-heatmaps-20261104/**'
       - 'docs/verification/orion-pro-bulk-20261104/**'
       - 'docs/verification/orion-pro-real-native-spatial-20261104/**'
+      - 'docs/verification/orion-pro-api-coverage-20261105/**'
   pull_request:
     paths:
       - '.github/workflows/verify-ingestion.yml'
@@ -84,6 +85,7 @@ on:
       - 'docs/verification/orion-pro-heatmaps-20261104/**'
       - 'docs/verification/orion-pro-bulk-20261104/**'
       - 'docs/verification/orion-pro-real-native-spatial-20261104/**'
+      - 'docs/verification/orion-pro-api-coverage-20261105/**'
   workflow_dispatch:
 permissions:
   contents: read
@@ -116,6 +118,7 @@ jobs:
             docs/verification/orion-pro-heatmaps-20261104
             docs/verification/orion-pro-bulk-20261104
             docs/verification/orion-pro-real-native-spatial-20261104
+            docs/verification/orion-pro-api-coverage-20261105
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -196,6 +199,12 @@ jobs:
           python3 tests/orion_pro_frontend_local.py
           --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
           --label ci-${{ github.run_id }}
+      - name: Close unversioned Pro fallbacks and preserve legacy and native HTTP contracts
+        run: >-
+          python3 tests/orion_pro_route_guard_local.py
+          --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
+          --label ci-${{ github.run_id }}
+          --baseline-receipt docs/verification/orion-pro-api-coverage-20261105/runs/20261104T234428216754Z-media-formats-pre-guard-red/result.json
       - name: Preserve reproducible PostgreSQL and CLI evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -217,6 +226,7 @@ jobs:
             docs/verification/orion-pro-heatmaps-20261104/runs/*-ci-*/
             docs/verification/orion-pro-bulk-20261104/runs/*-ci-*/
             docs/verification/orion-pro-real-native-spatial-20261104/runs/*-ci-*/
+            docs/verification/orion-pro-api-coverage-20261105/runs/*-ci-*/
             docs/verification/orion-pro-heatmaps-20261104/native31-regression/runs/*-heatmap-regression/
           if-no-files-found: warn
 

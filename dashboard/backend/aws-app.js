@@ -191,9 +191,23 @@ async function route(req) {
   if (path.startsWith("/data/"))
     reject(410, "Cette route de données a été retirée.");
   if (!path.startsWith("/api/")) missing();
-  if (process.env.STATARENA_PRO_API === "1") {
+  const proMode = process.env.STATARENA_PRO_API === "1";
+  if (proMode) {
     const pro = await orionProRoute(req, path, p);
     if (pro) return pro;
+    if (!["/api/health", "/api/status", "/api/assets"].includes(path))
+      return send(
+        req,
+        {
+          ok: false,
+          available: false,
+          error: {
+            code: "PRO_ROUTE_NOT_IMPLEMENTED",
+            message: "Ces données ne sont pas encore disponibles en mode Pro.",
+          },
+        },
+        501,
+      );
   }
   const name = path.slice(5);
   if (name === "health") {
@@ -259,16 +273,26 @@ async function route(req) {
     const src = p.get("url");
     if (!src || src.length > 2048) reject(400, "URL manquante.");
     const alias = await assetAliases(
-      src,
+      proMode ? `pro-image:${src}` : src,
       async () => {
         const [r] = await query(
-          "SELECT path FROM statarena_app.assets WHERE url=$1",
+          proMode
+            ? "SELECT path,content_type FROM statarena_app.assets WHERE url=$1"
+            : "SELECT path FROM statarena_app.assets WHERE url=$1",
           [src],
         );
         if (
           !r ||
           !immutableFile(r.path) ||
-          !/\.(?:webp|png|jpe?g)$/i.test(r.path)
+          !/\.(?:webp|png|jpe?g)$/i.test(r.path) ||
+          (proMode &&
+            r.content_type !==
+              {
+                webp: "image/webp",
+                png: "image/png",
+                jpg: "image/jpeg",
+                jpeg: "image/jpeg",
+              }[r.path.split(".").at(-1)])
         )
           missing();
         return {
