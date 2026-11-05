@@ -232,6 +232,7 @@ jobs:
             docs/verification/orion-pro-api-coverage-20261105/runs/*-ci-*/
             !docs/verification/orion-pro-api-coverage-20261105/runs/**/runtime/**/node_modules
             !docs/verification/orion-pro-api-coverage-20261105/runs/**/runtime/**/node_modules/**
+            !docs/verification/orion-pro-real-native-spatial-20261104/runs/**/overlay-cli/alias.sql
             docs/verification/orion-pro-heatmaps-20261104/native31-regression/runs/*-heatmap-regression/
           if-no-files-found: warn
 
