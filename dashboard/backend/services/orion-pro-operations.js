@@ -26,6 +26,8 @@ const workflowUrl =
 
 async function health(req, params) {
   validateParams(params, []);
+  if (!configured())
+    return send(req, { source: "AWS", status: "pending", revision: null }, 503);
   const [row] = await query(healthSql);
   const body = {
     source: "AWS",

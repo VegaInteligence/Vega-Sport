@@ -6,6 +6,7 @@ export { cache } from "./cache.js";
 
 let pool;
 const awsMode = () =>
+  process.env.STATARENA_PRO_API === "1" ||
   process.env.STATARENA_DATA_PROVIDER?.toLowerCase() === "aws" ||
   Boolean(process.env.DATABASE_URL);
 const sourceUrl = () =>
