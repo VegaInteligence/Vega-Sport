@@ -107,6 +107,7 @@ def main():
     group=parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--materialize',action='store_true',help='write only the new approved model; offline')
     group.add_argument('--check-model',action='store_true',help='verify exact approved model bytes; offline')
+    group.add_argument('--emit-migration',action='store_true',help='write deterministic016 over exact015; offline')
     group.add_argument('--check',action='store_true',help='verify approved model and deterministic migration bytes; offline')
     args=parser.parse_args()
     model=approved_model(); body=encoded(model)
@@ -116,9 +117,16 @@ def main():
     else:require(MODEL.read_bytes()==body,'Approved model bytes differ')
     result={'kind':'native107_schema_offline_v1','modelPath':str(MODEL.relative_to(ROOT)), 'modelSha256':hashlib.sha256(body).hexdigest(),
             'policyId':POLICY_ID,'pgConnections':0,'networkCalls':0,'sqlQualification':'not_executed'}
-    if args.check:
-        require(MIGRATION.is_file(),'Migration016 not yet implemented')
-        raise ValueError('Deterministic migration compiler not yet implemented')
+    if args.check or args.emit_migration:
+        sys.path.insert(0,str(Path(__file__).resolve().parent))
+        from orion_pro_native107_delta import compile_migration
+        sql = compile_migration()
+        if args.emit_migration and not MIGRATION.exists():
+            with MIGRATION.open('xb') as output:
+                output.write(sql)
+        require(MIGRATION.is_file() and MIGRATION.read_bytes()==sql,'Migration016 differs from exact deterministic SQL')
+        result['migrationSha256']=hashlib.sha256(sql).hexdigest()
+        result['migrationPath']=str(MIGRATION.relative_to(ROOT))
     print(json.dumps(result,ensure_ascii=False,sort_keys=True))
 
 if __name__=='__main__':

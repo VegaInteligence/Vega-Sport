@@ -36,6 +36,9 @@ on:
       - 'tests/orion_pro_*.py'
       - 'tests/orion_node24_runtime.py'
       - 'docs/architecture/orion-plan-20261104/**'
+      - 'docs/architecture/orion-native-details-107-20261105/**'
+      - 'docs/verification/orion-pro-native107-20261105/**'
+      - 'docs/verification/orion-pro-match-core-fields-20261105/**'
       - 'docs/verification/orion-pro-pilot-20261104/**'
       - 'docs/verification/orion-pro-readers-20261104/**'
       - 'docs/verification/orion-pro-frontend-20261104/**'
@@ -92,6 +95,9 @@ on:
       - 'tests/orion_pro_*.py'
       - 'tests/orion_node24_runtime.py'
       - 'docs/architecture/orion-plan-20261104/**'
+      - 'docs/architecture/orion-native-details-107-20261105/**'
+      - 'docs/verification/orion-pro-native107-20261105/**'
+      - 'docs/verification/orion-pro-match-core-fields-20261105/**'
       - 'docs/verification/orion-pro-pilot-20261104/**'
       - 'docs/verification/orion-pro-readers-20261104/**'
       - 'docs/verification/orion-pro-frontend-20261104/**'
@@ -137,6 +143,10 @@ jobs:
             dashboard/shared
             tests
             docs/architecture/orion-plan-20261104
+            docs/architecture/orion-native-details-107-20261105
+            docs/verification/orion-pro-native107-20261105
+            docs/verification/orion-pro-match-details-20261104
+            docs/verification/orion-pro-match-core-fields-20261105
             docs/verification/orion-pro-pilot-20261104
             docs/verification/orion-pro-readers-20261104
             docs/verification/orion-pro-frontend-20261104
@@ -312,6 +322,13 @@ jobs:
             --node24 /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64/bin/node \
             --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin \
             --label ci-${{ github.run_id }}
+      - name: Verify approved native match migrations and immutable observations
+        run: |
+          python3 -I dashboard/scripts/orion_pro_native107_schema.py --check
+          python3 -I dashboard/scripts/orion_pro_native107_core.py --check
+          python3 tests/orion_pro_native107_sql_local.py --run-owned --core-fields017 \
+            --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin \
+            --label native-core-017-ci-${{ github.run_id }}
       - name: Preserve reproducible PostgreSQL and CLI evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -342,6 +359,7 @@ jobs:
             docs/verification/orion-pro-appearances-20261105/runs/*-ci-*/
             docs/verification/orion-pro-fixture-aliases-20261105/runs/*-ci-*/
             docs/verification/orion-pro-competitions-20261105/runs/*-ci-*/
+            docs/verification/orion-pro-native107-20261105/owned-sql-runs/*-ci-*/
             docs/verification/orion-pro-observed-profile-20261105/runs/*-ci-*/
             docs/verification/orion-pro-appearances-regression-20261105/runs/*-ci-*/
             !docs/verification/orion-pro-api-coverage-20261105/runs/**/runtime/**/node_modules
