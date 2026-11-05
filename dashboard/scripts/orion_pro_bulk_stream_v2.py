@@ -25,11 +25,11 @@ import orion_pro_policy as policy
 
 ROOT = Path(__file__).resolve().parents[2]
 BASE = ROOT / 'docs/verification/orion-pro-bulk-stream-v2-local-20261105'
-BINDINGS = BASE / 'BINDINGS.json'
-BINDINGS_SHA = '1678fa2c85f459e374726e70ed35a73a3f45f399a6699997cd90442d486044f7'
+BINDINGS = BASE / 'BINDINGS_V2.json'
+BINDINGS_SHA = '5366f23acf923dd1ec3834cae64d6f9abc04d6b0be0355536fdcd7ab5f0e35d5'
 MODEL = ROOT / 'docs/architecture/orion-plan-20261104/target-schema.proposed.json'
 MATRIX = ROOT / 'docs/verification/orion-pro-bulk-stream-v2-20261105/OWNERSHIP_MATRIX.json'
-VERSION = 'orion_pro_bulk_stream_v2_local_v1'
+VERSION = 'orion_pro_bulk_stream_v2_local_v2'
 FIXTURE_VERSION = 'source_free_stream_v2_fixture_v1'
 FUNCTION_SHA = '30f86fa262fd4cf10307e78431350f25b9d7a5b353d0c76abc0594340edb5d20'
 P1_SHA = '6ecdf33f7084eba21eb31198621a50cd01a53309c303d8c221908c07503e2a92'
@@ -53,7 +53,8 @@ def read_json(path, maximum=1024 ** 2):
 def fixed_bindings():
     require(digest(BINDINGS) == BINDINGS_SHA, 'BINDING', 'Closed local bindings differ')
     binding = read_json(BINDINGS)
-    require(binding['localOnly'] is True and binding['campaignAuthorized'] is False,
+    require(binding['localOnly'] is True and binding['campaignAuthorized'] is False and
+            binding['writerVersion'] == VERSION and binding['controlReceiptVersion'] == 'orion_pro_bulk_stream_v2_phase_v2',
             'BINDING', 'Only the closed local implementation contract is supported')
     for path, expected in binding['inputs'].items():
         candidate = ROOT / path
@@ -138,7 +139,7 @@ class Stream:
         self.scope = set(self.matrix['copiedRelations']) | {'ingest.import_runs'}
         self.order = self.matrix['interTableDependencyOrder']
         self.maps_g, self.maps_s, self.source_runs = {}, {}, {}
-        self.phases, self.phase_contracts, self.source_run_digest = [], {}, {}
+        self.phases, self.phase_contracts, self.source_run_digest, self.phase_rows = [], {}, {}, {}
         self.bootstrap, self.self_order, self.sequence_plan, self.widths = {}, {}, [], {}
         self.target_widths = {}
         self.control_columns = {('ingest.dataset_snapshots', 'generation'): 'generation',
@@ -168,14 +169,20 @@ class Stream:
         self.memory()
 
     def ownership_and_dependencies(self):
-        allowed = ','.join(map(str, [0, *(p['generation'] for p in self.phases)]))
+        self.phase_rows = {p['generation']: 0 for p in self.phases}
         for name, table in self.tables.items():
             if self.widths[name]['rows'] == 0:
                 continue
             owner = self.owner(name)
-            invalid = self.source.execute('SELECT EXISTS(SELECT 1 FROM ' + rel(name) + ' t WHERE (' + owner +
-                                          ') IS NULL OR (' + owner + ') NOT IN (' + allowed + '))').fetchone()[0]
-            require(not invalid, 'PHASE_OWNERSHIP', 'Unresolved or unaccepted source row owner')
+            groups = self.source.execute('SELECT (' + owner + '),count(*) FROM ' + rel(name) +
+                                         ' t GROUP BY 1 LIMIT 66').fetchall()
+            require(len(groups) <= 65 and sum(count for _, count in groups) == self.widths[name]['rows'] and
+                    all(generation in {0, *self.phase_rows} for generation, _ in groups),
+                    'PHASE_OWNERSHIP', 'Unresolved or unaccepted source row owner')
+            if name in self.matrix['copiedRelations']:
+                for generation, count in groups:
+                    if generation != 0:
+                        self.phase_rows[generation] += count
             if 'transform_code_sha256' in table['columns']:
                 invalid = self.source.execute('SELECT EXISTS(SELECT 1 FROM ' + rel(name) + ' t WHERE (' + owner +
                     ')<>0 AND transform_code_sha256 IS DISTINCT FROM %s)', (self.accepted['producerSha256'],)).fetchone()[0]
@@ -204,6 +211,7 @@ class Stream:
             require(work <= 500000 and temporary <= 65536, 'SOURCE_BOUND', 'Ownership server work/temp exceeds the local plan gate')
             self.report['plans'].append({'relation': name, 'mode': 'EXPLAIN_ANALYZE_OWNERSHIP', 'sql': sql,
                                          'actualRows': work, 'tempBlocks': temporary, 'plan': plan})
+        self.report['sourcePhaseCopiedRows'] = self.phase_rows.copy()
         self.memory()
 
     def self_graphs(self):
@@ -324,7 +332,7 @@ class Stream:
             self.target_widths[name] = maximum
 
     def control_binding(self, phase):
-        return {'kind': 'orion_pro_bulk_stream_v2_phase_v1', 'phase': phase['phase'],
+        return {'kind': 'orion_pro_bulk_stream_v2_phase_v2', 'phase': phase['phase'],
                 'writer_sha256': self.accepted['writerSha256'], 'model_sha256': digest(MODEL),
                 'bindings_sha256': digest(BINDINGS), 'pair_sha256': self.pair_sha,
                 'source_native_sha256': self.accepted['sourceNativeSha256'],
@@ -345,12 +353,19 @@ class Stream:
         by_phase = {}
         for row in rows:
             try:
-                require(len(row[9].encode()) <= 16384, 'TARGET_DRIFT', 'Oversized target checkpoint')
+                require(isinstance(row[9], str) and len(row[9].encode()) <= 16384, 'TARGET_DRIFT', 'Missing/oversized target checkpoint')
                 checkpoint = json.loads(row[9], parse_float=Decimal)
                 checksum = checkpoint.pop('receipt_sha256')
                 require(checksum == hashed(checkpoint), 'TARGET_DRIFT', 'Receipt checksum differs')
                 checkpoint['receipt_sha256'] = checksum
                 phase = next(p for p in self.phases if p['phase'] == checkpoint['phase'])
+                require(set(checkpoint) == set(self.control_binding(phase)) | {
+                        'receipt_sha256', 'generation', 'snapshot_id', 'copied_rows', 'transaction_started_at'} and
+                        type(checkpoint['copied_rows']) is int and
+                        checkpoint['copied_rows'] == self.phase_rows[phase['generation']],
+                        'TARGET_DRIFT', 'Checkpoint shape/source-derived row count differs')
+                clock = datetime.fromisoformat(checkpoint['transaction_started_at'])
+                require(clock.tzinfo is not None, 'TARGET_DRIFT', 'Aware native transaction clock required')
                 require(phase['phase'] not in by_phase and
                         row[0] == phase['runId'] and row[1:5] == ('backfill', 'partial', VERSION, self.accepted['writerSha256']) and
                         row[5] is not None and row[6] is not None and row[5] <= row[6] and row[10] is True and
@@ -364,7 +379,7 @@ class Stream:
                 priority, cutoff = self.phase_contracts[phase['generation']]
                 require(snap is not None and snap[:7] == (generation, 'sealed', hashed(checkpoint), VERSION, priority,
                         self.snapshot_key(phase), cutoff) and snap[7] is not None and snap[8] is not None and
-                        snap[7] <= snap[8] and snap[7] <= row[5] <= row[6] <= snap[8],
+                        snap[7] == row[5] == row[6] == snap[8] == clock,
                         'TARGET_DRIFT', 'Destination snapshot/control clocks differ')
                 parameters = json.loads(row[7], parse_float=Decimal)
                 counters = json.loads(row[8], parse_float=Decimal)
@@ -531,6 +546,7 @@ class Stream:
             # All source acceptance/prefix work above precedes the target BEGIN.
             self.target.execute('BEGIN')
             try:
+                transaction_start = self.target.execute('SELECT transaction_timestamp()').fetchone()[0]
                 self.report['applicationStarted'] = True
                 priority, cutoff = self.phase_contracts[phase['generation']]
                 g = self.target.execute('SELECT ingest.begin_generation(%s,%s,%s,%s)',
@@ -555,8 +571,11 @@ class Stream:
                 self.source.commit()
                 self.report['sourceTransactionsClosedBeforeTargetAdmission'] += 1
                 self.verify_business(expected, applying=True)
+                require(self.report['copiedRows'] - start_count == self.phase_rows[phase['generation']],
+                        'PHASE_ORACLE', 'Actual copied row count differs from accepted source ownership')
                 checkpoint = {**self.control_binding(phase), 'generation': g, 'snapshot_id': sid,
-                              'copied_rows': self.report['copiedRows'] - start_count}
+                              'copied_rows': self.report['copiedRows'] - start_count,
+                              'transaction_started_at': transaction_start.isoformat()}
                 checkpoint['receipt_sha256'] = hashed(checkpoint)
                 require(len(canonical(checkpoint).encode()) <= 16384, 'SOURCE_BOUND', 'Regenerated technical receipt exceeds16KiB')
                 counters = {'copied_rows': checkpoint['copied_rows'], 'full_acceptance': False, 'local_only': True}
@@ -594,7 +613,7 @@ class Stream:
 
     def memory(self, *extra):
         objects = (self.model, self.tables, self.matrix, self.rules, self.scope, self.order, self.binding, self.pair, self.accepted, self.report,
-                   self.phases, self.phase_contracts, self.source_run_digest, self.source_runs,
+                   self.phases, self.phase_contracts, self.source_run_digest, self.source_runs, self.phase_rows,
                    self.bootstrap, self.self_order, self.sequence_plan, self.widths, self.target_widths,
                    self.control_columns, self.maps_g, self.maps_s, *extra)
         # Count shared children again, plus2MiB for bounded SQL/driver/iterator metadata.

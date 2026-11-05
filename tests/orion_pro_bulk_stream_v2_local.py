@@ -2,7 +2,7 @@
 """Pre-code complete local streaming E2E; no PG until separate ROOT hash release."""
 from __future__ import annotations
 import argparse
-from datetime import datetime,timezone
+from datetime import datetime,timezone,timedelta
 from decimal import Decimal
 import hashlib
 import importlib.util
@@ -13,10 +13,12 @@ import shutil
 import subprocess
 import sys
 import threading
+import tempfile
 import _thread
 import time
 import traceback
 import types
+from orion_e2e_process import run_bounded
 
 sys.dont_write_bytecode=True
 ROOT=Path(__file__).resolve().parents[1]
@@ -38,6 +40,7 @@ CASES=['implementation_available','campaign_release','owned_setup_and_compact_fi
        'dense_fixture_once','dense_core_commit_interruption','dense_families_rollback_and_resume',
        'dense_native94_and_controls','dense_noop_next_identity','no_publish_source_or_legacy_cleanup',
        'frozen_inputs_and_owned_cleanup']
+CLOSED_ATTEMPT={'docs/verification/orion-pro-bulk-stream-v2-local-20261105/campaign.json': 'b745827156ffdcca511f204e026d59eb770f04c164be3a0b3babb12dea4b8fa2', 'docs/verification/orion-pro-bulk-stream-v2-local-20261105/ROOT_CAMPAIGN_AUTHORIZATION.json': 'df8020bcffe1f78bbc7d8f8cffc2000f0708f103ff14cabb5a664bc662e955fb', 'docs/verification/orion-pro-bulk-stream-v2-local-20261105/attempt-1-closed/HASHES.json': '8cdc5ee9b07595cd4e514a15a1e3256212c0ef5667ae7acc01e452191f0b355e', 'docs/verification/orion-pro-bulk-stream-v2-local-20261105/runs/20261105T092838120236Z-root-exact-controls-compact-then-dense/result.json': '04e9ea78f01f3e44790e0fc3fbc50cb446c2883be815ccd9067bf4df44e1a896', 'docs/verification/orion-pro-bulk-stream-v2-local-20261105/campaign-continuation-v2.json': '1cdc77a2935ede9689dbb5a4427114ec4fbbde151d73386db7d452b63a1a7909', 'docs/verification/orion-pro-bulk-stream-v2-local-20261105/ROOT_CAMPAIGN_CONTINUATION_V2.json': 'c75e6a835b106f7018f386dc039172cd6054e827dc0c32a1b394c7ef8ea0a8b2', 'docs/verification/orion-pro-bulk-stream-v2-local-20261105/attempt-2-closed/HASHES.json': '103e6bd83df70d2ef85c0f95345d4d0f28af4d99aa12ffa77f8998655a5b0f0a', 'docs/verification/orion-pro-bulk-stream-v2-local-20261105/runs/20261105T094145641492Z-root-owned-fixture-restoration-continuation-v2/result.json': 'b3e577198af609291d05843d2dd3bee8423f8b7843abe26c7ad6e4b7eaaed5ab', 'docs/verification/orion-pro-bulk-stream-v2-local-20261105/campaign-continuation-v3.json': '5c03b262a99cdfbd6e7ae91ebc23c4f32426b9cc1a54413131895d86218285cd', 'docs/verification/orion-pro-bulk-stream-v2-local-20261105/ROOT_CAMPAIGN_CONTINUATION_V3.json': 'ff6fd508d296ffae9726b4092e34bd726842a99bec7404160ccc4e261872a2ae', 'docs/verification/orion-pro-bulk-stream-v2-local-20261105/attempt-3-closed/HASHES.json': '1ddf3fa9d7a5619eee8ba8af2a1225ed3290099c95aafc0ab3ce8f4a1cde4b8e', 'docs/verification/orion-pro-bulk-stream-v2-local-20261105/runs/20261105T094747460304Z-root-bootstrap-aware-compact-and-dense-v3/result.json': '30c4e7fd6e85b3cb2c84808f09f69c30a4fe1c0722780a9649a9a1fa0b6a47d3'}
 CONTROL={'ingest.dataset_snapshots','ingest.import_runs','ingest.schema_migrations'}
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def hashed(x):return hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':'),ensure_ascii=False).encode()).hexdigest()
@@ -49,7 +52,7 @@ def q(x):return '"'+x+'"'
 class Budget:
     def __init__(self,pg,run):
         self.pg,self.run=pg,run;self.start=time.monotonic();self.stop=threading.Event();self.reason=None;self.samples=[]
-        self.path=BASE/'campaign.json';assert not self.path.exists(),'Single campaign already consumed'
+        self.path=BASE/'campaign-continuation-v4.json';assert not self.path.exists(),'Single campaign already consumed'
         self.data={'maximumPgStarts':1,'pgStarts':1,'denseSourceConstructions':0,'denseCoreCopies':0,'startedAt':datetime.now(timezone.utc).isoformat()};save(self.path,self.data)
         self.thread=threading.Thread(target=self.watch,daemon=True);self.thread.start()
     def watch(self):
@@ -69,7 +72,7 @@ def main():
     run=BASE/'runs'/(datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')+'-'+args.label);(run/'inputs').mkdir(parents=True)
     model=json.loads(MODEL.read_text());tables={t['qualified_name']:t for s in model['schemas'] for t in s['tables'] if t['phase']!='models'}
     report={'kind':'source_free_stream_v2_local_e2e','startedAt':datetime.now(timezone.utc).isoformat(),'command':['python3','tests/orion_pro_bulk_stream_v2_local.py',*sys.argv[1:]],'expected':'PROTOCOL.md','cases':[],'invocations':[],'sourceSha256':{},'remoteActions':[],'sourceRamReads':0,'fullAcceptance':False,'denseSourceConstructions':0}
-    paths=[Path(__file__),WRITER,BASE/'PROTOCOL.md',BASE/'BINDINGS.json',FIXTURE,ROOT/'tests/orion_pro_bulk_local.py',MODEL,*SQL,SQL14,SCRIPTS/'orion_pro_policy.py',SCRIPTS/'orion_pro_upgrade.py',SCRIPTS/'orion_pro_bulk.py',SCRIPTS/'orion_pro_schema.py',SCRIPTS/'orion_pro_integrity.py',SCRIPTS/'orion_pro_migrate.py',PILOT/'harness.py']
+    paths=[Path(__file__),ROOT/'tests/orion_e2e_process.py',WRITER,BASE/'ROOT_REVISION_PROTOCOL.md',BASE/'ROOT_CAMPAIGN_CONTINUATION_V4.json',BASE/'PROTOCOL.md',BASE/'BINDINGS_V2.json',FIXTURE,ROOT/'tests/orion_pro_bulk_local.py',MODEL,*SQL,SQL14,SCRIPTS/'orion_pro_policy.py',SCRIPTS/'orion_pro_upgrade.py',SCRIPTS/'orion_pro_bulk.py',SCRIPTS/'orion_pro_schema.py',SCRIPTS/'orion_pro_integrity.py',SCRIPTS/'orion_pro_migrate.py',PILOT/'harness.py']
     for path in paths:
         if path.exists():
             dest=run/'inputs'/path.relative_to(ROOT);dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(path,dest);report['sourceSha256'][str(path.relative_to(ROOT))]=sha(path)
@@ -137,9 +140,9 @@ def main():
         for descriptor,connection in [(source_descriptor,source),(target_descriptor,target)]:
             descriptor['journalNativeSha256']=independent(connection)['ingest.schema_migrations']['sha256']
             descriptor['bootstrapNativeText']=connection.execute("SELECT ROW(s.*)::text FROM ingest.dataset_snapshots s WHERE transform_version='bootstrap_v1'").fetchone()[0]
-        pair={'kind':'explicit_stream_v2_local_policy_pair_v1','localOnly':True,'source':source_descriptor,'target':target_descriptor,'writerSha256':sha(WRITER),'bindingSha256':sha(BASE/'BINDINGS.json')}
+        pair={'kind':'explicit_stream_v2_local_policy_pair_v1','localOnly':True,'source':source_descriptor,'target':target_descriptor,'writerSha256':sha(WRITER),'bindingSha256':sha(BASE/'BINDINGS_V2.json')}
         pair_path=run/('pair-'+str(len(list(run.glob('pair-*.json'))))+'.json');save(pair_path,pair)
-        accepted={'kind':'orion_pro_bulk_stream_v2_local_acceptance_v1','localOnly':True,'writerSha256':sha(WRITER),'modelSha256':sha(MODEL),'bindingsSha256':sha(BASE/'BINDINGS.json'),'pairSha256':sha(pair_path),'sourceNativeSha256':hashed(native),'sourceTables':native,'sourceRows':sum(v['rows'] for v in native.values()),'sourcePhases':phases,'producerSha256':producer,'producerVersion':VERSION,'fixtureOrigin':'owned_source_free_fixture','fixtureShape':{'scalarRows':478547 if dense else 1240,'appearances':15437 if dense else 40,'metrics':31,'matches':612 if dense else 4}}
+        accepted={'kind':'orion_pro_bulk_stream_v2_local_acceptance_v1','localOnly':True,'writerSha256':sha(WRITER),'modelSha256':sha(MODEL),'bindingsSha256':sha(BASE/'BINDINGS_V2.json'),'pairSha256':sha(pair_path),'sourceNativeSha256':hashed(native),'sourceTables':native,'sourceRows':sum(v['rows'] for v in native.values()),'sourcePhases':phases,'producerSha256':producer,'producerVersion':VERSION,'fixtureOrigin':'owned_source_free_fixture','fixtureShape':{'scalarRows':478547 if dense else 1240,'appearances':15437 if dense else 40,'metrics':31,'matches':612 if dense else 4}}
         acceptance_path=run/('acceptance-'+str(len(list(run.glob('acceptance-*.json'))))+'.json');save(acceptance_path,accepted);return accepted
     def reset(target_only=False,large=False):
         close_owners()
@@ -163,7 +166,7 @@ def main():
         if fault:cmd+=['--fault',fault]
         close_owners();start=time.monotonic()
         try:
-            got=subprocess.run(cmd,cwd=ROOT,env=env,capture_output=True,text=True,timeout=1200);data=json.loads(output.read_text()) if output.exists() else json.loads(got.stdout)
+            got=run_bounded(cmd,cwd=ROOT,env=env,deadline=budget.start+1200,stop_reason=lambda:budget.reason);data=json.loads(output.read_text()) if output.exists() else json.loads(got.stdout)
         finally:open_owners()
         report['invocations'].append({'command':cmd,'exitCode':got.returncode,'elapsedMs':round((time.monotonic()-start)*1000,3),'report':output.name,'result':data})
         if expected:assert got.returncode!=0 and data.get('reasonCode') in expected,(data.get('reasonCode'),expected)
@@ -180,10 +183,12 @@ def main():
                 if name=='implementation_available':assert WRITER.is_file(),'Streaming v2 implementation is absent';actual={'writerSha256':sha(WRITER)}
                 elif name=='campaign_release':
                     assert args.run_compact_and_dense,'Only pre-code mode is allowed without explicit --run-compact-and-dense'
-                    release=json.loads((BASE/'ROOT_CAMPAIGN_AUTHORIZATION.json').read_text());assert release['status']=='approved_one_dense_campaign' and release['approvedBy']=='ROOT' and release['writerSha256']==sha(WRITER) and release['e2eSha256']==sha(Path(__file__)) and release['bindingsSha256']==sha(BASE/'BINDINGS.json');actual=release
+                    assert all(sha(ROOT/p)==h for p,h in CLOSED_ATTEMPT.items()),'Closed first campaign changed'
+                    release=json.loads((BASE/'ROOT_CAMPAIGN_CONTINUATION_V4.json').read_text());assert release['previousAttempt']==CLOSED_ATTEMPT;assert release['status']=='approved_one_dense_campaign' and release['approvedBy']=='ROOT' and release['writerSha256']==sha(WRITER) and release['e2eSha256']==sha(Path(__file__)) and release['bindingsSha256']==sha(BASE/'BINDINGS_V2.json') and release['processHelperSha256']==sha(ROOT/'tests/orion_e2e_process.py');actual=release
                 elif name=='owned_setup_and_compact_fixture':
                     import psycopg
                     from harness import LocalPostgres
+                    tempfile.tempdir='/tmp' # Keep the owned Unix socket under the platform path limit.
                     pg=LocalPostgres(args.pg_bin,run);budget=Budget(pg,run);pg.command([pg.binaries/'initdb','-D',pg.data,'--auth=trust','--no-locale','--encoding=UTF8'],name='initdb')
                     with (pg.data/'postgresql.conf').open('a') as f:f.write('\nstatement_timeout=8000\nlock_timeout=1000\ntemp_file_limit=512MB\nlog_error_verbosity=terse\nlog_min_error_statement=panic\nlog_parameter_max_length_on_error=0\n')
                     pg.start();admin=connect('postgres',os.environ.get('USER','postgres'));assert admin.info.server_version==180006
@@ -193,7 +198,7 @@ def main():
                         with connect(db) as c:c.execute("CREATE TABLE public.stream_v2_legacy_sentinel(id integer PRIMARY KEY,value text NOT NULL)");c.execute("INSERT INTO public.stream_v2_legacy_sentinel VALUES(1,'legacy unchanged')")
                     marker=pg.root/'stream-v2-marker.json';save(marker,{'kind':'orion_owned_stream_v2_pg18','ownedRoot':str(pg.root),'port':pg.port,'postmasterStartedAt':admin.execute('SELECT pg_postmaster_start_time()::text').fetchone()[0],'sourceDatabase':'policy_facts','targetDatabase':'policy_empty'});marker.chmod(0o600);original_compact();actual={'version':VERSION,'producerSha256':producer,'phases':phases}
                 elif name=='offline_default':
-                    got=subprocess.run(['python3',str(WRITER)],cwd=ROOT,env=env,capture_output=True,text=True,timeout=10);data=json.loads(got.stdout);assert got.returncode==0 and data['status']=='offline_plan' and data['connections']==0;actual=data
+                    got=run_bounded(['python3',str(WRITER)],cwd=ROOT,env=env,deadline=min(budget.start+1200,time.monotonic()+10),stop_reason=lambda:budget.reason);data=json.loads(got.stdout);assert got.returncode==0 and data['status']=='offline_plan' and data['connections']==0;actual=data
                 elif name=='exact_policy_pair_and_ownership':
                     data=invoke();assert data['controlComponents']==106 and data['copyRelations']==74 and data['regeneratedControls']==3 and data['forcedEmptyRelations']==17 and data['ownershipDictionaryRows']==0
                     assert data['plans'] and all(p['mode']=='EXPLAIN_ANALYZE_OWNERSHIP' and p['actualRows']<=500000 and p['tempBlocks']<=65536 for p in data['plans']);assert data['selfGraphTables']==3;actual=data
@@ -227,7 +232,7 @@ def main():
                     actual=data
                 elif name=='unowned_and_forward_source':
                     source.execute("INSERT INTO ingest.import_runs(id,mode,transform_version,code_commit) OVERRIDING SYSTEM VALUE VALUES(99,'backfill',%s,%s)",(VERSION,producer));bind();a=invoke(expected={'SOURCE_RECEIPT'});source.execute('DELETE FROM ingest.import_runs WHERE id=99')
-                    source.execute("INSERT INTO ingest.document_lineage(derived_document_id,parent_document_id,transform_version) VALUES(11,31,%s)",(VERSION,));bind();b=invoke(expected={'PHASE_OWNERSHIP'});source.execute('DELETE FROM ingest.document_lineage WHERE derived_document_id=11 AND parent_document_id=31');bind();actual={'unownedRun':a,'futureParent':b}
+                    source.execute("INSERT INTO ingest.document_lineage(derived_document_id,parent_document_id,transform_version) VALUES(11,31,%s)",(VERSION,));bind();b=invoke(expected={'PHASE_OWNERSHIP'});original_compact();actual={'unownedRun':a,'futureParent':b,'restore':'Recreate the two owned compact fixture schemas; immutable source guard remains enabled'}
                 elif name=='reservation_bounds':
                     source.execute("INSERT INTO ingest.sources(id,code,name) OVERRIDING SYSTEM VALUE VALUES(1000001,'bound','bound')");bind();before=state(target);data=invoke(expected={'RESERVATION_BOUND'});assert state(target)==before;original_compact();actual=data
                 elif name=='bounded_self_graph_and_native_cycle':
@@ -244,7 +249,40 @@ def main():
                     reset(True);before=state(target);fault={'wrong_control_component':'wrong-generation-map','corruption_phase_oracle':'corrupt-first-fact','compact_mid_copy_rollback_gaps':'after-copy-batches:2','compact_deadline_rollback':'before-seal-timeout'}[name];expected={'wrong_control_component':{'NATIVE_FK','PHASE_ORACLE'},'corruption_phase_oracle':{'PHASE_ORACLE'},'compact_mid_copy_rollback_gaps':{'INJECTED_FAILURE'},'compact_deadline_rollback':{'NATIVE_TIMEOUT'}}[name]
                     data=invoke(True,fault,expected);after=state(target);assert after['tables']==before['tables'];assert all(after['sequences'][s][0]>=v[0] for s,v in before['sequences'].items());actual={'failed':data,'rollbackNativeTablesExact':True,'sequenceGapsNotReset':True}
                 elif name=='compact_control_receipt_corruption':
-                    reset(True);done=invoke(True);before=state(target);target.execute("UPDATE ingest.import_runs SET checkpoint=checkpoint||'{\"receipt_sha256\":\"bad\"}'::jsonb WHERE id=7");data=invoke(expected={'TARGET_DRIFT'});assert done['status']=='applied';reset(True);actual={'receiptRefusal':data,'beforeCorruption':before['tables']['ingest.import_runs']}
+                    reset(True);done=invoke(True);before=state(target)
+                    row=target.execute("SELECT checkpoint::text,counters::text,started_at,finished_at FROM ingest.import_runs WHERE id=7").fetchone()
+                    checkpoint=json.loads(row[0]);counters=json.loads(row[1]);sid=checkpoint['snapshot_id']
+                    snap=target.execute('SELECT manifest_sha256,created_at,sealed_at FROM ingest.dataset_snapshots WHERE id=%s',(sid,)).fetchone()
+                    def install_control(cp,ct,clocks,manifest):
+                        # Owner-corruption fixture only; restore exact guard before the real worker observes it.
+                        with target.transaction():
+                            target.execute('ALTER TABLE ingest.dataset_snapshots DISABLE TRIGGER pro_typed_guard')
+                            target.execute('UPDATE ingest.import_runs SET checkpoint=%s::jsonb,counters=%s::jsonb,started_at=%s,finished_at=%s WHERE id=7',(json.dumps(cp),json.dumps(ct),clocks[0],clocks[1]))
+                            target.execute('UPDATE ingest.dataset_snapshots SET manifest_sha256=%s,created_at=%s,sealed_at=%s WHERE id=%s',(manifest,clocks[2],clocks[3],sid))
+                            target.execute('ALTER TABLE ingest.dataset_snapshots ENABLE TRIGGER pro_typed_guard')
+                    failures={}
+                    for variant in ['bad_checksum','unknown_checkpoint_field','fabricated_count','missing_clock','ordered_unequal_clocks']:
+                        cp=dict(checkpoint);ct=dict(counters);clocks=[row[2],row[3],snap[1],snap[2]]
+                        if variant=='unknown_checkpoint_field':cp['unexpected_field']='synthetic_owner_corruption'
+                        elif variant=='fabricated_count':cp['copied_rows']+=1;ct['copied_rows']=cp['copied_rows']
+                        elif variant=='missing_clock':cp.pop('transaction_started_at')
+                        elif variant=='ordered_unequal_clocks':
+                            clocks=[row[2]-timedelta(microseconds=3),row[3]-timedelta(microseconds=2),snap[1]-timedelta(microseconds=4),snap[2]-timedelta(microseconds=1)]
+                            assert clocks[2]<clocks[0]<clocks[1]<clocks[3]
+                        cp.pop('receipt_sha256',None);cp['receipt_sha256']=hashed(cp)
+                        if variant=='bad_checksum':cp['receipt_sha256']='bad'
+                        try:
+                            install_control(cp,ct,clocks,hashed(cp));failures[variant]=invoke(expected={'TARGET_DRIFT'})['reasonCode']
+                        finally:install_control(checkpoint,counters,[row[2],row[3],snap[1],snap[2]],snap[0])
+                        assert state(target)==before
+                    noop=invoke(True);assert noop['status']=='noop' and noop['copyCommands']==noop['nextvalCalls']==0 and state(target)==before
+                    matrix=json.loads((ROOT/'docs/verification/orion-pro-bulk-stream-v2-20261105/OWNERSHIP_MATRIX.json').read_text())
+                    source_native=independent(source);source_physical=sum(source_native[n]['rows'] for n in matrix['copiedRelations'])
+                    bootstrap_copied=sum(len(rows) for n,rows in model['seed_data'].items() if n in matrix['copiedRelations'])+(len(model['bootstrap']['relation_contracts']) if 'ingest.relation_contracts' in matrix['copiedRelations'] else 0)
+                    source_copied=source_physical-bootstrap_copied
+                    target_copied=target.execute("SELECT sum((counters->>'copied_rows')::bigint) FROM ingest.import_runs").fetchone()[0]
+                    assert target_copied==source_copied
+                    actual={'ownerCorruptionRefusals':failures,'restoredNative94AndSequencesExact':True,'noop':noop,'sourcePhysicalRowsInCopiedRelations':source_physical,'bootstrapRowsPreservedWithoutCopy':bootstrap_copied,'sourceCopiedRows':source_copied,'targetCopiedRows':target_copied}
                 elif name=='compact_lost_commit_ack':
                     reset(True);lost=invoke(True,'after-commit-ack',{'COMMIT_ACK_UNKNOWN'});prefix=state(target);assert prefix['tables']['football.player_match_metric_values']['rows']==1240
                     done=invoke(True);assert done['reusedPhases']==1 and done['copiedScalarRows']==0;actual={'unknownAck':lost,'freshNativePrefixResume':done}
@@ -256,7 +294,7 @@ def main():
                             g=c.execute("SELECT ingest.begin_generation('closed-fixture','closed_test','closed_test')").fetchone()[0]
                             row=c.execute("SELECT revision_id FROM football.player_match_metric_values WHERE value_kind='number' AND metric_code<>'a_ratio' LIMIT 1").fetchone()[0]
                             c.execute('UPDATE football.player_match_metric_values SET recorded_to_gen=%s WHERE revision_id=%s',(g,row))
-                            columns=list(tables['football.player_match_metric_values']['columns']);projection=[('%s' if k=='recorded_from_gen' else 'NULL' if k=='recorded_to_gen' else "nextval('football.player_match_metric_values_revision_id_seq')" if k=='revision_id' else 'numeric_value+1' if k=='numeric_value' else q(k)) for k in columns]
+                            columns=[column for column in tables['football.player_match_metric_values']['columns'] if column!='revision_id'];projection=[('%s' if k=='recorded_from_gen' else 'NULL' if k=='recorded_to_gen' else "nextval('football.player_match_metric_values_revision_id_seq')" if k=='revision_id' else 'numeric_value+1' if k=='numeric_value' else q(k)) for k in columns]
                             c.execute('INSERT INTO football.player_match_metric_values('+','.join(map(q,columns))+') SELECT '+','.join(projection)+' FROM football.player_match_metric_values WHERE revision_id=%s',(g,row));c.execute('SELECT ingest.seal_generation(%s,%s)',(g,'f'*64))
                     bind();data=invoke(expected={'CLOSED_HISTORY'});original_compact();actual=data
                 elif name=='compact_exact_native_oracle':
@@ -290,7 +328,7 @@ def main():
                     for c in [source,target]:assert list(c.execute('SELECT * FROM public.stream_v2_legacy_sentinel'))==[(1,'legacy unchanged')]
                     assert not list(run.rglob('*.dump')) and not list(run.rglob('*.csv'));assert all(x['result']['externalRequests']==0 and x['result']['temporaryTablesCreated']==0 for x in report['invocations']);actual={'publicationPointersEmpty':True,'legacySentinelsExact':True,'rawBodiesOrCollectorCalls':0,'sourceRamCalls':0}
                 elif name=='frozen_inputs_and_owned_cleanup':
-                    assert all(sha(ROOT/path)==h for path,h in report['sourceSha256'].items());assert report['denseSourceConstructions']==1;assert report['denseFinalImport']['maxMetadataBytes']<=32*1024**2 and report['denseFinalImport']['maxBufferedBytes']<=16*1024**2;actual={'allInputsUnchanged':True,'singleDenseSourceConstruction':True,'boundsRespected':True}
+                    assert all(sha(ROOT/path)==h for path,h in report['sourceSha256'].items()) and all(sha(ROOT/path)==h for path,h in CLOSED_ATTEMPT.items());assert report['denseSourceConstructions']==1;assert report['denseFinalImport']['maxMetadataBytes']<=32*1024**2 and report['denseFinalImport']['maxBufferedBytes']<=16*1024**2;actual={'allInputsUnchanged':True,'singleDenseSourceConstruction':True,'boundsRespected':True}
                 report['cases'].append({'case':name,'status':'pass','elapsedMs':round((time.monotonic()-started)*1000,3),'actual':actual})
             except BaseException as e:
                 blocker=name;report['cases'].append({'case':name,'status':'fail','error':{'type':type(e).__name__,'sqlstate':getattr(e,'sqlstate',None),'message':str(e) if isinstance(e,AssertionError) else 'Owned workflow failed; inspect traceback'}});(run/'failure-traceback.txt').write_text(traceback.format_exc())
@@ -298,7 +336,13 @@ def main():
         close_owners()
         if admin:admin.close()
         if budget:report['resourceBudget']=budget.close(not blocker)
-        report['cleanup']=pg.cleanup() if pg else {'server_stopped':True,'owned_directory_removed':True,'pgStarted':False};report['counts']={s:sum(c['status']==s for c in report['cases']) for s in ['pass','fail','unverified']};report['status']='pass' if not blocker and not args.precode_only else 'fail' if blocker else 'static_only';report['finishedAt']=datetime.now(timezone.utc).isoformat();save(run/'result.json',report);print(json.dumps({'status':report['status'],'counts':report['counts'],'receipt':str((run/'result.json').relative_to(ROOT)),'sha256':sha(run/'result.json'),'pgStarted':pg is not None,'remoteActions':[]}))
+        try:report['cleanup']=pg.cleanup() if pg else {'server_stopped':True,'owned_directory_removed':True,'pgStarted':False}
+        except BaseException as error:
+            report['cleanup']={'server_stopped':False,'owned_directory_removed':False,'errorType':type(error).__name__,'owned_root':str(pg.root) if pg else None};blocker=blocker or 'owned_cleanup'
+        report['counts']={s:sum(c['status']==s for c in report['cases']) for s in ['pass','fail','unverified']}
+        passed=report['counts']=={'pass':29,'fail':0,'unverified':0} and report['cleanup']['server_stopped'] and report['cleanup']['owned_directory_removed'] and (budget is None or budget.reason is None)
+        report['status']='pass' if passed else 'static_only' if args.precode_only and not blocker else 'fail'
+        report['finishedAt']=datetime.now(timezone.utc).isoformat();save(run/'result.json',report);print(json.dumps({'status':report['status'],'counts':report['counts'],'receipt':str((run/'result.json').relative_to(ROOT)),'sha256':sha(run/'result.json'),'pgStarted':pg is not None,'remoteActions':[]}))
     return 0 if report['status']=='pass' else 1
 
 if __name__=='__main__':raise SystemExit(main())
