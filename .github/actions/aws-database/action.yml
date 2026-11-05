@@ -2,7 +2,7 @@ name: Configure StatArena AWS database
 description: Load scoped RDS credentials and the regional trust bundle for this job.
 inputs:
   mode:
-    description: "ingest for staging/publishing, runtime for read-only monitoring"
+    description: "typed-ingest for typed RDS ingestion, ingest for temporary legacy staging, runtime for read-only monitoring"
     required: true
   role-arn:
     description: AWS IAM role trusted for this workflow and ref

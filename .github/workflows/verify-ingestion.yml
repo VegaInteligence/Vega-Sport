@@ -45,6 +45,7 @@ on:
       - 'docs/verification/orion-pro-api-coverage-20261105/**'
       - 'docs/verification/orion-validator-membership-20261105/**'
       - 'docs/verification/orion-real-spatial-digest-20261105/**'
+      - 'docs/verification/orion-typed-worker-20261105/**'
   pull_request:
     paths:
       - '.github/workflows/verify-ingestion.yml'
@@ -90,6 +91,7 @@ on:
       - 'docs/verification/orion-pro-api-coverage-20261105/**'
       - 'docs/verification/orion-validator-membership-20261105/**'
       - 'docs/verification/orion-real-spatial-digest-20261105/**'
+      - 'docs/verification/orion-typed-worker-20261105/**'
   workflow_dispatch:
 permissions:
   contents: read
@@ -279,6 +281,8 @@ jobs:
           python docs/verification/aws-actions-20261104/verify.py ci
       - name: Exercise temporary runner ingress and post cleanup
         run: python docs/verification/aws-actions-20261104/ingress_e2e.py ingress-ci
+      - name: Verify typed RDS worker credential scope
+        run: python3 docs/verification/orion-typed-worker-20261105/e2e.py --label ci-${{ github.run_id }}
       - name: Execute scheduled and manual football collection plans
         run: python docs/verification/aws-workflow-consolidation-20261104/verify_plan.py ci
       - name: Save AWS Actions verification receipts
@@ -290,6 +294,7 @@ jobs:
             docs/verification/aws-actions-20261104/ci/results.json
             docs/verification/aws-actions-20261104/ingress-ci/results.json
             docs/verification/aws-workflow-consolidation-20261104/ci.json
+            docs/verification/orion-typed-worker-20261105/runs/*-ci-*/
           if-no-files-found: warn
 
   relational:

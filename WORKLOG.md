@@ -29,8 +29,9 @@
 
 ## Active work and next
 - ROOT: realv2 committed73cd2e6d5b; guardsc1695ff574 pushed,129current/253historical artifacts verified. Publicreadback13/13,12HTTP,359249B,HEAD/304body0 at bothVercelaliases+AWS; deployment74ea3f76de stillREADY. Distinct Vercelbridge/AWSmanifests remain; no typedcutover. Review/integrate next receipts. Never complete goal at pilot.
+- ROOT typedworker: new typed-ingest RDS-only access10/10 realCLI/loopbackSSM cases,1SSMparameter vs2,0S3credentials/7vars vs17. OriginalRED retained; same testbytes. Added source-freeCIstep. LiveGitHub11workflows disabled,onlyCI/DependencyGraphactive;no runningcollector. No mode switch/dispatch/liveAWS/RDS in this lot.
 - Source Sol: approved test-first RDS adapter missing-codeRED then ONE local2DB/600s compact campaign; offline/remoteRO interface only,NO cloud/SSM/RDS/source/RAM. Future freshRDSnative owners/ACL/adminflags/clocks/67seq require separate boundedROrelease,then later014write release.
 - Publisher Sol: approved allS01–S14pre-code oracle amendments/ONEcompletePG+API+roles+deadlines run,unchangedcaps. Preserve3oldsetupfailures; publisher absent until genuine missinghelperRED and ROOTreview. No schema/grants/deploy/source.
 - Streaming Sol: approved PLAN/PROTOCOL,E2Ebeforecode/missingRED,newv2implementation/staticpairbindings. No PG yet; ROOTreview then ONE compact-then-dense20min campaign. Oldv1/scaffold/policies/design immutable.74COPY/3controls/17empty,IDpreserved,32MiBmeta16MiBtransport,sourceRRclosedbeforetargetoracle/seal;noTEMP/index/grants.
 - Open: fullnative schema/field/state reconciliation,typedstreaming/RDSdata,admission/publications/dependencies,remainingroutes/features/globalpagination,scheduled/manualcollectors+concurrency,desktop/mobileparity,livecomparablemeasures,jointAWScutover,verifiedsourcedeletion/spacereport/Neonretirement.
-- Suggested current commit: test: verify deployed frontend aliases and public API availability.
+- Suggested current commit: feat: add RDS-only typed ingestion worker credentials.

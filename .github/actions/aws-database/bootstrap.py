@@ -35,15 +35,21 @@ def field(record, name):
 
 
 def bootstrap(mode):
-    if mode not in ("ingest", "runtime"):
+    if mode not in ("ingest", "typed-ingest", "runtime"):
         raise ValueError("Unknown database access mode")
-    db = parameter("rds-" + mode)
+    db = parameter("rds-" + ("ingest" if mode == "typed-ingest" else mode))
     host, database, user, password = (field(db, key) for key in ("host", "database", "username", "password"))
     if not re.fullmatch(r"[a-z0-9-]+\.[a-z0-9]+\.us-east-2\.rds\.amazonaws\.com", host) or database != "statarena_prod":
         raise ValueError("Unexpected RDS instance or database")
     port = int(db.get("port", 5432))
     if not 1 <= port <= 65535:
         raise ValueError("Invalid database port")
+    if mode == "typed-ingest" and (
+        host != "statarena-postgres.clcy2iqyajbl.us-east-2.rds.amazonaws.com"
+        or port != 5432
+        or user != "statarena_ingest"
+    ):
+        raise ValueError("Unexpected typed ingestion target or actor")
     url = f"postgresql://{quote(user, safe='')}:{quote(password, safe='')}@{host}:{port}/{database}?sslmode=verify-full"
     cert = Path(os.environ["GITHUB_WORKSPACE"]) / "dashboard/backend/certs/rds-us-east-2.pem"
     ssl.create_default_context(cafile=str(cert))
