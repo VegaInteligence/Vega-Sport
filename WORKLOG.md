@@ -2,6 +2,7 @@
 
 ## Resume — 5 Nov evening
 - Resumed after the pause checkpoint 907eaf066e (goal paused in Codex; resumed with Claude). First lot: wire the four FIFA/UEFA ranking routes into the actual router. No deployment, collection, RDS write, data move or deletion in this lot.
+- Second lot (real core import): root cause of both failed RDS015 imports is the writer's own 8 s seal limit on t4g.micro (work_mem 4 MB; autovacuum truncated the rolled-back heaps, ~711 MB index left). New writer real_v4 = frozen v3 source/COPY/prefix + qualified 017 overlay + transaction-local seal/COMMIT budget (300 s, work_mem 64 MB); no migration/grant/model change. RDS017 RO readback verified (0 runs, B0 only); source core-recovery-v6 READY 7/7; operations/core-v2 preflight passed 74.9 s. Apply awaits explicit user approval for the production write. See transport-real-v4/PROTOCOL.md.
 
 ## Goal and constraints
 - Finish StatArena on AWS/RDS + Vercel/CloudFront. Minimal real typed import and working backend take priority; reconcile the full corpus in parallel. Preserve sources until full reconciliation and verified deletion. Objective: /Users/lemonnierhugo/.codex/attachments/8c5d9c3d-762b-403f-99ef-58a795217f50/goal-objective.md plus later user steering.
