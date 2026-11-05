@@ -34,6 +34,7 @@ on:
       - 'tests/daily_refresh_postgres.py'
       - 'tests/test_daily_refresh.py'
       - 'tests/orion_pro_*.py'
+      - 'tests/orion_node24_runtime.py'
       - 'docs/architecture/orion-plan-20261104/**'
       - 'docs/verification/orion-pro-pilot-20261104/**'
       - 'docs/verification/orion-pro-readers-20261104/**'
@@ -88,6 +89,7 @@ on:
       - 'tests/daily_refresh_postgres.py'
       - 'tests/test_daily_refresh.py'
       - 'tests/orion_pro_*.py'
+      - 'tests/orion_node24_runtime.py'
       - 'docs/architecture/orion-plan-20261104/**'
       - 'docs/verification/orion-pro-pilot-20261104/**'
       - 'docs/verification/orion-pro-readers-20261104/**'
@@ -162,6 +164,12 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: '1.4.4'
+      - name: Verify official pinned Node24 runtime for exact numeric JSON
+        run: |
+          mkdir -p /tmp/statarena-node24-runtime/v24.22.2
+          curl --fail --location --retry 2 https://nodejs.org/dist/v24.22.2/node-v24.22.2-linux-x64.tar.xz --output /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64.tar.xz
+          printf '%s  %s\n' 48cc0e21e048790e54c0cf5749c2725005313d652651c40b7a21feb9697aaf75 /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64.tar.xz | sha256sum --check
+          tar -xJf /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64.tar.xz -C /tmp/statarena-node24-runtime/v24.22.2
       - name: Install local PostgreSQL and Python dependencies
         run: |
           python -m pip install --target /tmp/statarena-ci-python -r dashboard/scripts/neon-requirements.txt
@@ -260,6 +268,24 @@ jobs:
       - name: Refuse Neon fallback for unconfigured Pro runtime on Node24
         run: >-
           python3 tests/orion_pro_runtime_origin_local.py
+          --label ci-${{ github.run_id }}
+      - name: Read all typed appearance pages with original22 scenarios
+        run: >-
+          python3 tests/orion_pro_appearances_regression_local.py
+          --node24 /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64/bin/node
+          --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
+          --label ci-${{ github.run_id }}
+      - name: Preserve closed physical profiles through catalogue corrections
+        run: >-
+          python3 tests/orion_pro_observed_profile_local.py
+          --node24 /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64/bin/node
+          --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
+          --label ci-${{ github.run_id }}
+      - name: Read versioned date and league fixture aliases
+        run: >-
+          python3 tests/orion_pro_fixture_aliases_local.py
+          --node24 /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64/bin/node
+          --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
           --label ci-${{ github.run_id }}
       - name: Preserve reproducible PostgreSQL and CLI evidence
         if: always()

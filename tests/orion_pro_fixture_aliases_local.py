@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+from orion_node24_runtime import verify_node24_runtime
 import re
 import select
 import shutil
@@ -53,7 +54,7 @@ def main():
         'sqlCountingRule':'External execute/COPY calls; internal stored-function statements are not counted separately',
         'limitations':['Synthetic local backend/consumer acceptance only, not hosted/real-data/full-source/production latency acceptance',
                        'Each v names one edition; a global day requires explicit edition traversal; no real-data/hosted cutover acceptance']}
-    paths=[Path(__file__),BASE/'PROTOCOL.md',ROOT/'dashboard/backend/services/orion-pro-appearances.js',ORIGINAL/'http_server.mjs',ORIGINAL/'runtime/DOWNLOAD.json',ROOT/'tests/orion_pro_appearances_local.py',
+    paths=[Path(__file__),ROOT/'tests/orion_node24_runtime.py',ROOT/'docs/verification/orion-pro-appearances-20261105/runtime/SHASUMS256.txt',ROOT/'dashboard/backend/services/orion-pro-fixture-aliases.js',BASE/'PROTOCOL.md',ROOT/'dashboard/backend/services/orion-pro-appearances.js',ORIGINAL/'http_server.mjs',ORIGINAL/'runtime/DOWNLOAD.json',ROOT/'tests/orion_pro_appearances_local.py',
         FIRST/'entity_fixture.py',BATCH/'media_fixture.py',ROOT/'dashboard/backend/aws-app.js',PRODUCT,
         ROOT/'dashboard/backend/services/orion-pro.js',ROOT/'dashboard/backend/services/orion-pro-entities.js',ROOT/'dashboard/backend/services/orion-pro-operations.js',
         ROOT/'dashboard/backend/services/postgres.js',ROOT/'dashboard/backend/services/database-connection.js',ROOT/'dashboard/backend/services/cache.js',
@@ -135,8 +136,8 @@ def main():
     try:
         runtime=json.loads(subprocess.check_output([str(args.node24),'-p','JSON.stringify({version:process.version,arch:process.arch,platform:process.platform,rawJSON:typeof JSON.rawJSON})'],text=True,env=clean_env))
         assert runtime['version']=='v24.22.2' and runtime['rawJSON']=='function';report['nodeRuntime']=runtime
-        receipt=json.loads((ORIGINAL/'runtime/DOWNLOAD.json').read_text());archive=Path(receipt['binary']).parents[2]/('node-'+runtime['version']+'-darwin-arm64.tar.xz')
-        assert sha(archive)==receipt['officialSha256'];report['runtimeArchiveVerified']=True
+        report['runtimeVerification']=verify_node24_runtime(args.node24,runtime,ROOT/'docs/verification/orion-pro-appearances-20261105/runtime/SHASUMS256.txt')
+        report['runtimeArchiveVerified']=True
         model=json.loads(MODEL.read_text());assert sha(MODEL)=='18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08'
         pg=OwnedPG(args.pg_bin,run);pg.start()
         admin=BudgetConnection(psycopg.connect(pg.dsn,sslmode='disable',gssencmode='disable',passfile=str(empty_passfile),autocommit=True))
