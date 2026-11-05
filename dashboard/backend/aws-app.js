@@ -10,6 +10,7 @@ import { getSupporting } from "./services/relational-support.js";
 import { getCatalog, getProfile } from "./services/relational-catalog.js";
 import { cloudFrontObjectUrl, immutableFile } from "./services/cdn.js";
 import { orionProRoute } from "./services/orion-pro.js";
+import { orionProEntityRoute } from "./services/orion-pro-entities.js";
 import {
   manifest,
   partitionPage,
@@ -195,6 +196,10 @@ async function route(req) {
   if (proMode) {
     const pro = await orionProRoute(req, path, p);
     if (pro) return pro;
+    const entity = await orionProEntityRoute(req, path, p, {
+      mediaBase: process.env.STATARENA_CLOUDFRONT_URL,
+    });
+    if (entity) return entity;
     if (!["/api/health", "/api/status", "/api/assets"].includes(path))
       return send(
         req,
