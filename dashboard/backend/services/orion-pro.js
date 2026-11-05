@@ -672,3 +672,6 @@ export async function orionProRoute(req, path, params) {
   tokenBuild(params.get("v"));
   return read();
 }
+
+/** Shared with the season read-model routes: the same published-build resolution and tokens. */
+export { representations as proRepresentations, tokenBuild as proTokenBuild };

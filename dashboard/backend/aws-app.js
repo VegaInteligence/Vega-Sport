@@ -22,6 +22,7 @@ import { orionProPlayerStatisticsRoute } from "./services/orion-pro-player-stati
 import { orionProMatchStatisticsRoute } from "./services/orion-pro-match-statistics.js";
 import { orionProSpatialAdvancedRoute } from "./services/orion-pro-spatial-advanced.js";
 import { orionProRankingsRoute } from "./services/orion-pro-rankings.js";
+import { orionProSeasonRoute } from "./services/orion-pro-season.js";
 import {
   manifest,
   partitionPage,
@@ -241,6 +242,8 @@ async function route(req) {
     if (enrichment) return enrichment;
     const rankings = await orionProRankingsRoute(req, path, p);
     if (rankings) return rankings;
+    const season = await orionProSeasonRoute(req, path, p);
+    if (season) return season;
     if (!["/api/health", "/api/status", "/api/assets"].includes(path))
       return send(
         req,
