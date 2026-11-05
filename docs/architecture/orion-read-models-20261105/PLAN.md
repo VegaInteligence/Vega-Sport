@@ -84,6 +84,8 @@ constraint, grant, table or column changes. Adoption follows the 016/017 pattern
 
 ## 4. API routes (new)
 
+Implemented 6 Nov with query parameters instead of path segments (seasons contain `/`): `/api/editions/table`, `/api/editions/players`, `/api/editions/cohort`, `/api/editions/team` (all `?league&season[&v]`) and `/api/players/seasons?player`. `/api/players/{id}/matches`, `/api/home` and `/api/search` remain to do.
+
 Every route takes `v=pro1.<build>.<digest>`. Each one is GET/HEAD, serves ETag and 304,
 and is cached by CloudFront (immutable when `v` is pinned). Targets per request: at most
 3 SQL statements, no more than 300 ms of database time on the t4g.micro, no more than
