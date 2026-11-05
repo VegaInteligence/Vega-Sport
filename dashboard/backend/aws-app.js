@@ -12,6 +12,7 @@ import { cloudFrontObjectUrl, immutableFile } from "./services/cdn.js";
 import { orionProRoute } from "./services/orion-pro.js";
 import { orionProEntityRoute } from "./services/orion-pro-entities.js";
 import { orionProOperationalRoute } from "./services/orion-pro-operations.js";
+import { orionProAppearanceRoute } from "./services/orion-pro-appearances.js";
 import {
   manifest,
   partitionPage,
@@ -205,6 +206,10 @@ async function route(req) {
       mediaBase: process.env.STATARENA_CLOUDFRONT_URL,
     });
     if (entity) return entity;
+    const appearance = await orionProAppearanceRoute(req, path, p, {
+      mediaBase: process.env.STATARENA_CLOUDFRONT_URL,
+    });
+    if (appearance) return appearance;
     if (!["/api/health", "/api/status", "/api/assets"].includes(path))
       return send(
         req,

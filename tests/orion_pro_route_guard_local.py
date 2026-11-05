@@ -24,7 +24,7 @@ READERS=ROOT/'docs/verification/orion-pro-readers-20261104'
 PILOT=ROOT/'docs/verification/orion-pro-pilot-20261104'
 MODEL=ROOT/'docs/architecture/orion-plan-20261104/target-schema.proposed.json'
 MODEL_SHA='18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08'
-SERVICE_NAMES=['orion-pro.js','orion-pro-entities.js','orion-pro-operations.js','postgres.js','database-connection.js','metrics.js','cache-policy.js','cache.js',
+SERVICE_NAMES=['orion-pro.js','orion-pro-entities.js','orion-pro-operations.js','orion-pro-appearances.js','postgres.js','database-connection.js','metrics.js','cache-policy.js','cache.js',
  'relational-match.js','relational-support.js','relational-catalog.js','cdn.js','relational-core.js','partition-wire.js',
  'catalog-model.json','support-model.json']
 WRAPPERS={'relational-core':['manifest','partitionPage','fixturePage','summary','scouting'],
@@ -32,7 +32,7 @@ WRAPPERS={'relational-core':['manifest','partitionPage','fixturePage','summary',
  'relational-catalog':['getCatalog','getProfile'],'relational-support':['getSupporting']}
 STABLE_HEADERS=['etag','cache-control','cdn-cache-control','vercel-cdn-cache-control','x-orion-representation','content-type','location','allow']
 HEAVY=re.compile(r'\bfootball\.(shots|match_heatmaps|match_heatmap_cells|pass_networks|pass_network_nodes|pass_network_edges)\b',re.I)
-CASES=['owned_runtime','positive_legacy_off','unsupported_get_remaining41','unsupported_head_remaining41','unsupported_conditional_remaining41','typed_entity_frontier',
+CASES=['owned_runtime','positive_legacy_off','unsupported_get_remaining40','unsupported_head_remaining40','unsupported_conditional_remaining40','typed_entity_frontier','typed_appearance_frontier',
  'closed_unknown_and_versioned','generic_path_method','operational_exceptions','media_valid','media_bad_path','media_bad_mime','media_cache_mode_isolation',
  'native_v1_golden_bytes','native_cold_head_304','correction_publication','old_pinned_v1','independent_C_and_stale_cursor','role_readonly','source_access_audit']
 
@@ -147,10 +147,12 @@ def main():
     entity_forms={r['path'] for r in entity_rows if r['status']=='local-entities-v1-E2E-qualified'}
     operational_forms={r['path'] for r in entity_rows if r['status']=='local-operations-v1-E2E-qualified'}
     assert operational_forms=={'/api/health','/api/status','/api/settings','/api/assets'}
-    assert len(entity_forms)==8 and sum(r['status']=='reader-and-data-contract-required' for r in entity_rows)==41
+    appearance_forms={r['path'] for r in entity_rows if r['status']=='local-appearances-v1-E2E-qualified'}
+    assert appearance_forms=={'/api/seasons/partition'}
+    assert len(entity_forms)==8 and sum(r['status']=='reader-and-data-contract-required' for r in entity_rows)==40
     entity_samples=[r['samplePath'] for r in pathlist['rows'] if r['path'] in entity_forms]
-    blocked=[r['samplePath'] for r in pathlist['rows'] if r['proOnPolicy']=='501_before_legacy_dispatch' and r['path'] not in entity_forms and r['path'] not in operational_forms]
-    assert len(blocked)==len(set(blocked))==41 and len(entity_samples)==8
+    blocked=[r['samplePath'] for r in pathlist['rows'] if r['proOnPolicy']=='501_before_legacy_dispatch' and r['path'] not in entity_forms and r['path'] not in operational_forms and r['path'] not in appearance_forms]
+    assert len(blocked)==len(set(blocked))==40 and len(entity_samples)==8
     backend_paths=[app,ROOT/'dashboard/package.json',*[ROOT/'dashboard/backend/services'/n for n in SERVICE_NAMES]]
     helper_paths=[Path(__file__),BASE/'guard_http_server.mjs',BASE/'PRO_ON_ROUTE_POLICY.md',BASE/'GUARD_E2E_PROTOCOL.md',BASE/'API_ROUTE_MATRIX.json',
       MODEL,entity_matrix,ROOT/'docs/verification/orion-pro-operations-20261105/GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-entities-20261105/GUARD_INTEGRATION_PROTOCOL.md',READERS/'fixture.py',PILOT/'harness.py',PILOT/'fixtures.py',ROOT/'tests/test_dashboard_data.py']
@@ -268,15 +270,15 @@ def main():
                         assert r['legacyEntries'] and r['sql'],r
                     for label in origins:flag(label,1)
                     actual={'positiveControls':len(controls)}
-                elif case in ['unsupported_get_remaining41','unsupported_head_remaining41','unsupported_conditional_remaining41']:
+                elif case in ['unsupported_get_remaining40','unsupported_head_remaining40','unsupported_conditional_remaining40']:
                     flag('candidate',1);failures=[]
                     for path in blocked:
-                        method='HEAD' if case=='unsupported_head_remaining41' else 'GET'
-                        h={'if-none-match':'*'} if case=='unsupported_conditional_remaining41' else None
+                        method='HEAD' if case=='unsupported_head_remaining40' else 'GET'
+                        h={'if-none-match':'*'} if case=='unsupported_conditional_remaining40' else None
                         r=http(path,method=method,headers=h)
                         try:refused(r)
                         except AssertionError:failures.append({'path':path,'id':r['id'],'status':r['status'],'legacyEntries':r['legacyEntries'],'sqlCount':len(r['sql'])})
-                    actual={'requests':41,'failures':failures};assert not failures,actual
+                    actual={'requests':40,'failures':failures};assert not failures,actual
                 elif case=='typed_entity_frontier':
                     for path in entity_samples:
                         for method in ['GET','HEAD']:
@@ -291,7 +293,22 @@ def main():
                             if method=='HEAD':assert r['body']=='',r
                     invalid=http('/api/scouting/routes?player=p_000001&v=bad')
                     assert invalid['status']==400 and not invalid['sql'] and not invalid['legacyEntries'] and not invalid['sourceAccess'],invalid
-                    actual={'supportedForms':8,'remainingClosedForms':41,'positiveEntityWorkflow':'tests/orion_pro_entities_local.py'}
+                    actual={'supportedForms':8,'remainingClosedForms':40,'positiveEntityWorkflow':'tests/orion_pro_entities_local.py'}
+                elif case=='typed_appearance_frontier':
+                    base='/api/seasons/partition?season=2024%2F2025&league=l_000001&limit=2'
+                    for path in [base,base+'&v=bad']:
+                        for method in ['GET','HEAD']:
+                            r=http(path,method=method);assert r['status']==400 and not r['sql'],r
+                            assert not r['legacyEntries'] and not r['sourceAccess'],r
+                            if method=='HEAD':assert r['body']=='',r
+                    manifest=http('/api/dashboard/manifest')['value']
+                    token=next(e['representationToken'] for e in manifest['editions'] if e['season']=='2024/2025')
+                    for method,headers in [('GET',None),('HEAD',None),('GET',{'if-none-match':'*'})]:
+                        r=http(base+'&'+qs(v=token),method=method,headers=headers)
+                        assert r['status']==503 and r['headers']['cache-control']=='no-store' and not r['headers'].get('etag'),r
+                        assert not r['legacyEntries'] and not r['legacyMaterializations'] and not r['sourceAccess'],r
+                        if method=='HEAD':assert r['body']=='',r
+                    actual={'supportedForms':17,'remainingClosedForms':40,'missingNormalizedCoverage':'503,not fabricated empty','positiveWorkflow':'22appearance+8observed-profile cases'}
                 elif case=='closed_unknown_and_versioned':
                     for path in ['/api/future-native-capability',
                       '/api/pitchapi/matches/m_000001/events?'+qs(v='pro1.1.'+'0'*64)]:refused(http(path))

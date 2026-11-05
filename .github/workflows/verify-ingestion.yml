@@ -47,6 +47,9 @@ on:
       - 'docs/verification/orion-pro-entity-batch-media-20261105/**'
       - 'docs/verification/orion-pro-operations-20261105/**'
       - 'docs/verification/orion-pro-runtime-origin-20261105/**'
+      - 'docs/verification/orion-pro-appearances-20261105/**'
+      - 'docs/verification/orion-pro-observed-profile-20261105/**'
+      - 'docs/verification/orion-pro-appearances-regression-20261105/**'
       - 'docs/verification/orion-validator-membership-20261105/**'
       - 'docs/verification/orion-real-spatial-digest-20261105/**'
       - 'docs/verification/orion-typed-worker-20261105/**'
@@ -97,6 +100,9 @@ on:
       - 'docs/verification/orion-pro-entity-batch-media-20261105/**'
       - 'docs/verification/orion-pro-operations-20261105/**'
       - 'docs/verification/orion-pro-runtime-origin-20261105/**'
+      - 'docs/verification/orion-pro-appearances-20261105/**'
+      - 'docs/verification/orion-pro-observed-profile-20261105/**'
+      - 'docs/verification/orion-pro-appearances-regression-20261105/**'
       - 'docs/verification/orion-validator-membership-20261105/**'
       - 'docs/verification/orion-real-spatial-digest-20261105/**'
       - 'docs/verification/orion-typed-worker-20261105/**'
@@ -137,6 +143,9 @@ jobs:
             docs/verification/orion-pro-entity-batch-media-20261105
             docs/verification/orion-pro-operations-20261105
             docs/verification/orion-pro-runtime-origin-20261105
+            docs/verification/orion-pro-appearances-20261105
+            docs/verification/orion-pro-observed-profile-20261105
+            docs/verification/orion-pro-appearances-regression-20261105
             docs/verification/orion-validator-membership-20261105
             docs/verification/orion-real-spatial-digest-20261105
       - uses: actions/setup-python@v5
@@ -276,6 +285,9 @@ jobs:
             docs/verification/orion-pro-entity-batch-media-20261105/runs/*-ci-*/
             docs/verification/orion-pro-operations-20261105/runs/*-ci-*/
             docs/verification/orion-pro-runtime-origin-20261105/runs/*-ci-*/
+            docs/verification/orion-pro-appearances-20261105/runs/*-ci-*/
+            docs/verification/orion-pro-observed-profile-20261105/runs/*-ci-*/
+            docs/verification/orion-pro-appearances-regression-20261105/runs/*-ci-*/
             !docs/verification/orion-pro-api-coverage-20261105/runs/**/runtime/**/node_modules
             !docs/verification/orion-pro-api-coverage-20261105/runs/**/runtime/**/node_modules/**
             !docs/verification/orion-pro-real-native-spatial-20261104/runs/**/overlay-cli/alias.sql
