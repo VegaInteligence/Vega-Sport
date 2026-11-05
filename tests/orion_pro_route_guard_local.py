@@ -142,7 +142,7 @@ def main():
     pathlist=json.loads((BASE/'API_ROUTE_MATRIX.json').read_text())
     blocked=[r['samplePath'] for r in pathlist['rows'] if r['proOnPolicy']=='501_before_legacy_dispatch']
     assert len(blocked)==len(set(blocked))==50
-    entity_matrix=ROOT/'docs/verification/orion-pro-entities-20261105/ALL_ROUTE_MATRIX.json'
+    entity_matrix=ROOT/'docs/verification/orion-pro-operations-20261105/API_ROUTE_MATRIX.json'
     entity_rows=json.loads(entity_matrix.read_text())['rows']
     entity_forms={r['path'] for r in entity_rows if r['status']=='local-entities-v1-E2E-qualified'}
     operational_forms={r['path'] for r in entity_rows if r['status']=='local-operations-v1-E2E-qualified'}

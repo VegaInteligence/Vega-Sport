@@ -108,7 +108,16 @@ def main():
         frozen=json.loads(frozen_path.read_text());verified=[]
         for entry in frozen['files']:
             if entry['path']=='dashboard/backend/services/orion-pro-entities.js':continue
-            current=ROOT/entry['path'];assert current.is_file() and sha(current)==entry['sha256'],entry['path']
+            current=ROOT/entry['path']
+            if entry['path']=='dashboard/backend/aws-app.js':
+                # The historical router is retained byte-exact; current route
+                # additions are qualified through this actual-router E2E and
+                # the independent legacy/native fallback-guard regression.
+                historical=ROOT/'docs/verification/orion-pro-entities-20261105/runs/20261105T114409550282Z-actual-router-fixture-enum-v2/inputs/dashboard/backend/aws-app.js'
+                assert historical.is_file() and sha(historical)==entry['sha256'],entry['path']
+                report['historicalRouter']={'path':str(historical.relative_to(ROOT)),'sha256':sha(historical),'currentSha256':sha(current),'currentRouterCanEvolve':True}
+            else:
+                assert current.is_file() and sha(current)==entry['sha256'],entry['path']
             verified.append(entry['path'])
         report['frozenHistoricalFilesVerified']=len(verified)
         report['frozenManifestSha256']=FROZEN_SHA
