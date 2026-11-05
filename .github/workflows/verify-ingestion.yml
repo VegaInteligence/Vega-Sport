@@ -43,6 +43,7 @@ on:
       - 'docs/verification/orion-pro-bulk-20261104/**'
       - 'docs/verification/orion-pro-real-native-spatial-20261104/**'
       - 'docs/verification/orion-pro-api-coverage-20261105/**'
+      - 'docs/verification/orion-validator-membership-20261105/**'
   pull_request:
     paths:
       - '.github/workflows/verify-ingestion.yml'
@@ -86,6 +87,7 @@ on:
       - 'docs/verification/orion-pro-bulk-20261104/**'
       - 'docs/verification/orion-pro-real-native-spatial-20261104/**'
       - 'docs/verification/orion-pro-api-coverage-20261105/**'
+      - 'docs/verification/orion-validator-membership-20261105/**'
   workflow_dispatch:
 permissions:
   contents: read
@@ -119,6 +121,7 @@ jobs:
             docs/verification/orion-pro-bulk-20261104
             docs/verification/orion-pro-real-native-spatial-20261104
             docs/verification/orion-pro-api-coverage-20261105
+            docs/verification/orion-validator-membership-20261105
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -227,6 +230,8 @@ jobs:
             docs/verification/orion-pro-bulk-20261104/runs/*-ci-*/
             docs/verification/orion-pro-real-native-spatial-20261104/runs/*-ci-*/
             docs/verification/orion-pro-api-coverage-20261105/runs/*-ci-*/
+            !docs/verification/orion-pro-api-coverage-20261105/runs/**/runtime/**/node_modules
+            !docs/verification/orion-pro-api-coverage-20261105/runs/**/runtime/**/node_modules/**
             docs/verification/orion-pro-heatmaps-20261104/native31-regression/runs/*-heatmap-regression/
           if-no-files-found: warn
 
