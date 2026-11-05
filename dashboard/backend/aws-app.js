@@ -10,6 +10,7 @@ import { getSupporting } from "./services/relational-support.js";
 import { getCatalog, getProfile } from "./services/relational-catalog.js";
 import { cloudFrontObjectUrl, immutableFile } from "./services/cdn.js";
 import { orionProRoute } from "./services/orion-pro.js";
+import { orionProMatchDetailRoute } from "./services/orion-pro-match-details.js";
 import { orionProEntityRoute } from "./services/orion-pro-entities.js";
 import { orionProOperationalRoute } from "./services/orion-pro-operations.js";
 import { orionProAppearanceRoute } from "./services/orion-pro-appearances.js";
@@ -204,6 +205,8 @@ async function route(req) {
     if (operational) return operational;
     const pro = await orionProRoute(req, path, p);
     if (pro) return pro;
+    const matchDetail = await orionProMatchDetailRoute(req, path, p);
+    if (matchDetail) return matchDetail;
     const entity = await orionProEntityRoute(req, path, p, {
       mediaBase: process.env.STATARENA_CLOUDFRONT_URL,
     });
