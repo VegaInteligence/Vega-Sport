@@ -49,8 +49,9 @@ def main():
             'authorizedBudget':{'seconds':90,'ownedClusters':1,'typedRows':5000,'HTTP':200,'sqlStatementMs':8000,'lockMs':1000},
             'limitations':['Source-free backend fixture only; no S3/cloud/hosted binary media delivery or production latency claim',
                            'This lot does not remove the inherited2048-build publication metadata ceiling']}
+    historical_test=FIRST/'runs/20261105T115323556411Z-actual-router-reviewed-fixture-v3/inputs/tests/orion_pro_entities_local.py'
     paths=[Path(__file__),BASE/'PROTOCOL.md',BASE/'media_fixture.py',BASE/'http_server.mjs',PRODUCT,ROOT/'dashboard/backend/aws-app.js',
-           FIRST/'BUNDLE_FILE_MANIFEST.json',FIRST/'entity_fixture.py']
+           FIRST/'BUNDLE_FILE_MANIFEST.json',FIRST/'entity_fixture.py',historical_test]
     for path in paths:
         target=inputs/path.relative_to(ROOT);target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(path,target)
         report['sourceSha256'][str(path.relative_to(ROOT))]=sha(path)
@@ -116,6 +117,9 @@ def main():
                 historical=ROOT/'docs/verification/orion-pro-entities-20261105/runs/20261105T114409550282Z-actual-router-fixture-enum-v2/inputs/dashboard/backend/aws-app.js'
                 assert historical.is_file() and sha(historical)==entry['sha256'],entry['path']
                 report['historicalRouter']={'path':str(historical.relative_to(ROOT)),'sha256':sha(historical),'currentSha256':sha(current),'currentRouterCanEvolve':True}
+            elif entry['path']=='tests/orion_pro_entities_local.py':
+                assert historical_test.is_file() and sha(historical_test)==entry['sha256'],entry['path']
+                report['historicalEntityTest']={'path':str(historical_test.relative_to(ROOT)),'sha256':entry['sha256']}
             else:
                 assert current.is_file() and sha(current)==entry['sha256'],entry['path']
             verified.append(entry['path'])
