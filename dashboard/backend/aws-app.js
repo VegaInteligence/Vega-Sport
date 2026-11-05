@@ -17,6 +17,7 @@ import { orionProAppearanceRoute } from "./services/orion-pro-appearances.js";
 import { orionProFixtureAliasRoute } from "./services/orion-pro-fixture-aliases.js";
 import { orionProCompetitionRoute } from "./services/orion-pro-competitions.js";
 import { orionProArchiveRoute } from "./services/orion-pro-archives.js";
+import { orionProEnrichmentRoute } from "./services/orion-pro-enrichment.js";
 import { orionProPlayerStatisticsRoute } from "./services/orion-pro-player-statistics.js";
 import { orionProMatchStatisticsRoute } from "./services/orion-pro-match-statistics.js";
 import {
@@ -230,6 +231,10 @@ async function route(req) {
     if (competition) return competition;
     const archive = await orionProArchiveRoute(req, path, p);
     if (archive) return archive;
+    const enrichment = await orionProEnrichmentRoute(req, path, p, {
+      mediaBase: process.env.STATARENA_CLOUDFRONT_URL,
+    });
+    if (enrichment) return enrichment;
     if (!["/api/health", "/api/status", "/api/assets"].includes(path))
       return send(
         req,
