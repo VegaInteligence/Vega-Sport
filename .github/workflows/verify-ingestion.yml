@@ -50,6 +50,7 @@ on:
       - 'docs/verification/orion-pro-runtime-origin-20261105/**'
       - 'docs/verification/orion-pro-appearances-20261105/**'
       - 'docs/verification/orion-pro-fixture-aliases-20261105/**'
+      - 'docs/verification/orion-pro-competitions-20261105/**'
       - 'docs/verification/orion-pro-observed-profile-20261105/**'
       - 'docs/verification/orion-pro-appearances-regression-20261105/**'
       - 'docs/verification/orion-validator-membership-20261105/**'
@@ -105,6 +106,7 @@ on:
       - 'docs/verification/orion-pro-runtime-origin-20261105/**'
       - 'docs/verification/orion-pro-appearances-20261105/**'
       - 'docs/verification/orion-pro-fixture-aliases-20261105/**'
+      - 'docs/verification/orion-pro-competitions-20261105/**'
       - 'docs/verification/orion-pro-observed-profile-20261105/**'
       - 'docs/verification/orion-pro-appearances-regression-20261105/**'
       - 'docs/verification/orion-validator-membership-20261105/**'
@@ -149,6 +151,8 @@ jobs:
             docs/verification/orion-pro-runtime-origin-20261105
             docs/verification/orion-pro-appearances-20261105
             docs/verification/orion-pro-fixture-aliases-20261105
+            docs/verification/orion-pro-competitions-20261105
+            docs/verification/orion-pro-publisher-20261105/product-campaign
             docs/verification/orion-pro-observed-profile-20261105
             docs/verification/orion-pro-appearances-regression-20261105
             docs/verification/orion-validator-membership-20261105
@@ -287,6 +291,27 @@ jobs:
           --node24 /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64/bin/node
           --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
           --label ci-${{ github.run_id }}
+      - name: Verify eight published competition routes through the actual AWS router
+        run: |
+          release="$PWD/docs/verification/orion-pro-competitions-20261105/ROOT_OWNED_COMPETITIONS_CI.json"
+          python3 - "$release" <<'PY_CI'
+          import json, os, subprocess, sys
+          from datetime import datetime, timedelta, timezone
+          from pathlib import Path
+          manifest=json.loads(subprocess.check_output([sys.executable,'-I','tests/orion_pro_competitions_local.py','--manifest'],text=True))
+          release={'kind':'competition_owned_e2e_release_v1','scope':'owned_source_free_only',
+                   'allocationId':'owned-competitions-ci-'+os.environ['GITHUB_RUN_ID']+'-'+os.environ['GITHUB_RUN_ATTEMPT'],
+                   'inputHashes':manifest,'ownedBaseCommit':os.environ['GITHUB_SHA'],
+                   'expiresAt':(datetime.now(timezone.utc)+timedelta(minutes=10)).isoformat(),'actualApp':True,
+                   'bounds':{'seconds':600,'sql':15000,'http':200,'typedRows':20000,'ownedDiskBytes':1024**3,
+                             'evidenceBytes':96*1024**2,'connections':5,'workers':2}}
+          Path(sys.argv[1]).write_text(json.dumps(release,indent=2)+'\n')
+          PY_CI
+          python3 tests/orion_pro_competitions_local.py --run-owned --actual-app --release "$release" \
+            --release-sha256 "$(sha256sum "$release" | cut -d ' ' -f 1)" \
+            --node24 /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64/bin/node \
+            --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin \
+            --label ci-${{ github.run_id }}
       - name: Preserve reproducible PostgreSQL and CLI evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -316,6 +341,7 @@ jobs:
             docs/verification/orion-pro-runtime-origin-20261105/runs/*-ci-*/
             docs/verification/orion-pro-appearances-20261105/runs/*-ci-*/
             docs/verification/orion-pro-fixture-aliases-20261105/runs/*-ci-*/
+            docs/verification/orion-pro-competitions-20261105/runs/*-ci-*/
             docs/verification/orion-pro-observed-profile-20261105/runs/*-ci-*/
             docs/verification/orion-pro-appearances-regression-20261105/runs/*-ci-*/
             !docs/verification/orion-pro-api-coverage-20261105/runs/**/runtime/**/node_modules
