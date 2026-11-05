@@ -83,10 +83,9 @@ def apply(conn, observed, binding):
         if existing:
             record_for[path] = existing['id']
             continue
-        rid = conn.execute("SELECT nextval('ingest.source_records_id_seq')").fetchone()[0]
-        conn.execute("INSERT INTO ingest.source_records(id,source_id,document_id,locator_kind,locator,ordinal,record_kind,external_key) "
-                     "VALUES(%s,1,%s,'json_pointer','/tables/performances',NULL,'normalized_performance_collection',%s)",
-                     (rid, doc['id'], path.split('/')[2].replace('-', '/')))
+        rid = conn.execute("INSERT INTO ingest.source_records(source_id,document_id,locator_kind,locator,ordinal,record_kind,external_key) "
+                           "VALUES(1,%s,'json_pointer','/tables/performances',NULL,'normalized_performance_collection',%s) RETURNING id",
+                           (doc['id'], path.split('/')[2].replace('-', '/'))).fetchone()[0]
         record_for[path] = rid
     names, generated = base.columns(conn, 'ingest.match_coverage')
     for row in observed['rows']:
