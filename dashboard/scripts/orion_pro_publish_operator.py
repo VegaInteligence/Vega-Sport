@@ -32,6 +32,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'dashboard/scripts'))
 import orion_pro_admit_real as admit  # noqa: E402
 import orion_pro_publish_real as publish  # noqa: E402
+import orion_pro_publish_aggregates as aggregate_publish  # noqa: E402
 from orion_pro_publish import MODEL_PATH, METRICS, REPRESENTATION, SCHEME, sha, tagged  # noqa: E402
 import orion_pro_source_recovery as recovery  # noqa: E402
 import orion_pro_native_transport_real_v4 as rds  # noqa: E402
@@ -206,6 +207,7 @@ def main():
     for name in ('plan-admit', 'admit', 'plan-publish', 'publish', 'verify'):
         group.add_argument('--' + name, action='store_true')
     parser.add_argument('--admission-receipt', type=Path)
+    parser.add_argument('--aggregates', action='store_true', help='Publish builds with the per-build season read models')
     args = parser.parse_args()
     label = next(n for n in ('plan_admit', 'admit', 'plan_publish', 'publish', 'verify') if getattr(args, n))
     EVIDENCE.mkdir(exist_ok=True)
@@ -239,7 +241,8 @@ def main():
             code = sha((ROOT / 'dashboard/scripts' / ('orion_pro_admit_real.py' if stage == 'admit' else 'orion_pro_publish_real.py')).read_bytes())
             boundary = Boundary(args=SimpleNamespace(mode=mode, admission_receipt=args.admission_receipt), body=body, code_sha=code,
                                 commit=commit, connections=1, owned=False, run=EVIDENCE, events=None, control=None)
-            operation = (admit.Admission if stage == 'admit' else publish.Publisher)(boundary, conn, model)
+            publisher = aggregate_publish.AggregatePublisher if args.aggregates else publish.Publisher
+            operation = (admit.Admission if stage == 'admit' else publisher)(boundary, conn, model)
             result = operation.run()
             result['operatorStage'] = operation.stage
     except admit.Refused as error:
