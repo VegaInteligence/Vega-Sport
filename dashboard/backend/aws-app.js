@@ -11,6 +11,7 @@ import { getCatalog, getProfile } from "./services/relational-catalog.js";
 import { cloudFrontObjectUrl, immutableFile } from "./services/cdn.js";
 import { orionProRoute } from "./services/orion-pro.js";
 import { orionProEntityRoute } from "./services/orion-pro-entities.js";
+import { orionProOperationalRoute } from "./services/orion-pro-operations.js";
 import {
   manifest,
   partitionPage,
@@ -194,6 +195,10 @@ async function route(req) {
   if (!path.startsWith("/api/")) missing();
   const proMode = process.env.STATARENA_PRO_API === "1";
   if (proMode) {
+    const operational = await orionProOperationalRoute(req, path, p, {
+      mediaBase: process.env.STATARENA_CLOUDFRONT_URL,
+    });
+    if (operational) return operational;
     const pro = await orionProRoute(req, path, p);
     if (pro) return pro;
     const entity = await orionProEntityRoute(req, path, p, {

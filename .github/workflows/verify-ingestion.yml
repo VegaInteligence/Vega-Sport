@@ -45,6 +45,7 @@ on:
       - 'docs/verification/orion-pro-api-coverage-20261105/**'
       - 'docs/verification/orion-pro-entities-20261105/**'
       - 'docs/verification/orion-pro-entity-batch-media-20261105/**'
+      - 'docs/verification/orion-pro-operations-20261105/**'
       - 'docs/verification/orion-validator-membership-20261105/**'
       - 'docs/verification/orion-real-spatial-digest-20261105/**'
       - 'docs/verification/orion-typed-worker-20261105/**'
@@ -93,6 +94,7 @@ on:
       - 'docs/verification/orion-pro-api-coverage-20261105/**'
       - 'docs/verification/orion-pro-entities-20261105/**'
       - 'docs/verification/orion-pro-entity-batch-media-20261105/**'
+      - 'docs/verification/orion-pro-operations-20261105/**'
       - 'docs/verification/orion-validator-membership-20261105/**'
       - 'docs/verification/orion-real-spatial-digest-20261105/**'
       - 'docs/verification/orion-typed-worker-20261105/**'
@@ -131,6 +133,7 @@ jobs:
             docs/verification/orion-pro-api-coverage-20261105
             docs/verification/orion-pro-entities-20261105
             docs/verification/orion-pro-entity-batch-media-20261105
+            docs/verification/orion-pro-operations-20261105
             docs/verification/orion-validator-membership-20261105
             docs/verification/orion-real-spatial-digest-20261105
       - uses: actions/setup-python@v5
@@ -234,6 +237,11 @@ jobs:
           --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
           --label ci-${{ github.run_id }}
           --compare-red docs/verification/orion-pro-entity-batch-media-20261105/runs/20261105T121925487909Z-batch-budget-red/result.json
+      - name: Serve typed operational health settings and media on Node24
+        run: >-
+          python3 tests/orion_pro_operations_local.py
+          --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
+          --label ci-${{ github.run_id }}
       - name: Preserve reproducible PostgreSQL and CLI evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -259,6 +267,7 @@ jobs:
             docs/verification/orion-pro-api-coverage-20261105/runs/*-ci-*/
             docs/verification/orion-pro-entities-20261105/runs/*-ci-*/
             docs/verification/orion-pro-entity-batch-media-20261105/runs/*-ci-*/
+            docs/verification/orion-pro-operations-20261105/runs/*-ci-*/
             !docs/verification/orion-pro-api-coverage-20261105/runs/**/runtime/**/node_modules
             !docs/verification/orion-pro-api-coverage-20261105/runs/**/runtime/**/node_modules/**
             !docs/verification/orion-pro-real-native-spatial-20261104/runs/**/overlay-cli/alias.sql

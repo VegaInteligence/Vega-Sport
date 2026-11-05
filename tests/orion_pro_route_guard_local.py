@@ -24,7 +24,7 @@ READERS=ROOT/'docs/verification/orion-pro-readers-20261104'
 PILOT=ROOT/'docs/verification/orion-pro-pilot-20261104'
 MODEL=ROOT/'docs/architecture/orion-plan-20261104/target-schema.proposed.json'
 MODEL_SHA='18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08'
-SERVICE_NAMES=['orion-pro.js','orion-pro-entities.js','postgres.js','database-connection.js','metrics.js','cache-policy.js','cache.js',
+SERVICE_NAMES=['orion-pro.js','orion-pro-entities.js','orion-pro-operations.js','postgres.js','database-connection.js','metrics.js','cache-policy.js','cache.js',
  'relational-match.js','relational-support.js','relational-catalog.js','cdn.js','relational-core.js','partition-wire.js',
  'catalog-model.json','support-model.json']
 WRAPPERS={'relational-core':['manifest','partitionPage','fixturePage','summary','scouting'],
@@ -32,7 +32,7 @@ WRAPPERS={'relational-core':['manifest','partitionPage','fixturePage','summary',
  'relational-catalog':['getCatalog','getProfile'],'relational-support':['getSupporting']}
 STABLE_HEADERS=['etag','cache-control','cdn-cache-control','vercel-cdn-cache-control','x-orion-representation','content-type','location','allow']
 HEAVY=re.compile(r'\bfootball\.(shots|match_heatmaps|match_heatmap_cells|pass_networks|pass_network_nodes|pass_network_edges)\b',re.I)
-CASES=['owned_runtime','positive_legacy_off','unsupported_get_remaining42','unsupported_head_remaining42','unsupported_conditional_remaining42','typed_entity_frontier',
+CASES=['owned_runtime','positive_legacy_off','unsupported_get_remaining41','unsupported_head_remaining41','unsupported_conditional_remaining41','typed_entity_frontier',
  'closed_unknown_and_versioned','generic_path_method','operational_exceptions','media_valid','media_bad_path','media_bad_mime','media_cache_mode_isolation',
  'native_v1_golden_bytes','native_cold_head_304','correction_publication','old_pinned_v1','independent_C_and_stale_cursor','role_readonly','source_access_audit']
 
@@ -82,6 +82,11 @@ def legacy_fixture(db):
         for name,(path,mime) in assets.items():
             db.execute('INSERT INTO statarena_app.assets(url,path,content_type,size,sha256) VALUES(%s,%s,%s,17,%s)',
                        ('https://fixture.invalid/'+name+'.png',path,mime,'f'*64))
+            # Typed registration is independent from the historical download map.
+            found=re.search(r'([a-f0-9]{64})\.',path)
+            content=found.group(1) if found else 'f'*64
+            db.execute('INSERT INTO ingest.media_assets(storage_bucket,storage_key,content_type,content_sha256,retrieved_at,legacy_asset_url) VALUES(%s,%s,%s,%s,CURRENT_TIMESTAMP,%s)',
+                       ('owned-fixture',path,mime,content,'https://fixture.invalid/'+name+'.png'))
     return {'coreMatches':2,'appearances':2,'shots':1,'profiles':2,'archiveIndexSeasons':1,'supportStadiumCapacity':12345,
             'assets':{k:{'path':v[0],'registeredMime':v[1]} for k,v in assets.items()}}
 
@@ -140,13 +145,15 @@ def main():
     entity_matrix=ROOT/'docs/verification/orion-pro-entities-20261105/ALL_ROUTE_MATRIX.json'
     entity_rows=json.loads(entity_matrix.read_text())['rows']
     entity_forms={r['path'] for r in entity_rows if r['status']=='local-entities-v1-E2E-qualified'}
-    assert len(entity_forms)==8 and sum(r['status']=='reader-and-data-contract-required' for r in entity_rows)==42
+    operational_forms={r['path'] for r in entity_rows if r['status']=='local-operations-v1-E2E-qualified'}
+    assert operational_forms=={'/api/health','/api/status','/api/settings','/api/assets'}
+    assert len(entity_forms)==8 and sum(r['status']=='reader-and-data-contract-required' for r in entity_rows)==41
     entity_samples=[r['samplePath'] for r in pathlist['rows'] if r['path'] in entity_forms]
-    blocked=[r['samplePath'] for r in pathlist['rows'] if r['proOnPolicy']=='501_before_legacy_dispatch' and r['path'] not in entity_forms]
-    assert len(blocked)==len(set(blocked))==42 and len(entity_samples)==8
+    blocked=[r['samplePath'] for r in pathlist['rows'] if r['proOnPolicy']=='501_before_legacy_dispatch' and r['path'] not in entity_forms and r['path'] not in operational_forms]
+    assert len(blocked)==len(set(blocked))==41 and len(entity_samples)==8
     backend_paths=[app,ROOT/'dashboard/package.json',*[ROOT/'dashboard/backend/services'/n for n in SERVICE_NAMES]]
     helper_paths=[Path(__file__),BASE/'guard_http_server.mjs',BASE/'PRO_ON_ROUTE_POLICY.md',BASE/'GUARD_E2E_PROTOCOL.md',BASE/'API_ROUTE_MATRIX.json',
-      MODEL,entity_matrix,ROOT/'docs/verification/orion-pro-entities-20261105/GUARD_INTEGRATION_PROTOCOL.md',READERS/'fixture.py',PILOT/'harness.py',PILOT/'fixtures.py',ROOT/'tests/test_dashboard_data.py']
+      MODEL,entity_matrix,ROOT/'docs/verification/orion-pro-operations-20261105/GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-entities-20261105/GUARD_INTEGRATION_PROTOCOL.md',READERS/'fixture.py',PILOT/'harness.py',PILOT/'fixtures.py',ROOT/'tests/test_dashboard_data.py']
     helper_paths += [ROOT/'dashboard/scripts'/n for n in ['orion_pro_migrate.py','orion_pro_integrity.py','orion_pro_schema.py','build_dashboard_data.py',
       'relational_core.py','relational_match.py','relational_match_ddl.py','relational_match_model.py','relational_catalog.py','relational_catalog_keys.py','relational_support.py']]
     migration_paths=[ROOT/'dashboard/backend/migrations'/n for n in ['003_relational_core.sql','004_match_details.sql','005_supporting_models.sql','006_catalog_models.sql',
@@ -261,15 +268,15 @@ def main():
                         assert r['legacyEntries'] and r['sql'],r
                     for label in origins:flag(label,1)
                     actual={'positiveControls':len(controls)}
-                elif case in ['unsupported_get_remaining42','unsupported_head_remaining42','unsupported_conditional_remaining42']:
+                elif case in ['unsupported_get_remaining41','unsupported_head_remaining41','unsupported_conditional_remaining41']:
                     flag('candidate',1);failures=[]
                     for path in blocked:
-                        method='HEAD' if case=='unsupported_head_remaining42' else 'GET'
-                        h={'if-none-match':'*'} if case=='unsupported_conditional_remaining42' else None
+                        method='HEAD' if case=='unsupported_head_remaining41' else 'GET'
+                        h={'if-none-match':'*'} if case=='unsupported_conditional_remaining41' else None
                         r=http(path,method=method,headers=h)
                         try:refused(r)
                         except AssertionError:failures.append({'path':path,'id':r['id'],'status':r['status'],'legacyEntries':r['legacyEntries'],'sqlCount':len(r['sql'])})
-                    actual={'requests':42,'failures':failures};assert not failures,actual
+                    actual={'requests':41,'failures':failures};assert not failures,actual
                 elif case=='typed_entity_frontier':
                     for path in entity_samples:
                         for method in ['GET','HEAD']:
@@ -284,7 +291,7 @@ def main():
                             if method=='HEAD':assert r['body']=='',r
                     invalid=http('/api/scouting/routes?player=p_000001&v=bad')
                     assert invalid['status']==400 and not invalid['sql'] and not invalid['legacyEntries'] and not invalid['sourceAccess'],invalid
-                    actual={'supportedForms':8,'remainingClosedForms':42,'positiveEntityWorkflow':'tests/orion_pro_entities_local.py'}
+                    actual={'supportedForms':8,'remainingClosedForms':41,'positiveEntityWorkflow':'tests/orion_pro_entities_local.py'}
                 elif case=='closed_unknown_and_versioned':
                     for path in ['/api/future-native-capability',
                       '/api/pitchapi/matches/m_000001/events?'+qs(v='pro1.1.'+'0'*64)]:refused(http(path))
@@ -293,13 +300,15 @@ def main():
                         r=http(path,method=method);assert r['status']==status and not r['sql'],r
                         if status==405:assert r['headers']['allow']=='GET, HEAD'
                 elif case=='operational_exceptions':
-                    for path in ['/api/health','/api/status']:
+                    for path in ['/api/health','/api/status','/api/settings']:
                         for method in ['GET','HEAD']:
-                            r=twins(path,method=method);assert r['status']==200 and not r['sourceAccess'] and not r['legacyEntries'],r
+                            r=http(path,method=method);assert r['status']==200 and not r['sourceAccess'] and not r['legacyEntries'],r
+                            assert not any(re.search(r'\bstatarena(?:_app)?\.',q['sql'],re.I) for q in r['sql']),r
                             if method=='HEAD':assert r['body']==''
                             elif path=='/api/health':assert r['value']['status']=='ok'
-                            else:assert r['value']['configured'] is True
-                    actual={'paths':['/api/health','/api/status'],'methods':['GET','HEAD'],'comparedToPreGuard':True}
+                            elif path=='/api/status':assert r['value']['configured'] is True
+                            else:assert r['value']['provider']=='AWS' and r['value']['schedule']['activation']=='unknown'
+                    actual={'paths':['/api/health','/api/status','/api/settings'],'methods':['GET','HEAD'],'typedOperationalContract':True,'legacyServingCompared':False}
                 elif case=='media_valid':
                     for name in ['valid','valid-jpeg','valid-jpg','valid-webp']:
                         for method in ['GET','HEAD']:
@@ -308,13 +317,13 @@ def main():
                             assert not r['sourceAccess'] and not r['legacyEntries']
                 elif case=='media_bad_path':
                     for name in ['json','json-gz','mutable','traversal','url-path','absent']:
-                        r=http(asset(name));assert r['status']==404 and r['headers']['cache-control']=='no-store' and 'location' not in r['headers'] and not r['sourceAccess'],r
+                        r=http(asset(name));assert r['status']==(404 if name=='absent' else 503) and r['headers']['cache-control']=='no-store' and 'location' not in r['headers'] and not r['sourceAccess'],r
                 elif case=='media_bad_mime':
                     for name in ['wrong-mime','mismatch']:
-                        r=http(asset(name));assert r['status']==404 and 'location' not in r['headers'] and not r['sourceAccess'],r
+                        r=http(asset(name));assert r['status']==503 and 'location' not in r['headers'] and not r['sourceAccess'],r
                 elif case=='media_cache_mode_isolation':
                     flag('candidate',0);old=http(asset('poison'));assert old['status']==307,old
-                    flag('candidate',1);new=http(asset('poison'));assert new['status']==404 and 'location' not in new['headers'],new
+                    flag('candidate',1);new=http(asset('poison'));assert new['status']==503 and 'location' not in new['headers'],new
                     actual={'offStatus':old['status'],'onStatus':new['status'],'onSqlCount':len(new['sql'])}
                 elif case=='native_v1_golden_bytes':
                     for label in origins:flag(label,1)
