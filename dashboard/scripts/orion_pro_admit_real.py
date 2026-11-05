@@ -40,7 +40,9 @@ MIGRATIONS = {"012": RELEASE_FILES["dashboard/backend/migrations/012_orion_pro_d
     # Approved and independently adopted on RDS (adoption receipt be6ca7bd...).
     "015": "3b85fcb4fe9380cc5f96238620ff3f4bedee7485ed52c98fef0bddfac1092bd7",
     "016": "12d63eaab6f4d610de3f2ff4efc0dcd71059c4d2e489a5f30d62d2a8498fd087",
-    "017": "87aac35a93b8b0455a7dcf13fde5bb0be468d1183a0bf4a96f36b04b4b770458"}
+    "017": "87aac35a93b8b0455a7dcf13fde5bb0be468d1183a0bf4a96f36b04b4b770458",
+    # Approved 6 Nov 2026: read-model indexes only.
+    "018": "8b87d06725db474203ad3449aa6ed598fad19622a2945c4818b2fbadd99603ce"}
 RDS_HOST = "statarena-postgres.clcy2iqyajbl.us-east-2.rds.amazonaws.com"
 MAX_FETCH = 1000
 OPTIONS = "-c statement_timeout=8000 -c lock_timeout=1000 -c idle_in_transaction_session_timeout=5000 -c timezone=UTC -c datestyle=ISO,YMD -c extra_float_digits=3"

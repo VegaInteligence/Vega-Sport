@@ -217,7 +217,7 @@ def main():
         with rds.ingest_auth() as passfile:
             conn = rds.rds_connection(passfile, OPTIONS if writes else RO_OPTIONS)
         journal = [tuple(r) for r in conn.execute('SELECT version,content_sha256 FROM ingest.schema_migrations ORDER BY version')]
-        require(journal == [tuple(c[::2]) for c in rds.overlay.CHAIN], 'Approved 012-017 journal required')
+        require(journal == sorted(admit.MIGRATIONS.items()), 'Approved migration journal required')
         model = admit.strict_json(MODEL_PATH.read_bytes())
         if label == 'verify':
             result = {'status': 'verified', 'publications': rows(conn, "SELECT b.id build_id,b.competition_season_id,b.status,"
