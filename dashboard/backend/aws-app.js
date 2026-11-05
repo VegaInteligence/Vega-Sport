@@ -17,6 +17,7 @@ import { orionProAppearanceRoute } from "./services/orion-pro-appearances.js";
 import { orionProFixtureAliasRoute } from "./services/orion-pro-fixture-aliases.js";
 import { orionProCompetitionRoute } from "./services/orion-pro-competitions.js";
 import { orionProArchiveRoute } from "./services/orion-pro-archives.js";
+import { orionProPlayerStatisticsRoute } from "./services/orion-pro-player-statistics.js";
 import {
   manifest,
   partitionPage,
@@ -208,6 +209,8 @@ async function route(req) {
     if (pro) return pro;
     const matchDetail = await orionProMatchDetailRoute(req, path, p);
     if (matchDetail) return matchDetail;
+    const playerStatistics = await orionProPlayerStatisticsRoute(req, path, p);
+    if (playerStatistics) return playerStatistics;
     const entity = await orionProEntityRoute(req, path, p, {
       mediaBase: process.env.STATARENA_CLOUDFRONT_URL,
     });

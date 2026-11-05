@@ -56,6 +56,7 @@ on:
       - 'docs/verification/orion-pro-fixture-aliases-20261105/**'
       - 'docs/verification/orion-pro-competitions-20261105/**'
       - 'docs/verification/orion-pro-archives-20261105/**'
+      - 'docs/verification/orion-pro-player-statistics-20261105/**'
       - 'docs/verification/orion-pro-observed-profile-20261105/**'
       - 'docs/verification/orion-pro-appearances-regression-20261105/**'
       - 'docs/verification/orion-validator-membership-20261105/**'
@@ -117,6 +118,7 @@ on:
       - 'docs/verification/orion-pro-fixture-aliases-20261105/**'
       - 'docs/verification/orion-pro-competitions-20261105/**'
       - 'docs/verification/orion-pro-archives-20261105/**'
+      - 'docs/verification/orion-pro-player-statistics-20261105/**'
       - 'docs/verification/orion-pro-observed-profile-20261105/**'
       - 'docs/verification/orion-pro-appearances-regression-20261105/**'
       - 'docs/verification/orion-validator-membership-20261105/**'
@@ -168,6 +170,7 @@ jobs:
             docs/verification/orion-pro-fixture-aliases-20261105
             docs/verification/orion-pro-competitions-20261105
             docs/verification/orion-pro-archives-20261105
+            docs/verification/orion-pro-player-statistics-20261105
             docs/verification/orion-pro-publisher-20261105/product-campaign
             docs/verification/orion-pro-observed-profile-20261105
             docs/verification/orion-pro-appearances-regression-20261105
@@ -368,6 +371,12 @@ jobs:
           --node24 /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64/bin/node
           --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
           --label native-017-ci-${{ github.run_id }}
+      - name: Verify normalized single-shot and player-shot routes through the actual AWS router
+        run: >-
+          python3 tests/orion_pro_shot_details_local.py --phase after
+          --node24 /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64/bin/node
+          --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
+          --label shot-details-ci-${{ github.run_id }}
       - name: Preserve reproducible PostgreSQL and CLI evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -399,6 +408,7 @@ jobs:
             docs/verification/orion-pro-fixture-aliases-20261105/runs/*-ci-*/
             docs/verification/orion-pro-competitions-20261105/runs/*-ci-*/
             docs/verification/orion-pro-archives-20261105/runs/*-ci-*/
+            docs/verification/orion-pro-player-statistics-20261105/runs/*-ci-*/
             docs/verification/orion-pro-native107-20261105/owned-sql-runs/*-ci-*/
             docs/verification/orion-pro-match-readers-20261105/runs/*-ci-*/
             docs/verification/orion-pro-observed-profile-20261105/runs/*-ci-*/
