@@ -28,9 +28,9 @@
 - Corpus612fixtures/387finished/15437performances/9795shots/839players/20teams.45591absent/188032null/175407nonzero/69517zero preserved.62exact-profile gaps/spatialnames+shirts/other detailedfamilies open. Transfer3d125825:Neon81finishedvsAWS80 in306sameIDs,H2H33vs0,lineups40vs39;onlyselectedarchive members qualified. No global source/purge acceptance.
 
 ## Active work and next
-- ROOT: realv2 committed73cd2e6d5b; expanded guard129artifacts and historical253Gitblobs independently verified. Commit/push guards, then review/integrate next receipts. Never complete goal at pilot.
+- ROOT: realv2 committed73cd2e6d5b; guardsc1695ff574 pushed,129current/253historical artifacts verified. Publicreadback13/13,12HTTP,359249B,HEAD/304body0 at bothVercelaliases+AWS; deployment74ea3f76de stillREADY. Distinct Vercelbridge/AWSmanifests remain; no typedcutover. Review/integrate next receipts. Never complete goal at pilot.
 - Source Sol: approved test-first RDS adapter missing-codeRED then ONE local2DB/600s compact campaign; offline/remoteRO interface only,NO cloud/SSM/RDS/source/RAM. Future freshRDSnative owners/ACL/adminflags/clocks/67seq require separate boundedROrelease,then later014write release.
 - Publisher Sol: approved allS01–S14pre-code oracle amendments/ONEcompletePG+API+roles+deadlines run,unchangedcaps. Preserve3oldsetupfailures; publisher absent until genuine missinghelperRED and ROOTreview. No schema/grants/deploy/source.
 - Streaming Sol: approved PLAN/PROTOCOL,E2Ebeforecode/missingRED,newv2implementation/staticpairbindings. No PG yet; ROOTreview then ONE compact-then-dense20min campaign. Oldv1/scaffold/policies/design immutable.74COPY/3controls/17empty,IDpreserved,32MiBmeta16MiBtransport,sourceRRclosedbeforetargetoracle/seal;noTEMP/index/grants.
 - Open: fullnative schema/field/state reconciliation,typedstreaming/RDSdata,admission/publications/dependencies,remainingroutes/features/globalpagination,scheduled/manualcollectors+concurrency,desktop/mobileparity,livecomparablemeasures,jointAWScutover,verifiedsourcedeletion/spacereport/Neonretirement.
-- Suggested current commit: fix: pin local policy routes and inspect complete security catalogue.
+- Suggested current commit: test: verify deployed frontend aliases and public API availability.
