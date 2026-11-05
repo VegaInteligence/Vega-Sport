@@ -44,6 +44,7 @@ on:
       - 'docs/verification/orion-pro-real-native-spatial-20261104/**'
       - 'docs/verification/orion-pro-api-coverage-20261105/**'
       - 'docs/verification/orion-validator-membership-20261105/**'
+      - 'docs/verification/orion-real-spatial-digest-20261105/**'
   pull_request:
     paths:
       - '.github/workflows/verify-ingestion.yml'
@@ -88,6 +89,7 @@ on:
       - 'docs/verification/orion-pro-real-native-spatial-20261104/**'
       - 'docs/verification/orion-pro-api-coverage-20261105/**'
       - 'docs/verification/orion-validator-membership-20261105/**'
+      - 'docs/verification/orion-real-spatial-digest-20261105/**'
   workflow_dispatch:
 permissions:
   contents: read
@@ -122,6 +124,7 @@ jobs:
             docs/verification/orion-pro-real-native-spatial-20261104
             docs/verification/orion-pro-api-coverage-20261105
             docs/verification/orion-validator-membership-20261105
+            docs/verification/orion-real-spatial-digest-20261105
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -192,6 +195,10 @@ jobs:
           python3 docs/verification/orion-pro-real-native-spatial-20261104/e2e.py
           --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
           --prepare-only --label ci-${{ github.run_id }}
+      - name: Preserve exact spatial numeric values across independent digest representations
+        run: >-
+          python3 docs/verification/orion-real-spatial-digest-20261105/e2e_serializer.py
+          --label ci-${{ github.run_id }}
       - name: Serve immutable typed pages, summaries and lazy shots over HTTP
         run: >-
           python3 tests/orion_pro_readers_local.py
@@ -229,6 +236,7 @@ jobs:
             docs/verification/orion-pro-heatmaps-20261104/runs/*-ci-*/
             docs/verification/orion-pro-bulk-20261104/runs/*-ci-*/
             docs/verification/orion-pro-real-native-spatial-20261104/runs/*-ci-*/
+            docs/verification/orion-real-spatial-digest-20261105/runs/*-ci-*/
             docs/verification/orion-pro-api-coverage-20261105/runs/*-ci-*/
             !docs/verification/orion-pro-api-coverage-20261105/runs/**/runtime/**/node_modules
             !docs/verification/orion-pro-api-coverage-20261105/runs/**/runtime/**/node_modules/**
