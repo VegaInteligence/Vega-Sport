@@ -24,7 +24,7 @@ READERS=ROOT/'docs/verification/orion-pro-readers-20261104'
 PILOT=ROOT/'docs/verification/orion-pro-pilot-20261104'
 MODEL=ROOT/'docs/architecture/orion-plan-20261104/target-schema.proposed.json'
 MODEL_SHA='18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08'
-SERVICE_NAMES=['orion-pro.js','orion-pro-entities.js','orion-pro-operations.js','orion-pro-appearances.js','orion-pro-fixture-aliases.js','orion-pro-competitions.js','orion-pro-match-details.js','orion-pro-archives.js','orion-pro-player-statistics.js','orion-pro-match-statistics.js','orion-pro-enrichment.js','orion-pro-spatial-advanced.js','postgres.js','database-connection.js','metrics.js','cache-policy.js','cache.js',
+SERVICE_NAMES=['orion-pro.js','orion-pro-entities.js','orion-pro-operations.js','orion-pro-appearances.js','orion-pro-fixture-aliases.js','orion-pro-competitions.js','orion-pro-match-details.js','orion-pro-archives.js','orion-pro-player-statistics.js','orion-pro-match-statistics.js','orion-pro-enrichment.js','orion-pro-spatial-advanced.js','orion-pro-rankings.js','postgres.js','database-connection.js','metrics.js','cache-policy.js','cache.js',
  'relational-match.js','relational-support.js','relational-catalog.js','cdn.js','relational-core.js','partition-wire.js',
  'catalog-model.json','support-model.json']
 WRAPPERS={'relational-core':['manifest','partitionPage','fixturePage','summary','scouting'],
@@ -32,7 +32,7 @@ WRAPPERS={'relational-core':['manifest','partitionPage','fixturePage','summary',
  'relational-catalog':['getCatalog','getProfile'],'relational-support':['getSupporting']}
 STABLE_HEADERS=['etag','cache-control','cdn-cache-control','vercel-cdn-cache-control','x-orion-representation','content-type','location','allow']
 HEAVY=re.compile(r'\bfootball\.(shots|match_heatmaps|match_heatmap_cells|pass_networks|pass_network_nodes|pass_network_edges)\b',re.I)
-CASES=['owned_runtime','positive_legacy_off','unsupported_get_remaining4','unsupported_head_remaining4','unsupported_conditional_remaining4','typed_entity_frontier','typed_appearance_frontier','typed_fixture_alias_frontier','typed_competitions_frontier','typed_native_match_detail_frontier','typed_archive_frontier','typed_shot_detail_frontier','typed_player_period_frontier','typed_enrichment_frontier','typed_spatial_advanced_frontier',
+CASES=['owned_runtime','positive_legacy_off','unsupported_get_uncatalogued','unsupported_head_uncatalogued','unsupported_conditional_uncatalogued','typed_entity_frontier','typed_appearance_frontier','typed_fixture_alias_frontier','typed_competitions_frontier','typed_native_match_detail_frontier','typed_archive_frontier','typed_shot_detail_frontier','typed_player_period_frontier','typed_enrichment_frontier','typed_spatial_advanced_frontier','typed_rankings_frontier',
  'closed_unknown_and_versioned','generic_path_method','operational_exceptions','media_valid','media_bad_path','media_bad_mime','media_cache_mode_isolation',
  'native_v1_golden_bytes','native_cold_head_304','correction_publication','old_pinned_v1','independent_C_and_stale_cursor','role_readonly','source_access_audit']
 
@@ -158,13 +158,16 @@ def main():
     player_period_forms={r['path'] for r in entity_rows if r['status']=='local-player-period-v1-E2E-qualified'}
     enrichment_forms={r['path'] for r in entity_rows if r['status']=='local-enrichment-v1-E2E-qualified'}
     spatial_forms={r['path'] for r in entity_rows if r['status']=='local-spatial-advanced-v1-E2E-qualified'}
-    assert len(spatial_forms)==5 and len(enrichment_forms)==5 and len(player_period_forms)==4 and len(shot_forms)==2 and len(archive_forms)==4 and len(native_forms)==6 and len(competition_forms)==8 and len(entity_forms)==8 and sum(r['status']=='reader-and-data-contract-required' for r in entity_rows)==4
+    rankings_forms={r['path'] for r in entity_rows if r['status']=='local-rankings-v1-E2E-qualified'}
+    assert rankings_forms=={'/api/rankings/index','/api/rankings/edition','/api/rankings/associations','/api/rankings/club'}
+    assert len(spatial_forms)==5 and len(enrichment_forms)==5 and len(player_period_forms)==4 and len(shot_forms)==2 and len(archive_forms)==4 and len(native_forms)==6 and len(competition_forms)==8 and len(entity_forms)==8 and sum(r['status']=='reader-and-data-contract-required' for r in entity_rows)==0
     entity_samples=[r['samplePath'] for r in pathlist['rows'] if r['path'] in entity_forms]
-    blocked=[r['samplePath'] for r in pathlist['rows'] if r['proOnPolicy']=='501_before_legacy_dispatch' and r['path'] not in entity_forms and r['path'] not in operational_forms and r['path'] not in appearance_forms and r['path'] not in fixture_forms and r['path'] not in competition_forms and r['path'] not in native_forms and r['path'] not in archive_forms and r['path'] not in shot_forms and r['path'] not in player_period_forms and r['path'] not in enrichment_forms and r['path'] not in spatial_forms]
-    assert len(blocked)==len(set(blocked))==4 and len(entity_samples)==8
+    blocked=[r['samplePath'] for r in pathlist['rows'] if r['proOnPolicy']=='501_before_legacy_dispatch' and r['path'] not in entity_forms and r['path'] not in operational_forms and r['path'] not in appearance_forms and r['path'] not in fixture_forms and r['path'] not in competition_forms and r['path'] not in native_forms and r['path'] not in archive_forms and r['path'] not in shot_forms and r['path'] not in player_period_forms and r['path'] not in enrichment_forms and r['path'] not in spatial_forms and r['path'] not in rankings_forms]
+    assert blocked==[] and len(entity_samples)==8
+    uncatalogued=['/api/rankings/unregistered','/api/rankings/index/extra','/api/future-native-capability']
     backend_paths=[app,ROOT/'dashboard/package.json',*[ROOT/'dashboard/backend/services'/n for n in SERVICE_NAMES]]
     helper_paths=[Path(__file__),BASE/'guard_http_server.mjs',BASE/'PRO_ON_ROUTE_POLICY.md',BASE/'GUARD_E2E_PROTOCOL.md',BASE/'API_ROUTE_MATRIX.json',
-      MODEL,entity_matrix,ROOT/'docs/verification/orion-pro-player-statistics-20261105/ROOT_SHOT_GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-player-statistics-20261105/ROOT_SPATIAL_ADVANCED_GUARD.md',ROOT/'docs/verification/orion-pro-enrichment-20261105/ROOT_ENRICHMENT_GUARD.md',ROOT/'docs/verification/orion-pro-player-statistics-20261105/ROOT_PLAYER_PERIOD_GUARD.md',ROOT/'docs/verification/orion-pro-archives-20261105/ROOT_GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-match-readers-20261105/ROOT_GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-competitions-20261105/ROOT_GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-fixture-aliases-20261105/GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-operations-20261105/GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-entities-20261105/GUARD_INTEGRATION_PROTOCOL.md',READERS/'fixture.py',PILOT/'harness.py',PILOT/'fixtures.py',ROOT/'tests/test_dashboard_data.py']
+      MODEL,entity_matrix,ROOT/'docs/verification/orion-pro-player-statistics-20261105/ROOT_SHOT_GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-player-statistics-20261105/ROOT_SPATIAL_ADVANCED_GUARD.md',ROOT/'docs/verification/orion-pro-rankings-20261105/ROOT_RANKINGS_GUARD.md',ROOT/'docs/verification/orion-pro-enrichment-20261105/ROOT_ENRICHMENT_GUARD.md',ROOT/'docs/verification/orion-pro-player-statistics-20261105/ROOT_PLAYER_PERIOD_GUARD.md',ROOT/'docs/verification/orion-pro-archives-20261105/ROOT_GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-match-readers-20261105/ROOT_GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-competitions-20261105/ROOT_GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-fixture-aliases-20261105/GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-operations-20261105/GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-entities-20261105/GUARD_INTEGRATION_PROTOCOL.md',READERS/'fixture.py',PILOT/'harness.py',PILOT/'fixtures.py',ROOT/'tests/test_dashboard_data.py']
     helper_paths += [ROOT/'dashboard/scripts'/n for n in ['orion_pro_migrate.py','orion_pro_integrity.py','orion_pro_schema.py','build_dashboard_data.py',
       'relational_core.py','relational_match.py','relational_match_ddl.py','relational_match_model.py','relational_catalog.py','relational_catalog_keys.py','relational_support.py']]
     migration_paths=[ROOT/'dashboard/backend/migrations'/n for n in ['003_relational_core.sql','004_match_details.sql','005_supporting_models.sql','006_catalog_models.sql',
@@ -279,15 +282,15 @@ def main():
                         assert r['legacyEntries'] and r['sql'],r
                     for label in origins:flag(label,1)
                     actual={'positiveControls':len(controls)}
-                elif case in ['unsupported_get_remaining4','unsupported_head_remaining4','unsupported_conditional_remaining4']:
+                elif case in ['unsupported_get_uncatalogued','unsupported_head_uncatalogued','unsupported_conditional_uncatalogued']:
                     flag('candidate',1);failures=[]
-                    for path in blocked:
-                        method='HEAD' if case=='unsupported_head_remaining4' else 'GET'
-                        h={'if-none-match':'*'} if case=='unsupported_conditional_remaining4' else None
+                    for path in uncatalogued:
+                        method='HEAD' if case=='unsupported_head_uncatalogued' else 'GET'
+                        h={'if-none-match':'*'} if case=='unsupported_conditional_uncatalogued' else None
                         r=http(path,method=method,headers=h)
                         try:refused(r)
                         except AssertionError:failures.append({'path':path,'id':r['id'],'status':r['status'],'legacyEntries':r['legacyEntries'],'sqlCount':len(r['sql'])})
-                    actual={'requests':4,'failures':failures};assert not failures,actual
+                    actual={'requests':len(uncatalogued),'catalogueClosedForms':0,'failures':failures};assert not failures,actual
                 elif case=='typed_entity_frontier':
                     for path in entity_samples:
                         for method in ['GET','HEAD']:
@@ -302,7 +305,7 @@ def main():
                             if method=='HEAD':assert r['body']=='',r
                     invalid=http('/api/scouting/routes?player=p_000001&v=bad')
                     assert invalid['status']==400 and not invalid['sql'] and not invalid['legacyEntries'] and not invalid['sourceAccess'],invalid
-                    actual={'supportedForms':8,'remainingClosedForms':4,'positiveEntityWorkflow':'tests/orion_pro_entities_local.py'}
+                    actual={'supportedForms':8,'remainingClosedForms':0,'positiveEntityWorkflow':'tests/orion_pro_entities_local.py'}
                 elif case=='typed_appearance_frontier':
                     base='/api/seasons/partition?season=2024%2F2025&league=l_000001&limit=2'
                     for path in [base,base+'&v=bad']:
@@ -317,7 +320,7 @@ def main():
                         assert r['status']==503 and r['headers']['cache-control']=='no-store' and not r['headers'].get('etag'),r
                         assert not r['legacyEntries'] and not r['legacyMaterializations'] and not r['sourceAccess'],r
                         if method=='HEAD':assert r['body']=='',r
-                    actual={'supportedForms':53,'remainingClosedForms':4,'missingNormalizedCoverage':'503,not fabricated empty','positiveWorkflow':'22appearance+8observed-profile cases'}
+                    actual={'supportedForms':57,'remainingClosedForms':0,'missingNormalizedCoverage':'503,not fabricated empty','positiveWorkflow':'22appearance+8observed-profile cases'}
                 elif case=='typed_fixture_alias_frontier':
                     manifest=http('/api/dashboard/manifest')['value']
                     version=next(e['representationToken'] for e in manifest['editions'] if e['season']=='2024/2025')
@@ -335,13 +338,13 @@ def main():
                             assert check['status']==status and check['body']=='',check
                             assert not check['legacyEntries'] and not check['sourceAccess'],check
                             metadata(check)
-                    actual={'supportedForms':53,'remainingClosedForms':4,'aliasForms':2,'positiveWorkflow':'16fixture-alias cases','publicationScope':'one explicit edition per v'}
+                    actual={'supportedForms':57,'remainingClosedForms':0,'aliasForms':2,'positiveWorkflow':'16fixture-alias cases','publicationScope':'one explicit edition per v'}
                 elif case=='typed_competitions_frontier':
                     for path in sorted(competition_forms):
                         for method in ['GET','HEAD']:
                             r=http(path+'?unexpected=1',method=method)
                             assert r['status']==400 and not r['sql'] and not r['legacyEntries'] and not r['sourceAccess'],r
-                    actual={'competitionForms':8,'supportedForms':53,'remainingClosedForms':4,'positiveWorkflow':'actual app C00–C25'}
+                    actual={'competitionForms':8,'supportedForms':57,'remainingClosedForms':0,'positiveWorkflow':'actual app C00–C25'}
                 elif case=='typed_native_match_detail_frontier':
                     for form in sorted(native_forms):
                         path=form.replace('{match}','m_000001')
@@ -353,7 +356,7 @@ def main():
                     old=http('/api/pitchapi/matches/m_000001/events?'+qs(v=version,representation='match-native-v1'))
                     assert old['status']==503 and not old['legacyEntries'] and not old['sourceAccess'],old
                     metadata(old)
-                    actual={'nativeForms':6,'supportedForms':53,'remainingClosedForms':4,'legacyReadyRefusesNative':True}
+                    actual={'nativeForms':6,'supportedForms':57,'remainingClosedForms':0,'legacyReadyRefusesNative':True}
                 elif case=='typed_archive_frontier':
                     for form in sorted(archive_forms):
                         path=form.replace('{match}','m_000001')
@@ -363,14 +366,14 @@ def main():
                     r=http('/api/archives/index?kind=results')
                     assert r['status']==503 and not r['legacyEntries'] and not r['sourceAccess'],r
                     metadata(r)
-                    actual={'archiveForms':4,'supportedForms':53,'remainingClosedForms':4,'unboundArchiveRefused':True}
+                    actual={'archiveForms':4,'supportedForms':57,'remainingClosedForms':0,'unboundArchiveRefused':True}
                 elif case=='typed_shot_detail_frontier':
                     for form in sorted(shot_forms):
                         path=form.replace('{match}','m_000001').replace('{shot}','s_000001').replace('{player}','p_000001')
                         for method in ['GET','HEAD']:
                             r=http(path+'?unexpected=1',method=method)
                             assert r['status']==400 and not r['sql'] and not r['legacyEntries'] and not r['sourceAccess'],r
-                    actual={'shotDetailForms':2,'supportedForms':53,'remainingClosedForms':4}
+                    actual={'shotDetailForms':2,'supportedForms':57,'remainingClosedForms':0}
                 elif case=='typed_player_period_frontier':
                     for form in sorted(player_period_forms):
                         path=form.replace('{match}','m_000001').replace('{player}','p_000001')
@@ -382,20 +385,31 @@ def main():
                     r=http('/api/pitchapi/matches/m_000001/players?'+qs(v=version,representation='match-statistics-v1'))
                     assert r['status']==503 and not r['legacyEntries'] and not r['sourceAccess'],r
                     metadata(r)
-                    actual={'playerPeriodForms':4,'supportedForms':53,'remainingClosedForms':4,'legacyReadyRefusesStats':True}
+                    actual={'playerPeriodForms':4,'supportedForms':57,'remainingClosedForms':0,'legacyReadyRefusesStats':True}
                 elif case=='typed_enrichment_frontier':
                     for path in sorted(enrichment_forms):
                         for method in ['GET','HEAD']:
                             r=http(path+'?unexpected=1',method=method)
                             assert r['status']==400 and not r['sql'] and not r['legacyEntries'] and not r['sourceAccess'],r
-                    actual={'enrichmentForms':5,'supportedForms':53,'remainingClosedForms':4}
+                    actual={'enrichmentForms':5,'supportedForms':57,'remainingClosedForms':0}
                 elif case=='typed_spatial_advanced_frontier':
                     for form in sorted(spatial_forms):
                         path=form.replace('{match}','m_000001').replace('{player}','p_000001')
                         for method in ['GET','HEAD']:
                             r=http(path+'?unexpected=1',method=method)
                             assert r['status']==400 and not r['sql'] and not r['legacyEntries'] and not r['sourceAccess'],r
-                    actual={'spatialForms':5,'supportedForms':53,'remainingClosedForms':4}
+                    actual={'spatialForms':5,'supportedForms':57,'remainingClosedForms':0}
+                elif case=='typed_rankings_frontier':
+                    for path in sorted(rankings_forms):
+                        for method in ['GET','HEAD']:
+                            r=http(path+'?unexpected=1',method=method)
+                            assert r['status']==400 and not r['sql'] and not r['legacyEntries'] and not r['sourceAccess'],r
+                    for path in ['/api/rankings/edition?kind=fifa-men&edition=2026-13-40.fifa','/api/rankings/associations?year=26','/api/rankings/club?club=bad']:
+                        r=http(path)
+                        assert r['status']==400 and not r['sql'] and not r['legacyEntries'] and not r['sourceAccess'],r
+                    r=http('/api/rankings/index',method='POST')
+                    assert r['status'] in (405,400) and not r['sql'] and not r['legacyEntries'] and not r['sourceAccess'],r
+                    actual={'rankingForms':4,'supportedForms':57,'remainingClosedForms':0}
                 elif case=='closed_unknown_and_versioned':
                     for path in ['/api/future-native-capability',
                       '/api/pitchapi/matches/m_000001/unregistered?'+qs(v='pro1.1.'+'0'*64)]:refused(http(path))
