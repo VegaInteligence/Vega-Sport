@@ -36,14 +36,47 @@ jobs:
         with:
           mode: ingest
           role-arn: ${{ vars.STATARENA_AWS_INGEST_ROLE_ARN }}
-      - name: Execute audited one-time RDS tournament reclassification
+      - name: Inspect empty year alias metadata before World Cup migration
         shell: bash
         run: |
           set -euo pipefail
           # relational_materialize.py is the normal publisher; this workflow is a one-time repair.
           python -m unittest discover -s tests -p 'test_football_seasons.py' -q
           python -m unittest discover -s tests -p 'test_tournament_publisher_aliases.py' -q
-          python dashboard/scripts/apply_tournament_reclass_once.py --snapshot statarena-before-season-reclass-20261106 --execute
+          python dashboard/scripts/apply_tournament_reclass_once.py --snapshot statarena-before-season-reclass-20261106
+          python - <<'PY'
+          import os, json, psycopg
+          from collections import Counter
+          tables=("partition_metrics","partition_counts","partition_notes",
+                  "partition_bootstrap_sources","matches","fixtures","appearances",
+                  "team_seasons","publication_jobs")
+          with psycopg.connect(os.environ["DATABASE_URL"],
+              options="-c default_transaction_read_only=on -c statement_timeout=15000") as db:
+              result={}
+              for name in tables:
+                  result[name]={}
+                  for season in ("2026","2026/2027","2025/2026"):
+                      n=db.execute(
+                          "SELECT count(*) FROM statarena_app."+name+
+                          " WHERE league_id=%s AND season=%s",
+                          ("l_1XLtP0",season)).fetchone()[0]
+                      result[name][season]=n
+              for season in ("2026","2026/2027","2025/2026"):
+                  data=db.execute(
+                      "SELECT metric_key,ordinal FROM statarena_app.partition_metrics "
+                      "WHERE league_id=%s AND season=%s ORDER BY ordinal",
+                      ("l_1XLtP0",season)).fetchall()
+                  result["metrics_"+season]=data[:120]
+                  result["notes_"+season]=db.execute(
+                      "SELECT ordinal,note FROM statarena_app.partition_notes "
+                      "WHERE league_id=%s AND season=%s ORDER BY ordinal LIMIT 10",
+                      ("l_1XLtP0",season)).fetchall()
+                  result["nonzero_counts_"+season]=db.execute(
+                      "SELECT metric_key,value FROM statarena_app.partition_counts "
+                      "WHERE league_id=%s AND season=%s AND value<>0 ORDER BY metric_key LIMIT 20",
+                      ("l_1XLtP0",season)).fetchall()
+              print("ALIAS_DIAGNOSTICS",json.dumps(result,default=str,ensure_ascii=False))
+          PY
       - name: Save reclassification receipt
         if: always()
         uses: actions/upload-artifact@v4
