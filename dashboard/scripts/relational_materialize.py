@@ -21,6 +21,7 @@ from relational_catalog import publish_catalog
 from relational_catalog_keys import records as catalog_records
 from relational_core import publish_snapshot
 from relational_match import (
+    MAX_MATCH_RECORDS,
     _PARENT_SUFFIXES,
     _resource_address,
     publish_match_batch,
@@ -750,11 +751,11 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
         partition_inputs(inputs, scratch, list(fixtures))
         source_done = time.monotonic()
         mids = list(fixtures)
-        for start in range(0, len(mids), 16):
+        for start in range(0, len(mids), MAX_MATCH_RECORDS):
             headroom = capacity(db)
             estimated = 0
             batch_details = []
-            for mid in mids[start : start + 16]:
+            for mid in mids[start : start + MAX_MATCH_RECORDS]:
                 context = scratch.execute(
                     "SELECT body FROM context WHERE mid=?", (mid,)
                 ).fetchone()
