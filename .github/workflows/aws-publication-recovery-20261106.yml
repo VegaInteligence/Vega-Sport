@@ -12,7 +12,7 @@ jobs:
   recover_publication:
     if: github.repository == 'OrionQuantPlatform/STATARENA' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 30
     permissions:
       contents: read
       id-token: write
@@ -25,7 +25,7 @@ jobs:
       - name: Check out the verified AWS worker release
         uses: actions/checkout@v4
         with:
-          ref: fbbef22b027e3334fd57fe4ea341e1c6f3103d3a
+          ref: 24bff85533b3d466164be7108062db74da786c1b
           sparse-checkout: |
             dashboard
             .github/actions/aws-database
@@ -44,11 +44,14 @@ jobs:
         with:
           mode: ingest
           role-arn: arn:aws:iam::361769570630:role/StatArenaGitHubIngest
-      - name: Publish pending editions from verified AWS staging
+      - name: Inspect the pinned final source reconciliation
         shell: bash
         run: |
           set -euo pipefail
-          python dashboard/scripts/relational_materialize.py --minutes 100 --batch 10 | tee publication-recovery.log
+          python dashboard/scripts/reconcile_aws_staging.py \
+            --manifest data/_migration/reconciliation/20261106T141500Z/manifest.json \
+            --sha256 40bfd8b7e43f27e561f73d340c236b8b3b913813115e5b1f24d2ff87a20a65b6 \
+            | tee publication-recovery.log
       - name: Save the publication receipt
         if: always()
         uses: actions/upload-artifact@v4
@@ -56,3 +59,4 @@ jobs:
           name: aws-publication-recovery-${{ github.run_id }}
           path: publication-recovery.log
           if-no-files-found: ignore
+
