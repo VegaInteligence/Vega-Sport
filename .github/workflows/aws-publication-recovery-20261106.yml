@@ -25,7 +25,7 @@ jobs:
       - name: Check out the verified AWS worker release
         uses: actions/checkout@v4
         with:
-          ref: 8938604b063bb9c67cf5d73a5d3c69a3ab4d6017
+          ref: 716630577d870738361d7cf635118afb1f15e0d4
           sparse-checkout: |
             dashboard
             .github/actions/aws-database
