@@ -74,3 +74,10 @@ export function nationalFlagCode(name, season) {
     return "yu-1992";
   return names.get(normalized) || null;
 }
+
+export function nationalTeamName(name, season) {
+  const code = nationalFlagCode(name, season);
+  return code?.length === 2
+    ? displays[1]?.of(code.toUpperCase()) || name
+    : name;
+}

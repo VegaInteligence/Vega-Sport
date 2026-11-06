@@ -22,6 +22,21 @@ const fixtures = {
     ["2040049", "2024-09-05", 90, 0, 0],
   ],
 };
+const matchDetails = {
+  2048018: ["39", "Angleterre", "122", "Espagne", 2, 3],
+  2047999: ["122", "Espagne", "56370", "Croatie", 4, 1],
+  2047971: ["122", "Espagne", "58837", "Tchéquie", 3, 1],
+  2047946: ["56370", "Croatie", "122", "Espagne", 1, 2],
+  2044949: ["110", "Portugal", "122", "Espagne", 2, 2],
+  2043065: ["122", "Espagne", "43", "France", 5, 4],
+  2043060: ["122", "Espagne", "95", "Pays-Bas", 3, 3],
+  2043056: ["95", "Pays-Bas", "122", "Espagne", 2, 2],
+  2040116: ["122", "Espagne", "35", "Danemark", 1, 0],
+  2040076: ["128", "Suisse", "122", "Espagne", 1, 4],
+  2040049: ["147", "Serbie", "122", "Espagne", 0, 0],
+};
+const teamId = (id) => (id === "122" ? TEAM : `uefa:${id}`);
+
 export const uefaSnapshotSeasons = (id) =>
   id === PLAYER ? Object.keys(fixtures) : [];
 
@@ -102,6 +117,29 @@ export function addUefaNationsSnapshot(data, playerId, season) {
     appearances: [
       ...appearances.filter((row) => !unresolved.has(row)),
       ...rows,
+    ],
+    matches: [
+      ...(value.matches || []),
+      ...rows
+        .filter(
+          (row) =>
+            !(value.matches || []).some((match) => match.id === row.matchId),
+        )
+        .map((row) => {
+          const id = row.matchId.slice(5);
+          const [homeId, homeName, awayId, awayName, homeScore, awayScore] =
+            matchDetails[id];
+          return {
+            id: row.matchId,
+            date: row.date,
+            season,
+            leagueId: selectedId,
+            league: native?.name || "Ligue des Nations",
+            sourceUrl: `https://www.uefa.com/uefanationsleague/match/${id}/`,
+            home: { id: teamId(homeId), name: homeName, score: homeScore },
+            away: { id: teamId(awayId), name: awayName, score: awayScore },
+          };
+        }),
     ],
     competitions: [
       ...competitions.filter((item) => item.id !== selectedId),

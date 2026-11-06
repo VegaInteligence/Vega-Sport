@@ -5,13 +5,16 @@ import React, { useState, useMemo, useDeferredValue } from "react";
 import Layout from "../components/Layout.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
-import { number, isNumber } from "../services/format.js";
+import { date, number } from "../services/format.js";
 import { sortRows, per90 } from "../model.js";
 import PlayerSeasonProfile from "../components/PlayerSeasonProfile.jsx";
 import PlayerWorkspace from "../components/PlayerWorkspace.jsx";
-import PerformanceContext from "../components/PerformanceContext.jsx";
+import PlayerFixture from "../components/PlayerFixture.jsx";
 import { ResearchComparisonTray } from "../components/ResearchUI.jsx";
-import { aggregateSeasonPlayers } from "../services/season-player.js";
+import {
+  aggregateSeason,
+  aggregateSeasonPlayers,
+} from "../services/season-player.js";
 import {
   PLAYER_RANKINGS,
   rankSeasonPlayers,
@@ -23,14 +26,7 @@ import {
   searchPlayerAverages,
   sortPlayerAverages,
 } from "../services/player-directory.js";
-import {
-  Card,
-  Rating,
-  Pager,
-  Segments,
-  Media,
-  Empty,
-} from "../components/UI.jsx";
+import { Card, Rating, Segments, Empty } from "../components/UI.jsx";
 export default function PlayersPage() {
   const research = useResearch(),
     params = useSearchParams();
@@ -40,7 +36,7 @@ export default function PlayersPage() {
       key: "rating",
       direction: "desc",
     }),
-    [page, setPage] = useState(1);
+    [matchSort, setMatchSort] = useState({ key: "date", direction: "desc" });
   const filters = useDeferredValue(f.filters);
   const ranking = f.filters.ranking;
   const sort = PLAYER_RANKINGS[ranking]?.sort || manualSort;
@@ -125,13 +121,18 @@ export default function PlayersPage() {
   );
   const rows = useMemo(
     () =>
-      sortRows(playerRows, sort.key, sort.direction, mode, f.data.appearances),
-    [playerRows, f.data, sort, mode],
+      id && profileView === "matches"
+        ? sortRows(
+            aggregateSeason(playerRows, id).rows,
+            matchSort.key,
+            matchSort.direction,
+            matchSort.key === "date" ? "total" : mode,
+          )
+        : [],
+    [id, profileView, playerRows, matchSort, mode],
   );
-  const pages = Math.max(1, Math.ceil(rows.length / 20)),
-    current = Math.min(page, pages);
   const fields = [
-    ["name", "Joueur"],
+    ["date", "Match"],
     ["minutes", "Min."],
     ["rating", "Note"],
     ["goals", "Buts"],
@@ -190,8 +191,8 @@ export default function PlayersPage() {
                         <th
                           key={key}
                           aria-sort={
-                            sort.key === key
-                              ? sort.direction === "asc"
+                            matchSort.key === key
+                              ? matchSort.direction === "asc"
                                 ? "ascending"
                                 : "descending"
                               : "none"
@@ -199,20 +200,20 @@ export default function PlayersPage() {
                         >
                           <button
                             onClick={() => {
-                              setSort({
+                              setMatchSort({
                                 key,
                                 direction:
-                                  sort.key === key && sort.direction === "desc"
+                                  matchSort.key === key &&
+                                  matchSort.direction === "desc"
                                     ? "asc"
                                     : "desc",
                               });
-                              setPage(1);
                             }}
                           >
                             {label}{" "}
                             <span className="sort-indicator" aria-hidden="true">
-                              {sort.key === key
-                                ? sort.direction === "asc"
+                              {matchSort.key === key
+                                ? matchSort.direction === "asc"
                                   ? "↑"
                                   : "↓"
                                 : "↕"}
@@ -223,7 +224,7 @@ export default function PlayersPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.slice((current - 1) * 20, current * 20).map((r) => (
+                    {rows.map((r) => (
                       <tr key={r.id}>
                         <td>
                           <input
@@ -237,32 +238,22 @@ export default function PlayersPage() {
                           />
                         </td>
                         <td>
-                          <button
-                            className="table-player"
-                            onClick={() => f.setPlayer(r.id)}
-                          >
-                            <Media
-                              name={r.name}
-                              url={r.imageUrl}
-                              className="player-avatar"
-                            />
-                            <span className="player-copy">
-                              <strong className="player-name">{r.name}</strong>
-                              <span className="player-meta">
-                                <PerformanceContext
-                                  teamIds={[r.teamId]}
-                                  leagueIds={[r.leagueId]}
-                                  team={r.team}
-                                  league={r.league}
-                                />
-                              </span>
-                            </span>
-                          </button>
+                          <PlayerFixture
+                            row={r}
+                            match={matchIndex.get(r.matchId)}
+                          />
                         </td>
                         {fields.slice(1).map(([key]) => (
                           <td key={key}>
                             {key === "rating" ? (
-                              <Rating value={r.rating} />
+                              <button
+                                type="button"
+                                className="player-rating-detail"
+                                onClick={() => f.setPlayer(r.id)}
+                                aria-label={`Détail de la performance du ${date(r.date)}`}
+                              >
+                                <Rating value={r.rating} />
+                              </button>
                             ) : (
                               number(
                                 mode === "per90" && key !== "minutes"
@@ -284,7 +275,6 @@ export default function PlayersPage() {
             ) : (
               <Empty>Aucune performance pour ces filtres.</Empty>
             )}
-            <Pager page={current} total={pages} onChange={setPage} />
           </Card>
         )
       ) : (

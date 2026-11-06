@@ -98,3 +98,16 @@ test("Liga artwork covers the recent trophy editions", async () => {
     new URL(`../dashboard/frontend/public${image}`, import.meta.url),
   );
 });
+
+test("the current Henri Delaunay trophy is used for modern Euro editions", async () => {
+  const image = "/trophies/euro-modern.webp";
+  assert.equal(trophyArt({ title: "Euro", years: "2024" }), image);
+  assert.equal(
+    trophyArt({ title: "UEFA European Championship", years: "2008" }),
+    image,
+  );
+  assert.equal(trophyArt({ title: "Euro", years: "2004" }), null);
+  await access(
+    new URL(`../dashboard/frontend/public${image}`, import.meta.url),
+  );
+});

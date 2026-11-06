@@ -61,6 +61,15 @@ export function trophyArt(item) {
   let file = ART[name];
   if (["coupe du monde", "fifa world cup"].includes(name))
     file = year !== null && year >= 1974 ? "world-cup.webp" : null;
+  if (
+    [
+      "euro",
+      "uefa euro",
+      "championnat d europe",
+      "uefa european championship",
+    ].includes(name)
+  )
+    file = year !== null && year >= 2008 ? "euro-modern.webp" : null;
   // The recent illustration is documented from the 2022/23 season.
   if (["liga", "spanish la liga", "la liga"].includes(name))
     file =

@@ -1,0 +1,31 @@
+.panel {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border, #d9e0e0);
+  border-radius: 12px;
+}
+.panel h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  margin: 0;
+}
+.grid div {
+  min-width: 110px;
+}
+.grid dt,
+.source {
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
+.grid dd {
+  margin: 0.2rem 0 0;
+  font-weight: 600;
+}
+.source {
+  margin: 0.75rem 0 0;
+}

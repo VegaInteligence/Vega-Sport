@@ -20,8 +20,12 @@ const CLUB_COMPETITIONS = new Set([
 ]);
 const TEAM_ORDER = { club: 0, selection: 1, unknown: 2 };
 
+export function isNationalTeamCompetition(id) {
+  return NATIONAL_COMPETITIONS.has(id);
+}
+
 function competitionKind(id) {
-  if (NATIONAL_COMPETITIONS.has(id)) return "selection";
+  if (isNationalTeamCompetition(id)) return "selection";
   if (CLUB_COMPETITIONS.has(id)) return "club";
   return "unknown";
 }

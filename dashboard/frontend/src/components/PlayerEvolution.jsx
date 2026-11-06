@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResource } from "../services/resources.js";
 import { loadPlayerHistory } from "../services/scouting-history.js";
-import { nationalFlagCode } from "../services/national-flags.js";
+import { nationalTeamName } from "../services/national-flags.js";
 import { playerTeamSeasons } from "../services/player-team-seasons.js";
 import { profileValue, SCOUT_METRICS } from "../services/scouting.js";
 import { seasonMetric } from "../services/season-player.js";
@@ -16,10 +16,6 @@ import NationalFlag from "./NationalFlag.jsx";
 import PlayerSeasonTrend from "./PlayerSeasonTrend.jsx";
 import { ResearchTrend } from "./ResearchCharts.jsx";
 
-const regionNames =
-  typeof Intl.DisplayNames === "function"
-    ? new Intl.DisplayNames(["fr"], { type: "region", fallback: "none" })
-    : null;
 const STAT_LABELS = {
   matches: "Matchs",
   goals: "Buts",
@@ -29,11 +25,7 @@ const STAT_LABELS = {
 };
 
 function teamDisplayName({ team, kind, season }) {
-  if (kind !== "selection") return team;
-  const code = nationalFlagCode(team, season);
-  return code?.length === 2
-    ? regionNames?.of(code.toUpperCase()) || team
-    : team;
+  return kind === "selection" ? nationalTeamName(team, season) : team;
 }
 
 function SeasonTeam({ row }) {
@@ -334,11 +326,7 @@ export default function PlayerEvolution({ id, profile }) {
                     />
                   )}
                   <span>
-                    <strong>
-                      {opponent
-                        ? `Contre ${opponent.name}`
-                        : row.league || "Match"}
-                    </strong>
+                    <strong>{opponent?.name || row.league || "Match"}</strong>
                     <small>{date(row.date)}</small>
                   </span>
                   <b>{number(row.rating, 2)}</b>

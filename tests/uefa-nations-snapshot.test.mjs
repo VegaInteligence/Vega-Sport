@@ -86,3 +86,31 @@ test("partial provider coverage shares one competition and ignores missing minut
   assert.equal(aggregateSeason(merged.appearances, id).unknownMinutes, 0);
   assert.equal(new Set(merged.appearances.map((row) => row.leagueId)).size, 1);
 });
+
+test("UEFA matches include official identity, scores, and links only for added rows", () => {
+  const data = empty();
+  data.competitions.push({ id: "l_provider", name: "UEFA Nations League" });
+  data.appearances.push({
+    playerId: id,
+    teamId: "t_486gYN",
+    leagueId: "l_provider",
+    date: "2026-09-29",
+    matchId: "m_native",
+    minutes: 68,
+  });
+  const merged = addUefaNationsSnapshot(data, id, season);
+  assert.equal(merged.matches.length, 3);
+  assert.equal(
+    merged.matches.some((match) => match.id === "uefa:2047999"),
+    false,
+  );
+  const match = merged.matches.find((match) => match.id === "uefa:2048018");
+  assert.deepEqual(match.home, { id: "uefa:39", name: "Angleterre", score: 2 });
+  assert.deepEqual(match.away, { id: "t_486gYN", name: "Espagne", score: 3 });
+  assert.equal(
+    match.sourceUrl,
+    "https://www.uefa.com/uefanationsleague/match/2048018/",
+  );
+  assert.equal(match.leagueId, "l_provider");
+  assert.equal(addUefaNationsSnapshot(null, id, "2024/2025").matches.length, 7);
+});

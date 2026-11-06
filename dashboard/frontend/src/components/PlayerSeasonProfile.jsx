@@ -10,14 +10,8 @@ import {
 } from "../services/season-player.js";
 import {
   buildCohorts,
-  cohortMedianPercentiles,
-  metricAxes,
   playerSnapshot,
-  cohortTraits,
-  METRIC_PRESETS,
-  profileValue,
   rankMetric,
-  roleAssessments,
   SCOUT_METRICS,
   similarPlayers,
 } from "../services/scouting.js";
@@ -35,11 +29,17 @@ import {
   ReportButton,
   ResearchTabs,
 } from "./ResearchUI.jsx";
-import { ResearchRadar } from "./ResearchCharts.jsx";
-import PlayerHonours from "./PlayerHonours.jsx";
+import PlayerHonours, {
+  PlayerHonoursSource,
+  usePlayerHonours,
+} from "./PlayerHonours.jsx";
+import PlayerBio from "./PlayerBio.jsx";
+import PlayerDiscipline from "./PlayerDiscipline.jsx";
+import { playerOpponent } from "./PlayerFixture.jsx";
 import PerformanceContext from "./PerformanceContext.jsx";
 import MessiGoats from "./MessiGoats.jsx";
 import { MESSI_ID } from "../services/player-honours.js";
+import { playerBio } from "../services/player-bio.js";
 import { primeResource, useResource } from "../services/resources.js";
 import {
   MESSI_PORTRAIT,
@@ -57,6 +57,29 @@ const TABS = [
   ["evolution", "Évolution"],
   ["compare", "Comparer"],
   ["matches", "Matchs"],
+];
+const OVERVIEW_GROUPS = [
+  ["summary", "Essentiel"],
+  ["attack", "Attaque"],
+  ["creation", "Création"],
+  ["defence", "Défense"],
+];
+const OVERVIEW_METRICS = {
+  summary: ["goals", "assists", "shotsOnTarget", "xg"],
+  attack: ["goals", "shots", "shotsOnTarget", "xg"],
+  creation: ["assists", "chancesCreated", "passesFinalThird", "passesAccurate"],
+  defence: ["recoveries", "interceptions", "tackles", "duelsWon"],
+};
+const KEEPER_METRICS = [
+  "saves",
+  "goalsPrevented",
+  "passesAccurate",
+  "passAccuracy",
+];
+const STAT_MODES = [
+  ["total", "Totaux"],
+  ["per90", "Par 90 min"],
+  ["perMatch", "Par match"],
 ];
 
 export function PlayerMetricTable({ profile, keys, mode, cohorts }) {
@@ -78,7 +101,9 @@ export function PlayerMetricTable({ profile, keys, mode, cohorts }) {
             </th>
             <th>Matchs renseignés</th>
             <th>Médiane / 90 ou %</th>
-            <th>Centile</th>
+            <th title="Un centile proche de 100 indique une place parmi les meilleurs joueurs du même poste sur cet indicateur.">
+              Centile au poste
+            </th>
             <th>Pairs</th>
           </tr>
         </thead>
@@ -215,7 +240,7 @@ function ProfileComparison({ profile, profiles, cohorts }) {
   );
 }
 
-function PlayerProfileHeading({ id, identity, role, children }) {
+function PlayerProfileHeading({ id, identity, role, honours, children }) {
   return (
     <div className="season-player-heading">
       <div className="season-player-identity">
@@ -230,7 +255,7 @@ function PlayerProfileHeading({ id, identity, role, children }) {
           {role && <p>{role}</p>}
         </div>
       </div>
-      <PlayerHonours key={id} id={id} name={identity.name} />
+      <PlayerHonours key={id} name={identity.name} result={honours} />
       {children}
     </div>
   );
@@ -271,6 +296,8 @@ export default function PlayerSeasonProfile({
       ),
     [id, profile, f.data?.appearances, missingIdentity.value],
   );
+  const honours = usePlayerHonours(id, identity.name);
+  const role = playerBio(id)?.position || profile.role?.label;
   const profiles = useMemo(
     () => allProfiles || aggregateSeasonPlayers(scopeRows),
     [allProfiles, scopeRows],
@@ -278,18 +305,10 @@ export default function PlayerSeasonProfile({
   const [mode, setMode] = useState("total"),
     [minMinutes, setMinMinutes] = useState(450),
     [keys, setKeys] = useState(Object.keys(SCOUT_METRICS)),
-    [preset, setPreset] = useState("overview");
+    [overviewGroup, setOverviewGroup] = useState("summary");
   const cohorts = useMemo(
     () => buildCohorts(profiles, minMinutes),
     [profiles, minMinutes],
-  );
-  const traits = useMemo(
-    () => cohortTraits(profile, cohorts),
-    [profile, cohorts],
-  );
-  const roles = useMemo(
-    () => roleAssessments(profile, cohorts),
-    [profile, cohorts],
   );
   const requestedView = params?.get("playerView");
   const view = TABS.some(([key]) => key === requestedView)
@@ -300,16 +319,6 @@ export default function PlayerSeasonProfile({
     url.searchParams.set("playerView", next);
     window.history.replaceState(null, "", url.pathname + url.search);
   };
-  const metricKeys =
-    profile.role?.group === "G" && preset === "overview"
-      ? METRIC_PRESETS.keeper.keys
-      : METRIC_PRESETS[preset].keys;
-  const rankings = Object.fromEntries(
-    metricKeys.map((key) => [
-      key,
-      rankMetric(profile, key, cohorts).percentile,
-    ]),
-  );
   const cohort = cohorts.groups.get(profile.role?.group);
   const matchIds = useMemo(
     () => new Set(profile.rows.map((row) => row.matchId)),
@@ -350,10 +359,19 @@ export default function PlayerSeasonProfile({
     return (
       <Card className="player-season-card research-player-profile">
         <MessiGoats id={id} />
-        {identity?.name && <PlayerProfileHeading id={id} identity={identity} />}
+        {identity.name && (
+          <PlayerProfileHeading
+            id={id}
+            identity={identity}
+            role={role}
+            honours={honours}
+          />
+        )}
+        <PlayerBio id={id} />
         <Empty>
           Aucune performance avec des minutes connues pour ces filtres.
         </Empty>
+        <PlayerHonoursSource url={honours.value?.sourceUrl} />
       </Card>
     );
   }
@@ -366,16 +384,17 @@ export default function PlayerSeasonProfile({
     />
   );
   const figures =
-    profile.role?.group === "G"
-      ? ["saves", "goalsPrevented", "passesAccurate", "passAccuracy"]
-      : ["goals", "assists", "xg", "xa"];
+    profile.role?.group === "G" && overviewGroup === "summary"
+      ? KEEPER_METRICS
+      : OVERVIEW_METRICS[overviewGroup];
   return (
     <Card className="player-season-card research-player-profile">
       <MessiGoats id={id} />
       <PlayerProfileHeading
         id={id}
         identity={identity}
-        role={profile.role?.label}
+        role={role}
+        honours={honours}
       >
         <div className="research-toolbar">
           <BookmarkButton
@@ -397,8 +416,15 @@ export default function PlayerSeasonProfile({
       </PlayerProfileHeading>
       <div className="research-stat-strip">
         <div>
-          <span>Matchs</span>
-          <strong>{number(profile.matches)}</strong>
+          <button
+            type="button"
+            className="player-match-count"
+            onClick={() => change("matches")}
+            aria-label={`Voir les ${number(profile.matches)} matchs joués`}
+          >
+            <span>Matchs joués</span>
+            <strong>{number(profile.matches)}</strong>
+          </button>
         </div>
         <div>
           <span>Minutes</span>
@@ -409,7 +435,7 @@ export default function PlayerSeasonProfile({
           <strong>{profile.knownStarts ? number(profile.starts) : "—"}</strong>
         </div>
         <div>
-          <span>Note</span>
+          <span>Note moyenne</span>
           <strong>{number(profile.rating, 2)}</strong>
         </div>
       </div>
@@ -442,39 +468,21 @@ export default function PlayerSeasonProfile({
             </div>
           </>
         )}
-        {["overview", "stats"].includes(view) && (
+        {view === "stats" && (
           <div className="research-toolbar">
             <Segments
               label="Calcul des statistiques du joueur"
               value={mode}
               onChange={setMode}
-              items={[
-                ["total", "Totaux"],
-                ["per90", "Par 90"],
-                ["perMatch", "Par match"],
-              ]}
+              items={STAT_MODES}
             />
-            <label>
-              Modèle du radar
-              <select
-                aria-label="Modèle du profil joueur"
-                value={preset}
-                onChange={(e) => setPreset(e.target.value)}
-              >
-                {Object.entries(METRIC_PRESETS).map(([key, item]) => (
-                  <option key={key} value={key}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
           </div>
         )}
-        {["overview", "stats", "similar"].includes(view) && (
+        {["stats", "similar"].includes(view) && (
           <div className="research-context">
             <span>
-              {number(cohort?.profiles.length || 0)} pairs au poste ·{" "}
-              {minMinutes} minutes minimum
+              {number(cohort?.profiles.length || 0)} joueurs au même poste · au
+              moins {minMinutes} min
             </span>
             <label>
               Minutes minimum
@@ -503,6 +511,20 @@ export default function PlayerSeasonProfile({
         >
           {view === "overview" && (
             <>
+              <div className="research-toolbar player-overview-controls">
+                <Segments
+                  label="Statistiques à afficher"
+                  value={overviewGroup}
+                  onChange={setOverviewGroup}
+                  items={OVERVIEW_GROUPS}
+                />
+                <Segments
+                  label="Calcul des statistiques du joueur"
+                  value={mode}
+                  onChange={setMode}
+                  items={STAT_MODES}
+                />
+              </div>
               <div className="season-player-figures">
                 {figures.map((key) => {
                   const result = seasonMetric(profile, key, mode);
@@ -533,75 +555,9 @@ export default function PlayerSeasonProfile({
                   );
                 })}
               </div>
-              <div className="research-two-columns">
-                <ResearchRadar
-                  title={`${profile.name} · centiles au poste`}
-                  axes={metricAxes(metricKeys)}
-                  series={[
-                    { name: profile.name, values: rankings },
-                    {
-                      name: "Médiane au poste",
-                      values: cohortMedianPercentiles(
-                        metricKeys,
-                        profile,
-                        cohorts,
-                      ),
-                    },
-                  ]}
-                  context={`${f.season}, ${profile.role?.label}, ${minMinutes} minutes minimum`}
-                />
-                <div>
-                  <h3>Traits statistiques</h3>
-                  {traits.high.length ? (
-                    <div className="research-traits">
-                      {[
-                        ["Centiles élevés", traits.high],
-                        ["Centiles bas", traits.low],
-                      ].map(([title, values]) => (
-                        <section key={title}>
-                          <h4>{title}</h4>
-                          <dl>
-                            {values.map((item) => (
-                              <div key={item.key}>
-                                <dt>{SCOUT_METRICS[item.key].label}</dt>
-                                <dd>
-                                  {number(item.percentile)}
-                                  <small>e centile</small>
-                                </dd>
-                              </div>
-                            ))}
-                          </dl>
-                        </section>
-                      ))}
-                    </div>
-                  ) : (
-                    <Empty>
-                      Échantillon insuffisant pour situer ce joueur. Élargissez
-                      les compétitions ou ajustez les minutes.
-                    </Empty>
-                  )}
-                  {roles.some((role) => role.value != null) && (
-                    <section>
-                      <h3>Dimensions par profil</h3>
-                      <div className="research-role-scores">
-                        {roles
-                          .filter((role) => role.value != null)
-                          .map((role) => (
-                            <div
-                              key={role.id}
-                              title={role.keys
-                                .map((key) => SCOUT_METRICS[key].label)
-                                .join(" · ")}
-                            >
-                              <span>{role.label}</span>
-                              <meter min="0" max="100" value={role.value} />
-                              <strong>{number(role.value)}</strong>
-                            </div>
-                          ))}
-                      </div>
-                    </section>
-                  )}
-                </div>
+              <div className="player-profile-facts">
+                <PlayerBio id={id} />
+                <PlayerDiscipline id={id} season={f.season} />
               </div>
               <section className="season-recent">
                 <div className="season-section-heading">
@@ -618,13 +574,7 @@ export default function PlayerSeasonProfile({
                     const match = f.data.matches.find(
                       (m) => m.id === row.matchId,
                     );
-                    const opponent =
-                      row.teamId &&
-                      (match?.home?.id === row.teamId
-                        ? match.away
-                        : match?.away?.id === row.teamId
-                          ? match.home
-                          : null);
+                    const opponent = playerOpponent(match, row.teamId);
                     return (
                       <button
                         className="season-match"
@@ -632,11 +582,7 @@ export default function PlayerSeasonProfile({
                         onClick={() => f.setPlayer(row.id)}
                       >
                         <span>
-                          <strong>
-                            {opponent?.name
-                              ? `Contre ${opponent.name}`
-                              : "Match"}
-                          </strong>
+                          <strong>{opponent?.name || "Match"}</strong>
                           <small>{date(row.date)}</small>
                         </span>
                         <span>
@@ -723,11 +669,10 @@ export default function PlayerSeasonProfile({
                   </table>
                 </section>
               </div>
-              <h3>Tirs de la saison</h3>
               <SeasonShots
                 key={id}
                 shots={shots}
-                title={`${profile.name} · tirs de la saison`}
+                legacyPitchApi={f.manifest?.storage === "aws-relational"}
               />
             </>
           )}
@@ -756,6 +701,7 @@ export default function PlayerSeasonProfile({
           )}
         </Suspense>
       </div>
+      <PlayerHonoursSource url={honours.value?.sourceUrl} />
     </Card>
   );
 }

@@ -60,18 +60,24 @@ test("search presents one navigable player for multiple match performances", () 
   assert.match(html, /\/joueurs\/?\?id=p_1/);
 });
 
-test("season card renders observed totals, average controls, sample warning and matches", () => {
+test("season overview shows observed metrics and direct opponent names", () => {
   const html = renderSeasonProfile(rows, matches, "p_1");
   assert.match(html, /Neymar/);
   assert.match(html, /37/);
   assert.match(html, /6,68/);
   assert.match(html, /0,82/);
   assert.match(html, /Par match/);
-  assert.match(html, /Échantillon insuffisant/);
+  assert.match(html, /Voir les 2 matchs joués/);
+  assert.match(html, /Essentiel/);
+  assert.match(html, /Attaque/);
+  assert.match(html, /Création/);
+  assert.match(html, /Défense/);
+  assert.doesNotMatch(html, /centiles au poste|Modèle du radar/);
   assert.match(html, /5 juil\. 2026/);
   assert.match(html, /29 juin 2026/);
-  assert.match(html, /Contre Norway/);
-  assert.match(html, /Contre Portugal/);
+  assert.match(html, />Norway</);
+  assert.match(html, />Portugal</);
+  assert.doesNotMatch(html, /Contre Norway|Contre Portugal/);
   assert.doesNotMatch(html, />Brazil<|>World Cup<| · Brazil<| · World Cup</);
   assert.doesNotMatch(html, /NaN|Infinity/);
 });
@@ -98,7 +104,7 @@ test("Messi keeps his portrait and published trophies when filters leave no matc
   assert.match(html, /\/trophies\/ballon-or\.webp/);
 });
 
-test("Yamal's Liga artwork and unillustrated Euro remain clickable", async () => {
+test("Yamal's Liga and Euro artwork remain clickable", async () => {
   const id = "p_2e0FPo";
   const name = "Lamine Yamal";
   await seedPlayerHonours(id, name, {
@@ -126,6 +132,7 @@ test("Yamal's Liga artwork and unillustrated Euro remain clickable", async () =>
   assert.match(html, /<button[^>]+aria-label="Liga, 3 titres, FC Barcelone"/);
   assert.match(html, /src="\/trophies\/liga-current\.webp"/);
   assert.match(html, /<button[^>]+aria-label="Euro, Espagne"/);
+  assert.match(html, /src="\/trophies\/euro-modern\.webp"/);
   assert.match(html, /FC Barcelone · 2025–26, 2024–25, 2022–23/);
   assert.doesNotMatch(html, /Faire défiler les trophées|Trophées suivants/);
 });

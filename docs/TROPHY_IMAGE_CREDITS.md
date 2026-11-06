@@ -40,6 +40,10 @@ pour la silhouette. [Photo du musée du Barça](https://www.fcbarcelona.com/en/f
 
 Cette silhouette est documentée sur les éditions 2022/23 à 2025/26. [Barça 2022/23](https://www.fcbarcelona.com/en/news/3447358/liga-title-celebrations-at-spotify-camp-nou), [Real Madrid 2023/24](https://www.realmadrid.com/en-US/news/football/first-team/latest-news/el-campeon-recibe-el-trofeo-de-la-liga-36-en-la-ciudad-real-madrid-12-05-2024), [Barça 2024/25](https://www.fcbarcelona.com/en/football/first-team/news/4267749/magic-night-at-montjuic-to-celebrate-unforgettable-season/featured)
 
+Le visuel `euro-modern.webp` représente la coupe Henri-Delaunay utilisée depuis
+2008. ImageGen a retravaillé la photographie de référence de la Présidence de la
+République italienne, créditée Quirinale.it. [Photographie et attribution](https://commons.wikimedia.org/wiki/File:UEFA_Euro_2020_Trophy_(cropped).jpg), [Historique officiel de la coupe](https://www.uefa.com/uefaeuro/history/news/026b-12b68866d10c-3752fb3a31e1-1000--the-henri-delaunay-cup-the-euro-s-cherished-prize/)
+
 Le portrait utilisé pour l'animation de Kylian Mbappé est une version réduite
 du [portrait vectoriel de Mao Zedong](https://commons.wikimedia.org/wiki/File:Mao_Zedong_vector_portrait.svg)
 par OwcaGierka, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).

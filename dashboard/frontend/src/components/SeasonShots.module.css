@@ -1,0 +1,156 @@
+.shots {
+  margin-top: 12px;
+}
+.header p,
+.note {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  margin: 10px 0;
+}
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(190px, 0.75fr);
+  gap: 24px;
+  align-items: start;
+}
+.figure {
+  margin: 0;
+  min-width: 0;
+}
+.figure svg {
+  display: block;
+  width: 100%;
+  max-height: 510px;
+}
+.field {
+  fill: light-dark(#e7f1e9, #183228);
+  stroke: light-dark(#92b09b, #638b72);
+  stroke-width: 1.5;
+}
+.lines {
+  stroke: light-dark(#8bad97, #648b74);
+  stroke-width: 1.4;
+}
+.goalLabel {
+  fill: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+.point {
+  stroke: #fff;
+  stroke-width: 1.8;
+  cursor: pointer;
+}
+.point:focus-visible,
+.point.selected {
+  outline: none;
+  stroke: #fff;
+  stroke-width: 4;
+}
+.goal {
+  fill: #ba6c00;
+  background: #ba6c00;
+}
+.target {
+  fill: #1779bb;
+  background: #1779bb;
+}
+.miss {
+  fill: #805db3;
+  background: #805db3;
+}
+.blocked {
+  fill: #ca5053;
+  background: #ca5053;
+}
+.post {
+  fill: #16836b;
+  background: #16836b;
+}
+.unknown {
+  fill: #717781;
+  background: #717781;
+}
+.figure figcaption,
+.note {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 8px 0;
+  font-size: var(--text-xs);
+}
+.legend span {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+.legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.summary {
+  display: grid;
+  gap: 12px;
+  border-left: 1px solid var(--border);
+  padding-left: 24px;
+}
+.summary > div {
+  display: grid;
+  gap: 3px;
+}
+.summary span,
+.summary small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.summary strong {
+  font-size: var(--text-lg);
+}
+.detail {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.detail p {
+  margin: 0;
+  color: var(--muted);
+}
+.detail a {
+  color: var(--accent);
+}
+.caption {
+  text-align: left;
+  font-weight: 700;
+  padding: 12px 0;
+}
+.selectButton {
+  border: 0;
+  padding: 4px 0;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.selectedRow {
+  background: var(--surface-hover);
+}
+@media (max-width: 720px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .summary {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    padding: 12px 0 0;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .detail {
+    grid-column: 1 / -1;
+  }
+}
