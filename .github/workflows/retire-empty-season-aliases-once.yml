@@ -1,0 +1,52 @@
+name: Retire empty season aliases (AWS)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/retire-empty-season-aliases-once.yml'
+permissions:
+  contents: read
+concurrency:
+  group: statarena-aws-ingestion
+  cancel-in-progress: false
+  queue: max
+jobs:
+  cleanup:
+    if: github.repository_id == '1441213700' && github.ref == 'refs/heads/main'
+    runs-on: ${{ vars.STATARENA_AWS_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            dashboard
+            .github/actions/aws-database
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install -r dashboard/scripts/requirements.txt
+      - name: Use existing AWS writer and scoped RDS credentials
+        uses: ./.github/actions/aws-database
+        with:
+          mode: ingest
+          role-arn: ${{ vars.STATARENA_AWS_INGEST_ROLE_ARN }}
+      - name: Check verified empty calendar-year partitions (no writes)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # relational_materialize.py prevents aliases from being republished.
+          python dashboard/scripts/retire_empty_year_aliases_once.py | tee alias-cleanup.log
+      - name: Retain audit receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: empty-year-aliases-${{ github.run_id }}
+          path: |
+            year-alias-cleanup-receipt.json
+            alias-cleanup.log
+          if-no-files-found: ignore
+          retention-days: 30
