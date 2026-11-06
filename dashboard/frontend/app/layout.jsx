@@ -16,6 +16,7 @@ import "../src/research.css";
 import "../src/player-profile-redesign.css";
 import "../src/home.css";
 const siteUrl = "https://statarena-analytics.vercel.app";
+const faviconVersion = 2;
 const description = "Vega Intelligence : statistiques de football, analyses de matchs, joueurs et compétitions.";
 export const metadata = {
   metadataBase: new URL(siteUrl),
@@ -24,7 +25,7 @@ export const metadata = {
   description,
   manifest: "/site.webmanifest",
   icons: {
-    icon: [{ url: "/branding/vega/favicon.svg", type: "image/svg+xml", sizes: "any" }],
+    icon: [{ url: `/branding/vega/favicon.svg?v=${faviconVersion}`, type: "image/svg+xml", sizes: "any" }],
     apple: [{ url: "/api/vega-image?kind=icon&size=180", sizes: "180x180" }],
   },
   openGraph: { type: "website", locale: "fr_FR", siteName: "Vega Intelligence",
@@ -57,7 +58,7 @@ export default function RootLayout({ children }) {
         <script
           id="vega-theme"
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("statarena.theme")==="light"?"light":"dark";document.documentElement.dataset.theme=t;document.querySelector('meta[name="theme-color"]')?.setAttribute("content",t==="light"?"#F6F8FB":"#0E0F12");window.__vegaSetFavicon=function(theme){document.querySelectorAll('link[rel="icon"]').forEach(function(link){if(link.href.includes("/branding/vega/"))link.href=theme==="light"?"/branding/vega/icon-light.svg":"/branding/vega/icon-dark.svg"})};document.addEventListener("DOMContentLoaded",function(){window.__vegaSetFavicon(t)},{once:true})}catch{}`,
+            __html: `try{var t=localStorage.getItem("statarena.theme")==="light"?"light":"dark";document.documentElement.dataset.theme=t;document.querySelector('meta[name="theme-color"]')?.setAttribute("content",t==="light"?"#F6F8FB":"#0E0F12");window.__vegaSetFavicon=function(theme){document.querySelectorAll('link[rel="icon"]').forEach(function(link){if(link.href.includes("/branding/vega/"))link.href=theme==="light"?"/branding/vega/icon-light.svg?v=${faviconVersion}":"/branding/vega/icon-dark.svg?v=${faviconVersion}"})};document.addEventListener("DOMContentLoaded",function(){window.__vegaSetFavicon(t)},{once:true})}catch{}`,
           }}
         />
       </head>
