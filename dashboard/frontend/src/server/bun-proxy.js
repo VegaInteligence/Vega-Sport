@@ -1,4 +1,6 @@
-/** Next transport only; all data access and provider credentials stay in Bun. */
+const AWS_API_ORIGIN = "https://d317dq37z1tacb.cloudfront.net";
+
+/** Next only forwards HTTP. Database access runs in the AWS backend. */
 export async function proxy(request) {
   const url = new URL(request.url);
   if (process.env.NEXT_PUBLIC_API_ORIGIN) {
@@ -7,15 +9,10 @@ export async function proxy(request) {
     const { apiUrl } = await import("../data-url.js");
     return Response.redirect(apiUrl(url.pathname + url.search), 307);
   }
-  if (process.env.VERCEL) {
-    const [{ legacyCompatibility }, { handleRequest }, { dataJson }] = await Promise.all([
-      import("./legacy-compat.js"),
-      import("../../../backend/legacy-app.js"),
-      import("../../../backend/services/data-store.js"),
-    ]);
-    return legacyCompatibility(request, { handleLegacy: handleRequest, readJson: dataJson });
-  }
-  const origin = process.env.ORION_API_ORIGIN || "http://127.0.0.1:8765";
+  if (url.pathname.startsWith("/data/"))
+    return new Response(null, { status: 410, headers: { "Cache-Control": "no-store" } });
+  const origin = process.env.ORION_API_ORIGIN ||
+    (process.env.NODE_ENV === "development" ? "http://127.0.0.1:8765" : AWS_API_ORIGIN);
   try {
     const validator = request.headers.get("if-none-match");
     const upstream = await fetch(origin + url.pathname + url.search, {

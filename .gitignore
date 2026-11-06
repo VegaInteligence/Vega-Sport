@@ -29,7 +29,14 @@ dashboard/outputs/daily-refresh/
 # Local resumable worldwide collection queue
 data/computed/pitchapi-world/
 
-# Durable football data lives in Neon, not in working trees.
+# Durable football data lives in AWS RDS and S3.
 /data/
 dashboard/outputs/neon-runtime/
 output/playwright/
+
+# Generated evidence and screenshots belong to CI artifacts, not source control.
+docs/verification/**/runs/
+docs/verification/**/*-runs/
+dashboard/outputs/
+!dashboard/outputs/data-completeness/
+prototypes/

@@ -24,7 +24,7 @@ READERS=ROOT/'docs/verification/orion-pro-readers-20261104'
 PILOT=ROOT/'docs/verification/orion-pro-pilot-20261104'
 MODEL=ROOT/'docs/architecture/orion-plan-20261104/target-schema.proposed.json'
 MODEL_SHA='18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08'
-SERVICE_NAMES=['orion-pro.js','orion-pro-entities.js','orion-pro-operations.js','orion-pro-appearances.js','orion-pro-fixture-aliases.js','orion-pro-competitions.js','orion-pro-match-details.js','orion-pro-archives.js','orion-pro-player-statistics.js','orion-pro-match-statistics.js','orion-pro-enrichment.js','orion-pro-spatial-advanced.js','orion-pro-rankings.js','postgres.js','database-connection.js','metrics.js','cache-policy.js','cache.js',
+SERVICE_NAMES=['orion-pro.js','orion-pro-entities.js','orion-pro-operations.js','orion-pro-appearances.js','orion-pro-fixture-aliases.js','orion-pro-competitions.js','orion-pro-match-details.js','orion-pro-archives.js','orion-pro-player-statistics.js','orion-pro-match-statistics.js','orion-pro-enrichment.js','orion-pro-spatial-advanced.js','orion-pro-rankings.js','orion-pro-season.js','postgres.js','database-connection.js','metrics.js','cache-policy.js','cache.js',
  'relational-match.js','relational-support.js','relational-catalog.js','cdn.js','relational-core.js','partition-wire.js',
  'catalog-model.json','support-model.json']
 WRAPPERS={'relational-core':['manifest','partitionPage','fixturePage','summary','scouting'],

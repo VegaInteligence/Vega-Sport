@@ -108,8 +108,9 @@ LEFT JOIN analytics.competition_summary totals ON totals.build_id=b.id AND total
 WHERE b.id=$1::bigint AND b.status='ready' LIMIT 2`;
 
 // Logical parents can retain an earlier physical anchor when a match is revised.
-// Participant selection therefore uses the logical match and the sealed dg; the
-// stats/native participant anchors must still match exactly.
+// Participant selection uses logical identity at the sealed generation. Admission
+// can revise a participant without rewriting its previously collected facts.
+// Stats and native values still share their original physical fact anchor.
 const scopeSql = `WITH x AS (SELECT * FROM jsonb_to_record($1::jsonb) AS c(
  build_id bigint,edition_id bigint,edition_revision_id bigint,dg bigint,cg bigint,competition_id bigint)),
 matches AS (
@@ -136,10 +137,10 @@ matches AS (
  FROM matches m JOIN football.player_match_stats s ON s.match_id=m.match_id
  AND s.period_code='full_match' AND s.period_definition_version='bootstrap_v1'
  AND s.contract_version='${producer}' AND s.transform_version='${producer}' AND ${selected("s", "m.dg")}
- JOIN football.match_players mp ON mp.revision_id=s.match_player_revision_id AND mp.match_id=s.match_id
+ JOIN football.match_players mp ON mp.match_id=s.match_id
  AND mp.team_id=s.team_id AND mp.player_id=s.player_id AND mp.source_id=s.source_id
  AND mp.source_record_id=s.source_record_id AND mp.variant_key=s.variant_key AND ${selected("mp", "m.dg")}
- JOIN sides ON sides.match_id=mp.match_id AND sides.team_id=mp.team_id AND sides.revision_id=mp.match_team_revision_id
+ JOIN sides ON sides.match_id=mp.match_id AND sides.team_id=mp.team_id
  LEFT JOIN ingest.source_records sr ON sr.id=s.source_record_id AND sr.source_id=s.source_id AND sr.record_kind='performance'
  LEFT JOIN LATERAL (SELECT min(a.public_key COLLATE "C") public_id FROM ingest.public_aliases a
  WHERE a.route_kind='player' AND a.player_id=s.player_id AND a.public_key ~ '^p_[A-Za-z0-9]{6}$' AND ${aliasAt("a", "m.cg")}) aliases ON true
@@ -299,7 +300,7 @@ async function contents(row, args, media) {
     query(`/*orion:appearance:stats*/ ${scopeSql}
  SELECT s.match_id::text,sides.side,s.quality_flags,${[...new Set(Object.values(teamFields))].map((field) => `s.${field}::text AS ${field}`).join(",")}
  FROM sides JOIN football.team_match_stats s ON s.match_id=sides.match_id AND s.team_id=sides.team_id
- AND s.match_team_revision_id=sides.revision_id AND s.period_code='full_match' AND s.period_definition_version='bootstrap_v1'
+ AND s.period_code='full_match' AND s.period_definition_version='bootstrap_v1'
  AND ${selected("s", "sides.dg")} WHERE s.match_id=ANY($2::bigint[]) ORDER BY s.match_id,sides.side`, params),
     query(`/*orion:appearance:context*/ ${scopeSql}
  SELECT t.team_id::text,aliases.public_id AS id,p.id::text AS profile_id,p.display_name AS name,p.image_asset_id::text,

@@ -241,8 +241,10 @@ export function FootballProvider({ children, loadData = true }) {
       !initial.get("id") &&
       !loadedScopes.has(scopeKey),
     fullKey = `season:${chosen}:${dataFocus}:all:full`;
+  const proMatchPage = proMode && /^\/matchs\/?$/.test(pathname) && !initial.get("id");
+  const proVersionKey = JSON.stringify(manifest.value?.editions || []);
   const seasonKey = proMode
-    ? `pro-catalogue:${chosen}:${JSON.stringify(manifest.value?.editions || [])}`
+    ? `pro-season:${chosen}:${proMatchPage || !loadData ? "catalogue" : `${dataFocus}:${leagueOnly ? filters.league : "all"}`}:${proVersionKey}`
     : progressive
       ? `season:${chosen}:europe:all:full`
       : `season:${chosen}:${loadData ? `${dataFocus}:${leagueOnly ? filters.league : "all"}:full` : "catalog"}`;
@@ -282,7 +284,7 @@ export function FootballProvider({ children, loadData = true }) {
     [manifest.value, catalogueManifest, chosen, proMode],
   );
   function loadScope() {
-    if (proMode) return Promise.resolve(emptySeason);
+    if (proMatchPage) return Promise.resolve(emptySeason);
     return loadSeason(
       manifest.value,
       chosen,
@@ -305,7 +307,7 @@ export function FootballProvider({ children, loadData = true }) {
         ? null
         : loadData
           ? loadScope().then((value) => {
-              if (!leagueOnly)
+              if (!leagueOnly && !proMatchPage)
                 loadedScopes.add(progressive ? `${chosen}:europe` : scopeKey);
               return value;
             })
@@ -429,19 +431,15 @@ export function FootballProvider({ children, loadData = true }) {
     return [...byId.values()];
   }, [client, data, seasonCompetitions, status.value, status.loading]);
   const fullSeason =
-    !proMode &&
+    !proMatchPage &&
     loadData &&
     !deferSeason &&
     dataFocus === "all" &&
     !leagueOnly &&
     !progressive;
   function searchData() {
-    if (proMode)
-      return Promise.reject(
-        new Error("La recherche de joueurs est indisponible."),
-      );
     if (fullSeason && data) return Promise.resolve(data);
-    return primeResource(`season:${chosen}:all:all:full`, () =>
+    return primeResource(`season:${chosen}:all:all:full:${proMode ? proVersionKey : ""}`, () =>
       loadSeason(manifest.value, chosen, fetch, null).then((value) => {
         loadedScopes.add(`${chosen}:all`);
         return value;
@@ -820,13 +818,7 @@ export function FootballProvider({ children, loadData = true }) {
           >
             {(value) =>
               value ? (
-                proMode && !/^\/matchs\/?$/.test(pathname) ? (
-                  <div role="alert" className="notice notice-warning">
-                    Données indisponibles pour cette vue.
-                  </div>
-                ) : (
-                  children
-                )
+                children
               ) : (
                 <div role="status">Chargement de la saison…</div>
               )

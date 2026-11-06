@@ -100,7 +100,7 @@ export function mergeSeason(manifest, selected, parts) {
   return {
     meta: {
       schemaVersion: 2,
-      source: manifest.storage === "json-packed" ? "PitchAPI · archives Neon" : "PitchAPI · archive européenne locale",
+      source: manifest.storage?.startsWith("aws-") ? "PitchAPI · AWS" : "PitchAPI · archives",
       storage: manifest.storage,
       retrievedAt: retrieved,
       currentSeason: selected,
@@ -167,6 +167,7 @@ export async function readPages(path, filters, fetcher = fetch) {
       if (
         !page.data ||
         current == null ||
+        (filters.v && current !== filters.v) ||
         !Object.hasOwn(page.pagination, "nextCursor")
       )
         throw new Error("Page de données invalide.");
@@ -329,19 +330,27 @@ export async function loadSeason(
   );
   const parts = await Promise.all(
     chunks.map((chunk) => {
+      const version = manifest.storage === "aws-orion-pro"
+        ? chunk.representationToken
+        : null;
+      if (manifest.storage === "aws-orion-pro" &&
+          (!/^pro1\.[1-9][0-9]{0,18}\.[a-f0-9]{64}$/.test(version || "") ||
+           !manifest.editions?.some((edition) => edition.leagueId === chunk.leagueId &&
+             edition.season === selected && edition.representationToken === version)))
+        throw new Error("Version de saison indisponible.");
       const load = () =>
         scheduled(async () =>
           mergePartition(
             await readPages(
               "/api/seasons/partition",
-              { season: selected, league: chunk.leagueId, format: "columns" },
+              { season: selected, league: chunk.leagueId, format: "columns", ...(version ? { v: version } : {}) },
               fetcher,
             ),
           ),
         );
       return chunk.sourceDigest
         ? cachedPart(
-            JSON.stringify([selected, chunk.leagueId, chunk.sourceDigest]),
+            JSON.stringify([selected, chunk.leagueId, chunk.sourceDigest, version]),
             fetcher,
             load,
           )
