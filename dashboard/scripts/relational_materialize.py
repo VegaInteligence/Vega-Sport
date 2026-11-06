@@ -144,47 +144,60 @@ class Inputs:
         return self.read(ref["path"], ref.get("sha256"))
 
     def prefetch(self, refs, scratch):
-        """Spool verified documents in small batches instead of one SQL call per file.
+        """Stream indexed documents to disk without a round trip per small batch.
 
-        A large edition references thousands of individual response documents.
-        The spool remains on the runner's disk, and only eight documents are held
-        in memory at once. Missing SQL documents retain the verified S3 path.
+        Each statement addresses at most 128 paths and yields one document at a
+        time. Close the stream before any verified fallback reads reuse the SQL
+        connection, including when a checksum or spool write fails.
         """
         by_path = {}
         for path, expected in refs:
             by_path.setdefault(path, set()).add(expected)
+
+        def spool(path, physical_sha, value):
+            encoded = compact(value)
+            for expected in by_path[path]:
+                if expected and expected != physical_sha:
+                    if not (
+                        re.fullmatch(r"[0-9a-f]{64}", expected)
+                        and path == f"raw/pitchapi-world/blobs/{expected}.json.gz"
+                    ):
+                        raise ValueError("Staging reference version changed: " + path)
+                    if hashlib.sha256(encoded.encode()).hexdigest() != expected:
+                        raise ValueError("Staging logical checksum mismatch: " + path)
+                scratch.execute(
+                    "INSERT INTO body_cache VALUES(?,?,?)",
+                    (path, expected or "", encoded),
+                )
+
         paths = list(by_path)
-        for start in range(0, len(paths), 8):
-            requested = paths[start : start + 8]
-            rows = self.db.execute(
+        for start in range(0, len(paths), 128):
+            requested = paths[start : start + 128]
+            found, missing_documents = set(), []
+            # Both lookup keys are unique. LATERAL keeps a large source catalogue
+            # from turning these bounded key lookups into global table scans.
+            with self.db.cursor() as cursor, closing(cursor.stream(
                 """SELECT o.path,encode(o.sha256,'hex'),d.document
-                FROM statarena.objects o LEFT JOIN statarena.current_file_documents d
-                  ON d.document_path=o.path AND d.source_path=o.path
-                WHERE o.path=ANY(%s)""",
+                FROM unnest(%s::text[]) AS requested(path)
+                JOIN LATERAL (SELECT path,sha256 FROM statarena.objects
+                  WHERE path=requested.path LIMIT 1) o ON true
+                LEFT JOIN LATERAL (SELECT document FROM statarena.current_file_documents
+                  WHERE document_path=o.path AND source_path=o.path LIMIT 1) d ON true""",
                 (requested,),
-            ).fetchall()
-            found = {row[0] for row in rows}
+            )) as rows:
+                for path, physical_sha, value in rows:
+                    found.add(path)
+                    if value is None:
+                        missing_documents.append((path, physical_sha))
+                    else:
+                        spool(path, physical_sha, value)
             if found != set(requested):
                 raise FileNotFoundError(next(path for path in requested if path not in found))
-            for path, physical_sha, value in rows:
-                if value is None:
-                    value, observed_sha = self.read_version(path)
-                    if observed_sha != physical_sha:
-                        raise ValueError("Staging input changed during prefetch: " + path)
-                encoded = compact(value)
-                for expected in by_path[path]:
-                    if expected and expected != physical_sha:
-                        if not (
-                            re.fullmatch(r"[0-9a-f]{64}", expected)
-                            and path == f"raw/pitchapi-world/blobs/{expected}.json.gz"
-                        ):
-                            raise ValueError("Staging reference version changed: " + path)
-                        if hashlib.sha256(encoded.encode()).hexdigest() != expected:
-                            raise ValueError("Staging logical checksum mismatch: " + path)
-                    scratch.execute(
-                        "INSERT INTO body_cache VALUES(?,?,?)",
-                        (path, expected or "", encoded),
-                    )
+            for path, physical_sha in missing_documents:
+                value, observed_sha = self.read_version(path)
+                if observed_sha != physical_sha:
+                    raise ValueError("Staging input changed during prefetch: " + path)
+                spool(path, physical_sha, value)
 
 
 def envelope(source, ref, status, error):
