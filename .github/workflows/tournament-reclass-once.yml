@@ -36,14 +36,14 @@ jobs:
         with:
           mode: ingest
           role-arn: ${{ vars.STATARENA_AWS_INGEST_ROLE_ARN }}
-      - name: Confirm canonical publisher and dry-run exact database reclassification
+      - name: Execute audited one-time RDS tournament reclassification
         shell: bash
         run: |
           set -euo pipefail
           # relational_materialize.py is the normal publisher; this workflow is a one-time repair.
           python -m unittest discover -s tests -p 'test_football_seasons.py' -q
           python -m unittest discover -s tests -p 'test_tournament_publisher_aliases.py' -q
-          python dashboard/scripts/apply_tournament_reclass_once.py --snapshot statarena-before-season-reclass-20261106
+          python dashboard/scripts/apply_tournament_reclass_once.py --snapshot statarena-before-season-reclass-20261106 --execute
       - name: Save reclassification receipt
         if: always()
         uses: actions/upload-artifact@v4
