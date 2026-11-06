@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/database-schema.yml'
       - '.github/actions/aws-database/inventory.py'
+      - 'dashboard/scripts/audit_empty_year_aliases.py'
       - 'dashboard/scripts/audit_tournament_cohorts.py'
 permissions:
   contents: read
@@ -28,6 +29,7 @@ jobs:
             dashboard/backend/certs
             dashboard/scripts/audit_tournament_cohorts.py
             dashboard/scripts/football_seasons.py
+            dashboard/scripts/audit_empty_year_aliases.py
           filter: blob:none
       - uses: actions/setup-python@v5
         with:
@@ -42,11 +44,14 @@ jobs:
         run: python .github/actions/aws-database/inventory.py
       - name: Compare existing tournament fixtures and published seasons (read-only)
         run: python dashboard/scripts/audit_tournament_cohorts.py
+      - name: Audit empty year-only seasons
+        run: python dashboard/scripts/audit_empty_year_aliases.py
       - uses: actions/upload-artifact@v4
         with:
           name: schema-inventory-${{ github.run_id }}
           path: |
             schema-inventory.json
             tournament-audit.json
+            year-alias-audit.json
           if-no-files-found: error
           retention-days: 30
