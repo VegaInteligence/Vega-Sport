@@ -5,11 +5,11 @@ import {
   seasonMetric,
 } from "../dashboard/frontend/src/services/season-player.js";
 import {
-  playerSeasonRows,
+  playerSeasonGroups,
   seasonTrendPoints,
 } from "../dashboard/frontend/src/services/player-season-history.js";
 
-test("history keeps a player's teams and competitions separate, with their own observed totals", () => {
+test("history groups competitions under one team total per season", () => {
   const id = "p_123456";
   const appearances = [
     {
@@ -23,17 +23,19 @@ test("history keeps a player's teams and competitions separate, with their own o
       goals: 1,
       assists: 0,
       xg: 0.4,
+      rating: 8,
     },
     {
       playerId: id,
       matchId: "m2",
       minutes: 60,
       teamId: "a",
-      team: "Club A",
+      team: "FC Club A",
       leagueId: "l1",
       league: "Ligue",
       goals: 0,
       assists: 1,
+      rating: 6,
     },
     {
       playerId: id,
@@ -44,6 +46,7 @@ test("history keeps a player's teams and competitions separate, with their own o
       leagueId: "l2",
       league: "Coupe",
       goals: 2,
+      rating: 9,
     },
     {
       playerId: id,
@@ -55,7 +58,17 @@ test("history keeps a player's teams and competitions separate, with their own o
       league: "Mondial",
       goals: 1,
     },
+    {
+      playerId: id,
+      matchId: "m5",
+      minutes: null,
+      teamId: "a",
+      team: "Club A",
+      leagueId: "l2",
+      league: "Coupe",
+    },
   ];
+  appearances.push({ ...appearances[0], leagueId: "duplicate" });
   const seasons = [
     {
       season: "2026/2027",
@@ -68,22 +81,34 @@ test("history keeps a player's teams and competitions separate, with their own o
           },
         ],
         competitions: [{ id: "l1", name: "Ligue" }],
+        appearances,
       },
       profile: aggregateSeason(appearances, id),
     },
   ];
-  const rows = playerSeasonRows(seasons, id);
-  assert.equal(rows.length, 3);
-  const league = rows.find((row) => row.competition.id === "l1");
-  assert.equal(league.team.imageUrl, "https://cdn.pitchapi.dev/a.png");
+  const groups = playerSeasonGroups(seasons, id);
+  assert.equal(groups.length, 2);
+  const club = groups.find(({ team }) => team.id === "a");
+  assert.equal(club.team.imageUrl, "https://cdn.pitchapi.dev/a.png");
+  assert.equal(club.profile.matches, 3);
+  assert.equal(club.profile.minutes, 180);
+  assert.equal(club.profile.unknownMinutes, 1);
+  assert.equal(club.profile.rating, 23 / 3);
+  assert.equal(seasonMetric(club.profile, "goals").value, 3);
+  assert.deepEqual(
+    club.competitions.map(({ competition }) => competition.id),
+    ["l1", "l2"],
+  );
+  const [league, cup] = club.competitions;
   assert.equal(league.profile.matches, 2);
   assert.equal(seasonMetric(league.profile, "goals").value, 1);
   assert.equal(seasonMetric(league.profile, "xg").count, 1);
+  assert.equal(cup.profile.matches, 1);
+  assert.equal(cup.profile.unknownMinutes, 1);
   assert.equal(
-    rows.find((row) => row.competition.id === "l2").profile.matches,
-    1,
+    groups.find((row) => row.team.id === "b").team.name,
+    "Sélection",
   );
-  assert.equal(rows.find((row) => row.team.id === "b").team.name, "Sélection");
 });
 
 test("a missing season is a gap, not a line between distant observations", () => {

@@ -3,10 +3,12 @@ import {
   FEATURED_EUROPE_IDS,
   FEATURED_LEAGUE_IDS,
 } from "./competition-selector.js";
+import { UEFA_NATIONS_ID } from "./uefa-nations-snapshot.js";
 
 // These IDs are also identified as national-team competitions in CupDirectory.
 const NATIONAL_COMPETITIONS = new Set([
   "l_1XLtP0",
+  UEFA_NATIONS_ID,
   "open-cup:euro",
   "openligadb:nations-league",
   "open-cup:world-cup-history",

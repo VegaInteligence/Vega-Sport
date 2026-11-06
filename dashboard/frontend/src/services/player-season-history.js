@@ -1,34 +1,70 @@
+import { isNumber } from "../model.js";
 import { aggregateSeason } from "./season-player.js";
 
-/** Keep separate rows when a player appears for several teams or competitions. */
-export function playerSeasonRows(seasons, playerId) {
+function groupRows(rows, keyFor) {
+  const groups = new Map();
+  for (const row of rows) {
+    const key = keyFor(row);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  }
+  return groups;
+}
+
+function seasonAppearances(data, profile, playerId) {
+  const rows = [...profile.rows];
+  const missingMinutes = new Set(profile.unknownMatches);
+  if (!missingMinutes.size) return rows;
+
+  for (const row of data?.appearances || []) {
+    if (
+      row.playerId === playerId &&
+      !isNumber(row.minutes) &&
+      missingMinutes.delete(row.matchId)
+    ) {
+      rows.push(row);
+      if (!missingMinutes.size) break;
+    }
+  }
+  return rows;
+}
+
+/** Group a season by team identity, then calculate totals from its appearances. */
+export function playerSeasonGroups(seasons, playerId) {
   return seasons.flatMap(({ season, data, profile }) => {
     const teams = new Map((data?.teams || []).map((item) => [item.id, item]));
     const competitions = new Map(
       (data?.competitions || []).map((item) => [item.id, item]),
     );
-    const groups = new Map();
-    for (const row of profile.rows) {
-      const key = JSON.stringify([
-        row.teamId || row.team || "",
-        row.leagueId || row.league || "",
-      ]);
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(row);
-    }
-    return [...groups.values()].map((rows) => {
+    const groups = groupRows(
+      seasonAppearances(data, profile, playerId),
+      (row) => row.teamId || row.team || "",
+    );
+    return [...groups].map(([teamKey, rows]) => {
       const first = rows[0];
+      const byCompetition = groupRows(
+        rows,
+        (row) => row.leagueId || row.league || "",
+      );
       return {
+        key: JSON.stringify([season, teamKey]),
         season,
         team: teams.get(first.teamId) || {
           id: first.teamId,
           name: first.team || "Équipe inconnue",
         },
-        competition: competitions.get(first.leagueId) || {
-          id: first.leagueId,
-          name: first.league || "Compétition inconnue",
-        },
         profile: aggregateSeason(rows, playerId),
+        competitions: [...byCompetition].map(([key, appearances]) => {
+          const { leagueId, league } = appearances[0];
+          return {
+            key,
+            competition: competitions.get(leagueId) || {
+              id: leagueId,
+              name: league || "Compétition inconnue",
+            },
+            profile: aggregateSeason(appearances, playerId),
+          };
+        }),
       };
     });
   });

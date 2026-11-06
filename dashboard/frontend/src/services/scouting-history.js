@@ -1,6 +1,10 @@
 import { apiUrl } from "../data-url.js";
 import { loadSeason, readPages } from "../season_data.js";
 import { aggregateSeason } from "./season-player.js";
+import {
+  addUefaNationsSnapshot,
+  uefaSnapshotSeasons,
+} from "./uefa-nations-snapshot.js";
 const routeCaches = new WeakMap();
 export async function playerRoutes(
   manifest,
@@ -74,13 +78,21 @@ export async function loadPlayerSeason(
 }
 export async function loadPlayerHistory(manifest, id) {
   const index = await playerRoutes(manifest, { players: [id] });
-  const seasons = Object.keys(index.routes[id] || {})
+  const seasons = [
+    ...new Set([
+      ...Object.keys(index.routes[id] || {}),
+      ...uefaSnapshotSeasons(id),
+    ]),
+  ]
     .sort()
     .reverse();
   return Promise.all(
-    seasons.map((season) =>
-      loadPlayerSeason(manifest, id, season, "all", index),
-    ),
+    seasons.map(async (season) => {
+      const entry = await loadPlayerSeason(manifest, id, season, "all", index);
+      const data = addUefaNationsSnapshot(entry.data, id, season);
+      if (data === entry.data) return entry;
+      return { season, data, profile: aggregateSeason(data.appearances, id) };
+    }),
   );
 }
 export async function historicalFixtures(_manifest, leagueId) {

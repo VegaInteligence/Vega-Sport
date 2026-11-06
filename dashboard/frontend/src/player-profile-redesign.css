@@ -158,6 +158,35 @@
   padding: 11px 12px;
   white-space: nowrap;
 }
+.player-season-group-table thead th:nth-child(n + 4),
+.player-season-group-table tbody td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.player-season-group-table tbody th {
+  color: var(--ink);
+  font-size: var(--text-sm);
+}
+.player-season-group-table .player-season-group-heading {
+  vertical-align: top;
+  border-right: 1px solid var(--border);
+}
+.player-season-total > * {
+  background: var(--surface-raised);
+  font-weight: 650;
+}
+.player-season-group-table tbody + tbody .player-season-total > * {
+  border-top: 1px solid var(--border-strong);
+}
+.player-season-group-table .player-season-competition > th {
+  padding-inline-start: 24px;
+}
+.player-season-source {
+  display: block;
+  margin-top: 3px;
+  color: var(--accent);
+  font-size: var(--text-xs);
+}
 .player-history-identity {
   display: inline-flex;
   align-items: center;
