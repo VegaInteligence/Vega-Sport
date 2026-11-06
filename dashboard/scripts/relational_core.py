@@ -76,6 +76,23 @@ def install_schema(db):
 def _many(db, table, rows, update=True):
     if not rows: return
     keys = list(rows[0]); columns = sql.SQL(',').join(map(sql.Identifier,keys))
+    if len(rows) >= 100:
+        # Large editions have tens of thousands of facts. COPY avoids sending an
+        # INSERT command for every fact while the target table still enforces all
+        # its constraints and the same conflict policy in the caller's transaction.
+        staged = sql.Identifier('_statarena_publish_' + table)
+        target = sql.Identifier('statarena_app', table)
+        with db.cursor() as cursor:
+            cursor.execute(sql.SQL('CREATE TEMP TABLE IF NOT EXISTS {} AS SELECT {} FROM {} WITH NO DATA').format(staged, columns, target))
+            cursor.execute(sql.SQL('TRUNCATE {}').format(staged))
+            with cursor.copy(sql.SQL('COPY {} ({}) FROM STDIN').format(staged, columns)) as copy:
+                for row in rows:
+                    copy.write_row(tuple(row.get(key) for key in keys))
+            statement = sql.SQL('INSERT INTO {} ({}) SELECT {} FROM {} WHERE true').format(target, columns, columns, staged)
+            if update:
+                statement += sql.SQL(' ON CONFLICT DO NOTHING')
+            cursor.execute(statement)
+        return
     statement = sql.SQL('INSERT INTO statarena_app.{} ({}) VALUES ({})').format(sql.Identifier(table),columns,sql.SQL(',').join(sql.Placeholder() for _ in keys))
     if update:
         statement += sql.SQL(' ON CONFLICT DO NOTHING')

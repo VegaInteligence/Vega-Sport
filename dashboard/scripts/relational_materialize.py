@@ -143,6 +143,49 @@ class Inputs:
     def ref(self, ref):
         return self.read(ref["path"], ref.get("sha256"))
 
+    def prefetch(self, refs, scratch):
+        """Spool verified documents in small batches instead of one SQL call per file.
+
+        A large edition references thousands of individual response documents.
+        The spool remains on the runner's disk, and only eight documents are held
+        in memory at once. Missing SQL documents retain the verified S3 path.
+        """
+        by_path = {}
+        for path, expected in refs:
+            by_path.setdefault(path, set()).add(expected)
+        paths = list(by_path)
+        for start in range(0, len(paths), 8):
+            requested = paths[start : start + 8]
+            rows = self.db.execute(
+                """SELECT o.path,encode(o.sha256,'hex'),d.document
+                FROM statarena.objects o LEFT JOIN statarena.current_file_documents d
+                  ON d.document_path=o.path AND d.source_path=o.path
+                WHERE o.path=ANY(%s)""",
+                (requested,),
+            ).fetchall()
+            found = {row[0] for row in rows}
+            if found != set(requested):
+                raise FileNotFoundError(next(path for path in requested if path not in found))
+            for path, physical_sha, value in rows:
+                if value is None:
+                    value, observed_sha = self.read_version(path)
+                    if observed_sha != physical_sha:
+                        raise ValueError("Staging input changed during prefetch: " + path)
+                encoded = compact(value)
+                for expected in by_path[path]:
+                    if expected and expected != physical_sha:
+                        if not (
+                            re.fullmatch(r"[0-9a-f]{64}", expected)
+                            and path == f"raw/pitchapi-world/blobs/{expected}.json.gz"
+                        ):
+                            raise ValueError("Staging reference version changed: " + path)
+                        if hashlib.sha256(encoded.encode()).hexdigest() != expected:
+                            raise ValueError("Staging logical checksum mismatch: " + path)
+                    scratch.execute(
+                        "INSERT INTO body_cache VALUES(?,?,?)",
+                        (path, expected or "", encoded),
+                    )
+
 
 def envelope(source, ref, status, error):
     if not ref:
@@ -455,6 +498,7 @@ def partition_inputs(inputs, scratch, mids):
         CREATE TABLE archive(mid text,family text,body text,PRIMARY KEY(mid,family));
         CREATE TABLE current(mid text,endpoint text,params text,body text,PRIMARY KEY(mid,endpoint,params));
     """)
+    inputs.prefetch(uses, scratch)
 
     def read(ref):
         key = (ref["path"], ref.get("sha256"))
