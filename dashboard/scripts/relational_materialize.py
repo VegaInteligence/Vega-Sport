@@ -217,6 +217,55 @@ def envelope(source, ref, status, error):
     }
 
 
+def queue_dirty(db, *, captured=False):
+    """Use the fixture season mapping while retaining the original source markers."""
+    source = "SELECT season,league_id,changed_at FROM work_dirty" if captured else """
+        SELECT CASE WHEN k.season IS NULL AND d.season ~ '^[0-9]{4}$'
+            THEN d.season||'/'||(d.season::int+1)::text ELSE d.season END AS season,
+            d.league_id,d.changed_at FROM statarena.dirty_partitions d
+        LEFT JOIN work_known k ON (k.season,k.league_id)=(d.season,d.league_id)"""
+    db.execute(f"""INSERT INTO statarena_app.publication_jobs(season,league_id,changed_at)
+        SELECT season,league_id,max(changed_at) FROM ({source}) d GROUP BY season,league_id
+        ON CONFLICT(season,league_id) DO UPDATE SET changed_at=excluded.changed_at
+        WHERE publication_jobs.changed_at<excluded.changed_at""")
+
+
+def retire_empty_season_aliases(db):
+    """Repair the old raw-year queue; remove only demonstrably empty derived aliases."""
+    db.execute("""CREATE TEMP TABLE work_aliases AS
+        WITH candidates AS MATERIALIZED (
+            SELECT s.season,s.league_id,s.season||'/'||(s.season::int+1)::text AS canonical
+            FROM (SELECT season,league_id FROM statarena_app.publication_jobs
+                  UNION SELECT season,league_id FROM statarena_app.partitions) s
+            WHERE s.season ~ '^[0-9]{4}$')
+        SELECT s.* FROM candidates s
+        WHERE NOT EXISTS(SELECT 1 FROM work_known k WHERE (k.season,k.league_id)=(s.season,s.league_id))
+          AND (EXISTS(SELECT 1 FROM work_known k WHERE (k.season,k.league_id)=(s.canonical,s.league_id))
+            OR EXISTS(SELECT 1 FROM work_scopes w WHERE (w.season,w.league_id)=(s.canonical,s.league_id)))""")
+    db.execute("""INSERT INTO statarena_app.publication_jobs(season,league_id,changed_at)
+        SELECT a.canonical,j.league_id,j.changed_at FROM statarena_app.publication_jobs j
+        JOIN work_aliases a USING(season,league_id)
+        ON CONFLICT(season,league_id) DO UPDATE SET changed_at=excluded.changed_at
+        WHERE publication_jobs.changed_at<excluded.changed_at""")
+    db.execute("""DELETE FROM statarena_app.publication_jobs j USING work_aliases a
+        WHERE (j.season,j.league_id)=(a.season,a.league_id)""")
+    # A known calendar-year season, a historical bootstrap, or any retained
+    # business row must survive. Only the old worker's empty shells qualify.
+    db.execute("""WITH removed AS (
+        DELETE FROM statarena_app.partitions p USING work_aliases a
+        WHERE (p.season,p.league_id)=(a.season,a.league_id)
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.matches m WHERE (m.season,m.league_id)=(p.season,p.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.fixtures f WHERE (f.season,f.league_id)=(p.season,p.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.appearances r WHERE (r.season,r.league_id)=(p.season,p.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.team_seasons t WHERE (t.season,t.league_id)=(p.season,p.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.partition_bootstrap_sources b WHERE (b.season,b.league_id)=(p.season,p.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.partition_counts c WHERE (c.season,c.league_id)=(p.season,p.league_id) AND c.value<>0)
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.partition_notes n WHERE (n.season,n.league_id)=(p.season,p.league_id))
+        RETURNING p.season,p.league_id)
+        DELETE FROM statarena_app.competition_seasons c USING removed r
+        WHERE (c.season,c.competition_id)=(r.season,r.league_id) AND c.sample_matches=0""")
+
+
 def prepare(inputs, manifest, queue_all):
     db = inputs.db
     known = {(s["id"], c["leagueId"]) for s in manifest["seasons"] for c in s["chunks"]}
@@ -230,6 +279,7 @@ def prepare(inputs, manifest, queue_all):
             "work_catalog",
             "work_shards",
             "work_dirty",
+            "work_aliases",
         ):
             db.execute(f"DROP TABLE IF EXISTS pg_temp.{name}")
         staging_bytes = db.execute("""SELECT sum(pg_table_size(rel))::bigint FROM unnest(ARRAY[
@@ -237,13 +287,16 @@ def prepare(inputs, manifest, queue_all):
             'statarena.observations'::regclass]) rel""").fetchone()[0]
         capacity(db, staging_bytes * 2)
         db.execute(
-            "CREATE TEMP TABLE work_dirty AS SELECT * FROM statarena.dirty_partitions"
-        )
-        db.execute(
             "CREATE TEMP TABLE work_known(season text,league_id text,PRIMARY KEY(season,league_id))"
         )
         with db.cursor() as cur:
             cur.executemany("INSERT INTO work_known VALUES(%s,%s)", sorted(known))
+        db.execute("""CREATE TEMP TABLE work_dirty AS
+            SELECT d.season AS source_season,
+                CASE WHEN k.season IS NULL AND d.season ~ '^[0-9]{4}$'
+                    THEN d.season||'/'||(d.season::int+1)::text ELSE d.season END AS season,
+                d.league_id,d.changed_at FROM statarena.dirty_partitions d
+            LEFT JOIN work_known k ON (k.season,k.league_id)=(d.season,d.league_id)""")
         db.execute("""CREATE TEMP TABLE work_resources AS SELECT r.*,r.xmin::text AS row_revision,split_part(endpoint,'/',3) AS mid,
             encode(o.sha256,'hex') AS object_digest FROM statarena.resources r LEFT JOIN statarena.objects o ON o.path=r.ref->>'path'
             WHERE starts_with(endpoint,'/matches/')""")
@@ -301,11 +354,11 @@ def prepare(inputs, manifest, queue_all):
             FROM work_matches w LEFT JOIN statarena.resources p ON p.endpoint='/leagues/'||w.league_id AND p.params='{}'
             LEFT JOIN statarena.objects o ON o.path=p.ref->>'path' GROUP BY w.season,w.league_id,p.xmin::text,o.sha256""")
         db.execute("CREATE UNIQUE INDEX ON work_scopes(season,league_id)")
+        retire_empty_season_aliases(db)
         db.execute("""INSERT INTO statarena_app.publication_jobs(season,league_id) SELECT w.season,w.league_id FROM work_scopes w
             LEFT JOIN statarena_app.worker_inputs i ON i.kind='partition' AND i.key=w.season||':'||w.league_id
             WHERE i.digest IS DISTINCT FROM w.digest ON CONFLICT DO NOTHING""")
-        db.execute("""INSERT INTO statarena_app.publication_jobs(season,league_id,changed_at) SELECT season,league_id,changed_at FROM work_dirty
-            ON CONFLICT(season,league_id) DO UPDATE SET changed_at=excluded.changed_at WHERE publication_jobs.changed_at<excluded.changed_at""")
+        queue_dirty(db, captured=True)
         # A migrated seed can be the sole source of a historical season. Discover
         # new scopes without forcing every already-published partition to rebuild.
         db.execute("""INSERT INTO statarena_app.publication_jobs(season,league_id)
@@ -621,10 +674,10 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
     requested_families = 0
     bootstrap_source = None
     db = inputs.db
-    marker = db.execute(
-        "SELECT changed_at FROM work_dirty WHERE season=%s AND league_id=%s",
+    markers = db.execute(
+        "SELECT source_season,changed_at FROM work_dirty WHERE season=%s AND league_id=%s",
         (label, league),
-    ).fetchone()
+    ).fetchall()
     digest = db.execute(
         "SELECT digest FROM work_scopes WHERE season=%s AND league_id=%s",
         (label, league),
@@ -841,10 +894,10 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
                 (label, league, *bootstrap_source))
     if digest:
         receipt(db, "partition", label + ":" + league, digest[0])
-    if marker:
+    for source_season, changed_at in markers:
         db.execute(
             "DELETE FROM statarena.dirty_partitions WHERE season=%s AND league_id=%s AND changed_at=%s",
-            (label, league, marker[0]),
+            (source_season, league, changed_at),
         )
     db.execute(
         "DELETE FROM statarena_app.publication_jobs WHERE season=%s AND league_id=%s AND changed_at=%s",
@@ -954,9 +1007,7 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, i
                 break
             if max_partitions is not None and result["partitions"] >= max_partitions:
                 break
-        db.execute("""INSERT INTO statarena_app.publication_jobs(season,league_id,changed_at)
-            SELECT season,league_id,changed_at FROM statarena.dirty_partitions
-            ON CONFLICT(season,league_id) DO UPDATE SET changed_at=excluded.changed_at WHERE publication_jobs.changed_at<excluded.changed_at""")
+        queue_dirty(db)
         result["remaining"] = db.execute(
             "SELECT (SELECT count(*) FROM statarena_app.publication_jobs)+(SELECT count(*) FROM work_catalog)"
         ).fetchone()[0]
