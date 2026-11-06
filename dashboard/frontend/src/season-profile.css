@@ -33,8 +33,7 @@
   border-color: var(--accent-line);
   background: var(--surface-hover);
 }
-.player-search-result:focus-visible,
-.season-match:focus-visible {
+.player-search-result:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -58,13 +57,6 @@
   color: var(--muted);
   font-size: var(--text-sm);
 }
-.player-season-card {
-  margin-bottom: var(--section-gap);
-}
-.player-season-card > .card-body {
-  padding: 22px;
-}
-
 .messi-goats {
   position: fixed;
   inset: 0;
@@ -90,7 +82,9 @@
   line-height: 1;
   -webkit-text-stroke: 1.5px #402200;
   paint-order: stroke fill;
-  text-shadow: 2px 3px 0 #a94412, 4px 5px 0 #402200,
+  text-shadow:
+    2px 3px 0 #a94412,
+    4px 5px 0 #402200,
     0 7px 14px rgb(0 0 0 / 45%);
   animation-name: ronaldo-cartoon-arrive;
 }
@@ -149,7 +143,8 @@
   }
   100% {
     opacity: 0;
-    transform: translate3d(var(--goat-drift), -110vh, 0) rotate(10deg) scale(1.05);
+    transform: translate3d(var(--goat-drift), -110vh, 0) rotate(10deg)
+      scale(1.05);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -233,38 +228,33 @@
 .season-player-figures {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 18px;
-  padding: 15px 0;
-  border-block: 1px solid var(--border);
+  gap: 16px 24px;
+  margin: 16px 0 0;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--border);
 }
 .season-player-figures > div {
-  display: flex;
-  flex-direction: column;
   min-width: 0;
-  padding: 0 16px;
-  border-left: 1px solid var(--border);
 }
-.season-player-figures > div:first-child {
-  border-left: 0;
-  padding-left: 0;
+.season-player-figures dd {
+  display: grid;
+  gap: 3px;
+  margin: 4px 0 0;
 }
-.season-player-figures span,
+.season-player-figures dt,
 .season-player-figures small {
   color: var(--muted);
   font-size: var(--text-sm);
 }
 .season-player-figures strong {
-  margin-top: 4px;
   color: var(--ink-strong);
-  font-size: 24px;
+  font-size: 20px;
   font-variant-numeric: tabular-nums;
 }
 .season-player-figures small {
-  margin-top: 4px;
   font-size: var(--text-xs);
 }
-.season-player-profile,
-.season-recent {
+.season-player-profile {
   margin-top: 22px;
 }
 .season-section-heading {
@@ -345,47 +335,6 @@
   font-size: var(--text-sm);
   line-height: 1.5;
 }
-.season-match-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
-  gap: 8px;
-}
-.season-match {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--ink);
-  background: var(--surface-raised);
-  text-align: left;
-  cursor: pointer;
-}
-.season-match:hover {
-  border-color: var(--accent-line);
-  background: var(--surface-hover);
-}
-.season-match > span {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  gap: 4px;
-  font-size: var(--text-sm);
-}
-.season-match > span:last-child {
-  flex: 0 0 auto;
-  text-align: right;
-}
-.season-match strong {
-  color: var(--ink-strong);
-  overflow-wrap: anywhere;
-}
-.season-match small {
-  color: var(--muted);
-  font-size: var(--text-xs);
-}
 .performance-context {
   display: inline-flex;
   flex-wrap: wrap;
@@ -411,9 +360,6 @@
   object-fit: contain;
 }
 @media (max-width: 700px) {
-  .player-season-card > .card-body {
-    padding: 16px;
-  }
   .season-player-heading {
     align-items: flex-start;
   }
@@ -427,11 +373,7 @@
   }
   .season-player-figures {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px 0;
-  }
-  .season-player-figures > div:nth-child(odd) {
-    border-left: 0;
-    padding-left: 0;
+    gap: 14px 16px;
   }
   .season-profile-grid {
     grid-template-columns: 1fr;

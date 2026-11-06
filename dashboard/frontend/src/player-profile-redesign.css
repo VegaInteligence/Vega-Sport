@@ -30,7 +30,7 @@
   color: var(--muted);
 }
 .player-trophy-item:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--ink-strong);
   outline-offset: 2px;
 }
 .player-trophy-grid {
@@ -55,13 +55,12 @@
   cursor: pointer;
 }
 @media (hover: hover) {
-  .player-trophy-item:hover {
-    background: var(--surface-hover);
+  .player-trophy-item:hover .player-trophy-name {
+    text-decoration: underline;
   }
 }
-.player-trophy-item[aria-pressed="true"] {
-  border-color: var(--accent-line);
-  background: var(--accent-pale);
+.player-trophy-item[aria-pressed="true"] .player-trophy-name {
+  text-decoration: underline;
 }
 .player-trophy-visual {
   display: flex;
@@ -95,6 +94,7 @@
   font-weight: 600;
   line-height: 1.25;
   overflow-wrap: anywhere;
+  text-underline-offset: 2px;
 }
 .player-trophy-count {
   flex: none;
@@ -177,6 +177,23 @@
 .player-season-group-table .player-season-competition > th {
   padding-inline-start: 24px;
 }
+.player-season-group-table .player-history-crest {
+  flex-basis: 20px;
+  width: 20px;
+  height: 18px;
+}
+.player-season-history-more {
+  margin-top: 12px;
+}
+.player-season-history-more > summary {
+  color: var(--accent);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.player-season-history-more[open] > summary {
+  margin-bottom: 12px;
+}
 .player-profile-source {
   margin-top: 14px;
   color: var(--muted);
@@ -196,79 +213,87 @@
   display: inline-block;
   margin-top: 6px;
 }
-.player-match-count,
-.player-season-match-count,
-.player-rating-detail {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--accent);
-  font: inherit;
-  cursor: pointer;
-}
-.player-match-count {
-  display: block;
-  width: 100%;
-  text-align: left;
-}
-.research-stat-strip .player-match-count strong {
-  color: var(--accent);
-}
 .player-season-match-count {
+  color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.player-match-count:hover strong,
-a.player-fixture-link:hover strong {
-  text-decoration: underline;
-}
-.player-fixture {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-.player-fixture-link {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--ink);
-  text-decoration: none;
-}
-.player-fixture-score {
-  flex: none;
-  color: var(--accent);
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-}
-.player-fixture small {
+.player-match-scope {
+  margin: 6px 0 18px;
   color: var(--muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 .player-fixture-list {
   padding: 0;
   margin: 0;
   list-style: none;
+  border-block: 1px solid var(--border);
 }
-.player-fixture-list > li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+.player-fixture-list > li + li {
+  border-top: 1px solid var(--border);
+}
+.player-fixture-list .match-row {
+  padding-inline: 0;
+}
+.player-fixture-list .team-name > span:not(.crest) {
+  overflow-wrap: anywhere;
+}
+.player-fixture-list .team-name .crest,
+.player-fixture-list .team-name .national-flag {
+  flex-shrink: 0;
+}
+.player-fixture-list a .score {
+  background: transparent;
+  color: var(--accent);
+}
+.player-profile-flat {
+  margin-bottom: var(--section-gap);
+}
+.player-profile-flat .season-player-heading {
+  padding-bottom: 16px;
+}
+.player-profile-flat .player-season-history-table {
+  border-inline: 0;
+  border-radius: 0;
+}
+.player-season-summary,
+.player-bio-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 12px 0 0;
+  font-size: var(--text-sm);
+}
+.player-season-summary div,
+.player-bio-inline div {
+  display: flex;
   align-items: baseline;
-  gap: 14px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
+  gap: 6px;
 }
-.player-profile-facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));
-  gap: 12px;
-  margin-top: 16px;
+.player-season-summary dt,
+.player-bio-inline dt {
+  color: var(--muted);
 }
-.player-profile-facts:empty {
-  display: none;
+.player-season-summary dd,
+.player-bio-inline dd {
+  margin: 0;
+  color: var(--ink-strong);
 }
 .player-overview-controls {
   justify-content: space-between;
+}
+.player-overview-controls .segmented-control {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.player-overview-controls .segmented-control button {
+  border-radius: 0;
+  border-bottom: 1px solid transparent;
+}
+.player-overview-controls .segmented-control button[aria-pressed="true"] {
+  border-bottom-color: var(--accent);
+  background: transparent;
 }
 .player-history-identity {
   display: inline-flex;

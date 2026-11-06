@@ -1,25 +1,26 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  playerBio,
-  playerDiscipline,
-} from "../dashboard/frontend/src/services/player-bio.js";
-test("identity and discipline are restricted to an attributed, verified player", () => {
-  assert.equal(playerBio("p_2e0FPo").fullName, "Lamine Yamal Nasraoui Ebana");
-  assert.equal(playerBio("p_2e0FPo").nationality, "Espagne");
-  assert.equal(playerBio("p_unknown"), null);
-  const cards = playerDiscipline("p_2e0FPo");
+import { playerBio } from "../dashboard/frontend/src/services/player-bio.js";
+test("identity uses only explicitly named internal fields", () => {
   assert.deepEqual(
-    cards.competitions.map(({ matches, yellow, directRed, secondYellow }) => [
-      matches,
-      yellow,
-      directRed,
-      secondYellow,
-    ]),
+    playerBio({ name: "Lamine Yamal", country_code: "ESP", position_id: 103 }),
+    [],
+  );
+  assert.deepEqual(
+    playerBio({
+      full_name: "Ada Exemple",
+      height_cm: 172,
+      nationality: "France",
+      preferred_foot: "Gauche",
+      position_label: "Défenseure",
+    }),
     [
-      [11, 2, 0, 0],
-      [4, 0, 0, 0],
+      { label: "Nom complet", value: "Ada Exemple" },
+      { label: "Taille", value: "172 cm" },
+      { label: "Nationalité", value: "France" },
+      { label: "Pied fort", value: "Gauche" },
+      { label: "Poste", value: "Défenseure" },
     ],
   );
-  assert.equal(playerDiscipline("p_unknown"), null);
+  assert.deepEqual(playerBio(null), []);
 });

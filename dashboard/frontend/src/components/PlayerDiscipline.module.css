@@ -1,0 +1,48 @@
+.discipline {
+  margin: 24px 0;
+}
+.discipline h3 {
+  margin-bottom: 10px;
+}
+.discipline p {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  margin: 8px 0 0;
+}
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 0;
+}
+.counts div {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.counts dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.counts dd {
+  margin: 0;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.counts i {
+  width: 12px;
+  height: 16px;
+  border-radius: 2px;
+  display: inline-block;
+  transform: rotate(8deg);
+}
+.yellow {
+  background: #e8b92f;
+}
+.red {
+  background: #d34e50;
+}
+.double {
+  background: linear-gradient(90deg, #e8b92f 0 50%, #d34e50 50%);
+}

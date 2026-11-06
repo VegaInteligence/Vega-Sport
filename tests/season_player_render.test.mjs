@@ -60,24 +60,22 @@ test("search presents one navigable player for multiple match performances", () 
   assert.match(html, /\/joueurs\/?\?id=p_1/);
 });
 
-test("season overview shows observed metrics and direct opponent names", () => {
+test("season overview shows observed metrics without a match list or a header count", () => {
   const html = renderSeasonProfile(rows, matches, "p_1");
   assert.match(html, /Neymar/);
   assert.match(html, /37/);
   assert.match(html, /6,68/);
   assert.match(html, /0,82/);
   assert.match(html, /Par match/);
-  assert.match(html, /Voir les 2 matchs joués/);
   assert.match(html, /Essentiel/);
   assert.match(html, /Attaque/);
   assert.match(html, /Création/);
   assert.match(html, /Défense/);
   assert.doesNotMatch(html, /centiles au poste|Modèle du radar/);
-  assert.match(html, /5 juil\. 2026/);
-  assert.match(html, /29 juin 2026/);
-  assert.match(html, />Norway</);
-  assert.match(html, />Portugal</);
-  assert.doesNotMatch(html, /Contre Norway|Contre Portugal/);
+  assert.doesNotMatch(
+    html,
+    /Matchs joués|Dernières performances|>Norway<|>Portugal</,
+  );
   assert.doesNotMatch(html, />Brazil<|>World Cup<| · Brazil<| · World Cup</);
   assert.doesNotMatch(html, /NaN|Infinity/);
 });

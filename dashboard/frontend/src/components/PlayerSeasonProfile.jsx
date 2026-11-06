@@ -19,8 +19,8 @@ import {
   comparisonKey,
   playerSelection,
 } from "../services/research-storage.js";
-import { date, normalizeText, number } from "../services/format.js";
-import { Card, Empty, Media, Segments } from "./UI.jsx";
+import { normalizeText, number } from "../services/format.js";
+import { Empty, Media, Segments } from "./UI.jsx";
 import {
   BookmarkButton,
   ComparePlayerButton,
@@ -35,12 +35,14 @@ import PlayerHonours, {
 } from "./PlayerHonours.jsx";
 import PlayerBio from "./PlayerBio.jsx";
 import PlayerDiscipline from "./PlayerDiscipline.jsx";
-import { playerOpponent } from "./PlayerFixture.jsx";
 import PerformanceContext from "./PerformanceContext.jsx";
 import MessiGoats from "./MessiGoats.jsx";
 import { MESSI_ID } from "../services/player-honours.js";
-import { playerBio } from "../services/player-bio.js";
-import { primeResource, useResource } from "../services/resources.js";
+import {
+  cachedResource,
+  primeResource,
+  useResource,
+} from "../services/resources.js";
 import {
   MESSI_PORTRAIT,
   resolvePlayerIdentity,
@@ -56,8 +58,8 @@ const TABS = [
   ["similar", "Profils similaires"],
   ["evolution", "Évolution"],
   ["compare", "Comparer"],
-  ["matches", "Matchs"],
 ];
+const HISTORY_TABS = TABS.slice(0, 2);
 const OVERVIEW_GROUPS = [
   ["summary", "Essentiel"],
   ["attack", "Attaque"],
@@ -280,24 +282,32 @@ export default function PlayerSeasonProfile({
     if (knownIdentity.name && knownIdentity.imageUrl)
       void primeResource(identityKey, () => knownIdentity);
   }, [identityKey, knownIdentity]);
-  const missingIdentity = useResource(
-    identityKey,
-    async () =>
-      (await f.client.request(`players/${encodeURIComponent(id)}`)).data,
-    Boolean(f.client && (!knownIdentity.name || !knownIdentity.imageUrl)),
+  const publishedProfile = useResource(
+    `player-record:${id}`,
+    async () => {
+      try {
+        return (await f.client.request(`players/${encodeURIComponent(id)}`))
+          .data;
+      } catch (error) {
+        if (error.status === 404) return null;
+        throw error;
+      }
+    },
+    Boolean(f.client && /^p_[A-Za-z0-9]{6}$/.test(id)),
   );
+  const record = publishedProfile.value;
+  const storedIdentity = cachedResource(identityKey);
   const identity = useMemo(
     () =>
-      resolvePlayerIdentity(
-        id,
-        profile,
-        f.data?.appearances,
-        missingIdentity.value,
-      ),
-    [id, profile, f.data?.appearances, missingIdentity.value],
+      resolvePlayerIdentity(id, profile, f.data?.appearances, {
+        name: record?.name || storedIdentity?.name,
+        image_url:
+          record?.image_url || record?.imageUrl || storedIdentity?.imageUrl,
+      }),
+    [id, profile, f.data?.appearances, record, storedIdentity],
   );
   const honours = usePlayerHonours(id, identity.name);
-  const role = playerBio(id)?.position || profile.role?.label;
+  const role = profile.role?.label;
   const profiles = useMemo(
     () => allProfiles || aggregateSeasonPlayers(scopeRows),
     [allProfiles, scopeRows],
@@ -355,9 +365,21 @@ export default function PlayerSeasonProfile({
       profile: aggregateSeason(values, id),
     }));
   }, [profile.rows, id]);
+  const seasonHistory = (
+    <Suspense
+      fallback={
+        <div className="loading-state" role="status">
+          Chargement des saisons…
+        </div>
+      }
+    >
+      <SeasonStats id={id} />
+    </Suspense>
+  );
   if (!profile.matches) {
+    const historyView = view === "stats" ? "stats" : "overview";
     return (
-      <Card className="player-season-card research-player-profile">
+      <article className="research-player-profile player-profile-flat">
         <MessiGoats id={id} />
         {identity.name && (
           <PlayerProfileHeading
@@ -367,12 +389,31 @@ export default function PlayerSeasonProfile({
             honours={honours}
           />
         )}
-        <PlayerBio id={id} />
-        <Empty>
-          Aucune performance avec des minutes connues pour ces filtres.
-        </Empty>
+        <PlayerBio profile={record} />
+        <ResearchTabs
+          label="Analyse du joueur"
+          value={historyView}
+          items={HISTORY_TABS}
+          onChange={change}
+          panelId="player-profile-panel"
+        />
+        <div
+          id="player-profile-panel"
+          role="tabpanel"
+          aria-label={
+            historyView === "stats" ? "Statistiques" : "Vue d’ensemble"
+          }
+        >
+          {historyView === "stats" ? (
+            seasonHistory
+          ) : (
+            <Empty>
+              Aucune performance avec des minutes connues pour ces filtres.
+            </Empty>
+          )}
+        </div>
         <PlayerHonoursSource url={honours.value?.sourceUrl} />
-      </Card>
+      </article>
     );
   }
   const metricTable = (
@@ -388,7 +429,7 @@ export default function PlayerSeasonProfile({
       ? KEEPER_METRICS
       : OVERVIEW_METRICS[overviewGroup];
   return (
-    <Card className="player-season-card research-player-profile">
+    <article className="research-player-profile player-profile-flat">
       <MessiGoats id={id} />
       <PlayerProfileHeading
         id={id}
@@ -414,31 +455,6 @@ export default function PlayerSeasonProfile({
           </ReportButton>
         </div>
       </PlayerProfileHeading>
-      <div className="research-stat-strip">
-        <div>
-          <button
-            type="button"
-            className="player-match-count"
-            onClick={() => change("matches")}
-            aria-label={`Voir les ${number(profile.matches)} matchs joués`}
-          >
-            <span>Matchs joués</span>
-            <strong>{number(profile.matches)}</strong>
-          </button>
-        </div>
-        <div>
-          <span>Minutes</span>
-          <strong>{number(profile.minutes)}</strong>
-        </div>
-        <div>
-          <span>Titularisations</span>
-          <strong>{profile.knownStarts ? number(profile.starts) : "—"}</strong>
-        </div>
-        <div>
-          <span>Note moyenne</span>
-          <strong>{number(profile.rating, 2)}</strong>
-        </div>
-      </div>
       <ResearchTabs
         label="Analyse du joueur"
         value={view}
@@ -453,15 +469,12 @@ export default function PlayerSeasonProfile({
       >
         {view === "stats" && (
           <>
-            <Suspense
-              fallback={
-                <div className="loading-state" role="status">
-                  Chargement des saisons…
-                </div>
-              }
-            >
-              <SeasonStats id={id} />
-            </Suspense>
+            {seasonHistory}
+            <PlayerDiscipline
+              id={id}
+              rows={profile.rows}
+              matches={f.data.matches}
+            />
             <div className="season-section-heading">
               <h3>Statistiques détaillées</h3>
               <span>{f.season}</span>
@@ -525,75 +538,56 @@ export default function PlayerSeasonProfile({
                   items={STAT_MODES}
                 />
               </div>
-              <div className="season-player-figures">
+              <dl className="season-player-figures">
                 {figures.map((key) => {
                   const result = seasonMetric(profile, key, mode);
                   return (
                     <div key={key}>
-                      <span>
+                      <dt>
                         {SCOUT_METRICS[key].label}
                         <MetricInfo
                           metric={key}
                           observed={result.count}
                           total={profile.matches}
                         />
-                      </span>
-                      <strong>
-                        {number(
-                          result.value,
-                          mode === "total" && !SCOUT_METRICS[key].ratio
-                            ? SCOUT_METRICS[key].decimals || 0
-                            : 2,
+                      </dt>
+                      <dd>
+                        <strong>
+                          {number(
+                            result.value,
+                            mode === "total" && !SCOUT_METRICS[key].ratio
+                              ? SCOUT_METRICS[key].decimals || 0
+                              : 2,
+                          )}
+                        </strong>
+                        {result.count < profile.matches && (
+                          <small>
+                            {result.count}/{profile.matches} matchs renseignés
+                          </small>
                         )}
-                      </strong>
-                      {result.count < profile.matches && (
-                        <small>
-                          {result.count}/{profile.matches} matchs renseignés
-                        </small>
-                      )}
+                      </dd>
                     </div>
                   );
                 })}
-              </div>
-              <div className="player-profile-facts">
-                <PlayerBio id={id} />
-                <PlayerDiscipline id={id} season={f.season} />
-              </div>
-              <section className="season-recent">
-                <div className="season-section-heading">
-                  <h3>Dernières performances</h3>
-                  <button
-                    className="inline-link"
-                    onClick={() => change("matches")}
-                  >
-                    Tous les matchs →
-                  </button>
+              </dl>
+              <dl
+                className="player-season-summary"
+                aria-label={`Temps de jeu et note en ${f.season}`}
+              >
+                <div>
+                  <dt>Minutes</dt>
+                  <dd>{number(profile.minutes)}</dd>
                 </div>
-                <div className="season-match-list">
-                  {profile.rows.slice(0, 5).map((row) => {
-                    const match = f.data.matches.find(
-                      (m) => m.id === row.matchId,
-                    );
-                    const opponent = playerOpponent(match, row.teamId);
-                    return (
-                      <button
-                        className="season-match"
-                        key={row.id}
-                        onClick={() => f.setPlayer(row.id)}
-                      >
-                        <span>
-                          <strong>{opponent?.name || "Match"}</strong>
-                          <small>{date(row.date)}</small>
-                        </span>
-                        <span>
-                          {number(row.minutes)} min
-                          <small>Note {number(row.rating, 2)}</small>
-                        </span>
-                      </button>
-                    );
-                  })}
+                <div>
+                  <dt>Titularisations</dt>
+                  <dd>{profile.knownStarts ? number(profile.starts) : "—"}</dd>
                 </div>
-              </section>
+                <div>
+                  <dt>Note moyenne</dt>
+                  <dd>{number(profile.rating, 2)}</dd>
+                </div>
+              </dl>
+              <PlayerBio profile={record} />
             </>
           )}
           {view === "stats" && (
@@ -689,19 +683,9 @@ export default function PlayerSeasonProfile({
               cohorts={cohorts}
             />
           )}
-          {view === "matches" && (
-            <div className="research-context">
-              <span>
-                {number(profile.matches)} matchs joués ·{" "}
-                {profile.unknownMinutes
-                  ? `${profile.unknownMinutes} observations sans minutes connues`
-                  : f.season}
-              </span>
-            </div>
-          )}
         </Suspense>
       </div>
       <PlayerHonoursSource url={honours.value?.sourceUrl} />
-    </Card>
+    </article>
   );
 }

@@ -5,6 +5,7 @@ import { ResearchProvider } from "../src/hooks/ResearchContext.jsx";
 export default function Providers({ children }) {
   const pathname = usePathname();
   const params = useSearchParams();
+  const playerMatches = /^\/joueurs\/matchs\/?$/.test(pathname);
   const standingsOnly =
     pathname.startsWith("/clubs") &&
     Boolean(
@@ -12,7 +13,11 @@ export default function Providers({ children }) {
     );
   return (
     <FootballProvider
-      loadData={!pathname.startsWith("/classement-joueurs") && !standingsOnly}
+      loadData={
+        !pathname.startsWith("/classement-joueurs") &&
+        !standingsOnly &&
+        !playerMatches
+      }
     >
       <ResearchProvider>{children}</ResearchProvider>
     </FootballProvider>
