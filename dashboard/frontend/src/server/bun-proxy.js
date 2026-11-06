@@ -33,13 +33,14 @@ export async function proxy(request) {
       "retry-after",
       "location",
       "etag",
-      "content-length",
       "x-data-source",
       "server-timing",
     ])
       if (upstream.headers.has(key))
         headers.set(key, upstream.headers.get(key));
     headers.set("X-Content-Type-Options", "nosniff");
+    // fetch decodes upstream compression. Its wire Content-Length no longer
+    // describes the streamed body; Next must frame this response itself.
     return new Response(request.method === "HEAD" ? null : upstream.body, {
       status: upstream.status,
       headers,

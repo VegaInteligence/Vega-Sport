@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import { gzipSync } from 'node:zlib';
 import { loadSeason } from '../dashboard/frontend/src/season_data.js';
 import { ProFootballDataClient } from '../dashboard/frontend/src/services/pro-football-client.js';
 import { proxy } from '../dashboard/frontend/src/server/bun-proxy.js';
@@ -78,5 +80,30 @@ test('Vercel proxies to AWS with no database credentials and preserves condition
   } finally {
     globalThis.fetch = original;
     for (const [key, value] of Object.entries(prior)) if (value === undefined) delete process.env[key]; else process.env[key] = value;
+  }
+});
+
+test('Vercel forwards a complete decoded AWS response without its compressed wire length', async () => {
+  const body = JSON.stringify({ editions: Array.from({ length: 200 }, (_, id) => ({ id, name: 'Competition' })) });
+  const compressed = gzipSync(body);
+  const server = createServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'application/json', 'content-encoding': 'gzip', 'content-length': compressed.length });
+    res.end(compressed);
+  });
+  const keys = ['ORION_API_ORIGIN', 'NEXT_PUBLIC_API_ORIGIN'];
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  try {
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    process.env.ORION_API_ORIGIN = `http://127.0.0.1:${server.address().port}`;
+    delete process.env.NEXT_PUBLIC_API_ORIGIN;
+    const response = await proxy(new Request('https://site.test/api/dashboard/manifest'));
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-length'), null);
+    assert.equal(response.headers.get('content-encoding'), null);
+    assert.equal(await response.text(), body);
+  } finally {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+    for (const [key, value] of Object.entries(previous)) if (value === undefined) delete process.env[key]; else process.env[key] = value;
   }
 });
