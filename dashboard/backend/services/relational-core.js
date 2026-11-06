@@ -135,8 +135,12 @@ function keyset(alias, dayParam, idParam) {
 }
 const jsonRows = (sql, projection = "r") =>
   `(SELECT coalesce(json_agg(${projection}),'[]'::json) FROM (${sql}) r)`;
-const byPage = (sql) =>
-  jsonRows(sql + " WHERE match_id IN (SELECT id FROM page)");
+// Keep each child read tied to one indexed match key. The ordered lateral
+// subquery bounds work to the page even as historical seasons accumulate.
+const byPage = (table, order, fields = "r.*") =>
+  jsonRows(`SELECT ${fields} FROM page p CROSS JOIN LATERAL (
+    SELECT * FROM statarena_app.${table} WHERE match_id=p.id ORDER BY ${order}
+  ) r ORDER BY r.match_id,${order.split(",").map((key) => "r." + key.trim()).join(",")}`);
 // Migration 003's appearance columns, in their published order. A newer table
 // layout travels as named records until its positional representation is reviewed.
 const appearanceColumns =
@@ -436,9 +440,12 @@ export async function partitionPage(req, p) {
  keys AS (SELECT * FROM candidates ORDER BY day NULLS LAST,id LIMIT ($3::int+1)), page AS (SELECT id FROM keys ORDER BY day NULLS LAST,id LIMIT $3),
  page_appearances AS MATERIALIZED (
  SELECT a.*,p.name,p.image_url,s.value_text AS shirt_number_raw,s.value_type AS shirt_number_type
- FROM statarena_app.appearances a JOIN statarena_app.players p ON p.id=a.player_ref
+ FROM page k CROSS JOIN LATERAL (
+   SELECT * FROM statarena_app.appearances
+   WHERE match_id=k.id AND season=$1 AND league_id=$2 ORDER BY ordinal,id
+ ) a JOIN statarena_app.players p ON p.id=a.player_ref
  LEFT JOIN statarena_app.appearance_shirt_numbers s ON s.appearance_id=a.id
- WHERE a.match_id IN(SELECT id FROM page)),
+ ),
  appearance_extras AS (
  SELECT e.appearance_id,json_object_agg(e.metric_key,e.value ORDER BY e.metric_key) extras
  FROM statarena_app.appearance_metrics e JOIN page_appearances a ON a.id=e.appearance_id GROUP BY e.appearance_id)
@@ -446,11 +453,11 @@ export async function partitionPage(req, p) {
  ${jsonRows("SELECT m.* FROM statarena_app.matches m JOIN page USING(id) ORDER BY m.day NULLS LAST,m.id")} matches,
  ${jsonRows("SELECT f.* FROM statarena_app.fixtures f JOIN page USING(id) ORDER BY f.day NULLS LAST,f.id")} fixtures,
  ${jsonRows("SELECT a.*,e.extras FROM page_appearances a LEFT JOIN appearance_extras e ON e.appearance_id=a.id ORDER BY a.match_id,a.ordinal,a.id", appearanceProjection)} appearances,
- ${jsonRows("SELECT * FROM statarena_app.shots WHERE match_id IN(SELECT id FROM page) ORDER BY match_id,ordinal,id")} shots,
- ${jsonRows("SELECT * FROM statarena_app.team_statistics WHERE match_id IN(SELECT id FROM page) ORDER BY match_id,ordinal")} stats,
- ${byPage("SELECT * FROM statarena_app.match_coverage")} cover,
- ${jsonRows("SELECT match_id,appearance_id FROM statarena_app.match_appearance_members WHERE match_id IN(SELECT id FROM page) ORDER BY match_id,ordinal")} players,
- ${jsonRows("SELECT * FROM statarena_app.match_warnings WHERE match_id IN(SELECT id FROM page) ORDER BY ordinal")} warnings,
+ ${byPage("shots", "ordinal,id")} shots,
+ ${byPage("team_statistics", "ordinal")} stats,
+ ${byPage("match_coverage", "coverage_key")} cover,
+ ${byPage("match_appearance_members", "ordinal", "r.match_id,r.appearance_id")} players,
+ ${byPage("match_warnings", "ordinal")} warnings,
  ${jsonRows("SELECT m.metric_key AS key,m.label,m.unit,m.decimals FROM statarena_app.partition_metrics pm JOIN statarena_app.metric_definitions m USING(metric_key) WHERE pm.season=$1 AND pm.league_id=$2 ORDER BY pm.ordinal")} metrics,
  ${jsonRows("SELECT c.*,s.season,s.sample_matches,(SELECT json_agg(native_season ORDER BY ordinal) FROM statarena_app.competition_catalog_seasons k WHERE k.competition_id=c.id) catalog_seasons FROM statarena_app.competitions c JOIN statarena_app.competition_seasons s ON s.competition_id=c.id WHERE c.id=$2 AND s.season=$1")} competitions,
  ${jsonRows("SELECT s.team_id AS id,s.name,s.image_url,s.sample_matches,t.country FROM statarena_app.team_seasons s JOIN statarena_app.teams t ON s.team_id=t.id WHERE season=$1 AND league_id=$2 ORDER BY s.team_id")} teams,
