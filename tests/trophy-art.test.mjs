@@ -80,5 +80,21 @@ test("different historical trophy designs are not mixed", () => {
     "/trophies/club-world-cup-2025.webp",
   );
   assert.equal(trophyArt({ title: "FIFA World Cup", years: "1970" }), null);
-  assert.equal(trophyArt({ title: "Liga", years: "2024/2025" }), null);
+});
+
+test("Liga artwork covers the recent trophy editions", async () => {
+  const image = "/trophies/liga-current.webp";
+  assert.equal(trophyArt({ title: "La Liga", years: "2022–23" }), image);
+  assert.equal(
+    trophyArt({ title: "Spanish La Liga", years: "2023/2024" }),
+    image,
+  );
+  assert.equal(trophyArt({ title: "Liga", years: "2024/2025" }), image);
+  assert.equal(
+    trophyArt({ title: "Liga", years: "2022–23, 2024–25, 2025–26" }),
+    image,
+  );
+  await access(
+    new URL(`../dashboard/frontend/public${image}`, import.meta.url),
+  );
 });

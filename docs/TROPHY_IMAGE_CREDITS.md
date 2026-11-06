@@ -34,6 +34,12 @@ Les liens de chaque référence donnent accès à l'œuvre originale et à sa li
 | Coupe de la Ligue                    | Brgesto                | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) | [Coupe de la Ligue](https://commons.wikimedia.org/wiki/File:CoupeLigueFrance.png)                                                          |
 | MLS Cup, modèle actuel               | SounderBruce           | [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0/) | [Osvaldo Alonso lifting the MLS Cup](https://commons.wikimedia.org/wiki/File:Osvaldo_Alonso_lifting_the_MLS_Cup_at_Sounders_Rally.jpg)     |
 
+Le visuel `liga-current.webp` retravaille l’illustration Liga ci-dessus avec
+ImageGen. La coupe exposée au musée du FC Barcelone en 2026 a servi de référence
+pour la silhouette. [Photo du musée du Barça](https://www.fcbarcelona.com/en/football/first-team/news/4505332/liga-and-super-cup-trophies-on-display-in-museum/featured)
+
+Cette silhouette est documentée sur les éditions 2022/23 à 2025/26. [Barça 2022/23](https://www.fcbarcelona.com/en/news/3447358/liga-title-celebrations-at-spotify-camp-nou), [Real Madrid 2023/24](https://www.realmadrid.com/en-US/news/football/first-team/latest-news/el-campeon-recibe-el-trofeo-de-la-liga-36-en-la-ciudad-real-madrid-12-05-2024), [Barça 2024/25](https://www.fcbarcelona.com/en/football/first-team/news/4267749/magic-night-at-montjuic-to-celebrate-unforgettable-season/featured)
+
 Le portrait utilisé pour l'animation de Kylian Mbappé est une version réduite
 du [portrait vectoriel de Mao Zedong](https://commons.wikimedia.org/wiki/File:Mao_Zedong_vector_portrait.svg)
 par OwcaGierka, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).

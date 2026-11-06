@@ -98,7 +98,7 @@ test("Messi keeps his portrait and published trophies when filters leave no matc
   assert.match(html, /\/trophies\/ballon-or\.webp/);
 });
 
-test("Yamal's team trophies remain clickable without matching artwork", async () => {
+test("Yamal's Liga artwork and unillustrated Euro remain clickable", async () => {
   const id = "p_2e0FPo";
   const name = "Lamine Yamal";
   await seedPlayerHonours(id, name, {
@@ -124,6 +124,7 @@ test("Yamal's team trophies remain clickable without matching artwork", async ()
     id,
   );
   assert.match(html, /<button[^>]+aria-label="Liga, 3 titres, FC Barcelone"/);
+  assert.match(html, /src="\/trophies\/liga-current\.webp"/);
   assert.match(html, /<button[^>]+aria-label="Euro, Espagne"/);
   assert.match(html, /FC Barcelone · 2025–26, 2024–25, 2022–23/);
   assert.doesNotMatch(html, /Faire défiler les trophées|Trophées suivants/);
