@@ -7,7 +7,7 @@ from hashlib import sha256
 from pathlib import Path
 
 from relational_catalog_keys import records
-from relational_match import canonical, save_rows, unpack_record, validate_scalar
+from relational_match import canonical, _copy_rows, _values_sql, unpack_record, validate_scalar
 from relational_match_ddl import column_lines, fields, projected
 from relational_match_model import Children
 
@@ -99,44 +99,84 @@ def normalize(model, body):
     return body
 
 
+def _publish_group(db, group):
+    """Compare headers once, then COPY each changed native table once per bounded group."""
+    if not group:
+        return 0, 0
+    columns = list(zip(*group))
+    previous = {
+        (kind, scope, edition): (rid, digest)
+        for kind, scope, edition, rid, digest in db.execute(
+            """SELECT c.catalog,c.scope,c.edition,c.resource_id,c.source_digest
+            FROM unnest(%s::text[],%s::text[],%s::text[]) requested(catalog,scope,edition)
+            JOIN statarena_app.catalog_editions c USING(catalog,scope,edition)""",
+            tuple(list(column) for column in columns),
+        )
+    }
+    changed, headers, replaced = [], [], []
+    unchanged = 0
+    for key, (model, body, digest) in group.items():
+        old = previous.get(key)
+        if old and old[1] == digest:
+            unchanged += 1
+            continue
+        batches = rows_for(models[model], normalize(model, body))
+        headers.append((*key, model, digest, body.get("status", 200) if key[0] == "profile" else 200))
+        changed.append((key, batches))
+        if old:
+            replaced.append(old[0])
+    if not headers:
+        return 0, unchanged
+    if replaced:
+        db.execute(
+            "DELETE FROM statarena_app.catalog_editions WHERE resource_id=ANY(%s::bigint[])",
+            (replaced,),
+        )
+    values, bindings = _values_sql(headers, ["text", "text", "text", "text", "text", "integer"])
+    identifiers = {
+        (kind, scope, edition): rid
+        for kind, scope, edition, rid in db.execute(
+            """INSERT INTO statarena_app.catalog_editions(catalog,scope,edition,model,source_digest,response_status)
+            VALUES """ + values + " RETURNING catalog,scope,edition,resource_id",
+            bindings,
+        )
+    }
+    tables = {}
+    for key, batches in changed:
+        for spec, rows in batches:
+            if spec.table not in tables:
+                tables[spec.table] = (spec, [])
+            tables[spec.table][1].append((identifiers[key], rows))
+    # Each model traverses parents before children. Grouping retains that order.
+    for spec, parts in tables.values():
+        _copy_rows(db, spec, parts)
+    return len(changed), unchanged
+
+
 def publish_catalog(db, records_in):
-    """Publish supplied (staging path or profile endpoint, parsed input) pairs in one transaction."""
+    """Publish supplied inputs atomically, with bounded memory and sequential duplicate precedence."""
     changed = unchanged = 0
+    group = {}
+    size = 0
     with db.transaction():
         db.execute(
             "SELECT pg_advisory_xact_lock(hashtextextended('statarena_app.catalog_editions',0))"
         )
-
         for path, value in records_in:
             for model, kind, scope, edition, body in records(path, value):
-                digest = sha256((model_version + canonical(body)).encode()).hexdigest()
+                raw = canonical(body).encode()
+                digest = sha256(model_version.encode() + raw).hexdigest()
                 key = (kind, scope, edition)
-                previous = db.execute(
-                    "SELECT source_digest FROM statarena_app.catalog_editions WHERE catalog=%s AND scope=%s AND edition=%s",
-                    key,
-                ).fetchone()
-                if previous and previous[0] == digest:
-                    unchanged += 1
-                    continue
-                batches = rows_for(models[model], normalize(model, body))
-                if previous:
-                    db.execute(
-                        "DELETE FROM statarena_app.catalog_editions WHERE catalog=%s AND scope=%s AND edition=%s",
-                        key,
-                    )
-                rid = db.execute(
-                    """INSERT INTO statarena_app.catalog_editions(catalog,scope,edition,model,source_digest,response_status)
-                                 VALUES (%s,%s,%s,%s,%s,%s) RETURNING resource_id""",
-                    (
-                        *key,
-                        model,
-                        digest,
-                        body.get("status", 200) if kind == "profile" else 200,
-                    ),
-                ).fetchone()[0]
-                for obj, rows in batches:
-                    save_rows(db, rid, obj, rows)
-                changed += 1
+                if group and (key in group or len(group) >= 64 or size + len(raw) > 8 * 1024 * 1024):
+                    added, kept = _publish_group(db, group)
+                    changed += added
+                    unchanged += kept
+                    group, size = {}, 0
+                group[key] = (model, body, digest)
+                size += len(raw)
+        added, kept = _publish_group(db, group)
+        changed += added
+        unchanged += kept
     return {"changed": changed, "unchanged": unchanged}
 
 

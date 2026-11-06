@@ -413,7 +413,12 @@ def partition_calendar(inputs, label, league):
 
 def catalog_batch(inputs, limit):
     db = inputs.db
-    with db.transaction():
+    started = time.monotonic()
+    with (
+        db.transaction(),
+        tempfile.TemporaryDirectory(prefix="statarena-catalog-") as tmp,
+        closing(sqlite3.connect(Path(tmp) / "sources.sqlite")) as scratch,
+    ):
         jobs = db.execute(
             "SELECT kind,key,digest,ref,status,error FROM work_catalog ORDER BY kind,key LIMIT %s",
             (limit,),
@@ -421,14 +426,30 @@ def catalog_batch(inputs, limit):
         if not jobs:
             return 0
         headroom = capacity(db)
+        scratch.execute("CREATE TABLE body_cache(path text,sha text,body text,PRIMARY KEY(path,sha))")
+        refs = []
+        for kind, key, digest, ref, *_ in jobs:
+            if kind == "object":
+                refs.append((key, digest))
+            elif ref:
+                refs.append((ref["path"], ref.get("sha256")))
+        inputs.prefetch(refs, scratch)
+
+        def read(path, expected):
+            row = scratch.execute(
+                "SELECT body FROM body_cache WHERE path=? AND sha=?", (path, expected or "")
+            ).fetchone()
+            if row is None:
+                raise FileNotFoundError(path)
+            return json.loads(row[0])
 
         def records():
             estimated = 0
             for kind, key, digest, ref, status, error in jobs:
                 body = (
-                    inputs.read(key, digest)
+                    read(key, digest)
                     if kind == "object"
-                    else envelope(inputs.ref(ref) if ref else None, ref, status, error)
+                    else envelope(read(ref["path"], ref.get("sha256")) if ref else None, ref, status, error)
                 )
                 estimated += len(compact(body).encode()) * 2
                 if estimated > headroom:
@@ -445,8 +466,12 @@ def catalog_batch(inputs, limit):
                 yield key, body
 
         result = publish_catalog(db, records())
-        for kind, key, digest, *_ in jobs:
-            receipt(db, kind, key, digest)
+        db.cursor().executemany(
+            """INSERT INTO statarena_app.worker_inputs VALUES(%s,%s,%s)
+            ON CONFLICT(kind,key) DO UPDATE SET digest=excluded.digest
+            WHERE worker_inputs.digest IS DISTINCT FROM excluded.digest""",
+            [(kind, key, digest) for kind, key, digest, *_ in jobs],
+        )
         db.cursor().executemany(
             "DELETE FROM work_catalog WHERE kind=%s AND key=%s",
             [(r[0], r[1]) for r in jobs],
@@ -456,7 +481,9 @@ def catalog_batch(inputs, limit):
                 "UPDATE statarena_app.publications SET generation=generation+1,published_at=clock_timestamp()"
             )
         capacity(db)
-        return len(jobs)
+    print(compact({"phase": "catalog-published", "inputs": len(jobs), **result,
+                   "seconds": round(time.monotonic() - started, 3)}), flush=True)
+    return len(jobs)
 
 
 def partition_inputs(inputs, scratch, mids):
