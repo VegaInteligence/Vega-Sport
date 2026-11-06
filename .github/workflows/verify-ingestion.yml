@@ -90,6 +90,8 @@ jobs:
       - name: Install dashboard dependencies
         working-directory: dashboard
         run: bun install --frozen-lockfile
+      - name: Verify AWS-only frontend and maintenance contracts
+        run: /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64/bin/node --test tests/aws-only-runtime.test.mjs tests/aws-delivery.test.mjs tests/aws-maintenance.test.mjs
       - name: Verify safe retirement of reserved model tables
         run: >-
           python3 tests/retire_models_postgres.py

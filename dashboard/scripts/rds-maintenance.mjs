@@ -49,13 +49,23 @@ export async function handler(event = {}) {
     // No generic SQL input, credential output, public URL or data export exists.
     if (!/^statarena-before-cleanup-[a-z0-9-]{1,50}$/.test(event.verifiedSnapshotId || ""))
       throw new Error("A verified pre-cleanup snapshot identifier is required");
+    if (!/^[a-f0-9]{40}$/.test(event.codeCommit || ""))
+      throw new Error("The reviewed source commit is required");
     const sql = readFileSync(root + "/retire-models.sql", "utf8");
     const checksum = createHash("sha256").update(sql).digest("hex");
     if (event.expectedMigrationSha256 !== checksum) throw new Error("Unexpected migration checksum");
     await client.query("BEGIN");
-    await client.query(sql);
+    await client.query("SELECT pg_advisory_xact_lock(20261104, 2)");
+    const previous = (await client.query("SELECT content_sha256 FROM ingest.schema_migrations WHERE version='019'")).rows[0];
+    if (previous && previous.content_sha256 !== checksum)
+      throw new Error("Applied migration 019 has a different checksum");
+    if (!previous) {
+      await client.query(sql);
+      await client.query("INSERT INTO ingest.schema_migrations(version,content_sha256,applied_at,code_commit) VALUES('019',$1,clock_timestamp(),$2)",
+        [checksum, event.codeCommit]);
+    }
     await client.query("COMMIT");
-    return { ok: true, operation: "retire_empty_models", migrationSha256: checksum, snapshotId: event.verifiedSnapshotId };
+    return { ok: true, operation: "retire_empty_models", reused: Boolean(previous), migrationSha256: checksum, snapshotId: event.verifiedSnapshotId };
   } catch (error) {
     await client.query("ROLLBACK").catch(() => {});
     throw error;
