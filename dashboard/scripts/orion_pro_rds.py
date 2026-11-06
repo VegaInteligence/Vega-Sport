@@ -87,7 +87,13 @@ def gate(report, name, ok, actual):
 
 def source_state():
     commit = command(['git', 'rev-parse', 'HEAD'])
-    branch = command(['git', 'symbolic-ref', '--short', 'HEAD'])
+    # A detached CI checkout can produce the read-only plan. It still fails
+    # the existing main-branch gate required for an actual database apply.
+    branch_ref = subprocess.run(['git', 'symbolic-ref', '--quiet', '--short', 'HEAD'],
+                                cwd=ROOT, capture_output=True, text=True, timeout=10)
+    if branch_ref.returncode not in (0, 1):
+        raise GateError('Cannot inspect the source branch')
+    branch = branch_ref.stdout.strip() if branch_ref.returncode == 0 else None
     origin = command(['git', 'rev-parse', 'origin/main'])
     paths = [relative(p) for p in EXECUTION_PATHS]
     changed = command(['git', 'status', '--porcelain', '--untracked-files=normal', '--', *paths])
