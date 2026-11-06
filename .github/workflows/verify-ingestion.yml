@@ -33,6 +33,7 @@ jobs:
             dashboard/scripts
             dashboard/backend
             dashboard/frontend/src
+            dashboard/frontend/app
             dashboard/shared
             tests
             docs/architecture/orion-plan-20261104
