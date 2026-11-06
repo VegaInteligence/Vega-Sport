@@ -4,41 +4,83 @@ import Link from "next/link";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResource } from "../services/resources.js";
 import { loadPlayerHistory } from "../services/scouting-history.js";
+import { nationalFlagCode } from "../services/national-flags.js";
+import { playerTeamSeasons } from "../services/player-team-seasons.js";
 import { profileValue, SCOUT_METRICS } from "../services/scouting.js";
+import { seasonMetric } from "../services/season-player.js";
 import { date, number } from "../services/format.js";
 import { observedMinutes } from "../services/trend-chart.js";
 import { seasonTrendPoints } from "../services/player-season-history.js";
-import { AsyncState, Media, Segments } from "./UI.jsx";
-import { ComparePlayerButton } from "./ResearchUI.jsx";
+import { AsyncState, Empty, Media, Rating, Segments } from "./UI.jsx";
+import NationalFlag from "./NationalFlag.jsx";
+import PlayerSeasonTrend from "./PlayerSeasonTrend.jsx";
 import { ResearchTrend } from "./ResearchCharts.jsx";
 
-function SeasonTeams({ season, compact = false }) {
-  const catalog = new Map(
-    (season.data?.teams || []).map((team) => [team.id, team]),
-  );
-  const teams = (season.profile.teamIds || []).map(
-    (id, index) =>
-      catalog.get(id) || { id, name: season.profile.teams[index] || "Équipe" },
-  );
-  if (!teams.length)
-    return <span>{season.profile.teams.join(" · ") || "—"}</span>;
+const regionNames =
+  typeof Intl.DisplayNames === "function"
+    ? new Intl.DisplayNames(["fr"], { type: "region", fallback: "none" })
+    : null;
+const STAT_LABELS = {
+  matches: "Matchs",
+  goals: "Buts",
+  assists: "Passes décisives",
+  minutes: "Minutes",
+  rating: "Note moyenne",
+};
+
+function teamDisplayName({ team, kind, season }) {
+  if (kind !== "selection") return team;
+  const code = nationalFlagCode(team, season);
+  return code?.length === 2
+    ? regionNames?.of(code.toUpperCase()) || team
+    : team;
+}
+
+function SeasonTeam({ row }) {
+  const { kind, season, team, teamInfo } = row;
   return (
-    <span className={`player-evolution-teams${compact ? " is-compact" : ""}`}>
-      {teams.map((team) => (
-        <span
-          key={team.id || team.name}
-          title={team.name}
-          className="player-history-identity"
-        >
-          <Media
-            name={team.name}
-            url={team.imageUrl}
-            className="player-history-crest"
-          />
-          {!compact && <span>{team.name}</span>}
-        </span>
-      ))}
+    <span className="player-history-identity">
+      {kind === "selection" ? (
+        <NationalFlag
+          name={team}
+          season={season}
+          className="player-evolution-flag"
+        />
+      ) : (
+        <Media
+          name={team}
+          url={teamInfo?.imageUrl}
+          className="player-history-crest"
+        />
+      )}
+      <span className="player-evolution-team-name">
+        <strong>{team}</strong>
+        {kind !== "unknown" && (
+          <small>{kind === "selection" ? "Sélection" : "Club"}</small>
+        )}
+      </span>
     </span>
+  );
+}
+
+function ObservedTotal({ statistic, matches }) {
+  const partial = statistic.count > 0 && statistic.count < matches;
+  return (
+    <>
+      {number(statistic.value)}
+      {partial && <sup className="player-history-partial">*</sup>}
+    </>
+  );
+}
+
+function StatCell({ stat, children }) {
+  return (
+    <td role="cell" className="player-evolution-stat">
+      <span className="player-evolution-stat-label" aria-hidden="true">
+        {STAT_LABELS[stat]}
+      </span>
+      <span className="player-evolution-stat-value">{children}</span>
+    </td>
   );
 }
 
@@ -50,6 +92,38 @@ export default function PlayerEvolution({ id, profile }) {
   const history = useResource(
     `player-history:${id}:${f.manifest.scouting?.sourceDigest}`,
     () => loadPlayerHistory(f.manifest, id),
+  );
+  const teamSeasons = useMemo(
+    () =>
+      playerTeamSeasons(history.value ?? []).map((row) => ({
+        ...row,
+        team: teamDisplayName(row),
+        goals: seasonMetric(row.profile, "goals"),
+        assists: seasonMetric(row.profile, "assists"),
+      })),
+    [history.value],
+  );
+  const ratings = useMemo(
+    () =>
+      teamSeasons.map(({ season, teamKey, team, kind, profile }) => ({
+        season,
+        teamKey,
+        team,
+        kind,
+        value: profile.rating,
+      })),
+    [teamSeasons],
+  );
+  const seasonsForTable = [...new Set(teamSeasons.map(({ season }) => season))];
+  const activeSeason = seasonsForTable.includes(selectedSeason)
+    ? selectedSeason
+    : "all";
+  const visibleRows =
+    activeSeason === "all"
+      ? teamSeasons
+      : teamSeasons.filter(({ season }) => season === activeSeason);
+  const hasPartialTotals = visibleRows.some(({ profile, goals, assists }) =>
+    [goals, assists].some(({ count }) => count > 0 && count < profile.matches),
   );
   const valueFor = (seasonProfile) =>
     metric === "minutes"
@@ -105,121 +179,123 @@ export default function PlayerEvolution({ id, profile }) {
       <AsyncState resource={history}>
         {(seasons) => (
           <>
-            <div className="player-evolution-visual">
+            {metric === "rating" ? (
+              <PlayerSeasonTrend points={ratings} />
+            ) : (
               <div className="player-evolution-plot">
                 <ResearchTrend
-                  label={`${metric === "rating" ? "Note" : metric === "minutes" ? "Minutes jouées" : SCOUT_METRICS[metric].label} · saisons collectées`}
-                  bounds={metric === "rating" ? [0, 10] : undefined}
+                  label={`${metric === "minutes" ? "Minutes jouées" : SCOUT_METRICS[metric].label} · toutes les équipes`}
                   decimals={metric === "minutes" ? 0 : 2}
                   points={seasonTrendPoints(seasons, valueFor)}
                 />
-                <p>
-                  Les saisons sans données interrompent la courbe.
-                  <span className="player-evolution-scroll-hint">
-                    {" "}
-                    Faites défiler le graphique pour voir toutes les saisons.
-                  </span>
-                </p>
               </div>
-              <div
-                className="player-evolution-seasons"
-                aria-label="Choisir une saison"
-              >
-                {[...seasons].reverse().map((s) => (
-                  <button
-                    type="button"
-                    key={s.season}
-                    className="player-evolution-season"
-                    aria-pressed={selectedSeason === s.season}
-                    aria-label={`Filtrer la saison ${s.season}, ${s.profile.teams.join(", ")}, valeur ${number(valueFor(s.profile), metric === "minutes" ? 0 : 2)}`}
-                    onClick={() =>
-                      setSelectedSeason(
-                        selectedSeason === s.season ? "all" : s.season,
-                      )
-                    }
-                  >
-                    <span>{s.season}</span>
-                    <SeasonTeams season={s} compact />
-                    <strong>
-                      {number(
-                        valueFor(s.profile),
-                        metric === "minutes" ? 0 : 2,
-                      )}
-                    </strong>
-                    <small>{number(s.profile.matches)} matchs</small>
-                  </button>
-                ))}
-              </div>
-            </div>
+            )}
             <div className="season-section-heading player-evolution-table-heading">
-              <h3>Par saison</h3>
-              {selectedSeason !== "all" && (
-                <button
-                  type="button"
-                  className="inline-link"
-                  onClick={() => setSelectedSeason("all")}
-                >
-                  Toutes les saisons
-                </button>
+              <h3 id="player-evolution-table-title">
+                Par saison et par équipe
+              </h3>
+              {seasonsForTable.length > 1 && (
+                <div className="research-toolbar">
+                  <label>
+                    Saison du tableau
+                    <select
+                      value={activeSeason}
+                      onChange={(e) => setSelectedSeason(e.target.value)}
+                    >
+                      <option value="all">Toutes les saisons</option>
+                      {seasonsForTable.map((season) => (
+                        <option key={season} value={season}>
+                          {season}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
               )}
             </div>
-            <div className="table-scroll">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Saison</th>
-                    <th>Clubs</th>
-                    <th>Matchs</th>
-                    <th>Minutes</th>
-                    <th>Valeur</th>
-                    <th>Couverture</th>
-                    <th>Comparer</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {seasons
-                    .filter(
-                      (s) =>
-                        selectedSeason === "all" || s.season === selectedSeason,
-                    )
-                    .map((s) => (
-                      <tr key={s.season}>
-                        <th>{s.season}</th>
-                        <td>
-                          <SeasonTeams season={s} />
-                        </td>
-                        <td>
-                          {s.profile.matches ? number(s.profile.matches) : "—"}
-                        </td>
-                        <td>{number(observedMinutes(s.profile))}</td>
-                        <td>
-                          {number(
-                            valueFor(s.profile),
-                            metric === "minutes" ? 0 : 2,
-                          )}
-                        </td>
-                        <td>
-                          {metric === "rating"
-                            ? s.profile.ratingCount
-                            : metric === "minutes"
-                              ? s.profile.matches
-                              : (s.profile.stats[metric]?.count ??
-                                s.profile.ratios[metric]?.count ??
-                                0)}
-                          /{s.profile.matches}
-                        </td>
-                        <td>
-                          <ComparePlayerButton
-                            profile={s.profile}
-                            season={s.season}
-                            compact
-                          />
-                        </td>
+            {visibleRows.length ? (
+              <>
+                <p className="player-history-footnote">
+                  Statistiques des matchs collectés.
+                </p>
+                <div className="table-scroll player-season-history-table player-evolution-table-wrap">
+                  <table
+                    className="data-table player-evolution-table"
+                    role="table"
+                    aria-labelledby="player-evolution-table-title"
+                  >
+                    <thead role="rowgroup">
+                      <tr role="row">
+                        <th scope="col" role="columnheader">
+                          Saison
+                        </th>
+                        <th scope="col" role="columnheader">
+                          Équipe
+                        </th>
+                        {Object.entries(STAT_LABELS).map(([stat, label]) => (
+                          <th key={stat} scope="col" role="columnheader">
+                            {label}
+                          </th>
+                        ))}
                       </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody role="rowgroup">
+                      {visibleRows.map((row) => (
+                        <tr key={row.key} role="row">
+                          <td
+                            role="cell"
+                            className="player-evolution-season-cell"
+                          >
+                            {row.season}
+                          </td>
+                          <th
+                            scope="row"
+                            role="rowheader"
+                            className="player-evolution-team-cell"
+                          >
+                            <SeasonTeam row={row} />
+                          </th>
+                          <StatCell stat="matches">
+                            {number(row.profile.matches)}
+                          </StatCell>
+                          <StatCell stat="goals">
+                            <ObservedTotal
+                              statistic={row.goals}
+                              matches={row.profile.matches}
+                            />
+                          </StatCell>
+                          <StatCell stat="assists">
+                            <ObservedTotal
+                              statistic={row.assists}
+                              matches={row.profile.matches}
+                            />
+                          </StatCell>
+                          <StatCell stat="minutes">
+                            {number(row.profile.minutes)}
+                          </StatCell>
+                          <StatCell stat="rating">
+                            {row.profile.rating == null ? (
+                              "—"
+                            ) : (
+                              <Rating value={row.profile.rating} />
+                            )}
+                          </StatCell>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {hasPartialTotals && (
+                  <p className="player-history-footnote">
+                    * Total des matchs où la statistique est renseignée.
+                  </p>
+                )}
+              </>
+            ) : (
+              <Empty>
+                Aucune apparition collectée par équipe pour ce joueur.
+              </Empty>
+            )}
           </>
         )}
       </AsyncState>

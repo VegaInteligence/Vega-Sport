@@ -1,0 +1,100 @@
+.chart {
+  margin: 12px 0 0;
+  width: 100%;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+.heading {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.heading strong {
+  display: block;
+  color: var(--ink-strong);
+  font-size: var(--text-lg);
+}
+.heading span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.plot {
+  width: 100%;
+  overflow-x: auto;
+}
+.plot:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.plot svg {
+  display: block;
+  max-width: none;
+}
+.grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.axis {
+  fill: var(--muted);
+  font-size: 11px;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 16px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.legend i {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  border-radius: 50%;
+}
+.empty {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  padding: 18px 0;
+}
+
+.legend strong {
+  color: var(--ink-strong);
+  font-weight: 600;
+}
+.plot circle:focus-visible {
+  outline: none;
+  stroke: var(--ink-strong);
+  stroke-width: 3;
+}
+.pointValue {
+  visibility: hidden;
+  pointer-events: none;
+}
+.marker:hover .pointValue,
+.marker:focus-within .pointValue {
+  visibility: visible;
+}
+.pointValue rect {
+  fill: var(--surface);
+  stroke: var(--border);
+}
+.pointValue text {
+  fill: var(--ink-strong);
+  font-size: 11px;
+  font-weight: 600;
+}
