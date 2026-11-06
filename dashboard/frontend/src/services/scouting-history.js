@@ -5,6 +5,7 @@ const routeCaches = new WeakMap();
 export async function playerRoutes(
   manifest,
   { players = [], teams = [] } = {},
+  fetcher = fetch,
 ) {
   const params = new URLSearchParams();
   for (const [key, ids] of [
@@ -16,11 +17,13 @@ export async function playerRoutes(
     if (unique.length) params.set(key, unique.join(","));
   }
   if (!params.size) return { routes: {}, clubRoutes: {} };
-  if (!routeCaches.has(manifest)) routeCaches.set(manifest, new Map());
-  const cache = routeCaches.get(manifest),
+  if (!routeCaches.has(manifest)) routeCaches.set(manifest, new WeakMap());
+  const readers = routeCaches.get(manifest);
+  if (!readers.has(fetcher)) readers.set(fetcher, new Map());
+  const cache = readers.get(fetcher),
     key = params.toString();
   if (!cache.has(key)) {
-    const pending = fetch(apiUrl("/api/scouting/routes?" + params))
+    const pending = fetcher(apiUrl("/api/scouting/routes?" + params))
       .then(async (r) => {
         if (!r.ok) throw new Error("L’index des saisons est indisponible.");
         return r.json();
@@ -32,6 +35,24 @@ export async function playerRoutes(
     cache.set(key, pending);
   }
   return cache.get(key);
+}
+
+// Comparative tabs need the complete cohort for valid centiles and rankings.
+// Other club tabs need every competition of that club, across the user's focus.
+export function clubDataTeam(params) {
+  if (["style", "compare"].includes(params.get("clubView"))) return null;
+  const id = params.get("id");
+  return /^t_[A-Za-z0-9]{6}$/.test(id || "") ? id : null;
+}
+
+export async function loadClubSeason(manifest, id, season, fetcher = fetch) {
+  const index = await playerRoutes(manifest, { teams: [id] }, fetcher);
+  if (!index.clubRoutes || typeof index.clubRoutes !== "object")
+    throw new Error("L’index des saisons du club est invalide.");
+  const ids = index.clubRoutes[id]?.[season] || [];
+  if (!Array.isArray(ids))
+    throw new Error("L’index des compétitions du club est invalide.");
+  return loadSeason(manifest, season, fetcher, new Set(ids));
 }
 
 export async function loadPlayerSeason(

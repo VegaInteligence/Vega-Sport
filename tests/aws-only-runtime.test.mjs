@@ -5,6 +5,7 @@ import { gzipSync } from 'node:zlib';
 import { loadSeason, readPages } from '../dashboard/frontend/src/season_data.js';
 import { ProFootballDataClient } from '../dashboard/frontend/src/services/pro-football-client.js';
 import { proxy } from '../dashboard/frontend/src/server/bun-proxy.js';
+import { clubDataTeam, loadClubSeason } from '../dashboard/frontend/src/services/scouting-history.js';
 
 const token = (n) => `pro1.${n}.${String(n).repeat(64)}`;
 const manifest = (n = 1) => ({
@@ -15,6 +16,54 @@ const manifest = (n = 1) => ({
 });
 const part = (id) => ({ meta: {}, metrics: [], matches: [{ id, date: '2026-10-01', players: [], shots: [], stats: [] }],
   appearances: [], fixtures: [], competitions: [{ id: 'l_000001', seasons: ['2026/2027'] }], teams: [] });
+
+test('club overview loads every owning competition without downloading the worldwide season', async () => {
+  const value = { storage: 'aws-relational', seasons: [{ id: '2026/2027', chunks:
+    ['l_000001', 'l_000002', 'l_000003'].map(leagueId => ({ leagueId, sourceDigest: leagueId })) }] };
+  const calls = [];
+  const fetcher = async (path) => {
+    const url = new URL(path, 'https://example.test'); calls.push(url);
+    if (url.pathname === '/api/scouting/routes') {
+      assert.equal(url.searchParams.get('team'), 't_000001');
+      return Response.json({ clubRoutes: { t_000001: {
+        '2026/2027': ['l_000001', 'l_000002', 'l_000002'], '2025/2026': ['l_000003'],
+      } } });
+    }
+    const league = url.searchParams.get('league');
+    assert.equal(url.searchParams.get('season'), '2026/2027');
+    assert.notEqual(league, 'l_000003');
+    const data = { ...part(league.replace('l_', 'm_')), competitions: [{ id: league, seasons: ['2026/2027'] }] };
+    return Response.json({ data, pagination: { generation: '1', nextCursor: null } });
+  };
+  const data = await loadClubSeason(value, 't_000001', '2026/2027', fetcher);
+  assert.deepEqual(data.competitions.map(c => c.id).sort(), ['l_000001', 'l_000002']);
+  assert.equal(data.matches.length, 2);
+  assert.equal(calls.length, 3);
+  await loadClubSeason(value, 't_000001', '2026/2027', fetcher);
+  assert.equal(calls.length, 3, 'Repeated navigation reuses the same committed partitions');
+});
+
+test('club comparisons and style retain the complete statistical cohort', () => {
+  for (const view of ['overview', 'matches', 'players', ''])
+    assert.equal(clubDataTeam(new URLSearchParams({ id: 't_000001', clubView: view })), 't_000001');
+  for (const view of ['style', 'compare'])
+    assert.equal(clubDataTeam(new URLSearchParams({ id: 't_000001', clubView: view })), null);
+  assert.equal(clubDataTeam(new URLSearchParams({ id: 'invalid' })), null);
+});
+
+test('missing club routing never silently falls back to a worldwide download', async () => {
+  const value = { storage: 'aws-relational', seasons: [{ id: '2026/2027', chunks: [{ leagueId: 'l_000001' }] }] };
+  let calls = 0;
+  const empty = await loadClubSeason(value, 't_000001', '2026/2027', async () => {
+    calls++; return Response.json({ clubRoutes: {} });
+  });
+  assert.equal(calls, 1); assert.equal(empty.matches.length, 0);
+  calls = 0;
+  await assert.rejects(loadClubSeason(value, 't_000001', '2026/2027', async () => {
+    calls++; return new Response(null, { status: 503 });
+  }), /index des saisons est indisponible/);
+  assert.equal(calls, 1);
+});
 
 test('season pages retain the published version, follow cursors and isolate a new build from cache', async () => {
   const calls = [];
