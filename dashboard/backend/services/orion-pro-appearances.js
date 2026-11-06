@@ -107,10 +107,10 @@ LEFT JOIN LATERAL (SELECT array_agg(a.public_key ORDER BY a.public_key COLLATE "
 LEFT JOIN analytics.competition_summary totals ON totals.build_id=b.id AND totals.competition_season_id=b.competition_season_id
 WHERE b.id=$1::bigint AND b.status='ready' LIMIT 2`;
 
-// Logical parents can retain an earlier physical anchor when a match is revised.
-// Participant selection uses logical identity at the sealed generation. Admission
-// can revise a participant without rewriting its previously collected facts.
-// Stats and native values still share their original physical fact anchor.
+// A performance retains the participant revision captured with its facts. Later
+// admission can close that participant revision without rewriting those facts.
+// Resolve the retained physical anchor by its indexed key; its closing generation
+// does not invalidate a selected performance. Native values use that same anchor.
 const scopeSql = `WITH x AS (SELECT * FROM jsonb_to_record($1::jsonb) AS c(
  build_id bigint,edition_id bigint,edition_revision_id bigint,dg bigint,cg bigint,competition_id bigint)),
 matches AS (
@@ -138,8 +138,10 @@ matches AS (
  AND s.period_code='full_match' AND s.period_definition_version='bootstrap_v1'
  AND s.contract_version='${producer}' AND s.transform_version='${producer}' AND ${selected("s", "m.dg")}
  JOIN football.match_players mp ON mp.match_id=s.match_id
+ AND mp.revision_id=s.match_player_revision_id
  AND mp.team_id=s.team_id AND mp.player_id=s.player_id AND mp.source_id=s.source_id
- AND mp.source_record_id=s.source_record_id AND mp.variant_key=s.variant_key AND ${selected("mp", "m.dg")}
+ AND mp.source_record_id=s.source_record_id AND mp.variant_key=s.variant_key
+ AND mp.recorded_from_gen<=m.dg AND mp.is_canonical AND NOT mp.is_deleted
  JOIN sides ON sides.match_id=mp.match_id AND sides.team_id=mp.team_id
  LEFT JOIN ingest.source_records sr ON sr.id=s.source_record_id AND sr.source_id=s.source_id AND sr.record_kind='performance'
  LEFT JOIN LATERAL (SELECT min(a.public_key COLLATE "C") public_id FROM ingest.public_aliases a

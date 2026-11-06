@@ -257,6 +257,15 @@ def main():
                     assert r['headers']['etag']!=values['first']['headers']['etag']
                     row=next(row for row in decimal_value(r)['data']['appearances'] if row['id']=='performance_1_01');assert row['xg']==Decimal('1.75')
                     old=http(values['first']['path']);okay(old);assert old['body']==values['first']['body'] and old['headers']['etag']==values['first']['headers']['etag']
+                    # Re-admitting a participant does not recollect its performance.
+                    # The observed stats keep their exact captured participant anchor.
+                    captured=fixture._row('football.match_players','revision_id=%s',
+                        (fixture.cohort_stats[0]['match_player_revision_id'],))
+                    with fixture._generation('appearance_participant_readmission') as generation:
+                        fixture._replace('football.match_players',captured,is_starter=not captured['is_starter'])
+                    report['participantReadmission']=fixture.publish_data(generation,'appearance_retained_participant_publication')
+                    retained=http(route(v=manifest_token(),limit=2));okay(retained)
+                    assert retained['value']['data']['appearances']==r['value']['data']['appearances']
                 elif case=='A13_cohort':
                     oracle_input=run/'consumer-input.json';oracle_output=run/'consumer-report.json'
                     oracle_input.write_text(json.dumps({'sourceDescriptors':str(run/report['fixture']['sourceDescriptors']),
