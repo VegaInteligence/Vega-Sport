@@ -86,5 +86,6 @@ export function ChartTip({ x, y, children }) {
 /** Opens the performance card of a player in a given match when it is loaded. */
 export function openPerformance(f, matchId, playerId) {
   const id = `${matchId}:${playerId}`;
-  if (playerId && f.byAppearance.has(id)) f.setPlayer(id);
+  if (playerId && (f.compactPerformanceAvailable || f.byAppearance.has(id)))
+    f.setPlayer(id);
 }

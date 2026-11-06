@@ -1,4 +1,12 @@
-# StatArena AWS backend
+# Vega Sport AWS backend
+
+## Current project identities
+
+The repository is [`VegaInteligence/Vega-Sport`](https://github.com/VegaInteligence/Vega-Sport), immutable repository ID `1441213700`, owner ID `188998341`. The production website is [`vegasport.vercel.app`](https://vegasport.vercel.app); its Vercel project is named `vega` (`prj_DhaqrVkH3Gi4uysT7IRsm9fB2bjR`). Existing AWS resource names, database names, SSM parameter paths and environment variables retain the `statarena` prefix. A project rename does not rename those resources.
+
+GitHub's immutable OIDC subject still contains the repository name. The ingestion and monitoring roles must use the exact subject `repo:VegaInteligence@188998341/Vega-Sport@1441213700:ref:refs/heads/main`, with the existing audience, workflow and repository-ID conditions. The obsolete `.../Vega@1441213700:...` subject prevents the renamed repository from assuming either role. Both live role trust documents were corrected and read back on 7 November 2026 (Europe/Paris), without changing permissions, the branch restriction or the workflow restrictions.
+
+`actions-roles.yaml` records the current identity for infrastructure maintenance. Before applying it as a complete CloudFormation update, compare the complete live role policies and stack resources: the historical Actions stack template predates manual trust repairs. The identity correction alone is not evidence that a full stack update is safe. Historical verification templates under `docs/verification` are evidence, not the current deployment entry point.
 
 The production template selects the relational reader (`STATARENA_PRO_API=0`): the AWS publication worker owns `statarena_app`, and the manifest reports `aws-relational`. The separate Pro reader remains experimental; its two-edition pilot is not the production catalogue. Changing this setting requires complete catalogue parity and real HTTP reads against RDS before a frontend cutover.
 
@@ -33,6 +41,20 @@ python3 infra/aws-backend/public-smoke.py '/actual-cacheable-api-path?actual=que
 ```
 
 The smoke checks unsigned origin rejection, public health, GET/HEAD/304, CORS preflight, repeat CDN hit, body hash and unsupported methods. It records actual status, elapsed time, edge request IDs, relevant headers and expectations. In addition, validate source data, browser direct requests across production routes, SQL/pool load, migration parity, and body/edge freshness ceilings using the project's relational acceptance suite. No public smoke run before creation constitutes production acceptance. For an app rollback, prepare the previously verified ZIP and review/execute its new change set. This does not roll back a database schema. Disable or redirect frontend traffic independently if acceptance fails; no RDS deletion or restore is part of this rollout.
+
+## Compact-read rollout acceptance
+
+Run the disposable native PostgreSQL contracts through `tests/run_public_read_contracts.py` before deploying. They cover paginated reads, exact aggregate parity, widget time periods, incremental publication rollback, publication retries and reversible lineup consolidation. The backend advertises its supported compact routes in `manifest.capabilities.compactReads`; deploy the backend before the frontend. A frontend with these changes continues to use the legacy reader only while a capability is absent. Errors from an advertised compact route are surfaced rather than triggering a whole-season download.
+
+The discipline route reads up to 200 exact match IDs in one SQL snapshot, scoped to the player's appearances. It returns counts together with covered and requested match totals; unavailable event sheets never become observed zero-card matches. Its validator includes native event digests, because an event correction may leave the core publication generation unchanged.
+
+After deployment, require all seven capabilities and verify bounded responses, publication fences, actor isolation and conditional caching against the new public origin:
+
+```sh
+STATARENA_TEST_ORIGIN=https://vegasport.vercel.app STATARENA_REQUIRE_COMPACT=1 STATARENA_TEST_EVIDENCE=/tmp/vega-public-acceptance.json node dashboard/scripts/verify_aws_runtime.mjs
+```
+
+The monitor can also run before rollout without `STATARENA_REQUIRE_COMPACT`: its report then explicitly lists which compact routes were advertised and exercised. An empty actor sample is recorded as unexercised, never counted as an actor-route validation. These HTTP checks measure sampled latency, not production p95 or load capacity; record cold/warm frontend timings and database plans separately before claiming an instant-navigation target.
 
 ## Operational constraints
 

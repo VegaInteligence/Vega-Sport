@@ -17,7 +17,7 @@ jobs:
   orion-pro:
     name: Orion Pro PostgreSQL and offline RDS contracts
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     permissions:
       contents: read
     env:
@@ -29,6 +29,7 @@ jobs:
           fetch-depth: 0
           filter: blob:none
           sparse-checkout: |
+            .github/workflows
             dashboard/scripts
             dashboard/backend
             dashboard/frontend/src
@@ -92,6 +93,10 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Verify AWS-only frontend and maintenance contracts
         run: /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64/bin/node --test tests/aws-only-runtime.test.mjs tests/aws-delivery.test.mjs tests/aws-maintenance.test.mjs
+      - name: Verify compact reads, freshness and incremental publications
+        run: >-
+          python3 tests/run_public_read_contracts.py
+          --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
       - name: Verify safe retirement of reserved model tables
         run: >-
           python3 tests/retire_models_postgres.py

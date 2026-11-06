@@ -2,6 +2,13 @@ import { apiUrl } from "../data-url.js";
 import { loadSeason, readPages } from "../season_data.js";
 import { aggregateSeason } from "./season-player.js";
 import {
+  compactGeneration,
+  compactScope,
+  mergeActorPages,
+  readCompactPages,
+  supportsCompactRead,
+} from "./compact-reads.js";
+import {
   addUefaNationsSnapshot,
   uefaSnapshotSeasons,
 } from "./uefa-nations-snapshot.js";
@@ -10,6 +17,7 @@ export async function playerRoutes(
   manifest,
   { players = [], teams = [] } = {},
   fetcher = fetch,
+  { signal } = {},
 ) {
   const params = new URLSearchParams();
   for (const [key, ids] of [
@@ -26,8 +34,8 @@ export async function playerRoutes(
   if (!readers.has(fetcher)) readers.set(fetcher, new Map());
   const cache = readers.get(fetcher),
     key = params.toString();
-  if (!cache.has(key)) {
-    const pending = fetcher(apiUrl("/api/scouting/routes?" + params))
+  const load = () =>
+    fetcher(apiUrl("/api/scouting/routes?" + params), { signal })
       .then(async (r) => {
         if (!r.ok) throw new Error("L’index des saisons est indisponible.");
         return r.json();
@@ -36,28 +44,59 @@ export async function playerRoutes(
         cache.delete(key);
         throw error;
       });
-    cache.set(key, pending);
+  if (signal) {
+    signal.throwIfAborted();
+    return load();
   }
+  if (!cache.has(key)) cache.set(key, load());
   return cache.get(key);
 }
 
 // Comparative tabs need the complete cohort for valid centiles and rankings.
 // Other club tabs need every competition of that club, across the user's focus.
-export function clubDataTeam(params, { playerOpen = false, comparing = false } = {}) {
-  if (playerOpen || comparing || ["style", "compare"].includes(params.get("clubView")))
+export function clubDataTeam(
+  params,
+  { playerOpen = false, comparing = false } = {},
+) {
+  if (
+    playerOpen ||
+    comparing ||
+    ["style", "compare"].includes(params.get("clubView"))
+  )
     return null;
   const id = params.get("id");
   return /^t_[A-Za-z0-9]{6}$/.test(id || "") ? id : null;
 }
 
-export async function loadClubSeason(manifest, id, season, fetcher = fetch) {
-  const index = await playerRoutes(manifest, { teams: [id] }, fetcher);
+export async function loadClubSeason(
+  manifest,
+  id,
+  season,
+  fetcher = fetch,
+  { signal } = {},
+) {
+  if (supportsCompactRead(manifest, "club")) {
+    const result = await readCompactPages(
+      "club",
+      {
+        season,
+        team: id,
+        leagues: "all",
+        generation: compactGeneration(manifest),
+      },
+      { signal, fetcher },
+    );
+    return mergeActorPages(result, manifest, season);
+  }
+  const index = await playerRoutes(manifest, { teams: [id] }, fetcher, {
+    signal,
+  });
   if (!index.clubRoutes || typeof index.clubRoutes !== "object")
     throw new Error("L’index des saisons du club est invalide.");
   const ids = index.clubRoutes[id]?.[season] || [];
   if (!Array.isArray(ids))
     throw new Error("L’index des compétitions du club est invalide.");
-  return loadSeason(manifest, season, fetcher, new Set(ids));
+  return loadSeason(manifest, season, fetcher, new Set(ids), { signal });
 }
 
 export async function loadPlayerSeason(
@@ -66,18 +105,42 @@ export async function loadPlayerSeason(
   season,
   competition = "all",
   routing = null,
+  { signal, fetcher = fetch } = {},
 ) {
-  const index = routing || (await playerRoutes(manifest, { players: [id] }));
+  const index =
+    routing ||
+    (await playerRoutes(manifest, { players: [id] }, fetcher, { signal }));
   const ids = (index.routes[id]?.[season] || []).filter(
     (value) => competition === "all" || value === competition,
   );
   if (!ids.length)
     return { season, data: null, profile: aggregateSeason([], id) };
-  const data = await loadSeason(manifest, season, fetch, new Set(ids));
+  const data = supportsCompactRead(manifest, "player")
+    ? mergeActorPages(
+        await readCompactPages(
+          "player",
+          {
+            player: id,
+            season,
+            leagues: compactScope(ids),
+            generation: compactGeneration(manifest),
+          },
+          { signal, fetcher },
+        ),
+        manifest,
+        season,
+      )
+    : await loadSeason(manifest, season, fetcher, new Set(ids), { signal });
   return { season, data, profile: aggregateSeason(data.appearances, id) };
 }
-export async function loadPlayerHistory(manifest, id) {
-  const index = await playerRoutes(manifest, { players: [id] });
+export async function loadPlayerHistory(
+  manifest,
+  id,
+  { signal, fetcher = fetch } = {},
+) {
+  const index = await playerRoutes(manifest, { players: [id] }, fetcher, {
+    signal,
+  });
   const seasons = [
     ...new Set([
       ...Object.keys(index.routes[id] || {}),
@@ -86,14 +149,31 @@ export async function loadPlayerHistory(manifest, id) {
   ]
     .sort()
     .reverse();
-  return Promise.all(
-    seasons.map(async (season) => {
-      const entry = await loadPlayerSeason(manifest, id, season, "all", index);
-      const data = addUefaNationsSnapshot(entry.data, id, season);
-      if (data === entry.data) return entry;
-      return { season, data, profile: aggregateSeason(data.appearances, id) };
+  const results = new Array(seasons.length);
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(3, seasons.length) }, async () => {
+      while (cursor < seasons.length) {
+        signal?.throwIfAborted();
+        const position = cursor++,
+          season = seasons[position];
+        const entry = await loadPlayerSeason(
+          manifest,
+          id,
+          season,
+          "all",
+          index,
+          { signal, fetcher },
+        );
+        const data = addUefaNationsSnapshot(entry.data, id, season);
+        results[position] =
+          data === entry.data
+            ? entry
+            : { season, data, profile: aggregateSeason(data.appearances, id) };
+      }
     }),
   );
+  return results;
 }
 export async function historicalFixtures(_manifest, leagueId) {
   const pages = await readPages("/api/fixtures", {

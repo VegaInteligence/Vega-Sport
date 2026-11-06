@@ -11,7 +11,7 @@ on:
         options: [daily, pulse, historical]
         default: daily
       minutes:
-        description: Collection minutes (blank uses mode default)
+        description: Collection minutes, 1-240 (90 minutes reserved for publication and setup)
         default: ''
       max_requests:
         description: Provider request limit (blank uses mode default)
@@ -73,13 +73,13 @@ jobs:
           case "$mode" in
             daily) minutes=60; requests=20000; assets=3000; supplemental=true ;;
             pulse) minutes=25; requests=20000; assets=1000; supplemental=false ;;
-            historical) minutes=280; requests=100000; assets=3000; supplemental=false ;;
+            historical) minutes=240; requests=100000; assets=3000; supplemental=false ;;
             *) echo 'Invalid collection mode' >&2; exit 1 ;;
           esac
           minutes="${MINUTES_INPUT:-$minutes}"
           requests="${REQUESTS_INPUT:-$requests}"
-          if [[ ! "$minutes" =~ ^[1-9][0-9]{0,2}$ ]] || (( 10#$minutes > 300 )); then
-            echo 'Collection minutes must be between 1 and 300' >&2; exit 1
+          if [[ ! "$minutes" =~ ^[1-9][0-9]{0,2}$ ]] || (( 10#$minutes > 240 )); then
+            echo 'Collection minutes must be between 1 and 240; reserve time for publication' >&2; exit 1
           fi
           if [[ ! "$requests" =~ ^[1-9][0-9]{0,5}$ ]] || (( 10#$requests > 100000 )); then
             echo 'Provider request limit must be between 1 and 100000' >&2; exit 1
@@ -112,11 +112,13 @@ jobs:
       - run: bun install --frozen-lockfile
         working-directory: dashboard
       - name: Load AWS staging credentials
+        id: aws
         uses: ./.github/actions/aws-database
         with:
           mode: ingest
           role-arn: ${{ vars.STATARENA_AWS_INGEST_ROLE_ARN }}
       - name: Collect provider records into AWS staging
+        id: provider
         env:
           PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
           COLLECT_MODE: ${{ steps.plan.outputs.mode }}
@@ -130,24 +132,45 @@ jobs:
           if [ -n "$PRIORITY_LEAGUE" ]; then args+=(--priority-league "$PRIORITY_LEAGUE"); fi
           python dashboard/scripts/aws_ingest.py --skip-materialize --mode "$COLLECT_MODE" --minutes "$COLLECT_MINUTES" --max-requests "$COLLECT_REQUESTS" "${args[@]}" | tee collection.log
       - name: Refresh supplemental records in AWS staging
+        id: supplemental
         if: steps.plan.outputs.supplemental == 'true'
+        continue-on-error: true
+        timeout-minutes: 5
         run: node dashboard/scripts/aws_refresh_sources.mjs
       - name: Refresh player honours in AWS staging
+        id: honours
         if: steps.plan.outputs.supplemental == 'true'
+        continue-on-error: true
+        timeout-minutes: 5
         run: python dashboard/scripts/player_honours.py --limit 100
       - name: Refresh portraits for observed coaches
+        id: portraits
         if: steps.plan.outputs.supplemental == 'true'
+        continue-on-error: true
+        timeout-minutes: 5
         run: node dashboard/scripts/aws_observed_coaches.mjs
       - name: Store new display images in AWS staging
+        id: images
         if: steps.plan.outputs.asset_limit != '0'
+        continue-on-error: true
+        timeout-minutes: 5
         env:
           ASSET_LIMIT: ${{ steps.plan.outputs.asset_limit }}
         run: python dashboard/scripts/aws_assets.py --limit "$ASSET_LIMIT"
       - name: Build serving tables from AWS staging
+        # Sources already committed by a partially failed collector remain usable.
+        # Optional enrichment must never prevent their publication.
+        if: ${{ !cancelled() && steps.aws.outcome == 'success' }}
+        timeout-minutes: 60
         shell: bash
         run: |
           set -euo pipefail
-          python dashboard/scripts/relational_materialize.py --minutes 15 --batch 10 | tee serving-tables.log
+          python dashboard/scripts/relational_materialize.py --minutes 45 --batch 10 | tee serving-tables.log
+      - name: Report incomplete optional collection
+        if: ${{ !cancelled() && (steps.supplemental.outcome == 'failure' || steps.honours.outcome == 'failure' || steps.portraits.outcome == 'failure' || steps.images.outcome == 'failure') }}
+        run: |
+          echo 'Optional collection failed; publication was attempted and committed inputs remain queued for retry.' >&2
+          exit 1
       - name: Save collection and serving-table receipts
         if: always()
         uses: actions/upload-artifact@v4

@@ -52,7 +52,7 @@ export function routeLabel(request) {
     return "/invalid";
   }
   if (
-    /^\/api\/(?:dashboard\/manifest|seasons\/partition|fixtures|scouting\/routes|archives\/(?:index|season)|rankings\/(?:associations|club|index|edition)|club-links|cup-(?:index|snapshot|table)|matchdays|supplemental)$/.test(
+    /^\/api\/(?:dashboard\/manifest|seasons\/partition|fixtures|search|read\/(?:home|players|clubs|player|club|performance|discipline)|scouting\/routes|archives\/(?:index|season)|rankings\/(?:associations|club|index|edition)|club-links|cup-(?:index|snapshot|table)|matchdays|supplemental)$/.test(
       pathname,
     )
   )

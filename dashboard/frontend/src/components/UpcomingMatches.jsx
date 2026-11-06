@@ -89,7 +89,11 @@ function Fixture({ entry, week, compact, competitions }) {
     </Link>
   );
 }
-export default function UpcomingMatches({ compact = false }) {
+export default function UpcomingMatches({
+  compact = false,
+  paginated = false,
+  nextPageAvailable = false,
+}) {
   const f = useFootball(),
     search = useSearchParams(),
     now = useClock();
@@ -164,6 +168,7 @@ export default function UpcomingMatches({ compact = false }) {
           <span className="upcoming-meta">
             <span>
               {entries.length} match{entries.length === 1 ? "" : "s"}
+              {paginated ? " sur cette page" : ""}
             </span>
             <span>Heure de Paris</span>
           </span>
@@ -251,12 +256,17 @@ export default function UpcomingMatches({ compact = false }) {
         <div className="fixtures-empty">
           <Icon name="calendar" />
           <p>
-            {f.season !== f.manifest.defaultSeason
-              ? "Aucun match à venir dans cette saison pour cette semaine."
-              : compact && favoriteLeagueIds?.length
-                ? "Aucun match à venir cette semaine pour vos compétitions et ces filtres."
-                : "Aucun match à venir cette semaine pour ces filtres."}
+            {paginated
+              ? "Aucun match à venir sur cette page."
+              : f.season !== f.manifest.defaultSeason
+                ? "Aucun match à venir dans cette saison pour cette semaine."
+                : compact && favoriteLeagueIds?.length
+                  ? "Aucun match à venir cette semaine pour vos compétitions et ces filtres."
+                  : "Aucun match à venir cette semaine pour ces filtres."}
           </p>
+          {paginated && nextPageAvailable && (
+            <p>Des rencontres peuvent se trouver sur la page suivante.</p>
+          )}
           {f.season !== f.manifest.defaultSeason ? (
             <Link
               className="button button-secondary"
@@ -280,7 +290,7 @@ export default function UpcomingMatches({ compact = false }) {
           )}
         </div>
       )}
-      {!compact && pageCount > 1 && (
+      {!compact && !paginated && pageCount > 1 && (
         <Pager page={selectedPage} total={pageCount} onChange={setPage} />
       )}
     </section>

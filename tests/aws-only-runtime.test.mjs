@@ -33,7 +33,7 @@ test('club overview loads every owning competition without downloading the world
     assert.equal(url.searchParams.get('season'), '2026/2027');
     assert.notEqual(league, 'l_000003');
     const data = { ...part(league.replace('l_', 'm_')), competitions: [{ id: league, seasons: ['2026/2027'] }] };
-    return Response.json({ data, pagination: { generation: '1', nextCursor: null } });
+    return Response.json({ data, pagination: { generation: league, nextCursor: null } });
   };
   const data = await loadClubSeason(value, 't_000001', '2026/2027', fetcher);
   assert.deepEqual(data.competitions.map(c => c.id).sort(), ['l_000001', 'l_000002']);

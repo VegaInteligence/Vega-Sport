@@ -22,6 +22,10 @@ import {
 } from "../services/global-search.js";
 import { useResource } from "../services/resources.js";
 import { cupIndex } from "../services/catalog-client.js";
+import {
+  hasBoundedSearch,
+  searchIdentities,
+} from "../services/global-search-client.js";
 
 const PAGES = {
   players: "/joueurs/",
@@ -34,8 +38,8 @@ const EMPTY_COMPETITIONS = [];
 /**
  * Navbar search. The typed text lives only in this component: no URL write
  * and no app-wide render per keystroke. Results follow in a deferred render
- * from an index built once per season over every competition, independent of
- * the competitions the pages are filtered on.
+ * from bounded identity reads, independent of the page's competition filter.
+ * The competition catalogue already in memory remains searchable immediately.
  */
 export default function GlobalSearch() {
   const f = useContext(FootballContext),
@@ -47,33 +51,56 @@ export default function GlobalSearch() {
     [open, setOpen] = useState(false),
     [armed, setArmed] = useState(false),
     [active, setActive] = useState(0),
-    [source, setSource] = useState(null);
+    [remoteResult, setRemoteResult] = useState(null);
   const deferred = useDeferredValue(query);
   const season = f?.season;
+  const remote = hasBoundedSearch(f?.manifest);
+  const needle = query.trim();
+  const searchKey = JSON.stringify([
+    season,
+    needle,
+    f?.manifest?.publicationVersion || f?.manifest?.scouting?.sourceDigest,
+  ]);
   const legacyCups = useResource(
     "supplemental-cup-index",
     () => cupIndex("supplemental"),
-    armed && !f?.pro,
+    armed && needle.length >= 2 && !f?.pro,
   );
   const workerCups = useResource(
     "cup-worker-index",
     () => cupIndex("worker"),
-    armed && !f?.pro,
+    armed && needle.length >= 2 && !f?.pro,
   );
-  // The whole season is loaded on first use (shared with the pages when they
-  // already show every competition).
+  // Compatibility with a backend deployed before the discovery endpoint. The
+  // complete legacy index is requested only after typing, never on hover/focus.
+  // An advertised endpoint failure must remain an error, not trigger this path.
+  const legacySearch = useResource(
+    `search-index:${f?.searchDataKey}`,
+    () => f.searchData(),
+    !remote && armed && needle.length >= 2 && Boolean(f?.searchData),
+  );
+  // Each search owns its request: closing or typing cancels both the debounce
+  // and the fetch. Hovering/focusing an empty input never downloads data.
   useEffect(() => {
-    if (!armed || !f?.searchData || (source && source.season === season))
-      return;
-    let active = true;
-    f.searchData()
-      .then((value) => active && setSource({ season, data: value }))
-      .catch(() => active && setSource({ season, data: f.data }));
+    if (!remote || !open || needle.length < 2 || !season) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      searchIdentities(needle, season, { signal: controller.signal })
+        .then((value) => {
+          if (!controller.signal.aborted)
+            setRemoteResult({ key: searchKey, value });
+        })
+        .catch((error) => {
+          if (!controller.signal.aborted)
+            setRemoteResult({ key: searchKey, error: error.message });
+        });
+    }, 180);
     return () => {
-      active = false;
+      clearTimeout(timer);
+      controller.abort();
     };
-  }, [armed, season, source?.season]);
-  const data = source && source.season === season ? source.data : null;
+  }, [remote, open, searchKey]);
+  const data = remote ? EMPTY_DATA : legacySearch.value || EMPTY_DATA;
   const baseCompetitions = f?.allCatalog?.length
     ? f.allCatalog
     : f?.allCompetitions?.length
@@ -92,13 +119,34 @@ export default function GlobalSearch() {
     [baseCompetitions, supplemental, workerCups.value?.native],
   );
   const index = useMemo(
-    () => (armed ? buildSearchIndex(data || EMPTY_DATA, competitions) : null),
+    () => (armed ? buildSearchIndex(data, competitions) : null),
     [armed, data, competitions],
   );
-  const results = useMemo(
+  const localResults = useMemo(
     () => searchIndex(index, deferred),
     [index, deferred],
   );
+  const currentRemote = remoteResult?.key === searchKey ? remoteResult : null;
+  const loading =
+    open &&
+    needle.length >= 2 &&
+    (remote ? !currentRemote : legacySearch.loading);
+  const searchError = remote ? currentRemote?.error : legacySearch.error;
+  const results = useMemo(() => {
+    if (!remote) return localResults;
+    const players = currentRemote?.value?.players || [],
+      clubs = currentRemote?.value?.clubs || [],
+      competitions = localResults.competitions || [];
+    return {
+      ...localResults,
+      players,
+      clubs,
+      playersHasMore: currentRemote?.value?.playersHasMore,
+      playersCount: undefined,
+      clubsCount: undefined,
+      total: players.length + clubs.length + competitions.length,
+    };
+  }, [remote, localResults, currentRemote]);
   const options = useMemo(
     () => results.order.flatMap((kind) => results[kind] || []),
     [results],
@@ -196,11 +244,7 @@ export default function GlobalSearch() {
   const listId = `${id}-results`;
   let position = -1;
   return (
-    <div
-      className={`global-search${show ? " is-open" : ""}`}
-      ref={rootRef}
-      onPointerEnter={() => setArmed(true)}
-    >
+    <div className={`global-search${show ? " is-open" : ""}`} ref={rootRef}>
       <div className="global-search-field">
         <Icon name="search" />
         <input
@@ -215,6 +259,7 @@ export default function GlobalSearch() {
             show && options[active] ? `${id}-option-${active}` : undefined
           }
           autoComplete="off"
+          maxLength={100}
           spellCheck="false"
           placeholder="Rechercher un joueur, un club…"
           value={query}
@@ -254,7 +299,7 @@ export default function GlobalSearch() {
           role="listbox"
           aria-label="Résultats de recherche"
         >
-          {!data && !results.total ? (
+          {loading && !results.total ? (
             <p className="global-search-note" role="status">
               Chargement des données…
             </p>
@@ -308,19 +353,25 @@ export default function GlobalSearch() {
                   </div>
                 ) : null,
               )}
-              {!data && results.total > 0 && (
+              {loading && results.total > 0 && (
                 <p className="global-search-note" role="status">
                   Recherche des joueurs et clubs…
                 </p>
               )}
-              {!results.total && (
+              {searchError && (
+                <p className="global-search-note" role="alert">
+                  {searchError}
+                </p>
+              )}
+              {!results.total && !searchError && !loading && (
                 <p className="global-search-note" role="status">
                   {stale || !index
                     ? "Recherche…"
                     : `Aucun joueur, club ou compétition pour « ${query.trim()} ».`}
                 </p>
               )}
-              {results.playersCount > results.players?.length && (
+              {(results.playersHasMore ||
+                results.playersCount > results.players?.length) && (
                 <Link
                   className="global-search-all"
                   href={allPlayers()}
@@ -328,7 +379,9 @@ export default function GlobalSearch() {
                   onPointerDown={(event) => event.preventDefault()}
                   onClick={close}
                 >
-                  Voir les {number(results.playersCount)} joueurs
+                  {remote
+                    ? "Voir tous les joueurs"
+                    : `Voir les ${number(results.playersCount)} joueurs`}
                   <Icon name="arrow" />
                 </Link>
               )}

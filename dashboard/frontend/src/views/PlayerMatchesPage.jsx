@@ -111,7 +111,7 @@ export default function PlayerMatchesPage({ currentRows } = {}) {
   const valid = /^p_[A-Za-z0-9]{6}$/.test(id);
   const history = useResource(
     `player-history:${id}:${f.manifest.scouting?.sourceDigest}`,
-    () => loadPlayerHistory(f.manifest, id),
+    ({ signal }) => loadPlayerHistory(f.manifest, id, { signal }),
     valid && currentRows === undefined,
   );
   const back = new URLSearchParams(params.toString());

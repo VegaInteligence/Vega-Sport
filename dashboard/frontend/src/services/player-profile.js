@@ -213,7 +213,7 @@ function builder(appearances) {
         if (!(row.minutes >= MIN_PEER_MINUTES)) continue;
         const g = peerGroup(row).group,
           own = lists[g],
-          outfield = g === "G" ? null : lists.F;
+          outfield = g === "G" || g === "F" ? null : lists.F;
         own.count++;
         if (outfield) outfield.count++;
         for (let k = 0; k < getters.length; k++) {
@@ -291,8 +291,33 @@ export function percentile(sorted, value) {
 /** Sections of the profile for one appearance, ranked against its line. */
 export function performanceProfile(row, appearances) {
   const line = peerGroup(row),
-    { count, values } = distributions(appearances, line.group),
-    missing = [];
+    { count, values } = distributions(appearances, line.group);
+  return profileFromDistribution(row, line, count, (key, value) =>
+    percentile(values[key], value),
+  );
+}
+
+/** The API returns exact lower/tied/known counts, never a sampled peer array. */
+export function performanceProfileFromCounts(row, counts) {
+  return profileFromDistribution(
+    row,
+    peerGroup(row),
+    Number(counts?.peers || 0),
+    (key, value) => {
+      const metric = counts?.metrics?.[key];
+      if (!metric || !isNumber(value) || !(Number(metric.known) > 0))
+        return null;
+      return Math.round(
+        ((Number(metric.below) + Number(metric.equal) / 2) /
+          Number(metric.known)) *
+          100,
+      );
+    },
+  );
+}
+
+function profileFromDistribution(row, line, count, rank) {
+  const missing = [];
   const sections = ORDER[line.group]
     .map((id) => {
       const section = SECTIONS[id];
@@ -313,8 +338,7 @@ export function performanceProfile(row, appearances) {
             decimals,
             unit,
             value,
-            percentile:
-              count >= MIN_PEERS ? percentile(values[key], value) : null,
+            percentile: count >= MIN_PEERS ? rank(key, value) : null,
           };
         })
         .filter(Boolean);

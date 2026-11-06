@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
-      STATARENA_TEST_ORIGIN: https://statarena-analytics.vercel.app
+      STATARENA_TEST_ORIGIN: https://vegasport.vercel.app
       STATARENA_TEST_EVIDENCE: production-validation.json
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +40,7 @@ jobs:
           node --input-type=module <<'JS'
           import assert from 'node:assert/strict';
           for (const path of ['/', '/matchs', '/competitions', '/clubs', '/joueurs']) {
-            const r = await fetch('https://statarena-analytics.vercel.app' + path, {signal: AbortSignal.timeout(30000)});
+            const r = await fetch('https://vegasport.vercel.app' + path, {signal: AbortSignal.timeout(30000)});
             assert.equal(r.status, 200, path);
             assert.match(r.headers.get('content-type') || '', /text\/html/);
             console.log(path + ': HTTP 200 HTML');

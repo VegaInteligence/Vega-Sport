@@ -7,12 +7,17 @@ const id = /^m_[A-Za-z0-9]{6}$/,
   league = /^l_[A-Za-z0-9]{6}$/,
   season = /^\d{4}(?:\/\d{4})?$/;
 const globalState =
-  "SELECT generation::text AS version, published_at, EXISTS(SELECT 1 FROM statarena_app.publication_jobs) AS dirty FROM statarena_app.publications WHERE singleton";
+  "SELECT generation::text AS version, published_at FROM statarena_app.publications WHERE singleton";
+// The writer commits each partition's rows, digest and publication generation
+// in one transaction. Pending jobs prepare later commits; they do not invalidate
+// the last committed read. Every paged read includes its version in the same SQL
+// snapshot and rejects a cursor from another generation before returning rows.
+const PAGE_TTL = 30;
 const digest = (s) => createHash("sha256").update(s).digest("hex");
 const camel = (k) => k.replace(/_([a-z])/g, (_, v) => v.toUpperCase());
 // Column names come from the backend's typed SQL projections.
 const fieldNames = new Map();
-function camelRow(row) {
+export function camelRow(row) {
   const out = Object.create(null);
   for (const field of Object.keys(row)) {
     let key = fieldNames.get(field);
@@ -25,7 +30,7 @@ function camelRow(row) {
   return out;
 }
 const tag = (req, version) =>
-  'W/"core-v1-' +
+  'W/"core-v3-' +
   digest(new URL(req.url).pathname + new URL(req.url).search + "|" + version) +
   '"';
 class ApiError extends Error {
@@ -129,9 +134,10 @@ function nextPage(rows, state, args) {
       : null;
   return { limit: args.limit, nextCursor, generation: state.version };
 }
-function keyset(alias, dayParam, idParam) {
-  return `(${alias}.day > ${dayParam}::date OR (${alias}.day IS NULL AND ${dayParam}::date IS NOT NULL)
- OR (${alias}.day IS NOT DISTINCT FROM ${dayParam}::date AND ${alias}.id > ${idParam}))`;
+function keyset(alias, dayParam, idParam, order = "asc") {
+  const comparison = order === "desc" ? "<" : ">";
+  return `(${alias}.day ${comparison} ${dayParam}::date OR (${alias}.day IS NULL AND ${dayParam}::date IS NOT NULL)
+ OR (${alias}.day IS NOT DISTINCT FROM ${dayParam}::date AND ${alias}.id ${comparison} ${idParam}))`;
 }
 const jsonRows = (sql, projection = "r") =>
   `(SELECT coalesce(json_agg(${projection}),'[]'::json) FROM (${sql}) r)`;
@@ -140,7 +146,10 @@ const jsonRows = (sql, projection = "r") =>
 const byPage = (table, order, fields = "r.*") =>
   jsonRows(`SELECT ${fields} FROM page p CROSS JOIN LATERAL (
     SELECT * FROM statarena_app.${table} WHERE match_id=p.id ORDER BY ${order}
-  ) r ORDER BY r.match_id,${order.split(",").map((key) => "r." + key.trim()).join(",")}`);
+  ) r ORDER BY r.match_id,${order
+    .split(",")
+    .map((key) => "r." + key.trim())
+    .join(",")}`);
 // Migration 003's appearance columns, in their published order. A newer table
 // layout travels as named records until its positional representation is reviewed.
 const appearanceColumns =
@@ -191,7 +200,7 @@ const positionTypeIndex = appearanceFields.indexOf("position_id_type");
 const shirtIndex = appearanceFields.indexOf("shirt_number");
 const shirtRawIndex = appearanceFields.indexOf("shirt_number_raw");
 const shirtTypeIndex = appearanceFields.indexOf("shirt_number_type");
-function appearanceRecord(row) {
+export function appearanceRecord(row) {
   if (!Array.isArray(row)) {
     const {
       extras,
@@ -231,7 +240,7 @@ function nativeScalar(value, kind) {
   if (kind === "bool") return value === "True";
   return value;
 }
-function fixture(row) {
+export function fixture(row) {
   const team = (side) => ({
     id: row[side + "_team_id"],
     name: row[side + "_name"],
@@ -258,7 +267,7 @@ function fixture(row) {
     score_penalty_away: row.score_penalty_away,
   };
 }
-function competition(row) {
+export function competition(row) {
   const {
     latest_season,
     competition_id,
@@ -276,7 +285,7 @@ function competition(row) {
     }),
   };
 }
-function assembleMatches(data) {
+export function assembleMatches(data) {
   const grouped = (rows, key) => {
     const m = new Map();
     for (const r of rows || []) {
@@ -354,14 +363,14 @@ async function globalValidator(req, ttl) {
   const etag = tag(req, m.version);
   return req.method === "HEAD" ||
     matchesEtag(req.headers.get("if-none-match"), etag)
-    ? send(req, null, 200, { etag, ttl: m.dirty ? 0 : ttl })
+    ? send(req, null, 200, { etag, ttl })
     : null;
 }
 export async function manifest(req) {
   const validated = await globalValidator(req, 15);
   if (validated) return validated;
   const [r] =
-    await query(`SELECT g.*, ${jsonRows("SELECT p.season,p.league_id,p.source_digest,p.retrieved_at,(SELECT json_object_agg(metric_key,value) FROM statarena_app.partition_counts c WHERE c.season=p.season AND c.league_id=p.league_id) AS counts FROM statarena_app.partitions p ORDER BY p.season DESC,p.league_id")} partitions,
+    await query(`SELECT g.*, ${jsonRows("SELECT p.season,p.league_id,p.source_digest,p.retrieved_at,p.start_date,p.end_date,p.published_at,(SELECT json_object_agg(metric_key,value) FROM statarena_app.partition_counts c WHERE c.season=p.season AND c.league_id=p.league_id) AS counts FROM statarena_app.partitions p ORDER BY p.season DESC,p.league_id")} partitions,
  ${jsonRows("SELECT c.*,(SELECT json_agg(native_season ORDER BY ordinal) FROM statarena_app.competition_catalog_seasons k WHERE k.competition_id=c.id) catalog_seasons FROM statarena_app.competitions c ORDER BY name,id")} competitions,
  (SELECT json_object_agg(id,country) FROM statarena_app.teams WHERE country IS NOT NULL) countries FROM (${globalState}) g`);
   if (!r) reject(503, "Publication indisponible.");
@@ -375,7 +384,13 @@ export async function manifest(req) {
     seasons.get(p.season).chunks.push({
       leagueId: p.league_id,
       sourceDigest: p.source_digest,
-      meta: p.counts || {},
+      meta: {
+        ...(p.counts || {}),
+        retrievedAt: p.retrieved_at,
+        startDate: p.start_date,
+        endDate: p.end_date,
+        publishedAt: p.published_at,
+      },
       competitions: c
         ? [
             {
@@ -392,41 +407,65 @@ export async function manifest(req) {
     {
       schemaVersion: 4,
       storage: "aws-relational",
+      capabilities: {
+        boundedSearch: true,
+        fixturePaginationOrder: true,
+        versionedPartitions: true,
+        compactReads: {
+          home: true,
+          players: true,
+          clubs: true,
+          player: true,
+          club: true,
+          performance: true,
+          discipline: true,
+        },
+      },
       defaultSeason: [...seasons.keys()][0] || null,
       retrievedAt: r.published_at,
+      publishedAt: r.published_at,
+      publicationVersion: r.version,
       seasons: [...seasons.values()],
       competitions: catalog,
       clubCountries: r.countries || {},
       scouting: { version: 2, sourceDigest: r.version },
     },
     200,
-    { etag: tag(req, r.version), ttl: r.dirty ? 0 : 15 },
+    { etag: tag(req, r.version), ttl: 15 },
   );
 }
 export async function partitionPage(req, p) {
-  validateParams(p, ["season", "league", "limit", "cursor", "format"]);
+  validateParams(p, ["season", "league", "limit", "cursor", "format", "v"]);
   const columns = p.get("format") === "columns";
   if (p.has("format") && !columns) reject(400, "Format invalide.");
   const y = p.get("season"),
-    l = p.get("league");
+    l = p.get("league"),
+    expectedVersion = p.get("v");
   if (!season.test(y) || !league.test(l))
     reject(400, "Saison ou compétition invalide.");
+  if (p.has("v") && !/^[a-f0-9]{64}$/.test(expectedVersion))
+    reject(400, "Version de partition invalide.");
+  const checkVersion = (state) => {
+    if (expectedVersion && state.version !== expectedVersion)
+      reject(409, "La publication a changé. Rechargez le catalogue.");
+  };
   const args = pageArgs(
       p,
       25,
       columns ? ["partition", y, l, "columns"] : ["partition", y, l],
     ),
     c = args.cursor;
-  const metaSql = `SELECT p.*,source_digest AS version, EXISTS(SELECT 1 FROM statarena_app.publication_jobs j WHERE j.season=p.season AND j.league_id=p.league_id) dirty FROM statarena_app.partitions p WHERE season=$1 AND league_id=$2`;
+  const metaSql = `SELECT p.*,source_digest AS version FROM statarena_app.partitions p WHERE season=$1 AND league_id=$2`;
   if (req.method === "HEAD" || req.headers.has("if-none-match")) {
     const [m] = await query(metaSql, [y, l]);
     if (!m) reject(404, "Partition introuvable.");
+    checkVersion(m);
     nextPage([], m, args);
     if (
       req.method === "HEAD" ||
       matchesEtag(req.headers.get("if-none-match"), tag(req, m.version))
     )
-      return send(req, null, 200, { etag: tag(req, m.version) });
+      return send(req, null, 200, { etag: tag(req, m.version), ttl: PAGE_TTL });
   }
   const binds = [y, l, args.limit];
   if (c) binds.push(c.day, c.id);
@@ -466,6 +505,7 @@ export async function partitionPage(req, p) {
     binds,
   );
   if (!r) reject(404, "Partition introuvable.");
+  checkVersion(r);
   const pagination = nextPage(r.keys, r, args);
   const data = {
     meta: {
@@ -496,6 +536,7 @@ export async function partitionPage(req, p) {
     200,
     {
       etag: tag(req, r.version),
+      ttl: PAGE_TTL,
       maxBytes: 2 * 1024 * 1024,
     },
   );
@@ -520,6 +561,7 @@ export async function fixturePage(req, p, { legacy = false } = {}) {
     "q",
     "limit",
     "cursor",
+    "order",
   ]);
   if (
     (p.has("league") && p.has("leagues")) ||
@@ -529,11 +571,13 @@ export async function fixturePage(req, p, { legacy = false } = {}) {
   const leagues = list(p, p.has("league") ? "league" : "leagues", league, 100),
     seasons = list(p, p.has("season") ? "season" : "seasons", season, 2);
   const status = p.get("status") || "all",
+    order = p.get("order") || "asc",
     from = p.get("from"),
     to = p.get("to"),
     q = p.get("q") || "";
   if (
     !["all", "played", "upcoming"].includes(status) ||
+    !["asc", "desc"].includes(order) ||
     (from && !dateOk(from)) ||
     (to && !dateOk(to)) ||
     (from && to && from > to) ||
@@ -548,6 +592,7 @@ export async function fixturePage(req, p, { legacy = false } = {}) {
       from,
       to,
       q,
+      ...(order === "desc" ? [order] : []),
     ]),
     binds = [],
     terms = [];
@@ -584,7 +629,7 @@ export async function fixturePage(req, p, { legacy = false } = {}) {
     );
   }
   if (args.cursor)
-    terms.push(keyset("f", bind(args.cursor.day), bind(args.cursor.id)));
+    terms.push(keyset("f", bind(args.cursor.day), bind(args.cursor.id), order));
   const isMeta = req.method === "HEAD" || req.headers.has("if-none-match");
   if (isMeta) {
     const [g] = await query(globalState);
@@ -594,12 +639,12 @@ export async function fixturePage(req, p, { legacy = false } = {}) {
       req.method === "HEAD" ||
       matchesEtag(req.headers.get("if-none-match"), tag(req, g.version))
     )
-      return send(req, null, 200, { etag: tag(req, g.version) });
+      return send(req, null, 200, { etag: tag(req, g.version), ttl: PAGE_TTL });
   }
   const sql =
     "SELECT * FROM statarena_app.fixtures f " +
     (terms.length ? "WHERE " + terms.join(" AND ") : "") +
-    " ORDER BY day NULLS LAST,id" +
+    ` ORDER BY day ${order.toUpperCase()} NULLS LAST,id ${order.toUpperCase()}` +
     (legacy ? "" : " LIMIT " + bind(args.limit + 1));
   const [r] = await query(
     `SELECT g.*,${jsonRows(sql)} AS rows FROM (${globalState}) g`,
@@ -612,7 +657,7 @@ export async function fixturePage(req, p, { legacy = false } = {}) {
     req,
     legacy ? { data: { matches } } : { data: { matches }, pagination },
     200,
-    { etag: tag(req, r.version), maxBytes: 2 * 1024 * 1024 },
+    { etag: tag(req, r.version), ttl: PAGE_TTL, maxBytes: 2 * 1024 * 1024 },
   );
 }
 export async function scouting(req, p) {
@@ -641,7 +686,7 @@ export async function scouting(req, p) {
     req,
     { routes: group(r.players), clubRoutes: group(r.teams) },
     200,
-    { etag: tag(req, r.version), ttl: r.dirty ? 0 : 30 },
+    { etag: tag(req, r.version), ttl: 30 },
   );
 }
 const summaries = cache(8 * 1024 * 1024, {

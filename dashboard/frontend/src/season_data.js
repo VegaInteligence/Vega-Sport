@@ -100,7 +100,9 @@ export function mergeSeason(manifest, selected, parts) {
   return {
     meta: {
       schemaVersion: 2,
-      source: manifest.storage?.startsWith("aws-") ? "PitchAPI · AWS" : "PitchAPI · archives",
+      source: manifest.storage?.startsWith("aws-")
+        ? "PitchAPI · AWS"
+        : "PitchAPI · archives",
       storage: manifest.storage,
       retrievedAt: retrieved,
       currentSeason: selected,
@@ -138,7 +140,12 @@ export function mergeSeason(manifest, selected, parts) {
 }
 
 /** Cursor traversal always returns a complete single generation or throws. */
-export async function readPages(path, filters, fetcher = fetch) {
+export async function readPages(
+  path,
+  filters,
+  fetcher = fetch,
+  { expectedGeneration, signal } = {},
+) {
   // Keep cold RDS reads bounded while several competitions load together.
   let limit = 50,
     restarted = false,
@@ -149,9 +156,10 @@ export async function readPages(path, filters, fetcher = fetch) {
     let cursor = null,
       generation;
     for (;;) {
+      signal?.throwIfAborted();
       const params = new URLSearchParams({ ...filters, limit: String(limit) });
       if (cursor) params.set("cursor", cursor);
-      const response = await fetcher(apiUrl(path + "?" + params));
+      const response = await fetcher(apiUrl(path + "?" + params), { signal });
       if (response.status === 409 && !restarted) {
         restarted = true;
         break;
@@ -178,6 +186,13 @@ export async function readPages(path, filters, fetcher = fetch) {
         !Object.hasOwn(page.pagination, "nextCursor")
       )
         throw new Error("Page de données invalide.");
+      // A complete new generation must not be cached under an older manifest
+      // digest. This check also prevents combining competitions from different
+      // publications while a season load is in flight.
+      if (expectedGeneration != null && current !== expectedGeneration)
+        throw new Error(
+          "Les données publiées ont changé. Actualisez la saison.",
+        );
       if (generation !== undefined && generation !== current) {
         if (restarted)
           throw new Error("Les données ont changé pendant la lecture.");
@@ -260,33 +275,62 @@ function mergePartition(packedPages) {
 // opening their own full set of simultaneous requests to the small API pool.
 const pending = [];
 let running = 0;
-function scheduled(loader) {
+function scheduled(loader, signal) {
   return new Promise((resolve, reject) => {
+    const abort = () => {
+      const index = pending.indexOf(start);
+      if (index >= 0) pending.splice(index, 1);
+      reject(signal.reason || new DOMException("Aborted", "AbortError"));
+    };
     function start() {
+      signal?.removeEventListener("abort", abort);
+      if (signal?.aborted) {
+        abort();
+        pending.shift()?.();
+        return;
+      }
       running++;
-      loader()
+      Promise.resolve()
+        .then(loader)
         .then(resolve, reject)
         .finally(() => {
           running--;
           pending.shift()?.();
         });
     }
+    if (signal?.aborted) {
+      abort();
+      return;
+    }
     if (running < 3) start();
-    else pending.push(start);
+    else {
+      pending.push(start);
+      signal?.addEventListener("abort", abort, { once: true });
+    }
   });
 }
 
 export function restoreLegacyTables(tables, chunk) {
   const players = new Map(tables.players.map((player) => [player.id, player]));
-  const shots = new Map(), stats = new Map(tables.team_statistics.map((row) => [row.matchId, row.values]));
+  const shots = new Map(),
+    stats = new Map(
+      tables.team_statistics.map((row) => [row.matchId, row.values]),
+    );
   for (const shot of tables.shots) {
     const { matchId, ...value } = shot;
     if (!shots.has(matchId)) shots.set(matchId, []);
     shots.get(matchId).push(value);
   }
   const packed = chunk?.tables?.performances;
-  const uniform = packed?.keys && !Object.values(packed.missing || {}).some((absent) => absent?.length);
-  const copy = uniform ? rowCopier(packed.keys.filter((key) => key !== "playerRef"), ["name", "imageUrl"]) : null;
+  const uniform =
+    packed?.keys &&
+    !Object.values(packed.missing || {}).some((absent) => absent?.length);
+  const copy = uniform
+    ? rowCopier(
+        packed.keys.filter((key) => key !== "playerRef"),
+        ["name", "imageUrl"],
+      )
+    : null;
   const appearances = tables.performances.map((row) => {
     const player = players.get(row.playerRef);
     if (!player) throw new Error("Référence joueur absente");
@@ -300,25 +344,59 @@ export function restoreLegacyTables(tables, chunk) {
     fixtures: tables.fixtures,
     competitions: tables.competitions,
     teams: tables.teams,
-    matches: tables.matches.map((row) => ({ ...row, shots: shots.get(row.id) || [], stats: stats.get(row.id) || [] })),
+    matches: tables.matches.map((row) => ({
+      ...row,
+      shots: shots.get(row.id) || [],
+      stats: stats.get(row.id) || [],
+    })),
     appearances,
   };
 }
 
-async function loadLegacySeason(manifest, selected, fetcher, leagueIds) {
+async function loadLegacySeason(
+  manifest,
+  selected,
+  fetcher,
+  leagueIds,
+  { signal } = {},
+) {
   const season = manifest.seasons.find((item) => item.id === selected);
   if (!season) throw new Error("Saison indisponible");
-  const chunks = season.chunks.filter((chunk) => !leagueIds || leagueIds.has(chunk.leagueId));
-  const parts = await Promise.all(chunks.map((chunk) => {
-    const load = () => scheduled(async () => {
-      const result = await fetcher(dataUrl(chunk.path));
-      if (!result.ok) throw new Error(`Données indisponibles (HTTP ${result.status})`);
-      if (typeof DecompressionStream === "undefined") throw new Error("Ce navigateur ne peut pas décompresser les données de saison.");
-      const packed = await new Response(result.body.pipeThrough(new DecompressionStream("gzip"))).json();
-      return restoreLegacyTables(decodeTables(packed), packed);
-    });
-    return chunk.sourceDigest ? cachedPart(JSON.stringify(["packed", selected, chunk.leagueId, chunk.sourceDigest]), fetcher, load) : load();
-  }));
+  const chunks = season.chunks.filter(
+    (chunk) => !leagueIds || leagueIds.has(chunk.leagueId),
+  );
+  const parts = await Promise.all(
+    chunks.map((chunk) => {
+      const load = () =>
+        scheduled(async () => {
+          signal?.throwIfAborted();
+          const result = await fetcher(dataUrl(chunk.path), { signal });
+          if (!result.ok)
+            throw new Error(`Données indisponibles (HTTP ${result.status})`);
+          if (typeof DecompressionStream === "undefined")
+            throw new Error(
+              "Ce navigateur ne peut pas décompresser les données de saison.",
+            );
+          const packed = await new Response(
+            result.body.pipeThrough(new DecompressionStream("gzip")),
+          ).json();
+          return restoreLegacyTables(decodeTables(packed), packed);
+        }, signal);
+      return chunk.sourceDigest && !signal
+        ? cachedPart(
+            JSON.stringify([
+              "packed",
+              selected,
+              chunk.leagueId,
+              chunk.sourceDigest,
+            ]),
+            fetcher,
+            load,
+          )
+        : load();
+    }),
+  );
+  signal?.throwIfAborted();
   return mergeSeason(manifest, selected, parts);
 }
 
@@ -327,9 +405,11 @@ export async function loadSeason(
   selected,
   fetcher = fetch,
   leagueIds = null,
+  { signal } = {},
 ) {
+  signal?.throwIfAborted();
   if (manifest.storage === "json-packed")
-    return loadLegacySeason(manifest, selected, fetcher, leagueIds);
+    return loadLegacySeason(manifest, selected, fetcher, leagueIds, { signal });
   const season = manifest.seasons.find((item) => item.id === selected);
   if (!season) throw new Error("Saison indisponible");
   const chunks = season.chunks.filter(
@@ -337,32 +417,63 @@ export async function loadSeason(
   );
   const parts = await Promise.all(
     chunks.map((chunk) => {
-      const version = manifest.storage === "aws-orion-pro"
-        ? chunk.representationToken
-        : null;
-      if (manifest.storage === "aws-orion-pro" &&
-          (!/^pro1\.[1-9][0-9]{0,18}\.[a-f0-9]{64}$/.test(version || "") ||
-           !manifest.editions?.some((edition) => edition.leagueId === chunk.leagueId &&
-             edition.season === selected && edition.representationToken === version)))
+      const version =
+        manifest.storage === "aws-orion-pro"
+          ? chunk.representationToken
+          : manifest.storage === "aws-relational" &&
+              manifest.capabilities?.versionedPartitions
+            ? chunk.sourceDigest
+            : null;
+      if (
+        manifest.storage === "aws-orion-pro" &&
+        (!/^pro1\.[1-9][0-9]{0,18}\.[a-f0-9]{64}$/.test(version || "") ||
+          !manifest.editions?.some(
+            (edition) =>
+              edition.leagueId === chunk.leagueId &&
+              edition.season === selected &&
+              edition.representationToken === version,
+          ))
+      )
         throw new Error("Version de saison indisponible.");
       const load = () =>
-        scheduled(async () =>
-          mergePartition(
-            await readPages(
-              "/api/seasons/partition",
-              { season: selected, league: chunk.leagueId, format: "columns", ...(version ? { v: version } : {}) },
-              fetcher,
+        scheduled(
+          async () =>
+            mergePartition(
+              await readPages(
+                "/api/seasons/partition",
+                {
+                  season: selected,
+                  league: chunk.leagueId,
+                  format: "columns",
+                  ...(version ? { v: version } : {}),
+                },
+                fetcher,
+                {
+                  expectedGeneration:
+                    manifest.storage === "aws-relational"
+                      ? chunk.sourceDigest
+                      : undefined,
+                  signal,
+                },
+              ),
             ),
-          ),
+          signal,
         );
-      return chunk.sourceDigest
+      // A per-resource AbortSignal must not cancel another scope's cached part.
+      return chunk.sourceDigest && !signal
         ? cachedPart(
-            JSON.stringify([selected, chunk.leagueId, chunk.sourceDigest, version]),
+            JSON.stringify([
+              selected,
+              chunk.leagueId,
+              chunk.sourceDigest,
+              version,
+            ]),
             fetcher,
             load,
           )
         : load();
     }),
   );
+  signal?.throwIfAborted();
   return mergeSeason(manifest, selected, parts);
 }

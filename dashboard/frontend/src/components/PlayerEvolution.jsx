@@ -83,7 +83,7 @@ export default function PlayerEvolution({ id, profile }) {
     [selectedSeason, setSelectedSeason] = useState("all");
   const history = useResource(
     `player-history:${id}:${f.manifest.scouting?.sourceDigest}`,
-    () => loadPlayerHistory(f.manifest, id),
+    ({ signal }) => loadPlayerHistory(f.manifest, id, { signal }),
   );
   const teamSeasons = useMemo(
     () =>

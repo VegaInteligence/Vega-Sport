@@ -295,11 +295,25 @@ def existing_observation(store, endpoint, params):
     response = record.get("response") if record else None
     if not response or response.get("status") not in [200, 400, 403, 404, 410, 422]:
         return None
+    reference = {"path": path, "documentId": doc["id"]}
+    retrieved_at = (doc.get("metadata") or {}).get("retrieved_at_utc")
+    if retrieved_at is not None:
+        reference["retrievedAt"] = retrieved_at
     return (
         response["status"],
         {"data": response.get("data"), "error": response.get("error")},
-        {"path": path, "documentId": doc["id"]},
+        reference,
     )
+
+
+def collect_response(store, endpoint, params, mode, key, base):
+    """Keep archive provenance; date only a response actually fetched from Pitch."""
+    previous = existing_observation(store, endpoint, params) if mode == "historical" else None
+    if previous:
+        return (*previous, True)
+    status, body = request(endpoint, params, key, base)
+    reference = {"retrievedAt": dt.datetime.now(dt.timezone.utc).isoformat()}
+    return status, body, reference, False
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -590,25 +604,18 @@ def main():
             endpoint, encoded, attempts = row
             params = json.loads(encoded)
             try:
-                previous = (
-                    existing_observation(store, endpoint, params)
-                    if a.mode == "historical"
-                    else None
+                status, body, reference, was_reused = collect_response(
+                    store, endpoint, params, a.mode, key, base
                 )
-                if previous:
-                    status, body, reference = previous
-                    reused += 1
-                else:
-                    status, body = request(endpoint, params, key, base)
-                    reference = None
+                reused += was_reused
                 with store.db.transaction():
-                    if reference is None:
+                    if "path" not in reference:
                         raw = canonical(body).encode()
                         compressed = gzip.compress(raw, mtime=0)
                         digest = hashlib.sha256(compressed).hexdigest()
                         path = "raw/neon/blobs/" + digest + ".json.gz"
                         store.put(path, compressed, "application/gzip")
-                        reference = {"path": path}
+                        reference = dict(reference, path=path)
                     store.db.execute(
                         "insert into statarena.resources(endpoint,params,status,ref,error) values(%s,%s,%s,%s,%s) on conflict(endpoint,params) do update set status=excluded.status,ref=excluded.ref,error=excluded.error,updated_at=now() where statarena.resources.status<>200 or excluded.status=200",
                         (

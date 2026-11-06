@@ -211,7 +211,7 @@ def read_partition(db, season, league):
         extras[r["appearance_id"]][r["metric_key"]] = r["value"]
     players = {}
     for r in rows(
-        "SELECT a.*,p.name,p.image_url,s.value_text AS shirt_number_raw,s.value_type AS shirt_number_type FROM statarena_app.appearances a JOIN statarena_app.players p ON p.id=a.player_ref LEFT JOIN statarena_app.appearance_shirt_numbers s ON s.appearance_id=a.id WHERE a.season=%s AND a.league_id=%s ORDER BY a.ordinal,a.id"
+        "SELECT a.*,p.name,p.image_url,s.value_text AS shirt_number_raw,s.value_type AS shirt_number_type FROM statarena_app.appearances a JOIN statarena_app.players p ON p.id=a.player_ref LEFT JOIN statarena_app.appearance_shirt_numbers s ON s.appearance_id=a.id WHERE a.season=%s AND a.league_id=%s ORDER BY a.match_id,a.ordinal,a.id"
     ):
         cells = fields(r, APPEARANCE_TEXT + APPEARANCE_NUMBER + APPEARANCE_BOOL)
         cells["positionId"] = typed_scalar(r["position_id"], r["position_id_type"])
@@ -253,7 +253,7 @@ def read_partition(db, season, league):
     tables["team_statistics"] = [
         {"matchId": mid, "values": v} for mid, v in stats.items()
     ]
-    return {"meta": meta, "metrics": metrics, "tables": tables}
+    return {"meta": meta, "metrics": metrics, "tables": tables, "sourceDigest": p["source_digest"]}
 
 
 def snapshot(tables, meta, metrics):

@@ -71,15 +71,26 @@ function ProfileSection({ section, peers }) {
 export function PlayerDialog() {
   const f = useFootball(),
     [view, setView] = useState("overview"),
-    row = f.byAppearance.get(f.player),
+    remote = f.performanceSummary,
+    row = remote ? remote.value?.data.row : f.byAppearance.get(f.player),
     appearances = f.performanceData.appearances;
   const profile = useMemo(
-      () => (row ? performanceProfile(row, appearances) : null),
-      [row, appearances],
+      () =>
+        remote
+          ? remote.value?.data.profile
+          : row
+            ? performanceProfile(row, f.compactMode ? [] : appearances)
+            : null,
+      [row, appearances, remote, f.compactMode],
     ),
     rank = useMemo(
-      () => (row ? matchRatingRank(row, appearances) : null),
-      [row, appearances],
+      () =>
+        remote
+          ? remote.value?.data.rank
+          : row && !f.compactMode
+            ? matchRatingRank(row, appearances)
+            : null,
+      [row, appearances, remote, f.compactMode],
     );
   if (!row && f.player && f.deferredPerformance) {
     const state = f.deferredPerformance;
@@ -101,10 +112,12 @@ export function PlayerDialog() {
     );
   }
   if (!row) return null;
-  const match = f.performanceData.matches.find((m) => m.id === row.matchId);
-  const competition = f.performanceData.competitions.find(
-    (c) => c.id === row.leagueId,
-  );
+  const match =
+    remote?.value?.data.match ||
+    f.performanceData.matches.find((m) => m.id === row.matchId);
+  const competition =
+    remote?.value?.data.competition ||
+    f.performanceData.competitions.find((c) => c.id === row.leagueId);
   const line = positionOf(row);
   const close = () => f.setPlayer(null);
   const role =

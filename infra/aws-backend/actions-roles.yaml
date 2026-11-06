@@ -1,0 +1,101 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: GitHub Actions OIDC for Vega Sport ingestion and read-only publication monitoring.
+Resources:
+  GitHubIdentity:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: [sts.amazonaws.com]
+  RunnerIngress:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Allow temporary hosted runner access to the existing RDS security group
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: InspectRunnerRules
+            Effect: Allow
+            Action: [ec2:DescribeSecurityGroups, ec2:DescribeSecurityGroupRules]
+            Resource: '*'
+            Condition:
+              StringEquals: {aws:RequestedRegion: us-east-2}
+          - Sid: ChangeOnlyRdsSecurityGroup
+            Effect: Allow
+            Action: [ec2:AuthorizeSecurityGroupIngress, ec2:RevokeSecurityGroupIngress]
+            Resource: arn:aws:ec2:us-east-2:361769570630:security-group/sg-0667c20e8ff5d2431
+          - Sid: CreateOnlyTaggedRunnerRules
+            Effect: Allow
+            Action: ec2:AuthorizeSecurityGroupIngress
+            Resource: arn:aws:ec2:us-east-2:361769570630:security-group-rule/*
+            Condition:
+              StringEquals:
+                aws:RequestTag/ManagedBy: statarena-actions
+              ForAllValues:StringEquals:
+                aws:TagKeys: [ManagedBy]
+          - Sid: TagAtCreationOnly
+            Effect: Allow
+            Action: ec2:CreateTags
+            Resource: arn:aws:ec2:us-east-2:361769570630:security-group-rule/*
+            Condition:
+              StringEquals:
+                ec2:CreateAction: AuthorizeSecurityGroupIngress
+                aws:RequestTag/ManagedBy: statarena-actions
+              ForAllValues:StringEquals:
+                aws:TagKeys: [ManagedBy]
+  Ingest:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: StatArenaGitHubIngest
+      MaxSessionDuration: 21600
+      ManagedPolicyArns: [!Ref RunnerIngress]
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Federated: !Ref GitHubIdentity}
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:repository_id: '1441213700'
+                token.actions.githubusercontent.com:workflow: ['Collect football (AWS)', 'Collect standings (AWS)', 'Build serving tables (AWS)']
+                token.actions.githubusercontent.com:sub: 'repo:VegaInteligence@188998341/Vega-Sport@1441213700:ref:refs/heads/main'
+      Policies:
+        - PolicyName: ReadStagingParameters
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ssm:GetParameter
+                Resource:
+                  - arn:aws:ssm:us-east-2:361769570630:parameter/statarena/app/rds-ingest
+                  - arn:aws:ssm:us-east-2:361769570630:parameter/statarena/app/s3-ingest
+  Monitor:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: StatArenaGitHubMonitor
+      MaxSessionDuration: 21600
+      ManagedPolicyArns: [!Ref RunnerIngress]
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Federated: !Ref GitHubIdentity}
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:repository_id: '1441213700'
+                token.actions.githubusercontent.com:workflow: 'Inspect database schema (AWS)'
+                token.actions.githubusercontent.com:sub: 'repo:VegaInteligence@188998341/Vega-Sport@1441213700:ref:refs/heads/main'
+      Policies:
+        - PolicyName: ReadRuntimeParameter
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ssm:GetParameter
+                Resource: arn:aws:ssm:us-east-2:361769570630:parameter/statarena/app/rds-runtime
+Outputs:
+  IngestionRoleArn: {Value: !GetAtt Ingest.Arn}
+  MonitorRoleArn: {Value: !GetAtt Monitor.Arn}

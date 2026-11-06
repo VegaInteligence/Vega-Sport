@@ -1,79 +1,70 @@
 import { apiUrl } from "../data-url.js";
-import { useEffect, useState } from "react";
-const cache = new Map();
-// Values of promises that already resolved: a component asking again for a
-// loaded resource gets it in the same render, without a loading frame.
-const settled = new Map();
-export async function json(url) {
-  const response = await fetch(apiUrl(url));
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createResourceCache } from "./resource-cache.js";
+const cache = createResourceCache();
+export async function json(url, options) {
+  const response = await fetch(apiUrl(url), options);
   if (!response.ok)
     throw new Error(`Données indisponibles (HTTP ${response.status})`);
   return response.json();
 }
-function forget(key) {
-  cache.delete(key);
-  settled.delete(key);
-}
-function start(key, loader) {
-  if (!cache.has(key)) {
-    const promise = Promise.resolve()
-      .then(loader)
-      .then((value) => {
-        if (cache.get(key) === promise) settled.set(key, value);
-        return value;
-      });
-    cache.set(key, promise);
-  }
-  return cache.get(key);
-}
 /** Returns an already-resolved resource without initiating a request. */
 export function cachedResource(key) {
-  return settled.get(key);
+  return cache.value(key);
 }
 /** Starts (or reuses) a resource outside a component, e.g. a background load. */
 export function primeResource(key, loader) {
-  return start(key, loader).catch((error) => {
-    forget(key);
-    throw error;
-  });
+  return cache.load(key, loader, { retain: true });
 }
 export function useResource(key, loader, enabled = true) {
   const [result, setResult] = useState({ key: null, loading: true });
-  const [attempt, retry] = useState(0);
+  const loaderRef = useRef({ key, loader });
+  // Only committed renders may replace a key's loader. An old subscription or
+  // callback must never store the next route's response under its previous key.
+  useEffect(() => {
+    loaderRef.current = { key, loader };
+  }, [key, loader]);
+  const revalidate = useCallback(() => {
+    if (!enabled) return Promise.resolve(undefined);
+    const read =
+      loaderRef.current.key === key ? loaderRef.current.loader : loader;
+    // Capture the function before the cache schedules its Promise microtask.
+    return cache.load(key, read, { force: true });
+  }, [key, enabled]);
+  const retry = useCallback(() => revalidate().catch(() => {}), [revalidate]);
   useEffect(() => {
     if (!enabled) return;
-    let active = true;
     if (key.startsWith("season:") && key.endsWith(":full"))
       for (const old of cache.keys())
         if (old.startsWith("season:") && old.endsWith(":full") && old !== key)
-          forget(old);
-    if (settled.has(key)) {
-      setResult({ key, value: settled.get(key), loading: false });
-      return;
-    }
-    setResult({ key, loading: true });
-    start(key, loader)
-      .then((value) => {
-        if (active) setResult({ key, value, loading: false });
-      })
-      .catch((error) => {
-        forget(key);
-        if (active) setResult({ key, error: error.message, loading: false });
-      });
-    return () => {
-      active = false;
+          cache.forget(old);
+    if (key.startsWith("compact-cohort:"))
+      for (const old of cache.keys())
+        if (old.startsWith("compact-cohort:") && old !== key) cache.forget(old);
+    const unsubscribe = cache.subscribe(key, setResult);
+    const refreshIfStale = () => {
+      if (document.visibilityState === "hidden") return;
+      const read =
+        loaderRef.current.key === key ? loaderRef.current.loader : loader;
+      cache.load(key, read).catch(() => {});
     };
-  }, [key, attempt, enabled]);
+    refreshIfStale();
+    window.addEventListener("focus", refreshIfStale);
+    document.addEventListener("visibilitychange", refreshIfStale);
+    return () => {
+      unsubscribe();
+      window.removeEventListener("focus", refreshIfStale);
+      document.removeEventListener("visibilitychange", refreshIfStale);
+    };
+  }, [key, enabled]);
   return {
     ...(enabled && result.key === key
       ? result
-      : enabled && settled.has(key)
-        ? { key, value: settled.get(key), loading: false }
+      : enabled && cache.peek(key)
+        ? cache.peek(key)
         : { loading: true }),
-    retry: () => {
-      forget(key);
-      retry((n) => n + 1);
-    },
+    retry,
+    revalidate,
   };
 }
 export function download(name, body, type = "application/json") {

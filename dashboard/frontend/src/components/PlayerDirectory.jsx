@@ -28,6 +28,8 @@ export default function PlayerDirectory({
   onMode,
   ranking = "",
   onRanking,
+  pagination,
+  onPage,
 }) {
   const f = useFootball(),
     r = useResearch();
@@ -42,8 +44,12 @@ export default function PlayerDirectory({
     key,
     labels[key] || SCOUT_METRICS[key]?.label || key,
   ]);
-  const pages = Math.max(1, Math.ceil(rows.length / 20));
-  const current = page.rows === rows ? Math.min(page.value, pages) : 1;
+  const total = pagination?.total ?? rows.length,
+    pages = pagination?.pages ?? Math.max(1, Math.ceil(rows.length / 20)),
+    current =
+      pagination?.page ??
+      (page.rows === rows ? Math.min(page.value, pages) : 1),
+    visible = pagination ? rows : rows.slice((current - 1) * 20, current * 20);
   return (
     <Card
       title="Performances"
@@ -88,7 +94,7 @@ export default function PlayerDirectory({
           ]}
         />
         <span role="status">
-          {number(rows.length)} joueur{rows.length === 1 ? "" : "s"}
+          {number(total)} joueur{total === 1 ? "" : "s"}
         </span>
       </div>
       {rows.length ? (
@@ -149,7 +155,7 @@ export default function PlayerDirectory({
               </tr>
             </thead>
             <tbody>
-              {rows.slice((current - 1) * 20, current * 20).map((row) => {
+              {visible.map((row) => {
                 const entry = playerSelection(row.profile, f);
                 return (
                   <tr key={row.playerId} data-player-id={row.playerId}>
@@ -251,7 +257,7 @@ export default function PlayerDirectory({
         page={current}
         total={pages}
         label="Pagination des joueurs"
-        onChange={(value) => setPage({ rows, value })}
+        onChange={onPage || ((value) => setPage({ rows, value }))}
       />
     </Card>
   );
