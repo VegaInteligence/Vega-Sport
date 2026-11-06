@@ -210,6 +210,10 @@ SELECT (SELECT count(*)::text FROM matches) match_count,
  OR (collection_state='empty' AND actual_count<>0) OR (collection_state='present' AND actual_count=0)) bad_coverage,
  (SELECT count(*)::text FROM (SELECT team_id FROM team_profiles GROUP BY team_id HAVING count(*)>1) ambiguous) bad_team_profile`;
 
+// Shared with the private, temporary inspector so its EXPLAIN uses the exact
+// application query. No execution capability is exposed by this export.
+export const appearanceReadQueries = Object.freeze({ publicationSql, admissionSql });
+
 function mediaValue(asset, base) {
   const ext = asset.storage_key?.split(".").at(-1)?.toLowerCase();
   if (!/^[a-f0-9]{64}$/.test(asset.content_sha256 || "") || !asset.storage_key || !immutableFile(asset.storage_key)

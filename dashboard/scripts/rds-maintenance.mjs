@@ -3,6 +3,7 @@ import pg from "pg";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { databaseConnectionOptions } from "../backend/services/database-connection.js";
+import { appearanceReadQueries } from "../backend/services/orion-pro-appearances.js";
 
 const host = "statarena-postgres.clcy2iqyajbl.us-east-2.rds.amazonaws.com";
 const database = "statarena_prod";
@@ -24,6 +25,40 @@ export async function handler(event = {}) {
     if (identity.database !== database) throw new Error("Unexpected connected database");
     if (event.operation === "inspect") {
       await client.query("BEGIN READ ONLY");
+      if (event.section === "read_paths") {
+        const indexes = (await client.query(`SELECT schemaname,tablename,indexname,indexdef FROM pg_indexes
+          WHERE schemaname IN ('statarena','statarena_app','ingest','football','analytics')
+          ORDER BY schemaname,tablename,indexname`)).rows;
+        const views = (await client.query(`SELECT schemaname,viewname,definition FROM pg_views
+          WHERE schemaname IN ('statarena','statarena_app','ingest','football','analytics')
+          ORDER BY schemaname,viewname`)).rows;
+        const migrations = (await client.query(`SELECT version,content_sha256,applied_at,code_commit
+          FROM ingest.schema_migrations ORDER BY version`)).rows;
+        const builds = (await client.query(`SELECT b.id::text build_id,b.competition_season_id::text edition_id,
+          b.competition_season_revision_id::text edition_revision_id,d.generation::text dg,c.generation::text cg,
+          e.competition_id::text competition_id,e.season_key,b.status,b.representation_version
+          FROM analytics.aggregation_builds b JOIN ingest.dataset_snapshots d ON d.id=b.dataset_snapshot_id
+          JOIN ingest.dataset_snapshots c ON c.id=b.catalog_snapshot_id
+          JOIN football.competition_seasons e ON e.revision_id=b.competition_season_revision_id
+          WHERE EXISTS(SELECT 1 FROM analytics.publication_versions p WHERE p.build_id=b.id AND p.published_to_gen IS NULL)
+          ORDER BY b.id LIMIT 10`)).rows;
+        const publications = (await client.query(`SELECT season,league_id,published_at
+          FROM statarena_app.partitions ORDER BY season,league_id`)).rows;
+        const jobs = (await client.query(`SELECT season,count(*)::text count FROM statarena_app.publication_jobs
+          GROUP BY season ORDER BY season`)).rows;
+        const plans = [];
+        for (const build of builds) {
+          const params = JSON.stringify(Object.fromEntries(['build_id','edition_id','edition_revision_id','dg','cg','competition_id']
+            .map((key) => [key, build[key]])));
+          // EXPLAIN without ANALYZE only plans this fixed SELECT; it does not run
+          // the expensive data scan or accept SQL from the invocation event.
+          const result = await client.query('EXPLAIN (FORMAT JSON) ' + appearanceReadQueries.admissionSql, [params]);
+          plans.push({ build, plan: result.rows[0]['QUERY PLAN'] });
+        }
+        await client.query("COMMIT");
+        return { ok: true, operation: "inspect", section: "read_paths", identity,
+          indexes, views, migrations, publications, jobs, plans };
+      }
       const tables = (await client.query(`SELECT n.nspname AS schema,c.relname AS name,c.relkind,
         pg_total_relation_size(c.oid)::text AS bytes,s.n_live_tup::text AS estimated_rows,
         s.seq_scan::text,s.idx_scan::text,s.last_analyze,s.last_autoanalyze
