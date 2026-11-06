@@ -1,4 +1,4 @@
-"""Collect sourced player honours for the Neon supplemental projections.
+"""Collect sourced player honours for the AWS supplemental projections.
 
 Only join a PitchAPI player to Wikidata when the name and an observed team
 identify exactly one footballer. The Wikipedia honours section is an incomplete

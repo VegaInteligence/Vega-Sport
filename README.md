@@ -38,7 +38,7 @@ Les migrations déjà appliquées restent immuables. Les anciens modèles JSON c
 cd dashboard
 bun run build
 cd ..
-node --test tests/aws-only-runtime.test.mjs tests/aws-delivery.test.mjs
+node --test tests/aws-only-runtime.test.mjs tests/aws-delivery.test.mjs tests/aws-maintenance.test.mjs
 ```
 
 La CI `Verify ingestion` vérifie aussi la publication relationnelle, les lecteurs versionnés et les migrations sur PostgreSQL 18.6. Les reçus, journaux et captures générés sont publiés comme artefacts CI et ignorés par Git.
