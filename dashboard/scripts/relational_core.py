@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS statarena_app.publication_jobs(season text NOT NULL,l
 def install_schema(db):
     db.execute((ROOT/'dashboard/backend/migrations/003_relational_core.sql').read_text())
     db.execute((ROOT/'dashboard/backend/migrations/011_appearance_shirt_numbers.sql').read_text())
+    db.execute((ROOT/'dashboard/backend/migrations/020_publication_foreign_key_indexes.sql').read_text())
 
 
 def _many(db, table, rows, update=True):
