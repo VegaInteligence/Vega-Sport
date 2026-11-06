@@ -139,8 +139,10 @@ export function mergeSeason(manifest, selected, parts) {
 
 /** Cursor traversal always returns a complete single generation or throws. */
 export async function readPages(path, filters, fetcher = fetch) {
-  let limit = 100,
-    restarted = false;
+  // Keep cold RDS reads bounded while several competitions load together.
+  let limit = 50,
+    restarted = false,
+    reducedAfterUnavailable = false;
   for (;;) {
     const pages = [],
       seen = new Set();
@@ -156,6 +158,11 @@ export async function readPages(path, filters, fetcher = fetch) {
       }
       if (response.status === 413 && limit > 1) {
         limit = Math.max(1, Math.floor(limit / 2));
+        break;
+      }
+      if (response.status === 503 && !reducedAfterUnavailable && limit > 25) {
+        reducedAfterUnavailable = true;
+        limit = 25;
         break;
       }
       if (!response.ok)

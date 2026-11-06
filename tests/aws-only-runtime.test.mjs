@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { gzipSync } from 'node:zlib';
-import { loadSeason } from '../dashboard/frontend/src/season_data.js';
+import { loadSeason, readPages } from '../dashboard/frontend/src/season_data.js';
 import { ProFootballDataClient } from '../dashboard/frontend/src/services/pro-football-client.js';
 import { proxy } from '../dashboard/frontend/src/server/bun-proxy.js';
 
@@ -39,6 +39,32 @@ test('season pages retain the published version, follow cursors and isolate a ne
 test('an inconsistent edition token is rejected before requesting data', async () => {
   const value = manifest(); value.seasons[0].chunks[0].representationToken = token(2);
   await assert.rejects(loadSeason(value, '2026/2027', () => { throw Error('network must not run'); }), /Version de saison/);
+});
+
+test('a slow season read restarts with smaller pages and discards the earlier generation', async () => {
+  const calls = [];
+  const fetcher = async (path) => {
+    const url = new URL(path, 'https://example.test');
+    const limit = Number(url.searchParams.get('limit'));
+    const cursor = url.searchParams.get('cursor');
+    calls.push({ limit, cursor });
+    if (limit === 50 && cursor) return new Response(null, { status: 503 });
+    return Response.json({ data: { id: limit === 50 ? 'old' : cursor ? 'new-second' : 'new-first' },
+      pagination: { generation: limit === 50 ? 'old-generation' : 'new-generation', nextCursor: cursor ? null : 'next' } });
+  };
+  const pages = await readPages('/api/seasons/partition', { season: '2026/2027', league: 'l_000001' }, fetcher);
+  assert.deepEqual(calls, [{ limit: 50, cursor: null }, { limit: 50, cursor: 'next' },
+    { limit: 25, cursor: null }, { limit: 25, cursor: 'next' }]);
+  assert.deepEqual(pages, [{ id: 'new-first' }, { id: 'new-second' }]);
+});
+
+test('a persistent unavailable season stops after one smaller-page attempt', async () => {
+  const limits = [];
+  await assert.rejects(readPages('/api/seasons/partition', {}, async (path) => {
+    limits.push(Number(new URL(path, 'https://example.test').searchParams.get('limit')));
+    return new Response(null, { status: 503 });
+  }), /HTTP 503/);
+  assert.deepEqual(limits, [50, 25]);
 });
 
 test('match details use their owning edition and retain native empty/null values', async () => {
