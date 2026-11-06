@@ -1,12 +1,18 @@
-/* STATARENA brand tokens. Fonts are references, not bundled files. */
+/* Vega Intelligence design tokens. Legacy aliases preserve component compatibility. */
 :root {
-  --statarena-navy: #112538;
-  --statarena-ink: #0d2134;
-  --statarena-blue: #1d6fd6;
-  --statarena-blue-bright: #3b8eff;
-  --statarena-background: #f6f9fc;
+  --vega-black: #000000;
+  --vega-white: #ffffff;
+  --vega-ink: #0b0d12;
+  --vega-ice: #72beff;
+  --vega-blue: #1c5fa6;
+  --vega-slate: #0b0d12;
+  --statarena-navy: #0b0d12;
+  --statarena-ink: #0b0d12;
+  --statarena-blue: #1c5fa6;
+  --statarena-blue-bright: #72beff;
+  --statarena-background: #f6f8fb;
   --statarena-surface: #ffffff;
-  --statarena-text: #0d2134;
+  --statarena-text: #0b0d12;
   --statarena-muted: #61778e;
   --statarena-border: #dce5ef;
   --statarena-font: "Inter", system-ui, -apple-system, sans-serif;
@@ -14,9 +20,9 @@
   --statarena-radius: 14px;
 }
 [data-theme="dark"] {
-  --statarena-background: #071626;
-  --statarena-surface: #112538;
-  --statarena-text: #f6fafe;
-  --statarena-muted: #98adc2;
-  --statarena-border: #23405a;
+  --statarena-background: #0b0d12;
+  --statarena-surface: #15171b;
+  --statarena-text: #ffffff;
+  --statarena-muted: #9aa1ad;
+  --statarena-border: #25282e;
 }

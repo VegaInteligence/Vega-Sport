@@ -3,7 +3,7 @@ import Icon from "./Icon.jsx";
 import StatarenaLogo from "./StatarenaLogo.jsx";
 import { date } from "../services/format.js";
 
-const repository = "https://github.com/OrionQuantPlatform/STATARENA";
+const repository = "https://github.com/VegaInteligence/Vega";
 const groups = [
   {
     title: "Explorer",
@@ -50,7 +50,7 @@ export default function SiteFooter({ href, path, updatedAt }) {
             <Link
               className="site-footer-home"
               href={href("/")}
-              aria-label="STATARENA, vue d’ensemble"
+              aria-label="Vega Intelligence, vue d’ensemble"
             >
               <StatarenaLogo
                 className="site-footer-logo"
@@ -100,11 +100,11 @@ export default function SiteFooter({ href, path, updatedAt }) {
               href={repository}
               target="_blank"
               rel="noreferrer"
-              aria-label="STATARENA sur GitHub"
+              aria-label="Vega Intelligence sur GitHub"
             >
               GitHub <Icon name="external" />
             </a>
-            <span>© {new Date().getFullYear()} STATARENA</span>
+            <span>© {new Date().getFullYear()} Vega Intelligence</span>
             {updatedAt && <span>Données au {date(updatedAt)}</span>}
           </div>
         </div>

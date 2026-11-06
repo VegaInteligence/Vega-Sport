@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 const base = process.env.ORION_VERIFY_URL || "http://127.0.0.1:3000";
 const report = {
   setup:
-    "Running Next/Bun application, bundled STATARENA assets and actual canonical data. No provider credentials needed.",
+    "Running Next/Bun application, bundled Vega Intelligence assets and actual canonical data. No provider credentials needed.",
   command: `cd dashboard && ORION_VERIFY_URL=${base} node scripts/verify_brand.mjs`,
   expected:
     "New brand in document metadata and share cards; supplied logo/favicon/OG assets available byte-for-byte; neutral theme and compact data manifest remain reachable.",
@@ -19,17 +19,17 @@ try {
     "Removed settings route",
   );
   const html = await (await fetch(base)).text();
-  assert.match(html, /<title>[^<]*STATARENA/);
+  assert.match(html, /<title>[^<]*Vega Intelligence/);
   assert.doesNotMatch(html, /<title>[^<]*Orion/);
   assert.match(html, /og:image/);
   assert.match(html, /site.webmanifest/);
   for (const file of [
     "favicon.svg",
-    "favicon.ico",
-    "apple-touch-icon.png",
-    "og-image.png",
-    "branding/statarena-horizontal-inverse.svg",
-    "branding/statarena-symbol-inverse.svg",
+    "branding/vega/favicon.svg",
+    "branding/vega/icon-dark.svg",
+    "branding/vega/banner-dark.svg",
+    "branding/vega/logo-dark.svg",
+    "branding/vega/symbol-dark.svg",
   ]) {
     const response = await fetch(base + "/" + file);
     assert.equal(response.status, 200, file);
@@ -42,8 +42,8 @@ try {
     report.checks.push(file);
   }
   const manifest = await (await fetch(base + "/site.webmanifest")).json();
-  assert.equal(manifest.name, "STATARENA");
-  assert.equal(manifest.theme_color, "#0F0F11");
+  assert.equal(manifest.name, "Vega Intelligence");
+  assert.equal(manifest.theme_color, "#000000");
   const data = await (
     await fetch(base + "/data/dashboard-manifest.json")
   ).json();

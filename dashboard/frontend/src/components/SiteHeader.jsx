@@ -12,7 +12,7 @@ export default function SiteHeader({ path, href }) {
     <header className="topbar">
       <Link
         className="brand"
-        aria-label="STATARENA, vue d’ensemble"
+        aria-label="Vega Intelligence, vue d’ensemble"
         href={href("/")}
       >
         <StatarenaLogo

@@ -16,50 +16,21 @@ import "../src/research.css";
 import "../src/player-profile-redesign.css";
 import "../src/home.css";
 const siteUrl = "https://statarena-analytics.vercel.app";
-const description =
-  "Statistiques de football, analyses de matchs, profils de joueurs et classement du Ballon d’Or.";
+const description = "Vega Intelligence : statistiques de football, analyses de matchs, joueurs et compétitions.";
 export const metadata = {
   metadataBase: new URL(siteUrl),
-  applicationName: "STATARENA",
-  title: {
-    default: "STATARENA — Football Analytics",
-    template: "%s — STATARENA",
-  },
+  applicationName: "Vega Intelligence",
+  title: { default: "Vega Intelligence — Sports Analytics", template: "%s — Vega Intelligence" },
   description,
-  manifest: "/site.webmanifest?brand=green",
+  manifest: "/site.webmanifest",
   icons: {
-    icon: [
-      { url: "/favicon.svg?brand=green", type: "image/svg+xml" },
-      { url: "/favicon.ico?brand=green", sizes: "any" },
-      {
-        url: "/branding/green/icons/favicon-32.png",
-        type: "image/png",
-        sizes: "32x32",
-      },
-    ],
-    apple: "/apple-touch-icon.png?brand=green",
+    icon: [{ url: "/branding/vega/favicon.svg", type: "image/svg+xml", sizes: "any" }],
+    apple: [{ url: "/api/vega-image?kind=icon&size=180", sizes: "180x180" }],
   },
-  openGraph: {
-    type: "website",
-    locale: "fr_FR",
-    siteName: "STATARENA",
-    title: "STATARENA — Football Analytics",
-    description,
-    images: [
-      {
-        url: "/og-image.png?brand=green",
-        width: 1200,
-        height: 630,
-        alt: "STATARENA",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "STATARENA — Football Analytics",
-    description,
-    images: ["/og-image.png?brand=green"],
-  },
+  openGraph: { type: "website", locale: "fr_FR", siteName: "Vega Intelligence",
+    title: "Vega Intelligence — Sports Analytics", description,
+    images: [{ url: "/api/vega-image?kind=og", width: 1200, height: 630, alt: "Vega Intelligence" }] },
+  twitter: { card: "summary_large_image", title: "Vega Intelligence", description, images: ["/api/vega-image?kind=og"] },
 };
 export const viewport = { themeColor: "#0E0F12", colorScheme: "dark light" };
 // Start the downloads every page needs while the scripts are still loading:
@@ -84,9 +55,9 @@ export default function RootLayout({ children }) {
           crossOrigin="anonymous"
         />
         <script
-          id="statarena-theme"
+          id="vega-theme"
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("statarena.theme")==="light"?"light":"dark";document.documentElement.dataset.theme=t;document.querySelector('meta[name="theme-color"]')?.setAttribute("content",t==="light"?"#F6F8FB":"#0E0F12")}catch{}`,
+            __html: `try{var t=localStorage.getItem("statarena.theme")==="light"?"light":"dark";document.documentElement.dataset.theme=t;document.querySelector('meta[name="theme-color"]')?.setAttribute("content",t==="light"?"#F6F8FB":"#0E0F12");window.__vegaSetFavicon=function(theme){document.querySelectorAll('link[rel="icon"]').forEach(function(link){if(link.href.includes("/branding/vega/"))link.href=theme==="light"?"/branding/vega/icon-light.svg":"/branding/vega/icon-dark.svg"})};document.addEventListener("DOMContentLoaded",function(){window.__vegaSetFavicon(t)},{once:true})}catch{}`,
           }}
         />
       </head>

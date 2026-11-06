@@ -1,4 +1,10 @@
-# StatArena
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/branding/vega-banner-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset=".github/branding/vega-banner-light.svg">
+  <img src=".github/branding/vega-banner-dark.svg" alt="Vega Intelligence" width="100%">
+</picture>
+
+# Vega Intelligence
 
 Application d’analyse du football. Le frontend Next.js est hébergé sur Vercel ; l’API AWS est servie par CloudFront et Lambda, les données relationnelles par PostgreSQL sur RDS et les fichiers source et images par S3.
 
@@ -60,3 +66,7 @@ Ce contrôle échoue si AWS perd une compétition/saison existante, même si `/a
 Le déploiement utilise le bucket privé de releases et un change set CloudFormation. La base, les sous-réseaux et le CDN d’images existants sont réutilisés. Les rôles runtime restent en lecture seule. Les workers utilisent les paramètres SSM existants par l’action GitHub `.github/actions/aws-database` ; les secrets ne doivent apparaître ni dans le dépôt ni dans les artefacts.
 
 `dashboard/scripts/rds-maintenance.mjs` est une entrée privée de maintenance temporaire, distincte du serveur HTTP. Elle n’est pas intégrée au ZIP de production. Elle propose uniquement l’inventaire du catalogue et l’application contrôlée de la migration de retrait des modèles vides. Sa création dans AWS reste soumise à l’autorisation de cet accès temporaire ; préparer ce fichier ne crée aucune fonction ni aucun accès.
+
+## Identité visuelle
+
+Le site utilise le logo Vega Intelligence vectoriel (étoile asymétrique et wordmark), des variantes explicites pour les thèmes dark/light, un favicon adaptatif et des aperçus Open Graph PNG générés côté serveur. Les anciens chemins `statarena_*` et le thème stocké dans `statarena.theme` restent des identifiants techniques conservés pour compatibilité.

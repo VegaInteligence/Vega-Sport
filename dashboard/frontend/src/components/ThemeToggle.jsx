@@ -25,6 +25,7 @@ export default function ThemeToggle() {
       ?.setAttribute("content", next === "light" ? "#F6F8FB" : "#0E0F12");
     try {
       localStorage.setItem("statarena.theme", next);
+      window.__vegaSetFavicon?.(next);
     } catch {}
     setTheme(next);
   }

@@ -1732,8 +1732,8 @@ th[aria-sort="descending"] .sort-indicator {
 }
 .site-footer-logo {
   display: block;
-  width: 156px;
-  height: 34px;
+  width: min(205px, 100%);
+  height: 72px;
 }
 .site-footer-column h2 {
   margin: 4px 0 12px;
