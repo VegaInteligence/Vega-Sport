@@ -48,12 +48,24 @@ export async function handler(event = {}) {
           GROUP BY season ORDER BY season`)).rows;
         const plans = [];
         for (const build of builds) {
+          if (event.buildId && event.buildId !== build.build_id) continue;
           const params = JSON.stringify(Object.fromEntries(['build_id','edition_id','edition_revision_id','dg','cg','competition_id']
             .map((key) => [key, build[key]])));
-          // EXPLAIN without ANALYZE only plans this fixed SELECT; it does not run
-          // the expensive data scan or accept SQL from the invocation event.
-          const result = await client.query('EXPLAIN (FORMAT JSON) ' + appearanceReadQueries.admissionSql, [params]);
-          plans.push({ build, plan: result.rows[0]['QUERY PLAN'] });
+          // Planning is the default. Explicit measurement runs only the same
+          // fixed SELECT in this read-only transaction, within the 20s timeout.
+          // Invocation input can never provide SQL or a database target.
+          await client.query('SAVEPOINT inspect_plan');
+          const started = performance.now();
+          try {
+            const explain = event.measure === true ? 'EXPLAIN (ANALYZE,BUFFERS,TIMING FALSE,FORMAT JSON) ' : 'EXPLAIN (FORMAT JSON) ';
+            const result = await client.query(explain + appearanceReadQueries.admissionSql, [params]);
+            plans.push({ build, elapsedMs: Math.round(performance.now() - started), plan: result.rows[0]['QUERY PLAN'] });
+          } catch (error) {
+            await client.query('ROLLBACK TO SAVEPOINT inspect_plan');
+            plans.push({ build, elapsedMs: Math.round(performance.now() - started), errorCode: error.code || error.name });
+          }
+          await client.query('RELEASE SAVEPOINT inspect_plan');
+          if (event.measure === true) break; // At most one measured plan per invocation.
         }
         await client.query("COMMIT");
         return { ok: true, operation: "inspect", section: "read_paths", identity,
