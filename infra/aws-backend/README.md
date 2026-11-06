@@ -1,5 +1,7 @@
 # StatArena AWS backend
 
+The production template selects the relational reader (`STATARENA_PRO_API=0`): the AWS publication worker owns `statarena_app`, and the manifest reports `aws-relational`. The separate Pro reader remains experimental; its two-edition pilot is not the production catalogue. Changing this setting requires complete catalogue parity and real HTTP reads against RDS before a frontend cutover.
+
 A dedicated CloudFront distribution signs requests to a private Lambda Function URL. The Node 24 ARM function handles the existing Web Request/Response application, inside the three existing RDS VPC subnets. No NAT, API Gateway, RDS proxy, SSM/Secrets Manager endpoint, new database, restart or public database rule is needed. The only change touching an existing network resource is a separate inbound TCP 5432 rule granting the new Lambda SG access to the existing RDS SG. The function SG permits only outbound 5432 to that SG. No S3 credentials or S3 read permissions are granted to the application. The existing public asset distribution remains entirely separate.
 
 ## Release commands

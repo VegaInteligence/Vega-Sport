@@ -75,8 +75,8 @@ Resources:
           DATABASE_URL: !Ref DatabaseUrl
           DATABASE_POOL_MAX: '1'
           STATARENA_DATA_PROVIDER: aws
-          # Serve only published typed SQL (Orion Pro readers); no legacy or Neon route.
-          STATARENA_PRO_API: '1'
+          # The production catalogue is published in statarena_app by the AWS worker.
+          STATARENA_PRO_API: '0'
           STATARENA_CLOUDFRONT_URL: 'https://d2clu0phovomb8.cloudfront.net'
       VpcConfig:
         SecurityGroupIds: [!Ref RuntimeSG]

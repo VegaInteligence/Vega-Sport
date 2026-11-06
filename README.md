@@ -32,6 +32,8 @@ Les anciennes implémentations du serveur Neon et les outils de bootstrap vers N
 
 Les migrations déjà appliquées restent immuables. Les anciens modèles JSON conservés pour reproduire ces migrations ne sont pas un nouveau plan de déploiement. Les neuf tables de scoring réservées ne font pas partie du socle actif. La migration `019_retire_reserved_models.sql` les retire si elles existent et sont vides ; elle refuse toute table peuplée et toute dépendance extérieure, sans `CASCADE`.
 
+Le déploiement de production sélectionne les tables relationnelles `statarena_app` publiées par le worker AWS (`STATARENA_PRO_API=0`, manifeste `aws-relational`). Le lecteur Pro reste expérimental et ne remplace pas ce catalogue complet. La maintenance du 6 novembre 2026 a vérifié le snapshot RDS `statarena-before-cleanup-20261106-131350`, journalisé la migration 019 et supprimé sa Lambda temporaire. Les neuf tables réservées étaient déjà absentes : cette opération n'a supprimé aucune donnée métier.
+
 ## Vérification
 
 ```sh
