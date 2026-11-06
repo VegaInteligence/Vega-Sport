@@ -44,7 +44,7 @@ export function responseBytes(body) {
   else if (body === null) context.metrics.response_bytes = 0;
 }
 
-function routeLabel(request) {
+export function routeLabel(request) {
   let pathname;
   try {
     pathname = new URL(request.url).pathname;
