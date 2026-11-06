@@ -1,11 +1,14 @@
+# Preserve this name: the existing read-only AWS role trusts this workflow.
 name: Published Villarreal PSG availability
 on:
-  schedule:
-    - cron: '8 * * * *'
   workflow_dispatch:
     inputs:
       verify_stop:
         description: 'Test only: verify automatic shutdown without querying RDS'
+        type: boolean
+        default: false
+      schema_inventory:
+        description: 'Count current RDS tables in a read-only transaction (no publication)'
         type: boolean
         default: false
 permissions:
@@ -15,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   observe:
-    if: github.repository == 'OrionQuantPlatform/STATARENA' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/aws-backend-20261104')
+    if: github.repository == 'OrionQuantPlatform/STATARENA' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
       id-token: write
@@ -43,9 +46,19 @@ jobs:
         with:
           mode: runtime
           role-arn: ${{ vars.STATARENA_AWS_MONITOR_ROLE_ARN }}
+      - name: Count user tables without scanning business data
+        if: inputs.verify_stop != true && inputs.schema_inventory == true
+        run: python .github/actions/aws-database/inventory.py
+      - name: Save schema inventory
+        if: inputs.schema_inventory == true
+        uses: actions/upload-artifact@v4
+        with:
+          name: schema-inventory-${{ github.run_id }}
+          path: schema-inventory.json
+          if-no-files-found: error
       - name: Observe relational publication
         id: probe
-        if: inputs.verify_stop != true
+        if: inputs.verify_stop != true && inputs.schema_inventory != true
         run: python .github/actions/aws-database/monitor.py
       - name: Stop the schedule after publication
         if: inputs.verify_stop == true || steps.probe.outputs.complete == 'true'
@@ -53,4 +66,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh api --method PUT "repos/$GITHUB_REPOSITORY/actions/workflows/pitchapi-villarreal-psg-availability.yml/disable"
-          echo 'Monitor disabled after published core data or the explicit shutdown fixture.'
+          echo 'Monitor disabled after published core data or the explicit shutdown test.'

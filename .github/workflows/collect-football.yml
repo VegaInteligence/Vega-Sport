@@ -1,11 +1,9 @@
 name: Collect football (AWS)
 on:
   schedule:
+    # UTC: daily refresh plus a morning check. Historical backfill is manual only.
     - cron: '35 22 * * *'
     - cron: '10 6 * * *'
-    - cron: '15 0,12 * * *'
-    - cron: '50 6 * * *'
-    - cron: '15 18 * * *'
   workflow_dispatch:
     inputs:
       mode:
@@ -68,7 +66,6 @@ jobs:
             case "$SCHEDULE" in
               '35 22 * * *') mode=daily ;;
               '10 6 * * *') mode=pulse ;;
-              '15 0,12 * * *'|'50 6 * * *'|'15 18 * * *') mode=historical ;;
               *) echo 'Unknown collection schedule' >&2; exit 1 ;;
             esac
           elif [ "$EVENT_NAME" != workflow_dispatch ]; then
@@ -80,7 +77,6 @@ jobs:
             historical) minutes=280; requests=100000; assets=3000; supplemental=false ;;
             *) echo 'Invalid collection mode' >&2; exit 1 ;;
           esac
-          if [ "$EVENT_NAME" = schedule ] && [ "$SCHEDULE" = '15 18 * * *' ]; then minutes=210; fi
           minutes="${MINUTES_INPUT:-$minutes}"
           requests="${REQUESTS_INPUT:-$requests}"
           if [[ ! "$minutes" =~ ^[1-9][0-9]{0,2}$ ]] || (( 10#$minutes > 300 )); then
