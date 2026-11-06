@@ -258,6 +258,61 @@ def canonical_source_aliases(db, manifest):
     return aliases
 
 
+def redundant_year_aliases(db, manifest):
+    """Canonicalize only proven-empty year aliases to populated source cohorts.
+
+    For year YYYY, prefer YYYY/YYYY+1 for the same competition when it has
+    actual fixtures or matches and YYYY has no source or published facts.
+    Other calendar-year competitions and their source edition IDs are kept.
+    """
+    available = {
+        (season["id"], chunk["leagueId"])
+        for season in manifest["seasons"]
+        for chunk in season["chunks"]
+    }
+    candidates = sorted({
+        (yr, league)
+        for yr, league in available
+        if re.fullmatch(r"\d{4}", yr)
+        and (yr + "/" + str(int(yr) + 1), league) in available
+    })
+    if not candidates:
+        return {}
+    rows = db.execute("""
+        SELECT c.year,c.league_id
+        FROM unnest(%s::text[],%s::text[]) AS c(year,league_id)
+        WHERE EXISTS(SELECT 1 FROM statarena_app.partitions p
+          WHERE p.season=c.year||'/'||(c.year::int+1)::text
+            AND p.league_id=c.league_id)
+          AND (EXISTS(SELECT 1 FROM statarena_app.matches m
+             WHERE m.season=c.year||'/'||(c.year::int+1)::text
+               AND m.league_id=c.league_id)
+            OR EXISTS(SELECT 1 FROM statarena_app.fixtures f
+             WHERE f.season=c.year||'/'||(c.year::int+1)::text
+               AND f.league_id=c.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena.fixtures f
+            WHERE (f.season,f.league_id)=(c.year,c.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.matches m
+            WHERE (m.season,m.league_id)=(c.year,c.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.fixtures f
+            WHERE (f.season,f.league_id)=(c.year,c.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.appearances a
+            WHERE (a.season,a.league_id)=(c.year,c.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.team_seasons t
+            WHERE (t.season,t.league_id)=(c.year,c.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.partition_bootstrap_sources b
+            WHERE (b.season,b.league_id)=(c.year,c.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.partition_notes n
+            WHERE (n.season,n.league_id)=(c.year,c.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.partition_counts k
+            WHERE (k.season,k.league_id)=(c.year,c.league_id) AND k.value<>0)
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.competition_seasons k
+            WHERE k.season=c.year AND k.competition_id=c.league_id
+              AND k.sample_matches<>0)
+    """, ([year for year, _ in candidates], [league for _, league in candidates])).fetchall()
+    return {(year, league): year + "/" + str(int(year) + 1) for year, league in rows}
+
+
 def canonical_known_scopes(manifest, aliases):
     return {
         (aliases.get((season["id"], c["leagueId"]), season["id"]), c["leagueId"])
@@ -309,6 +364,14 @@ def retire_empty_season_aliases(db):
           AND NOT EXISTS(SELECT 1 FROM statarena_app.partition_bootstrap_sources b WHERE (b.season,b.league_id)=(p.season,p.league_id))
           AND NOT EXISTS(SELECT 1 FROM statarena_app.partition_counts c WHERE (c.season,c.league_id)=(p.season,p.league_id) AND c.value<>0)
           AND NOT EXISTS(SELECT 1 FROM statarena_app.partition_notes n WHERE (n.season,n.league_id)=(p.season,p.league_id))
+          AND NOT EXISTS(
+            (SELECT metric_key,ordinal FROM statarena_app.partition_metrics m WHERE (m.season,m.league_id)=(p.season,p.league_id))
+            EXCEPT
+            (SELECT metric_key,ordinal FROM statarena_app.partition_metrics m WHERE (m.season,m.league_id)=(a.canonical,p.league_id)))
+          AND NOT EXISTS(
+            (SELECT metric_key,ordinal FROM statarena_app.partition_metrics m WHERE (m.season,m.league_id)=(a.canonical,p.league_id))
+            EXCEPT
+            (SELECT metric_key,ordinal FROM statarena_app.partition_metrics m WHERE (m.season,m.league_id)=(p.season,p.league_id)))
         RETURNING p.season,p.league_id)
         DELETE FROM statarena_app.competition_seasons c USING removed r
         WHERE (c.season,c.competition_id)=(r.season,r.league_id) AND c.sample_matches=0""")
@@ -317,6 +380,10 @@ def retire_empty_season_aliases(db):
 def prepare(inputs, manifest, queue_all):
     db = inputs.db
     aliases = canonical_source_aliases(db, manifest)
+    for key, canonical in redundant_year_aliases(db, manifest).items():
+        if key in aliases and aliases[key] != canonical:
+            raise RuntimeError("Conflicting tournament and calendar-year alias")
+        aliases[key] = canonical
     inputs.source_scope_aliases = aliases
     known = canonical_known_scopes(manifest, aliases)
     with db.transaction():
