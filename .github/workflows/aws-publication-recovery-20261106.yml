@@ -1,0 +1,58 @@
+name: Build serving tables (AWS)
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/aws-publication-recovery-20261106.yml]
+permissions:
+  contents: read
+concurrency:
+  group: statarena-aws-ingestion
+  cancel-in-progress: false
+jobs:
+  recover_publication:
+    if: github.repository == 'OrionQuantPlatform/STATARENA' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      # Existing 64 GiB RDS volume; keep at least 8 GiB below the 48 GB ceiling.
+      STATARENA_SQL_LIMIT_BYTES: '48000000000'
+      STATARENA_SQL_RESERVE_BYTES: '8589934592'
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - name: Check out the verified AWS worker release
+        uses: actions/checkout@v4
+        with:
+          ref: fbbef22b027e3334fd57fe4ea341e1c6f3103d3a
+          sparse-checkout: |
+            dashboard
+            .github/actions/aws-database
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: dashboard/scripts/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: pip install -r dashboard/scripts/requirements.txt
+      - name: Load the existing AWS staging writer
+        uses: ./.github/actions/aws-database
+        with:
+          mode: ingest
+          role-arn: arn:aws:iam::361769570630:role/StatArenaGitHubIngest
+      - name: Publish pending editions from verified AWS staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          python dashboard/scripts/relational_materialize.py --minutes 100 --batch 10 | tee publication-recovery.log
+      - name: Save the publication receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aws-publication-recovery-${{ github.run_id }}
+          path: publication-recovery.log
+          if-no-files-found: ignore
