@@ -34,12 +34,12 @@ jobs:
         with:
           mode: ingest
           role-arn: ${{ vars.STATARENA_AWS_INGEST_ROLE_ARN }}
-      - name: Check verified empty calendar-year partitions (no writes)
+      - name: Remove only verified empty calendar-year partitions
         shell: bash
         run: |
           set -euo pipefail
           # relational_materialize.py prevents aliases from being republished.
-          python dashboard/scripts/retire_empty_year_aliases_once.py | tee alias-cleanup.log
+          python dashboard/scripts/retire_empty_year_aliases_once.py --execute | tee alias-cleanup.log
       - name: Retain audit receipt
         if: always()
         uses: actions/upload-artifact@v4
