@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { query, configured, cache } from "./services/postgres.js";
-import { instrumentRequest } from "./services/metrics.js";
+import { instrumentRequest, routeLabel } from "./services/metrics.js";
 import { matchesEtag, cacheHeaders } from "./services/cache-policy.js";
 import {
   relationalResource,
@@ -302,7 +302,7 @@ async function route(req) {
         updated_at: r.updated_at,
       })),
       workflowUrl:
-        "https://github.com/OrionQuantPlatform/STATARENA/actions/workflows/daily-sync.yml",
+        "https://github.com/OrionQuantPlatform/STATARENA/actions/workflows/collect-football.yml",
     });
   }
   if (name === "dashboard/manifest") {
@@ -396,7 +396,7 @@ export function handleRequest(req) {
       const status =
         error.status >= 400 && error.status <= 599 ? error.status : 503;
       if (status === 503)
-        console.error("AWS serving query failed", error.code || error.name);
+        console.error("AWS serving query failed", error.code || error.name, routeLabel(req));
       return send(
         req,
         {

@@ -65,7 +65,7 @@ class HonoursWorkerTest(unittest.TestCase):
             "p_123456": {"name": "Other", "minutes": 900, "observations": {("Other", "Team"): "2026-11-02"}},
         }
         source = {"identitySourceUrl": "https://www.wikidata.org/wiki/Q615", "sourceUrl": "https://en.wikipedia.org/w/index.php?oldid=1", "honours": [{"name": "MLS Cup", "seasons": ["2025"]}]}
-        with patch("neon_store.Store", return_value=store), patch.object(worker, "candidates_from_manifest", return_value=players), patch.object(worker, "collect_player", return_value=source) as collect, patch.object(worker.time, "sleep"), contextlib.redirect_stdout(io.StringIO()):
+        with patch("aws_store.Store", return_value=store), patch.object(worker, "candidates_from_manifest", return_value=players), patch.object(worker, "collect_player", return_value=source) as collect, patch.object(worker.time, "sleep"), contextlib.redirect_stdout(io.StringIO()):
             worker.run(limit=1)
         self.assertEqual(collect.call_args.args[0], "Lionel Messi")
         self.assertEqual(len(store.db.writes), 1)
@@ -82,7 +82,7 @@ class HonoursWorkerTest(unittest.TestCase):
         store.db = RecentDB()
         players = {worker.MESSI_ID: {"name": "Lionel Messi", "minutes": 90, "observations": {("Lionel Messi", "Inter Miami CF"): "2026-11-02"}}}
         source = {"identitySourceUrl": "https://www.wikidata.org/wiki/Q615", "sourceUrl": "https://en.wikipedia.org/w/index.php?oldid=1", "honours": [{"name": "MLS Cup", "seasons": ["2025"]}]}
-        with patch("neon_store.Store", return_value=store), patch.object(worker, "candidates_from_manifest", return_value=players), patch.object(worker, "collect_player", return_value=source) as collect, patch.object(worker.time, "sleep"), contextlib.redirect_stdout(io.StringIO()):
+        with patch("aws_store.Store", return_value=store), patch.object(worker, "candidates_from_manifest", return_value=players), patch.object(worker, "collect_player", return_value=source) as collect, patch.object(worker.time, "sleep"), contextlib.redirect_stdout(io.StringIO()):
             worker.run(limit=1)
         self.assertEqual(collect.call_count, 1)
 

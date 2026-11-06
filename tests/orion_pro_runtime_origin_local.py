@@ -68,7 +68,8 @@ def main():
     elif case=='N05_non_rds':
      start('invalid_aws');r=http('/api/fixtures?limit=2');assert r['status']==503 and r['value']['error']['code']=='DATA_UNAVAILABLE' and not r['sql'],r
     elif case=='N06_legacy_off':
-     start('legacy');r=http('/api/status');assert r['status']==200 and r['value']['configured'] is True and not r['sql'],r
+     start('legacy');r=http('/api/status');assert r['status']==200 and r['value']['configured'] is False and not r['sql'],r
+     r=http('/api/health');assert r['status']==503 and not r['sql'],r
     elif case=='N07_boundaries':assert all(r['driverAttempts']==r['externalAttempts']==0 and not r['sql'] for r in report['requests'])
     report['cases'].append({'case':case,'status':'pass'})
    except Exception as e:blocked=case;report['cases'].append({'case':case,'status':'fail','error':str(e)[:5000]})

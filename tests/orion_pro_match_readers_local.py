@@ -145,9 +145,11 @@ class Harness:
         self.report['inputSha256'] = self.sources
         for path, digest in ((MODEL103, '18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08'),
                              (MIG / MIGRATIONS[4], '12d63eaab6f4d610de3f2ff4efc0dcd71059c4d2e489a5f30d62d2a8498fd087'),
-                             (MODEL016, self.binding016['modelSha256']), (MODEL017, self.binding017['modelSha256']),
-                             (SERVICES / 'orion-pro.js', '4815cdfb184fbae31fa501b50695b235c2ca14b85660db6e6aee8f5fef979616')):
+                             (MODEL016, self.binding016['modelSha256']), (MODEL017, self.binding017['modelSha256'])):
             assert sha(path) == digest, path
+        # Historical schemas stay pinned; current application code is frozen
+        # above and qualified by the HTTP cases, then checked for run-time drift.
+        assert SERVICES / 'orion-pro.js' in graph
         if self.args.target == '017':
             assert sha(MIG / MIGRATIONS[5]) == '87aac35a93b8b0455a7dcf13fde5bb0be468d1183a0bf4a96f36b04b4b770458'
             assert sha(BIND017) == '72019db9540c0099f197b8cf1b41d63198347fb17b7d07d440cf77fbfa3e4d9c'

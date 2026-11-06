@@ -100,7 +100,7 @@ export function mergeSeason(manifest, selected, parts) {
   return {
     meta: {
       schemaVersion: 2,
-      source: manifest.storage === "json-packed" ? "PitchAPI · archives Neon" : "PitchAPI · archive européenne locale",
+      source: manifest.storage?.startsWith("aws-") ? "PitchAPI · AWS" : "PitchAPI · archives",
       storage: manifest.storage,
       retrievedAt: retrieved,
       currentSeason: selected,
@@ -139,8 +139,10 @@ export function mergeSeason(manifest, selected, parts) {
 
 /** Cursor traversal always returns a complete single generation or throws. */
 export async function readPages(path, filters, fetcher = fetch) {
-  let limit = 100,
-    restarted = false;
+  // Keep cold RDS reads bounded while several competitions load together.
+  let limit = 50,
+    restarted = false,
+    reducedAfterUnavailable = false;
   for (;;) {
     const pages = [],
       seen = new Set();
@@ -158,6 +160,11 @@ export async function readPages(path, filters, fetcher = fetch) {
         limit = Math.max(1, Math.floor(limit / 2));
         break;
       }
+      if (response.status === 503 && !reducedAfterUnavailable && limit > 25) {
+        reducedAfterUnavailable = true;
+        limit = 25;
+        break;
+      }
       if (!response.ok)
         throw new Error(
           "Données indisponibles (HTTP " + response.status + ").",
@@ -167,6 +174,7 @@ export async function readPages(path, filters, fetcher = fetch) {
       if (
         !page.data ||
         current == null ||
+        (filters.v && current !== filters.v) ||
         !Object.hasOwn(page.pagination, "nextCursor")
       )
         throw new Error("Page de données invalide.");
@@ -309,7 +317,7 @@ async function loadLegacySeason(manifest, selected, fetcher, leagueIds) {
       const packed = await new Response(result.body.pipeThrough(new DecompressionStream("gzip"))).json();
       return restoreLegacyTables(decodeTables(packed), packed);
     });
-    return chunk.sourceDigest ? cachedPart(JSON.stringify(["neon", selected, chunk.leagueId, chunk.sourceDigest]), fetcher, load) : load();
+    return chunk.sourceDigest ? cachedPart(JSON.stringify(["packed", selected, chunk.leagueId, chunk.sourceDigest]), fetcher, load) : load();
   }));
   return mergeSeason(manifest, selected, parts);
 }
@@ -329,19 +337,27 @@ export async function loadSeason(
   );
   const parts = await Promise.all(
     chunks.map((chunk) => {
+      const version = manifest.storage === "aws-orion-pro"
+        ? chunk.representationToken
+        : null;
+      if (manifest.storage === "aws-orion-pro" &&
+          (!/^pro1\.[1-9][0-9]{0,18}\.[a-f0-9]{64}$/.test(version || "") ||
+           !manifest.editions?.some((edition) => edition.leagueId === chunk.leagueId &&
+             edition.season === selected && edition.representationToken === version)))
+        throw new Error("Version de saison indisponible.");
       const load = () =>
         scheduled(async () =>
           mergePartition(
             await readPages(
               "/api/seasons/partition",
-              { season: selected, league: chunk.leagueId, format: "columns" },
+              { season: selected, league: chunk.leagueId, format: "columns", ...(version ? { v: version } : {}) },
               fetcher,
             ),
           ),
         );
       return chunk.sourceDigest
         ? cachedPart(
-            JSON.stringify([selected, chunk.leagueId, chunk.sourceDigest]),
+            JSON.stringify([selected, chunk.leagueId, chunk.sourceDigest, version]),
             fetcher,
             load,
           )

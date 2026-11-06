@@ -3,8 +3,8 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "dashboard/scripts"))
-from neon_ingest import ENDPOINTS, claim_job, prioritize_league
-from neon_materialize import competition_metadata
+from aws_ingest import ENDPOINTS, claim_job, prioritize_league
+from aws_materialize import competition_metadata
 
 
 class Result:

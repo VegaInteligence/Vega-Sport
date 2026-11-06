@@ -13,10 +13,10 @@ from psycopg.types.json import Jsonb
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "dashboard/scripts"))
-from bootstrap_neon import unpack
-from neon_ingest import DAILY_MATCH_PRIORITY, PULSE_AUX_PRIORITY, PULSE_MATCH_PRIORITY, claim_job, discover, seed
-from neon_materialize import materialize
-from neon_store import Store, canonical
+from packed_tables import unpack
+from aws_ingest import DAILY_MATCH_PRIORITY, PULSE_AUX_PRIORITY, PULSE_MATCH_PRIORITY, claim_job, discover, seed
+from aws_materialize import materialize
+from aws_store import Store, canonical
 from test_dashboard_data import synthetic
 
 

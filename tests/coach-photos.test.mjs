@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { refreshCoachPortraits } from "../dashboard/scripts/neon_coach_photos.mjs";
+import { refreshCoachPortraits } from "../dashboard/scripts/aws_coach_photos.mjs";
 
 test("coach photo repair keeps identities and leaves existing portraits on failed refreshes", async () => {
   const rows = [

@@ -1,4 +1,4 @@
-/** Reproducible production HTTP E2E, with Neon as the only data source. */
+/** Production frontend acceptance against the configured AWS API. */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import net from "node:net";
@@ -7,13 +7,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 const cwd = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const evidence = path.resolve(
   cwd,
-  process.env.ORION_EVIDENCE_DIR || "outputs/neon-runtime",
+  process.env.ORION_EVIDENCE_DIR || "outputs/aws-runtime",
 );
 await mkdir(evidence, { recursive: true });
-if (!process.env.NEON_DATABASE_URL)
-  throw new Error(
-    "Configure read-only Neon runtime variables from .env.example",
-  );
 const socket = net.createServer();
 socket.listen(0, "127.0.0.1");
 await once(socket, "listening");
@@ -55,9 +51,9 @@ try {
     await Bun.sleep(250);
   }
   if (!ready)
-    throw new Error("Neon-backed production server did not become healthy");
+    throw new Error("AWS-backed production server did not become healthy");
   const check = Bun.spawn(
-    [process.execPath, "scripts/verify_neon_runtime.mjs"],
+    [process.execPath, "scripts/verify_aws_runtime.mjs"],
     {
       cwd,
       env: {
@@ -70,7 +66,7 @@ try {
     },
   );
   if (await check.exited)
-    throw new Error("Neon HTTP E2E failed; inspect http-e2e.json");
+    throw new Error("AWS HTTP E2E failed; inspect http-e2e.json");
 } finally {
   child.kill("SIGTERM");
   await child.exited;

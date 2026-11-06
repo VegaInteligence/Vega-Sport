@@ -1,4 +1,4 @@
-"""Collect sourced player honours for the Neon supplemental projections.
+"""Collect sourced player honours for the AWS supplemental projections.
 
 Only join a PitchAPI player to Wikidata when the name and an observed team
 identify exactly one footballer. The Wikipedia honours section is an incomplete
@@ -289,7 +289,7 @@ def player_candidate(store, manifest, player_id):
 
 
 def run(limit=100, player_id=None):
-    from neon_store import Store, canonical
+    from aws_store import Store, canonical
     from psycopg.types.json import Jsonb
 
     store = Store()

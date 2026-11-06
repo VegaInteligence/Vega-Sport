@@ -5,15 +5,8 @@ import { measuring, record } from "./metrics.js";
 export { cache } from "./cache.js";
 
 let pool;
-const awsMode = () =>
-  process.env.STATARENA_PRO_API === "1" ||
-  process.env.STATARENA_DATA_PROVIDER?.toLowerCase() === "aws" ||
-  Boolean(process.env.DATABASE_URL);
-const sourceUrl = () =>
-  awsMode() ? process.env.DATABASE_URL : process.env.NEON_DATABASE_URL;
-export const dataProvider = () =>
-  process.env.STATARENA_DATA_PROVIDER ||
-  (process.env.DATABASE_URL ? "AWS" : "Neon");
+const sourceUrl = () => process.env.DATABASE_URL;
+export const dataProvider = () => "AWS";
 export const configured = () => Boolean(sourceUrl());
 export const canonical = (params = {}) =>
   JSON.stringify(
@@ -32,7 +25,7 @@ export function database() {
   const localTest =
     process.env.STATARENA_TEST_DATABASE === "1" &&
     ["127.0.0.1", "localhost", "::1"].includes(url.hostname);
-  if (awsMode() && !localTest && !url.hostname.endsWith(".rds.amazonaws.com"))
+  if (!localTest && !url.hostname.endsWith(".rds.amazonaws.com"))
     throw new Error("AWS mode requires the RDS database endpoint");
   const maximum = Number(process.env.DATABASE_POOL_MAX || 1);
   if (!Number.isInteger(maximum) || maximum < 1 || maximum > 8)

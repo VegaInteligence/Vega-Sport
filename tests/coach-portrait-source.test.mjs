@@ -7,7 +7,7 @@ import {
 import {
   recentLineupIds,
   lineupCoaches,
-} from "../dashboard/scripts/neon_observed_coaches.mjs";
+} from "../dashboard/scripts/aws_observed_coaches.mjs";
 
 function source(candidates) {
   return async (raw) => {

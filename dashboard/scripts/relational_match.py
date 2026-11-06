@@ -238,10 +238,10 @@ def publish_match_resource(db, endpoint, params, response):
     return True
 
 
-# The rematerialization worker holds at most 16 matches at a time. Accept two
-# such groups for callers replaying a larger batch without retaining all typed rows.
-_MAX_MATCH_RECORDS = 32
-_MAX_COPY_MATCHES = 16
+# Amortize remote SQL round trips across matches. Typed COPY groups retain the
+# independent 8 MiB source ceiling, including exceptionally large matches.
+MAX_MATCH_RECORDS = 64
+_MAX_COPY_MATCHES = MAX_MATCH_RECORDS
 _MAX_COPY_SOURCE_BYTES = 8 * 1024 * 1024
 
 
@@ -392,7 +392,7 @@ def _copy_group(db, sources):
 
 
 def publish_match_batch(db, records):
-    """Publish up to 32 distinct matches and their saved variants atomically.
+    """Publish up to 64 distinct matches and their saved variants atomically.
 
     Each input is (match_id, family_responses, optional_metadata, saved_variants).
     A saved variant is (endpoint, params, response). The importer selects source
@@ -402,11 +402,11 @@ def publish_match_batch(db, records):
 
 
 def _publish_bounded(db, records, base_params, base_subject):
-    records = list(islice(records, _MAX_MATCH_RECORDS + 1))
+    records = list(islice(records, MAX_MATCH_RECORDS + 1))
     if not records:
         return
-    if len(records) > _MAX_MATCH_RECORDS:
-        raise ValueError("A match publication batch accepts at most 32 records")
+    if len(records) > MAX_MATCH_RECORDS:
+        raise ValueError(f"A match publication batch accepts at most {MAX_MATCH_RECORDS} records")
     mids = sorted(row[0] for row in records)
     if len(set(mids)) != len(mids):
         raise ValueError("A match may appear only once per batch")

@@ -176,6 +176,10 @@ def main():
                     report['fixture']=fixture.prepare_entities();count=sum(admin.execute('SELECT count(*) FROM '+table).fetchone()[0] for table in active)
                     assert count==213;report['initialTypedRows']=count;report['nativeCOPYBatches']=0
                     values['initialToken']=manifest_token()
+                    values['originalReaders']=[]
+                    for path in ['/api/fixtures','/api/matches/m_000001/summary','/api/pitchapi/matches/m_000001/shots']:
+                        baseline=http(path+'?'+qs(v=values['initialToken']));okay(baseline)
+                        values['originalReaders'].append(baseline)
                 elif case=='F02_actual_date_RED':
                     r=http(date_route(limit=1));okay(r);values['dateFirst']=r
                     assert r['headers']['x-orion-fixture-alias-contract']==CONTRACT
@@ -229,8 +233,11 @@ def main():
                 elif case=='F12_unknowns':
                     row=values['baselineRows'][2];assert row['date'] is None and row['time_utc'] is None and row['score_home'] is None and row['score_away'] is None and row['has_playoff'] is None and row['status']=='not_started'
                 elif case=='F13_original_readers':
-                    for path in ['/api/dashboard/manifest?'+qs(v=values['initialToken']),'/api/fixtures?'+qs(v=values['initialToken']),'/api/matches/m_000001/summary?'+qs(v=values['initialToken']),'/api/pitchapi/matches/m_000001/shots?'+qs(v=values['initialToken'])]:okay(http(path))
-                    assert sha(ROOT/'dashboard/backend/services/orion-pro.js')=='4815cdfb184fbae31fa501b50695b235c2ca14b85660db6e6aee8f5fef979616'
+                    okay(http('/api/dashboard/manifest?'+qs(v=values['initialToken'])))
+                    for baseline in values['originalReaders']:
+                        replay=http(baseline['path']);okay(replay)
+                        assert replay['body']==baseline['body'],'Pinned reader changed after alias reads and correction'
+                        assert replay['headers']['etag']==baseline['headers']['etag'],'Pinned reader validator changed'
                 elif case=='F14_methods':
                     for path in [date_route(),league_route()]:
                         r=http(path,method='POST');assert r['status']==405 and r['headers']['allow']=='GET, HEAD';metadata(r)

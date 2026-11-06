@@ -64,12 +64,12 @@ def bootstrap(mode):
         storage = parameter("s3-ingest")
         key, secret = (field(storage, k) for k in ("access_key_id", "secret_access_key"))
         sensitive.extend((key, secret))
-        # Existing staging writers still use these historical environment names.
+        # AWS staging writers use the same verified RDS target and the existing S3 writer.
         values.update({
-            "NEON_DATABASE_URL": url, "STATARENA_DATABASE_CA_PEM": pem,
-            "NEON_STORAGE_ENDPOINT": "https://s3.us-east-2.amazonaws.com",
-            "NEON_STORAGE_REGION": REGION, "NEON_STORAGE_BUCKET": BUCKET,
-            "NEON_STORAGE_ACCESS_KEY_ID": key, "NEON_STORAGE_SECRET_ACCESS_KEY": secret,
+            "STATARENA_DATABASE_CA_PEM": pem,
+            "STATARENA_S3_ENDPOINT": "https://s3.us-east-2.amazonaws.com",
+            "STATARENA_S3_REGION": REGION, "STATARENA_S3_BUCKET": BUCKET,
+            "STATARENA_S3_ACCESS_KEY_ID": key, "STATARENA_S3_SECRET_ACCESS_KEY": secret,
             "STATARENA_EXTERNAL_STORAGE": "1", "STATARENA_SQL_DOCUMENTS": "1",
             "STATARENA_S3_PATH_STYLE": "0",
         })

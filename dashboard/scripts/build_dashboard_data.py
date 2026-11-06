@@ -56,7 +56,7 @@ PLAYER_METRICS = {
     "goalsPrevented": "goals_prevented",
 }
 # Every other provider metric is kept as well, under a stable name, so no
-# collected player statistic is lost between Neon and the site.
+# collected player statistic is lost between AWS staging and the site.
 EXTRA_PLAYER_METRICS = {
     "shotsOffTarget": "ShotsOffTarget",
     "blockedShots": "blocked_shots",

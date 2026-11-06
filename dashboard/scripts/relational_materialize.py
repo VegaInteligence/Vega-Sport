@@ -14,13 +14,14 @@ from contextlib import closing
 from pathlib import Path
 
 import psycopg
-from bootstrap_neon import unpack
+from packed_tables import unpack
 from build_dashboard_data import METRICS
-from neon_materialize import competition_metadata, merge_sample
+from aws_materialize import competition_metadata, merge_sample
 from relational_catalog import publish_catalog
 from relational_catalog_keys import records as catalog_records
 from relational_core import publish_snapshot
 from relational_match import (
+    MAX_MATCH_RECORDS,
     _PARENT_SUFFIXES,
     _resource_address,
     publish_match_batch,
@@ -69,7 +70,7 @@ def install(db):
         db.execute(
             "CREATE TABLE IF NOT EXISTS statarena_app.worker_schema(version text PRIMARY KEY,digest text NOT NULL)"
         )
-        for prefix in ("003_", "004_", "005_", "006_", "007_", "008_", "009_", "010_", "011_"):
+        for prefix in ("003_", "004_", "005_", "006_", "007_", "008_", "009_", "010_", "011_", "020_"):
             (path,) = SCHEMA.glob(prefix + "*.sql")
             source = path.read_bytes()
             digest = hashlib.sha256(source).hexdigest()
@@ -143,6 +144,62 @@ class Inputs:
     def ref(self, ref):
         return self.read(ref["path"], ref.get("sha256"))
 
+    def prefetch(self, refs, scratch):
+        """Stream indexed documents to disk without a round trip per small batch.
+
+        Each statement addresses at most 128 paths and yields one document at a
+        time. Close the stream before any verified fallback reads reuse the SQL
+        connection, including when a checksum or spool write fails.
+        """
+        by_path = {}
+        for path, expected in refs:
+            by_path.setdefault(path, set()).add(expected)
+
+        def spool(path, physical_sha, value):
+            encoded = compact(value)
+            for expected in by_path[path]:
+                if expected and expected != physical_sha:
+                    if not (
+                        re.fullmatch(r"[0-9a-f]{64}", expected)
+                        and path == f"raw/pitchapi-world/blobs/{expected}.json.gz"
+                    ):
+                        raise ValueError("Staging reference version changed: " + path)
+                    if hashlib.sha256(encoded.encode()).hexdigest() != expected:
+                        raise ValueError("Staging logical checksum mismatch: " + path)
+                scratch.execute(
+                    "INSERT INTO body_cache VALUES(?,?,?)",
+                    (path, expected or "", encoded),
+                )
+
+        paths = list(by_path)
+        for start in range(0, len(paths), 128):
+            requested = paths[start : start + 128]
+            found, missing_documents = set(), []
+            # Both lookup keys are unique. LATERAL keeps a large source catalogue
+            # from turning these bounded key lookups into global table scans.
+            with self.db.cursor() as cursor, closing(cursor.stream(
+                """SELECT o.path,encode(o.sha256,'hex'),d.document
+                FROM unnest(%s::text[]) AS requested(path)
+                JOIN LATERAL (SELECT path,sha256 FROM statarena.objects
+                  WHERE path=requested.path LIMIT 1) o ON true
+                LEFT JOIN LATERAL (SELECT document FROM statarena.current_file_documents
+                  WHERE document_path=o.path AND source_path=o.path LIMIT 1) d ON true""",
+                (requested,),
+            )) as rows:
+                for path, physical_sha, value in rows:
+                    found.add(path)
+                    if value is None:
+                        missing_documents.append((path, physical_sha))
+                    else:
+                        spool(path, physical_sha, value)
+            if found != set(requested):
+                raise FileNotFoundError(next(path for path in requested if path not in found))
+            for path, physical_sha in missing_documents:
+                value, observed_sha = self.read_version(path)
+                if observed_sha != physical_sha:
+                    raise ValueError("Staging input changed during prefetch: " + path)
+                spool(path, physical_sha, value)
+
 
 def envelope(source, ref, status, error):
     if not ref:
@@ -161,6 +218,55 @@ def envelope(source, ref, status, error):
     }
 
 
+def queue_dirty(db, *, captured=False):
+    """Use the fixture season mapping while retaining the original source markers."""
+    source = "SELECT season,league_id,changed_at FROM work_dirty" if captured else """
+        SELECT CASE WHEN k.season IS NULL AND d.season ~ '^[0-9]{4}$'
+            THEN d.season||'/'||(d.season::int+1)::text ELSE d.season END AS season,
+            d.league_id,d.changed_at FROM statarena.dirty_partitions d
+        LEFT JOIN work_known k ON (k.season,k.league_id)=(d.season,d.league_id)"""
+    db.execute(f"""INSERT INTO statarena_app.publication_jobs(season,league_id,changed_at)
+        SELECT season,league_id,max(changed_at) FROM ({source}) d GROUP BY season,league_id
+        ON CONFLICT(season,league_id) DO UPDATE SET changed_at=excluded.changed_at
+        WHERE publication_jobs.changed_at<excluded.changed_at""")
+
+
+def retire_empty_season_aliases(db):
+    """Repair the old raw-year queue; remove only demonstrably empty derived aliases."""
+    db.execute("""CREATE TEMP TABLE work_aliases AS
+        WITH candidates AS MATERIALIZED (
+            SELECT s.season,s.league_id,s.season||'/'||(s.season::int+1)::text AS canonical
+            FROM (SELECT season,league_id FROM statarena_app.publication_jobs
+                  UNION SELECT season,league_id FROM statarena_app.partitions) s
+            WHERE s.season ~ '^[0-9]{4}$')
+        SELECT s.* FROM candidates s
+        WHERE NOT EXISTS(SELECT 1 FROM work_known k WHERE (k.season,k.league_id)=(s.season,s.league_id))
+          AND (EXISTS(SELECT 1 FROM work_known k WHERE (k.season,k.league_id)=(s.canonical,s.league_id))
+            OR EXISTS(SELECT 1 FROM work_scopes w WHERE (w.season,w.league_id)=(s.canonical,s.league_id)))""")
+    db.execute("""INSERT INTO statarena_app.publication_jobs(season,league_id,changed_at)
+        SELECT a.canonical,j.league_id,j.changed_at FROM statarena_app.publication_jobs j
+        JOIN work_aliases a USING(season,league_id)
+        ON CONFLICT(season,league_id) DO UPDATE SET changed_at=excluded.changed_at
+        WHERE publication_jobs.changed_at<excluded.changed_at""")
+    db.execute("""DELETE FROM statarena_app.publication_jobs j USING work_aliases a
+        WHERE (j.season,j.league_id)=(a.season,a.league_id)""")
+    # A known calendar-year season, a historical bootstrap, or any retained
+    # business row must survive. Only the old worker's empty shells qualify.
+    db.execute("""WITH removed AS (
+        DELETE FROM statarena_app.partitions p USING work_aliases a
+        WHERE (p.season,p.league_id)=(a.season,a.league_id)
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.matches m WHERE (m.season,m.league_id)=(p.season,p.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.fixtures f WHERE (f.season,f.league_id)=(p.season,p.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.appearances r WHERE (r.season,r.league_id)=(p.season,p.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.team_seasons t WHERE (t.season,t.league_id)=(p.season,p.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.partition_bootstrap_sources b WHERE (b.season,b.league_id)=(p.season,p.league_id))
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.partition_counts c WHERE (c.season,c.league_id)=(p.season,p.league_id) AND c.value<>0)
+          AND NOT EXISTS(SELECT 1 FROM statarena_app.partition_notes n WHERE (n.season,n.league_id)=(p.season,p.league_id))
+        RETURNING p.season,p.league_id)
+        DELETE FROM statarena_app.competition_seasons c USING removed r
+        WHERE (c.season,c.competition_id)=(r.season,r.league_id) AND c.sample_matches=0""")
+
+
 def prepare(inputs, manifest, queue_all):
     db = inputs.db
     known = {(s["id"], c["leagueId"]) for s in manifest["seasons"] for c in s["chunks"]}
@@ -174,6 +280,7 @@ def prepare(inputs, manifest, queue_all):
             "work_catalog",
             "work_shards",
             "work_dirty",
+            "work_aliases",
         ):
             db.execute(f"DROP TABLE IF EXISTS pg_temp.{name}")
         staging_bytes = db.execute("""SELECT sum(pg_table_size(rel))::bigint FROM unnest(ARRAY[
@@ -181,13 +288,16 @@ def prepare(inputs, manifest, queue_all):
             'statarena.observations'::regclass]) rel""").fetchone()[0]
         capacity(db, staging_bytes * 2)
         db.execute(
-            "CREATE TEMP TABLE work_dirty AS SELECT * FROM statarena.dirty_partitions"
-        )
-        db.execute(
             "CREATE TEMP TABLE work_known(season text,league_id text,PRIMARY KEY(season,league_id))"
         )
         with db.cursor() as cur:
             cur.executemany("INSERT INTO work_known VALUES(%s,%s)", sorted(known))
+        db.execute("""CREATE TEMP TABLE work_dirty AS
+            SELECT d.season AS source_season,
+                CASE WHEN k.season IS NULL AND d.season ~ '^[0-9]{4}$'
+                    THEN d.season||'/'||(d.season::int+1)::text ELSE d.season END AS season,
+                d.league_id,d.changed_at FROM statarena.dirty_partitions d
+            LEFT JOIN work_known k ON (k.season,k.league_id)=(d.season,d.league_id)""")
         db.execute("""CREATE TEMP TABLE work_resources AS SELECT r.*,r.xmin::text AS row_revision,split_part(endpoint,'/',3) AS mid,
             encode(o.sha256,'hex') AS object_digest FROM statarena.resources r LEFT JOIN statarena.objects o ON o.path=r.ref->>'path'
             WHERE starts_with(endpoint,'/matches/')""")
@@ -245,11 +355,11 @@ def prepare(inputs, manifest, queue_all):
             FROM work_matches w LEFT JOIN statarena.resources p ON p.endpoint='/leagues/'||w.league_id AND p.params='{}'
             LEFT JOIN statarena.objects o ON o.path=p.ref->>'path' GROUP BY w.season,w.league_id,p.xmin::text,o.sha256""")
         db.execute("CREATE UNIQUE INDEX ON work_scopes(season,league_id)")
+        retire_empty_season_aliases(db)
         db.execute("""INSERT INTO statarena_app.publication_jobs(season,league_id) SELECT w.season,w.league_id FROM work_scopes w
             LEFT JOIN statarena_app.worker_inputs i ON i.kind='partition' AND i.key=w.season||':'||w.league_id
             WHERE i.digest IS DISTINCT FROM w.digest ON CONFLICT DO NOTHING""")
-        db.execute("""INSERT INTO statarena_app.publication_jobs(season,league_id,changed_at) SELECT season,league_id,changed_at FROM work_dirty
-            ON CONFLICT(season,league_id) DO UPDATE SET changed_at=excluded.changed_at WHERE publication_jobs.changed_at<excluded.changed_at""")
+        queue_dirty(db, captured=True)
         # A migrated seed can be the sole source of a historical season. Discover
         # new scopes without forcing every already-published partition to rebuild.
         db.execute("""INSERT INTO statarena_app.publication_jobs(season,league_id)
@@ -370,7 +480,12 @@ def partition_calendar(inputs, label, league):
 
 def catalog_batch(inputs, limit):
     db = inputs.db
-    with db.transaction():
+    started = time.monotonic()
+    with (
+        db.transaction(),
+        tempfile.TemporaryDirectory(prefix="statarena-catalog-") as tmp,
+        closing(sqlite3.connect(Path(tmp) / "sources.sqlite")) as scratch,
+    ):
         jobs = db.execute(
             "SELECT kind,key,digest,ref,status,error FROM work_catalog ORDER BY kind,key LIMIT %s",
             (limit,),
@@ -378,14 +493,30 @@ def catalog_batch(inputs, limit):
         if not jobs:
             return 0
         headroom = capacity(db)
+        scratch.execute("CREATE TABLE body_cache(path text,sha text,body text,PRIMARY KEY(path,sha))")
+        refs = []
+        for kind, key, digest, ref, *_ in jobs:
+            if kind == "object":
+                refs.append((key, digest))
+            elif ref:
+                refs.append((ref["path"], ref.get("sha256")))
+        inputs.prefetch(refs, scratch)
+
+        def read(path, expected):
+            row = scratch.execute(
+                "SELECT body FROM body_cache WHERE path=? AND sha=?", (path, expected or "")
+            ).fetchone()
+            if row is None:
+                raise FileNotFoundError(path)
+            return json.loads(row[0])
 
         def records():
             estimated = 0
             for kind, key, digest, ref, status, error in jobs:
                 body = (
-                    inputs.read(key, digest)
+                    read(key, digest)
                     if kind == "object"
-                    else envelope(inputs.ref(ref) if ref else None, ref, status, error)
+                    else envelope(read(ref["path"], ref.get("sha256")) if ref else None, ref, status, error)
                 )
                 estimated += len(compact(body).encode()) * 2
                 if estimated > headroom:
@@ -402,8 +533,12 @@ def catalog_batch(inputs, limit):
                 yield key, body
 
         result = publish_catalog(db, records())
-        for kind, key, digest, *_ in jobs:
-            receipt(db, kind, key, digest)
+        db.cursor().executemany(
+            """INSERT INTO statarena_app.worker_inputs VALUES(%s,%s,%s)
+            ON CONFLICT(kind,key) DO UPDATE SET digest=excluded.digest
+            WHERE worker_inputs.digest IS DISTINCT FROM excluded.digest""",
+            [(kind, key, digest) for kind, key, digest, *_ in jobs],
+        )
         db.cursor().executemany(
             "DELETE FROM work_catalog WHERE kind=%s AND key=%s",
             [(r[0], r[1]) for r in jobs],
@@ -413,7 +548,9 @@ def catalog_batch(inputs, limit):
                 "UPDATE statarena_app.publications SET generation=generation+1,published_at=clock_timestamp()"
             )
         capacity(db)
-        return len(jobs)
+    print(compact({"phase": "catalog-published", "inputs": len(jobs), **result,
+                   "seconds": round(time.monotonic() - started, 3)}), flush=True)
+    return len(jobs)
 
 
 def partition_inputs(inputs, scratch, mids):
@@ -455,6 +592,7 @@ def partition_inputs(inputs, scratch, mids):
         CREATE TABLE archive(mid text,family text,body text,PRIMARY KEY(mid,family));
         CREATE TABLE current(mid text,endpoint text,params text,body text,PRIMARY KEY(mid,endpoint,params));
     """)
+    inputs.prefetch(uses, scratch)
 
     def read(ref):
         key = (ref["path"], ref.get("sha256"))
@@ -537,10 +675,10 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
     requested_families = 0
     bootstrap_source = None
     db = inputs.db
-    marker = db.execute(
-        "SELECT changed_at FROM work_dirty WHERE season=%s AND league_id=%s",
+    markers = db.execute(
+        "SELECT source_season,changed_at FROM work_dirty WHERE season=%s AND league_id=%s",
         (label, league),
-    ).fetchone()
+    ).fetchall()
     digest = db.execute(
         "SELECT digest FROM work_scopes WHERE season=%s AND league_id=%s",
         (label, league),
@@ -613,11 +751,11 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
         partition_inputs(inputs, scratch, list(fixtures))
         source_done = time.monotonic()
         mids = list(fixtures)
-        for start in range(0, len(mids), 16):
+        for start in range(0, len(mids), MAX_MATCH_RECORDS):
             headroom = capacity(db)
             estimated = 0
             batch_details = []
-            for mid in mids[start : start + 16]:
+            for mid in mids[start : start + MAX_MATCH_RECORDS]:
                 context = scratch.execute(
                     "SELECT body FROM context WHERE mid=?", (mid,)
                 ).fetchone()
@@ -757,10 +895,10 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
                 (label, league, *bootstrap_source))
     if digest:
         receipt(db, "partition", label + ":" + league, digest[0])
-    if marker:
+    for source_season, changed_at in markers:
         db.execute(
             "DELETE FROM statarena.dirty_partitions WHERE season=%s AND league_id=%s AND changed_at=%s",
-            (label, league, marker[0]),
+            (source_season, league, changed_at),
         )
     db.execute(
         "DELETE FROM statarena_app.publication_jobs WHERE season=%s AND league_id=%s AND changed_at=%s",
@@ -870,9 +1008,7 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, i
                 break
             if max_partitions is not None and result["partitions"] >= max_partitions:
                 break
-        db.execute("""INSERT INTO statarena_app.publication_jobs(season,league_id,changed_at)
-            SELECT season,league_id,changed_at FROM statarena.dirty_partitions
-            ON CONFLICT(season,league_id) DO UPDATE SET changed_at=excluded.changed_at WHERE publication_jobs.changed_at<excluded.changed_at""")
+        queue_dirty(db)
         result["remaining"] = db.execute(
             "SELECT (SELECT count(*) FROM statarena_app.publication_jobs)+(SELECT count(*) FROM work_catalog)"
         ).fetchone()[0]
@@ -905,7 +1041,7 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, i
 
 
 def main():
-    from neon_store import Store
+    from aws_store import Store
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -932,7 +1068,7 @@ def main():
         or parse_qs(parsed.query).get("sslmode") != ["verify-full"]
     ):
         raise SystemExit("Expected verified AWS RDS staging connection.")
-    os.environ["NEON_DATABASE_URL"] = url  # Existing ingestion-only Store interface.
+    os.environ["DATABASE_URL"] = url  # Existing ingestion-only Store interface.
     store = Store()
     try:
         print(

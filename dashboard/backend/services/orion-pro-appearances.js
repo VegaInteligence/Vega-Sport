@@ -107,23 +107,32 @@ LEFT JOIN LATERAL (SELECT array_agg(a.public_key ORDER BY a.public_key COLLATE "
 LEFT JOIN analytics.competition_summary totals ON totals.build_id=b.id AND totals.competition_season_id=b.competition_season_id
 WHERE b.id=$1::bigint AND b.status='ready' LIMIT 2`;
 
-// Logical parents can retain an earlier physical anchor when a match is revised.
-// Participant selection therefore uses the logical match and the sealed dg; the
-// stats/native participant anchors must still match exactly.
-const scopeSql = `WITH x AS (SELECT * FROM jsonb_to_record($1::jsonb) AS c(
- build_id bigint,edition_id bigint,edition_revision_id bigint,dg bigint,cg bigint,competition_id bigint)),
+// A performance retains the participant revision captured with its facts. Later
+// admission can close that participant revision without rewriting those facts.
+// Resolve the retained physical anchor by its indexed key; its closing generation
+// does not invalidate a selected performance. Native values use that same anchor.
+const scopeSql = `WITH x AS NOT MATERIALIZED (SELECT
+ ($1::jsonb->>'build_id')::bigint build_id,($1::jsonb->>'edition_id')::bigint edition_id,
+ ($1::jsonb->>'edition_revision_id')::bigint edition_revision_id,
+ ($1::jsonb->>'dg')::bigint dg,($1::jsonb->>'cg')::bigint cg,($1::jsonb->>'competition_id')::bigint competition_id),
+public_ids AS MATERIALIZED (
+ SELECT a.route_kind,CASE a.route_kind WHEN 'match' THEN a.match_id WHEN 'team' THEN a.team_id ELSE a.player_id END entity_id,
+ min(a.public_key COLLATE "C") public_id FROM x JOIN ingest.public_aliases a ON ${aliasAt("a", "x.cg")}
+ WHERE (a.route_kind='match' AND a.public_key ~ '^m_[A-Za-z0-9]{6}$')
+ OR (a.route_kind='team' AND a.public_key ~ '^t_[A-Za-z0-9]{6}$')
+ OR (a.route_kind='player' AND a.public_key ~ '^p_[A-Za-z0-9]{6}$')
+ GROUP BY a.route_kind,CASE a.route_kind WHEN 'match' THEN a.match_id WHEN 'team' THEN a.team_id ELSE a.player_id END
+),
 matches AS (
  SELECT s.*,x.dg,x.cg,aliases.public_id
  FROM x JOIN analytics.match_summary s ON s.build_id=x.build_id AND s.competition_season_id=x.edition_id
  JOIN football.matches m ON m.id=s.match_id AND m.revision_id=s.match_revision_id
  AND m.competition_season_id=x.edition_id AND m.publication_state='published' AND ${selected("m", "x.dg")}
- LEFT JOIN LATERAL (SELECT min(a.public_key COLLATE "C") public_id FROM ingest.public_aliases a
- WHERE a.route_kind='match' AND a.match_id=m.id AND a.public_key ~ '^m_[A-Za-z0-9]{6}$' AND ${aliasAt("a", "x.cg")}) aliases ON true
+ LEFT JOIN public_ids aliases ON aliases.route_kind='match' AND aliases.entity_id=m.id
 ), sides AS (
  SELECT mt.*,m.dg,m.cg,aliases.public_id AS team_public_id FROM matches m
  JOIN football.match_teams mt ON mt.match_id=m.match_id AND ${selected("mt", "m.dg")}
- LEFT JOIN LATERAL (SELECT min(a.public_key COLLATE "C") public_id FROM ingest.public_aliases a
- WHERE a.route_kind='team' AND a.team_id=mt.team_id AND a.public_key ~ '^t_[A-Za-z0-9]{6}$' AND ${aliasAt("a", "m.cg")}) aliases ON true
+ LEFT JOIN public_ids aliases ON aliases.route_kind='team' AND aliases.entity_id=mt.team_id
 ), performances AS (
  SELECT s.*,m.dg,m.cg,m.public_id AS match_public_id,m.match_date,
  mp.profile_version_id,mp.is_starter,mp.is_captain,mp.raw_pitch_x,mp.raw_pitch_y,mp.coordinate_frame,
@@ -136,13 +145,14 @@ matches AS (
  FROM matches m JOIN football.player_match_stats s ON s.match_id=m.match_id
  AND s.period_code='full_match' AND s.period_definition_version='bootstrap_v1'
  AND s.contract_version='${producer}' AND s.transform_version='${producer}' AND ${selected("s", "m.dg")}
- JOIN football.match_players mp ON mp.revision_id=s.match_player_revision_id AND mp.match_id=s.match_id
+ JOIN football.match_players mp ON mp.match_id=s.match_id
+ AND mp.revision_id=s.match_player_revision_id
  AND mp.team_id=s.team_id AND mp.player_id=s.player_id AND mp.source_id=s.source_id
- AND mp.source_record_id=s.source_record_id AND mp.variant_key=s.variant_key AND ${selected("mp", "m.dg")}
- JOIN sides ON sides.match_id=mp.match_id AND sides.team_id=mp.team_id AND sides.revision_id=mp.match_team_revision_id
+ AND mp.source_record_id=s.source_record_id AND mp.variant_key=s.variant_key
+ AND mp.recorded_from_gen<=m.dg AND mp.is_canonical AND NOT mp.is_deleted
+ JOIN sides ON sides.match_id=mp.match_id AND sides.team_id=mp.team_id
  LEFT JOIN ingest.source_records sr ON sr.id=s.source_record_id AND sr.source_id=s.source_id AND sr.record_kind='performance'
- LEFT JOIN LATERAL (SELECT min(a.public_key COLLATE "C") public_id FROM ingest.public_aliases a
- WHERE a.route_kind='player' AND a.player_id=s.player_id AND a.public_key ~ '^p_[A-Za-z0-9]{6}$' AND ${aliasAt("a", "m.cg")}) aliases ON true
+ LEFT JOIN public_ids aliases ON aliases.route_kind='player' AND aliases.entity_id=s.player_id
  LEFT JOIN football.player_profile_versions pp ON pp.id=mp.profile_version_id AND pp.player_id=mp.player_id
  AND NOT pp.is_deleted
 ), team_members AS (
@@ -182,12 +192,18 @@ native_counts AS (
  ELSE (${projectionSql}) IS NOT NULL END) FILTER(WHERE n.revision_id IS NOT NULL),false) AS bad_projection
  FROM performances p LEFT JOIN football.player_match_metric_values n ON ${nativeJoin}
  GROUP BY p.revision_id
+), performance_coverage AS (
+ SELECT match_id,count(*) actual_count,min(source_id) min_source_id,max(source_id) max_source_id,
+ min(variant_key COLLATE "C") min_variant_key,max(variant_key COLLATE "C") max_variant_key
+ FROM performances GROUP BY match_id
 ), coverage AS (
  SELECT m.match_id,c.source_id,c.variant_key,c.observed_row_count,c.collection_state,c.coverage_state,c.is_stale,
- (SELECT count(*) FROM performances p WHERE p.match_id=m.match_id) AS actual_count,
- EXISTS(SELECT 1 FROM performances p WHERE p.match_id=m.match_id AND (p.source_id<>c.source_id OR p.variant_key<>c.variant_key)) AS wrong_source
+ coalesce(pc.actual_count,0) AS actual_count,
+ coalesce(pc.actual_count>0 AND (pc.min_source_id<>c.source_id OR pc.max_source_id<>c.source_id
+ OR pc.min_variant_key<>c.variant_key OR pc.max_variant_key<>c.variant_key),false) AS wrong_source
  FROM matches m LEFT JOIN ingest.match_coverage c ON c.match_id=m.match_id
  AND c.feature_code='normalized_performance' AND ${at("c", "m.dg")} AND c.is_canonical
+ LEFT JOIN performance_coverage pc ON pc.match_id=m.match_id
 )
 SELECT (SELECT count(*)::text FROM matches) match_count,
  (SELECT count(*)::text FROM matches m JOIN football.player_match_stats s ON s.match_id=m.match_id
@@ -206,6 +222,10 @@ SELECT (SELECT count(*)::text FROM matches) match_count,
  OR collection_state NOT IN ('present','empty') OR observed_row_count IS DISTINCT FROM actual_count
  OR (collection_state='empty' AND actual_count<>0) OR (collection_state='present' AND actual_count=0)) bad_coverage,
  (SELECT count(*)::text FROM (SELECT team_id FROM team_profiles GROUP BY team_id HAVING count(*)>1) ambiguous) bad_team_profile`;
+
+// Shared with the private, temporary inspector so its EXPLAIN uses the exact
+// application query. No execution capability is exposed by this export.
+export const appearanceReadQueries = Object.freeze({ publicationSql, admissionSql });
 
 function mediaValue(asset, base) {
   const ext = asset.storage_key?.split(".").at(-1)?.toLowerCase();
@@ -299,7 +319,7 @@ async function contents(row, args, media) {
     query(`/*orion:appearance:stats*/ ${scopeSql}
  SELECT s.match_id::text,sides.side,s.quality_flags,${[...new Set(Object.values(teamFields))].map((field) => `s.${field}::text AS ${field}`).join(",")}
  FROM sides JOIN football.team_match_stats s ON s.match_id=sides.match_id AND s.team_id=sides.team_id
- AND s.match_team_revision_id=sides.revision_id AND s.period_code='full_match' AND s.period_definition_version='bootstrap_v1'
+ AND s.period_code='full_match' AND s.period_definition_version='bootstrap_v1'
  AND ${selected("s", "sides.dg")} WHERE s.match_id=ANY($2::bigint[]) ORDER BY s.match_id,sides.side`, params),
     query(`/*orion:appearance:context*/ ${scopeSql}
  SELECT t.team_id::text,aliases.public_id AS id,p.id::text AS profile_id,p.display_name AS name,p.image_asset_id::text,
