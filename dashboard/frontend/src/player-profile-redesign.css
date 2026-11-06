@@ -1,121 +1,135 @@
-/* The profile header keeps one consistent shelf for every player. */
 .research-player-profile .season-player-heading {
-  display: grid;
-  grid-template-columns: minmax(200px, max-content) minmax(200px, 1fr) auto;
-  align-items: center;
-  gap: 24px;
+  align-items: flex-start;
+  gap: 16px 24px;
 }
 .research-player-profile .season-player-identity {
-  max-width: 370px;
+  max-width: min(100%, 18rem);
+}
+.research-player-profile .season-player-identity h2 {
+  overflow-wrap: anywhere;
+}
+.research-player-profile .season-player-heading .research-toolbar {
+  margin-inline-start: auto;
 }
 .player-trophy-shelf,
 .player-trophy-loading {
+  flex: 1 1 24.375rem;
   min-width: 0;
+}
+.player-trophy-shelf {
+  display: grid;
+  gap: 8px;
 }
 .player-trophy-loading {
   color: var(--muted);
   font-size: var(--text-xs);
 }
-.player-trophy-shelf-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
 .player-trophy-label {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 650;
   color: var(--muted);
 }
-.player-trophy-controls {
-  display: flex;
-  gap: 4px;
-}
-.player-trophy-controls button {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border: 1px solid var(--border-strong);
-  border-radius: 50%;
-  background: transparent;
-  color: var(--ink);
-  cursor: pointer;
-}
-.player-trophy-controls button:hover,
-.player-trophy-item:hover {
-  background: var(--surface-hover);
-}
-.player-trophy-controls button:focus-visible,
-.player-trophy-rail:focus-visible,
-.player-trophy-item:focus-visible,
-.player-evolution-season:focus-visible {
+.player-trophy-item:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-.player-trophy-rail {
-  display: flex;
+.player-trophy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 4.625rem), 1fr));
   gap: 5px;
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
-  scroll-snap-type: x proximity;
-  scroll-behavior: smooth;
-  scrollbar-width: thin;
-  padding: 2px 2px 5px;
 }
 .player-trophy-item {
-  position: relative;
-  flex: 0 0 52px;
-  height: 58px;
   display: grid;
-  place-items: center;
-  padding: 3px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 6px 6px 0 0;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 3.25rem 1fr;
+  justify-items: center;
+  align-items: start;
+  gap: 5px;
+  min-width: 0;
+  padding: 6px 2px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
   background: transparent;
+  color: var(--ink);
+  font: inherit;
   cursor: pointer;
-  scroll-snap-align: start;
+}
+@media (hover: hover) {
+  .player-trophy-item:hover {
+    background: var(--surface-hover);
+  }
 }
 .player-trophy-item[aria-pressed="true"] {
-  border-bottom-color: var(--accent);
+  border-color: var(--accent-line);
+  background: var(--accent-pale);
 }
-.player-trophy-item img {
+.player-trophy-visual {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
   width: 100%;
-  height: 100%;
+}
+.player-trophy-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 1 3.25rem;
+  height: 3.25rem;
+  min-width: 0;
+}
+.player-trophy-image img {
+  min-width: 0;
+  width: 100%;
+  height: 3.25rem;
   object-fit: contain;
 }
-.player-trophy-item > span {
-  position: absolute;
-  right: 0;
-  bottom: 3px;
-  padding: 0 3px;
-  border-radius: 4px;
-  color: var(--ink-strong);
+.player-trophy-image .icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--muted);
+}
+.player-trophy-name {
+  max-width: 100%;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.player-trophy-count {
+  flex: none;
+  padding: 3px 4px;
+  border-radius: var(--radius-xs);
   background: var(--surface-subtle);
-  font-size: 10px;
-  font-weight: 700;
+  color: var(--ink-strong);
+  font-size: var(--text-xs);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 .player-trophy-caption {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 7px;
-  min-width: 0;
+  gap: 3px 10px;
+  padding-top: 7px;
+  border-top: 1px solid var(--border);
   color: var(--muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   line-height: 1.4;
 }
-.research-player-profile .season-player-heading .player-trophy-caption strong {
-  color: var(--ink-strong);
-  flex: 0 0 auto;
+.player-trophy-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
-.player-trophy-caption span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.player-trophy-details strong {
+  color: var(--ink-strong);
 }
 .player-trophy-caption a {
-  flex: 0 0 auto;
   color: var(--accent);
 }
 
@@ -377,16 +391,6 @@
   color: var(--ink-strong);
 }
 
-@media (max-width: 1150px) {
-  .research-player-profile .season-player-heading {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-  .research-player-profile .season-player-heading .player-trophy-shelf,
-  .research-player-profile .season-player-heading .player-trophy-loading {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-}
 @media (max-width: 700px) {
   .player-evolution-table-wrap {
     border: 0;
@@ -448,11 +452,10 @@
     font-size: var(--text-xs);
   }
   .research-player-profile .season-player-heading {
-    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
   }
-  .research-player-profile .season-player-heading .research-toolbar {
-    grid-row: 3;
+  .player-trophy-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 5rem), 1fr));
   }
   .player-shots-layout,
   .player-recent-form {
@@ -472,10 +475,5 @@
   .player-season-history .season-section-heading {
     align-items: flex-start;
     flex-direction: column;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .player-trophy-rail {
-    scroll-behavior: auto;
   }
 }

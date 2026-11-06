@@ -2,13 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { reactFixtures } from "./react-runtime.mjs";
 
-const { renderSeasonSearch, renderSeasonProfile } = await reactFixtures();
+const { renderSeasonSearch, renderSeasonProfile, seedPlayerHonours } =
+  await reactFixtures();
 const rows = [
   {
     id: "m_1:p_1",
     playerId: "p_1",
     matchId: "m_1",
     name: "Neymar",
+    teamId: "brazil",
     team: "Brazil",
     league: "World Cup",
     date: "2026-07-05",
@@ -25,6 +27,7 @@ const rows = [
     playerId: "p_1",
     matchId: "m_2",
     name: "Neymar",
+    teamId: "brazil",
     team: "Brazil",
     league: "World Cup",
     date: "2026-06-29",
@@ -40,13 +43,13 @@ const rows = [
 const matches = [
   {
     id: "m_1",
-    home: { name: "Brazil", score: 1 },
-    away: { name: "Norway", score: 2 },
+    home: { id: "brazil", name: "Brazil", score: 1 },
+    away: { id: "norway", name: "Norway", score: 2 },
   },
   {
     id: "m_2",
-    home: { name: "Brazil", score: 2 },
-    away: { name: "Portugal", score: 1 },
+    home: { id: "portugal", name: "Portugal", score: 1 },
+    away: { id: "brazil", name: "Brazil", score: 2 },
   },
 ];
 
@@ -67,13 +70,61 @@ test("season card renders observed totals, average controls, sample warning and 
   assert.match(html, /Échantillon insuffisant/);
   assert.match(html, /5 juil\. 2026/);
   assert.match(html, /29 juin 2026/);
+  assert.match(html, /Contre Norway/);
+  assert.match(html, /Contre Portugal/);
+  assert.doesNotMatch(html, />Brazil<|>World Cup<| · Brazil<| · World Cup</);
   assert.doesNotMatch(html, /NaN|Infinity/);
 });
 
-test("Messi keeps his portrait next to his honours when filters leave no matches", () => {
-  const html = renderSeasonProfile([], [], "p_1mZO3B");
+test("Messi keeps his portrait and published trophies when filters leave no matches", async () => {
+  const id = "p_1mZO3B";
+  await seedPlayerHonours(id, "Lionel Messi", {
+    available: true,
+    honours: [
+      {
+        category: "team",
+        name: "FIFA World Cup",
+        team: "Argentina",
+        seasons: ["2022"],
+      },
+      { category: "individual", name: "Ballon d'Or", seasons: ["2023"] },
+    ],
+  });
+  const html = renderSeasonProfile([], [], id);
   assert.match(html, /Lionel Messi/);
   assert.match(html, /<img[^>]+api\/assets\?url=/);
-  assert.match(html, /Palmarès/);
-  assert.match(html, /Coupe du monde/);
+  assert.match(html, /aria-label="Palmarès de Lionel Messi"/);
+  assert.match(html, /\/trophies\/world-cup\.webp/);
+  assert.match(html, /\/trophies\/ballon-or\.webp/);
+});
+
+test("Yamal's team trophies remain clickable without matching artwork", async () => {
+  const id = "p_2e0FPo";
+  const name = "Lamine Yamal";
+  await seedPlayerHonours(id, name, {
+    available: true,
+    honours: [
+      {
+        category: "team",
+        name: "La Liga",
+        team: "Barcelona",
+        seasons: ["2022–23", "2024–25", "2025–26"],
+      },
+      {
+        category: "team",
+        name: "UEFA European Championship",
+        team: "Spain",
+        seasons: ["2024"],
+      },
+    ],
+  });
+  const html = renderSeasonProfile(
+    [{ ...rows[0], playerId: id, name }],
+    matches,
+    id,
+  );
+  assert.match(html, /<button[^>]+aria-label="Liga, 3 titres, FC Barcelone"/);
+  assert.match(html, /<button[^>]+aria-label="Euro, Espagne"/);
+  assert.match(html, /FC Barcelone · 2025–26, 2024–25, 2022–23/);
+  assert.doesNotMatch(html, /Faire défiler les trophées|Trophées suivants/);
 });

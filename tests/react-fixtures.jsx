@@ -33,11 +33,18 @@ export class PitchExplorer extends FootballDataClient{
 
 import PlayerSearchResults from '../dashboard/frontend/src/components/PlayerSearchResults.jsx';
 import PlayerSeasonProfile from '../dashboard/frontend/src/components/PlayerSeasonProfile.jsx';
+import {loadPlayerHonours} from '../dashboard/frontend/src/services/player-honours.js';
+import {primeResource} from '../dashboard/frontend/src/services/resources.js';
 import {ResearchRadar} from '../dashboard/frontend/src/components/ResearchCharts.jsx';
 export const renderResearchRadar=(axes,series)=>renderToStaticMarkup(<ResearchRadar axes={axes} series={series}/>);
 export const renderSeasonSearch=(rows,query)=>renderToStaticMarkup(<FootballContext.Provider value={{rows,filters:{query},partial:false,href:(path,params={})=>path+'?'+new URLSearchParams(params)}}><PlayerSearchResults/></FootballContext.Provider>);
 import {ResearchProvider} from '../dashboard/frontend/src/hooks/ResearchContext.jsx';
 export const renderSeasonProfile=(rows,matches,id)=>renderToStaticMarkup(<FootballContext.Provider value={{season:'2026/2027',competitions:[],filters:{league:'all',minutes:1},focus:'all',data:{matches},setPlayer:()=>{}}}><ResearchProvider><PlayerSeasonProfile id={id} rows={rows} scopeRows={rows}/></ResearchProvider></FootballContext.Provider>);
+export function seedPlayerHonours(id, name, projection) {
+  return primeResource(`player-honours:${id}:${name}`, () =>
+    loadPlayerHonours(id, name, async () => Response.json(projection)),
+  );
+}
 import {historicalRows,historicalScore} from '../dashboard/frontend/src/services/openfootball-history.js';
 import {ArchiveResults,ArchiveMatchDetail} from '../dashboard/frontend/src/components/Archive.jsx';
 import {archiveRows,buildArchiveSeason} from '../dashboard/frontend/src/services/archive.js';

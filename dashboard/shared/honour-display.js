@@ -1,5 +1,6 @@
 const TITLES = {
   "FIFA World Cup": "Coupe du monde",
+  "UEFA European Championship": "Euro",
   "UEFA Champions League": "Ligue des champions",
   "UEFA Europa League": "Ligue Europa",
   "French Ligue 1": "Ligue 1",
@@ -31,6 +32,7 @@ const TEAM_LABELS = {
   barcelona: "FC Barcelone",
   "paris saint germain": "Paris Saint-Germain",
   "inter miami": "Inter Miami",
+  spain: "Espagne",
   argentina: "Argentine",
   "argentina u20": "Argentine",
   "argentina u23": "Argentine",

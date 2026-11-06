@@ -1,5 +1,5 @@
 "use client";
-import React, { lazy, Suspense, useMemo, useState } from "react";
+import React, { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
@@ -40,7 +40,7 @@ import PlayerHonours from "./PlayerHonours.jsx";
 import PerformanceContext from "./PerformanceContext.jsx";
 import MessiGoats from "./MessiGoats.jsx";
 import { MESSI_ID } from "../services/player-honours.js";
-import { useResource } from "../services/resources.js";
+import { primeResource, useResource } from "../services/resources.js";
 import {
   MESSI_PORTRAIT,
   resolvePlayerIdentity,
@@ -214,6 +214,28 @@ function ProfileComparison({ profile, profiles, cohorts }) {
     </>
   );
 }
+
+function PlayerProfileHeading({ id, identity, role, children }) {
+  return (
+    <div className="season-player-heading">
+      <div className="season-player-identity">
+        <Media
+          name={identity.name}
+          url={identity.imageUrl}
+          fallbackUrl={id === MESSI_ID ? MESSI_PORTRAIT : undefined}
+          className="player-avatar season-player-portrait"
+        />
+        <div>
+          <h2>{identity.name}</h2>
+          {role && <p>{role}</p>}
+        </div>
+      </div>
+      <PlayerHonours key={id} id={id} name={identity.name} />
+      {children}
+    </div>
+  );
+}
+
 export default function PlayerSeasonProfile({
   id,
   rows,
@@ -227,14 +249,17 @@ export default function PlayerSeasonProfile({
     () => resolvePlayerIdentity(id, profile, f.data?.appearances),
     [id, profile, f.data?.appearances],
   );
+  const identityKey = `player-identity:${id}`;
+  useEffect(() => {
+    // Changing competitions can remount the profile with a different dataset.
+    if (knownIdentity.name && knownIdentity.imageUrl)
+      void primeResource(identityKey, () => knownIdentity);
+  }, [identityKey, knownIdentity]);
   const missingIdentity = useResource(
-    `player-identity:${id}`,
+    identityKey,
     async () =>
       (await f.client.request(`players/${encodeURIComponent(id)}`)).data,
-    Boolean(
-      f.client &&
-      (!profile.matches || !profile.imageUrl || !knownIdentity.name),
-    ),
+    Boolean(f.client && (!knownIdentity.name || !knownIdentity.imageUrl)),
   );
   const identity = useMemo(
     () =>
@@ -325,20 +350,7 @@ export default function PlayerSeasonProfile({
     return (
       <Card className="player-season-card research-player-profile">
         <MessiGoats id={id} />
-        {identity?.name && (
-          <div className="season-player-heading">
-            <div className="season-player-identity">
-              <Media
-                name={identity.name}
-                url={identity.imageUrl}
-                fallbackUrl={id === MESSI_ID ? MESSI_PORTRAIT : undefined}
-                className="player-avatar season-player-portrait"
-              />
-              <h2>{identity.name}</h2>
-            </div>
-            <PlayerHonours key={id} id={id} name={identity.name} />
-          </div>
-        )}
+        {identity?.name && <PlayerProfileHeading id={id} identity={identity} />}
         <Empty>
           Aucune performance avec des minutes connues pour ces filtres.
         </Empty>
@@ -360,24 +372,11 @@ export default function PlayerSeasonProfile({
   return (
     <Card className="player-season-card research-player-profile">
       <MessiGoats id={id} />
-      <div className="season-player-heading">
-        <div className="season-player-identity">
-          <Media
-            name={identity.name}
-            url={identity.imageUrl}
-            fallbackUrl={id === MESSI_ID ? MESSI_PORTRAIT : undefined}
-            className="player-avatar season-player-portrait"
-          />
-          <div>
-            <h2>{profile.name}</h2>
-            <p>
-              {[profile.role?.label, profile.teams.join(" · ")]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-          </div>
-        </div>
-        <PlayerHonours key={id} id={id} name={identity.name || profile.name} />
+      <PlayerProfileHeading
+        id={id}
+        identity={identity}
+        role={profile.role?.label}
+      >
         <div className="research-toolbar">
           <BookmarkButton
             kind="players"
@@ -395,7 +394,7 @@ export default function PlayerSeasonProfile({
             {metricTable}
           </ReportButton>
         </div>
-      </div>
+      </PlayerProfileHeading>
       <div className="research-stat-strip">
         <div>
           <span>Matchs</span>
@@ -615,29 +614,38 @@ export default function PlayerSeasonProfile({
                   </button>
                 </div>
                 <div className="season-match-list">
-                  {profile.rows.slice(0, 5).map((row) => (
-                    <button
-                      className="season-match"
-                      key={row.id}
-                      onClick={() => f.setPlayer(row.id)}
-                    >
-                      <span>
-                        <strong>
-                          <PerformanceContext
-                            teamIds={[row.teamId]}
-                            leagueIds={[row.leagueId]}
-                            team={row.team}
-                            league={row.league}
-                          />
-                        </strong>
-                        <small>{date(row.date)}</small>
-                      </span>
-                      <span>
-                        {number(row.minutes)} min
-                        <small>Note {number(row.rating, 2)}</small>
-                      </span>
-                    </button>
-                  ))}
+                  {profile.rows.slice(0, 5).map((row) => {
+                    const match = f.data.matches.find(
+                      (m) => m.id === row.matchId,
+                    );
+                    const opponent =
+                      row.teamId &&
+                      (match?.home?.id === row.teamId
+                        ? match.away
+                        : match?.away?.id === row.teamId
+                          ? match.home
+                          : null);
+                    return (
+                      <button
+                        className="season-match"
+                        key={row.id}
+                        onClick={() => f.setPlayer(row.id)}
+                      >
+                        <span>
+                          <strong>
+                            {opponent?.name
+                              ? `Contre ${opponent.name}`
+                              : "Match"}
+                          </strong>
+                          <small>{date(row.date)}</small>
+                        </span>
+                        <span>
+                          {number(row.minutes)} min
+                          <small>Note {number(row.rating, 2)}</small>
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </section>
             </>

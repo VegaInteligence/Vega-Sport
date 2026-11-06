@@ -1,91 +1,83 @@
 "use client";
-import React, { useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useState } from "react";
 import { useResource } from "../services/resources.js";
-import {
-  loadPlayerHonours,
-} from "../services/player-honours.js";
+import { loadPlayerHonours } from "../services/player-honours.js";
 import { trophyArt } from "../services/trophy-art.js";
+import Icon from "./Icon.jsx";
 
 /** A compact shelf belongs to the player header, independent of the active tab. */
 export default function PlayerHonours({ id, name }) {
-  const rail = useRef(null);
-  const [selected, setSelected] = useState(0);
+  const [selected, setSelected] = useState(null);
   const result = useResource(
     `player-honours:${id}:${name}`,
     () => loadPlayerHonours(id, name),
     Boolean(id && name),
   );
   const groups = result.value?.groups || [];
-  const trophies = groups.flatMap((group) =>
-    group.items.flatMap((item) => {
+  const trophies = groups.flatMap(({ group, items }) =>
+    items.flatMap((item) => {
       const image = trophyArt(item);
-      return image ? [{ ...item, image, group: group.group }] : [];
+      // Keep the existing illustrated individual awards in the header.
+      if (!image && group === "Distinctions individuelles") return [];
+      return [{ ...item, image, group, key: `${group}:${item.title}` }];
     }),
   );
   if (!trophies.length) {
     if (result.loading)
       return (
-        <div className="player-trophy-loading">Chargement du palmarès…</div>
+        <div className="player-trophy-loading" role="status">
+          Chargement du palmarès…
+        </div>
       );
     return null;
   }
-  const current = trophies[Math.min(selected, trophies.length - 1)];
-  const scroll = (direction) => {
-    const width = rail.current?.clientWidth || 300;
-    rail.current?.scrollBy({
-      left: direction * Math.max(120, width * 0.75),
-      behavior: "auto",
-    });
-  };
+  const current = trophies.find((item) => item.key === selected) || trophies[0];
   return (
     <section className="player-trophy-shelf" aria-label={`Palmarès de ${name}`}>
-      <div className="player-trophy-shelf-top">
-        <span className="player-trophy-label">Palmarès</span>
-        <div className="player-trophy-controls">
-          <button
-            type="button"
-            aria-label="Trophées précédents"
-            onClick={() => scroll(-1)}
-          >
-            <ChevronLeft size={16} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            aria-label="Trophées suivants"
-            onClick={() => scroll(1)}
-          >
-            <ChevronRight size={16} aria-hidden="true" />
-          </button>
-        </div>
-      </div>
-      <div
-        className="player-trophy-rail"
-        ref={rail}
-        tabIndex={0}
-        aria-label="Faire défiler les trophées"
-      >
-        {trophies.map((item, index) => (
+      <span className="player-trophy-label">Palmarès</span>
+      <div className="player-trophy-grid">
+        {trophies.map((item) => (
           <button
             type="button"
             className="player-trophy-item"
-            key={`${item.group}:${item.title}`}
-            onClick={() => setSelected(index)}
-            aria-pressed={current === item}
+            key={item.key}
+            onClick={() => setSelected(item.key)}
+            aria-pressed={current.key === item.key}
             aria-label={`${item.title}${item.count > 1 ? `, ${item.count} titres` : ""}, ${item.group}`}
-            title={`${item.title} · ${item.group}`}
           >
-            <img src={item.image} alt="" loading="lazy" decoding="async" />
-            {item.count > 1 && <span>×{item.count}</span>}
+            <span className="player-trophy-visual" aria-hidden="true">
+              <span className="player-trophy-image">
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <Icon name="trophy" />
+                )}
+              </span>
+              {item.count > 1 && (
+                <span className="player-trophy-count">×{item.count}</span>
+              )}
+            </span>
+            <span className="player-trophy-name">{item.title}</span>
           </button>
         ))}
       </div>
-      <div className="player-trophy-caption" aria-live="polite">
-        <strong>{current.title}</strong>
-        <span>
-          {current.group}
-          {current.years ? ` · ${current.years}` : ""}
-        </span>
+      <div className="player-trophy-caption">
+        <div
+          className="player-trophy-details"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <strong>{current.title}</strong>
+          <span>
+            {current.group}
+            {current.years ? ` · ${current.years}` : ""}
+          </span>
+        </div>
         {result.value?.sourceUrl && (
           <a href={result.value.sourceUrl} target="_blank" rel="noreferrer">
             Source
