@@ -28,6 +28,7 @@ from relational_match import (
 )
 from relational_snapshot import TABLES, read_partition, snapshot
 from relational_support import FAMILIES, publish_supporting
+from football_seasons import tournament_kind
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = ROOT / "dashboard/backend/migrations"
@@ -218,6 +219,52 @@ def envelope(source, ref, status, error):
     }
 
 
+
+def canonical_source_aliases(db, manifest):
+    """Use typed RDS fixture seasons for legacy tournament source aliases."""
+    ids = {
+        c["leagueId"] for season in manifest.get("seasons", [])
+        for c in season.get("chunks", [])
+        if c["leagueId"] == "l_1XLtP0"
+        or any(tournament_kind(c["leagueId"], x.get("name"))
+               for x in c.get("competitions", []))
+    }
+    if not ids:
+        return {}
+    rows = db.execute(
+        """SELECT DISTINCT league_id,body->>'season',season
+           FROM statarena.fixtures
+           WHERE league_id=ANY(%s) AND body ? 'season'""",
+        (sorted(ids),),
+    ).fetchall()
+    by_edition = {}
+    for league, native, canonical in rows:
+        if not native or not canonical:
+            continue
+        key = (native, league)
+        if key in by_edition and by_edition[key] != canonical:
+            raise RuntimeError("Conflicting tournament source editions")
+        by_edition[key] = canonical
+    aliases = {}
+    for (native, league), canonical in by_edition.items():
+        labels = {native}
+        if re.fullmatch(r"\d{4}", native):
+            labels.add(native + "/" + str(int(native) + 1))
+        for label in labels:
+            key = (label, league)
+            if key in aliases and aliases[key] != canonical:
+                raise RuntimeError("Conflicting tournament aliases")
+            aliases[key] = canonical
+    return aliases
+
+
+def canonical_known_scopes(manifest, aliases):
+    return {
+        (aliases.get((season["id"], c["leagueId"]), season["id"]), c["leagueId"])
+        for season in manifest["seasons"] for c in season["chunks"]
+    }
+
+
 def queue_dirty(db, *, captured=False):
     """Use the fixture season mapping while retaining the original source markers."""
     source = "SELECT season,league_id,changed_at FROM work_dirty" if captured else """
@@ -269,10 +316,13 @@ def retire_empty_season_aliases(db):
 
 def prepare(inputs, manifest, queue_all):
     db = inputs.db
-    known = {(s["id"], c["leagueId"]) for s in manifest["seasons"] for c in s["chunks"]}
+    aliases = canonical_source_aliases(db, manifest)
+    inputs.source_scope_aliases = aliases
+    known = canonical_known_scopes(manifest, aliases)
     with db.transaction():
         for name in (
             "work_known",
+            "work_source_aliases",
             "work_matches",
             "work_resources",
             "work_resource_stamps",
@@ -292,11 +342,20 @@ def prepare(inputs, manifest, queue_all):
         )
         with db.cursor() as cur:
             cur.executemany("INSERT INTO work_known VALUES(%s,%s)", sorted(known))
+        db.execute("""CREATE TEMP TABLE work_source_aliases(
+            source_season text,league_id text,canonical text,
+            PRIMARY KEY(source_season,league_id))""")
+        with db.cursor() as cur:
+            cur.executemany("INSERT INTO work_source_aliases VALUES(%s,%s,%s)",
+                            [(source, league, canonical)
+                             for (source, league), canonical in sorted(aliases.items())])
         db.execute("""CREATE TEMP TABLE work_dirty AS
             SELECT d.season AS source_season,
-                CASE WHEN k.season IS NULL AND d.season ~ '^[0-9]{4}$'
-                    THEN d.season||'/'||(d.season::int+1)::text ELSE d.season END AS season,
+                COALESCE(a.canonical,
+                    CASE WHEN k.season IS NULL AND d.season ~ '^[0-9]{4}$'
+                    THEN d.season||'/'||(d.season::int+1)::text ELSE d.season END) AS season,
                 d.league_id,d.changed_at FROM statarena.dirty_partitions d
+            LEFT JOIN work_source_aliases a ON (a.source_season,a.league_id)=(d.season,d.league_id)
             LEFT JOIN work_known k ON (k.season,k.league_id)=(d.season,d.league_id)""")
         db.execute("""CREATE TEMP TABLE work_resources AS SELECT r.*,r.xmin::text AS row_revision,split_part(endpoint,'/',3) AS mid,
             encode(o.sha256,'hex') AS object_digest FROM statarena.resources r LEFT JOIN statarena.objects o ON o.path=r.ref->>'path'
@@ -694,16 +753,14 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
     if not is_orphan:
         old = read_partition(db, label, league)
         if old is None:
-            chunk = next(
-                (
-                    c
-                    for s in manifest["seasons"]
-                    if s["id"] == label
-                    for c in s["chunks"]
-                    if c["leagueId"] == league
-                ),
-                None,
-            )
+            candidates = [
+                c for s in manifest["seasons"] for c in s["chunks"]
+                if c["leagueId"] == league
+                and inputs.source_scope_aliases.get((s["id"], league), s["id"]) == label
+            ]
+            chunk = max(candidates,
+                        key=lambda c: int((c.get("meta") or {}).get("matchCount") or 0),
+                        default=None)
             if chunk:
                 packed, source_sha = inputs.read_version(chunk["path"], chunk.get("sha256"))
                 bootstrap_source = (chunk["path"], source_sha)

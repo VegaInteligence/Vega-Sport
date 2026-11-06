@@ -95,7 +95,15 @@ def inspect(db):
         "matches":count(db,"matches",OLD),
         "fixtures":count(db,"fixtures",OLD),
         "appearances":count(db,"appearances",OLD),
-        "team_seasons":count(db,"team_seasons",OLD)
+        "team_seasons":count(db,"team_seasons",OLD),
+        "shots":db.execute(
+            "SELECT count(*) FROM statarena_app.shots WHERE match_id=ANY(%s)",
+            (sorted(old_ids),),
+        ).fetchone()[0],
+        "team_stats":db.execute(
+            "SELECT count(*) FROM statarena_app.team_statistics WHERE match_id=ANY(%s)",
+            (sorted(old_ids),),
+        ).fetchone()[0],
     }
     if fixture_counts["appearances"]<1000:
         raise RuntimeError("Published player statistics coverage unexpectedly low")
@@ -168,14 +176,10 @@ def apply(db, plan):
             "UPDATE statarena_app.match_details SET season=%s WHERE match_id=ANY(%s) AND season IS DISTINCT FROM %s",
             (NEW,ids,NEW),
         )
+        # Source/catalog documents retain their official edition years.
         db.execute(
-            "UPDATE statarena_app.match_summaries SET season=%s WHERE id=ANY(%s) AND season IS DISTINCT FROM %s",
-            (NEW,ids,NEW),
-        )
-        # Source/native catalog may contain the same match IDs. Avoid
-        # changing provider names/official edition labels.
-        db.execute(
-            "UPDATE statarena_app.cat_cup_native_matches SET season=%s WHERE league_id=%s AND season=%s",
+            "UPDATE statarena_app.competitions SET latest_season=%s "
+            "WHERE id=%s AND latest_season=%s",
             (NEW,WORLD,OLD),
         )
         # Canonicalize competition-season row, preserving existing 0-matches
@@ -199,8 +203,23 @@ def apply(db, plan):
         # Delete old header only after all FK children point to the new key.
         db.execute("DELETE FROM statarena_app.partitions WHERE league_id=%s AND season=%s",
                    (WORLD,OLD))
-        db.execute("DELETE FROM statarena_app.partitions WHERE league_id=%s AND season='2026'",
-                   (WORLD,))
+        # Never remove a populated raw-year alias or its dependent records.
+        for table in (
+            "matches","fixtures","appearances","team_seasons","partition_metrics",
+            "partition_bootstrap_sources","partition_notes",
+        ):
+            if count(db,table,"2026"):
+                raise RuntimeError("Nonempty World Cup 2026 alias: " + table)
+        if db.execute(
+            """SELECT 1 FROM statarena_app.partition_counts
+               WHERE league_id=%s AND season='2026' AND value <> 0""",
+            (WORLD,),
+        ).fetchone():
+            raise RuntimeError("Nonzero counts on raw-year alias")
+        db.execute(
+            "DELETE FROM statarena_app.partitions WHERE league_id=%s AND season='2026'",
+            (WORLD,),
+        )
         # A fresh publication generation forces Vercel and CloudFront to
         # request the new edition mapping; retained match IDs are unchanged.
         db.execute("UPDATE statarena_app.publications SET generation=generation+1,published_at=clock_timestamp() WHERE singleton=true")
@@ -222,6 +241,14 @@ def apply(db, plan):
                 [(NEW,WORLD),(QATAR,WORLD)],
             )
         after=dict(
+            shots=db.execute(
+                "SELECT count(*) FROM statarena_app.shots WHERE match_id=ANY(%s)",
+                (ids,),
+            ).fetchone()[0],
+            team_stats=db.execute(
+                "SELECT count(*) FROM statarena_app.team_statistics WHERE match_id=ANY(%s)",
+                (ids,),
+            ).fetchone()[0],
             stage_2026=db.execute(
                 "SELECT count(*) FROM statarena.fixtures WHERE league_id=%s AND season=%s",
                 (WORLD,NEW)).fetchone()[0],
@@ -237,6 +264,8 @@ def apply(db, plan):
             after["old_published_2026"],after["players_2026"],after["old_players_2026"]) != (
                 104,64,104,0,plan["old_business_counts"]["appearances"],0):
             raise RuntimeError("Post-migration counts do not reconcile; rolled back")
+        if after["shots"]!=plan["old_business_counts"]["shots"] or after["team_stats"]!=plan["old_business_counts"]["team_stats"]:
+            raise RuntimeError("Shot or team statistic coverage changed; rolled back")
         if not db.execute("SELECT 1 FROM statarena_app.partitions WHERE league_id=%s AND season=%s",
                           (WORLD,NEW)).fetchone():
             raise RuntimeError("Canonical publication missing")

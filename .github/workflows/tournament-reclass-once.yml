@@ -36,7 +36,7 @@ jobs:
         with:
           mode: ingest
           role-arn: ${{ vars.STATARENA_AWS_INGEST_ROLE_ARN }}
-      - name: Validate normalization and inspect old seasons without writes
+      - name: Confirm canonical publisher and dry-run exact database reclassification
         shell: bash
         run: |
           set -euo pipefail
