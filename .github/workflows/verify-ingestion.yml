@@ -395,6 +395,7 @@ jobs:
           cache-dependency-path: dashboard/scripts/requirements.txt
       - run: pip install -r dashboard/scripts/requirements.txt
       - run: python -m unittest discover -s tests -p 'test_daily_refresh.py' -v
+      - run: python -m unittest discover -s tests -p 'test_football_seasons.py' -v
       - run: python tests/daily_refresh_postgres.py
       - name: Exercise AWS bootstrap and relational publication monitor
         run: |

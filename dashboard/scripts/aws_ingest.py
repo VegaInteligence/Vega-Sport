@@ -5,6 +5,7 @@ import argparse, datetime as dt, gzip, hashlib, json, os, re, time, urllib.parse
 from psycopg.types.json import Jsonb
 from aws_store import Store, canonical
 from functools import lru_cache
+from football_seasons import fixture_sporting_season
 
 ENDPOINTS = [
     "",
@@ -73,7 +74,8 @@ def matches(store, items, priority=3, enqueue_details=True):
         league = (m.get("league") or {}).get("id") or m.get("league_id")
         if not league:
             continue
-        season = str(m.get("season") or "")
+        # Store the sporting cohort, retaining native edition in body.
+        season = fixture_sporting_season(m)
         day = m.get("date") or str(m.get("time_utc") or "")[:10] or None
         rows.append(
             {
@@ -97,15 +99,26 @@ def matches(store, items, priority=3, enqueue_details=True):
                 priority=priority,
             )
     if rows:
+        before = {
+            mid: (old_season, old_league)
+            for mid, old_season, old_league in store.db.execute(
+                "SELECT id,season,league_id FROM statarena.fixtures WHERE id=ANY(%s)",
+                ([row["id"] for row in rows],),
+            )
+        }
         changed = store.db.execute(
-            "insert into statarena.fixtures(id,league_id,season,day,status,body) select id,league_id,season,day,status,body from jsonb_to_recordset(%s) as r(id text,league_id text,season text,day date,status text,body jsonb) on conflict(id) do update set body=statarena.fixtures.body||excluded.body,league_id=excluded.league_id,season=case when excluded.season<>'' then excluded.season else statarena.fixtures.season end,day=coalesce(excluded.day,statarena.fixtures.day),status=excluded.status,updated_at=now() where statarena.fixtures.body is distinct from statarena.fixtures.body||excluded.body or (excluded.season<>'' and statarena.fixtures.season<>excluded.season) or statarena.fixtures.league_id<>excluded.league_id returning season,league_id",
+            "insert into statarena.fixtures(id,league_id,season,day,status,body) select id,league_id,season,day,status,body from jsonb_to_recordset(%s) as r(id text,league_id text,season text,day date,status text,body jsonb) on conflict(id) do update set body=statarena.fixtures.body||excluded.body,league_id=excluded.league_id,season=case when excluded.season<>'' then excluded.season else statarena.fixtures.season end,day=coalesce(excluded.day,statarena.fixtures.day),status=excluded.status,updated_at=now() where statarena.fixtures.body is distinct from statarena.fixtures.body||excluded.body or (excluded.season<>'' and statarena.fixtures.season<>excluded.season) or statarena.fixtures.league_id<>excluded.league_id returning id,season,league_id",
             (Jsonb(rows),),
         ).fetchall()
-        partitions = set(
-            (season if "/" in season else season + "/" + str(int(season) + 1), league)
-            for season, league in changed
-            if re.fullmatch(r"\d{4}(?:/\d{4})?", season)
-        )
+        partitions = set()
+        for mid, season, league in changed:
+            if re.fullmatch(r"\d{4}(?:/\d{4})?", season):
+                partitions.add((season, league))
+            previous = before.get(mid)
+            if previous and previous != (season, league):
+                prior_season, prior_league = previous
+                if re.fullmatch(r"\d{4}(?:/\d{4})?", prior_season):
+                    partitions.add((prior_season, prior_league))
         with store.db.cursor() as c:
             c.executemany(
                 "insert into statarena.dirty_partitions(season,league_id) values(%s,%s) on conflict(season,league_id) do update set changed_at=now()",
