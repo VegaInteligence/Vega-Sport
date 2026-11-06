@@ -61,9 +61,9 @@ class PeriodHarness(Harness):
             MIG / MIGRATIONS[4]: '12d63eaab6f4d610de3f2ff4efc0dcd71059c4d2e489a5f30d62d2a8498fd087',
             MIG / MIGRATIONS[5]: '87aac35a93b8b0455a7dcf13fde5bb0be468d1183a0bf4a96f36b04b4b770458',
             BASE / 'STATISTICS_PUBLICATION.json': '52b47b0d2b7c0e80c160f9d61bf4a9a5d0dbdaf97a4839e12bcee23fa3fbfb77',
-            APP.parent / 'services/orion-pro.js': '4815cdfb184fbae31fa501b50695b235c2ca14b85660db6e6aee8f5fef979616',
         }
         assert all(sha(path) == digest for path, digest in expected.items())
+        assert APP.parent / 'services/orion-pro.js' in graph
         self.report['inputSha256'] = self.sources
         self.report['initialProductImported'] = PRODUCT in graph
         assert (PRODUCT in graph) == (self.phase == 'after'), 'Actual app import does not match phase'

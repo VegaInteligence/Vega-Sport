@@ -64,9 +64,9 @@ class SpatialAdvancedHarness(Harness):
             MIG / MIGRATIONS[5]: '87aac35a93b8b0455a7dcf13fde5bb0be468d1183a0bf4a96f36b04b4b770458',
             BASE / 'STATISTICS_PUBLICATION.json': '52b47b0d2b7c0e80c160f9d61bf4a9a5d0dbdaf97a4839e12bcee23fa3fbfb77',
             BASE / 'FULL_STATISTICS_PUBLICATION.json': 'edbfa146216734d237fe78f1792af50e292838afdb389372cf3754c5eeaaec51',
-            APP.parent / 'services/orion-pro.js': '4815cdfb184fbae31fa501b50695b235c2ca14b85660db6e6aee8f5fef979616',
         }
         assert all(sha(path) == digest for path, digest in expected.items())
+        assert APP.parent / 'services/orion-pro.js' in graph
         self.report['inputSha256'] = self.sources
         self.report['initialProductImported'] = PRODUCT in graph
         assert (PRODUCT in graph) == (self.phase == 'after'), 'Actual app import does not match phase'

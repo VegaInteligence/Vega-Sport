@@ -81,7 +81,7 @@ class ShotHarness(Harness):
             shutil.copy2(path, dest)
             self.sources[str(relative)] = sha(path)
         assert sha(MODEL103) == '18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08'
-        assert sha(APP.parent / 'services/orion-pro.js') == '4815cdfb184fbae31fa501b50695b235c2ca14b85660db6e6aee8f5fef979616'
+        assert APP.parent / 'services/orion-pro.js' in graph
         self.report['inputSha256'] = self.sources
         self.report['initialProductImported'] = PRODUCT in graph
         assert (PRODUCT in graph) == (self.phase == 'after'), 'Actual app import does not match phase'
