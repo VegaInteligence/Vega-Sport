@@ -2,7 +2,7 @@
 import hashlib
 import re
 from psycopg.types.json import Jsonb
-from neon_store import canonical
+from aws_store import canonical
 
 MLS_ID = "l_0eg6C9"
 

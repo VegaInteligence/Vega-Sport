@@ -1,6 +1,6 @@
 /** Ingestion-only supplemental refresh. Never imported by the application. */
-import { query, database, canonical } from "../backend/services/neon.js";
-import { dataJson } from "../backend/services/data-store.js";
+import { query, database, canonical } from "./lib/aws-staging.js";
+import { dataJson } from "./lib/aws-data-store.js";
 import { SPORTSCORE_LEAGUES } from "../frontend/src/services/sportscore-standings.js";
 import { NATIONAL_CUP_ARCHIVES } from "../frontend/src/services/cup-archives.js";
 import { normalizeText } from "../frontend/src/services/format.js";
@@ -9,7 +9,7 @@ let success = 0,
   failed = 0;
 async function refresh(name, params) {
   try {
-    const { GET } = await import("./neon-projections/" + name + ".mjs");
+    const { GET } = await import("./source-projections/" + name + ".mjs");
     const response = await GET(
       new Request(
         "http://ingestion/api/" + name + "?" + new URLSearchParams(params),

@@ -34,7 +34,7 @@ export function apiUrl(path) {
   return origin + path;
 }
 
-/** Existing saved Neon objects are read only while the legacy backend is active. */
+/** Historical interchange paths. The AWS web API retires raw object delivery. */
 export function dataUrl(path) {
   if (
     typeof path !== "string" ||

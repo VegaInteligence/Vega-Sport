@@ -1,4 +1,4 @@
-/** Refresh official historical UEFA tables into the existing Neon projections. */
+/** Refresh official historical UEFA tables into the existing AWS projections. */
 import {
   UEFA_STANDINGS_COMPETITIONS,
   normalizeUefaStandings,
@@ -33,8 +33,8 @@ if (process.argv.includes("--check-source")) {
     console.log(JSON.stringify({ season, groups: result.tables.length, teams: result.tables.reduce((n, group) => n + group.rows.length, 0), first: result.tables[0].rows[0].name }));
   }
 } else {
-  const { query, database, canonical } = await import("../backend/services/neon.js");
-  const { dataJson } = await import("../backend/services/data-store.js");
+  const { query, database, canonical } = await import("./lib/aws-staging.js");
+  const { dataJson } = await import("./lib/aws-data-store.js");
   const links = await dataJson("raw/rankings/club-links.json").catch(() => ({ links: {} }));
   const clubIds = {};
   for (const [pitchId, link] of Object.entries(links.links || {})) {

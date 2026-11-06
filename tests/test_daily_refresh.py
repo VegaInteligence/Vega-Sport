@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "dashboard/scripts"))
 from build_dashboard_data import build_snapshot
-from neon_ingest import (
+from aws_ingest import (
     DAILY_DISCOVERY_PRIORITY,
     DAILY_MATCH_PRIORITY,
     PULSE_AUX_PRIORITY,
@@ -19,7 +19,7 @@ from neon_ingest import (
     publish_pending,
     seed,
 )
-from neon_store import Store
+from aws_store import Store
 from test_dashboard_data import synthetic
 
 
@@ -103,7 +103,7 @@ class DailyRefreshTest(unittest.TestCase):
         recent = {"id": "m_MLS001", "time_utc": (now - dt.timedelta(hours=3)).isoformat(), "status": "finished"}
         future = {"id": "m_MLS002", "time_utc": (now + dt.timedelta(hours=3)).isoformat(), "status": "not_started"}
         store = Queue()
-        with patch("neon_ingest.matches") as record_fixtures:
+        with patch("aws_ingest.matches") as record_fixtures:
             discover(store, "/date/2026-11-04", {"matches": [recent, future]}, "pulse")
         self.assertFalse(record_fixtures.call_args.kwargs["enqueue_details"])
         self.assertTrue(any("m_MLS001" in job["endpoint"] for job in store.jobs))
@@ -123,7 +123,7 @@ class DailyRefreshTest(unittest.TestCase):
 
     def test_daily_publication_prioritizes_both_requested_leagues(self):
         for mode in ("daily", "pulse"):
-            with self.subTest(mode=mode), patch("neon_materialize.materialize") as materialize:
+            with self.subTest(mode=mode), patch("aws_materialize.materialize") as materialize:
                 publish_pending(object(), mode)
                 self.assertEqual([call.kwargs.get("league_id") for call in materialize.call_args_list[:2]], ["l_0eg6C9", "l_0Lpz1f"])
                 self.assertTrue(all(call.kwargs["recent_first"] for call in materialize.call_args_list[:2]))

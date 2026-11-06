@@ -289,7 +289,7 @@ def player_candidate(store, manifest, player_id):
 
 
 def run(limit=100, player_id=None):
-    from neon_store import Store, canonical
+    from aws_store import Store, canonical
     from psycopg.types.json import Jsonb
 
     store = Store()

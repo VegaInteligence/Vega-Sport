@@ -310,7 +310,7 @@ async function loadLegacySeason(manifest, selected, fetcher, leagueIds) {
       const packed = await new Response(result.body.pipeThrough(new DecompressionStream("gzip"))).json();
       return restoreLegacyTables(decodeTables(packed), packed);
     });
-    return chunk.sourceDigest ? cachedPart(JSON.stringify(["neon", selected, chunk.leagueId, chunk.sourceDigest]), fetcher, load) : load();
+    return chunk.sourceDigest ? cachedPart(JSON.stringify(["packed", selected, chunk.leagueId, chunk.sourceDigest]), fetcher, load) : load();
   }));
   return mergeSeason(manifest, selected, parts);
 }

@@ -36,9 +36,9 @@ export function lineupCoaches(data) {
 
 async function main() {
   const { query, database, canonical } =
-    await import("../backend/services/neon.js");
+    await import("./lib/aws-staging.js");
   const { savedResource, archivedResource } =
-    await import("../backend/services/database.js");
+    await import("./lib/aws-source-records.js");
   const arg = process.argv.indexOf("--name");
   const specific = arg >= 0 ? process.argv[arg + 1] : null;
   const all = process.argv.includes("--all");

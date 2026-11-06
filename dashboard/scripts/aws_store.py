@@ -1,6 +1,7 @@
 """Shared ingestion store. No repository data directory or Git publication."""
 
 import os, json, gzip, hashlib, base64
+from urllib.parse import urlsplit
 import boto3, psycopg
 from botocore.config import Config
 from botocore.exceptions import ClientError
@@ -17,22 +18,26 @@ def canonical(params=None):
 
 class Store:
     def __init__(self):
+        target = urlsplit(os.environ["DATABASE_URL"])
+        local_test = os.environ.get("STATARENA_TEST_DATABASE") == "1" and target.hostname in ("localhost", "127.0.0.1", "::1")
+        if not local_test and not (target.hostname or "").endswith(".rds.amazonaws.com"):
+            raise ValueError("The AWS staging worker requires the RDS endpoint")
         self.db = psycopg.connect(
-            os.environ["NEON_DATABASE_URL"],
+            os.environ["DATABASE_URL"],
             autocommit=True,
             application_name="statarena-ingestion",
             options="-c statement_timeout=120000",
         )
         # A forced refresh is performed at most once in each worker run.
         self.refresh_since = self.db.execute("select clock_timestamp()").fetchone()[0]
-        self.external = os.environ.get("STATARENA_EXTERNAL_STORAGE") == "1"
-        self.sql_documents = os.environ.get("STATARENA_SQL_DOCUMENTS") == "1"
+        self.external = True
+        self.sql_documents = True
         self.s3 = boto3.client(
             "s3",
-            endpoint_url=os.environ["NEON_STORAGE_ENDPOINT"],
-            region_name=os.environ.get("NEON_STORAGE_REGION", "us-east-2"),
-            aws_access_key_id=os.environ["NEON_STORAGE_ACCESS_KEY_ID"],
-            aws_secret_access_key=os.environ["NEON_STORAGE_SECRET_ACCESS_KEY"],
+            endpoint_url=os.environ["STATARENA_S3_ENDPOINT"],
+            region_name=os.environ.get("STATARENA_S3_REGION", "us-east-2"),
+            aws_access_key_id=os.environ["STATARENA_S3_ACCESS_KEY_ID"],
+            aws_secret_access_key=os.environ["STATARENA_S3_SECRET_ACCESS_KEY"],
             config=Config(
                 signature_version="s3v4",
                 s3={"addressing_style": "path" if os.environ.get("STATARENA_S3_PATH_STYLE", "1") != "0" else "virtual"},
@@ -41,7 +46,7 @@ class Store:
                 retries={"max_attempts": 4},
             ),
         )
-        self.bucket = os.environ.get("NEON_STORAGE_BUCKET", "statarena-data")
+        self.bucket = os.environ["STATARENA_S3_BUCKET"]
         self.queue = {}
 
     def bytes(self, path):
@@ -68,7 +73,7 @@ class Store:
         ):
             body = read(previous)
         if hashlib.sha256(body).digest() != bytes(row[1]) or len(body) != row[2]:
-            raise ValueError("Neon object checksum mismatch: " + path)
+            raise ValueError("AWS object checksum mismatch: " + path)
         return body
 
     def json(self, path):
@@ -112,7 +117,7 @@ class Store:
             ContentType=content_type,
         )
         if result["ETag"].strip('"') != etag:
-            raise ValueError("Neon server MD5 mismatch")
+            raise ValueError("AWS server MD5 mismatch")
         statement = "insert into statarena.objects(path,size,sha256,etag,body,content_type) values(%s,%s,%s,%s,%s,%s) on conflict(path) do update set size=excluded.size,sha256=excluded.sha256,etag=excluded.etag,body=excluded.body,content_type=excluded.content_type,updated_at=now()"
         values = (path, len(body), digest, etag, body if hot and not self.external else None, content_type)
         if self.external and getattr(self, "sql_documents", False) and supports_documents(path):

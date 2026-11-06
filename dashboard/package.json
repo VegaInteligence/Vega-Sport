@@ -17,9 +17,9 @@
     "format": "prettier --write frontend/src frontend/app frontend/next.config.mjs backend shared scripts/*.mjs package.json",
     "format:check": "prettier --check frontend/src frontend/app frontend/next.config.mjs backend shared scripts/*.mjs package.json",
     "verify": "bun scripts/verify_application.mjs",
-    "verify:neon": "bun scripts/verify_neon_runtime.mjs",
-    "ingest:daily": "python3 scripts/neon_ingest.py --mode daily",
-    "ingest:history": "python3 scripts/neon_ingest.py --mode historical"
+    "ingest:daily": "python3 scripts/aws_ingest.py --mode daily",
+    "ingest:history": "python3 scripts/aws_ingest.py --mode historical",
+    "verify:aws": "node scripts/verify_aws_runtime.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1161.0",

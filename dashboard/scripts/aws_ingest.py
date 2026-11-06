@@ -3,7 +3,7 @@
 
 import argparse, datetime as dt, gzip, hashlib, json, os, re, time, urllib.parse, urllib.request, urllib.error
 from psycopg.types.json import Jsonb
-from neon_store import Store, canonical
+from aws_store import Store, canonical
 from functools import lru_cache
 
 ENDPOINTS = [
@@ -301,7 +301,7 @@ def request(endpoint, params, key, base):
             headers={
                 "X-API-KEY": key,
                 "Accept": "application/json",
-                "User-Agent": "STATARENA-Neon-Ingestion/1.0",
+                "User-Agent": "STATARENA-AWS-Ingestion/1.0",
             },
         )
         try:
@@ -497,7 +497,7 @@ def capacity(store):
     objects = store.db.execute(
         "select coalesce(sum(size),0) from statarena.objects"
     ).fetchone()[0]
-    # The old defaults protect Neon quotas, but do not describe AWS capacity.
+    # The old defaults protect AWS quotas, but do not describe AWS capacity.
     # External deployments may opt into limits appropriate to their provisioned storage.
     external = os.environ.get("STATARENA_EXTERNAL_STORAGE") == "1"
     sql_limit = os.environ.get("STATARENA_SQL_LIMIT_BYTES") or (None if external else "900000000")
@@ -510,7 +510,7 @@ def capacity(store):
 
 
 def publish_pending(store, mode, league_id=None):
-    from neon_materialize import materialize
+    from aws_materialize import materialize
 
     if mode in {"daily", "pulse"} and not league_id:
         for league in DAILY_TARGET_LEAGUES:
@@ -534,7 +534,7 @@ def main():
     )
     test = (
         base.startswith("http://127.0.0.1:")
-        and os.environ.get("NEON_TEST_INGEST") == "1"
+        and os.environ.get("STATARENA_TEST_INGEST") == "1"
     )
     if base != "https://api.pitchapi.dev/v1" and not test:
         raise RuntimeError("Unapproved provider origin")
@@ -614,7 +614,7 @@ def main():
                     if status == 200:
                         discover(store, endpoint, body.get("data"), a.mode, params)
                         store.flush()
-                        from neon_assets import urls
+                        from aws_assets import urls
 
                         with store.db.cursor() as c:
                             c.executemany(

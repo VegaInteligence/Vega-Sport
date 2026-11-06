@@ -13,8 +13,8 @@ from daily_refresh_postgres import MemoryStore
 from test_dashboard_data import synthetic,metric
 from build_dashboard_data import build_snapshot,EXTRA_PLAYER_METRICS,ATTEMPTED_METRICS
 from build_dashboard_views import pack_table
-from bootstrap_neon import unpack
-from neon_materialize import materialize
+from packed_tables import unpack
+from aws_materialize import materialize
 
 p=argparse.ArgumentParser();p.add_argument('--report',required=True);a=p.parse_args()
 url=os.environ['TEST_DATABASE_URL'];target=urlparse(url)

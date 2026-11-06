@@ -1,20 +1,24 @@
 import pg from "pg";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { createHash } from "node:crypto";
-import { measuring, record, timeSync, observeVersion } from "./metrics.js";
-import { databaseConnectionOptions } from "./database-connection.js";
+import { measuring, record, timeSync, observeVersion } from "../../backend/services/metrics.js";
+import { databaseConnectionOptions } from "../../backend/services/database-connection.js";
 let pool, storage;
-export const externalStorage = () =>
-  process.env.STATARENA_EXTERNAL_STORAGE === "1";
-export const dataProvider = () => (externalStorage() ? "AWS" : "Neon");
+export const externalStorage = () => true;
+export const dataProvider = () => "AWS";
 export const configured = () =>
-  Boolean(process.env.NEON_DATABASE_URL && process.env.NEON_STORAGE_ENDPOINT);
+  Boolean(process.env.DATABASE_URL && process.env.STATARENA_S3_ENDPOINT);
 export function database() {
-  if (!process.env.NEON_DATABASE_URL) throw new Error("Neon is not configured");
+  if (!process.env.DATABASE_URL) throw new Error("AWS is not configured");
   if (pool) return pool;
+  const url = new URL(process.env.DATABASE_URL);
+  const localTest = process.env.STATARENA_TEST_DATABASE === "1" &&
+    ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname);
+  if (!localTest && !url.hostname.endsWith(".rds.amazonaws.com"))
+    throw new Error("The AWS staging worker requires the RDS endpoint");
   pool = new pg.Pool({
     ...databaseConnectionOptions(
-      process.env.NEON_DATABASE_URL,
+      process.env.DATABASE_URL,
       process.env.STATARENA_DATABASE_CA_PEM,
     ),
     max: 3,
@@ -25,7 +29,7 @@ export function database() {
     application_name: "statarena-runtime",
     query_timeout: 15000,
   });
-  pool.on("error", (e) => console.error("Neon idle connection error", e.code));
+  pool.on("error", (e) => console.error("AWS idle connection error", e.code));
   return pool;
 }
 export async function query(sql, values = []) {
@@ -168,19 +172,19 @@ export async function objectBody(meta) {
           )
         )[0];
         if (!row) {
-          const error = new Error("Neon object version changed");
+          const error = new Error("AWS object version changed");
           error.code = "ESTALE";
           throw error;
         }
         body = row.body;
       } else {
         storage ||= new S3Client({
-          endpoint: process.env.NEON_STORAGE_ENDPOINT,
-          region: process.env.NEON_STORAGE_REGION || "us-east-2",
+          endpoint: process.env.STATARENA_S3_ENDPOINT,
+          region: process.env.STATARENA_S3_REGION || "us-east-2",
           forcePathStyle: process.env.STATARENA_S3_PATH_STYLE !== "0",
           credentials: {
-            accessKeyId: process.env.NEON_STORAGE_ACCESS_KEY_ID,
-            secretAccessKey: process.env.NEON_STORAGE_SECRET_ACCESS_KEY,
+            accessKeyId: process.env.STATARENA_S3_ACCESS_KEY_ID,
+            secretAccessKey: process.env.STATARENA_S3_SECRET_ACCESS_KEY,
           },
           requestChecksumCalculation: "WHEN_REQUIRED",
           responseChecksumValidation: "WHEN_REQUIRED",
@@ -190,7 +194,7 @@ export async function objectBody(meta) {
         const read = async (path) => {
           const result = await storage.send(
             new GetObjectCommand({
-              Bucket: process.env.NEON_STORAGE_BUCKET || "statarena-data",
+              Bucket: process.env.STATARENA_S3_BUCKET || "statarena-data",
               Key: "data/" + path,
             }),
             { abortSignal: AbortSignal.timeout(20000) },
@@ -239,7 +243,7 @@ export async function objectBody(meta) {
           createHash("sha256").update(body).digest("hex"),
         ) !== meta.sha256
       )
-        throw new Error("Neon object integrity failure");
+        throw new Error("AWS object integrity failure");
       return body;
     },
     15 * 60 * 1000,

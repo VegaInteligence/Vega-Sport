@@ -1,11 +1,11 @@
 """Incremental packed views, using the existing metric normalizer and contracts."""
 
 import hashlib
-from neon_store import canonical
-from bootstrap_neon import unpack
+from aws_store import canonical
+from packed_tables import unpack
 from build_dashboard_data import build_snapshot, METRICS
 from build_dashboard_views import pack_table
-from neon_ingest import saved
+from aws_ingest import saved
 from mls_fixture_alias import publish_mls_fixture_alias
 
 
@@ -440,17 +440,17 @@ def mark_all(store):
 
 def main():
     import argparse, os, time
-    from neon_store import Store
+    from aws_store import Store
 
     p = argparse.ArgumentParser(
-        description="Rebuild the published dashboard partitions from the responses stored in Neon."
+        description="Rebuild the published dashboard partitions from the responses stored in AWS."
     )
     p.add_argument("--all", action="store_true", help="queue every published partition first")
     p.add_argument("--batch", type=int, default=10)
     p.add_argument("--minutes", type=float, default=100)
     a = p.parse_args()
     if not os.environ.get("GITHUB_ACTIONS"):
-        raise RuntimeError("Materialization writes to Neon and must run in GitHub Actions")
+        raise RuntimeError("Materialization writes to AWS and must run in GitHub Actions")
     store = Store()
     if not store.db.execute("select pg_try_advisory_lock(97813003)").fetchone()[0]:
         print("Another ingestion owns the lease; nothing was queued")

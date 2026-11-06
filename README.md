@@ -1,42 +1,60 @@
-# STATARENA
+# StatArena
 
-![STATARENA](dashboard/frontend/public/branding/green/social/github-readme-banner-1280x380.png)
+Application d’analyse du football. Le frontend Next.js est hébergé sur Vercel ; l’API AWS est servie par CloudFront et Lambda, les données relationnelles par PostgreSQL sur RDS et les fichiers source et images par S3.
 
-STATARENA est un projet de recherche consacré à la création d’un classement personnel du Ballon d’Or à partir des performances individuelles, match par match.
+## Développement
 
-L’approche vise à comparer attaquants, milieux, défenseurs et gardiens en tenant compte de leur rôle, de leur temps de jeu et du niveau des équipes rencontrées.
-
-## Approche
-
-La méthode proposée évalue les performances par rapport à une référence adaptée à chaque rôle. Elle combine finition, création, progression, défense et conservation du ballon, avec une évaluation spécifique aux gardiens.
-
-Les contributions sont ensuite agrégées sur la saison pour associer volume et niveau moyen de performance. Le classement cherche ainsi à mesurer l’excellence relative dans chaque rôle.
-
-Les formules, pondérations et limites sont détaillées dans la [documentation mathématique](docs/METHODE_CLASSEMENT_BALLON_D_OR.md).
-
-## Explorer les données
-
-[Ouvrir le dashboard STATARENA](https://statarena-analytics.vercel.app).
-
-Les données de football sont centralisées dans Neon : PostgreSQL indexe les ressources et le stockage objet privé conserve les fichiers. Le backend sert les pages, les observations et les images ; le site n’appelle pas directement Pitch API. Le format des tables et des vues calculées est conservé dans Neon.
-
-Le [dashboard STATARENA](docs/DASHBOARD.md) permet de parcourir les compétitions et les clubs, comparer les joueurs et explorer les matchs. Les valeurs absentes restent distinctes des zéros. Le classement STATARENA reste à calibrer et à valider.
-
-Pour développer, utiliser Node.js 26 et Bun 1.4.4. Configurer les identifiants Neon en lecture seule à partir de `dashboard/.env.example`, puis :
+Prérequis : Node.js 24, Bun 1.4.4 et Python 3.13 pour les workers.
 
 ```sh
 cd dashboard
-bun install
-bun run build
-bun start
+bun install --frozen-lockfile
+cp .env.example .env
+bun run dev:frontend
 ```
 
-Ouvrir http://127.0.0.1:3000/. `bun run verify` lance les vérifications E2E du serveur de production et enregistre les preuves. Aucun dossier local `data` ni clé Pitch n’est nécessaire au site.
+Le frontend utilise `NEXT_PUBLIC_API_ORIGIN`. L’origine AWS actuelle est `https://d317dq37z1tacb.cloudfront.net`. Aucun identifiant PostgreSQL ou S3 n’est nécessaire dans Vercel. Pour travailler sur une API locale, configurer `DATABASE_URL`, le certificat RDS et l’accès réseau, puis lancer `bun run dev:backend` et pointer le frontend vers cette API.
 
-Les deux workflows **Daily Sync** et **Historical Backfill** ingèrent les données directement dans Neon. La clé Pitch est conservée dans les secrets GitHub Actions. L’[architecture Neon](docs/NEON_STORAGE.md) décrit les connexions, le cache, la reprise et les limites de couverture.
+## Organisation
 
-Les sources complémentaires conservent leur attribution et leurs conditions d’usage, notamment [open-matchday](https://github.com/oladeeayo/open-matchday). Les refus des sources restent enregistrés ; une collecte bornée ne signifie pas que toute l’histoire mondiale est déjà disponible.
+| Répertoire | Responsabilité |
+| --- | --- |
+| `dashboard/frontend` | Interface et transport HTTP vers l’API |
+| `dashboard/backend` | Routes AWS et lectures PostgreSQL |
+| `dashboard/backend/migrations` | Historique SQL appliqué et migrations suivantes |
+| `dashboard/scripts` | Collecte, normalisation, publication et contrôles |
+| `dashboard/scripts/lib` | Lecteurs AWS réservés aux workers de collecte |
+| `infra/aws-backend` | Packaging Lambda et déploiement CloudFormation |
+| `tests` | Tests de comportement et d’intégration |
+| `docs/verification` | Fixtures et références historiques encore utilisées par les tests |
 
-## Licence
+Les anciennes implémentations du serveur Neon et les outils de bootstrap vers Neon sont retirés. Les préfixes historiques `raw/neon/…` encore présents identifient des objets déjà copiés dans S3 ; ils ne configurent pas un service Neon.
 
-[MIT](LICENSE). Les données de fournisseurs tiers restent soumises à leurs propres conditions d’utilisation.
+Les migrations déjà appliquées restent immuables. Les anciens modèles JSON conservés pour reproduire ces migrations ne sont pas un nouveau plan de déploiement. Les neuf tables de scoring réservées ne font pas partie du socle actif. La migration `019_retire_reserved_models.sql` les retire si elles existent et sont vides ; elle refuse toute table peuplée et toute dépendance extérieure, sans `CASCADE`.
+
+## Vérification
+
+```sh
+cd dashboard
+bun run build
+cd ..
+node --test tests/aws-only-runtime.test.mjs tests/aws-delivery.test.mjs
+```
+
+La CI `Verify ingestion` vérifie aussi la publication relationnelle, les lecteurs versionnés et les migrations sur PostgreSQL 18.6. Les reçus, journaux et captures générés sont publiés comme artefacts CI et ignorés par Git.
+
+Avant une bascule Vercel, comparer les éditions disponibles avec le site courant puis lire effectivement une partition de chaque saison :
+
+```sh
+STATARENA_TEST_ORIGIN=https://d317dq37z1tacb.cloudfront.net \
+STATARENA_BASELINE_ORIGIN=https://statarena-analytics.vercel.app \
+node dashboard/scripts/verify_aws_runtime.mjs
+```
+
+Ce contrôle échoue si AWS perd une compétition/saison existante, même si `/api/health` répond correctement. Une compilation réussie ne remplace pas ce contrôle.
+
+## Exploitation AWS
+
+Le déploiement utilise le bucket privé de releases et un change set CloudFormation. La base, les sous-réseaux et le CDN d’images existants sont réutilisés. Les rôles runtime restent en lecture seule. Les workers utilisent les paramètres SSM existants par l’action GitHub `.github/actions/aws-database` ; les secrets ne doivent apparaître ni dans le dépôt ni dans les artefacts.
+
+`dashboard/scripts/rds-maintenance.mjs` est une entrée privée de maintenance temporaire, distincte du serveur HTTP. Elle n’est pas intégrée au ZIP de production. Elle propose uniquement l’inventaire du catalogue et l’application contrôlée de la migration de retrait des modèles vides. Sa création dans AWS reste soumise à l’autorisation de cet accès temporaire ; préparer ce fichier ne crée aucune fonction ni aucun accès.

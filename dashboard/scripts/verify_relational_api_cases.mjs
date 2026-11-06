@@ -173,15 +173,15 @@ export async function verify(origin) {
       const { closeDatabase } = await import("../backend/services/postgres.js");
       await closeDatabase();
       const current = process.env.DATABASE_URL,
-        legacy = process.env.NEON_DATABASE_URL;
-      process.env.NEON_DATABASE_URL = current;
+        legacy = process.env.DATABASE_URL;
+      process.env.DATABASE_URL = current;
       delete process.env.DATABASE_URL;
       try {
         assert.equal((await get("/api/health")).response.status, 503);
       } finally {
         process.env.DATABASE_URL = current;
-        if (legacy === undefined) delete process.env.NEON_DATABASE_URL;
-        else process.env.NEON_DATABASE_URL = legacy;
+        if (legacy === undefined) delete process.env.DATABASE_URL;
+        else process.env.DATABASE_URL = legacy;
         await closeDatabase();
       }
     },

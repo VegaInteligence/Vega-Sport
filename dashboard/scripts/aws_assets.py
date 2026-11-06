@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Copy display images into Neon; backend asset requests never fetch the CDN."""
+"""Copy display images into AWS; backend asset requests never fetch the CDN."""
 
 import argparse, base64, concurrent.futures, gzip, hashlib, json, re, time, urllib.request, urllib.error
 from collections import Counter
 from contextlib import nullcontext
 from pathlib import Path
 from threading import Lock
-from neon_store import Store
+from aws_store import Store
 
 commons_requests = Lock()
 last_commons_request = 0.0

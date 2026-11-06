@@ -14,7 +14,7 @@ export default function MethodPage() {
           <section>
             <h2>Données</h2>
             <p>
-              Les observations sont conservées dans Neon par saison et entité.
+              Les observations sont conservées dans PostgreSQL sur AWS, par saison et entité.
               Une valeur absente reste distincte d’un zéro observé. Les saisons
               civiles sont regroupées par année de début.
             </p>

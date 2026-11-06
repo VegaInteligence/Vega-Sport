@@ -1,134 +1,16 @@
 name: Verify ingestion
 on:
   push:
-    paths:
-      - '.github/workflows/verify-ingestion.yml'
-      - '.github/actions/aws-database/**'
-      - '.github/workflows/rematerialize.yml'
-      - '.github/workflows/uefa-standings.yml'
-      - '.github/workflows/pitchapi-villarreal-psg-availability.yml'
-      - 'docs/verification/aws-actions-20261104/*.py'
-      - 'docs/verification/aws-actions-20261104/*.cjs'
-      - 'dashboard/scripts/**'
-      - 'dashboard/backend/**'
-      - 'dashboard/frontend/src/services/**'
-      - 'dashboard/frontend/src/hooks/FootballContext.jsx'
-      - 'dashboard/frontend/src/season_data.js'
-      - 'dashboard/frontend/src/packed_data.js'
-      - 'docs/verification/aws-wire-pages/disposable.mjs'
-      - 'dashboard/frontend/src/data-url.js'
-      - 'dashboard/frontend/src/server/**'
-      - 'dashboard/shared/**'
-      - 'dashboard/package.json'
-      - 'dashboard/bun.lock'
-      - 'docs/verification/aws-rematerialize-20261104/**'
-      - 'docs/verification/aws-relational-core-20261104/**'
-      - 'docs/verification/aws-support-20261104/**'
-      - 'docs/verification/aws-catalog-20261104/**'
-      - 'docs/verification/aws-compact-metrics-20261104/**'
-      - 'docs/verification/relational-match-20261104/**'
-      - 'docs/verification/aws-frontend-20261104/curated-*'
-      - 'dashboard/outputs/data-completeness/*.json'
-      - '.github/workflows/collect-football.yml'
-      - 'docs/verification/aws-workflow-consolidation-20261104/*.py'
-      - 'tests/daily_refresh_postgres.py'
-      - 'tests/test_daily_refresh.py'
-      - 'tests/orion_pro_*.py'
-      - 'tests/orion_node24_runtime.py'
-      - 'docs/architecture/orion-plan-20261104/**'
-      - 'docs/architecture/orion-native-details-107-20261105/**'
-      - 'docs/verification/orion-pro-native107-20261105/**'
-      - 'docs/verification/orion-pro-match-readers-20261105/**'
-      - 'docs/verification/orion-pro-match-core-fields-20261105/**'
-      - 'docs/verification/orion-pro-pilot-20261104/**'
-      - 'docs/verification/orion-pro-readers-20261104/**'
-      - 'docs/verification/orion-pro-frontend-20261104/**'
-      - 'docs/verification/orion-pro-native-contracts-20261104/**'
-      - 'docs/verification/orion-pro-heatmaps-20261104/**'
-      - 'docs/verification/orion-pro-bulk-20261104/**'
-      - 'docs/verification/orion-pro-real-native-spatial-20261104/**'
-      - 'docs/verification/orion-pro-api-coverage-20261105/**'
-      - 'docs/verification/orion-pro-entities-20261105/**'
-      - 'docs/verification/orion-pro-entity-batch-media-20261105/**'
-      - 'docs/verification/orion-pro-operations-20261105/**'
-      - 'docs/verification/orion-pro-runtime-origin-20261105/**'
-      - 'docs/verification/orion-pro-appearances-20261105/**'
-      - 'docs/verification/orion-pro-fixture-aliases-20261105/**'
-      - 'docs/verification/orion-pro-competitions-20261105/**'
-      - 'docs/verification/orion-pro-archives-20261105/**'
-      - 'docs/verification/orion-pro-enrichment-20261105/**'
-      - 'docs/verification/orion-pro-rankings-20261105/**'
-      - 'docs/verification/orion-pro-player-statistics-20261105/**'
-      - 'docs/verification/orion-pro-observed-profile-20261105/**'
-      - 'docs/verification/orion-pro-appearances-regression-20261105/**'
-      - 'docs/verification/orion-validator-membership-20261105/**'
-      - 'docs/verification/orion-real-spatial-digest-20261105/**'
-      - 'docs/verification/orion-typed-worker-20261105/**'
+    paths: &source_paths
+      - '.github/**'
+      - 'dashboard/**'
+      - 'infra/**'
+      - 'tests/**'
+      - 'docs/architecture/**'
+      - 'docs/verification/**'
   pull_request:
-    paths:
-      - '.github/workflows/verify-ingestion.yml'
-      - '.github/actions/aws-database/**'
-      - '.github/workflows/rematerialize.yml'
-      - '.github/workflows/uefa-standings.yml'
-      - '.github/workflows/pitchapi-villarreal-psg-availability.yml'
-      - 'docs/verification/aws-actions-20261104/*.py'
-      - 'docs/verification/aws-actions-20261104/*.cjs'
-      - 'dashboard/scripts/**'
-      - 'dashboard/backend/**'
-      - 'dashboard/frontend/src/services/**'
-      - 'dashboard/frontend/src/hooks/FootballContext.jsx'
-      - 'dashboard/frontend/src/season_data.js'
-      - 'dashboard/frontend/src/packed_data.js'
-      - 'docs/verification/aws-wire-pages/disposable.mjs'
-      - 'dashboard/frontend/src/data-url.js'
-      - 'dashboard/frontend/src/server/**'
-      - 'dashboard/shared/**'
-      - 'dashboard/package.json'
-      - 'dashboard/bun.lock'
-      - 'docs/verification/aws-rematerialize-20261104/**'
-      - 'docs/verification/aws-relational-core-20261104/**'
-      - 'docs/verification/aws-support-20261104/**'
-      - 'docs/verification/aws-catalog-20261104/**'
-      - 'docs/verification/aws-compact-metrics-20261104/**'
-      - 'docs/verification/relational-match-20261104/**'
-      - 'docs/verification/aws-frontend-20261104/curated-*'
-      - 'dashboard/outputs/data-completeness/*.json'
-      - '.github/workflows/collect-football.yml'
-      - 'docs/verification/aws-workflow-consolidation-20261104/*.py'
-      - 'tests/daily_refresh_postgres.py'
-      - 'tests/test_daily_refresh.py'
-      - 'tests/orion_pro_*.py'
-      - 'tests/orion_node24_runtime.py'
-      - 'docs/architecture/orion-plan-20261104/**'
-      - 'docs/architecture/orion-native-details-107-20261105/**'
-      - 'docs/verification/orion-pro-native107-20261105/**'
-      - 'docs/verification/orion-pro-match-readers-20261105/**'
-      - 'docs/verification/orion-pro-match-core-fields-20261105/**'
-      - 'docs/verification/orion-pro-pilot-20261104/**'
-      - 'docs/verification/orion-pro-readers-20261104/**'
-      - 'docs/verification/orion-pro-frontend-20261104/**'
-      - 'docs/verification/orion-pro-native-contracts-20261104/**'
-      - 'docs/verification/orion-pro-heatmaps-20261104/**'
-      - 'docs/verification/orion-pro-bulk-20261104/**'
-      - 'docs/verification/orion-pro-real-native-spatial-20261104/**'
-      - 'docs/verification/orion-pro-api-coverage-20261105/**'
-      - 'docs/verification/orion-pro-entities-20261105/**'
-      - 'docs/verification/orion-pro-entity-batch-media-20261105/**'
-      - 'docs/verification/orion-pro-operations-20261105/**'
-      - 'docs/verification/orion-pro-runtime-origin-20261105/**'
-      - 'docs/verification/orion-pro-appearances-20261105/**'
-      - 'docs/verification/orion-pro-fixture-aliases-20261105/**'
-      - 'docs/verification/orion-pro-competitions-20261105/**'
-      - 'docs/verification/orion-pro-archives-20261105/**'
-      - 'docs/verification/orion-pro-enrichment-20261105/**'
-      - 'docs/verification/orion-pro-rankings-20261105/**'
-      - 'docs/verification/orion-pro-player-statistics-20261105/**'
-      - 'docs/verification/orion-pro-observed-profile-20261105/**'
-      - 'docs/verification/orion-pro-appearances-regression-20261105/**'
-      - 'docs/verification/orion-validator-membership-20261105/**'
-      - 'docs/verification/orion-real-spatial-digest-20261105/**'
-      - 'docs/verification/orion-typed-worker-20261105/**'
-  workflow_dispatch:
+    paths: *source_paths
+
 permissions:
   contents: read
 jobs:
@@ -186,7 +68,7 @@ jobs:
         with:
           python-version: '3.13'
           cache: pip
-          cache-dependency-path: dashboard/scripts/neon-requirements.txt
+          cache-dependency-path: dashboard/scripts/requirements.txt
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
@@ -201,13 +83,17 @@ jobs:
           tar -xJf /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64.tar.xz -C /tmp/statarena-node24-runtime/v24.22.2
       - name: Install local PostgreSQL and Python dependencies
         run: |
-          python -m pip install --target /tmp/statarena-ci-python -r dashboard/scripts/neon-requirements.txt
+          python -m pip install --target /tmp/statarena-ci-python -r dashboard/scripts/requirements.txt
           mkdir -p /tmp/statarena-cache-test-tools
           cd /tmp/statarena-cache-test-tools
           npm install --no-save --no-package-lock --no-audit --no-fund embedded-postgres@18.6.0-beta.19
       - name: Install dashboard dependencies
         working-directory: dashboard
         run: bun install --frozen-lockfile
+      - name: Verify safe retirement of reserved model tables
+        run: >-
+          python3 tests/retire_models_postgres.py
+          --pg-bin /tmp/statarena-cache-test-tools/node_modules/@embedded-postgres/linux-x64/native/bin
       - name: Exercise the complete local schema workflow
         run: >-
           python3 tests/orion_pro_pilot_postgres.py
@@ -504,8 +390,8 @@ jobs:
         with:
           python-version: '3.13'
           cache: pip
-          cache-dependency-path: dashboard/scripts/neon-requirements.txt
-      - run: pip install -r dashboard/scripts/neon-requirements.txt
+          cache-dependency-path: dashboard/scripts/requirements.txt
+      - run: pip install -r dashboard/scripts/requirements.txt
       - run: python -m unittest discover -s tests -p 'test_daily_refresh.py' -v
       - run: python tests/daily_refresh_postgres.py
       - name: Exercise AWS bootstrap and relational publication monitor
@@ -571,7 +457,7 @@ jobs:
         with:
           python-version: '3.13'
           cache: pip
-          cache-dependency-path: dashboard/scripts/neon-requirements.txt
+          cache-dependency-path: dashboard/scripts/requirements.txt
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
@@ -580,7 +466,7 @@ jobs:
           bun-version: '1.4.4'
       - name: Install worker dependencies and create test-tool directory
         run: |
-          python -m pip install --target /tmp/statarena-ci-python -r dashboard/scripts/neon-requirements.txt PyYAML==6.0.3
+          python -m pip install --target /tmp/statarena-ci-python -r dashboard/scripts/requirements.txt PyYAML==6.0.3
           mkdir -p /tmp/statarena-cache-test-tools
       - name: Install disposable PostgreSQL
         working-directory: /tmp/statarena-cache-test-tools

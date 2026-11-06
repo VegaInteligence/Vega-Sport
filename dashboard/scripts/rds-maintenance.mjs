@@ -1,0 +1,65 @@
+/** Private, temporary maintenance entry. Never imported by the website/API. */
+import pg from "pg";
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { databaseConnectionOptions } from "../backend/services/database-connection.js";
+
+const host = "statarena-postgres.clcy2iqyajbl.us-east-2.rds.amazonaws.com";
+const database = "statarena_prod";
+export async function handler(event = {}) {
+  if (event.operation === "probe") return { ok: true, operations: ["inspect", "retire_empty_models"] };
+  if (!["inspect", "retire_empty_models"].includes(event.operation)) throw new Error("Unsupported maintenance operation");
+  const url = new URL(process.env.DATABASE_URL || "");
+  if (url.hostname !== host || url.port !== "5432" || url.pathname !== "/" + database)
+    throw new Error("Unexpected maintenance database target");
+  const root = process.env.LAMBDA_TASK_ROOT;
+  if (!root) throw new Error("Use the reviewed temporary Lambda package");
+  const ca = readFileSync(root + "/rds-ca.pem", "utf8");
+  const client = new pg.Client({ ...databaseConnectionOptions(url.href, ca),
+    application_name: "statarena-temporary-maintenance", connectionTimeoutMillis: 5000,
+    statement_timeout: 20000, lock_timeout: 5000, query_timeout: 25000 });
+  await client.connect();
+  try {
+    const identity = (await client.query("SELECT current_database() AS database, current_user AS actor")).rows[0];
+    if (identity.database !== database) throw new Error("Unexpected connected database");
+    if (event.operation === "inspect") {
+      await client.query("BEGIN READ ONLY");
+      const tables = (await client.query(`SELECT n.nspname AS schema,c.relname AS name,c.relkind,
+        pg_total_relation_size(c.oid)::text AS bytes,s.n_live_tup::text AS estimated_rows,
+        s.seq_scan::text,s.idx_scan::text,s.last_analyze,s.last_autoanalyze
+        FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+        LEFT JOIN pg_stat_all_tables s ON s.relid=c.oid
+        WHERE n.nspname IN ('statarena','statarena_app','ingest','football','analytics') AND c.relkind IN ('r','p','m')
+        ORDER BY n.nspname,c.relname`)).rows;
+      const columns = (await client.query(`SELECT c.table_schema AS schema,c.table_name AS table,c.column_name AS name,
+        c.data_type,c.is_nullable,c.column_default,s.null_frac AS estimated_null_fraction
+        FROM information_schema.columns c LEFT JOIN pg_stats s ON s.schemaname=c.table_schema
+        AND s.tablename=c.table_name AND s.attname=c.column_name
+        WHERE c.table_schema IN ('statarena','statarena_app','ingest','football','analytics')
+        ORDER BY c.table_schema,c.table_name,c.ordinal_position`)).rows;
+      const dependencies = (await client.query(`SELECT n.nspname AS schema,c.relname AS table,k.conname,
+        pg_get_constraintdef(k.oid) AS definition FROM pg_constraint k JOIN pg_class c ON c.oid=k.conrelid
+        JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('statarena','statarena_app','ingest','football','analytics')
+        AND k.contype='f' ORDER BY n.nspname,c.relname,k.conname`)).rows;
+      await client.query("COMMIT");
+      return { ok: true, operation: "inspect", identity, tables, columns, dependencies,
+        note: "Row and null estimates are planner statistics; they are not proof that a table or column is unused." };
+    }
+    // The caller must first verify an AVAILABLE snapshot of this exact instance.
+    // No generic SQL input, credential output, public URL or data export exists.
+    if (!/^statarena-before-cleanup-[a-z0-9-]{1,50}$/.test(event.verifiedSnapshotId || ""))
+      throw new Error("A verified pre-cleanup snapshot identifier is required");
+    const sql = readFileSync(root + "/retire-models.sql", "utf8");
+    const checksum = createHash("sha256").update(sql).digest("hex");
+    if (event.expectedMigrationSha256 !== checksum) throw new Error("Unexpected migration checksum");
+    await client.query("BEGIN");
+    await client.query(sql);
+    await client.query("COMMIT");
+    return { ok: true, operation: "retire_empty_models", migrationSha256: checksum, snapshotId: event.verifiedSnapshotId };
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    await client.end();
+  }
+}

@@ -1,5 +1,5 @@
-import { dataJson } from "./data-store.js";
-import { query, canonical, cache } from "./neon.js";
+import { dataJson } from "./aws-data-store.js";
+import { query, canonical, cache } from "./aws-staging.js";
 const resources = cache(16 * 1024 * 1024, { name: "resource" });
 export async function savedResource(endpoint, params = {}) {
   return resources(endpoint + "?" + canonical(params), async () => {
@@ -15,7 +15,7 @@ export async function savedResource(endpoint, params = {}) {
     if (row.ref.ordinal !== undefined) value = value[row.ref.ordinal];
     if (row.ref.documentId)
       value = value.find((r) => r.documentId === row.ref.documentId);
-    if (!value) throw new Error("Incomplete Neon resource reference");
+    if (!value) throw new Error("Incomplete AWS resource reference");
     value = value.observation || value.response || value;
     return {
       status: row.status,
@@ -41,7 +41,7 @@ export async function matchObservation(id) {
         const item = (await dataJson(row.ref.tables[name].path)).find(
           (r) => r.documentId === doc.id,
         );
-        if (!item) throw new Error("Incomplete Neon observations");
+        if (!item) throw new Error("Incomplete AWS observations");
         endpoints[name] = item.response;
       }),
     );

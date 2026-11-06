@@ -76,9 +76,9 @@ export async function refreshCoachPortraits(
 }
 
 async function main() {
-  const { query, database } = await import("../backend/services/neon.js");
+  const { query, database } = await import("./lib/aws-staging.js");
   const { GET: clubFacts } =
-    await import("./neon-projections/club-wikidata.mjs");
+    await import("./source-projections/club-wikidata.mjs");
   const all = await query(
     "SELECT params,body FROM statarena.projections WHERE name='club-wikidata'",
   );

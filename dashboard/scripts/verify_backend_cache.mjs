@@ -35,7 +35,7 @@ if (process.argv.includes("--serve")) {
     log(...items);
   };
   const { handleRequest } = await import("../backend/app.js");
-  const { cache } = await import("../backend/services/neon.js");
+  const { cache } = await import("./lib/aws-staging.js");
   const { instrumentRequest } = await import("../backend/services/metrics.js");
   const small = cache(1024, { name: "fixture" });
   const loads = {};
@@ -452,12 +452,12 @@ async function run() {
           env: {
             PATH: process.env.PATH,
             HOME: process.env.HOME,
-            NEON_DATABASE_URL: dbUrl.href,
-            NEON_STORAGE_ENDPOINT: storage.url.href,
-            NEON_STORAGE_BUCKET: "fixture",
-            NEON_STORAGE_REGION: "us-east-2",
-            NEON_STORAGE_ACCESS_KEY_ID: "fixture",
-            NEON_STORAGE_SECRET_ACCESS_KEY: "fixture",
+            DATABASE_URL: dbUrl.href,
+            STATARENA_S3_ENDPOINT: storage.url.href,
+            STATARENA_S3_BUCKET: "fixture",
+            STATARENA_S3_REGION: "us-east-2",
+            STATARENA_S3_ACCESS_KEY_ID: "fixture",
+            STATARENA_S3_SECRET_ACCESS_KEY: "fixture",
             STATARENA_METRICS_SAMPLE_RATE: sample,
             STATARENA_SERVER_TIMING: "1",
           },
@@ -1060,12 +1060,12 @@ async function run() {
                   NEXT_TELEMETRY_DISABLED: "1",
                   ORION_EMBEDDED_API: embedded ? "1" : "0",
                   ORION_API_ORIGIN: origin,
-                  NEON_DATABASE_URL: dbUrl.href,
-                  NEON_STORAGE_ENDPOINT: storage.url.href,
-                  NEON_STORAGE_BUCKET: "fixture",
-                  NEON_STORAGE_REGION: "us-east-2",
-                  NEON_STORAGE_ACCESS_KEY_ID: "fixture",
-                  NEON_STORAGE_SECRET_ACCESS_KEY: "fixture",
+                  DATABASE_URL: dbUrl.href,
+                  STATARENA_S3_ENDPOINT: storage.url.href,
+                  STATARENA_S3_BUCKET: "fixture",
+                  STATARENA_S3_REGION: "us-east-2",
+                  STATARENA_S3_ACCESS_KEY_ID: "fixture",
+                  STATARENA_S3_SECRET_ACCESS_KEY: "fixture",
                   STATARENA_METRICS_SAMPLE_RATE: "1",
                   STATARENA_SERVER_TIMING: "1",
                 },

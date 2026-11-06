@@ -10,8 +10,8 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "dashboard/scripts"))
 from botocore.exceptions import ClientError
 from copy_object_storage import copy_one
-from neon_ingest import capacity
-from neon_store import Store
+from aws_ingest import capacity
+from aws_store import Store
 
 
 class FakeStorage:

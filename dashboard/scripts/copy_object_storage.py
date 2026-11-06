@@ -100,7 +100,7 @@ def main():
         raise ValueError("workers must be between 1 and 32")
     if args.limit is not None and args.limit < 1:
         raise ValueError("limit must be positive")
-    with psycopg.connect(os.environ["NEON_DATABASE_URL"], options="-c default_transaction_read_only=on") as db:
+    with psycopg.connect(os.environ["DATABASE_URL"], options="-c default_transaction_read_only=on") as db:
         sql = "select path,size,sha256,content_type from statarena.objects order by path"
         rows = db.execute(sql + (" limit %s" if args.limit else ""), (args.limit,) if args.limit else ()).fetchall()
     source = None if args.verify_only else client("SOURCE_STORAGE", args.workers)

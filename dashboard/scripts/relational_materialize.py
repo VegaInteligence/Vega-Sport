@@ -14,9 +14,9 @@ from contextlib import closing
 from pathlib import Path
 
 import psycopg
-from bootstrap_neon import unpack
+from packed_tables import unpack
 from build_dashboard_data import METRICS
-from neon_materialize import competition_metadata, merge_sample
+from aws_materialize import competition_metadata, merge_sample
 from relational_catalog import publish_catalog
 from relational_catalog_keys import records as catalog_records
 from relational_core import publish_snapshot
@@ -905,7 +905,7 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, i
 
 
 def main():
-    from neon_store import Store
+    from aws_store import Store
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -932,7 +932,7 @@ def main():
         or parse_qs(parsed.query).get("sslmode") != ["verify-full"]
     ):
         raise SystemExit("Expected verified AWS RDS staging connection.")
-    os.environ["NEON_DATABASE_URL"] = url  # Existing ingestion-only Store interface.
+    os.environ["DATABASE_URL"] = url  # Existing ingestion-only Store interface.
     store = Store()
     try:
         print(

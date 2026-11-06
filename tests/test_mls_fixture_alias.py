@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "dashboard/scripts"))
 from mls_fixture_alias import publish_mls_fixture_alias
 from build_dashboard_views import pack_table
-from neon_materialize import _materialize
+from aws_materialize import _materialize
 
 
 class Database:
