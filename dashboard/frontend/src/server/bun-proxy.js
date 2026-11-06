@@ -1,4 +1,69 @@
 const AWS_API_ORIGIN = "https://d317dq37z1tacb.cloudfront.net";
+const UPSTREAM_CONCURRENCY = 4;
+const waiting = [];
+let active = 0;
+
+function acquire(signal) {
+  signal.throwIfAborted();
+  if (active < UPSTREAM_CONCURRENCY) {
+    active++;
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    const start = () => {
+      signal.removeEventListener("abort", aborted);
+      resolve();
+    };
+    const aborted = () => {
+      const index = waiting.indexOf(start);
+      if (index >= 0) waiting.splice(index, 1);
+      reject(signal.reason);
+    };
+    waiting.push(start);
+    signal.addEventListener("abort", aborted, { once: true });
+  });
+}
+
+function delay(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) return reject(signal.reason);
+    const aborted = () => {
+      clearTimeout(timer);
+      reject(signal.reason);
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", aborted);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", aborted, { once: true });
+  });
+}
+
+async function upstreamFetch(url, options) {
+  // Bound each Vercel process, including image redirects, below the current
+  // AWS account concurrency. A permit transfers directly to the next waiter.
+  await acquire(options.signal);
+  try {
+    options.signal.throwIfAborted();
+    const safe = ["GET", "HEAD"].includes(options.method);
+    for (let attempt = 0; ; attempt++) {
+      const response = await fetch(url, options);
+      if (!safe || response.status !== 429 || attempt >= 2) return response;
+      const after = response.headers.get("retry-after");
+      const parsed = after === null ? NaN : /^\d+(?:\.\d+)?$/.test(after)
+        ? Number(after) * 1000 : Date.parse(after) - Date.now();
+      const wait = Number.isFinite(parsed) ? Math.max(0, parsed) : 500 * 2 ** attempt;
+      // Do not retry earlier than a longer server-requested backoff.
+      if (wait > 2000) return response;
+      await response.body?.cancel();
+      await delay(wait, options.signal);
+    }
+  } finally {
+    const next = waiting.shift();
+    if (next) next();
+    else active--;
+  }
+}
 
 /** Next only forwards HTTP. Database access runs in the AWS backend. */
 export async function proxy(request) {
@@ -15,7 +80,7 @@ export async function proxy(request) {
     (process.env.NODE_ENV === "development" ? "http://127.0.0.1:8765" : AWS_API_ORIGIN);
   try {
     const validator = request.headers.get("if-none-match");
-    const upstream = await fetch(origin + url.pathname + url.search, {
+    const upstream = await upstreamFetch(origin + url.pathname + url.search, {
       method: request.method,
       cache: "no-store",
       redirect: "manual",

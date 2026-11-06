@@ -225,7 +225,9 @@ export function FootballProvider({ children, loadData = true }) {
   // no second download, no re-merge, no loading screen.
   const clubDetail =
     pathname.startsWith("/clubs") && Boolean(initial.get("id"));
-  const clubTeam = !proMode && clubDetail ? clubDataTeam(initial) : null;
+  const clubTeam = !proMode && clubDetail
+    ? clubDataTeam(initial, { playerOpen: Boolean(player), comparing })
+    : null;
   const dataFocus = clubDetail ? "all" : focus;
   const scopeKey = `${chosen}:${dataFocus}`,
     leagueOnly =

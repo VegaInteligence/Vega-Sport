@@ -48,6 +48,9 @@ test('club comparisons and style retain the complete statistical cohort', () => 
     assert.equal(clubDataTeam(new URLSearchParams({ id: 't_000001', clubView: view })), 't_000001');
   for (const view of ['style', 'compare'])
     assert.equal(clubDataTeam(new URLSearchParams({ id: 't_000001', clubView: view })), null);
+  const params = new URLSearchParams({ id: 't_000001' });
+  assert.equal(clubDataTeam(params, { playerOpen: true }), null);
+  assert.equal(clubDataTeam(params, { comparing: true }), null);
   assert.equal(clubDataTeam(new URLSearchParams({ id: 'invalid' })), null);
 });
 
@@ -180,5 +183,97 @@ test('Vercel forwards a complete decoded AWS response without its compressed wir
     server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));
     for (const [key, value] of Object.entries(previous)) if (value === undefined) delete process.env[key]; else process.env[key] = value;
+  }
+});
+
+test('Vercel bounds simultaneous AWS reads including image redirects', async () => {
+  const original = globalThis.fetch;
+  const previous = process.env.NEXT_PUBLIC_API_ORIGIN;
+  delete process.env.NEXT_PUBLIC_API_ORIGIN;
+  const releases = [];
+  let running = 0, peak = 0, started = 0;
+  try {
+    globalThis.fetch = async () => {
+      running++; started++; peak = Math.max(peak, running);
+      await new Promise(resolve => releases.push(resolve));
+      running--;
+      return Response.json({ ok: true });
+    };
+    const pending = Array.from({ length: 9 }, (_, i) =>
+      proxy(new Request(`https://site.test/api/assets?url=image-${i}`)));
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(started, 4);
+    while (started < 9 || running) {
+      releases.splice(0).forEach(resolve => resolve());
+      await new Promise(resolve => setImmediate(resolve));
+    }
+    assert.ok((await Promise.all(pending)).every(r => r.status === 200));
+    assert.equal(peak, 4);
+  } finally {
+    releases.splice(0).forEach(resolve => resolve());
+    globalThis.fetch = original;
+    if (previous === undefined) delete process.env.NEXT_PUBLIC_API_ORIGIN;
+    else process.env.NEXT_PUBLIC_API_ORIGIN = previous;
+  }
+});
+
+test('an aborted queued read exits promptly without consuming an upstream permit', async () => {
+  const original = globalThis.fetch;
+  const previous = process.env.NEXT_PUBLIC_API_ORIGIN;
+  delete process.env.NEXT_PUBLIC_API_ORIGIN;
+  const releases = [];
+  let started = 0;
+  try {
+    globalThis.fetch = async () => {
+      started++;
+      await new Promise(resolve => releases.push(resolve));
+      return Response.json({ ok: true });
+    };
+    const pending = Array.from({ length: 4 }, () => proxy(new Request('https://site.test/api/health')));
+    await new Promise(resolve => setImmediate(resolve));
+    const controller = new AbortController();
+    const cancelled = proxy(new Request('https://site.test/api/health', { signal: controller.signal }));
+    controller.abort();
+    assert.equal((await cancelled).status, 499);
+    assert.equal(started, 4);
+    releases.splice(0).forEach(resolve => resolve());
+    assert.ok((await Promise.all(pending)).every(r => r.status === 200));
+    globalThis.fetch = async () => { started++; return Response.json({ ok: true }); };
+    assert.equal((await proxy(new Request('https://site.test/api/health'))).status, 200);
+    assert.equal(started, 5, 'The cancelled queued request never reaches AWS');
+  } finally {
+    releases.splice(0).forEach(resolve => resolve());
+    globalThis.fetch = original;
+    if (previous === undefined) delete process.env.NEXT_PUBLIC_API_ORIGIN;
+    else process.env.NEXT_PUBLIC_API_ORIGIN = previous;
+  }
+});
+
+test('Vercel retries transient read throttles and preserves persistent or long backoffs', async () => {
+  const original = globalThis.fetch;
+  const previous = process.env.NEXT_PUBLIC_API_ORIGIN;
+  delete process.env.NEXT_PUBLIC_API_ORIGIN;
+  try {
+    let calls = 0;
+    globalThis.fetch = async () => ++calls < 3
+      ? new Response('busy', { status: 429, headers: { 'retry-after': '0' } })
+      : Response.json({ ok: true });
+    assert.equal((await proxy(new Request('https://site.test/api/health'))).status, 200);
+    assert.equal(calls, 3);
+    calls = 0;
+    globalThis.fetch = async () => { calls++; return new Response('busy', { status: 429, headers: { 'retry-after': '0' } }); };
+    const busy = await proxy(new Request('https://site.test/api/health'));
+    assert.equal(busy.status, 429); assert.equal(await busy.text(), 'busy'); assert.equal(calls, 3);
+    calls = 0;
+    globalThis.fetch = async () => { calls++; return new Response('later', { status: 429, headers: { 'retry-after': '60' } }); };
+    const later = await proxy(new Request('https://site.test/api/health'));
+    assert.equal(later.status, 429); assert.equal(later.headers.get('retry-after'), '60'); assert.equal(calls, 1);
+    calls = 0;
+    assert.equal((await proxy(new Request('https://site.test/api/health', { method: 'POST' }))).status, 429);
+    assert.equal(calls, 1);
+  } finally {
+    globalThis.fetch = original;
+    if (previous === undefined) delete process.env.NEXT_PUBLIC_API_ORIGIN;
+    else process.env.NEXT_PUBLIC_API_ORIGIN = previous;
   }
 });

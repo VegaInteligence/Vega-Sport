@@ -39,8 +39,9 @@ export async function playerRoutes(
 
 // Comparative tabs need the complete cohort for valid centiles and rankings.
 // Other club tabs need every competition of that club, across the user's focus.
-export function clubDataTeam(params) {
-  if (["style", "compare"].includes(params.get("clubView"))) return null;
+export function clubDataTeam(params, { playerOpen = false, comparing = false } = {}) {
+  if (playerOpen || comparing || ["style", "compare"].includes(params.get("clubView")))
+    return null;
   const id = params.get("id");
   return /^t_[A-Za-z0-9]{6}$/.test(id || "") ? id : null;
 }
