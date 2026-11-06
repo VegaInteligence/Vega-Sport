@@ -82,6 +82,10 @@ def apply_staged(db, captured_at):
     return result
 
 def run(store, manifest_key, expected_sha, apply=False):
+    if store.bucket != "statarena-football-333rosky-70db6e5f":
+        raise ValueError("Unexpected AWS data bucket")
+    if store.db.execute("SELECT current_database(),current_user").fetchone() != ("statarena_prod", "statarena_ingest"):
+        raise ValueError("Expected the existing StatArena ingestion writer")
     if manifest_key != PREFIX + "manifest.json":
         raise ValueError("Unexpected private capture")
     def read(key, sha, size=None):
