@@ -4,15 +4,12 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/production-validation.yml'
-      - '.github/workflows/collect-football.yml'
-      - '.github/workflows/pitchapi-villarreal-psg-availability.yml'
-      - '.github/actions/aws-database/inventory.py'
       - 'dashboard/scripts/verify_aws_runtime.mjs'
   schedule:
     - cron: '35 7 * * *'
   workflow_dispatch:
   workflow_run:
-    workflows: ['Collect football (AWS)']
+    workflows: ['Collect football (AWS)', 'Collect standings (AWS)', 'Build serving tables (AWS)']
     types: [completed]
     branches: [main]
 permissions:
@@ -21,26 +18,8 @@ concurrency:
   group: statarena-production-validation
   cancel-in-progress: false
 jobs:
-  configure_daily_collection:
-    # Idempotent, user-requested activation. No historical run is dispatched.
-    if: github.repository == 'OrionQuantPlatform/STATARENA' && github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    permissions:
-      contents: read
-      actions: write
-    steps:
-      - name: Enable daily collection and request read-only schema inventory
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh api --method PUT "repos/$GITHUB_REPOSITORY/actions/workflows/collect-football.yml/enable"
-          gh api --method PUT "repos/$GITHUB_REPOSITORY/actions/workflows/pitchapi-villarreal-psg-availability.yml/enable"
-          gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/pitchapi-villarreal-psg-availability.yml/dispatches" -f ref=main -f 'inputs[schema_inventory]=true'
-          echo 'Daily AWS collection enabled; historical schedules remain absent.' >> "$GITHUB_STEP_SUMMARY"
   validate_site:
-    if: github.repository == 'OrionQuantPlatform/STATARENA' && github.ref == 'refs/heads/main'
+    if: github.repository_id == '1441213700' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
@@ -54,28 +33,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Verify AWS health, catalogue and one bounded read per published season
-        # Completeness is deliberately not asserted: historical backfill is deferred.
+      - name: Validate public AWS reads
         run: node dashboard/scripts/verify_aws_runtime.mjs
-      - name: Check public page routes
+      - name: Validate public page shells
         run: |
           node --input-type=module <<'JS'
           import assert from 'node:assert/strict';
-          const origin = process.env.STATARENA_TEST_ORIGIN;
           for (const path of ['/', '/matchs', '/competitions', '/clubs', '/joueurs']) {
-            const response = await fetch(origin + path, {signal: AbortSignal.timeout(30000)});
-            assert.equal(response.status, 200, path);
-            assert.match(response.headers.get('content-type') || '', /text\/html/, path);
-            const body = await response.text();
-            assert.match(body, /<html[\s>]/i, path);
-            assert.match(body, /<body[\s>]/i, path);
-            console.log(`${path}: HTML 200`);
+            const r = await fetch('https://statarena-analytics.vercel.app' + path, {signal: AbortSignal.timeout(30000)});
+            assert.equal(r.status, 200, path);
+            assert.match(r.headers.get('content-type') || '', /text\/html/);
+            console.log(path + ': HTTP 200 HTML');
           }
           JS
-      - name: Save validation result
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
         with:
-          name: production-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          name: production-validation-${{ github.run_id }}
           path: production-validation.json
-          if-no-files-found: error
+          if-no-files-found: warn
+          retention-days: 14

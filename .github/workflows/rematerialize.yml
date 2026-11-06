@@ -26,7 +26,7 @@ concurrency:
   queue: max
 jobs:
   rematerialize:
-    if: github.repository == 'OrionQuantPlatform/STATARENA' && github.ref == 'refs/heads/main'
+    if: github.repository_id == '1441213700' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
       id-token: write

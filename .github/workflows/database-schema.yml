@@ -1,0 +1,45 @@
+name: Inspect database schema (AWS)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/database-schema.yml'
+      - '.github/actions/aws-database/inventory.py'
+permissions:
+  contents: read
+concurrency:
+  group: statarena-schema-inspection
+  cancel-in-progress: false
+jobs:
+  inspect:
+    if: github.repository_id == '1441213700' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ${{ vars.STATARENA_AWS_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/actions/aws-database
+            dashboard/backend/certs
+          filter: blob:none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install 'psycopg[binary]==3.3.7'
+      - name: Use existing read-only RDS role
+        uses: ./.github/actions/aws-database
+        with:
+          mode: runtime
+          role-arn: ${{ vars.STATARENA_AWS_MONITOR_ROLE_ARN }}
+      - name: Export tables, columns, constraints, indexes and view dependencies
+        run: python .github/actions/aws-database/inventory.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: schema-inventory-${{ github.run_id }}
+          path: schema-inventory.json
+          if-no-files-found: error
+          retention-days: 30

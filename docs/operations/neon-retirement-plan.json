@@ -1,0 +1,17 @@
+{
+  "format": "vega.neon-retirement-plan.v1",
+  "status": "prepared_not_started",
+  "execution_authorized": false,
+  "source": {"project_id": "sweet-queen-11955006", "branch_id": "br-mute-bonus-be23014e", "database": "neondb", "schemas": ["statarena", "neon_auth"], "object_storage_inventory_required": true},
+  "target": {"instance": "statarena-postgres", "region": "us-east-2", "database": "statarena_prod", "object_bucket": "statarena-football-333rosky-70db6e5f", "replace_existing_database": false},
+  "strategy": "reconcile_remaining_delta_then_publish_existing_aws_data",
+  "replay_previous_capture": false,
+  "source_write_freeze_required": true,
+  "preserve_newer_target_rows": true,
+  "delete_source": false,
+  "resize_rds": false,
+  "conflict_policy": "stop_and_review",
+  "validation": ["consistent_sql_snapshot", "object_version_manifest", "business_keys_and_hashes", "all_required_families", "publication_coverage", "browser_aws_only", "successful_daily_cycle", "restorable_backup"],
+  "stop_conditions": ["identity_mismatch", "schema_drift", "unknown_writer", "insufficient_headroom", "conflicting_newer_target", "checksum_mismatch", "unexplained_missing_data"],
+  "credentials_in_plan": false
+}
