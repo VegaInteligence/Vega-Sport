@@ -15,7 +15,7 @@ class Database:
         self.query=query
         self.params=params
         assert "statarena_app.partitions" in query
-        assert "statarena.fixtures" in query
+        assert "AND NOT EXISTS(SELECT 1 FROM statarena.fixtures" not in query
         assert "statarena_app.matches" in query
         assert "statarena_app.fixtures" in query
         return Result(self.canonical)

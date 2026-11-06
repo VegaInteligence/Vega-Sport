@@ -290,8 +290,6 @@ def redundant_year_aliases(db, manifest):
             OR EXISTS(SELECT 1 FROM statarena_app.fixtures f
              WHERE f.season=c.year||'/'||(c.year::int+1)::text
                AND f.league_id=c.league_id))
-          AND NOT EXISTS(SELECT 1 FROM statarena.fixtures f
-            WHERE (f.season,f.league_id)=(c.year,c.league_id))
           AND NOT EXISTS(SELECT 1 FROM statarena_app.matches m
             WHERE (m.season,m.league_id)=(c.year,c.league_id))
           AND NOT EXISTS(SELECT 1 FROM statarena_app.fixtures f
