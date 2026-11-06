@@ -205,7 +205,7 @@ def apply(db, plan):
                    (WORLD,OLD))
         # Never remove a populated raw-year alias or its dependent records.
         for table in (
-            "matches","fixtures","appearances","team_seasons","partition_metrics",
+            "matches","fixtures","appearances","team_seasons",
             "partition_bootstrap_sources","partition_notes",
         ):
             if count(db,table,"2026"):
@@ -216,6 +216,22 @@ def apply(db, plan):
             (WORLD,),
         ).fetchone():
             raise RuntimeError("Nonzero counts on raw-year alias")
+        alias_metrics = db.execute(
+            "SELECT metric_key,ordinal FROM statarena_app.partition_metrics "
+            "WHERE league_id=%s AND season='2026' ORDER BY ordinal,metric_key",
+            (WORLD,),
+        ).fetchall()
+        canonical_metrics = db.execute(
+            "SELECT metric_key,ordinal FROM statarena_app.partition_metrics "
+            "WHERE league_id=%s AND season=%s ORDER BY ordinal,metric_key",
+            (WORLD,NEW),
+        ).fetchall()
+        if alias_metrics != canonical_metrics:
+            raise RuntimeError("Raw-year metric definitions differ from canonical cohort")
+        db.execute(
+            "DELETE FROM statarena_app.partition_metrics WHERE league_id=%s AND season='2026'",
+            (WORLD,),
+        )
         db.execute(
             "DELETE FROM statarena_app.partitions WHERE league_id=%s AND season='2026'",
             (WORLD,),
