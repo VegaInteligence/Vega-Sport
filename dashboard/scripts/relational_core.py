@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from psycopg import sql
 from build_dashboard_data import PLAYER_METRICS, EXTRA_PLAYER_METRICS, ATTEMPTED_METRICS
+from player_rollups import refresh_player_rollups
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -73,6 +74,9 @@ def install_schema(db):
     db.execute((ROOT/'dashboard/backend/migrations/003_relational_core.sql').read_text())
     db.execute((ROOT/'dashboard/backend/migrations/011_appearance_shirt_numbers.sql').read_text())
     db.execute((ROOT/'dashboard/backend/migrations/020_publication_foreign_key_indexes.sql').read_text())
+    db.execute((ROOT/'dashboard/backend/migrations/025_player_season_rollups.sql').read_text())
+    db.execute((ROOT/'dashboard/backend/migrations/030_player_directory_index.sql').read_text())
+    db.execute((ROOT/'dashboard/backend/migrations/031_indexed_performance_cohorts.sql').read_text())
 
 
 MAX_CORE_WRITE_ROWS = 500
@@ -156,6 +160,7 @@ def _publish_full_snapshot(db, season, league_id, snapshot, *, metadata_only=Fal
         db.execute('DELETE FROM statarena_app.partition_counts WHERE season=%s AND league_id=%s',(season,league_id))
         db.execute('DELETE FROM statarena_app.partition_notes WHERE season=%s AND league_id=%s',(season,league_id))
         _partition_metadata(db, season, league_id, digest, meta, update=True)
+        refresh_player_rollups(db, season, league_id)
         db.execute('UPDATE statarena_app.publications SET generation=generation+1,published_at=clock_timestamp()')
         return 1
     db.execute('DELETE FROM statarena_app.matches WHERE season=%s AND league_id=%s',(season,league_id))
@@ -223,6 +228,7 @@ def _publish_full_snapshot(db, season, league_id, snapshot, *, metadata_only=Fal
     for i,m in enumerate(metrics):
         db.execute('INSERT INTO statarena_app.metric_definitions(metric_key,label,unit,decimals) VALUES(%s,%s,%s,%s) ON CONFLICT(metric_key) DO UPDATE SET label=excluded.label,unit=excluded.unit,decimals=excluded.decimals',(m['key'],m.get('label'),m.get('unit'),m.get('decimals')))
         _many(db,'partition_metrics',[dict(season=season,league_id=league_id,metric_key=m['key'],ordinal=i)])
+    refresh_player_rollups(db, season, league_id)
     db.execute('UPDATE statarena_app.publications SET generation=generation+1,published_at=clock_timestamp()')
     return 1
 

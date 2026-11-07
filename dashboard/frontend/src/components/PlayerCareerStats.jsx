@@ -4,6 +4,8 @@ import React, { useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
+import useVisibleIntent from "../hooks/useVisibleIntent.js";
+import { currentPlayerSeason } from "../services/actor-reads.js";
 import { date, number } from "../services/format.js";
 import {
   nationalFlagCode,
@@ -178,11 +180,17 @@ export default function PlayerCareerStats({
 }) {
   const f = useFootball();
   const params = useSearchParams();
+  const [sectionRef, visible] = useVisibleIntent(
+    playerHistoryKey(f.manifest, id),
+  );
   const history = useResource(
     playerHistoryKey(f.manifest, id),
     async ({ signal }) => {
+      const cachedSeason = (value) =>
+        cachedResource(playerHistoryKey(f.manifest, id, value))?.[0] ||
+        currentPlayerSeason(f, id, value);
       if (overview && season) {
-        // Let the overview's selected-season table and career share this read.
+        // Reuse the selected-season table before loading the remaining career.
         await primeResource(
           playerHistoryKey(f.manifest, id, season),
           ({ signal: seasonSignal }) =>
@@ -190,6 +198,7 @@ export default function PlayerCareerStats({
               signal: seasonSignal,
               season,
               routing,
+              cachedSeason,
             }),
         );
         signal?.throwIfAborted();
@@ -197,10 +206,10 @@ export default function PlayerCareerStats({
       return loadPlayerHistory(f.manifest, id, {
         signal,
         routing,
-        cachedSeason: (value) =>
-          cachedResource(playerHistoryKey(f.manifest, id, value))?.[0],
+        cachedSeason,
       });
     },
+    visible,
   );
   const groups = useMemo(
     () => playerCareerGroups(history.value || [], id),
@@ -225,7 +234,11 @@ export default function PlayerCareerStats({
     return `/joueurs/matchs/?${query}`;
   };
   return (
-    <section className="player-career" aria-label="Bilan de carrière">
+    <section
+      className="player-career"
+      aria-label="Bilan de carrière"
+      ref={sectionRef}
+    >
       <div className="player-career-heading">
         <h3>Bilan de carrière</h3>
         <p>Toutes les saisons collectées</p>

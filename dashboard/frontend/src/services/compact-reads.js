@@ -202,7 +202,8 @@ export async function readCompactPages(
     expectedPages,
     expectedTotal;
   const limit =
-    kind === "player" || /(?:appearances|shots)/.test(params.include || "")
+    /(?:appearances|shots)/.test(params.include || "") ||
+    (kind === "player" && params.detail !== "summary")
       ? 25
       : params.limit || 100;
   const load = (page) =>
@@ -305,6 +306,7 @@ export function mergeActorPages(result, manifest, season) {
       currentSeason: season,
       ...result.pages[0]?.meta,
       ...result.meta,
+      complete: true,
     },
     ...Object.fromEntries(
       names.map((name) => [

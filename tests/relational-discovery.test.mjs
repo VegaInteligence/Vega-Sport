@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { readFile, writeFile } from "node:fs/promises";
 import { createDiscoveryRoute } from "../dashboard/backend/services/relational-discovery.js";
 
 const player = (n) => ({
@@ -151,6 +152,36 @@ test("ETags vary with generation/query and HEAD retains the same cache contract"
   assert.notEqual(query.headers.get("etag"), changed.headers.get("etag"));
 });
 
+test("search revalidation and retained queries avoid rescanning identities", async () => {
+  let version = "42";
+  const calls = [];
+  const route = createDiscoveryRoute(async (sql) => {
+    calls.push(sql);
+    return [snapshot(version)];
+  });
+  const first = await invoke(route, "q=hakimi&season=2026/2027");
+  const etag = first.headers.get("etag");
+  assert.match(calls.pop(), /player_candidates/);
+  const repeated = await invoke(route, "q=HAKIMI&season=2026/2027");
+  assert.equal((await repeated.json()).generation, "42");
+  assert.equal(calls.length, 1);
+  assert.doesNotMatch(calls.pop(), /players|appearances|team_seasons/);
+  const conditional = await invoke(route, "q=hakimi&season=2026/2027", {
+    headers: { "if-none-match": etag },
+  });
+  assert.equal(conditional.status, 304);
+  assert.equal(calls.length, 1);
+  assert.doesNotMatch(calls.pop(), /player_candidates/);
+  await invoke(route, "q=hakimi&season=2026/2027", { method: "HEAD" });
+  assert.equal(calls.length, 1);
+  assert.doesNotMatch(calls.pop(), /player_candidates/);
+  version = "43";
+  const changed = await invoke(route, "q=hakimi&season=2026/2027");
+  assert.equal((await changed.json()).generation, "43");
+  assert.equal(calls.length, 2);
+  assert.match(calls.at(-1), /player_candidates/);
+});
+
 test("mixed name/club/league terms and aliases remain bounded SQL parameters", async () => {
   const calls = [];
   const route = createDiscoveryRoute(async (sql, values) => {
@@ -269,6 +300,268 @@ test(
       assert.equal((await search("ps")).clubs[0].id, "t_paris1");
       assert.deepEqual((await search("_%")).players, []);
       assert.equal((await search("Paris")).generation, "42");
+    } finally {
+      await client.query("ROLLBACK");
+      await client.end();
+    }
+  },
+);
+
+test(
+  "prefix search preserves the original ranking and bounds membership work on a realistic PostgreSQL fixture",
+  { skip: !process.env.VEGA_TEST_DATABASE_URL },
+  async (t) => {
+    const url = new URL(process.env.VEGA_TEST_DATABASE_URL);
+    assert.ok(["localhost", "127.0.0.1", "[::1]"].includes(url.hostname));
+    const requireLocal = createRequire(
+        new URL("../dashboard/package.json", import.meta.url),
+      ),
+      { Client } = requireLocal("pg"),
+      client = new Client({ connectionString: url.href }),
+      baseline = JSON.parse(
+        await readFile(
+          new URL("./fixtures/discovery-before-prefix.json", import.meta.url),
+          "utf8",
+        ),
+      );
+    await client.connect();
+    try {
+      await client.query("BEGIN");
+      assert.equal(
+        (
+          await client.query(
+            "SELECT to_regnamespace('statarena_app') AS schema",
+          )
+        ).rows[0].schema,
+        null,
+      );
+      for (const filename of ["003_relational_core.sql"])
+        await client.query(
+          await readFile(
+            new URL(
+              `../dashboard/backend/migrations/${filename}`,
+              import.meta.url,
+            ),
+            "utf8",
+          ),
+        );
+      await client.query(`
+        INSERT INTO statarena_app.competitions(id,name,country,latest_season)
+          VALUES('l_3FJFUl','Ligue 1','FRA','2026/2027');
+        INSERT INTO statarena_app.players(id,player_id,name)
+        SELECT 'ref_scale_'||i,'p_scale_'||i,
+          CASE WHEN i%125=0 THEN 'Pa '||lpad(i::text,6,'0')
+            WHEN i%32=0 THEN 'Other pa '||lpad(i::text,6,'0')
+            ELSE 'Person '||lpad(i::text,6,'0') END
+        FROM generate_series(1,26000) i;
+        INSERT INTO statarena_app.players(id,player_id,name) VALUES
+          ('ref_exact','p_exact','pa'),
+          ('ref_exact_variant','p_exact','0 pa'),
+          ('ref_prefix','p_prefix','Pablo Z'),
+          ('ref_prefix_variant','p_prefix','Abapa A'),
+          ('ref_prefix_fill','p_prefix_fill','Legacy Pablo'),
+          ('ref_ronaldo','p_3yEwhj','Cristiano Ronaldo'),
+          ('ref_muller','p_muller','Thomas Müller'),
+          ('ref_context','p_context','Pa Context Z'),
+          ('ref_context_variant','p_context','Otherpa Context A'),
+          ('ref_literal','p_literal','Player _% Literal'),
+          ('ref_old','p_old','Pa Old Season');
+        INSERT INTO statarena_app.players(id,player_id,name)
+        SELECT 'ref_zebra_'||i,'p_zebra_'||i,
+          CASE WHEN i<=6 THEN 'Zebra Prefix ' ELSE 'Legacy Zebra ' END||i
+        FROM generate_series(1,8) i;
+        INSERT INTO statarena_app.appearances(id,player_ref,player_id,season,date,team,league_id,league,minutes)
+        SELECT 'scale_a_'||i||'_'||g,'ref_scale_'||i,'p_scale_'||i,
+          CASE WHEN i%11=0 THEN '2025/2026' ELSE '2026/2027' END,
+          '2026-10-'||lpad(g::text,2,'0'),
+          CASE WHEN g<7 THEN 'Paris' ELSE 'Real Madrid' END,'l_3FJFUl','Ligue 1',90
+        FROM generate_series(1,26000) i CROSS JOIN generate_series(1,13) g;
+        INSERT INTO statarena_app.appearances(id,player_ref,player_id,season,date,team,league_id,league,minutes)
+        SELECT 'special_'||id,id,player_id,
+          CASE WHEN id='ref_old' THEN '2025/2026' ELSE '2026/2027' END,
+          '2026-10-31','Paris','l_3FJFUl','Ligue 1',90
+        FROM statarena_app.players WHERE id NOT LIKE 'ref_scale_%' AND id NOT LIKE '%variant';
+        INSERT INTO statarena_app.appearances(id,player_ref,player_id,season,date,team,league_id,league,minutes)
+        VALUES('special_context_latest','ref_context','p_context','2026/2027','2026-11-01','Real Madrid','l_3FJFUl','Ligue 1',90);
+        INSERT INTO statarena_app.teams(id,name,country,latest_season)
+        SELECT 't_scale_'||i,
+          CASE WHEN i%25=0 THEN 'Pa Club '||lpad(i::text,4,'0')
+            WHEN i%41=0 THEN 'Club pa '||lpad(i::text,4,'0')
+            ELSE 'Club '||lpad(i::text,4,'0') END,'FRA','2026/2027'
+        FROM generate_series(1,1000) i;
+        INSERT INTO statarena_app.teams(id,name,country,latest_season) VALUES
+          ('t_paris','Paris Saint-Germain','FRA','2026/2027'),
+          ('t_initials','Paris Athletic','FRA','2026/2027'),
+          ('t_exact','pa','FRA','2026/2027');
+        INSERT INTO statarena_app.team_seasons(team_id,season,league_id,sample_matches)
+        SELECT id,CASE WHEN id LIKE 't_scale_%' AND substring(id FROM 9)::int%13=0 THEN '2025/2026' ELSE '2026/2027' END,
+          'l_3FJFUl',12 FROM statarena_app.teams;
+        ANALYZE statarena_app.players;
+        ANALYZE statarena_app.appearances;
+        ANALYZE statarena_app.teams;
+        ANALYZE statarena_app.team_seasons;
+      `);
+      // The rollout builds024 over the populated model. Build in the same
+      // order, so a synthetic bulk-insert GIN pending list does not stand in
+      // for the native migration's compact index.
+      await client.query(
+        await readFile(
+          new URL(
+            "../dashboard/backend/migrations/024_navigation_indexes.sql",
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      );
+      await client.query(
+        "ANALYZE statarena_app.players; ANALYZE statarena_app.teams",
+      );
+      const reads = [],
+        referenceSnapshots = new Map(),
+        route = createDiscoveryRoute(async (sql, values) => {
+          reads.push({ sql, values });
+          const rows = (await client.query(sql, values)).rows;
+          if (values.length) {
+            const reference = referenceSnapshots.get(JSON.stringify(values));
+            assert.deepEqual(
+              rows[0].players,
+              reference.players,
+              "all seven candidate players retain their exact order and context",
+            );
+            assert.deepEqual(
+              rows[0].clubs,
+              reference.clubs,
+              "all five candidate clubs retain their exact order and context",
+            );
+          }
+          return rows;
+        }),
+        original = createDiscoveryRoute(async (sql, values) => {
+          const rows = (
+            await client.query(
+              values.length
+                ? values.length === 6
+                  ? baseline.single
+                  : baseline.multiple
+                : sql,
+              values,
+            )
+          ).rows;
+          if (values.length)
+            referenceSnapshots.set(JSON.stringify(values), rows[0]);
+          return rows;
+        });
+      for (const season of ["2026/2027", "2025/2026", "2024/2025"])
+        for (const q of [
+          "pa",
+          "Pa",
+          "pa 000",
+          "pablo",
+          "zebra",
+          "muller",
+          "cr7",
+          "cr7 paris",
+          "pa paris ligue",
+          "pa real",
+          "psg",
+          "ps",
+          "_%",
+          "notfound",
+        ]) {
+          const params = new URLSearchParams({ q, season }),
+            expected = await (await invoke(original, params)).json(),
+            actual = await (await invoke(route, params)).json();
+          assert.deepEqual(actual, expected, `${q} in ${season}`);
+        }
+      const broad = reads.find(
+          ({ values }) => values[0] === "pa" && values[1] === "2026/2027",
+        ),
+        explain = async (sql) =>
+          (
+            await client.query(
+              "EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) " + sql,
+              broad.values,
+            )
+          ).rows[0]["QUERY PLAN"][0],
+        before = await explain(baseline.single),
+        after = await explain(broad.sql),
+        nodes = (plan) => [plan, ...(plan.Plans || []).flatMap(nodes)],
+        probes = (plan, relation) =>
+          nodes(plan.Plan)
+            .filter((node) => node["Relation Name"] === relation)
+            .reduce((sum, node) => sum + node["Actual Loops"], 0);
+      if (process.env.VEGA_SEARCH_PLAN_RECEIPT)
+        await writeFile(
+          process.env.VEGA_SEARCH_PLAN_RECEIPT,
+          JSON.stringify({ status: "measured", before, after }, null, 2) + "\n",
+        );
+      assert.ok(
+        probes(before, "appearances") > 900,
+        "the former plan checks all broad matches before its limit",
+      );
+      assert.ok(
+        probes(after, "appearances") <= 25,
+        "only top eligible identities and their final contexts read appearances",
+      );
+      assert.ok(
+        nodes(after.Plan).some(
+          (node) =>
+            node["Index Name"] === "app_players_search_name" &&
+            node["Actual Loops"] > 0,
+        ),
+        "the preferred name branch uses migration024's existing index",
+      );
+      for (const name of ["other_players", "other_clubs"]) {
+        const branch = nodes(after.Plan).find(
+          (node) => node["Subplan Name"] === "CTE " + name,
+        );
+        assert.equal(
+          branch["Actual Rows"],
+          0,
+          `${name} is unnecessary when preferred results fill the response`,
+        );
+        assert.ok(
+          nodes(branch)
+            .filter((node) => node["Relation Name"])
+            .every((node) => node["Actual Loops"] === 0),
+          `${name} must not scan its fallback inputs`,
+        );
+      }
+      const report = {
+        engine: (await client.query("SELECT version() AS version")).rows[0]
+          .version,
+        fixtures: (
+          await client.query(
+            "SELECT (SELECT count(*)::int FROM statarena_app.players) AS players,(SELECT count(*)::int FROM statarena_app.appearances) AS appearances,(SELECT count(*)::int FROM statarena_app.teams) AS clubs",
+          )
+        ).rows[0],
+        parityQueries: 42,
+        before: {
+          planningMs: before["Planning Time"],
+          executionMs: before["Execution Time"],
+          appearanceProbes: probes(before, "appearances"),
+          plan: before,
+        },
+        after: {
+          planningMs: after["Planning Time"],
+          executionMs: after["Execution Time"],
+          appearanceProbes: probes(after, "appearances"),
+          plan: after,
+        },
+      };
+      t.diagnostic(
+        JSON.stringify({
+          beforeMs: report.before.executionMs,
+          afterMs: report.after.executionMs,
+          beforeProbes: report.before.appearanceProbes,
+          afterProbes: report.after.appearanceProbes,
+        }),
+      );
+      if (process.env.VEGA_SEARCH_PLAN_RECEIPT)
+        await writeFile(
+          process.env.VEGA_SEARCH_PLAN_RECEIPT,
+          JSON.stringify(report, null, 2) + "\n",
+        );
     } finally {
       await client.query("ROLLBACK");
       await client.end();

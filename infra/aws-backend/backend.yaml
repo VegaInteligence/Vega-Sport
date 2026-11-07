@@ -77,6 +77,10 @@ Resources:
           STATARENA_DATA_PROVIDER: aws
           # The production catalogue is published in statarena_app by the AWS worker.
           STATARENA_PRO_API: '0'
+          # Install/backfill 025 and deploy its publisher hooks before enabling.
+          # Every read checks the partition source digest and safely falls back.
+          STATARENA_PLAYER_ROLLUPS: '1'
+          STATARENA_SERVER_TIMING: '1'
           STATARENA_CLOUDFRONT_URL: 'https://d2clu0phovomb8.cloudfront.net'
       VpcConfig:
         SecurityGroupIds: [!Ref RuntimeSG]

@@ -3,7 +3,10 @@ import React, { useDeferredValue, useMemo, useState } from "react";
 import CompetitionOptions from "./CompetitionOptions.jsx";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useFootball } from "../hooks/FootballContext.jsx";
+import { FootballContext, useFootball } from "../hooks/FootballContext.jsx";
+import useActorRead from "../hooks/useActorRead.js";
+import useVisibleIntent from "../hooks/useVisibleIntent.js";
+import { actorReadParams } from "../services/actor-reads.js";
 import {
   CLUB_METRICS,
   CLUB_STYLE_KEYS,
@@ -181,6 +184,9 @@ function FormStrip({ club, limit = 5 }) {
 
 function Overview({ club, summary, history, allHistory, competitionName }) {
   const f = useFootball();
+  const [informationRef, informationVisible] = useVisibleIntent(
+    `${club.id}:${f.season}`,
+  );
   const upcoming = useMemo(
     () => upcomingClubMatches(summary, Date.now(), 3),
     [summary],
@@ -258,9 +264,13 @@ function Overview({ club, summary, history, allHistory, competitionName }) {
           )}
         </section>
       </div>
-      <div className="club-overview-info">
-        <ClubFacts club={club} matches={allHistory} />
-        <ClubRanking clubId={club.id} />
+      <div className="club-overview-info" ref={informationRef}>
+        {informationVisible && (
+          <>
+            <ClubFacts club={club} matches={allHistory} />
+            <ClubRanking clubId={club.id} />
+          </>
+        )}
       </div>
     </div>
   );
@@ -447,7 +457,7 @@ function GoalTimes({ summary }) {
   );
 }
 
-function Matches({ club, summary }) {
+function Matches({ club, summary, details }) {
   const [venue, setVenue] = useState("all"),
     [period, setPeriod] = useState("results"),
     [expanded, setExpanded] = useState(false);
@@ -477,7 +487,13 @@ function Matches({ club, summary }) {
           <div className="season-section-heading">
             <h3>Buts par période</h3>
           </div>
-          <GoalTimes summary={summary} />
+          {details && !details.value ? (
+            <p role="status" className="loading-state">
+              {details.error || "Chargement des tirs de la saison…"}
+            </p>
+          ) : (
+            <GoalTimes summary={summary} />
+          )}
         </section>
         <section>
           <div className="season-section-heading">
@@ -941,7 +957,38 @@ function Comparison({ summary, cohort, competitionName, rivalId, onRival }) {
   );
 }
 
-export default function ClubWorkspace({ club, history }) {
+export default function ClubWorkspace(props) {
+  const f = useFootball();
+  const params = useSearchParams();
+  const view = params.get("clubView") || "overview";
+  const enabled =
+    f.manifest?.capabilities?.actorSummary === true &&
+    ["squad", "matches"].includes(view);
+  const details = useActorRead(
+    f.manifest,
+    "club",
+    actorReadParams(f.manifest, "club", {
+      id: props.club.id,
+      season: f.season,
+      include: view === "squad" ? "appearances" : "shots",
+    }),
+    { enabled, refreshManifest: f.refreshManifest },
+  );
+  const context = useMemo(
+    () =>
+      enabled && details.value
+        ? Object.assign(Object.create(f), { data: details.value })
+        : f,
+    [f, enabled, details.value],
+  );
+  return (
+    <FootballContext.Provider value={context}>
+      <ClubWorkspaceContent {...props} details={enabled ? details : null} />
+    </FootballContext.Provider>
+  );
+}
+
+function ClubWorkspaceContent({ club, history, details }) {
   const f = useFootball(),
     params = useSearchParams();
   const view = TABS.some(([key]) => key === params.get("clubView"))
@@ -1107,6 +1154,11 @@ export default function ClubWorkspace({ club, history }) {
         role="tabpanel"
         aria-label={TABS.find(([key]) => key === view)[1]}
       >
+        {details?.error && (
+          <p role="alert">
+            {details.error} <button onClick={details.retry}>Réessayer</button>
+          </p>
+        )}
         {["style", "compare"].includes(view) && cohortState.loading && (
           <p role="status" className="loading-state">
             Chargement de la cohorte des clubs…
@@ -1127,8 +1179,17 @@ export default function ClubWorkspace({ club, history }) {
             competitionName={competitionName}
           />
         )}
-        {view === "squad" && <Squad club={club} summary={summary} />}
-        {view === "matches" && <Matches club={club} summary={summary} />}
+        {view === "squad" &&
+          (details && !details.value ? (
+            <p role="status" className="loading-state">
+              Chargement de l’effectif de la saison…
+            </p>
+          ) : (
+            <Squad club={club} summary={summary} />
+          ))}
+        {view === "matches" && (
+          <Matches club={club} summary={summary} details={details} />
+        )}
         {view === "style" && cohort && (
           <StyleProfile
             summary={summary}

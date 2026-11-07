@@ -289,6 +289,83 @@ test("the dedicated match catalogue cannot poison the actor profile cache", asyn
   assert.equal(reads[0].params.player, "p_000001");
 });
 
+test("summary actor boot is unchanged when heavy detail tabs are selected", async () => {
+  for (const kind of ["player", "club"]) {
+    let view = "overview";
+    const jobs = [],
+      reads = [],
+      keys = [];
+    const service =
+      await import("../dashboard/frontend/src/services/compact-reads.js");
+    const summaryManifest = {
+      ...manifest,
+      capabilities: { ...manifest.capabilities, actorSummary: true },
+    };
+    const mod = await compile("hooks/FootballContext.jsx", {
+      "next/navigation": {
+        usePathname: () => (kind === "player" ? "/joueurs/" : "/clubs/"),
+        useSearchParams: () =>
+          new URLSearchParams({
+            id: kind === "player" ? "p_000001" : "t_000001",
+            season,
+            focus: "all",
+            [kind === "player" ? "playerView" : "clubView"]: view,
+          }),
+      },
+      "../services/compact-reads.js": {
+        ...service,
+        readCompactPages: async (route, params) => {
+          reads.push({ route, params });
+          return { pages: [empty], meta: { generation: "g1" } };
+        },
+      },
+      "../services/resources.js": {
+        useResource: (key, loader, enabled = true) => {
+          if (enabled) jobs.push({ key, loader });
+          return {
+            loading: false,
+            value:
+              key === "manifest"
+                ? summaryManifest
+                : key.startsWith("status:")
+                  ? false
+                  : empty,
+            revalidate: async () => {},
+            retry() {},
+          };
+        },
+        cachedResource: () => undefined,
+        primeResource: async () => empty,
+        json: async () => ({}),
+        download() {},
+      },
+      "../components/UI.jsx": ui,
+      "../components/LoadingPage.jsx": moduleDefault(blank),
+    });
+    for (view of kind === "player"
+      ? ["overview", "stats"]
+      : ["overview", "squad", "matches"]) {
+      jobs.length = 0;
+      renderToStaticMarkup(
+        h(mod.FootballProvider, null, h("p", null, "ready")),
+      );
+      const job = jobs.find(({ key }) => key.startsWith("compact-actor:"));
+      keys.push(job.key);
+      await job.loader({ signal: new AbortController().signal });
+    }
+    assert.equal(
+      new Set(keys).size,
+      1,
+      "changing tabs reuses the exact base season resource",
+    );
+    for (const { params } of reads) {
+      assert.equal(params.detail, "summary");
+      assert.equal(params.limit, 100);
+      assert.equal(params.include, "");
+    }
+  }
+});
+
 test("a paged player directory never slices its server page again", async () => {
   const f = {
       season,
@@ -399,7 +476,119 @@ test("players table requests its page without activating the complete analysis c
   assert.equal(reads[1].options.enabled, false);
 });
 
-test("player overview requests the matching peer lines without filtering out the actor", async () => {
+test("a player profile renders its rows before the comparison section requests its complete role cohort", async () => {
+  const reads = [];
+  let intent = "",
+    requestComparisons,
+    profileRows;
+  const f = {
+    compactMode: true,
+    manifest,
+    season,
+    focus: "all",
+    href: (url) => url,
+    data: {
+      ...empty,
+      appearances: [
+        {
+          id: "a1",
+          playerId: "p_000001",
+          matchId: "m_000001",
+          name: "Défenseur",
+          season,
+          leagueId: league,
+          minutes: 450,
+          positionId: 31,
+          rating: 7,
+          goals: 1,
+        },
+      ],
+      matches: [{ id: "m_000001" }],
+    },
+    filters: {
+      league: "all",
+      leagues: [],
+      query: "",
+      minutes: 1,
+      basis: "total",
+      ranking: "",
+      match: "all",
+      advanced: {
+        positions: [],
+        role: "all",
+        venue: "all",
+        result: "all",
+        rating: null,
+        from: "",
+        to: "",
+        conditions: [],
+      },
+    },
+  };
+  const mod = await compile("views/PlayersPage.jsx", {
+    react: {
+      ...React,
+      lazy: () => (props) => {
+        requestComparisons = props.onNeedComparisons;
+        profileRows = props.rows;
+        return h("p", null, "profile ready");
+      },
+      useState: (initial) =>
+        initial === ""
+          ? [
+              intent,
+              (value) => {
+                intent = value;
+              },
+            ]
+          : React.useState(initial),
+    },
+    "next/navigation": {
+      useSearchParams: () => new URLSearchParams({ id: "p_000001" }),
+    },
+    "../hooks/FootballContext.jsx": {
+      useFootball: () => f,
+      FootballContext: React.createContext(null),
+    },
+    "../hooks/useCompactRead.js": moduleDefault((kind, params, options) => {
+      reads.push({ kind, params, options });
+      return { loading: Boolean(options.enabled) };
+    }),
+    "../components/Layout.jsx": moduleDefault(({ children }) =>
+      h("main", null, children),
+    ),
+    "../components/PlayerWorkspace.jsx": moduleDefault(blank),
+    "./PlayerMatchesPage.jsx": moduleDefault(blank),
+    "../components/ResearchUI.jsx": { ResearchComparisonTray: blank },
+  });
+  assert.match(renderToStaticMarkup(h(mod.default)), /profile ready/);
+  assert.equal(
+    profileRows.length,
+    1,
+    "the actor never waits for another player's data",
+  );
+  assert.equal(
+    reads.some(({ options }) => options.enabled),
+    false,
+  );
+  requestComparisons();
+  reads.length = 0;
+  renderToStaticMarkup(h(mod.default));
+  const cohort = reads.find(({ options }) => options.enabled);
+  assert.equal(
+    cohort.options.allPages,
+    true,
+    "percentiles still use every eligible peer",
+  );
+  assert.equal(
+    cohort.params.pos,
+    "D",
+    "only the player's complete comparison group is needed",
+  );
+  assert.equal(profileRows.length, 1);
+});
+
+test("player overview defers the complete matching peer lines without filtering out the actor", async () => {
   const id = "p_actor",
     reads = [],
     appearances = Array.from({ length: 6 }, (_, index) => ({
@@ -438,14 +627,31 @@ test("player overview requests the matching peer lines without filtering out the
       },
       href: (url) => url,
     };
-  let view = "overview";
+  let view = "overview",
+    intent = "",
+    requestComparisons;
   const mod = await compile("views/PlayersPage.jsx", {
     react: {
       ...React,
       lazy:
         () =>
-        ({ rows, radarComparison }) =>
-          h("p", null, `Aperçu ${rows.length} ${radarComparison?.loading}`),
+        ({ rows, radarComparison, onNeedComparisons }) => {
+          requestComparisons = onNeedComparisons;
+          return h(
+            "p",
+            null,
+            `Aperçu ${rows.length} ${radarComparison?.loading}`,
+          );
+        },
+      useState: (initial) =>
+        initial === ""
+          ? [
+              intent,
+              (value) => {
+                intent = value;
+              },
+            ]
+          : React.useState(initial),
     },
     "next/navigation": {
       useSearchParams: () => new URLSearchParams({ id, playerView: view }),
@@ -464,6 +670,13 @@ test("player overview requests the matching peer lines without filtering out the
     "../components/ResearchUI.jsx": { ResearchComparisonTray: blank },
   });
   assert.match(renderToStaticMarkup(h(mod.default)), /Aperçu 6 true/);
+  assert.equal(
+    reads.some(({ options }) => options.enabled),
+    false,
+  );
+  requestComparisons();
+  reads.length = 0;
+  renderToStaticMarkup(h(mod.default));
   let request = reads.find(({ options }) => options.enabled);
   assert.equal(request.params.pos, "M,A");
   assert.equal(request.params.leagues, league);
@@ -472,10 +685,26 @@ test("player overview requests the matching peer lines without filtering out the
   reads.length = 0;
   view = "stats";
   renderToStaticMarkup(h(mod.default));
+  assert.equal(
+    reads.some(({ options }) => options.enabled),
+    false,
+  );
+  requestComparisons();
+  reads.length = 0;
+  renderToStaticMarkup(h(mod.default));
   request = reads.find(({ options }) => options.enabled);
-  assert.equal(request.params.pos, "");
+  assert.equal(request.params.pos, "M,A");
   assert.equal(request.params.leagues, "all");
   assert.equal(request.options.parallelPages, false);
+  reads.length = 0;
+  view = "compare";
+  renderToStaticMarkup(h(mod.default));
+  request = reads.find(({ options }) => options.enabled);
+  assert.equal(
+    request.params.pos,
+    "",
+    "explicit player comparison keeps every position available",
+  );
 });
 
 test("the merged actor match list keeps fixture links, date order and every actor row", async () => {
@@ -800,9 +1029,16 @@ test("the new shot view consumes actor shot fields without changing their values
       season: match.season,
     })),
     before = structuredClone(shots);
+  let selectedKey = null;
   const mod = await compile("components/SeasonShots.jsx", {
+    react: {
+      ...React,
+      useState: (initial) =>
+        initial === null ? [selectedKey, () => {}] : React.useState(initial),
+    },
     "../hooks/FootballContext.jsx": {
       useFootball: () => ({
+        data: { matches: [match] },
         href: (url, params) => url + "?" + new URLSearchParams(params),
       }),
     },
@@ -811,15 +1047,18 @@ test("the new shot view consumes actor shot fields without changing their values
       point: "point",
       goal: "goal",
     }),
+    "./Icon.jsx": moduleDefault(blank),
     "./UI.jsx": ui,
   });
-  const html = renderToStaticMarkup(
-    h(mod.default, { shots, legacyPitchApi: true }),
-  );
-  assert.match(html, /BUT ATTAQUÉ/);
-  assert.match(html, /env\. 11,0 m/);
+  const render = () =>
+    renderToStaticMarkup(h(mod.default, { shots, legacyPitchApi: true }));
+  const html = render();
+  assert.match(html, /But attaqué/);
+  assert.match(html, /11,0\s*m du but/);
   assert.match(html, /xG 0,40/);
-  assert.match(html, /id=m_000001/);
+  assert.doesNotMatch(html, /id=m_000001/);
+  selectedKey = `${shots[0].matchId}:${shots[0].id}`;
+  assert.match(render(), /id=m_000001/);
   assert.deepEqual(shots, before);
 });
 

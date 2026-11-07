@@ -407,9 +407,12 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
     const effects = [],
       timers = new Map(),
       calls = [],
-      pending = [];
+      pending = [],
+      controllers = [],
+      state = [scenario.query, true, true, 0, ""];
     let stateIndex = 0,
-      legacyLoads = 0;
+      legacyLoads = 0,
+      cupLoads = 0;
     const context = {
       manifest: {
         ...manifest,
@@ -432,10 +435,16 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
     const react = {
       ...React,
       useContext: () => context,
-      useState: (initial) => [
-        [scenario.query, true, true, 0, null][stateIndex++] ?? initial,
-        () => {},
-      ],
+      useState: (initial) => {
+        const index = stateIndex++;
+        return [
+          state[index] ?? initial,
+          (value) => {
+            state[index] =
+              typeof value === "function" ? value(state[index]) : value;
+          },
+        ];
+      },
       useEffect: (effect) => effects.push(effect),
     };
     const stubs = {
@@ -451,13 +460,25 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
       "../services/format.js": { number: String },
       "../services/global-search.js": globalSearch,
       "../services/resources.js": {
+        cachedResource: () => undefined,
         useResource: (key, loader, enabled) => {
-          if (enabled) pending.push(Promise.resolve(loader()).catch(() => {}));
+          if (enabled) {
+            const controller = new AbortController();
+            controllers.push(controller);
+            pending.push(
+              Promise.resolve(loader({ signal: controller.signal })).catch(
+                () => {},
+              ),
+            );
+          }
           return { loading: Boolean(enabled) };
         },
       },
       "../services/catalog-client.js": {
-        cupIndex: async () => ({ competitions: [] }),
+        cupIndex: async () => {
+          cupLoads++;
+          return { competitions: [] };
+        },
       },
       "../services/global-search-client.js": {
         hasBoundedSearch,
@@ -472,7 +493,7 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
     runInNewContext("(function(require,module,exports){" + code + "\n})", {
       AbortController,
       setTimeout: (callback, delay) => {
-        assert.equal(delay, 180);
+        assert.equal(delay, 150);
         timers.set(1, callback);
         return 1;
       },
@@ -491,13 +512,23 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
     const cleanups = effects.map((effect) => effect());
     assert.equal(calls.length, 0, "the remote request waits for the debounce");
     for (const timer of timers.values()) timer();
+    if (timers.size) {
+      stateIndex = 0;
+      renderToStaticMarkup(React.createElement(mod.exports.default));
+    }
     await Promise.all(pending);
     await new Promise((resolve) => setImmediate(resolve));
     const hasQuery = scenario.query.length >= 2;
     assert.equal(calls.length, scenario.advertised && hasQuery ? 1 : 0);
     assert.equal(legacyLoads, !scenario.advertised && hasQuery ? 1 : 0);
+    assert.equal(
+      cupLoads,
+      !scenario.advertised && hasQuery ? 2 : 0,
+      "bounded search never downloads the auxiliary cup catalogues",
+    );
     for (const cleanup of cleanups)
       if (typeof cleanup === "function") cleanup();
+    controllers.forEach((controller) => controller.abort());
     if (calls[0]) assert.equal(calls[0].signal.aborted, true);
     assert.equal(timers.size, 0);
   }

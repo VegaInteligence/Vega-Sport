@@ -13,6 +13,7 @@ import {
 import { loadDisciplineByMatch } from "../services/player-discipline.js";
 import { playerSeasonGroups } from "../services/player-season-history.js";
 import { seasonMetric } from "../services/season-player.js";
+import { currentPlayerSeason } from "../services/actor-reads.js";
 import { number } from "../services/format.js";
 import { nationalTeamName } from "../services/national-flags.js";
 import { isNationalTeamCompetition } from "../services/player-team-seasons.js";
@@ -250,7 +251,12 @@ export default function PlayerSeasonStats({ id, season }) {
   const f = useFootball();
   const history = useResource(
     playerHistoryKey(f.manifest, id, season),
-    ({ signal }) => loadPlayerHistory(f.manifest, id, { signal, season }),
+    ({ signal }) =>
+      loadPlayerHistory(f.manifest, id, {
+        signal,
+        season,
+        cachedSeason: (value) => currentPlayerSeason(f, id, value),
+      }),
     Boolean(f.manifest && id && season),
   );
   const groups = useMemo(
@@ -374,16 +380,23 @@ export function PlayerPerformanceStats({ id, children }) {
   const seasons = routing.value?.seasons || [];
   const requested = params.get("performanceSeason");
   const preferred =
-    requested ?? (seasons.includes(f.season) ? f.season : seasons[0]);
-  const season = seasons.includes(preferred) ? preferred : "";
+    requested ??
+    (seasons.includes(f.season) || !routing.value ? f.season : seasons[0]);
+  const season =
+    seasons.includes(preferred) ||
+    (!routing.value &&
+      f.manifest?.seasons?.some((item) => item.id === preferred))
+      ? preferred
+      : "";
   const history = useResource(
     playerHistoryKey(f.manifest, id, season),
     ({ signal }) =>
       loadPlayerHistory(f.manifest, id, {
         signal,
         season,
-        routing: routing.value.index,
+        routing: routing.value?.index,
         cachedSeason: (value) =>
+          currentPlayerSeason(f, id, value) ||
           cachedResource(playerHistoryKey(f.manifest, id))?.find(
             (entry) => entry.season === value,
           ),
@@ -420,19 +433,20 @@ export function PlayerPerformanceStats({ id, children }) {
           </label>
         )}
       </div>
-      <AsyncState resource={routing}>
-        {({ index }) => (
-          <PerformanceRows
-            id={id}
-            history={history}
-            season={season}
-            routing={index}
-            hasSeasons={seasons.length > 0}
-          >
-            {season === f.season && children}
-          </PerformanceRows>
-        )}
-      </AsyncState>
+      {routing.error && (
+        <p role="alert">
+          {routing.error} <button onClick={routing.retry}>Réessayer</button>
+        </p>
+      )}
+      <PerformanceRows
+        id={id}
+        history={history}
+        season={season}
+        routing={routing.value?.index}
+        hasSeasons={seasons.length > 0}
+      >
+        {season === f.season && children}
+      </PerformanceRows>
     </section>
   );
 }

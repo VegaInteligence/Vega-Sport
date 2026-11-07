@@ -36,6 +36,10 @@ async function json(
     bytes,
     etag: response.headers.get("etag"),
     cacheControl: response.headers.get("cache-control"),
+    serverTiming: response.headers.get("server-timing"),
+    cacheStatus: response.headers.get("x-cache"),
+    age: response.headers.get("age"),
+    contentEncoding: response.headers.get("content-encoding"),
   };
   report.checks.push(check);
   assert.equal(response.status, status, `HTTP ${response.status}: ${route}`);

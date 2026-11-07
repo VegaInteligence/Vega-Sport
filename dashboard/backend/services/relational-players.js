@@ -1,9 +1,12 @@
 import { query } from "./postgres.js";
+import { createReadCache } from "./relational-read-cache.js";
+import { readPlayerRollup } from "./relational-player-rollups.js";
 import { reject, validateParams } from "./relational-core.js";
 import { playerAliasEntries } from "../../shared/player-aliases.js";
 import { MIN_RATED_MATCHES } from "../../shared/player-profile.js";
 import {
   bindValue,
+  comparisonNumberSql,
   finiteSql,
   likeText,
   normalizedSql,
@@ -218,15 +221,19 @@ const roleDefinitions = {
     positionId: 91,
   },
 };
-const countProjection = PLAYER_COUNT_METRICS.flatMap((key) => {
-  const column = `p.${snake(key)}`,
-    valid = finiteSql(column);
-  return [
-    `sum(${column}) FILTER(WHERE ${valid}) AS "${key}_sum"`,
-    `count(*) FILTER(WHERE ${valid})::int AS "${key}_count"`,
-    `sum(p.minutes) FILTER(WHERE ${valid}) AS "${key}_minutes"`,
-  ];
-}).join(",\n");
+const countProjectionFor = (keys) =>
+  keys
+    .flatMap((key) => {
+      const column = `p.${snake(key)}`,
+        valid = finiteSql(column);
+      return [
+        `sum(${column}) FILTER(WHERE ${valid}) AS "${key}_sum"`,
+        `count(*) FILTER(WHERE ${valid})::int AS "${key}_count"`,
+        `sum(p.minutes) FILTER(WHERE ${valid}) AS "${key}_minutes"`,
+      ];
+    })
+    .join(",\n");
+const countProjection = countProjectionFor(PLAYER_COUNT_METRICS);
 const ratioDefinitions = {
   passAccuracy: {
     numerator: "p.passes_accurate",
@@ -239,14 +246,19 @@ const ratioDefinitions = {
     valid: `${finiteSql("p.duels_won")} AND ${finiteSql("p.duels_lost")} AND p.duels_won+p.duels_lost>0`,
   },
 };
-const ratioProjection = Object.entries(ratioDefinitions)
-  .flatMap(([key, ratio]) => [
-    `sum(${ratio.numerator}) FILTER(WHERE ${ratio.valid}) AS "${key}_numerator"`,
-    `sum(${ratio.denominator}) FILTER(WHERE ${ratio.valid}) AS "${key}_denominator"`,
-    `count(*) FILTER(WHERE ${ratio.valid})::int AS "${key}_count"`,
-    `sum(p.minutes) FILTER(WHERE ${ratio.valid}) AS "${key}_minutes"`,
-  ])
-  .join(",\n");
+const ratioProjectionFor = (keys) =>
+  keys
+    .flatMap((key) => {
+      const ratio = ratioDefinitions[key];
+      return [
+        `sum(${ratio.numerator}) FILTER(WHERE ${ratio.valid}) AS "${key}_numerator"`,
+        `sum(${ratio.denominator}) FILTER(WHERE ${ratio.valid}) AS "${key}_denominator"`,
+        `count(*) FILTER(WHERE ${ratio.valid})::int AS "${key}_count"`,
+        `sum(p.minutes) FILTER(WHERE ${ratio.valid}) AS "${key}_minutes"`,
+      ];
+    })
+    .join(",\n");
+const ratioProjection = ratioProjectionFor(Object.keys(ratioDefinitions));
 
 export function playerReadQuery(filters, params) {
   const values = [],
@@ -288,19 +300,86 @@ export function playerReadQuery(filters, params) {
         ? `90.0*a."${key}_sum"/nullif(a."${key}_minutes",0)`
         : `a."${key}_sum"/nullif(a."${key}_count",0)`;
   };
+  // Eligibility and global ordering need only their selected metrics. Hydrate
+  // the complete profile after LIMIT, using the same deduplicated played rows.
+  // In particular, a rating/name directory must not aggregate every passing,
+  // shooting and defensive metric for every player on each page request.
+  const requiredMetrics = new Set(filters.conditions.map(({ key }) => key));
+  const rankingMetrics = {
+    rating: [],
+    goals: ["goals", "xg"],
+    assists: ["assists", "xa"],
+    clinical: ["goals", "xg"],
+    wasteful: ["goals", "xg"],
+  };
+  const finishingRequired = filters.ranking
+    ? ["clinical", "wasteful"].includes(filters.ranking)
+    : filters.sort === "finishingDelta";
+  for (const key of filters.ranking
+    ? rankingMetrics[filters.ranking]
+    : finishingRequired
+      ? ["goals", "xg"]
+      : metricKeys.includes(filters.sort)
+        ? [filters.sort]
+        : [])
+    requiredMetrics.add(key);
+  const earlyCounts = PLAYER_COUNT_METRICS.filter((key) =>
+    requiredMetrics.has(key),
+  );
+  const earlyRatios = Object.keys(ratioDefinitions).filter((key) =>
+    requiredMetrics.has(key),
+  );
+  const sourceMetrics = new Set(earlyCounts);
+  if (requiredMetrics.has("passAccuracy")) {
+    sourceMetrics.add("passesAccurate");
+    sourceMetrics.add("passesAttempted");
+  }
+  if (requiredMetrics.has("duelRate")) {
+    sourceMetrics.add("duelsWon");
+    sourceMetrics.add("duelsLost");
+  }
+  const earlyAggregates = [
+    countProjectionFor(earlyCounts),
+    ratioProjectionFor(earlyRatios),
+  ]
+    .filter(Boolean)
+    .join(",\n");
+  const earlyProfile = [
+    ...earlyCounts.flatMap((key) =>
+      ["sum", "count", "minutes"].map((suffix) => `a."${key}_${suffix}"`),
+    ),
+    ...earlyRatios.flatMap((key) =>
+      ["numerator", "denominator", "count", "minutes"].map(
+        (suffix) => `a."${key}_${suffix}"`,
+      ),
+    ),
+    ...metricKeys
+      .filter((key) => requiredMetrics.has(key))
+      .map((key) => `${metricValue(key)} AS "${key}"`),
+    ...(finishingRequired
+      ? [`(${metricValue("goals")})-(${metricValue("xg")}) AS "finishingDelta"`]
+      : []),
+  ].join(",\n");
   const averageMetrics = metricKeys
     .map((key) => `${metricValue(key)} AS "${key}"`)
     .join(",\n");
   const thresholds = ["true"];
-  if (filters.minutes) thresholds.push(`d.minutes>=${b(filters.minutes)}`);
+  if (filters.minutes)
+    thresholds.push(
+      `${comparisonNumberSql("d.minutes")}>=${comparisonNumberSql(b(filters.minutes))}`,
+    );
   if (filters.rating !== null)
-    thresholds.push(`d.rating>=${b(filters.rating)}`);
+    thresholds.push(
+      `${comparisonNumberSql("d.rating")}>=${comparisonNumberSql(b(filters.rating))}`,
+    );
   if (filters.positions.length)
     thresholds.push(
       `CASE WHEN d.role_code IN('AM','M') THEN 'M' ELSE d.role_code END=ANY(${b(filters.positions)}::text[])`,
     );
   for (const { key, min } of filters.conditions)
-    thresholds.push(`d."${key}">=${b(min)}`);
+    thresholds.push(
+      `${comparisonNumberSql(`d."${key}"`)}>=${comparisonNumberSql(b(min))}`,
+    );
   if (filters.q)
     thresholds.push(
       `${normalizedSql("concat_ws(' ',d.name,array_to_string(d.teams,' · '),array_to_string(d.leagues,' · '),d.search_aliases)")} LIKE ${b(`%${likeText(filters.q)}%`)}`,
@@ -308,23 +387,23 @@ export function playerReadQuery(filters, params) {
   const ranking = {
     rating: {
       eligible: `d.rating_count>=${MIN_RATED_MATCHES}`,
-      order: "d.rating DESC NULLS LAST,d.rating_count DESC",
+      order: `${comparisonNumberSql("d.rating")} DESC NULLS LAST,d.rating_count DESC`,
     },
     goals: {
-      eligible: 'd."goals_count">0 AND d."goals_sum">0',
-      order: "d.goals DESC,coalesce(d.xg,0) DESC",
+      eligible: `d."goals_count">0 AND ${comparisonNumberSql('d."goals_sum"')}>0`,
+      order: `${comparisonNumberSql("d.goals")} DESC,${comparisonNumberSql("coalesce(d.xg,0)")} DESC`,
     },
     assists: {
-      eligible: 'd."assists_count">0 AND d."assists_sum">0',
-      order: "d.assists DESC,coalesce(d.xa,0) DESC",
+      eligible: `d."assists_count">0 AND ${comparisonNumberSql('d."assists_sum"')}>0`,
+      order: `${comparisonNumberSql("d.assists")} DESC,${comparisonNumberSql("coalesce(d.xa,0)")} DESC`,
     },
     clinical: {
-      eligible: 'd."goals_sum">=4 AND d."xg_count">0',
-      order: 'd."finishingDelta" DESC',
+      eligible: `${comparisonNumberSql('d."goals_sum"')}>=4 AND d."xg_count">0`,
+      order: `${comparisonNumberSql('d."finishingDelta"')} DESC`,
     },
     wasteful: {
-      eligible: 'd."xg_sum">=3 AND d."goals_count">0',
-      order: 'd."finishingDelta" ASC',
+      eligible: `${comparisonNumberSql('d."xg_sum"')}>=3 AND d."goals_count">0`,
+      order: `${comparisonNumberSql('d."finishingDelta"')} ASC`,
     },
   }[filters.ranking];
   if (ranking) thresholds.push(ranking.eligible);
@@ -333,7 +412,7 @@ export function playerReadQuery(filters, params) {
     ? `${ranking.order},${names}`
     : filters.sort === "name"
       ? `${normalizedSql("d.name")} ${filters.direction},d.name COLLATE "C" ${filters.direction},d.player_id ASC`
-      : `d."${filters.sort}" ${filters.direction} NULLS LAST,${names}`;
+      : `${filters.sort === "matches" ? 'd."matches"' : comparisonNumberSql(`d."${filters.sort}"`)} ${filters.direction} NULLS LAST,${names}`;
   const aliasParam = b(
     JSON.stringify(
       playerAliasEntries().map(([player_id, aliases]) => ({
@@ -347,22 +426,26 @@ export function playerReadQuery(filters, params) {
   const sql = `/*vega:compact:players*/
 WITH publication AS MATERIALIZED (${publication}),
 source AS MATERIALIZED (
- SELECT a.id,a.player_id,a.team_id,a.team,a.match_id,a.league_id,a.league,a.date,a.minutes,a.rating,a.starter,
- ${PLAYER_COUNT_METRICS.map((key) => `a.${snake(key)}`).join(",")},p.name,p.image_url,${positionNumberSql("a")} position_number,
+ SELECT a.id,a.player_id,a.player_ref,a.team_id,a.team,a.match_id,a.league_id,a.league,a.date,a.minutes,a.rating,a.starter,
+ ${[...sourceMetrics].map((key) => `a.${snake(key)},`).join("")}${positionNumberSql("a")} position_number,
  row_number() OVER(ORDER BY a.league_id,a.date NULLS LAST,a.match_id,a.ordinal,a.id) source_order
- FROM statarena_app.appearances a JOIN statarena_app.players p ON p.id=a.player_ref
- LEFT JOIN statarena_app.matches m ON m.id=a.match_id
+ FROM statarena_app.appearances a
+ ${filters.venue !== "all" || filters.result !== "all" ? "LEFT JOIN statarena_app.matches m ON m.id=a.match_id" : ""}
  WHERE ${where.join(" AND ")}
 ), identities AS (
- SELECT DISTINCT ON(player_id) player_id,name,image_url,id,date,team,team_id,league_id,league,position_number
- FROM source ORDER BY player_id,coalesce(date,'') DESC,source_order
+ SELECT s.player_id,p.name,p.image_url,s.id,s.date,s.team,s.team_id,s.league_id,s.league,s.position_number
+ FROM (SELECT DISTINCT ON(player_id) * FROM source
+   ORDER BY player_id,coalesce(date,'') DESC,source_order) s
+ JOIN statarena_app.players p ON p.id=s.player_ref
 ), played AS MATERIALIZED (
  SELECT DISTINCT ON(player_id,match_id) s.*,${positionLineSql("s.position_number")} role_code
  FROM source s WHERE s.match_id IS NOT NULL AND s.match_id<>'' AND ${finiteSql("s.minutes")} AND s.minutes>0
  ORDER BY player_id,match_id,source_order
 ), latest AS (
- SELECT DISTINCT ON(player_id) player_id,name,image_url,id,date,team,team_id,league_id,league,position_number
- FROM played ORDER BY player_id,coalesce(date,'') DESC,source_order
+ SELECT s.player_id,p.name,p.image_url,s.id,s.date,s.team,s.team_id,s.league_id,s.league,s.position_number
+ FROM (SELECT DISTINCT ON(player_id) * FROM played
+   ORDER BY player_id,coalesce(date,'') DESC,source_order) s
+ JOIN statarena_app.players p ON p.id=s.player_ref
 ), unknown AS (
  SELECT s.player_id,count(DISTINCT s.match_id)::int amount FROM source s
  LEFT JOIN played p ON p.player_id=s.player_id AND p.match_id=s.match_id
@@ -390,8 +473,7 @@ source AS MATERIALIZED (
  count(*) FILTER(WHERE p.starter IS TRUE)::int starts,count(*) FILTER(WHERE p.starter IS NOT NULL)::int known_starts,
  avg(p.rating) FILTER(WHERE ${finiteSql("p.rating")}) rating,count(*) FILTER(WHERE ${finiteSql("p.rating")})::int rating_count,
  array_agg(DISTINCT p.team_id) FILTER(WHERE p.team_id IS NOT NULL AND p.team_id<>'') team_ids,
- array_agg(DISTINCT p.league_id) FILTER(WHERE p.league_id IS NOT NULL AND p.league_id<>'') league_ids,
- ${countProjection},${ratioProjection}
+ array_agg(DISTINCT p.league_id) FILTER(WHERE p.league_id IS NOT NULL AND p.league_id<>'') league_ids${earlyAggregates ? `,\n${earlyAggregates}` : ""}
  FROM played p GROUP BY p.player_id
 ), averages AS (
  SELECT i.player_id,coalesce(nullif(l.name,''),nullif(i.name,''),'Joueur') name,coalesce(l.image_url,i.image_url) image_url,
@@ -401,24 +483,24 @@ source AS MATERIALIZED (
  coalesce(a.total_minutes,0) total_minutes,coalesce(a.starts,0) starts,coalesce(a.known_starts,0) known_starts,
  coalesce(u.amount,0) unknown_minutes,a.rating,coalesce(a.rating_count,0) rating_count,
  coalesce(a.team_ids,'{}'::text[]) team_ids,coalesce(a.league_ids,'{}'::text[]) league_ids,
- to_jsonb(i)-'player_id' identity,to_jsonb(l)-'player_id' latest,aliases.search_aliases,
- ${PLAYER_COUNT_METRICS.flatMap((key) => ["sum", "count", "minutes"].map((suffix) => `a."${key}_${suffix}"`)).join(",")},
- ${Object.keys(ratioDefinitions)
-   .flatMap((key) =>
-     ["numerator", "denominator", "count", "minutes"].map(
-       (suffix) => `a."${key}_${suffix}"`,
-     ),
-   )
-   .join(",")},
- ${averageMetrics},(${metricValue("goals")})-(${metricValue("xg")}) AS "finishingDelta"
+ to_jsonb(i)-'player_id' identity,to_jsonb(l)-'player_id' latest,aliases.search_aliases${earlyProfile ? `,\n${earlyProfile}` : ""}
  FROM identities i LEFT JOIN aggregates a USING(player_id) LEFT JOIN latest l USING(player_id)
  LEFT JOIN unknown u USING(player_id) LEFT JOIN teams t USING(player_id) LEFT JOIN leagues le USING(player_id)
  LEFT JOIN main_role r USING(player_id)
  LEFT JOIN jsonb_to_recordset(${aliasParam}::jsonb) AS aliases(player_id text,search_aliases text) USING(player_id)
 ), filtered AS MATERIALIZED (SELECT d.* FROM averages d WHERE ${thresholds.join(" AND ")}),
-page AS (SELECT d.*,row_number() OVER(ORDER BY ${order}) result_order FROM filtered d ORDER BY ${order} LIMIT ${limit} OFFSET ${offset})
+page AS MATERIALIZED (SELECT d.*,row_number() OVER(ORDER BY ${order}) result_order FROM filtered d ORDER BY ${order} LIMIT ${limit} OFFSET ${offset}),
+page_metrics AS (
+ SELECT p.player_id,${countProjection},${ratioProjection}
+ FROM played k JOIN page selected ON selected.player_id=k.player_id
+ JOIN statarena_app.appearances p ON p.id=k.id GROUP BY p.player_id
+), page_records AS (
+ SELECT p.result_order,(to_jsonb(p)-'result_order')||coalesce(to_jsonb(a)-'player_id','{}'::jsonb)||to_jsonb(v) AS record
+ FROM page p LEFT JOIN page_metrics a USING(player_id)
+ CROSS JOIN LATERAL (SELECT ${averageMetrics},(${metricValue("goals")})-(${metricValue("xg")}) AS "finishingDelta") v
+)
 SELECT publication.*,(SELECT count(*)::int FROM filtered) total,
- coalesce((SELECT jsonb_agg(to_jsonb(p)-'result_order' ORDER BY result_order) FROM page p),'[]'::jsonb) players,
+ coalesce((SELECT jsonb_agg(p.record ORDER BY p.result_order) FROM page_records p),'[]'::jsonb) players,
  coalesce((SELECT jsonb_agg(jsonb_build_object('id',t.id,'name',t.name,'imageUrl',t.image_url) ORDER BY t.id)
    FROM statarena_app.teams t WHERE t.id IN(SELECT unnest(team_ids) FROM page)),'[]'::jsonb) teams
 FROM publication`;
@@ -505,7 +587,14 @@ export function playerReadRecord(row) {
   };
 }
 
-export function createPlayerReadRoute(read = query) {
+export function createPlayerReadRoute(
+  read = query,
+  { rollups = process.env.STATARENA_PLAYER_ROLLUPS === "1" } = {},
+) {
+  const snapshotRead = createReadCache(read, {
+    name: "players",
+    maxBytes: 8 * 1024 * 1024,
+  });
   return async (req, path, params) => {
     if (path !== "/api/read/players") return null;
     if (!["GET", "HEAD"].includes(req.method))
@@ -514,7 +603,15 @@ export function createPlayerReadRoute(read = query) {
     const validated = await readValidator(req, params, filters.scope, read);
     if (validated) return validated;
     const { sql, values } = playerReadQuery(filters, params);
-    const [snapshot] = await read(sql, values);
+    const snapshot = await snapshotRead(
+      req,
+      params,
+      filters.scope,
+      async () =>
+        (rollups
+          ? await readPlayerRollup(read, filters, params, PLAYER_COUNT_METRICS)
+          : null) || (await read(sql, values))[0],
+    );
     const total = Number(snapshot?.total || 0);
     return readResponse(
       req,

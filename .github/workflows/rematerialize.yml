@@ -38,6 +38,7 @@ jobs:
     runs-on: ${{ vars.STATARENA_AWS_RUNNER || 'ubuntu-latest' }}
     env:
       STATARENA_SQL_LIMIT_BYTES: ${{ vars.STATARENA_SQL_LIMIT_BYTES }}
+      STATARENA_SQL_RESERVE_BYTES: ${{ vars.STATARENA_SQL_RESERVE_BYTES }}
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
@@ -51,6 +52,9 @@ jobs:
           python-version: "3.13"
           cache: pip
           cache-dependency-path: dashboard/scripts/requirements.txt
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
       - run: pip install -r dashboard/scripts/requirements.txt
       - name: Load AWS staging credentials
         uses: ./.github/actions/aws-database

@@ -23,7 +23,8 @@ function endpoints(query) {
     .replace(/^import .*?;\n/gm, "")
     .replace(/^export /gm, "");
   return runInNewContext(
-    source + "\n({ manifest, fixturePage, partitionPage })",
+    source +
+      "\n({ manifest, fixturePage, partitionPage, appearanceProjection, appearanceRecord })",
     {
       query,
       createHash,
@@ -301,6 +302,109 @@ test("versioned partition URLs reject stale first pages before assembly or 304",
     (error) => error.status === 400,
   );
 });
+
+test(
+  "generated performance keys preserve positional appearances and unknown typed fields remain named",
+  { skip: !process.env.VEGA_TEST_DATABASE_URL },
+  async () => {
+    const url = new URL(process.env.VEGA_TEST_DATABASE_URL);
+    assert.ok(["127.0.0.1", "localhost", "[::1]"].includes(url.hostname));
+    const requireLocal = createRequire(
+      new URL("../dashboard/package.json", import.meta.url),
+    );
+    const { Client } = requireLocal("pg");
+    const client = new Client({ connectionString: url.href });
+    await client.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        readFileSync(
+          new URL(
+            "../dashboard/backend/migrations/003_relational_core.sql",
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      );
+      await client.query(`
+        INSERT INTO statarena_app.players(id,player_id,name) VALUES('p_ref','p_000001','Player');
+        INSERT INTO statarena_app.appearances(id,player_ref,position_id,position_id_type,minutes)
+          VALUES('a_000001','p_ref','11','int',90),('a_000002','p_ref','11','str',30);
+      `);
+      const api = endpoints(() => {
+        throw new Error("No route read expected");
+      });
+      const records = async () => {
+        const rows = (
+          await client.query(`
+          SELECT ${api.appearanceProjection} AS value FROM (
+            SELECT a.*,p.name,p.image_url,NULL::json AS extras,
+              NULL::text AS shirt_number_raw,NULL::text AS shirt_number_type
+            FROM statarena_app.appearances a JOIN statarena_app.players p ON p.id=a.player_ref
+          ) r ORDER BY r.id
+        `)
+        ).rows.map((row) => row.value);
+        return {
+          positional: rows.every(Array.isArray),
+          public: JSON.parse(JSON.stringify(rows.map(api.appearanceRecord))),
+        };
+      };
+      const original = await records();
+      assert.equal(original.positional, true);
+      assert.deepEqual(
+        original.public.map((row) => row.positionId),
+        [11, "11"],
+      );
+      await client.query(
+        readFileSync(
+          new URL(
+            "../dashboard/backend/migrations/031_indexed_performance_cohorts.sql",
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      );
+      assert.deepEqual(await records(), original);
+      await client.query(`
+        ALTER TABLE statarena_app.appearances ADD COLUMN future_typed_metric integer;
+        UPDATE statarena_app.appearances SET future_typed_metric=0 WHERE id='a_000001';
+      `);
+      const named = await records();
+      assert.equal(named.positional, false);
+      assert.deepEqual(
+        named.public.map((row) => row.futureTypedMetric),
+        [0, null],
+      );
+      assert.ok(
+        named.public.every((row) => !Object.hasOwn(row, "performanceGroup")),
+      );
+      assert.deepEqual(
+        named.public.map(({ futureTypedMetric, ...row }) => row),
+        original.public,
+      );
+      await client.query(
+        "ALTER TABLE statarena_app.appearances DROP COLUMN future_typed_metric",
+      );
+      assert.deepEqual(await records(), original);
+      await client.query(`
+        ALTER TABLE statarena_app.appearances ADD COLUMN future_generated_metric integer
+          GENERATED ALWAYS AS (minutes::integer) STORED;
+      `);
+      const future = await records();
+      assert.equal(future.positional, false);
+      assert.deepEqual(
+        future.public.map((row) => row.futureGeneratedMetric),
+        [90, 30],
+      );
+      assert.ok(
+        future.public.every((row) => !Object.hasOwn(row, "performanceGroup")),
+      );
+    } finally {
+      await client.query("ROLLBACK");
+      await client.end();
+    }
+  },
+);
 
 test(
   "fixture SQL pages tied and null dates without gaps on PostgreSQL",

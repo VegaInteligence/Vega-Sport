@@ -97,7 +97,7 @@ export function createResourceCache({
     });
     return pending;
   }
-  return {
+  const cache = {
     load,
     peek: (key) => entries.get(key)?.snapshot,
     value: (key, { age = maxAge } = {}) => {
@@ -141,4 +141,31 @@ export function createResourceCache({
     keys: () => entries.keys(),
     size: () => entries.size,
   };
+  // Non-React consumers follow the same cancellation rule as mounted hooks:
+  // one caller leaving must not abort a shared request another still needs.
+  cache.read = (key, loader, { signal, age = maxAge } = {}) => {
+    signal?.throwIfAborted();
+    const unsubscribe = cache.subscribe(key, () => {});
+    return new Promise((resolve, reject) => {
+      let finished = false;
+      const complete = (settle, value) => {
+        if (finished) return;
+        finished = true;
+        signal?.removeEventListener("abort", abort);
+        unsubscribe();
+        settle(value);
+      };
+      const abort = () =>
+        complete(
+          reject,
+          signal.reason || new DOMException("Aborted", "AbortError"),
+        );
+      signal?.addEventListener("abort", abort, { once: true });
+      cache.load(key, loader, { age }).then(
+        (value) => complete(resolve, value),
+        (error) => complete(reject, error),
+      );
+    });
+  };
+  return cache;
 }

@@ -64,6 +64,7 @@ import {
 import { directoryCSV } from "../services/player-directory.js";
 import { enrichSeasonCompetitions } from "../services/competition-identity.js";
 import { clubDataTeam, loadClubSeason } from "../services/scouting-history.js";
+import { actorReadKey, actorReadParams } from "../services/actor-reads.js";
 import { AsyncState } from "../components/UI.jsx";
 import LoadingPage from "../components/LoadingPage.jsx";
 import {
@@ -230,6 +231,16 @@ export function FootballProvider({ children, loadData = true }) {
   const manifest = requestedVersion ? pinnedManifest : currentManifest;
   const proMode =
     isProManifest(manifest.value) || isProManifest(currentManifest.value);
+  const readConnection = ({ signal } = {}) =>
+    json("/api/status", { signal })
+      .then((value) => value.configured === true)
+      .catch((error) => {
+        if (error.name === "AbortError") throw error;
+        return false;
+      });
+  // Start connectivity beside the manifest. Creating a client for a new route
+  // must not add another status round trip before its own requests can start.
+  useResource("status:api", readConnection, !proMode);
   const catalogueManifest = proMode
     ? currentManifest.value || manifest.value
     : manifest.value;
@@ -298,8 +309,9 @@ export function FootballProvider({ children, loadData = true }) {
         : compactScope(
             directoryScopeIds(manifest.value, chosen, focus, filters),
           ),
-    actorInclude =
-      compactKind === "player"
+    actorInclude = manifest.value?.capabilities?.actorSummary
+      ? ""
+      : compactKind === "player"
         ? initial.get("playerView") === "stats"
           ? "shots"
           : ""
@@ -308,6 +320,12 @@ export function FootballProvider({ children, loadData = true }) {
           : initial.get("clubView") === "matches"
             ? "shots"
             : "";
+  const actorParams = actorReadParams(manifest.value, compactKind, {
+    id: actorId,
+    season: chosen,
+    leagues: actorScope,
+    include: actorInclude,
+  });
   const versions = useMemo(
     () => ({
       all: seasonVersion(manifest.value, chosen),
@@ -365,7 +383,7 @@ export function FootballProvider({ children, loadData = true }) {
   const proVersionKey = JSON.stringify(manifest.value?.editions || []);
   const seasonKey = compactMode
     ? compactActor && loadData
-      ? `compact-actor:${compactKind}:${actorId}:${chosen}:${actorScope}:${actorInclude}:${compactGeneration(manifest.value)}`
+      ? actorReadKey(compactKind, actorParams)
       : `compact-catalogue:${chosen}:${compactKind}:${compactGeneration(manifest.value)}`
     : proMode
       ? `pro-season:${chosen}:${proMatchPage || !loadData ? "catalogue" : `${dataFocus}:${leagueOnly ? filters.league : "all"}`}:${proVersionKey}`
@@ -404,9 +422,10 @@ export function FootballProvider({ children, loadData = true }) {
               retrievedAt: manifest.value.retrievedAt,
               storage: manifest.value.storage,
             },
-            competitions: compactMode
-              ? compactCatalogue(catalogueManifest, chosen)
-              : catalogueManifest?.competitions || [],
+            competitions:
+              manifest.value.storage === "aws-relational"
+                ? compactCatalogue(catalogueManifest, chosen)
+                : catalogueManifest?.competitions || [],
             teams: [],
             matches: [],
             appearances: [],
@@ -417,18 +436,12 @@ export function FootballProvider({ children, loadData = true }) {
   );
   function loadScope({ signal } = {}) {
     if (compactActor)
-      return readCompactPages(
-        compactKind,
-        {
-          season: chosen,
-          [compactKind === "player" ? "player" : "team"]: actorId,
-          leagues: actorScope,
-          include: actorInclude,
-          generation: compactGeneration(manifest.value),
-        },
-        { signal },
-      )
-        .then((value) => mergeActorPages(value, manifest.value, chosen))
+      return readCompactPages(compactKind, actorParams, { signal })
+        .then((value) => {
+          const data = mergeActorPages(value, manifest.value, chosen);
+          data.meta.actorScope = actorScope;
+          return data;
+        })
         .catch((error) => {
           if (error.status === 409) void refreshManifest().catch(() => {});
           throw error;
@@ -679,13 +692,22 @@ export function FootballProvider({ children, loadData = true }) {
         : null,
     [data, proMode, clientManifest, clientLeague, clientSeason],
   );
-  const status = useResource(`status:${client?.id}`, async () => {
-    if (!client) return false;
-    await (loadData && !deferSeason && !pagedMatches && !compactMode
-      ? client.init()
-      : client.checkStatus());
-    return client.configured;
-  });
+  const status = useResource(
+    `status:${client?.id}`,
+    async () => {
+      if (proMode) await client.checkStatus();
+      else {
+        client.configured = await primeResource("status:api", readConnection);
+        client.statusKnown = true;
+        // The relational manifest already has the catalogue. Fetching all
+        // provider leagues again only delays competitions and match views.
+        if (loadData && data.meta?.storage !== "aws-relational")
+          await client.init();
+      }
+      return client.configured;
+    },
+    Boolean(client),
+  );
   const seasonCompetitions = useMemo(() => {
     const season = catalogueManifest?.seasons.find(
       (item) => item.id === chosen,
@@ -1085,6 +1107,7 @@ export function FootballProvider({ children, loadData = true }) {
     pro: proMode,
     compactMode,
     compactKind,
+    actorScope,
     pagedMatches,
     refreshManifest,
     refreshing: Boolean(refreshing),

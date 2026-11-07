@@ -58,18 +58,30 @@ export default function MatchdaySchedule({
   const [loadingMore, setLoadingMore] = useState(false);
   const automaticStarted = useRef(false);
   const resource = useResource(
-    `matchdays:${f.client.id}:${competition.id}:${season}`,
-    async () => {
+    `matchdays:${competition.id}:${season}:${f.manifest?.publicationVersion || f.manifest?.scouting?.sourceDigest || ""}`,
+    async ({ signal }) => {
       const url = `/api/matchdays?competition=${encodeURIComponent(competition.id)}&season=${encodeURIComponent(season)}`;
       const archived =
-        (await json(url).catch(() => ({ matches: {} }))).matches || {};
+        (
+          await json(url, { signal }).catch((error) => {
+            if (error.name === "AbortError") throw error;
+            return { matches: {} };
+          })
+        ).matches || {};
       return { rounds: archived };
     },
-    f.statusKnown,
+    Boolean(competition.id && season),
   );
   useEffect(() => {
-    if (!resource.value || !f.client.configured || automaticStarted.current)
+    if (
+      f.manifest?.storage === "aws-relational" ||
+      !resource.value ||
+      !f.client.configured ||
+      automaticStarted.current
+    )
       return;
+    // Published round metadata already describes the collected fixtures.
+    // Missing labels must not trigger 24 match-detail requests on each visit.
     automaticStarted.current = true;
     const archived = resource.value.rounds;
     let missing = nearestUntried(
@@ -137,12 +149,6 @@ export default function MatchdaySchedule({
     setPage(1);
   }
 
-  if (resource.loading)
-    return (
-      <div className="loading-state" role="status">
-        Chargement des journées…
-      </div>
-    );
   if (!matches.length)
     return <Empty>Aucune rencontre collectée pour cette saison.</Empty>;
   if (!selected)
@@ -155,6 +161,11 @@ export default function MatchdaySchedule({
   ).length;
   return (
     <section className="matchday-schedule" aria-label="Matchs par journée">
+      {resource.loading && (
+        <p role="status" className="matchday-note">
+          Chargement des journées…
+        </p>
+      )}
       <div className="matchday-toolbar">
         <div className="matchday-heading">
           <span className="matchday-eyebrow">

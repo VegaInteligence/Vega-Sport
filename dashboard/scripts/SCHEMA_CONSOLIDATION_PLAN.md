@@ -2,6 +2,24 @@
 
 ## Statut exact
 
+### Implémentation du 7 novembre 2026
+
+Le plan ci-dessous conserve le diagnostic et les candidats de l'audit initial.
+L'implémentation concrète est désormais décrite dans
+[`DB_REFACTOR_OPERATIONS.md`](DB_REFACTOR_OPERATIONS.md) et dans le manifeste exact
+[`consolidation-manifest.json`](consolidation-manifest.json). La migration 023
+déplace réellement **112 tables physiques du modèle de publication vers trois
+stockages de nœuds contraints et indexés**, avec backfill reprenable, comparaison
+exhaustive, publication adaptée et retour arrière incluant les écritures nouvelles.
+La cible physique active de `statarena_app` est **54 tables avec l'agrégat de
+navigation justifié de la migration 025**, contre 161 dans l'inventaire initial.
+Les tables de retour arrière, les sources, l'authentification et l'historique Pro
+sont comptabilisés séparément ; leur conservation n'est pas présentée comme une
+économie de stockage déjà réalisée. Les preuves de déploiement natif sont produites
+par le déploiement, pas déduites de la seule présence des fichiers de migration.
+
+### État de l'audit initial avant les migrations 023–025
+
 L’inventaire de référence est celui du 6 novembre 2026 à 20:55:10 UTC,
 artifact GitHub `13539309460`, run `42292333608`, transaction
 `READ ONLY REPEATABLE READ`. Il contient **347 relations : 295 tables et 52 vues**.
@@ -11,10 +29,10 @@ leur ancien nom de schéma. Les estimations de lignes ne prouvent ni vacuité ni
 absence d’usage.
 
 Les **40 relations applicatives cibles sont une proposition conditionnelle**.
-Ce code ne réduit pas physiquement 295 tables à 40 et ne promet pas une économie
+La première livraison ne réduisait pas physiquement 295 tables à 40 et ne promettait pas une économie
 de stockage correspondant à la taille des objets existants. La migration 021
 ajoute une vue et des fonctions ; la migration 022 ajoute des colonnes à une file.
-Aucune table métier existante n’est retirée. Le registre complet antérieur
+Aucune table métier existante n'était retirée dans cette première livraison. Le registre complet antérieur
 `schema-classification.json/csv` contient 347 mappings, leurs contraintes,
 incertitudes et preuves ; les deux vues de métriques joueur/mi-temps y ciblent
 bien `football.player_match_stats` avec conservation période/états/totaux/ordre.

@@ -52,7 +52,7 @@ export function routeLabel(request) {
     return "/invalid";
   }
   if (
-    /^\/api\/(?:dashboard\/manifest|seasons\/partition|fixtures|search|read\/(?:home|players|clubs|player|club|performance|discipline)|scouting\/routes|archives\/(?:index|season)|rankings\/(?:associations|club|index|edition)|club-links|cup-(?:index|snapshot|table)|matchdays|supplemental)$/.test(
+    /^\/api\/(?:dashboard\/manifest|seasons\/partition|fixtures|search|read\/(?:home|players|clubs|player|club|performance|discipline|archive)|scouting\/routes|archives\/(?:index|season)|rankings\/(?:associations|club|index|edition)|club-links|cup-(?:index|snapshot|table)|matchdays|supplemental)$/.test(
       pathname,
     )
   )
@@ -93,7 +93,10 @@ export function routeLabel(request) {
 
 /** Origin measurements only; no claim about CDN HITs or provider wire egress. */
 export async function instrumentRequest(request, handler) {
-  if (sampleRate === 0 || Math.random() >= sampleRate) return handler();
+  const sampled = sampleRate > 0 && Math.random() < sampleRate;
+  // Explicit timing headers must describe every measured response, not the
+  // incidental one-percent log sample. Logging remains independently sampled.
+  if (!sampled && !timingHeaders) return handler();
   return requests.run({ metrics: {}, versions: new Set() }, async () => {
     const context = requests.getStore(),
       start = performance.now();
@@ -115,27 +118,28 @@ export async function instrumentRequest(request, handler) {
           Math.round(value * 1000) / 1000,
         ]),
       );
-      console.log(
-        JSON.stringify({
-          event: "statarena.request",
-          route: routeLabel(request),
-          method: ["GET", "HEAD"].includes(request.method)
-            ? request.method
-            : "OTHER",
-          status: response?.status || 500,
-          duration_ms: Math.round((performance.now() - start) * 1000) / 1000,
-          instance_age_ms: Math.round(performance.now() - instanceStarted),
-          deployment:
-            process.env.STATARENA_RELEASE ||
-            process.env.AWS_LAMBDA_FUNCTION_VERSION ||
-            process.env.VERCEL_DEPLOYMENT_ID ||
-            "local",
-          region:
-            process.env.AWS_REGION || process.env.VERCEL_REGION || "local",
-          object_versions: [...context.versions],
-          metrics,
-        }),
-      );
+      if (sampled)
+        console.log(
+          JSON.stringify({
+            event: "statarena.request",
+            route: routeLabel(request),
+            method: ["GET", "HEAD"].includes(request.method)
+              ? request.method
+              : "OTHER",
+            status: response?.status || 500,
+            duration_ms: Math.round((performance.now() - start) * 1000) / 1000,
+            instance_age_ms: Math.round(performance.now() - instanceStarted),
+            deployment:
+              process.env.STATARENA_RELEASE ||
+              process.env.AWS_LAMBDA_FUNCTION_VERSION ||
+              process.env.VERCEL_DEPLOYMENT_ID ||
+              "local",
+            region:
+              process.env.AWS_REGION || process.env.VERCEL_REGION || "local",
+            object_versions: [...context.versions],
+            metrics,
+          }),
+        );
     }
   });
 }

@@ -9,6 +9,7 @@ from itertools import islice
 
 from relational_match_ddl import dbname, leaves, quoted
 from relational_match_model import Children, context, families, nested_families
+from consolidated_storage import copy_tree_records, storage_mode
 
 
 def canonical(value):
@@ -155,7 +156,9 @@ def prepare(family, response):
     return header, batches
 
 
-def _copy_rows(db, spec, parts):
+def _copy_rows(db, spec, parts, *, consolidated=False):
+    if consolidated and copy_tree_records(db, spec, parts):
+        return
     keys = ["record_no", "missing", "null_groups"]
     if parts[0][1][0]["parent_no"] is not None:
         keys += ["parent_no", "position"]
@@ -181,7 +184,7 @@ def _copy_rows(db, spec, parts):
 
 
 def save_rows(db, resource, spec, rows):
-    _copy_rows(db, spec, [(resource, rows)])
+    _copy_rows(db, spec, [(resource, rows)], consolidated=storage_mode(db))
 
 
 def publish_match_details(
@@ -355,7 +358,7 @@ def _insert_headers(db, rows):
     return ids
 
 
-def _copy_group(db, sources):
+def _copy_group(db, sources, *, consolidated=False):
     if not sources:
         return
     existing = _known_families(db, list(sources))
@@ -388,7 +391,7 @@ def _copy_group(db, sources):
                 groups[spec.table] = (spec, [])
             groups[spec.table][1].append((ids[address], rows))
     for spec, parts in groups.values():
-        _copy_rows(db, spec, parts)
+        _copy_rows(db, spec, parts, consolidated=consolidated)
 
 
 def publish_match_batch(db, records):
@@ -411,6 +414,7 @@ def _publish_bounded(db, records, base_params, base_subject):
     if len(set(mids)) != len(mids):
         raise ValueError("A match may appear only once per batch")
     with db.transaction():
+        consolidated = storage_mode(db)
         db.execute(
             """WITH dictionary_writer AS MATERIALIZED (
                      SELECT pg_advisory_xact_lock(hashtextextended('statarena_app.match_metric_dictionary_writer',0))
@@ -433,7 +437,7 @@ def _publish_bounded(db, records, base_params, base_subject):
         count = 0
         for record in records:
             if count == _MAX_COPY_MATCHES:
-                _copy_group(db, group)
+                _copy_group(db, group, consolidated=consolidated)
                 group = {}
                 size = 0
                 count = 0
@@ -441,7 +445,7 @@ def _publish_bounded(db, records, base_params, base_subject):
             for address, source in _family_sources(record, base_params, base_subject):
                 if address in group:
                     # Preserve sequential precedence for equivalent parameter encodings.
-                    _copy_group(db, group)
+                    _copy_group(db, group, consolidated=consolidated)
                     group = {}
                     size = 0
                     count = 1
@@ -452,10 +456,10 @@ def _publish_bounded(db, records, base_params, base_subject):
                 )
                 raw = canonical(response).encode()
                 if group and size + len(raw) > _MAX_COPY_SOURCE_BYTES:
-                    _copy_group(db, group)
+                    _copy_group(db, group, consolidated=consolidated)
                     group = {}
                     size = 0
                     count = 1
                 group[address] = (response, sha256(raw).hexdigest())
                 size += len(raw)
-        _copy_group(db, group)
+        _copy_group(db, group, consolidated=consolidated)

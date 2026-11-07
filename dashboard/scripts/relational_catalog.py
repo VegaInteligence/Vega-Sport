@@ -10,6 +10,8 @@ from relational_catalog_keys import records
 from relational_match import canonical, _copy_rows, _values_sql, unpack_record, validate_scalar
 from relational_match_ddl import column_lines, fields, projected
 from relational_match_model import Children
+from consolidated_storage import storage_mode
+from archive_projection import archive_index_seasons, refresh_archive_projection
 
 SPEC = Path(__file__).resolve().parents[1] / "backend/services/catalog-model.json"
 spec = json.loads(SPEC.read_text())
@@ -99,7 +101,7 @@ def normalize(model, body):
     return body
 
 
-def _publish_group(db, group):
+def _publish_group(db, group, *, consolidated=False):
     """Compare headers once, then COPY each changed native table once per bounded group."""
     if not group:
         return 0, 0
@@ -149,7 +151,7 @@ def _publish_group(db, group):
             tables[spec.table][1].append((identifiers[key], rows))
     # Each model traverses parents before children. Grouping retains that order.
     for spec, parts in tables.values():
-        _copy_rows(db, spec, parts)
+        _copy_rows(db, spec, parts, consolidated=consolidated)
     return len(changed), unchanged
 
 
@@ -158,25 +160,36 @@ def publish_catalog(db, records_in):
     changed = unchanged = 0
     group = {}
     size = 0
+    archive_seasons = set()
+    archive_indexes = {}
     with db.transaction():
+        consolidated = storage_mode(db)
         db.execute(
             "SELECT pg_advisory_xact_lock(hashtextextended('statarena_app.catalog_editions',0))"
         )
         for path, value in records_in:
             for model, kind, scope, edition, body in records(path, value):
+                if kind == "archive-season":
+                    archive_seasons.add(edition)
+                elif kind == "archive-index" and scope in ("results", "goals") and scope not in archive_indexes:
+                    archive_indexes[scope] = archive_index_seasons(db, scope)
                 raw = canonical(body).encode()
                 digest = sha256(model_version.encode() + raw).hexdigest()
                 key = (kind, scope, edition)
                 if group and (key in group or len(group) >= 64 or size + len(raw) > 8 * 1024 * 1024):
-                    added, kept = _publish_group(db, group)
+                    added, kept = _publish_group(db, group, consolidated=consolidated)
                     changed += added
                     unchanged += kept
                     group, size = {}, 0
                 group[key] = (model, body, digest)
                 size += len(raw)
-        added, kept = _publish_group(db, group)
+        added, kept = _publish_group(db, group, consolidated=consolidated)
         changed += added
         unchanged += kept
+        for scope, previous in archive_indexes.items():
+            archive_seasons.update(previous ^ archive_index_seasons(db, scope))
+        for season in sorted(archive_seasons):
+            refresh_archive_projection(db, season)
     return {"changed": changed, "unchanged": unchanged}
 
 

@@ -1,4 +1,5 @@
 import { query } from "./postgres.js";
+import { createReadCache } from "./relational-read-cache.js";
 import {
   appearanceRecord,
   assembleMatches,
@@ -39,24 +40,17 @@ function metric(alias, key) {
   return number(field);
 }
 function positionGroup(alias) {
-  const value = `${alias}.position_id`,
-    type = `${alias}.position_id_type`;
-  const position = `(CASE WHEN ${value} IS NULL OR ${type}='NoneType' THEN NULL
-    WHEN ${type}='bool' THEN CASE WHEN ${value}='True' THEN 1 ELSE 0 END
-    WHEN btrim(${value})='' THEN 0
-    WHEN btrim(${value})~'^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][+-]?[0-9]+)?$'
-      AND pg_input_is_valid(btrim(${value}),'double precision') THEN btrim(${value})::double precision END)`;
-  return `CASE WHEN ${position} IN (0,11) THEN 'G'
-    WHEN ${position}=1 OR (${position}>=30 AND ${position}<40) OR ${position} IN (51,59) THEN 'D'
-    WHEN ${position}=2 OR (${position}>=50 AND ${position}<80) THEN 'M'
-    WHEN (${position}>=80 AND ${position}<120) OR ${position}=3 THEN 'O'
-    WHEN ${finiteSql(`${alias}.saves`)} AND ${alias}.saves>0 THEN 'G' ELSE 'F' END`;
+  return `${alias}.performance_group`;
 }
 const rows = (sql) =>
   `(SELECT coalesce(json_agg(r),'[]'::json) FROM (${sql}) r)`;
 
 /** One selected performance, exact peer counts, and match-wide rating rank. */
 export function createPerformanceRoute(read = query) {
+  const snapshotRead = createReadCache(read, {
+    name: "performance",
+    maxEntryBytes: 256 * 1024,
+  });
   return async function relationalPerformanceRoute(req, path, params) {
     if (path !== "/api/read/performance") return null;
     if (!["GET", "HEAD"].includes(req.method))
@@ -126,10 +120,11 @@ export function createPerformanceRoute(read = query) {
       );
     const sql = `WITH publication AS MATERIALIZED (${publication}),target AS MATERIALIZED (${target}),
       target_values AS MATERIALIZED (SELECT ${positionGroup("t")} AS profile_group,${projection("t")} FROM target t),
-      cohort AS NOT MATERIALIZED (SELECT ${positionGroup("a")} AS profile_group,${projection("a")}
-        FROM statarena_app.appearances a WHERE ${cohortScope} AND a.minutes>=${MIN_PEER_MINUTES}),
-      peers AS (SELECT c.* FROM cohort c CROSS JOIN target_values t
-        WHERE c.profile_group=t.profile_group OR (t.profile_group='F' AND c.profile_group<>'G'))
+      peers AS NOT MATERIALIZED (SELECT ${projection("a")}
+        FROM target_values t JOIN statarena_app.appearances a
+          ON ${positionGroup("a")}=ANY(CASE WHEN t.profile_group='F'
+            THEN ARRAY['D','M','O','F']::text[] ELSE ARRAY[t.profile_group] END)
+        WHERE ${cohortScope} AND a.minutes>=${MIN_PEER_MINUTES})
       SELECT publication.*,(SELECT row_to_json(t) FROM target t) AS appearance,
         (SELECT json_build_object('peers',count(*),'metrics',json_build_object(${counts})) FROM peers p CROSS JOIN target_values t) AS profile_counts,
         (SELECT CASE WHEN t.rating IS NOT NULL AND ${finiteSql("t.rating")}
@@ -143,7 +138,13 @@ export function createPerformanceRoute(read = query) {
         ${rows("SELECT a.match_id,a.id AS appearance_id,a.ordinal FROM target t JOIN statarena_app.appearances a ON a.match_id=t.match_id ORDER BY a.ordinal,a.id")} players,
         ${rows("SELECT c.*,(SELECT json_agg(native_season ORDER BY ordinal) FROM statarena_app.competition_catalog_seasons k WHERE k.competition_id=c.id) catalog_seasons FROM target t JOIN statarena_app.competitions c ON c.id=t.league_id")} competitions
       FROM publication`;
-    const [snapshot] = await read(sql, values);
+    const snapshot = await snapshotRead(req, params, scope, async () => {
+      const [state] = await read(sql, values);
+      checkReadGeneration(params, state?.generation);
+      if (!state.appearance)
+        reject(404, "Performance indisponible dans ce périmètre.");
+      return state;
+    });
     checkReadGeneration(params, snapshot?.generation);
     if (!snapshot.appearance)
       reject(404, "Performance indisponible dans ce périmètre.");

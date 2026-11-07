@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+from consolidated_storage import copy_support_records, storage_mode
 
 _SPEC = json.loads(
     (
@@ -118,6 +119,7 @@ def publish_supporting(db, rows=None):
     the savepoint. Returns counts for the caller's worker receipt.
     """
     with db.transaction():
+        consolidated = storage_mode(db)
         db.execute(
             "SELECT pg_advisory_xact_lock(hashtextextended('statarena_app.support_projection',0))"
         )
@@ -176,15 +178,23 @@ def publish_supporting(db, rows=None):
         for model_key in FAMILIES.values():
             if batches.get(model_key):
                 # Target IDs are indexed. ON DELETE CASCADE removes only this family's changed children.
-                db.execute(
-                    "DELETE FROM statarena_app."
-                    + MODELS[model_key]["table"]
-                    + " WHERE projection_id=ANY(%s)",
-                    ([row[0] for row in batches[model_key]],),
-                )
+                if consolidated:
+                    db.execute(
+                        "DELETE FROM statarena_app.support_records WHERE record_kind=%s AND resource_id=ANY(%s)",
+                        (MODELS[model_key]["table"], [row[0] for row in batches[model_key]]),
+                    )
+                else:
+                    db.execute(
+                        "DELETE FROM statarena_app." + MODELS[model_key]["table"] + " WHERE projection_id=ANY(%s)",
+                        ([row[0] for row in batches[model_key]],),
+                    )
         # The checked-in model lists parent tables before child tables for FK order.
         for name, model in MODELS.items():
             if not batches.get(name):
+                continue
+            if consolidated:
+                copy_support_records(db, model, batches[name])
+                receipt["rows"] += len(batches[name])
                 continue
             fields = [column for column, kind in model["fields"].values()]
             depth = len(batches[name][0]) - len(fields) - 3

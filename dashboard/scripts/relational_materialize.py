@@ -31,6 +31,7 @@ from relational_match import (
 from relational_snapshot import TABLES, read_partition, snapshot
 from relational_support import FAMILIES, publish_supporting
 from football_seasons import tournament_kind
+from aws_storage_budget import sql_budget
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = ROOT / "dashboard/backend/migrations"
@@ -149,15 +150,15 @@ def publish_partition_snapshot(db, season, league, value, previous_facts=None, p
 
 
 def capacity(db, growth=0):
-    limit = int(os.environ.get("STATARENA_SQL_LIMIT_BYTES") or 16_000_000_000)
-    margin = int(os.environ.get("STATARENA_SQL_RESERVE_BYTES") or 256_000_000)
-    headroom = (
-        limit
-        - margin
-        - db.execute("SELECT pg_database_size(current_database())").fetchone()[0]
-    )
-    if limit <= 0 or margin < 0 or growth > headroom:
-        raise RuntimeError("RDS publication capacity exceeded; queued inputs retained")
+    limit, margin = sql_budget()
+    database_bytes = db.execute("SELECT pg_database_size(current_database())").fetchone()[0]
+    headroom = limit - margin - database_bytes
+    if growth < 0 or growth > headroom:
+        raise RuntimeError(
+            "RDS publication capacity exceeded; queued inputs retained "
+            f"(database_bytes={database_bytes}, limit_bytes={limit}, "
+            f"reserve_bytes={margin}, requested_growth_bytes={growth})"
+        )
     return headroom
 
 
@@ -170,7 +171,7 @@ def install(db):
         db.execute(
             "CREATE TABLE IF NOT EXISTS statarena_app.worker_schema(version text PRIMARY KEY,digest text NOT NULL)"
         )
-        for prefix in ("003_", "004_", "005_", "006_", "007_", "008_", "009_", "010_", "011_", "020_", "021_", "022_"):
+        for prefix in ("003_", "004_", "005_", "006_", "007_", "008_", "009_", "010_", "011_", "020_", "021_", "022_", "023_", "024_", "025_", "026_", "027_", "028_", "029_", "030_", "031_", "032_", "033_", "034_"):
             (path,) = SCHEMA.glob(prefix + "*.sql")
             source = path.read_bytes()
             digest = hashlib.sha256(source).hexdigest()

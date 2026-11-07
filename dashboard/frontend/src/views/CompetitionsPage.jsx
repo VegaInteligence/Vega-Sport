@@ -7,6 +7,7 @@ import React, {
   useRef,
   useDeferredValue,
   useMemo,
+  useCallback,
 } from "react";
 import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
@@ -28,6 +29,11 @@ import {
 } from "../services/competition-matches.js";
 import { normalizeText, seasonLabel } from "../services/format.js";
 import { useResource } from "../services/resources.js";
+import { competitionFixturePreview } from "../services/fixture-pages.js";
+import { compactGeneration } from "../services/compact-reads.js";
+import { parisDay } from "../services/fixtures.js";
+import { SPORTSCORE_LEAGUES } from "../services/sportscore-standings.js";
+import { hasUefaStandings } from "../services/uefa-standings.js";
 import { cupIndex as loadCupIndex } from "../services/catalog-client.js";
 import CompetitionHighlights from "../components/CompetitionHighlights.jsx";
 import SeasonSelect from "../components/SeasonSelect.jsx";
@@ -161,19 +167,58 @@ function Fixtures({ competition, day, initialSeason }) {
     defaultCompetitionMatchStatus(day),
   );
   const [page, setPage] = useState(1);
+  const publishedTable =
+    competition &&
+    (String(competition.seasons?.[0]) === String(season)
+      ? Boolean(SPORTSCORE_LEAGUES[competition.id])
+      : hasUefaStandings(competition.id, season));
+  const previewEnabled =
+    !day &&
+    !hasKnockout &&
+    publishedTable &&
+    f.manifest.capabilities?.fixturePaginationOrder === true;
+  const fixtureScope = `${competition?.id}:${season}`;
+  const [fallbackScope, setFallbackScope] = useState(null);
+  const needFixtures = useCallback(
+    () => setFallbackScope(fixtureScope),
+    [fixtureScope],
+  );
+  const needsFullCalendar =
+    !previewEnabled || view !== "standings" || fallbackScope === fixtureScope;
+  const preview = useResource(
+    `competition-preview:${fixtureScope}:${compactGeneration(f.manifest)}:${parisDay(Date.now())}`,
+    ({ signal }) =>
+      competitionFixturePreview(
+        {
+          league: competition.id,
+          season,
+          generation: compactGeneration(f.manifest),
+        },
+        { signal },
+      ).catch((error) => {
+        if (error.status === 409) void f.refreshManifest().catch(() => {});
+        throw error;
+      }),
+    previewEnabled && view === "standings",
+  );
   const resource = useResource(
     "fixtures:" +
-      f.client.id +
-      ":" +
       competition?.id +
       ":" +
       season +
       ":" +
       day +
       ":" +
-      f.configured,
-    async () => {
+      f.configured +
+      ":" +
+      (f.manifest.publicationVersion ||
+        f.manifest.scouting?.sourceDigest ||
+        ""),
+    async ({ signal }) => {
       const scoped = Object.assign(Object.create(f.client), {
+        // The shared resource owns freshness. A client's older in-memory map
+        // must not override a newly published season or a deliberate retry.
+        fixtures: new Map(),
         browseMode: day ? "day" : "catalog",
         day,
         competitionId: competition?.id,
@@ -181,14 +226,15 @@ function Fixtures({ competition, day, initialSeason }) {
         competition,
         useCupSnapshot: hasKnockout || Boolean(competition?.cupWorker),
       });
-      await f.client.loadFixtures.call(scoped);
+      await f.client.loadFixtures.call(scoped, { signal });
       return scoped.fixtures.get(
         day ? "date:" + day : competition.id + ":" + season,
       );
     },
-    f.statusKnown,
+    f.statusKnown && needsFullCalendar,
   );
   const showHighlights = supported && view === "standings";
+  const overviewFixtures = resource.value || preview.value;
   return (
     <div
       className={
@@ -254,93 +300,99 @@ function Fixtures({ competition, day, initialSeason }) {
             )}
           </div>
         )}
-        <AsyncState resource={resource}>
-          {(value) => {
-            const rows = orderCompetitionMatches(
-              (value.matches || []).filter(
-                (m) =>
-                  f.focus !== "europe" ||
-                  inEuropeFocus(competition) ||
-                  EUROPE_FOCUS_IDS.has(m.league?.id || m.leagueId),
-              ),
-              { status, day: Boolean(day) },
-            );
-            const pages = Math.max(1, Math.ceil(rows.length / 30)),
-              current = Math.min(page, pages);
-            return (
-              <>
-                {supported && view === "bracket" && hasKnockout ? (
-                  <NativeKnockoutBracket
-                    competition={competition}
-                    season={season}
-                    matches={value.matches || []}
-                    rounds={value.rounds}
-                  />
-                ) : supported && view === "standings" ? (
-                  <CompetitionStandings
-                    competition={competition}
-                    season={season}
-                    matches={value.matches || []}
-                    source={value.source}
-                  />
-                ) : supported ? (
-                  <MatchdaySchedule
-                    key={competition.id + ":" + season}
-                    competition={competition}
-                    season={season}
-                    initialStatus={status}
-                    matches={(value.matches || []).filter(
-                      (m) =>
-                        f.focus !== "europe" ||
-                        inEuropeFocus(competition) ||
-                        EUROPE_FOCUS_IDS.has(m.league?.id || m.leagueId),
-                    )}
-                  />
-                ) : (
-                  <>
-                    <Segments
-                      value={status}
-                      onChange={(v) => {
-                        setStatus(v);
-                        setPage(1);
-                      }}
-                      label="Statut des rencontres"
-                      items={[
-                        ["finished", "Résultats"],
-                        ["not_started", "À venir"],
-                        ["all", "Tous"],
-                      ]}
+        {supported && view === "standings" ? (
+          <CompetitionStandings
+            competition={competition}
+            season={season}
+            matches={overviewFixtures?.matches || []}
+            source={resource.value?.source}
+            fixturesLoading={!resource.value}
+            fixturesError={resource.error}
+            onRetry={resource.retry}
+            onNeedFixtures={needFixtures}
+          />
+        ) : (
+          <AsyncState resource={resource}>
+            {(value) => {
+              const rows = orderCompetitionMatches(
+                (value.matches || []).filter(
+                  (m) =>
+                    f.focus !== "europe" ||
+                    inEuropeFocus(competition) ||
+                    EUROPE_FOCUS_IDS.has(m.league?.id || m.leagueId),
+                ),
+                { status, day: Boolean(day) },
+              );
+              const pages = Math.max(1, Math.ceil(rows.length / 30)),
+                current = Math.min(page, pages);
+              return (
+                <>
+                  {supported && view === "bracket" && hasKnockout ? (
+                    <NativeKnockoutBracket
+                      competition={competition}
+                      season={season}
+                      matches={value.matches || []}
+                      rounds={value.rounds}
                     />
-                    {!day && (
-                      <p className="competition-matches-order">
-                        {status === "finished"
-                          ? "Les résultats les plus récents en premier"
-                          : status === "not_started"
-                            ? "Les prochaines rencontres en premier"
-                            : "Résultats récents, puis rencontres à venir"}
-                      </p>
-                    )}
-                    {rows.slice((current - 1) * 30, current * 30).map((m) => (
-                      <MatchLink key={m.id} match={m} />
-                    ))}
-                    {!rows.length && (
-                      <Empty>
-                        {status === "finished"
-                          ? "Aucun match terminé disponible pour cette saison."
-                          : "Aucune rencontre collectée."}
-                      </Empty>
-                    )}
-                    <Pager page={current} total={pages} onChange={setPage} />
-                  </>
-                )}
-              </>
-            );
-          }}
-        </AsyncState>
+                  ) : supported ? (
+                    <MatchdaySchedule
+                      key={competition.id + ":" + season}
+                      competition={competition}
+                      season={season}
+                      initialStatus={status}
+                      matches={(value.matches || []).filter(
+                        (m) =>
+                          f.focus !== "europe" ||
+                          inEuropeFocus(competition) ||
+                          EUROPE_FOCUS_IDS.has(m.league?.id || m.leagueId),
+                      )}
+                    />
+                  ) : (
+                    <>
+                      <Segments
+                        value={status}
+                        onChange={(v) => {
+                          setStatus(v);
+                          setPage(1);
+                        }}
+                        label="Statut des rencontres"
+                        items={[
+                          ["finished", "Résultats"],
+                          ["not_started", "À venir"],
+                          ["all", "Tous"],
+                        ]}
+                      />
+                      {!day && (
+                        <p className="competition-matches-order">
+                          {status === "finished"
+                            ? "Les résultats les plus récents en premier"
+                            : status === "not_started"
+                              ? "Les prochaines rencontres en premier"
+                              : "Résultats récents, puis rencontres à venir"}
+                        </p>
+                      )}
+                      {rows.slice((current - 1) * 30, current * 30).map((m) => (
+                        <MatchLink key={m.id} match={m} />
+                      ))}
+                      {!rows.length && (
+                        <Empty>
+                          {status === "finished"
+                            ? "Aucun match terminé disponible pour cette saison."
+                            : "Aucune rencontre collectée."}
+                        </Empty>
+                      )}
+                      <Pager page={current} total={pages} onChange={setPage} />
+                    </>
+                  )}
+                </>
+              );
+            }}
+          </AsyncState>
+        )}
       </Card>
-      {showHighlights && resource.value && (
+      {showHighlights && overviewFixtures && (
         <CompetitionHighlights
-          matches={resource.value.matches || []}
+          matches={overviewFixtures.matches || []}
           competition={competition}
           season={season}
           onShowMatches={(next) => {

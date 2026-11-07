@@ -7,6 +7,7 @@ export async function cupWorkerSnapshot(
   competition,
   season,
   fallbackUrl = null,
+  { signal } = {},
 ) {
   const path = apiUrl(
     "/api/cup-snapshot?" + new URLSearchParams({ kind, competition, season }),
@@ -14,7 +15,7 @@ export async function cupWorkerSnapshot(
   if (fallbackUrl && !fallbackUrl.startsWith("/api/"))
     throw new Error("Route de données invalide.");
   async function read(url) {
-    const response = await fetch(url);
+    const response = await fetch(url, { signal });
     return {
       status: response.status,
       body: response.ok ? await response.json() : null,
@@ -23,14 +24,17 @@ export async function cupWorkerSnapshot(
   const [savedRequest, freshRequest] = await Promise.allSettled([
     read(path),
     kind === "native"
-      ? completeFixtures({ league: competition, season }).then((matches) => ({
-          status: 200,
-          body: { data: { matches } },
-        }))
+      ? completeFixtures({ league: competition, season }, { signal }).then(
+          (matches) => ({
+            status: 200,
+            body: { data: { matches } },
+          }),
+        )
       : fallbackUrl
         ? read(apiUrl(fallbackUrl))
         : null,
   ]);
+  signal?.throwIfAborted();
   const saved =
     savedRequest.status === "fulfilled" ? savedRequest.value.body : null;
   const fresh =
