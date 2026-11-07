@@ -2,7 +2,7 @@
 
 ## Verdict à cette étape
 
-Les corrections de lecture, de fraîcheur et de publication, la consolidation du modèle applicatif et le retrait physique des structures remplacées disposent de preuves de production. Les six cohortes API mesurées depuis AWS Paris atteignent les cibles de p95 proposées, et le nettoyage des ressources temporaires est confirmé. **La recette complète ne peut pas être déclarée à 100 % : les quatre retours réellement en mémoire après PR45 prennent 245,4 ms, 128,8 ms, 245,9 ms et 230,7 ms, au-dessus de la cible de 100 ms. Le taux naturel de cache par route n'est pas observable avec les journaux actuellement désactivés.** Une implémentation terminée ne vaut pas une cible de performance mesurée.
+Les corrections de lecture, de fraîcheur et de publication, la consolidation du modèle applicatif et le retrait physique des structures remplacées disposent de preuves de production. Les six cohortes API mesurées depuis AWS Paris atteignent les cibles de p95 proposées, et le nettoyage des ressources temporaires est confirmé. **La recette complète ne peut pas être déclarée à 100 % : les quatre retours réellement en mémoire après PR46 prennent 127,9 ms, 146,7 ms, 246 ms et 313,3 ms, au-dessus de la cible de 100 ms. Le taux naturel de cache par route n'est pas observable avec les journaux actuellement désactivés.** Une implémentation terminée ne vaut pas une cible de performance mesurée.
 
 Ce dossier rapproche le plan du 6 novembre des preuves effectivement conservées. Son [empreinte et ses critères de référence](plan-reference.json) permettent d'identifier le document initial. Les chiffres ci-dessous sont des observations datées ; ils ne sont pas des compteurs permanents. Les documents antérieurs restent utiles pour les étapes réversibles, mais leurs inventaires de 56 tables applicatives, 302 tables physiques ou 112 tables retenues ne décrivent plus l'état final.
 
@@ -164,6 +164,21 @@ Les [sept transitions v4](browser-after-pr45.json) utilisent le même critère d
 Les quatre transitions ont des hits frais, aucun loader, aucune requête bloquante et aucun transfert API/RSC. Elles ne satisfont pas la cible de 100 ms. Le travail du premier contrôle coûte respectivement 15,7 / 26,7 / 18,3 / 49,3 ms ; les autres contrôles sont plus courts. L’accueil dépasse déjà 100 ms au montage du main. Les deux frames finales restent très variables et leur cause n’est pas attribuée sans contrôle.
 
 Les ouvertures avec réseau montrent aussi une attente de programmation : le premier Clubs attend 940,5 puis 983,9 ms avant deux contrôles dont le travail prend 27 puis 0,6 ms. Le premier retour Home attend 555,3 ms avant un contrôle de 1,2 ms. La première disponibilité de ce document est 1 934,9 ms, avec cache HTTP préexistant non contrôlé. Ces données motivent le correctif ciblé de programmation documenté dans [BROWSER_READINESS_NOTIFICATIONS](../BROWSER_READINESS_NOTIFICATIONS_20261107.md), sans prétendre qu’il règle le coût du montage ou qu’il a déjà passé la cible navigateur.
+
+## Contrôle des notifications après PR46
+
+[PR46](https://github.com/VegaInteligence/Vega-Sport/pull/46) est READY sur `a4f00f2102da76b8144c00c7d74a30eea7d1f18b`, après [CI 42417063532](https://github.com/VegaInteligence/Vega-Sport/actions/runs/42417063532) réussie. Le [reçu de livraison](release-pr46.json) et les [sept transitions complètes](browser-after-pr46.json) sont conservés. La première disponibilité est observée à **974,3 ms**, avec cache HTTP préexistant non contrôlé ; la comparaison entre nouveaux documents ne constitue pas une expérience causale.
+
+| Retour en mémoire | Nouveau main (ms) | Ready (ms) | Deux frames finales (ms) | Total (ms) | Contrôles | Travail cumulé (ms) | Attente cumulée (ms) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Joueurs → Clubs | 58,4 | 103,5 | 24,4 | **127,9** | 26 | 34,4 | 0,8 |
+| Clubs → Joueurs | 67,3 | 123,6 | 23,1 | **146,7** | 42 | 40,2 | 0,1 |
+| Accueil → Clubs | 63,7 | 122,4 | 123,6 | **246** | 28 | 33,9 | 1 |
+| Clubs → Accueil | 128,1 | 300,9 | 12,4 | **313,3** | 93 | 136,8 | 0,6 |
+
+L’attente de programmation est devenue très faible dans ces traces. En revanche, les notifications natives de chargement déclenchent beaucoup de contrôles alors que l’état Media reste encore `loading`. Le retour Home effectue 93 contrôles ; les vingt détails conservés ne remplacent pas le cumul de 136,8 ms sur tous ces contrôles. **La cible de 100 ms reste non atteinte.** Le correctif suivant supprime les notifications natives redondantes des Media et attend leur commit `ready` ou fallback déjà observé. Les images natives sans propriétaire gardent leur propre contrôle de chargement et de décodage.
+
+Le délai « nouveau main » inclut les effets de mise en page : il ne mesure pas isolément le temps React ou la création du DOM. La trace v5 ajoute des tâches longues et frames longues natives, sans sonde rAF continue ni changement du critère de fin, pour qualifier les attentes après `ready`.
 
 ## Politique de cache par route et condition
 

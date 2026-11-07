@@ -136,6 +136,18 @@
     {
       "file": "pr45-production-deployment.json",
       "sha256": "f9f99e12dac11467e0bb8582f5e9f835338a6f944f20ada15d7c9c133c4665bd"
+    },
+    {
+      "file": "browser-after-pr46.json",
+      "sha256": "4bda115598ed93c10ff710691dfb12560231e87352a3fdf0db77eaa1078b56df"
+    },
+    {
+      "file": "pr46-ci-accepted.json",
+      "sha256": "623cd2cd7022c00ffb209f527b6b754c276f324827c6d1703b65fa17b98122e4"
+    },
+    {
+      "file": "pr46-production-deployment.json",
+      "sha256": "ac900f70313cd44ee53b6e9072793b247729664667b95b3225f490d13c20f60b"
     }
   ],
   "policy": "Only allowlisted aggregates, public scope IDs, timestamps, statuses and hashes are included. Source filenames and hashes identify operator receipts; raw logs, credentials, resource bodies and signed URLs are excluded. Derived aggregates are asserted when built."

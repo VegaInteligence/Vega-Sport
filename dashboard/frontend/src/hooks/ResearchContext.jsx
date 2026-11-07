@@ -4,7 +4,7 @@ import React, {
   lazy,
   Suspense,
   useContext,
-  useEffect,
+  useMemo,
   useState,
 } from "react";
 import {
@@ -13,49 +13,38 @@ import {
   cleanSettings,
   comparisonKey,
   EMPTY_RESEARCH,
-  readResearch,
   RESEARCH_KEY,
 } from "../services/research-storage.js";
+import { createBrowserStateStore, useBrowserState } from "../services/browser-state.js";
 const ComparisonDialog = lazy(
   () => import("../components/PlayerComparison.jsx"),
 );
 const Context = createContext(null);
+const researchStore = createBrowserStateStore({
+  key: RESEARCH_KEY,
+  storage: "localStorage",
+  fallback: EMPTY_RESEARCH,
+  normalize: cleanResearch,
+});
 export const useResearch = () => useContext(Context);
 export function ResearchProvider({ children, initialState }) {
-  const [data, setData] = useState(() => initialState ? {
+  const serverData = useMemo(() => initialState ? {
     ...EMPTY_RESEARCH,
     lists: [{ id: "main", name: "Ma sélection", entries: [
       ...(initialState.personalTeams || []).map((id) => ({ kind: "clubs", id })),
       ...(initialState.personalPlayers || []).map((id) => ({ kind: "players", id })),
     ] }],
-  } : EMPTY_RESEARCH);
-  const [ready, setReady] = useState(false);
+  } : EMPTY_RESEARCH, [initialState]);
+  const [data, setData, ready] = useBrowserState(researchStore, serverData);
   const [message, setMessage] = useState("");
   const [comparing, setComparing] = useState(false);
   const [comparisonKind, setComparisonKind] = useState("players");
-  useEffect(() => {
-    setData(readResearch());
-    setReady(true);
-    const sync = (event) => {
-      if (event.key === RESEARCH_KEY) setData(readResearch());
-    };
-    window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
-  }, []);
-  useEffect(() => {
-    if (!ready) return;
-    try {
-      window.localStorage.setItem(RESEARCH_KEY, JSON.stringify(data));
-    } catch {
+  const update = (action) => {
+    if (!setData(action))
       setMessage(
         "La sauvegarde locale est indisponible. Vos recherches restent utilisables dans cet onglet.",
       );
-    }
-  }, [data, ready]);
-  const update = (action) =>
-    setData((previous) =>
-      cleanResearch(typeof action === "function" ? action(previous) : action),
-    );
+  };
   const currentList =
     data.lists.find((list) => list.id === data.activeList) || data.lists[0];
   function toggleFavorite(value) {
