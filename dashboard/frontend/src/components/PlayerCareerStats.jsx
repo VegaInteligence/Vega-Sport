@@ -58,12 +58,6 @@ function CareerTable({ group, title, entity, empty, entries, matchHref }) {
             <thead>
               <tr>
                 <th scope="col">{entity}</th>
-                {international && (
-                  <th scope="col" className="player-career-stat">
-                    N° portés
-                  </th>
-                )}
-                {international && <th scope="col">1er match recensé</th>}
                 <th
                   scope="col"
                   className="player-career-stat"
@@ -74,11 +68,9 @@ function CareerTable({ group, title, entity, empty, entries, matchHref }) {
                 <th scope="col" className="player-career-stat">
                   Buts
                 </th>
-                {!international && (
-                  <th scope="col" className="player-career-stat">
-                    Passes déc.
-                  </th>
-                )}
+                <th scope="col" className="player-career-stat">
+                  {international ? "1er match recensé" : "Passes déc."}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -115,17 +107,16 @@ function CareerTable({ group, title, entity, empty, entries, matchHref }) {
                         ) : null}
                         <span>{display}</span>
                       </span>
-                    </th>
-                    {detail && (
-                      <>
-                        <td
-                          className="player-career-stat"
+                      {detail && (
+                        <span
+                          className="player-career-shirt-numbers"
                           title={
                             detail.numberedMatches
                               ? `Numéro renseigné sur ${detail.numberedMatches} des ${profile.matches} matchs joués`
                               : undefined
                           }
                         >
+                          N° portés{" "}
                           {detail.shirtNumbers.length
                             ? detail.shirtNumbers.join(", ")
                             : "—"}
@@ -133,12 +124,9 @@ function CareerTable({ group, title, entity, empty, entries, matchHref }) {
                             detail.numberedMatches < profile.matches && (
                               <span className="player-history-partial">*</span>
                             )}
-                        </td>
-                        <td className="player-career-date">
-                          {date(detail.firstMatchDate)}
-                        </td>
-                      </>
-                    )}
+                        </span>
+                      )}
+                    </th>
                     <td className="player-career-stat">
                       {profile.matches ? (
                         <Link
@@ -156,7 +144,11 @@ function CareerTable({ group, title, entity, empty, entries, matchHref }) {
                     <td className="player-career-stat">
                       <ObservedValue {...goals} total={total} />
                     </td>
-                    {!international && (
+                    {detail ? (
+                      <td className="player-career-stat player-career-date">
+                        {date(detail.firstMatchDate)}
+                      </td>
+                    ) : (
                       <td className="player-career-stat">
                         <ObservedValue {...assists} total={total} />
                       </td>
