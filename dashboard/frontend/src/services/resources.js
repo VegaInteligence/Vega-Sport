@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createResourceCache } from "./resource-cache.js";
 import { useResourceBootstrap } from "./resource-bootstrap.js";
 import { acceptMediaPayload } from "./media-registry.js";
-const cache = createResourceCache();
+import { recordAcceptanceCacheRead } from "./navigation-acceptance.js";
+const cache = createResourceCache({ onRead: recordAcceptanceCacheRead });
 export async function json(url, options) {
   const response = await publicApiFetch(apiUrl(url), options);
   if (!response.ok)

@@ -3,6 +3,7 @@ export function createResourceCache({
   maxAge = 5 * 60_000,
   maxEntries = 96,
   now = Date.now,
+  onRead,
 } = {}) {
   const entries = new Map();
   function entry(key) {
@@ -43,10 +44,15 @@ export function createResourceCache({
     // Revalidation is also coalesced: focus, a timer and several components
     // asking for one resource share the same network request.
     if (item.pending) {
+      onRead?.("pending");
       item.retained ||= retain;
       return item.pending;
     }
-    if (!force && fresh(item, age)) return Promise.resolve(item.snapshot.value);
+    if (!force && fresh(item, age)) {
+      onRead?.("fresh");
+      return Promise.resolve(item.snapshot.value);
+    }
+    onRead?.("loader");
     const controller = new AbortController();
     item.controller = controller;
     item.retained = retain;
