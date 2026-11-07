@@ -173,18 +173,26 @@ def main():
                 db.execute("DELETE FROM statarena_app.publication_jobs WHERE season=%s AND league_id=%s AND changed_at=%s", (season, league, marked))
                 db.execute("UPDATE statarena_app.publications SET generation=generation+1")
                 if league == "l_bad":
+                    publisher.mark_stage("rollup_refresh")
                     raise ValueError("Untrusted source payload must not be persisted in queue errors")
                 return 1
 
             fake_inputs = SimpleNamespace(db=db, read=lambda path: {})
+            output = io.StringIO()
             with patch.object(publisher, "capacity", return_value=10**12), \
                  patch.object(publisher, "Inputs", return_value=fake_inputs), \
                  patch.object(publisher, "prepare", side_effect=prepare), \
                  patch.object(publisher, "publish_partition", side_effect=publish), \
                  patch.object(publisher, "publish_global", return_value={}), \
                  patch.object(publisher, "catalog_batch", return_value=0), \
-                 patch.object(publisher, "queue_dirty"):
+                 patch.object(publisher, "queue_dirty"), redirect_stdout(output):
                 result = publisher.run(SimpleNamespace(db=db), minutes=1, batch=2, max_partitions=1)
+            events = [json.loads(line) for line in output.getvalue().splitlines() if line.startswith("{")]
+            failure = next(event for event in events if event.get("phase") == "partition-deferred")
+            success = next(event for event in events if event.get("published") == "l_good")
+            check("failed stage survives real transaction rollback", failure["failure_stage"] == "rollup_refresh" and "rollup_refresh" in failure["stage_timings"])
+            check("following partition has its own trace and commits", "rollup_refresh" not in success["timing"]["stage_timings"] and "transaction_commit" in success["timing"]["stage_timings"])
+            check("stage diagnostics never persist untrusted exception text", "Untrusted source payload" not in output.getvalue())
             check("healthy partition published after earlier failure", result["partitions"] == 1 and result["failed_partitions"] == 1)
             check("failed inputs retained and counted", result["remaining"] == result["deferred_partitions"] == 1)
             check("only healthy facts retained", db.execute("SELECT league FROM observed_publications").fetchall() == [("l_good",)])

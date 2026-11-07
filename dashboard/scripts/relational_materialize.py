@@ -32,6 +32,7 @@ from relational_snapshot import TABLES, read_partition, snapshot
 from relational_support import FAMILIES, publish_supporting
 from football_seasons import tournament_kind
 from aws_storage_budget import sql_budget
+from publication_trace import PublicationTrace, mark_stage
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = ROOT / "dashboard/backend/migrations"
@@ -174,7 +175,7 @@ def install(db):
         db.execute(
             "CREATE TABLE IF NOT EXISTS statarena_app.worker_schema(version text PRIMARY KEY,digest text NOT NULL)"
         )
-        for prefix in ("003_", "004_", "005_", "006_", "007_", "008_", "009_", "010_", "011_", "020_", "021_", "022_", "023_", "024_", "025_", "026_", "027_", "028_", "029_", "030_", "031_", "032_", "033_", "034_", "035_", "036_"):
+        for prefix in ("003_", "004_", "005_", "006_", "007_", "008_", "009_", "010_", "011_", "020_", "021_", "022_", "023_", "024_", "025_", "026_", "027_", "028_", "029_", "030_", "031_", "032_", "033_", "034_", "035_", "036_", "037_"):
             (path,) = SCHEMA.glob(prefix + "*.sql")
             source = path.read_bytes()
             digest = hashlib.sha256(source).hexdigest()
@@ -965,6 +966,7 @@ def partition_inputs(inputs, scratch, mids):
 
 
 def publish_partition(inputs, manifest, label, league, marked, phase_report=None):
+    mark_stage("source_scope")
     began = time.monotonic()
     detail_seconds = 0.0
     batches = 0
@@ -988,6 +990,7 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
         ).fetchall()
     )
     if not is_orphan:
+        mark_stage("previous_partition")
         old = read_partition(db, label, league)
         old_snapshot = snapshot(old["tables"], {}, old["metrics"]) if old else None
         previous_facts = snapshot_facts(old_snapshot) if old else None
@@ -1021,6 +1024,7 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
         merged = {f["id"]: f for f in tables["fixtures"]}
         merged.update((mid, f) for mid, f in fixtures.items() if f is not None)
         tables["fixtures"] = list(merged.values())
+        mark_stage("source_profile")
         prof = db.execute(
             "SELECT status,ref,error FROM statarena.resources WHERE endpoint=%s AND params='{}' AND status=200",
             ("/leagues/" + league,),
@@ -1046,11 +1050,14 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
         tempfile.TemporaryDirectory(prefix="statarena-publish-") as tmp,
         closing(sqlite3.connect(Path(tmp) / "envelopes.sqlite")) as scratch,
     ):
+        mark_stage("source_spool")
         partition_inputs(inputs, scratch, list(fixtures))
         source_done = time.monotonic()
         mids = list(fixtures)
         for start in range(0, len(mids), MAX_MATCH_RECORDS):
+            mark_stage("capacity_check")
             headroom = capacity(db)
+            mark_stage("detail_prepare")
             estimated = 0
             batch_details = []
             for mid in mids[start : start + MAX_MATCH_RECORDS]:
@@ -1102,6 +1109,7 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
                         if (core.get(f) or {}).get("status") != 200
                     ]
                     if absent:
+                        mark_stage("detail_fallback")
                         for family, previous in db.execute(
                             """SELECT family,statarena_app.detail_response(f)
                             FROM statarena_app.match_families f WHERE match_id=%s AND params='{}' AND subject_id=''
@@ -1112,6 +1120,7 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
                             # The previous partition's retrieval is preserved below.
                             # A reused typed response does not acquire a new timestamp.
                             core_retrievals.pop(family, None)
+                        mark_stage("detail_prepare")
                 estimated += 2 * (
                     len(compact(detail).encode())
                     + sum(len(compact(v[2]).encode()) for v in variants)
@@ -1171,6 +1180,7 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
                         selected.append(core_retrievals.get("match"))
                     retrieved_at = latest_retrieval(retrieved_at, *selected)
             batch_start = time.monotonic()
+            mark_stage("detail_write")
             publish_match_batch(db, batch_details)
             detail_seconds += time.monotonic() - batch_start
             batches += bool(batch_details)
@@ -1178,6 +1188,7 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
                 len(item[1]) + len(item[3]) for item in batch_details
             )
     model_done = time.monotonic()
+    mark_stage("core_prepare")
     if not is_orphan:
         matches = tables["matches"]
         perform = tables["performances"]
@@ -1191,14 +1202,19 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
         tables["competitions"] = [comp]
         meta = partition_metadata(tables, old["meta"], retrieved_at)
         result = snapshot(tables, meta, old["metrics"])
+        mark_stage("capacity_check")
         capacity(db, len(compact(result).encode()) * 2)
+        mark_stage("core_snapshot")
         publish_partition_snapshot(db, label, league, result, previous_facts, previous_state)
+        mark_stage("partition_calendar")
         partition_calendar(inputs, label, league)
+        mark_stage("partition_receipts")
         if bootstrap_source is not None:
             db.execute("""INSERT INTO statarena_app.partition_bootstrap_sources(season,league_id,source_path,sha256)
                 VALUES(%s,%s,%s,%s) ON CONFLICT(season,league_id) DO UPDATE
                 SET source_path=excluded.source_path,sha256=excluded.sha256,recorded_at=excluded.recorded_at""",
                 (label, league, *bootstrap_source))
+    mark_stage("partition_receipts")
     if digest:
         receipt(db, "partition", label + ":" + league, digest[0])
     for source_season, changed_at in markers:
@@ -1210,6 +1226,7 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
         "DELETE FROM statarena_app.publication_jobs WHERE season=%s AND league_id=%s AND changed_at=%s",
         (label, league, marked),
     )
+    mark_stage("capacity_check")
     capacity(db)
     if phase_report is not None:
         finished = time.monotonic()
@@ -1323,12 +1340,15 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, i
                     break
                 label, league, marked = job
                 phase_report = {}
+                trace = PublicationTrace()
                 transaction_start = time.monotonic()
                 try:
-                    with db.transaction():
-                        normalized = publish_partition(
-                            inputs, manifest, label, league, marked, phase_report
-                        )
+                    with trace:
+                        with db.transaction():
+                            normalized = publish_partition(
+                                inputs, manifest, label, league, marked, phase_report
+                            )
+                            mark_stage("transaction_commit")
                 except Exception as error:
                     # The partition transaction has rolled back, including facts,
                     # receipts and generation. A broken connection cannot safely
@@ -1341,8 +1361,10 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, i
                     result["failed_partitions"] += 1
                     print(compact({"phase": "partition-deferred", "season": label,
                         "league": league, "error_code": code,
-                        "seconds": round(time.monotonic()-transaction_start, 3)}), flush=True)
+                        "seconds": round(time.monotonic()-transaction_start, 3),
+                        **trace.failure(error)}), flush=True)
                     continue
+                phase_report["stage_timings"] = trace.timings()
                 phase_report["transaction_including_commit_seconds"] = round(
                     time.monotonic() - transaction_start, 3
                 )

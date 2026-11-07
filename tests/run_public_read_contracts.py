@@ -60,7 +60,7 @@ def main():
             for name in ("test_collection_plan.py", "test_publication_plan.py", "test_publication_continuation.py",
                          "test_publication_freshness.py", "test_core_delta.py",
                          "test_tournament_publisher_aliases.py", "test_empty_year_aliases.py", "test_daily_refresh.py", "test_storage_budget.py",
-                         "test_schema_retirement_cli.py"):
+                         "test_schema_retirement_cli.py", "test_publication_trace.py"):
                 subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests",
                                 "-p", name], cwd=root, env=env, check=True)
             # Tests use one isolated schema name; serialize files so their
@@ -74,6 +74,7 @@ def main():
                 "tests/relational-read-cache.test.mjs",
                 "tests/relational-read-maintenance.test.mjs",
                 "tests/relational-player-rollups.test.mjs",
+                "tests/player-rollup-publication-postgres.test.mjs",
                 "tests/relational-archives.test.mjs",
                 "tests/remote-match.test.mjs",
                 "tests/relational-discovery.test.mjs",

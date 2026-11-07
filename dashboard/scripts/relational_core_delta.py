@@ -11,6 +11,7 @@ from collections import defaultdict
 
 from psycopg import sql
 from player_rollups import refresh_player_rollups
+from publication_trace import mark_stage
 
 from relational_core import (
     APPEARANCE_BOOL, APPEARANCE_NUMBER, APPEARANCE_TEXT,
@@ -251,6 +252,7 @@ def update_catalog(db, value, season, league):
 
 
 def publish_incremental(db, season, league, value, *, previous_state=None):
+    mark_stage("core_snapshot")
     digest = publication_digest(value)
     prior = db.execute("SELECT source_digest FROM statarena_app.partitions WHERE season=%s AND league_id=%s", (season, league)).fetchone()
     if prior and prior[0] == digest:
@@ -262,6 +264,7 @@ def publish_incremental(db, season, league, value, *, previous_state=None):
         previous = read_partition(db, season, league) if prior else None
         previous_state = snapshot_state(snapshot(previous["tables"], previous["meta"], previous["metrics"]), season, league) if previous else dict(matches={}, fixtures={}, metrics=None)
     incoming = match_inputs(value)
+    mark_stage("core_match_write")
     assert_scope(db, "matches", sorted(incoming), season, league)
     delete_scoped(db, "matches", sorted(set(previous_state["matches"]) - set(incoming)), season, league)
     pending, pending_bytes, changed_count, batch_count = [], 0, 0, 0
@@ -283,11 +286,14 @@ def publish_incremental(db, season, league, value, *, previous_state=None):
         write_matches(db, pending)
         batch_count += 1
     calendar = fixtures(value, season, league)
+    mark_stage("core_fixture_write")
     assert_scope(db, "fixtures", sorted(calendar), season, league)
     delete_scoped(db, "fixtures", sorted(set(previous_state["fixtures"]) - set(calendar)), season, league)
     changed_fixtures = [row for mid, row in calendar.items() if previous_state["fixtures"].get(mid) != fingerprint(row)]
     upsert(db, "fixtures", changed_fixtures, ["id"])
+    mark_stage("core_catalog_write")
     update_catalog(db, value, season, league)
+    mark_stage("core_metadata_write")
     if prior:
         db.execute("DELETE FROM statarena_app.partition_counts WHERE season=%s AND league_id=%s", (season, league))
         db.execute("DELETE FROM statarena_app.partition_notes WHERE season=%s AND league_id=%s", (season, league))
@@ -298,6 +304,7 @@ def publish_incremental(db, season, league, value, *, previous_state=None):
             upsert(db, "metric_definitions", [dict(metric_key=metric["key"], label=metric.get("label"), unit=metric.get("unit"), decimals=metric.get("decimals"))], ["metric_key"])
             _many(db, "partition_metrics", [dict(season=season, league_id=league, metric_key=metric["key"], ordinal=ordinal)])
     refresh_player_rollups(db, season, league)
+    mark_stage("publication_generation")
     db.execute("UPDATE statarena_app.publications SET generation=generation+1,published_at=clock_timestamp()")
     print(canonical(dict(phase="core-delta", season=season, league=league, changed_matches=changed_count,
                          match_batches=batch_count, changed_fixtures=len(changed_fixtures))), flush=True)
