@@ -1,0 +1,37 @@
+{
+  "ci": {
+    "runId": 42416098655,
+    "head": "213ad17a2251a1d35b9e417e14cd601859015cc7",
+    "jobs": [
+      {
+        "id": 128534424860,
+        "name": "Relational publication and HTTP contracts",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 128534425006,
+        "name": "verify",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 128534425146,
+        "name": "Orion Pro PostgreSQL and offline RDS contracts",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "deployment": {
+    "checkedAt": "2026-11-07 21:39:19 UTC",
+    "deploymentId": "dpl_qCHSJXMcPNMvHtW79w5wFoL5qWc2",
+    "state": "READY",
+    "sha": "1ba22c484ad5c9b4ebc162b272f82f07b373850b",
+    "url": "https://vegasport.vercel.app",
+    "deploymentUrl": "vega-jlbdkxecr-vegainteligence.vercel.app",
+    "backendUnchanged": true
+  },
+  "initialFailedRun": 42415301040,
+  "fixtureCorrection": "Request-scoped honours bootstrap; existing assertions preserved; 30/30 targeted tests pass."
+}

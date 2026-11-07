@@ -2,7 +2,7 @@
 
 ## Verdict à cette étape
 
-Les corrections de lecture, de fraîcheur et de publication, la consolidation du modèle applicatif et le retrait physique des structures remplacées disposent de preuves de production. Les six cohortes API mesurées depuis AWS Paris atteignent les cibles de p95 proposées, et le nettoyage des ressources temporaires est confirmé. **La recette complète ne peut pas être déclarée à 100 % : trois retours réellement en mémoire après PR41 prennent 257,5 ms, 260,6 ms et 356 ms, au-dessus de la cible de 100 ms. Le taux naturel de cache par route n'est pas observable avec les journaux actuellement désactivés.** Une implémentation terminée ne vaut pas une cible de performance mesurée.
+Les corrections de lecture, de fraîcheur et de publication, la consolidation du modèle applicatif et le retrait physique des structures remplacées disposent de preuves de production. Les six cohortes API mesurées depuis AWS Paris atteignent les cibles de p95 proposées, et le nettoyage des ressources temporaires est confirmé. **La recette complète ne peut pas être déclarée à 100 % : les quatre retours réellement en mémoire après PR45 prennent 245,4 ms, 128,8 ms, 245,9 ms et 230,7 ms, au-dessus de la cible de 100 ms. Le taux naturel de cache par route n'est pas observable avec les journaux actuellement désactivés.** Une implémentation terminée ne vaut pas une cible de performance mesurée.
 
 Ce dossier rapproche le plan du 6 novembre des preuves effectivement conservées. Son [empreinte et ses critères de référence](plan-reference.json) permettent d'identifier le document initial. Les chiffres ci-dessous sont des observations datées ; ils ne sont pas des compteurs permanents. Les documents antérieurs restent utiles pour les étapes réversibles, mais leurs inventaires de 56 tables applicatives, 302 tables physiques ou 112 tables retenues ne décrivent plus l'état final.
 
@@ -148,6 +148,23 @@ La première disponibilité est observée à **1 738,9 ms** dans ce nouveau docu
 
 La suite se concentre sur le replay d'abonnement du cache et une trace opt-in séparant le travail du contrôleur de préparation de son attente d'une frame. La correction des invariants de disponibilité ne constitue pas, à elle seule, une réussite de latence.
 
+## Mesures de préparation après PR45
+
+[PR45](https://github.com/VegaInteligence/Vega-Sport/pull/45) est READY en production sur `1ba22c484ad5c9b4ebc162b272f82f07b373850b`, après les trois jobs réussis de [CI 42416098655](https://github.com/VegaInteligence/Vega-Sport/actions/runs/42416098655). Le [reçu](release-pr45.json) conserve aussi le premier run échoué : quatre fixtures SSR reposaient sur le cache global ; elles passent maintenant un bootstrap de requête explicite, avec les assertions de trophées conservées et une vérification d’isolation supplémentaire.
+
+Les [sept transitions v4](browser-after-pr45.json) utilisent le même critère de fin. Le clic et la capture AX sont effectués dans deux appels séparés ; cela ne change ni l’origine temporelle ni le critère et ne prouve pas à lui seul une cause des attentes de frames. Le [contrôle supplémentaire PR44](browser-pr44-separated-capture.json) conserve aussi trois observations tardives, toutes avec du réseau encore présent : 360 ms, 1 284,9 ms et 116,1 ms. Aucune n’est classée en mémoire.
+
+| Retour PR45 classé en mémoire | Nouveau main (ms) | Ready (ms) | Deux frames finales (ms) | Total (ms) | Contrôles de préparation |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Joueurs → Clubs | 52,7 | 98,9 | 146,5 | **245,4** | 5 |
+| Clubs → Joueurs | 81,6 | 118 | 10,8 | **128,8** | 3 |
+| Accueil → Clubs | 86,2 | 130,2 | 115,7 | **245,9** | 5 |
+| Clubs → Accueil | 136,5 | 229,1 | 1,6 | **230,7** | 3 |
+
+Les quatre transitions ont des hits frais, aucun loader, aucune requête bloquante et aucun transfert API/RSC. Elles ne satisfont pas la cible de 100 ms. Le travail du premier contrôle coûte respectivement 15,7 / 26,7 / 18,3 / 49,3 ms ; les autres contrôles sont plus courts. L’accueil dépasse déjà 100 ms au montage du main. Les deux frames finales restent très variables et leur cause n’est pas attribuée sans contrôle.
+
+Les ouvertures avec réseau montrent aussi une attente de programmation : le premier Clubs attend 940,5 puis 983,9 ms avant deux contrôles dont le travail prend 27 puis 0,6 ms. Le premier retour Home attend 555,3 ms avant un contrôle de 1,2 ms. La première disponibilité de ce document est 1 934,9 ms, avec cache HTTP préexistant non contrôlé. Ces données motivent le correctif ciblé de programmation documenté dans [BROWSER_READINESS_NOTIFICATIONS](../BROWSER_READINESS_NOTIFICATIONS_20261107.md), sans prétendre qu’il règle le coût du montage ou qu’il a déjà passé la cible navigateur.
+
 ## Politique de cache par route et condition
 
 La politique suivante fixe un objectif vérifiable de réutilisation pour les quatre lectures critiques ci-dessous. **Elle n'est pas un taux naturel déjà obtenu.** Pour chaque route, on distingue le trafic complet et la sous-cohorte des répétitions éligibles : même POP, URL canonique complète, génération, représentation et négociation de compression, après une réponse mise en cache, dans sa durée de validité, sans changement de période ou de publication. Les premières demandes et les nouvelles clés restent présentes dans le taux naturel, même si elles ne sont pas des répétitions éligibles.
@@ -187,7 +204,7 @@ Pour le Ballon d'Or, le plan exige de **ne pas fabriquer un classement** tant qu
 | Charge simultanée et cache | **CONCURRENCE MESURÉE À 3**, erreurs/throttles 0/0 et métriques RDS conservées. **Taux naturel de cache NON OBSERVABLE** : logs CloudFront standard/temps réel désactivés ; politique conditionnelle définie ci-dessus. |
 | Nettoyage des ressources DB temporaires | **VÉRIFIÉ à 19:46 UTC** : trois stacks workers et clone absents ; snapshot et production disponibles. [Reçu](db-cleanup.json). |
 | Nettoyage de la sonde Paris | **VÉRIFIÉ** : stack temporaire absente ; backend de production toujours Active / Successful avec le même hash. [Reçu final](cleanup-final.json). Le reçu ne comporte pas de timestamp de suppression : aucune heure précise n'est inventée. |
-| Préservation du dossier final | Les reçus sélectionnés sont présents dans ce dossier et reliés aux sources par SHA-256. **Publication de ce dossier documentaire À CONFIRMER** ; la navigation reste une recette ouverte. La preuve de restauration/retrait avait déjà été préservée avec relecture indépendante. |
+| Préservation du dossier final | Les reçus sélectionnés sont présents dans ce dossier et reliés aux sources par SHA-256. **Dossier documentaire publié par PR43**, puis complété par PR45 ; la navigation reste une recette ouverte. La preuve de restauration/retrait avait déjà été préservée avec relecture indépendante. |
 | Verdict de recette | **À COMPLÉTER honnêtement** : critères atteints, cibles non atteintes et exceptions acceptées ; ne pas déclarer 100 % tant qu'une preuve requise manque. |
 
 ## Reçus et provenance
