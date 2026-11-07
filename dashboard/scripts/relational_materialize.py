@@ -37,6 +37,9 @@ ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = ROOT / "dashboard/backend/migrations"
 INDEX = "computed/dashboard/index.json"
 LEASE = 97813003
+CATALOG_SLICE_SECONDS = 30
+CATALOG_TRANSACTION_INPUTS = 4
+CATALOG_SLICE_INPUTS = 40
 CATALOG_PATHS = r"^(raw/(supplemental-index\.json$|cup-worker/|rankings/|openfootball/|historical-goals/|seasons/[^/]+/supplemental_(results|fixtures|goals)/)|computed/matchdays/).*\.json(\.gz)?$"
 PROFILE = r"^/(leagues|teams|players)(/[ltp]_[A-Za-z0-9]{6})?$"
 MESSI = ("player-honours", '{"id":"p_1mZO3B"}')
@@ -444,11 +447,21 @@ def queue_changed_scopes(db):
         WHERE publication_jobs.source_stamp IS DISTINCT FROM excluded.source_stamp""")
 
 
-def defer_partition(db, season, league, marked, error):
-    """Keep failed work; record only a safe exception class/SQLSTATE, no source payload."""
+def publication_error_code(error):
+    """A safe exception class/SQLSTATE, never source data or exception text."""
     code = getattr(error, "sqlstate", None) or type(error).__name__
     if not re.fullmatch(r"[A-Za-z0-9_]{1,80}", code):
         code = "PublicationError"
+    return code
+
+
+def publication_failed(result):
+    return any(result.get(key) for key in ("failed_partitions", "failed_globals", "failed_catalog_batches"))
+
+
+def defer_partition(db, season, league, marked, error):
+    """Keep failed work; record only a safe exception class/SQLSTATE, no source payload."""
+    code = publication_error_code(error)
     db.execute("""UPDATE statarena_app.publication_jobs SET attempts=attempts+1,
         last_attempt_at=clock_timestamp(),last_error_code=%s,
         next_attempt_at=clock_timestamp()+make_interval(secs=>
@@ -806,6 +819,29 @@ def catalog_batch(inputs, limit):
     print(compact({"phase": "catalog-published", "inputs": len(jobs), **result,
                    "seconds": round(time.monotonic() - started, 3)}), flush=True)
     return len(jobs)
+
+
+def catalog_slice(inputs, stop):
+    """Admit small atomic batches without making partitions wait for the backlog.
+
+    The deadline limits admission, not an individual transaction's duration.
+    Each admitted batch finishes or rolls back its sources, read models and
+    receipts together; never truncate catalog_batch's selected input iterator.
+    Return committed progress even if a later batch fails; the caller isolates
+    that queue for the rest of the run or aborts if the connection is broken.
+    """
+    deadline = min(stop, time.monotonic() + CATALOG_SLICE_SECONDS)
+    applied = 0
+    while applied < CATALOG_SLICE_INPUTS and time.monotonic() < deadline:
+        limit = min(CATALOG_TRANSACTION_INPUTS, CATALOG_SLICE_INPUTS - applied)
+        try:
+            count = catalog_batch(inputs, limit)
+        except Exception as error:
+            return applied, error
+        applied += count
+        if count < limit:
+            break
+    return applied, None
 
 
 def partition_inputs(inputs, scratch, mids):
@@ -1214,6 +1250,8 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, i
         result = {
             "partitions": 0,
             "failed_partitions": 0,
+            "failed_globals": 0,
+            "failed_catalog_batches": 0,
             "catalog_inputs": 0,
             "support_changed": 0,
             "assets_changed": 0,
@@ -1237,6 +1275,19 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, i
             VALUES('relational-materialize','running',0,clock_timestamp(),clock_timestamp()) ON CONFLICT(workflow)
             DO UPDATE SET status='running',started_at=excluded.started_at,updated_at=excluded.updated_at""")
         while time.monotonic() < stop:
+            if globals_pending and not result["failed_globals"]:
+                began = time.monotonic()
+                try:
+                    result.update(publish_global(db))
+                    globals_pending = False
+                except Exception as error:
+                    if db.closed:
+                        raise
+                    result["failed_globals"] = 1
+                    print(compact({"phase": "global-deferred", "error_code": publication_error_code(error),
+                                   "seconds": round(time.monotonic() - began, 3)}), flush=True)
+            if time.monotonic() >= stop:
+                break
             jobs = db.execute(
                 """SELECT j.season,j.league_id,j.changed_at FROM statarena_app.publication_jobs j
                 WHERE (j.next_attempt_at IS NULL OR j.next_attempt_at<=clock_timestamp())
@@ -1245,12 +1296,32 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, i
                 ORDER BY (j.season='@details'),j.season DESC,j.changed_at,j.league_id LIMIT %s""",
                 (batch,),
             ).fetchall()
-            for label, league, marked in jobs:
+            applied = 0
+            # The empty-queue iteration lets catalogue work use the remaining
+            # budget. Otherwise each partition gets its turn after one slice,
+            # even when the catalogue still has thousands of pending inputs.
+            for job in jobs or (None,):
+                if time.monotonic() >= stop:
+                    break
+                if not result["failed_catalog_batches"]:
+                    began = time.monotonic()
+                    count, error = catalog_slice(inputs, stop)
+                    applied += count
+                    result["catalog_inputs"] += count
+                    if error is not None:
+                        if db.closed:
+                            raise error
+                        result["failed_catalog_batches"] = 1
+                        print(compact({"phase": "catalog-deferred", "error_code": publication_error_code(error),
+                                       "committed_inputs": count, "seconds": round(time.monotonic() - began, 3)}), flush=True)
                 if time.monotonic() >= stop or (
                     max_partitions is not None
                     and result["partitions"] >= max_partitions
                 ):
                     break
+                if job is None:
+                    break
+                label, league, marked = job
                 phase_report = {}
                 transaction_start = time.monotonic()
                 try:
@@ -1287,13 +1358,8 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, i
                     ),
                     flush=True,
                 )
-            if time.monotonic() >= stop:
-                break
-            if globals_pending:
-                result.update(publish_global(db))
-                globals_pending = False
-            applied = catalog_batch(inputs, max(1, batch * 4))
-            result["catalog_inputs"] += applied
+                if max_partitions is not None and result["partitions"] >= max_partitions:
+                    break
             if not jobs and not applied:
                 break
             if max_partitions is not None and result["partitions"] >= max_partitions:
@@ -1310,7 +1376,7 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, i
             """UPDATE statarena_app.workflow_state SET status=%s,remaining=%s,updated_at=clock_timestamp(),
             completed_at=CASE WHEN %s=0 THEN clock_timestamp() ELSE NULL END WHERE workflow='relational-materialize'""",
             (
-                "failed" if result["failed_partitions"] else "pending" if result["remaining"] else "complete",
+                "failed" if publication_failed(result) else "pending" if result["remaining"] else "complete",
                 result["remaining"],
                 result["remaining"],
             ),
@@ -1375,7 +1441,7 @@ def main():
     try:
         result = run(store, minutes=a.minutes, batch=a.batch, queue_all=a.all, install_only=a.install_only)
         print(compact(result), flush=True)
-        if result.get("failed_partitions"):
+        if publication_failed(result):
             raise SystemExit(1)
     finally:
         store.db.close()

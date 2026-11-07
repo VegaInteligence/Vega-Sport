@@ -51,7 +51,8 @@ def main():
                 db.execute("CREATE DATABASE vega_archive_projection_test")
             subprocess.run([sys.executable, "tests/archive_projection_postgres.py"], cwd=root,
                            env={**env, "TEST_DATABASE_URL": base + "/vega_archive_projection_test"}, check=True)
-            for name in ("test_collection_plan.py", "test_publication_freshness.py", "test_core_delta.py",
+            for name in ("test_collection_plan.py", "test_publication_plan.py", "test_publication_continuation.py",
+                         "test_publication_freshness.py", "test_core_delta.py",
                          "test_tournament_publisher_aliases.py", "test_empty_year_aliases.py", "test_daily_refresh.py", "test_storage_budget.py"):
                 subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests",
                                 "-p", name], cwd=root, env=env, check=True)
