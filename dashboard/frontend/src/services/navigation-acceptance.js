@@ -11,6 +11,89 @@ export function acceptancePageIdentity(url) {
   return `${url.pathname.replace(/\/$/, "")}:${url.searchParams.get("id") || ""}:${url.searchParams.get("m") || ""}`;
 }
 
+/** Only the installed Vercel SDK's advertised, same-origin destinations. */
+export function acceptanceTelemetryURLs(scripts, location) {
+  const base = new URL(location),
+    urls = new Set();
+  for (const script of scripts) {
+    const data = script.dataset || {};
+    const sdk = /^@vercel\/(analytics|speed-insights)(?:\/[a-z-]+)?$/.exec(
+      data.sdkn || "",
+    );
+    if (!sdk) continue;
+    const analytics = sdk[1] === "analytics";
+    const raw = analytics
+      ? data.viewEndpoint ||
+        `${(data.endpoint || "/_vercel/insights").replace(/\/$/, "")}/view`
+      : data.endpoint || "/_vercel/speed-insights/vitals";
+    try {
+      const url = new URL(raw, base);
+      if (
+        url.origin === base.origin &&
+        !url.search &&
+        !url.hash &&
+        url.pathname.endsWith(analytics ? "/view" : "/vitals")
+      )
+        urls.add(url.href);
+    } catch {
+      /* Unknown destinations remain blocking requests. */
+    }
+  }
+  return urls;
+}
+
+export function acceptanceRequestKind(
+  url,
+  { method = "GET", headers, telemetryURLs = new Set() } = {},
+) {
+  if (url.searchParams.has("_rsc") || new Headers(headers).has("RSC"))
+    return "rsc";
+  if (url.pathname.startsWith("/api/")) return "api";
+  if (method.toUpperCase() === "POST" && telemetryURLs.has(url.href))
+    return "telemetry";
+  return "other";
+}
+
+export function acceptanceNetworkEvidence({
+  requests,
+  reads,
+  startMs,
+  finished,
+  inFlight,
+  blockingInFlight,
+  cache,
+  incomplete = false,
+}) {
+  const overlaps = requests.filter(
+    (request) =>
+      request.startMs <= finished &&
+      (request.endMs === null || request.endMs >= startMs),
+  );
+  const blocking = overlaps.filter((request) => request.kind !== "telemetry");
+  const transfers = reads.filter(
+    (read) => read.startMs <= finished && read.endMs >= startMs,
+  );
+  return {
+    fetchesStarted: overlaps.filter((request) => request.startMs >= startMs)
+      .length,
+    fetchesDuringInterval: overlaps.length,
+    fetchesInFlightAtClick: inFlight,
+    blockingFetchesDuringInterval: blocking.length,
+    blockingFetchesInFlightAtClick: blockingInFlight,
+    telemetryFetchesDuringInterval: overlaps.length - blocking.length,
+    dataTransfersDuringInterval: transfers.length,
+    networkEvidenceComplete: !incomplete,
+    dataInMemory:
+      cache.fresh > 0 &&
+      cache.pending === 0 &&
+      cache.loader === 0 &&
+      blocking.length === 0 &&
+      blockingInFlight === 0 &&
+      transfers.length === 0 &&
+      !incomplete,
+  };
+}
+
 export function startNavigationAcceptance() {
   if (
     typeof window === "undefined" ||
@@ -27,6 +110,9 @@ export function startNavigationAcceptance() {
     reads: [],
     requests: [],
     inFlight: 0,
+    blockingInFlight: 0,
+    discardedBlockingEndMs: -Infinity,
+    discardedReadEndMs: -Infinity,
     transitions: [],
   });
   const environment = {
@@ -40,7 +126,7 @@ export function startNavigationAcceptance() {
     document.documentElement.setAttribute(
       "data-vega-acceptance",
       JSON.stringify({
-        version: 1,
+        version: 2,
         startedAt: state.startedAt,
         documentId: state.documentId,
         environment,
@@ -52,7 +138,7 @@ export function startNavigationAcceptance() {
         method:
           "captured link click to new visible ready workspace, followed by two animation frames",
         excludes:
-          "same-identity filters; hidden tabs; this is not a screenshot-based paint measurement",
+          "same-identity filters; hidden tabs; only same-origin POST view/vitals destinations advertised by the installed Vercel SDK are excluded from dataInMemory, but retained in fetch counts; this is not a screenshot-based paint measurement",
       }),
     );
   }
@@ -63,6 +149,7 @@ export function startNavigationAcceptance() {
     let request;
     try {
       const input = args[0];
+      const options = args[1] || {};
       const url = new URL(
         typeof input === "string" || input instanceof URL
           ? String(input)
@@ -72,22 +159,48 @@ export function startNavigationAcceptance() {
       request = {
         url: url.href,
         path: url.pathname,
-        kind: url.searchParams.has("_rsc")
-          ? "rsc"
-          : url.pathname.startsWith("/api/")
-            ? "api"
-            : "other",
+        kind: acceptanceRequestKind(url, {
+          method: options.method || input?.method || "GET",
+          headers: options.headers ?? input?.headers,
+          telemetryURLs: acceptanceTelemetryURLs(
+            document.querySelectorAll("script[data-sdkn]"),
+            window.location.href,
+          ),
+        }),
         startMs: performance.now(),
         endMs: null,
         responseMs: null,
         status: null,
       };
-      state.requests.push(request);
-      state.inFlight++;
-      state.requests = state.requests.slice(-100);
     } catch {
       // Diagnostics cannot interfere with the native fetch input validation.
+      // A request that cannot be classified must still prevent a memory claim.
+      request = {
+        url: null,
+        path: "[unclassified]",
+        kind: "other",
+        startMs: performance.now(),
+        endMs: null,
+        responseMs: null,
+        status: null,
+      };
     }
+    state.requests.push(request);
+    state.inFlight++;
+    if (request.kind !== "telemetry") state.blockingInFlight++;
+    for (const removed of state.requests.slice(0, -100))
+      if (removed.kind !== "telemetry")
+        state.discardedBlockingEndMs = Math.max(
+          state.discardedBlockingEndMs,
+          removed.endMs ?? Infinity,
+        );
+    state.requests = state.requests.slice(-100);
+    const ended = () => {
+      if (request.endMs !== null) return;
+      state.inFlight--;
+      if (request.kind !== "telemetry") state.blockingInFlight--;
+      request.endMs = performance.now();
+    };
     try {
       const promise = Reflect.apply(originalFetch, this, args);
       promise.then(
@@ -99,8 +212,7 @@ export function startNavigationAcceptance() {
         },
         () => {
           if (request) {
-            if (request.endMs === null) state.inFlight--;
-            request.endMs = performance.now();
+            ended();
             request.status = "error";
           }
         },
@@ -108,8 +220,7 @@ export function startNavigationAcceptance() {
       return promise;
     } catch (error) {
       if (request) {
-        if (request.endMs === null) state.inFlight--;
-        request.endMs = performance.now();
+        ended();
         request.status = "error";
       }
       throw error;
@@ -161,14 +272,6 @@ export function startNavigationAcceptance() {
           return;
         }
         const finished = performance.now();
-        const reads = state.reads.filter(
-          (read) => read.endMs >= pending.startMs,
-        );
-        const requests = state.requests.filter(
-          (request) =>
-            request.startMs <= finished &&
-            (request.endMs === null || request.endMs >= pending.startMs),
-        );
         state.transitions.push({
           from: pending.from,
           to: pending.to,
@@ -177,19 +280,20 @@ export function startNavigationAcceptance() {
           eventQueueMs: Math.round(pending.eventQueueMs * 1000) / 1000,
           startClock: pending.startClock,
           cache: { ...pending.cache },
-          fetchesStarted: requests.filter(
-            (request) => request.startMs >= pending.startMs,
-          ).length,
-          fetchesDuringInterval: requests.length,
-          fetchesInFlightAtClick: pending.inFlight,
-          dataTransfersDuringInterval: reads.length,
-          dataInMemory:
-            pending.cache.fresh > 0 &&
-            pending.cache.pending === 0 &&
-            pending.cache.loader === 0 &&
-            requests.length === 0 &&
-            pending.inFlight === 0 &&
-            reads.length === 0,
+          ...acceptanceNetworkEvidence({
+            requests: state.requests,
+            reads: state.reads,
+            startMs: pending.startMs,
+            finished,
+            inFlight: pending.inFlight,
+            blockingInFlight: pending.blockingInFlight,
+            cache: pending.cache,
+            incomplete:
+              Math.max(
+                state.discardedBlockingEndMs,
+                state.discardedReadEndMs,
+              ) >= pending.startMs,
+          }),
           visible: true,
         });
         state.transitions = state.transitions.slice(-40);
@@ -233,6 +337,7 @@ export function startNavigationAcceptance() {
           ? "event.timeStamp"
           : "handler performance.now fallback",
         inFlight: state.inFlight,
+        blockingInFlight: state.blockingInFlight,
         startedAt: new Date().toISOString(),
         previous: document.querySelector("main#main"),
         from: current.pathname,
@@ -268,6 +373,7 @@ export function startNavigationAcceptance() {
       if (request) {
         request.endMs = entry.startTime + entry.duration;
         state.inFlight--;
+        if (request.kind !== "telemetry") state.blockingInFlight--;
       }
       if (
         (!url.pathname.startsWith("/api/") && !url.searchParams.has("_rsc")) ||
@@ -283,6 +389,11 @@ export function startNavigationAcceptance() {
         decodedBytes: entry.decodedBodySize,
       });
     }
+    for (const removed of state.reads.slice(0, -100))
+      state.discardedReadEndMs = Math.max(
+        state.discardedReadEndMs,
+        removed.endMs,
+      );
     state.reads = state.reads.slice(-100);
     report();
   });

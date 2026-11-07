@@ -201,6 +201,98 @@ test("Provider selects compact reads before season loading and only falls back w
   }
 });
 
+test("relational route remounts reuse connectivity without creating client-sequence loaders", async () => {
+  for (const route of ["/", "/clubs/", "/joueurs/"]) {
+    for (const configured of [true, false, undefined]) {
+      const activeKeys = [],
+        clients = [];
+      const mod = await compile("hooks/FootballContext.jsx", {
+        "next/navigation": {
+          usePathname: () => route,
+          useSearchParams: () => new URLSearchParams({ season }),
+        },
+        "../services/resources.js": {
+          useResource: (key, loader, active = true) => {
+            if (active) activeKeys.push(key);
+            return {
+              loading: key === "status:api" && configured === undefined,
+              value:
+                key === "manifest"
+                  ? manifest
+                  : key === "status:api"
+                    ? configured
+                    : empty,
+              revalidate: async () => {},
+              retry() {},
+            };
+          },
+          cachedResource: () => undefined,
+          primeResource: () => {
+            throw new Error(
+              "A warm relational status must not start a client loader",
+            );
+          },
+          json: async () => ({}),
+          download() {},
+        },
+        "../components/UI.jsx": ui,
+        "../components/LoadingPage.jsx": moduleDefault(blank),
+      });
+      const Witness = () => {
+        const value = React.useContext(mod.FootballContext);
+        clients.push(value.client);
+        assert.equal(value.configured, configured === true);
+        assert.equal(value.statusKnown, configured !== undefined);
+        assert.equal(value.client.configured, configured === true);
+        assert.equal(value.client.statusKnown, configured !== undefined);
+        return h("p", null, "ready");
+      };
+      for (let mount = 0; mount < 2; mount++)
+        renderToStaticMarkup(h(mod.FootballProvider, null, h(Witness)));
+      assert.notEqual(clients[0].id, clients[1].id);
+      assert.deepEqual(
+        activeKeys.filter((key) => key.startsWith("status:")),
+        ["status:api", "status:api"],
+      );
+    }
+  }
+});
+
+test("legacy clients retain their per-instance initialization job", async () => {
+  const activeKeys = [];
+  const legacyData = { ...empty, meta: { storage: "legacy" } };
+  const mod = await compile("hooks/FootballContext.jsx", {
+    "next/navigation": {
+      usePathname: () => "/clubs/",
+      useSearchParams: () => new URLSearchParams({ season }),
+    },
+    "../services/resources.js": {
+      useResource: (key, loader, active = true) => {
+        if (active) activeKeys.push(key);
+        return {
+          loading: false,
+          value:
+            key === "manifest"
+              ? { ...manifest, storage: "legacy", capabilities: {} }
+              : key.startsWith("status:")
+                ? true
+                : legacyData,
+          revalidate: async () => {},
+          retry() {},
+        };
+      },
+      cachedResource: () => undefined,
+      primeResource: async () => true,
+      json: async () => ({}),
+      download() {},
+    },
+    "../components/UI.jsx": ui,
+    "../components/LoadingPage.jsx": moduleDefault(blank),
+  });
+  renderToStaticMarkup(h(mod.FootballProvider, null, h("p", null, "ready")));
+  assert.equal(activeKeys.filter((key) => /^status:\d+$/.test(key)).length, 1);
+});
+
 test("the dedicated match catalogue cannot poison the actor profile cache", async () => {
   let pathname = "/joueurs/matchs/",
     loadData;

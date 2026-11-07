@@ -2,17 +2,22 @@
 import { useEffect, useRef } from "react";
 import { parisDay } from "../services/fixtures.js";
 
+// Route providers may unmount while the same document keeps its resource and
+// router caches. A remount must not restart the freshness budget for those
+// already-loaded values. This clock contains no user or publication data.
+const publicationClock = {
+  lastCheck: Date.now(),
+  day: parisDay(Date.now()),
+  pending: false,
+};
+
 /** One subscription in FootballProvider refreshes published data for every page. */
 export default function usePublishedDataRefresh(
   refreshManifest,
   enabled = true,
 ) {
   const refresh = useRef(refreshManifest),
-    state = useRef({
-      lastCheck: Date.now(),
-      day: parisDay(Date.now()),
-      pending: false,
-    });
+    state = useRef(publicationClock);
   useEffect(() => {
     refresh.current = refreshManifest;
   }, [refreshManifest]);
