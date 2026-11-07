@@ -59,7 +59,8 @@ def main():
                            env={**env, "TEST_DATABASE_URL": base + "/vega_archive_projection_test"}, check=True)
             for name in ("test_collection_plan.py", "test_publication_plan.py", "test_publication_continuation.py",
                          "test_publication_freshness.py", "test_core_delta.py",
-                         "test_tournament_publisher_aliases.py", "test_empty_year_aliases.py", "test_daily_refresh.py", "test_storage_budget.py"):
+                         "test_tournament_publisher_aliases.py", "test_empty_year_aliases.py", "test_daily_refresh.py", "test_storage_budget.py",
+                         "test_schema_retirement_cli.py"):
                 subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests",
                                 "-p", name], cwd=root, env=env, check=True)
             # Tests use one isolated schema name; serialize files so their
@@ -98,6 +99,12 @@ def main():
                 db.execute("CREATE DATABASE vega_ci_test")
             subprocess.run([sys.executable, "tests/consolidation_postgres.py"], cwd=root,
                            env={**env, "TEST_DATABASE_URL": base + "/vega_ci_test"}, check=True)
+            # Physical retirement is an explicit irreversible phase, separate
+            # from the reversible copy/cutover/rollback fixture above.
+            with psycopg.connect(base + "/postgres", autocommit=True) as db:
+                db.execute("CREATE DATABASE vega_retirement_test")
+            subprocess.run([sys.executable, "tests/consolidation_retirement_postgres.py"], cwd=root,
+                           env={**env, "TEST_DATABASE_URL": base + "/vega_retirement_test"}, check=True)
             # Archival exercises two independent owner roles and committed moves.
             # Keep its active/archived names separate from the consolidation fixture.
             with psycopg.connect(base + "/postgres", autocommit=True) as db:
