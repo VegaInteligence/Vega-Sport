@@ -93,7 +93,13 @@ test("Messi keeps his portrait and published trophies when filters leave no matc
   });
   const html = renderSeasonProfile([], [], id);
   assert.match(html, /Lionel Messi/);
-  assert.match(html, /<img[^>]+api\/assets\?url=/);
+  const portrait = html.match(
+    /<span class="player-avatar season-player-portrait"[^>]*>([\s\S]*?)<\/span>/,
+  )?.[1];
+  assert.ok(portrait, "the known portrait remains available without match rows");
+  assert.match(portrait, /<img[^>]+loading="lazy"/);
+  // ApiImage starts on visible intent; SSR must not bypass the shared budget.
+  assert.doesNotMatch(portrait, /\ssrc=/);
   assert.match(html, /aria-label="Palmarès de Lionel Messi"/);
   assert.match(html, /\/trophies\/world-cup\.webp/);
   assert.match(html, /\/trophies\/ballon-or\.webp/);
