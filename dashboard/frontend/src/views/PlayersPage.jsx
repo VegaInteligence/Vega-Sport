@@ -17,10 +17,15 @@ import PlayerWorkspace from "../components/PlayerWorkspace.jsx";
 import PlayerMatchesPage from "./PlayerMatchesPage.jsx";
 import { ResearchComparisonTray } from "../components/ResearchUI.jsx";
 import useCompactRead from "../hooks/useCompactRead.js";
-import { compactQuery, playerReadParams } from "../services/compact-reads.js";
+import {
+  compactQuery,
+  compactScope,
+  playerReadParams,
+} from "../services/compact-reads.js";
 import {
   aggregateSeason,
   aggregateSeasonPlayers,
+  MIN_SEASON_MINUTES,
 } from "../services/season-player.js";
 import {
   PLAYER_RANKINGS,
@@ -35,6 +40,18 @@ import {
   searchPlayerAverages,
   sortPlayerAverages,
 } from "../services/player-directory.js";
+
+// The API's M filter includes attacking midfielders, and its A filter
+// includes forwards. Both lines belong to the radar's offensive cohort.
+const RADAR_POSITIONS = { G: "G", D: "D", M: "M", O: "M,A" };
+const OTHER_PROFILE_VIEWS = [
+  "stats",
+  "similar",
+  "compare",
+  "evolution",
+  "matches",
+];
+
 export default function PlayersPage() {
   const params = useSearchParams();
   const profileView = params.get("playerView") || "overview";
@@ -47,6 +64,7 @@ export default function PlayersPage() {
     [directoryPage, setDirectoryPage] = useState({ key: "", page: 1 });
   const filters = useDeferredValue(f.filters);
   const id = params.get("id");
+  const overview = Boolean(id && !OTHER_PROFILE_VIEWS.includes(profileView));
   const ranking = playerDirectoryRanking(
     f.filters,
     !id && directoryView === "table",
@@ -71,18 +89,7 @@ export default function PlayersPage() {
         enabled: f.compactMode && !id && directoryView === "table",
         refreshManifest: f.refreshManifest,
       },
-    ),
-    cohortParams = playerReadParams(f, { cohort: true, limit: 100 }),
-    needsCohort =
-      f.compactMode &&
-      (id
-        ? ["overview", "stats", "similar", "compare"].includes(profileView)
-        : ["explore", "indices"].includes(directoryView)),
-    cohort = useCompactRead("players", cohortParams, {
-      enabled: needsCohort,
-      allPages: true,
-      refreshManifest: f.refreshManifest,
-    });
+    );
   const matchIndex = useMemo(
     () => new Map(f.data.matches.map((match) => [match.id, match])),
     [f.data.matches],
@@ -104,9 +111,50 @@ export default function PlayersPage() {
       filters.leagues,
     ],
   );
-  const localProfiles = useMemo(
-    () => aggregateSeasonPlayers(contextRows),
-    [contextRows],
+  const subject = useMemo(
+    () => (overview ? aggregateSeason(contextRows, id) : null),
+    [overview, contextRows, id],
+  );
+  const radarLeagues = subject?.rows.every(
+    ({ leagueId }) =>
+      leagueId && (!f.compactMode || /^l_[A-Za-z0-9]{6}$/.test(leagueId)),
+  )
+    ? subject.leagueIds
+    : undefined;
+  const localProfiles = useMemo(() => {
+    if (!overview) return aggregateSeasonPlayers(contextRows);
+    const leagues = new Set(radarLeagues);
+    return aggregateSeasonPlayers(
+      contextRows.filter((row) => leagues.has(row.leagueId)),
+    );
+  }, [overview, radarLeagues, contextRows]);
+  const radarPosition =
+    subject?.minutes >= MIN_SEASON_MINUTES
+      ? RADAR_POSITIONS[subject.role?.group]
+      : undefined;
+  const cohortParams = playerReadParams(f, { cohort: true, limit: 100 });
+  const needsCohort =
+    f.compactMode &&
+    (overview
+      ? Boolean(radarPosition && radarLeagues?.length)
+      : id
+        ? ["stats", "similar", "compare"].includes(profileView)
+        : ["explore", "indices"].includes(directoryView));
+  const cohort = useCompactRead(
+    "players",
+    overview
+      ? {
+          ...cohortParams,
+          leagues: compactScope(radarLeagues ?? []),
+          pos: radarPosition,
+        }
+      : cohortParams,
+    {
+      enabled: needsCohort,
+      allPages: true,
+      parallelPages: overview,
+      refreshManifest: f.refreshManifest,
+    },
   );
   const profiles = useMemo(
     () =>
@@ -164,15 +212,11 @@ export default function PlayersPage() {
       directory.value,
     ],
   );
-  const scopeRows = useMemo(() => {
-    if (!id) return [];
-    const ids = new Set(eligible.map((row) => row.playerId));
-    return contextRows.filter((row) => ids.has(row.playerId));
-  }, [id, contextRows, eligible]);
-  const playerRows = useMemo(
-    () => (id ? scopeRows.filter((row) => row.playerId === id) : []),
-    [id, scopeRows],
-  );
+  const playerRows = useMemo(() => {
+    if (!id || (!overview && !eligible.some((row) => row.playerId === id)))
+      return [];
+    return contextRows.filter((row) => row.playerId === id);
+  }, [id, overview, contextRows, eligible]);
   const displayContext = useMemo(() => {
     if (!f.compactMode) return f;
     const teams = [
@@ -208,12 +252,12 @@ export default function PlayersPage() {
             ← Tous les joueurs
           </Link>
         )}
-        {id && needsCohort && cohort.loading && (
+        {id && !overview && needsCohort && cohort.loading && (
           <p role="status" className="notice">
             Chargement des comparaisons de saison…
           </p>
         )}
-        {id && needsCohort && cohort.error && (
+        {id && !overview && needsCohort && cohort.error && (
           <p role="alert" className="notice notice-warning">
             Comparaisons indisponibles. {cohort.error}{" "}
             <button onClick={cohort.retry}>Réessayer</button>
@@ -226,6 +270,7 @@ export default function PlayersPage() {
               rows={playerRows}
               scopeRows={contextRows}
               profiles={profiles}
+              radarComparison={overview && needsCohort ? cohort : null}
             />
           </Suspense>
         )}

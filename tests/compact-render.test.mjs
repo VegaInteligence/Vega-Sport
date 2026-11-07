@@ -399,6 +399,85 @@ test("players table requests its page without activating the complete analysis c
   assert.equal(reads[1].options.enabled, false);
 });
 
+test("player overview requests the matching peer lines without filtering out the actor", async () => {
+  const id = "p_actor",
+    reads = [],
+    appearances = Array.from({ length: 6 }, (_, index) => ({
+      playerId: id,
+      name: "Joueur",
+      matchId: `m_${index}`,
+      season,
+      leagueId: league,
+      minutes: 90,
+      positionId: 83,
+      goals: 1,
+    })),
+    f = {
+      compactMode: true,
+      manifest,
+      season,
+      focus: "all",
+      data: { ...empty, appearances },
+      filters: {
+        league: "all",
+        leagues: [],
+        query: "",
+        minutes: 1,
+        basis: "total",
+        match: "all",
+        advanced: {
+          positions: ["D"],
+          role: "all",
+          venue: "all",
+          result: "all",
+          rating: null,
+          from: "",
+          to: "",
+          conditions: [],
+        },
+      },
+      href: (url) => url,
+    };
+  let view = "overview";
+  const mod = await compile("views/PlayersPage.jsx", {
+    react: {
+      ...React,
+      lazy:
+        () =>
+        ({ rows, radarComparison }) =>
+          h("p", null, `Aperçu ${rows.length} ${radarComparison?.loading}`),
+    },
+    "next/navigation": {
+      useSearchParams: () => new URLSearchParams({ id, playerView: view }),
+    },
+    "../hooks/FootballContext.jsx": {
+      useFootball: () => f,
+      FootballContext: React.createContext(null),
+    },
+    "../hooks/useCompactRead.js": moduleDefault((kind, params, options) => {
+      reads.push({ kind, params, options });
+      return { loading: true };
+    }),
+    "../components/Layout.jsx": moduleDefault(({ children }) => children),
+    "../components/PlayerWorkspace.jsx": moduleDefault(blank),
+    "./PlayerMatchesPage.jsx": moduleDefault(blank),
+    "../components/ResearchUI.jsx": { ResearchComparisonTray: blank },
+  });
+  assert.match(renderToStaticMarkup(h(mod.default)), /Aperçu 6 true/);
+  let request = reads.find(({ options }) => options.enabled);
+  assert.equal(request.params.pos, "M,A");
+  assert.equal(request.params.leagues, league);
+  assert.equal(request.options.allPages, true);
+  assert.equal(request.options.parallelPages, true);
+  reads.length = 0;
+  view = "stats";
+  renderToStaticMarkup(h(mod.default));
+  request = reads.find(({ options }) => options.enabled);
+  assert.equal(request.params.pos, "");
+  assert.equal(request.params.leagues, "all");
+  assert.equal(request.options.parallelPages, false);
+});
+
 test("the merged actor match list keeps fixture links, date order and every actor row", async () => {
   const id = "p_000001",
     jobs = [],

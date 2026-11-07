@@ -12,72 +12,46 @@
   line-height: 1.5;
   margin: 0;
 }
-.layout {
-  display: grid;
-  grid-template-columns: minmax(190px, 280px) minmax(170px, 340px);
-  gap: 16px 28px;
-  align-items: center;
+.scope {
+  display: block;
+  color: var(--ink);
+  font-weight: 600;
+  margin-top: 3px;
 }
 .chart {
   width: 100%;
-  max-width: 280px;
+  max-width: 440px;
   display: block;
-  margin: 0 auto;
+  margin: 12px 0 0;
 }
 .grid {
   fill: none;
   stroke: var(--border-strong);
   stroke-width: 1;
 }
-.index {
+.label {
   fill: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
+}
+.value {
+  fill: var(--ink);
+  font-size: 18px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .area {
-  fill: #4c91ef;
+  fill: var(--accent);
   fill-opacity: 0.17;
-  stroke: #4c91ef;
+  stroke: var(--accent);
   stroke-width: 2.5;
 }
 .edge {
-  stroke: #4c91ef;
+  stroke: var(--accent);
   stroke-width: 2.5;
 }
 .dot {
-  fill: #4c91ef;
-}
-.values {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 9px;
-}
-.values li {
-  display: grid;
-  grid-template-columns: 22px 1fr auto;
-  align-items: baseline;
-  gap: 7px;
-  font-size: var(--text-sm);
-}
-.values strong {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.number {
-  color: var(--muted);
-  font-size: var(--text-xs);
+  fill: var(--accent);
 }
 .note {
   margin-top: 10px;
-}
-@media (max-width: 600px) {
-  .layout {
-    grid-template-columns: 1fr;
-    gap: 2px;
-  }
-  .chart {
-    max-width: 240px;
-  }
 }

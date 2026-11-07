@@ -64,6 +64,8 @@ test("season overview offers a radar and a shortcut to the detailed statistics",
   const html = renderSeasonProfile(rows, matches, "p_1");
   assert.match(html, /Neymar/);
   assert.match(html, /Profil statistique/);
+  assert.match(html, /<svg[^>]+aria-label="Radar des rangs du joueur/);
+  assert.match(html, /<text[^>]*>Passes décisives<tspan[^>]*>—<\/tspan>/);
   assert.match(html, /Voir les statistiques détaillées/);
   assert.doesNotMatch(html, /Statistiques à afficher|Temps de jeu et note/);
   assert.doesNotMatch(html, /centiles au poste|Modèle du radar/);

@@ -4,7 +4,7 @@ const OUTFIELD = [
   ["goals", "Buts"],
   ["assists", "Passes décisives"],
   ["chancesCreated", "Occasions créées"],
-  ["shotsOnTarget", "Tirs cadrés"],
+  ["passesAccurate", "Passes réussies"],
   ["duelsWon", "Duels gagnés"],
   ["recoveries", "Récupérations"],
 ];

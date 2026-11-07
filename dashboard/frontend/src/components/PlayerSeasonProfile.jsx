@@ -6,6 +6,7 @@ import { useResearch } from "../hooks/ResearchContext.jsx";
 import {
   aggregateSeason,
   aggregateSeasonPlayers,
+  MIN_SEASON_MINUTES,
   seasonMetric,
 } from "../services/season-player.js";
 import {
@@ -252,6 +253,7 @@ export default function PlayerSeasonProfile({
   rows,
   scopeRows,
   profiles: allProfiles,
+  radarComparison,
 }) {
   const f = useFootball(),
     params = useSearchParams();
@@ -299,14 +301,16 @@ export default function PlayerSeasonProfile({
   const [mode, setMode] = useState("total"),
     [minMinutes, setMinMinutes] = useState(450),
     [keys, setKeys] = useState(Object.keys(SCOUT_METRICS));
-  const cohorts = useMemo(
-    () => buildCohorts(profiles, minMinutes),
-    [profiles, minMinutes],
-  );
   const requestedView = params?.get("playerView");
   const view = TABS.some(([key]) => key === requestedView)
     ? requestedView
     : "overview";
+  const comparisonMinutes =
+    view === "overview" ? MIN_SEASON_MINUTES : minMinutes;
+  const cohorts = useMemo(
+    () => buildCohorts(profiles, comparisonMinutes),
+    [profiles, comparisonMinutes],
+  );
   const change = (next) => {
     const url = new URL(window.location.href);
     url.searchParams.set("playerView", next);
@@ -350,7 +354,11 @@ export default function PlayerSeasonProfile({
       <Suspense fallback={historyLoading}>
         <SeasonStats id={id} season={f.season} />
       </Suspense>
-      <PlayerOverviewRadar profile={profile} cohorts={cohorts} />
+      <PlayerOverviewRadar
+        profile={profile}
+        cohorts={cohorts}
+        comparison={radarComparison}
+      />
       <Suspense fallback={historyLoading}>
         <CareerStats id={id} season={f.season} overview />
       </Suspense>

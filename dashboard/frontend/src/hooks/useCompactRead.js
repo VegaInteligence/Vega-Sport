@@ -11,7 +11,13 @@ import {
 export default function useCompactRead(
   kind,
   params,
-  { enabled = true, clock = "", refreshManifest, allPages = false } = {},
+  {
+    enabled = true,
+    clock = "",
+    refreshManifest,
+    allPages = false,
+    parallelPages = false,
+  } = {},
 ) {
   const query = compactQuery(params),
     scope = `${kind}:${allPages}:${compactQuery({ ...params, generation: undefined })}`,
@@ -19,20 +25,22 @@ export default function useCompactRead(
       `${allPages ? "compact-cohort" : "compact"}:${kind}:${query}:${clock}`,
       ({ signal }) =>
         (allPages
-          ? readCompactPages(kind, params, { signal }).then((result) => ({
-              data: {
-                [kind]: result.pages.flatMap((page) => page[kind]),
-                teams: [
-                  ...new Map(
-                    result.pages
-                      .flatMap((page) => page.teams || [])
-                      .map((team) => [team.id, team]),
-                  ).values(),
-                ],
-              },
-              meta: result.meta,
-              pagination: result.pagination,
-            }))
+          ? readCompactPages(kind, params, { signal, parallelPages }).then(
+              (result) => ({
+                data: {
+                  [kind]: result.pages.flatMap((page) => page[kind]),
+                  teams: [
+                    ...new Map(
+                      result.pages
+                        .flatMap((page) => page.teams || [])
+                        .map((team) => [team.id, team]),
+                    ).values(),
+                  ],
+                },
+                meta: result.meta,
+                pagination: result.pagination,
+              }),
+            )
           : readCompact(kind, params, { signal })
         ).catch((error) => {
           if (error.status === 409)

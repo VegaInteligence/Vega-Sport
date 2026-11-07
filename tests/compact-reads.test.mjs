@@ -439,3 +439,108 @@ test("discipline cancellation and changed publication never return partial total
     assert.equal(calls, abort ? 1 : 2);
   }
 });
+
+test("parallel cohort pages are bounded, pinned and returned in page order", async () => {
+  let active = 0,
+    maximum = 0;
+  const starts = [],
+    notifications = [];
+  const result = await readCompactPages(
+    "players",
+    { limit: 1 },
+    {
+      parallelPages: true,
+      onPage: ({ page }) => notifications.push(page),
+      fetcher: async (url) => {
+        const q = new URL(url, "https://test").searchParams;
+        const page = Number(q.get("page"));
+        if (page > 1) assert.equal(q.get("generation"), "g1");
+        starts.push(page);
+        active++;
+        maximum = Math.max(maximum, active);
+        await new Promise((resolve) =>
+          setTimeout(resolve, page === 2 ? 30 : 5),
+        );
+        active--;
+        return response(
+          { players: [{ playerId: `p_${page}` }] },
+          { page, limit: 1, total: 6 },
+        );
+      },
+    },
+  );
+  assert.equal(maximum, 2);
+  assert.deepEqual(starts, [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(notifications, [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(
+    result.pages.map((p) => p.players[0].playerId),
+    ["p_1", "p_2", "p_3", "p_4", "p_5", "p_6"],
+  );
+  await assert.rejects(
+    readCompactPages(
+      "players",
+      { limit: 1 },
+      {
+        parallelPages: true,
+        fetcher: async (url) => {
+          const page = Number(
+            new URL(url, "https://test").searchParams.get("page"),
+          );
+          return response(
+            { players: [{ playerId: page === 3 ? "p_2" : `p_${page}` }] },
+            { page, limit: 1, total: 4 },
+          );
+        },
+      },
+    ),
+    /doublons/,
+  );
+});
+
+test("parallel pages retry transient failures once after their batch, but never retry 409", async () => {
+  for (const status of [429, 502, 503, 504, 409]) {
+    const attempts = new Map(),
+      active = new Set(),
+      sequence = [];
+    const promise = readCompactPages(
+      "players",
+      { limit: 1 },
+      {
+        parallelPages: true,
+        fetcher: async (url) => {
+          const page = Number(
+            new URL(url, "https://test").searchParams.get("page"),
+          );
+          const attempt = (attempts.get(page) || 0) + 1;
+          attempts.set(page, attempt);
+          sequence.push(`start:${page}:${attempt}`);
+          active.add(page);
+          await new Promise((resolve) =>
+            setTimeout(resolve, page === 3 ? 20 : 3),
+          );
+          active.delete(page);
+          sequence.push(`end:${page}:${attempt}`);
+          if (page === 2 && attempt === 1)
+            return {
+              ok: false,
+              status,
+              json: async () => ({ error: { message: "unavailable" } }),
+            };
+          return response(
+            { players: [{ playerId: `p_${page}` }] },
+            { page, limit: 1, total: 3 },
+          );
+        },
+      },
+    );
+    if (status === 409) {
+      await assert.rejects(promise, /unavailable/);
+      assert.equal(attempts.get(2), 1);
+    } else {
+      const value = await promise;
+      assert.equal(value.pages.length, 3);
+      assert.equal(attempts.get(2), 2);
+      assert.ok(sequence.indexOf("start:2:2") > sequence.indexOf("end:3:1"));
+    }
+  }
+});

@@ -194,25 +194,26 @@ export async function readPlayerDiscipline(
 export async function readCompactPages(
   kind,
   params,
-  { signal, fetcher = fetch, onPage } = {},
+  { signal, fetcher = fetch, onPage, parallelPages = false } = {},
 ) {
   const pages = [],
     seen = new Set();
   let generation = params.generation,
     expectedPages,
     expectedTotal;
-  for (let page = 1; ; page++) {
+  const limit =
+    kind === "player" || /(?:appearances|shots)/.test(params.include || "")
+      ? 25
+      : params.limit || 100;
+  const load = (page) =>
+    readCompact(
+      kind,
+      { ...params, page, limit, generation },
+      { signal, fetcher },
+    );
+  function accept(result, page) {
     signal?.throwIfAborted();
-    const limit =
-      kind === "player" || /(?:appearances|shots)/.test(params.include || "")
-        ? 25
-        : params.limit || 100;
-    const result = await readCompact(
-        kind,
-        { ...params, page, limit, generation },
-        { signal, fetcher },
-      ),
-      pagination = result.pagination;
+    const pagination = result.pagination;
     if (
       !pagination ||
       pagination.page !== page ||
@@ -254,13 +255,39 @@ export async function readCompactPages(
     ids.forEach((id) => seen.add(id));
     pages.push(result.data);
     onPage?.({ page, pages: expectedPages, total: expectedTotal });
-    if (page === expectedPages && seen.size === expectedTotal)
-      return { pages, meta: result.meta, pagination };
-    if (page === expectedPages)
+    if (page === expectedPages && seen.size !== expectedTotal)
       throw new Error("La cohorte reçue est incomplète.");
     if (page > expectedPages)
       throw new Error("La pagination des données est invalide.");
+    return { pages, meta: result.meta, pagination };
   }
+  let final;
+  for (let first = 1; first <= (expectedPages ?? 1);) {
+    signal?.throwIfAborted();
+    const count = Math.min(
+      parallelPages ? 2 : 1,
+      (expectedPages ?? 1) - first + 1,
+    );
+    const settled = await Promise.allSettled(
+      Array.from({ length: count }, (_, index) => load(first + index)),
+    );
+    signal?.throwIfAborted();
+    for (const item of settled)
+      if (
+        item.status === "rejected" &&
+        (!parallelPages || ![429, 502, 503, 504].includes(item.reason?.status))
+      )
+        throw item.reason;
+    for (let index = 0; index < settled.length; index++) {
+      signal?.throwIfAborted();
+      const item = settled[index];
+      const result =
+        item.status === "fulfilled" ? item.value : await load(first + index);
+      final = accept(result, first + index);
+    }
+    first += count;
+  }
+  return final;
 }
 
 export function mergeActorPages(result, manifest, season) {
