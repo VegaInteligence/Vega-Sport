@@ -17,8 +17,14 @@ def build(manifest, output, *, bootstrap=False):
     document = json.loads(manifest.read_text())
     if not isinstance(document.get("operations"), dict) or not document["operations"]:
         raise ValueError("A reviewed operation manifest is required")
+    if bootstrap and set(document["operations"]) != {"bootstrap-consolidation"}:
+        raise ValueError("The separate bootstrap release accepts only its fixed prerequisite operation")
     for name, operation in document["operations"].items():
-        if operation.get("mode") not in ("read", "write") or not operation.get("sql"):
+        kind = operation.get("kind")
+        if kind and (kind not in ("archive-refresh", "vacuum-analyze") or operation.get("mode") != "write"
+                     or operation.get("sql") or operation.get("migration") or operation.get("repeat")):
+            raise ValueError(f"Invalid fixed maintenance operation: {name}")
+        if operation.get("mode") not in ("read", "write") or (not kind and not operation.get("sql")):
             raise ValueError(f"Invalid operation: {name}")
         if not set(operation.get("targets", [])) <= {"stage", "prod"}:
             raise ValueError(f"Invalid target: {name}")

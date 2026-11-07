@@ -11,6 +11,7 @@ from relational_match import canonical, _copy_rows, _values_sql, unpack_record, 
 from relational_match_ddl import column_lines, fields, projected
 from relational_match_model import Children
 from consolidated_storage import storage_mode
+from archive_projection import archive_index_seasons, refresh_archive_projection
 
 SPEC = Path(__file__).resolve().parents[1] / "backend/services/catalog-model.json"
 spec = json.loads(SPEC.read_text())
@@ -159,6 +160,8 @@ def publish_catalog(db, records_in):
     changed = unchanged = 0
     group = {}
     size = 0
+    archive_seasons = set()
+    archive_indexes = {}
     with db.transaction():
         consolidated = storage_mode(db)
         db.execute(
@@ -166,6 +169,10 @@ def publish_catalog(db, records_in):
         )
         for path, value in records_in:
             for model, kind, scope, edition, body in records(path, value):
+                if kind == "archive-season":
+                    archive_seasons.add(edition)
+                elif kind == "archive-index" and scope in ("results", "goals") and scope not in archive_indexes:
+                    archive_indexes[scope] = archive_index_seasons(db, scope)
                 raw = canonical(body).encode()
                 digest = sha256(model_version.encode() + raw).hexdigest()
                 key = (kind, scope, edition)
@@ -179,6 +186,10 @@ def publish_catalog(db, records_in):
         added, kept = _publish_group(db, group, consolidated=consolidated)
         changed += added
         unchanged += kept
+        for scope, previous in archive_indexes.items():
+            archive_seasons.update(previous ^ archive_index_seasons(db, scope))
+        for season in sorted(archive_seasons):
+            refresh_archive_projection(db, season)
     return {"changed": changed, "unchanged": unchanged}
 
 

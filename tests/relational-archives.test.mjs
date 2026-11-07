@@ -5,11 +5,17 @@ import { createRequire } from "node:module";
 import {
   createArchiveReadRoute,
   archiveEditionQuery,
+  archiveMetadataQuery,
+  archivePageQuery,
+  archiveDetailQuery,
 } from "../dashboard/backend/services/relational-archives.js";
 import {
   archiveRows,
   buildArchiveSeason,
 } from "../dashboard/shared/archive.js";
+
+import { buildArchiveProjection } from "../dashboard/shared/archive-projection.js";
+import projectionModel from "../dashboard/backend/services/archive-projection-model.json" with { type: "json" };
 
 const season = "2018/2019";
 const invoke = (route, params = {}, options) => {
@@ -141,17 +147,78 @@ const fixture = () => ({
   ],
 });
 
+function projectionOf(row) {
+  return buildArchiveProjection(
+    {
+      ...row,
+      source_fence: {
+        editions: row.editions,
+        expected_scopes: row.expected_scopes || [],
+      },
+    },
+    season,
+  );
+}
+
+function storedRead(row, sql, values = [], projection = projectionOf(row)) {
+  const source_fence = {
+    editions: row.editions,
+    expected_scopes: row.expected_scopes || [],
+  };
+  if (sql === archiveMetadataQuery)
+    return {
+      source_fence,
+      projection: projection.ready
+        ? {
+            version: projection.version,
+            revision: projection.revision,
+            source_fence: projection.source_fence,
+            competitions: projection.competitions,
+            summary: projection.summary,
+            match_count: projection.matches.length,
+          }
+        : null,
+    };
+  assert.notEqual(
+    sql,
+    archiveEditionQuery,
+    "Public requests must never rebuild a full edition",
+  );
+  if (!projection.ready || projection.version !== values[1])
+    return { ready: false };
+  if (sql === archiveDetailQuery) {
+    const match = projection.matches.find((m) => m.match_key === values[2]);
+    return {
+      ready: true,
+      match: match ? { listing: match.listing, goals: match.goals } : null,
+    };
+  }
+  assert.equal(sql, archivePageQuery);
+  const [, , competition, needle, requestedPage, limit] = values;
+  const matches = projection.matches.filter(
+    (m) =>
+      (competition === "all" || m.competition_id === competition) &&
+      (!needle ||
+        m.search_teams.includes(needle) ||
+        m.search_players.includes(needle)),
+  );
+  const total = matches.length,
+    pages = Math.max(1, Math.ceil(total / limit)),
+    page = Math.min(requestedPage, pages);
+  return {
+    ready: true,
+    pagination: { total, pages, page, limit, hasMore: page < pages },
+    matches: matches
+      .slice((page - 1) * limit, page * limit)
+      .map((m) => m.listing),
+  };
+}
+
 function mocked(row = fixture()) {
   const calls = [];
-  const route = createArchiveReadRoute(async (sql) => {
+  const route = createArchiveReadRoute(async (sql, values) => {
     calls.push(sql);
-    return [
-      structuredClone(
-        sql === archiveEditionQuery
-          ? row
-          : { editions: row.editions, expected_scopes: row.expected_scopes },
-      ),
-    ];
+    return [structuredClone(storedRead(row, sql, values))];
   });
   return { route, calls, row };
 }
@@ -211,8 +278,8 @@ test("archive pagination keeps exact edition facets, goal-only matches and playe
   assert.equal(detail.pagination, undefined);
   assert.equal(
     calls.filter((sql) => sql === archiveEditionQuery).length,
-    1,
-    "one cold edition read is shared by every bounded representation",
+    0,
+    "cold routes only read published pages; matching belongs to the publisher",
   );
 });
 
@@ -329,29 +396,100 @@ test("invalid archive input and absent resources do not become empty successful 
   );
 });
 
-test("a publication race retries a coherent edition and never caches a mixed response", async () => {
+test("a publication race retries a coherent page and never caches a mixed response", async () => {
   const before = fixture(),
     after = fixture();
   after.editions[0].source_digest = "c".repeat(64);
   let reads = 0;
-  const route = createArchiveReadRoute(async (sql) => {
+  const route = createArchiveReadRoute(async (sql, values) => {
     reads++;
-    return [structuredClone(reads === 1 ? before : after)];
+    return [
+      structuredClone(storedRead(reads === 1 ? before : after, sql, values)),
+    ];
   });
   const body = await (await invoke(route)).json();
   assert.equal(reads, 4);
   assert.equal(body.meta.sourceDigests.goals, "c".repeat(64));
-  const unstable = createArchiveReadRoute(async (sql) => [
-    {
-      ...fixture(),
-      editions: (sql === archiveEditionQuery ? after : before).editions,
-    },
+  const unstable = createArchiveReadRoute(async (sql, values) => [
+    storedRead(sql === archiveMetadataQuery ? before : after, sql, values),
   ]);
   await assert.rejects(invoke(unstable), (e) => e.status === 503);
 });
 
+test("missing or stale projections fail closed without cold source reconstruction", async () => {
+  const row = fixture(),
+    projection = projectionOf(row);
+  row.editions[0].source_digest = "d".repeat(64);
+  const calls = [];
+  const stale = createArchiveReadRoute(async (sql, values) => {
+    calls.push(sql);
+    return [storedRead(row, sql, values, projection)];
+  });
+  await assert.rejects(invoke(stale), (e) => e.status === 503);
+  assert.deepEqual(calls, [archiveMetadataQuery]);
+  await assert.rejects(
+    invoke(
+      createArchiveReadRoute(async () => [
+        {
+          source_fence: { editions: row.editions, expected_scopes: [] },
+          projection: null,
+        },
+      ]),
+      {},
+      { method: "HEAD" },
+    ),
+    (e) => e.status === 503,
+  );
+});
+
+test("expected streams and source identity fence detail keys even when digests stay equal", async () => {
+  const { route, row } = mocked();
+  const first = await (await invoke(route)).json();
+  row.expected_scopes = ["goals", "results"];
+  const changed = await (await invoke(route)).json();
+  assert.notEqual(changed.meta.version, first.meta.version);
+  assert.deepEqual(changed.data.summary, first.data.summary);
+  await assert.rejects(
+    invoke(route, { match: "r:2018-19/de.1:0", version: first.meta.version }),
+    (e) => e.status === 409,
+  );
+  row.editions[0].resource_id = 99;
+  await assert.rejects(
+    invoke(route, { version: changed.meta.version }),
+    (e) => e.status === 409,
+  );
+});
+
+test("player search cannot match across two distinct goal scorers", async () => {
+  const row = fixture();
+  row.goal_events.push({
+    ...row.goal_events[0],
+    position: 3,
+    minute: "24",
+    player: "Beta",
+    score: [2, 0],
+  });
+  const { route } = mocked(row);
+  assert.equal(
+    (await (await invoke(route, { q: "muller beta" })).json()).pagination.total,
+    0,
+  );
+  assert.equal(
+    (await (await invoke(route, { q: "muller" })).json()).pagination.total,
+    1,
+  );
+  assert.equal(
+    (await (await invoke(route, { q: "beta" })).json()).pagination.total,
+    1,
+  );
+  await assert.rejects(
+    invoke(route, { q: "muller\u001fbeta" }),
+    (e) => e.status === 400,
+  );
+});
+
 test(
-  "flat archive SQL preserves the full catalogue's exact merged order, filters and score notes",
+  "published archive pages preserve the full catalogue's exact merge, filters, totals and detail keys",
   { skip: !process.env.VEGA_TEST_DATABASE_URL },
   async () => {
     const target = new URL(process.env.VEGA_TEST_DATABASE_URL);
@@ -373,6 +511,15 @@ test(
         await readFile(
           new URL(
             "../dashboard/backend/migrations/006_catalog_models.sql",
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      );
+      await db.query(
+        await readFile(
+          new URL(
+            "../dashboard/backend/migrations/032_archive_read_projection.sql",
             import.meta.url,
           ),
           "utf8",
@@ -431,7 +578,28 @@ test(
         raw.find((r) => r.scope === "results").body,
         raw.find((r) => r.scope === "goals").body,
       );
-      const read = async (sql, values) => (await db.query(sql, values)).rows;
+      const source = (await db.query(archiveEditionQuery, [season])).rows[0];
+      const projection = buildArchiveProjection(source, season);
+      assert.equal(projection.ready, true);
+      await db.query(projectionModel.insert_header, [
+        season,
+        projection.revision,
+        JSON.stringify(projection.source_fence),
+        projection.version,
+        JSON.stringify(projection.competitions),
+        JSON.stringify(projection.summary),
+        projection.matches.length,
+      ]);
+      await db.query(projectionModel.insert_matches, [
+        season,
+        JSON.stringify(projection.matches),
+      ]);
+      const readCalls = [];
+      const read = async (sql, values) => {
+        readCalls.push(sql);
+        assert.notEqual(sql, archiveEditionQuery);
+        return (await db.query(sql, values)).rows;
+      };
       const route = createArchiveReadRoute(read);
       const complete = [];
       for (let page = 1; page <= 3; page++) {
@@ -469,6 +637,24 @@ test(
         const { raw, ...expected } = match;
         assert.deepEqual(body.data.match, expected);
       }
+      const fresh = createArchiveReadRoute(read);
+      const cold = await (
+        await invoke(fresh, { page: "999", limit: "7" })
+      ).json();
+      assert.equal(cold.data.matches.length, legacy.matches.length % 7);
+      assert.equal(cold.pagination.page, Math.ceil(legacy.matches.length / 7));
+      assert.ok(readCalls.every((sql) => !sql.includes("result_matches")));
+      await db.query(
+        "UPDATE statarena_app.catalog_editions SET source_digest=repeat('f',64) WHERE catalog='archive-season' AND scope='goals'",
+      );
+      await assert.rejects(
+        invoke(createArchiveReadRoute(read)),
+        (e) => e.status === 503,
+      );
+      await assert.rejects(
+        invoke(route, { version: projection.version }),
+        (e) => e.status === 409,
+      );
     } finally {
       await db.query("ROLLBACK");
       await db.end();

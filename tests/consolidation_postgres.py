@@ -384,6 +384,11 @@ def run(db):
     db.execute(unchanged_migration)
     check("028 preserves function OIDs, owners, ACLs and signatures", function_metadata() == before_functions)
     validator_regressions()
+    bounded_migration = (ROOT / "dashboard/backend/migrations/033_bounded_consolidation_lookups.sql").read_text()
+    before_bounded_progress = call("status")["progress"]
+    db.execute(bounded_migration)
+    check("033 preserves function OIDs, owners, ACLs and signatures", function_metadata() == before_functions)
+    check("033 preserves every existing copy/parity checkpoint", call("status")["progress"] == before_bounded_progress)
     try:
         call("activate")
     except psycopg.errors.RaiseException:
@@ -429,6 +434,11 @@ def run(db):
     check("027 reapplication preserves new full-range proofs", call("status")["progress"] == proof_before_reapply)
     db.execute(unchanged_migration)
     check("028 reapplication preserves full-range copy and parity proofs", call("status")["progress"] == proof_before_reapply)
+    bounded_function = db.execute("SELECT oid,ctid::text,prosrc FROM pg_proc WHERE oid='statarena_app.consolidation_copy_batch(text,integer)'::regprocedure").fetchone()
+    db.execute(bounded_migration)
+    check("033 reapplication preserves the fenced function and full-range proofs",
+          db.execute("SELECT oid,ctid::text,prosrc FROM pg_proc WHERE oid='statarena_app.consolidation_copy_batch(text,integer)'::regprocedure").fetchone() == bounded_function
+          and call("status")["progress"] == proof_before_reapply)
     check("all 112 mapped node kinds were copied", db.execute("SELECT count(*) FROM (SELECT DISTINCT record_kind FROM statarena_app.catalog_records UNION SELECT DISTINCT record_kind FROM statarena_app.support_records UNION SELECT DISTINCT record_kind FROM statarena_app.detail_records) n").fetchone()[0] == 112)
     check("negative zero is explicitly preserved", db.execute("SELECT count(*) FROM statarena_app.detail_records WHERE cardinality(negative_zero)>0").fetchone()[0] > 0)
     try:

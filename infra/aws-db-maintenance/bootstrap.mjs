@@ -42,8 +42,30 @@ export async function handler(event) {
     connected = true;
     await client.query("BEGIN");
     const identity = await client.query("SELECT current_user AS role,current_database() AS database,pg_try_advisory_xact_lock(97813003) AS lease");
-    if (identity.rows[0]?.role !== "statarena_admin" || identity.rows[0]?.database !== "statarena_prod" || !identity.rows[0]?.lease)
-      throw new Error("Unexpected bootstrap identity or occupied publication lease");
+    if (identity.rows[0]?.role !== "statarena_admin" || identity.rows[0]?.database !== "statarena_prod")
+      throw Object.assign(new Error("Unexpected bootstrap identity"), {code:"BOOTSTRAP_IDENTITY"});
+    if (!identity.rows[0]?.lease) {
+      // Queue behind a short healthy publication instead of racing its lease.
+      // The fixed connection lock_timeout bounds this wait to two seconds.
+      // A timed-out statement aborts its subtransaction; restore the savepoint
+      // before reading safe blocker metadata and rolling back the outer work.
+      await client.query("SAVEPOINT bootstrap_lease");
+      try {
+        await client.query("SELECT pg_advisory_xact_lock(97813003)");
+        await client.query("RELEASE SAVEPOINT bootstrap_lease");
+      } catch (error) {
+        if (error.code !== "55P03") throw error;
+        await client.query("ROLLBACK TO SAVEPOINT bootstrap_lease");
+        await client.query("RELEASE SAVEPOINT bootstrap_lease");
+        const blockers = await client.query(`SELECT a.pid,a.application_name,a.state,a.wait_event_type,a.wait_event,
+          extract(epoch FROM now()-a.xact_start)::bigint AS transaction_seconds,
+          extract(epoch FROM now()-a.query_start)::bigint AS query_seconds
+          FROM pg_locks l JOIN pg_stat_activity a ON a.pid=l.pid
+          WHERE l.locktype='advisory' AND l.classid=0 AND l.objid=97813003 AND l.objsubid=1 AND l.granted`);
+        await client.query("ROLLBACK");
+        return {ok:false,operation:event.operation,target:"prod",code:"BOOTSTRAP_LEASE_BUSY",blockers:blockers.rows};
+      }
+    }
     const response = await client.query(operation.sql);
     const results = Array.isArray(response) ? response : [response];
     const rows = results.flatMap((value) => value.rows || []);

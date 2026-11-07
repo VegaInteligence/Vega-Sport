@@ -16,7 +16,8 @@ test("bootstrap pins SQL and role while keeping the admin credential out of depl
   const prior = Object.fromEntries(keys.map((key)=>[key,process.env[key]]));
   const OriginalClient = pg.Client;
   const clients = [];
-  let busy = false, fail = false;
+  let lease = "immediate", fail = false;
+  const blocker = {pid:123,application_name:"statarena-ingestion",state:"active",wait_event_type:null,wait_event:null,transaction_seconds:1,query_seconds:1};
   class Client {
     constructor(config) {
       this.connectionParameters = config;
@@ -27,7 +28,18 @@ test("bootstrap pins SQL and role while keeping the admin credential out of depl
     async connect() { this.connected = true; }
     async query(sql) {
       this.statements.push(sql);
-      if (sql.includes("pg_try_advisory_xact_lock")) return {rows:[{role:"statarena_admin",database:"statarena_prod",lease:!busy}]};
+      if (sql === "ROLLBACK" || sql === "ROLLBACK TO SAVEPOINT bootstrap_lease") this.aborted = false;
+      if (this.aborted) throw Object.assign(new Error("current transaction is aborted"),{code:"25P02"});
+      if (sql.includes("pg_try_advisory_xact_lock")) return {rows:[{role:"statarena_admin",database:"statarena_prod",lease:lease === "immediate"}]};
+      if (sql === "SELECT pg_advisory_xact_lock(97813003)") {
+        assert.equal(this.statements.at(-2),"SAVEPOINT bootstrap_lease");
+        assert.match(this.connectionParameters.options, /(?:^| )-c lock_timeout=2000(?: |$)/);
+        if (lease === "timeout" || lease === "wait-error") {
+          this.aborted = true;
+          throw Object.assign(new Error("fixture lock failure must not expose transient-fixture-secret"),{code:lease === "timeout" ? "55P03" : "40P01"});
+        }
+      }
+      if (sql.includes("FROM pg_locks")) return {rows:[blocker]};
       if (sql === operation.sql && fail) throw Object.assign(new Error("fixture failure"),{code:"XX001"});
       return {rows:sql === operation.sql ? [{extension:"pg_trgm"}] : []};
     }
@@ -56,20 +68,58 @@ test("bootstrap pins SQL and role while keeping the admin credential out of depl
     assert.equal(client.connectionParameters.password,undefined);
     assert.equal(client.closed,true);
     assert.ok(client.statements.includes(operation.sql));
+    assert.ok(!client.statements.includes("SELECT pg_advisory_xact_lock(97813003)"));
     assert.equal(client.statements.at(-1),"COMMIT");
     assert.ok(!JSON.stringify(receipt).includes("transient-fixture-secret"));
     assert.equal(process.env.DATABASE_CONFIG,JSON.stringify(config));
-    busy=true;
-    const blocked=await handler(request());
+    lease="wait";
+    const waiting=request(), acquired=await handler(waiting), waiter=clients.at(-1);
+    assert.equal(acquired.ok,true);
+    assert.deepEqual(waiter.statements.slice(2,5),["SAVEPOINT bootstrap_lease","SELECT pg_advisory_xact_lock(97813003)","RELEASE SAVEPOINT bootstrap_lease"]);
+    assert.equal(waiter.statements.at(-2),operation.sql);
+    assert.equal(waiter.statements.at(-1),"COMMIT");
+    assert.equal(waiter.statements.some((sql)=>sql.includes("FROM pg_locks")),false);
+    assert.equal(waiting.password,undefined);
+    assert.equal(waiter.password,undefined);
+    assert.equal(waiter.connectionParameters.password,undefined);
+    assert.equal(waiter.closed,true);
+    lease="timeout";
+    const blockedInput=request(), blocked=await handler(blockedInput), blockedClient=clients.at(-1);
     assert.equal(blocked.ok,false);
-    assert.ok(!clients.at(-1).statements.includes(operation.sql));
-    assert.equal(clients.at(-1).statements.at(-1),"ROLLBACK");
-    busy=false;fail=true;
+    assert.equal(blocked.code,"BOOTSTRAP_LEASE_BUSY");
+    assert.deepEqual(blocked.blockers,[blocker]);
+    assert.deepEqual(blockedClient.statements.slice(2,6),["SAVEPOINT bootstrap_lease","SELECT pg_advisory_xact_lock(97813003)","ROLLBACK TO SAVEPOINT bootstrap_lease","RELEASE SAVEPOINT bootstrap_lease"]);
+    assert.ok(!blockedClient.statements.includes(operation.sql));
+    assert.equal(blockedClient.statements.at(-1),"ROLLBACK");
+    assert.equal(blockedClient.statements.filter((sql)=>sql === "SELECT pg_advisory_xact_lock(97813003)").length,1);
+    assert.equal(blockedInput.password,undefined);
+    assert.equal(blockedClient.password,undefined);
+    assert.equal(blockedClient.connectionParameters.password,undefined);
+    assert.equal(blockedClient.closed,true);
+    assert.ok(!JSON.stringify(blocked).includes("transient-fixture-secret"));
+    lease="wait-error";
+    const unexpectedInput=request(), unexpected=await handler(unexpectedInput), abortedClient=clients.at(-1);
+    assert.equal(unexpected.code,"40P01");
+    assert.equal(abortedClient.statements.at(-1),"ROLLBACK");
+    assert.ok(!abortedClient.statements.includes(operation.sql));
+    assert.equal(abortedClient.statements.some((sql)=>sql.includes("FROM pg_locks")),false);
+    assert.equal(unexpectedInput.password,undefined);
+    assert.equal(abortedClient.password,undefined);
+    assert.equal(abortedClient.connectionParameters.password,undefined);
+    assert.equal(abortedClient.closed,true);
+    assert.ok(!JSON.stringify(unexpected).includes("transient-fixture-secret"));
+    lease="immediate";fail=true;
     const failed=await handler(request());
     assert.equal(failed.ok,false);
     assert.equal(failed.code,"XX001");
     assert.equal(clients.at(-1).statements.at(-1),"ROLLBACK");
     assert.equal(clients.at(-1).connectionParameters.password,undefined);
+    for (const value of clients) {
+      assert.equal(value.password,undefined);
+      assert.equal(value.connectionParameters.password,undefined);
+      assert.equal(value.closed,true);
+      assert.ok(value.statements.every((sql)=>!/(?:pg_terminate_backend|pg_cancel_backend)/i.test(sql)));
+    }
   } finally {
     pg.Client=OriginalClient;
     for(const key of keys) if(prior[key]===undefined) delete process.env[key]; else process.env[key]=prior[key];

@@ -4,7 +4,7 @@
 
 Migration `023_consolidated_provider_records.sql` replaces **112 physical tables in the active publication schema with three constrained record stores**. The source mappings, migration, adapters and publication writers share one explicit model in `consolidated_model.py`. `consolidation-manifest.json` lists every affected table, parent, key and preserved column.
 
-The production inventory on 6 November 2026 contained 161 physical tables in `statarena_app`. Migration 023 adds three stores and one migration-state table, then moves the 112 former stores out of the active schema during the verified cutover. The resulting active schema contains **53 tables**, or **54 with migration 025's justified player-directory aggregate**. Compatibility views remain available for existing readers. Views contain no independent physical copy.
+The production inventory on 6 November 2026 contained 161 physical tables in `statarena_app`. Migration 023 adds three stores and one migration-state table, then moves the 112 former stores out of the active schema during the verified cutover. The resulting active schema contains **53 tables**, **54 with migration 025's player-directory aggregate**, and **56 with migration 032's two exact archive read projections**. Compatibility views remain available for existing readers. Views contain no independent physical copy.
 
 | Existing group | Physical tables replaced | Authoritative target |
 | --- | ---: | --- |
@@ -14,8 +14,11 @@ The production inventory on 6 November 2026 contained 161 physical tables in `st
 | Canonical identity, fixture, match, appearance and shot facts; compact metrics; source headers; publication state | 49 retained | Their existing indexed relational tables |
 | Migration state | 1 new | `statarena_app.consolidation_state` |
 | Player directory aggregates | 1 new in 025 | `statarena_app.player_season_rollups` |
+| Exact merged archive summaries and paginated matches | 2 new in 032 | `statarena_app.archive_read_editions`, `statarena_app.archive_read_matches` |
 
-This is a reduction in the active physical publication model, not a claim that all 295 database tables become 54, or that the corresponding bytes have already been reclaimed. The former 112 tables are initially retained in `statarena_retired_v1`. Database size therefore increases during backfill. Final physical retirement is a separate, exact-manifest operation after restored-backup and post-cutover acceptance.
+This is a reduction in the active physical publication model, not a claim that all 295 database tables become 56, or that the corresponding bytes have already been reclaimed. The former 112 tables are initially retained in `statarena_retired_v1`. Database size therefore increases during backfill. Final physical retirement is a separate, exact-manifest operation after restored-backup and post-cutover acceptance.
+
+The two archive projections move the existing exact whole-season results/goals merger to publication time. Public archive requests read one bounded page or one match detail while retaining complete summaries, facets and filtered totals. They are updated atomically with source publications and are unavailable when their source fence is stale. See [archive backfill and release operations](../../docs/operations/ARCHIVE_READ_PROJECTION_20261107.md).
 
 ### What remains intentionally relational
 
@@ -48,13 +51,15 @@ Run migration and cutover functions as the existing application-table owner (`st
 
 Migration 024 requires `pg_trgm`, bootstrapped by the RDS administrator if the ingest role cannot create extensions. Its name-normalization indexes match the actual search expression. It also indexes latest player appearances and home/away match traversal.
 
-Deploy the new publisher code before entering maintenance. The materializer records each migration SHA-256 in `worker_schema` and rejects changed applied migration files. A private SQL deployment worker must record the same filename and digest when it applies a migration outside the materializer. Check 021 and 022 receipts before installing 023–029. Migration 026 only installs the separate transfer-archive operators described below; it never invokes them during publication.
+Deploy the new publisher code before entering maintenance. The materializer records each migration SHA-256 in `worker_schema` and rejects changed applied migration files. A private SQL deployment worker must record the same filename and digest when it applies a migration outside the materializer. Check 021 and 022 receipts before installing the ordered consolidation and read-performance migration set. Migration 026 only installs the separate transfer-archive operators described below; it never invokes them during publication.
 
 Migration `027_nullable_consolidation_cursors.sql` must precede any cutover proof. Legal identity overrides can produce negative or zero resource IDs, including the minimum bigint; a starting cursor of zero would omit them from both copying and verification. The correction uses a NULL cursor to represent the entire initial range in mapped rows, consolidated candidates and native resource headers. It preserves function signatures, ownership and ACLs. Under the existing publication lease, its first application clears old copy/row/resource proof checkpoints and advances the control revision. Business rows remain intact; repeat the bounded copy and all parity passes. Reapplying the same correction preserves newly generated full-range proofs. The sealed 023 migration and generator remain unchanged.
 
 Migration `028_skip_unchanged_consolidation_rows.sql` preserves exhaustive traversal while filtering already-identical destinations before `INSERT`. Both forward and reverse copies still visit and count every source key, copy missing or changed rows, and require the same complete parity receipts before cutover. Reverse-copy equality includes native array dimensions and bounds plus float wire bytes, so negative zero cannot be silently treated as positive zero. Skipped rows avoid unnecessary constraints, triggers, tuple rewrites and WAL. The correction preserves the installed function identity, ownership, ACLs and checkpoints; it does not relax a constraint or replace verification with sampling.
 
 Migration `029_cached_attribute_validators.sql` retains each of the 112 attribute-validation expressions and dispatches them through cached PL/pgSQL branches. It changes execution cost, without changing the accepted fields, types or null states. Exact old/new function-body digests guard installation; function identities, privileges and immutability are preserved. Native acceptance profiles the same bounded source rows before and after this change, including an actual constrained insertion rolled back to a savepoint. Do not disable constraints to accelerate backfill.
+
+Migration `033_bounded_consolidation_lookups.sql` keeps the unchanged-row checks correlated to each selected source key. An `OFFSET 0` optimization fence prevents PostgreSQL from materializing a large destination kind and comparing every batch row against that entire set when cardinality estimates are poor. The full typed and binary equality predicates, source traversal, checkpoints and constraints remain unchanged. The correction runs after the guarded 028 SQL templates are expanded, so reapplying earlier corrections remains safe. Refresh consolidated-store planner statistics after the full copy and before verification; this does not replace the exact parity gates.
 
 All current publisher entry points acquire the existing publication lease and read the committed storage mode once per transaction. During backfill or reverse-copy maintenance they leave inputs queued. Any independently running older publisher, including an ad-hoc honours batch, must finish or update before cutover: an old `COPY` into a name that becomes a view cannot publish correctly.
 
@@ -110,7 +115,7 @@ The inventory's other schemas are explicitly accounted for:
 
 | Schema/group | Existing physical tables | Role and disposition |
 | --- | ---: | --- |
-| `statarena_app` | 161 | Active publication model; 112 mapped sources consolidated, 49 retained, 5 justified additions including 025 |
+| `statarena_app` | 161 | Active publication model; 112 mapped sources consolidated, 49 retained, 7 justified additions including 025 and 032 |
 | `statarena` | 27 | Source documents, object metadata, observations, ingestion queues and source-transfer history; current AWS import/materialization still consumes the live source groups |
 | `football` | 65 | Separately implemented historical Pro model; inactive for current public serving, preserved pending explicit isolation of optional import/read tools |
 | `ingest` | 23 | Pro lineage, revisions, reconciliation and import contracts; linked to the preserved Pro data |

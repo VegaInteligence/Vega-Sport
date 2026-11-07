@@ -45,6 +45,12 @@ def main():
             for name in ("publication_metadata_postgres", "core_delta_postgres",
                          "publication_retries_postgres", "lineup_consolidation_postgres"):
                 subprocess.run([sys.executable, f"tests/{name}.py"], cwd=root, env=env, check=True)
+            # The archive maintenance contract owns its real transaction on a
+            # second connection, so give it a separate disposable database.
+            with psycopg.connect(base + "/postgres", autocommit=True) as db:
+                db.execute("CREATE DATABASE vega_archive_projection_test")
+            subprocess.run([sys.executable, "tests/archive_projection_postgres.py"], cwd=root,
+                           env={**env, "TEST_DATABASE_URL": base + "/vega_archive_projection_test"}, check=True)
             for name in ("test_collection_plan.py", "test_publication_freshness.py", "test_core_delta.py",
                          "test_tournament_publisher_aliases.py", "test_empty_year_aliases.py", "test_daily_refresh.py", "test_storage_budget.py"):
                 subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests",
@@ -56,6 +62,7 @@ def main():
                 "tests/backend-metrics.test.mjs",
                 "tests/maintenance-bootstrap.test.mjs",
                 "tests/relational-read-cache.test.mjs",
+                "tests/relational-read-maintenance.test.mjs",
                 "tests/relational-player-rollups.test.mjs",
                 "tests/relational-archives.test.mjs",
                 "tests/remote-match.test.mjs",

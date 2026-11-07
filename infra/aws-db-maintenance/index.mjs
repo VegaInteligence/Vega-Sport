@@ -4,6 +4,7 @@
 import pg from "../../dashboard/node_modules/pg/lib/index.js";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { refreshArchiveProjection } from "../../dashboard/scripts/archive_projection.mjs";
 
 const root = process.env.LAMBDA_TASK_ROOT || new URL(".", import.meta.url).pathname;
 const manifest = JSON.parse(readFileSync(`${root}/operations.json`, "utf8"));
@@ -22,9 +23,19 @@ export async function handler(event, context) {
   if (write && process.env.ALLOW_WRITES !== "true") throw new Error("This worker is read-only");
   if (operation.repeat && (!write || operation.migration || operation.repeat !== "progress.complete"))
     throw new Error("Only checkpointed migration batches may repeat");
+  const maintenanceKind = operation.kind;
+  const vacuumTables = new Set(["statarena_app.appearances", "statarena_app.player_season_rollups",
+    "statarena_app.catalog_records", "statarena_app.support_records", "statarena_app.detail_records"]);
+  if (maintenanceKind && (!["archive-refresh", "vacuum-analyze"].includes(maintenanceKind) ||
+      !write || operation.migration || operation.repeat || operation.sql))
+    throw new Error("Invalid fixed maintenance operation");
   const values = event.values ?? operation.values ?? [];
   if (!Array.isArray(values) || values.length !== operation.parameters || JSON.stringify(values).length > 100000)
     throw new Error("Invalid operation parameters");
+  if (maintenanceKind === "archive-refresh" && (values.length !== 1 || typeof values[0] !== "string" || !/^\d{4}(?:\/\d{4})?$/.test(values[0])))
+    throw new Error("Invalid archive season");
+  if (maintenanceKind === "vacuum-analyze" && (values.length || !vacuumTables.has(operation.table)))
+    throw new Error("Invalid vacuum target");
   const config = JSON.parse(process.env.DATABASE_CONFIG || "{}");
   if (config.host !== process.env.EXPECTED_DATABASE_HOST || config.database !== "statarena_prod" ||
       !["statarena_runtime", "statarena_ingest", "statarena_admin"].includes(config.username))
@@ -39,10 +50,35 @@ export async function handler(event, context) {
   });
   let connected = false;
   let iterations = 0;
+  let sessionLease = false;
   try {
     await client.connect();
     connected = true;
     const connectionMs = performance.now() - started;
+    if (maintenanceKind === "archive-refresh") {
+      if (config.username !== "statarena_ingest") throw new Error("Archive refresh requires the existing ingestion owner");
+      const queryStarted = performance.now();
+      const receipt = await refreshArchiveProjection(client, values[0], {maintenance:true});
+      return {ok:true,operation:event.operation,operationHash:event.operationHash,target,
+        connectionMs:Math.round(connectionMs),queryMs:Math.round(performance.now()-queryStarted),
+        totalMs:Math.round(performance.now()-started),iterations:1,rows:[receipt]};
+    }
+    if (maintenanceKind === "vacuum-analyze") {
+      if (config.username !== "statarena_ingest") throw new Error("Vacuum requires the existing ingestion owner");
+      const lease = await client.query("SELECT pg_try_advisory_lock(97813003) AS acquired");
+      sessionLease = Boolean(lease.rows[0]?.acquired);
+      if (!sessionLease) throw new Error("Publisher lease is busy");
+      const owned = await client.query("SELECT relowner=current_user::regrole AND relkind='r' AS owned FROM pg_class WHERE oid=$1::regclass",[operation.table]);
+      if (!owned.rows[0]?.owned) throw new Error("Vacuum target is not owned by this worker");
+      await client.query("SELECT set_config('statement_timeout','40000',false)");
+      const queryStarted = performance.now();
+      // VACUUM cannot run inside a transaction. This fixed allowlist never uses
+      // FULL, changes table ownership, or removes committed business rows.
+      await client.query(`VACUUM (ANALYZE) ${operation.table}`);
+      return {ok:true,operation:event.operation,operationHash:event.operationHash,target,
+        connectionMs:Math.round(connectionMs),queryMs:Math.round(performance.now()-queryStarted),
+        totalMs:Math.round(performance.now()-started),iterations:1,rows:[{table:operation.table,maintenance:"VACUUM (ANALYZE)"}]};
+    }
     let rows, results, queryMs = 0;
     do {
       const remainingMs = Math.min(
@@ -101,6 +137,7 @@ export async function handler(event, context) {
       code: error.code || error.name, message: String(error.message).slice(0, 500),
       committedIterations: iterations, totalMs: Math.round(performance.now() - started) };
   } finally {
+    if (connected && sessionLease) await client.query("SELECT pg_advisory_unlock(97813003)").catch(() => {});
     if (connected) await client.end();
   }
 }

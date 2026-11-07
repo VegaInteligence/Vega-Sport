@@ -155,6 +155,8 @@ const byPage = (table, order, fields = "r.*") =>
     .join(",")}`);
 // Migration 003's appearance columns, in their published order. A newer table
 // layout travels as named records until its positional representation is reviewed.
+// The reviewed, generated performance cohort key is internal to SQL and does
+// not change this public wire layout. All other added columns keep the fallback.
 const appearanceColumns =
   `id player_ref ordinal position_id_type player_id team_id team match_id league_id
 league country season date role position_id raw_pitch_x raw_pitch_y shirt_number
@@ -181,6 +183,7 @@ const appearanceProjection = `CASE WHEN (
   SELECT array_agg(attname ORDER BY attnum) = ARRAY[${appearanceColumns.map((key) => `'${key}'`).join(",")}]::name[]
   FROM pg_catalog.pg_attribute
   WHERE attrelid='statarena_app.appearances'::regclass AND attnum>0 AND NOT attisdropped
+    AND NOT (attname='performance_group' AND attgenerated='s')
 ) THEN json_build_array(${appearanceFields.map((key) => "r." + key).join(",")})
   ELSE row_to_json(r) END`;
 const appearanceOutput = appearanceFields
@@ -211,6 +214,7 @@ export function appearanceRecord(row) {
       player_ref,
       position_id,
       position_id_type,
+      performance_group,
       shirt_number_raw,
       shirt_number_type,
       ...values

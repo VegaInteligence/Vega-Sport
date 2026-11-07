@@ -30,6 +30,7 @@ jobs:
           filter: blob:none
           sparse-checkout: |
             .github/workflows
+            infra/aws-db-maintenance
             dashboard/scripts
             dashboard/backend
             dashboard/frontend/src
@@ -474,6 +475,7 @@ jobs:
           filter: blob:none
           sparse-checkout: |
             .github/workflows
+            infra/aws-db-maintenance
             dashboard/backend
             dashboard/scripts
             dashboard/shared
