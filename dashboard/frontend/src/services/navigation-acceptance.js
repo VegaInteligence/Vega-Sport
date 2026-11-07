@@ -108,6 +108,7 @@ export function startNavigationAcceptance() {
     documentId: crypto.randomUUID(),
     initialReadyMs: null,
     reads: [],
+    imageReads: [],
     requests: [],
     inFlight: 0,
     blockingInFlight: 0,
@@ -126,13 +127,14 @@ export function startNavigationAcceptance() {
     document.documentElement.setAttribute(
       "data-vega-acceptance",
       JSON.stringify({
-        version: 2,
+        version: 3,
         startedAt: state.startedAt,
         documentId: state.documentId,
         environment,
         initialReadyMs: state.initialReadyMs,
         visibility: document.visibilityState,
         reads: state.reads,
+        imageReads: state.imageReads,
         fetches: state.requests.map(({ url, ...request }) => request),
         transitions: state.transitions,
         method:
@@ -261,7 +263,16 @@ export function startNavigationAcceptance() {
     const pending = state.pending;
     if (!pending || state.frames) return;
     const main = document.querySelector("main#main");
+    if (
+      pending.workspaceSeenMs === null &&
+      main &&
+      main !== pending.previous &&
+      main.isConnected &&
+      acceptancePageIdentity(new URL(window.location.href)) === pending.identity
+    )
+      pending.workspaceSeenMs = performance.now();
     if (!ready(pending, main)) return;
+    const readyObservedMs = performance.now();
     state.frames = true;
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
@@ -279,6 +290,21 @@ export function startNavigationAcceptance() {
           durationMs: Math.round((finished - pending.startMs) * 1000) / 1000,
           eventQueueMs: Math.round(pending.eventQueueMs * 1000) / 1000,
           startClock: pending.startClock,
+          phases: {
+            workspaceObservedMs:
+              pending.workspaceSeenMs === null
+                ? null
+                : Math.round(
+                    (pending.workspaceSeenMs - pending.startMs) * 1000,
+                  ) / 1000,
+            readyObservedMs:
+              Math.round((readyObservedMs - pending.startMs) * 1000) / 1000,
+            twoFramesAfterReadyMs:
+              Math.round((finished - readyObservedMs) * 1000) / 1000,
+          },
+          observedImageTransfers: state.imageReads.filter(
+            (read) => read.startMs <= finished && read.endMs >= pending.startMs,
+          ),
           cache: { ...pending.cache },
           ...acceptanceNetworkEvidence({
             requests: state.requests,
@@ -332,6 +358,7 @@ export function startNavigationAcceptance() {
       const startMs = eventClockValid ? eventTime : handlerTime;
       state.pending = {
         startMs,
+        workspaceSeenMs: null,
         eventQueueMs: handlerTime - startMs,
         startClock: eventClockValid
           ? "event.timeStamp"
@@ -375,6 +402,18 @@ export function startNavigationAcceptance() {
         state.inFlight--;
         if (request.kind !== "telemetry") state.blockingInFlight--;
       }
+      if (entry.initiatorType === "img") {
+        state.imageReads.push({
+          path: url.pathname,
+          sameOrigin: url.origin === window.location.origin,
+          startMs: Math.round(entry.startTime * 1000) / 1000,
+          endMs: Math.round((entry.startTime + entry.duration) * 1000) / 1000,
+          durationMs: Math.round(entry.duration * 1000) / 1000,
+          transferBytes: entry.transferSize,
+          encodedBytes: entry.encodedBodySize,
+          decodedBytes: entry.decodedBodySize,
+        });
+      }
       if (
         (!url.pathname.startsWith("/api/") && !url.searchParams.has("_rsc")) ||
         url.pathname.startsWith("/api/assets")
@@ -395,6 +434,7 @@ export function startNavigationAcceptance() {
         removed.endMs,
       );
     state.reads = state.reads.slice(-100);
+    state.imageReads = state.imageReads.slice(-100);
     report();
   });
   timingObserver.observe({ type: "resource", buffered: true });
