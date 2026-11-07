@@ -29,6 +29,8 @@ import {
 import { warmProfiles } from "../services/player-profile.js";
 import { filterSeasonPlayerScope } from "../services/season-player.js";
 import {
+  playerDirectoryRanking,
+  playerDirectoryView,
   playerLeagueIds,
   playerRankingKey,
 } from "../services/player-leaderboard.js";
@@ -79,6 +81,9 @@ const Context = FootballContext;
 export const useFootball = () => useContext(Context);
 export function FootballProvider({ children, loadData = true }) {
   const initial = useSearchParams();
+  const pathname = usePathname() || "";
+  const currentPage = seasonPage(pathname);
+  const playerDirectory = currentPage === "/joueurs" && !initial.get("id");
   const [matchFilter, setMatchFilter] = useState("all");
   const [preferences, setPreferences] = useState({
     focus: "europe",
@@ -88,11 +93,14 @@ export function FootballProvider({ children, loadData = true }) {
   });
   const [pageSeasons, setPageSeasons] = useState({});
   const [preferencesReady, setPreferencesReady] = useState(false);
+  const requestedFocus = initial.get("focus");
+  const defaultPlayerScope =
+    playerDirectory && !initial.get("league") && !initial.get("leagues");
   const focus =
-    initial.get("focus") === "europe"
-      ? "europe"
-      : initial.get("focus") === "all"
-        ? "all"
+    requestedFocus === "europe" || requestedFocus === "all"
+      ? requestedFocus
+      : defaultPlayerScope
+        ? "europe"
         : preferences.focus;
   function savePreferences(values) {
     setPreferences((previous) => {
@@ -146,11 +154,9 @@ export function FootballProvider({ children, loadData = true }) {
   const season = initial.get("season") || "";
   // Playing time and advanced filters belong to the players page: they stay
   // in the URL across pages but only narrow the data there.
-  const pathname = usePathname() || "",
-    playerScope = pathname.startsWith("/joueurs"),
+  const playerScope = pathname.startsWith("/joueurs"),
     // The home page has no list filter: the navbar search navigates instead.
     homeScope = pathname === "/" || pathname === "";
-  const currentPage = seasonPage(pathname);
   const urlFilters = useMemo(
     () => ({
       query: initial.get("q") || "",
@@ -274,8 +280,16 @@ export function FootballProvider({ children, loadData = true }) {
             ? "club"
             : "clubs"
           : null,
+    compactRanking =
+      playerDirectory &&
+      playerDirectoryView(initial.get("playersView")) === "table"
+        ? playerDirectoryRanking(filters, true)
+        : "",
     compactMode = Boolean(
-      compactKind && supportsCompactRead(manifest.value, compactKind),
+      compactKind &&
+      supportsCompactRead(manifest.value, compactKind, {
+        ranking: compactRanking,
+      }),
     ),
     compactActor = compactMode && ["player", "club"].includes(compactKind),
     actorScope =
@@ -904,8 +918,19 @@ export function FootballProvider({ children, loadData = true }) {
     const destination = seasonPage(page);
     const saved =
       destination === currentPage ? chosen : pageSeasons[destination];
+    const enteringPlayers = destination === "/joueurs" && !playerDirectory;
     return href(page, {
       season: validSeason(saved) ? saved : manifest.value?.defaultSeason || "",
+      ...(enteringPlayers
+        ? {
+            focus: "europe",
+            league: "",
+            leagues: "",
+            ranking: "",
+            playersView: "",
+            q: "",
+          }
+        : {}),
     });
   };
   function changeFocus(next) {
@@ -967,7 +992,14 @@ export function FootballProvider({ children, loadData = true }) {
               focus,
               filters: { ...filters, basis: mode },
             },
-            { limit: 100 },
+            {
+              limit: 100,
+              ranking: playerDirectoryRanking(
+                filters,
+                playerDirectory &&
+                  playerDirectoryView(initial.get("playersView")) === "table",
+              ),
+            },
           ),
           result = await readCompactPages("players", params),
           allPlayers = result.pages.flatMap((page) => page.players);

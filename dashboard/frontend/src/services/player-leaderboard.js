@@ -1,5 +1,21 @@
+import { MIN_RATED_MATCHES } from "../../../shared/player-profile.js";
+import { compareText } from "../model.js";
+
 /** Shared, season-scoped ranking definitions for home cards and the directory. */
 export const PLAYER_RANKINGS = {
+  rating: {
+    label: "Meilleures notes",
+    sort: { key: "rating", direction: "desc" },
+    columns: ["rating", "matches"],
+    eligible: (_totals, row) =>
+      Number.isFinite(row.rating) &&
+      row.profile?.ratingCount >= MIN_RATED_MATCHES,
+    compare: (a, b) =>
+      b.rating - a.rating ||
+      b.profile.ratingCount - a.profile.ratingCount ||
+      compareText(a.name, b.name) ||
+      compareText(a.playerId, b.playerId),
+  },
   goals: {
     label: "Buteurs",
     sort: { key: "goals", direction: "desc" },
@@ -31,7 +47,21 @@ export const PLAYER_RANKINGS = {
 };
 
 export const playerRankingKey = (value) =>
-  Object.hasOwn(PLAYER_RANKINGS, value) ? value : "";
+  value === "all" || Object.hasOwn(PLAYER_RANKINGS, value) ? value : "";
+
+export function playerDirectoryRanking(filters, defaults = false) {
+  if (filters.ranking) return filters.ranking === "all" ? "" : filters.ranking;
+  return defaults &&
+    !filters.query?.trim() &&
+    filters.match === "all" &&
+    filters.league === "all" &&
+    !filters.leagues?.length
+    ? "rating"
+    : "";
+}
+
+export const playerDirectoryView = (value) =>
+  ["explore", "indices", "lists"].includes(value) ? value : "table";
 
 export const playerLeagueIds = (value = "") =>
   [
@@ -46,7 +76,7 @@ export function rankSeasonPlayers(rows, key) {
   const ranking = PLAYER_RANKINGS[playerRankingKey(key)];
   return ranking
     ? rows
-        .filter((row) => ranking.eligible(row.totals || row))
+        .filter((row) => ranking.eligible(row.totals || row, row))
         .sort(ranking.compare)
     : rows;
 }

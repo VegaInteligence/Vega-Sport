@@ -3,6 +3,7 @@ import React, { lazy, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import PlayerDirectory from "./PlayerDirectory.jsx";
 import { ResearchLists, ResearchTabs, useHasSaved } from "./ResearchUI.jsx";
+import { playerDirectoryView } from "../services/player-leaderboard.js";
 const PlayerExplorer = lazy(() => import("./PlayerExplorer.jsx"));
 const PlayerIndices = lazy(() => import("./PlayerIndices.jsx"));
 export default function PlayerWorkspace({ profiles, resource, ...props }) {
@@ -15,9 +16,7 @@ export default function PlayerWorkspace({ profiles, resource, ...props }) {
     ["indices", "Indices"],
     ...(hasSaved ? [] : [["lists", "Mes listes"]]),
   ];
-  const view = items.some(([key]) => key === params.get("playersView"))
-    ? params.get("playersView")
-    : items[0][0];
+  const view = playerDirectoryView(params.get("playersView"));
   const change = (value) => {
     const url = new URL(window.location.href);
     url.searchParams.set("playersView", value);

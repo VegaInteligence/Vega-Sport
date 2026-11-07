@@ -1,5 +1,6 @@
 const isNumber = (value) =>
   typeof value === "number" && Number.isFinite(value);
+export const MIN_RATED_MATCHES = 5;
 
 /** Position lines from the source formation slot (positionId).
  *  Starters carry a slot (11 = keeper, 3x = back line, 6x–7x = midfield,

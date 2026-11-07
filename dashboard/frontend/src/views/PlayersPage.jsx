@@ -15,10 +15,7 @@ const PlayerSeasonProfile = lazy(
 );
 import PlayerWorkspace from "../components/PlayerWorkspace.jsx";
 import PlayerMatchesPage from "./PlayerMatchesPage.jsx";
-import {
-  ResearchComparisonTray,
-  useHasSaved,
-} from "../components/ResearchUI.jsx";
+import { ResearchComparisonTray } from "../components/ResearchUI.jsx";
 import useCompactRead from "../hooks/useCompactRead.js";
 import { compactQuery, playerReadParams } from "../services/compact-reads.js";
 import {
@@ -27,6 +24,8 @@ import {
 } from "../services/season-player.js";
 import {
   PLAYER_RANKINGS,
+  playerDirectoryRanking,
+  playerDirectoryView,
   rankSeasonPlayers,
 } from "../services/player-leaderboard.js";
 import {
@@ -39,8 +38,7 @@ import {
 export default function PlayersPage() {
   const params = useSearchParams();
   const profileView = params.get("playerView") || "overview";
-  const hasSaved = useHasSaved("players"),
-    directoryView = params.get("playersView") || (hasSaved ? "lists" : "table");
+  const directoryView = playerDirectoryView(params.get("playersView"));
   const f = useFootball(),
     [manualSort, setManualSort] = useState({
       key: "rating",
@@ -48,24 +46,27 @@ export default function PlayersPage() {
     }),
     [directoryPage, setDirectoryPage] = useState({ key: "", page: 1 });
   const filters = useDeferredValue(f.filters);
-  const ranking = f.filters.ranking;
+  const id = params.get("id");
+  const ranking = playerDirectoryRanking(
+    f.filters,
+    !id && directoryView === "table",
+  );
   const sort = PLAYER_RANKINGS[ranking]?.sort || manualSort;
   const setSort = (next) => {
     setManualSort(next);
-    if (ranking) f.setFilters((current) => ({ ...current, ranking: "" }));
+    if (ranking) f.setFilters((current) => ({ ...current, ranking: "all" }));
   };
   const mode = f.filters.basis;
   const setMode = (basis) => f.setFilters((v) => ({ ...v, basis }));
-  const id = params.get("id");
   const queryKey = compactQuery({
-      ...playerReadParams(f, { sort }),
+      ...playerReadParams(f, { sort, ranking }),
       page: undefined,
       generation: undefined,
     }),
     requestedPage = directoryPage.key === queryKey ? directoryPage.page : 1,
     directory = useCompactRead(
       "players",
-      playerReadParams(f, { sort, page: requestedPage }),
+      playerReadParams(f, { sort, ranking, page: requestedPage }),
       {
         enabled: f.compactMode && !id && directoryView === "table",
         refreshManifest: f.refreshManifest,
@@ -239,8 +240,8 @@ export default function PlayersPage() {
             onRanking={(value) =>
               f.setFilters((current) => ({
                 ...current,
-                ranking: value,
-                basis: value ? "total" : current.basis,
+                ranking: value || "all",
+                basis: value && value !== "rating" ? "total" : current.basis,
               }))
             }
             mode={mode}

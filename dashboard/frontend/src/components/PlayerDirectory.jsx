@@ -8,6 +8,7 @@ import { number } from "../services/format.js";
 import { Card, Empty, Media, Pager, Rating, Segments } from "./UI.jsx";
 import PerformanceContext from "./PerformanceContext.jsx";
 import { PLAYER_RANKINGS } from "../services/player-leaderboard.js";
+import { MIN_RATED_MATCHES } from "../../../shared/player-profile.js";
 import {
   BookmarkButton,
   MetricInfo,
@@ -95,6 +96,8 @@ export default function PlayerDirectory({
         />
         <span role="status">
           {number(total)} joueur{total === 1 ? "" : "s"}
+          {ranking === "rating" &&
+            ` · Au moins ${MIN_RATED_MATCHES} matchs notés`}
         </span>
       </div>
       {rows.length ? (

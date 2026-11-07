@@ -1,6 +1,7 @@
 import { query } from "./postgres.js";
 import { reject, validateParams } from "./relational-core.js";
 import { playerAliasEntries } from "../../shared/player-aliases.js";
+import { MIN_RATED_MATCHES } from "../../shared/player-profile.js";
 import {
   bindValue,
   finiteSql,
@@ -179,7 +180,7 @@ export function parsePlayerRead(params) {
     ranking: option(
       params,
       "ranking",
-      ["", "goals", "assists", "clinical", "wasteful"],
+      ["", "rating", "goals", "assists", "clinical", "wasteful"],
       "",
     ),
   };
@@ -305,6 +306,10 @@ export function playerReadQuery(filters, params) {
       `${normalizedSql("concat_ws(' ',d.name,array_to_string(d.teams,' · '),array_to_string(d.leagues,' · '),d.search_aliases)")} LIKE ${b(`%${likeText(filters.q)}%`)}`,
     );
   const ranking = {
+    rating: {
+      eligible: `d.rating_count>=${MIN_RATED_MATCHES}`,
+      order: "d.rating DESC NULLS LAST,d.rating_count DESC",
+    },
     goals: {
       eligible: 'd."goals_count">0 AND d."goals_sum">0',
       order: "d.goals DESC,coalesce(d.xg,0) DESC",

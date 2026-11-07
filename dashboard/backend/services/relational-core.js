@@ -411,6 +411,7 @@ export async function manifest(req) {
         boundedSearch: true,
         fixturePaginationOrder: true,
         versionedPartitions: true,
+        playerRatingRanking: true,
         compactReads: {
           home: true,
           players: true,

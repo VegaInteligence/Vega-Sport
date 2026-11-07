@@ -2,10 +2,13 @@ import { apiUrl } from "../data-url.js";
 import { europeFocusIds } from "../../../shared/competition-scope.js";
 import { advancedQuery, EMPTY_ADVANCED } from "./advanced-filters.js";
 
-export function supportsCompactRead(manifest, kind) {
+export function supportsCompactRead(manifest, kind, { ranking } = {}) {
   return (
     manifest?.storage === "aws-relational" &&
-    manifest.capabilities?.compactReads?.[kind] === true
+    manifest.capabilities?.compactReads?.[kind] === true &&
+    (kind !== "players" ||
+      ranking !== "rating" ||
+      manifest.capabilities.playerRatingRanking === true)
   );
 }
 
@@ -72,7 +75,13 @@ export function compactQuery(values) {
 
 export function playerReadParams(
   f,
-  { sort, page = 1, limit = 20, cohort = false } = {},
+  {
+    sort,
+    ranking = f.filters.ranking,
+    page = 1,
+    limit = 20,
+    cohort = false,
+  } = {},
 ) {
   const filters = f.filters,
     advanced = cohort
@@ -89,7 +98,7 @@ export function playerReadParams(
     basis: cohort ? "total" : filters.basis,
     match: filters.match !== "all" ? filters.match : "",
     ...advancedQuery(advanced),
-    ranking: cohort ? "" : filters.ranking,
+    ranking: cohort || ranking === "all" ? "" : ranking,
     sort: cohort ? "name" : sort?.key || "rating",
     direction: cohort ? "asc" : sort?.direction || "desc",
     page,

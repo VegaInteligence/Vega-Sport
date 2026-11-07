@@ -95,6 +95,7 @@ export function Filters({ kind = "performances" }) {
     [90, "Moyenne ≥ 90 min"],
     [0, "Inclure le banc"],
   ];
+  const activeRanking = PLAYER_RANKINGS[f.filters.ranking];
   const active =
     (!home && f.filters.query) ||
     f.filters.league !== "all" ||
@@ -103,7 +104,7 @@ export function Filters({ kind = "performances" }) {
     (players &&
       (f.filters.minutes !== 1 ||
         advancedCount > 0 ||
-        f.filters.ranking ||
+        activeRanking ||
         f.filters.leagues?.length)) ||
     (!fixtures && f.filters.match !== "all");
   const competitions = useMemo(
@@ -207,13 +208,13 @@ export function Filters({ kind = "performances" }) {
       {active && !home && (
         <div className="filter-panel-footer">
           <div className="filter-applied">
-            {players && f.filters.ranking && (
+            {players && activeRanking && (
               <button
                 className="filter-chip"
-                aria-label={`Retirer le classement ${PLAYER_RANKINGS[f.filters.ranking].label}`}
-                onClick={() => f.setFilters((v) => ({ ...v, ranking: "" }))}
+                aria-label={`Retirer le classement ${activeRanking.label}`}
+                onClick={() => f.setFilters((v) => ({ ...v, ranking: "all" }))}
               >
-                {PLAYER_RANKINGS[f.filters.ranking].label}
+                {activeRanking.label}
                 <Icon name="close" />
               </button>
             )}
