@@ -64,8 +64,12 @@ test("season overview shows the radar and removes the detailed statistics shortc
   const html = renderSeasonProfile(rows, matches, "p_1");
   assert.match(html, /Neymar/);
   assert.match(html, /Profil statistique/);
-  assert.match(html, /<svg[^>]+aria-label="Radar des rangs du joueur/);
-  assert.match(html, /<text[^>]*>Passes décisives<tspan[^>]*>—<\/tspan>/);
+  assert.match(html, /<svg[^>]+aria-label="Radar du joueur et de la moyenne/);
+  assert.match(
+    html,
+    /<tspan[^>]*>Passes<\/tspan><tspan[^>]*>décisives<\/tspan>/,
+  );
+  assert.match(html, /aria-label="Percentiles par indicateur"/);
   assert.doesNotMatch(html, /Voir les statistiques détaillées/);
   assert.doesNotMatch(html, /Statistiques à afficher|Temps de jeu et note/);
   assert.doesNotMatch(html, /centiles au poste|Modèle du radar/);
@@ -96,7 +100,10 @@ test("Messi keeps his portrait and published trophies when filters leave no matc
   const portrait = html.match(
     /<span class="player-avatar season-player-portrait"[^>]*>([\s\S]*?)<\/span>/,
   )?.[1];
-  assert.ok(portrait, "the known portrait remains available without match rows");
+  assert.ok(
+    portrait,
+    "the known portrait remains available without match rows",
+  );
   assert.match(portrait, /<img[^>]+loading="lazy"/);
   // ApiImage starts on visible intent; SSR must not bypass the shared budget.
   assert.doesNotMatch(portrait, /\ssrc=/);

@@ -19,7 +19,6 @@ import { nationalTeamName } from "../services/national-flags.js";
 import { isNationalTeamCompetition } from "../services/player-team-seasons.js";
 import { AsyncState, Media } from "./UI.jsx";
 import NationalFlag from "./NationalFlag.jsx";
-import PlayerCareerStats from "./PlayerCareerStats.jsx";
 import ObservedValue from "./PlayerObservedValue.jsx";
 import PlayerCompetitionMatches, {
   CardHeading,
@@ -289,14 +288,7 @@ export default function PlayerSeasonStats({ id, season }) {
 
 const NO_DISCIPLINE = new Map();
 
-function PerformanceRows({
-  id,
-  history,
-  season,
-  routing,
-  hasSeasons,
-  children,
-}) {
+function PerformanceRows({ id, history, season, hasSeasons, children }) {
   const f = useFootball();
   const entries = history.value;
   const groups = useMemo(
@@ -346,9 +338,6 @@ function PerformanceRows({
             ? "Cette saison est indisponible pour ce joueur."
             : "Aucune saison disponible pour ce joueur."}
         </p>
-      )}
-      {hasSeasons && (
-        <PlayerCareerStats id={id} season={season} routing={routing} />
       )}
       {groups.length > 0 && (
         <>
@@ -442,7 +431,6 @@ export function PlayerPerformanceStats({ id, children }) {
         id={id}
         history={history}
         season={season}
-        routing={routing.value?.index}
         hasSeasons={seasons.length > 0}
       >
         {season === f.season && children}

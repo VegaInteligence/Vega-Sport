@@ -388,18 +388,20 @@ export default function PlayerSeasonProfile({
       <Suspense fallback={historyLoading}>
         <SeasonStats id={id} season={f.season} />
       </Suspense>
-      <div ref={comparisonRef}>
-        <PlayerOverviewRadar
-          profile={profile}
-          cohorts={cohorts}
-          comparison={
-            radarComparison || (!comparisonsReady ? { loading: true } : null)
-          }
-        />
+      <div className="player-overview-comparison">
+        <div ref={comparisonRef}>
+          <PlayerOverviewRadar
+            profile={profile}
+            cohorts={cohorts}
+            comparison={
+              radarComparison || (!comparisonsReady ? { loading: true } : null)
+            }
+          />
+        </div>
+        <Suspense fallback={historyLoading}>
+          <CareerStats id={id} season={f.season} overview />
+        </Suspense>
       </div>
-      <Suspense fallback={historyLoading}>
-        <CareerStats id={id} season={f.season} overview />
-      </Suspense>
     </div>
   );
   if (!profile.matches) {
