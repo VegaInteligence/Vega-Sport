@@ -7,12 +7,14 @@ function fixture() {
     now = 0;
   const frames = new Map(),
     timers = new Map(),
-    listeners = new Map();
+    listeners = new Map(),
+    styleReads = new Map();
   let observer;
   const view = {
     innerWidth: 1000,
     innerHeight: 800,
     getComputedStyle(node) {
+      styleReads.set(node, (styleReads.get(node) || 0) + 1);
       return node.style || {};
     },
     requestAnimationFrame(fn) {
@@ -111,6 +113,7 @@ function fixture() {
   return {
     root,
     nodes,
+    styleReads,
     image,
     element,
     container(bounds, style = {}, parentElement = null) {
@@ -488,4 +491,172 @@ test("decoded media waits for its visible logo state to commit", async () => {
   f.mutate();
   f.frame();
   assert.equal(reveals, 1);
+});
+
+test("already decoded Media reveals immediately without a second decode or frame", () => {
+  const f = fixture();
+  let reveals = 0,
+    decodes = 0;
+  f.nodes.images.push(
+    f.image({
+      media: { getAttribute: () => "ready" },
+      decode() {
+        decodes++;
+        return new Promise(() => {});
+      },
+    }),
+  );
+  prepareInitialPage(f.root, () => reveals++);
+  assert.equal(
+    reveals,
+    1,
+    "the current decoded viewport is already safe to reveal",
+  );
+  assert.equal(decodes, 0, "Media's own successful decode is authoritative");
+  assert.equal(f.timerCount, 0);
+});
+
+test("Media owns decoding while loading and the gate waits for its committed ready state", () => {
+  const f = fixture();
+  let reveals = 0,
+    decodes = 0,
+    state = "loading";
+  f.nodes.images.push(
+    f.image({
+      media: { getAttribute: () => state },
+      decode() {
+        decodes++;
+        return Promise.resolve();
+      },
+    }),
+  );
+  prepareInitialPage(f.root, () => reveals++);
+  f.frame();
+  assert.equal(reveals, 0);
+  assert.equal(decodes, 0, "do not submit a duplicate browser decode");
+  state = "ready";
+  f.mutate();
+  f.frame();
+  assert.equal(reveals, 1);
+});
+
+test("broken managed images wait for their alternate or terminal fallback", () => {
+  const f = fixture();
+  let reveals = 0,
+    state = "loading";
+  const image = f.image({ width: 0, media: { getAttribute: () => state } });
+  f.nodes.images.push(image);
+  prepareInitialPage(f.root, () => reveals++);
+  f.frame();
+  assert.equal(reveals, 0);
+  assert.equal(
+    image.hasAttribute("data-page-image-deferred"),
+    false,
+    "the primary error must not bypass Media's fallback attempt",
+  );
+  image.setAttribute("src", "/alternate.png");
+  image.complete = false;
+  f.mutate();
+  f.frame();
+  assert.equal(reveals, 0);
+  // The alternate also fails. Media commits its terminal initials and removes
+  // the native image; only this final visible state releases the page.
+  state = "fallback";
+  f.nodes.images.length = 0;
+  f.mutate();
+  f.frame();
+  assert.equal(reveals, 1);
+});
+
+test("a changed managed source loses its ready state until the new decode commits", () => {
+  const f = fixture();
+  let reveals = 0,
+    state = "ready";
+  const image = f.image({ media: { getAttribute: () => state } });
+  f.nodes.images.push(image);
+  f.nodes.loading.push(f.element());
+  prepareInitialPage(f.root, () => reveals++);
+  assert.equal(reveals, 0);
+  image.setAttribute("src", "/replacement.png");
+  state = "loading";
+  f.nodes.loading.length = 0;
+  f.mutate();
+  f.frame();
+  assert.equal(
+    reveals,
+    0,
+    "an old ready source cannot qualify the replacement",
+  );
+  state = "ready";
+  f.mutate();
+  f.frame();
+  assert.equal(reveals, 1);
+});
+
+test("an unmanaged srcset selection still requires the replacement decode", async () => {
+  const f = fixture();
+  let reveals = 0;
+  const finish = [];
+  const image = f.image({
+    decode: () => new Promise((resolve) => finish.push(resolve)),
+  });
+  image.currentSrc = "/crest-small.png";
+  f.nodes.images.push(image);
+  prepareInitialPage(f.root, () => reveals++);
+  await settle();
+  image.currentSrc = "/crest-large.png";
+  f.mutate();
+  f.frame();
+  await settle();
+  assert.equal(finish.length, 2);
+  finish[0]();
+  await settle();
+  f.frame();
+  assert.equal(reveals, 0);
+  finish[1]();
+  await settle();
+  f.frame();
+  assert.equal(reveals, 1);
+});
+
+test("shared ancestor layout is read once per pass and refreshed after a mutation", () => {
+  const f = fixture();
+  let reveals = 0,
+    clipReads = 0,
+    left = 0;
+  const parent = f.container(
+    { left: 0, right: 100, top: 0, bottom: 100 },
+    { overflowX: "hidden", overflowY: "hidden" },
+  );
+  parent.getBoundingClientRect = () => {
+    clipReads++;
+    return {
+      left,
+      right: left + 100,
+      top: 0,
+      bottom: 100,
+      width: 100,
+      height: 100,
+    };
+  };
+  for (let i = 0; i < 24; i++) {
+    const image = f.image({ complete: false });
+    image.parentElement = parent;
+    f.nodes.images.push(image);
+  }
+  prepareInitialPage(f.root, () => reveals++);
+  f.frame();
+  assert.equal(reveals, 0);
+  assert.equal(f.styleReads.get(parent), 1);
+  assert.equal(clipReads, 1);
+  left = 50;
+  f.mutate();
+  f.frame();
+  assert.equal(
+    f.styleReads.get(parent),
+    2,
+    "layout is not reused across passes",
+  );
+  assert.equal(clipReads, 2);
+  assert.equal(reveals, 1, "new clipping must be observed immediately");
 });
