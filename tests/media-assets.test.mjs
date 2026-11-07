@@ -17,7 +17,11 @@ const source =
 // for image decoding; a native browser decode remains a deployment acceptance.
 async function imageComponent(
   run,
-  { component = "ApiImage", transport = createPublicApiTransport() } = {},
+  {
+    component = "ApiImage",
+    transport = createPublicApiTransport(),
+    nativeImage = {},
+  } = {},
 ) {
   const root = fileURLToPath(new URL("../", import.meta.url));
   const requireLocal = createRequire(path.join(root, "dashboard/package.json"));
@@ -28,7 +32,7 @@ async function imageComponent(
     );
   const filename = path.join(
     root,
-    `dashboard/frontend/src/components/${component === "Media" ? "UI" : "ApiImage"}.jsx`,
+    `dashboard/frontend/src/components/${component === "Media" ? "UI" : component}.jsx`,
   );
   const slots = [],
     admissions = [],
@@ -68,11 +72,17 @@ async function imageComponent(
     useEffect: (effect, deps) => {
       const index = cursor++;
       if (!equal(slots[index]?.deps, deps))
-        pending.push({ index, effect, deps });
+        pending.push({ index, effect, deps, phase: "passive" });
+    },
+    useLayoutEffect: (effect, deps) => {
+      const index = cursor++;
+      if (!equal(slots[index]?.deps, deps))
+        pending.push({ index, effect, deps, phase: "layout" });
     },
   };
   const stubs = {
     react: React,
+    "next/image": requireLocal("next/image"),
     "../hooks/useImageIntent.js": {
       __esModule: true,
       default: () => [visibilityRef, visible],
@@ -144,10 +154,14 @@ async function imageComponent(
         attrs.set("src", value);
         assignments.push({ node: this, src: value });
       },
+      get currentSrc() {
+        return attrs.get("src") || "";
+      },
       removeAttribute(name) {
         removals.push({ node: this, name, before: transport.pending() });
         attrs.delete(name);
       },
+      ...nativeImage,
     };
   }
   const unmount = () => {
@@ -184,7 +198,7 @@ async function imageComponent(
         }
         return tree;
       },
-      commit: () => {
+      commit: ({ passive = true } = {}) => {
         if (component === "ApiImage") {
           if (!node || node.key !== tree.props.key) {
             node?.props.ref?.(null);
@@ -196,13 +210,19 @@ async function imageComponent(
           node ||= createNode(mediaKey);
           node.props = tree.props;
           tree.props.ref.current = node;
+          if (component === "DirectMediaImage") node.src = tree.props.src;
         }
         // React changes the DOM/ref before passive cleanup. A source-change
         // cleanup must remove src from its captured old node, not the new one.
-        for (const { index } of pending) slots[index]?.cleanup?.();
-        for (const item of pending)
-          slots[item.index] = { ...item, cleanup: item.effect() };
-        pending = [];
+        const apply = (changes) => {
+          for (const { index } of changes) slots[index]?.cleanup?.();
+          for (const item of changes)
+            slots[item.index] = { ...item, cleanup: item.effect() };
+        };
+        apply(pending.filter((item) => item.phase === "layout"));
+        const remaining = pending.filter((item) => item.phase !== "layout");
+        if (passive) apply(remaining);
+        pending = passive ? [] : remaining;
       },
       emit: (type, target = node) =>
         target.props[type]({ currentTarget: target }),
@@ -646,5 +666,202 @@ test("Media presents a neutral fallback when the name is unknown", async () => {
       assert.deepEqual(media.props.children[0].props.children, ["—"]);
     },
     { component: "Media" },
+  );
+});
+
+// These lifecycle fixtures use a local immutable image. The deployed remote
+// allowlist and optimizer source variants are covered by optimized-media.test.
+const directSource = `/fixtures/${"a".repeat(64)}.webp`;
+
+test("cached native media starts decoding in layout and commits ready only after decode", async () => {
+  let decodes = 0,
+    finishDecode,
+    loads = 0;
+  await imageComponent(
+    async ({ render, commit, emit }) => {
+      render({ src: directSource, dimension: 64, onLoad: () => loads++ });
+      commit({ passive: false });
+      assert.equal(
+        decodes,
+        1,
+        "cached media must not wait for the passive-effect phase",
+      );
+      assert.equal(
+        loads,
+        0,
+        "complete is not a substitute for decode completion",
+      );
+      emit("onLoad");
+      assert.equal(
+        decodes,
+        1,
+        "a later native load event shares the same decode",
+      );
+      finishDecode();
+      await turn();
+      assert.equal(loads, 1);
+    },
+    {
+      component: "DirectMediaImage",
+      nativeImage: {
+        complete: true,
+        naturalWidth: 64,
+        decode: () => {
+          decodes++;
+          return new Promise((resolve) => {
+            finishDecode = resolve;
+          });
+        },
+      },
+    },
+  );
+});
+
+test("a broken cached native image reports its fallback before passive effects", async () => {
+  let loads = 0,
+    errors = 0;
+  await imageComponent(
+    async ({ render, commit }) => {
+      render({
+        src: directSource,
+        dimension: 64,
+        onLoad: () => loads++,
+        onError: () => errors++,
+      });
+      commit({ passive: false });
+      assert.equal(loads, 0);
+      assert.equal(errors, 1);
+    },
+    {
+      component: "DirectMediaImage",
+      nativeImage: { complete: true, naturalWidth: 0 },
+    },
+  );
+});
+
+test("a native decode failure cannot report a ready Media state", async () => {
+  let loads = 0;
+  const errors = [];
+  await imageComponent(
+    async ({ render, commit, node, emit }) => {
+      render({
+        src: directSource,
+        dimension: 64,
+        onLoad: () => loads++,
+        onError: (error) => errors.push(error),
+      });
+      commit({ passive: false });
+      assert.equal(errors.length, 0);
+      node().complete = true;
+      node().naturalWidth = 64;
+      emit("onLoad");
+      await turn();
+      assert.equal(loads, 0);
+      assert.equal(errors.length, 1);
+      assert.match(errors[0].message, /decode failed/);
+    },
+    {
+      component: "DirectMediaImage",
+      nativeImage: {
+        complete: false,
+        decode: () => Promise.reject(new Error("decode failed")),
+      },
+    },
+  );
+});
+
+test("a replaced native source ignores the previous decode completion", async () => {
+  const decodes = [],
+    loaded = [];
+  await imageComponent(
+    async ({ render, commit }) => {
+      render({
+        src: directSource,
+        dimension: 64,
+        onLoad: () => loaded.push("old"),
+      });
+      commit();
+      render({
+        src: directSource.replace("a".repeat(64), "b".repeat(64)),
+        dimension: 64,
+        onLoad: () => loaded.push("new"),
+      });
+      commit();
+      assert.equal(decodes.length, 2);
+      decodes[0]();
+      await turn();
+      assert.deepEqual(loaded, []);
+      decodes[1]();
+      await turn();
+      assert.deepEqual(loaded, ["new"]);
+    },
+    {
+      component: "DirectMediaImage",
+      nativeImage: {
+        complete: true,
+        naturalWidth: 64,
+        decode: () => new Promise((resolve) => decodes.push(resolve)),
+      },
+    },
+  );
+});
+
+test("an abandoned render cannot steal a committed image's decode callback", async () => {
+  let finishDecode;
+  const loaded = [];
+  await imageComponent(
+    async ({ render, commit }) => {
+      render({
+        src: directSource,
+        dimension: 64,
+        onLoad: () => loaded.push("committed"),
+      });
+      commit();
+      render({
+        src: directSource.replace("a".repeat(64), "b".repeat(64)),
+        dimension: 64,
+        onLoad: () => loaded.push("abandoned"),
+      });
+      finishDecode();
+      await turn();
+      assert.deepEqual(loaded, ["committed"]);
+    },
+    {
+      component: "DirectMediaImage",
+      nativeImage: {
+        complete: true,
+        naturalWidth: 64,
+        decode: () =>
+          new Promise((resolve) => {
+            finishDecode = resolve;
+          }),
+      },
+    },
+  );
+});
+
+test("unmounting native media prevents a late ready callback", async () => {
+  let finishDecode,
+    loads = 0;
+  await imageComponent(
+    async ({ render, commit, unmount }) => {
+      render({ src: directSource, dimension: 64, onLoad: () => loads++ });
+      commit();
+      unmount();
+      finishDecode();
+      await turn();
+      assert.equal(loads, 0);
+    },
+    {
+      component: "DirectMediaImage",
+      nativeImage: {
+        complete: true,
+        naturalWidth: 64,
+        decode: () =>
+          new Promise((resolve) => {
+            finishDecode = resolve;
+          }),
+      },
+    },
   );
 });
