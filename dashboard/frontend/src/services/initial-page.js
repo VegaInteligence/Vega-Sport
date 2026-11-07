@@ -132,6 +132,17 @@ export function prepareInitialPage(
       check();
     });
   };
+  const imageEvent = (event) => {
+    const mediaState = event?.target
+      ?.closest?.("[data-page-media]")
+      ?.getAttribute?.("data-media-state");
+    // Media commits ready only after decoding, or removes the image for its
+    // terminal fallback. Those DOM mutations already notify this gate. Native
+    // load/error arrives earlier and cannot prove either state; scanning on
+    // every such event repeats layout for all images, including offscreen ones.
+    if (["loading", "ready", "fallback"].includes(mediaState)) return;
+    scheduleNotification();
+  };
   const observer = new view.MutationObserver(scheduleNotification);
   const cleanup = () => {
     phase = "disposed";
@@ -142,8 +153,8 @@ export function prepareInitialPage(
     fallbackFrame = null;
     view.clearTimeout(deadline);
     view.clearTimeout(pageDeadline);
-    root.removeEventListener("load", scheduleNotification, true);
-    root.removeEventListener("error", scheduleNotification, true);
+    root.removeEventListener("load", imageEvent, true);
+    root.removeEventListener("error", imageEvent, true);
     view.removeEventListener("resize", scheduleFrame);
     view.removeEventListener("scroll", scheduleFrame, true);
   };
@@ -276,8 +287,8 @@ export function prepareInitialPage(
     attributes: true,
     attributeFilter: ["src", "srcset", "data-page-loading", "data-media-state"],
   });
-  root.addEventListener("load", scheduleNotification, true);
-  root.addEventListener("error", scheduleNotification, true);
+  root.addEventListener("load", imageEvent, true);
+  root.addEventListener("error", imageEvent, true);
   view.addEventListener("resize", scheduleFrame);
   view.addEventListener("scroll", scheduleFrame, {
     passive: true,

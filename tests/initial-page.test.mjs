@@ -158,8 +158,8 @@ function fixture({ trace = false } = {}) {
     mutate() {
       if (observer.connected) observer.fn();
     },
-    event(name) {
-      rootListeners.get(name)?.();
+    event(name, target) {
+      rootListeners.get(name)?.({ target });
     },
     viewportEvent(name) {
       listeners.get(name)?.();
@@ -650,7 +650,11 @@ test("an unmanaged srcset selection still requires the replacement decode", asyn
   assert.equal(finish.length, 2);
   finish[0]();
   await settle();
-  assert.equal(f.microtaskCount, 0, "an obsolete decode cannot schedule a new scan");
+  assert.equal(
+    f.microtaskCount,
+    0,
+    "an obsolete decode cannot schedule a new scan",
+  );
   f.frame();
   assert.equal(reveals, 0);
   finish[1]();
@@ -701,6 +705,71 @@ test("shared ancestor layout is read once per pass and refreshed after a mutatio
   assert.equal(reveals, 1, "new clipping must be observed immediately");
 });
 
+test("managed native image events wait for the committed Media state without redundant scans", () => {
+  const f = fixture();
+  let reveals = 0,
+    state = "loading";
+  const image = f.image({ media: { getAttribute: () => state } });
+  f.nodes.images.push(image);
+  prepareInitialPage(f.root, () => reveals++);
+  for (let i = 0; i < 24; i++) {
+    f.event("load", image);
+    f.microtasks();
+  }
+  assert.equal(f.scanCount, 1);
+  assert.equal(f.microtaskCount, 0);
+  assert.equal(reveals, 0, "native load is not a successful committed decode");
+  state = "ready";
+  f.mutate();
+  f.microtasks();
+  assert.equal(f.scanCount, 2);
+  assert.equal(reveals, 1);
+});
+
+test("managed native errors still wait for the committed terminal fallback", () => {
+  const f = fixture();
+  let reveals = 0;
+  const image = f.image({ width: 0, media: { getAttribute: () => "loading" } });
+  f.nodes.images.push(image);
+  prepareInitialPage(f.root, () => reveals++);
+  f.event("error", image);
+  assert.equal(f.microtaskCount, 0);
+  assert.equal(reveals, 0);
+  f.nodes.images.length = 0;
+  f.mutate();
+  f.microtasks();
+  assert.equal(
+    reveals,
+    1,
+    "removing the failed image exposes the final fallback",
+  );
+});
+
+test("unmanaged native image loads still schedule and await their own decode", async () => {
+  const f = fixture();
+  let reveals = 0,
+    finish;
+  const image = f.image({
+    complete: false,
+    decode: () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  });
+  f.nodes.images.push(image);
+  prepareInitialPage(f.root, () => reveals++);
+  image.complete = true;
+  f.event("load", image);
+  assert.equal(f.microtaskCount, 1);
+  f.microtasks();
+  await settle();
+  assert.equal(reveals, 0);
+  finish();
+  await settle();
+  f.microtasks();
+  assert.equal(reveals, 1);
+});
+
 test("ready DOM notifications coalesce without waiting for another frame", () => {
   const f = fixture();
   let reveals = 0,
@@ -726,7 +795,9 @@ test("ready DOM notifications coalesce without waiting for another frame", () =>
 test("scroll and resize stay on a frame which a DOM check can consume", () => {
   const f = fixture();
   f.nodes.loading.push(f.element());
-  const dispose = prepareInitialPage(f.root, () => assert.fail("data is pending"));
+  const dispose = prepareInitialPage(f.root, () =>
+    assert.fail("data is pending"),
+  );
   f.viewportEvent("scroll");
   f.viewportEvent("resize");
   assert.equal(f.frameCount, 1);
@@ -761,7 +832,9 @@ test("queued notifications and late decode cannot bypass the fallback frame", as
   };
   f.nodes.images.push(
     f.image({ complete: false, media }),
-    f.image({ decode: () => new Promise((resolve) => (finishDecode = resolve)) }),
+    f.image({
+      decode: () => new Promise((resolve) => (finishDecode = resolve)),
+    }),
   );
   prepareInitialPage(f.root, () => reveals++, {
     imageTimeout: 5,
@@ -779,7 +852,11 @@ test("queued notifications and late decode cannot bypass the fallback frame", as
   f.event("error");
   f.viewportEvent("resize");
   f.microtasks();
-  assert.equal(reveals, 0, "the deadline still owes its fallback commit a frame");
+  assert.equal(
+    reveals,
+    0,
+    "the deadline still owes its fallback commit a frame",
+  );
   assert.equal(f.frameCount, 1);
   assert.equal(f.microtaskCount, 0);
   f.advance(100);
@@ -796,7 +873,9 @@ test("cleanup invalidates a queued microtask and cancels its geometry frame", as
   let reveals = 0,
     finishDecode;
   f.nodes.images.push(
-    f.image({ decode: () => new Promise((resolve) => (finishDecode = resolve)) }),
+    f.image({
+      decode: () => new Promise((resolve) => (finishDecode = resolve)),
+    }),
   );
   const dispose = prepareInitialPage(f.root, () => reveals++);
   await settle();
@@ -845,7 +924,9 @@ test("pending images do not create a microtask loop or repeat their decode", asy
       },
     }),
   );
-  const dispose = prepareInitialPage(f.root, () => assert.fail("decode is pending"));
+  const dispose = prepareInitialPage(f.root, () =>
+    assert.fail("decode is pending"),
+  );
   await settle();
   for (let i = 0; i < 20; i++) {
     f.mutate();
