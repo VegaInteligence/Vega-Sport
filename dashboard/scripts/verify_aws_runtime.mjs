@@ -258,10 +258,12 @@ try {
         page.pagination &&
         Object.hasOwn(page.pagination, "nextCursor"),
     );
-    if (chunk.representationToken)
-      assert.equal(page.pagination.generation, chunk.representationToken);
-    else if (manifest.capabilities?.versionedPartitions)
-      assert.equal(page.pagination.generation, manifest.publicationVersion);
+    if (token)
+      assert.equal(
+        page.pagination.generation,
+        token,
+        "Partition generation differs from the requested version",
+      );
   }
   await compactChecks(manifest);
   report.passed = true;
