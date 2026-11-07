@@ -200,13 +200,7 @@ export default function PlayerDirectory({
                                   ? row.profile.teamIds
                                   : [row.profile.identity?.teamId]
                               }
-                              leagueIds={
-                                row.profile.leagueIds.length
-                                  ? row.profile.leagueIds
-                                  : [row.profile.identity?.leagueId]
-                              }
                               team={row.team}
-                              league={row.league}
                             />
                           </span>
                         </span>
