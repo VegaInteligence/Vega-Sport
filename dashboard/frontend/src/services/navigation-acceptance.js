@@ -25,6 +25,8 @@ export function startNavigationAcceptance() {
     documentId: crypto.randomUUID(),
     initialReadyMs: null,
     reads: [],
+    requests: [],
+    inFlight: 0,
     transitions: [],
   });
   const environment = {
@@ -45,6 +47,7 @@ export function startNavigationAcceptance() {
         initialReadyMs: state.initialReadyMs,
         visibility: document.visibilityState,
         reads: state.reads,
+        fetches: state.requests.map(({ url, ...request }) => request),
         transitions: state.transitions,
         method:
           "captured link click to new visible ready workspace, followed by two animation frames",
@@ -53,6 +56,65 @@ export function startNavigationAcceptance() {
       }),
     );
   }
+  // Observe starts, including Next/RSC and unfinished bodies. Return the native
+  // promise unchanged; this opt-in wrapper never retries or changes a request.
+  const originalFetch = window.fetch;
+  window.fetch = function (...args) {
+    let request;
+    try {
+      const input = args[0];
+      const url = new URL(
+        typeof input === "string" || input instanceof URL
+          ? String(input)
+          : input.url,
+        window.location.href,
+      );
+      request = {
+        url: url.href,
+        path: url.pathname,
+        kind: url.searchParams.has("_rsc")
+          ? "rsc"
+          : url.pathname.startsWith("/api/")
+            ? "api"
+            : "other",
+        startMs: performance.now(),
+        endMs: null,
+        responseMs: null,
+        status: null,
+      };
+      state.requests.push(request);
+      state.inFlight++;
+      state.requests = state.requests.slice(-100);
+    } catch {
+      // Diagnostics cannot interfere with the native fetch input validation.
+    }
+    try {
+      const promise = Reflect.apply(originalFetch, this, args);
+      promise.then(
+        (response) => {
+          if (request) {
+            request.responseMs = performance.now();
+            request.status = response.status;
+          }
+        },
+        () => {
+          if (request) {
+            if (request.endMs === null) state.inFlight--;
+            request.endMs = performance.now();
+            request.status = "error";
+          }
+        },
+      );
+      return promise;
+    } catch (error) {
+      if (request) {
+        if (request.endMs === null) state.inFlight--;
+        request.endMs = performance.now();
+        request.status = "error";
+      }
+      throw error;
+    }
+  };
   function inViewport(node) {
     const rect = node.getBoundingClientRect();
     return (
@@ -100,19 +162,28 @@ export function startNavigationAcceptance() {
         }
         const finished = performance.now();
         const reads = state.reads.filter(
-          (read) => read.startMs >= pending.startMs,
+          (read) => read.endMs >= pending.startMs,
+        );
+        const requests = state.requests.filter(
+          (request) => request.startMs >= pending.startMs,
         );
         state.transitions.push({
           from: pending.from,
           to: pending.to,
           startedAt: pending.startedAt,
           durationMs: Math.round((finished - pending.startMs) * 1000) / 1000,
+          eventQueueMs: Math.round(pending.eventQueueMs * 1000) / 1000,
+          startClock: pending.startClock,
           cache: { ...pending.cache },
-          apiReadsStarted: reads.length,
-          inMemory:
+          fetchesStarted: requests.length,
+          fetchesInFlightAtClick: pending.inFlight,
+          dataTransfersDuringInterval: reads.length,
+          dataInMemory:
             pending.cache.fresh > 0 &&
             pending.cache.pending === 0 &&
             pending.cache.loader === 0 &&
+            requests.length === 0 &&
+            pending.inFlight === 0 &&
             reads.length === 0,
           visible: true,
         });
@@ -143,8 +214,20 @@ export function startNavigationAcceptance() {
         acceptancePageIdentity(target) === acceptancePageIdentity(current)
       )
         return;
+      const handlerTime = performance.now();
+      const eventTime = Number(event.timeStamp);
+      const eventClockValid =
+        Number.isFinite(eventTime) &&
+        eventTime >= 0 &&
+        eventTime <= handlerTime;
+      const startMs = eventClockValid ? eventTime : handlerTime;
       state.pending = {
-        startMs: performance.now(),
+        startMs,
+        eventQueueMs: handlerTime - startMs,
+        startClock: eventClockValid
+          ? "event.timeStamp"
+          : "handler performance.now fallback",
+        inFlight: state.inFlight,
         startedAt: new Date().toISOString(),
         previous: document.querySelector("main#main"),
         from: current.pathname,
@@ -171,14 +254,25 @@ export function startNavigationAcceptance() {
   const timingObserver = new PerformanceObserver((list) => {
     for (const entry of list.getEntries()) {
       const url = new URL(entry.name, window.location.href);
+      const request = state.requests.find(
+        (item) =>
+          item.url === url.href &&
+          item.endMs === null &&
+          item.startMs <= entry.startTime + 2,
+      );
+      if (request) {
+        request.endMs = entry.startTime + entry.duration;
+        state.inFlight--;
+      }
       if (
-        !url.pathname.startsWith("/api/") ||
+        (!url.pathname.startsWith("/api/") && !url.searchParams.has("_rsc")) ||
         url.pathname.startsWith("/api/assets")
       )
         continue;
       state.reads.push({
         path: url.pathname,
         startMs: Math.round(entry.startTime * 1000) / 1000,
+        endMs: Math.round((entry.startTime + entry.duration) * 1000) / 1000,
         durationMs: Math.round(entry.duration * 1000) / 1000,
         transferBytes: entry.transferSize,
         decodedBytes: entry.decodedBodySize,
