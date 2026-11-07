@@ -11,12 +11,18 @@ L'implémentation concrète est désormais décrite dans
 déplace réellement **112 tables physiques du modèle de publication vers trois
 stockages de nœuds contraints et indexés**, avec backfill reprenable, comparaison
 exhaustive, publication adaptée et retour arrière incluant les écritures nouvelles.
-La cible physique active de `statarena_app` est **54 tables avec l'agrégat de
-navigation justifié de la migration 025**, contre 161 dans l'inventaire initial.
+La cible physique active de `statarena_app` est **56 tables avec l'agrégat de
+navigation de la migration 025 et les deux projections d'archives de la migration
+032**, contre 161 dans l'inventaire initial.
 Les tables de retour arrière, les sources, l'authentification et l'historique Pro
 sont comptabilisés séparément ; leur conservation n'est pas présentée comme une
 économie de stockage déjà réalisée. Les preuves de déploiement natif sont produites
 par le déploiement, pas déduites de la seule présence des fichiers de migration.
+
+La bascule de production est désormais **acceptée au 7 novembre 2026 à 08:05:32 UTC** :
+7 838 886 lignes vérifiées exactement, 56 tables physiques actives et 112 anciennes
+tables conservées pour le retour arrière. Le [bilan de livraison et ses preuves](../../docs/operations/DB_REFACTOR_RELEASE_20261107.md)
+distingue cette migration terminée de la publication courante des sources.
 
 ### État de l'audit initial avant les migrations 023–025
 
@@ -42,6 +48,14 @@ logiques cibles. Certains noms existent déjà dans le modèle Pro, dont l’API
 publique reste désactivée (`STATARENA_PRO_API=0` dans l’audit). L’identité de nom
 ne démontre pas une équivalence de contrat : aucune activation globale, aucun
 remplacement de ces tables et aucune recopie automatique n’est proposé.
+
+Les sections suivantes conservent les **candidats et limites de l'audit initial
+du 6 novembre**. Elles ne décrivent pas l'état d'exécution des migrations
+023–034 : le modèle implémenté et sa procédure sont dans
+[`DB_REFACTOR_OPERATIONS.md`](DB_REFACTOR_OPERATIONS.md). En particulier, les
+quatre tables de membres de compositions mentionnées ci-dessous sont désormais
+incluses dans les 112 familles consolidées par 023, et 026 fournit la procédure
+réversible d'archivage des dix anciennes captures de transfert.
 
 ## Tous les groupes cibles
 
@@ -264,9 +278,10 @@ explicite ; aucune file/backlog n’est vidée pour afficher un état « termin�
 
 ## Recette exacte pour 021 et 022
 
-Les commandes suivantes sont préparées pour le contexte GitHub AWS vérifié du
-worker, avec `DATABASE_URL` fourni par l’action de credentials. Elles n’ont pas
-été exécutées sur production par ce lot. `--install-only` vérifie les migrations
+Les commandes suivantes ont été préparées lors de l'audit initial pour le contexte
+GitHub AWS vérifié du worker, avec `DATABASE_URL` fourni par l’action de credentials.
+À la date de cet audit, elles n'avaient pas été exécutées sur production.
+`--install-only` vérifie les migrations
 scellées déjà appliquées, puis installe les nouvelles migrations atomiquement.
 Ne pas l’exécuter aveuglément sur une ancienne base vierge : l’installateur
 historique contient des migrations antérieures, à examiner si leur digest n’est
