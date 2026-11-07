@@ -26,6 +26,16 @@ Le risque résiduel est une multiplication des scans si des chargements arrivent
 
 La [mesure après PR46](acceptance-20261107/browser-after-pr46.json) confirme une attente cumulée de **0,1 à 1 ms** sur les quatre retours en mémoire. Elle révèle aussi **26 / 42 / 28 / 93 contrôles**, et jusqu’à **136,8 ms de travail cumulé** pour l’accueil. La plupart des événements natifs précèdent le commit de l’état Media et ne changent pas encore le verdict de disponibilité. Les mesures complètes, y compris ce résultat défavorable, sont conservées.
 
-Le correctif suivant ignore les événements natifs load/error des images dont le propriétaire Media expose un état reconnu. Le contrôleur observe déjà `data-media-state`, le remplacement de `src`/`srcset` et les mutations de descendants : le décodage réussi ou la suppression pour fallback provoque donc toujours son contrôle. Une image sans ce contrat de propriétaire continue de déclencher la préparation au chargement et attend son propre décodage.
+PR47 ignore les événements natifs load/error des images dont le propriétaire Media expose un état reconnu. Le contrôleur observe déjà `data-media-state`, le remplacement de `src`/`srcset` et les mutations de descendants : le décodage réussi ou la suppression pour fallback provoque donc toujours son contrôle. Une image sans ce contrat de propriétaire continue de déclencher la préparation au chargement et attend son propre décodage.
 
 **61/61 tests ciblés passent.** Deux nouvelles régressions échouent avant le correctif ; un troisième contrôle confirme le maintien du chemin des images natives. Une série de 24 événements load de Media ne provoque aucun scan supplémentaire avant son commit ready ; l’erreur native ne révèle pas la page avant le fallback. Les délais, le repli avec une frame obligatoire et le critère de navigation restent identiques.
+
+La [série de production PR47](acceptance-20261107/browser-after-pr47.json) contient dix transitions, dont sept retours en mémoire. Ces sept retours effectuent **2–5 contrôles**, mais prennent encore **94,6–215,1 ms** : six dépassent 100 ms. Les premiers contrôles Home prennent **31,8 puis 59,2 ms**. Les comptes réduits n’impliquent donc pas que la cible complète soit atteinte. Le [dossier d’acceptation](acceptance-20261107/README.md#contrôle-de-production-après-pr47) décrit également le changement de harnais v5 et ses limites de comparaison.
+
+## Lectures géométriques et admissions d’images
+
+Le contrôle suivant évite les lectures de géométrie pour un Media déjà prêt, dont la source actuelle est présente, complète et de largeur native positive. Ce cas ne peut bloquer la révélation, quelle que soit sa position. Les états loading, incomplets, cassés ou sans source conservent leurs contrôles ; aucune URL vue dans le passé ne vaut preuve pour un nouvel élément.
+
+La passe collecte également ses admissions avant d’écrire `loading=eager`, afin de terminer ses lectures de visibilité avant de lancer les images natives. Elle n’admet toujours pas les images hors écran et ne traite jamais une admission comme un décodage terminé. Les délais, fallbacks et critères de mesure restent identiques.
+
+Les [régressions du contrôleur](../verification/browser-readiness-20261107/media-layout-batching.json) conservent **deux échecs avant / 64 tests réussis après**, sans test ignoré. Elles établissent l’ordre des opérations et la disponibilité correcte, pas un gain de temps de mise en page ni l’atteinte des 100 ms. La mesure de production doit encore confirmer l’effet.

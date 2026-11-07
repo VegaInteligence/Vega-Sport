@@ -61,9 +61,10 @@ do not collect this trace. It does not change image admission, deadlines or the
 navigation completion criterion.
 
 After PR46, `checkWorkMs` and `checkQueueMs` accumulate all checks, including
-those no longer retained in the last-20 detail list. Native load/error events
-from a managed Media are redundant with its committed state or fallback DOM
-mutation; unmanaged images still need their own load/error and decode checks.
+those no longer retained in the last-20 detail list. PR47 suppresses native
+load/error notifications from a managed Media: they are redundant with its
+committed state or fallback DOM mutation. Unmanaged images still need their
+own load/error and decode checks.
 
 Version 5 additionally records native `longtask` and `long-animation-frame`
 entries when supported. Transition `startMs` and `finishedMs` use the same

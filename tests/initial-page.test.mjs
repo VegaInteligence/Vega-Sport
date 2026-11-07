@@ -555,6 +555,94 @@ test("already decoded Media reveals immediately without a second decode or frame
   assert.equal(f.timerCount, 0);
 });
 
+test("ready decoded Media needs no geometry while another image still blocks", () => {
+  const f = fixture();
+  let reveals = 0,
+    state = "loading";
+  const ready = f.image({
+    media: { getAttribute: () => "ready" },
+    decode: () => assert.fail("Media already proved this image decoded"),
+  });
+  ready.getClientRects = () =>
+    assert.fail("ready Media cannot block by position");
+  ready.getBoundingClientRect = () => assert.fail("ready Media needs no layout");
+  const pending = f.image({
+    complete: false,
+    media: { getAttribute: () => state },
+  });
+  f.nodes.images.push(ready, pending);
+  prepareInitialPage(f.root, () => reveals++);
+  assert.equal(reveals, 0, "the other visible image still controls readiness");
+  assert.equal(pending.loading, "eager");
+  pending.complete = true;
+  state = "ready";
+  f.mutate();
+  f.microtasks();
+  assert.equal(reveals, 1);
+  assert.equal(f.timerCount, 0);
+});
+
+test("a ready marker without a valid loaded source still checks visibility and waits", () => {
+  for (const invalid of ["missing source", "incomplete", "broken"]) {
+    const f = fixture();
+    let reveals = 0,
+      geometryReads = 0;
+    const image = f.image({
+      complete: invalid !== "incomplete",
+      width: invalid === "broken" ? 0 : 20,
+      media: { getAttribute: () => "ready" },
+    });
+    if (invalid === "missing source") image.setAttribute("src", "");
+    const bounds = image.getBoundingClientRect;
+    image.getBoundingClientRect = () => {
+      geometryReads++;
+      return bounds();
+    };
+    f.nodes.images.push(image);
+    const dispose = prepareInitialPage(f.root, () => reveals++);
+    assert.equal(geometryReads, 1, invalid);
+    assert.equal(image.loading, "eager", invalid);
+    assert.equal(reveals, 0, invalid);
+    assert.equal(image.hasAttribute("data-page-image-deferred"), false, invalid);
+    dispose();
+  }
+});
+
+test("all visibility reads precede eager admissions and offscreen images stay lazy", () => {
+  const f = fixture();
+  const operations = [];
+  let reveals = 0;
+  for (let index = 0; index < 4; index++) {
+    const image = f.image({ complete: false, visible: index !== 1 });
+    const bounds = image.getBoundingClientRect;
+    image.getBoundingClientRect = () => {
+      operations.push(`read:${index}`);
+      return bounds();
+    };
+    let loading = index === 3 ? "eager" : "lazy";
+    Object.defineProperty(image, "loading", {
+      get: () => loading,
+      set: (value) => {
+        operations.push(`admit:${index}`);
+        loading = value;
+      },
+    });
+    f.nodes.images.push(image);
+  }
+  const dispose = prepareInitialPage(f.root, () => reveals++);
+  assert.deepEqual(operations, [
+    "read:0",
+    "read:1",
+    "read:2",
+    "read:3",
+    "admit:0",
+    "admit:2",
+  ]);
+  assert.equal(f.nodes.images[1].loading, "lazy");
+  assert.equal(reveals, 0, "admission does not prove native load or decode");
+  dispose();
+});
+
 test("Media owns decoding while loading and the gate waits for its committed ready state", () => {
   const f = fixture();
   let reveals = 0,

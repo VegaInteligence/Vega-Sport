@@ -1,6 +1,6 @@
 # Préparation du premier écran après PR42
 
-Les [mesures de phases](acceptance-20261107/browser-after-pr42.json) montrent des retours Clubs/Joueurs avec données en mémoire : le nouveau workspace arrive en 42–64,2 ms, puis l'état ready en 199,6–261,7 ms. La mesure complète reste au-dessus des 100 ms. Pour l'accueil, la création du nouveau DOM prend déjà 157 ms dans le retour observé. Ce diagnostic ne prouve pas qu'un seul changement suffira à atteindre la cible.
+Les [mesures de phases](acceptance-20261107/browser-after-pr42.json) montrent des retours Clubs/Joueurs avec données en mémoire : le nouveau workspace est observé en 42–64,2 ms, puis l'état ready en 199,6–261,7 ms. La mesure complète reste au-dessus des 100 ms. Pour l'accueil, le nouveau main est observé pour la première fois à 157 ms après le clic. Ce délai inclut les effets de mise en page et ne mesure pas isolément le travail de React ou la création du DOM. Ce diagnostic ne prouve pas qu'un seul changement suffira à atteindre la cible.
 
 ## Correction
 
