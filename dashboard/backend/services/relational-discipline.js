@@ -8,7 +8,7 @@ import {
   readResponse,
   scopeWhere,
 } from "./relational-read-utils.js";
-import { summarizeDiscipline } from "../../frontend/src/services/player-discipline.js";
+import { summarizeDiscipline } from "../../shared/player-discipline.js";
 
 /** At most 200 exact matches, one publication snapshot and no native HTTP fan-out. */
 export function createDisciplineRoute(read = query) {

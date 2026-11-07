@@ -20,7 +20,7 @@ import {
   performanceProfileFromCounts,
   PROFILE_METRICS,
   MIN_PEER_MINUTES,
-} from "../../frontend/src/services/player-profile.js";
+} from "../../shared/player-profile.js";
 
 const ranked = Object.keys(PROFILE_METRICS).filter(
   (key) => !["goals", "assists", "xa"].includes(key),

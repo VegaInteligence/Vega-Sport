@@ -26,7 +26,10 @@ MODEL=ROOT/'docs/architecture/orion-plan-20261104/target-schema.proposed.json'
 MODEL_SHA='18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08'
 SERVICE_NAMES=['orion-pro.js','orion-pro-entities.js','orion-pro-operations.js','orion-pro-appearances.js','orion-pro-fixture-aliases.js','orion-pro-competitions.js','orion-pro-match-details.js','orion-pro-archives.js','orion-pro-player-statistics.js','orion-pro-match-statistics.js','orion-pro-enrichment.js','orion-pro-spatial-advanced.js','orion-pro-rankings.js','orion-pro-season.js','postgres.js','database-connection.js','metrics.js','cache-policy.js','cache.js',
  'relational-match.js','relational-support.js','relational-catalog.js','cdn.js','relational-core.js','partition-wire.js',
+ 'relational-discovery.js','relational-actors.js','relational-performance.js','relational-players.js',
+ 'relational-clubs.js','relational-home.js','relational-discipline.js','relational-read-utils.js',
  'catalog-model.json','support-model.json']
+SHARED_NAMES=['competition-scope.js','player-aliases.js','player-discipline.js','player-profile.js']
 WRAPPERS={'relational-core':['manifest','partitionPage','fixturePage','summary','scouting'],
  'relational-match':['relationalResource','relationalMatchObservation'],
  'relational-catalog':['getCatalog','getProfile'],'relational-support':['getSupporting']}
@@ -97,6 +100,8 @@ def export_runtime(run,label,aws_source):
     shutil.copy2(ROOT/'dashboard/package.json',target/'dashboard/package.json')
     (target/'dashboard/node_modules').symlink_to(ROOT/'dashboard/node_modules',target_is_directory=True)
     for name in SERVICE_NAMES:shutil.copy2(ROOT/'dashboard/backend/services'/name,backend/'services'/name)
+    shared=target/'dashboard/shared';shared.mkdir()
+    for name in SHARED_NAMES:shutil.copy2(ROOT/'dashboard/shared'/name,shared/name)
     source=aws_source.read_text();rewrites=[]
     for module,names in WRAPPERS.items():
         original=f'"./services/{module}.js"';replacement=f'"./services/guard-{module}.mjs"'
@@ -107,10 +112,11 @@ def export_runtime(run,label,aws_source):
         (backend/'services'/f'guard-{module}.mjs').write_text('\n'.join(exports)+'\n')
         rewrites.append({'from':original,'to':replacement,'observedFunctions':names})
     (backend/'aws-app.js').write_text(source)
-    graph='\n'.join((backend/'services'/n).read_text() for n in SERVICE_NAMES if n.endswith('.js'))+source
+    graph='\n'.join((backend/'services'/n).read_text() for n in SERVICE_NAMES if n.endswith('.js'))
+    graph+='\n'+'\n'.join((shared/n).read_text() for n in SHARED_NAMES)+source
     forbidden=['@aws-sdk/','./files.js','./data-store.js','./pitchapi.js','./neon.js']
     assert not any(v in graph for v in forbidden),'Unexpected source/object/provider transport in runtime graph'
-    files=[backend/'aws-app.js',target/'dashboard/package.json',*[backend/'services'/n for n in SERVICE_NAMES],
+    files=[backend/'aws-app.js',target/'dashboard/package.json',*[backend/'services'/n for n in SERVICE_NAMES],*[shared/n for n in SHARED_NAMES],
            *[backend/'services'/f'guard-{n}.mjs' for n in WRAPPERS]]
     assert not any(' 2.' in f.name or f.name.startswith('.env') for f in files)
     return target,{'label':label,'awsSourceSha256':sha(aws_source),'awsInstrumentedSha256':sha(backend/'aws-app.js'),
@@ -165,7 +171,8 @@ def main():
     blocked=[r['samplePath'] for r in pathlist['rows'] if r['proOnPolicy']=='501_before_legacy_dispatch' and r['path'] not in entity_forms and r['path'] not in operational_forms and r['path'] not in appearance_forms and r['path'] not in fixture_forms and r['path'] not in competition_forms and r['path'] not in native_forms and r['path'] not in archive_forms and r['path'] not in shot_forms and r['path'] not in player_period_forms and r['path'] not in enrichment_forms and r['path'] not in spatial_forms and r['path'] not in rankings_forms]
     assert blocked==[] and len(entity_samples)==8
     uncatalogued=['/api/rankings/unregistered','/api/rankings/index/extra','/api/future-native-capability']
-    backend_paths=[app,ROOT/'dashboard/package.json',*[ROOT/'dashboard/backend/services'/n for n in SERVICE_NAMES]]
+    backend_paths=[app,ROOT/'dashboard/package.json',*[ROOT/'dashboard/backend/services'/n for n in SERVICE_NAMES],
+      *[ROOT/'dashboard/shared'/n for n in SHARED_NAMES]]
     helper_paths=[Path(__file__),BASE/'guard_http_server.mjs',BASE/'PRO_ON_ROUTE_POLICY.md',BASE/'GUARD_E2E_PROTOCOL.md',BASE/'API_ROUTE_MATRIX.json',
       MODEL,entity_matrix,ROOT/'docs/verification/orion-pro-player-statistics-20261105/ROOT_SHOT_GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-player-statistics-20261105/ROOT_SPATIAL_ADVANCED_GUARD.md',ROOT/'docs/verification/orion-pro-rankings-20261105/ROOT_RANKINGS_GUARD.md',ROOT/'docs/verification/orion-pro-enrichment-20261105/ROOT_ENRICHMENT_GUARD.md',ROOT/'docs/verification/orion-pro-player-statistics-20261105/ROOT_PLAYER_PERIOD_GUARD.md',ROOT/'docs/verification/orion-pro-archives-20261105/ROOT_GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-match-readers-20261105/ROOT_GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-competitions-20261105/ROOT_GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-fixture-aliases-20261105/GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-operations-20261105/GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-entities-20261105/GUARD_INTEGRATION_PROTOCOL.md',READERS/'fixture.py',PILOT/'harness.py',PILOT/'fixtures.py',ROOT/'tests/test_dashboard_data.py']
     helper_paths += [ROOT/'dashboard/scripts'/n for n in ['orion_pro_migrate.py','orion_pro_integrity.py','orion_pro_schema.py','build_dashboard_data.py',
