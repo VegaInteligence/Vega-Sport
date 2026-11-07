@@ -5,7 +5,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import Layout from "../components/Layout.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
-import { Empty } from "../components/UI.jsx";
+import { AsyncState, Empty } from "../components/UI.jsx";
+import useCompactRead from "../hooks/useCompactRead.js";
+import { compactGeneration, compactScope } from "../services/compact-reads.js";
+import { fixtureWeek, parisDay } from "../services/fixtures.js";
 import HomePreferences from "../components/HomePreferences.jsx";
 import SeasonFilter from "../components/SeasonFilter.jsx";
 import {
@@ -29,19 +32,18 @@ import {
 } from "../components/HomeSeason.jsx";
 import { json, useResource } from "../services/resources.js";
 import { ballonDorRanking } from "../services/ballon-dor.js";
-import { apiUrl } from "../data-url.js";
 import { competitionIndex } from "../services/competition-identity.js";
 import { europeFocusIds } from "../../../shared/competition-scope.js";
 import {
   CHAMPIONS_LEAGUE_ID,
   TOP_SEVEN_IDS,
+  archiveSeason,
   ballonDorRaceOpen,
   bestDefences,
   bestWinStreak,
   biggestWin,
   leagueOf,
   leagueProgress,
-  manifestSignature,
   matchdayWindow,
   playerOfTheWeek,
   personalClubIds,
@@ -51,55 +53,11 @@ import {
   seasonTotals,
   selectMatchOfTheWeek,
   teamRanks,
-  untilParisMidnight,
   upcomingHighlights,
+  weekPeriodLabel,
   weekPerformances,
   weekResults,
 } from "../services/home-insights.js";
-
-/**
- * The data is refreshed every night. From midnight (Paris), the home checks
- * every 30 minutes for a newly published season and reloads itself once it
- * is there, so a page left open shows the new day without any action.
- */
-function useNightlyRefresh(manifest) {
-  useEffect(() => {
-    if (!manifest) return;
-    const current = manifestSignature(manifest);
-    let timer,
-      pending = false,
-      stopped = false;
-    const reload = () => window.location.reload();
-    const check = async () => {
-      try {
-        const response = await fetch(apiUrl("/api/dashboard/manifest"), {
-          cache: "no-store",
-        });
-        if (
-          response.ok &&
-          manifestSignature(await response.json()) !== current
-        ) {
-          if (document.visibilityState === "visible") return reload();
-          pending = true;
-          return;
-        }
-      } catch {
-        // A failed check is retried at the next interval.
-      }
-      if (!stopped) timer = window.setTimeout(check, 30 * 60_000);
-    };
-    timer = window.setTimeout(check, untilParisMidnight(Date.now()) + 60_000);
-    const visible = () => {
-      if (pending && document.visibilityState === "visible") reload();
-    };
-    document.addEventListener("visibilitychange", visible);
-    return () => {
-      stopped = true;
-      window.clearTimeout(timer);
-      document.removeEventListener("visibilitychange", visible);
-    };
-  }, [manifest]);
-}
 
 function useClock() {
   const [now, setNow] = useState(() => Date.now());
@@ -134,12 +92,11 @@ function homeScope(f, focusIds) {
   return { ids: focusIds, label: "Top 7 Europe et coupes d’Europe" };
 }
 
-export default function OverviewPage() {
+function LegacyOverview() {
   const f = useFootball(),
     research = useResearch(),
     params = useSearchParams(),
     now = useClock();
-  useNightlyRefresh(f.manifest);
   const focusIds = useMemo(() => europeFocusIds(f.manifest), [f.manifest]);
   const scope = homeScope(f, focusIds),
     scopeKey = scope.ids ? [...scope.ids].sort().join(",") : "all",
@@ -161,10 +118,13 @@ export default function OverviewPage() {
   );
   const scopedRows = useMemo(() => f.rows.filter(inScope), [f.rows, scopeKey]);
   const fixtures = f.data.fixtures;
+  const archived =
+    archiveSeason(f.season, f.manifest.defaultSeason, now) ||
+    Boolean(params.get("v"));
 
   const matchWeek = useMemo(
-    () => matchdayWindow(scopedMatches, now),
-    [scopedMatches, now],
+    () => matchdayWindow(scopedMatches, now, { archive: archived }),
+    [scopedMatches, now, archived],
   );
   const results = useMemo(
     () => weekResults(scopedMatches, matchWeek),
@@ -179,9 +139,13 @@ export default function OverviewPage() {
     () => selectMatchOfTheWeek(results, ranks),
     [results, ranks],
   );
+  const matchIndex = useMemo(
+    () => new Map(scopedMatches.map((m) => [m.id, m])),
+    [scopedMatches],
+  );
   const performances = useMemo(
-    () => weekPerformances(scopedRows, matchWeek),
-    [scopedRows, matchWeek],
+    () => weekPerformances(scopedRows, matchWeek, 60, matchIndex),
+    [scopedRows, matchWeek, matchIndex],
   );
   const potw = playerOfTheWeek(performances);
   const totals = useMemo(
@@ -200,10 +164,6 @@ export default function OverviewPage() {
   const streak = useMemo(() => bestWinStreak(progress), [progress]);
   const defences = useMemo(() => bestDefences(progress), [progress]);
   const defence = defences[0];
-  const matchIndex = useMemo(
-    () => new Map(scopedMatches.map((m) => [m.id, m])),
-    [scopedMatches],
-  );
   const bestOfFeatured = useMemo(
     () =>
       featured
@@ -255,34 +215,6 @@ export default function OverviewPage() {
             rounds: rounds.value || {},
           });
 
-  if (!matchWeek && !tables.length && !highlights.length && !totals.length)
-    return (
-      <Layout
-        path="/"
-        title="Vue d’ensemble"
-        actions={
-          <>
-            <SeasonFilter f={f} compact />
-            <HomePreferences f={f} />
-          </>
-        }
-      >
-        <Empty>
-          Aucun match terminé pour cette sélection.{" "}
-          {f.season !== f.manifest.defaultSeason && (
-            <Link
-              className="inline-link"
-              href={f.href("/", {
-                season: f.manifest.defaultSeason,
-                league: "",
-              })}
-            >
-              Voir la saison en cours
-            </Link>
-          )}
-        </Empty>
-      </Layout>
-    );
   const win = biggestWin(results);
   const streakNext =
     streak &&
@@ -301,6 +233,263 @@ export default function OverviewPage() {
   const others = performances
     .filter((p) => p.playerId !== potw?.playerId)
     .slice(0, 9);
+  return (
+    <OverviewContent
+      f={f}
+      scope={scope}
+      scopeKey={scopeKey}
+      competitions={competitions}
+      archived={archived}
+      now={now}
+      model={{
+        matchWeek,
+        results,
+        tables,
+        highlights,
+        ranks,
+        featured,
+        bestOfFeatured,
+        potw,
+        potwMatch,
+        potwSeason,
+        potwRecent,
+        others,
+        matchIndex,
+        performances,
+        leaders,
+        streak,
+        defences,
+        defence,
+        win,
+        streakNext,
+        raceOpen,
+        ranking,
+        progressValue: seasonProgress(progress),
+        hasSeasonPlayers: totals.length > 0,
+      }}
+    />
+  );
+}
+
+export default function OverviewPage() {
+  const f = useFootball();
+  return f.compactMode ? <CompactOverview /> : <LegacyOverview />;
+}
+
+function CompactOverview() {
+  const f = useFootball(),
+    research = useResearch(),
+    params = useSearchParams(),
+    now = useClock();
+  const scope = homeScope(f, europeFocusIds(f.manifest)),
+    scopeKey = compactScope(scope.ids ? [...scope.ids] : null),
+    archived =
+      archiveSeason(f.season, f.manifest.defaultSeason, now) ||
+      Boolean(params.get("v")),
+    entries = (research?.data.lists || []).flatMap(
+      (list) => list.entries || [],
+    ),
+    saved = (kind) =>
+      [
+        ...new Set(
+          entries
+            .filter((entry) => entry.kind === kind)
+            .map((entry) => entry.id),
+        ),
+      ]
+        .sort()
+        .slice(0, 100)
+        .join(","),
+    summary = useCompactRead(
+      "home",
+      {
+        season: f.season,
+        leagues: scopeKey,
+        generation: compactGeneration(f.manifest),
+        archive: archived ? 1 : undefined,
+        personalTeams: saved("clubs"),
+        personalPlayers: saved("players"),
+      },
+      { clock: Math.floor(now / 300_000), refreshManifest: f.refreshManifest },
+    );
+  if (summary.loading || summary.error)
+    return (
+      <Layout
+        path="/"
+        title="Vue d’ensemble"
+        actions={
+          <>
+            <SeasonFilter f={f} compact />
+            <HomePreferences f={f} />
+          </>
+        }
+      >
+        <AsyncState
+          resource={summary}
+          loading={<p role="status">Chargement de la synthèse…</p>}
+        >
+          {() => null}
+        </AsyncState>
+      </Layout>
+    );
+  return (
+    <AsyncState
+      resource={summary}
+      loading={
+        <Layout path="/" title="Vue d’ensemble">
+          <p role="status">Chargement de la synthèse…</p>
+        </Layout>
+      }
+    >
+      {(value) => {
+        const data = value.data,
+          currentWeek = fixtureWeek(parisDay(now)),
+          validPeriod = archived || data.period?.start === currentWeek.start,
+          results = validPeriod ? data.results || [] : [],
+          ranks = new Map(data.ranks || []),
+          potw = validPeriod ? data.potw : null,
+          others = validPeriod ? data.others || [] : [],
+          competitions = competitionIndex(
+            f.allCompetitions,
+            f.competitions,
+            data.competitions || [],
+          ),
+          highlights = (data.highlights || []).filter(
+            (item) => item.time >= now,
+          );
+        return (
+          <>
+            {summary.refreshing && (
+              <p className="notice" role="status">
+                Actualisation de la synthèse…
+              </p>
+            )}
+            {summary.refreshError && (
+              <p className="notice notice-warning" role="status">
+                La dernière synthèse reste affichée. {summary.refreshError}{" "}
+                <button onClick={summary.retry}>Réessayer</button>
+              </p>
+            )}
+            <OverviewContent
+              f={f}
+              scope={scope}
+              scopeKey={scopeKey}
+              competitions={competitions}
+              archived={archived}
+              now={now}
+              model={{
+                ...data,
+                matchWeek: validPeriod
+                  ? data.period
+                  : { ...currentWeek, current: true },
+                results,
+                ranks,
+                featured: validPeriod ? data.featured : null,
+                bestOfFeatured: validPeriod ? data.bestOfFeatured : null,
+                potw,
+                others,
+                performances: [potw, ...others].filter(Boolean),
+                matchIndex: new Map(
+                  [...results, ...(data.otherMatches || [])].map((match) => [
+                    match.id,
+                    match,
+                  ]),
+                ),
+                win: validPeriod ? data.win : null,
+                tables: data.tables || [],
+                highlights,
+                streakNext:
+                  data.streakNext?.time >= now ? data.streakNext : null,
+                leaders: data.leaders || {
+                  goals: [],
+                  assists: [],
+                  clinical: [],
+                  wasteful: [],
+                },
+                defences: data.defences || [],
+                defence: data.defences?.[0],
+                progressValue: data.seasonProgress,
+                ranking: null,
+                raceOpen: Boolean(data.raceOpen),
+              }}
+            />
+          </>
+        );
+      }}
+    </AsyncState>
+  );
+}
+
+function OverviewContent({
+  f,
+  scope,
+  scopeKey,
+  competitions,
+  archived,
+  now,
+  model,
+}) {
+  const {
+    matchWeek,
+    results,
+    tables,
+    highlights,
+    ranks,
+    featured,
+    bestOfFeatured,
+    potw,
+    potwMatch,
+    potwSeason,
+    potwRecent,
+    others,
+    matchIndex,
+    performances,
+    leaders,
+    streak,
+    defences,
+    defence,
+    win,
+    streakNext,
+    raceOpen,
+    ranking,
+    progressValue,
+    hasSeasonPlayers,
+  } = model;
+  if (
+    !results.length &&
+    !tables.length &&
+    !highlights.length &&
+    !hasSeasonPlayers
+  )
+    return (
+      <Layout
+        path="/"
+        title="Vue d’ensemble"
+        actions={
+          <>
+            <SeasonFilter f={f} compact />
+            <HomePreferences f={f} />
+          </>
+        }
+      >
+        <Empty>
+          {archived
+            ? "Aucun match terminé pour cette sélection."
+            : "Aucun match terminé disponible cette semaine pour cette sélection."}{" "}
+          {f.season !== f.manifest.defaultSeason && (
+            <Link
+              className="inline-link"
+              href={f.href("/", {
+                season: f.manifest.defaultSeason,
+                league: "",
+              })}
+            >
+              Voir la saison en cours
+            </Link>
+          )}
+        </Empty>
+      </Layout>
+    );
   const initialTable = tables.some((t) => t.leagueId === "l_3FJFUl")
     ? "l_3FJFUl"
     : tables[0]?.leagueId;
@@ -326,7 +515,33 @@ export default function OverviewPage() {
         <SeasonFilter f={f} compact />
         <HomePreferences f={f} />
       </div>
-      <HomeTicker results={results} ranks={ranks} competitions={competitions} />
+      {matchWeek && (
+        <div className="home-section-head">
+          <h2>
+            {archived ? `Archives · ${f.season}` : "Semaine en cours"}
+            <span>
+              {weekPeriodLabel(matchWeek)}
+              {!archived && " · résultats provisoires"}
+            </span>
+          </h2>
+        </div>
+      )}
+      {!results.length && !archived && (
+        <p className="home-meta" role="status">
+          Aucun match terminé disponible pour cette semaine.
+        </p>
+      )}
+      {results.length > 0 && !performances.length && (
+        <p className="home-meta" role="status">
+          Aucune note éligible disponible pour cette période (60 min minimum).
+        </p>
+      )}
+      <HomeTicker
+        results={results}
+        ranks={ranks}
+        competitions={competitions}
+        period={matchWeek}
+      />
       <div className="home-bento">
         {featured && (
           <div className={hasWeekSummary ? "home-span-8" : "home-span-12"}>
@@ -335,6 +550,7 @@ export default function OverviewPage() {
               ranks={ranks}
               competition={competitions.get(leagueOf(featured))}
               bestPlayer={bestOfFeatured}
+              period={matchWeek}
             />
           </div>
         )}
@@ -347,10 +563,12 @@ export default function OverviewPage() {
               match={potwMatch}
               season={potwSeason}
               recent={potwRecent}
+              period={matchWeek}
             />
             <NumberOfTheWeek
               win={win}
               competition={win && competitions.get(leagueOf(win.match))}
+              period={matchWeek}
             />
           </div>
         )}
@@ -413,14 +631,18 @@ export default function OverviewPage() {
         {!(raceOpen && ranking?.length >= 3) && (
           <div className="home-span-12">
             <BallonDorTeaser
-              progress={seasonProgress(progress)}
+              progress={progressValue}
               ranking={ranking}
               raceOpen={raceOpen}
             />
           </div>
         )}
       </div>
-      <AlsoShone performances={others} matches={matchIndex} />
+      <AlsoShone
+        performances={others}
+        matches={matchIndex}
+        period={matchWeek}
+      />
     </Layout>
   );
 }

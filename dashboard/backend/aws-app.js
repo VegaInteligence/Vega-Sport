@@ -23,6 +23,13 @@ import { orionProMatchStatisticsRoute } from "./services/orion-pro-match-statist
 import { orionProSpatialAdvancedRoute } from "./services/orion-pro-spatial-advanced.js";
 import { orionProRankingsRoute } from "./services/orion-pro-rankings.js";
 import { orionProSeasonRoute } from "./services/orion-pro-season.js";
+import { relationalDiscoveryRoute } from "./services/relational-discovery.js";
+import { relationalActorRoute } from "./services/relational-actors.js";
+import { relationalPerformanceRoute } from "./services/relational-performance.js";
+import { relationalPlayerReadRoute } from "./services/relational-players.js";
+import { relationalClubReadRoute } from "./services/relational-clubs.js";
+import { relationalHomeReadRoute } from "./services/relational-home.js";
+import { relationalDisciplineRoute } from "./services/relational-discipline.js";
 import {
   manifest,
   partitionPage,
@@ -258,6 +265,19 @@ async function route(req) {
         501,
       );
   }
+  const discovery = await relationalDiscoveryRoute(req, path, p);
+  if (discovery) return discovery;
+  for (const route of [
+    relationalActorRoute,
+    relationalPerformanceRoute,
+    relationalPlayerReadRoute,
+    relationalClubReadRoute,
+    relationalHomeReadRoute,
+    relationalDisciplineRoute,
+  ]) {
+    const response = await route(req, path, p);
+    if (response) return response;
+  }
   const name = path.slice(5);
   if (name === "health") {
     validate(p, {});
@@ -302,7 +322,7 @@ async function route(req) {
         updated_at: r.updated_at,
       })),
       workflowUrl:
-        "https://github.com/OrionQuantPlatform/STATARENA/actions/workflows/collect-football.yml",
+        "https://github.com/VegaInteligence/Vega-Sport/actions/workflows/collect-football.yml",
     });
   }
   if (name === "dashboard/manifest") {
@@ -396,7 +416,11 @@ export function handleRequest(req) {
       const status =
         error.status >= 400 && error.status <= 599 ? error.status : 503;
       if (status === 503)
-        console.error("AWS serving query failed", error.code || error.name, routeLabel(req));
+        console.error(
+          "AWS serving query failed",
+          error.code || error.name,
+          routeLabel(req),
+        );
       return send(
         req,
         {

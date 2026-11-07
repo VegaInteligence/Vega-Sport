@@ -70,3 +70,22 @@ test("an in-flight match endpoint does not become a missing result", async () =>
   assert.equal(totals.covered, 1);
   assert.equal(totals.yellow, 1);
 });
+
+test("leaving a legacy discipline view stops its remaining match reads", async () => {
+  const controller = new AbortController();
+  let calls = 0;
+  const client = {
+    payloads: new Map(),
+    async ensureEndpoint() {
+      calls++;
+      controller.abort();
+    },
+  };
+  await assert.rejects(
+    loadDiscipline(client, [{ id: "a" }, { id: "b" }], "p", 1, {
+      signal: controller.signal,
+    }),
+    { name: "AbortError" },
+  );
+  assert.equal(calls, 1);
+});

@@ -8,18 +8,26 @@ import React, {
   useEffect,
   useLayoutEffect,
   useRef,
+  lazy,
+  Suspense,
 } from "react";
 import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
 import CompetitionOptions from "../components/CompetitionOptions.jsx";
 import { FootballContext, useFootball } from "../hooks/FootballContext.jsx";
 import { Media, Pager, Empty } from "../components/UI.jsx";
-import ClubWorkspace from "../components/ClubWorkspace.jsx";
+const ClubWorkspace = lazy(() => import("../components/ClubWorkspace.jsx"));
 import StandingsClubProfile from "../components/StandingsClubProfile.jsx";
 import { ResearchLists, useHasSaved } from "../components/ResearchUI.jsx";
 import { clubMatchHistory } from "../services/club-matches.js";
 import { fixtureClub } from "../services/club-fixtures.js";
 import { useResource } from "../services/resources.js";
+import useCompactRead from "../hooks/useCompactRead.js";
+import {
+  compactGeneration,
+  compactScope,
+  directoryScopeIds,
+} from "../services/compact-reads.js";
 import { normalizeText, number } from "../services/format.js";
 import {
   countryLabel,
@@ -90,7 +98,8 @@ export default function ClubsPage() {
     [query, setQuery] = useState(""),
     [country, setCountry] = useState("all"),
     [competitionId, setCompetitionId] = useState("all"),
-    [paging, setPaging] = useState({ key: "", page: 1 });
+    [paging, setPaging] = useState({ key: "", page: 1 }),
+    [serverLimit, setServerLimit] = useState(12);
   const params = useSearchParams(),
     id = params.get("id"),
     hasSavedClubs = useHasSaved("clubs");
@@ -100,7 +109,36 @@ export default function ClubsPage() {
     clubTeam = params.get("clubTeam") || "";
   const fromStandings = Boolean(clubLeague && clubSeason && clubTeam);
   const gridRef = useRef(null);
-  const clubs = useMemo(() => {
+  const search = normalizeText(useDeferredValue(query)),
+    savedView =
+      params.get("clubsView") === "saved" ||
+      (!params.get("clubsView") && hasSavedClubs),
+    remoteKey = [
+      f.season,
+      f.focus,
+      search,
+      country,
+      competitionId,
+      serverLimit,
+    ].join("|"),
+    directory = useCompactRead(
+      "clubs",
+      {
+        season: f.season,
+        leagues: compactScope(directoryScopeIds(f.manifest, f.season, f.focus)),
+        generation: compactGeneration(f.manifest),
+        q: search,
+        country: country === "all" ? undefined : country,
+        competition: competitionId === "all" ? undefined : competitionId,
+        page: paging.key === remoteKey ? paging.page : 1,
+        limit: serverLimit,
+      },
+      {
+        enabled: f.compactMode && !id && !savedView,
+        refreshManifest: f.refreshManifest,
+      },
+    );
+  const localClubs = useMemo(() => {
     const map = new Map();
     const competitions = new Map(f.data.competitions.map((c) => [c.id, c]));
     for (const m of f.data.matches)
@@ -130,21 +168,31 @@ export default function ClubsPage() {
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((club) => ({ ...club, search: normalizeText(club.name) }));
   }, [f.data, f.manifest.clubCountries]);
+  const remoteDirectory = f.compactMode && !id,
+    clubs = remoteDirectory ? directory.value?.data.clubs || [] : localClubs;
   const countries = useMemo(
     () =>
-      [...new Set(clubs.map((c) => c.country))].sort((a, b) =>
+      [
+        ...new Set(
+          remoteDirectory
+            ? directory.value?.data.facets.countries || []
+            : clubs.map((c) => c.country),
+        ),
+      ].sort((a, b) =>
         a === "unknown"
           ? 1
           : b === "unknown"
             ? -1
             : countryLabel(a).localeCompare(countryLabel(b), "fr"),
       ),
-    [clubs],
+    [clubs, remoteDirectory, directory.value],
   );
   const activeCountry = countries.includes(country) ? country : "all";
   const competitions = useMemo(() => {
     const represented = new Set(
-      clubs.flatMap((club) => Object.keys(club.competitionCounts)),
+      remoteDirectory
+        ? directory.value?.data.facets.competitionIds || []
+        : clubs.flatMap((club) => Object.keys(club.competitionCounts)),
     );
     return orderedCompetitions(
       f.data.competitions.filter(
@@ -154,7 +202,13 @@ export default function ClubsPage() {
             competitionCountry(competition) === activeCountry),
       ),
     );
-  }, [clubs, f.data.competitions, activeCountry]);
+  }, [
+    clubs,
+    f.data.competitions,
+    activeCountry,
+    remoteDirectory,
+    directory.value,
+  ]);
   const activeCompetition = competitions.find((c) => c.id === competitionId);
   const activeCompetitionId = activeCompetition?.id || "all";
   const localSelected = useMemo(
@@ -214,24 +268,25 @@ export default function ClubsPage() {
         : Object.assign(Object.create(f), { data: profileData }),
     [f, profileData],
   );
-  const search = normalizeText(useDeferredValue(query)),
-    visible = useMemo(
+  const visible = useMemo(
       () =>
-        clubs.filter(
-          (c) =>
-            c.search.includes(search) &&
-            (activeCountry === "all" || c.country === activeCountry) &&
-            (activeCompetitionId === "all" ||
-              c.competitionCounts[activeCompetitionId] > 0),
-        ),
-      [clubs, search, activeCountry, activeCompetitionId],
+        remoteDirectory
+          ? clubs
+          : clubs.filter(
+              (c) =>
+                c.search.includes(search) &&
+                (activeCountry === "all" || c.country === activeCountry) &&
+                (activeCompetitionId === "all" ||
+                  c.competitionCounts[activeCompetitionId] > 0),
+            ),
+      [clubs, search, activeCountry, activeCompetitionId, remoteDirectory],
     ),
     layout = useDirectoryCapacity(
       gridRef,
       !selected && visible.length > 0,
       [f.season, f.focus, search, activeCountry, activeCompetitionId].join("|"),
     ),
-    capacity = layout.capacity,
+    capacity = Math.min(100, layout.capacity),
     pageKey = [
       f.season,
       f.focus,
@@ -240,12 +295,23 @@ export default function ClubsPage() {
       activeCompetitionId,
       capacity,
     ].join("|"),
-    pages = Math.max(1, Math.ceil(visible.length / capacity)),
-    current =
-      paging.key === pageKey && paging.data === f.data
+    pages = remoteDirectory
+      ? directory.value?.pagination.pages || 1
+      : Math.max(1, Math.ceil(visible.length / capacity)),
+    current = remoteDirectory
+      ? directory.value?.pagination.page || 1
+      : paging.key === pageKey && paging.data === f.data
         ? Math.min(paging.page, pages)
         : 1,
-    shown = visible.slice((current - 1) * capacity, current * capacity);
+    shown = remoteDirectory
+      ? visible
+      : visible.slice((current - 1) * capacity, current * capacity),
+    visibleTotal = remoteDirectory
+      ? directory.value?.pagination.total || 0
+      : visible.length;
+  useEffect(() => {
+    if (remoteDirectory) setServerLimit(capacity);
+  }, [remoteDirectory, capacity]);
   useEffect(() => {
     setPaging({ key: pageKey, data: f.data, page: 1 });
   }, [pageKey, f.data]);
@@ -264,17 +330,21 @@ export default function ClubsPage() {
             ← Tous les clubs
           </Link>
           <FootballContext.Provider value={profileContext}>
-            <ClubWorkspace
-              key={selected.id}
-              club={{
-                ...selected,
-                countryLabel:
-                  selected.country === "unknown"
-                    ? ""
-                    : countryLabel(selected.country),
-              }}
-              history={clubMatches}
-            />
+            <Suspense
+              fallback={<p role="status">Chargement du profil du club…</p>}
+            >
+              <ClubWorkspace
+                key={selected.id}
+                club={{
+                  ...selected,
+                  countryLabel:
+                    selected.country === "unknown"
+                      ? ""
+                      : countryLabel(selected.country),
+                }}
+                history={clubMatches}
+              />
+            </Suspense>
           </FootballContext.Provider>
         </>
       ) : fromStandings ? (
@@ -368,7 +438,7 @@ export default function ClubsPage() {
             aria-live="polite"
           >
             <span>
-              {number(visible.length)} club{visible.length === 1 ? "" : "s"}
+              {number(visibleTotal)} club{visibleTotal === 1 ? "" : "s"}
             </span>
             {(query ||
               activeCountry !== "all" ||
@@ -385,6 +455,28 @@ export default function ClubsPage() {
               </button>
             )}
           </div>
+          {remoteDirectory && directory.loading && (
+            <p role="status" className="loading-state">
+              Chargement des clubs…
+            </p>
+          )}
+          {remoteDirectory && directory.error && (
+            <p role="alert">
+              {directory.error}{" "}
+              <button onClick={directory.retry}>Réessayer</button>
+            </p>
+          )}
+          {remoteDirectory && directory.refreshing && (
+            <p role="status" className="notice">
+              Actualisation des clubs…
+            </p>
+          )}
+          {remoteDirectory && directory.refreshError && (
+            <p role="status" className="notice notice-warning">
+              La dernière publication reste affichée.{" "}
+              <button onClick={directory.retry}>Réessayer</button>
+            </p>
+          )}
           <div
             className="competition-grid directory-grid club-directory-grid"
             ref={gridRef}
@@ -423,12 +515,21 @@ export default function ClubsPage() {
               </Link>
             ))}
           </div>
-          {!visible.length && <Empty>Aucun club pour ces filtres.</Empty>}
+          {!visible.length &&
+            !(remoteDirectory && (directory.loading || directory.error)) && (
+              <Empty>Aucun club pour ces filtres.</Empty>
+            )}
           <Pager
             page={current}
             total={pages}
             label="Pagination des clubs"
-            onChange={(page) => setPaging({ key: pageKey, data: f.data, page })}
+            onChange={(page) =>
+              setPaging({
+                key: remoteDirectory ? remoteKey : pageKey,
+                data: f.data,
+                page,
+              })
+            }
           />
         </>
       )}

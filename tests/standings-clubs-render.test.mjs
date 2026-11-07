@@ -61,6 +61,7 @@ test("each standings team links to its matching profile or a source-backed fallb
       cupWorkerSnapshot: async () => ({ tables: [] }),
     },
     "../services/cup-catalog.js": { WORLD_CUP_ID: "l_1XLtP0" },
+    "../services/catalog-client.js": { associationRanking: async () => [] },
     "../services/competition-selector.js": {
       FEATURED_EUROPE_IDS: [],
       competitionCountry: () => "",

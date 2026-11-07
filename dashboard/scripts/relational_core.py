@@ -1,6 +1,7 @@
 """Typed application read models. Publication is owned by rematerialize's transaction."""
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 from psycopg import sql
@@ -74,30 +75,47 @@ def install_schema(db):
     db.execute((ROOT/'dashboard/backend/migrations/020_publication_foreign_key_indexes.sql').read_text())
 
 
+MAX_CORE_WRITE_ROWS = 500
+MAX_CORE_WRITE_BYTES = 512 * 1024
+
+
+def row_batches(rows, *, max_rows=MAX_CORE_WRITE_ROWS, max_bytes=MAX_CORE_WRITE_BYTES):
+    """Bound every statement independently of the number of matches in a season."""
+    batch, size = [], 0
+    for row in rows:
+        weight = len(json.dumps(row, ensure_ascii=False, allow_nan=False, default=str).encode())
+        if weight > max_bytes:
+            raise ValueError("Core row exceeds the bounded publication envelope")
+        if batch and (len(batch) >= max_rows or size + weight > max_bytes):
+            yield batch
+            batch, size = [], 0
+        batch.append(row)
+        size += weight
+    if batch:
+        yield batch
+
+
 def _many(db, table, rows, update=True):
+    for batch in row_batches(rows):
+        _many_batch(db, table, batch, update=update)
+
+
+def _many_batch(db, table, rows, update=True):
     if not rows: return
     keys = list(rows[0]); columns = sql.SQL(',').join(map(sql.Identifier,keys))
-    if len(rows) >= 100:
-        # Large editions have tens of thousands of facts. COPY avoids sending an
-        # INSERT command for every fact while the target table still enforces all
-        # its constraints and the same conflict policy in the caller's transaction.
-        staged = sql.Identifier('_statarena_publish_' + table)
-        target = sql.Identifier('statarena_app', table)
-        with db.cursor() as cursor:
-            cursor.execute(sql.SQL('CREATE TEMP TABLE IF NOT EXISTS {} AS SELECT {} FROM {} WITH NO DATA').format(staged, columns, target))
-            cursor.execute(sql.SQL('TRUNCATE {}').format(staged))
-            with cursor.copy(sql.SQL('COPY {} ({}) FROM STDIN').format(staged, columns)) as copy:
-                for row in rows:
-                    copy.write_row(tuple(row.get(key) for key in keys))
-            statement = sql.SQL('INSERT INTO {} ({}) SELECT {} FROM {} WHERE true').format(target, columns, columns, staged)
-            if update:
-                statement += sql.SQL(' ON CONFLICT DO NOTHING')
-            cursor.execute(statement)
+    # Bounded multi-row INSERT needs no scratch table, bulk transaction or COPY
+    # transport. It applies the same target constraints and conflict policy.
+    maximum = max(1, 60000 // len(keys))
+    if len(rows) > maximum:
+        for start in range(0, len(rows), maximum):
+            _many_batch(db, table, rows[start:start + maximum], update=update)
         return
-    statement = sql.SQL('INSERT INTO statarena_app.{} ({}) VALUES ({})').format(sql.Identifier(table),columns,sql.SQL(',').join(sql.Placeholder() for _ in keys))
+    values = sql.SQL('(') + sql.SQL(',').join(sql.Placeholder() for _ in keys) + sql.SQL(')')
+    statement = sql.SQL('INSERT INTO statarena_app.{} ({}) VALUES {}').format(
+        sql.Identifier(table), columns, sql.SQL(',').join(values for _ in rows))
     if update:
         statement += sql.SQL(' ON CONFLICT DO NOTHING')
-    with db.cursor() as cursor: cursor.executemany(statement,[tuple(r.get(k) for k in keys) for r in rows])
+    db.execute(statement, [r.get(k) for r in rows for k in keys])
 
 
 def _finite(value):
@@ -108,19 +126,42 @@ def _identity(value):
     return (value.get('name'),value.get('id'),True) if isinstance(value,dict) else (value,None,False)
 
 
-def publish_snapshot(db, season, league_id, snapshot):
-    """Caller owns transaction + ingestion lease. Never publishes files or calls providers."""
+def publication_digest(snapshot):
     encoded = json.dumps(snapshot,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False)
-    digest = hashlib.sha256(b'statarena-core-011\0' + encoded.encode()).hexdigest()
+    return hashlib.sha256(b'statarena-core-011\0' + encoded.encode()).hexdigest()
+
+
+def _partition_metadata(db, season, league_id, digest, meta, *, update=False):
+    if update:
+        db.execute('''UPDATE statarena_app.partitions SET source_digest=%s,source=%s,retrieved_at=%s,
+            rating_source=%s,ranking_available=%s,start_date=%s,end_date=%s,published_at=clock_timestamp()
+            WHERE season=%s AND league_id=%s''',
+            (digest,meta.get('source'),meta.get('retrievedAt'),meta.get('ratingSource'),
+             meta.get('rankingAvailable'),meta.get('startDate'),meta.get('endDate'),season,league_id))
+    else:
+        _many(db,'partitions',[dict(season=season,league_id=league_id,source_digest=digest,source=meta.get('source'),retrieved_at=meta.get('retrievedAt'),rating_source=meta.get('ratingSource'),ranking_available=meta.get('rankingAvailable'),start_date=meta.get('startDate'),end_date=meta.get('endDate'))])
+    _many(db,'partition_counts',[dict(season=season,league_id=league_id,metric_key=k,value=v) for k,v in meta.items() if isinstance(v,(int,float)) and not isinstance(v,bool)])
+    _many(db,'partition_notes',[dict(season=season,league_id=league_id,ordinal=i,note=str(n)) for i,n in enumerate(meta.get('notes') or [])])
+
+
+def _publish_full_snapshot(db, season, league_id, snapshot, *, metadata_only=False):
+    """Caller owns transaction + ingestion lease and proves facts unchanged for metadata_only."""
+    digest = publication_digest(snapshot)
     prior = db.execute('SELECT source_digest FROM statarena_app.partitions WHERE season=%s AND league_id=%s',(season,league_id)).fetchone()
     if prior and prior[0] == digest: return 0
+    meta=snapshot.get('meta') or {}
+    if prior and metadata_only:
+        # Never delete the partition row: its cascades include published metadata.
+        # The caller has compared all facts, identities, list orders and metric definitions.
+        db.execute('DELETE FROM statarena_app.partition_counts WHERE season=%s AND league_id=%s',(season,league_id))
+        db.execute('DELETE FROM statarena_app.partition_notes WHERE season=%s AND league_id=%s',(season,league_id))
+        _partition_metadata(db, season, league_id, digest, meta, update=True)
+        db.execute('UPDATE statarena_app.publications SET generation=generation+1,published_at=clock_timestamp()')
+        return 1
     db.execute('DELETE FROM statarena_app.matches WHERE season=%s AND league_id=%s',(season,league_id))
     db.execute('DELETE FROM statarena_app.fixtures WHERE season=%s AND league_id=%s',(season,league_id))
     db.execute('DELETE FROM statarena_app.partitions WHERE season=%s AND league_id=%s',(season,league_id))
-    meta=snapshot.get('meta') or {}
-    _many(db,'partitions',[dict(season=season,league_id=league_id,source_digest=digest,source=meta.get('source'),retrieved_at=meta.get('retrievedAt'),rating_source=meta.get('ratingSource'),ranking_available=meta.get('rankingAvailable'),start_date=meta.get('startDate'),end_date=meta.get('endDate'))])
-    _many(db,'partition_counts',[dict(season=season,league_id=league_id,metric_key=k,value=v) for k,v in meta.items() if isinstance(v,(int,float)) and not isinstance(v,bool)])
-    _many(db,'partition_notes',[dict(season=season,league_id=league_id,ordinal=i,note=str(n)) for i,n in enumerate(meta.get('notes') or [])])
+    _partition_metadata(db, season, league_id, digest, meta)
     competitions = {c['id']:c for c in snapshot.get('competitions') or []}
     for m in snapshot.get('matches') or []: competitions.setdefault(m.get('leagueId') or league_id,dict(id=m.get('leagueId') or league_id,name=m.get('league'),country=m.get('country')))
     for c in competitions.values():
@@ -184,3 +225,15 @@ def publish_snapshot(db, season, league_id, snapshot):
         _many(db,'partition_metrics',[dict(season=season,league_id=league_id,metric_key=m['key'],ordinal=i)])
     db.execute('UPDATE statarena_app.publications SET generation=generation+1,published_at=clock_timestamp()')
     return 1
+
+
+def publish_snapshot(db, season, league_id, snapshot, *, metadata_only=False, previous_state=None):
+    """Publish one atomic scope; the legacy path remains an explicit rollback option."""
+    mode = os.environ.get("STATARENA_INCREMENTAL_CORE", "1")
+    if mode not in {"0", "1"}:
+        raise ValueError("STATARENA_INCREMENTAL_CORE must be 0 or 1")
+    if metadata_only or mode == "0":
+        return _publish_full_snapshot(db, season, league_id, snapshot, metadata_only=metadata_only)
+    from relational_core_delta import publish_incremental
+
+    return publish_incremental(db, season, league_id, snapshot, previous_state=previous_state)

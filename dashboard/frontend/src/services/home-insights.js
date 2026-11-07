@@ -1,4 +1,4 @@
-import { parisDay, shiftDay, validDay } from "./fixtures.js";
+import { fixtureWeek, parisDay, validDay } from "./fixtures.js";
 import { FEATURED_CLUB_IDS } from "./home.js";
 import { knockoutStage } from "./knockout-bracket.js";
 import { SIMPLE_LEAGUES } from "./competition-standings.js";
@@ -48,52 +48,96 @@ export const shortCompetition = (id, name = "") =>
     .slice(0, 4)
     .toUpperCase();
 const hasScore = (value) => Number.isInteger(value) && value >= 0;
-const dayOf = (record) =>
-  typeof record?.date === "string" ? record.date.slice(0, 10) : "";
+const explicitKickoff = (record) => {
+  const value = record?.timeUtc || record?.time_utc;
+  return typeof value === "string" && /T.*(?:Z|[+-]\d{2}:\d{2})$/i.test(value)
+    ? Date.parse(value)
+    : NaN;
+};
+export const matchDay = (record) => {
+  const time = explicitKickoff(record);
+  return Number.isFinite(time)
+    ? parisDay(time)
+    : typeof record?.date === "string"
+      ? record.date.slice(0, 10)
+      : "";
+};
 const sum = (values) => values.reduce((a, b) => a + b, 0);
 
 /** Time of a match or fixture: an explicit UTC timestamp, else noon on its date. */
 export function kickoffTime(record) {
-  const value = record?.timeUtc || record?.time_utc;
-  const time =
-    typeof value === "string" && /T.*(?:Z|[+-]\d{2}:\d{2})$/i.test(value)
-      ? Date.parse(value)
-      : NaN;
+  const time = explicitKickoff(record);
   if (Number.isFinite(time)) return time;
-  const day = dayOf(record);
+  const day = matchDay(record);
   return validDay(day) ? Date.parse(day + "T12:00:00Z") : NaN;
 }
 export const finishedMatch = (match) =>
   match &&
-  match.status !== "not_started" &&
+  (match.status === "finished" ||
+    (match.status == null && match.finished === true)) &&
   match.finished !== false &&
   hasScore(match.home?.score) &&
   hasScore(match.away?.score);
 
 /**
- * The home shows the latest played week of the selection: the seven Paris days
- * ending on the last finished match. On a past or quiet season it stays on the
- * last week that has results instead of turning empty.
+ * Live widgets follow the current Monday–Sunday in Paris, including empty
+ * weeks. Only an explicitly selected archive may use its last played week.
+ * Calendar days, rather than 7 × 24 hours, preserve the boundaries across DST.
  */
-export function matchdayWindow(matches, now, days = 7) {
-  let latest = -Infinity;
-  for (const match of matches || []) {
-    if (!finishedMatch(match)) continue;
-    const time = kickoffTime(match);
-    if (Number.isFinite(time) && time <= now && time > latest) latest = time;
+export function matchdayWindow(matches, now, { archive = false } = {}) {
+  let anchor = now;
+  if (archive) {
+    anchor = -Infinity;
+    for (const match of matches || []) {
+      if (!finishedMatch(match)) continue;
+      const time = kickoffTime(match);
+      if (Number.isFinite(time) && time <= now && time > anchor) anchor = time;
+    }
+    if (!Number.isFinite(anchor)) return null;
   }
-  if (!Number.isFinite(latest)) return null;
-  const end = parisDay(latest);
   return {
-    start: shiftDay(end, 1 - days),
-    end,
-    current: end >= shiftDay(parisDay(now), -days),
+    ...fixtureWeek(parisDay(anchor)),
+    current: !archive,
+    asOf: now,
+    asOfDay: parisDay(now),
   };
 }
+
+/** A calendar-year season may still be active beside a split-year season. */
+export function archiveSeason(season, defaultSeason, now) {
+  return Boolean(
+    season &&
+    defaultSeason &&
+    season < defaultSeason &&
+    season !== parisDay(now).slice(0, 4),
+  );
+}
+
+const periodFormat = new Intl.DateTimeFormat("fr-FR", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
+export function weekPeriodLabel(period) {
+  if (!period || !validDay(period.start) || !validDay(period.end)) return "";
+  return periodFormat.formatRange(
+    new Date(period.start + "T12:00:00Z"),
+    new Date(period.end + "T12:00:00Z"),
+  );
+}
+
 export function inWindow(record, window) {
-  const day = dayOf(record);
+  const day = matchDay(record),
+    time = explicitKickoff(record);
   return (
-    Boolean(window) && validDay(day) && day >= window.start && day <= window.end
+    Boolean(window) &&
+    validDay(day) &&
+    day >= window.start &&
+    day <= window.end &&
+    (!Number.isFinite(window.asOf) ||
+      (day <= (window.asOfDay || parisDay(window.asOf)) &&
+        (!Number.isFinite(time) || time <= window.asOf)))
   );
 }
 export function weekResults(matches, window) {
@@ -449,11 +493,26 @@ export function bestDefences(progress, limit = 3) {
 }
 
 /** Best rated performance per player in the window, 60 minutes or more. */
-export function weekPerformances(appearances, window, minMinutes = 60) {
-  const best = new Map();
+export function weekPerformances(
+  appearances,
+  window,
+  minMinutes = 60,
+  matches = null,
+) {
+  const best = new Map(),
+    eligibleMatches = new Map();
   for (const row of appearances || []) {
+    const match = matches?.get(row.matchId);
+    if (matches && !eligibleMatches.has(row.matchId))
+      eligibleMatches.set(
+        row.matchId,
+        Boolean(finishedMatch(match) && inWindow(match, window)),
+      );
     if (
-      !inWindow(row, window) ||
+      (matches && !eligibleMatches.get(row.matchId)) ||
+      (!matches && row.status != null && row.status !== "finished") ||
+      row.finished === false ||
+      (!matches && !inWindow(row, window)) ||
       !(row.minutes >= minMinutes) ||
       !Number.isFinite(row.rating)
     )
@@ -514,6 +573,8 @@ export function seasonTotals(appearances, season) {
           assists: 0,
           xg: 0,
           xa: 0,
+          xgMatches: 0,
+          xaMatches: 0,
           ratingSum: 0,
           ratingMinutes: 0,
         }),
@@ -522,8 +583,14 @@ export function seasonTotals(appearances, season) {
     p.minutes += row.minutes;
     p.goals += row.goals || 0;
     p.assists += row.assists || 0;
-    p.xg += Number.isFinite(row.xg) ? row.xg : 0;
-    p.xa += Number.isFinite(row.xa) ? row.xa : 0;
+    if (Number.isFinite(row.xg)) {
+      p.xg += row.xg;
+      p.xgMatches++;
+    }
+    if (Number.isFinite(row.xa)) {
+      p.xa += row.xa;
+      p.xaMatches++;
+    }
     if (Number.isFinite(row.rating)) {
       p.ratingSum += row.rating * row.minutes;
       p.ratingMinutes += row.minutes;
@@ -540,6 +607,10 @@ export function seasonTotals(appearances, season) {
   }
   return [...players.values()].map((p) => ({
     ...p,
+    // A season total must cover the same matches as goals/assists. A partial
+    // xG sum is not zero and must not create a false finishing outperformance.
+    xg: p.xgMatches === p.apps ? p.xg : null,
+    xa: p.xaMatches === p.apps ? p.xa : null,
     rating: p.ratingMinutes ? p.ratingSum / p.ratingMinutes : null,
   }));
 }
@@ -723,24 +794,3 @@ export function recentRatings(appearances, playerId, season, count = 6) {
     .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
     .slice(-count);
 }
-
-const parisClock = new Intl.DateTimeFormat("en-GB", {
-  timeZone: "Europe/Paris",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-  hourCycle: "h23",
-});
-/** Milliseconds until the next midnight in Paris. */
-export function untilParisMidnight(now) {
-  const [h, m, s] = parisClock.format(new Date(now)).split(":").map(Number);
-  return ((24 - h) * 3600 - m * 60 - s) * 1000;
-}
-/** Identity of the published data: changes when any season chunk changes. */
-export const manifestSignature = (manifest) =>
-  JSON.stringify(
-    (manifest?.seasons || []).map((season) => [
-      season.id,
-      (season.chunks || []).map((c) => c.sourceDigest || c.sha256 || c.path),
-    ]),
-  );

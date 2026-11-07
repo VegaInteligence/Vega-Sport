@@ -7,13 +7,20 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
 import { Kicker, lastName, matchHref, shortDay } from "./HomeCommon.jsx";
 import { playerLeaderboardHref } from "../services/player-leaderboard.js";
+import { matchDay, weekPeriodLabel } from "../services/home-insights.js";
 
 const plural = (n, word) => `${number(n)} ${word}${n > 1 ? "s" : ""}`;
 const share = (a, b) =>
   Number.isFinite(a) && b > 0 ? `${number((a / b) * 100)} %` : "—";
 
 /** Poster-style card of the week's best performance, with its recent form and season. */
-export function PlayerOfTheWeek({ performance, match, season, recent = [] }) {
+export function PlayerOfTheWeek({
+  performance,
+  match,
+  season,
+  recent = [],
+  period,
+}) {
   const f = useFootball(),
     p = performance;
   if (!p) return null;
@@ -24,8 +31,10 @@ export function PlayerOfTheWeek({ performance, match, season, recent = [] }) {
         {lastName(p.name)}
       </span>
       <div className="home-potw-top">
-        <Kicker tone="green">Joueur de la semaine</Kicker>
-        <span className="home-chip">{shortDay(p.date)}</span>
+        <Kicker tone="green">
+          Joueur de la semaine{period?.current === false && " · archives"}
+        </Kicker>
+        <span className="home-chip">{shortDay(matchDay(match || p))}</span>
       </div>
       <button
         type="button"
@@ -99,7 +108,7 @@ export function PlayerOfTheWeek({ performance, match, season, recent = [] }) {
             {recent.map((r) => (
               <li
                 key={r.id}
-                title={`${shortDay(r.date)} · ${number(r.rating, 2)}`}
+                title={`${shortDay(matchDay(r))} · ${number(r.rating, 2)}`}
               >
                 <i
                   className={r.id === p.id ? "is-current" : ""}
@@ -147,7 +156,7 @@ export function PlayerOfTheWeek({ performance, match, season, recent = [] }) {
   );
 }
 
-export function AlsoShone({ performances, matches }) {
+export function AlsoShone({ performances, matches, period }) {
   const f = useFootball();
   if (!performances.length) return null;
   return (
@@ -155,7 +164,12 @@ export function AlsoShone({ performances, matches }) {
       <div className="home-section-head">
         <h2 id="home-also">
           Ils ont aussi brillé{" "}
-          <span>Meilleures notes de la semaine, 60 min minimum</span>
+          <span>
+            {period
+              ? `${weekPeriodLabel(period)}${period.current ? "" : " · archives"}`
+              : "Meilleures notes de la semaine"}
+            {" · 60 min minimum"}
+          </span>
         </h2>
         <Link className="inline-link" href={f.href("/joueurs/")}>
           Tous les joueurs <Icon name="arrow" />

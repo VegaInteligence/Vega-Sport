@@ -5,7 +5,7 @@ import PlayerDirectory from "./PlayerDirectory.jsx";
 import { ResearchLists, ResearchTabs, useHasSaved } from "./ResearchUI.jsx";
 const PlayerExplorer = lazy(() => import("./PlayerExplorer.jsx"));
 const PlayerIndices = lazy(() => import("./PlayerIndices.jsx"));
-export default function PlayerWorkspace({ profiles, ...props }) {
+export default function PlayerWorkspace({ profiles, resource, ...props }) {
   const params = useSearchParams(),
     hasSaved = useHasSaved("players");
   const items = [
@@ -44,18 +44,43 @@ export default function PlayerWorkspace({ profiles, ...props }) {
             </div>
           }
         >
-          {view === "table" && <PlayerDirectory {...props} />}
-          {view === "explore" && (
-            <PlayerExplorer
-              rows={props.rows}
-              mode={props.mode}
-              onMode={props.onMode}
-            />
+          {resource?.loading ? (
+            <p className="loading-state" role="status">
+              Chargement{" "}
+              {view === "table" ? "des joueurs" : "de la cohorte complète"}…
+            </p>
+          ) : resource?.error ? (
+            <div role="alert">
+              {resource.error}{" "}
+              <button onClick={resource.retry}>Réessayer</button>
+            </div>
+          ) : (
+            <>
+              {resource?.refreshing && (
+                <p className="notice" role="status">
+                  Actualisation des joueurs…
+                </p>
+              )}
+              {resource?.refreshError && (
+                <p className="notice notice-warning" role="status">
+                  La dernière publication reste affichée.{" "}
+                  <button onClick={resource.retry}>Réessayer</button>
+                </p>
+              )}
+              {view === "table" && <PlayerDirectory {...props} />}
+              {view === "explore" && (
+                <PlayerExplorer
+                  rows={props.rows}
+                  mode={props.mode}
+                  onMode={props.onMode}
+                />
+              )}
+              {view === "indices" && (
+                <PlayerIndices rows={props.rows} profiles={profiles} />
+              )}
+              {view === "lists" && <ResearchLists kind="players" />}
+            </>
           )}
-          {view === "indices" && (
-            <PlayerIndices rows={props.rows} profiles={profiles} />
-          )}
-          {view === "lists" && <ResearchLists kind="players" />}
         </Suspense>
       </div>
     </>

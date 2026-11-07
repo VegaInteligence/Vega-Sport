@@ -23,6 +23,14 @@ import {
   playerRoutes,
 } from "../services/scouting-history.js";
 import { useResource } from "../services/resources.js";
+import {
+  compactGeneration,
+  compactQuery,
+  compactScope,
+  playerReadParams,
+  readCompactPages,
+  supportsCompactRead,
+} from "../services/compact-reads.js";
 import { isNumber, number } from "../services/format.js";
 import { EUROPE_FOCUS_IDS } from "../../../shared/competition-scope.js";
 import { AsyncState, Empty, Modal, Segments } from "./UI.jsx";
@@ -30,54 +38,120 @@ import { MetricInfo, MetricPicker, ReportButton } from "./ResearchUI.jsx";
 import { ResearchRadar } from "./ResearchCharts.jsx";
 import CompetitionOptions from "./CompetitionOptions.jsx";
 
-export async function comparisonSamples(f, entries) {
-  const routing = await playerRoutes(f.manifest,{players:entries.map(entry=>entry.id)});
+export async function comparisonSamples(f, entries, { signal } = {}) {
+  const routing = await playerRoutes(
+      f.manifest,
+      { players: entries.map((entry) => entry.id) },
+      fetch,
+      { signal },
+    ),
+    cohorts = new Map();
   return Promise.all(
     entries.map(async (entry) => {
-      const available = routing.routes[entry.id]?.[entry.season] || [];
-      const selectedIds = available.filter(
-        (id) =>
-          (entry.scope.league === "all" || entry.scope.league === id) &&
-          (!entry.scope.leagues?.length || entry.scope.leagues.includes(id)) &&
-          (entry.scope.focus !== "europe" || EUROPE_FOCUS_IDS.has(id)),
-      );
-      const loaded = new Set(f.data.competitions.map((c) => c.id));
-      const canReuse =
-        entry.season === f.season && selectedIds.every((id) => loaded.has(id));
-      const data = canReuse
-        ? f.data
-        : (await loadPlayerSeason(f.manifest, entry.id, entry.season,"all",routing)).data;
-      const empty = {
-        ...entry,
-        profile: { ...aggregateSeason([], entry.id), name: entry.name },
-        profiles: [],
-        available,
-      };
-      if (!data) return empty;
-      const context = {
-        ...EMPTY_ADVANCED,
-        role: entry.scope.role,
-        venue: entry.scope.venue,
-        result: entry.scope.result,
-        from: entry.scope.from,
-        to: entry.scope.to,
-      };
-      const rows = playerDirectoryScope(
-        data.appearances.filter((row) => selectedIds.includes(row.leagueId)),
-        entry.season,
-        {
-          league: entry.scope.league,
-          query: "",
-          minutes: 0,
-          match: "all",
-          advanced: context,
+      const available = routing.routes[entry.id]?.[entry.season] || [],
+        selectedIds = available.filter(
+          (id) =>
+            (entry.scope.league === "all" || entry.scope.league === id) &&
+            (!entry.scope.leagues?.length ||
+              entry.scope.leagues.includes(id)) &&
+            (entry.scope.focus !== "europe" || EUROPE_FOCUS_IDS.has(id)),
+        ),
+        context = {
+          ...EMPTY_ADVANCED,
+          role: entry.scope.role,
+          venue: entry.scope.venue,
+          result: entry.scope.result,
+          from: entry.scope.from,
+          to: entry.scope.to,
         },
-        new Map(data.matches.map((m) => [m.id, m])),
-      );
-      const profiles = aggregateSeasonPlayers(rows);
+        empty = {
+          ...entry,
+          profile: { ...aggregateSeason([], entry.id), name: entry.name },
+          profiles: [],
+          available,
+        };
+      if (supportsCompactRead(f.manifest, "players")) {
+        const params = {
+            ...playerReadParams(
+              {
+                ...f,
+                season: entry.season,
+                focus: entry.scope.focus,
+                filters: {
+                  league: "all",
+                  leagues: selectedIds,
+                  query: "",
+                  minutes: 0,
+                  basis: "total",
+                  match: "all",
+                  advanced: context,
+                },
+              },
+              { cohort: true, limit: 100 },
+            ),
+            leagues: compactScope(selectedIds),
+            generation: compactGeneration(f.manifest),
+          },
+          key = compactQuery(params);
+        if (!cohorts.has(key))
+          cohorts.set(
+            key,
+            readCompactPages("players", params, { signal }).then((value) =>
+              value.pages.flatMap((page) =>
+                page.players.map((row) => row.profile),
+              ),
+            ),
+          );
+        const profiles = await cohorts.get(key);
+        return {
+          ...entry,
+          profile:
+            profiles.find((profile) => profile.id === entry.id) ||
+            empty.profile,
+          profiles,
+          available,
+          competitionNames: [
+            ...new Set(profiles.flatMap((profile) => profile.leagues || [])),
+          ],
+        };
+      }
+      const loaded = new Set(
+          f.data.competitions.map((competition) => competition.id),
+        ),
+        canReuse =
+          !f.compactMode &&
+          entry.season === f.season &&
+          selectedIds.every((id) => loaded.has(id)),
+        data = canReuse
+          ? f.data
+          : (
+              await loadPlayerSeason(
+                f.manifest,
+                entry.id,
+                entry.season,
+                "all",
+                routing,
+                { signal },
+              )
+            ).data;
+      if (!data) return empty;
+      const rows = playerDirectoryScope(
+          data.appearances.filter((row) => selectedIds.includes(row.leagueId)),
+          entry.season,
+          {
+            league: entry.scope.league,
+            query: "",
+            minutes: 0,
+            match: "all",
+            advanced: context,
+          },
+          new Map(data.matches.map((match) => [match.id, match])),
+        ),
+        profiles = aggregateSeasonPlayers(rows);
       return {
         ...entry,
-        profile: profiles.find((p) => p.id === entry.id) || empty.profile,
+        profile:
+          profiles.find((profile) => profile.id === entry.id) || empty.profile,
         profiles,
         available,
         competitionNames: [...new Set(rows.map((row) => row.league))],
@@ -251,7 +325,7 @@ export default function PlayerComparison({ onClose }) {
   const entries = r.data.comparison;
   const resource = useResource(
     `comparison:${f.client.id}:${entries.map(comparisonKey).join("|")}`,
-    () => comparisonSamples(f, entries),
+    ({ signal }) => comparisonSamples(f, entries, { signal }),
     entries.length >= 2,
   );
   const change = (index, patch) =>

@@ -12,6 +12,7 @@ import { useResource, json } from "../services/resources.js";
 import { loadRemoteMatch } from "../services/remote-match.js";
 import { ResearchLists, useHasSaved } from "../components/ResearchUI.jsx";
 import ProMatchesPage from "./ProMatchesPage.jsx";
+import PaginatedMatches from "../components/PaginatedMatches.jsx";
 function RemoteDetail({ id }) {
   const f = useFootball(),
     resource = useResource(`remote-match:${id}`, () =>
@@ -45,7 +46,7 @@ function LegacyMatchesPage() {
       path="/matchs/"
       title="Calendrier"
       filters={!id && !saved}
-      filterKind={upcoming ? "fixtures" : "performances"}
+      filterKind={upcoming || f.pagedMatches ? "fixtures" : "performances"}
       hideHeading={!!id}
       className={id ? "match-workspace" : ""}
       subnav={
@@ -91,6 +92,8 @@ function LegacyMatchesPage() {
         </>
       ) : saved ? (
         <ResearchLists kind="matches" />
+      ) : f.pagedMatches ? (
+        <PaginatedMatches upcoming={upcoming} />
       ) : upcoming ? (
         <UpcomingMatches />
       ) : (

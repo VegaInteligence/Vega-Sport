@@ -11,13 +11,18 @@ on:
         type: boolean
         default: false
       minutes:
-        description: Maximum serving-table build minutes
+        description: Maximum serving-table build minutes (1-100; job reserves 20 minutes for setup and commit)
         default: "100"
         required: true
       batch:
         description: Queue fetch size (each partition commits separately)
         default: "10"
         required: true
+      lineup_reader:
+        description: Optional lineup reader verification or reversible switch after installation
+        type: choice
+        options: [unchanged, verify, unified, legacy]
+        default: unchanged
 permissions:
   contents: read
 concurrency:
@@ -61,14 +66,37 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [[ ! "$MATERIALIZE_MINUTES" =~ ^[1-9][0-9]{0,2}$ ]] || (( 10#$MATERIALIZE_MINUTES > 100 )); then
+            echo 'Build minutes must be between 1 and 100 within this 120-minute job' >&2; exit 1
+          fi
+          if [[ ! "$MATERIALIZE_BATCH" =~ ^[1-9][0-9]{0,2}$ ]] || (( 10#$MATERIALIZE_BATCH > 100 )); then
+            echo 'Queue batch must be between 1 and 100' >&2; exit 1
+          fi
           args=(--minutes "$MATERIALIZE_MINUTES" --batch "$MATERIALIZE_BATCH")
           if [ "$QUEUE_ALL" = "true" ]; then args+=(--all); fi
           if [ "$SCHEMA_ONLY" = "true" ]; then args+=(--install-only); fi
           python dashboard/scripts/relational_materialize.py "${args[@]}" | tee rematerialize.log
+      - name: Verify or switch the lineup read contract
+        if: inputs.lineup_reader != '' && inputs.lineup_reader != 'unchanged'
+        env:
+          LINEUP_READER: ${{ inputs.lineup_reader }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          case "$LINEUP_READER" in
+            verify) ;;
+            unified) args+=(--activate) ;;
+            legacy) args+=(--rollback) ;;
+            *) echo 'Invalid lineup reader operation' >&2; exit 1 ;;
+          esac
+          python dashboard/scripts/lineup_consolidation.py "${args[@]}" | tee lineup-contract.log
       - name: Save publication receipt
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: rematerialize-${{ github.run_id }}-${{ github.run_attempt }}
-          path: rematerialize.log
+          path: |
+            rematerialize.log
+            lineup-contract.log
           if-no-files-found: ignore

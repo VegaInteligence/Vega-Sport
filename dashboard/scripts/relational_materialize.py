@@ -1,6 +1,7 @@
 """Publish typed website tables from verified AWS staging inputs under the ingestion lease."""
 
 import argparse
+import datetime as dt
 import hashlib
 import json
 import os
@@ -19,7 +20,8 @@ from build_dashboard_data import METRICS
 from aws_materialize import competition_metadata, merge_sample
 from relational_catalog import publish_catalog
 from relational_catalog_keys import records as catalog_records
-from relational_core import publish_snapshot
+from relational_core import publication_digest, publish_snapshot
+from relational_core_delta import snapshot_state
 from relational_match import (
     MAX_MATCH_RECORDS,
     _PARENT_SUFFIXES,
@@ -49,6 +51,103 @@ def compact(value):
     )
 
 
+def latest_retrieval(*values):
+    """Latest explicitly dated source observation, never a publication/write clock."""
+    dated = []
+    for value in values:
+        if not isinstance(value, str):
+            continue
+        try:
+            stamp = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+            if stamp.tzinfo is not None:
+                dated.append(stamp.astimezone(dt.timezone.utc))
+        except (ValueError, OverflowError):
+            continue
+    return max(dated).isoformat().replace("+00:00", "Z") if dated else None
+
+
+def partition_metadata(tables, previous, retrieved_at=None):
+    """Describe the merged facts, including retained data from successful fallbacks."""
+    matches = tables["matches"]
+    performances = tables["performances"]
+    played = [p for p in performances if (p.get("minutes") or 0) > 0]
+    shots = tables["shots"]
+    shot_matches = {s["matchId"] for s in shots}
+    dates = sorted(m["date"] for m in matches if m.get("date"))
+    competitions = tables["competitions"]
+    return dict(
+        previous,
+        # This is the latest known collection contributing to this partition,
+        # not a guarantee that every match/family was refreshed at that time.
+        retrievedAt=latest_retrieval(previous.get("retrievedAt"), retrieved_at),
+        matchCount=len(matches),
+        collectedMatches=sum(m.get("detailCollected") is True for m in matches),
+        expectedFinishedMatches=sum(
+            f.get("status") == "finished" for f in tables["fixtures"]
+        ),
+        playerCount=len({p["playerId"] for p in performances}),
+        activePlayerCount=len({p["playerId"] for p in played}),
+        listedAppearanceCount=len(performances),
+        appearanceCount=len(played),
+        teamCount=len({p["teamId"] for p in performances if p.get("teamId")}),
+        catalogCount=len(competitions),
+        seasonCount=sum(len(set(c.get("seasons") or [])) for c in competitions),
+        catalogSeasons=sorted({s for c in competitions for s in c.get("seasons") or []}),
+        sampleCompetitionCount=len({m["leagueId"] for m in matches if m.get("leagueId")}),
+        shotCount=len(shots),
+        knownShotXgCount=sum(s.get("xg") is not None for s in shots),
+        ratedAppearanceCount=sum(p.get("rating") is not None for p in played),
+        xgAppearanceCount=sum(p.get("xg") is not None for p in played),
+        xaAppearanceCount=sum(p.get("xa") is not None for p in played),
+        xgMatchCount=len({p["matchId"] for p in played if p.get("xg") is not None}),
+        ratedMatchCount=len({p["matchId"] for p in played if p.get("rating") is not None}),
+        # A successful empty shot response is covered too; zero is not missing.
+        shotMatchCount=sum(
+            bool((m.get("coverage") or {}).get("shots")) or m["id"] in shot_matches
+            for m in matches
+        ),
+        startDate=dates[0] if dates else None,
+        endDate=dates[-1] if dates else None,
+        seasons=sorted({m["season"] for m in matches if m.get("season")}),
+    )
+
+
+def snapshot_facts(value):
+    """Exact canonical facts, including identities, metric definitions and list order."""
+    return compact({key: item for key, item in value.items() if key != "meta"})
+
+
+def facts_receipt(source_digest, facts):
+    # Binding to source_digest invalidates the proof if another publisher has
+    # replaced the partition since this receipt was written.
+    return hashlib.sha256(
+        b"partition-facts-v1\0" + source_digest.encode() + b"\0" + facts.encode()
+    ).hexdigest()
+
+
+def publish_partition_snapshot(db, season, league, value, previous_facts=None, previous_state=None):
+    """Caller owns the partition transaction + lease; facts proof commits with its snapshot."""
+    facts = snapshot_facts(value)
+    key = season + ":" + league
+    prior = db.execute(
+        "SELECT source_digest FROM statarena_app.partitions WHERE season=%s AND league_id=%s",
+        (season, league),
+    ).fetchone()
+    if previous_state is not None and previous_state.get("source_digest") not in (None, prior[0] if prior else None):
+        raise RuntimeError("Publication changed after the partition was read")
+    proof = db.execute(
+        "SELECT digest FROM statarena_app.worker_inputs WHERE kind='partition-facts-v1' AND key=%s",
+        (key,),
+    ).fetchone()
+    unchanged = bool(prior and (
+        previous_facts == facts
+        or (proof and proof[0] == facts_receipt(prior[0], facts))
+    ))
+    changed = publish_snapshot(db, season, league, value, metadata_only=unchanged, previous_state=previous_state)
+    receipt(db, "partition-facts-v1", key, facts_receipt(publication_digest(value), facts))
+    return changed
+
+
 def capacity(db, growth=0):
     limit = int(os.environ.get("STATARENA_SQL_LIMIT_BYTES") or 16_000_000_000)
     margin = int(os.environ.get("STATARENA_SQL_RESERVE_BYTES") or 256_000_000)
@@ -71,7 +170,7 @@ def install(db):
         db.execute(
             "CREATE TABLE IF NOT EXISTS statarena_app.worker_schema(version text PRIMARY KEY,digest text NOT NULL)"
         )
-        for prefix in ("003_", "004_", "005_", "006_", "007_", "008_", "009_", "010_", "011_", "020_"):
+        for prefix in ("003_", "004_", "005_", "006_", "007_", "008_", "009_", "010_", "011_", "020_", "021_", "022_"):
             (path,) = SCHEMA.glob(prefix + "*.sql")
             source = path.read_bytes()
             digest = hashlib.sha256(source).hexdigest()
@@ -327,8 +426,35 @@ def queue_dirty(db, *, captured=False):
         LEFT JOIN work_known k ON (k.season,k.league_id)=(d.season,d.league_id)"""
     db.execute(f"""INSERT INTO statarena_app.publication_jobs(season,league_id,changed_at)
         SELECT season,league_id,max(changed_at) FROM ({source}) d GROUP BY season,league_id
-        ON CONFLICT(season,league_id) DO UPDATE SET changed_at=excluded.changed_at
+        ON CONFLICT(season,league_id) DO UPDATE SET changed_at=excluded.changed_at,
+          attempts=0,next_attempt_at=NULL,last_attempt_at=NULL,last_error_code=NULL
         WHERE publication_jobs.changed_at<excluded.changed_at""")
+
+
+def queue_changed_scopes(db):
+    """New source observations reset backoff; retries of identical inputs do not."""
+    db.execute("""INSERT INTO statarena_app.publication_jobs(season,league_id,source_stamp)
+        SELECT w.season,w.league_id,w.digest FROM work_scopes w
+        LEFT JOIN statarena_app.worker_inputs i ON i.kind='partition' AND i.key=w.season||':'||w.league_id
+        WHERE i.digest IS DISTINCT FROM w.digest
+        ON CONFLICT(season,league_id) DO UPDATE SET source_stamp=excluded.source_stamp,
+          changed_at=clock_timestamp(),attempts=0,next_attempt_at=NULL,
+          last_attempt_at=NULL,last_error_code=NULL
+        WHERE publication_jobs.source_stamp IS DISTINCT FROM excluded.source_stamp""")
+
+
+def defer_partition(db, season, league, marked, error):
+    """Keep failed work; record only a safe exception class/SQLSTATE, no source payload."""
+    code = getattr(error, "sqlstate", None) or type(error).__name__
+    if not re.fullmatch(r"[A-Za-z0-9_]{1,80}", code):
+        code = "PublicationError"
+    db.execute("""UPDATE statarena_app.publication_jobs SET attempts=attempts+1,
+        last_attempt_at=clock_timestamp(),last_error_code=%s,
+        next_attempt_at=clock_timestamp()+make_interval(secs=>
+          least(21600,300*power(2,least(attempts,7)))::integer)
+        WHERE season=%s AND league_id=%s AND changed_at=%s""",
+        (code, season, league, marked))
+    return code
 
 
 def retire_empty_season_aliases(db):
@@ -370,9 +496,12 @@ def retire_empty_season_aliases(db):
             (SELECT metric_key,ordinal FROM statarena_app.partition_metrics m WHERE (m.season,m.league_id)=(a.canonical,p.league_id))
             EXCEPT
             (SELECT metric_key,ordinal FROM statarena_app.partition_metrics m WHERE (m.season,m.league_id)=(p.season,p.league_id)))
-        RETURNING p.season,p.league_id)
+        RETURNING p.season,p.league_id), retired_competitions AS (
         DELETE FROM statarena_app.competition_seasons c USING removed r
-        WHERE (c.season,c.competition_id)=(r.season,r.league_id) AND c.sample_matches=0""")
+        WHERE (c.season,c.competition_id)=(r.season,r.league_id) AND c.sample_matches=0
+        RETURNING c.season)
+        UPDATE statarena_app.publications SET generation=generation+1,published_at=clock_timestamp()
+        WHERE EXISTS(SELECT 1 FROM removed)""")
 
 
 def prepare(inputs, manifest, queue_all):
@@ -396,6 +525,7 @@ def prepare(inputs, manifest, queue_all):
             "work_shards",
             "work_dirty",
             "work_aliases",
+            "work_failed",
         ):
             db.execute(f"DROP TABLE IF EXISTS pg_temp.{name}")
         staging_bytes = db.execute("""SELECT sum(pg_table_size(rel))::bigint FROM unnest(ARRAY[
@@ -480,9 +610,7 @@ def prepare(inputs, manifest, queue_all):
             LEFT JOIN statarena.objects o ON o.path=p.ref->>'path' GROUP BY w.season,w.league_id,p.xmin::text,o.sha256""")
         db.execute("CREATE UNIQUE INDEX ON work_scopes(season,league_id)")
         retire_empty_season_aliases(db)
-        db.execute("""INSERT INTO statarena_app.publication_jobs(season,league_id) SELECT w.season,w.league_id FROM work_scopes w
-            LEFT JOIN statarena_app.worker_inputs i ON i.kind='partition' AND i.key=w.season||':'||w.league_id
-            WHERE i.digest IS DISTINCT FROM w.digest ON CONFLICT DO NOTHING""")
+        queue_changed_scopes(db)
         queue_dirty(db, captured=True)
         # A migrated seed can be the sole source of a historical season. Discover
         # new scopes without forcing every already-published partition to rebuild.
@@ -492,7 +620,9 @@ def prepare(inputs, manifest, queue_all):
         if queue_all:
             db.execute("""INSERT INTO statarena_app.publication_jobs(season,league_id)
                 SELECT season,league_id FROM work_known UNION SELECT season,league_id FROM work_scopes
-                UNION SELECT season,league_id FROM statarena_app.partitions ON CONFLICT DO NOTHING""")
+                UNION SELECT season,league_id FROM statarena_app.partitions
+                ON CONFLICT(season,league_id) DO UPDATE SET attempts=0,next_attempt_at=NULL,
+                  last_attempt_at=NULL,last_error_code=NULL""")
         db.execute(
             """CREATE TEMP TABLE work_catalog AS SELECT * FROM(
             SELECT 'object' kind,o.path AS key,encode(o.sha256,'hex') digest,NULL::jsonb ref,NULL::smallint status,NULL::jsonb error
@@ -714,7 +844,7 @@ def partition_inputs(inputs, scratch, mids):
         CREATE TABLE body_cache(path text,sha text,body text,PRIMARY KEY(path,sha));
         CREATE TABLE context(mid text PRIMARY KEY,body text);
         CREATE TABLE archive(mid text,family text,body text,PRIMARY KEY(mid,family));
-        CREATE TABLE current(mid text,endpoint text,params text,body text,PRIMARY KEY(mid,endpoint,params));
+        CREATE TABLE current(mid text,endpoint text,params text,body text,retrieved_at text,PRIMARY KEY(mid,endpoint,params));
     """)
     inputs.prefetch(uses, scratch)
 
@@ -737,6 +867,7 @@ def partition_inputs(inputs, scratch, mids):
             scratch.execute("DELETE FROM body_cache WHERE path=? AND sha=?", dbkey)
         return value
 
+    archive_retrievals = {}
     for meta, entries in shards.values():
         docs = read(meta["document"])
         identities = {}
@@ -744,6 +875,7 @@ def partition_inputs(inputs, scratch, mids):
             doc = docs[ordinal]
             identities[doc["id"]] = mid
             if doc.get("metadata") is not None:
+                archive_retrievals[doc["id"]] = doc["metadata"].get("retrieved_at_utc")
                 scratch.execute(
                     "INSERT INTO context VALUES(?,?)", (mid, compact(doc["metadata"]))
                 )
@@ -785,9 +917,12 @@ def partition_inputs(inputs, scratch, mids):
                 )
             else:
                 body = envelope(source, ref, status, error)
+            source_retrieved_at = latest_retrieval((ref or {}).get("retrievedAt")) or latest_retrieval(
+                archive_retrievals.get((ref or {}).get("documentId"))
+            )
             scratch.execute(
-                "INSERT INTO current VALUES(?,?,?,?)",
-                (mid, endpoint, params, compact(body)),
+                "INSERT INTO current VALUES(?,?,?,?,?)",
+                (mid, endpoint, params, compact(body), source_retrieved_at),
             )
     scratch.commit()
 
@@ -817,6 +952,9 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
     )
     if not is_orphan:
         old = read_partition(db, label, league)
+        old_snapshot = snapshot(old["tables"], {}, old["metrics"]) if old else None
+        previous_facts = snapshot_facts(old_snapshot) if old else None
+        previous_state = snapshot_state(old_snapshot, label, league, source_digest=old.get("sourceDigest")) if old else None
         if old is None:
             candidates = [
                 c for s in manifest["seasons"] for c in s["chunks"]
@@ -866,6 +1004,7 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
             comp["country"] = "TUR"
 
     count = 0
+    retrieved_at = None
     with (
         tempfile.TemporaryDirectory(prefix="statarena-publish-") as tmp,
         closing(sqlite3.connect(Path(tmp) / "envelopes.sqlite")) as scratch,
@@ -881,6 +1020,7 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
                 context = scratch.execute(
                     "SELECT body FROM context WHERE mid=?", (mid,)
                 ).fetchone()
+                context = json.loads(context[0]) if context else None
                 base = {
                     f: json.loads(b)
                     for f, b in scratch.execute(
@@ -889,9 +1029,12 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
                 }
                 detail = dict(base)
                 core = dict(base)
+                core_retrievals = {
+                    family: (context or {}).get("retrieved_at_utc") for family in base
+                }
                 variants = []
-                for endpoint, params, body in scratch.execute(
-                    "SELECT endpoint,params,body FROM current WHERE mid=?", (mid,)
+                for endpoint, params, body, source_retrieved_at in scratch.execute(
+                    "SELECT endpoint,params,body,retrieved_at FROM current WHERE mid=?", (mid,)
                 ):
                     response = json.loads(body)
                     family = _PARENT_SUFFIXES.get(
@@ -904,6 +1047,7 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
                             or core[family].get("status") != 200
                         ):
                             core[family] = response
+                            core_retrievals[family] = source_retrieved_at
                         detail[family] = response
                     else:
                         variants.append((endpoint, json.loads(params), response))
@@ -928,6 +1072,9 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
                             (mid, absent),
                         ):
                             core[family] = previous
+                            # The previous partition's retrieval is preserved below.
+                            # A reused typed response does not acquire a new timestamp.
+                            core_retrievals.pop(family, None)
                 estimated += 2 * (
                     len(compact(detail).encode())
                     + sum(len(compact(v[2]).encode()) for v in variants)
@@ -944,7 +1091,7 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
                         (
                             mid,
                             detail,
-                            json.loads(context[0]) if context else None,
+                            context,
                             variants,
                         )
                     )
@@ -975,6 +1122,17 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
                         sample[target] = {"ok": True, "data": value.get("data")}
                 if merge_sample(tables, sample, mid):
                     count += 1
+                    selected = [
+                        core_retrievals.get(family)
+                        for family, target in (
+                            ("players", "players"), ("shots", "shots"),
+                            ("lineups", "lineups"), ("stats", "team_stats"),
+                        )
+                        if sample.get(target, {}).get("ok")
+                    ]
+                    if extras:
+                        selected.append(core_retrievals.get("match"))
+                    retrieved_at = latest_retrieval(retrieved_at, *selected)
             batch_start = time.monotonic()
             publish_match_batch(db, batch_details)
             detail_seconds += time.monotonic() - batch_start
@@ -994,21 +1152,10 @@ def publish_partition(inputs, manifest, label, league, marked, phase_report=None
             )
         comp["sampleMatches"] = len(matches)
         tables["competitions"] = [comp]
-        meta = dict(
-            old["meta"],
-            matchCount=len(matches),
-            collectedMatches=sum(m.get("detailCollected") is True for m in matches),
-            expectedFinishedMatches=sum(
-                f.get("status") == "finished" for f in tables["fixtures"]
-            ),
-            playerCount=len({p["playerId"] for p in tables["players"]}),
-            listedAppearanceCount=len(perform),
-            appearanceCount=sum((p.get("minutes") or 0) > 0 for p in perform),
-            shotCount=len(tables["shots"]),
-        )
+        meta = partition_metadata(tables, old["meta"], retrieved_at)
         result = snapshot(tables, meta, old["metrics"])
         capacity(db, len(compact(result).encode()) * 2)
-        publish_snapshot(db, label, league, result)
+        publish_partition_snapshot(db, label, league, result, previous_facts, previous_state)
         partition_calendar(inputs, label, league)
         if bootstrap_source is not None:
             db.execute("""INSERT INTO statarena_app.partition_bootstrap_sources(season,league_id,source_path,sha256)
@@ -1062,8 +1209,10 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, i
         inputs = Inputs(store)
         manifest = inputs.read(INDEX)
         prepare(inputs, manifest, queue_all)
+        db.execute("CREATE TEMP TABLE work_failed(season text,league_id text,PRIMARY KEY(season,league_id))")
         result = {
             "partitions": 0,
+            "failed_partitions": 0,
             "catalog_inputs": 0,
             "support_changed": 0,
             "assets_changed": 0,
@@ -1088,8 +1237,11 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, i
             DO UPDATE SET status='running',started_at=excluded.started_at,updated_at=excluded.updated_at""")
         while time.monotonic() < stop:
             jobs = db.execute(
-                """SELECT season,league_id,changed_at FROM statarena_app.publication_jobs
-                ORDER BY (season='@details'),season DESC,changed_at,league_id LIMIT %s""",
+                """SELECT j.season,j.league_id,j.changed_at FROM statarena_app.publication_jobs j
+                WHERE (j.next_attempt_at IS NULL OR j.next_attempt_at<=clock_timestamp())
+                  AND NOT EXISTS(SELECT 1 FROM work_failed f
+                    WHERE (f.season,f.league_id)=(j.season,j.league_id))
+                ORDER BY (j.season='@details'),j.season DESC,j.changed_at,j.league_id LIMIT %s""",
                 (batch,),
             ).fetchall()
             for label, league, marked in jobs:
@@ -1100,10 +1252,25 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, i
                     break
                 phase_report = {}
                 transaction_start = time.monotonic()
-                with db.transaction():
-                    normalized = publish_partition(
-                        inputs, manifest, label, league, marked, phase_report
-                    )
+                try:
+                    with db.transaction():
+                        normalized = publish_partition(
+                            inputs, manifest, label, league, marked, phase_report
+                        )
+                except Exception as error:
+                    # The partition transaction has rolled back, including facts,
+                    # receipts and generation. A broken connection cannot safely
+                    # persist a retry checkpoint and must abort this process.
+                    if db.closed:
+                        raise
+                    with db.transaction():
+                        code = defer_partition(db, label, league, marked, error)
+                        db.execute("INSERT INTO work_failed VALUES(%s,%s)", (label, league))
+                    result["failed_partitions"] += 1
+                    print(compact({"phase": "partition-deferred", "season": label,
+                        "league": league, "error_code": code,
+                        "seconds": round(time.monotonic()-transaction_start, 3)}), flush=True)
+                    continue
                 phase_report["transaction_including_commit_seconds"] = round(
                     time.monotonic() - transaction_start, 3
                 )
@@ -1135,11 +1302,14 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, i
             "SELECT (SELECT count(*) FROM statarena_app.publication_jobs)+(SELECT count(*) FROM work_catalog)"
         ).fetchone()[0]
         result["remaining"] += int(globals_pending)
+        result["deferred_partitions"] = db.execute(
+            "SELECT count(*) FROM statarena_app.publication_jobs WHERE next_attempt_at>clock_timestamp()"
+        ).fetchone()[0]
         db.execute(
             """UPDATE statarena_app.workflow_state SET status=%s,remaining=%s,updated_at=clock_timestamp(),
             completed_at=CASE WHEN %s=0 THEN clock_timestamp() ELSE NULL END WHERE workflow='relational-materialize'""",
             (
-                "pending" if result["remaining"] else "complete",
+                "failed" if result["failed_partitions"] else "pending" if result["remaining"] else "complete",
                 result["remaining"],
                 result["remaining"],
             ),
@@ -1159,7 +1329,16 @@ def run(store, *, minutes=100, batch=10, queue_all=False, max_partitions=None, i
                 )
         raise
     finally:
-        db.execute("SELECT pg_advisory_unlock(%s)", (LEASE,))
+        # PostgreSQL releases session locks when a connection closes. A failed
+        # unlock must not replace the original publication error in the logs.
+        failure = sys.exception()
+        try:
+            if not db.closed:
+                db.execute("SELECT pg_advisory_unlock(%s)", (LEASE,))
+        except psycopg.Error as unlock_error:
+            if failure is None:
+                raise
+            print("Could not release publication lease:", type(unlock_error).__name__, file=sys.stderr)
 
 
 def main():
@@ -1193,10 +1372,10 @@ def main():
     os.environ["DATABASE_URL"] = url  # Existing ingestion-only Store interface.
     store = Store()
     try:
-        print(
-            compact(run(store, minutes=a.minutes, batch=a.batch, queue_all=a.all, install_only=a.install_only)),
-            flush=True,
-        )
+        result = run(store, minutes=a.minutes, batch=a.batch, queue_all=a.all, install_only=a.install_only)
+        print(compact(result), flush=True)
+        if result.get("failed_partitions"):
+            raise SystemExit(1)
     finally:
         store.db.close()
 

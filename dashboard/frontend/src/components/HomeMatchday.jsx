@@ -7,10 +7,12 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
 import {
   leagueOf,
+  matchDay,
   matchWeight,
   shortCompetition,
   shotMapPoints,
   xgTimeline,
+  weekPeriodLabel,
 } from "../services/home-insights.js";
 import {
   ChartTip,
@@ -24,18 +26,21 @@ import {
 } from "./HomeCommon.jsx";
 
 /** Scores of the week, newest day first: each club opens its page, the score opens the match. */
-export function HomeTicker({ results, ranks, competitions }) {
+export function HomeTicker({ results, ranks, competitions, period }) {
   const f = useFootball();
   const byDay = new Map();
   for (const match of results) {
-    const day = match.date.slice(0, 10);
+    const day = matchDay(match);
     if (!byDay.has(day)) byDay.set(day, []);
     byDay.get(day).push(match);
   }
   const days = [...byDay.keys()].sort().reverse().slice(0, 4);
   if (!days.length) return null;
   return (
-    <nav className="home-ticker" aria-label="Résultats de la semaine">
+    <nav
+      className="home-ticker"
+      aria-label={`Résultats ${period ? weekPeriodLabel(period) : "de la semaine"}${period?.current === false ? " · archives" : ""}`}
+    >
       {days.map((day) => (
         <React.Fragment key={day}>
           <span className="home-ticker-day">{shortDay(day)}</span>
@@ -432,7 +437,13 @@ function verdict(match) {
 }
 
 /** The match of the week told by its data: score, expected goals over time, shots and key figures. */
-export function MatchOfTheWeek({ match, ranks, competition, bestPlayer }) {
+export function MatchOfTheWeek({
+  match,
+  ranks,
+  competition,
+  bestPlayer,
+  period,
+}) {
   const f = useFootball(),
     h = match.home,
     a = match.away;
@@ -483,14 +494,16 @@ export function MatchOfTheWeek({ match, ranks, competition, bestPlayer }) {
   return (
     <article className="card home-motw">
       <div className="home-motw-top">
-        <Kicker>Le choc de la semaine</Kicker>
+        <Kicker>
+          Le choc de la semaine{period?.current === false && " · archives"}
+        </Kicker>
         <span className="home-meta">
           <Media
             name={competition?.name || match.league}
             url={competition?.imageUrl}
             className="crest home-crest-xs"
           />
-          {competition?.name || match.league} · {shortDay(match.date)}
+          {competition?.name || match.league} · {shortDay(matchDay(match))}
         </span>
       </div>
       <div className="home-score">
@@ -617,7 +630,7 @@ export function MatchOfTheWeek({ match, ranks, competition, bestPlayer }) {
   );
 }
 
-export function NumberOfTheWeek({ win, competition }) {
+export function NumberOfTheWeek({ win, competition, period }) {
   const f = useFootball();
   if (!win) return null;
   const m = win.match;
@@ -625,7 +638,9 @@ export function NumberOfTheWeek({ win, competition }) {
     <Link className="card home-number" href={matchHref(f, m)} prefetch={false}>
       <span className="home-number-value">{win.margin}</span>
       <span>
-        <Kicker>Le chiffre de la semaine</Kicker>
+        <Kicker>
+          Le chiffre de la semaine{period?.current === false && " · archives"}
+        </Kicker>
         <span className="home-number-copy">
           buts d’écart :{" "}
           <b>

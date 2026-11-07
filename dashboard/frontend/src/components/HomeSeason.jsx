@@ -297,7 +297,7 @@ export function NextMatches({ highlights, ranks, competitions, now }) {
       <div className="home-card-head">
         <div>
           <Kicker>À ne pas manquer</Kicker>
-          <h2>Cette semaine</h2>
+          <h2>Les 7 prochains jours</h2>
         </div>
         <Link className="inline-link" href={f.href("/calendrier/")}>
           Calendrier <Icon name="arrow" />

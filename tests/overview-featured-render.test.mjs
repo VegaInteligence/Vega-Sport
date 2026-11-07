@@ -61,15 +61,21 @@ const quarterLegs = Array.from({ length: 8 }, (_, i) => ({
   score_away: 0,
 }));
 
-async function overview({ context, params = "", rounds = {}, ranking = null }) {
+async function overview({
+  context,
+  params = "",
+  rounds = {},
+  ranking = null,
+  now = "2026-11-01T21:00:00Z",
+  summary,
+  onRead = () => {},
+}) {
   const stubs = {
     react: {
       ...React,
       useState: (initial) =>
         React.useState(
-          typeof initial === "function"
-            ? () => Date.parse("2026-11-02T12:00:00Z")
-            : initial,
+          typeof initial === "function" ? () => Date.parse(now) : initial,
         ),
     },
     "next/link": {
@@ -83,10 +89,34 @@ async function overview({ context, params = "", rounds = {}, ranking = null }) {
       default: ({ children }) => h("main", null, children),
     },
     "../hooks/FootballContext.jsx": { useFootball: () => context },
+    "../hooks/ResearchContext.jsx": {
+      useResearch: () => ({ data: { lists: [] } }),
+    },
     "../components/UI.jsx": {
       Empty: ({ children }) => h("div", { "data-empty": "" }, children),
+      AsyncState: ({ resource, children, loading }) =>
+        resource.loading
+          ? loading
+          : resource.error
+            ? h("div", { role: "alert" }, resource.error)
+            : children(resource.value),
     },
+    "../hooks/useCompactRead.js": {
+      __esModule: true,
+      default: (kind, values) => {
+        onRead(kind, values);
+        if (!summary)
+          throw new Error("Legacy home must not request compact data");
+        return summary;
+      },
+    },
+    "../services/compact-reads.js": await src("services/compact-reads.js"),
+    "../services/fixtures.js": await src("services/fixtures.js"),
     "../components/HomePreferences.jsx": {
+      __esModule: true,
+      default: () => null,
+    },
+    "../components/SeasonFilter.jsx": {
       __esModule: true,
       default: () => null,
     },
@@ -113,7 +143,8 @@ async function overview({ context, params = "", rounds = {}, ranking = null }) {
       BestDefence: () => null,
       NextMatches: () => null,
       TitleRace: () => null,
-      WinStreak: () => null,
+      WinStreak: ({ next }) =>
+        h("span", { "data-streak-next": next?.fixture?.id || "" }),
     },
     "../services/format.js": { number: String },
     "../services/resources.js": {
@@ -258,4 +289,124 @@ test("the Ballon d'Or race needs both the end of the quarter-finals and the STAT
 test("a selection without finished matches shows an empty state", async () => {
   const rendered = await overview({ context: context({ matches: [] }) });
   assert.match(rendered, /data-empty/);
+});
+
+test("a new week does not keep the preceding week's featured results", async () => {
+  const rendered = await overview({
+    context: context(),
+    now: "2026-11-02T12:00:00Z",
+  });
+  assert.match(rendered, /data-empty/);
+  assert.match(rendered, /cette semaine/);
+  assert.doesNotMatch(rendered, /data-motw/);
+});
+
+test("an archive selection displays the historical week and season explicitly", async () => {
+  const archived = {
+    ...arsenal,
+    date: "2026-05-24",
+    timeUtc: "2026-05-24T19:00:00Z",
+    season: "2025/2026",
+  };
+  const rendered = await overview({
+    context: context({ season: "2025/2026", matches: [archived] }),
+    now: "2026-11-06T12:00:00Z",
+  });
+  assert.match(rendered, /Archives · 2025\/2026/);
+  assert.match(rendered, /18.*24.*mai.*2026/);
+  assert.match(rendered, /data-motw="arsenal-match"/);
+  assert.doesNotMatch(rendered, /résultats provisoires/);
+});
+
+const homeSummary = () => ({
+  loading: false,
+  value: {
+    data: {
+      period: { start: "2026-10-26", end: "2026-11-01", current: true },
+      results: [arsenal],
+      featured: arsenal,
+      ranks: [],
+      tables: [],
+      highlights: [],
+      leaders: { goals: [], assists: [], clinical: [], wasteful: [] },
+      others: [],
+      defences: [],
+      hasSeasonPlayers: false,
+    },
+  },
+});
+
+test("compact home renders every supplied summary without loading a season", async () => {
+  // Define the guarded getters after context() spreads its overrides.
+  const f = context({
+    compactMode: true,
+    manifest: {
+      defaultSeason: "2026/2027",
+      publicationVersion: "g1",
+      seasons: [],
+      competitions: [],
+    },
+    preferences: { favoriteLeagueIds: [PREMIER], onboardingComplete: true },
+  });
+  Object.defineProperties(f, {
+    matches: {
+      get() {
+        throw Error("bulk matches accessed");
+      },
+    },
+    rows: {
+      get() {
+        throw Error("bulk appearances accessed");
+      },
+    },
+  });
+  const requests = [];
+  const html = await overview({
+    context: f,
+    summary: homeSummary(),
+    onRead: (...args) => requests.push(args),
+  });
+  assert.match(html, /data-motw="arsenal-match"/);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0][0], "home");
+  assert.equal(requests[0][1].leagues, PREMIER);
+  assert.equal(requests[0][1].generation, "g1");
+});
+
+test("compact home expires a cached preceding week and keeps API failures visible", async () => {
+  const f = context({ compactMode: true });
+  const expired = await overview({
+    context: f,
+    summary: homeSummary(),
+    now: "2026-11-02T00:01:00Z",
+  });
+  assert.doesNotMatch(expired, /data-motw/);
+  assert.match(expired, /cette semaine/);
+  const failed = await overview({
+    context: f,
+    summary: { loading: false, error: "Publication indisponible" },
+  });
+  assert.match(failed, /role="alert"/);
+  assert.match(failed, /Publication indisponible/);
+});
+
+test("compact home hides a past next fixture even while the summary is retained", async () => {
+  const summary = homeSummary();
+  summary.value.data.streak = { id: "club", streak: 3 };
+  summary.value.data.streakNext = {
+    time: Date.parse("2026-11-01T20:00:00Z"),
+    fixture: { id: "past-next-fixture" },
+  };
+  const expired = await overview({
+    context: context({ compactMode: true }),
+    summary,
+  });
+  assert.match(expired, /data-streak-next=""/);
+  assert.doesNotMatch(expired, /past-next-fixture/);
+  summary.value.data.streakNext.time = Date.parse("2026-11-02T20:00:00Z");
+  const future = await overview({
+    context: context({ compactMode: true }),
+    summary,
+  });
+  assert.match(future, /data-streak-next="past-next-fixture"/);
 });

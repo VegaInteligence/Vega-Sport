@@ -29,6 +29,12 @@ import ClubRanking from "./ClubRanking.jsx";
 import { ClubFacts, ClubRoster } from "./ClubProfile.jsx";
 import { BookmarkButton, ResearchTabs, ReportButton } from "./ResearchUI.jsx";
 import { ResearchRadar } from "./ResearchCharts.jsx";
+import useCompactRead from "../hooks/useCompactRead.js";
+import {
+  compactGeneration,
+  compactScope,
+  supportsCompactRead,
+} from "../services/compact-reads.js";
 
 const TABS = [
   ["overview", "Vue d’ensemble"],
@@ -65,18 +71,35 @@ function setParam(key, value) {
 
 /** One cohort per competition scope, computed only when a tab needs it. */
 function useCohort(data, competition, enabled) {
-  return useMemo(() => {
-    if (!enabled) return null;
-    const clubs = allClubSummaries(data, { competition }).filter(
-      (club) => club.matches > 0,
-    );
+  const f = useFootball(),
+    remote = f.compactMode,
+    params = {
+      season: f.season,
+      leagues: compactScope(competition === "all" ? null : [competition]),
+      analysis: 1,
+      generation: compactGeneration(f.manifest),
+      limit: 100,
+    },
+    resource = useCompactRead("clubs", params, {
+      enabled: enabled && remote && supportsCompactRead(f.manifest, "clubs"),
+      allPages: true,
+      refreshManifest: f.refreshManifest,
+    });
+  const value = useMemo(() => {
+    if (!enabled || (remote && !resource.value)) return null;
+    const clubs = (
+      remote
+        ? resource.value.data.clubs
+        : allClubSummaries(data, { competition })
+    ).filter((club) => club.matches > 0);
     const distributions = clubStyleCohort(clubs);
     return {
       clubs,
       distributions,
       size: Math.max(0, ...Object.values(distributions).map((v) => v.length)),
     };
-  }, [data, competition, enabled]);
+  }, [data, competition, enabled, remote, resource.value]);
+  return remote ? { ...resource, value } : { value };
 }
 
 function RecordTable({ club }) {
@@ -951,11 +974,12 @@ export default function ClubWorkspace({ club, history }) {
         : history.filter((m) => m.leagueId === competition),
     [history, competition],
   );
-  const cohort = useCohort(
+  const cohortState = useCohort(
     f.data,
     competition,
     view === "style" || view === "compare",
   );
+  const cohort = cohortState.value;
   const rivalId = params.get("vs") || "";
   const change = (value) =>
     setParam("clubView", value === "overview" ? "" : value);
@@ -1083,6 +1107,17 @@ export default function ClubWorkspace({ club, history }) {
         role="tabpanel"
         aria-label={TABS.find(([key]) => key === view)[1]}
       >
+        {["style", "compare"].includes(view) && cohortState.loading && (
+          <p role="status" className="loading-state">
+            Chargement de la cohorte des clubs…
+          </p>
+        )}
+        {["style", "compare"].includes(view) && cohortState.error && (
+          <p role="alert">
+            {cohortState.error}{" "}
+            <button onClick={cohortState.retry}>Réessayer</button>
+          </p>
+        )}
         {view === "overview" && (
           <Overview
             club={club}

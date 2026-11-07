@@ -272,7 +272,7 @@ export default function PlayerSeasonStats({ id }) {
   const f = useFootball();
   const history = useResource(
     `player-history:${id}:${f.manifest.scouting?.sourceDigest}`,
-    () => loadPlayerHistory(f.manifest, id),
+    ({ signal }) => loadPlayerHistory(f.manifest, id, { signal }),
   );
   return (
     <section className="player-season-history">

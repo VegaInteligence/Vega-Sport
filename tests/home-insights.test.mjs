@@ -1,12 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  archiveSeason,
   ballonDorRaceOpen,
   bestDefence,
   inSeason,
   bestWinStreak,
   biggestWin,
+  finishedMatch,
   leagueProgress,
+  inWindow,
   matchdayWindow,
   playerOfTheWeek,
   seasonLeaders,
@@ -15,6 +18,7 @@ import {
   teamRanks,
   upcomingHighlights,
   weekPerformances,
+  weekPeriodLabel,
   weekResults,
   xgTimeline,
 } from "../dashboard/frontend/src/services/home-insights.js";
@@ -54,7 +58,7 @@ const fixture = (
   score_away: sa,
 });
 
-test("the home week ends on the last finished match, even on a past season", () => {
+test("the current Paris week expires old results even without new matches", () => {
   const now = Date.parse("2026-11-03T11:00:00Z");
   const current = matchdayWindow(
     [
@@ -64,27 +68,126 @@ test("the home week ends on the last finished match, even on a past season", () 
     now,
   );
   assert.deepEqual(current, {
-    start: "2026-10-26",
-    end: "2026-11-01",
+    start: "2026-11-02",
+    end: "2026-11-08",
     current: true,
+    asOf: now,
+    asOfDay: "2026-11-03",
   });
   const past = matchdayWindow(
     [match("c", L1, "2026-05-24", "x", "y", 2, 2)],
     now,
   );
-  assert.equal(past.end, "2026-05-24");
-  assert.equal(past.current, false);
-  assert.equal(matchdayWindow([], now), null);
+  assert.deepEqual(past, current);
+  assert.deepEqual(matchdayWindow([], now), current);
   const results = weekResults(
     [
-      match("in", L1, "2026-10-27", "x", "y", 0, 0),
-      match("out", L1, "2026-10-20", "x", "y", 0, 0),
+      match("in", L1, "2026-11-02", "x", "y", 0, 0),
+      match("out", L1, "2026-11-01", "x", "y", 0, 0),
+      match("future", L1, "2026-11-04", "x", "y", 0, 0),
     ],
     current,
   );
   assert.deepEqual(
     results.map((m) => m.id),
     ["in"],
+  );
+});
+
+test("archives retain their last played civil week with explicit dates", () => {
+  const now = Date.parse("2026-11-06T12:00:00Z"),
+    old = match("old", L1, "2026-05-24", "x", "y", 2, 2),
+    period = matchdayWindow([old], now, { archive: true });
+  assert.equal(period.start, "2026-05-18");
+  assert.equal(period.end, "2026-05-24");
+  assert.equal(period.current, false);
+  assert.match(weekPeriodLabel(period), /18.*24.*mai.*2026/);
+  assert.deepEqual(
+    weekResults([old], period).map((m) => m.id),
+    ["old"],
+  );
+  assert.equal(matchdayWindow([], now, { archive: true }), null);
+  assert.equal(archiveSeason("2025/2026", "2026/2027", now), true);
+  assert.equal(archiveSeason("2026/2027", "2026/2027", now), false);
+  assert.equal(archiveSeason("2026", "2026/2027", now), false);
+  assert.equal(archiveSeason("2027/2028", "2026/2027", now), false);
+});
+
+test("the week rolls over at Paris midnight across both DST changes", () => {
+  for (const [instant, start, end] of [
+    ["2026-03-29T21:59:59Z", "2026-03-23", "2026-03-29"],
+    ["2026-03-29T22:00:00Z", "2026-03-30", "2026-04-05"],
+    ["2026-10-25T22:59:59Z", "2026-10-19", "2026-10-25"],
+    ["2026-10-25T23:00:00Z", "2026-10-26", "2026-11-01"],
+  ]) {
+    const period = matchdayWindow([], Date.parse(instant));
+    assert.equal(period.start, start, instant);
+    assert.equal(period.end, end, instant);
+  }
+});
+
+test("weekly results and appearances use the Paris day of the match timestamp", () => {
+  const now = Date.parse("2026-11-02T02:00:00Z"),
+    period = matchdayWindow([], now),
+    late = match("late", L1, "2026-11-01", "x", "y", 1, 0, {
+      timeUtc: "2026-11-01T23:30:00Z",
+    }),
+    row = {
+      id: "late-performance",
+      playerId: "p",
+      matchId: late.id,
+      date: "2026-11-01",
+      minutes: 90,
+      rating: 9,
+    };
+  assert.equal(inWindow(late, period), true);
+  assert.deepEqual(
+    weekResults([late], period).map((m) => m.id),
+    ["late"],
+  );
+  assert.deepEqual(
+    weekPerformances([row], period, 60, new Map([[late.id, late]])).map(
+      (p) => p.id,
+    ),
+    [row.id],
+  );
+});
+
+test("in-progress and cancelled matches cannot supply weekly winners", () => {
+  const now = Date.parse("2026-11-03T12:00:00Z"),
+    period = matchdayWindow([], now),
+    played = match("played", L1, "2026-11-02", "x", "y", 1, 0),
+    live = { ...played, id: "live", status: "in_progress" },
+    cancelled = { ...played, id: "cancelled", status: "cancelled" },
+    matches = new Map([played, live, cancelled].map((m) => [m.id, m])),
+    rows = [played, live, cancelled].map((m, i) => ({
+      id: m.id,
+      playerId: m.id,
+      matchId: m.id,
+      date: m.date,
+      minutes: 90,
+      rating: 8 + i,
+    }));
+  assert.equal(finishedMatch(live), false);
+  assert.equal(finishedMatch(cancelled), false);
+  assert.deepEqual(
+    weekResults([...matches.values()], period).map((m) => m.id),
+    ["played"],
+  );
+  assert.equal(
+    playerOfTheWeek(weekPerformances(rows, period, 60, matches)).id,
+    "played",
+  );
+  assert.equal(
+    playerOfTheWeek(
+      weekPerformances(
+        rows,
+        matchdayWindow([], Date.parse("2026-11-09T12:00:00Z")),
+        60,
+        matches,
+      ),
+    ),
+    null,
   );
 });
 
@@ -316,6 +419,47 @@ test("season leaders compare goals with expected goals", () => {
   assert.equal(leaders.goals[0].lastId, "r9");
 });
 
+test("missing or partial xG coverage stays unknown and cannot create a finishing leader", () => {
+  const base = {
+    team: "Club",
+    leagueId: L1,
+    season: "2026/2027",
+    date: "2026-11-02",
+    minutes: 90,
+    goals: 4,
+    assists: 1,
+    rating: 8,
+  };
+  const totals = seasonTotals(
+    [
+      { ...base, id: "missing", playerId: "missing", xg: null, xa: null },
+      { ...base, id: "partial-a", playerId: "partial", xg: 1, xa: 0.5 },
+      { ...base, id: "partial-b", playerId: "partial", xg: null, xa: null },
+      { ...base, id: "zero", playerId: "zero", xg: 0, xa: 0 },
+    ],
+    "2026/2027",
+  );
+  const byId = new Map(totals.map((p) => [p.playerId, p]));
+  assert.equal(byId.get("missing").xg, null);
+  assert.equal(byId.get("missing").xa, null);
+  assert.equal(byId.get("partial").xg, null);
+  assert.equal(byId.get("partial").xa, null);
+  assert.equal(byId.get("partial").xgMatches, 1);
+  assert.equal(byId.get("partial").apps, 2);
+  assert.equal(byId.get("zero").xg, 0);
+  assert.equal(byId.get("zero").xa, 0);
+  const leaders = seasonLeaders(totals);
+  assert.deepEqual(
+    leaders.clinical.map((p) => p.playerId),
+    ["zero"],
+  );
+  assert.deepEqual(leaders.goals.map((p) => p.playerId).sort(), [
+    "missing",
+    "partial",
+    "zero",
+  ]);
+});
+
 test("the Ballon d'Or race opens once every Champions League quarter-final is played", () => {
   const legs = Array.from({ length: 8 }, (_, i) =>
     fixture(
@@ -419,27 +563,4 @@ test("the meanest defence concedes the fewest goals per game after five games", 
   assert.equal(defence.id, "wall");
   assert.equal(defence.cleanSheets, 4);
   assert.equal(defence.goalsAgainst, 2);
-});
-
-test("the nightly refresh waits for the next midnight in Paris and notices new data", async () => {
-  const { untilParisMidnight, manifestSignature } =
-    await import("../dashboard/frontend/src/services/home-insights.js");
-  // 23:30 in Paris in winter (UTC+1) is 22:30 UTC: midnight is 30 minutes away.
-  assert.equal(
-    untilParisMidnight(Date.parse("2026-11-03T22:30:00Z")),
-    30 * 60_000,
-  );
-  // 23:30 in Paris in summer (UTC+2).
-  assert.equal(
-    untilParisMidnight(Date.parse("2026-07-03T21:30:00Z")),
-    30 * 60_000,
-  );
-  const a = { seasons: [{ id: "2026/2027", chunks: [{ sha256: "x" }] }] };
-  assert.equal(manifestSignature(a), manifestSignature(structuredClone(a)));
-  assert.notEqual(
-    manifestSignature(a),
-    manifestSignature({
-      seasons: [{ id: "2026/2027", chunks: [{ sha256: "y" }] }],
-    }),
-  );
 });
