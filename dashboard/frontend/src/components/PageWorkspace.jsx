@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import { prepareInitialPage } from "../services/initial-page.js";
 import PageLoader from "./PageLoader.jsx";
 import { useResourceBootstrap } from "../services/resource-bootstrap.js";
@@ -12,7 +12,10 @@ export default function PageWorkspace({ className = "", children }) {
   const serverHome = Boolean(
     bootstrap?.homeReady && className.includes("home-page"),
   );
-  useEffect(() => prepareInitialPage(main.current, () => setReady(true)), []);
+  useLayoutEffect(
+    () => prepareInitialPage(main.current, () => setReady(true)),
+    [],
+  );
   return (
     <div className="page-presentation">
       {(!ready || serverHome) && (

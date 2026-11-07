@@ -143,6 +143,12 @@ export function startNavigationAcceptance() {
           "same-identity filters; hidden tabs; only same-origin POST view/vitals destinations advertised by the installed Vercel SDK are excluded from dataInMemory, but retained in fetch counts; this is not a screenshot-based paint measurement",
       }),
     );
+    // Let a test await the completed receipt before starting another click.
+    // This is updated only after the existing two-frame completion criterion.
+    document.documentElement.setAttribute(
+      "data-vega-acceptance-count",
+      String(state.transitions.length),
+    );
   }
   // Observe starts, including Next/RSC and unfinished bodies. Return the native
   // promise unchanged; this opt-in wrapper never retries or changes a request.

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef } from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import { getImageProps } from "next/image";
 
 /** The content-addressed source can start before hydration through native srcset. */
@@ -18,10 +18,13 @@ export default function DirectMediaImage({
     settled: false,
     active: true,
   });
-  current.current.onLoad = onLoad;
-  current.current.onError = onError;
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (current.current.src !== src) {
+      current.current = { src, onLoad, onError, settled: false, active: true };
+    }
     const state = current.current;
+    state.onLoad = onLoad;
+    state.onError = onError;
     state.active = true;
     const image = ref.current;
     if (image?.complete && image.naturalWidth) done(image, state);
@@ -32,12 +35,18 @@ export default function DirectMediaImage({
     return () => {
       state.active = false;
     };
-  }, [src]);
+  }, [src, onLoad, onError]);
   const done = (image, state) => {
     if (state.settled) return;
     state.settled = true;
-    Promise.resolve()
-      .then(() => image.decode?.())
+    let decoding;
+    try {
+      decoding = image.decode?.();
+    } catch (error) {
+      if (state.active && current.current === state) state.onError?.(error);
+      return;
+    }
+    Promise.resolve(decoding)
       .then(() => {
         if (state.active && current.current === state) state.onLoad?.();
       })
