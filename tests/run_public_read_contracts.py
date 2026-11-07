@@ -44,7 +44,7 @@ def main():
                    "AWS_EC2_METADATA_DISABLED": "true"}
             subprocess.run([sys.executable, "tests/home-projection-install-postgres.py"], cwd=root, env=env, check=True)
             for name in ("publication_metadata_postgres", "core_delta_postgres",
-                         "publication_retries_postgres", "lineup_consolidation_postgres"):
+                         "publication_retries_postgres", "catalog_profile_batches_postgres", "lineup_consolidation_postgres"):
                 subprocess.run([sys.executable, f"tests/{name}.py"], cwd=root, env=env, check=True)
             # Home projection owns its transaction and needs a dedicated database.
             with psycopg.connect(base + "/postgres", autocommit=True) as db:

@@ -47,3 +47,14 @@ Set `VEGA_ROLLUP_BENCHMARK_EVIDENCE` to a local output path to retain full query
 ## Release behavior
 
 The worker migration installer and the standalone core schema installer both apply 037 after the existing rollup definitions. Only future stale or explicitly forced scopes are refreshed; installation itself leaves existing publication facts and generation untouched. A deployment must still verify its actual installed function digest and observe completed publication transactions. Faster rollup refresh does not by itself prove that the catalogue backlog is drained or that every UI latency target is met.
+
+
+## Individual-profile catalogue batches
+
+The catalogue queue previously limited every transaction to four inputs. Individual player, team and league profiles use flat typed models; their fixed transaction, source-prefetch and COPY overhead can be amortized. The worker now admits a contiguous prefix of at most **16 individual profiles**, preserving queue order. Objects, collection endpoints such as `/players`, and mixed boundaries keep the existing **four-input** transaction size. No extra SQL query is needed to choose the size.
+
+The slice still admits at most **40 inputs** or **30 seconds** of work before yielding to a partition, and respects the overall run deadline. A deadline stops admission between transactions; an admitted transaction still finishes or rolls back as a whole. Source spooling remains on disk, the catalogue writer retains its **64-record / 8 MiB group budget**, and storage headroom checks still run before and after publication. The larger flat-profile limit does not apply to archives or collection documents.
+
+The [real-writer fixture](../verification/rollup-publication-20261107/catalog-profile-benchmark.json) activates the consolidated layout through its ordinary copy/parity gates, then publishes the same 40 profiles with limits 4, 16 and 32. Typed responses and source receipts agree exactly. Limit 16 needs **three batches, source streams and COPY groups** (`16+16+8`) instead of ten. This proves a **70% reduction in those fixed groups**, not a 70% production-throughput gain. The local PGlite bridge uses a batched INSERT adapter for COPY transport; its warm medians were 354 ms at 4, 127 ms at 16 and 92 ms at 32. The default remains 16. Native CI uses actual COPY.
+
+Generation remains an atomic fence for each changed committed batch. Its final numeric value intentionally differs: ten changed batches increment it ten times; three changed batches increment it three times. No receipt or generation advance survives a failed batch. Transaction fixtures cover a later profile failure after a successful 16-input batch, the 40-input cap, the 30-second slice, the overall deadline, collection boundaries and continuation of healthy partitions. Production cadence must still be established from `catalog-published` receipts after deployment.

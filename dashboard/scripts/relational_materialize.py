@@ -40,6 +40,7 @@ INDEX = "computed/dashboard/index.json"
 LEASE = 97813003
 CATALOG_SLICE_SECONDS = 30
 CATALOG_TRANSACTION_INPUTS = 4
+CATALOG_PROFILE_TRANSACTION_INPUTS = 16
 CATALOG_SLICE_INPUTS = 40
 CATALOG_PATHS = r"^(raw/(supplemental-index\.json$|cup-worker/|rankings/|openfootball/|historical-goals/|seasons/[^/]+/supplemental_(results|fixtures|goals)/)|computed/matchdays/).*\.json(\.gz)?$"
 PROFILE = r"^/(leagues|teams|players)(/[ltp]_[A-Za-z0-9]{6})?$"
@@ -747,7 +748,7 @@ def partition_calendar(inputs, label, league):
         publish_catalog(db, [(path, merged)])
 
 
-def catalog_batch(inputs, limit):
+def catalog_batch(inputs, limit, *, profile_limit=None):
     db = inputs.db
     started = time.monotonic()
     with (
@@ -757,10 +758,22 @@ def catalog_batch(inputs, limit):
     ):
         jobs = db.execute(
             "SELECT kind,key,digest,ref,status,error FROM work_catalog ORDER BY kind,key LIMIT %s",
-            (limit,),
+            (max(limit, profile_limit or limit),),
         ).fetchall()
         if not jobs:
             return 0
+        # Individual profiles are flat typed records. Collections, archives and
+        # mixed boundaries keep the existing small transaction limit. Enlarge
+        # only a contiguous prefix, preserving the queue's exact precedence.
+        profiles = 0
+        if profile_limit:
+            for kind, key, *_ in jobs:
+                if kind != "profile" or not re.fullmatch(
+                    r"/(leagues/l_|teams/t_|players/p_)[A-Za-z0-9]{6}", key
+                ):
+                    break
+                profiles += 1
+        jobs = jobs[:max(limit, profiles)]
         headroom = capacity(db)
         scratch.execute("CREATE TABLE body_cache(path text,sha text,body text,PRIMARY KEY(path,sha))")
         refs = []
@@ -836,7 +849,9 @@ def catalog_slice(inputs, stop):
     while applied < CATALOG_SLICE_INPUTS and time.monotonic() < deadline:
         limit = min(CATALOG_TRANSACTION_INPUTS, CATALOG_SLICE_INPUTS - applied)
         try:
-            count = catalog_batch(inputs, limit)
+            count = catalog_batch(inputs, limit, profile_limit=min(
+                CATALOG_PROFILE_TRANSACTION_INPUTS, CATALOG_SLICE_INPUTS - applied
+            ))
         except Exception as error:
             return applied, error
         applied += count
