@@ -1,0 +1,3077 @@
+{
+  "version": 4,
+  "startedAt": "2026-11-07T21:37:27.753Z",
+  "documentId": "8954ef6c-a599-407a-adeb-f5232220e1a9",
+  "environment": {
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+    "hardwareConcurrency": 5,
+    "deviceMemoryGiB": 8,
+    "viewport": [
+      1363,
+      936
+    ],
+    "devicePixelRatio": 1
+  },
+  "initialReadyMs": 1934.9,
+  "initialPreparation": {
+    "startedMs": 1042.199999999255,
+    "totalChecks": 2,
+    "checks": [
+      {
+        "startMs": 1042.2999999970198,
+        "durationMs": 6.700000002980232,
+        "queueMs": 0,
+        "dataLoading": false,
+        "pendingImages": 19
+      },
+      {
+        "startMs": 1912.3999999985099,
+        "durationMs": 1.3999999985098839,
+        "queueMs": 860.8999999985099,
+        "dataLoading": false,
+        "pendingImages": 0
+      }
+    ],
+    "reason": "ready",
+    "finishedMs": 1914
+  },
+  "visibility": "visible",
+  "reads": [
+    {
+      "path": "/api/status",
+      "startMs": 1092.4,
+      "endMs": 1160.4,
+      "durationMs": 68,
+      "transferBytes": 0,
+      "decodedBytes": 0
+    },
+    {
+      "path": "/joueurs",
+      "startMs": 1941.8,
+      "endMs": 2032.8,
+      "durationMs": 91,
+      "transferBytes": 803,
+      "decodedBytes": 503
+    },
+    {
+      "path": "/competitions",
+      "startMs": 1941.3,
+      "endMs": 2033.9,
+      "durationMs": 92.6,
+      "transferBytes": 808,
+      "decodedBytes": 508
+    },
+    {
+      "path": "/clubs",
+      "startMs": 1941.5,
+      "endMs": 2040.6,
+      "durationMs": 99.1,
+      "transferBytes": 737,
+      "decodedBytes": 437
+    },
+    {
+      "path": "/matchs",
+      "startMs": 1941.9,
+      "endMs": 2043.4,
+      "durationMs": 101.5,
+      "transferBytes": 802,
+      "decodedBytes": 502
+    },
+    {
+      "path": "/matchs",
+      "startMs": 2037,
+      "endMs": 2066.2,
+      "durationMs": 29.2,
+      "transferBytes": 802,
+      "decodedBytes": 502
+    },
+    {
+      "path": "/calendrier",
+      "startMs": 2038.9,
+      "endMs": 2101.3,
+      "durationMs": 62.4,
+      "transferBytes": 503,
+      "decodedBytes": 264
+    },
+    {
+      "path": "/",
+      "startMs": 2042.8,
+      "endMs": 2122.2,
+      "durationMs": 79.4,
+      "transferBytes": 1399,
+      "decodedBytes": 2842
+    },
+    {
+      "path": "/competitions",
+      "startMs": 2045,
+      "endMs": 2138,
+      "durationMs": 93,
+      "transferBytes": 2776,
+      "decodedBytes": 6130
+    },
+    {
+      "path": "/competitions",
+      "startMs": 2067.9,
+      "endMs": 2182.7,
+      "durationMs": 114.8,
+      "transferBytes": 1805,
+      "decodedBytes": 4415
+    },
+    {
+      "path": "/clubs",
+      "startMs": 2103.4,
+      "endMs": 2190.8,
+      "durationMs": 87.4,
+      "transferBytes": 1725,
+      "decodedBytes": 3908
+    },
+    {
+      "path": "/joueurs",
+      "startMs": 2124.7,
+      "endMs": 2209.5,
+      "durationMs": 84.8,
+      "transferBytes": 1807,
+      "decodedBytes": 4404
+    },
+    {
+      "path": "/competitions",
+      "startMs": 2197.7,
+      "endMs": 2226.1,
+      "durationMs": 28.4,
+      "transferBytes": 808,
+      "decodedBytes": 508
+    },
+    {
+      "path": "/clubs",
+      "startMs": 2212.1,
+      "endMs": 2244.8,
+      "durationMs": 32.7,
+      "transferBytes": 737,
+      "decodedBytes": 437
+    },
+    {
+      "path": "/calendrier",
+      "startMs": 2186.9,
+      "endMs": 2249.6,
+      "durationMs": 62.7,
+      "transferBytes": 1373,
+      "decodedBytes": 2896
+    },
+    {
+      "path": "/matchs",
+      "startMs": 2141.8,
+      "endMs": 2257.9,
+      "durationMs": 116.1,
+      "transferBytes": 1836,
+      "decodedBytes": 4562
+    },
+    {
+      "path": "/joueurs",
+      "startMs": 2227.7,
+      "endMs": 2269.6,
+      "durationMs": 41.9,
+      "transferBytes": 803,
+      "decodedBytes": 503
+    },
+    {
+      "path": "/matchs",
+      "startMs": 2261.3,
+      "endMs": 2287.5,
+      "durationMs": 26.2,
+      "transferBytes": 802,
+      "decodedBytes": 502
+    },
+    {
+      "path": "/calendrier",
+      "startMs": 2251.1,
+      "endMs": 2303.5,
+      "durationMs": 52.4,
+      "transferBytes": 472,
+      "decodedBytes": 232
+    },
+    {
+      "path": "/api/dashboard/manifest",
+      "startMs": 8481,
+      "endMs": 8507.4,
+      "durationMs": 26.4,
+      "transferBytes": 0,
+      "decodedBytes": 0
+    },
+    {
+      "path": "/api/read/clubs",
+      "startMs": 8543,
+      "endMs": 8654,
+      "durationMs": 111,
+      "transferBytes": 0,
+      "decodedBytes": 0
+    },
+    {
+      "path": "/api/read/players",
+      "startMs": 15907.8,
+      "endMs": 16321.6,
+      "durationMs": 413.8,
+      "transferBytes": 0,
+      "decodedBytes": 0
+    },
+    {
+      "path": "/",
+      "startMs": 64687.3,
+      "endMs": 64739.8,
+      "durationMs": 52.5,
+      "transferBytes": 1363,
+      "decodedBytes": 2810
+    },
+    {
+      "path": "/",
+      "startMs": 64653,
+      "endMs": 65088,
+      "durationMs": 435,
+      "transferBytes": 47579,
+      "decodedBytes": 379563
+    }
+  ],
+  "imageReads": [
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 9634.1,
+      "endMs": 9643,
+      "durationMs": 8.9,
+      "transferBytes": 0,
+      "encodedBytes": 1482,
+      "decodedBytes": 1482
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 9634.7,
+      "endMs": 9643.1,
+      "durationMs": 8.4,
+      "transferBytes": 0,
+      "encodedBytes": 1206,
+      "decodedBytes": 1206
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17110.8,
+      "endMs": 17119.2,
+      "durationMs": 8.4,
+      "transferBytes": 0,
+      "encodedBytes": 1824,
+      "decodedBytes": 1824
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17111.1,
+      "endMs": 17119.3,
+      "durationMs": 8.2,
+      "transferBytes": 0,
+      "encodedBytes": 2504,
+      "decodedBytes": 2504
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17111.2,
+      "endMs": 17125.7,
+      "durationMs": 14.5,
+      "transferBytes": 0,
+      "encodedBytes": 1428,
+      "decodedBytes": 1428
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17111.3,
+      "endMs": 17126.2,
+      "durationMs": 14.9,
+      "transferBytes": 0,
+      "encodedBytes": 1580,
+      "decodedBytes": 1580
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17111.5,
+      "endMs": 17126.5,
+      "durationMs": 15,
+      "transferBytes": 0,
+      "encodedBytes": 1380,
+      "decodedBytes": 1380
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17111.5,
+      "endMs": 17126.6,
+      "durationMs": 15.1,
+      "transferBytes": 0,
+      "encodedBytes": 1598,
+      "decodedBytes": 1598
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17111.8,
+      "endMs": 17126.7,
+      "durationMs": 14.9,
+      "transferBytes": 0,
+      "encodedBytes": 1522,
+      "decodedBytes": 1522
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17111.9,
+      "endMs": 17127.2,
+      "durationMs": 15.3,
+      "transferBytes": 0,
+      "encodedBytes": 1374,
+      "decodedBytes": 1374
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17118.7,
+      "endMs": 17129.4,
+      "durationMs": 10.7,
+      "transferBytes": 0,
+      "encodedBytes": 2430,
+      "decodedBytes": 2430
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17118.8,
+      "endMs": 17129.7,
+      "durationMs": 10.9,
+      "transferBytes": 0,
+      "encodedBytes": 1838,
+      "decodedBytes": 1838
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17118.8,
+      "endMs": 17130.3,
+      "durationMs": 11.5,
+      "transferBytes": 0,
+      "encodedBytes": 1568,
+      "decodedBytes": 1568
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17118.8,
+      "endMs": 17132,
+      "durationMs": 13.2,
+      "transferBytes": 0,
+      "encodedBytes": 2258,
+      "decodedBytes": 2258
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17118.9,
+      "endMs": 17132.4,
+      "durationMs": 13.5,
+      "transferBytes": 0,
+      "encodedBytes": 1268,
+      "decodedBytes": 1268
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17119,
+      "endMs": 17132.5,
+      "durationMs": 13.5,
+      "transferBytes": 0,
+      "encodedBytes": 1424,
+      "decodedBytes": 1424
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17119.1,
+      "endMs": 17132.5,
+      "durationMs": 13.4,
+      "transferBytes": 0,
+      "encodedBytes": 1264,
+      "decodedBytes": 1264
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17119.2,
+      "endMs": 17132.5,
+      "durationMs": 13.3,
+      "transferBytes": 0,
+      "encodedBytes": 1790,
+      "decodedBytes": 1790
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17119.2,
+      "endMs": 17132.6,
+      "durationMs": 13.4,
+      "transferBytes": 0,
+      "encodedBytes": 1222,
+      "decodedBytes": 1222
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17119.3,
+      "endMs": 17132.6,
+      "durationMs": 13.3,
+      "transferBytes": 0,
+      "encodedBytes": 1376,
+      "decodedBytes": 1376
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 17119.3,
+      "endMs": 17132.8,
+      "durationMs": 13.5,
+      "transferBytes": 0,
+      "encodedBytes": 1444,
+      "decodedBytes": 1444
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44512.9,
+      "endMs": 44520.3,
+      "durationMs": 7.4,
+      "transferBytes": 0,
+      "encodedBytes": 2382,
+      "decodedBytes": 2382
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44513.5,
+      "endMs": 44520.7,
+      "durationMs": 7.2,
+      "transferBytes": 0,
+      "encodedBytes": 1526,
+      "decodedBytes": 1526
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44514,
+      "endMs": 44526.5,
+      "durationMs": 12.5,
+      "transferBytes": 0,
+      "encodedBytes": 2000,
+      "decodedBytes": 2000
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44514.5,
+      "endMs": 44527,
+      "durationMs": 12.5,
+      "transferBytes": 0,
+      "encodedBytes": 1846,
+      "decodedBytes": 1846
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44515.1,
+      "endMs": 44523.9,
+      "durationMs": 8.8,
+      "transferBytes": 0,
+      "encodedBytes": 1556,
+      "decodedBytes": 1556
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44515.6,
+      "endMs": 44524,
+      "durationMs": 8.4,
+      "transferBytes": 0,
+      "encodedBytes": 1856,
+      "decodedBytes": 1856
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44516.2,
+      "endMs": 44527.2,
+      "durationMs": 11,
+      "transferBytes": 0,
+      "encodedBytes": 2546,
+      "decodedBytes": 2546
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44516.7,
+      "endMs": 44527.2,
+      "durationMs": 10.5,
+      "transferBytes": 0,
+      "encodedBytes": 2354,
+      "decodedBytes": 2354
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44517.1,
+      "endMs": 44527.5,
+      "durationMs": 10.4,
+      "transferBytes": 0,
+      "encodedBytes": 3124,
+      "decodedBytes": 3124
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44517.9,
+      "endMs": 44531.2,
+      "durationMs": 13.3,
+      "transferBytes": 0,
+      "encodedBytes": 1738,
+      "decodedBytes": 1738
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44518.5,
+      "endMs": 44534.4,
+      "durationMs": 15.9,
+      "transferBytes": 0,
+      "encodedBytes": 1944,
+      "decodedBytes": 1944
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44519,
+      "endMs": 44534.4,
+      "durationMs": 15.4,
+      "transferBytes": 0,
+      "encodedBytes": 2372,
+      "decodedBytes": 2372
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44519.6,
+      "endMs": 44534.6,
+      "durationMs": 15,
+      "transferBytes": 0,
+      "encodedBytes": 2070,
+      "decodedBytes": 2070
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44520.2,
+      "endMs": 44539.4,
+      "durationMs": 19.2,
+      "transferBytes": 0,
+      "encodedBytes": 1562,
+      "decodedBytes": 1562
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44520.6,
+      "endMs": 44539.5,
+      "durationMs": 18.9,
+      "transferBytes": 0,
+      "encodedBytes": 2694,
+      "decodedBytes": 2694
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44521.2,
+      "endMs": 44542,
+      "durationMs": 20.8,
+      "transferBytes": 0,
+      "encodedBytes": 2142,
+      "decodedBytes": 2142
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44526,
+      "endMs": 44552,
+      "durationMs": 26,
+      "transferBytes": 0,
+      "encodedBytes": 1342,
+      "decodedBytes": 1342
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44526,
+      "endMs": 44551.9,
+      "durationMs": 25.9,
+      "transferBytes": 0,
+      "encodedBytes": 1566,
+      "decodedBytes": 1566
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44526.1,
+      "endMs": 44557.6,
+      "durationMs": 31.5,
+      "transferBytes": 0,
+      "encodedBytes": 1482,
+      "decodedBytes": 1482
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44526.2,
+      "endMs": 44557.7,
+      "durationMs": 31.5,
+      "transferBytes": 0,
+      "encodedBytes": 1206,
+      "decodedBytes": 1206
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 44526.2,
+      "endMs": 44557.9,
+      "durationMs": 31.7,
+      "transferBytes": 0,
+      "encodedBytes": 2638,
+      "decodedBytes": 2638
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65214.9,
+      "endMs": 65230.1,
+      "durationMs": 15.2,
+      "transferBytes": 0,
+      "encodedBytes": 2596,
+      "decodedBytes": 2596
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65215.2,
+      "endMs": 65228.6,
+      "durationMs": 13.4,
+      "transferBytes": 0,
+      "encodedBytes": 3038,
+      "decodedBytes": 3038
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65215.3,
+      "endMs": 65230.4,
+      "durationMs": 15.1,
+      "transferBytes": 0,
+      "encodedBytes": 1932,
+      "decodedBytes": 1932
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65215.4,
+      "endMs": 65230.5,
+      "durationMs": 15.1,
+      "transferBytes": 0,
+      "encodedBytes": 2342,
+      "decodedBytes": 2342
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65215.6,
+      "endMs": 65234.8,
+      "durationMs": 19.2,
+      "transferBytes": 0,
+      "encodedBytes": 2418,
+      "decodedBytes": 2418
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65215.7,
+      "endMs": 65235.5,
+      "durationMs": 19.8,
+      "transferBytes": 0,
+      "encodedBytes": 1886,
+      "decodedBytes": 1886
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65215.8,
+      "endMs": 65235.7,
+      "durationMs": 19.9,
+      "transferBytes": 0,
+      "encodedBytes": 3354,
+      "decodedBytes": 3354
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65215.9,
+      "endMs": 65235.8,
+      "durationMs": 19.9,
+      "transferBytes": 0,
+      "encodedBytes": 732,
+      "decodedBytes": 732
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65216,
+      "endMs": 65235.9,
+      "durationMs": 19.9,
+      "transferBytes": 0,
+      "encodedBytes": 1518,
+      "decodedBytes": 1518
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65216.2,
+      "endMs": 65236.4,
+      "durationMs": 20.2,
+      "transferBytes": 0,
+      "encodedBytes": 2502,
+      "decodedBytes": 2502
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65216.2,
+      "endMs": 65236.5,
+      "durationMs": 20.3,
+      "transferBytes": 0,
+      "encodedBytes": 1790,
+      "decodedBytes": 1790
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65216.4,
+      "endMs": 65236.6,
+      "durationMs": 20.2,
+      "transferBytes": 0,
+      "encodedBytes": 1702,
+      "decodedBytes": 1702
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65216.9,
+      "endMs": 65236.6,
+      "durationMs": 19.7,
+      "transferBytes": 0,
+      "encodedBytes": 1464,
+      "decodedBytes": 1464
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65217.1,
+      "endMs": 65236.7,
+      "durationMs": 19.6,
+      "transferBytes": 0,
+      "encodedBytes": 1358,
+      "decodedBytes": 1358
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65217.3,
+      "endMs": 65236.8,
+      "durationMs": 19.5,
+      "transferBytes": 0,
+      "encodedBytes": 2478,
+      "decodedBytes": 2478
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.3,
+      "endMs": 65828.8,
+      "durationMs": 20.5,
+      "transferBytes": 0,
+      "encodedBytes": 2264,
+      "decodedBytes": 2264
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.4,
+      "endMs": 65829.1,
+      "durationMs": 20.7,
+      "transferBytes": 0,
+      "encodedBytes": 1906,
+      "decodedBytes": 1906
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.4,
+      "endMs": 65829.3,
+      "durationMs": 20.9,
+      "transferBytes": 0,
+      "encodedBytes": 2140,
+      "decodedBytes": 2140
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.4,
+      "endMs": 65830.8,
+      "durationMs": 22.4,
+      "transferBytes": 0,
+      "encodedBytes": 2392,
+      "decodedBytes": 2392
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.4,
+      "endMs": 65830.8,
+      "durationMs": 22.4,
+      "transferBytes": 0,
+      "encodedBytes": 1818,
+      "decodedBytes": 1818
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.5,
+      "endMs": 65833.8,
+      "durationMs": 25.3,
+      "transferBytes": 0,
+      "encodedBytes": 1328,
+      "decodedBytes": 1328
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.5,
+      "endMs": 65833.8,
+      "durationMs": 25.3,
+      "transferBytes": 0,
+      "encodedBytes": 2856,
+      "decodedBytes": 2856
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.6,
+      "endMs": 65834.4,
+      "durationMs": 25.8,
+      "transferBytes": 0,
+      "encodedBytes": 1870,
+      "decodedBytes": 1870
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.6,
+      "endMs": 65833.9,
+      "durationMs": 25.3,
+      "transferBytes": 0,
+      "encodedBytes": 2192,
+      "decodedBytes": 2192
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.6,
+      "endMs": 65834.2,
+      "durationMs": 25.6,
+      "transferBytes": 0,
+      "encodedBytes": 1562,
+      "decodedBytes": 1562
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.6,
+      "endMs": 65834.2,
+      "durationMs": 25.6,
+      "transferBytes": 0,
+      "encodedBytes": 884,
+      "decodedBytes": 884
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.6,
+      "endMs": 65834.2,
+      "durationMs": 25.6,
+      "transferBytes": 0,
+      "encodedBytes": 1306,
+      "decodedBytes": 1306
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.6,
+      "endMs": 65834.3,
+      "durationMs": 25.7,
+      "transferBytes": 0,
+      "encodedBytes": 960,
+      "decodedBytes": 960
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.6,
+      "endMs": 65834.3,
+      "durationMs": 25.7,
+      "transferBytes": 0,
+      "encodedBytes": 1656,
+      "decodedBytes": 1656
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.7,
+      "endMs": 65834.4,
+      "durationMs": 25.7,
+      "transferBytes": 0,
+      "encodedBytes": 2012,
+      "decodedBytes": 2012
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.8,
+      "endMs": 65834.4,
+      "durationMs": 25.6,
+      "transferBytes": 0,
+      "encodedBytes": 1870,
+      "decodedBytes": 1870
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.9,
+      "endMs": 65834.6,
+      "durationMs": 25.7,
+      "transferBytes": 0,
+      "encodedBytes": 1270,
+      "decodedBytes": 1270
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.9,
+      "endMs": 65834.6,
+      "durationMs": 25.7,
+      "transferBytes": 0,
+      "encodedBytes": 1844,
+      "decodedBytes": 1844
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.9,
+      "endMs": 65834.6,
+      "durationMs": 25.7,
+      "transferBytes": 0,
+      "encodedBytes": 1414,
+      "decodedBytes": 1414
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.9,
+      "endMs": 65834.7,
+      "durationMs": 25.8,
+      "transferBytes": 0,
+      "encodedBytes": 1518,
+      "decodedBytes": 1518
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65808.9,
+      "endMs": 65834.8,
+      "durationMs": 25.9,
+      "transferBytes": 0,
+      "encodedBytes": 1432,
+      "decodedBytes": 1432
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65809,
+      "endMs": 65834.9,
+      "durationMs": 25.9,
+      "transferBytes": 0,
+      "encodedBytes": 1324,
+      "decodedBytes": 1324
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65809,
+      "endMs": 65835,
+      "durationMs": 26,
+      "transferBytes": 0,
+      "encodedBytes": 1926,
+      "decodedBytes": 1926
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65809,
+      "endMs": 65835.4,
+      "durationMs": 26.4,
+      "transferBytes": 0,
+      "encodedBytes": 1346,
+      "decodedBytes": 1346
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65809,
+      "endMs": 65835.8,
+      "durationMs": 26.8,
+      "transferBytes": 0,
+      "encodedBytes": 1426,
+      "decodedBytes": 1426
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65809,
+      "endMs": 65836.2,
+      "durationMs": 27.2,
+      "transferBytes": 0,
+      "encodedBytes": 1634,
+      "decodedBytes": 1634
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65809,
+      "endMs": 65837.1,
+      "durationMs": 28.1,
+      "transferBytes": 0,
+      "encodedBytes": 1690,
+      "decodedBytes": 1690
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65809.1,
+      "endMs": 65836.5,
+      "durationMs": 27.4,
+      "transferBytes": 0,
+      "encodedBytes": 1400,
+      "decodedBytes": 1400
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65809.1,
+      "endMs": 65836.5,
+      "durationMs": 27.4,
+      "transferBytes": 0,
+      "encodedBytes": 1812,
+      "decodedBytes": 1812
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 65809.1,
+      "endMs": 65836.7,
+      "durationMs": 27.6,
+      "transferBytes": 0,
+      "encodedBytes": 2402,
+      "decodedBytes": 2402
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 82352.9,
+      "endMs": 82365.1,
+      "durationMs": 12.2,
+      "transferBytes": 0,
+      "encodedBytes": 2382,
+      "decodedBytes": 2382
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 82353.5,
+      "endMs": 82365.7,
+      "durationMs": 12.2,
+      "transferBytes": 0,
+      "encodedBytes": 1526,
+      "decodedBytes": 1526
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 82354.1,
+      "endMs": 82366.9,
+      "durationMs": 12.8,
+      "transferBytes": 0,
+      "encodedBytes": 2000,
+      "decodedBytes": 2000
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 82355.1,
+      "endMs": 82367,
+      "durationMs": 11.9,
+      "transferBytes": 0,
+      "encodedBytes": 1556,
+      "decodedBytes": 1556
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 82355.6,
+      "endMs": 82367.3,
+      "durationMs": 11.7,
+      "transferBytes": 0,
+      "encodedBytes": 1856,
+      "decodedBytes": 1856
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 82357.2,
+      "endMs": 82367.4,
+      "durationMs": 10.2,
+      "transferBytes": 0,
+      "encodedBytes": 2354,
+      "decodedBytes": 2354
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 82357.7,
+      "endMs": 82365.7,
+      "durationMs": 8,
+      "transferBytes": 0,
+      "encodedBytes": 3124,
+      "decodedBytes": 3124
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 82358.4,
+      "endMs": 82367.7,
+      "durationMs": 9.3,
+      "transferBytes": 0,
+      "encodedBytes": 1738,
+      "decodedBytes": 1738
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 82358.9,
+      "endMs": 82373.8,
+      "durationMs": 14.9,
+      "transferBytes": 0,
+      "encodedBytes": 1944,
+      "decodedBytes": 1944
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 82360.9,
+      "endMs": 82377.4,
+      "durationMs": 16.5,
+      "transferBytes": 0,
+      "encodedBytes": 2694,
+      "decodedBytes": 2694
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 82362.4,
+      "endMs": 82377.6,
+      "durationMs": 15.2,
+      "transferBytes": 0,
+      "encodedBytes": 2142,
+      "decodedBytes": 2142
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 82363.4,
+      "endMs": 82377.7,
+      "durationMs": 14.3,
+      "transferBytes": 0,
+      "encodedBytes": 1342,
+      "decodedBytes": 1342
+    },
+    {
+      "path": "/_next/image",
+      "sameOrigin": true,
+      "startMs": 82364.1,
+      "endMs": 82378.9,
+      "durationMs": 14.8,
+      "transferBytes": 0,
+      "encodedBytes": 1482,
+      "decodedBytes": 1482
+    }
+  ],
+  "fetches": [
+    {
+      "path": "/bb28a844c7b2a627/view",
+      "kind": "telemetry",
+      "startMs": 670.5999999977648,
+      "endMs": 754.5,
+      "responseMs": 761.5999999977648,
+      "status": 200
+    },
+    {
+      "path": "/api/status",
+      "kind": "api",
+      "startMs": 1092.0999999977648,
+      "endMs": 1160.3999999985099,
+      "responseMs": 1166.2999999970198,
+      "status": 200
+    },
+    {
+      "path": "/competitions",
+      "kind": "rsc",
+      "startMs": 1940.8999999985099,
+      "endMs": 2033.8999999985099,
+      "responseMs": 2037.199999999255,
+      "status": 200
+    },
+    {
+      "path": "/clubs",
+      "kind": "rsc",
+      "startMs": 1941.5,
+      "endMs": 2040.5999999977648,
+      "responseMs": 2041.0999999977648,
+      "status": 200
+    },
+    {
+      "path": "/joueurs",
+      "kind": "rsc",
+      "startMs": 1941.5999999977648,
+      "endMs": 2032.7999999970198,
+      "responseMs": 2034.2999999970198,
+      "status": 200
+    },
+    {
+      "path": "/matchs",
+      "kind": "rsc",
+      "startMs": 1941.8999999985099,
+      "endMs": 2043.3999999985099,
+      "responseMs": 2043.8999999985099,
+      "status": 200
+    },
+    {
+      "path": "/matchs",
+      "kind": "rsc",
+      "startMs": 2036.8999999985099,
+      "endMs": 2066.199999999255,
+      "responseMs": 2064.7999999970198,
+      "status": 200
+    },
+    {
+      "path": "/calendrier",
+      "kind": "rsc",
+      "startMs": 2038.7999999970198,
+      "endMs": 2101.2999999970198,
+      "responseMs": 2102,
+      "status": 200
+    },
+    {
+      "path": "/",
+      "kind": "rsc",
+      "startMs": 2042.699999999255,
+      "endMs": 2122.199999999255,
+      "responseMs": 2123.099999997765,
+      "status": 200
+    },
+    {
+      "path": "/competitions",
+      "kind": "rsc",
+      "startMs": 2044.8999999985099,
+      "endMs": 2138,
+      "responseMs": 2139.599999997765,
+      "status": 200
+    },
+    {
+      "path": "/competitions",
+      "kind": "rsc",
+      "startMs": 2067.699999999255,
+      "endMs": 2182.699999999255,
+      "responseMs": 2183.5,
+      "status": 200
+    },
+    {
+      "path": "/clubs",
+      "kind": "rsc",
+      "startMs": 2103.199999999255,
+      "endMs": 2190.7999999970198,
+      "responseMs": 2196.099999997765,
+      "status": 200
+    },
+    {
+      "path": "/joueurs",
+      "kind": "rsc",
+      "startMs": 2124.5,
+      "endMs": 2209.5,
+      "responseMs": 2210.39999999851,
+      "status": 200
+    },
+    {
+      "path": "/matchs",
+      "kind": "rsc",
+      "startMs": 2141.599999997765,
+      "endMs": 2257.89999999851,
+      "responseMs": 2258.599999997765,
+      "status": 200
+    },
+    {
+      "path": "/calendrier",
+      "kind": "rsc",
+      "startMs": 2186.7999999970198,
+      "endMs": 2249.599999997765,
+      "responseMs": 2250.099999997765,
+      "status": 200
+    },
+    {
+      "path": "/competitions",
+      "kind": "rsc",
+      "startMs": 2197.699999999255,
+      "endMs": 2226.099999997765,
+      "responseMs": 2226.699999999255,
+      "status": 200
+    },
+    {
+      "path": "/clubs",
+      "kind": "rsc",
+      "startMs": 2211.89999999851,
+      "endMs": 2244.7999999970198,
+      "responseMs": 2245.699999999255,
+      "status": 200
+    },
+    {
+      "path": "/joueurs",
+      "kind": "rsc",
+      "startMs": 2227.5,
+      "endMs": 2269.599999997765,
+      "responseMs": 2270.2999999970198,
+      "status": 200
+    },
+    {
+      "path": "/calendrier",
+      "kind": "rsc",
+      "startMs": 2251,
+      "endMs": 2303.5,
+      "responseMs": 2307,
+      "status": 200
+    },
+    {
+      "path": "/matchs",
+      "kind": "rsc",
+      "startMs": 2261.199999999255,
+      "endMs": 2287.5,
+      "responseMs": 2288.199999999255,
+      "status": 200
+    },
+    {
+      "path": "/633fec19580abde8/vitals",
+      "kind": "telemetry",
+      "startMs": 8484.39999999851,
+      "endMs": 8592.79999999702,
+      "responseMs": 8593.79999999702,
+      "status": 200
+    },
+    {
+      "path": "/bb28a844c7b2a627/view",
+      "kind": "telemetry",
+      "startMs": 8526.199999999255,
+      "endMs": 8638.5,
+      "responseMs": 8639.39999999851,
+      "status": 200
+    },
+    {
+      "path": "/api/read/clubs",
+      "kind": "api",
+      "startMs": 8542.699999999255,
+      "endMs": 8654,
+      "responseMs": 8654.79999999702,
+      "status": 200
+    },
+    {
+      "path": "/633fec19580abde8/vitals",
+      "kind": "telemetry",
+      "startMs": 15879.89999999851,
+      "endMs": 15993.099999997765,
+      "responseMs": 15994.099999997765,
+      "status": 200
+    },
+    {
+      "path": "/bb28a844c7b2a627/view",
+      "kind": "telemetry",
+      "startMs": 15890.39999999851,
+      "endMs": 16038.39999999851,
+      "responseMs": 16039.29999999702,
+      "status": 200
+    },
+    {
+      "path": "/api/read/players",
+      "kind": "api",
+      "startMs": 15907.599999997765,
+      "endMs": 16321.599999997765,
+      "responseMs": 16322.199999999255,
+      "status": 200
+    },
+    {
+      "path": "/bb28a844c7b2a627/view",
+      "kind": "telemetry",
+      "startMs": 44537.39999999851,
+      "endMs": 44655,
+      "responseMs": 44655.89999999851,
+      "status": 200
+    },
+    {
+      "path": "/bb28a844c7b2a627/view",
+      "kind": "telemetry",
+      "startMs": 55222.89999999851,
+      "endMs": 55307.79999999702,
+      "responseMs": 55309.29999999702,
+      "status": 200
+    },
+    {
+      "path": "/",
+      "kind": "rsc",
+      "startMs": 64652.89999999851,
+      "endMs": 65088,
+      "responseMs": 64730,
+      "status": 200
+    },
+    {
+      "path": "/bb28a844c7b2a627/view",
+      "kind": "telemetry",
+      "startMs": 64685.5,
+      "endMs": 64764.199999999255,
+      "responseMs": 64765.29999999702,
+      "status": 200
+    },
+    {
+      "path": "/",
+      "kind": "rsc",
+      "startMs": 64687.199999999255,
+      "endMs": 64739.79999999702,
+      "responseMs": 64740.599999997765,
+      "status": 200
+    },
+    {
+      "path": "/bb28a844c7b2a627/view",
+      "kind": "telemetry",
+      "startMs": 82384.19999999925,
+      "endMs": 82470,
+      "responseMs": 82470.89999999851,
+      "status": 200
+    },
+    {
+      "path": "/bb28a844c7b2a627/view",
+      "kind": "telemetry",
+      "startMs": 89546.09999999776,
+      "endMs": 89643.59999999776,
+      "responseMs": 89644.5,
+      "status": 200
+    }
+  ],
+  "transitions": [
+    {
+      "from": "/",
+      "to": "/clubs",
+      "startedAt": "2026-11-07T21:37:35.615Z",
+      "durationMs": 4193.1,
+      "eventQueueMs": 1.3,
+      "startClock": "event.timeStamp",
+      "phases": {
+        "workspaceObservedMs": 48,
+        "readyObservedMs": 2163.8,
+        "twoFramesAfterReadyMs": 2029.3
+      },
+      "observedImageTransfers": [
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 9614.6,
+          "endMs": 9625.6,
+          "durationMs": 11,
+          "transferBytes": 0,
+          "encodedBytes": 2382,
+          "decodedBytes": 2382
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 9615.3,
+          "endMs": 9626.1,
+          "durationMs": 10.8,
+          "transferBytes": 0,
+          "encodedBytes": 1526,
+          "decodedBytes": 1526
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 9615.9,
+          "endMs": 9626.7,
+          "durationMs": 10.8,
+          "transferBytes": 0,
+          "encodedBytes": 2000,
+          "decodedBytes": 2000
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 9616.5,
+          "endMs": 9626.9,
+          "durationMs": 10.4,
+          "transferBytes": 0,
+          "encodedBytes": 1846,
+          "decodedBytes": 1846
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 9616.9,
+          "endMs": 9633,
+          "durationMs": 16.1,
+          "transferBytes": 0,
+          "encodedBytes": 1556,
+          "decodedBytes": 1556
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 9617.9,
+          "endMs": 9633.6,
+          "durationMs": 15.7,
+          "transferBytes": 0,
+          "encodedBytes": 1856,
+          "decodedBytes": 1856
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 9619.3,
+          "endMs": 9638.9,
+          "durationMs": 19.6,
+          "transferBytes": 0,
+          "encodedBytes": 2354,
+          "decodedBytes": 2354
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 9620,
+          "endMs": 9640.6,
+          "durationMs": 20.6,
+          "transferBytes": 0,
+          "encodedBytes": 3124,
+          "decodedBytes": 3124
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 9624.9,
+          "endMs": 9641,
+          "durationMs": 16.1,
+          "transferBytes": 0,
+          "encodedBytes": 1738,
+          "decodedBytes": 1738
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 9625.6,
+          "endMs": 9641.1,
+          "durationMs": 15.5,
+          "transferBytes": 0,
+          "encodedBytes": 1944,
+          "decodedBytes": 1944
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 9631.5,
+          "endMs": 9642.5,
+          "durationMs": 11,
+          "transferBytes": 0,
+          "encodedBytes": 1562,
+          "decodedBytes": 1562
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 9632.1,
+          "endMs": 9642.6,
+          "durationMs": 10.5,
+          "transferBytes": 0,
+          "encodedBytes": 2694,
+          "decodedBytes": 2694
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 9632.7,
+          "endMs": 9642.7,
+          "durationMs": 10,
+          "transferBytes": 0,
+          "encodedBytes": 2142,
+          "decodedBytes": 2142
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 9633.6,
+          "endMs": 9642.8,
+          "durationMs": 9.2,
+          "transferBytes": 0,
+          "encodedBytes": 1342,
+          "decodedBytes": 1342
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 9634.1,
+          "endMs": 9643,
+          "durationMs": 8.9,
+          "transferBytes": 0,
+          "encodedBytes": 1482,
+          "decodedBytes": 1482
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 9634.7,
+          "endMs": 9643.1,
+          "durationMs": 8.4,
+          "transferBytes": 0,
+          "encodedBytes": 1206,
+          "decodedBytes": 1206
+        }
+      ],
+      "preparation": {
+        "startedMs": 8533.39999999851,
+        "totalChecks": 3,
+        "checks": [
+          {
+            "startMs": 8533.5,
+            "durationMs": 5.099999997764826,
+            "queueMs": 0,
+            "dataLoading": true,
+            "pendingImages": 0
+          },
+          {
+            "startMs": 9609.29999999702,
+            "durationMs": 27,
+            "queueMs": 940.5,
+            "dataLoading": false,
+            "pendingImages": 16
+          },
+          {
+            "startMs": 10627.39999999851,
+            "durationMs": 0.6000000014901161,
+            "queueMs": 983.8999999985099,
+            "dataLoading": false,
+            "pendingImages": 0
+          }
+        ],
+        "reason": "ready",
+        "finishedMs": 10628
+      },
+      "cache": {
+        "fresh": 2,
+        "pending": 0,
+        "loader": 2
+      },
+      "fetchesStarted": 3,
+      "fetchesDuringInterval": 3,
+      "fetchesInFlightAtClick": 0,
+      "blockingFetchesDuringInterval": 1,
+      "blockingFetchesInFlightAtClick": 0,
+      "telemetryFetchesDuringInterval": 2,
+      "dataTransfersDuringInterval": 2,
+      "networkEvidenceComplete": true,
+      "dataInMemory": false,
+      "visible": true
+    },
+    {
+      "from": "/clubs",
+      "to": "/joueurs",
+      "startedAt": "2026-11-07T21:37:43.010Z",
+      "durationMs": 4145.5,
+      "eventQueueMs": 0.3,
+      "startClock": "event.timeStamp",
+      "phases": {
+        "workspaceObservedMs": 24.4,
+        "readyObservedMs": 2267.5,
+        "twoFramesAfterReadyMs": 1878
+      },
+      "observedImageTransfers": [
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17110.8,
+          "endMs": 17119.2,
+          "durationMs": 8.4,
+          "transferBytes": 0,
+          "encodedBytes": 1824,
+          "decodedBytes": 1824
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17111.1,
+          "endMs": 17119.3,
+          "durationMs": 8.2,
+          "transferBytes": 0,
+          "encodedBytes": 2504,
+          "decodedBytes": 2504
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17111.2,
+          "endMs": 17125.7,
+          "durationMs": 14.5,
+          "transferBytes": 0,
+          "encodedBytes": 1428,
+          "decodedBytes": 1428
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17111.3,
+          "endMs": 17126.2,
+          "durationMs": 14.9,
+          "transferBytes": 0,
+          "encodedBytes": 1580,
+          "decodedBytes": 1580
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17111.5,
+          "endMs": 17126.5,
+          "durationMs": 15,
+          "transferBytes": 0,
+          "encodedBytes": 1380,
+          "decodedBytes": 1380
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17111.5,
+          "endMs": 17126.6,
+          "durationMs": 15.1,
+          "transferBytes": 0,
+          "encodedBytes": 1598,
+          "decodedBytes": 1598
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17111.8,
+          "endMs": 17126.7,
+          "durationMs": 14.9,
+          "transferBytes": 0,
+          "encodedBytes": 1522,
+          "decodedBytes": 1522
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17111.9,
+          "endMs": 17127.2,
+          "durationMs": 15.3,
+          "transferBytes": 0,
+          "encodedBytes": 1374,
+          "decodedBytes": 1374
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17118.7,
+          "endMs": 17129.4,
+          "durationMs": 10.7,
+          "transferBytes": 0,
+          "encodedBytes": 2430,
+          "decodedBytes": 2430
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17118.8,
+          "endMs": 17129.7,
+          "durationMs": 10.9,
+          "transferBytes": 0,
+          "encodedBytes": 1838,
+          "decodedBytes": 1838
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17118.8,
+          "endMs": 17130.3,
+          "durationMs": 11.5,
+          "transferBytes": 0,
+          "encodedBytes": 1568,
+          "decodedBytes": 1568
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17118.8,
+          "endMs": 17132,
+          "durationMs": 13.2,
+          "transferBytes": 0,
+          "encodedBytes": 2258,
+          "decodedBytes": 2258
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17118.9,
+          "endMs": 17132.4,
+          "durationMs": 13.5,
+          "transferBytes": 0,
+          "encodedBytes": 1268,
+          "decodedBytes": 1268
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17119,
+          "endMs": 17132.5,
+          "durationMs": 13.5,
+          "transferBytes": 0,
+          "encodedBytes": 1424,
+          "decodedBytes": 1424
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17119.1,
+          "endMs": 17132.5,
+          "durationMs": 13.4,
+          "transferBytes": 0,
+          "encodedBytes": 1264,
+          "decodedBytes": 1264
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17119.2,
+          "endMs": 17132.5,
+          "durationMs": 13.3,
+          "transferBytes": 0,
+          "encodedBytes": 1790,
+          "decodedBytes": 1790
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17119.2,
+          "endMs": 17132.6,
+          "durationMs": 13.4,
+          "transferBytes": 0,
+          "encodedBytes": 1222,
+          "decodedBytes": 1222
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17119.3,
+          "endMs": 17132.6,
+          "durationMs": 13.3,
+          "transferBytes": 0,
+          "encodedBytes": 1376,
+          "decodedBytes": 1376
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 17119.3,
+          "endMs": 17132.8,
+          "durationMs": 13.5,
+          "transferBytes": 0,
+          "encodedBytes": 1444,
+          "decodedBytes": 1444
+        }
+      ],
+      "preparation": {
+        "startedMs": 15899.699999999255,
+        "totalChecks": 3,
+        "checks": [
+          {
+            "startMs": 15899.699999999255,
+            "durationMs": 4,
+            "queueMs": 0,
+            "dataLoading": true,
+            "pendingImages": 0
+          },
+          {
+            "startMs": 17110.199999999255,
+            "durationMs": 1.8999999985098839,
+            "queueMs": 765.4000000022352,
+            "dataLoading": false,
+            "pendingImages": 8
+          },
+          {
+            "startMs": 18124.5,
+            "durationMs": 2.099999997764826,
+            "queueMs": 1002.2000000029802,
+            "dataLoading": false,
+            "pendingImages": 0
+          }
+        ],
+        "reason": "ready",
+        "finishedMs": 18126.599999997765
+      },
+      "cache": {
+        "fresh": 0,
+        "pending": 0,
+        "loader": 2
+      },
+      "fetchesStarted": 3,
+      "fetchesDuringInterval": 3,
+      "fetchesInFlightAtClick": 0,
+      "blockingFetchesDuringInterval": 1,
+      "blockingFetchesInFlightAtClick": 0,
+      "telemetryFetchesDuringInterval": 2,
+      "dataTransfersDuringInterval": 1,
+      "networkEvidenceComplete": true,
+      "dataInMemory": false,
+      "visible": true
+    },
+    {
+      "from": "/joueurs",
+      "to": "/clubs",
+      "startedAt": "2026-11-07T21:38:11.621Z",
+      "durationMs": 245.4,
+      "eventQueueMs": 0.3,
+      "startClock": "event.timeStamp",
+      "phases": {
+        "workspaceObservedMs": 52.7,
+        "readyObservedMs": 98.9,
+        "twoFramesAfterReadyMs": 146.5
+      },
+      "observedImageTransfers": [
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44512.9,
+          "endMs": 44520.3,
+          "durationMs": 7.4,
+          "transferBytes": 0,
+          "encodedBytes": 2382,
+          "decodedBytes": 2382
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44513.5,
+          "endMs": 44520.7,
+          "durationMs": 7.2,
+          "transferBytes": 0,
+          "encodedBytes": 1526,
+          "decodedBytes": 1526
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44514,
+          "endMs": 44526.5,
+          "durationMs": 12.5,
+          "transferBytes": 0,
+          "encodedBytes": 2000,
+          "decodedBytes": 2000
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44514.5,
+          "endMs": 44527,
+          "durationMs": 12.5,
+          "transferBytes": 0,
+          "encodedBytes": 1846,
+          "decodedBytes": 1846
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44515.1,
+          "endMs": 44523.9,
+          "durationMs": 8.8,
+          "transferBytes": 0,
+          "encodedBytes": 1556,
+          "decodedBytes": 1556
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44515.6,
+          "endMs": 44524,
+          "durationMs": 8.4,
+          "transferBytes": 0,
+          "encodedBytes": 1856,
+          "decodedBytes": 1856
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44516.2,
+          "endMs": 44527.2,
+          "durationMs": 11,
+          "transferBytes": 0,
+          "encodedBytes": 2546,
+          "decodedBytes": 2546
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44516.7,
+          "endMs": 44527.2,
+          "durationMs": 10.5,
+          "transferBytes": 0,
+          "encodedBytes": 2354,
+          "decodedBytes": 2354
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44517.1,
+          "endMs": 44527.5,
+          "durationMs": 10.4,
+          "transferBytes": 0,
+          "encodedBytes": 3124,
+          "decodedBytes": 3124
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44517.9,
+          "endMs": 44531.2,
+          "durationMs": 13.3,
+          "transferBytes": 0,
+          "encodedBytes": 1738,
+          "decodedBytes": 1738
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44518.5,
+          "endMs": 44534.4,
+          "durationMs": 15.9,
+          "transferBytes": 0,
+          "encodedBytes": 1944,
+          "decodedBytes": 1944
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44519,
+          "endMs": 44534.4,
+          "durationMs": 15.4,
+          "transferBytes": 0,
+          "encodedBytes": 2372,
+          "decodedBytes": 2372
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44519.6,
+          "endMs": 44534.6,
+          "durationMs": 15,
+          "transferBytes": 0,
+          "encodedBytes": 2070,
+          "decodedBytes": 2070
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44520.2,
+          "endMs": 44539.4,
+          "durationMs": 19.2,
+          "transferBytes": 0,
+          "encodedBytes": 1562,
+          "decodedBytes": 1562
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44520.6,
+          "endMs": 44539.5,
+          "durationMs": 18.9,
+          "transferBytes": 0,
+          "encodedBytes": 2694,
+          "decodedBytes": 2694
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44521.2,
+          "endMs": 44542,
+          "durationMs": 20.8,
+          "transferBytes": 0,
+          "encodedBytes": 2142,
+          "decodedBytes": 2142
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44526,
+          "endMs": 44552,
+          "durationMs": 26,
+          "transferBytes": 0,
+          "encodedBytes": 1342,
+          "decodedBytes": 1342
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44526,
+          "endMs": 44551.9,
+          "durationMs": 25.9,
+          "transferBytes": 0,
+          "encodedBytes": 1566,
+          "decodedBytes": 1566
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44526.1,
+          "endMs": 44557.6,
+          "durationMs": 31.5,
+          "transferBytes": 0,
+          "encodedBytes": 1482,
+          "decodedBytes": 1482
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44526.2,
+          "endMs": 44557.7,
+          "durationMs": 31.5,
+          "transferBytes": 0,
+          "encodedBytes": 1206,
+          "decodedBytes": 1206
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 44526.2,
+          "endMs": 44557.9,
+          "durationMs": 31.7,
+          "transferBytes": 0,
+          "encodedBytes": 2638,
+          "decodedBytes": 2638
+        }
+      ],
+      "preparation": {
+        "startedMs": 44509.5,
+        "totalChecks": 5,
+        "checks": [
+          {
+            "startMs": 44509.5,
+            "durationMs": 15.699999999254942,
+            "queueMs": 0,
+            "dataLoading": false,
+            "pendingImages": 24
+          },
+          {
+            "startMs": 44541.5,
+            "durationMs": 0.7999999970197678,
+            "queueMs": 7.100000001490116,
+            "dataLoading": false,
+            "pendingImages": 24
+          },
+          {
+            "startMs": 44547,
+            "durationMs": 0.5,
+            "queueMs": 2.2000000029802322,
+            "dataLoading": false,
+            "pendingImages": 21
+          },
+          {
+            "startMs": 44557.89999999851,
+            "durationMs": 0.5,
+            "queueMs": 8.899999998509884,
+            "dataLoading": false,
+            "pendingImages": 7
+          },
+          {
+            "startMs": 44569.599999997765,
+            "durationMs": 0.6000000014901161,
+            "queueMs": 5.699999999254942,
+            "dataLoading": false,
+            "pendingImages": 0
+          }
+        ],
+        "reason": "ready",
+        "finishedMs": 44570.199999999255
+      },
+      "cache": {
+        "fresh": 2,
+        "pending": 0,
+        "loader": 0
+      },
+      "fetchesStarted": 1,
+      "fetchesDuringInterval": 1,
+      "fetchesInFlightAtClick": 0,
+      "blockingFetchesDuringInterval": 0,
+      "blockingFetchesInFlightAtClick": 0,
+      "telemetryFetchesDuringInterval": 1,
+      "dataTransfersDuringInterval": 0,
+      "networkEvidenceComplete": true,
+      "dataInMemory": true,
+      "visible": true
+    },
+    {
+      "from": "/clubs",
+      "to": "/joueurs",
+      "startedAt": "2026-11-07T21:38:22.269Z",
+      "durationMs": 128.8,
+      "eventQueueMs": 0.4,
+      "startClock": "event.timeStamp",
+      "phases": {
+        "workspaceObservedMs": 81.6,
+        "readyObservedMs": 118,
+        "twoFramesAfterReadyMs": 10.8
+      },
+      "observedImageTransfers": [],
+      "preparation": {
+        "startedMs": 55174.89999999851,
+        "totalChecks": 3,
+        "checks": [
+          {
+            "startMs": 55174.89999999851,
+            "durationMs": 26.699999999254942,
+            "queueMs": 0,
+            "dataLoading": false,
+            "pendingImages": 20
+          },
+          {
+            "startMs": 55224.79999999702,
+            "durationMs": 1.300000000745058,
+            "queueMs": 9,
+            "dataLoading": false,
+            "pendingImages": 20
+          },
+          {
+            "startMs": 55232.39999999851,
+            "durationMs": 2.699999999254942,
+            "queueMs": 0,
+            "dataLoading": false,
+            "pendingImages": 0
+          }
+        ],
+        "reason": "ready",
+        "finishedMs": 55235.099999997765
+      },
+      "cache": {
+        "fresh": 2,
+        "pending": 0,
+        "loader": 0
+      },
+      "fetchesStarted": 1,
+      "fetchesDuringInterval": 1,
+      "fetchesInFlightAtClick": 0,
+      "blockingFetchesDuringInterval": 0,
+      "blockingFetchesInFlightAtClick": 0,
+      "telemetryFetchesDuringInterval": 1,
+      "dataTransfersDuringInterval": 0,
+      "networkEvidenceComplete": true,
+      "dataInMemory": true,
+      "visible": true
+    },
+    {
+      "from": "/joueurs",
+      "to": "/",
+      "startedAt": "2026-11-07T21:38:31.799Z",
+      "durationMs": 3162.8,
+      "eventQueueMs": 0.6,
+      "startClock": "event.timeStamp",
+      "phases": {
+        "workspaceObservedMs": 31.2,
+        "readyObservedMs": 1161.4,
+        "twoFramesAfterReadyMs": 2001.4
+      },
+      "observedImageTransfers": [
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65214.9,
+          "endMs": 65230.1,
+          "durationMs": 15.2,
+          "transferBytes": 0,
+          "encodedBytes": 2596,
+          "decodedBytes": 2596
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65215.2,
+          "endMs": 65228.6,
+          "durationMs": 13.4,
+          "transferBytes": 0,
+          "encodedBytes": 3038,
+          "decodedBytes": 3038
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65215.3,
+          "endMs": 65230.4,
+          "durationMs": 15.1,
+          "transferBytes": 0,
+          "encodedBytes": 1932,
+          "decodedBytes": 1932
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65215.4,
+          "endMs": 65230.5,
+          "durationMs": 15.1,
+          "transferBytes": 0,
+          "encodedBytes": 2342,
+          "decodedBytes": 2342
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65215.6,
+          "endMs": 65234.8,
+          "durationMs": 19.2,
+          "transferBytes": 0,
+          "encodedBytes": 2418,
+          "decodedBytes": 2418
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65215.7,
+          "endMs": 65235.5,
+          "durationMs": 19.8,
+          "transferBytes": 0,
+          "encodedBytes": 1886,
+          "decodedBytes": 1886
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65215.8,
+          "endMs": 65235.7,
+          "durationMs": 19.9,
+          "transferBytes": 0,
+          "encodedBytes": 3354,
+          "decodedBytes": 3354
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65215.9,
+          "endMs": 65235.8,
+          "durationMs": 19.9,
+          "transferBytes": 0,
+          "encodedBytes": 732,
+          "decodedBytes": 732
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65216,
+          "endMs": 65235.9,
+          "durationMs": 19.9,
+          "transferBytes": 0,
+          "encodedBytes": 1518,
+          "decodedBytes": 1518
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65216.2,
+          "endMs": 65236.4,
+          "durationMs": 20.2,
+          "transferBytes": 0,
+          "encodedBytes": 2502,
+          "decodedBytes": 2502
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65216.2,
+          "endMs": 65236.5,
+          "durationMs": 20.3,
+          "transferBytes": 0,
+          "encodedBytes": 1790,
+          "decodedBytes": 1790
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65216.4,
+          "endMs": 65236.6,
+          "durationMs": 20.2,
+          "transferBytes": 0,
+          "encodedBytes": 1702,
+          "decodedBytes": 1702
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65216.9,
+          "endMs": 65236.6,
+          "durationMs": 19.7,
+          "transferBytes": 0,
+          "encodedBytes": 1464,
+          "decodedBytes": 1464
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65217.1,
+          "endMs": 65236.7,
+          "durationMs": 19.6,
+          "transferBytes": 0,
+          "encodedBytes": 1358,
+          "decodedBytes": 1358
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65217.3,
+          "endMs": 65236.8,
+          "durationMs": 19.5,
+          "transferBytes": 0,
+          "encodedBytes": 2478,
+          "decodedBytes": 2478
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.3,
+          "endMs": 65828.8,
+          "durationMs": 20.5,
+          "transferBytes": 0,
+          "encodedBytes": 2264,
+          "decodedBytes": 2264
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.4,
+          "endMs": 65829.1,
+          "durationMs": 20.7,
+          "transferBytes": 0,
+          "encodedBytes": 1906,
+          "decodedBytes": 1906
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.4,
+          "endMs": 65829.3,
+          "durationMs": 20.9,
+          "transferBytes": 0,
+          "encodedBytes": 2140,
+          "decodedBytes": 2140
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.4,
+          "endMs": 65830.8,
+          "durationMs": 22.4,
+          "transferBytes": 0,
+          "encodedBytes": 2392,
+          "decodedBytes": 2392
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.4,
+          "endMs": 65830.8,
+          "durationMs": 22.4,
+          "transferBytes": 0,
+          "encodedBytes": 1818,
+          "decodedBytes": 1818
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.5,
+          "endMs": 65833.8,
+          "durationMs": 25.3,
+          "transferBytes": 0,
+          "encodedBytes": 1328,
+          "decodedBytes": 1328
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.5,
+          "endMs": 65833.8,
+          "durationMs": 25.3,
+          "transferBytes": 0,
+          "encodedBytes": 2856,
+          "decodedBytes": 2856
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.6,
+          "endMs": 65834.4,
+          "durationMs": 25.8,
+          "transferBytes": 0,
+          "encodedBytes": 1870,
+          "decodedBytes": 1870
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.6,
+          "endMs": 65833.9,
+          "durationMs": 25.3,
+          "transferBytes": 0,
+          "encodedBytes": 2192,
+          "decodedBytes": 2192
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.6,
+          "endMs": 65834.2,
+          "durationMs": 25.6,
+          "transferBytes": 0,
+          "encodedBytes": 1562,
+          "decodedBytes": 1562
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.6,
+          "endMs": 65834.2,
+          "durationMs": 25.6,
+          "transferBytes": 0,
+          "encodedBytes": 884,
+          "decodedBytes": 884
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.6,
+          "endMs": 65834.2,
+          "durationMs": 25.6,
+          "transferBytes": 0,
+          "encodedBytes": 1306,
+          "decodedBytes": 1306
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.6,
+          "endMs": 65834.3,
+          "durationMs": 25.7,
+          "transferBytes": 0,
+          "encodedBytes": 960,
+          "decodedBytes": 960
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.6,
+          "endMs": 65834.3,
+          "durationMs": 25.7,
+          "transferBytes": 0,
+          "encodedBytes": 1656,
+          "decodedBytes": 1656
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.7,
+          "endMs": 65834.4,
+          "durationMs": 25.7,
+          "transferBytes": 0,
+          "encodedBytes": 2012,
+          "decodedBytes": 2012
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.8,
+          "endMs": 65834.4,
+          "durationMs": 25.6,
+          "transferBytes": 0,
+          "encodedBytes": 1870,
+          "decodedBytes": 1870
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.9,
+          "endMs": 65834.6,
+          "durationMs": 25.7,
+          "transferBytes": 0,
+          "encodedBytes": 1270,
+          "decodedBytes": 1270
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.9,
+          "endMs": 65834.6,
+          "durationMs": 25.7,
+          "transferBytes": 0,
+          "encodedBytes": 1844,
+          "decodedBytes": 1844
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.9,
+          "endMs": 65834.6,
+          "durationMs": 25.7,
+          "transferBytes": 0,
+          "encodedBytes": 1414,
+          "decodedBytes": 1414
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.9,
+          "endMs": 65834.7,
+          "durationMs": 25.8,
+          "transferBytes": 0,
+          "encodedBytes": 1518,
+          "decodedBytes": 1518
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65808.9,
+          "endMs": 65834.8,
+          "durationMs": 25.9,
+          "transferBytes": 0,
+          "encodedBytes": 1432,
+          "decodedBytes": 1432
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65809,
+          "endMs": 65834.9,
+          "durationMs": 25.9,
+          "transferBytes": 0,
+          "encodedBytes": 1324,
+          "decodedBytes": 1324
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65809,
+          "endMs": 65835,
+          "durationMs": 26,
+          "transferBytes": 0,
+          "encodedBytes": 1926,
+          "decodedBytes": 1926
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65809,
+          "endMs": 65835.4,
+          "durationMs": 26.4,
+          "transferBytes": 0,
+          "encodedBytes": 1346,
+          "decodedBytes": 1346
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65809,
+          "endMs": 65835.8,
+          "durationMs": 26.8,
+          "transferBytes": 0,
+          "encodedBytes": 1426,
+          "decodedBytes": 1426
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65809,
+          "endMs": 65836.2,
+          "durationMs": 27.2,
+          "transferBytes": 0,
+          "encodedBytes": 1634,
+          "decodedBytes": 1634
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65809,
+          "endMs": 65837.1,
+          "durationMs": 28.1,
+          "transferBytes": 0,
+          "encodedBytes": 1690,
+          "decodedBytes": 1690
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65809.1,
+          "endMs": 65836.5,
+          "durationMs": 27.4,
+          "transferBytes": 0,
+          "encodedBytes": 1400,
+          "decodedBytes": 1400
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65809.1,
+          "endMs": 65836.5,
+          "durationMs": 27.4,
+          "transferBytes": 0,
+          "encodedBytes": 1812,
+          "decodedBytes": 1812
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 65809.1,
+          "endMs": 65836.7,
+          "durationMs": 27.6,
+          "transferBytes": 0,
+          "encodedBytes": 2402,
+          "decodedBytes": 2402
+        }
+      ],
+      "preparation": {
+        "startedMs": 65151.599999997765,
+        "totalChecks": 2,
+        "checks": [
+          {
+            "startMs": 65151.599999997765,
+            "durationMs": 66.10000000149012,
+            "queueMs": 0,
+            "dataLoading": false,
+            "pendingImages": 19
+          },
+          {
+            "startMs": 65783.79999999702,
+            "durationMs": 1.2000000029802322,
+            "queueMs": 555.2999999970198,
+            "dataLoading": false,
+            "pendingImages": 0
+          }
+        ],
+        "reason": "ready",
+        "finishedMs": 65785
+      },
+      "cache": {
+        "fresh": 4,
+        "pending": 0,
+        "loader": 0
+      },
+      "fetchesStarted": 3,
+      "fetchesDuringInterval": 3,
+      "fetchesInFlightAtClick": 0,
+      "blockingFetchesDuringInterval": 2,
+      "blockingFetchesInFlightAtClick": 0,
+      "telemetryFetchesDuringInterval": 1,
+      "dataTransfersDuringInterval": 2,
+      "networkEvidenceComplete": true,
+      "dataInMemory": false,
+      "visible": true
+    },
+    {
+      "from": "/",
+      "to": "/clubs",
+      "startedAt": "2026-11-07T21:38:49.429Z",
+      "durationMs": 245.9,
+      "eventQueueMs": 0.2,
+      "startClock": "event.timeStamp",
+      "phases": {
+        "workspaceObservedMs": 86.2,
+        "readyObservedMs": 130.2,
+        "twoFramesAfterReadyMs": 115.7
+      },
+      "observedImageTransfers": [
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 82352.9,
+          "endMs": 82365.1,
+          "durationMs": 12.2,
+          "transferBytes": 0,
+          "encodedBytes": 2382,
+          "decodedBytes": 2382
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 82353.5,
+          "endMs": 82365.7,
+          "durationMs": 12.2,
+          "transferBytes": 0,
+          "encodedBytes": 1526,
+          "decodedBytes": 1526
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 82354.1,
+          "endMs": 82366.9,
+          "durationMs": 12.8,
+          "transferBytes": 0,
+          "encodedBytes": 2000,
+          "decodedBytes": 2000
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 82355.1,
+          "endMs": 82367,
+          "durationMs": 11.9,
+          "transferBytes": 0,
+          "encodedBytes": 1556,
+          "decodedBytes": 1556
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 82355.6,
+          "endMs": 82367.3,
+          "durationMs": 11.7,
+          "transferBytes": 0,
+          "encodedBytes": 1856,
+          "decodedBytes": 1856
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 82357.2,
+          "endMs": 82367.4,
+          "durationMs": 10.2,
+          "transferBytes": 0,
+          "encodedBytes": 2354,
+          "decodedBytes": 2354
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 82357.7,
+          "endMs": 82365.7,
+          "durationMs": 8,
+          "transferBytes": 0,
+          "encodedBytes": 3124,
+          "decodedBytes": 3124
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 82358.4,
+          "endMs": 82367.7,
+          "durationMs": 9.3,
+          "transferBytes": 0,
+          "encodedBytes": 1738,
+          "decodedBytes": 1738
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 82358.9,
+          "endMs": 82373.8,
+          "durationMs": 14.9,
+          "transferBytes": 0,
+          "encodedBytes": 1944,
+          "decodedBytes": 1944
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 82360.9,
+          "endMs": 82377.4,
+          "durationMs": 16.5,
+          "transferBytes": 0,
+          "encodedBytes": 2694,
+          "decodedBytes": 2694
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 82362.4,
+          "endMs": 82377.6,
+          "durationMs": 15.2,
+          "transferBytes": 0,
+          "encodedBytes": 2142,
+          "decodedBytes": 2142
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 82363.4,
+          "endMs": 82377.7,
+          "durationMs": 14.3,
+          "transferBytes": 0,
+          "encodedBytes": 1342,
+          "decodedBytes": 1342
+        },
+        {
+          "path": "/_next/image",
+          "sameOrigin": true,
+          "startMs": 82364.1,
+          "endMs": 82378.9,
+          "durationMs": 14.8,
+          "transferBytes": 0,
+          "encodedBytes": 1482,
+          "decodedBytes": 1482
+        }
+      ],
+      "preparation": {
+        "startedMs": 82348.19999999925,
+        "totalChecks": 5,
+        "checks": [
+          {
+            "startMs": 82348.29999999702,
+            "durationMs": 18.300000000745058,
+            "queueMs": 0,
+            "dataLoading": false,
+            "pendingImages": 24
+          },
+          {
+            "startMs": 82387.69999999925,
+            "durationMs": 0.5999999977648258,
+            "queueMs": 12.699999999254942,
+            "dataLoading": false,
+            "pendingImages": 24
+          },
+          {
+            "startMs": 82396.5,
+            "durationMs": 0.5,
+            "queueMs": 4.5,
+            "dataLoading": false,
+            "pendingImages": 12
+          },
+          {
+            "startMs": 82399.89999999851,
+            "durationMs": 0.5,
+            "queueMs": 0.6000000014901161,
+            "dataLoading": false,
+            "pendingImages": 4
+          },
+          {
+            "startMs": 82409.69999999925,
+            "durationMs": 0.3999999985098839,
+            "queueMs": 8.199999999254942,
+            "dataLoading": false,
+            "pendingImages": 0
+          }
+        ],
+        "reason": "ready",
+        "finishedMs": 82410.09999999776
+      },
+      "cache": {
+        "fresh": 4,
+        "pending": 0,
+        "loader": 0
+      },
+      "fetchesStarted": 1,
+      "fetchesDuringInterval": 1,
+      "fetchesInFlightAtClick": 0,
+      "blockingFetchesDuringInterval": 0,
+      "blockingFetchesInFlightAtClick": 0,
+      "telemetryFetchesDuringInterval": 1,
+      "dataTransfersDuringInterval": 0,
+      "networkEvidenceComplete": true,
+      "dataInMemory": true,
+      "visible": true
+    },
+    {
+      "from": "/clubs",
+      "to": "/",
+      "startedAt": "2026-11-07T21:38:56.510Z",
+      "durationMs": 230.7,
+      "eventQueueMs": 0.6,
+      "startClock": "event.timeStamp",
+      "phases": {
+        "workspaceObservedMs": 136.5,
+        "readyObservedMs": 229.1,
+        "twoFramesAfterReadyMs": 1.6
+      },
+      "observedImageTransfers": [],
+      "preparation": {
+        "startedMs": 89447.69999999925,
+        "totalChecks": 3,
+        "checks": [
+          {
+            "startMs": 89447.79999999702,
+            "durationMs": 49.30000000074506,
+            "queueMs": 0,
+            "dataLoading": false,
+            "pendingImages": 19
+          },
+          {
+            "startMs": 89508.79999999702,
+            "durationMs": 4.900000002235174,
+            "queueMs": 2.5,
+            "dataLoading": false,
+            "pendingImages": 19
+          },
+          {
+            "startMs": 89580.29999999702,
+            "durationMs": 0.9000000022351742,
+            "queueMs": 8.199999999254942,
+            "dataLoading": false,
+            "pendingImages": 0
+          }
+        ],
+        "reason": "ready",
+        "finishedMs": 89581.19999999925
+      },
+      "cache": {
+        "fresh": 4,
+        "pending": 0,
+        "loader": 0
+      },
+      "fetchesStarted": 1,
+      "fetchesDuringInterval": 1,
+      "fetchesInFlightAtClick": 0,
+      "blockingFetchesDuringInterval": 0,
+      "blockingFetchesInFlightAtClick": 0,
+      "telemetryFetchesDuringInterval": 1,
+      "dataTransfersDuringInterval": 0,
+      "networkEvidenceComplete": true,
+      "dataInMemory": true,
+      "visible": true
+    }
+  ],
+  "method": "captured link click to new visible ready workspace, followed by two animation frames",
+  "excludes": "same-identity filters; hidden tabs; only same-origin POST view/vitals destinations advertised by the installed Vercel SDK are excluded from dataInMemory, but retained in fetch counts; this is not a screenshot-based paint measurement"
+}
