@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { playerCompetitionHref } from "../services/player-competition-navigation.js";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useVisibleIntent from "../hooks/useVisibleIntent.js";
 import { currentPlayerSeason } from "../services/actor-reads.js";
@@ -45,7 +46,15 @@ const TABLES = [
   ],
 ];
 
-function CareerTable({ group, title, entity, empty, entries, matchHref }) {
+function CareerTable({
+  group,
+  title,
+  entity,
+  empty,
+  entries,
+  matchHref,
+  competitionHref,
+}) {
   const international = group === "selections";
   return (
     <section className="player-career-panel">
@@ -105,7 +114,17 @@ function CareerTable({ group, title, entity, empty, entries, matchHref }) {
                             className="player-history-crest"
                           />
                         ) : null}
-                        <span>{display}</span>
+                        {group === "competitions" ? (
+                          <Link
+                            className="player-competition-link"
+                            href={competitionHref(key)}
+                            prefetch={false}
+                          >
+                            {display}
+                          </Link>
+                        ) : (
+                          <span>{display}</span>
+                        )}
                       </span>
                       {detail && (
                         <span
@@ -250,6 +269,9 @@ export default function PlayerCareerStats({
                   empty={empty}
                   entries={groups[group]}
                   matchHref={matchHref}
+                  competitionHref={(competitionId) =>
+                    playerCompetitionHref(params, id, competitionId)
+                  }
                 />
               ))}
               {overview && <PlayerPositionPitch positions={positions} />}

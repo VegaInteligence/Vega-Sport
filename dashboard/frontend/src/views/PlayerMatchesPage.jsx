@@ -172,7 +172,11 @@ export default function PlayerMatchesPage({ currentRows } = {}) {
   back.delete("careerKey");
   if (valid) {
     back.set("playerView", returnToOverview ? "overview" : "stats");
-    if (!career && selectedSeason)
+    if (
+      !career &&
+      selectedSeason &&
+      !(params.get("performanceCompetition") && params.get("performanceSeason"))
+    )
       back.set("performanceSeason", selectedSeason);
   } else {
     back.delete("id");

@@ -1,7 +1,10 @@
 "use client";
 import React from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { number } from "../services/format.js";
 import { overviewRadarValues } from "../services/player-overview-radar.js";
+import { playerCompetitionHref } from "../services/player-competition-navigation.js";
 import styles from "./PlayerOverviewRadar.module.css";
 
 const center = [210, 166];
@@ -110,6 +113,7 @@ function PercentileBars({ axes }) {
 }
 
 export default function PlayerOverviewRadar({ profile, cohorts, comparison }) {
+  const params = useSearchParams();
   const awaitingPeers = comparison && !comparison.value;
   const axes = overviewRadarValues(profile, cohorts).map((axis) =>
     awaitingPeers
@@ -125,7 +129,11 @@ export default function PlayerOverviewRadar({ profile, cohorts, comparison }) {
       : axis,
   );
   const competitions = [
-    ...new Set(profile.rows.map(({ league }) => league).filter(Boolean)),
+    ...new Map(
+      profile.rows
+        .filter(({ leagueId, league }) => leagueId && league)
+        .map(({ leagueId, league }) => [leagueId, league]),
+    ),
   ];
   const hasComparison = axes.some(
     ({ value, mean }) => known(value) && known(mean),
@@ -144,7 +152,20 @@ export default function PlayerOverviewRadar({ profile, cohorts, comparison }) {
         Par 90 minutes, comparé aux{" "}
         {profile.role?.peers || "joueurs du même poste"}.
         {competitions.length > 0 && (hasComparison || comparison) && (
-          <strong className={styles.scope}>{competitions.join(" · ")}</strong>
+          <strong className={styles.scope}>
+            {competitions.map(([id, name], index) => (
+              <React.Fragment key={id}>
+                {index > 0 && " · "}
+                <Link
+                  className="player-competition-link"
+                  prefetch={false}
+                  href={playerCompetitionHref(params, profile.id, id)}
+                >
+                  {name}
+                </Link>
+              </React.Fragment>
+            ))}
+          </strong>
         )}
       </p>
       <div className={styles.legend}>

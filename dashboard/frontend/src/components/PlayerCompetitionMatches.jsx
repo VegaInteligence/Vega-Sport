@@ -1,6 +1,7 @@
 "use client";
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { date, number } from "../services/format.js";
 import { positionOf } from "../services/player-profile.js";
@@ -15,6 +16,7 @@ import {
 } from "../services/player-competition-matches.js";
 import { Media, Segments } from "./UI.jsx";
 import NationalFlag from "./NationalFlag.jsx";
+import { playerCompetitionHref } from "../services/player-competition-navigation.js";
 import styles from "./PlayerCompetitionMatches.module.css";
 
 function Team({ team, national, season }) {
@@ -39,7 +41,10 @@ function Score({ match, f }) {
   if (!match) return <span>—</span>;
   const home = match.home?.score ?? match.score_home;
   const away = match.away?.score ?? match.score_away;
-  const value = `${number(home)} – ${number(away)}`;
+  const value =
+    match.status === "not_started" || match.finished === false
+      ? "À venir"
+      : `${number(home)} – ${number(away)}`;
   const external = matchExternalUrl(match);
   if (external)
     return (
@@ -88,11 +93,14 @@ export default function PlayerCompetitionMatches({
   groups = [],
   matches = [],
   disciplineByMatch,
+  sections: suppliedSections,
 }) {
   const f = useFootball(),
+    params = useSearchParams(),
     [view, setView] = useState("compact");
   const sections = useMemo(
     () =>
+      suppliedSections ||
       groups.flatMap((group) =>
         group.competitions.map((entry) => ({
           group,
@@ -100,7 +108,7 @@ export default function PlayerCompetitionMatches({
           rows: competitionMatchRows(entry.profile.rows, matches),
         })),
       ),
-    [groups, matches],
+    [groups, matches, suppliedSections],
   );
   if (!sections.length)
     return <p>Aucun match disponible pour cette sélection.</p>;
@@ -126,7 +134,20 @@ export default function PlayerCompetitionMatches({
         return (
           <section key={`${group.key}:${entry.key}`} className={styles.section}>
             <h4>
-              {teamName} · {entry.competition.name}
+              {teamName} ·{" "}
+              <Link
+                className="player-competition-link"
+                prefetch={false}
+                href={playerCompetitionHref(
+                  params,
+                  group.profile?.id || entry.profile.id,
+                  entry.competition.id,
+                )}
+              >
+                {entry.competition.name}
+              </Link>
+              {" · "}
+              {group.season}
             </h4>
             <div className={styles.scroll}>
               <table className={styles.table}>
@@ -140,6 +161,7 @@ export default function PlayerCompetitionMatches({
                     <th scope="col">Domicile</th>
                     <th scope="col">Score</th>
                     <th scope="col">Extérieur</th>
+                    {suppliedSections && <th scope="col">Participation</th>}
                     <th scope="col">Poste</th>
                     <th scope="col">Buts</th>
                     <th scope="col">Passes déc.</th>
@@ -159,11 +181,12 @@ export default function PlayerCompetitionMatches({
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map(({ row, match }) => {
-                    const cards = disciplineByMatch?.get(row.matchId);
+                  {rows.map(({ row, match, status, statusLabel }) => {
+                    const matchId = row?.matchId || match?.id;
+                    const cards = disciplineByMatch?.get(matchId);
                     return (
-                      <tr key={row.matchId}>
-                        <td>{date(match?.date || row.date)}</td>
+                      <tr key={matchId} data-participation={status}>
+                        <td>{date(match?.date || row?.date)}</td>
                         <td>
                           <Team
                             team={match?.home}
@@ -181,18 +204,23 @@ export default function PlayerCompetitionMatches({
                             season={group.season}
                           />
                         </td>
+                        {suppliedSections && (
+                          <td className={styles.participation}>
+                            {statusLabel}
+                          </td>
+                        )}
                         <td>{positionOf(row)?.label || "—"}</td>
-                        <td>{number(row.goals)}</td>
-                        <td>{number(row.assists)}</td>
-                        <td>{number(row.minutes)}</td>
+                        <td>{number(row?.goals)}</td>
+                        <td>{number(row?.assists)}</td>
+                        <td>{number(row?.minutes)}</td>
                         {DISCIPLINE_COLUMNS.map(([key]) => (
                           <td key={key}>{number(cards?.[key])}</td>
                         ))}
                         {view === "detailed" && (
                           <>
-                            <td>{number(row.xg, 2)}</td>
-                            <td>{number(row.xa, 2)}</td>
-                            <td>{number(row.rating, 2)}</td>
+                            <td>{number(row?.xg, 2)}</td>
+                            <td>{number(row?.xa, 2)}</td>
+                            <td>{number(row?.rating, 2)}</td>
                           </>
                         )}
                       </tr>

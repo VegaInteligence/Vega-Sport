@@ -65,6 +65,11 @@
   font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
+.table .participation {
+  color: var(--muted);
+  min-width: 130px;
+  white-space: normal;
+}
 .score a {
   color: var(--accent);
   text-decoration: none;
