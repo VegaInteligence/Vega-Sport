@@ -23,15 +23,34 @@ deliberately excluded: their existing ready marker cannot prove completion.
 
 The shared resource cache separately counts fresh resolved hits, shared
 pending requests and loaders started after the click. An opt-in fetch wrapper
-records starts without changing the native promise or request, including Next
-RSC reads. Resource Timing closes each body transfer. A transition is labelled
-`dataInMemory` only if it has at least one fresh hit, no pending hit, no loader,
-no fetch starting in the interval, no fetch still in flight at the
-click, and no observed API/RSC body transfer overlapping the interval.
-Unrelated background reads can conservatively exclude a sample. This label
-describes data: native images may use a separate browser HTTP cache, and the
-page-ready gate still includes their visible readiness. Keep the first uncached visits in the raw receipt;
-report the memory cohort separately rather than discarding slow observations.
+records starts without changing the native promise or request. Next RSC reads
+are identified by either the `_rsc` parameter or the `RSC` request header.
+Resource Timing closes each body transfer. Version 2 retains every fetch in its
+counts and records blocking and telemetry counts separately. Only same-origin
+POST requests to exact `view` or `vitals` destinations advertised by the
+installed Vercel SDK scripts are classified as non-blocking telemetry for the
+memory label. Merely having an unknown path, ending in `/view`, or being a
+background request is not enough for that exclusion.
+
+A transition is labelled `dataInMemory` only if it has at least one fresh hit,
+no pending hit, no loader, no non-telemetry fetch overlapping the interval, no
+blocking fetch still in flight at the click, and no observed API/RSC body
+transfer overlapping the interval. The interval includes requests that start
+before the click and end after it, or complete while the click handler is
+queued. Unknown or unclassifiable requests remain blocking. If bounded trace
+retention discards relevant network evidence, `networkEvidenceComplete` is
+false and the memory label is refused. Other background reads can therefore
+conservatively exclude a sample. This label describes data: native images may
+use a separate browser HTTP cache, and the page-ready gate still includes their
+visible readiness. Keep all initial visits and slow transitions in the raw
+receipt, recording whether the existing HTTP/image cache was controlled;
+report the memory cohort separately without relabelling a new document as a
+fully cold visit.
+
+Version 3 preserves that same interval and classification. It additionally records
+the first observation of the new workspace, the existing ready gate and the final
+two-frame interval. Native image resource timings are bounded separately and do
+not redefine the data-memory cohort. See [phase definitions](BROWSER_RENDER_PHASES_20261107.md).
 
 For a reproducible acceptance, warm the relevant page and its images, return
 to another page, then follow the same link within the cache lifetime. Record

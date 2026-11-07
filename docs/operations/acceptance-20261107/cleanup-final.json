@@ -1,0 +1,26 @@
+{
+  "database_resources": {
+    "checked_at": "2026-11-07T19:46:00Z",
+    "temporary_db_worker_stacks": [
+      "ABSENT",
+      "ABSENT",
+      "ABSENT"
+    ],
+    "validation_clone": [
+      "ABSENT"
+    ],
+    "retained_snapshot_status": "available",
+    "production_database_status": "available",
+    "scope": "DB retirement resources only; final performance-probe cleanup is a separate outstanding check."
+  },
+  "paris_probe": {
+    "stackStatus": "ABSENT",
+    "receiptTimestampRecorded": false
+  },
+  "production_backend": {
+    "State": "Active",
+    "LastUpdateStatus": "Successful",
+    "CodeSha256": "I1FGOkedNRvv28akZiQjRv/NJIyvFXM/WYzYy1sSXZM="
+  },
+  "scope": "Three temporary DB-worker stacks, the DB validation clone and the temporary Paris probe stack are absent. The historical database snapshot remains available. No precise Paris-deletion timestamp is inferred from the receipt."
+}

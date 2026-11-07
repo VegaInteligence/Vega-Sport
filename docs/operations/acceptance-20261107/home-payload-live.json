@@ -1,0 +1,27 @@
+{
+  "checked_at": "2026-11-07T19:49:02.676683+00:00",
+  "path": "/api/read/home?generation=923&leagues=l_0ALvwF%2Cl_0ErfuF%2Cl_0bfbkO%2Cl_1Isor4%2Cl_2WZ2tt%2Cl_38d9HA%2Cl_3FJFUl%2Cl_4H43wr%2Cl_4QexZg%2Cl_4WFCIZ&media=1&season=2026%2F2027",
+  "generation": "923",
+  "status": 200,
+  "json_bytes": 97424,
+  "wire_body_bytes": 20498,
+  "sha256": "ed428f6d57cc2760323cd8db8d95813a01657aabb0df56ac22154cc9397e8e1f",
+  "headers": {
+    "content-encoding": "gzip",
+    "cache-control": "public, max-age=0, s-maxage=30, must-revalidate, stale-if-error=0",
+    "server-timing": "origin;dur=700.52, sql;dur=583.99, pool;dur=0.56",
+    "etag": "W/\"media-home-v2-5a150a9d8f6c75a74896582531ba60bcd6143e1e4861d38aef84a3007ed20fe7\"",
+    "x-cache": "Miss from cloudfront",
+    "x-amz-cf-pop": "ORD58-P5"
+  },
+  "meta": {
+    "generation": "923",
+    "publishedAt": "2026-11-07T19:18:03.316Z",
+    "sourceRetrievedAt": "2026-11-07T02:22:05.726069Z",
+    "latestSourceRetrievedAt": "2026-11-07T03:19:55.772966Z",
+    "startDate": "2026-08-07",
+    "endDate": "2026-11-06",
+    "partitionCount": 10,
+    "missingWatermarks": 0
+  }
+}

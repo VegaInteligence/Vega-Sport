@@ -1,0 +1,32 @@
+{
+  "runId": 42411708790,
+  "head": "fcb78e94fabdba5452d6f205d05d2352a27514de",
+  "merge": "32bf347dcecae91bbf086e10cd165d510f6ddde4",
+  "jobs": [
+    {
+      "id": 128521057723,
+      "name": "verify",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 128521057901,
+      "name": "Relational publication and HTTP contracts",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 128521057912,
+      "name": "Orion Pro PostgreSQL and offline RDS contracts",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "production": {
+    "deploymentId": "dpl_CcT7GfwTHA74wjibQsjY6cCnsbyw",
+    "state": "READY",
+    "sha": "32bf347dcecae91bbf086e10cd165d510f6ddde4",
+    "url": "https://vegasport.vercel.app",
+    "checkedAt": "2026-11-07T20:41:27Z"
+  }
+}
