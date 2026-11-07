@@ -107,6 +107,7 @@ jobs:
           tests/compact-render.test.mjs
           tests/resource-cache.test.mjs
           tests/public-api-fetch.test.mjs
+          tests/initial-page.test.mjs
           tests/media-assets.test.mjs
           tests/resource-hook-identity.test.mjs
           tests/competition-render.test.mjs

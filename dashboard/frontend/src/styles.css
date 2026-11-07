@@ -360,6 +360,22 @@ button:disabled {
   padding: 28px var(--page-gutter) 0;
   min-height: calc(100vh - var(--header-h));
 }
+.page-presentation {
+  position: relative;
+}
+.workspace[data-page-ready="false"] {
+  opacity: 0;
+  pointer-events: none;
+}
+.page-preparing {
+  position: absolute;
+  inset: 28px var(--page-gutter) auto;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+img[data-page-image-deferred] {
+  visibility: hidden;
+}
 .page-heading {
   display: flex;
   justify-content: space-between;
@@ -2114,18 +2130,6 @@ th[aria-sort="descending"] .sort-indicator {
   display: grid;
   gap: 16px;
   color: var(--muted);
-}
-.loading-filter,
-.loading-chart {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-}
-.loading-filter {
-  height: 44px;
-}
-.loading-chart {
-  height: 360px;
 }
 
 /* Competition selection and result-derived standings */

@@ -674,7 +674,7 @@ export default function CompetitionsPage() {
             )
           ) : (!id && !choice.ready) ||
             (id?.startsWith("open-matchday:") && cupIndex.loading) ? (
-            <div className="loading-state" role="status">
+            <div data-page-loading="" className="loading-state" role="status">
               Chargement de la compétition…
             </div>
           ) : id?.startsWith("open-matchday:") && cupIndex.error ? (
@@ -808,7 +808,7 @@ export default function CompetitionsPage() {
           </div>
           {!rows.length &&
             (cupIndex.loading ? (
-              <div className="loading-state" role="status">
+              <div data-page-loading="" className="loading-state" role="status">
                 Chargement des compétitions…
               </div>
             ) : (

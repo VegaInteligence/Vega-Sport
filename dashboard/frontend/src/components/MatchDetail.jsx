@@ -639,7 +639,7 @@ export default function MatchDetail({ match }) {
         {view === "context" && (
           <Suspense
             fallback={
-              <div className="loading-state" role="status">
+              <div data-page-loading="" className="loading-state" role="status">
                 Chargement du contexte…
               </div>
             }

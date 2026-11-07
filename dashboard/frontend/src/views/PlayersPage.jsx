@@ -274,7 +274,7 @@ export default function PlayersPage() {
           </p>
         )}
         {id && (
-          <Suspense fallback={<p role="status">Chargement du profil…</p>}>
+          <Suspense fallback={<p data-page-loading="" role="status">Chargement du profil…</p>}>
             <PlayerSeasonProfile
               id={id}
               rows={playerRows}

@@ -38,13 +38,13 @@ export default function PlayerWorkspace({ profiles, resource, ...props }) {
       >
         <Suspense
           fallback={
-            <div className="loading-state" role="status">
+            <div data-page-loading="" className="loading-state" role="status">
               Chargement de l’analyse…
             </div>
           }
         >
           {resource?.loading ? (
-            <p className="loading-state" role="status">
+            <p data-page-loading="" className="loading-state" role="status">
               Chargement{" "}
               {view === "table" ? "des joueurs" : "de la cohorte complète"}…
             </p>

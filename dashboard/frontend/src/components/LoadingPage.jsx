@@ -19,9 +19,7 @@ export default function LoadingPage({ href }) {
           <h1 className="page-title">{page?.title || "STATARENA"}</h1>
         </div>
         <div className="season-loading" role="status">
-          <span>Chargement des données…</span>
-          <div className="loading-filter" aria-hidden="true" />
-          <div className="loading-chart" aria-hidden="true" />
+          <span>Préparation de la page…</span>
         </div>
       </main>
     </div>

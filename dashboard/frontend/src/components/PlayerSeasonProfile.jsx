@@ -406,7 +406,7 @@ export default function PlayerSeasonProfile({
     [showCurrentShots, shotMatches, matchIds, id],
   );
   const historyLoading = (
-    <div className="loading-state" role="status">
+    <div data-page-loading="" className="loading-state" role="status">
       Chargement des saisons…
     </div>
   );
@@ -547,7 +547,7 @@ export default function PlayerSeasonProfile({
         {view === "similar" && cohortControls}
         <Suspense
           fallback={
-            <div className="loading-state" role="status">
+            <div data-page-loading="" className="loading-state" role="status">
               Chargement de l’analyse…
             </div>
           }
@@ -617,7 +617,7 @@ export default function PlayerSeasonProfile({
                       <button onClick={shotDetails.retry}>Réessayer</button>
                     </p>
                   ) : (
-                    <p role="status" className="loading-state">
+                    <p role="status" data-page-loading="" className="loading-state">
                       Chargement des tirs de la saison…
                     </p>
                   )

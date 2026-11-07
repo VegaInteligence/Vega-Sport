@@ -334,7 +334,7 @@ export default function ClubsPage() {
           </Link>
           <FootballContext.Provider value={profileContext}>
             <Suspense
-              fallback={<p role="status">Chargement du profil du club…</p>}
+              fallback={<p data-page-loading="" role="status">Chargement du profil du club…</p>}
             >
               <ClubWorkspace
                 key={selected.id}
@@ -352,7 +352,7 @@ export default function ClubsPage() {
         </>
       ) : fromStandings ? (
         loadFixtures && additional.loading ? (
-          <div className="loading-state" role="status">
+          <div data-page-loading="" className="loading-state" role="status">
             Chargement de l’équipe…
           </div>
         ) : (
@@ -465,7 +465,7 @@ export default function ClubsPage() {
             )}
           </div>
           {remoteDirectory && directory.loading && (
-            <p role="status" className="loading-state">
+            <p role="status" data-page-loading="" className="loading-state">
               Chargement des clubs…
             </p>
           )}

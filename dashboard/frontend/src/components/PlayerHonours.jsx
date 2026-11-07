@@ -6,11 +6,13 @@ import { trophyArt } from "../services/trophy-art.js";
 import Icon from "./Icon.jsx";
 
 export function usePlayerHonours(id, name) {
-  return useResource(
+  const enabled = /^p_[A-Za-z0-9]{6}$/.test(id || "");
+  const result = useResource(
     `player-honours:${id}`,
     () => loadPlayerHonours(id, name),
-    /^p_[A-Za-z0-9]{6}$/.test(id || ""),
+    enabled,
   );
+  return enabled ? result : { ...result, loading: false };
 }
 
 /** A compact shelf belongs to the player header, independent of the active tab. */
@@ -31,7 +33,7 @@ export default function PlayerHonours({ name, result }) {
   if (!trophies.length && !otherAwards.length) {
     if (result.loading)
       return (
-        <div className="player-trophy-loading" role="status">
+        <div data-page-loading="" className="player-trophy-loading" role="status">
           Chargement du palmarès…
         </div>
       );

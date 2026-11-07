@@ -449,7 +449,7 @@ export default function CompetitionStandings({
   }, [enabled, external.loading, external.value, onNeedFixtures]);
   if (enabled && external.loading)
     return (
-      <div className="loading-state" role="status">
+      <div data-page-loading="" className="loading-state" role="status">
         Chargement du classement…
       </div>
     );
@@ -481,7 +481,7 @@ export default function CompetitionStandings({
   }
   if (fixturesLoading)
     return (
-      <div className="loading-state" role="status">
+      <div data-page-loading="" className="loading-state" role="status">
         Chargement du classement…
       </div>
     );

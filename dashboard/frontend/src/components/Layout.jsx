@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import Icon from "./Icon.jsx";
 import { pages } from "../../../shared/pages.js";
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -9,6 +10,7 @@ import CompetitionScope from "./CompetitionScope.jsx";
 import { AdvancedPanel, AdvancedToggle } from "./AdvancedFilters.jsx";
 import { advancedChips, countAdvanced } from "../services/advanced-filters.js";
 import SiteHeader from "./SiteHeader.jsx";
+import PageWorkspace from "./PageWorkspace.jsx";
 import PlayerSearchResults from "./PlayerSearchResults.jsx";
 import HomePreferences from "./HomePreferences.jsx";
 import SeasonFilter from "./SeasonFilter.jsx";
@@ -312,6 +314,8 @@ export default function Layout({
 }) {
   const f = useFootball();
   const research = useResearch();
+  const params = useSearchParams();
+  const pageIdentity = `${path}:${params.get("id") || ""}:${params.get("m") || ""}`;
   return (
     <>
       <Link className="skip-link" href="#main">
@@ -319,7 +323,7 @@ export default function Layout({
       </Link>
       <div className="app-shell">
         <SiteHeader path={path} href={f.navigationHref || f.href} />
-        <main id="main" className={`workspace ${className}`} tabIndex="-1">
+        <PageWorkspace key={pageIdentity} className={className}>
           {!hideHeading && (
             <div className="page-heading">
               <div className="page-heading-copy">
@@ -357,7 +361,7 @@ export default function Layout({
             </div>
           )}
           {children}
-        </main>
+        </PageWorkspace>
       </div>
       <PlayerDialog />
       {performanceComparison &&

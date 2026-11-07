@@ -488,7 +488,7 @@ function Matches({ club, summary, details }) {
             <h3>Buts par période</h3>
           </div>
           {details && !details.value ? (
-            <p role="status" className="loading-state">
+            <p data-page-loading={details?.loading ? "" : undefined} role="status" className="loading-state">
               {details.error || "Chargement des tirs de la saison…"}
             </p>
           ) : (
@@ -1160,7 +1160,7 @@ function ClubWorkspaceContent({ club, history, details }) {
           </p>
         )}
         {["style", "compare"].includes(view) && cohortState.loading && (
-          <p role="status" className="loading-state">
+          <p data-page-loading="" role="status" className="loading-state">
             Chargement de la cohorte des clubs…
           </p>
         )}
@@ -1181,7 +1181,7 @@ function ClubWorkspaceContent({ club, history, details }) {
         )}
         {view === "squad" &&
           (details && !details.value ? (
-            <p role="status" className="loading-state">
+            <p data-page-loading={details?.loading ? "" : undefined} role="status" className="loading-state">
               Chargement de l’effectif de la saison…
             </p>
           ) : (

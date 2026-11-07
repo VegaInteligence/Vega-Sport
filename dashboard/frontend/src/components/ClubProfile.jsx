@@ -44,7 +44,7 @@ export function ClubFacts({ club, matches }) {
   return (
     <Card title="Le club en bref" className="club-facts-card">
       {result.loading ? (
-        <div className="loading-state" role="status">
+        <div data-page-loading="" className="loading-state" role="status">
           Chargement des informations du club…
         </div>
       ) : (

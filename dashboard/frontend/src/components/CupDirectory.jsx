@@ -34,6 +34,6 @@ export default function CupDirectory({ catalog, selectedId, onSelect, onBack, er
     {otherInternational.length > 0 && <section className="cup-directory-section"><h3>Autres coupes internationales</h3>{cards(otherInternational)}</section>}
     {national.length > 0 && <section className="cup-directory-section"><h3>Coupes nationales</h3><div className="cup-country-list">{national.map((group) => <section className="cup-country" key={group.key}><h4>{group.label}</h4>{cards(group.competitions)}</section>)}</div></section>}
     {error && <p className="cup-catalog-error" role="status">Certaines coupes nationales sont temporairement indisponibles. <button type="button" onClick={onRetry}>Réessayer</button></p>}
-    {!selections.length && !clubs.length && !otherInternational.length && !national.length && (loading ? <div className="loading-state" role="status">Chargement des coupes…</div> : <Empty>Aucune coupe ne correspond à la recherche.</Empty>)}
+    {!selections.length && !clubs.length && !otherInternational.length && !national.length && (loading ? <div data-page-loading="" className="loading-state" role="status">Chargement des coupes…</div> : <Empty>Aucune coupe ne correspond à la recherche.</Empty>)}
   </div>;
 }

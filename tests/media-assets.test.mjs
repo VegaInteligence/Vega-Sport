@@ -38,7 +38,8 @@ async function imageComponent(
     pending = [],
     visible = false,
     tree,
-    node;
+    node,
+    mediaKey;
   const equal = (a, b) =>
     a?.length === b?.length && a.every((x, i) => Object.is(x, b[i]));
   const visibilityRef = () => {};
@@ -108,9 +109,13 @@ async function imageComponent(
   );
   function createNode(key) {
     const attrs = new Map();
+    const listeners = new Map();
     return {
       key,
       props: null,
+      addEventListener(type, handler) { listeners.set(type, handler); },
+      removeEventListener(type, handler) { if (listeners.get(type) === handler) listeners.delete(type); },
+      dispatchEvent(event) { listeners.get(event.type)?.(event); },
       get src() {
         return attrs.get("src");
       },
@@ -126,7 +131,8 @@ async function imageComponent(
   }
   const unmount = () => {
     for (const slot of slots) slot?.cleanup?.();
-    node?.props.ref?.(null);
+    if (component === "ApiImage") node?.props.ref?.(null);
+    else if (node?.props.ref) node.props.ref.current = null;
     node = null;
   };
   try {
@@ -143,9 +149,16 @@ async function imageComponent(
       render: (props) => {
         cursor = 0;
         pending = [];
-        tree = (
-          component === "Media" ? mod.exports.Media : mod.exports.default
-        )(props);
+        tree = (component === "Media" ? mod.exports.Media : mod.exports.default)(props);
+        if (component === "Media") {
+          if (mediaKey !== undefined && mediaKey !== tree.props.key) {
+            for (const slot of slots) slot?.cleanup?.();
+            slots.length = 0;
+            node = null;
+          }
+          mediaKey = tree.props.key;
+          tree = tree.tag(tree.props);
+        }
         return tree;
       },
       commit: () => {
@@ -156,6 +169,10 @@ async function imageComponent(
             tree.props.ref(node);
           }
           node.props = tree.props;
+        } else {
+          node ||= createNode(mediaKey);
+          node.props = tree.props;
+          tree.props.ref.current = node;
         }
         // React changes the DOM/ref before passive cleanup. A source-change
         // cleanup must remove src from its captured old node, not the new one.
@@ -479,4 +496,25 @@ test("Media preserves its single alternate source and then shows initials", asyn
     },
     { component: "Media" },
   );
+});
+
+
+test("Media keeps initials after deferral and resets for a new source", async () => {
+  await imageComponent(async ({ render, commit, node }) => {
+    const props = { name: "Paris Club", url: "https://cdn.pitchapi.dev/first.webp" };
+    const oldImage = render(props).props.children[0];
+    commit();
+    node().dispatchEvent({ type: "vega:defer-image" });
+    let fallback = render(props).props.children[0];
+    commit();
+    assert.equal(fallback.props.className, "image-fallback");
+    oldImage.props.onLoad();
+    oldImage.props.onError();
+    fallback = render(props).props.children[0];
+    commit();
+    assert.deepEqual(fallback.props.children, ["PC"]);
+    const replacement = render({ ...props, url: "https://cdn.pitchapi.dev/new.webp" }).props.children[0];
+    commit();
+    assert.ok(replacement.props.src.includes("new.webp"));
+  }, { component: "Media" });
 });

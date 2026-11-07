@@ -8,15 +8,42 @@ import {
   title,
 } from "../services/format.js";
 export function Media({ name = "", url, fallbackUrl, className = "crest" }) {
+  // Source changes remount the attempt state, including a deferred first reveal.
+  return (
+    <MediaSource
+      key={`${url || ""}\n${fallbackUrl || ""}`}
+      name={name}
+      url={url}
+      fallbackUrl={fallbackUrl}
+      className={className}
+    />
+  );
+}
+function MediaSource({ name, url, fallbackUrl, className }) {
   const [failed, setFailed] = useState(false);
   const [fallbackFailed, setFallbackFailed] = useState(false);
+  const [deferred, setDeferred] = useState(false);
+  const [loaded, setLoaded] = useState(null);
+  const element = useRef(null);
   useEffect(() => {
-    setFailed(false);
-    setFallbackFailed(false);
-  }, [url, fallbackUrl]);
-  const src = mediaImageSource(url, fallbackUrl, failed, fallbackFailed);
+    const node = element.current;
+    const defer = () => setDeferred(true);
+    node.addEventListener("vega:defer-image", defer);
+    return () => node.removeEventListener("vega:defer-image", defer);
+  }, []);
+  const src = deferred
+    ? null
+    : mediaImageSource(url, fallbackUrl, failed, fallbackFailed);
   return (
-    <span className={className} aria-hidden="true">
+    <span
+      ref={element}
+      className={className}
+      aria-hidden="true"
+      data-page-media=""
+      data-media-state={
+        !src ? "fallback" : loaded === src ? "ready" : "loading"
+      }
+    >
       {src ? (
         <ApiImage
           src={src}
@@ -24,6 +51,7 @@ export function Media({ name = "", url, fallbackUrl, className = "crest" }) {
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
+          onLoad={() => setLoaded(src)}
           onError={() => {
             // Native image events do not expose status or Retry-After. Keep the
             // existing single alternate source; never retry a failed source.
@@ -63,11 +91,13 @@ export function Empty({ children = "Aucune donnée disponible." }) {
 }
 export function AsyncState({ resource, children, loading }) {
   return resource.loading ? (
-    loading || (
-      <div role="status" className="loading-state">
-        Chargement…
-      </div>
-    )
+    <div data-page-loading="">
+      {loading || (
+        <div role="status" className="loading-state">
+          Chargement…
+        </div>
+      )}
+    </div>
   ) : resource.error ? (
     <div role="alert" className="notice notice-warning">
       {resource.error}{" "}
