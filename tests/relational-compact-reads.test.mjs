@@ -112,6 +112,42 @@ test("compact conditional validators avoid aggregations and preserve generation 
   }
 });
 
+test("conditional validators refresh source freshness changes within a publication", async () => {
+  let retrievedAt = "2026-11-06T08:00:00Z";
+  const calls = [];
+  const route = createPlayerReadRoute(async (sql) => {
+    calls.push(sql);
+    return [
+      {
+        generation: "42",
+        source_retrieved_at: retrievedAt,
+        players: [],
+        total: 0,
+      },
+    ];
+  });
+  const params = new URLSearchParams({ season });
+  const fetch = (etag) =>
+    route(
+      new Request(`https://api.test/api/read/players?${params}`, {
+        headers: etag ? { "If-None-Match": etag } : {},
+      }),
+      "/api/read/players",
+      params,
+    );
+  const first = await fetch();
+  retrievedAt = "2026-11-06T09:00:00Z";
+  calls.length = 0;
+  const refreshed = await fetch(first.headers.get("etag"));
+  assert.equal(refreshed.status, 200);
+  assert.equal((await refreshed.json()).meta.sourceRetrievedAt, retrievedAt);
+  assert.equal(calls.length, 2);
+  calls.length = 0;
+  assert.equal((await fetch(refreshed.headers.get("etag"))).status, 304);
+  assert.equal(calls.length, 1);
+  assert.doesNotMatch(calls[0], /statarena_app.appearances/);
+});
+
 test(
   "SQL club directories and analysis retain all results and observed-stat denominators",
   { skip: !process.env.VEGA_TEST_DATABASE_URL },

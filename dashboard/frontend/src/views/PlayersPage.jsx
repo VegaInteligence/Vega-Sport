@@ -7,6 +7,7 @@ import React, {
   useState,
   useMemo,
   useDeferredValue,
+  useCallback,
 } from "react";
 import Layout from "../components/Layout.jsx";
 import { FootballContext, useFootball } from "../hooks/FootballContext.jsx";
@@ -61,7 +62,8 @@ export default function PlayersPage() {
       key: "rating",
       direction: "desc",
     }),
-    [directoryPage, setDirectoryPage] = useState({ key: "", page: 1 });
+    [directoryPage, setDirectoryPage] = useState({ key: "", page: 1 }),
+    [comparisonIntent, setComparisonIntent] = useState("");
   const filters = useDeferredValue(f.filters);
   const id = params.get("id");
   const overview = Boolean(id && !OTHER_PROFILE_VIEWS.includes(profileView));
@@ -112,8 +114,8 @@ export default function PlayersPage() {
     ],
   );
   const subject = useMemo(
-    () => (overview ? aggregateSeason(contextRows, id) : null),
-    [overview, contextRows, id],
+    () => (id ? aggregateSeason(contextRows, id) : null),
+    [contextRows, id],
   );
   const radarLeagues = subject?.rows.every(
     ({ leagueId }) =>
@@ -132,34 +134,37 @@ export default function PlayersPage() {
     subject?.minutes >= MIN_SEASON_MINUTES
       ? RADAR_POSITIONS[subject.role?.group]
       : undefined;
+  const radarEligible = Boolean(radarPosition && radarLeagues?.length);
   const cohortParams = playerReadParams(f, { cohort: true, limit: 100 });
+  if (overview) {
+    cohortParams.leagues = compactScope(radarLeagues ?? []);
+    cohortParams.pos = radarPosition;
+  } else if (id && profileView !== "compare") {
+    // Read every peer in the actor's complete position group, without sampling.
+    cohortParams.pos = RADAR_POSITIONS[subject?.role?.group] || "";
+  }
+  const comparisonKey = `${id || "directory"}:${compactQuery(cohortParams)}`;
+  const requestComparisons = useCallback(
+    () => setComparisonIntent(comparisonKey),
+    [comparisonKey],
+  );
   const needsCohort =
     f.compactMode &&
-    (overview
-      ? Boolean(radarPosition && radarLeagues?.length)
-      : id
-        ? ["stats", "similar", "compare"].includes(profileView)
-        : ["explore", "indices"].includes(directoryView));
-  const cohort = useCompactRead(
-    "players",
-    overview
-      ? {
-          ...cohortParams,
-          leagues: compactScope(radarLeagues ?? []),
-          pos: radarPosition,
-        }
-      : cohortParams,
-    {
-      enabled: needsCohort,
-      allPages: true,
-      parallelPages: overview,
-      refreshManifest: f.refreshManifest,
-    },
-  );
+    (id
+      ? ["similar", "compare"].includes(profileView) ||
+        (((overview && radarEligible) || profileView === "stats") &&
+          comparisonIntent === comparisonKey)
+      : ["explore", "indices"].includes(directoryView));
+  const cohort = useCompactRead("players", cohortParams, {
+    enabled: needsCohort,
+    allPages: true,
+    parallelPages: overview,
+    refreshManifest: f.refreshManifest,
+  });
   const profiles = useMemo(
     () =>
-      f.compactMode && cohort.value
-        ? cohort.value.data.players.map((row) => row.profile)
+      f.compactMode
+        ? cohort.value?.data.players.map((row) => row.profile) || []
         : localProfiles,
     [f.compactMode, cohort.value, localProfiles],
   );
@@ -213,10 +218,15 @@ export default function PlayersPage() {
     ],
   );
   const playerRows = useMemo(() => {
-    if (!id || (!overview && !eligible.some((row) => row.playerId === id)))
+    if (!id) return [];
+    if (
+      !f.compactMode &&
+      !overview &&
+      !eligible.some((row) => row.playerId === id)
+    )
       return [];
     return contextRows.filter((row) => row.playerId === id);
-  }, [id, overview, contextRows, eligible]);
+  }, [id, overview, contextRows, eligible, f.compactMode]);
   const displayContext = useMemo(() => {
     if (!f.compactMode) return f;
     const teams = [
@@ -270,7 +280,15 @@ export default function PlayersPage() {
               rows={playerRows}
               scopeRows={contextRows}
               profiles={profiles}
-              radarComparison={overview && needsCohort ? cohort : null}
+              comparisonsReady={
+                !f.compactMode ||
+                (overview && !radarEligible) ||
+                Boolean(cohort.value)
+              }
+              onNeedComparisons={requestComparisons}
+              radarComparison={
+                overview && f.compactMode && radarEligible ? cohort : null
+              }
             />
           </Suspense>
         )}

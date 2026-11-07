@@ -5,8 +5,10 @@ import Layout from "../components/Layout.jsx";
 import Icon from "../components/Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
+import { seasonCoverage } from "../services/route-data.js";
 export default function MethodPage() {
   const f = useFootball();
+  const coverage = seasonCoverage(f.manifest, f.season);
   return (
     <Layout path="/methode/" title="Données & méthode">
       <div className="method-layout">
@@ -14,9 +16,9 @@ export default function MethodPage() {
           <section>
             <h2>Données</h2>
             <p>
-              Les observations sont conservées dans PostgreSQL sur AWS, par saison et entité.
-              Une valeur absente reste distincte d’un zéro observé. Les saisons
-              civiles sont regroupées par année de début.
+              Les observations sont conservées dans PostgreSQL sur AWS, par
+              saison et entité. Une valeur absente reste distincte d’un zéro
+              observé. Les saisons civiles sont regroupées par année de début.
             </p>
           </section>
           <section>
@@ -75,7 +77,7 @@ export default function MethodPage() {
               .
             </p>
             <p>
-              <a href="https://github.com/OrionQuantPlatform/STATARENA/blob/main/docs/TROPHY_IMAGE_CREDITS.md">
+              <a href="https://github.com/VegaInteligence/Vega-Sport/blob/main/docs/TROPHY_IMAGE_CREDITS.md">
                 Crédits des images de trophées
               </a>
             </p>
@@ -88,7 +90,7 @@ export default function MethodPage() {
           </section>
           <Link
             className="inline-link"
-            href="https://github.com/OrionQuantPlatform/STATARENA/tree/main/docs"
+            href="https://github.com/VegaInteligence/Vega-Sport/tree/main/docs"
           >
             Documentation du projet <Icon name="external" />
           </Link>
@@ -103,8 +105,8 @@ export default function MethodPage() {
           <dl className="method-figures">
             {[
               ["Saison", f.season],
-              ["Matchs collectés", number(f.data.matches.length)],
-              ["Apparitions", number(f.data.appearances.length)],
+              ["Matchs collectés", number(coverage.matches)],
+              ["Apparitions", number(coverage.appearances)],
             ].map(([k, v]) => (
               <div key={k}>
                 <dt>{k}</dt>

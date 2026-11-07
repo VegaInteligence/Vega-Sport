@@ -1,4 +1,5 @@
 import { query } from "./postgres.js";
+import { createReadCache } from "./relational-read-cache.js";
 import {
   appearanceRecord,
   assembleMatches,
@@ -57,6 +58,10 @@ const rows = (sql) =>
 
 /** One selected performance, exact peer counts, and match-wide rating rank. */
 export function createPerformanceRoute(read = query) {
+  const snapshotRead = createReadCache(read, {
+    name: "performance",
+    maxEntryBytes: 256 * 1024,
+  });
   return async function relationalPerformanceRoute(req, path, params) {
     if (path !== "/api/read/performance") return null;
     if (!["GET", "HEAD"].includes(req.method))
@@ -143,7 +148,13 @@ export function createPerformanceRoute(read = query) {
         ${rows("SELECT a.match_id,a.id AS appearance_id,a.ordinal FROM target t JOIN statarena_app.appearances a ON a.match_id=t.match_id ORDER BY a.ordinal,a.id")} players,
         ${rows("SELECT c.*,(SELECT json_agg(native_season ORDER BY ordinal) FROM statarena_app.competition_catalog_seasons k WHERE k.competition_id=c.id) catalog_seasons FROM target t JOIN statarena_app.competitions c ON c.id=t.league_id")} competitions
       FROM publication`;
-    const [snapshot] = await read(sql, values);
+    const snapshot = await snapshotRead(req, params, scope, async () => {
+      const [state] = await read(sql, values);
+      checkReadGeneration(params, state?.generation);
+      if (!state.appearance)
+        reject(404, "Performance indisponible dans ce périmètre.");
+      return state;
+    });
     checkReadGeneration(params, snapshot?.generation);
     if (!snapshot.appearance)
       reject(404, "Performance indisponible dans ce périmètre.");

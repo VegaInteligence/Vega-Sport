@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Temporary IAM-only Vega database migration and validation worker. Delete after the verified cutover.
+Parameters:
+  FunctionName: {Type: String, AllowedPattern: 'vega-db-refactor-(stage|prod)-[0-9]{8}'}
+  ReleaseKey: {Type: String, AllowedPattern: 'maintenance/[a-f0-9]{64}\.zip'}
+  DatabaseConfig: {Type: String, NoEcho: true, MaxLength: 2000}
+  DatabaseHost: {Type: String, AllowedPattern: '[a-z0-9.-]+\.us-east-2\.rds\.amazonaws\.com'}
+  Target: {Type: String, AllowedValues: [stage, prod]}
+  AllowWrites: {Type: String, Default: 'false', AllowedValues: ['true', 'false']}
+Resources:
+  Logs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${FunctionName}'
+      RetentionInDays: 7
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: [{Effect: Allow, Principal: {Service: lambda.amazonaws.com}, Action: 'sts:AssumeRole'}]
+      Policies:
+        - PolicyName: PrivateMaintenance
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['logs:CreateLogStream', 'logs:PutLogEvents']
+                Resource: !GetAtt Logs.Arn
+              - Effect: Allow
+                Action: ['ec2:CreateNetworkInterface', 'ec2:DescribeNetworkInterfaces', 'ec2:DescribeSubnets', 'ec2:DeleteNetworkInterface', 'ec2:AssignPrivateIpAddresses', 'ec2:UnassignPrivateIpAddresses']
+                Resource: '*'
+              - Effect: Deny
+                Action: 'ec2:*'
+                Resource: '*'
+                Condition:
+                  ArnEquals:
+                    'lambda:SourceFunctionArn': !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${FunctionName}'
+  Worker:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref FunctionName
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      Handler: index.handler
+      MemorySize: 512
+      Timeout: 150
+      Role: !GetAtt Role.Arn
+      Code: {S3Bucket: !Sub 'statarena-backend-releases-${AWS::AccountId}-${AWS::Region}', S3Key: !Ref ReleaseKey}
+      Environment:
+        Variables:
+          DATABASE_CONFIG: !Ref DatabaseConfig
+          EXPECTED_DATABASE_HOST: !Ref DatabaseHost
+          DATABASE_TARGET: !Ref Target
+          ALLOW_WRITES: !Ref AllowWrites
+      VpcConfig:
+        SecurityGroupIds: [sg-0c96277ace8667fe3]
+        SubnetIds: [subnet-0233a9567335f56ce, subnet-04c9af303f55d9718, subnet-0e72516f361932c15]
+      Tags: [{Key: Application, Value: Vega-Sport}, {Key: Purpose, Value: temporary-database-refactor}]
+Outputs:
+  WorkerArn: {Value: !GetAtt Worker.Arn}

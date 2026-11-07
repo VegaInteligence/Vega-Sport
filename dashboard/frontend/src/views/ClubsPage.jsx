@@ -23,6 +23,7 @@ import { clubMatchHistory } from "../services/club-matches.js";
 import { fixtureClub } from "../services/club-fixtures.js";
 import { useResource } from "../services/resources.js";
 import useCompactRead from "../hooks/useCompactRead.js";
+import useDebouncedValue from "../hooks/useDebouncedValue.js";
 import {
   compactGeneration,
   compactScope,
@@ -110,13 +111,14 @@ export default function ClubsPage() {
   const fromStandings = Boolean(clubLeague && clubSeason && clubTeam);
   const gridRef = useRef(null);
   const search = normalizeText(useDeferredValue(query)),
+    remoteQuery = useDebouncedValue(search),
     savedView =
       params.get("clubsView") === "saved" ||
       (!params.get("clubsView") && hasSavedClubs),
     remoteKey = [
       f.season,
       f.focus,
-      search,
+      remoteQuery,
       country,
       competitionId,
       serverLimit,
@@ -127,7 +129,7 @@ export default function ClubsPage() {
         season: f.season,
         leagues: compactScope(directoryScopeIds(f.manifest, f.season, f.focus)),
         generation: compactGeneration(f.manifest),
-        q: search,
+        q: remoteQuery,
         country: country === "all" ? undefined : country,
         competition: competitionId === "all" ? undefined : competitionId,
         page: paging.key === remoteKey ? paging.page : 1,
@@ -438,7 +440,13 @@ export default function ClubsPage() {
             aria-live="polite"
           >
             <span>
-              {number(visibleTotal)} club{visibleTotal === 1 ? "" : "s"}
+              {remoteDirectory && search !== remoteQuery ? (
+                "Recherche…"
+              ) : (
+                <>
+                  {number(visibleTotal)} club{visibleTotal === 1 ? "" : "s"}
+                </>
+              )}
             </span>
             {(query ||
               activeCountry !== "all" ||

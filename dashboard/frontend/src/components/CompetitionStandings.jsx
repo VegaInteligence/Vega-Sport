@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { Empty, Media } from "./UI.jsx";
@@ -67,8 +67,7 @@ function useEuropeanPlaces(competition, season) {
     country = competitionCountry(competition),
     top = isTopFlight(competition, f.allCatalog || f.catalog || []),
     enabled = Boolean(top && year && country);
-  const edition = (value) => () =>
-    associationRanking(value);
+  const edition = (value) => () => associationRanking(value);
   const ranking = useResource(
     `uefa-associations:${year}`,
     edition(year),
@@ -410,8 +409,10 @@ export default function CompetitionStandings({
   fixturesLoading = false,
   fixturesError,
   onRetry,
+  onNeedFixtures,
   highlightTeams = [],
 }) {
+  const f = useFootball();
   const latest = competition?.seasons?.[0];
   const current = Boolean(latest) && String(latest) === String(season);
   const historicUefa = !current && hasUefaStandings(competition.id, season);
@@ -423,7 +424,14 @@ export default function CompetitionStandings({
     competition.cupWorker;
   const places = useEuropeanPlaces(competition, season);
   const external = useResource(
-    "sportscore-standings:" + competition.id + ":" + season,
+    "sportscore-standings:" +
+      competition.id +
+      ":" +
+      season +
+      ":" +
+      (f.manifest?.publicationVersion ||
+        f.manifest?.scouting?.sourceDigest ||
+        ""),
     () => {
       const url =
         "/api/standings?competition=" +
@@ -435,6 +443,10 @@ export default function CompetitionStandings({
     },
     enabled,
   );
+  useEffect(() => {
+    if (!enabled || (!external.loading && !external.value?.tables?.length))
+      onNeedFixtures?.();
+  }, [enabled, external.loading, external.value, onNeedFixtures]);
   if (enabled && external.loading)
     return (
       <div className="loading-state" role="status">

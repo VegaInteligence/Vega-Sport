@@ -38,6 +38,7 @@ jobs:
     runs-on: ${{ vars.STATARENA_AWS_RUNNER || 'ubuntu-latest' }}
     env:
       STATARENA_SQL_LIMIT_BYTES: ${{ vars.STATARENA_SQL_LIMIT_BYTES }}
+      STATARENA_SQL_RESERVE_BYTES: ${{ vars.STATARENA_SQL_RESERVE_BYTES }}
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4

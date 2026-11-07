@@ -27,6 +27,7 @@ test("SportScore standings render without the update-timing message", async () =
     "../services/national-flags.js": { nationalFlagCode: () => null },
     "../services/format.js": { normalizeText: (value) => String(value).toLowerCase(), number: String, date: String, seasonLabel: String },
     "../services/resources.js": { useResource: () => ({ value: { tables: [{ name: "Général", rows: [{ name: "Paris", position: 1, points: 3, played: 1, wins: 1, draws: 0, losses: 0, goalsFor: 2, goalsAgainst: 0, difference: 2 }] }] } }), json: () => {} },
+    "../services/catalog-client.js": { associationRanking: async () => ({ rows: [] }) },
     "../services/sportscore-standings.js": sportscore,
     "../services/uefa-standings.js": await import("../dashboard/frontend/src/services/uefa-standings.js"),
     "../services/standings-clubs.js": await import("../dashboard/frontend/src/services/standings-clubs.js"),

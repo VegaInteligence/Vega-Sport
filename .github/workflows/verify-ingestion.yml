@@ -94,6 +94,24 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Verify AWS-only frontend and maintenance contracts
         run: /tmp/statarena-node24-runtime/v24.22.2/node-v24.22.2-linux-x64/bin/node --test tests/aws-only-runtime.test.mjs tests/aws-delivery.test.mjs tests/aws-maintenance.test.mjs
+      - name: Verify navigation, bounded search and deferred actor analysis
+        run: >-
+          BUN_BINARY="$(command -v bun)" node --test
+          tests/navigation-performance.test.mjs
+          tests/archive-navigation.test.mjs
+          tests/archive.test.mjs
+          tests/club-overview-loading.test.mjs
+          tests/bounded-reads.test.mjs
+          tests/compact-reads.test.mjs
+          tests/compact-render.test.mjs
+          tests/resource-cache.test.mjs
+          tests/resource-hook-identity.test.mjs
+          tests/competition-render.test.mjs
+          tests/season_player_render.test.mjs
+          tests/player-season-selected.test.mjs
+          tests/player-position-summary.test.mjs
+          tests/player-overview-radar.test.mjs
+          tests/player-career.test.mjs
       - name: Verify compact reads, freshness and incremental publications
         run: >-
           python3 tests/run_public_read_contracts.py

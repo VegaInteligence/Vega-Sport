@@ -30,6 +30,7 @@ import { relationalPlayerReadRoute } from "./services/relational-players.js";
 import { relationalClubReadRoute } from "./services/relational-clubs.js";
 import { relationalHomeReadRoute } from "./services/relational-home.js";
 import { relationalDisciplineRoute } from "./services/relational-discipline.js";
+import { relationalArchiveReadRoute } from "./services/relational-archives.js";
 import {
   manifest,
   partitionPage,
@@ -274,6 +275,7 @@ async function route(req) {
     relationalClubReadRoute,
     relationalHomeReadRoute,
     relationalDisciplineRoute,
+    relationalArchiveReadRoute,
   ]) {
     const response = await route(req, path, p);
     if (response) return response;

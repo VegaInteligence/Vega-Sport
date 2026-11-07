@@ -2,6 +2,9 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
+import useActorRead from "../hooks/useActorRead.js";
+import useVisibleIntent from "../hooks/useVisibleIntent.js";
+import { actorReadParams } from "../services/actor-reads.js";
 import { useResearch } from "../hooks/ResearchContext.jsx";
 import {
   aggregateSeason,
@@ -253,6 +256,8 @@ export default function PlayerSeasonProfile({
   rows,
   scopeRows,
   profiles: allProfiles,
+  comparisonsReady = true,
+  onNeedComparisons,
   radarComparison,
 }) {
   const f = useFootball(),
@@ -321,6 +326,35 @@ export default function PlayerSeasonProfile({
   const showCurrentShots =
     view === "stats" &&
     (performanceSeason == null || performanceSeason === f.season);
+  const [comparisonRef, comparisonVisible] = useVisibleIntent(
+    `${id}:${f.season}:${view}`,
+    ["overview", "stats"].includes(view),
+  );
+  useEffect(() => {
+    if (comparisonVisible) onNeedComparisons?.();
+  }, [comparisonVisible, onNeedComparisons]);
+  const [shotsRef, shotsVisible] = useVisibleIntent(
+    `${id}:${f.season}:shots`,
+    showCurrentShots,
+  );
+  const deferredShots = f.manifest?.capabilities?.actorSummary === true;
+  const shotDetails = useActorRead(
+    f.manifest,
+    "player",
+    actorReadParams(f.manifest, "player", {
+      id,
+      season: f.season,
+      leagues: f.actorScope || "all",
+      include: "shots",
+    }),
+    {
+      enabled: deferredShots && showCurrentShots && shotsVisible,
+      refreshManifest: f.refreshManifest,
+    },
+  );
+  const shotMatches = deferredShots
+    ? shotDetails.value?.matches || []
+    : f.data.matches;
   const matchIds = useMemo(
     () => new Set(profile.rows.map((row) => row.matchId)),
     [profile.rows],
@@ -328,7 +362,7 @@ export default function PlayerSeasonProfile({
   const shots = useMemo(
     () =>
       showCurrentShots
-        ? f.data.matches
+        ? shotMatches
             .filter((m) => matchIds.has(m.id))
             .flatMap((m) =>
               (m.shots || [])
@@ -342,7 +376,7 @@ export default function PlayerSeasonProfile({
                 })),
             )
         : [],
-    [showCurrentShots, f.data.matches, matchIds, id],
+    [showCurrentShots, shotMatches, matchIds, id],
   );
   const historyLoading = (
     <div className="loading-state" role="status">
@@ -354,11 +388,15 @@ export default function PlayerSeasonProfile({
       <Suspense fallback={historyLoading}>
         <SeasonStats id={id} season={f.season} />
       </Suspense>
-      <PlayerOverviewRadar
-        profile={profile}
-        cohorts={cohorts}
-        comparison={radarComparison}
-      />
+      <div ref={comparisonRef}>
+        <PlayerOverviewRadar
+          profile={profile}
+          cohorts={cohorts}
+          comparison={
+            radarComparison || (!comparisonsReady ? { loading: true } : null)
+          }
+        />
+      </div>
       <Suspense fallback={historyLoading}>
         <CareerStats id={id} season={f.season} overview />
       </Suspense>
@@ -498,7 +536,7 @@ export default function PlayerSeasonProfile({
           {view === "overview" && overview}
           {view === "stats" && (
             <PerformanceStats id={id}>
-              <div className="season-section-heading">
+              <div className="season-section-heading" ref={comparisonRef}>
                 <h3>Analyse détaillée</h3>
                 <span>{f.season}</span>
               </div>
@@ -552,13 +590,28 @@ export default function PlayerSeasonProfile({
                   </table>
                 </div>
               </section>
-              <Suspense fallback={historyLoading}>
-                <SeasonShots
-                  key={id}
-                  shots={shots}
-                  legacyPitchApi={f.manifest?.storage === "aws-relational"}
-                />
-              </Suspense>
+              <section ref={shotsRef}>
+                {deferredShots && !shotDetails.value ? (
+                  shotDetails.error ? (
+                    <p role="alert">
+                      {shotDetails.error}{" "}
+                      <button onClick={shotDetails.retry}>Réessayer</button>
+                    </p>
+                  ) : (
+                    <p role="status" className="loading-state">
+                      Chargement des tirs de la saison…
+                    </p>
+                  )
+                ) : (
+                  <Suspense fallback={historyLoading}>
+                    <SeasonShots
+                      key={id}
+                      shots={shots}
+                      legacyPitchApi={f.manifest?.storage === "aws-relational"}
+                    />
+                  </Suspense>
+                )}
+              </section>
             </PerformanceStats>
           )}
           {view === "similar" && (

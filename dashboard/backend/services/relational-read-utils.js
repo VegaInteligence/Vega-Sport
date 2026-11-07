@@ -4,6 +4,12 @@ import { matchesEtag } from "./cache-policy.js";
 
 export const finiteSql = (column) =>
   `(${column} IS NOT NULL AND ${column} NOT IN ('NaN'::float8,'Infinity'::float8,'-Infinity'::float8))`;
+// Membership and ranking use twelve decimal places for derived numeric keys.
+// Reordering floating-point additions must not decide a mathematical tie or
+// push it across a filter boundary. This never changes stored observations or
+// the unrounded measurements returned in a public profile.
+export const comparisonNumberSql = (expression) =>
+  `round((${expression})::numeric,12)`;
 export const normalizedSql = (column) =>
   `regexp_replace(normalize(lower(coalesce(${column},'')),NFD),'[̀-ͯ]','','g')`;
 export const normalizedText = (value) =>
@@ -70,14 +76,21 @@ export function checkReadGeneration(params, generation) {
     reject(409, "Les données ont été actualisées. Rechargez la première page.");
 }
 
-function readEtag(req, params, generation, periodKey) {
+function readEtag(req, params, snapshot, periodKey) {
   const signature = [
     new URL(req.url).pathname,
     [...params].sort(([a], [b]) => a.localeCompare(b)),
-    String(generation),
+    String(snapshot.generation),
+    snapshot.published_at,
+    snapshot.source_retrieved_at,
+    snapshot.latest_source_retrieved_at,
+    snapshot.start_date,
+    snapshot.end_date,
+    Number(snapshot.partition_count || 0),
+    Number(snapshot.missing_watermarks || 0),
     periodKey,
   ];
-  return `W/"compact-v1-${createHash("sha256").update(JSON.stringify(signature)).digest("hex")}"`;
+  return `W/"compact-v2-${createHash("sha256").update(JSON.stringify(signature)).digest("hex")}"`;
 }
 
 /**
@@ -97,7 +110,7 @@ export async function readValidator(
   const values = [];
   const [snapshot] = await read(publicationSql(scope, values), values);
   checkReadGeneration(params, snapshot?.generation);
-  const etag = readEtag(req, params, snapshot.generation, periodKey);
+  const etag = readEtag(req, params, snapshot, periodKey);
   if (
     req.method === "HEAD" ||
     matchesEtag(req.headers.get("if-none-match"), etag)
@@ -124,7 +137,7 @@ export function readResponse(
     partitionCount: Number(snapshot.partition_count || 0),
     missingWatermarks: Number(snapshot.missing_watermarks || 0),
   };
-  const etag = readEtag(req, params, meta.generation, periodKey);
+  const etag = readEtag(req, params, snapshot, periodKey);
   return send(
     req,
     {

@@ -1,4 +1,5 @@
 import { query } from "./postgres.js";
+import { createReadCache } from "./relational-read-cache.js";
 import { reject, validateParams } from "./relational-core.js";
 import {
   bindValue,
@@ -158,11 +159,23 @@ export function clubReadQuery(filters, params) {
   const values = [],
     publication = publicationSql(filters.scope, values),
     b = (value) => bindValue(values, value);
-  const matches = clubMatchCtes(
-    filters.scope,
-    values,
-    params.get("generation"),
-  );
+  const withRecords =
+    filters.analysis || !["name", "count"].includes(filters.sort);
+  let matches;
+  if (withRecords) {
+    matches = clubMatchCtes(filters.scope, values, params.get("generation"));
+  } else {
+    const predicate = scopeWhere("m", filters.scope, values),
+      fence = params.has("generation")
+        ? ` AND EXISTS(SELECT 1 FROM publication WHERE generation=${b(params.get("generation"))})`
+        : "";
+    // A directory needs identity/count columns only, not a materialized copy
+    // of every score, formation, statistic and fixture in the selected season.
+    matches = `match_source AS MATERIALIZED (
+      SELECT m.id,m.league_id,m.league,m.time_utc,m.date,
+        m.home_id,m.home_name,m.home_image_url,m.away_id,m.away_name,m.away_image_url
+      FROM statarena_app.matches m WHERE ${predicate}${fence})`;
+  }
   const where = [
     filters.analysis ? "(c.record->>'matches')::int>0" : "c.count>0",
   ];
@@ -264,7 +277,7 @@ directory_sides AS MATERIALIZED (
  WHERE c.country IS NOT NULL AND c.country<>'' AND c.country NOT IN('UEFA','INT','INT-2','FIFA') ORDER BY s.team_id,s.id DESC
 ), records AS (
  ${
-   filters.analysis || !["name", "count"].includes(filters.sort)
+   withRecords
      ? `
  SELECT s.team_id,${resultProjection()} record,${resultProjection("s.scored AND s.side='home'")} home,${resultProjection("s.scored AND s.side='away'")} away
  FROM sides s GROUP BY s.team_id`
@@ -320,6 +333,7 @@ export function clubReadRecord(row, analysis) {
 }
 
 export function createClubReadRoute(read = query) {
+  const snapshotRead = createReadCache(read, { name: "clubs" });
   return async (req, path, params) => {
     if (path !== "/api/read/clubs") return null;
     if (!["GET", "HEAD"].includes(req.method))
@@ -328,8 +342,13 @@ export function createClubReadRoute(read = query) {
     const validated = await readValidator(req, params, filters.scope, read);
     if (validated) return validated;
     const { sql, values } = clubReadQuery(filters, params);
-    const [snapshot] = await read(sql, values),
-      total = Number(snapshot?.total || 0);
+    const snapshot = await snapshotRead(
+      req,
+      params,
+      filters.scope,
+      async () => (await read(sql, values))[0],
+    );
+    const total = Number(snapshot?.total || 0);
     return readResponse(
       req,
       params,

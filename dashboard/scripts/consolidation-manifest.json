@@ -1,0 +1,3050 @@
+{
+  "version": 1,
+  "model_digest": "395de5ecf4c7e0546561c612559b2448bb78d36205d62b0f78ab33202bcfb9a4",
+  "physical_sources": 112,
+  "physical_stores": 3,
+  "state_tables": 1,
+  "reduction": 108,
+  "targets": [
+    {
+      "table": "cat_archive_goals",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "season",
+        "source_coverage",
+        "source_license",
+        "source_licenseUrl",
+        "source_name",
+        "source_revision",
+        "source_url"
+      ]
+    },
+    {
+      "table": "cat_archive_goals_competitions",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_archive_goals",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "calendarYear",
+        "country",
+        "id",
+        "name"
+      ]
+    },
+    {
+      "table": "cat_archive_goals_competitions_events",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_archive_goals_competitions",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "date",
+        "match",
+        "minute",
+        "player",
+        "score",
+        "scoreDisagreement",
+        "sourceSeason",
+        "team"
+      ]
+    },
+    {
+      "table": "cat_archive_goals_index",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "duplicatesRemoved",
+        "schemaVersion",
+        "source_coverage",
+        "source_license",
+        "source_licenseUrl",
+        "source_name",
+        "source_revision",
+        "source_url",
+        "unassignedEvents"
+      ]
+    },
+    {
+      "table": "cat_archive_goals_index_seasons",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_archive_goals_index",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "competitions",
+        "events",
+        "id",
+        "latestEvent",
+        "matches",
+        "path",
+        "scoreDisagreements",
+        "sha256"
+      ]
+    },
+    {
+      "table": "cat_archive_results",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "season",
+        "source_archiveSha256",
+        "source_coverage",
+        "source_license",
+        "source_name",
+        "source_revision",
+        "source_url"
+      ]
+    },
+    {
+      "table": "cat_archive_results_competitions",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_archive_results",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "code",
+        "country",
+        "id",
+        "name",
+        "sourceFile",
+        "sourceRepository",
+        "sourceRevision",
+        "sourceSeason"
+      ]
+    },
+    {
+      "table": "cat_archive_results_competitions_matches",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_archive_results_competitions",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "date",
+        "dateNote",
+        "round",
+        "score_et",
+        "score_final",
+        "score_ft",
+        "score_ht",
+        "score_p",
+        "sourceFields_Comments",
+        "sourceFields_Date",
+        "sourceFields_ET",
+        "sourceFields_FT",
+        "sourceFields_Group",
+        "sourceFields_HT",
+        "sourceFields_Matchday",
+        "sourceFields_P",
+        "sourceFields_Round",
+        "sourceFields_Season",
+        "sourceFields_Stage",
+        "sourceFields_Team 1",
+        "sourceFields_Team 2",
+        "sourceFields_Venue",
+        "sourceFields_aet",
+        "sourceFields_attendance",
+        "sourceFields_away",
+        "sourceFields_away_code",
+        "sourceFields_away_continent",
+        "sourceFields_away_country",
+        "sourceFields_away_ident",
+        "sourceFields_competition",
+        "sourceFields_continent",
+        "sourceFields_date",
+        "sourceFields_division",
+        "sourceFields_full_time",
+        "sourceFields_ga",
+        "sourceFields_gh",
+        "sourceFields_goaldif",
+        "sourceFields_group",
+        "sourceFields_hgoal",
+        "sourceFields_home",
+        "sourceFields_home_code",
+        "sourceFields_home_continent",
+        "sourceFields_home_country",
+        "sourceFields_home_ident",
+        "sourceFields_hp",
+        "sourceFields_leg",
+        "sourceFields_level",
+        "sourceFields_neutral",
+        "sourceFields_nonmatch",
+        "sourceFields_northsouth",
+        "sourceFields_notes",
+        "sourceFields_pen",
+        "sourceFields_pens",
+        "sourceFields_result",
+        "sourceFields_round",
+        "sourceFields_tie",
+        "sourceFields_tier",
+        "sourceFields_totgoal",
+        "sourceFields_vgoal",
+        "sourceFields_visitor",
+        "sourceFields_vp",
+        "sourceFields_\u2211FT",
+        "stage",
+        "status",
+        "team1",
+        "team2",
+        "time"
+      ]
+    },
+    {
+      "table": "cat_archive_results_source_additional_sources",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_archive_results",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "archiveSha256",
+        "license",
+        "name",
+        "revision",
+        "sourceManifest",
+        "upstream_license",
+        "upstream_name",
+        "upstream_url",
+        "upstream_usage",
+        "url",
+        "usage"
+      ]
+    },
+    {
+      "table": "cat_archive_results_index",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "schemaVersion",
+        "source_archiveSha256",
+        "source_coverage",
+        "source_license",
+        "source_name",
+        "source_revision",
+        "source_url"
+      ]
+    },
+    {
+      "table": "cat_archive_results_index_seasons",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_archive_results_index",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "competitions",
+        "id",
+        "matches",
+        "path",
+        "results",
+        "sha256",
+        "unplayed",
+        "unverifiedDates"
+      ]
+    },
+    {
+      "table": "cat_archive_results_index_source_additional_sources",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_archive_results_index",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "archiveSha256",
+        "license",
+        "name",
+        "revision",
+        "sourceManifest",
+        "upstream_license",
+        "upstream_name",
+        "upstream_url",
+        "upstream_usage",
+        "url",
+        "usage"
+      ]
+    },
+    {
+      "table": "cat_club_links",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups"
+      ]
+    },
+    {
+      "table": "cat_club_links_ambiguous",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_club_links",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "candidates",
+        "clubId",
+        "name"
+      ]
+    },
+    {
+      "table": "cat_club_links_links",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_club_links",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "metric_label",
+        "clubName",
+        "countryCode",
+        "entityId",
+        "method",
+        "rankingName"
+      ]
+    },
+    {
+      "table": "cat_club_links_unmatched",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_club_links",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "clubId",
+        "name"
+      ]
+    },
+    {
+      "table": "cat_cup_nations_results",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "season",
+        "source_license",
+        "source_name",
+        "source_url",
+        "worker_checkedAt",
+        "worker_updatedAt"
+      ]
+    },
+    {
+      "table": "cat_cup_nations_results_matches",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_cup_nations_results",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "away",
+        "awayId",
+        "date",
+        "group",
+        "home",
+        "homeId",
+        "key",
+        "league",
+        "round",
+        "score",
+        "status"
+      ]
+    },
+    {
+      "table": "cat_cup_native",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "source_name",
+        "worker_checkedAt",
+        "worker_updatedAt"
+      ]
+    },
+    {
+      "table": "cat_cup_native_matches",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_cup_native",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "away_team_id",
+        "away_team_image_url",
+        "away_team_name",
+        "date",
+        "home_team_id",
+        "home_team_image_url",
+        "home_team_name",
+        "id",
+        "league_id",
+        "league_image_url",
+        "league_name",
+        "league_season",
+        "score_away",
+        "score_home",
+        "season",
+        "status",
+        "time_utc"
+      ]
+    },
+    {
+      "table": "cat_cup_native_rounds",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_cup_native",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "metric_label",
+        "name",
+        "playoff"
+      ]
+    },
+    {
+      "table": "cat_cup_native_rounds_checked",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_cup_native",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "metric_label",
+        "value"
+      ]
+    },
+    {
+      "table": "cat_cup_open_cups",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "name",
+        "season",
+        "source_license",
+        "source_name",
+        "source_url",
+        "worker_checkedAt",
+        "worker_updatedAt"
+      ]
+    },
+    {
+      "table": "cat_cup_open_cups_matches",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_cup_open_cups",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "date",
+        "group",
+        "num",
+        "round",
+        "score_et",
+        "score_ft",
+        "score_ht",
+        "score_p",
+        "scoreVector",
+        "team1",
+        "team2"
+      ]
+    },
+    {
+      "table": "cat_cup_openligadb",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "competition",
+        "season",
+        "source_dataUrl",
+        "source_license",
+        "source_name",
+        "source_url",
+        "worker_checkedAt",
+        "worker_updatedAt"
+      ]
+    },
+    {
+      "table": "cat_cup_openligadb_matches",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_cup_openligadb",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "away",
+        "awayId",
+        "date",
+        "group",
+        "home",
+        "homeId",
+        "key",
+        "notes",
+        "penalties",
+        "round",
+        "roundName",
+        "score",
+        "status"
+      ]
+    },
+    {
+      "table": "cat_cup_standings",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "competition",
+        "source",
+        "worker_checkedAt",
+        "worker_updatedAt"
+      ]
+    },
+    {
+      "table": "cat_cup_standings_tables",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_cup_standings",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "name"
+      ]
+    },
+    {
+      "table": "cat_cup_standings_tables_rows",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_cup_standings_tables",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "difference",
+        "draws",
+        "goalsAgainst",
+        "goalsFor",
+        "imageUrl",
+        "losses",
+        "name",
+        "played",
+        "points",
+        "provider_position",
+        "wins"
+      ]
+    },
+    {
+      "table": "cat_cup_worker_index",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "meta_source",
+        "meta_source_generated_at_utc",
+        "meta_source_revision",
+        "meta_usage",
+        "schemaVersion"
+      ]
+    },
+    {
+      "table": "cat_cup_worker_index_competitions",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_cup_worker_index",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "country_code",
+        "discovered",
+        "editions_2026/2027_fixtures_format",
+        "editions_2026/2027_fixtures_path",
+        "editions_2026/2027_fixtures_rows",
+        "editions_2026/2027_fixtures_sha256",
+        "editions_2026/2027_results_format",
+        "editions_2026/2027_results_path",
+        "editions_2026/2027_results_rows",
+        "editions_2026/2027_results_sha256",
+        "folder",
+        "name",
+        "season",
+        "tables_fixtures_format",
+        "tables_fixtures_path",
+        "tables_fixtures_rows",
+        "tables_fixtures_sha256",
+        "tables_results_format",
+        "tables_results_path",
+        "tables_results_rows",
+        "tables_results_sha256"
+      ]
+    },
+    {
+      "table": "cat_cup_worker_index_native",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_cup_worker_index",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "country",
+        "cupWorker",
+        "id",
+        "name",
+        "seasons"
+      ]
+    },
+    {
+      "table": "cat_matchdays",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups"
+      ]
+    },
+    {
+      "table": "cat_matchdays_matches",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_matchdays",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "metric_label",
+        "name",
+        "playoff"
+      ]
+    },
+    {
+      "table": "cat_profile_catalog",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "error_code",
+        "error_message",
+        "status"
+      ]
+    },
+    {
+      "table": "cat_profile_catalog_data_leagues",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_profile_catalog",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "country_code",
+        "id",
+        "image_url",
+        "is_free",
+        "name",
+        "seasons"
+      ]
+    },
+    {
+      "table": "cat_profile_leagues",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "data_country_code",
+        "data_id",
+        "data_image_url",
+        "data_name",
+        "data_season",
+        "error_code",
+        "error_message",
+        "status"
+      ]
+    },
+    {
+      "table": "cat_profile_players",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "data_country_code",
+        "data_id",
+        "data_image_url",
+        "data_name",
+        "data_position_id",
+        "data_shirt_number",
+        "data_short_name",
+        "error_code",
+        "error_message",
+        "status"
+      ]
+    },
+    {
+      "table": "cat_profile_teams",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "data_id",
+        "data_image_url",
+        "data_name",
+        "error_code",
+        "error_message",
+        "status"
+      ]
+    },
+    {
+      "table": "cat_ranking_fifa_men",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "edition",
+        "kind",
+        "officialEdition",
+        "period",
+        "provider",
+        "quality_duplicateEntityIds",
+        "retrievedAt",
+        "sourceUpdatedAt",
+        "sourceUrl"
+      ]
+    },
+    {
+      "table": "cat_ranking_fifa_men_rows",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_ranking_fifa_men",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "confederation",
+        "countryCode",
+        "entityId",
+        "entityName",
+        "imageUrl",
+        "points",
+        "provider_position",
+        "previousPosition",
+        "sourceRow_lastUpdateDate",
+        "sourceRow_nativeRow_ConfederationName",
+        "sourceRow_nativeRow_Gender",
+        "sourceRow_nativeRow_IdConfederation",
+        "sourceRow_nativeRow_IdCountry",
+        "sourceRow_nativeRow_IdTeam",
+        "sourceRow_nativeRow_IsUpdateable",
+        "sourceRow_nativeRow_PrevPoints",
+        "sourceRow_nativeRow_PrevRank",
+        "sourceRow_nativeRow_Properties",
+        "sourceRow_nativeRow_Rank",
+        "sourceRow_nativeRow_RankingMovement",
+        "sourceRow_nativeRow_RankingStatus",
+        "sourceRow_nativeRow_RatedMatches",
+        "sourceRow_nativeRow_TotalPoints",
+        "sourceRow_nextUpdateDate",
+        "sourceRow_previousPoints",
+        "sourceRow_rankingItem_active",
+        "sourceRow_rankingItem_countryCode",
+        "sourceRow_rankingItem_countryURL",
+        "sourceRow_rankingItem_flag_alt",
+        "sourceRow_rankingItem_flag_height",
+        "sourceRow_rankingItem_flag_src",
+        "sourceRow_rankingItem_flag_title",
+        "sourceRow_rankingItem_flag_width",
+        "sourceRow_rankingItem_idTeam",
+        "sourceRow_rankingItem_name",
+        "sourceRow_rankingItem_previousRank",
+        "sourceRow_rankingItem_rank",
+        "sourceRow_rankingItem_totalPoints",
+        "sourceRow_tag_id",
+        "sourceRow_tag_text"
+      ]
+    },
+    {
+      "table": "cat_ranking_fifa_men_rows_source_row_native_row_team_name",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_ranking_fifa_men_rows",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "Description",
+        "Locale"
+      ]
+    },
+    {
+      "table": "cat_ranking_index",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "clubMapping_ambiguous",
+        "clubMapping_linked",
+        "clubMapping_unmatched",
+        "fifaCatalogueDates",
+        "notes_historicalDates",
+        "notes_uefa-associations",
+        "requestedFromYear",
+        "retrievedAt",
+        "schemaVersion"
+      ]
+    },
+    {
+      "table": "cat_ranking_index_editions",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_ranking_index",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "edition",
+        "kind",
+        "officialEdition",
+        "path",
+        "period",
+        "provider",
+        "retrievedAt",
+        "rows",
+        "sha256",
+        "sourceUpdatedAt",
+        "sourceUrl"
+      ]
+    },
+    {
+      "table": "cat_ranking_index_errors",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_ranking_index",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "date",
+        "error",
+        "kind",
+        "provider",
+        "year"
+      ]
+    },
+    {
+      "table": "cat_ranking_sportsapi",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "edition",
+        "kind",
+        "officialEdition",
+        "period",
+        "provider",
+        "quality_duplicateEntityIds",
+        "retrievedAt",
+        "sourceUpdatedAt",
+        "sourceUrl"
+      ]
+    },
+    {
+      "table": "cat_ranking_sportsapi_rows",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_ranking_sportsapi",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "countryCode",
+        "entityId",
+        "entityName",
+        "imageUrl",
+        "points",
+        "provider_position",
+        "previousPosition",
+        "sourceRow_bestPosition",
+        "sourceRow_country_code",
+        "sourceRow_country_name",
+        "sourceRow_league_category",
+        "sourceRow_league_country_code",
+        "sourceRow_league_country_name",
+        "sourceRow_league_id",
+        "sourceRow_league_image",
+        "sourceRow_league_name",
+        "sourceRow_league_slug",
+        "sourceRow_league_sport",
+        "sourceRow_points",
+        "sourceRow_position",
+        "sourceRow_previousPoints",
+        "sourceRow_previousPosition",
+        "sourceRow_team_code",
+        "sourceRow_team_id",
+        "sourceRow_team_image",
+        "sourceRow_team_name",
+        "sourceRow_team_shortName",
+        "sourceRow_team_slug",
+        "sourceRow_tournamentsPlayed"
+      ]
+    },
+    {
+      "table": "cat_ranking_uefa_associations",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "edition",
+        "kind",
+        "officialEdition",
+        "period",
+        "provider",
+        "quality_duplicateEntityIds",
+        "retrievedAt",
+        "sourceUpdatedAt",
+        "sourceUrl"
+      ]
+    },
+    {
+      "table": "cat_ranking_uefa_associations_rows",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_ranking_uefa_associations",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "countryCode",
+        "earnedPoints",
+        "entityId",
+        "entityName",
+        "imageUrl",
+        "points",
+        "provider_position",
+        "previousPosition",
+        "sourceRow_member_associationId",
+        "sourceRow_member_associationLogoUrl",
+        "sourceRow_member_bigLogoUrl",
+        "sourceRow_member_countryCode",
+        "sourceRow_member_countryName",
+        "sourceRow_member_displayName",
+        "sourceRow_member_displayNameShort",
+        "sourceRow_member_displayOfficialName",
+        "sourceRow_member_displayTeamCode",
+        "sourceRow_member_id",
+        "sourceRow_member_internationalName",
+        "sourceRow_member_isPlaceHolder",
+        "sourceRow_member_logoUrl",
+        "sourceRow_member_mediumLogoUrl",
+        "sourceRow_member_teamCode",
+        "sourceRow_member_typeIsNational",
+        "sourceRow_member_typeTeam",
+        "sourceRow_overallRanking_baseSeasonYear",
+        "sourceRow_overallRanking_factorBonusForTitleHeld",
+        "sourceRow_overallRanking_nationalAssociationPoints",
+        "sourceRow_overallRanking_numberOfMatches",
+        "sourceRow_overallRanking_numberOfTeams",
+        "sourceRow_overallRanking_numberOfTeamsStillInPlaying",
+        "sourceRow_overallRanking_position",
+        "sourceRow_overallRanking_targetSeasonYear",
+        "sourceRow_overallRanking_totalPoints",
+        "sourceRow_overallRanking_totalValue",
+        "sourceRow_overallRanking_trend"
+      ]
+    },
+    {
+      "table": "cat_ranking_uefa_associations_rows_source_row_member_history",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_ranking_uefa_associations_rows",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "bigLogoUrl",
+        "countryCode",
+        "countryName",
+        "displayName",
+        "displayNameShort",
+        "displayOfficialName",
+        "displayTeamCode",
+        "fromDate",
+        "fromPhase",
+        "fromYear",
+        "inheritTeamId",
+        "internationalName",
+        "logoUrl",
+        "mediumLogoUrl",
+        "teamCode",
+        "toDate",
+        "toPhase",
+        "toYear"
+      ]
+    },
+    {
+      "table": "cat_ranking_uefa_associations_rows_source_row_season_rankings",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_ranking_uefa_associations_rows",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "factorBonusForTitleHeld",
+        "factorTotalBonus",
+        "nationalAssociationPoints",
+        "numberOfMatches",
+        "numberOfTeams",
+        "numberOfTeamsStillInPlaying",
+        "provider_position",
+        "seasonYear",
+        "totalPoints",
+        "totalPointsWithBonus",
+        "totalValue"
+      ]
+    },
+    {
+      "table": "cat_ranking_uefa_clubs",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "edition",
+        "kind",
+        "officialEdition",
+        "period",
+        "provider",
+        "quality_duplicateEntityIds",
+        "retrievedAt",
+        "sourceUpdatedAt",
+        "sourceUrl"
+      ]
+    },
+    {
+      "table": "cat_ranking_uefa_clubs_rows",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_ranking_uefa_clubs",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "countryCode",
+        "earnedPoints",
+        "entityId",
+        "entityName",
+        "imageUrl",
+        "points",
+        "provider_position",
+        "previousPosition",
+        "sourceRow_competition_age",
+        "sourceRow_competition_displayName",
+        "sourceRow_competition_id",
+        "sourceRow_competition_region",
+        "sourceRow_competition_sex",
+        "sourceRow_competition_sportsType",
+        "sourceRow_competition_type",
+        "sourceRow_member_associationId",
+        "sourceRow_member_associationLogoUrl",
+        "sourceRow_member_bigLogoUrl",
+        "sourceRow_member_countryCode",
+        "sourceRow_member_countryName",
+        "sourceRow_member_displayName",
+        "sourceRow_member_displayNameShort",
+        "sourceRow_member_displayOfficialName",
+        "sourceRow_member_displayTeamCode",
+        "sourceRow_member_id",
+        "sourceRow_member_internationalName",
+        "sourceRow_member_isPlaceHolder",
+        "sourceRow_member_logoUrl",
+        "sourceRow_member_mediumLogoUrl",
+        "sourceRow_member_teamCode",
+        "sourceRow_member_typeIsNational",
+        "sourceRow_member_typeTeam",
+        "sourceRow_overallRanking_baseSeasonYear",
+        "sourceRow_overallRanking_factorBonusForTitleHeld",
+        "sourceRow_overallRanking_nationalAssociationPoints",
+        "sourceRow_overallRanking_numberOfMatches",
+        "sourceRow_overallRanking_numberOfTeams",
+        "sourceRow_overallRanking_numberOfTeamsStillInPlaying",
+        "sourceRow_overallRanking_position",
+        "sourceRow_overallRanking_targetSeasonYear",
+        "sourceRow_overallRanking_totalPoints",
+        "sourceRow_overallRanking_totalValue",
+        "sourceRow_overallRanking_trend"
+      ]
+    },
+    {
+      "table": "cat_ranking_uefa_clubs_rows_source_row_season_rankings",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_ranking_uefa_clubs_rows",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "factorBonusForTitleHeld",
+        "factorTotalBonus",
+        "nationalAssociationPoints",
+        "numberOfMatches",
+        "numberOfTeams",
+        "numberOfTeamsStillInPlaying",
+        "provider_position",
+        "seasonYear",
+        "totalPoints",
+        "totalPointsWithBonus",
+        "totalValue"
+      ]
+    },
+    {
+      "table": "cat_supp_fixtures",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups"
+      ]
+    },
+    {
+      "table": "cat_supp_fixtures_rows",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_supp_fixtures",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "away",
+        "date",
+        "gw",
+        "home",
+        "time"
+      ]
+    },
+    {
+      "table": "cat_supp_goals",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups"
+      ]
+    },
+    {
+      "table": "cat_supp_goals_rows",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_supp_goals",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "away",
+        "date",
+        "gw",
+        "home",
+        "minute",
+        "score_away",
+        "score_home",
+        "scorer"
+      ]
+    },
+    {
+      "table": "cat_supp_index",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "meta_retrieved_at_utc",
+        "meta_source",
+        "meta_source_generated_at_utc",
+        "meta_terms",
+        "meta_usage"
+      ]
+    },
+    {
+      "table": "cat_supp_index_competitions",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_supp_index",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "country_code",
+        "folder",
+        "name",
+        "season",
+        "tables_fixtures_path",
+        "tables_fixtures_rows",
+        "tables_fixtures_sha256",
+        "tables_goals_path",
+        "tables_goals_rows",
+        "tables_goals_sha256",
+        "tables_results_path",
+        "tables_results_rows",
+        "tables_results_sha256"
+      ]
+    },
+    {
+      "table": "cat_supp_results",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups"
+      ]
+    },
+    {
+      "table": "cat_supp_results_rows",
+      "domain": "catalog",
+      "store": "catalog_records",
+      "parent": "cat_supp_results",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "away",
+        "away_corners",
+        "away_corners_1h",
+        "away_corners_2h",
+        "away_fouls",
+        "away_red",
+        "away_shots",
+        "away_target",
+        "away_yellow",
+        "date",
+        "ft_away",
+        "ft_home",
+        "ft_result",
+        "goal_minutes",
+        "gw",
+        "home",
+        "home_corners",
+        "home_corners_1h",
+        "home_corners_2h",
+        "home_fouls",
+        "home_red",
+        "home_shots",
+        "home_target",
+        "home_yellow",
+        "ht_away",
+        "ht_home",
+        "ht_result",
+        "source",
+        "time"
+      ]
+    },
+    {
+      "table": "support_standing",
+      "domain": "support",
+      "store": "support_records",
+      "parent": null,
+      "keys": [
+        "projection_id"
+      ],
+      "columns": [
+        "projection_id",
+        "missing",
+        "null_groups",
+        "competition",
+        "season",
+        "source",
+        "fetched_at"
+      ]
+    },
+    {
+      "table": "support_standing_table",
+      "domain": "support",
+      "store": "support_records",
+      "parent": "support_standing",
+      "keys": [
+        "projection_id",
+        "ordinal_1"
+      ],
+      "columns": [
+        "projection_id",
+        "ordinal_1",
+        "missing",
+        "null_groups",
+        "name"
+      ]
+    },
+    {
+      "table": "support_standing_row",
+      "domain": "support",
+      "store": "support_records",
+      "parent": "support_standing_table",
+      "keys": [
+        "projection_id",
+        "ordinal_1",
+        "ordinal_2"
+      ],
+      "columns": [
+        "projection_id",
+        "ordinal_1",
+        "ordinal_2",
+        "missing",
+        "null_groups",
+        "team_id",
+        "uefa_id",
+        "image_url",
+        "name",
+        "wins",
+        "draws",
+        "losses",
+        "played",
+        "points",
+        "goals_for",
+        "goals_against",
+        "difference",
+        "position"
+      ]
+    },
+    {
+      "table": "support_stadium",
+      "domain": "support",
+      "store": "support_records",
+      "parent": null,
+      "keys": [
+        "projection_id"
+      ],
+      "columns": [
+        "projection_id",
+        "missing",
+        "null_groups",
+        "stadium_id",
+        "capacity",
+        "capacity_as_of",
+        "coordinates_lat",
+        "coordinates_lon",
+        "created",
+        "opened",
+        "fetched_at",
+        "source_url"
+      ]
+    },
+    {
+      "table": "support_stadium_plan",
+      "domain": "support",
+      "store": "support_records",
+      "parent": "support_stadium",
+      "keys": [
+        "projection_id",
+        "ordinal_1"
+      ],
+      "columns": [
+        "projection_id",
+        "ordinal_1",
+        "missing",
+        "null_groups",
+        "title",
+        "url",
+        "image_url",
+        "source",
+        "detail",
+        "format",
+        "allow_geolocation",
+        "embedded"
+      ]
+    },
+    {
+      "table": "support_club",
+      "domain": "support",
+      "store": "support_records",
+      "parent": null,
+      "keys": [
+        "projection_id"
+      ],
+      "columns": [
+        "projection_id",
+        "missing",
+        "null_groups",
+        "coach_name",
+        "coach_photo_url",
+        "coach_photo_author",
+        "coach_photo_license",
+        "coach_photo_source_url",
+        "founded",
+        "stadium",
+        "stadium_alias",
+        "stadium_id",
+        "fetched_at",
+        "source_url"
+      ]
+    },
+    {
+      "table": "support_coach",
+      "domain": "support",
+      "store": "support_records",
+      "parent": null,
+      "keys": [
+        "projection_id"
+      ],
+      "columns": [
+        "projection_id",
+        "missing",
+        "null_groups",
+        "name",
+        "lookup_version",
+        "photo_url",
+        "photo_author",
+        "photo_license",
+        "photo_source_url"
+      ]
+    },
+    {
+      "table": "support_honours",
+      "domain": "support",
+      "store": "support_records",
+      "parent": null,
+      "keys": [
+        "projection_id"
+      ],
+      "columns": [
+        "projection_id",
+        "missing",
+        "null_groups",
+        "available",
+        "fetched_at",
+        "identity_source_url",
+        "revision",
+        "source",
+        "source_url"
+      ]
+    },
+    {
+      "table": "support_honour",
+      "domain": "support",
+      "store": "support_records",
+      "parent": "support_honours",
+      "keys": [
+        "projection_id",
+        "ordinal_1"
+      ],
+      "columns": [
+        "projection_id",
+        "ordinal_1",
+        "missing",
+        "null_groups",
+        "category",
+        "name",
+        "team"
+      ]
+    },
+    {
+      "table": "support_honour_season",
+      "domain": "support",
+      "store": "support_records",
+      "parent": "support_honour",
+      "keys": [
+        "projection_id",
+        "ordinal_1",
+        "ordinal_2"
+      ],
+      "columns": [
+        "projection_id",
+        "ordinal_1",
+        "ordinal_2",
+        "missing",
+        "null_groups",
+        "season"
+      ]
+    },
+    {
+      "table": "support_honour_display_group",
+      "domain": "support",
+      "store": "support_records",
+      "parent": "support_honours",
+      "keys": [
+        "projection_id",
+        "ordinal_1"
+      ],
+      "columns": [
+        "projection_id",
+        "ordinal_1",
+        "missing",
+        "null_groups",
+        "team_or_distinction"
+      ]
+    },
+    {
+      "table": "support_honour_display_item",
+      "domain": "support",
+      "store": "support_records",
+      "parent": "support_honour_display_group",
+      "keys": [
+        "projection_id",
+        "ordinal_1",
+        "ordinal_2"
+      ],
+      "columns": [
+        "projection_id",
+        "ordinal_1",
+        "ordinal_2",
+        "missing",
+        "null_groups",
+        "title",
+        "title_count",
+        "edition_labels",
+        "trophy_year"
+      ]
+    },
+    {
+      "table": "support_nations",
+      "domain": "support",
+      "store": "support_records",
+      "parent": null,
+      "keys": [
+        "projection_id"
+      ],
+      "columns": [
+        "projection_id",
+        "missing",
+        "null_groups",
+        "season",
+        "source_license",
+        "source_name",
+        "source_url"
+      ]
+    },
+    {
+      "table": "support_nations_fixture",
+      "domain": "support",
+      "store": "support_records",
+      "parent": "support_nations",
+      "keys": [
+        "projection_id",
+        "ordinal_1"
+      ],
+      "columns": [
+        "projection_id",
+        "ordinal_1",
+        "missing",
+        "null_groups",
+        "fixture_date",
+        "fixture_key",
+        "home",
+        "away",
+        "home_id",
+        "away_id",
+        "league",
+        "status",
+        "group_number",
+        "round",
+        "score"
+      ]
+    },
+    {
+      "table": "support_cup",
+      "domain": "support",
+      "store": "support_records",
+      "parent": null,
+      "keys": [
+        "projection_id"
+      ],
+      "columns": [
+        "projection_id",
+        "missing",
+        "null_groups",
+        "name",
+        "season",
+        "source_license",
+        "source_name",
+        "source_url"
+      ]
+    },
+    {
+      "table": "support_cup_fixture",
+      "domain": "support",
+      "store": "support_records",
+      "parent": "support_cup",
+      "keys": [
+        "projection_id",
+        "ordinal_1"
+      ],
+      "columns": [
+        "projection_id",
+        "ordinal_1",
+        "missing",
+        "null_groups",
+        "fixture_date",
+        "group_name",
+        "num",
+        "round",
+        "team1",
+        "team2",
+        "score",
+        "full_time",
+        "half_time",
+        "extra_time",
+        "penalties"
+      ]
+    },
+    {
+      "table": "support_openliga",
+      "domain": "support",
+      "store": "support_records",
+      "parent": null,
+      "keys": [
+        "projection_id"
+      ],
+      "columns": [
+        "projection_id",
+        "missing",
+        "null_groups",
+        "competition",
+        "season",
+        "source_license",
+        "source_name",
+        "source_url",
+        "source_data_url"
+      ]
+    },
+    {
+      "table": "support_openliga_fixture",
+      "domain": "support",
+      "store": "support_records",
+      "parent": "support_openliga",
+      "keys": [
+        "projection_id",
+        "ordinal_1"
+      ],
+      "columns": [
+        "projection_id",
+        "ordinal_1",
+        "missing",
+        "null_groups",
+        "fixture_date",
+        "fixture_key",
+        "home",
+        "away",
+        "home_id",
+        "away_id",
+        "status",
+        "group_number",
+        "round",
+        "round_name",
+        "score",
+        "penalties",
+        "notes"
+      ]
+    },
+    {
+      "table": "match_summaries",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "id",
+        "date",
+        "time_utc",
+        "status",
+        "score_home",
+        "score_away",
+        "home_team_id",
+        "home_team_name",
+        "home_team_image_url",
+        "away_team_id",
+        "away_team_name",
+        "away_team_image_url",
+        "league_id",
+        "league_name",
+        "league_image_url",
+        "season",
+        "round_name",
+        "referee",
+        "stadium",
+        "has_playoff"
+      ]
+    },
+    {
+      "table": "event_sheets",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "match_id"
+      ]
+    },
+    {
+      "table": "match_events",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "event_sheets",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "event_type",
+        "period",
+        "team_id",
+        "minute",
+        "minute_added",
+        "score_home",
+        "score_away",
+        "is_own_goal",
+        "is_penalty",
+        "player_id",
+        "player_name",
+        "player_image_url",
+        "player_position_id",
+        "player_shirt_number",
+        "sub_in_player_id",
+        "sub_in_player_name",
+        "sub_in_player_image_url",
+        "sub_in_player_position_id",
+        "sub_in_player_shirt_number"
+      ]
+    },
+    {
+      "table": "shot_sheets",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "match_id"
+      ]
+    },
+    {
+      "table": "shot_periods",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "shot_sheets",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "period"
+      ]
+    },
+    {
+      "table": "match_shots",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "shot_periods",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "id",
+        "team_id",
+        "shot_type",
+        "situation",
+        "event_type",
+        "minute",
+        "minute_added",
+        "x",
+        "y",
+        "expected_goals",
+        "expected_goals_on_target",
+        "goal_crossed_y",
+        "goal_crossed_z",
+        "blocked_x",
+        "blocked_y",
+        "is_on_target",
+        "is_inside_box",
+        "is_blocked",
+        "player_id",
+        "player_name",
+        "player_image_url",
+        "player_position_id",
+        "player_shirt_number",
+        "keeper_id",
+        "keeper_name",
+        "keeper_image_url",
+        "keeper_position_id",
+        "keeper_shirt_number",
+        "is_own_goal",
+        "is_saved_off_line"
+      ]
+    },
+    {
+      "table": "team_stat_sheets",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "match_id",
+        "home_team_id",
+        "home_team_name",
+        "home_team_image_url",
+        "away_team_id",
+        "away_team_name",
+        "away_team_image_url"
+      ]
+    },
+    {
+      "table": "team_stat_periods",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "team_stat_sheets",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "period"
+      ]
+    },
+    {
+      "table": "team_stat_groups",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "team_stat_periods",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "group_name"
+      ]
+    },
+    {
+      "table": "team_stat_items",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "team_stat_groups",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "title",
+        "key",
+        "home",
+        "away",
+        "format_type"
+      ]
+    },
+    {
+      "table": "lineup_sheets",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "match_id",
+        "home_team_id",
+        "home_team_name",
+        "home_team_image_url",
+        "away_team_id",
+        "away_team_name",
+        "away_team_image_url",
+        "home_formation",
+        "home_lineup_type",
+        "home_confirmed",
+        "home_coach_name",
+        "away_formation",
+        "away_lineup_type",
+        "away_confirmed",
+        "away_coach_name"
+      ]
+    },
+    {
+      "table": "lineup_home_starters",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "lineup_sheets",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "player_id",
+        "name",
+        "shirt_number",
+        "position_id",
+        "pitch_x",
+        "pitch_y",
+        "is_captain"
+      ]
+    },
+    {
+      "table": "lineup_home_substitutes",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "lineup_sheets",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "player_id",
+        "name",
+        "shirt_number",
+        "position_id",
+        "pitch_x",
+        "pitch_y",
+        "is_captain"
+      ]
+    },
+    {
+      "table": "lineup_away_starters",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "lineup_sheets",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "player_id",
+        "name",
+        "shirt_number",
+        "position_id",
+        "pitch_x",
+        "pitch_y",
+        "is_captain"
+      ]
+    },
+    {
+      "table": "lineup_away_substitutes",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "lineup_sheets",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "player_id",
+        "name",
+        "shirt_number",
+        "position_id",
+        "pitch_x",
+        "pitch_y",
+        "is_captain"
+      ]
+    },
+    {
+      "table": "momentum_sheets",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "match_id"
+      ]
+    },
+    {
+      "table": "momentum_points",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "momentum_sheets",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "minute",
+        "value"
+      ]
+    },
+    {
+      "table": "h2h_sheets",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "match_id",
+        "home_team_id",
+        "home_team_name",
+        "home_team_image_url",
+        "away_team_id",
+        "away_team_name",
+        "away_team_image_url",
+        "home_wins",
+        "draws",
+        "away_wins",
+        "total_matches"
+      ]
+    },
+    {
+      "table": "h2h_matches",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "h2h_sheets",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "time_utc",
+        "score_home",
+        "score_away",
+        "finished",
+        "home_id",
+        "home_name",
+        "home_image_url",
+        "away_id",
+        "away_name",
+        "away_image_url"
+      ]
+    },
+    {
+      "table": "advanced_team_sheets",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "match_id"
+      ]
+    },
+    {
+      "table": "advanced_team_totals",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "advanced_team_sheets",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "actions",
+        "possession_value_xt_total",
+        "possession_value_vaep_total",
+        "possession_value_vaep_offensive",
+        "possession_value_vaep_defensive",
+        "possession_value_pv_total",
+        "possession_value_pv_offensive",
+        "possession_value_pv_defensive",
+        "passing_passes",
+        "passing_pass_accuracy",
+        "passing_progressive_passes",
+        "passing_progressive_pass_distance",
+        "passing_passes_into_box",
+        "passing_key_passes",
+        "passing_assists",
+        "passing_through_balls",
+        "passing_crosses",
+        "passing_switches",
+        "carrying_carries",
+        "carrying_carry_distance",
+        "carrying_progressive_carries",
+        "carrying_progressive_carry_distance",
+        "carrying_carries_into_final_third",
+        "carrying_carries_into_box",
+        "carrying_take_ons",
+        "carrying_take_ons_won",
+        "carrying_miscontrols",
+        "carrying_dispossessed",
+        "creation_sca",
+        "creation_gca",
+        "creation_chances_created",
+        "creation_second_assists",
+        "creation_xag",
+        "creation_xg_chain",
+        "creation_xg_buildup",
+        "creation_sca_breakdown_pass_live",
+        "creation_sca_breakdown_pass_dead",
+        "creation_sca_breakdown_take_on",
+        "creation_sca_breakdown_shot",
+        "creation_sca_breakdown_foul_drawn",
+        "creation_sca_breakdown_defensive",
+        "defending_tackles",
+        "defending_interceptions",
+        "defending_blocks",
+        "defending_clearances",
+        "defending_duels_won",
+        "defending_aerials",
+        "defending_aerials_won",
+        "defending_ppda",
+        "defending_opponent_passes",
+        "defending_defensive_actions",
+        "defending_challenges",
+        "defending_avg_defensive_action_x",
+        "defending_high_turnovers",
+        "defending_counterpress_regains_5s",
+        "defending_ball_recovery_time",
+        "team_id",
+        "team_name",
+        "team_image_url",
+        "territory_possession_pct",
+        "territory_field_tilt",
+        "territory_final_third_entries",
+        "territory_box_entries",
+        "territory_avg_action_x",
+        "tempo_passes_per_sequence",
+        "tempo_sequence_time",
+        "tempo_direct_speed",
+        "tempo_buildup_attacks",
+        "tempo_direct_attacks"
+      ]
+    },
+    {
+      "table": "advanced_player_sheets",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "match_id",
+        "sorted_by"
+      ]
+    },
+    {
+      "table": "advanced_player_totals",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "advanced_player_sheets",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "actions",
+        "possession_value_xt_total",
+        "possession_value_vaep_total",
+        "possession_value_vaep_offensive",
+        "possession_value_vaep_defensive",
+        "possession_value_pv_total",
+        "possession_value_pv_offensive",
+        "possession_value_pv_defensive",
+        "passing_passes",
+        "passing_pass_accuracy",
+        "passing_progressive_passes",
+        "passing_progressive_pass_distance",
+        "passing_passes_into_box",
+        "passing_key_passes",
+        "passing_assists",
+        "passing_through_balls",
+        "passing_crosses",
+        "passing_switches",
+        "carrying_carries",
+        "carrying_carry_distance",
+        "carrying_progressive_carries",
+        "carrying_progressive_carry_distance",
+        "carrying_carries_into_final_third",
+        "carrying_carries_into_box",
+        "carrying_take_ons",
+        "carrying_take_ons_won",
+        "carrying_miscontrols",
+        "carrying_dispossessed",
+        "creation_sca",
+        "creation_gca",
+        "creation_chances_created",
+        "creation_second_assists",
+        "creation_xag",
+        "creation_xg_chain",
+        "creation_xg_buildup",
+        "creation_sca_breakdown_pass_live",
+        "creation_sca_breakdown_pass_dead",
+        "creation_sca_breakdown_take_on",
+        "creation_sca_breakdown_shot",
+        "creation_sca_breakdown_foul_drawn",
+        "creation_sca_breakdown_defensive",
+        "defending_tackles",
+        "defending_interceptions",
+        "defending_blocks",
+        "defending_clearances",
+        "defending_duels_won",
+        "defending_aerials",
+        "defending_aerials_won",
+        "defending_ppda",
+        "defending_opponent_passes",
+        "defending_defensive_actions",
+        "defending_challenges",
+        "defending_avg_defensive_action_x",
+        "defending_high_turnovers",
+        "defending_counterpress_regains_5s",
+        "defending_ball_recovery_time",
+        "team_id",
+        "player_id",
+        "player_name",
+        "player_image_url",
+        "player_position_id",
+        "player_shirt_number",
+        "minutes_played",
+        "goalkeeping_claims",
+        "goalkeeping_claims_won",
+        "goalkeeping_claim_rate",
+        "goalkeeping_sweeper_actions",
+        "goalkeeping_distributions",
+        "goalkeeping_launches",
+        "goalkeeping_launch_pct",
+        "goalkeeping_avg_pass_length",
+        "goalkeeping_distribution_accuracy"
+      ]
+    },
+    {
+      "table": "network_sheets",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "match_id"
+      ]
+    },
+    {
+      "table": "pass_networks",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "network_sheets",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "centralization",
+        "team_id",
+        "team_name",
+        "team_image_url",
+        "window_kind",
+        "window_until_seconds"
+      ]
+    },
+    {
+      "table": "pass_nodes",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "pass_networks",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "avg_x",
+        "avg_y",
+        "passes",
+        "passes_received",
+        "degree",
+        "strength",
+        "betweenness",
+        "clustering",
+        "player_id",
+        "player_name",
+        "player_image_url",
+        "player_position_id",
+        "player_shirt_number"
+      ]
+    },
+    {
+      "table": "pass_edges",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "pass_networks",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "from_id",
+        "from_name",
+        "from_image_url",
+        "from_position_id",
+        "from_shirt_number",
+        "to_id",
+        "to_name",
+        "to_image_url",
+        "to_position_id",
+        "to_shirt_number",
+        "passes"
+      ]
+    },
+    {
+      "table": "heatmap_sheets",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "match_id",
+        "grid_frame",
+        "grid_length",
+        "grid_width",
+        "grid_cell_length_m",
+        "grid_cell_width_m"
+      ]
+    },
+    {
+      "table": "team_heatmaps",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "heatmap_sheets",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "side",
+        "actions",
+        "team_id",
+        "team_name",
+        "team_image_url",
+        "cells"
+      ]
+    },
+    {
+      "table": "player_heatmaps",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "heatmap_sheets",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "side",
+        "actions",
+        "team_id",
+        "team_name",
+        "team_image_url",
+        "cells",
+        "player_id",
+        "player_name",
+        "player_image_url",
+        "player_position_id",
+        "player_shirt_number"
+      ]
+    },
+    {
+      "table": "player_shot_sheets",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": null,
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "player_id",
+        "player_name",
+        "player_image_url",
+        "player_position_id",
+        "player_shirt_number"
+      ]
+    },
+    {
+      "table": "individual_player_shots",
+      "domain": "detail",
+      "store": "detail_records",
+      "parent": "player_shot_sheets",
+      "keys": [
+        "resource_id",
+        "record_no"
+      ],
+      "columns": [
+        "resource_id",
+        "record_no",
+        "missing",
+        "null_groups",
+        "parent_no",
+        "position",
+        "id",
+        "team_id",
+        "shot_type",
+        "situation",
+        "event_type",
+        "minute",
+        "minute_added",
+        "x",
+        "y",
+        "expected_goals",
+        "expected_goals_on_target",
+        "goal_crossed_y",
+        "goal_crossed_z",
+        "blocked_x",
+        "blocked_y",
+        "is_on_target",
+        "is_inside_box",
+        "is_blocked",
+        "player_id",
+        "player_name",
+        "player_image_url",
+        "player_position_id",
+        "player_shirt_number",
+        "keeper_id",
+        "keeper_name",
+        "keeper_image_url",
+        "keeper_position_id",
+        "keeper_shirt_number",
+        "is_own_goal",
+        "is_saved_off_line"
+      ]
+    }
+  ]
+}

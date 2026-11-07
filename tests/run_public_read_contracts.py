@@ -46,13 +46,18 @@ def main():
                          "publication_retries_postgres", "lineup_consolidation_postgres"):
                 subprocess.run([sys.executable, f"tests/{name}.py"], cwd=root, env=env, check=True)
             for name in ("test_collection_plan.py", "test_publication_freshness.py", "test_core_delta.py",
-                         "test_tournament_publisher_aliases.py", "test_empty_year_aliases.py", "test_daily_refresh.py"):
+                         "test_tournament_publisher_aliases.py", "test_empty_year_aliases.py", "test_daily_refresh.py", "test_storage_budget.py"):
                 subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests",
                                 "-p", name], cwd=root, env=env, check=True)
             # Tests use one isolated schema name; serialize files so their
             # rollback-only PostgreSQL fixtures cannot contend with one another.
             subprocess.run([
                 "node", "--test", "--test-concurrency=1",
+                "tests/backend-metrics.test.mjs",
+                "tests/relational-read-cache.test.mjs",
+                "tests/relational-player-rollups.test.mjs",
+                "tests/relational-archives.test.mjs",
+                "tests/remote-match.test.mjs",
                 "tests/relational-discovery.test.mjs",
                 "tests/relational-pagination-cache.test.mjs",
                 "tests/relational-compact-reads.test.mjs",
@@ -70,6 +75,18 @@ def main():
                 "tests/player-discipline.test.mjs",
                 "tests/runtime-acceptance.test.mjs",
             ], cwd=root, env=env, check=True)
+            # Consolidation intentionally commits bounded batches and exercises
+            # real COPY writers after cutover. Give it a separate fresh database.
+            with psycopg.connect(base + "/postgres", autocommit=True) as db:
+                db.execute("CREATE DATABASE vega_ci_test")
+            subprocess.run([sys.executable, "tests/consolidation_postgres.py"], cwd=root,
+                           env={**env, "TEST_DATABASE_URL": base + "/vega_ci_test"}, check=True)
+            # Archival exercises two independent owner roles and committed moves.
+            # Keep its active/archived names separate from the consolidation fixture.
+            with psycopg.connect(base + "/postgres", autocommit=True) as db:
+                db.execute("CREATE DATABASE vega_legacy_transfer_test")
+            subprocess.run([sys.executable, "tests/legacy_transfer_archive_postgres.py"], cwd=root,
+                           env={**env, "TEST_DATABASE_URL": base + "/vega_legacy_transfer_test"}, check=True)
         except Exception:
             log = path / "postgres.log"
             if log.exists():

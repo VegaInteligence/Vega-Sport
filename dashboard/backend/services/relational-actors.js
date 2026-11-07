@@ -1,4 +1,5 @@
 import { query } from "./postgres.js";
+import { createReadCache } from "./relational-read-cache.js";
 import {
   appearanceRecord,
   assembleMatches,
@@ -22,7 +23,15 @@ import {
 const rows = (statement) =>
   `(SELECT coalesce(json_agg(r),'[]'::json) FROM (${statement}) r)`;
 
-function actorQuery(kind, scope, actor, includes, pagination, generation) {
+function actorQuery(
+  kind,
+  scope,
+  actor,
+  includes,
+  pagination,
+  generation,
+  detail,
+) {
   const values = [],
     publication = publicationSql(scope, values);
   const fence =
@@ -34,10 +43,11 @@ function actorQuery(kind, scope, actor, includes, pagination, generation) {
   let candidates;
   if (kind === "player") {
     const appearanceScope = scopeWhere("a", scope, values);
-    candidates = `SELECT m.id,m.day FROM statarena_app.matches m
-      WHERE ${matchScope}${fence} AND EXISTS (
-        SELECT 1 FROM statarena_app.appearances a
-        WHERE a.match_id=m.id AND a.player_id=${actorParam} AND ${appearanceScope})`;
+    candidates = `SELECT m.id,m.day FROM (
+        SELECT DISTINCT a.match_id FROM statarena_app.appearances a
+        WHERE a.player_id=${actorParam} AND ${appearanceScope}${fence}
+      ) actor JOIN statarena_app.matches m ON m.id=actor.match_id
+      WHERE ${matchScope}`;
   } else {
     const fixtureScope = scopeWhere("f", scope, values);
     candidates = `SELECT id,min(day) AS day FROM (
@@ -58,16 +68,20 @@ function actorQuery(kind, scope, actor, includes, pagination, generation) {
         JOIN statarena_app.players p ON p.id=a.player_ref
         LEFT JOIN statarena_app.appearance_shirt_numbers s ON s.appearance_id=a.id
         WHERE a.${kind === "player" ? "player_id" : "team_id"}=${actorParam}
-          AND ${scopeWhere("a", scope, values)}),
+          AND ${scopeWhere("a", scope, values)})${
+            detail === "summary"
+              ? ""
+              : `,
       appearance_extras AS (
         SELECT e.appearance_id,json_object_agg(e.metric_key,e.value ORDER BY e.metric_key) extras
         FROM statarena_app.appearance_metrics e JOIN page_appearances a ON a.id=e.appearance_id
         GROUP BY e.appearance_id)`
+          }`
     : "";
-  const byPage = (table, order, columns = "r.*") =>
+  const byPage = (table, order, columns = "r.*", predicate = "") =>
     rows(
       `SELECT ${columns} FROM page p CROSS JOIN LATERAL (
-       SELECT * FROM statarena_app.${table} WHERE match_id=p.id ORDER BY ${order}
+       SELECT * FROM statarena_app.${table} WHERE match_id=p.id ${predicate} ORDER BY ${order}
      ) r ORDER BY r.match_id,${order
        .split(",")
        .map((key) => `r.${key.trim()}`)
@@ -87,11 +101,11 @@ function actorQuery(kind, scope, actor, includes, pagination, generation) {
     SELECT publication.*,(SELECT count(*)::int FROM actor_matches) AS total,
       ${rows("SELECT * FROM selected_matches ORDER BY day DESC NULLS LAST,id DESC")} matches,
       ${rows("SELECT * FROM selected_fixtures ORDER BY day DESC NULLS LAST,id DESC")} fixtures,
-      ${withAppearances ? rows("SELECT a.*,e.extras FROM page_appearances a LEFT JOIN appearance_extras e ON e.appearance_id=a.id ORDER BY a.match_id,a.ordinal,a.id") : "'[]'::json"} appearances,
+      ${withAppearances ? rows(`SELECT a.*${detail === "summary" ? "" : ",e.extras"} FROM page_appearances a ${detail === "summary" ? "" : "LEFT JOIN appearance_extras e ON e.appearance_id=a.id"} ORDER BY a.match_id,a.ordinal,a.id`) : "'[]'::json"} appearances,
       ${includes.has("shots") ? byPage("shots", "ordinal,id") : "'[]'::json"} shots,
-      ${byPage("team_statistics", "ordinal")} stats,
-      ${byPage("match_coverage", "coverage_key")} cover,
-      ${byPage("match_warnings", "kind,ordinal")} warnings,
+      ${kind === "club" || detail !== "summary" ? byPage("team_statistics", "ordinal") : "'[]'::json"} stats,
+      ${detail !== "summary" ? byPage("match_coverage", "coverage_key") : kind === "club" ? byPage("match_coverage", "coverage_key", "r.*", "AND coverage_key='teamStatsReliable'") : "'[]'::json"} cover,
+      ${detail !== "summary" ? byPage("match_warnings", "kind,ordinal") : "'[]'::json"} warnings,
       ${withAppearances ? rows("SELECT match_id,id AS appearance_id,ordinal FROM page_appearances ORDER BY match_id,ordinal,id") : "'[]'::json"} players,
       ${rows(`SELECT t.id,t.name,t.image_url,t.country,
           array_agg(DISTINCT s.league_id ORDER BY s.league_id) FILTER (WHERE s.league_id IS NOT NULL) league_ids,
@@ -110,6 +124,11 @@ function actorQuery(kind, scope, actor, includes, pagination, generation) {
 
 /** Dedicated actor reads never fetch other actors' appearances or raw archives. */
 export function createActorRoute(read = query) {
+  const snapshotRead = createReadCache(read, {
+    name: "actors",
+    maxBytes: 8 * 1024 * 1024,
+    maxEntryBytes: 2 * 1024 * 1024,
+  });
   return async function relationalActorRoute(req, path, params) {
     const kind =
       path === "/api/read/player"
@@ -130,6 +149,7 @@ export function createActorRoute(read = query) {
       "page",
       "limit",
       "include",
+      "detail",
     ]);
     const actor = params.get(actorKey);
     if (
@@ -145,6 +165,8 @@ export function createActorRoute(read = query) {
       [...includes].some((value) => !["appearances", "shots"].includes(value))
     )
       reject(400, "Détail invalide.");
+    const detail = params.get("detail") || "full";
+    if (!["full", "summary"].includes(detail)) reject(400, "Détail invalide.");
     const scope = parseReadScope(params),
       pagination = readPageArgs(params, 25);
     const cached = await readValidator(req, params, scope, read);
@@ -156,8 +178,14 @@ export function createActorRoute(read = query) {
       includes,
       pagination,
       params.get("generation"),
+      detail,
     );
-    const [snapshot] = await read(request.sql, request.values);
+    const snapshot = await snapshotRead(
+      req,
+      params,
+      scope,
+      async () => (await read(request.sql, request.values))[0],
+    );
     checkReadGeneration(params, snapshot?.generation);
     const data = {
       meta: {
@@ -170,6 +198,7 @@ export function createActorRoute(read = query) {
         shotsLoaded: includes.has("shots"),
         appearancesLoaded: request.withAppearances,
         actor: { kind, id: actor },
+        detail,
         notes: [],
       },
       metrics: snapshot.metrics || [],

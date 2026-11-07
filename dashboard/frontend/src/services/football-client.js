@@ -21,6 +21,7 @@ export class FootballDataClient {
     this.browseMode = "catalog";
   }
   async checkStatus() {
+    if (this.statusKnown) return;
     try {
       const r = await fetch(apiUrl("/api/status"));
       this.configured = r.ok && (await r.json()).configured === true;
@@ -52,9 +53,10 @@ export class FootballDataClient {
     }
     this.redraw();
   }
-  async request(path) {
+  async request(path, { signal } = {}) {
     const response = await fetch(apiUrl(`/api/pitchapi/${path}`), {
       headers: { Accept: "application/json" },
+      signal,
     });
     let body;
     try {
@@ -100,7 +102,7 @@ export class FootballDataClient {
         season: m.season,
       }));
   }
-  async loadFixtures() {
+  async loadFixtures({ signal } = {}) {
     const { browseMode, day, competitionId, season } = this;
     const league =
       this.catalog.find((x) => x.id === competitionId) || this.competition;
@@ -112,13 +114,23 @@ export class FootballDataClient {
     let result;
     if (browseMode !== "day" && this.useCupSnapshot) {
       try {
-        const saved = await cupWorkerSnapshot("native", competitionId, season);
+        const saved = await cupWorkerSnapshot(
+          "native",
+          competitionId,
+          season,
+          null,
+          { signal },
+        );
         result = {
           matches: saved.matches,
           rounds: saved.rounds || {},
           source: "snapshot",
         };
-      } catch {
+      } catch (error) {
+        if (error.name === "AbortError") {
+          this.fixtures.delete(key);
+          throw error;
+        }
         /* Older editions can still use the provider or local archive. */
       }
     }
@@ -128,6 +140,7 @@ export class FootballDataClient {
           throw new Error("Les données en direct ne sont pas disponibles.");
         const matches = await completeFixtures(
           browseMode === "day" ? { day } : { league: league.id, season },
+          { signal },
         );
         result = {
           matches:
@@ -144,6 +157,10 @@ export class FootballDataClient {
           source: "api",
         };
       } catch (error) {
+        if (error.name === "AbortError") {
+          this.fixtures.delete(key);
+          throw error;
+        }
         const matches =
           browseMode === "day"
             ? this.localFixtures().filter((m) => m.date === day)
@@ -162,24 +179,35 @@ export class FootballDataClient {
     this.supplementalError = null;
     try {
       if (this.data.meta?.storage === "json-packed") {
-        const indexResponse = await fetch(dataUrl("raw/supplemental-index.json"));
+        const indexResponse = await fetch(
+          dataUrl("raw/supplemental-index.json"),
+        );
         if (!indexResponse.ok) throw new Error(`HTTP ${indexResponse.status}`);
         const index = await indexResponse.json();
-        if (!Array.isArray(index.competitions) || !index.meta) throw new Error("Format de données invalide");
+        if (!Array.isArray(index.competitions) || !index.meta)
+          throw new Error("Format de données invalide");
         const competitions = new Array(index.competitions.length);
         let cursor = 0;
-        await Promise.all(Array.from({ length: Math.min(4, competitions.length) }, async () => {
-          while (cursor < competitions.length) {
-            const position = cursor++, { tables, ...item } = index.competitions[position];
-            for (const [kind, ref] of Object.entries(tables || {})) {
-              const response = await fetch(dataUrl(ref.path));
-              if (!response.ok) throw new Error(`HTTP ${response.status}`);
-              if (typeof DecompressionStream === "undefined") throw new Error("Ce navigateur ne peut pas décompresser les données.");
-              item[kind] = await new Response(response.body.pipeThrough(new DecompressionStream("gzip"))).json();
+        await Promise.all(
+          Array.from({ length: Math.min(4, competitions.length) }, async () => {
+            while (cursor < competitions.length) {
+              const position = cursor++,
+                { tables, ...item } = index.competitions[position];
+              for (const [kind, ref] of Object.entries(tables || {})) {
+                const response = await fetch(dataUrl(ref.path));
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (typeof DecompressionStream === "undefined")
+                  throw new Error(
+                    "Ce navigateur ne peut pas décompresser les données.",
+                  );
+                item[kind] = await new Response(
+                  response.body.pipeThrough(new DecompressionStream("gzip")),
+                ).json();
+              }
+              competitions[position] = item;
             }
-            competitions[position] = item;
-          }
-        }));
+          }),
+        );
         this.supplementalData = { meta: index.meta, competitions };
         this.supplementalLoading = false;
         this.redraw();

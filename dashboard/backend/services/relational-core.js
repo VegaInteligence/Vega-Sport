@@ -35,7 +35,7 @@ const tag = (req, version) =>
   '"';
 // Capability changes must invalidate the manifest even without a publication.
 // Keep this representation revision separate from other endpoint validators.
-const manifestTag = (req, version) => tag(req, `manifest-v1|${version}`);
+const manifestTag = (req, version) => tag(req, `manifest-v3|${version}`);
 class ApiError extends Error {
   constructor(status, message) {
     super(message);
@@ -415,6 +415,8 @@ export async function manifest(req) {
         fixturePaginationOrder: true,
         versionedPartitions: true,
         playerRatingRanking: true,
+        actorSummary: true,
+        boundedArchive: true,
         compactReads: {
           home: true,
           players: true,

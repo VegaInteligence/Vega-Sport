@@ -40,6 +40,7 @@ jobs:
     env:
       STATARENA_OBJECT_LIMIT_BYTES: ${{ vars.STATARENA_OBJECT_LIMIT_BYTES }}
       STATARENA_SQL_LIMIT_BYTES: ${{ vars.STATARENA_SQL_LIMIT_BYTES }}
+      STATARENA_SQL_RESERVE_BYTES: ${{ vars.STATARENA_SQL_RESERVE_BYTES }}
     steps:
       - uses: actions/checkout@v4
         with:

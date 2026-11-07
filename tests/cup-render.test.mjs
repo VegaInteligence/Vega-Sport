@@ -28,6 +28,7 @@ test("cup view identifies the edition and preserves penalty shootouts", async ()
     "../services/format.js": { date: String, seasonLabel: (value) => /^\d{4}$/.test(value) ? `${value}/${Number(value) + 1}` : value },
     "../services/fixtures.js": { parisDay: () => "2026-11-02" },
     "../services/resources.js": { useResource: () => ({ value: { matches: rows } }), json: () => {} },
+    "../services/catalog-client.js": { cupTable: async () => ({ matches: [] }) },
     "../data-url.js": { dataUrl: (path) => path },
     "../services/competition-selector.js": { competitionCountryLabel: () => "France" },
     "../services/cup-matches.js": cupMatches,

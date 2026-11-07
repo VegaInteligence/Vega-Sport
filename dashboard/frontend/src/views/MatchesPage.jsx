@@ -15,8 +15,8 @@ import ProMatchesPage from "./ProMatchesPage.jsx";
 import PaginatedMatches from "../components/PaginatedMatches.jsx";
 function RemoteDetail({ id }) {
   const f = useFootball(),
-    resource = useResource(`remote-match:${id}`, () =>
-      loadRemoteMatch(id, f.client, json),
+    resource = useResource(`remote-match:${id}`, ({ signal }) =>
+      loadRemoteMatch(id, f.client, json, { signal }),
     );
   return (
     <AsyncState resource={resource}>

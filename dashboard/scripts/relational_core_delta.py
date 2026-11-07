@@ -10,6 +10,7 @@ import json
 from collections import defaultdict
 
 from psycopg import sql
+from player_rollups import refresh_player_rollups
 
 from relational_core import (
     APPEARANCE_BOOL, APPEARANCE_NUMBER, APPEARANCE_TEXT,
@@ -296,6 +297,7 @@ def publish_incremental(db, season, league, value, *, previous_state=None):
         for ordinal, metric in enumerate(value.get("metrics") or []):
             upsert(db, "metric_definitions", [dict(metric_key=metric["key"], label=metric.get("label"), unit=metric.get("unit"), decimals=metric.get("decimals"))], ["metric_key"])
             _many(db, "partition_metrics", [dict(season=season, league_id=league, metric_key=metric["key"], ordinal=ordinal)])
+    refresh_player_rollups(db, season, league)
     db.execute("UPDATE statarena_app.publications SET generation=generation+1,published_at=clock_timestamp()")
     print(canonical(dict(phase="core-delta", season=season, league=league, changed_matches=changed_count,
                          match_batches=batch_count, changed_fixtures=len(changed_fixtures))), flush=True)

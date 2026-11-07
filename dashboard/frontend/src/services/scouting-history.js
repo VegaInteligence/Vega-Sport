@@ -1,6 +1,8 @@
 import { apiUrl } from "../data-url.js";
 import { loadSeason, readPages } from "../season_data.js";
 import { aggregateSeason } from "./season-player.js";
+import { actorReadParams } from "./actor-reads.js";
+import { createResourceCache } from "./resource-cache.js";
 import {
   compactGeneration,
   compactScope,
@@ -29,27 +31,21 @@ export async function playerRoutes(
     if (unique.length) params.set(key, unique.join(","));
   }
   if (!params.size) return { routes: {}, clubRoutes: {} };
-  if (!routeCaches.has(manifest)) routeCaches.set(manifest, new WeakMap());
-  const readers = routeCaches.get(manifest);
-  if (!readers.has(fetcher)) readers.set(fetcher, new Map());
-  const cache = readers.get(fetcher),
-    key = params.toString();
-  const load = () =>
-    fetcher(apiUrl("/api/scouting/routes?" + params), { signal })
-      .then(async (r) => {
-        if (!r.ok) throw new Error("L’index des saisons est indisponible.");
-        return r.json();
-      })
-      .catch((error) => {
-        cache.delete(key);
-        throw error;
+  if (!routeCaches.has(fetcher))
+    routeCaches.set(fetcher, createResourceCache({ maxEntries: 64 }));
+  const key = `${compactGeneration(manifest) || manifest?.retrievedAt || "legacy"}:${params}`;
+  return routeCaches.get(fetcher).read(
+    key,
+    async ({ signal: sharedSignal }) => {
+      const response = await fetcher(apiUrl("/api/scouting/routes?" + params), {
+        signal: sharedSignal,
       });
-  if (signal) {
-    signal.throwIfAborted();
-    return load();
-  }
-  if (!cache.has(key)) cache.set(key, load());
-  return cache.get(key);
+      if (!response.ok)
+        throw new Error("L’index des saisons est indisponible.");
+      return response.json();
+    },
+    { signal },
+  );
 }
 
 // Comparative tabs need the complete cohort for valid centiles and rankings.
@@ -78,12 +74,7 @@ export async function loadClubSeason(
   if (supportsCompactRead(manifest, "club")) {
     const result = await readCompactPages(
       "club",
-      {
-        season,
-        team: id,
-        leagues: "all",
-        generation: compactGeneration(manifest),
-      },
+      actorReadParams(manifest, "club", { id, season }),
       { signal, fetcher },
     );
     return mergeActorPages(result, manifest, season);
@@ -107,6 +98,22 @@ export async function loadPlayerSeason(
   routing = null,
   { signal, fetcher = fetch } = {},
 ) {
+  if (supportsCompactRead(manifest, "player") && !routing) {
+    if (!manifest.seasons?.some((entry) => entry.id === season))
+      return { season, data: null, profile: aggregateSeason([], id) };
+    const leagues = competition === "all" ? "all" : competition;
+    const data = mergeActorPages(
+      await readCompactPages(
+        "player",
+        actorReadParams(manifest, "player", { id, season, leagues }),
+        { signal, fetcher },
+      ),
+      manifest,
+      season,
+    );
+    data.meta.actorScope = leagues;
+    return { season, data, profile: aggregateSeason(data.appearances, id) };
+  }
   const index =
     routing ||
     (await playerRoutes(manifest, { players: [id] }, fetcher, { signal }));
@@ -119,12 +126,11 @@ export async function loadPlayerSeason(
     ? mergeActorPages(
         await readCompactPages(
           "player",
-          {
-            player: id,
+          actorReadParams(manifest, "player", {
+            id,
             season,
             leagues: compactScope(ids),
-            generation: compactGeneration(manifest),
-          },
+          }),
           { signal, fetcher },
         ),
         manifest,
@@ -160,12 +166,18 @@ export async function loadPlayerHistory(
     cachedSeason,
   } = {},
 ) {
+  const directSeason =
+    selectedSeason && supportsCompactRead(manifest, "player");
   const index =
     routing ||
-    (await playerRoutes(manifest, { players: [id] }, fetcher, { signal }));
-  const seasons = playerHistorySeasons(index, id).filter(
-    (season) => !selectedSeason || season === selectedSeason,
-  );
+    (directSeason
+      ? null
+      : await playerRoutes(manifest, { players: [id] }, fetcher, { signal }));
+  const seasons = directSeason
+    ? [selectedSeason]
+    : playerHistorySeasons(index, id).filter(
+        (season) => !selectedSeason || season === selectedSeason,
+      );
   const results = new Array(seasons.length);
   let cursor = 0;
   await Promise.all(
@@ -175,18 +187,13 @@ export async function loadPlayerHistory(
         const position = cursor++,
           season = seasons[position];
         const cached = cachedSeason?.(season);
-        if (cached?.season === season) {
-          results[position] = cached;
-          continue;
-        }
-        const entry = await loadPlayerSeason(
-          manifest,
-          id,
-          season,
-          "all",
-          index,
-          { signal, fetcher },
-        );
+        const entry =
+          cached?.season === season
+            ? cached
+            : await loadPlayerSeason(manifest, id, season, "all", index, {
+                signal,
+                fetcher,
+              });
         const data = addUefaNationsSnapshot(entry.data, id, season);
         results[position] =
           data === entry.data

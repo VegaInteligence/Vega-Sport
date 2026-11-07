@@ -27,7 +27,8 @@ test("competition page renders a result-derived league table and its limits", as
   let forceMatchView = false, forceBracketView = false;
   let forceDirectory = false, hookCount = 0;
   const reactStub = { ...React, useState: (initial) => { const [value, setValue] = React.useState(initial); hookCount++; if (forceDirectory && hookCount === 3) return [true, setValue]; return [forceBracketView && initial === "standings" ? "bracket" : forceMatchView && initial === "standings" ? "matches" : value, setValue]; } };
-  let externalTable = null;
+  let externalTable = null, fixturesPending = false;
+  const resourceCalls = [];
   const requestedStandings = [];
   const league = { id: "l_3FJFUl", name: "Ligue 1", country: "FRA", seasons: ["2026/2027", "2025/2026"] };
   const matches = [
@@ -54,7 +55,10 @@ test("competition page renders a result-derived league table and its limits", as
     "../components/MatchLink.jsx": { MatchLink: ({ match }) => elem("p", { "data-match": match.id }, match.id) },
     "../components/MatchdaySchedule.jsx": { __esModule: true, default: ({ matches, initialStatus }) => elem("section", { "data-matchday-status": initialStatus }, matches.map((match) => elem("p", { key: match.id, "data-match": match.id }, match.id))) },
     "../services/format.js": { normalizeText: String, seasonLabel: String, number: String, date: String },
-    "../services/resources.js": { useResource: (key, loader, enabled = true) => { if (key.startsWith("sportscore-standings:") && enabled) loader(); return { value: key === "supplemental-cup-index" ? { competitions: [{ folder: "ESP_CUP_copa-del-rey", name: "Copa del Rey", country_code: "ESP", season: "2026/2027", tables: { results: { rows: 1 } } }, { folder: "SUI_CUP_swiss-cup", name: "Swiss Cup", country_code: "SUI", season: "2026/2027", tables: { results: { rows: 1 } } }] } : key.startsWith("sportscore-standings:") && enabled && externalTable ? externalTable : { matches, source: "snapshot" } }; }, json: (url) => { requestedStandings.push(url); return Promise.resolve({}); }, download: () => {} },
+    "../services/resources.js": { useResource: (key, loader, enabled = true) => { resourceCalls.push({ key, enabled }); if (key.startsWith("sportscore-standings:") && enabled) loader(); if (fixturesPending && key.startsWith("fixtures:")) return { loading: true }; return { value: key === "supplemental-cup-index" ? { competitions: [{ folder: "ESP_CUP_copa-del-rey", name: "Copa del Rey", country_code: "ESP", season: "2026/2027", tables: { results: { rows: 1 } } }, { folder: "SUI_CUP_swiss-cup", name: "Swiss Cup", country_code: "SUI", season: "2026/2027", tables: { results: { rows: 1 } } }] } : key.startsWith("sportscore-standings:") && enabled && externalTable ? externalTable : { matches, source: "snapshot" } }; }, json: (url) => { requestedStandings.push(url); return Promise.resolve({}); }, download: () => {} },
+    "../services/fixture-pages.js": await import("../dashboard/frontend/src/services/fixture-pages.js"),
+    "../services/compact-reads.js": await import("../dashboard/frontend/src/services/compact-reads.js"),
+    "../services/fixtures.js": await import("../dashboard/frontend/src/services/fixtures.js"),
     "../model.js": { csvString: () => "" },
     "../services/catalog-client.js": await import("../dashboard/frontend/src/services/catalog-client.js"),
     "../components/SeasonSelect.jsx": { __esModule: true, default: ({ label, allLabel, seasons }) => elem("select", { "aria-label": label }, allLabel && elem("option", { value: "all" }, allLabel), seasons.map((value) => elem("option", { key: value, value }, value))) },
@@ -111,6 +115,17 @@ test("competition page renders a result-derived league table and its limits", as
   assert.match(sourced, /Groupe A/);
   assert.match(sourced, /Groupe B/);
   assert.doesNotMatch(sourced, /Les classements SportScore et les matchs PitchAPI/);
+  fixturesPending = true;
+  const parallel = renderToStaticMarkup(elem(mod.exports.default));
+  assert.match(parallel, /Groupe A/, "standings render before the full calendar finishes");
+  context.manifest.capabilities = { fixturePaginationOrder: true };
+  resourceCalls.length = 0;
+  const bounded = renderToStaticMarkup(elem(mod.exports.default));
+  assert.match(bounded, /Groupe A/);
+  assert.equal(resourceCalls.find(({ key }) => key.startsWith("fixtures:")).enabled, false, "published standings do not need a season-wide fixture drain");
+  assert.equal(resourceCalls.find(({ key }) => key.startsWith("competition-preview:")).enabled, true);
+  delete context.manifest.capabilities;
+  fixturesPending = false;
   context.season = "2025/2026";
   const historic = renderToStaticMarkup(elem(mod.exports.default));
   assert.doesNotMatch(historic, /Groupe A/);

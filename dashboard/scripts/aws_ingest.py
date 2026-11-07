@@ -6,6 +6,7 @@ from psycopg.types.json import Jsonb
 from aws_store import Store, canonical
 from functools import lru_cache
 from football_seasons import fixture_sporting_season
+from aws_storage_budget import sql_budget
 
 ENDPOINTS = [
     "",
@@ -527,12 +528,16 @@ def capacity(store):
     # The old defaults protect AWS quotas, but do not describe AWS capacity.
     # External deployments may opt into limits appropriate to their provisioned storage.
     external = os.environ.get("STATARENA_EXTERNAL_STORAGE") == "1"
-    sql_limit = os.environ.get("STATARENA_SQL_LIMIT_BYTES") or (None if external else "900000000")
+    if os.environ.get("STATARENA_DATA_PROVIDER") == "aws":
+        sql_limit, sql_reserve = sql_budget()
+    else:
+        sql_limit = os.environ.get("STATARENA_SQL_LIMIT_BYTES") or (None if external else "900000000")
+        sql_reserve = 0
     object_limit = os.environ.get("STATARENA_OBJECT_LIMIT_BYTES") or (None if external else "4750000000")
     return {
         "sqlBytes": size,
         "objectBytes": int(objects),
-        "paused": bool((sql_limit and size > int(sql_limit)) or (object_limit and objects > int(object_limit))),
+        "paused": bool((sql_limit and size + sql_reserve > int(sql_limit)) or (object_limit and objects > int(object_limit))),
     }
 
 

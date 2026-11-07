@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { createActorRoute } from "../dashboard/backend/services/relational-actors.js";
 import { createPerformanceRoute } from "../dashboard/backend/services/relational-performance.js";
+import { clubSummary } from "../dashboard/frontend/src/services/club-analysis.js";
 import { appearanceRecord } from "../dashboard/backend/services/relational-core.js";
 import {
   performanceProfile,
@@ -26,6 +27,7 @@ test("actor routes reject invalid IDs, details, scopes and methods before SQL", 
     { player: "bad", season: "2026/2027" },
     { player: "p_000001", season: "bad" },
     { player: "p_000001", season: "2026/2027", include: "archive" },
+    { player: "p_000001", season: "2026/2027", detail: "archive" },
     { player: "p_000001", season: "2026/2027", leagues: "x' OR TRUE" },
     { player: "p_000001", season: "2026/2027", limit: "101" },
   ])
@@ -51,6 +53,44 @@ test("actor routes reject invalid IDs, details, scopes and methods before SQL", 
     null,
   );
   assert.equal(calls, 0);
+});
+
+test("actor summary omits detail fan-out and retains club overview statistics", async () => {
+  const calls = [];
+  const route = createActorRoute(async (sql) => {
+    calls.push(sql);
+    return [{ generation: "42", total: 0 }];
+  });
+  const player = await (
+    await request(route, "/api/read/player", {
+      season: "2026/2027",
+      player: "p_000001",
+      detail: "summary",
+      limit: "100",
+    })
+  ).json();
+  assert.equal(player.data.meta.detail, "summary");
+  assert.equal(player.pagination.limit, 100);
+  assert.match(calls[0], /statarena_app.appearances/);
+  assert.doesNotMatch(
+    calls[0],
+    /appearance_metrics|team_statistics|match_coverage|match_warnings|statarena_app.shots/,
+  );
+  const club = await (
+    await request(route, "/api/read/club", {
+      season: "2026/2027",
+      team: "t_000001",
+      detail: "summary",
+      limit: "100",
+    })
+  ).json();
+  assert.equal(club.data.meta.detail, "summary");
+  assert.match(calls[1], /statarena_app.team_statistics/);
+  assert.match(calls[1], /coverage_key='teamStatsReliable'/);
+  assert.doesNotMatch(
+    calls[1],
+    /page_appearances|appearance_metrics|match_warnings|statarena_app.shots/,
+  );
 });
 
 test("unknown outfield positions enter their peer cohort once", () => {
@@ -120,8 +160,8 @@ test(
         ('m_000004','2026/2027','l_000001','2026-11-20','scheduled','t_000001','t_000002','Paris','Lyon');
       INSERT INTO statarena_app.players(id,player_id,name) VALUES
         ('p_000001','p_000001','Joueur choisi'),('p_000002','p_000002','Adversaire'),('p_000003','p_000003','Position inconnue');
-      INSERT INTO statarena_app.team_statistics(match_id,metric_key,ordinal,label,home_value,away_value) VALUES ('m_000001','possession',0,'Possession',60,40);
-      INSERT INTO statarena_app.match_coverage(match_id,coverage_key,flag) VALUES ('m_000001','shots',true);
+      INSERT INTO statarena_app.team_statistics(match_id,metric_key,ordinal,label,home_value,away_value) VALUES ('m_000001','possession',0,'Possession',60,40),('m_000001','expected_goals',1,'xG',99.9,20.5),('m_000002','expected_goals',0,'xG',0.4,1.4);
+      INSERT INTO statarena_app.match_coverage(match_id,coverage_key,flag) VALUES ('m_000001','shots',true),('m_000001','teamStatsReliable',false),('m_000002','teamStatsReliable',true);
       INSERT INTO statarena_app.shots(id,match_id,ordinal,player_id,team_id,xg) VALUES ('shot-one','m_000001',0,'p_000001','t_000001',0.2);`);
       const inputs = [];
       for (let i = 0; i < 36; i++) {
@@ -194,6 +234,23 @@ test(
       assert.equal(second.data.matches[0].stats[0].home, 60);
       assert.equal(second.data.appearances[0].shirtNumber, "07");
       assert.equal(second.data.matches[0].coverage.shots, true);
+      const lightPlayer = await (
+        await request(actorRoute, "/api/read/player", {
+          ...scope,
+          player: "p_000001",
+          detail: "summary",
+          limit: "100",
+        })
+      ).json();
+      assert.equal(lightPlayer.pagination.total, 2);
+      assert.equal(lightPlayer.data.appearances.length, 2);
+      assert.equal(lightPlayer.data.meta.detail, "summary");
+      assert.ok(
+        lightPlayer.data.appearances.every((row) => row.minutes === 90),
+      );
+      assert.ok(
+        lightPlayer.data.matches.every((match) => match.stats.length === 0),
+      );
       const club = await (
         await request(actorRoute, "/api/read/club", {
           ...scope,
@@ -204,6 +261,31 @@ test(
       assert.equal(club.data.fixtures.length, 3);
       assert.equal(club.data.appearances.length, 0);
       assert.ok(!calls.at(-1).includes("page_appearances"));
+      const lightClub = await (
+        await request(actorRoute, "/api/read/club", {
+          ...scope,
+          team: "t_000001",
+          detail: "summary",
+          limit: "100",
+        })
+      ).json();
+      assert.equal(lightClub.pagination.total, club.pagination.total);
+      assert.deepEqual(
+        lightClub.data.matches.map((match) => match.stats),
+        club.data.matches.map((match) => match.stats),
+      );
+      assert.equal(lightClub.data.fixtures.length, 3);
+      assert.equal(
+        lightClub.data.matches.find((m) => m.id === "m_000001").coverage
+          .teamStatsReliable,
+        false,
+      );
+      const fullSummary = clubSummary(club.data, "t_000001");
+      const lightSummary = clubSummary(lightClub.data, "t_000001");
+      assert.equal(lightSummary.excludedStats, 1);
+      assert.deepEqual(lightSummary.stats, fullSummary.stats);
+      assert.equal(lightSummary.excludedStats, fullSummary.excludedStats);
+      assert.equal(lightSummary.matches, fullSummary.matches);
       const squad = await (
         await request(actorRoute, "/api/read/club", {
           ...scope,

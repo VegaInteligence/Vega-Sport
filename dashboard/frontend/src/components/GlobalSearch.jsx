@@ -20,7 +20,7 @@ import {
   searchedEdition,
   SEARCH_LABELS,
 } from "../services/global-search.js";
-import { useResource } from "../services/resources.js";
+import { cachedResource, useResource } from "../services/resources.js";
 import { cupIndex } from "../services/catalog-client.js";
 import {
   hasBoundedSearch,
@@ -51,25 +51,25 @@ export default function GlobalSearch() {
     [open, setOpen] = useState(false),
     [armed, setArmed] = useState(false),
     [active, setActive] = useState(0),
-    [remoteResult, setRemoteResult] = useState(null);
+    [settledQuery, setSettledQuery] = useState("");
   const deferred = useDeferredValue(query);
   const season = f?.season;
   const remote = hasBoundedSearch(f?.manifest);
   const needle = query.trim();
   const searchKey = JSON.stringify([
     season,
-    needle,
+    needle.toLocaleLowerCase("fr"),
     f?.manifest?.publicationVersion || f?.manifest?.scouting?.sourceDigest,
   ]);
   const legacyCups = useResource(
     "supplemental-cup-index",
     () => cupIndex("supplemental"),
-    armed && needle.length >= 2 && !f?.pro,
+    !remote && armed && needle.length >= 2 && !f?.pro,
   );
   const workerCups = useResource(
     "cup-worker-index",
     () => cupIndex("worker"),
-    armed && needle.length >= 2 && !f?.pro,
+    !remote && armed && needle.length >= 2 && !f?.pro,
   );
   // Compatibility with a backend deployed before the discovery endpoint. The
   // complete legacy index is requested only after typing, never on hover/focus.
@@ -79,27 +79,27 @@ export default function GlobalSearch() {
     () => f.searchData(),
     !remote && armed && needle.length >= 2 && Boolean(f?.searchData),
   );
-  // Each search owns its request: closing or typing cancels both the debounce
-  // and the fetch. Hovering/focusing an empty input never downloads data.
+  // Only a settled query starts a request. The bounded shared cache lets a
+  // reopened query or a remounted header reuse its answer immediately, while
+  // unsubscribing cancels an abandoned request.
   useEffect(() => {
     if (!remote || !open || needle.length < 2 || !season) return;
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      searchIdentities(needle, season, { signal: controller.signal })
-        .then((value) => {
-          if (!controller.signal.aborted)
-            setRemoteResult({ key: searchKey, value });
-        })
-        .catch((error) => {
-          if (!controller.signal.aborted)
-            setRemoteResult({ key: searchKey, error: error.message });
-        });
-    }, 180);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
+    const timer = setTimeout(() => setSettledQuery(searchKey), 150);
+    return () => clearTimeout(timer);
   }, [remote, open, searchKey]);
+  const remoteKey = `identity-search:${searchKey}`;
+  const ready = Boolean(
+    remote &&
+    open &&
+    needle.length >= 2 &&
+    season &&
+    (settledQuery === searchKey || cachedResource(remoteKey)),
+  );
+  const remoteResult = useResource(
+    remoteKey,
+    ({ signal }) => searchIdentities(needle, season, { signal }),
+    ready,
+  );
   const data = remote ? EMPTY_DATA : legacySearch.value || EMPTY_DATA;
   const baseCompetitions = f?.allCatalog?.length
     ? f.allCatalog
@@ -126,11 +126,11 @@ export default function GlobalSearch() {
     () => searchIndex(index, deferred),
     [index, deferred],
   );
-  const currentRemote = remoteResult?.key === searchKey ? remoteResult : null;
+  const currentRemote = ready ? remoteResult : null;
   const loading =
     open &&
     needle.length >= 2 &&
-    (remote ? !currentRemote : legacySearch.loading);
+    (remote ? !ready || remoteResult.loading : legacySearch.loading);
   const searchError = remote ? currentRemote?.error : legacySearch.error;
   const results = useMemo(() => {
     if (!remote) return localResults;
@@ -146,7 +146,7 @@ export default function GlobalSearch() {
       clubsCount: undefined,
       total: players.length + clubs.length + competitions.length,
     };
-  }, [remote, localResults, currentRemote]);
+  }, [remote, localResults, currentRemote?.value]);
   const options = useMemo(
     () => results.order.flatMap((kind) => results[kind] || []),
     [results],
@@ -158,6 +158,8 @@ export default function GlobalSearch() {
           id: item.id,
           q: "",
           league: "",
+          leagues: "",
+          ranking: "",
           ...(item.kind === "players" ? { playerView: "" } : {}),
           ...(item.kind === "competitions"
             ? { edition: searchedEdition(item, query) }
@@ -173,6 +175,8 @@ export default function GlobalSearch() {
           q: query.trim(),
           playersView: "table",
           league: "",
+          leagues: "",
+          ranking: "all",
           focus: "all",
         })
       : `/joueurs/?q=${encodeURIComponent(query.trim())}`;

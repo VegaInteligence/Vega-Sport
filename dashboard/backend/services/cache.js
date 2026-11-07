@@ -62,5 +62,18 @@ export function cache(limit, { name = "local", maxEntryBytes = limit } = {}) {
     entries.delete(key);
     record(`cache_${name}_invalidated`);
   };
+  // Inspect a retained entry before doing a cheap source-version check. This
+  // never extends its lifetime or admits an unresolved in-flight value.
+  load.peek = (key) => {
+    const old = entries.get(key);
+    if (!old) return undefined;
+    if (old.until <= Date.now()) {
+      bytes -= old.size;
+      entries.delete(key);
+      record(`cache_${name}_expired`);
+      return undefined;
+    }
+    return old.value;
+  };
   return load;
 }

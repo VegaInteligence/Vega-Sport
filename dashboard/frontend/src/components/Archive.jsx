@@ -1,7 +1,15 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { archiveIndex, archiveSeason } from "../services/catalog-client.js";
+import {
+  archiveIndex,
+  archivePage,
+  archiveQuery,
+  archiveSeason,
+  supportsBoundedArchive,
+} from "../services/catalog-client.js";
+import { useFootball } from "../hooks/FootballContext.jsx";
+import useDebouncedValue from "../hooks/useDebouncedValue.js";
 import {
   archiveRows,
   archiveSeasons,
@@ -23,9 +31,20 @@ function scoreText([home, away]) {
 }
 
 /** Match list: only matches with goal events link to their sub-page. */
-export function ArchiveResults({ rows, page, onPage, matchHref, onOpen }) {
-  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE)),
-    current = Math.min(page, pages);
+export function ArchiveResults({
+  rows,
+  page,
+  pagination,
+  onPage,
+  matchHref,
+  onOpen,
+}) {
+  const pages =
+      pagination?.pages ?? Math.max(1, Math.ceil(rows.length / PAGE_SIZE)),
+    current = pagination?.page ?? Math.min(page, pages),
+    visible = pagination
+      ? rows
+      : rows.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
   if (!rows.length) return <Empty>Aucun match pour cette sélection.</Empty>;
   return (
     <>
@@ -41,49 +60,50 @@ export function ArchiveResults({ rows, page, onPage, matchHref, onOpen }) {
             </tr>
           </thead>
           <tbody>
-            {rows
-              .slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE)
-              .map((match) => {
-                const open = Boolean(match.goals?.length);
-                return (
-                  <tr
-                    key={match.key}
-                    className={open ? "archive-row-open" : "archive-row-closed"}
-                    data-archive-match={match.key}
-                    onClick={open && onOpen ? () => onOpen(match) : undefined}
-                  >
-                    <td>
-                      {date(match.date)}
-                      {match.dateNote && (
-                        <small className="historical-score-note">
-                          Date non vérifiée
-                        </small>
-                      )}
-                    </td>
-                    <td>{match.competition}</td>
-                    <td>{match.team1 || "—"}</td>
-                    <td className="archive-score">
-                      {open ? (
-                        <Link
-                          href={matchHref(match)}
-                          onClick={(event) => event.stopPropagation()}
-                          aria-label={`Buts de ${match.team1} – ${match.team2}`}
-                        >
-                          {scoreText(match.score)}
-                        </Link>
-                      ) : (
-                        scoreText(match.score)
-                      )}
-                      {match.notes.length > 0 && (
-                        <small className="historical-score-note">
-                          {match.notes.join(" · ")}
-                        </small>
-                      )}
-                    </td>
-                    <td>{match.team2 || "—"}</td>
-                  </tr>
-                );
-              })}
+            {visible.map((match) => {
+              const open = Boolean(
+                match.hasGoals || match.goalCount > 0 || match.goals?.length,
+              );
+              return (
+                <tr
+                  key={match.key}
+                  className={open ? "archive-row-open" : "archive-row-closed"}
+                  data-archive-match={match.key}
+                  onClick={open && onOpen ? () => onOpen(match) : undefined}
+                >
+                  <td>
+                    {date(match.date)}
+                    {match.dateNote && (
+                      <small className="historical-score-note">
+                        Date non vérifiée
+                      </small>
+                    )}
+                  </td>
+                  <td>{match.competition}</td>
+                  <td>{match.team1 || "—"}</td>
+                  <td className="archive-score">
+                    {open ? (
+                      <Link
+                        href={matchHref(match)}
+                        prefetch={false}
+                        onClick={(event) => event.stopPropagation()}
+                        aria-label={`Buts de ${match.team1} – ${match.team2}`}
+                      >
+                        {scoreText(match.score)}
+                      </Link>
+                    ) : (
+                      scoreText(match.score)
+                    )}
+                    {match.notes.length > 0 && (
+                      <small className="historical-score-note">
+                        {match.notes.join(" · ")}
+                      </small>
+                    )}
+                  </td>
+                  <td>{match.team2 || "—"}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -159,25 +179,94 @@ export function ArchiveMatchDetail({ match, backHref }) {
   );
 }
 
-function SeasonArchive({ seasons, entry, params, setParams, hrefWith }) {
+function SeasonArchive({
+  seasons,
+  entry,
+  params,
+  setParams,
+  hrefWith,
+  bounded,
+  generation,
+}) {
   const competition = params.get("ac") || "all";
   const query = params.get("aq") || "";
+  const settledQuery = useDebouncedValue(query.trim());
+  const searchPending = query.trim() !== settledQuery;
   const page = Math.max(1, Number(params.get("ap")) || 1);
   const matchKey = params.get("m");
   const router = useRouter();
-  const resource = useResource(`archive:season:${entry.id}`, async () => {
-    const [results, goals] = await Promise.all([
-      entry.results ? archiveSeason("results",entry.id) : null,
-      entry.goals ? archiveSeason("goals",entry.id) : null,
-    ]);
-    return buildArchiveSeason(results, goals);
-  });
-  const matchHref = (match) => hrefWith({ m: match.key });
+  const readParams = {
+    season: entry.id,
+    ...(matchKey
+      ? { match: matchKey }
+      : { competition, q: settledQuery, page, limit: PAGE_SIZE }),
+    version: params.get("av") || undefined,
+  };
+  const scope = bounded ? archiveQuery(readParams) : entry.id;
+  const resource = useResource(
+    `archive:${bounded ? "read" : "season"}:${generation}:${scope}`,
+    async ({ signal }) => {
+      if (bounded) {
+        try {
+          return await archivePage(readParams, { signal });
+        } catch (error) {
+          if (matchKey && error.status === 409)
+            return { data: { publicationChanged: true } };
+          if (matchKey && error.status === 404)
+            return { data: { match: null } };
+          throw error;
+        }
+      }
+      const [results, goals] = await Promise.all([
+        entry.results ? archiveSeason("results", entry.id, { signal }) : null,
+        entry.goals ? archiveSeason("goals", entry.id, { signal }) : null,
+      ]);
+      return buildArchiveSeason(results, goals);
+    },
+    !bounded || Boolean(matchKey) || !searchPending,
+  );
+  // A new publication can refresh the same page without erasing its last
+  // complete result. Different filters/pages never inherit each other's rows.
+  const previous = useRef(null);
+  useEffect(() => {
+    if (resource.value) previous.current = { scope, value: resource.value };
+  }, [resource.value, scope]);
+  const displayed =
+    !resource.value && previous.current?.scope === scope
+      ? {
+          ...resource,
+          value: previous.current.value,
+          loading: false,
+          refreshing: resource.loading,
+          refreshError: resource.error,
+          error: undefined,
+        }
+      : resource;
+  const edition = bounded ? displayed.value?.data : displayed.value;
+  const version = bounded ? displayed.value?.meta?.version : undefined;
+  const matchHref = (match) => hrefWith({ m: match.key, av: version });
   if (matchKey)
     return (
-      <AsyncState resource={resource}>
-        {(season) => {
-          const match = season.matches.find((item) => item.key === matchKey);
+      <AsyncState resource={displayed}>
+        {(value) => {
+          if (bounded && value.data.publicationChanged)
+            return (
+              <Card title="Archives actualisées">
+                <p>
+                  La publication a changé. Retrouvez ce match dans la liste
+                  actualisée.
+                </p>
+                <Link
+                  className="inline-link"
+                  href={hrefWith({ m: null, av: null })}
+                >
+                  ← Retour aux archives
+                </Link>
+              </Card>
+            );
+          const match = bounded
+            ? value.data.match
+            : value.matches.find((item) => item.key === matchKey);
           return match?.goals?.length ? (
             <ArchiveMatchDetail
               match={match}
@@ -194,9 +283,7 @@ function SeasonArchive({ seasons, entry, params, setParams, hrefWith }) {
         }}
       </AsyncState>
     );
-  const competitions = resource.value
-    ? orderedCompetitions(resource.value.competitions)
-    : [];
+  const competitions = edition ? orderedCompetitions(edition.competitions) : [];
   return (
     <Card title="Archives" className="archive-card">
       <div className="historical-archive-filters">
@@ -210,6 +297,7 @@ function SeasonArchive({ seasons, entry, params, setParams, hrefWith }) {
                 as: event.target.value.replace("/", "-"),
                 ac: null,
                 ap: null,
+                av: null,
               })
             }
           >
@@ -225,9 +313,9 @@ function SeasonArchive({ seasons, entry, params, setParams, hrefWith }) {
           <select
             aria-label="Compétition des archives"
             value={competition}
-            disabled={!resource.value}
+            disabled={!edition}
             onChange={(event) =>
-              setParams({ ac: event.target.value, ap: null })
+              setParams({ ac: event.target.value, ap: null, av: null })
             }
           >
             <option value="all">Toutes les compétitions</option>
@@ -240,26 +328,51 @@ function SeasonArchive({ seasons, entry, params, setParams, hrefWith }) {
             type="search"
             aria-label="Rechercher une équipe ou un buteur dans les archives"
             placeholder="Nom d’équipe ou de joueur…"
-            defaultValue={query}
+            value={query}
+            maxLength={100}
             onChange={(event) =>
-              setParams({ aq: event.target.value, ap: null })
+              setParams({ aq: event.target.value, ap: null, av: null })
             }
           />
         </label>
       </div>
-      <AsyncState resource={resource}>
-        {(season) => (
-          <SeasonList
-            season={season}
-            competition={competition}
-            query={query}
-            page={page}
-            setParams={setParams}
-            matchHref={matchHref}
-            onOpen={(match) => router.push(matchHref(match), { scroll: true })}
-          />
-        )}
-      </AsyncState>
+      <div
+        aria-busy={searchPending || displayed.refreshing || displayed.loading}
+      >
+        <AsyncState resource={displayed}>
+          {(value) =>
+            bounded ? (
+              <ArchiveResults
+                rows={value.data.matches}
+                pagination={value.pagination}
+                page={page}
+                onPage={(next) =>
+                  setParams({
+                    ap: next > 1 ? String(next) : null,
+                    av: value.meta.version,
+                  })
+                }
+                matchHref={matchHref}
+                onOpen={(match) =>
+                  router.push(matchHref(match), { scroll: true })
+                }
+              />
+            ) : (
+              <SeasonList
+                season={value}
+                competition={competition}
+                query={settledQuery}
+                page={page}
+                setParams={setParams}
+                matchHref={matchHref}
+                onOpen={(match) =>
+                  router.push(matchHref(match), { scroll: true })
+                }
+              />
+            )
+          }
+        </AsyncState>
+      </div>
     </Card>
   );
 }
@@ -289,16 +402,37 @@ function SeasonList({
 }
 
 export default function Archive() {
-  const router = useRouter();
+  const f = useFootball();
   const pathname = usePathname();
   const params = useSearchParams();
-  const indexes = useResource("archive:indexes", async () => {
-    const [results, goals] = await Promise.all([
-      archiveIndex("results"),
-      archiveIndex("goals"),
-    ]);
-    return archiveSeasons(results, goals);
-  });
+  const generation =
+    f?.manifest?.publicationVersion ||
+    f?.manifest?.scouting?.sourceDigest ||
+    "";
+  const bounded = supportsBoundedArchive(f?.manifest);
+  const indexes = useResource(
+    `archive:indexes:${generation}`,
+    async ({ signal }) => {
+      const [results, goals] = await Promise.all([
+        archiveIndex("results", { signal }),
+        archiveIndex("goals", { signal }),
+      ]);
+      return archiveSeasons(results, goals);
+    },
+  );
+  const previousIndexes = useRef(null);
+  useEffect(() => {
+    if (indexes.value) previousIndexes.current = indexes.value;
+  }, [indexes.value]);
+  const displayedIndexes =
+    !indexes.value && previousIndexes.current
+      ? {
+          ...indexes,
+          value: previousIndexes.current,
+          loading: false,
+          error: undefined,
+        }
+      : indexes;
   const hrefWith = (changes) => {
     const next = new URLSearchParams(params.toString());
     for (const [key, value] of Object.entries(changes))
@@ -308,10 +442,12 @@ export default function Archive() {
     const text = next.toString();
     return text ? `${pathname}?${text}` : pathname;
   };
+  // These filters are entirely client-owned. The supported History API keeps
+  // useSearchParams in sync without fetching an RSC route on every keystroke.
   const setParams = (changes) =>
-    router.replace(hrefWith(changes), { scroll: false });
+    window.history.replaceState(null, "", hrefWith(changes));
   return (
-    <AsyncState resource={indexes}>
+    <AsyncState resource={displayedIndexes}>
       {(seasons) => {
         if (!seasons.length) return <Empty>Aucune archive disponible.</Empty>;
         const id = (params.get("as") || "").replace("-", "/");
@@ -324,6 +460,8 @@ export default function Archive() {
             params={params}
             setParams={setParams}
             hrefWith={hrefWith}
+            bounded={bounded}
+            generation={generation}
           />
         );
       }}
