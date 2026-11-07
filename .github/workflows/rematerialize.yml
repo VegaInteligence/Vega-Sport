@@ -1,5 +1,7 @@
 name: Build serving tables (AWS)
 on:
+  schedule:
+    - cron: '17 * * * *'
   workflow_dispatch:
     inputs:
       schema_only:
@@ -39,8 +41,58 @@ jobs:
     env:
       STATARENA_SQL_LIMIT_BYTES: ${{ vars.STATARENA_SQL_LIMIT_BYTES }}
       STATARENA_SQL_RESERVE_BYTES: ${{ vars.STATARENA_SQL_RESERVE_BYTES }}
-    timeout-minutes: 120
+    timeout-minutes: ${{ github.event_name == 'schedule' && 50 || 120 }}
     steps:
+      - name: Plan publication budget
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MINUTES_INPUT: ${{ inputs.minutes }}
+          BATCH_INPUT: ${{ inputs.batch }}
+          QUEUE_ALL_INPUT: ${{ inputs.queue_all }}
+          SCHEMA_ONLY_INPUT: ${{ inputs.schema_only }}
+          LINEUP_READER_INPUT: ${{ inputs.lineup_reader }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$EVENT_NAME" in
+            schedule)
+              minutes=30
+              batch=10
+              queue_all=false
+              schema_only=false
+              lineup_reader=unchanged
+              ;;
+            workflow_dispatch)
+              minutes=${MINUTES_INPUT:-100}
+              batch=${BATCH_INPUT:-10}
+              queue_all=${QUEUE_ALL_INPUT:-false}
+              schema_only=${SCHEMA_ONLY_INPUT:-false}
+              lineup_reader=${LINEUP_READER_INPUT:-unchanged}
+              ;;
+            *) echo 'Unsupported publication trigger' >&2; exit 1 ;;
+          esac
+          if [[ ! "$minutes" =~ ^[1-9][0-9]{0,2}$ ]] || (( 10#$minutes > 100 )); then
+            echo 'Build minutes must be between 1 and 100' >&2; exit 1
+          fi
+          if [[ ! "$batch" =~ ^[1-9][0-9]{0,2}$ ]] || (( 10#$batch > 100 )); then
+            echo 'Queue batch must be between 1 and 100' >&2; exit 1
+          fi
+          case "$queue_all:$schema_only" in
+            true:true|true:false|false:true|false:false) ;;
+            *) echo 'Publication flags must be true or false' >&2; exit 1 ;;
+          esac
+          case "$lineup_reader" in
+            unchanged|verify|unified|legacy) ;;
+            *) echo 'Invalid lineup reader operation' >&2; exit 1 ;;
+          esac
+          {
+            echo "minutes=$minutes"
+            echo "batch=$batch"
+            echo "queue_all=$queue_all"
+            echo "schema_only=$schema_only"
+            echo "lineup_reader=$lineup_reader"
+          } >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         with:
           sparse-checkout: |
@@ -63,10 +115,10 @@ jobs:
           role-arn: ${{ vars.STATARENA_AWS_INGEST_ROLE_ARN }}
       - name: Publish relational models in AWS RDS
         env:
-          QUEUE_ALL: ${{ inputs.queue_all }}
-          MATERIALIZE_MINUTES: ${{ inputs.minutes }}
-          MATERIALIZE_BATCH: ${{ inputs.batch }}
-          SCHEMA_ONLY: ${{ inputs.schema_only }}
+          QUEUE_ALL: ${{ steps.plan.outputs.queue_all }}
+          MATERIALIZE_MINUTES: ${{ steps.plan.outputs.minutes }}
+          MATERIALIZE_BATCH: ${{ steps.plan.outputs.batch }}
+          SCHEMA_ONLY: ${{ steps.plan.outputs.schema_only }}
         shell: bash
         run: |
           set -euo pipefail
@@ -81,9 +133,9 @@ jobs:
           if [ "$SCHEMA_ONLY" = "true" ]; then args+=(--install-only); fi
           python dashboard/scripts/relational_materialize.py "${args[@]}" | tee rematerialize.log
       - name: Verify or switch the lineup read contract
-        if: inputs.lineup_reader != '' && inputs.lineup_reader != 'unchanged'
+        if: steps.plan.outputs.lineup_reader != 'unchanged'
         env:
-          LINEUP_READER: ${{ inputs.lineup_reader }}
+          LINEUP_READER: ${{ steps.plan.outputs.lineup_reader }}
         shell: bash
         run: |
           set -euo pipefail
