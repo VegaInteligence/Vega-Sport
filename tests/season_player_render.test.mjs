@@ -60,13 +60,13 @@ test("search presents one navigable player for multiple match performances", () 
   assert.match(html, /\/joueurs\/?\?id=p_1/);
 });
 
-test("season overview offers a radar and a shortcut to the detailed statistics", () => {
+test("season overview shows the radar and removes the detailed statistics shortcut", () => {
   const html = renderSeasonProfile(rows, matches, "p_1");
   assert.match(html, /Neymar/);
   assert.match(html, /Profil statistique/);
   assert.match(html, /<svg[^>]+aria-label="Radar des rangs du joueur/);
   assert.match(html, /<text[^>]*>Passes décisives<tspan[^>]*>—<\/tspan>/);
-  assert.match(html, /Voir les statistiques détaillées/);
+  assert.doesNotMatch(html, /Voir les statistiques détaillées/);
   assert.doesNotMatch(html, /Statistiques à afficher|Temps de jeu et note/);
   assert.doesNotMatch(html, /centiles au poste|Modèle du radar/);
   assert.doesNotMatch(
@@ -103,7 +103,7 @@ test("Messi keeps his portrait and published trophies when filters leave no matc
   assert.match(html, /aria-label="Palmarès de Lionel Messi"/);
   assert.match(html, /\/trophies\/world-cup\.webp/);
   assert.match(html, /\/trophies\/ballon-or\.webp/);
-  assert.match(html, /Voir les statistiques détaillées/);
+  assert.doesNotMatch(html, /Voir les statistiques détaillées/);
 });
 
 test("Yamal's Liga and Euro artwork remain clickable", async () => {

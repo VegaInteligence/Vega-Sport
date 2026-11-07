@@ -151,6 +151,8 @@ export default function PlayerMatchesPage({ currentRows } = {}) {
     Boolean(careerKey) &&
     groupKey === null &&
     competitionKey === null;
+  const returnToOverview =
+    validCareer && params.get("playerView") === "overview";
   const selectedSeason = groupSeason(groupKey);
   const season = selectedSeason || params.get("season") || f.season;
   const valid = /^p_[A-Za-z0-9]{6}$/.test(id);
@@ -169,7 +171,7 @@ export default function PlayerMatchesPage({ currentRows } = {}) {
   back.delete("careerGroup");
   back.delete("careerKey");
   if (valid) {
-    back.set("playerView", "stats");
+    back.set("playerView", returnToOverview ? "overview" : "stats");
     if (!career && selectedSeason)
       back.set("performanceSeason", selectedSeason);
   } else {
@@ -187,7 +189,12 @@ export default function PlayerMatchesPage({ currentRows } = {}) {
         className="inline-link competition-back"
         href={`/joueurs/${back.size ? `?${back}` : ""}`}
       >
-        ← {valid ? "Statistiques du joueur" : "Tous les joueurs"}
+        ←{" "}
+        {valid
+          ? returnToOverview
+            ? "Vue d’ensemble du joueur"
+            : "Statistiques du joueur"
+          : "Tous les joueurs"}
       </Link>
       {!valid ? (
         <Empty>Joueur indisponible.</Empty>

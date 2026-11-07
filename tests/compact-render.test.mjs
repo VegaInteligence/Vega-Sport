@@ -707,6 +707,39 @@ test("player overview defers the complete matching peer lines without filtering 
   );
 });
 
+test("player career overview renders club, competition and national career with positions", async () => {
+  const id = "p_123456";
+  const appearances = [
+    { playerId: id, matchId: "m_club", teamId: "club", team: "Club A", leagueId: "l_0ErfuF", minutes: 90 },
+    { playerId: id, matchId: "m_nation", teamId: "spain", team: "Espagne", leagueId: "l_1XLtP0", minutes: 90 },
+  ];
+  const { aggregateSeason } = await import("../dashboard/frontend/src/services/season-player.js");
+  const history = [{ season, data: {
+    appearances,
+    teams: [{ id: "club", name: "Club A" }, { id: "spain", name: "Espagne" }],
+    competitions: [{ id: "l_0ErfuF", name: "Liga" }, { id: "l_1XLtP0", name: "Coupe du monde" }],
+  }, profile: aggregateSeason(appearances, id) }];
+  const component = await compile("components/PlayerCareerStats.jsx", {
+    "next/navigation": { useSearchParams: () => new URLSearchParams({ id }) },
+    "../hooks/FootballContext.jsx": { useFootball: () => ({ manifest }) },
+    "../services/resources.js": {
+      useResource: () => ({ loading: false, value: history }),
+      cachedResource: () => undefined,
+      primeResource: async () => history,
+    },
+    "./NationalFlag.jsx": moduleDefault(blank),
+    "./PlayerObservedValue.jsx": moduleDefault(({ value }) => h("span", null, value)),
+    "./PlayerPositionPitch.jsx": moduleDefault(() => h("div", { "data-position-pitch": "mounted" })),
+    "./UI.jsx": ui,
+  });
+  const html = renderToStaticMarkup(h(component.default, { id, season, overview: true }));
+  for (const title of ["Performance par club", "Performance par compétition", "Carrière en sélection"])
+    assert.match(html, new RegExp(title));
+  assert.match(html, /Club A/);
+  assert.match(html, /Espagne/);
+  assert.match(html, /data-position-pitch="mounted"/);
+});
+
 test("the merged actor match list keeps fixture links, date order and every actor row", async () => {
   const id = "p_000001",
     jobs = [],
@@ -880,6 +913,13 @@ test("the merged actor match list keeps fixture links, date order and every acto
   assert.match(career, /Cumul des saisons disponibles/);
   assert.match(career, /performanceSeason=2024%2F2025/);
   assert.doesNotMatch(career, /careerGroup=|careerKey=/);
+  assert.match(career, /playerView=stats/);
+  matchParams.playerView = "overview";
+  const overviewCareer = renderToStaticMarkup(h(matchPage.default));
+  assert.match(overviewCareer, /playerView=overview/);
+  assert.match(overviewCareer, /Vue d’ensemble du joueur/);
+  assert.doesNotMatch(overviewCareer, /careerGroup=|careerKey=/);
+  delete matchParams.playerView;
   const all = jobs.find((job) => job.enabled);
   assert.equal(all.key, playerHistoryKey(manifest, id));
   await all.loader({ signal: controller.signal });

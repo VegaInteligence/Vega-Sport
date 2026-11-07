@@ -298,6 +298,12 @@
 .player-career-identity > span:last-child {
   overflow-wrap: anywhere;
 }
+.player-career-selections .data-table {
+  min-width: 420px;
+}
+.player-career-selections .player-career-identity > span:last-child {
+  overflow-wrap: normal;
+}
 @media (max-width: 1050px) {
   .player-career-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -370,12 +376,6 @@
 }
 .player-overview .player-season-history {
   margin-block: 20px;
-}
-.player-overview-details {
-  min-height: 46px;
-  padding-inline: 18px;
-  font-size: 16px;
-  font-weight: 650;
 }
 .player-history-identity {
   display: inline-flex;

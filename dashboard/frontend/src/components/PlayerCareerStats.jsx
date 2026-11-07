@@ -39,7 +39,7 @@ const TABLES = [
   ],
   [
     "selections",
-    "Carrière internationale",
+    "Carrière en sélection",
     "Sélection",
     "Aucun match en sélection recensé.",
   ],
@@ -51,16 +51,18 @@ function CareerTable({ group, title, entity, empty, entries, matchHref }) {
     <section className="player-career-panel">
       <h4>{title}</h4>
       {entries.length ? (
-        <div className="table-scroll player-career-table">
+        <div
+          className={`table-scroll player-career-table${international ? " player-career-selections" : ""}`}
+        >
           <table className="data-table" aria-label={title}>
             <thead>
               <tr>
+                <th scope="col">{entity}</th>
                 {international && (
                   <th scope="col" className="player-career-stat">
                     N° portés
                   </th>
                 )}
-                <th scope="col">{entity}</th>
                 {international && <th scope="col">1er match recensé</th>}
                 <th
                   scope="col"
@@ -100,24 +102,6 @@ function CareerTable({ group, title, entity, empty, entries, matchHref }) {
                 );
                 return (
                   <tr key={key}>
-                    {detail && (
-                      <td
-                        className="player-career-stat"
-                        title={
-                          detail.numberedMatches
-                            ? `Numéro renseigné sur ${detail.numberedMatches} des ${profile.matches} matchs joués`
-                            : undefined
-                        }
-                      >
-                        {detail.shirtNumbers.length
-                          ? detail.shirtNumbers.join(", ")
-                          : "—"}
-                        {detail.numberedMatches > 0 &&
-                          detail.numberedMatches < profile.matches && (
-                            <span className="player-history-partial">*</span>
-                          )}
-                      </td>
-                    )}
                     <th scope="row">
                       <span className="player-history-identity player-career-identity">
                         {international && nationalFlagCode(name, seasons[0]) ? (
@@ -133,9 +117,27 @@ function CareerTable({ group, title, entity, empty, entries, matchHref }) {
                       </span>
                     </th>
                     {detail && (
-                      <td className="player-career-date">
-                        {date(detail.firstMatchDate)}
-                      </td>
+                      <>
+                        <td
+                          className="player-career-stat"
+                          title={
+                            detail.numberedMatches
+                              ? `Numéro renseigné sur ${detail.numberedMatches} des ${profile.matches} matchs joués`
+                              : undefined
+                          }
+                        >
+                          {detail.shirtNumbers.length
+                            ? detail.shirtNumbers.join(", ")
+                            : "—"}
+                          {detail.numberedMatches > 0 &&
+                            detail.numberedMatches < profile.matches && (
+                              <span className="player-history-partial">*</span>
+                            )}
+                        </td>
+                        <td className="player-career-date">
+                          {date(detail.firstMatchDate)}
+                        </td>
+                      </>
                     )}
                     <td className="player-career-stat">
                       {profile.matches ? (
@@ -219,12 +221,10 @@ export default function PlayerCareerStats({
     () => (overview ? playerPositionSummary(history.value || [], id) : []),
     [overview, history.value, id],
   );
-  const tables = overview
-    ? TABLES.filter(([group]) => group === "competitions")
-    : TABLES;
   const matchHref = (group, key) => {
     const query = new URLSearchParams(params.toString());
-    query.delete("playerView");
+    if (overview) query.set("playerView", "overview");
+    else query.delete("playerView");
     query.delete("matchGroup");
     query.delete("matchCompetition");
     query.set("id", id);
@@ -249,7 +249,7 @@ export default function PlayerCareerStats({
             <div
               className={`player-career-grid${overview ? " player-career-overview-grid" : ""}`}
             >
-              {tables.map(([group, title, entity, empty]) => (
+              {TABLES.map(([group, title, entity, empty]) => (
                 <CareerTable
                   key={group}
                   group={group}
@@ -264,8 +264,7 @@ export default function PlayerCareerStats({
             </div>
             <p className="player-history-footnote">
               — Donnée indisponible. * Valeur partielle.
-              {!overview &&
-                groups.unknown.length > 0 &&
+              {groups.unknown.length > 0 &&
                 " Certaines équipes ont un type non renseigné."}
             </p>
           </>

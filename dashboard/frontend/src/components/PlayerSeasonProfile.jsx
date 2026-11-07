@@ -400,18 +400,6 @@ export default function PlayerSeasonProfile({
       <Suspense fallback={historyLoading}>
         <CareerStats id={id} season={f.season} overview />
       </Suspense>
-      <button
-        type="button"
-        className="button button-primary player-overview-details"
-        onClick={() => {
-          change("stats");
-          document
-            .getElementById("player-profile-panel")
-            ?.scrollIntoView({ block: "start" });
-        }}
-      >
-        Voir les statistiques détaillées
-      </button>
     </div>
   );
   if (!profile.matches) {
