@@ -241,7 +241,7 @@ export function FootballProvider({ children, loadData = true, initialState }) {
       });
   // Start connectivity beside the manifest. Creating a client for a new route
   // must not add another status round trip before its own requests can start.
-  useResource("status:api", readConnection, !proMode);
+  const connection = useResource("status:api", readConnection, !proMode);
   const catalogueManifest = proMode
     ? currentManifest.value || manifest.value
     : manifest.value;
@@ -681,21 +681,32 @@ export function FootballProvider({ children, loadData = true, initialState }) {
   const clientManifest = displayedManifest;
   const clientLeague = proMode ? filters.league : null;
   const clientSeason = proMode ? chosen : null;
+  const relationalConnection =
+    !proMode && data?.meta?.storage === "aws-relational";
+  const connectionValue = relationalConnection ? connection.value : undefined;
   const client = useMemo(
-    () =>
-      data
-        ? proMode
-          ? new ProFootballDataClient({
-              data,
-              manifest: displayedManifest,
-              leagueId: filters.league,
-              season: chosen,
-            })
-          : new FootballDataClient({ data, manifest: clientManifest })
-        : null,
-    [data, proMode, clientManifest, clientLeague, clientSeason],
+    () => {
+      if (!data) return null;
+      if (proMode)
+        return new ProFootballDataClient({
+          data,
+          manifest: displayedManifest,
+          leagueId: filters.league,
+          season: chosen,
+        });
+      const next = new FootballDataClient({ data, manifest: clientManifest });
+      // Relational routes already own one shared connectivity resource. A
+      // newly mounted client needs its state, not a new status:<sequence> job
+      // whose loader only reads that same fresh value again.
+      if (typeof connectionValue === "boolean") {
+        next.configured = connectionValue;
+        next.statusKnown = true;
+      }
+      return next;
+    },
+    [data, proMode, clientManifest, clientLeague, clientSeason, connectionValue],
   );
-  const status = useResource(
+  const clientStatus = useResource(
     `status:${client?.id}`,
     async () => {
       if (proMode) await client.checkStatus();
@@ -709,8 +720,9 @@ export function FootballProvider({ children, loadData = true, initialState }) {
       }
       return client.configured;
     },
-    Boolean(client),
+    Boolean(client) && !relationalConnection,
   );
+  const status = relationalConnection ? connection : clientStatus;
   const seasonCompetitions = useMemo(() => {
     const season = catalogueManifest?.seasons.find(
       (item) => item.id === chosen,

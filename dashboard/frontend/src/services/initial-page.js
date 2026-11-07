@@ -15,14 +15,53 @@ export function prepareInitialPage(
   const inViewport = (node) => {
     if (!node.getClientRects().length) return false;
     const rect = node.getBoundingClientRect();
-    return (
-      rect.width > 0 &&
-      rect.height > 0 &&
-      rect.bottom > 0 &&
-      rect.right > 0 &&
-      rect.top < view.innerHeight &&
-      rect.left < view.innerWidth
-    );
+    let left = Math.max(0, rect.left),
+      right = Math.min(view.innerWidth, rect.right),
+      top = Math.max(0, rect.top),
+      bottom = Math.min(view.innerHeight, rect.bottom);
+    if (rect.width <= 0 || rect.height <= 0 || right <= left || bottom <= top)
+      return false;
+    // IntersectionObserver also clips against scrolling/overflow ancestors.
+    // ApiImage deliberately has no src until that observer admits it. An image
+    // inside the window but outside its scrollport must not hold the page until
+    // the image deadline. Ignore opacity: the page's own preparation mask and
+    // Media's pending image are intentionally transparent while we wait.
+    const ancestors = [];
+    for (let element = node; element; element = element.parentElement) {
+      const style = view.getComputedStyle?.(element);
+      // Out-of-flow descendants can escape an intermediate overflow clip when
+      // their containing block is elsewhere. Keep the conservative old wait
+      // for these layouts instead of declaring an actually visible image ready.
+      if (style?.position === "absolute" || style?.position === "fixed")
+        return true;
+      if (element !== node) ancestors.push([element, style]);
+    }
+    for (const [parent, style] of ancestors) {
+      const clipsX = /^(auto|scroll|hidden|clip)$/.test(style?.overflowX),
+        clipsY = /^(auto|scroll|hidden|clip)$/.test(style?.overflowY);
+      if (!clipsX && !clipsY) continue;
+      const bounds = parent.getBoundingClientRect();
+      const scaleX = parent.offsetWidth ? bounds.width / parent.offsetWidth : 1,
+        scaleY = parent.offsetHeight ? bounds.height / parent.offsetHeight : 1;
+      const clipLeft = bounds.left + (parent.clientLeft || 0) * scaleX,
+        clipTop = bounds.top + (parent.clientTop || 0) * scaleY;
+      if (clipsX) {
+        left = Math.max(left, clipLeft);
+        right = Math.min(
+          right,
+          clipLeft + (parent.clientWidth ?? bounds.width) * scaleX,
+        );
+      }
+      if (clipsY) {
+        top = Math.max(top, clipTop);
+        bottom = Math.min(
+          bottom,
+          clipTop + (parent.clientHeight ?? bounds.height) * scaleY,
+        );
+      }
+      if (right <= left || bottom <= top) return false;
+    }
+    return true;
   };
   const schedule = () => {
     if (!disposed && frame === null) frame = view.requestAnimationFrame(check);
@@ -37,7 +76,7 @@ export function prepareInitialPage(
     root.removeEventListener("load", schedule, true);
     root.removeEventListener("error", schedule, true);
     view.removeEventListener("resize", schedule);
-    view.removeEventListener("scroll", schedule);
+    view.removeEventListener("scroll", schedule, true);
   };
   const finish = () => {
     if (disposed) return;
@@ -135,7 +174,7 @@ export function prepareInitialPage(
   root.addEventListener("load", schedule, true);
   root.addEventListener("error", schedule, true);
   view.addEventListener("resize", schedule);
-  view.addEventListener("scroll", schedule, { passive: true });
+  view.addEventListener("scroll", schedule, { passive: true, capture: true });
   // A stalled optional data source must not hide the page's own retry/status UI.
   pageDeadline = view.setTimeout(finishWithFallbacks, pageTimeout);
   schedule();

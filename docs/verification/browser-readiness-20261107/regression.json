@@ -1,0 +1,22 @@
+{
+  "baseline_commit": "a3b5c304bbd9481f1c97c3ac2b04a9758ccc4b91",
+  "baseline_source_sha256": "27e4f63df4bccb285f6a07a97d8ff6dc284b9df6d14976a4c47066f1a2ef2c25",
+  "test_source_sha256": "1cb47e4d90187d6299344a474ffec1d5f5d89e0123e4fe36de7530b9558bc4e0",
+  "baseline_exit_code": 1,
+  "failed_cases": [
+    "an unadmitted image fully clipped by a scrollport does not delay reveal",
+    "nested clipping applies to both data loaders and images"
+  ],
+  "limits": "This fixture proves a real clipped-element readiness defect. It does not attribute the previously observed production latency to clipped images.",
+  "candidate_targeted_tests": {
+    "passed": 74,
+    "failed": 0,
+    "skipped": 0
+  },
+  "production_build": {
+    "engine": "Next.js 16.4.3 webpack",
+    "status": "passed",
+    "static_pages": 14
+  },
+  "scope": "Local regression and build evidence; production navigation latency is not asserted."
+}

@@ -12,6 +12,9 @@ function fixture() {
   const view = {
     innerWidth: 1000,
     innerHeight: 800,
+    getComputedStyle(node) {
+      return node.style || {};
+    },
     requestAnimationFrame(fn) {
       const id = ++next;
       frames.set(id, fn);
@@ -110,6 +113,23 @@ function fixture() {
     nodes,
     image,
     element,
+    container(bounds, style = {}, parentElement = null) {
+      return {
+        style,
+        parentElement,
+        clientLeft: 0,
+        clientTop: 0,
+        clientWidth: bounds.right - bounds.left,
+        clientHeight: bounds.bottom - bounds.top,
+        offsetWidth: bounds.right - bounds.left,
+        offsetHeight: bounds.bottom - bounds.top,
+        getBoundingClientRect: () => ({
+          ...bounds,
+          width: bounds.right - bounds.left,
+          height: bounds.bottom - bounds.top,
+        }),
+      };
+    },
     mutate() {
       if (observer.connected) observer.fn();
     },
@@ -177,6 +197,103 @@ test("images below the viewport do not delay the initial reveal", () => {
   prepareInitialPage(f.root, () => reveals++);
   f.frame();
   assert.equal(reveals, 1);
+});
+
+test("an unadmitted image fully clipped by a scrollport does not delay reveal", () => {
+  const f = fixture();
+  let reveals = 0;
+  const image = f.image({ complete: false });
+  image.setAttribute("src", "");
+  // The image itself overlaps the window (0..20), but its scrolling parent's
+  // visible content starts at x=50. IntersectionObserver will not admit it.
+  image.parentElement = f.container(
+    { left: 50, right: 200, top: 0, bottom: 100 },
+    { overflowX: "auto", overflowY: "hidden" },
+  );
+  f.nodes.images.push(image);
+  prepareInitialPage(f.root, () => reveals++);
+  f.frame();
+  assert.equal(reveals, 1);
+  assert.equal(image.loading, undefined, "no forced request for clipped media");
+  assert.equal(image.hasAttribute("data-page-image-deferred"), false);
+});
+
+test("partially visible media still waits for decoding inside a clipping ancestor", async () => {
+  const f = fixture();
+  let reveals = 0,
+    finishDecode;
+  const image = f.image({
+    decode: () =>
+      new Promise((resolve) => {
+        finishDecode = resolve;
+      }),
+  });
+  image.parentElement = f.container(
+    { left: 10, right: 200, top: 0, bottom: 100 },
+    { overflowX: "hidden", overflowY: "auto", opacity: "0" },
+  );
+  f.nodes.images.push(image);
+  prepareInitialPage(f.root, () => reveals++);
+  f.frame();
+  await settle();
+  f.frame();
+  assert.equal(
+    reveals,
+    0,
+    "neither clipping nor the preparation mask bypasses decode",
+  );
+  finishDecode();
+  await settle();
+  f.frame();
+  assert.equal(reveals, 1);
+});
+
+test("nested clipping applies to both data loaders and images", () => {
+  const f = fixture();
+  let reveals = 0;
+  const outer = f.container(
+    { left: 0, right: 200, top: 50, bottom: 100 },
+    { overflowY: "hidden" },
+  );
+  const inner = f.container(
+    { left: 0, right: 200, top: 0, bottom: 100 },
+    { overflowX: "auto" },
+    outer,
+  );
+  const image = f.image({ complete: false });
+  image.parentElement = inner;
+  f.nodes.images.push(image);
+  f.nodes.loading.push(f.element());
+  prepareInitialPage(f.root, () => reveals++);
+  f.frame();
+  assert.equal(
+    reveals,
+    0,
+    "the actual visible data loader still owns readiness",
+  );
+  f.nodes.loading[0].parentElement = inner;
+  f.mutate();
+  f.frame();
+  assert.equal(
+    reveals,
+    1,
+    "fully clipped data and media do not block the first viewport",
+  );
+});
+
+test("out-of-flow media conservatively waits when its containing block may escape a clip", () => {
+  const f = fixture();
+  let reveals = 0;
+  const image = f.image({ complete: false });
+  image.style = { position: "fixed" };
+  image.parentElement = f.container(
+    { left: 50, right: 200, top: 0, bottom: 100 },
+    { overflowX: "hidden", overflowY: "hidden" },
+  );
+  f.nodes.images.push(image);
+  prepareInitialPage(f.root, () => reveals++);
+  f.frame();
+  assert.equal(reveals, 0);
 });
 
 test("visible loading state waits for subsequently mounted images", async () => {
