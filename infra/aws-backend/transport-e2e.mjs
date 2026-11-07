@@ -17,6 +17,11 @@ const serve = adapt(async (r) => {
       status: 307,
       headers: { location: "/binary" },
     });
+  if (u.pathname === "/throttle")
+    return new Response("Too many requests", {
+      status: 429,
+      headers: { "retry-after": "2", "x-amzn-errortype": "TooManyRequestsException" },
+    });
   if (r.headers.get("if-none-match") === '"123"')
     return new Response(null, { status: 304, headers: { etag: '"123"' } });
   const b =
@@ -86,6 +91,13 @@ try {
   assert.equal(r.status, 307);
   assert.equal(r.headers.location, "/binary");
   cases.push("307");
+  r = await go("/throttle");
+  assert.equal(r.status, 429);
+  assert.equal(r.headers["retry-after"], "2");
+  assert.equal(r.headers["cache-control"], "no-store");
+  assert.match(r.headers["access-control-expose-headers"], /\bRetry-After\b/i);
+  assert.match(r.headers["access-control-expose-headers"], /\bX-Amzn-ErrorType\b/i);
+  cases.push("browser-readable throttle status and retry headers");
   const before = calls;
   r = await go("/query", "OPTIONS", {
     "access-control-request-method": "GET",

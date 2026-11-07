@@ -1,3 +1,4 @@
+import { publicApiFetch } from "./public-api-fetch.js";
 import { completeFixtures } from "./fixture-pages.js";
 import { apiUrl } from "../data-url.js";
 
@@ -15,7 +16,7 @@ export async function cupWorkerSnapshot(
   if (fallbackUrl && !fallbackUrl.startsWith("/api/"))
     throw new Error("Route de données invalide.");
   async function read(url) {
-    const response = await fetch(url, { signal });
+    const response = await publicApiFetch(url, { signal });
     return {
       status: response.status,
       body: response.ok ? await response.json() : null,

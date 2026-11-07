@@ -1,3 +1,4 @@
+import { publicApiFetch } from "./public-api-fetch.js";
 import { apiUrl } from "../data-url.js";
 
 export const hasBoundedSearch = (manifest) =>
@@ -18,7 +19,11 @@ export async function searchIdentities(
       clubsHasMore: false,
     };
   const params = new URLSearchParams({ q, season });
-  const response = await fetcher(apiUrl(`/api/search?${params}`), { signal });
+  const response = await publicApiFetch(
+    apiUrl(`/api/search?${params}`),
+    { signal },
+    fetcher,
+  );
   if (!response.ok)
     throw new Error("La recherche est momentanément indisponible.");
   const body = await response.json();

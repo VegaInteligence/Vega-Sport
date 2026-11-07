@@ -72,6 +72,8 @@ async function withResourceHook(run) {
           },
         },
         "../data-url.js": { apiUrl: (url) => url },
+        "./public-api-fetch.js":
+          await import("../dashboard/frontend/src/services/public-api-fetch.js"),
         "./resource-cache.js": {
           createResourceCache: () => (cache = createResourceCache()),
         },

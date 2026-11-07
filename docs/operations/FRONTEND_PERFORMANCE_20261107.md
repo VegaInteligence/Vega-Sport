@@ -33,9 +33,13 @@ Archive filters use Next's supported native History API so typing does not reque
 
 The implementation preserves the concurrent upstream UI changes at `cdc12d23ee26201049aed2a7b6bf7bfa61034f2d`, including the flattened shot map, overview radar, career sections and player-position summary. It does not redesign those components.
 
-### Follow-up prepared after the runtime review
+### Follow-up deployed after the runtime review
 
-The match, club-directory and explicit-archive-edition corrections described above were prepared after the first deployed runtime checks. They are implemented and checked locally; this document does not record their deployment.
+The match, club-directory and explicit-archive-edition corrections described above were merged through [PR #29](https://github.com/VegaInteligence/Vega-Sport/pull/29) into main revision `1fcb00e`. The production build succeeded, and [main CI 42349281748](https://github.com/VegaInteligence/Vega-Sport/actions/runs/42349281748) passed all three jobs. Deployment `dpl_FXu91hMLMWioLCAaNLjkmZQhjFU1` was confirmed READY at **07:03:58 UTC** with the production alias `vegasport.vercel.app`.
+
+Production now sets `NEXT_PUBLIC_API_ORIGIN` to `https://d317dq37z1tacb.cloudfront.net`. Public API reads can reach the existing AWS endpoint directly instead of traversing the same-origin Next relay and its four-request process queue. The Next-only visitor-country and image-generation helpers retain their local URLs. This removes an actual relay dependency; it does not quantify the latency saved or explain the separate slow direct-CloudFront HTTP samples.
+
+A fresh browser load after deployment confirmed CloudFront URLs in the manifest preload and asset elements. Search and player navigation, the 24-club directory, an explicit archive edition and its version-bound goal detail, and the match shots tab all reached populated content without a visible application or CORS error. See the [direct-origin acceptance phase](FRONTEND_UI_ACCEPTANCE_20261107.md#direct-origin-deployment-acceptance) for the exact observations. This remains **before the production database cutover**; final post-cutover acceptance is separate.
 
 The remaining match-tab failure waterfall used to request a complete match archive after a failed statistics, shots or events request. A 500/503 response, network failure, permission failure or cancellation now stops that family read. Only an explicitly unsupported legacy endpoint permits archive compatibility. An `aws-relational` manifest remains evidence of native serving even when `/api/status` fails. Pro readers retain their edition-token requirements and never enter the unversioned archive fallback.
 
@@ -44,6 +48,28 @@ Match-family responses are shared by actual fetcher, displayed publication, matc
 Cancellation is shared at both levels: multiple widgets can need one family, and different legacy families can need the same archive. Removing one subscriber leaves the others running; removing the last subscriber cancels the underlying fetch. Summary, family, context and standings callers forward their resource signal. Context reuse also requires an actual loaded season, so an empty catalogue cannot be cached as a complete pre-match analysis.
 
 Pro resource keys use the displayed edition tokens. Stale or missing editions receive separate error identities during rendering, then fail inside the asynchronous reader before consulting successful shared data. Sources without a publication token remain isolated by their source object. This preserves controlled loading/error rendering during a publication change.
+
+## Capacity-burst follow-up — implemented, deployment pending
+
+The direct-origin runtime review identified a second bottleneck: simultaneous JSON and image requests could exhaust the backend's concurrency even when individual queries were fast. The browser now shares one public-read scheduler across its existing API readers. It admits **four reads at once**, with **at most two image downloads**, and chooses interactive data before queued images. Its backlog is bounded to 256 entries. The manifest's early HTML preload remains an independent browser preload; static branding, trophy art, external embeds and the Next-only country helper retain their existing delivery paths. This is protection against a burst from one document, not a global admission controller for multiple users or tabs.
+
+Only GET/HEAD throttling is retried: HTTP 429, or HTTP 503 with a valid `Retry-After` or an explicit AWS throttling error type. There are at most two retries, at most two seconds per wait and four seconds of aggregate retry delay. A longer server-requested delay remains an error instead of being shortened. Backoff includes jitter and keeps the request's permit, preventing a rejected call from immediately unleashing the next queued request. Generic 503, 500, source errors and network exceptions acquire no new transport retry behavior. Existing page recovery cannot multiply an already handled throttle or bypass its longer backoff.
+
+Queued requests honor their supplied abort signal before fetch starts. Active requests and backoff use the same signal. Publication-aware resource caches continue to own subscription cancellation: one subscriber leaving cannot cancel another subscriber's request, while the final subscriber can cancel the underlying work. No response generation, representation token or compatibility-fallback rules are changed.
+
+The existing `Media` component and proxied stadium plans now start their image requests on visible intent through the same budget. Duplicate images share Blob bytes through the existing resource cache; each mounted image creates and revokes its own object URL. At most 64 blobs of up to 256 KiB each are retained between views, for at most **16 MiB** of retained image bytes, with a **60-second** freshness interval. Larger images within the publisher's existing 4 MiB bound are delivered but not retained in that cache. Native image decode errors and missing-source fallbacks remain available. An exhausted throttle shows the existing initials fallback instead of immediately requesting an alternate URL. The existing public asset route and final media CDN support anonymous CORS; no credentials or new external image hosts are introduced.
+
+The focused regression command passed **107 tests**, including **18 new scheduler/image checks**, before deployment:
+
+```bash
+node --test tests/public-api-fetch.test.mjs tests/media-assets.test.mjs \
+  tests/remote-match.test.mjs tests/aws-only-runtime.test.mjs \
+  tests/bounded-reads.test.mjs tests/compact-reads.test.mjs \
+  tests/resource-cache.test.mjs tests/resource-hook-identity.test.mjs \
+  tests/archive-navigation.test.mjs tests/stadium-render.test.mjs
+```
+
+The two new test files are registered in the navigation CI step. They verify bounded mixed bursts, data priority, queued and active cancellation, shared subscribers, `Retry-After` seconds and dates, retry exhaustion, long-delay preservation, byte-cache eviction, object-URL cleanup, visible intent, image fallback and the absence of nested throttle retries. Post-deployment browser rendering and CloudWatch throttle measurements are still required; no zero-throttle production claim is made here.
 
 ## Verification
 

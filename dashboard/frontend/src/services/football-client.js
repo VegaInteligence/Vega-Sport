@@ -1,3 +1,4 @@
+import { publicApiFetch } from "./public-api-fetch.js";
 import { normalizeArchive } from "./format.js";
 import { apiUrl, dataUrl } from "../data-url.js";
 import { completeFixtures } from "./fixture-pages.js";
@@ -36,7 +37,7 @@ export class FootballDataClient {
   async checkStatus() {
     if (this.statusKnown) return;
     try {
-      const r = await fetch(apiUrl("/api/status"));
+      const r = await publicApiFetch(apiUrl("/api/status"));
       this.configured = r.ok && (await r.json()).configured === true;
     } catch {
       this.configured = false;
@@ -67,7 +68,7 @@ export class FootballDataClient {
     this.redraw();
   }
   async request(path, { signal } = {}) {
-    const response = await fetch(apiUrl(`/api/pitchapi/${path}`), {
+    const response = await publicApiFetch(apiUrl(`/api/pitchapi/${path}`), {
       headers: { Accept: "application/json" },
       signal,
     });
@@ -230,7 +231,7 @@ export class FootballDataClient {
         this.redraw();
         return;
       }
-      const response = await fetch(apiUrl("/api/supplemental"));
+      const response = await publicApiFetch(apiUrl("/api/supplemental"));
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const value = await response.json();
       if (!Array.isArray(value.competitions) || !value.meta)
@@ -250,7 +251,7 @@ export class FootballDataClient {
       this.fetcher || fetch,
       this.resourceKey("archive", id),
       async ({ signal: sharedSignal }) => {
-        const response = await fetch(
+        const response = await publicApiFetch(
           apiUrl("/api/archive/matches/" + encodeURIComponent(id)),
           { signal: sharedSignal },
         );

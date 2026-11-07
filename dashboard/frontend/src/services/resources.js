@@ -1,9 +1,10 @@
+import { publicApiFetch } from "./public-api-fetch.js";
 import { apiUrl } from "../data-url.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createResourceCache } from "./resource-cache.js";
 const cache = createResourceCache();
 export async function json(url, options) {
-  const response = await fetch(apiUrl(url), options);
+  const response = await publicApiFetch(apiUrl(url), options);
   if (!response.ok)
     throw new Error(`Données indisponibles (HTTP ${response.status})`);
   return response.json();
