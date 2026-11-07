@@ -1,0 +1,111 @@
+{
+  "format": "vega.provider-retirement.local-acceptance.v1",
+  "recorded_at": "2026-11-07T17:07:39.170864+00:00",
+  "status": "local_passed_native_rehearsal_pending",
+  "model_digest": "395de5ecf4c7e0546561c612559b2448bb78d36205d62b0f78ab33202bcfb9a4",
+  "scope": {
+    "retired_tables": 112,
+    "retired_row_type_functions": 62,
+    "installer_deletes_data": false,
+    "production_execution_claimed": false,
+    "migration": "036_finalize_provider_retirement.sql",
+    "preceding_user_migration_preserved": "035_home_projection.sql",
+    "expected_durable_before": 304,
+    "expected_durable_after": 192,
+    "expected_active_physical_tables": 58,
+    "counts_require_native_confirmation": true
+  },
+  "postgres_fixture": {
+    "path": "tests/consolidation_retirement_postgres.py",
+    "server": "PostgreSQL 18.6 (PGlite 0.5.15)",
+    "passed_checks": 62,
+    "apply_parameter_envelope_bytes": 48024,
+    "parameter_limit_bytes": 100000,
+    "transport": "PGlite INSERT adapter for COPY",
+    "verified": [
+      "Exact reviewed table and function scope; dependency and publication-fence refusal",
+      "Atomic late failure restores every retired table/function OID and proof state",
+      "Exact physical deletion preserves all active fixture store rows and serving contracts",
+      "Actual catalogue, support and detail publishers continue after deletion",
+      "Least-privilege reads and native negative-zero representation survive",
+      "Migration journal, original cutover/parity proof and installer idempotence survive",
+      "Physical rollback refuses before changing state; separate lineup-reader switch remains available",
+      "Real SQL plan, recovery envelope and receipt match the independent CLI validators",
+      "Both new home-projection tables retain OIDs and complete rows; subsequent publication still queues their refresh"
+    ],
+    "not_exercised": [
+      "Independent PostgreSQL backend advisory-lock contention: PGlite shares one backend",
+      "Cloud snapshot restoration, native RDS finalization and production execution"
+    ],
+    "canonical_local_receipt": {
+      "file": "retirement-local-fixture-036.json",
+      "sha256": "fa78cfcd74fdc3ee4bd09e1bd7d7362b22ca30c824f7e99b487f808ca0ab1a38"
+    },
+    "stage_sql_smoke": {
+      "status": "passed",
+      "operations": [
+        "retirement-stage-smoke-write",
+        "retirement-stage-smoke-read",
+        "retirement-stage-smoke-runtime",
+        "retirement-stage-smoke-cleanup",
+        "retirement-stage-rollback-refusal"
+      ],
+      "new_records": 4,
+      "owner_and_runtime_payloads_equal": true,
+      "signed_zero_hex": "8000000000000000",
+      "rollback_refused": true,
+      "exact_fixture_cleanup": true,
+      "runtime_evidence_scope": "SET LOCAL ROLE inside a disposable fixture; actual RDS connected-role proof remains required"
+    }
+  },
+  "cli_fixture": {
+    "command": "python -m unittest discover -s tests -p test_schema_retirement_cli.py",
+    "passed_checks": 20,
+    "reported_by": "direct local execution after main integration",
+    "database_or_cloud_operations": false,
+    "elapsed_seconds": 0.123
+  },
+  "native_ci": {
+    "entrypoint": "tests/run_public_read_contracts.py",
+    "database": "vega_retirement_test",
+    "registered": true,
+    "status_at_recording": "not yet observed"
+  },
+  "recovery_attestation": "Fixture recovery hashes are synthetic and must never authorize production retirement. External snapshot, restore, preservation and post-snapshot recovery evidence remain required.",
+  "files": [
+    {
+      "path": "dashboard/backend/migrations/036_finalize_provider_retirement.sql",
+      "sha256": "11b9ffe280f9ef9c25cf85e012a37829f70fdf6a39f1eed4fb6f447d69ef5b6e"
+    },
+    {
+      "path": "dashboard/scripts/finalize_schema_retirement.py",
+      "sha256": "9826268ebb227d55dda9f7b38fca097e58398f66e8fff1c5c67c95250e1f8c59"
+    },
+    {
+      "path": "dashboard/scripts/schema_consolidation.py",
+      "sha256": "dbc7457d94f8533e4c78305cc3a7883bbd770eccd28c6eae09c93826b5e49350"
+    },
+    {
+      "path": "dashboard/scripts/relational_materialize.py",
+      "sha256": "55864e93d3455354bbc8bb19844130549fdfdfa95e28e4b543f3251e22183e4e"
+    },
+    {
+      "path": "tests/consolidation_retirement_postgres.py",
+      "sha256": "82446323afaf25d48ec2225aba67056f7d0817eec0aa43ee626cb8ae837c8f46"
+    },
+    {
+      "path": "tests/test_schema_retirement_cli.py",
+      "sha256": "248bdc6480ba936ae1a1aadb94908c0129b14f8ba5e4ddd6f3415a3a35ba00d4"
+    },
+    {
+      "path": "tests/run_public_read_contracts.py",
+      "sha256": "f1bc078e5659b96a03d46157eba36256ba294cc1634262fc01d20ab676262b78"
+    },
+    {
+      "path": "dashboard/backend/migrations/035_home_projection.sql",
+      "sha256": "6dfe72ab98bc2408b5b0ace8441bad5926609cd8f1101d1154ee5e6efd78d090",
+      "scope": "preserved upstream migration; no edits"
+    }
+  ],
+  "integrated_main": "8787adf290c583f24418558200ac4826117a294f"
+}
