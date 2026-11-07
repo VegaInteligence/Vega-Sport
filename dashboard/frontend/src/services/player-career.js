@@ -25,12 +25,9 @@ function competitionKind(id, meta) {
     : "unknown";
 }
 
-/** Career groups preserve provider identities and deduplicate across editions. */
-export function playerCareerGroups(history, playerId) {
-  const teams = new Map(),
-    competitions = new Map(),
-    kinds = new Map(),
-    observed = new Map();
+/** One candidate per match across editions, preferring a played observation. */
+export function playerCareerObservations(history, playerId) {
+  const observed = new Map();
   for (const { season, data, profile } of history) {
     if (!profile) continue;
     const teamMeta = new Map((data?.teams || []).map((v) => [v.id, v]));
@@ -62,6 +59,14 @@ export function playerCareerGroups(history, playerId) {
         observed.set(row.matchId, candidate);
     }
   }
+  return [...observed.values()];
+}
+
+/** Career groups preserve provider identities and deduplicate across editions. */
+export function playerCareerGroups(history, playerId) {
+  const teams = new Map(),
+    competitions = new Map(),
+    kinds = new Map();
   function append(map, key, meta, row, season) {
     if (!map.has(key))
       map.set(key, {
@@ -77,7 +82,10 @@ export function playerCareerGroups(history, playerId) {
     value.rows.push(row);
     if (season) value.seasons.add(season);
   }
-  for (const { row, season, team, competition } of observed.values()) {
+  for (const { row, season, team, competition } of playerCareerObservations(
+    history,
+    playerId,
+  )) {
     if (row.teamId) {
       append(teams, row.teamId, team, row, season);
       if (!kinds.has(row.teamId)) kinds.set(row.teamId, new Set());

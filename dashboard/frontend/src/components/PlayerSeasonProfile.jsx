@@ -48,6 +48,7 @@ const Evolution = lazy(() => import("./PlayerEvolution.jsx"));
 const Similarity = lazy(() => import("./PlayerSimilarity.jsx"));
 const SeasonShots = lazy(() => import("./SeasonShots.jsx"));
 const SeasonStats = lazy(() => import("./PlayerSeasonStats.jsx"));
+const CareerStats = lazy(() => import("./PlayerCareerStats.jsx"));
 const PerformanceStats = lazy(() =>
   import("./PlayerSeasonStats.jsx").then(({ PlayerPerformanceStats }) => ({
     default: PlayerPerformanceStats,
@@ -350,6 +351,9 @@ export default function PlayerSeasonProfile({
         <SeasonStats id={id} season={f.season} />
       </Suspense>
       <PlayerOverviewRadar profile={profile} cohorts={cohorts} />
+      <Suspense fallback={historyLoading}>
+        <CareerStats id={id} season={f.season} overview />
+      </Suspense>
       <button
         type="button"
         className="button button-primary player-overview-details"

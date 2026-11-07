@@ -231,6 +231,30 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
+.player-career-grid.player-career-overview-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr);
+  align-items: start;
+}
+.player-career-overview-grid > .player-career-panel {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+.player-career-overview-grid > .player-career-panel h4 {
+  color: var(--ink-strong);
+  font-size: var(--text-lg);
+}
+@media (max-width: 1000px) {
+  .player-career-grid.player-career-overview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .player-career-overview-grid > .player-career-panel {
+    padding: 16px;
+  }
+}
 .player-career-panel {
   min-width: 0;
 }

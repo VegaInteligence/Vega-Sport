@@ -10,8 +10,13 @@ import {
   nationalTeamName,
 } from "../services/national-flags.js";
 import { playerCareerGroups } from "../services/player-career.js";
+import { playerPositionSummary } from "../services/player-position-summary.js";
 import { internationalCareerDetails } from "../services/player-international-career.js";
-import { cachedResource, useResource } from "../services/resources.js";
+import {
+  cachedResource,
+  primeResource,
+  useResource,
+} from "../services/resources.js";
 import {
   loadPlayerHistory,
   playerHistoryKey,
@@ -19,6 +24,7 @@ import {
 import { seasonMetric } from "../services/season-player.js";
 import NationalFlag from "./NationalFlag.jsx";
 import ObservedValue from "./PlayerObservedValue.jsx";
+import PlayerPositionPitch from "./PlayerPositionPitch.jsx";
 import { AsyncState, Media } from "./UI.jsx";
 
 const TABLES = [
@@ -164,21 +170,49 @@ function CareerTable({ group, title, entity, empty, entries, matchHref }) {
   );
 }
 
-export default function PlayerCareerStats({ id, routing, season }) {
+export default function PlayerCareerStats({
+  id,
+  routing,
+  season,
+  overview = false,
+}) {
   const f = useFootball();
   const params = useSearchParams();
-  const history = useResource(playerHistoryKey(f.manifest, id), ({ signal }) =>
-    loadPlayerHistory(f.manifest, id, {
-      signal,
-      routing,
-      cachedSeason: (value) =>
-        cachedResource(playerHistoryKey(f.manifest, id, value))?.[0],
-    }),
+  const history = useResource(
+    playerHistoryKey(f.manifest, id),
+    async ({ signal }) => {
+      if (overview && season) {
+        // Let the overview's selected-season table and career share this read.
+        await primeResource(
+          playerHistoryKey(f.manifest, id, season),
+          ({ signal: seasonSignal }) =>
+            loadPlayerHistory(f.manifest, id, {
+              signal: seasonSignal,
+              season,
+              routing,
+            }),
+        );
+        signal?.throwIfAborted();
+      }
+      return loadPlayerHistory(f.manifest, id, {
+        signal,
+        routing,
+        cachedSeason: (value) =>
+          cachedResource(playerHistoryKey(f.manifest, id, value))?.[0],
+      });
+    },
   );
   const groups = useMemo(
     () => playerCareerGroups(history.value || [], id),
     [history.value, id],
   );
+  const positions = useMemo(
+    () => (overview ? playerPositionSummary(history.value || [], id) : []),
+    [overview, history.value, id],
+  );
+  const tables = overview
+    ? TABLES.filter(([group]) => group === "competitions")
+    : TABLES;
   const matchHref = (group, key) => {
     const query = new URLSearchParams(params.toString());
     query.delete("playerView");
@@ -194,13 +228,15 @@ export default function PlayerCareerStats({ id, routing, season }) {
     <section className="player-career" aria-label="Bilan de carrière">
       <div className="player-career-heading">
         <h3>Bilan de carrière</h3>
-        <p>Cumul des saisons disponibles</p>
+        <p>Toutes les saisons collectées</p>
       </div>
       <AsyncState resource={history}>
         {() => (
           <>
-            <div className="player-career-grid">
-              {TABLES.map(([group, title, entity, empty]) => (
+            <div
+              className={`player-career-grid${overview ? " player-career-overview-grid" : ""}`}
+            >
+              {tables.map(([group, title, entity, empty]) => (
                 <CareerTable
                   key={group}
                   group={group}
@@ -211,10 +247,12 @@ export default function PlayerCareerStats({ id, routing, season }) {
                   matchHref={matchHref}
                 />
               ))}
+              {overview && <PlayerPositionPitch positions={positions} />}
             </div>
             <p className="player-history-footnote">
               — Donnée indisponible. * Valeur partielle.
-              {groups.unknown.length > 0 &&
+              {!overview &&
+                groups.unknown.length > 0 &&
                 " Certaines équipes ont un type non renseigné."}
             </p>
           </>
