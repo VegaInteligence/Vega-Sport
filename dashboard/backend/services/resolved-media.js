@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { cloudFrontObjectUrl, immutableFile } from "./cdn.js";
 import { matchesEtag } from "./cache-policy.js";
+import { compactHomePresentation } from "./home-presentation.js";
 
 // Collect only image-valued fields; never interpret arbitrary strings as assets.
 export function imageSources(value, out = new Set()) {
@@ -93,13 +94,16 @@ export async function withResolvedMedia(req, invoke, read, base) {
         })
       : original;
   const body = await original.json();
+  const home = url.pathname === "/api/read/home";
+  if (home) body.data = compactHomePresentation(body.data);
   body.media = await mediaSidecar(body, read, base);
   const serialized = JSON.stringify(body);
   const originTag = original.headers.get("etag");
   const signature = originTag
     ? JSON.stringify([originTag, body.media])
     : serialized;
-  const tag = `W/"media-v1-${createHash("sha256").update(signature).digest("hex")}"`;
+  const version = home ? "media-home-v2" : "media-v1";
+  const tag = `W/"${version}-${createHash("sha256").update(signature).digest("hex")}"`;
   const output = new Headers(original.headers);
   output.set("ETag", tag);
   output.delete("content-length");

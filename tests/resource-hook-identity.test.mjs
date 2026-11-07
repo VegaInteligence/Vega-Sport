@@ -76,8 +76,11 @@ async function withResourceHook(run, bootstrap = null) {
           await import("../dashboard/frontend/src/services/public-api-fetch.js"),
         "./resource-bootstrap.js": { useResourceBootstrap: () => bootstrap },
         "./media-registry.js": { acceptMediaPayload: () => {} },
+        "./navigation-acceptance.js":
+          await import("../dashboard/frontend/src/services/navigation-acceptance.js"),
         "./resource-cache.js": {
-          createResourceCache: () => (cache = createResourceCache()),
+          createResourceCache: (options) =>
+            (cache = createResourceCache(options)),
         },
       };
     vm.runInThisContext("(function(require,module,exports){" + code + "\n})", {

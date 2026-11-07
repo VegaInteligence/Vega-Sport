@@ -104,6 +104,7 @@ jobs:
           tests/home-bootstrap-preferences.test.mjs
           tests/media-registry.test.mjs
           tests/resolved-media.test.mjs
+          tests/home-presentation.test.mjs
           tests/relational-home-cache.test.mjs
           tests/home-projection.test.mjs
           tests/archive-navigation.test.mjs
