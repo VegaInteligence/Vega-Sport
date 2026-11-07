@@ -347,6 +347,10 @@ export default function PlayerSeasonProfile({
   const change = (next) => {
     const url = new URL(window.location.href);
     url.searchParams.set("playerView", next);
+    if (next === "stats") {
+      url.searchParams.delete("performanceCompetition");
+      url.searchParams.delete("performanceSeason");
+    }
     window.history.replaceState(null, "", url.pathname + url.search);
   };
   const cohort = cohorts.groups.get(profile.role?.group);
