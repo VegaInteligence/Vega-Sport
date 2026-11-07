@@ -1,5 +1,5 @@
 "use client";
-import React, { useId, useRef, useState } from "react";
+import React, { useId, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useResearch } from "../hooks/ResearchContext.jsx";
@@ -26,11 +26,83 @@ export function useHasSaved(kind) {
     ),
   );
 }
-export function ResearchTabs({ label, value, items, onChange, panelId }) {
+export function ResearchTabs({
+  label,
+  value,
+  items,
+  onChange,
+  panelId,
+  animated = false,
+}) {
   const id = useId(),
-    refs = useRef([]);
+    refs = useRef([]),
+    list = useRef(null),
+    indicator = useRef(null),
+    ready = useRef(false),
+    geometry = useRef(null);
+  const selectedIndex = items.findIndex(([key]) => key === value);
+  const positionIndicator = (index, animate = false) => {
+    const container = list.current,
+      line = indicator.current,
+      active = refs.current[index];
+    if (!animated || !container || !line || !active) return;
+    const left =
+      active.getBoundingClientRect().left -
+      container.getBoundingClientRect().left +
+      container.scrollLeft -
+      container.clientLeft;
+    const width = active.getBoundingClientRect().width;
+    if (
+      geometry.current &&
+      Math.abs(geometry.current.left - left) < 0.1 &&
+      Math.abs(geometry.current.width - width) < 0.1
+    )
+      return;
+    line.style.transition = animate && ready.current ? "" : "none";
+    line.style.transform = `translateX(${left}px) scaleX(${width})`;
+    geometry.current = { left, width };
+    container.dataset.indicatorReady = "true";
+    ready.current = true;
+  };
+  useLayoutEffect(() => {
+    if (!animated) {
+      ready.current = false;
+      geometry.current = null;
+      if (list.current) delete list.current.dataset.indicatorReady;
+      return;
+    }
+    const container = list.current;
+    const measure = () => positionIndicator(selectedIndex);
+    measure();
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(() => measure());
+    if (observer) {
+      observer.observe(container);
+      for (const node of refs.current) if (node) observer.observe(node);
+    }
+    const update = () => measure();
+    window.addEventListener("resize", update);
+    document.fonts?.addEventListener?.("loadingdone", update);
+    let live = true;
+    document.fonts?.ready?.then(() => {
+      if (live) update();
+    });
+    return () => {
+      live = false;
+      observer?.disconnect();
+      window.removeEventListener("resize", update);
+      document.fonts?.removeEventListener?.("loadingdone", update);
+    };
+  }, [animated, selectedIndex, items]);
   return (
-    <div className="research-tabs" role="tablist" aria-label={label}>
+    <div
+      ref={list}
+      className={`research-tabs${animated ? " research-tabs-animated" : ""}`}
+      role="tablist"
+      aria-label={label}
+    >
       {items.map(([key, title], i) => (
         <button
           key={key}
@@ -43,7 +115,10 @@ export function ResearchTabs({ label, value, items, onChange, panelId }) {
           aria-controls={panelId}
           aria-selected={key === value}
           tabIndex={key === value ? 0 : -1}
-          onClick={() => onChange(key)}
+          onClick={(event) => {
+            positionIndicator(i, key !== value && event.detail !== 0);
+            onChange(key);
+          }}
           onKeyDown={(event) => {
             let next;
             if (event.key === "ArrowRight") next = (i + 1) % items.length;
@@ -53,6 +128,7 @@ export function ResearchTabs({ label, value, items, onChange, panelId }) {
             if (event.key === "End") next = items.length - 1;
             if (next !== undefined) {
               event.preventDefault();
+              positionIndicator(next);
               onChange(items[next][0]);
               refs.current[next]?.focus();
             }
@@ -61,6 +137,13 @@ export function ResearchTabs({ label, value, items, onChange, panelId }) {
           {title}
         </button>
       ))}
+      {animated && (
+        <span
+          ref={indicator}
+          className="research-tabs-indicator"
+          aria-hidden="true"
+        />
+      )}
     </div>
   );
 }

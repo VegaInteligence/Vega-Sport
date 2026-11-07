@@ -1,5 +1,43 @@
 import { isNumber } from "../model.js";
 import { aggregateSeason } from "./season-player.js";
+import { advancedTest, EMPTY_ADVANCED } from "./advanced-filters.js";
+
+export function playerDateTest({ from = "", to = "" } = {}) {
+  const test = advancedTest({ ...EMPTY_ADVANCED, from, to }, new Map());
+  return (value) =>
+    !test ||
+    test({
+      date: typeof value === "string" ? value.slice(0, 10) : undefined,
+    });
+}
+
+/** The publication cache stays complete; dates only narrow its displayed copy. */
+export function playerHistoryInPeriod(history, playerId, period = {}) {
+  if (!period.from && !period.to) return history;
+  const inPeriod = playerDateTest(period);
+  return history.map((entry) => {
+    const byId = new Map(
+      (entry.data?.matches || []).map((match) => [match.id, match]),
+    );
+    const appearances = (entry.data?.appearances || entry.profile.rows).filter(
+      (row) =>
+        row.playerId === playerId &&
+        inPeriod(row.date || byId.get(row.matchId)?.date),
+    );
+    const ids = new Set(appearances.map((row) => row.matchId));
+    const data = entry.data && {
+      ...entry.data,
+      appearances,
+      matches: (entry.data.matches || []).filter(
+        (match) => ids.has(match.id) || inPeriod(match.date),
+      ),
+      fixtures: (entry.data.fixtures || []).filter((match) =>
+        inPeriod(match.date),
+      ),
+    };
+    return { ...entry, data, profile: aggregateSeason(appearances, playerId) };
+  });
+}
 
 function groupRows(rows, keyFor) {
   const groups = new Map();

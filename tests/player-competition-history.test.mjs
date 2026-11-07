@@ -24,6 +24,38 @@ const entry = (rows, matches = []) => ({
   season: "2025/2026",
   data: { appearances: rows, matches },
 });
+
+test("date windows preserve full-history affiliation anchors before narrowing calendar and totals", () => {
+  const history = entry([
+    appearance("first", "A", "2025-01-01"),
+    appearance("last", "A", "2025-01-31"),
+    appearance("bench", "A", "2025-01-16", { minutes: 0, starter: false }),
+  ]);
+  const evidence = [
+    {
+      match: match("middle", "2025-01-15", "A"),
+      season: "2025/2026",
+      teamId: "A",
+      lineup: {
+        confirmed: true,
+        complete: true,
+        starters: Array.from({ length: 11 }, (_, i) => "s" + i),
+        subs: [],
+      },
+    },
+  ];
+  const filtered = playerCompetitionHistory([history], id, league, evidence, {
+    from: "2025-01-10",
+    to: "2025-01-20",
+  });
+  assert.deepEqual(
+    filtered.rows.map((row) => row.match.id),
+    ["bench", "middle"],
+  );
+  assert.equal(filtered.profile.matches, 0);
+  assert.equal(filtered.rows[1].status, "absent");
+  assert.deepEqual(filtered.groups[0].cardMatchIds, ["bench"]);
+});
 test("exact competition and played aggregate; unknown and unused bench are distinct", () => {
   const rows = [
     appearance("1", "A", "2025-01-01", { goals: 1 }),

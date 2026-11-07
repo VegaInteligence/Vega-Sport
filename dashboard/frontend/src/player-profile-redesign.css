@@ -5,8 +5,14 @@
 .research-player-profile .season-player-identity {
   max-width: min(100%, 18rem);
 }
-.research-player-profile .season-player-identity h2 {
+.research-player-profile .season-player-identity :is(h1, h2) {
   overflow-wrap: anywhere;
+}
+.research-player-profile .player-profile-name {
+  margin: 2px 0;
+  color: var(--ink-strong);
+  font-size: var(--text-2xl);
+  line-height: 1.2;
 }
 .research-player-profile .season-player-heading .research-toolbar {
   margin-inline-start: auto;
@@ -193,12 +199,19 @@
 .player-performance-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 20px;
-  align-items: center;
+  gap: 10px 14px;
+  align-items: end;
 }
-.player-performance-filters select {
+.player-performance-filters .player-performance-season {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  font-size: var(--text-xs);
+}
+.player-performance-filters .player-performance-season select {
   min-width: 180px;
   max-width: 270px;
+  font-size: var(--text-sm);
 }
 .player-competition-link {
   color: var(--accent);
@@ -425,8 +438,26 @@
 .player-profile-flat #player-profile-panel {
   scroll-margin-top: 72px;
 }
+.player-profile-flat .research-tabs {
+  margin-bottom: 8px;
+}
+.player-profile-flat #player-profile-panel > .player-season-history {
+  margin-top: 0;
+}
 .player-overview .player-season-history {
-  margin-block: 20px;
+  margin-block: 12px 20px;
+}
+@media (max-width: 480px) {
+  .player-performance-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+  .player-performance-filters .player-performance-season select {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
 }
 .player-history-identity {
   display: inline-flex;

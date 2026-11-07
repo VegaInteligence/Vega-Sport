@@ -1,5 +1,6 @@
 import { isNumber } from "../model.js";
 import { aggregateSeason } from "./season-player.js";
+import { playerDateTest } from "./player-season-history.js";
 
 function day(value) {
   const result = typeof value === "string" ? value.slice(0, 10) : "";
@@ -62,7 +63,9 @@ export function playerCompetitionHistory(
   playerId,
   competitionId,
   evidence = [],
+  period = {},
 ) {
+  const inPeriod = playerDateTest(period);
   const observations = [],
     sources = new Map(),
     seasons = new Set();
@@ -170,7 +173,6 @@ export function playerCompetitionHistory(
         upcoming,
         playerId,
       );
-      if (entry.season) seasons.add(entry.season);
       return {
         ...entry,
         row: entry.appearance || null,
@@ -178,6 +180,7 @@ export function playerCompetitionHistory(
         statusLabel: labels[status],
       };
     })
+    .filter((entry) => inPeriod(entry.appearance?.date || entry.match.date))
     .sort(
       (a, b) =>
         String(b.match?.date || b.appearance?.date || "").localeCompare(
@@ -186,6 +189,7 @@ export function playerCompetitionHistory(
     );
   const grouped = new Map();
   for (const item of rows) {
+    if (item.season) seasons.add(item.season);
     const key = JSON.stringify([item.season, item.teamId]);
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key).push(item);

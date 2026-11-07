@@ -36,6 +36,7 @@ import {
 } from "./ResearchUI.jsx";
 import PlayerHonours, { usePlayerHonours } from "./PlayerHonours.jsx";
 import PlayerOverviewRadar from "./PlayerOverviewRadar.jsx";
+import PlayerProfileFilters from "./PlayerProfileFilters.jsx";
 import PlayerBio from "./PlayerBio.jsx";
 import MessiGoats from "./MessiGoats.jsx";
 import { MESSI_ID } from "../services/player-honours.js";
@@ -243,7 +244,7 @@ function PlayerProfileHeading({ id, identity, role, honours, children }) {
           className="player-avatar season-player-portrait"
         />
         <div>
-          <h2>{identity.name}</h2>
+          <h1 className="player-profile-name">{identity.name}</h1>
           {role && <p>{role}</p>}
         </div>
       </div>
@@ -448,6 +449,7 @@ export default function PlayerSeasonProfile({
         )}
         <PlayerBio profile={record} />
         <ResearchTabs
+          animated
           label="Analyse du joueur"
           value={historyView}
           items={HISTORY_TABS}
@@ -461,6 +463,7 @@ export default function PlayerSeasonProfile({
             historyView === "stats" ? "Statistiques" : "Vue d’ensemble"
           }
         >
+          {historyView === "overview" && <PlayerProfileFilters />}
           {historyView === "stats" ? (
             <Suspense fallback={historyLoading}>
               <PerformanceStats id={id} />
@@ -533,6 +536,7 @@ export default function PlayerSeasonProfile({
       </PlayerProfileHeading>
       <PlayerBio profile={record} />
       <ResearchTabs
+        animated
         label="Analyse du joueur"
         value={view}
         items={TABS}
@@ -544,6 +548,7 @@ export default function PlayerSeasonProfile({
         role="tabpanel"
         aria-label={TABS.find(([key]) => key === view)[1]}
       >
+        {view !== "stats" && view !== "evolution" && <PlayerProfileFilters />}
         {view === "similar" && cohortControls}
         <Suspense
           fallback={
@@ -617,7 +622,11 @@ export default function PlayerSeasonProfile({
                       <button onClick={shotDetails.retry}>Réessayer</button>
                     </p>
                   ) : (
-                    <p role="status" data-page-loading="" className="loading-state">
+                    <p
+                      role="status"
+                      data-page-loading=""
+                      className="loading-state"
+                    >
                       Chargement des tirs de la saison…
                     </p>
                   )

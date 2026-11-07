@@ -11,7 +11,11 @@ import {
   playerRoutes,
 } from "../services/scouting-history.js";
 import { loadDisciplineByMatch } from "../services/player-discipline.js";
-import { playerSeasonGroups } from "../services/player-season-history.js";
+import {
+  playerHistoryInPeriod,
+  playerSeasonGroups,
+} from "../services/player-season-history.js";
+import PlayerProfileFilters from "./PlayerProfileFilters.jsx";
 import { seasonMetric } from "../services/season-player.js";
 import { currentPlayerSeason } from "../services/actor-reads.js";
 import { loadPlayerCompetitionFixtures } from "../services/player-competition-fixtures.js";
@@ -335,8 +339,12 @@ export default function PlayerSeasonStats({ id, season }) {
     Boolean(f.manifest && id && season),
   );
   const groups = useMemo(
-    () => playerSeasonGroups(history.value || [], id),
-    [history.value, id],
+    () =>
+      playerSeasonGroups(
+        playerHistoryInPeriod(history.value || [], id, f.filters?.advanced),
+        id,
+      ),
+    [history.value, id, f.filters?.advanced?.from, f.filters?.advanced?.to],
   );
   return (
     <section className="player-season-history">
@@ -374,9 +382,15 @@ function PerformanceRows({
 }) {
   const f = useFootball();
   const entries = history.value;
+  const from = f.filters?.advanced?.from || "";
+  const to = f.filters?.advanced?.to || "";
+  const visibleEntries = useMemo(
+    () => playerHistoryInPeriod(entries || [], id, { from, to }),
+    [entries, id, from, to],
+  );
   const baseGroups = useMemo(
-    () => playerSeasonGroups(entries || [], id),
-    [entries, id],
+    () => playerSeasonGroups(visibleEntries, id),
+    [visibleEntries, id],
   );
   const exactCompetition = competition !== "all";
   const fixtureEnabled = Boolean(
@@ -406,21 +420,22 @@ function PerformanceRows({
             id,
             competition,
             fixtures.value || [],
+            { from, to },
           )
         : null,
-    [exactCompetition, entries, id, competition, fixtures.value],
+    [exactCompetition, entries, id, competition, fixtures.value, from, to],
   );
   const groups = detail?.groups || baseGroups;
   const matches = useMemo(
     () => [
       ...new Map(
         [
-          ...(entries || []).flatMap(({ data }) => data?.matches || []),
+          visibleEntries.flatMap(({ data }) => data?.matches || []),
           ...(fixtures.value || []).map(({ match }) => match),
         ].map((match) => [match.id, match]),
       ).values(),
     ],
-    [entries, fixtures.value],
+    [visibleEntries, fixtures.value],
   );
   const cardMatchIds = useMemo(
     () => [
@@ -633,8 +648,7 @@ export function PlayerPerformanceStats({ id, children }) {
       className="player-season-history"
       aria-label="Statistiques par saison"
     >
-      <div className="season-section-heading">
-        <h3>Statistiques par saison</h3>
+      <PlayerProfileFilters>
         <div className="player-performance-filters">
           <label className="player-performance-season">
             Compétition
@@ -673,6 +687,9 @@ export function PlayerPerformanceStats({ id, children }) {
             </select>
           </label>
         </div>
+      </PlayerProfileFilters>
+      <div className="season-section-heading">
+        <h3>Statistiques par saison</h3>
       </div>
       {routing.error && (
         <p role="alert">

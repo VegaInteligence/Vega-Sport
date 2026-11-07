@@ -11,7 +11,10 @@ import { date, number } from "../services/format.js";
 import { nationalTeamName } from "../services/national-flags.js";
 import { playerCareerGroups } from "../services/player-career.js";
 import { matchExternalUrl } from "../services/player-competition-matches.js";
-import { playerSeasonGroups } from "../services/player-season-history.js";
+import {
+  playerHistoryInPeriod,
+  playerSeasonGroups,
+} from "../services/player-season-history.js";
 import { isNationalTeamCompetition } from "../services/player-team-seasons.js";
 import { useResource } from "../services/resources.js";
 import {
@@ -222,7 +225,11 @@ export default function PlayerMatchesPage({ currentRows } = {}) {
               />
             ) : (
               <HistoryMatches
-                seasons={seasons}
+                seasons={playerHistoryInPeriod(
+                  seasons,
+                  id,
+                  f.filters?.advanced,
+                )}
                 id={id}
                 groupKey={groupKey}
                 competitionKey={competitionKey}

@@ -6,8 +6,68 @@ import {
 } from "../dashboard/frontend/src/services/season-player.js";
 import {
   playerSeasonGroups,
+  playerHistoryInPeriod,
   seasonTrendPoints,
 } from "../dashboard/frontend/src/services/player-season-history.js";
+
+test("date windows narrow displayed totals without changing a cached season", () => {
+  const id = "p_123456";
+  const appearances = [
+    {
+      playerId: id,
+      matchId: "one",
+      date: "2026-10-01",
+      teamId: "club",
+      leagueId: "league",
+      minutes: 90,
+      goals: 1,
+    },
+    {
+      playerId: id,
+      matchId: "two",
+      date: "2026-10-31",
+      teamId: "club",
+      leagueId: "league",
+      minutes: null,
+    },
+    {
+      playerId: id,
+      matchId: "three",
+      date: "2026-11-01",
+      teamId: "club",
+      leagueId: "league",
+      minutes: 90,
+      goals: 3,
+    },
+  ];
+  const original = [
+    {
+      season: "2026/2027",
+      data: {
+        appearances,
+        matches: appearances.map((row) => ({
+          id: row.matchId,
+          date: row.date,
+        })),
+      },
+      profile: aggregateSeason(appearances, id),
+    },
+  ];
+  const [period] = playerHistoryInPeriod(original, id, {
+    from: "2026-10-01",
+    to: "2026-10-31",
+  });
+  assert.deepEqual(
+    period.data.appearances.map((row) => row.matchId),
+    ["one", "two"],
+  );
+  assert.equal(period.profile.matches, 1);
+  assert.equal(period.profile.unknownMinutes, 1);
+  assert.equal(period.profile.stats.goals.sum, 1);
+  assert.equal(original[0].data.appearances.length, 3);
+  assert.equal(original[0].profile.matches, 2);
+  assert.equal(playerHistoryInPeriod(original, id), original);
+});
 
 test("history groups competitions under one team total per season", () => {
   const id = "p_123456";

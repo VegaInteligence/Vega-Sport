@@ -41,6 +41,7 @@ import {
   searchPlayerAverages,
   sortPlayerAverages,
 } from "../services/player-directory.js";
+import { EMPTY_ADVANCED } from "../services/advanced-filters.js";
 
 // The API's M filter includes attacking midfielders, and its A filter
 // includes forwards. Both lines belong to the radar's offensive cohort.
@@ -64,8 +65,23 @@ export default function PlayersPage() {
     }),
     [directoryPage, setDirectoryPage] = useState({ key: "", page: 1 }),
     [comparisonIntent, setComparisonIntent] = useState("");
-  const filters = useDeferredValue(f.filters);
   const id = params.get("id");
+  const deferredFilters = useDeferredValue(f.filters);
+  const filters = useMemo(
+    () =>
+      id
+        ? {
+            ...deferredFilters,
+            minutes: 0,
+            advanced: {
+              ...EMPTY_ADVANCED,
+              from: deferredFilters.advanced.from,
+              to: deferredFilters.advanced.to,
+            },
+          }
+        : deferredFilters,
+    [id, deferredFilters],
+  );
   const overview = Boolean(id && !OTHER_PROFILE_VIEWS.includes(profileView));
   const ranking = playerDirectoryRanking(
     f.filters,
@@ -135,7 +151,10 @@ export default function PlayersPage() {
       ? RADAR_POSITIONS[subject.role?.group]
       : undefined;
   const radarEligible = Boolean(radarPosition && radarLeagues?.length);
-  const cohortParams = playerReadParams(f, { cohort: true, limit: 100 });
+  const cohortParams = playerReadParams(id ? { ...f, filters } : f, {
+    cohort: true,
+    limit: 100,
+  });
   if (overview) {
     cohortParams.leagues = compactScope(radarLeagues ?? []);
     cohortParams.pos = radarPosition;
@@ -219,16 +238,12 @@ export default function PlayersPage() {
   );
   const playerRows = useMemo(() => {
     if (!id) return [];
-    if (
-      !f.compactMode &&
-      !overview &&
-      !eligible.some((row) => row.playerId === id)
-    )
-      return [];
     return contextRows.filter((row) => row.playerId === id);
-  }, [id, overview, contextRows, eligible, f.compactMode]);
+  }, [id, contextRows]);
   const displayContext = useMemo(() => {
-    if (!f.compactMode) return f;
+    const profileFilters = id ? { filters } : {};
+    if (!f.compactMode)
+      return id ? Object.assign(Object.create(f), profileFilters) : f;
     const teams = [
       ...new Map(
         [
@@ -238,8 +253,11 @@ export default function PlayersPage() {
         ].map((team) => [team.id, team]),
       ).values(),
     ];
-    return Object.assign(Object.create(f), { data: { ...f.data, teams } });
-  }, [f, directory.value, cohort.value]);
+    return Object.assign(Object.create(f), {
+      ...profileFilters,
+      data: { ...f.data, teams },
+    });
+  }, [f, id, filters, directory.value, cohort.value]);
   // Preserve old profile links while the dedicated route owns new match lists.
   if (id && profileView === "matches")
     return (
@@ -250,7 +268,8 @@ export default function PlayersPage() {
       <Layout
         path="/joueurs/"
         title="Joueurs"
-        filters
+        filters={!id}
+        hideHeading={Boolean(id)}
         filterKind="players"
         performanceComparison={Boolean(id)}
       >
@@ -274,7 +293,13 @@ export default function PlayersPage() {
           </p>
         )}
         {id && (
-          <Suspense fallback={<p data-page-loading="" role="status">Chargement du profil…</p>}>
+          <Suspense
+            fallback={
+              <p data-page-loading="" role="status">
+                Chargement du profil…
+              </p>
+            }
+          >
             <PlayerSeasonProfile
               id={id}
               rows={playerRows}
