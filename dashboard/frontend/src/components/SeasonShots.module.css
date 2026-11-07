@@ -2,7 +2,7 @@
   --pitch-surface: light-dark(#e0eee5, #18382e);
   --pitch-line: light-dark(#769a87, #709585);
   --pitch-contrast: light-dark(#244437, #eff9f2);
-  max-inline-size: 80rem;
+  max-inline-size: 64rem;
   margin-block-start: 28px;
 }
 
@@ -17,12 +17,6 @@
 .shots .heading h3 {
   margin: 0;
   font-size: var(--text-xl);
-}
-
-.heading p {
-  margin: 5px 0 0;
-  color: var(--muted);
-  font-size: var(--text-sm);
 }
 
 .totals {
@@ -63,8 +57,8 @@
 .filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-block: 14px;
+  gap: 0 20px;
+  margin-block: 10px;
 }
 
 .filter {
@@ -72,9 +66,8 @@
   min-block-size: 36px;
   align-items: center;
   gap: 7px;
-  padding: 5px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  padding: 5px 0;
+  border: 0;
   background: transparent;
   color: var(--ink);
   font: inherit;
@@ -82,16 +75,16 @@
   cursor: pointer;
 }
 
-.filter[aria-pressed="true"] {
-  border-color: var(--border-strong);
-  background: var(--surface-raised);
+.filter[aria-pressed="true"] .filterLabel {
   color: var(--ink-strong);
-  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
-.count {
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
+.filter:focus-visible,
+.matchLink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .swatch {
@@ -129,12 +122,8 @@
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(16rem, 30%, 22rem);
-  gap: 1px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--border);
+  grid-template-columns: minmax(0, 1fr) clamp(14rem, 30%, 20rem);
+  gap: clamp(20px, 4vw, 48px);
 }
 
 .figure {
@@ -142,7 +131,6 @@
   display: grid;
   align-content: start;
   margin: 0;
-  background: var(--surface);
 }
 
 .pitchHeader,
@@ -152,7 +140,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 4px 12px;
-  padding: 12px clamp(10px, 2vw, 20px);
+  padding-block: 8px;
   color: var(--muted);
   font-size: var(--text-xs);
 }
@@ -177,7 +165,6 @@
 .plot {
   display: grid;
   place-items: center;
-  padding-inline: clamp(4px, 1.5vw, 16px);
 }
 
 .plot > * {
@@ -259,9 +246,6 @@
   z-index: 1;
   max-inline-size: calc(100% - 24px);
   margin: 0;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  background: var(--surface);
   color: var(--ink);
   font-size: var(--text-sm);
   text-align: center;
@@ -270,46 +254,8 @@
 
 .inspector {
   min-inline-size: 0;
-  padding: clamp(12px, 2vw, 22px);
-  background: var(--surface-raised);
 }
 
-.inspectorHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-block-size: 36px;
-  color: var(--muted);
-  font-size: var(--text-sm);
-  font-variant-numeric: tabular-nums;
-}
-
-.navigation {
-  display: flex;
-  gap: 4px;
-}
-
-.navigation button {
-  display: grid;
-  inline-size: 36px;
-  block-size: 36px;
-  place-items: center;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--ink);
-  cursor: pointer;
-}
-
-.navigation button:disabled {
-  color: var(--muted);
-  opacity: 0.45;
-  cursor: default;
-}
-
-.navigation svg,
 .matchLink svg {
   inline-size: 16px;
   block-size: 16px;
@@ -318,9 +264,8 @@
 .event {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  margin-block-start: 14px;
+  gap: 12px;
+  margin-block-start: 8px;
 }
 
 .outcome {
@@ -355,12 +300,10 @@
 }
 
 .metrics {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
   margin: 16px 0;
-  padding: 12px 0;
-  border-block: 1px solid var(--border);
 }
 
 .metrics dd {
@@ -374,14 +317,10 @@
 }
 
 .matchLink {
-  display: flex;
+  display: inline-flex;
   min-block-size: 40px;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
+  gap: 6px;
   color: var(--ink-strong);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -394,10 +333,10 @@
 }
 
 @media (hover: hover) {
-  .filter:hover,
-  .navigation button:not(:disabled):hover,
+  .filter:hover .filterLabel,
   .matchLink:hover {
-    background: var(--surface-hover);
+    text-decoration: underline;
+    text-underline-offset: 4px;
   }
 
   .marker:hover .dot {
@@ -420,10 +359,5 @@
   .filter,
   .matchLink {
     min-block-size: 42px;
-  }
-
-  .navigation button {
-    inline-size: 44px;
-    block-size: 44px;
   }
 }

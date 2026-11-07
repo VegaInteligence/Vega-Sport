@@ -6,7 +6,6 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { date, isNumber, number } from "../services/format.js";
 import { shotOutcome, shotPosition } from "../services/season-shots.js";
 import Icon from "./Icon.jsx";
-import { Empty } from "./UI.jsx";
 import styles from "./SeasonShots.module.css";
 
 const PITCH_LENGTH = 105;
@@ -83,6 +82,10 @@ function ShotMap({
           role="group"
           aria-label="Carte des tirs"
         >
+          <desc>
+            Utilisez les flèches gauche et droite pour passer d’un point à
+            l’autre au clavier.
+          </desc>
           <g aria-hidden="true">
             <rect className={styles.field} width={PITCH_WIDTH} height={depth} />
             <PitchEnd />
@@ -103,7 +106,7 @@ function ShotMap({
             <circle className={styles.pitchSpot} cx="34" cy="52.5" r=".23" />
             <rect className={styles.lines} width={PITCH_WIDTH} height={depth} />
           </g>
-          {placed.map((entry) => {
+          {placed.map((entry, index) => {
             const { key, shot, outcome, pos, point } = entry;
             const label = [
               shot.date && date(shot.date),
@@ -122,11 +125,24 @@ function ShotMap({
                 tabIndex={keyboardShot === entry ? 0 : -1}
                 aria-label={label}
                 aria-pressed={selected === entry}
+                onPointerEnter={(event) => {
+                  if (event.pointerType !== "touch") select(entry);
+                }}
+                onFocus={() => select(entry)}
                 onClick={() => select(entry)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
                     select(entry);
+                  }
+                  if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                    event.preventDefault();
+                    const step = event.key === "ArrowLeft" ? -1 : 1;
+                    const markers =
+                      event.currentTarget.ownerSVGElement.querySelectorAll(
+                        '[role="button"]',
+                      );
+                    markers[index + step]?.focus();
                   }
                 }}
               >
@@ -165,18 +181,21 @@ function ShotMap({
         )}
       </div>
       <figcaption>
-        <span>
-          {number(placed.length)} / {number(count)} tirs placés
-        </span>
-        <span>Taille des points selon le xG renseigné</span>
+        {placed.length < count && (
+          <span>
+            {number(placed.length)} tirs placés sur {number(count)}
+          </span>
+        )}
+        {placed.length > 0 && (
+          <span>Taille des points selon le xG renseigné</span>
+        )}
       </figcaption>
     </figure>
   );
 }
 
-function ShotInspector({ entries, selected, select }) {
+function ShotDetail({ selected }) {
   const f = useFootball();
-  const index = entries.indexOf(selected);
   const shot = selected?.shot;
   const match =
     shot?.matchId && f.data.matches.find(({ id }) => id === shot.matchId);
@@ -186,40 +205,6 @@ function ShotInspector({ entries, selected, select }) {
       : null;
   return (
     <aside className={styles.inspector} aria-label="Détail du tir">
-      <div className={styles.inspectorHeader}>
-        <span aria-live="polite">
-          {shot
-            ? `Tir ${number(index + 1)} sur ${number(entries.length)}`
-            : "Détail du tir"}
-          {shot && (
-            <span className="sr-only">{` · ${selected.outcome} ${minuteLabel(shot.minute)}`}</span>
-          )}
-        </span>
-        {entries.length > 1 && (
-          <div
-            className={styles.navigation}
-            role="group"
-            aria-label="Parcourir les tirs"
-          >
-            <button
-              type="button"
-              aria-label="Tir précédent"
-              disabled={index <= 0}
-              onClick={() => select(entries[index - 1])}
-            >
-              <Icon name="back" />
-            </button>
-            <button
-              type="button"
-              aria-label="Tir suivant"
-              disabled={index >= entries.length - 1}
-              onClick={() => select(entries[index + 1])}
-            >
-              <Icon name="arrow" />
-            </button>
-          </div>
-        )}
-      </div>
       {shot ? (
         <>
           <div className={styles.event}>
@@ -248,11 +233,6 @@ function ShotInspector({ entries, selected, select }) {
               <dd>{number(shot.xg, 2)}</dd>
             </div>
           </dl>
-          {!selected.point && (
-            <p className={styles.positionNote}>
-              Position non renseignée sur la carte.
-            </p>
-          )}
           {shot.matchId && (
             <Link
               className={styles.matchLink}
@@ -269,7 +249,8 @@ function ShotInspector({ entries, selected, select }) {
         </>
       ) : (
         <p className={styles.positionNote}>
-          Choisissez un autre résultat pour explorer les tirs.
+          Survolez ou touchez un point pour afficher sa distance, son xG et son
+          match.
         </p>
       )}
     </aside>
@@ -311,16 +292,15 @@ export default function SeasonShots({
     return (
       <section className={styles.shots} aria-label={title}>
         <h3>{title}</h3>
-        <Empty>Aucun tir collecté dans ce périmètre.</Empty>
+        <p className={styles.positionNote}>
+          Aucun tir collecté dans ce périmètre.
+        </p>
       </section>
     );
 
-  const counts = new Map([["all", shots.length]]);
-  for (const { outcome } of shots)
-    counts.set(outcome, (counts.get(outcome) || 0) + 1);
-
+  const observed = new Set(shots.map(({ outcome }) => outcome));
   const availableFilters = FILTERS.filter(
-    ({ value, optional }) => !optional || counts.has(value),
+    ({ value, optional }) => !optional || observed.has(value),
   );
   const active = availableFilters.some(({ value }) => value === filter)
     ? filter
@@ -329,12 +309,11 @@ export default function SeasonShots({
     active === "all"
       ? shots
       : shots.filter(({ outcome }) => outcome === active);
-  const selected =
-    filtered.find(({ key }) => key === selectedKey) || filtered[0];
   const select = ({ key }) => setSelectedKey(key);
   const positioned = shots.filter(({ point }) => point);
   const placed =
     active === "all" ? positioned : filtered.filter(({ point }) => point);
+  const selected = placed.find(({ key }) => key === selectedKey);
   const directionKnown =
     positioned.length > 0 && positioned.every(({ pos }) => pos.verified);
   const halfPitch =
@@ -353,10 +332,7 @@ export default function SeasonShots({
   return (
     <section className={styles.shots} aria-label={title}>
       <div className={styles.heading}>
-        <div>
-          <h3>{title}</h3>
-          <p>Sélectionnez un point pour afficher le détail du tir.</p>
-        </div>
+        <h3>{title}</h3>
         <dl className={styles.totals} aria-label="Bilan des tirs affichés">
           <div>
             <dt>Tirs</dt>
@@ -391,10 +367,7 @@ export default function SeasonShots({
             onClick={() => setFilter(value)}
           >
             <span className={`${styles.swatch} ${color}`} aria-hidden="true" />
-            {label}
-            <span className={styles.count}>
-              {number(counts.get(value) || 0)}
-            </span>
+            <span className={styles.filterLabel}>{label}</span>
           </button>
         ))}
       </div>
@@ -407,7 +380,7 @@ export default function SeasonShots({
           halfPitch={halfPitch}
           select={select}
         />
-        <ShotInspector entries={filtered} selected={selected} select={select} />
+        {placed.length > 0 && <ShotDetail selected={selected} />}
       </div>
       {hasDistance && (
         <p className={styles.note}>
