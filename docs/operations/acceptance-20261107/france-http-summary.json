@@ -1,0 +1,202 @@
+{
+  "format": "vega.france-http-acceptance.v1",
+  "reference": {
+    "region": "eu-west-3",
+    "pop": "CDG50-P5",
+    "client": "AWS Lambda Python3.13 ARM64, 512MiB",
+    "scope": "Ten European league IDs, season 2026/2027, generation 923",
+    "connection": "New HTTPS connection per trial",
+    "percentile": "Nearest rank ceil(0.95*n), empirical sample"
+  },
+  "routes": {
+    "home": {
+      "warm": {
+        "path": "/api/read/home?generation=923&leagues=l_0ALvwF%2Cl_0ErfuF%2Cl_0bfbkO%2Cl_1Isor4%2Cl_2WZ2tt%2Cl_38d9HA%2Cl_3FJFUl%2Cl_4H43wr%2Cl_4QexZg%2Cl_4WFCIZ&media=1&season=2026%2F2027",
+        "startedAt": "2026-11-07T19:52:11.270911+00:00",
+        "finishedAt": "2026-11-07T19:52:19.880520+00:00",
+        "count": 50,
+        "p50Ms": 8.909,
+        "p95Ms": 12.697,
+        "maxMs": 25.928,
+        "jsonBytes": [
+          97424
+        ],
+        "wireBodyBytes": [
+          20499
+        ],
+        "statuses": {
+          "200": 50
+        },
+        "cacheStatus": {
+          "Hit from cloudfront": 50
+        },
+        "goalMs": 300,
+        "goalMet": true,
+        "distinctBodyHashes": 1
+      },
+      "miss": {
+        "path": "/api/read/home?generation=923&leagues=l_0ALvwF%2Cl_0ErfuF%2Cl_0bfbkO%2Cl_1Isor4%2Cl_2WZ2tt%2Cl_38d9HA%2Cl_3FJFUl%2Cl_4H43wr%2Cl_4QexZg%2Cl_4WFCIZ&media=1&season=2026%2F2027",
+        "startedAt": "2026-11-07T19:53:11.357245+00:00",
+        "finishedAt": "2026-11-07T19:53:36.417466+00:00",
+        "count": 50,
+        "p50Ms": 423.329,
+        "p95Ms": 487.651,
+        "maxMs": 1266.866,
+        "jsonBytes": [
+          97424
+        ],
+        "wireBodyBytes": [
+          20496,
+          20497,
+          20498,
+          20499,
+          20500,
+          20501
+        ],
+        "statuses": {
+          "200": 50
+        },
+        "cacheStatus": {
+          "Miss from cloudfront": 50
+        },
+        "goalMs": 1000,
+        "goalMet": true,
+        "distinctBodyHashes": 50
+      }
+    },
+    "players": {
+      "warm": {
+        "path": "/api/read/players?basis=total&direction=desc&generation=923&leagues=l_0ALvwF%2Cl_0ErfuF%2Cl_0bfbkO%2Cl_1Isor4%2Cl_2WZ2tt%2Cl_38d9HA%2Cl_3FJFUl%2Cl_4H43wr%2Cl_4QexZg%2Cl_4WFCIZ&limit=20&media=1&minutes=0&page=1&season=2026%2F2027&sort=rating",
+        "startedAt": "2026-11-07T19:52:20.733561+00:00",
+        "finishedAt": "2026-11-07T19:52:29.360225+00:00",
+        "count": 50,
+        "p50Ms": 8.633,
+        "p95Ms": 11.597,
+        "maxMs": 12.41,
+        "jsonBytes": [
+          74913
+        ],
+        "wireBodyBytes": [
+          11792
+        ],
+        "statuses": {
+          "200": 50
+        },
+        "cacheStatus": {
+          "Hit from cloudfront": 50
+        },
+        "goalMs": 300,
+        "goalMet": true,
+        "distinctBodyHashes": 1
+      },
+      "miss": {
+        "path": "/api/read/players?basis=total&direction=desc&generation=923&leagues=l_0ALvwF%2Cl_0ErfuF%2Cl_0bfbkO%2Cl_1Isor4%2Cl_2WZ2tt%2Cl_38d9HA%2Cl_3FJFUl%2Cl_4H43wr%2Cl_4QexZg%2Cl_4WFCIZ&limit=20&media=1&minutes=0&page=1&season=2026%2F2027&sort=rating",
+        "startedAt": "2026-11-07T19:53:11.586190+00:00",
+        "finishedAt": "2026-11-07T19:53:39.216613+00:00",
+        "count": 50,
+        "p50Ms": 436.177,
+        "p95Ms": 496.081,
+        "maxMs": 578.048,
+        "jsonBytes": [
+          74913
+        ],
+        "wireBodyBytes": [
+          11792
+        ],
+        "statuses": {
+          "200": 50
+        },
+        "cacheStatus": {
+          "Miss from cloudfront": 50
+        },
+        "goalMs": 1000,
+        "goalMet": true,
+        "distinctBodyHashes": 1
+      }
+    },
+    "clubs": {
+      "warm": {
+        "path": "/api/read/clubs?generation=923&leagues=l_0ALvwF%2Cl_0ErfuF%2Cl_0bfbkO%2Cl_1Isor4%2Cl_2WZ2tt%2Cl_38d9HA%2Cl_3FJFUl%2Cl_4H43wr%2Cl_4QexZg%2Cl_4WFCIZ&limit=24&media=1&page=1&season=2026%2F2027",
+        "startedAt": "2026-11-07T19:52:20.955429+00:00",
+        "finishedAt": "2026-11-07T19:52:29.876964+00:00",
+        "count": 50,
+        "p50Ms": 9.897,
+        "p95Ms": 12.538,
+        "maxMs": 13.778,
+        "jsonBytes": [
+          12425
+        ],
+        "wireBodyBytes": [
+          2470
+        ],
+        "statuses": {
+          "200": 50
+        },
+        "cacheStatus": {
+          "Hit from cloudfront": 50
+        },
+        "goalMs": 300,
+        "goalMet": true,
+        "distinctBodyHashes": 1
+      },
+      "miss": {
+        "path": "/api/read/clubs?generation=923&leagues=l_0ALvwF%2Cl_0ErfuF%2Cl_0bfbkO%2Cl_1Isor4%2Cl_2WZ2tt%2Cl_38d9HA%2Cl_3FJFUl%2Cl_4H43wr%2Cl_4QexZg%2Cl_4WFCIZ&limit=24&media=1&page=1&season=2026%2F2027",
+        "startedAt": "2026-11-07T19:53:11.347592+00:00",
+        "finishedAt": "2026-11-07T19:53:32.999120+00:00",
+        "count": 50,
+        "p50Ms": 323.958,
+        "p95Ms": 348.536,
+        "maxMs": 550.361,
+        "jsonBytes": [
+          12425
+        ],
+        "wireBodyBytes": [
+          2470
+        ],
+        "statuses": {
+          "200": 50
+        },
+        "cacheStatus": {
+          "Miss from cloudfront": 50
+        },
+        "goalMs": 1000,
+        "goalMet": true,
+        "distinctBodyHashes": 1
+      }
+    }
+  },
+  "limits": [
+    "AWS Paris synthetic client, not a residential connection or browser rendering",
+    "A CDN miss is not a cold Lambda/PostgreSQL cache",
+    "Constructed hit/miss cohorts are not natural user cache hit rate",
+    "Warmup and pilot are preserved separately; no failed trial discarded",
+    "Home data.period.asOf is a request clock, so its response digest varies across misses"
+  ],
+  "simultaneousObservation": {
+    "windowStart": "2026-11-07T19:51:00+00:00",
+    "windowEnd": "2026-11-07T19:55:17.626142+00:00",
+    "periodSeconds": 60,
+    "requestedProbeConcurrency": 3,
+    "observedLambdaPeakConcurrency": 3,
+    "lambdaErrors": 0,
+    "lambdaThrottles": 0,
+    "rdsPeakOfMinuteAverageCpuPct": 10.883333333333335,
+    "rdsPeakConnections": 3,
+    "rdsMinFreeableMemoryBytes": 105517056,
+    "rdsMinFreeStorageBytes": 21807788032,
+    "loadLimit": "Bounded concurrency 3 test, not a saturation/capacity guarantee"
+  },
+  "earlierPilot": {
+    "startedAt": "2026-11-07T19:16:06.432512+00:00",
+    "generation": "922",
+    "count": 2,
+    "maxMs": 2859.169,
+    "jsonBytes": 179114,
+    "includedInFinalCohorts": false
+  },
+  "sourceCommit": "a3b5c304bbd9481f1c97c3ac2b04a9758ccc4b91",
+  "routeScopeLimits": {
+    "players": "The benchmark uses basis=total, minutes=0 and sort=rating. The default UI uses basis=perMatch, minutes=1 and ranking=rating. No equivalence of those cohorts or their timings is asserted.",
+    "home": "The reader sets data.period.asOf to its request clock; distinct miss-body hashes do not alone imply changing football facts. All 50 final miss trials retain generation 923 and 97,424 JSON bytes."
+  }
+}
