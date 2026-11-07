@@ -264,33 +264,67 @@ test("shared resource subscribers retain their independent cancellation ownershi
   assert.equal(cache.value("publication:player"), "ok");
 });
 
-test("asset permits cover byte consumption, not only response headers", async () => {
+test("native image admission shares limits and gives queued data priority", async () => {
+  const transport = createPublicApiTransport();
+  const { fetcher, started } = pendingFetcher();
+  const first = await transport.imagePermit();
+  const second = await transport.imagePermit();
+  let thirdAdmitted = false;
+  const third = transport.imagePermit().then((release) => {
+    thirdAdmitted = true;
+    return release;
+  });
+  const reads = ["one", "two", "three"].map((name) =>
+    transport.read(name, {}, fetcher),
+  );
+  await turn();
+  assert.deepEqual(transport.pending(), { active: 4, images: 2, queued: 2 });
+  first();
+  await turn();
+  assert.deepEqual(
+    started.map((item) => item.url),
+    ["one", "two", "three"],
+  );
+  assert.equal(
+    thirdAdmitted,
+    false,
+    "interactive data precedes the queued image",
+  );
+  started[0].finish();
+  await turn();
+  assert.equal(thirdAdmitted, true);
+  assert.deepEqual(transport.pending(), { active: 4, images: 2, queued: 0 });
+  started[1].finish();
+  started[2].finish();
+  await Promise.all(reads);
+  assert.deepEqual(transport.pending(), { active: 2, images: 2, queued: 0 });
+  second();
+  (await third)();
+  assert.deepEqual(transport.pending(), { active: 0, images: 0, queued: 0 });
+});
+
+test("native image admission aborts before or after acquisition without a permit leak", async () => {
   const transport = createPublicApiTransport({
     concurrency: 1,
     imageConcurrency: 1,
   });
-  let finishBytes,
-    secondStarted = false;
-  const first = transport.read(
-    "/api/assets?first",
-    {},
-    async () => new Response("bytes"),
-    "image",
-    () =>
-      new Promise((resolve) => {
-        finishBytes = resolve;
-      }),
-  );
-  const second = transport.read("/api/status", {}, async () => {
-    secondStarted = true;
-    return new Response("ok");
-  });
-  await turn();
-  assert.equal(secondStarted, false);
-  finishBytes("blob");
-  assert.equal(await first, "blob");
-  await second;
-  assert.equal(secondStarted, true);
+  const active = new AbortController();
+  const release = await transport.imagePermit({ signal: active.signal });
+  const queued = new AbortController();
+  const pending = transport.imagePermit({ signal: queued.signal });
+  const rejected = assert.rejects(pending, { name: "AbortError" });
+  queued.abort();
+  await rejected;
+  assert.deepEqual(transport.pending(), { active: 1, images: 1, queued: 0 });
+  active.abort();
+  release();
+  release();
+  assert.deepEqual(transport.pending(), { active: 0, images: 0, queued: 0 });
+  const racing = new AbortController();
+  const admitted = transport.imagePermit({ signal: racing.signal });
+  racing.abort();
+  await assert.rejects(admitted, { name: "AbortError" });
+  assert.deepEqual(transport.pending(), { active: 0, images: 0, queued: 0 });
 });
 
 test("higher-level page recovery cannot multiply a throttle or ignore a longer Retry-After", async () => {
