@@ -1,0 +1,11 @@
+# Abonnement aux ressources déjà disponibles
+
+Le cache retourne déjà un snapshot stable pendant le rendu d'une page chaude. L'ancien hook l'affichait immédiatement, puis son abonnement recopiait cette même référence dans un état local initialement vide. Ce replay déclenchait un second rendu sans nouvelle donnée. Sur un changement de clé, il fallait aussi empêcher l'ancien état local de reprendre priorité sur une publication plus récente du cache.
+
+Le hook utilise maintenant `useSyncExternalStore`. L'abonnement immédiat reste présent ; React compare le snapshot déjà rendu avec celui du cache. Le snapshot serveur reste propre au bootstrap de la requête. Le seed et les abonnements sont appliqués au commit, avec priorité aux requêtes en cours et aux données plus récentes. Les états de rafraîchissement, d'erreur et de reprise continuent à produire des snapshots distincts.
+
+Le [reçu de régression](../verification/browser-readiness-20261107/resource-subscription.json) conserve **46 tests réussis**, dont **10 cas avec un vrai root ReactDOM**. Le montage d'une ressource chaude passe de deux rendus à un ; le cycle A → B → A passe de six à trois et affiche directement la nouvelle publication A2. Une lecture `fresh` reste comptée par abonnement, sans démarrage de loader. Les tests couvrent aussi une publication entre rendu et abonnement, les erreurs/reprises, les bootstraps antérieurs/récents, l'isolation SSR, les requêtes en vol, les rendus abandonnés, StrictMode et les événements focus/visibilité.
+
+Le host React de ces tests produit une sortie vide : il vérifie le vrai cycle de hooks et d'effets, sans mesurer la mise en page du navigateur. Les comptes de plusieurs hooks ne peuvent pas être additionnés pour prédire le nombre de rendus d'une page. Les TTL, l'horloge de publication et les échéances de préparation restent inchangés. **La cible native de 100 ms reste à vérifier sur le déploiement.**
+
+Le diagnostic opt-in passe en version 4 et distingue désormais, pour les 20 derniers contrôles de préparation, le temps passé à attendre une frame et le temps de travail du contrôle lui-même. L'intervalle total, les deux frames finales et la définition d'une navigation en mémoire sont conservés.

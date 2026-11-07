@@ -1,11 +1,18 @@
 import { publicApiFetch } from "./public-api-fetch.js";
 import { apiUrl } from "../data-url.js";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 import { createResourceCache } from "./resource-cache.js";
 import { useResourceBootstrap } from "./resource-bootstrap.js";
 import { acceptMediaPayload } from "./media-registry.js";
 import { recordAcceptanceCacheRead } from "./navigation-acceptance.js";
 const cache = createResourceCache({ onRead: recordAcceptanceCacheRead });
+const unavailable = Object.freeze({ loading: true });
 export async function json(url, options) {
   const response = await publicApiFetch(apiUrl(url), options);
   if (!response.ok)
@@ -24,22 +31,71 @@ export function primeResource(key, loader) {
 }
 export function useResource(key, loader, enabled = true) {
   const bootstrap = useResourceBootstrap();
-  const seeded =
-    bootstrap?.resources && Object.hasOwn(bootstrap.resources, key)
-      ? {
-          key,
-          value: bootstrap.resources[key],
-          loading: false,
-          refreshing: false,
-        }
-      : null;
-  const [result, setResult] = useState({ key: null, loading: true });
   const loaderRef = useRef({ key, loader });
   // Only committed renders may replace a key's loader. An old subscription or
   // callback must never store the next route's response under its previous key.
   useEffect(() => {
     loaderRef.current = { key, loader };
   }, [key, loader]);
+  const store = useMemo(() => {
+    const seeded =
+      bootstrap?.resources && Object.hasOwn(bootstrap.resources, key)
+        ? {
+            key,
+            value: bootstrap.resources[key],
+            loading: false,
+            refreshing: false,
+          }
+        : null;
+    let committed = false;
+    return {
+      getSnapshot() {
+        if (!enabled) return unavailable;
+        // Before commit, a request-specific seed may supply an absent/older
+        // cache entry. Once subscribed, the cache owns pending/error states as
+        // well as values; a seed must never hide a live refresh or publication.
+        if (committed) return cache.peek(key) || unavailable;
+        return seeded
+          ? cache.peekSince(key, bootstrap.createdAt) || seeded
+          : cache.peek(key) || unavailable;
+      },
+      // SSR/hydration must only see this request's bootstrap, never a value
+      // retained by another server request. Both fallbacks are stable objects.
+      getServerSnapshot: () => (enabled ? seeded || unavailable : unavailable),
+      subscribe(listener) {
+        if (!enabled) return () => {};
+        if (seeded) {
+          cache.seed(key, seeded.value, { updatedAt: bootstrap.createdAt });
+          acceptMediaPayload(
+            key === "manifest" ? "/api/dashboard/manifest" : "",
+            seeded.value,
+          );
+        }
+        if (key.startsWith("season:") && key.endsWith(":full"))
+          for (const old of cache.keys())
+            if (
+              old.startsWith("season:") &&
+              old.endsWith(":full") &&
+              old !== key
+            )
+              cache.forget(old);
+        if (key.startsWith("compact-cohort:"))
+          for (const old of cache.keys())
+            if (old.startsWith("compact-cohort:") && old !== key)
+              cache.forget(old);
+        committed = true;
+        // The cache's immediate replay is kept. React compares its stable
+        // snapshot with the one already rendered, so a warm subscription does
+        // not schedule a second identical render.
+        return cache.subscribe(key, listener);
+      },
+    };
+  }, [key, enabled, bootstrap]);
+  const result = useSyncExternalStore(
+    store.subscribe,
+    store.getSnapshot,
+    store.getServerSnapshot,
+  );
   const revalidate = useCallback(() => {
     if (!enabled) return Promise.resolve(undefined);
     const read =
@@ -50,21 +106,6 @@ export function useResource(key, loader, enabled = true) {
   const retry = useCallback(() => revalidate().catch(() => {}), [revalidate]);
   useEffect(() => {
     if (!enabled) return;
-    if (seeded) {
-      cache.seed(key, seeded.value, { updatedAt: bootstrap.createdAt });
-      acceptMediaPayload(
-        key === "manifest" ? "/api/dashboard/manifest" : "",
-        seeded.value,
-      );
-    }
-    if (key.startsWith("season:") && key.endsWith(":full"))
-      for (const old of cache.keys())
-        if (old.startsWith("season:") && old.endsWith(":full") && old !== key)
-          cache.forget(old);
-    if (key.startsWith("compact-cohort:"))
-      for (const old of cache.keys())
-        if (old.startsWith("compact-cohort:") && old !== key) cache.forget(old);
-    const unsubscribe = cache.subscribe(key, setResult);
     const refreshIfStale = () => {
       if (document.visibilityState === "hidden") return;
       const read =
@@ -75,21 +116,12 @@ export function useResource(key, loader, enabled = true) {
     window.addEventListener("focus", refreshIfStale);
     document.addEventListener("visibilitychange", refreshIfStale);
     return () => {
-      unsubscribe();
       window.removeEventListener("focus", refreshIfStale);
       document.removeEventListener("visibilitychange", refreshIfStale);
     };
   }, [key, enabled]);
   return {
-    ...(enabled && result.key === key
-      ? result
-      : enabled && seeded
-        ? (typeof window !== "undefined" &&
-            cache.peekSince(key, bootstrap.createdAt)) ||
-          seeded
-        : enabled && cache.peek(key)
-          ? cache.peek(key)
-          : { loading: true }),
+    ...result,
     retry,
     revalidate,
   };

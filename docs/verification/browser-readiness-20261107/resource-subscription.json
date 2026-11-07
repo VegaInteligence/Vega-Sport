@@ -1,0 +1,51 @@
+{
+  "baseCommit": "0f17dbfb338a912d910168909835ab33d3a1d38d",
+  "candidate": {
+    "tests": 46,
+    "pass": 46,
+    "fail": 0,
+    "skip": 0,
+    "realReactDomCases": 10
+  },
+  "mechanism": "useSyncExternalStore observes the cache stable snapshots; immediate subscription replay is preserved. React Object.is suppresses identical warm updates.",
+  "baseline": {
+    "realReactDomCases": 10,
+    "pass": 6,
+    "fail": 4,
+    "warmRenderCount": 2,
+    "cycleAToBToARenderCount": 6,
+    "failed": [
+      "warm mount duplicate render",
+      "warm A/B/A duplicate commits",
+      "bootstrap contract assertion",
+      "request-isolated server snapshot"
+    ]
+  },
+  "candidateWarm": {
+    "warmRenderCount": 1,
+    "cycleAToBToARenderCount": 3,
+    "freshReadCountPerWarmSubscription": 1,
+    "loaderCount": 0
+  },
+  "coverage": [
+    "publication between render and subscribe",
+    "A publication while B is active, then return to A",
+    "refresh states, retained error and retry",
+    "older and newer request bootstrap",
+    "server request isolation with no cache mutation",
+    "pending request wins over bootstrap",
+    "suspended uncommitted render cannot replace loader",
+    "StrictMode resubscription and final abort",
+    "disabled state and stale visibility/focus refresh"
+  ],
+  "sourceSha256": {
+    "dashboard/frontend/src/services/resources.js": "7dd7e9dc8b0210ee9db55fc3de1eda958f93f7ed17cfa1788a8e47ce2a5c4118",
+    "tests/resource-hook-identity.test.mjs": "fe95df162814cf64eade40d5799409e68bca4633f76e81491536dec02e614091",
+    "tests/resource-subscription-react.test.mjs": "c53b9a0c5e076095da8373d387687bf5f54fd6bd87f9102dfed94bc9cbd8fbfb"
+  },
+  "limits": [
+    "Real ReactDOM renders null using a minimal host document. It verifies hook rendering/effects, not native DOM layout or paint latency.",
+    "Per-hook render counts cannot be summed across hooks/providers because React may batch their updates.",
+    "Production performance still requires deployed browser acceptance."
+  ]
+}

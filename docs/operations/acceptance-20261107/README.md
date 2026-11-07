@@ -132,6 +132,22 @@ Les premières ouvertures avec lectures réseau sont conservées, sans les méla
 
 Le marqueur de première disponibilité est **13 695,1 ms** sur ce document ; le cache HTTP préexistant n'est pas contrôlé. Les quatre retours en mémoire n'ont aucun loader, aucun transfert API/RSC ni aucune requête bloquante. Ils dépassent tous 100 ms. Les délais entre création du main et ready dominent les retours Clubs/Joueurs ; pour l'accueil, la création du DOM dépasse déjà 100 ms. Les deux frames finales de trois autres parcours prennent environ deux secondes : cette observation est conservée sans l'attribuer à un timeout d'image ni à une cause de plateforme non démontrée. Ces mesures orientent un correctif de préparation du rendu ; elles ne constituent pas encore son résultat.
 
+## Contrôle supplémentaire après PR44
+
+[PR44](https://github.com/VegaInteligence/Vega-Sport/pull/44) est déployée sur `0f17dbfb338a912d910168909835ab33d3a1d38d` après [trois jobs CI réussis](https://github.com/VegaInteligence/Vega-Sport/actions/runs/42413222112). Le [reçu de livraison](release-pr44.json) et les [sept transitions complètes](browser-after-pr44.json) sont conservés. Les délais des images, l'horloge et le critère de fin n'ont pas changé.
+
+La première disponibilité est observée à **1 738,9 ms** dans ce nouveau document, avec cache HTTP préexistant non contrôlé. Ce chiffre ne prouve pas un gain causal par rapport aux ouvertures précédentes. Les trois retours classés en mémoire sont :
+
+| Destination | Nouveau main (ms) | Ready (ms) | Deux frames finales (ms) | Total (ms) |
+| --- | ---: | ---: | ---: | ---: |
+| Clubs | 56,3 | 247,5 | 2 030 | **2 277,5** |
+| Joueurs | 76,3 | 297,3 | 28,3 | **325,6** |
+| Clubs | 181,3 | 413,7 | 29,1 | **442,8** |
+
+**La cible de 100 ms reste non atteinte.** Les deux premières ouvertures et le premier retour Clubs ont utilisé une attente de sélecteur sur le compteur de reçus ; les autres parcours ont été lus dans un appel ultérieur sans cette attente active. Tous restent présents. Le délai d'environ deux secondes entre ready et la seconde frame a aussi été observé ailleurs ; sa cause n'est pas attribuée sans preuve. Le dernier retour Accueil de **679,4 ms** comporte un loader, deux requêtes déjà en vol et des transferts API/RSC : il n'est pas classé en mémoire. Aucun résultat n'est éliminé pour produire un percentile favorable.
+
+La suite se concentre sur le replay d'abonnement du cache et une trace opt-in séparant le travail du contrôleur de préparation de son attente d'une frame. La correction des invariants de disponibilité ne constitue pas, à elle seule, une réussite de latence.
+
 ## Politique de cache par route et condition
 
 La politique suivante fixe un objectif vérifiable de réutilisation pour les quatre lectures critiques ci-dessous. **Elle n'est pas un taux naturel déjà obtenu.** Pour chaque route, on distingue le trafic complet et la sous-cohorte des répétitions éligibles : même POP, URL canonique complète, génération, représentation et négociation de compression, après une réponse mise en cache, dans sa durée de validité, sans changement de période ou de publication. Les premières demandes et les nouvelles clés restent présentes dans le taux naturel, même si elles ne sont pas des répétitions éligibles.
