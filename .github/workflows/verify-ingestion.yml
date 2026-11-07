@@ -99,6 +99,13 @@ jobs:
         run: >-
           BUN_BINARY="$(command -v bun)" node --test
           tests/navigation-performance.test.mjs
+          tests/navigation-prefetch.test.mjs
+          tests/home-bootstrap.test.mjs
+          tests/home-bootstrap-preferences.test.mjs
+          tests/media-registry.test.mjs
+          tests/resolved-media.test.mjs
+          tests/relational-home-cache.test.mjs
+          tests/home-projection.test.mjs
           tests/archive-navigation.test.mjs
           tests/archive.test.mjs
           tests/club-overview-loading.test.mjs

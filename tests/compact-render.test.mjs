@@ -219,6 +219,12 @@ test("the dedicated match catalogue cannot poison the actor profile cache", asyn
     "../src/hooks/ResearchContext.jsx": {
       ResearchProvider: ({ children }) => children,
     },
+    "../src/components/ResourceBootstrap.jsx": moduleDefault(
+      ({ children }) => children,
+    ),
+    "../src/components/MediaContext.jsx": {
+      MediaProvider: ({ children }) => children,
+    },
   });
   const jobs = [],
     reads = [],
@@ -710,15 +716,42 @@ test("player overview defers the complete matching peer lines without filtering 
 test("player career overview renders club, competition and national career with positions", async () => {
   const id = "p_123456";
   const appearances = [
-    { playerId: id, matchId: "m_club", teamId: "club", team: "Club A", leagueId: "l_0ErfuF", minutes: 90 },
-    { playerId: id, matchId: "m_nation", teamId: "spain", team: "Espagne", leagueId: "l_1XLtP0", minutes: 90 },
+    {
+      playerId: id,
+      matchId: "m_club",
+      teamId: "club",
+      team: "Club A",
+      leagueId: "l_0ErfuF",
+      minutes: 90,
+    },
+    {
+      playerId: id,
+      matchId: "m_nation",
+      teamId: "spain",
+      team: "Espagne",
+      leagueId: "l_1XLtP0",
+      minutes: 90,
+    },
   ];
-  const { aggregateSeason } = await import("../dashboard/frontend/src/services/season-player.js");
-  const history = [{ season, data: {
-    appearances,
-    teams: [{ id: "club", name: "Club A" }, { id: "spain", name: "Espagne" }],
-    competitions: [{ id: "l_0ErfuF", name: "Liga" }, { id: "l_1XLtP0", name: "Coupe du monde" }],
-  }, profile: aggregateSeason(appearances, id) }];
+  const { aggregateSeason } =
+    await import("../dashboard/frontend/src/services/season-player.js");
+  const history = [
+    {
+      season,
+      data: {
+        appearances,
+        teams: [
+          { id: "club", name: "Club A" },
+          { id: "spain", name: "Espagne" },
+        ],
+        competitions: [
+          { id: "l_0ErfuF", name: "Liga" },
+          { id: "l_1XLtP0", name: "Coupe du monde" },
+        ],
+      },
+      profile: aggregateSeason(appearances, id),
+    },
+  ];
   const component = await compile("components/PlayerCareerStats.jsx", {
     "next/navigation": { useSearchParams: () => new URLSearchParams({ id }) },
     "../hooks/FootballContext.jsx": { useFootball: () => ({ manifest }) },
@@ -728,12 +761,22 @@ test("player career overview renders club, competition and national career with 
       primeResource: async () => history,
     },
     "./NationalFlag.jsx": moduleDefault(blank),
-    "./PlayerObservedValue.jsx": moduleDefault(({ value }) => h("span", null, value)),
-    "./PlayerPositionPitch.jsx": moduleDefault(() => h("div", { "data-position-pitch": "mounted" })),
+    "./PlayerObservedValue.jsx": moduleDefault(({ value }) =>
+      h("span", null, value),
+    ),
+    "./PlayerPositionPitch.jsx": moduleDefault(() =>
+      h("div", { "data-position-pitch": "mounted" }),
+    ),
     "./UI.jsx": ui,
   });
-  const html = renderToStaticMarkup(h(component.default, { id, season, overview: true }));
-  for (const title of ["Performance par club", "Performance par compétition", "Carrière en sélection"])
+  const html = renderToStaticMarkup(
+    h(component.default, { id, season, overview: true }),
+  );
+  for (const title of [
+    "Performance par club",
+    "Performance par compétition",
+    "Carrière en sélection",
+  ])
     assert.match(html, new RegExp(title));
   assert.match(html, /Club A/);
   assert.match(html, /Espagne/);

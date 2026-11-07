@@ -5,6 +5,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import Layout from "../components/Layout.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
+import { useResourceBootstrap } from "../services/resource-bootstrap.js";
+import { mirrorHomeState } from "../services/home-bootstrap-preferences.js";
 import { AsyncState, Empty } from "../components/UI.jsx";
 import useCompactRead from "../hooks/useCompactRead.js";
 import { compactGeneration, compactScope } from "../services/compact-reads.js";
@@ -60,7 +62,8 @@ import {
 } from "../services/home-insights.js";
 
 function useClock() {
-  const [now, setNow] = useState(() => Date.now());
+  const bootstrap = useResourceBootstrap();
+  const [now, setNow] = useState(() => bootstrap?.now || Date.now());
   useEffect(() => {
     const update = () => setNow(Date.now());
     const timer = window.setInterval(update, 60_000);
@@ -312,6 +315,16 @@ function CompactOverview() {
       },
       { clock: Math.floor(now / 300_000), refreshManifest: f.refreshManifest },
     );
+  useEffect(() => {
+    if (!f.preferencesReady || !research?.ready) return;
+    mirrorHomeState({
+      preferences: f.preferences, season: f.season,
+      personalTeams: saved("clubs").split(",").filter(Boolean),
+      personalPlayers: saved("players").split(",").filter(Boolean),
+    });
+    if (summary.value && !summary.loading)
+      delete document.documentElement.dataset.homeBootstrapMismatch;
+  }, [f.preferencesReady, research?.ready, f.preferences, f.season, scopeKey, summary.value, summary.loading]);
   if (summary.loading || summary.error)
     return (
       <Layout

@@ -93,6 +93,12 @@ async function imageComponent(
         imagePending: "imagePending",
       },
     },
+    "../services/resolved-media.js": { safeResolvedMedia: () => "" },
+    "./MediaContext.jsx": {
+      safeResolvedMedia: () => "",
+      useResolvedMedia: () => "",
+    },
+    "./DirectMediaImage.jsx": { __esModule: true, default: () => null },
     "./Icon.jsx": { __esModule: true, default: () => null },
     "./ApiImage.jsx": { __esModule: true, default: () => null },
     "../services/format.js":
@@ -630,9 +636,15 @@ test("Media displays initials until image load has decoded", async () => {
 });
 
 test("Media presents a neutral fallback when the name is unknown", async () => {
-  await imageComponent(async ({ render, commit }) => {
-    const media = render({ name: '  ', url: 'https://cdn.pitchapi.dev/first.webp' });
-    commit();
-    assert.deepEqual(media.props.children[0].props.children, ['—']);
-  }, { component: 'Media' });
+  await imageComponent(
+    async ({ render, commit }) => {
+      const media = render({
+        name: "  ",
+        url: "https://cdn.pitchapi.dev/first.webp",
+      });
+      commit();
+      assert.deepEqual(media.props.children[0].props.children, ["—"]);
+    },
+    { component: "Media" },
+  );
 });

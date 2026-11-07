@@ -1,5 +1,7 @@
 import Icon from "./Icon.jsx";
 import ApiImage from "./ApiImage.jsx";
+import DirectMediaImage from "./DirectMediaImage.jsx";
+import { useResolvedMedia } from "./MediaContext.jsx";
 import mediaStyles from "./Media.module.css";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -22,6 +24,7 @@ export function Media({ name = "", url, fallbackUrl, className = "crest" }) {
 }
 function MediaSource({ name, url, fallbackUrl, className }) {
   const [failed, setFailed] = useState(false);
+  const [directFailed, setDirectFailed] = useState(false);
   const [fallbackFailed, setFallbackFailed] = useState(false);
   const [deferred, setDeferred] = useState(false);
   const [loaded, setLoaded] = useState(null);
@@ -32,9 +35,14 @@ function MediaSource({ name, url, fallbackUrl, className }) {
     node.addEventListener("vega:defer-image", defer);
     return () => node.removeEventListener("vega:defer-image", defer);
   }, []);
+  const source = failed ? fallbackUrl : url;
+  const direct = useResolvedMedia(source);
+  const legacy = mediaImageSource(url, fallbackUrl, failed, fallbackFailed);
   const src = deferred
     ? null
-    : mediaImageSource(url, fallbackUrl, failed, fallbackFailed);
+    : !directFailed && direct && legacy
+      ? direct
+      : legacy;
   return (
     <span
       ref={element}
@@ -57,7 +65,15 @@ function MediaSource({ name, url, fallbackUrl, className }) {
         </span>
       ) : null}
       {src ? (
-        <ApiImage
+        <MediaImage
+          direct={src === direct}
+          dimension={
+            /season-player-portrait|pc-portrait/.test(className)
+              ? 192
+              : /home-avatar-xl/.test(className)
+                ? 96
+                : 64
+          }
           className={
             loaded === src ? mediaStyles.imageReady : mediaStyles.imagePending
           }
@@ -68,12 +84,22 @@ function MediaSource({ name, url, fallbackUrl, className }) {
           referrerPolicy="no-referrer"
           onLoad={() => setLoaded(src)}
           onError={() => {
-            if (!failed && src === safeImageUrl(url)) setFailed(true);
-            else setFallbackFailed(true);
+            if (src === direct) setDirectFailed(true);
+            else if (!failed && src === safeImageUrl(url)) {
+              setFailed(true);
+              setDirectFailed(false);
+            } else setFallbackFailed(true);
           }}
         />
       ) : null}
     </span>
+  );
+}
+function MediaImage({ direct, dimension, ...props }) {
+  return direct ? (
+    <DirectMediaImage key={props.src} {...props} dimension={dimension} />
+  ) : (
+    <ApiImage {...props} />
   );
 }
 export function Card({ title, children, action, footer, className = "" }) {

@@ -25,7 +25,7 @@ PILOT=ROOT/'docs/verification/orion-pro-pilot-20261104'
 MODEL=ROOT/'docs/architecture/orion-plan-20261104/target-schema.proposed.json'
 MODEL_SHA='18da43f940870b7a3a3cb49323c847dd5e5174e5eea1f8ff0c8a159cf373cb08'
 SERVICE_NAMES=['orion-pro.js','orion-pro-entities.js','orion-pro-operations.js','orion-pro-appearances.js','orion-pro-fixture-aliases.js','orion-pro-competitions.js','orion-pro-match-details.js','orion-pro-archives.js','orion-pro-player-statistics.js','orion-pro-match-statistics.js','orion-pro-enrichment.js','orion-pro-spatial-advanced.js','orion-pro-rankings.js','orion-pro-season.js','postgres.js','database-connection.js','metrics.js','cache-policy.js','cache.js',
- 'relational-match.js','relational-support.js','relational-catalog.js','cdn.js','relational-core.js','partition-wire.js',
+ 'relational-match.js','relational-support.js','relational-catalog.js','cdn.js','resolved-media.js','relational-core.js','partition-wire.js',
  'relational-discovery.js','relational-actors.js','relational-performance.js','relational-players.js',
  'relational-clubs.js','relational-home.js','relational-discipline.js','relational-read-utils.js',
  'relational-read-cache.js','relational-player-rollups.js','relational-archives.js',

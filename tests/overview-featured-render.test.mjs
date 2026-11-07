@@ -92,6 +92,8 @@ async function overview({
     "../hooks/ResearchContext.jsx": {
       useResearch: () => ({ data: { lists: [] } }),
     },
+    "../services/resource-bootstrap.js": { useResourceBootstrap: () => null },
+    "../services/home-bootstrap-preferences.js": { mirrorHomeState: () => {} },
     "../components/UI.jsx": {
       Empty: ({ children }) => h("div", { "data-empty": "" }, children),
       AsyncState: ({ resource, children, loading }) =>

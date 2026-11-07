@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import useImageIntent from "../hooks/useImageIntent.js";
 import { apiUrl } from "../data-url.js";
+import { safeResolvedMedia } from "../services/resolved-media.js";
 import { acquirePublicImage } from "../services/public-api-fetch.js";
 
 /** Only public /api/assets images use this queue; local/external assets stay native. */
@@ -41,6 +42,11 @@ export default function ApiImage({
     let url;
     Promise.resolve()
       .then(() => {
+        const direct = safeResolvedMedia(src);
+        if (direct) {
+          url = direct;
+          return () => {};
+        }
         url = apiUrl(src);
         if (
           new URL(url, "https://statarena.invalid").pathname !== "/api/assets"

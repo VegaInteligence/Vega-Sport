@@ -1,8 +1,8 @@
 name: Collect football (AWS)
 on:
   schedule:
-    - cron: '35 22 * * *'
-    - cron: '10 6 * * *'
+    - cron: "35 22 * * *"
+    - cron: "10 6 * * *"
   workflow_dispatch:
     inputs:
       mode:
@@ -12,13 +12,13 @@ on:
         default: daily
       minutes:
         description: Collection minutes, 1-240 (90 minutes reserved for publication and setup)
-        default: ''
+        default: ""
       max_requests:
         description: Provider request limit (blank uses mode default)
-        default: ''
+        default: ""
       priority_league:
         description: Optional provider league ID
-        default: ''
+        default: ""
       collect_assets:
         description: Collect newly discovered images
         type: boolean
@@ -100,12 +100,12 @@ jobs:
           } >> "$GITHUB_OUTPUT"
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: "3.13"
           cache: pip
           cache-dependency-path: dashboard/scripts/requirements.txt
       - uses: actions/setup-node@v4
         with:
-          node-version: '26'
+          node-version: "26"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
@@ -167,6 +167,9 @@ jobs:
         run: |
           set -euo pipefail
           python dashboard/scripts/relational_materialize.py --minutes 45 --batch 10 | tee serving-tables.log
+      - name: Refresh home projections after publication
+        continue-on-error: true
+        run: node dashboard/scripts/home_projection.mjs
       - name: Report incomplete optional collection
         if: ${{ !cancelled() && (steps.supplemental.outcome == 'failure' || steps.honours.outcome == 'failure' || steps.portraits.outcome == 'failure' || steps.images.outcome == 'failure') }}
         run: |

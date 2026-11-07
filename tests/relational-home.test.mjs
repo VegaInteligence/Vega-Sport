@@ -535,6 +535,9 @@ test(
         "another season's rounds cannot open this season",
       );
       const catalogId = await addRound(season);
+      await client.query(
+        "UPDATE statarena_app.publications SET published_at=clock_timestamp()",
+      );
       assert.equal(
         (await (await get()).json()).data.raceOpen,
         true,
@@ -544,6 +547,9 @@ test(
         "UPDATE statarena_app.cat_matchdays_matches SET missing=ARRAY['name'] WHERE resource_id=$1",
         [catalogId],
       );
+      await client.query(
+        "UPDATE statarena_app.publications SET published_at=clock_timestamp()",
+      );
       assert.equal(
         (await (await get()).json()).data.raceOpen,
         false,
@@ -551,6 +557,9 @@ test(
       );
       await client.query(
         "UPDATE statarena_app.fixtures SET round_name='Semi-finals' WHERE id='m_cat001'",
+      );
+      await client.query(
+        "UPDATE statarena_app.publications SET published_at=clock_timestamp()",
       );
       assert.equal(
         (await (await get()).json()).data.raceOpen,

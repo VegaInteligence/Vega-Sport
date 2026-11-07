@@ -146,3 +146,32 @@ test("the cache bounds unobserved entries while retaining subscribed values", as
   assert.equal(cache.forget("visible"), false);
   unsubscribe();
 });
+
+test("seed reuses server data but cannot overwrite fresher or in-flight client work", async () => {
+  let now = 1000,
+    reads = 0,
+    resolve;
+  const cache = createResourceCache({ now: () => now, maxAge: 100 });
+  cache.seed("home", { value: "server" }, { updatedAt: 950 });
+  assert.deepEqual(await cache.load("home", () => ++reads), {
+    value: "server",
+  });
+  assert.equal(reads, 0);
+  cache.seed("home", { value: "older" }, { updatedAt: 900 });
+  assert.equal(cache.peek("home").value.value, "server");
+  const pending = cache.load(
+    "home",
+    () =>
+      new Promise((done) => {
+        resolve = done;
+      }),
+    { force: true },
+  );
+  await Promise.resolve();
+  cache.seed("home", { value: "late server" }, { updatedAt: 1100 });
+  resolve({ value: "network" });
+  await pending;
+  assert.equal(cache.peek("home").value.value, "network");
+  now = 1100;
+  assert.equal(cache.value("home"), undefined);
+});

@@ -2,6 +2,10 @@ import { publicApiFetch, wasPublicApiThrottle } from "./public-api-fetch.js";
 import { apiUrl } from "../data-url.js";
 import { europeFocusIds } from "../../../shared/competition-scope.js";
 import { advancedQuery, EMPTY_ADVANCED } from "./advanced-filters.js";
+import {
+  acceptMediaPayload,
+  mediaRepresentationEnabled,
+} from "./media-registry.js";
 
 export function supportsCompactRead(manifest, kind, { ranking } = {}) {
   return (
@@ -115,7 +119,9 @@ export async function readCompact(
 ) {
   signal?.throwIfAborted();
   const response = await publicApiFetch(
-    apiUrl(`/api/read/${kind}?${compactQuery(params)}`),
+    apiUrl(
+      `/api/read/${kind}?${compactQuery({ ...params, ...(mediaRepresentationEnabled() ? { media: 1 } : {}) })}`,
+    ),
     {
       signal,
       headers: { Accept: "application/json" },
@@ -146,6 +152,7 @@ export async function readCompact(
     (params.generation && params.generation !== generation)
   )
     throw new Error("La publication reçue ne correspond pas à la sélection.");
+  acceptMediaPayload(`/api/read/${kind}`, body);
   return body;
 }
 
