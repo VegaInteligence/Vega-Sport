@@ -3,9 +3,12 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import { spawn } from "node:child_process";
 
+const partitionDigest = "a".repeat(64);
+
 async function probe({
   compact = false,
   wrongGeneration = false,
+  wrongPartitionGeneration = false,
   required = false,
 } = {}) {
   const requests = [],
@@ -20,7 +23,7 @@ async function probe({
         chunks: [
           {
             leagueId: "l_000001",
-            sourceDigest: "source-v2",
+            sourceDigest: partitionDigest,
             meta: { matchCount: 4 },
           },
         ],
@@ -77,7 +80,15 @@ async function probe({
         body = manifest;
         break;
       case "/api/seasons/partition":
-        body = { data: {}, pagination: { nextCursor: null, generation } };
+        body = {
+          data: {},
+          pagination: {
+            nextCursor: null,
+            generation: wrongPartitionGeneration
+              ? "b".repeat(64)
+              : partitionDigest,
+          },
+        };
         break;
       case "/api/read/home":
         body = { data: { period: { startDay: "2026-11-02" }, results: [] } };
@@ -189,7 +200,7 @@ test("acceptance checks bounded compact reads, actor details, ETags and a second
   assert.deepEqual(result.report.compactReads.unexercised, []);
   assert.equal(
     result.requests.find((r) => r.path === "/api/seasons/partition").query.v,
-    "source-v2",
+    partitionDigest,
   );
   const compact = result.requests.filter((r) =>
     r.path.startsWith("/api/read/"),
@@ -204,6 +215,14 @@ test("acceptance checks bounded compact reads, actor details, ETags and a second
   assert.ok(
     result.report.checks.some((r) => r.status === 304 && r.bytes === 0),
   );
+});
+
+test("acceptance rejects a different partition digest before compact reads", async () => {
+  const result = await probe({ compact: true, wrongPartitionGeneration: true });
+  assert.equal(result.code, 1);
+  assert.equal(result.report.passed, false);
+  assert.match(result.report.error, /Partition generation differs/);
+  assert.ok(result.requests.every((r) => !r.path.startsWith("/api/read/")));
 });
 
 test("acceptance rejects mixed publications and a partial capability rollout", async () => {
