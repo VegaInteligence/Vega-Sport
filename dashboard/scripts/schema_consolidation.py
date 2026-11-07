@@ -25,6 +25,7 @@ def call(db, name, *args):
 def summary(db):
     value = call(db, "status")
     return {**{key: value[key] for key in ("control", "active_physical_tables", "retired_physical_tables")},
+            **{key: value[key] for key in ("rollback_available", "recovery_strategy", "physical_retirement") if key in value},
             "target_count": len(value["targets"]),
             "completed_copies": sum(bool(v.get("complete")) for k, v in value["progress"].items() if k.startswith("copy:")),
             "completed_row_proofs": sum(bool(v.get("complete")) for k, v in value["progress"].items() if k.startswith("verify:")),

@@ -20,7 +20,9 @@ def main():
             assert db.execute("SELECT to_regnamespace('statarena_app')").fetchone()[0] is None
             db.execute((SCHEMA / '003_relational_core.sql').read_text())
             db.execute('CREATE TABLE statarena_app.worker_schema(version text PRIMARY KEY,digest text NOT NULL)')
-            for prefix in ('003_', '004_', '005_', '006_', '007_', '008_', '009_', '010_', '011_', '020_', '021_', '022_', '023_', '024_', '025_', '026_', '027_', '028_', '029_', '030_', '031_', '032_', '033_', '034_'):
+            # This fixture executes only 035; unrelated 036 depends on the real
+            # consolidation schema exercised by its separate native fixture.
+            for prefix in ('003_', '004_', '005_', '006_', '007_', '008_', '009_', '010_', '011_', '020_', '021_', '022_', '023_', '024_', '025_', '026_', '027_', '028_', '029_', '030_', '031_', '032_', '033_', '034_', '036_'):
                 (file,) = SCHEMA.glob(prefix + '*.sql')
                 db.execute('INSERT INTO statarena_app.worker_schema VALUES(%s,%s)', (file.name, hashlib.sha256(file.read_bytes()).hexdigest()))
             install(db)
