@@ -49,7 +49,7 @@ Cancellation is shared at both levels: multiple widgets can need one family, and
 
 Pro resource keys use the displayed edition tokens. Stale or missing editions receive separate error identities during rendering, then fail inside the asynchronous reader before consulting successful shared data. Sources without a publication token remain isolated by their source object. This preserves controlled loading/error rendering during a publication change.
 
-## Capacity-burst follow-up — implemented, deployment pending
+## Capacity-burst follow-up — deployed, native image correction prepared
 
 The direct-origin runtime review identified a second bottleneck: simultaneous JSON and image requests could exhaust the backend's concurrency even when individual queries were fast. The browser now shares one public-read scheduler across its existing API readers. It admits **four reads at once**, with **at most two image downloads**, and chooses interactive data before queued images. Its backlog is bounded to 256 entries. The manifest's early HTML preload remains an independent browser preload; static branding, trophy art, external embeds and the Next-only country helper retain their existing delivery paths. This is protection against a burst from one document, not a global admission controller for multiple users or tabs.
 
@@ -57,19 +57,23 @@ Only GET/HEAD throttling is retried: HTTP 429, or HTTP 503 with a valid `Retry-A
 
 Queued requests honor their supplied abort signal before fetch starts. Active requests and backoff use the same signal. Publication-aware resource caches continue to own subscription cancellation: one subscriber leaving cannot cancel another subscriber's request, while the final subscriber can cancel the underlying work. No response generation, representation token or compatibility-fallback rules are changed.
 
-The existing `Media` component and proxied stadium plans now start their image requests on visible intent through the same budget. Duplicate images share Blob bytes through the existing resource cache; each mounted image creates and revokes its own object URL. At most 64 blobs of up to 256 KiB each are retained between views, for at most **16 MiB** of retained image bytes, with a **60-second** freshness interval. Larger images within the publisher's existing 4 MiB bound are delivered but not retained in that cache. Native image decode errors and missing-source fallbacks remain available. An exhausted throttle shows the existing initials fallback instead of immediately requesting an alternate URL. The existing public asset route and final media CDN support anonymous CORS; no credentials or new external image hosts are introduced.
+The original PR #30 implementation fetched image bytes into Blobs. The post-cutover browser check exposed a production regression: the final media CDN served valid WebP bytes but omitted `Access-Control-Allow-Origin`, including direct checks with the frontend Origin and `Origin: null`. Its managed-policy configuration did not establish the live response contract. Visible portraits and crests therefore fell back to initials. The Blob cache, object URLs and image-byte fetch helper have been removed from the prepared correction.
 
-The focused regression command passed **107 tests**, including **18 new scheduler/image checks**, before deployment:
+The corrected `Media` component and proxied stadium plans use native `<img>` requests under the **same four-read/two-image budget**. An image gets its actual API source only after visible intent and admission. Its permit remains held until native load/error, source replacement or unmount. Cleanup removes the source from the owned image element before releasing its permit; old-element events cannot release a replacement's permit. Once admitted, the image is eager so a second browser lazy-loading gate cannot strand its permit. Ordinary rerenders do not reassign its source. Browser HTTP caching and native cross-origin redirects remain available, without a JavaScript byte cache or a final-CDN CORS dependency.
+
+Native image events do not expose HTTP status or `Retry-After`. **No automatic native-image transport retry is added.** The existing single alternate image source and initials fallback remain. JSON GET/HEAD throttling retains its existing bounded retry and cancellation behavior. Concurrent image elements own their own cancellation; removing one cannot remove another element's source.
+
+The corrected focused regression command passed **21 tests**:
 
 ```bash
-node --test tests/public-api-fetch.test.mjs tests/media-assets.test.mjs \
-  tests/remote-match.test.mjs tests/aws-only-runtime.test.mjs \
-  tests/bounded-reads.test.mjs tests/compact-reads.test.mjs \
-  tests/resource-cache.test.mjs tests/resource-hook-identity.test.mjs \
-  tests/archive-navigation.test.mjs tests/stadium-render.test.mjs
+node --test tests/public-api-fetch.test.mjs tests/media-assets.test.mjs
 ```
 
-The two new test files are registered in the navigation CI step. They verify bounded mixed bursts, data priority, queued and active cancellation, shared subscribers, `Retry-After` seconds and dates, retry exhaustion, long-delay preservation, byte-cache eviction, object-URL cleanup, visible intent, image fallback and the absence of nested throttle retries. Post-deployment browser rendering and CloudWatch throttle measurements are still required; no zero-throttle production claim is made here.
+These files are registered in the navigation CI step. They verify bounded mixed bursts, data priority, queued and active cancellation, shared data subscribers, `Retry-After` seconds and dates, retry exhaustion, long-delay preservation and the absence of nested throttle retries. The image cases exercise the compiled component's mount/ref/effect lifecycle against the real scheduler: deferred source assignment, load/error release, unmount before and after admission, source replacement, stale events, independent elements, invalid-route refusal and the existing fallback. They do not substitute for actual browser decoding. The **entire 24-file navigation command passed 126 tests, with no skips**, using the workflow's full file inventory and its Bun fixture runtime. The SSR portrait slot, player identity and trophy checks remain in place.
+
+The patch was merged through [PR #30](https://github.com/VegaInteligence/Vega-Sport/pull/30), with [CI 42353670931](https://github.com/VegaInteligence/Vega-Sport/actions/runs/42353670931) passing all three jobs. Main `a34514589726d6f8770dbcb86a798bd76d6b0af7` reached production in deployment `dpl_J7iTzpPePQkbMfFMuDdRaPYzLdo6`, READY at **08:10:40 UTC**. The **08:11:14–08:18:24.869 UTC** post-cutover browser sequence passed the populated player/search/profile, club pagination, versioned archive page/detail, match overview/shots and return-navigation checks.
+
+The same sequence **did not pass the image gate**: visible API portraits and crests showed initials, and no decoded Blob image was observed. No application or CORS error appeared in the sampled console, which did not rule out the handled image-load failure. See the [post-cutover acceptance phase](FRONTEND_UI_ACCEPTANCE_20261107.md#post-cutover-capacity-deployment--data-passed-image-gate-open). The native-image correction above is prepared and locally verified; its deployment and actual image-decoding acceptance are still pending. Successful local tests and data flows do not establish complete production acceptance or zero throttles; CloudWatch correlation is independent.
 
 ## Verification
 

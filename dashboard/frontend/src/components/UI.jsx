@@ -24,14 +24,9 @@ export function Media({ name = "", url, fallbackUrl, className = "crest" }) {
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
-          onError={(error) => {
-            // An exhausted shared capacity response is not a missing portrait.
-            // Trying its alternate URL immediately would bypass Retry-After.
-            if (error?.throttled) {
-              setFailed(true);
-              setFallbackFailed(true);
-              return;
-            }
+          onError={() => {
+            // Native image events do not expose status or Retry-After. Keep the
+            // existing single alternate source; never retry a failed source.
             if (!failed && src === safeImageUrl(url)) setFailed(true);
             else setFallbackFailed(true);
           }}

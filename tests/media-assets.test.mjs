@@ -5,135 +5,20 @@ import path from "node:path";
 import vm from "node:vm";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import { loadMediaAsset } from "../dashboard/frontend/src/services/media-assets.js";
+import { createPublicApiTransport } from "../dashboard/frontend/src/services/public-api-fetch.js";
+import { apiUrl } from "../dashboard/frontend/src/data-url.js";
 
 const turn = () => new Promise((resolve) => setImmediate(resolve));
 const source =
   "/api/assets?url=https%3A%2F%2Fcdn.pitchapi.dev%2Fimages%2Fteam.webp";
-const image = (body = "small-image") =>
-  new Response(body, { headers: { "Content-Type": "image/webp" } });
 
-test("duplicate visible images share bytes and one subscriber leaving does not cancel the others", async () => {
-  let calls = 0,
-    complete,
-    sharedSignal;
-  const fetcher = (_url, options) => {
-    calls++;
-    sharedSignal = options.signal;
-    assert.equal(options.credentials, "omit");
-    assert.equal(options.referrerPolicy, "no-referrer");
-    assert.deepEqual(options.headers, { Accept: "image/*" });
-    return new Promise((resolve) => {
-      complete = resolve;
-    });
-  };
-  const controller = new AbortController();
-  const a = loadMediaAsset(source, { fetcher, signal: controller.signal });
-  const rejection = assert.rejects(a, { name: "AbortError" });
-  const b = loadMediaAsset(source, { fetcher });
-  await turn();
-  controller.abort();
-  await rejection;
-  assert.equal(calls, 1);
-  assert.equal(sharedSignal.aborted, false);
-  complete(image());
-  const blob = await b;
-  assert.equal(blob.type, "image/webp");
-  assert.equal(await loadMediaAsset(source, { fetcher }), blob);
-  assert.equal(calls, 1, "remounting reuses the retained successful Blob");
-});
-
-test("the final image subscriber aborts its request and a later mount can retry", async () => {
-  const signals = [];
-  let calls = 0;
-  const fetcher = (_url, { signal }) => {
-    calls++;
-    signals.push(signal);
-    if (calls > 1) return Promise.resolve(image());
-    return new Promise((_, reject) =>
-      signal.addEventListener("abort", () => reject(signal.reason), {
-        once: true,
-      }),
-    );
-  };
-  const controller = new AbortController();
-  const pending = loadMediaAsset(source, {
-    fetcher,
-    signal: controller.signal,
-  });
-  const rejection = assert.rejects(pending, { name: "AbortError" });
-  await turn();
-  controller.abort();
-  await rejection;
-  await turn();
-  assert.equal(signals[0].aborted, true);
-  assert.equal((await loadMediaAsset(source, { fetcher })).type, "image/webp");
-  assert.equal(calls, 2);
-});
-
-test("the image cache retains a bounded set of small assets and releases larger ones", async () => {
-  let calls = 0;
-  const fetcher = async () => {
-    calls++;
-    return image();
-  };
-  for (let i = 0; i < 65; i++)
-    await loadMediaAsset(`${source}&test=${i}`, { fetcher });
-  await loadMediaAsset(`${source}&test=64`, { fetcher });
-  assert.equal(calls, 65);
-  await loadMediaAsset(`${source}&test=0`, { fetcher });
-  assert.equal(calls, 66, "old unused images are evicted");
-  let largeCalls = 0;
-  const largeFetcher = async () => {
-    largeCalls++;
-    return image(new Uint8Array(256 * 1024 + 1));
-  };
-  await loadMediaAsset(source, { fetcher: largeFetcher });
-  await loadMediaAsset(source, { fetcher: largeFetcher });
-  assert.equal(largeCalls, 2, "large photos do not occupy the in-memory cache");
-});
-
-test("image HTTP errors and invalid formats remain failures, without accepting arbitrary routes", async () => {
-  let calls = 0;
-  const unavailable = async () => {
-    calls++;
-    return new Response(null, { status: 404 });
-  };
-  await assert.rejects(loadMediaAsset(source, { fetcher: unavailable }), {
-    status: 404,
-  });
-  assert.equal(calls, 1);
-  await assert.rejects(
-    loadMediaAsset(source, {
-      fetcher: async () => Response.json({ error: "not an image" }),
-    }),
-    { status: 415 },
-  );
-  await assert.rejects(
-    loadMediaAsset(source, {
-      fetcher: async () =>
-        new Response("short", {
-          headers: {
-            "Content-Type": "image/webp",
-            "Content-Length": String(4 * 1024 * 1024 + 1),
-          },
-        }),
-    }),
-    { status: 413 },
-  );
-  await assert.rejects(
-    loadMediaAsset("/api/read/player", {
-      fetcher: () => {
-        throw new Error("must not run");
-      },
-    }),
-    /Route d’image/,
-  );
-});
-
-// Exercise the real component's lifecycle, without mounting a browser or loading
-// its network. Shared Blob cancellation is checked above with the real cache.
-async function imageComponent(t, run, component = "ApiImage") {
+// Exercise the compiled component, its refs/effect cleanup and native load/error
+// handlers against the real shared scheduler. No fetch/Blob/CORS mock stands in
+// for image decoding; a native browser decode remains a deployment acceptance.
+async function imageComponent(
+  run,
+  { component = "ApiImage", transport = createPublicApiTransport() } = {},
+) {
   const root = fileURLToPath(new URL("../", import.meta.url));
   const requireLocal = createRequire(path.join(root, "dashboard/package.json"));
   const babel = requireLocal("next/dist/compiled/babel/core"),
@@ -146,14 +31,17 @@ async function imageComponent(t, run, component = "ApiImage") {
     `dashboard/frontend/src/components/${component === "Media" ? "UI" : "ApiImage"}.jsx`,
   );
   const slots = [],
-    requests = [],
-    created = [],
-    revoked = [];
+    admissions = [],
+    assignments = [],
+    removals = [];
   let cursor = 0,
     pending = [],
-    visible = false;
+    visible = false,
+    tree,
+    node;
   const equal = (a, b) =>
     a?.length === b?.length && a.every((x, i) => Object.is(x, b[i]));
+  const visibilityRef = () => {};
   const React = {
     createElement: (tag, props, ...children) => ({
       tag,
@@ -170,6 +58,12 @@ async function imageComponent(t, run, component = "ApiImage") {
       ];
     },
     useRef: (initial) => (slots[cursor++] ||= { current: initial }),
+    useCallback: (callback, deps) => {
+      const index = cursor++;
+      if (!equal(slots[index]?.deps, deps))
+        slots[index] = { value: callback, deps };
+      return slots[index].value;
+    },
     useEffect: (effect, deps) => {
       const index = cursor++;
       if (!equal(slots[index]?.deps, deps))
@@ -180,13 +74,14 @@ async function imageComponent(t, run, component = "ApiImage") {
     react: React,
     "../hooks/useVisibleIntent.js": {
       __esModule: true,
-      default: () => [null, visible],
+      default: () => [visibilityRef, visible],
     },
-    "../services/media-assets.js": {
-      loadMediaAsset: (src, { signal }) =>
-        new Promise((resolve, reject) =>
-          requests.push({ src, signal, resolve, reject }),
-        ),
+    "../data-url.js": { apiUrl },
+    "../services/public-api-fetch.js": {
+      acquirePublicImage: (options) => {
+        admissions.push(options);
+        return transport.imagePermit(options);
+      },
     },
     "./Icon.jsx": { __esModule: true, default: () => null },
     "./ApiImage.jsx": { __esModule: true, default: () => null },
@@ -211,161 +106,377 @@ async function imageComponent(t, run, component = "ApiImage") {
     mod,
     mod.exports,
   );
-  t.mock.method(URL, "createObjectURL", (blob) => {
-    const url = `blob:test-${created.length}`;
-    created.push({ blob, url });
-    return url;
-  });
-  t.mock.method(URL, "revokeObjectURL", (url) => revoked.push(url));
+  function createNode(key) {
+    const attrs = new Map();
+    return {
+      key,
+      props: null,
+      get src() {
+        return attrs.get("src");
+      },
+      set src(value) {
+        attrs.set("src", value);
+        assignments.push({ node: this, src: value });
+      },
+      removeAttribute(name) {
+        removals.push({ node: this, name, before: transport.pending() });
+        attrs.delete(name);
+      },
+    };
+  }
   const unmount = () => {
     for (const slot of slots) slot?.cleanup?.();
+    node?.props.ref?.(null);
+    node = null;
   };
   try {
     await run({
-      requests,
-      created,
-      revoked,
+      admissions,
+      assignments,
+      removals,
+      transport,
       unmount,
-      visible: (next) => {
-        visible = next;
+      node: () => node,
+      visible: (value) => {
+        visible = value;
       },
       render: (props) => {
         cursor = 0;
         pending = [];
-        return (
+        tree = (
           component === "Media" ? mod.exports.Media : mod.exports.default
         )(props);
+        return tree;
       },
       commit: () => {
+        if (component === "ApiImage") {
+          if (!node || node.key !== tree.props.key) {
+            node?.props.ref?.(null);
+            node = createNode(tree.props.key);
+            tree.props.ref(node);
+          }
+          node.props = tree.props;
+        }
+        // React changes the DOM/ref before passive cleanup. A source-change
+        // cleanup must remove src from its captured old node, not the new one.
         for (const { index } of pending) slots[index]?.cleanup?.();
         for (const item of pending)
           slots[item.index] = { ...item, cleanup: item.effect() };
         pending = [];
       },
+      emit: (type, target = node) =>
+        target.props[type]({ currentTarget: target }),
     });
   } finally {
     unmount();
   }
 }
 
-test("images wait for visible intent, rerenders reuse bytes, and URLs are released on source change", async (t) => {
+test("native images wait for visible admission and release only on load", async () => {
   await imageComponent(
-    t,
     async ({
       visible,
       render,
       commit,
-      requests,
-      created,
-      revoked,
-      unmount,
+      admissions,
+      assignments,
+      node,
+      emit,
+      transport,
     }) => {
-      const first = {
+      let loaded = 0;
+      const props = {
         src: source,
         alt: "",
         loading: "lazy",
-        onError: () => {},
+        onLoad: () => loaded++,
       };
-      assert.equal(render(first).props.src, undefined);
+      assert.equal(render(props).props.src, undefined);
       commit();
-      assert.equal(requests.length, 0);
+      await turn();
+      assert.equal(admissions.length, 0);
       visible(true);
-      render(first);
-      commit();
-      assert.equal(requests.length, 1);
-      requests[0].resolve(new Blob(["image"], { type: "image/webp" }));
-      await turn();
       assert.equal(
-        render({ ...first, onError: () => {} }).props.src,
-        "blob:test-0",
+        render(props).props.loading,
+        "eager",
+        "native lazy loading cannot strand an admitted permit",
       );
       commit();
-      assert.equal(requests.length, 1);
-      assert.equal(created.length, 1);
-      const second = { ...first, src: source + "&next=1" };
-      assert.equal(render(second).props.src, undefined);
+      await turn();
+      assert.equal(admissions.length, 1);
+      assert.equal(node().src, apiUrl(source));
+      assert.equal(
+        node().props.crossOrigin,
+        undefined,
+        "redirected images retain native no-CORS delivery",
+      );
+      assert.deepEqual(transport.pending(), {
+        active: 1,
+        images: 1,
+        queued: 0,
+      });
+      render({ ...props, onError: () => {} });
       commit();
-      assert.deepEqual(revoked, ["blob:test-0"]);
-      assert.equal(requests.length, 2);
-      unmount();
-      assert.equal(requests[1].signal.aborted, true);
-      requests[1].resolve(new Blob(["late"]));
       await turn();
       assert.equal(
-        created.length,
+        assignments.length,
         1,
-        "a late abandoned download cannot allocate another URL",
+        "rerender does not reassign/reload the native source",
       );
+      emit("onLoad");
+      emit("onLoad");
+      assert.equal(loaded, 1);
+      assert.deepEqual(transport.pending(), {
+        active: 0,
+        images: 0,
+        queued: 0,
+      });
     },
   );
 });
 
-test("real image failures invoke the existing fallback handler once; cancellation does not", async (t) => {
+test("unmounting a queued image prevents source assignment and allows a later mount", async () => {
+  const transport = createPublicApiTransport({
+    concurrency: 1,
+    imageConcurrency: 1,
+  });
+  const releaseBlocker = await transport.imagePermit();
   await imageComponent(
-    t,
-    async ({ visible, render, commit, requests, unmount }) => {
-      const failures = [];
+    async ({ visible, render, commit, assignments, unmount }) => {
       visible(true);
+      render({ src: source });
+      commit();
+      await turn();
+      assert.deepEqual(transport.pending(), {
+        active: 1,
+        images: 1,
+        queued: 1,
+      });
+      unmount();
+      await turn();
+      assert.equal(assignments.length, 0);
+      assert.deepEqual(transport.pending(), {
+        active: 1,
+        images: 1,
+        queued: 0,
+      });
+    },
+    { transport },
+  );
+  releaseBlocker();
+  await imageComponent(
+    async ({ visible, render, commit, assignments, emit }) => {
+      visible(true);
+      render({ src: source });
+      commit();
+      await turn();
+      assert.equal(assignments.length, 1);
+      emit("onLoad");
+    },
+    { transport },
+  );
+  assert.deepEqual(transport.pending(), { active: 0, images: 0, queued: 0 });
+});
+
+test("active unmount removes the native source before returning its permit", async () => {
+  await imageComponent(
+    async ({
+      visible,
+      render,
+      commit,
+      removals,
+      node,
+      emit,
+      unmount,
+      transport,
+    }) => {
+      let callbacks = 0;
+      visible(true);
+      render({
+        src: source,
+        onLoad: () => callbacks++,
+        onError: () => callbacks++,
+      });
+      commit();
+      await turn();
+      const old = node();
+      unmount();
+      assert.equal(old.src, undefined);
+      assert.equal(removals.at(-1).before.active, 1);
+      assert.deepEqual(transport.pending(), {
+        active: 0,
+        images: 0,
+        queued: 0,
+      });
+      emit("onLoad", old);
+      emit("onError", old);
+      assert.equal(callbacks, 0);
+    },
+  );
+});
+
+test("source replacement ignores old events and cannot release the new image permit", async () => {
+  await imageComponent(
+    async ({ visible, render, commit, assignments, node, emit, transport }) => {
+      let loaded = 0,
+        failed = 0;
       const props = {
         src: source,
-        onError: (error) => failures.push(error.status),
+        onLoad: () => loaded++,
+        onError: () => failed++,
       };
+      visible(true);
       render(props);
       commit();
-      requests[0].reject(Object.assign(new Error("missing"), { status: 404 }));
       await turn();
-      render({ ...props });
-      commit();
-      assert.deepEqual(failures, [404]);
-      assert.equal(requests.length, 1);
+      const old = node();
       render({ ...props, src: source + "&next=1" });
       commit();
-      unmount();
-      requests[1].reject(new DOMException("Aborted", "AbortError"));
       await turn();
-      assert.deepEqual(failures, [404]);
+      assert.notEqual(node(), old);
+      assert.equal(old.src, undefined);
+      assert.equal(assignments.length, 2);
+      emit("onError", old);
+      emit("onLoad", old);
+      assert.equal(failed, 0);
+      assert.equal(loaded, 0);
+      assert.deepEqual(transport.pending(), {
+        active: 1,
+        images: 1,
+        queued: 0,
+      });
+      emit("onLoad");
+      assert.equal(loaded, 1);
+      assert.deepEqual(transport.pending(), {
+        active: 0,
+        images: 0,
+        queued: 0,
+      });
     },
   );
 });
 
-test("Media retains its alternate-source fallback but never changes URL to evade capacity backoff", async (t) => {
+test("native decode errors release capacity and call fallback once without retry", async () => {
+  await imageComponent(
+    async ({ visible, render, commit, assignments, emit, transport }) => {
+      const failures = [];
+      const props = { src: source, onError: (event) => failures.push(event) };
+      visible(true);
+      render(props);
+      commit();
+      await turn();
+      emit("onError");
+      emit("onError");
+      emit("onLoad");
+      render({ ...props });
+      commit();
+      await turn();
+      assert.equal(failures.length, 1);
+      assert.ok(failures[0].currentTarget);
+      assert.equal(assignments.length, 1);
+      assert.deepEqual(transport.pending(), {
+        active: 0,
+        images: 0,
+        queued: 0,
+      });
+    },
+  );
+});
+
+test("unmount between admission and its continuation cannot assign an abandoned source", async () => {
+  await imageComponent(
+    async ({ visible, render, commit, assignments, unmount, transport }) => {
+      visible(true);
+      render({ src: source });
+      commit();
+      await Promise.resolve();
+      assert.equal(transport.pending().active, 1);
+      unmount();
+      await turn();
+      assert.equal(assignments.length, 0);
+      assert.deepEqual(transport.pending(), {
+        active: 0,
+        images: 0,
+        queued: 0,
+      });
+    },
+  );
+});
+
+test("two native images of one URL retain independent element ownership", async () => {
+  const transport = createPublicApiTransport();
+  await imageComponent(
+    async (first) => {
+      first.visible(true);
+      first.render({ src: source });
+      first.commit();
+      await turn();
+      await imageComponent(
+        async (second) => {
+          second.visible(true);
+          second.render({ src: source });
+          second.commit();
+          await turn();
+          assert.deepEqual(transport.pending(), {
+            active: 2,
+            images: 2,
+            queued: 0,
+          });
+          first.unmount();
+          assert.equal(second.node().src, apiUrl(source));
+          assert.deepEqual(transport.pending(), {
+            active: 1,
+            images: 1,
+            queued: 0,
+          });
+          second.emit("onLoad");
+        },
+        { transport },
+      );
+    },
+    { transport },
+  );
+  assert.deepEqual(transport.pending(), { active: 0, images: 0, queued: 0 });
+});
+
+test("a non-asset route cannot use native image admission", async () => {
+  await imageComponent(
+    async ({ visible, render, commit, admissions, assignments }) => {
+      const failures = [];
+      visible(true);
+      render({
+        src: "/api/read/player",
+        onError: (error) => failures.push(error.message),
+      });
+      commit();
+      await turn();
+      assert.equal(admissions.length, 0);
+      assert.equal(assignments.length, 0);
+      assert.match(failures[0], /Route d’image/);
+    },
+  );
+});
+
+test("Media preserves its single alternate source and then shows initials", async () => {
   const props = {
     name: "Paris Club",
     url: "https://cdn.pitchapi.dev/first.webp",
     fallbackUrl: "https://cdn.pitchapi.dev/second.webp",
   };
   await imageComponent(
-    t,
     async ({ render, commit }) => {
-      const initial = render(props).props.children[0];
+      const first = render(props).props.children[0];
       commit();
-      initial.props.onError(
-        Object.assign(new Error("missing"), { status: 404 }),
-      );
+      first.props.onError({ currentTarget: {} });
       const alternate = render(props).props.children[0];
       commit();
       assert.ok(alternate.props.src.includes("second.webp"));
-      alternate.props.onError({});
+      alternate.props.onError({ currentTarget: {} });
       const unavailable = render(props).props.children[0];
       commit();
       assert.equal(unavailable.props.className, "image-fallback");
       assert.deepEqual(unavailable.props.children, ["PC"]);
     },
-    "Media",
-  );
-  await imageComponent(
-    t,
-    async ({ render, commit }) => {
-      const initial = render(props).props.children[0];
-      commit();
-      initial.props.onError(
-        Object.assign(new Error("capacity"), { status: 429, throttled: true }),
-      );
-      const unavailable = render(props).props.children[0];
-      commit();
-      assert.equal(unavailable.props.className, "image-fallback");
-      assert.equal(unavailable.props.src, undefined);
-    },
-    "Media",
+    { component: "Media" },
   );
 });

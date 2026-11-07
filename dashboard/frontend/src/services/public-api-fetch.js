@@ -103,13 +103,7 @@ export function createPublicApiTransport({
     });
   }
 
-  async function read(
-    input,
-    options = {},
-    fetcher = fetch,
-    kind = "data",
-    consume = (response) => response,
-  ) {
+  async function read(input, options = {}, fetcher = fetch, kind = "data") {
     const signal = options.signal;
     const release = await acquire(kind, signal);
     try {
@@ -133,13 +127,13 @@ export function createPublicApiTransport({
                 awsType,
               )));
         if (throttle) throttledResponses.add(response);
-        if (!safe || !throttle || attempt >= 2) return await consume(response);
+        if (!safe || !throttle || attempt >= 2) return response;
         const wait = Math.max(
           after || 0,
           400 * 2 ** attempt + Math.floor(random() * 150),
         );
         // Never shorten the server's requested delay to fit our retry budget.
-        if (wait > 2000 || waited + wait > 4000) return await consume(response);
+        if (wait > 2000 || waited + wait > 4000) return response;
         await response.body?.cancel().catch(() => {});
         waited += wait;
         // Keep this permit while backing off, so a throttle does not immediately
@@ -151,12 +145,33 @@ export function createPublicApiTransport({
     }
   }
 
-  return { read, pending: () => ({ active, images, queued: waiting.length }) };
+  // Native images share admission with JSON reads without fetching their bytes
+  // through CORS. Their owner releases this permit on load/error or cancellation.
+  async function imagePermit({ signal } = {}) {
+    const release = await acquire("image", signal);
+    try {
+      aborted(signal);
+    } catch (error) {
+      release();
+      throw error;
+    }
+    const finish = () => {
+      signal?.removeEventListener("abort", finish);
+      release();
+    };
+    signal?.addEventListener("abort", finish, { once: true });
+    return finish;
+  }
+
+  return {
+    read,
+    imagePermit,
+    pending: () => ({ active, images, queued: waiting.length }),
+  };
 }
 
 const publicTransport = createPublicApiTransport();
 export const publicApiFetch = (input, options, fetcher, kind) =>
   publicTransport.read(input, options, fetcher, kind);
-// Image permits include downloading their bytes, before the local blob is shown.
-export const readPublicApi = (input, options, consume, fetcher, kind) =>
-  publicTransport.read(input, options, fetcher, kind, consume);
+export const acquirePublicImage = (options) =>
+  publicTransport.imagePermit(options);
