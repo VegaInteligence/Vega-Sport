@@ -40,18 +40,7 @@ function metric(alias, key) {
   return number(field);
 }
 function positionGroup(alias) {
-  const value = `${alias}.position_id`,
-    type = `${alias}.position_id_type`;
-  const position = `(CASE WHEN ${value} IS NULL OR ${type}='NoneType' THEN NULL
-    WHEN ${type}='bool' THEN CASE WHEN ${value}='True' THEN 1 ELSE 0 END
-    WHEN btrim(${value})='' THEN 0
-    WHEN btrim(${value})~'^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][+-]?[0-9]+)?$'
-      AND pg_input_is_valid(btrim(${value}),'double precision') THEN btrim(${value})::double precision END)`;
-  return `CASE WHEN ${position} IN (0,11) THEN 'G'
-    WHEN ${position}=1 OR (${position}>=30 AND ${position}<40) OR ${position} IN (51,59) THEN 'D'
-    WHEN ${position}=2 OR (${position}>=50 AND ${position}<80) THEN 'M'
-    WHEN (${position}>=80 AND ${position}<120) OR ${position}=3 THEN 'O'
-    WHEN ${finiteSql(`${alias}.saves`)} AND ${alias}.saves>0 THEN 'G' ELSE 'F' END`;
+  return `${alias}.performance_group`;
 }
 const rows = (sql) =>
   `(SELECT coalesce(json_agg(r),'[]'::json) FROM (${sql}) r)`;
@@ -131,10 +120,11 @@ export function createPerformanceRoute(read = query) {
       );
     const sql = `WITH publication AS MATERIALIZED (${publication}),target AS MATERIALIZED (${target}),
       target_values AS MATERIALIZED (SELECT ${positionGroup("t")} AS profile_group,${projection("t")} FROM target t),
-      cohort AS NOT MATERIALIZED (SELECT ${positionGroup("a")} AS profile_group,${projection("a")}
-        FROM statarena_app.appearances a WHERE ${cohortScope} AND a.minutes>=${MIN_PEER_MINUTES}),
-      peers AS (SELECT c.* FROM cohort c CROSS JOIN target_values t
-        WHERE c.profile_group=t.profile_group OR (t.profile_group='F' AND c.profile_group<>'G'))
+      peers AS NOT MATERIALIZED (SELECT ${projection("a")}
+        FROM target_values t JOIN statarena_app.appearances a
+          ON ${positionGroup("a")}=ANY(CASE WHEN t.profile_group='F'
+            THEN ARRAY['D','M','O','F']::text[] ELSE ARRAY[t.profile_group] END)
+        WHERE ${cohortScope} AND a.minutes>=${MIN_PEER_MINUTES})
       SELECT publication.*,(SELECT row_to_json(t) FROM target t) AS appearance,
         (SELECT json_build_object('peers',count(*),'metrics',json_build_object(${counts})) FROM peers p CROSS JOIN target_values t) AS profile_counts,
         (SELECT CASE WHEN t.rating IS NOT NULL AND ${finiteSql("t.rating")}

@@ -135,6 +135,7 @@ test(
         "003_relational_core.sql",
         "011_appearance_shirt_numbers.sql",
         "020_publication_foreign_key_indexes.sql",
+        "031_indexed_performance_cohorts.sql",
       ])
         await db.query(
           readFileSync(
@@ -142,6 +143,24 @@ test(
             "utf8",
           ),
         );
+      // Keep the old expression as an independent baseline for index semantics.
+      // Decimal bounds, nulls, typed booleans and nonfinite saves cannot change
+      // the peer group just because the planner now uses a covering index.
+      const positions = [null, "", " ", "\t", "0", "-0", "1", "2", "3", "11", "29.999",
+        "30", "39.999", "40", "50", "51", "59", "79.999", "80", "89.999", "90", "119.999",
+        "120", "3e1", "1e500", "1e-500", "NaN", "Infinity", "True", "False", "0x20", "wrong"];
+      const cases = positions.flatMap((position_id) => [null, "str", "NoneType", "bool"].flatMap((position_id_type) =>
+        [null, "0", "1", "-1", "NaN", "Infinity", "-Infinity"].map((saves) => ({position_id,position_id_type,saves}))));
+      const legacyGroup = readFileSync(new URL("./fixtures/performance-position-group.sql",import.meta.url),"utf8");
+      const groups = await db.query(`WITH v AS (SELECT position_id,position_id_type,saves::float8 saves
+        FROM jsonb_to_recordset($1::jsonb) x(position_id text,position_id_type text,saves text))
+        SELECT statarena_app.performance_profile_group(v.position_id,v.position_id_type,v.saves) actual,
+          ${legacyGroup} expected FROM v`,[JSON.stringify(cases)]);
+      assert.equal(groups.rows.length,cases.length);
+      assert.ok(groups.rows.every(({actual,expected}) => actual===expected));
+      const functionIdentity = await db.query("SELECT oid,proowner,proacl::text FROM pg_proc WHERE oid='statarena_app.performance_profile_group(text,text,double precision)'::regprocedure");
+      await db.query(readFileSync(new URL("../dashboard/backend/migrations/031_indexed_performance_cohorts.sql",import.meta.url),"utf8"));
+      assert.deepEqual((await db.query("SELECT oid,proowner,proacl::text FROM pg_proc WHERE oid='statarena_app.performance_profile_group(text,text,double precision)'::regprocedure")).rows,functionIdentity.rows);
       await db.query(`UPDATE statarena_app.publications SET generation=42;
       INSERT INTO statarena_app.competitions(id,name,latest_season) VALUES ('l_000001','Ligue 1','2026/2027'),('l_000002','Coupe','2026/2027');
       INSERT INTO statarena_app.partitions(season,league_id,source_digest,retrieved_at,start_date,end_date) VALUES
@@ -198,6 +217,12 @@ test(
         );
         inputs.push(source);
       }
+      const generatedGroups = await db.query("SELECT performance_group,statarena_app.performance_profile_group(position_id,position_id_type,saves) expected FROM statarena_app.appearances");
+      assert.ok(generatedGroups.rows.every(({performance_group,expected}) => performance_group===expected));
+      await db.query("SAVEPOINT verify_group_update");
+      await db.query("UPDATE statarena_app.appearances SET position_id=NULL,position_id_type='NoneType',saves=3 WHERE id='appearance-0'");
+      assert.equal((await db.query("SELECT performance_group FROM statarena_app.appearances WHERE id='appearance-0'")).rows[0].performance_group,"G");
+      await db.query("ROLLBACK TO SAVEPOINT verify_group_update");
       await db.query(
         "INSERT INTO statarena_app.appearance_shirt_numbers(appearance_id,value_text,value_type) VALUES ('appearance-0','07','str')",
       );
@@ -336,7 +361,7 @@ test(
         );
         assert.equal(conditional.status, 304);
         assert.ok(
-          !calls.at(-1).includes("cohort AS"),
+          !calls.at(-1).includes("peers AS"),
           "Conditional validation must not aggregate peers",
         );
       }

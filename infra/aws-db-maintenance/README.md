@@ -19,6 +19,30 @@ existing role are verified before connecting, and TLS verifies the RDS CA and
 hostname. Do not save secrets or signed upload URLs in operation manifests,
 receipts, commits or logs.
 
+## One-time administrator bootstrap
+
+The separate `bootstrap.mjs` entry point is restricted to the reviewed
+`bootstrap-consolidation` operation on the exact production host. Use it only
+when the read-only privilege preflight proves that the migration namespaces or
+`pg_trgm` are missing and the ingestion role cannot create them. Its manifest
+contains no general query or migration operations.
+
+Build it with `package.py OPERATIONS.json RELEASE_DIRECTORY --bootstrap` and use
+a separate `vega-db-refactor-bootstrap-YYYYMMDD` stack. `DatabaseConfig` contains
+only host, database and the fixed administrator username; a password in this
+configuration is rejected. The authorized operator obtains the existing secret
+just before the IAM invocation and passes it only as the invocation's `password`
+field. Never print or save the invocation payload. The handler accepts no SQL,
+endpoint, role or bind values from the invocation; it acquires the publication
+lease, performs the fixed bootstrap in a transaction, returns a small receipt,
+and clears its credential references. There is no HTTP URL, SSM permission or
+credential in the Lambda environment or CloudFormation parameters. Delete this
+separate stack immediately after verifying the prerequisite schemas and grants.
+
+The ordinary migration worker's interface remains unchanged: it never accepts
+invocation-supplied credentials, endpoints, roles or SQL. All subsequent
+publication and consolidation operations use the existing ingestion role.
+
 ## Build and review
 
 Install the repository's dashboard dependencies and make Bun and Node available.

@@ -13,7 +13,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 
 
-def build(manifest, output):
+def build(manifest, output, *, bootstrap=False):
     document = json.loads(manifest.read_text())
     if not isinstance(document.get("operations"), dict) or not document["operations"]:
         raise ValueError("A reviewed operation manifest is required")
@@ -24,7 +24,8 @@ def build(manifest, output):
             raise ValueError(f"Invalid target: {name}")
     with tempfile.TemporaryDirectory(prefix="vega-maintenance-") as staging:
         stage = Path(staging)
-        subprocess.run(["bun", "build", str(HERE / "index.mjs"), "--target=node", "--format=esm",
+        entry = HERE / ("bootstrap.mjs" if bootstrap else "index.mjs")
+        subprocess.run(["bun", "build", str(entry), "--target=node", "--format=esm",
                         "--outfile=" + str(stage / "index.mjs")], cwd=ROOT, check=True)
         shutil.copyfile(ROOT / "dashboard/backend/certs/rds-us-east-2.pem", stage / "rds-ca.pem")
         (stage / "operations.json").write_text(json.dumps(document, ensure_ascii=False, separators=(",", ":")))
@@ -54,5 +55,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("manifest", type=Path)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--bootstrap", action="store_true", help="Build the separate password-free one-time bootstrap handler")
     args = parser.parse_args()
-    build(args.manifest, args.output)
+    build(args.manifest, args.output, bootstrap=args.bootstrap)

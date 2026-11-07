@@ -11,6 +11,7 @@ import {
 } from "./relational-read-utils.js";
 
 const ratioKeys = ["passAccuracy", "duelRate"];
+const indexedMetricKeys = new Set(["goals", "xg", "assists", "xa"]);
 const roleCode = (value) => `CASE WHEN ${value} IN(0,11) THEN 'G'
  WHEN ${value}=1 OR ${value}>=30 AND ${value}<40 OR ${value} IN(51,59) THEN 'D'
  WHEN ${value}=2 OR ${value}>=50 AND ${value}<80 THEN 'M'
@@ -63,14 +64,14 @@ export function supportsPlayerRollup(filters) {
   );
 }
 
-function metricProjection(keys, alias = "r") {
+function metricProjection(keys, alias = "r", indexed = false) {
   return keys.flatMap((key) =>
     (ratioKeys.includes(key)
       ? ["numerator", "denominator", "count", "minutes"]
       : ["sum", "count", "minutes"]
     ).map(
       (field) =>
-        `sum((${alias}.metrics->'${key}'->>'${field}')::float8) AS "${key}_${field}"`,
+        `sum(${indexed && indexedMetricKeys.has(key) ? `${alias}.rank_${key}_${field}` : `(${alias}.metrics->'${key}'->>'${field}')::float8`}) AS "${key}_${field}"`,
     ),
   );
 }
@@ -114,7 +115,7 @@ export function playerRollupQuery(filters, params, countMetrics) {
         : [])
     required.add(key);
   const requiredKeys = [...required];
-  const earlyMetrics = metricProjection(requiredKeys);
+  const earlyMetrics = metricProjection(requiredKeys, "r", true);
   const fullMetrics = metricProjection(metricKeys);
   const selectedFields = (keys) =>
     keys.flatMap((key) =>
@@ -125,6 +126,39 @@ export function playerRollupQuery(filters, params, countMetrics) {
     );
   const hasSearch = Boolean(filters.q),
     hasPositions = filters.positions.length > 0;
+  const sourceFields = [
+    "r.player_id",
+    "r.league_id",
+    "r.matches",
+    "r.total_minutes",
+    "r.unknown_minutes",
+    "r.rating_sum",
+    "r.rating_count",
+    "r.identity_ref",
+    "r.identity_date",
+    "r.identity_source_order",
+    "r.latest_ref",
+    "r.latest_date",
+    "r.latest_source_order",
+    "r.latest_present",
+    ...requiredKeys
+      .filter((key) => indexedMetricKeys.has(key))
+      .flatMap((key) =>
+        ["sum", "count", "minutes"].map((field) => `r.rank_${key}_${field}`),
+      ),
+    ...(requiredKeys.some((key) => !indexedMetricKeys.has(key))
+      ? ["r.metrics"]
+      : []),
+    ...(hasPositions
+      ? [
+          "r.roles",
+          "(r.identity->>'position_number')::float8 identity_position_number",
+        ]
+      : []),
+    ...(hasSearch
+      ? ["r.teams", "r.leagues", "r.identity->>'team' identity_team"]
+      : []),
+  ];
   const aliases = b(
     JSON.stringify(
       playerAliasEntries().map(([player_id, names]) => ({
@@ -194,31 +228,35 @@ export function playerRollupQuery(filters, params, countMetrics) {
   ];
   const sql = `/*vega:compact:players:rollup*/
 WITH publication AS MATERIALIZED (${publication}),rollup_state AS MATERIALIZED (${state}),
-source AS NOT MATERIALIZED (SELECT r.* FROM statarena_app.player_season_rollups r
+source AS ${hasSearch || hasPositions ? "MATERIALIZED" : "NOT MATERIALIZED"} (SELECT ${sourceFields.join(",")} FROM statarena_app.player_season_rollups r
  WHERE ${scope}${fence} AND (SELECT ready FROM rollup_state)),
-${keyCte("identities", "source", "identity")},${keyCte("latest", "source", "latest")},
 aggregates AS (
  SELECT r.player_id,sum(r.matches)::int matches,sum(r.total_minutes) total_minutes,
- sum(r.unknown_minutes)::int unknown_minutes,sum(r.rating_sum)/nullif(sum(r.rating_count),0) rating,sum(r.rating_count)::int rating_count
+ sum(r.unknown_minutes)::int unknown_minutes,sum(r.rating_sum)/nullif(sum(r.rating_count),0) rating,sum(r.rating_count)::int rating_count,
+ (array_agg(r.identity_ref ORDER BY r.identity_date DESC,r.league_id,r.identity_source_order))[1] identity_ref,
+ (array_agg(r.latest_ref ORDER BY r.latest_date DESC,r.league_id,r.latest_source_order) FILTER(WHERE r.latest_present))[1] latest_ref
+ ${hasPositions ? ",(array_agg(r.identity_position_number ORDER BY r.identity_date DESC,r.league_id,r.identity_source_order))[1] identity_position_number" : ""}
+ ${hasSearch ? ",(array_agg(r.identity_team ORDER BY r.identity_date DESC,r.league_id,r.identity_source_order))[1] identity_team" : ""}
  ${earlyMetrics.length ? "," + earlyMetrics.join(",") : ""} FROM source r GROUP BY r.player_id
 ),
 ${hasPositions ? roleCtes("global", "source") + "," : ""}
 ${hasSearch ? namesCte("global_teams", "source", "teams") + "," + namesCte("global_leagues", "source", "leagues") + "," : ""}
 averages AS (
- SELECT i.player_id,coalesce(nullif(lp.name,''),nullif(ip.name,''),'Joueur') name,
+ SELECT a.player_id,coalesce(nullif(lp.name,''),nullif(ip.name,''),'Joueur') name,
  a.matches,CASE WHEN a.matches>0 THEN a.total_minutes/a.matches WHEN a.unknown_minutes>0 THEN NULL ELSE 0 END minutes,
  a.rating,a.rating_count
- ${hasPositions ? `,coalesce(ro.role_code,${roleCode("i.position_number")}) role_code` : ""}
- ${hasSearch ? ",coalesce(t.names,CASE WHEN i.team IS NOT NULL AND i.team<>'' THEN ARRAY[i.team] ELSE '{}'::text[] END) teams,coalesce(le.names,'{}'::text[]) leagues,aliases.search_aliases" : ""}
+ ${hasPositions ? `,coalesce(ro.role_code,${roleCode("a.identity_position_number")}) role_code` : ""}
+ ${hasSearch ? ",coalesce(t.names,CASE WHEN a.identity_team IS NOT NULL AND a.identity_team<>'' THEN ARRAY[a.identity_team] ELSE '{}'::text[] END) teams,coalesce(le.names,'{}'::text[]) leagues,aliases.search_aliases" : ""}
  ${earlyProjection.length ? "," + earlyProjection.join(",") : ""}
- FROM identities i JOIN statarena_app.players ip ON ip.id=i.player_ref LEFT JOIN latest l ON l.player_id=i.player_id
- LEFT JOIN statarena_app.players lp ON lp.id=l.player_ref JOIN aggregates a ON a.player_id=i.player_id
- ${hasPositions ? "LEFT JOIN global_role ro ON ro.player_id=i.player_id" : ""}
- ${hasSearch ? "LEFT JOIN global_teams t ON t.player_id=i.player_id LEFT JOIN global_leagues le ON le.player_id=i.player_id" : ""}
- LEFT JOIN jsonb_to_recordset(${aliases}::jsonb) aliases(player_id text,search_aliases text) ON aliases.player_id=i.player_id
+ FROM aggregates a JOIN statarena_app.players ip ON ip.id=a.identity_ref
+ LEFT JOIN statarena_app.players lp ON lp.id=a.latest_ref
+ ${hasPositions ? "LEFT JOIN global_role ro ON ro.player_id=a.player_id" : ""}
+ ${hasSearch ? "LEFT JOIN global_teams t ON t.player_id=a.player_id LEFT JOIN global_leagues le ON le.player_id=a.player_id" : ""}
+ LEFT JOIN jsonb_to_recordset(${aliases}::jsonb) aliases(player_id text,search_aliases text) ON aliases.player_id=a.player_id
 ), filtered AS MATERIALIZED (SELECT d.* FROM averages d WHERE ${thresholds.join(" AND ")}),
 page AS MATERIALIZED (SELECT d.*,row_number() OVER(ORDER BY ${order}) result_order FROM filtered d ORDER BY ${order} LIMIT ${limit} OFFSET ${offset}),
-selected AS MATERIALIZED (SELECT r.* FROM source r JOIN page p USING(player_id)),
+selected AS MATERIALIZED (SELECT r.* FROM statarena_app.player_season_rollups r JOIN page p USING(player_id)
+ WHERE ${scope}${fence} AND (SELECT ready FROM rollup_state)),
 ${keyCte("selected_identities", "selected", "identity", true)},${keyCte("selected_latest", "selected", "latest", true)},
 ${namesCte("selected_teams", "selected", "teams")},${namesCte("selected_leagues", "selected", "leagues")},
 ${roleCtes("selected", "selected")},

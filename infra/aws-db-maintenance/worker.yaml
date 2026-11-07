@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Temporary IAM-only Vega database migration and validation worker. Delete after the verified cutover.
 Parameters:
-  FunctionName: {Type: String, AllowedPattern: 'vega-db-refactor-(stage|prod)-[0-9]{8}'}
+  FunctionName: {Type: String, AllowedPattern: 'vega-db-refactor-(stage|prod|bootstrap)-[0-9]{8}'}
   ReleaseKey: {Type: String, AllowedPattern: 'maintenance/[a-f0-9]{64}\.zip'}
   DatabaseConfig: {Type: String, NoEcho: true, MaxLength: 2000}
   DatabaseHost: {Type: String, AllowedPattern: '[a-z0-9.-]+\.us-east-2\.rds\.amazonaws\.com'}

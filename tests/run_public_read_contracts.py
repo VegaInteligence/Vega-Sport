@@ -54,6 +54,7 @@ def main():
             subprocess.run([
                 "node", "--test", "--test-concurrency=1",
                 "tests/backend-metrics.test.mjs",
+                "tests/maintenance-bootstrap.test.mjs",
                 "tests/relational-read-cache.test.mjs",
                 "tests/relational-player-rollups.test.mjs",
                 "tests/relational-archives.test.mjs",

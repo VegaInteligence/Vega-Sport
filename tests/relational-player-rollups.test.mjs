@@ -161,6 +161,69 @@ test(
           0,
         );
       }
+      const originalColumns = (
+        await db.query(
+          "SELECT quote_ident(attname) AS name FROM pg_attribute WHERE attrelid='statarena_app.player_season_rollups'::regclass AND attnum>0 AND NOT attisdropped ORDER BY attnum",
+        )
+      ).rows
+        .map((row) => row.name)
+        .join(",");
+      const originalRows = async () =>
+        (
+          await db.query(
+            `SELECT ${originalColumns} FROM statarena_app.player_season_rollups ORDER BY season,league_id,player_id`,
+          )
+        ).rows;
+      const beforeIndex = await originalRows();
+      const metricBytes = async () =>
+        (
+          await db.query(
+            "SELECT season,league_id,player_id,encode(jsonb_send(metrics),'hex') bytes FROM statarena_app.player_season_rollups ORDER BY season,league_id,player_id",
+          )
+        ).rows;
+      const beforeMetricBytes = await metricBytes();
+      const refreshDefinition = (
+        await db.query(
+          "SELECT pg_get_functiondef('statarena_app.refresh_player_season_rollups(text,text,boolean)'::regprocedure) AS definition",
+        )
+      ).rows[0].definition;
+      const directoryMigration = await readFile(
+        new URL(
+          "../dashboard/backend/migrations/030_player_directory_index.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      );
+      await db.query(directoryMigration);
+      await db.query(directoryMigration);
+      assert.deepEqual(
+        await originalRows(),
+        beforeIndex,
+        "adding the directory index preserves every existing rollup value",
+      );
+      assert.deepEqual(
+        await metricBytes(),
+        beforeMetricBytes,
+        "retargeting JSON storage preserves binary values",
+      );
+      assert.equal(
+        (
+          await db.query(
+            "SELECT pg_get_functiondef('statarena_app.refresh_player_season_rollups(text,text,boolean)'::regprocedure) AS definition",
+          )
+        ).rows[0].definition,
+        refreshDefinition,
+      );
+      for (const league of ["l_000001", "l_000002"])
+        await db.query(
+          "SELECT statarena_app.refresh_player_season_rollups($1,$2,true)",
+          ["2026/2027", league],
+        );
+      assert.deepEqual(
+        await originalRows(),
+        beforeIndex,
+        "the original025 INSERT refreshes appended generated columns without a writer change or VACUUM",
+      );
       let generation = "42";
       const calls = [];
       const facts = createPlayerReadRoute(
@@ -345,6 +408,7 @@ test(
       for (const file of [
         "003_relational_core.sql",
         "025_player_season_rollups.sql",
+        "030_player_directory_index.sql",
       ])
         await db.query(
           await readFile(

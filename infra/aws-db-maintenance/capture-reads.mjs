@@ -52,6 +52,7 @@ const examples = [
   ["players", "relational-players", "createPlayerReadRoute", "/api/read/players?season=2026%2F2027&ranking=rating&minutes=1&sort=rating&direction=desc&page=1&limit=20"],
   ["clubs", "relational-clubs", "createClubReadRoute", "/api/read/clubs?season=2026%2F2027&sort=name&direction=asc&page=1&limit=24"],
   ["player", "relational-actors", "createActorRoute", "/api/read/player?season=2026%2F2027&player=p_2e0FPo&limit=100"],
+  ["performance", "relational-performance", "createPerformanceRoute", "/api/read/performance?season=2026%2F2027&appearance=m_3Zye1t%3Ap_217YMB"],
 ];
 for (const [name, module, factory, path] of examples) {
   const imported = await service(module);
@@ -65,7 +66,7 @@ for (const [name, module, factory, path] of examples) {
   catch (error) { if (!captured) throw error; }
   if (!captured) throw new Error(`No SQL captured for ${path}`);
   add(`${label}-${name}-plan`, `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${captured.sql}`, captured.values, 45000, 10);
-  if (name.startsWith("search")) add(`${label}-${name}`, captured.sql, captured.values);
+  if (name.startsWith("search") || name === "performance") add(`${label}-${name}`, captured.sql, captured.values);
 }
 if (existsSync(resolve(source, "dashboard/backend/services/relational-player-rollups.js"))) {
   const { playerRollupQuery } = await service("relational-player-rollups");
