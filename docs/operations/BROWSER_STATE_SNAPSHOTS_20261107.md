@@ -24,4 +24,8 @@ La revue a détecté puis reproduit un défaut du premier prototype : une lectur
 - Les 14 nouveaux tests sont explicitement inclus dans le workflow Verify ingestion.
 - La compilation de production Next avec webpack réussit ; le contrôle de livraison Vercel et la mesure finale restent distincts.
 
+## Mesure après livraison
+
+La [livraison PR47](acceptance-20261107/release-pr47.json) est READY sur le commit `3c7638b88f873d468af32515e11c42f8b03b0882`, après les trois jobs de CI réussis. La [série navigateur complète](acceptance-20261107/browser-after-pr47.json) conserve sept retours réellement en mémoire : **94,6 à 215,1 ms**, dont six dépassent 100 ms. Le témoin React de commits et d’écritures reste une preuve fonctionnelle distincte ; il ne fournit pas isolément un gain de temps navigateur. Le [verdict courant](acceptance-20261107/README.md) conserve les autres limites de mesure.
+
 Les durées de fraîcheur, la publication et les clés de ressources restent inchangées. La [recette navigateur](acceptance-20261107/README.md) conserve les résultats précédents et doit être complétée sur la livraison exacte. Le même lot supprime les scans redondants des événements natifs Media et ajoute le [diagnostic v5](BROWSER_ACCEPTANCE_METRICS.md), dont le changement de harnais interdit une attribution naïve de tout gain mesuré au seul produit.
