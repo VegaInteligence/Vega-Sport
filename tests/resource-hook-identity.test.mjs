@@ -190,3 +190,43 @@ test("request bootstrap renders without mutating cache until commit", async () =
     assert.equal(calls, 0);
   }, bootstrap);
 });
+
+test("a cached route's older bootstrap cannot replace a newer publication already in memory", async () => {
+  const createdAt = Date.now() - 120000;
+  const bootstrap = {
+    createdAt,
+    resources: {
+      manifest: { publicationVersion: "42" },
+      "compact:home:generation=42": { marker: "old home" },
+    },
+  };
+  await withResourceHook(async ({ cache, render, commit }) => {
+    let loads = 0;
+    cache.seed(
+      "manifest",
+      { publicationVersion: "43" },
+      { updatedAt: createdAt + 60000 },
+    );
+    cache.seed(
+      "compact:home:generation=43",
+      { marker: "new home" },
+      { updatedAt: createdAt + 60000 },
+    );
+    const loader = () => {
+      loads++;
+      throw new Error("Unexpected warm read");
+    };
+    assert.equal(render("manifest", loader).value.publicationVersion, "43");
+    commit();
+    await flush();
+    assert.equal(cache.peek("manifest").value.publicationVersion, "43");
+    assert.equal(
+      render("compact:home:generation=43", loader).value.marker,
+      "new home",
+    );
+    commit();
+    await flush();
+    assert.equal(loads, 0);
+    assert.equal(cache.peek("compact:home:generation=42"), undefined);
+  }, bootstrap);
+});

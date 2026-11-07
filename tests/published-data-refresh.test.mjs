@@ -118,6 +118,10 @@ async function withRefreshHook({ start, refresh, enabled = true }, run) {
         await emit(documentEvents, "visibilitychange");
       },
       mount,
+      remount(active = true) {
+        refs.length = 0;
+        return mount(active);
+      },
       unmount() {
         cleanups.forEach((cleanup) => cleanup?.());
         cleanups = [];
@@ -133,6 +137,40 @@ async function withRefreshHook({ start, refresh, enabled = true }, run) {
     Date.now = previousNow;
   }
 }
+
+test("returning to a cached route does not restart the publication freshness budget", async () => {
+  let calls = 0;
+  await withRefreshHook(
+    {
+      start: "2026-11-06T12:00:00Z",
+      refresh: () => {
+        calls++;
+        return Promise.resolve();
+      },
+    },
+    async (clock) => {
+      await clock.tick(maxAge - 1);
+      clock.unmount();
+      await clock.remount();
+      assert.equal(calls, 0);
+      assert.equal(clock.nextDelay(), 1);
+      await clock.tick(1);
+      assert.equal(
+        calls,
+        1,
+        "the budget follows this document, not the latest mount",
+      );
+      clock.unmount();
+      clock.elapse(maxAge + 1);
+      await clock.remount();
+      assert.equal(
+        calls,
+        2,
+        "a route entered after the deadline refreshes immediately",
+      );
+    },
+  );
+});
 
 test("published data refreshes during the day, on stale focus and after a failure", async () => {
   let calls = 0,

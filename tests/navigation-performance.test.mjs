@@ -14,6 +14,119 @@ import {
 } from "../dashboard/frontend/src/services/scouting-history.js";
 import { createResourceCache } from "../dashboard/frontend/src/services/resource-cache.js";
 import { competitionFixturePreview } from "../dashboard/frontend/src/services/fixture-pages.js";
+import {
+  acceptanceTelemetryURLs,
+  acceptanceRequestKind,
+  acceptanceNetworkEvidence,
+} from "../dashboard/frontend/src/services/navigation-acceptance.js";
+
+test("navigation measurement excludes only advertised same-origin Vercel POST telemetry", () => {
+  const base = "https://site.test/",
+    telemetryURLs = acceptanceTelemetryURLs(
+      [
+        {
+          dataset: {
+            sdkn: "@vercel/analytics/nextjs",
+            viewEndpoint: "/opaque-insights/view",
+          },
+        },
+        {
+          dataset: {
+            sdkn: "@vercel/speed-insights/nextjs",
+            endpoint: "/opaque-speed/vitals",
+          },
+        },
+        { dataset: { sdkn: "unrelated", viewEndpoint: "/unrelated/view" } },
+        {
+          dataset: {
+            sdkn: "@vercel/analytics/nextjs",
+            viewEndpoint: "https://external.test/view",
+          },
+        },
+      ],
+      base,
+    );
+  assert.deepEqual([...telemetryURLs].sort(), [
+    base + "opaque-insights/view",
+    base + "opaque-speed/vitals",
+  ]);
+  const kind = (path, options = {}) =>
+    acceptanceRequestKind(new URL(path, base), { telemetryURLs, ...options });
+  assert.equal(kind("/opaque-insights/view", { method: "POST" }), "telemetry");
+  assert.equal(kind("/opaque-speed/vitals", { method: "POST" }), "telemetry");
+  for (const path of [
+    "/opaque-insights/view",
+    "/unknown/view",
+    "/unrelated/view",
+    "https://external.test/view",
+  ])
+    assert.equal(kind(path), "other", path);
+  assert.equal(kind("/unknown/view", { method: "POST" }), "other");
+  assert.equal(
+    kind("/opaque-insights/view?data=1", { method: "POST" }),
+    "other",
+  );
+  assert.equal(
+    kind("/opaque-insights/view", { method: "POST", headers: { RSC: "1" } }),
+    "rsc",
+  );
+  assert.equal(kind("/clubs", { headers: new Headers({ rsc: "1" }) }), "rsc");
+  assert.equal(kind("/?_rsc=opaque"), "rsc");
+  assert.equal(kind("/api/read/clubs"), "api");
+});
+
+test("memory claims retain all fetch counts and reject API, RSC, unknown, or pending work", () => {
+  const input = {
+    startMs: 100,
+    finished: 150,
+    inFlight: 1,
+    blockingInFlight: 0,
+    cache: { fresh: 5, pending: 0, loader: 0 },
+    reads: [],
+    requests: [{ kind: "telemetry", startMs: 90, endMs: 120 }],
+  };
+  const valid = acceptanceNetworkEvidence(input);
+  assert.equal(valid.dataInMemory, true);
+  assert.equal(valid.fetchesDuringInterval, 1);
+  assert.equal(valid.fetchesInFlightAtClick, 1);
+  assert.equal(valid.telemetryFetchesDuringInterval, 1);
+  assert.equal(valid.blockingFetchesDuringInterval, 0);
+  for (const kind of ["api", "rsc", "other"])
+    for (const request of [
+      { kind, startMs: 90, endMs: 105 },
+      { kind, startMs: 110, endMs: 115 }, // Completed before the click handler can run.
+      { kind, startMs: 120, endMs: null },
+    ])
+      assert.equal(
+        acceptanceNetworkEvidence({ ...input, requests: [request] })
+          .dataInMemory,
+        false,
+      );
+  assert.equal(
+    acceptanceNetworkEvidence({ ...input, blockingInFlight: 1 }).dataInMemory,
+    false,
+  );
+  assert.equal(
+    acceptanceNetworkEvidence({ ...input, incomplete: true }).dataInMemory,
+    false,
+  );
+  assert.equal(
+    acceptanceNetworkEvidence({
+      ...input,
+      reads: [{ startMs: 90, endMs: 105 }],
+    }).dataInMemory,
+    false,
+  );
+  for (const cache of [
+    { fresh: 0, pending: 0, loader: 0 },
+    { fresh: 5, pending: 1, loader: 0 },
+    { fresh: 5, pending: 0, loader: 1 },
+  ])
+    assert.equal(
+      acceptanceNetworkEvidence({ ...input, cache }).dataInMemory,
+      false,
+    );
+});
 
 const season = "2026/2027";
 const manifest = {
