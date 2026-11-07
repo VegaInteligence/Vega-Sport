@@ -36,6 +36,9 @@ import {
   orderedCompetitions,
 } from "../services/competition-selector.js";
 const EMPTY_FIXTURES = [];
+// A viewport resize must not discard a server page and fetch it again at a
+// different size. Twenty-four cards fit both three- and four-column grids.
+const DIRECTORY_PAGE_SIZE = 24;
 
 function useDirectoryCapacity(gridRef, active, scope) {
   const [layout, setLayout] = useState({ capacity: 12, height: undefined });
@@ -99,8 +102,7 @@ export default function ClubsPage() {
     [query, setQuery] = useState(""),
     [country, setCountry] = useState("all"),
     [competitionId, setCompetitionId] = useState("all"),
-    [paging, setPaging] = useState({ key: "", page: 1 }),
-    [serverLimit, setServerLimit] = useState(12);
+    [paging, setPaging] = useState({ key: "", page: 1 });
   const params = useSearchParams(),
     id = params.get("id"),
     hasSavedClubs = useHasSaved("clubs");
@@ -121,7 +123,7 @@ export default function ClubsPage() {
       remoteQuery,
       country,
       competitionId,
-      serverLimit,
+      DIRECTORY_PAGE_SIZE,
     ].join("|"),
     directory = useCompactRead(
       "clubs",
@@ -133,10 +135,10 @@ export default function ClubsPage() {
         country: country === "all" ? undefined : country,
         competition: competitionId === "all" ? undefined : competitionId,
         page: paging.key === remoteKey ? paging.page : 1,
-        limit: serverLimit,
+        limit: DIRECTORY_PAGE_SIZE,
       },
       {
-        enabled: f.compactMode && !id && !savedView,
+        enabled: f.compactMode && !id && !savedView && !fromStandings,
         refreshManifest: f.refreshManifest,
       },
     );
@@ -285,10 +287,12 @@ export default function ClubsPage() {
     ),
     layout = useDirectoryCapacity(
       gridRef,
-      !selected && visible.length > 0,
+      !remoteDirectory && !selected && visible.length > 0,
       [f.season, f.focus, search, activeCountry, activeCompetitionId].join("|"),
     ),
-    capacity = Math.min(100, layout.capacity),
+    capacity = remoteDirectory
+      ? DIRECTORY_PAGE_SIZE
+      : Math.min(100, layout.capacity),
     pageKey = [
       f.season,
       f.focus,
@@ -312,11 +316,8 @@ export default function ClubsPage() {
       ? directory.value?.pagination.total || 0
       : visible.length;
   useEffect(() => {
-    if (remoteDirectory) setServerLimit(capacity);
-  }, [remoteDirectory, capacity]);
-  useEffect(() => {
-    setPaging({ key: pageKey, data: f.data, page: 1 });
-  }, [pageKey, f.data]);
+    if (!remoteDirectory) setPaging({ key: pageKey, data: f.data, page: 1 });
+  }, [pageKey, f.data, remoteDirectory]);
   const clubMatches = useMemo(
     () => clubMatchHistory(profileData.matches, profileData.fixtures, id),
     [profileData.matches, profileData.fixtures, id],

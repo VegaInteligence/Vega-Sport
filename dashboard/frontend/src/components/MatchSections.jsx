@@ -10,6 +10,10 @@ import {
 } from "./UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResource } from "../services/resources.js";
+import {
+  matchReadSource,
+  matchResourceKey,
+} from "../services/match-resources.js";
 import PlayerMetrics, { periodLabel } from "./PlayerMetrics.jsx";
 import { MATCH_SECTIONS, number, isNumber } from "../services/format.js";
 import { ShotMap, XgTimeline } from "./Charts.jsx";
@@ -634,10 +638,19 @@ export function MatchSections({
     [section, setSection] = useState(initialSection),
     [version, setVersion] = useState(0);
   const result = useResource(
-    `section:${match.id}:${section}:${f.configured}:${version}`,
-    async () => {
-      await f.client.ensureEndpoint(match, section, version > 0);
-      const entry = f.client.payloads.get(`${match.id}:${section}`);
+    matchResourceKey(
+      f.manifest || f.client,
+      "section",
+      match,
+      section,
+      matchReadSource(f.manifest, f.configured),
+      version,
+    ),
+    async ({ signal }) => {
+      const entry =
+        (await f.client.ensureEndpoint(match, section, version > 0, {
+          signal,
+        })) || f.client.payloads.get(`${match.id}:${section}`);
       if (entry.error) throw new Error(entry.error);
       return entry;
     },

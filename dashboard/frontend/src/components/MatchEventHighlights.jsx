@@ -2,6 +2,10 @@
 import React, { useMemo, useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResource } from "../services/resources.js";
+import {
+  matchReadSource,
+  matchResourceKey,
+} from "../services/match-resources.js";
 import { AsyncState, Card, Empty, Segments } from "./UI.jsx";
 import Icon from "./Icon.jsx";
 import { Events, eventKind } from "./MatchSections.jsx";
@@ -134,14 +138,20 @@ export default function MatchEventHighlights({ match }) {
   const f = useFootball(),
     [view, setView] = useState("goals");
   const resource = useResource(
-    `match-events:${f.client.id}:${match.id}`,
-    async () => {
-      await f.client.ensureEndpoint(
-        match,
-        "events",
-        Boolean(f.client.payloads.get(`${match.id}:events`)?.error),
-      );
-      const value = f.client.payloads.get(`${match.id}:events`);
+    matchResourceKey(
+      f.manifest || f.client,
+      "timeline",
+      match,
+      matchReadSource(f.manifest, f.configured),
+    ),
+    async ({ signal }) => {
+      const value =
+        (await f.client.ensureEndpoint(
+          match,
+          "events",
+          Boolean(f.client.payloads.get(`${match.id}:events`)?.error),
+          { signal },
+        )) || f.client.payloads.get(`${match.id}:events`);
       if (value?.error) throw new Error(value.error);
       return value?.data;
     },

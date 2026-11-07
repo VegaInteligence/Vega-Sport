@@ -42,6 +42,7 @@ import {
   parseAdvanced,
 } from "../services/advanced-filters.js";
 import { FootballDataClient } from "../services/football-client.js";
+import { matchResourceKey } from "../services/match-resources.js";
 import { ProFootballDataClient } from "../services/pro-football-client.js";
 import { isProManifest } from "../services/pro-match-data.js";
 import {
@@ -551,7 +552,9 @@ export function FootballProvider({ children, loadData = true }) {
   );
   const selectedMatch = detailPlayer
     ? (deferSeason
-        ? cachedResource(`remote-match:${detailId}`)
+        ? cachedResource(
+            matchResourceKey(displayedManifest, "summary", detailId),
+          )
         : data?.matches.find((match) => match.id === detailId)) || {
         leagueId: initial.get("competition"),
         season: initial.get("sourceSeason"),
@@ -675,7 +678,7 @@ export function FootballProvider({ children, loadData = true }) {
       active = false;
     };
   }, [progressive, data, fullKey]);
-  const clientManifest = proMode ? displayedManifest : null;
+  const clientManifest = displayedManifest;
   const clientLeague = proMode ? filters.league : null;
   const clientSeason = proMode ? chosen : null;
   const client = useMemo(
@@ -688,7 +691,7 @@ export function FootballProvider({ children, loadData = true }) {
               leagueId: filters.league,
               season: chosen,
             })
-          : new FootballDataClient({ data })
+          : new FootballDataClient({ data, manifest: clientManifest })
         : null,
     [data, proMode, clientManifest, clientLeague, clientSeason],
   );

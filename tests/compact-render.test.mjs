@@ -1062,8 +1062,10 @@ test("the new shot view consumes actor shot fields without changing their values
   assert.deepEqual(shots, before);
 });
 
-test("clubs directory keeps global totals and facets without deriving them from its page", async () => {
+test("clubs directory preserves global totals and one server page size after layout measurement", async () => {
   const reads = [],
+    states = [],
+    effects = [],
     catalog = [
       ...manifest.competitions,
       { id: "l_1TB68P", name: "LaLiga", country: "ESP" },
@@ -1078,7 +1080,29 @@ test("clubs directory keeps global totals and facets without deriving them from 
       href: (url, values) => url + "?" + new URLSearchParams(values),
       changeSeason() {},
     };
+  let stateCursor = 0;
   const mod = await compile("views/ClubsPage.jsx", {
+    react: {
+      ...React,
+      useState(initial) {
+        const index = stateCursor++;
+        if (!(index in states))
+          states[index] = initial?.capacity
+            ? { capacity: 28, height: 510 }
+            : typeof initial === "function"
+              ? initial()
+              : initial;
+        return [
+          states[index],
+          (next) => {
+            states[index] =
+              typeof next === "function" ? next(states[index]) : next;
+          },
+        ];
+      },
+      useEffect: (effect) => effects.push(effect),
+      useLayoutEffect() {},
+    },
     "next/navigation": {
       useSearchParams: () => new URLSearchParams({ clubsView: "explore" }),
     },
@@ -1107,7 +1131,7 @@ test("clubs directory keeps global totals and facets without deriving them from 
               competitionIds: [league, "l_1TB68P"],
             },
           },
-          pagination: { page: 1, pages: 25, total: 300, limit: 12 },
+          pagination: { page: 1, pages: 13, total: 300, limit: 24 },
         },
       };
     }),
@@ -1135,10 +1159,18 @@ test("clubs directory keeps global totals and facets without deriving them from 
   assert.match(html, /300 clubs/);
   assert.match(html, /Paris/);
   assert.match(html, /Espagne/);
-  assert.match(html, /data-pages="25"/);
+  assert.match(html, /data-pages="13"/);
   assert.equal(reads.length, 1);
-  assert.equal(reads[0].params.limit, 12);
+  assert.equal(reads[0].params.limit, 24);
   assert.equal(reads[0].options.enabled, true);
+  for (const effect of effects.splice(0)) effect();
+  stateCursor = 0;
+  renderToStaticMarkup(h(mod.default));
+  assert.equal(reads.length, 2);
+  assert.equal(
+    new Set(reads.map(({ params }) => JSON.stringify(params))).size,
+    1,
+  );
 });
 
 test("compact actor errors cannot activate a bulk season fallback", async () => {

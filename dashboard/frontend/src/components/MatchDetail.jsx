@@ -27,6 +27,10 @@ import {
   statValue,
 } from "../services/match-data.js";
 import { useResource } from "../services/resources.js";
+import {
+  matchReadSource,
+  matchResourceKey,
+} from "../services/match-resources.js";
 import { useProResource } from "../hooks/useProResource.js";
 import { seasonLabel } from "../model.js";
 import { BookmarkButton } from "./ResearchUI.jsx";
@@ -44,14 +48,20 @@ function MatchStatistics({ match }) {
   const f = useFootball(),
     [period, setPeriod] = useState("All"),
     resource = useResource(
-      `team-periods:${match.id}:${f.client.id}`,
-      async () => {
-        await f.client.ensureEndpoint(
-          match,
-          "stats",
-          Boolean(f.client.payloads.get(`${match.id}:stats`)?.error),
-        );
-        const entry = f.client.payloads.get(`${match.id}:stats`);
+      matchResourceKey(
+        f.manifest || f.client,
+        "statistics",
+        match,
+        matchReadSource(f.manifest, f.configured),
+      ),
+      async ({ signal }) => {
+        const entry =
+          (await f.client.ensureEndpoint(
+            match,
+            "stats",
+            Boolean(f.client.payloads.get(`${match.id}:stats`)?.error),
+            { signal },
+          )) || f.client.payloads.get(`${match.id}:stats`);
         if (entry.error) throw new Error(entry.error);
         return entry.data;
       },
@@ -382,14 +392,20 @@ function ProSummaryShots({ match }) {
 function LegacySummaryShots({ match }) {
   const f = useFootball();
   const resource = useResource(
-    `summary-shots:${f.client.id}:${match.id}`,
-    async () => {
-      await f.client.ensureEndpoint(
-        match,
-        "shots",
-        Boolean(f.client.payloads.get(`${match.id}:shots`)?.error),
-      );
-      const value = f.client.payloads.get(`${match.id}:shots`);
+    matchResourceKey(
+      f.manifest || f.client,
+      "shots-view",
+      match,
+      matchReadSource(f.manifest, f.configured),
+    ),
+    async ({ signal }) => {
+      const value =
+        (await f.client.ensureEndpoint(
+          match,
+          "shots",
+          Boolean(f.client.payloads.get(`${match.id}:shots`)?.error),
+          { signal },
+        )) || f.client.payloads.get(`${match.id}:shots`);
       if (value?.error) throw new Error(value.error);
       return { ...match, shots: normalizeShots(value.data) };
     },

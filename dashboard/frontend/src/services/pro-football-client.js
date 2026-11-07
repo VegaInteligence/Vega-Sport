@@ -5,7 +5,7 @@ import { apiUrl } from "../data-url.js";
 /** Match views use published SQL representations, with no document fallback. */
 export class ProFootballDataClient extends FootballDataClient {
   constructor({ data, manifest, leagueId, season, fetcher = fetch, redraw }) {
-    super({ data, redraw });
+    super({ data, manifest, redraw });
     this.fetcher = fetcher;
     this.matchEditions = new Map();
     this.pro = true;
@@ -52,11 +52,15 @@ export class ProFootballDataClient extends FootballDataClient {
     return editions.length === 1 ? editions[0] : null;
   }
 
-  async read(path) {
-    const response = await this.fetcher(apiUrl(path), { headers: { Accept: "application/json" } });
+  async read(path, { signal } = {}) {
+    const response = await this.fetcher(apiUrl(path), { headers: { Accept: "application/json" }, signal });
     let body;
     try { body = await response.json(); }
-    catch { throw new Error("La réponse du service est illisible."); }
+    catch (error) {
+      signal?.throwIfAborted();
+      if (error?.name === "AbortError") throw error;
+      throw new Error("La réponse du service est illisible.");
+    }
     if (!response.ok || body.error) {
       const error = new Error(body.error?.message || "Données indisponibles.");
       Object.assign(error, { status: response.status, code: body.error?.code, state: body.error?.state });
@@ -65,10 +69,10 @@ export class ProFootballDataClient extends FootballDataClient {
     return body;
   }
 
-  async summary(id) {
+  async summary(id, options = {}) {
     if (!/^m_[A-Za-z0-9]{6}$/.test(id)) throw new Error("Identifiant de match invalide.");
     const edition = this.matchEdition(id);
-    const body = await this.read(`/api/matches/${id}/summary${edition ? `?v=${edition.representationToken}` : ""}`);
+    const body = await this.read(`/api/matches/${id}/summary${edition ? `?v=${edition.representationToken}` : ""}`, options);
     const { match, representationToken } = body.data || {};
     if (match?.id !== id || !this.manifest.editions.some((item) => item.representationToken === representationToken))
       throw new Error("La version du match a changé. Actualisez les données.");
@@ -76,28 +80,19 @@ export class ProFootballDataClient extends FootballDataClient {
     return { ...match, representationToken };
   }
 
-  async request(path) {
+  async request(path, options = {}) {
     if (typeof path !== "string" || !/^(leagues|teams|players|matches)(?:\/|$|\?)/.test(path))
       throw new Error("Ressource invalide.");
     const url = new URL(apiUrl("/api/pitchapi/" + path), "https://statarena.invalid");
     const id = /^matches\/(m_[A-Za-z0-9]{6})(?:[/?]|$)/.exec(path)?.[1];
     const edition = this.matchEdition(id);
     if (edition) url.searchParams.set("v", edition.representationToken);
-    return this.read(url.pathname + url.search);
+    return this.read(url.pathname + url.search, options);
   }
 
-  async ensureEndpoint(match, section, force = false) {
-    const key = `${match.id}:${section}`;
-    if (this.payloads.has(key) && !force) return;
+  async ensureEndpoint(match, section, force = false, options = {}) {
     this.matchEditions.set(match.id, match);
-    this.payloads.set(key, { loading: true });
-    try {
-      const payload = await this.request(`matches/${match.id}${section === "match" ? "" : `/${section}`}`);
-      this.payloads.set(key, { data: payload.data, source: "api" });
-    } catch (error) {
-      this.payloads.set(key, { error: error.message, code: error.code });
-    }
-    this.redraw();
+    return super.ensureEndpoint(match, section, force, options);
   }
 
   // Native endpoints own each detail; no raw object archive is used by the site.

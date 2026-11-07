@@ -3,6 +3,10 @@ import React from "react";
 import Link from "next/link";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResource } from "../services/resources.js";
+import {
+  matchResourceKey,
+  validateMatchPublication,
+} from "../services/match-resources.js";
 import { loadSeason } from "../season_data.js";
 import {
   historicalFixtures,
@@ -20,9 +24,15 @@ import { AsyncState, Card, Empty, Media } from "./UI.jsx";
 import { MatchLink } from "./MatchLink.jsx";
 import { StatRows } from "./StatRows.jsx";
 
-async function contextData(f, match) {
+async function contextData(f, match, { signal } = {}) {
+  validateMatchPublication(f.manifest || f.client, match);
   const season = seasonLabel(match.season || f.season);
-  const index = await playerRoutes(f.manifest,{teams:[match.home.id,match.away.id]});
+  const index = await playerRoutes(
+    f.manifest,
+    { teams: [match.home.id, match.away.id] },
+    fetch,
+    { signal },
+  );
   const home = index.clubRoutes?.[match.home.id] || {},
     away = index.clubRoutes?.[match.away.id] || {};
   const leagues = new Set(
@@ -35,10 +45,14 @@ async function contextData(f, match) {
   for (const year of Object.keys(home))
     for (const id of home[year]) if (away[year]?.includes(id)) shared.add(id);
   const [data, histories] = await Promise.all([
-    season === f.season && [...leagues].every((id) => loaded.has(id))
+    f.data.meta?.currentSeason === season &&
+    !f.data.meta?.actor &&
+    [...leagues].every((id) => loaded.has(id))
       ? f.data
-      : loadSeason(f.manifest, season, fetch, leagues),
-    Promise.all([...shared].map((id) => historicalFixtures(f.manifest, id))),
+      : loadSeason(f.manifest, season, fetch, leagues, { signal }),
+    Promise.all(
+      [...shared].map((id) => historicalFixtures(f.manifest, id, { signal })),
+    ),
   ]);
   const fixtures = [
     ...new Map(
@@ -275,8 +289,14 @@ function Content({ match, value }) {
 export default function MatchContext({ match }) {
   const f = useFootball();
   const resource = useResource(
-    `match-context:${f.client.id}:${match.id}:${match.season}`,
-    () => contextData(f, match),
+    matchResourceKey(
+      f.manifest || f.client,
+      "context",
+      match,
+      match.leagueId,
+      match.season,
+    ),
+    ({ signal }) => contextData(f, match, { signal }),
     Boolean(match.leagueId && match.season),
   );
   if (!match.leagueId || !match.season)

@@ -260,20 +260,23 @@ test('missing-key mode loads known snapshot payloads once and keeps advanced dat
   assert.doesNotMatch(JSON.stringify(calls), /x-api-key|pk_live_|pk_test_|authorization/i);
 });
 
-test('proxy missing-key failure falls back only to a collected family and sends no API credential', async t => {
+test('a configured proxy failure does not trigger a larger archive read or send an API credential', async t => {
   const match = data.matches[0];
   const calls = [];
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     calls.push({ url: String(url), options });
-    return String(url).startsWith('/api/pitchapi/') ? response({ error: { code: 'PITCHAPI_NOT_CONFIGURED', message: 'Server key missing' } }, 503) : response(shards.get(match.id));
+    assert.ok(String(url).startsWith('/api/pitchapi/'));
+    return response({ error: { code: 'PITCHAPI_NOT_CONFIGURED', message: 'Server key missing' } }, 503);
   });
   const app = explorer();
   app.configured = true;
   await app.ensureEndpoint(match, 'lineups');
-  assert.equal(app.payloads.get(`${match.id}:lineups`).source, 'snapshot');
+  assert.equal(app.payloads.get(`${match.id}:lineups`).code, 'PITCHAPI_NOT_CONFIGURED');
+  assert.equal(Object.hasOwn(app.payloads.get(`${match.id}:lineups`), 'data'), false);
   await app.ensureEndpoint(match, 'advanced/network');
   assert.equal(app.payloads.get(`${match.id}:advanced/network`).code, 'PITCHAPI_NOT_CONFIGURED');
   assert.equal(Object.hasOwn(app.payloads.get(`${match.id}:advanced/network`), 'data'), false);
+  assert.equal(calls.length, 2);
   assert.doesNotMatch(JSON.stringify(calls), /x-api-key|pk_live_|pk_test_|authorization/i);
 });
 

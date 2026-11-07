@@ -18,6 +18,10 @@ const commonjs = requireLocal(
 const e = React.createElement;
 
 async function loadComponent(file, stubs) {
+  stubs = {
+    "../services/match-resources.js": await import("../dashboard/frontend/src/services/match-resources.js"),
+    ...stubs,
+  };
   const filename = path.join(root, file),
     source = await fs.readFile(filename, "utf8");
   const code = babel.transformSync(source, {
