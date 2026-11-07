@@ -288,6 +288,12 @@
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
 }
+.player-career-table:not(.player-career-selections) .data-table {
+  table-layout: fixed;
+}
+.player-career-table:not(.player-career-selections) thead th:first-child {
+  width: 46%;
+}
 .player-career-table .data-table :is(th, td) {
   padding: 8px;
 }
