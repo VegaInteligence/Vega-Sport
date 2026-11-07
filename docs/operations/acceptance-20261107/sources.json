@@ -108,6 +108,18 @@
     {
       "file": "browser-v3-receipt.json",
       "sha256": "1c1dab79f2684bebdb18f1fb2563205fbace3417b9883c0b295d5d1ee5a531dc"
+    },
+    {
+      "file": "browser-after-pr44.json",
+      "sha256": "c7219693cff35f1af0a80cf9558e3ec2bcc5c9d0460b9f583627d78c681d1161"
+    },
+    {
+      "file": "pr44-ci-accepted.json",
+      "sha256": "09f48c5581d309de9351ce285518b87e14c07a168ba812ff69d240bcb73f564a"
+    },
+    {
+      "file": "pr44-production-deployment.json",
+      "sha256": "0ba36d06f8051d47c5b9471aeb5b34c5df0f4e304a35965c52033ad69e427e09"
     }
   ],
   "policy": "Only allowlisted aggregates, public scope IDs, timestamps, statuses and hashes are included. Source filenames and hashes identify operator receipts; raw logs, credentials, resource bodies and signed URLs are excluded. Derived aggregates are asserted when built."

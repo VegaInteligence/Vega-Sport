@@ -118,6 +118,7 @@ jobs:
           tests/initial-page.test.mjs
           tests/media-assets.test.mjs
           tests/resource-hook-identity.test.mjs
+          tests/resource-subscription-react.test.mjs
           tests/competition-render.test.mjs
           tests/season_player_render.test.mjs
           tests/player-season-selected.test.mjs

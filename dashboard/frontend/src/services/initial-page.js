@@ -11,6 +11,15 @@ export function prepareInitialPage(
   let frame = null;
   let deadline = null;
   let pageDeadline = null;
+  const trace = doc.documentElement?.hasAttribute?.("data-vega-acceptance")
+    ? {
+        startedMs: view.performance.now(),
+        totalChecks: 0,
+        checks: [],
+        reason: "ready",
+      }
+    : null;
+  let queuedAt = null;
 
   const viewportCheck = () => {
     // A page's images share most of their ancestors. Read each ancestor once
@@ -91,7 +100,10 @@ export function prepareInitialPage(
     };
   };
   const schedule = () => {
-    if (!disposed && frame === null) frame = view.requestAnimationFrame(check);
+    if (!disposed && frame === null) {
+      if (trace) queuedAt = view.performance.now();
+      frame = view.requestAnimationFrame(check);
+    }
   };
   const observer = new view.MutationObserver(schedule);
   const cleanup = () => {
@@ -107,6 +119,10 @@ export function prepareInitialPage(
   };
   const finish = () => {
     if (disposed) return;
+    if (trace) {
+      trace.finishedMs = view.performance.now();
+      root.setAttribute("data-vega-preparation", JSON.stringify(trace));
+    }
     cleanup();
     reveal();
   };
@@ -114,6 +130,7 @@ export function prepareInitialPage(
     [...root.querySelectorAll("[data-page-loading]")].some(inViewport);
   function finishWithFallbacks() {
     if (disposed) return;
+    if (trace) trace.reason = "deadline";
     const media = new Set();
     for (const image of pendingImages()) {
       const owner = image.closest("[data-page-media]");
@@ -169,9 +186,23 @@ export function prepareInitialPage(
   function check() {
     frame = null;
     if (disposed) return;
+    const checkStarted = trace ? view.performance.now() : null;
     const inViewport = viewportCheck();
     const loading = dataLoading(inViewport);
     const pending = pendingImages(inViewport);
+    if (trace) {
+      const checked = view.performance.now();
+      trace.totalChecks++;
+      trace.checks.push({
+        startMs: checkStarted,
+        durationMs: checked - checkStarted,
+        queueMs: queuedAt === null ? 0 : checkStarted - queuedAt,
+        dataLoading: loading,
+        pendingImages: pending.length,
+      });
+      trace.checks = trace.checks.slice(-20);
+      queuedAt = null;
+    }
     if (loading) {
       // Route data may mount its images later. Its existing error/retry UI owns
       // data failure; the image deadline starts only once that content exists.

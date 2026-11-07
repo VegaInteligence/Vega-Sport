@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { reactFixtures } from "./react-runtime.mjs";
 
-const { renderSeasonSearch, renderSeasonProfile, seedPlayerHonours } =
+const { renderSeasonSearch, renderSeasonProfile, preparePlayerHonoursBootstrap } =
   await reactFixtures();
 const rows = [
   {
@@ -83,7 +83,7 @@ test("season overview shows the radar and removes the detailed statistics shortc
 
 test("Messi keeps his portrait and published trophies when filters leave no matches", async () => {
   const id = "p_1mZO3B";
-  await seedPlayerHonours(id, "Lionel Messi", {
+  const bootstrap = await preparePlayerHonoursBootstrap(id, "Lionel Messi", {
     available: true,
     honours: [
       {
@@ -95,7 +95,7 @@ test("Messi keeps his portrait and published trophies when filters leave no matc
       { category: "individual", name: "Ballon d'Or", seasons: ["2023"] },
     ],
   });
-  const html = renderSeasonProfile([], [], id);
+  const html = renderSeasonProfile([], [], id, bootstrap);
   assert.match(html, /Lionel Messi/);
   const portrait = html.match(
     /<span class="player-avatar season-player-portrait(?: [^"]*)?"[^>]*>([\s\S]*?<img[^>]*>)/,
@@ -115,7 +115,7 @@ test("Messi keeps his portrait and published trophies when filters leave no matc
 
 test("published trophies remain visible without a player name and an empty result stays empty", async () => {
   const id = "p_123456";
-  await seedPlayerHonours(id, "", {
+  const bootstrap = await preparePlayerHonoursBootstrap(id, "", {
     available: true,
     honours: [
       {
@@ -126,21 +126,23 @@ test("published trophies remain visible without a player name and an empty resul
       },
     ],
   });
-  const html = renderSeasonProfile([], [], id);
+  const html = renderSeasonProfile([], [], id, bootstrap);
   assert.equal((html.match(/class="player-trophy-shelf"/g) || []).length, 1);
   assert.match(html, /aria-label="Palmarès"/);
   assert.match(html, /Coupe du monde/);
   const emptyId = "p_654321";
-  await seedPlayerHonours(emptyId, "", { available: false });
+  const emptyBootstrap = await preparePlayerHonoursBootstrap(emptyId, "", {
+    available: false,
+  });
   assert.doesNotMatch(
-    renderSeasonProfile([], [], emptyId),
+    renderSeasonProfile([], [], emptyId, emptyBootstrap),
     /class="player-trophy-shelf"/,
   );
 });
 
 test("unillustrated individual awards remain available without illustrated trophies", async () => {
   const id = "p_123457";
-  await seedPlayerHonours(id, "", {
+  const bootstrap = await preparePlayerHonoursBootstrap(id, "", {
     available: true,
     displayGroups: [
       {
@@ -149,7 +151,7 @@ test("unillustrated individual awards remain available without illustrated troph
       },
     ],
   });
-  const html = renderSeasonProfile([], [], id);
+  const html = renderSeasonProfile([], [], id, bootstrap);
   assert.match(
     html,
     /<details open=""><summary>Autres distinctions \(1\)<\/summary>/,
@@ -161,7 +163,7 @@ test("unillustrated individual awards remain available without illustrated troph
 test("Yamal's Liga and Euro artwork remain clickable", async () => {
   const id = "p_2e0FPo";
   const name = "Lamine Yamal";
-  await seedPlayerHonours(id, name, {
+  const bootstrap = await preparePlayerHonoursBootstrap(id, name, {
     available: true,
     sourceUrl: "https://en.wikipedia.org/wiki/Lamine_Yamal#Honours",
     honours: [
@@ -183,6 +185,7 @@ test("Yamal's Liga and Euro artwork remain clickable", async () => {
     [{ ...rows[0], playerId: id, name }],
     matches,
     id,
+    bootstrap,
   );
   assert.match(html, /<button[^>]+aria-label="Liga, 3 titres, FC Barcelone"/);
   assert.match(html, /src="\/trophies\/liga-current\.webp"/);
@@ -194,4 +197,32 @@ test("Yamal's Liga and Euro artwork remain clickable", async () => {
     html,
     /Source du palmarès|Palmarès sur Wikipédia|wikipedia\.org/,
   );
+});
+
+test("server profiles use only the honours supplied to their own render", async () => {
+  const id = "p_123458";
+  const published = await preparePlayerHonoursBootstrap(id, "", {
+    available: true,
+    honours: [
+      {
+        category: "team",
+        name: "FIFA World Cup",
+        team: "Argentina",
+        seasons: ["2022"],
+      },
+    ],
+  });
+  const empty = await preparePlayerHonoursBootstrap(id, "", {
+    available: false,
+  });
+  const first = renderSeasonProfile([], [], id, published);
+  assert.match(first, /class="player-trophy-shelf"/);
+  assert.match(first, /Coupe du monde/);
+  assert.doesNotMatch(first, /Chargement du palmarès/);
+  const second = renderSeasonProfile([], [], id, empty);
+  assert.doesNotMatch(second, /player-trophy-shelf|Chargement du palmarès/);
+  const unseeded = renderSeasonProfile([], [], id);
+  assert.match(unseeded, /Chargement du palmarès/);
+  assert.doesNotMatch(unseeded, /player-trophy-shelf|Coupe du monde/);
+  assert.equal(renderSeasonProfile([], [], id, published), first);
 });

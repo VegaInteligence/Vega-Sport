@@ -107,6 +107,7 @@ export function startNavigationAcceptance() {
     startedAt: new Date().toISOString(),
     documentId: crypto.randomUUID(),
     initialReadyMs: null,
+    initialPreparation: null,
     reads: [],
     imageReads: [],
     requests: [],
@@ -127,11 +128,12 @@ export function startNavigationAcceptance() {
     document.documentElement.setAttribute(
       "data-vega-acceptance",
       JSON.stringify({
-        version: 3,
+        version: 4,
         startedAt: state.startedAt,
         documentId: state.documentId,
         environment,
         initialReadyMs: state.initialReadyMs,
+        initialPreparation: state.initialPreparation,
         visibility: document.visibilityState,
         reads: state.reads,
         imageReads: state.imageReads,
@@ -258,12 +260,23 @@ export function startNavigationAcceptance() {
       ![...main.querySelectorAll("[data-page-loading]")].some(inViewport)
     );
   }
+  function preparation(main) {
+    try {
+      const value = main?.getAttribute("data-vega-preparation");
+      return value && value.length < 20000 ? JSON.parse(value) : null;
+    } catch {
+      return null;
+    }
+  }
   function check() {
     if (
       state.initialReadyMs === null &&
       document.querySelector('main#main[data-page-ready="true"]')
     ) {
       state.initialReadyMs = Math.round(performance.now() * 1000) / 1000;
+      state.initialPreparation = preparation(
+        document.querySelector("main#main"),
+      );
       report();
     }
     const pending = state.pending;
@@ -311,6 +324,7 @@ export function startNavigationAcceptance() {
           observedImageTransfers: state.imageReads.filter(
             (read) => read.startMs <= finished && read.endMs >= pending.startMs,
           ),
+          preparation: preparation(main),
           cache: { ...pending.cache },
           ...acceptanceNetworkEvidence({
             requests: state.requests,

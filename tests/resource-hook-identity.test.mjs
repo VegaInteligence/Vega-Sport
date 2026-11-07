@@ -70,6 +70,25 @@ async function withResourceHook(run, bootstrap = null) {
             pending.push({ index, callback, deps });
             return callback;
           },
+          useMemo(factory, deps) {
+            const index = cursor++;
+            if (equal(slots[index]?.deps, deps)) return slots[index].value;
+            const value = factory();
+            pending.push({ index, value, deps });
+            return value;
+          },
+          useSyncExternalStore(subscribe, getSnapshot) {
+            const index = cursor++;
+            if (!equal(slots[index]?.deps, [subscribe]))
+              pending.push({
+                index,
+                deps: [subscribe],
+                effect: () => subscribe(() => {}),
+              });
+            // Identity tests explicitly render and commit. Actual React store
+            // consistency checks/render counts live in the ReactDOM suite.
+            return getSnapshot();
+          },
         },
         "../data-url.js": { apiUrl: (url) => url },
         "./public-api-fetch.js":

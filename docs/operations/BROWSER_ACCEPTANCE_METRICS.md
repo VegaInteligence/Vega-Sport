@@ -52,6 +52,14 @@ the first observation of the new workspace, the existing ready gate and the fina
 two-frame interval. Native image resource timings are bounded separately and do
 not redefine the data-memory cohort. See [phase definitions](BROWSER_RENDER_PHASES_20261107.md).
 
+Version 4 also retains the page preparation controller's last 20 checks. Each
+check separates time waiting for its scheduled frame from time spent inspecting
+the current layout and images. The trace reports whether data or images were
+still pending, its total check count and whether readiness or a deadline ended
+the preparation. It is written once on the page at completion; ordinary visits
+do not collect this trace. It does not change image admission, deadlines or the
+navigation completion criterion.
+
 For a reproducible acceptance, warm the relevant page and its images, return
 to another page, then follow the same link within the cache lifetime. Record
 the number of valid memory transitions and their distribution, plus the
