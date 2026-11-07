@@ -10,6 +10,7 @@ import {
 import { scoreSql } from "./relational-clubs.js";
 import {
   bindValue,
+  checkReadGeneration,
   finiteSql,
   normalizedSql,
   parseReadScope,
@@ -338,6 +339,12 @@ champions_games AS (
  SELECT s.* FROM statarena_app.shots s JOIN featured f ON f.id=s.match_id ORDER BY s.ordinal,s.id LIMIT 1001
 )
 SELECT publication.*,
+ (SELECT min(change_at) FROM (
+   SELECT kickoff AS change_at FROM matches
+   UNION ALL SELECT kickoff FROM fixtures
+   UNION ALL SELECT kickoff - interval '7 days' FROM fixtures
+   UNION ALL SELECT (((${instant} AT TIME ZONE 'Europe/Paris')::date+1)::timestamp AT TIME ZONE 'Europe/Paris')
+ ) changes WHERE change_at > ${instant}) AS next_change,
  (SELECT CASE WHEN start_day IS NULL THEN null ELSE jsonb_build_object('start',start_day,'end',end_day,'current',${!filters.archive},'asOf',${b(now)}::float8,'asOfDay',as_of_day) END FROM period) period,
  (SELECT count(*)::int FROM weekly) result_count,
  ${jsonRows("SELECT * FROM ticker_ordered WHERE day_number<=4 AND daily_number<=8 ORDER BY kickoff DESC,id")} results,
@@ -429,11 +436,28 @@ export function homeReadRecord(snapshot) {
   };
 }
 
+export const homeStamp = (row) =>
+  JSON.stringify([
+    "home-projection-v1",
+    String(row?.generation),
+    row?.published_at,
+    row?.source_retrieved_at,
+    row?.latest_source_retrieved_at,
+    row?.start_date,
+    row?.end_date,
+    Number(row?.partition_count || 0),
+    Number(row?.missing_watermarks || 0),
+  ]);
+
 export function createHomeReadRoute(read = query, clock = Date.now) {
+  // A process-local bounded cache: SQL remains the authority, and each request
+  // checks publication metadata and every time boundary before reusing a result.
+  const cache = new Map(),
+    inflight = new Map();
   return async (req, path, params) => {
     if (path !== "/api/read/home") return null;
     if (!["GET", "HEAD"].includes(req.method))
-      reject(405, "Méthode non autorisée.");
+      reject(405, "M\u00e9thode non autoris\u00e9e.");
     const filters = parseHomeRead(params),
       now = clock(),
       periodKey = Math.floor(now / 60_000);
@@ -441,17 +465,107 @@ export function createHomeReadRoute(read = query, clock = Date.now) {
       periodKey,
     });
     if (validated) return validated;
-    const { sql, values } = homeReadQuery(filters, params, now);
-    const [snapshot] = await read(sql, values);
-    // The epoch minute changes the ETag even when a midnight boundary or kickoff
-    // occurs without a new publication. Shared caches expire within 30 seconds.
-    return readResponse(
-      req,
-      params,
-      snapshot,
-      snapshot ? homeReadRecord(snapshot) : {},
-      { periodKey, maxBytes: 1024 * 1024 },
+    // A conditional miss retains the existing one-statement payload snapshot.
+    if (req.headers.get("if-none-match")) {
+      const { sql, values } = homeReadQuery(filters, params, now);
+      const [snapshot] = await read(sql, values);
+      return readResponse(
+        req,
+        params,
+        snapshot,
+        snapshot ? homeReadRecord(snapshot) : {},
+        { periodKey, maxBytes: 1024 * 1024 },
+      );
+    }
+    const metaValues = [];
+    const [meta] = await read(
+      publicationSql(filters.scope, metaValues),
+      metaValues,
     );
+    checkReadGeneration(params, meta?.generation);
+    const key = JSON.stringify([
+      filters,
+      params.get("generation"),
+      homeStamp(meta),
+    ]);
+    let entry = cache.get(key);
+    if (!entry || !(now >= entry.from && now < entry.until)) {
+      // Both cold workers and arbitrary scopes fall back when a projection is unavailable.
+      try {
+        const [capability] = await read(
+          "SELECT CASE WHEN to_regclass('statarena_app.home_projection') IS NULL THEN false ELSE has_table_privilege(to_regclass('statarena_app.home_projection'),'SELECT') END AS available",
+        );
+        const [projection] = capability?.available
+          ? await read(
+              "SELECT stamp,computed_at,valid_until,snapshot FROM statarena_app.home_projection WHERE scope_key=$1",
+              [JSON.stringify(filters)],
+            )
+          : [];
+        if (
+          projection &&
+          projection.stamp === homeStamp(meta) &&
+          now >= new Date(projection.computed_at).getTime() &&
+          now < new Date(projection.valid_until).getTime()
+        ) {
+          entry = {
+            snapshot: projection.snapshot,
+            data: homeReadRecord(projection.snapshot),
+            from: new Date(projection.computed_at).getTime(),
+            until: new Date(projection.valid_until).getTime(),
+          };
+          cache.set(key, entry);
+          while (cache.size > 64) cache.delete(cache.keys().next().value);
+        }
+      } catch (error) {
+        if (!["42P01", "42501"].includes(error.code)) throw error;
+      }
+    }
+    if (!entry || !(now >= entry.from && now < entry.until)) {
+      const flightKey = key;
+      let pending = inflight.get(flightKey);
+      if (!pending) {
+        pending = (async () => {
+          const { sql, values } = homeReadQuery(filters, params, now);
+          const [snapshot] = await read(sql, values);
+          checkReadGeneration(params, snapshot?.generation);
+          const boundary = new Date(snapshot.next_change).getTime();
+          const result = {
+            snapshot,
+            data: homeReadRecord(snapshot),
+            from: now,
+            until: boundary,
+          };
+          // A publication racing the aggregation is never cached under the old fence.
+          if (
+            homeStamp(snapshot) === homeStamp(meta) &&
+            Number.isFinite(boundary) &&
+            boundary > now
+          ) {
+            cache.delete(key);
+            cache.set(key, result);
+            while (cache.size > 64) cache.delete(cache.keys().next().value);
+          }
+          return result;
+        })();
+        inflight.set(flightKey, pending);
+        pending.finally(() => inflight.delete(flightKey)).catch(() => {});
+      }
+      entry = await pending;
+      // A request that crossed the flight's boundary needs a fresh read.
+      if (!(now >= entry.from && now < entry.until) && now !== entry.from) {
+        const { sql, values } = homeReadQuery(filters, params, now);
+        const [snapshot] = await read(sql, values);
+        checkReadGeneration(params, snapshot?.generation);
+        entry = { snapshot, data: homeReadRecord(snapshot) };
+      }
+    }
+    const data = entry.data.period
+      ? { ...entry.data, period: { ...entry.data.period, asOf: now } }
+      : entry.data;
+    return readResponse(req, params, entry.snapshot, data, {
+      periodKey,
+      maxBytes: 1024 * 1024,
+    });
   };
 }
 export const relationalHomeReadRoute = createHomeReadRoute();

@@ -1,3 +1,4 @@
+import { withResolvedMedia } from "./services/resolved-media.js";
 import { createHash } from "node:crypto";
 import { query, configured, cache } from "./services/postgres.js";
 import { instrumentRequest, routeLabel } from "./services/metrics.js";
@@ -413,7 +414,14 @@ async function route(req) {
 export function handleRequest(req) {
   return instrumentRequest(req, async () => {
     try {
-      return await route(req);
+      return (
+        (await withResolvedMedia(
+          req,
+          route,
+          query,
+          process.env.STATARENA_CLOUDFRONT_URL,
+        )) || (await route(req))
+      );
     } catch (error) {
       const status =
         error.status >= 400 && error.status <= 599 ? error.status : 503;

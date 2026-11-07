@@ -21,8 +21,14 @@ const ComparisonDialog = lazy(
 );
 const Context = createContext(null);
 export const useResearch = () => useContext(Context);
-export function ResearchProvider({ children }) {
-  const [data, setData] = useState(EMPTY_RESEARCH);
+export function ResearchProvider({ children, initialState }) {
+  const [data, setData] = useState(() => initialState ? {
+    ...EMPTY_RESEARCH,
+    lists: [{ id: "main", name: "Ma sélection", entries: [
+      ...(initialState.personalTeams || []).map((id) => ({ kind: "clubs", id })),
+      ...(initialState.personalPlayers || []).map((id) => ({ kind: "players", id })),
+    ] }],
+  } : EMPTY_RESEARCH);
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState("");
   const [comparing, setComparing] = useState(false);

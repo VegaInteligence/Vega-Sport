@@ -11,6 +11,7 @@ import { AdvancedPanel, AdvancedToggle } from "./AdvancedFilters.jsx";
 import { advancedChips, countAdvanced } from "../services/advanced-filters.js";
 import SiteHeader from "./SiteHeader.jsx";
 import PageWorkspace from "./PageWorkspace.jsx";
+import NavigationPrefetch from "./NavigationPrefetch.jsx";
 import PlayerSearchResults from "./PlayerSearchResults.jsx";
 import HomePreferences from "./HomePreferences.jsx";
 import SeasonFilter from "./SeasonFilter.jsx";
@@ -318,6 +319,7 @@ export default function Layout({
   const pageIdentity = `${path}:${params.get("id") || ""}:${params.get("m") || ""}`;
   return (
     <>
+      <NavigationPrefetch />
       <Link className="skip-link" href="#main">
         Aller au contenu
       </Link>

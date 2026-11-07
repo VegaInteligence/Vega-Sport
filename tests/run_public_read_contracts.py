@@ -42,9 +42,15 @@ def main():
             url = base + "/vega_refactor_test"
             env = {**os.environ, "TEST_DATABASE_URL": url, "VEGA_TEST_DATABASE_URL": url,
                    "AWS_EC2_METADATA_DISABLED": "true"}
+            subprocess.run([sys.executable, "tests/home-projection-install-postgres.py"], cwd=root, env=env, check=True)
             for name in ("publication_metadata_postgres", "core_delta_postgres",
                          "publication_retries_postgres", "lineup_consolidation_postgres"):
                 subprocess.run([sys.executable, f"tests/{name}.py"], cwd=root, env=env, check=True)
+            # Home projection owns its transaction and needs a dedicated database.
+            with psycopg.connect(base + "/postgres", autocommit=True) as db:
+                db.execute("CREATE DATABASE home_projection_test")
+            subprocess.run(["node", "--test", "tests/home-projection-postgres.test.mjs"],
+                           cwd=root, env={**env, "HOME_PROJECTION_TEST_DATABASE_URL": base + "/home_projection_test"}, check=True)
             # The archive maintenance contract owns its real transaction on a
             # second connection, so give it a separate disposable database.
             with psycopg.connect(base + "/postgres", autocommit=True) as db:

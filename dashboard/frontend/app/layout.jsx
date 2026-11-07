@@ -3,7 +3,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import Providers from "./providers.jsx";
 import ShellFallback from "./shell-fallback.jsx";
-import { apiUrl } from "../src/data-url.js";
+import { homeBootstrapGuardScript } from "../src/services/home-bootstrap-preferences.js";
 import "../src/brand-tokens.css";
 import "../src/fonts.css";
 import "../src/theme.css";
@@ -34,25 +34,16 @@ export const metadata = {
   twitter: { card: "summary_large_image", title: "Vega Intelligence", description, images: ["/api/vega-image?kind=og"] },
 };
 export const viewport = { themeColor: "#0E0F12", colorScheme: "dark light" };
-// Start the downloads every page needs while the scripts are still loading:
-// the manifest, then the Top 7 + UEFA chunks of the default season, which
-// both scopes display first.
-const manifestUrl = apiUrl("/api/dashboard/manifest");
 export default function RootLayout({ children }) {
   return (
     <html lang="fr" data-theme="dark" suppressHydrationWarning>
       <head>
+        <script id="vega-home-scope" dangerouslySetInnerHTML={{ __html: homeBootstrapGuardScript }} />
         <link
           rel="preload"
           href="/fonts/inter-latin.woff2"
           as="font"
           type="font/woff2"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="preload"
-          href={manifestUrl}
-          as="fetch"
           crossOrigin="anonymous"
         />
         <script

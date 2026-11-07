@@ -1,11 +1,15 @@
 name: Build serving tables (AWS)
 on:
   schedule:
-    - cron: '17 * * * *'
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       schema_only:
         description: Install schemas without building business data
+        type: boolean
+        default: false
+      home_only:
+        description: Install schemas and refresh home projections without publishing business data
         type: boolean
         default: false
       queue_all:
@@ -49,6 +53,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           MINUTES_INPUT: ${{ inputs.minutes }}
           BATCH_INPUT: ${{ inputs.batch }}
+          HOME_ONLY_INPUT: ${{ inputs.home_only }}
           QUEUE_ALL_INPUT: ${{ inputs.queue_all }}
           SCHEMA_ONLY_INPUT: ${{ inputs.schema_only }}
           LINEUP_READER_INPUT: ${{ inputs.lineup_reader }}
@@ -59,6 +64,7 @@ jobs:
             schedule)
               minutes=30
               batch=10
+              home_only=false
               queue_all=false
               schema_only=false
               lineup_reader=unchanged
@@ -66,6 +72,7 @@ jobs:
             workflow_dispatch)
               minutes=${MINUTES_INPUT:-100}
               batch=${BATCH_INPUT:-10}
+              home_only=${HOME_ONLY_INPUT:-false}
               queue_all=${QUEUE_ALL_INPUT:-false}
               schema_only=${SCHEMA_ONLY_INPUT:-false}
               lineup_reader=${LINEUP_READER_INPUT:-unchanged}
@@ -78,15 +85,19 @@ jobs:
           if [[ ! "$batch" =~ ^[1-9][0-9]{0,2}$ ]] || (( 10#$batch > 100 )); then
             echo 'Queue batch must be between 1 and 100' >&2; exit 1
           fi
-          case "$queue_all:$schema_only" in
-            true:true|true:false|false:true|false:false) ;;
+          case "$home_only:$queue_all:$schema_only" in
+            true:false:false|false:true:true|false:true:false|false:false:true|false:false:false) ;;
             *) echo 'Publication flags must be true or false' >&2; exit 1 ;;
           esac
+          if [ "$home_only" = true ] && [ "$lineup_reader" != unchanged ]; then
+            echo 'Home-only cannot change the lineup reader' >&2; exit 1
+          fi
           case "$lineup_reader" in
             unchanged|verify|unified|legacy) ;;
             *) echo 'Invalid lineup reader operation' >&2; exit 1 ;;
           esac
           {
+            echo "home_only=$home_only"
             echo "minutes=$minutes"
             echo "batch=$batch"
             echo "queue_all=$queue_all"
@@ -107,6 +118,11 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "24"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - run: bun install --frozen-lockfile
+        working-directory: dashboard
       - run: pip install -r dashboard/scripts/requirements.txt
       - name: Load AWS staging credentials
         uses: ./.github/actions/aws-database
@@ -119,6 +135,7 @@ jobs:
           MATERIALIZE_MINUTES: ${{ steps.plan.outputs.minutes }}
           MATERIALIZE_BATCH: ${{ steps.plan.outputs.batch }}
           SCHEMA_ONLY: ${{ steps.plan.outputs.schema_only }}
+          HOME_ONLY: ${{ steps.plan.outputs.home_only }}
         shell: bash
         run: |
           set -euo pipefail
@@ -130,8 +147,21 @@ jobs:
           fi
           args=(--minutes "$MATERIALIZE_MINUTES" --batch "$MATERIALIZE_BATCH")
           if [ "$QUEUE_ALL" = "true" ]; then args+=(--all); fi
-          if [ "$SCHEMA_ONLY" = "true" ]; then args+=(--install-only); fi
+          if [ "$SCHEMA_ONLY" = "true" ] || [ "$HOME_ONLY" = "true" ]; then args+=(--install-only); fi
           python dashboard/scripts/relational_materialize.py "${args[@]}" | tee rematerialize.log
+          if [ "$HOME_ONLY" = "true" ]; then
+            node -e 'const s = require("node:fs").readFileSync("rematerialize.log", "utf8").trim().split("\n").at(-1); if (JSON.parse(s).schema_installed !== true) process.exit(1)'
+          fi
+      - name: Refresh home projections after publication
+        if: steps.plan.outputs.schema_only != 'true' || steps.plan.outputs.home_only == 'true'
+        continue-on-error: ${{ steps.plan.outputs.home_only != 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node dashboard/scripts/home_projection.mjs | tee home-projection.json
+          if [ "${{ steps.plan.outputs.home_only }}" = true ]; then
+            node -e 'const r = require("./home-projection.json"); if (r.scopes !== 2) process.exit(1)'
+          fi
       - name: Verify or switch the lineup read contract
         if: steps.plan.outputs.lineup_reader != 'unchanged'
         env:

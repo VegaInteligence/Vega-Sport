@@ -17,7 +17,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."),
 
 // Render and commit are separate so the tests can reproduce a route change
 // before a queued loader runs, including a render that never commits.
-async function withResourceHook(run) {
+async function withResourceHook(run, bootstrap = null) {
   const previousWindow = globalThis.window,
     previousDocument = globalThis.document,
     slots = [];
@@ -74,6 +74,8 @@ async function withResourceHook(run) {
         "../data-url.js": { apiUrl: (url) => url },
         "./public-api-fetch.js":
           await import("../dashboard/frontend/src/services/public-api-fetch.js"),
+        "./resource-bootstrap.js": { useResourceBootstrap: () => bootstrap },
+        "./media-registry.js": { acceptMediaPayload: () => {} },
         "./resource-cache.js": {
           createResourceCache: () => (cache = createResourceCache()),
         },
@@ -164,4 +166,24 @@ test("a retained callback keeps its key after a different route commits", async 
     assert.equal(cache.peek("B").value, "B");
     unsubscribeOther();
   });
+});
+
+test("request bootstrap renders without mutating cache until commit", async () => {
+  const bootstrap = {
+    createdAt: Date.now(),
+    resources: { home: { marker: "SSR" } },
+  };
+  await withResourceHook(async ({ cache, render, commit }) => {
+    let calls = 0;
+    const result = render("home", () => {
+      calls++;
+      return { marker: "network" };
+    });
+    assert.deepEqual(result.value, { marker: "SSR" });
+    assert.equal(cache.peek("home"), undefined);
+    commit();
+    await flush();
+    assert.deepEqual(cache.peek("home").value, { marker: "SSR" });
+    assert.equal(calls, 0);
+  }, bootstrap);
 });

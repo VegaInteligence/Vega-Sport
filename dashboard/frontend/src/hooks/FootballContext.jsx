@@ -81,19 +81,19 @@ const metricBasis = (value) =>
   value === "per90" || value === "total" ? value : "perMatch";
 const Context = FootballContext;
 export const useFootball = () => useContext(Context);
-export function FootballProvider({ children, loadData = true }) {
+export function FootballProvider({ children, loadData = true, initialState }) {
   const initial = useSearchParams();
   const pathname = usePathname() || "";
   const currentPage = seasonPage(pathname);
   const playerDirectory = currentPage === "/joueurs" && !initial.get("id");
   const [matchFilter, setMatchFilter] = useState("all");
-  const [preferences, setPreferences] = useState({
+  const [preferences, setPreferences] = useState(initialState?.preferences || {
     focus: "europe",
     defaultSeason: "",
     favoriteLeagueIds: [],
     onboardingComplete: false,
   });
-  const [pageSeasons, setPageSeasons] = useState({});
+  const [pageSeasons, setPageSeasons] = useState(initialState?.season ? { "/": initialState.season } : {});
   const [preferencesReady, setPreferencesReady] = useState(false);
   const requestedFocus = initial.get("focus");
   const defaultPlayerScope =
