@@ -21,3 +21,11 @@ Les délais **5 s images / 10 s page**, les critères de contenu prêt, l’horl
 Le risque résiduel est une multiplication des scans si des chargements arrivent dans des tâches distinctes. Une microtâche s’exécute avant une opportunité de rendu ; une chaîne de microtâches peut retarder ce rendu ([guide MDN](https://developer.mozilla.org/en-US/docs/Web/API/HTML_DOM_API/Microtask_guide)). La trace opt-in conserve donc désormais les sommes **checkWorkMs** et **checkQueueMs** sur tous les contrôles, en plus du compteur total et des vingt derniers détails. Cela évite de sous-estimer le travail si les détails sont tronqués.
 
 **La cible navigateur de 100 ms reste ouverte tant que la livraison exacte n’a pas été mesurée.** Les tests prouvent les invariants de disponibilité et la nouvelle programmation ; ils ne constituent pas une mesure de paint ou de navigation utilisateur.
+
+## Retour de production et suppression des scans redondants
+
+La [mesure après PR46](acceptance-20261107/browser-after-pr46.json) confirme une attente cumulée de **0,1 à 1 ms** sur les quatre retours en mémoire. Elle révèle aussi **26 / 42 / 28 / 93 contrôles**, et jusqu’à **136,8 ms de travail cumulé** pour l’accueil. La plupart des événements natifs précèdent le commit de l’état Media et ne changent pas encore le verdict de disponibilité. Les mesures complètes, y compris ce résultat défavorable, sont conservées.
+
+Le correctif suivant ignore les événements natifs load/error des images dont le propriétaire Media expose un état reconnu. Le contrôleur observe déjà `data-media-state`, le remplacement de `src`/`srcset` et les mutations de descendants : le décodage réussi ou la suppression pour fallback provoque donc toujours son contrôle. Une image sans ce contrat de propriétaire continue de déclencher la préparation au chargement et attend son propre décodage.
+
+**61/61 tests ciblés passent.** Deux nouvelles régressions échouent avant le correctif ; un troisième contrôle confirme le maintien du chemin des images natives. Une série de 24 événements load de Media ne provoque aucun scan supplémentaire avant son commit ready ; l’erreur native ne révèle pas la page avant le fallback. Les délais, le repli avec une frame obligatoire et le critère de navigation restent identiques.

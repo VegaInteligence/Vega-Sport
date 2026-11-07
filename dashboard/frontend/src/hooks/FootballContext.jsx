@@ -51,6 +51,7 @@ import {
   selectSeasonSnapshot,
 } from "../services/season-version.js";
 import usePublishedDataRefresh from "./usePublishedDataRefresh.js";
+import { createBrowserStateStore, useBrowserState } from "../services/browser-state.js";
 import {
   compactGeneration,
   compactCatalogue,
@@ -76,6 +77,43 @@ import {
 export const FootballContext = createContext(null);
 const loadedScopes = new Set();
 const PAGE_SEASONS_KEY = "statarena:page-seasons:v1";
+const EMPTY_PREFERENCES = {
+  focus: "europe",
+  defaultSeason: "",
+  favoriteLeagueIds: [],
+  onboardingComplete: false,
+};
+const EMPTY_PAGE_SEASONS = {};
+const preferenceStore = createBrowserStateStore({
+  key: PREFERENCES_KEY,
+  storage: "localStorage",
+  fallback: EMPTY_PREFERENCES,
+  preserveRequestFallback: true,
+  normalize: (saved) => {
+    if (saved === null) throw Error("Invalid preferences");
+    return {
+      focus: saved.focus === "all" ? "all" : "europe",
+      defaultSeason: typeof saved.defaultSeason === "string" ? saved.defaultSeason : "",
+      favoriteLeagueIds: Array.isArray(saved.favoriteLeagueIds)
+        ? [...new Set(saved.favoriteLeagueIds.filter((id) => typeof id === "string"))]
+        : [],
+      onboardingComplete: saved.onboardingComplete === true,
+    };
+  },
+});
+const pageSeasonStore = createBrowserStateStore({
+  key: PAGE_SEASONS_KEY,
+  storage: "sessionStorage",
+  fallback: EMPTY_PAGE_SEASONS,
+  preserveRequestFallback: true,
+  normalize: (saved) => {
+    if (!saved || typeof saved !== "object" || Array.isArray(saved))
+      throw Error("Invalid page seasons");
+    return Object.fromEntries(Object.entries(saved).filter(
+      ([path, value]) => path.startsWith("/") && typeof value === "string",
+    ));
+  },
+});
 const seasonPage = (path) => path.replace(/\/$/, "") || "/";
 const metricBasis = (value) =>
   value === "per90" || value === "total" ? value : "perMatch";
@@ -87,14 +125,17 @@ export function FootballProvider({ children, loadData = true, initialState }) {
   const currentPage = seasonPage(pathname);
   const playerDirectory = currentPage === "/joueurs" && !initial.get("id");
   const [matchFilter, setMatchFilter] = useState("all");
-  const [preferences, setPreferences] = useState(initialState?.preferences || {
-    focus: "europe",
-    defaultSeason: "",
-    favoriteLeagueIds: [],
-    onboardingComplete: false,
-  });
-  const [pageSeasons, setPageSeasons] = useState(initialState?.season ? { "/": initialState.season } : {});
-  const [preferencesReady, setPreferencesReady] = useState(false);
+  const [preferences, setPreferences, preferencesLoaded] = useBrowserState(
+    preferenceStore, initialState?.preferences || EMPTY_PREFERENCES,
+  );
+  const serverPageSeasons = useMemo(
+    () => initialState?.season ? { "/": initialState.season } : EMPTY_PAGE_SEASONS,
+    [initialState?.season],
+  );
+  const [pageSeasons, setPageSeasons, pageSeasonsLoaded] = useBrowserState(
+    pageSeasonStore, serverPageSeasons,
+  );
+  const preferencesReady = preferencesLoaded && pageSeasonsLoaded;
   const requestedFocus = initial.get("focus");
   const defaultPlayerScope =
     playerDirectory && !initial.get("league") && !initial.get("leagues");
@@ -105,54 +146,8 @@ export function FootballProvider({ children, loadData = true, initialState }) {
         ? "europe"
         : preferences.focus;
   function savePreferences(values) {
-    setPreferences((previous) => {
-      const next = { ...previous, ...values };
-      try {
-        window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify(next));
-      } catch {}
-      return next;
-    });
+    setPreferences((previous) => ({ ...previous, ...values }));
   }
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(
-        window.localStorage.getItem(PREFERENCES_KEY) || "{}",
-      );
-      setPreferences({
-        focus: saved.focus === "all" ? "all" : "europe",
-        defaultSeason:
-          typeof saved.defaultSeason === "string" ? saved.defaultSeason : "",
-        favoriteLeagueIds: Array.isArray(saved.favoriteLeagueIds)
-          ? [
-              ...new Set(
-                saved.favoriteLeagueIds.filter((id) => typeof id === "string"),
-              ),
-            ]
-          : [],
-        onboardingComplete: saved.onboardingComplete === true,
-      });
-    } catch {
-      // An unavailable or invalid local preference must not prevent browsing.
-    } finally {
-      try {
-        const saved = JSON.parse(
-          window.sessionStorage.getItem(PAGE_SEASONS_KEY) || "{}",
-        );
-        if (saved && typeof saved === "object" && !Array.isArray(saved))
-          setPageSeasons(
-            Object.fromEntries(
-              Object.entries(saved).filter(
-                ([path, value]) =>
-                  path.startsWith("/") && typeof value === "string",
-              ),
-            ),
-          );
-      } catch {
-        // Page selections still work in memory when browser storage is unavailable.
-      }
-      setPreferencesReady(true);
-    }
-  }, []);
   const season = initial.get("season") || "";
   // Playing time and advanced filters belong to the players page: they stay
   // in the URL across pages but only narrow the data there.
@@ -1108,15 +1103,6 @@ export function FootballProvider({ children, loadData = true, initialState }) {
     );
     if (initial.get("season") !== chosen) updateQuery({ season: chosen });
   }, [preferencesReady, chosen, initial, currentPage]);
-  useEffect(() => {
-    if (!preferencesReady) return;
-    try {
-      window.sessionStorage.setItem(
-        PAGE_SEASONS_KEY,
-        JSON.stringify(pageSeasons),
-      );
-    } catch {}
-  }, [preferencesReady, pageSeasons]);
   const value = {
     data,
     pro: proMode,

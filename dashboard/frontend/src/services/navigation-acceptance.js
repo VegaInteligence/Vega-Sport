@@ -116,6 +116,13 @@ export function startNavigationAcceptance() {
     discardedBlockingEndMs: -Infinity,
     discardedReadEndMs: -Infinity,
     transitions: [],
+    mainThread: {
+      supported: {},
+      longTasks: [],
+      longFrames: [],
+      discardedThroughMs: { longTasks: -1, longFrames: -1 },
+      droppedEntryCount: { longTasks: null, longFrames: null },
+    },
   });
   const environment = {
     userAgent: navigator.userAgent,
@@ -124,11 +131,22 @@ export function startNavigationAcceptance() {
     viewport: [window.innerWidth, window.innerHeight],
     devicePixelRatio: window.devicePixelRatio,
   };
+  let reportedOnce = false;
   function report() {
+    // Keep collecting every native entry in memory, but do not serialize a
+    // growing receipt or mutate the DOM inside the interval being measured.
+    // The first small export also enables the preparation trace before hydration.
+    if (
+      reportedOnce &&
+      !state.pending?.wasHidden &&
+      (state.pending || state.initialReadyMs === null)
+    )
+      return;
+    reportedOnce = true;
     document.documentElement.setAttribute(
       "data-vega-acceptance",
       JSON.stringify({
-        version: 4,
+        version: 5,
         startedAt: state.startedAt,
         documentId: state.documentId,
         environment,
@@ -139,6 +157,14 @@ export function startNavigationAcceptance() {
         imageReads: state.imageReads,
         fetches: state.requests.map(({ url, ...request }) => request),
         transitions: state.transitions,
+        mainThread: state.mainThread,
+        excludedPendingTransition: state.pending?.wasHidden
+          ? {
+              from: state.pending.from,
+              to: state.pending.to,
+              reason: "document-hidden",
+            }
+          : null,
         method:
           "captured link click to new visible ready workspace, followed by two animation frames",
         excludes:
@@ -306,6 +332,8 @@ export function startNavigationAcceptance() {
           from: pending.from,
           to: pending.to,
           startedAt: pending.startedAt,
+          startMs: Math.round(pending.startMs * 1000) / 1000,
+          finishedMs: Math.round(finished * 1000) / 1000,
           durationMs: Math.round((finished - pending.startMs) * 1000) / 1000,
           eventQueueMs: Math.round(pending.eventQueueMs * 1000) / 1000,
           startClock: pending.startClock,
@@ -400,6 +428,9 @@ export function startNavigationAcceptance() {
   document.addEventListener("visibilitychange", () => {
     if (state.pending && document.visibilityState !== "visible")
       state.pending.wasHidden = true;
+    // A hidden transition is already ineligible for a result. It must not
+    // indefinitely freeze exports or hide late native timing observations.
+    if (state.pending?.wasHidden) report();
   });
   const observer = new MutationObserver(check);
   observer.observe(document.documentElement, {
@@ -458,6 +489,77 @@ export function startNavigationAcceptance() {
     report();
   });
   timingObserver.observe({ type: "resource", buffered: true });
+  // Observe existing work only: no rAF probe, polling or extra rendering is
+  // introduced. Keep late observer deliveries at document level so the final
+  // frame's own entry can still be correlated with a completed transition.
+  const rounded = (value) =>
+    Number.isFinite(value) ? Math.round(value * 1000) / 1000 : null;
+  const scriptSourceKind = (raw) => {
+    if (!raw) return "unattributed";
+    try {
+      const url = new URL(raw, window.location.href);
+      if (["chrome-extension:", "moz-extension:"].includes(url.protocol))
+        return "extension";
+      return url.origin === window.location.origin
+        ? "same-origin"
+        : "other-origin";
+    } catch {
+      return "unattributed";
+    }
+  };
+  for (const [type, field] of [
+    ["longtask", "longTasks"],
+    ["long-animation-frame", "longFrames"],
+  ]) {
+    state.mainThread.supported[type] =
+      PerformanceObserver.supportedEntryTypes?.includes(type) || false;
+    if (!state.mainThread.supported[type]) continue;
+    try {
+      const observer = new PerformanceObserver((list, _observer, options) => {
+        if (Number.isFinite(options?.droppedEntriesCount))
+          state.mainThread.droppedEntryCount[field] =
+            (state.mainThread.droppedEntryCount[field] || 0) +
+            options.droppedEntriesCount;
+        for (const entry of list.getEntries()) {
+          const record = {
+            startMs: rounded(entry.startTime),
+            endMs: rounded(entry.startTime + entry.duration),
+            durationMs: rounded(entry.duration),
+          };
+          if (type === "long-animation-frame") {
+            record.blockingMs = rounded(entry.blockingDuration);
+            record.renderStartMs = rounded(entry.renderStart);
+            record.styleAndLayoutStartMs = rounded(entry.styleAndLayoutStart);
+            record.firstUIEventTimestamp = rounded(entry.firstUIEventTimestamp);
+            // No script URL, function name, container identity or user text.
+            record.scripts = [...(entry.scripts || [])]
+              .slice(0, 20)
+              .map((script) => ({
+                startMs: rounded(script.startTime),
+                durationMs: rounded(script.duration),
+                forcedStyleAndLayoutMs: rounded(
+                  script.forcedStyleAndLayoutDuration,
+                ),
+                invokerType: script.invokerType,
+                sourceKind: scriptSourceKind(script.sourceURL),
+              }));
+            record.scriptCount = entry.scripts?.length || 0;
+          }
+          state.mainThread[field].push(record);
+        }
+        for (const removed of state.mainThread[field].slice(0, -100))
+          state.mainThread.discardedThroughMs[field] = Math.max(
+            state.mainThread.discardedThroughMs[field],
+            removed.endMs,
+          );
+        state.mainThread[field] = state.mainThread[field].slice(-100);
+        report();
+      });
+      observer.observe({ type, buffered: true });
+    } catch {
+      state.mainThread.supported[type] = false;
+    }
+  }
   check();
   report();
 }
