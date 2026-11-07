@@ -13,6 +13,7 @@ from urllib.parse import urlsplit
 
 import psycopg
 from psycopg import sql
+from psycopg.types.json import Jsonb
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "dashboard/scripts"))
@@ -261,6 +262,76 @@ def run(db):
                   db.execute("SELECT count(*) FROM pg_temp.consolidation_copy_writes").fetchone()[0] == 0)
             raise psycopg.Rollback()
 
+    def validator_regressions():
+        """Compare the original and replacement predicates over every node kind."""
+        matrix = []
+        for node in NODES:
+            attributes = db.execute(sql.SQL("SELECT to_jsonb(t)-%s::text[] FROM statarena_app.{} t LIMIT 1").format(
+                sql.Identifier(node.table)), (list(node.metadata_columns),)).fetchone()[0]
+            matrix.extend((node.domain, node.table, label, value, accepted) for label, value, accepted in (
+                ("valid", attributes, True),
+                ("explicit null fields", dict.fromkeys(attributes), True),
+                ("unknown field", {**attributes, "__unmapped_field": 1}, False),
+                ("null document", None, False),
+                ("array document", [], False),
+                ("scalar document", "invalid", False),
+            ))
+            for column, kind in node.columns:
+                wrong_type = {**attributes, column: {"wrong": "type"}}
+                missing = {key: value for key, value in attributes.items() if key != column}
+                matrix.append((node.domain, node.table, "wrong type " + column, wrong_type, False))
+                matrix.append((node.domain, node.table, "missing field " + column, missing, False))
+                if kind in ("integer[]", "integer[][]"):
+                    matrix.append((node.domain, node.table, "invalid array element " + column,
+                                   {**attributes, column: ["not an integer"]}, False))
+                elif kind == "date":
+                    matrix.append((node.domain, node.table, "invalid calendar date " + column,
+                                   {**attributes, column: "2026-02-31"}, False))
+                elif kind == "double precision":
+                    for label, value, accepted in (("negative zero", -0.0, True), ("subnormal", 5e-324, True),
+                                                   ("nonfinite string", "NaN", False)):
+                        matrix.append((node.domain, node.table, label + " " + column, {**attributes, column: value}, accepted))
+        for domain in ("catalog", "support", "detail"):
+            matrix.extend(((domain, "unmapped_kind", "unknown kind", {}, False),
+                           (domain, None, "null kind", {}, False)))
+
+        def evaluate():
+            results = []
+            for domain, kind, label, attributes, accepted in matrix:
+                try:
+                    value = db.execute(sql.SQL("SELECT statarena_app.{}(%s,%s)").format(
+                        sql.Identifier(domain + "_attributes_valid")), (kind, Jsonb(attributes))).fetchone()[0]
+                    result = ("value", value)
+                except psycopg.Error as error:
+                    result = ("error", error.sqlstate)
+                if (result == ("value", True)) != accepted:
+                    raise AssertionError("validator admission changed for " + str(kind) + ": " + label + " " + repr(result))
+                results.append(result)
+            for domain in ("catalog", "support", "detail"):
+                value = db.execute(sql.SQL("SELECT statarena_app.{}(%s,NULL)").format(
+                    sql.Identifier(domain + "_attributes_valid")), (next(n.table for n in NODES if n.domain == domain),)).fetchone()[0]
+                if value is not False:
+                    raise AssertionError("SQL null attributes admitted")
+                results.append(("value", value))
+            return results
+
+        metadata = lambda: db.execute("""SELECT oid,proname,proowner,proacl::text,prosecdef,provolatile,proisstrict,
+            proconfig,proargtypes::text,proparallel,procost,prorows FROM pg_proc
+            WHERE pronamespace='statarena_app'::regnamespace AND proname IN
+            ('catalog_attributes_valid','support_attributes_valid','detail_attributes_valid') ORDER BY oid""").fetchall()
+        before_metadata = metadata()
+        before = evaluate()
+        original_progress = call("status")["progress"]
+        validator_migration = (ROOT / "dashboard/backend/migrations/029_cached_attribute_validators.sql").read_text()
+        db.execute(validator_migration)
+        check("029 retains validator OIDs, owners, ACLs, volatility, strictness and execution attributes", metadata() == before_metadata)
+        check("029 preserves all 112 kinds across valid, invalid, missing, null, array and float-boundary inputs (" + str(len(before)) + " cases)", evaluate() == before)
+        state = db.execute("SELECT oid,ctid::text,prosrc FROM pg_proc WHERE oid=ANY(%s) ORDER BY oid", ([row[0] for row in before_metadata],)).fetchall()
+        db.execute(validator_migration)
+        check("029 is idempotent without replacing functions or copy/parity proofs",
+              db.execute("SELECT oid,ctid::text,prosrc FROM pg_proc WHERE oid=ANY(%s) ORDER BY oid", ([row[0] for row in before_metadata],)).fetchall() == state
+              and call("status")["progress"] == original_progress)
+
     for prefix in ("003_", "004_", "005_", "006_", "007_", "008_", "009_", "010_", "011_", "020_", "021_", "022_", "023_", "024_"):
         if prefix == "023_":
             # Match the existing RDS runtime's old public-schema read grants.
@@ -312,6 +383,7 @@ def run(db):
     unchanged_migration = (ROOT / "dashboard/backend/migrations/028_skip_unchanged_consolidation_rows.sql").read_text()
     db.execute(unchanged_migration)
     check("028 preserves function OIDs, owners, ACLs and signatures", function_metadata() == before_functions)
+    validator_regressions()
     try:
         call("activate")
     except psycopg.errors.RaiseException:

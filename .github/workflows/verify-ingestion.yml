@@ -112,6 +112,13 @@ jobs:
           tests/player-position-summary.test.mjs
           tests/player-overview-radar.test.mjs
           tests/player-career.test.mjs
+          tests/competition-highlights-render.test.mjs
+          tests/competition-standings-notice.test.mjs
+          tests/club-profile-render.test.mjs
+          tests/cup-render.test.mjs
+          tests/competition-matchdays.test.mjs
+          tests/player-competition-matches.test.mjs
+          tests/player-international-career.test.mjs
       - name: Verify compact reads, freshness and incremental publications
         run: >-
           python3 tests/run_public_read_contracts.py

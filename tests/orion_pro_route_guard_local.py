@@ -28,8 +28,10 @@ SERVICE_NAMES=['orion-pro.js','orion-pro-entities.js','orion-pro-operations.js',
  'relational-match.js','relational-support.js','relational-catalog.js','cdn.js','relational-core.js','partition-wire.js',
  'relational-discovery.js','relational-actors.js','relational-performance.js','relational-players.js',
  'relational-clubs.js','relational-home.js','relational-discipline.js','relational-read-utils.js',
+ 'relational-read-cache.js','relational-player-rollups.js','relational-archives.js',
  'catalog-model.json','support-model.json']
-SHARED_NAMES=['competition-scope.js','player-aliases.js','player-discipline.js','player-profile.js']
+SHARED_NAMES=['competition-scope.js','player-aliases.js','player-discipline.js','player-profile.js',
+ 'archive.js','archive-text.js','openfootball-history.js']
 WRAPPERS={'relational-core':['manifest','partitionPage','fixturePage','summary','scouting'],
  'relational-match':['relationalResource','relationalMatchObservation'],
  'relational-catalog':['getCatalog','getProfile'],'relational-support':['getSupporting']}
@@ -176,9 +178,11 @@ def main():
     helper_paths=[Path(__file__),BASE/'guard_http_server.mjs',BASE/'PRO_ON_ROUTE_POLICY.md',BASE/'GUARD_E2E_PROTOCOL.md',BASE/'API_ROUTE_MATRIX.json',
       MODEL,entity_matrix,ROOT/'docs/verification/orion-pro-player-statistics-20261105/ROOT_SHOT_GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-player-statistics-20261105/ROOT_SPATIAL_ADVANCED_GUARD.md',ROOT/'docs/verification/orion-pro-rankings-20261105/ROOT_RANKINGS_GUARD.md',ROOT/'docs/verification/orion-pro-enrichment-20261105/ROOT_ENRICHMENT_GUARD.md',ROOT/'docs/verification/orion-pro-player-statistics-20261105/ROOT_PLAYER_PERIOD_GUARD.md',ROOT/'docs/verification/orion-pro-archives-20261105/ROOT_GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-match-readers-20261105/ROOT_GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-competitions-20261105/ROOT_GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-fixture-aliases-20261105/GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-operations-20261105/GUARD_INTEGRATION.md',ROOT/'docs/verification/orion-pro-entities-20261105/GUARD_INTEGRATION_PROTOCOL.md',READERS/'fixture.py',PILOT/'harness.py',PILOT/'fixtures.py',ROOT/'tests/test_dashboard_data.py']
     helper_paths += [ROOT/'dashboard/scripts'/n for n in ['orion_pro_migrate.py','orion_pro_integrity.py','orion_pro_schema.py','build_dashboard_data.py',
-      'relational_core.py','relational_match.py','relational_match_ddl.py','relational_match_model.py','relational_catalog.py','relational_catalog_keys.py','relational_support.py']]
+      'relational_core.py','relational_match.py','relational_match_ddl.py','relational_match_model.py','relational_catalog.py','relational_catalog_keys.py','relational_support.py',
+      'player_rollups.py','consolidated_storage.py','consolidated_model.py']]
     migration_paths=[ROOT/'dashboard/backend/migrations'/n for n in ['003_relational_core.sql','004_match_details.sql','005_supporting_models.sql','006_catalog_models.sql',
-      '007_match_source_fields.sql','008_match_player_position.sql','009_compact_player_metrics.sql','010_partition_bootstrap_sources.sql','011_appearance_shirt_numbers.sql','012_orion_pro_domain.sql','013_orion_pro_integrity.sql']]
+      '007_match_source_fields.sql','008_match_player_position.sql','009_compact_player_metrics.sql','010_partition_bootstrap_sources.sql','011_appearance_shirt_numbers.sql','012_orion_pro_domain.sql','013_orion_pro_integrity.sql',
+      '025_player_season_rollups.sql']]
     report={'kind':'OWNED_PG18_REAL_HTTP_CLOSED_PRO_ROUTE_GUARD_E2E','command':['python3','tests/orion_pro_route_guard_local.py',*sys.argv[1:]],
       'requiredEnvironment':'PYTHONPATH=/tmp/statarena-publication-test-python','expected':'GUARD_E2E_PROTOCOL.md pre-code matrix',
       'sourceSha256':{},'cases':[],'requests':[],'runtimeExports':[],'baselineReceipt':str(args.baseline_receipt) if args.baseline_receipt else None,
