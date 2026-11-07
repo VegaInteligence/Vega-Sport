@@ -14,7 +14,7 @@ from consolidated_storage import storage_mode
 from archive_projection import archive_index_seasons, refresh_archive_projection
 
 SPEC = Path(__file__).resolve().parents[1] / "backend/services/catalog-model.json"
-spec = json.loads(SPEC.read_text())
+spec = json.loads(SPEC.read_text(encoding="utf-8"))
 model_version = sha256(SPEC.read_bytes()).hexdigest()
 
 

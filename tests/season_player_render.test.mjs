@@ -113,6 +113,51 @@ test("Messi keeps his portrait and published trophies when filters leave no matc
   assert.doesNotMatch(html, /Voir les statistiques détaillées/);
 });
 
+test("published trophies remain visible without a player name and an empty result stays empty", async () => {
+  const id = "p_123456";
+  await seedPlayerHonours(id, "", {
+    available: true,
+    honours: [
+      {
+        category: "team",
+        name: "FIFA World Cup",
+        team: "Argentina",
+        seasons: ["2022"],
+      },
+    ],
+  });
+  const html = renderSeasonProfile([], [], id);
+  assert.equal((html.match(/class="player-trophy-shelf"/g) || []).length, 1);
+  assert.match(html, /aria-label="Palmarès"/);
+  assert.match(html, /Coupe du monde/);
+  const emptyId = "p_654321";
+  await seedPlayerHonours(emptyId, "", { available: false });
+  assert.doesNotMatch(
+    renderSeasonProfile([], [], emptyId),
+    /class="player-trophy-shelf"/,
+  );
+});
+
+test("unillustrated individual awards remain available without illustrated trophies", async () => {
+  const id = "p_123457";
+  await seedPlayerHonours(id, "", {
+    available: true,
+    displayGroups: [
+      {
+        group: "Distinctions individuelles",
+        items: [{ title: "Prix inconnu", count: 2, years: "2022, 2024" }],
+      },
+    ],
+  });
+  const html = renderSeasonProfile([], [], id);
+  assert.match(
+    html,
+    /<details open=""><summary>Autres distinctions \(1\)<\/summary>/,
+  );
+  assert.match(html, /Prix inconnu × 2 · 2022, 2024/);
+  assert.doesNotMatch(html, /class="player-trophy-grid"/);
+});
+
 test("Yamal's Liga and Euro artwork remain clickable", async () => {
   const id = "p_2e0FPo";
   const name = "Lamine Yamal";

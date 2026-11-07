@@ -12,7 +12,7 @@ from consolidated_storage import copy_support_records, storage_mode
 _SPEC = json.loads(
     (
         Path(__file__).resolve().parents[1] / "backend/services/support-model.json"
-    ).read_text()
+    ).read_text(encoding="utf-8")
 )
 FAMILIES, MODELS = _SPEC["families"], _SPEC["models"]
 # A physical layout or encoding change must republish identical source data.

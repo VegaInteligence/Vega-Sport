@@ -5,6 +5,7 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import useActorRead from "../hooks/useActorRead.js";
 import useVisibleIntent from "../hooks/useVisibleIntent.js";
 import { actorReadParams } from "../services/actor-reads.js";
+import { compactGeneration, readCompact } from "../services/compact-reads.js";
 import { useResearch } from "../hooks/ResearchContext.jsx";
 import {
   aggregateSeason,
@@ -45,6 +46,7 @@ import {
 } from "../services/resources.js";
 import {
   MESSI_PORTRAIT,
+  loadSummaryIdentity,
   resolvePlayerIdentity,
 } from "../services/player-identity.js";
 
@@ -270,7 +272,7 @@ export default function PlayerSeasonProfile({
   const identityKey = `player-identity:${id}`;
   useEffect(() => {
     // Changing competitions can remount the profile with a different dataset.
-    if (knownIdentity.name && knownIdentity.imageUrl)
+    if (knownIdentity.name)
       void primeResource(identityKey, () => knownIdentity);
   }, [identityKey, knownIdentity]);
   const publishedProfile = useResource(
@@ -288,14 +290,39 @@ export default function PlayerSeasonProfile({
   );
   const record = publishedProfile.value;
   const storedIdentity = cachedResource(identityKey);
+  const generation = compactGeneration(f.manifest);
+  const seasons = [
+    f.season,
+    ...(f.manifest?.seasons || []).map((s) => s.id),
+  ].filter((season, index, all) => season && all.indexOf(season) === index);
+  const relationalIdentity = useResource(
+    `player-summary-identity:${id}:${seasons.join(",")}:${generation}`,
+    ({ signal }) =>
+      loadSummaryIdentity(id, seasons, generation, readCompact, signal),
+    Boolean(
+      !knownIdentity.name &&
+      !record?.name &&
+      !storedIdentity?.name &&
+      seasons.length &&
+      /^p_[A-Za-z0-9]{6}$/.test(id || ""),
+    ),
+  );
+  const summaryIdentity = relationalIdentity.value;
+  useEffect(() => {
+    if (summaryIdentity?.name)
+      void primeResource(identityKey, () => summaryIdentity);
+  }, [identityKey, summaryIdentity]);
   const identity = useMemo(
     () =>
       resolvePlayerIdentity(id, profile, f.data?.appearances, {
-        name: record?.name || storedIdentity?.name,
+        name: record?.name || storedIdentity?.name || summaryIdentity?.name,
         image_url:
-          record?.image_url || record?.imageUrl || storedIdentity?.imageUrl,
+          record?.image_url ||
+          record?.imageUrl ||
+          storedIdentity?.imageUrl ||
+          summaryIdentity?.imageUrl,
       }),
-    [id, profile, f.data?.appearances, record, storedIdentity],
+    [id, profile, f.data?.appearances, record, storedIdentity, summaryIdentity],
   );
   const honours = usePlayerHonours(id, identity.name);
   const role = profile.role?.label;
@@ -409,13 +436,15 @@ export default function PlayerSeasonProfile({
     return (
       <article className="research-player-profile player-profile-flat">
         <MessiGoats id={id} />
-        {identity.name && (
+        {identity.name ? (
           <PlayerProfileHeading
             id={id}
             identity={identity}
             role={role}
             honours={honours}
           />
+        ) : (
+          <PlayerHonours key={id} result={honours} />
         )}
         <PlayerBio profile={record} />
         <ResearchTabs

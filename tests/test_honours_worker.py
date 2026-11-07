@@ -39,6 +39,43 @@ class Store:
 
 
 class HonoursWorkerTest(unittest.TestCase):
+    def test_interrupted_candidate_is_retried_from_saved_cursor(self):
+        manifest = {"seasons": [{"id": "2026/2027", "chunks": []}]}
+        store = Store({"computed/dashboard/index.json": manifest})
+        class StatefulDB(DB):
+            def __init__(self):
+                super().__init__()
+                self.state = {}
+            def execute(self, sql, params=None):
+                if sql.startswith("select value from statarena.state"):
+                    key = params[0] if params else "player_honours_rotation"
+                    return Result([(self.state[key],)] if key in self.state else [])
+                if sql.startswith("insert into statarena.state"):
+                    key, value = params if len(params) == 2 else ("player_honours_rotation", params[0])
+                    self.state[key] = value.obj
+                return super().execute(sql, params)
+        store.db = StatefulDB()
+        store.db.state["player_honours_cursor:recent"] = 2
+        players = {f"p_{i:06d}": {"name": str(i), "minutes": 100-i,
+                   "observations": {(str(i), "Team"): "2026-11-02"}} for i in range(3)}
+        calls = []
+        def interrupted(name, observations):
+            calls.append(name)
+            if name == "0":
+                raise KeyboardInterrupt()
+            return None
+        with patch("aws_store.Store", return_value=store), patch.object(worker, "candidates_from_manifest", return_value=players), patch.object(worker, "player_candidate", return_value=None), patch.object(worker, "collect_player", side_effect=interrupted), patch.object(worker.time, "sleep"), contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(KeyboardInterrupt):
+                worker.run(limit=3)
+        self.assertEqual(calls, ["2", "0"])
+        self.assertEqual(store.db.state["player_honours_cursor:recent"], 0)
+        self.assertNotIn("player_honours_rotation", store.db.state)
+        with patch("aws_store.Store", return_value=store), patch.object(worker, "candidates_from_manifest", return_value=players), patch.object(worker, "player_candidate", return_value=None), patch.object(worker, "collect_player", return_value=None) as collect, patch.object(worker.time, "sleep"), contextlib.redirect_stdout(io.StringIO()):
+            worker.run(limit=1)
+        self.assertEqual(collect.call_args.args[0], "0")
+        self.assertEqual(store.db.state["player_honours_cursor:recent"], 1)
+        self.assertEqual(store.db.state["player_honours_rotation"], 1)
+
     def test_source_parser_preserves_wins_and_excludes_runners_up(self):
         html = "<p><b>Club</b></p><ul><li>League: 2024–25; runner-up: 2023–24</li><li>Cup runner-up: 2022</li></ul>"
         self.assertEqual(worker.parse_honours(html), [{"name": "League", "team": "Club", "category": "team", "seasons": ["2024–25"]}])
@@ -70,6 +107,46 @@ class HonoursWorkerTest(unittest.TestCase):
         self.assertEqual(collect.call_args.args[0], "Lionel Messi")
         self.assertEqual(len(store.db.writes), 1)
         self.assertIn(worker.MESSI_ID, store.db.writes[0][1][1])
+
+    def test_interruption_after_saved_projection_retries_then_skips_fresh_record(self):
+        manifest = {"seasons": [{"id": "2026/2027", "chunks": []}]}
+        store = Store({"computed/dashboard/index.json": manifest})
+        class FreshDB(DB):
+            def execute(self, sql, params=None):
+                if sql.startswith("select params from statarena.projections"):
+                    return Result([(self.writes[0][1][1],)] if self.writes else [])
+                if sql.startswith("insert into statarena.state"):
+                    raise KeyboardInterrupt()
+                return super().execute(sql, params)
+        store.db = FreshDB()
+        players = {f"p_{i:06d}": {"name": str(i), "minutes": 100-i,
+                   "observations": {(str(i), "Team"): "2026-11-02"}} for i in range(2)}
+        source = {"identitySourceUrl": "https://www.wikidata.org/wiki/Q1", "honours": []}
+        with patch("aws_store.Store", return_value=store), patch.object(worker, "candidates_from_manifest", return_value=players), patch.object(worker, "player_candidate", return_value=None), patch.object(worker, "collect_player", return_value=source), patch.object(worker.time, "sleep"), contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(KeyboardInterrupt):
+                worker.run(limit=1)
+        self.assertEqual(len(store.db.writes), 1)
+        with patch("aws_store.Store", return_value=store), patch.object(worker, "candidates_from_manifest", return_value=players), patch.object(worker, "player_candidate", return_value=None), patch.object(worker, "collect_player", return_value=source) as collect, patch.object(worker.time, "sleep"), contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(KeyboardInterrupt):
+                worker.run(limit=1)
+        self.assertEqual(collect.call_args.args[0], "1")
+
+    def test_interrupted_priority_and_target_do_not_write_state(self):
+        manifest = {"seasons": [{"id": "2026/2027", "chunks": []}]}
+        player = {"name": "Lionel Messi", "minutes": 90, "observations": {("Lionel Messi", "Inter Miami"): "2026-11-02"}}
+        class StateDB(DB):
+            def execute(self, sql, params=None):
+                if sql.startswith("insert into statarena.state"):
+                    self.writes.append((sql, params))
+                return super().execute(sql, params)
+        for target in (None, worker.MESSI_ID):
+            with self.subTest(target=target):
+                store = Store({"computed/dashboard/index.json": manifest})
+                store.db = StateDB()
+                with patch("aws_store.Store", return_value=store), patch.object(worker, "candidates_from_manifest", return_value={worker.MESSI_ID: player}), patch.object(worker, "player_candidate", return_value=player), patch.object(worker, "collect_player", side_effect=KeyboardInterrupt), contextlib.redirect_stdout(io.StringIO()):
+                    with self.assertRaises(KeyboardInterrupt):
+                        worker.run(limit=1, player_id=target)
+                self.assertEqual(store.db.writes, [])
 
     def test_messi_is_retried_after_one_day_even_when_other_honours_are_recent(self):
         manifest = {"seasons": [{"id": "2026/2027", "chunks": []}]}

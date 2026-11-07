@@ -33,6 +33,11 @@ test("Messi's major trophies use distinct, available images", async () => {
 
 test("the same verified trophy is shown for other players and unknown trophies have no substitute", () => {
   assert.equal(
+    trophyArt({ title: "Ballon d'Or/FIFA Ballon d'Or", years: "2008, 2013, 2014, 2016, 2017" }),
+    "/trophies/ballon-or.webp",
+  );
+  assert.equal(trophyArt({ title: "FIFA Ballon d'Or" }), "/trophies/ballon-or.webp");
+  assert.equal(
     trophyArt(
       { title: "UEFA Champions League", years: "2024-2025" },
       "p_123456",

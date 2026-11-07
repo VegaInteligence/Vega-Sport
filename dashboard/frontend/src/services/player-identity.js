@@ -2,6 +2,38 @@
 export const MESSI_PORTRAIT =
   "https://cdn.pitchapi.dev/images/players/4d33a107ca0c78cbe22a3aa4f641007615e51b69af5ca1c5b40cf9dedbe3c563.webp";
 
+/** Accept only an appearance belonging to the requested relational actor. */
+export function identityFromPlayerSummary(id, data) {
+  if (data?.meta?.actor?.id !== id) return null;
+  const row = data.appearances?.find(
+    (item) => item.playerId === id && item.name && item.name !== "Joueur",
+  );
+  return row ? { name: row.name, imageUrl: row.imageUrl || "" } : null;
+}
+
+export async function loadSummaryIdentity(
+  id,
+  seasons,
+  generation,
+  read,
+  signal,
+) {
+  for (const season of seasons) {
+    try {
+      const response = await read(
+        "player",
+        { player: id, season, detail: "summary", limit: 1, generation },
+        { signal },
+      );
+      const found = identityFromPlayerSummary(id, response.data);
+      if (found) return found;
+    } catch (error) {
+      if (error.status !== 404) throw error;
+    }
+  }
+  return null;
+}
+
 /** Keep a player's identity independent of the selected view and filters. */
 export function resolvePlayerIdentity(
   id,
@@ -14,14 +46,14 @@ export function resolvePlayerIdentity(
   if (!profile?.imageUrl || !profile?.matches) {
     for (const row of appearances || []) {
       if (row.playerId !== id) continue;
-      observedName ||= row.name || "";
+      observedName ||= row.name && row.name !== "Joueur" ? row.name : "";
       observedImage ||= row.imageUrl || "";
       if (observedName && observedImage) break;
     }
   }
   return {
     name:
-      (profile?.matches && profile.name) ||
+      (profile?.matches && profile.name !== "Joueur" && profile.name) ||
       remote?.name ||
       observedName ||
       (id === "p_1mZO3B" ? "Lionel Messi" : ""),

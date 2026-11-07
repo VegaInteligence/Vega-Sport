@@ -362,6 +362,11 @@ def run(limit=100, player_id=None):
         except Exception as error:
             failed += 1
             print(json.dumps({"player": pid, "error": type(error).__name__}), flush=True)
+        # Commit progress only after the candidate has finished. Priority Messi
+        # is outside the rotating sequence and must not move its cursor.
+        if not player_id and advances:
+            store.db.execute("insert into statarena.state(name,value) values(%s,%s) on conflict(name) do update set value=excluded.value,updated_at=now()",
+                             (cursor_name, Jsonb((start + advanced) % max(1, len(ordered)))))
         time.sleep(0.2)
     if not player_id:
         store.db.execute("insert into statarena.state(name,value) values(%s,%s) on conflict(name) do update set value=excluded.value,updated_at=now()",

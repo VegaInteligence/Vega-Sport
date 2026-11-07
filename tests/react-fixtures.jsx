@@ -41,7 +41,7 @@ export const renderSeasonSearch=(rows,query)=>renderToStaticMarkup(<FootballCont
 import {ResearchProvider} from '../dashboard/frontend/src/hooks/ResearchContext.jsx';
 export const renderSeasonProfile=(rows,matches,id)=>renderToStaticMarkup(<FootballContext.Provider value={{season:'2026/2027',competitions:[],filters:{league:'all',minutes:1},focus:'all',data:{matches},setPlayer:()=>{}}}><ResearchProvider><PlayerSeasonProfile id={id} rows={rows} scopeRows={rows}/></ResearchProvider></FootballContext.Provider>);
 export function seedPlayerHonours(id, name, projection) {
-  return primeResource(`player-honours:${id}:${name}`, () =>
+  return primeResource(`player-honours:${id}`, () =>
     loadPlayerHonours(id, name, async () => Response.json(projection)),
   );
 }

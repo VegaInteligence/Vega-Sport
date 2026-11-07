@@ -15,8 +15,8 @@ from relational_match_model import Children, families
 from relational_match_ddl import dbname, fields, leaves
 
 ROOT = Path(__file__).resolve().parents[1]
-CATALOG = json.loads((ROOT / "backend/services/catalog-model.json").read_text())
-SUPPORT = json.loads((ROOT / "backend/services/support-model.json").read_text())
+CATALOG = json.loads((ROOT / "backend/services/catalog-model.json").read_text(encoding="utf-8"))
+SUPPORT = json.loads((ROOT / "backend/services/support-model.json").read_text(encoding="utf-8"))
 
 
 def compile_fields(value):

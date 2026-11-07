@@ -20,6 +20,8 @@ const ART = {
   "supporters shield": "supporters-shield.webp",
   "american mls supporters shield": "supporters-shield.webp",
   "ballon d or": "ballon-or.webp",
+  "ballon d or fifa ballon d or": "ballon-or.webp",
+  "fifa ballon d or": "ballon-or.webp",
   "the best fifa": "fifa-best.webp",
   "the best fifa men s player": "fifa-best.webp",
   "soulier d or europeen": "golden-shoe.webp",
