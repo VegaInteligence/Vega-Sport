@@ -75,6 +75,7 @@ test(
       for (const file of [
         "003_relational_core.sql",
         "025_player_season_rollups.sql",
+        "037_bounded_player_rollup_publication.sql",
       ])
         await db.query(
           await readFile(
@@ -222,7 +223,7 @@ test(
       assert.deepEqual(
         await originalRows(),
         beforeIndex,
-        "the original025 INSERT refreshes appended generated columns without a writer change or VACUUM",
+        "the publication function refreshes appended generated columns without a writer change or VACUUM",
       );
       let generation = "42";
       const calls = [];
@@ -408,6 +409,7 @@ test(
       for (const file of [
         "003_relational_core.sql",
         "025_player_season_rollups.sql",
+        "037_bounded_player_rollup_publication.sql",
         "030_player_directory_index.sql",
       ])
         await db.query(

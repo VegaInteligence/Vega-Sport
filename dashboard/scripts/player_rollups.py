@@ -5,8 +5,11 @@ selected partition, preserves observation coverage and atomically marks the
 derived rows with that partition's source digest. No commit is performed here.
 """
 
+from publication_trace import mark_stage
+
 
 def refresh_player_rollups(db, season, league_id, *, force=False):
+    mark_stage("rollup_refresh")
     row = db.execute(
         "SELECT statarena_app.refresh_player_season_rollups(%s,%s,%s)",
         (season, league_id, force),
