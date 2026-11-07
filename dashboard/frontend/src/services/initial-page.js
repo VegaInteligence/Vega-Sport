@@ -7,14 +7,18 @@ export function prepareInitialPage(
   const doc = root.ownerDocument;
   const view = doc.defaultView;
   const images = new Map();
-  let disposed = false;
+  let phase = "preparing";
+  let microtaskQueued = false;
   let frame = null;
+  let fallbackFrame = null;
   let deadline = null;
   let pageDeadline = null;
   const trace = doc.documentElement?.hasAttribute?.("data-vega-acceptance")
     ? {
         startedMs: view.performance.now(),
         totalChecks: 0,
+        checkWorkMs: 0,
+        checkQueueMs: 0,
         checks: [],
         reason: "ready",
       }
@@ -99,26 +103,52 @@ export function prepareInitialPage(
       return true;
     };
   };
-  const schedule = () => {
-    if (!disposed && frame === null) {
-      if (trace) queuedAt = view.performance.now();
-      frame = view.requestAnimationFrame(check);
-    }
+  const markQueued = () => {
+    if (trace && queuedAt === null) queuedAt = view.performance.now();
   };
-  const observer = new view.MutationObserver(schedule);
-  const cleanup = () => {
-    disposed = true;
-    observer.disconnect();
+  const cancelCheckFrame = () => {
+    if (frame === null) return;
     view.cancelAnimationFrame(frame);
+    frame = null;
+  };
+  const scheduleNotification = () => {
+    if (phase !== "preparing" || microtaskQueued) return;
+    markQueued();
+    microtaskQueued = true;
+    view.queueMicrotask(() => {
+      microtaskQueued = false;
+      if (phase !== "preparing") return;
+      // This pass reads current geometry too, so it consumes any pending
+      // scroll/resize check without leaving a second scan in the next frame.
+      cancelCheckFrame();
+      check();
+    });
+  };
+  const scheduleFrame = () => {
+    if (phase !== "preparing" || frame !== null || microtaskQueued) return;
+    markQueued();
+    frame = view.requestAnimationFrame(() => {
+      frame = null;
+      check();
+    });
+  };
+  const observer = new view.MutationObserver(scheduleNotification);
+  const cleanup = () => {
+    phase = "disposed";
+    microtaskQueued = false;
+    observer.disconnect();
+    cancelCheckFrame();
+    view.cancelAnimationFrame(fallbackFrame);
+    fallbackFrame = null;
     view.clearTimeout(deadline);
     view.clearTimeout(pageDeadline);
-    root.removeEventListener("load", schedule, true);
-    root.removeEventListener("error", schedule, true);
-    view.removeEventListener("resize", schedule);
-    view.removeEventListener("scroll", schedule, true);
+    root.removeEventListener("load", scheduleNotification, true);
+    root.removeEventListener("error", scheduleNotification, true);
+    view.removeEventListener("resize", scheduleFrame);
+    view.removeEventListener("scroll", scheduleFrame, true);
   };
   const finish = () => {
-    if (disposed) return;
+    if (phase === "disposed") return;
     if (trace) {
       trace.finishedMs = view.performance.now();
       root.setAttribute("data-vega-preparation", JSON.stringify(trace));
@@ -129,7 +159,13 @@ export function prepareInitialPage(
   const dataLoading = (inViewport = viewportCheck()) =>
     [...root.querySelectorAll("[data-page-loading]")].some(inViewport);
   function finishWithFallbacks() {
-    if (disposed) return;
+    if (phase !== "preparing") return;
+    // A queued notification or React's fallback commit must not reveal early.
+    // Only the dedicated frame below may finish once this phase starts.
+    phase = "fallback";
+    cancelCheckFrame();
+    view.clearTimeout(deadline);
+    view.clearTimeout(pageDeadline);
     if (trace) trace.reason = "deadline";
     const media = new Set();
     for (const image of pendingImages()) {
@@ -137,10 +173,14 @@ export function prepareInitialPage(
       if (owner) media.add(owner);
       else image.setAttribute("data-page-image-deferred", "");
     }
-    for (const owner of media)
+    for (const owner of media) {
       owner.dispatchEvent(new view.Event("vega:defer-image"));
-    view.cancelAnimationFrame(frame);
-    frame = view.requestAnimationFrame(finish);
+      if (phase !== "fallback") return;
+    }
+    fallbackFrame = view.requestAnimationFrame(() => {
+      fallbackFrame = null;
+      finish();
+    });
   }
   function pendingImages(inViewport = viewportCheck()) {
     return [...root.querySelectorAll("img")].filter((image) => {
@@ -176,16 +216,16 @@ export function prepareInitialPage(
           .then(() => image.decode?.())
           .catch(() => {})
           .then(() => {
+            if (phase !== "preparing" || images.get(image) !== record) return;
             record.decoded = true;
-            schedule();
+            scheduleNotification();
           });
       }
       return !record.decoded;
     });
   }
   function check() {
-    frame = null;
-    if (disposed) return;
+    if (phase !== "preparing") return;
     const checkStarted = trace ? view.performance.now() : null;
     const inViewport = viewportCheck();
     const loading = dataLoading(inViewport);
@@ -193,6 +233,8 @@ export function prepareInitialPage(
     if (trace) {
       const checked = view.performance.now();
       trace.totalChecks++;
+      trace.checkWorkMs += checked - checkStarted;
+      trace.checkQueueMs += queuedAt === null ? 0 : checkStarted - queuedAt;
       trace.checks.push({
         startMs: checkStarted,
         durationMs: checked - checkStarted,
@@ -217,9 +259,9 @@ export function prepareInitialPage(
     if (deadline === null)
       deadline = view.setTimeout(() => {
         deadline = null;
-        if (disposed) return;
+        if (phase !== "preparing") return;
         if (dataLoading()) {
-          schedule();
+          scheduleNotification();
           return;
         }
         // A slow asset must neither block the page nor pop in after its reveal.
@@ -234,15 +276,19 @@ export function prepareInitialPage(
     attributes: true,
     attributeFilter: ["src", "srcset", "data-page-loading", "data-media-state"],
   });
-  root.addEventListener("load", schedule, true);
-  root.addEventListener("error", schedule, true);
-  view.addEventListener("resize", schedule);
-  view.addEventListener("scroll", schedule, { passive: true, capture: true });
+  root.addEventListener("load", scheduleNotification, true);
+  root.addEventListener("error", scheduleNotification, true);
+  view.addEventListener("resize", scheduleFrame);
+  view.addEventListener("scroll", scheduleFrame, {
+    passive: true,
+    capture: true,
+  });
   // A stalled optional data source must not hide the page's own retry/status UI.
   pageDeadline = view.setTimeout(finishWithFallbacks, pageTimeout);
   // PageWorkspace installs this during its layout effect. Already decoded
   // content can be revealed in that commit; pending work still uses the same
-  // observer, frame scheduling and deadlines as subsequent checks.
+  // observer and deadlines as subsequent checks. DOM/load/decode notifications
+  // coalesce in a microtask; geometry-only events still wait for a frame.
   check();
   return cleanup;
 }

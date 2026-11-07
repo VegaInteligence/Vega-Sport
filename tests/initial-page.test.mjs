@@ -2,9 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { prepareInitialPage } from "../dashboard/frontend/src/services/initial-page.js";
 
-function fixture() {
+function fixture({ trace = false } = {}) {
   let next = 0,
-    now = 0;
+    now = 0,
+    scans = 0;
+  const microtasks = [];
   const frames = new Map(),
     timers = new Map(),
     listeners = new Map(),
@@ -13,6 +15,10 @@ function fixture() {
   const view = {
     innerWidth: 1000,
     innerHeight: 800,
+    performance: { now: () => now },
+    queueMicrotask(fn) {
+      microtasks.push(fn);
+    },
     getComputedStyle(node) {
       styleReads.set(node, (styleReads.get(node) || 0) + 1);
       return node.style || {};
@@ -60,9 +66,18 @@ function fixture() {
   };
   const nodes = { images: [], loading: [], errors: [] };
   const rootListeners = new Map();
+  const rootAttributes = new Map();
   const root = {
-    ownerDocument: { defaultView: view },
+    ownerDocument: {
+      defaultView: view,
+      documentElement: {
+        hasAttribute: (name) => trace && name === "data-vega-acceptance",
+      },
+    },
+    setAttribute: (name, value) => rootAttributes.set(name, value),
+    getAttribute: (name) => rootAttributes.get(name),
     querySelectorAll(selector) {
+      if (selector === "img") scans++;
       return selector === "img"
         ? nodes.images
         : selector === "[data-page-loading]"
@@ -110,6 +125,13 @@ function fixture() {
       closest: () => media,
     });
   }
+  function flushMicrotasks() {
+    let rounds = 0;
+    while (microtasks.length) {
+      if (++rounds > 100) throw new Error("microtasks did not settle");
+      for (const callback of microtasks.splice(0)) callback();
+    }
+  }
   return {
     root,
     nodes,
@@ -139,10 +161,18 @@ function fixture() {
     event(name) {
       rootListeners.get(name)?.();
     },
+    viewportEvent(name) {
+      listeners.get(name)?.();
+    },
+    microtasks: flushMicrotasks,
     frame() {
+      flushMicrotasks();
       const batch = [...frames.values()];
       frames.clear();
-      batch.forEach((fn) => fn());
+      batch.forEach((fn) => {
+        fn();
+        flushMicrotasks();
+      });
     },
     advance(ms) {
       const target = now + ms;
@@ -162,6 +192,15 @@ function fixture() {
     },
     get connected() {
       return observer.connected;
+    },
+    get scanCount() {
+      return scans;
+    },
+    get frameCount() {
+      return frames.size;
+    },
+    get microtaskCount() {
+      return microtasks.length;
     },
   };
 }
@@ -188,7 +227,7 @@ test("visible image must decode before the page is revealed", async () => {
   assert.equal(reveals, 0);
   finishDecode();
   await settle();
-  f.frame();
+  f.microtasks();
   assert.equal(reveals, 1);
   assert.equal(f.connected, false);
 });
@@ -611,6 +650,7 @@ test("an unmanaged srcset selection still requires the replacement decode", asyn
   assert.equal(finish.length, 2);
   finish[0]();
   await settle();
+  assert.equal(f.microtaskCount, 0, "an obsolete decode cannot schedule a new scan");
   f.frame();
   assert.equal(reveals, 0);
   finish[1]();
@@ -659,4 +699,185 @@ test("shared ancestor layout is read once per pass and refreshed after a mutatio
   );
   assert.equal(clipReads, 2);
   assert.equal(reveals, 1, "new clipping must be observed immediately");
+});
+
+test("ready DOM notifications coalesce without waiting for another frame", () => {
+  const f = fixture();
+  let reveals = 0,
+    state = "loading";
+  f.nodes.images.push(f.image({ media: { getAttribute: () => state } }));
+  prepareInitialPage(f.root, () => reveals++);
+  assert.equal(f.scanCount, 1);
+  state = "ready";
+  f.mutate();
+  f.mutate();
+  f.event("load");
+  f.event("error");
+  assert.equal(f.microtaskCount, 1);
+  assert.equal(f.frameCount, 0);
+  assert.equal(f.scanCount, 1, "notifications never check reentrantly");
+  assert.equal(reveals, 0);
+  f.microtasks();
+  assert.equal(f.scanCount, 2);
+  assert.equal(reveals, 1);
+  assert.equal(f.timerCount, 0);
+});
+
+test("scroll and resize stay on a frame which a DOM check can consume", () => {
+  const f = fixture();
+  f.nodes.loading.push(f.element());
+  const dispose = prepareInitialPage(f.root, () => assert.fail("data is pending"));
+  f.viewportEvent("scroll");
+  f.viewportEvent("resize");
+  assert.equal(f.frameCount, 1);
+  assert.equal(f.microtaskCount, 0);
+  assert.equal(f.scanCount, 1);
+  f.frame();
+  assert.equal(f.scanCount, 2);
+  f.viewportEvent("resize");
+  f.mutate();
+  assert.equal(f.frameCount, 1);
+  assert.equal(f.microtaskCount, 1);
+  f.microtasks();
+  assert.equal(f.scanCount, 3);
+  assert.equal(f.frameCount, 0, "the same geometry must not be scanned twice");
+  f.frame();
+  assert.equal(f.scanCount, 3);
+  dispose();
+});
+
+test("queued notifications and late decode cannot bypass the fallback frame", async () => {
+  const f = fixture();
+  let reveals = 0,
+    finishDecode,
+    fallbacks = 0;
+  const media = {
+    dispatchEvent() {
+      fallbacks++;
+      f.nodes.images.splice(0, 1);
+      // React committing the terminal initials emits an observer notification.
+      f.mutate();
+    },
+  };
+  f.nodes.images.push(
+    f.image({ complete: false, media }),
+    f.image({ decode: () => new Promise((resolve) => (finishDecode = resolve)) }),
+  );
+  prepareInitialPage(f.root, () => reveals++, {
+    imageTimeout: 5,
+    pageTimeout: 20,
+  });
+  await settle();
+  f.mutate();
+  assert.equal(f.microtaskCount, 1);
+  f.advance(5);
+  assert.equal(fallbacks, 1);
+  assert.equal(f.frameCount, 1);
+  finishDecode();
+  await settle();
+  f.event("load");
+  f.event("error");
+  f.viewportEvent("resize");
+  f.microtasks();
+  assert.equal(reveals, 0, "the deadline still owes its fallback commit a frame");
+  assert.equal(f.frameCount, 1);
+  assert.equal(f.microtaskCount, 0);
+  f.advance(100);
+  assert.equal(fallbacks, 1, "the second deadline cannot restart the fallback");
+  assert.equal(reveals, 0);
+  f.frame();
+  assert.equal(reveals, 1);
+  f.frame();
+  assert.equal(reveals, 1);
+});
+
+test("cleanup invalidates a queued microtask and cancels its geometry frame", async () => {
+  const f = fixture();
+  let reveals = 0,
+    finishDecode;
+  f.nodes.images.push(
+    f.image({ decode: () => new Promise((resolve) => (finishDecode = resolve)) }),
+  );
+  const dispose = prepareInitialPage(f.root, () => reveals++);
+  await settle();
+  f.viewportEvent("scroll");
+  f.mutate();
+  assert.equal(f.frameCount, 1);
+  assert.equal(f.microtaskCount, 1);
+  dispose();
+  assert.equal(f.frameCount, 0);
+  f.microtasks();
+  finishDecode();
+  await settle();
+  f.frame();
+  f.advance(20000);
+  assert.equal(f.scanCount, 1);
+  assert.equal(f.microtaskCount, 0);
+  assert.equal(f.timerCount, 0);
+  assert.equal(f.connected, false);
+  assert.equal(reveals, 0);
+});
+
+test("cleanup during the fallback event cannot leave a reveal frame behind", () => {
+  const f = fixture();
+  let reveals = 0,
+    dispose;
+  f.nodes.images.push(
+    f.image({ complete: false, media: { dispatchEvent: () => dispose() } }),
+  );
+  dispose = prepareInitialPage(f.root, () => reveals++, { imageTimeout: 5 });
+  f.advance(5);
+  assert.equal(f.frameCount, 0);
+  assert.equal(f.timerCount, 0);
+  f.microtasks();
+  f.frame();
+  assert.equal(reveals, 0);
+});
+
+test("pending images do not create a microtask loop or repeat their decode", async () => {
+  const f = fixture();
+  let decodes = 0;
+  f.nodes.images.push(
+    f.image({
+      decode() {
+        decodes++;
+        return new Promise(() => {});
+      },
+    }),
+  );
+  const dispose = prepareInitialPage(f.root, () => assert.fail("decode is pending"));
+  await settle();
+  for (let i = 0; i < 20; i++) {
+    f.mutate();
+    f.event("load");
+  }
+  f.microtasks();
+  await settle();
+  assert.equal(f.scanCount, 2);
+  assert.equal(decodes, 1);
+  assert.equal(f.microtaskCount, 0);
+  assert.equal(f.frameCount, 0);
+  dispose();
+});
+
+test("trace keeps the first queued time when a notification absorbs a frame", () => {
+  const f = fixture({ trace: true });
+  let reveals = 0;
+  f.nodes.loading.push(f.element());
+  prepareInitialPage(f.root, () => reveals++);
+  f.advance(1);
+  f.viewportEvent("resize");
+  f.advance(2);
+  f.nodes.loading.length = 0;
+  f.mutate();
+  f.advance(2);
+  f.microtasks();
+  const receipt = JSON.parse(f.root.getAttribute("data-vega-preparation"));
+  assert.equal(reveals, 1);
+  assert.equal(receipt.reason, "ready");
+  assert.equal(receipt.totalChecks, 2);
+  assert.equal(receipt.checks[1].startMs, 5);
+  assert.equal(receipt.checks[1].queueMs, 4);
+  assert.equal(receipt.checks[1].durationMs, 0);
+  assert.equal(f.frameCount, 0);
 });
