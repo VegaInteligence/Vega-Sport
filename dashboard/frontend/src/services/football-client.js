@@ -3,12 +3,24 @@ import { apiUrl, dataUrl } from "../data-url.js";
 import { completeFixtures } from "./fixture-pages.js";
 import { cupWorkerSnapshot } from "./cup-worker-client.js";
 import { SAUDI_PRO_LEAGUE, reconcileSaudiFixtures } from "./saudi-fixtures.js";
+import { createResourceCache } from "./resource-cache.js";
+import {
+  matchReadSource,
+  matchResourceKey,
+  readMatchResource,
+  validateMatchPublication,
+} from "./match-resources.js";
 /** Data access only: no view builders, document selectors or event delegation. */
 let clientSequence = 0;
 export class FootballDataClient {
-  constructor({ data, redraw = () => {} }) {
+  constructor({ data, manifest, redraw = () => {} }) {
     this.id = ++clientSequence;
     Object.assign(this, { data, redraw });
+    this.manifest = manifest || {
+      storage: data.meta.storage,
+      publicationVersion: data.meta.generation,
+      retrievedAt: data.meta.retrievedAt,
+    };
     this.catalog = data.competitions;
     this.configured = false;
     this.statusKnown = false;
@@ -16,7 +28,8 @@ export class FootballDataClient {
     this.fixtures = new Map();
     this.fixtureIndex = new Map();
     this.payloads = new Map();
-    this.shards = new Map();
+    this.payloadKeys = new Map();
+    this.endpointReads = createResourceCache();
     this.day = data.meta.endDate;
     this.browseMode = "catalog";
   }
@@ -61,10 +74,14 @@ export class FootballDataClient {
     let body;
     try {
       body = await response.json();
-    } catch {
-      throw new Error(
+    } catch (error) {
+      signal?.throwIfAborted();
+      if (error?.name === "AbortError") throw error;
+      const unavailable = new Error(
         "La connexion aux données est momentanément indisponible.",
       );
+      unavailable.status = response.status;
+      throw unavailable;
     }
     if (!response.ok || body.error) {
       const error = new Error(
@@ -225,67 +242,141 @@ export class FootballDataClient {
     this.supplementalLoading = false;
     this.redraw();
   }
-  async loadShard(id) {
-    if (!this.shards.has(id))
-      this.shards.set(
-        id,
-        (async () => {
-          const response = await fetch(
-            apiUrl("/api/archive/matches/" + encodeURIComponent(id)),
-          );
-          if (response.ok) return normalizeArchive(await response.json());
-          return null;
-        })().catch(() => {
-          this.shards.delete(id);
-          return null;
-        }),
-      );
-    return await this.shards.get(id);
+  resourceKey(kind, subject, ...parameters) {
+    return matchResourceKey(this.manifest, kind, subject, ...parameters);
   }
-  async ensureEndpoint(match, section, force = false) {
-    const key = `${match.id}:${section}`;
-    if (this.payloads.has(key) && !force) return;
-    this.payloads.set(key, { loading: true });
-    if (force) this.shards.delete(match.id);
+  async loadShard(id, { signal, force = false } = {}) {
+    return readMatchResource(
+      this.fetcher || fetch,
+      this.resourceKey("archive", id),
+      async ({ signal: sharedSignal }) => {
+        const response = await fetch(
+          apiUrl("/api/archive/matches/" + encodeURIComponent(id)),
+          { signal: sharedSignal },
+        );
+        if (response.ok) return normalizeArchive(await response.json());
+        if ([404, 405, 501].includes(response.status)) return null;
+        const error = new Error(
+          `Données indisponibles (HTTP ${response.status})`,
+        );
+        error.status = response.status;
+        throw error;
+      },
+      { signal, force },
+    );
+  }
+  async endpointResponse(match, section, { signal, force = false } = {}) {
     await this.statusPromise;
+    signal?.throwIfAborted();
     let apiError;
-    if (this.configured) {
+    if (matchReadSource(this.manifest, this.configured) === "native") {
       try {
         const payload = await this.request(
           `matches/${match.id}${section === "match" ? "" : `/${section}`}`,
+          { signal },
         );
-        this.payloads.set(key, { data: payload.data, source: "api" });
-        this.redraw();
-        return;
+        signal?.throwIfAborted();
+        return { data: payload.data, source: "api" };
       } catch (error) {
+        // A connectivity check is not evidence that an advertised native
+        // backend is legacy. Only an explicitly absent endpoint permits this.
+        if (
+          this.pro ||
+          ![404, 405, 501].includes(error.status) ||
+          signal?.aborted
+        )
+          throw error;
         apiError = error;
       }
     }
-    if (
-      apiError &&
-      [400, 403, 404, 410, 413, 422, 429].includes(apiError.status)
-    ) {
-      this.payloads.set(key, { error: apiError.message, code: apiError.code });
-      this.redraw();
-      return;
-    }
-    const shard = await this.loadShard(match.id);
+    const shard = await this.loadShard(match.id, { signal, force });
+    signal?.throwIfAborted();
     if (shard?.[section] && Object.hasOwn(shard[section], "data"))
-      this.payloads.set(key, {
+      return {
         data: shard[section].data,
         source: "snapshot",
         warning: apiError?.message,
-      });
-    else
-      this.payloads.set(key, {
-        error:
-          apiError?.message ||
-          (this.configured
-            ? "Ces données ne sont pas disponibles pour ce match."
-            : "Ces données ne figurent pas dans l’instantané. Elles se chargeront dès que la connexion aux données sera active."),
-        code: apiError?.code || "NOT_COLLECTED",
-      });
-    this.redraw();
+      };
+    const error = new Error(
+      apiError?.message ||
+        (matchReadSource(this.manifest, this.configured) === "native"
+          ? "Ces données ne sont pas disponibles pour ce match."
+          : "Ces données ne figurent pas dans l’instantané. Elles se chargeront dès que la connexion aux données sera active."),
+    );
+    error.code = apiError?.code || "NOT_COLLECTED";
+    throw error;
+  }
+  async ensureEndpoint(match, section, force = false, { signal } = {}) {
+    signal?.throwIfAborted();
+    validateMatchPublication(this.manifest, match);
+    const key = `${match.id}:${section}`;
+    const responseKey = this.resourceKey(
+      "family",
+      match,
+      section,
+      matchReadSource(this.manifest, this.configured),
+    );
+    if (
+      this.payloads.has(key) &&
+      this.payloads.get(key).error &&
+      this.payloadKeys.get(key) === responseKey &&
+      !force
+    )
+      return this.payloads.get(key);
+    // Different widgets can need the same family, or different families from
+    // one legacy archive. Only the last reader leaving may cancel shared work.
+    return this.endpointReads.read(
+      responseKey,
+      async ({ signal: sharedSignal }) => {
+        const previous = this.payloads.get(key);
+        const previousKey = this.payloadKeys.get(key);
+        const pending = { loading: true };
+        const restore = () => {
+          if (this.payloads.get(key) !== pending) return;
+          if (previous && !previous.loading) {
+            this.payloads.set(key, previous);
+            this.payloadKeys.set(key, previousKey);
+          } else {
+            this.payloads.delete(key);
+            this.payloadKeys.delete(key);
+          }
+        };
+        this.payloads.set(key, pending);
+        this.payloadKeys.set(key, responseKey);
+        sharedSignal.addEventListener("abort", restore, { once: true });
+        try {
+          sharedSignal.throwIfAborted();
+          const entry = await readMatchResource(
+            this.fetcher || fetch,
+            responseKey,
+            ({ signal: responseSignal }) =>
+              this.endpointResponse(match, section, {
+                signal: responseSignal,
+                force,
+              }),
+            { signal: sharedSignal, force },
+          );
+          sharedSignal.throwIfAborted();
+          // The requesting client must receive its own payload entry even
+          // when another route/client populated the shared response cache.
+          if (this.payloads.get(key) === pending) this.payloads.set(key, entry);
+          this.redraw();
+          return entry;
+        } catch (error) {
+          if (sharedSignal.aborted || error?.name === "AbortError") {
+            restore();
+            throw sharedSignal.reason || error;
+          }
+          const entry = { error: error.message, code: error.code };
+          if (this.payloads.get(key) === pending) this.payloads.set(key, entry);
+          this.redraw();
+          return entry;
+        } finally {
+          sharedSignal.removeEventListener("abort", restore);
+        }
+      },
+      { signal, age: 0 },
+    );
   }
   normalizedRemote(match) {
     return {

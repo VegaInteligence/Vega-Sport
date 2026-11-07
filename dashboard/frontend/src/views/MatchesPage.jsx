@@ -10,13 +10,21 @@ import MatchDetail from "../components/MatchDetail.jsx";
 import UpcomingMatches from "../components/UpcomingMatches.jsx";
 import { useResource, json } from "../services/resources.js";
 import { loadRemoteMatch } from "../services/remote-match.js";
+import {
+  matchResourceKey,
+  validateMatchPublication,
+} from "../services/match-resources.js";
 import { ResearchLists, useHasSaved } from "../components/ResearchUI.jsx";
 import ProMatchesPage from "./ProMatchesPage.jsx";
 import PaginatedMatches from "../components/PaginatedMatches.jsx";
 function RemoteDetail({ id }) {
   const f = useFootball(),
-    resource = useResource(`remote-match:${id}`, ({ signal }) =>
-      loadRemoteMatch(id, f.client, json, { signal }),
+    resource = useResource(
+      matchResourceKey(f.manifest || f.client, "summary", id),
+      async ({ signal }) => {
+        validateMatchPublication(f.manifest || f.client, { id });
+        return loadRemoteMatch(id, f.client, json, { signal });
+      },
     );
   return (
     <AsyncState resource={resource}>

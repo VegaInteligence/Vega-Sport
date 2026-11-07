@@ -204,11 +204,16 @@ export async function loadPlayerHistory(
   );
   return results;
 }
-export async function historicalFixtures(_manifest, leagueId) {
-  const pages = await readPages("/api/fixtures", {
-    league: leagueId,
-    status: "all",
-  });
+export async function historicalFixtures(_manifest, leagueId, { signal } = {}) {
+  const pages = await readPages(
+    "/api/fixtures",
+    {
+      league: leagueId,
+      status: "all",
+    },
+    fetch,
+    { signal },
+  );
   return [
     ...new Map(
       pages

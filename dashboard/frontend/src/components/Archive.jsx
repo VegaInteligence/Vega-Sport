@@ -187,6 +187,7 @@ function SeasonArchive({
   hrefWith,
   bounded,
   generation,
+  indexState,
 }) {
   const competition = params.get("ac") || "all";
   const query = params.get("aq") || "";
@@ -292,6 +293,7 @@ function SeasonArchive({
           <select
             aria-label="Saison des archives"
             value={entry.id}
+            disabled={Boolean(indexState && !indexState.value)}
             onChange={(event) =>
               setParams({
                 as: event.target.value.replace("/", "-"),
@@ -336,6 +338,12 @@ function SeasonArchive({
           />
         </label>
       </div>
+      {indexState?.error && (
+        <p role="status" className="notice notice-warning">
+          La liste des saisons est indisponible.{" "}
+          <button onClick={indexState.retry}>Réessayer</button>
+        </p>
+      )}
       <div
         aria-busy={searchPending || displayed.refreshing || displayed.loading}
       >
@@ -410,6 +418,8 @@ export default function Archive() {
     f?.manifest?.scouting?.sourceDigest ||
     "";
   const bounded = supportsBoundedArchive(f?.manifest);
+  const requestedEdition = (params.get("as") || "").replace("-", "/");
+  const directEdition = bounded && /^\d{4}(?:\/\d{4})?$/.test(requestedEdition);
   const indexes = useResource(
     `archive:indexes:${generation}`,
     async ({ signal }) => {
@@ -419,6 +429,9 @@ export default function Archive() {
       ]);
       return archiveSeasons(results, goals);
     },
+    // An explicit match detail has no season selector. Its publication-pinned
+    // detail read already identifies the edition and needs no catalogue boot.
+    !(directEdition && params.get("m")),
   );
   const previousIndexes = useRef(null);
   useEffect(() => {
@@ -446,6 +459,27 @@ export default function Archive() {
   // useSearchParams in sync without fetching an RSC route on every keystroke.
   const setParams = (changes) =>
     window.history.replaceState(null, "", hrefWith(changes));
+  if (directEdition) {
+    const available = displayedIndexes.value || [];
+    const known = available.find((item) => item.id === requestedEdition);
+    const entry = known || { id: requestedEdition };
+    // The bounded reader resolves existence and freshness itself. Start it in
+    // parallel with selector metadata; a slow/failed index must not block a
+    // directly linked edition or silently redirect it to another season.
+    return (
+      <SeasonArchive
+        key={entry.id}
+        seasons={known ? available : [entry, ...available]}
+        entry={entry}
+        params={params}
+        setParams={setParams}
+        hrefWith={hrefWith}
+        bounded={bounded}
+        generation={generation}
+        indexState={displayedIndexes}
+      />
+    );
+  }
   return (
     <AsyncState resource={displayedIndexes}>
       {(seasons) => {

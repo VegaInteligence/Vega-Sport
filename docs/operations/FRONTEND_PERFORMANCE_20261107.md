@@ -13,12 +13,12 @@ The frontend uses the capabilities advertised by the deployed backend. An advert
 | Player directory `/joueurs` | One server page with its exact global totals, filters and qualification rules | No complete cohort for ordinary table navigation; explicit export and analysis may request all aggregate pages |
 | Player profile `/joueurs?id=…` | Direct actor summary, 100-match page budget; no routing-index request for a known edition | Full season totals remain complete. Shots, richer statistics and peer cohorts load on their relevant tab/section. Radar peers use the matching competition and complete position cohort; no percentile uses a partial directory page |
 | Player career and match history | Selected season reads that season directly; reuses an already complete actor summary with the same edition, scope and publication | Complete multi-season career loads on visible intent. The separate `/joueurs/matchs` route does not require a provider-wide season load |
-| Club directory `/clubs` | One compact page with server-owned totals and facets; debounced filtering | Never derives total clubs or filter options from just the visible page |
+| Club directory `/clubs` | One fixed 24-row compact page with server-owned totals and facets; debounced filtering | Card measurement and browser resizing do not change the server page size or issue a second initial request. The older local reader retains adaptive layout pagination. Never derives total clubs or filter options from just the visible page |
 | Club profile `/clubs?id=…` | Actor summary preserves exact team statistics and match history | Squad, shots, style/comparison cohorts and the below-fold facts/ranking panels start only when needed. A profile reached through a standings identity bypasses the season provider boot |
 | Match directory `/matchs` | Existing bounded fixture/result page scoped to the selected period and publication | Further cursors require explicit pagination. Matchday metadata starts in parallel; modern relational reads do not initiate 24 match-detail probes |
-| Match detail | Summary read with the route's abort signal | Transient failures stop. Full archive/native compatibility fallbacks are limited to missing or unsupported older summary routes; individual heavy detail sections retain separate readers |
+| Match detail | Summary read with the route's abort signal and displayed-publication cache identity | Statistics, shots, timeline, context and standings also use publication-aware keys. Transient summary/family failures stop; 404/405/501 compatibility remains available for older native endpoints. A failed connectivity check cannot make an advertised relational backend bypass its native endpoint |
 | Competitions `/competitions` | Independent catalogue/standings readers; overview requests at most 30 recent results and 30 upcoming fixtures | Full fixture drain is reserved for the explicit calendar/bracket or a genuinely missing native standings source. Result-derived fallback tables wait for the complete calendar |
-| Archives `/archives` | Two small edition indexes, then one merged 50-row server page with exact totals and whole-edition facets | Search is debounced. Pagination never re-slices a server page. Only opening a goal-bearing match requests its goal array. A publication conflict replaces the complete requested page once; it never merges generations or downloads both full editions |
+| Archives `/archives` | An explicit valid edition on a bounded backend starts its 50-row page alongside the small edition indexes. Default-edition selection still waits for the indexes | Exact totals and whole-edition facets come from the server. A detail link skips unused edition indexes. Search is debounced; pagination never re-slices a server page. Only opening a goal-bearing match requests its goal array. A publication conflict replaces the requested page once; it never merges generations or downloads both full editions |
 | Calendar `/calendrier` | Existing redirect to the bounded upcoming-match view | Preserves the requested edition/scope/week; no separate full-season boot |
 | Player rankings `/classement-joueurs` | Independent ranking reader | Provider does not load a football season before mounting this route |
 | Method `/methode` | Published manifest coverage counts | Missing counts remain unknown; no partial page is presented as a full database count |
@@ -33,9 +33,32 @@ Archive filters use Next's supported native History API so typing does not reque
 
 The implementation preserves the concurrent upstream UI changes at `cdc12d23ee26201049aed2a7b6bf7bfa61034f2d`, including the flattened shot map, overview radar, career sections and player-position summary. It does not redesign those components.
 
+### Follow-up prepared after the runtime review
+
+The match, club-directory and explicit-archive-edition corrections described above were prepared after the first deployed runtime checks. They are implemented and checked locally; this document does not record their deployment.
+
+The remaining match-tab failure waterfall used to request a complete match archive after a failed statistics, shots or events request. A 500/503 response, network failure, permission failure or cancellation now stops that family read. Only an explicitly unsupported legacy endpoint permits archive compatibility. An `aws-relational` manifest remains evidence of native serving even when `/api/status` fails. Pro readers retain their edition-token requirements and never enter the unversioned archive fallback.
+
+Match-family responses are shared by actual fetcher, displayed publication, match, family and source mode. Recreating a route client can reuse the successful response while hydrating that client's own payload map. The response cache is bounded to 96 entries per fetcher with a five-minute freshness interval; the local payload map cannot bypass that lifetime. An explicit retry refreshes its response. A failed or abandoned request cannot hydrate another client, and a late response from an abandoned transport cannot replace its retry. An aborted refresh restores an existing successful value.
+
+Cancellation is shared at both levels: multiple widgets can need one family, and different legacy families can need the same archive. Removing one subscriber leaves the others running; removing the last subscriber cancels the underlying fetch. Summary, family, context and standings callers forward their resource signal. Context reuse also requires an actual loaded season, so an empty catalogue cannot be cached as a complete pre-match analysis.
+
+Pro resource keys use the displayed edition tokens. Stale or missing editions receive separate error identities during rendering, then fail inside the asynchronous reader before consulting successful shared data. Sources without a publication token remain isolated by their source object. This preserves controlled loading/error rendering during a publication change.
+
 ## Verification
 
-The expanded frontend regression run passed **102 tests**. Its coverage includes route policy, shared-cache cancellation and identity, bounded search, compact directory pagination, exact actor/cohort completeness, deferred radar/profile work, competition fallback correctness, archive pagination and selected-match reads, below-fold club requests, and the upstream shot-map/career/radar changes.
+The initial expanded frontend regression run passed **102 tests**. Its coverage includes route policy, shared-cache cancellation and identity, bounded search, compact directory pagination, exact actor/cohort completeness, deferred radar/profile work, competition fallback correctness, archive pagination and selected-match reads, below-fold club requests, and the upstream shot-map/career/radar changes.
+
+The subsequent match-cache/cancellation follow-up passed **64 focused client, cache, route and discipline checks**, plus **22 rendering checks**, **3 provider-profile rendering contracts** and **1 updated configured-service failure contract**. These are local results, not a claim about a later CI run. The focused command is:
+
+```bash
+node --test tests/remote-match.test.mjs tests/aws-only-runtime.test.mjs \
+  tests/player-discipline.test.mjs tests/player-discipline-by-match.test.mjs \
+  tests/resource-cache.test.mjs tests/navigation-performance.test.mjs \
+  tests/resource-hook-identity.test.mjs
+```
+
+The added cases exercise 500/503/network failures, non-JSON 404/405/501 compatibility, a failed connectivity check on a relational source, independent cancellation across widgets and clients, cancellation while status is pending, late transport completion, explicit retry, warm client hydration, publication invalidation, fetcher isolation, cache expiry and stale Pro tokens. They extend existing CI test files.
 
 The dedicated new archive and club loading gates are:
 

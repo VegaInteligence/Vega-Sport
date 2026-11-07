@@ -140,6 +140,89 @@ test('missing AWS detail exposes the API error without reading an object archive
   assert.equal(await client.loadShard('m_000001'), null);
 });
 
+test('versioned match-family subscribers share a cancellable read without losing its edition', async () => {
+  const match = { id: 'm_000001', leagueId: 'l_000001', season: '2026/2027' };
+  const requests = [];
+  const client = new ProFootballDataClient({
+    data: { meta: {}, competitions: [], matches: [match] },
+    manifest: manifest(), leagueId: 'all', season: match.season,
+    fetcher: (path, { signal }) => new Promise((resolve, reject) => {
+      requests.push({ url: new URL(path, 'https://example.test'), signal, resolve });
+      signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+    }),
+  });
+  const controller = new AbortController();
+  const leaving = client.ensureEndpoint(match, 'lineups', false, { signal: controller.signal });
+  const remaining = client.ensureEndpoint(match, 'lineups');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url.searchParams.get('v'), token(1));
+  const rejected = assert.rejects(leaving, { name: 'AbortError' });
+  controller.abort();
+  await rejected;
+  assert.equal(requests[0].signal.aborted, false);
+  requests[0].resolve(Response.json({ data: null }));
+  await remaining;
+  assert.deepEqual(client.payloads.get('m_000001:lineups'), { data: null, source: 'api' });
+  const retryController = new AbortController();
+  const refresh = client.ensureEndpoint(match, 'lineups', true, { signal: retryController.signal });
+  await new Promise(resolve => setImmediate(resolve));
+  const aborted = assert.rejects(refresh, { name: 'AbortError' });
+  retryController.abort();
+  await aborted;
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(requests[1].signal.aborted, true);
+  assert.deepEqual(client.payloads.get('m_000001:lineups'), { data: null, source: 'api' });
+});
+
+test('unsupported versioned family endpoints never fall back to an unversioned archive', async () => {
+  for (const status of [404, 405, 501, 500, 503]) {
+    const requests = [];
+    const client = new ProFootballDataClient({
+      data: { meta: {}, competitions: [], matches: [] }, manifest: manifest(), season: '2026/2027',
+      fetcher: async path => {
+        requests.push(path);
+        return Response.json({ error: { code: 'NOT_COLLECTED', message: 'Unavailable' } }, { status });
+      },
+    });
+    await client.ensureEndpoint({ id: 'm_000001', leagueId: 'l_000001', season: '2026/2027' }, 'shots');
+    assert.equal(requests.length, 1, String(status));
+    assert.match(requests[0], /^\/api\/pitchapi\/matches\/m_000001\/shots\?v=/);
+    assert.equal(client.payloads.get('m_000001:shots').code, 'NOT_COLLECTED');
+  }
+});
+
+test('versioned match cache rejects an unpublished token without crashing key construction', async () => {
+  const match = { id: 'm_000001', leagueId: 'l_000001', season: '2026/2027' };
+  let requests = 0;
+  const fetcher = async path => {
+    requests++;
+    return Response.json({ data: { version: new URL(path, 'https://example.test').searchParams.get('v') } });
+  };
+  const create = n => new ProFootballDataClient({
+    data: { meta: {}, competitions: [], matches: [match] },
+    manifest: manifest(n), leagueId: match.leagueId, season: match.season, fetcher,
+  });
+  const original = create(1);
+  await original.ensureEndpoint({ ...match, representationToken: token(1) }, 'events');
+  const returned = create(1);
+  await returned.ensureEndpoint(match, 'events');
+  assert.equal(requests, 1);
+  assert.equal(returned.payloads.get('m_000001:events').data.version, token(1));
+  const updated = create(2);
+  await updated.ensureEndpoint({ ...match, representationToken: token(2) }, 'events');
+  assert.equal(requests, 2);
+  const stale = { ...match, representationToken: token(1) };
+  assert.doesNotThrow(() => updated.resourceKey('section', stale, 'events'));
+  assert.notEqual(updated.resourceKey('section', stale, 'events'), updated.resourceKey('section', match, 'events'));
+  await assert.rejects(updated.ensureEndpoint(stale, 'events'), /version du match/);
+  const absent = { ...match, leagueId: 'l_999999' };
+  assert.doesNotThrow(() => updated.resourceKey('section', absent, 'events'));
+  await assert.rejects(updated.ensureEndpoint(absent, 'events'), /version du match/);
+  assert.equal(requests, 2);
+  assert.equal(updated.payloads.get('m_000001:events').data.version, token(2));
+});
+
 test('Vercel proxies to AWS with no database credentials and preserves conditional responses', async () => {
   const original = globalThis.fetch;
   const keys = ['VERCEL', 'NODE_ENV', 'ORION_API_ORIGIN', 'NEXT_PUBLIC_API_ORIGIN', 'DATABASE_URL', 'NEON_DATABASE_URL'];

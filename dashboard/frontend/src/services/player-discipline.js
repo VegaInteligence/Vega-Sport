@@ -3,12 +3,12 @@ import { summarizeDiscipline } from "../../../shared/player-discipline.js";
 export { summarizeDiscipline };
 
 async function matchEvents(client, match, signal) {
-  await client.ensureEndpoint(match, "events");
+  await client.ensureEndpoint(match, "events", false, { signal });
   signal?.throwIfAborted();
   const value = client.payloads.get(`${match.id}:events`);
   // Another view may have started the request already.
   const data = value?.loading
-    ? (await client.request(`matches/${match.id}/events`)).data
+    ? (await client.request(`matches/${match.id}/events`, { signal })).data
     : value?.data;
   return Array.isArray(data?.events) ? data : null;
 }

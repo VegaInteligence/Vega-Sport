@@ -1,13 +1,22 @@
 import React, { useMemo } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResource } from "../services/resources.js";
+import {
+  matchReadSource,
+  matchResourceKey,
+  validateMatchPublication,
+} from "../services/match-resources.js";
 import { loadSeason } from "../season_data.js";
 import { seasonLabel } from "../services/format.js";
 import { competitionLabel } from "../services/competition-selector.js";
 import CompetitionStandings from "./CompetitionStandings.jsx";
 import { Card, Empty } from "./UI.jsx";
 
-async function matchFixtures(f, competition, season) {
+async function matchFixtures(f, competition, season, { signal } = {}) {
+  validateMatchPublication(f.manifest || f.client, {
+    leagueId: competition.id,
+    season,
+  });
   const key = `${competition.id}:${season}`;
   const cached = f.client.fixtures.get(key);
   const scoped = Object.assign(Object.create(f.client), {
@@ -21,7 +30,7 @@ async function matchFixtures(f, competition, season) {
       ...f.client.catalog.filter((c) => c.id !== competition.id),
     ],
   });
-  await scoped.loadFixtures();
+  await scoped.loadFixtures({ signal });
   let value = scoped.fixtures.get(key);
   if (value.source === "snapshot" && !value.matches.length) {
     const bucket = seasonLabel(season);
@@ -36,6 +45,7 @@ async function matchFixtures(f, competition, season) {
         bucket,
         fetch,
         new Set([competition.id]),
+        { signal },
       );
       value = {
         matches: scoped.localFixtures(competition.id, season),
@@ -82,8 +92,14 @@ export default function MatchStandings({ match }) {
   ]);
   const season = match.season;
   const fixtures = useResource(
-    `match-standings:${f.client.id}:${competition.id}:${season}`,
-    () => matchFixtures(f, competition, season),
+    matchResourceKey(
+      f.manifest || f.client,
+      "standings",
+      { id: competition.id, leagueId: competition.id, season },
+      season,
+      matchReadSource(f.manifest, f.configured),
+    ),
+    ({ signal }) => matchFixtures(f, competition, season, { signal }),
     Boolean(competition.id && season && f.statusKnown),
   );
   if (!competition.id || !season)

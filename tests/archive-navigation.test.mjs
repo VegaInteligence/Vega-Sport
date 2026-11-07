@@ -180,13 +180,20 @@ test("archive errors never fall back to full seasons or retry an abandoned page"
   assert.equal(calls, 1);
 });
 
-async function archiveFixture({ bounded = true, match = null, settled } = {}) {
+async function archiveFixture({
+  bounded = true,
+  match = null,
+  settled,
+  indexState,
+  requestedEdition = "2018-2019",
+} = {}) {
   const requested = [],
     loaders = [],
     links = [],
     inputs = [],
     navigated = [],
-    params = new URLSearchParams({ as: "2018-2019", ap: "2", aq: "Bayern" });
+    params = new URLSearchParams({ ap: "2", aq: "Bayern" });
+  if (requestedEdition) params.set("as", requestedEdition);
   if (match) params.set("m", match);
   let envelope = pageRecord(),
     legacyError = null;
@@ -301,6 +308,7 @@ async function archiveFixture({ bounded = true, match = null, settled } = {}) {
     "../services/resources.js": {
       useResource: (key, loader, enabled = true) => {
         loaders.push({ key, loader, enabled });
+        if (key.startsWith("archive:indexes:") && indexState) return indexState;
         return {
           value: key.startsWith("archive:indexes:")
             ? [{ id: season, results: true, goals: true }]
@@ -385,6 +393,11 @@ test("an archived match requests only its goals and a 404 stays local to that de
     html = fixture.render();
   assert.match(html, /Thomas Müller/);
   assert.doesNotMatch(html, /archive-results|Page 2 sur/);
+  assert.equal(
+    fixture.loaders.find(({ key }) => key.startsWith("archive:indexes:"))
+      .enabled,
+    false,
+  );
   const detail = fixture.loaders.find(({ key }) =>
     key.startsWith("archive:read:"),
   );
@@ -400,6 +413,59 @@ test("an archived match requests only its goals and a 404 stays local to that de
     fixture.requested.some(({ kind }) => kind === "season"),
     false,
   );
+});
+
+test("an explicit bounded edition loads while its selector catalogue is pending or failed", async () => {
+  for (const indexState of [
+    { loading: true },
+    { error: "HTTP 503", retry() {} },
+  ]) {
+    const fixture = await archiveFixture({ indexState });
+    const html = fixture.render();
+    assert.match(html, /data-archive-match="match-51"/);
+    assert.match(html, /Page 2 sur 38/);
+    assert.match(html, /aria-label="Saison des archives"[^>]*disabled/);
+    if (indexState.error)
+      assert.match(html, /liste des saisons est indisponible/);
+    const page = fixture.loaders.find(({ key }) =>
+      key.startsWith("archive:read:"),
+    );
+    assert.equal(page.enabled, true);
+    await page.loader({ signal: new AbortController().signal });
+    assert.deepEqual(
+      fixture.requested.map(({ kind }) => kind),
+      ["page"],
+    );
+    assert.equal(fixture.requested[0].params.season, season);
+  }
+});
+
+test("a directly linked edition is not replaced by another catalogue default", async () => {
+  const fixture = await archiveFixture({
+    indexState: { value: [{ id: "2020/2021", results: true, goals: true }] },
+  });
+  fixture.render();
+  await fixture.loaders
+    .find(({ key }) => key.startsWith("archive:read:"))
+    .loader({});
+  assert.equal(fixture.requested[0].params.season, season);
+});
+
+test("missing, invalid and legacy edition selection still waits for a valid catalogue", async () => {
+  for (const options of [
+    { requestedEdition: null },
+    { requestedEdition: "invalid/edition" },
+    { bounded: false },
+  ]) {
+    const fixture = await archiveFixture({
+      ...options,
+      indexState: { loading: true },
+    });
+    assert.match(fixture.render(), /loading/);
+    assert.equal(fixture.loaders.length, 1);
+    assert.match(fixture.loaders[0].key, /^archive:indexes:/);
+    assert.equal(fixture.loaders[0].enabled, true);
+  }
 });
 
 test("a changed archive detail shows a safe return to the unpinned list", async () => {
