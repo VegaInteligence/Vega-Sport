@@ -158,6 +158,109 @@ def run(db):
                 while not call("verify_resources", kind, 2)["complete"]:
                     pass
 
+    def unchanged_copy_regressions(action):
+        """Exercise the installed copier, including work avoided before INSERT."""
+        reverse = action == "rollback"
+        node = next(n for n in NODES if n.table == "lineup_home_starters")
+        plan = next(p for p in call("status")["targets"] if p["table"] == node.table)
+        destination_schema = "statarena_retired_v1" if reverse else "statarena_app"
+        source_schema = "statarena_next" if reverse else "statarena_app"
+        destination_tables = [n.table for n in NODES] if reverse else ["catalog_records", "support_records", "detail_records"]
+        watched_tables = [node.table] if reverse else destination_tables
+
+        def tuple_ids():
+            return {table: db.execute(sql.SQL("SELECT ctid::text FROM {}.{} ORDER BY ctid").format(
+                sql.Identifier(destination_schema), sql.Identifier(table))).fetchall() for table in destination_tables}
+
+        with db.transaction():
+            db.execute("CREATE TEMP TABLE consolidation_copy_writes(operation text)")
+            db.execute("""CREATE FUNCTION pg_temp.observe_consolidation_copy() RETURNS trigger LANGUAGE plpgsql AS $$
+                BEGIN INSERT INTO pg_temp.consolidation_copy_writes VALUES(TG_OP); RETURN NEW; END $$""")
+            for table in watched_tables:
+                db.execute(sql.SQL("CREATE TRIGGER observe_copy BEFORE INSERT OR UPDATE ON {}.{} FOR EACH ROW EXECUTE FUNCTION pg_temp.observe_consolidation_copy()").format(
+                    sql.Identifier(destination_schema), sql.Identifier(table)))
+            before_tuples = tuple_ids()
+            call("restart")
+            copy_and_verify(action)
+            check("028 " + action + " leaves every unchanged destination tuple in place", tuple_ids() == before_tuples)
+            check("028 " + action + " skips unchanged rows before INSERT triggers", db.execute("SELECT count(*) FROM pg_temp.consolidation_copy_writes").fetchone()[0] == 0)
+            progress = call("status")["progress"]
+            for item in NODES:
+                amount = db.execute(sql.SQL("SELECT count(*) FROM {}.{}").format(sql.Identifier(source_schema), sql.Identifier(item.table))).fetchone()[0]
+                if progress["copy:" + item.table]["rows"] != amount:
+                    raise AssertionError("028 source traversal count changed for " + item.table)
+            check("028 " + action + " counts every source key including unchanged nonpositive keys", True)
+
+            rid, record_no = db.execute(sql.SQL("SELECT resource_id,record_no FROM {}.{} WHERE resource_id<0 ORDER BY resource_id,record_no LIMIT 1").format(
+                sql.Identifier(source_schema), sql.Identifier(node.table))).fetchone()
+            typed_where = "resource_id=%s AND record_no=%s"
+            store_where = "resource_id=%s AND record_kind='lineup_home_starters' AND path=ARRAY[%s::integer]"
+            destination = "statarena_retired_v1.lineup_home_starters" if reverse else "statarena_app.detail_records"
+            destination_where = typed_where if reverse else store_where
+
+            def recopy_member():
+                db.execute("DELETE FROM statarena_app.consolidation_state WHERE key=%s", ("copy:" + node.table,))
+                for _ in range(100):
+                    if call("copy_batch", node.table, 2)["complete"]:
+                        return
+                raise AssertionError("028 member copy did not converge")
+
+            def exact_member(schema, key):
+                return db.execute("SELECT " + plan["evidence"] + ",array_send(t.missing),array_send(t.null_groups) FROM "
+                                  + schema + ".lineup_home_starters t WHERE " + typed_where, key).fetchone()
+
+            # Establish equal, nonempty metadata arrays with a nondefault lower
+            # bound. JSON equality alone would not detect their later corruption.
+            if reverse:
+                db.execute("UPDATE statarena_app.detail_records SET attributes=jsonb_set(attributes,'{pitch_x}','0'),negative_zero=array_remove(negative_zero,'pitch_x'),missing='[0:0]={shirt_number}',null_groups='[0:0]={fixture_group}' WHERE " + store_where, (rid, record_no))
+            else:
+                db.execute("UPDATE statarena_app.lineup_home_starters SET pitch_x=0,missing='[0:0]={shirt_number}',null_groups='[0:0]={fixture_group}' WHERE " + typed_where, (rid, record_no))
+            recopy_member()
+            mutations = [
+                ("changed attributes", "name='changed destination'" if reverse else "attributes=jsonb_set(attributes,'{name}','\"changed destination\"')"),
+                ("signed zero", "pitch_x='-0'::float8" if reverse else "negative_zero=array_append(negative_zero,'pitch_x')"),
+                ("missing-array bounds", "missing='[1:1]={shirt_number}'"),
+                ("null-group-array bounds", "null_groups='[1:1]={fixture_group}'"),
+            ]
+            for label, assignment in mutations:
+                db.execute("UPDATE " + destination + " SET " + assignment + " WHERE " + destination_where, (rid, record_no))
+                before_tuple = db.execute("SELECT ctid::text FROM " + destination + " WHERE " + destination_where, (rid, record_no)).fetchone()[0]
+                db.execute("TRUNCATE pg_temp.consolidation_copy_writes")
+                recopy_member()
+                after_tuple = db.execute("SELECT ctid::text FROM " + destination + " WHERE " + destination_where, (rid, record_no)).fetchone()[0]
+                writes = db.execute("SELECT operation FROM pg_temp.consolidation_copy_writes ORDER BY operation").fetchall()
+                target_schema = "statarena_retired_v1" if reverse else "statarena_next"
+                check("028 " + action + " repairs " + label + " with exact typed/binary parity",
+                      before_tuple != after_tuple and writes == [("INSERT",), ("UPDATE",)]
+                      and exact_member(source_schema, (rid, record_no)) == exact_member(target_schema, (rid, record_no)))
+            db.execute("DELETE FROM " + destination + " WHERE " + destination_where, (rid, record_no))
+            db.execute("TRUNCATE pg_temp.consolidation_copy_writes")
+            recopy_member()
+            check("028 " + action + " inserts a missing destination row",
+                  db.execute("SELECT operation FROM pg_temp.consolidation_copy_writes").fetchall() == [("INSERT",)]
+                  and exact_member(source_schema, (rid, record_no)) == exact_member(target_schema, (rid, record_no)))
+
+            new_key = (rid, 20000)
+            if reverse:
+                db.execute("""INSERT INTO statarena_app.detail_records(resource_id,record_kind,path,parent_kind,parent_path,position,metric_label,missing,null_groups,negative_zero,attributes)
+                    SELECT resource_id,record_kind,ARRAY[20000],parent_kind,parent_path,20000,metric_label,missing,null_groups,negative_zero,attributes
+                    FROM statarena_app.detail_records WHERE """ + store_where, (rid, record_no))
+            else:
+                columns = plan["column_sql"]
+                selected = ",".join("20000" if name in ("record_no", "position") else '"' + name + '"' for name in plan["columns"])
+                db.execute("INSERT INTO statarena_app.lineup_home_starters (" + columns + ") SELECT " + selected
+                           + " FROM statarena_app.lineup_home_starters WHERE " + typed_where, (rid, record_no))
+            db.execute("TRUNCATE pg_temp.consolidation_copy_writes")
+            recopy_member()
+            check("028 " + action + " copies a newly added source key",
+                  db.execute("SELECT operation FROM pg_temp.consolidation_copy_writes").fetchall() == [("INSERT",)]
+                  and exact_member(source_schema, new_key) == exact_member(target_schema, new_key))
+            db.execute("TRUNCATE pg_temp.consolidation_copy_writes")
+            recopy_member()
+            check("028 " + action + " remains a no-op after repairing and extending rows",
+                  db.execute("SELECT count(*) FROM pg_temp.consolidation_copy_writes").fetchone()[0] == 0)
+            raise psycopg.Rollback()
+
     for prefix in ("003_", "004_", "005_", "006_", "007_", "008_", "009_", "010_", "011_", "020_", "021_", "022_", "023_", "024_"):
         if prefix == "023_":
             # Match the existing RDS runtime's old public-schema read grants.
@@ -206,6 +309,9 @@ def run(db):
     db.execute(cursor_migration)
     check("027 invalidates every zero-start copy and parity checkpoint", call("status")["progress"] == {})
     check("027 preserves function OIDs, owners, ACLs and signatures", function_metadata() == before_functions)
+    unchanged_migration = (ROOT / "dashboard/backend/migrations/028_skip_unchanged_consolidation_rows.sql").read_text()
+    db.execute(unchanged_migration)
+    check("028 preserves function OIDs, owners, ACLs and signatures", function_metadata() == before_functions)
     try:
         call("activate")
     except psycopg.errors.RaiseException:
@@ -219,6 +325,7 @@ def run(db):
     else:
         raise AssertionError("Publisher ignored migration maintenance")
     copy_and_verify("backfill")
+    unchanged_copy_regressions("backfill")
     for store in ("catalog_records", "support_records", "detail_records"):
         keys = db.execute(sql.SQL("SELECT DISTINCT resource_id FROM statarena_app.{} WHERE resource_id=ANY(%s) ORDER BY resource_id").format(sql.Identifier(store)), ([-(2**63), -1, 0],)).fetchall()
         check("full-range copy includes bigint minimum, negative and zero in " + store, keys == [(-(2**63),), (-1,), (0,)])
@@ -248,6 +355,8 @@ def run(db):
     proof_before_reapply = call("status")["progress"]
     db.execute(cursor_migration)
     check("027 reapplication preserves new full-range proofs", call("status")["progress"] == proof_before_reapply)
+    db.execute(unchanged_migration)
+    check("028 reapplication preserves full-range copy and parity proofs", call("status")["progress"] == proof_before_reapply)
     check("all 112 mapped node kinds were copied", db.execute("SELECT count(*) FROM (SELECT DISTINCT record_kind FROM statarena_app.catalog_records UNION SELECT DISTINCT record_kind FROM statarena_app.support_records UNION SELECT DISTINCT record_kind FROM statarena_app.detail_records) n").fetchone()[0] == 112)
     check("negative zero is explicitly preserved", db.execute("SELECT count(*) FROM statarena_app.detail_records WHERE cardinality(negative_zero)>0").fetchone()[0] > 0)
     try:
@@ -304,6 +413,7 @@ def run(db):
         check("runtime observes new published records after cutover", read() == after_write)
     check("publication actually writes the consolidated member store", db.execute("SELECT count(*) FROM statarena_app.detail_records WHERE record_kind='lineup_home_starters' AND attributes->>'name'='New'").fetchone()[0] == 1)
     copy_and_verify("rollback")
+    unchanged_copy_regressions("rollback")
     call("rollback")
     for node in NODES:
         restored_count = db.execute(sql.SQL("SELECT count(*) FROM statarena_app.{} WHERE {}<=0").format(sql.Identifier(node.table), sql.Identifier(node.resource))).fetchone()[0]
