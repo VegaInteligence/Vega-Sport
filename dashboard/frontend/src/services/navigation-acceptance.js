@@ -165,7 +165,9 @@ export function startNavigationAcceptance() {
           (read) => read.endMs >= pending.startMs,
         );
         const requests = state.requests.filter(
-          (request) => request.startMs >= pending.startMs,
+          (request) =>
+            request.startMs <= finished &&
+            (request.endMs === null || request.endMs >= pending.startMs),
         );
         state.transitions.push({
           from: pending.from,
@@ -175,7 +177,10 @@ export function startNavigationAcceptance() {
           eventQueueMs: Math.round(pending.eventQueueMs * 1000) / 1000,
           startClock: pending.startClock,
           cache: { ...pending.cache },
-          fetchesStarted: requests.length,
+          fetchesStarted: requests.filter(
+            (request) => request.startMs >= pending.startMs,
+          ).length,
+          fetchesDuringInterval: requests.length,
           fetchesInFlightAtClick: pending.inFlight,
           dataTransfersDuringInterval: reads.length,
           dataInMemory:
