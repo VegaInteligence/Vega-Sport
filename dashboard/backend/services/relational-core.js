@@ -33,6 +33,9 @@ const tag = (req, version) =>
   'W/"core-v3-' +
   digest(new URL(req.url).pathname + new URL(req.url).search + "|" + version) +
   '"';
+// Capability changes must invalidate the manifest even without a publication.
+// Keep this representation revision separate from other endpoint validators.
+const manifestTag = (req, version) => tag(req, `manifest-v1|${version}`);
 class ApiError extends Error {
   constructor(status, message) {
     super(message);
@@ -356,18 +359,18 @@ export function assembleMatches(data) {
     return match;
   });
 }
-async function globalValidator(req, ttl) {
+async function globalValidator(req, ttl, etagFor = tag) {
   if (req.method !== "HEAD" && !req.headers.has("if-none-match")) return null;
   const [m] = await query(globalState);
   if (!m) reject(503, "Publication indisponible.");
-  const etag = tag(req, m.version);
+  const etag = etagFor(req, m.version);
   return req.method === "HEAD" ||
     matchesEtag(req.headers.get("if-none-match"), etag)
     ? send(req, null, 200, { etag, ttl })
     : null;
 }
 export async function manifest(req) {
-  const validated = await globalValidator(req, 15);
+  const validated = await globalValidator(req, 15, manifestTag);
   if (validated) return validated;
   const [r] =
     await query(`SELECT g.*, ${jsonRows("SELECT p.season,p.league_id,p.source_digest,p.retrieved_at,p.start_date,p.end_date,p.published_at,(SELECT json_object_agg(metric_key,value) FROM statarena_app.partition_counts c WHERE c.season=p.season AND c.league_id=p.league_id) AS counts FROM statarena_app.partitions p ORDER BY p.season DESC,p.league_id")} partitions,
@@ -432,7 +435,7 @@ export async function manifest(req) {
       scouting: { version: 2, sourceDigest: r.version },
     },
     200,
-    { etag: tag(req, r.version), ttl: 15 },
+    { etag: manifestTag(req, r.version), ttl: 15 },
   );
 }
 export async function partitionPage(req, p) {

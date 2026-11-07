@@ -213,6 +213,56 @@ test("manifest separates source freshness from publication time", async () => {
   assert.equal(body.seasons[0].chunks[0].meta.endDate, "2026-11-05");
 });
 
+test("manifest capabilities refresh cached representations without a data publication", async () => {
+  let calls = 0;
+  const api = endpoints(async () => {
+    calls++;
+    return [
+      {
+        version: "199",
+        published_at: "2026-11-06T21:13:42.971Z",
+        countries: {},
+        competitions: [],
+        partitions: [],
+      },
+    ];
+  });
+  const url = "https://api.test/api/dashboard/manifest";
+  // The deployed core-v3 manifest used this ETag for publication 199 before
+  // playerRatingRanking was advertised. Its cached body must be replaced.
+  const previous =
+    'W/"core-v3-510207df25b4e0c761d49e9ca25e754cd9e1bbe71ceadf91af52ae9128a1f18b"';
+  const response = await api.manifest(
+    new Request(url, { headers: { "If-None-Match": previous } }),
+  );
+  assert.equal(response.status, 200);
+  assert.equal(calls, 2);
+  const body = await response.json();
+  assert.equal(body.publicationVersion, "199");
+  assert.equal(body.capabilities.playerRatingRanking, true);
+  const etag = response.headers.get("etag");
+  assert.ok(etag);
+  assert.notEqual(etag, previous);
+  calls = 0;
+  const conditional = await api.manifest(
+    new Request(url, { headers: { "If-None-Match": etag } }),
+  );
+  assert.equal(conditional.status, 304);
+  assert.equal(await conditional.text(), "");
+  assert.equal(calls, 1, "a current validator does not rebuild the catalogue");
+  assert.equal(conditional.headers.get("etag"), etag);
+  assert.equal(
+    conditional.headers.get("cache-control"),
+    response.headers.get("cache-control"),
+  );
+  calls = 0;
+  const head = await api.manifest(new Request(url, { method: "HEAD" }));
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+  assert.equal(head.headers.get("etag"), etag);
+  assert.equal(calls, 1);
+});
+
 test("invalid order cannot alter the SQL query", async () => {
   let calls = 0;
   const api = endpoints(async () => {
