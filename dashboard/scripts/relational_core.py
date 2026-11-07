@@ -7,6 +7,7 @@ from pathlib import Path
 from psycopg import sql
 from build_dashboard_data import PLAYER_METRICS, EXTRA_PLAYER_METRICS, ATTEMPTED_METRICS
 from player_rollups import refresh_player_rollups
+from publication_trace import mark_stage
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -77,6 +78,7 @@ def install_schema(db):
     db.execute((ROOT/'dashboard/backend/migrations/025_player_season_rollups.sql').read_text())
     db.execute((ROOT/'dashboard/backend/migrations/030_player_directory_index.sql').read_text())
     db.execute((ROOT/'dashboard/backend/migrations/031_indexed_performance_cohorts.sql').read_text())
+    db.execute((ROOT/'dashboard/backend/migrations/037_bounded_player_rollup_publication.sql').read_text())
 
 
 MAX_CORE_WRITE_ROWS = 500
@@ -150,6 +152,7 @@ def _partition_metadata(db, season, league_id, digest, meta, *, update=False):
 
 def _publish_full_snapshot(db, season, league_id, snapshot, *, metadata_only=False):
     """Caller owns transaction + ingestion lease and proves facts unchanged for metadata_only."""
+    mark_stage("core_snapshot")
     digest = publication_digest(snapshot)
     prior = db.execute('SELECT source_digest FROM statarena_app.partitions WHERE season=%s AND league_id=%s',(season,league_id)).fetchone()
     if prior and prior[0] == digest: return 0
@@ -157,12 +160,15 @@ def _publish_full_snapshot(db, season, league_id, snapshot, *, metadata_only=Fal
     if prior and metadata_only:
         # Never delete the partition row: its cascades include published metadata.
         # The caller has compared all facts, identities, list orders and metric definitions.
+        mark_stage("core_metadata_write")
         db.execute('DELETE FROM statarena_app.partition_counts WHERE season=%s AND league_id=%s',(season,league_id))
         db.execute('DELETE FROM statarena_app.partition_notes WHERE season=%s AND league_id=%s',(season,league_id))
         _partition_metadata(db, season, league_id, digest, meta, update=True)
         refresh_player_rollups(db, season, league_id)
+        mark_stage("publication_generation")
         db.execute('UPDATE statarena_app.publications SET generation=generation+1,published_at=clock_timestamp()')
         return 1
+    mark_stage("core_match_write")
     db.execute('DELETE FROM statarena_app.matches WHERE season=%s AND league_id=%s',(season,league_id))
     db.execute('DELETE FROM statarena_app.fixtures WHERE season=%s AND league_id=%s',(season,league_id))
     db.execute('DELETE FROM statarena_app.partitions WHERE season=%s AND league_id=%s',(season,league_id))
@@ -229,6 +235,7 @@ def _publish_full_snapshot(db, season, league_id, snapshot, *, metadata_only=Fal
         db.execute('INSERT INTO statarena_app.metric_definitions(metric_key,label,unit,decimals) VALUES(%s,%s,%s,%s) ON CONFLICT(metric_key) DO UPDATE SET label=excluded.label,unit=excluded.unit,decimals=excluded.decimals',(m['key'],m.get('label'),m.get('unit'),m.get('decimals')))
         _many(db,'partition_metrics',[dict(season=season,league_id=league_id,metric_key=m['key'],ordinal=i)])
     refresh_player_rollups(db, season, league_id)
+    mark_stage("publication_generation")
     db.execute('UPDATE statarena_app.publications SET generation=generation+1,published_at=clock_timestamp()')
     return 1
 

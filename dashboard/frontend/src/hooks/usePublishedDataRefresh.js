@@ -18,7 +18,9 @@ export default function usePublishedDataRefresh(
   }, [refreshManifest]);
   useEffect(() => {
     if (!enabled) return;
-    const maxAge = 5 * 60_000,
+    // Leave one minute of the five-minute visibility budget for the shared
+    // cache TTL, network work and coherent replacement of the current view.
+    const maxAge = 4 * 60_000,
       clockStep = 60_000;
     let stopped = false,
       timer;

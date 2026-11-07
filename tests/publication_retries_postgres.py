@@ -11,6 +11,7 @@ from unittest.mock import patch
 from urllib.parse import urlsplit
 
 import psycopg
+from psycopg.types.json import Jsonb
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "dashboard/scripts"))
@@ -26,7 +27,8 @@ def continuation_checks(db, check):
     db.execute("CREATE TEMP TABLE continuation_records(kind text,key text,PRIMARY KEY(kind,key))")
 
     def scenario(*, catalog_count, partition_count, catalog_seconds=0,
-                 partition_seconds=0, max_partitions=None, fail_catalog_at=None, fail_globals=False, minutes=1):
+                 partition_seconds=0, max_partitions=None, fail_catalog_at=None, fail_globals=False,
+                 minutes=1, catalog_kind="object", profile_collection=False):
         db.execute("DROP TABLE IF EXISTS work_catalog,work_failed")
         db.execute("TRUNCATE statarena_app.publication_jobs,statarena_app.worker_inputs,statarena_app.workflow_state,continuation_records")
         clock = [0]
@@ -36,14 +38,19 @@ def continuation_checks(db, check):
 
         def prepare(*_):
             db.execute("CREATE TEMP TABLE work_catalog(kind text,key text,digest text,ref jsonb,status integer,error text)")
-            db.cursor().executemany("INSERT INTO work_catalog VALUES('object',%s,%s,NULL,200,NULL)",
-                                    [(f"fixture/{i:03}.json", f"digest-{i}") for i in range(catalog_count)])
+            for i in range(catalog_count):
+                key = f"/players/p_{i:06}" if catalog_kind == "profile" else f"fixture/{i:03}.json"
+                if profile_collection and i == 0:
+                    key = "/players"
+                ref = Jsonb({"path": key, "sha256": f"digest-{i}"}) if catalog_kind == "profile" else None
+                db.execute("INSERT INTO work_catalog VALUES(%s,%s,%s,%s,200,NULL)",
+                           (catalog_kind, key, f"digest-{i}", ref))
             db.cursor().executemany("INSERT INTO statarena_app.publication_jobs(season,league_id) VALUES('2026/2027',%s)",
                                     [(f"l_{i:06}",) for i in range(partition_count)])
 
         def prefetch(refs, scratch):
             scratch.executemany("INSERT INTO body_cache VALUES(?,?,?)",
-                                [(key, digest, json.dumps({"key": key})) for key, digest in refs])
+                                [(key, digest, json.dumps({"data": {"key": key}} if catalog_kind == "profile" else {"key": key})) for key, digest in refs])
 
         def publish_globals(_):
             events.append(("global",))
@@ -58,7 +65,7 @@ def continuation_checks(db, check):
         def publish_catalog(_, records):
             keys = []
             for key, value in records:
-                assert value == {"key": key}
+                assert value == ({"status": 200, "data": {"key": key}, "error": None} if catalog_kind == "profile" else {"key": key})
                 db.execute("INSERT INTO continuation_records VALUES('catalog',%s)", (key,))
                 keys.append(key)
                 catalog_writes[0] += 1
@@ -137,6 +144,33 @@ def continuation_checks(db, check):
     check("two failed queues remain pending while healthy partitions finish", result["failed_globals"] == result["failed_catalog_batches"] == 1 and result["partitions"] == 2 and result["remaining"] == 9 and db.execute("SELECT generation FROM statarena_app.publications").fetchone()[0] == generation + 2)
     check("each failed queue has one safe attempt per invocation", output.count('"phase":"global-deferred"') == output.count('"phase":"catalog-deferred"') == 1 and "source-body-must-not-appear" not in output)
 
+    result, events, generation, _ = scenario(catalog_count=100, partition_count=2,
+        catalog_kind="profile", max_partitions=2, minutes=5)
+    check("flat profiles amortize writes while yielding at forty inputs per partition", events == [
+        ("global",), ("catalog", 16), ("catalog", 16), ("catalog", 8), ("partition", "l_000000"),
+        ("catalog", 16), ("catalog", 16), ("catalog", 8), ("partition", "l_000001")])
+    check("larger profile batches acknowledge only the eighty completed inputs", result["catalog_inputs"] == 80 and result["remaining"] == 20 and db.execute("SELECT count(*) FROM statarena_app.worker_inputs WHERE kind='profile'").fetchone()[0] == 80)
+    check("profile generation remains atomic per completed batch", db.execute("SELECT generation FROM statarena_app.publications").fetchone()[0] == generation + 9)
+
+    result, events, _, _ = scenario(catalog_count=40, partition_count=1,
+        catalog_kind="profile", profile_collection=True, max_partitions=1)
+    check("profile collections keep the original four-input boundary", events == [
+        ("global",), ("catalog", 4), ("catalog", 16), ("catalog", 16), ("catalog", 4), ("partition", "l_000000")])
+
+    result, events, _, _ = scenario(catalog_count=100, partition_count=1,
+        catalog_kind="profile", catalog_seconds=16, max_partitions=1, minutes=5)
+    check("profile batches yield after the thirty-second soft slice even below forty inputs", events == [
+        ("global",), ("catalog", 16), ("catalog", 16), ("partition", "l_000000")] and result["catalog_inputs"] == 32)
+
+    result, events, _, _ = scenario(catalog_count=40, partition_count=1,
+        catalog_kind="profile", catalog_seconds=65)
+    check("a slow profile batch cannot admit additional work after the global deadline", events == [("global",), ("catalog", 16)] and result["partitions"] == 0 and result["catalog_inputs"] == 16 and result["remaining"] == 25)
+
+    result, events, generation, output = scenario(catalog_count=40, partition_count=1,
+        catalog_kind="profile", fail_catalog_at=18)
+    check("failed larger profile batch rolls back every source and retains earlier progress", result["catalog_inputs"] == 16 and result["failed_catalog_batches"] == 1 and result["partitions"] == 1 and result["remaining"] == 24 and '"committed_inputs":16' in output)
+    check("only the first profile batch has facts and receipts after later failure", db.execute("SELECT count(*) FROM continuation_records WHERE kind='catalog'").fetchone()[0] == 16 and db.execute("SELECT count(*) FROM statarena_app.worker_inputs WHERE kind='profile'").fetchone()[0] == 16 and db.execute("SELECT generation FROM statarena_app.publications").fetchone()[0] == generation + 3)
+
 
 def main():
     target = urlsplit(os.environ["TEST_DATABASE_URL"])
@@ -173,18 +207,26 @@ def main():
                 db.execute("DELETE FROM statarena_app.publication_jobs WHERE season=%s AND league_id=%s AND changed_at=%s", (season, league, marked))
                 db.execute("UPDATE statarena_app.publications SET generation=generation+1")
                 if league == "l_bad":
+                    publisher.mark_stage("rollup_refresh")
                     raise ValueError("Untrusted source payload must not be persisted in queue errors")
                 return 1
 
             fake_inputs = SimpleNamespace(db=db, read=lambda path: {})
+            output = io.StringIO()
             with patch.object(publisher, "capacity", return_value=10**12), \
                  patch.object(publisher, "Inputs", return_value=fake_inputs), \
                  patch.object(publisher, "prepare", side_effect=prepare), \
                  patch.object(publisher, "publish_partition", side_effect=publish), \
                  patch.object(publisher, "publish_global", return_value={}), \
                  patch.object(publisher, "catalog_batch", return_value=0), \
-                 patch.object(publisher, "queue_dirty"):
+                 patch.object(publisher, "queue_dirty"), redirect_stdout(output):
                 result = publisher.run(SimpleNamespace(db=db), minutes=1, batch=2, max_partitions=1)
+            events = [json.loads(line) for line in output.getvalue().splitlines() if line.startswith("{")]
+            failure = next(event for event in events if event.get("phase") == "partition-deferred")
+            success = next(event for event in events if event.get("published") == "l_good")
+            check("failed stage survives real transaction rollback", failure["failure_stage"] == "rollup_refresh" and "rollup_refresh" in failure["stage_timings"])
+            check("following partition has its own trace and commits", "rollup_refresh" not in success["timing"]["stage_timings"] and "transaction_commit" in success["timing"]["stage_timings"])
+            check("stage diagnostics never persist untrusted exception text", "Untrusted source payload" not in output.getvalue())
             check("healthy partition published after earlier failure", result["partitions"] == 1 and result["failed_partitions"] == 1)
             check("failed inputs retained and counted", result["remaining"] == result["deferred_partitions"] == 1)
             check("only healthy facts retained", db.execute("SELECT league FROM observed_publications").fetchall() == [("l_good",)])

@@ -17,7 +17,7 @@ class CatalogueAdmissionTests(unittest.TestCase):
         clock = [start]
         admissions = []
 
-        def publish(inputs, limit):
+        def publish(inputs, limit, *, profile_limit=None):
             nonlocal pending
             admissions.append((clock[0], limit))
             count = min(pending, limit)

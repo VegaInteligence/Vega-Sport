@@ -13,7 +13,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."),
   commonjs = requireLocal(
     "next/dist/compiled/babel/plugin-transform-modules-commonjs",
   ),
-  maxAge = 5 * 60_000;
+  maxAge = 4 * 60_000;
 
 async function withRefreshHook({ start, refresh, enabled = true }, run) {
   const previousWindow = globalThis.window,
@@ -194,7 +194,7 @@ test("published data refreshes during the day, on stale focus and after a failur
   );
 });
 
-test("focus between ticks preserves the exact five-minute deadline", async () => {
+test("focus between ticks preserves the four-minute revalidation deadline", async () => {
   let calls = 0;
   await withRefreshHook(
     {
