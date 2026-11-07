@@ -75,6 +75,33 @@ The recovery plan must identify any source-version loss explicitly. The retained
 Neon reconciliation script is pinned to an earlier transfer capture and is not a
 general recovery tool for this operation.
 
+### Preserve current data before an actual recovery
+
+The retained pre-retirement snapshot recovers the old 112-table layout at its
+recorded recovery point. Physical retirement leaves the current consolidated
+serving data, ingestion sources and home projections in place. The historical
+snapshot must not replace the live database without accounting for later changes.
+
+Before any actual recovery, preserve a verified, coherent capture of the CURRENT
+whole database with a full snapshot or a consistent logical dump. Keep source
+and serving rows, input receipts, publication generation, migration journal and
+derived projections together. Restore into an empty isolated recovery target.
+Do not restore with destructive cleanup into the working primary or the populated
+historical clone, and do not import newer receipts independently of their data.
+
+A verified point-in-time restore immediately before finalization may reduce the
+recovery gap. No zero-data-loss recovery point is claimed. The repository has no
+validated general importer for every post-snapshot database change. Latest source
+values may omit intermediate values or provenance. The recovery attestation
+confirms review of the procedure and these limits; it does not assert that a
+lossless delta replay has already run.
+
+Keep the working production database intact until the reconstructed replacement
+passes exact data and serving-contract validation against the preserved current
+capture. Rebuilding the old physical layout after finalization requires a
+separately reviewed recovery operation. The former in-place rollback command
+deliberately remains unavailable.
+
 ## Guarded SQL interface
 
 | Operation | Fixed SQL | Effect |
