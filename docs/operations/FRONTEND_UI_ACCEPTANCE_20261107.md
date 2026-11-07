@@ -1,5 +1,7 @@
 # Deployed navigation acceptance — 7 November 2026
 
+**Final representative browser acceptance passed on main `3ce123f4`, including decoded native portraits and crests.** The final window was **08:40:30–08:42:52.386 UTC**. Earlier phases, including the image regression that was found and corrected, are preserved below. See [Final native-image and navigation acceptance](#final-native-image-and-navigation-acceptance).
+
 ## Environment and scope
 
 The deployed frontend at `https://vegasport.vercel.app` was exercised through the browser after the backend deployment was confirmed live at 05:24:14 UTC. This was a representative interaction and rendering check before the database consolidation cutover, while the production backfill was beginning. It did not perform database writes, change configuration or run a load test.
@@ -99,8 +101,49 @@ A fresh document load preceded this bounded sequence. The data and navigation ch
 
 The 50-entry warning/error console sample contained no application or CORS error within this window; its new entries were the known browser-extension metadata errors. That absence does not explain the image failure because image load errors are handled by the component. The browser tab was retained for review. No load test or additional HTTP probe was performed, and tool duration is not a page-latency measure. The exact window is available for independent CloudWatch correlation; **zero backend throttles is not asserted by this browser evidence**.
 
-### Image diagnosis and prepared correction
+### Image diagnosis and correction
 
 The operator's bounded follow-up confirmed a valid **9,588-byte WebP**, HTTP 200 and `image/webp`, at the final immutable PSG asset URL. Direct final-CDN HEAD responses with both `Origin: https://vegasport.vercel.app` and `Origin: null` omitted `Access-Control-Allow-Origin`. The image-byte fetch introduced a CORS requirement that the previously native image route did not have; the CDN policy's configuration alone had not proved that response behavior.
 
-The prepared fix restores native `<img>` source assignment after admission to the same shared scheduler. It removes Blob fetching/cache/object-URL code, retains visible intent and the four-total/two-image limits, and releases admission on native load/error or cleanup. Native image events cannot inspect HTTP retry headers, so there is no new automatic image retry; existing alternate-source and initials fallbacks remain. JSON throttle handling is unchanged. The focused scheduler/component lifecycle suite passes **21 tests**, and the complete workflow navigation command passes **126 tests**. This is local verification only: **deployment, decoded native images and a fresh bounded browser acceptance remain pending**.
+The fix restores native `<img>` source assignment after admission to the same shared scheduler. It removes Blob fetching/cache/object-URL code, retains visible intent and the four-total/two-image limits, and releases admission on native load/error or cleanup. Native image events cannot inspect HTTP retry headers, so there is no new automatic image retry; existing alternate-source and initials fallbacks remain. JSON throttle handling is unchanged. The focused scheduler/component lifecycle suite passes **21 tests**, and the complete workflow navigation command passes **126 tests**. Those local checks preceded the live acceptance below.
+
+## Final native-image and navigation acceptance
+
+[PR #31](https://github.com/VegaInteligence/Vega-Sport/pull/31) merged as main **`3ce123f44bd359f59e5c38e30d5149b82c085603`**, with [CI 42355898799](https://github.com/VegaInteligence/Vega-Sport/actions/runs/42355898799) passing all three jobs. Deployment **`dpl_2tjAdv7MksrUtz6wLgd6YoQdkSjr`** and its `vegasport.vercel.app` alias were verified READY at **08:40:13.905 UTC**. A fresh page load on that production deployment started the final browser sequence at **08:40:30 UTC**; the last inspection and screenshot ended at **08:42:52.386 UTC**. The database was active throughout this phase. Publication was allowed to advance; no unchanged generation is assumed.
+
+All **11 recorded route/action checks** reached the requested populated state:
+
+| Check | Final observation |
+| --- | --- |
+| Fresh player directory | **20 rows**, **2,185 qualified players**, **110 pages**, rating sort. The first 16 inspected visible portraits/crests all decoded. |
+| Search and player profile | **Hakimi** returned **Achraf Hakimi — Paris Saint-Germain**; Enter opened the profile. The season summary showed **12 matches, 887 minutes, 3 goals and 3 assists**, with the competition split. Both the portrait and PSG crest decoded. |
+| Club directory, first and second pages | **24 cards** on each page, **192 clubs**, **8 pages**. Page 2 began with Beşiktaş. The three recorded first-page crest samples decoded. |
+| Club profile | PSG displayed **13 matches**, **10–2–1**, **41–15 goals**, complete home/away rows and recent/upcoming fixtures. Its crest decoded. |
+| Archive edition and pagination | Explicit **2018/2019** displayed **50 rows** on page 1 and **50 rows** on page 2 of **205**, preserving the source version. |
+| Archive detail | The current page-2 link displayed **Wolfsberger AC 2–1 Sturm Graz** with the same **three goals** and version-bound positional key recorded above. |
+| Match overview and shots | PSG–Slovan displayed **6–1** and decoded team crests. The shots tab displayed **44 shots**, with **0 missing xG** and **0 missing coordinates**. |
+| Return navigation and images | Returning to players displayed **20 rows**. All **18 visible image elements inspected** had `complete=true`, `naturalWidth>0`, and native CloudFront API URLs in both `src` and `currentSrc`. |
+
+The recorded image dimensions are **192 pixels for player portraits** and **150 pixels for team crests**. The API URL is `https://d317dq37z1tacb.cloudfront.net/api/assets?…`; no Blob URL is used in these successful observations. This verifies actual native image decoding, rather than merely the presence of image placeholders or a successful data request.
+
+The 80-entry warning/error console sample contained **19 new entries during the window**, all from the browser extension's metadata delivery. It contained **no application or CORS error**. No visible application failure, incorrect page transition or failed image sample was observed. The final screenshot shows the populated player directory with decoded portraits and crests; tab 7 was retained as the review deliverable. The canonical private receipt is `frontend-ui-final-acceptance.json`, with screenshot SHA-256 `3298eddff2185186d411515bd089cd475c009522d91b75b7d61577b20435f523`. The earlier failed image receipt and screenshot remain separate.
+
+This was one bounded representative navigation sequence, with no independent HTTP sweep or load test. Tool duration is not browser latency, and browser observations alone make no global capacity or zero-throttle claim. The independent server correlation follows. Route values describe the published dataset; they do not independently authenticate upstream results.
+
+### Independent CloudWatch correlation
+
+The operator read the `statarena-backend` function's CloudWatch metrics at **08:45:15 UTC**, recorded in `native-image-live-cloudwatch.json`. The three **60-second bins from 08:40:00 inclusive to 08:43:00 exclusive** cover the browser's **08:40:30–08:42:52.386 UTC** window. All three datapoints were present for each metric; missing datapoints were not treated as zeros.
+
+| Function-wide metric | Observed value |
+| --- | --- |
+| Invocations | **134** |
+| Throttles | **0** |
+| Errors | **0** |
+| Peak concurrent executions | **3** |
+| Sum of invocation durations | **7,416.97 ms** |
+| Mean duration, weighted over 134 invocation samples | **55.3505 ms** |
+| Maximum invocation duration | **895.74 ms** |
+
+These are **function-wide production bins**, not requests isolated to this browser tab. Other real traffic may share the bins, while CDN cache hits do not invoke Lambda. The later HTTP verification sweep is outside this window. Lambda duration is **not page-load latency** and omits client/network/rendering work. This correlation establishes zero recorded throttles and errors during the bounded acceptance window; it does not establish multi-user capacity or a load-test result.
+
+The earlier **53 throttles in the 07:00–07:33 UTC diagnostic window** motivated the concurrency correction. That interval had different duration, traffic and cache conditions. It is retained as diagnostic evidence, **not a controlled before/after benchmark** or a basis for a percentage improvement claim.

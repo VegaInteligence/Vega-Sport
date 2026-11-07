@@ -77,6 +77,23 @@ The first-page, second-page and filtered-page comparisons all verified exact con
 
 The operator receipts are `clone-archive-canary-refresh.json` and `clone-archive-canary-acceptance.json`. The initial inventory found 154 source editions; the canary made one ready. Remaining editions must be backfilled and their current fences verified before the new reader is activated. These receipts establish stage validation only.
 
+### Completed production backfill, 7 November 2026
+
+The approved transient ingestion worker (`e785e3ab0ae4abca926b24697e155fb7a584de84364b8cf71a06433d1c25d50c`) prepared **all 154 published editions**, containing **507,698 merged match rows**. The final inventory found zero missing or stale projections. Every refresh preserved consolidation revision 1, and the operator retained a separate canonical receipt for every edition. No source rows were moved, deleted or rewritten by this operation.
+
+The 2018/2019 production canary produced the same version and exact counts as stage. Its one-time refresh took 7.252 seconds of database work. After the complete backfill, all ten native acceptance checks passed on the existing production instance:
+
+| Read | PostgreSQL execution | Shared-buffer blocks read |
+| --- | ---: | ---: |
+| First page | 13.353 ms | 4 |
+| Player-name filter | 62.209 ms | 1,031 |
+| Single match detail | 6.259 ms | 2 |
+| Edition metadata | 8.128 ms | 2 |
+
+The page still returned exactly 50 list rows (16,061 bytes), with a complete total of 10,219 matches and 205 pages. The selected one-goal detail was 709 bytes. Exact first-page, second-page and filtered-page contents/order, complete totals and page numbers all passed. These are native SQL execution measurements; they exclude HTTP and frontend rendering, and are not a controlled cold-storage benchmark.
+
+Evidence is in `prod-archive-backfill-summary.json`, `prod-archive-refresh-batch-001.json` through `prod-archive-refresh-batch-048.json`, the production canary receipt, and `prod-archive-acceptance-001.json` / `prod-archive-acceptance-summary.json`. The production database window was released after these checks. Reader deployment and browser acceptance are separate release gates.
+
 ## Recovery
 
 An unsuccessful rebuild leaves the prior committed sources and projection intact. A stale projection remains unavailable until a successful refresh; the API does not display it as current. Reverting the public reader requires no canonical data rollback and no table deletion. The derived tables can be retained while diagnosing a deployment, then refreshed from unchanged canonical sources.
