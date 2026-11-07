@@ -71,4 +71,10 @@ test("the season index includes the stored national-team supplement and is reusa
   });
   assert.equal(entry.season, "2024/2025");
   assert.equal(entry.profile.matches, 7);
+  const [cached] = await loadPlayerHistory({}, id, {
+    routing,
+    season: entry.season,
+    cachedSeason: () => entry,
+  });
+  assert.equal(cached, entry);
 });

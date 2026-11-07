@@ -504,7 +504,7 @@ test("the merged actor match list keeps fixture links, date order and every acto
       ) => {
         assert.equal(source, manifest);
         assert.equal(player, id);
-        assert.equal(selected, season);
+        assert.equal(selected, matchParams.careerGroup ? undefined : season);
         historySignal = signal;
         return seasons;
       },
@@ -559,6 +559,31 @@ test("the merged actor match list keeps fixture links, date order and every acto
   const controller = new AbortController();
   await history.loader({ signal: controller.signal });
   assert.equal(historySignal, controller.signal);
+
+  jobs.length = 0;
+  matchParams = {
+    id,
+    performanceSeason: "2024/2025",
+    careerGroup: "clubs",
+    careerKey: "t_000001",
+  };
+  const career = renderToStaticMarkup(h(matchPage.default));
+  assert.equal((career.match(/class="match-row"/g) || []).length, 25);
+  assert.match(career, /Cumul des saisons disponibles/);
+  assert.match(career, /performanceSeason=2024%2F2025/);
+  assert.doesNotMatch(career, /careerGroup=|careerKey=/);
+  const all = jobs.find((job) => job.enabled);
+  assert.equal(all.key, playerHistoryKey(manifest, id));
+  await all.loader({ signal: controller.signal });
+  assert.equal(historySignal, controller.signal);
+
+  jobs.length = 0;
+  matchParams.careerGroup = "constructor";
+  assert.match(renderToStaticMarkup(h(matchPage.default)), /indisponible/);
+  assert.equal(
+    jobs.some((job) => job.enabled),
+    false,
+  );
 });
 
 test("dynamic discipline uses the compact generation and preserves uncovered match counts", async () => {

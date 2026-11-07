@@ -9,6 +9,7 @@ import { AsyncState, Empty } from "../components/UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { date, number } from "../services/format.js";
 import { nationalTeamName } from "../services/national-flags.js";
+import { playerCareerGroups } from "../services/player-career.js";
 import { matchExternalUrl } from "../services/player-competition-matches.js";
 import { playerSeasonGroups } from "../services/player-season-history.js";
 import { isNationalTeamCompetition } from "../services/player-team-seasons.js";
@@ -118,25 +119,59 @@ function HistoryMatches({ seasons, id, groupKey, competitionKey, season }) {
   );
 }
 
+function CareerMatches({ seasons, id, group, matchKey }) {
+  const entry = playerCareerGroups(seasons, id)[group].find(
+    (item) => item.key === matchKey,
+  );
+  if (!entry) return <Empty>Ce périmètre de matchs est indisponible.</Empty>;
+  const name =
+    group === "selections"
+      ? nationalTeamName(entry.name, entry.seasons[0])
+      : entry.name;
+  return (
+    <MatchResults
+      rows={entry.profile.rows}
+      matches={seasons.flatMap(({ data }) => data?.matches || [])}
+      label={`${name} · Cumul des saisons disponibles`}
+    />
+  );
+}
+
 export default function PlayerMatchesPage({ currentRows } = {}) {
   const params = useSearchParams();
   const f = useFootball();
   const id = params.get("id") || "";
   const groupKey = params.get("matchGroup");
+  const competitionKey = params.get("matchCompetition");
+  const careerGroup = params.get("careerGroup");
+  const careerKey = params.get("careerKey");
+  const career = careerGroup !== null || careerKey !== null;
+  const validCareer =
+    ["clubs", "competitions", "selections"].includes(careerGroup) &&
+    Boolean(careerKey) &&
+    groupKey === null &&
+    competitionKey === null;
   const selectedSeason = groupSeason(groupKey);
   const season = selectedSeason || params.get("season") || f.season;
   const valid = /^p_[A-Za-z0-9]{6}$/.test(id);
   const history = useResource(
-    playerHistoryKey(f.manifest, id, season),
-    ({ signal }) => loadPlayerHistory(f.manifest, id, { signal, season }),
-    valid && currentRows === undefined,
+    playerHistoryKey(f.manifest, id, career ? undefined : season),
+    ({ signal }) =>
+      loadPlayerHistory(f.manifest, id, {
+        signal,
+        season: career ? undefined : season,
+      }),
+    valid && currentRows === undefined && (!career || validCareer),
   );
   const back = new URLSearchParams(params.toString());
   back.delete("matchGroup");
   back.delete("matchCompetition");
+  back.delete("careerGroup");
+  back.delete("careerKey");
   if (valid) {
     back.set("playerView", "stats");
-    if (selectedSeason) back.set("performanceSeason", selectedSeason);
+    if (!career && selectedSeason)
+      back.set("performanceSeason", selectedSeason);
   } else {
     back.delete("id");
     back.delete("playerView");
@@ -156,6 +191,8 @@ export default function PlayerMatchesPage({ currentRows } = {}) {
       </Link>
       {!valid ? (
         <Empty>Joueur indisponible.</Empty>
+      ) : career && !validCareer ? (
+        <Empty>Ce périmètre de matchs est indisponible.</Empty>
       ) : currentRows !== undefined ? (
         <MatchResults
           rows={currentRows}
@@ -164,15 +201,24 @@ export default function PlayerMatchesPage({ currentRows } = {}) {
         />
       ) : (
         <AsyncState resource={history}>
-          {(seasons) => (
-            <HistoryMatches
-              seasons={seasons}
-              id={id}
-              groupKey={groupKey}
-              competitionKey={params.get("matchCompetition")}
-              season={season}
-            />
-          )}
+          {(seasons) =>
+            career ? (
+              <CareerMatches
+                seasons={seasons}
+                id={id}
+                group={careerGroup}
+                matchKey={careerKey}
+              />
+            ) : (
+              <HistoryMatches
+                seasons={seasons}
+                id={id}
+                groupKey={groupKey}
+                competitionKey={competitionKey}
+                season={season}
+              />
+            )
+          }
         </AsyncState>
       )}
     </Layout>

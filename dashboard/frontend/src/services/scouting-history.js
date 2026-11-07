@@ -152,7 +152,13 @@ export function playerHistoryKey(manifest, id, season) {
 export async function loadPlayerHistory(
   manifest,
   id,
-  { signal, fetcher = fetch, season: selectedSeason = null, routing } = {},
+  {
+    signal,
+    fetcher = fetch,
+    season: selectedSeason = null,
+    routing,
+    cachedSeason,
+  } = {},
 ) {
   const index =
     routing ||
@@ -168,6 +174,11 @@ export async function loadPlayerHistory(
         signal?.throwIfAborted();
         const position = cursor++,
           season = seasons[position];
+        const cached = cachedSeason?.(season);
+        if (cached?.season === season) {
+          results[position] = cached;
+          continue;
+        }
         const entry = await loadPlayerSeason(
           manifest,
           id,

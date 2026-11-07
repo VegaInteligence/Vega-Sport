@@ -205,6 +205,85 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+.player-career {
+  margin: 24px 0 30px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.player-career-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 18px;
+  margin-bottom: 16px;
+}
+.player-career-heading h3,
+.player-career-heading p {
+  margin: 0;
+}
+.player-career-heading p {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.player-career-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.player-career-panel {
+  min-width: 0;
+}
+.player-career-panel h4 {
+  margin: 0 0 8px;
+}
+.player-career-table {
+  position: relative;
+}
+.player-career-table .data-table {
+  min-width: 0;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.player-career-table .data-table :is(th, td) {
+  padding: 8px;
+}
+.player-career-table .data-table thead th {
+  white-space: normal;
+}
+.player-career-table .data-table tbody th {
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-sm);
+  white-space: normal;
+}
+.player-career-table .data-table tbody tr:last-child td {
+  border-bottom: 1px solid var(--border);
+}
+.player-career-table .data-table .player-career-stat {
+  text-align: right;
+}
+.player-career-table .player-career-date {
+  white-space: nowrap;
+}
+.player-career-identity .player-history-crest {
+  flex-basis: 18px;
+  width: 18px;
+  height: 18px;
+}
+.player-career-identity > span:last-child {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1050px) {
+  .player-career-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 650px) {
+  .player-career-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .player-match-scope {
   margin: 6px 0 18px;
   color: var(--muted);
