@@ -32,8 +32,6 @@ import {
 import PlayerHonours, { usePlayerHonours } from "./PlayerHonours.jsx";
 import PlayerOverviewRadar from "./PlayerOverviewRadar.jsx";
 import PlayerBio from "./PlayerBio.jsx";
-import PlayerDiscipline from "./PlayerDiscipline.jsx";
-import PerformanceContext from "./PerformanceContext.jsx";
 import MessiGoats from "./MessiGoats.jsx";
 import { MESSI_ID } from "../services/player-honours.js";
 import {
@@ -50,6 +48,11 @@ const Evolution = lazy(() => import("./PlayerEvolution.jsx"));
 const Similarity = lazy(() => import("./PlayerSimilarity.jsx"));
 const SeasonShots = lazy(() => import("./SeasonShots.jsx"));
 const SeasonStats = lazy(() => import("./PlayerSeasonStats.jsx"));
+const PerformanceStats = lazy(() =>
+  import("./PlayerSeasonStats.jsx").then(({ PlayerPerformanceStats }) => ({
+    default: PlayerPerformanceStats,
+  })),
+);
 const TABS = [
   ["overview", "Vue d’ensemble"],
   ["stats", "Statistiques"],
@@ -309,13 +312,17 @@ export default function PlayerSeasonProfile({
     window.history.replaceState(null, "", url.pathname + url.search);
   };
   const cohort = cohorts.groups.get(profile.role?.group);
+  const performanceSeason = params?.get("performanceSeason");
+  const showCurrentShots =
+    view === "stats" &&
+    (performanceSeason == null || performanceSeason === f.season);
   const matchIds = useMemo(
     () => new Set(profile.rows.map((row) => row.matchId)),
     [profile.rows],
   );
   const shots = useMemo(
     () =>
-      view === "stats"
+      showCurrentShots
         ? f.data.matches
             .filter((m) => matchIds.has(m.id))
             .flatMap((m) =>
@@ -330,34 +337,17 @@ export default function PlayerSeasonProfile({
                 })),
             )
         : [],
-    [view, f.data.matches, matchIds, id],
+    [showCurrentShots, f.data.matches, matchIds, id],
   );
-  const splits = useMemo(() => {
-    const leagues = new Map();
-    for (const row of profile.rows) {
-      if (!leagues.has(row.leagueId)) leagues.set(row.leagueId, []);
-      leagues.get(row.leagueId).push(row);
-    }
-    return [...leagues].map(([leagueId, values]) => ({
-      leagueId,
-      name: values[0].league,
-      profile: aggregateSeason(values, id),
-    }));
-  }, [profile.rows, id]);
   const historyLoading = (
     <div className="loading-state" role="status">
       Chargement des saisons…
     </div>
   );
-  const seasonHistory = (
-    <Suspense fallback={historyLoading}>
-      <SeasonStats id={id} />
-    </Suspense>
-  );
   const overview = (
     <div className="player-overview">
       <Suspense fallback={historyLoading}>
-        <SeasonStats id={id} season={f.season} linkMatches={false} />
+        <SeasonStats id={id} season={f.season} />
       </Suspense>
       <PlayerOverviewRadar profile={profile} cohorts={cohorts} />
       <button
@@ -402,7 +392,13 @@ export default function PlayerSeasonProfile({
             historyView === "stats" ? "Statistiques" : "Vue d’ensemble"
           }
         >
-          {historyView === "stats" ? seasonHistory : overview}
+          {historyView === "stats" ? (
+            <Suspense fallback={historyLoading}>
+              <PerformanceStats id={id} />
+            </Suspense>
+          ) : (
+            overview
+          )}
         </div>
       </article>
     );
@@ -414,6 +410,30 @@ export default function PlayerSeasonProfile({
       mode={mode}
       cohorts={cohorts}
     />
+  );
+  const cohortControls = (
+    <div className="research-context">
+      <span>
+        {number(cohort?.profiles.length || 0)} joueurs au même poste · au moins{" "}
+        {minMinutes} min
+      </span>
+      <label>
+        Minutes minimum
+        <input
+          type="number"
+          aria-label="Minutes minimum de la cohorte"
+          min="0"
+          max="9000"
+          step="90"
+          value={minMinutes}
+          onChange={(e) =>
+            setMinMinutes(
+              Math.max(0, Math.min(9000, Number(e.target.value) || 0)),
+            )
+          }
+        />
+      </label>
+    </div>
   );
   return (
     <article className="research-player-profile player-profile-flat">
@@ -455,54 +475,7 @@ export default function PlayerSeasonProfile({
         role="tabpanel"
         aria-label={TABS.find(([key]) => key === view)[1]}
       >
-        {view === "stats" && (
-          <>
-            {seasonHistory}
-            <PlayerDiscipline
-              id={id}
-              rows={profile.rows}
-              matches={f.data.matches}
-            />
-            <div className="season-section-heading">
-              <h3>Statistiques détaillées</h3>
-              <span>{f.season}</span>
-            </div>
-          </>
-        )}
-        {view === "stats" && (
-          <div className="research-toolbar">
-            <Segments
-              label="Calcul des statistiques du joueur"
-              value={mode}
-              onChange={setMode}
-              items={STAT_MODES}
-            />
-          </div>
-        )}
-        {["stats", "similar"].includes(view) && (
-          <div className="research-context">
-            <span>
-              {number(cohort?.profiles.length || 0)} joueurs au même poste · au
-              moins {minMinutes} min
-            </span>
-            <label>
-              Minutes minimum
-              <input
-                type="number"
-                aria-label="Minutes minimum de la cohorte"
-                min="0"
-                max="9000"
-                step="90"
-                value={minMinutes}
-                onChange={(e) =>
-                  setMinMinutes(
-                    Math.max(0, Math.min(9000, Number(e.target.value) || 0)),
-                  )
-                }
-              />
-            </label>
-          </div>
-        )}
+        {view === "similar" && cohortControls}
         <Suspense
           fallback={
             <div className="loading-state" role="status">
@@ -512,7 +485,20 @@ export default function PlayerSeasonProfile({
         >
           {view === "overview" && overview}
           {view === "stats" && (
-            <>
+            <PerformanceStats id={id}>
+              <div className="season-section-heading">
+                <h3>Analyse détaillée</h3>
+                <span>{f.season}</span>
+              </div>
+              <div className="research-toolbar">
+                <Segments
+                  label="Calcul des statistiques du joueur"
+                  value={mode}
+                  onChange={setMode}
+                  items={STAT_MODES}
+                />
+              </div>
+              {cohortControls}
               <div className="research-toolbar">
                 <MetricPicker
                   label="Indicateurs affichés"
@@ -527,72 +513,41 @@ export default function PlayerSeasonProfile({
                 </button>
               </div>
               {metricTable}
-              <div className="research-two-columns">
-                <section>
-                  <h3>Par compétition</h3>
-                  <div className="table-scroll">
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>Compétition</th>
-                          <th>Matchs</th>
-                          <th>Minutes</th>
-                          <th>Note</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {splits.map((split) => (
-                          <tr key={split.leagueId}>
-                            <th>
-                              <PerformanceContext
-                                leagueIds={[split.leagueId]}
-                                league={split.name}
-                              />
-                            </th>
-                            <td>{number(split.profile.matches)}</td>
-                            <td>{number(split.profile.minutes)}</td>
-                            <td>{number(split.profile.rating, 2)}</td>
+              <section>
+                <h3>Postes observés</h3>
+                <div className="table-scroll">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Poste</th>
+                        <th>Minutes</th>
+                        <th>Part du temps</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...profile.positions]
+                        .sort((a, b) => b[1].minutes - a[1].minutes)
+                        .map(([key, item]) => (
+                          <tr key={key}>
+                            <th>{key}</th>
+                            <td>{number(item.minutes)}</td>
+                            <td>
+                              {number((item.minutes / profile.minutes) * 100)} %
+                            </td>
                           </tr>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-                <section>
-                  <h3>Postes observés</h3>
-                  <div className="table-scroll">
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>Poste</th>
-                          <th>Minutes</th>
-                          <th>Part du temps</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[...profile.positions]
-                          .sort((a, b) => b[1].minutes - a[1].minutes)
-                          .map(([key, item]) => (
-                            <tr key={key}>
-                              <th>{key}</th>
-                              <td>{number(item.minutes)}</td>
-                              <td>
-                                {number((item.minutes / profile.minutes) * 100)}{" "}
-                                %
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-              </div>
-              <SeasonShots
-                key={id}
-                shots={shots}
-                legacyPitchApi={f.manifest?.storage === "aws-relational"}
-              />
-            </>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+              <Suspense fallback={historyLoading}>
+                <SeasonShots
+                  key={id}
+                  shots={shots}
+                  legacyPitchApi={f.manifest?.storage === "aws-relational"}
+                />
+              </Suspense>
+            </PerformanceStats>
           )}
           {view === "similar" && (
             <Similarity profile={profile} cohorts={cohorts} />

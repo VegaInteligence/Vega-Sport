@@ -89,6 +89,7 @@ const season = "2026/2027",
     publicationVersion: "g1",
     defaultSeason: season,
     capabilities: {
+      playerRatingRanking: true,
       compactReads: {
         home: true,
         players: true,
@@ -471,14 +472,16 @@ test("the merged actor match list keeps fixture links, date order and every acto
   });
   const { aggregateSeason } =
     await import("../dashboard/frontend/src/services/season-player.js");
+  const { playerHistoryKey } =
+    await import("../dashboard/frontend/src/services/scouting-history.js");
   const seasons = [
     { season, data: f.data, profile: aggregateSeason(appearances, id) },
   ];
   let historySignal;
+  let matchParams = { id, season, playerView: "matches" };
   const matchPage = await compile("views/PlayerMatchesPage.jsx", {
     "next/navigation": {
-      useSearchParams: () =>
-        new URLSearchParams({ id, season, playerView: "matches" }),
+      useSearchParams: () => new URLSearchParams(matchParams),
     },
     "../hooks/FootballContext.jsx": { useFootball: () => f },
     "../components/Layout.jsx": moduleDefault(({ children }) =>
@@ -493,9 +496,15 @@ test("the merged actor match list keeps fixture links, date order and every acto
       },
     },
     "../services/scouting-history.js": {
-      loadPlayerHistory: async (source, player, { signal }) => {
+      playerHistoryKey,
+      loadPlayerHistory: async (
+        source,
+        player,
+        { signal, season: selected },
+      ) => {
         assert.equal(source, manifest);
         assert.equal(player, id);
+        assert.equal(selected, season);
         historySignal = signal;
         return seasons;
       },
@@ -537,10 +546,16 @@ test("the merged actor match list keeps fixture links, date order and every acto
   // The dedicated route has an empty catalogue and loads only this actor's history.
   f.data = empty;
   jobs.length = 0;
+  matchParams = {
+    id,
+    season: "2025/2026",
+    matchGroup: JSON.stringify([season, "t_000001"]),
+  };
   const dedicated = renderToStaticMarkup(h(matchPage.default));
   assert.equal((dedicated.match(/class="match-row"/g) || []).length, 25);
+  assert.match(dedicated, /performanceSeason=2026%2F2027/);
   const history = jobs.find((job) => job.enabled);
-  assert.ok(history.key.startsWith("player-history:"));
+  assert.equal(history.key, playerHistoryKey(manifest, id, season));
   const controller = new AbortController();
   await history.loader({ signal: controller.signal });
   assert.equal(historySignal, controller.signal);

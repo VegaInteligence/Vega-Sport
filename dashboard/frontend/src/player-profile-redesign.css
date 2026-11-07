@@ -143,6 +143,7 @@
   font-size: var(--text-xs);
 }
 .player-season-history-table {
+  position: relative;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
 }
@@ -182,17 +183,22 @@
   width: 20px;
   height: 18px;
 }
-.player-season-history-more {
-  margin-top: 12px;
-}
-.player-season-history-more > summary {
-  color: var(--accent);
-  cursor: pointer;
+.player-performance-season {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--muted);
   font-size: var(--text-sm);
-  font-weight: 600;
 }
-.player-season-history-more[open] > summary {
-  margin-bottom: 12px;
+.player-performance-season select {
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--ink-strong);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
 }
 .player-season-match-count {
   color: var(--accent);

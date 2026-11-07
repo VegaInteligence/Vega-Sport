@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { loadPlayerHistory } from "../dashboard/frontend/src/services/scouting-history.js";
+import {
+  loadPlayerHistory,
+  playerHistorySeasons,
+} from "../dashboard/frontend/src/services/scouting-history.js";
 
 test("selected history season loads only that season and never falls back", async () => {
   const calls = [];
@@ -48,4 +51,24 @@ test("selected history season loads only that season and never falls back", asyn
     }),
     [],
   );
+});
+
+test("the season index includes the stored national-team supplement and is reusable", async () => {
+  const id = "p_2e0FPo";
+  const routing = {
+    routes: { [id]: { "2026/2027": ["l_000001"], "2025/2026": ["l_000002"] } },
+  };
+  assert.deepEqual(playerHistorySeasons(routing, id), [
+    "2026/2027",
+    "2025/2026",
+    "2024/2025",
+  ]);
+  const [entry] = await loadPlayerHistory({}, id, {
+    routing,
+    season: "2024/2025",
+    fetcher: () =>
+      assert.fail("A season with only stored matches needs no second read"),
+  });
+  assert.equal(entry.season, "2024/2025");
+  assert.equal(entry.profile.matches, 7);
 });

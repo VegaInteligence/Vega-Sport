@@ -9,10 +9,29 @@ import { AsyncState, Empty } from "../components/UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { date, number } from "../services/format.js";
 import { nationalTeamName } from "../services/national-flags.js";
+import { matchExternalUrl } from "../services/player-competition-matches.js";
 import { playerSeasonGroups } from "../services/player-season-history.js";
 import { isNationalTeamCompetition } from "../services/player-team-seasons.js";
 import { useResource } from "../services/resources.js";
-import { loadPlayerHistory } from "../services/scouting-history.js";
+import {
+  loadPlayerHistory,
+  playerHistoryKey,
+} from "../services/scouting-history.js";
+
+function groupSeason(key) {
+  if (!key) return null;
+  try {
+    const group = JSON.parse(key);
+    return Array.isArray(group) &&
+      group.length === 2 &&
+      typeof group[0] === "string" &&
+      /^\d{4}(?:\/\d{4})?$/.test(group[0])
+      ? group[0]
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 function MatchResults({ rows, matches, label, season }) {
   const f = useFootball();
@@ -38,11 +57,7 @@ function MatchResults({ rows, matches, label, season }) {
               {match ? (
                 <MatchLink
                   match={match}
-                  externalHref={
-                    row.matchId.startsWith("uefa:")
-                      ? match.sourceUrl
-                      : undefined
-                  }
+                  externalHref={matchExternalUrl(match)}
                   nationalTeams={isNationalTeamCompetition(
                     match.leagueId || row.leagueId,
                   )}
@@ -107,18 +122,22 @@ export default function PlayerMatchesPage({ currentRows } = {}) {
   const params = useSearchParams();
   const f = useFootball();
   const id = params.get("id") || "";
-  const season = params.get("season") || f.season;
+  const groupKey = params.get("matchGroup");
+  const selectedSeason = groupSeason(groupKey);
+  const season = selectedSeason || params.get("season") || f.season;
   const valid = /^p_[A-Za-z0-9]{6}$/.test(id);
   const history = useResource(
-    `player-history:${id}:${f.manifest.scouting?.sourceDigest}`,
-    ({ signal }) => loadPlayerHistory(f.manifest, id, { signal }),
+    playerHistoryKey(f.manifest, id, season),
+    ({ signal }) => loadPlayerHistory(f.manifest, id, { signal, season }),
     valid && currentRows === undefined,
   );
   const back = new URLSearchParams(params.toString());
   back.delete("matchGroup");
   back.delete("matchCompetition");
-  if (valid) back.set("playerView", "stats");
-  else {
+  if (valid) {
+    back.set("playerView", "stats");
+    if (selectedSeason) back.set("performanceSeason", selectedSeason);
+  } else {
     back.delete("id");
     back.delete("playerView");
   }
@@ -149,7 +168,7 @@ export default function PlayerMatchesPage({ currentRows } = {}) {
             <HistoryMatches
               seasons={seasons}
               id={id}
-              groupKey={params.get("matchGroup")}
+              groupKey={groupKey}
               competitionKey={params.get("matchCompetition")}
               season={season}
             />

@@ -3,7 +3,10 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResource } from "../services/resources.js";
-import { loadPlayerHistory } from "../services/scouting-history.js";
+import {
+  loadPlayerHistory,
+  playerHistoryKey,
+} from "../services/scouting-history.js";
 import { nationalTeamName } from "../services/national-flags.js";
 import { playerTeamSeasons } from "../services/player-team-seasons.js";
 import { profileValue, SCOUT_METRICS } from "../services/scouting.js";
@@ -81,9 +84,8 @@ export default function PlayerEvolution({ id, profile }) {
     [metric, setMetric] = useState("rating"),
     [mode, setMode] = useState("per90"),
     [selectedSeason, setSelectedSeason] = useState("all");
-  const history = useResource(
-    `player-history:${id}:${f.manifest.scouting?.sourceDigest}`,
-    ({ signal }) => loadPlayerHistory(f.manifest, id, { signal }),
+  const history = useResource(playerHistoryKey(f.manifest, id), ({ signal }) =>
+    loadPlayerHistory(f.manifest, id, { signal }),
   );
   const teamSeasons = useMemo(
     () =>

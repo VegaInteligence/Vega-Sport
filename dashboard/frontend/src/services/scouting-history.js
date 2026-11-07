@@ -133,23 +133,33 @@ export async function loadPlayerSeason(
     : await loadSeason(manifest, season, fetcher, new Set(ids), { signal });
   return { season, data, profile: aggregateSeason(data.appearances, id) };
 }
-export async function loadPlayerHistory(
-  manifest,
-  id,
-  { signal, fetcher = fetch, season: selectedSeason = null } = {},
-) {
-  const index = await playerRoutes(manifest, { players: [id] }, fetcher, {
-    signal,
-  });
-  const seasons = [
+export function playerHistorySeasons(index, id) {
+  return [
     ...new Set([
       ...Object.keys(index.routes[id] || {}),
       ...uefaSnapshotSeasons(id),
     ]),
   ]
-    .filter((season) => !selectedSeason || season === selectedSeason)
     .sort()
     .reverse();
+}
+
+export function playerHistoryKey(manifest, id, season) {
+  const key = `player-history:${id}:${compactGeneration(manifest)}`;
+  return season ? `${key}:${season}` : key;
+}
+
+export async function loadPlayerHistory(
+  manifest,
+  id,
+  { signal, fetcher = fetch, season: selectedSeason = null, routing } = {},
+) {
+  const index =
+    routing ||
+    (await playerRoutes(manifest, { players: [id] }, fetcher, { signal }));
+  const seasons = playerHistorySeasons(index, id).filter(
+    (season) => !selectedSeason || season === selectedSeason,
+  );
   const results = new Array(seasons.length);
   let cursor = 0;
   await Promise.all(

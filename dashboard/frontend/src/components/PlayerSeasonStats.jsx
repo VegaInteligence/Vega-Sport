@@ -4,7 +4,13 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResource } from "../services/resources.js";
-import { loadPlayerHistory } from "../services/scouting-history.js";
+import {
+  loadPlayerHistory,
+  playerHistoryKey,
+  playerHistorySeasons,
+  playerRoutes,
+} from "../services/scouting-history.js";
+import { loadDisciplineByMatch } from "../services/player-discipline.js";
 import { playerSeasonGroups } from "../services/player-season-history.js";
 import { seasonMetric } from "../services/season-player.js";
 import { number } from "../services/format.js";
@@ -12,6 +18,10 @@ import { nationalTeamName } from "../services/national-flags.js";
 import { isNationalTeamCompetition } from "../services/player-team-seasons.js";
 import { AsyncState, Media } from "./UI.jsx";
 import NationalFlag from "./NationalFlag.jsx";
+import PlayerCompetitionMatches, {
+  CardHeading,
+  DISCIPLINE_COLUMNS,
+} from "./PlayerCompetitionMatches.jsx";
 
 const METRICS = [
   ["goals", 0],
@@ -35,8 +45,19 @@ function ObservedValue({ value, count, total, decimals = 0 }) {
   );
 }
 
-function ProfileCells({ profile, matchLabel, matchHref, linkMatches }) {
+function ProfileCells({
+  profile,
+  matchLabel,
+  matchHref,
+  linkMatches,
+  discipline,
+}) {
   const total = profile.matches + profile.unknownMinutes;
+  const cards = discipline
+    ? profile.rows.flatMap(({ matchId }) =>
+        discipline.has(matchId) ? [discipline.get(matchId)] : [],
+      )
+    : [];
   const played = (
     <ObservedValue
       value={profile.matches || null}
@@ -88,14 +109,30 @@ function ProfileCells({ profile, matchLabel, matchHref, linkMatches }) {
           decimals={2}
         />
       </td>
+      {discipline &&
+        DISCIPLINE_COLUMNS.map(([key]) => (
+          <td key={key}>
+            <ObservedValue
+              value={
+                cards.length
+                  ? cards.reduce((sum, match) => sum + match[key], 0)
+                  : null
+              }
+              count={cards.length}
+              total={total}
+            />
+          </td>
+        ))}
     </>
   );
 }
 
-function hasCoverageGaps(profile) {
+function hasCoverageGaps(profile, discipline) {
   return (
     profile.unknownMinutes > 0 ||
     profile.ratingCount < profile.matches ||
+    (discipline &&
+      profile.rows.some(({ matchId }) => !discipline.has(matchId))) ||
     METRICS.some(([metric]) => {
       const { count } = seasonMetric(profile, metric);
       return count < profile.matches;
@@ -103,7 +140,8 @@ function hasCoverageGaps(profile) {
   );
 }
 
-function SeasonTable({ groups, id, params, caption, linkMatches }) {
+function SeasonTable({ groups, id, caption, linkMatches = false, discipline }) {
+  const params = useSearchParams();
   return (
     <>
       <div className="table-scroll player-season-history-table">
@@ -126,6 +164,12 @@ function SeasonTable({ groups, id, params, caption, linkMatches }) {
                   {column}
                 </th>
               ))}
+              {discipline &&
+                DISCIPLINE_COLUMNS.map(([key, color, label]) => (
+                  <th key={key} scope="col">
+                    <CardHeading color={color} text={label} />
+                  </th>
+                ))}
             </tr>
           </thead>
           {groups.map(({ key, season, team, profile, competitions }) => {
@@ -136,9 +180,11 @@ function SeasonTable({ groups, id, params, caption, linkMatches }) {
               ? nationalTeamName(team.name, season)
               : team.name;
             const matchProps = (selected, label, competitionKey) => {
+              if (!linkMatches) return { profile: selected, discipline };
               const query = new URLSearchParams(params.toString());
               query.delete("playerView");
               query.set("id", id);
+              query.set("performanceSeason", season);
               query.set("matchGroup", key);
               query.delete("matchCompetition");
               if (competitionKey !== undefined)
@@ -146,6 +192,7 @@ function SeasonTable({ groups, id, params, caption, linkMatches }) {
               return {
                 profile: selected,
                 linkMatches,
+                discipline,
                 matchLabel: `Voir les ${number(selected.matches)} matchs de ${label} (${season})`,
                 matchHref: `/joueurs/matchs/?${query}`,
               };
@@ -200,8 +247,10 @@ function SeasonTable({ groups, id, params, caption, linkMatches }) {
       </div>
       {groups.some(
         ({ profile, competitions }) =>
-          hasCoverageGaps(profile) ||
-          competitions.some(({ profile }) => hasCoverageGaps(profile)),
+          hasCoverageGaps(profile, discipline) ||
+          competitions.some(({ profile }) =>
+            hasCoverageGaps(profile, discipline),
+          ),
       ) && (
         <p className="player-history-footnote">
           — Donnée indisponible. * Valeur partielle.
@@ -211,72 +260,165 @@ function SeasonTable({ groups, id, params, caption, linkMatches }) {
   );
 }
 
-function SeasonRows({ seasons, id, season, linkMatches }) {
-  const params = useSearchParams();
-  const groups = useMemo(() => playerSeasonGroups(seasons, id), [seasons, id]);
-  if (!groups.length)
-    return (
-      <p className="club-note">Aucune saison disponible pour ce joueur.</p>
-    );
-
-  const latest = season || groups[0].season;
-  const latestGroups = groups.filter(({ season }) => season === latest);
-  const earlierGroups = groups.filter(({ season }) => season !== latest);
-  return (
-    <>
-      <SeasonTable
-        groups={latestGroups}
-        id={id}
-        params={params}
-        caption={`Totaux par équipe et détail par compétition · ${latest}`}
-        linkMatches={linkMatches}
-      />
-      {earlierGroups.length > 0 && (
-        <details className="player-season-history-more">
-          <summary aria-label="Voir les statistiques détaillées des saisons précédentes">
-            Voir les statistiques détaillées
-          </summary>
-          <SeasonTable
-            groups={earlierGroups}
-            id={id}
-            params={params}
-            caption="Totaux par équipe et détail par compétition des saisons précédentes"
-            linkMatches={linkMatches}
-          />
-        </details>
-      )}
-    </>
-  );
-}
-
-export default function PlayerSeasonStats({
-  id,
-  season = null,
-  linkMatches = true,
-}) {
+export default function PlayerSeasonStats({ id, season }) {
   const f = useFootball();
-  const key = `player-history:${id}:${f.manifest?.scouting?.sourceDigest}`;
   const history = useResource(
-    season ? `${key}:${season}` : key,
+    playerHistoryKey(f.manifest, id, season),
     ({ signal }) => loadPlayerHistory(f.manifest, id, { signal, season }),
-    Boolean(f.manifest && id),
+    Boolean(f.manifest && id && season),
+  );
+  const groups = useMemo(
+    () => playerSeasonGroups(history.value || [], id),
+    [history.value, id],
   );
   return (
     <section className="player-season-history">
       <div className="season-section-heading">
-        <h3>{season ? `Saison ${season}` : "Statistiques par saison"}</h3>
-        {!season && <span>Totaux et détail par équipe</span>}
+        <h3>Saison {season}</h3>
       </div>
       <AsyncState resource={history}>
-        {(seasons) => (
-          <SeasonRows
-            key={id}
-            seasons={seasons}
-            id={id}
-            season={season}
-            linkMatches={linkMatches}
-          />
+        {() =>
+          groups.length ? (
+            <SeasonTable
+              groups={groups}
+              id={id}
+              caption={`Totaux par équipe et détail par compétition · ${season}`}
+            />
+          ) : (
+            <p className="club-note">
+              Aucune statistique disponible pour cette saison.
+            </p>
+          )
+        }
+      </AsyncState>
+    </section>
+  );
+}
+
+const NO_DISCIPLINE = new Map();
+
+function PerformanceRows({ id, entries, season, children }) {
+  const f = useFootball();
+  const groups = useMemo(() => playerSeasonGroups(entries, id), [entries, id]);
+  const matches = entries[0]?.data?.matches || [];
+  const played = useMemo(() => {
+    const ids = new Set(
+      groups.flatMap(({ profile }) => profile.rows.map((row) => row.matchId)),
+    );
+    return matches.filter(
+      (match) => ids.has(match.id) && /^m_[A-Za-z0-9]{6}$/.test(match.id),
+    );
+  }, [groups, matches]);
+  const discipline = useResource(
+    `${playerHistoryKey(f.manifest, id, season)}:cards:${played
+      .map(({ id }) => id)
+      .sort()
+      .join(",")}`,
+    ({ signal }) => loadDisciplineByMatch(f.client, played, id, { signal }),
+    Boolean(f.client && f.statusKnown && played.length),
+  );
+  if (!groups.length)
+    return (
+      <p className="club-note">
+        Aucune statistique disponible pour cette saison.
+      </p>
+    );
+
+  return (
+    <>
+      <SeasonTable
+        groups={groups}
+        id={id}
+        caption={`Totaux par équipe et détail par compétition · ${season}`}
+        discipline={discipline.value || NO_DISCIPLINE}
+        linkMatches
+      />
+      <PlayerCompetitionMatches
+        groups={groups}
+        matches={matches}
+        disciplineByMatch={discipline.value}
+      />
+      {children}
+    </>
+  );
+}
+
+export function PlayerPerformanceStats({ id, children }) {
+  const f = useFootball();
+  const params = useSearchParams();
+  const routing = useResource(
+    `${playerHistoryKey(f.manifest, id)}:routes`,
+    async ({ signal }) => {
+      const index = await playerRoutes(f.manifest, { players: [id] }, fetch, {
+        signal,
+      });
+      return { index, seasons: playerHistorySeasons(index, id) };
+    },
+    Boolean(f.manifest && id),
+  );
+  const seasons = routing.value?.seasons || [];
+  const requested = params.get("performanceSeason");
+  const preferred =
+    requested ?? (seasons.includes(f.season) ? f.season : seasons[0]);
+  const season = seasons.includes(preferred) ? preferred : "";
+  const history = useResource(
+    playerHistoryKey(f.manifest, id, season),
+    ({ signal }) =>
+      loadPlayerHistory(f.manifest, id, {
+        signal,
+        season,
+        routing: routing.value.index,
+      }),
+    Boolean(season),
+  );
+  const selectSeason = (event) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("performanceSeason", event.target.value);
+    window.history.replaceState(null, "", url);
+  };
+  return (
+    <section
+      className="player-season-history"
+      aria-label="Statistiques par saison"
+    >
+      <div className="season-section-heading">
+        <h3>Statistiques par saison</h3>
+        {seasons.length > 0 && (
+          <label className="player-performance-season">
+            Saison
+            <select value={season} onChange={selectSeason}>
+              {!season && (
+                <option value="" disabled>
+                  Saison indisponible
+                </option>
+              )}
+              {seasons.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
         )}
+      </div>
+      <AsyncState resource={routing}>
+        {() =>
+          !season ? (
+            <p className="club-note">
+              {seasons.length
+                ? "Cette saison est indisponible pour ce joueur."
+                : "Aucune saison disponible pour ce joueur."}
+            </p>
+          ) : (
+            <AsyncState resource={history}>
+              {(entries) => (
+                <PerformanceRows id={id} entries={entries} season={season}>
+                  {season === f.season && children}
+                </PerformanceRows>
+              )}
+            </AsyncState>
+          )
+        }
       </AsyncState>
     </section>
   );
