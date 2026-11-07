@@ -1,3 +1,7 @@
+import {
+  publicApiFetch,
+  wasPublicApiThrottle,
+} from "./services/public-api-fetch.js";
 import { decodeTables, rowCopier } from "./packed_data.js";
 import { apiUrl, dataUrl } from "./data-url.js";
 const chunkCaches = new WeakMap();
@@ -159,7 +163,11 @@ export async function readPages(
       signal?.throwIfAborted();
       const params = new URLSearchParams({ ...filters, limit: String(limit) });
       if (cursor) params.set("cursor", cursor);
-      const response = await fetcher(apiUrl(path + "?" + params), { signal });
+      const response = await publicApiFetch(
+        apiUrl(path + "?" + params),
+        { signal },
+        fetcher,
+      );
       if (response.status === 409 && !restarted) {
         restarted = true;
         break;
@@ -168,7 +176,12 @@ export async function readPages(
         limit = Math.max(1, Math.floor(limit / 2));
         break;
       }
-      if (response.status === 503 && !reducedAfterUnavailable && limit > 25) {
+      if (
+        response.status === 503 &&
+        !wasPublicApiThrottle(response) &&
+        !reducedAfterUnavailable &&
+        limit > 25
+      ) {
         reducedAfterUnavailable = true;
         limit = 25;
         break;

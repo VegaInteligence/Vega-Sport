@@ -1,3 +1,4 @@
+import { publicApiFetch } from "./public-api-fetch.js";
 import { apiUrl } from "../data-url.js";
 import { europeFocusIds } from "../../../shared/competition-scope.js";
 import { fixtureWeek, parisDay, shiftDay, validDay } from "./fixtures.js";
@@ -51,7 +52,11 @@ export async function readFixturePage(
     };
   const params = new URLSearchParams(filters);
   if (cursor) params.set("cursor", cursor);
-  const response = await fetcher(apiUrl(`/api/fixtures?${params}`), { signal });
+  const response = await publicApiFetch(
+    apiUrl(`/api/fixtures?${params}`),
+    { signal },
+    fetcher,
+  );
   // A changed publication requires an explicit reset, never appending or silently
   // retrying through multiple generations until a page happens to succeed.
   if (response.status === 409) return { publicationChanged: true };

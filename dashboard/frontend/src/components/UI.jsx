@@ -1,4 +1,5 @@
 import Icon from "./Icon.jsx";
+import ApiImage from "./ApiImage.jsx";
 import React, { useEffect, useRef, useState } from "react";
 import {
   number,
@@ -17,13 +18,20 @@ export function Media({ name = "", url, fallbackUrl, className = "crest" }) {
   return (
     <span className={className} aria-hidden="true">
       {src ? (
-        <img
+        <ApiImage
           src={src}
           alt=""
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
-          onError={() => {
+          onError={(error) => {
+            // An exhausted shared capacity response is not a missing portrait.
+            // Trying its alternate URL immediately would bypass Retry-After.
+            if (error?.throttled) {
+              setFailed(true);
+              setFallbackFailed(true);
+              return;
+            }
             if (!failed && src === safeImageUrl(url)) setFailed(true);
             else setFallbackFailed(true);
           }}

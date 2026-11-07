@@ -37,9 +37,18 @@ test("stadium dialog renders sourced dates, capacity and a map only with coordin
       AsyncState: ({ resource, children }) => children(resource.value),
     },
     "../services/resources.js": {
-      useResource: () => ({ value: stadium, loading: false }),
+      useResource: (key) => ({
+        value: { ...stadium, plans: plans.stadiumPlans(key.split(":")[1]) },
+        loading: false,
+      }),
       json: () => {},
     },
+    "./ApiImage.jsx": {
+      __esModule: true,
+      default: ({ src, ...props }) =>
+        e("img", { ...props, "data-asset-src": src }),
+    },
+    "../data-url.js": await import("../dashboard/frontend/src/data-url.js"),
     "../services/format.js": format,
     "../services/stadium-plans.js": plans,
     "./StadiumMap.jsx": {
@@ -83,7 +92,12 @@ test("stadium dialog renders sourced dates, capacity and a map only with coordin
   assert.match(html, /sansirostadium\.com/);
   assert.match(
     html,
-    /<img[^>]+src="https:\/\/sansirostadium\.com\/wp-content\/uploads\/2026\/09\/SETTORI-STADIO\.jpg"/,
+    /<img[^>]+data-asset-src="\/api\/assets\?url=https%3A%2F%2Fsansirostadium\.com%2Fwp-content%2Fuploads%2F2026%2F09%2FSETTORI-STADIO\.jpg"/,
+  );
+  assert.doesNotMatch(
+    html,
+    /<img[^>]+\ssrc=/,
+    "the queued image owns starting the actual asset request",
   );
   assert.match(html, /Agrandir le plan des tribunes/);
   assert.match(render("Q159884"), /media\.asroma\.com\/prod\/images\/original/);

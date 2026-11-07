@@ -4,6 +4,8 @@ import { Modal, AsyncState } from "./UI.jsx";
 import { useResource, json } from "../services/resources.js";
 import { number } from "../services/format.js";
 import StadiumMap from "./StadiumMap.jsx";
+import ApiImage from "./ApiImage.jsx";
+import { apiUrl } from "../data-url.js";
 
 function stadiumDate(value) {
   if (!value) return "Non renseignée";
@@ -43,9 +45,9 @@ function PlanImage({ plan }) {
       rel="noopener noreferrer"
       aria-label="Agrandir le plan des tribunes"
     >
-      <img
+      <ApiImage
         className="stadium-plan-image"
-        src={`/api/assets?url=${encodeURIComponent(plan.imageUrl)}`}
+        src={apiUrl(`/api/assets?url=${encodeURIComponent(plan.imageUrl)}`)}
         alt="Plan des tribunes"
         loading="lazy"
         onError={() => setFailed(true)}

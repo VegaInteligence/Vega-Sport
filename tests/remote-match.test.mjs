@@ -201,14 +201,20 @@ test("only absent legacy family endpoints fall back, including non-JSON errors",
 
 test("authorization, version and rate-limit errors do not enter legacy fallback", async (t) => {
   for (const status of [400, 403, 409, 410, 413, 422, 429]) {
-    let requests = 0;
-    const mock = t.mock.method(globalThis, "fetch", async () => {
-      requests++;
+    const requests = [];
+    const mock = t.mock.method(globalThis, "fetch", async (url) => {
+      requests.push(url);
       return Response.json({ error: { message: "Unavailable" } }, { status });
     });
     const client = clientForDetails();
     await client.ensureEndpoint(fixture, "events");
-    assert.equal(requests, 1, String(status));
+    assert.equal(requests.length, status === 429 ? 3 : 1, String(status));
+    assert.equal(
+      new Set(requests).size,
+      1,
+      "bounded throttle retry never changes to an archive route",
+    );
+    assert.ok(requests.every((url) => url.includes("/events")));
     assert.ok(client.payloads.get(familyKey("events")).error);
     mock.mock.restore();
   }

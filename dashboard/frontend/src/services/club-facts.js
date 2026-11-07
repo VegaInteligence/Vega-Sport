@@ -1,9 +1,10 @@
+import { publicApiFetch } from "./public-api-fetch.js";
 import { apiUrl } from "../data-url.js";
 import { normalizeText } from "./format.js";
 
 async function readJson(url, fetcher) {
   try {
-    const response = await fetcher(apiUrl(url));
+    const response = await publicApiFetch(apiUrl(url), undefined, fetcher);
     return response.ok ? await response.json() : null;
   } catch {
     return null;

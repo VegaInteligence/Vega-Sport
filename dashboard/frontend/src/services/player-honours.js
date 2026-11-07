@@ -1,3 +1,4 @@
+import { publicApiFetch } from "./public-api-fetch.js";
 import { apiUrl } from "../data-url.js";
 import { projectionGroups } from "../../../shared/honour-display.js";
 export { projectionGroups };
@@ -16,8 +17,10 @@ function wikipediaUrl(value) {
 export async function loadPlayerHonours(id, _name, fetcher = fetch) {
   if (!/^p_[A-Za-z0-9]{6}$/.test(id || ""))
     return { groups: [], partial: true };
-  const response = await fetcher(
+  const response = await publicApiFetch(
     apiUrl("/api/player-honours?id=" + encodeURIComponent(id)),
+    undefined,
+    fetcher,
   );
   if (response.status === 404) return { groups: [], partial: true };
   if (!response.ok) throw new Error("Palmarès momentanément indisponible.");

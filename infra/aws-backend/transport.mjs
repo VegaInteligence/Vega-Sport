@@ -9,7 +9,7 @@ const cors = {
   "access-control-allow-headers":
     "If-None-Match, If-Modified-Since, Content-Type",
   "access-control-expose-headers":
-    "ETag, Content-Length, Cache-Control, Age, X-Cache, X-Data-Source, Server-Timing",
+    "ETag, Content-Length, Cache-Control, Age, X-Cache, X-Data-Source, Server-Timing, Retry-After, X-Amzn-ErrorType",
 };
 const fail = (statusCode, body, extra = {}) => ({
   statusCode,

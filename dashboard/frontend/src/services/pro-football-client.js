@@ -1,3 +1,4 @@
+import { publicApiFetch } from "./public-api-fetch.js";
 import { FootballDataClient } from "./football-client.js";
 import { ProMatchClient } from "./pro-match-data.js";
 import { apiUrl } from "../data-url.js";
@@ -53,7 +54,7 @@ export class ProFootballDataClient extends FootballDataClient {
   }
 
   async read(path, { signal } = {}) {
-    const response = await this.fetcher(apiUrl(path), { headers: { Accept: "application/json" }, signal });
+    const response = await publicApiFetch(apiUrl(path), { headers: { Accept: "application/json" }, signal }, this.fetcher);
     let body;
     try { body = await response.json(); }
     catch (error) {

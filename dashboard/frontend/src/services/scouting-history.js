@@ -1,4 +1,5 @@
 import { apiUrl } from "../data-url.js";
+import { publicApiFetch } from "./public-api-fetch.js";
 import { loadSeason, readPages } from "../season_data.js";
 import { aggregateSeason } from "./season-player.js";
 import { actorReadParams } from "./actor-reads.js";
@@ -37,9 +38,13 @@ export async function playerRoutes(
   return routeCaches.get(fetcher).read(
     key,
     async ({ signal: sharedSignal }) => {
-      const response = await fetcher(apiUrl("/api/scouting/routes?" + params), {
-        signal: sharedSignal,
-      });
+      const response = await publicApiFetch(
+        apiUrl("/api/scouting/routes?" + params),
+        {
+          signal: sharedSignal,
+        },
+        fetcher,
+      );
       if (!response.ok)
         throw new Error("L’index des saisons est indisponible.");
       return response.json();

@@ -1,3 +1,4 @@
+import { publicApiFetch } from "./public-api-fetch.js";
 import { apiUrl } from "../data-url.js";
 
 const TOKEN = /^pro1\.([1-9][0-9]{0,18})\.[a-f0-9]{64}$/;
@@ -23,9 +24,9 @@ export function isProManifest(value) {
 }
 
 async function readJson(fetcher, path, validate) {
-  const response = await fetcher(apiUrl(path), {
+  const response = await publicApiFetch(apiUrl(path), {
     headers: { Accept: "application/json" },
-  });
+  }, fetcher);
   const text = await response.text();
   let value;
   try { value = JSON.parse(text); }

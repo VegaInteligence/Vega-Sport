@@ -1,5 +1,6 @@
 import { json } from "./resources.js";
 import { apiUrl } from "../data-url.js";
+import { publicApiFetch } from "./public-api-fetch.js";
 
 export const archiveQuery = (params) =>
   new URLSearchParams(
@@ -22,9 +23,10 @@ export const supportsBoundedArchive = (manifest) =>
 export async function archivePage(params, { signal, fetcher = fetch } = {}) {
   const read = async (values) => {
     signal?.throwIfAborted();
-    const response = await fetcher(
+    const response = await publicApiFetch(
       apiUrl(`/api/read/archive?${archiveQuery(values)}`),
       { signal },
+      fetcher,
     );
     if (!response.ok) {
       const error = new Error(

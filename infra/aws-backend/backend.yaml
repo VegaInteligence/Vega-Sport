@@ -131,7 +131,7 @@ Resources:
           AccessControlAllowMethods: {Items: [GET, HEAD, OPTIONS]}
           AccessControlAllowOrigins: {Items: ['*']}
           AccessControlExposeHeaders:
-            Items: [ETag, Content-Length, Cache-Control, Age, X-Cache, X-Data-Source, Server-Timing]
+            Items: [ETag, Content-Length, Cache-Control, Age, X-Cache, X-Data-Source, Server-Timing, Retry-After, X-Amzn-ErrorType]
           OriginOverride: true
   Distribution:
     Type: AWS::CloudFront::Distribution

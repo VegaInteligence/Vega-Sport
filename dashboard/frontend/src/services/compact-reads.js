@@ -1,3 +1,4 @@
+import { publicApiFetch, wasPublicApiThrottle } from "./public-api-fetch.js";
 import { apiUrl } from "../data-url.js";
 import { europeFocusIds } from "../../../shared/competition-scope.js";
 import { advancedQuery, EMPTY_ADVANCED } from "./advanced-filters.js";
@@ -113,12 +114,13 @@ export async function readCompact(
   { signal, fetcher = fetch } = {},
 ) {
   signal?.throwIfAborted();
-  const response = await fetcher(
+  const response = await publicApiFetch(
     apiUrl(`/api/read/${kind}?${compactQuery(params)}`),
     {
       signal,
       headers: { Accept: "application/json" },
     },
+    fetcher,
   );
   let body;
   try {
@@ -134,6 +136,7 @@ export async function readCompact(
           : `Données indisponibles (HTTP ${response.status}).`),
     );
     error.status = response.status;
+    error.throttled = wasPublicApiThrottle(response);
     throw error;
   }
   const generation = body.pagination?.generation || body.meta?.generation;
@@ -276,7 +279,9 @@ export async function readCompactPages(
     for (const item of settled)
       if (
         item.status === "rejected" &&
-        (!parallelPages || ![429, 502, 503, 504].includes(item.reason?.status))
+        (!parallelPages ||
+          item.reason?.throttled ||
+          ![502, 503, 504].includes(item.reason?.status))
       )
         throw item.reason;
     for (let index = 0; index < settled.length; index++) {
