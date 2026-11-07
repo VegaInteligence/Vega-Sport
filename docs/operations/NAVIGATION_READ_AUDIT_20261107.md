@@ -19,7 +19,7 @@ navigation and explicitly requested cohort analysis are measured separately.
 | Cup edition | One selected competition/season's native or worker results/fixtures. | One semantic edition; existing compatibility routes retained. | Whole-edition information remains necessary for brackets. The unused global supplemental loader is no longer called by current page components. |
 | Match overview | One match/fixture, its summary shots, selected team statistics, coverage and five leading players. | 256 KiB. Source-version-aware summary cache. | Default calendar navigation no longer fans out into 24 match-detail requests. |
 | Match tabs / compatibility | One requested native family through `detail_response`; the complete all-family archive is a compatibility fallback. | Native family responses capped at 2 MiB, cached by committed family digest. | Summary/archive fallback occurs only for unsupported endpoints (404/405/501). A timeout, 503, network failure or abort no longer starts a heavier fallback chain. |
-| Selected player performance | One selected appearance plus exact scoped peer counts; optional shots. | 256 KiB, publication-safe origin cache and record-existence-aware conditional validation. | The cold peer aggregation remains an explicit native measurement target. It does not block ordinary actor navigation. |
+| Selected player performance | One selected appearance plus exact indexed position-cohort peer counts; optional shots. | 256 KiB, publication-safe origin cache and record-existence-aware conditional validation. | The post-maintenance native plan took 423 ms with actual buffer reads and no heap fetches in its cohort index-only scan. This analysis remains separate from ordinary actor navigation. |
 | Historical archives | Read one stored edition header and one indexed match page or detail. The publisher runs the exact legacy merge and stores its rows in two derived tables before committing a source change. Public reads never reconstruct a full source edition. | At most 100 list rows, 512 KiB. No goal arrays or raw source records in list responses. Results/goals identities, digests, timestamps, status and expected-stream membership fence pages and details. | Whole-edition counts, competition facets, goal-only matches, duplicate-key ordering and scorer search stay exact. Unready/stale projections return 503; goals load only for an explicit detail. |
 
 The old archive-season and other compatibility endpoints remain available.
@@ -50,12 +50,17 @@ clone measurements must not be mixed into a single artificial benchmark.
 | Isolated native clone rollup all-scope plan | 249 ms | Verified `rollup_ready=true`, exact total 9,492 and 20 actual player records. |
 | Isolated native clone rollup Europe plan | 111 ms | Verified nonempty exact total 2,151 and a full 20-player page. |
 | Isolated native clone rollup after copy work evicted cached pages | 11,710 ms | A cold wide-heap scan took about 10,093 ms; three full scans read 20,414 blocks in total. The earlier warm result did not prove cold-read acceptance. |
+| Native clone all-scope rollup after 030/031 and required maintenance | 353 ms | The principal scan reads 978 index blocks, visits 26,837 scoped rollups and makes zero heap fetches; complete plan reads 1,653 blocks. |
+| Native clone Europe rollup after required maintenance | 173 ms | One selective scan over 6,494 scoped rollups; complete plan reads 545 blocks. |
+| Native clone selected-player performance after required maintenance | 423 ms | Cohort index-only scan visits 40,939 observations with zero heap fetches; complete plan reads 1,045 blocks. |
 
 The first captured all-scope rollup data read on the clone took 1,007 ms; the
 subsequent analyzed plan took 249 ms. This distinction matters for cold reads.
 The same clone's narrowed fact payload took approximately 30 seconds under its
-observed conditions. Final native measurements must be repeated after the
-numeric comparison-key correction and final search change.
+observed conditions. The post-maintenance plans use the final numeric comparison
+policy. Their buffer reads establish that the measurements include storage I/O;
+they are not a controlled complete-cache-eviction benchmark or production HTTP
+latency measurements.
 
 ### Cold directory storage and ordinary publication
 

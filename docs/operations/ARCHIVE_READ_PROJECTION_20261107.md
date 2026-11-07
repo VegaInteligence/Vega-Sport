@@ -60,6 +60,23 @@ The receipt reports season, readiness, version, changed status, exact match/goal
 
 The public-contract CI runner creates a separate disposable database for this fixture, because testing the maintenance entrypoint requires committed synthetic source rows. The fixture removes the schema it created and never accepts a production database address.
 
+### Native stage canary, 7 November 2026
+
+The reviewed stage worker (`5d1adec4ccf56e021618cd22bbac0ec4ff6e5687dca99ba93596fb2cd13d279f`) rebuilt 2018/2019 in 8.185 seconds of database work. The committed projection contains 10,219 merged matches and 15,258 goal events. Its receipt confirms that consolidation revision 582 was unchanged. This is a derived-table backfill measurement, separate from public request latency.
+
+All ten reviewed native acceptance operations then succeeded:
+
+| Read | PostgreSQL execution | Returned data |
+| --- | ---: | --- |
+| First page | 13.940 ms | 50 list rows, 16,061 bytes; exact total 10,219 and 205 pages. |
+| Player-name filter | 23.521 ms | 13 matching rows; exact complete filtered total. |
+| Single match detail | 2.923 ms | 709 bytes for the selected one-goal match. |
+| Edition metadata | 3.235 ms | Current source fence and whole-edition summary/facets. |
+
+The first-page, second-page and filtered-page comparisons all verified exact contents/order, complete filtered totals and page numbers against the committed merged projection. These plans ran immediately after the refresh and read zero physical blocks, so they establish native query behavior with warm database buffers, not physical-cold storage latency. End-to-end HTTP latency also includes the API connection and response work.
+
+The operator receipts are `clone-archive-canary-refresh.json` and `clone-archive-canary-acceptance.json`. The initial inventory found 154 source editions; the canary made one ready. Remaining editions must be backfilled and their current fences verified before the new reader is activated. These receipts establish stage validation only.
+
 ## Recovery
 
 An unsuccessful rebuild leaves the prior committed sources and projection intact. A stale projection remains unavailable until a successful refresh; the API does not display it as current. Reverting the public reader requires no canonical data rollback and no table deletion. The derived tables can be retained while diagnosing a deployment, then refreshed from unchanged canonical sources.

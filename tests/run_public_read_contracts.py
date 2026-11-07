@@ -61,6 +61,8 @@ def main():
                 "node", "--test", "--test-concurrency=1",
                 "tests/backend-metrics.test.mjs",
                 "tests/maintenance-bootstrap.test.mjs",
+                "tests/maintenance-transient-ingest.test.mjs",
+                "tests/maintenance-admin-transfers.test.mjs",
                 "tests/relational-read-cache.test.mjs",
                 "tests/relational-read-maintenance.test.mjs",
                 "tests/relational-player-rollups.test.mjs",

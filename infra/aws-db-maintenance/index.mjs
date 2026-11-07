@@ -7,20 +7,27 @@ import { createHash } from "node:crypto";
 import { refreshArchiveProjection } from "../../dashboard/scripts/archive_projection.mjs";
 
 const root = process.env.LAMBDA_TASK_ROOT || new URL(".", import.meta.url).pathname;
-const manifest = JSON.parse(readFileSync(`${root}/operations.json`, "utf8"));
+export const maintenanceManifest = JSON.parse(readFileSync(`${root}/operations.json`, "utf8"));
 const digest = (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
 export async function handler(event, context) {
+  return runMaintenance(event, context);
+}
+
+// The alternate credential entrypoints pass policy internally. It is never
+// accepted from an invocation or written to process.env.
+export async function runMaintenance(event, context, policy = {}) {
+  const manifest = maintenanceManifest;
   const started = performance.now();
   if (!event || Object.keys(event).some((key) => !["operation", "operationHash", "values"].includes(key)))
     throw new Error("Unexpected maintenance request fields");
   const operation = manifest.operations[event.operation];
   if (!operation || event.operationHash !== digest(operation))
     throw new Error("Unknown operation or release hash mismatch");
-  const target = process.env.DATABASE_TARGET;
+  const target = policy.target ?? process.env.DATABASE_TARGET;
   if (!operation.targets.includes(target)) throw new Error("Operation is not allowed on this target");
   const write = operation.mode === "write";
-  if (write && process.env.ALLOW_WRITES !== "true") throw new Error("This worker is read-only");
+  if (write && !(policy.allowWrites ?? (process.env.ALLOW_WRITES === "true"))) throw new Error("This worker is read-only");
   if (operation.repeat && (!write || operation.migration || operation.repeat !== "progress.complete"))
     throw new Error("Only checkpointed migration batches may repeat");
   const maintenanceKind = operation.kind;
@@ -36,8 +43,8 @@ export async function handler(event, context) {
     throw new Error("Invalid archive season");
   if (maintenanceKind === "vacuum-analyze" && (values.length || !vacuumTables.has(operation.table)))
     throw new Error("Invalid vacuum target");
-  const config = JSON.parse(process.env.DATABASE_CONFIG || "{}");
-  if (config.host !== process.env.EXPECTED_DATABASE_HOST || config.database !== "statarena_prod" ||
+  const config = policy.config ?? JSON.parse(process.env.DATABASE_CONFIG || "{}");
+  if (config.host !== (policy.expectedHost ?? process.env.EXPECTED_DATABASE_HOST) || config.database !== "statarena_prod" ||
       !["statarena_runtime", "statarena_ingest", "statarena_admin"].includes(config.username))
     throw new Error("Unexpected configured database identity");
   const client = new pg.Client({
@@ -48,6 +55,32 @@ export async function handler(event, context) {
     connectionTimeoutMillis: 8000,
     options: "-c statement_timeout=120000 -c lock_timeout=2000 -c idle_in_transaction_session_timeout=150000",
   });
+  if (policy.expiresAt) {
+    // A hard release expiry also bounds already running work. This applies to
+    // archive refresh/VACUUM as well as checkpoint loops, without changing the
+    // ordinary stage worker. Cleanup remains possible after a timeout.
+    const deadline = Math.min(started + 45000,
+      started + policy.expiresAt - Date.now() - 1000,
+      started + (context?.getRemainingTimeInMillis?.() ?? 150000) - 5000);
+    const rawQuery = client.query.bind(client);
+    const operationLimit = maintenanceKind === "archive-refresh" ? 44000
+      : maintenanceKind === "vacuum-analyze" ? 40000 : Math.min(operation.timeoutMs || 20000,45000);
+    client.query = async (statement, parameters) => {
+      const request = typeof statement === "string" ? {text:statement,values:parameters} : {...statement};
+      if (request.text === "ROLLBACK" || request.text === "SELECT pg_advisory_unlock(97813003)")
+        return rawQuery({...request,query_timeout:1000});
+      const remaining = () => {
+        const value = Math.floor(Math.min(deadline-performance.now(),policy.expiresAt-Date.now()-1000));
+        if (value < 1) throw Object.assign(new Error("Transient operation deadline exhausted"),{code:"TRANSIENT_DEADLINE"});
+        return value;
+      };
+      const budget = Math.min(remaining(),operationLimit,request.query_timeout || Infinity);
+      // The fixed setter is separate from reviewed SQL and bind values. It
+      // prevents a helper's larger local timeout from extending this release.
+      await rawQuery({text:"SELECT set_config('statement_timeout',$1,false)",values:[`${budget}ms`],query_timeout:budget});
+      return rawQuery({...request,query_timeout:Math.min(budget,remaining())});
+    };
+  }
   let connected = false;
   let iterations = 0;
   let sessionLease = false;
@@ -55,6 +88,11 @@ export async function handler(event, context) {
     await client.connect();
     connected = true;
     const connectionMs = performance.now() - started;
+    if (policy.identity) {
+      const actual = (await client.query("SELECT current_user AS role,current_database() AS database")).rows[0];
+      if (actual?.role !== policy.identity.role || actual?.database !== policy.identity.database)
+        throw Object.assign(new Error("Unexpected transient database identity"),{code:"TRANSIENT_IDENTITY"});
+    }
     if (maintenanceKind === "archive-refresh") {
       if (config.username !== "statarena_ingest") throw new Error("Archive refresh requires the existing ingestion owner");
       const queryStarted = performance.now();
@@ -134,10 +172,19 @@ export async function handler(event, context) {
     if (connected) await client.query("ROLLBACK").catch(() => {});
     // Do not log connection strings, bind values, rows, or credentials.
     return { ok: false, operation: event.operation, target,
-      code: error.code || error.name, message: String(error.message).slice(0, 500),
+      code: error.code || error.name, ...(!policy.redactErrors && {message:String(error.message).slice(0, 500)}),
       committedIterations: iterations, totalMs: Math.round(performance.now() - started) };
   } finally {
     if (connected && sessionLease) await client.query("SELECT pg_advisory_unlock(97813003)").catch(() => {});
-    if (connected) await client.end();
+    try {
+      if (policy.config) await client.end().catch(() => {});
+      else if (connected) await client.end();
+    }
+    finally {
+      if (policy.config) {
+        client.password = undefined;
+        if (client.connectionParameters) client.connectionParameters.password = undefined;
+      }
+    }
   }
 }

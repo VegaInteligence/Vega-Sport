@@ -5,7 +5,7 @@ network. It has no HTTP endpoint and requires an authenticated IAM invocation.
 Delete its CloudFormation stack and the restored validation database after the
 verified rollout. Retain the pre-migration snapshot and operation receipts.
 
-The worker accepts only an operation name, its SHA-256 digest and bounded bind
+The ordinary stage/read-only worker accepts only an operation name, its SHA-256 digest and bounded bind
 values. SQL, credentials, database endpoints and roles cannot be supplied by an
 invocation. The SQL manifest is bundled into an immutable, content-addressed
 release. Every operation names its allowed target (`stage`, `prod`), mode,
@@ -42,6 +42,66 @@ separate stack immediately after verifying the prerequisite schemas and grants.
 The ordinary migration worker's interface remains unchanged: it never accepts
 invocation-supplied credentials, endpoints, roles or SQL. All subsequent
 publication and consolidation operations use the existing ingestion role.
+
+## Expiring production ingestion
+
+Use the separate `transient-ingest.mjs` entrypoint for privileged production
+maintenance. Build with `--transient-ingest` and create a temporary
+`vega-db-refactor-ingest-YYYYMMDD` stack. Its database configuration contains only
+the fixed production hostname, port 5432, `statarena_prod` and username
+`statarena_ingest`. A password in that configuration is rejected. Keep the
+ordinary production runtime worker read-only; its configuration need not change.
+
+The manifest has format `vega.transient-ingest.v1`, absolute `issuedAt` and
+`expiresAt` timestamps, and the reviewed operation map. Its validity must be
+positive and no longer than four hours. Packaging rejects invalid, future or
+expired windows; the deployed handler independently checks the immutable
+window on every invocation. Targets must be exactly `["prod"]`. The admin-only
+bootstrap and schema-authorization operations cannot enter this release.
+
+The IAM-authorized operator obtains the existing ingestion credential just
+before invocation and supplies it in the `password` field, alongside the fixed
+operation name, its digest and bounded bind values. Construct this payload only
+in memory; do not print it, write it to an invocation file or place its password
+in an environment variable. The handler verifies the actual database/user after
+connecting. It passes connection data explicitly to the common maintenance
+engine; it never puts the credential in `process.env`.
+
+The common engine preserves the existing migration journal, publication leases,
+bounded copy/verification checkpoints and explicit cutover/rollback operations.
+Transient work has a 45-second total query budget and also stops before release
+expiry. Every database statement receives a bounded server and client timeout;
+archive refresh and VACUUM use the same expiry guard. An expired transaction
+cannot begin a new batch or commit. Cleanup can still roll back and release a
+session lease after expiry. Responses omit database error messages, and client,
+connection and invocation password references are cleared when the call ends.
+
+`worker.yaml` gives this separate function no SSM access, HTTP endpoint or public
+function URL. Its environment and CloudFormation parameters hold metadata only.
+The explicit `AllowWrites` flag is still required for write operations; expiry
+is enforced independently of that flag. Extending the window requires a freshly
+reviewed manifest and new content-addressed release. After the operation window,
+delete the temporary stack and retain only password-free receipts and hashes.
+
+## Expiring administrator transfer operations
+
+The independent `admin-transfers.mjs` entrypoint uses the same metadata-only
+configuration and transient credential pattern with the existing
+`statarena_admin` role. Build with `--transient-admin-transfers`, manifest format
+`vega.transient-admin-transfers.v1` and the same four-hour maximum window. Use a
+separate `vega-db-refactor-admin-transfers-YYYYMMDD` stack and delete it after the
+verified owner batch. This does not widen the bootstrap handler's single action.
+
+Only four literal SQL operations are accepted: `transfer-owner-preflight` with
+an explicit boolean; `transfer-authorize` with exactly the two reviewed owners;
+`transfer-archive` with the original admin-owned preflight; and
+`transfer-rollback` with its exact archival receipt. The administrator batch is
+limited to `neon_delta_documents` and `neon_delta_queue`. Preflight performs no
+archive or authorization automatically. Review and retain its canonical JSON,
+then explicitly pass that unmodified receipt to a separate write invocation.
+The 026 functions recheck counts, object identities, ACLs, catalogue fingerprints
+and blockers under locks; the handler never refreshes a stale receipt to make
+it pass. The remaining eight tables use their existing ingestion owner.
 
 ## Build and review
 
