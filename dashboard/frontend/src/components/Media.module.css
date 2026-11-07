@@ -1,0 +1,16 @@
+.media {
+  display: inline-grid;
+  place-items: center;
+  position: relative;
+}
+.fallback,
+.imagePending,
+.imageReady {
+  grid-area: 1 / 1;
+}
+.imagePending {
+  opacity: 0;
+}
+.imageReady {
+  opacity: 1;
+}

@@ -1,5 +1,6 @@
 import Icon from "./Icon.jsx";
 import ApiImage from "./ApiImage.jsx";
+import mediaStyles from "./Media.module.css";
 import React, { useEffect, useRef, useState } from "react";
 import {
   number,
@@ -37,15 +38,29 @@ function MediaSource({ name, url, fallbackUrl, className }) {
   return (
     <span
       ref={element}
-      className={className}
+      className={`${className} ${mediaStyles.media}`}
       aria-hidden="true"
       data-page-media=""
       data-media-state={
         !src ? "fallback" : loaded === src ? "ready" : "loading"
       }
     >
+      {loaded !== src || !src ? (
+        <span className={`image-fallback ${mediaStyles.fallback}`}>
+          {(typeof name === "string" ? name : "")
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((x) => x[0])
+            .join("")
+            .toUpperCase() || "\u2014"}
+        </span>
+      ) : null}
       {src ? (
         <ApiImage
+          className={
+            loaded === src ? mediaStyles.imageReady : mediaStyles.imagePending
+          }
           src={src}
           alt=""
           loading="lazy"
@@ -53,22 +68,11 @@ function MediaSource({ name, url, fallbackUrl, className }) {
           referrerPolicy="no-referrer"
           onLoad={() => setLoaded(src)}
           onError={() => {
-            // Native image events do not expose status or Retry-After. Keep the
-            // existing single alternate source; never retry a failed source.
             if (!failed && src === safeImageUrl(url)) setFailed(true);
             else setFallbackFailed(true);
           }}
         />
-      ) : (
-        <span className="image-fallback">
-          {(typeof name === "string" ? name : "")
-            .split(/\s+/)
-            .slice(0, 2)
-            .map((x) => x[0])
-            .join("")
-            .toUpperCase()}
-        </span>
-      )}
+      ) : null}
     </span>
   );
 }

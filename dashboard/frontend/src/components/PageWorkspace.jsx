@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import { prepareInitialPage } from "../services/initial-page.js";
+import PageLoader from "./PageLoader.jsx";
 
 /** Keep the shared navigation available while the first viewport is prepared. */
 export default function PageWorkspace({ className = "", children }) {
@@ -9,11 +10,7 @@ export default function PageWorkspace({ className = "", children }) {
   useEffect(() => prepareInitialPage(main.current, () => setReady(true)), []);
   return (
     <div className="page-presentation">
-      {!ready && (
-        <div className="page-preparing" role="status">
-          Préparation de la page…
-        </div>
-      )}
+      {!ready && <PageLoader overlay />}
       <main
         ref={main}
         id="main"

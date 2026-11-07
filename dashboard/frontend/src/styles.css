@@ -367,12 +367,6 @@ button:disabled {
   opacity: 0;
   pointer-events: none;
 }
-.page-preparing {
-  position: absolute;
-  inset: 28px var(--page-gutter) auto;
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
 img[data-page-image-deferred] {
   visibility: hidden;
 }

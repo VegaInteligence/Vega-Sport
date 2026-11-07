@@ -73,7 +73,7 @@ async function imageComponent(
   };
   const stubs = {
     react: React,
-    "../hooks/useVisibleIntent.js": {
+    "../hooks/useImageIntent.js": {
       __esModule: true,
       default: () => [visibilityRef, visible],
     },
@@ -82,6 +82,15 @@ async function imageComponent(
       acquirePublicImage: (options) => {
         admissions.push(options);
         return transport.imagePermit(options);
+      },
+    },
+    "./Media.module.css": {
+      __esModule: true,
+      default: {
+        media: "media",
+        fallback: "fallback",
+        imageReady: "imageReady",
+        imagePending: "imagePending",
       },
     },
     "./Icon.jsx": { __esModule: true, default: () => null },
@@ -113,9 +122,15 @@ async function imageComponent(
     return {
       key,
       props: null,
-      addEventListener(type, handler) { listeners.set(type, handler); },
-      removeEventListener(type, handler) { if (listeners.get(type) === handler) listeners.delete(type); },
-      dispatchEvent(event) { listeners.get(event.type)?.(event); },
+      addEventListener(type, handler) {
+        listeners.set(type, handler);
+      },
+      removeEventListener(type, handler) {
+        if (listeners.get(type) === handler) listeners.delete(type);
+      },
+      dispatchEvent(event) {
+        listeners.get(event.type)?.(event);
+      },
       get src() {
         return attrs.get("src");
       },
@@ -149,7 +164,9 @@ async function imageComponent(
       render: (props) => {
         cursor = 0;
         pending = [];
-        tree = (component === "Media" ? mod.exports.Media : mod.exports.default)(props);
+        tree = (
+          component === "Media" ? mod.exports.Media : mod.exports.default
+        )(props);
         if (component === "Media") {
           if (mediaKey !== undefined && mediaKey !== tree.props.key) {
             for (const slot of slots) slot?.cleanup?.();
@@ -242,6 +259,7 @@ test("native images wait for visible admission and release only on load", async 
       );
       emit("onLoad");
       emit("onLoad");
+      await turn();
       assert.equal(loaded, 1);
       assert.deepEqual(transport.pending(), {
         active: 0,
@@ -363,6 +381,7 @@ test("source replacement ignores old events and cannot release the new image per
         queued: 0,
       });
       emit("onLoad");
+      await turn();
       assert.equal(loaded, 1);
       assert.deepEqual(transport.pending(), {
         active: 0,
@@ -482,39 +501,138 @@ test("Media preserves its single alternate source and then shows initials", asyn
   };
   await imageComponent(
     async ({ render, commit }) => {
-      const first = render(props).props.children[0];
+      const first = render(props).props.children[1];
       commit();
       first.props.onError({ currentTarget: {} });
-      const alternate = render(props).props.children[0];
+      const alternate = render(props).props.children[1];
       commit();
       assert.ok(alternate.props.src.includes("second.webp"));
       alternate.props.onError({ currentTarget: {} });
       const unavailable = render(props).props.children[0];
       commit();
-      assert.equal(unavailable.props.className, "image-fallback");
+      assert.match(unavailable.props.className, /image-fallback/);
       assert.deepEqual(unavailable.props.children, ["PC"]);
     },
     { component: "Media" },
   );
 });
 
-
 test("Media keeps initials after deferral and resets for a new source", async () => {
-  await imageComponent(async ({ render, commit, node }) => {
-    const props = { name: "Paris Club", url: "https://cdn.pitchapi.dev/first.webp" };
-    const oldImage = render(props).props.children[0];
+  await imageComponent(
+    async ({ render, commit, node }) => {
+      const props = {
+        name: "Paris Club",
+        url: "https://cdn.pitchapi.dev/first.webp",
+      };
+      const oldImage = render(props).props.children[1];
+      commit();
+      node().dispatchEvent({ type: "vega:defer-image" });
+      let fallback = render(props).props.children[0];
+      commit();
+      assert.match(fallback.props.className, /image-fallback/);
+      oldImage.props.onLoad();
+      oldImage.props.onError();
+      fallback = render(props).props.children[0];
+      commit();
+      assert.deepEqual(fallback.props.children, ["PC"]);
+      const replacement = render({
+        ...props,
+        url: "https://cdn.pitchapi.dev/new.webp",
+      }).props.children[1];
+      commit();
+      assert.ok(replacement.props.src.includes("new.webp"));
+    },
+    { component: "Media" },
+  );
+});
+
+test("decode releases capacity immediately and ignores stale completion after replacement or unmount", async () => {
+  await imageComponent(
+    async ({ visible, render, commit, node, emit, transport, unmount }) => {
+      let resolveOld,
+        resolveNew,
+        loads = 0;
+      visible(true);
+      render({ src: source, onLoad: () => loads++ });
+      commit();
+      await turn();
+      node().decode = () =>
+        new Promise((resolve) => {
+          resolveOld = resolve;
+        });
+      emit("onLoad");
+      await Promise.resolve();
+      assert.equal(transport.pending().active, 0);
+      render({ src: source + "&next=1", onLoad: () => loads++ });
+      commit();
+      await turn();
+      node().decode = () =>
+        new Promise((resolve) => {
+          resolveNew = resolve;
+        });
+      emit("onLoad");
+      await Promise.resolve();
+      resolveOld();
+      await turn();
+      assert.equal(loads, 0);
+      unmount();
+      resolveNew();
+      await turn();
+      assert.equal(loads, 0);
+    },
+  );
+});
+
+test("decode rejection reports an error after releasing the permit", async () => {
+  await imageComponent(
+    async ({ visible, render, commit, node, emit, transport }) => {
+      let loads = 0;
+      const errors = [];
+      visible(true);
+      render({
+        src: source,
+        onLoad: () => loads++,
+        onError: (error) => errors.push(error),
+      });
+      commit();
+      await turn();
+      node().decode = () => Promise.reject(new Error("decode failed"));
+      emit("onLoad");
+      await turn();
+      assert.equal(transport.pending().active, 0);
+      assert.equal(loads, 0);
+      assert.match(errors[0].message, /decode failed/);
+    },
+  );
+});
+
+test("Media displays initials until image load has decoded", async () => {
+  await imageComponent(
+    async ({ render, commit }) => {
+      const props = {
+        name: "Paris Club",
+        url: "https://cdn.pitchapi.dev/first.webp",
+      };
+      const pending = render(props);
+      commit();
+      assert.equal(pending.props["data-media-state"], "loading");
+      assert.match(pending.props.children[0].props.className, /image-fallback/);
+      assert.equal(pending.props.children[1].props.className, "imagePending");
+      pending.props.children[1].props.onLoad();
+      const ready = render(props);
+      commit();
+      assert.equal(ready.props["data-media-state"], "ready");
+      assert.equal(ready.props.children[0], null);
+      assert.equal(ready.props.children[1].props.className, "imageReady");
+    },
+    { component: "Media" },
+  );
+});
+
+test("Media presents a neutral fallback when the name is unknown", async () => {
+  await imageComponent(async ({ render, commit }) => {
+    const media = render({ name: '  ', url: 'https://cdn.pitchapi.dev/first.webp' });
     commit();
-    node().dispatchEvent({ type: "vega:defer-image" });
-    let fallback = render(props).props.children[0];
-    commit();
-    assert.equal(fallback.props.className, "image-fallback");
-    oldImage.props.onLoad();
-    oldImage.props.onError();
-    fallback = render(props).props.children[0];
-    commit();
-    assert.deepEqual(fallback.props.children, ["PC"]);
-    const replacement = render({ ...props, url: "https://cdn.pitchapi.dev/new.webp" }).props.children[0];
-    commit();
-    assert.ok(replacement.props.src.includes("new.webp"));
-  }, { component: "Media" });
+    assert.deepEqual(media.props.children[0].props.children, ['—']);
+  }, { component: 'Media' });
 });

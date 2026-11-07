@@ -353,3 +353,22 @@ test("overall deadline reveals stalled data status and freezes pending media", (
   f.frame();
   assert.equal(reveals, 1);
 });
+
+test("decoded media waits for its visible logo state to commit", async () => {
+  const f = fixture();
+  let reveals = 0;
+  let state = "loading";
+  const media = {
+    getAttribute: (name) => (name === "data-media-state" ? state : null),
+  };
+  f.nodes.images.push(f.image({ media }));
+  prepareInitialPage(f.root, () => reveals++);
+  f.frame();
+  await settle();
+  f.frame();
+  assert.equal(reveals, 0);
+  state = "ready";
+  f.mutate();
+  f.frame();
+  assert.equal(reveals, 1);
+});

@@ -86,7 +86,14 @@ export function prepareInitialPage(
             schedule();
           });
       }
-      return !record.decoded;
+      // Media swaps its fallback only after its own decode callback commits.
+      // Do not reveal between native decoding and that React update.
+      return (
+        !record.decoded ||
+        image
+          .closest("[data-page-media]")
+          ?.getAttribute?.("data-media-state") === "loading"
+      );
     });
   }
   function check() {
@@ -123,7 +130,7 @@ export function prepareInitialPage(
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ["src", "data-page-loading"],
+    attributeFilter: ["src", "data-page-loading", "data-media-state"],
   });
   root.addEventListener("load", schedule, true);
   root.addEventListener("error", schedule, true);

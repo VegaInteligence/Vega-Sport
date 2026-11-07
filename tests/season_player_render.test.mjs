@@ -98,7 +98,7 @@ test("Messi keeps his portrait and published trophies when filters leave no matc
   const html = renderSeasonProfile([], [], id);
   assert.match(html, /Lionel Messi/);
   const portrait = html.match(
-    /<span class="player-avatar season-player-portrait"[^>]*>([\s\S]*?)<\/span>/,
+    /<span class="player-avatar season-player-portrait(?: [^"]*)?"[^>]*>([\s\S]*?<img[^>]*>)/,
   )?.[1];
   assert.ok(
     portrait,

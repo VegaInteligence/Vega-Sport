@@ -2,6 +2,7 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import { pages } from "../../../shared/pages.js";
 import SiteHeader from "./SiteHeader.jsx";
+import PageLoader from "./PageLoader.jsx";
 export default function LoadingPage({ href }) {
   const path = usePathname();
   const page = pages.find(
@@ -15,12 +16,7 @@ export default function LoadingPage({ href }) {
         className={`workspace${page?.path === "/classement-joueurs/" ? " ranking-page" : ""}`}
         aria-busy="true"
       >
-        <div className="page-heading">
-          <h1 className="page-title">{page?.title || "STATARENA"}</h1>
-        </div>
-        <div className="season-loading" role="status">
-          <span>Préparation de la page…</span>
-        </div>
+        <PageLoader />
       </main>
     </div>
   );

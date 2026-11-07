@@ -1,6 +1,6 @@
 "use client";
 import React, { useCallback, useEffect, useRef } from "react";
-import useVisibleIntent from "../hooks/useVisibleIntent.js";
+import useImageIntent from "../hooks/useImageIntent.js";
 import { apiUrl } from "../data-url.js";
 import { acquirePublicImage } from "../services/public-api-fetch.js";
 
@@ -12,7 +12,7 @@ export default function ApiImage({
   loading = "lazy",
   ...props
 }) {
-  const [visibilityRef, visible] = useVisibleIntent(src, Boolean(src));
+  const [visibilityRef, visible] = useImageIntent(src, Boolean(src));
   const imageRef = useRef(null);
   const requestRef = useRef(null);
   const handlersRef = useRef({ onLoad, onError });
@@ -88,8 +88,22 @@ export default function ApiImage({
     )
       return;
     request.settled = true;
+    // The network is finished; decoding must not occupy an API permit.
     request.release?.();
-    handlersRef.current[handler]?.(event);
+    const current = () =>
+      requestRef.current === request && !request.controller.signal.aborted;
+    if (handler === "onError") {
+      if (current()) handlersRef.current.onError?.(event);
+      return;
+    }
+    Promise.resolve()
+      .then(() => request.node.decode?.())
+      .then(() => {
+        if (current()) handlersRef.current.onLoad?.(event);
+      })
+      .catch((error) => {
+        if (current()) handlersRef.current.onError?.(error);
+      });
   };
   return (
     <img
