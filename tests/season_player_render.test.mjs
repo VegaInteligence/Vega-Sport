@@ -60,17 +60,12 @@ test("search presents one navigable player for multiple match performances", () 
   assert.match(html, /\/joueurs\/?\?id=p_1/);
 });
 
-test("season overview shows observed metrics without a match list or a header count", () => {
+test("season overview offers a radar and a shortcut to the detailed statistics", () => {
   const html = renderSeasonProfile(rows, matches, "p_1");
   assert.match(html, /Neymar/);
-  assert.match(html, /37/);
-  assert.match(html, /6,68/);
-  assert.match(html, /0,82/);
-  assert.match(html, /Par match/);
-  assert.match(html, /Essentiel/);
-  assert.match(html, /Attaque/);
-  assert.match(html, /Création/);
-  assert.match(html, /Défense/);
+  assert.match(html, /Profil statistique/);
+  assert.match(html, /Voir les statistiques détaillées/);
+  assert.doesNotMatch(html, /Statistiques à afficher|Temps de jeu et note/);
   assert.doesNotMatch(html, /centiles au poste|Modèle du radar/);
   assert.doesNotMatch(
     html,
@@ -100,6 +95,7 @@ test("Messi keeps his portrait and published trophies when filters leave no matc
   assert.match(html, /aria-label="Palmarès de Lionel Messi"/);
   assert.match(html, /\/trophies\/world-cup\.webp/);
   assert.match(html, /\/trophies\/ballon-or\.webp/);
+  assert.match(html, /Voir les statistiques détaillées/);
 });
 
 test("Yamal's Liga and Euro artwork remain clickable", async () => {
@@ -107,6 +103,7 @@ test("Yamal's Liga and Euro artwork remain clickable", async () => {
   const name = "Lamine Yamal";
   await seedPlayerHonours(id, name, {
     available: true,
+    sourceUrl: "https://en.wikipedia.org/wiki/Lamine_Yamal#Honours",
     honours: [
       {
         category: "team",
@@ -133,4 +130,8 @@ test("Yamal's Liga and Euro artwork remain clickable", async () => {
   assert.match(html, /src="\/trophies\/euro-modern\.webp"/);
   assert.match(html, /FC Barcelone · 2025–26, 2024–25, 2022–23/);
   assert.doesNotMatch(html, /Faire défiler les trophées|Trophées suivants/);
+  assert.doesNotMatch(
+    html,
+    /Source du palmarès|Palmarès sur Wikipédia|wikipedia\.org/,
+  );
 });

@@ -13,18 +13,6 @@ export function usePlayerHonours(id, name) {
   );
 }
 
-export function PlayerHonoursSource({ url }) {
-  if (!url) return null;
-  return (
-    <details className="player-profile-source">
-      <summary>Source du palmarès</summary>
-      <a href={url} target="_blank" rel="noreferrer">
-        Palmarès sur Wikipédia
-      </a>
-    </details>
-  );
-}
-
 /** A compact shelf belongs to the player header, independent of the active tab. */
 export default function PlayerHonours({ name, result }) {
   const [selected, setSelected] = useState(null);

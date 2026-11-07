@@ -1,0 +1,83 @@
+.radar {
+  min-width: 0;
+  margin: 24px 0;
+}
+.radar h3 {
+  margin: 0 0 7px;
+}
+.intro,
+.note {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  margin: 0;
+}
+.layout {
+  display: grid;
+  grid-template-columns: minmax(190px, 280px) minmax(170px, 340px);
+  gap: 16px 28px;
+  align-items: center;
+}
+.chart {
+  width: 100%;
+  max-width: 280px;
+  display: block;
+  margin: 0 auto;
+}
+.grid {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.index {
+  fill: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.area {
+  fill: #4c91ef;
+  fill-opacity: 0.17;
+  stroke: #4c91ef;
+  stroke-width: 2.5;
+}
+.edge {
+  stroke: #4c91ef;
+  stroke-width: 2.5;
+}
+.dot {
+  fill: #4c91ef;
+}
+.values {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 9px;
+}
+.values li {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  align-items: baseline;
+  gap: 7px;
+  font-size: var(--text-sm);
+}
+.values strong {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.number {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.note {
+  margin-top: 10px;
+}
+@media (max-width: 600px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .chart {
+    max-width: 240px;
+  }
+}

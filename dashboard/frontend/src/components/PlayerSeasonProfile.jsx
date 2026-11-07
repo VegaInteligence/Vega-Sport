@@ -20,7 +20,7 @@ import {
   playerSelection,
 } from "../services/research-storage.js";
 import { normalizeText, number } from "../services/format.js";
-import { Empty, Media, Segments } from "./UI.jsx";
+import { Media, Segments } from "./UI.jsx";
 import {
   BookmarkButton,
   ComparePlayerButton,
@@ -29,10 +29,8 @@ import {
   ReportButton,
   ResearchTabs,
 } from "./ResearchUI.jsx";
-import PlayerHonours, {
-  PlayerHonoursSource,
-  usePlayerHonours,
-} from "./PlayerHonours.jsx";
+import PlayerHonours, { usePlayerHonours } from "./PlayerHonours.jsx";
+import PlayerOverviewRadar from "./PlayerOverviewRadar.jsx";
 import PlayerBio from "./PlayerBio.jsx";
 import PlayerDiscipline from "./PlayerDiscipline.jsx";
 import PerformanceContext from "./PerformanceContext.jsx";
@@ -60,24 +58,6 @@ const TABS = [
   ["compare", "Comparer"],
 ];
 const HISTORY_TABS = TABS.slice(0, 2);
-const OVERVIEW_GROUPS = [
-  ["summary", "Essentiel"],
-  ["attack", "Attaque"],
-  ["creation", "Création"],
-  ["defence", "Défense"],
-];
-const OVERVIEW_METRICS = {
-  summary: ["goals", "assists", "shotsOnTarget", "xg"],
-  attack: ["goals", "shots", "shotsOnTarget", "xg"],
-  creation: ["assists", "chancesCreated", "passesFinalThird", "passesAccurate"],
-  defence: ["recoveries", "interceptions", "tackles", "duelsWon"],
-};
-const KEEPER_METRICS = [
-  "saves",
-  "goalsPrevented",
-  "passesAccurate",
-  "passAccuracy",
-];
 const STAT_MODES = [
   ["total", "Totaux"],
   ["per90", "Par 90 min"],
@@ -314,8 +294,7 @@ export default function PlayerSeasonProfile({
   );
   const [mode, setMode] = useState("total"),
     [minMinutes, setMinMinutes] = useState(450),
-    [keys, setKeys] = useState(Object.keys(SCOUT_METRICS)),
-    [overviewGroup, setOverviewGroup] = useState("summary");
+    [keys, setKeys] = useState(Object.keys(SCOUT_METRICS));
   const cohorts = useMemo(
     () => buildCohorts(profiles, minMinutes),
     [profiles, minMinutes],
@@ -365,16 +344,35 @@ export default function PlayerSeasonProfile({
       profile: aggregateSeason(values, id),
     }));
   }, [profile.rows, id]);
+  const historyLoading = (
+    <div className="loading-state" role="status">
+      Chargement des saisons…
+    </div>
+  );
   const seasonHistory = (
-    <Suspense
-      fallback={
-        <div className="loading-state" role="status">
-          Chargement des saisons…
-        </div>
-      }
-    >
+    <Suspense fallback={historyLoading}>
       <SeasonStats id={id} />
     </Suspense>
+  );
+  const overview = (
+    <div className="player-overview">
+      <Suspense fallback={historyLoading}>
+        <SeasonStats id={id} season={f.season} linkMatches={false} />
+      </Suspense>
+      <PlayerOverviewRadar profile={profile} cohorts={cohorts} />
+      <button
+        type="button"
+        className="button button-primary player-overview-details"
+        onClick={() => {
+          change("stats");
+          document
+            .getElementById("player-profile-panel")
+            ?.scrollIntoView({ block: "start" });
+        }}
+      >
+        Voir les statistiques détaillées
+      </button>
+    </div>
   );
   if (!profile.matches) {
     const historyView = view === "stats" ? "stats" : "overview";
@@ -404,15 +402,8 @@ export default function PlayerSeasonProfile({
             historyView === "stats" ? "Statistiques" : "Vue d’ensemble"
           }
         >
-          {historyView === "stats" ? (
-            seasonHistory
-          ) : (
-            <Empty>
-              Aucune performance avec des minutes connues pour ces filtres.
-            </Empty>
-          )}
+          {historyView === "stats" ? seasonHistory : overview}
         </div>
-        <PlayerHonoursSource url={honours.value?.sourceUrl} />
       </article>
     );
   }
@@ -424,10 +415,6 @@ export default function PlayerSeasonProfile({
       cohorts={cohorts}
     />
   );
-  const figures =
-    profile.role?.group === "G" && overviewGroup === "summary"
-      ? KEEPER_METRICS
-      : OVERVIEW_METRICS[overviewGroup];
   return (
     <article className="research-player-profile player-profile-flat">
       <MessiGoats id={id} />
@@ -455,6 +442,7 @@ export default function PlayerSeasonProfile({
           </ReportButton>
         </div>
       </PlayerProfileHeading>
+      <PlayerBio profile={record} />
       <ResearchTabs
         label="Analyse du joueur"
         value={view}
@@ -522,74 +510,7 @@ export default function PlayerSeasonProfile({
             </div>
           }
         >
-          {view === "overview" && (
-            <>
-              <div className="research-toolbar player-overview-controls">
-                <Segments
-                  label="Statistiques à afficher"
-                  value={overviewGroup}
-                  onChange={setOverviewGroup}
-                  items={OVERVIEW_GROUPS}
-                />
-                <Segments
-                  label="Calcul des statistiques du joueur"
-                  value={mode}
-                  onChange={setMode}
-                  items={STAT_MODES}
-                />
-              </div>
-              <dl className="season-player-figures">
-                {figures.map((key) => {
-                  const result = seasonMetric(profile, key, mode);
-                  return (
-                    <div key={key}>
-                      <dt>
-                        {SCOUT_METRICS[key].label}
-                        <MetricInfo
-                          metric={key}
-                          observed={result.count}
-                          total={profile.matches}
-                        />
-                      </dt>
-                      <dd>
-                        <strong>
-                          {number(
-                            result.value,
-                            mode === "total" && !SCOUT_METRICS[key].ratio
-                              ? SCOUT_METRICS[key].decimals || 0
-                              : 2,
-                          )}
-                        </strong>
-                        {result.count < profile.matches && (
-                          <small>
-                            {result.count}/{profile.matches} matchs renseignés
-                          </small>
-                        )}
-                      </dd>
-                    </div>
-                  );
-                })}
-              </dl>
-              <dl
-                className="player-season-summary"
-                aria-label={`Temps de jeu et note en ${f.season}`}
-              >
-                <div>
-                  <dt>Minutes</dt>
-                  <dd>{number(profile.minutes)}</dd>
-                </div>
-                <div>
-                  <dt>Titularisations</dt>
-                  <dd>{profile.knownStarts ? number(profile.starts) : "—"}</dd>
-                </div>
-                <div>
-                  <dt>Note moyenne</dt>
-                  <dd>{number(profile.rating, 2)}</dd>
-                </div>
-              </dl>
-              <PlayerBio profile={record} />
-            </>
-          )}
+          {view === "overview" && overview}
           {view === "stats" && (
             <>
               <div className="research-toolbar">
@@ -639,28 +560,31 @@ export default function PlayerSeasonProfile({
                 </section>
                 <section>
                   <h3>Postes observés</h3>
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Poste</th>
-                        <th>Minutes</th>
-                        <th>Part du temps</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[...profile.positions]
-                        .sort((a, b) => b[1].minutes - a[1].minutes)
-                        .map(([key, item]) => (
-                          <tr key={key}>
-                            <th>{key}</th>
-                            <td>{number(item.minutes)}</td>
-                            <td>
-                              {number((item.minutes / profile.minutes) * 100)} %
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
+                  <div className="table-scroll">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Poste</th>
+                          <th>Minutes</th>
+                          <th>Part du temps</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...profile.positions]
+                          .sort((a, b) => b[1].minutes - a[1].minutes)
+                          .map(([key, item]) => (
+                            <tr key={key}>
+                              <th>{key}</th>
+                              <td>{number(item.minutes)}</td>
+                              <td>
+                                {number((item.minutes / profile.minutes) * 100)}{" "}
+                                %
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </section>
               </div>
               <SeasonShots
@@ -685,7 +609,6 @@ export default function PlayerSeasonProfile({
           )}
         </Suspense>
       </div>
-      <PlayerHonoursSource url={honours.value?.sourceUrl} />
     </article>
   );
 }

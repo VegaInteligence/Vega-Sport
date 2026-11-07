@@ -136,7 +136,7 @@ export async function loadPlayerSeason(
 export async function loadPlayerHistory(
   manifest,
   id,
-  { signal, fetcher = fetch } = {},
+  { signal, fetcher = fetch, season: selectedSeason = null } = {},
 ) {
   const index = await playerRoutes(manifest, { players: [id] }, fetcher, {
     signal,
@@ -147,6 +147,7 @@ export async function loadPlayerHistory(
       ...uefaSnapshotSeasons(id),
     ]),
   ]
+    .filter((season) => !selectedSeason || season === selectedSeason)
     .sort()
     .reverse();
   const results = new Array(seasons.length);
