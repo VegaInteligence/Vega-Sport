@@ -2,6 +2,8 @@
 
 Cette implémentation suit les étapes 1 et 2 du document « Vega Sport — schéma v2 » fourni le 8 novembre 2026. Elle crée une base neuve à partir de PitchAPI. Le RDS, les fichiers et l'API qui servent actuellement le site ne sont ni lus ni modifiés par ce prototype.
 
+Le [compte rendu de validation](VERIFICATION.md) contient la mesure complète des 306 matchs, les preuves et les limites de couverture.
+
 ## Ce qui fonctionne
 
 - Migrations PostgreSQL 16 : faits `core`, tables de calcul `agg`, suivi `ops` et migration optionnelle pgvector.
