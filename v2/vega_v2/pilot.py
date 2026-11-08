@@ -38,6 +38,7 @@ class Pilot:
         self.available_matches = 0
         self.selected_matches = 0
         self.completed_matches = 0
+        self.fatal_error = None
 
     def fetch(self, family, endpoint, params=None, *, kind=None, ident=None):
         self.events.clear()
@@ -113,10 +114,12 @@ class Pilot:
         unknown = conn.execute('SELECT family,field_path,occurrences FROM ops.unknown_fields ORDER BY family,field_path').fetchall()
         rows = ['# Vega v2 isolated pilot', '', f'UTC: {datetime.now(timezone.utc).isoformat()}',
             f'PostgreSQL: {conn.execute("SHOW server_version").fetchone()[0]}',
+            f'Overall result: {self.fatal_error or ("family_errors" if self.errors else "ok")}',
             f'Finished matches available: {self.available_matches}', f'Selected matches: {self.selected_matches}',
             f'Completed match loops: {self.completed_matches}', f'HTTP attempts this run (including retries/profiles): {self.client.requests}',
             f'Wall seconds: {seconds:.2f}', f'Family failures: {sum(self.errors.values())}', '',
-            'Core contains the whole competition calendar, and details only for selected matches.',
+            f'Calendar rows actually stored: {conn.execute("SELECT count(*) FROM core.matches").fetchone()[0]}',
+            'A completed collection stores the whole competition calendar, and details only for selected matches.',
             'Database size includes empty schema/index overhead; do not extrapolate one-match bytes to a season.',
             'Only metadata, counts and timings are exported. No database dump, response or football row is exported.', '',
             '| Schema | Heap bytes | Index bytes | Total bytes including TOAST |', '|---|---:|---:|---:|']
@@ -157,11 +160,14 @@ def main():
             migrate(conn,vector=args.vector)
             pilot = Pilot(Store(conn),os.environ.get('PITCHAPI_API_KEY',''))
             try: ok=pilot.run(season=args.season,league_name=args.league,max_matches=args.max_matches,resume=args.resume)
+            except Exception as error:
+                pilot.fatal_error=safe_code(error)
+                raise
             finally: pilot.report(args.report)
             return 0 if ok else 1
     except Exception as error:
         print('pilot_error='+safe_code(error),flush=True)
-        if isinstance(error,PitchError): print(f'http_status={error.status} envelope_shape={getattr(error,"envelope_shape",None)}',flush=True)
+        if isinstance(error,PitchError): print(f'http_status={error.status} envelope_shape={getattr(error,"envelope_shape",None)} access_reason={getattr(error,"access_reason",None)}',flush=True)
         return 1
 
 

@@ -21,9 +21,9 @@ _ENDPOINTS = (
 assert len(_ENDPOINTS) == 19
 
 class PitchError(Exception):
-    def __init__(self, code, status=None, envelope_shape=None):
+    def __init__(self, code, status=None, envelope_shape=None, access_reason=None):
         super().__init__(code)
-        self.code, self.status, self.envelope_shape = code, status, envelope_shape
+        self.code, self.status, self.envelope_shape, self.access_reason = code, status, envelope_shape, access_reason
 
 @dataclass(frozen=True)
 class PitchResult:
@@ -46,6 +46,19 @@ def _retry_delay(value):
             if timestamp.tzinfo is None: timestamp = timestamp.replace(tzinfo=timezone.utc)
             return max(0, (timestamp - datetime.now(timezone.utc)).total_seconds())
         except (ValueError, TypeError, OverflowError): return None
+
+def _access_reason(value):
+    # Only classify documented top-level diagnostic fields; never retain their text.
+    if not isinstance(value, dict): return 'unspecified'
+    parts=[value.get(k) for k in ('message','detail') if isinstance(value.get(k),str)]
+    text=' '.join(parts).lower()[:2048]
+    if re.search(r'\b(expired|expiration|expiry)\b', text) and re.search(r'\b(key|token|credential)\b', text): return 'credential_expired'
+    if re.search(r'\b(invalid|revoked|unauthori[sz]ed)\b', text) and re.search(r'\b(key|token|credential|auth)', text): return 'credential_invalid'
+    if re.search(r'\b(rate.limit|too many requests|quota)\b',text): return 'rate_limited'
+    if re.search(r'\b(ip|address)\b',text) and re.search(r'\b(block|denied|allow|restrict)',text): return 'ip_restricted'
+    if re.search(r'\b(firewall|waf|cloudflare)\b',text): return 'firewall'
+    if re.search(r'\b(auth|permission|access denied|forbidden)',text): return 'access_denied'
+    return 'unspecified'
 
 class PitchClient:
     def __init__(self, key, *, interval=0.5, retries=3, timeout=30, transport=None, sleep=time.sleep, monotonic=time.monotonic, on_attempt=None):
@@ -79,7 +92,7 @@ class PitchClient:
                 if self._on_attempt:
                     self._on_attempt({'status':status,'error_code':code,'duration_ms':max(0,round((self._clock()-started)*1000)),'fetched_at':datetime.now(timezone.utc),'request_id':request_id})
             try:
-                status, headers, raw = self._transport(Request(url, headers={"X-API-KEY":self._key,"Accept":"application/json"}), self.timeout)
+                status, headers, raw = self._transport(Request(url, headers={"X-API-KEY":self._key,"Accept":"application/json","User-Agent":"VegaSport-V2Pilot/1.0"}), self.timeout)
             except (URLError, OSError, TimeoutError):
                 emit(None,'TRANSPORT_ERROR')
                 raise PitchError("TRANSPORT_ERROR") from None
@@ -100,10 +113,13 @@ class PitchClient:
             elif data_present: shape='object_data'
             else: shape='object_error'
             safe_code=code if code in known else ('INVALID_JSON' if value is None else 'INVALID_ENVELOPE' if not valid else 'PROVIDER_ERROR') if not (200 <= status < 300 and valid and data_present) else None
+            if status == 403 and code not in known: safe_code='HTTP_ACCESS_DENIED'
             emit(status,safe_code,request_id)
             if status in (429,500,502,503,504) and attempt < self.retries:
                 delay=_retry_delay(headers.get("Retry-After"))
                 self._sleep(max(0.5*2**attempt,delay or 0)); continue
+            if status == 403 and code not in known:
+                raise PitchError('HTTP_ACCESS_DENIED',status,shape,_access_reason(value))
             if value is None: raise PitchError("INVALID_JSON",status,shape)
             if not valid: raise PitchError("INVALID_ENVELOPE",status,shape)
             if 200 <= status < 300 and data_present: return PitchResult(data=value["data"])
