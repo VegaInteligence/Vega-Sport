@@ -171,3 +171,123 @@ class TransportTest(unittest.TestCase):
         with self.assertRaises(PitchError) as e:
             c.fetch("/leagues")
         self.assertEqual(e.exception.code, "UNAUTHORIZED")
+
+    def test_521_retry_then_success_and_observe_each_attempt(self):
+        events, waits = [], []
+        responses = iter(
+            [
+                (521, {"Retry-After": "2"}, b"<html>private</html>"),
+                (200, {}, b'{"data":[]}'),
+            ]
+        )
+        client = PitchClient(
+            "pk_test_secret",
+            interval=0,
+            transport=lambda *_: next(responses),
+            sleep=waits.append,
+            on_attempt=events.append,
+        )
+        self.assertEqual(client.fetch("/leagues").data, [])
+        self.assertEqual(client.requests, 2)
+        self.assertEqual([e["error_code"] for e in events], ["HTTP_SERVER_ERROR", None])
+        self.assertIn(2, waits)
+        self.assertNotIn("private", str(events))
+
+    def test_521_exhaustion_distinct_and_4xx_not_retried(self):
+        events = []
+        client = PitchClient(
+            "pk_test_secret",
+            interval=0,
+            retries=3,
+            transport=lambda *_: (521, {}, b"<html>private</html>"),
+            sleep=lambda _: None,
+            on_attempt=events.append,
+        )
+        with self.assertRaises(PitchError) as error:
+            client.fetch("/leagues")
+        self.assertEqual(
+            (error.exception.code, error.exception.status), ("HTTP_SERVER_ERROR", 521)
+        )
+        self.assertEqual(client.requests, 4)
+        self.assertEqual(len(events), 4)
+        client = PitchClient(
+            "pk_test_secret",
+            interval=0,
+            retries=3,
+            transport=lambda *_: (404, {}, b'{"error":{"code":"RESOURCE_NOT_FOUND"}}'),
+            sleep=lambda _: None,
+        )
+        with self.assertRaises(PitchError):
+            client.fetch("/leagues")
+        self.assertEqual(client.requests, 1)
+
+    def test_network_errors_retry_then_success_or_exhaust(self):
+        from urllib.error import URLError
+
+        events = []
+        attempts = iter(
+            [URLError("private"), TimeoutError("private"), (200, {}, b'{"data":[]}')]
+        )
+
+        def transport(*_):
+            item = next(attempts)
+            if isinstance(item, Exception):
+                raise item
+            return item
+
+        client = PitchClient(
+            "pk_test_secret",
+            interval=0,
+            transport=transport,
+            sleep=lambda _: None,
+            on_attempt=events.append,
+        )
+        self.assertEqual(client.fetch("/leagues").data, [])
+        self.assertEqual(client.requests, 3)
+        self.assertEqual(
+            [e["error_code"] for e in events],
+            ["TRANSPORT_ERROR", "TRANSPORT_ERROR", None],
+        )
+        self.assertNotIn("private", str(events))
+
+        def broken(*_):
+            raise OSError("private")
+
+        client = PitchClient(
+            "pk_test_secret",
+            interval=0,
+            retries=3,
+            transport=broken,
+            sleep=lambda _: None,
+        )
+        with self.assertRaises(PitchError) as error:
+            client.fetch("/leagues")
+        self.assertEqual(error.exception.code, "TRANSPORT_ERROR")
+        self.assertEqual(client.requests, 4)
+        self.assertNotIn("private", str(error.exception))
+
+    def test_429_increases_interval_never_decreases(self):
+        responses = iter(
+            [
+                (429, {}, b'{"error":{"code":"RATE_LIMIT_EXCEEDED"}}'),
+                (200, {}, b'{"data":[]}'),
+            ]
+        )
+        client = PitchClient(
+            "pk_test_secret",
+            interval=0.25,
+            transport=lambda *_: next(responses),
+            sleep=lambda _: None,
+        )
+        client.fetch("/leagues")
+        self.assertEqual(client.interval, 1.0)
+        client = PitchClient(
+            "pk_test_secret",
+            interval=2.0,
+            retries=0,
+            transport=lambda *_: (429, {}, b'{"error":{"code":"RATE_LIMIT_EXCEEDED"}}'),
+            sleep=lambda _: None,
+        )
+        with self.assertRaises(PitchError):
+            client.fetch("/leagues")
+        self.assertEqual(client.interval, 2.0)

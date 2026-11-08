@@ -37,6 +37,7 @@ jobs:
       VEGA_V2_PILOT_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_pilot_test
       VEGA_V2_PROFILES_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_profiles_test
       VEGA_V2_CONCURRENCY_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_concurrency_test
+      VEGA_V2_UNKNOWN_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_unknown_test
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,23 +51,36 @@ jobs:
           python - <<'PY'
           import os, psycopg
           with psycopg.connect(os.environ['V2_DATABASE_URL'], autocommit=True) as db:
-              for name in ('vega_v2_test','vega_v2_jobs_test','vega_v2_store_test','vega_v2_pilot_test','vega_v2_profiles_test','vega_v2_concurrency_test'):
+              for name in ('vega_v2_test','vega_v2_jobs_test','vega_v2_store_test','vega_v2_pilot_test','vega_v2_profiles_test','vega_v2_concurrency_test','vega_v2_unknown_test'):
                   db.execute(psycopg.sql.SQL('CREATE DATABASE {}').format(psycopg.sql.Identifier(name)))
           PY
       - name: Validate typed schema, normalization and transactional ingestion
         run: python -m unittest discover -s v2/tests -v
+      - name: Verify previously failing event, shot and upstream-error fixtures
+        env:
+          PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
+          MATCH_INPUT: ${{ inputs.max_matches }}
+        run: |
+          scope="${MATCH_INPUT:-$(cat v2/pilot-scope.txt)}"
+          if [ "$scope" = 306 ]; then
+            python -m vega_v2.pilot --ordinals 19,20,227,228 --max-matches 4 --profile-limit 2 --interval 0.25 --report work/vega-v2-regressions.md
+          fi
       - name: Fresh PitchAPI collection into local PostgreSQL only
         env:
           PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
           MATCH_INPUT: ${{ inputs.max_matches }}
         run: |
           scope="${MATCH_INPUT:-$(cat v2/pilot-scope.txt)}"
-          python -m vega_v2.pilot --max-matches "$scope" --report work/vega-v2-pilot.md
+          if python -m vega_v2.pilot --max-matches "$scope" --resume --profile-limit 2 --interval 0.25 --report work/vega-v2-pilot-initial.md; then
+            cp work/vega-v2-pilot-initial.md work/vega-v2-pilot.md
+          else
+            python -m vega_v2.pilot --max-matches "$scope" --resume --profile-limit 2 --interval 0.25 --report work/vega-v2-pilot.md
+          fi
       - name: Export measurements only
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: vega-v2-pilot-measurements
-          path: work/vega-v2-pilot.md
+          path: work/vega-v2-*.md
           if-no-files-found: warn
           retention-days: 14

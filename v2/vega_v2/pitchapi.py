@@ -213,6 +213,9 @@ class PitchClient:
                 )
             except (URLError, OSError, TimeoutError):
                 emit(None, "TRANSPORT_ERROR")
+                if attempt < self.retries:
+                    self._sleep(0.5 * 2**attempt)
+                    continue
                 raise PitchError("TRANSPORT_ERROR") from None
             request_id = headers.get("X-Request-ID") or headers.get("X-Request-Id")
             if (
@@ -278,13 +281,19 @@ class PitchClient:
                     else None
                 )
             )
-            if status == 403 and code not in known:
+            if status == 429:
+                self.interval = max(self.interval, 1.0)
+            if 500 <= status <= 599:
+                safe_code = "HTTP_SERVER_ERROR"
+            elif status == 403 and code not in known:
                 safe_code = "HTTP_ACCESS_DENIED"
             emit(status, safe_code, request_id)
-            if status in (429, 500, 502, 503, 504) and attempt < self.retries:
+            if (status == 429 or 500 <= status <= 599) and attempt < self.retries:
                 delay = _retry_delay(headers.get("Retry-After"))
                 self._sleep(max(0.5 * 2**attempt, delay or 0))
                 continue
+            if 500 <= status <= 599:
+                raise PitchError("HTTP_SERVER_ERROR", status, shape)
             if status == 403 and code not in known:
                 raise PitchError(
                     "HTTP_ACCESS_DENIED", status, shape, _access_reason(value)
