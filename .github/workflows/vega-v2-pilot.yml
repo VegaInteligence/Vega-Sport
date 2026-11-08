@@ -1,0 +1,69 @@
+name: Vega v2 isolated pilot
+on:
+  push:
+    branches: ['codex/vega-schema-v2-*']
+    paths: ['v2/**', '.github/workflows/vega-v2-pilot.yml']
+  workflow_dispatch:
+    inputs:
+      max_matches:
+        description: Finished Ligue 1 2025/26 matches (1 to 306)
+        type: string
+        default: '1'
+permissions:
+  contents: read
+concurrency:
+  group: vega-v2-isolated-pilot
+  cancel-in-progress: false
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: isolated-v2-only
+          POSTGRES_DB: vega_v2_pilot
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PYTHONPATH: v2
+      V2_DATABASE_URL: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_pilot
+      VEGA_V2_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_test
+      VEGA_V2_JOBS_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_jobs_test
+      VEGA_V2_STORE_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_store_test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r v2/requirements.txt
+      - name: Create disposable test databases
+        run: |
+          python - <<'PY'
+          import os, psycopg
+          with psycopg.connect(os.environ['V2_DATABASE_URL'], autocommit=True) as db:
+              for name in ('vega_v2_test','vega_v2_jobs_test','vega_v2_store_test'):
+                  db.execute(psycopg.sql.SQL('CREATE DATABASE {}').format(psycopg.sql.Identifier(name)))
+          PY
+      - name: Validate typed schema, normalization and transactional ingestion
+        run: python -m unittest discover -s v2/tests -v
+      - name: Fresh PitchAPI collection into local PostgreSQL only
+        env:
+          PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
+          MATCH_INPUT: ${{ inputs.max_matches }}
+        run: |
+          scope="${MATCH_INPUT:-$(cat v2/pilot-scope.txt)}"
+          python -m vega_v2.pilot --max-matches "$scope" --report work/vega-v2-pilot.md
+      - name: Export measurements only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vega-v2-pilot-measurements
+          path: work/vega-v2-pilot.md
+          if-no-files-found: warn
+          retention-days: 14

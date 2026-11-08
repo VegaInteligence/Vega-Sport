@@ -1,0 +1,284 @@
+"""Transactional typed persistence into a dedicated local v2 PostgreSQL database."""
+from datetime import date, datetime, timezone
+import hashlib
+import json
+from pathlib import Path
+import re
+from urllib.parse import urlparse
+
+import psycopg
+from psycopg import sql
+
+from .normalize import NormalizedFamily, number
+
+FAMILY_TABLES = {
+    'shots': ('shots',), 'events': ('match_events',),
+    'lineups': ('lineups', 'lineup_players'), 'momentum': ('match_momentum',),
+    'team_stats': ('team_match_stats',), 'player_stats': ('player_match_stats',),
+    'player_halves': ('player_match_half_stats',), 'advanced': ('team_match_advanced',),
+    'advanced_players': ('player_match_advanced',),
+    'network': ('pass_network_teams', 'pass_network_nodes', 'pass_network_edges'),
+    'heatmaps': ('team_heatmaps', 'player_heatmaps'), 'h2h': ('match_h2h',),
+}
+ENTITY_TABLE = {'competition': 'competitions', 'team': 'teams', 'player': 'players',
+                'coach': 'coaches', 'referee': 'referees', 'venue': 'venues', 'match': 'matches'}
+FOREIGN_KIND = {'team_id': 'team', 'home_team_id': 'team', 'away_team_id': 'team',
+    'player_id': 'player', 'related_player_id': 'player', 'keeper_id': 'player',
+    'from_player_id': 'player', 'to_player_id': 'player', 'coach_id': 'coach',
+    'referee_id': 'referee', 'venue_id': 'venue'}
+
+
+class StoreError(RuntimeError):
+    """Messages are codes, never provider values or SQL rejected-row details."""
+
+
+def connect_local(dsn):
+    parsed = urlparse(dsn)
+    if (parsed.scheme not in ('postgres', 'postgresql') or
+            parsed.hostname not in ('127.0.0.1', 'localhost', '::1') or
+            not re.fullmatch(r'/vega_v2_[a-z0-9_]+', parsed.path) or parsed.query):
+        raise StoreError('LOCAL_V2_DATABASE_REQUIRED')
+    return psycopg.connect(dsn, autocommit=True)
+
+
+def migrate(conn, *, vector=False):
+    """Apply immutable checksummed migrations; never touch an existing legacy schema."""
+    directory = Path(__file__).resolve().parents[1] / 'sql'
+    files = sorted(p for p in directory.glob('*.sql') if vector or 'vector_optional' not in p.name)
+    with conn.transaction():
+        conn.execute("SELECT pg_advisory_xact_lock(hashtextextended('vega_v2_migrate',0))")
+        present = conn.execute("SELECT to_regclass('ops.schema_migrations')").fetchone()[0]
+        if not present and conn.execute("SELECT 1 FROM pg_namespace WHERE nspname IN ('core','agg','ops')").fetchone():
+            raise StoreError('UNMANAGED_SCHEMA')
+        applied = dict(conn.execute('SELECT version,checksum FROM ops.schema_migrations')) if present else {}
+        pending = []
+        for path in files:
+            source = path.read_text(encoding='utf-8')
+            checksum = hashlib.sha256(source.encode()).digest()
+            if path.name in applied:
+                if bytes(applied[path.name]) != checksum: raise StoreError('MIGRATION_CHECKSUM_CHANGED')
+                continue
+            conn.execute(source)
+            pending.append((path.name, checksum))
+        for version, checksum in pending:
+            conn.execute('INSERT INTO ops.schema_migrations(version,checksum) VALUES(%s,%s)', (version, checksum))
+
+
+def digest(batch):
+    # JSON is a transient canonical serializer for a hash, never a stored response.
+    value = {'coverage': batch.coverage, 'rows': batch.rows}
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':'),
+        allow_nan=False, default=lambda x: x.isoformat() if isinstance(x, (date, datetime)) else str(x)).encode()).digest()
+
+
+class Store:
+    def __init__(self, conn):
+        self.conn = conn
+        self.columns = {}
+        for table, col in conn.execute("SELECT table_name,column_name FROM information_schema.columns WHERE table_schema='core'"):
+            self.columns.setdefault(table, set()).add(col)
+        self.partitions = [r[0] for r in conn.execute("SELECT c.relname FROM pg_partitioned_table p JOIN pg_class c ON c.oid=p.partrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='core'")]
+
+    def resolve(self, kind, key):
+        if key is None: return None
+        if kind in ('coach', 'referee', 'venue'):
+            row = self.conn.execute(sql.SQL('SELECT id FROM core.{} WHERE name=%s').format(sql.Identifier(ENTITY_TABLE[kind])), (key,)).fetchone()
+        else:
+            row = self.conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type=%s AND provider='pitchapi' AND provider_key=%s", (kind, key)).fetchone()
+        if not row: raise StoreError('UNRESOLVED_REFERENCE')
+        return row[0]
+
+    def has(self, kind, key):
+        try: self.resolve(kind, key); return True
+        except StoreError: return False
+
+    def _upsert(self, table, row, conflict):
+        if table not in self.columns or set(row) - self.columns[table]: raise StoreError('UNKNOWN_COLUMN')
+        keys = list(row)
+        changed = [k for k in keys if k not in conflict]
+        action = sql.SQL('DO UPDATE SET {}').format(sql.SQL(',').join(
+            sql.SQL('{}=EXCLUDED.{}').format(sql.Identifier(k), sql.Identifier(k)) for k in changed)) if changed else sql.SQL('DO NOTHING')
+        return self.conn.execute(sql.SQL('INSERT INTO core.{} ({}) VALUES ({}) ON CONFLICT ({}) {} RETURNING id').format(
+            sql.Identifier(table), sql.SQL(',').join(map(sql.Identifier, keys)), sql.SQL(',').join(sql.Placeholder() for _ in keys),
+            sql.SQL(',').join(map(sql.Identifier, conflict)), action), list(row.values())).fetchone()
+
+    def entity(self, kind, key, fields):
+        if kind == 'match': return
+        table = ENTITY_TABLE[kind]
+        self.conn.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))', ('pitchapi:'+kind+':'+key,))
+        row = {k: v for k, v in fields.items() if k in self.columns[table] and k not in ('id', 'updated_at')}
+        for name in ('shirt_number', 'position_id'):
+            if name in row: row[name] = number(row[name], 'smallint')
+        if row.get('country_code'):
+            self.conn.execute('INSERT INTO core.countries(code) VALUES(%s) ON CONFLICT DO NOTHING', (row['country_code'],))
+        if fields.get('image_url') and kind in ('competition', 'team', 'player'):
+            asset_kind, col = {'competition': ('logo', 'logo_asset_id'), 'team': ('crest', 'crest_asset_id'), 'player': ('photo', 'photo_asset_id')}[kind]
+            aid = self.conn.execute('INSERT INTO core.assets(kind,source_url) VALUES(%s,%s) ON CONFLICT(source_url) DO UPDATE SET source_url=EXCLUDED.source_url RETURNING id', (asset_kind, fields['image_url'])).fetchone()[0]
+            row[col] = aid
+        try: ident = self.resolve(kind, key)
+        except StoreError: ident = None
+        if ident is None:
+            if not isinstance(row.get('name'), str) or not row['name'].strip(): raise StoreError('REFERENCE_NAME_REQUIRED')
+            if kind in ('coach', 'referee', 'venue'):
+                ident = self._upsert(table, row, ['name'])[0]
+            else:
+                keys = list(row)
+                ident = self.conn.execute(sql.SQL('INSERT INTO core.{} ({}) VALUES ({}) RETURNING id').format(sql.Identifier(table),
+                    sql.SQL(',').join(map(sql.Identifier, keys)), sql.SQL(',').join(sql.Placeholder() for _ in keys)), list(row.values())).fetchone()[0]
+                self.conn.execute("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES(%s,'pitchapi',%s,%s)", (kind, key, ident))
+        elif row:
+            # Omitted metadata is preserved; explicit source null remains null except required name.
+            if row.get('name', True) is None: row.pop('name')
+            self.conn.execute(sql.SQL('UPDATE core.{} SET {},updated_at=now() WHERE id=%s').format(sql.Identifier(table),
+                sql.SQL(',').join(sql.SQL('{}=%s').format(sql.Identifier(k)) for k in row)), [*row.values(), ident])
+        return ident
+
+    def references(self, batch):
+        grouped = {}
+        for ref in batch.references:
+            if ref.entity_type == 'match': continue
+            key = ref.provider_key or ref.natural_name
+            if key is None: continue
+            fields = grouped.setdefault((ref.entity_type, key), {})
+            fields.update({k: v for k, v in ref.fields.items() if v is not None})
+            if ref.natural_name: fields['name'] = ref.natural_name
+        for (kind, key), fields in sorted(grouped.items()): self.entity(kind, key, fields)
+
+    def season(self, label):
+        if not re.fullmatch(r'\d{4}(?:/\d{4})?', label): raise StoreError('INVALID_SEASON')
+        sid = self.conn.execute('INSERT INTO core.seasons(label,start_year) VALUES(%s,%s) ON CONFLICT(label) DO UPDATE SET label=EXCLUDED.label RETURNING id', (label, int(label[:4]))).fetchone()[0]
+        self.conn.execute('SELECT pg_advisory_xact_lock(92001,%s)', (sid,))
+        for table in self.partitions:
+            self.conn.execute(sql.SQL('CREATE TABLE IF NOT EXISTS core.{} PARTITION OF core.{} FOR VALUES IN ({})').format(sql.Identifier(f'{table}_s{sid}'), sql.Identifier(table), sql.Literal(sid)))
+        return sid
+
+    def edition(self, competition_id, label):
+        sid = self.season(label)
+        eid = self.conn.execute('INSERT INTO core.competition_seasons(competition_id,season_id,native_label) VALUES(%s,%s,%s) ON CONFLICT(competition_id,season_id) DO UPDATE SET native_label=EXCLUDED.native_label RETURNING id', (competition_id, sid, label)).fetchone()[0]
+        return eid, sid
+
+    def _row(self, row):
+        return {k: self.resolve(FOREIGN_KIND[k], v) if k in FOREIGN_KIND else v for k, v in row.items()}
+
+    def _bump(self, kind, ident):
+        self.conn.execute('INSERT INTO ops.resource_versions(resource_kind,resource_id) VALUES(%s,%s) ON CONFLICT(resource_kind,resource_id) DO UPDATE SET version=ops.resource_versions.version+1,updated_at=now()', (kind, ident))
+
+    def _scopes(self, mid, tables):
+        scopes = set()
+        for table in tables:
+            cols = self.columns[table]
+            if 'team_id' not in cols: continue
+            select = 'player_id,team_id' if 'player_id' in cols else 'NULL::integer,team_id'
+            scopes.update(self.conn.execute(sql.SQL('SELECT DISTINCT '+select+' FROM core.{} WHERE match_id=%s').format(sql.Identifier(table)), (mid,)))
+        return scopes
+
+    def _dirty(self, mid, edition, scopes):
+        self._bump('match', mid); self._bump('competition_season', edition); self._bump('home', 1)
+        targets = {('competition_season', None, None)}
+        for player, team in scopes:
+            if team: targets.add(('team_season', None, team)); self._bump('team', team)
+            if player and team: targets.add(('player_season', player, team)); self._bump('player', player)
+        for kind, player, team in targets:
+            self.conn.execute('INSERT INTO ops.dirty_scopes(scope_kind,player_id,team_id,competition_season_id) VALUES(%s,%s,%s,%s) ON CONFLICT(scope_kind,player_id,team_id,competition_season_id,cohort_id) DO UPDATE SET revision=ops.dirty_scopes.revision+1,queued_at=now()', (kind, player, team, edition))
+
+    def save_references(self, batch):
+        with self.conn.transaction():
+            self.references(batch)
+            for table, rows in batch.rows.items():
+                kind = {'core.competitions': 'competition', 'core.teams': 'team', 'core.players': 'player'}.get(table)
+                if kind:
+                    for row in rows: self.entity(kind, row['id'], row)
+                elif table == 'core.competition_seasons':
+                    for row in rows: self.edition(self.resolve('competition', row['competition_id']), row['native_label'])
+                else: raise StoreError('UNEXPECTED_REFERENCE_TABLE')
+
+    def save_matches(self, batch, competition_season_id):
+        """Catalogue/summary match anchors, with explicit season identity."""
+        with self.conn.transaction():
+            for source in sorted(batch.rows.get('core.matches', []), key=lambda row: row['id']):
+                self.conn.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))', ('pitchapi:match:'+source['id'],))
+                self.conn.execute("SELECT m.id FROM core.matches m JOIN core.provider_ids p ON p.entity_type='match' AND p.provider='pitchapi' AND p.entity_id=m.id WHERE p.provider_key=%s FOR UPDATE OF m", (source['id'],))
+            self.references(batch)
+            sid = self.conn.execute('SELECT season_id FROM core.competition_seasons WHERE id=%s', (competition_season_id,)).fetchone()[0]
+            ids = []
+            for source in batch.rows.get('core.matches', []):
+                key = source['id']
+                row = self._row({k: v for k, v in source.items() if k != 'id'})
+                row.update(competition_season_id=competition_season_id, season_id=sid, source='pitchapi')
+                try: mid = self.resolve('match', key)
+                except StoreError: mid = None
+                changed = True
+                old_scopes = set()
+                if mid:
+                    current = self.conn.execute('SELECT competition_season_id,season_id,home_team_id,away_team_id FROM core.matches WHERE id=%s FOR UPDATE', (mid,)).fetchone()
+                    if current[:2] != (competition_season_id, sid): raise StoreError('MATCH_SEASON_CHANGED')
+                    old_scopes = {(None, current[2]), (None, current[3])}
+                    cols = list(row)
+                    old = self.conn.execute(sql.SQL('SELECT {} FROM core.matches WHERE id=%s').format(sql.SQL(',').join(map(sql.Identifier, cols))), (mid,)).fetchone()
+                    changed = tuple(row.values()) != old
+                    if changed:
+                        self.conn.execute(sql.SQL('UPDATE core.matches SET {},revision=revision+1,updated_at=now() WHERE id=%s').format(sql.SQL(',').join(sql.SQL('{}=%s').format(sql.Identifier(k)) for k in row)), [*row.values(), mid])
+                else:
+                    cols = list(row)
+                    mid = self.conn.execute(sql.SQL('INSERT INTO core.matches ({}) VALUES ({}) RETURNING id').format(sql.SQL(',').join(map(sql.Identifier, cols)), sql.SQL(',').join(sql.Placeholder() for _ in cols)), list(row.values())).fetchone()[0]
+                    self.conn.execute("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES('match','pitchapi',%s,%s)", (key, mid))
+                if row.get('status') == 'finished':
+                    self.conn.execute('UPDATE core.matches SET first_finished_at=COALESCE(first_finished_at,now()) WHERE id=%s', (mid,))
+                self.conn.execute('INSERT INTO core.match_coverage(season_id,match_id) VALUES(%s,%s) ON CONFLICT DO NOTHING', (sid, mid))
+                for tid in (row.get('home_team_id'), row.get('away_team_id')):
+                    if tid: self.conn.execute('INSERT INTO core.team_seasons(team_id,competition_season_id) VALUES(%s,%s) ON CONFLICT DO NOTHING', (tid, competition_season_id))
+                if changed: self._dirty(mid, competition_season_id, old_scopes | {(None, row.get('home_team_id')), (None, row.get('away_team_id'))})
+                ids.append(mid)
+            return ids
+
+    def save_family(self, mid, family, batch, *, lease=None):
+        if family not in FAMILY_TABLES or batch.coverage not in ('ok', 'unavailable'): raise StoreError('INVALID_FAMILY')
+        tables = FAMILY_TABLES[family]
+        if set(batch.rows) - {'core.'+t for t in tables}: raise StoreError('UNEXPECTED_FAMILY_TABLE')
+        with self.conn.transaction():
+            if lease:
+                job_id, token = lease
+                if not self.conn.execute("SELECT id FROM ops.fetch_jobs WHERE id=%s AND lease_token=%s AND state='leased' AND lease_until>clock_timestamp() FOR UPDATE", (job_id, token)).fetchone(): raise StoreError('LEASE_LOST')
+            key = self.conn.execute("SELECT provider_key FROM core.provider_ids WHERE entity_type='match' AND provider='pitchapi' AND entity_id=%s", (mid,)).fetchone()[0]
+            self.conn.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))', ('pitchapi:match:'+key,))
+            sid, eid, home, away = self.conn.execute('SELECT season_id,competition_season_id,home_team_id,away_team_id FROM core.matches WHERE id=%s FOR UPDATE', (mid,)).fetchone()
+            self.references(batch)
+            for path in sorted(batch.unknown_paths):
+                self.conn.execute('INSERT INTO ops.unknown_fields(family,field_path) VALUES(%s,%s) ON CONFLICT(family,field_path) DO UPDATE SET last_seen_at=now(),occurrences=ops.unknown_fields.occurrences+1', (family, path))
+            fingerprint = digest(batch)
+            prior = self.conn.execute('SELECT fingerprint,status FROM ops.family_state WHERE match_id=%s AND family=%s', (mid, family)).fetchone()
+            changed = not prior or bytes(prior[0] or b'') != fingerprint or prior[1] != batch.coverage
+            if changed:
+                scopes = self._scopes(mid, tables) | {(None, home), (None, away)}
+                for table in reversed(tables): self.conn.execute(sql.SQL('DELETE FROM core.{} WHERE season_id=%s AND match_id=%s').format(sql.Identifier(table)), (sid, mid))
+                for table in tables:
+                    for item in batch.rows.get('core.'+table, []):
+                        row = self._row(item); row.update(season_id=sid, match_id=mid)
+                        if set(row)-self.columns[table]: raise StoreError('UNKNOWN_COLUMN')
+                        cols = list(row)
+                        self.conn.execute(sql.SQL('INSERT INTO core.{} ({}) VALUES ({})').format(sql.Identifier(table), sql.SQL(',').join(map(sql.Identifier, cols)), sql.SQL(',').join(sql.Placeholder() for _ in cols)), list(row.values()))
+                self.conn.execute(sql.SQL('UPDATE core.match_coverage SET {}=%s,updated_at=now() WHERE season_id=%s AND match_id=%s').format(sql.Identifier(family)), (batch.coverage, sid, mid))
+                self.conn.execute('UPDATE core.matches SET revision=revision+1,updated_at=now() WHERE id=%s', (mid,))
+                self._dirty(mid, eid, scopes | self._scopes(mid, tables))
+            self.conn.execute('INSERT INTO ops.family_state(match_id,family,fingerprint,status,last_success_at,last_attempt_at) VALUES(%s,%s,%s,%s,now(),now()) ON CONFLICT(match_id,family) DO UPDATE SET fingerprint=EXCLUDED.fingerprint,status=EXCLUDED.status,last_success_at=now(),last_attempt_at=now(),updated_at=now()', (mid, family, fingerprint, batch.coverage))
+            if lease:
+                from .jobs import ack
+                ack(self.conn, *lease)
+            return changed
+
+    def record_failure(self, mid, family, code):
+        if not re.fullmatch(r'[A-Z][A-Z0-9_]{0,63}', code): code = 'INGESTION_ERROR'
+        with self.conn.transaction():
+            self.conn.execute('INSERT INTO ops.parse_failures(family,entity_type,entity_id,error_code,message) VALUES(%s,\'match\',%s,%s,%s)', (family, mid, code, code))
+            self.conn.execute("INSERT INTO ops.family_state(match_id,family,status,last_attempt_at) VALUES(%s,%s,'error',now()) ON CONFLICT(match_id,family) DO UPDATE SET status='error',last_attempt_at=now(),updated_at=now()", (mid, family))
+            if family in FAMILY_TABLES:
+                self.conn.execute(sql.SQL("UPDATE core.match_coverage SET {}='error',updated_at=now() WHERE match_id=%s").format(sql.Identifier(family)), (mid,))
+
+    def log_attempt(self, family, event, *, entity_type=None, entity_id=None, competition_season_id=None):
+        at = event['fetched_at']
+        start = at.date().replace(day=1)
+        end = date(start.year + (start.month == 12), start.month % 12 + 1, 1)
+        with self.conn.transaction():
+            self.conn.execute('SELECT pg_advisory_xact_lock(92002,%s)', (start.year*100+start.month,))
+            self.conn.execute(sql.SQL('CREATE TABLE IF NOT EXISTS ops.{} PARTITION OF ops.fetch_log FOR VALUES FROM ({}) TO ({})').format(sql.Identifier('fetch_log_'+start.strftime('%Y%m')), sql.Literal(start.isoformat()), sql.Literal(end.isoformat())))
+            self.conn.execute('INSERT INTO ops.fetch_log(family,entity_type,entity_id,competition_season_id,http_status,error_code,request_id,duration_ms,fetched_at) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)', (family, entity_type, entity_id, competition_season_id, event['status'], event['error_code'], event['request_id'], event['duration_ms'], at))
