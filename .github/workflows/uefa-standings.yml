@@ -67,13 +67,25 @@ jobs:
           cache-dependency-path: dashboard/scripts/requirements.txt
       - run: pip install -r dashboard/scripts/requirements.txt
       - name: Load AWS staging credentials
+        id: aws
         uses: ./.github/actions/aws-database
         with:
           mode: ingest
           role-arn: ${{ vars.STATARENA_AWS_INGEST_ROLE_ARN }}
       - run: node dashboard/scripts/aws_refresh_uefa_standings.mjs
       - name: Publish normalized RDS tables from staged data
+        id: publish
         run: python dashboard/scripts/relational_materialize.py --minutes 15 --batch 10
       - name: Refresh home projections after publication
-        continue-on-error: true
-        run: node dashboard/scripts/home_projection.mjs
+        if: ${{ !cancelled() && steps.aws.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -o pipefail
+          node dashboard/scripts/home_projection.mjs | tee home-projection.json
+      - name: Save home projection receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: home-projection-${{ github.run_id }}-${{ github.run_attempt }}
+          path: home-projection.json
+          if-no-files-found: ignore

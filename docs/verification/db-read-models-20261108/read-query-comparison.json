@@ -1,0 +1,65 @@
+{
+  "date": "2026-11-08",
+  "sourceGeneration": "2024",
+  "measurement": "RDS EXPLAIN (ANALYZE, BUFFERS), SQL execution milliseconds, read-only fixed queries",
+  "protocol": "For each scope: old, new, new, old, followed by same-statement EXCEPT ALL comparison. Existing database cache state was not reset. Connection/HTTP/render time excluded.",
+  "scopes": {
+    "top24": {
+      "oldMs": [
+        1522.924,
+        1508.976
+      ],
+      "newMs": [
+        98.164,
+        98.539
+      ],
+      "rowDifferences": {
+        "old_only": "0",
+        "new_only": "0"
+      }
+    },
+    "top100": {
+      "oldMs": [
+        1699.735,
+        1616.456
+      ],
+      "newMs": [
+        324.516,
+        241.197
+      ],
+      "rowDifferences": {
+        "old_only": "0",
+        "new_only": "0"
+      }
+    },
+    "all100": {
+      "oldMs": [
+        3288.373,
+        2468.056
+      ],
+      "newMs": [
+        1932.152,
+        1144.272
+      ],
+      "rowDifferences": {
+        "old_only": "0",
+        "new_only": "0"
+      }
+    },
+    "ligue1": {
+      "oldMs": [
+        32.625,
+        31.214
+      ],
+      "newMs": [
+        29.308,
+        30.066
+      ],
+      "rowDifferences": {
+        "old_only": "0",
+        "new_only": "0"
+      }
+    }
+  },
+  "decision": "Reuse existing indexed source reads; no new aggregate table for already-cheap directory/base work. Existing player/archive/home projections remain separate from source facts and official standings."
+}
