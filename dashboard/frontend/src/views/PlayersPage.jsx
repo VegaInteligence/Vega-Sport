@@ -48,6 +48,7 @@ import { EMPTY_ADVANCED } from "../services/advanced-filters.js";
 const RADAR_POSITIONS = { G: "G", D: "D", M: "M", O: "M,A" };
 const OTHER_PROFILE_VIEWS = [
   "stats",
+  "advanced",
   "similar",
   "compare",
   "evolution",
@@ -170,14 +171,15 @@ export default function PlayersPage() {
   const needsCohort =
     f.compactMode &&
     (id
-      ? ["similar", "compare"].includes(profileView) ||
+      ? ["similar", "compare", "advanced"].includes(profileView) ||
         (((overview && radarEligible) || profileView === "stats") &&
           comparisonIntent === comparisonKey)
       : ["explore", "indices"].includes(directoryView));
   const cohort = useCompactRead("players", cohortParams, {
     enabled: needsCohort,
     allPages: true,
-    parallelPages: overview,
+    // The advanced tab ranks against the full position group, like the radar.
+    parallelPages: overview || (Boolean(id) && profileView === "advanced"),
     refreshManifest: f.refreshManifest,
   });
   const profiles = useMemo(
