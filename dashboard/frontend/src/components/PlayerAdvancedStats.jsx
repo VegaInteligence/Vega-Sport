@@ -18,6 +18,7 @@ import {
   ToneLegend,
   toneClass,
 } from "./PlayerScoutCharts.jsx";
+import { RankingTrigger } from "./RankingDialog.jsx";
 import s from "./PlayerScout.module.css";
 
 const VIEWS = [
@@ -78,8 +79,10 @@ function DistRow({ metric }) {
     <div className={s.distRow}>
       <div className={s.distLabel}>
         <strong>
-          {metric.label}
-          {metric.unit ? "" : " / 90"}
+          <RankingTrigger target={{ type: "metric", key: metric.key }}>
+            {metric.label}
+            {metric.unit ? "" : " / 90"}
+          </RankingTrigger>
         </strong>
         <small>
           Médiane {format(metric.dist[2])} · {ordinal(metric.rank)} sur{" "}

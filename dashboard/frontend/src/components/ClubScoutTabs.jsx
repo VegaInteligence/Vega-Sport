@@ -26,6 +26,7 @@ import {
   Kpis,
   LeaguePlot,
   LeagueTable,
+  mixedReferential,
   MatchRows,
   MetricTable,
   PhaseBars,
@@ -139,7 +140,7 @@ export function IdentityRail({ dossier, onTab }) {
             <small>moyenne pondérée des centiles par phase de jeu</small>
           </span>
         </div>
-        <PhaseBars dossier={dossier} phases={PHASES} />
+        <PhaseBars dossier={dossier} phases={PHASES} base />
         <button className={s.railLink} onClick={() => onTab("stats")}>
           Détail des indicateurs →
         </button>
@@ -212,116 +213,20 @@ function readings(dossier) {
   };
 }
 
-export function Overview({ dossier, onTab, base = dossier }) {
+/**
+ * Points, goals and the expected table of one competition. A mixed
+ * referential (several leagues) passes the club's own league instead: a
+ * table across leagues with different calendars would not mean anything.
+ */
+function ExpectedCard({ dossier }) {
   const self = dossier.self,
-    v = self.values,
-    total = dossier.clubs.length;
-  const { strengths, weaknesses } = readings(dossier);
-  const pizza = PERFORMANCE_KEYS.map((key) => ({
-    key,
-    label: METRICS[key].label
-      .replace(" / match", "")
-      .replace(" (hors penalty)", ""),
-    percentile: self.centiles[key],
-    value: v[key],
-    decimals: METRICS[key].digits,
-    signed: METRICS[key].signed,
-    unit: METRICS[key].unit,
-    rank: self.ranks[key],
-    peers: total,
-  }));
+    v = self.values;
   const gfDiff = self.record.gf - (v.xg ?? 0) * self.record.matches;
   const gaDiff = self.record.ga - (v.xga ?? 0) * self.record.matches;
   return (
-    <div className={c.stack}>
-      <Kpis
-        items={[
-          [
-            "Points / match",
-            fmtNum(v.ppm, 2),
-            `${ordinal(self.ranks.ppm)} / ${total}`,
-          ],
-          [
-            "Buts",
-            `${self.record.gf}–${self.record.ga}`,
-            `${fmtNum(v.goalsFor, 2)} – ${fmtNum(v.goalsAgainst, 2)} / match`,
-          ],
-          [
-            "xG pour",
-            fmtNum(v.xg, 2),
-            `${ordinal(self.ranks.xg)} du championnat`,
-          ],
-          [
-            "xG contre",
-            fmtNum(v.xga, 2),
-            `${ordinal(self.ranks.xga)} du championnat`,
-          ],
-          [
-            "Diff. xG / match",
-            fmtNum((v.xg ?? 0) - (v.xga ?? 0), 2, true),
-            "pour moins contre",
-            (v.xg ?? 0) >= (v.xga ?? 0) ? "up" : "down",
-          ],
-          [
-            "Sans encaisser",
-            `${fmtNum(v.cleanSheets)} %`,
-            `${self.rows.filter((row) => row.ga === 0).length} matchs`,
-          ],
-        ]}
-      />
-      <Card
-        title="Profil de performance"
-        text={`Centiles face aux ${total} clubs de ${dossier.league?.name || "son championnat"}. Indicateurs concédés inversés : plus la part est grande, mieux c’est.`}
-      >
-        <div className={s.profileGrid}>
-          <PercentilePizza items={pizza} cohort={total} size={520} />
-          <div className={s.profileSide}>
-            <div>
-              <h4 className={s.subTitle}>Indice Vega par phase de jeu</h4>
-              <PhaseBars dossier={dossier} phases={PHASES} />
-            </div>
-            <div className={s.reading}>
-              <div>
-                <h4>Points forts</h4>
-                <ul>
-                  {strengths.map(({ key, centile }) => (
-                    <li key={key}>
-                      <span>{METRICS[key].label}</span>
-                      <b>P{centile}</b>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h4>À surveiller</h4>
-                <ul>
-                  {weaknesses.map(({ key, centile }) => (
-                    <li key={key}>
-                      <span>{METRICS[key].label}</span>
-                      <b>P{centile}</b>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className={s.profileTags}>
-          <div className={c.tags}>
-            {styleTags(self).map((tag) => (
-              <span key={tag} className={c.tag}>
-                {tag}
-              </span>
-            ))}
-          </div>
-          <button className={s.railLink} onClick={() => onTab("style")}>
-            Voir le style de jeu →
-          </button>
-        </div>
-      </Card>
       <Card
         title="Résultats et attendus"
-        text="Les écarts entre le réel et l’attendu signalent la finition, le gardien ou la réussite : ils tendent à se résorber. À droite, le classement si chaque match s’était joué selon ses xG."
+        text={`Les écarts entre le réel et l’attendu signalent la finition, le gardien ou la réussite : ils tendent à se résorber. À droite, le classement de ${dossier.league?.name || "son championnat"} si chaque match s’était joué selon ses xG.`}
       >
         <div className={s.expectedGrid}>
           <div className={c.stack}>
@@ -372,6 +277,115 @@ export function Overview({ dossier, onTab, base = dossier }) {
           <LeagueTable dossier={dossier} sort="xpts" compact window={10} />
         </div>
       </Card>
+  );
+}
+
+export function Overview({ dossier, onTab, base = dossier }) {
+  const self = dossier.self,
+    v = self.values,
+    total = dossier.clubs.length;
+  const { strengths, weaknesses } = readings(dossier);
+  const pizza = PERFORMANCE_KEYS.map((key) => ({
+    key,
+    label: METRICS[key].label
+      .replace(" / match", "")
+      .replace(" (hors penalty)", ""),
+    percentile: self.centiles[key],
+    value: v[key],
+    decimals: METRICS[key].digits,
+    signed: METRICS[key].signed,
+    unit: METRICS[key].unit,
+    rank: self.ranks[key],
+    peers: total,
+  }));
+  return (
+    <div className={c.stack}>
+      <Kpis
+        items={[
+          [
+            "Points / match",
+            fmtNum(v.ppm, 2),
+            `${ordinal(self.ranks.ppm)} / ${total}`,
+          ],
+          [
+            "Buts",
+            `${self.record.gf}–${self.record.ga}`,
+            `${fmtNum(v.goalsFor, 2)} – ${fmtNum(v.goalsAgainst, 2)} / match`,
+          ],
+          [
+            "xG pour",
+            fmtNum(v.xg, 2),
+            `${ordinal(self.ranks.xg)} / ${total}`,
+          ],
+          [
+            "xG contre",
+            fmtNum(v.xga, 2),
+            `${ordinal(self.ranks.xga)} / ${total}`,
+          ],
+          [
+            "Diff. xG / match",
+            fmtNum((v.xg ?? 0) - (v.xga ?? 0), 2, true),
+            "pour moins contre",
+            (v.xg ?? 0) >= (v.xga ?? 0) ? "up" : "down",
+          ],
+          [
+            "Sans encaisser",
+            `${fmtNum(v.cleanSheets)} %`,
+            `${self.rows.filter((row) => row.ga === 0).length} matchs`,
+          ],
+        ]}
+      />
+      <Card
+        title="Profil de performance"
+        text={`Centiles face aux ${total} clubs du référentiel (${dossier.league?.name || "son championnat"}). Indicateurs concédés inversés : plus la part est grande, mieux c’est.`}
+      >
+        <div className={s.profileGrid}>
+          <PercentilePizza items={pizza} cohort={total} size={520} />
+          <div className={s.profileSide}>
+            <div>
+              <h4 className={s.subTitle}>Indice Vega par phase de jeu</h4>
+              <PhaseBars dossier={dossier} phases={PHASES} />
+            </div>
+            <div className={s.reading}>
+              <div>
+                <h4>Points forts</h4>
+                <ul>
+                  {strengths.map(({ key, centile }) => (
+                    <li key={key}>
+                      <span>{METRICS[key].label}</span>
+                      <b>P{centile}</b>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h4>À surveiller</h4>
+                <ul>
+                  {weaknesses.map(({ key, centile }) => (
+                    <li key={key}>
+                      <span>{METRICS[key].label}</span>
+                      <b>P{centile}</b>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={s.profileTags}>
+          <div className={c.tags}>
+            {styleTags(self).map((tag) => (
+              <span key={tag} className={c.tag}>
+                {tag}
+              </span>
+            ))}
+          </div>
+          <button className={s.railLink} onClick={() => onTab("style")}>
+            Voir le style de jeu →
+          </button>
+        </div>
+      </Card>
+      <ExpectedCard dossier={mixedReferential(dossier) ? base : dossier} />
       <div className={c.grid2}>
         <Card
           title="Derniers matchs"
@@ -505,7 +519,7 @@ export function Style({ dossier }) {
         <div className={c.stack}>
           <Card
             title="Identité de jeu"
-            text="Position du club sur chaque axe de style, parmi les clubs du championnat (traits gris)."
+            text="Position du club sur chaque axe de style, parmi les clubs du référentiel (traits gris)."
           >
             {tags.length > 0 && (
               <div className={c.tags} style={{ marginBottom: 18 }}>
@@ -559,7 +573,7 @@ export function Style({ dossier }) {
         <div className={c.stack}>
           <Card
             title="Carte des styles"
-            text="Possession et intensité du pressing de chaque club du championnat."
+            text="Possession et intensité du pressing de chaque club du référentiel."
           >
             <LeaguePlot
               dossier={dossier}
