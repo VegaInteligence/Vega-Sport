@@ -6,6 +6,8 @@ import { similarPlayers, SCOUT_METRICS } from "../services/scouting.js";
 import { number } from "../services/format.js";
 import { Empty, Media } from "./UI.jsx";
 import { BookmarkButton, ComparePlayerButton } from "./ResearchUI.jsx";
+import { PercentileBar } from "./PlayerScoutCharts.jsx";
+import scout from "./PlayerScout.module.css";
 export default function PlayerSimilarity({ profile, cohorts }) {
   const f = useFootball();
   const similar = useMemo(
@@ -14,82 +16,83 @@ export default function PlayerSimilarity({ profile, cohorts }) {
   );
   return similar.length ? (
     <>
-      <div className="research-context">
-        <span>
-          {profile.role?.label} · {cohorts.minMinutes} minutes minimum ·
-          proximité des centiles
-        </span>
+      <div className={scout.sectionHead}>
+        <div>
+          <h2 className={scout.similarTitle}>Profils similaires</h2>
+          <p className={scout.similarIntro}>
+            {profile.role?.label} · {cohorts.minMinutes} minutes minimum ·
+            proximité des centiles sur les indicateurs communs
+          </p>
+        </div>
       </div>
-      <div className="research-similar-grid">
-        {similar.map((item) => (
-          <article className="research-similar" key={item.profile.id}>
-            <div className="research-similar-heading">
-              <Media
-                name={item.profile.name}
-                url={item.profile.imageUrl}
-                className="player-avatar"
-              />
-              <Link
-                href={f.href("/joueurs/", {
-                  id: item.profile.id,
-                  q: "",
-                  rmin: "",
-                  stats: "",
-                  minutes: "1",
-                  playerView: "overview",
-                })}
-              >
-                <strong>{item.profile.name}</strong>
-                <small>{item.profile.teams.join(" · ")}</small>
-              </Link>
-              <span
-                className="research-index-score"
-                title="100 moins l’écart moyen des centiles, sur les indicateurs communs. Ce n’est pas une probabilité."
-              >
-                {number(item.similarity, 1)}
-                <small>proximité / 100</small>
-              </span>
-            </div>
-            <div className="research-context">
-              <span>
-                {number(item.profile.minutes)} min · {item.parts.length}{" "}
-                indicateurs communs
-              </span>
-            </div>
-            <details>
-              <summary>Indicateurs les plus proches</summary>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Indicateur / 90 ou %</th>
-                    <th>{profile.name}</th>
-                    <th>{item.profile.name}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {item.parts.slice(0, 4).map((part) => (
-                    <tr key={part.key}>
-                      <th>{SCOUT_METRICS[part.key].label}</th>
-                      <td>{number(part.target, 2)}</td>
-                      <td>{number(part.other, 2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </details>
-            <div className="research-toolbar">
-              <ComparePlayerButton profile={item.profile} season={f.season} />
-              <BookmarkButton
-                kind="players"
-                id={item.profile.id}
-                name={item.profile.name}
-                imageUrl={item.profile.imageUrl}
-                season={f.season}
-                compact
-              />
-            </div>
-          </article>
-        ))}
+      <div className={scout.similarGrid}>
+        {similar.map((item) => {
+          const score = Math.round(item.similarity);
+          const gap = item.parts.at(-1);
+          return (
+            <article className={scout.similar} key={item.profile.id}>
+              <div className={scout.similarHead}>
+                <Media
+                  name={item.profile.name}
+                  url={item.profile.imageUrl}
+                  className="player-avatar"
+                />
+                <Link
+                  className={scout.similarName}
+                  href={f.href("/joueurs/", {
+                    id: item.profile.id,
+                    q: "",
+                    rmin: "",
+                    stats: "",
+                    minutes: "1",
+                    playerView: "overview",
+                  })}
+                >
+                  <strong>{item.profile.name}</strong>
+                  <small>{item.profile.teams.join(" · ")}</small>
+                </Link>
+                <span
+                  className={scout.similarScore}
+                  title="100 moins l’écart moyen des centiles, sur les indicateurs communs. Ce n’est pas une probabilité."
+                >
+                  <b>{number(item.similarity, 1)}</b>
+                  <small>proximité / 100</small>
+                </span>
+              </div>
+              <PercentileBar value={score} />
+              <div className={scout.similarMeta}>
+                <span>
+                  <b>{number(item.profile.minutes)}</b> min
+                </span>
+                <span>
+                  <b>{item.parts.length}</b> indicateurs communs
+                </span>
+              </div>
+              <div className={scout.tags}>
+                {item.parts.slice(0, 3).map((part) => (
+                  <span key={part.key}>{SCOUT_METRICS[part.key].label}</span>
+                ))}
+              </div>
+              {gap && (
+                <p className={scout.gap}>
+                  Écart principal : {SCOUT_METRICS[gap.key].label} (
+                  {number(gap.target, 2)} contre {number(gap.other, 2)})
+                </p>
+              )}
+              <div className="research-toolbar">
+                <ComparePlayerButton profile={item.profile} season={f.season} />
+                <BookmarkButton
+                  kind="players"
+                  id={item.profile.id}
+                  name={item.profile.name}
+                  imageUrl={item.profile.imageUrl}
+                  season={f.season}
+                  compact
+                />
+              </div>
+            </article>
+          );
+        })}
       </div>
     </>
   ) : (

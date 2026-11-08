@@ -173,8 +173,9 @@ export default function PlayersPage() {
   const cohort = useCompactRead("players", cohortParams, {
     enabled: needsCohort,
     allPages: true,
-    // The advanced tab ranks against the full position group, like the radar.
-    parallelPages: overview || (Boolean(id) && profileView === "advanced"),
+    // Profile cohorts (and the all-positions comparison) read a bounded
+    // pair of pages at a time.
+    parallelPages: Boolean(id),
     refreshManifest: f.refreshManifest,
   });
   const profiles = useMemo(

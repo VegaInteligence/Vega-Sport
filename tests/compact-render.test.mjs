@@ -795,7 +795,8 @@ test("player overview defers the complete matching peer lines without filtering 
   request = reads.find(({ options }) => options.enabled);
   assert.equal(request.params.pos, "M,A");
   assert.equal(request.params.leagues, "all");
-  assert.equal(request.options.parallelPages, false);
+  // Same cohort as the overview, read with the same bounded parallelism.
+  assert.equal(request.options.parallelPages, true);
   reads.length = 0;
   view = "compare";
   renderToStaticMarkup(h(mod.default));

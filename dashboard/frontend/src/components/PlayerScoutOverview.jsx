@@ -5,7 +5,9 @@ import {
   cohortTraits,
   roleAssessments,
   SCOUT_METRICS,
+  similarPlayers,
 } from "../services/scouting.js";
+import { normalizeText } from "../services/format.js";
 import {
   aggregateSeason,
   seasonMetric,
@@ -20,6 +22,8 @@ import {
   PercentileBadge,
   PercentileBar,
   PercentilePizza,
+  RadarChart,
+  SeriesLegend,
   TipBody,
   ToneLegend,
   toneClass,
@@ -637,6 +641,357 @@ export function PlayerGames({ profile, matches }) {
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+const MODE_LABELS = {
+  total: "Total",
+  per90: "Par 90 ou %",
+  perMatch: "Par match ou %",
+};
+
+/** Version C statistics: one table per family with value, median, a
+ *  percentile bar, the percentile and the rank in the position cohort. */
+export function PlayerScoutStats({ profile, cohorts, mode, ready }) {
+  const group = profile.role?.group;
+  const sections = seasonSections(group);
+  if (!ready)
+    return (
+      <p className={s.note} role="status">
+        Chargement des joueurs du même poste…
+      </p>
+    );
+  return (
+    <div className={s.overview}>
+      <div className={s.block}>
+        <ToneLegend />
+      </div>
+      {sections.map((section) => {
+        const rows = section.keys.filter((key) => SCOUT_METRICS[key]);
+        const ranked = rows
+          .map((key) => advancedMetric(profile, key, cohorts))
+          .filter(Boolean);
+        const average = ranked.length
+          ? Math.round(
+              ranked.reduce((sum, item) => sum + item.percentile, 0) /
+                ranked.length,
+            )
+          : null;
+        return (
+          <section className={s.block} key={section.id}>
+            <div className={s.sectionHead}>
+              <h2>{section.title}</h2>
+              <p>
+                {average == null ? "Non classé" : `Centile moyen ${average}`}
+              </p>
+            </div>
+            <div className={s.tableCard}>
+              <div className="table-scroll">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Indicateur</th>
+                      <th className={s.num}>{MODE_LABELS[mode]}</th>
+                      <th className={s.num}>Médiane / 90</th>
+                      <th>Position dans la cohorte</th>
+                      <th className={s.num}>Centile</th>
+                      <th className={s.num}>Rang</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((key) => {
+                      const definition = SCOUT_METRICS[key];
+                      const metric = advancedMetric(profile, key, cohorts);
+                      const value = seasonMetric(profile, key, mode).value;
+                      const decimals =
+                        mode === "total" && !definition.ratio
+                          ? definition.decimals || 0
+                          : definition.unit
+                            ? 1
+                            : 2;
+                      return (
+                        <tr key={key}>
+                          <th scope="row">
+                            {label(key)}
+                            {definition.lowerIsBetter && (
+                              <span style={{ color: "var(--muted)" }}>
+                                {" "}
+                                · moins = mieux
+                              </span>
+                            )}
+                          </th>
+                          <td className={s.num}>
+                            {fmt(value, decimals, {
+                              unit: definition.unit || "",
+                            })}
+                          </td>
+                          <td
+                            className={s.num}
+                            style={{ color: "var(--muted)" }}
+                          >
+                            {metric
+                              ? fmt(metric.dist[2], metric.decimals, {
+                                  unit: metric.unit,
+                                })
+                              : "—"}
+                          </td>
+                          <td className={s.barCell}>
+                            {metric ? (
+                              <PercentileBar value={metric.percentile} />
+                            ) : (
+                              <span style={{ color: "var(--muted-light)" }}>
+                                Non classé
+                              </span>
+                            )}
+                          </td>
+                          <td className={s.num}>
+                            {metric ? (
+                              <PercentileBadge
+                                value={metric.percentile}
+                                label={String(metric.percentile)}
+                              />
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className={s.num}>
+                            {metric ? (
+                              <>
+                                {metric.rank === 1 ? "1er" : `${metric.rank}e`}
+                                <span style={{ color: "var(--muted-light)" }}>
+                                  {" "}
+                                  / {metric.peers}
+                                </span>
+                              </>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+const SERIES = [
+  "var(--mq-series-1)",
+  "var(--mq-series-2)",
+  "var(--mq-series-3)",
+];
+
+/** Version C comparison: up to two peers from the position cohort, overlaid
+ *  on the percentile radar and listed side by side. */
+export function PlayerScoutCompare({ profile, cohorts, ready, children }) {
+  const group = profile.role?.group;
+  const peers = cohorts.groups.get(group)?.profiles || [];
+  const suggestions = useMemo(
+    () => similarPlayers(profile, cohorts, 6).map((item) => item.profile),
+    [profile, cohorts],
+  );
+  const [chosen, setChosen] = useState(null);
+  const [search, setSearch] = useState("");
+  const selected = (chosen ?? suggestions.slice(0, 1).map((p) => p.id))
+    .map((id) => peers.find((item) => item.id === id))
+    .filter(Boolean);
+  const needle = normalizeText(search).trim();
+  const matches =
+    needle.length >= 2
+      ? peers
+          .filter(
+            (item) =>
+              item.id !== profile.id &&
+              !selected.some((other) => other.id === item.id) &&
+              normalizeText(item.name).includes(needle),
+          )
+          .slice(0, 6)
+      : [];
+  const players = [profile, ...selected];
+  const keys = (PIZZA_KEYS[group] || PIZZA_KEYS.O).filter(
+    (key) => advancedMetric(profile, key, cohorts) != null,
+  );
+  const percentileOf = (player, key) =>
+    advancedMetric(player, key, cohorts)?.percentile ?? null;
+  // The radar only plots axes ranked for every player: an unranked metric
+  // must not read as a zero.
+  const shared = keys.filter((key) =>
+    players.every((player) => percentileOf(player, key) != null),
+  );
+  const series = players.map((player, index) => ({
+    name: player.name,
+    color: SERIES[index],
+    values: Object.fromEntries(
+      shared.map((key) => [key, percentileOf(player, key)]),
+    ),
+  }));
+  const ids = selected.map((item) => item.id);
+  const setIds = (next) => setChosen(next);
+  if (!ready)
+    return (
+      <p className={s.note} role="status">
+        Chargement des joueurs du même poste…
+      </p>
+    );
+  return (
+    <div className={s.overview}>
+      <section className={s.block}>
+        <div className={s.sectionHead}>
+          <div>
+            <h2>Joueurs comparés</h2>
+            <p>
+              Jusqu’à trois profils · centiles face aux {peers.length}{" "}
+              {profile.role?.peers || "joueurs du même poste"}
+            </p>
+          </div>
+        </div>
+        <div className={s.slots}>
+          {players.map((player, index) => (
+            <div
+              className={s.slot}
+              key={player.id}
+              style={{ "--tone": SERIES[index] }}
+            >
+              <div>
+                <strong>{player.name}</strong>
+                <small>
+                  {player.teams.join(" · ")} · {number(player.minutes)} min
+                  {index === 0 ? " · joueur de base" : ""}
+                </small>
+              </div>
+              {index > 0 && (
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  aria-label={`Retirer ${player.name}`}
+                  onClick={() =>
+                    setIds(ids.filter((value) => value !== player.id))
+                  }
+                >
+                  Retirer
+                </button>
+              )}
+            </div>
+          ))}
+          {selected.length < 2 && (
+            <div className={s.slotSearch}>
+              <input
+                type="search"
+                aria-label="Rechercher un joueur à comparer"
+                placeholder="Ajouter un joueur du même poste…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              <div className={s.quickPicks}>
+                {(matches.length
+                  ? matches
+                  : suggestions.filter((item) => !ids.includes(item.id))
+                )
+                  .slice(0, 5)
+                  .map((item) => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      onClick={() => {
+                        setIds([...ids, item.id]);
+                        setSearch("");
+                      }}
+                    >
+                      {item.name}
+                    </button>
+                  ))}
+              </div>
+              {!matches.length && needle.length < 2 && (
+                <p className={s.note}>Profils proches suggérés</p>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+      {keys.length >= 3 ? (
+        <section className={`${s.block} ${s.grid2}`}>
+          <Card
+            title="Radar de centiles"
+            text={`${shared.length} indicateurs classés pour tous les joueurs comparés`}
+          >
+            {shared.length >= 3 ? (
+              <>
+                <RadarChart
+                  axes={shared.map((key) => ({ key, label: label(key) }))}
+                  series={series}
+                  showValues={false}
+                  size={460}
+                />
+                <SeriesLegend series={series} />
+              </>
+            ) : (
+              <p className={s.note}>
+                Moins de trois indicateurs sont classés pour tous ces joueurs :
+                comparez-les dans le tableau.
+              </p>
+            )}
+          </Card>
+          <div className={s.tableCard} style={{ alignSelf: "start" }}>
+            <div className="table-scroll">
+              <table className="data-table" style={{ minWidth: 420 }}>
+                <thead>
+                  <tr>
+                    <th>Indicateur</th>
+                    {players.map((player) => (
+                      <th key={player.id} className={s.num}>
+                        {player.name}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {keys.map((key) => {
+                    const values = players.map((player) =>
+                      percentileOf(player, key),
+                    );
+                    const best = Math.max(
+                      ...values.filter((value) => value != null),
+                    );
+                    return (
+                      <tr key={key}>
+                        <th scope="row">{label(key)}</th>
+                        {values.map((value, index) => (
+                          <td
+                            key={players[index].id}
+                            className={s.num}
+                            style={
+                              value === best
+                                ? {
+                                    color: "var(--ink-strong)",
+                                    fontWeight: 700,
+                                  }
+                                : undefined
+                            }
+                          >
+                            {value ?? "—"}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <p className={`${s.block} ${s.note}`}>
+          Pas assez d’indicateurs classés pour comparer ce joueur.
+        </p>
+      )}
+      {children}
     </div>
   );
 }
