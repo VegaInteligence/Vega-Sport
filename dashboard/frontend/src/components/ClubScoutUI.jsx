@@ -4,6 +4,7 @@ import Link from "next/link";
 import Icon from "./Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { PercentileBar, toneVar } from "./PlayerScoutCharts.jsx";
+import { RankingTrigger } from "./RankingDialog.jsx";
 import {
   METRICS,
   SITUATION_LABELS,
@@ -231,8 +232,10 @@ export function MetricTable({ dossier, keys, club = dossier.self, caption }) {
             return (
               <tr key={key}>
                 <th scope="row">
-                  {metric.label}
-                  {metric.better === -1 ? " ↓" : ""}
+                  <RankingTrigger target={{ type: "metric", key }}>
+                    {metric.label}
+                    {metric.better === -1 ? " ↓" : ""}
+                  </RankingTrigger>
                   <Info text={metric.info} />
                 </th>
                 <td>
@@ -269,7 +272,12 @@ export function MetricTable({ dossier, keys, club = dossier.self, caption }) {
 
 /* --------------------------------------------------------- phase bars */
 
-export function PhaseBars({ dossier, phases, club = dossier.self }) {
+export function PhaseBars({
+  dossier,
+  phases,
+  club = dossier.self,
+  base = false,
+}) {
   const total = dossier.clubs.length;
   return (
     <div className={s.phases}>
@@ -284,7 +292,9 @@ export function PhaseBars({ dossier, phases, club = dossier.self }) {
         return (
           <div className={s.phase} key={phase.key}>
             <span>
-              {phase.label}
+              <RankingTrigger target={{ type: "phase", key: phase.key, base }}>
+                {phase.label}
+              </RankingTrigger>
               <small>
                 {rank ? `${ordinal(rank)} sur ${total}` : "non classé"}
               </small>
@@ -1350,7 +1360,19 @@ export function LeagueTable({
         </caption>
         <thead>
           <tr>
-            <th scope="col">Club</th>
+            <th scope="col">
+              {sort === "xpts" ? "Rang aux xPts · club" : "Club"}
+            </th>
+            <th
+              scope="col"
+              title={
+                sort === "xpts"
+                  ? "Rang au classement réel (points)"
+                  : "Rang aux points attendus"
+              }
+            >
+              {sort === "xpts" ? "Réel" : "xPts"}
+            </th>
             <th scope="col">MJ</th>
             <th scope="col">Pts</th>
             <th scope="col">xPts</th>
@@ -1378,6 +1400,24 @@ export function LeagueTable({
                     {club.name}
                   </span>
                 </th>
+                <td className={s.muted}>
+                  {sort === "xpts" ? club.position : club.xptsPosition}
+                  {sort === "xpts" && club.position !== club.xptsPosition && (
+                    <small
+                      className={
+                        club.position < club.xptsPosition ? s.up : s.down
+                      }
+                      title={
+                        club.position < club.xptsPosition
+                          ? "Mieux classé que ses points attendus"
+                          : "Moins bien classé que ses points attendus"
+                      }
+                    >
+                      {" "}
+                      {club.position < club.xptsPosition ? "▲" : "▼"}
+                    </small>
+                  )}
+                </td>
                 <td>{club.record.matches}</td>
                 <td>{club.record.points}</td>
                 <td>{fmtNum(club.xptsTotal, 1)}</td>
@@ -1388,6 +1428,82 @@ export function LeagueTable({
                   <td>{fmtNum(club.record.gf - club.record.ga, 0, true)}</td>
                 )}
                 {!compact && <td>{fmtNum(xgd(club), 1, true)}</td>}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Several leagues in one pool: totals and table positions do not compare. */
+export const mixedReferential = (dossier) => {
+  const ref = dossier.referential;
+  return Boolean(ref && (ref.europe || ref.multi || ref.inserted));
+};
+
+/**
+ * Expected table of a mixed referential. Leagues differ in calendar and
+ * size, so no cross-league position: each club's gap to its expected points
+ * per match (comparable everywhere), with its positions in its own league.
+ */
+export function ExpectedGapTable({ dossier }) {
+  const per = (club, value) => value / (club.record.matches || 1);
+  const gap = (club) => per(club, club.record.points - club.xptsTotal);
+  const rows = [...dossier.clubs].sort((a, b) => gap(b) - gap(a));
+  return (
+    <div className={s.tableScroll}>
+      <table className={s.table}>
+        <caption className="sr-only">
+          Écart aux points attendus par match, et classements dans chaque
+          championnat
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Club</th>
+            <th scope="col" title="Rang réel · rang aux points attendus, dans son championnat">
+              Champ. réel · xPts
+            </th>
+            <th scope="col">MJ</th>
+            <th scope="col">Pts / m</th>
+            <th scope="col">xPts / m</th>
+            <th scope="col" title="Points moins points attendus, par match">
+              Écart / m
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((club, i) => {
+            const g = gap(club);
+            return (
+              <tr key={club.id} data-self={club.id === dossier.id}>
+                <th scope="row">
+                  <span className={s.clubCell}>
+                    <span
+                      className={s.muted}
+                      style={{ width: 18, textAlign: "right" }}
+                    >
+                      {i + 1}
+                    </span>
+                    <Crest club={club} />
+                    <span>
+                      {club.name}
+                      <small className={s.muted}> · {club.league?.name}</small>
+                    </span>
+                  </span>
+                </th>
+                <td className={s.muted}>
+                  {club.leaguePosition
+                    ? `${ordinal(club.leaguePosition)} · ${ordinal(club.leagueXptsPosition)}`
+                    : "—"}
+                </td>
+                <td>{club.record.matches}</td>
+                <td>{fmtNum(per(club, club.record.points), 2)}</td>
+                <td>{fmtNum(per(club, club.xptsTotal), 2)}</td>
+                <td className={g > 0 ? s.up : g < 0 ? s.down : undefined}>
+                  {fmtNum(g, 2, true)}
+                </td>
               </tr>
             );
           })}

@@ -9,7 +9,9 @@ import {
   Card,
   Kpis,
   LeaguePlot,
+  ExpectedGapTable,
   LeagueTable,
+  mixedReferential,
   MetricTable,
   MirrorBars,
   ShotPair,
@@ -33,7 +35,7 @@ export function Synthesis({ dossier }) {
     <Section>
       <div className={s.synthesis}>
         <Card
-          title="Carte du championnat"
+          title="Carte du référentiel"
           text="xG créés et concédés par match. En haut à droite : les équipes qui dominent leurs matchs."
         >
           <LeaguePlot
@@ -316,7 +318,7 @@ export function Finishing({ dossier }) {
           [
             "Buts − xG",
             fmtNum((self.values.finishing ?? 0) * n, 1, true),
-            `${ordinal(self.ranks.finishing)} du championnat`,
+            `${ordinal(self.ranks.finishing)} sur ${dossier.clubs.length}`,
             (self.values.finishing ?? 0) >= 0 ? "up" : "down",
           ],
           [
@@ -328,7 +330,7 @@ export function Finishing({ dossier }) {
           [
             "Buts évités (gardien)",
             fmtNum((self.values.keeper ?? 0) * n, 1, true),
-            `${ordinal(self.ranks.keeper)} du championnat`,
+            `${ordinal(self.ranks.keeper)} sur ${dossier.clubs.length}`,
             (self.values.keeper ?? 0) >= 0 ? "up" : "down",
           ],
           [
@@ -371,6 +373,17 @@ export function Finishing({ dossier }) {
 
 export function Standings({ dossier }) {
   const [sort, setSort] = useState("points");
+  if (mixedReferential(dossier))
+    return (
+      <Section>
+        <Card
+          title="Écart aux points attendus, par match"
+          text="Les championnats n’ont ni le même calendrier ni le même nombre de clubs : pas de classement commun. Chaque club est lu par match, avec ses rangs réel et attendu dans son propre championnat."
+        >
+          <ExpectedGapTable dossier={dossier} />
+        </Card>
+      </Section>
+    );
   return (
     <Section>
       <Card

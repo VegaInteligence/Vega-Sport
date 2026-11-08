@@ -294,6 +294,175 @@ export function useReferential(leagues) {
   );
 }
 
+/* ------------------------------------------------------ Europe (DEMO) */
+
+/**
+ * LOCAL DEMO: the European pool is read from public/demo/europe-clubs.json,
+ * built by scripts/demo-europe-clubs.mjs. It stands in for the server-side
+ * aggregate a release needs (one read instead of ~130).
+ *
+ * Level of a club, in xG difference per match (Premier League average = 0),
+ * half from the season, half from the long run:
+ *  - season: league offset + 0.8 × xG difference per match in its league;
+ *  - long run: 0.6 × ln(UEFA five-year club coefficient / 15). Unranked
+ *    clubs take 70 % of their association's floor (20 % of its coefficient).
+ * Offsets and floors are demo calibrations, to be fitted on results.
+ */
+export const EUROPE_LEVELS = {
+  ENG: 0,
+  ESP: -0.2,
+  ITA: -0.25,
+  GER: -0.25,
+  FRA: -0.45,
+  POR: -0.85,
+  NED: -0.9,
+};
+const ASSOCIATION_FLOOR = {
+  ENG: 23,
+  ITA: 19.6,
+  ESP: 18.4,
+  GER: 17.6,
+  FRA: 14.5,
+  NED: 12.8,
+  POR: 12.4,
+};
+const OTHER_LEVEL = -1.2;
+function levelScore(country, xgd, coefficient) {
+  const season = (EUROPE_LEVELS[country] ?? OTHER_LEVEL) + 0.8 * (xgd ?? 0);
+  const coef = coefficient ?? (ASSOCIATION_FLOOR[country] ?? 7) * 0.7;
+  return 0.5 * season + 0.5 * 0.6 * Math.log(coef / 15);
+}
+export const LEVEL_PEERS = 30;
+
+function europeLoad() {
+  return cachedLoad("demo|europe", async () => {
+    const response = await fetch("/demo/europe-clubs.json");
+    if (!response.ok)
+      throw new Error(
+        "Agrégat européen de démo absent : lancez node scripts/demo-europe-clubs.mjs.",
+      );
+    const data = await response.json();
+    const byClub = new Map();
+    for (const m of data.matches)
+      for (const id of [m.home.id, m.away.id]) {
+        if (!byClub.has(id)) byClub.set(id, []);
+        byClub.get(id).push(m);
+      }
+    const summaries = new Map(
+      [...byClub].map(([id, matches]) => [id, { matches }]),
+    );
+    const uefa = data.uefa.map((c) => c.id);
+    const strength = new Map(),
+      clubs = [];
+    for (const league of data.leagues) {
+      const members = data.clubs
+        .filter((c) => c.leagueId === league.id)
+        .map((c) => ({ ...c, league }));
+      // League matches set the level; league + UEFA matches are ranked.
+      const domestic = buildCohort({ league, cohortClubs: members, summaries });
+      for (const club of domestic.clubs)
+        strength.set(club.id, {
+          score: levelScore(
+            league.country,
+            (club.values.xg ?? 0) - (club.values.xga ?? 0),
+            members.find((m) => m.id === club.id)?.uefaCoefficient,
+          ),
+          coefficient:
+            members.find((m) => m.id === club.id)?.uefaCoefficient ?? null,
+          position: club.position,
+          xptsPosition: club.xptsPosition,
+          league,
+        });
+      const european = buildCohort({
+        league,
+        cohortClubs: members,
+        summaries,
+        scope: new Set([league.id, ...uefa]),
+      });
+      for (const club of european.clubs) {
+        club.strength = strength.get(club.id)?.score ?? null;
+        club.leaguePosition = strength.get(club.id)?.position ?? null;
+        club.leagueXptsPosition = strength.get(club.id)?.xptsPosition ?? null;
+        club.coefficient = strength.get(club.id)?.coefficient ?? null;
+      }
+      clubs.push(...european.clubs);
+    }
+    return { season: data.season, builtAt: data.builtAt, clubs, strength };
+  });
+}
+
+/** DEMO European pool (Top 7 leagues, league + UEFA matches). */
+export function useEuropePool(enabled = true) {
+  return useCachedState(enabled ? "demo|europe" : null, () => europeLoad());
+}
+
+/** Level of any club: from the pool, else from its own league values. */
+export function clubStrength(dossier, pool) {
+  return (
+    pool?.strength.get(dossier.id)?.score ??
+    levelScore(
+      dossier.league?.country,
+      (dossier.self.values.xg ?? 0) - (dossier.self.values.xga ?? 0),
+      null,
+    )
+  );
+}
+
+/** The LEVEL_PEERS clubs of the pool closest to a level, one club left out. */
+function nearestClubs(pool, score, except) {
+  return pool.clubs
+    .filter((club) => club.id !== except && club.strength != null)
+    .sort((a, b) => Math.abs(a.strength - score) - Math.abs(b.strength - score))
+    .slice(0, LEVEL_PEERS);
+}
+
+/**
+ * Club ids of comparable level for a player's club (the club included), or
+ * null when the club is outside the European pool.
+ */
+export function levelPeerClubs(pool, clubId) {
+  const score = pool?.strength.get(clubId)?.score;
+  if (score == null) return null;
+  const clubs = nearestClubs(pool, score, clubId);
+  return {
+    ids: new Set([clubId, ...clubs.map((club) => club.id)]),
+    clubs,
+    leagues: new Set(clubs.map((club) => club.league?.id)).size,
+  };
+}
+
+/**
+ * Dossier ranked against Europe: every club of the pool, or only the
+ * LEVEL_PEERS clubs whose level is closest to this one.
+ */
+export function europeReferential(dossier, pool, { level = false } = {}) {
+  const score = clubStrength(dossier, pool);
+  const own = pool.clubs.find((club) => club.id === dossier.id);
+  let clubs = pool.clubs;
+  if (level) {
+    clubs = nearestClubs(pool, score, dossier.id);
+    if (own) clubs = [...clubs, own];
+  }
+  const levels = clubs.map((club) => club.strength).filter((v) => v != null);
+  const view = rebase(
+    dossier,
+    [{ clubs }],
+    level ? "Europe · niveau comparable" : "Top 7 Europe + UEFA",
+    {
+      perMatch: true,
+      multi: true,
+      meta: {
+        europe: true,
+        level,
+        strength: score,
+        range: [Math.min(...levels), Math.max(...levels)],
+        leagues: new Set(clubs.map((club) => club.league?.id)).size,
+      },
+    },
+  );
+  return view;
+}
+
 /** Every competition published for the season, international ones included. */
 export function useSeasonCompetitions() {
   const { manifest, season } = usePublication();
@@ -379,7 +548,10 @@ export function teamRows(matches, clubId, leagueId = null) {
       (m) =>
         m.status === "finished" &&
         (m.home?.id === clubId || m.away?.id === clubId) &&
-        (!leagueId || m.leagueId === leagueId) &&
+        (!leagueId ||
+          (leagueId instanceof Set
+            ? leagueId.has(m.leagueId)
+            : m.leagueId === leagueId)) &&
         Number.isInteger(m.home.score) &&
         Number.isInteger(m.away.score),
     )
@@ -1156,18 +1328,20 @@ function record(rows) {
   return r;
 }
 
-function buildCohort({ league, cohortClubs, summaries }) {
+function buildCohort({ league, cohortClubs, summaries, scope = null }) {
   const clubs = cohortClubs
     .map((club) => {
       const read = summaries.get(club.id);
-      const rows = read ? teamRows(read.matches, club.id, league?.id) : [];
+      const rows = read
+        ? teamRows(read.matches, club.id, scope || league?.id)
+        : [];
       const xpts = rows.filter(has).reduce((t, x) => t + x.xpts, 0);
       return {
         id: club.id,
         name: club.name,
         imageUrl: club.imageUrl,
         country: club.country,
-        league,
+        league: club.league || league,
         rows,
         record: record(rows),
         xptsTotal: xpts,
@@ -1274,7 +1448,7 @@ function rankCohort(clubs, { perMatch = false } = {}) {
  * values there are used; otherwise its league values are placed among the
  * referential's clubs.
  */
-export function rebase(dossier, cohorts, label) {
+export function rebase(dossier, cohorts, label, options = {}) {
   const pool = new Map();
   for (const cohort of cohorts)
     for (const club of cohort.clubs)
@@ -1290,12 +1464,19 @@ export function rebase(dossier, cohorts, label) {
     record: club.record,
     xptsTotal: club.xptsTotal,
     values: club.values,
+    strength: club.strength ?? null,
+    leaguePosition: club.leaguePosition ?? null,
+    leagueXptsPosition: club.leagueXptsPosition ?? null,
+    coefficient: club.coefficient ?? null,
   });
   const clubs = [...pool.values()]
     .filter((club) => club.id !== dossier.id)
     .map(copy)
     .concat(copy(own || dossier.self));
-  const single = cohorts.length === 1 && Boolean(own);
+  const single =
+    options.perMatch == null
+      ? cohorts.length === 1 && Boolean(own)
+      : !options.perMatch;
   const ranked = rankCohort(clubs, { perMatch: !single });
   return {
     ...dossier,
@@ -1307,7 +1488,8 @@ export function rebase(dossier, cohorts, label) {
       label,
       inserted: !own,
       perMatch: !single,
-      multi: cohorts.length > 1,
+      multi: options.multi ?? cohorts.length > 1,
+      ...options.meta,
     },
   };
 }
