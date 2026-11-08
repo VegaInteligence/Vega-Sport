@@ -1,5 +1,12 @@
 "use client";
-import React, { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import React, {
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useActorRead from "../hooks/useActorRead.js";
@@ -37,7 +44,11 @@ import {
 import PlayerHonours, { usePlayerHonours } from "./PlayerHonours.jsx";
 import PlayerOverviewRadar from "./PlayerOverviewRadar.jsx";
 import PlayerProfileFilters from "./PlayerProfileFilters.jsx";
-import PlayerBio from "./PlayerBio.jsx";
+import PlayerScoutRail, { PlayerScoutStrip } from "./PlayerScoutRail.jsx";
+import PlayerAdvancedStats from "./PlayerAdvancedStats.jsx";
+import { chartTokens } from "./PlayerScoutCharts.jsx";
+import scout from "./PlayerScout.module.css";
+import { nationalFlagCode } from "../services/national-flags.js";
 import MessiGoats from "./MessiGoats.jsx";
 import { MESSI_ID } from "../services/player-honours.js";
 import {
@@ -64,6 +75,7 @@ const PerformanceStats = lazy(() =>
 const TABS = [
   ["overview", "Vue d’ensemble"],
   ["stats", "Statistiques"],
+  ["advanced", "Stats avancées"],
   ["similar", "Profils similaires"],
   ["evolution", "Évolution"],
   ["compare", "Comparer"],
@@ -233,24 +245,57 @@ function ProfileComparison({ profile, profiles, cohorts }) {
   );
 }
 
-function PlayerProfileHeading({ id, identity, role, honours, children }) {
+/** Identity rail beside the tabbed analysis, plus its compact scrolling strip. */
+function ProfileLayout({
+  id,
+  identity,
+  profile,
+  record,
+  season,
+  team,
+  honours,
+  actions,
+  stripActions,
+  children,
+}) {
+  const railRef = useRef(null);
+  const fallbackUrl = id === MESSI_ID ? MESSI_PORTRAIT : undefined;
+  const showIdentity = Boolean(identity.name);
   return (
-    <div className="season-player-heading">
-      <div className="season-player-identity">
-        <Media
-          name={identity.name}
-          url={identity.imageUrl}
-          fallbackUrl={id === MESSI_ID ? MESSI_PORTRAIT : undefined}
-          className="player-avatar season-player-portrait"
+    <>
+      {showIdentity && (
+        <PlayerScoutStrip
+          railRef={railRef}
+          identity={identity}
+          profile={profile}
+          team={team}
+          actions={stripActions}
         />
-        <div>
-          <h1 className="player-profile-name">{identity.name}</h1>
-          {role && <p>{role}</p>}
+      )}
+      <div className={scout.layout}>
+        <div ref={railRef}>
+          <PlayerScoutRail
+            id={id}
+            identity={identity}
+            fallbackUrl={fallbackUrl}
+            showIdentity={showIdentity}
+            profile={profile}
+            record={record}
+            season={season}
+            team={team}
+            honours={
+              <PlayerHonours
+                key={id}
+                name={identity.name || undefined}
+                result={honours}
+              />
+            }
+            actions={actions}
+          />
         </div>
+        <div className={scout.main}>{children}</div>
       </div>
-      <PlayerHonours key={id} name={identity.name} result={honours} />
-      {children}
-    </div>
+    </>
   );
 }
 
@@ -326,6 +371,23 @@ export default function PlayerSeasonProfile({
     [id, profile, f.data?.appearances, record, storedIdentity, summaryIdentity],
   );
   const honours = usePlayerHonours(id, identity.name);
+  const team = useMemo(() => {
+    const minutes = new Map();
+    for (const row of profile.rows)
+      if (row.teamId)
+        minutes.set(
+          row.teamId,
+          (minutes.get(row.teamId) || 0) + (row.minutes || 0),
+        );
+    const known = new Map((f.data?.teams || []).map((item) => [item.id, item]));
+    for (const [teamId] of [...minutes].sort((a, b) => b[1] - a[1])) {
+      const row = profile.rows.find((item) => item.teamId === teamId);
+      const name = known.get(teamId)?.name || row?.team;
+      if (!name || nationalFlagCode(name, f.season)) continue;
+      return { id: teamId, name, imageUrl: known.get(teamId)?.imageUrl };
+    }
+    return null;
+  }, [profile.rows, f.data?.teams, f.season]);
   const role = profile.role?.label;
   const profiles = useMemo(
     () => allProfiles || aggregateSeasonPlayers(scopeRows),
@@ -439,43 +501,44 @@ export default function PlayerSeasonProfile({
   if (!profile.matches) {
     const historyView = view === "stats" ? "stats" : "overview";
     return (
-      <article className="research-player-profile player-profile-flat">
+      <article
+        className={`research-player-profile player-profile-flat ${chartTokens}`}
+      >
         <MessiGoats id={id} />
-        {identity.name ? (
-          <PlayerProfileHeading
-            id={id}
-            identity={identity}
-            role={role}
-            honours={honours}
-          />
-        ) : (
-          <PlayerHonours key={id} result={honours} />
-        )}
-        <PlayerBio profile={record} />
-        <ResearchTabs
-          animated
-          label="Analyse du joueur"
-          value={historyView}
-          items={HISTORY_TABS}
-          onChange={change}
-          panelId="player-profile-panel"
-        />
-        <div
-          id="player-profile-panel"
-          role="tabpanel"
-          aria-label={
-            historyView === "stats" ? "Statistiques" : "Vue d’ensemble"
-          }
+        <ProfileLayout
+          id={id}
+          identity={identity}
+          profile={profile}
+          record={record}
+          season={f.season}
+          team={team}
+          honours={honours}
         >
-          {historyView === "overview" && <PlayerProfileFilters />}
-          {historyView === "stats" ? (
-            <Suspense fallback={historyLoading}>
-              <PerformanceStats id={id} />
-            </Suspense>
-          ) : (
-            overview
-          )}
-        </div>
+          <ResearchTabs
+            animated
+            label="Analyse du joueur"
+            value={historyView}
+            items={HISTORY_TABS}
+            onChange={change}
+            panelId="player-profile-panel"
+          />
+          <div
+            id="player-profile-panel"
+            role="tabpanel"
+            aria-label={
+              historyView === "stats" ? "Statistiques" : "Vue d’ensemble"
+            }
+          >
+            {historyView === "overview" && <PlayerProfileFilters />}
+            {historyView === "stats" ? (
+              <Suspense fallback={historyLoading}>
+                <PerformanceStats id={id} />
+              </Suspense>
+            ) : (
+              overview
+            )}
+          </div>
+        </ProfileLayout>
       </article>
     );
   }
@@ -511,156 +574,180 @@ export default function PlayerSeasonProfile({
       </label>
     </div>
   );
+  const playerActions = (
+    <div className="research-toolbar">
+      <BookmarkButton
+        kind="players"
+        id={id}
+        name={profile.name}
+        imageUrl={profile.imageUrl}
+        season={f.season}
+      />
+      <ComparePlayerButton profile={profile} season={f.season} />
+      <ReportButton
+        title={`${profile.name} · ${f.season}`}
+        context={`${profile.teams.join(" · ")} · ${profile.matches} matchs · ${profile.minutes} minutes · minimum de cohorte ${minMinutes} min`}
+        data={playerSnapshot(profile, f.season)}
+      >
+        {metricTable}
+      </ReportButton>
+    </div>
+  );
   return (
-    <article className="research-player-profile player-profile-flat">
+    <article
+      className={`research-player-profile player-profile-flat ${chartTokens}`}
+    >
       <MessiGoats id={id} />
-      <PlayerProfileHeading
+      <ProfileLayout
         id={id}
         identity={identity}
-        role={role}
+        profile={profile}
+        record={record}
+        season={f.season}
+        team={team}
         honours={honours}
+        actions={playerActions}
+        stripActions={
+          <div className="research-toolbar">
+            <ComparePlayerButton profile={profile} season={f.season} />
+          </div>
+        }
       >
-        <div className="research-toolbar">
-          <BookmarkButton
-            kind="players"
-            id={id}
-            name={profile.name}
-            imageUrl={profile.imageUrl}
-            season={f.season}
-          />
-          <ComparePlayerButton profile={profile} season={f.season} />
-          <ReportButton
-            title={`${profile.name} · ${f.season}`}
-            context={`${profile.teams.join(" · ")} · ${profile.matches} matchs · ${profile.minutes} minutes · minimum de cohorte ${minMinutes} min`}
-            data={playerSnapshot(profile, f.season)}
-          >
-            {metricTable}
-          </ReportButton>
-        </div>
-      </PlayerProfileHeading>
-      <PlayerBio profile={record} />
-      <ResearchTabs
-        animated
-        label="Analyse du joueur"
-        value={view}
-        items={TABS}
-        onChange={change}
-        panelId="player-profile-panel"
-      />
-      <div
-        id="player-profile-panel"
-        role="tabpanel"
-        aria-label={TABS.find(([key]) => key === view)[1]}
-      >
-        {view !== "stats" && view !== "evolution" && <PlayerProfileFilters />}
-        {view === "similar" && cohortControls}
-        <Suspense
-          fallback={
-            <div data-page-loading="" className="loading-state" role="status">
-              Chargement de l’analyse…
-            </div>
-          }
+        <ResearchTabs
+          animated
+          label="Analyse du joueur"
+          value={view}
+          items={TABS}
+          onChange={change}
+          panelId="player-profile-panel"
+        />
+        <div
+          id="player-profile-panel"
+          role="tabpanel"
+          aria-label={TABS.find(([key]) => key === view)[1]}
         >
-          {view === "overview" && overview}
-          {view === "stats" && (
-            <PerformanceStats id={id}>
-              <div className="season-section-heading" ref={comparisonRef}>
-                <h3>Analyse détaillée</h3>
-                <span>{f.season}</span>
+          {view !== "stats" && view !== "evolution" && <PlayerProfileFilters />}
+          {view === "similar" && cohortControls}
+          <Suspense
+            fallback={
+              <div data-page-loading="" className="loading-state" role="status">
+                Chargement de l’analyse…
               </div>
-              <div className="research-toolbar">
-                <Segments
-                  label="Calcul des statistiques du joueur"
-                  value={mode}
-                  onChange={setMode}
-                  items={STAT_MODES}
-                />
-              </div>
-              {cohortControls}
-              <div className="research-toolbar">
-                <MetricPicker
-                  label="Indicateurs affichés"
-                  value={keys}
-                  onChange={setKeys}
-                />
-                <button
-                  className="inline-link"
-                  onClick={() => setKeys(Object.keys(SCOUT_METRICS))}
-                >
-                  Tous les indicateurs
-                </button>
-              </div>
-              {metricTable}
-              <section>
-                <h3>Postes observés</h3>
-                <div className="table-scroll">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Poste</th>
-                        <th>Minutes</th>
-                        <th>Part du temps</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[...profile.positions]
-                        .sort((a, b) => b[1].minutes - a[1].minutes)
-                        .map(([key, item]) => (
-                          <tr key={key}>
-                            <th>{key}</th>
-                            <td>{number(item.minutes)}</td>
-                            <td>
-                              {number((item.minutes / profile.minutes) * 100)} %
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
+            }
+          >
+            {view === "overview" && overview}
+            {view === "advanced" && (
+              <PlayerAdvancedStats
+                profile={profile}
+                cohorts={cohorts}
+                minMinutes={minMinutes}
+                onMinMinutes={setMinMinutes}
+                ready={comparisonsReady}
+              />
+            )}
+            {view === "stats" && (
+              <PerformanceStats id={id}>
+                <div className="season-section-heading" ref={comparisonRef}>
+                  <h3>Analyse détaillée</h3>
+                  <span>{f.season}</span>
                 </div>
-              </section>
-              <section ref={shotsRef}>
-                {deferredShots && !shotDetails.value ? (
-                  shotDetails.error ? (
-                    <p role="alert">
-                      {shotDetails.error}{" "}
-                      <button onClick={shotDetails.retry}>Réessayer</button>
-                    </p>
+                <div className="research-toolbar">
+                  <Segments
+                    label="Calcul des statistiques du joueur"
+                    value={mode}
+                    onChange={setMode}
+                    items={STAT_MODES}
+                  />
+                </div>
+                {cohortControls}
+                <div className="research-toolbar">
+                  <MetricPicker
+                    label="Indicateurs affichés"
+                    value={keys}
+                    onChange={setKeys}
+                  />
+                  <button
+                    className="inline-link"
+                    onClick={() => setKeys(Object.keys(SCOUT_METRICS))}
+                  >
+                    Tous les indicateurs
+                  </button>
+                </div>
+                {metricTable}
+                <section>
+                  <h3>Postes observés</h3>
+                  <div className="table-scroll">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Poste</th>
+                          <th>Minutes</th>
+                          <th>Part du temps</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...profile.positions]
+                          .sort((a, b) => b[1].minutes - a[1].minutes)
+                          .map(([key, item]) => (
+                            <tr key={key}>
+                              <th>{key}</th>
+                              <td>{number(item.minutes)}</td>
+                              <td>
+                                {number((item.minutes / profile.minutes) * 100)}{" "}
+                                %
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+                <section ref={shotsRef}>
+                  {deferredShots && !shotDetails.value ? (
+                    shotDetails.error ? (
+                      <p role="alert">
+                        {shotDetails.error}{" "}
+                        <button onClick={shotDetails.retry}>Réessayer</button>
+                      </p>
+                    ) : (
+                      <p
+                        role="status"
+                        data-page-loading=""
+                        className="loading-state"
+                      >
+                        Chargement des tirs de la saison…
+                      </p>
+                    )
                   ) : (
-                    <p
-                      role="status"
-                      data-page-loading=""
-                      className="loading-state"
-                    >
-                      Chargement des tirs de la saison…
-                    </p>
-                  )
-                ) : (
-                  <Suspense fallback={historyLoading}>
-                    <SeasonShots
-                      key={id}
-                      shots={shots}
-                      legacyPitchApi={f.manifest?.storage === "aws-relational"}
-                    />
-                  </Suspense>
-                )}
-              </section>
-            </PerformanceStats>
-          )}
-          {view === "similar" && (
-            <Similarity profile={profile} cohorts={cohorts} />
-          )}
-          {view === "evolution" && (
-            <Evolution key={id} id={id} profile={profile} />
-          )}
-          {view === "compare" && (
-            <ProfileComparison
-              profile={profile}
-              profiles={profiles}
-              cohorts={cohorts}
-            />
-          )}
-        </Suspense>
-      </div>
+                    <Suspense fallback={historyLoading}>
+                      <SeasonShots
+                        key={id}
+                        shots={shots}
+                        legacyPitchApi={
+                          f.manifest?.storage === "aws-relational"
+                        }
+                      />
+                    </Suspense>
+                  )}
+                </section>
+              </PerformanceStats>
+            )}
+            {view === "similar" && (
+              <Similarity profile={profile} cohorts={cohorts} />
+            )}
+            {view === "evolution" && (
+              <Evolution key={id} id={id} profile={profile} />
+            )}
+            {view === "compare" && (
+              <ProfileComparison
+                profile={profile}
+                profiles={profiles}
+                cohorts={cohorts}
+              />
+            )}
+          </Suspense>
+        </div>
+      </ProfileLayout>
     </article>
   );
 }
