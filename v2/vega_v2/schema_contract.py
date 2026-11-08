@@ -42,3 +42,14 @@ PLAYER_TOTAL_KEYS = {
     'ground_duels_won': 'ground_duels_total',
     'long_balls_accurate': 'long_balls_total',
 }
+
+# Explicit physical-metric spellings from the existing provider adapter.
+PITCHAPI_PLAYER_KEYS.update({
+    'physical_metrics_distance_covered': 'distance_m',
+    'physical_metrics_topspeed': 'top_speed_kmh',
+    'physical_metrics_number_of_sprints': 'sprints',
+    'physical_metrics_running': 'running_m',
+    'physical_metrics_sprinting': 'sprinting_m',
+})
+# The team endpoint can publish a count and percentage with no total.
+TEAM_STATS_COLUMNS['accurate_passes_pct'] = 'real'

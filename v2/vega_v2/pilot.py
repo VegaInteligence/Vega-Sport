@@ -11,7 +11,7 @@ import time
 import psycopg
 from .normalize import NormalizedFamily, NormalizationError, normalize_family
 from .pitchapi import PitchClient, PitchError
-from .store import Store, StoreError, connect_local, migrate
+from .store import FAMILY_TABLES, Store, StoreError, connect_local, migrate
 
 # Order reuses the names observed in lineups/basic stats before ID-only networks.
 DETAILS = (
@@ -114,9 +114,10 @@ class Pilot:
         sizes = conn.execute("SELECT n.nspname,sum(pg_relation_size(c.oid)),sum(pg_indexes_size(c.oid)),sum(pg_total_relation_size(c.oid)) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('core','agg','ops') AND c.relkind='r' GROUP BY n.nspname ORDER BY n.nspname").fetchall()
         requests = conn.execute('SELECT family,http_status,error_code,count(*),round(avg(duration_ms)),percentile_cont(0.95) WITHIN GROUP(ORDER BY duration_ms) FROM ops.fetch_log GROUP BY family,http_status,error_code ORDER BY family,http_status,error_code').fetchall()
         unknown = conn.execute('SELECT family,field_path,occurrences FROM ops.unknown_fields ORDER BY family,field_path').fetchall()
+        outcome = self.fatal_error or ('incomplete' if self.completed_matches!=self.selected_matches else 'family_errors' if self.errors else 'ok')
         rows = ['# Vega v2 isolated pilot', '', f'UTC: {datetime.now(timezone.utc).isoformat()}',
             f'PostgreSQL: {conn.execute("SHOW server_version").fetchone()[0]}',
-            f'Overall result: {self.fatal_error or ("family_errors" if self.errors else "ok")}',
+            f'Overall result: {outcome}',
             f'Finished matches available: {self.available_matches}', f'Selected matches: {self.selected_matches}',
             f'Completed match loops: {self.completed_matches}', f'HTTP attempts this run (including retries/profiles): {self.client.requests}',
             f'Wall seconds: {seconds:.2f}', f'Family failures: {sum(self.errors.values())}', '',
@@ -130,13 +131,29 @@ class Pilot:
         rows += [f'| {f} | {status} | {n} |' for (f,status),n in sorted(self.results.items())]
         rows += ['', '| Family | SQL write median ms | SQL write p95 ms |', '|---|---:|---:|']
         for family,values in sorted(self.writes.items()):
-            rows.append(f'| {family} | {statistics.median(values):.2f} | {sorted(values)[max(0,int(len(values)*.95)-1)]:.2f} |')
+            p95=statistics.quantiles(values,n=20,method='inclusive')[-1] if len(values)>1 else values[0]
+            rows.append(f'| {family} | {statistics.median(values):.2f} | {p95:.2f} |')
         rows += ['', '| Family | HTTP status | Error | Attempts in database | Mean ms | P95 ms |', '|---|---|---|---:|---:|---:|']
         rows += [f'| {f} | {status} | {code or ""} | {n} | {mean} | {p95:.2f} |' for f,status,code,n,mean,p95 in requests]
         rows += ['', '| Family | Controlled error | Count |', '|---|---|---:|']
         rows += [f'| {f} | {code} | {n} |' for (f,code),n in sorted(self.errors.items())]
         rows += ['', '| Family | Unknown field path (no values) | Count |', '|---|---|---:|']
         rows += [f'| {f} | {field} | {n} |' for f,field,n in unknown]
+        rows += ['', '| Typed fact table | Stored rows |', '|---|---:|']
+        for table in sorted({t for tables in FAMILY_TABLES.values() for t in tables}):
+            count=conn.execute(psycopg.sql.SQL('SELECT count(*) FROM core.{}').format(psycopg.sql.Identifier(table))).fetchone()[0]
+            rows.append(f'| {table} | {count} |')
+        rows += ['', 'Coverage counts below count source observations, including explicit zero; NULL is not zero.',
+            '', '| Fact table | Metric | Non-NULL rows | Total rows |', '|---|---|---:|---:|']
+        for table,metrics in {
+            'player_match_stats':('minutes_played','goals','rating','xg','distance_m','sprints','top_speed_kmh'),
+            'team_match_stats':('total_shots','xg','accurate_passes','accurate_passes_pct','distance_m'),
+            'player_match_advanced':('xt_total','vaep_total','pv_total','xag'),
+            'team_match_advanced':('xt_total','ppda','field_tilt'),
+        }.items():
+            for metric in metrics:
+                covered,total=conn.execute(psycopg.sql.SQL('SELECT count({}),count(*) FROM core.{}').format(psycopg.sql.Identifier(metric),psycopg.sql.Identifier(table))).fetchone()
+                rows.append(f'| {table} | {metric} | {covered} | {total} |')
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         Path(path).write_text('\n'.join(rows)+'\n', encoding='utf-8')
 

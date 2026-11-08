@@ -82,3 +82,13 @@ class NormalizeTest(unittest.TestCase):
   self.assertEqual((row['provider_season'],row['provider_competition_id']),('2025/2026','l_123456'));self.assertNotIn('match.season',result.unknown_paths)
   obj['season']='invalid'
   with self.assertRaises(NormalizationError):normalize_family('summary',obj)
+ def test_physical_metrics_keep_documented_units(self):
+  metrics={'physical_metrics_distance_covered':('distance_m','distance',10324.5),'physical_metrics_running':('running_m','distance',3234.5),'physical_metrics_sprinting':('sprinting_m','distance',523.5),'physical_metrics_topspeed':('top_speed_kmh','speed',33.4),'physical_metrics_number_of_sprints':('sprints','integer',17)}
+  groups=[{'stats':{key:{'key':key,'stat':{'type':kind,'value':value}} for key,(column,kind,value) in metrics.items()}}]
+  result=normalize_family('players',[{'player':P,'team_id':T['id'],'stats':groups}]);row=result.rows['core.player_match_stats'][0]
+  for key,(column,kind,value) in metrics.items():self.assertEqual(row[column],value)
+  self.assertFalse(result.unknown_paths)
+ def test_accurate_passes_published_percentage_is_not_lost(self):
+  data={'home_team':T,'away_team':{'id':'t_abcdef'},'periods':[{'period':'All','groups':[{'items':[{'key':'accurate_passes','home':'329 (82%)','away':'0 (0%)','format_type':'integerWithPercentage'}]}]}]}
+  home,away=normalize_family('stats',data).rows['core.team_match_stats']
+  self.assertEqual((home['accurate_passes'],home['accurate_passes_pct']),(329,82.0));self.assertEqual((away['accurate_passes'],away['accurate_passes_pct']),(0,0.0))

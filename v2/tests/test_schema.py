@@ -16,7 +16,7 @@ class SchemaTests(unittest.TestCase):
         if target.hostname not in ('localhost','127.0.0.1','::1') or target.path!='/vega_v2_test': raise RuntimeError('Only disposable local vega_v2_test allowed')
         cls.db=psycopg.connect(DSN)
         assert cls.db.execute("SELECT to_regnamespace('core') IS NULL AND to_regnamespace('agg') IS NULL AND to_regnamespace('ops') IS NULL").fetchone()[0]
-        for name in ('001_core.sql','002_aggregates.sql','003_ops.sql'):
+        for name in ('001_core.sql','002_aggregates.sql','003_ops.sql','005_team_pass_percentage.sql'):
             cls.db.execute((ROOT/'sql'/name).read_text(encoding='utf-8'))
         cls.db.execute("INSERT INTO core.seasons(id,label,start_year) VALUES(1,'2025/2026',2025),(2,'2026/2027',2026)")
         cls.db.execute("INSERT INTO core.competitions(id,name) VALUES(1,'Fixture League')")
@@ -46,6 +46,13 @@ class SchemaTests(unittest.TestCase):
             found=dict(self.db.execute("SELECT column_name,data_type FROM information_schema.columns WHERE table_schema='core' AND table_name=%s",(table,)))
             self.assertEqual({k:found[k] for k in contract},contract)
         self.assertFalse(self.db.execute("SELECT 1 FROM information_schema.columns WHERE table_schema IN ('core','agg','ops') AND data_type IN ('json','jsonb') LIMIT 1").fetchone())
+    def test_passing_percentage_has_typed_fact_and_aggregate_columns(self):
+        rows = self.db.execute("SELECT table_schema,table_name,column_name,data_type FROM information_schema.columns WHERE (table_schema,table_name,column_name) IN (('core','team_match_stats','accurate_passes_pct'),('agg','team_season_stats','accurate_passes_pct'),('agg','team_season_stats','accurate_passes_pct_avg')) ORDER BY 1,2,3").fetchall()
+        self.assertEqual(len(rows),3)
+        self.assertTrue(all(row[3]=='real' for row in rows))
+        self.db.execute('CREATE TABLE core.team_match_stats_s1 PARTITION OF core.team_match_stats FOR VALUES IN (1)')
+        self.db.execute("INSERT INTO core.team_match_stats(season_id,match_id,team_id,period,accurate_passes,accurate_passes_pct) VALUES(1,1,1,'all',329,82)")
+        self.assertEqual(self.db.execute('SELECT accurate_passes,accurate_passes_pct FROM core.team_match_stats').fetchone(),(329,82.0))
     def test_global_match_and_season_integrity(self):
         self.rejects("INSERT INTO core.matches(id,competition_season_id,season_id,source) VALUES(1,1,1,'pitchapi')")
         self.rejects("INSERT INTO core.matches(id,competition_season_id,season_id,source) VALUES(2,1,2,'pitchapi')")
