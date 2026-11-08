@@ -200,6 +200,84 @@ export function MockIndex() {
           <span className={s.optionCta}>Ouvrir la version C →</span>
         </Link>
       </div>
+      <h2
+        className={s.intro}
+        style={{ marginTop: 40, color: "var(--ink-strong)" }}
+      >
+        Page club
+      </h2>
+      <p className={s.intro}>
+        Trois propositions pour la page club, sur les données publiées réelles
+        de n’importe quel club (Barcelona par défaut, sélecteur dans le
+        bandeau). Chaque indicateur est classé contre tous les clubs de son
+        championnat.
+      </p>
+      <div className={s.index}>
+        <Link className={s.option} href="/maquettes/club-a">
+          <span className={s.optionLabel}>Version A</span>
+          <h2>Fiche club</h2>
+          <p>
+            La page joueur transposée au club : colonne d’identité à gauche,
+            onglets à droite, du résumé vers le détail.
+          </p>
+          <ul>
+            <li>
+              Classement, xPts, indice Vega club et ses six phases de jeu dans
+              la colonne
+            </li>
+            <li>
+              Profil de performance en centiles, identité de jeu sur des axes de
+              style, résultats contre attendus
+            </li>
+            <li>
+              Onglets : statistiques, style, matchs et tendances, effectif,
+              comparaison, clubs similaires
+            </li>
+          </ul>
+          <span className={s.optionCta}>Ouvrir la version A →</span>
+        </Link>
+        <Link className={s.option} href="/maquettes/club-b">
+          <span className={s.optionLabel}>Version B</span>
+          <h2>Tableau tactique</h2>
+          <p>
+            Un tableau de bord par phase de jeu, lu « pour / contre » : ce que
+            le club produit face à ce qu’il concède, et sa place dans le
+            championnat.
+          </p>
+          <ul>
+            <li>Carte du championnat xG créés / concédés, indice par phase</li>
+            <li>
+              Avec et sans ballon, transitions et CPA, finition et gardien,
+              tendance et états de match
+            </li>
+            <li>
+              Classement réel et aux points attendus, effectif, calendrier
+              pondéré par la difficulté, comparaison
+            </li>
+          </ul>
+          <span className={s.optionCta}>Ouvrir la version B →</span>
+        </Link>
+        <Link className={s.option} href="/maquettes/club-c">
+          <span className={s.optionLabel}>Version C</span>
+          <h2>Fiche club augmentée</h2>
+          <p>
+            La version A, enrichie d’un onglet Stats avancées fait des blocs de
+            la version B, et d’une comparaison ouverte à tous les championnats.
+          </p>
+          <ul>
+            <li>
+              Stats avancées : carte du championnat, avec et sans ballon,
+              transitions et CPA, finition et gardien, classement attendu
+            </li>
+            <li>
+              Comparaison avec n’importe quel club, cherché dans un menu
+              déroulant, centiles calculés dans le championnat de chacun
+            </li>
+            <li>Clubs similaires cherchés dans le championnat de son choix</li>
+          </ul>
+          <span className={s.optionCta}>Ouvrir la version C →</span>
+        </Link>
+      </div>
     </Layout>
   );
 }
