@@ -27,3 +27,10 @@ class TransportTest(unittest.TestCase):
   c=PitchClient('pk_test_secret',interval=0,transport=bad,on_attempt=calls.append)
   with self.assertRaises(PitchError):c.fetch('/leagues')
   self.assertEqual(calls[0]['error_code'],'TRANSPORT_ERROR');self.assertNotIn('secret',str(calls))
+ def test_null_error_success_and_sanitized_shape(self):
+  c=PitchClient('pk_test_secret',interval=0,transport=lambda *x:(200,{},b'{"data":{"leagues":[]},"error":null}'),sleep=lambda x:None)
+  self.assertEqual(c.fetch('/leagues').data,{'leagues':[]})
+  for payload,shape in [(b'[]','root_array'),(b'{"secret":"payload"}','object_neither'),(b'{"data":[],"error":{"code":"x"}}','object_both')]:
+   c=PitchClient('pk_test_secret',interval=0,transport=lambda *x:(200,{},payload),sleep=lambda x:None)
+   with self.assertRaises(PitchError) as caught:c.fetch('/leagues')
+   self.assertEqual(caught.exception.status,200);self.assertEqual(caught.exception.envelope_shape,shape);self.assertNotIn('payload',str(caught.exception))
