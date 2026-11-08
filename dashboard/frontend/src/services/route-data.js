@@ -1,6 +1,8 @@
 /** Pages with their own readers must not download a season before mounting. */
 export function routeNeedsSeason(pathname, params) {
   const path = (pathname || "/").replace(/\/$/, "") || "/";
+  // Design mock-ups render their own fictitious data.
+  if (path === "/maquettes" || path.startsWith("/maquettes/")) return false;
   if (
     [
       "/competitions",
