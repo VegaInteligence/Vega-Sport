@@ -45,7 +45,7 @@ class Pilot:
         try: return self.client.fetch(endpoint, params)
         finally:
             for event in self.events:
-                self.store.log_attempt(family, event, entity_type=kind, entity_id=ident, competition_season_id=self.edition if family=='league_matches' else None)
+                self.store.log_attempt(family, event, entity_type=kind, entity_id=ident, competition_season_id=self.edition if family=='league_matches' else None,global_key='catalogue' if endpoint=='/leagues' else None)
 
     def hydrate(self, batch):
         grouped = defaultdict(dict)
@@ -58,9 +58,12 @@ class Pilot:
             parser = 'league' if kind=='competition' else kind
             result = self.fetch(parser, endpoint)
             profile = normalize_family(parser, result.data)
-            self.store.save_references(profile,family=parser)
+            if kind in ('team','player'):
+                from .profiles import save_profile
+                save_profile(self.store,kind,key,profile)
+            else: self.store.save_references(profile,family=parser)
 
-    def run(self, *, season, league_name, max_matches, resume=False):
+    def run(self, *, season, league_name, max_matches, resume=False, profile_limit=0):
         catalogue = self.fetch('league', '/leagues').data
         leagues = [x for x in catalogue.get('leagues', []) if x.get('name')==league_name and x.get('country_code') in ('FRA','FR')]
         if len(leagues)!=1: raise StoreError('LEAGUE_SELECTION_NOT_UNIQUE')
@@ -105,7 +108,30 @@ class Pilot:
                     print(f'family={family} error={code}', flush=True)
             self.completed_matches += 1
             print(f'matches={count}/{len(chosen)} attempts={self.client.requests} failures={sum(self.errors.values())}', flush=True)
+        self.collect_profiles(profile_limit)
         return not self.errors
+
+    def collect_profiles(self, limit):
+        """Explicitly bounded smoke, alternating team and player profiles."""
+        from .jobs import claim
+        from .profiles import save_profile,record_failure
+        for index in range(limit):
+            kind=('team','player')[index%2]
+            with self.store.conn.transaction(): job=claim(self.store.conn,'reference',family=kind,lease_seconds=300)
+            if not job: continue
+            key=self.store.conn.execute("SELECT provider_key FROM core.provider_ids WHERE entity_type=%s AND provider='pitchapi' AND entity_id=%s",(kind,job['entity_id'])).fetchone()[0]
+            lease=(job['id'],job['lease_token'])
+            try:
+                result=self.fetch(kind,'/'+kind+'s/'+key,kind=kind,ident=job['entity_id'])
+                batch=normalize_family(kind,result.data)
+                start=time.perf_counter()
+                save_profile(self.store,kind,key,batch,lease)
+                self.writes[kind].append((time.perf_counter()-start)*1000)
+                self.results[(kind,'ok')]+=1
+            except (PitchError,NormalizationError,StoreError,psycopg.Error) as error:
+                code=safe_code(error);self.errors[(kind,code)]+=1
+                record_failure(self.store,kind,key,code,lease)
+                print(f'family={kind} error={code}',flush=True)
 
     def report(self, path):
         conn = self.store.conn
@@ -139,6 +165,10 @@ class Pilot:
         rows += [f'| {f} | {code} | {n} |' for (f,code),n in sorted(self.errors.items())]
         rows += ['', '| Family | Unknown field path (no values) | Count |', '|---|---|---:|']
         rows += [f'| {f} | {field} | {n} |' for f,field,n in unknown]
+        rows += ['', 'Named embedded references do not prove an explicit profile has been fetched.',
+            '', '| Reference kind | Explicit profile success | Registered references |', '|---|---:|---:|']
+        for kind,success,total in conn.execute("SELECT entity_type,count(last_success_at),count(*) FROM ops.reference_state WHERE provider='pitchapi' GROUP BY entity_type ORDER BY entity_type"):
+            rows.append(f'| {kind} | {success} | {total} |')
         rows += ['', '| Typed fact table | Stored rows |', '|---|---:|']
         for table in sorted({t for tables in FAMILY_TABLES.values() for t in tables}):
             count=conn.execute(psycopg.sql.SQL('SELECT count(*) FROM core.{}').format(psycopg.sql.Identifier(table))).fetchone()[0]
@@ -171,14 +201,16 @@ def main():
     parser.add_argument('--report',default='work/vega-v2-pilot.md')
     parser.add_argument('--resume',action='store_true')
     parser.add_argument('--vector',action='store_true')
+    parser.add_argument('--profile-limit',type=int,default=2)
     args = parser.parse_args()
     if not 1<=args.max_matches<=306: parser.error('max-matches must be between 1 and 306')
+    if not 0<=args.profile_limit<=100: parser.error('profile-limit must be between 0 and 100')
     pilot = None
     try:
         with connect_local(os.environ.get('V2_DATABASE_URL','')) as conn:
             migrate(conn,vector=args.vector)
             pilot = Pilot(Store(conn),os.environ.get('PITCHAPI_API_KEY',''))
-            try: ok=pilot.run(season=args.season,league_name=args.league,max_matches=args.max_matches,resume=args.resume)
+            try: ok=pilot.run(season=args.season,league_name=args.league,max_matches=args.max_matches,resume=args.resume,profile_limit=args.profile_limit)
             except Exception as error:
                 pilot.fatal_error=safe_code(error)
                 raise
