@@ -159,6 +159,7 @@ jobs:
           ASSET_LIMIT: ${{ steps.plan.outputs.asset_limit }}
         run: python dashboard/scripts/aws_assets.py --limit "$ASSET_LIMIT"
       - name: Build serving tables from AWS staging
+        id: publish
         # Sources already committed by a partially failed collector remain usable.
         # Optional enrichment must never prevent their publication.
         if: ${{ !cancelled() && steps.aws.outcome == 'success' }}
@@ -168,8 +169,11 @@ jobs:
           set -euo pipefail
           python dashboard/scripts/relational_materialize.py --minutes 45 --batch 10 | tee serving-tables.log
       - name: Refresh home projections after publication
-        continue-on-error: true
-        run: node dashboard/scripts/home_projection.mjs
+        if: ${{ !cancelled() && steps.aws.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -o pipefail
+          node dashboard/scripts/home_projection.mjs | tee home-projection.json
       - name: Report incomplete optional collection
         if: ${{ !cancelled() && (steps.supplemental.outcome == 'failure' || steps.honours.outcome == 'failure' || steps.portraits.outcome == 'failure' || steps.images.outcome == 'failure') }}
         run: |
@@ -183,4 +187,5 @@ jobs:
           path: |
             collection.log
             serving-tables.log
+            home-projection.json
           if-no-files-found: ignore

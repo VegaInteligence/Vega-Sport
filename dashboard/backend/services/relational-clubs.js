@@ -220,7 +220,8 @@ export function clubReadQuery(filters, params) {
 selected_sides AS MATERIALIZED (SELECT s.* FROM sides s JOIN page p ON p.id=s.team_id),
 stat_values AS (
  SELECT t.match_id,${statKeys.flatMap((key, index) => ["home", "away"].map((side) => `max(t.${side}_value) FILTER(WHERE metric_key='${key}') AS ${side}_${index}`)).join(",")}
- FROM statarena_app.team_statistics t JOIN (SELECT DISTINCT id FROM selected_sides WHERE scored) m ON m.id=t.match_id GROUP BY t.match_id
+ FROM statarena_app.team_statistics t JOIN (SELECT DISTINCT id FROM selected_sides WHERE scored) m ON m.id=t.match_id
+ WHERE t.metric_key IN (${statKeys.map((key) => `'${key}'`).join(",")}) GROUP BY t.match_id
 ), observations AS (
  SELECT s.*,co.flag reliable,${observations.join(",")}
  FROM selected_sides s LEFT JOIN stat_values t ON t.match_id=s.id
@@ -246,8 +247,12 @@ stat_values AS (
  SELECT team_id,jsonb_agg(jsonb_build_array(formation,amount) ORDER BY amount DESC,formation) formations FROM formation_counts GROUP BY team_id
 ), goal_buckets AS (
  SELECT s.team_id,sh.team_id=s.team_id own,least(5,greatest(0,floor((sh.minute-0.01)/15)::int)) bucket,count(*)::int amount
- FROM selected_sides s JOIN statarena_app.shots sh ON sh.match_id=s.id
- WHERE s.scored AND sh.team_id IN(s.home_id,s.away_id) AND sh.is_goal IS TRUE AND sh.is_own_goal IS DISTINCT FROM true AND ${finiteSql("sh.minute")}
+ -- Keep the shot read bounded to each displayed match. Without this fence the
+ -- planner can scan all seasons' shots for a small page of clubs.
+ FROM selected_sides s JOIN LATERAL (
+ SELECT sh.team_id,sh.minute FROM statarena_app.shots sh
+ WHERE sh.match_id=s.id AND sh.team_id IN(s.home_id,s.away_id) AND sh.is_goal IS TRUE AND sh.is_own_goal IS DISTINCT FROM true AND ${finiteSql("sh.minute")} OFFSET 0
+ ) sh ON true WHERE s.scored
  GROUP BY s.team_id,sh.team_id=s.team_id,least(5,greatest(0,floor((sh.minute-0.01)/15)::int))
 ), goal_times AS (
  SELECT p.id team_id,

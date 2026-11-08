@@ -6,7 +6,11 @@ import {
   createPlayerReadRoute,
   positionNumberSql,
 } from "../dashboard/backend/services/relational-players.js";
-import { createClubReadRoute } from "../dashboard/backend/services/relational-clubs.js";
+import {
+  createClubReadRoute,
+  clubReadQuery,
+  parseClubRead,
+} from "../dashboard/backend/services/relational-clubs.js";
 import { createHomeReadRoute } from "../dashboard/backend/services/relational-home.js";
 import { allClubSummaries } from "../dashboard/frontend/src/services/club-analysis.js";
 import { aggregateSeasonPlayers } from "../dashboard/frontend/src/services/season-player.js";
@@ -311,6 +315,64 @@ test(
         assert.deepEqual(club.games, []);
         assert.deepEqual(club.shots, []);
       }
+      // Boundary shots and non-finite stats exercise the real PostgreSQL query,
+      // including empty eligible sets and every original MAX input period.
+      await client.query(`INSERT INTO statarena_app.shots(id,match_id,ordinal,team_id,minute,is_goal,is_own_goal) VALUES
+        ('b0','m_game01',20,'t_paris1',0,true,false),
+        ('b15plus','m_game01',21,'t_paris1',15.0001,true,false),
+        ('b90','m_game01',22,'t_paris1',95,true,false),
+        ('bnull','m_game01',23,'t_paris1',90,true,NULL),
+        ('bown','m_game01',24,'t_paris1',20,true,true),
+        ('bmissing','m_game01',25,'t_paris1',20,NULL,false),
+        ('binf','m_game01',26,'t_paris1','Infinity'::float8,true,false),
+        ('bother','m_game01',27,'t_other1',20,false,false)`);
+      await client.query(
+        `UPDATE statarena_app.team_statistics SET home_value='NaN'::float8 WHERE match_id='m_game01' AND metric_key='expected_goals'`,
+      );
+      await client.query(
+        `INSERT INTO statarena_app.team_statistics(match_id,metric_key,ordinal,home_value,away_value) VALUES('m_game01','unused_metric',99,888,777)`,
+      );
+      const params = new URLSearchParams({
+        season,
+        analysis: "1",
+        limit: "100",
+      });
+      const built = clubReadQuery(parseClubRead(params), params);
+      const lateral =
+        / FROM selected_sides s JOIN LATERAL \(\n SELECT sh.team_id,sh.minute FROM statarena_app\.shots sh\n WHERE sh.match_id=s.id AND sh.team_id IN\(s.home_id,s.away_id\) AND sh.is_goal IS TRUE AND sh.is_own_goal IS DISTINCT FROM true AND (.+?) OFFSET 0\n \) sh ON true WHERE s.scored/;
+      assert.match(built.sql, lateral);
+      let baseline = built.sql.replace(
+        lateral,
+        " FROM selected_sides s JOIN statarena_app.shots sh ON sh.match_id=s.id\n WHERE s.scored AND sh.team_id IN(s.home_id,s.away_id) AND sh.is_goal IS TRUE AND sh.is_own_goal IS DISTINCT FROM true AND $1",
+      );
+      baseline = baseline.replace(
+        /\n WHERE t\.metric_key IN \([^\n]+\) GROUP BY t\.match_id/,
+        " GROUP BY t.match_id",
+      );
+      assert.notEqual(baseline, built.sql);
+      const before = (await client.query(baseline, built.values)).rows;
+      const after = (await client.query(built.sql, built.values)).rows;
+      assert.deepEqual(
+        after,
+        before,
+        "bounded SQL must preserve full raw result",
+      );
+      const paris = after[0].clubs.find((club) => club.id === "t_paris1");
+      assert.deepEqual(paris.goal_times.for, [3, 0, 0, 0, 0, 2]);
+      assert.deepEqual(paris.goal_times.against, [0, 0, 0, 1, 0, 0]);
+      assert.equal(
+        paris.stats.xgFor.count,
+        1,
+        "NaN metric excludes this observation instead of using match fallback",
+      );
+      await client.query(
+        "UPDATE statarena_app.shots SET is_goal=false WHERE match_id='m_game01'",
+      );
+      const empty = (
+        await client.query(built.sql, built.values)
+      ).rows[0].clubs.find((club) => club.id === "t_paris1");
+      assert.deepEqual(empty.goal_times.for, [0, 0, 0, 0, 0, 0]);
+      assert.equal(empty.goal_times.observed, 0);
     } finally {
       await client.query("ROLLBACK");
       await client.end();
