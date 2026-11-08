@@ -37,7 +37,6 @@ import {
   BookmarkButton,
   ComparePlayerButton,
   MetricInfo,
-  MetricPicker,
   ReportButton,
   ResearchTabs,
 } from "./ResearchUI.jsx";
@@ -46,6 +45,11 @@ import PlayerOverviewRadar from "./PlayerOverviewRadar.jsx";
 import PlayerProfileFilters from "./PlayerProfileFilters.jsx";
 import PlayerScoutRail, { PlayerScoutStrip } from "./PlayerScoutRail.jsx";
 import PlayerAdvancedStats from "./PlayerAdvancedStats.jsx";
+import PlayerScoutOverview, {
+  PlayerGames,
+  PlayerScoutCompare,
+  PlayerScoutStats,
+} from "./PlayerScoutOverview.jsx";
 import { chartTokens } from "./PlayerScoutCharts.jsx";
 import scout from "./PlayerScout.module.css";
 import { nationalFlagCode } from "../services/national-flags.js";
@@ -77,8 +81,9 @@ const TABS = [
   ["stats", "Statistiques"],
   ["advanced", "Stats avancées"],
   ["similar", "Profils similaires"],
-  ["evolution", "Évolution"],
-  ["compare", "Comparer"],
+  ["compare", "Comparaison"],
+  ["evolution", "Carrière"],
+  ["games", "Matchs"],
 ];
 const HISTORY_TABS = TABS.slice(0, 2);
 const STAT_MODES = [
@@ -395,7 +400,7 @@ export default function PlayerSeasonProfile({
   );
   const [mode, setMode] = useState("total"),
     [minMinutes, setMinMinutes] = useState(450),
-    [keys, setKeys] = useState(Object.keys(SCOUT_METRICS));
+    [keys] = useState(Object.keys(SCOUT_METRICS));
   const requestedView = params?.get("playerView");
   const view = TABS.some(([key]) => key === requestedView)
     ? requestedView
@@ -477,7 +482,7 @@ export default function PlayerSeasonProfile({
       Chargement des saisons…
     </div>
   );
-  const overview = (
+  const historyOverview = (
     <div className="player-overview">
       <Suspense fallback={historyLoading}>
         <SeasonStats id={id} season={f.season} />
@@ -497,6 +502,21 @@ export default function PlayerSeasonProfile({
         </Suspense>
       </div>
     </div>
+  );
+  const overview = (
+    <PlayerScoutOverview
+      profile={profile}
+      cohorts={cohorts}
+      ready={comparisonsReady}
+      season={f.season}
+      matches={f.data?.matches}
+      comparisonRef={comparisonRef}
+      onTab={change}
+    >
+      <Suspense fallback={historyLoading}>
+        <SeasonStats id={id} season={f.season} />
+      </Suspense>
+    </PlayerScoutOverview>
   );
   if (!profile.matches) {
     const historyView = view === "stats" ? "stats" : "overview";
@@ -535,7 +555,7 @@ export default function PlayerSeasonProfile({
                 <PerformanceStats id={id} />
               </Suspense>
             ) : (
-              overview
+              historyOverview
             )}
           </div>
         </ProfileLayout>
@@ -646,9 +666,9 @@ export default function PlayerSeasonProfile({
               />
             )}
             {view === "stats" && (
-              <PerformanceStats id={id}>
+              <>
                 <div className="season-section-heading" ref={comparisonRef}>
-                  <h3>Analyse détaillée</h3>
+                  <h3>Statistiques détaillées</h3>
                   <span>{f.season}</span>
                 </div>
                 <div className="research-toolbar">
@@ -660,90 +680,109 @@ export default function PlayerSeasonProfile({
                   />
                 </div>
                 {cohortControls}
-                <div className="research-toolbar">
-                  <MetricPicker
-                    label="Indicateurs affichés"
-                    value={keys}
-                    onChange={setKeys}
-                  />
-                  <button
-                    className="inline-link"
-                    onClick={() => setKeys(Object.keys(SCOUT_METRICS))}
-                  >
-                    Tous les indicateurs
-                  </button>
-                </div>
-                {metricTable}
-                <section>
-                  <h3>Postes observés</h3>
-                  <div className="table-scroll">
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>Poste</th>
-                          <th>Minutes</th>
-                          <th>Part du temps</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[...profile.positions]
-                          .sort((a, b) => b[1].minutes - a[1].minutes)
-                          .map(([key, item]) => (
-                            <tr key={key}>
-                              <th>{key}</th>
-                              <td>{number(item.minutes)}</td>
-                              <td>
-                                {number((item.minutes / profile.minutes) * 100)}{" "}
-                                %
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-                <section ref={shotsRef}>
-                  {deferredShots && !shotDetails.value ? (
-                    shotDetails.error ? (
-                      <p role="alert">
-                        {shotDetails.error}{" "}
-                        <button onClick={shotDetails.retry}>Réessayer</button>
-                      </p>
+                <PlayerScoutStats
+                  profile={profile}
+                  cohorts={cohorts}
+                  mode={mode}
+                  ready={comparisonsReady}
+                />
+                <PerformanceStats id={id}>
+                  <section>
+                    <h3>Postes observés</h3>
+                    <div className="table-scroll">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Poste</th>
+                            <th>Minutes</th>
+                            <th>Part du temps</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[...profile.positions]
+                            .sort((a, b) => b[1].minutes - a[1].minutes)
+                            .map(([key, item]) => (
+                              <tr key={key}>
+                                <th>{key}</th>
+                                <td>{number(item.minutes)}</td>
+                                <td>
+                                  {number(
+                                    (item.minutes / profile.minutes) * 100,
+                                  )}{" "}
+                                  %
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                  <section ref={shotsRef}>
+                    {deferredShots && !shotDetails.value ? (
+                      shotDetails.error ? (
+                        <p role="alert">
+                          {shotDetails.error}{" "}
+                          <button onClick={shotDetails.retry}>Réessayer</button>
+                        </p>
+                      ) : (
+                        <p
+                          role="status"
+                          data-page-loading=""
+                          className="loading-state"
+                        >
+                          Chargement des tirs de la saison…
+                        </p>
+                      )
                     ) : (
-                      <p
-                        role="status"
-                        data-page-loading=""
-                        className="loading-state"
-                      >
-                        Chargement des tirs de la saison…
-                      </p>
-                    )
-                  ) : (
-                    <Suspense fallback={historyLoading}>
-                      <SeasonShots
-                        key={id}
-                        shots={shots}
-                        legacyPitchApi={
-                          f.manifest?.storage === "aws-relational"
-                        }
-                      />
-                    </Suspense>
-                  )}
-                </section>
-              </PerformanceStats>
+                      <Suspense fallback={historyLoading}>
+                        <SeasonShots
+                          key={id}
+                          shots={shots}
+                          legacyPitchApi={
+                            f.manifest?.storage === "aws-relational"
+                          }
+                        />
+                      </Suspense>
+                    )}
+                  </section>
+                </PerformanceStats>
+              </>
             )}
-            {view === "similar" && (
-              <Similarity profile={profile} cohorts={cohorts} />
-            )}
+            {view === "similar" &&
+              (comparisonsReady ? (
+                <Similarity profile={profile} cohorts={cohorts} />
+              ) : (
+                <p className="notice" role="status">
+                  Chargement des joueurs du même poste…
+                </p>
+              ))}
             {view === "evolution" && (
-              <Evolution key={id} id={id} profile={profile} />
+              <>
+                <CareerStats id={id} season={f.season} overview />
+                <Evolution key={id} id={id} profile={profile} />
+              </>
+            )}
+            {view === "games" && (
+              <PlayerGames profile={profile} matches={f.data?.matches} />
             )}
             {view === "compare" && (
-              <ProfileComparison
+              <PlayerScoutCompare
                 profile={profile}
-                profiles={profiles}
                 cohorts={cohorts}
-              />
+                ready={comparisonsReady}
+              >
+                <section>
+                  <div className="season-section-heading">
+                    <h3>Comparateur multi-saisons</h3>
+                    <span>jusqu’à quatre joueurs</span>
+                  </div>
+                  <ProfileComparison
+                    profile={profile}
+                    profiles={profiles}
+                    cohorts={cohorts}
+                  />
+                </section>
+              </PlayerScoutCompare>
             )}
           </Suspense>
         </div>
