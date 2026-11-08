@@ -244,6 +244,27 @@ class StoreTest(unittest.TestCase):
         recovered = self.claim(
             self.db, "details", now=datetime.now(timezone.utc), lease_seconds=120
         )
+        from vega_v2.normalize import NormalizedFamily
+
+        other_match = dict(match, id="m_654321")
+        other_id = self.store.save_matches(
+            self.normalize("summary", other_match, match_id="m_654321"), edition
+        )[0]
+        for target, family, payload in (
+            (other_id, "player_stats", one),
+            (mid, "events", NormalizedFamily()),
+        ):
+            with self.assertRaisesRegex(StoreError, "LEASE_LOST"):
+                self.store.save_family(
+                    target, family, payload, lease=(job, recovered["lease_token"])
+                )
+            with self.assertRaisesRegex(StoreError, "LEASE_LOST"):
+                self.store.record_failure(
+                    target,
+                    family,
+                    "TRANSPORT_ERROR",
+                    lease=(job, recovered["lease_token"]),
+                )
         self.assertTrue(
             self.store.save_family(
                 mid, "player_stats", one, lease=(job, recovered["lease_token"])
@@ -255,8 +276,6 @@ class StoreTest(unittest.TestCase):
             ).fetchone()[0],
             "done",
         )
-        from vega_v2.normalize import NormalizedFamily
-
         combined = NormalizedFamily(
             rows={
                 "core.player_match_stats": one.rows["core.player_match_stats"]

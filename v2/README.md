@@ -49,7 +49,7 @@ Le workflow `Vega v2 isolated pilot` utilise le secret PitchAPI déjà présent 
 
 ## Validation
 
-Les tests avec base utilisent cinq bases locales jetables distinctes : `vega_v2_test`, `vega_v2_jobs_test`, `vega_v2_store_test`, `vega_v2_pilot_test`, `vega_v2_profiles_test`. Définir respectivement `VEGA_V2_TEST_DSN`, `VEGA_V2_JOBS_TEST_DSN`, `VEGA_V2_STORE_TEST_DSN`, `VEGA_V2_PILOT_TEST_DSN`, `VEGA_V2_PROFILES_TEST_DSN`, puis lancer :
+Les tests avec base utilisent six bases locales jetables distinctes : `vega_v2_test`, `vega_v2_jobs_test`, `vega_v2_store_test`, `vega_v2_pilot_test`, `vega_v2_profiles_test`, `vega_v2_concurrency_test`. Définir respectivement `VEGA_V2_TEST_DSN`, `VEGA_V2_JOBS_TEST_DSN`, `VEGA_V2_STORE_TEST_DSN`, `VEGA_V2_PILOT_TEST_DSN`, `VEGA_V2_PROFILES_TEST_DSN`, `VEGA_V2_CONCURRENCY_TEST_DSN`, puis lancer :
 
 ```sh
 python -m unittest discover -s v2/tests -v

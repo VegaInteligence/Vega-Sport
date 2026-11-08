@@ -394,7 +394,9 @@ class Store:
             if player and team:
                 targets.add(("player_season", player, team))
                 self._bump("player", player)
-        for kind, player, team in targets:
+        for kind, player, team in sorted(
+            targets, key=lambda item: (item[0], item[1] or 0, item[2] or 0)
+        ):
             self.conn.execute(
                 "INSERT INTO ops.dirty_scopes(scope_kind,player_id,team_id,competition_season_id) VALUES(%s,%s,%s,%s) ON CONFLICT(scope_kind,player_id,team_id,competition_season_id,cohort_id) DO UPDATE SET revision=ops.dirty_scopes.revision+1,queued_at=now()",
                 (kind, player, team, edition),
@@ -575,8 +577,8 @@ class Store:
             if lease:
                 job_id, token = lease
                 if not self.conn.execute(
-                    "SELECT id FROM ops.fetch_jobs WHERE id=%s AND lease_token=%s AND state='leased' AND lease_until>clock_timestamp() FOR UPDATE",
-                    (job_id, token),
+                    "SELECT id FROM ops.fetch_jobs WHERE id=%s AND lease_token=%s AND state='leased' AND lease_until>clock_timestamp() AND family=%s AND entity_type='match' AND entity_id=%s FOR UPDATE",
+                    (job_id, token, family, mid),
                 ).fetchone():
                     raise StoreError("LEASE_LOST")
             key = self.conn.execute(
@@ -652,8 +654,8 @@ class Store:
             if (
                 lease
                 and not self.conn.execute(
-                    "SELECT id FROM ops.fetch_jobs WHERE id=%s AND lease_token=%s AND state='leased' AND lease_until>clock_timestamp() FOR UPDATE",
-                    lease,
+                    "SELECT id FROM ops.fetch_jobs WHERE id=%s AND lease_token=%s AND state='leased' AND lease_until>clock_timestamp() AND family=%s AND entity_type='match' AND entity_id=%s FOR UPDATE",
+                    (*lease, family, mid),
                 ).fetchone()
             ):
                 raise StoreError("LEASE_LOST")
