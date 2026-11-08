@@ -1,6 +1,6 @@
 "use client";
 /**
- * Club mock-ups: real published data, read once per club and generation.
+ * Club profile: real published data, read once per club and generation.
  *
  * The club is read with its shots and appearances; its domestic league is
  * read club by club (summary detail) so every team indicator below can be
@@ -9,22 +9,21 @@
  * wear a « Données fictives » badge.
  */
 import { useEffect, useState } from "react";
-import { useFootball } from "../../../src/hooks/FootballContext.jsx";
+import { useFootball } from "../hooks/FootballContext.jsx";
 import {
   compactGeneration,
   compactScope,
   readCompact,
   readCompactPages,
-} from "../../../src/services/compact-reads.js";
+} from "./compact-reads.js";
 import {
   clubCompetitions,
   clubSquad,
   clubSummary,
   formationRecords,
   upcomingClubMatches,
-} from "../../../src/services/club-analysis.js";
+} from "./club-analysis.js";
 
-export const DEFAULT_CLUB = "t_32jSEF";
 const INTERNATIONAL = new Set(["INT", "INT-2", "UEFA", "FIFA", "EUR", "WORLD"]);
 
 /* ------------------------------------------------------------------ load */
@@ -220,13 +219,13 @@ function usePublication() {
   const f = useFootball();
   return {
     generation: compactGeneration(f?.manifest),
-    season: f?.manifest?.defaultSeason || f?.season,
+    season: f?.season || f?.manifest?.defaultSeason,
     manifest: f?.manifest,
   };
 }
 
-/** Whole dossier of one club, cached per generation across mock-up pages. */
-export function useClubDossier(clubId = DEFAULT_CLUB) {
+/** Whole dossier of one club, cached per generation and season. */
+export function useClubDossier(clubId) {
   const { generation, season } = usePublication();
   const key =
     clubId && generation && season ? `${generation}|${season}|${clubId}` : null;
