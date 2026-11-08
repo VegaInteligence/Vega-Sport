@@ -13,3 +13,32 @@ PITCHAPI_PLAYER_KEYS = {name: name for name in PLAYER_STATS_COLUMNS}
 PITCHAPI_PLAYER_KEYS.update({'rating_title':'rating','owngoal':'own_goals','ShotsOnTarget':'shots_on_target','ShotsOffTarget':'shots_off_target','expected_goals':'xg','expected_goals_non_penalty':'npxg','expected_goals_on_target_variant':'xgot','expected_assists':'xa','big_chance_created_team_title':'big_chances_created','big_chance_missed_title':'big_chances_missed','missed_penalty':'penalties_missed','player_throws':'throw_ins','matchstats.headers.tackles':'tackles','duel_won':'duels_won','duel_lost':'duels_lost'})
 PITCHAPI_TEAM_KEYS = {name: name for name in TEAM_STATS_COLUMNS}
 PITCHAPI_TEAM_KEYS.update({'big_chance':'big_chances','BallPossesion':'possession_pct','ShotsOnTarget':'shots_on_target','ShotsOffTarget':'shots_off_target','matchstats.headers.tackles':'tackles','expected_goals':'xg','expected_goals_on_target':'xgot','expected_goals_open_play':'xg_open_play','expected_goals_set_play':'xg_set_play'})
+
+# Exact provider spellings confirmed from the existing typed collector definitions.
+PITCHAPI_PLAYER_KEYS.update({
+    'Offsides': 'offsides',
+    'clearance_off_the_line': 'clearances_off_line',
+    'conceded_penalties': 'penalties_conceded',
+    'expected_goals_on_target_faced': 'xgot_faced',
+    'headed_clearance': 'headed_clearances',
+    'keeper_diving_save': 'diving_saves',
+    'keeper_high_claim': 'high_claims',
+    'keeper_sweeper': 'sweeper_actions',
+    'last_man_tackle': 'last_man_tackles',
+    'saved_penalties': 'penalties_saved',
+})
+
+# Explicit team spellings observed by the metadata-only pilot.
+PITCHAPI_TEAM_KEYS.update({
+    'big_chance_missed_title': 'big_chances_missed',
+    'duel_won': 'duels_won',
+    'expected_goals_non_penalty': 'npxg',
+    'Offsides': 'offsides',
+    'player_throws': 'throw_ins',
+})
+PLAYER_TOTAL_KEYS = {
+    'aerials_won': 'aerials_total',
+    'dribbles_succeeded': 'dribbles_total',
+    'ground_duels_won': 'ground_duels_total',
+    'long_balls_accurate': 'long_balls_total',
+}
