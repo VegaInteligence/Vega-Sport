@@ -136,6 +136,30 @@
     {
       "file": "pr45-production-deployment.json",
       "sha256": "f9f99e12dac11467e0bb8582f5e9f835338a6f944f20ada15d7c9c133c4665bd"
+    },
+    {
+      "file": "browser-after-pr46.json",
+      "sha256": "4bda115598ed93c10ff710691dfb12560231e87352a3fdf0db77eaa1078b56df"
+    },
+    {
+      "file": "pr46-ci-accepted.json",
+      "sha256": "623cd2cd7022c00ffb209f527b6b754c276f324827c6d1703b65fa17b98122e4"
+    },
+    {
+      "file": "pr46-production-deployment.json",
+      "sha256": "ac900f70313cd44ee53b6e9072793b247729664667b95b3225f490d13c20f60b"
+    },
+    {
+      "file": "browser-after-pr47.json",
+      "sha256": "a7e6ff0bb158c18782a9a4fb869f8537a8eee9ffc263d6e7b09612d48a9065ae"
+    },
+    {
+      "file": "pr47-ci-accepted.json",
+      "sha256": "a1b66aa9c2f34b31a68ecd200ac02c2c231d672044319b29b2427c09bde814f9"
+    },
+    {
+      "file": "pr47-production-deployment.json",
+      "sha256": "d6377dbdd15d0d93d261dc5be42f08877f803492d627ddd2e4523b1ce67ccfd6"
     }
   ],
   "policy": "Only allowlisted aggregates, public scope IDs, timestamps, statuses and hashes are included. Source filenames and hashes identify operator receipts; raw logs, credentials, resource bodies and signed URLs are excluded. Derived aggregates are asserted when built."

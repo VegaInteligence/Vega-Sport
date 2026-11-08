@@ -1,0 +1,36 @@
+{
+  "ci": {
+    "head": "4edcaa323a5306206e691659868817546a9e215a",
+    "runId": 42419630368,
+    "checkedAt": "2026-11-07 22:21:37 UTC",
+    "jobs": [
+      {
+        "id": 128545058191,
+        "name": "Relational publication and HTTP contracts",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 128545058372,
+        "name": "verify",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 128545058415,
+        "name": "Orion Pro PostgreSQL and offline RDS contracts",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "deployment": {
+    "checkedAt": "2026-11-07 22:23:43 UTC",
+    "deploymentId": "dpl_CDEjPXSpBKErkbw42Tp9y6WRm7Ud",
+    "state": "READY",
+    "sha": "3c7638b88f873d468af32515e11c42f8b03b0882",
+    "url": "https://vegasport.vercel.app",
+    "deploymentUrl": "vega-onvit4md0-vegainteligence.vercel.app",
+    "backendUnchanged": true
+  }
+}
