@@ -1,0 +1,141 @@
+/* Version C · Fiche club augmentée : layout A, Stats avancées made of B. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Stats avancées, same heading as the player page's mock-up C. */
+.advanced {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.advancedHead h2 {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.advancedHead p {
+  max-width: 70ch;
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+.badgeNew {
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  font-size: var(--text-2xs, 10px);
+  font-weight: 600;
+  vertical-align: 1px;
+}
+.advancedBody {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.subnav {
+  display: grid;
+  gap: 8px;
+}
+.subnav > div {
+  flex-wrap: wrap;
+}
+.subnav p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+/* Comparison */
+.notice {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius);
+  background: var(--accent-pale);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.best {
+  color: var(--ink-strong);
+  font-weight: 700;
+}
+.centile {
+  display: inline-block;
+  min-width: 30px;
+  margin-left: 6px;
+  color: var(--muted-light);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  text-align: right;
+}
+
+/* Largest centile gaps under the comparison radar. */
+.gaps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.gaps h4 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.gaps ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gaps li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ink);
+  font-size: var(--text-sm);
+}
+.gaps b {
+  color: var(--mq-series-1);
+  font-variant-numeric: tabular-nums;
+}
+.gaps [data-side="rival"] b {
+  color: var(--mq-series-2);
+}
+.gaps p {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+/* Referential picker above the tabs that rank the club. */
+.referential {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 14px 0 16px;
+}
+.referential p,
+.referentialLine {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.referentialLine {
+  margin: 14px 0 16px;
+}
