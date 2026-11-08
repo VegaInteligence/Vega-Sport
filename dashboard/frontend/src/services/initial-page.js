@@ -132,6 +132,17 @@ export function prepareInitialPage(
       check();
     });
   };
+  const imageEvent = (event) => {
+    const mediaState = event?.target
+      ?.closest?.("[data-page-media]")
+      ?.getAttribute?.("data-media-state");
+    // Media commits ready only after decoding, or removes the image for its
+    // terminal fallback. Those DOM mutations already notify this gate. Native
+    // load/error arrives earlier and cannot prove either state; scanning on
+    // every such event repeats layout for all images, including offscreen ones.
+    if (["loading", "ready", "fallback"].includes(mediaState)) return;
+    scheduleNotification();
+  };
   const observer = new view.MutationObserver(scheduleNotification);
   const cleanup = () => {
     phase = "disposed";
@@ -142,8 +153,8 @@ export function prepareInitialPage(
     fallbackFrame = null;
     view.clearTimeout(deadline);
     view.clearTimeout(pageDeadline);
-    root.removeEventListener("load", scheduleNotification, true);
-    root.removeEventListener("error", scheduleNotification, true);
+    root.removeEventListener("load", imageEvent, true);
+    root.removeEventListener("error", imageEvent, true);
     view.removeEventListener("resize", scheduleFrame);
     view.removeEventListener("scroll", scheduleFrame, true);
   };
@@ -183,17 +194,27 @@ export function prepareInitialPage(
     });
   }
   function pendingImages(inViewport = viewportCheck()) {
-    return [...root.querySelectorAll("img")].filter((image) => {
-      if (!inViewport(image) || image.hasAttribute("data-page-image-deferred"))
-        return false;
-      // Native assets can start now too; ApiImage still controls API admission.
-      if (image.loading !== "eager") image.loading = "eager";
+    const eager = [];
+    const pending = [...root.querySelectorAll("img")].filter((image) => {
+      if (image.hasAttribute("data-page-image-deferred")) return false;
       const src = image.getAttribute("src");
-      if (!src) return true;
-      if (!image.complete) return true;
       const mediaState = image
         .closest("[data-page-media]")
         ?.getAttribute?.("data-media-state");
+      // A currently loaded, decoded Media cannot block in any position. Avoid
+      // forcing layout just to establish visibility for that terminal state.
+      // This is the current element's proof, never a cache of previously seen URLs.
+      if (
+        src &&
+        mediaState === "ready" &&
+        image.complete &&
+        image.naturalWidth > 0
+      )
+        return false;
+      if (!inViewport(image)) return false;
+      if (image.loading !== "eager") eager.push(image);
+      if (!src) return true;
+      if (!image.complete) return true;
       // Media owns decoding, error alternatives and the final visible state.
       // Its loading marker must commit to ready (or remove the image for its
       // fallback). A second decode here adds another browser decode/frame even
@@ -223,6 +244,11 @@ export function prepareInitialPage(
       }
       return !record.decoded;
     });
+    // Finish the pass's geometry reads before starting native lazy assets.
+    // ApiImage still owns API admission; load/decode/Media commit still owns
+    // readiness. These writes alone never qualify an image for reveal.
+    for (const image of eager) image.loading = "eager";
+    return pending;
   }
   function check() {
     if (phase !== "preparing") return;
@@ -276,8 +302,8 @@ export function prepareInitialPage(
     attributes: true,
     attributeFilter: ["src", "srcset", "data-page-loading", "data-media-state"],
   });
-  root.addEventListener("load", scheduleNotification, true);
-  root.addEventListener("error", scheduleNotification, true);
+  root.addEventListener("load", imageEvent, true);
+  root.addEventListener("error", imageEvent, true);
   view.addEventListener("resize", scheduleFrame);
   view.addEventListener("scroll", scheduleFrame, {
     passive: true,
