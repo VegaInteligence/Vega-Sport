@@ -35,6 +35,7 @@ jobs:
       VEGA_V2_JOBS_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_jobs_test
       VEGA_V2_STORE_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_store_test
       VEGA_V2_PILOT_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_pilot_test
+      VEGA_V2_PROFILES_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_profiles_test
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,7 +49,7 @@ jobs:
           python - <<'PY'
           import os, psycopg
           with psycopg.connect(os.environ['V2_DATABASE_URL'], autocommit=True) as db:
-              for name in ('vega_v2_test','vega_v2_jobs_test','vega_v2_store_test','vega_v2_pilot_test'):
+              for name in ('vega_v2_test','vega_v2_jobs_test','vega_v2_store_test','vega_v2_pilot_test','vega_v2_profiles_test'):
                   db.execute(psycopg.sql.SQL('CREATE DATABASE {}').format(psycopg.sql.Identifier(name)))
           PY
       - name: Validate typed schema, normalization and transactional ingestion

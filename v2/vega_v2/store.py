@@ -142,6 +142,9 @@ class Store:
                 for edition, in self.conn.execute('SELECT id FROM core.competition_seasons WHERE competition_id=%s',(ident,)):
                     self._bump('competition_season',edition)
             self._bump('home',1)
+        if kind in ('team','player'):
+            from .profiles import queue_first_seen
+            queue_first_seen(self.conn,kind,ident)
         return ident
 
     def references(self, batch):
@@ -311,11 +314,11 @@ class Store:
             # An attempt failure belongs to ops; core coverage describes the last
             # committed facts. Neither successful data nor its cache version changes.
 
-    def log_attempt(self, family, event, *, entity_type=None, entity_id=None, competition_season_id=None):
+    def log_attempt(self, family, event, *, entity_type=None, entity_id=None, competition_season_id=None, target_date=None, global_key=None):
         at = event['fetched_at']
         start = at.date().replace(day=1)
         end = date(start.year + (start.month == 12), start.month % 12 + 1, 1)
         with self.conn.transaction():
             self.conn.execute('SELECT pg_advisory_xact_lock(92002,%s)', (start.year*100+start.month,))
             self.conn.execute(sql.SQL('CREATE TABLE IF NOT EXISTS ops.{} PARTITION OF ops.fetch_log FOR VALUES FROM ({}) TO ({})').format(sql.Identifier('fetch_log_'+start.strftime('%Y%m')), sql.Literal(start.isoformat()), sql.Literal(end.isoformat())))
-            self.conn.execute('INSERT INTO ops.fetch_log(family,entity_type,entity_id,competition_season_id,http_status,error_code,request_id,duration_ms,fetched_at) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)', (family, entity_type, entity_id, competition_season_id, event['status'], event['error_code'], event['request_id'], event['duration_ms'], at))
+            self.conn.execute('INSERT INTO ops.fetch_log(family,entity_type,entity_id,competition_season_id,target_date,global_key,http_status,error_code,request_id,duration_ms,fetched_at) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)', (family, entity_type, entity_id, competition_season_id, target_date, global_key, event['status'], event['error_code'], event['request_id'], event['duration_ms'], at))

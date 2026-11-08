@@ -16,7 +16,7 @@ class SchemaTests(unittest.TestCase):
         if target.hostname not in ('localhost','127.0.0.1','::1') or target.path!='/vega_v2_test': raise RuntimeError('Only disposable local vega_v2_test allowed')
         cls.db=psycopg.connect(DSN)
         assert cls.db.execute("SELECT to_regnamespace('core') IS NULL AND to_regnamespace('agg') IS NULL AND to_regnamespace('ops') IS NULL").fetchone()[0]
-        for name in ('001_core.sql','002_aggregates.sql','003_ops.sql','005_team_pass_percentage.sql'):
+        for name in ('001_core.sql','002_aggregates.sql','003_ops.sql','005_team_pass_percentage.sql','006_reference_state.sql'):
             cls.db.execute((ROOT/'sql'/name).read_text(encoding='utf-8'))
         cls.db.execute("INSERT INTO core.seasons(id,label,start_year) VALUES(1,'2025/2026',2025),(2,'2026/2027',2026)")
         cls.db.execute("INSERT INTO core.competitions(id,name) VALUES(1,'Fixture League')")
@@ -92,6 +92,14 @@ class SchemaTests(unittest.TestCase):
         self.assertEqual(status,'error'); self.assertEqual(bytes(digest),bytes.fromhex('12'*32))
         self.rejects("INSERT INTO ops.family_state(match_id,family) VALUES(1,'calendar')")
         self.rejects("INSERT INTO ops.family_state(match_id,family,fingerprint) VALUES(1,'events',decode('01','hex'))")
+    def test_reference_state_fingerprint_and_entity_scope(self):
+        digest=bytes.fromhex('12'*32)
+        self.db.execute("INSERT INTO ops.reference_state(provider,entity_type,entity_id,fingerprint,status) VALUES('pitchapi','team',1,%s,'ok')",(digest,))
+        self.db.execute("INSERT INTO ops.reference_state(provider,entity_type,entity_id) VALUES('pitchapi','player',1)")
+        self.assertEqual(self.db.execute("SELECT status FROM ops.reference_state WHERE entity_type='player'").fetchone()[0],'pending')
+        self.rejects("INSERT INTO ops.reference_state(provider,entity_type,entity_id) VALUES('pitchapi','team',1)")
+        self.rejects("INSERT INTO ops.reference_state(provider,entity_type,entity_id) VALUES('pitchapi','match',1)")
+        self.rejects("INSERT INTO ops.reference_state(provider,entity_type,entity_id,fingerprint) VALUES('pitchapi','team',2,decode('01','hex'))")
     def test_optional_pgvector_dimension_and_hnsw(self):
         if not self.db.execute("SELECT 1 FROM pg_available_extensions WHERE name='vector'").fetchone():
             self.skipTest('pgvector extension unavailable in local server')

@@ -25,15 +25,16 @@ def enqueue(conn, lane, family, *, entity_type=None, entity_id=None, target_date
       VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING RETURNING id''',(lane,family,entity_type,entity_id,target_date,competition_season_id,global_key,instant,priority)).fetchone()
     return row[0] if row else None
 
-def claim(conn,lane,*,now=None,lease_seconds=120):
+def claim(conn,lane,*,now=None,lease_seconds=120,family=None):
     if lane not in LANES or not isinstance(lease_seconds,int) or isinstance(lease_seconds,bool) or not 1<=lease_seconds<=3600: raise ValueError('invalid claim')
+    if family is not None and family not in MATCH_FAMILIES | {'calendar','league_matches','league','team','player'}: raise ValueError('invalid family')
     instant=_aware(now) if now is not None else datetime.now(timezone.utc)
     token=uuid.uuid4()
     cur=conn.execute('''WITH candidate AS (
-      SELECT id FROM ops.fetch_jobs WHERE lane=%s AND ((state='pending' AND run_after<=%s) OR (state='leased' AND lease_until<=%s))
+      SELECT id FROM ops.fetch_jobs WHERE lane=%s AND (%s::text IS NULL OR family::text=%s) AND ((state='pending' AND run_after<=%s) OR (state='leased' AND lease_until<=%s))
       ORDER BY priority DESC,run_after,id FOR UPDATE SKIP LOCKED LIMIT 1)
       UPDATE ops.fetch_jobs j SET state='leased',lease_token=%s,lease_until=%s,attempts=j.attempts+1,updated_at=%s
-      FROM candidate c WHERE j.id=c.id RETURNING j.id,j.lane,j.family,j.entity_type,j.entity_id,j.target_date,j.competition_season_id,j.global_key,j.attempts,j.lease_until,j.lease_token''',(lane,instant,instant,token,instant+timedelta(seconds=lease_seconds),instant))
+      FROM candidate c WHERE j.id=c.id RETURNING j.id,j.lane,j.family,j.entity_type,j.entity_id,j.target_date,j.competition_season_id,j.global_key,j.attempts,j.lease_until,j.lease_token''',(lane,family,family,instant,instant,token,instant+timedelta(seconds=lease_seconds),instant))
     row=cur.fetchone()
     return dict(zip([c.name for c in cur.description],row)) if row else None
 

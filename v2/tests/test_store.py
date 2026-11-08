@@ -61,6 +61,7 @@ class StoreTest(unittest.TestCase):
   self.assertEqual(rev(),r);self.assertEqual(self.db.execute('SELECT goals FROM core.player_match_stats WHERE match_id=%s',(mid,)).fetchall(),[(2,)])
   self.db.execute("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES('player','pitchapi','p_ffff00',999999)")
   broken_fk=stats('p_ffff00','t_123456',5)
+  broken_fk.references=[ref for ref in broken_fk.references if ref.provider_key!='p_ffff00']
   with self.assertRaises(psycopg.errors.ForeignKeyViolation):self.store.save_family(mid,'player_stats',broken_fk)
   self.assertEqual(rev(),r);self.assertEqual(self.db.execute('SELECT goals FROM core.player_match_stats WHERE match_id=%s',(mid,)).fetchall(),[(2,)])
   now=datetime.now(timezone.utc);job=self.enqueue(self.db,'details','player_stats',entity_type='match',entity_id=mid,run_after=now-timedelta(seconds=5));leased=self.claim(self.db,'details',now=now-timedelta(seconds=4),lease_seconds=1)

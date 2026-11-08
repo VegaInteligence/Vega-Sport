@@ -80,6 +80,21 @@ def workflow(name):
     check('secrets.NEON' not in text,'legacy repository secret references')
     if name=='verify-ingestion':
         check('postgres:18' in text and 'id-token: write' not in text and all(step.get('uses') != './.github/actions/aws-database' for job in obj['jobs'].values() for step in job.get('steps',[])),'test job must be isolated on PG18')
+    elif name=='vega-v2-pilot':
+        check(obj.get('permissions') == {'contents':'read'} and 'id-token: write' not in text,
+              'v2 pilot must have repository read permission only')
+        check('./.github/actions/aws-database' not in text and 'secrets.NEON' not in text,
+              'v2 pilot must not bootstrap the production database')
+        check(obj['jobs']['pilot']['services']['postgres']['image']=='postgres:16',
+              'v2 pilot must use its disposable PostgreSQL service')
+        target=urllib.parse.urlsplit(obj['jobs']['pilot']['env']['V2_DATABASE_URL'])
+        check(target.hostname=='127.0.0.1' and target.path=='/vega_v2_pilot',
+              'v2 pilot database must stay local to the runner')
+        import re
+        check(set(re.findall(r'secrets\.([A-Za-z0-9_]+)',text))=={'PITCHAPI_API_KEY'},
+              'v2 pilot may receive only its provider key')
+        check('schedule' not in obj.get('on',obj.get(True,{})),
+              'v2 pilot must not activate a permanent schedule')
     elif name=='production-validation':
         check('id-token: write' not in text and 'secrets.' not in text,
               'public site validation must not receive cloud/provider credentials')
