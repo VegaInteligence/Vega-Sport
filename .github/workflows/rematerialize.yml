@@ -125,11 +125,13 @@ jobs:
         working-directory: dashboard
       - run: pip install -r dashboard/scripts/requirements.txt
       - name: Load AWS staging credentials
+        id: aws
         uses: ./.github/actions/aws-database
         with:
           mode: ingest
           role-arn: ${{ vars.STATARENA_AWS_INGEST_ROLE_ARN }}
       - name: Publish relational models in AWS RDS
+        id: publish
         env:
           QUEUE_ALL: ${{ steps.plan.outputs.queue_all }}
           MATERIALIZE_MINUTES: ${{ steps.plan.outputs.minutes }}
@@ -153,8 +155,7 @@ jobs:
             node -e 'const s = require("node:fs").readFileSync("rematerialize.log", "utf8").trim().split("\n").at(-1); if (JSON.parse(s).schema_installed !== true) process.exit(1)'
           fi
       - name: Refresh home projections after publication
-        if: steps.plan.outputs.schema_only != 'true' || steps.plan.outputs.home_only == 'true'
-        continue-on-error: ${{ steps.plan.outputs.home_only != 'true' }}
+        if: ${{ !cancelled() && steps.aws.outcome == 'success' && steps.plan.outcome == 'success' && steps.plan.outputs.schema_only != 'true' && (steps.plan.outputs.home_only != 'true' || steps.publish.outcome == 'success') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -184,5 +185,6 @@ jobs:
           name: rematerialize-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             rematerialize.log
+            home-projection.json
             lineup-contract.log
           if-no-files-found: ignore
