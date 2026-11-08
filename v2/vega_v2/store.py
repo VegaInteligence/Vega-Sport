@@ -214,6 +214,12 @@ class Store:
             for k, v in fields.items()
             if k in self.columns[table] and k not in ("id", "updated_at")
         }
+        if (
+            kind == "player"
+            and isinstance(row.get("name"), str)
+            and not row["name"].strip()
+        ):
+            row["name"] = None
         for name in ("shirt_number", "position_id"):
             if name in row:
                 row[name] = number(row[name], "smallint")

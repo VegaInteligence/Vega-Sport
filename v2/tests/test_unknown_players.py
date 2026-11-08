@@ -70,7 +70,7 @@ class UnknownPlayerTest(unittest.TestCase):
                     {
                         "event_type": "Goal",
                         "team_id": "t_123456",
-                        "player": {"id": "p_123456"},
+                        "player": {"id": "p_123456", "name": ""},
                         "minute": 12,
                     }
                 ]
