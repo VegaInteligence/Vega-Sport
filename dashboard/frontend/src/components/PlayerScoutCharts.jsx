@@ -260,8 +260,9 @@ export function PercentilePizza({ items, cohort, size = 560 }) {
           const a0 = -Math.PI / 2 + i * step,
             a1 = a0 + step,
             mid = (a0 + a1) / 2;
-          const end = radius(item.percentile);
-          const inside = item.percentile >= 80;
+          const ranked = item.percentile != null;
+          const end = radius(ranked ? item.percentile : 0);
+          const inside = ranked && item.percentile >= 80;
           const [lx, ly] = polar(
             c,
             c,
@@ -280,9 +281,14 @@ export function PercentilePizza({ items, cohort, size = 560 }) {
                     unit: item.unit,
                   }),
                 ],
-                ["Centile", item.percentile],
+                ["Centile", ranked ? item.percentile : "non classé"],
                 ...(item.rank
-                  ? [["Rang", `${ordinal(item.rank)} / ${cohort}`]]
+                  ? [
+                      [
+                        "Rang",
+                        `${ordinal(item.rank)} / ${item.peers || cohort}`,
+                      ],
+                    ]
                   : []),
               ]}
             />
@@ -294,7 +300,7 @@ export function PercentilePizza({ items, cohort, size = 560 }) {
               {...tipHandlers(t, content, (on) =>
                 setActive(on ? item.key : null),
               )}
-              aria-label={`${item.label} : centile ${item.percentile}`}
+              aria-label={`${item.label} : ${ranked ? `centile ${item.percentile}` : "non classé"}`}
               style={{ outline: "none" }}
             >
               <path
@@ -303,19 +309,21 @@ export function PercentilePizza({ items, cohort, size = 560 }) {
                 stroke="var(--mq-gap)"
                 strokeWidth="2"
               />
-              <path
-                d={wedge(c, c, r0, end, a0, a1)}
-                fill={`color-mix(in srgb, ${toneVar(item.percentile)} 84%, var(--mq-gap))`}
-                stroke="var(--mq-gap)"
-                strokeWidth="2"
-              />
+              {ranked && (
+                <path
+                  d={wedge(c, c, r0, end, a0, a1)}
+                  fill={`color-mix(in srgb, ${toneVar(item.percentile)} 84%, var(--mq-gap))`}
+                  stroke="var(--mq-gap)"
+                  strokeWidth="2"
+                />
+              )}
               <text
                 x={lx}
                 y={ly + 4}
                 textAnchor="middle"
                 className={inside ? s.valueTextOnFill : s.valueText}
               >
-                {item.percentile}
+                {ranked ? item.percentile : "—"}
               </text>
               <AxisLabel
                 x={tx}
