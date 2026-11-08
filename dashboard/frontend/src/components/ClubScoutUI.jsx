@@ -1,120 +1,19 @@
 "use client";
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import Layout from "../../../src/components/Layout.jsx";
-import Icon from "../../../src/components/Icon.jsx";
-import { chartTokens, PercentileBar, toneVar } from "./charts.jsx";
+import Icon from "./Icon.jsx";
+import { useFootball } from "../hooks/FootballContext.jsx";
+import { PercentileBar, toneVar } from "./PlayerScoutCharts.jsx";
 import {
-  DEFAULT_CLUB,
   METRICS,
   SITUATION_LABELS,
   STYLE_AXES,
   formatMetric,
   rolling,
-} from "./club-data.js";
-import s from "./club.module.css";
+} from "../services/club-scout.js";
+import s from "./ClubScout.module.css";
 
 export const clubStyles = s;
-
-const VERSIONS = [
-  ["/maquettes/club-a", "A · Fiche club"],
-  ["/maquettes/club-b", "B · Tableau tactique"],
-  ["/maquettes/club-c", "C · Fiche club augmentée"],
-];
-const PRESETS = [
-  ["t_32jSEF", "Barcelona"],
-  ["t_4NZcri", "Real Madrid"],
-  ["t_41iFW3", "Paris Saint-Germain"],
-  ["t_2s2eyG", "Marseille"],
-  ["t_38NVJO", "Lens"],
-  ["t_1gkhxH", "Arsenal"],
-  ["t_0UCNPX", "Manchester City"],
-  ["t_0BrMnM", "Liverpool"],
-  ["t_1cpjqO", "Bayern München"],
-  ["t_386iz1", "Borussia Dortmund"],
-  ["t_3CPHHF", "Inter"],
-  ["t_2toJRF", "Napoli"],
-];
-
-export function useClubId() {
-  const params = useSearchParams();
-  const id = params.get("id");
-  return /^t_[A-Za-z0-9]{6}$/.test(id || "") ? id : DEFAULT_CLUB;
-}
-
-/** The real site frame around a club mock-up, with version and club pickers. */
-export function ClubShell({ version, title, dossier, children }) {
-  const router = useRouter(),
-    pathname = usePathname(),
-    id = useClubId();
-  const options = useMemo(() => {
-    const seen = new Set(PRESETS.map(([value]) => value));
-    const league = (dossier?.clubs || [])
-      .filter((club) => !seen.has(club.id))
-      .map((club) => [club.id, club.name])
-      .sort((a, b) => a[1].localeCompare(b[1], "fr"));
-    return { presets: PRESETS, league };
-  }, [dossier]);
-  return (
-    <Layout
-      path="/clubs/"
-      title="Clubs"
-      hideHeading
-      performanceComparison={false}
-    >
-      <div className={`${chartTokens} ${s.shell}`}>
-        <div className={s.banner} role="note">
-          <span>
-            <strong>Maquette {version}</strong> · {title} · données publiées
-            réelles, valeur et âge de l’effectif fictifs
-          </span>
-          <label className={s.switcher}>
-            Club
-            <select
-              value={id}
-              onChange={(e) => router.push(`${pathname}?id=${e.target.value}`)}
-            >
-              {!options.presets.some(([value]) => value === id) &&
-                !options.league.some(([value]) => value === id) && (
-                  <option value={id}>{dossier?.name || id}</option>
-                )}
-              <optgroup label="Exemples">
-                {options.presets.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </optgroup>
-              {options.league.length > 0 && (
-                <optgroup label={dossier?.league?.name || "Championnat"}>
-                  {options.league.map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-          </label>
-          <nav aria-label="Versions de la maquette">
-            <Link href="/maquettes">Sommaire</Link>
-            {VERSIONS.map(([href, label]) => (
-              <Link
-                key={href}
-                href={`${href}?id=${id}`}
-                aria-current={label.startsWith(version) ? "page" : undefined}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-        {children}
-      </div>
-    </Layout>
-  );
-}
 
 export function ClubLoading({ state, compact = false }) {
   if (state.status === "error")
@@ -1344,6 +1243,7 @@ export function MatchRows({ rows, limit = 99, competitionName = true }) {
 /* ----------------------------------------------------------------- squad */
 
 export function SquadTable({ dossier, limit = 30 }) {
+  const f = useFootball();
   const possible = dossier.allRecord.matches * 90 || 1;
   const rows = dossier.squad.profiles
     .filter((p) => p.minutes > 0)
@@ -1375,7 +1275,10 @@ export function SquadTable({ dossier, limit = 30 }) {
             return (
               <tr key={player.id}>
                 <th scope="row">
-                  <Link className={s.player} href={`/joueurs/?id=${player.id}`}>
+                  <Link
+                    className={s.player}
+                    href={f.href("/joueurs/", { id: player.id, q: "" })}
+                  >
                     <Picture
                       name={player.name}
                       url={player.imageUrl}

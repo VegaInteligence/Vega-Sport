@@ -1,13 +1,13 @@
 "use client";
-/* Version A · Fiche club : the player profile (mock-up C) adapted to a club.
- * Identity rail on the left, the same tab rhythm on the right. */
+/* Club profile tabs: identity rail and the overview, statistics, style,
+ * matches and squad tabs (the player profile adapted to a club). */
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import { Segments } from "../../../src/components/UI.jsx";
-import { BookmarkButton } from "../../../src/components/ResearchUI.jsx";
-import { FakeBadge } from "../../../src/components/PlayerScoutDemo.jsx";
-import { PercentilePizza, RadarChart } from "../_shared/charts.jsx";
-import { Tabs, useTab } from "../_shared/ui.jsx";
+import { Segments } from "./UI.jsx";
+import { BookmarkButton } from "./ResearchUI.jsx";
+import { FakeBadge } from "./PlayerScoutDemo.jsx";
+import ClubInformation from "./ClubInformation.jsx";
+import { PercentilePizza } from "./PlayerScoutCharts.jsx";
 import {
   FAMILIES,
   METRICS,
@@ -15,13 +15,9 @@ import {
   PHASES,
   formatMetric,
   opponentStrength,
-  similarClubs,
-  useClubDossier,
-} from "../_shared/club-data.js";
+} from "../services/club-scout.js";
 import {
   Card,
-  ClubLoading,
-  ClubShell,
   Crest,
   FormStrip,
   GameState,
@@ -44,92 +40,8 @@ import {
   fmtNum,
   ordinal,
   styleTags,
-  useClubId,
-} from "../_shared/club-ui.jsx";
-import s from "./page-a.module.css";
-
-const TABS = [
-  ["apercu", "Vue d’ensemble"],
-  ["stats", "Statistiques"],
-  ["style", "Style de jeu"],
-  ["matchs", "Matchs et tendances"],
-  ["effectif", "Effectif"],
-  ["comparer", "Comparaison"],
-  ["similaires", "Clubs similaires"],
-];
-
-export default function ClubPageA() {
-  const id = useClubId();
-  const state = useClubDossier(id);
-  const dossier = state.status === "ready" ? state.dossier : null;
-  return (
-    <ClubShell version="A" title="Fiche club" dossier={dossier}>
-      {dossier ? (
-        <Profile key={dossier.id} dossier={dossier} />
-      ) : (
-        <ClubLoading state={state} />
-      )}
-    </ClubShell>
-  );
-}
-
-function Profile({ dossier }) {
-  const [tab, setTab] = useTab(TABS);
-  const [rival, setRival] = useState(null);
-  const compare = (clubId) => {
-    setRival(clubId);
-    setTab("comparer");
-  };
-  return (
-    <>
-      <Link className={s.back} href={`/clubs/?id=${dossier.id}`}>
-        ← Page club actuelle
-      </Link>
-      <div className={s.layout}>
-        <IdentityRail dossier={dossier} onTab={setTab} />
-        <div className={s.main}>
-          <Tabs
-            label="Analyse du club"
-            items={TABS}
-            value={tab}
-            onChange={setTab}
-            panelId="club-a-panel"
-          />
-          <div
-            id="club-a-panel"
-            role="tabpanel"
-            aria-label={TABS.find(([key]) => key === tab)[1]}
-          >
-            <Referential dossier={dossier} />
-            {tab === "apercu" && <Overview dossier={dossier} onTab={setTab} />}
-            {tab === "stats" && <Statistics dossier={dossier} />}
-            {tab === "style" && <Style dossier={dossier} />}
-            {tab === "matchs" && <Matches dossier={dossier} />}
-            {tab === "effectif" && <Squad dossier={dossier} />}
-            {tab === "comparer" && (
-              <Comparison dossier={dossier} rival={rival} onRival={setRival} />
-            )}
-            {tab === "similaires" && (
-              <Similar dossier={dossier} onCompare={compare} />
-            )}
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-export function Referential({ dossier }) {
-  return (
-    <p className={s.referential}>
-      Référentiel : <strong>{dossier.league?.name}</strong> ·{" "}
-      {dossier.clubs.length} clubs · {dossier.self.record.matches} journées
-      jouées par le club · valeurs par match en championnat
-    </p>
-  );
-}
-
-/* ------------------------------------------------------------- rail */
+} from "./ClubScoutUI.jsx";
+import s from "./ClubScoutTabs.module.css";
 
 function competitionRecords(dossier) {
   const out = new Map();
@@ -166,7 +78,7 @@ export function IdentityRail({ dossier, onTab }) {
     <aside className={s.rail} aria-label="Identité du club">
       <div className={s.identity}>
         <Crest club={dossier} className={`crest ${s.bigCrest}`} />
-        <h1 className={s.name}>{dossier.name}</h1>
+        <h2 className={s.name}>{dossier.name}</h2>
         <p className={s.sub}>
           {[dossier.league?.name, dossier.season].filter(Boolean).join(" · ")}
         </p>
@@ -474,6 +386,7 @@ export function Overview({ dossier, onTab, base = dossier }) {
           <Upcoming dossier={base} />
         </Card>
       </div>
+      <ClubInformation dossier={base} />
     </div>
   );
 }
@@ -848,215 +761,3 @@ export function Squad({ dossier }) {
 }
 
 /* -------------------------------------------------------- comparison */
-
-const COMPARE_KEYS = [
-  "ppm",
-  "xpts",
-  "xg",
-  "xga",
-  "bigChances",
-  "bigChancesAgainst",
-  "xgPerShot",
-  "possession",
-  "fieldTilt",
-  "ppda",
-  "passAccuracy",
-  "duels",
-  "xgSet",
-  "xgSetAgainst",
-  "finishing",
-  "keeper",
-];
-
-function Comparison({ dossier, rival, onRival }) {
-  const fallback = similarClubs(dossier, 1)[0]?.club.id;
-  const other = dossier.clubs.find((club) => club.id === (rival || fallback));
-  const self = dossier.self;
-  const meetings = other
-    ? dossier.allRows.filter((row) => row.opponent.id === other.id)
-    : [];
-  return (
-    <div className={c.stack}>
-      <div className={s.toolbar}>
-        <label className={c.switcher}>
-          Comparer avec
-          <select
-            value={other?.id || ""}
-            onChange={(e) => onRival(e.target.value)}
-          >
-            {dossier.clubs
-              .filter((club) => club.id !== dossier.id)
-              .map((club) => (
-                <option key={club.id} value={club.id}>
-                  {club.position}. {club.name}
-                </option>
-              ))}
-          </select>
-        </label>
-      </div>
-      {other && (
-        <>
-          <div className={s.versus}>
-            {[self, other].map((club, i) => (
-              <div key={club.id} data-side={i ? "rival" : "self"}>
-                <Crest club={club} />
-                <span>
-                  <strong>{club.name}</strong>
-                  <small>
-                    {ordinal(club.position)} · {club.record.points} pts ·{" "}
-                    {club.record.w}-{club.record.d}-{club.record.l} · Indice{" "}
-                    {club.vegaIndex}
-                  </small>
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className={c.grid2}>
-            <Card
-              title="Profils superposés"
-              text="Centiles de performance dans le championnat."
-            >
-              <RadarChart
-                size={440}
-                axes={PERFORMANCE_KEYS.map((key) => ({
-                  key,
-                  label: METRICS[key].label.replace(" / match", ""),
-                }))}
-                series={[self, other].map((club, i) => ({
-                  name: club.name,
-                  color: i ? "var(--mq-series-2)" : "var(--mq-series-1)",
-                  values: Object.fromEntries(
-                    PERFORMANCE_KEYS.map((key) => [
-                      key,
-                      club.centiles[key] ?? 0,
-                    ]),
-                  ),
-                }))}
-              />
-            </Card>
-            <Card
-              title="Côte à côte"
-              text="Valeurs par match en championnat ; en gras, le meilleur des deux."
-            >
-              <div className={c.tableScroll}>
-                <table className={c.table}>
-                  <thead>
-                    <tr>
-                      <th scope="col">Indicateur</th>
-                      <th scope="col">{self.name}</th>
-                      <th scope="col">{other.name}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {COMPARE_KEYS.map((key) => {
-                      const a = self.values[key],
-                        b = other.values[key],
-                        better = METRICS[key].better;
-                      const best =
-                        better && a != null && b != null && a !== b
-                          ? a > b === better > 0
-                            ? 0
-                            : 1
-                          : null;
-                      return (
-                        <tr key={key}>
-                          <th scope="row">
-                            {METRICS[key].label}
-                            <Info text={METRICS[key].info} />
-                          </th>
-                          <td
-                            style={{
-                              fontWeight: best === 0 ? 700 : 400,
-                              color:
-                                best === 0 ? "var(--ink-strong)" : undefined,
-                            }}
-                          >
-                            {formatMetric(key, a)}
-                          </td>
-                          <td
-                            style={{
-                              fontWeight: best === 1 ? 700 : 400,
-                              color:
-                                best === 1 ? "var(--ink-strong)" : undefined,
-                            }}
-                          >
-                            {formatMetric(key, b)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          </div>
-          <Card title="Confrontations cette saison">
-            {meetings.length ? (
-              <MatchRows rows={meetings} />
-            ) : (
-              <p className={c.muted}>
-                Aucune confrontation jouée cette saison.
-              </p>
-            )}
-          </Card>
-        </>
-      )}
-    </div>
-  );
-}
-
-/* ----------------------------------------------------------- similar */
-
-function Similar({ dossier, onCompare }) {
-  const list = similarClubs(dossier, 6);
-  return (
-    <div className={c.stack}>
-      <p className={c.note} style={{ margin: 0 }}>
-        Proximité des centiles de style et de niveau (possession, territoire,
-        jeu direct, pressing, centres, CPA, xG pour et contre) : un profil
-        voisin, pas un niveau égal.
-      </p>
-      <div className={s.similar}>
-        {list.map(({ club, similarity, parts }) => (
-          <article key={club.id} className={c.card}>
-            <div className={s.similarHead}>
-              <Crest club={club} />
-              <span>
-                <strong>{club.name}</strong>
-                <small>
-                  {ordinal(club.position)} · {club.record.w}-{club.record.d}-
-                  {club.record.l}
-                </small>
-              </span>
-              <b>
-                {similarity}
-                <small>/100</small>
-              </b>
-            </div>
-            <p className={c.note}>
-              Plus proches :{" "}
-              {parts
-                .slice(0, 3)
-                .map((part) => METRICS[part.key].label.replace(" / match", ""))
-                .join(" · ")}
-            </p>
-            <div className={s.similarActions}>
-              <button
-                className="button button-secondary"
-                onClick={() => onCompare(club.id)}
-              >
-                Comparer
-              </button>
-              <Link
-                className="inline-link"
-                href={`/maquettes/club-a?id=${club.id}`}
-              >
-                Ouvrir la fiche →
-              </Link>
-            </div>
-          </article>
-        ))}
-      </div>
-    </div>
-  );
-}

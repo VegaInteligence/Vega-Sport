@@ -1,4 +1,4 @@
-/* Version B · Tableau tactique : header band, sticky section nav, one scroll. */
+/* Club profile, Stats avancées tab. */
 .header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

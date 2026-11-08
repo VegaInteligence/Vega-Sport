@@ -1,31 +1,30 @@
 "use client";
-/* Version C · Fiche club augmentée : version A, plus un onglet Stats avancées
- * fait des blocs de la version B, et une comparaison ouverte à tous les
- * championnats (menu déroulant avec recherche). */
-import React, { useMemo, useState } from "react";
+/* Club profile: identity rail and tabs, statistics ranked in a referential
+ * the user chooses, comparison and similar clubs across every competition. */
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Segments } from "../../../src/components/UI.jsx";
-import { countryLabel } from "../../../src/services/competition-selector.js";
-import { normalizeText } from "../../../src/services/format.js";
-import { RadarChart } from "../_shared/charts.jsx";
-import { Tabs, useTab } from "../_shared/ui.jsx";
+import { useFootball } from "../hooks/FootballContext.jsx";
+import { Segments } from "./UI.jsx";
+import { ResearchTabs } from "./ResearchUI.jsx";
+import { chartTokens, RadarChart } from "./PlayerScoutCharts.jsx";
+import { countryLabel } from "../services/competition-selector.js";
+import { normalizeText } from "../services/format.js";
 import {
   METRICS,
   PERFORMANCE_KEYS,
   formatMetric,
+  rebase,
   similarClubs,
   useClubDossier,
   useClubSearch,
-  rebase,
   useLeagueCohort,
   useReferential,
   useSeasonCompetitions,
   useSeasonLeagues,
-} from "../_shared/club-data.js";
+} from "../services/club-scout.js";
 import {
   Card,
   ClubLoading,
-  ClubShell,
   Crest,
   Info,
   MatchRows,
@@ -33,8 +32,7 @@ import {
   SearchMenu,
   clubStyles as c,
   ordinal,
-  useClubId,
-} from "../_shared/club-ui.jsx";
+} from "./ClubScoutUI.jsx";
 import {
   IdentityRail,
   Matches,
@@ -42,7 +40,7 @@ import {
   Squad,
   Statistics,
   Style,
-} from "../club-a/ClubPageA.jsx";
+} from "./ClubScoutTabs.jsx";
 import {
   Finishing,
   SetPieces,
@@ -50,33 +48,51 @@ import {
   Synthesis,
   WithBall,
   WithoutBall,
-} from "../club-b/ClubPageB.jsx";
-import sA from "../club-a/page-a.module.css";
-import s from "./page-c.module.css";
+} from "./ClubScoutAdvanced.jsx";
+import sA from "./ClubScoutTabs.module.css";
+import s from "./ClubScoutProfile.module.css";
 
 const TABS = [
-  ["apercu", "Vue d’ensemble"],
+  ["overview", "Vue d’ensemble"],
   ["stats", "Statistiques"],
-  ["avancees", "Stats avancées"],
+  ["advanced", "Stats avancées"],
   ["style", "Style de jeu"],
-  ["matchs", "Matchs et tendances"],
-  ["effectif", "Effectif"],
-  ["comparer", "Comparaison"],
-  ["similaires", "Clubs similaires"],
+  ["matches", "Matchs et tendances"],
+  ["squad", "Effectif"],
+  ["compare", "Comparaison"],
+  ["similar", "Clubs similaires"],
 ];
 
-export default function ClubPageC() {
-  const id = useClubId();
-  const state = useClubDossier(id);
+/** Tab mirrored in `?clubView=` without a navigation, as before. */
+function useClubTab() {
+  const [tab, setTab] = useState("overview");
+  useEffect(() => {
+    const requested = new URL(window.location.href).searchParams.get(
+      "clubView",
+    );
+    if (TABS.some(([key]) => key === requested)) setTab(requested);
+  }, []);
+  const change = useCallback((next) => {
+    setTab(next);
+    const url = new URL(window.location.href);
+    if (next === "overview") url.searchParams.delete("clubView");
+    else url.searchParams.set("clubView", next);
+    window.history.replaceState(null, "", url.pathname + url.search);
+  }, []);
+  return [tab, change];
+}
+
+export default function ClubScoutProfile({ clubId }) {
+  const state = useClubDossier(clubId);
   const dossier = state.status === "ready" ? state.dossier : null;
   return (
-    <ClubShell version="C" title="Fiche club augmentée" dossier={dossier}>
+    <div className={`${chartTokens} ${c.shell}`}>
       {dossier ? (
         <Profile key={dossier.id} dossier={dossier} />
       ) : (
         <ClubLoading state={state} />
       )}
-    </ClubShell>
+    </div>
   );
 }
 
@@ -94,7 +110,7 @@ const brief = (club, league) => ({
 });
 
 function Profile({ dossier }) {
-  const [tab, setTab] = useTab(TABS);
+  const [tab, setTab] = useClubTab();
   // Referential chosen by the user; null keeps the club's own league.
   const [choice, setChoice] = useState(null);
   const refState = useReferential(choice?.leagues || null);
@@ -111,25 +127,23 @@ function Profile({ dossier }) {
   });
   const compare = (club) => {
     setRival(club);
-    setTab("comparer");
+    setTab("compare");
   };
   return (
     <>
-      <Link className={sA.back} href={`/clubs/?id=${dossier.id}`}>
-        ← Page club actuelle
-      </Link>
       <div className={sA.layout}>
         <IdentityRail dossier={dossier} onTab={setTab} />
         <div className={sA.main}>
-          <Tabs
+          <ResearchTabs
+            animated
             label="Analyse du club"
             items={TABS}
             value={tab}
             onChange={setTab}
-            panelId="club-c-panel"
+            panelId="club-profile-panel"
           />
           <div
-            id="club-c-panel"
+            id="club-profile-panel"
             role="tabpanel"
             aria-label={TABS.find(([key]) => key === tab)[1]}
           >
@@ -147,18 +161,18 @@ function Profile({ dossier }) {
                 {dossier.league?.name}
               </p>
             )}
-            {tab === "apercu" && (
+            {tab === "overview" && (
               <Overview dossier={view} base={dossier} onTab={setTab} />
             )}
             {tab === "stats" && <Statistics dossier={view} />}
-            {tab === "avancees" && <AdvancedStats dossier={view} />}
+            {tab === "advanced" && <AdvancedStats dossier={view} />}
             {tab === "style" && <Style dossier={view} />}
-            {tab === "matchs" && <Matches dossier={dossier} />}
-            {tab === "effectif" && <Squad dossier={dossier} />}
-            {tab === "comparer" && (
+            {tab === "matches" && <Matches dossier={dossier} />}
+            {tab === "squad" && <Squad dossier={dossier} />}
+            {tab === "compare" && (
               <Comparison dossier={dossier} rival={rival} onRival={setRival} />
             )}
-            {tab === "similaires" && (
+            {tab === "similar" && (
               <Similar dossier={dossier} onCompare={compare} />
             )}
           </div>
@@ -170,7 +184,7 @@ function Profile({ dossier }) {
 
 /* --------------------------------------------------------- referential */
 
-const REFERENTIAL_TABS = new Set(["apercu", "stats", "avancees", "style"]);
+const REFERENTIAL_TABS = new Set(["overview", "stats", "advanced", "style"]);
 const TOP5 = [
   ["ENG", "Premier League"],
   ["ESP", "LaLiga"],
@@ -301,9 +315,8 @@ function AdvancedStats({ dossier }) {
           Stats avancées<span className={s.badgeNew}>Nouveau</span>
         </h2>
         <p>
-          Les blocs du tableau tactique : chaque indicateur lu pour et contre,
-          et classé parmi les {dossier.clubs.length} clubs de{" "}
-          {dossier.league?.name}.
+          Chaque phase de jeu lue pour et contre, chaque indicateur classé parmi
+          les {dossier.clubs.length} clubs de {dossier.league?.name}.
         </p>
       </div>
       <div className={s.advancedBody}>
@@ -564,6 +577,7 @@ const MAJOR = [
 ];
 
 function Similar({ dossier, onCompare }) {
+  const f = useFootball();
   const leagues = useSeasonLeagues();
   const [league, setLeague] = useState(dossier.league);
   const state = useLeagueCohort(league);
@@ -651,7 +665,7 @@ function Similar({ dossier, onCompare }) {
                 </button>
                 <Link
                   className="inline-link"
-                  href={`/maquettes/club-c?id=${club.id}`}
+                  href={f.href("/clubs/", { id: club.id, clubView: "" })}
                 >
                   Ouvrir la fiche →
                 </Link>
