@@ -215,11 +215,13 @@ class Store:
                 self.conn.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))', ('pitchapi:match:'+source['id'],))
                 self.conn.execute("SELECT m.id FROM core.matches m JOIN core.provider_ids p ON p.entity_type='match' AND p.provider='pitchapi' AND p.entity_id=m.id WHERE p.provider_key=%s FOR UPDATE OF m", (source['id'],))
             self.references(batch)
-            sid = self.conn.execute('SELECT season_id FROM core.competition_seasons WHERE id=%s', (competition_season_id,)).fetchone()[0]
+            sid, competition_id, label = self.conn.execute('SELECT cs.season_id,cs.competition_id,s.label FROM core.competition_seasons cs JOIN core.seasons s ON s.id=cs.season_id WHERE cs.id=%s', (competition_season_id,)).fetchone()
             ids = []
             for source in batch.rows.get('core.matches', []):
                 key = source['id']
-                row = self._row({k: v for k, v in source.items() if k != 'id'})
+                if source.get('provider_season') is not None and source['provider_season'] != label: raise StoreError('MATCH_SEASON_CHANGED')
+                if source.get('provider_competition_id') and self.resolve('competition',source['provider_competition_id']) != competition_id: raise StoreError('MATCH_COMPETITION_CHANGED')
+                row = self._row({k: v for k, v in source.items() if k not in ('id','provider_season','provider_competition_id')})
                 row.update(competition_season_id=competition_season_id, season_id=sid, source='pitchapi')
                 try: mid = self.resolve('match', key)
                 except StoreError: mid = None

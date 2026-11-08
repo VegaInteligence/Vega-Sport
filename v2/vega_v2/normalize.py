@@ -4,7 +4,7 @@ from datetime import datetime, date, timezone
 from decimal import Decimal, InvalidOperation
 import math
 import re
-from .schema_contract import (PLAYER_STATS_COLUMNS, TEAM_STATS_COLUMNS, TEAM_ADVANCED_COLUMNS, PLAYER_ADVANCED_COLUMNS, PITCHAPI_PLAYER_KEYS, PITCHAPI_TEAM_KEYS)
+from .schema_contract import (PLAYER_STATS_COLUMNS, TEAM_STATS_COLUMNS, TEAM_ADVANCED_COLUMNS, PLAYER_ADVANCED_COLUMNS, PITCHAPI_PLAYER_KEYS, PITCHAPI_TEAM_KEYS, PLAYER_TOTAL_KEYS)
 
 class NormalizationError(ValueError):
     """Controlled errors only: never include provider values in exception text."""
@@ -83,7 +83,7 @@ def _unknown_keys(out, prefix, obj, known):
         if key not in known and isinstance(key, str): _unknown(out, prefix+'.'+key)
 
 def _period(value):
-    if value not in _PERIOD: raise NormalizationError('UNKNOWN_PERIOD')
+    if not isinstance(value,str) or value not in _PERIOD: raise NormalizationError('UNKNOWN_PERIOD')
     return _PERIOD[value]
 
 def _bool(value):
@@ -99,10 +99,14 @@ def _typed_fields(obj, fields, types, aliases=None):
 
 def _match(out,item):
     item=_object(item)
-    _unknown_keys(out,'match',item,{'id','home_team','away_team','league','status','score_home','score_away','score_penalty_home','score_penalty_away','round','round_name','date','time_utc','has_playoff','referee','stadium'})
+    _unknown_keys(out,'match',item,{'id','home_team','away_team','league','status','score_home','score_away','score_penalty_home','score_penalty_away','round','round_name','date','time_utc','has_playoff','referee','stadium','season'})
     mid=_ref(out,'match',item.get('id'))
-    if item.get('league') is not None: _ref(out,'competition',item['league'])
+    competition=_ref(out,'competition',item['league']) if item.get('league') is not None else None
     row={'id':mid,'home_team_id':_ref(out,'team',item.get('home_team')),'away_team_id':_ref(out,'team',item.get('away_team'))}
+    if competition is not None: row['provider_competition_id']=competition
+    if item.get('season') is not None:
+        if not isinstance(item['season'],str) or not re.fullmatch(r'\d{4}(?:/\d{4})?',item['season']): raise NormalizationError('INVALID_SEASON')
+        row['provider_season']=item['season']
     status=item.get('status')
     if status is not None:
         if status not in ('not_started','in_play','finished','postponed','awarded','canceled'): raise NormalizationError('UNKNOWN_STATUS')
@@ -130,9 +134,11 @@ def _match(out,item):
 def _player_stats(out, row, groups, *, half=False):
     for group in _list(groups):
         group=_object(group); stats=_object(group.get('stats'))
-        for val in stats.values():
+        for label,val in stats.items():
             val=_object(val); key=val.get('key'); stat=_object(val.get('stat'))
+            if key == '' and stat.get('type') == 'boolean' and isinstance(label,str) and re.sub(r'[^a-z]','',label.lower()) == 'shotmap': continue
             if key in ('xg_and_xa','shot_accuracy'): continue
+            if not isinstance(key,str): raise NormalizationError('INVALID_STAT_KEY')
             column=PITCHAPI_PLAYER_KEYS.get(key)
             if not column or (half and column in ('rating','fantasy_points')):
                 if isinstance(key,str): _unknown(out,'player_stats.'+key)
@@ -142,7 +148,7 @@ def _player_stats(out, row, groups, *, half=False):
             if typ not in ('integer','double','fraction','fractionWithPercentage','percentage','distanceWithPercentage','distance','speed','fantasyPoints'): raise NormalizationError('UNKNOWN_STAT_FORMAT')
             row[column]=number(stat.get('value'),PLAYER_STATS_COLUMNS[column])
             if 'total' in stat:
-                total=column+'_total'
+                total=PLAYER_TOTAL_KEYS.get(key,column+'_total')
                 if total in PLAYER_STATS_COLUMNS: row[total]=number(stat['total'],PLAYER_STATS_COLUMNS[total])
                 elif key not in ('shot_accuracy',): _unknown(out,'player_stats.'+str(key)+'.total')
 
@@ -199,6 +205,8 @@ def normalize_family(family, data, *, match_id=None):
     if family in ('leagues','league'):
         entries=_list(_object(data).get('leagues')) if family=='leagues' else [_object(data)]
         for item in entries:
+            item=_object(item)
+            _unknown_keys(out,'league',item,{'id','name','country_code','image_url','seasons','season','is_free'})
             key=_ref(out,'competition',item)
             out.add('competitions',{'id':key,'name':item.get('name'),'country_code':item.get('country_code'),'image_url':item.get('image_url')})
             seasons=item.get('seasons', [item['season']] if 'season' in item else [])
@@ -210,7 +218,9 @@ def normalize_family(family, data, *, match_id=None):
         if isinstance(data.get('league'),dict): _ref(out,'competition',data['league'])
         for item in _list(data.get('matches')): _match(out,item)
     elif family in ('team','player'):
-        item=_object(data); key=_ref(out,family,item); row={'id':key}
+        item=_object(data)
+        _unknown_keys(out,family,item,{'id','name','short_name','country_code','image_url','shirt_number','position_id'})
+        key=_ref(out,family,item); row={'id':key}
         for k in ('name','short_name','country_code','image_url'):
             if k in item: row[k]=item[k]
         if family=='player':
@@ -257,11 +267,11 @@ def normalize_family(family, data, *, match_id=None):
                     if k in item: row[k]=_bool(item[k])
                 for src,dst,values in [('event_type','outcome',{'Goal':'goal','AttemptSaved':'saved','Miss':'miss','Post':'post'}),('shot_type','body_part',{'RightFoot':'right_foot','LeftFoot':'left_foot','Header':'header','OtherBodyParts':'other'})]:
                     if item.get(src) is not None:
-                        if item[src] not in values: raise NormalizationError('UNKNOWN_SHOT_ENUM')
+                        if not isinstance(item[src],str) or item[src] not in values: raise NormalizationError('UNKNOWN_SHOT_ENUM')
                         row[dst]=values[item[src]]
                 if item.get('situation') is not None:
                     situations={'RegularPlay':'regular_play','FromCorner':'from_corner','SetPiece':'set_piece','FastBreak':'fast_break','FreeKick':'free_kick','ThrowInSetPiece':'throw_in_set_piece','Penalty':'penalty','IndividualPlay':'individual_play'}
-                    if item['situation'] not in situations: raise NormalizationError('UNKNOWN_SHOT_ENUM')
+                    if not isinstance(item['situation'],str) or item['situation'] not in situations: raise NormalizationError('UNKNOWN_SHOT_ENUM')
                     row['situation']=situations[item['situation']]
                 out.add('shots',row)
     elif family=='lineups':
@@ -296,7 +306,9 @@ def normalize_family(family, data, *, match_id=None):
             period=_object(period); rows={side:{'team_id':teams[side],'period':_period(period.get('period'))} for side in teams}
             for group in _list(period.get('groups')):
                 for item in _list(_object(group).get('items')):
-                    item=_object(item);key=item.get('key');column=PITCHAPI_TEAM_KEYS.get(key)
+                    item=_object(item);key=item.get('key')
+                    if not isinstance(key,str): raise NormalizationError('INVALID_STAT_KEY')
+                    column=PITCHAPI_TEAM_KEYS.get(key)
                     if not column:
                         if isinstance(key,str):_unknown(out,'team_stats.'+key)
                         continue

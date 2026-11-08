@@ -43,6 +43,16 @@ class StoreTest(unittest.TestCase):
   dirty=self.db.execute("SELECT p.provider_key FROM ops.dirty_scopes d JOIN core.provider_ids p ON p.entity_type='player' AND p.entity_id=d.player_id WHERE d.scope_kind='player_season' ORDER BY p.provider_key").fetchall();self.assertEqual(dirty,[('p_123456',),('p_abcdef',)])
   with self.assertRaises(self.NormalizationError):stats('p_654321','t_123456',1.5)
   self.store.record_failure(mid,'player_stats','INVALID_NUMBER');self.assertEqual(self.db.execute('SELECT goals FROM core.player_match_stats WHERE match_id=%s',(mid,)).fetchall(),[(2,)])
+  self.assertEqual(self.db.execute('SELECT player_stats FROM core.match_coverage WHERE match_id=%s',(mid,)).fetchone()[0],'ok')
+  before_recovery=rev();self.assertFalse(self.store.save_family(mid,'player_stats',two));self.assertEqual(rev(),before_recovery)
+  self.assertEqual(self.db.execute("SELECT status FROM ops.family_state WHERE match_id=%s AND family='player_stats'",(mid,)).fetchone()[0],'ok')
+  self.store.record_failure(mid,'summary','TRANSPORT_ERROR');self.store.save_matches(batch,edition)
+  self.assertEqual(self.db.execute("SELECT status FROM ops.family_state WHERE match_id=%s AND family='summary'",(mid,)).fetchone()[0],'ok')
+  player=self.store.resolve('player','p_abcdef');version=self.db.execute("SELECT version FROM ops.resource_versions WHERE resource_kind='player' AND resource_id=%s",(player,)).fetchone()[0]
+  corrected=stats('p_abcdef','t_abcdef',2)
+  corrected.references[0].fields['name']='Corrected display name'
+  self.assertFalse(self.store.save_family(mid,'player_stats',corrected));self.assertEqual(rev(),before_recovery)
+  self.assertGreater(self.db.execute("SELECT version FROM ops.resource_versions WHERE resource_kind='player' AND resource_id=%s",(player,)).fetchone()[0],version)
   r=rev();bad=stats('p_123456','t_123456',3);bad.rows['core.player_match_stats'][0]['not_a_column']=7
   with self.assertRaises(StoreError):self.store.save_family(mid,'player_stats',bad)
   self.assertEqual(rev(),r);self.assertEqual(self.db.execute('SELECT goals FROM core.player_match_stats WHERE match_id=%s',(mid,)).fetchall(),[(2,)])
@@ -55,6 +65,7 @@ class StoreTest(unittest.TestCase):
   self.assertEqual(rev(),r);self.assertEqual(self.db.execute('SELECT goals FROM core.player_match_stats WHERE match_id=%s',(mid,)).fetchall(),[(2,)])
   now=datetime.now(timezone.utc);job=self.enqueue(self.db,'details','player_stats',entity_type='match',entity_id=mid,run_after=now-timedelta(seconds=5));leased=self.claim(self.db,'details',now=now-timedelta(seconds=4),lease_seconds=1)
   with self.assertRaisesRegex(StoreError,'LEASE_LOST'):self.store.save_family(mid,'player_stats',one,lease=(job,leased['lease_token']))
+  with self.assertRaisesRegex(StoreError,'LEASE_LOST'):self.store.record_failure(mid,'player_stats','TRANSPORT_ERROR',lease=(job,leased['lease_token']))
   self.assertEqual(rev(),r);self.assertEqual(self.db.execute('SELECT goals FROM core.player_match_stats WHERE match_id=%s',(mid,)).fetchall(),[(2,)])
 
   recovered=self.claim(self.db,'details',now=datetime.now(timezone.utc),lease_seconds=120)

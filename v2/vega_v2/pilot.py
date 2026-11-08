@@ -73,6 +73,8 @@ class Pilot:
         competition_id = self.store.resolve('competition', league['id'])
         with self.store.conn.transaction(): self.edition, _ = self.store.edition(competition_id, season)
         result = self.fetch('league_matches', '/leagues/'+league['id']+'/matches', {'season':season, 'status':'all'})
+        identity = result.data.get('league',{})
+        if identity.get('id') != league['id'] or identity.get('season',season) != season: raise StoreError('CALENDAR_IDENTITY_MISMATCH')
         calendar = normalize_family('league_matches', result.data)
         self.hydrate(calendar)
         self.store.save_matches(calendar, self.edition, family='league_matches')

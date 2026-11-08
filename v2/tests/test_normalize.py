@@ -56,3 +56,29 @@ class NormalizeTest(unittest.TestCase):
   }
   for family,data in cases.items():
    with self.subTest(family=family):self.assertEqual(normalize_family(family,data).coverage,'ok')
+ def test_confirmed_player_source_aliases(self):
+  aliases={'Offsides':'offsides','clearance_off_the_line':'clearances_off_line','conceded_penalties':'penalties_conceded','expected_goals_on_target_faced':'xgot_faced','headed_clearance':'headed_clearances','keeper_diving_save':'diving_saves','keeper_high_claim':'high_claims','keeper_sweeper':'sweeper_actions','last_man_tackle':'last_man_tackles','saved_penalties':'penalties_saved'}
+  groups=[{'stats':{key:{'key':key,'stat':{'type':'double' if target=='xgot_faced' else 'integer','value':0}} for key,target in aliases.items()}}]
+  result=normalize_family('players',[{'player':P,'team_id':T['id'],'stats':groups}]);row=result.rows['core.player_match_stats'][0]
+  self.assertEqual({target:row[target] for target in aliases.values()},{target:0 for target in aliases.values()});self.assertFalse(result.unknown_paths)
+ def test_reference_unknown_paths_and_nonstring_enum_are_safe(self):
+  for family,data,key in [('league',{'id':'l_123456','name':'League','new_prop':'dont-log'},'league.new_prop'),('team',{'id':'t_123456','name':'Team','new_prop':'dont-log'},'team.new_prop'),('player',{'id':'p_123456','name':'Player','new_prop':'dont-log'},'player.new_prop')]:
+   result=normalize_family(family,data);self.assertIn(key,result.unknown_paths);self.assertNotIn('dont-log',str(result.unknown_paths))
+  with self.assertRaises(NormalizationError):normalize_family('shots',{'periods':[{'period':['untrusted'],'shots':[]}]})
+ def test_pilot_source_aliases_and_fraction_totals(self):
+  team_alias={'big_chance_missed_title':'big_chances_missed','duel_won':'duels_won','expected_goals_non_penalty':'npxg','Offsides':'offsides','player_throws':'throw_ins'}
+  items=[{'key':key,'home':'0','away':'0','format_type':'double' if col=='npxg' else 'integer'} for key,col in team_alias.items()]
+  data={'home_team':T,'away_team':{'id':'t_abcdef'},'periods':[{'period':'All','groups':[{'items':items}]}]}
+  result=normalize_family('stats',data);row=result.rows['core.team_match_stats'][0];self.assertFalse(result.unknown_paths)
+  for col in team_alias.values():self.assertEqual(row[col],0)
+  totals={'aerials_won':'aerials_total','dribbles_succeeded':'dribbles_total','ground_duels_won':'ground_duels_total','long_balls_accurate':'long_balls_total'}
+  entries={key:{'key':key,'stat':{'type':'fractionWithPercentage','value':0,'total':2}} for key in totals};entries['Shot map']={'key':'','stat':{'type':'boolean','value':True}}
+  result=normalize_family('players',[{'player':P,'team_id':T['id'],'stats':[{'stats':entries}]}]);row=result.rows['core.player_match_stats'][0]
+  self.assertFalse(result.unknown_paths)
+  for col in totals.values():self.assertEqual(row[col],2)
+ def test_match_provider_scope_is_explicit_and_validated(self):
+  obj={'id':'m_123456','home_team':T,'away_team':{'id':'t_abcdef'},'season':'2025/2026','league':{'id':'l_123456'}}
+  result=normalize_family('summary',obj,match_id='m_123456');row=result.rows['core.matches'][0]
+  self.assertEqual((row['provider_season'],row['provider_competition_id']),('2025/2026','l_123456'));self.assertNotIn('match.season',result.unknown_paths)
+  obj['season']='invalid'
+  with self.assertRaises(NormalizationError):normalize_family('summary',obj)
