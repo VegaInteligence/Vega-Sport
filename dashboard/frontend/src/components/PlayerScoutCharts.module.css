@@ -1,0 +1,311 @@
+/* Chart tokens for the mock-ups. Percentiles use a diverging scale around the
+   cohort median: blue above, orange below, neutral grey in the middle band.
+   Comparison series use three validated categorical slots per theme. */
+.root,
+:global(html[data-theme="dark"]) .root {
+  --mq-pos-2: #72beff;
+  --mq-pos-1: #3f78ad;
+  --mq-mid: #4d535d;
+  --mq-neg-1: #9a6439;
+  --mq-neg-2: #f0915a;
+  --mq-track: #1d2025;
+  --mq-series-1: #4596e0;
+  --mq-series-2: #c07c30;
+  --mq-series-3: #927bdc;
+  --mq-pitch: #12151a;
+  --mq-pitch-line: #2a2e35;
+  --mq-on-strong: #0b0d12;
+  --mq-gap: var(--surface);
+}
+:global(html[data-theme="light"]) .root {
+  --mq-pos-2: #1c5fa6;
+  --mq-pos-1: #7fa9d6;
+  --mq-mid: #b4bcc7;
+  --mq-neg-1: #dba57d;
+  --mq-neg-2: #b0561a;
+  --mq-track: #eef1f5;
+  --mq-series-1: #1c5fa6;
+  --mq-series-2: #b0661a;
+  --mq-series-3: #6a4dc4;
+  --mq-pitch: #f3f6f9;
+  --mq-pitch-line: #d5dce5;
+  --mq-on-strong: #ffffff;
+  --mq-gap: var(--surface);
+}
+
+.chart {
+  position: relative;
+  min-width: 0;
+}
+.chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 5;
+  min-width: 140px;
+  max-width: 240px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-pop);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 12px));
+  white-space: nowrap;
+}
+.tooltip strong {
+  display: block;
+  color: var(--ink-strong);
+  font-weight: 600;
+}
+.tooltip span {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--muted);
+}
+.tooltip span b {
+  color: var(--ink-strong);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.axisText {
+  fill: var(--muted);
+  font-size: 11px;
+}
+.axisTextStrong {
+  fill: var(--ink);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.valueText {
+  fill: var(--ink-strong);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.valueTextOnFill {
+  fill: var(--mq-on-strong);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.grid {
+  fill: none;
+  stroke: var(--grid);
+  stroke-width: 1;
+}
+.gridStrong {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.track {
+  fill: var(--mq-track);
+}
+.hit {
+  fill: transparent;
+  cursor: default;
+}
+.dimmed {
+  opacity: 0.35;
+  transition: opacity 120ms;
+}
+
+/* Tone helpers for HTML elements. */
+.tone-pos-2 {
+  --tone: var(--mq-pos-2);
+}
+.tone-pos-1 {
+  --tone: var(--mq-pos-1);
+}
+.tone-mid {
+  --tone: var(--mq-mid);
+}
+.tone-neg-1 {
+  --tone: var(--mq-neg-1);
+}
+.tone-neg-2 {
+  --tone: var(--mq-neg-2);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--tone, var(--accent));
+}
+.swatchLine {
+  width: 16px;
+  height: 0;
+  border-top: 2px solid var(--tone, var(--accent));
+}
+.swatchDash {
+  width: 16px;
+  height: 0;
+  border-top: 2px dashed var(--muted);
+}
+.swatchRing {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+}
+.swatchDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--tone, var(--accent));
+}
+
+/* Percentile badge: tinted pill, number always visible. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--tone) 18%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 45%, transparent);
+  color: var(--ink-strong);
+  font-size: var(--text-xs);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Horizontal percentile bar with a median tick. */
+.pbar {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--mq-track);
+}
+.pbarFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+  background: var(--tone);
+}
+.pbarMedian {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  left: 50%;
+  width: 1px;
+  background: var(--muted);
+}
+
+/* Distribution strip */
+.strip {
+  display: grid;
+  gap: 4px;
+}
+.stripTrack {
+  position: relative;
+  height: 22px;
+}
+.stripLine {
+  position: absolute;
+  top: 10px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--border-strong);
+}
+.stripBand {
+  position: absolute;
+  top: 7px;
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--muted-light) 38%, transparent);
+}
+.stripTick {
+  position: absolute;
+  top: 6px;
+  width: 1px;
+  height: 10px;
+  background: var(--muted-light);
+}
+.stripMedian {
+  position: absolute;
+  top: 2px;
+  width: 2px;
+  height: 18px;
+  border-radius: 1px;
+  background: var(--ink);
+}
+.stripMarker {
+  position: absolute;
+  top: 3px;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tone) 60%, transparent);
+}
+.stripLabels {
+  position: relative;
+  height: 14px;
+  color: var(--muted-light);
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums;
+}
+.stripLabels span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.stripLabels span b {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* Segmented horizontal bar (speed zones). */
+.segments {
+  display: flex;
+  gap: 2px;
+  height: 28px;
+}
+.segments > div {
+  min-width: 4px;
+  border-radius: 4px;
+  background: var(--tone);
+}
+
+/* Gauge */
+.gaugeValue {
+  fill: var(--ink-strong);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.gaugeLabel {
+  fill: var(--muted);
+  font-size: 11px;
+}
