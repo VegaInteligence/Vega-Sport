@@ -2,7 +2,6 @@
 import React, { useMemo, useState } from "react";
 import { Segments } from "./UI.jsx";
 import {
-  cohortTraits,
   rankMetric,
   roleAssessments,
   SCOUT_METRICS,
@@ -111,7 +110,6 @@ function Synthesis({ profile, cohorts, sections, metrics }) {
   const roles = roleAssessments(profile, cohorts).filter(
     (role) => role.value != null,
   );
-  const traits = cohortTraits(profile, cohorts);
   const series = [
     {
       name: profile.name,
@@ -131,19 +129,6 @@ function Synthesis({ profile, cohorts, sections, metrics }) {
     .flatMap((section) => section.keys)
     .map((key) => metrics.get(key))
     .filter(Boolean);
-  const trait = (item) => {
-    const metric = metrics.get(item.key);
-    return (
-      <li key={item.key} className={toneClass(metric?.percentile)}>
-        <span>{metricLabel(item.key)}</span>
-        <small>
-          {fmt(item.value, metric?.decimals ?? 2, { unit: metric?.unit })}
-          {metric?.unit ? "" : " /90"}
-        </small>
-        <PercentileBadge value={metric?.percentile ?? item.percentile} />
-      </li>
-    );
-  };
   return (
     <>
       <div className={s.cols2}>
@@ -202,20 +187,6 @@ function Synthesis({ profile, cohorts, sections, metrics }) {
           </div>
         </Panel>
       </div>
-      {(traits.high.length > 0 || traits.low.length > 0) && (
-        <Panel title="Forces et limites" text="Centiles extrêmes du profil">
-          <div className={s.traitGrid}>
-            <div>
-              <h4>Points forts</h4>
-              <ul className={s.traits}>{traits.high.map(trait)}</ul>
-            </div>
-            <div>
-              <h4>Points faibles</h4>
-              <ul className={s.traits}>{traits.low.map(trait)}</ul>
-            </div>
-          </div>
-        </Panel>
-      )}
     </>
   );
 }

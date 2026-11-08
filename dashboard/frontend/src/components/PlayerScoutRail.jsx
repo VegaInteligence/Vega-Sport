@@ -1,47 +1,80 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useFootball } from "../hooks/FootballContext.jsx";
+import { useResource } from "../services/resources.js";
+import {
+  loadPlayerHistory,
+  playerHistoryKey,
+} from "../services/scouting-history.js";
+import { playerTeamSeasons } from "../services/player-team-seasons.js";
 import { Media } from "./UI.jsx";
+import NationalFlag from "./NationalFlag.jsx";
 import { number } from "../services/format.js";
 import { playerFacts } from "../services/player-bio.js";
+import {
+  nationalFlagCode,
+  nationalTeamName,
+} from "../services/national-flags.js";
+import { PositionsPitch, Sparkline } from "./PlayerScoutCharts.jsx";
+import {
+  FAKE_AVAILABILITY,
+  FAKE_FACTS,
+  FAKE_POTENTIAL,
+  FAKE_VALUE,
+  FakeBadge,
+} from "./PlayerScoutDemo.jsx";
 import s from "./PlayerScout.module.css";
 
-const RATING_NOTE = "Note moyenne des matchs notés";
+// Formation lines placed on a horizontal pitch, attack to the right.
+const LINE_SPOTS = {
+  Gardien: ["GAR", 6],
+  Défenseur: ["DÉF", 24],
+  Milieu: ["MIL", 46],
+  "Milieu offensif": ["MO", 64],
+  Attaquant: ["ATT", 84],
+};
 
-/** Current-scope season figures, all computed from the published appearances. */
-function seasonFigures(profile) {
-  if (!profile?.matches) return [];
-  const goals = profile.stats?.goals?.count ? profile.stats.goals.sum : null;
-  const assists = profile.stats?.assists?.count
-    ? profile.stats.assists.sum
-    : null;
-  return [
-    {
-      label: "Matchs",
-      value: number(profile.matches),
-      note:
-        profile.knownStarts > 0
-          ? `${number(profile.starts)} titularisations`
-          : null,
-    },
-    {
-      label: "Minutes",
-      value: number(profile.minutes),
-      note: `${number(profile.minutes / profile.matches)} min par match`,
-    },
-    goals != null && { label: "Buts", value: number(goals) },
-    assists != null && { label: "Passes déc.", value: number(assists) },
-    profile.rating != null && {
-      label: "Note",
-      value: number(profile.rating, 2),
-      note: RATING_NOTE,
-    },
-    goals != null &&
-      assists != null &&
-      goals + assists > 0 && {
-        label: "Min. par but ou PD",
-        value: `${number(profile.minutes / (goals + assists))}′`,
-      },
-  ].filter(Boolean);
+/** Positions held in the current scope, from the published appearances. */
+function heldPositions(profile) {
+  return [...(profile?.positions || new Map())]
+    .filter(([label, item]) => LINE_SPOTS[label] && item.minutes > 0)
+    .map(([label, item]) => ({
+      code: LINE_SPOTS[label][0],
+      label,
+      x: LINE_SPOTS[label][1],
+      y: 50,
+      minutes: item.minutes,
+    }));
+}
+
+/** National-team caps over every collected season. */
+function selection(history) {
+  const rows = playerTeamSeasons(history || []).filter(
+    (row) => row.kind === "selection",
+  );
+  if (!rows.length) return null;
+  const caps = rows.reduce((sum, row) => sum + row.profile.matches, 0);
+  const goals = rows.reduce(
+    (sum, row) => sum + (row.profile.stats?.goals?.sum || 0),
+    0,
+  );
+  const { team, season } = rows[0];
+  return {
+    team,
+    season,
+    label: "Sélection",
+    value: `${number(caps)} sél.`,
+    note: `${number(goals)} but${goals > 1 ? "s" : ""} · ${nationalTeamName(team, season)}`,
+  };
+}
+
+/** Club competition holding most of the player's minutes. */
+function mainCompetition(profile, season) {
+  const minutes = new Map();
+  for (const row of profile?.rows || [])
+    if (row.league && !nationalFlagCode(row.team, season))
+      minutes.set(row.league, (minutes.get(row.league) || 0) + row.minutes);
+  return [...minutes].sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 }
 
 function Facts({ items, label }) {
@@ -50,7 +83,10 @@ function Facts({ items, label }) {
     <dl className={s.facts} aria-label={label}>
       {items.map((item) => (
         <div key={item.label}>
-          <dt>{item.label}</dt>
+          <dt>
+            {item.label}
+            {item.fake && <FakeBadge short />}
+          </dt>
           <dd>{item.value}</dd>
           {item.note && <small>{item.note}</small>}
         </div>
@@ -59,7 +95,8 @@ function Facts({ items, label }) {
   );
 }
 
-/** Identity column of the player profile: who, what, value, honours, actions. */
+/** Identity column of mock-up C: who, facts, value, Vega index, positions,
+ *  availability and actions. Values without a source wear a « Fictif » tag. */
 export default function PlayerScoutRail({
   id,
   identity,
@@ -69,12 +106,27 @@ export default function PlayerScoutRail({
   record,
   season,
   team,
-  honours,
+  vega,
   actions,
+  onTab,
 }) {
-  const { facts, value } = playerFacts(record);
-  const figures = seasonFigures(profile);
+  const { facts: published, value: publishedValue } = playerFacts(record);
+  const f = useFootball();
+  const history = useResource(
+    playerHistoryKey(f.manifest, id),
+    ({ signal }) => loadPlayerHistory(f.manifest, id, { signal }),
+    Boolean(id && f.manifest),
+  );
+  const nation = useMemo(() => selection(history.value), [history.value]);
+  const known = new Set(published.map((item) => item.label));
+  const facts = [
+    ...published.filter((item) => item.label !== "Nom complet"),
+    ...FAKE_FACTS.filter((item) => !known.has(item.label)),
+  ];
+  if (nation) facts.splice(Math.min(4, facts.length), 0, nation);
   const role = profile?.role;
+  const league = mainCompetition(profile, season);
+  const positions = heldPositions(profile);
   return (
     <aside className={s.rail} aria-label="Identité du joueur">
       {showIdentity && (
@@ -97,37 +149,123 @@ export default function PlayerScoutRail({
             {role?.label && <p className={s.role}>{role.label}</p>}
             {role?.peers && <p className={s.peers}>Comparé aux {role.peers}</p>}
           </div>
-        </div>
-      )}
-      {facts.length > 0 && (
-        <div className={s.railSection}>
-          <Facts items={facts} label="Fiche du joueur" />
-        </div>
-      )}
-      {value && (
-        <div className={s.railSection}>
-          <p className={s.railTitle}>
-            Valeur marchande <span>{value.source}</span>
-          </p>
-          <div className={s.value}>{value.amount}</div>
-          {value.updated && (
-            <p className={s.valueMeta}>Mise à jour le {value.updated}</p>
+          {nation && (
+            <div className={s.nations}>
+              <span>
+                <NationalFlag name={nation.team} season={nation.season} />
+                {nationalTeamName(nation.team, nation.season)}
+              </span>
+            </div>
+          )}
+          {(team || league) && (
+            <div className={s.chips}>
+              {team && (
+                <span className={s.chip}>
+                  {team.imageUrl && (
+                    <Media name={team.name} url={team.imageUrl} />
+                  )}
+                  {team.name}
+                </span>
+              )}
+              {league && <span className={s.chip}>{league}</span>}
+            </div>
           )}
         </div>
       )}
-      {figures.length > 0 && (
+      <div className={s.railSection}>
+        <Facts items={facts} label="Fiche du joueur" />
+      </div>
+      <div className={s.railSection}>
+        {publishedValue ? (
+          <>
+            <p className={s.railTitle}>
+              Valeur marchande <span>{publishedValue.source}</span>
+            </p>
+            <div className={s.value}>{publishedValue.amount}</div>
+            {publishedValue.updated && (
+              <p className={s.valueMeta}>
+                Mise à jour le {publishedValue.updated}
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <p className={s.railTitle}>
+              Valeur estimée <FakeBadge />
+            </p>
+            <div className={s.valueRow}>
+              <span className={s.value}>{FAKE_VALUE.amount}</span>
+              <Sparkline values={FAKE_VALUE.history} />
+            </div>
+            <p className={s.valueMeta}>
+              <span className={s.up}>{FAKE_VALUE.trend}</span> sur 6 mois ·
+              fourchette {FAKE_VALUE.range}
+            </p>
+          </>
+        )}
+      </div>
+      <div className={s.railSection}>
+        <p className={s.railTitle}>
+          Indice Vega <span>sur 100</span>
+        </p>
+        <div className={s.indexRow}>
+          <div>
+            <strong>{vega?.value ?? "—"}</strong>
+            <span>Niveau actuel</span>
+          </div>
+          <div>
+            <strong>{FAKE_POTENTIAL}</strong>
+            <span>Potentiel</span>
+            <div>
+              <FakeBadge short />
+            </div>
+          </div>
+          <div>
+            <strong>
+              {vega?.rank ? (vega.rank === 1 ? "1er" : `${vega.rank}e`) : "—"}
+            </strong>
+            <span>
+              {vega?.of ? `sur ${number(vega.of)} au poste` : "au poste"}
+            </span>
+          </div>
+        </div>
+      </div>
+      {positions.length > 0 && (
         <div className={s.railSection}>
           <p className={s.railTitle}>
-            Saison {season} <span>filtres actifs</span>
+            Postes occupés <span>{season}</span>
           </p>
-          <Facts items={figures} label={`Saison ${season}`} />
+          <PositionsPitch positions={positions} total={profile.minutes} />
         </div>
       )}
-      {honours && (
-        <div className={s.railSection} key={id}>
-          {honours}
+      <div className={s.railSection}>
+        <p className={s.railTitle}>
+          Disponibilité <FakeBadge />
+        </p>
+        <div className={s.indexRow}>
+          <div>
+            <strong>{FAKE_AVAILABILITY.count}</strong>
+            <span>absences</span>
+          </div>
+          <div>
+            <strong>{FAKE_AVAILABILITY.weeks} sem.</strong>
+            <span>d’arrêt cumulé</span>
+          </div>
+          <div>
+            <strong>{FAKE_AVAILABILITY.current} j</strong>
+            <span>cette saison</span>
+          </div>
         </div>
-      )}
+        {onTab && (
+          <button
+            type="button"
+            className={s.railLink}
+            onClick={() => onTab("evolution")}
+          >
+            Historique des blessures →
+          </button>
+        )}
+      </div>
       {actions && <div className={s.railSection}>{actions}</div>}
     </aside>
   );
