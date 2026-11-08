@@ -49,6 +49,8 @@ const OTHER_PROFILE_VIEWS = [
   "similar",
   "compare",
   "evolution",
+  "physical",
+  "projection",
   "matches",
 ];
 
@@ -166,10 +168,23 @@ export default function PlayersPage() {
   const needsCohort =
     f.compactMode &&
     (id
-      ? ["similar", "compare", "advanced"].includes(profileView) ||
+      ? // The rail's Vega index ranks the player on every tab.
+        [
+          "similar",
+          "compare",
+          "advanced",
+          "evolution",
+          "games",
+          "physical",
+          "projection",
+        ].includes(profileView) ||
         (((overview && radarEligible) || profileView === "stats") &&
           comparisonIntent === comparisonKey)
       : ["explore", "indices"].includes(directoryView));
+  // Tabs built on the cohort; elsewhere it only feeds the rail's Vega index.
+  const cohortTab = ["similar", "compare", "advanced", "stats"].includes(
+    profileView,
+  );
   const cohort = useCompactRead("players", cohortParams, {
     enabled: needsCohort,
     allPages: true,
@@ -279,12 +294,12 @@ export default function PlayersPage() {
             ← Tous les joueurs
           </Link>
         )}
-        {id && !overview && needsCohort && cohort.loading && (
+        {id && !overview && cohortTab && needsCohort && cohort.loading && (
           <p role="status" className="notice">
             Chargement des comparaisons de saison…
           </p>
         )}
-        {id && !overview && needsCohort && cohort.error && (
+        {id && !overview && cohortTab && needsCohort && cohort.error && (
           <p role="alert" className="notice notice-warning">
             Comparaisons indisponibles. {cohort.error}{" "}
             <button onClick={cohort.retry}>Réessayer</button>

@@ -8,11 +8,8 @@ import {
   similarPlayers,
 } from "../services/scouting.js";
 import { normalizeText } from "../services/format.js";
-import {
-  aggregateSeason,
-  seasonMetric,
-  seasonSections,
-} from "../services/season-player.js";
+import { percentile } from "../services/player-profile.js";
+import { aggregateSeason, seasonMetric } from "../services/season-player.js";
 import { number } from "../services/format.js";
 import { advancedMetric } from "./PlayerAdvancedStats.jsx";
 import {
@@ -28,7 +25,75 @@ import {
   ToneLegend,
   toneClass,
 } from "./PlayerScoutCharts.jsx";
+import {
+  FAKE_SECURITY_ROWS,
+  FakeBadge,
+  fakePreviousSeason,
+  PlayStyleCard,
+  TeamContextCard,
+} from "./PlayerScoutDemo.jsx";
 import s from "./PlayerScout.module.css";
+
+/** Metric families of mock-up C, filled with the PitchAPI indicators. */
+export function scoutFamilies(group) {
+  const families = [
+    {
+      id: "finishing",
+      title: "Finition",
+      keys: [
+        "goals",
+        "xg",
+        "npxg",
+        "xgot",
+        "shots",
+        "shotsOnTarget",
+        "touchesBox",
+      ],
+    },
+    {
+      id: "creation",
+      title: "Création",
+      keys: ["assists", "xa", "chancesCreated", "bigChancesCreated"],
+    },
+    {
+      id: "progression",
+      title: "Progression",
+      keys: ["dribbles", "passesFinalThird", "touches"],
+    },
+    {
+      id: "passing",
+      title: "Passe",
+      keys: ["passesAccurate", "passesAttempted", "passAccuracy"],
+    },
+    {
+      id: "defending",
+      title: "Défense",
+      keys: [
+        "defensiveActions",
+        "tackles",
+        "interceptions",
+        "recoveries",
+        "duelsWon",
+        "duelRate",
+        "clearances",
+        "blocks",
+      ],
+    },
+    // PitchAPI has no fouls or ball losses per player: those rows are fake.
+    {
+      id: "security",
+      title: "Sécurité de balle",
+      keys: ["duelsLost"],
+      fake: FAKE_SECURITY_ROWS,
+    },
+  ];
+  return group === "G"
+    ? [
+        { id: "keeper", title: "Gardien", keys: ["saves", "goalsPrevented"] },
+        ...families,
+      ]
+    : families;
+}
 
 /** Pizza axes per position line, ordered by phase of play. */
 const PIZZA_KEYS = {
@@ -249,6 +314,39 @@ function TraitList({ items, metrics }) {
   );
 }
 
+const ordinalP = (value) => `P${Math.round(value)}`;
+
+/** Plain-language summary written from the player's own figures. */
+function ScoutReading({ profile, best, traits }) {
+  const goals = seasonMetric(profile, "goals", "per90");
+  const assists = seasonMetric(profile, "assists", "per90");
+  const lines = [
+    best &&
+      `Meilleur rôle : ${best.label.toLowerCase()}, indice ${Math.round(best.value)} sur 100 face aux ${profile.role?.peers || "joueurs du même poste"}.`,
+    traits.high.length > 0 &&
+      `Points forts : ${traits.high
+        .slice(0, 2)
+        .map(
+          (item) =>
+            `${label(item.key).toLowerCase()} (${ordinalP(item.percentile)})`,
+        )
+        .join(" et ")}.`,
+    (goals.count > 0 || assists.count > 0) &&
+      `Production : ${fmt(goals.value ?? 0, 2)} but et ${fmt(assists.value ?? 0, 2)} passe décisive par 90 min${profile.rating != null ? `, note moyenne ${fmt(profile.rating, 2)}` : ""}.`,
+    traits.low.length > 0 &&
+      `Point de vigilance : ${label(traits.low[0].key).toLowerCase()} (${ordinalP(traits.low[0].percentile)}).`,
+  ].filter(Boolean);
+  if (!lines.length)
+    return <p className={s.note}>Pas assez de données classées.</p>;
+  return (
+    <ul className={s.summary}>
+      {lines.map((line) => (
+        <li key={line}>{line}</li>
+      ))}
+    </ul>
+  );
+}
+
 function RecentForm({ profile, matches, onTab }) {
   const index = useMemo(
     () => new Map((matches || []).map((match) => [match.id, match])),
@@ -336,6 +434,7 @@ export default function PlayerScoutOverview({
   matches,
   comparisonRef,
   onTab,
+  team,
   children,
 }) {
   const group = profile.role?.group;
@@ -343,7 +442,7 @@ export default function PlayerScoutOverview({
   const metrics = useMemo(() => {
     const keys = new Set([
       ...(PIZZA_KEYS[group] || PIZZA_KEYS.O),
-      ...seasonSections(group).flatMap((section) => section.keys),
+      ...scoutFamilies(group).flatMap((section) => section.keys),
     ]);
     const result = new Map();
     for (const key of keys) {
@@ -372,7 +471,7 @@ export default function PlayerScoutOverview({
     (a, b) => (b.value ?? -1) - (a.value ?? -1),
   );
   const best = roles.find((role) => role.value != null);
-  const families = seasonSections(group).map((section) => {
+  const families = scoutFamilies(group).map((section) => {
     const ranked = section.keys.map((key) => metrics.get(key)).filter(Boolean);
     return {
       ...section,
@@ -417,7 +516,7 @@ export default function PlayerScoutOverview({
         </Card>
         <div className={s.stack}>
           <Card
-            title="Indices de rôle"
+            title="Indice Vega par rôle"
             text="Moyenne des centiles des indicateurs de chaque rôle, sur 100."
           >
             <Pending ready={ready}>
@@ -450,8 +549,8 @@ export default function PlayerScoutOverview({
             </Pending>
           </Card>
           <Card
-            title="Scores par famille"
-            text="Centile moyen des indicateurs classés de chaque famille."
+            title="Scores par compétence"
+            text="Synthèse sur 100 des indicateurs classés de chaque famille."
           >
             <Pending ready={ready}>
               <div className={s.skills}>
@@ -478,7 +577,19 @@ export default function PlayerScoutOverview({
             <TraitList items={traits.low} metrics={metrics} />
           </Pending>
         </Card>
+        <Card
+          title="Lecture du scout"
+          text="Synthèse des chiffres de la période"
+        >
+          <Pending ready={ready}>
+            <ScoutReading profile={profile} best={best} traits={traits} />
+          </Pending>
+        </Card>
+      </div>
+      <div className={`${s.block} ${s.grid3}`}>
         <RecentForm profile={profile} matches={matches} onTab={onTab} />
+        <PlayStyleCard />
+        <TeamContextCard team={team} />
       </div>
       {children}
     </div>
@@ -532,8 +643,70 @@ export function PlayerGames({ profile, matches }) {
   };
   const cell = (row, key, decimals = 0) =>
     Number.isFinite(row[key]) ? fmt(row[key], decimals) : "—";
+  const competitions = [
+    ...new Set(profile.rows.map((row) => row.league).filter(Boolean)),
+  ]
+    .map((name) => ({
+      name,
+      split: aggregateSeason(
+        profile.rows.filter((row) => row.league === name),
+        profile.id,
+      ),
+    }))
+    .sort((a, b) => b.split.minutes - a.split.minutes);
+  const sum = (split, key, decimals = 0) => {
+    const metric = seasonMetric(split, key, "total");
+    return metric.count ? fmt(metric.value, decimals) : "—";
+  };
   return (
     <div className={s.overview}>
+      <div className={`${s.block} ${s.tableCard}`}>
+        <div className={s.tableHead}>
+          <h3>Par compétition</h3>
+        </div>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Compétition</th>
+                <th className={s.num}>MJ</th>
+                <th className={s.num}>Min</th>
+                <th className={s.num}>Buts</th>
+                <th className={s.num}>PD</th>
+                <th className={s.num}>xG</th>
+                <th className={s.num}>xA</th>
+                <th className={s.num}>Min / B+PD</th>
+                <th className={s.num}>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              {competitions.map(({ name, split }) => {
+                const contributions =
+                  (total(split, "goals") ?? 0) + (total(split, "assists") ?? 0);
+                return (
+                  <tr key={name}>
+                    <th scope="row">{name}</th>
+                    <td className={s.num}>{number(split.matches)}</td>
+                    <td className={s.num}>{number(split.minutes)}</td>
+                    <td className={s.num}>{sum(split, "goals")}</td>
+                    <td className={s.num}>{sum(split, "assists")}</td>
+                    <td className={s.num}>{sum(split, "xg", 2)}</td>
+                    <td className={s.num}>{sum(split, "xa", 2)}</td>
+                    <td className={s.num}>
+                      {contributions
+                        ? `${number(split.minutes / contributions)}′`
+                        : "—"}
+                    </td>
+                    <td className={s.num}>
+                      {split.rating == null ? "—" : fmt(split.rating, 2)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
       <div className={s.block}>
         <Card
           title="Note par match"
@@ -655,7 +828,8 @@ const MODE_LABELS = {
  *  percentile bar, the percentile and the rank in the position cohort. */
 export function PlayerScoutStats({ profile, cohorts, mode, ready }) {
   const group = profile.role?.group;
-  const sections = seasonSections(group);
+  const sections = scoutFamilies(group);
+  const size = cohorts.groups.get(group)?.profiles.length || 0;
   if (!ready)
     return (
       <p className={s.note} role="status">
@@ -771,6 +945,57 @@ export function PlayerScoutStats({ profile, cohorts, mode, ready }) {
                         </tr>
                       );
                     })}
+                    {(section.fake || []).map((metric) => (
+                      <tr key={metric.key}>
+                        <th scope="row">
+                          {metric.label}
+                          {metric.inverted && (
+                            <span style={{ color: "var(--muted)" }}>
+                              {" "}
+                              · moins = mieux
+                            </span>
+                          )}{" "}
+                          <FakeBadge short />
+                        </th>
+                        <td className={s.num}>
+                          {fmt(
+                            mode === "total"
+                              ? (metric.value * profile.minutes) / 90
+                              : mode === "perMatch"
+                                ? (metric.value * profile.minutes) /
+                                  90 /
+                                  profile.matches
+                                : metric.value,
+                            mode === "per90" ? metric.decimals : 1,
+                          )}
+                        </td>
+                        <td className={s.num} style={{ color: "var(--muted)" }}>
+                          {fmt(metric.dist[2], metric.decimals)}
+                        </td>
+                        <td className={s.barCell}>
+                          <PercentileBar value={metric.percentile} />
+                        </td>
+                        <td className={s.num}>
+                          <PercentileBadge
+                            value={metric.percentile}
+                            label={String(metric.percentile)}
+                          />
+                        </td>
+                        <td className={s.num}>
+                          {Math.max(
+                            1,
+                            Math.round(
+                              ((100 - metric.percentile) / 100) * size,
+                            ),
+                          )}
+                          e
+                          <span style={{ color: "var(--muted-light)" }}>
+                            {" "}
+                            / {size}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -787,10 +1012,14 @@ const SERIES = [
   "var(--mq-series-2)",
   "var(--mq-series-3)",
 ];
+const COMPARE_VIEWS = [
+  ["radar", "Radar"],
+  ["table", "Côte à côte"],
+];
 
-/** Version C comparison: up to two peers from the position cohort, overlaid
- *  on the percentile radar and listed side by side. */
-export function PlayerScoutCompare({ profile, cohorts, ready, children }) {
+/** Version C comparison: automatic comparisons, up to two peers from the
+ *  position cohort, then a radar or a side-by-side table. */
+export function PlayerScoutCompare({ profile, cohorts, ready }) {
   const group = profile.role?.group;
   const peers = cohorts.groups.get(group)?.profiles || [];
   const suggestions = useMemo(
@@ -798,10 +1027,84 @@ export function PlayerScoutCompare({ profile, cohorts, ready, children }) {
     [profile, cohorts],
   );
   const [chosen, setChosen] = useState(null);
+  const [autoId, setAutoId] = useState(null);
+  const [view, setView] = useState("radar");
   const [search, setSearch] = useState("");
+  const keys = (PIZZA_KEYS[group] || PIZZA_KEYS.O).filter(
+    (key) => advancedMetric(profile, key, cohorts) != null,
+  );
+  const percentiles = (player) =>
+    Object.fromEntries(
+      keys.map((key) => [
+        key,
+        advancedMetric(player, key, cohorts)?.percentile ?? null,
+      ]),
+    );
+  const base = percentiles(profile);
+  // Second competition by minutes: the player's own season there.
+  const competition = useMemo(() => {
+    const minutes = new Map();
+    for (const row of profile.rows)
+      if (row.league)
+        minutes.set(row.league, (minutes.get(row.league) || 0) + row.minutes);
+    const name = [...minutes].sort((a, b) => b[1] - a[1])[1]?.[0];
+    if (!name) return null;
+    const split = aggregateSeason(
+      profile.rows.filter((row) => row.league === name),
+      profile.id,
+    );
+    const pool = (key) => cohorts.groups.get(group)?.distributions[key];
+    // A single competition rarely reaches the cohort's minutes floor: rank
+    // its per-90 values directly against the same distribution.
+    const values = Object.fromEntries(
+      keys.map((key) => {
+        const metric = seasonMetric(split, key, "per90");
+        const values = pool(key);
+        if (
+          !values?.length ||
+          metric.value == null ||
+          metric.count !== split.matches
+        )
+          return [key, null];
+        const p = percentile(values, metric.value);
+        return [key, SCOUT_METRICS[key].lowerIsBetter ? 100 - p : p];
+      }),
+    );
+    return { name, profile: split, values };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, cohorts, group, keys.join()]);
+  const autos = [
+    {
+      id: "previous",
+      label: "Saison précédente",
+      detail: "Données fictives",
+      name: `${profile.name} · saison précédente`,
+      fake: true,
+      values: fakePreviousSeason(base),
+    },
+    {
+      id: "median",
+      label: "Joueur médian",
+      detail: profile.role?.peers || "Même poste",
+      name: "Joueur médian du poste",
+      dashed: true,
+      values: Object.fromEntries(keys.map((key) => [key, 50])),
+    },
+    competition && {
+      id: "competition",
+      label: `Sa saison en ${competition.name}`,
+      detail: `${number(competition.profile.matches)} matchs · ${number(competition.profile.minutes)} min${competition.profile.minutes < cohorts.minMinutes ? " · petit échantillon" : ""}`,
+      name: `${profile.name} · ${competition.name}`,
+      values: competition.values,
+    },
+  ].filter(Boolean);
+  const auto = autos.find((item) => item.id === autoId);
+  const limit = auto ? 1 : 2;
   const selected = (chosen ?? suggestions.slice(0, 1).map((p) => p.id))
     .map((id) => peers.find((item) => item.id === id))
-    .filter(Boolean);
+    .filter(Boolean)
+    .slice(0, limit);
+  const ids = selected.map((item) => item.id);
   const needle = normalizeText(search).trim();
   const matches =
     needle.length >= 2
@@ -809,31 +1112,50 @@ export function PlayerScoutCompare({ profile, cohorts, ready, children }) {
           .filter(
             (item) =>
               item.id !== profile.id &&
-              !selected.some((other) => other.id === item.id) &&
+              !ids.includes(item.id) &&
               normalizeText(item.name).includes(needle),
           )
           .slice(0, 6)
       : [];
-  const players = [profile, ...selected];
-  const keys = (PIZZA_KEYS[group] || PIZZA_KEYS.O).filter(
-    (key) => advancedMetric(profile, key, cohorts) != null,
-  );
-  const percentileOf = (player, key) =>
-    advancedMetric(player, key, cohorts)?.percentile ?? null;
-  // The radar only plots axes ranked for every player: an unranked metric
+  const columns = [
+    {
+      id: profile.id,
+      name: profile.name,
+      sub: `${profile.teams.join(" · ")} · ${number(profile.minutes)} min · joueur de base`,
+      values: base,
+    },
+    ...(auto
+      ? [
+          {
+            id: auto.id,
+            name: auto.name,
+            sub: auto.detail,
+            values: auto.values,
+            fake: auto.fake,
+            dashed: auto.dashed,
+            onRemove: () => setAutoId(null),
+          },
+        ]
+      : []),
+    ...selected.map((player) => ({
+      id: player.id,
+      name: player.name,
+      sub: `${player.teams.join(" · ")} · ${number(player.minutes)} min`,
+      values: percentiles(player),
+      onRemove: () => setChosen(ids.filter((value) => value !== player.id)),
+    })),
+  ].map((column, index) => ({ ...column, color: SERIES[index] }));
+  // The radar only plots axes ranked for every column: an unranked metric
   // must not read as a zero.
   const shared = keys.filter((key) =>
-    players.every((player) => percentileOf(player, key) != null),
+    columns.every((column) => column.values[key] != null),
   );
-  const series = players.map((player, index) => ({
-    name: player.name,
-    color: SERIES[index],
-    values: Object.fromEntries(
-      shared.map((key) => [key, percentileOf(player, key)]),
-    ),
+  const series = columns.map((column) => ({
+    name: column.name,
+    color: column.color,
+    dashed: column.dashed,
+    values: Object.fromEntries(shared.map((key) => [key, column.values[key]])),
   }));
-  const ids = selected.map((item) => item.id);
-  const setIds = (next) => setChosen(next);
   if (!ready)
     return (
       <p className={s.note} role="status">
@@ -842,45 +1164,76 @@ export function PlayerScoutCompare({ profile, cohorts, ready, children }) {
     );
   return (
     <div className={s.overview}>
+      <div className={s.viewSwitch}>
+        <Segments
+          label="Affichage de la comparaison"
+          value={view}
+          onChange={setView}
+          items={COMPARE_VIEWS}
+        />
+        <p>
+          {view === "radar"
+            ? "Superposition de trois profils au maximum"
+            : `Centiles par 90 min face aux ${peers.length} ${profile.role?.peers || "joueurs du même poste"}`}
+        </p>
+      </div>
+      <section className={s.block}>
+        <div className={s.sectionHead}>
+          <div>
+            <h2>Comparaisons automatiques</h2>
+            <p>Un clic remplace le premier joueur comparé</p>
+          </div>
+        </div>
+        <div className={s.autoGrid}>
+          {autos.map((item) => (
+            <button
+              type="button"
+              key={item.id}
+              className={s.autoButton}
+              aria-pressed={autoId === item.id}
+              onClick={() => setAutoId(autoId === item.id ? null : item.id)}
+            >
+              <span>
+                {item.label} {item.fake && <FakeBadge short />}
+              </span>
+              <small>{item.detail}</small>
+            </button>
+          ))}
+        </div>
+      </section>
       <section className={s.block}>
         <div className={s.sectionHead}>
           <div>
             <h2>Joueurs comparés</h2>
-            <p>
-              Jusqu’à trois profils · centiles face aux {peers.length}{" "}
-              {profile.role?.peers || "joueurs du même poste"}
-            </p>
+            <p>Jusqu’à trois profils</p>
           </div>
         </div>
         <div className={s.slots}>
-          {players.map((player, index) => (
+          {columns.map((column) => (
             <div
               className={s.slot}
-              key={player.id}
-              style={{ "--tone": SERIES[index] }}
+              key={column.id}
+              style={{ "--tone": column.color }}
             >
               <div>
-                <strong>{player.name}</strong>
-                <small>
-                  {player.teams.join(" · ")} · {number(player.minutes)} min
-                  {index === 0 ? " · joueur de base" : ""}
-                </small>
+                <strong>
+                  {column.name} {column.fake && <FakeBadge short />}
+                </strong>
+                <small>{column.sub}</small>
               </div>
-              {index > 0 && (
+              {column.onRemove && (
                 <button
                   type="button"
                   className="button button-ghost"
-                  aria-label={`Retirer ${player.name}`}
-                  onClick={() =>
-                    setIds(ids.filter((value) => value !== player.id))
-                  }
+                  aria-label={`Retirer ${column.name}`}
+                  onClick={column.onRemove}
                 >
                   Retirer
                 </button>
               )}
             </div>
           ))}
-          {selected.length < 2 && (
+          {columns.length < 3 && (
             <div className={s.slotSearch}>
               <input
                 type="search"
@@ -900,7 +1253,7 @@ export function PlayerScoutCompare({ profile, cohorts, ready, children }) {
                       type="button"
                       key={item.id}
                       onClick={() => {
-                        setIds([...ids, item.id]);
+                        setChosen([...ids, item.id]);
                         setSearch("");
                       }}
                     >
@@ -915,11 +1268,15 @@ export function PlayerScoutCompare({ profile, cohorts, ready, children }) {
           )}
         </div>
       </section>
-      {keys.length >= 3 ? (
+      {keys.length < 3 ? (
+        <p className={`${s.block} ${s.note}`}>
+          Pas assez d’indicateurs classés pour comparer ce joueur.
+        </p>
+      ) : view === "radar" ? (
         <section className={`${s.block} ${s.grid2}`}>
           <Card
             title="Radar de centiles"
-            text={`${shared.length} indicateurs classés pour tous les joueurs comparés`}
+            text={`${shared.length} indicateurs classés pour tous les profils comparés`}
           >
             {shared.length >= 3 ? (
               <>
@@ -933,65 +1290,173 @@ export function PlayerScoutCompare({ profile, cohorts, ready, children }) {
               </>
             ) : (
               <p className={s.note}>
-                Moins de trois indicateurs sont classés pour tous ces joueurs :
-                comparez-les dans le tableau.
+                Moins de trois indicateurs sont classés pour tous ces profils :
+                comparez-les côte à côte.
               </p>
             )}
           </Card>
-          <div className={s.tableCard} style={{ alignSelf: "start" }}>
-            <div className="table-scroll">
-              <table className="data-table" style={{ minWidth: 420 }}>
-                <thead>
-                  <tr>
-                    <th>Indicateur</th>
-                    {players.map((player) => (
-                      <th key={player.id} className={s.num}>
-                        {player.name}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {keys.map((key) => {
-                    const values = players.map((player) =>
-                      percentileOf(player, key),
-                    );
-                    const best = Math.max(
-                      ...values.filter((value) => value != null),
-                    );
-                    return (
-                      <tr key={key}>
-                        <th scope="row">{label(key)}</th>
-                        {values.map((value, index) => (
-                          <td
-                            key={players[index].id}
-                            className={s.num}
-                            style={
-                              value === best
-                                ? {
-                                    color: "var(--ink-strong)",
-                                    fontWeight: 700,
-                                  }
-                                : undefined
-                            }
-                          >
-                            {value ?? "—"}
-                          </td>
-                        ))}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <PercentileTable columns={columns} keys={keys} />
         </section>
       ) : (
-        <p className={`${s.block} ${s.note}`}>
-          Pas assez d’indicateurs classés pour comparer ce joueur.
-        </p>
+        <SideBySide profile={profile} cohorts={cohorts} columns={columns} />
       )}
-      {children}
     </div>
+  );
+}
+
+function bestOf(values) {
+  const known = values.filter((value) => value != null);
+  return known.length ? Math.max(...known) : null;
+}
+
+function PercentileTable({ columns, keys }) {
+  return (
+    <div className={s.tableCard} style={{ alignSelf: "start" }}>
+      <div className="table-scroll">
+        <table className="data-table" style={{ minWidth: 420 }}>
+          <thead>
+            <tr>
+              <th>Indicateur</th>
+              {columns.map((column) => (
+                <th key={column.id} className={s.num}>
+                  {column.name}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {keys.map((key) => {
+              const values = columns.map((column) => column.values[key]);
+              const best = bestOf(values);
+              return (
+                <tr key={key}>
+                  <th scope="row">{label(key)}</th>
+                  {values.map((value, index) => (
+                    <td
+                      key={columns[index].id}
+                      className={s.num}
+                      style={
+                        value != null && value === best
+                          ? { color: "var(--ink-strong)", fontWeight: 700 }
+                          : undefined
+                      }
+                    >
+                      {value ?? "—"}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/** « Côte à côte »: every family of indicators, one column per profile. */
+function SideBySide({ profile, cohorts, columns }) {
+  const families = scoutFamilies(profile.role?.group)
+    .map((family) => ({
+      ...family,
+      keys: family.keys.filter((key) =>
+        columns.some((column) => column.values[key] != null),
+      ),
+    }))
+    .filter((family) => family.keys.length);
+  const averages = columns.map((column) => {
+    const known = Object.values(column.values).filter((v) => v != null);
+    return known.length
+      ? Math.round(known.reduce((sum, v) => sum + v, 0) / known.length)
+      : null;
+  });
+  const best = bestOf(averages);
+  return (
+    <section className={`${s.block} ${s.tableCard}`}>
+      <div className="table-scroll">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Indicateur</th>
+              {columns.map((column) => (
+                <th
+                  key={column.id}
+                  className={s.num}
+                  style={{ "--tone": column.color }}
+                >
+                  <div className={s.compareHead}>
+                    <strong>
+                      {column.name} {column.fake && <FakeBadge short />}
+                    </strong>
+                    <small>{column.sub}</small>
+                    <i />
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          {families.map((family) => (
+            <tbody key={family.id}>
+              <tr className={s.groupRow}>
+                <th colSpan={columns.length + 1}>{family.title}</th>
+              </tr>
+              {family.keys.map((key) => {
+                const values = columns.map((column) => column.values[key]);
+                const top = bestOf(values);
+                const own = advancedMetric(profile, key, cohorts);
+                return (
+                  <tr key={key}>
+                    <th scope="row">{label(key)}</th>
+                    {values.map((value, index) => (
+                      <td key={columns[index].id} className={s.num}>
+                        <span className={s.compareCell}>
+                          {index === 0 && own && (
+                            <small>
+                              {fmt(own.value, own.decimals, { unit: own.unit })}
+                            </small>
+                          )}
+                          {value == null ? (
+                            "—"
+                          ) : (
+                            <span
+                              className={
+                                value === top ? s.bestBadge : undefined
+                              }
+                            >
+                              <PercentileBadge
+                                value={value}
+                                label={String(value)}
+                              />
+                            </span>
+                          )}
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          ))}
+          <tbody>
+            <tr className={s.highlight}>
+              <th scope="row">Moyenne des centiles</th>
+              {averages.map((value, index) => (
+                <td
+                  key={columns[index].id}
+                  className={s.num}
+                  style={
+                    value != null && value === best
+                      ? { color: "var(--ink-strong)", fontWeight: 700 }
+                      : undefined
+                  }
+                >
+                  {value ?? "—"}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
