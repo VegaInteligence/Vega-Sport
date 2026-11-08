@@ -34,3 +34,15 @@ class TransportTest(unittest.TestCase):
    c=PitchClient('pk_test_secret',interval=0,transport=lambda *x:(200,{},payload),sleep=lambda x:None)
    with self.assertRaises(PitchError) as caught:c.fetch('/leagues')
    self.assertEqual(caught.exception.status,200);self.assertEqual(caught.exception.envelope_shape,shape);self.assertNotIn('payload',str(caught.exception))
+ def test_honest_user_agent_and_sanitized_403(self):
+  captured=[];events=[]
+  def transport(request,timeout):
+   captured.append(request.get_header('User-agent'))
+   return (403,{},b'{"message":"API key expired, private detail"}')
+  c=PitchClient('pk_test_secret',interval=0,transport=transport,sleep=lambda x:None,on_attempt=events.append)
+  with self.assertRaises(PitchError) as e:c.fetch('/leagues')
+  self.assertEqual(captured,['VegaSport-V2Pilot/1.0']);self.assertEqual(e.exception.code,'HTTP_ACCESS_DENIED');self.assertEqual(e.exception.status,403);self.assertEqual(e.exception.access_reason,'credential_expired');self.assertNotIn('private',str(e.exception));self.assertEqual(events[0]['error_code'],'HTTP_ACCESS_DENIED')
+ def test_403_does_not_discard_documented_error(self):
+  c=PitchClient('pk_test_secret',interval=0,transport=lambda *a:(403,{},b'{"error":{"code":"UNAUTHORIZED"}}'),sleep=lambda x:None)
+  with self.assertRaises(PitchError) as e:c.fetch('/leagues')
+  self.assertEqual(e.exception.code,'UNAUTHORIZED')
