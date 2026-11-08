@@ -117,6 +117,7 @@ class Store:
             row[col] = aid
         try: ident = self.resolve(kind, key)
         except StoreError: ident = None
+        changed = ident is None
         if ident is None:
             if not isinstance(row.get('name'), str) or not row['name'].strip(): raise StoreError('REFERENCE_NAME_REQUIRED')
             if kind in ('coach', 'referee', 'venue'):
@@ -129,8 +130,17 @@ class Store:
         elif row:
             # Omitted metadata is preserved; explicit source null remains null except required name.
             if row.get('name', True) is None: row.pop('name')
-            self.conn.execute(sql.SQL('UPDATE core.{} SET {},updated_at=now() WHERE id=%s').format(sql.Identifier(table),
-                sql.SQL(',').join(sql.SQL('{}=%s').format(sql.Identifier(k)) for k in row)), [*row.values(), ident])
+            current = self.conn.execute(sql.SQL('SELECT {} FROM core.{} WHERE id=%s').format(sql.SQL(',').join(map(sql.Identifier,row)),sql.Identifier(table)),(ident,)).fetchone() if row else ()
+            changed = tuple(row.values()) != current
+            if changed:
+                self.conn.execute(sql.SQL('UPDATE core.{} SET {},updated_at=now() WHERE id=%s').format(sql.Identifier(table),
+                    sql.SQL(',').join(sql.SQL('{}=%s').format(sql.Identifier(k)) for k in row)), [*row.values(), ident])
+        if changed and kind in ('team','player','competition'):
+            if kind!='competition': self._bump(kind,ident)
+            else:
+                for edition, in self.conn.execute('SELECT id FROM core.competition_seasons WHERE competition_id=%s',(ident,)):
+                    self._bump('competition_season',edition)
+            self._bump('home',1)
         return ident
 
     def references(self, batch):
@@ -181,8 +191,13 @@ class Store:
         for kind, player, team in targets:
             self.conn.execute('INSERT INTO ops.dirty_scopes(scope_kind,player_id,team_id,competition_season_id) VALUES(%s,%s,%s,%s) ON CONFLICT(scope_kind,player_id,team_id,competition_season_id,cohort_id) DO UPDATE SET revision=ops.dirty_scopes.revision+1,queued_at=now()', (kind, player, team, edition))
 
-    def save_references(self, batch):
+    def _unknown(self, family, batch):
+        for path in sorted(batch.unknown_paths):
+            self.conn.execute('INSERT INTO ops.unknown_fields(family,field_path) VALUES(%s,%s) ON CONFLICT(family,field_path) DO UPDATE SET last_seen_at=now(),occurrences=ops.unknown_fields.occurrences+1', (family, path))
+
+    def save_references(self, batch, *, family='league'):
         with self.conn.transaction():
+            self._unknown(family,batch)
             self.references(batch)
             for table, rows in batch.rows.items():
                 kind = {'core.competitions': 'competition', 'core.teams': 'team', 'core.players': 'player'}.get(table)
@@ -192,9 +207,10 @@ class Store:
                     for row in rows: self.edition(self.resolve('competition', row['competition_id']), row['native_label'])
                 else: raise StoreError('UNEXPECTED_REFERENCE_TABLE')
 
-    def save_matches(self, batch, competition_season_id):
+    def save_matches(self, batch, competition_season_id, *, family='summary'):
         """Catalogue/summary match anchors, with explicit season identity."""
         with self.conn.transaction():
+            self._unknown(family,batch)
             for source in sorted(batch.rows.get('core.matches', []), key=lambda row: row['id']):
                 self.conn.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))', ('pitchapi:match:'+source['id'],))
                 self.conn.execute("SELECT m.id FROM core.matches m JOIN core.provider_ids p ON p.entity_type='match' AND p.provider='pitchapi' AND p.entity_id=m.id WHERE p.provider_key=%s FOR UPDATE OF m", (source['id'],))
@@ -228,6 +244,9 @@ class Store:
                 for tid in (row.get('home_team_id'), row.get('away_team_id')):
                     if tid: self.conn.execute('INSERT INTO core.team_seasons(team_id,competition_season_id) VALUES(%s,%s) ON CONFLICT DO NOTHING', (tid, competition_season_id))
                 if changed: self._dirty(mid, competition_season_id, old_scopes | {(None, row.get('home_team_id')), (None, row.get('away_team_id'))})
+                if family=='summary':
+                    fingerprint=digest(NormalizedFamily(rows={'core.matches':[source]}))
+                    self.conn.execute("INSERT INTO ops.family_state(match_id,family,fingerprint,status,last_success_at,last_attempt_at) VALUES(%s,'summary',%s,'ok',now(),now()) ON CONFLICT(match_id,family) DO UPDATE SET fingerprint=EXCLUDED.fingerprint,status='ok',last_success_at=now(),last_attempt_at=now(),updated_at=now()",(mid,fingerprint))
                 ids.append(mid)
             return ids
 
@@ -243,11 +262,10 @@ class Store:
             self.conn.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))', ('pitchapi:match:'+key,))
             sid, eid, home, away = self.conn.execute('SELECT season_id,competition_season_id,home_team_id,away_team_id FROM core.matches WHERE id=%s FOR UPDATE', (mid,)).fetchone()
             self.references(batch)
-            for path in sorted(batch.unknown_paths):
-                self.conn.execute('INSERT INTO ops.unknown_fields(family,field_path) VALUES(%s,%s) ON CONFLICT(family,field_path) DO UPDATE SET last_seen_at=now(),occurrences=ops.unknown_fields.occurrences+1', (family, path))
+            self._unknown(family,batch)
             fingerprint = digest(batch)
             prior = self.conn.execute('SELECT fingerprint,status FROM ops.family_state WHERE match_id=%s AND family=%s', (mid, family)).fetchone()
-            changed = not prior or bytes(prior[0] or b'') != fingerprint or prior[1] != batch.coverage
+            changed = not prior or bytes(prior[0] or b'') != fingerprint
             if changed:
                 scopes = self._scopes(mid, tables) | {(None, home), (None, away)}
                 for table in reversed(tables): self.conn.execute(sql.SQL('DELETE FROM core.{} WHERE season_id=%s AND match_id=%s').format(sql.Identifier(table)), (sid, mid))
@@ -266,13 +284,16 @@ class Store:
                 ack(self.conn, *lease)
             return changed
 
-    def record_failure(self, mid, family, code):
+    def record_failure(self, mid, family, code, *, lease=None):
         if not re.fullmatch(r'[A-Z][A-Z0-9_]{0,63}', code): code = 'INGESTION_ERROR'
         with self.conn.transaction():
+            if lease and not self.conn.execute("SELECT id FROM ops.fetch_jobs WHERE id=%s AND lease_token=%s AND state='leased' AND lease_until>clock_timestamp() FOR UPDATE",lease).fetchone():
+                raise StoreError('LEASE_LOST')
+            self.conn.execute('SELECT id FROM core.matches WHERE id=%s FOR UPDATE',(mid,))
             self.conn.execute('INSERT INTO ops.parse_failures(family,entity_type,entity_id,error_code,message) VALUES(%s,\'match\',%s,%s,%s)', (family, mid, code, code))
             self.conn.execute("INSERT INTO ops.family_state(match_id,family,status,last_attempt_at) VALUES(%s,%s,'error',now()) ON CONFLICT(match_id,family) DO UPDATE SET status='error',last_attempt_at=now(),updated_at=now()", (mid, family))
-            if family in FAMILY_TABLES:
-                self.conn.execute(sql.SQL("UPDATE core.match_coverage SET {}='error',updated_at=now() WHERE match_id=%s").format(sql.Identifier(family)), (mid,))
+            # An attempt failure belongs to ops; core coverage describes the last
+            # committed facts. Neither successful data nor its cache version changes.
 
     def log_attempt(self, family, event, *, entity_type=None, entity_id=None, competition_season_id=None):
         at = event['fetched_at']

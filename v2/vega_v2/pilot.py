@@ -57,7 +57,7 @@ class Pilot:
             parser = 'league' if kind=='competition' else kind
             result = self.fetch(parser, endpoint)
             profile = normalize_family(parser, result.data)
-            self.store.save_references(profile)
+            self.store.save_references(profile,family=parser)
 
     def run(self, *, season, league_name, max_matches, resume=False):
         catalogue = self.fetch('league', '/leagues').data
@@ -74,7 +74,7 @@ class Pilot:
         result = self.fetch('league_matches', '/leagues/'+league['id']+'/matches', {'season':season, 'status':'all'})
         calendar = normalize_family('league_matches', result.data)
         self.hydrate(calendar)
-        self.store.save_matches(calendar, self.edition)
+        self.store.save_matches(calendar, self.edition, family='league_matches')
         matches = [row for row in calendar.rows.get('core.matches',[]) if row.get('status')=='finished']
         matches.sort(key=lambda r: (str(r.get('kickoff_at') or r.get('match_date') or ''), r['id']), reverse=True)
         self.available_matches = len(matches)
@@ -109,7 +109,7 @@ class Pilot:
         seconds = time.perf_counter()-self.started
         # Relations use physical leaf sizes; parent tables are not counted twice.
         sizes = conn.execute("SELECT n.nspname,sum(pg_relation_size(c.oid)),sum(pg_indexes_size(c.oid)),sum(pg_total_relation_size(c.oid)) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('core','agg','ops') AND c.relkind='r' GROUP BY n.nspname ORDER BY n.nspname").fetchall()
-        requests = conn.execute('SELECT family,count(*),round(avg(duration_ms)),percentile_cont(0.95) WITHIN GROUP(ORDER BY duration_ms) FROM ops.fetch_log GROUP BY family ORDER BY family').fetchall()
+        requests = conn.execute('SELECT family,http_status,error_code,count(*),round(avg(duration_ms)),percentile_cont(0.95) WITHIN GROUP(ORDER BY duration_ms) FROM ops.fetch_log GROUP BY family,http_status,error_code ORDER BY family,http_status,error_code').fetchall()
         unknown = conn.execute('SELECT family,field_path,occurrences FROM ops.unknown_fields ORDER BY family,field_path').fetchall()
         rows = ['# Vega v2 isolated pilot', '', f'UTC: {datetime.now(timezone.utc).isoformat()}',
             f'PostgreSQL: {conn.execute("SHOW server_version").fetchone()[0]}',
@@ -126,8 +126,8 @@ class Pilot:
         rows += ['', '| Family | SQL write median ms | SQL write p95 ms |', '|---|---:|---:|']
         for family,values in sorted(self.writes.items()):
             rows.append(f'| {family} | {statistics.median(values):.2f} | {sorted(values)[max(0,int(len(values)*.95)-1)]:.2f} |')
-        rows += ['', '| Family | HTTP attempts in database | Mean ms | P95 ms |', '|---|---:|---:|---:|']
-        rows += [f'| {f} | {n} | {mean} | {p95:.2f} |' for f,n,mean,p95 in requests]
+        rows += ['', '| Family | HTTP status | Error | Attempts in database | Mean ms | P95 ms |', '|---|---|---|---:|---:|---:|']
+        rows += [f'| {f} | {status} | {code or ""} | {n} | {mean} | {p95:.2f} |' for f,status,code,n,mean,p95 in requests]
         rows += ['', '| Family | Controlled error | Count |', '|---|---|---:|']
         rows += [f'| {f} | {code} | {n} |' for (f,code),n in sorted(self.errors.items())]
         rows += ['', '| Family | Unknown field path (no values) | Count |', '|---|---|---:|']
@@ -161,6 +161,7 @@ def main():
             return 0 if ok else 1
     except Exception as error:
         print('pilot_error='+safe_code(error),flush=True)
+        if isinstance(error,PitchError): print(f'http_status={error.status} envelope_shape={getattr(error,"envelope_shape",None)}',flush=True)
         return 1
 
 

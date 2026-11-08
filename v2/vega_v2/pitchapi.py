@@ -21,9 +21,9 @@ _ENDPOINTS = (
 assert len(_ENDPOINTS) == 19
 
 class PitchError(Exception):
-    def __init__(self, code, status=None):
+    def __init__(self, code, status=None, envelope_shape=None):
         super().__init__(code)
-        self.code, self.status = code, status
+        self.code, self.status, self.envelope_shape = code, status, envelope_shape
 
 @dataclass(frozen=True)
 class PitchResult:
@@ -89,14 +89,24 @@ class PitchClient:
             except (ValueError, TypeError): value = None
             code = value.get("error",{}).get("code") if isinstance(value,dict) and isinstance(value.get("error"),dict) else None
             known=('RESOURCE_NOT_FOUND','INVALID_PARAMETER','UNAUTHORIZED','RATE_LIMIT_EXCEEDED','ANALYTICS_UNAVAILABLE','HALVES_UNAVAILABLE','INTERNAL_SERVER_ERROR')
-            safe_code=code if code in known else ('INVALID_JSON' if value is None else 'PROVIDER_ERROR') if not (200 <= status < 300 and isinstance(value,dict) and 'data' in value and 'error' not in value) else None
+            data_present = isinstance(value,dict) and 'data' in value and value['data'] is not None
+            error_present = isinstance(value,dict) and 'error' in value and value['error'] is not None
+            valid = isinstance(value,dict) and data_present != error_present
+            if value is None: shape='root_null_or_invalid_json'
+            elif isinstance(value,list): shape='root_array'
+            elif not isinstance(value,dict): shape='root_scalar'
+            elif data_present and error_present: shape='object_both'
+            elif not data_present and not error_present: shape='object_neither'
+            elif data_present: shape='object_data'
+            else: shape='object_error'
+            safe_code=code if code in known else ('INVALID_JSON' if value is None else 'INVALID_ENVELOPE' if not valid else 'PROVIDER_ERROR') if not (200 <= status < 300 and valid and data_present) else None
             emit(status,safe_code,request_id)
             if status in (429,500,502,503,504) and attempt < self.retries:
                 delay=_retry_delay(headers.get("Retry-After"))
                 self._sleep(max(0.5*2**attempt,delay or 0)); continue
-            if value is None: raise PitchError("INVALID_JSON",status)
-            if not isinstance(value,dict) or ("data" in value) == ("error" in value): raise PitchError("INVALID_ENVELOPE",status)
-            if 200 <= status < 300 and "data" in value: return PitchResult(data=value["data"])
+            if value is None: raise PitchError("INVALID_JSON",status,shape)
+            if not valid: raise PitchError("INVALID_ENVELOPE",status,shape)
+            if 200 <= status < 300 and data_present: return PitchResult(data=value["data"])
             if status == 404 and code in ("ANALYTICS_UNAVAILABLE", "HALVES_UNAVAILABLE"): return PitchResult(coverage="unavailable",code=code)
             raise PitchError(code if code in ("RESOURCE_NOT_FOUND","INVALID_PARAMETER","UNAUTHORIZED","RATE_LIMIT_EXCEEDED") else "PROVIDER_ERROR",status)
         raise PitchError("PROVIDER_ERROR")
