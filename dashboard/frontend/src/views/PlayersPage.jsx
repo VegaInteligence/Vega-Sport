@@ -18,11 +18,7 @@ import PlayerWorkspace from "../components/PlayerWorkspace.jsx";
 import PlayerMatchesPage from "./PlayerMatchesPage.jsx";
 import { ResearchComparisonTray } from "../components/ResearchUI.jsx";
 import useCompactRead from "../hooks/useCompactRead.js";
-import {
-  compactQuery,
-  compactScope,
-  playerReadParams,
-} from "../services/compact-reads.js";
+import { compactQuery, playerReadParams } from "../services/compact-reads.js";
 import {
   aggregateSeason,
   aggregateSeasonPlayers,
@@ -49,6 +45,7 @@ const RADAR_POSITIONS = { G: "G", D: "D", M: "M", O: "M,A" };
 const OTHER_PROFILE_VIEWS = [
   "stats",
   "advanced",
+  "games",
   "similar",
   "compare",
   "evolution",
@@ -140,13 +137,12 @@ export default function PlayersPage() {
   )
     ? subject.leagueIds
     : undefined;
-  const localProfiles = useMemo(() => {
-    if (!overview) return aggregateSeasonPlayers(contextRows);
-    const leagues = new Set(radarLeagues);
-    return aggregateSeasonPlayers(
-      contextRows.filter((row) => leagues.has(row.leagueId)),
-    );
-  }, [overview, radarLeagues, contextRows]);
+  // Overview, Stats avancées and similar profiles rank against one cohort:
+  // the whole position group in the selected competitions.
+  const localProfiles = useMemo(
+    () => aggregateSeasonPlayers(contextRows),
+    [contextRows],
+  );
   const radarPosition =
     subject?.minutes >= MIN_SEASON_MINUTES
       ? RADAR_POSITIONS[subject.role?.group]
@@ -157,7 +153,6 @@ export default function PlayersPage() {
     limit: 100,
   });
   if (overview) {
-    cohortParams.leagues = compactScope(radarLeagues ?? []);
     cohortParams.pos = radarPosition;
   } else if (id && profileView !== "compare") {
     // Read every peer in the actor's complete position group, without sampling.
