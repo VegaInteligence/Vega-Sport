@@ -777,15 +777,17 @@ test("player overview defers the complete matching peer lines without filtering 
   renderToStaticMarkup(h(mod.default));
   let request = reads.find(({ options }) => options.enabled);
   assert.equal(request.params.pos, "M,A");
-  assert.equal(request.params.leagues, league);
+  // The overview shares the full position cohort with Stats avancées.
+  assert.equal(request.params.leagues, "all");
   assert.equal(request.options.allPages, true);
   assert.equal(request.options.parallelPages, true);
   reads.length = 0;
   view = "stats";
   renderToStaticMarkup(h(mod.default));
+  // Statistics reuse the cohort the overview already requested.
   assert.equal(
     reads.some(({ options }) => options.enabled),
-    false,
+    true,
   );
   requestComparisons();
   reads.length = 0;

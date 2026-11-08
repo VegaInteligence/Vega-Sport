@@ -46,6 +46,7 @@ import PlayerOverviewRadar from "./PlayerOverviewRadar.jsx";
 import PlayerProfileFilters from "./PlayerProfileFilters.jsx";
 import PlayerScoutRail, { PlayerScoutStrip } from "./PlayerScoutRail.jsx";
 import PlayerAdvancedStats from "./PlayerAdvancedStats.jsx";
+import PlayerScoutOverview, { PlayerGames } from "./PlayerScoutOverview.jsx";
 import { chartTokens } from "./PlayerScoutCharts.jsx";
 import scout from "./PlayerScout.module.css";
 import { nationalFlagCode } from "../services/national-flags.js";
@@ -77,8 +78,9 @@ const TABS = [
   ["stats", "Statistiques"],
   ["advanced", "Stats avancées"],
   ["similar", "Profils similaires"],
-  ["evolution", "Évolution"],
-  ["compare", "Comparer"],
+  ["compare", "Comparaison"],
+  ["evolution", "Carrière"],
+  ["games", "Matchs"],
 ];
 const HISTORY_TABS = TABS.slice(0, 2);
 const STAT_MODES = [
@@ -477,7 +479,7 @@ export default function PlayerSeasonProfile({
       Chargement des saisons…
     </div>
   );
-  const overview = (
+  const historyOverview = (
     <div className="player-overview">
       <Suspense fallback={historyLoading}>
         <SeasonStats id={id} season={f.season} />
@@ -497,6 +499,21 @@ export default function PlayerSeasonProfile({
         </Suspense>
       </div>
     </div>
+  );
+  const overview = (
+    <PlayerScoutOverview
+      profile={profile}
+      cohorts={cohorts}
+      ready={comparisonsReady}
+      season={f.season}
+      matches={f.data?.matches}
+      comparisonRef={comparisonRef}
+      onTab={change}
+    >
+      <Suspense fallback={historyLoading}>
+        <SeasonStats id={id} season={f.season} />
+      </Suspense>
+    </PlayerScoutOverview>
   );
   if (!profile.matches) {
     const historyView = view === "stats" ? "stats" : "overview";
@@ -535,7 +552,7 @@ export default function PlayerSeasonProfile({
                 <PerformanceStats id={id} />
               </Suspense>
             ) : (
-              overview
+              historyOverview
             )}
           </div>
         </ProfileLayout>
@@ -736,7 +753,13 @@ export default function PlayerSeasonProfile({
               <Similarity profile={profile} cohorts={cohorts} />
             )}
             {view === "evolution" && (
-              <Evolution key={id} id={id} profile={profile} />
+              <>
+                <CareerStats id={id} season={f.season} overview />
+                <Evolution key={id} id={id} profile={profile} />
+              </>
+            )}
+            {view === "games" && (
+              <PlayerGames profile={profile} matches={f.data?.matches} />
             )}
             {view === "compare" && (
               <ProfileComparison
