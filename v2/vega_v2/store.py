@@ -74,6 +74,7 @@ def digest(batch):
 class Store:
     def __init__(self, conn):
         self.conn = conn
+        self._versions = set()
         self.columns = {}
         for table, col in conn.execute("SELECT table_name,column_name FROM information_schema.columns WHERE table_schema='core'"):
             self.columns.setdefault(table, set()).add(col)
@@ -171,7 +172,14 @@ class Store:
         return {k: self.resolve(FOREIGN_KIND[k], v) if k in FOREIGN_KIND else v for k, v in row.items()}
 
     def _bump(self, kind, ident):
-        self.conn.execute('INSERT INTO ops.resource_versions(resource_kind,resource_id) VALUES(%s,%s) ON CONFLICT(resource_kind,resource_id) DO UPDATE SET version=ops.resource_versions.version+1,updated_at=now()', (kind, ident))
+        self._versions.add((kind, ident))
+
+    def _flush_versions(self):
+        # Acquire shared version rows only after all entity locks. Otherwise a
+        # worker holding home could wait on an entity held by a home waiter.
+        for kind, ident in sorted(self._versions):
+            self.conn.execute('INSERT INTO ops.resource_versions(resource_kind,resource_id) VALUES(%s,%s) ON CONFLICT(resource_kind,resource_id) DO UPDATE SET version=ops.resource_versions.version+1,updated_at=now()', (kind, ident))
+        self._versions.clear()
 
     def _scopes(self, mid, tables):
         scopes = set()
@@ -197,6 +205,7 @@ class Store:
 
     def save_references(self, batch, *, family='league'):
         with self.conn.transaction():
+            self._versions.clear()
             self._unknown(family,batch)
             self.references(batch)
             for table, rows in batch.rows.items():
@@ -206,10 +215,12 @@ class Store:
                 elif table == 'core.competition_seasons':
                     for row in rows: self.edition(self.resolve('competition', row['competition_id']), row['native_label'])
                 else: raise StoreError('UNEXPECTED_REFERENCE_TABLE')
+            self._flush_versions()
 
     def save_matches(self, batch, competition_season_id, *, family='summary'):
         """Catalogue/summary match anchors, with explicit season identity."""
         with self.conn.transaction():
+            self._versions.clear()
             self._unknown(family,batch)
             for source in sorted(batch.rows.get('core.matches', []), key=lambda row: row['id']):
                 self.conn.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))', ('pitchapi:match:'+source['id'],))
@@ -250,6 +261,7 @@ class Store:
                     fingerprint=digest(NormalizedFamily(rows={'core.matches':[source]}))
                     self.conn.execute("INSERT INTO ops.family_state(match_id,family,fingerprint,status,last_success_at,last_attempt_at) VALUES(%s,'summary',%s,'ok',now(),now()) ON CONFLICT(match_id,family) DO UPDATE SET fingerprint=EXCLUDED.fingerprint,status='ok',last_success_at=now(),last_attempt_at=now(),updated_at=now()",(mid,fingerprint))
                 ids.append(mid)
+            self._flush_versions()
             return ids
 
     def save_family(self, mid, family, batch, *, lease=None):
@@ -257,6 +269,7 @@ class Store:
         tables = FAMILY_TABLES[family]
         if set(batch.rows) - {'core.'+t for t in tables}: raise StoreError('UNEXPECTED_FAMILY_TABLE')
         with self.conn.transaction():
+            self._versions.clear()
             if lease:
                 job_id, token = lease
                 if not self.conn.execute("SELECT id FROM ops.fetch_jobs WHERE id=%s AND lease_token=%s AND state='leased' AND lease_until>clock_timestamp() FOR UPDATE", (job_id, token)).fetchone(): raise StoreError('LEASE_LOST')
@@ -284,6 +297,7 @@ class Store:
             if lease:
                 from .jobs import ack
                 ack(self.conn, *lease)
+            self._flush_versions()
             return changed
 
     def record_failure(self, mid, family, code, *, lease=None):
