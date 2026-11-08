@@ -66,7 +66,7 @@ test("season overview shows the scout layout without a detailed statistics short
   assert.match(html, /<h2>Saison 2026\/2027<\/h2>/);
   assert.match(html, /<span>Passes décisives<\/span><strong>0<\/strong>/);
   assert.match(html, /<h3>Profil statistique<\/h3>/);
-  assert.match(html, /<h3>Indices de rôle<\/h3>/);
+  assert.match(html, /<h3>Indice Vega par rôle<\/h3>/);
   assert.match(html, /<h3>Forme récente<\/h3>/);
   // 37 minutes cannot be ranked: the notice replaces percentiles.
   assert.match(html, /37 minutes jouées : les centiles demandent au moins 450/);
