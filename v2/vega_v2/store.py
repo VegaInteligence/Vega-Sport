@@ -239,7 +239,10 @@ class Store:
             ident = None
         changed = ident is None
         if ident is None:
-            if not isinstance(row.get("name"), str) or not row["name"].strip():
+            if kind == "player" and row.get("name") is None:
+                # An observed provider ID is a fact even if its profile is absent.
+                row["name"] = None
+            elif not isinstance(row.get("name"), str) or not row["name"].strip():
                 raise StoreError("REFERENCE_NAME_REQUIRED")
             if kind in ("coach", "referee", "venue"):
                 ident = self._upsert(table, row, ["name"])[0]

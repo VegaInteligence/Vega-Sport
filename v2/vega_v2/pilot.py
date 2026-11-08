@@ -37,6 +37,7 @@ class Pilot:
         self.store = store
         self.events = []
         self.client = PitchClient(key, interval=interval, on_attempt=self.events.append)
+        self.initial_interval = interval
         self.writes = defaultdict(list)
         self.results = Counter()
         self.errors = Counter()
@@ -72,6 +73,10 @@ class Pilot:
                     {k: v for k, v in ref.fields.items() if v is not None}
                 )
         for (kind, key), fields in grouped.items():
+            # Reference metadata has its own lane. Missing player profiles must
+            # never discard valid events or shots carrying an observed player ID.
+            if kind == "player":
+                continue
             if fields.get("name") or self.store.has(kind, key):
                 continue
             endpoint = {
@@ -89,7 +94,16 @@ class Pilot:
             else:
                 self.store.save_references(profile, family=parser)
 
-    def run(self, *, season, league_name, max_matches, resume=False, profile_limit=0):
+    def run(
+        self,
+        *,
+        season,
+        league_name,
+        max_matches,
+        resume=False,
+        profile_limit=0,
+        ordinals=None,
+    ):
         catalogue = self.fetch("league", "/leagues").data
         leagues = [
             x
@@ -135,7 +149,11 @@ class Pilot:
             reverse=True,
         )
         self.available_matches = len(matches)
-        chosen = matches[:max_matches]
+        chosen = (
+            [matches[i - 1] for i in ordinals if i <= len(matches)]
+            if ordinals
+            else matches[:max_matches]
+        )
         self.selected_matches = len(chosen)
         if not chosen:
             raise StoreError("NO_FINISHED_MATCH")
@@ -144,7 +162,6 @@ class Pilot:
             for family, suffix, parser in DETAILS:
                 if (
                     resume
-                    and family != "summary"
                     and self.store.conn.execute(
                         "SELECT 1 FROM ops.family_state WHERE match_id=%s AND family=%s AND status IN ('ok','unavailable')",
                         (mid, family),
@@ -246,6 +263,7 @@ class Pilot:
             "",
             f"UTC: {datetime.now(timezone.utc).isoformat()}",
             f'PostgreSQL: {conn.execute("SHOW server_version").fetchone()[0]}',
+            f"Minimum request interval seconds (initial / final): {self.initial_interval} / {self.client.interval}",
             f"Overall result: {outcome}",
             f"Finished matches available: {self.available_matches}",
             f"Selected matches: {self.selected_matches}",
@@ -255,6 +273,7 @@ class Pilot:
             f"Family failures: {sum(self.errors.values())}",
             "",
             f'Calendar rows actually stored: {conn.execute("SELECT count(*) FROM core.matches").fetchone()[0]}',
+            f'Observed player identities with unknown name: {conn.execute("SELECT count(*) FROM core.players WHERE name IS NULL").fetchone()[0]}',
             "A completed collection stores the whole competition calendar, and details only for selected matches.",
             "Database size includes empty schema/index overhead; do not extrapolate one-match bytes to a season.",
             "Only metadata, counts and timings are exported. No database dump, response or football row is exported.",
@@ -375,16 +394,40 @@ def main():
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--vector", action="store_true")
     parser.add_argument("--profile-limit", type=int, default=2)
+    parser.add_argument(
+        "--ordinals",
+        help="Comma-separated 1-based match positions for bounded regression checks",
+    )
+    parser.add_argument("--interval", type=float, default=0.5)
     args = parser.parse_args()
     if not 1 <= args.max_matches <= 306:
         parser.error("max-matches must be between 1 and 306")
     if not 0 <= args.profile_limit <= 100:
         parser.error("profile-limit must be between 0 and 100")
+    if not 0.25 <= args.interval <= 5:
+        parser.error("interval must be between 0.25 and 5 seconds")
+    try:
+        ordinals = (
+            [int(value) for value in args.ordinals.split(",")]
+            if args.ordinals
+            else None
+        )
+        if ordinals and (
+            len(set(ordinals)) != len(ordinals)
+            or any(not 1 <= v <= 306 for v in ordinals)
+        ):
+            raise ValueError()
+    except ValueError:
+        parser.error("ordinals must be distinct match positions between 1 and 306")
     pilot = None
     try:
         with connect_local(os.environ.get("V2_DATABASE_URL", "")) as conn:
             migrate(conn, vector=args.vector)
-            pilot = Pilot(Store(conn), os.environ.get("PITCHAPI_API_KEY", ""))
+            pilot = Pilot(
+                Store(conn),
+                os.environ.get("PITCHAPI_API_KEY", ""),
+                interval=args.interval,
+            )
             try:
                 ok = pilot.run(
                     season=args.season,
@@ -392,6 +435,7 @@ def main():
                     max_matches=args.max_matches,
                     resume=args.resume,
                     profile_limit=args.profile_limit,
+                    ordinals=ordinals,
                 )
             except Exception as error:
                 pilot.fatal_error = safe_code(error)

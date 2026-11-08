@@ -10,6 +10,7 @@ Cette implémentation suit les étapes 1 et 2 du document « Vega Sport — sch�
 - Conservation des dernières données valides après un échec. L'échec de la tentative est enregistré dans `ops`, sans changer la couverture de la dernière écriture réussie dans `core`.
 - File avec cibles typées, déduplication, reprise de bail et contrôle du jeton. Fonctions de cadence des scores et programmation des détails/contrôle à 24 heures.
 - Profil joueur/club programmé dès la première apparition, même si un nom est déjà connu. Suivi distinct du dernier profil réussi et de son échéance à 30 jours ; test réel de profils borné séparément des matchs.
+- Un identifiant joueur observé reste utilisable avec un nom NULL. Une fiche joueur manquante ne fait pas disparaître ses événements ou tirs : le profil est enrichi par la file de références.
 - Pilote borné Ligue 1 2025/26, rapports de couverture, tentatives HTTP, temps d'écriture et tailles physiques avec index.
 
 Les tables `agg` sont créées mais leur alimentation et l'API de lecture constituent l'étape 6. La file est testée ; aucun ordonnanceur permanent n'est activé. Les données de modèles, postes, biographies, transferts, contrats et tracking non fournies restent absentes. Le prototype ne crée ni faux résultats ni valeurs issues de la maquette.
@@ -26,6 +27,7 @@ Les tables `agg` sont créées mais leur alimentation et l'API de lecture consti
 | Classements | Observations fournisseur dans `core.official_standings`, calcul Vega dans `agg.standings`. Clé de substitution et unicité `NULLS NOT DISTINCT` pour les phases/groupes absents. |
 | Statistiques de base/avancées | Espaces de colonnes distincts ; préfixe `advanced_` dans les agrégats, moyennes d'équipe séparées par suffixe `_avg`. |
 | Pourcentage de passes | `accurate_passes_pct` complète la liste initiale pour conserver le pourcentage publié, par exemple dans `329 (82%)`, conformément à la règle de parsing du document. |
+| Joueurs sans fiche | Le nom d'un joueur peut être NULL ; son identifiant fournisseur et les faits observés sont conservés. Aucun nom artificiel n'est créé. |
 | Jobs | Cible explicite : catalogue, date, édition ou entité. Un bail utilise un jeton UUID ; un ancien travailleur ne peut pas écrire puis acquitter une tâche reprise. |
 | Recalculs | Le périmètre joueur contient joueur, équipe et édition. Une correction marque les anciens et les nouveaux périmètres. |
 | Erreurs | Une liste vide valide est une observation connue. Les indisponibilités explicites et les erreurs restent distinctes. Les logs contiennent des codes et chemins, jamais la réponse ni les lignes refusées par PostgreSQL. |
@@ -49,7 +51,7 @@ Le workflow `Vega v2 isolated pilot` utilise le secret PitchAPI déjà présent 
 
 ## Validation
 
-Les tests avec base utilisent six bases locales jetables distinctes : `vega_v2_test`, `vega_v2_jobs_test`, `vega_v2_store_test`, `vega_v2_pilot_test`, `vega_v2_profiles_test`, `vega_v2_concurrency_test`. Définir respectivement `VEGA_V2_TEST_DSN`, `VEGA_V2_JOBS_TEST_DSN`, `VEGA_V2_STORE_TEST_DSN`, `VEGA_V2_PILOT_TEST_DSN`, `VEGA_V2_PROFILES_TEST_DSN`, `VEGA_V2_CONCURRENCY_TEST_DSN`, puis lancer :
+Les tests avec base utilisent sept bases locales jetables distinctes : `vega_v2_test`, `vega_v2_jobs_test`, `vega_v2_store_test`, `vega_v2_pilot_test`, `vega_v2_profiles_test`, `vega_v2_concurrency_test`, `vega_v2_unknown_test`. Définir respectivement `VEGA_V2_TEST_DSN`, `VEGA_V2_JOBS_TEST_DSN`, `VEGA_V2_STORE_TEST_DSN`, `VEGA_V2_PILOT_TEST_DSN`, `VEGA_V2_PROFILES_TEST_DSN`, `VEGA_V2_CONCURRENCY_TEST_DSN`, `VEGA_V2_UNKNOWN_TEST_DSN`, puis lancer :
 
 ```sh
 python -m unittest discover -s v2/tests -v

@@ -69,6 +69,7 @@ class PilotTest(unittest.TestCase):
                 "matches": [match],
             },
             "/players/p_111111": {"id": "p_111111", "name": name},
+            "/teams/t_111111": {"id": "t_111111", "name": "Home"},
             "/matches/m_111111": match,
             "/matches/m_111111/lineups": {
                 "home_team": home,
@@ -170,9 +171,14 @@ class PilotTest(unittest.TestCase):
         pilot = Pilot(Store(self.db), "pk_test_synthetic", interval=0)
         pilot.client._transport = transport
         self.assertTrue(
-            pilot.run(season="2025/2026", league_name="Ligue 1", max_matches=1)
+            pilot.run(
+                season="2025/2026",
+                league_name="Ligue 1",
+                max_matches=1,
+                profile_limit=2,
+            )
         )
-        self.assertEqual(len(calls), 16)
+        self.assertEqual(len(calls), 17)
         self.assertEqual(set(calls), set(endpoints))
         self.assertEqual(
             self.db.execute("SELECT count(*) FROM core.matches").fetchone()[0], 1

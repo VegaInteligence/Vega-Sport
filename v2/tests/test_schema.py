@@ -39,6 +39,7 @@ class SchemaTests(unittest.TestCase):
             "003_ops.sql",
             "005_team_pass_percentage.sql",
             "006_reference_state.sql",
+            "007_unknown_player_name.sql",
         ):
             cls.db.execute((ROOT / "sql" / name).read_text(encoding="utf-8"))
         cls.db.execute(
@@ -83,6 +84,21 @@ class SchemaTests(unittest.TestCase):
         finally:
             self.db.execute("ROLLBACK TO SAVEPOINT reject_case")
             self.db.execute("RELEASE SAVEPOINT reject_case")
+
+    def test_observed_player_identity_can_have_unknown_name(self):
+        self.db.execute("INSERT INTO core.players(id,name) VALUES(2,NULL)")
+        self.db.execute(
+            "INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES('player','pitchapi','p_abcdef',2)"
+        )
+        row = self.db.execute(
+            "SELECT p.name,i.provider_key FROM core.players p JOIN core.provider_ids i ON i.entity_type='player' AND i.entity_id=p.id WHERE p.id=2"
+        ).fetchone()
+        self.assertEqual(row, (None, "p_abcdef"))
+        self.assertEqual(
+            self.db.execute("SELECT name FROM core.players WHERE id=1").fetchone()[0],
+            "Player",
+        )
+        self.rejects("INSERT INTO core.teams(id,name) VALUES(3,NULL)")
 
     def test_types_and_absence(self):
         rows = dict(
