@@ -71,7 +71,7 @@ test("match summary of a collected match", { skip }, async () => {
   });
   assert.equal(m.away.coach, null);
   assert.deepEqual(m.stats.map((s) => s.key), ["expected_goals", "total_shots", "ShotsOnTarget", "BallPossesion"]);
-  assert.deepEqual(m.stats[3], { key: "BallPossesion", label: "Ball possession", home: 46, away: 47, homeRaw: 46, awayRaw: 47, format: "integer", reliable: true });
+  assert.deepEqual(m.stats[3], { key: "BallPossesion", label: null, home: 46, away: 47, homeRaw: 46, awayRaw: 47, format: "integer", reliable: true });
   assert.deepEqual(m.shots.map((s) => [s.id, s.teamId, s.playerId, s.minute, s.isGoal]), [
     ["s1", "t_aaaaa1", "p_aaaab1", 11, true], ["s2", "t_aaaaa2", "p_aaaab4", 30, false], ["s3", "t_aaaaa1", "p_aaaab1", 21, true],
   ]);

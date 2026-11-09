@@ -7,8 +7,9 @@
  * Differences with the legacy read, by construction of v2 (listed for the parity
  * comparison):
  * - statuses are the normalized ones (a provider "started" reads "in_play");
- * - team statistics are typed columns: `homeRaw`/`awayRaw` repeat the number, `format`
- *   is "double" for xG and "integer" otherwise, `reliable` is true;
+ * - team statistics are typed columns: `label` is null (the site has its own labels),
+ *   `homeRaw`/`awayRaw` repeat the number, `format` is "double" for xG and "integer"
+ *   otherwise, `reliable` is true;
  * - a referee or a stadium is an object {id, name} whenever it is known;
  * - shot periods are the normalized period names (first_half, second_half, …);
  * - `warnings` and `warningCodes` are empty (v2 keeps data warnings in ops);
@@ -166,13 +167,14 @@ export async function fixturePage(req, p, read) {
 }
 
 // The overview statistics of a summary (legacy keys of team_statistics) and their columns.
+// Labels are null as in team-stats.mjs: the provider's titles are not stored.
 const SUMMARY_STATS = [
-  ["expected_goals", "xg", "Expected goals (xG)", "double"],
-  ["total_shots", "shots", "Total shots", "integer"],
-  ["ShotsOnTarget", "shots_on_target", "Shots on target", "integer"],
-  ["BallPossesion", "possession", "Ball possession", "integer"],
-  ["big_chance", "big_chances", "Big chances", "integer"],
-  ["corners", "corners", "Corners", "integer"],
+  ["expected_goals", "xg", null, "double"],
+  ["total_shots", "shots", null, "integer"],
+  ["ShotsOnTarget", "shots_on_target", null, "integer"],
+  ["BallPossesion", "possession", null, "integer"],
+  ["big_chance", "big_chances", null, "integer"],
+  ["corners", "corners", null, "integer"],
 ];
 
 const summarySql = `WITH f AS MATERIALIZED (SELECT * FROM api.fixtures WHERE match_id=api.internal_id('match',$1))
