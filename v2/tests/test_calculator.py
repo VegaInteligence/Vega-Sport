@@ -113,7 +113,20 @@ class CalculatorTest(unittest.TestCase):
         from vega_v2.metric_catalog import PLAYER_RATIOS, TEAM_RATIOS
 
         expected = len(PLAYER_METRICS) + len(TEAM_METRICS) + len(PLAYER_RATIOS) + len(TEAM_RATIOS)
-        self.assertEqual(self.db.execute("SELECT count(*) FROM agg.metric_definitions").fetchone()[0], expected)
+        self.assertEqual(
+            self.db.execute("SELECT count(*) FROM agg.metric_definitions WHERE source_family <> 'derived'").fetchone()[0], expected
+        )
+        # The club indicators of api.team_season, minus the two keys that are also raw metrics.
+        from vega_v2.models import TEAM_INDICATORS
+
+        self.assertEqual(
+            self.db.execute("SELECT count(*) FROM agg.metric_definitions WHERE source_family = 'derived'").fetchone()[0],
+            len(TEAM_INDICATORS) - 2,
+        )
+        self.assertEqual(
+            self.db.execute("SELECT count(*) FROM agg.metric_definitions WHERE label_fr IS NOT NULL").fetchone()[0],
+            len(TEAM_INDICATORS) + 27,
+        )
         self.assertEqual(
             self.db.execute("SELECT aggregation,numerator_key,denominator_key FROM agg.metric_definitions WHERE entity_type='team' AND key='ppda'").fetchone(),
             ("ratio", "opponent_passes", "defensive_actions"),
@@ -173,7 +186,10 @@ class CalculatorTest(unittest.TestCase):
             "INSERT INTO ops.dirty_scopes(scope_kind,player_id,team_id,competition_season_id) VALUES('player_season',11,2,1),('team_season',NULL,1,1),('competition_season',NULL,NULL,1)"
         )
         self.assertEqual(process_dirty(self.db), 3)
-        self.assertEqual(self.db.execute("SELECT count(*) FROM ops.dirty_scopes").fetchone()[0], 0)
+        # Only the edition's cohorts (1 club + 4 position groups) remain, queued for the models.
+        self.assertEqual(
+            self.db.execute("SELECT scope_kind::text, count(*) FROM ops.dirty_scopes GROUP BY 1").fetchall(), [("cohort", 5)]
+        )
         self.assertIsNone(self.player(11, "minutes"))
         self.assertEqual(self.team(1, "drawn", "points"), (1, 4))
         self.assertEqual(

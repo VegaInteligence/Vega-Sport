@@ -90,44 +90,53 @@ def connect_local(dsn):
 
 
 def migrate(conn, *, vector=False):
-    """Apply immutable checksummed migrations; never touch an existing legacy schema."""
+    """Apply immutable checksummed migrations; never touch an existing legacy schema.
+
+    Each file commits on its own: a value added to an enum (ALTER TYPE ... ADD VALUE)
+    can only be used once that transaction has committed, so a later file may rely on
+    it. A failing file rolls back alone and stops the run. On a new database, the
+    files up to the one creating ops.schema_migrations run as one transaction.
+    """
     directory = Path(__file__).resolve().parents[1] / "sql"
     files = sorted(
         p for p in directory.glob("*.sql") if vector or "vector_optional" not in p.name
     )
+    sources = [(p.name, p.read_text(encoding="utf-8")) for p in files]
+    lock = "SELECT pg_advisory_xact_lock(hashtextextended('vega_v2_migrate',0))"
+    table = "SELECT to_regclass('ops.schema_migrations')"
     with conn.transaction():
-        conn.execute(
-            "SELECT pg_advisory_xact_lock(hashtextextended('vega_v2_migrate',0))"
-        )
-        present = conn.execute(
-            "SELECT to_regclass('ops.schema_migrations')"
-        ).fetchone()[0]
-        if (
-            not present
-            and conn.execute(
+        conn.execute(lock)
+        if not conn.execute(table).fetchone()[0]:
+            if conn.execute(
                 "SELECT 1 FROM pg_namespace WHERE nspname IN ('core','agg','ops')"
+            ).fetchone():
+                raise StoreError("UNMANAGED_SCHEMA")
+            done = []
+            for name, source in sources:
+                conn.execute(source)
+                done.append((name, hashlib.sha256(source.encode()).digest()))
+                if conn.execute(table).fetchone()[0]:
+                    break
+            for version, checksum in done:
+                conn.execute(
+                    "INSERT INTO ops.schema_migrations(version,checksum) VALUES(%s,%s)",
+                    (version, checksum),
+                )
+    for name, source in sources:
+        checksum = hashlib.sha256(source.encode()).digest()
+        with conn.transaction():
+            conn.execute(lock)
+            applied = conn.execute(
+                "SELECT checksum FROM ops.schema_migrations WHERE version=%s", (name,)
             ).fetchone()
-        ):
-            raise StoreError("UNMANAGED_SCHEMA")
-        applied = (
-            dict(conn.execute("SELECT version,checksum FROM ops.schema_migrations"))
-            if present
-            else {}
-        )
-        pending = []
-        for path in files:
-            source = path.read_text(encoding="utf-8")
-            checksum = hashlib.sha256(source.encode()).digest()
-            if path.name in applied:
-                if bytes(applied[path.name]) != checksum:
+            if applied:
+                if bytes(applied[0]) != checksum:
                     raise StoreError("MIGRATION_CHECKSUM_CHANGED")
                 continue
             conn.execute(source)
-            pending.append((path.name, checksum))
-        for version, checksum in pending:
             conn.execute(
                 "INSERT INTO ops.schema_migrations(version,checksum) VALUES(%s,%s)",
-                (version, checksum),
+                (name, checksum),
             )
 
 

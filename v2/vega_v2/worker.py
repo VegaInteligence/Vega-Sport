@@ -16,7 +16,7 @@ import time
 
 import psycopg
 
-from . import calculator, planner, profiles
+from . import calculator, models, planner, profiles
 from .jobs import LeaseLost, ack, claim, fail
 from .normalize import NormalizedFamily, NormalizationError, normalize_family
 from .pilot import DETAILS, safe_code
@@ -47,7 +47,7 @@ def _now():
 
 
 class Worker:
-    def __init__(self, store, client, *, lanes=DEFAULT_LANES, clock=_now):
+    def __init__(self, store, client, *, lanes=DEFAULT_LANES, clock=_now, cohort_delay=600):
         unknown = set(lanes) - set(LANE_ORDER)
         if unknown or not lanes:
             raise ValueError("invalid lanes")
@@ -56,6 +56,7 @@ class Worker:
         self.client = client
         self.lanes = tuple(lane for lane in LANE_ORDER if lane in lanes)
         self.clock = clock
+        self.cohort_delay = cohort_delay
         self.results = Counter()
         self._events = []
         client._on_attempt = self._events.append
@@ -186,11 +187,35 @@ class Worker:
             self.results[(family, "LEASE_LOST")] += 1
 
     def calculate(self, limit=500):
+        """Season aggregates first, then the cohorts they changed (debounced)."""
         try:
-            return calculator.process_dirty(self.conn, limit=limit)
+            done = calculator.process_dirty(self.conn, limit=limit)
+            return done + models.process_cohorts(self.conn, min_age_seconds=self.cohort_delay)
         except psycopg.Error as error:
             print(f"calculator error={safe_code(error)}", flush=True)
             return 0
+
+    def daily(self):
+        """Levels, competition strength, squad profiles and similarities, once a UTC day
+        for each season played in the last 30 days."""
+        now = self.clock()
+        seasons = [
+            s
+            for (s,) in self.conn.execute(
+                """SELECT DISTINCT m.season_id FROM core.matches m
+                   WHERE m.kickoff_at > %s - interval '30 days' AND m.kickoff_at <= %s
+                     AND NOT EXISTS (SELECT 1 FROM agg.calc_runs r WHERE r.kind = 'levels' AND r.status = 'published'
+                                     AND r.cohort_definition = 'season:' || m.season_id AND r.started_at >= date_trunc('day', %s))
+                   ORDER BY 1""",
+                (now, now, now),
+            )
+        ]
+        for season in seasons:
+            try:
+                models.refresh_daily(self.conn, season)
+            except psycopg.Error as error:
+                print(f"daily models season={season} error={safe_code(error)}", flush=True)
+        return seasons
 
     def run(self, *, max_jobs=None, until_idle=False, plan_every=60, calc_every=30, idle_sleep=5, stop=None):
         stop = stop or (lambda: False)
@@ -204,6 +229,7 @@ class Worker:
                 except psycopg.Error as error:
                     print(f"planner error={safe_code(error)}", flush=True)
                 last_plan = tick
+                self.daily()
             worked = self.step()
             done += worked
             if not worked or tick - last_calc >= calc_every:
