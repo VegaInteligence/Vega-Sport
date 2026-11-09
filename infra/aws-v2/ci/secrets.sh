@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Secrets of the v2 base (vega-football-db-postgres), created once in SSM SecureStrings:
-# the three login passwords (random, generated here), the PitchAPI key (from the
-# workflow secret) and the connection URLs built from the database stack's endpoint.
+# the three login passwords and the status page's key (random, generated here), the
+# PitchAPI key (from the workflow secret) and the connection URLs built from the
+# database stack's endpoint.
 # Values go through mode-0600 files, never the command line, the log or the shell trace.
 set -euo pipefail
 umask 077
@@ -24,6 +25,9 @@ if [ -n "${SPORTSAPI_API_KEY:-}" ]; then
   printf '%s' "$SPORTSAPI_API_KEY" > "$work/sportsapi"
   put /vega/v2/sportsapi-key "$work/sportsapi"
 fi
+# The key of the read API's /api/ops/status, read by the private status page (Vega Status).
+openssl rand -hex 32 | tr -d '\n' > "$work/ops"
+put /vega/v2/ops-key "$work/ops"
 endpoint=$(aws cloudformation describe-stacks --stack-name vega-v2-database \
   --query "Stacks[0].Outputs[?OutputKey=='DatabaseEndpoint'].OutputValue" --output text)
 # The worker verifies TLS against the bundled CA (sslrootcert); the API passes the CA itself,

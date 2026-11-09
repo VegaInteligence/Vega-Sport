@@ -13,4 +13,6 @@ const reader = createReader(process.env.V2_READ_DATABASE_URL || "postgresql://of
   ca,
   role: "vega_read",
 });
-export const handler = adapt(createHandler({ read: reader.read, mediaBase: process.env.V2_MEDIA_BASE_URL || null }));
+export const handler = adapt(
+  createHandler({ read: reader.read, mediaBase: process.env.V2_MEDIA_BASE_URL || null, opsKey: process.env.V2_OPS_KEY || null }),
+);

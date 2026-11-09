@@ -78,6 +78,7 @@ export function send(req, value, status = 200, { etag, ttl = 0, maxBytes = 0, he
 /** Stable machine-readable codes, and whether the same request may succeed later. */
 const ERRORS = {
   400: ["INVALID_PARAMETER", false],
+  401: ["UNAUTHORIZED", false],
   404: ["RESOURCE_NOT_FOUND", false],
   405: ["METHOD_NOT_ALLOWED", false],
   409: ["PUBLICATION_CHANGED", true],
