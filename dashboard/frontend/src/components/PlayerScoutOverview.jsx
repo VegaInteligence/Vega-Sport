@@ -199,14 +199,13 @@ function Pending({ ready, children }) {
   );
 }
 
-function SeasonKpis({ profile, season }) {
+function SeasonKpis({ profile, season, scope, onScope }) {
   const competitions = useMemo(() => {
     const names = new Map();
     for (const row of profile.rows)
       if (row.league) names.set(row.league, (names.get(row.league) || 0) + 1);
     return [...names].sort((a, b) => b[1] - a[1]).map(([name]) => name);
   }, [profile.rows]);
-  const [scope, setScope] = useState("all");
   const subject = useMemo(
     () =>
       scope === "all"
@@ -271,7 +270,7 @@ function SeasonKpis({ profile, season }) {
           <Segments
             label="Compétition"
             value={scope}
-            onChange={setScope}
+            onChange={onScope}
             items={[
               ["all", "Toutes"],
               ...competitions.slice(0, 4).map((name) => [name, name]),
@@ -440,6 +439,8 @@ export default function PlayerScoutOverview({
   comparisonRef,
   onTab,
   team,
+  competition = "all",
+  onCompetition,
   children,
 }) {
   const group = profile.role?.group;
@@ -492,7 +493,12 @@ export default function PlayerScoutOverview({
   const enoughMinutes = profile.minutes >= cohorts.minMinutes;
   return (
     <div className={s.overview}>
-      <SeasonKpis profile={profile} season={season} />
+      <SeasonKpis
+        profile={profile}
+        season={season}
+        scope={competition}
+        onScope={onCompetition}
+      />
       <div className={`${s.block} ${s.grid2}`} ref={comparisonRef}>
         <Card
           title="Profil statistique"

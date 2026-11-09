@@ -30,7 +30,7 @@ Tout chiffre du site n'est pas un calcul sur données réelles. Cette page liste
 Ces blocs affichent des valeurs d'exemple de la maquette, sans aucun calcul sur les données réelles :
 
 **Profil joueur** ([PlayerScoutDemo.jsx](../../../dashboard/frontend/src/components/PlayerScoutDemo.jsx))
-- âge, taille, poids, pied fort, fin de contrat, clause, part du temps de jeu de la fiche ;
+- âge, taille, poids, pied fort, fin de contrat et clause ;
 - valeur marchande, tendance, fourchette, historique de valeur, zone « revente, clause, intérêts » ;
 - **potentiel** (à côté de l'indice Vega réel) et historique de l'indice Vega par saison ;
 - blessures, suspensions, disponibilité ;

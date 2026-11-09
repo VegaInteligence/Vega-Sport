@@ -25,6 +25,8 @@ Exemple : 12 axes classés pour le joueur → il faut 9 axes communs. Sur 10 axe
 
 `cohortTraits` : parmi les 15 axes de style classés, les **3 centiles les plus hauts** (points forts) et les **3 plus bas** (points faibles).
 
+La carte « Lecture du scout » reprend les deux premiers points forts et le premier point faible (voir [Carte « Lecture du scout »](07-lecture-du-scout.md)).
+
 ## Radar de la vue d'ensemble
 
 `overviewRadarValues` dans [player-overview-radar.js](../../../dashboard/frontend/src/services/player-overview-radar.js#L20).
