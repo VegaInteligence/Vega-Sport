@@ -1,6 +1,7 @@
 "use client";
 import React, {
   lazy,
+  useCallback,
   Suspense,
   useEffect,
   useMemo,
@@ -47,15 +48,14 @@ import PlayerScoutOverview, {
   PlayerScoutStats,
 } from "./PlayerScoutOverview.jsx";
 import PlayerScoutCareer from "./PlayerScoutCareer.jsx";
-import {
-  FakePhysical,
-  FakeProjection,
-  HeatmapCard,
-} from "./PlayerScoutDemo.jsx";
+import { FakePhysical, HeatmapCard } from "./PlayerScoutDemo.jsx";
 import { chartTokens } from "./PlayerScoutCharts.jsx";
 import scout from "./PlayerScout.module.css";
 import { nationalFlagCode } from "../services/national-flags.js";
 import MessiGoats from "./MessiGoats.jsx";
+import { levelPeerClubs, useEuropePool } from "../services/club-scout.js";
+import { RankingProvider, RankingTrigger } from "./RankingDialog.jsx";
+import { PlayerLevelBar, PlayerRankingDialog } from "./PlayerRanking.jsx";
 import { MESSI_ID } from "../services/player-honours.js";
 import {
   cachedResource,
@@ -69,6 +69,7 @@ import {
 } from "../services/player-identity.js";
 
 const Similarity = lazy(() => import("./PlayerSimilarity.jsx"));
+const Projection = lazy(() => import("./PlayerProjection.jsx"));
 const SeasonShots = lazy(() => import("./SeasonShots.jsx"));
 const SeasonStats = lazy(() => import("./PlayerSeasonStats.jsx"));
 const CareerStats = lazy(() => import("./PlayerCareerStats.jsx"));
@@ -135,7 +136,9 @@ export function PlayerMetricTable({ profile, keys, mode, cohorts }) {
             return (
               <tr key={key} data-metric={key}>
                 <th scope="row">
-                  {SCOUT_METRICS[key].label}
+                  <RankingTrigger target={{ type: "metric", key }}>
+                    {SCOUT_METRICS[key].label}
+                  </RankingTrigger>
                   <MetricInfo
                     metric={key}
                     observed={value.count}
@@ -318,9 +321,35 @@ export default function PlayerSeasonProfile({
     : "overview";
   const comparisonMinutes =
     view === "overview" ? MIN_SEASON_MINUTES : minMinutes;
+  // Peers restricted to the clubs closest to the player's club in level.
+  const [level, setLevel] = useState(true);
+  const europe = useEuropePool(level);
+  const levelPeers = useMemo(
+    () =>
+      level && europe.status === "ready" && team
+        ? levelPeerClubs(europe.value, team.id)
+        : null,
+    [level, europe, team],
+  );
+  const scopedProfiles = useMemo(
+    () =>
+      levelPeers
+        ? profiles.filter(
+            (peer) =>
+              peer.id === profile.id ||
+              (peer.teamIds || []).some((teamId) => levelPeers.ids.has(teamId)),
+          )
+        : profiles,
+    [profiles, levelPeers, profile.id],
+  );
   const cohorts = useMemo(
-    () => buildCohorts(profiles, comparisonMinutes),
-    [profiles, comparisonMinutes],
+    () => buildCohorts(scopedProfiles, comparisonMinutes),
+    [scopedProfiles, comparisonMinutes],
+  );
+  const [rankingKey, setRankingKey] = useState(null);
+  const openRanking = useCallback(
+    (target) => target?.type === "metric" && setRankingKey(target.key),
+    [],
   );
   const change = (next) => {
     const url = new URL(window.location.href);
@@ -559,6 +588,7 @@ export default function PlayerSeasonProfile({
     </div>
   );
   return (
+    <RankingProvider value={comparisonsReady ? openRanking : null}>
     <article
       className={`research-player-profile player-profile-flat ${chartTokens}`}
     >
@@ -593,6 +623,15 @@ export default function PlayerSeasonProfile({
           aria-label={TABS.find(([key]) => key === view)[1]}
         >
           {!UNFILTERED_VIEWS.has(view) && <PlayerProfileFilters />}
+          {COHORT_VIEWS.has(view) && (
+            <PlayerLevelBar
+              level={level}
+              onLevel={setLevel}
+              state={level ? europe : { status: "ready" }}
+              peers={levelPeers}
+              team={team}
+            />
+          )}
           {view === "similar" && cohortControls}
           <Suspense
             fallback={
@@ -694,7 +733,14 @@ export default function PlayerSeasonProfile({
               </PlayerScoutCareer>
             )}
             {view === "physical" && <FakePhysical />}
-            {view === "projection" && <FakeProjection />}
+            {view === "projection" && (
+              <Projection
+                profile={profile}
+                profiles={profiles}
+                team={team}
+                ready={comparisonsReady}
+              />
+            )}
             {view === "games" && (
               <PlayerGames profile={profile} matches={f.data?.matches} />
             )}
@@ -708,6 +754,22 @@ export default function PlayerSeasonProfile({
           </Suspense>
         </div>
       </ProfileLayout>
+      {rankingKey && (
+        <PlayerRankingDialog
+          profile={profile}
+          cohorts={cohorts}
+          metricKey={rankingKey}
+          onClose={() => setRankingKey(null)}
+        />
+      )}
     </article>
+    </RankingProvider>
   );
 }
+const COHORT_VIEWS = new Set([
+  "overview",
+  "advanced",
+  "stats",
+  "similar",
+  "compare",
+]);

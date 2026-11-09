@@ -16,10 +16,11 @@ import Layout from "../components/Layout.jsx";
 import CompetitionOptions from "../components/CompetitionOptions.jsx";
 import { FootballContext, useFootball } from "../hooks/FootballContext.jsx";
 import { Media, Pager, Empty } from "../components/UI.jsx";
-const ClubWorkspace = lazy(() => import("../components/ClubWorkspace.jsx"));
+const ClubScoutProfile = lazy(
+  () => import("../components/ClubScoutProfile.jsx"),
+);
 import StandingsClubProfile from "../components/StandingsClubProfile.jsx";
 import { ResearchLists, useHasSaved } from "../components/ResearchUI.jsx";
-import { clubMatchHistory } from "../services/club-matches.js";
 import { fixtureClub } from "../services/club-fixtures.js";
 import { useResource } from "../services/resources.js";
 import useCompactRead from "../hooks/useCompactRead.js";
@@ -318,10 +319,6 @@ export default function ClubsPage() {
   useEffect(() => {
     if (!remoteDirectory) setPaging({ key: pageKey, data: f.data, page: 1 });
   }, [pageKey, f.data, remoteDirectory]);
-  const clubMatches = useMemo(
-    () => clubMatchHistory(profileData.matches, profileData.fixtures, id),
-    [profileData.matches, profileData.fixtures, id],
-  );
   return (
     <Layout path="/clubs/" title="Clubs">
       {selected ? (
@@ -334,19 +331,13 @@ export default function ClubsPage() {
           </Link>
           <FootballContext.Provider value={profileContext}>
             <Suspense
-              fallback={<p data-page-loading="" role="status">Chargement du profil du club…</p>}
+              fallback={
+                <p data-page-loading="" role="status">
+                  Chargement du profil du club…
+                </p>
+              }
             >
-              <ClubWorkspace
-                key={selected.id}
-                club={{
-                  ...selected,
-                  countryLabel:
-                    selected.country === "unknown"
-                      ? ""
-                      : countryLabel(selected.country),
-                }}
-                history={clubMatches}
-              />
+              <ClubScoutProfile key={selected.id} clubId={selected.id} />
             </Suspense>
           </FootballContext.Provider>
         </>
