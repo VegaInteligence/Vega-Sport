@@ -5,8 +5,9 @@
  *
  * Differences with the legacy read, by construction of v2: standings come from the
  * official table when a source publishes one (SportScore), otherwise from Vega's own
- * table (`source: "vega"`), where the legacy read answered 404 and the site computed
- * the table from the fixtures. Validators are content hashes of the body.
+ * table (`source: "Vega"`), where the legacy read answered 404 and the site computed
+ * the table from the fixtures. Rows carry the team's id and its own name (legacy:
+ * SportScore's spelling), and `season` is always given. Validators are content hashes.
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
@@ -14,6 +15,8 @@ import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 const LEAGUE = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/,
   YEAR = /^\d{4}(?:\/\d{4})?$/;
 const SHARE_TTL = 60;
+// Provider names as the legacy bodies spell them.
+const SOURCE_NAMES = { sportscore: "SportScore", vega: "Vega", uefa: "UEFA" };
 
 function validate(p, spec, required = false) {
   validateParams(p, Object.keys(spec));
@@ -55,12 +58,12 @@ export async function standings(req, p, read) {
       difference: r.difference, position: r.position,
     });
   }
-  const sources = [...new Set(rows.map((r) => r.source))];
+  const sources = [...new Set(rows.map((r) => SOURCE_NAMES[r.source] ?? r.source))];
   const fetched = rows.map((r) => iso(r.as_of)).filter(Boolean).sort();
   return respond(
     req,
     {
-      competition,
+      competition: rows[0].league_name,
       season: season ?? rows[0].native_label ?? rows[0].season,
       source: sources.length === 1 ? sources[0] : sources.join(","),
       fetchedAt: fetched.at(-1) ?? null,

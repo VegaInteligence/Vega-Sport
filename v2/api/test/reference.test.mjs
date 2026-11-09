@@ -9,7 +9,7 @@ test("standings: Vega's table when no official one is published", { skip }, asyn
   assert.equal(response.status, 200);
   assert.match(response.headers.get("etag"), /^W\/"support-v1-/);
   assert.deepEqual(Object.keys(body).sort(), ["competition", "fetchedAt", "season", "source", "tables"]);
-  assert.deepEqual([body.competition, body.season, body.source, body.fetchedAt], ["l_3FJFUl", "2025/2026", "vega", "2025-09-20T11:00:00.000Z"]);
+  assert.deepEqual([body.competition, body.season, body.source, body.fetchedAt], ["Ligue 1", "2025/2026", "Vega", "2025-09-20T11:00:00.000Z"]);
   assert.equal(body.tables.length, 1);
   assert.equal(body.tables[0].name, "Ligue 1");
   assert.deepEqual(body.tables[0].rows.map((r) => [r.id, r.position, r.points]), [
