@@ -389,6 +389,39 @@ class WorkerTest(unittest.TestCase):
         self.assertEqual((label, self.watch("m_llllll")[0]), ("2024/2025", "final"))
         self.assertEqual(self.db.execute("SELECT count(*) FROM ops.parse_failures").fetchone()[0], 0)
 
+    def test_backfill_collects_history_without_watches(self):
+        start = self.now
+        old = [match(f"m_hist0{i}", start - timedelta(days=300 + i), "finished", (i % 3, 1), season="2024/2025") for i in range(1, 4)]
+        self.api.routes["/leagues"] = {"leagues": [dict(LIGUE1, seasons=["2024/2025"])]}
+        self.api.routes["/leagues/l_aaaaaa/matches"] = {"league": {"id": "l_aaaaaa", "name": "Ligue 1"}, "matches": old}
+        for item in old:
+            self.api.routes["/matches/" + item["id"]] = item
+            self.api.routes.update({path.replace("m_aaaaaa", item["id"]): body for path, body in details("m_aaaaaa").items()})
+        # The catalogue first (reference lane), then the backfill task alone.
+        self.worker.lanes = ("reference",)
+        planner.plan(self.db, start)
+        self.drain()
+        backfill = Worker(self.worker.store, self.worker.client, lanes=("backfill",), clock=lambda: self.now, cohort_delay=0,
+                          backfill={"first_season": 2024, "last_season": 2024})
+        self.assertEqual(planner.plan_backfill(self.db, start, first_season=2024, last_season=2024), {"league_matches": 1})
+        while backfill.step():
+            pass
+        counts = planner.plan_backfill(self.db, start, first_season=2024, last_season=2024)
+        self.assertEqual(sum(counts.values()), 3 * 13)
+        while backfill.step():
+            pass
+        self.assertEqual(planner.plan_backfill(self.db, start, first_season=2024, last_season=2024), {})
+        # History is complete, and no watch, correction or live detail job was created.
+        self.assertEqual(self.db.execute("SELECT count(*) FROM ops.match_watch").fetchone()[0], 0)
+        self.assertEqual(
+            self.db.execute("SELECT count(*) FROM ops.fetch_jobs WHERE lane <> 'backfill' AND entity_type = 'match'").fetchone()[0], 0
+        )
+        progress = self.db.execute(
+            "SELECT family::text, expected, done + empty FROM ops.collection_progress WHERE family <> 'league_matches'"
+        ).fetchall()
+        self.assertEqual(len(progress), 13)
+        self.assertTrue(all(expected == covered == 3 for _, expected, covered in progress), progress)
+
     def test_bad_match_does_not_block_the_day_and_jobs_are_pruned(self):
         start = self.now
         kick = start + timedelta(hours=6)

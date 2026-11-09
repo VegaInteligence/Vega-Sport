@@ -47,7 +47,7 @@ def _now():
 
 
 class Worker:
-    def __init__(self, store, client, *, lanes=DEFAULT_LANES, clock=_now, cohort_delay=600, calc_conn=None):
+    def __init__(self, store, client, *, lanes=DEFAULT_LANES, clock=_now, cohort_delay=600, calc_conn=None, backfill=None):
         unknown = set(lanes) - set(LANE_ORDER)
         if unknown or not lanes:
             raise ValueError("invalid lanes")
@@ -59,6 +59,8 @@ class Worker:
         self.lanes = tuple(lane for lane in LANE_ORDER if lane in lanes)
         self.clock = clock
         self.cohort_delay = cohort_delay
+        # The backfill task plans history only (planner.plan_backfill keyword arguments).
+        self.backfill = backfill if backfill is not None else ({} if self.lanes == ("backfill",) else None)
         self.results = Counter()
         self._events = []
         client._on_attempt = self._events.append
@@ -227,11 +229,15 @@ class Worker:
             tick = time.monotonic()
             if tick - last_plan >= plan_every:
                 try:
-                    planner.plan(self.conn, self.clock())
+                    if self.backfill is None:
+                        planner.plan(self.conn, self.clock())
+                    else:
+                        planner.plan_backfill(self.conn, self.clock(), **self.backfill)
                 except psycopg.Error as error:
                     print(f"planner error={safe_code(error)}", flush=True)
                 last_plan = tick
-                self.daily()
+                if self.backfill is None:
+                    self.daily()
             worked = self.step()
             done += worked
             if not worked or tick - last_calc >= calc_every:
@@ -399,6 +405,12 @@ class Worker:
             row.setdefault("provider_competition_id", key)
             row.setdefault("provider_season", label)
         self._save_calendar(batch, job, family="league_matches")
+        self.conn.execute(
+            """INSERT INTO ops.collection_progress(source, competition_season_id, family, expected, done, last_success_at)
+               VALUES ('pitchapi', %s, 'league_matches', 1, 1, %s)
+               ON CONFLICT (source, competition_season_id, family) DO UPDATE SET done = 1, last_success_at = EXCLUDED.last_success_at, updated_at = now()""",
+            (edition, self.clock()),
+        )
 
     def league(self, job):
         if job["global_key"] == "catalogue":
@@ -451,6 +463,8 @@ class Worker:
                 (mid,),
             ).fetchone()
             ack(self.conn, job["id"], job["lease_token"], now=now)
+            if job["lane"] == "backfill":
+                return  # history: no watch, no correction (the live planner owns those)
             planner.after_summary(
                 self.conn,
                 mid,
@@ -576,6 +590,8 @@ def main(argv=None):
     parser.add_argument("--migrate", action="store_true")
     parser.add_argument("--report", help="write a measurements-only Markdown report")
     parser.add_argument("--cohort-delay", type=int, default=600, help="seconds a changed cohort waits before recalculation")
+    parser.add_argument("--backfill-from", type=int, default=2021, help="first season (start year) of the backfill")
+    parser.add_argument("--backfill-competitions", help="comma-separated PitchAPI league ids; default every league")
     args = parser.parse_args(argv)
     dsn, key = os.environ.get("V2_DATABASE_URL"), os.environ.get("PITCHAPI_API_KEY")
     if not dsn or not key:
@@ -594,6 +610,12 @@ def main(argv=None):
         lanes=tuple(x for x in args.lanes.split(",") if x),
         cohort_delay=args.cohort_delay,
         calc_conn=calc_conn,
+        backfill=(
+            {"first_season": args.backfill_from,
+             "competitions": args.backfill_competitions.split(",") if args.backfill_competitions else None}
+            if args.lanes == "backfill"
+            else None
+        ),
     )
     started = time.monotonic()
     done = worker.run(max_jobs=args.max_jobs, until_idle=args.until_idle, stop=lambda: bool(stopping))
