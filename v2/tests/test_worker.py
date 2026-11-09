@@ -1,5 +1,7 @@
 """Worker loop end to end against an in-memory PitchAPI: plan, collect, calculate."""
 
+import contextlib
+import io
 import json
 import os
 from datetime import datetime, timedelta, timezone
@@ -9,13 +11,15 @@ import tempfile
 import unittest
 from urllib.parse import urlparse
 
+import psycopg
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega_v2 import planner
 from vega_v2.jobs import DETAIL_FAMILIES
 from vega_v2.pitchapi import PitchClient
 from vega_v2.store import Store, StoreError, connect_local, migrate
-from vega_v2.worker import PUBLISH_EVERY, RECOMPUTE_AFTER, Worker, connect, due_seasons, publish, report
+from vega_v2.worker import HEALTHY_AFTER, PUBLISH_EVERY, RECOMPUTE_AFTER, RECONNECT_FOR, Worker, connect, due_seasons, keep_running, publish, report
 
 DSN = os.environ.get("VEGA_V2_WORKER_TEST_DSN")
 HOME = {"id": "t_aaaaaa", "name": "Home FC"}
@@ -122,6 +126,68 @@ class ConnectTest(unittest.TestCase):
                 connect(dsn)
 
 
+class KeepRunningTest(unittest.TestCase):
+    """A database restart ends a session; the task opens another one (worker.keep_running)."""
+
+    def play(self, sessions, *, stop_after=None):
+        """sessions: (seconds it holds, True when it loses the database) per call."""
+        clock, left = [0.0], list(sessions)
+
+        def session():
+            held, lost = left.pop(0)
+            clock[0] += held
+            if lost:
+                raise psycopg.OperationalError("connection lost")
+
+        def sleep(seconds):
+            clock[0] += seconds
+
+        def stop():
+            return stop_after is not None and clock[0] >= stop_after
+
+        marks = []
+
+        def watched():
+            marks.append(clock[0])
+            return session()
+
+        self.log = io.StringIO()
+        with contextlib.redirect_stdout(self.log):
+            ended = keep_running(watched, stop=stop, sleep=sleep, clock=lambda: clock[0])
+        # The wait before each new session: its start minus the end of the one before.
+        ends = [marks[i] + sessions[i][0] for i in range(len(marks) - 1)]
+        waits = [marks[i + 1] - ends[i] for i in range(len(ends))]
+        return ended, waits, left
+
+    def test_a_lost_database_opens_a_new_session(self):
+        ended, waits, left = self.play([(40, True), (0, True), (0, True), (7200, False)])
+        self.assertTrue(ended)
+        self.assertEqual(waits, [5, 10, 20])
+        self.assertEqual(left, [])
+        # One line per loss, a code and never the server's message.
+        self.assertEqual(self.log.getvalue().splitlines()[0], "database lost error=DATABASE_ERROR retry_in=5")
+
+    def test_the_wait_is_capped_and_the_task_gives_up(self):
+        ended, waits, left = self.play([(0, True)] * 60)
+        self.assertFalse(ended)
+        self.assertEqual(waits[:6], [5, 10, 20, 40, 60, 60])
+        # It tried for RECONNECT_FOR seconds, not for ever.
+        self.assertGreaterEqual(sum(waits), RECONNECT_FOR - 60)
+        self.assertLess(sum(waits), RECONNECT_FOR + 60)
+        self.assertTrue(left)
+        self.assertTrue(self.log.getvalue().endswith("outcome=gave_up\n"))
+
+    def test_a_session_that_held_starts_the_count_again(self):
+        ended, waits, _ = self.play([(0, True), (0, True), (HEALTHY_AFTER, True), (0, False)])
+        self.assertTrue(ended)
+        self.assertEqual(waits, [5, 10, 5])
+
+    def test_a_stopping_task_does_not_reconnect(self):
+        ended, waits, left = self.play([(0, True), (0, True), (0, False)], stop_after=3)
+        self.assertFalse(ended)
+        self.assertEqual(len(left), 1)
+
+
 @unittest.skipUnless(DSN, "requires dedicated local vega_v2_worker_test DB")
 class WorkerTest(unittest.TestCase):
     @classmethod
@@ -157,6 +223,26 @@ class WorkerTest(unittest.TestCase):
     def at(self, value):
         self.now = value
         return planner.plan(self.db, value)
+
+    def test_connections_see_a_dead_database_within_a_minute(self):
+        got = self.db.info.get_parameters()
+        self.assertEqual(
+            {k: got.get(k) for k in ("keepalives_idle", "keepalives_interval", "keepalives_count", "tcp_user_timeout", "connect_timeout")},
+            {"keepalives_idle": "30", "keepalives_interval": "10", "keepalives_count": "3", "tcp_user_timeout": "60000", "connect_timeout": "10"},
+        )
+
+    def test_a_lost_connection_ends_the_run(self):
+        lost = connect_local(DSN)
+        worker = Worker(Store(lost), self.worker.client, clock=lambda: self.now, cohort_delay=0)
+        lost.close()
+        with self.assertRaises(psycopg.OperationalError):
+            worker.run(max_jobs=1)
+        # The calculator's connection alone is enough.
+        calc = connect_local(DSN)
+        worker = Worker(Store(self.db), self.worker.client, clock=lambda: self.now, cohort_delay=0, calc_conn=calc)
+        calc.close()
+        with self.assertRaises(psycopg.OperationalError):
+            worker.run(max_jobs=1)
 
     def test_publication_advances_on_its_rhythm(self):
         x = self.db.execute
