@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 import { matchesEtag } from "./http.mjs";
 
 export const MEDIA_ROUTES = new Set([
-  "/api/read/home", "/api/read/players", "/api/read/clubs", "/api/read/player",
+  "/api/read/home", "/api/read/home-favourites", "/api/read/players", "/api/read/clubs", "/api/read/player",
   "/api/read/club", "/api/read/archive", "/api/read/performance", "/api/read/discipline",
 ]);
 const TYPES = { webp: "image/webp", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg" };

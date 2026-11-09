@@ -228,7 +228,7 @@ class UefaTest(unittest.TestCase):
         x("INSERT INTO core.players(id, name) VALUES (50, 'Cristiano Ronaldo'), (51, 'Cristiano Ronaldo')")
         x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player','pitchapi','p_3yEwhj',50), ('player','pitchapi','p_other1',51)")
         x("INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source) VALUES ('player', 50, 'Old', 'old', 'alias', 'vega'), ('player', 50, 'CR', 'cr', 'alias', 'wikidata')")
-        self.assertEqual(sources.run_due(self.db, None, NOW, names={"vega"}), {("vega", scope): "ok" for scope in ("player_aliases", "club_aliases", "stadium_plans", "league_zones", "cup_logos", "sportscore_ids", "country_names", "team_identity")})
+        self.assertEqual(sources.run_due(self.db, None, NOW, names={"vega"}), {("vega", scope): "ok" for scope in ("player_aliases", "club_aliases", "stadium_plans", "league_zones", "cup_logos", "sportscore_ids", "country_names", "team_identity", "editorial_lists")})
         names = self.db.execute("SELECT entity_id, normalized, source::text FROM core.entity_names WHERE entity_type='player' ORDER BY 1, 2").fetchall()
         # The homonym gets nothing; the removed Vega alias goes; Wikidata's stays.
         self.assertEqual(names, [(50, "cr", "wikidata"), (50, "cr7", "vega")])

@@ -81,18 +81,18 @@ function readEtag(req, params, snapshot, periodKey) {
 }
 
 /** A conditional hit or a HEAD needs only the publication, never the payload query. */
-export async function readValidator(req, params, scope, read, { periodKey = null, ttl = 30 } = {}) {
+export async function readValidator(req, params, scope, read, { periodKey = null, ttl = 30, stale = null, personal = false } = {}) {
   if (req.method !== "HEAD" && !req.headers.get("if-none-match")) return null;
   const values = [];
   const [snapshot] = await read(publicationSql(scope, values), values);
   checkReadGeneration(params, snapshot?.generation);
   const etag = readEtag(req, params, snapshot, periodKey);
   if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag))
-    return readResponse(req, params, snapshot, null, { periodKey, ttl });
+    return readResponse(req, params, snapshot, null, { periodKey, ttl, stale, personal });
   return null;
 }
 
-export function readResponse(req, params, snapshot, data, { pagination, maxBytes = 1024 * 1024, periodKey = null, ttl = 30 } = {}) {
+export function readResponse(req, params, snapshot, data, { pagination, maxBytes = 1024 * 1024, periodKey = null, ttl = 30, stale = null, personal = false } = {}) {
   checkReadGeneration(params, snapshot?.generation);
   const meta = {
     generation: String(snapshot.generation),
@@ -109,7 +109,7 @@ export function readResponse(req, params, snapshot, data, { pagination, maxBytes
     req,
     { data, meta, ...(pagination && { pagination: { ...pagination, generation: meta.generation } }) },
     200,
-    { etag, ttl, maxBytes },
+    { etag, ttl, maxBytes, stale, personal },
   );
 }
 
