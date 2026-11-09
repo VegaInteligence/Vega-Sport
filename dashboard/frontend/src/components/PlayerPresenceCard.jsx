@@ -96,7 +96,7 @@ export default function PlayerPresenceCard({ id, rows }) {
       <div className={s.cardHead}>
         <div>
           <h3 id={heading}>Zones de présence</h3>
-          <p>Actions localisées par PitchAPI · attaque vers la droite</p>
+          <p>Actions localisées · attaque vers la droite</p>
         </div>
       </div>
       {content}
