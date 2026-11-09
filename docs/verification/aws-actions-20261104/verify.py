@@ -99,7 +99,8 @@ def workflow(name):
               'v2 pilot must not activate a permanent schedule')
     elif name=='v2-ci':
         # The v2 pipeline: suites on a disposable PostgreSQL, templates, image, package.
-        check(obj.get('permissions') == {'contents':'read'} and 'id-token: write' not in text and 'secrets.' not in text,
+        # A secret is a ${{ secrets.X }} expression (the CI syntax-checks infra/aws-v2/ci/secrets.sh).
+        check(obj.get('permissions') == {'contents':'read'} and 'id-token: write' not in text and not re.search(r'\$\{\{\s*secrets\.',text),
               'v2 CI must have repository read permission only and no secret')
         check('./.github/actions/aws-database' not in text and 'configure-aws-credentials' not in text,
               'v2 CI must not reach AWS')

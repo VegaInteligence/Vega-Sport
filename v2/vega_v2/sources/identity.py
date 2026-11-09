@@ -15,8 +15,15 @@ a day) exists for the site once: PitchAPI-era reads leave cup editions out. The 
 noted in ops.data_warnings (duplicate_match, and score_disagreement when the final
 scores differ), the PitchAPI match id in the detail.
 
-Archive teams (seasons up to 2020/2021, before PitchAPI) are not merged by this pass.
+Archive teams (seasons up to 2020/2021) are keyed by their country's French name and
+their own: one is the PitchAPI club of the same country (core.countries.name_fr) whose name
+is the same, or the same once the club-form words at either end are set aside ("West Ham
+United FC" and "West Ham United"), when exactly one club matches. A merged team's matches
+keep the names their source gave (core.matches.home_team_name, away_team_name, 034).
 """
+
+import re
+import unicodedata
 
 from datetime import timedelta
 
@@ -106,6 +113,59 @@ def spelling_row(conn, team, provider, name):
         )
 
 
+# Club-form words set aside at either end of a club's name, never inside it.
+CLUB_FORMS = {"fc", "afc", "cf", "sc", "ac", "ssc", "cd", "ud", "sv", "fk", "sk", "bk", "if", "as", "us", "rc", "ca", "cfc", "club",
+              "calcio", "football", "futbol", "fussball", "1"}
+
+
+def club_core(name):
+    folded = unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode().lower()
+    words = [w for w in re.split(r"[^a-z0-9]+", folded) if w]
+    while words and words[0] in CLUB_FORMS:
+        words.pop(0)
+    while words and words[-1] in CLUB_FORMS:
+        words.pop()
+    return "".join(words)
+
+
+def _archive_candidates(conn):
+    """Archive-only teams: (team, name, normalized country of their key)."""
+    rows = conn.execute(
+        """SELECT t.id, t.name, p.provider_key FROM core.teams t
+           JOIN core.provider_ids p ON p.entity_type = 'team' AND p.entity_id = t.id AND p.provider = 'vega' AND p.provider_key LIKE 'archive:%%'
+           WHERE NOT EXISTS (SELECT 1 FROM core.provider_ids x WHERE x.entity_type = 'team' AND x.entity_id = t.id AND x.provider = 'pitchapi')
+           ORDER BY t.id"""
+    ).fetchall()
+    return [(team, name, key.split(":")[1]) for team, name, key in rows if key.count(":") == 2]
+
+
+def _pitch_clubs(conn):
+    """PitchAPI clubs by (normalized French country name, normalized name) and core name."""
+    exact, core = {}, {}
+    for team, name, country in conn.execute(
+        """SELECT t.id, n.name, c.name_fr FROM core.teams t
+           JOIN core.provider_ids p ON p.entity_type = 'team' AND p.entity_id = t.id AND p.provider = 'pitchapi'
+           JOIN core.countries c ON c.code = t.country_code AND c.name_fr IS NOT NULL
+           CROSS JOIN LATERAL (SELECT t.name UNION SELECT e.name FROM core.entity_names e
+             WHERE e.entity_type = 'team' AND e.entity_id = t.id AND e.kind <> 'source_spelling') n(name)
+           WHERE t.is_national IS NOT TRUE"""
+    ):
+        exact.setdefault((normalize(country), normalize(name)), set()).add(team)
+        core.setdefault((normalize(country), club_core(name)), set()).add(team)
+    return exact, core
+
+
+def match_archive_team(clubs, name, country):
+    exact, core = clubs
+    for index, key in ((exact, normalize(name)), (core, club_core(name))):
+        found = index.get((country, key), set())
+        if len(found) == 1:
+            return next(iter(found))
+        if len(found) > 1:
+            return None
+    return None
+
+
 def duplicates(conn):
     """Cup-source matches PitchAPI also has, noted once in ops.data_warnings."""
     rows = conn.execute(
@@ -152,6 +212,19 @@ def run(conn, get, scope, now):
                 merge_team(conn, keep, team, provider, name)
         except psycopg.errors.IntegrityError:
             # Something computed still names the source-only team: merged on a later run.
+            unmatched += 1
+            continue
+        merged += 1
+    clubs = _pitch_clubs(conn)
+    for team, name, country in _archive_candidates(conn):
+        keep = match_archive_team(clubs, name, country)
+        if keep is None:
+            unmatched += 1
+            continue
+        try:
+            with conn.transaction():
+                merge_team(conn, keep, team, "vega", name)
+        except psycopg.errors.IntegrityError:
             unmatched += 1
             continue
         merged += 1

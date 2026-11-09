@@ -31,7 +31,7 @@ CLUB_ALIASES = {
 def scopes(now):
     day = timedelta(days=1)
     return {"player_aliases": day, "club_aliases": day, "stadium_plans": day, "league_zones": day, "cup_logos": day,
-            "sportscore_ids": day, "team_identity": day}
+            "sportscore_ids": day, "country_names": day, "team_identity": day}
 
 
 def _shared(name):
@@ -66,6 +66,36 @@ def league_zones(conn):
                 )
                 written += 1
     return written, unmatched
+
+
+# COUNTRY_NAMES of frontend/src/services/competition-selector.js (main): the French names
+# the archives name countries by. A drift test compares the two.
+COUNTRY_NAMES_FR = {
+    "ARG": "Argentine", "AUS": "Australie", "AUT": "Autriche", "BEL": "Belgique", "BOL": "Bolivie", "BRA": "Brésil",
+    "CAN": "Canada", "CHI": "Chili", "CHN": "Chine", "COL": "Colombie", "CRO": "Croatie", "CYP": "Chypre",
+    "CZE": "Tchéquie", "DEN": "Danemark", "ECU": "Équateur", "EGY": "Égypte", "ENG": "Angleterre", "ESP": "Espagne",
+    "FIN": "Finlande", "FRA": "France", "GER": "Allemagne", "GRE": "Grèce", "IND": "Inde", "INT": "International",
+    "INT-2": "Europe", "IRL": "Irlande", "IRE": "Irlande", "ISL": "Islande", "ISR": "Israël", "ITA": "Italie",
+    "JPN": "Japon", "KAZ": "Kazakhstan", "KOR": "Corée du Sud", "KSA": "Arabie saoudite", "LVA": "Lettonie", "MEX": "Mexique",
+    "NED": "Pays-Bas", "NOR": "Norvège", "PAR": "Paraguay", "PER": "Pérou", "POL": "Pologne", "POR": "Portugal",
+    "QAT": "Qatar", "ROU": "Roumanie", "RSA": "Afrique du Sud", "RUS": "Russie", "SCO": "Écosse", "SRB": "Serbie",
+    "SUI": "Suisse", "SVK": "Slovaquie", "SVN": "Slovénie", "SWE": "Suède", "THA": "Thaïlande", "TUR": "Turquie",
+    "UAE": "Émirats arabes unis", "UKR": "Ukraine", "USA": "États-Unis", "VEN": "Venezuela", "WAL": "Pays de Galles", "UEFA": "Europe",
+}
+
+
+def country_names(conn):
+    """French country names (core.countries.name_fr), which tie an archive team's country
+    to a PitchAPI club's (identity.py)."""
+    written = 0
+    for code, name in sorted(COUNTRY_NAMES_FR.items()):
+        written += conn.execute(
+            """INSERT INTO core.countries(code, name_fr) VALUES (%s, %s)
+               ON CONFLICT (code) DO UPDATE SET name_fr = EXCLUDED.name_fr, updated_at = now()
+               WHERE core.countries.name_fr IS DISTINCT FROM EXCLUDED.name_fr""",
+            (code, name),
+        ).rowcount
+    return written, 0
 
 
 # Site keys of shared/cup-logos.json -> the Vega key of the cup-source competition.
@@ -175,7 +205,8 @@ def run(conn, get, scope, now):
         from . import identity
 
         return identity.run(conn, get, "teams", now)
-    for name, handler in (("league_zones", league_zones), ("cup_logos", cup_logos), ("sportscore_ids", sportscore_ids)):
+    for name, handler in (("league_zones", league_zones), ("cup_logos", cup_logos), ("sportscore_ids", sportscore_ids),
+                          ("country_names", country_names)):
         if scope == name:
             return handler(conn)
     if scope == "club_aliases":

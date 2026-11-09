@@ -37,6 +37,19 @@ class ParseTest(unittest.TestCase):
         self.assertEqual(sportsapi.parse(capture("uefa-associations"))[0][:2], ("EN", "England"))
         self.assertEqual(len(sportsapi.parse(capture("uefa-clubs"))), 415)
 
+    def test_country_names_follow_the_site(self):
+        import re
+
+        js = (ROOT.parent / "dashboard/frontend/src/services/competition-selector.js").read_text()
+        block = js[js.index("export const COUNTRY_NAMES = {"):]
+        block = block[:block.index("}")]
+        self.assertEqual(dict(re.findall(r'^\s*"?([A-Z0-9-]+)"?:\s*"([^"]+)"', block, re.M)), curated.COUNTRY_NAMES_FR)
+
+    def test_club_core_names(self):
+        self.assertEqual(identity.club_core("West Ham United FC"), identity.club_core("West Ham United"))
+        self.assertEqual(identity.club_core("1. FC Köln"), "koln")
+        self.assertNotEqual(identity.club_core("Racing Club de Lens"), identity.club_core("Racing Club de Strasbourg"))
+
     def test_no_key_no_scope(self):
         os.environ.pop("V2_SPORTSAPI_API_KEY", None)
         self.assertEqual(sportsapi.scopes(NOW), {})
@@ -117,6 +130,38 @@ class SourceIdentityTest(unittest.TestCase):
         slugs = dict(self.db.execute("SELECT entity_id, provider_key FROM core.provider_ids WHERE provider='sportscore'").fetchall())
         self.assertEqual(slugs, {1: "italian-serie-a", 2: "fifa-world-cup"})
 
+    def test_archive_teams_merge_into_the_club_of_their_country(self):
+        x = self.db.execute
+        x("INSERT INTO core.teams(id, name, country_code) VALUES (20, 'West Ham United', 'ENG'), (21, 'Racing', 'ESP'), (22, 'Racing', 'ESP')")
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','pitchapi','t_aaaa20',20), ('team','pitchapi','t_aaaa21',21), ('team','pitchapi','t_aaaa22',22)")
+        x("INSERT INTO core.teams(id, name) VALUES (30, 'West Ham United FC'), (31, 'Racing'), (32, 'Leicester City FC')")
+        x("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES
+             ('team','vega','archive:angleterre:westhamunitedfc',30), ('team','vega','archive:espagne:racing',31), ('team','vega','archive:angleterre:leicestercityfc',32)""")
+        with self.db.transaction():
+            from vega_v2.store import Store
+
+            Store(self.db).season("2015/2016")
+        x("INSERT INTO core.competitions(id, name) VALUES (50, 'English Premier League')")
+        x("""INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label, archive_key, archive_name, archive_country)
+             VALUES (50, 50, 2015, '2015/2016', '2015-16/en.1', 'English Premier League 2015/16', 'Angleterre')""")
+        x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, home_score, away_score,
+               match_date, archive_key, home_team_name, away_team_name)
+             VALUES (50, 50, 2015, 'openfootball', 'finished', 30, 32, 2, 1, '2015-08-09', 'r:2015-16/en.1:0', 'West Ham United FC', 'Leicester City FC')""")
+        x("""INSERT INTO core.match_events(season_id, match_id, team_id, seq, event_type, minute, player_name)
+             VALUES (2015, 50, 30, 0, 'goal', 12, 'Cheikhou Kouyaté')""")
+        with self.db.transaction():
+            curated.country_names(self.db)
+            merged, unmatched = identity.run(self.db, None, "teams", NOW)
+        self.assertGreaterEqual(merged, 1)
+        # West Ham is the English club; Racing names two Spanish clubs, Leicester none: both stay.
+        self.assertEqual(self.db.execute("SELECT home_team_id, away_team_id FROM core.matches WHERE id = 50").fetchone(), (20, 32))
+        self.assertEqual(self.db.execute("SELECT entity_id FROM core.provider_ids WHERE provider_key = 'archive:angleterre:westhamunitedfc'").fetchone()[0], 20)
+        self.assertEqual(self.db.execute("SELECT count(*) FROM core.teams WHERE id IN (30, 31, 32)").fetchone()[0], 2)
+        # The archive reads keep the source's names.
+        self.assertEqual(self.db.execute("SELECT team1, team2 FROM api.archive_matches WHERE match_id = 50").fetchone(), ("West Ham United FC", "Leicester City FC"))
+        self.assertEqual(self.db.execute("SELECT team FROM api.archive_goals WHERE match_id = 50").fetchone()[0], "West Ham United FC")
+        self.assertEqual(self.db.execute("SELECT team_id FROM core.match_events WHERE match_id = 50").fetchone()[0], 20)
+
     def test_cup_teams_merge_into_the_same_pitchapi_teams(self):
         from vega_v2.sources import cups
 
@@ -127,7 +172,9 @@ class SourceIdentityTest(unittest.TestCase):
             cups.save(self.db, "open-cups", "world-cup-history", "2026", body, NOW)
         with self.db.transaction():
             merged, unmatched = identity.run(self.db, None, "teams", NOW)
-        self.assertEqual((merged, unmatched), (2, 1))  # Germany and Scotland; Narnia names nobody
+        self.assertEqual(merged, 2)  # Germany and Scotland; Narnia names nobody and stays
+        narnia = self.db.execute("SELECT entity_id FROM core.provider_ids WHERE provider='openfootball' AND provider_key='name:Narnia'").fetchone()[0]
+        self.assertEqual(self.db.execute("SELECT name FROM core.teams WHERE id=%s", (narnia,)).fetchone()[0], "Narnia")
         owners = dict(self.db.execute("SELECT provider_key, entity_id FROM core.provider_ids WHERE entity_type='team' AND provider='openfootball'").fetchall())
         self.assertEqual((owners["name:Germany"], owners["name:Scotland"]), (2, 3))
         self.assertEqual(self.db.execute("SELECT count(*) FROM core.teams WHERE name IN ('Germany', 'Scotland')").fetchone()[0], 2)

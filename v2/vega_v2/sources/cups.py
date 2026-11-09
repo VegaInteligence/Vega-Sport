@@ -103,7 +103,7 @@ def _team(conn, provider, key, name):
             if conn.execute("SELECT 1 FROM core.provider_ids WHERE entity_type='team' AND entity_id=%s AND provider='pitchapi'", (row[0],)).fetchone():
                 from .identity import spelling_row
 
-                spelling_row(conn, row[0], provider, name)
+                spelling_row(conn, row[0], provider, name)  # a name of that source (search)
             else:
                 conn.execute("UPDATE core.teams SET name=%s WHERE id=%s AND name<>%s", (name, row[0], name))
         return row[0]
@@ -155,6 +155,7 @@ def save(conn, kind, competition, season, body, now):
         values = {k: m[k] for k in ("status", "home_score", "away_score", "home_score_90", "away_score_90", "home_score_ht",
                                      "away_score_ht", "home_score_et", "away_score_et", "home_penalty_score", "away_penalty_score")}
         values.update(competition_season_id=edition, season_id=season_id, match_date=m["date"], home_team_id=home, away_team_id=away,
+                      home_team_name=m["home"] or None, away_team_name=m["away"] or None,
                       round_id=round_id, group_name=m["group"], match_number=m["number"], archive_position=m["position"], source=provider)
         columns = list(values)
         if found:
