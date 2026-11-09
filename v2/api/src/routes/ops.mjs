@@ -57,7 +57,12 @@ function quantile(sorted, q) {
   return Math.round(sorted[low] + (sorted[Math.ceil(at)] - sorted[low]) * (at - low));
 }
 
-/** Kickoff to first final score, and final score to last detail family, over the matches. */
+// The score watch follows a match for 7 days after kickoff (jobs.SCORE_WINDOWS). A final
+// score first recorded later than that is the import of a past match, not a followed one:
+// its delay from kickoff is the age of the match, not the time the score took.
+const FOLLOWED = "first_finished_at - kickoff_at <= interval '7 days'";
+
+/** Kickoff to first final score, and final score to last detail family, over the followed matches. */
 export function freshness(rows) {
   const toScore = [],
     toDetails = [];
@@ -179,7 +184,7 @@ export function createOpsRoute(read, { key = null, clock = Date.now } = {}) {
       ),
       read(`SELECT * FROM api.ops_unknown_fields ORDER BY last_seen_at DESC, family, field_path LIMIT ${LIMITS.fields}`),
       read("SELECT * FROM api.ops_summary"),
-      read("SELECT kickoff_at, first_finished_at, last_family_at FROM api.ops_finished_matches WHERE first_finished_at >= $1", [since]),
+      read(`SELECT kickoff_at, first_finished_at, last_family_at FROM api.ops_finished_matches WHERE first_finished_at >= $1 AND ${FOLLOWED}`, [since]),
       read("SELECT generation::text AS revision, published_at, (SELECT count(*) FROM api.editions)::integer AS editions FROM api.publication"),
     ]);
 
