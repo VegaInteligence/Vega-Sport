@@ -21,7 +21,7 @@ from .jobs import LeaseLost, ack, claim, fail
 from .normalize import NormalizedFamily, NormalizationError, normalize_family
 from .pilot import DETAILS, safe_code
 from .pitchapi import PitchClient, PitchError
-from .store import Store, StoreError, connect_local, migrate
+from .store import CONNECTION, Store, StoreError, connect_local, migrate
 
 DEFAULT_LANES = ("score", "details", "reference")
 LANE_ORDER = ("score", "details", "reference", "backfill")
@@ -40,6 +40,12 @@ TRANSIENT = frozenset(
 MAX_ATTEMPTS = 5
 SUMMARY_FIELDS = ("status", "home_score", "away_score", "home_penalty_score", "away_penalty_score")
 LEASE_SECONDS = 300
+# A lost database (worker.keep_running): first and longest wait between two
+# reconnections, how long a session must hold to count as healthy, and how long the task
+# keeps trying. A resize takes about 4 minutes, a memory recovery about 3.
+RECONNECT_WAIT = (5, 60)
+HEALTHY_AFTER = 300
+RECONNECT_FOR = 1800
 
 
 def _now():
@@ -121,6 +127,7 @@ class Worker:
         # The backfill task plans history only (planner.plan_backfill keyword arguments).
         self.backfill = backfill if backfill is not None else ({} if self.lanes == ("backfill",) else None)
         self.results = Counter()
+        self.done = 0  # jobs run since this worker started, across run() calls
         self._events = []
         client._on_attempt = self._events.append
 
@@ -335,6 +342,10 @@ class Worker:
         last_plan = last_calc = last_media = float("-inf")
         since_plan = 0  # jobs done since the last planning round
         while not stop():
+            # The steps below report a database error and go on; without a database the
+            # run ends here and keep_running opens a new one.
+            if self.conn.closed or self.calc_conn.closed:
+                raise psycopg.OperationalError("connection lost")
             tick = time.monotonic()
             if tick - last_plan >= plan_every:
                 since_plan = 0
@@ -354,6 +365,7 @@ class Worker:
                 last_media = tick
             worked = self.step()
             done += worked
+            self.done += worked
             since_plan += worked
             if not worked or tick - last_calc >= calc_every:
                 self.calculate()
@@ -632,7 +644,39 @@ def connect(dsn):
         or mode not in ("require", "verify-ca", "verify-full")
     ):
         raise StoreError("TLS_VEGA_V2_DATABASE_REQUIRED")
-    return psycopg.connect(dsn, autocommit=True)
+    return psycopg.connect(dsn, autocommit=True, **CONNECTION)
+
+
+def keep_running(session, *, stop, sleep=time.sleep, clock=time.monotonic):
+    """Call session() until it ends by itself; True when it did.
+
+    session() opens its own connections and runs a worker on them. A database that
+    restarts (recovery, resize, maintenance) ends it with psycopg.OperationalError: it is
+    started again on new connections, after 5 s then up to 60 s. A session that held
+    HEALTHY_AFTER seconds starts the count again; the task gives up (False) when the
+    database stayed away RECONNECT_FOR seconds, or when it is asked to stop.
+    """
+    lost_at, wait = None, RECONNECT_WAIT[0]
+    while True:
+        began = clock()
+        try:
+            session()
+            return True
+        except psycopg.OperationalError as error:
+            now = clock()
+            if now - began >= HEALTHY_AFTER:
+                lost_at, wait = None, RECONNECT_WAIT[0]
+            lost_at = now if lost_at is None else lost_at
+            if stop():
+                return False
+            if now - lost_at >= RECONNECT_FOR:
+                print(f"database lost error={safe_code(error)} outcome=gave_up", flush=True)
+                return False
+            print(f"database lost error={safe_code(error)} retry_in={wait}", flush=True)
+            until = now + wait
+            while clock() < until and not stop():
+                sleep(1)
+            wait = min(wait * 2, RECONNECT_WAIT[1])
 
 
 REPORT_QUERIES = (
@@ -727,38 +771,58 @@ def main(argv=None):
     if not dsn or not key:
         print("V2_DATABASE_URL and PITCHAPI_API_KEY are required", file=sys.stderr)
         return 2
-    conn = connect(dsn)
-    if args.migrate:
-        migrate(conn)
     calc_dsn = os.environ.get("V2_CALC_DATABASE_URL")
-    calc_conn = connect(calc_dsn) if calc_dsn else None
+    bucket = os.environ.get("V2_MEDIA_BUCKET")
+    client = PitchClient(key, interval=args.interval)
     stopping = []
     signal.signal(signal.SIGTERM, lambda *_: stopping.append(True))
-    worker = Worker(
-        Store(conn),
-        PitchClient(key, interval=args.interval),
-        lanes=tuple(x for x in args.lanes.split(",") if x),
-        cohort_delay=args.cohort_delay,
-        calc_conn=calc_conn,
-        source_get=None if args.lanes == "backfill" else __import__("vega_v2.sources.http", fromlist=["json_getter"]).json_getter(),
-        backfill=(
-            {"first_season": args.backfill_from, "last_season": args.backfill_to,
-             "competitions": args.backfill_competitions.split(",") if args.backfill_competitions else None}
-            if args.lanes == "backfill"
-            else None
-        ),
-    )
-    bucket = os.environ.get("V2_MEDIA_BUCKET")
-    if bucket and args.lanes != "backfill":
-        worker.media_io = (media.downloader(), media.s3_writer(bucket))
+    results, state = Counter(), {"done": 0, "migrate": args.migrate}
     started = time.monotonic()
-    done = worker.run(max_jobs=args.max_jobs, until_idle=args.until_idle, stop=lambda: bool(stopping))
-    if args.report:
-        report(worker, args.report, jobs=done, seconds=time.monotonic() - started)
-    for (family, outcome), count in sorted(worker.results.items()):
+
+    def session():
+        conns = [connect(dsn)]
+        worker = None
+        try:
+            if state["migrate"]:
+                migrate(conns[0])
+                state["migrate"] = False
+            if calc_dsn:
+                conns.append(connect(calc_dsn))
+            worker = Worker(
+                Store(conns[0]),
+                client,
+                lanes=tuple(x for x in args.lanes.split(",") if x),
+                cohort_delay=args.cohort_delay,
+                calc_conn=conns[1] if calc_dsn else None,
+                source_get=None if args.lanes == "backfill" else __import__("vega_v2.sources.http", fromlist=["json_getter"]).json_getter(),
+                backfill=(
+                    {"first_season": args.backfill_from, "last_season": args.backfill_to,
+                     "competitions": args.backfill_competitions.split(",") if args.backfill_competitions else None}
+                    if args.lanes == "backfill"
+                    else None
+                ),
+            )
+            if bucket and args.lanes != "backfill":
+                worker.media_io = (media.downloader(), media.s3_writer(bucket))
+            left = None if args.max_jobs is None else args.max_jobs - state["done"]
+            worker.run(max_jobs=left, until_idle=args.until_idle, stop=lambda: bool(stopping))
+            if args.report:
+                report(worker, args.report, jobs=state["done"] + worker.done, seconds=time.monotonic() - started)
+        finally:
+            if worker is not None:
+                results.update(worker.results)
+                state["done"] += worker.done
+            for conn in conns:
+                try:
+                    conn.close()
+                except psycopg.Error:
+                    pass
+
+    ended = keep_running(session, stop=lambda: bool(stopping))
+    for (family, outcome), count in sorted(results.items()):
         print(f"family={family} outcome={outcome} count={count}", flush=True)
-    print(f"jobs={done}", flush=True)
-    return 0
+    print(f"jobs={state['done']}", flush=True)
+    return 0 if ended or stopping else 1
 
 
 if __name__ == "__main__":

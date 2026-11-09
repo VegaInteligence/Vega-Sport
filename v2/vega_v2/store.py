@@ -77,6 +77,21 @@ def round_stage(name):
     return "regular"
 
 
+# A database restart (memory recovery, resize) can replace the host without closing its
+# connections: with the system's defaults a task then waits about two hours on a dead
+# socket (9 November 2026: the worker and the backfill stayed 40 minutes without one
+# call after a recovery). With these the loss is seen within a minute and raises
+# psycopg.OperationalError, which worker.keep_running answers by reconnecting.
+CONNECTION = {
+    "connect_timeout": 10,
+    "keepalives": 1,
+    "keepalives_idle": 30,
+    "keepalives_interval": 10,
+    "keepalives_count": 3,
+    "tcp_user_timeout": 60000,  # ms a sent query may stay unacknowledged
+}
+
+
 def connect_local(dsn):
     parsed = urlparse(dsn)
     if (
@@ -86,7 +101,7 @@ def connect_local(dsn):
         or parsed.query
     ):
         raise StoreError("LOCAL_V2_DATABASE_REQUIRED")
-    return psycopg.connect(dsn, autocommit=True)
+    return psycopg.connect(dsn, autocommit=True, **CONNECTION)
 
 
 def migrate(conn, *, vector=False):
