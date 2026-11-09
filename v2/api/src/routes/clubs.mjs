@@ -6,6 +6,8 @@
  * Differences with the legacy read, by construction of v2 (listed for the parity
  * comparison): team statistics have one source, so there is no "unreliable stats"
  * exclusion (excludedStats is always 0) and no fallback to match-level fields.
+ * Added by v2: each directory club has `power`, its power ranking of the season read
+ * (api.power_clubs: rank, Elo, Elo change, matches), or null.
  */
 import { reject, validateParams } from "../http.mjs";
 import { powerOf } from "./rankings.mjs";

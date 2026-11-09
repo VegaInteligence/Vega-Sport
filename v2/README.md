@@ -34,6 +34,8 @@ Le worker prend les travaux dans l'ordre score, détails, référentiel (le back
 - clubs : la force Elo du § 3, mise à jour match après match sur tous les matchs terminés ; chaque match se lit avec les forces d'avant. Les coupes d'Europe relient les championnats ; clubs et sélections sont classés à part (`agg.team_elo`, `agg.team_power`) ;
 - joueurs : le score B par rôle des §§ 4–8. Pour chaque match, on calcule l'écart standardisé à l'attendu pour le rôle, les minutes et l'adversaire, puis la contribution C (blocs pondérés selon le rôle). Sur la saison, T = ΣC et R* = 90 T / (M + 450), et B = 0,75 Pct(T) + 0,25 Pct(R*) dans le rôle principal (`agg.player_power_matches`, `agg.player_power`) ;
 - lecture : `/api/rankings/power?kind=players|clubs|nations&season=`. Les lignes joueurs portent les champs qu'attend `ballonDorRanking(season)` du site (rang, joueur, photo, club, logo, poste, score).
+- par club et par joueur : chaque club de l'annuaire (`/api/read/clubs`) et chaque fiche joueur (`/api/read/players`) porte `power`, son classement de la saison lue (clubs : rang, Elo, variation, matchs ; joueurs : rang, score, rôle, rang dans le rôle ; `null` s'il n'est pas classé). Les valeurs restent une ligne par saison dans `agg.team_power` et `agg.player_power` ;
+- course au Ballon d'Or : les 30 premiers joueurs éligibles de la saison, numérotés de 1 à 30, sont écrits dans `agg.player_award_ranking` avec la ligne `agg.calc_runs` qui les a produits (`kind='award'`).
 
 Les points que la méthode laisse ouverts (son § 12) sont tranchés ainsi. Chaque réglage est nommé dans `power.py` et conservé avec chaque calcul (`agg.power_runs`) :
 
