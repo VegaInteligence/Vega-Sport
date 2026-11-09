@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega_v2 import sources
-from vega_v2.sources import SourceError, cups, curated, fifa, normalize, sportscore, uefa, wikidata
+from vega_v2.sources import SourceError, cups, curated, fifa, honours, normalize, sportscore, uefa, wikidata
 sys.path.insert(0, str(ROOT / "tests"))
 from cup_samples import SAMPLES
 
@@ -366,6 +366,41 @@ class UefaTest(unittest.TestCase):
             self.assertEqual(x("SELECT count(*) FROM api.cup_matches m JOIN api.cup_editions e USING (competition_season_id) WHERE e.season='2024'").fetchone(), (3,))
         finally:
             cups.bridge = original
+
+    def test_player_honours(self):
+        from vega_v2.store import Store
+
+        x = self.db.execute
+        with self.db.transaction():
+            Store(self.db).season("2025/2026")
+        x("INSERT INTO core.competitions(id, name) VALUES (85, 'Liga H')")
+        x("INSERT INTO core.competition_seasons(id, competition_id, season_id) VALUES (85, 85, 2025)")
+        x("INSERT INTO core.teams(id, name) VALUES (85, 'Inter Miami')")
+        x("INSERT INTO core.players(id, name) VALUES (60, 'Lionel Messi'), (61, 'Common Name')")
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player','pitchapi','p_1mZO3B',60), ('player','pitchapi','p_other2',61)")
+        x("INSERT INTO core.matches(id, competition_season_id, season_id, source, match_date) VALUES (950, 85, 2025, 'pitchapi', '2025-10-01')")
+        x("INSERT INTO core.player_match_stats(season_id, match_id, team_id, player_id, minutes_played) VALUES (2025, 950, 85, 60, 90), (2025, 950, 85, 61, 90)")
+        body = {"available": True, "source": "Wikipédia", "identitySourceUrl": "https://www.wikidata.org/wiki/Q615",
+                "sourceUrl": "https://en.wikipedia.org/w/index.php?title=Lionel_Messi&oldid=1#Honours", "revision": 1, "fetchedAt": "2026-11-09T08:00:00+00:00",
+                "honours": [{"name": "FIFA World Cup", "team": "Argentina", "category": "team", "seasons": ["2022"]},
+                            {"name": "Ballon d'Or", "team": None, "category": "individual", "seasons": ["2009", "2010"]}]}
+        seen = []
+
+        def fake(name, observations):
+            seen.append((name, observations))
+            return body if name == "Lionel Messi" else None
+
+        original, honours.collect = honours.collect, fake
+        try:
+            self.assertEqual(sources.run_due(self.db, None, NOW, names={"wikimedia"}), {("wikimedia", "players"): "ok"})
+        finally:
+            honours.collect = original
+        self.assertEqual(seen[0], ("Lionel Messi", [{"team": "Inter Miami", "date": "2025-10-01"}]))  # Messi first
+        self.assertEqual(x("SELECT category, name, team, seasons FROM core.player_honour_titles WHERE player_id=60 ORDER BY seq").fetchall(),
+                         [("team", "FIFA World Cup", "Argentina", ["2022"]), ("individual", "Ballon d'Or", None, ["2009", "2010"])])
+        self.assertEqual(x("SELECT provider_key FROM core.provider_ids WHERE entity_type='player' AND provider='wikidata' AND entity_id=60").fetchone(), ("Q615",))
+        self.assertEqual(x("SELECT honours_fetched_at IS NULL, honours_checked_at IS NOT NULL FROM core.players WHERE id=61").fetchone(), (True, True))
+        self.assertEqual(x("SELECT rows_written, unmatched FROM ops.source_runs WHERE source='wikimedia'").fetchone(), (1, 1))
 
 
 if __name__ == "__main__":

@@ -33,3 +33,23 @@ test("coach portrait and stadium", { skip }, async () => {
   assert.equal((await get("/api/stadium?id=Q1")).response.status, 404);
   assert.equal((await get("/api/stadium?id=bad")).response.status, 400);
 });
+
+test("player honours and image redirects", { skip }, async () => {
+  const { response, body } = await get("/api/player-honours?id=p_aaaab1");
+  assert.equal(response.status, 200);
+  assert.deepEqual(body, {
+    available: true, source: "Wikipédia", identitySourceUrl: "https://www.wikidata.org/wiki/Q100",
+    sourceUrl: "https://en.wikipedia.org/w/index.php?title=E&oldid=7#Honours", revision: 7, fetchedAt: "2025-09-20T09:00:00.000Z",
+    honours: [
+      { name: "French Ligue 1", team: "Olympique Été", category: "team", seasons: ["2023–24", "2024–25"] },
+      { name: "Ligue 1 Player of the Year", team: null, category: "individual", seasons: ["2025"] },
+    ],
+  });
+  assert.equal(body.displayGroups, undefined); // only Messi's page carries main's curated list
+  assert.equal((await get("/api/player-honours?id=p_aaaab2")).response.status, 404);
+  assert.equal((await get("/api/player-honours?id=bad")).response.status, 400);
+  const asset = await get("/api/assets?url=" + encodeURIComponent("https://img.example/t1.png"));
+  assert.equal(asset.response.status, 307);
+  assert.equal(asset.response.headers.get("location"), "https://media.test/data/sources/v2/images/" + "ab".repeat(32) + ".png");
+  assert.equal((await get("/api/assets?url=" + encodeURIComponent("https://img.example/none.png"))).response.status, 404);
+});

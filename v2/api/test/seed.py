@@ -113,6 +113,10 @@ def main(dsn):
     x("UPDATE core.coaches SET photo_asset_id=4, portrait_checked_at='2025-09-20T09:00:00Z', portrait_lookup_version=3 WHERE id=1")
     x("INSERT INTO core.team_coach_tenures(team_id,coach_id,start_date,source) VALUES (1,1,'2025-07-01','wikidata')")
     x("INSERT INTO core.venue_plans(venue_id,seq,title,url,source,detail,format,is_embedded,allow_geolocation) VALUES (1,0,'Plan interactif','https://club.example/plan','Club','Accès et tribunes.','Plan',true,true)")
+    # Wikipedia honours of Élie Durand (main's player_honours.py projection, typed).
+    x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('player','wikidata','Q100',101)")
+    x("UPDATE core.players SET honours_source_url='https://en.wikipedia.org/w/index.php?title=E&oldid=7#Honours', honours_revision=7, honours_fetched_at='2025-09-20T09:00:00Z', honours_checked_at='2025-09-20T09:00:00Z' WHERE id=101")
+    x("INSERT INTO core.player_honour_titles(player_id,seq,category,name,team,seasons) VALUES (101,0,'team','French Ligue 1','Olympique Été',ARRAY['2023–24','2024–25']),(101,1,'individual','Ligue 1 Player of the Year',NULL,ARRAY['2025'])")
     # UEFA club and association coefficients of 2025/2026, FIFA's edition of 18 September 2025.
     x("""INSERT INTO core.ranking_editions(id,kind,provider,label,period,published_on,is_current,source_url,source_updated_at,updated_at) VALUES
          (1,'uefa_clubs','uefa','2025/2026','2025/2026','2025-09-01',true,'https://comp.uefa.com/v2/coefficients?c','2025-09-01T08:00:00Z','2025-09-02T00:00:00Z'),
