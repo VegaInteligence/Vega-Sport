@@ -252,9 +252,22 @@ class Worker:
             print(f"media outcome={code} count={count}", flush=True)
         return outcomes
 
+    def backfill_references(self):
+        """The leagues a backfill names, read first: their profiles list their seasons, so a
+        past edition can be planned on a base whose weekly catalogue has not run yet."""
+        for key in sorted((self.backfill or {}).get("competitions") or []):
+            try:
+                profile = normalize_family("league", self.fetch("league", "/leagues/" + key).data)
+                with self.conn.transaction():
+                    self.store.save_references(profile, family="league")
+            except (NormalizationError, StoreError, PitchError, psycopg.Error) as error:
+                self.results[("league", safe_code(error))] += 1
+
     def run(self, *, max_jobs=None, until_idle=False, plan_every=60, calc_every=30, media_every=300, idle_sleep=5, stop=None):
         stop = stop or (lambda: False)
         done = 0
+        if self.backfill is not None:
+            self.backfill_references()
         last_plan = last_calc = last_media = float("-inf")
         while not stop():
             tick = time.monotonic()

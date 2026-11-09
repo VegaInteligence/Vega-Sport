@@ -34,12 +34,10 @@ run() {
 }
 get() { curl -fsS --max-time 60 "$API$1"; }
 
-echo "== 1. The league catalogue is loaded (the worker service reads it at start)"
-until get "/api/competitions" | python3 -c "import json,sys; d=json.load(sys.stdin)['data']['leagues']; sys.exit(0 if any(l['id']=='$LEAGUE' and '$LABEL' in l['seasons'] for l in d) else 1)"; do
-  echo "   waiting for $LEAGUE $LABEL in the catalogue"; sleep 120
-done
+echo "== 1. The read API answers"
+get "/api/status" >/dev/null
 
-echo "== 2. Backfill $LEAGUE $LABEL: calendar, then the 13 families of every finished match"
+echo "== 2. Backfill $LEAGUE $LABEL: the league profile (its seasons), its calendar, then the 13 families of every finished match"
 run vega-v2-backfill backfill "[\"--lanes\",\"backfill\",\"--until-idle\",\"--backfill-from\",\"$SEASON\",\"--backfill-to\",\"$SEASON\",\"--backfill-competitions\",\"$LEAGUE\"]"
 
 if [ -n "$ARCHIVES" ]; then
