@@ -47,12 +47,14 @@ def _now():
 
 
 class Worker:
-    def __init__(self, store, client, *, lanes=DEFAULT_LANES, clock=_now, cohort_delay=600):
+    def __init__(self, store, client, *, lanes=DEFAULT_LANES, clock=_now, cohort_delay=600, calc_conn=None):
         unknown = set(lanes) - set(LANE_ORDER)
         if unknown or not lanes:
             raise ValueError("invalid lanes")
         self.store = store
         self.conn = store.conn
+        # Collect role for the queue and core; calc role for agg (doc "Rôles en base").
+        self.calc_conn = calc_conn or store.conn
         self.client = client
         self.lanes = tuple(lane for lane in LANE_ORDER if lane in lanes)
         self.clock = clock
@@ -189,8 +191,8 @@ class Worker:
     def calculate(self, limit=500):
         """Season aggregates first, then the cohorts they changed (debounced)."""
         try:
-            done = calculator.process_dirty(self.conn, limit=limit)
-            return done + models.process_cohorts(self.conn, min_age_seconds=self.cohort_delay)
+            done = calculator.process_dirty(self.calc_conn, limit=limit)
+            return done + models.process_cohorts(self.calc_conn, min_age_seconds=self.cohort_delay)
         except psycopg.Error as error:
             print(f"calculator error={safe_code(error)}", flush=True)
             return 0
@@ -201,7 +203,7 @@ class Worker:
         now = self.clock()
         seasons = [
             s
-            for (s,) in self.conn.execute(
+            for (s,) in self.calc_conn.execute(
                 """SELECT DISTINCT m.season_id FROM core.matches m
                    WHERE m.kickoff_at > %s - interval '30 days' AND m.kickoff_at <= %s
                      AND NOT EXISTS (SELECT 1 FROM agg.calc_runs r WHERE r.kind = 'levels' AND r.status = 'published'
@@ -212,7 +214,7 @@ class Worker:
         ]
         for season in seasons:
             try:
-                models.refresh_daily(self.conn, season)
+                models.refresh_daily(self.calc_conn, season)
             except psycopg.Error as error:
                 print(f"daily models season={season} error={safe_code(error)}", flush=True)
         return seasons
@@ -582,6 +584,8 @@ def main(argv=None):
     conn = connect(dsn)
     if args.migrate:
         migrate(conn)
+    calc_dsn = os.environ.get("V2_CALC_DATABASE_URL")
+    calc_conn = connect(calc_dsn) if calc_dsn else None
     stopping = []
     signal.signal(signal.SIGTERM, lambda *_: stopping.append(True))
     worker = Worker(
@@ -589,6 +593,7 @@ def main(argv=None):
         PitchClient(key, interval=args.interval),
         lanes=tuple(x for x in args.lanes.split(",") if x),
         cohort_delay=args.cohort_delay,
+        calc_conn=calc_conn,
     )
     started = time.monotonic()
     done = worker.run(max_jobs=args.max_jobs, until_idle=args.until_idle, stop=lambda: bool(stopping))
