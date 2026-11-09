@@ -8,6 +8,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tests"))
 import tempfile
 
 from archive_fixtures import make_sources
+from cup_samples import SAMPLES
+from vega_v2.sources import cups
 from vega_v2 import archives
 from vega_v2.store import Store, connect_local, migrate
 
@@ -133,6 +135,11 @@ def main(dsn):
     with tempfile.TemporaryDirectory() as sources:
         archives.run(db, make_sources(sources))
     db.execute("UPDATE ops.resource_versions SET published_at='2025-09-20T10:30:00Z' WHERE resource_kind='archive_season'")
+    # Cup editions as main's source projections answer them, written by the cups adapter.
+    from datetime import datetime, timezone
+    with db.transaction():
+        for kind, competition, season, body in SAMPLES:
+            cups.save(db, kind, competition, season, body, datetime(2025, 9, 20, 8, tzinfo=timezone.utc))
     db.close()
 
 

@@ -12,7 +12,9 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega_v2 import sources
-from vega_v2.sources import SourceError, curated, fifa, normalize, sportscore, uefa, wikidata
+from vega_v2.sources import SourceError, cups, curated, fifa, normalize, sportscore, uefa, wikidata
+sys.path.insert(0, str(ROOT / "tests"))
+from cup_samples import SAMPLES
 
 try:
     import psycopg
@@ -69,6 +71,20 @@ class PureTest(unittest.TestCase):
         text = (ROOT.parent / "dashboard/frontend/src/services/sportscore-standings.js").read_text()
         body = re.search(r"SPORTSCORE_LEAGUES = Object\.freeze\(\{(.*?)\}\);", text, re.S).group(1)
         self.assertEqual(dict(re.findall(r'(l_[A-Za-z0-9]{6}): "([a-z0-9-]+)"', body)), sportscore.LEAGUES)
+
+    def test_cup_editions_match_main(self):
+        # The editions main refreshes (scripts/aws_refresh_sources.mjs) and its national cup archives.
+        text = (ROOT.parent / "dashboard/scripts/aws_refresh_sources.mjs").read_text()
+        archives = (ROOT.parent / "dashboard/frontend/src/services/cup-archives.js").read_text()
+        self.assertEqual(re.findall(r'key: "([a-z-]+)"', archives), list(cups.NATIONAL_CUP_ARCHIVES))
+        before = text.split('jobs.push(["open-cups", { competition: "world-cup-history"')[0]
+        years = before.rsplit("for (const season of [", 1)[1]
+        self.assertEqual(tuple(re.findall(r'"(\d{4})"', years)), cups.WORLD_CUP_YEARS)
+        for kind, competition, season in cups.EDITIONS:
+            if competition.endswith("-archive"):
+                continue
+            self.assertIn(competition, text)
+            self.assertIn(f'"{season}"', text)
 
     def test_pagination_must_be_complete(self):
         get = FakeSource({("MEN_CLUB", 2027, 1): uefa_page([club(1, "A", "FRA", 1, 10)], 3)})
@@ -322,6 +338,34 @@ class UefaTest(unittest.TestCase):
         finally:
             wikidata.bridge = original
         self.assertEqual(calls, [])
+
+    def test_cup_editions_typed_and_kept_on_failure(self):
+        x = self.db.execute
+        answers = {}
+        for kind, competition, season, body in SAMPLES:
+            from urllib.parse import urlencode
+            query = urlencode({"competition": competition, "season": season} if kind != "nations-results" else {"season": season})
+            answers[(kind, query)] = {"status": 200, "body": body}
+        original, cups.bridge = cups.bridge, lambda command, kind, query: answers.get((kind, query), {"status": 502, "body": None})
+        try:
+            done = sources.run_due(self.db, None, NOW, names={"openfootball", "openligadb", "international_results"})
+            self.assertEqual(done[("openfootball", "open-cups:euro:2024")], "ok")
+            self.assertEqual(done[("openfootball", "open-cups:euro:2020")], "HTTP_502")  # not in the answers
+            self.assertEqual(x("SELECT rows_written FROM ops.source_runs WHERE scope='open-cups:euro:2024'").fetchone(), (3,))
+            rows = x("""SELECT m.home_score, m.away_score, m.home_score_90, m.home_score_et, m.home_penalty_score, s.label
+                        FROM core.matches m JOIN core.seasons s ON s.id=m.season_id JOIN core.competition_seasons cs ON cs.id=m.competition_season_id
+                        WHERE cs.cup_key='open-cups:euro:2024' ORDER BY m.archive_position""").fetchall()
+            # Euro 2024 belongs to 2023/2024; a match decided after extra time keeps its 90-minute score.
+            self.assertEqual(rows, [(5, 1, None, None, None, "2023/2024"), (0, 0, 0, 0, 3, "2023/2024"), (2, 1, None, None, None, "2023/2024")])
+            # Unchanged content: nothing rewritten. A failing source keeps the edition.
+            later = NOW + timedelta(days=8)
+            self.assertEqual(sources.run_due(self.db, None, later, names={"openfootball"})[("openfootball", "open-cups:euro:2024")], "ok")
+            self.assertEqual(x("SELECT rows_written FROM ops.source_runs WHERE scope='open-cups:euro:2024'").fetchone(), (0,))
+            answers.clear()
+            sources.run_due(self.db, None, NOW + timedelta(days=16), names={"openfootball"})
+            self.assertEqual(x("SELECT count(*) FROM api.cup_matches m JOIN api.cup_editions e USING (competition_season_id) WHERE e.season='2024'").fetchone(), (3,))
+        finally:
+            cups.bridge = original
 
 
 if __name__ == "__main__":
