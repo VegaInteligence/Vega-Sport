@@ -17,6 +17,7 @@ and never stored.
 """
 
 import argparse
+from collections import defaultdict
 import gzip
 import json
 import os
@@ -132,6 +133,19 @@ def match_row(match):
     return row
 
 
+# A stored goal, in the order of a goal tuple built by Loader.season.
+GOAL_COLUMNS = ("team_id", "seq", "minute", "minute_added", "player_name", "score_home", "score_away", "source_minute", "score_disagreement")
+
+
+def _pg_text(value):
+    """A value as PostgreSQL's ::text prints it (to compare a row with what is stored)."""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
+
 def _minute(value):
     found = re.fullmatch(r"\s*(\d{1,3})(?:\s*\+\s*(\d{1,2}))?\s*'?\s*", str(value or ""))
     return (int(found.group(1)), int(found.group(2)) if found.group(2) else None) if found else (None, None)
@@ -189,9 +203,18 @@ class Loader:
                 (competition, start, label, comp["id"], comp["name"], comp.get("country"), position),
             ).fetchone()[0]
         keep = {m["key"] for m in data["matches"]}
-        self.conn.execute(
+        changed = self.conn.execute(
             "DELETE FROM core.matches WHERE season_id=%s AND archive_key IS NOT NULL AND NOT archive_key = ANY(%s)", (start, list(keep))
-        )
+        ).rowcount
+        # What the season already holds, read once: a re-import writes only what differs (the
+        # archives rarely change; rewriting them all saturated the base for hours).
+        rounds = {
+            (edition, name): ident
+            for edition, name, ident in self.conn.execute(
+                "SELECT competition_season_id, name, id FROM core.rounds WHERE competition_season_id = ANY(%s)", (list(editions.values()),)
+            ).fetchall()
+        }
+        stored, stored_goals = {}, defaultdict(list)
         written = 0
         for position, match in enumerate(data["matches"]):
             edition_id = editions[match["competitionId"]]
@@ -200,44 +223,74 @@ class Loader:
             away = self.team(match["team2"], match.get("country")) if match.get("team2") else None
             round_id = None
             if match.get("round"):
-                round_id = self.conn.execute(
-                    """INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s)
-                       ON CONFLICT (competition_season_id, name) DO UPDATE SET name=EXCLUDED.name RETURNING id""",
-                    (edition_id, match["round"]),
-                ).fetchone()[0]
+                round_id = rounds.get((edition_id, match["round"]))
+                if round_id is None:
+                    round_id = rounds[(edition_id, match["round"])] = self.conn.execute(
+                        """INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s)
+                           ON CONFLICT (competition_season_id, name) DO UPDATE SET name=EXCLUDED.name RETURNING id""",
+                        (edition_id, match["round"]),
+                    ).fetchone()[0]
             values = dict(row, competition_season_id=edition_id, season_id=start, round_id=round_id,
                           match_date=match.get("date") or None, date_unverified=bool(match.get("dateNote")) or None,
                           home_team_id=home, away_team_id=away, archive_key=match["key"], archive_position=position,
                           home_team_name=match.get("team1") or None, away_team_name=match.get("team2") or None,
                           source=provider_of(match))
             columns = list(values)
-            mid = self.conn.execute(
-                f"""INSERT INTO core.matches({", ".join(columns)}) VALUES ({", ".join(["%s"] * len(columns))})
-                    ON CONFLICT (season_id, archive_key) WHERE archive_key IS NOT NULL DO UPDATE SET
-                    {", ".join(f"{c}=EXCLUDED.{c}" for c in columns if c not in ("season_id", "archive_key"))},
-                    revision=core.matches.revision+1, updated_at=now() RETURNING id""",
-                [values[c] for c in columns],
-            ).fetchone()[0]
-            self.conn.execute("DELETE FROM core.match_events WHERE season_id=%s AND match_id=%s", (start, mid))
+            if not stored and written == 0:
+                stored.update(self._stored_matches(start, columns))
+                for match_id, *goal in self.conn.execute(
+                    f"SELECT match_id, {', '.join(f'{c}::text' for c in GOAL_COLUMNS)} FROM core.match_events "
+                    "WHERE season_id=%s AND event_type='goal' ORDER BY match_id, seq",
+                    (start,),
+                ).fetchall():
+                    stored_goals[match_id].append(tuple(goal))
+            goals = []
             for seq, goal in enumerate(match.get("goals") or []):
                 minute, added = _minute(goal.get("minute"))
                 score = _pair(goal.get("score")) or [None, None]
-                side = goal.get("side")
-                self.conn.execute(
-                    """INSERT INTO core.match_events(season_id, match_id, team_id, seq, event_type, minute, minute_added, player_name,
-                         score_home, score_away, source_minute, score_disagreement)
-                       VALUES (%s,%s,%s,%s,'goal',%s,%s,%s,%s,%s,%s,%s)""",
-                    (start, mid, {"home": home, "away": away}.get(side), seq, minute, added, goal.get("player") or None,
-                     score[0], score[1], str(goal["minute"]) if goal.get("minute") not in (None, "") else None,
-                     bool(goal.get("scoreDisagreement")) or None),
-                )
+                goals.append(({"home": home, "away": away}.get(goal.get("side")), seq, minute, added, goal.get("player") or None,
+                              score[0], score[1], str(goal["minute"]) if goal.get("minute") not in (None, "") else None,
+                              bool(goal.get("scoreDisagreement")) or None))
+            known = stored.get(match["key"])
+            if known is not None and known[1] == tuple(_pg_text(values[c]) for c in columns):
+                mid = known[0]
+            else:
+                mid = self.conn.execute(
+                    f"""INSERT INTO core.matches({", ".join(columns)}) VALUES ({", ".join(["%s"] * len(columns))})
+                        ON CONFLICT (season_id, archive_key) WHERE archive_key IS NOT NULL DO UPDATE SET
+                        {", ".join(f"{c}=EXCLUDED.{c}" for c in columns if c not in ("season_id", "archive_key"))},
+                        revision=core.matches.revision+1, updated_at=now() RETURNING id""",
+                    [values[c] for c in columns],
+                ).fetchone()[0]
+                changed += 1
+            if stored_goals.get(mid, []) != [tuple(_pg_text(v) for v in goal) for goal in goals]:
+                self.conn.execute("DELETE FROM core.match_events WHERE season_id=%s AND match_id=%s", (start, mid))
+                for goal in goals:
+                    self.conn.execute(
+                        f"""INSERT INTO core.match_events(season_id, match_id, event_type, {', '.join(GOAL_COLUMNS)})
+                            VALUES (%s,%s,'goal',{', '.join(['%s'] * len(GOAL_COLUMNS))})""",
+                        (start, mid, *goal),
+                    )
+                changed += 1
             written += 1
-        self.conn.execute(
-            """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES ('archive_season', %s)
-               ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
-            (start,),
-        )
+        if changed or not stored:
+            self.conn.execute(
+                """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES ('archive_season', %s)
+                   ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
+                (start,),
+            )
         return written
+
+    def _stored_matches(self, season, columns):
+        """{archive key: (match id, the columns as PostgreSQL prints them)} of a season."""
+        return {
+            key: (ident, tuple(rest))
+            for key, ident, *rest in self.conn.execute(
+                f"SELECT archive_key, id, {', '.join(f'{c}::text' for c in columns)} FROM core.matches "
+                "WHERE season_id=%s AND archive_key IS NOT NULL",
+                (season,),
+            ).fetchall()
+        }
 
 
 def provider_for(index_sources):
