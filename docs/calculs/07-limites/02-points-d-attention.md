@@ -45,12 +45,16 @@ Profil et annuaire : moyenne simple des notes. Accueil : moyenne pondérée par 
 **11. La cohorte d'une performance compte des performances, pas des joueurs.**
 Le centile d'un match compare à toutes les performances de 30 minutes ou plus du même poste : les titulaires indiscutables pèsent davantage dans la distribution que les joueurs peu utilisés. C'est cohérent avec la question posée (« ce match est-il bon pour un match de défenseur ? ») mais diffère du centile saison, qui compte chaque joueur une fois.
 
+**12. La « Lecture du scout » écrit 0 pour une production absente.**
+La phrase de production s'affiche dès que les buts **ou** les passes décisives sont renseignés, et remplace l'autre mesure par 0 si elle manque (`goals.value ?? 0`, `assists.value ?? 0`). Un joueur sans passes décisives renseignées lit « 0,00 passe décisive par 90 min » au lieu d'une valeur absente. Le point de vigilance de la même carte est aussi relatif : c'est toujours le centile le plus bas du joueur, même élevé.
+→ [PlayerScoutOverview.jsx](../../../dashboard/frontend/src/components/PlayerScoutOverview.jsx#L338), [Carte « Lecture du scout »](../05-joueurs/07-lecture-du-scout.md)
+
 ## Modèle de points attendus
 
-**12. Hypothèses fortes du modèle de Poisson.**
+**13. Hypothèses fortes du modèle de Poisson.**
 Buts indépendants, xG d'équipe agrégé (la répartition des occasions est ignorée), plancher λ = 0,01, troncature à 10 buts, défaite obtenue par complément. Ce sont des choix standard, mais ils expliquent par exemple qu'un 0-0 sans aucun tir vaille 1,01 xPts.
 
 ## Démo
 
-**13. Calibrations européennes non ajustées.**
+**14. Calibrations européennes non ajustées.**
 Les décalages de ligue et coefficients du niveau européen sont fixés à la main ; le commentaire du code précise qu'ils restent « à ajuster sur des résultats ». L'option « Clubs de niveau comparable », activée par défaut sur le profil joueur, en dépend.
