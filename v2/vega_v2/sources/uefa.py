@@ -30,13 +30,17 @@ def scopes(now):
     }
 
 
+def source_url(kind, year, page=1):
+    return BASE + "?" + urlencode({
+        "coefficientRange": "OVERALL", "coefficientType": KINDS[kind], "language": "EN",
+        "page": page, "pagesize": 50, "seasonYear": year,
+    })
+
+
 def fetch(get, kind, year):
     members, updated, page = [], None, 1
     while True:
-        body = get(BASE + "?" + urlencode({
-            "coefficientRange": "OVERALL", "coefficientType": KINDS[kind], "language": "EN",
-            "page": page, "pagesize": 50, "seasonYear": year,
-        }))
+        body = get(source_url(kind, year, page))
         data = body["data"]
         part = data["members"]
         members.extend(part)
@@ -50,15 +54,26 @@ def fetch(get, kind, year):
     if len(members) != total:
         raise SourceError("INCOMPLETE_PAGINATION")
     rows = []
+    real = lambda value: float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+    count = lambda value: int(value) if isinstance(value, int) and not isinstance(value, bool) else None
     for entry in members:
         member, rank = entry["member"], entry["overallRanking"]
         points = rank.get("totalValue", rank.get("totalPoints"))
         rows.append({
             "id": str(member["id"]),
             "name": member["displayName"],
+            # Every spelling UEFA gives, for the strict name match (main's club_links).
+            "names": [n for n in (member.get(k) for k in ("displayName", "displayOfficialName", "internationalName", "displayNameShort")) if n],
             "country": member.get("countryCode") or member.get("associationCode"),
             "position": int(rank["position"]) if rank.get("position") is not None else None,
             "points": float(points) if points is not None else None,
+            "earned": real(rank.get("totalPoints")),
+            "still": count(rank.get("numberOfTeamsStillInPlaying")),
+            "logo": member.get("logoUrl") if isinstance(member.get("logoUrl"), str) and member["logoUrl"].startswith("https://") else None,
+            "seasons": [
+                (count(s.get("seasonYear")), real(s.get("totalPoints")), real(s.get("nationalAssociationPoints")), count(s.get("numberOfTeamsStillInPlaying")))
+                for s in entry.get("seasonRankings") or [] if count(s.get("seasonYear"))
+            ],
         })
     return rows, updated
 
@@ -92,7 +107,10 @@ def link_team(conn, row):
         return known[0], True
     country = _country(conn, row["country"])
     key = normalize(row["name"])
-    candidates = _candidates(conn, country, key) if country and key else set()
+    candidates = set()
+    if country:
+        for spelling in {normalize(n) for n in row.get("names") or [row["name"]]} - {""}:
+            candidates |= _candidates(conn, country, spelling)
     # A team that already carries another UEFA id is not this club.
     candidates = {
         t for t in candidates
@@ -109,12 +127,13 @@ def link_team(conn, row):
         "INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team', 'uefa', %s, %s)",
         (row["id"], team),
     )
-    if key:
-        conn.execute(
-            """INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source)
-               VALUES ('team', %s, %s, %s, 'source_spelling', 'uefa') ON CONFLICT DO NOTHING""",
-            (team, row["name"], key),
-        )
+    for spelling in dict.fromkeys(row.get("names") or [row["name"]]):
+        if normalize(spelling):
+            conn.execute(
+                """INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source)
+                   VALUES ('team', %s, %s, %s, 'source_spelling', 'uefa') ON CONFLICT DO NOTHING""",
+                (team, spelling, normalize(spelling)),
+            )
     return team, linked
 
 
@@ -123,12 +142,12 @@ def save(conn, kind, year, rows, updated, now):
     label = f"{year - 1}/{year}"
     current = year == current_end_year(now)
     edition = conn.execute(
-        """INSERT INTO core.ranking_editions(kind, provider, label, period, published_on, is_current)
-           VALUES (%s, 'uefa', %s, %s, %s, %s)
+        """INSERT INTO core.ranking_editions(kind, provider, label, period, published_on, is_current, source_url, source_updated_at)
+           VALUES (%s, 'uefa', %s, %s, %s, %s, %s, %s)
            ON CONFLICT (kind, provider, label) DO UPDATE SET published_on = EXCLUDED.published_on,
-             is_current = EXCLUDED.is_current, updated_at = now()
+             is_current = EXCLUDED.is_current, source_url = EXCLUDED.source_url, source_updated_at = EXCLUDED.source_updated_at, updated_at = now()
            RETURNING id""",
-        (kind, label, label, (updated or "")[:10] or None, current),
+        (kind, label, label, (updated or "")[:10] or None, current, source_url(kind, year), updated or None),
     ).fetchone()[0]
     if current:
         conn.execute(
@@ -149,10 +168,24 @@ def save(conn, kind, year, rows, updated, now):
             target = (None, _country(conn, row["country"]))
             if target[1] is None:
                 continue
+        logo = None
+        if row.get("logo"):
+            logo = conn.execute(
+                """INSERT INTO core.assets(kind, source_url) VALUES ('logo', %s)
+                   ON CONFLICT (source_url) DO UPDATE SET source_url = EXCLUDED.source_url RETURNING id""",
+                (row["logo"],),
+            ).fetchone()[0]
         conn.execute(
-            "INSERT INTO core.ranking_rows(edition_id, row_no, team_id, country_code, position, points) VALUES (%s,%s,%s,%s,%s,%s)",
-            (edition, row_no, *target, row["position"], row["points"]),
+            """INSERT INTO core.ranking_rows(edition_id, row_no, team_id, country_code, position, points, provider_key, entity_name,
+                 earned_points, teams_still_playing, image_asset_id) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (edition, row_no, *target, row["position"], row["points"], row["id"], row["name"], row.get("earned"), row.get("still"), logo),
         )
+        for season_year, points, association, still in row.get("seasons") or []:
+            conn.execute(
+                """INSERT INTO core.ranking_season_points(edition_id, row_no, season_year, points, association_points, teams_still_playing)
+                   VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING""",
+                (edition, row_no, season_year, points, association, still),
+            )
         written += 1
     # The European level reads the current club coefficients: its cohorts recalculate.
     conn.execute(

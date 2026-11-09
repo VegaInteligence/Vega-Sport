@@ -9,13 +9,42 @@ from datetime import timedelta
 
 # dashboard/shared/player-aliases.js (main); a drift test compares the two.
 PLAYER_ALIASES = {"p_3yEwhj": ("cr7",)}
+# Reviewed UEFA spellings of clubs (club_links() of dashboard/scripts/collect_rankings.py
+# on main): a club named as the key is also known by the value. A drift test compares them.
+CLUB_ALIASES = {
+    "Newcastle United": "Newcastle United FC", "Nottingham Forest": "Nottingham Forest FC",
+    "Slovan Bratislava": "ŠK Slovan Bratislava", "PSG": "Paris Saint-Germain", "Inter": "Internazionale Milano",
+    "Inter Milan": "Internazionale Milano", "Manchester City": "Manchester City FC", "Manchester United": "Manchester United FC",
+    "Tottenham": "Tottenham Hotspur", "Bayern München": "Bayern München", "Bayern Munich": "Bayern München",
+    "Barcelona": "FC Barcelona", "Atletico Madrid": "Atlético de Madrid", "Atlético Madrid": "Atlético de Madrid",
+    "Sporting CP": "Sporting Clube de Portugal", "FC Porto": "FC Porto", "FC København": "FC København", "FCSB": "FCSB",
+    "Bodø/Glimt": "Bodø/Glimt",
+}
 
 
 def scopes(now):
-    return {"player_aliases": timedelta(days=1)}
+    return {"player_aliases": timedelta(days=1), "club_aliases": timedelta(days=1)}
+
+
+def club_aliases(conn):
+    """The reviewed spelling of each club named as a key (several clubs may share a name:
+    each gets it; the UEFA link still needs the same country and a unique match)."""
+    from . import normalize
+
+    written = 0
+    for name, alias in CLUB_ALIASES.items():
+        for (team,) in conn.execute("SELECT id FROM core.teams WHERE name = %s AND is_national IS NOT TRUE", (name,)).fetchall():
+            written += conn.execute(
+                """INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source)
+                   VALUES ('team', %s, %s, %s, 'alias', 'vega') ON CONFLICT DO NOTHING""",
+                (team, alias, normalize(alias)),
+            ).rowcount
+    return written, 0
 
 
 def run(conn, get, scope, now):
+    if scope == "club_aliases":
+        return club_aliases(conn)
     if scope != "player_aliases":
         raise ValueError(scope)
     written = unmatched = 0

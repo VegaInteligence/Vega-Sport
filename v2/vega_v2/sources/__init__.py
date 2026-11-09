@@ -21,8 +21,9 @@ def normalize(name):
 def adapters():
     from . import curated, fifa, sportscore, uefa
 
-    # Keys are core.provider values (ops.source_runs.source).
-    return {"uefa": uefa, "fifa": fifa, "sportscore": sportscore, "vega": curated}
+    # Keys are core.provider values (ops.source_runs.source). Curated names first: the
+    # UEFA links read the reviewed aliases.
+    return {"vega": curated, "uefa": uefa, "fifa": fifa, "sportscore": sportscore}
 
 
 def due(conn, now, adapter_name, adapter):

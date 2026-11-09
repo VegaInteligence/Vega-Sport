@@ -26,9 +26,11 @@ def uefa_page(members, total, updated="2026-11-06T22:00:00Z"):
     return {"data": {"members": members, "lastUpdateDate": updated}, "meta": {"collection": {"totalElements": total}}}
 
 
-def club(ident, name, country, position, value):
-    return {"member": {"id": ident, "displayName": name, "countryCode": country},
-            "overallRanking": {"position": position, "totalValue": value, "totalPoints": value - 1}}
+def club(ident, name, country, position, value, official=None):
+    return {"member": {"id": ident, "displayName": name, "countryCode": country, "displayOfficialName": official,
+                       "logoUrl": f"https://img.uefa.com/{ident}.png"},
+            "overallRanking": {"position": position, "totalValue": value, "totalPoints": value - 1, "numberOfTeamsStillInPlaying": 1},
+            "seasonRankings": [{"seasonYear": 2027, "totalPoints": 9.5, "nationalAssociationPoints": 2.0, "numberOfTeamsStillInPlaying": 1}]}
 
 
 class FakeSource:
@@ -57,6 +59,11 @@ class PureTest(unittest.TestCase):
         body = re.search(r"const ALIASES = Object\.freeze\(\{(.*?)\}\);", text, re.S).group(1)
         site = {key: tuple(re.findall(r'"([^"]+)"', values)) for key, values in re.findall(r"(p_[A-Za-z0-9]{6}): Object\.freeze\(\[(.*?)\]\)", body)}
         self.assertEqual(site, curated.PLAYER_ALIASES)
+
+    def test_curated_club_aliases_match_main(self):
+        text = (ROOT.parent / "dashboard/scripts/collect_rankings.py").read_text()
+        body = re.search(r"aliases=(\{.*?\})\n", text).group(1)
+        self.assertEqual(dict(re.findall(r"'([^']+)':'([^']+)'", body)), curated.CLUB_ALIASES)
 
     def test_sportscore_leagues_match_the_site(self):
         text = (ROOT.parent / "dashboard/frontend/src/services/sportscore-standings.js").read_text()
@@ -98,8 +105,9 @@ class UefaTest(unittest.TestCase):
 
     def test_coefficients_linking_and_reconciliation(self):
         pages = {
-            ("MEN_CLUB", 2027, 1): uefa_page([club(10, "Lyon", "FRA", 9, 80.5), club(11, "Atletico de Madrid", "ESP", 5, 95.0)], 4),
-            ("MEN_CLUB", 2027, 2): uefa_page([club(12, "Racing", "FRA", 60, 12.0), club(13, "Celta Vigo", "ESP", 120, 8.5)], 4),
+            ("MEN_CLUB", 2027, 1): uefa_page([club(10, "Lyon", "FRA", 9, 80.5), club(11, "Atletico de Madrid", "ESP", 5, 95.0)], 5),
+            ("MEN_CLUB", 2027, 2): uefa_page([club(12, "Racing", "FRA", 60, 12.0), club(13, "Celta Vigo", "ESP", 120, 8.5),
+                                              club(14, "R. Sociedad", "ESP", 30, 40.0, official="Real Sociedad")], 5),
             ("MEN_ASSOCIATION", 2027, 1): uefa_page([{"member": {"id": 1, "displayName": "France", "countryCode": "FRA"}, "overallRanking": {"position": 5, "totalValue": 72.3}}], 1),
         }
         get = FakeSource(pages)
@@ -114,9 +122,17 @@ class UefaTest(unittest.TestCase):
         self.assertEqual((links["10"], links["11"]), (1, 2))
         self.assertNotIn(links["12"], (3, 4))
         self.assertGreater(links["13"], 100)
+        self.assertEqual(links["14"], 5)  # by its official UEFA name
         self.assertEqual(self.db.execute(
             "SELECT rows_written, unmatched, status FROM ops.source_runs WHERE scope='uefa_clubs:2027'"
-        ).fetchone(), (4, 2, "ok"))
+        ).fetchone(), (5, 2, "ok"))
+        # The facts the site reads: the source's name, id, logo, earned points, each season.
+        self.assertEqual(self.db.execute(
+            """SELECT r.provider_key, r.entity_name, r.earned_points, r.teams_still_playing, a.source_url, s.season_year, s.points
+               FROM core.ranking_rows r JOIN core.ranking_editions e ON e.id=r.edition_id AND e.kind='uefa_clubs'
+               LEFT JOIN core.assets a ON a.id=r.image_asset_id
+               LEFT JOIN core.ranking_season_points s ON s.edition_id=r.edition_id AND s.row_no=r.row_no WHERE r.team_id=1"""
+        ).fetchone(), ("10", "Lyon", 79.5, 1, "https://img.uefa.com/10.png", 2027, 9.5))
         points = dict(self.db.execute(
             "SELECT r.team_id, r.points FROM core.ranking_rows r JOIN core.ranking_editions e ON e.id=r.edition_id WHERE e.kind='uefa_clubs' AND e.is_current"
         ).fetchall())
@@ -141,7 +157,7 @@ class UefaTest(unittest.TestCase):
         x("INSERT INTO core.players(id, name) VALUES (50, 'Cristiano Ronaldo'), (51, 'Cristiano Ronaldo')")
         x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player','pitchapi','p_3yEwhj',50), ('player','pitchapi','p_other1',51)")
         x("INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source) VALUES ('player', 50, 'Old', 'old', 'alias', 'vega'), ('player', 50, 'CR', 'cr', 'alias', 'wikidata')")
-        self.assertEqual(sources.run_due(self.db, None, NOW, names={"vega"}), {("vega", "player_aliases"): "ok"})
+        self.assertEqual(sources.run_due(self.db, None, NOW, names={"vega"}), {("vega", "player_aliases"): "ok", ("vega", "club_aliases"): "ok"})
         names = self.db.execute("SELECT entity_id, normalized, source::text FROM core.entity_names WHERE entity_type='player' ORDER BY 1, 2").fetchall()
         # The homonym gets nothing; the removed Vega alias goes; Wikidata's stays.
         self.assertEqual(names, [(50, "cr", "wikidata"), (50, "cr7", "vega")])
