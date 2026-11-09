@@ -9,13 +9,17 @@
  * come from the portrait search as well as from Wikidata.
  */
 import { createHash } from "node:crypto";
-import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+import { cacheHeaders, matchesEtag, reject, send, validateParams } from "../http.mjs";
+import { cloudFrontObjectUrl, immutableFile } from "../media.mjs";
+import { MESSI_ID, mergeMessiHonours } from "../../../../dashboard/scripts/materialize_curated.mjs";
+import { projectionGroups } from "../../../../dashboard/shared/honour-display.js";
 
 const iso = (v) => (v instanceof Date ? v.toISOString() : v ?? null);
 const SPEC = {
   "club-wikidata": { uefa: /^\d{1,12}$/, name: /^[^\u0000-\u001f\u007f]{1,200}$/, country: /^[^\u0000-\u001f\u007f]{1,200}$/ },
   "coach-portrait": { name: /^[^\u0000-\u001f\u007f]{1,200}$/ },
   stadium: { id: /^Q\d{1,16}$/ },
+  "player-honours": { id: /^p_[A-Za-z0-9]{6}$/ },
 };
 
 function validate(p, spec) {
@@ -45,8 +49,42 @@ export function clubFacts(r) {
   };
 }
 
-export function createSupportRoute(read) {
+/** Player honours (main's player_honours.py projection); Messi's page shows main's curated list. */
+export function honoursBody(r) {
+  const body = {
+    available: true,
+    source: "Wikipédia",
+    identitySourceUrl: `https://www.wikidata.org/wiki/${r.wikidata_id}`,
+    sourceUrl: r.source_url,
+    revision: r.revision != null ? Number(r.revision) : null,
+    fetchedAt: iso(r.fetched_at),
+    honours: r.honours,
+  };
+  if (r.public_id === MESSI_ID) body.displayGroups = mergeMessiHonours(projectionGroups(body.honours));
+  return body;
+}
+
+const IMAGE_TYPES = { webp: "image/webp", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg" };
+
+export function createSupportRoute(read, { mediaBase = null } = {}) {
   return async (req, path, params) => {
+    if (path === "/api/player-honours") {
+      const p = validate(params, SPEC["player-honours"]);
+      if (!p.id) reject(400, "Paramètre manquant.");
+      const [r] = await read("SELECT * FROM api.player_honours WHERE public_id=$1", [p.id]);
+      if (!r) missing();
+      return respond(req, honoursBody(r));
+    }
+    if (path === "/api/assets") {
+      // An image URL of a response -> its copy behind CloudFront (main: the same 307).
+      validateParams(params, ["url"]);
+      const src = params.get("url");
+      if (!src || src.length > 2048) reject(400, "URL manquante.");
+      const [row] = await read("SELECT s3_key AS path,content_type FROM api.media_assets WHERE source_url=$1", [src]);
+      const type = row && IMAGE_TYPES[String(row.path).split(".").at(-1).toLowerCase()];
+      if (!row || !mediaBase || !immutableFile(row.path) || type !== row.content_type) missing();
+      return new Response(null, { status: 307, headers: { Location: cloudFrontObjectUrl(row.path, mediaBase), ...cacheHeaders(60, 0) } });
+    }
     if (path === "/api/club-wikidata") {
       const p = validate(params, SPEC["club-wikidata"]);
       let rows;

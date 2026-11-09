@@ -14,7 +14,7 @@ COPY v2/sql sql
 # The archive import runs main's builders and shared/archive.js unchanged.
 COPY dashboard/scripts/build_openfootball_history.py dashboard/scripts/build_footballcsv_history.py \
      dashboard/scripts/build_engsoccerdata_history.py dashboard/scripts/build_scottish_history.py \
-     dashboard/scripts/build_historical_goals.py dashboard/scripts/
+     dashboard/scripts/build_historical_goals.py dashboard/scripts/player_honours.py dashboard/scripts/
 COPY dashboard/shared/archive.js dashboard/shared/archive-text.js dashboard/shared/openfootball-history.js dashboard/shared/
 COPY v2/archives/edition.mjs v2/archives/
 # main's Wikidata and Commons readers (vega_v2/sources/wikidata.py) and their imports.

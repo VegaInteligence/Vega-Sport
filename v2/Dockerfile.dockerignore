@@ -11,6 +11,7 @@
 !dashboard/scripts/build_engsoccerdata_history.py
 !dashboard/scripts/build_scottish_history.py
 !dashboard/scripts/build_historical_goals.py
+!dashboard/scripts/player_honours.py
 !dashboard/shared/archive.js
 !dashboard/shared/archive-text.js
 !dashboard/shared/openfootball-history.js
