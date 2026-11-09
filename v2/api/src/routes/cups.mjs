@@ -7,7 +7,12 @@
  * - GET /api/cups/edition?competition=l_v…&season=: one edition, in main's body for its
  *   format (legacy /api/open-cups, /api/openligadb and /api/nations-results);
  * - GET /api/cup-snapshot?kind=native|standings|edition&competition=l_…&season=: main's
- *   snapshot; `edition` replaces the legacy source kinds.
+ *   snapshot; `edition` replaces the legacy source kinds;
+ * - GET /api/cup-index?kind=supplemental and /api/cup-table?competition=<folder>&season=&kind=:
+ *   main's catalogue of complementary competitions (open-matchday) and its table rows,
+ *   rebuilt from typed facts (the source's goal minutes, kick-off time and per-row
+ *   sub-source are not kept: empty). The retired cup worker's index (kind=worker) is a 404,
+ *   and the site reads the catalogue instead.
  *
  * Differences with the legacy read: a field the source left null is omitted (as when it
  * is absent); a snapshot's `worker.checkedAt`/`updatedAt` are the last successful read and
@@ -33,7 +38,24 @@ const SOURCES = {
   "open-cups": (e) => ({ name: "OpenFootball", url: e.source_url, license: "CC0-1.0" }),
   openligadb: (e) => ({ name: "OpenLigaDB", url: "https://www.openligadb.de/", dataUrl: e.data_url, license: "ODbL-1.0" }),
   "nations-results": () => ({ name: "International Results", url: "https://github.com/martj42/international_results", license: "CC0-1.0" }),
+  "open-matchday": (e) => ({ name: "open-matchday", url: e.source_url, license: "informational, non-commercial use with attribution" }),
 };
+const FOLDER = /^[A-Z0-9_]+_[a-z0-9-]+$/;
+const text = (v) => (v === null || v === undefined ? "" : String(v));
+const outcome = (h, a) => (h == null || a == null ? "" : h > a ? "H" : h < a ? "A" : "D");
+
+/** A row of main's catalogue tables (the source's CSV line), from typed facts. */
+export function tableRow(r) {
+  const row = { gw: text(r.gw), away: r.away, date: r.date ?? "", home: r.home, time: "" };
+  if (r.status !== "finished") return row;
+  const sides = {};
+  for (const side of ["home", "away"])
+    for (const k of ["shots", "target", "fouls", "corners", "yellow", "red", "corners_1h", "corners_2h"]) sides[`${side}_${k}`] = text(r[`${side}_${k}`]);
+  return {
+    ...row, source: "", ft_away: text(r.away_score), ft_home: text(r.home_score), ht_away: text(r.away_score_ht), ht_home: text(r.home_score_ht),
+    ft_result: outcome(r.home_score, r.away_score), ht_result: outcome(r.home_score_ht, r.away_score_ht), goal_minutes: "", ...sides,
+  };
+}
 
 function validate(p, spec) {
   validateParams(p, Object.keys(spec));
@@ -95,6 +117,15 @@ export async function cupBody(read, competitionId, season) {
   if (!e) return null;
   const rows = await read("SELECT * FROM api.cup_matches WHERE competition_season_id=$1 ORDER BY position, match_id", [e.competition_season_id]);
   const source = SOURCES[e.kind](e);
+  if (e.format === "table-v1") {
+    const table = await read("SELECT * FROM api.cup_table_rows WHERE competition_season_id=$1 ORDER BY position", [e.competition_season_id]);
+    const body = {
+      name: e.name, season, source,
+      results: table.filter((r) => r.status === "finished").map(tableRow),
+      fixtures: table.filter((r) => r.status !== "finished").map(tableRow),
+    };
+    return { body, worker: { checkedAt: iso(e.checked_at), updatedAt: iso(e.updated_at) } };
+  }
   const body =
     e.format === "matches-v1"
       ? { name: e.name, season, matches: rows.map(openCupMatch), source }
@@ -137,6 +168,38 @@ export function createCupRoute(read) {
         cups.set(e.competition_id, { ...cup, name: e.name ?? e.competition, format: e.format, source: SOURCES[e.kind](e), seasons: [...cup.seasons, e.season] });
       }
       return respond(req, { cups: [...cups.values()] }, "catalog");
+    }
+    if (path === "/api/cup-index") {
+      // main's catalogue of complementary competitions; the cup worker's own index is retired.
+      const p = validate(params, { kind: /^(supplemental|worker)$/ });
+      if (p.kind !== "supplemental") reject(404, "Donnée indisponible.");
+      const [revision] = await read("SELECT * FROM api.source_revisions WHERE source='open-matchday'");
+      const editions = await read(
+        `SELECT e.competition,e.name,e.season,(SELECT count(*) FILTER(WHERE t.status='finished')::int FROM api.cup_table_rows t WHERE t.competition_season_id=e.competition_season_id) results,
+           (SELECT count(*) FILTER(WHERE t.status<>'finished')::int FROM api.cup_table_rows t WHERE t.competition_season_id=e.competition_season_id) fixtures
+         FROM api.cup_editions e WHERE e.kind='open-matchday' ORDER BY e.competition,e.season`,
+      );
+      if (!revision && !editions.length) reject(404, "Donnée indisponible.");
+      return respond(req, {
+        meta: {
+          terms: "https://github.com/oladeeayo/open-matchday/blob/master/DISCLAIMER.md",
+          usage: revision?.license ?? "informational, non-commercial use with attribution",
+          source: revision?.url ?? "https://github.com/oladeeayo/open-matchday",
+          retrieved_at_utc: iso(revision?.retrieved_at),
+          source_generated_at_utc: revision?.revision ?? null,
+        },
+        competitions: editions.map((e) => ({
+          name: e.name, folder: e.competition, season: e.season,
+          tables: { goals: { rows: 0 }, results: { rows: e.results }, fixtures: { rows: e.fixtures } }, country_code: e.competition.split("_")[0],
+        })),
+      }, "catalog");
+    }
+    if (path === "/api/cup-table") {
+      const p = validate(params, { competition: FOLDER, season: YEAR, kind: /^(results|fixtures)$/ });
+      if (!p.competition || !p.season || !p.kind) reject(400, "Paramètre manquant.");
+      const rows = await read("SELECT * FROM api.cup_table_rows WHERE competition=$1 AND season=$2 ORDER BY position", [p.competition, p.season]);
+      if (!rows.length) reject(404, "Donnée indisponible.");
+      return respond(req, rows.filter((r) => (p.kind === "results") === (r.status === "finished")).map(tableRow), "catalog");
     }
     if (path === "/api/cups/edition") {
       const p = validate(params, { competition: LEAGUE, season: YEAR });
