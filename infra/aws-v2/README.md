@@ -46,6 +46,12 @@ aws login --profile statarena
 aws cloudformation deploy --profile statarena --region us-east-2 --stack-name vega-v2-deploy-roles --template-file infra/aws-v2/deploy-roles.yaml --capabilities CAPABILITY_NAMED_IAM
 ```
 
+The database size of the doc (« Volume » : 4 GB once measured; on 2026-11-09 the 1 GB instance ran out of memory twice with the archives and the backfill), set once by the account owner, then kept by every deploy:
+
+```bash
+aws cloudformation deploy --profile statarena --region us-east-2 --stack-name vega-v2-database --template-file infra/aws-v2/database.yaml --parameter-overrides InstanceClass=db.t4g.medium --no-fail-on-empty-changeset
+```
+
 ```sh
 gh api -X PUT repos/VegaInteligence/Vega-Sport/environments/v2-production
 ```

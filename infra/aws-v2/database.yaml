@@ -4,11 +4,17 @@ Description: >-
   worker and the v2 read API security groups. The current statarena-postgres
   instance, its security group and its data are not touched.
 Parameters:
+  # Doc "Volume": the current season (~1.5 GB) holds in memory on a 4 GB instance, the
+  # size chosen once measured. Measured on 2026-11-09 with the archives and the backfill:
+  # the 1 GB db.t4g.micro ran out of memory twice (RDS recoveries at 17:21 and 21:03 UTC)
+  # and cold home reads took 2 to 7 s, so the doc's size is db.t4g.medium. The resize is
+  # the account owner's (a billing change): set once with InstanceClass=db.t4g.medium
+  # (infra/aws-v2/README.md), then kept by every later deploy (previous value).
   InstanceClass:
     Type: String
     Default: db.t4g.micro
     AllowedValues: [db.t4g.micro, db.t4g.small, db.t4g.medium]
-    Description: Final size is chosen in the AWS review after the vertical-slice measurements.
+    Description: The doc's size is db.t4g.medium (4 GB), measured on 2026-11-09.
   AllocatedStorage: {Type: Number, Default: 20, MinValue: 20, MaxValue: 200}
   MaxAllocatedStorage: {Type: Number, Default: 100, MinValue: 20, MaxValue: 1000}
   EngineVersion: {Type: String, Default: '18', AllowedPattern: '1[78](\.\d+)?'}
@@ -95,6 +101,50 @@ Resources:
       AutoMinorVersionUpgrade: true
       EnablePerformanceInsights: false
       Tags: [{Key: project, Value: vega-v2}]
+  # Alarms of the AWS review (doc "Mise en place": instance, backups, alarms), visible in
+  # CloudWatch; the collection backlog is on the status page (ops views).
+  LowMemoryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-db-low-memory
+      AlarmDescription: Under 300 MB freeable on vega-football-db-postgres for 15 minutes
+      Namespace: AWS/RDS
+      MetricName: FreeableMemory
+      Dimensions: [{Name: DBInstanceIdentifier, Value: !Ref Database}]
+      Statistic: Minimum
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 314572800
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: notBreaching
+  LowStorageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-db-low-storage
+      AlarmDescription: Under 3 GB free storage on vega-football-db-postgres (autoscaling up to MaxAllocatedStorage)
+      Namespace: AWS/RDS
+      MetricName: FreeStorageSpace
+      Dimensions: [{Name: DBInstanceIdentifier, Value: !Ref Database}]
+      Statistic: Minimum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 3221225472
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: notBreaching
+  HighCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-db-high-cpu
+      AlarmDescription: Over 90 % CPU on vega-football-db-postgres for 30 minutes
+      Namespace: AWS/RDS
+      MetricName: CPUUtilization
+      Dimensions: [{Name: DBInstanceIdentifier, Value: !Ref Database}]
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 6
+      Threshold: 90
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
 Outputs:
   DatabaseEndpoint: {Value: !GetAtt Database.Endpoint.Address, Export: {Name: vega-v2-db-endpoint}}
   DatabasePort: {Value: !GetAtt Database.Endpoint.Port, Export: {Name: vega-v2-db-port}}

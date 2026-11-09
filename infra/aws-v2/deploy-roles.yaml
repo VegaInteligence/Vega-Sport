@@ -111,6 +111,12 @@ Resources:
                 Effect: Allow
                 Action: ['appsync:CreateApi', 'appsync:TagResource', 'appsync:ListApis']
                 Resource: '*'
+              # The database alarms (database.yaml).
+              - Sid: DatabaseAlarms
+                Effect: Allow
+                Action: ['cloudwatch:PutMetricAlarm', 'cloudwatch:DeleteAlarms', 'cloudwatch:DescribeAlarms', 'cloudwatch:TagResource',
+                         'cloudwatch:UntagResource', 'cloudwatch:ListTagsForResource']
+                Resource: !Sub 'arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:vega-v2-*'
               # The schedule that starts the live ingestor (live.yaml IngestorSchedule).
               - Sid: LiveSchedule
                 Effect: Allow
