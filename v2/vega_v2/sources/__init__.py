@@ -1,0 +1,66 @@
+"""Adapters of the sources other than PitchAPI: call -> validate -> match -> write.
+
+Each adapter exposes SCOPES (scope -> period) and run(conn, get, scope, now) returning
+(rows_written, unmatched). `due` and `run_due` schedule them from ops.source_runs;
+the worker calls run_due once a day. Responses are processed in memory, never stored.
+"""
+
+from datetime import datetime, timedelta, timezone
+import re
+import unicodedata
+
+from ..store import StoreError
+
+
+def normalize(name):
+    """Comparison form of a name: ASCII, lower case, letters and digits only."""
+    folded = unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]", "", folded)
+
+
+def adapters():
+    from . import uefa
+
+    return {"uefa": uefa}
+
+
+def due(conn, now, adapter_name, adapter):
+    rows = dict(
+        conn.execute(
+            "SELECT scope, last_success_at FROM ops.source_runs WHERE source=%s", (adapter_name,)
+        ).fetchall()
+    )
+    return [scope for scope, period in adapter.scopes(now).items() if rows.get(scope) is None or rows[scope] <= now - period]
+
+
+def run_due(conn, get, now=None, *, names=None):
+    """Run every adapter scope whose period has elapsed; one failure never stops the others."""
+    instant = now or datetime.now(timezone.utc)
+    results = {}
+    for name, adapter in adapters().items():
+        if names and name not in names:
+            continue
+        for scope in due(conn, instant, name, adapter):
+            code, written, unmatched = None, 0, 0
+            try:
+                with conn.transaction():
+                    written, unmatched = adapter.run(conn, get, scope, instant)
+            except (SourceError, StoreError, ValueError, KeyError, TypeError) as error:
+                code = error.code if isinstance(error, SourceError) else "INVALID_SOURCE_RESPONSE"
+            conn.execute(
+                """INSERT INTO ops.source_runs(source, scope, last_attempt_at, last_success_at, status, error_code, rows_written, unmatched, updated_at)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,now())
+                   ON CONFLICT (source, scope) DO UPDATE SET last_attempt_at=EXCLUDED.last_attempt_at,
+                     last_success_at=coalesce(EXCLUDED.last_success_at, ops.source_runs.last_success_at),
+                     status=EXCLUDED.status, error_code=EXCLUDED.error_code, rows_written=EXCLUDED.rows_written,
+                     unmatched=EXCLUDED.unmatched, updated_at=now()""",
+                (name, scope, instant, None if code else instant, "error" if code else "ok", code, written, unmatched),
+            )
+            results[(name, scope)] = code or "ok"
+    return results
+
+
+class SourceError(RuntimeError):
+    def __init__(self, code):
+        super().__init__(code)
+        self.code = code

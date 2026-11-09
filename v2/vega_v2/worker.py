@@ -47,7 +47,7 @@ def _now():
 
 
 class Worker:
-    def __init__(self, store, client, *, lanes=DEFAULT_LANES, clock=_now, cohort_delay=600, calc_conn=None, backfill=None):
+    def __init__(self, store, client, *, lanes=DEFAULT_LANES, clock=_now, cohort_delay=600, calc_conn=None, backfill=None, source_get=None):
         unknown = set(lanes) - set(LANE_ORDER)
         if unknown or not lanes:
             raise ValueError("invalid lanes")
@@ -59,6 +59,7 @@ class Worker:
         self.lanes = tuple(lane for lane in LANE_ORDER if lane in lanes)
         self.clock = clock
         self.cohort_delay = cohort_delay
+        self.source_get = source_get  # sources other than PitchAPI; None disables them
         # The backfill task plans history only (planner.plan_backfill keyword arguments).
         self.backfill = backfill if backfill is not None else ({} if self.lanes == ("backfill",) else None)
         self.results = Counter()
@@ -214,6 +215,18 @@ class Worker:
                 (now, now, now),
             )
         ]
+        if self.source_get is not None:
+            # Rankings and other sources first: the levels read the UEFA coefficients.
+            from . import sources
+            from .sources import uefa
+
+            try:
+                for (name, scope), outcome in sources.run_due(self.conn, self.source_get, now).items():
+                    print(f"source={name} scope={scope} outcome={outcome}", flush=True)
+                with self.conn.transaction():
+                    uefa.reconcile_teams(self.conn)
+            except psycopg.Error as error:
+                print(f"sources error={safe_code(error)}", flush=True)
         for season in seasons:
             try:
                 models.refresh_daily(self.calc_conn, season)
@@ -610,6 +623,7 @@ def main(argv=None):
         lanes=tuple(x for x in args.lanes.split(",") if x),
         cohort_delay=args.cohort_delay,
         calc_conn=calc_conn,
+        source_get=None if args.lanes == "backfill" else __import__("vega_v2.sources.http", fromlist=["json_getter"]).json_getter(),
         backfill=(
             {"first_season": args.backfill_from,
              "competitions": args.backfill_competitions.split(",") if args.backfill_competitions else None}
