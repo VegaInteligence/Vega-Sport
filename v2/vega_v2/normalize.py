@@ -676,6 +676,8 @@ def normalize_family(family, data, *, match_id=None):
                         "outcome",
                         {
                             "Goal": "goal",
+                            # Seen in real responses (CI worker run, 2026-11-09).
+                            "OwnGoal": "goal",
                             "AttemptSaved": "saved",
                             "Miss": "miss",
                             "Post": "post",
@@ -696,6 +698,8 @@ def normalize_family(family, data, *, match_id=None):
                         value = _enum(out, "shot." + src, item[src], values)
                         if value is not None:
                             row[dst] = value
+                        if src == "event_type" and item[src] == "OwnGoal":
+                            row.setdefault("is_own_goal", True)
                 if item.get("situation") is not None:
                     situations = {
                         "RegularPlay": "regular_play",

@@ -1,0 +1,168 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Vega v2 worker (planner + collector + calculator) as one small always-on Fargate
+  service, plus on-demand task definitions for the backfill and the migrations.
+  Public IP in the default VPC subnets: outbound HTTPS without a NAT gateway; no
+  inbound port is open.
+Parameters:
+  ImageTag: {Type: String, AllowedPattern: '[a-f0-9]{12,64}', Description: Immutable image tag (git SHA) in the vega-v2-worker repository.}
+  DesiredCount: {Type: Number, Default: 1, AllowedValues: [0, 1]}
+  CollectUrlParameter: {Type: String, Default: /vega/v2/collect-database-url}
+  CalcUrlParameter: {Type: String, Default: /vega/v2/calc-database-url}
+  PasswordParameterPrefix: {Type: String, Default: /vega/v2/password, Description: 'SecureStrings <prefix>-collect, -calc, -read'}
+  PitchApiKeyParameter: {Type: String, Default: /vega/v2/pitchapi-key}
+Resources:
+  Repository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    Properties:
+      RepositoryName: vega-v2-worker
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration: {ScanOnPush: true}
+      LifecyclePolicy:
+        LifecyclePolicyText: '{"rules":[{"rulePriority":1,"description":"keep 20 images","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":20},"action":{"type":"expire"}}]}'
+      Tags: [{Key: project, Value: vega-v2}]
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: vega-v2
+      ClusterSettings: [{Name: containerInsights, Value: disabled}]
+      Tags: [{Key: project, Value: vega-v2}]
+  Logs:
+    Type: AWS::Logs::LogGroup
+    Properties: {LogGroupName: /ecs/vega-v2-worker, RetentionInDays: 30}
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: [{Effect: Allow, Principal: {Service: ecs-tasks.amazonaws.com}, Action: 'sts:AssumeRole'}]
+      ManagedPolicyArns: ['arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy']
+      Policies:
+        - PolicyName: Secrets
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['ssm:GetParameters']
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CollectUrlParameter}'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CalcUrlParameter}'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PasswordParameterPrefix}-*'
+              - Effect: Allow
+                Action: ['secretsmanager:GetSecretValue']
+                Resource: !ImportValue vega-v2-db-master-secret
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PitchApiKeyParameter}'
+  # The code calls no AWS API: the task role grants nothing.
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: [{Effect: Allow, Principal: {Service: ecs-tasks.amazonaws.com}, Action: 'sts:AssumeRole'}]
+  WorkerTask:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: vega-v2-worker
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: '256'
+      Memory: '512'
+      RuntimePlatform: {CpuArchitecture: ARM64, OperatingSystemFamily: LINUX}
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: worker
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/vega-v2-worker:${ImageTag}'
+          Essential: true
+          Command: [--lanes, 'score,details,reference']
+          StopTimeout: 60
+          ReadonlyRootFilesystem: true
+          Secrets:
+            - {Name: V2_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CollectUrlParameter}'}
+            - {Name: V2_CALC_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CalcUrlParameter}'}
+            - {Name: PITCHAPI_API_KEY, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PitchApiKeyParameter}'}
+          LogConfiguration:
+            LogDriver: awslogs
+            Options: {awslogs-group: !Ref Logs, awslogs-region: !Ref 'AWS::Region', awslogs-stream-prefix: worker}
+  BackfillTask:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: vega-v2-backfill
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: '256'
+      Memory: '512'
+      RuntimePlatform: {CpuArchitecture: ARM64, OperatingSystemFamily: LINUX}
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: backfill
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/vega-v2-worker:${ImageTag}'
+          Essential: true
+          # Runs for days, stops when the backfill lane is empty.
+          Command: [--lanes, backfill, --until-idle]
+          ReadonlyRootFilesystem: true
+          Secrets:
+            - {Name: V2_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CollectUrlParameter}'}
+            - {Name: V2_CALC_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CalcUrlParameter}'}
+            - {Name: PITCHAPI_API_KEY, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PitchApiKeyParameter}'}
+          LogConfiguration:
+            LogDriver: awslogs
+            Options: {awslogs-group: !Ref Logs, awslogs-region: !Ref 'AWS::Region', awslogs-stream-prefix: backfill}
+  MigrationTask:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: vega-v2-migrate
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: '256'
+      Memory: '512'
+      RuntimePlatform: {CpuArchitecture: ARM64, OperatingSystemFamily: LINUX}
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: migrate
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/vega-v2-worker:${ImageTag}'
+          Essential: true
+          EntryPoint: [python, -m, vega_v2.migrate]
+          ReadonlyRootFilesystem: true
+          Environment:
+            - {Name: V2_DB_HOST, Value: !ImportValue vega-v2-db-endpoint}
+            - {Name: V2_DB_NAME, Value: vega_v2}
+          Secrets:
+            - Name: V2_DB_USER
+              ValueFrom: !Join ['', [!ImportValue vega-v2-db-master-secret, ':username::']]
+            - Name: V2_DB_PASSWORD
+              ValueFrom: !Join ['', [!ImportValue vega-v2-db-master-secret, ':password::']]
+            - {Name: V2_COLLECT_PASSWORD, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PasswordParameterPrefix}-collect'}
+            - {Name: V2_CALC_PASSWORD, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PasswordParameterPrefix}-calc'}
+            - {Name: V2_READ_PASSWORD, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PasswordParameterPrefix}-read'}
+          LogConfiguration:
+            LogDriver: awslogs
+            Options: {awslogs-group: !Ref Logs, awslogs-region: !Ref 'AWS::Region', awslogs-stream-prefix: migrate}
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: vega-v2-worker
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref WorkerTask
+      DesiredCount: !Ref DesiredCount
+      LaunchType: FARGATE
+      # One worker at a time: replace, never overlap (the planner and leases allow
+      # overlap, but a single process keeps the PitchAPI rate predictable).
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 0
+        MaximumPercent: 100
+        DeploymentCircuitBreaker: {Enable: true, Rollback: true}
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups: [!ImportValue vega-v2-worker-sg]
+          Subnets: [subnet-0233a9567335f56ce, subnet-04c9af303f55d9718, subnet-0e72516f361932c15]
+      Tags: [{Key: project, Value: vega-v2}]
+Outputs:
+  RepositoryUri: {Value: !GetAtt Repository.RepositoryUri}
+  Cluster: {Value: !Ref Cluster}
+  BackfillTaskDefinition: {Value: !Ref BackfillTask}
+  MigrationTaskDefinition: {Value: !Ref MigrationTask}
