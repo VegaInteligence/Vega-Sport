@@ -28,7 +28,30 @@ Le [compte rendu de validation](VERIFICATION.md) contient les preuves : tests, p
 
 Le worker prend les travaux dans l'ordre score, détails, référentiel (le backfill a sa propre tâche). Il écrit `core` dans la même transaction que l'acquittement, puis recalcule.
 
-**Calcul.** Saisons joueur et club, états de jeu, classements, xPts (`agg.xpts_v1`), cohortes (par édition et poste, et Europe : Top 7 et coupes UEFA, par match), centiles et rangs, distributions P10–P90, phases et indice Vega club, positions, niveaux européens, rôles et indice Vega joueur, similarité club et joueur, force des championnats, profils d'âge. Les formules sont celles de `docs/calculs` (main). Les cohortes se recalculent 10 min après le dernier changement ; niveaux, similarités et profils une fois par jour. Chaque résultat porte son `agg.calc_runs`. Potentiel, projections, Ballon d'Or et valeurs marchandes restent vides : le site les affiche comme fictifs.
+**Calcul.** Saisons joueur et club, états de jeu, classements, xPts (`agg.xpts_v1`), cohortes (par édition et poste, et Europe : Top 7 et coupes UEFA, par match), centiles et rangs, distributions P10–P90, phases et indice Vega club, positions, niveaux européens, rôles et indice Vega joueur, similarité club et joueur, force des championnats, profils d'âge. Les formules sont celles de `docs/calculs` (main). Les cohortes se recalculent 10 min après le dernier changement ; niveaux, similarités et profils une fois par jour. Chaque résultat porte son `agg.calc_runs`. Potentiel, projections et valeurs marchandes restent vides : le site les affiche comme fictifs.
+
+**Classements de puissance** ([`power.py`](vega_v2/power.py), méthode de `docs/METHODE_CLASSEMENT_BALLON_D_OR.md` sur main), recalculés chaque jour :
+- clubs : la force Elo du § 3, mise à jour match après match sur tous les matchs terminés ; chaque match se lit avec les forces d'avant. Les coupes d'Europe relient les championnats ; clubs et sélections sont classés à part (`agg.team_elo`, `agg.team_power`) ;
+- joueurs : le score B par rôle des §§ 4–8. Pour chaque match, on calcule l'écart standardisé à l'attendu pour le rôle, les minutes et l'adversaire, puis la contribution C (blocs pondérés selon le rôle). Sur la saison, T = ΣC et R* = 90 T / (M + 450), et B = 0,75 Pct(T) + 0,25 Pct(R*) dans le rôle principal (`agg.player_power_matches`, `agg.player_power`) ;
+- lecture : `/api/rankings/power?kind=players|clubs|nations&season=`. Les lignes joueurs portent les champs qu'attend `ballonDorRanking(season)` du site (rang, joueur, photo, club, logo, poste, score).
+
+Les points que la méthode laisse ouverts (son § 12) sont tranchés ainsi. Chaque réglage est nommé dans `power.py` et conservé avec chaque calcul (`agg.power_runs`) :
+
+| Point ouvert | Choix v1 |
+|---|---|
+| Elo | départ 1500, K = 20, avantage du terrain 60 points (aucun en terrain neutre), attendu 1 / (1 + 10^((R_adv − R − h)/400)), résultat après prolongation (tirs au but = nul) |
+| Matchs de la force | tous les matchs terminés de l'ère PitchAPI ; archives et coupes complémentaires une fois leurs équipes reliées aux mêmes clubs |
+| Période et univers | une saison Vega, matchs de clubs (sélections exclues), joueur entré en jeu |
+| Rôles | emplacement de la composition (`core.power_role`) ; un remplaçant prend son rôle le plus joué, sinon le défaut de sa ligne |
+| Attendu, volumes | (t/90) · exp(α + β Δ), Δ = (Elo adverse − Elo propre)/400 avant le match, α et β ajustés par maximum de vraisemblance de Poisson par rôle et indicateur (β = 0 sous 200 matchs) |
+| Attendu, indicateurs conditionnels | tentatives × taux de réussite du rôle (duels, duels aériens, dribbles, passes, longs ballons) |
+| Gardiens | buts évités (xGOT subis − buts encaissés), attendu 0 ; sorties aériennes et poings ; sorties hors de la surface ; relance |
+| Dispersion s | écart quadratique moyen de x − x̂ dans le rôle ; indicateur écarté si s = 0 ou sous 30 matchs |
+| Blocs | finition (buts hors penalty, xG hors penalty, tirs cadrés, grosses occasions manquées −), création (passes décisives, xA, occasions créées, grosses occasions créées), progression (passes dans le dernier tiers, passes et conduites progressives, dribbles), défense (tacles, interceptions, récupérations, dégagements, tirs contrés, duels, duels aériens, dribblé −, erreurs −), conservation (passes réussies, ballons perdus −, ballons touchés) ; poids égaux dans un bloc |
+| Valeurs absentes | jamais zéro : l'indicateur ou le bloc sort du match, les poids des blocs restants sont renormalisés |
+| Rôles multiples | les contributions s'additionnent ; le rang se calcule dans le rôle qui a le plus de minutes |
+| Éligibilité | 900 minutes |
+| Centiles | « rang moyen » du site : (#inférieurs + ½ #égaux) / n, dans le rôle |
 
 **Lecture.** Les corps de l'API actuelle (mêmes validateurs), plus un champ `retry` dans les erreurs. Une route nomme ce qu'elle sert, jamais sa source : ni le chemin ni un paramètre ne nomme un fournisseur, qui peut changer (`030_neutral_reads.sql`). Les clubs, stades et coupes se désignent par leur identifiant Vega ; la table de correspondance avec les routes actuelles, pour la bascule, est en fin de liste.
 - `/api/health`, `/api/status`, `/api/dashboard/manifest` (son `capabilities.compactReads` dit quelles lectures la v2 sert) ;
@@ -50,6 +73,7 @@ Le worker prend les travaux dans l'ordre score, détails, référentiel (le back
 | `/api/open-cups`, `/api/openligadb`, `/api/nations-results` | `/api/cups/edition?competition=l_v…&season=` (identifiants dans `/api/cups/index`) |
 | `/api/cup-snapshot?kind=open-cups\|openligadb\|nations-results` | `/api/cup-snapshot?kind=edition` |
 | `/api/rankings/edition?edition=2026.uefa` | `/api/rankings/edition?edition=2026` |
+| `ballonDorRanking(season)` (vide sur main) | `/api/rankings/power?kind=players&season=` |
 
 Chaque route liste en tête de fichier ses écarts voulus avec l'API actuelle, pour la parité : identifiant d'apparition `<match>:<joueur>`, statuts normalisés, libellés de statistiques laissés au site, classement Vega servi quand aucune source officielle n'en publie.
 

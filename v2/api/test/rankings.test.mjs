@@ -43,3 +43,20 @@ test("ranking index and editions", { skip }, async () => {
   assert.equal((await get("/api/rankings/edition?kind=fifa-men&edition=bad")).response.status, 400);
   assert.equal((await get("/api/rankings/edition?kind=fifa-men&edition=2025-09-18.fifa")).response.status, 400); // no source in a key
 });
+
+test("power rankings of players and clubs for a season", { skip }, async () => {
+  const { response, body } = await get("/api/rankings/power?kind=players&season=2025/2026");
+  assert.equal(response.status, 200);
+  assert.deepEqual([body.season, body.kind, body.method.version], ["2025/2026", "players", "power-ranking-v1"]);
+  assert.deepEqual(body.rows.map((r) => [r.rank, r.playerId, r.position, r.score]), [[1, "p_aaaab1", "Avant-centre", 87.5], [2, "p_aaaab4", "Ailier / milieu offensif", 50]]);
+  assert.deepEqual(Object.keys(body.rows[0]).slice(0, 8), ["rank", "playerId", "name", "imageUrl", "teamId", "team", "teamImageUrl", "position"]);
+  const clubs = (await get("/api/rankings/power?kind=clubs&season=2025/2026")).body;
+  assert.equal(clubs.rows.length, 4);
+  assert.deepEqual(clubs.rows.map((r) => r.rank), [1, 2, 3, 4]);
+  assert.ok(clubs.rows.every((r, i) => !i || clubs.rows[i - 1].elo >= r.elo));
+  assert.equal(Math.round(clubs.rows.reduce((s, r) => s + r.elo, 0)), 6000); // Elo moves points between clubs only
+  assert.equal((await get("/api/rankings/power?kind=players&season=2025/2026&limit=1")).body.rows.length, 1);
+  assert.equal((await get("/api/rankings/power?kind=nations&season=2025/2026")).response.status, 404);
+  assert.equal((await get("/api/rankings/power?kind=players&season=2025")).response.status, 400);
+  assert.equal((await get("/api/rankings/power?kind=ballon&season=2025/2026")).response.status, 400);
+});

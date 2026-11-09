@@ -4,7 +4,7 @@ Every formula is the one the site uses today, as written in docs/calculs on main
 04-clubs/02 (centiles, phases, indice Vega club), 04-clubs/03 (référentiels, niveau),
 04-clubs/04 (clubs similaires), 05-joueurs/02 (centiles saison), 05-joueurs/03 (rôles,
 indice Vega joueur) and 05-joueurs/04 (joueurs similaires). Values shown as fictitious
-on the site (potential, projections, Ballon d'Or, market value) are not invented here:
+on the site (potential, projections, market value) are not invented here:
 their tables stay empty until a source or a validated model exists.
 
 Each published result carries the agg.calc_runs row that produced it.
@@ -760,7 +760,11 @@ def process_cohorts(conn, *, limit=50, min_age_seconds=600):
 
 
 def refresh_daily(conn, season):
-    """Once a day per active season: levels, strength, squad profiles, similarity."""
+    """Once a day per active season: levels, strength, squad profiles, similarity, and
+    the club and player power rankings (power.py)."""
+    from . import power
+
+    power.refresh_power(conn, season)
     refresh_levels(conn, season)
     refresh_strength(conn, season)
     refresh_squad_profiles(conn, season)

@@ -68,6 +68,41 @@ class ModelsTest(unittest.TestCase):
         refresh_competition_season(cls.db, 1)
         cls.cohorts = models.refresh_season(cls.db, 2025)
 
+    def test_power_rankings_of_clubs(self):
+        rows = self.db.execute("SELECT team_id, elo, rank, matches, scope FROM agg.team_power WHERE season_id=2025 ORDER BY rank").fetchall()
+        self.assertEqual(len(rows), 8)
+        self.assertTrue(all(r[4] == "clubs" and r[3] == 14 for r in rows))
+        self.assertAlmostEqual(sum(r[1] for r in rows) / 8, 1500, places=2)  # Elo only moves points between clubs
+        self.assertEqual([r[2] for r in rows], sorted(r[2] for r in rows))
+        points = self.facts["points"]
+        self.assertGreater(points[rows[0][0]], points[rows[-1][0]])
+
+    def test_power_rankings_of_players(self):
+        from vega_v2 import power
+
+        for slot in range(0, 121):
+            self.assertEqual(self.db.execute("SELECT core.power_role(%s)", (slot,)).fetchone()[0], power.ROLE_OF_SLOT(slot), slot)
+        ranked = self.db.execute(
+            "SELECT player_id, role, minutes, total, rate, score, rank, role_rank FROM agg.player_power WHERE season_id=2025 AND eligible ORDER BY rank"
+        ).fetchall()
+        self.assertEqual(len(ranked), 88)  # 14 matches of 90 minutes: everyone is eligible
+        self.assertEqual({r[1] for r in ranked}, {"goalkeeper", "full_back", "centre_back", "defensive_midfielder", "winger", "centre_forward"})
+        self.assertTrue(all(0 <= r[5] <= 100 for r in ranked))
+        self.assertEqual(ranked[0][6], 1)
+        for player, role, minutes, total, rate, *_ in ranked[:5]:
+            self.assertAlmostEqual(rate, 90 * total / (minutes + 450), places=3)
+            summed = self.db.execute(
+                "SELECT sum(contribution), sum(minutes) FROM agg.player_power_matches WHERE season_id=2025 AND player_id=%s", (player,)
+            ).fetchone()
+            self.assertAlmostEqual(summed[0], total, places=3)
+            self.assertEqual(summed[1], minutes)
+        # The best of each role is first of his role.
+        for role in {r[1] for r in ranked}:
+            mine = [r for r in ranked if r[1] == role]
+            self.assertEqual(min(r[7] for r in mine), 1)
+        run = self.db.execute("SELECT method_version, elo_k, regularisation_minutes, eligibility_minutes FROM agg.power_runs WHERE kind='players' AND status='published'").fetchone()
+        self.assertEqual(run, ("power-ranking-v1", 20.0, 450.0, 900.0))
+
     @classmethod
     def tearDownClass(cls):
         cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
