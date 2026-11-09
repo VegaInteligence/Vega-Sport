@@ -1,0 +1,9 @@
+# Only what the worker image copies (BuildKit reads <Dockerfile>.dockerignore).
+*
+!v2/requirements.txt
+!v2/vega_v2
+!v2/vega_v2/**
+!v2/sql
+!v2/sql/**
+!dashboard/backend/certs/rds-us-east-2.pem
+**/__pycache__
