@@ -1,10 +1,10 @@
 # Vega v2 on AWS
 
-Three CloudFormation stacks, one per block of the v2 backend (doc « Vega Sport — schéma v2 », section Backend v2). They live next to the current backend and change nothing of it: the `statarena-postgres` instance, its security group, the `statarena-backend` Lambda and distribution, and the GitHub ingestion workflows keep running until the cutover is complete.
+Three CloudFormation stacks, one per block of the v2 backend, plus the roles of the deployment workflow (`deploy-roles.yaml`) (doc « Vega Sport — schéma v2 », section Backend v2). They live next to the current backend and change nothing of it: the `statarena-postgres` instance, its security group, the `statarena-backend` Lambda and distribution, and the GitHub ingestion workflows keep running until the cutover is complete.
 
 | Stack | Template | Contents |
 |---|---|---|
-| `vega-v2-database` | `database.yaml` | private PostgreSQL 18 (`vega-v2-postgres`, `db.t4g.micro`, gp3 20→100 GB, encrypted, 7-day backups, deletion protection, snapshot on delete), master password managed by Secrets Manager, security groups of the worker and the API |
+| `vega-v2-database` | `database.yaml` | private PostgreSQL 18 (`vega-football-db-postgres`, database `vega_v2`, `db.t4g.micro`, gp3 20→100 GB, encrypted, 7-day backups, deletion protection, snapshot on delete), master password managed by Secrets Manager, security groups of the worker and the API |
 | `vega-v2-worker` | `worker.yaml` | ECR repository, ECS cluster, the always-on worker service (Fargate ARM 0.25 vCPU / 0.5 GB, one task), the on-demand `vega-v2-backfill` and `vega-v2-migrate` task definitions, and the private bucket of the image copies (`vega-v2-media-…`, written only under `data/sources/v2/images/` by the worker's task role) |
 | `vega-v2-api` | `api.yaml` | the read API Lambda (Node 24 ARM, `v2/api`), its signed Function URL and its own CloudFront distribution (same policies as the current API); the distribution also serves the image copies at `data/*` from the media bucket (origin access control, bucket policy limited to this distribution) |
 
@@ -21,58 +21,57 @@ Account 361769570630, region us-east-2, AWS CLI profile `statarena`, default VPC
 | `vega_v2_calc` | `vega_calc` | reads `core`, writes `agg`, `ops.dirty_scopes`, `ops.resource_versions` |
 | `vega_v2_read` | `vega_read` | reads the `api` schema only (the API also sets `role=vega_read` on each connection) |
 
-## Deployment (each command that changes AWS is marked)
+## Deployment
 
-Validation is read-only:
+`deploy.sh` is the whole deployment: the same script runs from the **Vega v2 deploy** workflow (`.github/workflows/v2-deploy.yml`, manual, role `vega-v2-deploy`) and from a workstation. Every step only creates or changes `vega-v2-*` resources and the second base `vega-football-db-postgres`:
+
+1. database stack (about 10 minutes the first time);
+2. secrets, created once in SSM SecureStrings (`ci/secrets.sh`): three random login passwords, the PitchAPI key, and the connection URLs built from the database endpoint. Values go through mode-0600 files, never the command line or the log;
+3. worker stack with the worker stopped (it creates the ECR repository and the task definitions);
+4. worker image (linux/arm64, tagged with the git SHA, pushed once);
+5. migrations and logins, as the one-off `vega-v2-migrate` task (the script stops if it fails);
+6. worker start (`WORKER_DESIRED_COUNT`, 1 by default);
+7. read API package, uploaded under `releases/v2-api/`;
+8. read API stack; on the first deployment a second pass sets `MediaBaseUrl` once the distribution's domain is known;
+9. with `IMPORT_ARCHIVES=true` and `ARCHIVE_SOURCES_BUCKET`, the historical archive import (`vega-v2-archives`), which reads main's pinned sources under `data/sources/` read only.
+
+### One-time setup (commands to run, each changes AWS or GitHub)
 
 ```sh
-for t in database worker api; do aws cloudformation validate-template --profile statarena --region us-east-2 --template-body file://infra/aws-v2/$t.yaml; done
+aws login --profile statarena
 ```
 
-1. **Changes AWS.** Database stack (about 10 minutes):
+```sh
+aws cloudformation deploy --profile statarena --region us-east-2 --stack-name vega-v2-deploy-roles --template-file infra/aws-v2/deploy-roles.yaml --capabilities CAPABILITY_NAMED_IAM
+```
 
-   ```sh
-   aws cloudformation deploy --profile statarena --region us-east-2 --stack-name vega-v2-database --template-file infra/aws-v2/database.yaml --no-execute-changeset
-   ```
+```sh
+gh api -X PUT repos/VegaInteligence/Vega-Sport/environments/v2-production
+```
 
-   Review the change set in the console or with `describe-change-set`, then execute it.
+`deploy-roles.yaml` creates `vega-v2-deploy` (assumable only by the **Vega v2 deploy** workflow of this repository, in the `v2-production` environment, through the existing GitHub OIDC provider) and `vega-v2-cloudformation` (the service role CloudFormation uses, limited to the v2 resources). Optional: `gh variable set V2_ARCHIVE_SOURCES_BUCKET --body <main's data bucket>` for the archive import.
 
-2. **Changes AWS.** Three random passwords and the source key, as SSM SecureStrings. Type them through a file, never on the command line or in shell history: `/vega/v2/password-collect`, `/vega/v2/password-calc`, `/vega/v2/password-read`, `/vega/v2/pitchapi-key`. Then the two worker URLs, built from the stack's `DatabaseEndpoint` output: `/vega/v2/collect-database-url` and `/vega/v2/calc-database-url`, as `postgresql://vega_v2_collect:<password>@<endpoint>:5432/vega_v2?sslmode=verify-full&sslrootcert=/app/rds-ca.pem` (percent-encode the password).
+### Deploy
 
-3. **Changes AWS.** Worker image and stack. Build from the repository root, then push with the git SHA as the immutable tag:
+From a workstation, before the workflow is on `main` (a manual workflow can only be started once it is on the default branch):
 
-   ```sh
-   docker build --platform linux/arm64 -f v2/Dockerfile -t vega-v2-worker:$(git rev-parse HEAD) .
-   aws cloudformation deploy --profile statarena --region us-east-2 --stack-name vega-v2-worker --template-file infra/aws-v2/worker.yaml --capabilities CAPABILITY_IAM --parameter-overrides ImageTag=$(git rev-parse HEAD) DesiredCount=0 --no-execute-changeset
-   ```
+```sh
+AWS_PROFILE=statarena PITCHAPI_API_KEY_FILE=<file holding the key> bash infra/aws-v2/deploy.sh
+```
 
-   The first deployment creates the ECR repository with `DesiredCount=0`; push the image (`aws ecr get-login-password | docker login …`, `docker push`), then continue.
+Then, from GitHub: `gh workflow run "Vega v2 deploy" -f worker_desired_count=1`. The migration task's log line `migrations applied=N total=M logins=…` shows 28 migrations (30 with `V2_VECTOR=1`). The backfill runs on demand, for days, and stops by itself when its lane is empty: `aws ecs run-task … --task-definition vega-v2-backfill` with the network configuration `deploy.sh` uses.
 
-4. **Changes the v2 database.** Migrations and logins, as a one-off task in the VPC:
+The account runs at most 10 Lambdas concurrently and the current API needs them: `ReservedConcurrency` stays 0 and the pool size 1 until the quota is raised.
 
-   ```sh
-   aws ecs run-task --profile statarena --region us-east-2 --cluster vega-v2 --launch-type FARGATE --task-definition vega-v2-migrate --network-configuration 'awsvpcConfiguration={subnets=[subnet-0233a9567335f56ce],securityGroups=[<WorkerSecurityGroup>],assignPublicIp=ENABLED}'
-   ```
+## Continuous integration
 
-   Its log line `migrations applied=N total=M logins=…` must show 15 migrations (17 with `V2_VECTOR=1`).
+| Workflow | When | What |
+|---|---|---|
+| `v2-ci.yml` (Vega v2 CI) | every change to v2, `infra/aws-v2` or the main code v2 reuses | every Python and API suite on a disposable PostgreSQL 18 with pgvector (the engine of `vega-football-db-postgres`), `cfn-lint` of the stacks, the worker image built natively on linux/arm64 and its tools started, the read API package; no secret, no AWS access |
+| `vega-v2-pilot.yml` | v2 changes, or by hand | real PitchAPI data into a throwaway PostgreSQL 18: the pilot collection, then 700 worker jobs on the real J−1..J+7 calendars and the other sources; only measurements leave the runner |
+| `v2-deploy.yml` (Vega v2 deploy) | by hand, environment `v2-production` | `deploy.sh` with the `vega-v2-deploy` role |
 
-5. **Changes AWS.** Start the worker: redeploy the worker stack with `DesiredCount=1`. It plans every minute, collects, and recalculates. Watch `/ecs/vega-v2-worker` and, from the API once deployed, the `ops.v_freshness` and `ops.v_backlog` views.
-
-6. **Changes AWS.** Backfill (days, stops by itself when the backfill lane is empty): `aws ecs run-task … --task-definition vega-v2-backfill` with the same network configuration.
-
-   **Changes the v2 database.** Historical archives (1871/1872 to 2020/2021): redeploy the worker stack with `ArchiveSourcesBucket=<main's data bucket>` (the task role may only read `data/sources/openfootball/`, `engsoccerdata/` and `worldclub/` there), then `aws ecs run-task … --task-definition vega-v2-archives` with the same network configuration. It runs main's archive builders and `shared/archive.js` on those pinned files and replaces each archive season; running it again changes nothing unless the sources changed.
-
-7. **Changes AWS.** Read API. Build the ZIP, upload it to the existing release bucket under `releases/v2-api/`, then create the stack with the read URL as a NoEcho parameter passed from a mode-0600 file (as the current backend does):
-
-   ```sh
-   python3 infra/aws-v2/package_api.py /tmp/vega-v2-api-releases
-   aws s3 cp /tmp/vega-v2-api-releases/<sha256>.zip s3://statarena-backend-releases-361769570630-us-east-2/releases/v2-api/<sha256>.zip --profile statarena
-   aws cloudformation deploy --profile statarena --region us-east-2 --stack-name vega-v2-api --template-file infra/aws-v2/api.yaml --capabilities CAPABILITY_IAM --parameter-overrides ReleaseKey=releases/v2-api/<sha256>.zip ReadDatabaseUrl=<from file> --no-execute-changeset
-   ```
-
-   The account runs at most 10 Lambdas concurrently and the current API needs them: keep `ReservedConcurrency=0` and pool size 1 until the quota is raised.
-
-8. **Changes AWS.** Media map. The distribution's domain is known only once the stack exists: redeploy `vega-v2-api` with `MediaBaseUrl=https://<ApiOrigin domain>/` (same other parameters). Until then `media=1` answers with an empty `media` map and the site shows the provider images, as it does today for an image not yet copied.
+`docs/verification/aws-actions-20261104/verify.py` (run by **Verify ingestion**) checks these rules: CI read-only without secrets on PostgreSQL 18, deploy manual only with OIDC, its own role and only the provider key.
 
 ## Parity and cutover
 

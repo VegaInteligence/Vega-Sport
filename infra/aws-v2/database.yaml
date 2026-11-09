@@ -73,7 +73,7 @@ Resources:
     DeletionPolicy: Snapshot
     UpdateReplacePolicy: Snapshot
     Properties:
-      DBInstanceIdentifier: vega-v2-postgres
+      DBInstanceIdentifier: vega-football-db-postgres
       DBName: vega_v2
       Engine: postgres
       EngineVersion: !Ref EngineVersion
