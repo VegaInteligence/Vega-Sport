@@ -104,6 +104,27 @@ const STAT_MODES = [
   ["perMatch", "Par match"],
 ];
 
+function profileTeam(rows, teams, season, includeSelection = false) {
+  const minutes = new Map();
+  for (const row of rows)
+    if (row.teamId)
+      minutes.set(
+        row.teamId,
+        (minutes.get(row.teamId) || 0) + (row.minutes || 0),
+      );
+  const known = new Map((teams || []).map((item) => [item.id, item]));
+  let selection = null;
+  for (const [teamId] of [...minutes].sort((a, b) => b[1] - a[1])) {
+    const info = known.get(teamId);
+    const name = info?.name || rows.find((row) => row.teamId === teamId)?.team;
+    if (!name) continue;
+    const team = { id: teamId, name, imageUrl: info?.imageUrl };
+    if (!nationalFlagCode(name, season)) return team;
+    if (includeSelection) selection ||= team;
+  }
+  return selection;
+}
+
 export function PlayerMetricTable({ profile, keys, mode, cohorts }) {
   return (
     <div className="table-scroll">
@@ -176,6 +197,7 @@ function ProfileLayout({
   record,
   season,
   team,
+  playingTime,
   vega,
   actions,
   stripActions,
@@ -207,6 +229,7 @@ function ProfileLayout({
             record={record}
             season={season}
             team={team}
+            playingTime={playingTime}
             vega={vega}
             actions={actions}
             onTab={onTab}
@@ -290,23 +313,10 @@ export default function PlayerSeasonProfile({
     [id, profile, f.data?.appearances, record, storedIdentity, summaryIdentity],
   );
   const honours = usePlayerHonours(id, identity.name);
-  const team = useMemo(() => {
-    const minutes = new Map();
-    for (const row of profile.rows)
-      if (row.teamId)
-        minutes.set(
-          row.teamId,
-          (minutes.get(row.teamId) || 0) + (row.minutes || 0),
-        );
-    const known = new Map((f.data?.teams || []).map((item) => [item.id, item]));
-    for (const [teamId] of [...minutes].sort((a, b) => b[1] - a[1])) {
-      const row = profile.rows.find((item) => item.teamId === teamId);
-      const name = known.get(teamId)?.name || row?.team;
-      if (!name || nationalFlagCode(name, f.season)) continue;
-      return { id: teamId, name, imageUrl: known.get(teamId)?.imageUrl };
-    }
-    return null;
-  }, [profile.rows, f.data?.teams, f.season]);
+  const team = useMemo(
+    () => profileTeam(profile.rows, f.data?.teams, f.season),
+    [profile.rows, f.data?.teams, f.season],
+  );
   const role = profile.role?.label;
   const profiles = useMemo(
     () => allProfiles || aggregateSeasonPlayers(scopeRows),
@@ -319,6 +329,42 @@ export default function PlayerSeasonProfile({
   const view = TABS.some(([key]) => key === requestedView)
     ? requestedView
     : "overview";
+  const [overviewScope, setOverviewScope] = useState(null);
+  const scopeKey = `${id}:${f.season}`;
+  const competition =
+    view === "overview" &&
+    overviewScope?.key === scopeKey &&
+    profile.rows.some((row) => row.league === overviewScope.competition)
+      ? overviewScope.competition
+      : "all";
+  const timeRows = useMemo(
+    () =>
+      competition === "all"
+        ? rows
+        : rows.filter((row) => row.league === competition),
+    [rows, competition],
+  );
+  const timeTeam = useMemo(() => {
+    if (competition === "all" && team) return team;
+    return (
+      profileTeam(timeRows, f.data?.teams, f.season, true) ||
+      profileTeam(
+        (f.data?.appearances || []).filter((row) => row.playerId === id),
+        f.data?.teams,
+        f.season,
+        true,
+      )
+    );
+  }, [
+    competition,
+    team,
+    timeRows,
+    f.data?.teams,
+    f.data?.appearances,
+    f.season,
+    id,
+  ]);
+  const playingTime = { rows: timeRows, team: timeTeam, competition };
   const comparisonMinutes =
     view === "overview" ? MIN_SEASON_MINUTES : minMinutes;
   // Peers restricted to the clubs closest to the player's club in level.
@@ -354,6 +400,7 @@ export default function PlayerSeasonProfile({
   const change = (next) => {
     const url = new URL(window.location.href);
     url.searchParams.set("playerView", next);
+    if (next !== "overview") setOverviewScope(null);
     if (next === "stats") {
       url.searchParams.delete("performanceCompetition");
       url.searchParams.delete("performanceSeason");
@@ -488,6 +535,10 @@ export default function PlayerSeasonProfile({
       comparisonRef={comparisonRef}
       onTab={change}
       team={team?.name}
+      competition={competition}
+      onCompetition={(value) =>
+        setOverviewScope({ key: scopeKey, competition: value })
+      }
     >
       {palmares}
     </PlayerScoutOverview>
@@ -506,6 +557,7 @@ export default function PlayerSeasonProfile({
           record={record}
           season={f.season}
           team={team}
+          playingTime={playingTime}
           onTab={change}
         >
           <ResearchTabs
@@ -600,6 +652,7 @@ export default function PlayerSeasonProfile({
         record={record}
         season={f.season}
         team={team}
+        playingTime={playingTime}
         vega={vega}
         onTab={change}
         actions={playerActions}

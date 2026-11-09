@@ -23,6 +23,10 @@ Pour chaque taux, numérateur et dénominateur séparés, sur les matchs où les
 
 Également : matchs, minutes totales, titularisations (`starts` sur `knownStarts`, les matchs où l'information est connue), équipes, compétitions, poste dominant (voir [Postes](../01-sources-et-conventions/03-postes-et-groupes.md)).
 
+## Temps de jeu de la fiche
+
+Le **temps de jeu** de la fiche rapporte les minutes du joueur pour l’équipe indiquée aux minutes de ses matchs terminés, à raison de 90 minutes par match. Le calcul utilise la saison, la compétition et la période sélectionnées. Il inclut les matchs où l’absence du joueur est établie par une composition confirmée et des données joueurs exploitables. Une durée non renseignée, une observation supérieure à 90 minutes ou un calendrier incomplet empêche d’afficher un pourcentage pour ce périmètre.
+
 ## Trois bases d'affichage
 
 `seasonMetric(profil, mesure, base)` :
