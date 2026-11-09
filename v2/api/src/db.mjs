@@ -23,7 +23,10 @@ export function createReader(connectionString, { max = 4, timeoutMs = 8000, role
     ...(ca && { ssl: { ca, rejectUnauthorized: true } }),
     // jit=off: the reads' plans are costly enough to trigger JIT, whose compile time was
     // half of a league's player list (measured: 650 ms of 1.37 s) and saves nothing here.
-    options: `-c default_transaction_read_only=on -c statement_timeout=${timeoutMs} -c jit=off -c search_path=api${role ? ` -c role=${role}` : ""}`,
+    // No parallel query: the reads touch a few hundred rows, and on the 2-vCPU instance
+    // starting the workers cost more than the work (measured on the home: a Gather's first
+    // row after 14 s for 0.8 s of work).
+    options: `-c default_transaction_read_only=on -c statement_timeout=${timeoutMs} -c jit=off -c max_parallel_workers_per_gather=0 -c search_path=api${role ? ` -c role=${role}` : ""}`,
   });
   return {
     read: async (sql, values = []) => (await pool.query(sql, values)).rows,

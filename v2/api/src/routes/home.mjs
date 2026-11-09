@@ -94,10 +94,23 @@ export function parseHomeRead(params, { personal = false } = {}) {
 }
 
 // The appearance record columns of performance.mjs, for the selected appearances only.
-const appearanceJson = (keys) => `SELECT a.*,fx.id AS match_key,fx.id||':'||api.public_id('player',a.player_id) AS appearance_id,
+const appearanceJson = (keys, pin) => `SELECT a.*,fx.id AS match_key,fx.id||':'||api.public_id('player',a.player_id) AS appearance_id,
   api.public_id('player',a.player_id) AS player_key,api.public_id('team',a.team_id) AS team_key
   FROM api.player_appearances a JOIN api.fixtures fx ON fx.season_id=a.season_id AND fx.match_id=a.match_id
-  WHERE (a.season_id,a.match_id,a.player_id) IN (${keys})`;
+  WHERE ${pin("a")} AND ${pin("fx")} AND a.match_id=ANY(ARRAY(SELECT k.match_id FROM (${keys}) k)) AND fx.match_id=ANY(ARRAY(SELECT k.match_id FROM (${keys}) k))
+  AND (a.season_id,a.match_id,a.player_id) IN (${keys})`;
+
+/** The scope as ids (api.edition_keys, 047): its season's id and its editions. Resolved
+ * before the query and bound, so the query filters on indexed ids and the planner prunes
+ * the other seasons' partitions at plan time (a subquery only prunes at run time, after
+ * planning every season's partitions: 39 s of planning for the Ligue 1 home). */
+export const EDITIONS_SQL = `SELECT (SELECT k.season_id FROM api.season_keys k WHERE k.season=$1) AS season_id,
+  coalesce((SELECT array_agg(e.competition_season_id ORDER BY e.competition_season_id) FROM api.edition_keys e
+    WHERE e.season=$1 AND ($2::text[] IS NULL OR e.league_id=ANY($2::text[]))),'{}') AS ids`;
+export async function resolveEditions(read, scope) {
+  const [row] = await read(EDITIONS_SQL, [scope.season, scope.leagueIds]);
+  return { seasonId: row?.season_id ?? null, ids: (row?.ids || []).map(Number) };
+}
 
 // The scope's fixtures and its last result, then the displayed week (api.home_period):
 // the start of both reads, so that they show the same week.
@@ -115,12 +128,17 @@ const weekSql = (fixtureScope, fence, instant, archive) => `fixture_source AS MA
  SELECT p.* FROM api.home_period(${instant},(SELECT kickoff FROM last_finished),${archive},(SELECT latest_week_days FROM rules)) p
 )`;
 
-export function homeReadQuery(filters, params, now) {
+export function homeReadQuery(filters, params, now, editions) {
   const values = [],
     b = (value) => bindValue(values, value),
     publication = publicationSql(filters.scope, values);
-  const fixtureScope = scopeWhere("f", filters.scope, values),
-    appearanceScope = scopeWhere("a", filters.scope, values);
+  // The scope as bound ids (resolveEditions): the season's partitions only, the editions by index.
+  const season = b(editions.seasonId),
+    ids = b(editions.ids),
+    seasonPin = (alias) => `${alias}.season_id=${season}::smallint`,
+    inScope = (alias) => `${seasonPin(alias)} AND ${alias}.competition_season_id=ANY(${ids}::int[])`;
+  const fixtureScope = inScope("f"),
+    appearanceScope = inScope("a");
   const fence = params.has("generation") ? ` AND EXISTS(SELECT 1 FROM publication WHERE generation=${b(params.get("generation"))})` : "";
   const instant = `${b(new Date(now).toISOString())}::timestamptz`;
   const weight = (alias, home, away) =>
@@ -134,7 +152,6 @@ export function homeReadQuery(filters, params, now) {
     'lastId',api.public_id('match',${alias}.last_match_id)||':'||api.public_id('player',${alias}.player_id),'apps',${alias}.apps,
     'minutes',${alias}.minutes,'goals',${alias}.goals,'assists',${alias}.assists,'xg',${alias}.xg,'xa',${alias}.xa,
     'xgMatches',${alias}.xg_matches,'xaMatches',${alias}.xa_matches,'ratingSum',${alias}.rating_sum,'ratingMinutes',${alias}.rating_minutes,'rating',${alias}.rating)`;
-  const editionScope = scopeWhere("e", filters.scope, values);
   const leaders = (key) => {
     const [, predicate, order, limit] = BOARDS.find(([name]) => name === key);
     return `(SELECT coalesce(jsonb_agg(${seasonRow("p")} ORDER BY ${order}),'[]'::jsonb)
@@ -198,8 +215,6 @@ ${weekSql(fixtureScope, fence, instant, filters.archive)}, league_sides AS MATER
 ), biggest_win AS MATERIALIZED (
  SELECT w.*,abs(home_score-away_score) margin,home_score+away_score goals FROM weekly w
  WHERE abs(home_score-away_score)>=3 ORDER BY margin DESC,goals DESC,kickoff DESC,id LIMIT 1
-), scope_editions AS MATERIALIZED (
- SELECT e.competition_season_id FROM api.editions e WHERE ${editionScope}
 ), season_players AS MATERIALIZED (
  -- The season's totals from agg.player_season_stats (api.home_season_players, 046), summed
  -- over the scope's editions: never every appearance of the season (doc "Ce qui change en v2").
@@ -209,7 +224,7 @@ ${weekSql(fixtureScope, fence, instant, filters.archive)}, league_sides AS MATER
  sum(s.xg_matches)::int xg_matches,sum(s.xa_matches)::int xa_matches,
  sum(s.rating_sum) rating_sum,sum(s.rating_minutes) rating_minutes,
  CASE WHEN sum(s.rating_minutes)>0 THEN sum(s.rating_sum)/sum(s.rating_minutes) END rating
- FROM api.home_season_players s WHERE s.competition_season_id IN (SELECT competition_season_id FROM scope_editions) AND s.appearances>0
+ FROM api.home_season_players s WHERE s.competition_season_id=ANY(${ids}::int[]) AND s.appearances>0
  GROUP BY s.player_id
 ), rating_minimum AS (SELECT greatest(450,round(coalesce(max(minutes),0)*0.4)) rated_min FROM season_players),
 week_apps AS MATERIALIZED (
@@ -217,7 +232,8 @@ week_apps AS MATERIALIZED (
  SELECT a.season_id,a.match_id,a.player_id,a.team_id,a.team,a.league_id,a.date,a.kickoff_at,a.minutes,a.rating,a.goals,a.assists,a.xg,a.xa,
  a.player_name AS name,a.image_url,
  row_number() OVER(ORDER BY a.league_id,a.date NULLS LAST,a.kickoff_at NULLS LAST,a.match_id,a.player_id) source_order
- FROM api.player_appearances a JOIN weekly w ON w.season_id=a.season_id AND w.match_id=a.match_id WHERE a.minutes>=1
+ FROM api.player_appearances a JOIN weekly w ON w.season_id=a.season_id AND w.match_id=a.match_id
+ WHERE ${seasonPin("a")} AND a.match_id=ANY(ARRAY(SELECT match_id FROM weekly)) AND a.minutes>=1
 ), weekly_performances AS MATERIALIZED (
  SELECT DISTINCT ON(a.player_id) a.* FROM week_apps a
  WHERE a.minutes>=60 AND ${finiteSql("a.rating")} ORDER BY a.player_id,a.rating DESC,a.source_order
@@ -248,7 +264,7 @@ week_apps AS MATERIALIZED (
 ), season_rows AS MATERIALIZED (
  SELECT p.*,i.name,i.image_url,i.team_id,i.team,i.date,i.last_match_id FROM season_players p JOIN identities i USING(player_id)
 ), selected_appearances AS MATERIALIZED (${appearanceJson(`SELECT season_id,match_id,player_id FROM potw UNION SELECT season_id,match_id,player_id FROM other_performances
-   UNION SELECT season_id,match_id,player_id FROM best_featured UNION SELECT season_id,match_id,player_id FROM recent_performances`)}
+   UNION SELECT season_id,match_id,player_id FROM best_featured UNION SELECT season_id,match_id,player_id FROM recent_performances`, seasonPin)}
 ), upcoming_candidates AS MATERIALIZED (
  -- The big matches of the next days in the scope, by editorial weight; the favourites'
  -- matches come from the personal read.
@@ -276,7 +292,8 @@ champions_stages AS (
  SELECT season_id,match_id FROM results UNION SELECT season_id,match_id FROM featured UNION SELECT season_id,match_id FROM biggest_win
  UNION SELECT season_id,match_id FROM potw UNION SELECT season_id,match_id FROM other_performances
 ), records AS (
- SELECT f.id,${matchRecordColumns({ shots: true })} FROM api.fixtures f WHERE (f.season_id,f.match_id) IN (SELECT season_id,match_id FROM record_keys)
+ SELECT f.id,${matchRecordColumns({ shots: true })} FROM api.fixtures f
+ WHERE ${seasonPin("f")} AND f.match_id=ANY(ARRAY(SELECT match_id FROM record_keys)) AND (f.season_id,f.match_id) IN (SELECT season_id,match_id FROM record_keys)
 )
 SELECT publication.*,
  (SELECT min(change_at) FROM (
@@ -392,7 +409,7 @@ export function createHomeReadRoute(read, clock = Date.now) {
       periodKey = Math.floor(now / 60_000);
     const validated = await readValidator(req, params, filters.scope, read, { periodKey, ttl: 60, stale: HOME_STALE });
     if (validated) return validated;
-    const { sql, values } = homeReadQuery(filters, params, now);
+    const { sql, values } = homeReadQuery(filters, params, now, await resolveEditions(read, filters.scope));
     const [snapshot] = await read(sql, values);
     checkReadGeneration(params, snapshot?.generation);
     const data = homeReadRecord(snapshot);
@@ -416,16 +433,20 @@ export function createHomeReadRoute(read, clock = Date.now) {
  * - each followed player's matches of the displayed week and his club's next match.
  * Never in the common cache (private): a visitor's favourites only change his own read.
  */
-export function homeFavouritesQuery(filters, params, now) {
+export function homeFavouritesQuery(filters, params, now, editions) {
   const values = [],
     b = (value) => bindValue(values, value),
     publication = publicationSql(filters.scope, values);
-  const fixtureScope = scopeWhere("f", filters.scope, values);
+  const season = b(editions.seasonId),
+    seasonPin = (alias) => `${alias}.season_id=${season}::smallint`,
+    fixtureScope = `${seasonPin("f")} AND f.competition_season_id=ANY(${b(editions.ids)}::int[])`,
+    // The favourites' upcoming matches and latest clubs, whatever the season shown: the
+    // recent seasons' partitions only (season ids are start years).
+    recent = (alias, years) => `${alias}.season_id>=${b(new Date(now).getUTCFullYear() - years)}::smallint`;
   const fence = params.has("generation") ? ` AND EXISTS(SELECT 1 FROM publication WHERE generation=${b(params.get("generation"))})` : "";
   const instant = `${b(new Date(now).toISOString())}::timestamptz`,
     teams = `${b(filters.personalTeams)}::text[]`,
-    players = `${b(filters.personalPlayers)}::text[]`,
-    season = b(filters.scope.season);
+    players = `${b(filters.personalPlayers)}::text[]`;
   const sql = `/*vega:v2:home-favourites*/
 WITH publication AS MATERIALIZED (${publication}),
 rules AS MATERIALIZED (SELECT * FROM api.home_rules_v1),
@@ -434,12 +455,12 @@ followed_players AS MATERIALIZED (
  SELECT DISTINCT k player_key,api.internal_id('player',k) player_id FROM unnest(${players}) k
 ), player_clubs AS MATERIALIZED (
  SELECT DISTINCT ON(y.player_id) y.player_key,a.team_id FROM followed_players y JOIN api.player_appearances a ON a.player_id=y.player_id
- WHERE a.season=${season} AND a.minutes>0 AND a.team_id IS NOT NULL AND a.date IS NOT NULL AND a.team_is_national IS NOT TRUE
+ WHERE ${seasonPin("a")} AND a.minutes>0 AND a.team_id IS NOT NULL AND a.date IS NOT NULL AND a.team_is_national IS NOT TRUE
  AND (coalesce(a.country,'') NOT IN('INT','INT-2','UEFA','WORLD') OR a.league_id=ANY(${uefa}))
  ORDER BY y.player_id,a.date DESC,a.match_id DESC
 ), player_nations AS MATERIALIZED (
  SELECT DISTINCT ON(y.player_id) y.player_key,a.team_id FROM followed_players y JOIN api.player_appearances a ON a.player_id=y.player_id
- WHERE a.team_is_national AND a.minutes>0 AND a.date IS NOT NULL ORDER BY y.player_id,a.date DESC,a.match_id DESC
+ WHERE ${recent("a", 3)} AND a.team_is_national AND a.minutes>0 AND a.date IS NOT NULL ORDER BY y.player_id,a.date DESC,a.match_id DESC
 ), favourite_rows AS (
  SELECT api.internal_id('team',k) team_id,1 strength,'club' reason,NULL::text player_key FROM unnest(${teams}) k
  UNION ALL SELECT team_id,2,'player_club',player_key FROM player_clubs
@@ -452,7 +473,7 @@ followed_players AS MATERIALIZED (
  SELECT f.*,v.team_key favourite,v.strength,
  row_number() OVER(PARTITION BY v.team_id ORDER BY f.kickoff_at,f.id) nth
  FROM favourites v JOIN api.fixtures f ON v.team_id IN(f.home_internal_id,f.away_internal_id)
- WHERE f.status='not_started' AND f.kickoff_at>${instant}
+ WHERE ${recent("f", 1)} AND f.status='not_started' AND f.kickoff_at>${instant}
  AND f.kickoff_at<=${instant}+make_interval(days=>(SELECT favourite_days FROM rules))
  AND coalesce(f.home_name,'')<>'' AND coalesce(f.away_name,'')<>''
 ), candidates AS (
@@ -470,16 +491,16 @@ followed_players AS MATERIALIZED (
  CASE WHEN a.team_id=f.home_internal_id THEN f.score_away ELSE f.score_home END ga
  FROM followed_players y JOIN api.player_appearances a ON a.player_id=y.player_id
  JOIN api.fixtures f ON f.season_id=a.season_id AND f.match_id=a.match_id CROSS JOIN period p
- WHERE a.date BETWEEN p.start_day AND p.end_day AND a.minutes>0
+ WHERE ${seasonPin("a")} AND a.date BETWEEN p.start_day AND p.end_day AND a.minutes>0
 ), your_clubs AS MATERIALIZED (
  SELECT DISTINCT ON(y.player_id) y.player_key,y.player_id,a.player_name,a.image_url,a.team_id,a.team
  FROM followed_players y JOIN api.player_appearances a ON a.player_id=y.player_id
- WHERE a.minutes>0 AND a.team_id IS NOT NULL AND a.date IS NOT NULL AND a.team_is_national IS NOT TRUE
+ WHERE ${recent("a", 2)} AND a.minutes>0 AND a.team_id IS NOT NULL AND a.date IS NOT NULL AND a.team_is_national IS NOT TRUE
  ORDER BY y.player_id,a.date DESC,a.match_id DESC
 ), your_next AS MATERIALIZED (
  SELECT c.player_key,n.* FROM your_clubs c CROSS JOIN LATERAL (
  SELECT f.id,extract(epoch FROM f.kickoff_at)*1000 time_ms,f.league_id,f.home_team_id,f.home_name,f.away_team_id,f.away_name
- FROM api.fixtures f WHERE c.team_id IN(f.home_internal_id,f.away_internal_id) AND f.status='not_started' AND f.kickoff_at>${instant}
+ FROM api.fixtures f WHERE ${recent("f", 1)} AND c.team_id IN(f.home_internal_id,f.away_internal_id) AND f.status='not_started' AND f.kickoff_at>${instant}
  ORDER BY f.kickoff_at,f.id LIMIT 1) n
 )
 SELECT publication.*,
@@ -535,7 +556,7 @@ export function createHomeFavouritesRoute(read, clock = Date.now) {
     if (!filters.personalTeams.length && !filters.personalPlayers.length) reject(400, "Favoris manquants.");
     const validated = await readValidator(req, params, filters.scope, read, { periodKey, personal: true });
     if (validated) return validated;
-    const { sql, values } = homeFavouritesQuery(filters, params, now);
+    const { sql, values } = homeFavouritesQuery(filters, params, now, await resolveEditions(read, filters.scope));
     const [snapshot] = await read(sql, values);
     checkReadGeneration(params, snapshot?.generation);
     return readResponse(req, params, snapshot, homeFavouritesRecord(snapshot), { periodKey, maxBytes: 512 * 1024, personal: true });
