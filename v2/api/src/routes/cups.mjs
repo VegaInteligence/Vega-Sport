@@ -1,8 +1,13 @@
 /**
- * Cup editions of the sources other than PitchAPI, and the cup snapshots of main:
- * /api/open-cups, /api/openligadb, /api/nations-results and /api/cup-snapshot, same
- * parameters and bodies, read from api.cup_editions and api.cup_matches (028), which
- * vega_v2/sources/cups.py fills with main's own source projections.
+ * The cup editions of the complementary sources and the cup snapshots, read from
+ * api.cup_editions and api.cup_matches (028, 030), which vega_v2/sources/cups.py fills with
+ * main's own source projections. Routes name no source (030_neutral_reads.sql):
+ * - GET /api/cups/index: the cups, by Vega competition id, with their competition key,
+ *   seasons, body `format` and attribution;
+ * - GET /api/cups/edition?competition=l_v…&season=: one edition, in main's body for its
+ *   format (legacy /api/open-cups, /api/openligadb and /api/nations-results);
+ * - GET /api/cup-snapshot?kind=native|standings|edition&competition=l_…&season=: main's
+ *   snapshot; `edition` replaces the legacy source kinds.
  *
  * Differences with the legacy read: a field the source left null is omitted (as when it
  * is absent); a snapshot's `worker.checkedAt`/`updatedAt` are the last successful read and
@@ -15,7 +20,7 @@ import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 import { fixture } from "./matches.mjs";
 import { standingsBody } from "./reference.mjs";
 
-const KEY = /^[\w:-]{1,100}$/,
+const LEAGUE = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/,
   YEAR = /^\d{4}(?:\/\d{4})?$/;
 const iso = (v) => (v instanceof Date ? v.toISOString() : v ?? null);
 const pair = (a, b) => (a != null && b != null ? [a, b] : null);
@@ -84,17 +89,17 @@ const nationsMatch = (m) => ({
   league: m.group_name?.[0] ?? null, group: m.group_name ? Number(m.group_name.slice(1)) : null, round: m.round ?? "",
 });
 
-/** The body of a cup edition, or null when it was never read. */
-export async function cupBody(read, kind, competition, season) {
-  const [e] = await read("SELECT * FROM api.cup_editions WHERE kind=$1 AND competition=$2 AND season=$3", [kind, competition, season]);
+/** The body of a cup edition (by Vega competition id and season), or null when it was never read. */
+export async function cupBody(read, competitionId, season) {
+  const [e] = await read("SELECT * FROM api.cup_editions WHERE competition_id=$1 AND season=$2", [competitionId, season]);
   if (!e) return null;
   const rows = await read("SELECT * FROM api.cup_matches WHERE competition_season_id=$1 ORDER BY position, match_id", [e.competition_season_id]);
-  const source = SOURCES[kind](e);
+  const source = SOURCES[e.kind](e);
   const body =
-    kind === "open-cups"
+    e.format === "matches-v1"
       ? { name: e.name, season, matches: rows.map(openCupMatch), source }
-      : kind === "openligadb"
-        ? { competition, season, matches: rows.map(openLigaMatch(competition)), source }
+      : e.format === "rounds-v1"
+        ? { competition: e.competition, season, matches: rows.map(openLigaMatch(e.competition)), source }
         : { season, matches: rows.map(nationsMatch), source };
   return { body, worker: { checkedAt: iso(e.checked_at), updatedAt: iso(e.updated_at) } };
 }
@@ -122,30 +127,30 @@ async function nativeSnapshot(read, competition, season) {
 
 export function createCupRoute(read) {
   return async (req, path, params) => {
-    const edition = async (kind, competition, season) => {
-      const found = await cupBody(read, kind, competition, season);
-      if (!found) reject(400, "Compétition ou édition indisponible.");
+    if (path === "/api/cups/index") {
+      validate(params, {});
+      const rows = await read("SELECT competition_id,competition,name,season,format,kind,source_url,data_url FROM api.cup_editions ORDER BY competition_id,season");
+      const cups = new Map();
+      for (const e of rows) {
+        const cup = cups.get(e.competition_id) ?? { id: e.competition_id, key: e.competition, seasons: [] };
+        // The latest edition names the cup and its source.
+        cups.set(e.competition_id, { ...cup, name: e.name ?? e.competition, format: e.format, source: SOURCES[e.kind](e), seasons: [...cup.seasons, e.season] });
+      }
+      return respond(req, { cups: [...cups.values()] }, "catalog");
+    }
+    if (path === "/api/cups/edition") {
+      const p = validate(params, { competition: LEAGUE, season: YEAR });
+      if (!p.competition || !p.season) reject(400, "Paramètre manquant.");
+      const found = await cupBody(read, p.competition, p.season);
+      if (!found) reject(404, "Compétition ou édition indisponible.");
       return respond(req, found.body, "support");
-    };
-    if (path === "/api/open-cups") {
-      const p = validate(params, { competition: KEY, season: YEAR });
-      return edition("open-cups", p.competition ?? "", p.season ?? "");
-    }
-    if (path === "/api/openligadb") {
-      const p = validate(params, { competition: KEY, season: YEAR });
-      return edition("openligadb", p.competition ?? "", p.season ?? "");
-    }
-    if (path === "/api/nations-results") {
-      const p = validate(params, { season: YEAR });
-      return edition("nations-results", "nations-league", p.season ?? "");
     }
     if (path === "/api/cup-snapshot") {
-      const p = validate(params, { competition: KEY, season: YEAR, kind: /^(native|standings|open-cups|openligadb|nations-results)$/ });
+      const p = validate(params, { competition: LEAGUE, season: YEAR, kind: /^(native|standings|edition)$/ });
       if (!p.competition || !p.season || !p.kind) reject(400, "Paramètre manquant.");
       let body = null;
       if (p.kind === "native") body = await nativeSnapshot(read, p.competition, p.season);
       else if (p.kind === "standings") {
-        if (!/^l_(?:[A-Za-z0-9]{6}|v\d{7})$/.test(p.competition)) reject(404, "Donnée indisponible.");
         const table = await standingsBody(read, p.competition, p.season).catch((error) => (error.status === 404 ? null : Promise.reject(error)));
         if (table) {
           const [state] = await read("SELECT published_at FROM api.publication");
@@ -153,8 +158,7 @@ export function createCupRoute(read) {
           body = { competition, source, tables, worker: { checkedAt: iso(state?.published_at), updatedAt: table.fetchedAt } };
         }
       } else {
-        const competition = p.kind === "nations-results" ? "nations-league" : p.competition;
-        const found = await cupBody(read, p.kind, competition, p.season);
+        const found = await cupBody(read, p.competition, p.season);
         if (found) body = { ...found.body, worker: found.worker };
       }
       if (!body) reject(404, "Donnée indisponible.");

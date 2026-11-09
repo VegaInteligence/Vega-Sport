@@ -8,7 +8,12 @@
  * `sourceRow` keeps only the facts the site reads (a UEFA row's overall and per-season
  * points and clubs still in competition), not the provider's whole record; editions carry
  * no file path or checksum; `quality.duplicateEntityIds` is empty (one row per entity).
- * SportsAPI editions appear once that source is collected.
+ * An edition is keyed by what it covers, never by its source (030_neutral_reads.sql): the
+ * season's ending year for the UEFA coefficients ("2026", legacy "2026.uefa"), the
+ * publication date otherwise ("2025-09-18", legacy "2025-09-18.fifa"); when two sources
+ * hold the same edition the official one is served. `kind` names the ranking itself (the
+ * UEFA coefficients, the FIFA ranking), whoever supplies it; the supplier stays in the
+ * body's `provider`.
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
@@ -113,13 +118,13 @@ export function createRankingRoute(read) {
     if (path === "/api/rankings/edition") {
       const p = validate(params, {
         kind: /^(uefa-clubs|uefa-associations|fifa-men)$/,
-        edition: /^(?:\d{4}\.uefa|\d{4}-\d{2}-\d{2}\.(?:fifa|sportsapi))$/,
+        edition: /^\d{4}(?:-\d{2}-\d{2})?$/,
       });
       return respond(req, await editionBody(read, p.kind, p.edition));
     }
     if (path === "/api/rankings/associations") {
       const p = validate(params, { year: /^\d{4}$/ });
-      return respond(req, await editionBody(read, "uefa-associations", `${p.year}.uefa`));
+      return respond(req, await editionBody(read, "uefa-associations", p.year));
     }
     if (path === "/api/rankings/club") {
       const p = validate(params, { club: TEAM });

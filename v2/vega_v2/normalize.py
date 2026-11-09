@@ -562,6 +562,27 @@ def normalize_family(family, data, *, match_id=None):
                 for k in ("home_wins", "draws", "away_wins", "total_matches")
             },
         )
+        # The meetings the site lists (newest first, the next one included).
+        for seq, meeting in enumerate(_list(item.get("recent_matches", []))):
+            meeting = _object(meeting)
+            _unknown_keys(out, "h2h.recent_matches", meeting, {"home", "away", "finished", "time_utc", "score_home", "score_away"})
+            row = {
+                "seq": number(seq, "smallint"),
+                "home_team_id": _ref(out, "team", meeting.get("home")),
+                "away_team_id": _ref(out, "team", meeting.get("away")),
+                "finished": _bool(meeting.get("finished")),
+                "home_score": number(meeting.get("score_home"), "smallint"),
+                "away_score": number(meeting.get("score_away"), "smallint"),
+            }
+            if meeting.get("time_utc") is not None:
+                try:
+                    kickoff = datetime.fromisoformat(str(meeting["time_utc"]).replace("Z", "+00:00"))
+                    if kickoff.tzinfo is None:
+                        raise ValueError()
+                except ValueError:
+                    raise NormalizationError("INVALID_TIMESTAMP") from None
+                row["kickoff_at"] = kickoff.astimezone(timezone.utc)
+            out.add("match_h2h_meetings", row)
     elif family == "events":
         # Provider spellings (Goal, YellowCard, SecondYellow, RedCard, ...): a second
         # yellow is its own event, followed by the red card it causes (main counts both).
@@ -740,12 +761,14 @@ def normalize_family(family, data, *, match_id=None):
                 players = block.get(
                     key, block.get("subs") if key == "substitutes" else None
                 )
-                for item in _list(players):
+                for order, item in enumerate(_list(players)):
                     item = _object(item)
                     row = {
                         "team_id": team,
                         "player_id": _ref(out, "player", item),
                         "is_starter": starter,
+                        # The source's order (starters by role, then substitutes as they came on).
+                        "lineup_order": number(order, "smallint"),
                     }
                     for k in ("shirt_number", "position_id"):
                         if k in item:

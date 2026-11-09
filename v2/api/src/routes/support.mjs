@@ -1,11 +1,14 @@
 /**
- * Support reads of main (aws-app.js `support`, relational-support.js): /api/club-wikidata,
- * /api/coach-portrait and /api/stadium, same parameters and bodies, read from
+ * Support reads of main (aws-app.js `support`, relational-support.js), read from
  * api.club_facts, api.coach_portraits, api.stadiums and api.stadium_plans (027), which
- * vega_v2/sources/wikidata.py fills with main's own Wikidata and Commons readers.
+ * vega_v2/sources/wikidata.py fills with main's own Wikidata and Commons readers. Routes
+ * name no source (030_neutral_reads.sql) and take Vega ids:
+ * - GET /api/club-facts?club=t_…: main's /api/club-wikidata body (founded, stadium, coach);
+ * - GET /api/stadium?club=t_…: the club's home stadium, main's /api/stadium body;
+ * - GET /api/coach-portrait?name=, /api/player-honours?id=p_…, /api/assets?url=.
  *
- * Differences with the legacy read: a club found by name and country is the v2 club of
- * that exact name and country (legacy: main's Wikidata name search); a coach's photo may
+ * Differences with the legacy read: clubs and stadiums are designated by the club's Vega id
+ * (legacy: a UEFA id, or a name and country; a stadium's Wikidata id); a coach's photo may
  * come from the portrait search as well as from Wikidata.
  */
 import { createHash } from "node:crypto";
@@ -14,11 +17,12 @@ import { cloudFrontObjectUrl, immutableFile } from "../media.mjs";
 import { MESSI_ID, mergeMessiHonours } from "../../../../dashboard/scripts/materialize_curated.mjs";
 import { projectionGroups } from "../../../../dashboard/shared/honour-display.js";
 
+const TEAM = /^t_(?:[A-Za-z0-9]{6}|v\d{7})$/;
 const iso = (v) => (v instanceof Date ? v.toISOString() : v ?? null);
 const SPEC = {
-  "club-wikidata": { uefa: /^\d{1,12}$/, name: /^[^\u0000-\u001f\u007f]{1,200}$/, country: /^[^\u0000-\u001f\u007f]{1,200}$/ },
+  "club-facts": { club: TEAM },
   "coach-portrait": { name: /^[^\u0000-\u001f\u007f]{1,200}$/ },
-  stadium: { id: /^Q\d{1,16}$/ },
+  stadium: { club: TEAM },
   "player-honours": { id: /^p_[A-Za-z0-9]{6}$/ },
 };
 
@@ -85,15 +89,12 @@ export function createSupportRoute(read, { mediaBase = null } = {}) {
       if (!row || !mediaBase || !immutableFile(row.path) || type !== row.content_type) missing();
       return new Response(null, { status: 307, headers: { Location: cloudFrontObjectUrl(row.path, mediaBase), ...cacheHeaders(60, 0) } });
     }
-    if (path === "/api/club-wikidata") {
-      const p = validate(params, SPEC["club-wikidata"]);
-      let rows;
-      if (p.uefa) rows = await read("SELECT * FROM api.club_facts WHERE uefa_id=$1", [p.uefa]);
-      else if (p.name && p.country)
-        rows = await read("SELECT * FROM api.club_facts WHERE lower(name)=lower($1) AND country_code=$2", [p.name, p.country]);
-      else reject(400, "Paramètre manquant.");
-      if (rows.length !== 1) missing(); // unknown, or a name that designates several clubs
-      return respond(req, clubFacts(rows[0]));
+    if (path === "/api/club-facts") {
+      const p = validate(params, SPEC["club-facts"]);
+      if (!p.club) reject(400, "Paramètre manquant.");
+      const [r] = await read("SELECT * FROM api.club_facts WHERE team_id=api.internal_id('team',$1)", [p.club]);
+      if (!r) missing();
+      return respond(req, clubFacts(r));
     }
     if (path === "/api/coach-portrait") {
       const p = validate(params, SPEC["coach-portrait"]);
@@ -105,8 +106,11 @@ export function createSupportRoute(read, { mediaBase = null } = {}) {
     }
     if (path === "/api/stadium") {
       const p = validate(params, SPEC.stadium);
-      if (!p.id) reject(400, "Paramètre manquant.");
-      const [s] = await read("SELECT * FROM api.stadiums WHERE id=$1", [p.id]);
+      if (!p.club) reject(400, "Paramètre manquant.");
+      const [s] = await read(
+        "SELECT s.* FROM api.club_facts c JOIN api.stadiums s ON s.id=c.stadium_id WHERE c.team_id=api.internal_id('team',$1)",
+        [p.club],
+      );
       if (!s) missing();
       const plans = await read("SELECT * FROM api.stadium_plans WHERE venue_id=$1 ORDER BY seq", [s.venue_id]);
       return respond(req, {
