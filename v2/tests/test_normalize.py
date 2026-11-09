@@ -415,3 +415,18 @@ class NormalizeTest(unittest.TestCase):
         self.assertEqual(
             (away["accurate_passes"], away["accurate_passes_pct"]), (0, 0.0)
         )
+
+
+class NewProviderCodesTest(unittest.TestCase):
+    def test_unknown_shot_codes_keep_the_shot(self):
+        from vega_v2.normalize import normalize_family
+
+        batch = normalize_family(
+            "shots",
+            {"periods": [{"period": "FirstHalf", "shots": [
+                {"id": "s_111111", "team_id": "t_111111", "minute": 3, "event_type": "Deflected", "situation": "KickOff"}
+            ]}]},
+        )
+        self.assertEqual(len(batch.rows["core.shots"]), 1)
+        self.assertNotIn("outcome", batch.rows["core.shots"][0])
+        self.assertEqual(batch.unknown_paths, {"shot.event_type.Deflected", "shot.situation.KickOff"})

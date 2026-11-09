@@ -85,7 +85,7 @@ jobs:
       - name: Worker loop on the real J-1..J+7 calendars, local PostgreSQL only
         env:
           PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
-        run: python -m vega_v2.worker --max-jobs 700 --interval 0.25 --report work/vega-v2-worker.md
+        run: python -m vega_v2.worker --max-jobs 700 --interval 0.25 --cohort-delay 0 --report work/vega-v2-worker.md
       - name: Export measurements only
         if: always()
         uses: actions/upload-artifact@v4

@@ -432,10 +432,17 @@ class Worker:
         now = self.clock()
         with self.conn.transaction():
             self._own(job)
-            edition, before = self.conn.execute(
-                "SELECT m.competition_season_id, f.fingerprint FROM core.matches m LEFT JOIN ops.family_state f ON f.match_id=m.id AND f.family='summary' WHERE m.id=%s",
+            edition, competition, before = self.conn.execute(
+                "SELECT m.competition_season_id, cs.competition_id, f.fingerprint FROM core.matches m JOIN core.competition_seasons cs ON cs.id=m.competition_season_id LEFT JOIN ops.family_state f ON f.match_id=m.id AND f.family='summary' WHERE m.id=%s",
                 (mid,),
             ).fetchone()
+            source = batch.rows.get("core.matches", [{}])[0]
+            if source.get("provider_season"):
+                # The match endpoint names its edition: it wins over the one /date implied
+                # (store.save_matches moves the match while it has no after-match facts).
+                if source.get("provider_competition_id"):
+                    competition = self.store.resolve("competition", source["provider_competition_id"])
+                edition, _ = self.store.edition(competition, source["provider_season"])
             self.store.save_matches(batch, edition, family="summary")
             status, kickoff, after = self.conn.execute(
                 "SELECT m.status::text, m.kickoff_at, f.fingerprint FROM core.matches m LEFT JOIN ops.family_state f ON f.match_id=m.id AND f.family='summary' WHERE m.id=%s",
@@ -521,6 +528,12 @@ REPORT_QUERIES = (
              ('agg.player_season_stats', (SELECT count(*) FROM agg.player_season_stats)),
              ('agg.team_season_stats', (SELECT count(*) FROM agg.team_season_stats)),
              ('agg.standings', (SELECT count(*) FROM agg.standings)),
+             ('agg.cohorts', (SELECT count(*) FROM agg.cohorts)),
+             ('agg.team_percentiles', (SELECT count(*) FROM agg.team_percentiles)),
+             ('agg.player_percentiles', (SELECT count(*) FROM agg.player_percentiles)),
+             ('agg.team_index', (SELECT count(*) FROM agg.team_index)),
+             ('agg.player_role_scores', (SELECT count(*) FROM agg.player_role_scores)),
+             ('agg.team_levels', (SELECT count(*) FROM agg.team_levels)),
              ('ops.dirty_scopes', (SELECT count(*) FROM ops.dirty_scopes)),
              ('ops.data_warnings', (SELECT count(*) FROM ops.data_warnings)),
              ('api.match_list', (SELECT count(*) FROM api.match_list)),
@@ -560,6 +573,7 @@ def main(argv=None):
     parser.add_argument("--interval", type=float, default=0.5, help="minimum seconds between PitchAPI calls")
     parser.add_argument("--migrate", action="store_true")
     parser.add_argument("--report", help="write a measurements-only Markdown report")
+    parser.add_argument("--cohort-delay", type=int, default=600, help="seconds a changed cohort waits before recalculation")
     args = parser.parse_args(argv)
     dsn, key = os.environ.get("V2_DATABASE_URL"), os.environ.get("PITCHAPI_API_KEY")
     if not dsn or not key:
@@ -574,6 +588,7 @@ def main(argv=None):
         Store(conn),
         PitchClient(key, interval=args.interval),
         lanes=tuple(x for x in args.lanes.split(",") if x),
+        cohort_delay=args.cohort_delay,
     )
     started = time.monotonic()
     done = worker.run(max_jobs=args.max_jobs, until_idle=args.until_idle, stop=lambda: bool(stopping))
