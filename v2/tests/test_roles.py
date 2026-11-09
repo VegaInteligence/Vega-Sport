@@ -84,6 +84,27 @@ class RolesTest(unittest.TestCase):
         self.denied("SELECT 1 FROM agg.player_season_stats")
         self.denied("SELECT 1 FROM ops.fetch_jobs")
 
+    def test_migration_task_creates_logins_idempotently(self):
+        from vega_v2 import migrate
+
+        env = {"V2_MIGRATION_DATABASE_URL": DSN, "V2_COLLECT_PASSWORD": "pw-collect-1", "V2_READ_PASSWORD": "pw-read-1"}
+        for _ in range(2):
+            self.assertEqual(migrate.main(env), 0)
+        rows = self.db.execute(
+            """SELECT r.rolname, r.rolcanlogin, r.rolconnlimit, g.rolname FROM pg_roles r
+               JOIN pg_auth_members m ON m.member = r.oid JOIN pg_roles g ON g.oid = m.roleid
+               WHERE r.rolname LIKE 'vega_v2_%' ORDER BY 1"""
+        ).fetchall()
+        self.assertEqual(rows, [("vega_v2_collect", True, 6, "vega_collect"), ("vega_v2_read", True, 12, "vega_read")])
+        self.assertEqual(self.db.execute("SELECT count(*) FROM ops.schema_migrations").fetchone()[0], len(list((ROOT / "sql").glob("*.sql"))) - 2)
+
+    def test_owner_url_from_the_rds_secret(self):
+        from vega_v2.migrate import owner_url
+
+        url = owner_url({"V2_DB_HOST": "h.example", "V2_DB_NAME": "vega_v2", "V2_DB_USER": "vega_owner", "V2_DB_PASSWORD": "p@ss/w:rd"})
+        self.assertEqual(url, "postgresql://vega_owner:p%40ss%2Fw%3Ard@h.example:5432/vega_v2?sslmode=verify-full&sslrootcert=/app/rds-ca.pem")
+        self.assertIsNone(owner_url({"V2_DB_HOST": "h"}))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -430,3 +430,14 @@ class NewProviderCodesTest(unittest.TestCase):
         self.assertEqual(len(batch.rows["core.shots"]), 1)
         self.assertNotIn("outcome", batch.rows["core.shots"][0])
         self.assertEqual(batch.unknown_paths, {"shot.event_type.Deflected", "shot.situation.KickOff"})
+
+    def test_own_goal_shot(self):
+        from vega_v2.normalize import normalize_family
+
+        batch = normalize_family(
+            "shots",
+            {"periods": [{"period": "SecondHalf", "shots": [{"id": "s_222222", "team_id": "t_111111", "minute": 70, "event_type": "OwnGoal"}]}]},
+        )
+        shot = batch.rows["core.shots"][0]
+        self.assertEqual((shot["outcome"], shot["is_own_goal"]), ("goal", True))
+        self.assertEqual(batch.unknown_paths, set())

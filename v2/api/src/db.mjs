@@ -13,12 +13,14 @@ const types = {
 };
 
 /** `role`: a group role to read as (vega_read in production, see 017_roles.sql). */
-export function createReader(connectionString, { max = 4, timeoutMs = 8000, role = null } = {}) {
+export function createReader(connectionString, { max = 4, timeoutMs = 8000, role = null, ca = null } = {}) {
   if (role !== null && !/^[a-z_][a-z0-9_]{0,62}$/.test(role)) throw new Error("invalid role");
   const pool = new pg.Pool({
     connectionString,
     max,
     types,
+    // RDS: TLS verified against the bundled regional CA, never disabled.
+    ...(ca && { ssl: { ca, rejectUnauthorized: true } }),
     options: `-c default_transaction_read_only=on -c statement_timeout=${timeoutMs} -c search_path=api${role ? ` -c role=${role}` : ""}`,
   });
   return {
