@@ -1,7 +1,8 @@
 /**
  * GET /api/read/players — player directory and rankings, same parameters and same
  * response as dashboard/backend/services/relational-players.js on main, read from
- * api.player_appearances (019_api_players.sql).
+ * api.player_appearances (019_api_players.sql). Added by v2: each player record has
+ * `power`, its power ranking of the season read (api.power_players), or null.
  *
  * Differences with the legacy read, by construction of v2 (listed for the parity
  * comparison):
