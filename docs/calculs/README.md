@@ -49,6 +49,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 - [Similarité, radar, pizza et traits](05-joueurs/04-similarite-radar-et-traits.md)
 - [Classements joueurs](05-joueurs/05-classements-joueurs.md) — meilleures notes, buteurs, efficaces, maladroits.
 - [Compatibilité par niveau](05-joueurs/06-compatibilite-par-niveau.md) — onglet Projection : le joueur face aux titulaires de chaque club.
+- [Carte « Lecture du scout »](05-joueurs/07-lecture-du-scout.md) — les quatre phrases de synthèse de la vue d'ensemble et d'où vient chaque chiffre.
 
 ### 6. Accueil et fiches de match
 - [Accueil](06-accueil-et-matchs/01-accueil.md) — semaine affichée, match de la semaine, joueur de la semaine, séries.
