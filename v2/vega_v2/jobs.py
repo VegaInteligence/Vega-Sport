@@ -203,19 +203,65 @@ def fail(
         raise LeaseLost("lease lost")
 
 
+FIRST_SCORE_CHECK = timedelta(minutes=105)
+# (end of the window after kickoff, step inside it). Validated cadence: every 2 min to
+# +150 min, every 15 min to +4 h, hourly for 2 days, then daily to +7 days.
+SCORE_WINDOWS = (
+    (timedelta(minutes=150), timedelta(minutes=2)),
+    (timedelta(hours=4), timedelta(minutes=15)),
+    (timedelta(hours=52), timedelta(hours=1)),
+    (timedelta(days=7), timedelta(days=1)),
+)
+
+
 def next_score_check(kickoff, now):
+    """Next summary check of a match that is not final yet; None once the watch ends."""
     kickoff, now = _aware(kickoff), _aware(now)
-    first = kickoff + timedelta(minutes=105)
-    if now < first:
-        return first
-    cutoff = kickoff + timedelta(minutes=150)
-    if now < cutoff:
-        steps = int((now - first).total_seconds() // 900) + 1
-        return first + timedelta(minutes=15 * steps)
-    return now + timedelta(hours=1)
+    start = kickoff + FIRST_SCORE_CHECK
+    if now < start:
+        return start
+    for until, step in SCORE_WINDOWS:
+        end = kickoff + until
+        if now < end:
+            steps = (now - start) // step + 1
+            return min(start + step * steps, end)
+        start = end
+    return None
 
 
-def after_finished(conn, match_id, finished_at):
+def enqueue_or_revive(conn, lane, family, **target):
+    """enqueue(), except that a failed job on the same target is given a new try.
+
+    A failed row still holds the active-target slot: without this, a lineups forecast
+    that failed before kickoff would block the lineups fetched after the final whistle.
+    """
+    job = enqueue(conn, lane, family, **target)
+    if job is not None:
+        return job
+    instant = (
+        _aware(target["run_after"])
+        if target.get("run_after") is not None
+        else datetime.now(timezone.utc)
+    )
+    columns = ("entity_type", "entity_id", "target_date", "competition_season_id", "global_key")
+    clause = " AND ".join(f"{c} IS NOT DISTINCT FROM %s" for c in columns)
+    row = conn.execute(
+        f"""UPDATE ops.fetch_jobs SET state='pending', lane=%s, attempts=0, run_after=%s,
+              priority=GREATEST(priority, %s), last_error_code=NULL, updated_at=%s
+            WHERE family=%s AND {clause} AND state='failed' RETURNING id""",
+        (
+            lane,
+            instant,
+            target.get("priority", 0),
+            instant,
+            family,
+            *(target.get(c) for c in columns),
+        ),
+    ).fetchone()
+    return row[0] if row else None
+
+
+def after_finished(conn, match_id, finished_at, *, detail_priority=0, correction_priority=0):
     """Enqueue match detail families immediately and a correction check at +24h.
 
     Call only after acknowledging the active summary job in the same transaction,
@@ -223,13 +269,14 @@ def after_finished(conn, match_id, finished_at):
     """
     instant = _aware(finished_at)
     detail = [
-        enqueue(
+        enqueue_or_revive(
             conn,
             "details",
             family,
             entity_type="match",
             entity_id=match_id,
             run_after=instant,
+            priority=detail_priority,
         )
         for family in DETAIL_FAMILIES
     ]
@@ -240,5 +287,6 @@ def after_finished(conn, match_id, finished_at):
         entity_type="match",
         entity_id=match_id,
         run_after=instant + timedelta(hours=24),
+        priority=correction_priority,
     )
     return {"details": detail, "correction": correction}

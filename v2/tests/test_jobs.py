@@ -30,18 +30,20 @@ class CadenceTests(unittest.TestCase):
         self.assertEqual(
             next_score_check(kickoff, kickoff), kickoff + timedelta(minutes=105)
         )
-        self.assertEqual(
-            next_score_check(kickoff, kickoff + timedelta(minutes=105)),
-            kickoff + timedelta(minutes=120),
-        )
-        self.assertEqual(
-            next_score_check(kickoff, kickoff + timedelta(minutes=149)),
-            kickoff + timedelta(minutes=150),
-        )
-        self.assertEqual(
-            next_score_check(kickoff, kickoff + timedelta(minutes=150)),
-            kickoff + timedelta(minutes=210),
-        )
+        minutes = lambda n: kickoff + timedelta(minutes=n)
+        for now, expected in (
+            (105, 107),
+            (106, 107),
+            (149, 150),
+            (150, 165),
+            (239, 240),
+            (240, 300),
+            (52 * 60 - 1, 52 * 60),
+            (52 * 60, 76 * 60),
+            (7 * 24 * 60 - 1, 7 * 24 * 60),
+        ):
+            self.assertEqual(next_score_check(kickoff, minutes(now)), minutes(expected))
+        self.assertIsNone(next_score_check(kickoff, minutes(7 * 24 * 60)))
         with self.assertRaises(ValueError):
             next_score_check(datetime(2026, 1, 1), NOW)
 

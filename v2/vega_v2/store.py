@@ -349,6 +349,14 @@ class Store:
             (sid, label),
         )
         archive = sid <= LAST_ARCHIVE_SEASON
+        suffix = "archive" if archive else f"s{sid}"
+        # One catalog read instead of one DDL per partitioned table when all exist
+        # (the weekly league catalogue names thousands of editions).
+        if self.conn.execute(
+            "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='core' AND c.relname=ANY(%s)",
+            ([f"{table}_{suffix}" for table in self.partitions],),
+        ).fetchone()[0] == len(self.partitions):
+            return sid
         self.conn.execute(
             "SELECT pg_advisory_xact_lock(92001,%s)", (0 if archive else sid,)
         )
@@ -360,7 +368,6 @@ class Store:
             if archive
             else sql.Literal(sid)
         )
-        suffix = "archive" if archive else f"s{sid}"
         for table in self.partitions:
             self.conn.execute(
                 sql.SQL(

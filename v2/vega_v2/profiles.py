@@ -118,7 +118,7 @@ def save_profile(store, kind, provider_key, batch, lease=None, *, now=None):
     return entity_id
 
 
-def record_failure(store, kind, provider_key, code, lease=None, *, now=None):
+def record_failure(store, kind, provider_key, code, lease=None, *, now=None, retry=True):
     if (
         kind not in KINDS
         or not isinstance(code, str)
@@ -132,14 +132,20 @@ def record_failure(store, kind, provider_key, code, lease=None, *, now=None):
         _lock_lease(store.conn, kind, entity_id, lease)
         store.conn.execute(
             "INSERT INTO ops.reference_state(provider,entity_type,entity_id,status,last_attempt_at,next_due) VALUES('pitchapi',%s,%s,'error',%s,%s) ON CONFLICT(provider,entity_type,entity_id) DO UPDATE SET status='error',last_attempt_at=EXCLUDED.last_attempt_at,next_due=EXCLUDED.next_due,updated_at=EXCLUDED.last_attempt_at",
-            (kind, entity_id, instant, instant + timedelta(hours=1)),
+            (kind, entity_id, instant, instant + timedelta(hours=1 if retry else 24 * 30)),
         )
         store.conn.execute(
             "INSERT INTO ops.parse_failures(family,entity_type,entity_id,error_code,message) VALUES(%s,%s,%s,%s,%s)",
             (kind, kind, entity_id, code, code),
         )
         if lease:
-            fail(store.conn, *lease, code, now=instant if explicit_time else None)
+            fail(
+                store.conn,
+                *lease,
+                code,
+                now=instant if explicit_time else None,
+                retry=retry,
+            )
     return entity_id
 
 
