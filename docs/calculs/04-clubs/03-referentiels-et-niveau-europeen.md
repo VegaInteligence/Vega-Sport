@@ -46,4 +46,4 @@ Exemples :
 
 Usages :
 - **Profil club**, référentiel « Europe · niveau comparable » : le club est classé parmi ces 30 + lui-même.
-- **Profil joueur**, option « Clubs de niveau comparable » (activée par défaut) : la cohorte de comparaison est réduite aux joueurs ayant joué pour l'un de ces clubs ou pour le club du joueur ([PlayerSeasonProfile.jsx](../../../dashboard/frontend/src/components/PlayerSeasonProfile.jsx#L327)). Si le club n'est pas dans le pool, la comparaison se fait avec tous les clubs, et la page le signale.
+- **Profil joueur**, option « Clubs de niveau comparable » (activée par défaut) : la cohorte de comparaison est réduite aux joueurs ayant joué pour l'un de ces clubs ou pour le club du joueur ([PlayerSeasonProfile.jsx](../../../dashboard/frontend/src/components/PlayerSeasonProfile.jsx#L371)). Si le club n'est pas dans le pool, la comparaison se fait avec tous les clubs, et la page le signale.
