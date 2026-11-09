@@ -69,6 +69,8 @@ jobs:
           docker run --rm --entrypoint python vega-v2-worker:${{ github.sha }} -c "import vega_v2.worker, vega_v2.archives, vega_v2.migrate, boto3"
           docker run --rm --entrypoint node vega-v2-worker:${{ github.sha }} /app/v2/sources/bridge.mjs plans > /dev/null
           docker run --rm --entrypoint node vega-v2-worker:${{ github.sha }} /app/v2/archives/edition.mjs - - > /dev/null
+          # Every file a source adapter reads is where it looks for it in the image.
+          docker run --rm --entrypoint python vega-v2-worker:${{ github.sha }} -c "from vega_v2.sources import curated, honours, wikidata; from vega_v2 import archives; import sys; missing = [str(p) for p in (curated.SHARED / 'league-rules.json', curated.SHARED / 'cup-logos.json', honours.SCRIPTS / 'player_honours.py', wikidata.BRIDGE, archives.EDITION) if not p.exists()]; sys.exit('missing: ' + ', '.join(missing) if missing else 0)"
   api-package:
     name: Read API package
     runs-on: ubuntu-latest
