@@ -20,6 +20,23 @@ class NormalizeTest(unittest.TestCase):
             self.assertEqual(result.coverage, "ok")
             self.assertEqual(result.rows, {})
 
+    def test_source_gaps_seen_on_live_matches(self):
+        # 2026-11-08: no shot map ("periods": null) is an unavailable family, not an error.
+        self.assertEqual(normalize_family("shots", {"match_id": "m_123456", "periods": None}).coverage, "unavailable")
+        # A shot without its shooter ({"id": ""}) is kept, unattributed.
+        shot = {"team_id": "t_123456", "player": {"id": "", "name": "", "position_id": None, "image_url": None}, "x": 90, "y": 50}
+        rows = normalize_family("shots", {"periods": [{"period": "FirstHalf", "shots": [shot]}]}).rows["core.shots"]
+        self.assertEqual([r["player_id"] for r in rows], [None])
+        # A blank shirt number is none; a player listed twice keeps his first entry.
+        side = lambda players: {"formation": "4-3-3", "starters": players, "subs": [dict(P, player_id="p_123456", shirt_number="12")]}
+        data = {"home_team": T, "away_team": {"id": "t_654321", "name": "Other"},
+                "home": side([dict(P, player_id="p_123456", shirt_number="")]), "away": side([])}
+        data["away"]["subs"] = []
+        players = normalize_family("lineups", data).rows["core.lineup_players"]
+        self.assertEqual([(r["player_id"], r["is_starter"], r.get("shirt_number")) for r in players], [("p_123456", True, None)])
+        with self.assertRaises(NormalizationError):
+            normalize_family("lineups", dict(data, home=side([dict(P, player_id="p_123456", shirt_number="x")])))
+
     def test_player_groups_preserve_zero_and_fraction(self):
         groups = [
             {

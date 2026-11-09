@@ -75,6 +75,13 @@ def number(value, kind):
     raise NormalizationError("INVALID_TYPE")
 
 
+def _smallint_or_blank(value):
+    """A shirt number or a position: the source sends "" when it has none."""
+    if isinstance(value, str) and not value.strip():
+        return None
+    return number(value, "smallint")
+
+
 def _object(value):
     if not isinstance(value, dict):
         raise NormalizationError("INVALID_OBJECT")
@@ -100,6 +107,9 @@ def _key(value, prefix):
 def _ref(out, kind, value, *, required=True):
     if value is None and not required:
         return None
+    # An optional reference the source leaves blank ({"id": "", "name": ""}): none.
+    if not required and isinstance(value, dict) and not (value.get("id") or value.get("player_id")):
+        return None
     if isinstance(value, str):
         key = value
         fields = {}
@@ -120,7 +130,7 @@ def _ref(out, kind, value, *, required=True):
         }
         for key_name in ("position_id", "shirt_number"):
             if key_name in fields:
-                fields[key_name] = number(fields[key_name], "smallint")
+                fields[key_name] = _smallint_or_blank(fields[key_name])
         for key_name in ("name", "short_name", "country_code", "image_url"):
             if (
                 key_name in fields
@@ -537,7 +547,7 @@ def normalize_family(family, data, *, match_id=None):
         if family == "player":
             for k in ("shirt_number", "position_id"):
                 if k in item:
-                    row[k] = number(item[k], "smallint")
+                    row[k] = _smallint_or_blank(item[k])
         out.add(family + "s", row)
     elif family == "summary":
         if match_id and _object(data).get("id") != match_id:
@@ -621,7 +631,10 @@ def normalize_family(family, data, *, match_id=None):
     elif family == "shots":
         obj = _object(data)
         seq = 0
-        for group in _list(obj.get("periods")):
+        if obj.get("periods") is None:
+            # No shot map for this match (the source answers "periods": null).
+            out.coverage = "unavailable"
+        for group in _list(obj.get("periods") or []):
             group = _object(group)
             period = _period(group.get("period"))
             for item in _list(group.get("shots")):
@@ -743,6 +756,7 @@ def normalize_family(family, data, *, match_id=None):
                 out.add("shots", row)
     elif family == "lineups":
         obj = _object(data)
+        listed = set()
         for side in ("home", "away"):
             block = _object(obj.get(side))
             team = _ref(out, "team", obj.get(side + "_team"))
@@ -763,16 +777,21 @@ def normalize_family(family, data, *, match_id=None):
                 )
                 for order, item in enumerate(_list(players)):
                     item = _object(item)
+                    player = _ref(out, "player", item)
+                    # A player the source lists twice keeps his first entry (starters come first).
+                    if player in listed:
+                        continue
+                    listed.add(player)
                     row = {
                         "team_id": team,
-                        "player_id": _ref(out, "player", item),
+                        "player_id": player,
                         "is_starter": starter,
                         # The source's order (starters by role, then substitutes as they came on).
                         "lineup_order": number(order, "smallint"),
                     }
                     for k in ("shirt_number", "position_id"):
                         if k in item:
-                            row[k] = number(item[k], "smallint")
+                            row[k] = _smallint_or_blank(item[k])
                     if "is_captain" in item:
                         row["is_captain"] = _bool(item["is_captain"])
                     if starter:
