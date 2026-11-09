@@ -9,7 +9,7 @@ import { actorReadKey } from "../dashboard/frontend/src/services/actor-reads.js"
 const origin = "https://vega.example/joueurs?season=2026%2F2027&v=123";
 const football = {
   season: "2026/2027",
-  preferences: { focus: "all" },
+  preferences: { focus: "europe" },
   manifest: {
     storage: "aws-relational",
     publicationVersion: "7",
@@ -25,7 +25,11 @@ test("actor intent uses canonical scope and rejects external, unknown, unsupport
   const value = actorIntent(path, origin, football);
   assert.equal(value.kind, "player");
   assert.equal(value.params.player, "p_Ab12Cd");
-  assert.equal(value.params.leagues, "l_3FJFUl");
+  assert.equal(value.params.leagues, "all");
+  assert.equal(
+    actorIntent(path + "&focus=all", origin, football).key,
+    value.key,
+  );
   assert.equal(value.params.detail, "summary");
   assert.equal(value.key, actorReadKey("player", value.params));
   for (const bad of [

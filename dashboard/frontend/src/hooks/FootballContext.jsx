@@ -263,20 +263,21 @@ export function FootballProvider({ children, loadData = true, initialState }) {
   // A competition filter only narrows the download when the whole scope has
   // not been loaded yet (deep link). Once it has, the filter runs in memory:
   // no second download, no re-merge, no loading screen.
-  const clubDetail =
-    pathname.startsWith("/clubs") && Boolean(initial.get("id"));
+  const actorId = initial.get("id");
+  const clubDetail = pathname.startsWith("/clubs") && Boolean(actorId);
+  const playerDetail = playerScope && Boolean(actorId);
   const clubTeam =
     !proMode && clubDetail
       ? clubDataTeam(initial, { playerOpen: Boolean(player), comparing })
       : null;
-  const dataFocus = clubDetail ? "all" : focus;
+  // A profile can span competitions outside the directory's discovery focus.
+  const dataFocus = clubDetail || playerDetail ? "all" : focus;
   const pagedMatches = pagedMatchList(
     manifest.value,
     pathname,
     initial.get("id"),
   );
-  const actorId = initial.get("id"),
-    compactKind = homeScope
+  const compactKind = homeScope
       ? "home"
       : playerScope
         ? actorId
@@ -300,7 +301,7 @@ export function FootballProvider({ children, loadData = true, initialState }) {
     ),
     compactActor = compactMode && ["player", "club"].includes(compactKind),
     actorScope =
-      compactKind === "club"
+      compactKind === "club" || compactKind === "player"
         ? "all"
         : compactScope(
             directoryScopeIds(manifest.value, chosen, focus, filters),
