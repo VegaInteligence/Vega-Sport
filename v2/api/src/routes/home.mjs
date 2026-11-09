@@ -1,8 +1,17 @@
 /**
- * GET /api/read/home — the home page in one read: the week's results, the match and
- * player of the week, the mini tables, the season leaders, the upcoming highlights
- * (favourites first) and the season markers. Same parameters, same editorial weights
- * and same response as relational-home.js on main, read from the v2 api views.
+ * The home page in two reads (doc "Accueil et personnalisation", "Ce qui change en v2"):
+ * - GET /api/read/home, the common read: the week's results, the match and player of the
+ *   week, the mini tables, the season leaders, the big upcoming matches by editorial
+ *   weight and the season markers. It depends on the scope and the time only, so
+ *   CloudFront keeps one entry per scope, served stale while it is computed again
+ *   (stale-while-revalidate); a new publication changes its cache key (generation);
+ * - GET /api/read/home-favourites, the personal read: the favourites' upcoming matches
+ *   (« Prochains matchs ») and « Vos joueurs cette semaine », never in the common cache.
+ *   The site chooses the five upcoming matches from the two (home-upcoming.js).
+ * The settings are data: the lists in core.editorial_lists (api.editorial_lists), the
+ * weights in api.home_weight_v1, the week in api.home_period, the thresholds in
+ * api.home_rules_v1 (044_home_settings.sql). Same blocks and weights as
+ * relational-home.js on main.
  *
  * Differences with the legacy read, by construction of v2 (listed for the parity
  * comparison):
@@ -32,36 +41,34 @@ import {
 import { fixture } from "./matches.mjs";
 import { appearanceRecord } from "./performance.mjs";
 
-export const HOME_TOP_FIVE = EUROPE_FOCUS.slice(0, 5).map(({ id }) => id);
-export const HOME_TOP_SEVEN = EUROPE_FOCUS.slice(0, 7).map(({ id }) => id);
+// The European club cups (a competition's nature, not an editorial choice).
 export const HOME_UEFA = EUROPE_FOCUS.slice(7).map(({ id }) => id);
-// relational-home.js on main (a test compares them).
-export const HOME_SIMPLE_LEAGUES = [
-  "l_3FJFUl", "l_0275VP", "l_4WFCIZ", "l_4DWyTT", "l_0ahLw8", "l_1W6idJ", "l_1Isor4", "l_3hvsne", "l_47077Y",
-  "l_0ErfuF", "l_3kyHLd", "l_0ALvwF", "l_0jy5yE", "l_4QexZg", "l_4H43wr", "l_49KZaB", "l_0S1uaf", "l_1BFfna",
-];
-// dashboard/backend/services/relational-home.js (main), mirrored by the site's home-insights.js.
-export const LATEST_WEEK_DAYS = 14;
-
-export const HOME_FEATURED_CLUBS = [
-  "t_1gkhxH", "t_4R934X", "t_0BrMnM", "t_0UCNPX", "t_2I313i", "t_2eQl9k", "t_4A7FfD", "t_41iFW3", "t_2s2eyG", "t_0xMlRV",
-  "t_13gLEF", "t_0tnX1I", "t_4NZcri", "t_32jSEF", "t_3NIiXl", "t_1cpjqO", "t_386iz1", "t_2lHR8t", "t_4ZwKDn", "t_3CPHHF",
-  "t_1DYf1D", "t_2toJRF", "t_0RhqmW", "t_0Mzm1V", "t_0dVrhE", "t_1TAfIz", "t_3t08JG", "t_1jOgDP", "t_4KvHFN",
-];
+// Upcoming matches the common read offers: more than five, so that a match leaving at
+// kick-off or taken by a favourite still leaves the five places filled.
+export const UPCOMING_OFFERED = 12;
+// The common read: fresh for 60 s, then served stale for 5 minutes while CloudFront
+// computes it again, and for a day if that fails.
+export const HOME_STALE = { revalidate: 300, error: 86400 };
 
 const arraySql = (values) => `ARRAY[${values.map((value) => `'${value}'`).join(",")}]::text[]`;
-const topFive = arraySql(HOME_TOP_FIVE),
-  topSeven = arraySql(HOME_TOP_SEVEN),
-  uefa = arraySql(HOME_UEFA),
-  simpleLeagues = arraySql(HOME_SIMPLE_LEAGUES),
-  bigClubs = arraySql(HOME_FEATURED_CLUBS);
+const uefa = arraySql(HOME_UEFA);
+// The editorial lists (api.editorial_lists), read once per request.
+const LISTS = `SELECT coalesce(array_agg(entity_key ORDER BY seq) FILTER(WHERE list_kind='featured_clubs'),'{}') clubs,
+ coalesce(array_agg(entity_key ORDER BY seq) FILTER(WHERE list_kind='title_race_leagues'),'{}') title_race,
+ coalesce(array_agg(entity_key ORDER BY seq) FILTER(WHERE list_kind='top_seven'),'{}') top_seven,
+ coalesce((array_agg(entity_key ORDER BY seq) FILTER(WHERE list_kind='top_seven'))[1:5],'{}') top_five FROM api.editorial_lists`;
+// Cast: "= ANY((SELECT …))" would compare with each row, not with the array.
+const bigClubs = "(SELECT clubs FROM lists)::text[]",
+  topFive = "(SELECT top_five FROM lists)::text[]",
+  topSeven = "(SELECT top_seven FROM lists)::text[]",
+  simpleLeagues = "(SELECT title_race FROM lists)::text[]";
 const scoreSql = (value) => `(${finiteSql(value)} AND ${value}>=0 AND ${value}=trunc(${value}))`;
 const jsonRows = (sql) => `(SELECT coalesce(jsonb_agg(to_jsonb(r)),'[]'::jsonb) FROM (${sql}) r)`;
 const oneRow = (sql) => `(SELECT to_jsonb(r) FROM (${sql}) r)`;
 const IDENT = (prefix) => new RegExp(`^${prefix}_(?:[A-Za-z0-9]{6}|v\\d{7})$`);
 
-export function parseHomeRead(params) {
-  validateParams(params, ["season", "league", "leagues", "generation", "archive", "personalTeams", "personalPlayers"]);
+export function parseHomeRead(params, { personal = false } = {}) {
+  validateParams(params, ["season", "league", "leagues", "generation", "archive", ...(personal ? ["personalTeams", "personalPlayers"] : [])]);
   const scope = parseReadScope(params);
   if (params.has("archive") && !["0", "1"].includes(params.get("archive"))) reject(400, "Période invalide.");
   const identifiers = (key, prefix) => {
@@ -84,6 +91,22 @@ const appearanceJson = (keys) => `SELECT a.*,fx.id AS match_key,fx.id||':'||api.
   FROM api.player_appearances a JOIN api.fixtures fx ON fx.season_id=a.season_id AND fx.match_id=a.match_id
   WHERE (a.season_id,a.match_id,a.player_id) IN (${keys})`;
 
+// The scope's fixtures and its last result, then the displayed week (api.home_period):
+// the start of both reads, so that they show the same week.
+const weekSql = (fixtureScope, fence, instant, archive) => `fixture_source AS MATERIALIZED (
+ SELECT f.*,f.kickoff_at explicit_time FROM api.fixtures f WHERE ${fixtureScope}${fence}
+), fixtures AS MATERIALIZED (
+ SELECT f.*,coalesce(explicit_time,(f.day+time '12:00') AT TIME ZONE 'UTC') kickoff,
+ coalesce((explicit_time AT TIME ZONE 'Europe/Paris')::date,f.day) local_day FROM fixture_source f
+), matches AS MATERIALIZED (
+ SELECT f.*,f.home_team_id home_id,f.away_team_id away_id,f.score_home home_score,f.score_away away_score FROM fixtures f
+ WHERE f.status='finished' AND ${scoreSql("f.score_home")} AND ${scoreSql("f.score_away")}
+), last_finished AS (
+ SELECT kickoff,local_day FROM matches WHERE kickoff<=${instant} ORDER BY kickoff DESC,id LIMIT 1
+), period AS MATERIALIZED (
+ SELECT p.* FROM api.home_period(${instant},(SELECT kickoff FROM last_finished),${archive},(SELECT latest_week_days FROM rules)) p
+)`;
+
 export function homeReadQuery(filters, params, now) {
   const values = [],
     b = (value) => bindValue(values, value),
@@ -91,13 +114,9 @@ export function homeReadQuery(filters, params, now) {
   const fixtureScope = scopeWhere("f", filters.scope, values),
     appearanceScope = scopeWhere("a", filters.scope, values);
   const fence = params.has("generation") ? ` AND EXISTS(SELECT 1 FROM publication WHERE generation=${b(params.get("generation"))})` : "";
-  const instant = `${b(new Date(now).toISOString())}::timestamptz`,
-    personalTeams = `${b(filters.personalTeams)}::text[]`,
-    personalPlayers = `${b(filters.personalPlayers)}::text[]`,
-    personalSeason = b(filters.scope.season);
-  const weight = (alias, home, away) => `(2*(coalesce((${alias}.${home}=ANY(${bigClubs}))::int,0)+coalesce((${alias}.${away}=ANY(${bigClubs}))::int,0))
-    +CASE WHEN ${alias}.league_id='l_0bfbkO' THEN 3 WHEN ${alias}.league_id=ANY(${uefa}) THEN 1 ELSE 0 END
-    +coalesce((${alias}.league_id=ANY(${topFive}))::int,0)+coalesce((rh.rank<=3)::int,0)+coalesce((ra.rank<=3)::int,0))`;
+  const instant = `${b(new Date(now).toISOString())}::timestamptz`;
+  const weight = (alias, home, away) =>
+    `api.home_weight_v1('editorial',${alias}.league_id,${alias}.${home},${alias}.${away},rh.rank,ra.rank,false,l.clubs,l.top_five)`;
   const tableRow = (alias) => `jsonb_build_object('id',${alias}.team_id,'name',${alias}.name,'imageUrl',${alias}.image_url,'leagueId',${alias}.league_id,
     'played',${alias}.played,'points',${alias}.points,'goalsFor',${alias}.goals_for,'goalsAgainst',${alias}.goals_against,
     'cleanSheets',${alias}.clean_sheets,'results',${alias}.results,'cumulative',${alias}.cumulative,
@@ -111,29 +130,9 @@ export function homeReadQuery(filters, params, now) {
     FROM (SELECT * FROM season_players WHERE ${predicate} ORDER BY ${order} LIMIT ${limit}) p)`;
   const sql = `/*vega:v2:home*/
 WITH publication AS MATERIALIZED (${publication}),
-fixture_source AS MATERIALIZED (
- SELECT f.*,f.kickoff_at explicit_time FROM api.fixtures f WHERE ${fixtureScope}${fence}
-), fixtures AS MATERIALIZED (
- SELECT f.*,coalesce(explicit_time,(f.day+time '12:00') AT TIME ZONE 'UTC') kickoff,
- coalesce((explicit_time AT TIME ZONE 'Europe/Paris')::date,f.day) local_day FROM fixture_source f
-), matches AS MATERIALIZED (
- SELECT f.*,f.home_team_id home_id,f.away_team_id away_id,f.score_home home_score,f.score_away away_score FROM fixtures f
- WHERE f.status='finished' AND ${scoreSql("f.score_home")} AND ${scoreSql("f.score_away")}
-), last_finished AS (
- SELECT kickoff,local_day FROM matches WHERE kickoff<=${instant} ORDER BY kickoff DESC,id LIMIT 1
-), period_anchor AS (
- -- As on main: an archive uses its last played week. A live home keeps the latest week
- -- with results while the current week has none (Monday morning, international
- -- breaks), as long as that result is under ${LATEST_WEEK_DAYS} days old.
- SELECT CASE WHEN ${filters.archive} OR latest THEN l.kickoff ELSE ${instant} END anchor,coalesce(latest,false) latest
- FROM (SELECT 1) one LEFT JOIN last_finished l ON true CROSS JOIN LATERAL (SELECT NOT ${filters.archive}
- AND l.local_day<date_trunc('week',${instant} AT TIME ZONE 'Europe/Paris')::date
- AND l.local_day>(${instant} AT TIME ZONE 'Europe/Paris')::date-${LATEST_WEEK_DAYS} latest) fallback
-), period AS (
- SELECT date_trunc('week',anchor AT TIME ZONE 'Europe/Paris')::date start_day,
- date_trunc('week',anchor AT TIME ZONE 'Europe/Paris')::date+6 end_day,
- (${instant} AT TIME ZONE 'Europe/Paris')::date as_of_day,latest FROM period_anchor
-), league_sides AS MATERIALIZED (
+lists AS MATERIALIZED (${LISTS}),
+rules AS MATERIALIZED (SELECT * FROM api.home_rules_v1),
+${weekSql(fixtureScope, fence, instant, filters.archive)}, league_sides AS MATERIALIZED (
  SELECT f.*,s.team_id,s.name,s.image_url,s.gf,s.ga,
  (f.status='finished' AND ${scoreSql("f.score_home")} AND ${scoreSql("f.score_away")}) scored
  FROM fixtures f CROSS JOIN LATERAL (VALUES(f.home_team_id,f.home_name,f.home_image_url,f.score_home,f.score_away),
@@ -172,11 +171,9 @@ fixture_source AS MATERIALIZED (
  WHERE t.played>0 AND t.team_count>=4 ORDER BY coalesce(array_position(${topSeven},t.league_id),99),${normalizedSql("c.name")},t.league_id LIMIT 8
 ), weekly AS MATERIALIZED (
  SELECT m.*,${weight("m", "home_id", "away_id")} editorial_weight,
- 4*(coalesce((m.home_id=ANY(${bigClubs}))::int,0)+coalesce((m.away_id=ANY(${bigClubs}))::int,0))
- +coalesce((rh.rank<=4)::int,0)*2+coalesce((ra.rank<=4)::int,0)*2
- +coalesce((rh.rank<=3 AND ra.rank<=3)::int,0)*2+(m.league_id='l_0bfbkO')::int*3
- +(m.league_id=ANY(${topFive}))::int+(EXISTS(SELECT 1 FROM api.match_shots sh WHERE sh.season_id=m.season_id AND sh.match_id=m.match_id))::int showcase_weight
- FROM matches m CROSS JOIN period p LEFT JOIN ranks rh ON rh.team_id=m.home_id LEFT JOIN ranks ra ON ra.team_id=m.away_id
+ api.home_weight_v1('showcase',m.league_id,m.home_id,m.away_id,rh.rank,ra.rank,
+ EXISTS(SELECT 1 FROM api.match_shots sh WHERE sh.season_id=m.season_id AND sh.match_id=m.match_id),l.clubs,l.top_five) showcase_weight
+ FROM matches m CROSS JOIN period p CROSS JOIN lists l LEFT JOIN ranks rh ON rh.team_id=m.home_id LEFT JOIN ranks ra ON ra.team_id=m.away_id
  WHERE m.local_day BETWEEN p.start_day AND p.end_day AND m.local_day<=p.as_of_day
  AND (m.explicit_time IS NULL OR m.explicit_time<=${instant})
 ), ticker_ordered AS (
@@ -234,47 +231,18 @@ weekly_performances AS MATERIALIZED (
  ORDER BY date DESC NULLS LAST,source_order DESC LIMIT 6
 ), selected_appearances AS MATERIALIZED (${appearanceJson(`SELECT season_id,match_id,player_id FROM potw UNION SELECT season_id,match_id,player_id FROM other_performances
    UNION SELECT season_id,match_id,player_id FROM best_featured UNION SELECT season_id,match_id,player_id FROM recent_performances`)}
-), personal_clubs AS MATERIALIZED (
- SELECT unnest(${personalTeams}) team_id UNION
- SELECT api.public_id('team',team_id) FROM (SELECT DISTINCT ON(a.player_id) a.team_id FROM api.player_appearances a
- WHERE a.season=${personalSeason} AND a.player_id IN (SELECT api.internal_id('player',k) FROM unnest(${personalPlayers}) k)
- AND a.minutes>0 AND a.team_id IS NOT NULL AND a.date IS NOT NULL
- AND (coalesce(a.country,'') NOT IN('INT','INT-2','UEFA','WORLD') OR a.league_id=ANY(${uefa}))
- ORDER BY a.player_id,a.date DESC,a.match_id DESC) p
-), your_list AS MATERIALIZED (
- SELECT DISTINCT y.k player_key,api.internal_id('player',y.k) player_id FROM unnest(${personalPlayers}) y(k)
-), your_matches AS MATERIALIZED (
- SELECT y.player_key,f.id match_key,a.date,a.minutes,a.rating,a.goals,a.assists,
- CASE WHEN a.team_id=f.home_internal_id THEN f.away_team_id ELSE f.home_team_id END opponent_id,
- CASE WHEN a.team_id=f.home_internal_id THEN f.away_name ELSE f.home_name END opponent,
- CASE WHEN a.team_id=f.home_internal_id THEN f.score_home ELSE f.score_away END gf,
- CASE WHEN a.team_id=f.home_internal_id THEN f.score_away ELSE f.score_home END ga
- FROM your_list y JOIN api.player_appearances a ON a.player_id=y.player_id
- JOIN api.fixtures f ON f.season_id=a.season_id AND f.match_id=a.match_id CROSS JOIN period p
- WHERE a.date BETWEEN p.start_day AND p.end_day AND a.minutes>0
-), your_clubs AS MATERIALIZED (
- SELECT DISTINCT ON(y.player_id) y.player_key,y.player_id,a.player_name,a.image_url,a.team_id,a.team
- FROM your_list y JOIN api.player_appearances a ON a.player_id=y.player_id
- WHERE a.minutes>0 AND a.team_id IS NOT NULL AND a.date IS NOT NULL AND a.team_is_national IS NOT TRUE
- ORDER BY y.player_id,a.date DESC,a.match_id DESC
-), your_next AS MATERIALIZED (
- SELECT c.player_key,n.* FROM your_clubs c CROSS JOIN LATERAL (
- SELECT f.id,extract(epoch FROM f.kickoff_at)*1000 time_ms,f.league_id,f.home_team_id,f.home_name,f.away_team_id,f.away_name
- FROM api.fixtures f WHERE c.team_id IN(f.home_internal_id,f.away_internal_id) AND f.status='not_started' AND f.kickoff_at>${instant}
- ORDER BY f.kickoff_at,f.id LIMIT 1) n
 ), upcoming_candidates AS MATERIALIZED (
+ -- The big matches of the next days in the scope, by editorial weight; the favourites'
+ -- matches come from the personal read.
  SELECT f.*,extract(epoch FROM f.kickoff)*1000 time_ms,(f.kickoff AT TIME ZONE 'Europe/Paris')::date upcoming_day,
- coalesce(((f.home_team_id IN(SELECT team_id FROM personal_clubs)) OR (f.away_team_id IN(SELECT team_id FROM personal_clubs)))::int,0) personal,
  ${weight("f", "home_team_id", "away_team_id")} editorial_weight
- FROM fixtures f LEFT JOIN ranks rh ON rh.team_id=f.home_team_id LEFT JOIN ranks ra ON ra.team_id=f.away_team_id
- WHERE f.status='not_started' AND f.kickoff>${instant} AND f.kickoff<=${instant}+interval '7 days'
+ FROM fixtures f CROSS JOIN lists l LEFT JOIN ranks rh ON rh.team_id=f.home_team_id LEFT JOIN ranks ra ON ra.team_id=f.away_team_id
+ WHERE f.status='not_started' AND f.kickoff>${instant}
+ AND f.kickoff<=${instant}+make_interval(days=>(SELECT upcoming_days FROM rules))
  AND coalesce(f.home_name,'')<>'' AND coalesce(f.away_name,'')<>''
 ), upcoming AS MATERIALIZED (
- SELECT u.*,CASE WHEN personal=1 THEN coalesce(4-array_position(${uefa},league_id),0) ELSE 0 END europe_priority,
- row_number() OVER(ORDER BY personal DESC,CASE WHEN personal=1 THEN upcoming_day END ASC NULLS LAST,
- CASE WHEN personal=1 THEN coalesce(4-array_position(${uefa},league_id),0) END DESC NULLS LAST,
- CASE WHEN personal=1 THEN kickoff END ASC NULLS LAST,
- CASE WHEN personal=1 THEN id END ASC NULLS LAST,editorial_weight DESC,kickoff,id) highlight_order
+ SELECT u.*,(league_id=ANY(${uefa})) europe,
+ row_number() OVER(ORDER BY editorial_weight DESC,kickoff,id) highlight_order
  FROM upcoming_candidates u
 ), streak AS MATERIALIZED (
  SELECT * FROM ranked WHERE streak>=3 ORDER BY streak DESC,rank,league_id LIMIT 1
@@ -326,15 +294,8 @@ SELECT publication.*,
  (SELECT coalesce(jsonb_agg(jsonb_build_array(team_id,jsonb_build_object('id',team_id,'rank',rank,'leagueId',league_id,'form',form)) ORDER BY team_id),'[]'::jsonb) FROM ranks) ranks,
  (SELECT ${tableRow("s")} FROM streak s) streak,
  (SELECT coalesce(jsonb_agg(${tableRow("d")}||jsonb_build_object('perGame',d.per_game) ORDER BY d.per_game,d.clean_sheets DESC,d.league_id,d.rank),'[]'::jsonb) FROM defences d) defences,
- ${jsonRows("SELECT * FROM upcoming ORDER BY highlight_order LIMIT 5")} highlights,
- (SELECT coalesce(jsonb_agg(to_jsonb(x)-'best' ORDER BY x.best DESC NULLS LAST,x.name,x.player_id),'[]'::jsonb) FROM (
-  SELECT c.player_key player_id,c.player_name name,c.image_url,api.public_id('team',c.team_id) team_id,c.team,
-  (SELECT max(w.rating) FROM your_matches w WHERE w.player_key=c.player_key) best,
-  (SELECT coalesce(jsonb_agg(jsonb_build_object('matchId',w.match_key,'date',w.date,'minutes',w.minutes,'rating',w.rating,'goals',w.goals,
-    'assists',w.assists,'opponentId',w.opponent_id,'opponent',w.opponent,'score',jsonb_build_array(w.gf,w.ga)) ORDER BY w.date,w.match_key),'[]'::jsonb)
-   FROM your_matches w WHERE w.player_key=c.player_key) matches,
-  (SELECT to_jsonb(n)-'player_key' FROM your_next n WHERE n.player_key=c.player_key) next
-  FROM your_clubs c) x WHERE jsonb_array_length(x.matches)>0 OR x.next IS NOT NULL) your_players,
+ ${jsonRows(`SELECT * FROM upcoming ORDER BY highlight_order LIMIT ${UPCOMING_OFFERED}`)} highlights,
+ (SELECT to_jsonb(r) FROM rules r) rules,
  ${oneRow("SELECT u.* FROM upcoming u JOIN streak s ON s.team_id IN(u.home_team_id,u.away_team_id) ORDER BY u.highlight_order LIMIT 1")} streak_next,
  (SELECT coalesce(avg(least(1,played::float8/games)),0) FROM table_totals t WHERE games>0
  AND (league_id=ANY(${topFive}) OR NOT EXISTS(SELECT 1 FROM table_totals WHERE games>0 AND league_id=ANY(${topFive})))) season_progress,
@@ -352,9 +313,16 @@ const upcomingRecord = (row) =>
         fixture: fixture(row),
         time: Number(row.time_ms),
         day: row.upcoming_day,
-        personal: row.personal,
-        europePriority: row.europe_priority,
+        europe: Boolean(row.europe),
         weight: row.editorial_weight,
+      }
+    : null;
+
+export const homeRules = (row) =>
+  row
+    ? {
+        places: row.upcoming_places, favouritePlaces: row.favourite_places, upcomingDays: row.upcoming_days,
+        favouriteDays: row.favourite_days, bigCardHours: row.big_card_hours, latestWeekDays: row.latest_week_days,
       }
     : null;
 
@@ -390,15 +358,7 @@ export function homeReadRecord(snapshot) {
     defences: snapshot.defences || [],
     win: snapshot.biggest_win ? { match: match(snapshot.biggest_win.id), margin: snapshot.biggest_win.margin, goals: snapshot.biggest_win.goals } : null,
     streakNext: upcomingRecord(snapshot.streak_next),
-    // « Vos joueurs cette semaine » (v2 doc, retenu): each followed player's matches of the
-    // displayed week and the next match of his latest club.
-    yourPlayers: (snapshot.your_players || []).map((p) => ({
-      playerId: p.player_id, name: p.name, imageUrl: p.image_url ?? null, teamId: p.team_id, team: p.team, matches: p.matches,
-      next: p.next
-        ? { id: p.next.id, time: Number(p.next.time_ms), leagueId: p.next.league_id,
-            home: { id: p.next.home_team_id, name: p.next.home_name }, away: { id: p.next.away_team_id, name: p.next.away_name } }
-        : null,
-    })),
+    rules: homeRules(snapshot.rules),
     seasonProgress: snapshot.season_progress,
     hasSeasonPlayers: snapshot.has_season_players,
     raceOpen: Boolean(snapshot.race_open),
@@ -415,13 +375,154 @@ export function createHomeReadRoute(read, clock = Date.now) {
     const filters = parseHomeRead(params),
       now = clock(),
       periodKey = Math.floor(now / 60_000);
-    const validated = await readValidator(req, params, filters.scope, read, { periodKey });
+    const validated = await readValidator(req, params, filters.scope, read, { periodKey, ttl: 60, stale: HOME_STALE });
     if (validated) return validated;
     const { sql, values } = homeReadQuery(filters, params, now);
     const [snapshot] = await read(sql, values);
     checkReadGeneration(params, snapshot?.generation);
     const data = homeReadRecord(snapshot);
     if (data.period) data.period = { ...data.period, asOf: now };
-    return readResponse(req, params, snapshot, data, { periodKey, maxBytes: 1024 * 1024 });
+    // A slightly old home rather than an error: served stale while computed again.
+    return readResponse(req, params, snapshot, data, { periodKey, maxBytes: 1024 * 1024, ttl: 60, stale: HOME_STALE });
+  };
+}
+
+/**
+ * GET /api/read/home-favourites — the personal read (doc "Prochains matchs : comment on
+ * choisit", steps 1 and 2, and « Vos joueurs cette semaine »):
+ * - the favourites and their strength: a followed club (1), the last observed club of a
+ *   followed player, his latest league or European cup match (2), the national team of a
+ *   followed player, his latest international match (3); a team that is several of
+ *   these keeps its strongest;
+ * - their matches: every one of the next upcoming_days (7) days, and each favourite's
+ *   next match whatever the competition up to favourite_days (21) days, as in the doc's
+ *   international break example (France – Allemagne, then the clubs at 10 and 11 days,
+ *   then France – Espagne). A match between two favourites is one match;
+ * - each followed player's matches of the displayed week and his club's next match.
+ * Never in the common cache (private): a visitor's favourites only change his own read.
+ */
+export function homeFavouritesQuery(filters, params, now) {
+  const values = [],
+    b = (value) => bindValue(values, value),
+    publication = publicationSql(filters.scope, values);
+  const fixtureScope = scopeWhere("f", filters.scope, values);
+  const fence = params.has("generation") ? ` AND EXISTS(SELECT 1 FROM publication WHERE generation=${b(params.get("generation"))})` : "";
+  const instant = `${b(new Date(now).toISOString())}::timestamptz`,
+    teams = `${b(filters.personalTeams)}::text[]`,
+    players = `${b(filters.personalPlayers)}::text[]`,
+    season = b(filters.scope.season);
+  const sql = `/*vega:v2:home-favourites*/
+WITH publication AS MATERIALIZED (${publication}),
+rules AS MATERIALIZED (SELECT * FROM api.home_rules_v1),
+${weekSql(fixtureScope, fence, instant, filters.archive)},
+followed_players AS MATERIALIZED (
+ SELECT DISTINCT k player_key,api.internal_id('player',k) player_id FROM unnest(${players}) k
+), player_clubs AS MATERIALIZED (
+ SELECT DISTINCT ON(y.player_id) y.player_key,a.team_id FROM followed_players y JOIN api.player_appearances a ON a.player_id=y.player_id
+ WHERE a.season=${season} AND a.minutes>0 AND a.team_id IS NOT NULL AND a.date IS NOT NULL AND a.team_is_national IS NOT TRUE
+ AND (coalesce(a.country,'') NOT IN('INT','INT-2','UEFA','WORLD') OR a.league_id=ANY(${uefa}))
+ ORDER BY y.player_id,a.date DESC,a.match_id DESC
+), player_nations AS MATERIALIZED (
+ SELECT DISTINCT ON(y.player_id) y.player_key,a.team_id FROM followed_players y JOIN api.player_appearances a ON a.player_id=y.player_id
+ WHERE a.team_is_national AND a.minutes>0 AND a.date IS NOT NULL ORDER BY y.player_id,a.date DESC,a.match_id DESC
+), favourite_rows AS (
+ SELECT api.internal_id('team',k) team_id,1 strength,'club' reason,NULL::text player_key FROM unnest(${teams}) k
+ UNION ALL SELECT team_id,2,'player_club',player_key FROM player_clubs
+ UNION ALL SELECT team_id,3,'player_nation',player_key FROM player_nations
+), favourites AS MATERIALIZED (
+ SELECT team_id,api.public_id('team',team_id) team_key,min(strength) strength,(array_agg(reason ORDER BY strength))[1] reason,
+ coalesce(array_agg(DISTINCT player_key) FILTER(WHERE player_key IS NOT NULL),'{}') players
+ FROM favourite_rows WHERE team_id IS NOT NULL GROUP BY team_id
+), favourite_fixtures AS MATERIALIZED (
+ SELECT f.*,v.team_key favourite,v.strength,
+ row_number() OVER(PARTITION BY v.team_id ORDER BY f.kickoff_at,f.id) nth
+ FROM favourites v JOIN api.fixtures f ON v.team_id IN(f.home_internal_id,f.away_internal_id)
+ WHERE f.status='not_started' AND f.kickoff_at>${instant}
+ AND f.kickoff_at<=${instant}+make_interval(days=>(SELECT favourite_days FROM rules))
+ AND coalesce(f.home_name,'')<>'' AND coalesce(f.away_name,'')<>''
+), candidates AS (
+ SELECT f.id,min(f.strength) strength,array_agg(DISTINCT f.favourite) favourites FROM favourite_fixtures f
+ WHERE f.nth=1 OR f.kickoff_at<=${instant}+make_interval(days=>(SELECT upcoming_days FROM rules)) GROUP BY f.id
+), upcoming AS (
+ SELECT DISTINCT ON(f.id) f.*,c.strength best_strength,c.favourites favourite_keys,extract(epoch FROM f.kickoff_at)*1000 time_ms,
+ (f.kickoff_at AT TIME ZONE 'Europe/Paris')::date upcoming_day,(f.league_id=ANY(${uefa})) europe
+ FROM candidates c JOIN favourite_fixtures f ON f.id=c.id ORDER BY f.id
+), your_matches AS MATERIALIZED (
+ SELECT y.player_key,f.id match_key,a.date,a.minutes,a.rating,a.goals,a.assists,
+ CASE WHEN a.team_id=f.home_internal_id THEN f.away_team_id ELSE f.home_team_id END opponent_id,
+ CASE WHEN a.team_id=f.home_internal_id THEN f.away_name ELSE f.home_name END opponent,
+ CASE WHEN a.team_id=f.home_internal_id THEN f.score_home ELSE f.score_away END gf,
+ CASE WHEN a.team_id=f.home_internal_id THEN f.score_away ELSE f.score_home END ga
+ FROM followed_players y JOIN api.player_appearances a ON a.player_id=y.player_id
+ JOIN api.fixtures f ON f.season_id=a.season_id AND f.match_id=a.match_id CROSS JOIN period p
+ WHERE a.date BETWEEN p.start_day AND p.end_day AND a.minutes>0
+), your_clubs AS MATERIALIZED (
+ SELECT DISTINCT ON(y.player_id) y.player_key,y.player_id,a.player_name,a.image_url,a.team_id,a.team
+ FROM followed_players y JOIN api.player_appearances a ON a.player_id=y.player_id
+ WHERE a.minutes>0 AND a.team_id IS NOT NULL AND a.date IS NOT NULL AND a.team_is_national IS NOT TRUE
+ ORDER BY y.player_id,a.date DESC,a.match_id DESC
+), your_next AS MATERIALIZED (
+ SELECT c.player_key,n.* FROM your_clubs c CROSS JOIN LATERAL (
+ SELECT f.id,extract(epoch FROM f.kickoff_at)*1000 time_ms,f.league_id,f.home_team_id,f.home_name,f.away_team_id,f.away_name
+ FROM api.fixtures f WHERE c.team_id IN(f.home_internal_id,f.away_internal_id) AND f.status='not_started' AND f.kickoff_at>${instant}
+ ORDER BY f.kickoff_at,f.id LIMIT 1) n
+)
+SELECT publication.*,
+ (SELECT CASE WHEN start_day IS NULL THEN null ELSE jsonb_build_object('start',start_day,'end',end_day,'latest',latest) END FROM period) period,
+ (SELECT to_jsonb(r) FROM rules r) rules,
+ (SELECT coalesce(jsonb_agg(jsonb_build_object('teamId',team_key,'strength',strength,'reason',reason,'players',players)
+   ORDER BY strength,team_key),'[]'::jsonb) FROM favourites) favourites,
+ ${jsonRows("SELECT * FROM upcoming ORDER BY kickoff_at,id")} upcoming,
+ (SELECT coalesce(jsonb_agg(to_jsonb(x)-'best' ORDER BY x.best DESC NULLS LAST,x.name,x.player_id),'[]'::jsonb) FROM (
+  SELECT c.player_key player_id,c.player_name name,c.image_url,api.public_id('team',c.team_id) team_id,c.team,
+  (SELECT max(w.rating) FROM your_matches w WHERE w.player_key=c.player_key) best,
+  (SELECT coalesce(jsonb_agg(jsonb_build_object('matchId',w.match_key,'date',w.date,'minutes',w.minutes,'rating',w.rating,'goals',w.goals,
+    'assists',w.assists,'opponentId',w.opponent_id,'opponent',w.opponent,'score',jsonb_build_array(w.gf,w.ga)) ORDER BY w.date,w.match_key),'[]'::jsonb)
+   FROM your_matches w WHERE w.player_key=c.player_key) matches,
+  (SELECT to_jsonb(n)-'player_key' FROM your_next n WHERE n.player_key=c.player_key) next
+  FROM your_clubs c) x WHERE jsonb_array_length(x.matches)>0 OR x.next IS NOT NULL) your_players
+FROM publication`;
+  return { sql, values };
+}
+
+export function homeFavouritesRecord(snapshot) {
+  return {
+    period: snapshot.period,
+    rules: homeRules(snapshot.rules),
+    favourites: snapshot.favourites || [],
+    upcoming: (snapshot.upcoming || []).map((row) => ({
+      fixture: fixture(row),
+      time: Number(row.time_ms),
+      day: row.upcoming_day,
+      europe: Boolean(row.europe),
+      strength: row.best_strength,
+      favourites: [...(row.favourite_keys || [])].sort(),
+    })),
+    // « Vos joueurs cette semaine » (doc, retained): each followed player's matches of
+    // the displayed week and the next match of his latest club.
+    yourPlayers: (snapshot.your_players || []).map((p) => ({
+      playerId: p.player_id, name: p.name, imageUrl: p.image_url ?? null, teamId: p.team_id, team: p.team, matches: p.matches,
+      next: p.next
+        ? { id: p.next.id, time: Number(p.next.time_ms), leagueId: p.next.league_id,
+            home: { id: p.next.home_team_id, name: p.next.home_name }, away: { id: p.next.away_team_id, name: p.next.away_name } }
+        : null,
+    })),
+  };
+}
+
+export function createHomeFavouritesRoute(read, clock = Date.now) {
+  return async (req, path, params) => {
+    if (path !== "/api/read/home-favourites") return null;
+    if (!["GET", "HEAD"].includes(req.method)) reject(405, "Méthode non autorisée.");
+    const filters = parseHomeRead(params, { personal: true }),
+      now = clock(),
+      periodKey = Math.floor(now / 60_000);
+    if (!filters.personalTeams.length && !filters.personalPlayers.length) reject(400, "Favoris manquants.");
+    const validated = await readValidator(req, params, filters.scope, read, { periodKey, personal: true });
+    if (validated) return validated;
+    const { sql, values } = homeFavouritesQuery(filters, params, now);
+    const [snapshot] = await read(sql, values);
+    checkReadGeneration(params, snapshot?.generation);
+    return readResponse(req, params, snapshot, homeFavouritesRecord(snapshot), { periodKey, maxBytes: 512 * 1024, personal: true });
   };
 }

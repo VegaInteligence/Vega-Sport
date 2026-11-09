@@ -297,7 +297,12 @@ export function NextMatches({ highlights, ranks, competitions, now }) {
       <div className="home-card-head">
         <div>
           <Kicker>À ne pas manquer</Kicker>
-          <h2>Les 7 prochains jours</h2>
+          {/* v2: a favourite's next match may be up to 21 days ahead (international break). */}
+          <h2>
+            {highlights.some((h) => h.time - now > 7 * 86_400_000)
+              ? "Les prochains matchs"
+              : "Les 7 prochains jours"}
+          </h2>
         </div>
         <Link className="inline-link" href={f.href("/calendrier/")}>
           Calendrier <Icon name="arrow" />

@@ -28,10 +28,55 @@ CLUB_ALIASES = {
 }
 
 
+# The home's editorial lists (doc "Accueil": core.editorial_lists), as main's
+# relational-home.js writes them in its code: the 29 big clubs, the 18 leagues of the
+# title race and the Top 7 (shared/competition-scope.js). A drift test compares them.
+EDITORIAL_LISTS = {
+    "featured_clubs": ("team", (
+        "t_1gkhxH", "t_4R934X", "t_0BrMnM", "t_0UCNPX", "t_2I313i", "t_2eQl9k", "t_4A7FfD", "t_41iFW3", "t_2s2eyG", "t_0xMlRV",
+        "t_13gLEF", "t_0tnX1I", "t_4NZcri", "t_32jSEF", "t_3NIiXl", "t_1cpjqO", "t_386iz1", "t_2lHR8t", "t_4ZwKDn", "t_3CPHHF",
+        "t_1DYf1D", "t_2toJRF", "t_0RhqmW", "t_0Mzm1V", "t_0dVrhE", "t_1TAfIz", "t_3t08JG", "t_1jOgDP", "t_4KvHFN",
+    )),
+    "title_race_leagues": ("competition", (
+        "l_3FJFUl", "l_0275VP", "l_4WFCIZ", "l_4DWyTT", "l_0ahLw8", "l_1W6idJ", "l_1Isor4", "l_3hvsne", "l_47077Y",
+        "l_0ErfuF", "l_3kyHLd", "l_0ALvwF", "l_0jy5yE", "l_4QexZg", "l_4H43wr", "l_49KZaB", "l_0S1uaf", "l_1BFfna",
+    )),
+    "top_seven": ("competition", ("l_4WFCIZ", "l_0ErfuF", "l_1Isor4", "l_0ALvwF", "l_3FJFUl", "l_4QexZg", "l_4H43wr")),
+}
+
+
 def scopes(now):
     day = timedelta(days=1)
     return {"player_aliases": day, "club_aliases": day, "stadium_plans": day, "league_zones": day, "cup_logos": day,
-            "sportscore_ids": day, "country_names": day, "team_identity": day}
+            "sportscore_ids": day, "country_names": day, "team_identity": day, "editorial_lists": day}
+
+
+def editorial_lists(conn):
+    """core.editorial_lists from EDITORIAL_LISTS: each list in its order (seq), by core id.
+    An entry PitchAPI has not seen yet is counted unmatched and written on a later run;
+    an entry removed from the list goes away. The home reads api.editorial_lists."""
+    written = unmatched = 0
+    for kind, (entity, keys) in EDITORIAL_LISTS.items():
+        rows = []
+        for seq, key in enumerate(keys):
+            found = conn.execute(
+                "SELECT entity_id FROM core.provider_ids WHERE entity_type=%s AND provider='pitchapi' AND provider_key=%s AND is_current",
+                (entity, key),
+            ).fetchone()
+            if found is None:
+                unmatched += 1
+            else:
+                rows.append((found[0], seq))
+        ids = [entity_id for entity_id, _ in rows]
+        conn.execute("DELETE FROM core.editorial_lists WHERE list_kind=%s AND NOT (entity_id = ANY(%s))", (kind, ids))
+        for entity_id, seq in rows:
+            written += conn.execute(
+                """INSERT INTO core.editorial_lists(list_kind, entity_type, entity_id, seq) VALUES (%s, %s, %s, %s)
+                   ON CONFLICT (list_kind, entity_id) DO UPDATE SET seq = EXCLUDED.seq, entity_type = EXCLUDED.entity_type, updated_at = now()
+                   WHERE core.editorial_lists.seq IS DISTINCT FROM EXCLUDED.seq""",
+                (kind, entity, entity_id, seq),
+            ).rowcount
+    return written, unmatched
 
 
 def _shared(name):
@@ -206,7 +251,7 @@ def run(conn, get, scope, now):
 
         return identity.run(conn, get, "teams", now)
     for name, handler in (("league_zones", league_zones), ("cup_logos", cup_logos), ("sportscore_ids", sportscore_ids),
-                          ("country_names", country_names)):
+                          ("country_names", country_names), ("editorial_lists", editorial_lists)):
         if scope == name:
             return handler(conn)
     if scope == "club_aliases":

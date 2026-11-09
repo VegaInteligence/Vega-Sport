@@ -45,6 +45,17 @@ class ParseTest(unittest.TestCase):
         block = block[:block.index("}")]
         self.assertEqual(dict(re.findall(r'^\s*"?([A-Z0-9-]+)"?:\s*"([^"]+)"', block, re.M)), curated.COUNTRY_NAMES_FR)
 
+    def test_editorial_lists_are_mains(self):
+        import re
+
+        home = (ROOT.parent / "dashboard/backend/services/relational-home.js").read_text()
+        listed = lambda name: re.findall(r'"([a-z]_[A-Za-z0-9]+)"', re.search(rf"export const {name} = \[(.*?)\]", home, re.S).group(1))
+        self.assertEqual(list(curated.EDITORIAL_LISTS["featured_clubs"][1]), listed("HOME_FEATURED_CLUBS"))
+        self.assertEqual(list(curated.EDITORIAL_LISTS["title_race_leagues"][1]), listed("HOME_SIMPLE_LEAGUES"))
+        scope = (ROOT.parent / "dashboard/shared/competition-scope.js").read_text()
+        focus = re.findall(r'\{ id: "(l_[A-Za-z0-9]+)"', scope[scope.index("export const EUROPE_FOCUS = ["):].split("];")[0])
+        self.assertEqual(list(curated.EDITORIAL_LISTS["top_seven"][1]), focus[:7])
+
     def test_club_core_names(self):
         self.assertEqual(identity.club_core("West Ham United FC"), identity.club_core("West Ham United"))
         self.assertEqual(identity.club_core("1. FC Köln"), "koln")
@@ -144,6 +155,22 @@ class SourceIdentityTest(unittest.TestCase):
         self.assertTrue(logo.startswith("https://img.thesports.com/"))
         slugs = dict(self.db.execute("SELECT entity_id, provider_key FROM core.provider_ids WHERE provider='sportscore'").fetchall())
         self.assertEqual(slugs, {1: "italian-serie-a", 2: "fifa-world-cup"})
+
+    def test_editorial_lists_as_rows(self):
+        # Serie A is the only listed entity the seed knows: twelfth league of the title
+        # race, fourth of the Top 7; the other entries wait for PitchAPI.
+        with self.db.transaction():
+            written, unmatched = curated.editorial_lists(self.db)
+        self.assertEqual((written, unmatched), (2, 29 + 17 + 6))
+        rows = self.db.execute("SELECT list_kind, entity_type, entity_key, seq FROM api.editorial_lists ORDER BY 1").fetchall()
+        self.assertEqual(rows, [("title_race_leagues", "competition", "l_0ALvwF", 11), ("top_seven", "competition", "l_0ALvwF", 3)])
+        with self.db.transaction():
+            self.assertEqual(curated.editorial_lists(self.db), (0, 52))  # nothing changed, nothing written
+        # An entry gone from the list goes away.
+        with self.db.transaction():
+            self.db.execute("INSERT INTO core.editorial_lists(list_kind, entity_type, entity_id, seq) VALUES ('featured_clubs', 'team', 4, 0)")
+            curated.editorial_lists(self.db)
+        self.assertEqual(self.db.execute("SELECT count(*) FROM core.editorial_lists WHERE list_kind = 'featured_clubs'").fetchone()[0], 0)
 
     def test_archive_teams_merge_into_the_club_of_their_country(self):
         x = self.db.execute

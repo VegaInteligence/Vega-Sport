@@ -38,6 +38,20 @@ export function cacheHeaders(ttl = 60, swr = 30, { immutable = false } = {}) {
   };
 }
 
+/** A response CloudFront serves stale while it computes it again, and on an error
+ * (doc "Accueil": a slightly old answer rather than an error). */
+export function staleHeaders(ttl, { revalidate, error }) {
+  const value = `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=${revalidate}, stale-if-error=${error}`;
+  return { "Cache-Control": value, "CDN-Cache-Control": value, "Vercel-CDN-Cache-Control": value };
+}
+
+/** One visitor's response: the browser may keep it, a shared cache never. */
+export const privateHeaders = {
+  "Cache-Control": "private, max-age=0, must-revalidate",
+  "CDN-Cache-Control": "no-store",
+  "Vercel-CDN-Cache-Control": "no-store",
+};
+
 export const noStoreHeaders = {
   "Cache-Control": "no-store",
   "CDN-Cache-Control": "no-store",
@@ -54,13 +68,14 @@ export function matchesEtag(value, etag) {
   return candidates.some((tag) => tag.replace(/^W\//, "") === etag.replace(/^W\//, ""));
 }
 
-export function send(req, value, status = 200, { etag, ttl = 0, maxBytes = 0, headers = {} } = {}) {
+export function send(req, value, status = 200, { etag, ttl = 0, maxBytes = 0, headers = {}, stale = null, personal = false } = {}) {
+  const cached = status === 200 && (ttl > 0 || personal);
   const h = {
     "Content-Type": "application/json; charset=utf-8",
     "X-Content-Type-Options": "nosniff",
     "X-Data-Source": "AWS",
     "X-Vega-Schema": "v2",
-    ...(ttl > 0 && status === 200 ? cacheHeaders(ttl, 0) : noStoreHeaders),
+    ...(!cached ? noStoreHeaders : personal ? privateHeaders : stale ? staleHeaders(ttl, stale) : cacheHeaders(ttl, 0)),
     ...headers,
   };
   if (etag && status === 200) {

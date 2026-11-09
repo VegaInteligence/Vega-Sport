@@ -9,7 +9,7 @@ import tempfile
 
 from archive_fixtures import make_sources
 from cup_samples import SAMPLES
-from vega_v2.sources import cups
+from vega_v2.sources import cups, curated
 from vega_v2 import archives, power
 from vega_v2.worker import publish
 from vega_v2.store import Store, connect_local, migrate
@@ -55,6 +55,8 @@ def main(dsn):
         x("INSERT INTO core.teams(id,name,country_code,crest_asset_id) VALUES (%s,%s,%s,%s)", (tid, name, country, 2 if tid == 1 else None))
         x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('team','pitchapi',%s,%s)", (key, tid))
         x("INSERT INTO core.team_seasons(team_id,competition_season_id) VALUES (%s,1)", (tid,))
+    # The home's editorial lists (Ligue 1: title race and Top 7), as the curated source writes them.
+    curated.editorial_lists(db)
     for mid, (home, away, hs, as_, status) in enumerate(MATCHES, 1):
         x(
             "INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date,kickoff_at) VALUES (%s,1,2025,'pitchapi',%s,%s,%s,%s,%s,%s,%s)",
