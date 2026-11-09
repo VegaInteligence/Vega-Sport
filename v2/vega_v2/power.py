@@ -400,7 +400,40 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
                 copy.write_row((season, player, r["role"], r["team"], r["matches"], int(r["minutes"]), r["total"], r["rate"], r["eligible"],
                                 r.get("total_percentile"), r.get("rate_percentile"), r.get("score"), r.get("rank"), r.get("role_rank"), run))
         _publish(conn, run, "players", season, len(rows), len(scored))
+        write_award(conn, season, scored)
     return len(scored)
+
+
+AWARD_SIZE = 30  # the race shown on the home (ballon-dor.js reads the first 30)
+
+
+def award_race(scored, size=AWARD_SIZE):
+    """The award race: the first eligible players of the power ranking, numbered 1..size
+    (agg.player_award_ranking keys a season's award by rank, so ties take the ranking order)."""
+    ranked = sorted((p for p, r in scored.items() if r["eligible"] and r.get("rank") is not None),
+                    key=lambda p: (scored[p]["rank"], -scored[p]["total"], -scored[p]["minutes"], p))
+    return [(i, p, scored[p]["team"], scored[p]["score"]) for i, p in enumerate(ranked[:size], 1)]
+
+
+def write_award(conn, season, scored):
+    """Store the season's Ballon d'Or race with the agg.calc_runs row that produced it."""
+    definition = f"ballon_dor:{season}"
+    run = conn.execute(
+        """INSERT INTO agg.calc_runs(kind, model_version, formula_version, data_revision, cohort_definition, cutoff_at)
+           VALUES ('award', %s, %s, (SELECT coalesce(max(revision), 0) FROM core.matches), %s, now()) RETURNING id""",
+        (METHOD_VERSION, METHOD_VERSION, definition),
+    ).fetchone()[0]
+    conn.execute("DELETE FROM agg.player_award_ranking WHERE season_id=%s AND award='ballon_dor'", (season,))
+    race = award_race(scored)
+    if race:
+        with conn.cursor().copy("COPY agg.player_award_ranking(season_id, award, rank, player_id, team_id, score, calc_run_id) FROM STDIN") as copy:
+            for rank, player, team, score in race:
+                copy.write_row((season, "ballon_dor", rank, player, team, score, run))
+    conn.execute(
+        "UPDATE agg.calc_runs SET status='superseded' WHERE kind='award' AND cohort_definition=%s AND status='published' AND id<>%s", (definition, run)
+    )
+    conn.execute("UPDATE agg.calc_runs SET status='published', finished_at=now() WHERE id=%s", (run,))
+    return len(race)
 
 
 def refresh_power(conn, season):

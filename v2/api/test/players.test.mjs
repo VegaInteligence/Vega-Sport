@@ -15,7 +15,7 @@ const METRICS = [
   "goalsPrevented", "passAccuracy", "duelRate",
 ];
 const RECORD_KEYS = [
-  "id", "playerId", "name", "imageUrl", "team", "league", "position", "positionId", "matches", "minutes", "rating",
+  "id", "playerId", "name", "imageUrl", "team", "league", "position", "power", "positionId", "matches", "minutes", "rating",
   ...METRICS, "finishingDelta", "totals", "profile",
 ].sort();
 const PROFILE_KEYS = [
@@ -36,6 +36,9 @@ test("player directory: envelope, rating order, records", { skip }, async () => 
     [p1.name, p1.imageUrl, p1.team, p1.league, p1.position, p1.positionId, p1.matches],
     ["Élie Durand", "https://img.example/p1.png", "Olympique Été", "Ligue 1", "Attaquant", 91, 3],
   );
+  // The player power ranking of the season; p_aaaab3 is not ranked (under 900 minutes in the seed).
+  assert.deepEqual(p1.power, { rank: 1, score: 87.5, role: "centre_forward", position: "Avant-centre", roleRank: 1 });
+  assert.equal(body.data.players.find((p) => p.id === "p_aaaab3").power, null);
   close(p1.minutes, 260 / 3);
   close(p1.rating, 20.5 / 3, 6);
   close(p1.goals, 2 / 3);

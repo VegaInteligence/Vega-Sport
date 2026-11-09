@@ -5,8 +5,9 @@ import assert from "node:assert/strict";
 import { context, get, skip } from "./context.mjs";
 
 const clubs = "/api/read/clubs?season=2025/2026&leagues=all";
-// The keys of a club record in dashboard/backend/services/relational-clubs.js (main).
-const DIRECTORY_KEYS = ["competitionCounts", "count", "country", "id", "imageUrl", "league", "name"];
+// The keys of a club record in dashboard/backend/services/relational-clubs.js (main), plus
+// v2's power ranking of the season.
+const DIRECTORY_KEYS = ["competitionCounts", "count", "country", "id", "imageUrl", "league", "name", "power"];
 const ANALYSIS_KEYS = [
   ...DIRECTORY_KEYS, "away", "cleanSheets", "draws", "excludedStats", "formations", "forms", "games",
   "goalTimes", "goalsAgainst", "goalsFor", "home", "losses", "matches", "points", "shots", "stats", "unscored", "wins",
@@ -19,10 +20,16 @@ test("club directory: envelope, order, facets", { skip }, async () => {
   assert.deepEqual(Object.keys(body).sort(), ["data", "meta", "pagination"]);
   assert.deepEqual(body.data.clubs.map((c) => c.id), ["t_aaaaa1", "t_aaaaa2", "t_aaaaa3", "t_aaaaa4"]);
   assert.deepEqual(Object.keys(body.data.clubs[0]).sort(), DIRECTORY_KEYS);
-  assert.deepEqual(body.data.clubs[0], {
+  const { power, ...club } = body.data.clubs[0];
+  assert.deepEqual(club, {
     id: "t_aaaaa1", name: "Olympique Été", imageUrl: "https://img.example/t1.png", league: "Ligue 1",
     country: "FRA", count: 3, competitionCounts: { l_3FJFUl: 3 },
   });
+  // The club power ranking (Elo after its last match of the season): moved points only.
+  assert.deepEqual(Object.keys(power).sort(), ["elo", "eloChange", "matches", "rank"]);
+  assert.equal(power.matches, 3);
+  assert.equal(Math.round(body.data.clubs.reduce((sum, c) => sum + c.power.elo, 0)), 6000);
+  assert.deepEqual(body.data.clubs.map((c) => c.power.rank).sort(), [1, 2, 3, 4]);
   // No team country: the domestic league's country.
   assert.equal(body.data.clubs[2].country, "FRA");
   assert.deepEqual(body.data.facets, { countries: ["FRA"], competitionIds: ["l_3FJFUl"] });

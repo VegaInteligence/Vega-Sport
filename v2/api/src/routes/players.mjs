@@ -13,6 +13,7 @@
  *   order of the published partition files).
  */
 import { reject, validateParams } from "../http.mjs";
+import { powerOf } from "./rankings.mjs";
 import {
   bindValue,
   finiteSql,
@@ -428,11 +429,15 @@ export function createPlayerReadRoute(read) {
     const { sql, values } = playerReadQuery(filters, params);
     const [snapshot] = await read(sql, values);
     const total = Number(snapshot?.total || 0);
+    const players = (snapshot?.players || []).map(playerReadRecord);
+    // Each player's power ranking of the season (rankings.mjs).
+    const power = await powerOf(read, "players", filters.scope.season, players.map((p) => p.id));
+    for (const p of players) p.power = power.get(p.id) ?? null;
     return readResponse(
       req,
       params,
       snapshot,
-      { players: (snapshot?.players || []).map(playerReadRecord), teams: snapshot?.teams || [] },
+      { players, teams: snapshot?.teams || [] },
       {
         pagination: { page: filters.page, limit: filters.limit, total, pages: Math.max(1, Math.ceil(total / filters.limit)) },
         maxBytes: 1024 * 1024,
