@@ -156,6 +156,16 @@ def _unknown_keys(out, prefix, obj, known):
             _unknown(out, prefix + "." + key)
 
 
+def _enum(out, path, value, values):
+    """A provider code mapped to our enum; a new code keeps the row, field empty, and is
+    reported as a path (codes such as "FreeKick" are vocabulary, not football values)."""
+    if isinstance(value, str) and value in values:
+        return values[value]
+    token = value if isinstance(value, str) and re.fullmatch(r"[A-Za-z_]{1,40}", value) else "invalid"
+    _unknown(out, path + "." + token)
+    return None
+
+
 def _period(value):
     if not isinstance(value, str) or value not in _PERIOD:
         raise NormalizationError("UNKNOWN_PERIOD")
@@ -683,9 +693,9 @@ def normalize_family(family, data, *, match_id=None):
                     ),
                 ]:
                     if item.get(src) is not None:
-                        if not isinstance(item[src], str) or item[src] not in values:
-                            raise NormalizationError("UNKNOWN_SHOT_ENUM")
-                        row[dst] = values[item[src]]
+                        value = _enum(out, "shot." + src, item[src], values)
+                        if value is not None:
+                            row[dst] = value
                 if item.get("situation") is not None:
                     situations = {
                         "RegularPlay": "regular_play",
@@ -697,12 +707,9 @@ def normalize_family(family, data, *, match_id=None):
                         "Penalty": "penalty",
                         "IndividualPlay": "individual_play",
                     }
-                    if (
-                        not isinstance(item["situation"], str)
-                        or item["situation"] not in situations
-                    ):
-                        raise NormalizationError("UNKNOWN_SHOT_ENUM")
-                    row["situation"] = situations[item["situation"]]
+                    value = _enum(out, "shot.situation", item["situation"], situations)
+                    if value is not None:
+                        row["situation"] = value
                 out.add("shots", row)
     elif family == "lineups":
         obj = _object(data)

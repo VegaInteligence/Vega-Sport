@@ -370,6 +370,25 @@ class WorkerTest(unittest.TestCase):
         )
         self.assertEqual(self.db.execute("SELECT count(*) FROM ops.parse_failures").fetchone()[0], 0)
 
+    def test_summary_edition_wins_over_the_assumed_one(self):
+        start = self.now
+        self.api.routes["/leagues/" + LIGUE1["id"]] = dict(LIGUE1, seasons=["2024/2025", "2025/2026"])
+        kick = start - timedelta(hours=3)
+        self.calendar(match("m_llllll", kick, "finished", (1, 0), season=None))
+        self.at(start)
+        self.worker.lanes = ("score",)
+        self.drain()
+        # /matches/{id} says the match belongs to 2024/2025, not the current edition.
+        self.api.routes["/matches/m_llllll"] = match("m_llllll", kick, "finished", (1, 0), season="2024/2025")
+        self.at(start)
+        self.drain()
+        label = self.db.execute(
+            "SELECT cs.native_label FROM core.matches m JOIN core.competition_seasons cs ON cs.id=m.competition_season_id WHERE m.id=%s",
+            (self.mid("m_llllll"),),
+        ).fetchone()[0]
+        self.assertEqual((label, self.watch("m_llllll")[0]), ("2024/2025", "final"))
+        self.assertEqual(self.db.execute("SELECT count(*) FROM ops.parse_failures").fetchone()[0], 0)
+
     def test_bad_match_does_not_block_the_day_and_jobs_are_pruned(self):
         start = self.now
         kick = start + timedelta(hours=6)
