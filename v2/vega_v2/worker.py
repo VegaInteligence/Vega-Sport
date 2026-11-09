@@ -8,7 +8,7 @@ calculator when the queues are idle or every 30 s. Components only meet in Postg
 
 import argparse
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import os
 import signal
 import sys
@@ -44,6 +44,36 @@ LEASE_SECONDS = 300
 
 def _now():
     return datetime.now(timezone.utc)
+
+
+# A season whose matches changed after its last daily models waits this long before the
+# models run again (a backfill writes a season's matches for hours).
+RECOMPUTE_AFTER = timedelta(hours=1)
+
+
+def due_seasons(conn, now):
+    """The seasons whose daily models are due:
+    - a season played in the last 30 days, once a UTC day;
+    - a season with finished matches never computed (a backfilled one);
+    - a season whose matches changed after its last computation (a backfill that went on,
+      a correction), once RECOMPUTE_AFTER has passed since that computation."""
+    return [
+        s
+        for (s,) in conn.execute(
+            """WITH last AS (
+                 SELECT DISTINCT ON (cohort_definition) cohort_definition, started_at FROM agg.calc_runs
+                 WHERE kind = 'levels' AND status = 'published' ORDER BY cohort_definition, started_at DESC)
+               SELECT m.season_id FROM core.matches m LEFT JOIN last l ON l.cohort_definition = 'season:' || m.season_id
+               GROUP BY m.season_id, l.started_at
+               HAVING (l.started_at IS NULL AND bool_or(m.status = 'finished'))
+                   OR (bool_or(m.kickoff_at > %(now)s - interval '30 days' AND m.kickoff_at <= %(now)s)
+                       AND (l.started_at IS NULL OR l.started_at < date_trunc('day', %(now)s)))
+                   OR (l.started_at < %(now)s - %(after)s
+                       AND max(m.updated_at) FILTER (WHERE m.status = 'finished') > l.started_at)
+               ORDER BY 1""",
+            {"now": now, "after": RECOMPUTE_AFTER},
+        ).fetchall()
+    ]
 
 
 class Worker:
@@ -202,24 +232,10 @@ class Worker:
             return 0
 
     def daily(self):
-        """Levels, competition strength, squad profiles, similarities and power rankings,
-        once a UTC day for each season played in the last 30 days, and once for a season
-        never computed (a backfilled one)."""
+        """Levels, competition strength, squad profiles, similarities and power rankings
+        (models.refresh_daily) for the seasons due_seasons() names."""
         now = self.clock()
-        seasons = [
-            s
-            for (s,) in self.calc_conn.execute(
-                """SELECT DISTINCT m.season_id FROM core.matches m
-                   WHERE ((m.kickoff_at > %s - interval '30 days' AND m.kickoff_at <= %s)
-                          OR (m.status = 'finished' AND NOT EXISTS (
-                                SELECT 1 FROM agg.calc_runs r WHERE r.kind = 'levels' AND r.status = 'published'
-                                  AND r.cohort_definition = 'season:' || m.season_id)))
-                     AND NOT EXISTS (SELECT 1 FROM agg.calc_runs r WHERE r.kind = 'levels' AND r.status = 'published'
-                                     AND r.cohort_definition = 'season:' || m.season_id AND r.started_at >= date_trunc('day', %s))
-                   ORDER BY 1""",
-                (now, now, now),
-            )
-        ]
+        seasons = due_seasons(self.calc_conn, now)
         if self.source_get is not None:
             # Rankings and other sources first: the levels read the UEFA coefficients.
             from . import sources
@@ -235,6 +251,7 @@ class Worker:
         for season in seasons:
             try:
                 models.refresh_daily(self.calc_conn, season)
+                print(f"daily models season={season} outcome=ok", flush=True)
             except psycopg.Error as error:
                 print(f"daily models season={season} error={safe_code(error)}", flush=True)
         return seasons

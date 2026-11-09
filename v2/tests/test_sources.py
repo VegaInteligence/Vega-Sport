@@ -189,6 +189,8 @@ class UefaTest(unittest.TestCase):
         overview = {"rankings": [
             {"rankingItem": {"idTeam": "43969", "name": "Spain", "countryCode": "ESP", "rank": 1, "previousRank": 2, "totalPoints": 1875.37}},
             {"rankingItem": {"idTeam": "43946", "name": "France", "countryCode": "FRA", "rank": 2, "previousRank": 1, "totalPoints": 1870.0}},
+            # A suspended association is listed without a rank: kept, as main keeps it.
+            {"rankingItem": {"idTeam": "43965", "name": "Russia", "countryCode": "RUS", "rank": None, "previousRank": None, "totalPoints": 1503.0}},
         ]}
         native = {"Results": [
             {"IdTeam": "43946", "TeamName": [{"Description": "France"}], "IdCountry": "FRA", "Rank": 1, "PrevRank": 2, "TotalPoints": 2011.5},
@@ -215,12 +217,22 @@ class UefaTest(unittest.TestCase):
         # France is the national team (not the club of the same country); Spain keeps its code; no previous rank 0.
         self.assertEqual(rows, [(1, 2, 20, None), (2, None, None, "ESP")])
         self.assertEqual(x("SELECT entity_id FROM core.provider_ids WHERE provider='fifa' AND provider_key='43946'").fetchone(), (20,))
-        self.assertEqual(x("SELECT rows_written, unmatched FROM ops.source_runs WHERE source='fifa'").fetchone(), (4, 2))
+        self.assertEqual(x("SELECT rows_written, unmatched FROM ops.source_runs WHERE source='fifa'").fetchone(), (5, 3))
+        unranked = x("""SELECT r.position, r.points, r.country_code FROM core.ranking_rows r JOIN core.ranking_editions e ON e.id = r.edition_id
+                        WHERE e.label = '2025-09-18' AND r.entity_name = 'Russia'""").fetchone()
+        self.assertEqual(unranked, (None, 1503.0, "RUS"))
         # Published editions are not read again.
         calls.clear()
         later = NOW.replace(day=NOW.day + 1)
         sources.run_due(self.db, get, later, names={"fifa"})
         self.assertEqual(calls, [fifa.PAGE])
+        # A rank that is not one fails the run; it is tried again an hour later, not at every round.
+        overview["rankings"][0]["rankingItem"]["rank"] = "x"
+        x("DELETE FROM core.ranking_editions WHERE label='2025-09-18'")
+        failed = later + timedelta(days=1)
+        self.assertEqual(sources.run_due(self.db, get, failed, names={"fifa"}), {("fifa", "fifa_men:editions"): "INVALID_ROW"})
+        self.assertEqual(sources.run_due(self.db, get, failed + timedelta(minutes=1), names={"fifa"}), {})
+        self.assertEqual(sources.run_due(self.db, get, failed + sources.RETRY_AFTER, names={"fifa"}), {("fifa", "fifa_men:editions"): "INVALID_ROW"})
 
     def test_sportscore_official_tables(self):
         from vega_v2.store import Store

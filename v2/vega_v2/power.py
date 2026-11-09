@@ -146,16 +146,23 @@ def refresh_elo(conn):
             for row in rows:
                 copy.write_row((*row, run))
         conn.execute(
-            """WITH last AS (
+            """WITH season AS (
+                 SELECT season_id, team_id, max(elo_after) AS peak, min(elo_after) AS low,
+                   count(*) FILTER (WHERE result = 1) AS wins, count(*) FILTER (WHERE result = 0.5) AS draws,
+                   count(*) FILTER (WHERE result = 0) AS losses, sum(result) AS result_sum, sum(expected) AS expected_sum
+                 FROM agg.team_elo GROUP BY season_id, team_id),
+               last AS (
                  SELECT DISTINCT ON (e.season_id, e.team_id) e.season_id, e.team_id, e.elo_after, e.kickoff_at,
                    count(*) OVER (PARTITION BY e.season_id, e.team_id) AS matches,
                    first_value(e.elo_before) OVER (PARTITION BY e.season_id, e.team_id ORDER BY e.kickoff_at NULLS FIRST, e.match_id) AS start
                  FROM agg.team_elo e
                  ORDER BY e.season_id, e.team_id, e.kickoff_at DESC NULLS LAST, e.match_id DESC)
-               INSERT INTO agg.team_power(season_id, team_id, scope, elo, elo_change, matches, rank, last_match_at, run_id)
+               INSERT INTO agg.team_power(season_id, team_id, scope, elo, elo_change, matches, rank, last_match_at, run_id,
+                 elo_start, elo_peak, elo_low, wins, draws, losses, result_sum, expected_sum)
                SELECT l.season_id, l.team_id, CASE WHEN t.is_national THEN 'nations' ELSE 'clubs' END, l.elo_after, l.elo_after - l.start,
-                 l.matches, rank() OVER (PARTITION BY l.season_id, t.is_national IS TRUE ORDER BY l.elo_after DESC), l.kickoff_at, %s
-               FROM last l JOIN core.teams t ON t.id = l.team_id""",
+                 l.matches, rank() OVER (PARTITION BY l.season_id, t.is_national IS TRUE ORDER BY l.elo_after DESC), l.kickoff_at, %s,
+                 l.start, s.peak, s.low, s.wins, s.draws, s.losses, s.result_sum, s.expected_sum
+               FROM last l JOIN season s USING (season_id, team_id) JOIN core.teams t ON t.id = l.team_id""",
             (run,),
         )
         _publish(conn, run, "elo", None, len(rows) // 2)
@@ -327,6 +334,38 @@ def match_contribution(r, refs):
     return scores, sum(w * scores[b] for b, w in weights.items()) / sum(weights.values())
 
 
+def block_shares(role, scores):
+    """Each block's part of C (weights renormalised over the measured blocks): they add up to C."""
+    weights = {b: w for b, w in WEIGHTS[role].items() if b in scores}
+    total = sum(weights.values())
+    return {b: w * scores[b] / total for b, w in weights.items()} if total else {}
+
+
+def season_details(contributions, scored, *, lam=LAMBDA):
+    """Block totals and block percentiles within the main role (eligible players), and one
+    row per role played. contributions: {player: [(role, minutes, C, team, shares)]}."""
+    blocks, roles = {}, {}
+    for player, items in contributions.items():
+        totals = defaultdict(float)
+        by_role = defaultdict(lambda: [0, 0.0, 0.0])
+        for role, minutes, c, _, shares in items:
+            for b, v in shares.items():
+                totals[b] += v
+            row = by_role[role]
+            row[0] += 1
+            row[1] += minutes
+            row[2] += c
+        blocks[player] = {"totals": dict(totals), "percentiles": {}}
+        roles[player] = {role: {"matches": n, "minutes": m, "total": t, "rate": 90 * t / (m + lam)} for role, (n, m, t) in by_role.items()}
+    for role in {r["role"] for r in scored.values()}:
+        group = [p for p, r in scored.items() if r["role"] == role and r["eligible"]]
+        for b in blocks_of(role):
+            values = [blocks[p]["totals"].get(b, 0.0) for p in group]
+            for p in group:
+                blocks[p]["percentiles"][b] = percentile(values, blocks[p]["totals"].get(b, 0.0))
+    return blocks, roles
+
+
 def percentile(values, mine):
     below = sum(1 for v in values if v < mine)
     equal = sum(1 for v in values if v == mine)
@@ -381,7 +420,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
         refs = references(rows)
         conn.execute("DELETE FROM agg.player_power WHERE season_id=%s", (season,))
         conn.execute("DELETE FROM agg.player_power_matches WHERE season_id=%s", (season,))
-        contributions = defaultdict(list)
+        detailed = defaultdict(list)
         with conn.cursor().copy(
             f"COPY agg.player_power_matches(season_id, match_id, player_id, team_id, role, minutes, opponent_elo, {', '.join(BLOCK_COLUMNS)}, contribution, run_id) FROM STDIN"
         ) as copy:
@@ -390,15 +429,25 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
                 copy.write_row((season, r["match_id"], r["player_id"], r["team_id"], r["role"], int(r["minutes_played"]), r["opponent_elo"],
                                 *[scores.get(b) for b in BLOCK_COLUMNS], c, run))
                 if c is not None:
-                    contributions[r["player_id"]].append((r["role"], r["minutes_played"], c, r["team_id"]))
+                    detailed[r["player_id"]].append((r["role"], r["minutes_played"], c, r["team_id"], block_shares(r["role"], scores)))
+        contributions = {p: [item[:4] for item in items] for p, items in detailed.items()}
         scored = season_scores(contributions, eligibility=eligibility)
+        blocks, roles = season_details(detailed, scored)
+        conn.execute("DELETE FROM agg.player_power_roles WHERE season_id=%s", (season,))
         with conn.cursor().copy(
-            """COPY agg.player_power(season_id, player_id, role, team_id, matches, minutes, total, rate, eligible, total_percentile,
-                 rate_percentile, score, rank, role_rank, run_id) FROM STDIN"""
+            f"""COPY agg.player_power(season_id, player_id, role, team_id, matches, minutes, total, rate, eligible, total_percentile,
+                 rate_percentile, score, rank, role_rank, run_id, {', '.join(b + '_total' for b in BLOCK_COLUMNS)},
+                 {', '.join(b + '_percentile' for b in BLOCK_COLUMNS)}) FROM STDIN"""
         ) as copy:
             for player, r in scored.items():
+                b = blocks[player]
                 copy.write_row((season, player, r["role"], r["team"], r["matches"], int(r["minutes"]), r["total"], r["rate"], r["eligible"],
-                                r.get("total_percentile"), r.get("rate_percentile"), r.get("score"), r.get("rank"), r.get("role_rank"), run))
+                                r.get("total_percentile"), r.get("rate_percentile"), r.get("score"), r.get("rank"), r.get("role_rank"), run,
+                                *[b["totals"].get(k) for k in BLOCK_COLUMNS], *[b["percentiles"].get(k) for k in BLOCK_COLUMNS]))
+        with conn.cursor().copy("COPY agg.player_power_roles(season_id, player_id, role, matches, minutes, total, rate, run_id) FROM STDIN") as copy:
+            for player, by_role in roles.items():
+                for role, x in by_role.items():
+                    copy.write_row((season, player, role, x["matches"], int(x["minutes"]), x["total"], x["rate"], run))
         _publish(conn, run, "players", season, len(rows), len(scored))
         write_award(conn, season, scored)
     return len(scored)

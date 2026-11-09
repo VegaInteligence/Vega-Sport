@@ -104,21 +104,57 @@ const ROLE_LABEL = {
   defensive_midfielder: "Milieu défensif", full_back: "Latéral / piston", centre_back: "Défenseur central", goalkeeper: "Gardien",
 };
 const round = (v, d) => (v === null || v === undefined ? null : Math.round(v * 10 ** d) / 10 ** d);
+const BLOCKS = { finishing: "finishing", creation: "creation", progression: "progression", defence: "defence", retention: "retention",
+  shot_stopping: "shotStopping", aerial: "aerial", depth: "depth", distribution: "distribution" };
+
+/** A player's season by block (§§ 6, 8): its share of T and its percentile within the role. */
+function blocksOf(r) {
+  const out = {};
+  for (const [column, key] of Object.entries(BLOCKS))
+    if (r[column + "_total"] != null || r[column + "_percentile"] != null)
+      out[key] = { contribution: round(r[column + "_total"], 2), percentile: round(r[column + "_percentile"], 1) };
+  return out;
+}
+
+/** A club's season in Elo terms (§ 3). */
+const clubSeason = (r) => ({
+  eloStart: round(r.elo_start, 1), eloPeak: round(r.elo_peak, 1), eloLow: round(r.elo_low, 1),
+  wins: r.wins ?? null, draws: r.draws ?? null, losses: r.losses ?? null,
+  results: round(r.result_sum, 1), expectedResults: round(r.expected_sum, 2),
+});
+
+/** Each role a player played in the season (§ 8), most played first. */
+async function rolesOf(read, season, ids) {
+  const out = new Map();
+  if (!ids.length) return out;
+  for (const r of await read("SELECT * FROM api.power_player_roles WHERE season=$1 AND player_id=ANY($2) ORDER BY minutes DESC, role", [season, ids])) {
+    if (!out.has(r.player_id)) out.set(r.player_id, []);
+    out.get(r.player_id).push({ role: r.role, position: ROLE_LABEL[r.role] ?? r.role, matches: r.matches, minutes: r.minutes,
+      contribution: round(r.total, 2), rate: round(r.rate, 3) });
+  }
+  return out;
+}
 
 /**
  * The power ranking of each club or player of a page, for one season (the club and
- * player reads carry it): clubs { rank, elo, eloChange, matches }, players { rank, score,
- * role, position, roleRank }. A club or player without one (not ranked) has none.
+ * player reads carry it): clubs { rank, elo, eloChange, matches, and the season in Elo
+ * terms }, players { rank, score, role, position, roleRank, blocks, roles }. A club or
+ * player without one (not ranked) has none.
  */
 export async function powerOf(read, kind, season, ids) {
   const out = new Map();
   if (!season || !ids.length) return out;
   if (kind === "clubs") {
-    for (const r of await read("SELECT team_id,rank,elo,elo_change,matches FROM api.power_clubs WHERE season=$1 AND scope='clubs' AND team_id=ANY($2)", [season, ids]))
-      out.set(r.team_id, { rank: r.rank, elo: round(r.elo, 1), eloChange: round(r.elo_change, 1), matches: r.matches });
+    for (const r of await read("SELECT * FROM api.power_clubs WHERE season=$1 AND scope='clubs' AND team_id=ANY($2)", [season, ids]))
+      out.set(r.team_id, { rank: r.rank, elo: round(r.elo, 1), eloChange: round(r.elo_change, 1), matches: r.matches, ...clubSeason(r) });
   } else {
-    for (const r of await read("SELECT player_id,rank,score,role,role_rank FROM api.power_players WHERE season=$1 AND player_id=ANY($2)", [season, ids]))
-      out.set(r.player_id, { rank: r.rank, score: round(r.score, 1), role: r.role, position: ROLE_LABEL[r.role] ?? r.role, roleRank: r.role_rank });
+    const rows = await read("SELECT * FROM api.power_players WHERE season=$1 AND player_id=ANY($2)", [season, ids]);
+    const roles = await rolesOf(read, season, rows.map((r) => r.player_id));
+    for (const r of rows)
+      out.set(r.player_id, {
+        rank: r.rank, score: round(r.score, 1), role: r.role, position: ROLE_LABEL[r.role] ?? r.role, roleRank: r.role_rank,
+        blocks: blocksOf(r), roles: roles.get(r.player_id) ?? [],
+      });
   }
   return out;
 }
@@ -132,6 +168,7 @@ async function powerRanking(read, params) {
   if (kind === "players") {
     const rows = await read("SELECT * FROM api.power_players WHERE season=$1 ORDER BY rank, player_id LIMIT $2", [season, limit]);
     if (!rows.length) reject(404, "Donnée indisponible.");
+    const roles = await rolesOf(read, season, rows.map((r) => r.player_id));
     return {
       season, kind, method: { version: rows[0].method_version, computedAt: iso(rows[0].computed_at) },
       rows: rows.map((r) => ({
@@ -139,6 +176,7 @@ async function powerRanking(read, params) {
         teamImageUrl: r.team_image_url ?? null, position: ROLE_LABEL[r.role] ?? r.role, role: r.role, roleRank: r.role_rank,
         score: round(r.score, 1), matches: r.matches, minutes: r.minutes, contribution: round(r.total, 2), rate: round(r.rate, 3),
         contributionPercentile: round(r.total_percentile, 1), ratePercentile: round(r.rate_percentile, 1),
+        blocks: blocksOf(r), roles: roles.get(r.player_id) ?? [],
       })),
     };
   }
@@ -148,7 +186,7 @@ async function powerRanking(read, params) {
     season, kind, method: { version: rows[0].method_version, computedAt: iso(rows[0].computed_at) },
     rows: rows.map((r) => ({
       rank: r.rank, teamId: r.team_id, name: r.name, imageUrl: r.image_url ?? null, country: r.country ?? null,
-      elo: round(r.elo, 1), eloChange: round(r.elo_change, 1), matches: r.matches, lastMatchAt: iso(r.last_match_at),
+      elo: round(r.elo, 1), eloChange: round(r.elo_change, 1), matches: r.matches, lastMatchAt: iso(r.last_match_at), ...clubSeason(r),
     })),
   };
 }

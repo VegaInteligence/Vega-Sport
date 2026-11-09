@@ -51,6 +51,17 @@ def _int(value):
     return number if number >= 1 else None
 
 
+def _rank(value):
+    """A row's rank: none for an unranked team (a suspended association), as main keeps it;
+    any other value must be a rank."""
+    if value is None or value == "":
+        return None
+    number = _int(value)
+    if number is None:
+        raise SourceError("INVALID_ROW")
+    return number
+
+
 FLAG = "https://api.fifa.com/api/v3/picture/flags-sq-2/"
 
 
@@ -63,7 +74,7 @@ def edition(get, ident):
     for entry in body.get("rankings") or []:
         item = entry["rankingItem"]
         flag = (item.get("flag") or {}).get("src")
-        rows.append((str(item["idTeam"]), item["name"], item.get("countryCode"), _int(item.get("rank")),
+        rows.append((str(item["idTeam"]), item["name"], item.get("countryCode"), _rank(item.get("rank")),
                      _int(item.get("previousRank")), item.get("totalPoints"), (entry.get("tag") or {}).get("id"),
                      flag if isinstance(flag, str) and flag.startswith("https://") else None))
     if not rows and ident.startswith("FRS_"):
@@ -71,11 +82,9 @@ def edition(get, ident):
         native = get(url)
         for r in native.get("Results") or []:
             code = r.get("IdCountry")
-            rows.append((str(r["IdTeam"]), r["TeamName"][0]["Description"], code, _int(r.get("Rank")),
+            rows.append((str(r["IdTeam"]), r["TeamName"][0]["Description"], code, _rank(r.get("Rank")),
                          _int(r.get("PrevRank")), r.get("TotalPoints"), r.get("ConfederationName"),
                          FLAG + code if isinstance(code, str) and code.isalnum() else None))
-    if any(row[3] is None for row in rows):
-        raise SourceError("INVALID_ROW")
     return rows, url
 
 
