@@ -163,6 +163,10 @@ def main(dsn):
     x("UPDATE agg.player_power SET finishing_total=3.1,creation_total=0.8,defence_total=0.3,finishing_percentile=95,creation_percentile=70.5,defence_percentile=40 WHERE player_id=101")
     x("""INSERT INTO agg.player_power_roles(season_id,player_id,role,matches,minutes,total,rate,run_id)
          VALUES (2025,101,'centre_forward',2,200,3.9,0.539,%(run)s),(2025,101,'winger',1,60,0.3,0.053,%(run)s)""", {"run": run})
+    # The players' season totals, as the calculator writes them (the home's leaders read them).
+    from vega_v2 import calculator
+
+    x(calculator.PLAYER_SQL, {"cs": 1, "sid": 2025, "all": True, "players": [], "teams": []})
     # The seeded data is one publication (the worker publishes on its rhythm).
     published = db.execute("SELECT max(coalesce(published_at, updated_at)) FROM ops.resource_versions").fetchone()[0]
     publish(db, published, force=True)

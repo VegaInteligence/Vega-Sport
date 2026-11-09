@@ -49,6 +49,14 @@ export const UPCOMING_OFFERED = 12;
 // The common read: fresh for 60 s, then served stale for 5 minutes while CloudFront
 // computes it again, and for a day if that fails.
 export const HOME_STALE = { revalidate: 300, error: 86400 };
+// The season leaderboards: [name, who qualifies, order, size] (main's relational-home.js).
+const BOARDS = [
+  ["goals", "goals>0", "goals DESC,coalesce(xg,0) DESC,player_id", 10],
+  ["assists", "assists>0", "assists DESC,coalesce(xa,0) DESC,player_id", 10],
+  ["clinical", "goals>=4 AND xg IS NOT NULL", "goals-xg DESC,player_id", 8],
+  ["wasteful", "xg>=3", "goals-xg,player_id", 8],
+  ["rating", "rating IS NOT NULL AND minutes>=(SELECT rated_min FROM rating_minimum)", "rating DESC,player_id", 10],
+];
 
 const arraySql = (values) => `ARRAY[${values.map((value) => `'${value}'`).join(",")}]::text[]`;
 const uefa = arraySql(HOME_UEFA);
@@ -126,8 +134,12 @@ export function homeReadQuery(filters, params, now) {
     'lastId',api.public_id('match',${alias}.last_match_id)||':'||api.public_id('player',${alias}.player_id),'apps',${alias}.apps,
     'minutes',${alias}.minutes,'goals',${alias}.goals,'assists',${alias}.assists,'xg',${alias}.xg,'xa',${alias}.xa,
     'xgMatches',${alias}.xg_matches,'xaMatches',${alias}.xa_matches,'ratingSum',${alias}.rating_sum,'ratingMinutes',${alias}.rating_minutes,'rating',${alias}.rating)`;
-  const leaders = (predicate, order, limit) => `(SELECT coalesce(jsonb_agg(${seasonRow("p")} ORDER BY ${order}),'[]'::jsonb)
-    FROM (SELECT * FROM season_players WHERE ${predicate} ORDER BY ${order} LIMIT ${limit}) p)`;
+  const editionScope = scopeWhere("e", filters.scope, values);
+  const leaders = (key) => {
+    const [, predicate, order, limit] = BOARDS.find(([name]) => name === key);
+    return `(SELECT coalesce(jsonb_agg(${seasonRow("p")} ORDER BY ${order}),'[]'::jsonb)
+    FROM (SELECT * FROM season_rows WHERE ${predicate} ORDER BY ${order} LIMIT ${limit}) p)`;
+  };
   const sql = `/*vega:v2:home*/
 WITH publication AS MATERIALIZED (${publication}),
 lists AS MATERIALIZED (${LISTS}),
@@ -186,38 +198,28 @@ ${weekSql(fixtureScope, fence, instant, filters.archive)}, league_sides AS MATER
 ), biggest_win AS MATERIALIZED (
  SELECT w.*,abs(home_score-away_score) margin,home_score+away_score goals FROM weekly w
  WHERE abs(home_score-away_score)>=3 ORDER BY margin DESC,goals DESC,kickoff DESC,id LIMIT 1
-), season_apps AS MATERIALIZED (
- SELECT a.season_id,a.match_id,a.player_id,a.team_id,a.team,a.league_id,a.date,a.minutes,a.rating,a.goals,a.assists,a.xg,a.xa,
+), scope_editions AS MATERIALIZED (
+ SELECT e.competition_season_id FROM api.editions e WHERE ${editionScope}
+), season_players AS MATERIALIZED (
+ -- The season's totals from agg.player_season_stats (api.home_season_players, 046), summed
+ -- over the scope's editions: never every appearance of the season (doc "Ce qui change en v2").
+ SELECT s.player_id,sum(s.appearances)::int apps,sum(s.minutes) minutes,sum(s.goals) goals,sum(s.assists) assists,
+ CASE WHEN sum(s.xg_matches)=sum(s.appearances) THEN sum(s.xg) END xg,
+ CASE WHEN sum(s.xa_matches)=sum(s.appearances) THEN sum(s.xa) END xa,
+ sum(s.xg_matches)::int xg_matches,sum(s.xa_matches)::int xa_matches,
+ sum(s.rating_sum) rating_sum,sum(s.rating_minutes) rating_minutes,
+ CASE WHEN sum(s.rating_minutes)>0 THEN sum(s.rating_sum)/sum(s.rating_minutes) END rating
+ FROM api.home_season_players s WHERE s.competition_season_id IN (SELECT competition_season_id FROM scope_editions) AND s.appearances>0
+ GROUP BY s.player_id
+), rating_minimum AS (SELECT greatest(450,round(coalesce(max(minutes),0)*0.4)) rated_min FROM season_players),
+week_apps AS MATERIALIZED (
+ -- The week's appearances only (the player of the week, the others, the featured match).
+ SELECT a.season_id,a.match_id,a.player_id,a.team_id,a.team,a.league_id,a.date,a.kickoff_at,a.minutes,a.rating,a.goals,a.assists,a.xg,a.xa,
  a.player_name AS name,a.image_url,
  row_number() OVER(ORDER BY a.league_id,a.date NULLS LAST,a.kickoff_at NULLS LAST,a.match_id,a.player_id) source_order
- FROM api.player_appearances a WHERE ${appearanceScope}${fence} AND a.minutes>=1
-), season_identity AS (
- SELECT DISTINCT ON(player_id) player_id,name,image_url,team_id,team FROM season_apps ORDER BY player_id,source_order
-), season_latest AS (
- SELECT DISTINCT ON(player_id) player_id,match_id,date FROM season_apps ORDER BY player_id,date DESC NULLS LAST,source_order DESC
-), season_team_candidates AS (
- SELECT player_id,team_id,team,league_id,date,source_order,
- max(coalesce(date,'0001-01-01')) OVER(PARTITION BY player_id ORDER BY source_order ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) prior_date
- FROM season_apps
-), season_team AS (
- SELECT DISTINCT ON(player_id) player_id,team_id,team FROM season_team_candidates
- WHERE coalesce(date,'0001-01-01')>=coalesce(prior_date,'0001-01-01') AND NOT league_id=ANY(${uefa}) ORDER BY player_id,source_order DESC
-), player_totals AS (
- SELECT player_id,count(*)::int apps,sum(minutes) minutes,coalesce(sum(goals) FILTER(WHERE ${finiteSql("goals")}),0) goals,
- coalesce(sum(assists) FILTER(WHERE ${finiteSql("assists")}),0) assists,
- CASE WHEN count(xg) FILTER(WHERE ${finiteSql("xg")})=count(*) THEN sum(xg) END xg,
- CASE WHEN count(xa) FILTER(WHERE ${finiteSql("xa")})=count(*) THEN sum(xa) END xa,
- count(xg) FILTER(WHERE ${finiteSql("xg")})::int xg_matches,count(xa) FILTER(WHERE ${finiteSql("xa")})::int xa_matches,
- coalesce(sum(rating*minutes) FILTER(WHERE ${finiteSql("rating")}),0) rating_sum,
- coalesce(sum(minutes) FILTER(WHERE ${finiteSql("rating")}),0) rating_minutes,min(source_order) first_order
- FROM season_apps GROUP BY player_id
-), season_players AS MATERIALIZED (
- SELECT p.*,i.name,i.image_url,coalesce(t.team_id,i.team_id) team_id,coalesce(t.team,i.team) team,l.date,l.match_id last_match_id,
- CASE WHEN p.rating_minutes>0 THEN p.rating_sum/p.rating_minutes END rating
- FROM player_totals p JOIN season_identity i USING(player_id) JOIN season_latest l USING(player_id) LEFT JOIN season_team t USING(player_id)
-), rating_minimum AS (SELECT greatest(450,round(coalesce(max(minutes),0)*0.4)) rated_min FROM season_players),
-weekly_performances AS MATERIALIZED (
- SELECT DISTINCT ON(a.player_id) a.* FROM season_apps a JOIN weekly w ON w.season_id=a.season_id AND w.match_id=a.match_id
+ FROM api.player_appearances a JOIN weekly w ON w.season_id=a.season_id AND w.match_id=a.match_id WHERE a.minutes>=1
+), weekly_performances AS MATERIALIZED (
+ SELECT DISTINCT ON(a.player_id) a.* FROM week_apps a
  WHERE a.minutes>=60 AND ${finiteSql("a.rating")} ORDER BY a.player_id,a.rating DESC,a.source_order
 ), potw AS MATERIALIZED (
  SELECT * FROM weekly_performances ORDER BY (league_id=ANY(${topFive}||${uefa})) DESC,rating DESC,coalesce(goals,0) DESC,${normalizedSql("name")},name COLLATE "C",source_order LIMIT 1
@@ -225,10 +227,26 @@ weekly_performances AS MATERIALIZED (
  SELECT * FROM weekly_performances WHERE player_id IS DISTINCT FROM (SELECT player_id FROM potw)
  ORDER BY rating DESC,coalesce(goals,0) DESC,${normalizedSql("name")},name COLLATE "C",source_order LIMIT 9
 ), best_featured AS MATERIALIZED (
- SELECT a.* FROM season_apps a JOIN featured f ON f.season_id=a.season_id AND f.match_id=a.match_id WHERE ${finiteSql("a.rating")} ORDER BY a.rating DESC,a.source_order LIMIT 1
+ SELECT a.* FROM week_apps a JOIN featured f ON f.season_id=a.season_id AND f.match_id=a.match_id WHERE ${finiteSql("a.rating")} ORDER BY a.rating DESC,a.source_order LIMIT 1
 ), recent_performances AS MATERIALIZED (
- SELECT * FROM season_apps WHERE player_id=(SELECT player_id FROM potw) AND ${finiteSql("rating")}
- ORDER BY date DESC NULLS LAST,source_order DESC LIMIT 6
+ SELECT a.*,row_number() OVER(ORDER BY a.date NULLS LAST,a.kickoff_at NULLS LAST,a.match_id) source_order FROM (
+  SELECT a.* FROM api.player_appearances a WHERE a.player_id=(SELECT player_id FROM potw) AND ${appearanceScope} AND a.minutes>=1 AND ${finiteSql("a.rating")}
+  ORDER BY a.date DESC NULLS LAST,a.kickoff_at DESC NULLS LAST,a.match_id DESC LIMIT 6) a
+), leader_ids AS MATERIALIZED (
+ ${BOARDS.map(([, predicate, order, limit]) => `(SELECT player_id FROM season_players WHERE ${predicate} ORDER BY ${order} LIMIT ${limit})`).join(" UNION ")}
+ UNION SELECT player_id FROM potw
+), identities AS MATERIALIZED (
+ -- Name, photo, latest club (a league match first) and last match, for the players shown.
+ SELECT l.player_id,last.name,last.image_url,last.date,last.match_id last_match_id,
+ coalesce(club.team_id,last.team_id) team_id,coalesce(club.team,last.team) team
+ FROM leader_ids l
+ CROSS JOIN LATERAL (SELECT a.player_name name,a.image_url,a.date,a.match_id,a.team_id,a.team FROM api.player_appearances a
+  WHERE a.player_id=l.player_id AND ${appearanceScope} AND a.minutes>=1 ORDER BY a.date DESC NULLS LAST,a.kickoff_at DESC NULLS LAST,a.match_id DESC LIMIT 1) last
+ LEFT JOIN LATERAL (SELECT a.team_id,a.team FROM api.player_appearances a
+  WHERE a.player_id=l.player_id AND ${appearanceScope} AND a.minutes>=1 AND NOT a.league_id=ANY(${uefa})
+  ORDER BY a.date DESC NULLS LAST,a.kickoff_at DESC NULLS LAST,a.match_id DESC LIMIT 1) club ON true
+), season_rows AS MATERIALIZED (
+ SELECT p.*,i.name,i.image_url,i.team_id,i.team,i.date,i.last_match_id FROM season_players p JOIN identities i USING(player_id)
 ), selected_appearances AS MATERIALIZED (${appearanceJson(`SELECT season_id,match_id,player_id FROM potw UNION SELECT season_id,match_id,player_id FROM other_performances
    UNION SELECT season_id,match_id,player_id FROM best_featured UNION SELECT season_id,match_id,player_id FROM recent_performances`)}
 ), upcoming_candidates AS MATERIALIZED (
@@ -275,17 +293,14 @@ SELECT publication.*,
  (SELECT coalesce(jsonb_object_agg(r.id,to_jsonb(r)),'{}'::jsonb) FROM records r) records,
  ${oneRow("SELECT s.* FROM selected_appearances s JOIN potw p ON p.season_id=s.season_id AND p.match_id=s.match_id AND p.player_id=s.player_id")} potw,
  (SELECT f.id FROM potw p JOIN fixtures f ON f.season_id=p.season_id AND f.match_id=p.match_id) potw_match,
- (SELECT ${seasonRow("s")} FROM season_players s JOIN potw p USING(player_id)) potw_season,
+ (SELECT ${seasonRow("s")} FROM season_rows s JOIN potw p USING(player_id)) potw_season,
  ${jsonRows("SELECT s.* FROM selected_appearances s JOIN recent_performances p ON p.season_id=s.season_id AND p.match_id=s.match_id AND p.player_id=s.player_id ORDER BY p.date NULLS FIRST,p.source_order")} potw_recent,
  ${oneRow("SELECT s.* FROM selected_appearances s JOIN best_featured p ON p.season_id=s.season_id AND p.match_id=s.match_id AND p.player_id=s.player_id")} best_featured,
  ${jsonRows(`SELECT s.* FROM selected_appearances s JOIN other_performances p ON p.season_id=s.season_id AND p.match_id=s.match_id AND p.player_id=s.player_id
    ORDER BY p.rating DESC,coalesce(p.goals,0) DESC,${normalizedSql("p.name")},p.name COLLATE "C",p.source_order`)} others,
  (SELECT coalesce(jsonb_agg(DISTINCT f.id),'[]'::jsonb) FROM other_performances o JOIN fixtures f ON f.season_id=o.season_id AND f.match_id=o.match_id) other_matches,
- jsonb_build_object('goals',${leaders("goals>0", "goals DESC,coalesce(xg,0) DESC,first_order", 10)},
- 'assists',${leaders("assists>0", "assists DESC,coalesce(xa,0) DESC,first_order", 10)},
- 'clinical',${leaders("goals>=4 AND xg IS NOT NULL", "goals-xg DESC,first_order", 8)},
- 'wasteful',${leaders("xg>=3", "goals-xg,first_order", 8)},
- 'rating',${leaders("rating IS NOT NULL AND minutes>=(SELECT rated_min FROM rating_minimum)", "rating DESC,first_order", 10)},
+ jsonb_build_object('goals',${leaders("goals")},'assists',${leaders("assists")},'clinical',${leaders("clinical")},
+ 'wasteful',${leaders("wasteful")},'rating',${leaders("rating")},
  'ratedMin',(SELECT rated_min FROM rating_minimum)) leaders,
  (SELECT coalesce(jsonb_agg(jsonb_build_object('leagueId',t.league_id,'played',t.played,'games',t.games,'teamCount',t.team_count,
  'rows',(SELECT jsonb_agg(${tableRow("r")} ORDER BY r.rank) FROM ranked r WHERE r.league_id=t.league_id AND r.rank<=6))

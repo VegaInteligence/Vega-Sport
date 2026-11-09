@@ -56,14 +56,18 @@ def due_seasons(conn, now):
     - a season played in the last 30 days, once a UTC day;
     - a season with finished matches never computed (a backfilled one);
     - a season whose matches changed after its last computation (a backfill that went on,
-      a correction), once RECOMPUTE_AFTER has passed since that computation."""
+      a correction), once RECOMPUTE_AFTER has passed since that computation.
+    Only PitchAPI editions count: the models read nothing of the archives and cups (whose
+    seasons would otherwise all fall due when they are imported)."""
     return [
         s
         for (s,) in conn.execute(
             """WITH last AS (
                  SELECT DISTINCT ON (cohort_definition) cohort_definition, started_at FROM agg.calc_runs
                  WHERE kind = 'levels' AND status = 'published' ORDER BY cohort_definition, started_at DESC)
-               SELECT m.season_id FROM core.matches m LEFT JOIN last l ON l.cohort_definition = 'season:' || m.season_id
+               SELECT m.season_id FROM core.matches m
+               JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL AND cs.cup_key IS NULL
+               LEFT JOIN last l ON l.cohort_definition = 'season:' || m.season_id
                GROUP BY m.season_id, l.started_at
                HAVING (l.started_at IS NULL AND bool_or(m.status = 'finished'))
                    OR (bool_or(m.kickoff_at > %(now)s - interval '30 days' AND m.kickoff_at <= %(now)s)
@@ -84,13 +88,17 @@ def publish(conn, now, *, force=False):
     """Advance the publication when a resource changed since the last one, at most every
     PUBLISH_EVERY (or now, with force): the generation is the sum of the resource versions
     at that moment, so it only grows. Returns the new generation, or None."""
+    args = {"now": now, "force": force, "every": PUBLISH_EVERY}
+    totals = "(SELECT coalesce(sum(version), 0)::bigint AS total FROM ops.resource_versions) v"
+    due = "p.source_version <> v.total AND (%(force)s OR p.published_at <= %(now)s - %(every)s)"
     with conn.transaction():
+        if conn.execute(f"SELECT 1 FROM ops.publication p, {totals} WHERE {due}", args).fetchone() is None:
+            return None
+        # The editions the reads and the manifest list (agg.editions, 045), as of this generation.
+        conn.execute("SELECT ops.refresh_editions()")
         row = conn.execute(
-            """UPDATE ops.publication p SET generation = v.total, source_version = v.total, published_at = %(now)s
-               FROM (SELECT coalesce(sum(version), 0)::bigint AS total FROM ops.resource_versions) v
-               WHERE p.source_version <> v.total AND (%(force)s OR p.published_at <= %(now)s - %(every)s)
-               RETURNING p.generation""",
-            {"now": now, "force": force, "every": PUBLISH_EVERY},
+            f"UPDATE ops.publication p SET generation = v.total, source_version = v.total, published_at = %(now)s FROM {totals} WHERE {due} RETURNING p.generation",
+            args,
         ).fetchone()
     return row[0] if row else None
 
@@ -267,9 +275,18 @@ class Worker:
                     uefa.reconcile_teams(self.conn)
             except psycopg.Error as error:
                 print(f"sources error={safe_code(error)}", flush=True)
+        if seasons:
+            # The Elo covers every match in order: once for the pass, never once per season
+            # (with ~140 archive seasons due at once it rewrote agg.team_elo 95 times).
+            from . import power
+
+            try:
+                power.refresh_elo(self.calc_conn)
+            except psycopg.Error as error:
+                print(f"daily models elo error={safe_code(error)}", flush=True)
         for season in seasons:
             try:
-                models.refresh_daily(self.calc_conn, season)
+                models.refresh_daily(self.calc_conn, season, elo=False)
                 print(f"daily models season={season} outcome=ok", flush=True)
             except psycopg.Error as error:
                 print(f"daily models season={season} error={safe_code(error)}", flush=True)
