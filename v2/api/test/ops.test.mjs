@@ -51,6 +51,8 @@ before(async () => {
 
   await x("UPDATE core.matches SET first_finished_at = $1 WHERE id = 5", [iso(-905)]); // kickoff + 1 h 55
   await x("UPDATE core.matches SET first_finished_at = $1 WHERE id = 4", [iso(-2350)]); // before the window
+  // Match 1, played five weeks earlier, got its final score from the backfill two hours ago.
+  await x("UPDATE core.matches SET match_date = '2025-08-01', kickoff_at = '2025-08-01T19:00:00Z', first_finished_at = $1 WHERE id = 1", [iso(-120)]);
   await x("UPDATE ops.family_state SET last_success_at = $1 WHERE match_id = 5 AND family = 'summary'", [iso(-900)]);
   await x(
     `INSERT INTO ops.family_state(match_id, family, status, last_success_at) VALUES
@@ -211,7 +213,8 @@ test("provider calls, warnings, progress, quality, freshness, publication", { sk
   assert.deepEqual(body.quality.unknownFields, [{ family: "shots", path: "data.foo", occurrences: 3, firstSeenAt: iso(-7200), lastSeenAt: iso(-60) }]);
   assert.ok(body.quality.coverageGaps >= 1); // match 5 still lacks families
   assert.equal(typeof body.quality.dirtyScopes, "number");
-  // Match 5 only: kickoff to score 1 h 55, score to its last family 35 min.
+  // Match 5 only: kickoff to score 1 h 55, score to its last family 35 min. Match 1 was
+  // imported, not followed: its 36 days from kickoff to score are not a score delay.
   assert.deepEqual(body.freshness, { matches: 1, kickoffToScoreMedianMs: 6_900_000, kickoffToScoreP95Ms: 6_900_000, scoreToDetailsMedianMs: 2_100_000 });
   assert.match(body.publication.revision, /^\d+$/);
   assert.ok(body.publication.editions >= 1);
