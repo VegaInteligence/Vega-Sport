@@ -43,6 +43,10 @@ Exemple : 3 matchs de 90, 45 et 90 minutes ; xG observé 0,4 et 0,3 sur les deux
 - Total = 0,7 ; par match = 0,7 / 2 = **0,35** ;
 - par 90 = 90 × 0,7 / 135 = **0,47** (et non 90 × 0,7 / 225 = 0,28).
 
+## Zones de présence
+
+La lecture AWS additionne les actions localisées dans les cellules des cartes PitchAPI du joueur sur les matchs terminés du périmètre. La grille de 16 × 12 est orientée pour que l’équipe du joueur attaque vers la droite. La fiche indique le nombre de cartes exploitables sur les matchs examinés. La couleur représente le volume d’actions par cellule parmi les matchs couverts.
+
 ## Note saison
 
 Moyenne simple des notes observées (`ratingSum / ratingCount`). L'accueil utilise une moyenne pondérée par les minutes (voir [Note du match](../02-metriques-attendues/04-note-du-match.md)).
