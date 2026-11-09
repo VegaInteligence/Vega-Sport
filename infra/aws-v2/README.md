@@ -80,7 +80,7 @@ for t in database worker api; do aws cloudformation validate-template --profile 
 node v2/api/parity.mjs --legacy https://d317dq37z1tacb.cloudfront.net --v2 https://<vega-v2-api distribution> paths.txt
 ```
 
-Cutover goes route family by route family, only once its parity is clean and the backfill covers its seasons: in the current distribution (`infra/aws-backend/backend.yaml`), add the v2 Function URL as a second origin (with its own OAC) and one cache behavior per path pattern served by v2 (today `/api/read/clubs*`). Rolling back a family is removing its behavior. The manifest stays on the current API until every compact read is on v2; `/api/dashboard/manifest` on v2 already says which reads it serves (`capabilities.compactReads`). The GitHub ingestion workflows stop only at the end.
+Cutover goes route family by route family, only once its parity is clean and the backfill covers its seasons: in the current distribution (`infra/aws-backend/backend.yaml`), add the v2 Function URL as a second origin (with its own OAC) and one cache behavior per path pattern served by v2 (today `/api/read/clubs*`, `/api/read/players*`, `/api/read/player*`, `/api/read/club*`, `/api/read/performance*`, `/api/read/discipline*`, `/api/fixtures*`, `/api/matches/*`, `/api/standings*`, `/api/matchdays*`, and `data/sources/v2/*` for the image copies). Rolling back a family is removing its behavior. The manifest stays on the current API until every compact read is on v2; `/api/dashboard/manifest` on v2 already says which reads it serves (`capabilities.compactReads`). The GitHub ingestion workflows stop only at the end.
 
 ## Cost (on-demand, us-east-2, before free tier; check in the AWS pricing calculator)
 
