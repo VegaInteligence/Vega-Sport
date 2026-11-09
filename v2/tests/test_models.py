@@ -102,6 +102,16 @@ class ModelsTest(unittest.TestCase):
             self.assertEqual(min(r[7] for r in mine), 1)
         run = self.db.execute("SELECT method_version, elo_k, regularisation_minutes, eligibility_minutes FROM agg.power_runs WHERE kind='players' AND status='published'").fetchone()
         self.assertEqual(run, ("power-ranking-v1", 20.0, 450.0, 900.0))
+        # The award race: the first 30 of the ranking, numbered 1..30, with its calc run.
+        race = self.db.execute(
+            """SELECT a.rank, a.player_id, a.score, r.kind, r.status FROM agg.player_award_ranking a JOIN agg.calc_runs r ON r.id=a.calc_run_id
+               WHERE a.season_id=2025 AND a.award='ballon_dor' ORDER BY a.rank"""
+        ).fetchall()
+        self.assertEqual([r[0] for r in race], list(range(1, 31)))
+        rank_of = {r[0]: r[6] for r in ranked}
+        self.assertEqual([rank_of[r[1]] for r in race], [r[6] for r in ranked[:30]])  # ties may come in either order
+        self.assertTrue(all(r[3] == "award" and r[4] == "published" for r in race))
+        self.assertAlmostEqual(race[0][2], ranked[0][5], places=3)
 
     @classmethod
     def tearDownClass(cls):
@@ -323,7 +333,8 @@ class ModelsTest(unittest.TestCase):
         )
         self.assertEqual(self.one("SELECT count(*) FROM agg.team_squad_profile")[0], 1)
         self.assertEqual(self.one("SELECT count(*) FROM agg.player_projections")[0], 0)
-        self.assertEqual(self.one("SELECT count(*) FROM agg.player_award_ranking")[0], 0)
+        # The award race is written by the power ranking (test_power_rankings_of_players).
+        self.assertEqual(self.one("SELECT count(*) FROM agg.player_award_ranking")[0], 30)
 
     def test_z_incremental_cohort_refresh(self):
         from vega_v2.calculator import process_dirty

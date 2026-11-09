@@ -81,6 +81,16 @@ class ScoreTest(unittest.TestCase):
         self.assertEqual(scores, {"finishing": 2.0, "creation": -0.5})
         self.assertAlmostEqual(c, (0.45 * 2.0 + 0.20 * -0.5) / 0.65)
 
+    def test_award_race_numbers_ties_in_ranking_order(self):
+        scored = {
+            1: {"eligible": True, "rank": 1, "total": 5.0, "minutes": 1000, "team": 9, "score": 80.0},
+            2: {"eligible": True, "rank": 2, "total": 4.0, "minutes": 1000, "team": 9, "score": 70.0},
+            3: {"eligible": True, "rank": 2, "total": 4.0, "minutes": 1200, "team": 8, "score": 70.0},
+            4: {"eligible": False, "rank": None, "total": 9.0, "minutes": 300, "team": 8, "score": None},
+        }
+        self.assertEqual(power.award_race(scored), [(1, 1, 9, 80.0), (2, 3, 8, 70.0), (3, 2, 9, 70.0)])
+        self.assertEqual(len(power.award_race({i: dict(scored[1], rank=i) for i in range(1, 50)})), 30)
+
     def test_season_score_regularises_and_ranks_within_the_role(self):
         contributions = {
             1: [("winger", 900, 3.0, 10), ("winger", 900, 1.0, 10)],

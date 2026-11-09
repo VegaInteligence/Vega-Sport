@@ -105,6 +105,24 @@ const ROLE_LABEL = {
 };
 const round = (v, d) => (v === null || v === undefined ? null : Math.round(v * 10 ** d) / 10 ** d);
 
+/**
+ * The power ranking of each club or player of a page, for one season (the club and
+ * player reads carry it): clubs { rank, elo, eloChange, matches }, players { rank, score,
+ * role, position, roleRank }. A club or player without one (not ranked) has none.
+ */
+export async function powerOf(read, kind, season, ids) {
+  const out = new Map();
+  if (!season || !ids.length) return out;
+  if (kind === "clubs") {
+    for (const r of await read("SELECT team_id,rank,elo,elo_change,matches FROM api.power_clubs WHERE season=$1 AND scope='clubs' AND team_id=ANY($2)", [season, ids]))
+      out.set(r.team_id, { rank: r.rank, elo: round(r.elo, 1), eloChange: round(r.elo_change, 1), matches: r.matches });
+  } else {
+    for (const r of await read("SELECT player_id,rank,score,role,role_rank FROM api.power_players WHERE season=$1 AND player_id=ANY($2)", [season, ids]))
+      out.set(r.player_id, { rank: r.rank, score: round(r.score, 1), role: r.role, position: ROLE_LABEL[r.role] ?? r.role, roleRank: r.role_rank });
+  }
+  return out;
+}
+
 async function powerRanking(read, params) {
   validateParams(params, ["kind", "season", "limit"]);
   const kind = params.get("kind") ?? "players", season = params.get("season"), limitRaw = params.get("limit") ?? "30";

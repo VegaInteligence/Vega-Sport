@@ -8,6 +8,7 @@
  * exclusion (excludedStats is always 0) and no fallback to match-level fields.
  */
 import { reject, validateParams } from "../http.mjs";
+import { powerOf } from "./rankings.mjs";
 import {
   bindValue,
   finiteSql,
@@ -221,12 +222,16 @@ export function createClubReadRoute(read) {
     const { sql, values } = clubReadQuery(filters, params);
     const [snapshot] = await read(sql, values);
     const total = Number(snapshot?.total || 0);
+    const clubs = (snapshot?.clubs || []).map((row) => clubReadRecord(row, filters.analysis));
+    // Each club's power ranking of the season (its Elo strength, rankings.mjs).
+    const power = await powerOf(read, "clubs", filters.scope.season, clubs.map((c) => c.id));
+    for (const c of clubs) c.power = power.get(c.id) ?? null;
     return readResponse(
       req,
       params,
       snapshot,
       {
-        clubs: (snapshot?.clubs || []).map((row) => clubReadRecord(row, filters.analysis)),
+        clubs,
         facets: { countries: snapshot?.countries || [], competitionIds: snapshot?.competition_ids || [] },
       },
       {
