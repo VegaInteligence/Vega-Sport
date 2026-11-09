@@ -56,7 +56,8 @@ export async function standingsBody(read, competition, season) {
   const tables = new Map();
   for (const r of rows) {
     const key = `${r.stage ?? ""}\u0000${r.group_name ?? ""}`;
-    if (!tables.has(key)) tables.set(key, { name: r.group_name ?? r.league_name, rows: [] });
+    // An official table is named by its group, "" without one (legacy); Vega's own by the league.
+    if (!tables.has(key)) tables.set(key, { name: r.group_name ?? (r.source === "vega" ? r.league_name : ""), rows: [] });
     tables.get(key).rows.push({
       id: r.id, uefaId: r.uefa_id, imageUrl: r.image_url, name: r.name, wins: r.wins, draws: r.draws,
       losses: r.losses, played: r.played, points: r.points, goalsFor: r.goals_for, goalsAgainst: r.goals_against,

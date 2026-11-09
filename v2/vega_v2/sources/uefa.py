@@ -22,11 +22,12 @@ def current_end_year(now):
 
 
 def scopes(now):
-    """The running season daily (it changes after every European week), the last one monthly."""
+    """The running season daily (it changes after every European week), the three before it
+    monthly: the four editions main keeps (a club's ranking history on its profile)."""
     end = current_end_year(now)
     return {
         **{f"{kind}:{end}": timedelta(days=1) for kind in KINDS},
-        **{f"{kind}:{end - 1}": timedelta(days=30) for kind in KINDS},
+        **{f"{kind}:{end - back}": timedelta(days=30) for kind in KINDS for back in (1, 2, 3)},
     }
 
 

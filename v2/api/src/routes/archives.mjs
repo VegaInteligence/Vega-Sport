@@ -148,7 +148,8 @@ export async function archiveIndex(req, params, read) {
   validateParams(params, ["kind"]);
   const kind = params.get("kind");
   if (!["results", "goals"].includes(kind || "")) reject(400, "Paramètre invalide.");
-  const sources = await read("SELECT * FROM api.source_revisions ORDER BY source");
+  // In the archive index's order (its position), as main lists them.
+  const sources = await read("SELECT * FROM api.source_revisions ORDER BY position NULLS LAST,source");
   const main = sources.find((s) => s.source === kind);
   if (!main) reject(404, "Donnée indisponible.");
   let body;
@@ -163,7 +164,9 @@ export async function archiveIndex(req, params, read) {
         ...source(main),
         ...(main.archive_sha256 && { archiveSha256: main.archive_sha256 }),
         ...(main.coverage && { coverage: main.coverage }),
-        additionalSources: sources.filter((s) => s.source.startsWith("results/")).map(source),
+        additionalSources: sources
+          .filter((s) => s.source.startsWith("results/"))
+          .map((s) => ({ ...source(s), ...(s.archive_sha256 && { archiveSha256: s.archive_sha256 }), ...(s.coverage && { coverage: s.coverage }) })),
       },
       seasons,
     };
