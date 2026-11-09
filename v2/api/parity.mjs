@@ -6,9 +6,12 @@
  *
  *   node parity.mjs --legacy https://<current> --v2 https://<v2> paths.txt
  *
- * paths.txt: one path per line, e.g. /api/read/clubs?season=2025/2026&leagues=all
+ * paths.txt: one path per line, the current API's (e.g. /api/read/clubs?season=2025/2026&leagues=all);
+ * the v2 side reads the same request under its v2 route, as the site does once switched
+ * (dashboard/frontend/src/services/v2-routes.js).
  */
 import { readFile } from "node:fs/promises";
+import { v2Path } from "../../dashboard/frontend/src/services/v2-routes.js";
 
 export const IGNORED = new Set(["generation", "publishedAt", "sourceRetrievedAt", "latestSourceRetrievedAt", "publicationVersion", "retrievedAt", "sourceDigest", "storage"]);
 
@@ -48,7 +51,7 @@ async function main(argv) {
   const paths = (await readFile(file, "utf8")).split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
   let failing = 0;
   for (const path of paths) {
-    const [a, b] = await Promise.all([fetch(legacy + path), fetch(v2 + path)]);
+    const [a, b] = await Promise.all([fetch(legacy + path), fetch(v2 + v2Path(path))]);
     const [ja, jb] = await Promise.all([a.json().catch(() => null), b.json().catch(() => null)]);
     const diffs = a.status === b.status ? compare(ja, jb) : [{ path: "status", legacy: a.status, v2: b.status }];
     if (diffs.length) failing++;

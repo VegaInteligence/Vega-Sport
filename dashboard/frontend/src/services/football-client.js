@@ -1,4 +1,5 @@
 import { publicApiFetch } from "./public-api-fetch.js";
+import { API_V2, fixtureScope } from "./v2-routes.js";
 import { normalizeArchive } from "./format.js";
 import { apiUrl, dataUrl } from "../data-url.js";
 import { completeFixtures } from "./fixture-pages.js";
@@ -68,6 +69,8 @@ export class FootballDataClient {
     this.redraw();
   }
   async request(path, { signal } = {}) {
+    const scope = API_V2 ? fixtureScope(path) : null;
+    if (scope) return { data: { matches: await completeFixtures(scope, { signal }) } };
     const response = await publicApiFetch(apiUrl(`/api/pitchapi/${path}`), {
       headers: { Accept: "application/json" },
       signal,

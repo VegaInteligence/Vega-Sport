@@ -85,13 +85,23 @@ Defaults: Ligue 1 (`LEAGUE=l_3FJFUl`), 2025/2026 (`SEASON=2025`), archive `ARCHI
 
 ## Parity and cutover
 
-`v2/api/parity.mjs` reads the same paths from both APIs and lists every difference (publication metadata excepted):
+v2 is a second base (`vega-football-db-postgres`) filled from the sources themselves: the current RDS is never copied. The move happens once v2 holds everything, in four steps:
 
-```sh
-node v2/api/parity.mjs --legacy https://d317dq37z1tacb.cloudfront.net --v2 https://<vega-v2-api distribution> paths.txt
-```
+1. **Backfill everything.** Run the backfill task without bounds; it reads every edition since 2021/2022 and stops by itself:
 
-Cutover goes route family by route family, only once its parity is clean and the backfill covers its seasons: in the current distribution (`infra/aws-backend/backend.yaml`), add the v2 Function URL as a second origin (with its own OAC) and one cache behavior per path pattern served by v2 (today `/api/read/home*`, `/api/read/clubs*`, `/api/read/players*`, `/api/read/player*`, `/api/read/club*`, `/api/read/performance*`, `/api/read/discipline*`, `/api/fixtures*`, `/api/matches/*`, `/api/standings*`, `/api/matchdays*`, `/api/search*`, `/api/read/archive*`, `/api/archives/index*`, `/api/rankings/*`, `/api/club-links*`, `/api/club-wikidata*`, `/api/coach-portrait*`, `/api/stadium*`, `/api/open-cups*`, `/api/openligadb*`, `/api/nations-results*`, `/api/cup-snapshot*`, and `data/sources/v2/*` for the image copies). Rolling back a family is removing its behavior. The manifest stays on the current API until every compact read is on v2; `/api/dashboard/manifest` on v2 already says which reads it serves (`capabilities.compactReads`). The GitHub ingestion workflows stop only at the end.
+   ```sh
+   aws ecs run-task --profile statarena --region us-east-2 --cluster vega-v2 --task-definition vega-v2-backfill --launch-type FARGATE --network-configuration "awsvpcConfiguration={subnets=[subnet-0233a9567335f56ce,subnet-04c9af303f55d9718,subnet-0e72516f361932c15],securityGroups=[<WorkerSecurityGroup of vega-v2-database>],assignPublicIp=ENABLED}"
+   ```
+
+   Then import every archive season with `IMPORT_ARCHIVES=true ARCHIVE_SOURCES_BUCKET=<bucket> bash infra/aws-v2/deploy.sh`.
+2. **Parity.** `v2/api/parity.mjs` reads each current path from the current API and the same request under its v2 route (the site's own mapping, `v2-routes.js`), and lists every difference outside publication metadata and the gaps each route documents:
+
+   ```sh
+   node v2/api/parity.mjs --legacy https://d317dq37z1tacb.cloudfront.net --v2 https://<vega-v2-api distribution> paths.txt
+   ```
+
+3. **Switch the site.** In the site's Vercel project, set `NEXT_PUBLIC_API_ORIGIN` to the v2 distribution (`ApiOrigin` output of `vega-v2-api`) and `NEXT_PUBLIC_API_SCHEMA=v2`, then redeploy. Every read goes to its v2 route (`dashboard/frontend/src/services/v2-routes.js`): the provider proxy becomes `/api/matches/{id}[/…]`, `/api/competitions`, `/api/players/{id}` and `/api/teams/{id}`, club facts and stadiums are read by club id, cups by Vega id, schedules as fixture pages, and the Ballon d'Or slots show the player power ranking. Rolling back is removing the two variables and redeploying.
+4. **Retire the old path, with explicit consent only.** Stop the GitHub ingestion workflows, then, separately, the current backend and the RDS `statarena-postgres` (a final snapshot first). Nothing here deletes them.
 
 ## Cost (on-demand, us-east-2, before free tier; check in the AWS pricing calculator)
 
