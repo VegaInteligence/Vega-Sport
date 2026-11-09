@@ -59,17 +59,26 @@ def run_due(conn, get, now=None, *, names=None):
                     else "DATABASE_ERROR" if isinstance(error, psycopg.Error)
                     else "INVALID_SOURCE_RESPONSE"
                 )
-            conn.execute(
-                """INSERT INTO ops.source_runs(source, scope, last_attempt_at, last_success_at, status, error_code, rows_written, unmatched, updated_at)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,now())
-                   ON CONFLICT (source, scope) DO UPDATE SET last_attempt_at=EXCLUDED.last_attempt_at,
-                     last_success_at=coalesce(EXCLUDED.last_success_at, ops.source_runs.last_success_at),
-                     status=EXCLUDED.status, error_code=EXCLUDED.error_code, rows_written=EXCLUDED.rows_written,
-                     unmatched=EXCLUDED.unmatched, updated_at=now()""",
-                (name, scope, instant, None if code else instant, "error" if code else "ok", code, written, unmatched),
-            )
+            try:
+                record_run(conn, name, scope, instant, code, written, unmatched)
+            except psycopg.Error:
+                # A status that cannot be written must not stop the other scopes.
+                code = code or "STATUS_NOT_RECORDED"
             results[(name, scope)] = code or "ok"
     return results
+
+
+def record_run(conn, name, scope, instant, code, written, unmatched):
+    with conn.transaction():
+        conn.execute(
+            """INSERT INTO ops.source_runs(source, scope, last_attempt_at, last_success_at, status, error_code, rows_written, unmatched, updated_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,now())
+               ON CONFLICT (source, scope) DO UPDATE SET last_attempt_at=EXCLUDED.last_attempt_at,
+                 last_success_at=coalesce(EXCLUDED.last_success_at, ops.source_runs.last_success_at),
+                 status=EXCLUDED.status, error_code=EXCLUDED.error_code, rows_written=EXCLUDED.rows_written,
+                 unmatched=EXCLUDED.unmatched, updated_at=now()""",
+            (name, scope, instant, None if code else instant, "error" if code else "ok", code, written, unmatched),
+        )
 
 
 class SourceError(RuntimeError):

@@ -118,6 +118,21 @@ class SourceIdentityTest(unittest.TestCase):
         self.assertEqual(served, [("FIFA", True)])
         self.assertEqual(self.db.execute("SELECT provider FROM api.ranking_editions WHERE kind='uefa-clubs' AND edition='2026-11-01'").fetchone()[0], "SportsAPI")
 
+    def test_scopes_naming_provider_ids_are_recorded(self):
+        # SportScore scopes carry PitchAPI league ids (upper case): their status rows must be
+        # written, and one source's failure must not stop the others (worker log 2026-11-09).
+        from vega_v2 import sources
+        from vega_v2.sources import SourceError
+
+        def unavailable(url, **kwargs):
+            raise SourceError("HTTP_503")
+
+        results = sources.run_due(self.db, unavailable, NOW, names={"sportscore"})
+        self.assertIn(("sportscore", "standings:l_0ALvwF"), results)
+        recorded = self.db.execute("SELECT count(*), count(*) FILTER (WHERE scope ~ '[A-Z]') FROM ops.source_runs WHERE source = 'sportscore'").fetchone()
+        self.assertEqual(recorded[0], len(results))
+        self.assertGreater(recorded[1], 0)
+
     def test_shared_site_data_as_rows(self):
         with self.db.transaction():
             curated.league_zones(self.db)
