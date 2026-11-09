@@ -85,7 +85,9 @@ def workflow(name):
               'v2 pilot must have repository read permission only')
         check('./.github/actions/aws-database' not in text and 'secrets.NEON' not in text,
               'v2 pilot must not bootstrap the production database')
-        check(obj['jobs']['pilot']['services']['postgres']['image']=='postgres:16',
+        # pgvector's image is PostgreSQL 16 plus the extension the optional v2 vector
+        # migration needs; both are throwaway runner services.
+        check(obj['jobs']['pilot']['services']['postgres']['image'] in ('postgres:16','pgvector/pgvector:pg16'),
               'v2 pilot must use its disposable PostgreSQL service')
         target=urllib.parse.urlsplit(obj['jobs']['pilot']['env']['V2_DATABASE_URL'])
         check(target.hostname=='127.0.0.1' and target.path=='/vega_v2_pilot',
