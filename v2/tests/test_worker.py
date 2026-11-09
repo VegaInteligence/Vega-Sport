@@ -194,6 +194,13 @@ class WorkerTest(unittest.TestCase):
           {"t": self.now - RECOMPUTE_AFTER + timedelta(minutes=10), "c": f"season:{season}"})
         x("UPDATE core.matches SET updated_at=%s WHERE id=900", (self.now - timedelta(minutes=5),))
         self.assertEqual(due_seasons(self.db, self.now), [])
+        # An archive season imported now is never due: the models read PitchAPI editions only.
+        with self.db.transaction():
+            archive = Store(self.db).season("1970/1971")
+        x("INSERT INTO core.competition_seasons(id,competition_id,season_id,native_label,archive_key) VALUES (901,900,%s,'1970/1971','test:1970')", (archive,))
+        x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date)
+             VALUES (901,901,%s,'vega','finished',900,901,2,2,'1971-01-01')""", (archive,))
+        self.assertEqual(due_seasons(self.db, self.now), [])
 
     def drain(self):
         count = 0

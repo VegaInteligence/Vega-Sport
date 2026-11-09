@@ -743,12 +743,16 @@ def process_cohorts(conn, *, limit=50, min_age_seconds=600):
     return len(claimed)
 
 
-def refresh_daily(conn, season):
+def refresh_daily(conn, season, *, elo=True):
     """Once a day per active season: levels, strength, squad profiles, similarity, and
-    the club and player power rankings (power.py)."""
+    the club and player power rankings (power.py). The clubs' Elo runs over every match
+    at once: a pass over several seasons computes it once first (elo=False here)."""
     from . import power
 
-    power.refresh_power(conn, season)
+    if elo:
+        power.refresh_power(conn, season)
+    else:
+        power.refresh_players(conn, season)
     refresh_levels(conn, season)
     refresh_strength(conn, season)
     refresh_squad_profiles(conn, season)
