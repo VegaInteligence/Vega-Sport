@@ -34,7 +34,8 @@ Le worker prend les travaux dans l'ordre score, détails, référentiel (le back
 - `/api/health`, `/api/status`, `/api/dashboard/manifest` (son `capabilities.compactReads` dit quelles lectures la v2 sert) ;
 - les lectures compactes `/api/read/home`, `clubs`, `players`, `player`, `club`, `performance`, `discipline`, avec la carte `media` de `media=1` (et, pour l'accueil, la présentation compacte de main, importée telle quelle) ;
 - `/api/fixtures` (pages à curseur liées à la génération), `/api/matches/{id}/summary`, `/api/standings`, `/api/matchdays`, `/api/search` ;
-- les archives : `/api/read/archive` (pages, recherche par équipe ou buteur, buts d'un match) et `/api/archives/index` ; le manifeste déclare `boundedArchive`.
+- les archives : `/api/read/archive` (pages, recherche par équipe ou buteur, buts d'un match) et `/api/archives/index` ; le manifeste déclare `boundedArchive` ;
+- les classements et le support des fiches club : `/api/rankings/{index,edition,associations,club}`, `/api/club-links`, `/api/club-wikidata`, `/api/coach-portrait`, `/api/stadium`.
 
 Chaque route liste en tête de fichier ses écarts voulus avec l'API actuelle, pour la parité : identifiant d'apparition `<match>:<joueur>`, statuts normalisés, libellés de statistiques laissés au site, classement Vega servi quand aucune source officielle n'en publie.
 
@@ -42,12 +43,19 @@ Chaque route liste en tête de fichier ses écarts voulus avec l'API actuelle, p
 
 **Archives.** [`archives.py`](vega_v2/archives.py) fait tourner sans modification les constructeurs d'archives de main et `shared/archive.js` (rapprochement des buts et des matchs) sur les sources épinglées, puis écrit chaque saison jusqu'à 2020/2021 en lignes typées : compétitions, éditions, équipes, matchs, tours et buteurs, dans la partition d'archives. Les lectures de l'ère PitchAPI les laissent de côté.
 
-**Sources hors PitchAPI.** Coefficients UEFA, classement FIFA (toutes les éditions depuis 2021), classements officiels SportScore (écrits seulement si chaque ligne désigne un club de l'édition), alias de recherche de `shared/` ; chaque source a sa période dans `ops.source_runs`.
+**Sources hors PitchAPI.**
+- coefficients UEFA, avec les points par saison et les clubs encore en lice ;
+- classement FIFA, toutes les éditions depuis 2021 ;
+- classements officiels SportScore, écrits seulement si chaque ligne désigne un club de l'édition ;
+- Wikidata et Commons : fondation, stade, entraîneur, portraits. Les lecteurs de main tournent tels quels via [`sources/bridge.mjs`](sources/bridge.mjs), par lots de vingt par heure.
+- alias de recherche et orthographes UEFA revues de main.
+
+Chaque source a sa période dans `ops.source_runs`. Une erreur de base de données reste confinée à sa portée.
 
 ## Ce qui reste
 
-- Les routes encore servies par l'API actuelle : `/api/seasons/partition` (chargeur de saison complet, inutile une fois toutes les lectures compactes servies), `/api/archives/season` (documents source entiers, inutiles avec `boundedArchive`), `/api/archive/matches/{id}`, `/api/assets`, les routes de support (`club-wikidata`, `coach-portrait`, `stadium`, `player-honours`, `open-cups`, `openligadb`, `nations-results`), de catalogue (classements, archives, coupes), le proxy `/api/pitchapi/*` et `orion-pro`.
-- Les autres adaptateurs : Wikidata et Commons (biographies, photos, stades), SportsAPI, OpenFootball, OpenLigaDB, International Results, coupes (football-data, ESPN, fixturedl). L'import réel des archives attend la copie en lecture seule des sources de main (`data/sources/`).
+- Les routes encore servies par l'API actuelle : `/api/seasons/partition` (chargeur de saison complet, inutile une fois toutes les lectures compactes servies), `/api/archives/season` (documents source entiers, inutiles avec `boundedArchive`), `/api/archive/matches/{id}`, `/api/assets`, `player-honours`, le bloc des coupes (`open-cups`, `openligadb`, `nations-results`, `cup-index`, `cup-table`, `cup-snapshot`, `supplemental`), le proxy `/api/pitchapi/*` et `orion-pro`.
+- Les autres adaptateurs : SportsAPI, OpenFootball, OpenLigaDB, International Results, coupes (football-data, ESPN, fixturedl). L'import réel des archives attend la copie en lecture seule des sources de main (`data/sources/`).
 - Le déploiement des piles AWS, le backfill, la parité réelle et la bascule route par route : voir `infra/aws-v2/README.md`. Rien n'est déployé.
 
 ## Exécution locale
