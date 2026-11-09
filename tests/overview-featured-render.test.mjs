@@ -293,14 +293,23 @@ test("a selection without finished matches shows an empty state", async () => {
   assert.match(rendered, /data-empty/);
 });
 
-test("a new week does not keep the preceding week's featured results", async () => {
-  const rendered = await overview({
+test("a new week keeps the latest played week until its first result", async () => {
+  const monday = await overview({
     context: context(),
     now: "2026-11-02T12:00:00Z",
   });
-  assert.match(rendered, /data-empty/);
-  assert.match(rendered, /cette semaine/);
-  assert.doesNotMatch(rendered, /data-motw/);
+  assert.match(monday, /Dernière semaine jouée/);
+  assert.match(monday, /data-motw="arsenal-match"/);
+  assert.match(monday, /Aucun match terminé pour l’instant cette semaine/);
+  assert.doesNotMatch(monday, /résultats provisoires/);
+  // Results more than 14 days old no longer stand in for the current week.
+  const stale = await overview({
+    context: context(),
+    now: "2026-11-16T12:00:00Z",
+  });
+  assert.match(stale, /data-empty/);
+  assert.match(stale, /cette semaine/);
+  assert.doesNotMatch(stale, /data-motw/);
 });
 
 test("an archive selection displays the historical week and season explicitly", async () => {
@@ -390,6 +399,18 @@ test("compact home expires a cached preceding week and keeps API failures visibl
   });
   assert.match(failed, /role="alert"/);
   assert.match(failed, /Publication indisponible/);
+});
+
+test("compact home shows the latest played week kept by the server", async () => {
+  const summary = homeSummary();
+  summary.value.data.period = { ...summary.value.data.period, latest: true };
+  const kept = await overview({
+    context: context({ compactMode: true }),
+    summary,
+    now: "2026-11-02T00:01:00Z",
+  });
+  assert.match(kept, /data-motw="arsenal-match"/);
+  assert.match(kept, /Dernière semaine jouée/);
 });
 
 test("compact home hides a past next fixture even while the summary is retained", async () => {

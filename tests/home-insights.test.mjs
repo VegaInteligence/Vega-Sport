@@ -58,22 +58,48 @@ const fixture = (
   score_away: sa,
 });
 
-test("the current Paris week expires old results even without new matches", () => {
-  const now = Date.parse("2026-11-03T11:00:00Z");
-  const current = matchdayWindow(
-    [
-      match("a", L1, "2026-11-01", "x", "y", 1, 0),
-      match("b", L1, "2026-11-04", "x", "y", 1, 0, { status: "not_started" }),
-    ],
-    now,
-  );
-  assert.deepEqual(current, {
+test("a live home keeps the latest played week until the current one has a result", () => {
+  const now = Date.parse("2026-11-03T11:00:00Z"),
+    sunday = match("a", L1, "2026-11-01", "x", "y", 1, 0),
+    upcoming = match("b", L1, "2026-11-04", "x", "y", 1, 0, {
+      status: "not_started",
+    });
+  const current = {
     start: "2026-11-02",
     end: "2026-11-08",
     current: true,
+    latest: false,
     asOf: now,
     asOfDay: "2026-11-03",
+  };
+  const latest = matchdayWindow([sunday, upcoming], now);
+  assert.deepEqual(latest, {
+    ...current,
+    start: "2026-10-26",
+    end: "2026-11-01",
+    latest: true,
   });
+  assert.deepEqual(
+    weekResults([sunday, upcoming], latest).map((m) => m.id),
+    ["a"],
+  );
+  // The first result of the current week takes over.
+  assert.deepEqual(
+    matchdayWindow(
+      [sunday, match("monday", L1, "2026-11-02", "x", "y", 0, 0)],
+      now,
+    ),
+    current,
+  );
+  // A result more than 14 days old no longer anchors the home.
+  assert.equal(
+    matchdayWindow([match("d", L1, "2026-10-21", "x", "y", 1, 1)], now).start,
+    "2026-10-19",
+  );
+  assert.deepEqual(
+    matchdayWindow([match("e", L1, "2026-10-20", "x", "y", 1, 1)], now),
+    current,
+  );
   const past = matchdayWindow(
     [match("c", L1, "2026-05-24", "x", "y", 2, 2)],
     now,

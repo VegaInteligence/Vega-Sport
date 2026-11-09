@@ -1,4 +1,4 @@
-import { fixtureWeek, parisDay, validDay } from "./fixtures.js";
+import { fixtureWeek, parisDay, shiftDay, validDay } from "./fixtures.js";
 import { FEATURED_CLUB_IDS } from "./home.js";
 import { knockoutStage } from "./knockout-bracket.js";
 import { SIMPLE_LEAGUES } from "./competition-standings.js";
@@ -79,27 +79,37 @@ export const finishedMatch = (match) =>
   hasScore(match.home?.score) &&
   hasScore(match.away?.score);
 
+// Mirrors LATEST_WEEK_DAYS in backend/services/relational-home.js.
+export const LATEST_WEEK_DAYS = 14;
+
 /**
- * Live widgets follow the current Monday–Sunday in Paris, including empty
- * weeks. Only an explicitly selected archive may use its last played week.
+ * Live widgets follow the current Monday–Sunday in Paris. While that week has
+ * no result yet (Monday morning, international breaks), they keep the latest
+ * week with results, flagged `latest`, if it is under LATEST_WEEK_DAYS old;
+ * otherwise the empty current week. An archive uses its last played week.
  * Calendar days, rather than 7 × 24 hours, preserve the boundaries across DST.
  */
 export function matchdayWindow(matches, now, { archive = false } = {}) {
-  let anchor = now;
-  if (archive) {
-    anchor = -Infinity;
-    for (const match of matches || []) {
-      if (!finishedMatch(match)) continue;
-      const time = kickoffTime(match);
-      if (Number.isFinite(time) && time <= now && time > anchor) anchor = time;
-    }
-    if (!Number.isFinite(anchor)) return null;
+  let last = -Infinity;
+  for (const match of matches || []) {
+    if (!finishedMatch(match)) continue;
+    const time = kickoffTime(match);
+    if (Number.isFinite(time) && time <= now && time > last) last = time;
   }
+  if (archive && !Number.isFinite(last)) return null;
+  const today = parisDay(now),
+    lastDay = Number.isFinite(last) ? parisDay(last) : "";
+  const latest =
+    !archive &&
+    Boolean(lastDay) &&
+    lastDay < fixtureWeek(today).start &&
+    lastDay > shiftDay(today, -LATEST_WEEK_DAYS);
   return {
-    ...fixtureWeek(parisDay(anchor)),
+    ...fixtureWeek(archive || latest ? lastDay : today),
     current: !archive,
+    latest,
     asOf: now,
-    asOfDay: parisDay(now),
+    asOfDay: today,
   };
 }
 
