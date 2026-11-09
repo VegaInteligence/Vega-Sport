@@ -86,9 +86,18 @@ class ImportTest(unittest.TestCase):
             ("results", "OpenFootball", "e6744429ee395bc86f247348c6184bb08d4eb361"),
         ])
         ids = dict(x("SELECT archive_key, id FROM core.matches").fetchall())
-        # Re-import: same rows, same ids, one more archive version.
+        # Re-import of unchanged sources: same rows, same ids, nothing written, no new version.
+        revisions = dict(x("SELECT id, revision FROM core.matches").fetchall())
         self.assertEqual(archives.run(self.db, self.sources.name), {"2015/2016": 4})
         self.assertEqual(dict(x("SELECT archive_key, id FROM core.matches").fetchall()), ids)
+        self.assertEqual(dict(x("SELECT id, revision FROM core.matches").fetchall()), revisions)
+        self.assertEqual(x("SELECT count(*) FROM core.match_events").fetchone()[0], 4)
+        self.assertEqual(x("SELECT version FROM ops.resource_versions WHERE resource_kind='archive_season' AND resource_id=2015").fetchone()[0], 1)
+        # A row that differs from the sources (and a goal lost) is rewritten, and the season gets a new version.
+        x("UPDATE core.matches SET home_score=9 WHERE archive_key='r:2015-16/en.1:0'")
+        x("DELETE FROM core.match_events WHERE seq=1 AND minute=57")
+        self.assertEqual(archives.run(self.db, self.sources.name), {"2015/2016": 4})
+        self.assertEqual(x("SELECT home_score FROM core.matches WHERE archive_key='r:2015-16/en.1:0'").fetchone(), (0,))
         self.assertEqual(x("SELECT count(*) FROM core.match_events").fetchone()[0], 4)
         self.assertEqual(x("SELECT version FROM ops.resource_versions WHERE resource_kind='archive_season' AND resource_id=2015").fetchone()[0], 2)
         self.assertEqual(x("SELECT count(*) FROM core.teams").fetchone()[0], 7)  # Leicester plays twice
