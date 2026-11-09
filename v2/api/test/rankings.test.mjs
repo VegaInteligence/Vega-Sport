@@ -10,7 +10,7 @@ test("club links and a club's UEFA ranking history", { skip }, async () => {
   const history = (await get("/api/rankings/club?club=t_aaaaa1")).body;
   assert.equal(history.rows.length, 1);
   assert.deepEqual(history.rows[0].edition, {
-    edition: "2026.uefa", kind: "uefa-clubs", officialEdition: true, period: "2025/2026", provider: "UEFA",
+    edition: "2026", kind: "uefa-clubs", officialEdition: true, period: "2025/2026", provider: "UEFA",
     retrievedAt: "2025-09-02T00:00:00.000Z", rows: 1, sourceUpdatedAt: "2025-09-01T08:00:00.000Z", sourceUrl: "https://comp.uefa.com/v2/coefficients?c",
   });
   assert.deepEqual([history.rows[0].row.position, history.rows[0].row.points, history.rows[0].row.entityId], [40, 30.5, "uefa:52747"]);
@@ -19,7 +19,7 @@ test("club links and a club's UEFA ranking history", { skip }, async () => {
 
 test("UEFA associations of a year, with their season points", { skip }, async () => {
   const { body } = await get("/api/rankings/associations?year=2026");
-  assert.deepEqual([body.kind, body.edition, body.provider, body.period, body.officialEdition], ["uefa-associations", "2026.uefa", "UEFA", "2025/2026", true]);
+  assert.deepEqual([body.kind, body.edition, body.provider, body.period, body.officialEdition], ["uefa-associations", "2026", "UEFA", "2025/2026", true]);
   assert.deepEqual(body.rows, [{
     entityId: "uefa:1", entityName: "France", countryCode: "FRA", position: 5, points: 72.3, earnedPoints: 72.3, previousPosition: null, imageUrl: null,
     sourceRow: {
@@ -36,9 +36,10 @@ test("UEFA associations of a year, with their season points", { skip }, async ()
 
 test("ranking index and editions", { skip }, async () => {
   const index = (await get("/api/rankings/index")).body;
-  assert.deepEqual(index.editions.map((e) => [e.kind, e.edition]), [["uefa-clubs", "2026.uefa"], ["uefa-associations", "2026.uefa"], ["fifa-men", "2025-09-18.fifa"]]);
+  assert.deepEqual(index.editions.map((e) => [e.kind, e.edition]), [["uefa-clubs", "2026"], ["uefa-associations", "2026"], ["fifa-men", "2025-09-18"]]);
   assert.deepEqual(index.clubMapping, { linked: 1 });
-  const fifa = (await get("/api/rankings/edition?kind=fifa-men&edition=2025-09-18.fifa")).body;
+  const fifa = (await get("/api/rankings/edition?kind=fifa-men&edition=2025-09-18")).body;
   assert.deepEqual(fifa.rows, [{ entityId: "fifa:43946", entityName: "France", countryCode: "FRA", position: 2, points: 1870, previousPosition: 1, imageUrl: null, confederation: "UEFA" }]);
   assert.equal((await get("/api/rankings/edition?kind=fifa-men&edition=bad")).response.status, 400);
+  assert.equal((await get("/api/rankings/edition?kind=fifa-men&edition=2025-09-18.fifa")).response.status, 400); // no source in a key
 });

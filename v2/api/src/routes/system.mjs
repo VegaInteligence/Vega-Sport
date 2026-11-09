@@ -27,7 +27,7 @@ export function createSystemRoute(read) {
     }
     if (path === "/api/status") {
       validateParams(params, []);
-      return send(req, { source: "AWS", configured: true, basePath: "/api/pitchapi", schema: "v2" });
+      return send(req, { source: "AWS", configured: true, basePath: "/api/matches", schema: "v2" });
     }
     if (path !== "/api/dashboard/manifest") return null;
     validateParams(params, ["v"]);

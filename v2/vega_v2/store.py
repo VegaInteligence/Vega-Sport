@@ -25,7 +25,7 @@ FAMILY_TABLES = {
     "advanced_players": ("player_match_advanced",),
     "network": ("pass_network_teams", "pass_network_nodes", "pass_network_edges"),
     "heatmaps": ("team_heatmaps", "player_heatmaps"),
-    "h2h": ("match_h2h",),
+    "h2h": ("match_h2h", "match_h2h_meetings"),
 }
 ENTITY_TABLE = {
     "competition": "competitions",

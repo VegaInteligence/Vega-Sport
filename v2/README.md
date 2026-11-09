@@ -30,13 +30,26 @@ Le worker prend les travaux dans l'ordre score, détails, référentiel (le back
 
 **Calcul.** Saisons joueur et club, états de jeu, classements, xPts (`agg.xpts_v1`), cohortes (par édition et poste, et Europe : Top 7 et coupes UEFA, par match), centiles et rangs, distributions P10–P90, phases et indice Vega club, positions, niveaux européens, rôles et indice Vega joueur, similarité club et joueur, force des championnats, profils d'âge. Les formules sont celles de `docs/calculs` (main). Les cohortes se recalculent 10 min après le dernier changement ; niveaux, similarités et profils une fois par jour. Chaque résultat porte son `agg.calc_runs`. Potentiel, projections, Ballon d'Or et valeurs marchandes restent vides : le site les affiche comme fictifs.
 
-**Lecture.** À l'identique de l'API actuelle (mêmes paramètres, mêmes corps, mêmes validateurs), plus un champ `retry` dans les erreurs :
+**Lecture.** Les corps de l'API actuelle (mêmes validateurs), plus un champ `retry` dans les erreurs. Une route nomme ce qu'elle sert, jamais sa source : ni le chemin ni un paramètre ne nomme un fournisseur, qui peut changer (`030_neutral_reads.sql`). Les clubs, stades et coupes se désignent par leur identifiant Vega ; la table de correspondance avec les routes actuelles, pour la bascule, est en fin de liste.
 - `/api/health`, `/api/status`, `/api/dashboard/manifest` (son `capabilities.compactReads` dit quelles lectures la v2 sert) ;
 - les lectures compactes `/api/read/home`, `clubs`, `players`, `player`, `club`, `performance`, `discipline`, avec la carte `media` de `media=1` (et, pour l'accueil, la présentation compacte de main, importée telle quelle) ;
 - `/api/fixtures` (pages à curseur liées à la génération), `/api/matches/{id}/summary`, `/api/standings`, `/api/matchdays`, `/api/search` ;
+- la fiche match et ses 12 familles : `/api/matches/{id}` et `/api/matches/{id}/{lineups,events,shots,stats,players,players/halves,momentum,advanced,advanced/players,advanced/network,heatmaps,h2h}` (`frame=acting_ltr|home_ltr` pour les cartes d'activité), les profils `/api/players/{id}`, `/api/teams/{id}` et le catalogue `/api/competitions`, dans les corps que le site lit aujourd'hui, reconstruits des lignes typées ; un aller-retour sur un vrai match (`tests/fixtures/match_m_08LEIz`) le vérifie famille par famille ;
 - les archives : `/api/read/archive` (pages, recherche par équipe ou buteur, buts d'un match) et `/api/archives/index` ; le manifeste déclare `boundedArchive` ;
-- les classements et le support des fiches club : `/api/rankings/{index,edition,associations,club}`, `/api/club-links`, `/api/club-wikidata`, `/api/coach-portrait`, `/api/stadium`, `/api/player-honours`, `/api/assets` ;
-- les coupes : `/api/open-cups`, `/api/openligadb`, `/api/nations-results` et `/api/cup-snapshot` (éditions des sources, coupes PitchAPI et classements).
+- les classements et le support des fiches club : `/api/rankings/{index,edition,associations,club}` (une édition se nomme par sa saison ou sa date), `/api/club-links`, `/api/club-facts?club=`, `/api/coach-portrait`, `/api/stadium?club=`, `/api/player-honours`, `/api/assets` ;
+- les coupes : `/api/cups/index`, `/api/cups/edition?competition=&season=` et `/api/cup-snapshot?kind=native|standings|edition`.
+
+| Route actuelle | Route v2 |
+|---|---|
+| `/api/pitchapi/matches/{id}[/…]` | `/api/matches/{id}[/…]` |
+| `/api/pitchapi/date/{d}`, `/api/pitchapi/leagues/{id}/matches` | `/api/fixtures?from=&to=`, `/api/fixtures?league=&season=` |
+| `/api/pitchapi/leagues` | `/api/competitions` |
+| `/api/pitchapi/players/{id}`, `/api/pitchapi/teams/{id}` | `/api/players/{id}`, `/api/teams/{id}` |
+| `/api/club-wikidata?uefa=` ou `?name=&country=` | `/api/club-facts?club=t_…` |
+| `/api/stadium?id=Q…` | `/api/stadium?club=t_…` |
+| `/api/open-cups`, `/api/openligadb`, `/api/nations-results` | `/api/cups/edition?competition=l_v…&season=` (identifiants dans `/api/cups/index`) |
+| `/api/cup-snapshot?kind=open-cups\|openligadb\|nations-results` | `/api/cup-snapshot?kind=edition` |
+| `/api/rankings/edition?edition=2026.uefa` | `/api/rankings/edition?edition=2026` |
 
 Chaque route liste en tête de fichier ses écarts voulus avec l'API actuelle, pour la parité : identifiant d'apparition `<match>:<joueur>`, statuts normalisés, libellés de statistiques laissés au site, classement Vega servi quand aucune source officielle n'en publie.
 
@@ -57,7 +70,7 @@ Chaque source a sa période dans `ops.source_runs`. Une erreur de base de donné
 
 ## Ce qui reste
 
-- Les routes encore servies par l'API actuelle : `/api/seasons/partition` (chargeur de saison complet, inutile une fois toutes les lectures compactes servies), `/api/archives/season` (documents source entiers, inutiles avec `boundedArchive`), `/api/archive/matches/{id}`, le catalogue figé des coupes open-matchday (`cup-index`, `cup-table`, `supplemental` : le worker de coupes de main est retiré, ces routes peuvent rester sur main), le proxy `/api/pitchapi/*` et `orion-pro`.
+- Les routes encore servies par l'API actuelle : `/api/seasons/partition` (chargeur de saison complet, inutile une fois toutes les lectures compactes servies), `/api/archives/season` (documents source entiers, inutiles avec `boundedArchive`), `/api/archive/matches/{id}`, le catalogue figé des coupes open-matchday (`cup-index`, `cup-table`, `supplemental` : le worker de coupes de main est retiré, ces routes peuvent rester sur main) et `orion-pro`. Le site appelle encore les routes actuelles : la bascule change ses chemins selon la table ci-dessus.
 - Les autres adaptateurs : SportsAPI, OpenFootball, OpenLigaDB, International Results, coupes (football-data, ESPN, fixturedl). L'import réel des archives attend la copie en lecture seule des sources de main (`data/sources/`).
 - Le déploiement des piles AWS, le backfill, la parité réelle et la bascule route par route : voir `infra/aws-v2/README.md`. Rien n'est déployé.
 
