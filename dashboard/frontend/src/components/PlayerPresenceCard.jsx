@@ -52,10 +52,13 @@ export default function PlayerPresenceCard({ id, rows }) {
     { enabled: visible, refreshManifest: f.refreshManifest },
   );
   const data = ready ? presence.value?.data : null;
+  const singleMatch = data?.requested === 1;
   let content = (
     <p className={s.note}>
       {data?.requested
-        ? `Aucune carte exploitable sur ${number(data.requested)} matchs examinés.`
+        ? singleMatch
+          ? "Aucune carte exploitable pour ce match."
+          : `Aucune carte exploitable sur ${number(data.requested)} matchs examinés.`
         : "Aucune carte disponible sur ce périmètre."}
     </p>
   );
@@ -68,8 +71,10 @@ export default function PlayerPresenceCard({ id, rows }) {
       <>
         <HeatmapPitch grid={grid} />
         <p className={s.note} style={{ marginTop: 12 }}>
-          {number(data.actions)} actions localisées · {number(data.covered)} sur{" "}
-          {number(data.requested)} matchs couverts
+          {number(data.actions)}{" "}
+          {data.actions === 1 ? "action localisée" : "actions localisées"} ·{" "}
+          {number(data.covered)} sur {number(data.requested)}{" "}
+          {singleMatch ? "match couvert" : "matchs couverts"}
         </p>
       </>
     );
