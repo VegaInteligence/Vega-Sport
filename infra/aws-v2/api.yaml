@@ -5,7 +5,7 @@ Description: >-
   database are not touched; routes move to it one family at a time (README).
 Parameters:
   ReleaseKey: {Type: String, AllowedPattern: 'releases/v2-api/[a-f0-9]{64}\.zip'}
-  ReadDatabaseUrl: {Type: String, NoEcho: true, MaxLength: 2000, Description: 'vega_v2_read login on the v2 database, sslmode=verify-full'}
+  ReadDatabaseUrl: {Type: String, NoEcho: true, MaxLength: 2000, Description: 'vega_v2_read login on vega-football-db-postgres, without sslmode (the function verifies TLS with the bundled CA)'}
   ReservedConcurrency:
     Type: Number
     Default: 0

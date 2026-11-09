@@ -87,7 +87,7 @@ def workflow(name):
               'v2 pilot must not bootstrap the production database')
         # pgvector's image is PostgreSQL 16 plus the extension the optional v2 vector
         # migration needs; both are throwaway runner services.
-        check(obj['jobs']['pilot']['services']['postgres']['image'] in ('postgres:16','pgvector/pgvector:pg16'),
+        check(obj['jobs']['pilot']['services']['postgres']['image'] in ('postgres:16','pgvector/pgvector:pg16','pgvector/pgvector:pg18'),
               'v2 pilot must use its disposable PostgreSQL service')
         target=urllib.parse.urlsplit(obj['jobs']['pilot']['env']['V2_DATABASE_URL'])
         check(target.hostname=='127.0.0.1' and target.path=='/vega_v2_pilot',
@@ -97,6 +97,25 @@ def workflow(name):
               'v2 pilot may receive only its provider key')
         check('schedule' not in obj.get('on',obj.get(True,{})),
               'v2 pilot must not activate a permanent schedule')
+    elif name=='v2-ci':
+        # The v2 pipeline: suites on a disposable PostgreSQL, templates, image, package.
+        check(obj.get('permissions') == {'contents':'read'} and 'id-token: write' not in text and 'secrets.' not in text,
+              'v2 CI must have repository read permission only and no secret')
+        check('./.github/actions/aws-database' not in text and 'configure-aws-credentials' not in text,
+              'v2 CI must not reach AWS')
+        check(obj['jobs']['tests']['services']['postgres']['image']=='pgvector/pgvector:pg18',
+              'v2 CI suites must run on the v2 base engine (PostgreSQL 18)')
+        check('schedule' not in obj.get('on',obj.get(True,{})), 'v2 CI must not run periodically')
+    elif name=='v2-deploy':
+        # Manual deployment of v2 only, through its own role and environment.
+        triggers=obj.get('on',obj.get(True,{}))
+        check(list(triggers)==['workflow_dispatch'], 'v2 deploy must be manual only')
+        check(obj.get('permissions')=={'contents':'read','id-token':'write'}, 'v2 deploy needs only OIDC and read access')
+        check(obj['jobs']['deploy'].get('environment')=='v2-production', 'v2 deploy must run in the v2-production environment')
+        check('role/vega-v2-deploy' in text and './.github/actions/aws-database' not in text and 'statarena-postgres' not in text,
+              'v2 deploy must use its own role and never the current database')
+        import re
+        check(set(re.findall(r'\$\{\{\s*secrets\.([A-Za-z0-9_]+)',text))=={'PITCHAPI_API_KEY'}, 'v2 deploy may receive only the provider key')
     elif name=='production-validation':
         check('id-token: write' not in text and 'secrets.' not in text,
               'public site validation must not receive cloud/provider credentials')
