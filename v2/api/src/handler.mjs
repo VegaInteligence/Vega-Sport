@@ -39,6 +39,14 @@ export function presentHome(data) {
   return out;
 }
 
+function pathOf(req) {
+  try {
+    return new URL(req.url).pathname;
+  } catch {
+    return "?";
+  }
+}
+
 /** `mediaBase`: the CloudFront origin of the image copies (https://…/); none, no media map.
  * `clock`: the home page's notion of now (tests pin it).
  * `opsKey`: the key of /api/ops/status (the private status page); none, no such route. */
@@ -60,7 +68,8 @@ export function createHandler({ read, mediaBase = null, clock = Date.now, opsKey
     try {
       return (await withResolvedMedia(req, route, read, mediaBase, { present: presentHome })) || (await route(req));
     } catch (error) {
-      if (!(error.status >= 400 && error.status <= 599)) console.error("v2 read failed", error.code || error.name);
+      // The path alone, never the query: it says which read failed without logging what was asked.
+      if (!(error.status >= 400 && error.status <= 599)) console.error("v2 read failed", error.code || error.name, pathOf(req));
       return errorResponse(req, error);
     }
   };
