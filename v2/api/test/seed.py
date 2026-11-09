@@ -103,6 +103,14 @@ def main(dsn):
         x("INSERT INTO agg.standings(competition_season_id,team_id,position,played,won,drawn,lost,goals_for,goals_against,points,updated_at) VALUES (1,%s,%s,%s,%s,%s,%s,%s,%s,%s,'2025-09-20T11:00:00Z')",
           (team, pos, played, w, d, l, gf, ga, pts))
     x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('team','uefa','52747',1)")
+    # Wikidata facts of club 1: its stadium (with a plan), founded year and current coach.
+    x("INSERT INTO core.venues(id,name,capacity,capacity_observed,latitude,longitude,opened,wikidata_fetched_at) VALUES (1,'Stade Été',41000,'2019',45.76,4.98,'2016-01-09','2025-09-20T09:00:00Z')")
+    x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('team','wikidata','Q704',1),('venue','wikidata','Q1150',1)")
+    x("UPDATE core.teams SET founded_year=1950, home_venue_id=1, wikidata_fetched_at='2025-09-20T09:00:00Z' WHERE id=1")
+    x("INSERT INTO core.assets(id,kind,source_url,author,license,source_page_url) VALUES (4,'photo','https://upload.wikimedia.org/wikipedia/commons/c/c1/Coach.jpg','Someone','CC BY-SA 4.0','https://commons.wikimedia.org/wiki/File:Coach.jpg')")
+    x("UPDATE core.coaches SET photo_asset_id=4, portrait_checked_at='2025-09-20T09:00:00Z', portrait_lookup_version=3 WHERE id=1")
+    x("INSERT INTO core.team_coach_tenures(team_id,coach_id,start_date,source) VALUES (1,1,'2025-07-01','wikidata')")
+    x("INSERT INTO core.venue_plans(venue_id,seq,title,url,source,detail,format,is_embedded,allow_geolocation) VALUES (1,0,'Plan interactif','https://club.example/plan','Club','Accès et tribunes.','Plan',true,true)")
     # UEFA club and association coefficients of 2025/2026, FIFA's edition of 18 September 2025.
     x("""INSERT INTO core.ranking_editions(id,kind,provider,label,period,published_on,is_current,source_url,source_updated_at,updated_at) VALUES
          (1,'uefa_clubs','uefa','2025/2026','2025/2026','2025-09-01',true,'https://comp.uefa.com/v2/coefficients?c','2025-09-01T08:00:00Z','2025-09-02T00:00:00Z'),

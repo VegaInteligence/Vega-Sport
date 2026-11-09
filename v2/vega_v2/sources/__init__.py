@@ -9,6 +9,8 @@ from datetime import datetime, timedelta, timezone
 import re
 import unicodedata
 
+import psycopg
+
 from ..store import StoreError
 
 
@@ -19,11 +21,11 @@ def normalize(name):
 
 
 def adapters():
-    from . import curated, fifa, sportscore, uefa
+    from . import curated, fifa, sportscore, uefa, wikidata
 
     # Keys are core.provider values (ops.source_runs.source). Curated names first: the
     # UEFA links read the reviewed aliases.
-    return {"vega": curated, "uefa": uefa, "fifa": fifa, "sportscore": sportscore}
+    return {"vega": curated, "uefa": uefa, "fifa": fifa, "sportscore": sportscore, "wikidata": wikidata}
 
 
 def due(conn, now, adapter_name, adapter):
@@ -47,8 +49,13 @@ def run_due(conn, get, now=None, *, names=None):
             try:
                 with conn.transaction():
                     written, unmatched = adapter.run(conn, get, scope, instant)
-            except (SourceError, StoreError, ValueError, KeyError, TypeError) as error:
-                code = error.code if isinstance(error, SourceError) else "INVALID_SOURCE_RESPONSE"
+            except (SourceError, StoreError, ValueError, KeyError, TypeError, psycopg.Error) as error:
+                # The scope's writes are rolled back; the other scopes still run.
+                code = (
+                    error.code if isinstance(error, SourceError)
+                    else "DATABASE_ERROR" if isinstance(error, psycopg.Error)
+                    else "INVALID_SOURCE_RESPONSE"
+                )
             conn.execute(
                 """INSERT INTO ops.source_runs(source, scope, last_attempt_at, last_success_at, status, error_code, rows_written, unmatched, updated_at)
                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,now())

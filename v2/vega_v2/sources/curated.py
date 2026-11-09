@@ -23,7 +23,37 @@ CLUB_ALIASES = {
 
 
 def scopes(now):
-    return {"player_aliases": timedelta(days=1), "club_aliases": timedelta(days=1)}
+    return {"player_aliases": timedelta(days=1), "club_aliases": timedelta(days=1), "stadium_plans": timedelta(days=1)}
+
+
+def stadium_plans(conn):
+    """Stadium plans of frontend/src/services/stadium-plans.js (main), on the venues of the
+    same Wikidata id; a stadium not known yet is counted unmatched and written later."""
+    from . import wikidata
+
+    written = unmatched = 0
+    for qid, plans in (wikidata.bridge("plans") or {}).items():
+        venue = wikidata._entity(conn, "venue", qid)
+        if venue is None:
+            unmatched += 1
+            continue
+        conn.execute("DELETE FROM core.venue_plans WHERE venue_id=%s", (venue,))
+        for seq, plan in enumerate(plans):
+            image = None
+            if plan.get("imageUrl"):
+                image = conn.execute(
+                    """INSERT INTO core.assets(kind, source_url) VALUES ('venue_plan', %s)
+                       ON CONFLICT (source_url) DO UPDATE SET source_url=EXCLUDED.source_url RETURNING id""",
+                    (plan["imageUrl"],),
+                ).fetchone()[0]
+            conn.execute(
+                """INSERT INTO core.venue_plans(venue_id, seq, title, url, image_asset_id, source, detail, format, is_embedded, allow_geolocation)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (venue, seq, plan["title"], plan.get("url"), image, plan.get("source"), plan.get("detail"), plan.get("format"),
+                 bool(plan.get("embedded")), bool(plan.get("allowGeolocation"))),
+            )
+            written += 1
+    return written, unmatched
 
 
 def club_aliases(conn):
@@ -45,6 +75,8 @@ def club_aliases(conn):
 def run(conn, get, scope, now):
     if scope == "club_aliases":
         return club_aliases(conn)
+    if scope == "stadium_plans":
+        return stadium_plans(conn)
     if scope != "player_aliases":
         raise ValueError(scope)
     written = unmatched = 0

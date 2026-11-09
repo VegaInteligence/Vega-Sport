@@ -3,7 +3,7 @@
 import json
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
 import unittest
@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega_v2 import sources
-from vega_v2.sources import SourceError, curated, fifa, normalize, sportscore, uefa
+from vega_v2.sources import SourceError, curated, fifa, normalize, sportscore, uefa, wikidata
 
 try:
     import psycopg
@@ -157,7 +157,7 @@ class UefaTest(unittest.TestCase):
         x("INSERT INTO core.players(id, name) VALUES (50, 'Cristiano Ronaldo'), (51, 'Cristiano Ronaldo')")
         x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player','pitchapi','p_3yEwhj',50), ('player','pitchapi','p_other1',51)")
         x("INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source) VALUES ('player', 50, 'Old', 'old', 'alias', 'vega'), ('player', 50, 'CR', 'cr', 'alias', 'wikidata')")
-        self.assertEqual(sources.run_due(self.db, None, NOW, names={"vega"}), {("vega", "player_aliases"): "ok", ("vega", "club_aliases"): "ok"})
+        self.assertEqual(sources.run_due(self.db, None, NOW, names={"vega"}), {("vega", "player_aliases"): "ok", ("vega", "club_aliases"): "ok", ("vega", "stadium_plans"): "ok"})
         names = self.db.execute("SELECT entity_id, normalized, source::text FROM core.entity_names WHERE entity_type='player' ORDER BY 1, 2").fetchall()
         # The homonym gets nothing; the removed Vega alias goes; Wikidata's stays.
         self.assertEqual(names, [(50, "cr", "wikidata"), (50, "cr7", "vega")])
@@ -258,6 +258,70 @@ class UefaTest(unittest.TestCase):
         payload["competition_slug"] = "other"
         with self.assertRaises(SourceError):
             sportscore.run(self.db, get, "standings:l_3FJFUl", NOW)
+
+    def test_wikidata_clubs_stadiums_portraits_and_plans(self):
+        from vega_v2.store import Store
+
+        x = self.db.execute
+        with self.db.transaction():
+            Store(self.db).season("2025/2026")
+        x("INSERT INTO core.countries(code) VALUES ('ESP') ON CONFLICT DO NOTHING")
+        x("INSERT INTO core.competitions(id, name) VALUES (80, 'Liga Test')")
+        x("INSERT INTO core.competition_seasons(id, competition_id, season_id, is_current) VALUES (80, 80, 2025, true)")
+        x("INSERT INTO core.teams(id, name, country_code) VALUES (40, 'Club Un', 'FRA'), (41, 'Club Bis', 'ESP')")
+        x("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES
+             ('team','pitchapi','t_club40',40), ('team','pitchapi','t_club41',41), ('team','uefa','777',40)""")
+        x("INSERT INTO core.team_seasons(team_id, competition_season_id) VALUES (40, 80), (41, 80)")
+        x("INSERT INTO core.matches(id, competition_season_id, season_id, source, home_team_id, away_team_id) VALUES (900, 80, 2025, 'pitchapi', 41, 40)")
+        x("INSERT INTO core.coaches(id, name) VALUES (90, 'Coach B')")
+        x("INSERT INTO core.lineups(season_id, match_id, team_id, side, coach_id) VALUES (2025, 900, 41, 'home', 90)")
+        photo = {"url": "https://upload.wikimedia.org/wikipedia/commons/a/a1/A.jpg", "sourceUrl": "https://commons.wikimedia.org/wiki/File:A.jpg",
+                 "author": "Someone", "license": "CC BY-SA 4.0"}
+        answers = {
+            ("club", "777"): {"sourceUrl": "https://www.wikidata.org/entity/Q1", "fetchedAt": "2026-11-09T08:00:00.000Z", "stadium": "Stade A",
+                              "stadiumId": "Q11", "stadiumAlias": None, "coach": {"name": "Coach A", "photo": photo}, "founded": "1950"},
+            ("identity", "Club Bis", "ESP"): "Q2",
+            ("club", "Q2"): {"sourceUrl": "https://www.wikidata.org/entity/Q2", "fetchedAt": "2026-11-09T08:00:00.000Z", "stadium": None,
+                             "stadiumId": None, "stadiumAlias": None, "coach": {"name": "Coach B", "photo": None}, "founded": None},
+            ("stadium", "Q11"): {"id": "Q11", "sourceUrl": "https://www.wikidata.org/wiki/Q11", "fetchedAt": "2026-11-09T08:00:00.000Z",
+                                 "capacity": 40000, "capacityAsOf": "2019", "opened": "1998-01-28", "created": None,
+                                 "coordinates": {"lat": 48.84, "lon": 2.25}},
+            ("portraits", '["Coach B"]'): {"Coach B": dict(photo, url="https://upload.wikimedia.org/wikipedia/commons/b/b1/B.jpg")},
+            ("plans",): {"Q11": [{"title": "Plan", "source": "Club Un", "url": "https://club.example/plan", "format": "Plan"}],
+                         "Q999": [{"title": "Elsewhere", "url": "https://x.example"}]},
+        }
+        calls = []
+
+        def fake(command, *args):
+            calls.append((command, *args))
+            return answers.get((command, *args))
+
+        original, wikidata.bridge = wikidata.bridge, fake
+        try:
+            results = sources.run_due(self.db, None, NOW, names={"wikidata"})
+            self.assertEqual(results, {("wikidata", "clubs"): "ok", ("wikidata", "stadiums"): "ok", ("wikidata", "portraits"): "ok"})
+            with self.db.transaction():
+                self.assertEqual(curated.stadium_plans(self.db), (1, 1))  # Q999 is not a known stadium yet
+        finally:
+            wikidata.bridge = original
+        # The UEFA id is used as it is; the club without one is resolved by name and country.
+        self.assertIn(("club", "777"), calls)
+        self.assertIn(("identity", "Club Bis", "ESP"), calls)
+        self.assertEqual(x("SELECT founded_year, (SELECT provider_key FROM core.provider_ids WHERE entity_type='team' AND provider='wikidata' AND entity_id=40) FROM core.teams WHERE id=40").fetchone(), (1950, "Q1"))
+        self.assertEqual(x("""SELECT v.name, v.capacity, v.capacity_observed, v.opened, v.latitude::numeric(5,2)::float8 FROM core.teams t
+                              JOIN core.venues v ON v.id=t.home_venue_id WHERE t.id=40""").fetchone(), ("Stade A", 40000, "2019", "1998-01-28", 48.84))
+        coaches = x("""SELECT t.team_id, c.name, a.source_url FROM core.team_coach_tenures t JOIN core.coaches c ON c.id=t.coach_id
+                       LEFT JOIN core.assets a ON a.id=c.photo_asset_id WHERE t.end_date IS NULL ORDER BY 1""").fetchall()
+        self.assertEqual(coaches, [(40, "Coach A", photo["url"]), (41, "Coach B", "https://upload.wikimedia.org/wikipedia/commons/b/b1/B.jpg")])
+        self.assertEqual(x("SELECT title, url FROM core.venue_plans").fetchall(), [("Plan", "https://club.example/plan")])
+        # Fetched this week: nothing is due again an hour later.
+        calls.clear()
+        wikidata.bridge = fake
+        try:
+            sources.run_due(self.db, None, NOW + timedelta(hours=2), names={"wikidata"})
+        finally:
+            wikidata.bridge = original
+        self.assertEqual(calls, [])
 
 
 if __name__ == "__main__":
