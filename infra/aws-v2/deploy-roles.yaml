@@ -178,6 +178,43 @@ Resources:
                 Effect: Allow
                 Action: ['logs:GetLogEvents', 'logs:FilterLogEvents']
                 Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/vega-v2-worker:*'
+  # The isolated pilot (.github/workflows/vega-v2-pilot.yml) reads the provider key from
+  # SSM with this role, and nothing else: the key lives in one place, no GitHub secret.
+  PilotRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: vega-v2-pilot
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Federated: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com'}
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:repository_id: '1441213700'
+                token.actions.githubusercontent.com:workflow: 'Vega v2 isolated pilot'
+              StringLike:
+                token.actions.githubusercontent.com:sub:
+                  - 'repo:VegaInteligence@188998341/Vega-Sport@1441213700:ref:refs/heads/main'
+                  - 'repo:VegaInteligence@188998341/Vega-Sport@1441213700:ref:refs/heads/claude/v2-*'
+      Policies:
+        - PolicyName: ProviderKeyOnly
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ProviderKey
+                Effect: Allow
+                Action: 'ssm:GetParameter'
+                Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vega/v2/pitchapi-key'
+              - Sid: ProviderKeyDecrypt
+                Effect: Allow
+                Action: 'kms:Decrypt'
+                Resource: '*'
+                Condition: {StringEquals: {'kms:ViaService': !Sub 'ssm.${AWS::Region}.amazonaws.com'}}
 Outputs:
+  PilotRoleArn: {Value: !GetAtt PilotRole.Arn}
   DeployRoleArn: {Value: !GetAtt DeployRole.Arn}
   CloudFormationRoleArn: {Value: !GetAtt CloudFormationRole.Arn}

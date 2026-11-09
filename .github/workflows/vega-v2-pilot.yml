@@ -12,8 +12,11 @@ on:
         description: Finished Ligue 1 2025/26 matches (1 to 306)
         type: string
         default: '1'
+# The provider key is read from SSM (/vega/v2/pitchapi-key) with the vega-v2-pilot role,
+# which can read that parameter and nothing else; no GitHub secret.
 permissions:
   contents: read
+  id-token: write
 concurrency:
   group: vega-v2-isolated-pilot
   cancel-in-progress: false
@@ -48,9 +51,19 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
       - run: pip install -r v2/requirements.txt
+      - name: AWS session (vega-v2-pilot, provider key only)
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5
+        with:
+          role-to-assume: arn:aws:iam::361769570630:role/vega-v2-pilot
+          aws-region: us-east-2
+          role-duration-seconds: 900
+      - name: Provider key from SSM, masked
+        run: |
+          key=$(aws ssm get-parameter --name /vega/v2/pitchapi-key --with-decryption --query Parameter.Value --output text)
+          echo "::add-mask::$key"
+          echo "PITCHAPI_API_KEY=$key" >> "$GITHUB_ENV"
       - name: Verify previously failing event, shot and upstream-error fixtures
         env:
-          PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
           MATCH_INPUT: ${{ inputs.max_matches }}
         run: |
           scope="${MATCH_INPUT:-$(cat v2/pilot-scope.txt)}"
@@ -59,7 +72,6 @@ jobs:
           fi
       - name: Fresh PitchAPI collection into local PostgreSQL only
         env:
-          PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
           MATCH_INPUT: ${{ inputs.max_matches }}
         run: |
           scope="${MATCH_INPUT:-$(cat v2/pilot-scope.txt)}"
@@ -69,8 +81,6 @@ jobs:
             python -m vega_v2.pilot --max-matches "$scope" --resume --profile-limit 2 --interval 0.25 --report work/vega-v2-pilot.md
           fi
       - name: Worker loop on the real J-1..J+7 calendars, local PostgreSQL only
-        env:
-          PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
         run: python -m vega_v2.worker --max-jobs 700 --interval 0.25 --cohort-delay 0 --report work/vega-v2-worker.md
       - name: Export measurements only
         if: always()
