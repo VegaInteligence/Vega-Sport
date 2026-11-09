@@ -118,10 +118,12 @@ export async function readCompact(
   { signal, fetcher = fetch } = {},
 ) {
   signal?.throwIfAborted();
+  const query = compactQuery({
+    ...params,
+    ...(kind !== "presence" && mediaRepresentationEnabled() ? { media: 1 } : {}),
+  });
   const response = await publicApiFetch(
-    apiUrl(
-      `/api/read/${kind}?${compactQuery({ ...params, ...(mediaRepresentationEnabled() ? { media: 1 } : {}) })}`,
-    ),
+    apiUrl(`/api/read/${kind}?${query}`),
     {
       signal,
       headers: { Accept: "application/json" },

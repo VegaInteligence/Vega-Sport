@@ -34,7 +34,7 @@ Ces blocs affichent des valeurs d'exemple de la maquette, sans aucun calcul sur 
 - valeur marchande, tendance, fourchette, historique de valeur, zone « revente, clause, intérêts » ;
 - **potentiel** (à côté de l'indice Vega réel) et historique de l'indice Vega par saison ;
 - blessures, suspensions, disponibilité ;
-- profil de jeu, contexte d'équipe, carte de chaleur ;
+- profil de jeu et contexte d'équipe ;
 - lignes « sécurité de balle » (fautes subies, pertes de balle, fautes) ;
 - données physiques ;
 - **saison précédente** dans les comparaisons : centiles fabriqués à partir des centiles actuels par `fakePreviousSeason` (`centile − 6 + ((rang de l'axe × 7) mod 11)`, borné à [1, 99]) — ce ne sont pas des données de la saison précédente.
