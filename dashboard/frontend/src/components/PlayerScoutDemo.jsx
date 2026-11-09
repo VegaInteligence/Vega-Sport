@@ -83,11 +83,6 @@ export const FAKE_FACTS = [
     value: "06/2031",
     note: `Clause ${D.PLAYER.releaseClause}`,
   },
-  {
-    label: "Temps de jeu",
-    value: `${D.SEASON.minutesShare} %`,
-    note: "des minutes du club",
-  },
 ].map((item) => ({ ...item, fake: true }));
 
 export const FAKE_VALUE = {

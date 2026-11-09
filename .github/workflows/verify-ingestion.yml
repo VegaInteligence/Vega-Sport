@@ -123,6 +123,8 @@ jobs:
           tests/browser-state-react.test.mjs
           tests/competition-render.test.mjs
           tests/season_player_render.test.mjs
+          tests/player-playing-time.test.mjs
+          tests/player-half-minutes.test.mjs
           tests/player-season-selected.test.mjs
           tests/player-position-summary.test.mjs
           tests/player-overview-radar.test.mjs
