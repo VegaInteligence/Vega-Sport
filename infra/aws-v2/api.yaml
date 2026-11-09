@@ -11,6 +11,12 @@ Parameters:
     Default: 0
     AllowedValues: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     Description: Zero omits the reservation; deployment preflight must verify account limit <=10 in that case.
+  OpsKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+    AllowedPattern: '([A-Za-z0-9_-]{32,128})?'
+    Description: 'Key of /api/ops/status (SSM /vega/v2/ops-key), sent by the private status page as X-Vega-Ops-Key; empty, no such route'
   MediaBaseUrl:
     Type: String
     Default: ''
@@ -64,6 +70,7 @@ Resources:
           VEGA_RELEASE: !Ref ReleaseKey
           V2_READ_DATABASE_URL: !Ref ReadDatabaseUrl
           V2_MEDIA_BASE_URL: !Ref MediaBaseUrl
+          V2_OPS_KEY: !Ref OpsKey
       VpcConfig:
         SecurityGroupIds: [!ImportValue vega-v2-api-sg]
         SubnetIds: [subnet-0233a9567335f56ce, subnet-04c9af303f55d9718, subnet-0e72516f361932c15]
@@ -139,6 +146,15 @@ Resources:
         HeadersConfig: {HeaderBehavior: whitelist, Headers: [If-None-Match, If-Modified-Since]}
         CookiesConfig: {CookieBehavior: none}
         QueryStringsConfig: {QueryStringBehavior: none}
+  # /api/ops/*: the status page's key reaches the function; nothing is cached.
+  OpsHeaders:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: vega-v2-api-ops
+        HeadersConfig: {HeaderBehavior: whitelist, Headers: [X-Vega-Ops-Key]}
+        CookiesConfig: {CookieBehavior: none}
+        QueryStringsConfig: {QueryStringBehavior: none}
   ViewerHeaders:
     Type: AWS::CloudFront::ResponseHeadersPolicy
     Properties:
@@ -193,6 +209,15 @@ Resources:
             Compress: true
             CachePolicyId: !Ref LiveCache
             ResponseHeadersPolicyId: !Ref ViewerHeaders
+          # Operations reads of the private status page (managed CachingDisabled policy).
+          - PathPattern: api/ops/*
+            TargetOriginId: api
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            Compress: false
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: !Ref OpsHeaders
         DefaultCacheBehavior:
           TargetOriginId: api
           ViewerProtocolPolicy: redirect-to-https

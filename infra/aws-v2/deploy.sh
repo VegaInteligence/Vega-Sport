@@ -90,8 +90,10 @@ aws s3 cp "$zip" "s3://$RELEASES/$key" >/dev/null
 echo "== 8. Read API stack and distribution"
 url=$(aws ssm get-parameter --name /vega/v2/read-database-url --with-decryption --query Parameter.Value --output text)
 [ -n "${GITHUB_ACTIONS:-}" ] && echo "::add-mask::$url"
+ops=$(aws ssm get-parameter --name /vega/v2/ops-key --with-decryption --query Parameter.Value --output text)
+[ -n "${GITHUB_ACTIONS:-}" ] && echo "::add-mask::$ops"
 media=$(output vega-v2-api ApiOrigin)
-api() { stack vega-v2-api api.yaml --capabilities CAPABILITY_IAM --parameter-overrides ReleaseKey="$key" ReadDatabaseUrl="$url" MediaBaseUrl="$1"; }
+api() { stack vega-v2-api api.yaml --capabilities CAPABILITY_IAM --parameter-overrides ReleaseKey="$key" ReadDatabaseUrl="$url" OpsKey="$ops" MediaBaseUrl="$1"; }
 if [ -n "$media" ] && [ "$media" != None ]; then api "$media/"; else
   api ""
   media=$(output vega-v2-api ApiOrigin)

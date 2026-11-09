@@ -6,7 +6,7 @@ Three CloudFormation stacks, one per block of the v2 backend, plus the roles of 
 |---|---|---|
 | `vega-v2-database` | `database.yaml` | private PostgreSQL 18 (`vega-football-db-postgres`, database `vega_v2`, `db.t4g.micro`, gp3 20→100 GB, encrypted, 7-day backups, deletion protection, snapshot on delete), master password managed by Secrets Manager, security groups of the worker and the API |
 | `vega-v2-worker` | `worker.yaml` | ECR repository, ECS cluster, the always-on worker service (Fargate ARM 0.25 vCPU / 0.5 GB, one task), the on-demand `vega-v2-backfill` and `vega-v2-migrate` task definitions, and the private bucket of the image copies (`vega-v2-media-…`, written only under `data/sources/v2/images/` by the worker's task role) |
-| `vega-v2-api` | `api.yaml` | the read API Lambda (Node 24 ARM, `v2/api`), its signed Function URL and its own CloudFront distribution (same policies as the current API); the distribution also serves the image copies at `data/*` from the media bucket (origin access control, bucket policy limited to this distribution) |
+| `vega-v2-api` | `api.yaml` | the read API Lambda (Node 24 ARM, `v2/api`), its signed Function URL and its own CloudFront distribution (same policies as the current API); the distribution also serves the image copies at `data/*` from the media bucket (origin access control, bucket policy limited to this distribution) and `api/ops/*`, the status page's read, uncached |
 
 Account 361769570630, region us-east-2, AWS CLI profile `statarena`, default VPC `vpc-08e400afa07fc1812` and its three subnets. The subnets route to an internet gateway: the worker gets a public IP for outbound HTTPS (sources, ECR, logs) and no inbound port; no NAT gateway is needed. The database is not publicly accessible: only the worker and API security groups reach it on 5432.
 
@@ -26,7 +26,7 @@ Account 361769570630, region us-east-2, AWS CLI profile `statarena`, default VPC
 `deploy.sh` is the whole deployment: the same script runs from the **Vega v2 deploy** workflow (`.github/workflows/v2-deploy.yml`, manual, role `vega-v2-deploy`) and from a workstation. Every step only creates or changes `vega-v2-*` resources and the second base `vega-football-db-postgres`:
 
 1. database stack (about 10 minutes the first time);
-2. secrets, created once in SSM SecureStrings (`ci/secrets.sh`): three random login passwords, the PitchAPI key, and the connection URLs built from the database endpoint. Values go through mode-0600 files, never the command line or the log;
+2. secrets, created once in SSM SecureStrings (`ci/secrets.sh`): three random login passwords, the status page's key, the PitchAPI key, and the connection URLs built from the database endpoint. Values go through mode-0600 files, never the command line or the log;
 3. worker stack with the worker stopped (it creates the ECR repository and the task definitions);
 4. worker image (linux/arm64, tagged with the git SHA, pushed once);
 5. migrations and logins, as the one-off `vega-v2-migrate` task (the script stops if it fails);
@@ -60,7 +60,7 @@ From a workstation, before the workflow is on `main` (a manual workflow can only
 AWS_PROFILE=statarena PITCHAPI_API_KEY_FILE=<file holding the key> bash infra/aws-v2/deploy.sh
 ```
 
-Then, from GitHub: `gh workflow run "Vega v2 deploy" -f worker_desired_count=1`. The migration task's log line `migrations applied=N total=M logins=…` shows 42 migrations (44 with `V2_VECTOR=1`). The backfill runs on demand, for days, and stops by itself when its lane is empty: `aws ecs run-task … --task-definition vega-v2-backfill` with the network configuration `deploy.sh` uses.
+Then, from GitHub: `gh workflow run "Vega v2 deploy" -f worker_desired_count=1`. The migration task's log line `migrations applied=N total=M logins=…` shows 43 migrations (45 with `V2_VECTOR=1`). The backfill runs on demand, for days, and stops by itself when its lane is empty: `aws ecs run-task … --task-definition vega-v2-backfill` with the network configuration `deploy.sh` uses.
 
 The account runs at most 10 Lambdas concurrently and the current API needs them: `ReservedConcurrency` stays 0 and the pool size 1 until the quota is raised.
 
@@ -73,6 +73,14 @@ AWS_PROFILE=statarena ARCHIVE_SOURCES_BUCKET=<main's data bucket> bash infra/aws
 ```
 
 Defaults: Ligue 1 (`LEAGUE=l_3FJFUl`), 2025/2026 (`SEASON=2025`), archive `ARCHIVE_SEASON=2019/2020`. With PitchAPI's free plan at one call every 0.5 s, a 306-match season (13 families each) takes about 40 minutes. The worker service computes the aggregates and, within a day, the levels, similarities and power rankings of the backfilled season (it now runs once for a season never computed). It writes only to `vega-football-db-postgres`.
+
+## Status page
+
+The private status page (repository VegaInteligence/Vega-Status, its own Vercel project) reads `GET /api/ops/status`: the jobs of the last and next 24 hours, the queue, the watched matches, the source runs, the model runs, the provider calls per hour and the data warnings, from the `api.ops_*` views (`v2/sql/043_ops_status.sql`).
+
+- The key is the SSM SecureString `/vega/v2/ops-key` (random, created once by `ci/secrets.sh`). `deploy.sh` passes it to the function as `V2_OPS_KEY` (stack parameter `OpsKey`). Without it the route answers 404; with a wrong `X-Vega-Ops-Key` header, 401.
+- CloudFront's `api/ops/*` behaviour uses the managed CachingDisabled policy and forwards only `X-Vega-Ops-Key` (the function adapter drops `Authorization`, which the origin access control signs).
+- The Vercel project needs `VEGA_API_ORIGIN` (this stack's `ApiOrigin`) and `VEGA_OPS_KEY` (the SSM value) in Production.
 
 ## Continuous integration
 
