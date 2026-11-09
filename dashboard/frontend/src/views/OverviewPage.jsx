@@ -357,7 +357,11 @@ function CompactOverview() {
       {(value) => {
         const data = value.data,
           currentWeek = fixtureWeek(parisDay(now)),
-          validPeriod = archived || data.period?.start === currentWeek.start,
+          // The server keeps the latest played week while the current one has no result.
+          validPeriod =
+            archived ||
+            data.period?.start === currentWeek.start ||
+            Boolean(data.period?.latest && data.period.end < currentWeek.start),
           results = validPeriod ? data.results || [] : [],
           ranks = new Map(data.ranks || []),
           potw = validPeriod ? data.potw : null,
@@ -531,13 +535,24 @@ function OverviewContent({
       {matchWeek && (
         <div className="home-section-head">
           <h2>
-            {archived ? `Archives · ${f.season}` : "Semaine en cours"}
+            {archived
+              ? `Archives · ${f.season}`
+              : matchWeek.latest
+                ? "Dernière semaine jouée"
+                : "Semaine en cours"}
             <span>
               {weekPeriodLabel(matchWeek)}
-              {!archived && " · résultats provisoires"}
+              {!archived && !matchWeek.latest && " · résultats provisoires"}
             </span>
           </h2>
         </div>
+      )}
+      {matchWeek?.latest && !archived && (
+        <p className="home-meta" role="status">
+          Aucun match terminé pour l’instant cette semaine (
+          {weekPeriodLabel(fixtureWeek(parisDay(now)))}). Elle remplacera ces
+          résultats dès le premier score.
+        </p>
       )}
       {!results.length && !archived && (
         <p className="home-meta" role="status">
