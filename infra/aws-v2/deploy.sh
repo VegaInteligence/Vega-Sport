@@ -29,7 +29,7 @@ if [ -z "${PITCHAPI_API_KEY:-}" ] && [ -n "${PITCHAPI_API_KEY_FILE:-}" ]; then P
 if [ -z "${SPORTSAPI_API_KEY:-}" ] && [ -n "${SPORTSAPI_API_KEY_FILE:-}" ]; then SPORTSAPI_API_KEY=$(cat "$SPORTSAPI_API_KEY_FILE"); export SPORTSAPI_API_KEY; fi
 [ "$(aws sts get-caller-identity --query Account --output text)" = "$ACCOUNT" ] || { echo "wrong AWS account" >&2; exit 1; }
 output() { aws cloudformation describe-stacks --stack-name "$1" --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text 2>/dev/null || true; }
-stack() { aws cloudformation deploy "${role[@]}" --no-fail-on-empty-changeset --stack-name "$1" --template-file "infra/aws-v2/$2" "${@:3}"; }
+stack() { aws cloudformation deploy ${role[@]+"${role[@]}"} --no-fail-on-empty-changeset --stack-name "$1" --template-file "infra/aws-v2/$2" "${@:3}"; }
 run_task() {
   local sg task
   sg=$(output vega-v2-database WorkerSecurityGroup)
