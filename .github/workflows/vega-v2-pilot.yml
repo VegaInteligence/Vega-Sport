@@ -1,7 +1,7 @@
 name: Vega v2 isolated pilot
 on:
   push:
-    branches: ['codex/vega-schema-v2-*']
+    branches: ['codex/vega-schema-v2-*', 'claude/v2-*']
     paths: ['v2/**', '.github/workflows/vega-v2-pilot.yml']
   workflow_dispatch:
     inputs:
@@ -20,7 +20,8 @@ jobs:
     timeout-minutes: 100
     services:
       postgres:
-        image: postgres:16
+        # pgvector image: the optional vector migration is tested too, not skipped.
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: isolated-v2-only
@@ -38,6 +39,9 @@ jobs:
       VEGA_V2_PROFILES_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_profiles_test
       VEGA_V2_CONCURRENCY_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_concurrency_test
       VEGA_V2_UNKNOWN_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_unknown_test
+      VEGA_V2_VALIDATED_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_validated_test
+      VEGA_V2_AGG_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_agg_test
+      VEGA_V2_API_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_api_test
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,7 +55,7 @@ jobs:
           python - <<'PY'
           import os, psycopg
           with psycopg.connect(os.environ['V2_DATABASE_URL'], autocommit=True) as db:
-              for name in ('vega_v2_test','vega_v2_jobs_test','vega_v2_store_test','vega_v2_pilot_test','vega_v2_profiles_test','vega_v2_concurrency_test','vega_v2_unknown_test'):
+              for name in ('vega_v2_test','vega_v2_jobs_test','vega_v2_store_test','vega_v2_pilot_test','vega_v2_profiles_test','vega_v2_concurrency_test','vega_v2_unknown_test','vega_v2_validated_test','vega_v2_agg_test','vega_v2_api_test'):
                   db.execute(psycopg.sql.SQL('CREATE DATABASE {}').format(psycopg.sql.Identifier(name)))
           PY
       - name: Validate typed schema, normalization and transactional ingestion

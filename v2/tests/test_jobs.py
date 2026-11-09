@@ -66,14 +66,14 @@ class QueueTests(unittest.TestCase):
         for name in ("001_core.sql", "002_aggregates.sql", "003_ops.sql"):
             cls.db.execute((ROOT / "sql" / name).read_text(encoding="utf-8"))
         cls.db.execute(
-            "INSERT INTO core.seasons(id,label,start_year) VALUES(1,'2025/2026',2025)"
+            "INSERT INTO core.seasons(id,label) VALUES(2025,'2025/2026')"
         )
         cls.db.execute("INSERT INTO core.competitions(id,name) VALUES(1,'Test')")
         cls.db.execute(
-            "INSERT INTO core.competition_seasons(id,competition_id,season_id) VALUES(1,1,1)"
+            "INSERT INTO core.competition_seasons(id,competition_id,season_id) VALUES(1,1,2025)"
         )
         cls.db.execute(
-            "INSERT INTO core.matches(id,competition_season_id,season_id,source) VALUES(1,1,1,'pitchapi')"
+            "INSERT INTO core.matches(id,competition_season_id,season_id,source) VALUES(1,1,2025,'pitchapi')"
         )
 
     @classmethod

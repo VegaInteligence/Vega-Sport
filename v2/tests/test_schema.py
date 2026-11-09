@@ -40,28 +40,29 @@ class SchemaTests(unittest.TestCase):
             "005_team_pass_percentage.sql",
             "006_reference_state.sql",
             "007_unknown_player_name.sql",
+            "008_validated_core_ops.sql",
         ):
             cls.db.execute((ROOT / "sql" / name).read_text(encoding="utf-8"))
         cls.db.execute(
-            "INSERT INTO core.seasons(id,label,start_year) VALUES(1,'2025/2026',2025),(2,'2026/2027',2026)"
+            "INSERT INTO core.seasons(id,label) VALUES(2025,'2025/2026'),(2026,'2026/2027')"
         )
         cls.db.execute(
             "INSERT INTO core.competitions(id,name) VALUES(1,'Fixture League')"
         )
         cls.db.execute(
-            "INSERT INTO core.competition_seasons(id,competition_id,season_id) VALUES(1,1,1),(2,1,2)"
+            "INSERT INTO core.competition_seasons(id,competition_id,season_id) VALUES(1,1,2025),(2,1,2026)"
         )
         cls.db.execute("INSERT INTO core.teams(id,name) VALUES(1,'Home'),(2,'Away')")
         cls.db.execute("INSERT INTO core.players(id,name) VALUES(1,'Player')")
         cls.db.execute(
-            "INSERT INTO core.matches(id,competition_season_id,season_id,source,home_team_id,away_team_id) VALUES(1,1,1,'pitchapi',1,2)"
+            "INSERT INTO core.matches(id,competition_season_id,season_id,source,home_team_id,away_team_id) VALUES(1,1,2025,'pitchapi',1,2)"
         )
         for name in ("player_match_stats", "team_heatmaps", "player_heatmaps", "shots"):
             cls.db.execute(
-                f"CREATE TABLE core.{name}_s1 PARTITION OF core.{name} FOR VALUES IN (1)"
+                f"CREATE TABLE core.{name}_s2025 PARTITION OF core.{name} FOR VALUES IN (2025)"
             )
         cls.db.execute(
-            "CREATE TABLE core.shots_s2 PARTITION OF core.shots FOR VALUES IN (2)"
+            "CREATE TABLE core.shots_s2026 PARTITION OF core.shots FOR VALUES IN (2026)"
         )
 
     @classmethod
@@ -109,7 +110,7 @@ class SchemaTests(unittest.TestCase):
         for key, typ in PLAYER_STATS_COLUMNS.items():
             self.assertEqual(rows[key], typ)
         self.db.execute(
-            "INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,minutes_played,xg) VALUES(1,1,1,1,90,0.123456789)"
+            "INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,minutes_played,xg) VALUES(2025,1,1,1,90,0.123456789)"
         )
         xg, goals = self.db.execute(
             "SELECT xg,goals FROM core.player_match_stats"
@@ -148,10 +149,10 @@ class SchemaTests(unittest.TestCase):
         self.assertEqual(len(rows), 3)
         self.assertTrue(all(row[3] == "real" for row in rows))
         self.db.execute(
-            "CREATE TABLE core.team_match_stats_s1 PARTITION OF core.team_match_stats FOR VALUES IN (1)"
+            "CREATE TABLE core.team_match_stats_s2025 PARTITION OF core.team_match_stats FOR VALUES IN (2025)"
         )
         self.db.execute(
-            "INSERT INTO core.team_match_stats(season_id,match_id,team_id,period,accurate_passes,accurate_passes_pct) VALUES(1,1,1,'all',329,82)"
+            "INSERT INTO core.team_match_stats(season_id,match_id,team_id,period,accurate_passes,accurate_passes_pct) VALUES(2025,1,1,'all',329,82)"
         )
         self.assertEqual(
             self.db.execute(
@@ -162,28 +163,28 @@ class SchemaTests(unittest.TestCase):
 
     def test_global_match_and_season_integrity(self):
         self.rejects(
-            "INSERT INTO core.matches(id,competition_season_id,season_id,source) VALUES(1,1,1,'pitchapi')"
+            "INSERT INTO core.matches(id,competition_season_id,season_id,source) VALUES(1,1,2025,'pitchapi')"
         )
         self.rejects(
-            "INSERT INTO core.matches(id,competition_season_id,season_id,source) VALUES(2,1,2,'pitchapi')"
+            "INSERT INTO core.matches(id,competition_season_id,season_id,source) VALUES(2,1,2026,'pitchapi')"
         )
-        self.rejects("INSERT INTO core.shots(season_id,match_id,shot_no) VALUES(2,1,1)")
+        self.rejects("INSERT INTO core.shots(season_id,match_id,shot_no) VALUES(2026,1,1)")
         self.db.execute(
-            "INSERT INTO core.shots(season_id,match_id,shot_no) VALUES(1,1,1)"
+            "INSERT INTO core.shots(season_id,match_id,shot_no) VALUES(2025,1,1)"
         )
 
     def test_heatmap_shape_no_null_no_negative(self):
         self.db.execute(
-            "INSERT INTO core.team_heatmaps(season_id,match_id,team_id,cells) VALUES(1,1,1,%s)",
+            "INSERT INTO core.team_heatmaps(season_id,match_id,team_id,cells) VALUES(2025,1,1,%s)",
             ([0] * 192,),
         )
         for cells in ([0] * 191, [0] * 193, [0] * 191 + [None], [0] * 191 + [-1]):
             self.rejects(
-                "INSERT INTO core.player_heatmaps(season_id,match_id,player_id,cells) VALUES(1,1,1,%s)",
+                "INSERT INTO core.player_heatmaps(season_id,match_id,player_id,cells) VALUES(2025,1,1,%s)",
                 (cells,),
             )
         self.rejects(
-            "INSERT INTO core.player_heatmaps(season_id,match_id,player_id,cells) VALUES(1,1,1,array_fill(0::smallint,ARRAY[192],ARRAY[0]))"
+            "INSERT INTO core.player_heatmaps(season_id,match_id,player_id,cells) VALUES(2025,1,1,array_fill(0::smallint,ARRAY[192],ARRAY[0]))"
         )
 
     def test_nullable_standings_and_distinct_scopes(self):
@@ -200,12 +201,12 @@ class SchemaTests(unittest.TestCase):
             "INSERT INTO ops.dirty_scopes(scope_kind,player_id,team_id,competition_season_id) VALUES('player_season',1,1,1)"
         )
 
-    def test_official_standings_keep_provider_provenance_separate(self):
+    def test_standings_official_keep_provider_provenance_separate(self):
         self.db.execute(
-            "INSERT INTO core.official_standings(competition_season_id,team_id,source,as_of,points) VALUES(1,1,'uefa','2026-01-01',7),(1,1,'sportscore','2026-01-02',8)"
+            "INSERT INTO core.standings_official(competition_season_id,team_id,source,as_of,points) VALUES(1,1,'uefa','2026-01-01',7),(1,1,'sportscore','2026-01-02',8)"
         )
         rows = self.db.execute(
-            "SELECT source,as_of,points FROM core.official_standings ORDER BY source"
+            "SELECT source,as_of,points FROM core.standings_official ORDER BY source"
         ).fetchall()
         self.assertEqual([r[0] for r in rows], ["uefa", "sportscore"])
         self.assertEqual([r[2] for r in rows], [7, 8])
@@ -213,7 +214,7 @@ class SchemaTests(unittest.TestCase):
             self.db.execute("SELECT count(*) FROM agg.standings").fetchone()[0], 0
         )
         self.rejects(
-            "INSERT INTO core.official_standings(competition_season_id,team_id,source) VALUES(1,1,'uefa')"
+            "INSERT INTO core.standings_official(competition_season_id,team_id,source) VALUES(1,1,'uefa')"
         )
 
     def test_jobs_global_date_and_edition_do_not_collide(self):
@@ -318,7 +319,7 @@ class SchemaTests(unittest.TestCase):
         for table in (
             "core.player_contracts",
             "core.player_transfers",
-            "core.official_standings",
+            "core.standings_official",
             "agg.role_weights",
             "agg.player_index",
             "agg.player_projections",
