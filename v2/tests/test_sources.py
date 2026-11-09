@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
@@ -11,7 +12,7 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega_v2 import sources
-from vega_v2.sources import SourceError, normalize, uefa
+from vega_v2.sources import SourceError, curated, normalize, uefa
 
 try:
     import psycopg
@@ -49,6 +50,13 @@ class PureTest(unittest.TestCase):
         self.assertEqual(sorted(uefa.scopes(NOW)), sorted([
             "uefa_clubs:2027", "uefa_associations:2027", "uefa_clubs:2026", "uefa_associations:2026",
         ]))
+
+    def test_curated_aliases_match_the_site(self):
+        # dashboard/shared/player-aliases.js: `const ALIASES = Object.freeze({ key: Object.freeze([...]) })`.
+        text = (ROOT.parent / "dashboard/shared/player-aliases.js").read_text()
+        body = re.search(r"const ALIASES = Object\.freeze\(\{(.*?)\}\);", text, re.S).group(1)
+        site = {key: tuple(re.findall(r'"([^"]+)"', values)) for key, values in re.findall(r"(p_[A-Za-z0-9]{6}): Object\.freeze\(\[(.*?)\]\)", body)}
+        self.assertEqual(site, curated.PLAYER_ALIASES)
 
     def test_pagination_must_be_complete(self):
         get = FakeSource({("MEN_CLUB", 2027, 1): uefa_page([club(1, "A", "FRA", 1, 10)], 3)})
@@ -122,6 +130,16 @@ class UefaTest(unittest.TestCase):
         self.assertEqual(self.db.execute("SELECT entity_id FROM core.provider_ids WHERE provider='uefa' AND provider_key='13'").fetchone()[0], 6)
         self.assertEqual(self.db.execute("SELECT count(*) FROM core.ranking_rows WHERE team_id=6").fetchone()[0], 1)
         self.assertIsNone(self.db.execute("SELECT 1 FROM core.teams WHERE id=%s", (celta_uefa_only,)).fetchone())
+
+    def test_curated_aliases(self):
+        x = self.db.execute
+        x("INSERT INTO core.players(id, name) VALUES (50, 'Cristiano Ronaldo'), (51, 'Cristiano Ronaldo')")
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player','pitchapi','p_3yEwhj',50), ('player','pitchapi','p_other1',51)")
+        x("INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source) VALUES ('player', 50, 'Old', 'old', 'alias', 'vega'), ('player', 50, 'CR', 'cr', 'alias', 'wikidata')")
+        self.assertEqual(sources.run_due(self.db, None, NOW, names={"vega"}), {("vega", "player_aliases"): "ok"})
+        names = self.db.execute("SELECT entity_id, normalized, source::text FROM core.entity_names WHERE entity_type='player' ORDER BY 1, 2").fetchall()
+        # The homonym gets nothing; the removed Vega alias goes; Wikidata's stays.
+        self.assertEqual(names, [(50, "cr", "wikidata"), (50, "cr7", "vega")])
 
 
 if __name__ == "__main__":
