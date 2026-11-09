@@ -10,6 +10,8 @@ import React, {
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
+import useLiveMatch from "../hooks/useLiveMatch.js";
+import { isLiveWindow } from "../services/live-client.js";
 import { Card, Media, Rating, Segments, Empty, AsyncState } from "./UI.jsx";
 import Icon from "./Icon.jsx";
 import { XgTimeline, ShotMap } from "./Charts.jsx";
@@ -447,8 +449,16 @@ export default function MatchDetail({ match }) {
   const competition = f.allCompetitions.find((c) => c.id === match.leagueId);
   const homeName = match.home.name ?? "Équipe non renseignée";
   const awayName = match.away.name ?? "Équipe non renseignée";
-  const status =
-    match.status === "finished"
+  // Live (v2): the feed's minute and score until PitchAPI has the score, then core's.
+  const live = useLiveMatch(match.id, isLiveWindow(match));
+  const liveScore = live && live.families?.score !== "core" && live.status !== "scheduled" ? live.score : null;
+  const status = liveScore
+    ? live.status === "finished"
+      ? "Résultat provisoire"
+      : live.status === "half_time"
+        ? "Mi-temps"
+        : `En direct${live.minute != null ? ` · ${live.minute}${live.minuteAdded ? `+${live.minuteAdded}` : ""}’` : ""}`
+    : match.status === "finished"
       ? "Terminé"
       : upcoming
         ? "À venir"
@@ -534,8 +544,14 @@ export default function MatchDetail({ match }) {
               <span />
               {status}
             </span>
-            <div className="scoreboard-score">
-              {upcoming ? (
+            <div className="scoreboard-score" data-live={liveScore ? "" : undefined}>
+              {liveScore ? (
+                <>
+                  <strong>{number(liveScore.home)}</strong>
+                  <span>–</span>
+                  <strong>{number(liveScore.away)}</strong>
+                </>
+              ) : upcoming ? (
                 <span className="scoreboard-upcoming">{time || "—"}</span>
               ) : (
                 <>

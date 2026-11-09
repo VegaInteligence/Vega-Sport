@@ -66,6 +66,8 @@ Resources:
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/vega-v2-worker*'
                   - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/vega-v2-api*'
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/vega-v2-live*'
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/vega-v2-live*'
               - Sid: LogsDescribe
                 Effect: Allow
                 Action: ['logs:DescribeLogGroups']
@@ -78,6 +80,7 @@ Resources:
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/vega-v2-worker-*'
                   - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/vega-v2-api-*'
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/vega-v2-live-*'
               - Sid: ServiceLinkedRoles
                 Effect: Allow
                 Action: 'iam:CreateServiceLinkedRole'
@@ -86,11 +89,28 @@ Resources:
               - Sid: Functions
                 Effect: Allow
                 Action: ['lambda:*']
-                Resource: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:vega-v2-api*'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:vega-v2-api*'
+                  - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:vega-v2-live*'
               - Sid: ReleaseRead
                 Effect: Allow
                 Action: ['s3:GetObject']
-                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-api/*'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-api/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-live/*'
+              # Live (live.yaml): its tables and its AppSync Events API.
+              - Sid: LiveTables
+                Effect: Allow
+                Action: ['dynamodb:*']
+                Resource: !Sub 'arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/vega-v2-live-*'
+              - Sid: LiveEvents
+                Effect: Allow
+                Action: ['appsync:*']
+                Resource: !Sub 'arn:${AWS::Partition}:appsync:${AWS::Region}:${AWS::AccountId}:apis/*'
+              - Sid: LiveEventsCreate
+                Effect: Allow
+                Action: ['appsync:CreateApi', 'appsync:TagResource', 'appsync:ListApis']
+                Resource: '*'
               - Sid: MediaBucket
                 Effect: Allow
                 Action: ['s3:CreateBucket', 's3:DeleteBucket', 's3:PutBucket*', 's3:GetBucket*', 's3:PutEncryptionConfiguration',
@@ -149,7 +169,9 @@ Resources:
               - Sid: Release
                 Effect: Allow
                 Action: ['s3:PutObject', 's3:GetObject']
-                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-api/*'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-api/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-live/*'
               - Sid: Secrets
                 Effect: Allow
                 Action: ['ssm:GetParameter', 'ssm:PutParameter']

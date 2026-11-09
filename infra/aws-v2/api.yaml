@@ -116,6 +116,21 @@ Resources:
           QueryStringsConfig: {QueryStringBehavior: all}
           EnableAcceptEncodingBrotli: true
           EnableAcceptEncodingGzip: true
+  # GET /live/matches/{id} (live.yaml): the full live state, cached 2 s (doc "Live").
+  LiveCache:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: vega-v2-live
+        MinTTL: 0
+        DefaultTTL: 2
+        MaxTTL: 2
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig: {CookieBehavior: none}
+          HeadersConfig: {HeaderBehavior: none}
+          QueryStringsConfig: {QueryStringBehavior: none}
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
   Validators:
     Type: AWS::CloudFront::OriginRequestPolicy
     Properties:
@@ -157,6 +172,10 @@ Resources:
             DomainName: !ImportValue vega-v2-media-domain
             OriginAccessControlId: !GetAtt MediaOAC.Id
             S3OriginConfig: {OriginAccessIdentity: ''}
+          - Id: live
+            DomainName: !ImportValue vega-v2-live-read-domain
+            OriginAccessControlId: !GetAtt OAC.Id
+            CustomOriginConfig: {OriginProtocolPolicy: https-only, OriginSSLProtocols: [TLSv1.2], OriginReadTimeout: 10}
         # Image copies: immutable, content-addressed (managed CachingOptimized policy).
         CacheBehaviors:
           - PathPattern: data/*
@@ -166,6 +185,14 @@ Resources:
             CachedMethods: [GET, HEAD]
             Compress: false
             CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          - PathPattern: live/*
+            TargetOriginId: live
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: !Ref LiveCache
+            ResponseHeadersPolicyId: !Ref ViewerHeaders
         DefaultCacheBehavior:
           TargetOriginId: api
           ViewerProtocolPolicy: redirect-to-https
@@ -196,6 +223,22 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref Backend
+      Action: lambda:InvokeFunction
+      InvokedViaFunctionUrl: true
+      Principal: cloudfront.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+  InvokeLiveUrl:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !ImportValue vega-v2-live-read-function
+      Action: lambda:InvokeFunctionUrl
+      FunctionUrlAuthType: AWS_IAM
+      Principal: cloudfront.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+  InvokeLive:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !ImportValue vega-v2-live-read-function
       Action: lambda:InvokeFunction
       InvokedViaFunctionUrl: true
       Principal: cloudfront.amazonaws.com

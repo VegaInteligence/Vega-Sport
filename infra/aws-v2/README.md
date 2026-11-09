@@ -31,6 +31,7 @@ Account 361769570630, region us-east-2, AWS CLI profile `statarena`, default VPC
 4. worker image (linux/arm64, tagged with the git SHA, pushed once);
 5. migrations and logins, as the one-off `vega-v2-migrate` task (the script stops if it fails);
 6. worker start (`WORKER_DESIRED_COUNT`, 1 by default);
+6b. live stack (`live.yaml`): the live tables, the AppSync Events API and its browser key (renewed for 360 days on each deploy), the `GET /live/matches/{id}` function and the ingestor service, at 0 tasks unless `LIVE_PROVIDER` names an adapter and `LIVE_INGESTOR_COUNT=1`;
 7. read API package, uploaded under `releases/v2-api/`;
 8. read API stack; on the first deployment a second pass sets `MediaBaseUrl` once the distribution's domain is known;
 9. with `IMPORT_ARCHIVES=true` and `ARCHIVE_SOURCES_BUCKET`, the historical archive import (`vega-v2-archives`), which reads main's pinned sources under `data/sources/` read only.
@@ -59,7 +60,7 @@ From a workstation, before the workflow is on `main` (a manual workflow can only
 AWS_PROFILE=statarena PITCHAPI_API_KEY_FILE=<file holding the key> bash infra/aws-v2/deploy.sh
 ```
 
-Then, from GitHub: `gh workflow run "Vega v2 deploy" -f worker_desired_count=1`. The migration task's log line `migrations applied=N total=M logins=…` shows 41 migrations (43 with `V2_VECTOR=1`). The backfill runs on demand, for days, and stops by itself when its lane is empty: `aws ecs run-task … --task-definition vega-v2-backfill` with the network configuration `deploy.sh` uses.
+Then, from GitHub: `gh workflow run "Vega v2 deploy" -f worker_desired_count=1`. The migration task's log line `migrations applied=N total=M logins=…` shows 42 migrations (44 with `V2_VECTOR=1`). The backfill runs on demand, for days, and stops by itself when its lane is empty: `aws ecs run-task … --task-definition vega-v2-backfill` with the network configuration `deploy.sh` uses.
 
 The account runs at most 10 Lambdas concurrently and the current API needs them: `ReservedConcurrency` stays 0 and the pool size 1 until the quota is raised.
 
@@ -121,6 +122,8 @@ v2 is a second base (`vega-football-db-postgres`) filled from the sources themse
 | Fargate ARM 0.25 vCPU / 0.5 GB, always on | ~$7 |
 | Public IPv4 of the worker task | ~$3.6 |
 | ECR, CloudWatch Logs (30 days), Lambda, CloudFront, S3 image copies (a few GB) | usage-based, a few dollars |
+| Live: DynamoDB on demand, AppSync Events, the live read function | nothing without a live provider; per match and viewer once one runs |
+| Live ingestor (Fargate ARM, like the worker) | ~$7 once started, 0 until a provider is chosen |
 | **Total** | **≈ $25–30** |
 
 The backfill task costs the same rate as the worker while it runs. No NAT gateway, load balancer, provisioned concurrency or reserved instance.

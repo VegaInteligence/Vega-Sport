@@ -66,7 +66,7 @@ jobs:
         run: docker build --platform linux/arm64 -f v2/Dockerfile -t vega-v2-worker:${{ github.sha }} .
       - name: The image runs its tools
         run: |
-          docker run --rm --entrypoint python vega-v2-worker:${{ github.sha }} -c "import vega_v2.worker, vega_v2.archives, vega_v2.migrate, boto3"
+          docker run --rm --entrypoint python vega-v2-worker:${{ github.sha }} -c "import vega_v2.worker, vega_v2.archives, vega_v2.migrate, vega_v2.live.ingestor, boto3, botocore.auth"
           docker run --rm --entrypoint node vega-v2-worker:${{ github.sha }} /app/v2/sources/bridge.mjs plans > /dev/null
           docker run --rm --entrypoint node vega-v2-worker:${{ github.sha }} /app/v2/archives/edition.mjs - - > /dev/null
           # Every file a source adapter reads is where it looks for it in the image.
@@ -83,5 +83,7 @@ jobs:
         with: {node-version: '22'}
       - run: npm ci --prefix v2/api
       - run: python3 infra/aws-v2/package_api.py "$RUNNER_TEMP/v2-api"
+      # GET /live/matches/{id}: its own function, the runtime's AWS SDK left out of the bundle.
+      - run: python3 infra/aws-v2/package_api.py "$RUNNER_TEMP/v2-live" live
       - uses: actions/upload-artifact@v4
         with: {name: v2-api-package, path: '${{ runner.temp }}/v2-api/*.zip', retention-days: 14}
