@@ -202,14 +202,18 @@ class Worker:
             return 0
 
     def daily(self):
-        """Levels, competition strength, squad profiles and similarities, once a UTC day
-        for each season played in the last 30 days."""
+        """Levels, competition strength, squad profiles, similarities and power rankings,
+        once a UTC day for each season played in the last 30 days, and once for a season
+        never computed (a backfilled one)."""
         now = self.clock()
         seasons = [
             s
             for (s,) in self.calc_conn.execute(
                 """SELECT DISTINCT m.season_id FROM core.matches m
-                   WHERE m.kickoff_at > %s - interval '30 days' AND m.kickoff_at <= %s
+                   WHERE ((m.kickoff_at > %s - interval '30 days' AND m.kickoff_at <= %s)
+                          OR (m.status = 'finished' AND NOT EXISTS (
+                                SELECT 1 FROM agg.calc_runs r WHERE r.kind = 'levels' AND r.status = 'published'
+                                  AND r.cohort_definition = 'season:' || m.season_id)))
                      AND NOT EXISTS (SELECT 1 FROM agg.calc_runs r WHERE r.kind = 'levels' AND r.status = 'published'
                                      AND r.cohort_definition = 'season:' || m.season_id AND r.started_at >= date_trunc('day', %s))
                    ORDER BY 1""",
@@ -621,6 +625,7 @@ def main(argv=None):
     parser.add_argument("--report", help="write a measurements-only Markdown report")
     parser.add_argument("--cohort-delay", type=int, default=600, help="seconds a changed cohort waits before recalculation")
     parser.add_argument("--backfill-from", type=int, default=2021, help="first season (start year) of the backfill")
+    parser.add_argument("--backfill-to", type=int, help="last season (start year) of the backfill; default the current one")
     parser.add_argument("--backfill-competitions", help="comma-separated PitchAPI league ids; default every league")
     args = parser.parse_args(argv)
     dsn, key = os.environ.get("V2_DATABASE_URL"), os.environ.get("PITCHAPI_API_KEY")
@@ -642,7 +647,7 @@ def main(argv=None):
         calc_conn=calc_conn,
         source_get=None if args.lanes == "backfill" else __import__("vega_v2.sources.http", fromlist=["json_getter"]).json_getter(),
         backfill=(
-            {"first_season": args.backfill_from,
+            {"first_season": args.backfill_from, "last_season": args.backfill_to,
              "competitions": args.backfill_competitions.split(",") if args.backfill_competitions else None}
             if args.lanes == "backfill"
             else None
