@@ -280,9 +280,11 @@ class Worker:
         if self.backfill is not None:
             self.backfill_references()
         last_plan = last_calc = last_media = float("-inf")
+        since_plan = 0  # jobs done since the last planning round
         while not stop():
             tick = time.monotonic()
             if tick - last_plan >= plan_every:
+                since_plan = 0
                 try:
                     if self.backfill is None:
                         planner.plan(self.conn, self.clock())
@@ -298,6 +300,7 @@ class Worker:
                 last_media = tick
             worked = self.step()
             done += worked
+            since_plan += worked
             if not worked or tick - last_calc >= calc_every:
                 self.calculate()
                 last_calc = tick
@@ -305,6 +308,11 @@ class Worker:
                 break
             if not worked:
                 if until_idle:
+                    # Jobs just done can give the planner work (a calendar, then its matches'
+                    # families): plan once more, and stop only after a round that adds none.
+                    if since_plan:
+                        last_plan = float("-inf")
+                        continue
                     break
                 time.sleep(idle_sleep)
         self.calculate()

@@ -405,6 +405,22 @@ class WorkerTest(unittest.TestCase):
         # Only the named league is written from the catalogue.
         self.assertEqual(self.db.execute("SELECT count(*) FROM core.provider_ids WHERE provider_key = 'l_bbbbbb'").fetchone()[0], 0)
 
+    def test_backfill_run_until_idle_collects_calendar_then_details(self):
+        # The first import test (2026-11-09): the backfill stopped after the calendar, before
+        # the planner's next round could plan the finished matches' families.
+        start = self.now
+        old = [match(f"m_hist0{i}", start - timedelta(days=300 + i), "finished", (i % 3, 1), season="2024/2025") for i in range(1, 3)]
+        self.api.routes["/leagues"] = {"leagues": [dict(LIGUE1, seasons=["2024/2025"])]}
+        self.api.routes["/leagues/l_aaaaaa/matches"] = {"league": {"id": "l_aaaaaa", "name": "Ligue 1"}, "matches": old}
+        for item in old:
+            self.api.routes["/matches/" + item["id"]] = item
+            self.api.routes.update({path.replace("m_aaaaaa", item["id"]): body for path, body in details("m_aaaaaa").items()})
+        backfill = Worker(self.worker.store, self.worker.client, lanes=("backfill",), clock=lambda: self.now, cohort_delay=0,
+                          backfill={"first_season": 2024, "last_season": 2024, "competitions": ["l_aaaaaa"]})
+        done = backfill.run(until_idle=True, idle_sleep=0)
+        self.assertEqual(done, 1 + 2 * 13)  # the calendar, then 13 families of each finished match
+        self.assertEqual(planner.plan_backfill(self.db, start, first_season=2024, last_season=2024, competitions=["l_aaaaaa"]), {})
+
     def test_backfill_collects_history_without_watches(self):
         start = self.now
         old = [match(f"m_hist0{i}", start - timedelta(days=300 + i), "finished", (i % 3, 1), season="2024/2025") for i in range(1, 4)]
