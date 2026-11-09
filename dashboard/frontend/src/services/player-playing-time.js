@@ -4,7 +4,13 @@ const finished = (match) =>
   match.status === "finished" || (!match.status && match.finished === true);
 
 /** Use the scoped player rows and the team's recorded calendar. */
-export function playerPlayingTime(calendar, rows, teamId, filters = {}) {
+export function playerPlayingTime(
+  calendar,
+  rows,
+  teamId,
+  filters = {},
+  minutesFromHalves,
+) {
   if (!calendar || !teamId) return null;
   const { from, to, league, leagues, competition = "all", matchId } = filters;
   const leagueIds = new Set(leagues);
@@ -31,6 +37,7 @@ export function playerPlayingTime(calendar, rows, teamId, filters = {}) {
     ),
   );
   const byMatch = new Map();
+  const recoverable = new Set();
   let missingMatch = false;
   for (const row of rows) {
     if (row.teamId !== teamId || !row.matchId) continue;
@@ -42,6 +49,8 @@ export function playerPlayingTime(calendar, rows, teamId, filters = {}) {
         ? row.minutes
         : null;
     if (minutes > 0 && !scheduled.has(row.matchId)) missingMatch = true;
+    if (row.minutes == null && row.statsReliable !== false)
+      recoverable.add(row.matchId);
     if (previous == null) byMatch.set(row.matchId, minutes);
     else if (minutes != null && previous !== minutes)
       byMatch.set(row.matchId, NaN);
@@ -49,9 +58,24 @@ export function playerPlayingTime(calendar, rows, teamId, filters = {}) {
 
   let minutes = 0;
   let covered = 0;
+  let recovered = 0;
+  const missingMinutes = [];
   for (const game of dated) {
     if (byMatch.has(game.id)) {
-      const played = byMatch.get(game.id);
+      let played = byMatch.get(game.id);
+      if (played === null && recoverable.has(game.id)) {
+        const fromHalves = minutesFromHalves?.get(game.id);
+        if (
+          Number.isFinite(fromHalves) &&
+          fromHalves >= 0 &&
+          fromHalves <= 90
+        ) {
+          played = fromHalves;
+          recovered++;
+        } else {
+          missingMinutes.push(game);
+        }
+      }
       // A recorded duration above 90 cannot be compared to a 90-minute game.
       if (!Number.isFinite(played) || played > 90) continue;
       minutes += played;
@@ -79,6 +103,8 @@ export function playerPlayingTime(calendar, rows, teamId, filters = {}) {
     covered,
     matches,
     incompleteCalendar,
+    missingMinutes,
+    recovered,
     percentage:
       covered === matches && !incompleteCalendar
         ? (100 * minutes) / totalMinutes
