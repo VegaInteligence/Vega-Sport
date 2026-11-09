@@ -31,7 +31,7 @@ Account 361769570630, region us-east-2, AWS CLI profile `statarena`, default VPC
 4. worker image (linux/arm64, tagged with the git SHA, pushed once);
 5. migrations and logins, as the one-off `vega-v2-migrate` task (the script stops if it fails);
 6. worker start (`WORKER_DESIRED_COUNT`, 1 by default);
-6b. live stack (`live.yaml`): the live tables, the AppSync Events API and its browser key (renewed for 360 days on each deploy), the `GET /live/matches/{id}` function and the ingestor service, at 0 tasks unless `LIVE_PROVIDER` names an adapter and `LIVE_INGESTOR_COUNT=1`;
+6b. live stack (`live.yaml`): the live tables, the AppSync Events API and its browser key (renewed for 360 days on each deploy), the `GET /live/matches/{id}` function and the EventBridge schedule that starts the ingestor every 15 minutes (`--until-idle`: it exits at once without a match within 30 minutes, follows the day's matches to the last otherwise, and a second start finds the lease taken), off unless `LIVE_PROVIDER` names an adapter;
 7. read API package, uploaded under `releases/v2-api/`;
 8. read API stack; on the first deployment a second pass sets `MediaBaseUrl` once the distribution's domain is known;
 9. with `IMPORT_ARCHIVES=true` and `ARCHIVE_SOURCES_BUCKET`, the historical archive import (`vega-v2-archives`), which reads main's pinned sources under `data/sources/` read only.

@@ -1,7 +1,8 @@
 /**
  * Live matches on the v2 API (doc "Live"): the full state from GET /live/matches/{id}
- * (the v2 distribution, cached 2 s), then each change as AppSync Events publishes it on
- * /live/match/{id}. The browser never talks to the live provider: one feed per match,
+ * (the v2 distribution, cached 2 s), then each revision as AppSync Events publishes it on
+ * /live/match/{id}: one message per revision, applied in order, the full state read again
+ * when one is missing. The browser never talks to the live provider: one feed per match,
  * on the server. Built with NEXT_PUBLIC_API_SCHEMA=v2 and the three
  * NEXT_PUBLIC_LIVE_EVENTS_* settings (outputs of infra/aws-v2/live.yaml); without them
  * nothing here runs.
@@ -40,41 +41,58 @@ export async function readLive(id, { config = LIVE, fetcher = fetch, signal } = 
 
 const camel = (key) => key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
 const FAMILIES = ["score", "events", "stats"];
+const STATS = ["possession_pct", "total_shots", "shots_on_target", "corners", "fouls"];
 
-/** One broadcast change applied to the full state (what GET /live/matches/{id} returns). */
-export function applyLive(state, change) {
-  if (!state || !change) return state;
-  if (change.type === "state")
-    return {
-      ...state,
-      status: change.status,
-      minute: change.minute ?? null,
-      minuteAdded: change.minute_added ?? null,
-      period: change.period ?? null,
-      score: { home: change.score_home ?? null, away: change.score_away ?? null },
-      provisional: change.status === "finished" && state.families?.score !== "core",
-    };
-  if (change.type === "event") {
-    if (state.events.some((e) => e.seq === change.seq)) return state;
-    const event = {
-      seq: change.seq, kind: change.kind, minute: change.minute ?? null, minuteAdded: change.minute_added ?? null,
-      period: change.period ?? null, side: change.side ?? null, player: change.player ?? null, playerName: change.player_name ?? null,
-      score: change.score_home == null ? null : { home: change.score_home, away: change.score_away },
-    };
-    return { ...state, events: [...state.events, event].sort((a, b) => a.seq - b.seq) };
-  }
-  if (change.type === "stats") {
-    const { type, side, period, ...values } = change;
-    const row = { side, period, ...Object.fromEntries(Object.entries(values).map(([k, v]) => [camel(k), v])) };
-    return { ...state, stats: [...state.stats.filter((s) => s.side !== side || s.period !== period), row] };
-  }
-  if (change.type === "families") {
-    const core = new Set(change.families);
-    const families = Object.fromEntries(FAMILIES.map((f) => [f, core.has(f) ? "core" : "live"]));
-    return { ...state, families, provisional: state.status === "finished" && !core.has("score") };
-  }
-  return state;
+const liveEvent = (e) => ({
+  seq: e.seq, revision: e.revision, type: e.event_type, minute: e.minute ?? null, minuteAdded: e.minute_added ?? null,
+  period: e.period ?? null, teamId: e.team_id ?? null, player: e.player_id ?? null, relatedPlayer: e.related_player_id ?? null,
+  playerName: e.player_name ?? null, cancelled: Boolean(e.is_cancelled),
+});
+const liveStats = (s) => ({
+  teamId: s.team_id, revision: s.revision,
+  ...Object.fromEntries(STATS.filter((k) => s[k] != null).map((k) => [camel(k), s[k]])),
+});
+
+/** True when a broadcast skips a revision: the full state must be read again (doc "Écriture
+ * réussie, diffusion ratée"). */
+export function missing(state, message) {
+  return Boolean(state && message && message.match === state.match && (message.revision ?? 0) > (state.revision ?? 0) + 1);
 }
+
+/** The next revision applied to the full state (what GET /live/matches/{id} returns). A
+ * revision already applied, another match's or one after a gap leaves the state as it is.
+ * A corrected event (goal cancelled by VAR) replaces the event of the same seq. */
+export function applyLive(state, message) {
+  if (!state || !message || message.match !== state.match) return state;
+  if ((message.revision ?? 0) !== (state.revision ?? 0) + 1) return state;
+  let next = { ...state, revision: message.revision };
+  if (message.state) {
+    const s = message.state;
+    next = {
+      ...next, status: s.status, minute: s.minute ?? null, minuteAdded: s.minute_added ?? null, period: s.period ?? null,
+      score: { home: s.home_score ?? null, away: s.away_score ?? null }, finishedAt: s.finished_at ?? next.finishedAt ?? null,
+    };
+  }
+  if (message.events?.length) {
+    const bySeq = new Map((next.events || []).map((e) => [e.seq, e]));
+    for (const e of message.events) bySeq.set(e.seq, liveEvent(e));
+    next.events = [...bySeq.values()].sort((a, b) => a.seq - b.seq);
+  }
+  if (message.stats?.length) {
+    const byTeam = new Map((next.stats || []).map((s) => [s.teamId, s]));
+    for (const s of message.stats) byTeam.set(s.team_id, liveStats(s));
+    next.stats = [...byTeam.values()];
+  }
+  if (message.families) {
+    const core = new Set(message.families);
+    next.families = Object.fromEntries(FAMILIES.map((f) => [f, core.has(f) ? "core" : "live"]));
+  }
+  next.provisional = next.status === "finished" && next.families?.score !== "core";
+  return next;
+}
+
+/** A full read never replaces a newer state (CloudFront may serve one up to 2 s old). */
+export const newer = (current, body) => !current || !body || (body.revision ?? 0) >= (current.revision ?? 0);
 
 const base64url = (text) =>
   btoa(String.fromCharCode(...new TextEncoder().encode(text))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");

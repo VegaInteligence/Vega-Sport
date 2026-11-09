@@ -4,16 +4,18 @@ Description: >-
   expires_at), the broadcast (AppSync Events, namespace live, channel /live/match/{id}:
   the ingestor publishes with IAM, browsers subscribe with a public key), the full-state
   read GET /live/matches/{id} (a function outside the private network, served at live/*
-  by the v2 distribution with a 2 s cache, api.yaml), and the ingestor (one ECS task,
-  0 until a live provider is chosen). Live data never enters core; only the
-  differences with the final data go to ops.live_discrepancies.
+  by the v2 distribution with a 2 s cache, api.yaml), and the ingestor (one ECS task
+  that EventBridge Scheduler starts before the first kick-off and that stops itself
+  after the last match, off until a live provider is chosen). Live data never enters
+  core; only the differences with the final data go to ops.live_discrepancies.
 Parameters:
   ImageTag: {Type: String, AllowedPattern: '[a-f0-9]{12,64}', Description: Image of vega-v2-worker (the ingestor is vega_v2.live).}
   ReleaseKey: {Type: String, AllowedPattern: 'releases/v2-live/[a-f0-9]{64}\.zip'}
-  IngestorCount: {Type: Number, Default: 0, AllowedValues: [0, 1], Description: 'One ingestor at most; 0 until a live provider is chosen'}
-  LiveProvider: {Type: String, Default: '', AllowedPattern: '[a-z0-9_]{0,40}', Description: 'Adapter name in vega_v2/live/adapters.py'}
+  LiveProvider: {Type: String, Default: '', AllowedPattern: '[a-z0-9_]{0,40}', Description: 'Adapter name in vega_v2/live/adapters.py; empty: the schedule is off'}
   ApiKeyExpires: {Type: Number, Description: 'Epoch seconds of the browser key expiry, 1 to 365 days ahead (deploy.sh renews it)'}
   CollectUrlParameter: {Type: String, Default: /vega/v2/collect-database-url}
+Conditions:
+  HasProvider: !Not [!Equals [!Ref LiveProvider, '']]
 Resources:
   StateTable:
     Type: AWS::DynamoDB::Table
@@ -33,13 +35,14 @@ Resources:
       KeySchema: [{AttributeName: match, KeyType: HASH}, {AttributeName: seq, KeyType: RANGE}]
       TimeToLiveSpecification: {AttributeName: expires_at, Enabled: true}
       Tags: [{Key: project, Value: vega-v2}]
+  # live_team_stats: one item per team (doc "Tables temporaires").
   StatsTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: vega-v2-live-stats
+      TableName: vega-v2-live-team-stats
       BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions: [{AttributeName: match, AttributeType: S}, {AttributeName: key, AttributeType: S}]
-      KeySchema: [{AttributeName: match, KeyType: HASH}, {AttributeName: key, KeyType: RANGE}]
+      AttributeDefinitions: [{AttributeName: match, AttributeType: S}, {AttributeName: team_id, AttributeType: S}]
+      KeySchema: [{AttributeName: match, KeyType: HASH}, {AttributeName: team_id, KeyType: RANGE}]
       TimeToLiveSpecification: {AttributeName: expires_at, Enabled: true}
       Tags: [{Key: project, Value: vega-v2}]
   EventsApi:
@@ -157,6 +160,8 @@ Resources:
           Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/vega-v2-worker:${ImageTag}'
           Essential: true
           EntryPoint: [python, -m, vega_v2.live]
+          # Stops by itself once no match is under way, upcoming or waiting for core.
+          Command: [--until-idle]
           StopTimeout: 30
           ReadonlyRootFilesystem: true
           Environment:
@@ -171,25 +176,55 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options: {awslogs-group: !Ref IngestorLogs, awslogs-region: !Ref 'AWS::Region', awslogs-stream-prefix: live}
-  IngestorService:
-    Type: AWS::ECS::Service
+  # EventBridge Scheduler starts the ingestor every 15 minutes while a provider is set. A
+  # start with no match within 30 minutes exits in seconds; the first one ahead of a
+  # kick-off follows every match to the last whistle (doc "Briques": started before the
+  # day's first kick-off, stopped after the last); a start while one runs finds its lease
+  # taken and exits, so there is never more than one feed per match.
+  SchedulerRole:
+    Type: AWS::IAM::Role
     Properties:
-      ServiceName: vega-v2-live
-      Cluster: vega-v2
-      TaskDefinition: !Ref IngestorTask
-      DesiredCount: !Ref IngestorCount
-      LaunchType: FARGATE
-      # One feed per match, never one per viewer: a single ingestor, replaced, never doubled.
-      DeploymentConfiguration:
-        MinimumHealthyPercent: 0
-        MaximumPercent: 100
-        DeploymentCircuitBreaker: {Enable: true, Rollback: true}
-      NetworkConfiguration:
-        AwsvpcConfiguration:
-          AssignPublicIp: ENABLED
-          SecurityGroups: [!ImportValue vega-v2-worker-sg]
-          Subnets: [subnet-0233a9567335f56ce, subnet-04c9af303f55d9718, subnet-0e72516f361932c15]
-      Tags: [{Key: project, Value: vega-v2}]
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: scheduler.amazonaws.com}
+            Action: 'sts:AssumeRole'
+            Condition: {StringEquals: {'aws:SourceAccount': !Ref 'AWS::AccountId'}}
+      Policies:
+        - PolicyName: RunIngestor
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: 'ecs:RunTask'
+                Resource: !Sub 'arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/vega-v2-live:*'
+                Condition: {ArnEquals: {'ecs:cluster': !Sub 'arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/vega-v2'}}
+              - Effect: Allow
+                Action: 'iam:PassRole'
+                Resource: [!GetAtt IngestorExecutionRole.Arn, !GetAtt IngestorRole.Arn]
+                Condition: {StringEquals: {'iam:PassedToService': ecs-tasks.amazonaws.com}}
+  IngestorSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Name: vega-v2-live-ingestor
+      Description: Starts the live ingestor (python -m vega_v2.live --until-idle)
+      ScheduleExpression: rate(15 minutes)
+      FlexibleTimeWindow: {Mode: 'OFF'}
+      State: !If [HasProvider, ENABLED, DISABLED]
+      Target:
+        Arn: !Sub 'arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/vega-v2'
+        RoleArn: !GetAtt SchedulerRole.Arn
+        RetryPolicy: {MaximumRetryAttempts: 0}
+        EcsParameters:
+          TaskDefinitionArn: !Ref IngestorTask
+          TaskCount: 1
+          LaunchType: FARGATE
+          NetworkConfiguration:
+            AwsvpcConfiguration:
+              AssignPublicIp: ENABLED
+              SecurityGroups: [!ImportValue vega-v2-worker-sg]
+              Subnets: [subnet-0233a9567335f56ce, subnet-04c9af303f55d9718, subnet-0e72516f361932c15]
 Outputs:
   ReadDomain: {Value: !Select [2, !Split ['/', !GetAtt ReadUrl.FunctionUrl]], Export: {Name: vega-v2-live-read-domain}}
   ReadFunction: {Value: !Ref Read, Export: {Name: vega-v2-live-read-function}}
