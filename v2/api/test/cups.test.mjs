@@ -3,6 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { get, skip } from "./context.mjs";
 
@@ -24,7 +25,7 @@ test("the cup index lists each cup by its Vega id, never by its source", { skip 
   assert.equal(response.status, 200);
   for (const cup of body.cups) {
     assert.match(cup.id, /^l_v\d{7}$/);
-    assert.ok(["matches-v1", "rounds-v1", "results-v1"].includes(cup.format));
+    assert.ok(["matches-v1", "rounds-v1", "results-v1", "table-v1"].includes(cup.format));
     assert.ok(cup.seasons.length > 0 && cup.source.name);
   }
   const euro = body.cups.find((c) => c.key === "euro");
@@ -74,4 +75,30 @@ test("cup editions stay out of the PitchAPI-era reads", { skip }, async () => {
   const manifest = (await get("/api/dashboard/manifest")).body;
   assert.deepEqual(manifest.competitions.map((c) => c.id), ["l_3FJFUl"]);
   assert.deepEqual((await get("/api/fixtures?season=2023/2024")).body.data.matches, []);
+});
+
+// The source's CSV lines (quoted fields allowed), as main served them from its catalogue.
+const csv = (name) => {
+  const [head, ...lines] = readFileSync(new URL(`../../tests/fixtures/open_matchday/${name}`, import.meta.url), "utf8").trim().split(/\r?\n/);
+  const split = (line) => [...line.matchAll(/("([^"]*)"|[^,]*)(,|$)/g)].slice(0, -1).map((m) => m[2] ?? m[1]);
+  const keys = split(head);
+  return lines.map((line) => Object.fromEntries(split(line).map((v, i) => [keys[i], v])));
+};
+
+test("open-matchday catalogue and tables, as main's", { skip }, async () => {
+  const index = (await get("/api/cup-index?kind=supplemental")).body;
+  assert.equal(index.meta.source_generated_at_utc, "2026-11-09T05:30:38Z");
+  assert.deepEqual(index.competitions.map((c) => [c.folder, c.name, c.season, c.tables.results.rows, c.tables.fixtures.rows, c.country_code]), [
+    ["AUT_CUP_ofb-cup", "OFB Cup", "2026/2027", 7, 4, "AUT"], ["ENG_1_premier-league", "Premier League", "2026/2027", 5, 3, "ENG"],
+  ]);
+  for (const folder of ["ENG_1_premier-league", "AUT_CUP_ofb-cup"]) {
+    const results = (await get(`/api/cup-table?competition=${folder}&season=2026%2F2027&kind=results`)).body;
+    // Not kept: the local kick-off time, the goal minutes (no side) and the row's sub-source.
+    assert.deepEqual(results, csv(`${folder}.results_2627.csv`).map((r) => ({ ...r, time: "", goal_minutes: "", source: "" })), folder);
+    const fixtures = (await get(`/api/cup-table?competition=${folder}&season=2026%2F2027&kind=fixtures`)).body;
+    assert.deepEqual(fixtures, csv(`${folder}.fixtures_2627.csv`).map((r) => ({ ...r, time: "" })), folder);
+  }
+  assert.equal((await get("/api/cup-index?kind=worker")).response.status, 404);
+  assert.equal((await get("/api/cup-table?competition=XYZ_1_none&season=2026%2F2027&kind=results")).response.status, 404);
+  assert.equal((await get("/api/cup-table?competition=bad&season=2026%2F2027&kind=results")).response.status, 400);
 });

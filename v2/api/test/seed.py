@@ -144,6 +144,12 @@ def main(dsn):
     with db.transaction():
         for kind, competition, season, body in SAMPLES:
             cups.save(db, kind, competition, season, body, datetime(2025, 9, 20, 8, tzinfo=timezone.utc))
+    # open-matchday competitions, from the real (trimmed) files of v2/tests/fixtures/open_matchday.
+    from test_open_matchday import fake_get
+    from vega_v2.sources import open_matchday
+
+    with db.transaction():
+        open_matchday.run(db, fake_get, "europe", datetime(2026, 11, 9, 6, tzinfo=timezone.utc))
     # Power rankings: the clubs' Elo for real; players synthetic (too few matches for the role references).
     power.refresh_elo(db)
     run = x("INSERT INTO agg.power_runs(kind,season_id,method_version,status,finished_at) VALUES ('players',2025,'power-ranking-v1','published','2025-09-06T03:00:00Z') RETURNING id").fetchone()[0]

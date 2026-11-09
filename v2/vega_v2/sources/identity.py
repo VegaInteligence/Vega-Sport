@@ -31,7 +31,7 @@ import psycopg
 
 from . import normalize
 
-CUP_PROVIDERS = ("openfootball", "openligadb", "international_results")
+CUP_PROVIDERS = ("openfootball", "openligadb", "international_results", "open_matchday")
 
 
 def scopes(now):
