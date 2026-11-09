@@ -91,7 +91,7 @@ class PureTest(unittest.TestCase):
         self.assertTrue(headers["authorization"].startswith("AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/"))
         self.assertIn("/us-east-2/appsync/aws4_request", headers["authorization"])
         body = json.loads(request.data)
-        self.assertEqual(body["channel"], "/live/match/m_aaaaaa")
+        self.assertEqual(body["channel"], "/live/match/m-aaaaaa")
         self.assertEqual([json.loads(e)["n"] for e in body["events"]], [0, 1, 2, 3, 4])
 
     def test_dynamo_store_types(self):
@@ -163,7 +163,7 @@ class IngestorTest(unittest.TestCase):
         self.assertEqual(publisher.sent, [])
         at(12)  # a goal, the score, the team statistics
         channel, events = publisher.sent[-1]
-        self.assertEqual(channel, "/live/match/m_live01")
+        self.assertEqual(channel, "/live/match/m-live01")
         self.assertEqual([e["type"] for e in events], ["state", "event", "stats", "stats"])
         self.assertEqual(events[1]["player"], "p_aaaaa1")  # the core player, through core.provider_ids
         at(110)  # the whistle: a provisional result, three more events
