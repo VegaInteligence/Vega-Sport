@@ -33,9 +33,13 @@ export function parseReadScope(params) {
   return { season, leagueIds };
 }
 
-/** `alias` must expose `season` (Vega label) and `league_id` (public competition id). */
-export function scopeWhere(alias, scope, values) {
-  return `${alias}.season=${bindValue(values, scope.season)} AND (${bindValue(values, scope.leagueIds)}::text[] IS NULL OR ${alias}.league_id=ANY($${values.length}::text[]))`;
+/** `alias` must expose `season` (Vega label) and `league_id` (public competition id);
+ * with `seasonId`, also `season_id`: the season's id is pinned, so only its partitions
+ * are read (the appearance reads). */
+export function scopeWhere(alias, scope, values, { seasonId = false } = {}) {
+  const season = bindValue(values, scope.season);
+  const pin = seasonId ? ` AND ${alias}.season_id=(SELECT k.season_id FROM api.season_keys k WHERE k.season=${season})` : "";
+  return `${alias}.season=${season}${pin} AND (${bindValue(values, scope.leagueIds)}::text[] IS NULL OR ${alias}.league_id=ANY($${values.length}::text[]))`;
 }
 
 export function publicationSql(scope, values) {

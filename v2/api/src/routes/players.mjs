@@ -169,7 +169,7 @@ const ratioProjection = ratioProjectionFor(Object.keys(ratioDefinitions));
 /** The played-row filters shared by the player reads (scope, generation, match, period, context). */
 export function appearanceWhere(filters, params, values, alias = "a") {
   const b = (value) => bindValue(values, value);
-  const where = [scopeWhere(alias, filters.scope, values)];
+  const where = [scopeWhere(alias, filters.scope, values, { seasonId: true })];
   if (params.has("generation")) where.push(`EXISTS(SELECT 1 FROM publication WHERE generation=${b(params.get("generation"))})`);
   if (filters.match && filters.match !== "all") where.push(`${alias}.match_id=api.internal_id('match',${b(filters.match)})`);
   if (filters.from) where.push(`${alias}.date>=${b(filters.from)}::date`);
@@ -328,8 +328,9 @@ page AS MATERIALIZED (SELECT d.*,row_number() OVER(ORDER BY ${order}) result_ord
 page_metrics AS (
  SELECT p.player_id,${countProjection},${ratioProjection}
  FROM api.player_appearances p
- JOIN played k ON k.season_id=p.season_id AND k.match_id=p.match_id AND k.player_id=p.player_id
- WHERE ${scopeWhere("p", filters.scope, values)} AND p.player_id IN(SELECT internal_id FROM page)
+ -- The played rows of the page's players: the same filters as source, minutes > 0
+ -- (re-applied rather than joined to the played CTE, so the player index is used).
+ WHERE ${appearanceWhere(filters, params, values, "p")} AND p.minutes>0 AND p.player_id IN(SELECT internal_id FROM page)
  GROUP BY p.player_id
 ), page_records AS (
  SELECT p.result_order,(to_jsonb(p)-'result_order'-'internal_id'-'internal_team_ids')

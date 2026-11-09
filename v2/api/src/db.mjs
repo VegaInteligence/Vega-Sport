@@ -21,7 +21,9 @@ export function createReader(connectionString, { max = 4, timeoutMs = 8000, role
     types,
     // RDS: TLS verified against the bundled regional CA, never disabled.
     ...(ca && { ssl: { ca, rejectUnauthorized: true } }),
-    options: `-c default_transaction_read_only=on -c statement_timeout=${timeoutMs} -c search_path=api${role ? ` -c role=${role}` : ""}`,
+    // jit=off: the reads' plans are costly enough to trigger JIT, whose compile time was
+    // half of a league's player list (measured: 650 ms of 1.37 s) and saves nothing here.
+    options: `-c default_transaction_read_only=on -c statement_timeout=${timeoutMs} -c jit=off -c search_path=api${role ? ` -c role=${role}` : ""}`,
   });
   return {
     read: async (sql, values = []) => (await pool.query(sql, values)).rows,

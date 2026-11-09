@@ -11,6 +11,7 @@
  * (dashboard/frontend/src/services/v2-routes.js).
  */
 import { readFile } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
 import { v2Path } from "../../dashboard/frontend/src/services/v2-routes.js";
 
 export const IGNORED = new Set(["generation", "publishedAt", "sourceRetrievedAt", "latestSourceRetrievedAt", "publicationVersion", "retrievedAt", "sourceDigest", "storage"]);
@@ -62,4 +63,5 @@ async function main(argv) {
   return failing ? 1 : 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) process.exit(await main(process.argv.slice(2)));
+// pathToFileURL: a path with a space is %20 in import.meta.url.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) process.exit(await main(process.argv.slice(2)));
