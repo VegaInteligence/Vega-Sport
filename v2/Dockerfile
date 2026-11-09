@@ -3,7 +3,7 @@
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     VEGA_ARCHIVE_SCRIPTS=/app/dashboard/scripts VEGA_ARCHIVE_EDITION=/app/v2/archives/edition.mjs \
-    VEGA_SOURCE_BRIDGE=/app/v2/sources/bridge.mjs
+    VEGA_SOURCE_BRIDGE=/app/v2/sources/bridge.mjs VEGA_SHARED_DIR=/app/dashboard/shared
 WORKDIR /app
 # Node runs main's shared/archive.js for the archive import (vega_v2/archives.py).
 RUN apt-get update && apt-get install -y --no-install-recommends nodejs && rm -rf /var/lib/apt/lists/*
