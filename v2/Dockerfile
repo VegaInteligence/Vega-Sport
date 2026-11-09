@@ -2,7 +2,8 @@
 #   docker build --platform linux/arm64 -f v2/Dockerfile -t vega-v2-worker:<sha> .
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
-    VEGA_ARCHIVE_SCRIPTS=/app/dashboard/scripts VEGA_ARCHIVE_EDITION=/app/v2/archives/edition.mjs
+    VEGA_ARCHIVE_SCRIPTS=/app/dashboard/scripts VEGA_ARCHIVE_EDITION=/app/v2/archives/edition.mjs \
+    VEGA_SOURCE_BRIDGE=/app/v2/sources/bridge.mjs
 WORKDIR /app
 # Node runs main's shared/archive.js for the archive import (vega_v2/archives.py).
 RUN apt-get update && apt-get install -y --no-install-recommends nodejs && rm -rf /var/lib/apt/lists/*
@@ -16,6 +17,14 @@ COPY dashboard/scripts/build_openfootball_history.py dashboard/scripts/build_foo
      dashboard/scripts/build_historical_goals.py dashboard/scripts/
 COPY dashboard/shared/archive.js dashboard/shared/archive-text.js dashboard/shared/openfootball-history.js dashboard/shared/
 COPY v2/archives/edition.mjs v2/archives/
+# main's Wikidata and Commons readers (vega_v2/sources/wikidata.py) and their imports.
+COPY dashboard/frontend/src/services/wikidata-club.js dashboard/frontend/src/services/wikidata-club-identity.js \
+     dashboard/frontend/src/services/wikidata-stadium.js dashboard/frontend/src/services/stadium-plans.js \
+     dashboard/frontend/src/services/format.js dashboard/frontend/src/services/player-aliases.js dashboard/frontend/src/services/
+COPY dashboard/frontend/src/data-url.js dashboard/frontend/src/model.js dashboard/frontend/src/
+COPY dashboard/scripts/coach-portrait-source.mjs dashboard/scripts/
+COPY dashboard/shared/player-aliases.js dashboard/shared/
+COPY v2/sources/bridge.mjs v2/sources/
 # Database URLs use sslmode=verify-full&sslrootcert=/app/rds-ca.pem
 COPY dashboard/backend/certs/rds-us-east-2.pem rds-ca.pem
 USER 10001

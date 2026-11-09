@@ -57,7 +57,7 @@ jobs:
           sparse-checkout: |
             v2
             dashboard/shared
-            dashboard/frontend/src/services
+            dashboard/frontend/src
             dashboard/backend/services
             dashboard/scripts
       - uses: actions/setup-python@v5

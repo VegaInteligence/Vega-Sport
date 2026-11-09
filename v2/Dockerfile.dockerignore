@@ -15,4 +15,15 @@
 !dashboard/shared/archive-text.js
 !dashboard/shared/openfootball-history.js
 !v2/archives/edition.mjs
+!v2/sources/bridge.mjs
+!dashboard/frontend/src/services/wikidata-club.js
+!dashboard/frontend/src/services/wikidata-club-identity.js
+!dashboard/frontend/src/services/wikidata-stadium.js
+!dashboard/frontend/src/services/stadium-plans.js
+!dashboard/frontend/src/services/format.js
+!dashboard/frontend/src/services/player-aliases.js
+!dashboard/frontend/src/data-url.js
+!dashboard/frontend/src/model.js
+!dashboard/scripts/coach-portrait-source.mjs
+!dashboard/shared/player-aliases.js
 **/__pycache__
