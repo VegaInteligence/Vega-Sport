@@ -93,6 +93,11 @@ def main(dsn):
     for no, (team, player, minute, xg, outcome) in enumerate([(1, 101, 11, 0.7, "goal"), (2, 104, 30, 0.2, "saved"), (1, 101, 21, 0.5, "goal")], 1):
         x("INSERT INTO core.shots(season_id,match_id,team_id,shot_no,provider_shot_key,period,minute,player_id,xg,outcome,is_own_goal) VALUES (2025,1,%s,%s,%s,'first_half',%s,%s,%s,%s,false)",
           (team, no, f"s{no}", minute, player, xg, outcome))
+    # Vega's own table (the calculator's agg.standings), and the UEFA id of club 1.
+    for team, pos, played, w, d, l, gf, ga, pts in [(1, 1, 3, 1, 1, 1, 2, 1, 4), (3, 2, 2, 1, 1, 0, 2, 1, 4), (2, 3, 2, 1, 0, 1, 3, 4, 3), (4, 4, 3, 0, 2, 1, 3, 4, 2)]:
+        x("INSERT INTO agg.standings(competition_season_id,team_id,position,played,won,drawn,lost,goals_for,goals_against,points,updated_at) VALUES (1,%s,%s,%s,%s,%s,%s,%s,%s,%s,'2025-09-20T11:00:00Z')",
+          (team, pos, played, w, d, l, gf, ga, pts))
+    x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('team','uefa','52747',1)")
     x("INSERT INTO ops.resource_versions(resource_kind,resource_id,version,published_at) VALUES ('home',1,3,'2025-09-20T11:00:00Z'),('competition_season',1,4,'2025-09-20T11:00:00Z')")
     db.close()
 

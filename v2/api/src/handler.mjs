@@ -10,10 +10,11 @@ import { createSystemRoute } from "./routes/system.mjs";
 import { createClubReadRoute } from "./routes/clubs.mjs";
 import { createPlayerReadRoute } from "./routes/players.mjs";
 import { createMatchRoute } from "./routes/matches.mjs";
+import { createReferenceRoute } from "./routes/reference.mjs";
 
 /** `mediaBase`: the CloudFront origin of the image copies (https://…/); none, no media map. */
 export function createHandler({ read, mediaBase = null }) {
-  const routes = [createSystemRoute(read), createClubReadRoute(read), createPlayerReadRoute(read), createMatchRoute(read)];
+  const routes = [createSystemRoute(read), createClubReadRoute(read), createPlayerReadRoute(read), createMatchRoute(read), createReferenceRoute(read)];
   async function route(req) {
     const url = new URL(req.url),
       path = url.pathname;
