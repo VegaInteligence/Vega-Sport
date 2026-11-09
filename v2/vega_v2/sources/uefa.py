@@ -199,12 +199,38 @@ def save(conn, kind, year, rows, updated, now):
 def run(conn, get, scope, now):
     kind, year = scope.split(":")
     rows, updated = fetch(get, kind, int(year))
+    club_countries(conn)
     return save(conn, kind, int(year), rows, updated, now)
+
+
+# Competitions that are no country (main's relational-clubs.js leaves them out the same way).
+NOT_A_COUNTRY = ("UEFA", "INT", "INT-2", "FIFA", "EUR", "WORLD")
+
+
+def club_countries(conn):
+    """A PitchAPI club the source gives no country takes the country of the last domestic
+    competition it played (main reads a club's country the same way); the UEFA links need
+    it. Returns the clubs given a country."""
+    return conn.execute(
+        """UPDATE core.teams t SET country_code = x.country, updated_at = now()
+           FROM (SELECT t2.id, (SELECT c.country_code FROM core.matches m
+                   JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL AND cs.cup_key IS NULL
+                   JOIN core.competitions c ON c.id = cs.competition_id
+                   WHERE (m.home_team_id = t2.id OR m.away_team_id = t2.id) AND c.country_code IS NOT NULL
+                     AND c.country_code <> ALL(%s) AND c.kind IS DISTINCT FROM 'international'
+                   ORDER BY m.kickoff_at DESC NULLS LAST, m.id DESC LIMIT 1) AS country
+                 FROM core.teams t2
+                 WHERE t2.country_code IS NULL AND t2.is_national IS NOT TRUE
+                   AND EXISTS (SELECT 1 FROM core.provider_ids p WHERE p.entity_type = 'team' AND p.entity_id = t2.id AND p.provider = 'pitchapi')) x
+           WHERE t.id = x.id AND x.country IS NOT NULL""",
+        (list(NOT_A_COUNTRY),),
+    ).rowcount
 
 
 def reconcile_teams(conn):
     """A UEFA-only club that a PitchAPI team now names exactly (same country, unique) is
     merged into it: its UEFA id and ranking rows move, the UEFA-only team goes."""
+    club_countries(conn)
     merged = 0
     for team, name, country in conn.execute(
         """SELECT t.id, t.name, t.country_code FROM core.teams t

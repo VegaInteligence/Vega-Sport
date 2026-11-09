@@ -168,6 +168,31 @@ class UefaTest(unittest.TestCase):
         self.assertEqual(self.db.execute("SELECT count(*) FROM core.ranking_rows WHERE team_id=6").fetchone()[0], 1)
         self.assertIsNone(self.db.execute("SELECT 1 FROM core.teams WHERE id=%s", (celta_uefa_only,)).fetchone())
 
+    def test_a_club_without_country_takes_its_league_country(self):
+        from vega_v2.store import Store
+
+        x = self.db.execute
+        x("INSERT INTO core.countries(code) VALUES ('UEFA') ON CONFLICT DO NOTHING")
+        x("INSERT INTO core.competitions(id, name, country_code, kind) VALUES (1950, 'Ligue 1 (test)', 'FRA', 'league'), (1951, 'Champions League (test)', 'UEFA', NULL)")
+        with self.db.transaction():
+            season = Store(self.db).season("2025/2026")
+        x("INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label) VALUES (1950, 1950, %s, '2025/2026'), (1951, 1951, %s, '2025/2026')", (season, season))
+        # PitchAPI gives Brest no country; its last match is in Europe, the one before in Ligue 1.
+        x("INSERT INTO core.teams(id, name) VALUES (60, 'Stade Brestois'), (61, 'Opponent')")
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','pitchapi','t_brest1',60), ('team','pitchapi','t_oppon1',61)")
+        x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, match_date, kickoff_at) VALUES
+             (1950, 1950, %(s)s, 'pitchapi', 'finished', 60, 61, '2025-09-01', '2025-09-01T19:00:00Z'),
+             (1951, 1951, %(s)s, 'pitchapi', 'finished', 61, 60, '2025-09-20', '2025-09-20T19:00:00Z')""", {"s": season})
+        # A UEFA-only Brest (the coefficient arrived first).
+        x("INSERT INTO core.teams(id, name, country_code) VALUES (62, 'Stade Brestois', 'FRA')")
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','uefa','uefa-brest',62)")
+        with self.db.transaction():
+            merged = uefa.reconcile_teams(self.db)
+        self.assertGreaterEqual(merged, 1)
+        self.assertEqual(x("SELECT country_code FROM core.teams WHERE id=60").fetchone(), ("FRA",))
+        self.assertEqual(x("SELECT entity_id FROM core.provider_ids WHERE provider='uefa' AND provider_key='uefa-brest'").fetchone(), (60,))
+        self.assertIsNone(x("SELECT 1 FROM core.teams WHERE id=62").fetchone())
+
     def test_curated_aliases(self):
         x = self.db.execute
         x("INSERT INTO core.players(id, name) VALUES (50, 'Cristiano Ronaldo'), (51, 'Cristiano Ronaldo')")
