@@ -156,7 +156,7 @@ async function overview({
     "../services/competition-identity.js": await src(
       "services/competition-identity.js",
     ),
-    "../services/ballon-dor.js": { ballonDorRanking: () => ranking },
+    "../services/ballon-dor.js": { ballonDorRanking: () => ranking, useBallonDorRanking: () => ranking },
     "../data-url.js": { dataUrl: (file) => "/data/" + file },
     "../services/home-insights.js": await src("services/home-insights.js"),
     "../../../shared/competition-scope.js": await import(

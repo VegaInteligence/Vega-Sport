@@ -22,6 +22,8 @@ COPY dashboard/frontend/src/services/wikidata-club.js dashboard/frontend/src/ser
      dashboard/frontend/src/services/wikidata-stadium.js dashboard/frontend/src/services/stadium-plans.js \
      dashboard/frontend/src/services/format.js dashboard/frontend/src/services/player-aliases.js dashboard/frontend/src/services/
 COPY dashboard/frontend/src/data-url.js dashboard/frontend/src/model.js dashboard/frontend/src/
+# data-url.js maps the site's reads to v2 routes when built for v2 (it imports this module).
+COPY dashboard/frontend/src/services/v2-routes.js dashboard/frontend/src/services/
 COPY dashboard/scripts/coach-portrait-source.mjs dashboard/scripts/
 COPY dashboard/shared/player-aliases.js dashboard/shared/league-rules.json dashboard/shared/cup-logos.json dashboard/shared/
 # main's cup source projections (vega_v2/sources/cups.py) and their imports.
