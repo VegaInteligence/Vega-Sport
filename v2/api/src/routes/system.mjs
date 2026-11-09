@@ -25,6 +25,13 @@ export const editionDigest = (p) => digest(JSON.stringify([p.season, p.league_id
 /** The compact reads this API serves; the others stay on the current API until ported. */
 export const COMPACT_READS = { home: true, players: true, clubs: true, player: true, club: true, performance: true, discipline: true };
 
+/** The latest season already started: a calendar published ahead (a league's next
+ * calendar year) is not the default. */
+export function defaultSeason(seasons, today) {
+  const ids = [...seasons.keys()];
+  return ids.find((id) => seasons.get(id).chunks.some((c) => c.meta.startDate && c.meta.startDate <= today)) ?? ids[0] ?? null;
+}
+
 export function createSystemRoute(read) {
   return async (req, path, params) => {
     if (path === "/api/health") {
@@ -87,7 +94,7 @@ export function createSystemRoute(read) {
           boundedArchive: true,
           compactReads: COMPACT_READS,
         },
-        defaultSeason: [...seasons.keys()][0] || null,
+        defaultSeason: defaultSeason(seasons, new Date().toISOString().slice(0, 10)),
         retrievedAt: iso(state.published_at),
         publishedAt: iso(state.published_at),
         publicationVersion: state.version,

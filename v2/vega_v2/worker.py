@@ -76,6 +76,25 @@ def due_seasons(conn, now):
     ]
 
 
+# The publication generation (the site's fence and cache key) advances at most this often.
+PUBLISH_EVERY = timedelta(minutes=5)
+
+
+def publish(conn, now, *, force=False):
+    """Advance the publication when a resource changed since the last one, at most every
+    PUBLISH_EVERY (or now, with force): the generation is the sum of the resource versions
+    at that moment, so it only grows. Returns the new generation, or None."""
+    with conn.transaction():
+        row = conn.execute(
+            """UPDATE ops.publication p SET generation = v.total, source_version = v.total, published_at = %(now)s
+               FROM (SELECT coalesce(sum(version), 0)::bigint AS total FROM ops.resource_versions) v
+               WHERE p.source_version <> v.total AND (%(force)s OR p.published_at <= %(now)s - %(every)s)
+               RETURNING p.generation""",
+            {"now": now, "force": force, "every": PUBLISH_EVERY},
+        ).fetchone()
+    return row[0] if row else None
+
+
 class Worker:
     def __init__(self, store, client, *, lanes=DEFAULT_LANES, clock=_now, cohort_delay=600, calc_conn=None, backfill=None, source_get=None, media_io=None):
         unknown = set(lanes) - set(LANE_ORDER)
@@ -312,6 +331,7 @@ class Worker:
                 last_plan = tick
                 if self.backfill is None:
                     self.daily()
+                self.publish()
             if self.backfill is None and tick - last_media >= media_every:
                 self.mirror()
                 last_media = tick
@@ -333,7 +353,16 @@ class Worker:
                     break
                 time.sleep(idle_sleep)
         self.calculate()
+        self.publish(force=True)
         return done
+
+    def publish(self, *, force=False):
+        try:
+            generation = publish(self.conn, self.clock(), force=force)
+            if generation is not None:
+                print(f"publication generation={generation}", flush=True)
+        except psycopg.Error as error:
+            print(f"publication error={safe_code(error)}", flush=True)
 
     # Handlers ------------------------------------------------------------
 

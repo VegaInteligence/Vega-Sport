@@ -149,3 +149,14 @@ test("manifest, health and status", { skip }, async () => {
   assert.deepEqual(health.body, { source: "AWS", status: "ok", revision: "7" });
   assert.equal((await get("/api/status")).body.schema, "v2");
 });
+
+test("the default season is the latest one already started", async () => {
+  const { defaultSeason } = await import("../src/routes/system.mjs");
+  const season = (...starts) => ({ chunks: starts.map((startDate) => ({ meta: { startDate } })) });
+  // A league's next calendar year is published ahead: it is not the default.
+  const seasons = new Map([["2027/2028", season("2027-02-13")], ["2026/2027", season("2026-08-14", null)], ["2025/2026", season("2025-08-15")]]);
+  assert.equal(defaultSeason(seasons, "2026-11-09"), "2026/2027");
+  assert.equal(defaultSeason(seasons, "2027-02-13"), "2027/2028");
+  assert.equal(defaultSeason(new Map([["2027/2028", season("2027-02-13")]]), "2026-11-09"), "2027/2028");
+  assert.equal(defaultSeason(new Map(), "2026-11-09"), null);
+});
