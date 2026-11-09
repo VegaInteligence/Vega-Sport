@@ -59,7 +59,7 @@ From a workstation, before the workflow is on `main` (a manual workflow can only
 AWS_PROFILE=statarena PITCHAPI_API_KEY_FILE=<file holding the key> bash infra/aws-v2/deploy.sh
 ```
 
-Then, from GitHub: `gh workflow run "Vega v2 deploy" -f worker_desired_count=1`. The migration task's log line `migrations applied=N total=M logins=…` shows 37 migrations (39 with `V2_VECTOR=1`). The backfill runs on demand, for days, and stops by itself when its lane is empty: `aws ecs run-task … --task-definition vega-v2-backfill` with the network configuration `deploy.sh` uses.
+Then, from GitHub: `gh workflow run "Vega v2 deploy" -f worker_desired_count=1`. The migration task's log line `migrations applied=N total=M logins=…` shows 38 migrations (40 with `V2_VECTOR=1`). The backfill runs on demand, for days, and stops by itself when its lane is empty: `aws ecs run-task … --task-definition vega-v2-backfill` with the network configuration `deploy.sh` uses.
 
 The account runs at most 10 Lambdas concurrently and the current API needs them: `ReservedConcurrency` stays 0 and the pool size 1 until the quota is raised.
 

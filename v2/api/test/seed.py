@@ -11,6 +11,7 @@ from archive_fixtures import make_sources
 from cup_samples import SAMPLES
 from vega_v2.sources import cups
 from vega_v2 import archives, power
+from vega_v2.worker import publish
 from vega_v2.store import Store, connect_local, migrate
 
 TEAMS = {1: ("t_aaaaa1", "Olympique Été", "FRA"), 2: ("t_aaaaa2", "Racing Club", "FRA"), 3: ("t_aaaaa3", "Stade Nord", None), 4: ("t_aaaaa4", "Union Sud", "FRA")}
@@ -160,6 +161,9 @@ def main(dsn):
     x("UPDATE agg.player_power SET finishing_total=3.1,creation_total=0.8,defence_total=0.3,finishing_percentile=95,creation_percentile=70.5,defence_percentile=40 WHERE player_id=101")
     x("""INSERT INTO agg.player_power_roles(season_id,player_id,role,matches,minutes,total,rate,run_id)
          VALUES (2025,101,'centre_forward',2,200,3.9,0.539,%(run)s),(2025,101,'winger',1,60,0.3,0.053,%(run)s)""", {"run": run})
+    # The seeded data is one publication (the worker publishes on its rhythm).
+    published = db.execute("SELECT max(coalesce(published_at, updated_at)) FROM ops.resource_versions").fetchone()[0]
+    publish(db, published, force=True)
     db.close()
 
 

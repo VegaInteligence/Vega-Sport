@@ -15,7 +15,7 @@ from vega_v2 import planner
 from vega_v2.jobs import DETAIL_FAMILIES
 from vega_v2.pitchapi import PitchClient
 from vega_v2.store import Store, StoreError, connect_local, migrate
-from vega_v2.worker import RECOMPUTE_AFTER, Worker, connect, due_seasons, report
+from vega_v2.worker import PUBLISH_EVERY, RECOMPUTE_AFTER, Worker, connect, due_seasons, publish, report
 
 DSN = os.environ.get("VEGA_V2_WORKER_TEST_DSN")
 HOME = {"id": "t_aaaaaa", "name": "Home FC"}
@@ -157,6 +157,20 @@ class WorkerTest(unittest.TestCase):
     def at(self, value):
         self.now = value
         return planner.plan(self.db, value)
+
+    def test_publication_advances_on_its_rhythm(self):
+        x = self.db.execute
+        generation = lambda: x("SELECT generation FROM api.publication").fetchone()[0]
+        start = generation()
+        self.assertIsNone(publish(self.db, self.now, force=True))  # nothing changed
+        x("INSERT INTO ops.resource_versions(resource_kind, resource_id, version) VALUES ('match', 990, 3)")
+        self.assertEqual(publish(self.db, self.now, force=True), start + 3)
+        # A write a minute later waits for the rhythm: reads keep their generation meanwhile.
+        x("UPDATE ops.resource_versions SET version = version + 1 WHERE resource_id = 990")
+        self.assertIsNone(publish(self.db, self.now + timedelta(minutes=1)))
+        self.assertEqual(generation(), start + 3)
+        self.assertEqual(publish(self.db, self.now + PUBLISH_EVERY), start + 4)
+        self.assertEqual(generation(), start + 4)
 
     def test_daily_models_follow_a_backfilled_season(self):
         x = self.db.execute
