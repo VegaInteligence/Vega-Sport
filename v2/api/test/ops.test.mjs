@@ -82,7 +82,7 @@ before(async () => {
   await x("INSERT INTO ops.data_warnings(match_id, kind, detail, detected_at) VALUES (5, 'score_disagreement', '2-0 / 2-1', $1)", [iso(-60)]);
   await x(
     `INSERT INTO ops.collection_progress(source, competition_season_id, family, expected, done, empty, failed, last_success_at, updated_at) VALUES
-       ('pitchapi', 1, 'shots', 5, 3, 1, 1, $1, $1), ('pitchapi', 1, 'league_matches', 1, 1, 0, 0, $2, $2)`,
+       ('pitchapi', 1, 'shots', 6, 3, 1, 1, $1, $1), ('pitchapi', 1, 'league_matches', 1, 1, 0, 0, $2, $2)`,
     [iso(-60), iso(-120)],
   );
   await x(
@@ -110,7 +110,7 @@ test("the key is compared in constant time and required", { skip }, async () => 
   assert.equal((await status(undefined, "?x=1")).response.status, 400);
 });
 
-test("jobs of the last and next 24 hours, backfill as counts", { skip }, async () => {
+test("jobs of the last and next 24 hours: counts per 10 minutes, sample rows", { skip }, async () => {
   const { response, body } = await status();
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("cache-control"), "no-store");
@@ -128,14 +128,20 @@ test("jobs of the last and next 24 hours, backfill as counts", { skip }, async (
   ]);
   const failed = body.jobs.find((j) => j.family === "heatmaps");
   assert.deepEqual([failed.http, failed.error, failed.attempts, failed.matchId, failed.seasonId], [404, "RESOURCE_NOT_FOUND", 1, 5, 2025]);
-  assert.deepEqual(body.backfill, {
-    seasons: [2025], expected: 5, done: 4, failed: 1,
-    buckets: [
-      { family: "events", at: iso(-120), done: 2, failed: 0 },
-      { family: "league_matches", at: iso(-120), done: 1, failed: 0 },
-      { family: "network", at: iso(-120), done: 0, failed: 1 },
-    ],
-  });
+  // Every job of the window, counted where it ended or is due; the due ones at now.
+  assert.deepEqual(body.jobBuckets.map((b) => [b.at, b.lane, b.family, b.state, b.jobs]), [
+    [iso(-600), "score", "summary", "done", 1],
+    [iso(-540), "details", "heatmaps", "failed", 1],
+    [iso(-360), "reference", "calendar", "done", 1],
+    [iso(-120), "backfill", "events", "done", 2],
+    [iso(-120), "backfill", "league_matches", "done", 1],
+    [iso(-120), "backfill", "network", "failed", 1],
+    [iso(0), "backfill", "shots", "pending", 1],
+    [iso(0), "reference", "player", "pending", 1],
+    [iso(520), "score", "summary", "pending", 1],
+  ]);
+  // Editions still to collect, under their own season name.
+  assert.deepEqual(body.backfill, { editions: [{ season: "2025/2026", seasonId: 2025, editions: 1 }], expected: 6, done: 4, failed: 1 });
   const backlog = Object.fromEntries(body.backlog.map((b) => [`${b.lane}/${b.family}/${b.state}`, b.jobs]));
   assert.equal(backlog["backfill/shots/pending"], 1);
   assert.equal(backlog["details/heatmaps/failed"], 1);
@@ -157,6 +163,8 @@ test("watched matches, sources, model runs", { skip }, async () => {
     { source: "sportscore", scope: "standings:l_x", lastAttemptAt: iso(-20), lastSuccessAt: iso(-420), status: "error", errorCode: "HTTP_TIMEOUT", rowsWritten: 0, unmatched: 0 },
     { source: "wikidata", scope: "clubs", lastAttemptAt: iso(-30), lastSuccessAt: iso(-30), status: "ok", errorCode: null, rowsWritten: 12, unmatched: 1 },
   ]);
+  assert.deepEqual(body.calcs.buckets.find((b) => b.kind === "percentiles"), { kind: "percentiles", at: iso(-180), runs: 1 });
+  assert.ok(!body.calcs.buckets.some((b) => b.kind === "levels" || b.kind === "index"));
   const runs = body.calcs.runs.map((r) => `${r.kind}:${r.status}`);
   assert.ok(runs.includes("percentiles:published") && runs.includes("index:running"));
   assert.ok(!runs.includes("levels:published")); // finished more than 24 h ago
@@ -179,7 +187,7 @@ test("provider calls, warnings, progress, quality, freshness, publication", { sk
   ]);
   assert.deepEqual(body.warnings, [{ matchId: 5, match: "Union Sud – Olympique Été", kind: "score_disagreement", detail: "2-0 / 2-1", detectedAt: iso(-60) }]);
   assert.deepEqual(body.progress.map((p) => [p.competition, p.season, p.family, p.expected, p.done, p.empty, p.failed]), [
-    ["Ligue 1", "2025/2026", "shots", 5, 3, 1, 1],
+    ["Ligue 1", "2025/2026", "shots", 6, 3, 1, 1],
     ["Ligue 1", "2025/2026", "league_matches", 1, 1, 0, 0],
   ]);
   assert.deepEqual(body.quality.parseFailures, [{ family: "calendar", code: "INVALID_ENVELOPE", count: 2 }]);
