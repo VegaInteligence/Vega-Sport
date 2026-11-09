@@ -1,7 +1,14 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
+import useActorRead from "../hooks/useActorRead.js";
 import { useResource } from "../services/resources.js";
+import { actorReadParams } from "../services/actor-reads.js";
+import {
+  compactGeneration,
+  supportsCompactRead,
+} from "../services/compact-reads.js";
+import { playerPlayingTime } from "../services/player-playing-time.js";
 import {
   loadPlayerHistory,
   playerHistoryKey,
@@ -88,7 +95,7 @@ function Facts({ items, label }) {
             {item.fake && <FakeBadge short />}
           </dt>
           <dd>{item.value}</dd>
-          {item.note && <small>{item.note}</small>}
+          {item.note && <small title={item.title}>{item.note}</small>}
         </div>
       ))}
     </dl>
@@ -106,6 +113,7 @@ export default function PlayerScoutRail({
   record,
   season,
   team,
+  playingTime,
   vega,
   actions,
   onTab,
@@ -119,9 +127,65 @@ export default function PlayerScoutRail({
   );
   const nation = useMemo(() => selection(history.value), [history.value]);
   const known = new Set(published.map((item) => item.label));
+  const timeTeam = playingTime?.team;
+  const playerMeta = f.data?.meta;
+  const complete =
+    playerMeta?.complete === true &&
+    playerMeta.actor?.kind === "player" &&
+    playerMeta.actor.id === id &&
+    playerMeta.currentSeason === season &&
+    playerMeta.generation === compactGeneration(f.manifest);
+  const calendar = useActorRead(
+    f.manifest,
+    "club",
+    {
+      ...actorReadParams(f.manifest, "club", {
+        id: timeTeam?.id,
+        season,
+        leagues: f.actorScope || "all",
+      }),
+      // Coverage and lineup confirmation are available on the full read.
+      detail: undefined,
+      limit: 100,
+    },
+    {
+      enabled:
+        complete &&
+        supportsCompactRead(f.manifest, "club") &&
+        /^t_[A-Za-z0-9]{6}$/.test(timeTeam?.id || ""),
+      refreshManifest: f.refreshManifest,
+    },
+  );
+  const time = complete
+    ? playerPlayingTime(calendar.value, playingTime?.rows, timeTeam?.id, {
+        from: f.filters.advanced?.from,
+        to: f.filters.advanced?.to,
+        league: f.filters.league,
+        leagues: f.filters.leagues,
+        competition: playingTime?.competition,
+        matchId: f.filters.match,
+      })
+    : null;
+  const timeFact = { label: "Temps de jeu", value: "—", note: "Indisponible" };
+  if (time?.percentage != null) {
+    timeFact.value = `${number(time.percentage, 1)} %`;
+    const minutes = `${number(time.minutes)} / ${number(time.totalMinutes)} min`;
+    timeFact.note =
+      timeTeam.id === team?.id
+        ? `${minutes} · 90 min/match`
+        : `${timeTeam.name} · ${minutes} · 90 min/match`;
+    timeFact.title = `${timeTeam.name} · ${number(time.matches)} matchs terminés`;
+  } else if (time?.incompleteCalendar) {
+    timeFact.note = "Calendrier incomplet";
+  } else if (time) {
+    timeFact.note = `Couverture partielle · ${time.covered}/${time.matches}`;
+  } else if (calendar.loading) {
+    timeFact.note = "Chargement…";
+  }
   const facts = [
     ...published.filter((item) => item.label !== "Nom complet"),
     ...FAKE_FACTS.filter((item) => !known.has(item.label)),
+    timeFact,
   ];
   if (nation) facts.splice(Math.min(4, facts.length), 0, nation);
   const role = profile?.role;
