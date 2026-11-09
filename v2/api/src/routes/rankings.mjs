@@ -14,6 +14,11 @@
  * hold the same edition the official one is served. `kind` names the ranking itself (the
  * UEFA coefficients, the FIFA ranking), whoever supplies it; the supplier stays in the
  * body's `provider`.
+ *
+ * GET /api/rankings/power?kind=players|clubs|nations&season=&limit= — Vega's power
+ * rankings (docs/METHODE_CLASSEMENT_BALLON_D_OR.md on main, vega_v2/power.py): players by
+ * the role-relative score B (the site's `ballonDorRanking(season)` entries), clubs and
+ * national teams by their Elo strength after their last match of the season.
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
@@ -94,8 +99,45 @@ async function editionBody(read, kind, edition) {
   };
 }
 
+const ROLE_LABEL = {
+  centre_forward: "Avant-centre", winger: "Ailier / milieu offensif", central_midfielder: "Milieu central",
+  defensive_midfielder: "Milieu défensif", full_back: "Latéral / piston", centre_back: "Défenseur central", goalkeeper: "Gardien",
+};
+const round = (v, d) => (v === null || v === undefined ? null : Math.round(v * 10 ** d) / 10 ** d);
+
+async function powerRanking(read, params) {
+  validateParams(params, ["kind", "season", "limit"]);
+  const kind = params.get("kind") ?? "players", season = params.get("season"), limitRaw = params.get("limit") ?? "30";
+  if (!/^(players|clubs|nations)$/.test(kind) || !/^\d{4}\/\d{4}$/.test(season || "") || !/^[1-9]\d{0,2}$/.test(limitRaw) || Number(limitRaw) > 200)
+    reject(400, "Paramètre invalide.");
+  const limit = Number(limitRaw);
+  if (kind === "players") {
+    const rows = await read("SELECT * FROM api.power_players WHERE season=$1 ORDER BY rank, player_id LIMIT $2", [season, limit]);
+    if (!rows.length) reject(404, "Donnée indisponible.");
+    return {
+      season, kind, method: { version: rows[0].method_version, computedAt: iso(rows[0].computed_at) },
+      rows: rows.map((r) => ({
+        rank: r.rank, playerId: r.player_id, name: r.name, imageUrl: r.image_url ?? null, teamId: r.team_id ?? null, team: r.team ?? null,
+        teamImageUrl: r.team_image_url ?? null, position: ROLE_LABEL[r.role] ?? r.role, role: r.role, roleRank: r.role_rank,
+        score: round(r.score, 1), matches: r.matches, minutes: r.minutes, contribution: round(r.total, 2), rate: round(r.rate, 3),
+        contributionPercentile: round(r.total_percentile, 1), ratePercentile: round(r.rate_percentile, 1),
+      })),
+    };
+  }
+  const rows = await read("SELECT * FROM api.power_clubs WHERE season=$1 AND scope=$2 ORDER BY rank, team_id LIMIT $3", [season, kind, limit]);
+  if (!rows.length) reject(404, "Donnée indisponible.");
+  return {
+    season, kind, method: { version: rows[0].method_version, computedAt: iso(rows[0].computed_at) },
+    rows: rows.map((r) => ({
+      rank: r.rank, teamId: r.team_id, name: r.name, imageUrl: r.image_url ?? null, country: r.country ?? null,
+      elo: round(r.elo, 1), eloChange: round(r.elo_change, 1), matches: r.matches, lastMatchAt: iso(r.last_match_at),
+    })),
+  };
+}
+
 export function createRankingRoute(read) {
   return async (req, path, params) => {
+    if (path === "/api/rankings/power") return respond(req, await powerRanking(read, params));
     if (path === "/api/rankings/index") {
       validate(params, {});
       const [editions, [mapping]] = await Promise.all([

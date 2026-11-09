@@ -10,7 +10,7 @@ import tempfile
 from archive_fixtures import make_sources
 from cup_samples import SAMPLES
 from vega_v2.sources import cups
-from vega_v2 import archives
+from vega_v2 import archives, power
 from vega_v2.store import Store, connect_local, migrate
 
 TEAMS = {1: ("t_aaaaa1", "Olympique Été", "FRA"), 2: ("t_aaaaa2", "Racing Club", "FRA"), 3: ("t_aaaaa3", "Stade Nord", None), 4: ("t_aaaaa4", "Union Sud", "FRA")}
@@ -144,6 +144,12 @@ def main(dsn):
     with db.transaction():
         for kind, competition, season, body in SAMPLES:
             cups.save(db, kind, competition, season, body, datetime(2025, 9, 20, 8, tzinfo=timezone.utc))
+    # Power rankings: the clubs' Elo for real; players synthetic (too few matches for the role references).
+    power.refresh_elo(db)
+    run = x("INSERT INTO agg.power_runs(kind,season_id,method_version,status,finished_at) VALUES ('players',2025,'power-ranking-v1','published','2025-09-06T03:00:00Z') RETURNING id").fetchone()[0]
+    x("""INSERT INTO agg.player_power(season_id,player_id,role,team_id,matches,minutes,total,rate,eligible,total_percentile,rate_percentile,score,rank,role_rank,run_id)
+         VALUES (2025,101,'centre_forward',1,3,260,4.2,0.535,true,90,80,87.5,1,1,%(run)s),(2025,104,'winger',2,2,160,1.1,0.161,true,50,50,50,2,1,%(run)s),
+                (2025,103,'goalkeeper',4,2,180,0.3,0.042,false,NULL,NULL,NULL,NULL,NULL,%(run)s)""", {"run": run})
     db.close()
 
 
