@@ -13,6 +13,15 @@ const manifestTag = (req, version) => tag(req, `manifest-v4|v2|${version}`);
 const iso = (value) => (value instanceof Date ? value.toISOString() : value ?? null);
 const day = (value) => (value instanceof Date ? value.toISOString().slice(0, 10) : value ?? null);
 
+/** A season edition's counts, and the digest the manifest names its partition by. */
+export const editionCounts = (p) => ({
+  matchCount: Number(p.match_count),
+  expectedFinishedMatches: Number(p.finished_count),
+  collectedMatches: Number(p.collected_count),
+  teamCount: Number(p.team_count),
+});
+export const editionDigest = (p) => digest(JSON.stringify([p.season, p.league_id, iso(p.retrieved_at), editionCounts(p)]));
+
 /** The compact reads this API serves; the others stay on the current API until ported. */
 export const COMPACT_READS = { home: true, players: true, clubs: true, player: true, club: true, performance: true, discipline: true };
 
@@ -55,15 +64,10 @@ export function createSystemRoute(read) {
     for (const p of editions) {
       if (!seasons.has(p.season)) seasons.set(p.season, { id: p.season, chunks: [] });
       const c = byId.get(p.league_id);
-      const counts = {
-        matchCount: Number(p.match_count),
-        expectedFinishedMatches: Number(p.finished_count),
-        collectedMatches: Number(p.collected_count),
-        teamCount: Number(p.team_count),
-      };
+      const counts = editionCounts(p);
       seasons.get(p.season).chunks.push({
         leagueId: p.league_id,
-        sourceDigest: digest(JSON.stringify([p.season, p.league_id, iso(p.retrieved_at), counts])),
+        sourceDigest: editionDigest(p),
         meta: { ...counts, retrievedAt: iso(p.retrieved_at), startDate: day(p.start_date), endDate: day(p.end_date), publishedAt: iso(state.published_at) },
         competitions: c ? [{ ...c, sampleMatches: counts.matchCount, sampleSeasons: counts.matchCount ? [p.season] : [] }] : [],
       });
