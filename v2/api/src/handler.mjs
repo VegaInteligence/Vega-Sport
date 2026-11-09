@@ -14,10 +14,13 @@ import { createReferenceRoute } from "./routes/reference.mjs";
 import { createDisciplineRoute } from "./routes/discipline.mjs";
 import { createPerformanceRoute } from "./routes/performance.mjs";
 import { createActorRoute } from "./routes/actors.mjs";
+import { createHomeReadRoute } from "./routes/home.mjs";
+import { compactHomePresentation } from "../../../dashboard/backend/services/home-presentation.js";
 
-/** `mediaBase`: the CloudFront origin of the image copies (https://…/); none, no media map. */
-export function createHandler({ read, mediaBase = null }) {
-  const routes = [createSystemRoute(read), createClubReadRoute(read), createPlayerReadRoute(read), createMatchRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPerformanceRoute(read), createActorRoute(read)];
+/** `mediaBase`: the CloudFront origin of the image copies (https://…/); none, no media map.
+ * `clock`: the home page's notion of now (tests pin it). */
+export function createHandler({ read, mediaBase = null, clock = Date.now }) {
+  const routes = [createSystemRoute(read), createClubReadRoute(read), createPlayerReadRoute(read), createMatchRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPerformanceRoute(read), createActorRoute(read), createHomeReadRoute(read, clock)];
   async function route(req) {
     const url = new URL(req.url),
       path = url.pathname;
@@ -32,7 +35,7 @@ export function createHandler({ read, mediaBase = null }) {
   }
   return async function handleRequest(req) {
     try {
-      return (await withResolvedMedia(req, route, read, mediaBase)) || (await route(req));
+      return (await withResolvedMedia(req, route, read, mediaBase, { present: compactHomePresentation })) || (await route(req));
     } catch (error) {
       if (!(error.status >= 400 && error.status <= 599)) console.error("v2 read failed", error.code || error.name);
       return errorResponse(req, error);

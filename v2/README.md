@@ -32,7 +32,7 @@ Le worker prend les travaux dans l'ordre score, détails, référentiel (le back
 
 **Lecture.** À l'identique de l'API actuelle (mêmes paramètres, mêmes corps, mêmes validateurs), plus un champ `retry` dans les erreurs :
 - `/api/health`, `/api/status`, `/api/dashboard/manifest` (son `capabilities.compactReads` dit quelles lectures la v2 sert) ;
-- les lectures compactes `/api/read/clubs`, `players`, `player`, `club`, `performance`, `discipline`, avec la carte `media` de `media=1` ;
+- les lectures compactes `/api/read/home`, `clubs`, `players`, `player`, `club`, `performance`, `discipline`, avec la carte `media` de `media=1` (et, pour l'accueil, la présentation compacte de main, importée telle quelle) ;
 - `/api/fixtures` (pages à curseur liées à la génération), `/api/matches/{id}/summary`, `/api/standings`, `/api/matchdays`.
 
 Chaque route liste en tête de fichier ses écarts voulus avec l'API actuelle, pour la parité : identifiant d'apparition `<match>:<joueur>`, statuts normalisés, libellés de statistiques laissés au site, classement Vega servi quand aucune source officielle n'en publie.
@@ -43,7 +43,7 @@ Chaque route liste en tête de fichier ses écarts voulus avec l'API actuelle, p
 
 ## Ce qui reste
 
-- Les routes encore servies par l'API actuelle : `/api/read/home` (et sa présentation compacte), `/api/read/archive`, `/api/seasons/partition` (chargeur de saison complet, inutile une fois toutes les lectures compactes servies), la recherche, `/api/assets`, les routes de support (`club-wikidata`, `coach-portrait`, `stadium`, `player-honours`, `open-cups`, `openligadb`, `nations-results`), de catalogue (classements, archives, coupes), le proxy `/api/pitchapi/*` et `orion-pro`.
+- Les routes encore servies par l'API actuelle : `/api/read/archive`, `/api/seasons/partition` (chargeur de saison complet, inutile une fois toutes les lectures compactes servies), la recherche, `/api/assets`, les routes de support (`club-wikidata`, `coach-portrait`, `stadium`, `player-honours`, `open-cups`, `openligadb`, `nations-results`), de catalogue (classements, archives, coupes), le proxy `/api/pitchapi/*` et `orion-pro`.
 - Les autres adaptateurs : Wikidata et Commons (biographies, photos, stades), SportsAPI, OpenFootball, OpenLigaDB, International Results, coupes (football-data, ESPN, fixturedl), archives (footballcsv, engsoccerdata, schochastics).
 - Le déploiement des piles AWS, le backfill, la parité réelle et la bascule route par route : voir `infra/aws-v2/README.md`. Rien n'est déployé.
 

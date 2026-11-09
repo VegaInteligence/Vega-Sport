@@ -29,10 +29,12 @@ export const matchRecordColumns = ({ shots = true } = {}) => `row_to_json(f) AS 
 
 const strip = (row) => (row ? Object.fromEntries(Object.entries(row).filter(([k]) => k.startsWith("for_")).map(([k, v]) => [k.slice(4), v])) : null);
 
-/** The legacy match object, or null when the match's details are not collected. */
-export function assembleMatch(r, { statKeys } = {}) {
+/** The legacy match object, or null when the match's details are not collected
+ * (`allowPending`: the record of a scored match whose details are still coming). */
+export function assembleMatch(r, { statKeys, allowPending = false } = {}) {
   const f = r?.fixture;
-  if (!f || !r.state?.detail_collected) return null;
+  const state = r?.state || {};
+  if (!f || (!state.detail_collected && !allowPending)) return null;
   const sides = Object.fromEntries((r.sides || []).map((s) => [s.side, s]));
   const side = (name) => {
     const s = sides[name] || {};
@@ -50,13 +52,13 @@ export function assembleMatch(r, { statKeys } = {}) {
     shots: r.shots || [],
     stats: teamStats(strip(r.home_stats), strip(r.away_stats), statKeys),
     coverage: {
-      players: Boolean(r.state.player_stats_ok) && n.listed > 0, playerStats: n.played > 0, ratings: n.rated > 0,
-      xg: n.xg > 0, xa: n.xa > 0, shots: Boolean(r.state.shots_ok), teamStatsReliable: Boolean(r.state.team_stats_ok),
+      players: Boolean(state.player_stats_ok) && n.listed > 0, playerStats: n.played > 0, ratings: n.rated > 0,
+      xg: n.xg > 0, xa: n.xa > 0, shots: Boolean(state.shots_ok), teamStatsReliable: Boolean(state.team_stats_ok),
       listedPlayers: n.listed ?? 0, playedPlayers: n.played ?? 0, ratedPlayers: n.rated ?? 0, xgPlayers: n.xg ?? 0, xaPlayers: n.xa ?? 0,
     },
     warnings: [],
     warningCodes: [],
-    detailCollected: true,
+    detailCollected: Boolean(state.detail_collected),
     players: n.ids || [],
   };
 }
