@@ -1,0 +1,128 @@
+"""Source adapters other than PitchAPI, against small synthetic response samples."""
+
+import json
+import os
+from datetime import datetime, timezone
+from pathlib import Path
+import sys
+import unittest
+from urllib.parse import parse_qs, urlparse
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from vega_v2 import sources
+from vega_v2.sources import SourceError, normalize, uefa
+
+try:
+    import psycopg
+except ImportError:
+    psycopg = None
+DSN = os.environ.get("VEGA_V2_SOURCES_TEST_DSN")
+NOW = datetime(2026, 11, 9, 8, tzinfo=timezone.utc)
+
+
+def uefa_page(members, total, updated="2026-11-06T22:00:00Z"):
+    return {"data": {"members": members, "lastUpdateDate": updated}, "meta": {"collection": {"totalElements": total}}}
+
+
+def club(ident, name, country, position, value):
+    return {"member": {"id": ident, "displayName": name, "countryCode": country},
+            "overallRanking": {"position": position, "totalValue": value, "totalPoints": value - 1}}
+
+
+class FakeSource:
+    def __init__(self, pages):
+        self.pages, self.calls = pages, []
+
+    def __call__(self, url):
+        query = parse_qs(urlparse(url).query)
+        key = (query["coefficientType"][0], int(query["seasonYear"][0]), int(query["page"][0]))
+        self.calls.append(key)
+        if key not in self.pages:
+            raise SourceError("HTTP_404")
+        return json.loads(json.dumps(self.pages[key]))
+
+
+class PureTest(unittest.TestCase):
+    def test_normalize_and_scopes(self):
+        self.assertEqual(normalize("Atlético  de Madrid"), "atleticodemadrid")
+        self.assertEqual(sorted(uefa.scopes(NOW)), sorted([
+            "uefa_clubs:2027", "uefa_associations:2027", "uefa_clubs:2026", "uefa_associations:2026",
+        ]))
+
+    def test_pagination_must_be_complete(self):
+        get = FakeSource({("MEN_CLUB", 2027, 1): uefa_page([club(1, "A", "FRA", 1, 10)], 3)})
+        with self.assertRaises(SourceError):
+            uefa.fetch(get, "uefa_clubs", 2027)
+
+
+@unittest.skipUnless(DSN and psycopg, "requires disposable local sources DB and psycopg")
+class UefaTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from vega_v2.store import connect_local, migrate
+
+        target = urlparse(DSN)
+        if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_sources_test":
+            raise RuntimeError("dedicated local sources DB required")
+        cls.db = connect_local(DSN)
+        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
+        migrate(cls.db)
+        x = cls.db.execute
+        x("INSERT INTO core.countries(code) VALUES ('FRA'), ('ESP')")
+        x("""INSERT INTO core.teams(id, name, country_code) VALUES
+             (1, 'Olympique Lyonnais', 'FRA'), (2, 'Atlético de Madrid', 'ESP'),
+             (3, 'Racing', 'FRA'), (4, 'Racing', 'FRA'), (5, 'Real Sociedad', 'ESP')""")
+        x("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id)
+             SELECT 'team', 'pitchapi', 't_aaaaa' || id, id FROM core.teams""")
+        x("INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source) VALUES ('team', 1, 'Lyon', 'lyon', 'alias', 'wikidata')")
+        x("SELECT setval(pg_get_serial_sequence('core.teams', 'id'), 100)")
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
+        cls.db.close()
+
+    def test_coefficients_linking_and_reconciliation(self):
+        pages = {
+            ("MEN_CLUB", 2027, 1): uefa_page([club(10, "Lyon", "FRA", 9, 80.5), club(11, "Atletico de Madrid", "ESP", 5, 95.0)], 4),
+            ("MEN_CLUB", 2027, 2): uefa_page([club(12, "Racing", "FRA", 60, 12.0), club(13, "Celta Vigo", "ESP", 120, 8.5)], 4),
+            ("MEN_ASSOCIATION", 2027, 1): uefa_page([{"member": {"id": 1, "displayName": "France", "countryCode": "FRA"}, "overallRanking": {"position": 5, "totalValue": 72.3}}], 1),
+        }
+        get = FakeSource(pages)
+        results = sources.run_due(self.db, get, NOW, names={"uefa"})
+        self.assertEqual(results[("uefa", "uefa_clubs:2027")], "ok")
+        self.assertEqual(results[("uefa", "uefa_associations:2027")], "ok")
+        self.assertEqual(results[("uefa", "uefa_clubs:2026")], "HTTP_404")  # an error is recorded, the others ran
+        links = dict(self.db.execute(
+            "SELECT provider_key, entity_id FROM core.provider_ids WHERE provider='uefa' ORDER BY 1"
+        ).fetchall())
+        # Alias "Lyon" (FRA) and accents (ESP) link; two "Racing" in France are ambiguous; Celta is unknown.
+        self.assertEqual((links["10"], links["11"]), (1, 2))
+        self.assertNotIn(links["12"], (3, 4))
+        self.assertGreater(links["13"], 100)
+        self.assertEqual(self.db.execute(
+            "SELECT rows_written, unmatched, status FROM ops.source_runs WHERE scope='uefa_clubs:2027'"
+        ).fetchone(), (4, 2, "ok"))
+        points = dict(self.db.execute(
+            "SELECT r.team_id, r.points FROM core.ranking_rows r JOIN core.ranking_editions e ON e.id=r.edition_id WHERE e.kind='uefa_clubs' AND e.is_current"
+        ).fetchall())
+        self.assertAlmostEqual(points[1], 80.5)
+        self.assertEqual(self.db.execute(
+            "SELECT country_code, position FROM core.ranking_rows r JOIN core.ranking_editions e ON e.id=r.edition_id WHERE e.kind='uefa_associations'"
+        ).fetchall(), [("FRA", 5)])
+        # Run again the same day: nothing is due.
+        self.assertNotIn(("uefa", "uefa_clubs:2027"), sources.run_due(self.db, get, NOW, names={"uefa"}))
+        # PitchAPI now observes Celta: the UEFA-only club merges into it, rows follow.
+        self.db.execute("INSERT INTO core.teams(id, name, country_code) VALUES (6, 'Celta Vigo', 'ESP')")
+        self.db.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','pitchapi','t_celta1',6)")
+        celta_uefa_only = links["13"]
+        with self.db.transaction():
+            self.assertEqual(uefa.reconcile_teams(self.db), 1)
+        self.assertEqual(self.db.execute("SELECT entity_id FROM core.provider_ids WHERE provider='uefa' AND provider_key='13'").fetchone()[0], 6)
+        self.assertEqual(self.db.execute("SELECT count(*) FROM core.ranking_rows WHERE team_id=6").fetchone()[0], 1)
+        self.assertIsNone(self.db.execute("SELECT 1 FROM core.teams WHERE id=%s", (celta_uefa_only,)).fetchone())
+
+
+if __name__ == "__main__":
+    unittest.main()
