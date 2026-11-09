@@ -137,8 +137,7 @@ export function homeReadQuery(filters, params, now, editions) {
     ids = b(editions.ids),
     seasonPin = (alias) => `${alias}.season_id=${season}::smallint`,
     inScope = (alias) => `${seasonPin(alias)} AND ${alias}.competition_season_id=ANY(${ids}::int[])`;
-  const fixtureScope = inScope("f"),
-    appearanceScope = inScope("a");
+  const fixtureScope = inScope("f");
   const fence = params.has("generation") ? ` AND EXISTS(SELECT 1 FROM publication WHERE generation=${b(params.get("generation"))})` : "";
   const instant = `${b(new Date(now).toISOString())}::timestamptz`;
   const weight = (alias, home, away) =>
@@ -228,11 +227,12 @@ ${weekSql(fixtureScope, fence, instant, filters.archive)}, league_sides AS MATER
  GROUP BY s.player_id
 ), rating_minimum AS (SELECT greatest(450,round(coalesce(max(minutes),0)*0.4)) rated_min FROM season_players),
 week_apps AS MATERIALIZED (
- -- The week's appearances only (the player of the week, the others, the featured match).
- SELECT a.season_id,a.match_id,a.player_id,a.team_id,a.team,a.league_id,a.date,a.kickoff_at,a.minutes,a.rating,a.goals,a.assists,a.xg,a.xa,
+ -- The week's player rows only (the player of the week, the others, the featured match),
+ -- lean (api.home_player_matches, 048); the dates and leagues are the fixtures'.
+ SELECT a.season_id,a.match_id,a.player_id,a.team_id,a.team,w.league_id,w.day AS date,w.kickoff_at,a.minutes,a.rating,a.goals,a.assists,a.xg,a.xa,
  a.player_name AS name,a.image_url,
- row_number() OVER(ORDER BY a.league_id,a.date NULLS LAST,a.kickoff_at NULLS LAST,a.match_id,a.player_id) source_order
- FROM api.player_appearances a JOIN weekly w ON w.season_id=a.season_id AND w.match_id=a.match_id
+ row_number() OVER(ORDER BY w.league_id,w.day NULLS LAST,w.kickoff_at NULLS LAST,a.match_id,a.player_id) source_order
+ FROM api.home_player_matches a JOIN weekly w ON w.season_id=a.season_id AND w.match_id=a.match_id
  WHERE ${seasonPin("a")} AND a.match_id=ANY(ARRAY(SELECT match_id FROM weekly)) AND a.minutes>=1
 ), weekly_performances AS MATERIALIZED (
  SELECT DISTINCT ON(a.player_id) a.* FROM week_apps a
@@ -245,22 +245,28 @@ week_apps AS MATERIALIZED (
 ), best_featured AS MATERIALIZED (
  SELECT a.* FROM week_apps a JOIN featured f ON f.season_id=a.season_id AND f.match_id=a.match_id WHERE ${finiteSql("a.rating")} ORDER BY a.rating DESC,a.source_order LIMIT 1
 ), recent_performances AS MATERIALIZED (
- SELECT a.*,row_number() OVER(ORDER BY a.date NULLS LAST,a.kickoff_at NULLS LAST,a.match_id) source_order FROM (
-  SELECT a.* FROM api.player_appearances a WHERE a.player_id=(SELECT player_id FROM potw) AND ${appearanceScope} AND a.minutes>=1 AND ${finiteSql("a.rating")}
-  ORDER BY a.date DESC NULLS LAST,a.kickoff_at DESC NULLS LAST,a.match_id DESC LIMIT 6) a
+ SELECT r.*,row_number() OVER(ORDER BY r.date NULLS LAST,r.kickoff_at NULLS LAST,r.match_id) source_order FROM (
+  SELECT a.season_id,a.match_id,a.player_id,a.rating,f.day AS date,f.kickoff_at FROM api.home_player_matches a
+  JOIN fixtures f ON f.season_id=a.season_id AND f.match_id=a.match_id
+  WHERE ${seasonPin("a")} AND a.player_id=(SELECT player_id FROM potw) AND a.minutes>=1 AND ${finiteSql("a.rating")}
+  ORDER BY f.day DESC NULLS LAST,f.kickoff_at DESC NULLS LAST,a.match_id DESC LIMIT 6) r
 ), leader_ids AS MATERIALIZED (
  ${BOARDS.map(([, predicate, order, limit]) => `(SELECT player_id FROM season_players WHERE ${predicate} ORDER BY ${order} LIMIT ${limit})`).join(" UNION ")}
  UNION SELECT player_id FROM potw
+), leader_apps AS MATERIALIZED (
+ -- The shown players' matches of the scope, in one read.
+ SELECT a.player_id,a.player_name AS name,a.image_url,f.day AS date,f.kickoff_at,a.match_id,a.team_id,a.team,f.league_id
+ FROM api.home_player_matches a JOIN fixtures f ON f.season_id=a.season_id AND f.match_id=a.match_id
+ WHERE ${seasonPin("a")} AND a.player_id=ANY(ARRAY(SELECT player_id FROM leader_ids)) AND a.minutes>=1
 ), identities AS MATERIALIZED (
  -- Name, photo, latest club (a league match first) and last match, for the players shown.
  SELECT l.player_id,last.name,last.image_url,last.date,last.match_id last_match_id,
  coalesce(club.team_id,last.team_id) team_id,coalesce(club.team,last.team) team
  FROM leader_ids l
- CROSS JOIN LATERAL (SELECT a.player_name name,a.image_url,a.date,a.match_id,a.team_id,a.team FROM api.player_appearances a
-  WHERE a.player_id=l.player_id AND ${appearanceScope} AND a.minutes>=1 ORDER BY a.date DESC NULLS LAST,a.kickoff_at DESC NULLS LAST,a.match_id DESC LIMIT 1) last
- LEFT JOIN LATERAL (SELECT a.team_id,a.team FROM api.player_appearances a
-  WHERE a.player_id=l.player_id AND ${appearanceScope} AND a.minutes>=1 AND NOT a.league_id=ANY(${uefa})
-  ORDER BY a.date DESC NULLS LAST,a.kickoff_at DESC NULLS LAST,a.match_id DESC LIMIT 1) club ON true
+ CROSS JOIN LATERAL (SELECT x.* FROM leader_apps x WHERE x.player_id=l.player_id
+  ORDER BY x.date DESC NULLS LAST,x.kickoff_at DESC NULLS LAST,x.match_id DESC LIMIT 1) last
+ LEFT JOIN LATERAL (SELECT x.team_id,x.team FROM leader_apps x WHERE x.player_id=l.player_id AND NOT x.league_id=ANY(${uefa})
+  ORDER BY x.date DESC NULLS LAST,x.kickoff_at DESC NULLS LAST,x.match_id DESC LIMIT 1) club ON true
 ), season_rows AS MATERIALIZED (
  SELECT p.*,i.name,i.image_url,i.team_id,i.team,i.date,i.last_match_id FROM season_players p JOIN identities i USING(player_id)
 ), selected_appearances AS MATERIALIZED (${appearanceJson(`SELECT season_id,match_id,player_id FROM potw UNION SELECT season_id,match_id,player_id FROM other_performances
@@ -292,8 +298,14 @@ champions_stages AS (
  SELECT season_id,match_id FROM results UNION SELECT season_id,match_id FROM featured UNION SELECT season_id,match_id FROM biggest_win
  UNION SELECT season_id,match_id FROM potw UNION SELECT season_id,match_id FROM other_performances
 ), records AS (
- SELECT f.id,${matchRecordColumns({ shots: true })} FROM api.fixtures f
+ -- The cards show a match's sides and state; the featured match alone its shots,
+ -- statistics and coverage (homeReadRecord).
+ SELECT f.id,${matchRecordColumns({ shots: false, players: false, teamStats: false })} FROM api.fixtures f
  WHERE ${seasonPin("f")} AND f.match_id=ANY(ARRAY(SELECT match_id FROM record_keys)) AND (f.season_id,f.match_id) IN (SELECT season_id,match_id FROM record_keys)
+ AND f.match_id IS DISTINCT FROM (SELECT match_id FROM featured)
+ UNION ALL
+ SELECT f.id,${matchRecordColumns({ shots: true })} FROM api.fixtures f
+ WHERE ${seasonPin("f")} AND f.match_id=(SELECT match_id FROM featured)
 )
 SELECT publication.*,
  (SELECT min(change_at) FROM (

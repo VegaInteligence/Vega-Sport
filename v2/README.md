@@ -127,7 +127,6 @@ Chaque source a sa période dans `ops.source_runs`. Une erreur de base de donné
 football-data, ESPN et fixturedl sont les sources des lignes d'open-matchday (la colonne `source` de chaque ligne, non gardée). L'extrait UEFA écrit à la main pour un joueur (`uefa-nations-snapshot.js`) reste sur main : la v2 n'invente pas d'identités d'équipe pour recopier un correctif.
 - Le passage : l'import des archives est terminé (9 novembre 2026, 150 saisons, 489 963 matchs) ; le backfill complet tourne ; restent la parité sur toutes les saisons, la bascule du site et le retrait de l'ancien chemin avec accord explicite : voir `infra/aws-v2/README.md`.
 - Le fournisseur live, à choisir (question ouverte du document) : le circuit est déployé, l'ingestor attend son adaptateur.
-- Les noms de la note pondérée de `agg.player_season_stats` : `rating_wsum` et `rating_w` (le motif `_wsum`/`_w` du catalogue des métriques pondérées) au lieu de `rating_sum` et `rating_minutes` du document. Même sens que le document (somme de note × minutes et minutes notées), seuls les noms diffèrent. Les migrations 009 et 012 sont générées par `agg_schema.py` et `api_schema.py` (un test les compare), et le calculateur écrit les colonnes par ces mêmes générateurs. Renommer demande donc une migration 047, une option « anciens noms » dans les générateurs de 009 et 012, et le calculateur.
 
 ## Exécution locale
 

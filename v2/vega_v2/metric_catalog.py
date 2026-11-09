@@ -126,11 +126,15 @@ TEAM_RATIOS = (
 )
 
 
-def metric_columns(metric, *, prefix="", minutes=False):
-    """(column, SQL type) pairs stored for one metric."""
+def metric_columns(metric, *, prefix="", minutes=False, legacy=False):
+    """(column, SQL type) pairs stored for one metric. The rating is stored as the doc names
+    it, rating_sum (rating x minutes) and rating_minutes; `legacy` gives the names that
+    migrations 009 and 012 were generated with (049 renames them)."""
     stem = prefix + metric.key
     value = "real" if metric.real or metric.rule != "sum" else "integer"
-    if metric.rule in ("weighted_mean", "rating"):
+    if metric.rule == "rating" and not legacy:
+        cols = [(stem + "_sum", "real"), (stem + "_minutes", "integer")]
+    elif metric.rule in ("weighted_mean", "rating"):
         cols = [(stem + "_wsum", "real"), (stem + "_w", "real")]
     elif metric.rule == "max":
         cols = [(stem + "_max", "real")]
@@ -149,10 +153,10 @@ def ratio_columns(ratio, *, prefix=""):
     return [(stem + "_num", "real"), (stem + "_den", "real"), (stem + "_n", "integer")]
 
 
-def player_season_columns():
+def player_season_columns(*, legacy=False):
     cols = []
     for metric in PLAYER_METRICS:
-        cols += metric_columns(metric, minutes=True)
+        cols += metric_columns(metric, minutes=True, legacy=legacy)
     for ratio in PLAYER_RATIOS:
         cols += ratio_columns(ratio)
     return cols
