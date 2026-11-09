@@ -237,8 +237,18 @@ def reconcile_teams(conn):
            WHERE EXISTS (SELECT 1 FROM core.provider_ids p WHERE p.entity_type='team' AND p.entity_id=t.id AND p.provider='uefa')
              AND NOT EXISTS (SELECT 1 FROM core.provider_ids p WHERE p.entity_type='team' AND p.entity_id=t.id AND p.provider<>'uefa')"""
     ).fetchall():
+        # Every spelling the UEFA rows gave this club: its display name ("Paris") and its
+        # official one ("Paris Saint-Germain").
+        spellings = {normalize(name)} | {
+            n for (n,) in conn.execute(
+                "SELECT normalized FROM core.entity_names WHERE entity_type='team' AND entity_id=%s", (team,)
+            ).fetchall()
+        }
+        found = set()
+        for spelling in spellings - {""}:
+            found |= _candidates(conn, country, spelling)
         targets = {
-            t for t in _candidates(conn, country, normalize(name))
+            t for t in found
             if t != team and conn.execute(
                 "SELECT 1 FROM core.provider_ids WHERE entity_type='team' AND provider='pitchapi' AND entity_id=%s", (t,)
             ).fetchone()

@@ -192,6 +192,17 @@ class UefaTest(unittest.TestCase):
         self.assertEqual(x("SELECT country_code FROM core.teams WHERE id=60").fetchone(), ("FRA",))
         self.assertEqual(x("SELECT entity_id FROM core.provider_ids WHERE provider='uefa' AND provider_key='uefa-brest'").fetchone(), (60,))
         self.assertIsNone(x("SELECT 1 FROM core.teams WHERE id=62").fetchone())
+        # A UEFA-only club known by its display name ("Paris") merges through its official spelling.
+        x("INSERT INTO core.teams(id, name) VALUES (63, 'Paris Saint-Germain')")
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','pitchapi','t_psg001',63)")
+        x("UPDATE core.matches SET away_team_id=63 WHERE id=1950")
+        x("INSERT INTO core.teams(id, name, country_code) VALUES (64, 'Paris', 'FRA')")
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','uefa','uefa-psg',64)")
+        x("""INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source) VALUES
+             ('team', 64, 'Paris', 'paris', 'source_spelling', 'uefa'), ('team', 64, 'Paris Saint-Germain', 'parissaintgermain', 'source_spelling', 'uefa')""")
+        with self.db.transaction():
+            uefa.reconcile_teams(self.db)
+        self.assertEqual(x("SELECT entity_id FROM core.provider_ids WHERE provider='uefa' AND provider_key='uefa-psg'").fetchone(), (63,))
 
     def test_curated_aliases(self):
         x = self.db.execute
