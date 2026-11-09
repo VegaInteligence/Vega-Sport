@@ -59,9 +59,19 @@ From a workstation, before the workflow is on `main` (a manual workflow can only
 AWS_PROFILE=statarena PITCHAPI_API_KEY_FILE=<file holding the key> bash infra/aws-v2/deploy.sh
 ```
 
-Then, from GitHub: `gh workflow run "Vega v2 deploy" -f worker_desired_count=1`. The migration task's log line `migrations applied=N total=M logins=…` shows 28 migrations (30 with `V2_VECTOR=1`). The backfill runs on demand, for days, and stops by itself when its lane is empty: `aws ecs run-task … --task-definition vega-v2-backfill` with the network configuration `deploy.sh` uses.
+Then, from GitHub: `gh workflow run "Vega v2 deploy" -f worker_desired_count=1`. The migration task's log line `migrations applied=N total=M logins=…` shows 33 migrations (35 with `V2_VECTOR=1`). The backfill runs on demand, for days, and stops by itself when its lane is empty: `aws ecs run-task … --task-definition vega-v2-backfill` with the network configuration `deploy.sh` uses.
 
 The account runs at most 10 Lambdas concurrently and the current API needs them: `ReservedConcurrency` stays 0 and the pool size 1 until the quota is raised.
+
+### Import test: one full season and one archive season
+
+After the first deploy, `import-test.sh` loads one complete league season through the backfill task and one archive season through the archive task, then reads them back through the v2 API (match families, season loader, clubs, standings, power rankings, archive):
+
+```bash
+AWS_PROFILE=statarena ARCHIVE_SOURCES_BUCKET=<main's data bucket> bash infra/aws-v2/import-test.sh
+```
+
+Defaults: Ligue 1 (`LEAGUE=l_3FJFUl`), 2025/2026 (`SEASON=2025`), archive `ARCHIVE_SEASON=2019/2020`. With PitchAPI's free plan at one call every 0.5 s, a 306-match season (13 families each) takes about 40 minutes. The worker service computes the aggregates and, within a day, the levels, similarities and power rankings of the backfilled season (it now runs once for a season never computed). It writes only to `vega-football-db-postgres`.
 
 ## Continuous integration
 
