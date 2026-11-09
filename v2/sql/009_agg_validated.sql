@@ -767,6 +767,10 @@ CREATE TABLE agg.team_season_stats(
   goals_for integer NOT NULL, goals_against integer NOT NULL,
   points integer NOT NULL, clean_sheets integer NOT NULL,
   xpts real, xpts_matches integer NOT NULL DEFAULT 0,
+  -- Same matches as the current club page (both xG known): finishing, keeper, placement.
+  has_goals_for integer, has_goals_against integer, has_xg_for real, has_xg_against real,
+  keeper_xgot_against real, keeper_goals_against integer, keeper_matches integer NOT NULL DEFAULT 0,
+  placement_sum real, placement_matches integer NOT NULL DEFAULT 0,
   for_total_shots_sum integer,
   for_total_shots_n integer,
   for_shots_on_target_sum integer,
