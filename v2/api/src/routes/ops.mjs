@@ -11,8 +11,12 @@ import { reject, send, validateParams } from "../http.mjs";
 
 const HOUR = 3600_000;
 const DAY = 24 * HOUR;
-// Individual rows; the backfill lane's finished jobs come as 10-minute counts instead.
-const LIMITS = { done: 5000, failed: 500, pending: 1500, matches: 300, calcs: 2000, warnings: 200, progress: 400, fields: 100 };
+// Every job and model run of the window is counted per 10 minutes (the dial, the totals);
+// individual rows are a sample for the lists: per lane the latest finished and the next
+// queued, every failure up to a bound, every running one.
+const LIMITS = { done: 150, failed: 500, pending: 150, matches: 300, calcs: 300, warnings: 200, progress: 400, fields: 100 };
+const SAMPLED = ["score", "details", "reference"];
+const BUCKET = (column) => `to_timestamp(floor(extract(epoch FROM ${column}) / 600) * 600)`;
 // planner.PERMANENT_CODES: codes a retry cannot fix.
 const PERMANENT = [
   "RESOURCE_NOT_FOUND", "INVALID_PARAMETER", "UNAUTHORIZED", "INVALID_ENDPOINT", "MATCH_ID_MISMATCH",
@@ -69,24 +73,38 @@ export function createOpsRoute(read, { key = null, clock = Date.now } = {}) {
       until = new Date(now.getTime() + DAY);
 
     const [
-      jobs, backfillBuckets, backfillSeasons, backfillProgress, backlog, matches, sources, calcRuns, calcLatest,
+      jobs, jobBuckets, backfillEditions, backfillProgress, backlog, matches, sources, calcRuns, calcBuckets, calcLatest,
       requests, families, warnings, progress, parseFailures, unknownFields, [summary], finished, [publication],
     ] = await Promise.all([
       read(
-        `(SELECT ${JOB} WHERE state = 'done' AND lane <> 'backfill' AND updated_at >= $1 ORDER BY updated_at DESC LIMIT ${LIMITS.done})
+        `(SELECT j.* FROM unnest($3::text[]) AS s(lane) CROSS JOIN LATERAL (
+            SELECT ${JOB} WHERE state = 'done' AND lane = s.lane AND updated_at >= $1 ORDER BY updated_at DESC LIMIT ${LIMITS.done}) j)
          UNION ALL (SELECT ${JOB} WHERE state = 'failed' AND updated_at >= $1 ORDER BY updated_at DESC LIMIT ${LIMITS.failed})
          UNION ALL (SELECT ${JOB} WHERE state = 'leased')
-         UNION ALL (SELECT ${JOB} WHERE state = 'pending' AND lane <> 'backfill' AND run_after <= $2 ORDER BY run_after LIMIT ${LIMITS.pending})`,
-        [since, until],
+         UNION ALL (SELECT j.* FROM unnest($3::text[]) AS s(lane) CROSS JOIN LATERAL (
+            SELECT ${JOB} WHERE state = 'pending' AND lane = s.lane AND run_after <= $2 ORDER BY run_after LIMIT ${LIMITS.pending}) j)`,
+        [since, until, SAMPLED],
       ),
+      // Finished and failed jobs by when they ended, queued ones by when they are due; the
+      // ones already due are counted at now.
       read(
-        `SELECT family, to_timestamp(floor(extract(epoch FROM updated_at) / 600) * 600) AS bucket,
-                count(*) FILTER (WHERE state = 'done')::integer AS done, count(*) FILTER (WHERE state = 'failed')::integer AS failed
-         FROM api.ops_jobs WHERE lane = 'backfill' AND state IN ('done', 'failed') AND updated_at >= $1
-         GROUP BY 1, 2 ORDER BY 2, 1`,
-        [since],
+        `SELECT lane, family, state, bucket, count(*)::integer AS jobs FROM (
+           SELECT lane, family, state,
+                  CASE WHEN state = 'pending' AND run_after <= $3 THEN $3::timestamptz
+                       ELSE ${BUCKET("CASE WHEN state = 'pending' THEN run_after ELSE updated_at END")} END AS bucket
+           FROM api.ops_jobs
+           WHERE (state IN ('done', 'failed') AND updated_at >= $1) OR (state = 'pending' AND run_after <= $2)) j
+         GROUP BY 1, 2, 3, 4 ORDER BY 4, 1, 2, 3`,
+        [since, until, now],
       ),
-      read("SELECT DISTINCT season_id FROM api.ops_jobs WHERE lane = 'backfill' AND state IN ('pending', 'leased') AND season_id IS NOT NULL ORDER BY 1 DESC"),
+      // Editions whose match families are not all collected yet, under their own season name.
+      read(
+        `SELECT season, season_id, count(*)::integer AS editions FROM (
+           SELECT competition_season_id, max(season) AS season, max(season_id) AS season_id
+           FROM api.ops_collection_progress WHERE family <> 'league_matches'
+           GROUP BY competition_season_id HAVING sum(done + empty + failed) < sum(expected)) e
+         GROUP BY 1, 2 ORDER BY 2 DESC, 1`,
+      ),
       read(
         `SELECT coalesce(sum(expected), 0)::bigint::text AS expected, coalesce(sum(done + empty), 0)::bigint::text AS done,
                 coalesce(sum(failed), 0)::bigint::text AS failed
@@ -101,8 +119,14 @@ export function createOpsRoute(read, { key = null, clock = Date.now } = {}) {
       ),
       read("SELECT * FROM api.ops_source_runs ORDER BY source, scope"),
       read(
-        `SELECT * FROM api.ops_calc_runs WHERE started_at >= $1 OR finished_at >= $1 OR status = 'running'
-         ORDER BY started_at DESC LIMIT ${LIMITS.calcs}`,
+        `(SELECT * FROM api.ops_calc_runs WHERE status = 'running' OR (status = 'failed' AND started_at >= $1) ORDER BY started_at DESC LIMIT ${LIMITS.failed})
+         UNION ALL (SELECT * FROM api.ops_calc_runs WHERE status IN ('published', 'superseded') AND (started_at >= $1 OR finished_at >= $1)
+                    ORDER BY started_at DESC LIMIT ${LIMITS.calcs})`,
+        [since],
+      ),
+      read(
+        `SELECT kind, ${BUCKET("started_at")} AS bucket, count(*)::integer AS runs FROM api.ops_calc_runs
+         WHERE status IN ('published', 'superseded') AND (started_at >= $1 OR finished_at >= $1) GROUP BY 1, 2 ORDER BY 2, 1`,
         [since],
       ),
       read("SELECT DISTINCT ON (kind) * FROM api.ops_calc_runs ORDER BY kind, started_at DESC"),
@@ -146,12 +170,12 @@ export function createOpsRoute(read, { key = null, clock = Date.now } = {}) {
         attempts: j.attempts, priority: j.priority, http: j.last_http, error: j.last_error_code,
         matchId: j.match_id, seasonId: j.season_id, target: j.target,
       })),
+      jobBuckets: jobBuckets.map((b) => ({ lane: b.lane, family: b.family, state: b.state, at: b.bucket, jobs: b.jobs })),
       backfill: {
-        seasons: backfillSeasons.map((r) => r.season_id),
+        editions: backfillEditions.map((e) => ({ season: e.season, seasonId: e.season_id, editions: e.editions })),
         expected: Number(backfillProgress[0].expected),
         done: Number(backfillProgress[0].done),
         failed: Number(backfillProgress[0].failed),
-        buckets: backfillBuckets.map((b) => ({ family: b.family, at: b.bucket, done: b.done, failed: b.failed })),
       },
       backlog: backlog.map((b) => ({ lane: b.lane, family: b.family, state: b.state, jobs: b.jobs, oldestRunAfter: b.oldest_run_after })),
       matches: matches.map((m) => ({
@@ -165,6 +189,7 @@ export function createOpsRoute(read, { key = null, clock = Date.now } = {}) {
       })),
       calcs: {
         runs: calcRuns.map(calc),
+        buckets: calcBuckets.map((b) => ({ kind: b.kind, at: b.bucket, runs: b.runs })),
         latest: calcLatest.map(calc),
       },
       requests: requests.map((r) => ({
