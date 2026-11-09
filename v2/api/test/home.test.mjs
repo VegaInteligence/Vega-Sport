@@ -10,7 +10,7 @@ const home = "/api/read/home?season=2025/2026&leagues=all";
 const KEYS = [
   "bestOfFeatured", "competitions", "defences", "featured", "hasSeasonPlayers", "highlights", "leaders", "others",
   "otherMatches", "period", "potw", "potwMatch", "potwRecent", "potwSeason", "raceOpen", "ranks", "resultCount", "results",
-  "seasonProgress", "streak", "streakNext", "tables", "win",
+  "seasonProgress", "streak", "streakNext", "tables", "win", "yourPlayers",
 ].sort();
 
 test("editorial lists are main's", () => {
@@ -63,6 +63,17 @@ test("home: tables, ranks, leaders, highlights and markers", { skip }, async () 
   assert.equal(d.seasonProgress, 0.5);
   assert.deepEqual([d.streak, d.streakNext, d.defences, d.hasSeasonPlayers, d.raceOpen], [null, null, [], true, false]);
   assert.deepEqual(d.competitions, [{ id: "l_3FJFUl", name: "Ligue 1", country: "FRA", providerCountry: "FRA", imageUrl: "https://img.example/l1.png", seasons: [] }]);
+});
+
+test("home: your players this week (v2 doc, retained)", { skip }, async () => {
+  assert.deepEqual((await get(home)).body.data.yourPlayers, []);
+  const [mine] = (await get(home + "&personalPlayers=p_aaaab4")).body.data.yourPlayers;
+  assert.deepEqual([mine.playerId, mine.name, mine.teamId, mine.team], ["p_aaaab4", "Cristiano Test", "t_aaaaa2", "Racing Club"]);
+  assert.deepEqual(mine.matches.map((m) => [m.matchId, m.date, m.minutes, m.rating, m.goals, m.opponentId, m.score]), [
+    ["m_aaaaa1", "2025-09-01", 70, 6.9, 0, "t_aaaaa1", [0, 2]],
+    ["m_aaaaa4", "2025-09-04", 90, 8.1, 3, "t_aaaaa4", [3, 2]],
+  ]);
+  assert.deepEqual([mine.next.id, mine.next.time, mine.next.home.id, mine.next.away.id], ["m_aaaaa6", Date.parse("2025-09-06T19:00:00Z"), "t_aaaaa2", "t_aaaaa3"]);
 });
 
 test("home: favourites first, archive week, media representation", { skip }, async () => {

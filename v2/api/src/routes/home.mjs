@@ -230,6 +230,27 @@ weekly_performances AS MATERIALIZED (
  AND a.minutes>0 AND a.team_id IS NOT NULL AND a.date IS NOT NULL
  AND (coalesce(a.country,'') NOT IN('INT','INT-2','UEFA','WORLD') OR a.league_id=ANY(${uefa}))
  ORDER BY a.player_id,a.date DESC,a.match_id DESC) p
+), your_list AS MATERIALIZED (
+ SELECT DISTINCT y.k player_key,api.internal_id('player',y.k) player_id FROM unnest(${personalPlayers}) y(k)
+), your_matches AS MATERIALIZED (
+ SELECT y.player_key,f.id match_key,a.date,a.minutes,a.rating,a.goals,a.assists,
+ CASE WHEN a.team_id=f.home_internal_id THEN f.away_team_id ELSE f.home_team_id END opponent_id,
+ CASE WHEN a.team_id=f.home_internal_id THEN f.away_name ELSE f.home_name END opponent,
+ CASE WHEN a.team_id=f.home_internal_id THEN f.score_home ELSE f.score_away END gf,
+ CASE WHEN a.team_id=f.home_internal_id THEN f.score_away ELSE f.score_home END ga
+ FROM your_list y JOIN api.player_appearances a ON a.player_id=y.player_id
+ JOIN api.fixtures f ON f.season_id=a.season_id AND f.match_id=a.match_id CROSS JOIN period p
+ WHERE a.date BETWEEN p.start_day AND p.end_day AND a.minutes>0
+), your_clubs AS MATERIALIZED (
+ SELECT DISTINCT ON(y.player_id) y.player_key,y.player_id,a.player_name,a.image_url,a.team_id,a.team
+ FROM your_list y JOIN api.player_appearances a ON a.player_id=y.player_id
+ WHERE a.minutes>0 AND a.team_id IS NOT NULL AND a.date IS NOT NULL AND a.team_is_national IS NOT TRUE
+ ORDER BY y.player_id,a.date DESC,a.match_id DESC
+), your_next AS MATERIALIZED (
+ SELECT c.player_key,n.* FROM your_clubs c CROSS JOIN LATERAL (
+ SELECT f.id,extract(epoch FROM f.kickoff_at)*1000 time_ms,f.league_id,f.home_team_id,f.home_name,f.away_team_id,f.away_name
+ FROM api.fixtures f WHERE c.team_id IN(f.home_internal_id,f.away_internal_id) AND f.status='not_started' AND f.kickoff_at>${instant}
+ ORDER BY f.kickoff_at,f.id LIMIT 1) n
 ), upcoming_candidates AS MATERIALIZED (
  SELECT f.*,extract(epoch FROM f.kickoff)*1000 time_ms,(f.kickoff AT TIME ZONE 'Europe/Paris')::date upcoming_day,
  coalesce(((f.home_team_id IN(SELECT team_id FROM personal_clubs)) OR (f.away_team_id IN(SELECT team_id FROM personal_clubs)))::int,0) personal,
@@ -295,6 +316,14 @@ SELECT publication.*,
  (SELECT ${tableRow("s")} FROM streak s) streak,
  (SELECT coalesce(jsonb_agg(${tableRow("d")}||jsonb_build_object('perGame',d.per_game) ORDER BY d.per_game,d.clean_sheets DESC,d.league_id,d.rank),'[]'::jsonb) FROM defences d) defences,
  ${jsonRows("SELECT * FROM upcoming ORDER BY highlight_order LIMIT 5")} highlights,
+ (SELECT coalesce(jsonb_agg(to_jsonb(x)-'best' ORDER BY x.best DESC NULLS LAST,x.name,x.player_id),'[]'::jsonb) FROM (
+  SELECT c.player_key player_id,c.player_name name,c.image_url,api.public_id('team',c.team_id) team_id,c.team,
+  (SELECT max(w.rating) FROM your_matches w WHERE w.player_key=c.player_key) best,
+  (SELECT coalesce(jsonb_agg(jsonb_build_object('matchId',w.match_key,'date',w.date,'minutes',w.minutes,'rating',w.rating,'goals',w.goals,
+    'assists',w.assists,'opponentId',w.opponent_id,'opponent',w.opponent,'score',jsonb_build_array(w.gf,w.ga)) ORDER BY w.date,w.match_key),'[]'::jsonb)
+   FROM your_matches w WHERE w.player_key=c.player_key) matches,
+  (SELECT to_jsonb(n)-'player_key' FROM your_next n WHERE n.player_key=c.player_key) next
+  FROM your_clubs c) x WHERE jsonb_array_length(x.matches)>0 OR x.next IS NOT NULL) your_players,
  ${oneRow("SELECT u.* FROM upcoming u JOIN streak s ON s.team_id IN(u.home_team_id,u.away_team_id) ORDER BY u.highlight_order LIMIT 1")} streak_next,
  (SELECT coalesce(avg(least(1,played::float8/games)),0) FROM table_totals t WHERE games>0
  AND (league_id=ANY(${topFive}) OR NOT EXISTS(SELECT 1 FROM table_totals WHERE games>0 AND league_id=ANY(${topFive})))) season_progress,
@@ -350,6 +379,15 @@ export function homeReadRecord(snapshot) {
     defences: snapshot.defences || [],
     win: snapshot.biggest_win ? { match: match(snapshot.biggest_win.id), margin: snapshot.biggest_win.margin, goals: snapshot.biggest_win.goals } : null,
     streakNext: upcomingRecord(snapshot.streak_next),
+    // « Vos joueurs cette semaine » (v2 doc, retenu): each followed player's matches of the
+    // displayed week and the next match of his latest club.
+    yourPlayers: (snapshot.your_players || []).map((p) => ({
+      playerId: p.player_id, name: p.name, imageUrl: p.image_url ?? null, teamId: p.team_id, team: p.team, matches: p.matches,
+      next: p.next
+        ? { id: p.next.id, time: Number(p.next.time_ms), leagueId: p.next.league_id,
+            home: { id: p.next.home_team_id, name: p.next.home_name }, away: { id: p.next.away_team_id, name: p.next.away_name } }
+        : null,
+    })),
     seasonProgress: snapshot.season_progress,
     hasSeasonPlayers: snapshot.has_season_players,
     raceOpen: Boolean(snapshot.race_open),

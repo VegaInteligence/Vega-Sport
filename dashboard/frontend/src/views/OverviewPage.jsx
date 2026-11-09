@@ -19,7 +19,7 @@ import {
   NumberOfTheWeek,
 } from "../components/HomeMatchday.jsx";
 import {
-  AlsoShone,
+  AlsoShone, YourPlayers,
   Finishing,
   PlayerOfTheWeek,
   SeasonScorers,
@@ -467,6 +467,7 @@ function OverviewContent({
     ranking,
     progressValue,
     hasSeasonPlayers,
+    yourPlayers,
   } = model;
   if (
     !results.length &&
@@ -651,6 +652,7 @@ function OverviewContent({
           </div>
         )}
       </div>
+      <YourPlayers players={yourPlayers} period={matchWeek} now={now} />
       <AlsoShone
         performances={others}
         matches={matchIndex}
