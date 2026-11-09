@@ -59,6 +59,6 @@ CREATE VIEW api.match_detail_state AS
 SELECT m.season_id, m.id AS match_id,
   coalesce('ok' IN (mc.player_stats::text, mc.team_stats::text, mc.events::text, mc.shots::text, mc.lineups::text), false) AS detail_collected,
   coalesce(mc.shots = 'ok', false) AS shots_ok, coalesce(mc.team_stats = 'ok', false) AS team_stats_ok,
-  coalesce(mc.player_stats = 'ok', false) AS player_stats_ok
+  coalesce(mc.player_stats = 'ok', false) AS player_stats_ok, coalesce(mc.events = 'ok', false) AS events_ok
 FROM core.matches m
 LEFT JOIN core.match_coverage mc ON mc.season_id = m.season_id AND mc.match_id = m.id;

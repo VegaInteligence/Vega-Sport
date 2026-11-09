@@ -563,17 +563,22 @@ def normalize_family(family, data, *, match_id=None):
             },
         )
     elif family == "events":
+        # Provider spellings (Goal, YellowCard, SecondYellow, RedCard, ...): a second
+        # yellow is its own event, followed by the red card it causes (main counts both).
         types = {
             "goal": "goal",
             "substitution": "substitution",
             "yellowcard": "yellow_card",
+            "secondyellow": "second_yellow",
             "redcard": "red_card",
         }
         for i, item in enumerate(_list(_object(data).get("events"))):
             item = _object(item)
-            kind = types.get(str(item.get("event_type", "")).replace("_", "").lower())
+            raw = item.get("event_type")
+            kind = types.get(str(raw or "").replace("_", "").lower())
             if kind is None:
-                raise NormalizationError("UNKNOWN_EVENT_TYPE")
+                # A new kind keeps the event (minute, player) with its type empty.
+                _enum(out, "event.event_type", raw, {})
             row = {
                 "seq": number(i, "smallint"),
                 "event_type": kind,

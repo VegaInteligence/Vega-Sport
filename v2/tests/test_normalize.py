@@ -164,9 +164,12 @@ class NormalizeTest(unittest.TestCase):
             normalize_family(
                 "events", {"match_id": "m_654321", "events": []}, match_id="m_123456"
             )
-        with self.assertRaises(NormalizationError) as e:
-            normalize_family("events", {"events": [{"event_type": "secret_payload"}]})
-        self.assertNotIn("secret_payload", str(e.exception))
+        # A new event kind keeps the event, type empty, reported as a path; a value that is
+        # not a code word is never echoed.
+        got = normalize_family("events", {"events": [{"event_type": "VarDecision", "minute": 12}, {"event_type": "<b>x</b>"},
+                                                     {"event_type": "SecondYellow", "minute": 80}]})
+        self.assertEqual([r["event_type"] for r in got.rows["core.match_events"]], [None, None, "second_yellow"])
+        self.assertEqual(got.unknown_paths, {"event.event_type.VarDecision", "event.event_type.invalid"})
 
     def test_unknown_paths_only_and_bad_formats(self):
         data = {"events": [], "future_metric": {"secret": "DO_NOT_LOG"}}
