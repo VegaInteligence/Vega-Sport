@@ -13,7 +13,8 @@
 # Environment: WORKER_DESIRED_COUNT (1), IMPORT_ARCHIVES (false), ARCHIVE_SOURCES_BUCKET
 # (main's data bucket, read only, for the archives), CFN_ROLE (CloudFormation service role,
 # set by the workflow), IMAGE_TAG (git HEAD), PITCHAPI_API_KEY or PITCHAPI_API_KEY_FILE
-# (needed once, to create /vega/v2/pitchapi-key).
+# (needed once, to create /vega/v2/pitchapi-key), SPORTSAPI_API_KEY or SPORTSAPI_API_KEY_FILE
+# (optional, once: /vega/v2/sportsapi-key, the SportsAPI ranking snapshots).
 set -euo pipefail
 export AWS_REGION=${AWS_REGION:-us-east-2}
 ACCOUNT=361769570630
@@ -25,6 +26,7 @@ COUNT=${WORKER_DESIRED_COUNT:-1}
 ARCHIVES=${ARCHIVE_SOURCES_BUCKET:-}
 role=(); [ -n "${CFN_ROLE:-}" ] && role=(--role-arn "$CFN_ROLE")
 if [ -z "${PITCHAPI_API_KEY:-}" ] && [ -n "${PITCHAPI_API_KEY_FILE:-}" ]; then PITCHAPI_API_KEY=$(cat "$PITCHAPI_API_KEY_FILE"); export PITCHAPI_API_KEY; fi
+if [ -z "${SPORTSAPI_API_KEY:-}" ] && [ -n "${SPORTSAPI_API_KEY_FILE:-}" ]; then SPORTSAPI_API_KEY=$(cat "$SPORTSAPI_API_KEY_FILE"); export SPORTSAPI_API_KEY; fi
 [ "$(aws sts get-caller-identity --query Account --output text)" = "$ACCOUNT" ] || { echo "wrong AWS account" >&2; exit 1; }
 output() { aws cloudformation describe-stacks --stack-name "$1" --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text 2>/dev/null || true; }
 stack() { aws cloudformation deploy "${role[@]}" --no-fail-on-empty-changeset --stack-name "$1" --template-file "infra/aws-v2/$2" "${@:3}"; }
@@ -41,9 +43,11 @@ echo "== 1. Database vega-football-db-postgres (about 10 minutes the first time)
 stack vega-v2-database database.yaml
 echo "== 2. Secrets"
 bash infra/aws-v2/ci/secrets.sh
+# The SportsAPI source is on once its key is in SSM.
+SPORTSAPI=$(aws ssm get-parameter --name /vega/v2/sportsapi-key --query Parameter.Name --output text 2>/dev/null || true)
 echo "== 3. Worker stack, worker stopped"
 stack vega-v2-worker worker.yaml --capabilities CAPABILITY_IAM \
-  --parameter-overrides ImageTag="$TAG" DesiredCount=0 ArchiveSourcesBucket="$ARCHIVES"
+  --parameter-overrides ImageTag="$TAG" DesiredCount=0 ArchiveSourcesBucket="$ARCHIVES" SportsApiKeyParameter="$SPORTSAPI"
 echo "== 4. Worker image $TAG (linux/arm64)"
 if ! aws ecr describe-images --repository-name vega-v2-worker --image-ids imageTag="$TAG" >/dev/null 2>&1; then
   aws ecr get-login-password | docker login --username AWS --password-stdin "$REGISTRY"
@@ -57,7 +61,7 @@ code=$(aws ecs describe-tasks --cluster vega-v2 --tasks "$task" --query 'tasks[0
 echo "migration exit code: $code"; [ "$code" = 0 ]
 echo "== 6. Worker: $COUNT task(s)"
 stack vega-v2-worker worker.yaml --capabilities CAPABILITY_IAM \
-  --parameter-overrides ImageTag="$TAG" DesiredCount="$COUNT" ArchiveSourcesBucket="$ARCHIVES"
+  --parameter-overrides ImageTag="$TAG" DesiredCount="$COUNT" ArchiveSourcesBucket="$ARCHIVES" SportsApiKeyParameter="$SPORTSAPI"
 echo "== 7. Read API package"
 npm ci --prefix v2/api >/dev/null
 zip=$(python3 infra/aws-v2/package_api.py "${RUNNER_TEMP:-$(mktemp -d)}/v2-api" | tail -1)

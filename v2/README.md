@@ -90,13 +90,17 @@ Chaque route liste en tête de fichier ses écarts voulus avec l'API actuelle, p
 - palmarès Wikipédia, par le collecteur de main (`player_honours.py`), une centaine de joueurs par jour, Messi en premier ;
 - alias de recherche et orthographes UEFA revues de main ;
 - coupes OpenFootball, OpenLigaDB et International Results, par les projections de main, pour les éditions qu'il actualise ; une source indisponible garde la dernière édition.
+- instantanés SportsAPI (FIFA, associations et clubs UEFA), datés du jour de lecture, jamais officiels, liés comme les sources officielles ; la source dort tant que la clé `/vega/v2/sportsapi-key` n'existe pas ;
+- les données écrites dans le code du site deviennent des lignes : zones de montée et de relégation de `shared/league-rules.json` (`core.competition_zones`, édition courante au bon nombre d'équipes), logos de `shared/cup-logos.json`, correspondances SportScore en identifiants fournisseur ;
+- une équipe par équipe réelle ([`identity.py`](vega_v2/sources/identity.py)) : une équipe vue d'abord dans une coupe complémentaire est fusionnée dans l'équipe PitchAPI que nomme une règle unique (même nom normalisé, nom connu ou orthographe UEFA revue, même pays). Ses matchs, identifiants et noms passent à l'équipe PitchAPI ; l'orthographe de la source reste un nom `source_spelling`, que montrent les lectures de coupes. Un match de coupe que PitchAPI a aussi est noté `duplicate_match` (et `score_disagreement` si les scores diffèrent) dans `ops.data_warnings`. Les lectures de l'ère PitchAPI laissent les coupes de côté : le site ne le voit qu'une fois.
 
 Chaque source a sa période dans `ops.source_runs`. Une erreur de base de données reste confinée à sa portée.
 
 ## Ce qui reste
 
 - Les routes que la v2 ne sert pas, volontairement : `/api/archives/season` (documents source entiers, inutiles avec `boundedArchive`), `/api/archive/matches/{id}` (l'archive brute d'un match ; le site ne la lit qu'en repli quand une famille native manque, et la v2 sert toutes les familles), le catalogue figé des coupes open-matchday (`cup-index`, `cup-table`, `supplemental` : le worker de coupes de main est retiré, ces routes peuvent rester sur main) et `orion-pro`. Le site appelle encore les routes actuelles : la bascule change ses chemins selon la table ci-dessus.
-- Les autres adaptateurs : SportsAPI, OpenFootball, OpenLigaDB, International Results, coupes (football-data, ESPN, fixturedl). L'import réel des archives attend la copie en lecture seule des sources de main (`data/sources/`).
+- Les équipes des archives (saisons jusqu'à 2020/2021, avant PitchAPI) ne sont pas encore fusionnées : aucun match ne fait doublon, mais l'historique d'un club et sa force Elo s'arrêtent à 2021 tant qu'elles ne le sont pas. football-data, ESPN et fixturedl n'alimentent que le catalogue figé open-matchday de main, qui reste sur main. L'extrait UEFA écrit à la main pour un joueur (`uefa-nations-snapshot.js`) reste sur main : la v2 n'invente pas d'identités d'équipe pour recopier un correctif.
+- L'import réel des archives attend la copie en lecture seule des sources de main (`data/sources/`).
 - Le déploiement des piles AWS, le backfill, la parité réelle et la bascule route par route : voir `infra/aws-v2/README.md`. Rien n'est déployé.
 
 ## Exécution locale

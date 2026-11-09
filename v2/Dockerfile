@@ -23,7 +23,7 @@ COPY dashboard/frontend/src/services/wikidata-club.js dashboard/frontend/src/ser
      dashboard/frontend/src/services/format.js dashboard/frontend/src/services/player-aliases.js dashboard/frontend/src/services/
 COPY dashboard/frontend/src/data-url.js dashboard/frontend/src/model.js dashboard/frontend/src/
 COPY dashboard/scripts/coach-portrait-source.mjs dashboard/scripts/
-COPY dashboard/shared/player-aliases.js dashboard/shared/
+COPY dashboard/shared/player-aliases.js dashboard/shared/league-rules.json dashboard/shared/cup-logos.json dashboard/shared/
 # main's cup source projections (vega_v2/sources/cups.py) and their imports.
 COPY dashboard/scripts/source-projections/open-cups.mjs dashboard/scripts/source-projections/openligadb.mjs \
      dashboard/scripts/source-projections/nations-results.mjs dashboard/scripts/source-projections/

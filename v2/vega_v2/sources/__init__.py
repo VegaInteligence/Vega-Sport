@@ -21,11 +21,11 @@ def normalize(name):
 
 
 def adapters():
-    from . import cups, curated, fifa, honours, sportscore, uefa, wikidata
+    from . import cups, curated, fifa, honours, sportsapi, sportscore, uefa, wikidata
 
     # Keys are core.provider values (ops.source_runs.source). Curated names first: the
     # UEFA links read the reviewed aliases.
-    return {"vega": curated, "uefa": uefa, "fifa": fifa, "sportscore": sportscore, "wikidata": wikidata, "wikimedia": honours,
+    return {"vega": curated, "uefa": uefa, "fifa": fifa, "sportsapi": sportsapi, "sportscore": sportscore, "wikidata": wikidata, "wikimedia": honours,
             # Cup editions: one adapter per source provider of ops.source_runs.
             "openfootball": cups.For("open-cups"), "openligadb": cups.For("openligadb"),
             "international_results": cups.For("nations-results")}

@@ -98,7 +98,14 @@ def _team(conn, provider, key, name):
     row = conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type='team' AND provider=%s AND provider_key=%s", (provider, key)).fetchone()
     if row:
         if name:
-            conn.execute("UPDATE core.teams SET name=%s WHERE id=%s AND name<>%s", (name, row[0], name))
+            # A team merged into a PitchAPI one keeps PitchAPI's name; the source's spelling
+            # is a name of that source (identity.py).
+            if conn.execute("SELECT 1 FROM core.provider_ids WHERE entity_type='team' AND entity_id=%s AND provider='pitchapi'", (row[0],)).fetchone():
+                from .identity import spelling_row
+
+                spelling_row(conn, row[0], provider, name)
+            else:
+                conn.execute("UPDATE core.teams SET name=%s WHERE id=%s AND name<>%s", (name, row[0], name))
         return row[0]
     team = conn.execute("INSERT INTO core.teams(name) VALUES (%s) RETURNING id", (name or key,)).fetchone()[0]
     conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team',%s,%s,%s)", (provider, key, team))

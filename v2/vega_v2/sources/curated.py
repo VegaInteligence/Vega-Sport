@@ -6,6 +6,12 @@ yet is counted as unmatched and written on a later run, once PitchAPI has seen h
 """
 
 from datetime import timedelta
+import json
+import os
+from pathlib import Path
+
+# main's dashboard/shared (copied into the worker image), read as they are.
+SHARED = Path(os.environ.get("VEGA_SHARED_DIR", Path(__file__).resolve().parents[3] / "dashboard/shared"))
 
 # dashboard/shared/player-aliases.js (main); a drift test compares the two.
 PLAYER_ALIASES = {"p_3yEwhj": ("cr7",)}
@@ -23,7 +29,99 @@ CLUB_ALIASES = {
 
 
 def scopes(now):
-    return {"player_aliases": timedelta(days=1), "club_aliases": timedelta(days=1), "stadium_plans": timedelta(days=1)}
+    day = timedelta(days=1)
+    return {"player_aliases": day, "club_aliases": day, "stadium_plans": day, "league_zones": day, "cup_logos": day,
+            "sportscore_ids": day, "team_identity": day}
+
+
+def _shared(name):
+    return json.loads((SHARED / name).read_text())
+
+
+def league_zones(conn):
+    """Promotion and relegation places of shared/league-rules.json (main) as
+    core.competition_zones of each league's current edition, when the edition has the
+    recorded number of teams (docs/calculs 03-resultats/03). European places stay derived
+    from the UEFA coefficient, as on the site."""
+    written = unmatched = 0
+    for key, rule in sorted(_shared("league-rules.json")["leagues"].items()):
+        edition = conn.execute(
+            """SELECT cs.id, (SELECT count(*) FROM core.team_seasons ts WHERE ts.competition_season_id = cs.id)
+               FROM core.provider_ids p JOIN core.competition_seasons cs ON cs.competition_id = p.entity_id AND cs.is_current
+               WHERE p.entity_type = 'competition' AND p.provider = 'pitchapi' AND p.provider_key = %s ORDER BY cs.season_id DESC LIMIT 1""",
+            (key,),
+        ).fetchone()
+        teams = int(rule.get("teams") or 0)
+        if not edition or edition[1] != teams or teams < 2:
+            unmatched += 1
+            continue
+        conn.execute("DELETE FROM core.competition_zones WHERE competition_season_id = %s AND source = 'vega'", (edition[0],))
+        up, up_po, down_po, down = (int(rule.get(k) or 0) for k in ("promotion", "promotionPlayoff", "relegationPlayoff", "relegation"))
+        for zone, first, last in (("promotion", 1, up), ("promotion_playoff", up + 1, up + up_po),
+                                  ("relegation_playoff", teams - down - down_po + 1, teams - down), ("relegation", teams - down + 1, teams)):
+            if last >= first >= 1:
+                conn.execute(
+                    "INSERT INTO core.competition_zones(competition_season_id, zone, position_from, position_to, source) VALUES (%s,%s,%s,%s,'vega')",
+                    (edition[0], zone, first, last),
+                )
+                written += 1
+    return written, unmatched
+
+
+# Site keys of shared/cup-logos.json -> the Vega key of the cup-source competition.
+CUP_FAMILY = {"open-cup": "cup:open-cups:", "openligadb": "cup:openligadb:"}
+
+
+def cup_logos(conn):
+    """Competition logos of shared/cup-logos.json (main, SportScore): the logo of a
+    cup-source competition, and of a PitchAPI one that has none."""
+    written = unmatched = 0
+    for key, logo in sorted(_shared("cup-logos.json")["logos"].items()):
+        family, _, name = key.partition(":")
+        if key.startswith("l_"):
+            ref = ("pitchapi", key)
+        elif family in CUP_FAMILY:
+            ref = ("vega", CUP_FAMILY[family] + name)
+        else:
+            continue  # open-matchday: main's frozen catalogue
+        row = conn.execute(
+            "SELECT c.id, c.logo_asset_id FROM core.provider_ids p JOIN core.competitions c ON c.id = p.entity_id WHERE p.entity_type = 'competition' AND p.provider = %s AND p.provider_key = %s",
+            ref,
+        ).fetchone()
+        if not row or not logo.get("imageUrl"):
+            unmatched += 1
+            continue
+        if ref[0] == "pitchapi" and row[1] is not None:
+            continue
+        asset = conn.execute(
+            """INSERT INTO core.assets(kind, source_url, author) VALUES ('logo', %s, %s)
+               ON CONFLICT (source_url) DO UPDATE SET author = EXCLUDED.author RETURNING id""",
+            (logo["imageUrl"], logo.get("source")),
+        ).fetchone()[0]
+        conn.execute("UPDATE core.competitions SET logo_asset_id = %s, updated_at = now() WHERE id = %s AND logo_asset_id IS DISTINCT FROM %s", (asset, row[0], asset))
+        written += 1
+    return written, unmatched
+
+
+def sportscore_ids(conn):
+    """The reviewed PitchAPI-to-SportScore competition mapping (sportscore.LEAGUES, a copy
+    of main's sportscore-standings.js) as SportScore provider ids."""
+    from .sportscore import LEAGUES
+
+    written = unmatched = 0
+    for key, slug in sorted(LEAGUES.items()):
+        row = conn.execute(
+            "SELECT entity_id FROM core.provider_ids WHERE entity_type = 'competition' AND provider = 'pitchapi' AND provider_key = %s", (key,)
+        ).fetchone()
+        if not row:
+            unmatched += 1
+            continue
+        written += conn.execute(
+            """INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition', 'sportscore', %s, %s)
+               ON CONFLICT (entity_type, provider, provider_key) DO UPDATE SET entity_id = EXCLUDED.entity_id""",
+            (slug, row[0]),
+        ).rowcount
+    return written, unmatched
 
 
 def stadium_plans(conn):
@@ -73,6 +171,13 @@ def club_aliases(conn):
 
 
 def run(conn, get, scope, now):
+    if scope == "team_identity":
+        from . import identity
+
+        return identity.run(conn, get, "teams", now)
+    for name, handler in (("league_zones", league_zones), ("cup_logos", cup_logos), ("sportscore_ids", sportscore_ids)):
+        if scope == name:
+            return handler(conn)
     if scope == "club_aliases":
         return club_aliases(conn)
     if scope == "stadium_plans":
