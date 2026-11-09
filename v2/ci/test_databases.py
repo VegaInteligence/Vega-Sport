@@ -28,6 +28,7 @@ SUITES = {
     "VEGA_V2_SOURCES_TEST_DSN": "vega_v2_sources_test",
     "VEGA_V2_MEDIA_TEST_DSN": "vega_v2_media_test",
     "VEGA_V2_ARCHIVES_TEST_DSN": "vega_v2_archives_test",
+    "VEGA_V2_LIVE_TEST_DSN": "vega_v2_live_test",
     "VEGA_V2_API_NODE_TEST_DSN": "vega_v2_api_node_test",
 }
 

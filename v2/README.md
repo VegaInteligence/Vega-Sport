@@ -105,12 +105,21 @@ Chaque route liste en tête de fichier ses écarts voulus avec l'API actuelle, p
 
 Chaque source a sa période dans `ops.source_runs`. Une erreur de base de données reste confinée à sa portée.
 
+**Live** ([`vega_v2/live`](vega_v2/live), section « Live » du document ; pile `infra/aws-v2/live.yaml`). Le circuit entier est en place, sans fournisseur : le document le laisse à choisir (PitchAPI ne fait pas de live) et c'est la seule pièce qui manque.
+- un seul flux par match en direct, jamais un par spectateur : l'ingestor (`python -m vega_v2.live`, service ECS `vega-v2-live`, 0 tâche tant qu'aucun fournisseur n'est choisi) relie 30 minutes avant le coup d'envoi le match du fournisseur au match `core` (date et équipes, joueurs par `core.provider_ids`), l'interroge pendant le match et n'écrit que ce qui change ;
+- le live n'entre jamais dans `core` : trois tables DynamoDB à la demande (`vega-v2-live-state`, `-events`, `-stats`), attributs typés, `expires_at` sur chaque ligne ;
+- diffusion par AppSync Events, canal `/live/match/{id}` : l'ingestor publie avec IAM, les navigateurs s'abonnent avec une clé publique ; l'état complet se lit à `GET /live/matches/{id}` (une fonction hors du réseau privé, servie par la distribution v2 à `live/*`, cache 2 s) ;
+- PitchAPI fait foi : au coup de sifflet du flux, résultat provisoire ; puis le site passe à `core` famille par famille (score, événements, stats) dès que PitchAPI a chacune ; un écart (score, buts, buteur) va dans `ops.live_discrepancies` (vue `ops.live_reliability`), les données live elles-mêmes ne sont pas gardées ;
+- les données live expirent 24 h après que `core` est complet, 72 h après le match au plus tard ; les lectures filtrent sur `expires_at` ;
+- indépendant du fournisseur : un adaptateur par fournisseur ([`adapters.py`](vega_v2/live/adapters.py)) ; l'adaptateur `replay` rejoue un flux enregistré à travers tout le circuit (tests, essai à blanc). Brancher un fournisseur : une classe dans `adapters.py`, puis `LIVE_PROVIDER=<nom> LIVE_INGESTOR_COUNT=1` au déploiement ;
+- côté site (`services/live-client.js`, `hooks/useLiveMatch.js`) : la fiche match affiche la minute et le score du direct, puis « Résultat provisoire », puis le score de `core` ; il faut les réglages `NEXT_PUBLIC_LIVE_EVENTS_HTTP`, `_REALTIME` et `_KEY` (sorties de la pile `vega-v2-live`).
+
 ## Ce qui reste
 
 - Les routes que la v2 ne sert pas, volontairement : `/api/archives/season` (documents source entiers, inutiles avec `boundedArchive`), `/api/archive/matches/{id}` (l'archive brute d'un match ; le site ne la lit qu'en repli quand une famille native manque, et la v2 sert toutes les familles), `/api/supplemental` (déjà indisponible sur main), l'index du worker de coupes retiré (`cup-index?kind=worker`, le site lit alors le catalogue) et `orion-pro`. Le site appelle encore les routes actuelles : la bascule change ses chemins selon la table ci-dessus.
 football-data, ESPN et fixturedl sont les sources des lignes d'open-matchday (la colonne `source` de chaque ligne, non gardée). L'extrait UEFA écrit à la main pour un joueur (`uefa-nations-snapshot.js`) reste sur main : la v2 n'invente pas d'identités d'équipe pour recopier un correctif.
-- L'import réel des archives attend la copie en lecture seule des sources de main (`data/sources/`).
-- Le déploiement des piles AWS, le backfill, la parité réelle et la bascule route par route : voir `infra/aws-v2/README.md`. Rien n'est déployé.
+- Le passage : le backfill complet et l'import des archives tournent (lancés le 9 novembre 2026) ; restent la parité sur toutes les saisons, la bascule du site et le retrait de l'ancien chemin avec accord explicite : voir `infra/aws-v2/README.md`.
+- Le fournisseur live, à choisir (question ouverte du document) : le circuit est déployé, l'ingestor attend son adaptateur.
 
 ## Exécution locale
 
