@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega_v2 import sources
-from vega_v2.sources import SourceError, curated, fifa, normalize, uefa
+from vega_v2.sources import SourceError, curated, fifa, normalize, sportscore, uefa
 
 try:
     import psycopg
@@ -57,6 +57,11 @@ class PureTest(unittest.TestCase):
         body = re.search(r"const ALIASES = Object\.freeze\(\{(.*?)\}\);", text, re.S).group(1)
         site = {key: tuple(re.findall(r'"([^"]+)"', values)) for key, values in re.findall(r"(p_[A-Za-z0-9]{6}): Object\.freeze\(\[(.*?)\]\)", body)}
         self.assertEqual(site, curated.PLAYER_ALIASES)
+
+    def test_sportscore_leagues_match_the_site(self):
+        text = (ROOT.parent / "dashboard/frontend/src/services/sportscore-standings.js").read_text()
+        body = re.search(r"SPORTSCORE_LEAGUES = Object\.freeze\(\{(.*?)\}\);", text, re.S).group(1)
+        self.assertEqual(dict(re.findall(r'(l_[A-Za-z0-9]{6}): "([a-z0-9-]+)"', body)), sportscore.LEAGUES)
 
     def test_pagination_must_be_complete(self):
         get = FakeSource({("MEN_CLUB", 2027, 1): uefa_page([club(1, "A", "FRA", 1, 10)], 3)})
@@ -184,6 +189,59 @@ class UefaTest(unittest.TestCase):
         later = NOW.replace(day=NOW.day + 1)
         sources.run_due(self.db, get, later, names={"fifa"})
         self.assertEqual(calls, [fifa.PAGE])
+
+    def test_sportscore_official_tables(self):
+        from vega_v2.store import Store
+
+        x = self.db.execute
+        with self.db.transaction():
+            Store(self.db).season("2025/2026")
+        x("INSERT INTO core.competitions(id, name, country_code, kind) VALUES (70, 'Ligue 1', 'FRA', 'league')")
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition','pitchapi','l_3FJFUl',70)")
+        x("INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label, is_current) VALUES (70, 70, 2025, '2025/2026', true)")
+        x("""INSERT INTO core.teams(id, name, short_name, country_code) VALUES (30, 'Paris Saint-Germain', 'PSG', 'FRA'),
+             (31, 'Olympique de Marseille', 'Marseille', 'FRA'), (32, 'AS Monaco', NULL, 'FRA')""")
+        x("INSERT INTO core.team_seasons(team_id, competition_season_id) SELECT id, 70 FROM core.teams WHERE id IN (30, 31, 32)")
+        table = [{"team": "Paris Saint Germain", "pos": 1, "p": 12, "w": 9, "d": 2, "l": 1, "gf": 30, "ga": 8, "gd": 22, "pts": 29},
+                 {"team": "Marseille", "pos": 2, "p": 12, "w": 8, "d": 2, "l": 2, "gf": 25, "ga": 12, "gd": 13, "pts": 26},
+                 {"team": "Monaco FC", "pos": 3, "p": 12, "w": 7, "d": 3, "l": 2, "gf": 20, "ga": 11, "gd": 9, "pts": 24}]
+        payload = {"sport": "football", "competition_slug": "french-ligue-1", "competition": "Ligue 1", "tables": [{"group": "", "rows": table}]}
+        calls = []
+
+        def get(url):
+            calls.append(url)
+            if "slug=french-ligue-1" not in url:
+                raise AssertionError("only the collected competition is called")
+            return json.loads(json.dumps(payload))
+
+        def standings():
+            return x("SELECT team_id, position, points FROM core.standings_official WHERE competition_season_id=70 ORDER BY position").fetchall()
+
+        def version():
+            row = x("SELECT version FROM ops.resource_versions WHERE resource_kind='competition_season' AND resource_id=70").fetchone()
+            return row and row[0]
+
+        with self.db.transaction():
+            self.assertEqual(sportscore.run(self.db, get, "standings:l_3FJFUl", NOW), (3, 0))
+        # Name, short name, and Monaco as the last team left.
+        self.assertEqual(standings(), [(30, 1, 29), (31, 2, 26), (32, 3, 24)])
+        published = version()
+        with self.db.transaction():
+            self.assertEqual(sportscore.run(self.db, get, "standings:l_3FJFUl", NOW), (0, 0))
+        self.assertEqual(version(), published)  # unchanged table: no new publication
+        # Another league without a current v2 edition: no call at all.
+        with self.db.transaction():
+            self.assertEqual(sportscore.run(self.db, get, "standings:l_4WFCIZ", NOW), (0, 0))
+        self.assertEqual(len(calls), 2)
+        # A table naming clubs of another season: nothing official is kept.
+        table[1]["team"], table[2]["team"] = "Paris FC", "Le Havre"
+        with self.db.transaction():
+            self.assertEqual(sportscore.run(self.db, get, "standings:l_3FJFUl", NOW), (0, 2))
+        self.assertEqual(standings(), [])
+        self.assertGreater(version(), published)
+        payload["competition_slug"] = "other"
+        with self.assertRaises(SourceError):
+            sportscore.run(self.db, get, "standings:l_3FJFUl", NOW)
 
 
 if __name__ == "__main__":

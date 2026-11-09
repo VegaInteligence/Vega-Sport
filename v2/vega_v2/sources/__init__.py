@@ -19,10 +19,10 @@ def normalize(name):
 
 
 def adapters():
-    from . import curated, fifa, uefa
+    from . import curated, fifa, sportscore, uefa
 
     # Keys are core.provider values (ops.source_runs.source).
-    return {"uefa": uefa, "fifa": fifa, "vega": curated}
+    return {"uefa": uefa, "fifa": fifa, "sportscore": sportscore, "vega": curated}
 
 
 def due(conn, now, adapter_name, adapter):
