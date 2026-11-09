@@ -100,6 +100,14 @@ v2 is a second base (`vega-football-db-postgres`) filled from the sources themse
    node v2/api/parity.mjs --legacy https://d317dq37z1tacb.cloudfront.net --v2 https://<vega-v2-api distribution> paths.txt
    ```
 
+   First run, 2026-11-09, on Ligue 1 2025/2026 (the only fully collected season then): match, stats, events and shots identical. Fixed from it: the player list's statement timeout and the club goal times (counted from the shot map, as main). Differences kept on purpose, all richer on the v2 side or raw source data v2 does not store:
+   - club and player reads carry `power` (the power ranking);
+   - a club's `country` is its league's when the source gives none (main: null), and a fixture keeps its round name;
+   - line-ups name players as their profile does, accents included ("Gerónimo Rulli"; main repeats the line-up's unaccented spelling);
+   - the competition catalogue has no `is_free` (a plan flag of the provider) and lists competitions by name;
+   - UEFA ranking rows rebuild only the `sourceRow` fields the site reads (teams still playing, season points), not the whole raw row;
+   - `metrics` of the actor reads is empty (the site has its own labels).
+
 3. **Switch the site.** In the site's Vercel project, set `NEXT_PUBLIC_API_ORIGIN` to the v2 distribution (`ApiOrigin` output of `vega-v2-api`) and `NEXT_PUBLIC_API_SCHEMA=v2`, then redeploy. Every read goes to its v2 route (`dashboard/frontend/src/services/v2-routes.js`): the provider proxy becomes `/api/matches/{id}[/…]`, `/api/competitions`, `/api/players/{id}` and `/api/teams/{id}`, club facts and stadiums are read by club id, cups by Vega id, schedules as fixture pages, and the Ballon d'Or slots show the player power ranking. Rolling back is removing the two variables and redeploying.
 4. **Retire the old path, with explicit consent only.** Stop the GitHub ingestion workflows, then, separately, the current backend and the RDS `statarena-postgres` (a final snapshot first). Nothing here deletes them.
 
