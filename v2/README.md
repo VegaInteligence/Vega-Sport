@@ -35,7 +35,8 @@ Le worker prend les travaux dans l'ordre score, détails, référentiel (le back
 - les lectures compactes `/api/read/home`, `clubs`, `players`, `player`, `club`, `performance`, `discipline`, avec la carte `media` de `media=1` (et, pour l'accueil, la présentation compacte de main, importée telle quelle) ;
 - `/api/fixtures` (pages à curseur liées à la génération), `/api/matches/{id}/summary`, `/api/standings`, `/api/matchdays`, `/api/search` ;
 - les archives : `/api/read/archive` (pages, recherche par équipe ou buteur, buts d'un match) et `/api/archives/index` ; le manifeste déclare `boundedArchive` ;
-- les classements et le support des fiches club : `/api/rankings/{index,edition,associations,club}`, `/api/club-links`, `/api/club-wikidata`, `/api/coach-portrait`, `/api/stadium`.
+- les classements et le support des fiches club : `/api/rankings/{index,edition,associations,club}`, `/api/club-links`, `/api/club-wikidata`, `/api/coach-portrait`, `/api/stadium` ;
+- les coupes : `/api/open-cups`, `/api/openligadb`, `/api/nations-results` et `/api/cup-snapshot` (éditions des sources, coupes PitchAPI et classements).
 
 Chaque route liste en tête de fichier ses écarts voulus avec l'API actuelle, pour la parité : identifiant d'apparition `<match>:<joueur>`, statuts normalisés, libellés de statistiques laissés au site, classement Vega servi quand aucune source officielle n'en publie.
 
@@ -48,13 +49,14 @@ Chaque route liste en tête de fichier ses écarts voulus avec l'API actuelle, p
 - classement FIFA, toutes les éditions depuis 2021 ;
 - classements officiels SportScore, écrits seulement si chaque ligne désigne un club de l'édition ;
 - Wikidata et Commons : fondation, stade, entraîneur, portraits. Les lecteurs de main tournent tels quels via [`sources/bridge.mjs`](sources/bridge.mjs), par lots de vingt par heure.
-- alias de recherche et orthographes UEFA revues de main.
+- alias de recherche et orthographes UEFA revues de main ;
+- coupes OpenFootball, OpenLigaDB et International Results, par les projections de main, pour les éditions qu'il actualise ; une source indisponible garde la dernière édition.
 
 Chaque source a sa période dans `ops.source_runs`. Une erreur de base de données reste confinée à sa portée.
 
 ## Ce qui reste
 
-- Les routes encore servies par l'API actuelle : `/api/seasons/partition` (chargeur de saison complet, inutile une fois toutes les lectures compactes servies), `/api/archives/season` (documents source entiers, inutiles avec `boundedArchive`), `/api/archive/matches/{id}`, `/api/assets`, `player-honours`, le bloc des coupes (`open-cups`, `openligadb`, `nations-results`, `cup-index`, `cup-table`, `cup-snapshot`, `supplemental`), le proxy `/api/pitchapi/*` et `orion-pro`.
+- Les routes encore servies par l'API actuelle : `/api/seasons/partition` (chargeur de saison complet, inutile une fois toutes les lectures compactes servies), `/api/archives/season` (documents source entiers, inutiles avec `boundedArchive`), `/api/archive/matches/{id}`, `/api/assets`, `player-honours`, le catalogue figé des coupes open-matchday (`cup-index`, `cup-table`, `supplemental` : le worker de coupes de main est retiré, ces routes peuvent rester sur main), le proxy `/api/pitchapi/*` et `orion-pro`.
 - Les autres adaptateurs : SportsAPI, OpenFootball, OpenLigaDB, International Results, coupes (football-data, ESPN, fixturedl). L'import réel des archives attend la copie en lecture seule des sources de main (`data/sources/`).
 - Le déploiement des piles AWS, le backfill, la parité réelle et la bascule route par route : voir `infra/aws-v2/README.md`. Rien n'est déployé.
 

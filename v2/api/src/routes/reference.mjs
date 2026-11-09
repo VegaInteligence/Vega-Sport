@@ -37,6 +37,11 @@ const iso = (value) => (value instanceof Date ? value.toISOString() : value ?? n
 export async function standings(req, p, read) {
   const { competition, season } = validate(p, { competition: LEAGUE, season: YEAR });
   if (!competition) reject(400, "Paramètre manquant.");
+  return respond(req, await standingsBody(read, competition, season), "support");
+}
+
+/** The standings body of a competition (and season), or a 404. */
+export async function standingsBody(read, competition, season) {
   // Without a season: the current edition (else the latest one), as the legacy projection.
   const rows = await read(
     `WITH edition AS (
@@ -60,17 +65,13 @@ export async function standings(req, p, read) {
   }
   const sources = [...new Set(rows.map((r) => SOURCE_NAMES[r.source] ?? r.source))];
   const fetched = rows.map((r) => iso(r.as_of)).filter(Boolean).sort();
-  return respond(
-    req,
-    {
-      competition: rows[0].league_name,
-      season: season ?? rows[0].native_label ?? rows[0].season,
-      source: sources.length === 1 ? sources[0] : sources.join(","),
-      fetchedAt: fetched.at(-1) ?? null,
-      tables: [...tables.values()],
-    },
-    "support",
-  );
+  return {
+    competition: rows[0].league_name,
+    season: season ?? rows[0].native_label ?? rows[0].season,
+    source: sources.length === 1 ? sources[0] : sources.join(","),
+    fetchedAt: fetched.at(-1) ?? null,
+    tables: [...tables.values()],
+  };
 }
 
 export async function matchdays(req, p, read) {

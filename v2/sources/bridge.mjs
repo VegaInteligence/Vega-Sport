@@ -9,6 +9,9 @@
  *   node v2/sources/bridge.mjs stadium <Q id>
  *   node v2/sources/bridge.mjs portraits '<json array of names>'
  *   node v2/sources/bridge.mjs plans
+ *   node v2/sources/bridge.mjs projection <open-cups|openligadb|nations-results> '<query string>'
+ *     main's own source projection (scripts/source-projections), which fetches its source
+ *     and normalizes it: prints {status, body}.
  */
 import { readFileSync } from "node:fs";
 import { fetchWikidataClub } from "../../dashboard/frontend/src/services/wikidata-club.js";
@@ -26,6 +29,11 @@ else if (command === "portraits") out = Object.fromEntries(await findCoachPortra
 else if (command === "plans") {
   const source = readFileSync(new URL("../../dashboard/frontend/src/services/stadium-plans.js", import.meta.url), "utf8");
   out = Object.fromEntries([...new Set(source.match(/\bQ[1-9]\d{0,11}(?=:)/g) || [])].map((id) => [id, stadiumPlans(id)]));
+} else if (command === "projection") {
+  if (!["open-cups", "openligadb", "nations-results"].includes(args[0])) process.exit(2);
+  const { GET } = await import(`../../dashboard/scripts/source-projections/${args[0]}.mjs`);
+  const response = await GET(new Request(`http://bridge/api/${args[0]}?${args[1] || ""}`));
+  out = { status: response.status, body: await response.json().catch(() => null) };
 } else {
   console.error("unknown command");
   process.exit(2);

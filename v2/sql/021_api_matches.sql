@@ -21,7 +21,7 @@ SELECT m.id AS match_id, m.season_id, m.competition_season_id, m.revision,
   ref.id AS referee_internal_id, ref.name AS referee, v.id AS venue_internal_id, v.name AS stadium
 FROM core.matches m
 JOIN core.seasons se ON se.id = m.season_id
-JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL
+JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL AND cs.cup_key IS NULL
 JOIN core.competitions c ON c.id = cs.competition_id
 LEFT JOIN core.rounds r ON r.id = m.round_id
 LEFT JOIN core.teams ht ON ht.id = m.home_team_id

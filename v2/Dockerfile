@@ -24,6 +24,13 @@ COPY dashboard/frontend/src/services/wikidata-club.js dashboard/frontend/src/ser
 COPY dashboard/frontend/src/data-url.js dashboard/frontend/src/model.js dashboard/frontend/src/
 COPY dashboard/scripts/coach-portrait-source.mjs dashboard/scripts/
 COPY dashboard/shared/player-aliases.js dashboard/shared/
+# main's cup source projections (vega_v2/sources/cups.py) and their imports.
+COPY dashboard/scripts/source-projections/open-cups.mjs dashboard/scripts/source-projections/openligadb.mjs \
+     dashboard/scripts/source-projections/nations-results.mjs dashboard/scripts/source-projections/
+COPY dashboard/frontend/src/services/openfootball-france-cup.js dashboard/frontend/src/services/openfootball-cups.js \
+     dashboard/frontend/src/services/cup-archives.js dashboard/frontend/src/services/openligadb.js \
+     dashboard/frontend/src/services/competition-selector.js dashboard/frontend/src/services/nations-results.js dashboard/frontend/src/services/
+COPY dashboard/shared/competition-scope.js dashboard/shared/
 COPY v2/sources/bridge.mjs v2/sources/
 # Database URLs use sslmode=verify-full&sslrootcert=/app/rds-ca.pem
 COPY dashboard/backend/certs/rds-us-east-2.pem rds-ca.pem
