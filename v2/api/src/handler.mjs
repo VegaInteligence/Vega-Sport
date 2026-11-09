@@ -15,12 +15,13 @@ import { createDisciplineRoute } from "./routes/discipline.mjs";
 import { createPerformanceRoute } from "./routes/performance.mjs";
 import { createActorRoute } from "./routes/actors.mjs";
 import { createHomeReadRoute } from "./routes/home.mjs";
+import { createSearchRoute } from "./routes/search.mjs";
 import { compactHomePresentation } from "../../../dashboard/backend/services/home-presentation.js";
 
 /** `mediaBase`: the CloudFront origin of the image copies (https://…/); none, no media map.
  * `clock`: the home page's notion of now (tests pin it). */
 export function createHandler({ read, mediaBase = null, clock = Date.now }) {
-  const routes = [createSystemRoute(read), createClubReadRoute(read), createPlayerReadRoute(read), createMatchRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPerformanceRoute(read), createActorRoute(read), createHomeReadRoute(read, clock)];
+  const routes = [createSystemRoute(read), createClubReadRoute(read), createPlayerReadRoute(read), createMatchRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPerformanceRoute(read), createActorRoute(read), createHomeReadRoute(read, clock), createSearchRoute(read)];
   async function route(req) {
     const url = new URL(req.url),
       path = url.pathname;
