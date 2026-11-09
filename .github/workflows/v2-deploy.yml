@@ -49,4 +49,5 @@ jobs:
           IMPORT_ARCHIVES: ${{ inputs.import_archives }}
           ARCHIVE_SOURCES_BUCKET: ${{ vars.V2_ARCHIVE_SOURCES_BUCKET }}
           PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
+          SPORTSAPI_API_KEY: ${{ secrets.SPORTSAPI_API_KEY }}
         run: bash infra/aws-v2/deploy.sh | tee -a "$GITHUB_STEP_SUMMARY"

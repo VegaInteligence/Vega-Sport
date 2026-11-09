@@ -24,7 +24,7 @@ def json_getter(*, interval=0.5, retries=3, timeout=30, sleep=time.sleep, clock=
     opener = build_opener(_SameHost())
     last = [None]
 
-    def get(url, *, as_text=False):
+    def get(url, *, as_text=False, headers=None):
         if urlparse(url).scheme != "https":
             raise SourceError("HTTPS_REQUIRED")
         for attempt in range(retries + 1):
@@ -33,7 +33,7 @@ def json_getter(*, interval=0.5, retries=3, timeout=30, sleep=time.sleep, clock=
             last[0] = clock()
             try:
                 accept = "text/html" if as_text else "application/json"
-                with opener.open(Request(url, headers={"Accept": accept, "User-Agent": "VegaSport-V2/1.0"}), timeout=timeout) as r:
+                with opener.open(Request(url, headers={"Accept": accept, "User-Agent": "VegaSport-V2/1.0", **(headers or {})}), timeout=timeout) as r:
                     body = r.read(MAX_BYTES + 1)
                 if len(body) > MAX_BYTES:
                     raise SourceError("TOO_LARGE")

@@ -115,7 +115,7 @@ def workflow(name):
         check('role/vega-v2-deploy' in text and './.github/actions/aws-database' not in text and 'statarena-postgres' not in text,
               'v2 deploy must use its own role and never the current database')
         import re
-        check(set(re.findall(r'\$\{\{\s*secrets\.([A-Za-z0-9_]+)',text))=={'PITCHAPI_API_KEY'}, 'v2 deploy may receive only the provider key')
+        check(set(re.findall(r'\$\{\{\s*secrets\.([A-Za-z0-9_]+)',text))<={'PITCHAPI_API_KEY','SPORTSAPI_API_KEY'}, 'v2 deploy may receive only the provider keys')
     elif name=='production-validation':
         check('id-token: write' not in text and 'secrets.' not in text,
               'public site validation must not receive cloud/provider credentials')

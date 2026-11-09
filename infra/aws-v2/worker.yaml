@@ -11,6 +11,10 @@ Parameters:
   CalcUrlParameter: {Type: String, Default: /vega/v2/calc-database-url}
   PasswordParameterPrefix: {Type: String, Default: /vega/v2/password, Description: 'SecureStrings <prefix>-collect, -calc, -read'}
   PitchApiKeyParameter: {Type: String, Default: /vega/v2/pitchapi-key}
+  SportsApiKeyParameter:
+    Type: String
+    Default: ''
+    Description: SSM parameter of the SportsAPI key (ranking snapshots); empty to leave that source off
   ArchiveSourcesBucket:
     Type: String
     Default: ''
@@ -18,6 +22,7 @@ Parameters:
     Description: "Bucket holding main's data/sources (read only, archive import); empty, no archive task"
 Conditions:
   HasArchiveSources: !Not [!Equals [!Ref ArchiveSourcesBucket, '']]
+  HasSportsApi: !Not [!Equals [!Ref SportsApiKeyParameter, '']]
 Resources:
   Repository:
     Type: AWS::ECR::Repository
@@ -58,6 +63,7 @@ Resources:
                   - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CalcUrlParameter}'
                   - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PasswordParameterPrefix}-*'
                   - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PitchApiKeyParameter}'
+                  - !If [HasSportsApi, !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SportsApiKeyParameter}', !Ref AWS::NoValue]
               - Effect: Allow
                 Action: ['secretsmanager:GetSecretValue']
                 Resource: !ImportValue vega-v2-db-master-secret
@@ -117,6 +123,10 @@ Resources:
             - {Name: V2_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CollectUrlParameter}'}
             - {Name: V2_CALC_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CalcUrlParameter}'}
             - {Name: PITCHAPI_API_KEY, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PitchApiKeyParameter}'}
+            - !If
+              - HasSportsApi
+              - {Name: V2_SPORTSAPI_API_KEY, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SportsApiKeyParameter}'}
+              - !Ref AWS::NoValue
           LogConfiguration:
             LogDriver: awslogs
             Options: {awslogs-group: !Ref Logs, awslogs-region: !Ref 'AWS::Region', awslogs-stream-prefix: worker}
