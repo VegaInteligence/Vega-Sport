@@ -164,7 +164,7 @@ class Loader:
     def team(self, name, country):
         key = f"archive:{normalize(country)}:{normalize(name)}"
         if key not in self.teams:
-            ident = self._key("team", key)
+            ident = self._key("team", key)  # may be a PitchAPI club the archive team was merged into
             if ident is None:
                 ident = self.conn.execute("INSERT INTO core.teams(name) VALUES (%s) RETURNING id", (name,)).fetchone()[0]
                 self._link("team", key, ident)
@@ -208,6 +208,7 @@ class Loader:
             values = dict(row, competition_season_id=edition_id, season_id=start, round_id=round_id,
                           match_date=match.get("date") or None, date_unverified=bool(match.get("dateNote")) or None,
                           home_team_id=home, away_team_id=away, archive_key=match["key"], archive_position=position,
+                          home_team_name=match.get("team1") or None, away_team_name=match.get("team2") or None,
                           source=provider_of(match))
             columns = list(values)
             mid = self.conn.execute(
