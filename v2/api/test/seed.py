@@ -103,6 +103,15 @@ def main(dsn):
         x("INSERT INTO agg.standings(competition_season_id,team_id,position,played,won,drawn,lost,goals_for,goals_against,points,updated_at) VALUES (1,%s,%s,%s,%s,%s,%s,%s,%s,%s,'2025-09-20T11:00:00Z')",
           (team, pos, played, w, d, l, gf, ga, pts))
     x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('team','uefa','52747',1)")
+    # UEFA club and association coefficients of 2025/2026, FIFA's edition of 18 September 2025.
+    x("""INSERT INTO core.ranking_editions(id,kind,provider,label,period,published_on,is_current,source_url,source_updated_at,updated_at) VALUES
+         (1,'uefa_clubs','uefa','2025/2026','2025/2026','2025-09-01',true,'https://comp.uefa.com/v2/coefficients?c','2025-09-01T08:00:00Z','2025-09-02T00:00:00Z'),
+         (2,'uefa_associations','uefa','2025/2026','2025/2026','2025-09-01',true,'https://comp.uefa.com/v2/coefficients?a','2025-09-01T08:00:00Z','2025-09-02T00:00:00Z'),
+         (3,'fifa_men','fifa','2025-09-18','2025-09-18','2025-09-18',true,'https://inside.fifa.com/api/ranking-overview?x','2025-09-18T00:00:00Z','2025-09-19T00:00:00Z')""")
+    x("INSERT INTO core.ranking_rows(edition_id,row_no,team_id,position,points,provider_key,entity_name,earned_points,teams_still_playing) VALUES (1,1,1,40,30.5,'52747','Olympique Ete',29.5,1)")
+    x("INSERT INTO core.ranking_rows(edition_id,row_no,country_code,position,points,provider_key,entity_name,earned_points,teams_still_playing) VALUES (2,1,'FRA',5,72.3,'1','France',72.3,7)")
+    x("INSERT INTO core.ranking_season_points(edition_id,row_no,season_year,points,association_points,teams_still_playing) VALUES (2,1,2026,15.5,15.5,7),(2,1,2025,17.0,17.0,0)")
+    x("INSERT INTO core.ranking_rows(edition_id,row_no,country_code,position,previous_position,points,provider_key,entity_name,confederation) VALUES (3,1,'FRA',2,1,1870.0,'43946','France','UEFA')")
     # Cards of Élie Durand: a yellow (m1), a direct red (m3), a second yellow and its red (m5).
     for mid, seq, kind, minute in [(1, 10, "yellow_card", 30), (3, 10, "red_card", 60), (5, 10, "second_yellow", 80), (5, 11, "red_card", 80)]:
         x("INSERT INTO core.match_events(season_id,match_id,team_id,seq,event_type,minute,period,player_id) VALUES (2025,%s,1,%s,%s,%s,'second_half',101)", (mid, seq, kind, minute))

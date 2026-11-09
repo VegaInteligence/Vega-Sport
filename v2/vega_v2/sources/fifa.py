@@ -51,22 +51,32 @@ def _int(value):
     return number if number >= 1 else None
 
 
+FLAG = "https://api.fifa.com/api/v3/picture/flags-sq-2/"
+
+
 def edition(get, ident):
-    """Rows of one edition: (fifa team id, name, FIFA code, position, previous, points)."""
-    body = get(OVERVIEW + "?" + urlencode({"locale": "en", "dateId": ident, "rankingType": "football"}))
+    """(rows, source url) of one edition; a row is (fifa team id, name, FIFA code, position,
+    previous, points, confederation, flag url), as main's collect_rankings.py reads them."""
+    url = OVERVIEW + "?" + urlencode({"locale": "en", "dateId": ident, "rankingType": "football"})
+    body = get(url)
     rows = []
     for entry in body.get("rankings") or []:
         item = entry["rankingItem"]
+        flag = (item.get("flag") or {}).get("src")
         rows.append((str(item["idTeam"]), item["name"], item.get("countryCode"), _int(item.get("rank")),
-                     _int(item.get("previousRank")), item.get("totalPoints")))
+                     _int(item.get("previousRank")), item.get("totalPoints"), (entry.get("tag") or {}).get("id"),
+                     flag if isinstance(flag, str) and flag.startswith("https://") else None))
     if not rows and ident.startswith("FRS_"):
-        native = get(SCHEDULE + "?" + urlencode({"rankingScheduleId": ident, "language": "en", "count": 300}))
+        url = SCHEDULE + "?" + urlencode({"rankingScheduleId": ident, "language": "en", "count": 300})
+        native = get(url)
         for r in native.get("Results") or []:
-            rows.append((str(r["IdTeam"]), r["TeamName"][0]["Description"], r.get("IdCountry"), _int(r.get("Rank")),
-                         _int(r.get("PrevRank")), r.get("TotalPoints")))
-    if any(position is None for *_, position, _, _ in rows):
+            code = r.get("IdCountry")
+            rows.append((str(r["IdTeam"]), r["TeamName"][0]["Description"], code, _int(r.get("Rank")),
+                         _int(r.get("PrevRank")), r.get("TotalPoints"), r.get("ConfederationName"),
+                         FLAG + code if isinstance(code, str) and code.isalnum() else None))
+    if any(row[3] is None for row in rows):
         raise SourceError("INVALID_ROW")
-    return rows
+    return rows, url
 
 
 def link_national_team(conn, fifa_id, name, code):
@@ -94,17 +104,17 @@ def link_national_team(conn, fifa_id, name, code):
     return team
 
 
-def save(conn, day, rows):
+def save(conn, day, rows, url=None):
     edition_id = conn.execute(
-        """INSERT INTO core.ranking_editions(kind, provider, label, period, published_on, is_current)
-           VALUES ('fifa_men', 'fifa', %s, %s, %s, false)
-           ON CONFLICT (kind, provider, label) DO UPDATE SET updated_at = now() RETURNING id""",
-        (day, day, date.fromisoformat(day)),
+        """INSERT INTO core.ranking_editions(kind, provider, label, period, published_on, is_current, source_url, source_updated_at)
+           VALUES ('fifa_men', 'fifa', %s, %s, %s, false, %s, %s)
+           ON CONFLICT (kind, provider, label) DO UPDATE SET source_url = EXCLUDED.source_url, updated_at = now() RETURNING id""",
+        (day, day, date.fromisoformat(day), url, day),
     ).fetchone()[0]
     conn.execute("DELETE FROM core.ranking_rows WHERE edition_id=%s", (edition_id,))
     written = unmatched = 0
     seen = set()
-    for row_no, (fifa_id, name, code, position, previous, points) in enumerate(rows, 1):
+    for row_no, (fifa_id, name, code, position, previous, points, confederation, flag) in enumerate(rows, 1):
         team = link_national_team(conn, fifa_id, name, code)
         if team is None:
             unmatched += 1
@@ -114,10 +124,16 @@ def save(conn, day, rows):
         elif team in seen:
             continue
         seen.add(team if team is not None else code)
+        image = conn.execute(
+            """INSERT INTO core.assets(kind, source_url) VALUES ('logo', %s)
+               ON CONFLICT (source_url) DO UPDATE SET source_url = EXCLUDED.source_url RETURNING id""",
+            (flag,),
+        ).fetchone()[0] if flag else None
         conn.execute(
-            """INSERT INTO core.ranking_rows(edition_id, row_no, team_id, country_code, position, previous_position, points)
-               VALUES (%s,%s,%s,%s,%s,%s,%s)""",
-            (edition_id, row_no, team, None if team is not None else code, position, previous, points),
+            """INSERT INTO core.ranking_rows(edition_id, row_no, team_id, country_code, position, previous_position, points,
+                 provider_key, entity_name, confederation, image_asset_id)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (edition_id, row_no, team, None if team is not None else code, position, previous, points, fifa_id, name, confederation, image),
         )
         written += 1
     conn.execute(
@@ -137,10 +153,10 @@ def run(conn, get, scope, now):
     ).fetchall()}
     written = unmatched = 0
     for day in [d for d in dates if d not in stored][-MAX_EDITIONS:]:
-        rows = edition(get, dates[day])
+        rows, url = edition(get, dates[day])
         if not rows:  # not published yet: read again on a later run
             continue
-        w, u = save(conn, day, rows)
+        w, u = save(conn, day, rows, url)
         written, unmatched = written + w, unmatched + u
     # The latest stored edition is the current one.
     conn.execute(
