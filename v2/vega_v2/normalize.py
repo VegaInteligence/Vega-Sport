@@ -234,6 +234,7 @@ def _match(out, item):
             "postponed",
             "awarded",
             "canceled",
+            "suspended",
         ):
             raise NormalizationError("UNKNOWN_STATUS")
         row["status"] = status

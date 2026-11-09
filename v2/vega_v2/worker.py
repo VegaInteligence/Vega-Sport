@@ -1,0 +1,461 @@
+"""Worker loop: planner + collector + calculator in one long-running process.
+
+Each loop: plan (every minute), claim one job (lanes in priority order: score, then
+details, then reference; backfill runs in its own task), call PitchAPI, write core in
+one transaction with the job acknowledgement, and drain ops.dirty_scopes with the
+calculator when the queues are idle or every 30 s. Components only meet in PostgreSQL.
+"""
+
+import argparse
+from collections import Counter, defaultdict
+from datetime import datetime, timezone
+import os
+import signal
+import sys
+import time
+
+import psycopg
+
+from . import calculator, planner, profiles
+from .jobs import LeaseLost, ack, claim, fail
+from .normalize import NormalizedFamily, NormalizationError, normalize_family
+from .pilot import DETAILS, safe_code
+from .pitchapi import PitchClient, PitchError
+from .store import Store, StoreError, connect_local, migrate
+
+DEFAULT_LANES = ("score", "details", "reference")
+LANE_ORDER = ("score", "details", "reference", "backfill")
+DETAIL_ENDPOINTS = {family: (suffix, parser) for family, suffix, parser in DETAILS}
+TRANSIENT = frozenset(
+    (
+        "HTTP_SERVER_ERROR",
+        "TRANSPORT_ERROR",
+        "RATE_LIMIT_EXCEEDED",
+        "PROVIDER_ERROR",
+        "INTERNAL_SERVER_ERROR",
+        "INVALID_JSON",
+        "INVALID_ENVELOPE",
+    )
+)
+MAX_ATTEMPTS = 5
+SUMMARY_FIELDS = ("status", "home_score", "away_score", "home_penalty_score", "away_penalty_score")
+LEASE_SECONDS = 300
+
+
+def _now():
+    return datetime.now(timezone.utc)
+
+
+class Worker:
+    def __init__(self, store, client, *, lanes=DEFAULT_LANES, clock=_now):
+        unknown = set(lanes) - set(LANE_ORDER)
+        if unknown or not lanes:
+            raise ValueError("invalid lanes")
+        self.store = store
+        self.conn = store.conn
+        self.client = client
+        self.lanes = tuple(lane for lane in LANE_ORDER if lane in lanes)
+        self.clock = clock
+        self.results = Counter()
+        self._events = []
+        client._on_attempt = self._events.append
+
+    # Transport -----------------------------------------------------------
+
+    def fetch(self, family, endpoint, params=None, *, job=None):
+        """One provider call; every attempt lands in ops.fetch_log with the job target."""
+        self._events.clear()
+        try:
+            return self.client.fetch(endpoint, params)
+        finally:
+            target = job or {}
+            for event in self._events:
+                self.store.log_attempt(
+                    family,
+                    event,
+                    entity_type=target.get("entity_type"),
+                    entity_id=target.get("entity_id"),
+                    competition_season_id=target.get("competition_season_id"),
+                    target_date=target.get("target_date"),
+                    global_key=target.get("global_key"),
+                )
+
+    def hydrate(self, batch):
+        """Fetch competitions and teams a response names without describing them."""
+        grouped = defaultdict(dict)
+        for ref in batch.references:
+            if ref.provider_key and ref.entity_type in ("competition", "team"):
+                grouped[(ref.entity_type, ref.provider_key)].update(
+                    {k: v for k, v in ref.fields.items() if v is not None}
+                )
+        for (kind, key), fields in sorted(grouped.items()):
+            if fields.get("name") or self.store.has(kind, key):
+                continue
+            if kind == "team":
+                profile = normalize_family("team", self.fetch("team", "/teams/" + key).data)
+                profiles.save_profile(self.store, "team", key, profile)
+            else:
+                profile = normalize_family("league", self.fetch("league", "/leagues/" + key).data)
+                self.store.save_references(profile, family="league")
+
+    def _provider_key(self, kind, ident):
+        row = self.conn.execute(
+            "SELECT provider_key FROM core.provider_ids WHERE entity_type=%s AND provider='pitchapi' AND entity_id=%s AND is_current",
+            (kind, ident),
+        ).fetchone()
+        if not row:
+            raise StoreError("UNRESOLVED_REFERENCE")
+        return row[0]
+
+    def _own(self, job):
+        """Inside a transaction: the lease must still be ours before any write."""
+        if not self.conn.execute(
+            "SELECT 1 FROM ops.fetch_jobs WHERE id=%s AND lease_token=%s AND state='leased' AND lease_until>clock_timestamp() FOR UPDATE",
+            (job["id"], job["lease_token"]),
+        ).fetchone():
+            raise StoreError("LEASE_LOST")
+
+    # Loop ----------------------------------------------------------------
+
+    def claim_next(self):
+        for lane in self.lanes:
+            job = claim(self.conn, lane, now=self.clock(), lease_seconds=LEASE_SECONDS)
+            if job:
+                return job
+        return None
+
+    def step(self):
+        """Claim and run one job; False when every lane is empty."""
+        job = self.claim_next()
+        if not job:
+            return False
+        family = job["family"]
+        handler = {
+            "calendar": self.calendar,
+            "league_matches": self.league_matches,
+            "league": self.league,
+            "team": self.profile,
+            "player": self.profile,
+            "summary": self.summary,
+        }.get(family, self.details)
+        try:
+            handler(job)
+            code = "ok"
+        except LeaseLost:
+            code = "LEASE_LOST"
+        except (PitchError, NormalizationError, StoreError, psycopg.Error) as error:
+            code = safe_code(error)
+        except Exception as error:  # a bug must not crash-loop on the same job
+            code = "WORKER_" + type(error).__name__.upper()[:50]
+        self.results[(family, code)] += 1
+        if code not in ("ok", "LEASE_LOST"):
+            self.failed(job, code)
+            print(f"family={family} job={job['id']} error={code}", flush=True)
+        return True
+
+    def failed(self, job, code):
+        retry = code in TRANSIENT and job["attempts"] < MAX_ATTEMPTS
+        lease = (job["id"], job["lease_token"])
+        family = job["family"]
+        try:
+            if family in ("team", "player"):
+                key = self._provider_key(family, job["entity_id"])
+                profiles.record_failure(self.store, family, key, code, lease, retry=retry)
+                return
+            with self.conn.transaction():
+                if job["entity_type"] == "match":
+                    self.store.record_failure(job["entity_id"], family, code, lease=lease)
+                    if family == "summary" and not retry:
+                        planner.stop_watch(self.conn, job["entity_id"], now=self.clock())
+                else:
+                    self.conn.execute(
+                        "INSERT INTO ops.parse_failures(family,entity_type,entity_id,target_date,competition_season_id,global_key,error_code,message) VALUES(%s,%s,%s,%s,%s,%s,%s,%s)",
+                        (
+                            family,
+                            job["entity_type"],
+                            job["entity_id"],
+                            job["target_date"],
+                            job["competition_season_id"],
+                            job["global_key"],
+                            code,
+                            code,
+                        ),
+                    )
+                fail(self.conn, *lease, code, retry=retry, now=self.clock())
+        except (LeaseLost, StoreError):
+            self.results[(family, "LEASE_LOST")] += 1
+
+    def calculate(self, limit=500):
+        try:
+            return calculator.process_dirty(self.conn, limit=limit)
+        except psycopg.Error as error:
+            print(f"calculator error={safe_code(error)}", flush=True)
+            return 0
+
+    def run(self, *, max_jobs=None, until_idle=False, plan_every=60, calc_every=30, idle_sleep=5, stop=None):
+        stop = stop or (lambda: False)
+        done = 0
+        last_plan = last_calc = float("-inf")
+        while not stop():
+            tick = time.monotonic()
+            if tick - last_plan >= plan_every:
+                try:
+                    planner.plan(self.conn, self.clock())
+                except psycopg.Error as error:
+                    print(f"planner error={safe_code(error)}", flush=True)
+                last_plan = tick
+            worked = self.step()
+            done += worked
+            if not worked or tick - last_calc >= calc_every:
+                self.calculate()
+                last_calc = tick
+            if max_jobs is not None and done >= max_jobs:
+                break
+            if not worked:
+                if until_idle:
+                    break
+                time.sleep(idle_sleep)
+        self.calculate()
+        return done
+
+    # Handlers ------------------------------------------------------------
+
+    def _save_calendar(self, batch, job, *, family):
+        """Matches of a calendar response, grouped by edition, then their watches."""
+        now = self.clock()
+        groups = defaultdict(list)
+        for row in batch.rows.get("core.matches", []):
+            groups[(row.get("provider_competition_id"), row.get("provider_season"))].append(row)
+        with self.conn.transaction():
+            self._own(job)
+            self.store.save_references(
+                NormalizedFamily(references=batch.references, unknown_paths=batch.unknown_paths),
+                family=family,
+            )
+            for (competition, season), rows in sorted(groups.items(), key=lambda g: (str(g[0][0]), str(g[0][1]))):
+                try:
+                    with self.conn.transaction():
+                        self._save_group(competition, season, rows, family, now)
+                except StoreError:
+                    # One moved or unreadable match must not cost the other matches of
+                    # the day: the group is replayed match by match, failures logged.
+                    for row in rows:
+                        try:
+                            with self.conn.transaction():
+                                self._save_group(competition, season, [row], family, now)
+                        except StoreError as error:
+                            self.conn.execute(
+                                "INSERT INTO ops.parse_failures(family,target_date,competition_season_id,error_code,message) VALUES(%s,%s,%s,%s,%s)",
+                                (family, job["target_date"], job["competition_season_id"], str(error), str(error)),
+                            )
+                            self.results[(family, str(error))] += 1
+            ack(self.conn, job["id"], job["lease_token"], now=now)
+
+    def _defer_to_summary(self, rows):
+        """Once /matches/{id} has given a final result, calendars no longer rewrite it.
+
+        A calendar can be staler than the match endpoint: without this, a day's
+        calendar would put back the score that the +24 h correction just fixed.
+        """
+        final = {
+            key
+            for (key,) in self.conn.execute(
+                """SELECT p.provider_key FROM core.provider_ids p
+                   JOIN core.matches m ON m.id = p.entity_id
+                   JOIN ops.family_state f ON f.match_id = m.id AND f.family = 'summary' AND f.status = 'ok'
+                   WHERE p.entity_type = 'match' AND p.provider = 'pitchapi'
+                     AND p.provider_key = ANY(%s) AND m.status = 'finished'""",
+                ([row["id"] for row in rows],),
+            )
+        }
+        return [
+            {k: v for k, v in row.items() if k not in SUMMARY_FIELDS} if row["id"] in final else row
+            for row in rows
+        ]
+
+    def _save_group(self, competition, season, rows, family, now):
+        edition = self._edition_for(competition, season, rows)
+        ids = self.store.save_matches(
+            NormalizedFamily(rows={"core.matches": self._defer_to_summary(rows)}), edition, family=family
+        )
+        today = now.date()
+        for mid, row in zip(ids, rows):
+            kickoff = row.get("kickoff_at")
+            # Watches come from the J-1..J+7 date calendar. A season calendar only moves
+            # an existing watch or opens one in that window; history is the backfill's job.
+            if not (
+                family == "calendar"
+                or (kickoff is not None and -1 <= (kickoff.date() - today).days <= 7)
+                or self.conn.execute("SELECT 1 FROM ops.match_watch WHERE match_id=%s", (mid,)).fetchone()
+            ):
+                continue
+            planner.observe(
+                self.conn,
+                mid,
+                kickoff_at=row.get("kickoff_at"),
+                status=row.get("status"),
+                now=now,
+            )
+
+    def _edition_for(self, competition, season, rows):
+        if competition is not None and season is not None:
+            edition, _ = self.store.edition(self.store.resolve("competition", competition), season)
+            return edition
+        # No edition in the payload: a known match keeps the edition it was stored under.
+        known = {
+            self.conn.execute(
+                "SELECT m.competition_season_id FROM core.matches m JOIN core.provider_ids p ON p.entity_type='match' AND p.provider='pitchapi' AND p.entity_id=m.id WHERE p.provider_key=%s",
+                (row["id"],),
+            ).fetchone()
+            for row in rows
+        }
+        if len(known) == 1 and None not in known:
+            return known.pop()[0]
+        raise StoreError("MATCH_SEASON_UNKNOWN")
+
+    def calendar(self, job):
+        day = job["target_date"]
+        result = self.fetch("calendar", "/date/" + day.isoformat(), {"status": "all"}, job=job)
+        batch = normalize_family("date", result.data)
+        self.hydrate(batch)
+        self._save_calendar(batch, job, family="calendar")
+
+    def league_matches(self, job):
+        edition = job["competition_season_id"]
+        competition, label = self.conn.execute(
+            "SELECT competition_id, native_label FROM core.competition_seasons WHERE id=%s",
+            (edition,),
+        ).fetchone()
+        key = self._provider_key("competition", competition)
+        result = self.fetch(
+            "league_matches",
+            "/leagues/" + key + "/matches",
+            {"season": label, "status": "all"},
+            job=job,
+        )
+        identity = result.data.get("league", {}) if isinstance(result.data, dict) else {}
+        if identity.get("id") != key or identity.get("season", label) != label:
+            raise StoreError("CALENDAR_IDENTITY_MISMATCH")
+        batch = normalize_family("league_matches", result.data)
+        self.hydrate(batch)
+        for row in batch.rows.get("core.matches", []):
+            row.setdefault("provider_competition_id", key)
+            row.setdefault("provider_season", label)
+        self._save_calendar(batch, job, family="league_matches")
+
+    def league(self, job):
+        if job["global_key"] == "catalogue":
+            data = self.fetch("league", "/leagues", job=job).data
+            entries = data.get("leagues", []) if isinstance(data, dict) else []
+        else:
+            key = self._provider_key("competition", job["entity_id"])
+            entries = [self.fetch("league", "/leagues/" + key, job=job).data]
+        with self.conn.transaction():
+            self._own(job)
+            for entry in entries:
+                try:
+                    with self.conn.transaction():
+                        self.store.save_references(normalize_family("league", entry), family="league")
+                except (NormalizationError, StoreError) as error:
+                    # One unreadable league must not block the catalogue.
+                    self.results[("league", safe_code(error))] += 1
+            ack(self.conn, job["id"], job["lease_token"], now=self.clock())
+
+    def profile(self, job):
+        kind = job["family"]
+        key = self._provider_key(kind, job["entity_id"])
+        result = self.fetch(kind, "/" + kind + "s/" + key, job=job)
+        batch = normalize_family(kind, result.data)
+        profiles.save_profile(self.store, kind, key, batch, (job["id"], job["lease_token"]))
+
+    def summary(self, job):
+        mid = job["entity_id"]
+        key = self._provider_key("match", mid)
+        result = self.fetch("summary", "/matches/" + key, job=job)
+        batch = normalize_family("summary", result.data, match_id=key)
+        self.hydrate(batch)
+        now = self.clock()
+        with self.conn.transaction():
+            self._own(job)
+            edition, before = self.conn.execute(
+                "SELECT m.competition_season_id, f.fingerprint FROM core.matches m LEFT JOIN ops.family_state f ON f.match_id=m.id AND f.family='summary' WHERE m.id=%s",
+                (mid,),
+            ).fetchone()
+            self.store.save_matches(batch, edition, family="summary")
+            status, kickoff, after = self.conn.execute(
+                "SELECT m.status::text, m.kickoff_at, f.fingerprint FROM core.matches m LEFT JOIN ops.family_state f ON f.match_id=m.id AND f.family='summary' WHERE m.id=%s",
+                (mid,),
+            ).fetchone()
+            ack(self.conn, job["id"], job["lease_token"], now=now)
+            planner.after_summary(
+                self.conn,
+                mid,
+                kickoff_at=kickoff,
+                status=status,
+                now=now,
+                summary_changed=before is not None and bytes(before) != bytes(after),
+            )
+
+    def details(self, job):
+        family = job["family"]
+        suffix, parser = DETAIL_ENDPOINTS[family]
+        mid = job["entity_id"]
+        key = self._provider_key("match", mid)
+        result = self.fetch(family, "/matches/" + key + suffix, job=job)
+        batch = (
+            normalize_family(parser, result.data, match_id=key)
+            if result.coverage == "ok"
+            else NormalizedFamily(coverage="unavailable")
+        )
+        self.hydrate(batch)
+        self.store.save_family(mid, family, batch, lease=(job["id"], job["lease_token"]))
+
+
+def connect(dsn):
+    """Local DSN for development; a remote one only for a vega_v2 database over TLS."""
+    from urllib.parse import parse_qs, urlparse
+
+    parsed = urlparse(dsn)
+    if parsed.hostname in ("127.0.0.1", "localhost", "::1"):
+        return connect_local(dsn)
+    mode = parse_qs(parsed.query).get("sslmode", [""])[0]
+    if (
+        parsed.scheme not in ("postgres", "postgresql")
+        or not parsed.path.startswith("/vega_v2")
+        or mode not in ("require", "verify-ca", "verify-full")
+    ):
+        raise StoreError("TLS_VEGA_V2_DATABASE_REQUIRED")
+    return psycopg.connect(dsn, autocommit=True)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--lanes", default=",".join(DEFAULT_LANES))
+    parser.add_argument("--until-idle", action="store_true", help="exit once every lane is empty")
+    parser.add_argument("--max-jobs", type=int)
+    parser.add_argument("--interval", type=float, default=0.5, help="minimum seconds between PitchAPI calls")
+    parser.add_argument("--migrate", action="store_true")
+    args = parser.parse_args(argv)
+    dsn, key = os.environ.get("VEGA_V2_DSN"), os.environ.get("PITCHAPI_KEY")
+    if not dsn or not key:
+        print("VEGA_V2_DSN and PITCHAPI_KEY are required", file=sys.stderr)
+        return 2
+    conn = connect(dsn)
+    if args.migrate:
+        migrate(conn)
+    stopping = []
+    signal.signal(signal.SIGTERM, lambda *_: stopping.append(True))
+    worker = Worker(
+        Store(conn),
+        PitchClient(key, interval=args.interval),
+        lanes=tuple(x for x in args.lanes.split(",") if x),
+    )
+    done = worker.run(max_jobs=args.max_jobs, until_idle=args.until_idle, stop=lambda: bool(stopping))
+    for (family, outcome), count in sorted(worker.results.items()):
+        print(f"family={family} outcome={outcome} count={count}", flush=True)
+    print(f"jobs={done}", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
