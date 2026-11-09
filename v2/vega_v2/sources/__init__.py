@@ -31,13 +31,25 @@ def adapters():
             "international_results": cups.For("nations-results"), "open_matchday": open_matchday}
 
 
+# A failed scope is tried again after this delay (or its period, if shorter), not at every round.
+RETRY_AFTER = timedelta(hours=1)
+
+
 def due(conn, now, adapter_name, adapter):
-    rows = dict(
-        conn.execute(
-            "SELECT scope, last_success_at FROM ops.source_runs WHERE source=%s", (adapter_name,)
+    rows = {
+        scope: (success, attempt)
+        for scope, success, attempt in conn.execute(
+            "SELECT scope, last_success_at, last_attempt_at FROM ops.source_runs WHERE source=%s", (adapter_name,)
         ).fetchall()
-    )
-    return [scope for scope, period in adapter.scopes(now).items() if rows.get(scope) is None or rows[scope] <= now - period]
+    }
+
+    def is_due(scope, period):
+        success, attempt = rows.get(scope, (None, None))
+        if success is not None and success > now - period:
+            return False
+        return attempt is None or attempt <= now - min(period, RETRY_AFTER)
+
+    return [scope for scope, period in adapter.scopes(now).items() if is_due(scope, period)]
 
 
 def run_due(conn, get, now=None, *, names=None):

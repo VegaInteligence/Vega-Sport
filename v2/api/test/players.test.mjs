@@ -37,7 +37,16 @@ test("player directory: envelope, rating order, records", { skip }, async () => 
     ["Élie Durand", "https://img.example/p1.png", "Olympique Été", "Ligue 1", "Attaquant", 91, 3],
   );
   // The player power ranking of the season; p_aaaab3 is not ranked (under 900 minutes in the seed).
-  assert.deepEqual(p1.power, { rank: 1, score: 87.5, role: "centre_forward", position: "Avant-centre", roleRank: 1 });
+  assert.deepEqual(p1.power, {
+    rank: 1, score: 87.5, role: "centre_forward", position: "Avant-centre", roleRank: 1,
+    blocks: {
+      finishing: { contribution: 3.1, percentile: 95 }, creation: { contribution: 0.8, percentile: 70.5 }, defence: { contribution: 0.3, percentile: 40 },
+    },
+    roles: [
+      { role: "centre_forward", position: "Avant-centre", matches: 2, minutes: 200, contribution: 3.9, rate: 0.539 },
+      { role: "winger", position: "Ailier / milieu offensif", matches: 1, minutes: 60, contribution: 0.3, rate: 0.053 },
+    ],
+  });
   assert.equal(body.data.players.find((p) => p.id === "p_aaaab3").power, null);
   close(p1.minutes, 260 / 3);
   close(p1.rating, 20.5 / 3, 6);

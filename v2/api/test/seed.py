@@ -156,6 +156,10 @@ def main(dsn):
     x("""INSERT INTO agg.player_power(season_id,player_id,role,team_id,matches,minutes,total,rate,eligible,total_percentile,rate_percentile,score,rank,role_rank,run_id)
          VALUES (2025,101,'centre_forward',1,3,260,4.2,0.535,true,90,80,87.5,1,1,%(run)s),(2025,104,'winger',2,2,160,1.1,0.161,true,50,50,50,2,1,%(run)s),
                 (2025,103,'goalkeeper',4,2,180,0.3,0.042,false,NULL,NULL,NULL,NULL,NULL,%(run)s)""", {"run": run})
+    # Élie Durand's season by block and by role (two roles: 200 minutes up front, 60 on the wing).
+    x("UPDATE agg.player_power SET finishing_total=3.1,creation_total=0.8,defence_total=0.3,finishing_percentile=95,creation_percentile=70.5,defence_percentile=40 WHERE player_id=101")
+    x("""INSERT INTO agg.player_power_roles(season_id,player_id,role,matches,minutes,total,rate,run_id)
+         VALUES (2025,101,'centre_forward',2,200,3.9,0.539,%(run)s),(2025,101,'winger',1,60,0.3,0.053,%(run)s)""", {"run": run})
     db.close()
 
 

@@ -50,11 +50,20 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   assert.deepEqual([body.season, body.kind, body.method.version], ["2025/2026", "players", "power-ranking-v1"]);
   assert.deepEqual(body.rows.map((r) => [r.rank, r.playerId, r.position, r.score]), [[1, "p_aaaab1", "Avant-centre", 87.5], [2, "p_aaaab4", "Ailier / milieu offensif", 50]]);
   assert.deepEqual(Object.keys(body.rows[0]).slice(0, 8), ["rank", "playerId", "name", "imageUrl", "teamId", "team", "teamImageUrl", "position"]);
+  // More than one score: the season by block and by role.
+  assert.deepEqual(body.rows[0].blocks.finishing, { contribution: 3.1, percentile: 95 });
+  assert.deepEqual(body.rows[0].roles.map((r) => [r.role, r.minutes]), [["centre_forward", 200], ["winger", 60]]);
+  assert.deepEqual([body.rows[1].blocks, body.rows[1].roles], [{}, []]);
   const clubs = (await get("/api/rankings/power?kind=clubs&season=2025/2026")).body;
   assert.equal(clubs.rows.length, 4);
   assert.deepEqual(clubs.rows.map((r) => r.rank), [1, 2, 3, 4]);
   assert.ok(clubs.rows.every((r, i) => !i || clubs.rows[i - 1].elo >= r.elo));
   assert.equal(Math.round(clubs.rows.reduce((s, r) => s + r.elo, 0)), 6000); // Elo moves points between clubs only
+  for (const r of clubs.rows) {
+    assert.equal(r.wins + r.draws + r.losses, r.matches);
+    assert.equal(Math.round(r.eloStart + r.eloChange), Math.round(r.elo));
+  }
+  assert.equal(Math.round(clubs.rows.reduce((s, r) => s + r.results, 0) * 2), 10); // five matches, one point shared each
   assert.equal((await get("/api/rankings/power?kind=players&season=2025/2026&limit=1")).body.rows.length, 1);
   assert.equal((await get("/api/rankings/power?kind=nations&season=2025/2026")).response.status, 404);
   assert.equal((await get("/api/rankings/power?kind=players&season=2025")).response.status, 400);

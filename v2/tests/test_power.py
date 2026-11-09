@@ -81,6 +81,28 @@ class ScoreTest(unittest.TestCase):
         self.assertEqual(scores, {"finishing": 2.0, "creation": -0.5})
         self.assertAlmostEqual(c, (0.45 * 2.0 + 0.20 * -0.5) / 0.65)
 
+    def test_block_shares_add_up_to_the_contribution(self):
+        scores = {"finishing": 1.2, "creation": -0.4, "defence": 0.5}  # progression and retention not measured
+        shares = power.block_shares("centre_forward", scores)
+        weights = {"finishing": 0.45, "creation": 0.20, "defence": 0.10}
+        expected_c = sum(w * scores[b] for b, w in weights.items()) / sum(weights.values())
+        self.assertAlmostEqual(sum(shares.values()), expected_c, places=12)
+        self.assertAlmostEqual(shares["finishing"], 0.45 * 1.2 / 0.75, places=12)
+
+    def test_season_details_by_block_and_role(self):
+        detailed = {
+            1: [("winger", 90, 1.0, 9, {"creation": 0.7, "finishing": 0.3}), ("centre_forward", 60, -0.5, 9, {"finishing": -0.5})],
+            2: [("winger", 90, 0.2, 8, {"creation": 0.2})],
+        }
+        scored = {1: {"role": "winger", "eligible": True}, 2: {"role": "winger", "eligible": True}}
+        blocks, roles = power.season_details(detailed, scored)
+        self.assertAlmostEqual(blocks[1]["totals"]["finishing"], -0.2)
+        self.assertEqual(blocks[1]["percentiles"]["creation"], 75.0)
+        self.assertEqual(blocks[2]["percentiles"]["finishing"], 75.0)  # 0 against -0.2
+        self.assertEqual(set(blocks[1]["percentiles"]), set(power.blocks_of("winger")))
+        self.assertEqual(roles[1]["centre_forward"], {"matches": 1, "minutes": 60, "total": -0.5, "rate": 90 * -0.5 / (60 + 450)})
+        self.assertEqual(roles[1]["winger"]["minutes"], 90)
+
     def test_award_race_numbers_ties_in_ranking_order(self):
         scored = {
             1: {"eligible": True, "rank": 1, "total": 5.0, "minutes": 1000, "team": 9, "score": 80.0},

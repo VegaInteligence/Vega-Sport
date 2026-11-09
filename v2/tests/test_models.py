@@ -68,6 +68,16 @@ class ModelsTest(unittest.TestCase):
         self.assertTrue(all(r[4] == "clubs" and r[3] == 14 for r in rows))
         self.assertAlmostEqual(sum(r[1] for r in rows) / 8, 1500, places=2)  # Elo only moves points between clubs
         self.assertEqual([r[2] for r in rows], sorted(r[2] for r in rows))
+        # The season in Elo terms: start + change = Elo, the record adds up, peak ≥ Elo ≥ low.
+        for elo, change, matches, start, peak, low, w, d, l, result, expected in self.db.execute(
+            """SELECT elo, elo_change, matches, elo_start, elo_peak, elo_low, wins, draws, losses, result_sum, expected_sum
+               FROM agg.team_power WHERE season_id=2025"""
+        ).fetchall():
+            self.assertAlmostEqual(start + change, elo, places=2)
+            self.assertEqual(w + d + l, matches)
+            self.assertAlmostEqual(result, w + 0.5 * d, places=3)
+            self.assertTrue(peak + 1e-3 >= elo >= low - 1e-3)
+            self.assertTrue(0 < expected < matches)
         points = self.facts["points"]
         self.assertGreater(points[rows[0][0]], points[rows[-1][0]])
 
@@ -90,6 +100,22 @@ class ModelsTest(unittest.TestCase):
             ).fetchone()
             self.assertAlmostEqual(summed[0], total, places=3)
             self.assertEqual(summed[1], minutes)
+        # Each block's share of T: they add up to T; percentiles within the role for its blocks.
+        blocks = ("finishing", "creation", "progression", "defence", "retention", "shot_stopping", "aerial", "depth", "distribution")
+        for player, role, minutes, total, *_ in ranked:
+            row = self.db.execute(
+                f"SELECT {', '.join(b + '_total' for b in blocks)}, {', '.join(b + '_percentile' for b in blocks)} FROM agg.player_power WHERE season_id=2025 AND player_id=%s",
+                (player,),
+            ).fetchone()
+            totals, percentiles = row[:9], row[9:]
+            self.assertAlmostEqual(sum(v or 0 for v in totals), total, places=3)
+            mine = dict(zip(blocks, percentiles))
+            self.assertEqual({b for b, v in mine.items() if v is not None}, set(power.blocks_of(role)))
+            self.assertTrue(all(0 <= v <= 100 for v in mine.values() if v is not None))
+            # One row per role played; they add up to the season.
+            roles = self.db.execute("SELECT sum(minutes), sum(total), sum(matches) FROM agg.player_power_roles WHERE season_id=2025 AND player_id=%s", (player,)).fetchone()
+            self.assertEqual(roles[0], minutes)
+            self.assertAlmostEqual(roles[1], total, places=3)
         # The best of each role is first of his role.
         for role in {r[1] for r in ranked}:
             mine = [r for r in ranked if r[1] == role]

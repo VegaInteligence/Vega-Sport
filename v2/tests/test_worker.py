@@ -15,7 +15,7 @@ from vega_v2 import planner
 from vega_v2.jobs import DETAIL_FAMILIES
 from vega_v2.pitchapi import PitchClient
 from vega_v2.store import Store, StoreError, connect_local, migrate
-from vega_v2.worker import Worker, connect, report
+from vega_v2.worker import RECOMPUTE_AFTER, Worker, connect, due_seasons, report
 
 DSN = os.environ.get("VEGA_V2_WORKER_TEST_DSN")
 HOME = {"id": "t_aaaaaa", "name": "Home FC"}
@@ -157,6 +157,29 @@ class WorkerTest(unittest.TestCase):
     def at(self, value):
         self.now = value
         return planner.plan(self.db, value)
+
+    def test_daily_models_follow_a_backfilled_season(self):
+        x = self.db.execute
+        with self.db.transaction():
+            season = Store(self.db).season("2019/2020")
+        x("INSERT INTO core.competitions(id,name) VALUES (900,'Old League')")
+        x("INSERT INTO core.competition_seasons(id,competition_id,season_id,native_label) VALUES (900,900,%s,'2019/2020')", (season,))
+        x("INSERT INTO core.teams(id,name) VALUES (900,'A'),(901,'B')")
+        old = self.now - timedelta(days=2000)
+        x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date,kickoff_at,updated_at)
+             VALUES (900,900,%s,'pitchapi','finished',900,901,1,0,%s,%s,%s)""", (season, old.date(), old, self.now - timedelta(hours=3)))
+        self.assertEqual(due_seasons(self.db, self.now), [season])  # never computed
+        x("INSERT INTO agg.calc_runs(kind,model_version,cohort_definition,status,started_at,finished_at) VALUES ('levels','m',%s,'published',%s,%s)",
+          (f"season:{season}", self.now - timedelta(hours=2), self.now - timedelta(hours=2)))
+        self.assertEqual(due_seasons(self.db, self.now), [])  # computed after its last change
+        # The backfill went on after the computation: due, since the computation is over RECOMPUTE_AFTER old.
+        x("UPDATE core.matches SET updated_at=%s WHERE id=900", (self.now - timedelta(minutes=30),))
+        self.assertEqual(due_seasons(self.db, self.now), [season])
+        # Changed after a computation under RECOMPUTE_AFTER old: it waits.
+        x("UPDATE agg.calc_runs SET started_at=%(t)s, finished_at=%(t)s WHERE cohort_definition=%(c)s",
+          {"t": self.now - RECOMPUTE_AFTER + timedelta(minutes=10), "c": f"season:{season}"})
+        x("UPDATE core.matches SET updated_at=%s WHERE id=900", (self.now - timedelta(minutes=5),))
+        self.assertEqual(due_seasons(self.db, self.now), [])
 
     def drain(self):
         count = 0
