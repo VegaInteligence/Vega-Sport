@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega_v2 import sources
-from vega_v2.sources import SourceError, curated, normalize, uefa
+from vega_v2.sources import SourceError, curated, fifa, normalize, uefa
 
 try:
     import psycopg
@@ -140,6 +140,50 @@ class UefaTest(unittest.TestCase):
         names = self.db.execute("SELECT entity_id, normalized, source::text FROM core.entity_names WHERE entity_type='player' ORDER BY 1, 2").fetchall()
         # The homonym gets nothing; the removed Vega alias goes; Wikidata's stays.
         self.assertEqual(names, [(50, "cr", "wikidata"), (50, "cr7", "vega")])
+
+    def test_fifa_editions(self):
+        x = self.db.execute
+        x("INSERT INTO core.countries(code) VALUES ('FRA') ON CONFLICT DO NOTHING")
+        x("INSERT INTO core.teams(id, name, country_code, is_national) VALUES (20, 'France', 'FRA', true)")
+        dates = [{"id": "FRS_Male_Football_20261007", "date": "2026-10-07"}, {"id": "id14870", "date": "2025-09-18"},
+                 {"id": "FRS_future", "date": "2027-01-01"}, {"id": "id2", "date": "1993-08-08"}]
+        page = '<html><script id="__NEXT_DATA__" type="application/json">' + json.dumps(
+            {"props": {"pageProps": {"pageData": {"ranking": {"allAvailableDates": dates}}}}}) + "</script></html>"
+        overview = {"rankings": [
+            {"rankingItem": {"idTeam": "43969", "name": "Spain", "countryCode": "ESP", "rank": 1, "previousRank": 2, "totalPoints": 1875.37}},
+            {"rankingItem": {"idTeam": "43946", "name": "France", "countryCode": "FRA", "rank": 2, "previousRank": 1, "totalPoints": 1870.0}},
+        ]}
+        native = {"Results": [
+            {"IdTeam": "43946", "TeamName": [{"Description": "France"}], "IdCountry": "FRA", "Rank": 1, "PrevRank": 2, "TotalPoints": 2011.5},
+            {"IdTeam": "43969", "TeamName": [{"Description": "Spain"}], "IdCountry": "ESP", "Rank": 2, "PrevRank": 0, "TotalPoints": 1995.8},
+        ]}
+        calls = []
+
+        def get(url, as_text=False):
+            calls.append(url)
+            if url == fifa.PAGE:
+                return page
+            query = parse_qs(urlparse(url).query)
+            if url.startswith(fifa.OVERVIEW):
+                return overview if query["dateId"] == ["id14870"] else {"rankings": []}
+            if url.startswith(fifa.SCHEDULE):
+                return native
+            raise SourceError("HTTP_404")
+
+        self.assertEqual(sources.run_due(self.db, get, NOW, names={"fifa"}), {("fifa", "fifa_men:editions"): "ok"})
+        editions = x("SELECT label, is_current FROM core.ranking_editions WHERE kind='fifa_men' ORDER BY label").fetchall()
+        self.assertEqual(editions, [("2025-09-18", False), ("2026-10-07", True)])  # 1993 and the future are left out
+        rows = x("""SELECT r.position, r.previous_position, r.team_id, r.country_code FROM core.ranking_rows r
+                    JOIN core.ranking_editions e ON e.id = r.edition_id WHERE e.label = '2026-10-07' ORDER BY r.position""").fetchall()
+        # France is the national team (not the club of the same country); Spain keeps its code; no previous rank 0.
+        self.assertEqual(rows, [(1, 2, 20, None), (2, None, None, "ESP")])
+        self.assertEqual(x("SELECT entity_id FROM core.provider_ids WHERE provider='fifa' AND provider_key='43946'").fetchone(), (20,))
+        self.assertEqual(x("SELECT rows_written, unmatched FROM ops.source_runs WHERE source='fifa'").fetchone(), (4, 2))
+        # Published editions are not read again.
+        calls.clear()
+        later = NOW.replace(day=NOW.day + 1)
+        sources.run_due(self.db, get, later, names={"fifa"})
+        self.assertEqual(calls, [fifa.PAGE])
 
 
 if __name__ == "__main__":
