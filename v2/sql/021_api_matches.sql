@@ -48,11 +48,19 @@ LEFT JOIN core.lineups l ON l.season_id = m.season_id AND l.match_id = m.id AND 
 LEFT JOIN core.coaches co ON co.id = l.coach_id
 LEFT JOIN core.team_match_stats s ON s.season_id = m.season_id AND s.match_id = m.id AND s.team_id = x.team_id AND s.period = 'all';
 
+-- Shots under the legacy field names; type, shotType and situation are the normalized
+-- codes (outcome, body part, situation), not the provider spellings.
 CREATE VIEW api.match_shots AS
 SELECT s.season_id, s.match_id, s.shot_no, coalesce(s.provider_shot_key, s.shot_no::text) AS id,
-  s.team_id, s.player_id, p.name AS player_name, s.minute::float8 AS minute, s.minute_added::float8 AS minute_added,
-  s.period::text AS period, s.xg::numeric::float8 AS xg, (s.outcome = 'goal') AS is_goal, s.is_own_goal
-FROM core.shots s LEFT JOIN core.players p ON p.id = s.player_id;
+  s.team_id, s.player_id, p.name AS player_name, s.keeper_id, k.name AS keeper_name,
+  s.outcome::text AS type, s.body_part::text AS shot_type, s.situation::text AS situation,
+  s.period::text AS period, s.x::numeric::float8 AS x, s.y::numeric::float8 AS y,
+  s.xg::numeric::float8 AS xg, s.xgot::numeric::float8 AS xgot,
+  s.minute::float8 AS minute, s.minute_added::float8 AS minute_added,
+  s.goal_crossed_y::numeric::float8 AS goal_crossed_y, s.goal_crossed_z::numeric::float8 AS goal_crossed_z,
+  s.blocked_x::numeric::float8 AS blocked_x, s.blocked_y::numeric::float8 AS blocked_y,
+  (s.outcome = 'goal') AS is_goal, s.is_own_goal, s.is_on_target, s.is_blocked, s.is_inside_box AS inside_box
+FROM core.shots s LEFT JOIN core.players p ON p.id = s.player_id LEFT JOIN core.players k ON k.id = s.keeper_id;
 
 -- Collection state of a match's details (legacy detailCollected and coverage flags).
 CREATE VIEW api.match_detail_state AS
