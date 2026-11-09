@@ -311,13 +311,42 @@ class Worker:
         }
         if len(known) == 1 and None not in known:
             return known.pop()[0]
+        # /date gives the competition but not the edition: a new match belongs to the
+        # competition's current edition; the weekly season calendar, which names the
+        # edition, then confirms it (MATCH_SEASON_CHANGED otherwise, kept visible).
+        if competition is not None and None in known and len(known) == 1:
+            row = self.conn.execute(
+                "SELECT id FROM core.competition_seasons WHERE competition_id=%s ORDER BY is_current DESC NULLS LAST, season_id DESC LIMIT 1",
+                (self.store.resolve("competition", competition),),
+            ).fetchone()
+            if row:
+                return row[0]
         raise StoreError("MATCH_SEASON_UNKNOWN")
+
+    def ensure_editions(self, batch):
+        """Competitions named without an edition, and with none known yet: fetch them."""
+        keys = {
+            row["provider_competition_id"]
+            for row in batch.rows.get("core.matches", [])
+            if row.get("provider_competition_id") and not row.get("provider_season")
+        }
+        for key in sorted(keys):
+            known = self.conn.execute(
+                """SELECT 1 FROM core.competition_seasons cs JOIN core.provider_ids p
+                     ON p.entity_type='competition' AND p.provider='pitchapi' AND p.entity_id=cs.competition_id
+                   WHERE p.provider_key=%s LIMIT 1""",
+                (key,),
+            ).fetchone()
+            if not known:
+                profile = normalize_family("league", self.fetch("league", "/leagues/" + key).data)
+                self.store.save_references(profile, family="league")
 
     def calendar(self, job):
         day = job["target_date"]
         result = self.fetch("calendar", "/date/" + day.isoformat(), {"status": "all"}, job=job)
         batch = normalize_family("date", result.data)
         self.hydrate(batch)
+        self.ensure_editions(batch)
         self._save_calendar(batch, job, family="calendar")
 
     def league_matches(self, job):

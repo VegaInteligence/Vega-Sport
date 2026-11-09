@@ -180,6 +180,17 @@ def _typed_fields(obj, fields, types, aliases=None):
     return row
 
 
+MATCH_STATUSES = (
+    "not_started",
+    "in_play",
+    "finished",
+    "postponed",
+    "awarded",
+    "canceled",
+    "suspended",
+)
+
+
 def _match(out, item):
     item = _object(item)
     _unknown_keys(
@@ -227,17 +238,14 @@ def _match(out, item):
         row["provider_season"] = item["season"]
     status = item.get("status")
     if status is not None:
-        if status not in (
-            "not_started",
-            "in_play",
-            "finished",
-            "postponed",
-            "awarded",
-            "canceled",
-            "suspended",
-        ):
-            raise NormalizationError("UNKNOWN_STATUS")
-        row["status"] = status
+        if status in MATCH_STATUSES:
+            row["status"] = status
+        else:
+            # A new provider status must not cost the other matches of the response:
+            # it is reported (as a path, the status token is no football value) and
+            # the stored status is left as it was.
+            token = status if isinstance(status, str) and re.fullmatch(r"[a-z_]{1,32}", status) else "invalid"
+            _unknown(out, "match.status." + token)
     for src, dst in [
         ("score_home", "home_score"),
         ("score_away", "away_score"),
@@ -467,15 +475,22 @@ def normalize_family(family, data, *, match_id=None):
                     "image_url": item.get("image_url"),
                 },
             )
-            seasons = item.get("seasons", [item["season"]] if "season" in item else [])
-            for label in _list(seasons):
+            seasons = list(_list(item.get("seasons", [])))
+            current = item.get("season")
+            if current is not None and current not in seasons:
+                seasons.append(current)
+            for label in seasons:
                 if not isinstance(label, str) or not re.fullmatch(
                     r"\d{4}(?:/\d{4})?", label
                 ):
                     raise NormalizationError("INVALID_SEASON")
+            # The current edition is the one the provider names, else its latest one.
+            if current is None and seasons:
+                current = max(seasons, key=lambda label: (int(label[:4]), label))
+            for label in seasons:
                 out.add(
                     "competition_seasons",
-                    {"competition_id": key, "native_label": label},
+                    {"competition_id": key, "native_label": label, "is_current": label == current},
                 )
     elif family in ("league_matches", "date"):
         data = _object(data)

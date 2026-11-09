@@ -488,10 +488,13 @@ class Store:
                         self.entity(kind, row["id"], row)
                 elif table == "core.competition_seasons":
                     for row in rows:
-                        self.edition(
-                            self.resolve("competition", row["competition_id"]),
-                            row["native_label"],
-                        )
+                        competition = self.resolve("competition", row["competition_id"])
+                        edition, _ = self.edition(competition, row["native_label"])
+                        if row.get("is_current"):
+                            self.conn.execute(
+                                "UPDATE core.competition_seasons SET is_current = (id = %s) WHERE competition_id = %s AND is_current IS DISTINCT FROM (id = %s)",
+                                (edition, competition, edition),
+                            )
                 else:
                     raise StoreError("UNEXPECTED_REFERENCE_TABLE")
             self._flush_versions()

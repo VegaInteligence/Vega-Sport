@@ -40,6 +40,8 @@ def match(key, kickoff, status, score=None, season="2025/2026"):
         "time_utc": iso(kickoff),
         "round": "Matchday 12",
     }
+    if season is None:
+        del item["season"]
     if score:
         item.update(score_home=score[0], score_away=score[1])
     return item
@@ -339,6 +341,34 @@ class WorkerTest(unittest.TestCase):
         )
         self.assertEqual(self.at(start + timedelta(hours=25))["revived"], 1)
         self.assertEqual(self.jobs("m_ffffff", "summary")[-1][1], "failed")
+
+    def test_date_matches_without_edition_and_new_statuses(self):
+        # Real /date responses name the competition but not the edition.
+        start = self.now
+        self.api.routes["/leagues/" + LIGUE1["id"]] = dict(LIGUE1, seasons=["2024/2025", "2025/2026"])
+        self.calendar(
+            match("m_iiiiii", start + timedelta(hours=4), "not_started", season=None),
+            dict(match("m_jjjjjj", start - timedelta(hours=1), "in_play", season=None), status="abandoned"),
+        )
+        self.at(start)
+        self.worker.lanes = ("score",)
+        self.drain()
+        label, current = self.db.execute(
+            "SELECT cs.native_label, cs.is_current FROM core.matches m JOIN core.competition_seasons cs ON cs.id=m.competition_season_id WHERE m.id=%s",
+            (self.mid("m_iiiiii"),),
+        ).fetchone()
+        self.assertEqual((label, current), ("2025/2026", True))
+        self.assertEqual(
+            self.db.execute("SELECT count(*) FROM core.competition_seasons WHERE is_current").fetchone()[0], 1
+        )
+        self.assertEqual(self.watch("m_iiiiii")[0], "scheduled")
+        # An unknown status is reported as a path and leaves the rest of the day intact.
+        self.assertIsNone(self.db.execute("SELECT status FROM core.matches WHERE id=%s", (self.mid("m_jjjjjj"),)).fetchone()[0])
+        self.assertEqual(
+            self.db.execute("SELECT field_path FROM ops.unknown_fields WHERE family='calendar'").fetchall(),
+            [("match.status.abandoned",)],
+        )
+        self.assertEqual(self.db.execute("SELECT count(*) FROM ops.parse_failures").fetchone()[0], 0)
 
     def test_bad_match_does_not_block_the_day_and_jobs_are_pruned(self):
         start = self.now
