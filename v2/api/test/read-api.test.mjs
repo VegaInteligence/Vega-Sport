@@ -59,7 +59,9 @@ test("club analysis: records, statistics, forms, formations, goal times", { skip
   assert.deepEqual(t1.stats.possession, { sum: 138, count: 3 });
   assert.equal(t1.stats.corners, undefined); // never observed: omitted, as today
   assert.deepEqual(t1.formations, [["4-3-3", 2], ["4-4-2", 1]]);
-  assert.deepEqual(t1.goalTimes, { for: [1, 1, 0, 0, 0, 0], against: [1, 0, 0, 0, 0, 0], observed: 3 });
+  // As main, from the shot map: only match 1 has one (its two goals); the goal conceded in
+  // match 3 has no shot, so it is not observed.
+  assert.deepEqual(t1.goalTimes, { for: [1, 1, 0, 0, 0, 0], against: [0, 0, 0, 0, 0, 0], observed: 2 });
   assert.equal(t1.forms.length, 3);
   assert.deepEqual(t1.forms[0], {
     match: {

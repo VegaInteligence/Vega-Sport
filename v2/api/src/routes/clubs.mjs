@@ -133,8 +133,9 @@ observed AS (
  SELECT team_id,jsonb_agg(jsonb_build_array(formation,amount) ORDER BY amount DESC,formation) formations FROM formation_counts GROUP BY team_id
 ), goal_buckets AS (
  SELECT s.team_id,g.team_id=s.internal_team_id own,least(5,greatest(0,floor((g.minute-0.01)/15)::int)) bucket,count(*)::int amount
- FROM selected s JOIN api.match_goals g ON g.season_id=s.season_id AND g.match_id=s.match_id
- WHERE s.scored AND g.is_own_goal IS DISTINCT FROM true AND g.minute IS NOT NULL
+ -- As main: the goals of the shot map (not the goal events), own goals left out.
+ FROM selected s JOIN api.match_shots g ON g.season_id=s.season_id AND g.match_id=s.match_id
+ WHERE s.scored AND g.is_goal IS TRUE AND g.is_own_goal IS DISTINCT FROM true AND g.minute IS NOT NULL
  GROUP BY 1,2,3
 ), goal_times AS (
  SELECT p.id team_id,jsonb_build_object('for',jsonb_agg(coalesce(o.amount,0) ORDER BY n),'against',jsonb_agg(coalesce(a.amount,0) ORDER BY n),
