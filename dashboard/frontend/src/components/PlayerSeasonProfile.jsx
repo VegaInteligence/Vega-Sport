@@ -48,11 +48,7 @@ import PlayerScoutOverview, {
   PlayerScoutStats,
 } from "./PlayerScoutOverview.jsx";
 import PlayerScoutCareer from "./PlayerScoutCareer.jsx";
-import {
-  FakePhysical,
-  FakeProjection,
-  HeatmapCard,
-} from "./PlayerScoutDemo.jsx";
+import { FakePhysical, HeatmapCard } from "./PlayerScoutDemo.jsx";
 import { chartTokens } from "./PlayerScoutCharts.jsx";
 import scout from "./PlayerScout.module.css";
 import { nationalFlagCode } from "../services/national-flags.js";
@@ -73,6 +69,7 @@ import {
 } from "../services/player-identity.js";
 
 const Similarity = lazy(() => import("./PlayerSimilarity.jsx"));
+const Projection = lazy(() => import("./PlayerProjection.jsx"));
 const SeasonShots = lazy(() => import("./SeasonShots.jsx"));
 const SeasonStats = lazy(() => import("./PlayerSeasonStats.jsx"));
 const CareerStats = lazy(() => import("./PlayerCareerStats.jsx"));
@@ -736,7 +733,14 @@ export default function PlayerSeasonProfile({
               </PlayerScoutCareer>
             )}
             {view === "physical" && <FakePhysical />}
-            {view === "projection" && <FakeProjection />}
+            {view === "projection" && (
+              <Projection
+                profile={profile}
+                profiles={profiles}
+                team={team}
+                ready={comparisonsReady}
+              />
+            )}
             {view === "games" && (
               <PlayerGames profile={profile} matches={f.data?.matches} />
             )}

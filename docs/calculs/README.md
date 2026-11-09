@@ -48,6 +48,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 - [Indices Vega et profils de rôle](05-joueurs/03-indices-vega-et-roles.md)
 - [Similarité, radar, pizza et traits](05-joueurs/04-similarite-radar-et-traits.md)
 - [Classements joueurs](05-joueurs/05-classements-joueurs.md) — meilleures notes, buteurs, efficaces, maladroits.
+- [Compatibilité par niveau](05-joueurs/06-compatibilite-par-niveau.md) — onglet Projection : le joueur face aux titulaires de chaque club.
 
 ### 6. Accueil et fiches de match
 - [Accueil](06-accueil-et-matchs/01-accueil.md) — semaine affichée, match de la semaine, joueur de la semaine, séries.
@@ -71,6 +72,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 | Résumé club (fiche match, effectif) | [club-analysis.js](../../dashboard/frontend/src/services/club-analysis.js) |
 | Agrégation saison joueur | [season-player.js](../../dashboard/frontend/src/services/season-player.js) |
 | Cohortes, indices, similarité joueur | [scouting.js](../../dashboard/frontend/src/services/scouting.js) |
+| Compatibilité par niveau (onglet Projection) | [player-projection.js](../../dashboard/frontend/src/services/player-projection.js) |
 | Profil d'une performance, postes, centile | [shared/player-profile.js](../../dashboard/shared/player-profile.js) |
 | Accueil (semaine, sélections, meneurs) | [home-insights.js](../../dashboard/frontend/src/services/home-insights.js), [relational-home.js](../../dashboard/backend/services/relational-home.js) |
 | Classements dérivés et zones | [competition-standings.js](../../dashboard/frontend/src/services/competition-standings.js), [standings-zones.js](../../dashboard/frontend/src/services/standings-zones.js), [nations-standings.js](../../dashboard/frontend/src/services/nations-standings.js) |

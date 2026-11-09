@@ -18,7 +18,8 @@ Tout chiffre du site n'est pas un calcul sur données réelles. Cette page liste
 - **Classement Ballon d'Or Vega** : `ballonDorRanking` renvoie `null`. La méthode (excellence relative par rôle, Elo des équipes, percentiles 75 / 25) est une proposition non implémentée et non calibrée : [METHODE_CLASSEMENT_BALLON_D_OR.md](../../METHODE_CLASSEMENT_BALLON_D_OR.md).
 - **Victoires attendues** : le modèle les produit (`outcomeChances`), mais elles ne sont ni conservées ni affichées (voir [xPts](../03-resultats-et-points-attendus/01-points-attendus-xpts.md)).
 - **Force des équipes de type Elo** : aucune. Le seul « niveau » de club est le score de démo ci-dessous.
-- **Projection entre championnats** : bloc d'exemple de la maquette.
+- **Projection entre championnats** (indice ajusté au niveau d'un autre championnat) : pas de modèle. L'onglet Projection compare les indices tels quels ([Compatibilité par niveau](../05-joueurs/06-compatibilite-par-niveau.md)).
+- **Compatibilité athlétique** : aucune source de suivi physique, non affichée.
 
 ## Démonstration locale (calibrations non ajustées)
 
@@ -35,7 +36,7 @@ Ces blocs affichent des valeurs d'exemple de la maquette, sans aucun calcul sur 
 - blessures, suspensions, disponibilité ;
 - profil de jeu, contexte d'équipe, carte de chaleur ;
 - lignes « sécurité de balle » (fautes subies, pertes de balle, fautes) ;
-- données physiques, projection entre championnats ;
+- données physiques ;
 - **saison précédente** dans les comparaisons : centiles fabriqués à partir des centiles actuels par `fakePreviousSeason` (`centile − 6 + ((rang de l'axe × 7) mod 11)`, borné à [1, 99]) — ce ne sont pas des données de la saison précédente.
 
 **Profil club** ([ClubScoutTabs.jsx](../../../dashboard/frontend/src/components/ClubScoutTabs.jsx))
