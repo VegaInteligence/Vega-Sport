@@ -58,6 +58,7 @@ Les points que la méthode laisse ouverts (son § 12) sont tranchés ainsi. Chaq
 - les lectures compactes `/api/read/home`, `clubs`, `players`, `player`, `club`, `performance`, `discipline`, avec la carte `media` de `media=1` (et, pour l'accueil, la présentation compacte de main, importée telle quelle) ;
 - `/api/fixtures` (pages à curseur liées à la génération), `/api/matches/{id}/summary`, `/api/standings`, `/api/matchdays`, `/api/search` ;
 - la fiche match et ses 12 familles : `/api/matches/{id}` et `/api/matches/{id}/{lineups,events,shots,stats,players,players/halves,momentum,advanced,advanced/players,advanced/network,heatmaps,h2h}` (`frame=acting_ltr|home_ltr` pour les cartes d'activité), les profils `/api/players/{id}`, `/api/teams/{id}` et le catalogue `/api/competitions`, dans les corps que le site lit aujourd'hui, reconstruits des lignes typées ; un aller-retour sur un vrai match (`tests/fixtures/match_m_08LEIz`) le vérifie famille par famille ;
+- le chargeur de saison `/api/seasons/partition` (25 matchs par page, `format=columns` empaqueté par le `packPartition` de main, relu par le décodeur du site dans les tests) et `/api/scouting/routes` ;
 - les archives : `/api/read/archive` (pages, recherche par équipe ou buteur, buts d'un match) et `/api/archives/index` ; le manifeste déclare `boundedArchive` ;
 - les classements et le support des fiches club : `/api/rankings/{index,edition,associations,club}` (une édition se nomme par sa saison ou sa date), `/api/club-links`, `/api/club-facts?club=`, `/api/coach-portrait`, `/api/stadium?club=`, `/api/player-honours`, `/api/assets` ;
 - les coupes : `/api/cups/index`, `/api/cups/edition?competition=&season=` et `/api/cup-snapshot?kind=native|standings|edition`.
@@ -94,7 +95,7 @@ Chaque source a sa période dans `ops.source_runs`. Une erreur de base de donné
 
 ## Ce qui reste
 
-- Les routes encore servies par l'API actuelle : `/api/seasons/partition` (chargeur de saison complet, inutile une fois toutes les lectures compactes servies), `/api/archives/season` (documents source entiers, inutiles avec `boundedArchive`), `/api/archive/matches/{id}`, le catalogue figé des coupes open-matchday (`cup-index`, `cup-table`, `supplemental` : le worker de coupes de main est retiré, ces routes peuvent rester sur main) et `orion-pro`. Le site appelle encore les routes actuelles : la bascule change ses chemins selon la table ci-dessus.
+- Les routes que la v2 ne sert pas, volontairement : `/api/archives/season` (documents source entiers, inutiles avec `boundedArchive`), `/api/archive/matches/{id}` (l'archive brute d'un match ; le site ne la lit qu'en repli quand une famille native manque, et la v2 sert toutes les familles), le catalogue figé des coupes open-matchday (`cup-index`, `cup-table`, `supplemental` : le worker de coupes de main est retiré, ces routes peuvent rester sur main) et `orion-pro`. Le site appelle encore les routes actuelles : la bascule change ses chemins selon la table ci-dessus.
 - Les autres adaptateurs : SportsAPI, OpenFootball, OpenLigaDB, International Results, coupes (football-data, ESPN, fixturedl). L'import réel des archives attend la copie en lecture seule des sources de main (`data/sources/`).
 - Le déploiement des piles AWS, le backfill, la parité réelle et la bascule route par route : voir `infra/aws-v2/README.md`. Rien n'est déployé.
 
