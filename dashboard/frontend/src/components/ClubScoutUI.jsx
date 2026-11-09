@@ -666,6 +666,7 @@ export function MultiLine({
   format = (v) => fmtNum(v, 2),
   ariaLabel,
   step = 1,
+  details,
 }) {
   const [active, setActive] = useState(null);
   const width = 640,
@@ -813,6 +814,15 @@ export function MultiLine({
           }}
         >
           <strong>{series[0].tips?.[active] || labels[active]}</strong>
+          {details?.[active]?.map(([label, value, tone]) => (
+            <span key={label}>
+              {label}{" "}
+              <b className={tone === 1 ? s.up : tone === -1 ? s.down : undefined}>
+                {value}
+              </b>
+            </span>
+          ))}
+          {details && <small className={s.plotTipRule}>Cumul</small>}
           {series.map((serie) => (
             <span key={serie.name}>
               {serie.name} <b>{format(serie.values[active])}</b>
@@ -882,10 +892,18 @@ export function PointsTrend({ rows, height = 220 }) {
   return (
     <MultiLine
       height={height}
-      ariaLabel="Points cumulés et points attendus cumulés"
+      ariaLabel="Points cumulés et points attendus cumulés, avec les points et xPts de chaque match"
       labels={usable.map((_, i) => `J${i + 1}`)}
       format={(v) => fmtNum(v, 1)}
       step={Math.max(1, Math.ceil(usable.length / 10))}
+      details={usable.map((row) => {
+        const gap = row.points - row.xpts;
+        return [
+          ["Points pris", String(row.points)],
+          ["xPts du match", fmtNum(row.xpts, 2)],
+          ["Écart", fmtNum(gap, 2, true), gap > 0 ? 1 : gap < 0 ? -1 : 0],
+        ];
+      })}
       series={[
         {
           name: "Points",
@@ -893,8 +911,8 @@ export function PointsTrend({ rows, height = 220 }) {
           values: real,
           dots: true,
           tips: usable.map(
-            (row) =>
-              `${row.side === "home" ? "vs" : "à"} ${row.opponent.name} ${row.gf}–${row.ga}`,
+            (row, i) =>
+              `J${i + 1} · ${dateShort(row.match.date)} · ${row.side === "home" ? "vs" : "à"} ${row.opponent.name} ${row.gf}–${row.ga}`,
           ),
         },
         {

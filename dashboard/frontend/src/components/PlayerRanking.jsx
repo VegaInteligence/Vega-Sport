@@ -14,7 +14,7 @@ import s from "./PlayerRanking.module.css";
  * Level switch above the analysis. `peers` is levelPeerClubs()'s result,
  * null when the club is outside the European pool.
  */
-export function PlayerLevelBar({ level, onLevel, state, peers, team, size }) {
+export function PlayerLevelBar({ level, onLevel, state, peers, team }) {
   const outside = level && state.status === "ready" && !peers;
   return (
     <section className={s.bar} aria-label="Joueurs comparés">
@@ -31,18 +31,15 @@ export function PlayerLevelBar({ level, onLevel, state, peers, team, size }) {
           Tous les clubs
         </button>
       </div>
-      <p className={s.summary} aria-live="polite">
-        {level && state.status === "loading"
-          ? "Lecture des niveaux des 132 clubs du Top 7 européen…"
-          : level && state.status === "error"
-            ? state.error
-            : outside
-              ? `${team?.name || "Son club"} n’est pas dans le Top 7 européen : comparaison avec tous les clubs.`
-              : level && peers
-                ? `Joueurs du même poste de ${team?.name} et des ${peers.clubs.length} clubs au niveau le plus proche (${peers.leagues} championnats)${size != null ? ` · ${size} joueurs` : ""}.`
-                : `Joueurs du même poste de toutes les compétitions sélectionnées${size != null ? ` · ${size} joueurs` : ""}.`}
-        {level && peers && <span className={s.demo}>Démo locale</span>}
-      </p>
+      {level && (state.status !== "ready" || outside) && (
+        <p className={s.summary} role="status">
+          {state.status === "loading"
+            ? "Lecture des niveaux des clubs du Top 7 européen…"
+            : state.status === "error"
+              ? state.error
+              : `${team?.name || "Son club"} n’est pas dans le Top 7 européen : comparaison avec tous les clubs.`}
+        </p>
+      )}
     </section>
   );
 }
