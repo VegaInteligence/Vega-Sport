@@ -4,6 +4,11 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tests"))
+import tempfile
+
+from archive_fixtures import make_sources
+from vega_v2 import archives
 from vega_v2.store import Store, connect_local, migrate
 
 TEAMS = {1: ("t_aaaaa1", "Olympique Été", "FRA"), 2: ("t_aaaaa2", "Racing Club", "FRA"), 3: ("t_aaaaa3", "Stade Nord", None), 4: ("t_aaaaa4", "Union Sud", "FRA")}
@@ -102,7 +107,15 @@ def main(dsn):
     for mid, seq, kind, minute in [(1, 10, "yellow_card", 30), (3, 10, "red_card", 60), (5, 10, "second_yellow", 80), (5, 11, "red_card", 80)]:
         x("INSERT INTO core.match_events(season_id,match_id,team_id,seq,event_type,minute,period,player_id) VALUES (2025,%s,1,%s,%s,%s,'second_half',101)", (mid, seq, kind, minute))
     x("UPDATE core.match_coverage SET events='ok' WHERE match_id IN (1,3,5)")
-    x("INSERT INTO ops.resource_versions(resource_kind,resource_id,version,published_at) VALUES ('home',1,3,'2025-09-20T11:00:00Z'),('competition_season',1,4,'2025-09-20T11:00:00Z')")
+    # Generation 7 = home 3 + edition 3 + the archive season 1 (imported below, dated before).
+    x("INSERT INTO ops.resource_versions(resource_kind,resource_id,version,published_at) VALUES ('home',1,3,'2025-09-20T11:00:00Z'),('competition_season',1,3,'2025-09-20T11:00:00Z')")
+    # The seed sets ids by hand: move every identity past them before the import adds rows.
+    for table in ("competitions", "competition_seasons", "teams", "players", "matches", "rounds", "coaches", "referees", "assets"):
+        db.execute(f"SELECT setval(pg_get_serial_sequence('core.{table}','id'), greatest(1,(SELECT coalesce(max(id),0) FROM core.{table})))")
+    # The 2015/2016 archive, imported by main's builders and shared/archive.js (tests/archive_fixtures.py).
+    with tempfile.TemporaryDirectory() as sources:
+        archives.run(db, make_sources(sources))
+    db.execute("UPDATE ops.resource_versions SET published_at='2025-09-20T10:30:00Z' WHERE resource_kind='archive_season'")
     db.close()
 
 

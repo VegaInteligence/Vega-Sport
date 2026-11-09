@@ -9,13 +9,14 @@ SELECT coalesce(sum(version), 0)::bigint AS generation,
 FROM ops.resource_versions;
 
 -- One row per edition that has matches: the legacy partition and its watermarks.
+-- Historical archive editions are not partitions (they have their own reads).
 CREATE VIEW api.editions AS
 SELECT cs.id AS competition_season_id, s.label AS season, cs.native_label, cs.is_current,
   api.public_id('competition', c.id) AS league_id, c.name AS league_name, c.country_code AS country,
   c.kind::text AS kind, lg.source_url AS league_image_url,
   x.start_date, x.end_date, x.match_count, x.finished_count, x.collected_count, x.team_count, x.retrieved_at
 FROM core.competition_seasons cs
-JOIN core.seasons s ON s.id = cs.season_id
+JOIN core.seasons s ON s.id = cs.season_id AND cs.archive_key IS NULL
 JOIN core.competitions c ON c.id = cs.competition_id
 LEFT JOIN core.assets lg ON lg.id = c.logo_asset_id
 JOIN LATERAL (
@@ -60,16 +61,20 @@ CROSS JOIN LATERAL (VALUES
 ) AS x(side, team_id, team_public_id, name, image_url, country, formation, own, against, opponent_id)
 LEFT JOIN core.team_match_stats o ON o.season_id = m.season_id AND o.match_id = m.match_id AND o.team_id = x.team_id AND o.period = 'all'
 LEFT JOIN core.team_match_stats p ON p.season_id = m.season_id AND p.match_id = m.match_id AND p.team_id = x.opponent_id AND p.period = 'all'
-WHERE m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL AND m.home_team_id <> m.away_team_id;
+WHERE m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL AND m.home_team_id <> m.away_team_id
+  AND NOT EXISTS (SELECT 1 FROM core.competition_seasons ax WHERE ax.id = m.competition_season_id AND ax.archive_key IS NOT NULL);
 
 -- The manifest's competition catalogue: every known edition label, latest first.
 CREATE VIEW api.competitions AS
 SELECT api.public_id('competition', c.id) AS id, c.name, c.country_code AS country, c.kind::text AS kind,
   lg.source_url AS image_url,
   (SELECT array_agg(cs.native_label ORDER BY cs.season_id DESC, cs.id DESC)
-   FROM core.competition_seasons cs WHERE cs.competition_id = c.id) AS seasons
+   FROM core.competition_seasons cs WHERE cs.competition_id = c.id AND cs.archive_key IS NULL) AS seasons
 FROM core.competitions c
-LEFT JOIN core.assets lg ON lg.id = c.logo_asset_id;
+LEFT JOIN core.assets lg ON lg.id = c.logo_asset_id
+-- An archive competition (only archive editions) is not in the catalogue.
+WHERE NOT EXISTS (SELECT 1 FROM core.competition_seasons cs WHERE cs.competition_id = c.id AND cs.archive_key IS NOT NULL)
+   OR EXISTS (SELECT 1 FROM core.competition_seasons cs WHERE cs.competition_id = c.id AND cs.archive_key IS NULL);
 
 -- Club countries for the manifest (clubCountries), without the team profile joins.
 CREATE VIEW api.team_countries AS

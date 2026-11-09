@@ -11,6 +11,13 @@ Parameters:
   CalcUrlParameter: {Type: String, Default: /vega/v2/calc-database-url}
   PasswordParameterPrefix: {Type: String, Default: /vega/v2/password, Description: 'SecureStrings <prefix>-collect, -calc, -read'}
   PitchApiKeyParameter: {Type: String, Default: /vega/v2/pitchapi-key}
+  ArchiveSourcesBucket:
+    Type: String
+    Default: ''
+    AllowedPattern: '[a-z0-9.-]{0,63}'
+    Description: "Bucket holding main's data/sources (read only, archive import); empty, no archive task"
+Conditions:
+  HasArchiveSources: !Not [!Equals [!Ref ArchiveSourcesBucket, '']]
 Resources:
   Repository:
     Type: AWS::ECR::Repository
@@ -169,6 +176,55 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options: {awslogs-group: !Ref Logs, awslogs-region: !Ref 'AWS::Region', awslogs-stream-prefix: migrate}
+  # One-off historical archive import (vega_v2/archives.py): reads main's pinned archive
+  # sources, read only, and writes the archive seasons as the collect role.
+  ArchiveRole:
+    Type: AWS::IAM::Role
+    Condition: HasArchiveSources
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: [{Effect: Allow, Principal: {Service: ecs-tasks.amazonaws.com}, Action: 'sts:AssumeRole'}]
+      Policies:
+        - PolicyName: ReadArchiveSources
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: 's3:GetObject'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ArchiveSourcesBucket}/data/sources/openfootball/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ArchiveSourcesBucket}/data/sources/engsoccerdata/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ArchiveSourcesBucket}/data/sources/worldclub/*'
+              - Effect: Allow
+                Action: 's3:ListBucket'
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArchiveSourcesBucket}'
+                Condition:
+                  StringLike: {'s3:prefix': ['data/sources/openfootball/*', 'data/sources/engsoccerdata/*', 'data/sources/worldclub/*']}
+  ArchiveTask:
+    Type: AWS::ECS::TaskDefinition
+    Condition: HasArchiveSources
+    Properties:
+      Family: vega-v2-archives
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: '512'
+      Memory: '2048'
+      RuntimePlatform: {CpuArchitecture: ARM64, OperatingSystemFamily: LINUX}
+      EphemeralStorage: {SizeInGiB: 30}
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      TaskRoleArn: !GetAtt ArchiveRole.Arn
+      ContainerDefinitions:
+        - Name: archives
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/vega-v2-worker:${ImageTag}'
+          Essential: true
+          EntryPoint: [python, -m, vega_v2.archives]
+          Command: [--sources, !Sub 's3://${ArchiveSourcesBucket}/data/sources']
+          Secrets:
+            - {Name: V2_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CollectUrlParameter}'}
+          LogConfiguration:
+            LogDriver: awslogs
+            Options: {awslogs-group: !Ref Logs, awslogs-region: !Ref 'AWS::Region', awslogs-stream-prefix: archives}
   Service:
     Type: AWS::ECS::Service
     Properties:
@@ -194,5 +250,6 @@ Outputs:
   Cluster: {Value: !Ref Cluster}
   BackfillTaskDefinition: {Value: !Ref BackfillTask}
   MigrationTaskDefinition: {Value: !Ref MigrationTask}
+  ArchiveTaskDefinition: {Condition: HasArchiveSources, Value: !Ref ArchiveTask}
   MediaBucket: {Value: !Ref MediaBucket, Export: {Name: vega-v2-media-bucket}}
   MediaBucketDomain: {Value: !GetAtt MediaBucket.RegionalDomainName, Export: {Name: vega-v2-media-domain}}

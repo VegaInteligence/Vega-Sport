@@ -1,0 +1,343 @@
+"""Historical archives into core (doc: archives in core.matches, scorers in
+core.match_events), built exactly as main builds them.
+
+1. main's archive builders (dashboard/scripts/build_*_history.py, build_historical_goals.py)
+   run unchanged on the pinned source files, into a temporary directory;
+2. for each season, main's shared/archive.js builds the edition (results, the goals
+   attached to their match, goal-only matches) through v2/archives/edition.mjs;
+3. the edition is written as typed rows: one competition per archive family, one
+   edition per season, Vega teams by name and country, matches, rounds and goals.
+
+Only seasons up to 2020/2021 are imported: from 2021/2022 on, PitchAPI is the source.
+A season is replaced as a whole (its archive matches only); ids stay stable because
+every row is keyed by its archive key. Files are processed in a temporary directory
+and never stored.
+
+  python -m vega_v2.archives --sources <dir, or s3://bucket/data/sources, laid out as main's data/sources> [--seasons ...]
+"""
+
+import argparse
+import gzip
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+import unicodedata
+
+from .store import Store
+
+LAST_ARCHIVE_SEASON = 2020
+ROOT = Path(__file__).resolve().parents[2]
+SCRIPTS = Path(os.environ.get("VEGA_ARCHIVE_SCRIPTS", ROOT / "dashboard/scripts"))
+EDITION = Path(os.environ.get("VEGA_ARCHIVE_EDITION", ROOT / "v2/archives/edition.mjs"))
+PROVIDERS = {"openfootball": "openfootball", "footballcsv": "footballcsv", "engsoccerdata": "engsoccerdata", "worldclub": "worldclub"}
+
+
+class ArchiveError(RuntimeError):
+    pass
+
+
+def _run(args):
+    done = subprocess.run(args, capture_output=True, text=True, timeout=3600)
+    if done.returncode != 0:
+        raise ArchiveError(f"{Path(args[1]).name} failed: {done.stderr.strip()[-500:]}")
+    return done.stdout
+
+
+def build_sources(sources, work):
+    """Run main's builders on a data/sources-like directory; returns (results dir, goals dir)."""
+    sources, work = Path(sources), Path(work)
+    results, goals = work / "results", work / "goals"
+    py = sys.executable
+    football = sorted((sources / "openfootball").glob("football-json-*.zip"))
+    if not football:
+        raise ArchiveError("openfootball/football-json-*.zip is required")
+    _run([py, str(SCRIPTS / "build_openfootball_history.py"), "--archive", str(football[-1]), "--output", str(results)])
+    csv = {repo: sorted((sources / "openfootball").glob(f"footballcsv-{repo}-*.zip")) for repo in ("england", "deutschland", "europe", "soccerdata")}
+    if all(csv.values()):
+        _run([py, str(SCRIPTS / "build_footballcsv_history.py"), "--output", str(results),
+              *[arg for repo, files in csv.items() for arg in (f"--{repo}", str(files[-1]))]])
+    if (sources / "engsoccerdata/manifest.json").is_file():
+        _run([py, str(SCRIPTS / "build_engsoccerdata_history.py"), "--source-dir", str(sources / "engsoccerdata"), "--output", str(results)])
+    if (sources / "worldclub/scotland-manifest.json").is_file():
+        _run([py, str(SCRIPTS / "build_scottish_history.py"), "--source", str(sources / "worldclub"), "--output", str(results)])
+    if (sources / "worldclub/goals/manifest.json").is_file():
+        _run([py, str(SCRIPTS / "build_historical_goals.py"), "--source", str(sources / "worldclub/goals"), "--output", str(goals)])
+    return results, goals if (goals / "index.json").is_file() else None
+
+
+def edition(results_file, goals_file):
+    return json.loads(_run(["node", str(EDITION), str(results_file or "-"), str(goals_file or "-")]))
+
+
+def normalize(value):
+    folded = unicodedata.normalize("NFKD", value or "").encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", " ", folded).strip()
+
+
+def family(competition_id):
+    """The competition an archive edition belongs to: its id without the season part."""
+    if competition_id.startswith("g:"):
+        return competition_id
+    return re.sub(r"(^|/)\d{4}(-\d{2})?(?=/|$)", "", competition_id).strip("/")
+
+
+def _pair(value):
+    return value if isinstance(value, list) and len(value) == 2 and all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in value) else None
+
+
+def notes_of(row):
+    """The notes the read API shows, from the typed columns (shared/openfootball-history.js
+    historicalScoreNotes for results, groupNotes for goal-only matches)."""
+    notes = []
+    if row["home_score_et"] is not None and row["away_score_et"] is not None:
+        notes.append("après prolongation")
+    if row["home_penalty_score"] is not None and row["away_penalty_score"] is not None:
+        notes.append(f"tirs au but {row['home_penalty_score']} – {row['away_penalty_score']}")
+    elif row["decided_on_penalties"]:
+        notes.append("tirs au but")
+    if row["status"] == "canceled":
+        notes.append("Rencontre non disputée" + (f" : {row['note']}" if row["note"] else ""))
+    if row["is_neutral"]:
+        notes.append("terrain neutre")
+    return notes
+
+
+def match_row(match):
+    source = match.get("source")
+    score = match["score"]
+    if source:
+        et, p = _pair(source.get("et")), _pair(source.get("p"))
+        not_played = source.get("status") == "not_played"
+        row = {
+            "home_score_et": et and et[0], "away_score_et": et and et[1],
+            "home_penalty_score": p and p[0], "away_penalty_score": p and p[1], "decided_on_penalties": None,
+            "status": "canceled" if not_played else "finished",
+            "note": (source.get("nonmatch") or None) if not_played else None, "is_neutral": bool(source.get("neutral")) or None,
+        }
+    else:
+        notes = match.get("notes") or []
+        extra = "après prolongation" in notes
+        row = {
+            "home_score_et": score[0] if extra else None, "away_score_et": score[1] if extra else None,
+            "home_penalty_score": None, "away_penalty_score": None, "decided_on_penalties": "tirs au but" in notes or None,
+            "status": "finished", "note": None, "is_neutral": None,
+        }
+    row.update(home_score=score[0], away_score=score[1])
+    if notes_of(row) != (match.get("notes") or []):
+        raise ArchiveError(f"notes of {match['key']} cannot be typed: {match.get('notes')}")
+    return row
+
+
+def _minute(value):
+    found = re.fullmatch(r"\s*(\d{1,3})(?:\s*\+\s*(\d{1,2}))?\s*'?\s*", str(value or ""))
+    return (int(found.group(1)), int(found.group(2)) if found.group(2) else None) if found else (None, None)
+
+
+class Loader:
+    def __init__(self, conn):
+        self.conn = conn
+        self.teams = {}
+
+    def _key(self, entity, provider_key):
+        row = self.conn.execute(
+            "SELECT entity_id FROM core.provider_ids WHERE entity_type=%s AND provider='vega' AND provider_key=%s", (entity, provider_key)
+        ).fetchone()
+        return row and row[0]
+
+    def _link(self, entity, provider_key, ident):
+        self.conn.execute(
+            "INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES (%s,'vega',%s,%s)", (entity, provider_key, ident)
+        )
+
+    def competition(self, comp_family, name, country):
+        key = "archive:" + comp_family
+        ident = self._key("competition", key)
+        if ident is None:
+            ident = self.conn.execute("INSERT INTO core.competitions(name) VALUES (%s) RETURNING id", (name,)).fetchone()[0]
+            self._link("competition", key, ident)
+        return ident
+
+    def team(self, name, country):
+        key = f"archive:{normalize(country)}:{normalize(name)}"
+        if key not in self.teams:
+            ident = self._key("team", key)
+            if ident is None:
+                ident = self.conn.execute("INSERT INTO core.teams(name) VALUES (%s) RETURNING id", (name,)).fetchone()[0]
+                self._link("team", key, ident)
+            self.teams[key] = ident
+        return self.teams[key]
+
+    def season(self, label, data, provider_of):
+        """Replace one season's archive matches with its edition."""
+        start = int(label[:4])
+        if start > LAST_ARCHIVE_SEASON:
+            return 0
+        Store(self.conn).season(label)
+        editions = {}
+        for position, comp in enumerate(data["competitions"]):
+            competition = self.competition(family(comp["id"]), comp["name"], comp.get("country"))
+            editions[comp["id"]] = self.conn.execute(
+                """INSERT INTO core.competition_seasons(competition_id, season_id, native_label, archive_key, archive_name, archive_country, archive_position)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s)
+                   ON CONFLICT (archive_key) DO UPDATE SET archive_name=EXCLUDED.archive_name, archive_country=EXCLUDED.archive_country,
+                     archive_position=EXCLUDED.archive_position, updated_at=now()
+                   RETURNING id""",
+                (competition, start, label, comp["id"], comp["name"], comp.get("country"), position),
+            ).fetchone()[0]
+        keep = {m["key"] for m in data["matches"]}
+        self.conn.execute(
+            "DELETE FROM core.matches WHERE season_id=%s AND archive_key IS NOT NULL AND NOT archive_key = ANY(%s)", (start, list(keep))
+        )
+        written = 0
+        for position, match in enumerate(data["matches"]):
+            edition_id = editions[match["competitionId"]]
+            row = match_row(match)
+            home = self.team(match["team1"], match.get("country")) if match.get("team1") else None
+            away = self.team(match["team2"], match.get("country")) if match.get("team2") else None
+            round_id = None
+            if match.get("round"):
+                round_id = self.conn.execute(
+                    """INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s)
+                       ON CONFLICT (competition_season_id, name) DO UPDATE SET name=EXCLUDED.name RETURNING id""",
+                    (edition_id, match["round"]),
+                ).fetchone()[0]
+            values = dict(row, competition_season_id=edition_id, season_id=start, round_id=round_id,
+                          match_date=match.get("date") or None, date_unverified=bool(match.get("dateNote")) or None,
+                          home_team_id=home, away_team_id=away, archive_key=match["key"], archive_position=position,
+                          source=provider_of(match))
+            columns = list(values)
+            mid = self.conn.execute(
+                f"""INSERT INTO core.matches({", ".join(columns)}) VALUES ({", ".join(["%s"] * len(columns))})
+                    ON CONFLICT (season_id, archive_key) WHERE archive_key IS NOT NULL DO UPDATE SET
+                    {", ".join(f"{c}=EXCLUDED.{c}" for c in columns if c not in ("season_id", "archive_key"))},
+                    revision=core.matches.revision+1, updated_at=now() RETURNING id""",
+                [values[c] for c in columns],
+            ).fetchone()[0]
+            self.conn.execute("DELETE FROM core.match_events WHERE season_id=%s AND match_id=%s", (start, mid))
+            for seq, goal in enumerate(match.get("goals") or []):
+                minute, added = _minute(goal.get("minute"))
+                score = _pair(goal.get("score")) or [None, None]
+                side = goal.get("side")
+                self.conn.execute(
+                    """INSERT INTO core.match_events(season_id, match_id, team_id, seq, event_type, minute, minute_added, player_name,
+                         score_home, score_away, source_minute, score_disagreement)
+                       VALUES (%s,%s,%s,%s,'goal',%s,%s,%s,%s,%s,%s,%s)""",
+                    (start, mid, {"home": home, "away": away}.get(side), seq, minute, added, goal.get("player") or None,
+                     score[0], score[1], str(goal["minute"]) if goal.get("minute") not in (None, "") else None,
+                     bool(goal.get("scoreDisagreement")) or None),
+                )
+            written += 1
+        self.conn.execute(
+            """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES ('archive_season', %s)
+               ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
+            (start,),
+        )
+        return written
+
+
+def provider_for(index_sources):
+    def provider_of(match):
+        cid = match["competitionId"]
+        if cid.startswith("g:"):
+            return "worldclub"
+        if cid.startswith("engsoccerdata/"):
+            return "engsoccerdata"
+        if cid.split("/", 1)[0] in ("england", "deutschland", "europe", "soccerdata"):
+            return "footballcsv"
+        if cid.startswith("worldclub/") or cid.startswith("scotland/"):
+            return "worldclub"
+        return "openfootball"
+    return provider_of
+
+
+def record_sources(conn, results_index, goals_index):
+    entries = []
+    if results_index:
+        src = results_index["source"]
+        entries.append(("results", src))
+        entries += [(f"results/{a['name']}", a) for a in src.get("additionalSources", [])]
+    if goals_index:
+        entries.append(("goals", goals_index["source"]))
+    for key, src in entries:
+        conn.execute(
+            """INSERT INTO core.source_revisions(source, name, url, license, revision, archive_sha256, coverage, retrieved_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,now())
+               ON CONFLICT (source) DO UPDATE SET name=EXCLUDED.name, url=EXCLUDED.url, license=EXCLUDED.license,
+                 revision=EXCLUDED.revision, archive_sha256=EXCLUDED.archive_sha256, coverage=EXCLUDED.coverage, retrieved_at=now()""",
+            (re.sub(r"[^a-z0-9_./-]", "-", key.lower())[:80], src.get("name") or key, src.get("url"), src.get("license"),
+             src.get("revision"), src.get("archiveSha256"), src.get("coverage")),
+        )
+
+
+SOURCE_FOLDERS = ("openfootball/", "engsoccerdata/", "worldclub/")
+
+
+def download(url, target, client=None):
+    """Copy the archive source folders of s3://bucket/prefix into target (read only)."""
+    import boto3
+
+    bucket, _, prefix = url[len("s3://"):].partition("/")
+    prefix = prefix.rstrip("/") + "/"
+    s3 = client or boto3.client("s3")
+    for folder in SOURCE_FOLDERS:
+        for page in s3.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix + folder):
+            for item in page.get("Contents", []):
+                relative = item["Key"][len(prefix):]
+                if ".." in Path(relative).parts:
+                    raise ArchiveError("unexpected source key")
+                path = Path(target) / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                s3.download_file(bucket, item["Key"], str(path))
+    return Path(target)
+
+
+def run(conn, sources, seasons=None):
+    """Import every archive season (or the given labels); returns {season: matches}."""
+    out = {}
+    with tempfile.TemporaryDirectory(prefix="vega-archives-") as work:
+        if str(sources).startswith("s3://"):
+            sources = download(str(sources), Path(work) / "sources")
+        results_dir, goals_dir = build_sources(sources, work)
+        results_index = json.loads((results_dir / "index.json").read_text(encoding="utf-8"))
+        goals_index = json.loads((goals_dir / "index.json").read_text(encoding="utf-8")) if goals_dir else None
+        files = {}
+        for kind, index, base in (("results", results_index, results_dir), ("goals", goals_index, goals_dir)):
+            for entry in (index or {}).get("seasons", []):
+                files.setdefault(entry["id"], {})[kind] = base / Path(entry["path"]).name
+        with conn.transaction():
+            record_sources(conn, results_index, goals_index)
+        loader = Loader(conn)
+        provider_of = provider_for(results_index)
+        for label in sorted(files):
+            if (seasons and label not in seasons) or int(label[:4]) > LAST_ARCHIVE_SEASON:
+                continue
+            data = edition(files[label].get("results"), files[label].get("goals"))
+            with conn.transaction():
+                out[label] = loader.season(label, data, provider_of)
+    return out
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--sources", required=True)
+    parser.add_argument("--seasons", help="comma-separated labels (default: every archive season)")
+    args = parser.parse_args(argv)
+    dsn = os.environ.get("V2_DATABASE_URL")
+    if not dsn:
+        print("V2_DATABASE_URL is required", file=sys.stderr)
+        return 2
+    from .worker import connect
+
+    conn = connect(dsn)
+    done = run(conn, args.sources, set(args.seasons.split(",")) if args.seasons else None)
+    for label, count in sorted(done.items()):
+        print(f"season={label} matches={count}", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

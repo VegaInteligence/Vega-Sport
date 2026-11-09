@@ -80,7 +80,7 @@ export function createSystemRoute(read) {
           playerRatingRanking: false,
           actorSummary: false,
           resolvedMedia: false,
-          boundedArchive: false,
+          boundedArchive: true,
           compactReads: COMPACT_READS,
         },
         defaultSeason: [...seasons.keys()][0] || null,
