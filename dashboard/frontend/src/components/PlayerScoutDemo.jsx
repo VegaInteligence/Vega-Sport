@@ -11,7 +11,6 @@ import {
   MarketPanel as MockMarketPanel,
   Physical as MockPhysical,
 } from "../../app/maquettes/joueur-b/PlayerPageB.jsx";
-import { Projection as MockProjection } from "../../app/maquettes/joueur-a/PlayerPageA.jsx";
 import sA from "../../app/maquettes/joueur-a/page-a.module.css";
 import {
   dateFr,
@@ -309,14 +308,6 @@ export function FakePhysical() {
   return (
     <FakeZone text="Aucune source de suivi physique (vitesse, distances) n’est branchée : exemple de la maquette.">
       <MockPhysical />
-    </FakeZone>
-  );
-}
-
-export function FakeProjection() {
-  return (
-    <FakeZone text="Le modèle de projection entre championnats n’existe pas encore : exemple de la maquette (Lamine Yamal).">
-      <MockProjection />
     </FakeZone>
   );
 }

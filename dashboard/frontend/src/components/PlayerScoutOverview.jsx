@@ -32,6 +32,7 @@ import {
   PlayStyleCard,
   TeamContextCard,
 } from "./PlayerScoutDemo.jsx";
+import { RankingTrigger } from "./RankingDialog.jsx";
 import s from "./PlayerScout.module.css";
 
 /** Metric families of mock-up C, filled with the PitchAPI indicators. */
@@ -301,7 +302,11 @@ function TraitList({ items, metrics }) {
         const percentile = metric?.percentile ?? item.percentile;
         return (
           <li key={item.key} className={toneClass(percentile)}>
-            <span>{label(item.key)}</span>
+            <span>
+              <RankingTrigger target={{ type: "metric", key: item.key }}>
+                {label(item.key)}
+              </RankingTrigger>
+            </span>
             <small>
               {fmt(item.value, metric?.decimals ?? 2, { unit: metric?.unit })}
               {metric?.unit ? "" : " /90"}
@@ -887,7 +892,13 @@ export function PlayerScoutStats({ profile, cohorts, mode, ready }) {
                       return (
                         <tr key={key}>
                           <th scope="row">
-                            {label(key)}
+                            {metric ? (
+                              <RankingTrigger target={{ type: "metric", key }}>
+                                {label(key)}
+                              </RankingTrigger>
+                            ) : (
+                              label(key)
+                            )}
                             {definition.lowerIsBetter && (
                               <span style={{ color: "var(--muted)" }}>
                                 {" "}

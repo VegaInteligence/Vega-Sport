@@ -40,6 +40,9 @@ export const HOME_SIMPLE_LEAGUES = [
   "l_3FJFUl", "l_0275VP", "l_4WFCIZ", "l_4DWyTT", "l_0ahLw8", "l_1W6idJ", "l_1Isor4", "l_3hvsne", "l_47077Y",
   "l_0ErfuF", "l_3kyHLd", "l_0ALvwF", "l_0jy5yE", "l_4QexZg", "l_4H43wr", "l_49KZaB", "l_0S1uaf", "l_1BFfna",
 ];
+// dashboard/backend/services/relational-home.js (main), mirrored by the site's home-insights.js.
+export const LATEST_WEEK_DAYS = 14;
+
 export const HOME_FEATURED_CLUBS = [
   "t_1gkhxH", "t_4R934X", "t_0BrMnM", "t_0UCNPX", "t_2I313i", "t_2eQl9k", "t_4A7FfD", "t_41iFW3", "t_2s2eyG", "t_0xMlRV",
   "t_13gLEF", "t_0tnX1I", "t_4NZcri", "t_32jSEF", "t_3NIiXl", "t_1cpjqO", "t_386iz1", "t_2lHR8t", "t_4ZwKDn", "t_3CPHHF",
@@ -116,12 +119,20 @@ fixture_source AS MATERIALIZED (
 ), matches AS MATERIALIZED (
  SELECT f.*,f.home_team_id home_id,f.away_team_id away_id,f.score_home home_score,f.score_away away_score FROM fixtures f
  WHERE f.status='finished' AND ${scoreSql("f.score_home")} AND ${scoreSql("f.score_away")}
+), last_finished AS (
+ SELECT kickoff,local_day FROM matches WHERE kickoff<=${instant} ORDER BY kickoff DESC,id LIMIT 1
 ), period_anchor AS (
- SELECT ${filters.archive ? `(SELECT max(kickoff) FROM matches WHERE kickoff<=${instant})` : instant} anchor
+ -- As on main: an archive uses its last played week. A live home keeps the latest week
+ -- with results while the current week has none (Monday morning, international
+ -- breaks), as long as that result is under ${LATEST_WEEK_DAYS} days old.
+ SELECT CASE WHEN ${filters.archive} OR latest THEN l.kickoff ELSE ${instant} END anchor,coalesce(latest,false) latest
+ FROM (SELECT 1) one LEFT JOIN last_finished l ON true CROSS JOIN LATERAL (SELECT NOT ${filters.archive}
+ AND l.local_day<date_trunc('week',${instant} AT TIME ZONE 'Europe/Paris')::date
+ AND l.local_day>(${instant} AT TIME ZONE 'Europe/Paris')::date-${LATEST_WEEK_DAYS} latest) fallback
 ), period AS (
  SELECT date_trunc('week',anchor AT TIME ZONE 'Europe/Paris')::date start_day,
  date_trunc('week',anchor AT TIME ZONE 'Europe/Paris')::date+6 end_day,
- (${instant} AT TIME ZONE 'Europe/Paris')::date as_of_day FROM period_anchor
+ (${instant} AT TIME ZONE 'Europe/Paris')::date as_of_day,latest FROM period_anchor
 ), league_sides AS MATERIALIZED (
  SELECT f.*,s.team_id,s.name,s.image_url,s.gf,s.ga,
  (f.status='finished' AND ${scoreSql("f.score_home")} AND ${scoreSql("f.score_away")}) scored
@@ -288,7 +299,7 @@ SELECT publication.*,
    UNION ALL SELECT kickoff - interval '7 days' FROM fixtures
    UNION ALL SELECT (((${instant} AT TIME ZONE 'Europe/Paris')::date+1)::timestamp AT TIME ZONE 'Europe/Paris')
  ) changes WHERE change_at > ${instant}) AS next_change,
- (SELECT CASE WHEN start_day IS NULL THEN null ELSE jsonb_build_object('start',start_day,'end',end_day,'current',${!filters.archive},'asOf',${b(now)}::float8,'asOfDay',as_of_day) END FROM period) period,
+ (SELECT CASE WHEN start_day IS NULL THEN null ELSE jsonb_build_object('start',start_day,'end',end_day,'current',${!filters.archive},'latest',latest,'asOf',${b(now)}::float8,'asOfDay',as_of_day) END FROM period) period,
  (SELECT count(*)::int FROM weekly) result_count,
  (SELECT coalesce(jsonb_agg(id ORDER BY kickoff DESC,id),'[]'::jsonb) FROM results) results,
  (SELECT id FROM featured) featured,

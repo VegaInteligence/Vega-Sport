@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { context, get, skip } from "./context.mjs";
-import { HOME_FEATURED_CLUBS, HOME_SIMPLE_LEAGUES } from "../src/routes/home.mjs";
+import { HOME_FEATURED_CLUBS, HOME_SIMPLE_LEAGUES, LATEST_WEEK_DAYS } from "../src/routes/home.mjs";
 import { readFileSync } from "node:fs";
 
 const home = "/api/read/home?season=2025/2026&leagues=all";
@@ -19,6 +19,7 @@ test("editorial lists are main's", () => {
   const list = (name) => JSON.parse(source.match(new RegExp(`export const ${name} = (\\[[^\\]]*\\])`))[1].replace(/,\s*\]/, "]"));
   assert.deepEqual(HOME_SIMPLE_LEAGUES, list("HOME_SIMPLE_LEAGUES"));
   assert.deepEqual(HOME_FEATURED_CLUBS, list("HOME_FEATURED_CLUBS"));
+  assert.equal(LATEST_WEEK_DAYS, Number(source.match(/export const LATEST_WEEK_DAYS = (\d+);/)[1]));
 });
 
 test("home: the week, its featured match and player", { skip }, async () => {
@@ -26,7 +27,7 @@ test("home: the week, its featured match and player", { skip }, async () => {
   assert.equal(response.status, 200);
   const d = body.data;
   assert.deepEqual(Object.keys(d).sort(), KEYS);
-  assert.deepEqual(d.period, { start: "2025-09-01", end: "2025-09-07", current: true, asOf: context.now, asOfDay: "2025-09-06" });
+  assert.deepEqual(d.period, { start: "2025-09-01", end: "2025-09-07", current: true, latest: false, asOf: context.now, asOfDay: "2025-09-06" });
   assert.equal(d.resultCount, 5);
   // Four most recent days of the week, latest first.
   assert.deepEqual(d.results.map((m) => m.id), ["m_aaaaa5", "m_aaaaa4", "m_aaaaa3", "m_aaaaa2"]);
@@ -89,4 +90,21 @@ test("home: favourites first, archive week, media representation", { skip }, asy
   assert.deepEqual(media.body.media, { "https://img.example/t1.png": "https://media.test/data/sources/v2/images/" + "ab".repeat(32) + ".png" });
   assert.equal(media.body.data.leaders.rating, undefined); // the compact cards drop the rating leaders
   for (const bad of ["&archive=2", "&personalTeams=bad", "&x=1"]) assert.equal((await get(home + bad)).response.status, 400, bad);
+});
+
+test("home: the latest played week stays while the new week has no result", { skip }, async () => {
+  const saved = context.now;
+  try {
+    // Tuesday of the next week: no finished match yet, the last one is four days old.
+    context.now = Date.parse("2025-09-09T12:00:00Z");
+    const d = (await get(home)).body.data;
+    assert.deepEqual([d.period.start, d.period.end, d.period.latest, d.period.asOfDay], ["2025-09-01", "2025-09-07", true, "2025-09-09"]);
+    assert.equal(d.resultCount, 5);
+    // Over LATEST_WEEK_DAYS later, the current (empty) week is shown.
+    context.now = Date.parse("2025-09-24T12:00:00Z");
+    const later = (await get(home)).body.data;
+    assert.deepEqual([later.period.start, later.period.latest, later.resultCount], ["2025-09-22", false, 0]);
+  } finally {
+    context.now = saved;
+  }
 });

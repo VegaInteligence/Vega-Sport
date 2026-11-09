@@ -24,31 +24,11 @@ test("club facts and ranking do not consume requests before their section approa
   const context = { season: "2026/2027", href: (path) => path },
     stubs = {
       react: React,
-      "next/link": {
-        __esModule: true,
-        default: ({ children, href }) => e("a", { href }, children),
-      },
-      "next/navigation": {},
       "../hooks/FootballContext.jsx": { useFootball: () => context },
-      "../hooks/useActorRead.js": {},
       "../hooks/useVisibleIntent.js": {
         __esModule: true,
         default: () => [null, visible],
       },
-      "../hooks/useCompactRead.js": {},
-      "../services/actor-reads.js": {},
-      "../services/compact-reads.js": {},
-      "../services/club-analysis.js": {
-        upcomingClubMatches: () => [],
-        clubMetric: () => ({ value: null, count: 0 }),
-      },
-      "../services/format.js":
-        await import("../dashboard/frontend/src/services/format.js"),
-      "./UI.jsx": { Empty: ({ children }) => e("p", null, children) },
-      "./Icon.jsx": {},
-      "./CompetitionOptions.jsx": {},
-      "./MatchLink.jsx": { MatchLink: () => null },
-      "./ClubForm.jsx": { __esModule: true, default: () => null },
       "./ClubProfile.jsx": {
         ClubFacts: () => {
           facts++;
@@ -62,15 +42,13 @@ test("club facts and ranking do not consume requests before their section approa
           return e("p", null, "Club ranking");
         },
       },
-      "./ResearchUI.jsx": {},
-      "./ResearchCharts.jsx": {},
     },
     filename = path.join(
       root,
-      "dashboard/frontend/src/components/ClubWorkspace.jsx",
+      "dashboard/frontend/src/components/ClubInformation.jsx",
     ),
     source = await fs.readFile(filename, "utf8"),
-    code = babel.transformSync(source + "\nexport { Overview };\n", {
+    code = babel.transformSync(source, {
       presets: [[preset, { runtime: "classic" }]],
       plugins: [commonjs],
       babelrc: false,
@@ -90,16 +68,17 @@ test("club facts and ranking do not consume requests before their section approa
   );
   const render = () =>
     renderToStaticMarkup(
-      e(mod.exports.Overview, {
-        club: { id: "t_000001" },
-        summary: { matches: 0, unscored: 0, forms: [] },
-        history: [],
-        allHistory: [],
-        competitionName: "Ligue 1",
+      e(mod.exports.default, {
+        dossier: {
+          id: "t_000001",
+          name: "Club",
+          country: "FRA",
+          allRows: [],
+        },
       }),
     );
   const first = render();
-  assert.match(first, /Derniers résultats/);
+  assert.doesNotMatch(first, /Club facts|Club ranking/);
   assert.equal(facts, 0);
   assert.equal(rankings, 0);
   visible = true;
