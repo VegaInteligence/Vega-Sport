@@ -96,8 +96,9 @@ export function subscribeLive(id, onChange, { config = LIVE, WebSocketImpl = glo
     } catch {
       return;
     }
+    // AppSync channel segments take letters, digits and dashes only: m_2fkSwK -> m-2fkSwK.
     if (data.type === "connection_ack")
-      socket.send(JSON.stringify({ type: "subscribe", id: subscription, channel: `/live/match/${id}`, authorization }));
+      socket.send(JSON.stringify({ type: "subscribe", id: subscription, channel: `/live/match/${id.replace(/_/g, "-")}`, authorization }));
     else if (data.type === "data" && data.id === subscription) {
       try {
         onChange(JSON.parse(data.event));

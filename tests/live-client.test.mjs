@@ -83,7 +83,7 @@ test("AppSync Events: the key in the subprotocol, init, then the match channel",
   socket.onopen();
   socket.onmessage({ data: JSON.stringify({ type: "connection_ack" }) });
   assert.deepEqual(socket.sent.map((m) => m.type), ["connection_init", "subscribe"]);
-  assert.equal(socket.sent[1].channel, "/live/match/m_live01");
+  assert.equal(socket.sent[1].channel, "/live/match/m-live01"); // AppSync: no underscore in a segment
   socket.onmessage({ data: JSON.stringify({ type: "data", id: socket.sent[1].id, event: JSON.stringify({ type: "state", minute: 3 }) }) });
   socket.onmessage({ data: JSON.stringify({ type: "data", id: "other", event: "{}" }) });
   assert.deepEqual(changes, [{ type: "state", minute: 3 }]);

@@ -9,7 +9,9 @@ import urllib.request
 
 
 def channel(match):
-    return f"/live/match/{match}"
+    """/live/match/{id}; AppSync channel segments take letters, digits and dashes only, so
+    the id's underscore is written as a dash (m_2fkSwK -> m-2fkSwK)."""
+    return f"/live/match/{match.replace('_', '-')}"
 
 
 class MemoryPublisher:
