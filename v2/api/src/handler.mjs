@@ -5,11 +5,13 @@
  * handler one at a time (doc "Bascule route par route").
  */
 import { errorResponse, reject } from "./http.mjs";
+import { withResolvedMedia } from "./media.mjs";
 import { createSystemRoute } from "./routes/system.mjs";
 import { createClubReadRoute } from "./routes/clubs.mjs";
 import { createPlayerReadRoute } from "./routes/players.mjs";
 
-export function createHandler({ read }) {
+/** `mediaBase`: the CloudFront origin of the image copies (https://…/); none, no media map. */
+export function createHandler({ read, mediaBase = null }) {
   const routes = [createSystemRoute(read), createClubReadRoute(read), createPlayerReadRoute(read)];
   async function route(req) {
     const url = new URL(req.url),
@@ -25,7 +27,7 @@ export function createHandler({ read }) {
   }
   return async function handleRequest(req) {
     try {
-      return await route(req);
+      return (await withResolvedMedia(req, route, read, mediaBase)) || (await route(req));
     } catch (error) {
       if (!(error.status >= 400 && error.status <= 599)) console.error("v2 read failed", error.code || error.name);
       return errorResponse(req, error);

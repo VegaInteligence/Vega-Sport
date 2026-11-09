@@ -88,6 +88,17 @@ test("errors: stable codes and retry advice", { skip }, async () => {
   assert.equal(season.response.status, 400);
 });
 
+test("media=1 maps image URLs to their copies", { skip }, async () => {
+  const { response, body } = await get(clubs + "&media=1");
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("etag"), /^W\/"media-v1-/);
+  assert.deepEqual(body.media, { "https://img.example/t1.png": "https://media.test/data/sources/v2/images/" + "ab".repeat(32) + ".png" });
+  const again = await get(clubs + "&media=1", { "if-none-match": response.headers.get("etag") });
+  assert.equal(again.response.status, 304);
+  // Not a compact read: no map, as on main.
+  assert.equal((await get("/api/dashboard/manifest?media=1")).response.status, 400);
+});
+
 test("conditional reads answer 304 without the payload query", { skip }, async () => {
   const first = await get(clubs);
   const again = await get(clubs, { "if-none-match": first.response.headers.get("etag") });

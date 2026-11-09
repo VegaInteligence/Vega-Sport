@@ -11,6 +11,11 @@ Parameters:
     Default: 0
     AllowedValues: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     Description: Zero omits the reservation; deployment preflight must verify account limit <=10 in that case.
+  MediaBaseUrl:
+    Type: String
+    Default: ''
+    AllowedPattern: '(https://[a-z0-9.-]+/)?'
+    Description: 'This distribution, https://<ApiOrigin domain>/, once known (second deploy); empty, no media map'
 Conditions:
   Reserve: !Not [!Equals [!Ref ReservedConcurrency, '0']]
 Resources:
@@ -58,6 +63,7 @@ Resources:
         Variables:
           VEGA_RELEASE: !Ref ReleaseKey
           V2_READ_DATABASE_URL: !Ref ReadDatabaseUrl
+          V2_MEDIA_BASE_URL: !Ref MediaBaseUrl
       VpcConfig:
         SecurityGroupIds: [!ImportValue vega-v2-api-sg]
         SubnetIds: [subnet-0233a9567335f56ce, subnet-04c9af303f55d9718, subnet-0e72516f361932c15]
@@ -72,6 +78,30 @@ Resources:
         OriginAccessControlOriginType: lambda
         SigningBehavior: always
         SigningProtocol: sigv4
+  MediaOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: vega-v2-media
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+  MediaReadByCloudFront:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !ImportValue vega-v2-media-bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: cloudfront.amazonaws.com}
+            Action: 's3:GetObject'
+            Resource: !Sub
+              - 'arn:${AWS::Partition}:s3:::${Bucket}/data/*'
+              - Bucket: !ImportValue vega-v2-media-bucket
+            Condition:
+              StringEquals:
+                'AWS:SourceArn': !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
   Cache:
     Type: AWS::CloudFront::CachePolicy
     Properties:
@@ -123,6 +153,19 @@ Resources:
             DomainName: !Select [2, !Split ['/', !GetAtt Origin.FunctionUrl]]
             OriginAccessControlId: !GetAtt OAC.Id
             CustomOriginConfig: {OriginProtocolPolicy: https-only, OriginSSLProtocols: [TLSv1.2], OriginReadTimeout: 29}
+          - Id: media
+            DomainName: !ImportValue vega-v2-media-domain
+            OriginAccessControlId: !GetAtt MediaOAC.Id
+            S3OriginConfig: {OriginAccessIdentity: ''}
+        # Image copies: immutable, content-addressed (managed CachingOptimized policy).
+        CacheBehaviors:
+          - PathPattern: data/*
+            TargetOriginId: media
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            Compress: false
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
         DefaultCacheBehavior:
           TargetOriginId: api
           ViewerProtocolPolicy: redirect-to-https

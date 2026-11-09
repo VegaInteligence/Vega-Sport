@@ -15,6 +15,7 @@ Resources:
   Repository:
     Type: AWS::ECR::Repository
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       RepositoryName: vega-v2-worker
       ImageTagMutability: IMMUTABLE
@@ -49,17 +50,42 @@ Resources:
                   - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CollectUrlParameter}'
                   - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CalcUrlParameter}'
                   - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PasswordParameterPrefix}-*'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PitchApiKeyParameter}'
               - Effect: Allow
                 Action: ['secretsmanager:GetSecretValue']
                 Resource: !ImportValue vega-v2-db-master-secret
-                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PitchApiKeyParameter}'
-  # The code calls no AWS API: the task role grants nothing.
+  # Copies of display images (vega_v2/media.py): private, served by the v2 CloudFront
+  # distribution at data/* (api.yaml), content-addressed keys under data/sources/v2/images/.
+  MediaBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub 'vega-v2-media-${AWS::AccountId}-${AWS::Region}'
+      PublicAccessBlockConfiguration: {BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: true}
+      OwnershipControls: {Rules: [{ObjectOwnership: BucketOwnerEnforced}]}
+      BucketEncryption: {ServerSideEncryptionConfiguration: [{ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}}]}
+      Tags: [{Key: project, Value: vega-v2}]
+  # The only AWS API the code calls: the image copies (head, put; list so that a
+  # missing key answers 404, not 403).
   TaskRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement: [{Effect: Allow, Principal: {Service: ecs-tasks.amazonaws.com}, Action: 'sts:AssumeRole'}]
+      Policies:
+        - PolicyName: MediaCopies
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['s3:GetObject', 's3:PutObject']
+                Resource: !Sub '${MediaBucket.Arn}/data/sources/v2/images/*'
+              - Effect: Allow
+                Action: 's3:ListBucket'
+                Resource: !GetAtt MediaBucket.Arn
+                Condition: {StringLike: {'s3:prefix': 'data/sources/v2/images/*'}}
   WorkerTask:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -78,6 +104,8 @@ Resources:
           Command: [--lanes, 'score,details,reference']
           StopTimeout: 60
           ReadonlyRootFilesystem: true
+          Environment:
+            - {Name: V2_MEDIA_BUCKET, Value: !Ref MediaBucket}
           Secrets:
             - {Name: V2_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CollectUrlParameter}'}
             - {Name: V2_CALC_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CalcUrlParameter}'}
@@ -166,3 +194,5 @@ Outputs:
   Cluster: {Value: !Ref Cluster}
   BackfillTaskDefinition: {Value: !Ref BackfillTask}
   MigrationTaskDefinition: {Value: !Ref MigrationTask}
+  MediaBucket: {Value: !Ref MediaBucket, Export: {Name: vega-v2-media-bucket}}
+  MediaBucketDomain: {Value: !GetAtt MediaBucket.RegionalDomainName, Export: {Name: vega-v2-media-domain}}
