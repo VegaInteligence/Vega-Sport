@@ -20,7 +20,9 @@ before(() => {
   assert.equal(seed.status, 0, seed.stderr);
   // The production read role: api schema only.
   context.reader = createReader(DSN, { role: "vega_read" });
-  context.handle = createHandler({ read: context.reader.read, mediaBase: "https://media.test/" });
+  // The home page reads "now": Saturday 6 September 2025, 14:00 in Paris (seed week).
+  context.now = Date.parse("2025-09-06T12:00:00Z");
+  context.handle = createHandler({ read: context.reader.read, mediaBase: "https://media.test/", clock: () => context.now });
 });
 after(() => context.reader?.end());
 

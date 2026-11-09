@@ -51,11 +51,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # dashboard/shared and the SportScore mapping: data the v2 adapters copy (drift tests).
+          # Code and data the v2 API and adapters share with main (shared/, the home presentation)
+          # and the mappings they copy (drift tests).
           sparse-checkout: |
             v2
             dashboard/shared
             dashboard/frontend/src/services
+            dashboard/backend/services
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
