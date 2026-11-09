@@ -34,6 +34,7 @@
 !dashboard/frontend/src/services/format.js
 !dashboard/frontend/src/services/player-aliases.js
 !dashboard/frontend/src/data-url.js
+!dashboard/frontend/src/services/v2-routes.js
 !dashboard/frontend/src/model.js
 !dashboard/scripts/coach-portrait-source.mjs
 !dashboard/shared/player-aliases.js

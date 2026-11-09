@@ -1,5 +1,5 @@
 """Black-box bootstrap, workflow and relational monitor checks. No AWS credentials inherited."""
-import contextlib, http.server, json, os, pathlib, subprocess, sys, tempfile, threading, urllib.parse
+import contextlib, http.server, json, os, pathlib, re, subprocess, sys, tempfile, threading, urllib.parse
 import psycopg, yaml
 root = pathlib.Path.cwd()
 folder = pathlib.Path(__file__).resolve().parent
@@ -92,7 +92,6 @@ def workflow(name):
         target=urllib.parse.urlsplit(obj['jobs']['pilot']['env']['V2_DATABASE_URL'])
         check(target.hostname=='127.0.0.1' and target.path=='/vega_v2_pilot',
               'v2 pilot database must stay local to the runner')
-        import re
         check(set(re.findall(r'secrets\.([A-Za-z0-9_]+)',text))=={'PITCHAPI_API_KEY'},
               'v2 pilot may receive only its provider key')
         check('schedule' not in obj.get('on',obj.get(True,{})),
@@ -115,7 +114,6 @@ def workflow(name):
         check(obj['jobs']['deploy'].get('environment')=='v2-production', 'v2 deploy must run in the v2-production environment')
         check('role/vega-v2-deploy' in text and './.github/actions/aws-database' not in text and 'statarena-postgres' not in text,
               'v2 deploy must use its own role and never the current database')
-        import re
         check(set(re.findall(r'\$\{\{\s*secrets\.([A-Za-z0-9_]+)',text))<={'PITCHAPI_API_KEY','SPORTSAPI_API_KEY'}, 'v2 deploy may receive only the provider keys')
     elif name=='production-validation':
         check('id-token: write' not in text and 'secrets.' not in text,
