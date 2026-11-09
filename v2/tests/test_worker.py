@@ -389,6 +389,19 @@ class WorkerTest(unittest.TestCase):
         self.assertEqual((label, self.watch("m_llllll")[0]), ("2024/2025", "final"))
         self.assertEqual(self.db.execute("SELECT count(*) FROM ops.parse_failures").fetchone()[0], 0)
 
+    def test_backfill_reads_its_leagues_before_any_catalogue(self):
+        # A fresh base (first v2 deploy, 2026-11-09): the weekly catalogue waits behind live
+        # work, and a past edition is unknown until the league's profile lists it.
+        self.api.routes["/leagues/l_aaaaaa"] = dict(LIGUE1, seasons=["2024/2025", "2025/2026"])
+        backfill = Worker(self.worker.store, self.worker.client, lanes=("backfill",), clock=lambda: self.now, cohort_delay=0,
+                          backfill={"first_season": 2024, "last_season": 2024, "competitions": ["l_aaaaaa"]})
+        self.assertEqual(planner.plan_backfill(self.db, self.now, first_season=2024, last_season=2024, competitions=["l_aaaaaa"]), {})
+        backfill.backfill_references()
+        self.assertEqual(
+            planner.plan_backfill(self.db, self.now, first_season=2024, last_season=2024, competitions=["l_aaaaaa"]), {"league_matches": 1}
+        )
+        self.assertNotIn("/leagues", self.api.calls)  # only the named league, not the catalogue
+
     def test_backfill_collects_history_without_watches(self):
         start = self.now
         old = [match(f"m_hist0{i}", start - timedelta(days=300 + i), "finished", (i % 3, 1), season="2024/2025") for i in range(1, 4)]
