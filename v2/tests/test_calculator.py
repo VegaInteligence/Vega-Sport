@@ -238,7 +238,7 @@ class ApiViewTest(CalculatorTest):
         views = [r[0] for r in self.db.execute(
             "SELECT table_schema||'.'||table_name FROM information_schema.views WHERE table_schema IN ('api','ops') ORDER BY 1"
         )]
-        self.assertEqual(len([v for v in views if v.startswith("api.")]), 36)  # 21 + 5 read API (016) + 3 players (019) + media (020) + 4 matches (021) + 2 (022)
+        self.assertEqual(len([v for v in views if v.startswith("api.")]), 37)  # 21 + 5 read API (016) + 3 players (019) + media (020) + 4 matches (021) + 2 (022) + cards (023)
         self.assertEqual(len([v for v in views if v.startswith("ops.")]), 3)
         for view in views:
             self.db.execute(f"SELECT * FROM {view} LIMIT 5").fetchall()
