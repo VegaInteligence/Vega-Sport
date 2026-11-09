@@ -11,6 +11,7 @@ import psycopg
 from psycopg import sql
 
 from .normalize import NormalizedFamily, number
+from .seasons import FIRST_SEASON, LAST_ARCHIVE_SEASON, season_id, sporting_season
 
 FAMILY_TABLES = {
     "shots": ("shots",),
@@ -52,6 +53,28 @@ FOREIGN_KIND = {
 
 class StoreError(RuntimeError):
     """Messages are codes, never provider values or SQL rejected-row details."""
+
+
+# Order matters: "Quarter-final" is a knockout round, not the final.
+_STAGES = (
+    (r"\b(qualif\w*|preliminary|prelim\w*)\b", "qualifying"),
+    (r"\b(play-?offs?|barrage\w*)\b", "playoff"),
+    (r"\b(group|groupe|league phase|phase de ligue)\b", "group"),
+    (
+        r"(\bround of \d+|\b1/\d+|\bquarter|\bsemi|\bhuiti\w*|\bquarts?\b|\bdemi\w*|\bseizi\w*|\bknockout)",
+        "knockout",
+    ),
+    (r"\b(final|finale)\b", "final"),
+)
+
+
+def round_stage(name):
+    """Stage of a round from its provider name; a plain matchday is a regular round."""
+    plain = name.lower()
+    for pattern, stage in _STAGES:
+        if re.search(pattern, plain):
+            return stage
+    return "regular"
 
 
 def connect_local(dsn):
@@ -148,18 +171,12 @@ class Store:
     def resolve(self, kind, key):
         if key is None:
             return None
-        if kind in ("coach", "referee", "venue"):
-            row = self.conn.execute(
-                sql.SQL("SELECT id FROM core.{} WHERE name=%s").format(
-                    sql.Identifier(ENTITY_TABLE[kind])
-                ),
-                (key,),
-            ).fetchone()
-        else:
-            row = self.conn.execute(
-                "SELECT entity_id FROM core.provider_ids WHERE entity_type=%s AND provider='pitchapi' AND provider_key=%s",
-                (kind, key),
-            ).fetchone()
+        # Coaches, referees and venues have only a name at PitchAPI: that name is their
+        # provider key, so homonyms can later be split by another source (Wikidata QID).
+        row = self.conn.execute(
+            "SELECT entity_id FROM core.provider_ids WHERE entity_type=%s AND provider='pitchapi' AND provider_key=%s",
+            (kind, key),
+        ).fetchone()
         if not row:
             raise StoreError("UNRESOLVED_REFERENCE")
         return row[0]
@@ -250,22 +267,19 @@ class Store:
                 row["name"] = None
             elif not isinstance(row.get("name"), str) or not row["name"].strip():
                 raise StoreError("REFERENCE_NAME_REQUIRED")
-            if kind in ("coach", "referee", "venue"):
-                ident = self._upsert(table, row, ["name"])[0]
-            else:
-                keys = list(row)
-                ident = self.conn.execute(
-                    sql.SQL("INSERT INTO core.{} ({}) VALUES ({}) RETURNING id").format(
-                        sql.Identifier(table),
-                        sql.SQL(",").join(map(sql.Identifier, keys)),
-                        sql.SQL(",").join(sql.Placeholder() for _ in keys),
-                    ),
-                    list(row.values()),
-                ).fetchone()[0]
-                self.conn.execute(
-                    "INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES(%s,'pitchapi',%s,%s)",
-                    (kind, key, ident),
-                )
+            keys = list(row)
+            ident = self.conn.execute(
+                sql.SQL("INSERT INTO core.{} ({}) VALUES ({}) RETURNING id").format(
+                    sql.Identifier(table),
+                    sql.SQL(",").join(map(sql.Identifier, keys)),
+                    sql.SQL(",").join(sql.Placeholder() for _ in keys),
+                ),
+                list(row.values()),
+            ).fetchone()[0]
+            self.conn.execute(
+                "INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES(%s,'pitchapi',%s,%s)",
+                (kind, key, ident),
+            )
         elif row:
             # Omitted metadata is preserved; explicit source null remains null except required name.
             if row.get("name", True) is None:
@@ -326,32 +340,65 @@ class Store:
             self.entity(kind, key, fields)
 
     def season(self, label):
-        if not re.fullmatch(r"\d{4}(?:/\d{4})?", label):
+        """Create a Vega season ("YYYY/YYYY+1", id = start year) and its partitions."""
+        sid = season_id(label)
+        if sid is None:
             raise StoreError("INVALID_SEASON")
-        sid = self.conn.execute(
-            "INSERT INTO core.seasons(label,start_year) VALUES(%s,%s) ON CONFLICT(label) DO UPDATE SET label=EXCLUDED.label RETURNING id",
-            (label, int(label[:4])),
-        ).fetchone()[0]
-        self.conn.execute("SELECT pg_advisory_xact_lock(92001,%s)", (sid,))
+        self.conn.execute(
+            "INSERT INTO core.seasons(id,label) VALUES(%s,%s) ON CONFLICT(id) DO NOTHING",
+            (sid, label),
+        )
+        archive = sid <= LAST_ARCHIVE_SEASON
+        self.conn.execute(
+            "SELECT pg_advisory_xact_lock(92001,%s)", (0 if archive else sid,)
+        )
+        # One partition per season since 2021/2022; one shared partition for the archives.
+        values = (
+            sql.SQL(",").join(
+                sql.Literal(y) for y in range(FIRST_SEASON, LAST_ARCHIVE_SEASON + 1)
+            )
+            if archive
+            else sql.Literal(sid)
+        )
+        suffix = "archive" if archive else f"s{sid}"
         for table in self.partitions:
             self.conn.execute(
                 sql.SQL(
                     "CREATE TABLE IF NOT EXISTS core.{} PARTITION OF core.{} FOR VALUES IN ({})"
                 ).format(
-                    sql.Identifier(f"{table}_s{sid}"),
+                    sql.Identifier(f"{table}_{suffix}"),
                     sql.Identifier(table),
-                    sql.Literal(sid),
+                    values,
                 )
             )
         return sid
 
-    def edition(self, competition_id, label):
+    def edition(self, competition_id, native_label):
+        """A provider edition becomes a competition-season of its Vega sporting season."""
+        found = self.conn.execute(
+            "SELECT c.name,p.provider_key FROM core.competitions c LEFT JOIN core.provider_ids p ON p.entity_type='competition' AND p.provider='pitchapi' AND p.entity_id=c.id AND p.is_current WHERE c.id=%s",
+            (competition_id,),
+        ).fetchone()
+        name, key = found if found else (None, None)
+        label = sporting_season(native_label, key, name)
+        if label is None:
+            raise StoreError("INVALID_SEASON")
         sid = self.season(label)
         eid = self.conn.execute(
             "INSERT INTO core.competition_seasons(competition_id,season_id,native_label) VALUES(%s,%s,%s) ON CONFLICT(competition_id,season_id) DO UPDATE SET native_label=EXCLUDED.native_label RETURNING id",
-            (competition_id, sid, label),
+            (competition_id, sid, native_label),
         ).fetchone()[0]
         return eid, sid
+
+    def round(self, competition_season_id, name):
+        """A matchday, cup round or group stage, keyed by its name within the edition."""
+        if not isinstance(name, str) or not name.strip():
+            return None
+        name = name.strip()
+        return self.conn.execute(
+            "INSERT INTO core.rounds(competition_season_id,name,stage) VALUES(%s,%s,%s) ON CONFLICT(competition_season_id,name) DO UPDATE SET name=EXCLUDED.name RETURNING id",
+            (competition_season_id, name, round_stage(name)),
+        ).fetchone()[0]
 
     def _row(self, row):
         return {
@@ -459,8 +506,10 @@ class Store:
                     (source["id"],),
                 )
             self.references(batch)
+            # The provider edition is compared with the edition it was stored under,
+            # not with the Vega season label (a calendar-year "2026" is 2026/2027).
             sid, competition_id, label = self.conn.execute(
-                "SELECT cs.season_id,cs.competition_id,s.label FROM core.competition_seasons cs JOIN core.seasons s ON s.id=cs.season_id WHERE cs.id=%s",
+                "SELECT cs.season_id,cs.competition_id,cs.native_label FROM core.competition_seasons cs WHERE cs.id=%s",
                 (competition_season_id,),
             ).fetchone()
             ids = []
@@ -481,9 +530,19 @@ class Store:
                     {
                         k: v
                         for k, v in source.items()
-                        if k not in ("id", "provider_season", "provider_competition_id")
+                        if k
+                        not in (
+                            "id",
+                            "provider_season",
+                            "provider_competition_id",
+                            "round_name",
+                        )
                     }
                 )
+                if "round_name" in source:
+                    row["round_id"] = self.round(
+                        competition_season_id, source["round_name"]
+                    )
                 row.update(
                     competition_season_id=competition_season_id,
                     season_id=sid,
