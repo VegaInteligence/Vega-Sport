@@ -100,7 +100,7 @@ Chaque source a sa période dans `ops.source_runs`. Une erreur de base de donné
 ## Ce qui reste
 
 - Les routes que la v2 ne sert pas, volontairement : `/api/archives/season` (documents source entiers, inutiles avec `boundedArchive`), `/api/archive/matches/{id}` (l'archive brute d'un match ; le site ne la lit qu'en repli quand une famille native manque, et la v2 sert toutes les familles), `/api/supplemental` (déjà indisponible sur main), l'index du worker de coupes retiré (`cup-index?kind=worker`, le site lit alors le catalogue) et `orion-pro`. Le site appelle encore les routes actuelles : la bascule change ses chemins selon la table ci-dessus.
-football-data, ESPN et fixturedl n'alimentent que le catalogue figé open-matchday de main, qui reste sur main. L'extrait UEFA écrit à la main pour un joueur (`uefa-nations-snapshot.js`) reste sur main : la v2 n'invente pas d'identités d'équipe pour recopier un correctif.
+football-data, ESPN et fixturedl sont les sources des lignes d'open-matchday (la colonne `source` de chaque ligne, non gardée). L'extrait UEFA écrit à la main pour un joueur (`uefa-nations-snapshot.js`) reste sur main : la v2 n'invente pas d'identités d'équipe pour recopier un correctif.
 - L'import réel des archives attend la copie en lecture seule des sources de main (`data/sources/`).
 - Le déploiement des piles AWS, le backfill, la parité réelle et la bascule route par route : voir `infra/aws-v2/README.md`. Rien n'est déployé.
 
