@@ -633,12 +633,6 @@ export default function PlayerSeasonProfile({
               state={level ? europe : { status: "ready" }}
               peers={levelPeers}
               team={team}
-              size={
-                comparisonsReady
-                  ? cohorts.groups.get(profile.role?.group)?.profiles.length ||
-                    0
-                  : null
-              }
             />
           )}
           {view === "similar" && cohortControls}

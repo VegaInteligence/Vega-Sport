@@ -499,6 +499,22 @@
   color: var(--ink);
   font-weight: 600;
 }
+.plotTip b.up {
+  color: var(--accent);
+}
+.plotTip b.down {
+  color: light-dark(#aa3d43, #e98c91);
+}
+.plotTipRule {
+  display: block;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
 
 /* -------------------------------------------------------- style spectrum */
 .spectrum {

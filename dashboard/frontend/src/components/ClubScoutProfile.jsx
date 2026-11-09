@@ -34,7 +34,6 @@ import {
   MenuItem,
   SearchMenu,
   clubStyles as c,
-  fmtNum,
   ordinal,
 } from "./ClubScoutUI.jsx";
 import { RankingDialog, RankingProvider } from "./RankingDialog.jsx";
@@ -138,7 +137,6 @@ function Profile({ dossier }) {
             dossier={dossier}
             cmp={cmp}
             active={referentialTab}
-            onMembers={() => setRanking({ type: "members" })}
           />
           <ResearchTabs
             animated
@@ -230,16 +228,15 @@ function useComparison(dossier) {
   };
 }
 
-function ComparisonBar({ dossier, cmp, active, onMembers }) {
+function ComparisonBar({ dossier, cmp, active }) {
   const competitions = useSeasonCompetitions();
-  const { scope, level, view, state } = cmp;
+  const { scope, level, state } = cmp;
   const single = (c) => ({ ...c, leagues: [c] });
   const own = { ...dossier.league, own: true, leagues: null };
   const played = dossier.competitions
     .filter((c) => c.id !== dossier.league?.id)
     .map((c) => single(competitions.find((x) => x.id === c.id) || c));
   const loading = state.status !== "ready";
-  const ref = view.referential;
   const leagueName = dossier.league?.name || "Championnat";
   return (
     <section
@@ -312,43 +309,17 @@ function ComparisonBar({ dossier, cmp, active, onMembers }) {
           </div>
         )}
       </div>
-      <p className={s.compareSummary} aria-live="polite">
-        {!active ? (
-          "Cet onglet montre les données du club, sans référentiel."
-        ) : loading ? (
-          state.status === "error" ? (
-            state.error
-          ) : scope === "europe" ? (
-            "Lecture des 132 clubs du Top 7 européen…"
-          ) : (
-            `Lecture de ${state.progress?.league || cmp.competition?.name} · ${state.progress?.done ?? 0} / ${state.progress?.total || "…"} clubs`
-          )
-        ) : (
-          <>
-            {summary(dossier, view, ref)}{" "}
-            <button className={s.compareMembers} onClick={onMembers}>
-              Voir les {view.clubs.length} clubs
-            </button>
-            {ref?.europe && <span className={s.demoTag}>Démo locale</span>}
-          </>
-        )}
-      </p>
+      {active && loading && (
+        <p className={s.compareSummary} role="status">
+          {state.status === "error"
+            ? state.error
+            : scope === "europe"
+              ? "Lecture des clubs du Top 7 européen…"
+              : `Lecture de ${state.progress?.league || cmp.competition?.name} · ${state.progress?.done ?? 0} / ${state.progress?.total || "…"} clubs`}
+        </p>
+      )}
     </section>
   );
-}
-
-function summary(dossier, view, ref) {
-  const n = view.clubs.length;
-  if (!ref) return `${n} clubs de ${dossier.league?.name} · valeurs par match en championnat.`;
-  if (ref.europe)
-    return ref.level
-      ? `Les ${n - 1} clubs européens au niveau le plus proche de ${dossier.name} (${ref.leagues} championnats) · valeurs par match, championnat et coupes d’Europe.`
-      : `${n} clubs des 7 championnats · valeurs par match, championnat et coupes d’Europe.`;
-  if (ref.multi)
-    return `${n} clubs de ${ref.label} · valeurs par match de chaque club dans son championnat.`;
-  if (ref.inserted)
-    return `${n - 1} clubs de ${ref.label} + ${dossier.name} (valeurs de son championnat) · classés par match.`;
-  return `${n} clubs · valeurs par match en ${ref.label}.`;
 }
 
 function refMeta(item, dossier) {
@@ -358,7 +329,7 @@ function refMeta(item, dossier) {
   return countryLabel(item.country);
 }
 
-/** Every club of the referential behind one indicator, phase or level. */
+/** Every club of the referential behind one indicator or phase index. */
 function ClubRankingDialog({ dossier, target, onClose }) {
   const f = useFootball();
   const ref = dossier.referential;
@@ -398,7 +369,7 @@ function ClubRankingDialog({ dossier, target, onClose }) {
         centile: metric.better === 0 ? null : club.centiles?.[target.key],
         href: href(club),
       }));
-  } else if (target.type === "phase") {
+  } else {
     const phase = PHASES.find((p) => p.key === target.key);
     title = `Indice ${phase.label.toLowerCase()}`;
     note = `Moyenne des centiles : ${phase.keys.map((k) => METRICS[k].label.toLowerCase()).join(", ")}.`;
@@ -421,35 +392,6 @@ function ClubRankingDialog({ dossier, target, onClose }) {
         href: href(club),
       };
     });
-  } else {
-    title = "Clubs du référentiel";
-    note = ref?.europe
-      ? "Niveau (en xG par match, moyenne de Premier League = 0) : moitié saison (écart de championnat + différence de xG par match), moitié long terme (coefficient UEFA du club sur cinq ans). Du plus fort au moins fort."
-      : "Classés par points par match.";
-    const sorted = ref?.europe
-      ? [...dossier.clubs].sort((a, b) => (b.strength ?? -9) - (a.strength ?? -9))
-      : [...dossier.clubs].sort((a, b) => a.position - b.position);
-    rows = sorted.map((club, i) => ({
-      id: club.id,
-      rank: i + 1,
-      name: club.name,
-      imageUrl: club.imageUrl,
-      meta: [
-        club.league?.name,
-        club.leaguePosition && `${ordinal(club.leaguePosition)} du championnat`,
-        ref?.europe &&
-          (club.coefficient != null
-            ? `coef. UEFA ${fmtNum(club.coefficient, 1)}`
-            : "sans coef. UEFA"),
-      ]
-        .filter(Boolean)
-        .join(" · "),
-      value: ref?.europe
-        ? `niveau ${fmtNum(club.strength, 2, true)}`
-        : `${fmtNum(club.record.points / (club.record.matches || 1), 2)} pts/m`,
-      centile: null,
-      href: href(club),
-    }));
   }
   return (
     <RankingDialog
