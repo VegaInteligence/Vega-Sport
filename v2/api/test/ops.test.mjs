@@ -1,11 +1,12 @@
-// Contract tests of /api/ops/status, the private status page's read (043_ops_status.sql):
-// its key, its 24-hour window and every block, read as vega_read.
+// Contract tests of /api/ops/status, the private status page's read (043_ops_status.sql,
+// 050_ops_status_reads.sql): its key, its 24-hour window and every block, read as vega_read.
 import { before, after, test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import pg from "pg";
 import { context, skip } from "./context.mjs";
 import { createHandler } from "../src/handler.mjs";
-import { freshness, keyMatches } from "../src/routes/ops.mjs";
+import { PERMANENT, freshness, keyMatches } from "../src/routes/ops.mjs";
 
 const KEY = "k".repeat(64);
 const NOW = Date.parse("2025-09-06T12:00:00Z");
@@ -52,7 +53,8 @@ before(async () => {
   await x("UPDATE core.matches SET first_finished_at = $1 WHERE id = 4", [iso(-2350)]); // before the window
   await x("UPDATE ops.family_state SET last_success_at = $1 WHERE match_id = 5 AND family = 'summary'", [iso(-900)]);
   await x(
-    "INSERT INTO ops.family_state(match_id, family, status, last_success_at) VALUES (5, 'shots', 'ok', $1), (5, 'events', 'ok', $1), (5, 'heatmaps', 'error', NULL)",
+    `INSERT INTO ops.family_state(match_id, family, status, last_success_at) VALUES
+       (5, 'shots', 'ok', $1), (5, 'events', 'ok', $1), (5, 'heatmaps', 'error', NULL), (5, 'network', 'unavailable', NULL)`,
     [iso(-870)],
   );
   await x(
@@ -142,10 +144,22 @@ test("jobs of the last and next 24 hours: counts per 10 minutes, sample rows", {
   ]);
   // Editions still to collect, under their own season name.
   assert.deepEqual(body.backfill, { editions: [{ season: "2025/2026", seasonId: 2025, editions: 1 }], expected: 6, done: 4, failed: 1 });
-  const backlog = Object.fromEntries(body.backlog.map((b) => [`${b.lane}/${b.family}/${b.state}`, b.jobs]));
-  assert.equal(backlog["backfill/shots/pending"], 1);
-  assert.equal(backlog["details/heatmaps/failed"], 1);
-  assert.equal(backlog["reference/team/pending"], 1);
+  // The queue: per lane, family and state, what waits, what is due now, what a retry cannot fix.
+  const backlog = Object.fromEntries(body.backlog.map((b) => [`${b.lane}/${b.family}/${b.state}`, [b.jobs, b.due, b.permanent]]));
+  assert.deepEqual(backlog["backfill/shots/pending"], [1, 1, 0]);
+  assert.deepEqual(backlog["reference/team/pending"], [1, 0, 0]); // due after the window
+  assert.deepEqual(backlog["score/lineups/leased"], [1, 0, 0]);
+  assert.deepEqual(backlog["details/heatmaps/failed"], [1, 0, 1]); // 404: stays failed
+  assert.deepEqual(backlog["backfill/network/failed"], [1, 0, 0]); // 5xx: tried again after a day
+  assert.equal(body.backlog.find((b) => b.family === "team").oldestRunAfter, iso(1800));
+  assert.ok(!body.backlog.some((b) => b.state === "done"));
+});
+
+test("the codes a retry cannot fix are the planner's", () => {
+  const source = readFileSync(new URL("../../vega_v2/planner.py", import.meta.url), "utf8");
+  const tuple = /^PERMANENT_CODES = \(([^)]*)\)/m.exec(source);
+  assert.ok(tuple, "planner.PERMANENT_CODES not found");
+  assert.deepEqual([...PERMANENT].sort(), [...tuple[1].matchAll(/"([A-Z_]+)"/g)].map((m) => m[1]).sort());
 });
 
 test("watched matches, sources, model runs", { skip }, async () => {
@@ -154,10 +168,12 @@ test("watched matches, sources, model runs", { skip }, async () => {
     body.matches.map((m) => [m.id, m.watch, m.status, m.home, m.away, m.familiesOk, m.competition]),
     [
       [4, "waiting_final", "finished", "Racing Club", "Union Sud", 0, "Ligue 1"],
-      [5, "final", "finished", "Union Sud", "Olympique Été", 2, "Ligue 1"],
+      // Settled families: two collected, one the provider does not have; the failed one is not.
+      [5, "final", "finished", "Union Sud", "Olympique Été", 3, "Ligue 1"],
       [6, "scheduled", "not_started", "Racing Club", "Stade Nord", 0, "Ligue 1"],
     ],
   );
+  assert.equal(body.totals.matches, 3);
   assert.equal(body.matches[2].nextCheckAt, iso(525));
   assert.deepEqual(body.sources, [
     { source: "sportscore", scope: "standings:l_x", lastAttemptAt: iso(-20), lastSuccessAt: iso(-420), status: "error", errorCode: "HTTP_TIMEOUT", rowsWritten: 0, unmatched: 0 },
@@ -186,10 +202,11 @@ test("provider calls, warnings, progress, quality, freshness, publication", { sk
     { family: "network", calls: 1, errors: 1, meanMs: 900, p95Ms: 900 },
   ]);
   assert.deepEqual(body.warnings, [{ matchId: 5, match: "Union Sud – Olympique Été", kind: "score_disagreement", detail: "2-0 / 2-1", detectedAt: iso(-60) }]);
-  assert.deepEqual(body.progress.map((p) => [p.competition, p.season, p.family, p.expected, p.done, p.empty, p.failed]), [
-    ["Ligue 1", "2025/2026", "shots", 6, 3, 1, 1],
-    ["Ligue 1", "2025/2026", "league_matches", 1, 1, 0, 0],
+  // One row per edition, its match families added up; the season calendar is not one of them.
+  assert.deepEqual(body.progress, [
+    { editionId: 1, competition: "Ligue 1", season: "2025/2026", seasonId: 2025, expected: 6, done: 3, empty: 1, failed: 1, lastSuccessAt: iso(-60) },
   ]);
+  assert.deepEqual(body.totals, { matches: 3, warnings: 1, editions: 1 });
   assert.deepEqual(body.quality.parseFailures, [{ family: "calendar", code: "INVALID_ENVELOPE", count: 2 }]);
   assert.deepEqual(body.quality.unknownFields, [{ family: "shots", path: "data.foo", occurrences: 3, firstSeenAt: iso(-7200), lastSeenAt: iso(-60) }]);
   assert.ok(body.quality.coverageGaps >= 1); // match 5 still lacks families
