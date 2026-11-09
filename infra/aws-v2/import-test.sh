@@ -37,7 +37,7 @@ get() { curl -fsS --max-time 60 "$API$1"; }
 echo "== 1. The read API answers"
 get "/api/status" >/dev/null
 
-echo "== 2. Backfill $LEAGUE $LABEL: the league profile (its seasons), its calendar, then the 13 families of every finished match"
+echo "== 2. Backfill $LEAGUE $LABEL: the league in the catalogue (its seasons), its calendar, then the 13 families of every finished match"
 run vega-v2-backfill backfill "[\"--lanes\",\"backfill\",\"--until-idle\",\"--backfill-from\",\"$SEASON\",\"--backfill-to\",\"$SEASON\",\"--backfill-competitions\",\"$LEAGUE\"]"
 
 if [ -n "$ARCHIVES" ]; then
@@ -60,6 +60,8 @@ chunk = next((c for s in manifest["seasons"] if s["id"] == label for c in s["chu
 print("edition:", chunk and chunk["meta"])
 fixtures = get(f"/api/fixtures?league={league}&season={q(label)}&status=played&limit=100")["data"]["matches"]
 print("played matches (first page):", len(fixtures))
+if not fixtures:
+    sys.exit("no played match of this season in v2: the backfill wrote nothing")
 match = fixtures[0]["id"]
 for family in ("", "/lineups", "/events", "/shots", "/stats", "/players", "/players/halves", "/momentum", "/advanced",
                "/advanced/players", "/advanced/network", "/heatmaps", "/h2h"):
