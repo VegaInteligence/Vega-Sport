@@ -1,0 +1,9 @@
+{
+  "name": "vega-v2-api",
+  "private": true,
+  "type": "module",
+  "description": "Vega v2 read API: the current routes, read from the api schema only.",
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test test/*.test.mjs" },
+  "dependencies": { "pg": "8.23.1" }
+}

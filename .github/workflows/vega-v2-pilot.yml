@@ -42,6 +42,8 @@ jobs:
       VEGA_V2_VALIDATED_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_validated_test
       VEGA_V2_WORKER_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_worker_test
       VEGA_V2_MODELS_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_models_test
+      VEGA_V2_ROLES_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_roles_test
+      VEGA_V2_API_NODE_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_api_node_test
       VEGA_V2_AGG_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_agg_test
       VEGA_V2_API_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_api_test
     steps:
@@ -57,11 +59,16 @@ jobs:
           python - <<'PY'
           import os, psycopg
           with psycopg.connect(os.environ['V2_DATABASE_URL'], autocommit=True) as db:
-              for name in ('vega_v2_test','vega_v2_jobs_test','vega_v2_store_test','vega_v2_pilot_test','vega_v2_profiles_test','vega_v2_concurrency_test','vega_v2_unknown_test','vega_v2_validated_test','vega_v2_agg_test','vega_v2_api_test','vega_v2_worker_test','vega_v2_models_test'):
+              for name in ('vega_v2_test','vega_v2_jobs_test','vega_v2_store_test','vega_v2_pilot_test','vega_v2_profiles_test','vega_v2_concurrency_test','vega_v2_unknown_test','vega_v2_validated_test','vega_v2_agg_test','vega_v2_api_test','vega_v2_worker_test','vega_v2_models_test','vega_v2_roles_test','vega_v2_api_node_test'):
                   db.execute(psycopg.sql.SQL('CREATE DATABASE {}').format(psycopg.sql.Identifier(name)))
           PY
       - name: Validate typed schema, normalization and transactional ingestion
         run: python -m unittest discover -s v2/tests -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read API contract tests (v2/api, read role only)
+        run: npm ci --prefix v2/api && npm test --prefix v2/api
       - name: Verify previously failing event, shot and upstream-error fixtures
         env:
           PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}

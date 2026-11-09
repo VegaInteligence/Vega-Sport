@@ -366,6 +366,10 @@ class Store:
             ([f"{table}_{suffix}" for table in self.partitions],),
         ).fetchone()[0] == len(self.partitions):
             return sid
+        # One partition per season since 2021/2022, one shared partition for the
+        # archives; created by the tables' owner (017_roles.sql).
+        self.conn.execute("SELECT core.ensure_season_partitions(%s)", (sid,))
+        return sid
         self.conn.execute(
             "SELECT pg_advisory_xact_lock(92001,%s)", (0 if archive else sid,)
         )
@@ -812,22 +816,8 @@ class Store:
         global_key=None,
     ):
         at = event["fetched_at"]
-        start = at.date().replace(day=1)
-        end = date(start.year + (start.month == 12), start.month % 12 + 1, 1)
         with self.conn.transaction():
-            self.conn.execute(
-                "SELECT pg_advisory_xact_lock(92002,%s)",
-                (start.year * 100 + start.month,),
-            )
-            self.conn.execute(
-                sql.SQL(
-                    "CREATE TABLE IF NOT EXISTS ops.{} PARTITION OF ops.fetch_log FOR VALUES FROM ({}) TO ({})"
-                ).format(
-                    sql.Identifier("fetch_log_" + start.strftime("%Y%m")),
-                    sql.Literal(start.isoformat()),
-                    sql.Literal(end.isoformat()),
-                )
-            )
+            self.conn.execute("SELECT ops.ensure_fetch_log_partition(%s)", (at,))
             self.conn.execute(
                 "INSERT INTO ops.fetch_log(family,entity_type,entity_id,competition_season_id,target_date,global_key,http_status,error_code,request_id,duration_ms,fetched_at) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                 (
