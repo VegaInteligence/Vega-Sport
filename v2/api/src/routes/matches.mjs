@@ -10,7 +10,8 @@
  * - team statistics are typed columns: `label` is null (the site has its own labels),
  *   `homeRaw`/`awayRaw` repeat the number, `format` is "double" for xG and "integer"
  *   otherwise, `reliable` is true;
- * - a referee or a stadium is an object {id, name} whenever it is known;
+ * - a referee or a stadium is its name, as main returns the source's names (main's
+ *   club profile prints them as text);
  * - shot periods are the normalized period names (first_half, second_half, …);
  * - `warnings` and `warningCodes` are empty (v2 keeps data warnings in ops);
  * - an appearance id is `<match id>:<player id>`.
@@ -193,8 +194,8 @@ SELECT g.version||':'||f.revision AS version,row_to_json(f) AS fixture,
    api.public_id('team',a.team_id) team_id,a.team,a.player_name AS name,a.image_url,a.minutes,a.rating,a.goals,a.assists
    FROM api.player_appearances a WHERE a.season_id=f.season_id AND a.match_id=f.match_id AND a.minutes>0 AND a.rating IS NOT NULL
    ORDER BY a.rating DESC,1 LIMIT 5) l) leaders,
- CASE WHEN f.referee_internal_id IS NULL THEN NULL ELSE json_build_object('id',api.public_id('referee',f.referee_internal_id),'name',f.referee) END referee,
- CASE WHEN f.venue_internal_id IS NULL THEN NULL ELSE json_build_object('id',api.public_id('venue',f.venue_internal_id),'name',f.stadium) END stadium
+ f.referee AS referee,
+ f.stadium AS stadium
 FROM (${publication}) g,f`;
 
 const camel = (k) => k.replace(/_([a-z])/g, (_, v) => v.toUpperCase());

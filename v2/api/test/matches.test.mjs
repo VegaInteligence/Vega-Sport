@@ -63,7 +63,7 @@ test("match summary of a collected match", { skip }, async () => {
     [m.id, m.season, m.leagueId, m.league, m.country, m.date, m.timeUtc, m.status, m.roundName, m.summaryVersion, m.detailCollected],
     ["m_aaaaa1", "2025/2026", "l_3FJFUl", "Ligue 1", "FRA", "2025-09-01", "2025-09-01T19:00:00Z", "finished", "1", 1, true],
   );
-  assert.deepEqual(m.referee, { id: "r_v0000001", name: "Clément Turpin" });
+  assert.equal(m.referee, "Clément Turpin"); // a name, as main returns it
   assert.equal(m.stadium, null);
   assert.deepEqual(m.home, {
     id: "t_aaaaa1", name: "Olympique Été", imageUrl: "https://img.example/t1.png", formation: "4-3-3", coach: "Coach Un",

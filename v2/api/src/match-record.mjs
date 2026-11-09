@@ -24,8 +24,8 @@ export const matchRecordColumns = ({ shots = true } = {}) => `row_to_json(f) AS 
    'xa',count(*) FILTER(WHERE a.minutes>0 AND a.xa IS NOT NULL),
    'ids',coalesce(json_agg(f.id||':'||api.public_id('player',a.player_id) ORDER BY api.public_id('player',a.player_id)),'[]'::json))
    FROM api.player_appearances a WHERE a.season_id=f.season_id AND a.match_id=f.match_id) players,
- CASE WHEN f.referee_internal_id IS NULL THEN NULL ELSE json_build_object('id',api.public_id('referee',f.referee_internal_id),'name',f.referee) END referee,
- CASE WHEN f.venue_internal_id IS NULL THEN NULL ELSE json_build_object('id',api.public_id('venue',f.venue_internal_id),'name',f.stadium) END stadium`;
+ f.referee AS referee,
+ f.stadium AS stadium`;
 
 const strip = (row) => (row ? Object.fromEntries(Object.entries(row).filter(([k]) => k.startsWith("for_")).map(([k, v]) => [k.slice(4), v])) : null);
 
