@@ -82,6 +82,17 @@ def main(dsn):
         x("INSERT INTO core.lineup_players(season_id,match_id,team_id,player_id,is_starter,position_id) VALUES (2025,%s,%s,%s,%s,%s)", (mid, team, pid, starter, position))
     for pid, mid, team in BENCH:
         x("INSERT INTO core.lineup_players(season_id,match_id,team_id,player_id,is_starter,position_id) VALUES (2025,%s,%s,%s,false,61)", (mid, team, pid))
+    # Match 1 in detail: referee, coaches, shots and their coverage.
+    x("INSERT INTO core.referees(id,name) VALUES (1,'Clément Turpin')")
+    x("INSERT INTO core.coaches(id,name) VALUES (1,'Coach Un')")
+    x("INSERT INTO core.rounds(id,competition_season_id,name,seq) VALUES (1,1,'1',1)")
+    x("UPDATE core.matches SET referee_id=1, round_id=1 WHERE id=1")
+    x("UPDATE core.lineups SET coach_id=1, confirmed=true WHERE match_id=1 AND team_id=1")
+    x("UPDATE core.match_coverage SET shots='ok', team_stats='ok' WHERE match_id=1")
+    x("UPDATE core.team_match_stats SET shots_on_target=%s WHERE match_id=1", (4,))
+    for no, (team, player, minute, xg, outcome) in enumerate([(1, 101, 11, 0.7, "goal"), (2, 104, 30, 0.2, "saved"), (1, 101, 21, 0.5, "goal")], 1):
+        x("INSERT INTO core.shots(season_id,match_id,team_id,shot_no,provider_shot_key,period,minute,player_id,xg,outcome,is_own_goal) VALUES (2025,1,%s,%s,%s,'first_half',%s,%s,%s,%s,false)",
+          (team, no, f"s{no}", minute, player, xg, outcome))
     x("INSERT INTO ops.resource_versions(resource_kind,resource_id,version,published_at) VALUES ('home',1,3,'2025-09-20T11:00:00Z'),('competition_season',1,4,'2025-09-20T11:00:00Z')")
     db.close()
 
