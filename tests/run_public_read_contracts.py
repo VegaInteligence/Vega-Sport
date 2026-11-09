@@ -83,6 +83,7 @@ def main():
                 "tests/relational-home.test.mjs",
                 "tests/relational-actors.test.mjs",
                 "tests/relational-discipline.test.mjs",
+                "tests/relational-player-presence.test.mjs",
                 "tests/bounded-reads.test.mjs",
                 "tests/resource-cache.test.mjs",
                 "tests/resource-hook-identity.test.mjs",

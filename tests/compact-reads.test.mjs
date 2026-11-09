@@ -13,6 +13,7 @@ import {
 } from "../dashboard/frontend/src/services/compact-reads.js";
 import { readPages } from "../dashboard/frontend/src/season_data.js";
 import { EMPTY_ADVANCED } from "../dashboard/frontend/src/services/advanced-filters.js";
+import { acceptMediaPayload } from "../dashboard/frontend/src/services/media-registry.js";
 
 const manifest = {
   storage: "aws-relational",
@@ -30,6 +31,30 @@ const manifest = {
   ],
   competitions: [],
 };
+
+test("the presence read sends no media option when media is enabled", async () => {
+  const previousWindow = globalThis.window;
+  globalThis.window = {};
+  acceptMediaPayload("/api/dashboard/manifest", {
+    capabilities: { resolvedMedia: true },
+  });
+  try {
+    const urls = [];
+    const fetcher = async (url) => {
+      urls.push(new URL(url, "https://example.test"));
+      return response({ cells: [] });
+    };
+    await readCompact("presence", { generation: "g1" }, { fetcher });
+    await readCompact("player", { generation: "g1" }, { fetcher });
+    assert.equal(urls[0].searchParams.has("media"), false);
+    assert.equal(urls[1].searchParams.get("media"), "1");
+  } finally {
+    acceptMediaPayload("/api/dashboard/manifest", { capabilities: {} });
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});
+
 const response = (
   data,
   {

@@ -35,7 +35,7 @@ const tag = (req, version) =>
   '"';
 // Capability changes must invalidate the manifest even without a publication.
 // Keep this representation revision separate from other endpoint validators.
-const manifestTag = (req, version) => tag(req, `manifest-v4|${version}`);
+const manifestTag = (req, version) => tag(req, `manifest-v5|${version}`);
 class ApiError extends Error {
   constructor(status, message) {
     super(message);
@@ -430,6 +430,7 @@ export async function manifest(req) {
           club: true,
           performance: true,
           discipline: true,
+          presence: true,
         },
       },
       defaultSeason: [...seasons.keys()][0] || null,

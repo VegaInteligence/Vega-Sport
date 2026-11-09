@@ -15,7 +15,6 @@ import sA from "../../app/maquettes/joueur-a/page-a.module.css";
 import {
   dateFr,
   fmt,
-  HeatmapPitch,
   InjuryTimeline,
   injuryTotals,
   Legend,
@@ -155,21 +154,6 @@ export function TeamContextCard({ team }) {
 export const FAKE_SECURITY_ROWS = ["foulsDrawn", "dispossessed", "fouls"].map(
   (key) => D.METRIC[key],
 );
-
-export function HeatmapCard() {
-  return (
-    <FakeCard
-      title="Zones de présence"
-      text="Ballons touchés, attaque vers la droite"
-    >
-      <HeatmapPitch grid={D.HEATMAP} />
-      <p className={s.note} style={{ marginTop: 12 }}>
-        71 % des ballons touchés dans le couloir droit, dont 38 % dans le
-        dernier tiers. Repique vers l’axe dans 6 actions sur 10.
-      </p>
-    </FakeCard>
-  );
-}
 
 /* ------------------------------------------------------------ comparison */
 
