@@ -364,7 +364,11 @@ def migration_sql():
         "  won integer NOT NULL, drawn integer NOT NULL, lost integer NOT NULL,\n"
         "  goals_for integer NOT NULL, goals_against integer NOT NULL,\n"
         "  points integer NOT NULL, clean_sheets integer NOT NULL,\n"
-        "  xpts real, xpts_matches integer NOT NULL DEFAULT 0"
+        "  xpts real, xpts_matches integer NOT NULL DEFAULT 0,\n"
+        "  -- Same matches as the current club page (both xG known): finishing, keeper, placement.\n"
+        "  has_goals_for integer, has_goals_against integer, has_xg_for real, has_xg_against real,\n"
+        "  keeper_xgot_against real, keeper_goals_against integer, keeper_matches integer NOT NULL DEFAULT 0,\n"
+        "  placement_sum real, placement_matches integer NOT NULL DEFAULT 0"
         + _columns(team_season_columns())
         + ",\n  updated_at timestamptz NOT NULL DEFAULT now(),\n"
         "  PRIMARY KEY (team_id, competition_season_id),\n"

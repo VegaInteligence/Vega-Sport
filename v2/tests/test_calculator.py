@@ -189,3 +189,82 @@ class CalculatorTest(unittest.TestCase):
             self.db.execute("SELECT core.pct(3,0), core.per90(1,0), core.age_on('2000-06-15','2026-06-14')").fetchone(),
             (None, None, 25),
         )
+
+
+@unittest.skipUnless(DSN and psycopg, "requires disposable local agg DB and psycopg")
+class ApiViewTest(CalculatorTest):
+    """The api views read the same hand-built league after a full refresh."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        from vega_v2.calculator import refresh_competition_season
+
+        refresh_competition_season(cls.db, 1)
+
+    # The inherited calculator tests already ran in CalculatorTest.
+    test_1_catalog_covers_every_numeric_source_column = None
+    test_1b_every_metric_has_a_definition = None
+    test_2_full_refresh = None
+    test_3_dirty_scopes_are_processed_and_published = None
+    test_4_xpts_function_matches_the_site_model = None
+
+    def one(self, query, params=()):
+        return self.db.execute(query, params).fetchone()
+
+    def test_committed_api_migration_matches_the_generator(self):
+        from vega_v2 import api_schema
+
+        committed = (ROOT / "sql" / "012_api_views.sql").read_text(encoding="utf-8")
+        self.assertEqual(committed, api_schema.migration_sql())
+
+    def test_every_view_answers(self):
+        views = [r[0] for r in self.db.execute(
+            "SELECT table_schema||'.'||table_name FROM information_schema.views WHERE table_schema IN ('api','ops') ORDER BY 1"
+        )]
+        self.assertEqual(len([v for v in views if v.startswith("api.")]), 21)
+        self.assertEqual(len([v for v in views if v.startswith("ops.")]), 3)
+        for view in views:
+            self.db.execute(f"SELECT * FROM {view} LIMIT 5").fetchall()
+
+    def test_season_values_are_computed_on_covered_minutes(self):
+        xg_p90, pass_pct, rating = self.one(
+            "SELECT xg_p90, pass_completion_pct, rating_avg FROM api.player_season WHERE player_id=10"
+        )
+        self.assertAlmostEqual(xg_p90, 0.8, places=4)
+        self.assertAlmostEqual(pass_pct, 80.0, places=4)
+        self.assertAlmostEqual(rating, (7.5 * 90 + 8.0 * 45) / 135, places=4)
+        ppm, xg_pm, tilt = self.one("SELECT ppm, xg_pm, pass_accuracy_pct FROM api.team_season WHERE team_id=1")
+        self.assertAlmostEqual(ppm, 2.0, places=4)
+        self.assertAlmostEqual(xg_pm, 2.0, places=4)
+        self.assertAlmostEqual(tilt, 100 * 740 / 850, places=3)
+
+    def test_public_ids_and_match_reads(self):
+        self.assertEqual(self.one("SELECT api.public_id('match', 1)")[0], "m_v0000001")
+        self.assertEqual(self.one("SELECT count(*) FROM api.match_goals WHERE match_id=1")[0], 3)
+        self.assertAlmostEqual(
+            self.one("SELECT xpts FROM api.match_xpts WHERE match_id=1 AND team_id=1")[0], xpts(1.8, 0.9), places=3
+        )
+        self.assertEqual(
+            self.one("SELECT stage, home_name, away_name FROM api.match_list WHERE match_id=5"),
+            ("final", "Alpha", "Charlie"),
+        )
+
+    def test_cup_tie_and_standings(self):
+        self.assertEqual(
+            self.one("SELECT winner_team_id, decided_by, legs FROM api.cup_ties WHERE round_id=2"), (3, "score", 1)
+        )
+        rows = self.db.execute(
+            "SELECT team_id, position, source FROM api.standings WHERE competition_season_id=1 ORDER BY position"
+        ).fetchall()
+        self.assertEqual([r[0] for r in rows], [1, 2, 3])
+        self.assertEqual({r[2] for r in rows}, {"vega"})
+        # An official table, once observed, replaces the computed one.
+        self.db.execute(
+            "INSERT INTO core.standings_official(competition_season_id,team_id,position,points,source,as_of) VALUES(1,3,1,9,'sportscore',now())"
+        )
+        self.assertEqual(
+            self.db.execute("SELECT team_id, source FROM api.standings WHERE competition_season_id=1").fetchall(),
+            [(3, "sportscore")],
+        )
+        self.db.execute("DELETE FROM core.standings_official")

@@ -163,7 +163,9 @@ def _team_sql():
         for r in TEAM_RATIOS:
             items += _ratio_aggregates(r, alias if r.table == TEAM_BASE else adv_alias, prefix=side)
     cols = [i.rsplit(" AS ", 1)[1] for i in items]
-    fixed = ["matches", "won", "drawn", "lost", "goals_for", "goals_against", "points", "clean_sheets", "xpts", "xpts_matches"]
+    fixed = ["matches", "won", "drawn", "lost", "goals_for", "goals_against", "points", "clean_sheets", "xpts", "xpts_matches",
+             "has_goals_for", "has_goals_against", "has_xg_for", "has_xg_against",
+             "keeper_xgot_against", "keeper_goals_against", "keeper_matches", "placement_sum", "placement_matches"]
     statement = f"""
 WITH side AS (
   SELECT m.id AS match_id, m.season_id, x.team_id, x.opp_id, x.gf, x.ga
@@ -185,6 +187,13 @@ SELECT side.team_id, %(cs)s, %(sid)s,
   count(*) FILTER (WHERE side.ga = 0)::integer,
   (sum((agg.xpts_v1(o.xg, p.xg)).xpts) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL))::real,
   count(*) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL)::integer,
+  (sum(side.gf) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL))::integer, (sum(side.ga) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL))::integer,
+  (sum(o.xg) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL))::real, (sum(p.xg) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL))::real,
+  (sum(p.xgot) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL AND p.xgot IS NOT NULL))::real,
+  (sum(side.ga) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL AND p.xgot IS NOT NULL))::integer,
+  count(*) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL AND p.xgot IS NOT NULL)::integer,
+  (sum(o.xgot - o.xg) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL AND o.xgot IS NOT NULL))::real,
+  count(*) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL AND o.xgot IS NOT NULL)::integer,
   {", ".join(items)}
 FROM side
 LEFT JOIN core.team_match_stats o ON o.season_id = side.season_id AND o.match_id = side.match_id AND o.team_id = side.team_id AND o.period = 'all'
