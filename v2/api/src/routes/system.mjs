@@ -14,7 +14,7 @@ const iso = (value) => (value instanceof Date ? value.toISOString() : value ?? n
 const day = (value) => (value instanceof Date ? value.toISOString().slice(0, 10) : value ?? null);
 
 /** The compact reads this API serves; the others stay on the current API until ported. */
-export const COMPACT_READS = { home: false, players: true, clubs: true, player: false, club: false, performance: true, discipline: true };
+export const COMPACT_READS = { home: false, players: true, clubs: true, player: true, club: true, performance: true, discipline: true };
 
 export function createSystemRoute(read) {
   return async (req, path, params) => {

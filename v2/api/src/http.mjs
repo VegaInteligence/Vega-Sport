@@ -93,7 +93,8 @@ export function errorResponse(req, error) {
       ok: false,
       available: false,
       error: {
-        code: error.code || code,
+        // Only the API's own codes are public; a database error is DATA_UNAVAILABLE.
+        code: (error instanceof ApiError && error.code) || code,
         message: status === 503 ? "Données indisponibles." : error.message,
         retry,
       },

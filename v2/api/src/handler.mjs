@@ -13,10 +13,11 @@ import { createMatchRoute } from "./routes/matches.mjs";
 import { createReferenceRoute } from "./routes/reference.mjs";
 import { createDisciplineRoute } from "./routes/discipline.mjs";
 import { createPerformanceRoute } from "./routes/performance.mjs";
+import { createActorRoute } from "./routes/actors.mjs";
 
 /** `mediaBase`: the CloudFront origin of the image copies (https://…/); none, no media map. */
 export function createHandler({ read, mediaBase = null }) {
-  const routes = [createSystemRoute(read), createClubReadRoute(read), createPlayerReadRoute(read), createMatchRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPerformanceRoute(read)];
+  const routes = [createSystemRoute(read), createClubReadRoute(read), createPlayerReadRoute(read), createMatchRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPerformanceRoute(read), createActorRoute(read)];
   async function route(req) {
     const url = new URL(req.url),
       path = url.pathname;

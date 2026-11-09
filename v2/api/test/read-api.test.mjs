@@ -99,6 +99,14 @@ test("media=1 maps image URLs to their copies", { skip }, async () => {
   assert.equal((await get("/api/dashboard/manifest?media=1")).response.status, 400);
 });
 
+test("a database failure answers DATA_UNAVAILABLE, never the database's code", { skip }, async () => {
+  const { createHandler } = await import("../src/handler.mjs");
+  const failing = createHandler({ read: async () => { throw Object.assign(new Error("boom"), { code: "42P18" }); } });
+  const response = await failing(new Request("https://api.test" + clubs));
+  assert.equal(response.status, 503);
+  assert.deepEqual((await response.json()).error, { code: "DATA_UNAVAILABLE", message: "Données indisponibles.", retry: true });
+});
+
 test("conditional reads answer 304 without the payload query", { skip }, async () => {
   const first = await get(clubs);
   const again = await get(clubs, { "if-none-match": first.response.headers.get("etag") });
