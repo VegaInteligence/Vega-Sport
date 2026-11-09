@@ -263,14 +263,15 @@ def record_sources(conn, results_index, goals_index):
         entries += [(f"results/{a['name']}", a) for a in src.get("additionalSources", [])]
     if goals_index:
         entries.append(("goals", goals_index["source"]))
-    for key, src in entries:
+    for position, (key, src) in enumerate(entries):
         conn.execute(
-            """INSERT INTO core.source_revisions(source, name, url, license, revision, archive_sha256, coverage, retrieved_at)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,now())
+            """INSERT INTO core.source_revisions(source, name, url, license, revision, archive_sha256, coverage, position, retrieved_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,now())
                ON CONFLICT (source) DO UPDATE SET name=EXCLUDED.name, url=EXCLUDED.url, license=EXCLUDED.license,
-                 revision=EXCLUDED.revision, archive_sha256=EXCLUDED.archive_sha256, coverage=EXCLUDED.coverage, retrieved_at=now()""",
+                 revision=EXCLUDED.revision, archive_sha256=EXCLUDED.archive_sha256, coverage=EXCLUDED.coverage,
+                 position=EXCLUDED.position, retrieved_at=now()""",
             (re.sub(r"[^a-z0-9_./-]", "-", key.lower())[:80], src.get("name") or key, src.get("url"), src.get("license"),
-             src.get("revision"), src.get("archiveSha256"), src.get("coverage")),
+             src.get("revision"), src.get("archiveSha256"), src.get("coverage"), position),
         )
 
 
@@ -319,6 +320,8 @@ def run(conn, sources, seasons=None):
             data = edition(files[label].get("results"), files[label].get("goals"))
             with conn.transaction():
                 out[label] = loader.season(label, data, provider_of)
+            # One line per season as it lands: the import runs for hours.
+            print(f"season={label} matches={out[label]}", flush=True)
     return out
 
 
@@ -335,8 +338,7 @@ def main(argv=None):
 
     conn = connect(dsn)
     done = run(conn, args.sources, set(args.seasons.split(",")) if args.seasons else None)
-    for label, count in sorted(done.items()):
-        print(f"season={label} matches={count}", flush=True)
+    print(f"archives seasons={len(done)} matches={sum(done.values())}", flush=True)
     return 0
 
 

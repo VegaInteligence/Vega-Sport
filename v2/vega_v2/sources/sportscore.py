@@ -10,6 +10,8 @@ only) therefore never lands on the wrong edition.
 """
 
 from datetime import timedelta
+import re
+import unicodedata
 from urllib.parse import urlencode
 
 from . import SourceError, normalize
@@ -128,7 +130,7 @@ def parse(payload, slug):
 
 
 def _edition_teams(conn, edition):
-    names = {}
+    names, spelled = {}, {}
     for team, *spellings in conn.execute(
         """SELECT t.id, t.name, t.short_name, n.name FROM core.team_seasons ts JOIN core.teams t ON t.id = ts.team_id
            LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
@@ -136,18 +138,68 @@ def _edition_teams(conn, edition):
         (edition,),
     ).fetchall():
         names.setdefault(team, set()).update(normalize(s) for s in spellings if s)
-    return names
+        spelled.setdefault(team, set()).update(s for s in spellings if s)
+    return names, spelled
+
+
+# Words of a club's official name that say what it is, not which one ("Stade Rennais FC").
+FORM_WORDS = {"fc", "cf", "sc", "ac", "as", "af", "afc", "ssc", "ss", "us", "rc", "aj", "ogc", "sco", "sk", "fk", "nk", "bk", "if",
+              "sv", "vfb", "vfl", "tsg", "bsc", "cd", "ud", "sd", "rcd", "club", "athletic", "stade", "sporting", "calcio", "de", "del",
+              "la", "le", "les", "the", "of", "and", "1", "04", "05", "29", "1899", "1900", "1901", "1907", "1909", "1910", "1913"}
+
+
+def _tokens(name):
+    plain = unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode().lower()
+    return {t for t in re.split(r"[^a-z0-9]+", plain) if t and t not in FORM_WORDS}
+
+
+def _closeness(source_tokens, team_tokens):
+    """Length of the longest common start of a source word and a team word (4 letters at least)."""
+    best = 0
+    for s in source_tokens:
+        for t in team_tokens:
+            n = 0
+            while n < min(len(s), len(t)) and s[n] == t[n]:
+                n += 1
+            if n >= 4 and n > best:
+                best = n
+    return best
 
 
 def link(conn, edition, tables):
-    """{row name: team id} when every row designates one team, else None (and the count)."""
-    teams = _edition_teams(conn, edition)
-    wanted = {row["name"] for _, rows in tables for row in rows}
+    """{row name: team id} when every row designates one team, else None (and the count).
+    A row is its team by a known spelling; else by its distinctive words ("LOSC Lille" is
+    Lille, "Stade Rennais FC" is Rennes), when one team of the edition is clearly closest."""
+    teams, spelled = _edition_teams(conn, edition)
+    return pair({row["name"] for _, rows in tables for row in rows}, teams, spelled)
+
+
+def pair(wanted, teams, spelled):
+    """link() without the database: teams {id: normalized spellings}, spelled {id: spellings}."""
     found = {}
     for name in wanted:
         hits = [team for team, keys in teams.items() if normalize(name) in keys]
         if len(hits) == 1:
             found[name] = hits[0]
+    # Distinctive words, over the rows and teams still unpaired: a row takes the team it is
+    # closest to only when that team is not as close to another row, and no other team ties.
+    while True:
+        rows = [n for n in wanted if n not in found]
+        free = [t for t in teams if t not in found.values()]
+        scores = {(n, t): max((_closeness(_tokens(n), _tokens(s)) for s in spelled[t]), default=0) for n in rows for t in free}
+        paired = False
+        for n in rows:
+            ranked = sorted(((scores[(n, t)], t) for t in free), reverse=True)
+            if not ranked or ranked[0][0] == 0 or (len(ranked) > 1 and ranked[1][0] == ranked[0][0]):
+                continue
+            team = ranked[0][1]
+            if any(scores[(other, team)] >= ranked[0][0] for other in rows if other != n):
+                continue
+            found[n] = team
+            paired = True
+            break
+        if not paired:
+            break
     left_rows = wanted - set(found)
     left_teams = set(teams) - set(found.values())
     if len(left_rows) == 1 and len(left_teams) == 1:

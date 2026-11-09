@@ -51,9 +51,28 @@ class FakeSource:
 class PureTest(unittest.TestCase):
     def test_normalize_and_scopes(self):
         self.assertEqual(normalize("Atlético  de Madrid"), "atleticodemadrid")
-        self.assertEqual(sorted(uefa.scopes(NOW)), sorted([
-            "uefa_clubs:2027", "uefa_associations:2027", "uefa_clubs:2026", "uefa_associations:2026",
-        ]))
+        # The four editions main keeps: the running one and the three before it.
+        self.assertEqual(sorted(uefa.scopes(NOW)), sorted(
+            f"uefa_{kind}:{year}" for kind in ("clubs", "associations") for year in (2024, 2025, 2026, 2027)
+        ))
+
+    def test_sportscore_official_names_pair_with_the_clubs(self):
+        # Ligue 1 2026/2027 as SportScore and PitchAPI spell it (live, 2026-11-09).
+        clubs = ["Angers", "Auxerre", "Brest", "Le Havre", "Le Mans", "Lens", "Lille", "Lorient", "Lyon", "Marseille", "Monaco",
+                 "Nice", "Paris FC", "Paris Saint-Germain", "Rennes", "Strasbourg", "Toulouse", "Troyes"]
+        official = {"Paris Saint Germain": "Paris Saint-Germain", "LOSC Lille": "Lille", "Stade Rennais FC": "Rennes",
+                    "AS Monaco": "Monaco", "OGC Nice": "Nice", "RC Lens": "Lens", "Toulouse FC": "Toulouse",
+                    "Stade Brestois 29": "Brest", "RC Strasbourg Alsace": "Strasbourg", "AJ Auxerre": "Auxerre",
+                    "Angers SCO": "Angers", "Havre Athletic Club": "Le Havre", "Paris FC": "Paris FC", "Lyon": "Lyon",
+                    "Marseille": "Marseille", "Lorient": "Lorient", "Le Mans": "Le Mans", "Troyes": "Troyes"}
+        teams = {i: {normalize(name)} for i, name in enumerate(clubs)}
+        spelled = {i: {name} for i, name in enumerate(clubs)}
+        found, missing = sportscore.pair(set(official), teams, spelled)
+        self.assertEqual(missing, 0)
+        self.assertEqual({row: clubs[team] for row, team in found.items()}, official)
+        # Two rows equally close to one club stay unpaired: no table rather than a wrong one.
+        found, missing = sportscore.pair({"Racing Club", "Racing Genk"}, {0: {"racing"}, 1: {"genk"}}, {0: {"Racing"}, 1: {"Genk"}})
+        self.assertEqual(found, None)
 
     def test_curated_aliases_match_the_site(self):
         # dashboard/shared/player-aliases.js: `const ALIASES = Object.freeze({ key: Object.freeze([...]) })`.
