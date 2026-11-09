@@ -1,4 +1,5 @@
 import { publicApiFetch } from "./public-api-fetch.js";
+import { API_V2, clubFactsPath } from "./v2-routes.js";
 import { apiUrl } from "../data-url.js";
 import { normalizeText } from "./format.js";
 
@@ -54,9 +55,11 @@ export async function loadClubFacts(
           country: identity.country,
         }).toString()
       : null;
-  const wiki = lookup
-    ? await readJson(`/api/club-wikidata?${lookup}`, fetcher)
-    : null;
+  const wiki = API_V2
+    ? await readJson(clubFactsPath(clubId), fetcher)
+    : lookup
+      ? await readJson(`/api/club-wikidata?${lookup}`, fetcher)
+      : null;
   const side = latest?.home?.id === clubId ? "home" : "away";
   const lineupData = lineup?.data;
   const lineupTeam = lineupData?.[`${side}_team`];

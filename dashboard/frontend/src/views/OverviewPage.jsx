@@ -33,7 +33,7 @@ import {
   WinStreak,
 } from "../components/HomeSeason.jsx";
 import { json, useResource } from "../services/resources.js";
-import { ballonDorRanking } from "../services/ballon-dor.js";
+import { useBallonDorRanking } from "../services/ballon-dor.js";
 import { competitionIndex } from "../services/competition-identity.js";
 import { europeFocusIds } from "../../../shared/competition-scope.js";
 import {
@@ -206,7 +206,7 @@ function LegacyOverview() {
   );
   const override = params.get("ballondor");
   // The Ballon d'Or blocks show only the STATARENA ranking, never a stand-in list.
-  const ranking = ballonDorRanking(f.season);
+  const ranking = useBallonDorRanking(f.season);
   const raceOpen =
     override === "ouvert"
       ? true
