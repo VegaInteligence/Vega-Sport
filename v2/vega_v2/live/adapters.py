@@ -39,9 +39,9 @@ def snapshot(data):
     """A Snapshot from its JSON form (the replay files, and any adapter that wants it)."""
     return Snapshot(
         status=data["status"], minute=data.get("minute"), minute_added=data.get("minute_added"), period=data.get("period"),
-        score_home=data.get("score_home"), score_away=data.get("score_away"),
+        home_score=data.get("home_score"), away_score=data.get("away_score"),
         events=tuple(Event(**e) for e in data.get("events", [])),
-        stats=tuple(TeamStats(side=s["side"], period=s.get("period", "all"), values=s.get("values", {})) for s in data.get("stats", [])),
+        stats=tuple(TeamStats(side=s["side"], values=s.get("values", {})) for s in data.get("stats", [])),
     )
 
 

@@ -21,22 +21,25 @@ from vega_v2.live.store import DynamoStore, MemoryStore
 DSN = os.environ.get("VEGA_V2_LIVE_TEST_DSN")
 KICKOFF = datetime(2025, 9, 20, 19, 0, tzinfo=timezone.utc)
 
+GOAL1 = {"provider_event_id": "e1", "event_type": "goal", "minute": 9, "side": "home", "player_key": "p_aaaaa1", "player_name": "A. Striker"}
+GOAL2 = {"provider_event_id": "e2", "event_type": "goal", "minute": 70, "side": "home", "player_key": "p_aaaaa1", "player_name": "A. Striker"}
+CARD = {"provider_event_id": "e3", "event_type": "yellow_card", "minute": 40, "side": "away", "player_name": "B. Back"}
+GOAL4 = {"provider_event_id": "e4", "event_type": "goal", "minute": 85, "side": "home", "player_key": "p_aaaaa1", "player_name": "A. Striker"}
+GOAL5 = {"provider_event_id": "e5", "event_type": "goal", "minute": 88, "side": "away", "player_name": "C. Forward"}
+STATS = lambda h, a: [{"side": "home", "values": {"possession_pct": 52, "total_shots": h}}, {"side": "away", "values": {"possession_pct": 48, "total_shots": a}}]
 FEED = {
     "provider": "pitchapi",  # the replay feed carries PitchAPI's player ids
     "fixtures": [{"key": "f1", "kickoff_at": "2025-09-20T19:00:00Z", "home": "Olympique Lyonnais", "away": "Paris Saint-Germain"},
                  {"key": "f2", "kickoff_at": "2025-09-20T19:00:00Z", "home": "Nobody FC", "away": "Elsewhere"}],
     "snapshots": {"f1": [
         {"status": "scheduled"},
-        {"status": "in_play", "minute": 12, "period": "first_half", "score_home": 1, "score_away": 0,
-         "events": [{"seq": 1, "kind": "goal", "minute": 9, "side": "home", "player_key": "p_aaaaa1", "player_name": "A. Striker",
-                     "score_home": 1, "score_away": 0}],
-         "stats": [{"side": "home", "values": {"possession_pct": 55, "total_shots": 3}}, {"side": "away", "values": {"possession_pct": 45, "total_shots": 1}}]},
-        {"status": "finished", "minute": 90, "minute_added": 4, "period": "second_half", "score_home": 2, "score_away": 1,
-         "events": [{"seq": 1, "kind": "goal", "minute": 9, "side": "home", "player_key": "p_aaaaa1", "player_name": "A. Striker", "score_home": 1, "score_away": 0},
-                    {"seq": 2, "kind": "yellow_card", "minute": 40, "side": "away", "player_name": "B. Back"},
-                    {"seq": 3, "kind": "goal", "minute": 70, "side": "home", "player_key": "p_aaaaa1", "player_name": "A. Striker", "score_home": 2, "score_away": 0},
-                    {"seq": 4, "kind": "goal", "minute": 88, "side": "away", "player_name": "C. Forward", "score_home": 2, "score_away": 1}],
-         "stats": [{"side": "home", "values": {"possession_pct": 52, "total_shots": 14}}, {"side": "away", "values": {"possession_pct": 48, "total_shots": 9}}]},
+        {"status": "in_play", "minute": 12, "period": "first_half", "home_score": 1, "away_score": 0, "events": [GOAL1], "stats": STATS(3, 1)},
+        {"status": "in_play", "minute": 75, "period": "second_half", "home_score": 2, "away_score": 0, "events": [GOAL1, GOAL2, CARD], "stats": STATS(9, 4)},
+        # VAR cancels the second goal: the same event, a new revision.
+        {"status": "in_play", "minute": 80, "period": "second_half", "home_score": 1, "away_score": 0,
+         "events": [GOAL1, dict(GOAL2, is_cancelled=True), CARD], "stats": STATS(9, 4)},
+        {"status": "finished", "minute": 90, "minute_added": 4, "period": "second_half", "home_score": 2, "away_score": 1,
+         "events": [GOAL1, dict(GOAL2, is_cancelled=True), CARD, GOAL4, GOAL5], "stats": STATS(14, 9)},
     ]},
 }
 
@@ -44,22 +47,22 @@ FEED = {
 class PureTest(unittest.TestCase):
     def test_typed_values(self):
         with self.assertRaises(LiveError):
-            Event(seq=1, kind="tackle", minute=3, side="home")
+            Event(provider_event_id="x", event_type="tackle", minute=3, side="home")
         with self.assertRaises(LiveError):
-            TeamStats(side="home", period="all", values={"xg_chain": 1})
+            TeamStats(side="home", values={"xg_chain": 1})
         with self.assertRaises(LiveError):
-            snapshot({"status": "in_play", "events": [{"seq": 1, "kind": "goal", "minute": 1, "side": "home"},
-                                                       {"seq": 1, "kind": "goal", "minute": 2, "side": "home"}]})
+            snapshot({"status": "in_play", "events": [GOAL1, dict(GOAL1, minute=10)]})  # one id, one event
 
     def test_expiry_and_discrepancies(self):
         complete = KICKOFF + timedelta(hours=3)
         self.assertEqual(handoff.expiry(KICKOFF), KICKOFF + timedelta(hours=72))
         self.assertEqual(handoff.expiry(KICKOFF, complete), complete + timedelta(hours=24))
         self.assertEqual(handoff.expiry(KICKOFF, KICKOFF + timedelta(hours=60)), KICKOFF + timedelta(hours=72))
-        view = {"score": (2, 0), "events": True, "stats": False, "goals": [("home", 9, 7), ("home", 70, 7)]}
-        state = {"score_home": 2, "score_away": 1}
-        events = [{"kind": "goal", "side": "home", "player": "p_x"}, {"kind": "yellow_card"}, {"kind": "goal", "side": "home", "player": "p_x"},
-                  {"kind": "goal", "side": "away", "player": None}]
+        view = {"score": (2, 0), "events": True, "stats": False, "goals": [(1, 9, 7), (1, 70, 7)]}
+        state = {"home_score": 2, "away_score": 1}
+        events = [{"event_type": "goal", "team_id": "t_a", "player_id": "p_x"}, {"event_type": "yellow_card"},
+                  {"event_type": "goal", "team_id": "t_a", "player_id": "p_x", "is_cancelled": True},  # not counted
+                  {"event_type": "goal", "team_id": "t_a", "player_id": "p_x"}, {"event_type": "goal", "team_id": "t_b"}]
         self.assertEqual(handoff.discrepancies(state, events, view), [("score", "2-1", "2-0"), ("goals", "3", "2")])
         self.assertEqual(handoff.families(view), ["score", "events"])
 
@@ -101,12 +104,20 @@ class PureTest(unittest.TestCase):
         client = boto3.client("dynamodb", region_name="us-east-2", aws_access_key_id="x", aws_secret_access_key="y")
         store = DynamoStore({"state": "s", "events": "e", "stats": "t"}, client=client)
         with Stubber(client) as stub:
-            stub.add_response("put_item", {}, {"TableName": "t", "Item": {"match": {"S": "m_aaaaaa"}, "key": {"S": "home#all"},
-                                                                          "possession_pct": {"N": "55.5"}, "expires_at": {"N": "10"}}})
-            store.put_stats({"match": "m_aaaaaa", "key": "home#all", "possession_pct": 55.5, "total_shots": None, "expires_at": 10})
+            # One revision in one transaction: the statistics first, the state last.
+            stub.add_response("transact_write_items", {}, {"TransactItems": [
+                {"Put": {"TableName": "t", "Item": {"match": {"S": "m_aaaaaa"}, "team_id": {"S": "t_aaaaaa"},
+                                                   "possession_pct": {"N": "55.5"}, "revision": {"N": "2"}, "expires_at": {"N": "10"}}}},
+                {"Put": {"TableName": "s", "Item": {"match": {"S": "m_aaaaaa"}, "revision": {"N": "2"}}}},
+            ]})
+            store.write_round({"match": "m_aaaaaa", "revision": 2}, [],
+                              [{"match": "m_aaaaaa", "team_id": "t_aaaaaa", "possession_pct": 55.5, "total_shots": None, "revision": 2, "expires_at": 10}])
             stub.add_response("get_item", {"Item": {"match": {"S": "m_aaaaaa"}, "minute": {"N": "12"}, "core_families": {"L": [{"S": "score"}]}}},
                               {"TableName": "s", "Key": {"match": {"S": "m_aaaaaa"}}, "ConsistentRead": True})
             self.assertEqual(store.get_state("m_aaaaaa"), {"match": "m_aaaaaa", "minute": 12, "core_families": ["score"]})
+            # The lease is a conditional write: held by another, it is refused.
+            stub.add_client_error("update_item", service_error_code="ConditionalCheckFailedException")
+            self.assertFalse(store.lease("m_aaaaaa", "me", 200, 100))
 
     def test_no_provider_no_feed(self):
         os.environ.pop("V2_LIVE_PROVIDER", None)
@@ -147,53 +158,72 @@ class IngestorTest(unittest.TestCase):
         x = self.db.execute
         store, publisher, lines = MemoryStore(), MemoryPublisher(), []
         now = {"t": KICKOFF - timedelta(minutes=20)}
-        ingestor = Ingestor(self.db, ReplayAdapter(FEED), store, publisher, clock=lambda: now["t"], log=lines.append)
+        ingestor = Ingestor(self.db, ReplayAdapter(FEED), store, publisher, clock=lambda: now["t"], log=lines.append, owner="first")
 
-        def at(minutes):
+        current = {"ingestor": ingestor}
+
+        def at(minutes, who=None):
             now["t"] = KICKOFF + timedelta(minutes=minutes)
-            ingestor.step()
+            return (who or current["ingestor"]).step()
 
         # 20 minutes before kick-off: linked by date and team names (the other fixture is
         # not), and polled once: still scheduled, nothing to broadcast.
-        ingestor.step()
+        self.assertTrue(ingestor.step())
         state = store.get_state("m_live01")
-        self.assertEqual((state["core_match_id"], state["status"], state["home_team"], state["away_team"]), (10, "scheduled", "t_lyon01", "t_psg001"))
+        self.assertEqual((state["match_id"], state["status"], state["home_team"], state["away_team"], state["revision"]),
+                         (10, "scheduled", "t_lyon01", "t_psg001", 0))
         self.assertEqual(state["expires_at"], int((KICKOFF + timedelta(hours=72)).timestamp()))
         self.assertIn("live provider=replay fixture=f2 outcome=unlinked", lines)
         self.assertEqual(publisher.sent, [])
-        at(12)  # a goal, the score, the team statistics
-        channel, events = publisher.sent[-1]
-        self.assertEqual(channel, "/live/match/m-live01")
-        self.assertEqual([e["type"] for e in events], ["state", "event", "stats", "stats"])
-        self.assertEqual(events[1]["player"], "p_aaaaa1")  # the core player, through core.provider_ids
-        at(110)  # the whistle: a provisional result, three more events
+        # A second ingestor started meanwhile stops at once: one feed per match.
+        second = Ingestor(self.db, ReplayAdapter(FEED), store, MemoryPublisher(), clock=lambda: now["t"], log=lines.append, owner="second")
+        self.assertFalse(second.step())  # the first one's lease is still running
+        at(12)  # revision 1: a goal, the score, the team statistics, in one message
+        channel, [message] = publisher.sent[-1]
+        self.assertEqual((channel, message["match"], message["revision"]), ("/live/match/m-live01", "m_live01", 1))
+        self.assertEqual(message["state"]["home_score"], 1)
+        self.assertEqual([e["seq"] for e in message["events"]], [1])
+        self.assertEqual(message["events"][0]["player_id"], "p_aaaaa1")  # the core player, through core.provider_ids
+        self.assertEqual(message["events"][0]["team_id"], "t_lyon01")
+        self.assertEqual(sorted(s["team_id"] for s in message["stats"]), ["t_lyon01", "t_psg001"])
+        at(75)  # revision 2: a goal and a card
+        self.assertEqual([e["provider_event_id"] for e in publisher.sent[-1][1][0]["events"]], ["e2", "e3"])
+        at(80)  # revision 3: VAR cancels e2 — the same event (seq 2), not a new one
+        message = publisher.sent[-1][1][0]
+        self.assertEqual((message["revision"], [(e["seq"], e["is_cancelled"]) for e in message["events"]]), (3, [(2, True)]))
+        self.assertEqual(len(store.events("m_live01")), 3)
+        # The ingestor stops (crash): its lease expires and the next one takes the match
+        # back at its last written revision.
+        now["t"] = KICKOFF + timedelta(minutes=83)
+        second.adapter.played["f1"] = 4
+        self.assertTrue(at(83, second))
+        message = publisher.sent[-1][1][0] if second.publisher is publisher else second.publisher.sent[-1][1][0]
+        self.assertEqual(message["revision"], 4)  # the whistle: a provisional result
         state = store.get_state("m_live01")
-        self.assertEqual((state["status"], state["score_home"], state["score_away"]), ("finished", 2, 1))
+        self.assertEqual((state["status"], state["home_score"], state["away_score"], state["revision"]), ("finished", 2, 1, 4))
         self.assertTrue(state["finished_at"])
-        self.assertEqual([e["seq"] for e in store.events("m_live01")], [1, 2, 3, 4])
-        self.assertEqual({s["key"]: s["total_shots"] for s in store.stats("m_live01")}, {"away#all": 9, "home#all": 14})
-        sent = len(publisher.sent)
-        at(115)  # core has nothing yet: nothing moves
-        self.assertEqual(len(publisher.sent), sent)
+        self.assertEqual([e["seq"] for e in store.events("m_live01")], [1, 2, 3, 4, 5])
+        self.assertEqual({s["team_id"]: s["total_shots"] for s in store.stats("m_live01")}, {"t_lyon01": 14, "t_psg001": 9})
+        ingestor = current["ingestor"] = second
+        sent = len(ingestor.publisher.sent)
+        self.assertTrue(at(90))  # core has nothing yet: nothing moves, still busy
+        self.assertEqual(len(ingestor.publisher.sent), sent)
         # PitchAPI's score arrives (2-0: it wins), then its events and statistics.
         x("UPDATE core.matches SET status='finished', home_score=2, away_score=0 WHERE id=10")
         at(130)
-        self.assertEqual(publisher.sent[-1][1], [{"type": "families", "families": ["score"]}])
+        self.assertEqual(ingestor.publisher.sent[-1][1], [{"match": "m_live01", "revision": 5, "families": ["score"]}])
         self.assertEqual(x("SELECT field, live_value, final_value FROM ops.live_discrepancies").fetchall(), [("score", "2-1", "2-0")])
         x("UPDATE core.match_coverage SET events='ok', team_stats='ok' WHERE match_id=10")
         x("""INSERT INTO core.match_events(season_id, match_id, team_id, seq, event_type, minute, player_id)
-             VALUES (2025, 10, 1, 0, 'goal', 9, 7), (2025, 10, 1, 1, 'goal', 70, 7)""")
-        at(200)
+             VALUES (2025, 10, 1, 0, 'goal', 9, 7), (2025, 10, 1, 1, 'goal', 85, 7)""")
+        self.assertFalse(at(200))  # core complete: nothing left to do, the ingestor may stop
         state = store.get_state("m_live01")
         self.assertEqual(state["core_families"], ["score", "events", "stats"])
         complete = KICKOFF + timedelta(minutes=200)
         self.assertEqual(state["expires_at"], int((complete + timedelta(hours=24)).timestamp()))
         self.assertTrue(all(e["expires_at"] == state["expires_at"] for e in store.events("m_live01")))
+        # Three live goals (the cancelled one left out) against two in core.
         self.assertEqual(sorted(x("SELECT field FROM ops.live_discrepancies").fetchall()), [("goals",), ("score",)])
-        # Expired: the ingestor leaves it alone.
-        sent = len(publisher.sent)
-        at(200 + 25 * 60)
-        self.assertEqual(len(publisher.sent), sent)
         self.assertEqual(x("SELECT provider, field, matches FROM ops.live_reliability ORDER BY field").fetchall(),
                          [("replay", "goals", 1), ("replay", "score", 1)])
 

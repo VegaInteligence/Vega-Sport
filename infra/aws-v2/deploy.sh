@@ -15,8 +15,8 @@
 # (main's data bucket, read only, for the archives; kept from the previous deploy when unset), CFN_ROLE (CloudFormation service role,
 # set by the workflow), IMAGE_TAG (git HEAD), PITCHAPI_API_KEY or PITCHAPI_API_KEY_FILE
 # (needed once, to create /vega/v2/pitchapi-key), SPORTSAPI_API_KEY or SPORTSAPI_API_KEY_FILE
-# (optional, once: /vega/v2/sportsapi-key, the SportsAPI ranking snapshots), LIVE_PROVIDER and
-# LIVE_INGESTOR_COUNT (0: the live circuit is deployed, its ingestor stopped).
+# (optional, once: /vega/v2/sportsapi-key, the SportsAPI ranking snapshots) and LIVE_PROVIDER
+# (empty: the live circuit is deployed, the schedule that starts its ingestor is off).
 set -euo pipefail
 export AWS_REGION=${AWS_REGION:-us-east-2}
 ACCOUNT=361769570630
@@ -25,9 +25,8 @@ RELEASES="statarena-backend-releases-$ACCOUNT-$AWS_REGION"
 SUBNETS=subnet-0233a9567335f56ce,subnet-04c9af303f55d9718,subnet-0e72516f361932c15
 TAG=${IMAGE_TAG:-$(git rev-parse HEAD)}
 COUNT=${WORKER_DESIRED_COUNT:-1}
-# The live ingestor stays at 0 until a live provider is chosen (doc "Live"): LIVE_PROVIDER names its
-# adapter (vega_v2/live/adapters.py), LIVE_INGESTOR_COUNT=1 starts it.
-LIVE_COUNT=${LIVE_INGESTOR_COUNT:-0}
+# The live ingestor stays off until a live provider is chosen (doc "Live"): LIVE_PROVIDER names its
+# adapter (vega_v2/live/adapters.py) and turns on the schedule that starts it.
 ARCHIVES=${ARCHIVE_SOURCES_BUCKET:-}
 role=(); [ -n "${CFN_ROLE:-}" ] && role=(--role-arn "$CFN_ROLE")
 if [ -z "${PITCHAPI_API_KEY:-}" ] && [ -n "${PITCHAPI_API_KEY_FILE:-}" ]; then PITCHAPI_API_KEY=$(cat "$PITCHAPI_API_KEY_FILE"); export PITCHAPI_API_KEY; fi
@@ -74,14 +73,14 @@ echo "migration exit code: $code"; [ "$code" = 0 ]
 echo "== 6. Worker: $COUNT task(s)"
 stack vega-v2-worker worker.yaml --capabilities CAPABILITY_IAM \
   --parameter-overrides ImageTag="$TAG" DesiredCount="$COUNT" ArchiveSourcesBucket="$ARCHIVES" SportsApiKeyParameter="$SPORTSAPI"
-echo "== 6b. Live: store, broadcast, full-state read, ingestor ($LIVE_COUNT task(s), provider '${LIVE_PROVIDER:-}')"
+echo "== 6b. Live: store, broadcast, full-state read, ingestor schedule (provider '${LIVE_PROVIDER:-}', $([ -n "${LIVE_PROVIDER:-}" ] && echo on || echo off))"
 live_zip=$(python3 infra/aws-v2/package_api.py "${RUNNER_TEMP:-$(mktemp -d)}/v2-live" live | tail -1)
 live_key="releases/v2-live/$(basename "$live_zip")"
 aws s3 cp "$live_zip" "s3://$RELEASES/$live_key" >/dev/null
 # The browser key is renewed for 360 days on every deploy (AppSync allows 365 at most).
 expires=$(( ( $(date +%s) / 3600 ) * 3600 + 360 * 86400 ))
 stack vega-v2-live live.yaml --capabilities CAPABILITY_IAM \
-  --parameter-overrides ImageTag="$TAG" ReleaseKey="$live_key" ApiKeyExpires="$expires" IngestorCount="$LIVE_COUNT" LiveProvider="${LIVE_PROVIDER:-}"
+  --parameter-overrides ImageTag="$TAG" ReleaseKey="$live_key" ApiKeyExpires="$expires" LiveProvider="${LIVE_PROVIDER:-}"
 echo "== 7. Read API package"
 npm ci --prefix v2/api >/dev/null
 zip=$(python3 infra/aws-v2/package_api.py "${RUNNER_TEMP:-$(mktemp -d)}/v2-api" | tail -1)

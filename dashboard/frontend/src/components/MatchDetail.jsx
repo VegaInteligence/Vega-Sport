@@ -419,6 +419,55 @@ function LegacySummaryShots({ match }) {
     </AsyncState>
   );
 }
+// Live (v2): the feed's goals and cards and its team statistics, while PitchAPI has not
+// sent them yet (doc "Fin de match": the timeline moves to core once its events are in).
+const LIVE_EVENTS = {
+  goal: "But",
+  own_goal: "But contre son camp",
+  penalty_goal: "But sur penalty",
+  missed_penalty: "Penalty manqué",
+  yellow_card: "Carton jaune",
+  red_card: "Carton rouge",
+};
+const LIVE_STATS = [
+  ["possessionPct", "Possession", (v) => `${number(v)} %`],
+  ["totalShots", "Tirs", number],
+  ["shotsOnTarget", "Tirs cadrés", number],
+  ["corners", "Corners", number],
+];
+export function liveTimeline(live) {
+  if (!live || live.families?.events === "core") return [];
+  return (live.events || []).filter((e) => LIVE_EVENTS[e.type]);
+}
+export function liveTeamStats(live, match) {
+  if (!live || live.families?.stats === "core") return null;
+  const home = (live.stats || []).find((s) => s.teamId === match.home.id);
+  const away = (live.stats || []).find((s) => s.teamId === match.away.id);
+  if (!home || !away) return null;
+  const rows = LIVE_STATS.filter(([key]) => home[key] != null && away[key] != null);
+  return rows.length ? rows.map(([key, label, format]) => ({ key, label, home: format(home[key]), away: format(away[key]) })) : null;
+}
+function LiveTimeline({ events, match }) {
+  if (!events.length) return null;
+  return (
+    <ol className="scoreboard-live-events" aria-label="Faits du direct">
+      {events.map((e) => (
+        <li
+          key={e.seq}
+          className={`${e.teamId === match.away.id ? "is-away" : "is-home"}${e.cancelled ? " is-cancelled" : ""}`}
+        >
+          <span>
+            {e.minute != null ? `${e.minute}${e.minuteAdded ? `+${e.minuteAdded}` : ""}’` : "—"}
+          </span>
+          <strong>{LIVE_EVENTS[e.type]}</strong>
+          {e.playerName && <span>{e.playerName}</span>}
+          {e.cancelled && <em>annulé (VAR)</em>}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export default function MatchDetail({ match }) {
   const f = useFootball(),
     search = useSearchParams(),
@@ -452,6 +501,8 @@ export default function MatchDetail({ match }) {
   // Live (v2): the feed's minute and score until PitchAPI has the score, then core's.
   const live = useLiveMatch(match.id, isLiveWindow(match));
   const liveScore = live && live.families?.score !== "core" && live.status !== "scheduled" ? live.score : null;
+  const liveEvents = liveScore ? liveTimeline(live) : [];
+  const liveStats = live && live.status !== "scheduled" ? liveTeamStats(live, match) : null;
   const status = liveScore
     ? live.status === "finished"
       ? "Résultat provisoire"
@@ -576,7 +627,21 @@ export default function MatchDetail({ match }) {
             </div>
           </Link>
         </div>
-        {!upcoming && (
+        <LiveTimeline events={liveEvents} match={match} />
+        {liveStats ? (
+          <div className="match-kpis" data-live="">
+            {liveStats.map((s) => (
+              <div key={s.key}>
+                <span>{s.label}</span>
+                <strong>
+                  <b className="home-number">{s.home}</b>
+                  <i>–</i>
+                  <b className="away-number">{s.away}</b>
+                </strong>
+              </div>
+            ))}
+          </div>
+        ) : !upcoming && (
           <div className="match-kpis">
             {overviewStats(match)
               .slice(0, 4)

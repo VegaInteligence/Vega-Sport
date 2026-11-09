@@ -2,6 +2,9 @@
 
 Only the ingestor publishes, signed with its task role (IAM); browsers subscribe with the
 public API key and read the full state from GET /live/matches/{id} (CloudFront, 2 s).
+One message per revision, carrying the match and its revision: a browser applies them in
+order and reloads the full state when one is missing (doc "Écriture réussie, diffusion
+ratée").
 """
 
 import json
