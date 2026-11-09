@@ -1,13 +1,10 @@
 import { actorReadKey, actorReadParams } from "./actor-reads.js";
 import {
   compactGeneration,
-  compactScope,
-  directoryScopeIds,
   mergeActorPages,
   readCompactPages,
   supportsCompactRead,
 } from "./compact-reads.js";
-import { playerLeagueIds } from "./player-leaderboard.js";
 import { cachedResource, primeResource } from "./resources.js";
 
 /** Build the exact actor key used by FootballProvider for a destination. */
@@ -57,26 +54,9 @@ export function actorIntent(href, currentHref, football) {
     !compactGeneration(football.manifest)
   )
     return null;
-  const requested = url.searchParams.get("focus");
-  const focus =
-    requested === "all" || requested === "europe"
-      ? requested
-      : football.preferences?.focus;
-  if (kind === "player" && focus !== "all" && focus !== "europe") return null;
-  const filters = {
-    league: url.searchParams.get("league") || "all",
-    leagues: playerLeagueIds(url.searchParams.get("leagues") || ""),
-  };
-  const leagues =
-    kind === "club"
-      ? "all"
-      : compactScope(
-          directoryScopeIds(football.manifest, season, focus, filters),
-        );
   const params = actorReadParams(football.manifest, kind, {
     id,
     season,
-    leagues,
   });
   return {
     kind,

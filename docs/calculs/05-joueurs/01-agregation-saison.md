@@ -25,7 +25,7 @@ Pour chaque taux, numérateur et dénominateur séparés, sur les matchs où les
 
 ## Temps de jeu de la fiche
 
-Le **temps de jeu** de la fiche rapporte les minutes du joueur pour l’équipe indiquée aux minutes de ses matchs terminés, à raison de 90 minutes par match. Le calcul utilise la saison, la compétition et la période sélectionnées. Il inclut les matchs où l’absence du joueur est établie par une composition confirmée et des données joueurs exploitables. Une durée non renseignée, une observation supérieure à 90 minutes ou un calendrier incomplet empêche d’afficher un pourcentage pour ce périmètre.
+Le **temps de jeu** de la fiche rapporte les minutes du joueur pour l’équipe indiquée aux minutes de ses matchs terminés, à raison de 90 minutes par match. Le calcul utilise la saison, la compétition et la période sélectionnées. Il inclut les matchs où l’absence du joueur est établie par une composition confirmée et des données joueurs exploitables. Quand la durée d’une apparition manque, le calcul peut additionner les deux mi-temps si chacune est renseignée pour ce même joueur, cette équipe et ce match. Une durée encore inconnue, une observation supérieure à 90 minutes ou un calendrier incomplet empêche d’afficher un pourcentage pour ce périmètre.
 
 ## Trois bases d'affichage
 

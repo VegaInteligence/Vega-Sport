@@ -91,3 +91,30 @@ test("marks a calendar missing a recorded appearance as incomplete", () => {
   assert.equal(result.percentage, null);
   assert.equal(playerPlayingTime({ matches: [] }, [], "club"), null);
 });
+
+test("uses verified halves only for an existing appearance with missing minutes", () => {
+  const matches = {
+    matches: [game("a", "2026-08-23"), game("b", "2026-08-30")],
+  };
+  const rows = [row("a", null)];
+  const observed = playerPlayingTime(matches, rows, "club");
+  assert.deepEqual(
+    observed.missingMinutes.map((match) => match.id),
+    ["a"],
+  );
+  assert.equal(observed.percentage, null);
+
+  const result = playerPlayingTime(
+    matches,
+    rows,
+    "club",
+    {},
+    new Map([
+      ["a", 90],
+      ["b", 90],
+    ]),
+  );
+  assert.equal(result.percentage, 50);
+  assert.equal(result.recovered, 1);
+  assert.equal(rows[0].minutes, null);
+});

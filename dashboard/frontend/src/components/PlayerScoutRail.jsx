@@ -9,6 +9,7 @@ import {
   supportsCompactRead,
 } from "../services/compact-reads.js";
 import { playerPlayingTime } from "../services/player-playing-time.js";
+import { loadPlayerHalfMinutes } from "../services/player-half-minutes.js";
 import {
   loadPlayerHistory,
   playerHistoryKey,
@@ -129,12 +130,13 @@ export default function PlayerScoutRail({
   const known = new Set(published.map((item) => item.label));
   const timeTeam = playingTime?.team;
   const playerMeta = f.data?.meta;
+  const generation = compactGeneration(f.manifest);
   const complete =
     playerMeta?.complete === true &&
     playerMeta.actor?.kind === "player" &&
     playerMeta.actor.id === id &&
     playerMeta.currentSeason === season &&
-    playerMeta.generation === compactGeneration(f.manifest);
+    playerMeta.generation === generation;
   const calendar = useActorRead(
     f.manifest,
     "club",
@@ -156,16 +158,43 @@ export default function PlayerScoutRail({
       refreshManifest: f.refreshManifest,
     },
   );
-  const time = complete
-    ? playerPlayingTime(calendar.value, playingTime?.rows, timeTeam?.id, {
-        from: f.filters.advanced?.from,
-        to: f.filters.advanced?.to,
-        league: f.filters.league,
-        leagues: f.filters.leagues,
-        competition: playingTime?.competition,
-        matchId: f.filters.match,
-      })
+  const timeFilters = {
+    from: f.filters.advanced?.from,
+    to: f.filters.advanced?.to,
+    league: f.filters.league,
+    leagues: f.filters.leagues,
+    competition: playingTime?.competition,
+    matchId: f.filters.match,
+  };
+  const observed = complete
+    ? playerPlayingTime(
+        calendar.value,
+        playingTime?.rows,
+        timeTeam?.id,
+        timeFilters,
+      )
     : null;
+  const missing = observed?.missingMinutes || [];
+  const canRecover =
+    Boolean(f.client && missing.length) &&
+    !observed.incompleteCalendar &&
+    observed.covered + missing.length === observed.matches;
+  const halfMinutes = useResource(
+    `playing-time-halves:${generation}:${id}:${timeTeam?.id}:${missing.map((game) => game.id).join(",")}`,
+    ({ signal }) =>
+      loadPlayerHalfMinutes(f.client, missing, id, timeTeam.id, signal),
+    canRecover,
+  );
+  const time =
+    canRecover && halfMinutes.value?.size
+      ? playerPlayingTime(
+          calendar.value,
+          playingTime.rows,
+          timeTeam.id,
+          timeFilters,
+          halfMinutes.value,
+        )
+      : observed;
   const timeFact = { label: "Temps de jeu", value: "—", note: "Indisponible" };
   if (time?.percentage != null) {
     timeFact.value = `${number(time.percentage, 1)} %`;
@@ -175,6 +204,10 @@ export default function PlayerScoutRail({
         ? `${minutes} · 90 min/match`
         : `${timeTeam.name} · ${minutes} · 90 min/match`;
     timeFact.title = `${timeTeam.name} · ${number(time.matches)} matchs terminés`;
+    if (time.recovered) {
+      const games = time.recovered === 1 ? "match" : "matchs";
+      timeFact.title += ` · Minutes issues des mi-temps pour ${number(time.recovered)} ${games}`;
+    }
   } else if (time?.incompleteCalendar) {
     timeFact.note = "Calendrier incomplet";
   } else if (time) {
