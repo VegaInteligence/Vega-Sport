@@ -20,7 +20,7 @@ before(() => {
   assert.equal(seed.status, 0, seed.stderr);
   // The production read role: api schema only.
   context.reader = createReader(DSN, { role: "vega_read" });
-  context.handle = createHandler({ read: context.reader.read });
+  context.handle = createHandler({ read: context.reader.read, mediaBase: "https://media.test/" });
 });
 after(() => context.reader?.end());
 

@@ -5,8 +5,8 @@ Three CloudFormation stacks, one per block of the v2 backend (doc « Vega Sport 
 | Stack | Template | Contents |
 |---|---|---|
 | `vega-v2-database` | `database.yaml` | private PostgreSQL 18 (`vega-v2-postgres`, `db.t4g.micro`, gp3 20→100 GB, encrypted, 7-day backups, deletion protection, snapshot on delete), master password managed by Secrets Manager, security groups of the worker and the API |
-| `vega-v2-worker` | `worker.yaml` | ECR repository, ECS cluster, the always-on worker service (Fargate ARM 0.25 vCPU / 0.5 GB, one task), and the on-demand `vega-v2-backfill` and `vega-v2-migrate` task definitions |
-| `vega-v2-api` | `api.yaml` | the read API Lambda (Node 24 ARM, `v2/api`), its signed Function URL and its own CloudFront distribution (same policies as the current API) |
+| `vega-v2-worker` | `worker.yaml` | ECR repository, ECS cluster, the always-on worker service (Fargate ARM 0.25 vCPU / 0.5 GB, one task), the on-demand `vega-v2-backfill` and `vega-v2-migrate` task definitions, and the private bucket of the image copies (`vega-v2-media-…`, written only under `data/sources/v2/images/` by the worker's task role) |
+| `vega-v2-api` | `api.yaml` | the read API Lambda (Node 24 ARM, `v2/api`), its signed Function URL and its own CloudFront distribution (same policies as the current API); the distribution also serves the image copies at `data/*` from the media bucket (origin access control, bucket policy limited to this distribution) |
 
 Account 361769570630, region us-east-2, AWS CLI profile `statarena`, default VPC `vpc-08e400afa07fc1812` and its three subnets. The subnets route to an internet gateway: the worker gets a public IP for outbound HTTPS (sources, ECR, logs) and no inbound port; no NAT gateway is needed. The database is not publicly accessible: only the worker and API security groups reach it on 5432.
 
@@ -70,6 +70,8 @@ for t in database worker api; do aws cloudformation validate-template --profile 
 
    The account runs at most 10 Lambdas concurrently and the current API needs them: keep `ReservedConcurrency=0` and pool size 1 until the quota is raised.
 
+8. **Changes AWS.** Media map. The distribution's domain is known only once the stack exists: redeploy `vega-v2-api` with `MediaBaseUrl=https://<ApiOrigin domain>/` (same other parameters). Until then `media=1` answers with an empty `media` map and the site shows the provider images, as it does today for an image not yet copied.
+
 ## Parity and cutover
 
 `v2/api/parity.mjs` reads the same paths from both APIs and lists every difference (publication metadata excepted):
@@ -89,7 +91,7 @@ Cutover goes route family by route family, only once its parity is clean and the
 | Secrets Manager (managed master secret) | $0.40 |
 | Fargate ARM 0.25 vCPU / 0.5 GB, always on | ~$7 |
 | Public IPv4 of the worker task | ~$3.6 |
-| ECR, CloudWatch Logs (30 days), Lambda, CloudFront | usage-based, a few dollars |
+| ECR, CloudWatch Logs (30 days), Lambda, CloudFront, S3 image copies (a few GB) | usage-based, a few dollars |
 | **Total** | **≈ $25–30** |
 
 The backfill task costs the same rate as the worker while it runs. No NAT gateway, load balancer, provisioned concurrency or reserved instance.

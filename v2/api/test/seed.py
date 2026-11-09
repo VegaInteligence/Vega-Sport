@@ -38,6 +38,8 @@ def main(dsn):
     x = db.execute
     x("INSERT INTO core.countries(code) VALUES ('FRA')")
     x("INSERT INTO core.assets(id,kind,source_url) VALUES (1,'logo','https://img.example/l1.png'),(2,'crest','https://img.example/t1.png')")
+    # The crest of t_aaaaa1 has its copy (media=1); the league logo has none.
+    x("UPDATE core.assets SET s3_key=%s, content_type='image/png' WHERE id=2", ("sources/v2/images/" + "ab" * 32 + ".png",))
     x("INSERT INTO core.competitions(id,name,country_code,kind,logo_asset_id) VALUES (1,'Ligue 1','FRA','league',1)")
     x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('competition','pitchapi','l_3FJFUl',1)")
     x("INSERT INTO core.competition_seasons(id,competition_id,season_id,native_label,is_current) VALUES (1,1,2025,'2025/2026',true)")

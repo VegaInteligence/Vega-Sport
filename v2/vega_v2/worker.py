@@ -16,7 +16,7 @@ import time
 
 import psycopg
 
-from . import calculator, models, planner, profiles
+from . import calculator, media, models, planner, profiles
 from .jobs import LeaseLost, ack, claim, fail
 from .normalize import NormalizedFamily, NormalizationError, normalize_family
 from .pilot import DETAILS, safe_code
@@ -47,7 +47,7 @@ def _now():
 
 
 class Worker:
-    def __init__(self, store, client, *, lanes=DEFAULT_LANES, clock=_now, cohort_delay=600, calc_conn=None, backfill=None, source_get=None):
+    def __init__(self, store, client, *, lanes=DEFAULT_LANES, clock=_now, cohort_delay=600, calc_conn=None, backfill=None, source_get=None, media_io=None):
         unknown = set(lanes) - set(LANE_ORDER)
         if unknown or not lanes:
             raise ValueError("invalid lanes")
@@ -60,6 +60,7 @@ class Worker:
         self.clock = clock
         self.cohort_delay = cohort_delay
         self.source_get = source_get  # sources other than PitchAPI; None disables them
+        self.media_io = media_io  # (download, put) of the image copies; None disables them
         # The backfill task plans history only (planner.plan_backfill keyword arguments).
         self.backfill = backfill if backfill is not None else ({} if self.lanes == ("backfill",) else None)
         self.results = Counter()
@@ -234,10 +235,23 @@ class Worker:
                 print(f"daily models season={season} error={safe_code(error)}", flush=True)
         return seasons
 
-    def run(self, *, max_jobs=None, until_idle=False, plan_every=60, calc_every=30, idle_sleep=5, stop=None):
+    def mirror(self, limit=200):
+        """Copies of the images seen since the last pass (media.py)."""
+        if self.media_io is None:
+            return {}
+        try:
+            outcomes = media.mirror(self.conn, *self.media_io, self.clock(), limit=limit)
+        except psycopg.Error as error:
+            print(f"media error={safe_code(error)}", flush=True)
+            return {}
+        for code, count in sorted(outcomes.items()):
+            print(f"media outcome={code} count={count}", flush=True)
+        return outcomes
+
+    def run(self, *, max_jobs=None, until_idle=False, plan_every=60, calc_every=30, media_every=300, idle_sleep=5, stop=None):
         stop = stop or (lambda: False)
         done = 0
-        last_plan = last_calc = float("-inf")
+        last_plan = last_calc = last_media = float("-inf")
         while not stop():
             tick = time.monotonic()
             if tick - last_plan >= plan_every:
@@ -251,6 +265,9 @@ class Worker:
                 last_plan = tick
                 if self.backfill is None:
                     self.daily()
+            if self.backfill is None and tick - last_media >= media_every:
+                self.mirror()
+                last_media = tick
             worked = self.step()
             done += worked
             if not worked or tick - last_calc >= calc_every:
@@ -631,6 +648,9 @@ def main(argv=None):
             else None
         ),
     )
+    bucket = os.environ.get("V2_MEDIA_BUCKET")
+    if bucket and args.lanes != "backfill":
+        worker.media_io = (media.downloader(), media.s3_writer(bucket))
     started = time.monotonic()
     done = worker.run(max_jobs=args.max_jobs, until_idle=args.until_idle, stop=lambda: bool(stopping))
     if args.report:
