@@ -1,68 +1,74 @@
-# Vega Sport — prototype de base v2
+# Vega Sport — v2
 
-Cette implémentation suit les étapes 1 et 2 du document « Vega Sport — schéma v2 » fourni le 8 novembre 2026. Elle crée une base neuve à partir de PitchAPI. Le RDS, les fichiers et l'API qui servent actuellement le site ne sont ni lus ni modifiés par ce prototype.
+Implémentation du document validé « Vega Sport — schéma v2 » (claude.ai, 8–9 novembre 2026), sur la base du prototype de la PR #53. Une base neuve, alimentée par un worker et lue par une API qui ne connaît que le schéma `api`. Le RDS, les fichiers S3, l'API et les workflows qui servent aujourd'hui le site ne sont ni lus ni modifiés par ce code.
 
-Le [compte rendu de validation](VERIFICATION.md) contient la mesure complète des 306 matchs, les preuves et les limites de couverture.
+Le [compte rendu de validation](VERIFICATION.md) contient les preuves : tests, passages réels en CI, mesures.
 
-## Ce qui fonctionne
+## Organisation
 
-- Migrations PostgreSQL 16 : faits `core`, tables de calcul `agg`, suivi `ops` et migration optionnelle pgvector.
-- Transport de 19 routes historiques non redondantes, normalisation typée en mémoire, références internes et métadonnées des médias.
-- Remplacement transactionnel d'une famille de match, couverture, hash de contenu, révisions, versions de ressources et périmètres à recalculer.
-- Conservation des dernières données valides après un échec. L'échec de la tentative est enregistré dans `ops`, sans changer la couverture de la dernière écriture réussie dans `core`.
-- File avec cibles typées, déduplication, reprise de bail et contrôle du jeton. Fonctions de cadence des scores et programmation des détails/contrôle à 24 heures.
-- Profil joueur/club programmé dès la première apparition, même si un nom est déjà connu. Suivi distinct du dernier profil réussi et de son échéance à 30 jours ; test réel de profils borné séparément des matchs.
-- Un identifiant joueur observé reste utilisable avec un nom NULL. Une fiche joueur manquante ne fait pas disparaître ses événements ou tirs : le profil est enrichi par la file de références.
-- Pilote borné Ligue 1 2025/26, rapports de couverture, tentatives HTTP, temps d'écriture et tailles physiques avec index.
-
-Les tables `agg` sont créées mais leur alimentation et l'API de lecture constituent l'étape 6. La file est testée ; aucun ordonnanceur permanent n'est activé. Les données de modèles, postes, biographies, transferts, contrats et tracking non fournies restent absentes. Le prototype ne crée ni faux résultats ni valeurs issues de la maquette.
-
-## Ajustements nécessaires du schéma proposé
-
-| Point | Décision et raison |
+| Dossier | Contenu |
 |---|---|
-| Identité des matchs | `core.matches` est un ancrage global non partitionné. Les détails sont partitionnés par saison et portent une FK `(match_id, season_id)`. PostgreSQL impose la clé de partition dans les contraintes uniques des tables partitionnées. |
-| Heatmaps | Tableaux typés de 192 entiers, contraintes de dimension, bornes, absence de NULL et valeurs non négatives. Le frame demandé est explicitement `acting_ltr`. |
-| Pays/régions | Texte pour conserver des codes fournisseur tels que `UEFA` ou `INT-2`, sans tronquer à trois caractères. |
-| Compteurs agrégés | `integer` pour les sommes saisonnières, même lorsque la mesure d'un match tient dans un `smallint`. |
-| Nombres | Les fractions ne sont jamais arrondies vers un compteur entier. NaN, infinis et dépassements sont refusés. `real` reste une précision volontairement limitée ; ce n'est pas une conservation bit à bit d'un double. |
-| Classements | Observations fournisseur dans `core.official_standings`, calcul Vega dans `agg.standings`. Clé de substitution et unicité `NULLS NOT DISTINCT` pour les phases/groupes absents. |
-| Statistiques de base/avancées | Espaces de colonnes distincts ; préfixe `advanced_` dans les agrégats, moyennes d'équipe séparées par suffixe `_avg`. |
-| Pourcentage de passes | `accurate_passes_pct` complète la liste initiale pour conserver le pourcentage publié, par exemple dans `329 (82%)`, conformément à la règle de parsing du document. |
-| Joueurs sans fiche | Le nom d'un joueur peut être NULL ; son identifiant fournisseur et les faits observés sont conservés. Aucun nom artificiel n'est créé. |
-| Jobs | Cible explicite : catalogue, date, édition ou entité. Un bail utilise un jeton UUID ; un ancien travailleur ne peut pas écrire puis acquitter une tâche reprise. |
-| Recalculs | Le périmètre joueur contient joueur, équipe et édition. Une correction marque les anciens et les nouveaux périmètres. |
-| Erreurs | Une liste vide valide est une observation connue. Les indisponibilités explicites et les erreurs restent distinctes. Les logs contiennent des codes et chemins, jamais la réponse ni les lignes refusées par PostgreSQL. |
+| `sql/` | migrations numérotées, appliquées fichier par fichier et suivies dans `ops.schema_migrations` ; `009` et `012`, `015` sont générées depuis le code Python (tests de dérive) |
+| `vega_v2/` | adaptateur PitchAPI (`pitchapi`, `normalize`, `store`, `profiles`), règles de saison (`seasons`), file (`jobs`), planificateur (`planner`), worker (`worker`), calculateur des saisons et classements (`calculator`), modèles (`models`), catalogue des métriques (`metric_catalog`), migrations (`migrate`) |
+| `api/` | API de lecture Node : mêmes routes et même format que l'API actuelle, lues dans les vues `api` (`src/`), tests de contrat (`test/`), script de parité (`parity.mjs`) |
+| `tests/` | tests Python avec bases PostgreSQL jetables |
+| `Dockerfile` | image du worker (et des tâches de backfill et de migration) |
+| `../infra/aws-v2/` | piles CloudFormation base, worker, API ; procédure, coûts et bascule ([README](../infra/aws-v2/README.md)) |
 
-Les agrégations futures devront conserver les dénominateurs de couverture par métrique. Une métrique absente ne vaut pas zéro ; un ratio par 90 minutes ne doit pas utiliser les minutes de matchs où cette métrique n'était pas couverte. La note pondérée par les minutes ne doit inclure que les observations notées avec des minutes valides. Les formules de rôles, indices, potentiel, projections et vecteurs doivent être définies et versionnées avant de remplir leurs tables.
+## Ce qui est fait
+
+**Schéma.** `core` (faits), `agg` (calculs), `ops` (collecte, versions), `api` (vues de lecture). Saison sportive Vega distincte de l'édition du fournisseur ; une partition par saison depuis 2021, une partition d'archives 1850–2020. Les noms ne sont pas des identités (`provider_ids`, homonymes). Couverture par métrique dans les agrégats (`_sum`, `_n`, `_min`), ratios sur les seuls matchs où les deux termes existent. Rôles en base : migration (propriétaire), collecte, calcul, lecture (`017_roles.sql`).
+
+**Collecte.** Le planificateur crée chaque minute les travaux dus :
+- le calendrier `/date` de J−1 à J+7, une fois par jour ;
+- le score à coup d'envoi +105 min, puis toutes les 2 min jusqu'à +150, toutes les 15 min jusqu'à +4 h, toutes les heures pendant 2 jours et chaque jour jusqu'à +7 jours ; un statut reporté, annulé ou attribué arrête la surveillance, et une nouvelle date la relance ;
+- les compositions 48 h avant le match et au coup d'envoi, le h2h une fois avant le match ;
+- au statut `finished`, les 12 familles de détail, puis la correction à +24 h, qui refait les détails si le fournisseur a changé le match ;
+- le catalogue, les compétitions actives et leurs calendriers chaque semaine, les profils à la première apparition puis chaque mois.
+
+Le worker prend les travaux dans l'ordre score, détails, référentiel (le backfill a sa propre tâche). Il écrit `core` dans la même transaction que l'acquittement, puis recalcule.
+
+**Calcul.** Saisons joueur et club, états de jeu, classements, xPts (`agg.xpts_v1`), cohortes (par édition et poste, et Europe : Top 7 et coupes UEFA, par match), centiles et rangs, distributions P10–P90, phases et indice Vega club, positions, niveaux européens, rôles et indice Vega joueur, similarité club et joueur, force des championnats, profils d'âge. Les formules sont celles de `docs/calculs` (main). Les cohortes se recalculent 10 min après le dernier changement ; niveaux, similarités et profils une fois par jour. Chaque résultat porte son `agg.calc_runs`. Potentiel, projections, Ballon d'Or et valeurs marchandes restent vides : le site les affiche comme fictifs.
+
+**Lecture.** `/api/health`, `/api/status`, `/api/dashboard/manifest` (son `capabilities.compactReads` dit quelles lectures la v2 sert) et `/api/read/clubs` (annuaire et analyse), à l'identique de l'API actuelle, plus un champ `retry` dans les erreurs.
+
+## Ce qui reste
+
+- Les autres routes de l'API actuelle (joueurs, accueil, performances, discipline, fiches, calendriers et partitions, résumé de match, classements, journées, recherche, médias, routes de support et d'archives, `orion-pro`), chacune avec son test de contrat et sa parité.
+- Les autres adaptateurs : Wikidata et Commons (biographies, photos, stades), UEFA, FIFA et SportsAPI (classements), SportScore (classements officiels), OpenFootball, OpenLigaDB, International Results, coupes (football-data, ESPN, fixturedl), archives (footballcsv, engsoccerdata, schochastics), puis le rapprochement des identités (`entity_names`).
+- Le déploiement des piles AWS, le backfill, la parité réelle et la bascule route par route : voir `infra/aws-v2/README.md`. Rien n'est déployé.
 
 ## Exécution locale
 
-Installer Python 3.12, PostgreSQL 16 avec `pg_trgm`, puis `pip install -r v2/requirements.txt`. Créer une base dédiée, par exemple `vega_v2_pilot`. La connexion est volontairement limitée à localhost et à un nom commençant par `vega_v2_` pendant cette phase.
+Python 3.12, PostgreSQL 16 ou plus avec `pg_trgm` (pgvector en option), Node 22 ou plus.
 
 ```sh
+pip install -r v2/requirements.txt
 export PYTHONPATH=v2
-export V2_DATABASE_URL=postgresql://postgres@127.0.0.1:5432/vega_v2_pilot
-# Fournir PITCHAPI_API_KEY dans l'environnement, sans la mettre dans le dépôt.
-python -m vega_v2.pilot --max-matches 1 --report work/vega-v2-pilot.md
+export V2_DATABASE_URL=postgresql://postgres@127.0.0.1:5432/vega_v2_local   # localhost et nom vega_v2_* uniquement
+V2_MIGRATION_DATABASE_URL=$V2_DATABASE_URL python -m vega_v2.migrate
+# PITCHAPI_API_KEY dans l'environnement, jamais dans le dépôt :
+python -m vega_v2.worker --max-jobs 200 --report work/vega-v2-worker.md
 ```
 
-`--max-matches 306` borne le pilote saisonnier ; `--resume` conserve les familles déjà importées avec succès ou explicitement indisponibles. La liste des matchs de la compétition entière est conservée, même lors du contrôle d'un seul match. Le rapport explicite cette différence pour éviter une extrapolation trompeuse du coût par match. `--vector` applique la migration optionnelle si l'extension est installée. `--profile-limit 2` (défaut) contrôle un profil club et un profil joueur ; mettre zéro pour mesurer uniquement les familles de match. Les références intégrées aux matchs et les profils explicitement collectés ont des compteurs distincts.
+Hors localhost, une connexion exige TLS (`sslmode=require` ou plus) et une base `vega_v2*`. `V2_CALC_DATABASE_URL` donne au calculateur sa propre connexion (rôle calcul).
 
-Le workflow `Vega v2 isolated pilot` utilise le secret PitchAPI déjà présent dans le dépôt et un PostgreSQL éphémère sur le runner GitHub. Il n'a aucun identifiant AWS ou Neon. Il exporte uniquement un rapport de mesures, jamais la base, un dump ou des réponses API. Le nombre de matchs par défaut des branches de développement est dans `pilot-scope.txt`.
+API de lecture, avec une base peuplée :
 
-## Validation
+```sh
+cd v2/api && npm ci
+node --input-type=module -e "import {createReader} from './src/db.mjs'; import {createHandler} from './src/handler.mjs'; const h=createHandler(createReader(process.env.V2_READ_DATABASE_URL)); const r=await h(new Request('http://local/api/read/clubs?season=2025/2026&leagues=all')); console.log(r.status, await r.text())"
+```
 
-Les tests avec base utilisent sept bases locales jetables distinctes : `vega_v2_test`, `vega_v2_jobs_test`, `vega_v2_store_test`, `vega_v2_pilot_test`, `vega_v2_profiles_test`, `vega_v2_concurrency_test`, `vega_v2_unknown_test`. Définir respectivement `VEGA_V2_TEST_DSN`, `VEGA_V2_JOBS_TEST_DSN`, `VEGA_V2_STORE_TEST_DSN`, `VEGA_V2_PILOT_TEST_DSN`, `VEGA_V2_PROFILES_TEST_DSN`, `VEGA_V2_CONCURRENCY_TEST_DSN`, `VEGA_V2_UNKNOWN_TEST_DSN`, puis lancer :
+Le pilote historique de la PR #53 reste disponible : `python -m vega_v2.pilot --max-matches 1 --report work/vega-v2-pilot.md`.
+
+## Tests
+
+Chaque suite a sa base locale jetable (`vega_v2_*_test`) et refuse toute autre base. Variables : `VEGA_V2_TEST_DSN`, `VEGA_V2_JOBS_TEST_DSN`, `VEGA_V2_STORE_TEST_DSN`, `VEGA_V2_PILOT_TEST_DSN`, `VEGA_V2_PROFILES_TEST_DSN`, `VEGA_V2_CONCURRENCY_TEST_DSN`, `VEGA_V2_UNKNOWN_TEST_DSN`, `VEGA_V2_VALIDATED_TEST_DSN`, `VEGA_V2_AGG_TEST_DSN`, `VEGA_V2_API_TEST_DSN`, `VEGA_V2_WORKER_TEST_DSN`, `VEGA_V2_MODELS_TEST_DSN`, `VEGA_V2_ROLES_TEST_DSN`, et `VEGA_V2_API_NODE_TEST_DSN` pour l'API.
 
 ```sh
 python -m unittest discover -s v2/tests -v
+npm test --prefix v2/api
 ```
 
-Les suites ne doivent pas être lancées simultanément contre la même base de test. Les tests de schéma incluent pgvector lorsque l'extension est installée. Les tests d'ingestion couvrent le réimport identique, la correction, le rollback, la conservation des faits après erreur et le rejet d'un bail expiré. Les nombres de tests et les mesures réelles sont consignés dans le compte rendu du pilote, séparément des résultats synthétiques.
-
-## Suite dépendante du pilote
-
-Le choix d'infrastructure, le backfill complet, le worker permanent, les agrégats, l'API v2 et la bascule frontend attendent les mesures et les décisions correspondantes. Les 80 Ko par match et 25 Mo pour la Ligue 1 du document restent des estimations tant que le pilote complet n'est pas achevé. Aucun retrait du RDS ou des JSON S3 n'est inclus.
-
-La [documentation PitchAPI](https://pitchapi.dev/) consultée le 8 novembre 2026 décrit désormais `/matches/{id}/live`, contrairement à la mention d'absence de live dans le document fourni. Ce constat appelle une vérification de couverture, fraîcheur et droits lors de l'étape 10 ; il ne modifie pas ce collecteur historique.
+Le workflow `Vega v2 isolated pilot` lance les deux suites, le pilote Ligue 1, puis 700 travaux du worker sur les vrais calendriers J−1 à J+7, dans un PostgreSQL éphémère du runner. Il n'a aucun identifiant AWS : seul le secret PitchAPI lui est donné, et il n'exporte qu'un rapport de mesures (comptes, codes, chemins de champs, durées), jamais de données.

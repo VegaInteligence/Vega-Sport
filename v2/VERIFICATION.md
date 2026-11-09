@@ -48,3 +48,37 @@ Les tests couvrent aussi le remplacement atomique, la conservation des faits apr
 ## Étape suivante
 
 Ces mesures permettent d'ouvrir la revue AWS prévue à l'étape 3 : instance, stockage, réseau privé, sauvegardes et alarmes. Elles ne démontrent pas encore un gain de chargement web : l'alimentation des agrégats et leur API de lecture relèvent de l'étape 6, avant la bascule du frontend.
+
+# Suite de l'implémentation (PR #54) — 9 novembre 2026
+
+La PR #54 reprend la PR #53 et l'aligne sur le document validé : saisons, identités, tables manquantes, agrégats avec couverture, calculateur, vues `api`, planificateur et worker, modèles, API de lecture, rôles en base, piles AWS (non déployées).
+
+## Preuves
+
+- [Passage CI complet réussi](https://github.com/VegaInteligence/Vega-Sport/actions/runs/42552580375) sur `117b80271a` : 91 tests Python, 8 tests de contrat de l'API (exécutés avec le rôle `vega_read`), pilote Ligue 1, puis 700 travaux du worker sur les vrais calendriers.
+- [Rapport du worker](verification/worker-calendars-20261109.md), copié de l'artefact de ce run.
+
+## Ce que les passages réels ont montré, et ce qui a été corrigé
+
+Quatre passages successifs du worker sur les calendriers réels de J−1 à J+7 (toutes compétitions) ont servi de banc d'essai. Chacun a révélé un cas que les tests synthétiques ne pouvaient pas voir ; chacun est corrigé et couvert par un test :
+
+| Passage | Constat | Correction |
+|---|---|---|
+| 1 | `/date` donne la compétition mais pas l'édition : 307 matchs refusés, aucune surveillance de score | un match sans édition va dans l'édition en cours de sa compétition (récupérée d'abord si inconnue) ; `is_current` est tenu |
+| 1 | un statut inconnu faisait échouer toute la journée | le statut nouveau est signalé comme chemin inconnu, le reste est écrit |
+| 2 | 10 résumés nommaient une autre édition que celle supposée | l'édition donnée par `/matches/{id}` gagne : le match est déplacé tant qu'il n'a pas de faits d'après-match |
+| 2 | statut `started` | lu comme `in_play` |
+| 3 | un code de tir inconnu faisait perdre tous les tirs d'un match | le tir est gardé, le champ reste vide, le code est signalé |
+| 4 | code `OwnGoal` | lu comme but contre son camp |
+
+Le dernier passage : **700 travaux, 761 appels, aucun échec contrôlé**. 202 matchs terminés et confirmés, une trentaine de matchs collectés sur leurs 13 familles, 626 matchs, 1 809 joueurs, 1 545 saisons joueur et 422 saisons club calculées. Les modèles ont tourné sur ces données : 330 cohortes, 4 888 centiles club, 508 indices club, 403 niveaux. Aucun centile joueur, comme attendu : avec environ un match par club, personne n'atteint les 450 minutes requises.
+
+## Vérifications locales
+
+- Les formules des modèles sont recalculées à la main dans `tests/test_models.py` (centiles, rangs, distributions, phases, indice, positions, rôles, indice joueur, similarité, niveaux avec les trois exemples de `docs/calculs`, force, profils d'âge, recalcul incrémental et différé).
+- Les droits sont éprouvés dans `tests/test_roles.py` : la collecte crée des partitions sans posséder de table et n'atteint pas `agg` ; le calcul n'écrit pas `core` ; la lecture ne voit que `api`.
+- Les trois gabarits CloudFormation passent `validate-template` ; l'image du worker se construit (ARM64) et ses entrées répondent ; le paquet de l'API se construit et répond hors ligne.
+
+## Limites
+
+Seules les routes listées dans le README sont servies par la v2 ; la parité réelle et la bascule attendent le déploiement et le backfill. Les sources autres que PitchAPI ne sont pas encore branchées. Les calibrations du niveau européen restent celles de la démo du site, versionnées `levels-demo-v1`.
