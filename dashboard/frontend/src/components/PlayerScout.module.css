@@ -1292,3 +1292,32 @@ p.similarIntro {
 .palmares :global(.player-trophy-label) {
   display: none;
 }
+
+/* Side-by-side cards end level: each card is a column whose last block takes
+   the spare height and spreads its rows, so no card ends on an empty band. */
+.grid2 > .card,
+.grid3 > .card,
+.grid2 > .stack > .card:last-child,
+.cols2 > .panel {
+  display: flex;
+  flex-direction: column;
+}
+.grid2 > .card > :last-child,
+.grid3 > .card > :last-child,
+.grid2 > .stack > .card:last-child > :last-child {
+  flex: 1 1 auto;
+  align-content: space-between;
+}
+.grid2 > .stack {
+  grid-template-rows: auto 1fr;
+  align-content: stretch;
+}
+.cols2 > .panel > .distRows {
+  flex: 1 1 auto;
+}
+.cols2 > .panel > .distRows > .distRow {
+  align-content: center;
+}
+.grid2 > .stack > .card:last-child > .skills {
+  align-content: stretch;
+}

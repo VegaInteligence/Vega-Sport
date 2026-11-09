@@ -274,7 +274,7 @@ function ExpectedCard({ dossier }) {
             </dl>
             <PointsTrend rows={self.rows} height={250} />
           </div>
-          <LeagueTable dossier={dossier} sort="xpts" compact window={10} />
+          <LeagueTable dossier={dossier} sort="xpts" compact window={10} fill />
         </div>
       </Card>
   );
@@ -515,7 +515,7 @@ export function Style({ dossier }) {
   const tags = styleTags(dossier.self);
   return (
     <div className={c.stack}>
-      <div className={c.columns}>
+      <div className={`${c.columns} ${c.fillRow}`}>
         <div className={c.stack}>
           <Card
             title="Identité de jeu"
@@ -572,6 +572,7 @@ export function Style({ dossier }) {
         </div>
         <div className={c.stack}>
           <Card
+            className={c.grow}
             title="Carte des styles"
             text="Possession et intensité du pressing de chaque club du référentiel."
           >
@@ -580,7 +581,7 @@ export function Style({ dossier }) {
               x="possession"
               y="ppda"
               invertY
-              ratio="6 / 7"
+              fill
               yLabel="Pressing (PPDA, bas = intense)"
               quadrants={[
                 ["Presse sans le ballon", "top-left"],

@@ -414,6 +414,45 @@
     display: none;
   }
 }
+/* Plot that takes the height its row leaves (neighbour cards set it). */
+.grow {
+  display: flex;
+  flex-direction: column;
+}
+.grow > .plotFill {
+  flex: 1 1 auto;
+}
+/* In a stretched card, spectra space their axes and tables their rows. */
+.grow > .spectrum {
+  flex: 1 1 auto;
+  align-content: space-between;
+}
+.grow > .tableScroll {
+  flex: 1 1 auto;
+}
+.grow > .tableScroll > table {
+  height: 100%;
+}
+.plotFill {
+  aspect-ratio: auto;
+  min-height: 320px;
+}
+.columns.fillRow {
+  align-items: stretch;
+}
+.fillRow > .stack {
+  display: flex;
+  flex-direction: column;
+}
+.fillRow > .stack > .grow {
+  flex: 1 1 auto;
+}
+@media (max-width: 760px) {
+  .plotFill {
+    aspect-ratio: 1;
+    min-height: 0;
+  }
+}
 .plot svg {
   position: absolute;
   inset: 0;

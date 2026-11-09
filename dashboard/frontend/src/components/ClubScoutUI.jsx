@@ -389,6 +389,7 @@ export function LeaguePlot({
   quadrants = [],
   highlight = [],
   ratio,
+  fill = false,
 }) {
   const [hover, setHover] = useState(null);
   const clubs = dossier.clubs.filter(
@@ -415,8 +416,8 @@ export function LeaguePlot({
   const ticks = (lo, hi) => [0.15, 0.5, 0.85].map((t) => lo + (hi - lo) * t);
   return (
     <div
-      className={s.plot}
-      style={ratio ? { aspectRatio: ratio } : undefined}
+      className={fill ? `${s.plot} ${s.plotFill}` : s.plot}
+      style={ratio && !fill ? { aspectRatio: ratio } : undefined}
       onMouseLeave={() => setHover(null)}
     >
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -1351,12 +1352,47 @@ export function SquadTable({ dossier, limit = 30 }) {
 
 /* --------------------------------------------------------- league table */
 
+/**
+ * Rows a table can show to end level with its neighbour in a side-by-side
+ * grid (no gap under the shorter column); `fallback` when stacked.
+ */
+function useFillRows(ref, fallback, enabled) {
+  const [rows, setRows] = useState(fallback);
+  useEffect(() => {
+    const el = ref.current,
+      grid = el?.parentElement;
+    if (!enabled || !grid) return;
+    const measure = () => {
+      const me = el.getBoundingClientRect();
+      const beside = [...grid.children]
+        .filter((child) => child !== el)
+        .map((child) => child.getBoundingClientRect())
+        .filter((r) => Math.abs(r.top - me.top) < 4 && r.left !== me.left);
+      if (!beside.length) return setRows(fallback);
+      const target = Math.max(...beside.map((r) => r.height));
+      const head = el.querySelector("thead")?.getBoundingClientRect().height;
+      const row = el.querySelector("tbody tr")?.getBoundingClientRect().height;
+      if (!head || !row) return;
+      setRows(Math.max(5, Math.floor((target - head) / row)));
+    };
+    const observer = new ResizeObserver(measure);
+    for (const child of grid.children) if (child !== el) observer.observe(child);
+    observer.observe(grid);
+    measure();
+    return () => observer.disconnect();
+  }, [ref, fallback, enabled]);
+  return rows;
+}
+
 export function LeagueTable({
   dossier,
   sort = "points",
   compact = false,
-  window: size = 0,
+  window: minimum = 0,
+  fill = false,
 }) {
+  const box = useRef(null);
+  const size = useFillRows(box, minimum, fill && minimum > 0);
   const rows = [...dossier.clubs].sort((a, b) =>
     sort === "xpts" ? a.xptsPosition - b.xptsPosition : a.position - b.position,
   );
@@ -1371,7 +1407,7 @@ export function LeagueTable({
     (club.values.xg ?? 0) * club.rows.length -
     (club.values.xga ?? 0) * club.rows.length;
   return (
-    <div className={s.tableScroll}>
+    <div className={s.tableScroll} ref={box}>
       <table className={s.table}>
         <caption className="sr-only">
           Classement réel et classement aux points attendus

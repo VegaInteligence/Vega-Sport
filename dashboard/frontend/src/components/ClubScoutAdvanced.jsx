@@ -35,11 +35,13 @@ export function Synthesis({ dossier }) {
     <Section>
       <div className={s.synthesis}>
         <Card
+          className={c.grow}
           title="Carte du référentiel"
           text="xG créés et concédés par match. En haut à droite : les équipes qui dominent leurs matchs."
         >
           <LeaguePlot
             dossier={dossier}
+            fill
             x="xg"
             y="xga"
             invertY
@@ -133,6 +135,7 @@ export function WithBall({ dossier }) {
       </Card>
       <div className={c.grid2}>
         <Card
+          className={c.grow}
           title="Manière d’avoir le ballon"
           text="Axes de style : aucune position n’est bonne ou mauvaise en soi."
         >
@@ -162,13 +165,16 @@ export function WithBall({ dossier }) {
             ]}
           />
         </Card>
-        <Card title="Qualité de la possession">
+        <Card className={c.grow} title="Qualité de la possession">
           <MetricTable
             dossier={dossier}
             keys={[
+              "passes",
               "passAccuracy",
               "fieldTilt",
               "boxShare",
+              "xgOpen",
+              "bigChances",
               "xgPerShot",
               "boxShots",
               "touchesBox",
@@ -185,6 +191,7 @@ export function WithoutBall({ dossier }) {
     <Section>
       <div className={c.grid2}>
         <Card
+          className={c.grow}
           title="Carte des styles défensifs"
           text="Possession et PPDA de chaque club : en haut, les équipes qui pressent le plus."
         >
@@ -193,7 +200,7 @@ export function WithoutBall({ dossier }) {
             x="possession"
             y="ppda"
             invertY
-            ratio="6 / 7"
+            fill
             yLabel="PPDA (bas = pressing intense)"
             quadrants={[
               ["Presse sans le ballon", "top-left"],
@@ -268,6 +275,7 @@ export function SetPieces({ dossier }) {
       />
       <div className={c.grid2}>
         <Card
+          className={c.grow}
           title="Situations de tir"
           text="D’où viennent les tirs et les buts, des deux côtés."
         >

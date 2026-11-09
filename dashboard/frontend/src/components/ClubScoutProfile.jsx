@@ -601,26 +601,29 @@ function Comparison({ dossier, rival, onRival }) {
           )}
           <div className={c.grid2}>
             <Card
+              className={c.grow}
               title="Profils superposés"
               text="Centiles de performance, chacun dans son championnat."
             >
-              <RadarChart
-                size={440}
-                axes={PERFORMANCE_KEYS.map((key) => ({
-                  key,
-                  label: METRICS[key].label.replace(" / match", ""),
-                }))}
-                series={[self, other.self].map((club, i) => ({
-                  name: club.name,
-                  color: i ? "var(--mq-series-2)" : "var(--mq-series-1)",
-                  values: Object.fromEntries(
-                    PERFORMANCE_KEYS.map((key) => [
-                      key,
-                      club.centiles[key] ?? 0,
-                    ]),
-                  ),
-                }))}
-              />
+              <div className={s.radarBox}>
+                <RadarChart
+                  size={440}
+                  axes={PERFORMANCE_KEYS.map((key) => ({
+                    key,
+                    label: METRICS[key].label.replace(" / match", ""),
+                  }))}
+                  series={[self, other.self].map((club, i) => ({
+                    name: club.name,
+                    color: i ? "var(--mq-series-2)" : "var(--mq-series-1)",
+                    values: Object.fromEntries(
+                      PERFORMANCE_KEYS.map((key) => [
+                        key,
+                        club.centiles[key] ?? 0,
+                      ]),
+                    ),
+                  }))}
+                />
+              </div>
               <Gaps self={self} other={other.self} />
             </Card>
             <Card
