@@ -364,3 +364,77 @@ def stop_watch(conn, match_id, *, now):
         "UPDATE ops.match_watch SET state='stopped', next_check_at=NULL, updated_at=%s WHERE match_id=%s AND state IN ('scheduled','waiting_final','final')",
         (_aware(now), match_id),
     )
+
+
+# Backfill -----------------------------------------------------------------
+
+BACKFILL_FAMILIES = ("summary", "shots", "events", "lineups", "momentum", "team_stats", "player_stats",
+                     "player_halves", "advanced", "advanced_players", "network", "heatmaps", "h2h")
+
+
+def current_season(now):
+    """Start year of the sporting season running on `now` (July starts a season)."""
+    return now.year if now.month >= 7 else now.year - 1
+
+
+def plan_backfill(conn, now=None, *, first_season=2021, last_season=None, competitions=None, limit=2000):
+    """History, for the separate backfill task: each edition's season calendar once,
+    then the 13 families of every finished match that lacks them, recent first and at
+    most `limit` jobs per call so the queue stays bounded. Progress lands in
+    ops.collection_progress. No watch and no +24 h correction: those belong to the
+    live planner."""
+    instant = _aware(now) if now is not None else datetime.now(timezone.utc)
+    last = current_season(instant) if last_season is None else last_season
+    counts = Counter()
+    with conn.transaction():
+        if not conn.execute(
+            "SELECT pg_try_advisory_xact_lock(hashtextextended('vega_v2_backfill_planner',0))"
+        ).fetchone()[0]:
+            return counts
+        scope = """FROM core.competition_seasons cs
+                   JOIN core.provider_ids p ON p.entity_type='competition' AND p.provider='pitchapi' AND p.entity_id=cs.competition_id AND p.is_current
+                   WHERE cs.season_id BETWEEN %(first)s AND %(last)s AND (%(competitions)s::text[] IS NULL OR p.provider_key = ANY(%(competitions)s))"""
+        params = {"first": first_season, "last": last, "competitions": competitions, "limit": limit,
+                  "families": list(BACKFILL_FAMILIES)}
+        editions = [r[0] for r in conn.execute(f"SELECT cs.id {scope} ORDER BY cs.season_id DESC, cs.id", params)]
+        for edition in editions:
+            done = conn.execute(
+                "SELECT 1 FROM ops.collection_progress WHERE source='pitchapi' AND competition_season_id=%s AND family='league_matches' AND last_success_at IS NOT NULL",
+                (edition,),
+            ).fetchone()
+            if not done and enqueue(conn, "backfill", "league_matches", competition_season_id=edition, run_after=instant):
+                counts["league_matches"] += 1
+        for mid, family in conn.execute(
+            """SELECT m.id, f.family FROM core.matches m
+               CROSS JOIN unnest(%(families)s::text[]) AS f(family)
+               WHERE m.status = 'finished' AND m.competition_season_id = ANY(%(editions)s)
+                 AND NOT EXISTS (SELECT 1 FROM ops.family_state s WHERE s.match_id = m.id AND s.family::text = f.family
+                                 AND s.status IN ('ok', 'unavailable'))
+                 AND NOT EXISTS (SELECT 1 FROM ops.fetch_jobs j WHERE j.entity_type = 'match' AND j.entity_id = m.id
+                                 AND j.family::text = f.family AND j.state <> 'done')
+               ORDER BY m.kickoff_at DESC NULLS LAST, m.id, f.family LIMIT %(limit)s""",
+            {**params, "editions": editions},
+        ).fetchall():
+            if enqueue(conn, "backfill", family, entity_type="match", entity_id=mid, run_after=instant):
+                counts[family] += 1
+        _progress(conn, editions)
+    return +counts
+
+
+def _progress(conn, editions):
+    """Expected, done, empty and failed match families per edition (13 per finished match)."""
+    conn.execute(
+        """INSERT INTO ops.collection_progress(source, competition_season_id, family, expected, done, empty, failed, last_success_at, updated_at)
+           SELECT 'pitchapi', m.competition_season_id, f.family::ops.fetch_family, count(*),
+             count(*) FILTER (WHERE s.status = 'ok'), count(*) FILTER (WHERE s.status = 'unavailable'),
+             count(*) FILTER (WHERE s.status = 'error'), max(s.last_success_at), now()
+           FROM core.matches m
+           CROSS JOIN unnest(%s::text[]) AS f(family)
+           LEFT JOIN ops.family_state s ON s.match_id = m.id AND s.family::text = f.family
+           WHERE m.status = 'finished' AND m.competition_season_id = ANY(%s)
+           GROUP BY m.competition_season_id, f.family
+           ON CONFLICT (source, competition_season_id, family) DO UPDATE SET expected = EXCLUDED.expected,
+             done = EXCLUDED.done, empty = EXCLUDED.empty, failed = EXCLUDED.failed,
+             last_success_at = EXCLUDED.last_success_at, updated_at = now()""",
+        (list(BACKFILL_FAMILIES), editions),
+    )
