@@ -145,8 +145,9 @@ class CalculatorTest(unittest.TestCase):
         self.assertEqual((xg_n, xg_min), (1, 90))
         num, den, n = self.player(10, "pass_completion_num", "pass_completion_den", "pass_completion_n")
         self.assertEqual((num, den, n), (40, 50, 1))
-        wsum, w = self.player(10, "rating_wsum", "rating_w")
-        self.assertAlmostEqual(wsum / w, (7.5 * 90 + 8.0 * 45) / 135, places=4)
+        rating_sum, rating_minutes = self.player(10, "rating_sum", "rating_minutes")
+        self.assertEqual(rating_minutes, 135)  # integer minutes, as the doc names them
+        self.assertAlmostEqual(rating_sum / rating_minutes, (7.5 * 90 + 8.0 * 45) / 135, places=4)
         self.assertAlmostEqual(self.player(10, "top_speed_kmh_max")[0], 33.0, places=4)
         # Team Alpha: the final is excluded from the standings, not from the season totals.
         matches, won, gf, ga, pts, cs, xp, xpm = self.team(
@@ -233,12 +234,14 @@ class ApiViewTest(CalculatorTest):
 
         committed = (ROOT / "sql" / "012_api_views.sql").read_text(encoding="utf-8")
         self.assertEqual(committed, api_schema.migration_sql())
+        renamed = (ROOT / "sql" / "049_rating_names.sql").read_text(encoding="utf-8")
+        self.assertEqual(renamed, api_schema.rating_rename_sql())
 
     def test_every_view_answers(self):
         views = [r[0] for r in self.db.execute(
             "SELECT table_schema||'.'||table_name FROM information_schema.views WHERE table_schema IN ('api','ops') ORDER BY 1"
         )]
-        self.assertEqual(len([v for v in views if v.startswith("api.")]), 95)  # 21 + 5 read API (016) + 3 players (019) + media (020) + 4 matches (021) + 2 (022) + cards (023) + 3 search (024) + 4 archives (025) + 4 rankings (026) + 4 Wikidata (027) + 2 cups (028) + honours (029) + 19 match details and profiles (031) + 2 power rankings (032) + cup tables (035) + power roles (037) + season keys (039) + 12 status page (043) + 2 home settings (044) + home leaders (046) + edition keys (047)
+        self.assertEqual(len([v for v in views if v.startswith("api.")]), 96)  # 21 + 5 read API (016) + 3 players (019) + media (020) + 4 matches (021) + 2 (022) + cards (023) + 3 search (024) + 4 archives (025) + 4 rankings (026) + 4 Wikidata (027) + 2 cups (028) + honours (029) + 19 match details and profiles (031) + 2 power rankings (032) + cup tables (035) + power roles (037) + season keys (039) + 12 status page (043) + 2 home settings (044) + home leaders (046) + edition keys (047) + home player rows (048)
         self.assertEqual(len([v for v in views if v.startswith("ops.")]), 4)  # + live reliability (042)
         for view in views:
             self.db.execute(f"SELECT * FROM {view} LIMIT 5").fetchall()

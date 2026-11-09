@@ -348,7 +348,7 @@ def migration_sql():
         "  appearances integer NOT NULL CHECK (appearances >= 0),\n"
         "  starts integer NOT NULL CHECK (starts >= 0),\n"
         "  minutes integer NOT NULL CHECK (minutes >= 0)"
-        + _columns(player_season_columns())
+        + _columns(player_season_columns(legacy=True))
         + ",\n  updated_at timestamptz NOT NULL DEFAULT now(),\n"
         "  PRIMARY KEY (player_id, team_id, competition_season_id),\n"
         "  FOREIGN KEY (competition_season_id, season_id) REFERENCES core.competition_seasons(id, season_id)\n"
