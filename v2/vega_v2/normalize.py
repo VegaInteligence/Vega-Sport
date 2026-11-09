@@ -214,8 +214,8 @@ def _match(out, item):
     )
     row = {
         "id": mid,
-        "home_team_id": _ref(out, "team", item.get("home_team")),
-        "away_team_id": _ref(out, "team", item.get("away_team")),
+        "home_team_id": _ref(out, "team", item.get("home_team"), required=False),
+        "away_team_id": _ref(out, "team", item.get("away_team"), required=False),
     }
     if competition is not None:
         row["provider_competition_id"] = competition

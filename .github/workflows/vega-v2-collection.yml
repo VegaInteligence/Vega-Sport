@@ -1,0 +1,105 @@
+name: Vega v2 collection (existing RDS)
+on:
+  push:
+    branches: [codex/vega-v2-rollout-20261108]
+    paths: ['v2/**', 'infra/vega-v2/**', '.github/workflows/vega-v2-collection.yml']
+  workflow_dispatch:
+    inputs:
+      phase:
+        type: choice
+        options: [catalogue, backfill]
+        default: catalogue
+      max_requests:
+        type: string
+        default: '15'
+      duration_seconds:
+        type: string
+        default: '600'
+permissions:
+  contents: read
+concurrency:
+  group: vega-v2-shared-rds
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: isolated-v2-only
+          POSTGRES_DB: vega_v2_tests
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PYTHONPATH: v2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r v2/requirements.txt
+      - name: Validate on disposable PostgreSQL 18
+        run: |
+          python - <<'PY'
+          import os,psycopg,subprocess,sys
+          base='postgresql://postgres:isolated-v2-only@127.0.0.1:5432/'
+          env=dict(os.environ)
+          with psycopg.connect(base+'vega_v2_tests',autocommit=True) as conn:
+              for kind in ('','jobs','store','pilot','profiles','concurrency','unknown','backfill','worker','store_batch'):
+                  db='vega_v2_'+(kind+'_' if kind else '')+'test'
+                  conn.execute(psycopg.sql.SQL('CREATE DATABASE {}').format(psycopg.sql.Identifier(db)))
+                  env['VEGA_V2_'+(kind.upper()+'_' if kind else '')+'TEST_DSN']=base+db
+              env['VEGA_V2_BATCH_TEST_DSN']=base+'vega_v2_store_batch_test'
+          raise SystemExit(subprocess.run([sys.executable,'-m','unittest','discover','-s','v2/tests','-v'],env=env).returncode)
+          PY
+  collect:
+    if: github.repository_id == '1441213700'
+    needs: verify
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    env:
+      PYTHONPATH: v2
+      V2_MAX_DATABASE_BYTES: '1073741824'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            v2
+            infra/vega-v2
+            .github/actions/aws-database/runner-ingress
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r v2/requirements.txt
+      - name: Exchange OIDC for v2-only access
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708
+        with:
+          role-to-assume: arn:aws:iam::361769570630:role/VegaV2GitHubIngest
+          aws-region: us-east-2
+          allowed-account-ids: '361769570630'
+          role-session-name: vega-v2-${{ github.run_id }}-${{ github.run_attempt }}
+          role-duration-seconds: 21600
+          unset-current-credentials: true
+      - name: Permit this runner only for this job
+        uses: ./.github/actions/aws-database/runner-ingress
+      - name: Configure the v2 logical database
+        run: python infra/vega-v2/shared_ci.py
+      - name: Collect directly into typed v2 tables
+        env:
+          PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
+          PHASE: ${{ inputs.phase || 'catalogue' }}
+          MAX_REQUESTS: ${{ inputs.max_requests || '15' }}
+          DURATION_SECONDS: ${{ inputs.duration_seconds || '600' }}
+        run: |
+          python -m vega_v2.worker run --phase "$PHASE" --lanes backfill,reference --duration-seconds "$DURATION_SECONDS" --max-requests "$MAX_REQUESTS"
+      - name: Report durable queue and catalogue counts
+        if: ${{ !cancelled() }}
+        run: python -m vega_v2.worker plan

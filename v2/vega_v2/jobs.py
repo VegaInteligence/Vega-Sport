@@ -162,6 +162,27 @@ def ack(conn, job_id, token, *, now=None):
         raise LeaseLost("lease lost")
 
 
+def renew(conn, job_id, token, *, lease_seconds=300):
+    """Extend only a still-owned, unexpired lease using the database clock."""
+    if (
+        not isinstance(lease_seconds, int)
+        or isinstance(lease_seconds, bool)
+        or not 1 <= lease_seconds <= 3600
+    ):
+        raise ValueError("invalid lease duration")
+    row = conn.execute(
+        """WITH instant AS (SELECT clock_timestamp() AS value)
+        UPDATE ops.fetch_jobs j
+        SET lease_until=instant.value+make_interval(secs=>%s),updated_at=instant.value
+        FROM instant WHERE j.id=%s AND j.state='leased' AND j.lease_token=%s
+        AND j.lease_until>instant.value RETURNING j.lease_until""",
+        (lease_seconds, job_id, token),
+    ).fetchone()
+    if not row:
+        raise LeaseLost("lease lost")
+    return row[0]
+
+
 def fail(
     conn,
     job_id,

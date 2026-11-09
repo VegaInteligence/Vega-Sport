@@ -95,6 +95,17 @@ def workflow(name):
               'v2 pilot may receive only its provider key')
         check('schedule' not in obj.get('on',obj.get(True,{})),
               'v2 pilot must not activate a permanent schedule')
+    elif name=='vega-v2-collection':
+        check(obj.get('permissions')=={'contents':'read'},'v2 validation needs read permission only')
+        job=obj['jobs']['collect']
+        check(job.get('permissions')=={'contents':'read','id-token':'write'} and job.get('needs')=='verify',
+              'v2 data writes require validated code and scoped OIDC')
+        check('VegaV2GitHubIngest' in text and 'shared_ci.py' in text and 'V2_MAX_DATABASE_BYTES' in text,
+              'v2 collection must use its own role, logical database and capacity ceiling')
+        check('modify-db-instance' not in text and 'create-db-instance' not in text and 'cloudformation' not in text,
+              'shared v2 workflow must not resize or create database infrastructure')
+        check(set(__import__('re').findall(r'secrets\.([A-Za-z0-9_]+)',text))=={'PITCHAPI_API_KEY'},
+              'v2 collection may receive only the provider key directly')
     elif name=='production-validation':
         check('id-token: write' not in text and 'secrets.' not in text,
               'public site validation must not receive cloud/provider credentials')

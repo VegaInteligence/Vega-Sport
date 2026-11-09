@@ -40,6 +40,7 @@ class SchemaTests(unittest.TestCase):
             "005_team_pass_percentage.sql",
             "006_reference_state.sql",
             "007_unknown_player_name.sql",
+            "008_unknown_team_name.sql",
         ):
             cls.db.execute((ROOT / "sql" / name).read_text(encoding="utf-8"))
         cls.db.execute(
@@ -98,7 +99,10 @@ class SchemaTests(unittest.TestCase):
             self.db.execute("SELECT name FROM core.players WHERE id=1").fetchone()[0],
             "Player",
         )
-        self.rejects("INSERT INTO core.teams(id,name) VALUES(3,NULL)")
+        self.db.execute("INSERT INTO core.teams(id,name) VALUES(3,NULL)")
+        self.assertIsNone(
+            self.db.execute("SELECT name FROM core.teams WHERE id=3").fetchone()[0]
+        )
 
     def test_types_and_absence(self):
         rows = dict(

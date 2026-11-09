@@ -1,5 +1,6 @@
 """Transactional typed persistence into a dedicated local v2 PostgreSQL database."""
 
+from contextlib import contextmanager
 from datetime import date, datetime, timezone
 import hashlib
 import json
@@ -133,6 +134,7 @@ class Store:
     def __init__(self, conn):
         self.conn = conn
         self._versions = set()
+        self._lookup_cache = None
         self.columns = {}
         for table, col in conn.execute(
             "SELECT table_name,column_name FROM information_schema.columns WHERE table_schema='core'"
@@ -145,9 +147,24 @@ class Store:
             )
         ]
 
+    @contextmanager
+    def _transaction(self):
+        # Do not retain IDs past commit or rollback: another transaction may
+        # delete or remap a reference, and newly inserted IDs can roll back.
+        previous = self._lookup_cache
+        self._lookup_cache = {}
+        try:
+            with self.conn.transaction():
+                yield
+        finally:
+            self._lookup_cache = previous
+
     def resolve(self, kind, key):
         if key is None:
             return None
+        cache_key = (kind, key)
+        if self._lookup_cache is not None and cache_key in self._lookup_cache:
+            return self._lookup_cache[cache_key]
         if kind in ("coach", "referee", "venue"):
             row = self.conn.execute(
                 sql.SQL("SELECT id FROM core.{} WHERE name=%s").format(
@@ -162,6 +179,8 @@ class Store:
             ).fetchone()
         if not row:
             raise StoreError("UNRESOLVED_REFERENCE")
+        if self._lookup_cache is not None:
+            self._lookup_cache[cache_key] = row[0]
         return row[0]
 
     def has(self, kind, key):
@@ -215,7 +234,7 @@ class Store:
             if k in self.columns[table] and k not in ("id", "updated_at")
         }
         if (
-            kind == "player"
+            kind in ("player", "team")
             and isinstance(row.get("name"), str)
             and not row["name"].strip()
         ):
@@ -234,18 +253,28 @@ class Store:
                 "team": ("crest", "crest_asset_id"),
                 "player": ("photo", "photo_asset_id"),
             }[kind]
-            aid = self.conn.execute(
-                "INSERT INTO core.assets(kind,source_url) VALUES(%s,%s) ON CONFLICT(source_url) DO UPDATE SET source_url=EXCLUDED.source_url RETURNING id",
-                (asset_kind, fields["image_url"]),
-            ).fetchone()[0]
-            row[col] = aid
+            source_url = fields["image_url"]
+            asset = self.conn.execute(
+                "SELECT id FROM core.assets WHERE source_url=%s", (source_url,)
+            ).fetchone()
+            if not asset:
+                asset = self.conn.execute(
+                    "INSERT INTO core.assets(kind,source_url) VALUES(%s,%s) ON CONFLICT(source_url) DO NOTHING RETURNING id",
+                    (asset_kind, source_url),
+                ).fetchone()
+                # A competing publisher may have inserted the same URL.
+                if not asset:
+                    asset = self.conn.execute(
+                        "SELECT id FROM core.assets WHERE source_url=%s", (source_url,)
+                    ).fetchone()
+            row[col] = asset[0]
         try:
             ident = self.resolve(kind, key)
         except StoreError:
             ident = None
         changed = ident is None
         if ident is None:
-            if kind == "player" and row.get("name") is None:
+            if kind in ("player", "team") and row.get("name") is None:
                 # An observed provider ID is a fact even if its profile is absent.
                 row["name"] = None
             elif not isinstance(row.get("name"), str) or not row["name"].strip():
@@ -294,6 +323,8 @@ class Store:
                     ),
                     [*row.values(), ident],
                 )
+        if self._lookup_cache is not None:
+            self._lookup_cache[(kind, key)] = ident
         if changed and kind in ("team", "player", "competition"):
             if kind != "competition":
                 self._bump(kind, ident)
@@ -328,10 +359,22 @@ class Store:
     def season(self, label):
         if not re.fullmatch(r"\d{4}(?:/\d{4})?", label):
             raise StoreError("INVALID_SEASON")
-        sid = self.conn.execute(
-            "INSERT INTO core.seasons(label,start_year) VALUES(%s,%s) ON CONFLICT(label) DO UPDATE SET label=EXCLUDED.label RETURNING id",
-            (label, int(label[:4])),
-        ).fetchone()[0]
+        self.conn.execute(
+            "SELECT pg_advisory_xact_lock(hashtextextended(%s,0))", ("season:" + label,)
+        )
+        found = self.conn.execute(
+            "SELECT id FROM core.seasons WHERE label=%s", (label,)
+        ).fetchone()
+        # Repeated catalogue refreshes must not consume the SMALLINT identity
+        # sequence for a season that already exists.
+        sid = (
+            found[0]
+            if found
+            else self.conn.execute(
+                "INSERT INTO core.seasons(label,start_year) VALUES(%s,%s) RETURNING id",
+                (label, int(label[:4])),
+            ).fetchone()[0]
+        )
         self.conn.execute("SELECT pg_advisory_xact_lock(92001,%s)", (sid,))
         for table in self.partitions:
             self.conn.execute(
@@ -419,7 +462,7 @@ class Store:
             )
 
     def save_references(self, batch, *, family="league"):
-        with self.conn.transaction():
+        with self._transaction():
             self._versions.clear()
             self._unknown(family, batch)
             self.references(batch)
@@ -444,26 +487,36 @@ class Store:
 
     def save_matches(self, batch, competition_season_id, *, family="summary"):
         """Catalogue/summary match anchors, with explicit season identity."""
-        with self.conn.transaction():
+        with self._transaction():
             self._versions.clear()
             self._unknown(family, batch)
-            for source in sorted(
-                batch.rows.get("core.matches", []), key=lambda row: row["id"]
-            ):
+            source_matches = batch.rows.get("core.matches", [])
+            match_keys = sorted({row["id"] for row in source_matches})
+            existing_matches = {}
+            if match_keys:
+                # Take exactly the same advisory locks in key order, but in one
+                # round trip. Materialization forces the ordered lock input.
                 self.conn.execute(
-                    "SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
-                    ("pitchapi:match:" + source["id"],),
+                    "WITH ordered AS MATERIALIZED (SELECT key FROM unnest(%s::text[]) AS u(key) ORDER BY key COLLATE \"C\") SELECT pg_advisory_xact_lock(hashtextextended('pitchapi:match:'||key,0)) FROM ordered",
+                    (match_keys,),
                 )
-                self.conn.execute(
-                    "SELECT m.id FROM core.matches m JOIN core.provider_ids p ON p.entity_type='match' AND p.provider='pitchapi' AND p.entity_id=m.id WHERE p.provider_key=%s FOR UPDATE OF m",
-                    (source["id"],),
+                locked = self.conn.execute(
+                    "SELECT p.provider_key,m.* FROM core.matches m JOIN core.provider_ids p ON p.entity_type='match' AND p.provider='pitchapi' AND p.entity_id=m.id WHERE p.provider_key=ANY(%s::text[]) ORDER BY p.provider_key COLLATE \"C\" FOR UPDATE OF m",
+                    (match_keys,),
                 )
+                columns = [item.name for item in locked.description]
+                for values in locked.fetchall():
+                    record = dict(zip(columns, values))
+                    key = record.pop("provider_key")
+                    existing_matches[key] = record
+                    self._lookup_cache[("match", key)] = record["id"]
             self.references(batch)
             sid, competition_id, label = self.conn.execute(
                 "SELECT cs.season_id,cs.competition_id,s.label FROM core.competition_seasons cs JOIN core.seasons s ON s.id=cs.season_id WHERE cs.id=%s",
                 (competition_season_id,),
             ).fetchone()
             ids = []
+            coverage_rows, team_seasons = set(), set()
             for source in batch.rows.get("core.matches", []):
                 key = source["id"]
                 if (
@@ -489,27 +542,21 @@ class Store:
                     season_id=sid,
                     source="pitchapi",
                 )
-                try:
-                    mid = self.resolve("match", key)
-                except StoreError:
-                    mid = None
+                current = existing_matches.get(key)
+                mid = current["id"] if current else None
                 changed = True
                 old_scopes = set()
                 if mid:
-                    current = self.conn.execute(
-                        "SELECT competition_season_id,season_id,home_team_id,away_team_id FROM core.matches WHERE id=%s FOR UPDATE",
-                        (mid,),
-                    ).fetchone()
-                    if current[:2] != (competition_season_id, sid):
+                    if (current["competition_season_id"], current["season_id"]) != (
+                        competition_season_id,
+                        sid,
+                    ):
                         raise StoreError("MATCH_SEASON_CHANGED")
-                    old_scopes = {(None, current[2]), (None, current[3])}
-                    cols = list(row)
-                    old = self.conn.execute(
-                        sql.SQL("SELECT {} FROM core.matches WHERE id=%s").format(
-                            sql.SQL(",").join(map(sql.Identifier, cols))
-                        ),
-                        (mid,),
-                    ).fetchone()
+                    old_scopes = {
+                        (None, current["home_team_id"]),
+                        (None, current["away_team_id"]),
+                    }
+                    old = tuple(current.get(column) for column in row)
                     changed = tuple(row.values()) != old
                     if changed:
                         self.conn.execute(
@@ -538,21 +585,27 @@ class Store:
                         "INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES('match','pitchapi',%s,%s)",
                         (key, mid),
                     )
-                if row.get("status") == "finished":
+                    current = {"id": mid}
+                    existing_matches[key] = current
+                    self._lookup_cache[("match", key)] = mid
+                # Duplicate source IDs, if present, still observe the preceding
+                # write in the same batch exactly as an ordinary SELECT would.
+                current.update(row)
+                if (
+                    row.get("status") == "finished"
+                    and current.get("first_finished_at") is None
+                ):
                     self.conn.execute(
                         "UPDATE core.matches SET first_finished_at=COALESCE(first_finished_at,now()) WHERE id=%s",
                         (mid,),
                     )
-                self.conn.execute(
-                    "INSERT INTO core.match_coverage(season_id,match_id) VALUES(%s,%s) ON CONFLICT DO NOTHING",
-                    (sid, mid),
-                )
+                    # This marker only avoids repeating an update within this
+                    # transaction; the real timestamp remains database-owned.
+                    current["first_finished_at"] = True
+                coverage_rows.add((sid, mid))
                 for tid in (row.get("home_team_id"), row.get("away_team_id")):
                     if tid:
-                        self.conn.execute(
-                            "INSERT INTO core.team_seasons(team_id,competition_season_id) VALUES(%s,%s) ON CONFLICT DO NOTHING",
-                            (tid, competition_season_id),
-                        )
+                        team_seasons.add((tid, competition_season_id))
                 if changed:
                     self._dirty(
                         mid,
@@ -572,6 +625,18 @@ class Store:
                         (mid, fingerprint),
                     )
                 ids.append(mid)
+            if coverage_rows:
+                with self.conn.cursor() as cursor:
+                    cursor.executemany(
+                        "INSERT INTO core.match_coverage(season_id,match_id) VALUES(%s,%s) ON CONFLICT DO NOTHING",
+                        sorted(coverage_rows),
+                    )
+            if team_seasons:
+                with self.conn.cursor() as cursor:
+                    cursor.executemany(
+                        "INSERT INTO core.team_seasons(team_id,competition_season_id) VALUES(%s,%s) ON CONFLICT DO NOTHING",
+                        sorted(team_seasons),
+                    )
             self._flush_versions()
             return ids
 
@@ -581,7 +646,7 @@ class Store:
         tables = FAMILY_TABLES[family]
         if set(batch.rows) - {"core." + t for t in tables}:
             raise StoreError("UNEXPECTED_FAMILY_TABLE")
-        with self.conn.transaction():
+        with self._transaction():
             self._versions.clear()
             if lease:
                 job_id, token = lease
@@ -620,20 +685,26 @@ class Store:
                         (sid, mid),
                     )
                 for table in tables:
+                    groups = {}
                     for item in batch.rows.get("core." + table, []):
                         row = self._row(item)
                         row.update(season_id=sid, match_id=mid)
                         if set(row) - self.columns[table]:
                             raise StoreError("UNKNOWN_COLUMN")
-                        cols = list(row)
-                        self.conn.execute(
-                            sql.SQL("INSERT INTO core.{} ({}) VALUES ({})").format(
-                                sql.Identifier(table),
-                                sql.SQL(",").join(map(sql.Identifier, cols)),
-                                sql.SQL(",").join(sql.Placeholder() for _ in cols),
-                            ),
-                            list(row.values()),
+                        cols = tuple(row)
+                        groups.setdefault(cols, []).append(list(row.values()))
+                    for cols, values in groups.items():
+                        statement = sql.SQL(
+                            "INSERT INTO core.{} ({}) VALUES ({})"
+                        ).format(
+                            sql.Identifier(table),
+                            sql.SQL(",").join(map(sql.Identifier, cols)),
+                            sql.SQL(",").join(sql.Placeholder() for _ in cols),
                         )
+                        # psycopg pipelines executemany on supported libpq, avoiding
+                        # one network round trip per row while keeping atomicity.
+                        with self.conn.cursor() as cursor:
+                            cursor.executemany(statement, values)
                 self.conn.execute(
                     sql.SQL(
                         "UPDATE core.match_coverage SET {}=%s,updated_at=now() WHERE season_id=%s AND match_id=%s"
