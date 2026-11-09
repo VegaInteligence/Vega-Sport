@@ -5,7 +5,7 @@ import Icon from "./Icon.jsx";
 import { Media, Segments } from "./UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
-import { Kicker, lastName, matchHref, shortDay } from "./HomeCommon.jsx";
+import { Kicker, lastName, matchHref, relativeDay, shortDay } from "./HomeCommon.jsx";
 import { playerLeaderboardHref } from "../services/player-leaderboard.js";
 import { matchDay, weekPeriodLabel } from "../services/home-insights.js";
 
@@ -357,5 +357,55 @@ export function SeasonScorers({ leaders, scopeIds }) {
         Tous les joueurs <Icon name="arrow" />
       </Link>
     </article>
+  );
+}
+
+/** « Vos joueurs cette semaine »: each followed player's matches of the week and his
+ * club's next match (v2 doc, Accueil et personnalisation, retenu). */
+export function YourPlayers({ players, period, now }) {
+  const f = useFootball();
+  if (!players?.length) return null;
+  return (
+    <section className="home-section" aria-labelledby="home-yours">
+      <div className="home-section-head">
+        <h2 id="home-yours">
+          Vos joueurs cette semaine{" "}
+          {period && <span>{weekPeriodLabel(period)}</span>}
+        </h2>
+      </div>
+      <div className="home-rail">
+        {players.map((p) => (
+          <Link key={p.playerId} className="card home-rail-card" href={f.href("/joueurs/", { id: p.playerId })}>
+            <span className="home-rail-top">
+              <Media name={p.name} url={p.imageUrl} className="player-avatar" />
+              {p.matches.some((m) => Number.isFinite(m.rating)) && (
+                <b>{number(Math.max(...p.matches.filter((m) => Number.isFinite(m.rating)).map((m) => m.rating)), 2)}</b>
+              )}
+            </span>
+            <span>
+              <strong>{p.name}</strong>
+              <small>{p.team}</small>
+            </span>
+            {p.matches.length ? (
+              p.matches.map((m) => (
+                <span className="home-rail-line" key={m.matchId}>
+                  {shortDay(m.date)} · {m.opponent} {m.score?.[0] ?? "–"}–{m.score?.[1] ?? "–"} · {number(m.minutes || 0)}′
+                  {Number.isFinite(m.rating) && <> · <b>{number(m.rating, 2)}</b></>}
+                  {" · "}
+                  <b>{number(m.goals || 0)}</b> but{m.goals > 1 ? "s" : ""} · <b>{number(m.assists || 0)}</b> passe{m.assists > 1 ? "s" : ""}
+                </span>
+              ))
+            ) : (
+              <span className="home-rail-line">Pas de match cette semaine</span>
+            )}
+            {p.next && p.next.time >= now && (
+              <span className="home-rail-line">
+                Prochain match : {p.next.home.name} – {p.next.away.name} · {relativeDay(p.next.time, now)}
+              </span>
+            )}
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }

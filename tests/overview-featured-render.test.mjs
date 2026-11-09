@@ -135,6 +135,7 @@ async function overview({
     },
     "../components/HomePlayers.jsx": {
       AlsoShone: () => null,
+      YourPlayers: () => null,
       Finishing: () => null,
       PlayerOfTheWeek: () => null,
       SeasonScorers: () => null,
