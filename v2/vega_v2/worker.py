@@ -428,6 +428,75 @@ def connect(dsn):
     return psycopg.connect(dsn, autocommit=True)
 
 
+REPORT_QUERIES = (
+    (
+        "Watches",
+        ("State", "Matches"),
+        "SELECT state::text, count(*) FROM ops.match_watch GROUP BY 1 ORDER BY 1",
+    ),
+    (
+        "Jobs",
+        ("Lane", "Family", "State", "Jobs"),
+        "SELECT lane::text, family::text, state::text, count(*) FROM ops.fetch_jobs GROUP BY 1,2,3 ORDER BY 1,2,3",
+    ),
+    (
+        "PitchAPI attempts",
+        ("Family", "HTTP", "Error", "Attempts", "Mean ms", "P95 ms"),
+        "SELECT family::text, http_status, coalesce(error_code,''), count(*), round(avg(duration_ms)), round(percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_ms)::numeric) FROM ops.fetch_log GROUP BY 1,2,3 ORDER BY 1,2,3",
+    ),
+    (
+        "Controlled failures",
+        ("Family", "Code", "Count"),
+        "SELECT family::text, error_code, count(*) FROM ops.parse_failures GROUP BY 1,2 ORDER BY 1,2",
+    ),
+    (
+        "Unknown provider fields (paths only)",
+        ("Family", "Path", "Count"),
+        "SELECT family::text, field_path, occurrences FROM ops.unknown_fields ORDER BY 1,2",
+    ),
+    (
+        "Rows",
+        ("Table", "Rows"),
+        """SELECT t, n FROM (VALUES
+             ('core.competitions', (SELECT count(*) FROM core.competitions)),
+             ('core.competition_seasons', (SELECT count(*) FROM core.competition_seasons)),
+             ('core.matches', (SELECT count(*) FROM core.matches)),
+             ('core.teams', (SELECT count(*) FROM core.teams)),
+             ('core.players', (SELECT count(*) FROM core.players)),
+             ('agg.player_season_stats', (SELECT count(*) FROM agg.player_season_stats)),
+             ('agg.team_season_stats', (SELECT count(*) FROM agg.team_season_stats)),
+             ('agg.standings', (SELECT count(*) FROM agg.standings)),
+             ('ops.dirty_scopes', (SELECT count(*) FROM ops.dirty_scopes)),
+             ('ops.data_warnings', (SELECT count(*) FROM ops.data_warnings)),
+             ('api.match_list', (SELECT count(*) FROM api.match_list)),
+             ('api.standings', (SELECT count(*) FROM api.standings))
+           ) AS r(t, n)""",
+    ),
+)
+
+
+def report(worker, path, *, jobs, seconds):
+    """Measurements only: counts, codes, field paths and timings, never provider values."""
+    lines = [
+        "# Vega v2 worker loop",
+        "",
+        f"UTC: {datetime.now(timezone.utc).isoformat()}",
+        f"Lanes: {', '.join(worker.lanes)}",
+        f"Jobs run: {jobs}",
+        f"HTTP attempts: {worker.client.requests}",
+        f"Wall seconds: {seconds:.1f}",
+        "",
+        "| Family | Outcome | Jobs |",
+        "|---|---|---:|",
+        *(f"| {f} | {o} | {n} |" for (f, o), n in sorted(worker.results.items())),
+    ]
+    for title, header, query in REPORT_QUERIES:
+        lines += ["", "## " + title, "", "| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
+        lines += ["| " + " | ".join("" if v is None else str(v) for v in row) + " |" for row in worker.conn.execute(query)]
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write("\n".join(lines) + "\n")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--lanes", default=",".join(DEFAULT_LANES))
@@ -435,10 +504,11 @@ def main(argv=None):
     parser.add_argument("--max-jobs", type=int)
     parser.add_argument("--interval", type=float, default=0.5, help="minimum seconds between PitchAPI calls")
     parser.add_argument("--migrate", action="store_true")
+    parser.add_argument("--report", help="write a measurements-only Markdown report")
     args = parser.parse_args(argv)
-    dsn, key = os.environ.get("VEGA_V2_DSN"), os.environ.get("PITCHAPI_KEY")
+    dsn, key = os.environ.get("V2_DATABASE_URL"), os.environ.get("PITCHAPI_API_KEY")
     if not dsn or not key:
-        print("VEGA_V2_DSN and PITCHAPI_KEY are required", file=sys.stderr)
+        print("V2_DATABASE_URL and PITCHAPI_API_KEY are required", file=sys.stderr)
         return 2
     conn = connect(dsn)
     if args.migrate:
@@ -450,7 +520,10 @@ def main(argv=None):
         PitchClient(key, interval=args.interval),
         lanes=tuple(x for x in args.lanes.split(",") if x),
     )
+    started = time.monotonic()
     done = worker.run(max_jobs=args.max_jobs, until_idle=args.until_idle, stop=lambda: bool(stopping))
+    if args.report:
+        report(worker, args.report, jobs=done, seconds=time.monotonic() - started)
     for (family, outcome), count in sorted(worker.results.items()):
         print(f"family={family} outcome={outcome} count={count}", flush=True)
     print(f"jobs={done}", flush=True)

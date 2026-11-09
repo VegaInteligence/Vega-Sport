@@ -5,6 +5,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 from urllib.parse import urlparse
 
@@ -14,7 +15,7 @@ from vega_v2 import planner
 from vega_v2.jobs import DETAIL_FAMILIES
 from vega_v2.pitchapi import PitchClient
 from vega_v2.store import Store, StoreError, connect_local, migrate
-from vega_v2.worker import Worker, connect
+from vega_v2.worker import Worker, connect, report
 
 DSN = os.environ.get("VEGA_V2_WORKER_TEST_DSN")
 HOME = {"id": "t_aaaaaa", "name": "Home FC"}
@@ -269,6 +270,15 @@ class WorkerTest(unittest.TestCase):
         self.assertEqual(self.watch("m_bbbbbb")[0], "final")
         # lineups at kickoff, h2h before, two score checks, then the 12 families.
         self.assertEqual(len(self.jobs("m_bbbbbb", state="done")), 1 + 1 + 2 + len(DETAIL_FAMILIES))
+
+        # The run report carries measurements only, never names or other provider values.
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "worker.md"
+            report(self.worker, path, jobs=1, seconds=0)
+            text = path.read_text(encoding="utf-8")
+        for secret in (HOME["name"], AWAY["name"], PLAYER["name"], "m_aaaaaa", "t_aaaaaa"):
+            self.assertNotIn(secret, text)
+        self.assertIn("## Watches", text)
 
     def test_rescheduled_and_never_final_watches(self):
         start = self.now
