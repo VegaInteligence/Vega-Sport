@@ -373,17 +373,33 @@ class WorkerTest(unittest.TestCase):
     def test_bad_match_does_not_block_the_day_and_jobs_are_pruned(self):
         start = self.now
         kick = start + timedelta(hours=6)
-        self.calendar(match("m_gggggg", kick, "not_started"))
+        self.calendar(match("m_gggggg", kick, "not_started"), match("m_kkkkkk", kick, "not_started"))
         self.at(start)
         self.drain()
-        # The provider moves G to another edition; H of that edition must still be saved.
+        # G already has after-match facts, K only a forecast lineup.
+        self.db.execute(
+            "INSERT INTO ops.family_state(match_id, family, status) VALUES (%s, 'shots', 'ok'), (%s, 'lineups', 'ok')",
+            (self.mid("m_gggggg"), self.mid("m_kkkkkk")),
+        )
+        # The provider moves G and K to another edition; H of that edition must still be
+        # saved, K moves with it (its forecast is dropped), G is refused visibly.
         self.calendar(
             match("m_gggggg", kick, "not_started", season="2024/2025"),
             match("m_hhhhhh", kick, "not_started", season="2024/2025"),
+            match("m_kkkkkk", kick, "not_started", season="2024/2025"),
         )
         self.at(start + timedelta(days=1))
         self.drain()
         self.assertEqual(self.watch("m_hhhhhh")[0], "scheduled")
+        labels = dict(
+            self.db.execute(
+                "SELECT p.provider_key, cs.native_label FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id JOIN core.provider_ids p ON p.entity_type='match' AND p.entity_id=m.id"
+            ).fetchall()
+        )
+        self.assertEqual(labels, {"m_gggggg": "2025/2026", "m_hhhhhh": "2024/2025", "m_kkkkkk": "2024/2025"})
+        self.assertIsNone(
+            self.db.execute("SELECT 1 FROM ops.family_state WHERE match_id=%s AND family='lineups'", (self.mid("m_kkkkkk"),)).fetchone()
+        )
         self.assertEqual(
             self.db.execute("SELECT error_code FROM ops.parse_failures WHERE family='calendar'").fetchall(),
             [("MATCH_SEASON_CHANGED",)],
