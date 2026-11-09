@@ -183,7 +183,7 @@ class Loader:
             editions[comp["id"]] = self.conn.execute(
                 """INSERT INTO core.competition_seasons(competition_id, season_id, native_label, archive_key, archive_name, archive_country, archive_position)
                    VALUES (%s,%s,%s,%s,%s,%s,%s)
-                   ON CONFLICT (archive_key) DO UPDATE SET archive_name=EXCLUDED.archive_name, archive_country=EXCLUDED.archive_country,
+                   ON CONFLICT (season_id, archive_key) WHERE archive_key IS NOT NULL DO UPDATE SET archive_name=EXCLUDED.archive_name, archive_country=EXCLUDED.archive_country,
                      archive_position=EXCLUDED.archive_position, updated_at=now()
                    RETURNING id""",
                 (competition, start, label, comp["id"], comp["name"], comp.get("country"), position),

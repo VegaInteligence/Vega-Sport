@@ -92,6 +92,17 @@ class ImportTest(unittest.TestCase):
         self.assertEqual(x("SELECT count(*) FROM core.match_events").fetchone()[0], 4)
         self.assertEqual(x("SELECT version FROM ops.resource_versions WHERE resource_kind='archive_season' AND resource_id=2015").fetchone()[0], 2)
         self.assertEqual(x("SELECT count(*) FROM core.teams").fetchone()[0], 7)  # Leicester plays twice
+        # A calendar-year edition spans two sporting seasons under one key: each season has
+        # its own edition row, and its matches point at it.
+        loader = archives.Loader(self.db)
+        spanning = {"competitions": [{"id": "2015-16/en.1", "name": "English Premier League 2015/16", "country": "Angleterre"}],
+                    "matches": [{"key": "r:2015-16/en.1:9", "competitionId": "2015-16/en.1", "date": "2016-08-01",
+                                 "team1": "Arsenal FC", "team2": "Everton", "score": [1, 0]}]}
+        with self.db.transaction():
+            self.assertEqual(loader.season("2016/2017", spanning, lambda match: "openfootball"), 1)
+        editions = x("""SELECT s.label, count(*) FROM core.competition_seasons cs JOIN core.seasons s ON s.id = cs.season_id
+                        WHERE cs.archive_key = '2015-16/en.1' GROUP BY 1 ORDER BY 1""").fetchall()
+        self.assertEqual(editions, [("2015/2016", 1), ("2016/2017", 1)])
 
 
 if __name__ == "__main__":
