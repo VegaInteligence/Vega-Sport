@@ -1,34 +1,9 @@
 // Contract tests of the v2 read API against a seeded local database (test/seed.py).
 // Shapes are the current API's (main); values are recomputed by hand from the seed.
-import { test, before, after } from "node:test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
-import { createReader } from "../src/db.mjs";
-import { createHandler } from "../src/handler.mjs";
+import { context, get, skip } from "./context.mjs";
 
-const DSN = process.env.VEGA_V2_API_NODE_TEST_DSN;
-const skip = !DSN && "requires VEGA_V2_API_NODE_TEST_DSN (local vega_v2_api_node_test)";
-let reader, handle;
-
-before(() => {
-  if (skip) return;
-  const target = new URL(DSN);
-  if (!["localhost", "127.0.0.1", "[::1]"].includes(target.hostname) || target.pathname !== "/vega_v2_api_node_test")
-    throw new Error("dedicated local API test DB required");
-  const seed = spawnSync("python3", [fileURLToPath(new URL("./seed.py", import.meta.url)), DSN], { encoding: "utf8" });
-  assert.equal(seed.status, 0, seed.stderr);
-  // The production read role: api schema only.
-  reader = createReader(DSN, { role: "vega_read" });
-  handle = createHandler({ read: reader.read });
-});
-after(() => reader?.end());
-
-const get = async (path, headers = {}) => {
-  const response = await handle(new Request("https://api.test" + path, { headers }));
-  const text = response.status === 304 ? "" : await response.text();
-  return { response, body: text ? JSON.parse(text) : null };
-};
 const clubs = "/api/read/clubs?season=2025/2026&leagues=all";
 // The keys of a club record in dashboard/backend/services/relational-clubs.js (main).
 const DIRECTORY_KEYS = ["competitionCounts", "count", "country", "id", "imageUrl", "league", "name"];
@@ -120,9 +95,9 @@ test("conditional reads answer 304 without the payload query", { skip }, async (
 });
 
 test("the read role cannot reach core, agg or ops", { skip }, async () => {
-  await assert.rejects(reader.read("SELECT 1 FROM core.matches"), /permission denied/);
-  await assert.rejects(reader.read("SELECT 1 FROM agg.team_season_stats"), /permission denied/);
-  await assert.rejects(reader.read("INSERT INTO api.publication VALUES (1, now())"), /read-only|permission denied|cannot insert/);
+  await assert.rejects(context.reader.read("SELECT 1 FROM core.matches"), /permission denied/);
+  await assert.rejects(context.reader.read("SELECT 1 FROM agg.team_season_stats"), /permission denied/);
+  await assert.rejects(context.reader.read("INSERT INTO api.publication VALUES (1, now())"), /read-only|permission denied|cannot insert/);
 });
 
 test("manifest, health and status", { skip }, async () => {

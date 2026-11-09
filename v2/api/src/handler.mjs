@@ -7,9 +7,10 @@
 import { errorResponse, reject } from "./http.mjs";
 import { createSystemRoute } from "./routes/system.mjs";
 import { createClubReadRoute } from "./routes/clubs.mjs";
+import { createPlayerReadRoute } from "./routes/players.mjs";
 
 export function createHandler({ read }) {
-  const routes = [createSystemRoute(read), createClubReadRoute(read)];
+  const routes = [createSystemRoute(read), createClubReadRoute(read), createPlayerReadRoute(read)];
   async function route(req) {
     const url = new URL(req.url),
       path = url.pathname;
