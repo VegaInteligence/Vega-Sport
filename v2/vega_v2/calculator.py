@@ -395,6 +395,10 @@ def process_dirty(conn, *, limit=500):
                 conn.execute(
                     "DELETE FROM ops.dirty_scopes WHERE id=%s AND revision=%s", (ident, revision)
                 )
+            # The edition's cohorts (its league, Europe) are recalculated next, debounced.
+            from .models import mark_cohorts
+
+            mark_cohorts(conn, cs)
             published = {("competition_season", cs)} | {("team", t) for t in work["teams"]} | {
                 ("player", p) for p, _ in work["players"]
             }

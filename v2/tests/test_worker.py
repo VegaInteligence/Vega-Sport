@@ -152,7 +152,7 @@ class WorkerTest(unittest.TestCase):
             }
         )
         client = PitchClient("pk_test_synthetic", interval=0, retries=0, transport=self.api, sleep=lambda _: None)
-        self.worker = Worker(Store(self.db), client, clock=lambda: self.now)
+        self.worker = Worker(Store(self.db), client, clock=lambda: self.now, cohort_delay=0)
 
     def at(self, value):
         self.now = value
