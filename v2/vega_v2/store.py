@@ -569,9 +569,14 @@ class Store:
                         "SELECT competition_season_id,season_id,home_team_id,away_team_id FROM core.matches WHERE id=%s FOR UPDATE",
                         (mid,),
                     ).fetchone()
-                    if current[:2] != (competition_season_id, sid):
-                        raise StoreError("MATCH_SEASON_CHANGED")
                     old_scopes = {(None, current[2]), (None, current[3])}
+                    moved = current[:2] != (competition_season_id, sid)
+                    if moved:
+                        # The provider names another edition (or /date had none and the
+                        # current one was assumed): move the match while it has no
+                        # after-match facts; otherwise refuse, visibly.
+                        self._move(mid, current[0], current[1], competition_season_id, sid)
+                        self._dirty(mid, current[0], old_scopes)
                     cols = list(row)
                     old = self.conn.execute(
                         sql.SQL("SELECT {} FROM core.matches WHERE id=%s").format(
@@ -579,7 +584,7 @@ class Store:
                         ),
                         (mid,),
                     ).fetchone()
-                    changed = tuple(row.values()) != old
+                    changed = moved or tuple(row.values()) != old
                     if changed:
                         self.conn.execute(
                             sql.SQL(
@@ -643,6 +648,41 @@ class Store:
                 ids.append(mid)
             self._flush_versions()
             return ids
+
+    PRE_MATCH_FAMILIES = ("lineups", "h2h")
+
+    def _move(self, mid, old_edition, old_season, edition, season):
+        """Move a match to another edition; its detail rows live in the season's partition."""
+        if self.conn.execute(
+            "SELECT 1 FROM ops.family_state WHERE match_id=%s AND family <> 'summary' AND NOT (family = ANY(%s)) AND status IN ('ok','unavailable')",
+            (mid, list(self.PRE_MATCH_FAMILIES)),
+        ).fetchone():
+            raise StoreError("MATCH_SEASON_CHANGED")
+        # Forecast lineups and h2h are fetched again after the final whistle.
+        for family in self.PRE_MATCH_FAMILIES:
+            for table in FAMILY_TABLES[family]:
+                self.conn.execute(
+                    sql.SQL("DELETE FROM core.{} WHERE match_id=%s AND season_id=%s").format(sql.Identifier(table)),
+                    (mid, old_season),
+                )
+        self.conn.execute(
+            "DELETE FROM ops.family_state WHERE match_id=%s AND family = ANY(%s)",
+            (mid, list(self.PRE_MATCH_FAMILIES)),
+        )
+        self.conn.execute(
+            "DELETE FROM core.match_coverage WHERE match_id=%s AND season_id=%s", (mid, old_season)
+        )
+        round_name = self.conn.execute(
+            "SELECT r.name FROM core.matches m JOIN core.rounds r ON r.id = m.round_id WHERE m.id=%s", (mid,)
+        ).fetchone()
+        self.conn.execute(
+            "UPDATE core.matches SET competition_season_id=%s, season_id=%s, round_id=%s, revision=revision+1, updated_at=now() WHERE id=%s",
+            (edition, season, self.round(edition, round_name[0]) if round_name else None, mid),
+        )
+        self.conn.execute(
+            "INSERT INTO core.match_coverage(season_id,match_id) VALUES(%s,%s) ON CONFLICT DO NOTHING",
+            (season, mid),
+        )
 
     def save_family(self, mid, family, batch, *, lease=None):
         if family not in FAMILY_TABLES or batch.coverage not in ("ok", "unavailable"):

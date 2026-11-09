@@ -191,6 +191,10 @@ MATCH_STATUSES = (
 )
 
 
+# Seen in real /date responses (CI worker run, 2026-11-09).
+STATUS_ALIASES = {"started": "in_play"}
+
+
 def _match(out, item):
     item = _object(item)
     _unknown_keys(
@@ -238,6 +242,7 @@ def _match(out, item):
         row["provider_season"] = item["season"]
     status = item.get("status")
     if status is not None:
+        status = STATUS_ALIASES.get(status, status)
         if status in MATCH_STATUSES:
             row["status"] = status
         else:
