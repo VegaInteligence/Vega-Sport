@@ -60,6 +60,8 @@ for t in database worker api; do aws cloudformation validate-template --profile 
 
 6. **Changes AWS.** Backfill (days, stops by itself when the backfill lane is empty): `aws ecs run-task … --task-definition vega-v2-backfill` with the same network configuration.
 
+   **Changes the v2 database.** Historical archives (1871/1872 to 2020/2021): redeploy the worker stack with `ArchiveSourcesBucket=<main's data bucket>` (the task role may only read `data/sources/openfootball/`, `engsoccerdata/` and `worldclub/` there), then `aws ecs run-task … --task-definition vega-v2-archives` with the same network configuration. It runs main's archive builders and `shared/archive.js` on those pinned files and replaces each archive season; running it again changes nothing unless the sources changed.
+
 7. **Changes AWS.** Read API. Build the ZIP, upload it to the existing release bucket under `releases/v2-api/`, then create the stack with the read URL as a NoEcho parameter passed from a mode-0600 file (as the current backend does):
 
    ```sh
@@ -80,7 +82,7 @@ for t in database worker api; do aws cloudformation validate-template --profile 
 node v2/api/parity.mjs --legacy https://d317dq37z1tacb.cloudfront.net --v2 https://<vega-v2-api distribution> paths.txt
 ```
 
-Cutover goes route family by route family, only once its parity is clean and the backfill covers its seasons: in the current distribution (`infra/aws-backend/backend.yaml`), add the v2 Function URL as a second origin (with its own OAC) and one cache behavior per path pattern served by v2 (today `/api/read/home*`, `/api/read/clubs*`, `/api/read/players*`, `/api/read/player*`, `/api/read/club*`, `/api/read/performance*`, `/api/read/discipline*`, `/api/fixtures*`, `/api/matches/*`, `/api/standings*`, `/api/matchdays*`, and `data/sources/v2/*` for the image copies). Rolling back a family is removing its behavior. The manifest stays on the current API until every compact read is on v2; `/api/dashboard/manifest` on v2 already says which reads it serves (`capabilities.compactReads`). The GitHub ingestion workflows stop only at the end.
+Cutover goes route family by route family, only once its parity is clean and the backfill covers its seasons: in the current distribution (`infra/aws-backend/backend.yaml`), add the v2 Function URL as a second origin (with its own OAC) and one cache behavior per path pattern served by v2 (today `/api/read/home*`, `/api/read/clubs*`, `/api/read/players*`, `/api/read/player*`, `/api/read/club*`, `/api/read/performance*`, `/api/read/discipline*`, `/api/fixtures*`, `/api/matches/*`, `/api/standings*`, `/api/matchdays*`, `/api/search*`, `/api/read/archive*`, `/api/archives/index*`, and `data/sources/v2/*` for the image copies). Rolling back a family is removing its behavior. The manifest stays on the current API until every compact read is on v2; `/api/dashboard/manifest` on v2 already says which reads it serves (`capabilities.compactReads`). The GitHub ingestion workflows stop only at the end.
 
 ## Cost (on-demand, us-east-2, before free tier; check in the AWS pricing calculator)
 

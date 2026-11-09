@@ -6,4 +6,13 @@
 !v2/sql
 !v2/sql/**
 !dashboard/backend/certs/rds-us-east-2.pem
+!dashboard/scripts/build_openfootball_history.py
+!dashboard/scripts/build_footballcsv_history.py
+!dashboard/scripts/build_engsoccerdata_history.py
+!dashboard/scripts/build_scottish_history.py
+!dashboard/scripts/build_historical_goals.py
+!dashboard/shared/archive.js
+!dashboard/shared/archive-text.js
+!dashboard/shared/openfootball-history.js
+!v2/archives/edition.mjs
 **/__pycache__

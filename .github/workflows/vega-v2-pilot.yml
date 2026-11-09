@@ -45,6 +45,7 @@ jobs:
       VEGA_V2_ROLES_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_roles_test
       VEGA_V2_SOURCES_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_sources_test
       VEGA_V2_MEDIA_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_media_test
+      VEGA_V2_ARCHIVES_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_archives_test
       VEGA_V2_API_NODE_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_api_node_test
       VEGA_V2_AGG_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_agg_test
       VEGA_V2_API_TEST_DSN: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_api_test
@@ -58,6 +59,7 @@ jobs:
             dashboard/shared
             dashboard/frontend/src/services
             dashboard/backend/services
+            dashboard/scripts
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -67,7 +69,7 @@ jobs:
           python - <<'PY'
           import os, psycopg
           with psycopg.connect(os.environ['V2_DATABASE_URL'], autocommit=True) as db:
-              for name in ('vega_v2_test','vega_v2_jobs_test','vega_v2_store_test','vega_v2_pilot_test','vega_v2_profiles_test','vega_v2_concurrency_test','vega_v2_unknown_test','vega_v2_validated_test','vega_v2_agg_test','vega_v2_api_test','vega_v2_worker_test','vega_v2_models_test','vega_v2_roles_test','vega_v2_api_node_test','vega_v2_sources_test','vega_v2_media_test'):
+              for name in ('vega_v2_test','vega_v2_jobs_test','vega_v2_store_test','vega_v2_pilot_test','vega_v2_profiles_test','vega_v2_concurrency_test','vega_v2_unknown_test','vega_v2_validated_test','vega_v2_agg_test','vega_v2_api_test','vega_v2_worker_test','vega_v2_models_test','vega_v2_roles_test','vega_v2_api_node_test','vega_v2_sources_test','vega_v2_media_test','vega_v2_archives_test'):
                   db.execute(psycopg.sql.SQL('CREATE DATABASE {}').format(psycopg.sql.Identifier(name)))
           PY
       - name: Validate typed schema, normalization and transactional ingestion
