@@ -253,14 +253,25 @@ class Worker:
         return outcomes
 
     def backfill_references(self):
-        """The leagues a backfill names, read first: their profiles list their seasons, so a
-        past edition can be planned on a base whose weekly catalogue has not run yet."""
-        for key in sorted((self.backfill or {}).get("competitions") or []):
+        """The leagues a backfill names, read first from the league catalogue (the one
+        endpoint that lists every season of a league; a league's own profile names only
+        the current one), so a past edition can be planned on a base whose weekly
+        catalogue has not run yet."""
+        wanted = set((self.backfill or {}).get("competitions") or [])
+        if not wanted:
+            return
+        try:
+            data = self.fetch("league", "/leagues").data
+        except PitchError as error:
+            self.results[("league", safe_code(error))] += 1
+            return
+        for entry in (data.get("leagues") or []) if isinstance(data, dict) else []:
+            if not isinstance(entry, dict) or entry.get("id") not in wanted:
+                continue
             try:
-                profile = normalize_family("league", self.fetch("league", "/leagues/" + key).data)
                 with self.conn.transaction():
-                    self.store.save_references(profile, family="league")
-            except (NormalizationError, StoreError, PitchError, psycopg.Error) as error:
+                    self.store.save_references(normalize_family("league", entry), family="league")
+            except (NormalizationError, StoreError, psycopg.Error) as error:
                 self.results[("league", safe_code(error))] += 1
 
     def run(self, *, max_jobs=None, until_idle=False, plan_every=60, calc_every=30, media_every=300, idle_sleep=5, stop=None):

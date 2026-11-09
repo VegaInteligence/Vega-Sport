@@ -392,7 +392,9 @@ class WorkerTest(unittest.TestCase):
     def test_backfill_reads_its_leagues_before_any_catalogue(self):
         # A fresh base (first v2 deploy, 2026-11-09): the weekly catalogue waits behind live
         # work, and a past edition is unknown until the league's profile lists it.
-        self.api.routes["/leagues/l_aaaaaa"] = dict(LIGUE1, seasons=["2024/2025", "2025/2026"])
+        # PitchAPI's league profile names only the current season; the catalogue lists them all.
+        self.api.routes["/leagues/l_aaaaaa"] = dict(LIGUE1, season="2025/2026")
+        self.api.routes["/leagues"] = {"leagues": [dict(LIGUE1, seasons=["2024/2025", "2025/2026"]), dict(LIGUE1, id="l_bbbbbb", seasons=["2024/2025"])]}
         backfill = Worker(self.worker.store, self.worker.client, lanes=("backfill",), clock=lambda: self.now, cohort_delay=0,
                           backfill={"first_season": 2024, "last_season": 2024, "competitions": ["l_aaaaaa"]})
         self.assertEqual(planner.plan_backfill(self.db, self.now, first_season=2024, last_season=2024, competitions=["l_aaaaaa"]), {})
@@ -400,7 +402,8 @@ class WorkerTest(unittest.TestCase):
         self.assertEqual(
             planner.plan_backfill(self.db, self.now, first_season=2024, last_season=2024, competitions=["l_aaaaaa"]), {"league_matches": 1}
         )
-        self.assertNotIn("/leagues", self.api.calls)  # only the named league, not the catalogue
+        # Only the named league is written from the catalogue.
+        self.assertEqual(self.db.execute("SELECT count(*) FROM core.provider_ids WHERE provider_key = 'l_bbbbbb'").fetchone()[0], 0)
 
     def test_backfill_collects_history_without_watches(self):
         start = self.now
