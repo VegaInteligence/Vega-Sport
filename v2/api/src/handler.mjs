@@ -8,6 +8,7 @@ import { errorResponse, reject } from "./http.mjs";
 import { withResolvedMedia } from "./media.mjs";
 import { createSystemRoute } from "./routes/system.mjs";
 import { createClubReadRoute } from "./routes/clubs.mjs";
+import { createEuropeRoute } from "./routes/europe.mjs";
 import { createPlayerReadRoute } from "./routes/players.mjs";
 import { createMatchRoute } from "./routes/matches.mjs";
 import { createMatchDetailRoute } from "./routes/match-details.mjs";
@@ -28,7 +29,7 @@ import { compactHomePresentation } from "../../../dashboard/backend/services/hom
 /** `mediaBase`: the CloudFront origin of the image copies (https://…/); none, no media map.
  * `clock`: the home page's notion of now (tests pin it). */
 export function createHandler({ read, mediaBase = null, clock = Date.now }) {
-  const routes = [createSystemRoute(read), createClubReadRoute(read), createPlayerReadRoute(read), createMatchRoute(read), createMatchDetailRoute(read), createProfileRoute(read), createPartitionRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPerformanceRoute(read), createActorRoute(read), createHomeReadRoute(read, clock), createSearchRoute(read), createArchiveRoute(read), createRankingRoute(read), createSupportRoute(read, { mediaBase }), createCupRoute(read)];
+  const routes = [createSystemRoute(read), createClubReadRoute(read), createPlayerReadRoute(read), createMatchRoute(read), createMatchDetailRoute(read), createProfileRoute(read), createPartitionRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPerformanceRoute(read), createActorRoute(read), createHomeReadRoute(read, clock), createSearchRoute(read), createArchiveRoute(read), createRankingRoute(read), createSupportRoute(read, { mediaBase }), createCupRoute(read), createEuropeRoute(read)];
   async function route(req) {
     const url = new URL(req.url),
       path = url.pathname;

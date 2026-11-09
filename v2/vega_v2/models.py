@@ -10,15 +10,16 @@ their tables stay empty until a source or a validated model exists.
 Each published result carries the agg.calc_runs row that produced it.
 """
 
-from math import ceil, log
+from math import ceil
 import re
 
 from .api_schema import CLUB_INDICATORS
 
 MODEL_VERSION = "statarena-descriptive-v1"
 FORMULA_VERSION = "docs-calculs-2026-11-09"
-# The level calibrations are the site's demo ones ("à ajuster sur des résultats").
-LEVELS_VERSION = "levels-demo-v1"
+# A club's level is its Elo of the power ranking (power.py), fitted on every result:
+# league matches and the European cups that link the leagues.
+LEVELS_VERSION = "levels-elo-v1"
 
 EUROPE_LEAGUES = {
     "l_4WFCIZ": "ENG",
@@ -30,10 +31,6 @@ EUROPE_LEAGUES = {
     "l_4H43wr": "NED",
 }
 UEFA_CUPS = ("l_0bfbkO", "l_38d9HA", "l_2WZ2tt")
-LEAGUE_OFFSET = {"ENG": 0.0, "ESP": -0.20, "ITA": -0.25, "GER": -0.25, "FRA": -0.45, "POR": -0.85, "NED": -0.90}
-OTHER_OFFSET = -1.20
-ASSOCIATION_FLOOR = {"ENG": 23.0, "ITA": 19.6, "ESP": 18.4, "GER": 17.6, "FRA": 14.5, "NED": 12.8, "POR": 12.4}
-OTHER_FLOOR = 7.0
 CUP_NAME = re.compile(
     r"\b(cup|coupe|copa|coppa|pokal|beker|ta[cç]a|super ?cup|supercopa|supercoppa|supercoupe|"
     r"superta[cç]a|community shield|troph[ée]e des champions|johan cruijff schaal)\b",
@@ -629,42 +626,29 @@ def refresh_similarity(conn, cohort):
 # Levels and competition strength -----------------------------------------
 
 
-def level_parts(country, xgd, coefficient):
-    """(season part, long-run part, level) of docs/calculs/04-clubs/03."""
-    season_part = LEAGUE_OFFSET.get(country, OTHER_OFFSET) + 0.8 * (xgd or 0.0)
-    coef = coefficient if coefficient is not None else ASSOCIATION_FLOOR.get(country, OTHER_FLOOR) * 0.7
-    long_run = 0.6 * log(coef / 15)
-    return season_part, long_run, 0.5 * season_part + 0.5 * long_run
-
-
 def refresh_levels(conn, season):
-    """Comparable level of every club with a league edition in the season."""
+    """Comparable level of every club with a league edition in the season: its Elo after
+    its last match of the season (agg.team_power, run just before), split into the Elo it
+    carried in (long run) and what the season added (season part)."""
     with conn.transaction():
         run = _start_run(conn, "levels", f"season:{season}", version=LEVELS_VERSION)
         rows = conn.execute(
-            """SELECT DISTINCT ON (t.team_id) t.team_id, c.country_code, c.kind::text, c.name,
-                 (t.has_xg_for - t.has_xg_against) / nullif(t.xpts_matches, 0) AS xgd
+            """SELECT DISTINCT ON (t.team_id) t.team_id, c.country_code, c.kind::text, c.name, p.elo, p.elo_change
                FROM agg.team_season_stats t
                JOIN core.competition_seasons cs ON cs.id = t.competition_season_id
                JOIN core.competitions c ON c.id = cs.competition_id
+               JOIN agg.team_power p ON p.team_id = t.team_id AND p.season_id = t.season_id AND p.scope = 'clubs'
                WHERE t.season_id = %s
                ORDER BY t.team_id, (c.kind = 'league') DESC NULLS LAST, t.matches DESC, t.competition_season_id""",
             (season,),
         ).fetchall()
-        coefficients = dict(
-            conn.execute(
-                """SELECT r.team_id, r.points FROM core.ranking_rows r JOIN core.ranking_editions e ON e.id = r.edition_id
-                   WHERE e.kind = 'uefa_clubs' AND e.is_current AND r.team_id IS NOT NULL AND r.points > 0"""
-            ).fetchall()
-        )
         conn.execute("DELETE FROM agg.team_levels WHERE season_id=%s", (season,))
-        for team, country, kind, name, xgd in rows:
+        for team, country, kind, name, elo, change in rows:
             if not _is_league(kind, name, country):
                 continue
-            season_part, long_run, level = level_parts(country, xgd, coefficients.get(team))
             conn.execute(
                 "INSERT INTO agg.team_levels(team_id, season_id, level, season_part, long_run_part, calc_run_id) VALUES (%s,%s,%s,%s,%s,%s)",
-                (team, season, level, season_part, long_run, run),
+                (team, season, elo, change, elo - change, run),
             )
         _publish(conn, run, "levels", f"season:{season}")
 

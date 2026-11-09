@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega_v2 import models
-from vega_v2.models import half_up, level_parts
+from vega_v2.models import half_up
 
 try:
     import psycopg
@@ -31,12 +31,6 @@ def centile(values, x, direction=1):
 
 
 class FormulaTest(unittest.TestCase):
-    def test_level_examples_of_the_docs(self):
-        # docs/calculs/04-clubs/03, examples A, B, C.
-        self.assertAlmostEqual(level_parts("FRA", 1.0, 100)[2], 0.74, places=2)
-        self.assertAlmostEqual(level_parts("ENG", 0.2, 15)[2], 0.08, places=2)
-        self.assertAlmostEqual(level_parts("FRA", -0.3, None)[2], -0.46, places=2)
-
     def test_rounding_and_centile_examples(self):
         self.assertEqual((half_up(64.5), half_up(63.9), half_up(2.5)), (65, 64, 3))
         # 18 clubs, 11 below, none equal but the club itself -> 64.
@@ -316,13 +310,17 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual(self.one("SELECT max(rank) FROM agg.team_similar WHERE cohort_id=%s", self.cohort("team:2025:cs:1"))[0], 7)
 
     def test_levels_strength_and_squad(self):
-        xgd = self.one(
-            "SELECT (has_xg_for - has_xg_against) / xpts_matches FROM agg.team_season_stats WHERE team_id=1 AND competition_season_id=1"
-        )[0]
-        # Club 1 has a coefficient; club 2 takes the "other" floor (country unknown).
-        self.assertAlmostEqual(self.one("SELECT level FROM agg.team_levels WHERE team_id=1")[0], level_parts(None, xgd, 100)[2], places=5)
-        xgd2 = self.one("SELECT (has_xg_for - has_xg_against) / xpts_matches FROM agg.team_season_stats WHERE team_id=2")[0]
-        self.assertAlmostEqual(self.one("SELECT level FROM agg.team_levels WHERE team_id=2")[0], level_parts(None, xgd2, None)[2], places=5)
+        # A club's level is its season-end Elo: the Elo it carried in plus what the season added.
+        levels = self.db.execute(
+            """SELECT l.team_id, l.level, l.season_part, l.long_run_part, p.elo, p.elo_change FROM agg.team_levels l
+               JOIN agg.team_power p ON p.team_id=l.team_id AND p.season_id=l.season_id AND p.scope='clubs' ORDER BY 1"""
+        ).fetchall()
+        self.assertEqual(len(levels), 8)
+        for team, level, season_part, long_run, elo, change in levels:
+            self.assertAlmostEqual(level, elo, places=3)
+            self.assertAlmostEqual(season_part, change, places=3)
+            self.assertAlmostEqual(long_run + season_part, level, places=3)
+        self.assertEqual(self.one("SELECT formula_version FROM agg.calc_runs WHERE kind='levels' AND status='published'")[0], "levels-elo-v1")
         goals = self.one("SELECT sum(home_score + away_score)::float / count(*) FROM core.matches")[0]
         self.assertEqual(self.one("SELECT strength FROM agg.competition_strength WHERE competition_season_id=1")[0], 50)
         self.assertAlmostEqual(self.one("SELECT goals_per90 FROM agg.competition_strength")[0], goals, places=5)
