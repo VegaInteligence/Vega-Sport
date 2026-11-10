@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
 import tempfile
+import types
 import unittest
 from urllib.parse import urlparse
 
@@ -19,8 +20,8 @@ from vega_v2 import calculator, models, planner
 from vega_v2.jobs import DETAIL_FAMILIES, claim, enqueue, enqueue_or_revive
 from vega_v2.pitchapi import PitchClient
 from vega_v2.store import Store, StoreError, connect_local, migrate
-from vega_v2.worker import (HEALTHY_AFTER, PUBLISH_EVERY, RECOMPUTE_AFTER, RECONNECT_FOR, RETRY_DAILY_AFTER, Worker, connect, due_seasons,
-                            error_code, keep_running, publish, report)
+from vega_v2.worker import (HEALTHY_AFTER, PUBLISH_EVERY, RECOMPUTE_AFTER, RECONNECT_FOR, RETRY_DAILY_AFTER, SideProcess, Worker, connect,
+                            due_seasons, error_code, keep_running, main, prefer_as_oom_victim, publish, report, side_loop)
 
 DSN = os.environ.get("VEGA_V2_WORKER_TEST_DSN")
 HOME = {"id": "t_aaaaaa", "name": "Home FC"}
@@ -187,6 +188,102 @@ class KeepRunningTest(unittest.TestCase):
         ended, waits, left = self.play([(0, True), (0, True), (0, False)], stop_after=3)
         self.assertFalse(ended)
         self.assertEqual(len(left), 1)
+
+
+class SideProcessTest(unittest.TestCase):
+    """The daily pass and the image copies in a process of their own."""
+
+    def test_the_child_is_started_watched_and_started_again_after_the_wait(self):
+        now, started = [0.0], []
+
+        class Child:
+            pid = 4242
+
+            def __init__(self):
+                self.code, self.signals = None, []
+
+            def poll(self):
+                return self.code
+
+            def terminate(self):
+                self.signals.append("terminate")
+                self.code = -15
+
+            def wait(self, timeout=None):
+                return self.code
+
+        def popen(command):
+            self.assertEqual(command, ["side", "command"])
+            started.append(Child())
+            return started[-1]
+
+        side = SideProcess(["side", "command"], retry_after=3600, clock=lambda: now[0], popen=popen)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            side.tick()
+            side.tick()
+            self.assertEqual(len(started), 1)  # running: a round only looks
+            started[0].code = -9  # killed by the kernel
+            now[0] += 60
+            side.tick()
+            now[0] += 3599
+            side.tick()
+            self.assertEqual(len(started), 1)  # not at the next round: after the wait
+            now[0] += 1
+            side.tick()
+            self.assertEqual(len(started), 2)
+            side.stop()
+        self.assertEqual(started[1].signals, ["terminate"])
+        self.assertEqual(out.getvalue().count("side process exit=-9 restart_in=3600"), 1)
+
+    def test_a_real_child_that_ends_or_hangs(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            ended = SideProcess([sys.executable, "-c", "raise SystemExit(7)"])
+            ended.tick()
+            ended.process.wait(timeout=30)
+            ended.tick()
+            ended.tick()
+            self.assertIsNone(ended.process)
+            # A command that cannot start waits like a child that ended.
+            missing = SideProcess([str(Path(tempfile.gettempdir()) / "vega-v2-no-such-command")])
+            missing.tick()
+            self.assertIsNone(missing.process)
+            # stop() ends a child that is still working.
+            busy = SideProcess([sys.executable, "-c", "import time; time.sleep(120)"])
+            busy.tick()
+            child = busy.process
+            busy.stop(wait=20)
+            self.assertIsNotNone(child.poll())
+        self.assertEqual(out.getvalue().count("side process exit=7 restart_in=3600"), 1)
+        self.assertIn("side process error=WORKER_FILENOTFOUNDERROR", out.getvalue())
+
+    def test_the_side_loop_keeps_its_rhythms_and_ends_with_the_database(self):
+        calls, now = [], [0.0]
+        conn = lambda: types.SimpleNamespace(closed=False)
+        worker = types.SimpleNamespace(conn=conn(), calc_conn=conn(), daily=lambda: calls.append("daily"), mirror=lambda: calls.append("mirror"))
+
+        def sleep(seconds):
+            now[0] += seconds
+
+        side_loop(worker, stop=lambda: now[0] > 300, sleep=sleep, clock=lambda: now[0])
+        # Five minutes: a daily pass each minute, the image copies at the start and the end.
+        self.assertEqual((calls.count("daily"), calls.count("mirror")), (6, 2))
+        worker.calc_conn.closed = True
+        with self.assertRaises(psycopg.OperationalError):
+            side_loop(worker, stop=lambda: False, sleep=sleep, clock=lambda: now[0])
+
+    def test_the_child_asks_to_be_the_first_killed_for_memory(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "oom_score_adj"
+            self.assertTrue(prefer_as_oom_victim(str(path)))
+            self.assertEqual(path.read_text(), "1000")
+            self.assertFalse(prefer_as_oom_victim(str(Path(folder) / "missing" / "oom_score_adj")))
+
+    def test_the_side_process_is_for_the_long_running_worker(self):
+        for extra in (["--until-idle"], ["--max-jobs", "1"], ["--lanes", "backfill"]):
+            with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+                main(["--side-work", "process", *extra])
 
 
 @unittest.skipUnless(DSN, "requires dedicated local vega_v2_worker_test DB")
@@ -356,6 +453,17 @@ class WorkerTest(unittest.TestCase):
         for step in ("planner", "daily step=season", "calculator"):
             self.assertIn(step, out.getvalue())
         self.assertEqual(self.db.execute("SELECT state::text FROM ops.fetch_jobs WHERE family='league'").fetchall(), [("done",)])
+
+    def test_with_a_side_process_the_loop_leaves_the_side_work_to_it(self):
+        self.due_season()
+        rounds = []
+        self.worker.side_process = types.SimpleNamespace(tick=lambda: rounds.append("tick"))
+        self.worker.daily = lambda: self.fail("the daily pass ran in the loop")
+        self.worker.mirror = lambda: self.fail("the image copies ran in the loop")
+        self.worker.media_io = (None, None)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.worker.run(max_jobs=1), 1)
+        self.assertEqual(rounds, ["tick"])
 
     def test_an_error_code_never_carries_the_error_s_text(self):
         try:
