@@ -48,7 +48,8 @@ import PlayerScoutOverview, {
   PlayerScoutStats,
 } from "./PlayerScoutOverview.jsx";
 import PlayerScoutCareer from "./PlayerScoutCareer.jsx";
-import { FakePhysical, HeatmapCard } from "./PlayerScoutDemo.jsx";
+import { FakePhysical } from "./PlayerScoutDemo.jsx";
+import PlayerPresenceCard from "./PlayerPresenceCard.jsx";
 import { chartTokens } from "./PlayerScoutCharts.jsx";
 import scout from "./PlayerScout.module.css";
 import { nationalFlagCode } from "../services/national-flags.js";
@@ -577,9 +578,12 @@ export default function PlayerSeasonProfile({
           >
             {historyView === "overview" && <PlayerProfileFilters />}
             {historyView === "stats" ? (
-              <Suspense fallback={historyLoading}>
-                <PerformanceStats id={id} />
-              </Suspense>
+              <>
+                <Suspense fallback={historyLoading}>
+                  <PerformanceStats id={id} />
+                </Suspense>
+                {rows.length > 0 && <PlayerPresenceCard id={id} rows={rows} />}
+              </>
             ) : (
               historyOverview
             )}
@@ -762,7 +766,7 @@ export default function PlayerSeasonProfile({
                       </Suspense>
                     )}
                   </section>
-                  <HeatmapCard />
+                  <PlayerPresenceCard id={id} rows={rows} />
                 </div>
               </>
             )}
