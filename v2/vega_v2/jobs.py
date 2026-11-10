@@ -20,6 +20,7 @@ DETAIL_FAMILIES = (
 )
 MATCH_FAMILIES = frozenset(("summary", *DETAIL_FAMILIES))
 LANES = frozenset(("score", "details", "backfill", "reference"))
+TARGET_COLUMNS = ("entity_type", "entity_id", "target_date", "competition_season_id", "global_key")
 
 
 class LeaseLost(RuntimeError):
@@ -34,6 +35,24 @@ def _aware(value):
     ):
         raise ValueError("UTC-aware timestamp required")
     return value.astimezone(timezone.utc)
+
+
+def target_clause(target):
+    """SQL and values that select the jobs of one target (the columns of the unique
+    index fetch_jobs_active_target, after the family).
+
+    Written with `=` and IS NULL, never IS NOT DISTINCT FROM: PostgreSQL reads no index
+    for the latter, so each lookup read the whole queue (0.7 s with the backfill's
+    million jobs, several hundred lookups per planning round, 10 November 2026)."""
+    parts, values = [], []
+    for column in TARGET_COLUMNS:
+        value = target.get(column)
+        if value is None:
+            parts.append(f"{column} IS NULL")
+        else:
+            parts.append(f"{column}=%s")
+            values.append(value)
+    return " AND ".join(parts), values
 
 
 def enqueue(
@@ -243,20 +262,12 @@ def enqueue_or_revive(conn, lane, family, **target):
         if target.get("run_after") is not None
         else datetime.now(timezone.utc)
     )
-    columns = ("entity_type", "entity_id", "target_date", "competition_season_id", "global_key")
-    clause = " AND ".join(f"{c} IS NOT DISTINCT FROM %s" for c in columns)
+    clause, values = target_clause(target)
     row = conn.execute(
         f"""UPDATE ops.fetch_jobs SET state='pending', lane=%s, attempts=0, run_after=%s,
               priority=GREATEST(priority, %s), last_error_code=NULL, updated_at=%s
             WHERE family=%s AND {clause} AND state='failed' RETURNING id""",
-        (
-            lane,
-            instant,
-            target.get("priority", 0),
-            instant,
-            family,
-            *(target.get(c) for c in columns),
-        ),
+        (lane, instant, target.get("priority", 0), instant, family, *values),
     ).fetchone()
     return row[0] if row else None
 

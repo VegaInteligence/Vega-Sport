@@ -356,10 +356,13 @@ class Worker:
                         planner.plan_backfill(self.conn, self.clock(), **self.backfill)
                 except psycopg.Error as error:
                     print(f"planner error={safe_code(error)}", flush=True)
-                last_plan = tick
                 if self.backfill is None:
                     self.daily()
                 self.publish()
+                # Counted from the end of the round: `plan_every` seconds of fetching between
+                # two rounds, however long a round lasts (rounds of 35 s counted from their
+                # start left the backfill 25 s a minute to fetch, 10 November 2026).
+                last_plan = time.monotonic()
             if self.backfill is None and tick - last_media >= media_every:
                 self.mirror()
                 last_media = tick

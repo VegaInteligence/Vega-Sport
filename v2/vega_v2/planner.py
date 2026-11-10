@@ -15,7 +15,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 from . import profiles
-from .jobs import _aware, enqueue, enqueue_or_revive, next_score_check, FIRST_SCORE_CHECK
+from .jobs import _aware, enqueue, enqueue_or_revive, next_score_check, target_clause, FIRST_SCORE_CHECK
 
 CALENDAR_DAYS = range(-1, 8)
 LINEUP_FORECAST = timedelta(hours=48)
@@ -76,16 +76,17 @@ def plan(conn, now=None, *, profile_limit=200):
 
 
 def _recent(conn, family, since, **target):
-    """An active job for this target, or one finished since `since`."""
-    columns = ("entity_type", "entity_id", "target_date", "competition_season_id", "global_key")
-    clause = " AND ".join(f"{c} IS NOT DISTINCT FROM %s" for c in columns)
-    return (
-        conn.execute(
-            f"SELECT 1 FROM ops.fetch_jobs WHERE family=%s AND {clause} AND (state<>'done' OR updated_at>=%s) LIMIT 1",
-            (family, *(target.get(c) for c in columns), since),
-        ).fetchone()
-        is not None
-    )
+    """An active job for this target, or one finished since `since`.
+
+    Two lookups, one per partial index (fetch_jobs_active_target for the jobs that are
+    not done, fetch_jobs_done_recent for the ones that are): a single `state<>'done' OR
+    updated_at>=…` fits neither index and read the whole queue."""
+    clause, values = target_clause(target)
+    return conn.execute(
+        f"""SELECT EXISTS (SELECT 1 FROM ops.fetch_jobs WHERE family=%s AND {clause} AND state<>'done')
+                OR EXISTS (SELECT 1 FROM ops.fetch_jobs WHERE family=%s AND {clause} AND state='done' AND updated_at>=%s)""",
+        (family, *values, family, *values, since),
+    ).fetchone()[0]
 
 
 def _calendar(conn, now):
@@ -379,10 +380,10 @@ def current_season(now):
 
 def plan_backfill(conn, now=None, *, first_season=2021, last_season=None, competitions=None, limit=2000):
     """History, for the separate backfill task: each edition's season calendar once,
-    then the 13 families of every finished match that lacks them, recent first and at
-    most `limit` jobs per call so the queue stays bounded. Progress lands in
-    ops.collection_progress. No watch and no +24 h correction: those belong to the
-    live planner."""
+    then the 13 families of every finished match that lacks them, recent first, at most
+    `limit` jobs per call and none while the lane still holds `limit` pending jobs, so the
+    queue stays bounded. Progress lands in ops.collection_progress. No watch and no
+    +24 h correction: those belong to the live planner."""
     instant = _aware(now) if now is not None else datetime.now(timezone.utc)
     last = current_season(instant) if last_season is None else last_season
     counts = Counter()
@@ -404,7 +405,15 @@ def plan_backfill(conn, now=None, *, first_season=2021, last_season=None, compet
             ).fetchone()
             if not done and enqueue(conn, "backfill", "league_matches", competition_season_id=edition, run_after=instant):
                 counts["league_matches"] += 1
-        for mid, family in conn.execute(
+        # The lane already holds a full batch: nothing to add this round. Without this
+        # test every round looked for 2,000 more jobs among all the matches, until the
+        # whole history was queued at once (949,000 jobs on 10 November 2026), and then
+        # kept reading it all for nothing: up to 35 s a minute of the task that fetches.
+        queued = conn.execute(
+            "SELECT count(*) FROM (SELECT 1 FROM ops.fetch_jobs WHERE lane='backfill' AND state='pending' LIMIT %s) q",
+            (limit,),
+        ).fetchone()[0]
+        missing = [] if queued >= limit else conn.execute(
             """SELECT m.id, f.family FROM core.matches m
                CROSS JOIN unnest(%(families)s::text[]) AS f(family)
                WHERE m.status = 'finished' AND m.competition_season_id = ANY(%(editions)s)
@@ -414,7 +423,8 @@ def plan_backfill(conn, now=None, *, first_season=2021, last_season=None, compet
                                  AND j.family::text = f.family AND j.state <> 'done')
                ORDER BY m.kickoff_at DESC NULLS LAST, m.id, f.family LIMIT %(limit)s""",
             {**params, "editions": editions},
-        ).fetchall():
+        ).fetchall()
+        for mid, family in missing:
             if enqueue(conn, "backfill", family, entity_type="match", entity_id=mid, run_after=instant):
                 counts[family] += 1
         _progress(conn, editions)
