@@ -138,6 +138,16 @@ v2 is a second base (`vega-football-db-postgres`) filled from the sources themse
 3. **Switch the site.** In the site's Vercel project, set `NEXT_PUBLIC_API_ORIGIN` to the v2 distribution (`ApiOrigin` output of `vega-v2-api`) and `NEXT_PUBLIC_API_SCHEMA=v2`, then redeploy. Every read goes to its v2 route (`dashboard/frontend/src/services/v2-routes.js`): the provider proxy becomes `/api/matches/{id}[/…]`, `/api/competitions`, `/api/players/{id}` and `/api/teams/{id}`, club facts and stadiums are read by club id, cups by Vega id, schedules as fixture pages, and the Ballon d'Or slots show the player power ranking. Rolling back is removing the two variables and redeploying.
 4. **Retire the old path, with explicit consent only.** Stop the GitHub ingestion workflows, then, separately, the current backend and the RDS `statarena-postgres` (a final snapshot first). Nothing here deletes them.
 
+**Done on 10 November 2026**, on the owner's decision, before the backfill had finished (the site shows what v2 holds while it runs):
+
+- The site reads v2 since 15:31 UTC. A first switch at 15:10 was put back six minutes later: the manifest said `storage: "aws-relational-v2"`, and the site turns its compact reads on for `"aws-relational"` only, so it loaded whole seasons page by page. The manifest now declares what the routes serve (`v2/api/src/routes/system.mjs`).
+- The scheduled workflows of the old path are disabled (Collect football, Build serving tables, Validate production, Inspect database schema, Vega v2 collection on the existing RDS).
+- The stack `statarena-backend` is deleted (the API function and its distribution `d317dq37z1tacb.cloudfront.net`).
+- `statarena-postgres` is deleted; its final snapshot is `statarena-final-20261110` (64 GB).
+- The old bucket `statarena-football-333rosky-70db6e5f` keeps `data/sources/` (the archive import reads it); `_migration/`, `data/_migration/`, `data/staging/`, `data/computed/` and `data/raw/` are emptied.
+- Still there, not part of that decision: the stack `statarena-backend-actions` (it owns the GitHub OIDC provider the v2 roles use, and two roles of the old workflows), the stack `statarena-backend-artifacts` and its releases bucket, the distribution `E3IHCBKMHSDYC6` (public files of the old bucket), the SSM parameters under `/statarena/`, the snapshots of 7 November, and the old backend's code in this repository.
+- Not served by v2 yet: `/api/player-market-values` (the player page's value card answers "Données indisponibles").
+
 ## Cost (on-demand, us-east-2, before free tier; check in the AWS pricing calculator)
 
 | Item | Approx. per month |
@@ -156,4 +166,4 @@ The backfill task (1 vCPU / 2 GB) costs four times the worker's rate while it ru
 
 ## Rollback
 
-Each stack is independent. Setting `DesiredCount=0` stops the worker without data loss. Deleting `vega-v2-database` is refused while deletion protection is on, and leaves a final snapshot when it is off. Nothing here touches the current production path.
+Each stack is independent. Setting `DesiredCount=0` stops the worker without data loss. Deleting `vega-v2-database` is refused while deletion protection is on, and leaves a final snapshot when it is off. There is no old path to go back to since 10 November 2026: its base exists only as the snapshot `statarena-final-20261110`.
