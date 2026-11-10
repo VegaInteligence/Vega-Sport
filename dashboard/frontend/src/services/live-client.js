@@ -1,13 +1,11 @@
 /**
- * Live matches on the v2 API (doc "Live"): the full state from GET /live/matches/{id}
- * (the v2 distribution, cached 2 s), then each revision as AppSync Events publishes it on
+ * Live matches (doc "Live"): the full state from GET /live/matches/{id}
+ * (the API's distribution, cached 2 s), then each revision as AppSync Events publishes it on
  * /live/match/{id}: one message per revision, applied in order, the full state read again
  * when one is missing. The browser never talks to the live provider: one feed per match,
- * on the server. Built with NEXT_PUBLIC_API_SCHEMA=v2 and the three
- * NEXT_PUBLIC_LIVE_EVENTS_* settings (outputs of infra/aws-v2/live.yaml); without them
- * nothing here runs.
+ * on the server. Built with the three NEXT_PUBLIC_LIVE_EVENTS_* settings (outputs of
+ * infra/aws/live.yaml); without them nothing here runs.
  */
-import { API_V2 } from "./v2-routes.js";
 
 export const LIVE = {
   origin: process.env.NEXT_PUBLIC_API_ORIGIN || "",
@@ -15,8 +13,8 @@ export const LIVE = {
   realtime: process.env.NEXT_PUBLIC_LIVE_EVENTS_REALTIME || "",
   key: process.env.NEXT_PUBLIC_LIVE_EVENTS_KEY || "",
 };
-export const liveConfigured = (config = LIVE, v2 = API_V2) =>
-  Boolean(v2 && config.http && config.realtime && config.key);
+export const liveConfigured = (config = LIVE) =>
+  Boolean(config.http && config.realtime && config.key);
 
 const MATCH = /^m_(?:[A-Za-z0-9]{6}|v\d{7})$/;
 const AHEAD = 30 * 60 * 1000,

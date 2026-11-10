@@ -16,7 +16,7 @@
 
 ## Meneurs de l'accueil
 
-`seasonTotals` et `seasonLeaders` dans [home-insights.js](../../../dashboard/frontend/src/services/home-insights.js#L564), même calcul en SQL dans [relational-home.js](../../../dashboard/backend/services/relational-home.js).
+`seasonTotals` et `seasonLeaders` dans [home-insights.js](../../../dashboard/frontend/src/services/home-insights.js#L564), même calcul en SQL dans [home.mjs](../../../backend/api/src/routes/home.mjs).
 
 Totaux saison par joueur (matchs avec minutes > 0) : matchs, minutes, buts, passes décisives, xG et xA (**seulement s'ils couvrent tous les matchs**, sinon `null`), note pondérée par les minutes. Le club affiché est le dernier club national : un match européen ne change pas de club.
 
@@ -38,4 +38,4 @@ Totaux saison par joueur (matchs avec minutes > 0) : matchs, minutes, buts, pass
 
 ## Classement Ballon d'Or
 
-`ballonDorRanking` ([ballon-dor.js](../../../dashboard/frontend/src/services/ballon-dor.js)) renvoie `null` : **aucun classement Ballon d'Or n'est calculé**. Seule l'ouverture de la « course » sur l'accueil est calculée (voir [Accueil](../06-accueil-et-matchs/01-accueil.md)). La méthode envisagée est décrite dans [METHODE_CLASSEMENT_BALLON_D_OR.md](../../METHODE_CLASSEMENT_BALLON_D_OR.md).
+`useBallonDorRanking` ([ballon-dor.js](../../../dashboard/frontend/src/services/ballon-dor.js)) lit les 30 premiers joueurs du **classement de puissance** de la saison sur `/api/rankings/power?kind=players` ; il est calculé chaque jour par le worker (`backend/vega/power.py`) selon [METHODE_CLASSEMENT_BALLON_D_OR.md](../../METHODE_CLASSEMENT_BALLON_D_OR.md). Une saison sans classement publié n'en affiche pas. L'ouverture de la « course » sur l'accueil est décrite dans [Accueil](../06-accueil-et-matchs/01-accueil.md).

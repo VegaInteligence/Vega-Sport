@@ -1,9 +1,0 @@
-{
-  "kind": "rds_native_adoption_one_shot_v1",
-  "state": "consumed",
-  "executions": 1,
-  "releaseSha256": "93827aa8fbc97b96c52a2712c1d344cf8ec48e0f722f3c824735260d863b40e9",
-  "startedAt": "2026-11-05T10:19:32.138081+00:00",
-  "outcome": "applied_and_independently_verified",
-  "result": "docs/verification/orion-pro-policy-rds-20261105/rds-adoption/20261105T101932138463Z/result.json"
-}

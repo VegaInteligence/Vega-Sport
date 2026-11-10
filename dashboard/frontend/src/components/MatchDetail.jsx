@@ -419,7 +419,7 @@ function LegacySummaryShots({ match }) {
     </AsyncState>
   );
 }
-// Live (v2): the feed's goals and cards and its team statistics, while PitchAPI has not
+// Live: the feed's goals and cards and its team statistics, while PitchAPI has not
 // sent them yet (doc "Fin de match": the timeline moves to core once its events are in).
 const LIVE_EVENTS = {
   goal: "But",
@@ -498,7 +498,7 @@ export default function MatchDetail({ match }) {
   const competition = f.allCompetitions.find((c) => c.id === match.leagueId);
   const homeName = match.home.name ?? "Équipe non renseignée";
   const awayName = match.away.name ?? "Équipe non renseignée";
-  // Live (v2): the feed's minute and score until PitchAPI has the score, then core's.
+  // Live: the feed's minute and score until PitchAPI has the score, then core's.
   const live = useLiveMatch(match.id, isLiveWindow(match));
   const liveScore = live && live.families?.score !== "core" && live.status !== "scheduled" ? live.score : null;
   const liveEvents = liveScore ? liveTimeline(live) : [];

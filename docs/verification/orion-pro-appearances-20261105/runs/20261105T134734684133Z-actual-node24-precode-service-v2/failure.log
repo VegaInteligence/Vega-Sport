@@ -1,2 +1,0 @@
-A01_runtime_setup: NotNullViolation: null value in column "definition" of relation "metric_definitions" violates not-null constraint
-DETAIL:  Failing row contains (legacy_normalized_goals, goals, null, source_native, player, none, null, null, f, null, null, real_source_core_v2_native31, 6, null, football.metric_definitions, pilot_v1, pilot_v1, 8c6db19b12d226fbfbcfd743ee3b406904afe022f588dd3c82665849ff45c659, 1, 4, provider, null, null).

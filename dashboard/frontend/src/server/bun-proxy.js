@@ -1,4 +1,5 @@
-const AWS_API_ORIGIN = "https://d317dq37z1tacb.cloudfront.net";
+import { API_ORIGIN } from "../api-origin.js";
+
 const UPSTREAM_CONCURRENCY = 4;
 const waiting = [];
 let active = 0;
@@ -77,7 +78,7 @@ export async function proxy(request) {
   if (url.pathname.startsWith("/data/"))
     return new Response(null, { status: 410, headers: { "Cache-Control": "no-store" } });
   const origin = process.env.ORION_API_ORIGIN ||
-    (process.env.NODE_ENV === "development" ? "http://127.0.0.1:8765" : AWS_API_ORIGIN);
+    (process.env.NODE_ENV === "development" ? "http://127.0.0.1:8765" : API_ORIGIN);
   try {
     const validator = request.headers.get("if-none-match");
     const upstream = await upstreamFetch(origin + url.pathname + url.search, {

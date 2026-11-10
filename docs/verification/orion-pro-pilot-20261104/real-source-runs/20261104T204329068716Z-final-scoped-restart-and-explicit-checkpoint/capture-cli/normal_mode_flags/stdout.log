@@ -1,1 +1,0 @@
-{"status": "failed", "errorType": "MappingError", "sqlstate": null, "reason": "Capture checkpoint flags are only valid with --memory-source-server"}

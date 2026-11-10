@@ -20,6 +20,4 @@ La Coupe d’Allemagne dispose des tours 2026/2027 et 2025/2026 via OpenLigaDB. 
 
 ## Actualisation automatique
 
-`.github/workflows/cup-data.yml` lance `dashboard/scripts/cup-worker.mjs` toutes les quatre heures (Europe/Paris), au premier déploiement du worker et à la demande. Le worker découvre les entrées `_CUP_` du catalogue open-matchday, conserve les éditions précédentes et publie résultats, classements et rencontres à venir. Les compétitions de coupe reconnues dans PitchAPI sont également collectées ; les tours des nouvelles rencontres à venir sont mémorisés quand le fournisseur les précise. Les données actives sont vérifiées à chaque passage, les archives anciennes au plus une fois tous les 30 jours.
-
-Les fichiers sont publiés uniquement lorsqu’ils changent ; un reçu de collecte est conservé comme artefact GitHub Actions. Une source temporairement indisponible ne remplace pas son dernier instantané valide. Les résultats et les calendriers sont ajoutés automatiquement au tableau lorsque la source indique les tours et des croisements vérifiables ; les tours absents ne sont pas déduits des dates. La disponibilité et la fréquence des mises à jour restent dépendantes de chaque fournisseur.
+Les coupes des sources complémentaires sont lues par le worker du backend (`backend/vega/sources/cups.py`), au rythme de ses sources, et écrites en lignes typées. Une source indisponible ne remplace pas la dernière édition enregistrée.

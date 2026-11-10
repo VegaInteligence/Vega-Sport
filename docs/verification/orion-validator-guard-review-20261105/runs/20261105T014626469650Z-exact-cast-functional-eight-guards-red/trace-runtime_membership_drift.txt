@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-validator-guard-review-20261105/e2e.py", line 181, in main
-    elif name=='runtime_membership_drift':actual=drift('GRANT policy_ingest TO policy_runtime','REVOKE policy_ingest FROM policy_runtime',admin)
-                                                 ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-validator-guard-review-20261105/e2e.py", line 118, in drift
-    assert observed['refused'],'MISSING_GUARD_ACCEPTED_DRIFT'
-           ~~~~~~~~^^^^^^^^^^^
-AssertionError: MISSING_GUARD_ACCEPTED_DRIFT

@@ -1,6 +1,0 @@
-{
-  "daily-sync": "${{ vars.STATARENA_SQL_LIMIT_BYTES }}",
-  "historical-backfill": "${{ vars.STATARENA_SQL_LIMIT_BYTES }}",
-  "rematerialize": "${{ vars.STATARENA_SQL_LIMIT_BYTES }}",
-  "uefa-standings": "${{ vars.STATARENA_SQL_LIMIT_BYTES }}"
-}

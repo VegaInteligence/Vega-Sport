@@ -1,6 +1,0 @@
-{
-  "command": "STATARENA_CORE_API=1 STATARENA_CORE_EVIDENCE=docs/verification/aws-relational-core-20261104/shirt-upgrade-before bun dashboard/scripts/verify_relational_core.mjs",
-  "setup": "Embedded PostgreSQL18 + actual Python source normalizer. Synthetic provider responses. No production, provider, S3 or JSON-file publication.",
-  "expected": "Typed relational publication, values/reference integrity, idempotence, isolation and atomic rollback.",
-  "exitCode": 1
-}

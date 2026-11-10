@@ -10,7 +10,6 @@ import { mirrorHomeState } from "../services/home-bootstrap-preferences.js";
 import { AsyncState, Empty } from "../components/UI.jsx";
 import useCompactRead from "../hooks/useCompactRead.js";
 import { compactGeneration, compactScope } from "../services/compact-reads.js";
-import { API_V2 } from "../services/v2-routes.js";
 import { chooseUpcoming } from "../services/home-upcoming.js";
 import { fixtureWeek, parisDay } from "../services/fixtures.js";
 import HomePreferences from "../components/HomePreferences.jsx";
@@ -312,18 +311,18 @@ function CompactOverview() {
       archive: archived ? 1 : undefined,
     },
     favourites = { personalTeams: saved("clubs"), personalPlayers: saved("players") },
-    // v2 (doc "Accueil": two reads): the common read is the same for every visitor of a
+    // Doc "Accueil", two reads: the common read is the same for every visitor of a
     // scope and cached as such; the favourites are a small personal read of their own.
     summary = useCompactRead(
       "home",
-      API_V2 ? common : { ...common, ...favourites },
+      common,
       { clock: Math.floor(now / 300_000), refreshManifest: f.refreshManifest },
     ),
     personal = useCompactRead(
       "home-favourites",
       { ...common, ...favourites },
       {
-        enabled: API_V2 && Boolean(favourites.personalTeams || favourites.personalPlayers),
+        enabled: Boolean(favourites.personalTeams || favourites.personalPlayers),
         clock: Math.floor(now / 300_000),
         refreshManifest: f.refreshManifest,
       },
@@ -384,18 +383,16 @@ function CompactOverview() {
             f.competitions,
             data.competitions || [],
           ),
-          mine = API_V2 ? personal.value?.data : null,
-          // v2: the five upcoming matches from the big matches and the favourites'
-          // (home-upcoming.js); the current API sends them chosen.
-          highlights = API_V2
-            ? chooseUpcoming({
-                editorial: data.highlights || [],
-                favourites: mine?.favourites,
-                matches: mine?.upcoming,
-                rules: data.rules,
-                now,
-              })
-            : (data.highlights || []).filter((item) => item.time >= now);
+          mine = personal.value?.data,
+          // The five upcoming matches, chosen from the big matches and the favourites'
+          // (home-upcoming.js).
+          highlights = chooseUpcoming({
+            editorial: data.highlights || [],
+            favourites: mine?.favourites,
+            matches: mine?.upcoming,
+            rules: data.rules,
+            now,
+          });
         return (
           <>
             {summary.refreshing && (
@@ -437,7 +434,7 @@ function CompactOverview() {
                 win: validPeriod ? data.win : null,
                 tables: data.tables || [],
                 highlights,
-                yourPlayers: API_V2 ? mine?.yourPlayers || [] : data.yourPlayers,
+                yourPlayers: mine?.yourPlayers || [],
                 streakNext:
                   data.streakNext?.time >= now ? data.streakNext : null,
                 leaders: data.leaders || {

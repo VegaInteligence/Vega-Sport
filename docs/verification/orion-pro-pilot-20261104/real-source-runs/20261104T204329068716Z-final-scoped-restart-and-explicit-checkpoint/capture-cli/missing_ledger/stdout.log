@@ -1,1 +1,0 @@
-{"status": "failed", "errorType": "MappingError", "sqlstate": null, "reason": "Source budget ledger is missing; refusing an invented/reset checkpoint"}

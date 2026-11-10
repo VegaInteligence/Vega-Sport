@@ -1,4 +1,4 @@
-// The European pool of the club and player profiles on the v2 API: read from the base
+// The European pool of the club and player profiles: read from the base
 // (/api/clubs/europe, then one matches read per competition), level = power-ranking Elo.
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -17,7 +17,6 @@ const root = fileURLToPath(new URL("../", import.meta.url)),
 
 /** club-scout.js with its real helpers; React, the football context and the fetch helpers stubbed. */
 function loadClubScout(requests) {
-  process.env.NEXT_PUBLIC_API_SCHEMA = "v2";
   const stubs = {
     react: React,
     "../hooks/FootballContext.jsx": { useFootball: () => null },
@@ -90,7 +89,7 @@ const MATCHES = [
   match("m_aaaaa4", "l_0bfbkO", "t_aaaaa1", "t_outsid", 1, 0, "2025-09-17"),
 ];
 
-test("the pool is read from the v2 base, one read per competition", async () => {
+test("the pool is read from the base, one read per competition", async () => {
   const requests = [];
   const scout = loadClubScout(requests);
   const data = await scout.readEuropePool({ season: "2025/2026", generation: "7" });
@@ -106,7 +105,6 @@ test("the pool is read from the v2 base, one read per competition", async () => 
 test("a club's level is its Elo, for pool clubs and the others", async () => {
   const scout = loadClubScout([]);
   const pool = scout.buildEuropePool({ ...POOL, matches: MATCHES });
-  assert.equal(pool.demo, false);
   assert.deepEqual(
     ["t_aaaaa1", "t_aaaaa2", "t_aaaaa3"].map((id) => pool.strength.get(id).score),
     [1640, 1500, 1380],
@@ -117,7 +115,7 @@ test("a club's level is its Elo, for pool clubs and the others", async () => {
   const peers = scout.levelPeerClubs(pool, "t_outsid");
   assert.deepEqual([...peers.ids].sort(), ["t_aaaaa1", "t_aaaaa2", "t_aaaaa3", "t_outsid"]);
   assert.equal(peers.clubs[0].id, "t_aaaaa2"); // 1500 is the closest to 1520
-  // No hand-set calibration on v2: a club without Elo has no level.
+  // No hand-set calibration with an Elo pool: a club without Elo has no level.
   assert.equal(scout.clubStrength({ id: "t_unknwn", league: LIGUE_1, self: { values: { xg: 2, xga: 0 } } }, pool), null);
   assert.equal(scout.levelPeerClubs(pool, "t_unknwn"), null);
 });

@@ -1,2 +1,0 @@
-PASS local_overlay_probe
-{"status": "prepared_real_unverified", "counts": {"pass": 1, "fail": 0, "unverified": 0}, "evidence": "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-pro-real-native-spatial-20261104/runs/20261105T004740468205Z-local-overlay-probe-allowed"}

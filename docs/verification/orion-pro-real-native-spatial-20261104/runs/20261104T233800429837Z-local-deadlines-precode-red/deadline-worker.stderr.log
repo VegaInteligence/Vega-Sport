@@ -1,4 +1,0 @@
-usage: e2e.py [-h] [--label LABEL] [--prepare-only]
-              [--source-socket SOURCE_SOCKET] [--worker] [--evidence EVIDENCE]
-              [--pg-bin PG_BIN]
-e2e.py: error: unrecognized arguments: --deadlines-only

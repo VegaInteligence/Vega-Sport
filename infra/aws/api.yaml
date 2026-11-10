@@ -1,0 +1,273 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Vega read API (backend/api) behind its own CloudFront distribution. It reads the
+  database as vega_read only.
+Parameters:
+  ReleaseKey: {Type: String, AllowedPattern: 'releases/v2-api/[a-f0-9]{64}\.zip'}
+  ReadDatabaseUrl: {Type: String, NoEcho: true, MaxLength: 2000, Description: 'vega_v2_read login on vega-football-db-postgres, without sslmode (the function verifies TLS with the bundled CA)'}
+  ReservedConcurrency:
+    Type: Number
+    Default: 0
+    AllowedValues: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    Description: Zero omits the reservation; deployment preflight must verify account limit <=10 in that case.
+  OpsKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+    AllowedPattern: '([A-Za-z0-9_-]{32,128})?'
+    Description: 'Key of /api/ops/status (SSM /vega/v2/ops-key), sent by the private status page as X-Vega-Ops-Key; empty, no such route'
+  MediaBaseUrl:
+    Type: String
+    Default: ''
+    AllowedPattern: '(https://[a-z0-9.-]+/)?'
+    Description: 'This distribution, https://<ApiOrigin domain>/, once known (second deploy); empty, no media map'
+Conditions:
+  Reserve: !Not [!Equals [!Ref ReservedConcurrency, '0']]
+Resources:
+  Logs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/vega-v2-api
+      RetentionInDays: 14
+  RuntimeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: [{Effect: Allow, Principal: {Service: lambda.amazonaws.com}, Action: 'sts:AssumeRole'}]
+      Policies:
+        - PolicyName: Runtime
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['logs:CreateLogStream','logs:PutLogEvents']
+                Resource: !GetAtt Logs.Arn
+              - Effect: Allow
+                Action: ['ec2:CreateNetworkInterface','ec2:DescribeNetworkInterfaces','ec2:DescribeSubnets','ec2:DeleteNetworkInterface','ec2:AssignPrivateIpAddresses','ec2:UnassignPrivateIpAddresses']
+                Resource: '*'
+              - Effect: Deny
+                Action: 'ec2:*'
+                Resource: '*'
+                Condition:
+                  ArnEquals:
+                    'lambda:SourceFunctionArn': !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:vega-v2-api'
+  Backend:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: vega-v2-api
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      Handler: index.handler
+      MemorySize: 512
+      Timeout: 25
+      ReservedConcurrentExecutions: !If [Reserve, !Ref ReservedConcurrency, !Ref 'AWS::NoValue']
+      Role: !GetAtt RuntimeRole.Arn
+      Code: {S3Bucket: !Sub 'vega-v2-releases-${AWS::AccountId}-${AWS::Region}', S3Key: !Ref ReleaseKey}
+      Environment:
+        Variables:
+          VEGA_RELEASE: !Ref ReleaseKey
+          V2_READ_DATABASE_URL: !Ref ReadDatabaseUrl
+          V2_MEDIA_BASE_URL: !Ref MediaBaseUrl
+          V2_OPS_KEY: !Ref OpsKey
+      VpcConfig:
+        SecurityGroupIds: [!ImportValue vega-v2-api-sg]
+        SubnetIds: [subnet-0233a9567335f56ce, subnet-04c9af303f55d9718, subnet-0e72516f361932c15]
+  Origin:
+    Type: AWS::Lambda::Url
+    Properties: {AuthType: AWS_IAM, TargetFunctionArn: !GetAtt Backend.Arn, InvokeMode: BUFFERED}
+  OAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: vega-v2-api
+        OriginAccessControlOriginType: lambda
+        SigningBehavior: always
+        SigningProtocol: sigv4
+  MediaOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: vega-v2-media
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+  MediaReadByCloudFront:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !ImportValue vega-v2-media-bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: cloudfront.amazonaws.com}
+            Action: 's3:GetObject'
+            Resource: !Sub
+              - 'arn:${AWS::Partition}:s3:::${Bucket}/data/*'
+              - Bucket: !ImportValue vega-v2-media-bucket
+            Condition:
+              StringEquals:
+                'AWS:SourceArn': !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+  Cache:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: vega-v2-api
+        MinTTL: 0
+        DefaultTTL: 0
+        MaxTTL: 60
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig: {CookieBehavior: none}
+          HeadersConfig: {HeaderBehavior: none}
+          QueryStringsConfig: {QueryStringBehavior: all}
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
+  # GET /live/matches/{id} (live.yaml): the full live state, cached 2 s (doc "Live").
+  LiveCache:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: vega-v2-live
+        MinTTL: 0
+        DefaultTTL: 2
+        MaxTTL: 2
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig: {CookieBehavior: none}
+          HeadersConfig: {HeaderBehavior: none}
+          QueryStringsConfig: {QueryStringBehavior: none}
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
+  Validators:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: vega-v2-api-validators
+        HeadersConfig: {HeaderBehavior: whitelist, Headers: [If-None-Match, If-Modified-Since]}
+        CookiesConfig: {CookieBehavior: none}
+        QueryStringsConfig: {QueryStringBehavior: none}
+  # /api/ops/*: the status page's key reaches the function; nothing is cached.
+  OpsHeaders:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: vega-v2-api-ops
+        HeadersConfig: {HeaderBehavior: whitelist, Headers: [X-Vega-Ops-Key]}
+        CookiesConfig: {CookieBehavior: none}
+        QueryStringsConfig: {QueryStringBehavior: none}
+  ViewerHeaders:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: vega-v2-api
+        SecurityHeadersConfig:
+          ContentTypeOptions: {Override: true}
+        CorsConfig:
+          AccessControlAllowCredentials: false
+          AccessControlAllowHeaders: {Items: ['*']}
+          AccessControlAllowMethods: {Items: [GET, HEAD, OPTIONS]}
+          AccessControlAllowOrigins: {Items: ['*']}
+          AccessControlExposeHeaders:
+            Items: [ETag, Content-Length, Cache-Control, Age, X-Cache, X-Data-Source, Server-Timing, Retry-After, X-Amzn-ErrorType]
+          OriginOverride: true
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: vega-v2 read API (dedicated Lambda origin, no production traffic until cutover)
+        Enabled: true
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: api
+            DomainName: !Select [2, !Split ['/', !GetAtt Origin.FunctionUrl]]
+            OriginAccessControlId: !GetAtt OAC.Id
+            CustomOriginConfig: {OriginProtocolPolicy: https-only, OriginSSLProtocols: [TLSv1.2], OriginReadTimeout: 29}
+          - Id: media
+            DomainName: !ImportValue vega-v2-media-domain
+            OriginAccessControlId: !GetAtt MediaOAC.Id
+            S3OriginConfig: {OriginAccessIdentity: ''}
+          - Id: live
+            DomainName: !ImportValue vega-v2-live-read-domain
+            OriginAccessControlId: !GetAtt OAC.Id
+            CustomOriginConfig: {OriginProtocolPolicy: https-only, OriginSSLProtocols: [TLSv1.2], OriginReadTimeout: 10}
+        # Image copies: immutable, content-addressed (managed CachingOptimized policy).
+        CacheBehaviors:
+          - PathPattern: data/*
+            TargetOriginId: media
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            Compress: false
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          - PathPattern: live/*
+            TargetOriginId: live
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: !Ref LiveCache
+            ResponseHeadersPolicyId: !Ref ViewerHeaders
+          # Operations reads of the private status page (managed CachingDisabled policy).
+          - PathPattern: api/ops/*
+            TargetOriginId: api
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            Compress: false
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: !Ref OpsHeaders
+        DefaultCacheBehavior:
+          TargetOriginId: api
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          CachePolicyId: !Ref Cache
+          OriginRequestPolicyId: !Ref Validators
+          ResponseHeadersPolicyId: !Ref ViewerHeaders
+        CustomErrorResponses:
+          - {ErrorCode: 400, ErrorCachingMinTTL: 0}
+          - {ErrorCode: 403, ErrorCachingMinTTL: 0}
+          - {ErrorCode: 404, ErrorCachingMinTTL: 0}
+          - {ErrorCode: 405, ErrorCachingMinTTL: 0}
+          - {ErrorCode: 500, ErrorCachingMinTTL: 0}
+          - {ErrorCode: 502, ErrorCachingMinTTL: 0}
+          - {ErrorCode: 503, ErrorCachingMinTTL: 0}
+          - {ErrorCode: 504, ErrorCachingMinTTL: 0}
+  InvokeUrl:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Backend
+      Action: lambda:InvokeFunctionUrl
+      FunctionUrlAuthType: AWS_IAM
+      Principal: cloudfront.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+  Invoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Backend
+      Action: lambda:InvokeFunction
+      InvokedViaFunctionUrl: true
+      Principal: cloudfront.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+  InvokeLiveUrl:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !ImportValue vega-v2-live-read-function
+      Action: lambda:InvokeFunctionUrl
+      FunctionUrlAuthType: AWS_IAM
+      Principal: cloudfront.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+  InvokeLive:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !ImportValue vega-v2-live-read-function
+      Action: lambda:InvokeFunction
+      InvokedViaFunctionUrl: true
+      Principal: cloudfront.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+Outputs:
+  ApiOrigin: {Value: !Sub 'https://${Distribution.DomainName}'}
+  DistributionId: {Value: !Ref Distribution}
+  SignedOrigin: {Value: !GetAtt Origin.FunctionUrl}

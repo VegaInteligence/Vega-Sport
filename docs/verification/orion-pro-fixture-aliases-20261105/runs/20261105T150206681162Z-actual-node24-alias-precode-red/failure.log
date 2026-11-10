@@ -1,1 +1,0 @@
-F02_actual_date_RED: AssertionError: (501, '{"ok":false,"available":false,"error":{"code":"PRO_ROUTE_NOT_IMPLEMENTED","message":"Ces données ne sont pas encore disponibles en mode Pro."}}')

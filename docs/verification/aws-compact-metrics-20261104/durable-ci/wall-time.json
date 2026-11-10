@@ -1,8 +1,0 @@
-{
-  "command": "node docs/verification/aws-compact-metrics-20261104/run.mjs ci",
-  "seconds": 30.326,
-  "exitCode": 0,
-  "productionAuthority": "none; isolated local disposable PostgreSQL",
-  "stdout": "",
-  "stderr": ""
-}

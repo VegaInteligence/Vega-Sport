@@ -1,8 +1,0 @@
-usage: orion_pro_upgrade.py [-h] [--preflight-local | --apply-local]
-                            [--marker MARKER]
-                            [--database {policy_empty,policy_facts}]
-                            [--policy {membership-nonnull-m18da43-v1,membership-original-restored-m18da43-local099-v1}]
-                            [--expect-manifest-sha256 EXPECT_MANIFEST_SHA256]
-                            [--acceptance ACCEPTANCE]
-                            [--expect-acceptance-sha256 EXPECT_ACCEPTANCE_SHA256]
-orion_pro_upgrade.py: error: argument --database: invalid choice: 'rds_policy_empty' (choose from 'policy_empty', 'policy_facts')

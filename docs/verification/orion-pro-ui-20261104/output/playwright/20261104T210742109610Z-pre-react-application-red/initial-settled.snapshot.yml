@@ -1,5 +1,0 @@
-- generic [active] [ref=e1]:
-  - alert [ref=e31]
-  - alert [ref=e32]:
-    - text: Données indisponibles (HTTP 503).
-    - button "Réessayer" [ref=e33] [cursor=pointer]

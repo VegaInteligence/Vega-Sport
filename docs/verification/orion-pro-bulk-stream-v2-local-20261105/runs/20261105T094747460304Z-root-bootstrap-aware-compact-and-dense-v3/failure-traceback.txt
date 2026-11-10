@@ -1,9 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/tests/orion_pro_bulk_stream_v2_local.py", line 298, in main
-    c.execute('INSERT INTO football.player_match_metric_values('+','.join(map(q,columns))+') SELECT '+','.join(projection)+' FROM football.player_match_metric_values WHERE revision_id=%s',(g,row));c.execute('SELECT ingest.seal_generation(%s,%s)',(g,'f'*64))
-    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/tmp/statarena-publication-test-python/psycopg/connection.py", line 304, in execute
-    raise ex.with_traceback(None)
-psycopg.errors.GeneratedAlways: cannot insert a non-DEFAULT value into column "revision_id"
-DETAIL:  Column "revision_id" is an identity column defined as GENERATED ALWAYS.
-HINT:  Use OVERRIDING SYSTEM VALUE to override.

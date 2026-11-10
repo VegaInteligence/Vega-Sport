@@ -1,2 +1,0 @@
-E02_unpublished: CheckViolation: new row for relation "match_players" violates check constraint "football_match_players_squad_status_ck"
-DETAIL:  Failing row contains (1, 4, 1, null, null, bench, f, synthetic missing-profile case, null, null, null, null, null, null, null, null, 1, 1, pilot_v1, 1, {}, 2026-11-05 12:41:08.23235+01, 4, 4, null, pilot:primary, t, f, football.match_players, pilot_v1, pilot_v1, 8c6db19b12d226fbfbcfd743ee3b406904afe022f588dd3c82665849ff45c659, provider, 1, null, absent, null, absent, null).

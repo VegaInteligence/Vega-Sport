@@ -1,4 +1,4 @@
-// « Prochains matchs » on the v2 API (doc "Prochains matchs : comment on choisit"): the
+// « Prochains matchs » (doc "Prochains matchs : comment on choisit"): the
 // three examples of the doc, for a visitor who follows PSG and Mbappé, and the edges.
 import test from "node:test";
 import assert from "node:assert/strict";

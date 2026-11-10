@@ -1,6 +1,6 @@
 # Accueil
 
-Calculs dans [home-insights.js](../../../dashboard/frontend/src/services/home-insights.js) ; la version servie par l'API est la requête SQL de [relational-home.js](../../../dashboard/backend/services/relational-home.js), qui reproduit les mêmes règles.
+Calculs dans [home-insights.js](../../../dashboard/frontend/src/services/home-insights.js) ; la version servie par l'API est la requête SQL de [home.mjs](../../../backend/api/src/routes/home.mjs), qui reproduit les mêmes règles.
 
 ## Semaine affichée
 

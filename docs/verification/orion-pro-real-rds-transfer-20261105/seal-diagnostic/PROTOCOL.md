@@ -1,9 +1,0 @@
-# Source-only seal planner diagnosis V1
-
-ROOT explicitly allocated at most six bounded read-only SELECT/EXPLAIN statements on the already running retained source, with 8-second statement / 1-second lock limits and at most 64 KiB retained server plan metadata. No restart, extension, RAM/cloud access, ANALYZE, business write or generation function call is authorized. The frozen readback cd8b and all earlier results remain unchanged.
-
-The first SELECT combines source identity/TLS/epoch/settings and catalogue statistics for the three largest relevant fact tables, including last analyze/autovacuum statistics and existing MAINTAIN privileges. Five EXPLAIN (ANALYZE, BUFFERS, SETTINGS, FORMAT JSON) statements profile the exact sealed014 predicate shapes at source generation 2: metric overlap variant, metric overlap canonical, metric identical reimport, metric definition membership and metric participant membership. Each predicate is extracted verbatim from the frozen migration and only its PL/pgSQL parameter `g` is substituted with the already accepted generation 2. They are read-only SELECT EXISTS predicates; the validator itself is never called because it requires an owned draft transaction.
-
-Expected: six or fewer statements, ordinary runtime role / TLS / RO / RR / PG18.6 / exact current source epoch, no writes and a closed connection. Plans characterize this committed local source, whose statistics and hardware may differ from the uncommitted RDS COPY transaction. They cannot establish that a tuning change will cure the real timeout. A statement timeout is an inspectable diagnostic result, not permission to retry, raise 8 seconds, edit the model or skip an invariant. On any error the one-shot campaign stops and rolls back its read transaction. Preserve exact script/SQL hashes, rerun command, measured outcomes, full retained plans within 64 KiB, and cleanup.
-
-Suggested commit: `docs: diagnose the real core seal timeout without writes`

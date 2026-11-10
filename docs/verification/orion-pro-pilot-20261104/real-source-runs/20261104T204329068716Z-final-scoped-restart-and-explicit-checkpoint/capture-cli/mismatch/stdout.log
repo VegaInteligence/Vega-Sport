@@ -1,1 +1,0 @@
-{"status": "failed", "errorType": "MappingError", "sqlstate": null, "reason": "Source budget checkpoint mismatch; pass the exact current ledger counters"}

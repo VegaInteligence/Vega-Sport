@@ -1,2 +1,0 @@
-A01_runtime_setup: CheckViolation: new row for relation "match_players" violates check constraint "football_match_players_coords_frame_ck"
-DETAIL:  Failing row contains (7, 6, 6, 11, t, starter, t, Synthetic complete normalized performance, 0, 91, null, null, 30, 40, null, t, 1, 6, pilot_v1, 1, {}, 2026-11-05 14:57:28.305078+01, 5, 6, null, pilot:primary, t, f, football.match_players, pilot_v1, pilot_v1, 8c6db19b12d226fbfbcfd743ee3b406904afe022f588dd3c82665849ff45c659, provider, 13, null, number, 91, number, 0).

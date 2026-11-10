@@ -1,4 +1,0 @@
-E02_unpublished: CheckViolation: Build summary counters must match the selected edition inputs
-CONTEXT:  PL/pgSQL function ingest.validate_aggregation_build(bigint) line 37 at RAISE
-SQL statement "SELECT ingest.validate_aggregation_build(NEW.id)"
-PL/pgSQL function ingest.pro_validate_ready_build() line 5 at PERFORM

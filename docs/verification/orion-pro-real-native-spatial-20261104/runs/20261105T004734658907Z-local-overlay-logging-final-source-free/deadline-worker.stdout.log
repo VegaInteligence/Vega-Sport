@@ -1,1 +1,0 @@
-{"status": "pass", "mode": "source_free_writer_deadlines", "writerSettings": {"host": "127.0.0.1", "role": "orion_pro_ingest", "statementTimeout": "8s", "lockTimeout": "1s"}, "sourceCalls": 0}

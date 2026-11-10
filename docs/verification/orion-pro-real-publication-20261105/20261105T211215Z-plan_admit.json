@@ -1,9 +1,0 @@
-{
-  "elapsedSeconds": 4.777,
-  "error": {
-    "message": "column \"is_deleted\" does not exist\nLINE 1: ... recorded_to_gen IS NULL AND is_canonical AND NOT is_deleted...\n                                                             ^",
-    "sqlstate": "42703",
-    "type": "UndefinedColumn"
-  },
-  "status": "failed"
-}

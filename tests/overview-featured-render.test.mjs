@@ -69,7 +69,6 @@ async function overview({
   now = "2026-11-01T21:00:00Z",
   summary,
   onRead = () => {},
-  v2 = false,
   personal = null,
   lists = [],
 }) {
@@ -109,7 +108,7 @@ async function overview({
     "../hooks/useCompactRead.js": {
       __esModule: true,
       default: (kind, values, options = {}) => {
-        // A disabled read (v2's favourites read on the current API) requests nothing.
+        // A disabled read (the favourites' read of a visitor without favourites) requests nothing.
         if (options.enabled !== false) onRead(kind, values);
         if (!summary)
           throw new Error("Legacy home must not request compact data");
@@ -162,10 +161,9 @@ async function overview({
     "../services/competition-identity.js": await src(
       "services/competition-identity.js",
     ),
-    "../services/ballon-dor.js": { ballonDorRanking: () => ranking, useBallonDorRanking: () => ranking },
+    "../services/ballon-dor.js": { useBallonDorRanking: () => ranking },
     "../data-url.js": { dataUrl: (file) => "/data/" + file },
     "../services/home-insights.js": await src("services/home-insights.js"),
-    "../services/v2-routes.js": { API_V2: v2 },
     "../services/home-upcoming.js": await src("services/home-upcoming.js"),
     "../../../shared/competition-scope.js": await import(
       path.join(root, "dashboard/shared/competition-scope.js")
@@ -442,7 +440,7 @@ test("compact home hides a past next fixture even while the summary is retained"
   assert.match(future, /data-streak-next="past-next-fixture"/);
 });
 
-test("v2 home: a common read without favourites, their own read, the five upcoming matches chosen from both", async () => {
+test("home: a common read without favourites, their own read, the five upcoming matches chosen from both", async () => {
   const f = context({
     compactMode: true,
     manifest: { defaultSeason: "2026/2027", publicationVersion: "g1", seasons: [], competitions: [] },
@@ -464,7 +462,7 @@ test("v2 home: a common read without favourites, their own read, the five upcomi
   };
   const requests = [];
   const html = await overview({
-    context: f, summary, personal, v2: true, onRead: (...args) => requests.push(args),
+    context: f, summary, personal, onRead: (...args) => requests.push(args),
     lists: [{ entries: [{ kind: "clubs", id: "t_mine01" }, { kind: "players", id: "p_mine01" }] }],
   });
   assert.deepEqual(requests.map(([kind]) => kind), ["home", "home-favourites"]);

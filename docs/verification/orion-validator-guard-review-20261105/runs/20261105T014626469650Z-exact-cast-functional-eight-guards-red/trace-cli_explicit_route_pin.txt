@@ -1,5 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-validator-guard-review-20261105/e2e.py", line 170, in main
-    assert code==0 and trace['explicitHostaddr']=='127.0.0.1' and trace['effectiveHostaddr']=='127.0.0.1' and not trace['nonlocalPrevented'],'MISSING_EXPLICIT_HOSTADDR_PIN'
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AssertionError: MISSING_EXPLICIT_HOSTADDR_PIN

@@ -1,9 +1,0 @@
-{
-  "kind": "rds_policy_one_shot_ro_budget_v1",
-  "state": "consumed",
-  "selects": 14,
-  "decodedBytes": 2418433,
-  "instructions": 17,
-  "releaseSha256": "0dd0be53fc77d2d93791c43beca2cdc63522fc31dc64fb39929e7de40f413e57",
-  "result": "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-pro-policy-rds-20261105/rds-readbacks/20261105T094350886029Z/result.json"
-}

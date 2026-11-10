@@ -53,8 +53,3 @@ La phrase de production s'affiche dès que les buts **ou** les passes décisives
 
 **13. Hypothèses fortes du modèle de Poisson.**
 Buts indépendants, xG d'équipe agrégé (la répartition des occasions est ignorée), plancher λ = 0,01, troncature à 10 buts, défaite obtenue par complément. Ce sont des choix standard, mais ils expliquent par exemple qu'un 0-0 sans aucun tir vaille 1,01 xPts.
-
-## Démo
-
-**14. Calibrations européennes non ajustées.**
-Sur l'API actuelle, les décalages de ligue et coefficients du niveau européen sont fixés à la main ; le commentaire du code précise qu'ils restent « à ajuster sur des résultats ». L'option « Clubs de niveau comparable », activée par défaut sur le profil joueur, en dépend. Sur l'API v2, le niveau est l'Elo du classement de puissance, ajusté sur les résultats.

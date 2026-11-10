@@ -1,9 +1,0 @@
-{
-  "phase": "before-nested",
-  "source": "923bb0ff4a9ab4da8a528fdc7f138b31a5f6f68f",
-  "command": "bun docs/verification/relational-match-20261104/verify.mjs before-nested",
-  "setup": "PROTOCOL.md; PostgreSQL 18, verified local TLS, migration 004; seed.py, PROTOCOL.md and source archive captures",
-  "requests": [],
-  "error": "Error: Command failed: python3 /private/tmp/statarena-aws-backend-20261104/docs/verification/relational-match-20261104/seed.py\nTraceback (most recent call last):\n  File \"/private/tmp/statarena-aws-backend-20261104/docs/verification/relational-match-20261104/seed.py\", line 35, in <module>\n    from relational_match import publish_match_resource\nImportError: cannot import name 'publish_match_resource' from 'relational_match' (/private/tmp/statarena-aws-backend-20261104/dashboard/scripts/relational_match.py). Did you mean: 'publish_match_details'?\n\n    at genericNodeError (node:child_process:1097:22)\n    at checkExecSyncError (node:child_process:504:27)\n    at execFileSync (node:child_process:301:31)\n    at /private/tmp/statarena-aws-backend-20261104/docs/verification/relational-match-20261104/verify.mjs:34:3\n    at processTicksAndRejections (native:7:39)",
-  "passed": false
-}

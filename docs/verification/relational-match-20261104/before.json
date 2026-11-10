@@ -1,9 +1,0 @@
-{
-  "phase": "before",
-  "source": "923bb0ff4a9ab4da8a528fdc7f138b31a5f6f68f",
-  "command": "bun docs/verification/relational-match-20261104/verify.mjs before",
-  "setup": "PROTOCOL.md; PostgreSQL 18, verified local TLS, migration 004; seed.py, PROTOCOL.md and source archive captures",
-  "requests": [],
-  "error": "Error: ENOENT: no such file or directory, open '/private/tmp/statarena-aws-backend-20261104/dashboard/backend/migrations/004_match_details.sql'",
-  "passed": false
-}

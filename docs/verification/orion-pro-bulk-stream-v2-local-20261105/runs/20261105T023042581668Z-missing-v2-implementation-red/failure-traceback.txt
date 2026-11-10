@@ -1,5 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/tests/orion_pro_bulk_stream_v2_local.py", line 175, in main
-    if name=='implementation_available':assert WRITER.is_file(),'Streaming v2 implementation is absent';actual={'writerSha256':sha(WRITER)}
-                                               ~~~~~~~~~~~~~~^^
-AssertionError: Streaming v2 implementation is absent

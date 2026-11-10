@@ -1,8 +1,0 @@
-{
-  "kind": "whole_workflow_control_tests_before_stream_control_fix",
-  "testSha256": "7d183c5e5875fcf7ff7cd92555b35fc50482bab4c729e57918182477c9a5e30a",
-  "originalWriterSha256": "6de5f02484c167393f425eda13d8f12805764751bb5d9fb7bcff716e647fe645",
-  "postgresStarts": 0,
-  "newProcessE2E": "7/7 actual; separate helper only",
-  "fullAcceptance": false
-}

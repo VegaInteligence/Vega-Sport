@@ -1,1 +1,0 @@
-{"event":"ready","port":56200,"identity":[{"role":"statarena_runtime","readonly":"on"}],"entityRoutePresent":true,"handler":"actual-aws-app.handleRequest"}

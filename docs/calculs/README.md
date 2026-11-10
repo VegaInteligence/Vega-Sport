@@ -14,7 +14,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 | Totaux, moyennes par match, valeurs par 90 minutes, taux | **Calculés par Vega** à partir des observations par match. |
 | Centiles, rangs, indice Vega club et joueur, similarités, tags de style | **Calculés par Vega**, toujours relativement à un groupe de comparaison. |
 | Classements dérivés des résultats, zones européennes | **Calculés par Vega** quand aucun classement officiel n'est utilisé. |
-| Classements FIFA, coefficients UEFA | **Collectés** (voir [RANKINGS.md](../RANKINGS.md)), jamais recalculés. |
+| Classements FIFA, coefficients UEFA | **Collectés** par le worker (`backend/vega/sources/fifa.py`, `uefa.py`), jamais recalculés. |
 | Classement Ballon d'Or Vega | **Pas encore calculé** (la méthode proposée est dans [METHODE_CLASSEMENT_BALLON_D_OR.md](../METHODE_CLASSEMENT_BALLON_D_OR.md)). |
 
 ## Sections
@@ -56,7 +56,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 - [Fiche de match](06-accueil-et-matchs/02-fiche-match.md) — courbe des xG, carte des tirs, contexte avant match, discipline.
 
 ### 7. Limites
-- [Non calculé, fictif ou démo](07-limites/01-non-calcule-fictif-demo.md)
+- [Non calculé ou fictif](07-limites/01-non-calcule-fictif-demo.md)
 - [Points d'attention relevés dans le code](07-limites/02-points-d-attention.md)
 
 ## Trois règles qui reviennent partout
@@ -75,7 +75,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 | Cohortes, indices, similarité joueur | [scouting.js](../../dashboard/frontend/src/services/scouting.js) |
 | Compatibilité par niveau (onglet Projection) | [player-projection.js](../../dashboard/frontend/src/services/player-projection.js) |
 | Profil d'une performance, postes, centile | [shared/player-profile.js](../../dashboard/shared/player-profile.js) |
-| Accueil (semaine, sélections, meneurs) | [home-insights.js](../../dashboard/frontend/src/services/home-insights.js), [relational-home.js](../../dashboard/backend/services/relational-home.js) |
+| Accueil (semaine, sélections, meneurs) | [home-insights.js](../../dashboard/frontend/src/services/home-insights.js), [home.mjs](../../backend/api/src/routes/home.mjs) |
 | Classements dérivés et zones | [competition-standings.js](../../dashboard/frontend/src/services/competition-standings.js), [standings-zones.js](../../dashboard/frontend/src/services/standings-zones.js), [nations-standings.js](../../dashboard/frontend/src/services/nations-standings.js) |
-| Lecture des données fournisseur | [build_dashboard_data.py](../../dashboard/scripts/build_dashboard_data.py) |
-| Agrégats saison côté base | [025_player_season_rollups.sql](../../dashboard/backend/migrations/025_player_season_rollups.sql), [relational-performance.js](../../dashboard/backend/services/relational-performance.js) |
+| Lecture des données fournisseur | build_dashboard_data.py (ancien backend, supprimé le 10 novembre 2026) |
+| Agrégats saison côté base | 025_player_season_rollups.sql (ancien backend, supprimé le 10 novembre 2026), [performance.mjs](../../backend/api/src/routes/performance.mjs) |

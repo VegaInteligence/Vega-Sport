@@ -361,7 +361,7 @@ export function SeasonScorers({ leaders, scopeIds }) {
 }
 
 /** « Vos joueurs cette semaine »: each followed player's matches of the week and his
- * club's next match (v2 doc, Accueil et personnalisation, retenu). */
+ * club's next match (design doc, Accueil et personnalisation, retenu). */
 export function YourPlayers({ players, period, now }) {
   const f = useFootball();
   if (!players?.length) return null;

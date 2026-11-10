@@ -4,7 +4,7 @@ import { Card, AsyncState } from "./UI.jsx";
 import { useResource } from "../services/resources.js";
 import { number } from "../services/format.js";
 import { clubRanking } from "../services/catalog-client.js";
-import { editionYear } from "../services/v2-routes.js";
+import { editionYear } from "../services/api-routes.js";
 
 function editionLabel(edition) {
   const now = new Date();

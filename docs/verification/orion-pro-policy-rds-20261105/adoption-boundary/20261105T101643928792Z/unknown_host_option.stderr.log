@@ -1,2 +1,0 @@
-usage: root_adopt.py [-h] [--execute-released-rds]
-root_adopt.py: error: unrecognized arguments: --host external.invalid

@@ -1,8 +1,0 @@
-{
-    "Parameters": [],
-    "Description": "GitHub Actions OIDC for StatArena ingestion and read-only publication monitoring.",
-    "Capabilities": [
-        "CAPABILITY_NAMED_IAM"
-    ],
-    "CapabilitiesReason": "The following resource(s) require capabilities: [AWS::IAM::ManagedPolicy, AWS::IAM::Role]"
-}

@@ -1,9 +1,0 @@
-{
-  "sourceServiceCheckpoint": "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-pro-real-rds-transfer-20261105/core-checkpoint/runs-v2/20261105T192211685980Z/checkpoint.json",
-  "sourceMarker": "/var/folders/8z/mp96_9353w79bsgv7kftgk2h0000gn/T/orion-pro-e2e-939fcgo9/core-native-marker-v2.json",
-  "targetDescriptor": "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-pro-real-rds-transfer-20261105/transport-real-v4/target-readbacks/20261105T192039Z/target-descriptor.json",
-  "pairSha256": "76a503de98b31a2e98efac2e60b1c5d07852345b460333331beafa20dcaf6048",
-  "acceptanceSha256": "45f652d187a46db23812f62b86b70401256f7562fd205fba4e62a40e3b2eb497",
-  "writerSha256": "653cfc72149ca667186d477e7ba18db59cee4821b8f5f576658b3220001a70d7",
-  "preparedAt": "2026-11-05T19:22:51.866786+00:00"
-}

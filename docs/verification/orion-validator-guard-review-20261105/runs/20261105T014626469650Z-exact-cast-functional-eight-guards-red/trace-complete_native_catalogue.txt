@@ -1,5 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-validator-guard-review-20261105/e2e.py", line 174, in main
-    assert counts['schema']==3 and counts['view']==46 and counts['role']==3,'MISSING_NATIVE_CATALOGUE_CATEGORIES';actual={'categories':counts,'catalogueSha256':cat['sha256']}
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AssertionError: MISSING_NATIVE_CATALOGUE_CATEGORIES

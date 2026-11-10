@@ -1,1 +1,0 @@
-{"status": "failed", "errorType": "MappingError", "sqlstate": null, "reason": "Explicit expected source checkpoint requires both queries and decoded bytes"}

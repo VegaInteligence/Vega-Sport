@@ -1,1 +1,0 @@
-{"event":"ready","port":49309,"identity":[{"role":"statarena_runtime","readonly":"on"}],"calibrations":["provider_or_object_fetch","Bun.file","fs.readFileSync","fs.readFile","fs.createReadStream","fsp.readFile"],"runtimeLabel":"baseline"}

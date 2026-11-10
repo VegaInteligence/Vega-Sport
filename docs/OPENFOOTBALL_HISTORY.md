@@ -38,10 +38,10 @@ restent disponibles pour permettre l’audit.
 Pour reconstruire les fichiers et leurs empreintes :
 
 ```sh
-python dashboard/scripts/build_openfootball_history.py --archive data/sources/openfootball/football-json-e6744429.zip
-python dashboard/scripts/build_footballcsv_history.py --england data/sources/openfootball/footballcsv-england-52b7e5f5.zip --deutschland data/sources/openfootball/footballcsv-deutschland-17832462.zip --europe data/sources/openfootball/footballcsv-europe-66393c8d.zip --soccerdata data/sources/openfootball/footballcsv-soccerdata-f1c9d418.zip
-python dashboard/scripts/build_engsoccerdata_history.py
-python dashboard/scripts/build_scottish_history.py
+python backend/archives/builders/build_openfootball_history.py --archive data/sources/openfootball/football-json-e6744429.zip
+python backend/archives/builders/build_footballcsv_history.py --england data/sources/openfootball/footballcsv-england-52b7e5f5.zip --deutschland data/sources/openfootball/footballcsv-deutschland-17832462.zip --europe data/sources/openfootball/footballcsv-europe-66393c8d.zip --soccerdata data/sources/openfootball/footballcsv-soccerdata-f1c9d418.zip
+python backend/archives/builders/build_engsoccerdata_history.py
+python backend/archives/builders/build_scottish_history.py
 ```
 
 Le manifeste `data/raw/openfootball/index.json` détaille, pour chaque saison, le

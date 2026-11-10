@@ -1,9 +1,0 @@
-{
-  "status": "failed",
-  "setup": "actual PostgreSQL fixture with copied published metrics; original source hashes in published-metrics.json",
-  "command": "node docs/verification/aws-compact-metrics-20261104/run.mjs missing-input",
-  "inputSource": "METRIC_COPY_INPUT",
-  "families": {},
-  "checks": [],
-  "error": "[Errno 2] No such file or directory: '/nonexistent/statarena-009-input-check/half_stat_metrics.tsv.gz'"
-}

@@ -1,4 +1,0 @@
-usage: controller_v2.py [-h] [--recover | --noop-worker] [--release RELEASE]
-                        [--release-sha256 RELEASE_SHA256] [--marker MARKER]
-                        [--evidence EVIDENCE]
-controller_v2.py: error: unrecognized arguments: --construct

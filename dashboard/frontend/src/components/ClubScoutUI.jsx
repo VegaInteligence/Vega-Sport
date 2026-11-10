@@ -52,14 +52,6 @@ export function ClubLoading({ state, compact = false }) {
 
 /* ------------------------------------------------------------- basics */
 
-/** Same file on the Vega asset mirror, as the player mock-ups use. */
-function mirrored(url) {
-  const hash = /\/([0-9a-f]{64})\.webp$/.exec(url || "")?.[1];
-  return hash
-    ? `https://d2clu0phovomb8.cloudfront.net/data/raw/neon/assets/${hash}.webp`
-    : url;
-}
-
 /**
  * Plain images: the site's reveal deadline would freeze Media elements that
  * mount after a long read into their initials.
@@ -70,9 +62,8 @@ export function Picture({
   className = "crest",
   round = false,
 }) {
-  const [step, setStep] = useState(0);
-  const sources = [mirrored(url), url].filter(Boolean);
-  const src = sources[step];
+  const [failed, setFailed] = useState(false);
+  const src = failed ? null : url;
   const initials = name
     .split(/\s+/)
     .filter(Boolean)
@@ -91,7 +82,7 @@ export function Picture({
           src={src}
           alt=""
           referrerPolicy="no-referrer"
-          onError={() => setStep((n) => n + 1)}
+          onError={() => setFailed(true)}
         />
       ) : (
         <span>{initials || "—"}</span>

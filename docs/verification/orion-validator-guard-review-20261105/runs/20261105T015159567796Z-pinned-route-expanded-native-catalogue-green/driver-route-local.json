@@ -1,1 +1,0 @@
-{"kind": "e2e_libpq_route_tripwire", "host": "127.0.0.1", "explicitHostaddr": "127.0.0.1", "effectiveHostaddr": "127.0.0.1", "port": 57686, "nonlocalPrevented": false, "actualNonlocalConnections": 0}

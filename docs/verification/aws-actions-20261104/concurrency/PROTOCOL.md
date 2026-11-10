@@ -1,7 +1,0 @@
-# AWS writer queue separation
-
-Before changing the workflows, check all actual Actions YAML files with the existing workstation/CI workflow verification. Every ingest-mode job must inherit or declare the exact group `statarena-aws-ingestion`, with `cancel-in-progress: false` and `queue: max`. Three workflows set it globally. UEFA sets it on the refresh job. Failure on one writer blocks release. The four workflows on old main at commit 01830e1f9b use the legacy group. The RDS ingestion and normalized publisher must keep session lease 97813003. No other writer, role, schema or SG configuration is changed.
-
-During the transition only the manually dispatched AWS rematerialize workflow may overlap the old main collector. It requests zero Pitch calls and never writes staged source objects. Its only source schema mutation is the exact-timestamp dirty acknowledgment after successful typed publication. Do not dispatch AWS provider collection until old Daily Sync 41761941235 completes. A queued dispatch keeps the original group even when YAML changes. The release operator may replace only the team's pending dispatch 41762091548.
-
-Run the existing PostgreSQL 18 + actual workflow/bootstrap checks before and after (setup per ../PROTOCOL.md) and retain both results. Run the existing runner-ingress fixture once on the final state. Expect four writer failures before, zero after, and nine passing ingress cases. Local execution verifies definitions and action subprocesses. Actual scheduler admission requires a subsequent real run.

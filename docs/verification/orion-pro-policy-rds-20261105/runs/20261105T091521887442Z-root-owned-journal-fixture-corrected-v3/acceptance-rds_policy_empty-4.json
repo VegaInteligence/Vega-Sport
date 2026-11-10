@@ -1,9 +1,0 @@
-{
-  "kind": "owned_rds_policy_acceptance_v1",
-  "database": "rds_policy_empty",
-  "contractSha256": "7a84cd027e942b2ee62a91a68689b63ee05c83074b433fed718a1e4a164f2ef1",
-  "adapterSha256": "a6e5213e54de057562b10f57b4dd675e1501b4dd82449dd7a3ab19e7caf250d6",
-  "beforeStateSha256": "de3821cc2e3d1587629f03b95b24f91fb6a7f4e770c931b75ad7348755409b40",
-  "releaseCommit": "local_rds_policy_e2e",
-  "localOnly": true
-}

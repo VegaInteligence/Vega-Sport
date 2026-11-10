@@ -125,7 +125,7 @@ test('match details use their owning edition and retain native empty/null values
     fetcher: async (path) => { calls.push(new URL(path, 'https://example.test')); return Response.json({ data: { periods: [], value: null } }); } });
   await client.ensureEndpoint(data.matches[0], 'shots');
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].pathname, '/api/pitchapi/matches/m_000001/shots');
+  assert.equal(calls[0].pathname, '/api/matches/m_000001/shots');
   assert.equal(calls[0].searchParams.get('v'), token(1));
   assert.deepEqual(client.payloads.get('m_000001:shots').data, { periods: [], value: null });
   await client.ensureEndpoint(data.matches[0], 'shots');
@@ -187,7 +187,7 @@ test('unsupported versioned family endpoints never fall back to an unversioned a
     });
     await client.ensureEndpoint({ id: 'm_000001', leagueId: 'l_000001', season: '2026/2027' }, 'shots');
     assert.equal(requests.length, 1, String(status));
-    assert.match(requests[0], /^\/api\/pitchapi\/matches\/m_000001\/shots\?v=/);
+    assert.match(requests[0], /^\/api\/matches\/m_000001\/shots\?v=/);
     assert.equal(client.payloads.get('m_000001:shots').code, 'NOT_COLLECTED');
   }
 });
@@ -231,7 +231,7 @@ test('Vercel proxies to AWS with no database credentials and preserves condition
     for (const key of keys) delete process.env[key];
     process.env.VERCEL = '1'; process.env.NODE_ENV = 'production';
     globalThis.fetch = async (url, options) => {
-      assert.equal(url, 'https://d317dq37z1tacb.cloudfront.net/api/health');
+      assert.equal(url, 'https://dngp6kh9jx2bl.cloudfront.net/api/health');
       assert.equal(options.headers['If-None-Match'], '"version"');
       return new Response(null, { status: 304, headers: { etag: '"version"', 'x-data-source': 'AWS' } });
     };

@@ -1,6 +1,6 @@
 # Agrégation d'une saison joueur
 
-Code : `addAppearance`, `finish`, `seasonMetric` dans [season-player.js](../../../dashboard/frontend/src/services/season-player.js#L171). La base fait le même calcul par saison et compétition dans `refresh_player_season_rollups` ([025_player_season_rollups.sql](../../../dashboard/backend/migrations/025_player_season_rollups.sql)).
+Code : `addAppearance`, `finish`, `seasonMetric` dans [season-player.js](../../../dashboard/frontend/src/services/season-player.js#L171). La base fait le même calcul par saison et compétition dans `refresh_player_season_rollups` (025_player_season_rollups.sql (ancien backend, supprimé le 10 novembre 2026)).
 
 ## Quels matchs comptent
 

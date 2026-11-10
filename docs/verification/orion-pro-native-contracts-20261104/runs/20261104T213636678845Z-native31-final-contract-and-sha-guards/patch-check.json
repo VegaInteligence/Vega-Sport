@@ -1,7 +1,0 @@
-{
-  "command": "git apply --check --reverse docs/verification/orion-pro-native-contracts-20261104/review-from-fc524ec8be-native31-final.patch",
-  "workingDirectory": "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking",
-  "exitCode": 0,
-  "expected": "Patch reverses exactly from current source/spec bytes to fc524ec8be; check-only performs no mutation",
-  "mutations": false
-}

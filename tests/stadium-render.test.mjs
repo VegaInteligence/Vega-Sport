@@ -49,7 +49,7 @@ test("stadium dialog renders sourced dates, capacity and a map only with coordin
         e("img", { ...props, "data-asset-src": src }),
     },
     "../data-url.js": await import("../dashboard/frontend/src/data-url.js"),
-    "../services/v2-routes.js": await import("../dashboard/frontend/src/services/v2-routes.js"),
+    "../services/api-routes.js": await import("../dashboard/frontend/src/services/api-routes.js"),
     "../services/format.js": format,
     "../services/stadium-plans.js": plans,
     "./StadiumMap.jsx": {
@@ -83,7 +83,8 @@ test("stadium dialog renders sourced dates, capacity and a map only with coordin
   );
   const render = (id) =>
     renderToStaticMarkup(
-      e(mod.exports.default, { name: "San Siro", id, onClose: () => {} }),
+      // The stubbed read is keyed by the club, as the dialog's own read is.
+      e(mod.exports.default, { name: "San Siro", id, clubId: id, onClose: () => {} }),
     );
   const html = render("Q133566");
   assert.match(html, /75[\s\u202f\u00a0]817/);

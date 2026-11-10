@@ -1,9 +1,0 @@
-{
-  "auditSha256": "3e8412e5c8d6ec267099ef4dc832d26a9614c7abe2019847d14ad51e3185cf7a",
-  "authority": "ROOT explicit message authorizes one fresh V3 setup after minimal native required-column audit, unchanged bounds/codeCommit",
-  "expectedBusinessOutcomeChanges": [],
-  "fixtureAfterSha256": "835aeb29c44bd7679c6915d0ac52d40765d6c76a3a72dc9d9c7761f3fb56b1a9",
-  "kind": "ROOT_AUTHORITY_NOTE_FOR_SETUP_V3",
-  "priorFailureSha256": "7f5ce636b4a33305decc674eda4244323eb1741b516f8883a577546e1d0ee04c",
-  "releaseSha256": "4c4c6d938baacaa309e8cbe87a3b7b0ec39210547d0a64ed3e8163749fe4f9db"
-}

@@ -1,8 +1,0 @@
-[
-  {
-    "rejected": "native_http_global_profile",
-    "sqlstate": "23514",
-    "constraint": null,
-    "message": "native107: profile event actor observation differs"
-  }
-]

@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/tests/orion_pro_match_readers_local.py", line 425, in main
-    from http_cases import Cases
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-pro-match-readers-20261105/http_cases.py", line 7, in <module>
-    from fixture_publisher import FixturePublisher
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-pro-match-readers-20261105/fixture_publisher.py", line 15, in <module>
-    from fixture import NOW
-ModuleNotFoundError: No module named 'fixture'

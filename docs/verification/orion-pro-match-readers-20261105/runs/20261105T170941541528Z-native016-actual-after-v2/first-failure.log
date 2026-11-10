@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/tests/orion_pro_match_readers_local.py", line 439, in main
-    status = getattr(cases, name.lower())() or 'pass'
-             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-pro-match-readers-20261105/http_cases.py", line 268, in r22
-    assert result['sqlstate'] == '23514' and marker in result['message'], result
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AssertionError: {'rejected': 'native_http_count_mismatch', 'sqlstate': '23514', 'constraint': None, 'message': 'Collection child count differs from its full typed parent: football.match_events'}

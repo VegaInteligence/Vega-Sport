@@ -2,7 +2,7 @@
 
 Toutes les statistiques de match viennent de **PitchAPI**. Vega les lit à trois niveaux : le tir, l'équipe dans un match, le joueur dans un match. Aucune valeur « attendue » (xG, xA, xGOT, buts évités) n'est recalculée : Vega n'a pas de modèle de tir.
 
-Code de lecture : [build_dashboard_data.py](../../../dashboard/scripts/build_dashboard_data.py) (`PLAYER_METRICS`, `build_snapshot`). Les mêmes colonnes sont typées en base par [relational_metric_ddl.py](../../../dashboard/scripts/relational_metric_ddl.py).
+Code de lecture : build_dashboard_data.py (ancien backend, supprimé le 10 novembre 2026) (`PLAYER_METRICS`, `build_snapshot`). Les mêmes colonnes sont typées en base par relational_metric_ddl.py (ancien backend, supprimé le 10 novembre 2026).
 
 ## Niveau tir
 
@@ -75,7 +75,7 @@ Règles de lecture :
 
 ## Voie « Pro » (expérimentale, hors production)
 
-Le lecteur Pro (`STATARENA_PRO_API`) n'est pas utilisé en production (README racine). Ses agrégats ([orion_pro_season_aggregates.py](../../../dashboard/scripts/orion_pro_season_aggregates.py)) diffèrent sur deux points :
+Le lecteur Pro (`STATARENA_PRO_API`) n'est pas utilisé en production (README racine). Ses agrégats (orion_pro_season_aggregates.py (ancien backend, supprimé le 10 novembre 2026)) diffèrent sur deux points :
 - le xG d'équipe d'un match y est **la somme des xG des joueurs** de l'équipe (`match_xg`) ;
 - la note saison y est **pondérée par les minutes** (`provider_rating_weighted`).
 

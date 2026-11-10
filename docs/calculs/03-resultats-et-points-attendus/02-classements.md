@@ -21,7 +21,7 @@ Ce classement est affiché ([CompetitionStandings.jsx](../../../dashboard/fronte
 
 ## Tableaux de l'accueil
 
-`leagueProgress` dans [home-insights.js](../../../dashboard/frontend/src/services/home-insights.js#L341) et son équivalent SQL dans [relational-home.js](../../../dashboard/backend/services/relational-home.js) suivent le même ordre et ajoutent :
+`leagueProgress` dans [home-insights.js](../../../dashboard/frontend/src/services/home-insights.js#L341) et son équivalent SQL dans [home.mjs](../../../backend/api/src/routes/home.mjs) suivent le même ordre et ajoutent :
 - **points cumulés après chaque match** (ordre chronologique du coup d'envoi) ;
 - **forme** : les 5 derniers résultats ;
 - **série en cours** : nombre de victoires consécutives en fin de liste ;

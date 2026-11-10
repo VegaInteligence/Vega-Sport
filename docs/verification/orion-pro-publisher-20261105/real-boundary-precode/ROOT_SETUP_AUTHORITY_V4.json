@@ -1,8 +1,0 @@
-{
-  "authority": "ROOT explicit allocation V4, one of max3 local attempts from this point, cumulative600s, samebounds, no expectation/oracle weakening",
-  "change": "Close only child families of replaced canonical parents; retain noncanonical source/variant families; assert every selected parent native count before seal",
-  "kind": "ROOT_AUTHORITY_NOTE_FOR_SETUP_V4",
-  "priorFailureSha256": "7f1924dae9656556461f3c666b8bfb5bb461e14f9a862884f23426180cd8db4c",
-  "releaseSha256": "987df81537d2d2749d475974d04bd1bae5760c7f3a5aea39d2e131f421d792aa",
-  "suggestedCommit": "fix: preserve independent shot families in streamed E2E input"
-}

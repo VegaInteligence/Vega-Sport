@@ -1,6 +1,0 @@
-{
-  "command": "bun docs/verification/aws-wire-pages/disposable.mjs --ci",
-  "checks": [],
-  "passed": false,
-  "error": "Expected values to be strictly equal:\n\n1 !== 0\n"
-}

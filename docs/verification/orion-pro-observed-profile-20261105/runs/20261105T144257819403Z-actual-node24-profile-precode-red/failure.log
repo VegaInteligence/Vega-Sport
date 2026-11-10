@@ -1,1 +1,0 @@
-P04_oldDG_newCG: AssertionError: (503, '{"error":{"code":"PERFORMANCE_COVERAGE_UNAVAILABLE","message":"Identités ou périmètre de performance indisponibles."}}')

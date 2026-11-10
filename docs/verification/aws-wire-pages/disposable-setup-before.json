@@ -1,6 +1,0 @@
-{
-  "command": "bun docs/verification/aws-wire-pages/disposable.mjs",
-  "checks": [],
-  "passed": false,
-  "error": "Traceback (most recent call last):\n  File \"/private/tmp/statarena-aws-backend-20261104/docs/verification/aws-relational-core-20261104/workflow.py\", line 14, in <module>\n    assert target.hostname == '127.0.0.1' and target.path == '/relational_core_e2e'\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n\n\n1 !== 0\n"
-}

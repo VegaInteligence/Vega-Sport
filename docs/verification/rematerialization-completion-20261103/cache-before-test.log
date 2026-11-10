@@ -1,6 +1,0 @@
-{"fixtures":1,"materialized":"l_000001","season":"2021/2022","updatedMatches":1}
-{"fixtures":1,"materialized":"l_000001","season":"2021/2022","updatedMatches":1}
-{"fixtures":1,"materialized":"l_000001","season":"2021/2022","updatedMatches":1}
-{"fixtures":1,"materialized":"l_000001","season":"2021/2022","updatedMatches":1}
-{"fixtures":32,"materialized":"l_000001","season":"2021/2022","updatedMatches":32}
-{"status": "failed", "cases": [{"name": "archive-only", "status": "passed", "error": null}, {"name": "fixture-without-summary", "status": "passed", "error": null}, {"name": "recent-precedence", "status": "passed", "error": null}, {"name": "partial-families", "status": "passed", "error": null}, {"name": "archive-shard-reuse", "status": "failed", "error": "each source archive file read once: {'files': 96, 'reads': 192, 'maxReadsPerFile': 2}"}]}

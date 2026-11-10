@@ -1,0 +1,52 @@
+name: Deploy
+# Deploys the backend: the base vega-football-db-postgres, its secrets, the worker and the
+# backfill (migrations first), the read API and its distribution. Manual only, from the
+# v2-production environment, through the vega-v2-deploy role (deploy-roles.yaml).
+on:
+  workflow_dispatch:
+    inputs:
+      worker_desired_count:
+        description: Worker tasks after the migrations (0 keeps the worker stopped)
+        type: choice
+        options: ['1', '0']
+        default: '1'
+      import_archives:
+        description: Run the historical archive import (needs vars.V2_ARCHIVE_SOURCES_BUCKET)
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: vega-v2-deploy
+  cancel-in-progress: false
+env:
+  AWS_REGION: us-east-2
+  CFN_ROLE: arn:aws:iam::361769570630:role/vega-v2-cloudformation
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04-arm
+    environment: v2-production
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - name: AWS session (vega-v2-deploy)
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5
+        with:
+          role-to-assume: arn:aws:iam::361769570630:role/vega-v2-deploy
+          aws-region: us-east-2
+          role-duration-seconds: 7200
+      - uses: oven-sh/setup-bun@v2
+        with: {bun-version: '1.2.21'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Deploy (infra/aws/deploy.sh)
+        env:
+          CFN_ROLE: ${{ env.CFN_ROLE }}
+          IMAGE_TAG: ${{ github.sha }}
+          WORKER_DESIRED_COUNT: ${{ inputs.worker_desired_count }}
+          IMPORT_ARCHIVES: ${{ inputs.import_archives }}
+          ARCHIVE_SOURCES_BUCKET: ${{ vars.V2_ARCHIVE_SOURCES_BUCKET }}
+          PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
+          SPORTSAPI_API_KEY: ${{ secrets.SPORTSAPI_API_KEY }}
+        run: bash infra/aws/deploy.sh | tee -a "$GITHUB_STEP_SUMMARY"

@@ -6,27 +6,18 @@
     "frontend"
   ],
   "type": "module",
-  "description": "Explorateur des donn\u00e9es du projet STATARENA Football Ranking",
+  "description": "Vega Sport: the site (Next.js) and the modules it shares with the backend",
   "scripts": {
-    "dev": "bun scripts/dev.mjs",
-    "dev:frontend": "node node_modules/next/dist/bin/next dev frontend --hostname 127.0.0.1 --port 3000",
+    "dev": "node node_modules/next/dist/bin/next dev frontend --hostname 127.0.0.1 --port 3000",
     "build": "NEXT_TELEMETRY_DISABLED=1 node node_modules/next/dist/bin/next build frontend",
-    "start": "bun scripts/dev.mjs --production",
-    "test": "bun run build && bun run verify",
-    "dev:backend": "bun --watch backend/server.js",
-    "format": "prettier --write frontend/src frontend/app frontend/next.config.mjs backend shared scripts/*.mjs package.json",
-    "format:check": "prettier --check frontend/src frontend/app frontend/next.config.mjs backend shared scripts/*.mjs package.json",
-    "verify": "bun scripts/verify_application.mjs",
-    "ingest:daily": "python3 scripts/aws_ingest.py --mode daily",
-    "ingest:history": "python3 scripts/aws_ingest.py --mode historical",
-    "verify:aws": "node scripts/verify_aws_runtime.mjs"
+    "start": "node node_modules/next/dist/bin/next start frontend",
+    "format": "prettier --write frontend/src frontend/app frontend/next.config.mjs shared package.json",
+    "format:check": "prettier --check frontend/src frontend/app frontend/next.config.mjs shared package.json"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1161.0",
     "flag-icons": "7.6.0",
     "lucide-react": "^1.66.0",
     "next": "^16.4.3",
-    "pg": "^8.23.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

@@ -1,8 +1,0 @@
-[
-  {
-    "rejected": "native_http_core_pair",
-    "sqlstate": "23514",
-    "constraint": "match_observation_source_referee_state_ck",
-    "message": "new row for relation \"match_observation_details\" violates check constraint \"match_observation_source_referee_state_ck\""
-  }
-]

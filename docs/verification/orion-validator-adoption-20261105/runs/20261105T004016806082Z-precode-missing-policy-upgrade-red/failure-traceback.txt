@@ -1,5 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/tests/orion_pro_validator_policy_local.py", line 142, in main
-    assert all(p.is_file() for p in MODULES) and NEW_SQL.is_file(),'Policy/upgrade modules and014 are absent'
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AssertionError: Policy/upgrade modules and014 are absent

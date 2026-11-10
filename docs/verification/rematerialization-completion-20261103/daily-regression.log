@@ -1,7 +1,0 @@
-{"fixtures":1,"materialized":"l_0eg6C9","season":"2026/2027","updatedMatches":1}
-{"fixtures":1,"materialized":"l_0eg6C9","season":"2026/2027","updatedMatches":1}
-{"fixtures":1,"materialized":"l_0Lpz1f","season":"2026/2027","updatedMatches":1}
-{"fixtures":1,"materialized":"l_0Lpz1f","season":"2026/2027","updatedMatches":1}
-{"fixtures":1,"materialized":"l_0eg6C9","season":"2026/2027","updatedMatches":1}
-{"fixtures":1,"materialized":"l_0eg6C9","season":"2026/2027","updatedMatches":1}
-{"daily_refresh": "passed", "pulse_refresh": "passed", "goal_before": 0, "goal_after": 1, "leagues": ["MLS", "Saudi Pro League"]}

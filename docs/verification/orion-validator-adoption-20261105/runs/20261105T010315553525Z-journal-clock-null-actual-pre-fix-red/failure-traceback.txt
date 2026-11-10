@@ -1,5 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/tests/orion_pro_validator_policy_local.py", line 281, in main
-    assert after['journal'][-1][2] is not None,'NEW_JOURNAL_CLOCK_NULL'
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AssertionError: NEW_JOURNAL_CLOCK_NULL

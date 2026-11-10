@@ -1,7 +1,0 @@
-{
-  "scope": "one readonly RDS015 failed rollback and planner metadata observation",
-  "applyReceiptSha256": "b8f27dd58f8ae81918195d2bd485df84513a523f8db271b9c8dbd8e91696d2da",
-  "maxConnections": 1,
-  "maxSelects": 24,
-  "maxSeconds": 90
-}

@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-validator-guard-review-20261105/e2e.py", line 176, in main
-    definition=target.execute("SELECT pg_get_viewdef('football.matches_current'::regclass)").fetchone()[0].strip().removesuffix(';');actual=drift('CREATE OR REPLACE VIEW football.matches_current AS SELECT * FROM ('+definition+') x WHERE false','CREATE OR REPLACE VIEW football.matches_current AS '+definition,target)
-                                                                                                                                            ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-validator-guard-review-20261105/e2e.py", line 118, in drift
-    assert observed['refused'],'MISSING_GUARD_ACCEPTED_DRIFT'
-           ~~~~~~~~^^^^^^^^^^^
-AssertionError: MISSING_GUARD_ACCEPTED_DRIFT

@@ -1,8 +1,0 @@
-{
-  "kind": "isolated_rds015_oneshot_v1",
-  "state": "consumed",
-  "executions": 1,
-  "releaseSha256": "6e7ad8dc0b45e9519650a5e488ef3f6235c616bcfc2c6b4517f8f56d0f622cae",
-  "outcome": "applied_and_independently_verified",
-  "result": "docs/verification/orion-pro-policy-rds-20261105/p2-metric-guard/rds-adoption/20261105T161411991493Z/result.json"
-}

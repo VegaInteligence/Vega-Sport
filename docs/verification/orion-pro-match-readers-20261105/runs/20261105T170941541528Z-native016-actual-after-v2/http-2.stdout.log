@@ -1,1 +1,0 @@
-{"event":"ready","port":54009,"identity":[{"role":"statarena_runtime","readonly":"on"}],"runtime":{"version":"v24.22.2","platform":"darwin","arch":"arm64","rawJSON":"function"},"handler":"actual-aws-app.handleRequest"}

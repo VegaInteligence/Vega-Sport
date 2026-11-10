@@ -57,8 +57,6 @@ test("server bootstrap uses the same canonical home key as client preferences, w
     leagues: "l_4WFCIZ,l_999999",
     generation: "42",
     archive: 1,
-    personalTeams: "t_111111,t_222222",
-    personalPlayers: "p_111111",
   });
   assert.equal(bootstrap.homeReady, true);
   assert.equal(bootstrap.homeKey, expected);

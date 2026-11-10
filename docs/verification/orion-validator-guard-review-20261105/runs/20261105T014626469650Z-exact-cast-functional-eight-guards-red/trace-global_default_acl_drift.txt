@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-validator-guard-review-20261105/e2e.py", line 179, in main
-    elif name=='global_default_acl_drift':actual=drift('ALTER DEFAULT PRIVILEGES FOR ROLE policy_owner GRANT EXECUTE ON FUNCTIONS TO policy_runtime','ALTER DEFAULT PRIVILEGES FOR ROLE policy_owner REVOKE EXECUTE ON FUNCTIONS FROM policy_runtime',target)
-                                                 ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-validator-guard-review-20261105/e2e.py", line 118, in drift
-    assert observed['refused'],'MISSING_GUARD_ACCEPTED_DRIFT'
-           ~~~~~~~~^^^^^^^^^^^
-AssertionError: MISSING_GUARD_ACCEPTED_DRIFT

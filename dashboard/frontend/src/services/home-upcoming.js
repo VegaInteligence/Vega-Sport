@@ -1,5 +1,5 @@
 /**
- * « Prochains matchs » on the v2 API (doc "Prochains matchs : comment on choisit"). The
+ * « Prochains matchs » (doc "Prochains matchs : comment on choisit"). The
  * block keeps its design: a big card with its countdown, four matches in a list, and a
  * match leaves at kick-off. Only the choice of the five and their order change:
  *

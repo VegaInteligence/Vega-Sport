@@ -8,9 +8,9 @@ La note sur 10 d'un joueur dans un match est **la note PitchAPI** (`rating_title
 
 | Où | Calcul | Code |
 | --- | --- | --- |
-| Rang dans le match | `1 + nombre de joueurs du match ayant une note strictement supérieure`, sur le nombre de joueurs notés | `matchRatingRank` ([player-profile.js](../../../dashboard/frontend/src/services/player-profile.js#L119)), même calcul en SQL ([relational-performance.js](../../../dashboard/backend/services/relational-performance.js)) |
+| Rang dans le match | `1 + nombre de joueurs du match ayant une note strictement supérieure`, sur le nombre de joueurs notés | `matchRatingRank` ([player-profile.js](../../../dashboard/frontend/src/services/player-profile.js#L119)), même calcul en SQL ([performance.mjs](../../../backend/api/src/routes/performance.mjs)) |
 | Note saison (fiche, annuaire) | **moyenne simple** des notes des matchs notés : `Σ note / nombre de matchs notés` | `finish()` ([season-player.js](../../../dashboard/frontend/src/services/season-player.js#L227)) |
-| Note saison (accueil, meneurs) | **moyenne pondérée par les minutes** : `Σ (note × minutes) / Σ minutes des matchs notés` | `seasonTotals` ([home-insights.js](../../../dashboard/frontend/src/services/home-insights.js#L564)), même calcul en SQL ([relational-home.js](../../../dashboard/backend/services/relational-home.js)) |
+| Note saison (accueil, meneurs) | **moyenne pondérée par les minutes** : `Σ (note × minutes) / Σ minutes des matchs notés` | `seasonTotals` ([home-insights.js](../../../dashboard/frontend/src/services/home-insights.js#L564)), même calcul en SQL ([home.mjs](../../../backend/api/src/routes/home.mjs)) |
 | Forme récente | les 10 derniers matchs notés, dans l'ordre ; ligne de référence = moyenne simple de ces 10 notes | `RecentForm` ([PlayerScoutOverview.jsx](../../../dashboard/frontend/src/components/PlayerScoutOverview.jsx#L354)) |
 | Évolution par saison | une note par saison et par équipe, échelle bornée à [0, 10] | [PlayerSeasonTrend.jsx](../../../dashboard/frontend/src/components/PlayerSeasonTrend.jsx) |
 

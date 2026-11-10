@@ -1,9 +1,0 @@
-Traceback (most recent call last):
-  File "/private/tmp/statarena-aws-backend-20261104/docs/verification/aws-compact-metrics-20261104/verify.py", line 55, in <module>
-    assert r.execute("select count(*) from statarena_app.half_stat_metrics").fetchone()[0]==report["families"]["half"]["rows"]
-           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/tmp/statarena-publication-test-python/psycopg/connection.py", line 304, in execute
-    raise ex.with_traceback(None)
-psycopg.errors.LockNotAvailable: canceling statement due to lock timeout
-LINE 1: select count(*) from statarena_app.half_stat_metrics
-                             ^

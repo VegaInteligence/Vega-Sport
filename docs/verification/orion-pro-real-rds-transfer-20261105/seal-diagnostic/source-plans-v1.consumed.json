@@ -1,9 +1,0 @@
-{
-  "run": "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-pro-real-rds-transfer-20261105/seal-diagnostic/runs/20261105T134000182676Z",
-  "executions": 1,
-  "maximumSelects": 6,
-  "maximumRetainedPlanBytes": 65536,
-  "maximumStatementSeconds": 8,
-  "maximumLockSeconds": 1,
-  "approvedByMessage": "ROOT scoped source-only diagnostic allocation"
-}

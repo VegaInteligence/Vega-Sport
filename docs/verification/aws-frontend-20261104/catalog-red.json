@@ -1,5 +1,0 @@
-{
-  "command": "python3 docs/verification/aws-frontend-20261104/verify.py catalog-red",
-  "error": "fixture startup failed",
-  "passed": false
-}

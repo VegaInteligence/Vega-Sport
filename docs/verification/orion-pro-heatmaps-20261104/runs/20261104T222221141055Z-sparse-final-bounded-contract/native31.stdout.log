@@ -1,9 +1,0 @@
-PASS numeric31_registry_and_oracle
-PASS invalid_complete_imports_atomic
-PASS five_native_states_precision
-PASS canonical_incoherence_refused
-PASS variant_observation_retained
-PASS correction_old_snapshot
-PASS fresh_process_noop
-PASS legacy_receipt_rejected
-{"status": "pass", "counts": {"pass": 8, "fail": 0, "unverified": 0}, "evidence": "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/docs/verification/orion-pro-heatmaps-20261104/native31-regression/runs/20261104T222225118985Z-heatmap-regression"}

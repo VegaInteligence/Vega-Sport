@@ -87,7 +87,7 @@ export function seasonStartYear(season) {
 /**
  * Promotion and relegation zones of a league, by row index, from the places
  * recorded in shared/league-rules.json (refreshed by
- * dashboard/scripts/refresh_league_rules.mjs). Only applied to a table of the
+ * the previous pipeline's refresh_league_rules.mjs). Only applied to a table of the
  * recorded size.
  */
 export function leagueZones(competitionId, rowCount) {

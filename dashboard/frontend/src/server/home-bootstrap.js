@@ -6,14 +6,13 @@ import {
 } from "../services/compact-reads.js";
 import { europeFocusIds } from "../../../shared/competition-scope.js";
 import { archiveSeason } from "../services/home-insights.js";
-import { API_V2 } from "../services/v2-routes.js";
+import { API_ORIGIN } from "../api-origin.js";
 import {
   DEFAULT_HOME_STATE,
   normalizeHomeState,
 } from "../services/home-bootstrap-preferences.js";
 
-const origin =
-  process.env.NEXT_PUBLIC_API_ORIGIN || "https://d317dq37z1tacb.cloudfront.net";
+const origin = process.env.NEXT_PUBLIC_API_ORIGIN || API_ORIGIN;
 async function serverJson(path) {
   const response = await fetch(origin + path, {
     cache: "no-store",
@@ -72,8 +71,7 @@ export async function prepareHomeBootstrap(
     leagues: compactScope(ids),
     generation,
     archive: archiveSeason(season, manifest.defaultSeason, now) ? 1 : undefined,
-    // v2: the common read takes no favourites (they have their own read, client side).
-    ...(API_V2 ? {} : { personalTeams: state.personalTeams.join(","), personalPlayers: state.personalPlayers.join(",") }),
+    // The common read takes no favourites: they have their own read, client side.
   };
   const summary = await fetchJson(
     `/api/read/home?${compactQuery({ ...params, ...(manifest.capabilities.resolvedMedia ? { media: 1 } : {}) })}`,

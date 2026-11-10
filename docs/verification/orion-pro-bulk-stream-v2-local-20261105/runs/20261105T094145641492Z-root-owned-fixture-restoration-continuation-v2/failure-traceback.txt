@@ -1,5 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/lemonnierhugo/Desktop/Coding Project/Football_ranking/tests/orion_pro_bulk_stream_v2_local.py", line 282, in main
-    assert target_copied==source_copied
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AssertionError
