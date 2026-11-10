@@ -240,6 +240,7 @@ class Worker:
             "player": self.profile,
             "summary": self.summary,
         }.get(family, self.details)
+        reason = None
         try:
             handler(job)
             code = "ok"
@@ -247,12 +248,14 @@ class Worker:
             code = "LEASE_LOST"
         except (PitchError, NormalizationError, StoreError, psycopg.Error) as error:
             code = safe_code(error)
+            # Why the provider refused (pitchapi._access_reason: a category, never its text).
+            reason = getattr(error, "access_reason", None)
         except Exception as error:  # a bug must not crash-loop on the same job
             code = "WORKER_" + type(error).__name__.upper()[:50]
         self.results[(family, code)] += 1
         if code not in ("ok", "LEASE_LOST"):
             self.failed(job, code)
-            print(f"family={family} job={job['id']} error={code}", flush=True)
+            print(f"family={family} job={job['id']} error={code}" + (f" reason={reason}" if reason else ""), flush=True)
         return True
 
     def failed(self, job, code):
