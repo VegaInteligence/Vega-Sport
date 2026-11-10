@@ -32,8 +32,15 @@ PARTIAL = re.compile(r"^\d{4}(-\d{2}(-\d{2})?)?$")
 
 
 def node_bridge(command, *args):
-    done = subprocess.run(["node", str(BRIDGE), command, *args], capture_output=True, text=True, timeout=120)
+    try:
+        done = subprocess.run(["node", str(BRIDGE), command, *args], capture_output=True, text=True, timeout=120)
+    except subprocess.TimeoutExpired:
+        print(f"bridge command={command} error=timeout", flush=True)
+        raise SourceError("BRIDGE_TIMEOUT") from None
     if done.returncode != 0:
+        # The class of the reader's error (TypeError, SyntaxError...), never its text.
+        kind = re.search(r"\b([A-Z][A-Za-z]*Error)\b", done.stderr or "")
+        print(f"bridge command={command} exit={done.returncode} error={kind.group(1) if kind else 'unknown'}", flush=True)
         raise SourceError("BRIDGE_FAILED")
     try:
         return json.loads(done.stdout)
@@ -164,14 +171,22 @@ def _clubs(conn, now):
            ORDER BY t.wikidata_fetched_at NULLS FIRST, t.id LIMIT %s""",
         (now - CLUB_PERIOD, BATCH),
     ).fetchall()
-    written = unmatched = 0
+    written = unmatched = failed = 0
     for team, name, country, uefa, qid in rows:
-        ref = uefa or qid or bridge("identity", name, country)
-        club = bridge("club", ref) if ref else None
+        try:
+            ref = uefa or qid or bridge("identity", name, country)
+            club = bridge("club", ref) if ref else None
+        except SourceError:
+            # A club the reader fails on does not stop the others (one failure failed the
+            # whole pass); it is not marked as read, so the next pass tries it again.
+            failed += 1
+            continue
         with conn.transaction():
             linked = save_club(conn, team, club, now)
         written += linked
         unmatched += not linked
+    if failed and failed == len(rows):
+        raise SourceError("BRIDGE_FAILED")
     return written, unmatched
 
 

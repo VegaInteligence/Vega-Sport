@@ -406,6 +406,43 @@ class UefaTest(unittest.TestCase):
             wikidata.bridge = original
         self.assertEqual(calls, [])
 
+    def test_wikidata_one_failing_club_does_not_stop_the_others(self):
+        from vega_v2.sources import SourceError
+        from vega_v2.store import Store
+
+        x = self.db.execute
+        with self.db.transaction():
+            Store(self.db).season("2025/2026")
+        x("INSERT INTO core.countries(code) VALUES ('ESP') ON CONFLICT DO NOTHING")
+        x("INSERT INTO core.competitions(id, name) VALUES (86, 'Liga Bridge')")
+        x("INSERT INTO core.competition_seasons(id, competition_id, season_id, is_current) VALUES (86, 86, 2025, true)")
+        x("INSERT INTO core.teams(id, name, country_code) VALUES (47, 'Club Sept', 'FRA'), (48, 'Club Huit', 'ESP')")
+        x("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES
+             ('team','pitchapi','t_club47',47), ('team','pitchapi','t_club48',48), ('team','uefa','8847',47), ('team','uefa','8848',48)""")
+        x("INSERT INTO core.team_seasons(team_id, competition_season_id) VALUES (47, 86), (48, 86)")
+        answer = lambda qid: {"sourceUrl": "https://www.wikidata.org/entity/" + qid, "fetchedAt": "2026-11-09T08:00:00.000Z", "stadium": None,
+                              "stadiumId": None, "stadiumAlias": None, "coach": None, "founded": "1901"}
+        broken = {"8847"}
+
+        def fake(command, *args):
+            if command == "club" and args[0] in broken:
+                raise SourceError("BRIDGE_FAILED")
+            return answer("Q88" + args[0][-2:]) if command == "club" and args[0] in ("8847", "8848") else None
+
+        read = "SELECT id, wikidata_fetched_at IS NOT NULL FROM core.teams WHERE id IN (47, 48) ORDER BY id"
+        original, wikidata.bridge = wikidata.bridge, fake
+        try:
+            self.assertEqual(sources.run_due(self.db, None, NOW + timedelta(hours=10), names={"wikidata"})[("wikidata", "clubs")], "ok")
+            # The other club is read; the failing one is left for the next pass.
+            self.assertEqual(x(read).fetchall(), [(47, False), (48, True)])
+            # Every club of the pass failing is the source failing.
+            self.assertEqual(sources.run_due(self.db, None, NOW + timedelta(hours=12), names={"wikidata"})[("wikidata", "clubs")], "BRIDGE_FAILED")
+            broken.clear()
+            self.assertEqual(sources.run_due(self.db, None, NOW + timedelta(hours=14), names={"wikidata"})[("wikidata", "clubs")], "ok")
+            self.assertEqual(x(read).fetchall(), [(47, True), (48, True)])
+        finally:
+            wikidata.bridge = original
+
     def test_cup_editions_typed_and_kept_on_failure(self):
         x = self.db.execute
         answers = {}
