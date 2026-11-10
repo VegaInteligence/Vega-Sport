@@ -179,6 +179,8 @@ def main(dsn):
 
     x(calculator.PLAYER_SQL, {"cs": 1, "sid": 2025, "all": True, "players": [], "teams": []})
     x("SELECT agg.refresh_performance_distribution(1)")
+    # The player list's rows (060), for every seeded edition.
+    x("SELECT count(agg.refresh_player_list(id)) FROM core.competition_seasons")
     # The seeded data is one publication (the worker publishes on its rhythm).
     published = db.execute("SELECT max(coalesce(published_at, updated_at)) FROM ops.resource_versions").fetchone()[0]
     publish(db, published, force=True)

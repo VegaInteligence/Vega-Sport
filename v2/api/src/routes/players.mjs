@@ -1,8 +1,18 @@
 /**
  * GET /api/read/players — player directory and rankings, same parameters and same
- * response as dashboard/backend/services/relational-players.js on main, read from
- * api.player_appearances (019_api_players.sql). Added by v2: each player record has
- * `power`, its power ranking of the season read (api.power_players), or null.
+ * response as dashboard/backend/services/relational-players.js on main. Added by v2:
+ * each player record has `power`, its power ranking of the season read
+ * (api.power_players), or null.
+ *
+ * Two reads give the same response:
+ * - the season's rows per player and edition (api.player_list_editions, _teams,
+ *   _positions: the calculator keeps them), when the request filters no appearance. It
+ *   is the list as the site opens it: a season's players are ranked without reading
+ *   each of their appearances;
+ * - the appearances themselves (api.player_appearances), when a match, a period, a
+ *   role, a venue or a result is asked: only they know which matches count.
+ * The scope is bound by ids in both (season id, edition ids), so the season's
+ * partitions and the editions are known when the statement is planned.
  *
  * Differences with the legacy read, by construction of v2 (listed for the parity
  * comparison):
@@ -18,6 +28,7 @@ import { powerOf } from "./rankings.mjs";
 import {
   bindValue,
   finiteSql,
+  idScopeWhere,
   likeText,
   normalizedSql,
   parseReadScope,
@@ -25,7 +36,7 @@ import {
   readPageArgs,
   readResponse,
   readValidator,
-  scopeWhere,
+  resolveEditions,
 } from "../publication.mjs";
 
 // dashboard/shared/player-profile.js (main).
@@ -166,10 +177,39 @@ const ratioProjectionFor = (keys) =>
     .join(",\n");
 const ratioProjection = ratioProjectionFor(Object.keys(ratioDefinitions));
 
-/** The played-row filters shared by the player reads (scope, generation, match, period, context). */
-export function appearanceWhere(filters, params, values, alias = "a") {
+// The same sums read from the season's rows (api.player_list_editions): one row per
+// player and edition, already restricted to the played matches and the finite values.
+const rollupCounts = (keys) =>
+  keys
+    .flatMap((key) => {
+      const column = `r.${snake(key)}`;
+      return [
+        `sum(${column}_sum)::float8 AS "${key}_sum"`,
+        `sum(${column}_count)::int AS "${key}_count"`,
+        `sum(${column}_minutes)::float8 AS "${key}_minutes"`,
+      ];
+    })
+    .join(",\n");
+const rollupRatios = (keys) =>
+  keys
+    .flatMap((key) => {
+      const column = `r.${snake(key)}`;
+      return [
+        `sum(${column}_numerator)::float8 AS "${key}_numerator"`,
+        `sum(${column}_denominator)::float8 AS "${key}_denominator"`,
+        `sum(${column}_count)::int AS "${key}_count"`,
+        `sum(${column}_minutes)::float8 AS "${key}_minutes"`,
+      ];
+    })
+    .join(",\n");
+
+/**
+ * The appearance filters of a players read (scope, generation, match, period, context).
+ * editions is the scope resolved to ids (resolveEditions).
+ */
+export function appearanceWhere(filters, params, values, editions, alias = "a") {
   const b = (value) => bindValue(values, value);
-  const where = [scopeWhere(alias, filters.scope, values, { seasonId: true })];
+  const where = [idScopeWhere(alias, filters.scope, editions, values)];
   if (params.has("generation")) where.push(`EXISTS(SELECT 1 FROM publication WHERE generation=${b(params.get("generation"))})`);
   if (filters.match && filters.match !== "all") where.push(`${alias}.match_id=api.internal_id('match',${b(filters.match)})`);
   if (filters.from) where.push(`${alias}.date>=${b(filters.from)}::date`);
@@ -189,11 +229,15 @@ export function appearanceWhere(filters, params, values, alias = "a") {
   return where.join(" AND ");
 }
 
-export function playerReadQuery(filters, params) {
-  const values = [],
-    publication = publicationSql(filters.scope, values);
+/**
+ * What a players read selects, whichever rows it reads: the metrics that eligibility
+ * and ordering need for every player (the others are computed for the page only), the
+ * thresholds, the order and the page. Both statements name their per-player sums `a`
+ * ("<key>_sum", "_count", "_minutes"; a ratio's "_numerator", "_denominator") and the
+ * player's row `d`; nameSort is the folded name the order compares.
+ */
+function playerSelection(filters, values, nameSort) {
   const b = (value) => bindValue(values, value);
-  const where = appearanceWhere(filters, params, values);
   const metricValue = (key) => {
     if (Object.hasOwn(ratioDefinitions, key)) return `100.0*a."${key}_numerator"/nullif(a."${key}_denominator",0)`;
     return filters.basis === "total"
@@ -220,7 +264,6 @@ export function playerReadQuery(filters, params) {
   const sourceMetrics = new Set(earlyCounts);
   if (requiredMetrics.has("passAccuracy")) sourceMetrics.add("passesAccurate").add("passesAttempted");
   if (requiredMetrics.has("duelRate")) sourceMetrics.add("duelsWon").add("duelsLost");
-  const earlyAggregates = [countProjectionFor(earlyCounts), ratioProjectionFor(earlyRatios)].filter(Boolean).join(",\n");
   const earlyProfile = [
     ...earlyCounts.flatMap((key) => ["sum", "count", "minutes"].map((suffix) => `a."${key}_${suffix}"`)),
     ...earlyRatios.flatMap((key) => ["numerator", "denominator", "count", "minutes"].map((suffix) => `a."${key}_${suffix}"`)),
@@ -256,14 +299,34 @@ export function playerReadQuery(filters, params) {
     wasteful: { eligible: `${comparisonNumberSql('d."xg_sum"')}>=3 AND d."goals_count">0`, order: `${comparisonNumberSql('d."finishingDelta"')} ASC` },
   }[filters.ranking];
   if (ranking) thresholds.push(ranking.eligible);
-  const names = `${normalizedSql("d.name")} ASC,d.name COLLATE "C" ASC,d.player_id ASC`;
+  const names = `${nameSort} ASC,d.name COLLATE "C" ASC,d.player_id ASC`;
   const order = ranking
     ? `${ranking.order},${names}`
     : filters.sort === "name"
-      ? `${normalizedSql("d.name")} ${filters.direction},d.name COLLATE "C" ${filters.direction},d.player_id ASC`
+      ? `${nameSort} ${filters.direction},d.name COLLATE "C" ${filters.direction},d.player_id ASC`
       : `${filters.sort === "matches" ? 'd."matches"' : comparisonNumberSql(`d."${filters.sort}"`)} ${filters.direction} NULLS LAST,${names}`;
-  const limit = b(filters.limit),
-    offset = b(filters.offset);
+  return {
+    metricValue,
+    earlyCounts,
+    earlyRatios,
+    sourceMetrics,
+    earlyProfile,
+    averageMetrics,
+    thresholds: thresholds.join(" AND "),
+    order,
+    limit: b(filters.limit),
+    offset: b(filters.offset),
+  };
+}
+
+/** The read on the appearances: any filter. editions is the scope resolved to ids. */
+export function playerReadQuery(filters, params, editions) {
+  const values = [],
+    publication = publicationSql(filters.scope, values);
+  const where = appearanceWhere(filters, params, values, editions);
+  const { metricValue, earlyCounts, earlyRatios, sourceMetrics, earlyProfile, averageMetrics, thresholds, order, limit, offset } =
+    playerSelection(filters, values, normalizedSql("d.name"));
+  const earlyAggregates = [countProjectionFor(earlyCounts), ratioProjectionFor(earlyRatios)].filter(Boolean).join(",\n");
   const identityColumns = `s.player_id,s.player_name AS name,s.image_url,s.match_id,s.date,s.team,s.team_id,s.league_id,s.league,s.position_number`;
   const identityJson = (alias) =>
     `CASE WHEN ${alias}.player_id IS NULL THEN NULL ELSE jsonb_build_object('id',api.public_id('match',${alias}.match_id)||':'||p.player_id,
@@ -323,14 +386,15 @@ source AS MATERIALIZED (
  FROM identities i LEFT JOIN aggregates a USING(player_id) LEFT JOIN latest l USING(player_id)
  LEFT JOIN unknown u USING(player_id) LEFT JOIN teams t USING(player_id) LEFT JOIN leagues le USING(player_id)
  LEFT JOIN main_role r USING(player_id) LEFT JOIN api.player_search_aliases al ON al.player_id=i.player_id
-), filtered AS MATERIALIZED (SELECT d.* FROM averages d WHERE ${thresholds.join(" AND ")}),
+), filtered AS MATERIALIZED (SELECT d.* FROM averages d WHERE ${thresholds}),
 page AS MATERIALIZED (SELECT d.*,row_number() OVER(ORDER BY ${order}) result_order FROM filtered d ORDER BY ${order} LIMIT ${limit} OFFSET ${offset}),
 page_metrics AS (
  SELECT p.player_id,${countProjection},${ratioProjection}
  FROM api.player_appearances p
  -- The played rows of the page's players: the same filters as source, minutes > 0
- -- (re-applied rather than joined to the played CTE, so the player index is used).
- WHERE ${appearanceWhere(filters, params, values, "p")} AND p.minutes>0 AND p.player_id IN(SELECT internal_id FROM page)
+ -- (re-applied rather than joined to the played CTE; the page's players are given as
+ -- one array, an index condition on the player).
+ WHERE ${appearanceWhere(filters, params, values, editions, "p")} AND p.minutes>0 AND p.player_id=ANY(ARRAY(SELECT internal_id FROM page))
  GROUP BY p.player_id
 ), page_records AS (
  SELECT p.result_order,(to_jsonb(p)-'result_order'-'internal_id'-'internal_team_ids')
@@ -345,6 +409,161 @@ SELECT publication.*,(SELECT count(*)::int FROM filtered) total,
  coalesce((SELECT jsonb_agg(p.record ORDER BY p.result_order) FROM page_records p),'[]'::jsonb) players,
  coalesce((SELECT jsonb_agg(jsonb_build_object('id',t.public_id,'name',t.name,'imageUrl',t.image_url) ORDER BY t.public_id)
    FROM api.team_keys t WHERE t.team_id IN(SELECT unnest(internal_team_ids) FROM page)),'[]'::jsonb) teams
+FROM publication`;
+  return { sql, values };
+}
+
+/** A request the season's rows answer: no filter on which appearances count. */
+export const supportsPlayerRollup = (filters) =>
+  filters.match === "all" && !filters.from && !filters.to && filters.role === "all" && filters.venue === "all" && filters.result === "all";
+
+/**
+ * The read on the season's rows (one per player and edition, kept by the calculator):
+ * the same response as playerReadQuery for a request that filters no appearance.
+ *
+ * Every player of the scope gets only what the thresholds and the order need: his
+ * sums, his name, and his role or his clubs and leagues when a position or a text is
+ * asked. The rest (identity, latest match, clubs, leagues, role, every metric) is read
+ * after LIMIT, for the page's players alone.
+ *
+ * The appearance read orders a player's rows by league, date, kick-off and match. The
+ * season's rows keep that order inside an edition (first_order, the identity and latest
+ * rows); across editions the league id decides, as there: a league has one edition in
+ * a season.
+ */
+export function playerRollupQuery(filters, params, editions) {
+  const values = [],
+    publication = publicationSql(filters.scope, values);
+  const scope = (alias) => idScopeWhere(alias, filters.scope, editions, values);
+  const { metricValue, earlyCounts, earlyRatios, earlyProfile, averageMetrics, thresholds, order, limit, offset } = playerSelection(
+    filters,
+    values,
+    "d.sort_name",
+  );
+  const generation = params.has("generation")
+    ? ` AND EXISTS(SELECT 1 FROM publication WHERE generation=${bindValue(values, params.get("generation"))})`
+    : "";
+  const earlyAggregates = [rollupCounts(earlyCounts), rollupRatios(earlyRatios)].filter(Boolean).join(",\n");
+  // What the thresholds read beyond the sums; everything else waits for the page.
+  const needsRole = filters.positions.length > 0,
+    needsText = Boolean(filters.q);
+  const paged = (alias, early) => (early ? "" : ` AND ${alias}.player_id=ANY(ARRAY(SELECT internal_id FROM page))`);
+  const edition = (alias) => `JOIN editions e ON e.competition_season_id=${alias}.competition_season_id`;
+  // The most recent row of the player (prefix identity), or the most recent played one
+  // (prefix latest, where he played): one candidate per edition, the first is kept.
+  const recent = (name, prefix, early) => `${name} AS (
+ SELECT DISTINCT ON(r.player_id) r.player_id,r.${prefix}_match_id match_id,r.${prefix}_date date,r.${prefix}_team_id team_id,
+ e.league_id,e.league,r.${prefix}_position position_number
+ FROM api.player_list_editions r ${edition("r")}
+ WHERE ${scope("r")}${prefix === "latest" ? " AND r.matches>0" : ""}${paged("r", early)}
+ ORDER BY r.player_id,r.${prefix}_date DESC NULLS LAST,e.league_id,r.${prefix}_kickoff NULLS LAST,r.${prefix}_match_id
+)`;
+  const teamNames = (early) => `team_names AS (
+ SELECT player_id,array_agg(name ORDER BY first_rank) names FROM (
+   SELECT x.player_id,t.name,min(x.rank) first_rank FROM (
+     SELECT r.player_id,r.team_id,row_number() OVER(PARTITION BY r.player_id ORDER BY e.league_id,r.first_order) rank
+     FROM api.player_list_teams r ${edition("r")} WHERE ${scope("r")}${paged("r", early)}
+   ) x JOIN api.team_keys t ON t.team_id=x.team_id WHERE t.name<>'' GROUP BY x.player_id,t.name
+ ) n GROUP BY player_id
+)`;
+  const leagueNames = (early) => `league_names AS (
+ SELECT player_id,array_agg(league ORDER BY first_league) names FROM (
+   SELECT r.player_id,e.league,min(e.league_id) first_league FROM api.player_list_editions r ${edition("r")}
+   WHERE ${scope("r")}${paged("r", early)} AND e.league<>'' GROUP BY r.player_id,e.league
+ ) l GROUP BY player_id
+)`;
+  const roles = (early) => `position_totals AS (
+ SELECT player_id,role_code,CASE WHEN role_code IN('AM','A') THEN 'O' ELSE role_code END role_group,
+ sum(minutes) minutes,min(rank) first_order FROM (
+   SELECT r.player_id,${positionLineSql("r.position_number")} role_code,r.minutes,
+   row_number() OVER(PARTITION BY r.player_id ORDER BY e.league_id,r.first_order) rank
+   FROM api.player_list_positions r ${edition("r")} WHERE ${scope("r")}${paged("r", early)}
+ ) x WHERE role_code IS NOT NULL GROUP BY player_id,role_code
+), group_totals AS (
+ SELECT player_id,role_group,sum(minutes) minutes,min(first_order) first_order FROM position_totals GROUP BY player_id,role_group
+), main_group AS (
+ SELECT DISTINCT ON(player_id) * FROM group_totals ORDER BY player_id,minutes DESC,first_order
+), main_role AS (
+ SELECT DISTINCT ON(p.player_id) p.player_id,p.role_code FROM position_totals p JOIN main_group g USING(player_id,role_group)
+ ORDER BY p.player_id,p.minutes DESC,p.first_order
+)`;
+  // Each detail is read once: before the thresholds for every player when they need
+  // it, after LIMIT for the page's players otherwise.
+  const details = [
+    [needsRole || needsText, (early) => recent("identities", "identity", early)],
+    [needsRole, roles],
+    [needsText, teamNames],
+    [needsText, leagueNames],
+  ];
+  const detailSql = (early) =>
+    details
+      .filter(([needed]) => needed === early)
+      .map(([, build]) => `${build(early)},\n`)
+      .join("");
+  const roleSql = `coalesce(mr.role_code,${positionLineSql("i.position_number")})`;
+  const teamsSql = `coalesce(t.names,CASE WHEN it.name IS NOT NULL AND it.name<>'' THEN ARRAY[it.name] ELSE '{}'::text[] END)`;
+  const leaguesSql = `coalesce(le.names,'{}'::text[])`;
+  const identityJson = (alias, team) =>
+    `CASE WHEN ${alias}.player_id IS NULL THEN NULL ELSE jsonb_build_object('id',api.public_id('match',${alias}.match_id)||':'||p.player_id,
+     'name',k.name,'image_url',k.image_url,'date',${alias}.date,'team',${team}.name,'team_id',${team}.public_id,
+     'league_id',${alias}.league_id,'league',${alias}.league,'position_number',${alias}.position_number) END`;
+  const sql = `/*vega:v2:players:rollup*/
+WITH publication AS MATERIALIZED (${publication}),
+editions AS MATERIALIZED (
+ SELECT e.competition_season_id,e.league_id,e.league FROM api.edition_keys e WHERE ${scope("e")}
+), aggregates AS (
+ SELECT r.player_id,sum(r.matches)::int matches,sum(r.total_minutes)::float8 total_minutes,
+ sum(r.unknown_matches)::int unknown_minutes,sum(r.starts)::int starts,sum(r.known_starts)::int known_starts,
+ sum(r.rating_sum)/nullif(sum(r.rating_count),0) rating,sum(r.rating_count)::int rating_count${earlyAggregates ? `,\n${earlyAggregates}` : ""}
+ FROM api.player_list_editions r WHERE ${scope("r")}${generation}
+ GROUP BY r.player_id
+),
+${detailSql(true)}averages AS (
+ SELECT a.player_id internal_id,k.public_id player_id,coalesce(nullif(k.name,''),'Joueur') name,
+ -- The stored folded name (the folding of normalizedSql); 'Joueur' folds to 'joueur'.
+ CASE WHEN k.name IS NULL OR k.name='' THEN 'joueur' ELSE k.search_name END sort_name,
+ a.matches,CASE WHEN a.matches>0 THEN a.total_minutes/a.matches WHEN a.unknown_minutes>0 THEN NULL ELSE 0 END minutes,
+ a.total_minutes,a.starts,a.known_starts,a.unknown_minutes,a.rating,a.rating_count${needsRole ? `,\n ${roleSql} role_code` : ""}${
+   needsText ? `,\n ${teamsSql} teams,${leaguesSql} leagues,al.search_aliases` : ""
+ }${earlyProfile ? `,\n${earlyProfile}` : ""}
+ FROM aggregates a JOIN api.player_keys k ON k.player_id=a.player_id${
+   needsRole || needsText ? "\n LEFT JOIN identities i ON i.player_id=a.player_id" : ""
+ }${needsRole ? "\n LEFT JOIN main_role mr ON mr.player_id=a.player_id" : ""}${
+   needsText
+     ? `\n LEFT JOIN api.team_keys it ON it.team_id=i.team_id LEFT JOIN team_names t ON t.player_id=a.player_id
+ LEFT JOIN league_names le ON le.player_id=a.player_id LEFT JOIN api.player_search_aliases al ON al.player_id=a.player_id`
+     : ""
+ }
+), filtered AS MATERIALIZED (SELECT d.* FROM averages d WHERE ${thresholds}),
+page AS MATERIALIZED (SELECT d.*,row_number() OVER(ORDER BY ${order}) result_order FROM filtered d ORDER BY ${order} LIMIT ${limit} OFFSET ${offset}),
+${detailSql(false)}${recent("latest", "latest", false)},
+team_ids AS (
+ SELECT r.player_id,array_agg(DISTINCT r.team_id) ids FROM api.player_list_teams r WHERE ${scope("r")}${paged("r", false)} GROUP BY r.player_id
+), league_ids AS (
+ SELECT r.player_id,array_agg(DISTINCT e.league_id) ids FROM api.player_list_editions r ${edition("r")}
+ WHERE ${scope("r")} AND r.matches>0${paged("r", false)} GROUP BY r.player_id
+), page_metrics AS (
+ SELECT r.player_id,${rollupCounts(PLAYER_COUNT_METRICS)},${rollupRatios(Object.keys(ratioDefinitions))}
+ FROM api.player_list_editions r WHERE ${scope("r")}${paged("r", false)} GROUP BY r.player_id
+), page_records AS (
+ SELECT p.result_order,(to_jsonb(p)-'result_order'-'internal_id'-'sort_name')
+   ||jsonb_build_object('image_url',k.image_url,'teams',${teamsSql},'leagues',${leaguesSql},'role_code',${roleSql},
+     'league_ids',coalesce(li.ids,'{}'::text[]),
+     'team_ids',coalesce((SELECT jsonb_agg(x.public_id ORDER BY x.public_id) FROM api.team_keys x WHERE x.team_id=ANY(ti.ids)),'[]'::jsonb),
+     'identity',${identityJson("i", "it")},'latest',${identityJson("l", "lt")})
+   ||coalesce(to_jsonb(a)-'player_id','{}'::jsonb)||to_jsonb(v) AS record
+ FROM page p JOIN api.player_keys k ON k.player_id=p.internal_id
+ LEFT JOIN identities i ON i.player_id=p.internal_id LEFT JOIN api.team_keys it ON it.team_id=i.team_id
+ LEFT JOIN latest l ON l.player_id=p.internal_id LEFT JOIN api.team_keys lt ON lt.team_id=l.team_id
+ LEFT JOIN team_names t ON t.player_id=p.internal_id LEFT JOIN league_names le ON le.player_id=p.internal_id
+ LEFT JOIN main_role mr ON mr.player_id=p.internal_id LEFT JOIN team_ids ti ON ti.player_id=p.internal_id
+ LEFT JOIN league_ids li ON li.player_id=p.internal_id LEFT JOIN page_metrics a ON a.player_id=p.internal_id
+ CROSS JOIN LATERAL (SELECT ${averageMetrics},(${metricValue("goals")})-(${metricValue("xg")}) AS "finishingDelta") v
+)
+SELECT publication.*,(SELECT count(*)::int FROM filtered) total,
+ coalesce((SELECT jsonb_agg(p.record ORDER BY p.result_order) FROM page_records p),'[]'::jsonb) players,
+ coalesce((SELECT jsonb_agg(jsonb_build_object('id',t.public_id,'name',t.name,'imageUrl',t.image_url) ORDER BY t.public_id)
+   FROM api.team_keys t WHERE t.team_id IN(SELECT unnest(ids) FROM team_ids)),'[]'::jsonb) teams
 FROM publication`;
   return { sql, values };
 }
@@ -428,7 +647,8 @@ export function createPlayerReadRoute(read) {
     const filters = parsePlayerRead(params);
     const validated = await readValidator(req, params, filters.scope, read);
     if (validated) return validated;
-    const { sql, values } = playerReadQuery(filters, params);
+    const editions = await resolveEditions(read, filters.scope);
+    const { sql, values } = (supportsPlayerRollup(filters) ? playerRollupQuery : playerReadQuery)(filters, params, editions);
     const [snapshot] = await read(sql, values);
     const total = Number(snapshot?.total || 0);
     const players = (snapshot?.players || []).map(playerReadRecord);

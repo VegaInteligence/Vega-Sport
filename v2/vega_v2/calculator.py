@@ -363,6 +363,8 @@ def refresh_competition_season(conn, cs, *, players=None, teams=None):
         refresh_game_states(conn, cs, sid, None if teams is None else set(teams))
         # The peers of a performance (055): the edition's histogram follows its statistics.
         conn.execute("SELECT agg.refresh_performance_distribution(%s)", (cs,))
+        # The player list (060): the edition's rows per player follow its appearances.
+        conn.execute("SELECT agg.refresh_player_list(%s)", (cs,))
 
 
 def process_dirty(conn, *, limit=500):

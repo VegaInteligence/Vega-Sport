@@ -435,6 +435,68 @@ class ModelsTest(unittest.TestCase):
             x("SELECT agg.refresh_performance_distribution(1)")
         self.assertEqual(self.distribution(metrics), expected)
 
+    def test_player_list_rows_hold_each_player_s_season(self):
+        # 060: the calculator wrote the rows of the player list (setUpClass); the list sums them.
+        matches, mid = {t: [] for t in TEAMS}, 0
+        for home in TEAMS:
+            for away in TEAMS:
+                if home != away:
+                    mid += 1
+                    matches[home].append(mid)
+                    matches[away].append(mid)
+
+        def editions():
+            return {r[0]: r[1:] for r in self.db.execute(
+                """SELECT player_id, matches, total_minutes, unknown_matches, starts, known_starts, goals_sum, goals_count, goals_minutes,
+                          xg_count, recoveries_sum, pass_accuracy_numerator, pass_accuracy_denominator, pass_accuracy_count,
+                          identity_match_id, identity_team_id, latest_match_id, latest_position
+                   FROM agg.player_list_editions WHERE competition_season_id=1 AND season_id=2025"""
+            )}
+
+        def clubs():
+            return self.db.execute("SELECT player_id, team_id, first_order FROM agg.player_list_teams WHERE competition_season_id=1 ORDER BY 1").fetchall()
+
+        def positions():
+            return self.db.execute(
+                "SELECT player_id, position_number, minutes, first_order FROM agg.player_list_positions WHERE competition_season_id=1 ORDER BY 1"
+            ).fetchall()
+
+        players = sorted(self.facts["players"])
+        expected = {}
+        for pid, team, _, position in players:
+            mids = matches[team]  # all on the same day: the first one is his identity and his latest
+            expected[pid] = (
+                14, 14 * 90, 0, 14, 14, sum((pid + m) % 5 == 0 for m in mids), 14, 14 * 90,
+                13 if pid == 102 else 14, self.facts["recoveries"][pid], 14 * (20 + pid % 30), 14 * (30 + pid % 30), 14,
+                mids[0], team, mids[0], position,
+            )
+        self.assertEqual(editions(), expected)
+        self.assertEqual(clubs(), [(pid, team, 1) for pid, team, _, _ in players])
+        self.assertEqual(positions(), [(pid, position, 14 * 90, 1) for pid, _, _, position in players])
+        self.assertEqual(self.one("SELECT agg.refresh_player_list(1)")[0], 0)  # nothing to rewrite
+        x = self.db.execute
+        pid, (first, second) = 105, matches[1][:2]
+        change = "UPDATE core.player_match_stats SET minutes_played=%s WHERE season_id=2025 AND match_id=%s AND player_id=%s"
+        try:
+            # Not played: the match leaves his totals, and his club and position start at his second row.
+            x(change, (0, first, pid))
+            self.assertEqual(self.one("SELECT agg.refresh_player_list(1)")[0], 3)  # his row, his club, his position
+            row = editions()[pid]
+            self.assertEqual(row[:5], (13, 13 * 90, 0, 13, 13))  # starts are counted on played matches
+            self.assertEqual(row[5], sum((pid + m) % 5 == 0 for m in matches[1][1:]))
+            self.assertEqual(row[13:], (first, 1, second, 62))
+            self.assertIn((pid, 1, 2), clubs())
+            self.assertIn((pid, 62, 13 * 90, 2), positions())
+            # Minutes unknown: the match is counted apart.
+            x(change, (None, first, pid))
+            x("SELECT agg.refresh_player_list(1)")
+            self.assertEqual(editions()[pid][:3], (13, 13 * 90, 1))
+        finally:
+            x(change, (90, first, pid))
+            x("SELECT agg.refresh_player_list(1)")
+        self.assertEqual(editions(), expected)
+        self.assertEqual(clubs(), [(pid, team, 1) for pid, team, _, _ in players])
+
     def test_partitioned_tables_get_their_own_statistics(self):
         # 056: autovacuum never analyses a partitioned table itself.
         parents = self.one("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind='p' AND n.nspname IN ('core','agg','ops')")[0]
