@@ -3,10 +3,10 @@
 # the backfill task, one archive season through the archive task, then the read API's
 # answers for both. Run after deploy.sh, from the repository root:
 #
-#   AWS_PROFILE=statarena ARCHIVE_SOURCES_BUCKET=<the archive sources bucket> bash infra/aws/import-test.sh
+#   AWS_PROFILE=statarena bash infra/aws/import-test.sh
 #
 # Environment: LEAGUE (l_3FJFUl, Ligue 1), SEASON (2025, i.e. 2025/2026), ARCHIVE_SEASON
-# (2019/2020), ARCHIVE_SOURCES_BUCKET (read only; without it the archive step is skipped).
+# (2019/2020), ARCHIVE_SOURCES_BUCKET (read only; the stack's release bucket when unset).
 # Writes to the base through its own tasks.
 set -euo pipefail
 export AWS_REGION=${AWS_REGION:-us-east-2}
@@ -14,7 +14,7 @@ LEAGUE=${LEAGUE:-l_3FJFUl}
 SEASON=${SEASON:-2025}
 LABEL="$SEASON/$((SEASON + 1))"
 ARCHIVE_SEASON=${ARCHIVE_SEASON:-2019/2020}
-ARCHIVES=${ARCHIVE_SOURCES_BUCKET:-}
+ARCHIVES=${ARCHIVE_SOURCES_BUCKET:-vega-v2-releases-361769570630-$AWS_REGION}
 SUBNETS=subnet-0233a9567335f56ce,subnet-04c9af303f55d9718,subnet-0e72516f361932c15
 [ "$(aws sts get-caller-identity --query Account --output text)" = 361769570630 ] || { echo "wrong AWS account" >&2; exit 1; }
 output() { aws cloudformation describe-stacks --stack-name "$1" --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text; }

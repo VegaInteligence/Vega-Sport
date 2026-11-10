@@ -5,7 +5,7 @@ Three CloudFormation stacks, one per block of the backend, plus the live stack (
 | Stack | Template | Contents |
 |---|---|---|
 | `vega-v2-database` | `database.yaml` | private PostgreSQL 18 (`vega-football-db-postgres`, database `vega_v2`, `db.t4g.medium` since 2026-11-09, gp3 20→100 GB, encrypted, 7-day backups, deletion protection, snapshot on delete), master password managed by Secrets Manager, security groups of the worker and the API |
-| `vega-v2-worker` | `worker.yaml` | ECR repository, ECS cluster, the always-on worker service (Fargate ARM 0.25 vCPU / 2 GB, one task), the `vega-v2-backfill` service (1 vCPU / 2 GB, one task while history is collected, none after), the on-demand `vega-v2-migrate` task definition, the private bucket of the image copies (`vega-v2-media-…`, written only under `data/sources/v2/images/` by the worker's task role), and the private bucket of the function packages (`vega-v2-releases-…`) |
+| `vega-v2-worker` | `worker.yaml` | ECR repository, ECS cluster, the always-on worker service (Fargate ARM 0.25 vCPU / 2 GB, one task), the `vega-v2-backfill` service (1 vCPU / 2 GB, one task while history is collected, none after), the on-demand `vega-v2-migrate` task definition, the private bucket of the image copies (`vega-v2-media-…`, written only under `data/sources/v2/images/` by the worker's task role), and the private release bucket (`vega-v2-releases-…`: the function packages, and the pinned archive sources under `data/sources/`) |
 | `vega-v2-api` | `api.yaml` | the read API Lambda (Node 24 ARM, `backend/api`), its signed Function URL and its own CloudFront distribution; the distribution also serves the image copies at `data/*` from the media bucket (origin access control, bucket policy limited to this distribution) and `api/ops/*`, the status page's read, uncached |
 
 Account 361769570630, region us-east-2, AWS CLI profile `statarena`, default VPC `vpc-08e400afa07fc1812` and its three subnets. The subnets route to an internet gateway: the worker gets a public IP for outbound HTTPS (sources, ECR, logs) and no inbound port; no NAT gateway is needed. The database is not publicly accessible: only the worker and API security groups reach it on 5432.
@@ -34,7 +34,7 @@ Account 361769570630, region us-east-2, AWS CLI profile `statarena`, default VPC
 6b. live stack (`live.yaml`): the live tables, the AppSync Events API and its browser key (renewed for 360 days on each deploy), the `GET /live/matches/{id}` function and the EventBridge schedule that starts the ingestor every 15 minutes (`--until-idle`: it exits at once without a match within 30 minutes, follows the day's matches to the last otherwise, and a second start finds the lease taken), off unless `LIVE_PROVIDER` names an adapter;
 7. read API package, uploaded under `releases/v2-api/` of the release bucket;
 8. read API stack; on the first deployment a second pass sets `MediaBaseUrl` once the distribution's domain is known;
-9. with `IMPORT_ARCHIVES=true` and `ARCHIVE_SOURCES_BUCKET`, the historical archive import (`vega-v2-archives`), which reads the pinned sources under `data/sources/` of that bucket, read only: whole seasons up to 2020/2021, then only the competitions PitchAPI has no edition of that season. A re-import writes only what differs.
+9. with `IMPORT_ARCHIVES=true`, the historical archive import (`vega-v2-archives`), which reads the pinned sources under `data/sources/` of the release bucket (`openfootball/`, `engsoccerdata/`, `worldclub/`; another bucket with `ARCHIVE_SOURCES_BUCKET`), read only: whole seasons up to 2020/2021, then only the competitions PitchAPI has no edition of that season. A re-import writes only what differs.
 
 ### One-time setup (commands to run, each changes AWS or GitHub)
 
@@ -56,7 +56,7 @@ aws cloudformation deploy --profile statarena --region us-east-2 --stack-name ve
 gh api -X PUT repos/VegaInteligence/Vega-Sport/environments/v2-production
 ```
 
-`deploy-roles.yaml` creates `vega-v2-deploy` (assumable only by the **Deploy** workflow of this repository, in the `v2-production` environment, through the existing GitHub OIDC provider) and `vega-v2-cloudformation` (the service role CloudFormation uses, limited to the `vega-v2-*` resources). Both trusts name the workflow: after renaming a workflow, deploy this stack again before the workflow runs. Optional: `gh variable set V2_ARCHIVE_SOURCES_BUCKET --body <the archive sources bucket>` for the archive import.
+`deploy-roles.yaml` creates `vega-v2-deploy` (assumable only by the **Deploy** workflow of this repository, in the `v2-production` environment, through the existing GitHub OIDC provider) and `vega-v2-cloudformation` (the service role CloudFormation uses, limited to the `vega-v2-*` resources). Both trusts name the workflow: after renaming a workflow, deploy this stack again before the workflow runs.
 
 ### Deploy
 
@@ -87,7 +87,7 @@ The account runs at most 10 Lambdas concurrently: `ReservedConcurrency` stays 0 
 After the first deploy, `import-test.sh` loads one complete league season through the backfill task and one archive season through the archive task, then reads them back through the read API (match families, season loader, clubs, standings, power rankings, archive):
 
 ```bash
-AWS_PROFILE=statarena ARCHIVE_SOURCES_BUCKET=<the archive sources bucket> bash infra/aws/import-test.sh
+AWS_PROFILE=statarena bash infra/aws/import-test.sh
 ```
 
 Defaults: Ligue 1 (`LEAGUE=l_3FJFUl`), 2025/2026 (`SEASON=2025`), archive `ARCHIVE_SEASON=2019/2020`. With PitchAPI's free plan at one call every 0.5 s, a 306-match season (13 families each) takes about 40 minutes. The worker service computes the aggregates and, within a day, the levels, similarities and power rankings of the backfilled season (it now runs once for a season never computed). It writes only to `vega-football-db-postgres`.
@@ -128,7 +128,8 @@ The base (`vega-football-db-postgres`) was filled from the sources themselves; t
 - The old bucket `statarena-football-333rosky-70db6e5f` keeps `data/sources/` (the archive import reads it); `_migration/`, `data/_migration/`, `data/staging/`, `data/computed/` and `data/raw/` are emptied.
 - The stack `statarena-backend-actions` is deleted; the GitHub OIDC provider it had created is kept (the deploy and pilot roles sign in through it).
 - The API and live functions take their packages from their own release bucket (`vega-v2-releases-…`); until the repository's clean-up of 10 November they took them from the old one (`statarena-backend-releases-…`).
-- Kept on purpose: the final snapshot `statarena-final-20261110` and `data/sources/` of the old bucket (the archive import reads it).
+- The pinned archive sources the import reads (52 files) were copied into the release bucket on 11 November 2026, identical file for file; nothing of the stack reads the old bucket `statarena-football-333rosky-70db6e5f` any more.
+- Kept on purpose until the backfill has finished: the final snapshot `statarena-final-20261110`.
 - Not served yet: `/api/player-market-values` (the player page's value card answers "Données indisponibles").
 
 ## Cost (on-demand, us-east-2, before free tier; check in the AWS pricing calculator)

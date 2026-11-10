@@ -12,7 +12,7 @@
 #
 # Environment: WORKER_DESIRED_COUNT (1), BACKFILL_DESIRED_COUNT (kept from the previous
 # deploy when unset: 1 while history is collected, 0 once it is), IMPORT_ARCHIVES (false), ARCHIVE_SOURCES_BUCKET
-# (main's data bucket, read only, for the archives; kept from the previous deploy when unset), CFN_ROLE (CloudFormation service role,
+# (where the pinned archive sources are, under data/sources/; the stack's release bucket when unset), CFN_ROLE (CloudFormation service role,
 # set by the workflow), IMAGE_TAG (git HEAD), PITCHAPI_API_KEY or PITCHAPI_API_KEY_FILE
 # (needed once, to create /vega/v2/pitchapi-key), SPORTSAPI_API_KEY or SPORTSAPI_API_KEY_FILE
 # (optional, once: /vega/v2/sportsapi-key, the SportsAPI ranking snapshots) and LIVE_PROVIDER
@@ -44,13 +44,9 @@ role=(); [ -n "${CFN_ROLE:-}" ] && role=(--role-arn "$CFN_ROLE")
 if [ -z "${PITCHAPI_API_KEY:-}" ] && [ -n "${PITCHAPI_API_KEY_FILE:-}" ]; then PITCHAPI_API_KEY=$(cat "$PITCHAPI_API_KEY_FILE"); export PITCHAPI_API_KEY; fi
 if [ -z "${SPORTSAPI_API_KEY:-}" ] && [ -n "${SPORTSAPI_API_KEY_FILE:-}" ]; then SPORTSAPI_API_KEY=$(cat "$SPORTSAPI_API_KEY_FILE"); export SPORTSAPI_API_KEY; fi
 [ "$(aws sts get-caller-identity --query Account --output text)" = "$ACCOUNT" ] || { echo "wrong AWS account" >&2; exit 1; }
-# A deploy without ARCHIVE_SOURCES_BUCKET keeps the bucket the worker stack already has
-# (otherwise every later deploy dropped it, and the archive task with it).
-if [ -z "$ARCHIVES" ]; then
-  ARCHIVES=$(aws cloudformation describe-stacks --stack-name vega-v2-worker \
-    --query "Stacks[0].Parameters[?ParameterKey=='ArchiveSourcesBucket'].ParameterValue" --output text 2>/dev/null || true)
-  [ "$ARCHIVES" = None ] && ARCHIVES=
-fi
+# The pinned archive sources live in the stack's own release bucket (data/sources/), next to
+# the function packages: nothing of the stack reads another bucket.
+[ -z "$ARCHIVES" ] && ARCHIVES=$RELEASES
 # The backfill service keeps the size it has (0 or 1) unless BACKFILL_DESIRED_COUNT says otherwise.
 BACKFILL=${BACKFILL_DESIRED_COUNT:-}
 if [ -z "$BACKFILL" ]; then
