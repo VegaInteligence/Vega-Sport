@@ -701,6 +701,22 @@ class WorkerTest(unittest.TestCase):
         self.assertEqual(self.at(start + timedelta(hours=25))["revived"], 1)
         self.assertEqual(self.jobs("m_ffffff", "summary")[-1][1], "failed")
 
+    def test_a_refused_profile_logs_the_provider_s_reason_as_a_category(self):
+        # The provider answers 403 with a sentence: the log keeps its category only.
+        def refuse(request, timeout):
+            return 403, {}, json.dumps({"message": "Access denied for this resource: p_aaaaaa"}).encode()
+
+        self.db.execute("INSERT INTO core.players(id,name) VALUES (901,'Synthetic Player')")
+        self.db.execute("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('player','pitchapi','p_aaaaaa',901)")
+        enqueue(self.db, "reference", "player", entity_type="player", entity_id=901, run_after=self.now)
+        self.worker.client._transport = refuse
+        self.worker.lanes = ("reference",)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertTrue(self.worker.step())
+        self.assertRegex(out.getvalue(), r"family=player job=\d+ error=HTTP_ACCESS_DENIED reason=access_denied\n")
+        self.assertNotIn("this resource", out.getvalue())
+
     def test_date_matches_without_edition_and_new_statuses(self):
         # Real /date responses name the competition but not the edition.
         start = self.now
