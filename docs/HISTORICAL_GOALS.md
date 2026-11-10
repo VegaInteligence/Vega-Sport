@@ -10,7 +10,7 @@ Les lignes exactement identiques sont dédupliquées ; les fichiers originaux co
 Pour reconstruire les archives et le manifeste :
 
 ```sh
-python dashboard/scripts/build_historical_goals.py
+python backend/archives/builders/build_historical_goals.py
 ```
 
 Dans le dashboard : « Compétitions » puis « Archives de buts », avec recherche par joueur ou équipe, filtre de compétition et export CSV.

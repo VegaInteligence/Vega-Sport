@@ -8,13 +8,6 @@ node_modules/
 dist/
 .sites-runtime/
 .sites-checkout/
-data/sources/pitchapi/full/
-data/sources/pitchapi/archives/europe_2026_2027/
-data/sources/pitchapi/archives/europe_2021_2026/
-data/sources/pitchapi/archives/world_cup_2026/
-data/staging/dashboard/football.json
-data/staging/
-
 .DS_Store
 
 dashboard/node_modules/
@@ -24,19 +17,5 @@ dashboard/dist/
 .next-dev/
 next-env.d.ts
 .vercel/
-dashboard/outputs/daily-refresh/
-
-# Local resumable worldwide collection queue
-data/computed/pitchapi-world/
-
-# Durable football data lives in AWS RDS and S3.
-/data/
-dashboard/outputs/neon-runtime/
 output/playwright/
-
-# Generated evidence and screenshots belong to CI artifacts, not source control.
-docs/verification/**/runs/
-docs/verification/**/*-runs/
-dashboard/outputs/
-!dashboard/outputs/data-completeness/
 prototypes/

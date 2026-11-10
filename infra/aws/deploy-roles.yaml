@@ -1,0 +1,254 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Roles of the deployment workflow (.github/workflows/deploy.yml). The workflow
+  assumes vega-v2-deploy through the existing GitHub OIDC provider, only from the
+  v2-production environment of this repository; CloudFormation changes the vega-v2-*
+  stacks with vega-v2-cloudformation, limited to their resources.
+Parameters:
+  GitHubSubject:
+    Type: String
+    Default: 'repo:VegaInteligence@188998341/Vega-Sport@1441213700:environment:v2-production'
+    Description: OIDC subject (immutable ids, as the current roles use them)
+  ReleaseBucket:
+    Type: String
+    Default: vega-v2-releases-361769570630-us-east-2
+Resources:
+  CloudFormationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: vega-v2-cloudformation
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: [{Effect: Allow, Principal: {Service: cloudformation.amazonaws.com}, Action: 'sts:AssumeRole'}]
+      Policies:
+        - PolicyName: V2Stacks
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: Database
+                Effect: Allow
+                Action: ['rds:*']
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:rds:${AWS::Region}:${AWS::AccountId}:db:vega-football-db-postgres'
+                  - !Sub 'arn:${AWS::Partition}:rds:${AWS::Region}:${AWS::AccountId}:subgrp:vega-v2-*'
+                  - !Sub 'arn:${AWS::Partition}:rds:${AWS::Region}:${AWS::AccountId}:pg:vega-v2-*'
+                  - !Sub 'arn:${AWS::Partition}:rds:${AWS::Region}:${AWS::AccountId}:snapshot:vega-football-db-postgres-*'
+              - Sid: DatabaseDescribe
+                Effect: Allow
+                Action: ['rds:Describe*', 'rds:ListTagsForResource', 'ec2:Describe*', 'secretsmanager:CreateSecret', 'secretsmanager:TagResource',
+                         'secretsmanager:DescribeSecret', 'secretsmanager:RotateSecret', 'secretsmanager:PutSecretValue', 'kms:DescribeKey',
+                         'kms:CreateGrant', 'kms:Decrypt', 'kms:GenerateDataKey']
+                Resource: '*'
+              - Sid: SecurityGroups
+                Effect: Allow
+                Action: ['ec2:CreateSecurityGroup', 'ec2:DeleteSecurityGroup', 'ec2:AuthorizeSecurityGroupIngress', 'ec2:AuthorizeSecurityGroupEgress',
+                         'ec2:RevokeSecurityGroupIngress', 'ec2:RevokeSecurityGroupEgress', 'ec2:CreateTags', 'ec2:DeleteTags']
+                Resource: '*'
+                Condition: {StringEquals: {'ec2:Vpc': !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:vpc/vpc-08e400afa07fc1812'}}
+              - Sid: SecurityGroupCreate
+                Effect: Allow
+                Action: ['ec2:CreateSecurityGroup', 'ec2:CreateTags']
+                Resource: !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
+              - Sid: Containers
+                Effect: Allow
+                Action: ['ecr:*']
+                Resource: !Sub 'arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/vega-v2-worker'
+              - Sid: Ecs
+                Effect: Allow
+                Action: ['ecs:CreateCluster', 'ecs:DeleteCluster', 'ecs:DescribeClusters', 'ecs:UpdateClusterSettings', 'ecs:TagResource',
+                         'ecs:RegisterTaskDefinition', 'ecs:DeregisterTaskDefinition', 'ecs:DescribeTaskDefinition', 'ecs:CreateService',
+                         'ecs:UpdateService', 'ecs:DeleteService', 'ecs:DescribeServices', 'ecs:ListTagsForResource']
+                Resource: '*'
+              - Sid: Logs
+                Effect: Allow
+                Action: ['logs:*']
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/vega-v2-worker*'
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/vega-v2-api*'
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/vega-v2-live*'
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/vega-v2-live*'
+              - Sid: LogsDescribe
+                Effect: Allow
+                Action: ['logs:DescribeLogGroups']
+                Resource: '*'
+              - Sid: Roles
+                Effect: Allow
+                Action: ['iam:CreateRole', 'iam:DeleteRole', 'iam:GetRole', 'iam:PassRole', 'iam:PutRolePolicy', 'iam:DeleteRolePolicy',
+                         'iam:GetRolePolicy', 'iam:AttachRolePolicy', 'iam:DetachRolePolicy', 'iam:TagRole', 'iam:UpdateAssumeRolePolicy',
+                         'iam:ListRolePolicies', 'iam:ListAttachedRolePolicies']
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/vega-v2-worker-*'
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/vega-v2-api-*'
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/vega-v2-live-*'
+              - Sid: ServiceLinkedRoles
+                Effect: Allow
+                Action: 'iam:CreateServiceLinkedRole'
+                Resource: '*'
+                Condition: {StringEquals: {'iam:AWSServiceName': ['ecs.amazonaws.com', 'rds.amazonaws.com']}}
+              - Sid: Functions
+                Effect: Allow
+                Action: ['lambda:*']
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:vega-v2-api*'
+                  - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:vega-v2-live*'
+              - Sid: ReleaseRead
+                Effect: Allow
+                Action: ['s3:GetObject']
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-api/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-live/*'
+              # Live (live.yaml): its tables and its AppSync Events API.
+              - Sid: LiveTables
+                Effect: Allow
+                Action: ['dynamodb:*']
+                Resource: !Sub 'arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/vega-v2-live-*'
+              - Sid: LiveEvents
+                Effect: Allow
+                Action: ['appsync:*']
+                Resource: !Sub 'arn:${AWS::Partition}:appsync:${AWS::Region}:${AWS::AccountId}:apis/*'
+              - Sid: LiveEventsCreate
+                Effect: Allow
+                Action: ['appsync:CreateApi', 'appsync:TagResource', 'appsync:ListApis']
+                Resource: '*'
+              # The database alarms (database.yaml).
+              - Sid: DatabaseAlarms
+                Effect: Allow
+                Action: ['cloudwatch:PutMetricAlarm', 'cloudwatch:DeleteAlarms', 'cloudwatch:DescribeAlarms', 'cloudwatch:TagResource',
+                         'cloudwatch:UntagResource', 'cloudwatch:ListTagsForResource']
+                Resource: !Sub 'arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:vega-v2-*'
+              # The schedule that starts the live ingestor (live.yaml IngestorSchedule).
+              - Sid: LiveSchedule
+                Effect: Allow
+                Action: ['scheduler:*']
+                Resource: !Sub 'arn:${AWS::Partition}:scheduler:${AWS::Region}:${AWS::AccountId}:schedule/default/vega-v2-live*'
+              - Sid: Buckets
+                Effect: Allow
+                Action: ['s3:CreateBucket', 's3:DeleteBucket', 's3:PutBucket*', 's3:GetBucket*', 's3:PutEncryptionConfiguration',
+                         's3:GetEncryptionConfiguration', 's3:PutBucketPolicy', 's3:DeleteBucketPolicy']
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::vega-v2-media-${AWS::AccountId}-${AWS::Region}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}'
+              - Sid: Distribution
+                Effect: Allow
+                Action: ['cloudfront:*']
+                Resource: '*'
+  DeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: vega-v2-deploy
+      MaxSessionDuration: 7200
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Federated: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com'}
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:repository_id: '1441213700'
+                token.actions.githubusercontent.com:workflow: 'Deploy'
+                token.actions.githubusercontent.com:sub: !Ref GitHubSubject
+      Policies:
+        - PolicyName: DeployV2
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: Stacks
+                Effect: Allow
+                Action: ['cloudformation:CreateStack', 'cloudformation:UpdateStack', 'cloudformation:CreateChangeSet',
+                         'cloudformation:ExecuteChangeSet', 'cloudformation:DescribeChangeSet', 'cloudformation:DeleteChangeSet',
+                         'cloudformation:DescribeStacks', 'cloudformation:DescribeStackEvents', 'cloudformation:GetTemplateSummary',
+                         'cloudformation:ListStackResources']
+                Resource: !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/vega-v2-*/*'
+              - Sid: Templates
+                Effect: Allow
+                Action: ['cloudformation:ValidateTemplate', 'cloudformation:ListExports']
+                Resource: '*'
+              - Sid: HandStacksToCloudFormation
+                Effect: Allow
+                Action: 'iam:PassRole'
+                Resource: !GetAtt CloudFormationRole.Arn
+              - Sid: Image
+                Effect: Allow
+                Action: ['ecr:BatchCheckLayerAvailability', 'ecr:InitiateLayerUpload', 'ecr:UploadLayerPart', 'ecr:CompleteLayerUpload',
+                         'ecr:PutImage', 'ecr:BatchGetImage', 'ecr:DescribeImages']
+                Resource: !Sub 'arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/vega-v2-worker'
+              - Sid: RegistryLogin
+                Effect: Allow
+                Action: 'ecr:GetAuthorizationToken'
+                Resource: '*'
+              - Sid: Release
+                Effect: Allow
+                Action: ['s3:PutObject', 's3:GetObject']
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-api/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-live/*'
+              - Sid: Secrets
+                Effect: Allow
+                Action: ['ssm:GetParameter', 'ssm:PutParameter']
+                Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vega/v2/*'
+              - Sid: SecretsKey
+                Effect: Allow
+                Action: ['kms:Encrypt', 'kms:Decrypt', 'kms:GenerateDataKey']
+                Resource: '*'
+                Condition: {StringEquals: {'kms:ViaService': !Sub 'ssm.${AWS::Region}.amazonaws.com'}}
+              - Sid: OneOffTasks
+                Effect: Allow
+                Action: 'ecs:RunTask'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/vega-v2-migrate:*'
+                  - !Sub 'arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/vega-v2-archives:*'
+              - Sid: TaskStatus
+                Effect: Allow
+                Action: ['ecs:DescribeTasks', 'ecs:DescribeServices']
+                Resource: '*'
+              - Sid: TaskRoles
+                Effect: Allow
+                Action: 'iam:PassRole'
+                Resource: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/vega-v2-worker-*'
+                Condition: {StringEquals: {'iam:PassedToService': 'ecs-tasks.amazonaws.com'}}
+              - Sid: TaskLogs
+                Effect: Allow
+                Action: ['logs:GetLogEvents', 'logs:FilterLogEvents']
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/vega-v2-worker:*'
+  # The isolated pilot (.github/workflows/pilot.yml) reads the provider key from
+  # SSM with this role, and nothing else: the key lives in one place, no GitHub secret.
+  PilotRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: vega-v2-pilot
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Federated: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com'}
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:repository_id: '1441213700'
+                token.actions.githubusercontent.com:workflow: 'Isolated pilot'
+              StringLike:
+                token.actions.githubusercontent.com:sub:
+                  - 'repo:VegaInteligence@188998341/Vega-Sport@1441213700:ref:refs/heads/main'
+                  - 'repo:VegaInteligence@188998341/Vega-Sport@1441213700:ref:refs/heads/claude/v2-*'
+      Policies:
+        - PolicyName: ProviderKeyOnly
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ProviderKey
+                Effect: Allow
+                Action: 'ssm:GetParameter'
+                Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vega/v2/pitchapi-key'
+              - Sid: ProviderKeyDecrypt
+                Effect: Allow
+                Action: 'kms:Decrypt'
+                Resource: '*'
+                Condition: {StringEquals: {'kms:ViaService': !Sub 'ssm.${AWS::Region}.amazonaws.com'}}
+Outputs:
+  PilotRoleArn: {Value: !GetAtt PilotRole.Arn}
+  DeployRoleArn: {Value: !GetAtt DeployRole.Arn}
+  CloudFormationRoleArn: {Value: !GetAtt CloudFormationRole.Arn}

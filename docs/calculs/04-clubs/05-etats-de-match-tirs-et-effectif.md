@@ -20,7 +20,7 @@ Exemple : mené 0-1 puis vainqueur 2-1 → 3 points « pris après avoir été m
 
 ## Buts par tranche de 15 minutes
 
-Calculé en SQL par l'annuaire ([relational-clubs.js](../../../dashboard/backend/services/relational-clubs.js#L248)) et dans `clubSummary` ([club-analysis.js](../../../dashboard/frontend/src/services/club-analysis.js#L242)) :
+Calculé en SQL par l'annuaire ([clubs.mjs](../../../backend/api/src/routes/clubs.mjs)) et dans `clubSummary` ([club-analysis.js](../../../dashboard/frontend/src/services/club-analysis.js#L242)) :
 
 $$
 \text{tranche} = \min\!\left(5,\; \max\!\left(0,\; \left\lfloor \frac{\text{minute} - 0{,}01}{15} \right\rfloor\right)\right)

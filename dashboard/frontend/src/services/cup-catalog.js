@@ -2,7 +2,7 @@ import { normalizeText } from "../model.js";
 import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, GERMAN_CUP_SEASONS } from "./cup-archives.js";
 import cupLogos from "../../../shared/cup-logos.json" with { type: "json" };
 
-/** Cup logos refreshed by dashboard/scripts/refresh_cup_logos.mjs. */
+/** Cup logos refreshed by the previous pipeline's refresh_cup_logos.mjs. */
 const CUP_LOGOS = cupLogos.logos || {};
 const withLogo = (competition) => competition.imageUrl || !CUP_LOGOS[competition.id]?.imageUrl ? competition : { ...competition, imageUrl: CUP_LOGOS[competition.id].imageUrl };
 

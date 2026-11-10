@@ -4,32 +4,40 @@
  * projections sont fictifs et servent uniquement à éprouver la mise en page.
  */
 
-const CDN = "https://d2clu0phovomb8.cloudfront.net/data/raw/neon/assets/";
-const asset = (hash) => `${CDN}${hash}.webp`;
+const CDN = "https://cdn.pitchapi.dev/images/";
+const asset = (kind, hash) => `${CDN}${kind}/${hash}.webp`;
 
 export const CRESTS = {
   barcelona: asset(
+    "teams",
     "71881ba9f1d678143d4d2b88feab251ce8a840eca4c46768e756e73e5170687c",
   ),
   bayern: asset(
+    "teams",
     "1e2afd379a7d354c930f790c1f9ab0c2b50654cf4d47f20ffb269b8cfe309bca",
   ),
   realMadrid: asset(
+    "teams",
     "9e7141c583abe50554615387c99815ee3663d1a4f888549679523d2acd7f716c",
   ),
   como: asset(
+    "teams",
     "35f069058222c070820cbf97102be4379a619b2c9892b41f0ee6c4d1920bdec9",
   ),
   benfica: asset(
+    "teams",
     "f400d9a5aa24f6f0c3094f0d1598c0f56ce2b003b8282a45481dd551d75a7a20",
   ),
   laliga: asset(
+    "leagues",
     "4a840c09a3b5d1b2150eeba66e2c31d83d23503c0df04b3ddd04341f9c7b2b48",
   ),
   ucl: asset(
+    "leagues",
     "b1d686d355832acff3032f4b9ee3cf885bf81879dac40c68e6ad033b695c1210",
   ),
   worldCup: asset(
+    "leagues",
     "676031121ec155fbaa398a16b88b1f94e51f9c1eabf90087480b70b59c7ec04d",
   ),
 };
@@ -39,6 +47,7 @@ export const PLAYER = {
   name: "Lamine Yamal",
   shortName: "L. Yamal",
   image: asset(
+    "players",
     "60531580698d915721def4245586cbf0f4512edc93317b14fd02652eca3434ca",
   ),
   club: "FC Barcelona",
@@ -1236,7 +1245,7 @@ export const TELEMETRY = [
   },
 ];
 
-const avatar = (hash) => (hash ? asset(hash) : "");
+const avatar = (hash) => (hash ? asset("players", hash) : "");
 
 export const PEERS = [
   {

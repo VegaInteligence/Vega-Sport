@@ -6,7 +6,7 @@ import { safeResolvedMedia } from "../dashboard/frontend/src/services/resolved-m
 process.env.NODE_ENV = "production";
 const require = createRequire(import.meta.url);
 const { getImageProps } = require("../dashboard/node_modules/next/image");
-const source = `https://d2clu0phovomb8.cloudfront.net/data/raw/neon/assets/${"a".repeat(64)}.webp`;
+const source = `https://dngp6kh9jx2bl.cloudfront.net/data/sources/v2/images/${"a".repeat(64)}.webp`;
 test("optimized media yields native src and bounded high-density variants", () => {
   for (const width of [64, 96, 192]) {
     const { props } = getImageProps({
@@ -29,7 +29,7 @@ test("optimizer is restricted to asset origin and does not follow redirects", ()
   assert.equal(config.images.minimumCacheTTL, 31536000);
   for (const rule of config.images.remotePatterns) {
     assert.equal(rule.protocol, "https");
-    assert.equal(rule.hostname, "d2clu0phovomb8.cloudfront.net");
+    assert.equal(rule.hostname, "dngp6kh9jx2bl.cloudfront.net");
     assert.equal(rule.search, "");
   }
 });
@@ -37,7 +37,7 @@ test("optimizer is restricted to asset origin and does not follow redirects", ()
 test("only trusted immutable image paths can bypass the API queue", () => {
   assert.equal(safeResolvedMedia(source), source);
   for (const value of [
-    source.replace("d2clu0phovomb8", "d111evil"),
+    source.replace("dngp6kh9jx2bl", "d111evil"),
     source.replace("https:", "http:"),
     source.replace("a".repeat(64), "mutable"),
     source + "?v=1",

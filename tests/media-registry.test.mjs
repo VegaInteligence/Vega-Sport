@@ -9,7 +9,7 @@ import {
 } from "../dashboard/frontend/src/services/media-registry.js";
 const source = (n) => `https://cdn.pitchapi.dev/images/${n}.webp`;
 const target = (n) =>
-  `https://d2clu0phovomb8.cloudfront.net/data/raw/neon/assets/${n.toString(16).padStart(64, "0")}.webp`;
+  `https://dngp6kh9jx2bl.cloudfront.net/data/sources/v2/images/${n.toString(16).padStart(64, "0")}.webp`;
 test("registry is browser-only, capability gated and accepts only valid mappings", () => {
   delete globalThis.window;
   acceptMediaPayload("/api/dashboard/manifest", {

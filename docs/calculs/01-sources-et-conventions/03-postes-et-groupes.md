@@ -2,7 +2,7 @@
 
 Les centiles joueurs comparent un joueur à ceux du **même groupe de poste**. Le poste vient du numéro d'emplacement dans la composition (`positionId`), pas d'une étiquette éditoriale.
 
-Code : `positionOf` et `peerGroup` dans [shared/player-profile.js](../../../dashboard/shared/player-profile.js#L26) ; même table en SQL dans [031_indexed_performance_cohorts.sql](../../../dashboard/backend/migrations/031_indexed_performance_cohorts.sql) et [025_player_season_rollups.sql](../../../dashboard/backend/migrations/025_player_season_rollups.sql).
+Code : `positionOf` et `peerGroup` dans [shared/player-profile.js](../../../dashboard/shared/player-profile.js#L26) ; même table en SQL dans 031_indexed_performance_cohorts.sql (ancien backend, supprimé le 10 novembre 2026) et 025_player_season_rollups.sql (ancien backend, supprimé le 10 novembre 2026).
 
 ## Du `positionId` à la ligne
 

@@ -3,7 +3,7 @@
 ## Absent n'est pas zéro
 
 Une mesure que le fournisseur ne donne pas reste `null`. Elle n'est jamais remplacée par 0 :
-- `number()` dans [build_dashboard_data.py](../../../dashboard/scripts/build_dashboard_data.py#L135) refuse `null`, les booléens et les nombres non finis ;
+- `number()` dans build_dashboard_data.py (ancien backend, supprimé le 10 novembre 2026) refuse `null`, les booléens et les nombres non finis ;
 - les agrégats ne comptent une valeur que si elle est un nombre fini (`isNumber`, `finiteSql` côté SQL) ;
 - un total « saison » conserve, pour chaque mesure, le **nombre de matchs observés** (`count`) et les **minutes de ces matchs** (`minutes`).
 
@@ -11,7 +11,7 @@ Conséquence : pour un joueur de 10 matchs dont le xG n'est renseigné que sur 8
 
 ## Zéros suspects (`SUSPICIOUS_ZERO_STATS`)
 
-Certains matchs arrivent avec des tirs et des passes tous à zéro alors que le match a eu lieu. Un match est déclaré suspect ([build_dashboard_data.py](../../../dashboard/scripts/build_dashboard_data.py#L233)) quand les trois conditions sont réunies :
+Certains matchs arrivent avec des tirs et des passes tous à zéro alors que le match a eu lieu. Un match est déclaré suspect (build_dashboard_data.py (ancien backend, supprimé le 10 novembre 2026)) quand les trois conditions sont réunies :
 
 1. aucun tir dans la liste des tirs ;
 2. les périodes de tirs sont absentes **ou** le score total est supérieur à 0 ;
@@ -33,7 +33,7 @@ Deux mesures joueur ne sont **jamais publiées à zéro** par PitchAPI : le xA e
 
 ## Le cas « aucun tir »
 
-Quand un joueur n'a tenté aucun tir (`shots === 0`), le fournisseur laisse `xg` et `shotsOnTarget` vides. Le profil d'**une performance** restaure alors 0 (`withoutShots` dans [shared/player-profile.js](../../../dashboard/shared/player-profile.js#L57), même règle dans [relational-performance.js](../../../dashboard/backend/services/relational-performance.js#L39)).
+Quand un joueur n'a tenté aucun tir (`shots === 0`), le fournisseur laisse `xg` et `shotsOnTarget` vides. Le profil d'**une performance** restaure alors 0 (`withoutShots` dans [shared/player-profile.js](../../../dashboard/shared/player-profile.js#L57), même règle dans [performance.mjs](../../../backend/api/src/routes/performance.mjs)).
 
 Cette restauration **n'est pas appliquée à l'agrégation saison** ([season-player.js](../../../dashboard/frontend/src/services/season-player.js#L171)) : un match sans tir y laisse le xG non observé.
 

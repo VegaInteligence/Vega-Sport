@@ -1,4 +1,4 @@
-import { API_V2, v2Path } from "./services/v2-routes.js";
+import { apiPath } from "./services/api-routes.js";
 
 const configuredOrigin = process.env.NEXT_PUBLIC_API_ORIGIN;
 function publicOrigin(value) {
@@ -24,8 +24,8 @@ const origin = publicOrigin(configuredOrigin);
 export function apiUrl(path) {
   if (origin && path.startsWith(origin + "/api/"))
     path = path.slice(origin.length);
-  // On the v2 API, the same reads under their v2 routes (services/v2-routes.js).
-  if (API_V2 && typeof path === "string") path = v2Path(path);
+  // A read named by its former path goes to the API's route (services/api-routes.js).
+  if (typeof path === "string") path = apiPath(path);
   if (
     !path.startsWith("/api/") ||
     path.includes("#") ||

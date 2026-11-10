@@ -16,7 +16,7 @@ Couleur d'un centile (`tone`, [PlayerScoutCharts.jsx](../../../dashboard/fronten
 
 ## 1. Profil d'une performance (un match)
 
-Code : `performanceProfile` ([player-profile.js](../../../dashboard/frontend/src/services/player-profile.js#L109)) et la route `/api/read/performance` ([relational-performance.js](../../../dashboard/backend/services/relational-performance.js)).
+Code : `performanceProfile` ([player-profile.js](../../../dashboard/frontend/src/services/player-profile.js#L109)) et la route `/api/read/performance` ([performance.mjs](../../../backend/api/src/routes/performance.mjs)).
 
 | Règle | Valeur |
 | --- | --- |

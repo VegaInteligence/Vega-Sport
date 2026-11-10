@@ -169,7 +169,7 @@ test("temporary match-family failures never download the all-family archive", as
     });
     const client = clientForDetails();
     await client.ensureEndpoint(fixture, "shots");
-    assert.deepEqual(calls, [`/api/pitchapi/matches/${fixture.id}/shots`]);
+    assert.deepEqual(calls, [`/api/matches/${fixture.id}/shots`]);
     assert.ok(client.payloads.get(familyKey("shots")).error);
     assert.equal(client.payloads.get(familyKey("shots")).source, undefined);
     mock.mock.restore();
@@ -190,7 +190,7 @@ test("only absent legacy family endpoints fall back, including non-JSON errors",
     const client = clientForDetails();
     await client.ensureEndpoint(fixture, "lineups");
     assert.deepEqual(calls, [
-      `/api/pitchapi/matches/${fixture.id}/lineups`,
+      `/api/matches/${fixture.id}/lineups`,
       `/api/archive/matches/${fixture.id}`,
     ]);
     assert.equal(client.payloads.get(familyKey("lineups")).source, "snapshot");
@@ -282,7 +282,7 @@ test("two legacy families share an archive without transferring cancellation own
   let archive;
   t.mock.method(globalThis, "fetch", async (url, { signal } = {}) => {
     requests.push(String(url));
-    if (String(url).includes("/pitchapi/"))
+    if (String(url).includes("/api/matches/"))
       return Response.json({}, { status: 404 });
     return new Promise((resolve, reject) => {
       archive = { signal, resolve };
@@ -421,7 +421,7 @@ test("an aborted forced refresh retains the last valid family value", async (t) 
 test("a failed compatibility archive can be explicitly retried", async (t) => {
   let archives = 0;
   t.mock.method(globalThis, "fetch", async (url) => {
-    if (String(url).includes("/pitchapi/"))
+    if (String(url).includes("/api/matches/"))
       return Response.json({}, { status: 405 });
     return ++archives === 1
       ? Response.json({}, { status: 503 })
@@ -451,7 +451,7 @@ test("a relational manifest still attempts the native family after a failed stat
       publicationVersion: "42",
     });
     await client.ensureEndpoint(fixture, "events");
-    assert.deepEqual(calls, [`/api/pitchapi/matches/${fixture.id}/events`]);
+    assert.deepEqual(calls, [`/api/matches/${fixture.id}/events`]);
     assert.ok(client.payloads.get(familyKey("events")).error);
     mock.mock.restore();
   }

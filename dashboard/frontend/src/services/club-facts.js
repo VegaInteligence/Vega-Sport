@@ -1,5 +1,5 @@
 import { publicApiFetch } from "./public-api-fetch.js";
-import { API_V2, clubFactsPath } from "./v2-routes.js";
+import { clubFactsPath } from "./api-routes.js";
 import { apiUrl } from "../data-url.js";
 import { normalizeText } from "./format.js";
 
@@ -13,12 +13,7 @@ async function readJson(url, fetcher) {
 }
 
 /** Independent requests start together; external facts supplement PitchAPI. */
-export async function loadClubFacts(
-  clubId,
-  matches,
-  fetcher = fetch,
-  identity = {},
-) {
+export async function loadClubFacts(clubId, matches, fetcher = fetch) {
   const finished = matches
     .filter(
       (m) =>
@@ -30,8 +25,8 @@ export async function loadClubFacts(
     );
   const latest = finished[0],
     home = finished.find((m) => m.home?.id === clubId);
-  const [links, lineup, match] = await Promise.all([
-    readJson("/api/club-links?club=" + encodeURIComponent(clubId), fetcher),
+  const [wiki, lineup, match] = await Promise.all([
+    readJson(clubFactsPath(clubId), fetcher),
     latest
       ? readJson(
           `/api/pitchapi/matches/${encodeURIComponent(latest.id)}/lineups`,
@@ -45,21 +40,6 @@ export async function loadClubFacts(
         )
       : null,
   ]);
-  const uefa =
-    links?.links?.[clubId]?.entityId?.match(/^uefa:(\d{1,12})$/)?.[1];
-  const lookup = uefa
-    ? `uefa=${uefa}`
-    : identity.name && identity.country
-      ? new URLSearchParams({
-          name: identity.name,
-          country: identity.country,
-        }).toString()
-      : null;
-  const wiki = API_V2
-    ? await readJson(clubFactsPath(clubId), fetcher)
-    : lookup
-      ? await readJson(`/api/club-wikidata?${lookup}`, fetcher)
-      : null;
   const side = latest?.home?.id === clubId ? "home" : "away";
   const lineupData = lineup?.data;
   const lineupTeam = lineupData?.[`${side}_team`];

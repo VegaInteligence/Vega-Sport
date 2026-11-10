@@ -20,10 +20,7 @@ export function ClubFacts({ club, matches }) {
   const result = useResource(
     `club-facts:${club.id}:${club.country || "none"}:${latest?.id || "none"}:${home?.id || "none"}`,
     () =>
-      loadClubFacts(club.id, matches, fetch, {
-        name: club.name,
-        country: club.country,
-      }),
+      loadClubFacts(club.id, matches, fetch),
   );
   const value = result.value,
     wiki = value?.wiki;

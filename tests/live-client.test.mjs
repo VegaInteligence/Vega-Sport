@@ -13,7 +13,7 @@ import {
   subscribeLive,
 } from "../dashboard/frontend/src/services/live-client.js";
 
-const CONFIG = { origin: "https://v2.example", http: "abc.appsync-api.us-east-2.amazonaws.com", realtime: "abc.appsync-realtime-api.us-east-2.amazonaws.com", key: "da2-public" };
+const CONFIG = { origin: "https://api.example", http: "abc.appsync-api.us-east-2.amazonaws.com", realtime: "abc.appsync-realtime-api.us-east-2.amazonaws.com", key: "da2-public" };
 const KICKOFF = Date.parse("2025-09-20T19:00:00Z");
 const STATE = {
   match: "m_live01", revision: 4, status: "in_play", provisional: false, minute: 12, minuteAdded: null, period: "first_half",
@@ -23,10 +23,9 @@ const STATE = {
 const round = (revision, body) => ({ match: "m_live01", revision, ...body });
 const live = (status, minute, home, away) => ({ status, minute, minute_added: null, period: "second_half", home_score: home, away_score: away, finished_at: null });
 
-test("live only with the v2 API and the three AppSync settings", () => {
-  assert.equal(liveConfigured(CONFIG, true), true);
-  assert.equal(liveConfigured(CONFIG, false), false);
-  assert.equal(liveConfigured({ ...CONFIG, key: "" }, true), false);
+test("live only with the three AppSync settings", () => {
+  assert.equal(liveConfigured(CONFIG), true);
+  assert.equal(liveConfigured({ ...CONFIG, key: "" }), false);
 });
 
 test("the live window: 30 minutes before kick-off to 3 hours after, never once over", () => {
@@ -48,7 +47,7 @@ test("the full state is read once, a missing one is null", async () => {
   assert.deepEqual(await readLive("m_live01", { config: CONFIG, fetcher }), STATE);
   assert.equal(await readLive("m_none01", { config: CONFIG, fetcher }), null);
   assert.equal(await readLive("../x", { config: CONFIG, fetcher }), null);
-  assert.deepEqual(calls, ["https://v2.example/live/matches/m_live01", "https://v2.example/live/matches/m_none01"]);
+  assert.deepEqual(calls, ["https://api.example/live/matches/m_live01", "https://api.example/live/matches/m_none01"]);
 });
 
 test("revisions in order: state, a new event, statistics, a VAR correction, then core takes the score", () => {

@@ -50,7 +50,7 @@ Le bandeau « Échantillon encore court » apparaît si le joueur a moins de **9
 
 ## Limites
 
-- **Pas d'ajustement au niveau du championnat** : un indice se lit de la même façon en Premier League et en Eredivisie. Le niveau des clubs (calibrations de démo sur l'API actuelle, Elo sur la v2 : [Référentiels](../04-clubs/03-referentiels-et-niveau-europeen.md)) n'est pas utilisé ici.
+- **Pas d'ajustement au niveau du championnat** : un indice se lit de la même façon en Premier League et en Eredivisie. Le niveau des clubs (leur Elo : [Référentiels](../04-clubs/03-referentiels-et-niveau-europeen.md)) n'est pas utilisé ici.
 - Le meilleur rôle de chacun est comparé : un milieu créateur et un milieu récupérateur sont jugés chacun sur son point fort.
 - Les clubs absents de la cohorte (périmètre de compétitions réduit) apparaissent en « Effectif non mesurable ».
 - **Compatibilité athlétique** : non affichée, aucune source de suivi physique n'est branchée.

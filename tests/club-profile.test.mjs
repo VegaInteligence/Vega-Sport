@@ -105,8 +105,8 @@ test("club facts use the latest completed lineup and the latest home venue", asy
   const calls = [];
   const fetcher = async (url) => {
     calls.push(url);
-    if (url.includes("club-links"))
-      return Response.json({ links: { club: { entityId: "uefa:50058" } } });
+    if (url.includes("club-facts?club=club"))
+      return Response.json({ coach: { name: "Coach" }, stadium: "Stade" });
     if (url.includes("m_new/lineups"))
       return Response.json({
         data: { away_team: { id: "club" }, away: { coach: { name: "Coach" } } },
@@ -115,8 +115,6 @@ test("club facts use the latest completed lineup and the latest home venue", asy
       return Response.json({
         data: { home_team: { id: "club" }, stadium: "Stade" },
       });
-    if (url.includes("club-wikidata?uefa=50058"))
-      return Response.json({ coach: { name: "Coach" }, stadium: "Stade" });
     if (url.includes("coach-portrait?name=Coach"))
       return Response.json({
         name: "Coach",
@@ -132,7 +130,7 @@ test("club facts use the latest completed lineup and the latest home venue", asy
   assert.equal(result.observedStadium.name, "Stade");
   assert.equal(result.wiki.coach.name, "Coach");
   assert.ok(result.coachPhoto.url.endsWith("coach.jpg"));
-  assert.equal(calls.length, 5);
+  assert.equal(calls.length, 4);
 });
 
 test("observed coach photo is accepted only for the displayed coach", async () => {
@@ -146,7 +144,7 @@ test("observed coach photo is accepted only for the displayed coach", async () =
     },
   ];
   const fetcher = async (url) => {
-    if (url.includes("club-links")) return Response.json({ links: {} });
+    if (url.includes("club-facts")) return Response.json({}, { status: 404 });
     if (url.includes("lineups"))
       return Response.json({
         data: {
@@ -163,7 +161,7 @@ test("observed coach photo is accepted only for the displayed coach", async () =
   assert.equal(result.coachPhoto, null);
 });
 
-test("missing identity or mismatched team does not assign another team's coach", async () => {
+test("a club without facts and a mismatched team does not assign another team's coach", async () => {
   const matches = [
     {
       id: "m_1",
@@ -174,8 +172,8 @@ test("missing identity or mismatched team does not assign another team's coach",
     },
   ];
   const fetcher = async (url) =>
-    url.includes("club-links")
-      ? Response.json({ links: {} })
+    url.includes("club-facts")
+      ? Response.json({}, { status: 404 })
       : url.includes("lineups")
         ? Response.json({
             data: {
