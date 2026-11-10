@@ -175,7 +175,7 @@ export const FAKE_CAREER_STAGE = D.PLAYER.careerStage;
 
 export function FakeMarket() {
   return (
-    <FakeZone text="Valeur, revente, clause et intérêts : en attente de Transfermarkt.">
+    <FakeZone text="Données de marché indisponibles.">
       <MockMarketPanel wide />
     </FakeZone>
   );
