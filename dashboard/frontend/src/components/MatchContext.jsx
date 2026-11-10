@@ -9,9 +9,12 @@ import {
 } from "../services/match-resources.js";
 import { loadSeason } from "../season_data.js";
 import {
-  historicalFixtures,
+  headToHeadFixtures,
+  loadClubSeasonDetail,
+  mergeSeasonData,
   playerRoutes,
 } from "../services/scouting-history.js";
+import { supportsCompactRead } from "../services/compact-reads.js";
 import {
   beforeMatch,
   clubMetric,
@@ -44,19 +47,27 @@ async function contextData(f, match, { signal } = {}) {
   const shared = new Set([match.leagueId].filter(Boolean));
   for (const year of Object.keys(home))
     for (const id of home[year]) if (away[year]?.includes(id)) shared.add(id);
-  const [data, histories] = await Promise.all([
+  // The season already on the page serves as it is. Otherwise each club's own season
+  // is read (its matches and players), never the whole season of every league.
+  const seasonData = () =>
     f.data.meta?.currentSeason === season &&
     !f.data.meta?.actor &&
     [...leagues].every((id) => loaded.has(id))
       ? f.data
-      : loadSeason(f.manifest, season, fetch, leagues, { signal }),
-    Promise.all(
-      [...shared].map((id) => historicalFixtures(f.manifest, id, { signal })),
-    ),
+      : supportsCompactRead(f.manifest, "club")
+        ? Promise.all(
+            [match.home.id, match.away.id].map((id) =>
+              loadClubSeasonDetail(f.manifest, id, season, { signal }),
+            ),
+          ).then(mergeSeasonData)
+        : loadSeason(f.manifest, season, fetch, leagues, { signal });
+  const [data, meetings] = await Promise.all([
+    seasonData(),
+    headToHeadFixtures(match.home.id, match.away.id, shared, { signal }),
   ]);
   const fixtures = [
     ...new Map(
-      histories.flat().map((raw) => {
+      meetings.map((raw) => {
         const m = normalizedFixture(raw);
         return [m.id, m];
       }),
