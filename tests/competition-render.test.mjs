@@ -127,9 +127,30 @@ test("competition page renders a result-derived league table and its limits", as
   delete context.manifest.capabilities;
   fixturesPending = false;
   context.season = "2025/2026";
+  // A past league season: the table the API serves, here the one the base computed from
+  // the results. The page says so, and reads the fixtures' preview, not the calendar.
+  const official = externalTable;
+  externalTable = { source: "Vega", tables: [{ name: "Ligue 1", rows: [
+    { id: "t_paris1", name: "Paris", position: 1, points: 3, played: 1, wins: 1, draws: 0, losses: 0, goalsFor: 2, goalsAgainst: 0, difference: 2 },
+    { id: "t_lille1", name: "Lille", position: 2, points: 0, played: 1, wins: 0, draws: 0, losses: 1, goalsFor: 0, goalsAgainst: 2, difference: -2 },
+  ] }] };
+  context.manifest.capabilities = { fixturePaginationOrder: true };
+  resourceCalls.length = 0;
   const historic = renderToStaticMarkup(elem(mod.exports.default));
   assert.doesNotMatch(historic, /Groupe A/);
   assert.match(historic, /Classement calculé à partir des résultats disponibles/);
+  assert.match(historic, /1 matchs pris en compte/);
+  assert.ok(requestedStandings.includes("/api/standings?competition=l_3FJFUl&season=2025%2F2026"));
+  assert.equal(resourceCalls.find(({ key }) => key.startsWith("fixtures:")).enabled, false, "a served table does not need the season's calendar");
+  assert.equal(resourceCalls.find(({ key }) => key.startsWith("competition-preview:")).enabled, true);
+  delete context.manifest.capabilities;
+  // No table served for that season: the one computed from the fixtures, as before.
+  externalTable = null;
+  const computed = renderToStaticMarkup(elem(mod.exports.default));
+  assert.doesNotMatch(computed, /Groupe A/);
+  assert.match(computed, /Classement calculé à partir des résultats disponibles/);
+  assert.match(computed, /dernier match le/);
+  externalTable = official;
 
   context.catalog = [{ id: "l_0bfbkO", name: "Champions League", country: "INT", seasons: ["2026/2027", "2025/2026"] }];
   requestedId = "l_0bfbkO";
