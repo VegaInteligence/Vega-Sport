@@ -23,6 +23,10 @@ on:
         description: Collect newly discovered images
         type: boolean
         default: true
+      market_values_replay_clubs:
+        description: Enrich the active market-value archive with its source club fields
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -56,7 +60,14 @@ jobs:
           mode: ingest
           role-arn: ${{ vars.STATARENA_AWS_INGEST_ROLE_ARN }}
       - name: Import and publish dated market values
-        run: python dashboard/scripts/import_dcaribou_market_values.py
+        env:
+          REPLAY_CLUBS: ${{ inputs.market_values_replay_clubs }}
+        run: |
+          if [ "$REPLAY_CLUBS" = "true" ]; then
+            python dashboard/scripts/import_dcaribou_market_values.py --replay-active-clubs
+          else
+            python dashboard/scripts/import_dcaribou_market_values.py
+          fi
   collect:
     if: github.repository_id == '1441213700' && github.ref == 'refs/heads/main' && inputs.mode != 'market-values'
     permissions:

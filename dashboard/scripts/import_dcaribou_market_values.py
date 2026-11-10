@@ -2,7 +2,9 @@
 """Import the pinned dcaribou snapshot through the existing AWS ingest role."""
 
 import argparse
+import csv
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -15,7 +17,7 @@ from zipfile import is_zipfile, ZipFile
 
 import psycopg
 
-from import_player_market_values import archive_snapshot, identity_links, prepare_snapshot
+from import_player_market_values import SNAPSHOT_STATE, archive_snapshot, identity_links, prepare_snapshot
 
 
 VERSION = "679"
@@ -68,13 +70,85 @@ def export_evidence(db, path):
                 out.write(chunk)
 
 
+def prepare_active_replay(scratch):
+    """Rebuild only from the active immutable source and its published links."""
+    from aws_store import Store
+
+    store = Store()
+    try:
+        active = store.db.execute(
+            "SELECT value->>'path' FROM statarena.state WHERE name=%s", (SNAPSHOT_STATE,)
+        ).fetchone()
+        if not active or not active[0]:
+            raise ValueError("No active valuation snapshot")
+        base = active[0]
+        payload = store.bytes(base)
+    finally:
+        store.db.close()
+    with ZipFile(io.BytesIO(payload)) as archive:
+        names = archive.namelist()
+        if len(names) != len(set(names)):
+            raise ValueError("Duplicate archive members")
+        manifest = json.loads(archive.read("manifest.json"))
+        original = archive.read("source/valuation-export.original")
+        if hashlib.sha256(original).hexdigest() != manifest["source_sha256"]:
+            raise ValueError("Original valuation source checksum mismatch")
+        source = scratch / ("original.csv.gz" if original.startswith(b'\x1f\x8b') else "original.csv")
+        source.write_bytes(original)
+        identities = {name for name in names if name.startswith("vega/") and name.endswith(".json")}
+        links = {}
+        for name in identities:
+            doc = json.loads(archive.read(name))
+            source_id = doc.get("source_player_id")
+            vega_id = doc.get("vega_player_id")
+            if doc.get("kind") != "vega_market_value_identity" or name != f"vega/{vega_id}.json" or source_id in links:
+                raise ValueError("Invalid published identity document")
+            links[source_id] = (vega_id, doc.get("identity_evidence"))
+        # Validate identities using the same canonical rules as normal import.
+        link_file = scratch / "published-links.csv"
+        with link_file.open("w", encoding="utf-8", newline="") as out:
+            writer = csv.writer(out)
+            writer.writerow(("source_player_id", "vega_player_id", "evidence"))
+            writer.writerows((sid, *link) for sid, link in links.items())
+        validated = identity_links(link_file)
+        rebuilt, report, players = prepare_snapshot(source, validated, manifest["source_version"])
+        with ZipFile(io.BytesIO(rebuilt)) as candidate:
+            candidate_names = candidate.namelist()
+            source_names = {n for n in names if n.startswith("source/") and n.endswith(".json")}
+            if source_names != {n for n in candidate_names if n.startswith("source/") and n.endswith(".json")}:
+                raise ValueError("Replayed source player set changed")
+            for name in source_names:
+                old = json.loads(archive.read(name))
+                new = json.loads(candidate.read(name))
+                old_points = [(p["date"], p["valueEur"]) for p in old["history"]]
+                new_points = [(p["date"], p["valueEur"]) for p in new["history"]]
+                if old_points != new_points:
+                    raise ValueError("Replayed valuation history changed")
+            if identities != {n for n in candidate_names if n.startswith("vega/") and n.endswith(".json")}:
+                raise ValueError("Replayed identity set changed")
+            for name in identities:
+                if json.loads(archive.read(name)) != json.loads(candidate.read(name)):
+                    raise ValueError("Replayed identity evidence changed")
+    return base, rebuilt, report, players
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", type=Path, help="Use the verified local CSV files")
     parser.add_argument("--verified-crosswalk", type=Path, help="Optional separately verified identity links")
+    parser.add_argument("--replay-active-clubs", action="store_true", help="Enrich the active snapshot using its original source and identity links")
     args = parser.parse_args()
+    if args.replay_active_clubs and (args.data_dir or args.verified_crosswalk):
+        parser.error("--replay-active-clubs cannot be combined with source or crosswalk options")
     with TemporaryDirectory(prefix="vega-market-values-") as tmp:
         scratch = Path(tmp)
+        if args.replay_active_clubs:
+            base, payload, report, players = prepare_active_replay(scratch)
+            report["archive_changed"] = archive_snapshot(payload, report, players, publish=True, expected_base=base)
+            report["published"] = True
+            report["replayed_from"] = base
+            print(json.dumps(report, indent=2))
+            return
         source = args.data_dir or scratch
         fetch_assets(source, download=args.data_dir is None)
         evidence, links = scratch / "vega-evidence.csv", scratch / "identity-links.csv"
