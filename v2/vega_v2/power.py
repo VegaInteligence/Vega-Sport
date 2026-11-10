@@ -410,10 +410,13 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     """The player power ranking of one season (after refresh_elo)."""
     with conn.transaction():
         run = _start(conn, "players", season)
-        cur = conn.execute(PLAYER_MATCHES, (season,))
-        names = [d.name for d in cur.description]
-        rows = [{k: (_num(v) if k not in ("match_id", "player_id", "team_id", "position_id", "is_starter") else v) for k, v in zip(names, row)}
-                for row in cur.fetchall()]
+        # Read through a server-side cursor: the season's rows are held once, as the dicts
+        # below, never a second time as the fetched result.
+        with conn.cursor(name="power_player_matches") as cur:
+            cur.execute(PLAYER_MATCHES, (season,))
+            names = [d.name for d in cur.description]
+            rows = [{k: (_num(v) if k not in ("match_id", "player_id", "team_id", "position_id", "is_starter") else v) for k, v in zip(names, row)}
+                    for row in cur]
         for r in rows:
             r["delta"] = 0.0 if r["own_elo"] is None or r["opponent_elo"] is None else (r["opponent_elo"] - r["own_elo"]) / 400
         rows = assign_roles(rows)

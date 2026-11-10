@@ -106,7 +106,9 @@ Resources:
       RequiresCompatibilities: [FARGATE]
       NetworkMode: awsvpc
       Cpu: '256'
-      Memory: '512'
+      # The collection and its side process (the daily pass holds a season's appearances
+      # in memory): 2 GB is the most a quarter vCPU takes.
+      Memory: '2048'
       RuntimePlatform: {CpuArchitecture: ARM64, OperatingSystemFamily: LINUX}
       ExecutionRoleArn: !GetAtt ExecutionRole.Arn
       TaskRoleArn: !GetAtt TaskRole.Arn
@@ -114,7 +116,7 @@ Resources:
         - Name: worker
           Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/vega-v2-worker:${ImageTag}'
           Essential: true
-          Command: [--lanes, 'score,details,reference']
+          Command: [--lanes, 'score,details,reference', --side-work, process]
           StopTimeout: 60
           ReadonlyRootFilesystem: true
           Environment:

@@ -1,9 +1,13 @@
-"""Worker loop: planner + collector + calculator in one long-running process.
+"""Worker loop: planner + collector + calculator in one long-running task.
 
 Each loop: plan (every minute), claim one job (lanes in priority order: score, then
 details, then reference; backfill runs in its own task), call PitchAPI, write core in
 one transaction with the job acknowledgement, and drain ops.dirty_scopes with the
 calculator when the queues are idle or every 30 s. Components only meet in PostgreSQL.
+
+The side work (the daily pass: statistics, sources, Elo and season models; the image
+copies) runs in the loop by default, and in a process of its own in the deployed worker
+(--side-work process, SideProcess): the collection then never waits for it.
 """
 
 import argparse
@@ -11,6 +15,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 import os
 import signal
+import subprocess
 import sys
 import time
 import traceback
@@ -60,6 +65,12 @@ RECOMPUTE_AFTER = timedelta(hours=1)
 # the wait a season whose models fail stays due, and every planning round runs the Elo of
 # every match again before failing at the same place.
 RETRY_DAILY_AFTER = timedelta(hours=1)
+
+
+# The side work on its own rhythm (side_loop): a daily pass every minute (it does
+# nothing when nothing is due), the image copies every five.
+SIDE_DAILY_EVERY = 60
+SIDE_MEDIA_EVERY = 300
 
 
 def error_code(error):
@@ -146,6 +157,8 @@ class Worker:
         self._analyzed = None  # UTC day of the last ops.analyze_partitioned()
         self._archives = None  # UTC day of the last agg.refresh_archive_seasons()
         self._retry_at = {}  # step of the daily pass that failed -> when it is tried again
+        # SideProcess when the daily pass and the image copies run in a process of their own.
+        self.side_process = None
         self._events = []
         client._on_attempt = self._events.append
 
@@ -407,14 +420,16 @@ class Worker:
                         planner.plan_backfill(self.conn, self.clock(), **self.backfill)
                 except Exception as error:
                     print(f"planner error={error_code(error)}", flush=True)
-                if self.backfill is None:
+                if self.side_process is not None:
+                    self.side_process.tick()
+                elif self.backfill is None:
                     self.daily()
                 self.publish()
                 # Counted from the end of the round: `plan_every` seconds of fetching between
                 # two rounds, however long a round lasts (rounds of 35 s counted from their
                 # start left the backfill 25 s a minute to fetch, 10 November 2026).
                 last_plan = time.monotonic()
-            if self.backfill is None and tick - last_media >= media_every:
+            if self.backfill is None and self.side_process is None and tick - last_media >= media_every:
                 self.mirror()
                 last_media = tick
             worked = self.step()
@@ -701,6 +716,80 @@ def connect(dsn):
     return psycopg.connect(dsn, autocommit=True, **CONNECTION)
 
 
+class SideProcess:
+    """The side work in a process of its own, started and watched by the collection.
+
+    In the collection's loop a daily pass keeps every job waiting while it runs (the Elo
+    of every match, then each due season's models), and whatever ends the process ends
+    the collection with it: the player ranking holds a season's appearances in memory,
+    and a task that passes its memory limit is killed. The child runs side_loop(); it is
+    the process the kernel kills first when the task runs out of memory (prefer_as_oom_victim).
+    When it ends, however it ends, it is started again `retry_after` seconds later."""
+
+    def __init__(self, command, *, retry_after=RETRY_DAILY_AFTER.total_seconds(), clock=time.monotonic, popen=subprocess.Popen):
+        self.command, self.retry_after, self.clock, self.popen = list(command), retry_after, clock, popen
+        self.process = None
+        self.next_start = float("-inf")
+
+    def tick(self):
+        """Start the process when it is due; note its end. Never waits."""
+        now = self.clock()
+        if self.process is not None:
+            code = self.process.poll()
+            if code is None:
+                return
+            # A negative code is the signal that killed it (-9: the kernel, out of memory).
+            print(f"side process exit={code} restart_in={int(self.retry_after)}", flush=True)
+            self.process = None
+            self.next_start = now + self.retry_after
+        if now >= self.next_start:
+            try:
+                self.process = self.popen(self.command)
+            except OSError as error:
+                self.next_start = now + self.retry_after
+                print(f"side process error={error_code(error)} restart_in={int(self.retry_after)}", flush=True)
+                return
+            print(f"side process started pid={self.process.pid}", flush=True)
+
+    def stop(self, wait=10):
+        if self.process is None or self.process.poll() is not None:
+            return
+        self.process.terminate()
+        try:
+            self.process.wait(timeout=wait)
+        except subprocess.TimeoutExpired:
+            self.process.kill()
+            self.process.wait()
+
+
+def prefer_as_oom_victim(path="/proc/self/oom_score_adj"):
+    """Make this process the first the kernel kills when the task runs out of memory
+    (Linux; a process may always raise its own score). False where it cannot be set."""
+    try:
+        with open(path, "w", encoding="ascii") as handle:
+            handle.write("1000")
+        return True
+    except OSError:
+        return False
+
+
+def side_loop(worker, *, stop, daily_every=SIDE_DAILY_EVERY, media_every=SIDE_MEDIA_EVERY, sleep=time.sleep, clock=time.monotonic):
+    """The side work of a worker, until `stop`: the daily pass and the image copies, each
+    on its rhythm. Ends with psycopg.OperationalError when the database is lost."""
+    last_daily = last_media = float("-inf")
+    while not stop():
+        if worker.conn.closed or worker.calc_conn.closed:
+            raise psycopg.OperationalError("connection lost")
+        tick = clock()
+        if tick - last_daily >= daily_every:
+            worker.daily()
+            last_daily = clock()  # counted from the end, as the planning round
+        if tick - last_media >= media_every:
+            worker.mirror()
+            last_media = tick
+        sleep(1)
+
+
 def keep_running(session, *, stop, sleep=time.sleep, clock=time.monotonic):
     """Call session() until it ends by itself; True when it did.
 
@@ -820,7 +909,16 @@ def main(argv=None):
     parser.add_argument("--backfill-from", type=int, default=2021, help="first season (start year) of the backfill")
     parser.add_argument("--backfill-to", type=int, help="last season (start year) of the backfill; default the current one")
     parser.add_argument("--backfill-competitions", help="comma-separated PitchAPI league ids; default every league")
+    parser.add_argument(
+        "--side-work",
+        choices=("inline", "process", "only"),
+        default="inline",
+        help="the daily pass and the image copies: in the loop (inline), in a child process this one starts and watches (process), "
+        "or nothing else (only: what the child runs)",
+    )
     args = parser.parse_args(argv)
+    if args.side_work != "inline" and (args.lanes == "backfill" or args.until_idle or args.max_jobs is not None or args.report):
+        parser.error("--side-work process/only is for the long-running worker")
     dsn, key = os.environ.get("V2_DATABASE_URL"), os.environ.get("PITCHAPI_API_KEY")
     if not dsn or not key:
         print("V2_DATABASE_URL and PITCHAPI_API_KEY are required", file=sys.stderr)
@@ -832,6 +930,12 @@ def main(argv=None):
     signal.signal(signal.SIGTERM, lambda *_: stopping.append(True))
     results, state = Counter(), {"done": 0, "migrate": args.migrate}
     started = time.monotonic()
+    side = None
+    if args.side_work == "process":
+        # The child is this module again, with this process's environment (its connections are its own).
+        side = SideProcess([sys.executable, "-m", "vega_v2.worker", "--side-work", "only", "--cohort-delay", str(args.cohort_delay)])
+    elif args.side_work == "only":
+        print(f"side work oom_victim={prefer_as_oom_victim()}", flush=True)
 
     def session():
         conns = [connect(dsn)]
@@ -856,8 +960,12 @@ def main(argv=None):
                     else None
                 ),
             )
-            if bucket and args.lanes != "backfill":
+            if bucket and args.lanes != "backfill" and side is None:
                 worker.media_io = (media.downloader(), media.s3_writer(bucket))
+            if args.side_work == "only":
+                side_loop(worker, stop=lambda: bool(stopping))
+                return
+            worker.side_process = side
             left = None if args.max_jobs is None else args.max_jobs - state["done"]
             worker.run(max_jobs=left, until_idle=args.until_idle, stop=lambda: bool(stopping))
             if args.report:
@@ -872,7 +980,11 @@ def main(argv=None):
                 except psycopg.Error:
                     pass
 
-    ended = keep_running(session, stop=lambda: bool(stopping))
+    try:
+        ended = keep_running(session, stop=lambda: bool(stopping))
+    finally:
+        if side is not None:
+            side.stop()
     for (family, outcome), count in sorted(results.items()):
         print(f"family={family} outcome={outcome} count={count}", flush=True)
     print(f"jobs={state['done']}", flush=True)
