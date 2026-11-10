@@ -20,15 +20,20 @@ import NationalFlag from "./NationalFlag.jsx";
 import { number } from "../services/format.js";
 import { playerFacts } from "../services/player-bio.js";
 import {
+  loadPlayerMarketValues,
+  marketDate,
+  marketValue,
+  playerMarketValuesKey,
+} from "../services/player-market-values.js";
+import {
   nationalFlagCode,
   nationalTeamName,
 } from "../services/national-flags.js";
-import { PositionsPitch, Sparkline } from "./PlayerScoutCharts.jsx";
+import { PositionsPitch } from "./PlayerScoutCharts.jsx";
 import {
   FAKE_AVAILABILITY,
   FAKE_FACTS,
   FAKE_POTENTIAL,
-  FAKE_VALUE,
   FakeBadge,
 } from "./PlayerScoutDemo.jsx";
 import s from "./PlayerScout.module.css";
@@ -120,6 +125,19 @@ export default function PlayerScoutRail({
   onTab,
 }) {
   const { facts: published, value: publishedValue } = playerFacts(record);
+  const market = useResource(
+    playerMarketValuesKey(id),
+    ({ signal }) => loadPlayerMarketValues(id, { signal }),
+    Boolean(id),
+  );
+  const latestValue = market.value?.history.at(-1);
+  const valuation = latestValue
+    ? {
+        source: "Transfermarkt",
+        amount: marketValue(latestValue.valueEur),
+        updated: marketDate(latestValue.date),
+      }
+    : publishedValue;
   const f = useFootball();
   const history = useResource(
     playerHistoryKey(f.manifest, id),
@@ -273,32 +291,22 @@ export default function PlayerScoutRail({
         <Facts items={facts} label="Fiche du joueur" />
       </div>
       <div className={s.railSection}>
-        {publishedValue ? (
-          <>
-            <p className={s.railTitle}>
-              Valeur marchande <span>{publishedValue.source}</span>
-            </p>
-            <div className={s.value}>{publishedValue.amount}</div>
-            {publishedValue.updated && (
-              <p className={s.valueMeta}>
-                Mise à jour le {publishedValue.updated}
-              </p>
-            )}
-          </>
+        <p className={s.railTitle}>
+          Valeur marchande <span>{valuation?.source ?? "Transfermarkt"}</span>
+        </p>
+        <div className={s.value}>{valuation?.amount ?? "—"}</div>
+        {valuation ? (
+          valuation.updated && (
+            <p className={s.valueMeta}>Estimation au {valuation.updated}</p>
+          )
         ) : (
-          <>
-            <p className={s.railTitle}>
-              Valeur estimée <FakeBadge />
-            </p>
-            <div className={s.valueRow}>
-              <span className={s.value}>{FAKE_VALUE.amount}</span>
-              <Sparkline values={FAKE_VALUE.history} />
-            </div>
-            <p className={s.valueMeta}>
-              <span className={s.up}>{FAKE_VALUE.trend}</span> sur 6 mois ·
-              fourchette {FAKE_VALUE.range}
-            </p>
-          </>
+          <p className={s.valueMeta}>
+            {market.loading
+              ? "Chargement…"
+              : market.error
+                ? "Données indisponibles"
+                : "Aucune estimation disponible"}
+          </p>
         )}
       </div>
       <div className={s.railSection}>
