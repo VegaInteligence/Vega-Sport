@@ -16,7 +16,7 @@ import psycopg
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega_v2 import planner
-from vega_v2.jobs import DETAIL_FAMILIES
+from vega_v2.jobs import DETAIL_FAMILIES, claim, enqueue, enqueue_or_revive
 from vega_v2.pitchapi import PitchClient
 from vega_v2.store import Store, StoreError, connect_local, migrate
 from vega_v2.worker import HEALTHY_AFTER, PUBLISH_EVERY, RECOMPUTE_AFTER, RECONNECT_FOR, Worker, connect, due_seasons, keep_running, publish, report
@@ -583,6 +583,92 @@ class WorkerTest(unittest.TestCase):
         ).fetchall()
         self.assertEqual(len(progress), 13)
         self.assertTrue(all(expected == covered == 3 for _, expected, covered in progress), progress)
+
+    def test_backfill_planner_adds_nothing_while_its_lane_is_full(self):
+        # 10 November 2026: every round added 2,000 jobs whatever the lane already held,
+        # 949,000 were queued at once, and each round then read all the matches for nothing.
+        start = self.now
+        old = [match(f"m_hist0{i}", start - timedelta(days=300 + i), "finished", (1, 0), season="2024/2025") for i in range(1, 4)]
+        self.api.routes["/leagues"] = {"leagues": [dict(LIGUE1, seasons=["2024/2025"])]}
+        self.api.routes["/leagues/l_aaaaaa/matches"] = {"league": {"id": "l_aaaaaa", "name": "Ligue 1"}, "matches": old}
+        for item in old:
+            self.api.routes["/matches/" + item["id"]] = item
+            self.api.routes.update({path.replace("m_aaaaaa", item["id"]): body for path, body in details("m_aaaaaa").items()})
+        scope = {"first_season": 2024, "last_season": 2024, "competitions": ["l_aaaaaa"]}
+        backfill = Worker(self.worker.store, self.worker.client, lanes=("backfill",), clock=lambda: self.now, cohort_delay=0, backfill=scope)
+        backfill.backfill_references()
+        self.assertEqual(planner.plan_backfill(self.db, start, **scope, limit=13), {"league_matches": 1})
+        self.assertEqual(backfill.step(), 1)  # the season calendar: 3 finished matches, 39 families to fetch
+        pending = lambda: self.db.execute("SELECT count(*) FROM ops.fetch_jobs WHERE lane='backfill' AND state='pending'").fetchone()[0]
+        self.assertEqual(sum(planner.plan_backfill(self.db, start, **scope, limit=13).values()), 13)
+        self.assertEqual(planner.plan_backfill(self.db, start, **scope, limit=13), {})
+        self.assertEqual(pending(), 13)
+        # One job done: the lane is below a batch again and takes the next one.
+        self.assertEqual(backfill.step(), 1)
+        self.assertEqual(sum(planner.plan_backfill(self.db, start, **scope, limit=13).values()), 13)
+        self.assertEqual(pending(), 25)
+        # Nothing is lost: the whole history is collected in the end.
+        self.assertEqual(backfill.run(until_idle=True, idle_sleep=0), 38)
+        self.assertEqual(pending(), 0)
+        self.assertEqual(self.db.execute("SELECT count(*) FROM ops.family_state WHERE status IN ('ok', 'unavailable')").fetchone()[0], 39)
+
+    def test_queue_lookups_read_a_few_rows_of_a_long_queue(self):
+        # 10 November 2026, 949,000 jobs waiting in the backfill lane: each claim read and
+        # sorted them all (0.4 s), each "fetched recently?" lookup read the whole table (0.7 s).
+        self.worker.lanes = ("reference",)
+        planner.plan(self.db, self.now)
+        self.drain()
+        families = list(DETAIL_FAMILIES)
+        self.db.execute(
+            """INSERT INTO ops.fetch_jobs(lane, family, entity_type, entity_id, run_after, state)
+               SELECT 'backfill', f::ops.fetch_family, 'match', 100000 + m, %s, 'pending'
+               FROM generate_series(1, 2000) m, unnest(%s::text[]) AS f""",
+            (self.now - timedelta(days=1), families),
+        )
+        self.db.execute("ANALYZE ops.fetch_jobs")
+        queued = 2000 * len(families)
+        day = self.now.date() + timedelta(days=30)
+        since = self.now - timedelta(days=7)
+
+        def rows_read(action):
+            # Rows of ops.fetch_jobs read by `action`, as PostgreSQL counts them in a transaction.
+            counted = "SELECT seq_tup_read + idx_tup_fetch FROM pg_stat_xact_user_tables WHERE schemaname='ops' AND relname='fetch_jobs'"
+            with self.db.transaction():
+                before = (self.db.execute(counted).fetchone() or (0,))[0]
+                result = action()
+                return result, self.db.execute(counted).fetchone()[0] - before
+
+        job, read = rows_read(lambda: claim(self.db, "backfill", now=self.now))
+        self.assertEqual((job["lane"], job["entity_id"]), ("backfill", 100001))
+        leased = job["family"]
+        self.assertLess(read, 20, f"a claim read {read} of {queued} queued jobs")
+        # A claim of another lane does not walk through the backfill's jobs either.
+        score = enqueue(self.db, "score", "calendar", target_date=day, run_after=self.now, priority=10)
+        job, read = rows_read(lambda: claim(self.db, "score", now=self.now))
+        self.assertEqual(job["lane"], "score")
+        self.assertLess(read, 20, f"a claim read {read} of {queued} queued jobs")
+
+        # "Fetched recently?": an active job, or one done since `since`, on that target only.
+        for expected, family, target in (
+            (True, "calendar", {"target_date": day}),  # queued just above
+            (False, "calendar", {"target_date": day + timedelta(days=1)}),
+            (True, "league", {"global_key": "catalogue"}),  # done by the reference lane
+            (True, leased, {"entity_type": "match", "entity_id": 100001}),  # leased by the claim above
+            (True, "shots", {"entity_type": "match", "entity_id": 100002}),  # pending
+            (False, "shots", {"entity_type": "match", "entity_id": 99}),
+        ):
+            got, read = rows_read(lambda: planner._recent(self.db, family, since, **target))
+            self.assertEqual(got, expected, (family, target))
+            self.assertLess(read, 20, f"{family} {target} read {read} of {queued} queued jobs")
+        # A job done before `since` no longer counts.
+        self.assertFalse(planner._recent(self.db, "league", self.now + timedelta(hours=1), global_key="catalogue"))
+
+        # A failed job is given a new try on its own target, found the same way.
+        self.db.execute("UPDATE ops.fetch_jobs SET state='failed', lease_until=NULL, lease_token=NULL WHERE id=%s", (score,))
+        revived, read = rows_read(lambda: enqueue_or_revive(self.db, "score", "calendar", target_date=day, run_after=self.now))
+        self.assertEqual(revived, score)
+        self.assertLess(read, 20, f"a revive read {read} of {queued} queued jobs")
+        self.assertEqual(self.db.execute("SELECT state::text FROM ops.fetch_jobs WHERE id=%s", (score,)).fetchone()[0], "pending")
 
     def test_bad_match_does_not_block_the_day_and_jobs_are_pruned(self):
         start = self.now

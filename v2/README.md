@@ -26,7 +26,7 @@ Le [compte rendu de validation](VERIFICATION.md) contient les preuves : tests, p
 - au statut `finished`, les 12 familles de détail, puis la correction à +24 h, qui refait les détails si le fournisseur a changé le match ;
 - le catalogue, les compétitions actives et leurs calendriers chaque semaine, les profils à la première apparition puis chaque mois.
 
-Le worker prend les travaux dans l'ordre score, détails, référentiel (le backfill a sa propre tâche). Il écrit `core` dans la même transaction que l'acquittement, puis recalcule.
+Le worker prend les travaux dans l'ordre score, détails, référentiel (le backfill a sa propre tâche, dont le planificateur ajoute au plus 2 000 travaux par minute et aucun tant que sa file en contient déjà 2 000). Il écrit `core` dans la même transaction que l'acquittement, puis recalcule.
 
 **Calcul.** Saisons joueur et club, états de jeu, classements, xPts (`agg.xpts_v1`), cohortes (par édition et poste, et Europe : Top 7 et coupes UEFA, par match), centiles et rangs, distributions P10–P90, phases et indice Vega club, positions, niveaux européens (l'Elo du classement de puissance des clubs, ajusté sur tous les résultats : aucun décalage de ligue fixé à la main), rôles et indice Vega joueur, similarité club et joueur, force des championnats, profils d'âge. Les formules sont celles de `docs/calculs` (main). Les cohortes se recalculent 10 min après le dernier changement ; niveaux, similarités, profils et classements de puissance une fois par jour, et pour une saison dont les matchs ont changé depuis son dernier calcul (un backfill), au plus une fois par heure. Chaque résultat porte son `agg.calc_runs`. Potentiel, projections et valeurs marchandes restent vides : le site les affiche comme fictifs.
 
