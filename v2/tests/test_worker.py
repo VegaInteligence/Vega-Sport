@@ -15,11 +15,12 @@ import psycopg
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from vega_v2 import planner
+from vega_v2 import calculator, models, planner
 from vega_v2.jobs import DETAIL_FAMILIES, claim, enqueue, enqueue_or_revive
 from vega_v2.pitchapi import PitchClient
 from vega_v2.store import Store, StoreError, connect_local, migrate
-from vega_v2.worker import HEALTHY_AFTER, PUBLISH_EVERY, RECOMPUTE_AFTER, RECONNECT_FOR, Worker, connect, due_seasons, keep_running, publish, report
+from vega_v2.worker import (HEALTHY_AFTER, PUBLISH_EVERY, RECOMPUTE_AFTER, RECONNECT_FOR, RETRY_DAILY_AFTER, Worker, connect, due_seasons,
+                            error_code, keep_running, publish, report)
 
 DSN = os.environ.get("VEGA_V2_WORKER_TEST_DSN")
 HOME = {"id": "t_aaaaaa", "name": "Home FC"}
@@ -287,6 +288,81 @@ class WorkerTest(unittest.TestCase):
         x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date)
              VALUES (901,901,%s,'vega','finished',900,901,2,2,'1971-01-01')""", (archive,))
         self.assertEqual(due_seasons(self.db, self.now), [])
+
+    def due_season(self):
+        """A season with a finished match and no models yet: due at once."""
+        x = self.db.execute
+        with self.db.transaction():
+            season = Store(self.db).season("2019/2020")
+        x("INSERT INTO core.competitions(id,name) VALUES (900,'Old League')")
+        x("INSERT INTO core.competition_seasons(id,competition_id,season_id,native_label) VALUES (900,900,%s,'2019/2020')", (season,))
+        x("INSERT INTO core.teams(id,name) VALUES (900,'A'),(901,'B')")
+        old = self.now - timedelta(days=2000)
+        x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date,kickoff_at)
+             VALUES (900,900,%s,'pitchapi','finished',900,901,1,0,%s,%s)""", (season, old.date(), old))
+        return season
+
+    def broken(self, module, name):
+        """Replace module.name by a function that fails on a bug of ours (no database error); returns its calls."""
+        calls = []
+
+        def fail(*args, **kwargs):
+            calls.append(args[1:])
+            return 1 / 0
+
+        self.addCleanup(setattr, module, name, getattr(module, name))
+        setattr(module, name, fail)
+        return calls
+
+    def test_a_failing_model_waits_an_hour_instead_of_every_round(self):
+        season = self.due_season()
+        calls = self.broken(models, "refresh_daily")
+        elo = lambda: self.db.execute("SELECT count(*) FROM agg.power_runs WHERE kind='elo'").fetchone()[0]
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.worker.daily(), [season])  # the failure is logged, the pass returns
+        self.assertEqual((calls, elo()), ([(season,)], 1))
+        # The log names the error's class and where it was raised, never its text.
+        self.assertRegex(out.getvalue(), rf"daily step=season {season} error=WORKER_ZERODIVISIONERROR@test_worker\.py:\d+ retry_at=")
+        self.assertNotIn("division by zero", out.getvalue())
+        # No models were published, so the season stays due: the next rounds leave it alone
+        # (each of them ran the Elo of every match again before failing at the same place).
+        self.now += timedelta(minutes=1)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.worker.daily(), [])
+        self.assertEqual((calls, elo()), ([(season,)], 1))
+        self.now += RETRY_DAILY_AFTER
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.worker.daily(), [season])
+        self.assertEqual((calls, elo()), ([(season,)] * 2, 2))
+        # Once it works again it is no longer held back.
+        setattr(models, "refresh_daily", lambda conn, season, elo=True: None)
+        self.now += RETRY_DAILY_AFTER
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.worker.daily(), [season])
+        self.assertEqual(self.worker._retry_at, {})
+
+    def test_the_collection_goes_on_whatever_fails_around_it(self):
+        # The daily pass, the calculator and the planner all fail on a bug: the worker
+        # still takes its job. Before, the first of them ended the process, and the task
+        # started again only to fail at the same place before its first job.
+        self.due_season()
+        failed = [self.broken(models, "refresh_daily"), self.broken(calculator, "process_dirty"), self.broken(planner, "plan")]
+        enqueue(self.db, "reference", "league", global_key="catalogue", run_after=self.now)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.worker.run(max_jobs=1), 1)
+        self.assertTrue(all(failed))
+        for step in ("planner", "daily step=season", "calculator"):
+            self.assertIn(step, out.getvalue())
+        self.assertEqual(self.db.execute("SELECT state::text FROM ops.fetch_jobs WHERE family='league'").fetchall(), [("done",)])
+
+    def test_an_error_code_never_carries_the_error_s_text(self):
+        try:
+            {}["a player's name"]
+        except KeyError as error:
+            self.assertRegex(error_code(error), r"^WORKER_KEYERROR@test_worker\.py:\d+$")
+        self.assertEqual(error_code(StoreError("LEASE_LOST")), "LEASE_LOST")
 
     def test_partitioned_tables_are_analysed_once_a_day(self):
         calls = []

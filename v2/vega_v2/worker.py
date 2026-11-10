@@ -13,6 +13,7 @@ import os
 import signal
 import sys
 import time
+import traceback
 
 import psycopg
 
@@ -55,6 +56,20 @@ def _now():
 # A season whose matches changed after its last daily models waits this long before the
 # models run again (a backfill writes a season's matches for hours).
 RECOMPUTE_AFTER = timedelta(hours=1)
+# A step of the daily pass that failed waits this long before it is tried again. Without
+# the wait a season whose models fail stays due, and every planning round runs the Elo of
+# every match again before failing at the same place.
+RETRY_DAILY_AFTER = timedelta(hours=1)
+
+
+def error_code(error):
+    """The log code of any error. A database or provider error keeps its own code; any
+    other one (a bug of ours) gives its class and where it was raised, never its text."""
+    if isinstance(error, (psycopg.Error, PitchError, NormalizationError, StoreError)):
+        return safe_code(error)
+    frames = traceback.extract_tb(error.__traceback__)
+    where = f"@{os.path.basename(frames[-1].filename)}:{frames[-1].lineno}" if frames else ""
+    return "WORKER_" + type(error).__name__.upper()[:50] + where
 
 
 def due_seasons(conn, now):
@@ -130,6 +145,7 @@ class Worker:
         self.done = 0  # jobs run since this worker started, across run() calls
         self._analyzed = None  # UTC day of the last ops.analyze_partitioned()
         self._archives = None  # UTC day of the last agg.refresh_archive_seasons()
+        self._retry_at = {}  # step of the daily pass that failed -> when it is tried again
         self._events = []
         client._on_attempt = self._events.append
 
@@ -258,64 +274,80 @@ class Worker:
         except (LeaseLost, StoreError):
             self.results[(family, "LEASE_LOST")] += 1
 
+    # The calculations, the daily pass, the image copies and the planner run in the
+    # collection's own process: whatever fails in them is logged and the loop goes on. An
+    # error that left one of them (anything but a database error, until 10 November 2026)
+    # ended the process; the task started again, ran the daily pass before its first job,
+    # failed at the same place, and collected nothing for as long as the season stayed due.
+
     def calculate(self, limit=500):
         """Season aggregates first, then the cohorts they changed (debounced)."""
         try:
             done = calculator.process_dirty(self.calc_conn, limit=limit)
             return done + models.process_cohorts(self.calc_conn, min_age_seconds=self.cohort_delay)
-        except psycopg.Error as error:
-            print(f"calculator error={safe_code(error)}", flush=True)
+        except Exception as error:
+            print(f"calculator error={error_code(error)}", flush=True)
             return 0
+
+    def _daily_step(self, step, now, call):
+        """Run one step of the daily pass unless it failed less than RETRY_DAILY_AFTER ago;
+        (True, its result), or (False, None) when it waited or failed."""
+        name = " ".join(str(part) for part in step)
+        if now < self._retry_at.get(step, now):
+            return False, None
+        try:
+            result = call()
+        except Exception as error:
+            self._retry_at[step] = now + RETRY_DAILY_AFTER
+            print(f"daily step={name} error={error_code(error)} retry_at={self._retry_at[step].isoformat(timespec='seconds')}", flush=True)
+            return False, None
+        self._retry_at.pop(step, None)
+        return True, result
 
     def daily(self):
         """Levels, competition strength, squad profiles, similarities and power rankings
-        (models.refresh_daily) for the seasons due_seasons() names."""
+        (models.refresh_daily) for the seasons due_seasons() names. Each step stands alone:
+        one that fails is logged and waits RETRY_DAILY_AFTER, the others run."""
         now = self.clock()
+        scalar = lambda sql: lambda: self.calc_conn.execute(sql).fetchone()[0]
         if self._analyzed != now.date():
             # Autovacuum analyses each partition, never the partitioned table itself (056).
-            try:
-                tables = self.calc_conn.execute("SELECT ops.analyze_partitioned()").fetchone()[0]
+            ok, tables = self._daily_step(("analyze",), now, scalar("SELECT ops.analyze_partitioned()"))
+            if ok:
                 self._analyzed = now.date()
                 print(f"analyze partitioned tables={tables}", flush=True)
-            except psycopg.Error as error:
-                print(f"analyze partitioned error={safe_code(error)}", flush=True)
         if self._archives != now.date():
             # The archive index's counts per season (058): an import, or goals a collected
             # match brought to an archive match, show in the index at this pass.
-            try:
-                changed = self.calc_conn.execute("SELECT agg.refresh_archive_seasons()").fetchone()[0]
+            ok, changed = self._daily_step(("archives",), now, scalar("SELECT agg.refresh_archive_seasons()"))
+            if ok:
                 self._archives = now.date()
                 print(f"archive seasons changed={changed}", flush=True)
-            except psycopg.Error as error:
-                print(f"archive seasons error={safe_code(error)}", flush=True)
-        seasons = due_seasons(self.calc_conn, now)
+        _, due = self._daily_step(("due",), now, lambda: due_seasons(self.calc_conn, now))
+        # A season whose models failed stays due: it waits like any failed step.
+        seasons = [season for season in due or [] if now >= self._retry_at.get(("season", season), now)]
         if self.source_get is not None:
             # Rankings and other sources first: the levels read the UEFA coefficients.
             from . import sources
             from .sources import uefa
 
-            try:
+            def run_sources():
                 for (name, scope), outcome in sources.run_due(self.conn, self.source_get, now).items():
                     print(f"source={name} scope={scope} outcome={outcome}", flush=True)
                 with self.conn.transaction():
                     uefa.reconcile_teams(self.conn)
-            except psycopg.Error as error:
-                print(f"sources error={safe_code(error)}", flush=True)
+
+            self._daily_step(("sources",), now, run_sources)
         if seasons:
             # The Elo covers every match in order: once for the pass, never once per season
             # (with ~140 archive seasons due at once it rewrote agg.team_elo 95 times).
             from . import power
 
-            try:
-                power.refresh_elo(self.calc_conn)
-            except psycopg.Error as error:
-                print(f"daily models elo error={safe_code(error)}", flush=True)
+            self._daily_step(("elo",), now, lambda: power.refresh_elo(self.calc_conn))
         for season in seasons:
-            try:
-                models.refresh_daily(self.calc_conn, season, elo=False)
+            ok, _ = self._daily_step(("season", season), now, lambda: models.refresh_daily(self.calc_conn, season, elo=False))
+            if ok:
                 print(f"daily models season={season} outcome=ok", flush=True)
-            except psycopg.Error as error:
-                print(f"daily models season={season} error={safe_code(error)}", flush=True)
         return seasons
 
     def mirror(self, limit=200):
@@ -324,8 +356,8 @@ class Worker:
             return {}
         try:
             outcomes = media.mirror(self.conn, *self.media_io, self.clock(), limit=limit)
-        except psycopg.Error as error:
-            print(f"media error={safe_code(error)}", flush=True)
+        except Exception as error:
+            print(f"media error={error_code(error)}", flush=True)
             return {}
         for code, count in sorted(outcomes.items()):
             print(f"media outcome={code} count={count}", flush=True)
@@ -373,8 +405,8 @@ class Worker:
                         planner.plan(self.conn, self.clock())
                     else:
                         planner.plan_backfill(self.conn, self.clock(), **self.backfill)
-                except psycopg.Error as error:
-                    print(f"planner error={safe_code(error)}", flush=True)
+                except Exception as error:
+                    print(f"planner error={error_code(error)}", flush=True)
                 if self.backfill is None:
                     self.daily()
                 self.publish()
@@ -412,8 +444,8 @@ class Worker:
             generation = publish(self.conn, self.clock(), force=force)
             if generation is not None:
                 print(f"publication generation={generation}", flush=True)
-        except psycopg.Error as error:
-            print(f"publication error={safe_code(error)}", flush=True)
+        except Exception as error:
+            print(f"publication error={error_code(error)}", flush=True)
 
     # Handlers ------------------------------------------------------------
 
