@@ -133,7 +133,9 @@ selected AS MATERIALIZED (
    .map((c) => c.replace("s.", "v."))
    .join(",")}
  FROM sides s JOIN page p ON p.id=s.team_id
- JOIN api.club_match_sides v ON ${scope("v")} AND v.match_id=s.match_id AND v.team_id=s.internal_team_id
+ -- By the match's id only (its season keeps the partitions): with the editions too, the
+ -- planner may read the whole scope again for each of the page's rows.
+ JOIN api.club_match_sides v ON v.season_id=${sid}::smallint AND v.match_id=s.match_id AND v.team_id=s.internal_team_id
 ),
 observed AS (
  SELECT s.team_id,jsonb_build_object(${stats}) stats,
