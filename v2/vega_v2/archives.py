@@ -66,7 +66,7 @@ PITCHAPI_COMPETITIONS = {
     "g:tur-sueperlig": "l_0S1uaf",
 }
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPTS = Path(os.environ.get("VEGA_ARCHIVE_SCRIPTS", ROOT / "dashboard/scripts"))
+SCRIPTS = Path(os.environ.get("VEGA_ARCHIVE_SCRIPTS", ROOT / "v2/archives/builders"))
 EDITION = Path(os.environ.get("VEGA_ARCHIVE_EDITION", ROOT / "v2/archives/edition.mjs"))
 PROVIDERS = {"openfootball": "openfootball", "footballcsv": "footballcsv", "engsoccerdata": "engsoccerdata", "worldclub": "worldclub"}
 

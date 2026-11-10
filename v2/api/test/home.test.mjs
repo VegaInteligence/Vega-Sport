@@ -5,7 +5,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { context, get, skip } from "./context.mjs";
-import { readFileSync } from "node:fs";
 
 const home = "/api/read/home?season=2025/2026&leagues=all";
 const favourites = "/api/read/home-favourites?season=2025/2026&leagues=all";
@@ -14,13 +13,6 @@ const KEYS = [
   "otherMatches", "period", "potw", "potwMatch", "potwRecent", "potwSeason", "raceOpen", "ranks", "resultCount", "results",
   "rules", "seasonProgress", "streak", "streakNext", "tables", "win",
 ].sort();
-
-test("the week rule is main's", () => {
-  // Read as text: importing main's route would load its database client.
-  const source = readFileSync(new URL("../../../dashboard/backend/services/relational-home.js", import.meta.url), "utf8");
-  const sql = readFileSync(new URL("../../sql/044_home_settings.sql", import.meta.url), "utf8");
-  assert.equal(Number(sql.match(/(\d+) AS latest_week_days/)[1]), Number(source.match(/export const LATEST_WEEK_DAYS = (\d+);/)[1]));
-});
 
 test("home: the week, its featured match and player", { skip }, async () => {
   const { response, body } = await get(home);

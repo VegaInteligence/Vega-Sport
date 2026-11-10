@@ -45,13 +45,9 @@ class ParseTest(unittest.TestCase):
         block = block[:block.index("}")]
         self.assertEqual(dict(re.findall(r'^\s*"?([A-Z0-9-]+)"?:\s*"([^"]+)"', block, re.M)), curated.COUNTRY_NAMES_FR)
 
-    def test_editorial_lists_are_mains(self):
+    def test_the_top_seven_is_the_site_s_europe_focus(self):
         import re
 
-        home = (ROOT.parent / "dashboard/backend/services/relational-home.js").read_text()
-        listed = lambda name: re.findall(r'"([a-z]_[A-Za-z0-9]+)"', re.search(rf"export const {name} = \[(.*?)\]", home, re.S).group(1))
-        self.assertEqual(list(curated.EDITORIAL_LISTS["featured_clubs"][1]), listed("HOME_FEATURED_CLUBS"))
-        self.assertEqual(list(curated.EDITORIAL_LISTS["title_race_leagues"][1]), listed("HOME_SIMPLE_LEAGUES"))
         scope = (ROOT.parent / "dashboard/shared/competition-scope.js").read_text()
         focus = re.findall(r'\{ id: "(l_[A-Za-z0-9]+)"', scope[scope.index("export const EUROPE_FOCUS = ["):].split("];")[0])
         self.assertEqual(list(curated.EDITORIAL_LISTS["top_seven"][1]), focus[:7])

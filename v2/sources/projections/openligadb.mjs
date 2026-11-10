@@ -1,4 +1,4 @@
-import { normalizeOpenLigaMatches } from "../../frontend/src/services/openligadb.js";
+import { normalizeOpenLigaMatches } from "../../../dashboard/frontend/src/services/openligadb.js";
 
 const SOURCES = {
   "nations-league": { "2026/2027": ["nla", "2026"] },

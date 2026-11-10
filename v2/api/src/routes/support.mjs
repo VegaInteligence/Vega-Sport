@@ -14,7 +14,7 @@
 import { createHash } from "node:crypto";
 import { cacheHeaders, matchesEtag, reject, send, validateParams } from "../http.mjs";
 import { cloudFrontObjectUrl, immutableFile } from "../media.mjs";
-import { MESSI_ID, mergeMessiHonours } from "../../../../dashboard/scripts/materialize_curated.mjs";
+import { MESSI_ID, mergeMessiHonours } from "../curated-honours.mjs";
 import { projectionGroups } from "../../../../dashboard/shared/honour-display.js";
 
 const TEAM = /^t_(?:[A-Za-z0-9]{6}|v\d{7})$/;

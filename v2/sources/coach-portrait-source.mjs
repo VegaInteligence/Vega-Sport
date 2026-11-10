@@ -1,8 +1,8 @@
 import {
   commonsPhoto,
   commonsPhotoFromInfo,
-} from "../frontend/src/services/wikidata-club.js";
-import { normalizeText } from "../frontend/src/services/format.js";
+} from "../../dashboard/frontend/src/services/wikidata-club.js";
+import { normalizeText } from "../../dashboard/frontend/src/services/format.js";
 
 const identity = (value) => normalizeText(value).trim().replace(/\s+/g, " ");
 const endpoint = "https://www.wikidata.org/w/api.php";

@@ -1,6 +1,6 @@
-import { parseFranceCup } from "../../frontend/src/services/openfootball-france-cup.js";
-import { parseOpenCupText } from "../../frontend/src/services/openfootball-cups.js";
-import { NATIONAL_CUP_ARCHIVES } from "../../frontend/src/services/cup-archives.js";
+import { parseFranceCup } from "../../../dashboard/frontend/src/services/openfootball-france-cup.js";
+import { parseOpenCupText } from "../../../dashboard/frontend/src/services/openfootball-cups.js";
+import { NATIONAL_CUP_ARCHIVES } from "../../../dashboard/frontend/src/services/cup-archives.js";
 
 const WORLD_CUP_YEARS = new Set([
   "1930",
