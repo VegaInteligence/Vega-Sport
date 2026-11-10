@@ -8,7 +8,10 @@ core.match_events), built exactly as main builds them.
 3. the edition is written as typed rows: one competition per archive family, one
    edition per season, Vega teams by name and country, matches, rounds and goals.
 
-Only seasons up to 2020/2021 are imported: from 2021/2022 on, PitchAPI is the source.
+Seasons up to 2020/2021 are imported whole. From 2021/2022 on PitchAPI is the source,
+and the archives only fill what it does not have: a competition is imported for the
+seasons PitchAPI has no edition of it (the national cups it never has, a league before
+its first PitchAPI season), so a match is never stored twice (PITCHAPI_COMPETITIONS).
 A season is replaced as a whole (its archive matches only); ids stay stable because
 every row is keyed by its archive key. Files are processed in a temporary directory
 and never stored.
@@ -31,6 +34,37 @@ import unicodedata
 from .store import Store
 
 LAST_ARCHIVE_SEASON = 2020
+# After LAST_ARCHIVE_SEASON, each archive competition names the PitchAPI competition that
+# is the same one (None: PitchAPI never has it). A season of it is imported only when
+# PitchAPI has no edition of that competition then; a competition missing from this table
+# stops the import, so that nothing PitchAPI also has gets in unnoticed. The keys are the
+# goal archive's competitions (dashboard/scripts/build_historical_goals.py), the only
+# archive that goes past 2020/2021.
+PITCHAPI_COMPETITIONS = {
+    "g:aut-bundesliga": "l_3zsMpo",
+    "g:bel-pro-league": "l_2L6d1F",
+    "g:bundesliga": "l_1Isor4",
+    "g:champions-league": "l_0bfbkO",
+    "g:cze-1-fotbalova-liga": "l_0F4I4F",
+    "g:dfb-pokal": None,
+    "g:eng-fa-cup": None,
+    "g:eng-league-cup": None,
+    "g:eng-premier-league": "l_4WFCIZ",
+    "g:esp-copa-del-rey": None,
+    "g:esp-primera-division": "l_0ErfuF",
+    "g:europa-league": "l_38d9HA",
+    "g:fra-coupe-de-france": None,
+    "g:fra-ligue-1": "l_3FJFUl",
+    "g:gre-super-league": "l_3xwVF2",
+    "g:ita-serie-a": "l_0ALvwF",
+    "g:ned-eredivisie": "l_4H43wr",
+    "g:nor-eliteserien": "l_0uqFK8",
+    "g:pol-ekstraklasa": "l_214sqK",
+    "g:por-primeira-liga": "l_4QexZg",
+    "g:sco-premiership": "l_1LMdEO",
+    "g:sui-super-league": "l_4d6Bwl",
+    "g:tur-sueperlig": "l_0S1uaf",
+}
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = Path(os.environ.get("VEGA_ARCHIVE_SCRIPTS", ROOT / "dashboard/scripts"))
 EDITION = Path(os.environ.get("VEGA_ARCHIVE_EDITION", ROOT / "v2/archives/edition.mjs"))
@@ -185,14 +219,35 @@ class Loader:
             self.teams[key] = ident
         return self.teams[key]
 
+    def uncovered(self, label, competitions):
+        """The archive competitions of a season after LAST_ARCHIVE_SEASON that PitchAPI has
+        no edition of that season (the others are PitchAPI's: not imported)."""
+        unknown = sorted(c["id"] for c in competitions if c["id"] not in PITCHAPI_COMPETITIONS)
+        if unknown:
+            raise ArchiveError(f"{label}: no PitchAPI competition is declared for {', '.join(unknown)}")
+        covered = {
+            key
+            for (key,) in self.conn.execute(
+                """SELECT p.provider_key FROM core.provider_ids p
+                   JOIN core.competition_seasons cs ON cs.competition_id = p.entity_id AND cs.season_id = %s
+                     AND cs.archive_key IS NULL AND cs.cup_key IS NULL
+                   WHERE p.entity_type = 'competition' AND p.provider = 'pitchapi' AND p.provider_key = ANY(%s)""",
+                (int(label[:4]), [key for key in PITCHAPI_COMPETITIONS.values() if key]),
+            ).fetchall()
+        }
+        return {c["id"] for c in competitions if PITCHAPI_COMPETITIONS[c["id"]] not in covered}
+
     def season(self, label, data, provider_of):
         """Replace one season's archive matches with its edition."""
         start = int(label[:4])
-        if start > LAST_ARCHIVE_SEASON:
-            return 0
         Store(self.conn).season(label)
+        competitions, matches = data["competitions"], data["matches"]
+        if start > LAST_ARCHIVE_SEASON:
+            ours = self.uncovered(label, competitions)
+            competitions = [c for c in competitions if c["id"] in ours]
+            matches = [m for m in matches if m["competitionId"] in ours]
         editions = {}
-        for position, comp in enumerate(data["competitions"]):
+        for position, comp in enumerate(competitions):
             competition = self.competition(family(comp["id"]), comp["name"], comp.get("country"))
             editions[comp["id"]] = self.conn.execute(
                 """INSERT INTO core.competition_seasons(competition_id, season_id, native_label, archive_key, archive_name, archive_country, archive_position)
@@ -202,10 +257,21 @@ class Loader:
                    RETURNING id""",
                 (competition, start, label, comp["id"], comp["name"], comp.get("country"), position),
             ).fetchone()[0]
-        keep = {m["key"] for m in data["matches"]}
+        keep = {m["key"] for m in matches}
         changed = self.conn.execute(
             "DELETE FROM core.matches WHERE season_id=%s AND archive_key IS NOT NULL AND NOT archive_key = ANY(%s)", (start, list(keep))
         ).rowcount
+        # An edition the season no longer has (PitchAPI has it now) goes with its rounds.
+        gone = [
+            ident
+            for (ident,) in self.conn.execute(
+                "SELECT id FROM core.competition_seasons WHERE season_id=%s AND archive_key IS NOT NULL AND NOT id = ANY(%s)",
+                (start, list(editions.values())),
+            ).fetchall()
+        ]
+        if gone:
+            self.conn.execute("DELETE FROM core.rounds WHERE competition_season_id = ANY(%s)", (gone,))
+            changed += self.conn.execute("DELETE FROM core.competition_seasons WHERE id = ANY(%s)", (gone,)).rowcount
         # What the season already holds, read once: a re-import writes only what differs (the
         # archives rarely change; rewriting them all saturated the base for hours).
         rounds = {
@@ -216,7 +282,7 @@ class Loader:
         }
         stored, stored_goals = {}, defaultdict(list)
         written = 0
-        for position, match in enumerate(data["matches"]):
+        for position, match in enumerate(matches):
             edition_id = editions[match["competitionId"]]
             row = match_row(match)
             home = self.team(match["team1"], match.get("country")) if match.get("team1") else None
@@ -238,9 +304,11 @@ class Loader:
             columns = list(values)
             if not stored and written == 0:
                 stored.update(self._stored_matches(start, columns))
+                # Archive matches only: after LAST_ARCHIVE_SEASON the season also holds PitchAPI's goals.
                 for match_id, *goal in self.conn.execute(
-                    f"SELECT match_id, {', '.join(f'{c}::text' for c in GOAL_COLUMNS)} FROM core.match_events "
-                    "WHERE season_id=%s AND event_type='goal' ORDER BY match_id, seq",
+                    f"SELECT e.match_id, {', '.join(f'e.{c}::text' for c in GOAL_COLUMNS)} FROM core.match_events e "
+                    "JOIN core.matches m ON m.id = e.match_id AND m.season_id = e.season_id AND m.archive_key IS NOT NULL "
+                    "WHERE e.season_id=%s AND e.event_type='goal' ORDER BY e.match_id, e.seq",
                     (start,),
                 ).fetchall():
                     stored_goals[match_id].append(tuple(goal))
@@ -273,7 +341,7 @@ class Loader:
                     )
                 changed += 1
             written += 1
-        if changed or not stored:
+        if changed:
             self.conn.execute(
                 """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES ('archive_season', %s)
                    ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
@@ -368,7 +436,7 @@ def run(conn, sources, seasons=None):
         loader = Loader(conn)
         provider_of = provider_for(results_index)
         for label in sorted(files):
-            if (seasons and label not in seasons) or int(label[:4]) > LAST_ARCHIVE_SEASON:
+            if seasons and label not in seasons:
                 continue
             data = edition(files[label].get("results"), files[label].get("goals"))
             with conn.transaction():

@@ -1,6 +1,7 @@
 """Historical archives (vega_v2/archives.py): main's builders and shared/archive.js on
 synthetic sources, then typed rows."""
 
+import importlib.util
 import os
 from pathlib import Path
 import shutil
@@ -12,7 +13,7 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
-from archive_fixtures import make_sources
+from archive_fixtures import RECENT_GOALS, make_sources
 from vega_v2 import archives
 
 try:
@@ -36,6 +37,16 @@ class PureTest(unittest.TestCase):
         self.assertEqual((row["home_score_et"], row["home_penalty_score"], row["status"]), (2, 4, "finished"))
         with self.assertRaises(archives.ArchiveError):  # a note no typed column carries
             archives.match_row({"key": "r:x:1", "score": [1, 0], "notes": ["Source : x"], "source": {"status": None}})
+
+    def test_every_goal_competition_names_its_pitchapi_one(self):
+        # The goal archive is the only one that goes past 2020/2021: each of its competitions
+        # says which PitchAPI competition it is (or that PitchAPI never has it).
+        spec = importlib.util.spec_from_file_location("build_historical_goals", archives.SCRIPTS / "build_historical_goals.py")
+        builder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(builder)
+        self.assertEqual(set(archives.PITCHAPI_COMPETITIONS), {"g:" + name for name in builder.COMPETITIONS})
+        mapped = [key for key in archives.PITCHAPI_COMPETITIONS.values() if key]
+        self.assertEqual(len(mapped), len(set(mapped)))
 
 
 @unittest.skipUnless(DSN and psycopg and shutil.which("node"), "requires a disposable local archives DB, psycopg and node")
@@ -112,6 +123,61 @@ class ImportTest(unittest.TestCase):
         editions = x("""SELECT s.label, count(*) FROM core.competition_seasons cs JOIN core.seasons s ON s.id = cs.season_id
                         WHERE cs.archive_key = '2015-16/en.1' GROUP BY 1 ORDER BY 1""").fetchall()
         self.assertEqual(editions, [("2015/2016", 1), ("2016/2017", 1)])
+
+    def test_recent_seasons_fill_what_pitchapi_lacks(self):
+        from vega_v2.store import Store
+
+        x = self.db.execute
+        editions = lambda season: x(
+            """SELECT cs.archive_key, count(m.id) FROM core.competition_seasons cs
+               LEFT JOIN core.matches m ON m.competition_season_id = cs.id
+               WHERE cs.season_id = %s AND cs.archive_key IS NOT NULL GROUP BY 1 ORDER BY 1""", (season,)).fetchall()
+        version = lambda season: x(
+            "SELECT version FROM ops.resource_versions WHERE resource_kind='archive_season' AND resource_id=%s", (season,)).fetchone()
+        with tempfile.TemporaryDirectory() as root:
+            make_sources(root, RECENT_GOALS)
+            run = lambda: archives.run(self.db, root, {"2021/2022"})
+            # PitchAPI has no edition of either competition that season: both are imported.
+            self.assertEqual(run(), {"2021/2022": 2})
+            self.assertEqual(editions(2021), [("g:eng-fa-cup", 1), ("g:eng-premier-league", 1)])
+            self.assertEqual(x("SELECT DISTINCT source::text FROM core.matches WHERE season_id=2021").fetchall(), [("worldclub",)])
+            self.assertEqual(x("SELECT count(*) FROM core.match_events WHERE season_id=2021").fetchone()[0], 3)
+            # A PitchAPI edition of the league in another season changes nothing here.
+            league = x("INSERT INTO core.competitions(name) VALUES ('Premier League') RETURNING id").fetchone()[0]
+            x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition','pitchapi','l_4WFCIZ',%s)", (league,))
+            Store(self.db).season("2022/2023")
+            x("INSERT INTO core.competition_seasons(competition_id, season_id, native_label) VALUES (%s, 2022, '2022/2023')", (league,))
+            self.assertEqual(run(), {"2021/2022": 2})
+            self.assertEqual(version(2021), (1,))
+            # Once PitchAPI has that season of the league, its archive edition goes: the cup
+            # stays, and PitchAPI's own match and goal are left alone.
+            edition = x("INSERT INTO core.competition_seasons(competition_id, season_id, native_label) VALUES (%s, 2021, '2021/2022') RETURNING id",
+                        (league,)).fetchone()[0]
+            match = x("INSERT INTO core.matches(competition_season_id, season_id, status, source) VALUES (%s, 2021, 'finished', 'pitchapi') RETURNING id",
+                      (edition,)).fetchone()[0]
+            x("INSERT INTO core.match_events(season_id, match_id, seq, event_type, minute) VALUES (2021, %s, 0, 'goal', 10)", (match,))
+            self.assertEqual(run(), {"2021/2022": 1})
+            self.assertEqual(editions(2021), [("g:eng-fa-cup", 1)])
+            self.assertEqual(x("SELECT count(*) FROM core.matches WHERE season_id=2021 AND archive_key IS NULL").fetchone()[0], 1)
+            self.assertEqual(x("SELECT match_id = %s, count(*) FROM core.match_events WHERE season_id=2021 GROUP BY 1 ORDER BY 1", (match,)).fetchall(),
+                             [(False, 1), (True, 1)])
+            self.assertEqual(version(2021), (2,))
+            self.assertEqual(run(), {"2021/2022": 1})
+            self.assertEqual(version(2021), (2,))
+            self.assertEqual(x("SELECT count(*) FROM core.match_events WHERE season_id=2021").fetchone()[0], 2)
+        loader = archives.Loader(self.db)
+        league_only = {"competitions": [{"id": "g:eng-premier-league", "name": "Première division", "country": "Angleterre"}],
+                       "matches": [{"key": "g:eng-premier-league:2022-08-06:0", "competitionId": "g:eng-premier-league", "date": "2022-08-06",
+                                    "team1": "Arsenal", "team2": "Everton", "score": [1, 0]}]}
+        # A season PitchAPI has entirely: nothing is written, not even a version.
+        with self.db.transaction():
+            self.assertEqual(loader.season("2022/2023", league_only, lambda match: "worldclub"), 0)
+        self.assertEqual(editions(2022), [])
+        self.assertIsNone(version(2022))
+        # A competition the table does not know stops the import instead of slipping in.
+        unknown = {"competitions": [{"id": "g:xx-new-league", "name": "X", "country": "Angleterre"}], "matches": []}
+        with self.assertRaises(archives.ArchiveError), self.db.transaction():
+            loader.season("2021/2022", unknown, lambda match: "worldclub")
 
 
 if __name__ == "__main__":

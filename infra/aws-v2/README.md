@@ -34,7 +34,7 @@ Account 361769570630, region us-east-2, AWS CLI profile `statarena`, default VPC
 6b. live stack (`live.yaml`): the live tables, the AppSync Events API and its browser key (renewed for 360 days on each deploy), the `GET /live/matches/{id}` function and the EventBridge schedule that starts the ingestor every 15 minutes (`--until-idle`: it exits at once without a match within 30 minutes, follows the day's matches to the last otherwise, and a second start finds the lease taken), off unless `LIVE_PROVIDER` names an adapter;
 7. read API package, uploaded under `releases/v2-api/`;
 8. read API stack; on the first deployment a second pass sets `MediaBaseUrl` once the distribution's domain is known;
-9. with `IMPORT_ARCHIVES=true` and `ARCHIVE_SOURCES_BUCKET`, the historical archive import (`vega-v2-archives`), which reads main's pinned sources under `data/sources/` read only.
+9. with `IMPORT_ARCHIVES=true` and `ARCHIVE_SOURCES_BUCKET`, the historical archive import (`vega-v2-archives`), which reads main's pinned sources under `data/sources/` read only: whole seasons up to 2020/2021, then only the competitions PitchAPI has no edition of that season. A re-import writes only what differs.
 
 ### One-time setup (commands to run, each changes AWS or GitHub)
 

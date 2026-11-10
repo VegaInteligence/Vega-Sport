@@ -15,8 +15,8 @@ a day) exists for the site once: PitchAPI-era reads leave cup editions out. The 
 noted in ops.data_warnings (duplicate_match, and score_disagreement when the final
 scores differ), the PitchAPI match id in the detail.
 
-Archive teams (seasons up to 2020/2021) are keyed by their country's French name and
-their own: one is the PitchAPI club of the same country (core.countries.name_fr) whose name
+Archive teams (every archive season, the ones after 2020/2021 included) are keyed by
+their country's French name and their own: one is the PitchAPI club of the same country (core.countries.name_fr) whose name
 is the same, or the same once the club-form words at either end are set aside ("West Ham
 United FC" and "West Ham United"), when exactly one club matches. A merged team's matches
 keep the names their source gave (core.matches.home_team_name, away_team_name, 034).
