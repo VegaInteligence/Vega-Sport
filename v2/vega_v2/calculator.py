@@ -361,6 +361,8 @@ def refresh_competition_season(conn, cs, *, players=None, teams=None):
         conn.execute("DELETE FROM agg.standings WHERE competition_season_id=%s", (cs,))
         conn.execute(STANDINGS_SQL, {"cs": cs})
         refresh_game_states(conn, cs, sid, None if teams is None else set(teams))
+        # The peers of a performance (055): the edition's histogram follows its statistics.
+        conn.execute("SELECT agg.refresh_performance_distribution(%s)", (cs,))
 
 
 def process_dirty(conn, *, limit=500):

@@ -128,6 +128,8 @@ class Worker:
         self.backfill = backfill if backfill is not None else ({} if self.lanes == ("backfill",) else None)
         self.results = Counter()
         self.done = 0  # jobs run since this worker started, across run() calls
+        self._analyzed = None  # UTC day of the last ops.analyze_partitioned()
+        self._archives = None  # UTC day of the last agg.refresh_archive_seasons()
         self._events = []
         client._on_attempt = self._events.append
 
@@ -269,6 +271,23 @@ class Worker:
         """Levels, competition strength, squad profiles, similarities and power rankings
         (models.refresh_daily) for the seasons due_seasons() names."""
         now = self.clock()
+        if self._analyzed != now.date():
+            # Autovacuum analyses each partition, never the partitioned table itself (056).
+            try:
+                tables = self.calc_conn.execute("SELECT ops.analyze_partitioned()").fetchone()[0]
+                self._analyzed = now.date()
+                print(f"analyze partitioned tables={tables}", flush=True)
+            except psycopg.Error as error:
+                print(f"analyze partitioned error={safe_code(error)}", flush=True)
+        if self._archives != now.date():
+            # The archive index's counts per season (058): an import, or goals a collected
+            # match brought to an archive match, show in the index at this pass.
+            try:
+                changed = self.calc_conn.execute("SELECT agg.refresh_archive_seasons()").fetchone()[0]
+                self._archives = now.date()
+                print(f"archive seasons changed={changed}", flush=True)
+            except psycopg.Error as error:
+                print(f"archive seasons error={safe_code(error)}", flush=True)
         seasons = due_seasons(self.calc_conn, now)
         if self.source_get is not None:
             # Rankings and other sources first: the levels read the UEFA coefficients.

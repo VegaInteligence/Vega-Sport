@@ -87,7 +87,8 @@ def main(dsn):
     for pid, mid, team, minutes, rating, goals, xg, shots, ok, att, position, starter, saves, prevented in STATS:
         x(
             "INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,position_id,minutes_played,rating,goals,xg,total_shots,accurate_passes,accurate_passes_total,saves,goals_prevented) VALUES (2025,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-            (mid, team, pid, position, minutes, rating, goals, xg, shots, ok, att, saves, prevented),
+            # As in production: the statistics carry no position, the line-up does.
+            (mid, team, pid, None, minutes, rating, goals, xg, shots, ok, att, saves, prevented),
         )
         x("INSERT INTO core.lineup_players(season_id,match_id,team_id,player_id,is_starter,position_id) VALUES (2025,%s,%s,%s,%s,%s)", (mid, team, pid, starter, position))
     for pid, mid, team in BENCH:
@@ -149,6 +150,8 @@ def main(dsn):
     # The 2015/2016 archive, imported by main's builders and shared/archive.js (tests/archive_fixtures.py).
     with tempfile.TemporaryDirectory() as sources:
         archives.run(db, make_sources(sources))
+    # The archive index reads the counts the worker's daily pass computes (058).
+    db.execute("SELECT agg.refresh_archive_seasons()")
     db.execute("UPDATE ops.resource_versions SET published_at='2025-09-20T10:30:00Z' WHERE resource_kind='archive_season'")
     # Cup editions as main's source projections answer them, written by the cups adapter.
     from datetime import datetime, timezone
@@ -175,6 +178,7 @@ def main(dsn):
     from vega_v2 import calculator
 
     x(calculator.PLAYER_SQL, {"cs": 1, "sid": 2025, "all": True, "players": [], "teams": []})
+    x("SELECT agg.refresh_performance_distribution(1)")
     # The seeded data is one publication (the worker publishes on its rhythm).
     published = db.execute("SELECT max(coalesce(published_at, updated_at)) FROM ops.resource_versions").fetchone()[0]
     publish(db, published, force=True)

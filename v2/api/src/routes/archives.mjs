@@ -152,12 +152,12 @@ export async function archiveIndex(req, params, read) {
   const sources = await read("SELECT * FROM api.source_revisions ORDER BY position NULLS LAST,source");
   const main = sources.find((s) => s.source === kind);
   if (!main) reject(404, "Donnée indisponible.");
+  // The seasons' counts are precomputed (agg.archive_seasons, refreshed by the worker's
+  // daily pass): counting them here read the whole archive on every request.
   let body;
   if (kind === "results") {
-    const seasons = await read(`SELECT season AS id,count(DISTINCT competition_id)::int competitions,count(*)::int matches,
-      count(*) FILTER(WHERE home_score IS NOT NULL AND away_score IS NOT NULL AND status<>'canceled')::int results,
-      count(*) FILTER(WHERE status='canceled')::int unplayed,count(*) FILTER(WHERE date_unverified)::int "unverifiedDates"
-      FROM api.archive_matches WHERE key LIKE 'r:%' GROUP BY season ORDER BY season DESC`);
+    const seasons = await read(`SELECT season AS id,competitions,matches,results,unplayed,unverified_dates AS "unverifiedDates"
+      FROM api.archive_result_seasons ORDER BY season DESC`);
     body = {
       schemaVersion: 1,
       source: {
@@ -171,11 +171,8 @@ export async function archiveIndex(req, params, read) {
       seasons,
     };
   } else {
-    const seasons = await read(`SELECT m.season AS id,count(DISTINCT m.competition_id)::int competitions,
-      sum(m.goal_count)::int events,count(*)::int matches,
-      (SELECT count(*)::int FROM api.archive_goals g JOIN api.archive_matches x ON x.season_id=g.season_id AND x.match_id=g.match_id
-        WHERE x.season=m.season AND g.score_disagreement) "scoreDisagreements",max(m.date)::text "latestEvent"
-      FROM api.archive_matches m WHERE m.goal_count>0 GROUP BY m.season ORDER BY m.season DESC`);
+    const seasons = await read(`SELECT season AS id,competitions,events,matches,score_disagreements AS "scoreDisagreements",
+      latest_event::text AS "latestEvent" FROM api.archive_goal_seasons ORDER BY season DESC`);
     body = { schemaVersion: 1, source: { ...source(main), ...(main.coverage && { coverage: main.coverage }) }, seasons };
   }
   const etag = `W/"catalog-v1-${hash(body)}"`;

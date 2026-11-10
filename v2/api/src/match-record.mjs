@@ -15,17 +15,20 @@ const SHOT_FIELDS = `'id',x.id,'playerId',api.public_id('player',x.player_id),'p
 /** SQL columns of a match record for the match row `f` of api.fixtures. */
 // `players` and `teamStats` false: a card that shows neither (the home's result rows)
 // skips the player aggregate and the team statistics.
-export const matchRecordColumns = ({ shots = true, players = true, teamStats = true } = {}) => `row_to_json(f) AS fixture,
- (SELECT json_agg(s ORDER BY s.side DESC) FROM api.match_sides s WHERE s.season_id=f.season_id AND s.match_id=f.match_id) sides,
- ${teamStats ? `(SELECT to_json(t) FROM api.match_team_sides t WHERE t.season_id=f.season_id AND t.match_id=f.match_id AND t.team_id=f.home_internal_id AND t.period='all')` : "NULL::json"} home_stats,
- ${teamStats ? `(SELECT to_json(t) FROM api.match_team_sides t WHERE t.season_id=f.season_id AND t.match_id=f.match_id AND t.team_id=f.away_internal_id AND t.period='all')` : "NULL::json"} away_stats,
- ${shots ? `(SELECT coalesce(json_agg(json_build_object(${SHOT_FIELDS}) ORDER BY x.shot_no),'[]'::json) FROM api.match_shots x WHERE x.season_id=f.season_id AND x.match_id=f.match_id)` : "'[]'::json"} shots,
- (SELECT row_to_json(d) FROM api.match_detail_state d WHERE d.season_id=f.season_id AND d.match_id=f.match_id) state,
+// `season`: the SQL of the season's id when the read knows it (a bound parameter). The
+// details are season-partitioned: a constant prunes the other seasons when the query is
+// planned, the match row's own season only when it runs, after planning them all.
+export const matchRecordColumns = ({ shots = true, players = true, teamStats = true, season = "f.season_id" } = {}) => `row_to_json(f) AS fixture,
+ (SELECT json_agg(s ORDER BY s.side DESC) FROM api.match_sides s WHERE s.season_id=${season} AND s.match_id=f.match_id) sides,
+ ${teamStats ? `(SELECT to_json(t) FROM api.match_team_sides t WHERE t.season_id=${season} AND t.match_id=f.match_id AND t.team_id=f.home_internal_id AND t.period='all')` : "NULL::json"} home_stats,
+ ${teamStats ? `(SELECT to_json(t) FROM api.match_team_sides t WHERE t.season_id=${season} AND t.match_id=f.match_id AND t.team_id=f.away_internal_id AND t.period='all')` : "NULL::json"} away_stats,
+ ${shots ? `(SELECT coalesce(json_agg(json_build_object(${SHOT_FIELDS}) ORDER BY x.shot_no),'[]'::json) FROM api.match_shots x WHERE x.season_id=${season} AND x.match_id=f.match_id)` : "'[]'::json"} shots,
+ (SELECT row_to_json(d) FROM api.match_detail_state d WHERE d.season_id=${season} AND d.match_id=f.match_id) state,
  ${players ? `(SELECT json_build_object('listed',count(*),'played',count(*) FILTER(WHERE a.minutes>0),
    'rated',count(*) FILTER(WHERE a.minutes>0 AND a.rating IS NOT NULL),'xg',count(*) FILTER(WHERE a.minutes>0 AND a.xg IS NOT NULL),
    'xa',count(*) FILTER(WHERE a.minutes>0 AND a.xa IS NOT NULL),
    'ids',coalesce(json_agg(f.id||':'||api.public_id('player',a.player_id) ORDER BY api.public_id('player',a.player_id)),'[]'::json))
-   FROM api.player_appearances a WHERE a.season_id=f.season_id AND a.match_id=f.match_id)` : "NULL::json"} players,
+   FROM api.player_appearances a WHERE a.season_id=${season} AND a.match_id=f.match_id)` : "NULL::json"} players,
  f.referee AS referee,
  f.stadium AS stadium`;
 

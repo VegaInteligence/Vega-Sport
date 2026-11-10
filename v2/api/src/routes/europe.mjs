@@ -77,9 +77,9 @@ export function createEuropeRoute(read) {
            WHERE r.internal_team_id IS NOT NULL AND r.edition_id=(SELECT edition_id FROM api.ranking_editions
              WHERE kind='uefa-clubs' AND provider='UEFA' ORDER BY edition DESC LIMIT 1))
          SELECT publication.*,
-           (SELECT coalesce(json_agg(json_build_object('id',k.public_id,'name',k.name,'imageUrl',k.image_url,'country',c.country,
+           (SELECT coalesce(json_agg(json_build_object('id',k.public_id,'name',k.name,'imageUrl',k.image_url,'country',k.country,
               'leagueId',p.league_id,'uefaCoefficient',u.points,'level',w.elo,'levelRank',w.rank) ORDER BY p.league_id,k.name,k.public_id),'[]'::json)
-            FROM pool p JOIN api.team_keys k ON k.team_id=p.team_id LEFT JOIN api.team_countries c ON c.team_id=k.public_id
+            FROM pool p JOIN api.team_keys k ON k.team_id=p.team_id
             LEFT JOIN uefa u ON u.team_id=p.team_id
             LEFT JOIN api.power_clubs w ON w.team_id=k.public_id AND w.season=${seasonParam} AND w.scope='clubs') clubs,
            (SELECT coalesce(json_object_agg(w.team_id,w.elo),'{}'::json) FROM api.power_clubs w WHERE w.season=${seasonParam} AND w.scope='clubs') levels,

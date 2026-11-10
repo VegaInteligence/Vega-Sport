@@ -1,7 +1,9 @@
 // Contract tests of /api/read/performance (relational-performance.js on main).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { get, skip } from "./context.mjs";
+import { context, get, skip } from "./context.mjs";
+import { appearanceRecord, peerCountsSql, PEER_COUNTS, profileCounts } from "../src/routes/performance.mjs";
+import { metricValue, MIN_PEER_MINUTES, peerGroup, RANKED } from "../../../dashboard/shared/player-profile.js";
 
 const base = "/api/read/performance?season=2025/2026&leagues=all&appearance=m_aaaaa1:p_aaaab1";
 
@@ -45,4 +47,36 @@ test("performance with shots, conditional reads and errors", { skip }, async () 
   assert.equal((await get(base.replace("m_aaaaa1:p_aaaab1", "nope"))).response.status, 404);
   assert.equal((await get(base + "&include=all")).response.status, 400);
   assert.equal((await get(base.replace("leagues=all", "leagues=l_zzzzzz"))).response.status, 404);
+});
+
+// The peers are summed over a precomputed histogram (055): for every appearance of the
+// seed, the same counts as ranking the season's appearances with the shared getters.
+test("peer counts equal a direct count with the shared profile getters", { skip }, async () => {
+  const rows = (await context.reader.read("SELECT a.* FROM api.player_appearances a WHERE a.season_id=2025")).map((t) => ({ t, row: appearanceRecord(t) }));
+  assert.ok(rows.length >= 10);
+  const lines = (row) => (peerGroup(row).group === "F" ? ["D", "M", "O", "F"] : [peerGroup(row).group]);
+  let ranked = 0;
+  for (const { t, row } of rows) {
+    const peers = rows.filter((p) => p.row.minutes >= MIN_PEER_MINUTES && lines(row).includes(peerGroup(p.row).group));
+    const expected = {
+      peers: peers.length,
+      metrics: Object.fromEntries(
+        RANKED.map((key) => {
+          const value = metricValue(row, key),
+            known = peers.map((p) => metricValue(p.row, key)).filter((v) => v !== null);
+          ranked += value !== null && known.length > 0;
+          return [key, { known: known.length, below: value === null ? 0 : known.filter((v) => v < value).length, equal: value === null ? 0 : known.filter((v) => v === value).length }];
+        }),
+      ),
+    };
+    const [found] = await context.reader.read(
+      `WITH target AS (SELECT a.* FROM api.player_appearances a WHERE a.season_id=2025 AND a.match_id=$1 AND a.player_id=$2),
+       ${peerCountsSql("2025::smallint", "ARRAY[1]")} SELECT ${PEER_COUNTS} AS sums FROM counts c`,
+      [t.match_id, t.player_id],
+    );
+    const counts = profileCounts(found.sums);
+    for (const key of RANKED) for (const part of ["known", "below", "equal"]) counts.metrics[key][part] = Number(counts.metrics[key][part]);
+    assert.deepEqual(counts, expected, `${t.match_id}:${t.player_id}`);
+  }
+  assert.ok(ranked > 20); // the seed does rank values, not only empty metrics
 });

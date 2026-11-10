@@ -66,7 +66,7 @@ From a workstation, before the workflow is on `main` (a manual workflow can only
 AWS_PROFILE=statarena PITCHAPI_API_KEY_FILE=<file holding the key> bash infra/aws-v2/deploy.sh
 ```
 
-Then, from GitHub: `gh workflow run "Vega v2 deploy" -f worker_desired_count=1`. The migration task's log line `migrations applied=N total=M logins=…` shows 54 migrations (56 with `V2_VECTOR=1`). The backfill runs on demand, for days, and stops by itself when its lane is empty: `aws ecs run-task … --task-definition vega-v2-backfill` with the network configuration `deploy.sh` uses.
+Then, from GitHub: `gh workflow run "Vega v2 deploy" -f worker_desired_count=1`. The migration task's log line `migrations applied=N total=M logins=…` shows 58 migrations (60 with `V2_VECTOR=1`). The backfill runs on demand, for days, and stops by itself when its lane is empty: `aws ecs run-task … --task-definition vega-v2-backfill` with the network configuration `deploy.sh` uses.
 
 A database restart (memory recovery, resize) does not stop a task: every connection sees a lost database within a minute (`store.CONNECTION`), and the worker and the backfill reconnect by themselves (`database lost error=… retry_in=N` in the log) for up to 30 minutes. After that the task exits with an error: ECS starts the worker service's task again, the backfill has to be run again by hand.
 
@@ -148,7 +148,7 @@ v2 is a second base (`vega-football-db-postgres`) filled from the sources themse
 | Live ingestor (Fargate ARM, like the worker) | ~$7 once started, 0 until a provider is chosen |
 | **Total** | **≈ $25–30** |
 
-The backfill task costs the same rate as the worker while it runs. No NAT gateway, load balancer, provisioned concurrency or reserved instance.
+The backfill task (1 vCPU / 2 GB) costs four times the worker's rate while it runs: about $1 a day. No NAT gateway, load balancer, provisioned concurrency or reserved instance.
 
 ## Rollback
 

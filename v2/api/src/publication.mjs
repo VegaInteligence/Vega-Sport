@@ -42,6 +42,25 @@ export function scopeWhere(alias, scope, values, { seasonId = false } = {}) {
   return `${alias}.season=${season}${pin} AND (${bindValue(values, scope.leagueIds)}::text[] IS NULL OR ${alias}.league_id=ANY($${values.length}::text[]))`;
 }
 
+/** The scope as ids (api.edition_keys, 047): its season's id and its editions. Resolved
+ * before the query and bound, so the query filters on indexed ids and the planner prunes
+ * the other seasons' partitions at plan time (a subquery only prunes at run time, after
+ * planning every season's partitions: 39 s of planning for the Ligue 1 home). */
+export const EDITIONS_SQL = `SELECT (SELECT k.season_id FROM api.season_keys k WHERE k.season=$1) AS season_id,
+  coalesce((SELECT array_agg(e.competition_season_id ORDER BY e.competition_season_id) FROM api.edition_keys e
+    WHERE e.season=$1 AND ($2::text[] IS NULL OR e.league_id=ANY($2::text[]))),'{}') AS ids`;
+export async function resolveEditions(read, scope) {
+  const [row] = await read(EDITIONS_SQL, [scope.season, scope.leagueIds]);
+  return { seasonId: row?.season_id ?? null, ids: (row?.ids || []).map(Number) };
+}
+
+/** scopeWhere on resolved ids (resolveEditions): `alias` must expose `season_id` and
+ * `competition_season_id`. Every league of the season needs no edition filter. */
+export function idScopeWhere(alias, scope, editions, values) {
+  const pin = `${alias}.season_id=${bindValue(values, editions.seasonId)}::smallint`;
+  return scope.leagueIds === null ? pin : `${pin} AND ${alias}.competition_season_id=ANY(${bindValue(values, editions.ids)}::int[])`;
+}
+
 export function publicationSql(scope, values) {
   const predicate = scopeWhere("p", scope, values);
   return `SELECT g.generation::text AS generation,g.published_at,
