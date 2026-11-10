@@ -4,7 +4,8 @@
  *
  * Behind its own key: the X-Vega-Ops-Key header must equal V2_OPS_KEY. Without a
  * configured key the route does not exist (404). Read from the api.ops_* views
- * (043_ops_status.sql, 050_ops_status_reads.sql) as vega_read, never cached.
+ * (043_ops_status.sql, 050_ops_status_reads.sql, 051_ops_followed_matches.sql) as vega_read,
+ * never cached.
  *
  * The job table holds two weeks of finished jobs and the whole backfill queue: every job
  * query here is bounded by an index of ops.fetch_jobs, except the queue's counts, which
@@ -57,10 +58,12 @@ function quantile(sorted, q) {
   return Math.round(sorted[low] + (sorted[Math.ceil(at)] - sorted[low]) * (at - low));
 }
 
-// The score watch follows a match for 7 days after kickoff (jobs.SCORE_WINDOWS). A final
-// score first recorded later than that is the import of a past match, not a followed one:
-// its delay from kickoff is the age of the match, not the time the score took.
-const FOLLOWED = "first_finished_at - kickoff_at <= interval '7 days'";
+// A match is followed when its watch was opened before its kickoff: its first check is
+// then planned 105 minutes after kickoff (jobs.FIRST_SCORE_CHECK). A match first seen once
+// played (the days before the worker started, a late entry in a calendar, the backfill's
+// history) gets its final score when it is met: its delay from kickoff is the age of the
+// match, not the time the score took. Such a match has a later watch, or none.
+const FOLLOWED = "watched_since < kickoff_at";
 
 /** Kickoff to first final score, and final score to last detail family, over the followed matches. */
 export function freshness(rows) {

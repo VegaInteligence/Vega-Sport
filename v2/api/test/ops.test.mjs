@@ -1,5 +1,6 @@
 // Contract tests of /api/ops/status, the private status page's read (043_ops_status.sql,
-// 050_ops_status_reads.sql): its key, its 24-hour window and every block, read as vega_read.
+// 050_ops_status_reads.sql, 051_ops_followed_matches.sql): its key, its 24-hour window and
+// every block, read as vega_read.
 import { before, after, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -51,8 +52,10 @@ before(async () => {
 
   await x("UPDATE core.matches SET first_finished_at = $1 WHERE id = 5", [iso(-905)]); // kickoff + 1 h 55
   await x("UPDATE core.matches SET first_finished_at = $1 WHERE id = 4", [iso(-2350)]); // before the window
-  // Match 1, played five weeks earlier, got its final score from the backfill two hours ago.
-  await x("UPDATE core.matches SET match_date = '2025-08-01', kickoff_at = '2025-08-01T19:00:00Z', first_finished_at = $1 WHERE id = 1", [iso(-120)]);
+  // Two matches the worker did not follow. Match 1 was first seen two hours ago, already
+  // played: its watch opens after its kickoff. Match 2 came from the backfill: no watch.
+  await x("UPDATE core.matches SET first_finished_at = $1 WHERE id = 1", [iso(-120)]);
+  await x("UPDATE core.matches SET first_finished_at = $1 WHERE id = 2", [iso(-180)]);
   await x("UPDATE ops.family_state SET last_success_at = $1 WHERE match_id = 5 AND family = 'summary'", [iso(-900)]);
   await x(
     `INSERT INTO ops.family_state(match_id, family, status, last_success_at) VALUES
@@ -60,10 +63,10 @@ before(async () => {
     [iso(-870)],
   );
   await x(
-    `INSERT INTO ops.match_watch(match_id, state, checks, next_check_at, kickoff_at) VALUES
-       (1, 'corrected', 9, NULL, '2025-09-01T19:00:00Z'), (4, 'waiting_final', 30, $1, '2025-09-04T19:00:00Z'),
-       (5, 'final', 4, $2, '2025-09-05T19:00:00Z'), (6, 'scheduled', 0, $3, '2025-09-06T19:00:00Z')`,
-    [iso(60), iso(720), iso(525)],
+    `INSERT INTO ops.match_watch(match_id, state, checks, next_check_at, kickoff_at, created_at) VALUES
+       (1, 'corrected', 9, NULL, '2025-09-01T19:00:00Z', $4), (4, 'waiting_final', 30, $1, '2025-09-04T19:00:00Z', $5),
+       (5, 'final', 4, $2, '2025-09-05T19:00:00Z', $5), (6, 'scheduled', 0, $3, '2025-09-06T19:00:00Z', $5)`,
+    [iso(60), iso(720), iso(525), iso(-120), "2025-08-30T08:00:00Z"], // $5: seen in a calendar before kickoff
   );
   await x(
     `INSERT INTO ops.source_runs(source, scope, last_attempt_at, last_success_at, status, error_code, rows_written, unmatched) VALUES
@@ -213,8 +216,9 @@ test("provider calls, warnings, progress, quality, freshness, publication", { sk
   assert.deepEqual(body.quality.unknownFields, [{ family: "shots", path: "data.foo", occurrences: 3, firstSeenAt: iso(-7200), lastSeenAt: iso(-60) }]);
   assert.ok(body.quality.coverageGaps >= 1); // match 5 still lacks families
   assert.equal(typeof body.quality.dirtyScopes, "number");
-  // Match 5 only: kickoff to score 1 h 55, score to its last family 35 min. Match 1 was
-  // imported, not followed: its 36 days from kickoff to score are not a score delay.
+  // Match 5 only, watched since before its kickoff: kickoff to score 1 h 55, score to its
+  // last family 35 min. Matches 1 and 2 got their final score days after kickoff, when
+  // they were first met: that is their age, not a score delay.
   assert.deepEqual(body.freshness, { matches: 1, kickoffToScoreMedianMs: 6_900_000, kickoffToScoreP95Ms: 6_900_000, scoreToDetailsMedianMs: 2_100_000 });
   assert.match(body.publication.revision, /^\d+$/);
   assert.ok(body.publication.editions >= 1);
