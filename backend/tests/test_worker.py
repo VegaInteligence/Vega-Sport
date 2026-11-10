@@ -655,11 +655,14 @@ class WorkerTest(unittest.TestCase):
         self.drain()
         self.assertEqual(self.watch("m_eeeeee")[:2], ("waiting_final", e_kick + timedelta(minutes=107)))
 
-        # The next day's calendar gives D a new date: the watch restarts on it.
+        # The next day's calendar gives D a new date: the watch restarts on it. The calendar
+        # is read once per UTC day, and the check above may already have crossed midnight
+        # (a run started after 23:15 UTC): an hour past the same time next day, a day's
+        # read is due whatever the hour this runs at.
         new_kick = start + timedelta(days=3)
         self.calendar(match("m_eeeeee", e_kick, "in_play"))
         self.calendar(match("m_dddddd", new_kick, "not_started"), day=new_kick.date())
-        self.at(start + timedelta(days=1))
+        self.at(start + timedelta(days=1, hours=1))
         self.drain()
         self.assertEqual(self.watch("m_dddddd")[:2], ("scheduled", new_kick + timedelta(minutes=105)))
 
