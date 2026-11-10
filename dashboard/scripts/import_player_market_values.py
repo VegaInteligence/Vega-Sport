@@ -85,7 +85,15 @@ def prepare_snapshot(path, links, source_version):
         amount_eur = int(amount)
         if amount_eur > 2**53 - 1:
             raise ValueError(f"{location}: amount exceeds the exact integer range")
-        if history.setdefault(valued_on, amount_eur) != amount_eur:
+        observation = {"date": valued_on, "valueEur": amount_eur}
+        club_name = (row.get("current_club_name") or "").strip()
+        club_id = (row.get("current_club_id") or "").strip()
+        if club_name and club_name.casefold() != "unknown":
+            observation["clubName"] = club_name
+        if SOURCE_ID.fullmatch(club_id):
+            observation["clubId"] = club_id
+        previous = history.setdefault(valued_on, observation)
+        if previous != observation:
             raise ValueError(f"{location}: conflicting values for the same player and date")
     if not histories:
         raise ValueError("The valuation file contains no observations")
@@ -120,7 +128,7 @@ def prepare_snapshot(path, links, source_version):
                 "kind": "source_market_value_history",
                 "source_player_id": source_id,
                 "history": [
-                    {"date": valued_on, "valueEur": value}
+                    value
                     for valued_on, value in sorted(history.items())
                 ],
             })
@@ -138,7 +146,7 @@ def prepare_snapshot(path, links, source_version):
     return payload, report, [links[source_id][0] for source_id in matched]
 
 
-def archive_snapshot(payload, report, player_ids, publish):
+def archive_snapshot(payload, report, player_ids, publish, expected_base=None):
     if publish and not player_ids:
         raise ValueError("No verified Vega players with valuations to publish")
     from aws_store import Store
@@ -174,6 +182,13 @@ def archive_snapshot(payload, report, player_ids, publish):
             if counts != (report["source_players"], report["source_valuations"]):
                 raise ValueError("The AWS valuation readback did not match the source")
             if publish:
+                if expected_base is not None:
+                    active = store.db.execute(
+                        "SELECT value->>'path' FROM statarena.state WHERE name=%s FOR UPDATE",
+                        (SNAPSHOT_STATE,),
+                    ).fetchone()
+                    if not active or active[0] not in (expected_base, path):
+                        raise ValueError("Active valuation snapshot changed during replay")
                 store.db.execute(
                     """INSERT INTO statarena.state(name,value) VALUES (%s,%s)
                        ON CONFLICT (name) DO UPDATE SET value=excluded.value, updated_at=now()
