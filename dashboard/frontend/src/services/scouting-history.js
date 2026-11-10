@@ -242,14 +242,70 @@ export async function loadPlayerHistory(
   );
   return results;
 }
-export async function historicalFixtures(_manifest, leagueId, { signal } = {}) {
+/**
+ * A club's season with what a match preview needs: every match of the club with its
+ * statistics, and its players' appearances. One club read, not its leagues' seasons.
+ */
+export async function loadClubSeasonDetail(
+  manifest,
+  id,
+  season,
+  { signal, fetcher = fetch } = {},
+) {
+  const result = await readCompactPages(
+    "club",
+    actorReadParams(manifest, "club", { id, season, include: "appearances" }),
+    { signal, fetcher, parallelPages: true },
+  );
+  return mergeActorPages(result, manifest, season);
+}
+
+/** Several season documents as one: each match, fixture, appearance and team once. */
+export function mergeSeasonData(parts) {
+  const names = [
+    "matches",
+    "fixtures",
+    "appearances",
+    "teams",
+    "competitions",
+    "metrics",
+  ];
+  return {
+    ...parts[0],
+    ...Object.fromEntries(
+      names.map((name) => [
+        name,
+        [
+          ...new Map(
+            parts
+              .flatMap((part) => part?.[name] || [])
+              .map((row) => [row.id || row.key, row]),
+          ).values(),
+        ],
+      ]),
+    ),
+  };
+}
+
+/**
+ * The meetings of two clubs in the given competitions, whatever the season: one
+ * filtered read of the fixtures, not each competition's whole history.
+ */
+export async function headToHeadFixtures(
+  home,
+  away,
+  leagueIds = [],
+  { signal, fetcher = fetch } = {},
+) {
+  const leagues = [...new Set(leagueIds)].sort();
   const pages = await readPages(
     "/api/fixtures",
     {
-      league: leagueId,
+      teams: [home, away].sort().join(","),
+      ...(leagues.length ? { leagues: leagues.join(",") } : {}),
       status: "all",
     },
-    fetch,
+    fetcher,
     { signal },
   );
   return [
