@@ -72,6 +72,8 @@ A database restart (memory recovery, resize) does not stop a task: every connect
 
 A running backfill keeps the image it was started with: `deploy.sh` stops and restarts only the worker service. After a deploy whose migration changes what the calculator reads (`calculator error=DATABASE_42703` in the backfill's log), stop the backfill task and run it again; it resumes from what is still missing.
 
+The worker and the backfill share the provider key and its pace (one call every 0.5 s). After a 429 a task keeps at least 1 s between its calls, then returns to 0.5 s once ten minutes have passed without another 429 (`pitchapi.RECOVER_AFTER`): the backfill runs at about half its pace while the worker collects a large batch (the player profiles after a new season's calendars), and at its full pace the rest of the time.
+
 The account runs at most 10 Lambdas concurrently and the current API needs them: `ReservedConcurrency` stays 0 and the pool size 1 until the quota is raised.
 
 ### Import test: one full season and one archive season
