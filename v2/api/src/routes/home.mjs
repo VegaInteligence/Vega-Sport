@@ -95,11 +95,19 @@ export function parseHomeRead(params, { personal = false } = {}) {
 }
 
 // The appearance record columns of performance.mjs, for the selected appearances only.
-const appearanceJson = (keys, pin) => `SELECT a.*,fx.id AS match_key,fx.id||':'||api.public_id('player',a.player_id) AS appearance_id,
+// The appearances are read first, by their matches and their players (the index of the
+// statistics rows takes both), then joined to their fixtures. Read in one join by their
+// matches alone, the planner took every appearance of those matches (480 rows for 12
+// matches) and compared them to every edition once per fixture: 6.9 s of the 8.2 s the
+// Premier League home of 2026/2027 took on 10 November 2026.
+const appearanceJson = (keys, pin) => `WITH picked AS MATERIALIZED (
+  SELECT a.* FROM api.player_appearances a
+  WHERE ${pin("a")} AND a.match_id=ANY(ARRAY(SELECT k.match_id FROM (${keys}) k)) AND a.player_id=ANY(ARRAY(SELECT k.player_id FROM (${keys}) k))
+  AND (a.season_id,a.match_id,a.player_id) IN (${keys}))
+  SELECT a.*,fx.id AS match_key,fx.id||':'||api.public_id('player',a.player_id) AS appearance_id,
   api.public_id('player',a.player_id) AS player_key,api.public_id('team',a.team_id) AS team_key
-  FROM api.player_appearances a JOIN api.fixtures fx ON fx.season_id=a.season_id AND fx.match_id=a.match_id
-  WHERE ${pin("a")} AND ${pin("fx")} AND a.match_id=ANY(ARRAY(SELECT k.match_id FROM (${keys}) k)) AND fx.match_id=ANY(ARRAY(SELECT k.match_id FROM (${keys}) k))
-  AND (a.season_id,a.match_id,a.player_id) IN (${keys})`;
+  FROM picked a JOIN api.fixtures fx ON fx.season_id=a.season_id AND fx.match_id=a.match_id
+  WHERE ${pin("fx")} AND fx.match_id=ANY(ARRAY(SELECT p.match_id FROM picked p))`;
 
 // The scope's fixtures and its last result, then the displayed week (api.home_period):
 // the start of both reads, so that they show the same week.
