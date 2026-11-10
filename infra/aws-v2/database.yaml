@@ -1,0 +1,153 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Vega v2 database. A new private PostgreSQL instance, reachable only from the v2
+  worker and the v2 read API security groups. The current statarena-postgres
+  instance, its security group and its data are not touched.
+Parameters:
+  # Doc "Volume": the current season (~1.5 GB) holds in memory on a 4 GB instance, the
+  # size chosen once measured. Measured on 2026-11-09 with the archives and the backfill:
+  # the 1 GB db.t4g.micro ran out of memory twice (RDS recoveries at 17:21 and 21:03 UTC)
+  # and cold home reads took 2 to 7 s, so the doc's size is db.t4g.medium. The resize is
+  # the account owner's (a billing change): set once with InstanceClass=db.t4g.medium
+  # (infra/aws-v2/README.md), then kept by every later deploy (previous value).
+  InstanceClass:
+    Type: String
+    Default: db.t4g.micro
+    AllowedValues: [db.t4g.micro, db.t4g.small, db.t4g.medium]
+    Description: The doc's size is db.t4g.medium (4 GB), measured on 2026-11-09.
+  AllocatedStorage: {Type: Number, Default: 20, MinValue: 20, MaxValue: 200}
+  MaxAllocatedStorage: {Type: Number, Default: 100, MinValue: 20, MaxValue: 1000}
+  EngineVersion: {Type: String, Default: '18', AllowedPattern: '1[78](\.\d+)?'}
+Resources:
+  DatabaseSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Vega v2 PostgreSQL, ingress from the v2 worker and read API only
+      VpcId: vpc-08e400afa07fc1812
+      SecurityGroupEgress:
+        - {IpProtocol: '-1', CidrIp: 127.0.0.1/32, Description: no egress}
+      Tags: [{Key: Name, Value: vega-v2-database}, {Key: project, Value: vega-v2}]
+  WorkerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Vega v2 worker, HTTPS to the sources and 5432 to the v2 database
+      VpcId: vpc-08e400afa07fc1812
+      SecurityGroupEgress:
+        - {IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0, Description: 'sources (PitchAPI, Wikidata, UEFA...), ECR, logs'}
+      Tags: [{Key: Name, Value: vega-v2-worker}, {Key: project, Value: vega-v2}]
+  ApiSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Vega v2 read API Lambda, 5432 to the v2 database only
+      VpcId: vpc-08e400afa07fc1812
+      SecurityGroupEgress:
+        - {IpProtocol: '-1', CidrIp: 127.0.0.1/32, Description: replaced by the database rule}
+      Tags: [{Key: Name, Value: vega-v2-api}, {Key: project, Value: vega-v2}]
+  WorkerToDatabase:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties: {GroupId: !Ref WorkerSG, IpProtocol: tcp, FromPort: 5432, ToPort: 5432, DestinationSecurityGroupId: !Ref DatabaseSG}
+  ApiToDatabase:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties: {GroupId: !Ref ApiSG, IpProtocol: tcp, FromPort: 5432, ToPort: 5432, DestinationSecurityGroupId: !Ref DatabaseSG}
+  DatabaseFromWorker:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties: {GroupId: !Ref DatabaseSG, IpProtocol: tcp, FromPort: 5432, ToPort: 5432, SourceSecurityGroupId: !Ref WorkerSG, Description: v2 worker}
+  DatabaseFromApi:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties: {GroupId: !Ref DatabaseSG, IpProtocol: tcp, FromPort: 5432, ToPort: 5432, SourceSecurityGroupId: !Ref ApiSG, Description: v2 read API}
+  SubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Vega v2 database subnets (default VPC)
+      SubnetIds: [subnet-0233a9567335f56ce, subnet-04c9af303f55d9718, subnet-0e72516f361932c15]
+      Tags: [{Key: project, Value: vega-v2}]
+  Parameters:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Description: Vega v2 PostgreSQL parameters
+      Family: !Sub
+        - 'postgres${Major}'
+        - {Major: !Select [0, !Split ['.', !Ref EngineVersion]]}
+      Parameters:
+        rds.force_ssl: '1'
+        shared_preload_libraries: pg_stat_statements
+        log_min_duration_statement: '2000'
+        idle_in_transaction_session_timeout: '60000'
+      Tags: [{Key: project, Value: vega-v2}]
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: vega-football-db-postgres
+      DBName: vega_v2
+      Engine: postgres
+      EngineVersion: !Ref EngineVersion
+      DBInstanceClass: !Ref InstanceClass
+      AllocatedStorage: !Ref AllocatedStorage
+      MaxAllocatedStorage: !Ref MaxAllocatedStorage
+      StorageType: gp3
+      StorageEncrypted: true
+      PubliclyAccessible: false
+      MultiAZ: false
+      DBSubnetGroupName: !Ref SubnetGroup
+      VPCSecurityGroups: [!Ref DatabaseSG]
+      DBParameterGroupName: !Ref Parameters
+      MasterUsername: vega_owner
+      ManageMasterUserPassword: true
+      BackupRetentionPeriod: 7
+      CopyTagsToSnapshot: true
+      DeletionProtection: true
+      AutoMinorVersionUpgrade: true
+      EnablePerformanceInsights: false
+      Tags: [{Key: project, Value: vega-v2}]
+  # Alarms of the AWS review (doc "Mise en place": instance, backups, alarms), visible in
+  # CloudWatch; the collection backlog is on the status page (ops views).
+  LowMemoryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-db-low-memory
+      AlarmDescription: Under 300 MB freeable on vega-football-db-postgres for 15 minutes
+      Namespace: AWS/RDS
+      MetricName: FreeableMemory
+      Dimensions: [{Name: DBInstanceIdentifier, Value: !Ref Database}]
+      Statistic: Minimum
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 314572800
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: notBreaching
+  LowStorageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-db-low-storage
+      AlarmDescription: Under 3 GB free storage on vega-football-db-postgres (autoscaling up to MaxAllocatedStorage)
+      Namespace: AWS/RDS
+      MetricName: FreeStorageSpace
+      Dimensions: [{Name: DBInstanceIdentifier, Value: !Ref Database}]
+      Statistic: Minimum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 3221225472
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: notBreaching
+  HighCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-db-high-cpu
+      AlarmDescription: Over 90 % CPU on vega-football-db-postgres for 30 minutes
+      Namespace: AWS/RDS
+      MetricName: CPUUtilization
+      Dimensions: [{Name: DBInstanceIdentifier, Value: !Ref Database}]
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 6
+      Threshold: 90
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+Outputs:
+  DatabaseEndpoint: {Value: !GetAtt Database.Endpoint.Address, Export: {Name: vega-v2-db-endpoint}}
+  DatabasePort: {Value: !GetAtt Database.Endpoint.Port, Export: {Name: vega-v2-db-port}}
+  MasterSecretArn: {Value: !GetAtt Database.MasterUserSecret.SecretArn, Export: {Name: vega-v2-db-master-secret}}
+  WorkerSecurityGroup: {Value: !Ref WorkerSG, Export: {Name: vega-v2-worker-sg}}
+  ApiSecurityGroup: {Value: !Ref ApiSG, Export: {Name: vega-v2-api-sg}}

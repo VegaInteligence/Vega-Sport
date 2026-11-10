@@ -15,15 +15,15 @@ Tout chiffre du site n'est pas un calcul sur données réelles. Cette page liste
 
 ## Pas encore calculé
 
-- **Classement Ballon d'Or Vega** : `ballonDorRanking` renvoie `null`. La méthode (excellence relative par rôle, Elo des équipes, percentiles 75 / 25) est une proposition non implémentée et non calibrée : [METHODE_CLASSEMENT_BALLON_D_OR.md](../../METHODE_CLASSEMENT_BALLON_D_OR.md).
+- **Classement Ballon d'Or Vega** : `ballonDorRanking` renvoie `null` sur l'API actuelle. Sur l'API v2, il est calculé chaque jour par la méthode [METHODE_CLASSEMENT_BALLON_D_OR.md](../../METHODE_CLASSEMENT_BALLON_D_OR.md) (classement de puissance des joueurs, `v2/vega_v2/power.py`) et lu sur `/api/rankings/power`.
 - **Victoires attendues** : le modèle les produit (`outcomeChances`), mais elles ne sont ni conservées ni affichées (voir [xPts](../03-resultats-et-points-attendus/01-points-attendus-xpts.md)).
-- **Force des équipes de type Elo** : aucune. Le seul « niveau » de club est le score de démo ci-dessous.
+- **Force des équipes de type Elo** : aucune sur l'API actuelle, où le seul « niveau » de club est le score de démo ci-dessous. Sur l'API v2, l'Elo du classement de puissance est le niveau des clubs.
 - **Projection entre championnats** (indice ajusté au niveau d'un autre championnat) : pas de modèle. L'onglet Projection compare les indices tels quels ([Compatibilité par niveau](../05-joueurs/06-compatibilite-par-niveau.md)).
 - **Compatibilité athlétique** : aucune source de suivi physique, non affichée.
 
-## Démonstration locale (calibrations non ajustées)
+## Démonstration locale, jusqu'à la bascule vers la v2 (calibrations non ajustées)
 
-- **Pool européen et niveau des clubs** : lus depuis `public/demo/europe-clubs.json`, généré par [demo-europe-clubs.mjs](../../../dashboard/frontend/scripts/demo-europe-clubs.mjs). Les décalages par ligue (0 à −1,20), le coefficient 0,8, le 0,6 × ln(coef / 15), le partage 50 / 50 et les planchers d'association sont des **calibrations de démo** « à ajuster sur des résultats » ([club-scout.js](../../../dashboard/frontend/src/services/club-scout.js#L299)). Ils servent au référentiel « Europe » du profil club et à l'option « Clubs de niveau comparable » du profil joueur.
+- **Pool européen et niveau des clubs**, sur l'API actuelle seulement (la v2 les lit dans la base, niveau = Elo : [Référentiels](../04-clubs/03-referentiels-et-niveau-europeen.md)) : lus depuis `public/demo/europe-clubs.json`, généré par [demo-europe-clubs.mjs](../../../dashboard/frontend/scripts/demo-europe-clubs.mjs). Les décalages par ligue (0 à −1,20), le coefficient 0,8, le 0,6 × ln(coef / 15), le partage 50 / 50 et les planchers d'association sont des **calibrations de démo** « à ajuster sur des résultats » ([club-scout.js](../../../dashboard/frontend/src/services/club-scout.js#L299)). Ils servent au référentiel « Europe » du profil club et à l'option « Clubs de niveau comparable » du profil joueur.
 
 ## Données fictives (badge « Données fictives » / « Fictif »)
 

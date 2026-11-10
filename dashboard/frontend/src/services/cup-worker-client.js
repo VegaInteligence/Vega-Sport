@@ -1,6 +1,7 @@
 import { publicApiFetch } from "./public-api-fetch.js";
 import { completeFixtures } from "./fixture-pages.js";
 import { apiUrl } from "../data-url.js";
+import { API_V2, cupId, cupPaths } from "./v2-routes.js";
 
 /** Read the published edition and merge newer native fixtures from the same backend. */
 export async function cupWorkerSnapshot(
@@ -10,11 +11,21 @@ export async function cupWorkerSnapshot(
   fallbackUrl = null,
   { signal } = {},
 ) {
-  const path = apiUrl(
-    "/api/cup-snapshot?" + new URLSearchParams({ kind, competition, season }),
-  );
   if (fallbackUrl && !fallbackUrl.startsWith("/api/"))
     throw new Error("Route de données invalide.");
+  // On v2, a cup of the complementary sources is read by its Vega id (v2-routes.js).
+  const v2Cup = API_V2
+    ? await cupId(kind, competition, async (url) => {
+        const response = await publicApiFetch(apiUrl(url), { signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+    : null;
+  const paths = v2Cup ? cupPaths(v2Cup, season) : null;
+  if (paths) fallbackUrl = paths.edition;
+  const path = apiUrl(
+    paths?.snapshot ?? "/api/cup-snapshot?" + new URLSearchParams({ kind, competition, season }),
+  );
   async function read(url) {
     const response = await publicApiFetch(url, { signal });
     return {

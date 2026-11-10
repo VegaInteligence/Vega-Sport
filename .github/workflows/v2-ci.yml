@@ -1,0 +1,89 @@
+name: Vega v2 CI
+# The v2 pipeline from the ground: every suite, the infrastructure templates, the worker
+# image and the read API package, on every change to v2. No secret and no AWS access:
+# deployment is v2-deploy.yml; real-data runs are vega-v2-pilot.yml.
+on:
+  push:
+    branches: [main, 'claude/v2-*']
+    paths: ['v2/**', 'infra/aws-v2/**', 'dashboard/shared/**', 'dashboard/frontend/src/**', 'dashboard/backend/services/**',
+            'dashboard/scripts/**', '.github/workflows/v2-*.yml']
+  pull_request:
+    paths: ['v2/**', 'infra/aws-v2/**', 'dashboard/shared/**', 'dashboard/frontend/src/**', 'dashboard/backend/services/**',
+            'dashboard/scripts/**', '.github/workflows/v2-*.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: v2-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  tests:
+    name: Python and API suites
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        # The v2 base's engine (database.yaml: PostgreSQL 18), with pgvector for the optional migration.
+        image: pgvector/pgvector:pg18
+        env: {POSTGRES_USER: postgres, POSTGRES_PASSWORD: v2-ci-only, POSTGRES_DB: postgres}
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PYTHONPATH: v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: pip install -r v2/requirements.txt
+      - name: Disposable test databases
+        run: python v2/ci/test_databases.py postgresql://postgres:v2-ci-only@127.0.0.1:5432 >> "$GITHUB_ENV"
+      - name: Python suites
+        run: python -m unittest discover -s v2/tests -v
+      - name: Read API suites
+        run: npm ci --prefix v2/api && npm test --prefix v2/api
+  infra:
+    name: Infrastructure templates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install cfn-lint==1.43.0
+      - run: cfn-lint --regions us-east-2 -- infra/aws-v2/*.yaml
+      - name: Deployment scripts parse
+        run: bash -n infra/aws-v2/deploy.sh && bash -n infra/aws-v2/ci/secrets.sh
+  image:
+    name: Worker image (linux/arm64)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: docker build --platform linux/arm64 -f v2/Dockerfile -t vega-v2-worker:${{ github.sha }} .
+      - name: The image runs its tools
+        run: |
+          docker run --rm --entrypoint python vega-v2-worker:${{ github.sha }} -c "import vega_v2.worker, vega_v2.archives, vega_v2.migrate, vega_v2.live.ingestor, boto3, botocore.auth"
+          docker run --rm --entrypoint node vega-v2-worker:${{ github.sha }} /app/v2/sources/bridge.mjs plans > /dev/null
+          docker run --rm --entrypoint node vega-v2-worker:${{ github.sha }} /app/v2/archives/edition.mjs - - > /dev/null
+          # Every file a source adapter reads is where it looks for it in the image.
+          docker run --rm --entrypoint python vega-v2-worker:${{ github.sha }} -c "from vega_v2.sources import curated, honours, wikidata; from vega_v2 import archives; import sys; missing = [str(p) for p in (curated.SHARED / 'league-rules.json', curated.SHARED / 'cup-logos.json', honours.SCRIPTS / 'player_honours.py', wikidata.BRIDGE, archives.EDITION) if not p.exists()]; sys.exit('missing: ' + ', '.join(missing) if missing else 0)"
+  api-package:
+    name: Read API package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with: {bun-version: '1.2.21'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: npm ci --prefix v2/api
+      - run: python3 infra/aws-v2/package_api.py "$RUNNER_TEMP/v2-api"
+      # GET /live/matches/{id}: its own function, the runtime's AWS SDK left out of the bundle.
+      - run: python3 infra/aws-v2/package_api.py "$RUNNER_TEMP/v2-live" live
+      - uses: actions/upload-artifact@v4
+        with: {name: v2-api-package, path: '${{ runner.temp }}/v2-api/*.zip', retention-days: 14}

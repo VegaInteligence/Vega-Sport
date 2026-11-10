@@ -4,11 +4,12 @@ import { Card, AsyncState } from "./UI.jsx";
 import { useResource } from "../services/resources.js";
 import { number } from "../services/format.js";
 import { clubRanking } from "../services/catalog-client.js";
+import { editionYear } from "../services/v2-routes.js";
 
 function editionLabel(edition) {
   const now = new Date();
   const ending = now.getUTCFullYear() + (now.getUTCMonth() >= 6 ? 1 : 0);
-  return `${edition.period}${edition.edition === `${ending}.uefa` ? " · en cours" : ""}`;
+  return `${edition.period}${editionYear(edition.edition) === String(ending) ? " · en cours" : ""}`;
 }
 
 export default function ClubRanking({ clubId }) {

@@ -1192,6 +1192,45 @@ select optgroup {
   font: 650 32px var(--font-display);
   letter-spacing: -0.02em;
 }
+.scoreboard-live-events {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--border);
+  list-style: none;
+  font-size: var(--text-sm);
+}
+.scoreboard-live-events li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.scoreboard-live-events li.is-away {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+.scoreboard-live-events li > span:first-child {
+  min-width: 40px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.scoreboard-live-events li.is-home strong {
+  color: var(--home);
+}
+.scoreboard-live-events li.is-away strong {
+  color: var(--away);
+}
+.scoreboard-live-events li.is-cancelled strong,
+.scoreboard-live-events li.is-cancelled > span {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+.scoreboard-live-events em {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-style: normal;
+}
 .match-kpis {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

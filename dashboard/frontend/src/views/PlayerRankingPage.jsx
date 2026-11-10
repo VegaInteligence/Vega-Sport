@@ -7,7 +7,7 @@ import { Media } from "../components/UI.jsx";
 import SeasonSelect from "../components/SeasonSelect.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
-import { ballonDorRanking } from "../services/ballon-dor.js";
+import { useBallonDorRanking } from "../services/ballon-dor.js";
 
 const PODIUM = [
   { rank: 2, medal: "silver" },
@@ -154,7 +154,7 @@ function RankColumn({ from, to, ranking }) {
 export default function PlayerRankingPage() {
   const f = useFootball(),
     seasons = f.manifest?.seasons || [],
-    ranking = ballonDorRanking(f.season);
+    ranking = useBallonDorRanking(f.season);
   return (
     <Layout
       path="/classement-joueurs/"

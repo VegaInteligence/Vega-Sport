@@ -57,4 +57,4 @@ Buts indépendants, xG d'équipe agrégé (la répartition des occasions est ign
 ## Démo
 
 **14. Calibrations européennes non ajustées.**
-Les décalages de ligue et coefficients du niveau européen sont fixés à la main ; le commentaire du code précise qu'ils restent « à ajuster sur des résultats ». L'option « Clubs de niveau comparable », activée par défaut sur le profil joueur, en dépend.
+Sur l'API actuelle, les décalages de ligue et coefficients du niveau européen sont fixés à la main ; le commentaire du code précise qu'ils restent « à ajuster sur des résultats ». L'option « Clubs de niveau comparable », activée par défaut sur le profil joueur, en dépend. Sur l'API v2, le niveau est l'Elo du classement de puissance, ajusté sur les résultats.

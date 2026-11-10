@@ -6,6 +6,7 @@ import {
 } from "../services/compact-reads.js";
 import { europeFocusIds } from "../../../shared/competition-scope.js";
 import { archiveSeason } from "../services/home-insights.js";
+import { API_V2 } from "../services/v2-routes.js";
 import {
   DEFAULT_HOME_STATE,
   normalizeHomeState,
@@ -71,8 +72,8 @@ export async function prepareHomeBootstrap(
     leagues: compactScope(ids),
     generation,
     archive: archiveSeason(season, manifest.defaultSeason, now) ? 1 : undefined,
-    personalTeams: state.personalTeams.join(","),
-    personalPlayers: state.personalPlayers.join(","),
+    // v2: the common read takes no favourites (they have their own read, client side).
+    ...(API_V2 ? {} : { personalTeams: state.personalTeams.join(","), personalPlayers: state.personalPlayers.join(",") }),
   };
   const summary = await fetchJson(
     `/api/read/home?${compactQuery({ ...params, ...(manifest.capabilities.resolvedMedia ? { media: 1 } : {}) })}`,
