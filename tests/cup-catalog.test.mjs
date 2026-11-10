@@ -5,9 +5,10 @@ import { normalizeOpenCup, normalizeSupplementalCup, filterCupMatches } from "..
 import { parseFranceCup } from "../dashboard/frontend/src/services/openfootball-france-cup.js";
 
 const index = { meta: { source_generated_at_utc: "2026-11-01T00:00:00Z" }, competitions: [
-  { folder: "ESP_CUP_copa-del-rey", name: "Copa del Rey", country_code: "ESP", tables: { results: { path: "raw/seasons/2026-2027/supplemental_results/cup.json.gz", rows: 2 }, fixtures: { path: "raw/seasons/2026-2027/supplemental_fixtures/cup.json.gz", rows: 1 } } },
-  { folder: "ENG_1_premier-league", name: "Premier League", country_code: "ENG", tables: { results: { path: "raw/seasons/2026-2027/x.gz", rows: 1 } } },
-  { folder: "FRA_CUP_empty", name: "Empty cup", country_code: "FRA", tables: { results: { path: "raw/seasons/2026-2027/x.gz", rows: 0 } } },
+  { folder: "ESP_CUP_copa-del-rey", name: "Copa del Rey", country_code: "ESP", season: "2026/2027", tables: { results: { rows: 2 }, fixtures: { rows: 1 } } },
+  { folder: "ENG_1_premier-league", name: "Premier League", country_code: "ENG", season: "2026/2027", tables: { results: { rows: 1 } } },
+  { folder: "FRA_CUP_empty", name: "Empty cup", country_code: "FRA", season: "2026/2027", tables: { results: { rows: 0 } } },
+  { folder: "ITA_CUP_coppa-italia", name: "Coppa Italia", country_code: "ITA", tables: { results: { rows: 3 } } },
 ] };
 
 test("cup catalogue exposes actual cup data, Euro, France archive and World Cup once", () => {

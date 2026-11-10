@@ -51,7 +51,7 @@ node --test tests/*.test.mjs
 (cd dashboard && bun run build)
 ```
 
-La CI (`.github/workflows/ci.yml`) lance ces suites, vérifie les modèles d'infrastructure, construit l'image du worker et le paquet de l'API. `tests/known-failing.txt` liste les fichiers de test du site que la CI ne lance pas encore.
+La CI (`.github/workflows/ci.yml`) lance ces suites, vérifie les modèles d'infrastructure, construit l'image du worker et le paquet de l'API.
 
 ## Déploiement
 

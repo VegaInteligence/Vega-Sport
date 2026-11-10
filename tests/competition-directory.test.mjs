@@ -18,19 +18,21 @@ const catalogue = [
   { id: "unknown", name: "Other" },
 ];
 
-test("international comes first and countries follow French alphabetical order", () => {
+test("groups follow the French alphabetical order of their labels, leagues their pyramid", () => {
   const groups = competitionGroups(catalogue);
-  assert.deepEqual(groups.map((group) => group.label), ["International", "Allemagne", "Angleterre", "Australie", "Belgique", "Égypte", "France", "Suède", "Autres compétitions"]);
-  assert.deepEqual(groups[0].competitions.map((item) => item.name), ["Champions League", "Europa League"]);
-  assert.deepEqual(groups[1].competitions.map((item) => item.name), ["Bundesliga", "2. Bundesliga"]);
-  assert.deepEqual(groups[2].competitions.map((item) => item.name), ["Premier League", "Championship"]);
-  assert.deepEqual(groups[6].competitions.map((item) => item.name), ["Ligue 1", "Ligue 2"]);
+  assert.deepEqual(groups.map((group) => group.label), ["Allemagne", "Angleterre", "Australie", "Autres compétitions", "Belgique", "Égypte", "Europe", "France", "International", "Suède"]);
+  const named = (label) => groups.find((group) => group.label === label).competitions.map((item) => item.name);
+  assert.deepEqual(named("Allemagne"), ["Bundesliga", "2. Bundesliga"]);
+  assert.deepEqual(named("Angleterre"), ["Premier League", "Championship"]);
+  assert.deepEqual(named("France"), ["Ligue 1", "Ligue 2"]);
+  assert.deepEqual(named("Europe"), ["Europa League"]);
+  assert.deepEqual(named("International"), ["Champions League"]);
   assert.equal(catalogue[0].name, "Championship");
 });
 
 test("country filter uses displayed labels and initial limiting preserves the sorted order", () => {
-  assert.deepEqual(orderedCountryCodes(catalogue), ["INT-2", "INT", "GER", "ENG", "AUS", "BEL", "EGY", "FRA", "SWE"]);
+  assert.deepEqual(orderedCountryCodes(catalogue), ["GER", "ENG", "AUS", "BEL", "EGY", "INT-2", "FRA", "INT", "SWE"]);
   const visible = competitionGroups(catalogue, 3);
-  assert.deepEqual(visible.map((group) => group.label), ["International", "Allemagne"]);
-  assert.deepEqual(visible.flatMap((group) => group.competitions.map((item) => item.id)), ["champions", "europa", "germany1"]);
+  assert.deepEqual(visible.map((group) => group.label), ["Allemagne", "Angleterre"]);
+  assert.deepEqual(visible.flatMap((group) => group.competitions.map((item) => item.id)), ["germany1", "germany2", "england1"]);
 });

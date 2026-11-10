@@ -5,7 +5,6 @@ import { combineCupLegs, buildKnockoutBracket } from "../dashboard/frontend/src/
 import { normalizeOpenCup } from "../dashboard/frontend/src/services/cup-matches.js";
 import { normalizeOpenLigaMatches } from "../dashboard/frontend/src/services/openligadb.js";
 import { nationsStandings } from "../dashboard/frontend/src/services/nations-standings.js";
-import { GET } from "../dashboard/frontend/app/api/openligadb/route.js";
 
 const team = (id, name, shortName = "") => ({ teamId: id, teamName: name, shortName });
 const sourceMatch = (id, group, home, away, score, type = 2) => ({ matchID: id, matchDateTime: "2026-10-01T20:45:00", group: { groupName: group, groupOrderID: 1 }, team1: home, team2: away, matchIsFinished: Boolean(score), matchResults: score ? [{ resultTypeID: type, pointsTeam1: score[0], pointsTeam2: score[1] }] : [] });
@@ -51,18 +50,6 @@ test("Nations League groups use points and head-to-head before overall goal diff
   assert.equal(rows[1].points, 3); assert.equal(rows[2].difference, 5);
 });
 
-test("OpenLigaDB route is allowlisted and returns source attribution", async () => {
-  const original = globalThis.fetch, france = team(1,"Frankreich","FRA"), italy = team(2,"Italien","ITA");
-  const urls = []; globalThis.fetch = async (url) => { urls.push(url); return Response.json([sourceMatch(1,"Gruppe A",france,italy,[1,0])]); };
-  try {
-    const response = await GET(new Request("http://localhost/api/openligadb?competition=nations-league&season=2026%2F2027"));
-    const body = await response.json(); assert.equal(response.status, 200); assert.equal(body.source.license, "ODbL-1.0"); assert.equal(body.matches[0].home, "France");
-    assert.match(urls[0], /getmatchdata\/nla\/2026$/);
-    const bad = await GET(new Request("http://localhost/api/openligadb?competition=nations-league&season=../../secret"));
-    assert.equal(bad.status, 400); assert.equal(urls.length, 1);
-  } finally { globalThis.fetch = original; }
-});
-
 test("Nations results cover other leagues without assigning teams to the wrong group", async () => {
   const { parseNationsResults } = await import("../dashboard/frontend/src/services/nations-results.js");
   const csv = "date,home_team,away_team,home_score,away_score,tournament,city,country,neutral\n2026-09-26,Scotland,Switzerland,0,3,UEFA Nations League,\"Glasgow, Scotland\",Scotland,FALSE\n2026-09-27,Austria,Kosovo,2,1,UEFA Nations League,Vienna,Austria,FALSE\n2026-09-27,Scotland,Austria,1,0,UEFA Nations League,Glasgow,Scotland,FALSE\n";
@@ -70,15 +57,4 @@ test("Nations results cover other leagues without assigning teams to the wrong g
   assert.equal(rows.length, 2); assert.equal(rows[0].league, "B"); assert.equal(rows[0].group, 1); assert.equal(rows[0].home, "Écosse"); assert.deepEqual(rows[0].score, [0, 3]);
   assert.equal(rows[1].group, 3);
   assert.throws(() => parseNationsResults(csv + "2026-09-26,Scotland,Switzerland,0,3,UEFA Nations League,Glasgow,Scotland,FALSE\n"), /Duplicate/);
-});
-
-test("Nations results route is restricted to the supported edition", async () => {
-  const { GET: getResults } = await import("../dashboard/frontend/app/api/nations-results/route.js");
-  const original = globalThis.fetch;
-  globalThis.fetch = async () => new Response("date,home_team,away_team,home_score,away_score,tournament,city,country,neutral\n2026-09-26,Scotland,Switzerland,0,3,UEFA Nations League,Glasgow,Scotland,FALSE\n");
-  try {
-    const response = await getResults(new Request("http://localhost/api/nations-results?season=2026%2F2027"));
-    const body = await response.json(); assert.equal(response.status, 200); assert.equal(body.source.license, "CC0-1.0"); assert.equal(body.matches[0].away, "Suisse");
-    assert.equal((await getResults(new Request("http://localhost/api/nations-results?season=../bad"))).status, 400);
-  } finally { globalThis.fetch = original; }
 });

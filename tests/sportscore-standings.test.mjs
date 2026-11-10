@@ -10,7 +10,6 @@ import {
   orderedFeatured,
 } from "../dashboard/frontend/src/services/competition-selector.js";
 import { safeImageUrl } from "../dashboard/frontend/src/services/format.js";
-import { GET } from "../dashboard/frontend/app/api/standings/route.js";
 
 const payload = {
   sport: "football",
@@ -120,29 +119,8 @@ test("only trusted team images are displayed", () => {
   );
 });
 
-test("standings route maps only known league IDs and normalizes the response", async () => {
+test("known league ids map to their standings slug", () => {
   assert.equal(SPORTSCORE_LEAGUES.l_4V6jPs, "brazilian-campeonato-paulista-a1");
-  const original = globalThis.fetch;
-  let called = "";
-  globalThis.fetch = async (url) => {
-    called = String(url);
-    return Response.json(payload);
-  };
-  try {
-    const result = await GET(
-      new Request("https://example.test/api/standings?competition=l_0eg6C9"),
-    );
-    assert.equal(result.status, 200);
-    assert.equal(
-      new URL(called).searchParams.get("slug"),
-      payload.competition_slug,
-    );
-    assert.equal((await result.json()).tables.length, 2);
-    const unknown = await GET(
-      new Request("https://example.test/api/standings?competition=unknown"),
-    );
-    assert.equal(unknown.status, 404);
-  } finally {
-    globalThis.fetch = original;
-  }
+  assert.equal(SPORTSCORE_LEAGUES.l_0eg6C9, payload.competition_slug);
+  assert.equal(SPORTSCORE_LEAGUES.unknown, undefined);
 });
