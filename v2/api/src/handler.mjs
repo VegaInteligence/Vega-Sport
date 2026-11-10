@@ -17,6 +17,7 @@ import { createProfileRoute } from "./routes/profiles.mjs";
 import { createPartitionRoute } from "./routes/partition.mjs";
 import { createReferenceRoute } from "./routes/reference.mjs";
 import { createDisciplineRoute } from "./routes/discipline.mjs";
+import { createPresenceRoute } from "./routes/presence.mjs";
 import { createPerformanceRoute } from "./routes/performance.mjs";
 import { createActorRoute } from "./routes/actors.mjs";
 import { createHomeFavouritesRoute, createHomeReadRoute } from "./routes/home.mjs";
@@ -51,7 +52,7 @@ function pathOf(req) {
  * `clock`: the home page's notion of now (tests pin it).
  * `opsKey`: the key of /api/ops/status (the private status page); none, no such route. */
 export function createHandler({ read, mediaBase = null, clock = Date.now, opsKey = null }) {
-  const routes = [createSystemRoute(read), createOpsRoute(read, { key: opsKey, clock }), createClubReadRoute(read), createPlayerReadRoute(read), createMatchRoute(read), createMatchDetailRoute(read), createProfileRoute(read), createPartitionRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPerformanceRoute(read), createActorRoute(read), createHomeReadRoute(read, clock), createHomeFavouritesRoute(read, clock), createSearchRoute(read), createArchiveRoute(read), createRankingRoute(read), createSupportRoute(read, { mediaBase }), createCupRoute(read), createEuropeRoute(read)];
+  const routes = [createSystemRoute(read), createOpsRoute(read, { key: opsKey, clock }), createClubReadRoute(read), createPlayerReadRoute(read), createMatchRoute(read), createMatchDetailRoute(read), createProfileRoute(read), createPartitionRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPresenceRoute(read), createPerformanceRoute(read), createActorRoute(read), createHomeReadRoute(read, clock), createHomeFavouritesRoute(read, clock), createSearchRoute(read), createArchiveRoute(read), createRankingRoute(read), createSupportRoute(read, { mediaBase }), createCupRoute(read), createEuropeRoute(read)];
   async function route(req) {
     const url = new URL(req.url),
       path = url.pathname;

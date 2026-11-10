@@ -133,6 +133,14 @@ def main(dsn):
     for mid, seq, kind, minute in [(1, 10, "yellow_card", 30), (3, 10, "red_card", 60), (5, 10, "second_yellow", 80), (5, 11, "red_card", 80)]:
         x("INSERT INTO core.match_events(season_id,match_id,team_id,seq,event_type,minute,period,player_id) VALUES (2025,%s,1,%s,%s,%s,'second_half',101)", (mid, seq, kind, minute))
     x("UPDATE core.match_coverage SET events='ok' WHERE match_id IN (1,3,5)")
+    # Activity maps (16 x 12, cells[y * 16 + x]): Élie Durand's of m1 and m3, one of m5 whose
+    # cells do not add up to its actions, Marc Petit's of m3 (on the bench) and m5 (minutes unknown).
+    for pid, mid, actions, cells in [(101, 1, 5, {(2, 3): 4, (15, 11): 1}), (101, 3, 5, {(2, 3): 2, (0, 0): 3}), (101, 5, 9, {(1, 1): 2}),
+                                     (102, 3, 1, {(5, 5): 1}), (102, 5, 3, {(4, 4): 3})]:
+        grid = [0] * 192
+        for (cx, cy), n in cells.items():
+            grid[cy * 16 + cx] = n
+        x("INSERT INTO core.player_heatmaps(season_id,match_id,team_id,player_id,actions,cells,updated_at) VALUES (2025,%s,1,%s,%s,%s,'2025-09-20T10:00:00Z')", (mid, pid, actions, grid))
     # Generation 7 = home 3 + edition 3 + the archive season 1 (imported below, dated before).
     x("INSERT INTO ops.resource_versions(resource_kind,resource_id,version,published_at) VALUES ('home',1,3,'2025-09-20T11:00:00Z'),('competition_season',1,3,'2025-09-20T11:00:00Z')")
     # The seed sets ids by hand: move every identity past them before the import adds rows.

@@ -9,7 +9,7 @@ import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 const digest = (value) => createHash("sha256").update(value).digest("hex");
 const tag = (req, version) =>
   'W/"core-v3-' + digest(new URL(req.url).pathname + new URL(req.url).search + "|" + version) + '"';
-const manifestTag = (req, version) => tag(req, `manifest-v4|v2|${version}`);
+const manifestTag = (req, version) => tag(req, `manifest-v5|v2|${version}`);
 const iso = (value) => (value instanceof Date ? value.toISOString() : value ?? null);
 const day = (value) => (value instanceof Date ? value.toISOString().slice(0, 10) : value ?? null);
 
@@ -23,7 +23,7 @@ export const editionCounts = (p) => ({
 export const editionDigest = (p) => digest(JSON.stringify([p.season, p.league_id, iso(p.retrieved_at), editionCounts(p)]));
 
 /** The compact reads this API serves; the others stay on the current API until ported. */
-export const COMPACT_READS = { home: true, players: true, clubs: true, player: true, club: true, performance: true, discipline: true };
+export const COMPACT_READS = { home: true, players: true, clubs: true, player: true, club: true, performance: true, discipline: true, presence: true };
 
 /** The latest season already started: a calendar published ahead (a league's next
  * calendar year) is not the default. */
