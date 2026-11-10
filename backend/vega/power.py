@@ -407,35 +407,48 @@ def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA):
 
 
 def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
-    """The player power ranking of one season (after refresh_elo)."""
+    """The player power ranking of one season (after refresh_elo).
+
+    Three steps, and no transaction open during the second: the base ends a session that
+    stays idle inside a transaction (60 s, infra/aws/database.yaml), and fitting the
+    references of a large season takes longer than that."""
+    # 1. Read. Through a server-side cursor (it needs a transaction, a short one): the
+    # season's rows are held once, as the dicts below, never a second time as the result.
     with conn.transaction():
-        run = _start(conn, "players", season)
-        # Read through a server-side cursor: the season's rows are held once, as the dicts
-        # below, never a second time as the fetched result.
         with conn.cursor(name="power_player_matches") as cur:
             cur.execute(PLAYER_MATCHES, (season,))
             names = [d.name for d in cur.description]
             rows = [{k: (_num(v) if k not in ("match_id", "player_id", "team_id", "position_id", "is_starter") else v) for k, v in zip(names, row)}
                     for row in cur]
-        for r in rows:
-            r["delta"] = 0.0 if r["own_elo"] is None or r["opponent_elo"] is None else (r["opponent_elo"] - r["own_elo"]) / 400
-        rows = assign_roles(rows)
-        refs = references(rows)
+    # 2. Compute, outside any transaction.
+    for r in rows:
+        r["delta"] = 0.0 if r["own_elo"] is None or r["opponent_elo"] is None else (r["opponent_elo"] - r["own_elo"]) / 400
+    rows = assign_roles(rows)
+    refs = references(rows)
+    count = len(rows)
+    matches = []
+    detailed = defaultdict(list)
+    for i, r in enumerate(rows):
+        scores, c = match_contribution(r, refs)
+        matches.append((r["match_id"], r["player_id"], r["team_id"], r["role"], int(r["minutes_played"]), r["opponent_elo"],
+                        *[scores.get(b) for b in BLOCK_COLUMNS], c))
+        if c is not None:
+            detailed[r["player_id"]].append((r["role"], r["minutes_played"], c, r["team_id"], block_shares(r["role"], scores)))
+        rows[i] = None  # the match's row is its tuple from here on: the season is not held twice
+    del rows
+    contributions = {p: [item[:4] for item in items] for p, items in detailed.items()}
+    scored = season_scores(contributions, eligibility=eligibility)
+    blocks, roles = season_details(detailed, scored)
+    # 3. Write, in one transaction: the season's ranking changes at once or not at all.
+    with conn.transaction():
+        run = _start(conn, "players", season)
         conn.execute("DELETE FROM agg.player_power WHERE season_id=%s", (season,))
         conn.execute("DELETE FROM agg.player_power_matches WHERE season_id=%s", (season,))
-        detailed = defaultdict(list)
         with conn.cursor().copy(
             f"COPY agg.player_power_matches(season_id, match_id, player_id, team_id, role, minutes, opponent_elo, {', '.join(BLOCK_COLUMNS)}, contribution, run_id) FROM STDIN"
         ) as copy:
-            for r in rows:
-                scores, c = match_contribution(r, refs)
-                copy.write_row((season, r["match_id"], r["player_id"], r["team_id"], r["role"], int(r["minutes_played"]), r["opponent_elo"],
-                                *[scores.get(b) for b in BLOCK_COLUMNS], c, run))
-                if c is not None:
-                    detailed[r["player_id"]].append((r["role"], r["minutes_played"], c, r["team_id"], block_shares(r["role"], scores)))
-        contributions = {p: [item[:4] for item in items] for p, items in detailed.items()}
-        scored = season_scores(contributions, eligibility=eligibility)
-        blocks, roles = season_details(detailed, scored)
+            for match in matches:
+                copy.write_row((season, *match, run))
         conn.execute("DELETE FROM agg.player_power_roles WHERE season_id=%s", (season,))
         with conn.cursor().copy(
             f"""COPY agg.player_power(season_id, player_id, role, team_id, matches, minutes, total, rate, eligible, total_percentile,
@@ -451,7 +464,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
             for player, by_role in roles.items():
                 for role, x in by_role.items():
                     copy.write_row((season, player, role, x["matches"], int(x["minutes"]), x["total"], x["rate"], run))
-        _publish(conn, run, "players", season, len(rows), len(scored))
+        _publish(conn, run, "players", season, count, len(scored))
         write_award(conn, season, scored)
     return len(scored)
 

@@ -543,6 +543,38 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual(self.one("SELECT count(*) FROM ops.resource_versions WHERE resource_kind='cohort'")[0], 10)
         self.db.execute("UPDATE core.matches SET home_score = home_score - 3 WHERE id = 1")
 
+    def test_zz_the_player_ranking_computes_with_no_transaction_open(self):
+        """The base ends a session that stays idle inside a transaction (60 s in production).
+        A large season's references take longer than that to fit: the ranking must not hold
+        a transaction while it computes."""
+        import time
+        from vega import power
+
+        before = self.db.execute(
+            "SELECT player_id, score, rank FROM agg.player_power WHERE season_id=2025 ORDER BY player_id"
+        ).fetchall()
+        fit = power.references
+
+        def slow(rows):
+            time.sleep(1.2)
+            return fit(rows)
+
+        self.db.execute("SET idle_in_transaction_session_timeout = '400ms'")
+        power.references = slow
+        try:
+            power.refresh_players(self.db, 2025)
+        finally:
+            power.references = fit
+            self.db.execute("RESET idle_in_transaction_session_timeout")
+        after = self.db.execute(
+            "SELECT player_id, score, rank FROM agg.player_power WHERE season_id=2025 ORDER BY player_id"
+        ).fetchall()
+        self.assertEqual(after, before)
+        self.assertTrue(after)
+        self.assertEqual(
+            self.one("SELECT count(*) FROM agg.power_runs WHERE kind='players' AND season_id=2025 AND status='published'")[0], 1
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
