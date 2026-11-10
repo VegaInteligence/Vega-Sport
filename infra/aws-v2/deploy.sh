@@ -24,6 +24,18 @@ REGISTRY="$ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com"
 RELEASES="statarena-backend-releases-$ACCOUNT-$AWS_REGION"
 SUBNETS=subnet-0233a9567335f56ce,subnet-04c9af303f55d9718,subnet-0e72516f361932c15
 TAG=${IMAGE_TAG:-$(git rev-parse HEAD)}
+# What is deployed is the commit $TAG and nothing else: the image, the two Lambda packages
+# and the templates are read from a clean export of that commit, never from the checkout.
+# (A checkout can be edited while the deploy runs, by hand or by a second session: the
+# change went out under a tag that does not hold it.) The export holds what the deploy
+# reads: v2, infra, and dashboard for main's files the image and the read API share.
+if [ -z "${VEGA_V2_DEPLOY_EXPORT:-}" ]; then
+  export_dir=$(mktemp -d)
+  trap 'rm -rf "$export_dir"' EXIT
+  git archive --format=tar "$TAG" v2 infra dashboard | tar -xf - -C "$export_dir"
+  (cd "$export_dir" && IMAGE_TAG=$TAG VEGA_V2_DEPLOY_EXPORT=1 bash infra/aws-v2/deploy.sh)
+  exit
+fi
 COUNT=${WORKER_DESIRED_COUNT:-1}
 # The live ingestor stays off until a live provider is chosen (doc "Live"): LIVE_PROVIDER names its
 # adapter (vega_v2/live/adapters.py) and turns on the schedule that starts it.

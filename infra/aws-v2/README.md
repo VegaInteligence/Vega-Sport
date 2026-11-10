@@ -23,7 +23,7 @@ Account 361769570630, region us-east-2, AWS CLI profile `statarena`, default VPC
 
 ## Deployment
 
-`deploy.sh` is the whole deployment: the same script runs from the **Vega v2 deploy** workflow (`.github/workflows/v2-deploy.yml`, manual, role `vega-v2-deploy`) and from a workstation. Every step only creates or changes `vega-v2-*` resources and the second base `vega-football-db-postgres`:
+`deploy.sh` is the whole deployment: the same script runs from the **Vega v2 deploy** workflow (`.github/workflows/v2-deploy.yml`, manual, role `vega-v2-deploy`) and from a workstation. Every step only creates or changes `vega-v2-*` resources and the second base `vega-football-db-postgres`. It deploys the commit it is given (`IMAGE_TAG`, by default `HEAD`) from a clean export of that commit: uncommitted changes in the checkout are not deployed, and editing the checkout while it runs changes nothing:
 
 1. database stack (about 10 minutes the first time);
 2. secrets, created once in SSM SecureStrings (`ci/secrets.sh`): three random login passwords, the status page's key, the PitchAPI key, and the connection URLs built from the database endpoint. Values go through mode-0600 files, never the command line or the log;
