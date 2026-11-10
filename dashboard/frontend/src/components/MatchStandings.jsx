@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResource } from "../services/resources.js";
 import {
@@ -91,6 +91,12 @@ export default function MatchStandings({ match }) {
     match.league,
   ]);
   const season = match.season;
+  // The table is the one the API serves. The season's fixtures are only read when it has
+  // none (CompetitionStandings then asks for them), as the competitions page does.
+  const scope = `${competition.id}:${season}`;
+  const [fixtureScope, setFixtureScope] = useState(null);
+  const needFixtures = useCallback(() => setFixtureScope(scope), [scope]);
+  const wanted = fixtureScope === scope;
   const fixtures = useResource(
     matchResourceKey(
       f.manifest || f.client,
@@ -100,7 +106,7 @@ export default function MatchStandings({ match }) {
       matchReadSource(f.manifest, f.configured),
     ),
     ({ signal }) => matchFixtures(f, competition, season, { signal }),
-    Boolean(competition.id && season && f.statusKnown),
+    Boolean(wanted && competition.id && season && f.statusKnown),
   );
   if (!competition.id || !season)
     return (
@@ -121,9 +127,11 @@ export default function MatchStandings({ match }) {
         season={season}
         matches={fixtures.value?.matches || []}
         source={fixtures.value?.source}
-        fixturesLoading={fixtures.loading}
+        fixturesLoading={wanted && fixtures.loading}
         fixturesError={fixtures.error}
         onRetry={fixtures.retry}
+        onNeedFixtures={needFixtures}
+        served
         highlightTeams={[match.home, match.away]}
       />
     </Card>

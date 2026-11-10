@@ -287,7 +287,15 @@ function SportscoreTable({
     for (const match of matches || [])
       for (const team of [match.home_team, match.away_team])
         if (team?.id) indexed.set(team.id, team);
-    return table.rows.map((row, i) => indexed.get(row.id) || resolved[i]);
+    // A row that names its club by id is that club, with or without a fixture of it.
+    return table.rows.map(
+      (row, i) =>
+        indexed.get(row.id) ||
+        resolved[i] ||
+        (row.id
+          ? { id: row.id, name: row.name, image_url: row.imageUrl }
+          : undefined),
+    );
   }, [table.rows, matches]);
   const display = (value) => (value == null ? "—" : number(value));
   return (
@@ -411,17 +419,23 @@ export default function CompetitionStandings({
   onRetry,
   onNeedFixtures,
   highlightTeams = [],
+  // Read the table the API serves for this season, whichever it is (the official one,
+  // else the one the base computes from the results), before any fixture is loaded.
+  served = false,
 }) {
   const f = useFootball();
   const latest = competition?.seasons?.[0];
   const current = Boolean(latest) && String(latest) === String(season);
   const historicUefa = !current && hasUefaStandings(competition.id, season);
-  const enabled =
-    historicUefa || (current && Boolean(SPORTSCORE_LEAGUES[competition.id]));
   const cup =
     competition.id === WORLD_CUP_ID ||
     FEATURED_EUROPE_IDS.includes(competition.id) ||
     competition.cupWorker;
+  const servedSeason = served && !cup;
+  const enabled =
+    historicUefa ||
+    (current && Boolean(SPORTSCORE_LEAGUES[competition.id])) ||
+    servedSeason;
   const places = useEuropeanPlaces(competition, season);
   const external = useResource(
     "sportscore-standings:" +
@@ -436,7 +450,9 @@ export default function CompetitionStandings({
       const url =
         "/api/standings?competition=" +
         encodeURIComponent(competition.id) +
-        (historicUefa ? "&season=" + encodeURIComponent(season) : "");
+        (historicUefa || (servedSeason && !current)
+          ? "&season=" + encodeURIComponent(season)
+          : "");
       return cup && !historicUefa
         ? cupWorkerSnapshot("standings", competition.id, String(season), url)
         : json(url);
