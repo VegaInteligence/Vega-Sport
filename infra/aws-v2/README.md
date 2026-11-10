@@ -68,6 +68,10 @@ AWS_PROFILE=statarena PITCHAPI_API_KEY_FILE=<file holding the key> bash infra/aw
 
 Then, from GitHub: `gh workflow run "Vega v2 deploy" -f worker_desired_count=1`. The migration task's log line `migrations applied=N total=M logins=…` shows 43 migrations (45 with `V2_VECTOR=1`). The backfill runs on demand, for days, and stops by itself when its lane is empty: `aws ecs run-task … --task-definition vega-v2-backfill` with the network configuration `deploy.sh` uses.
 
+A database restart (memory recovery, resize) does not stop a task: every connection sees a lost database within a minute (`store.CONNECTION`), and the worker and the backfill reconnect by themselves (`database lost error=… retry_in=N` in the log) for up to 30 minutes. After that the task exits with an error: ECS starts the worker service's task again, the backfill has to be run again by hand.
+
+A running backfill keeps the image it was started with: `deploy.sh` stops and restarts only the worker service. After a deploy whose migration changes what the calculator reads (`calculator error=DATABASE_42703` in the backfill's log), stop the backfill task and run it again; it resumes from what is still missing.
+
 The account runs at most 10 Lambdas concurrently and the current API needs them: `ReservedConcurrency` stays 0 and the pool size 1 until the quota is raised.
 
 ### Import test: one full season and one archive season
