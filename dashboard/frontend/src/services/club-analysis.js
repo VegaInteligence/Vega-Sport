@@ -430,6 +430,16 @@ export function upcomingClubMatches(club, now = Date.now(), limit = 3) {
     )
     .slice(0, limit);
 }
+/**
+ * What a club's season holds: the finished games the base knows by their result,
+ * and how many of them were read with their statistics (`rows`, what every
+ * indicator of the profile is computed from). A season known only by its
+ * results has nothing to rank.
+ */
+export function seasonCoverage(club, rows) {
+  const played = club.games.filter((m) => m.status === "finished").length;
+  return { played, analysed: rows.length, empty: rows.length === 0 };
+}
 /** Results by formation: only matches whose formation the source gives. */
 export function formationRecords(club) {
   const records = new Map();

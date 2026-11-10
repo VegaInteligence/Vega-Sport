@@ -23,6 +23,7 @@ import {
   clubSquad,
   clubSummary,
   formationRecords,
+  seasonCoverage,
   upcomingClubMatches,
 } from "./club-analysis.js";
 
@@ -1547,6 +1548,7 @@ function buildDossier({ id, season, data, competitions, league, cohort }) {
     summary,
     allRows,
     leagueRows,
+    coverage: seasonCoverage(summary, allRows),
     allRecord: record(allRows),
     self,
     clubs,

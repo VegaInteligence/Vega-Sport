@@ -53,6 +53,31 @@ export function ClubLoading({ state, compact = false }) {
 /* ------------------------------------------------------------- basics */
 
 /**
+ * A club the base knows in the season without any match statistics: its
+ * results may be known (`played`), but there is nothing to rank yet.
+ */
+export function ClubEmptySeason({ dossier, played = 0 }) {
+  const games = `${played} match${played > 1 ? "s" : ""} joué${played > 1 ? "s" : ""}`;
+  return (
+    <div className={s.loading} role="status" data-empty-season="">
+      <Crest club={dossier} />
+      <strong>{dossier.name}</strong>
+      <span>
+        {[dossier.league?.name, dossier.season].filter(Boolean).join(" · ")}
+      </span>
+      <span>
+        {played
+          ? `Les résultats de cette saison sont connus (${games}), mais les statistiques de match ne sont pas disponibles pour l’instant.`
+          : "Aucun match joué cette saison."}
+      </span>
+      {played > 0 && (
+        <span>La fiche se remplira dès qu’elles le seront.</span>
+      )}
+    </div>
+  );
+}
+
+/**
  * Plain images: the site's reveal deadline would freeze Media elements that
  * mount after a long read into their initials.
  */
@@ -173,7 +198,8 @@ export const fmtNum = (value, digits = 0, signed = false) =>
           maximumFractionDigits: digits,
         },
       )}`;
-export const ordinal = (n) => (n === 1 ? "1er" : `${n}e`);
+/** "1er", "15e"; a dash when there is no rank. */
+export const ordinal = (n) => (n == null ? "—" : n === 1 ? "1er" : `${n}e`);
 
 /* ------------------------------------------------------- metric table */
 
