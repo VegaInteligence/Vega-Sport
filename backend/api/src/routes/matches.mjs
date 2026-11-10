@@ -15,12 +15,16 @@
  * - shot periods are the normalized period names (first_half, second_half, …);
  * - `warnings` and `warningCodes` are empty (data warnings are kept in ops);
  * - an appearance id is `<match id>:<player id>`.
+ *
+ * Added here: `teams=t_…,t_…` (exactly two) keeps the meetings of two clubs, whatever the
+ * season, so that a head-to-head is one read and not a league's whole history.
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 
 const MATCH = /^m_(?:[A-Za-z0-9]{6}|v\d{7})$/,
   LEAGUE = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/,
+  TEAM = /^t_(?:[A-Za-z0-9]{6}|v\d{7})$/,
   SEASON = /^\d{4}(?:\/\d{4})?$/;
 const PAGE_TTL = 30;
 const digest = (s) => createHash("sha256").update(s).digest("hex");
@@ -107,10 +111,12 @@ function list(p, key, pattern, max) {
 }
 
 export async function fixturePage(req, p, read) {
-  validateParams(p, ["league", "leagues", "season", "seasons", "status", "from", "to", "q", "limit", "cursor", "order"]);
+  validateParams(p, ["league", "leagues", "season", "seasons", "teams", "status", "from", "to", "q", "limit", "cursor", "order"]);
   if ((p.has("league") && p.has("leagues")) || (p.has("season") && p.has("seasons"))) reject(400, "Filtres incompatibles.");
   const leagues = list(p, p.has("league") ? "league" : "leagues", LEAGUE, 100),
-    seasons = list(p, p.has("season") ? "season" : "seasons", SEASON, 2);
+    seasons = list(p, p.has("season") ? "season" : "seasons", SEASON, 2),
+    teams = list(p, "teams", TEAM, 2);
+  if (p.has("teams") && teams.length !== 2) reject(400, "Deux équipes attendues.");
   const status = p.get("status") || "all",
     order = p.get("order") || "asc",
     from = p.get("from"),
@@ -125,7 +131,7 @@ export async function fixturePage(req, p, read) {
     q.length > 200
   )
     reject(400, "Filtres invalides.");
-  const args = pageArgs(p, 50, ["fixtures", leagues, seasons, status, from, to, q, ...(order === "desc" ? [order] : [])]),
+  const args = pageArgs(p, 50, ["fixtures", leagues, seasons, status, from, to, q, ...(order === "desc" ? [order] : []), ...(teams.length ? [{ teams }] : [])]),
     binds = [],
     terms = [];
   const bind = (v) => {
@@ -136,6 +142,11 @@ export async function fixturePage(req, p, read) {
   if (seasons.length) {
     const k = bind(seasons);
     terms.push("(f.season=ANY(" + k + "::text[]) OR f.native_season=ANY(" + k + "::text[]))");
+  }
+  if (teams.length) {
+    // The two clubs' internal ids, read once: the match's own team columns are indexed.
+    const pair = "(ARRAY(SELECT api.internal_id('team',t) FROM unnest(" + bind(teams) + "::text[]) t))";
+    terms.push("f.home_internal_id=ANY" + pair + " AND f.away_internal_id=ANY" + pair + " AND f.home_internal_id<>f.away_internal_id");
   }
   if (status !== "all") terms.push(status === "played" ? "f.status='finished'" : "f.status='not_started'");
   if (from) terms.push("f.day>=" + bind(from) + "::date");
