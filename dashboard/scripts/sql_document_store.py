@@ -30,10 +30,10 @@ def publish_documents(db, source_path, source_sha, body):
             if pending:
                 cursor.executemany(statement, pending)
 
-    # SQLite inventories and JSONL files can contain millions of records.
+    # Bulk archives can contain thousands of documents.
     # COPY avoids millions of individual insert commands. A savepoint allows
     # the normal upsert path to handle a colliding virtual document path.
-    if source_path.lower().endswith((".sqlite", ".jsonl", ".jsonl.gz", ".ndjson", ".ndjson.gz")):
+    if source_path.lower().endswith((".sqlite", ".zip", ".jsonl", ".jsonl.gz", ".ndjson", ".ndjson.gz")):
         try:
             with db.transaction():
                 with db.cursor() as cursor:
