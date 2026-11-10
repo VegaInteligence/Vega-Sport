@@ -48,8 +48,9 @@ def _by_key(conn, provider, key, kind):
 def link(conn, fixture, provider=None):
     """The core match of a provider fixture, or None (no match, or more than one)."""
     candidates = conn.execute(
+        # PitchAPI matches only: a cup source's copy of the same fixture is another row.
         """SELECT id, home_team_id, away_team_id FROM core.matches
-           WHERE kickoff_at BETWEEN %s AND %s AND home_team_id IS NOT NULL AND away_team_id IS NOT NULL""",
+           WHERE source = 'pitchapi' AND kickoff_at BETWEEN %s AND %s AND home_team_id IS NOT NULL AND away_team_id IS NOT NULL""",
         (fixture.kickoff_at - KICKOFF_TOLERANCE, fixture.kickoff_at + KICKOFF_TOLERANCE),
     ).fetchall()
     home_id = _by_key(conn, provider, fixture.home_key, "team")

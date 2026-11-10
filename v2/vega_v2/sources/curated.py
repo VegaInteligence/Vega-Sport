@@ -47,8 +47,39 @@ EDITORIAL_LISTS = {
 
 def scopes(now):
     day = timedelta(days=1)
+    # national_teams before team_identity: the merge reads the flag it sets.
     return {"player_aliases": day, "club_aliases": day, "stadium_plans": day, "league_zones": day, "cup_logos": day,
-            "sportscore_ids": day, "country_names": day, "team_identity": day, "editorial_lists": day}
+            "sportscore_ids": day, "country_names": day, "national_teams": day, "team_identity": day, "editorial_lists": day}
+
+
+# The PitchAPI competitions played by national teams: the site's own list (main's
+# NATIONAL_COMPETITIONS, dashboard/frontend/src/services/player-team-seasons.js; its other
+# entries are cup-source editions, known by their cup key). PitchAPI says of no competition
+# or team that it is international: this list is what says it.
+NATIONAL_COMPETITIONS = ("l_1XLtP0",)
+
+
+def national_teams(conn):
+    """core.competitions.kind = 'international' for NATIONAL_COMPETITIONS, and
+    core.teams.is_national for every team of their PitchAPI matches. The collect never
+    writes either column, so a later collect keeps them."""
+    ids = [row[0] for row in conn.execute(
+        "SELECT entity_id FROM core.provider_ids WHERE entity_type = 'competition' AND provider = 'pitchapi' AND provider_key = ANY(%s)",
+        (list(NATIONAL_COMPETITIONS),),
+    )]
+    written = conn.execute(
+        "UPDATE core.competitions SET kind = 'international', updated_at = now() WHERE id = ANY(%s) AND kind IS DISTINCT FROM 'international'",
+        (ids,),
+    ).rowcount
+    written += conn.execute(
+        """UPDATE core.teams t SET is_national = true, updated_at = now()
+           WHERE t.is_national IS NOT TRUE AND EXISTS (
+             SELECT 1 FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+             WHERE cs.competition_id = ANY(%s) AND cs.archive_key IS NULL AND cs.cup_key IS NULL
+               AND t.id IN (m.home_team_id, m.away_team_id))""",
+        (ids,),
+    ).rowcount
+    return written, len(NATIONAL_COMPETITIONS) - len(ids)
 
 
 def editorial_lists(conn):
@@ -251,7 +282,8 @@ def run(conn, get, scope, now):
 
         return identity.run(conn, get, "teams", now)
     for name, handler in (("league_zones", league_zones), ("cup_logos", cup_logos), ("sportscore_ids", sportscore_ids),
-                          ("country_names", country_names), ("editorial_lists", editorial_lists)):
+                          ("country_names", country_names), ("national_teams", national_teams),
+                          ("editorial_lists", editorial_lists)):
         if scope == name:
             return handler(conn)
     if scope == "club_aliases":
