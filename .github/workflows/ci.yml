@@ -48,8 +48,9 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      # The version dashboard/package.json names (packageManager): it wrote bun.lock.
       - uses: oven-sh/setup-bun@v2
-        with: {bun-version: '1.2.21'}
+        with: {bun-version: '1.4.4'}
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
       - run: bun install --frozen-lockfile
