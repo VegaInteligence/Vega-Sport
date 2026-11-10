@@ -11,7 +11,7 @@ on:
         options: ['1', '0']
         default: '1'
       import_archives:
-        description: Run the historical archive import (needs vars.V2_ARCHIVE_SOURCES_BUCKET)
+        description: Run the historical archive import (sources in the release bucket, data/sources/)
         type: boolean
         default: false
 permissions:

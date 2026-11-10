@@ -173,7 +173,7 @@ Resources:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
-        Comment: vega-v2 read API (dedicated Lambda origin, no production traffic until cutover)
+        Comment: Vega read API (Lambda origin) and image copies
         Enabled: true
         HttpVersion: http2and3
         IPV6Enabled: true
