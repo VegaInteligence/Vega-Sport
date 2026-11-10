@@ -768,6 +768,21 @@ def refresh_daily(conn, season, *, elo=True):
     for (edition,) in editions:
         with conn.transaction():
             conn.execute("SELECT agg.refresh_performance_distribution(%s)", (edition,))
+    # The same for the player list's rows (060): every edition of the season that has a
+    # statistics row or a line-up row, and those that still hold rows, so an edition whose
+    # appearances are gone is emptied.
+    editions = conn.execute(
+        """SELECT DISTINCT m.competition_season_id FROM core.matches m
+           WHERE m.season_id = %(season)s
+             AND (EXISTS (SELECT 1 FROM core.player_match_stats s WHERE s.season_id = m.season_id AND s.match_id = m.id)
+               OR EXISTS (SELECT 1 FROM core.lineup_players l WHERE l.season_id = m.season_id AND l.match_id = m.id))
+           UNION SELECT competition_season_id FROM agg.player_list_editions WHERE season_id = %(season)s
+           ORDER BY 1""",
+        {"season": season},
+    ).fetchall()
+    for (edition,) in editions:
+        with conn.transaction():
+            conn.execute("SELECT agg.refresh_player_list(%s)", (edition,))
 
 
 def refresh_season(conn, season):

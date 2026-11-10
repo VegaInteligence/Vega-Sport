@@ -1,7 +1,13 @@
 /**
  * GET /api/read/clubs — club directory and club analysis, same parameters and same
  * response as dashboard/backend/services/relational-clubs.js on main, read from
- * api.club_match_sides and api.match_goals.
+ * api.club_match_sides and api.match_shots.
+ *
+ * The scope is resolved to ids before the query (resolveEditions) and bound: the view
+ * reaches the scope's matches by index and its season's partitions only. Every club of
+ * the scope is ranked from the columns of its matches (ids, scores, competition); the
+ * formations, the team statistics and the score lines' keys are read for the page's
+ * clubs only (`selected`).
  *
  * Differences with the legacy read, by construction of v2 (listed for the parity
  * comparison): team statistics have one source, so there is no "unreliable stats"
@@ -21,7 +27,7 @@ import {
   readPageArgs,
   readResponse,
   readValidator,
-  scopeWhere,
+  resolveEditions,
 } from "../publication.mjs";
 
 // Legacy metric name -> v2 column of api.club_match_sides.
@@ -83,11 +89,17 @@ export function parseClubRead(params) {
   return { scope, ...page, q, country, competition, analysis, sort, direction };
 }
 
-export function clubReadQuery(filters, params) {
+/** editions is the scope resolved to ids (resolveEditions). */
+export function clubReadQuery(filters, params, editions) {
   const values = [],
     publication = publicationSql(filters.scope, values),
     b = (value) => bindValue(values, value);
   const withRecords = filters.analysis || !["name", "count"].includes(filters.sort);
+  // core.matches is one table for every season: the editions' ids reach the scope's
+  // matches by index, the season's id keeps the partitioned tables to its partitions.
+  const sid = b(editions.seasonId),
+    eds = b(editions.ids);
+  const scope = (alias) => `${alias}.season_id=${sid}::smallint AND ${alias}.competition_season_id=ANY(${eds}::int[])`;
   const fence = params.has("generation")
     ? ` AND EXISTS(SELECT 1 FROM publication WHERE generation=${b(params.get("generation"))})`
     : "";
@@ -113,7 +125,16 @@ export function clubReadQuery(filters, params) {
     .join(",");
   const optional = filters.analysis
     ? `,
-selected AS MATERIALIZED (SELECT s.* FROM sides s JOIN page p ON p.id=s.team_id),
+selected AS MATERIALIZED (
+ SELECT s.*,v.public_id,v.season,v.formation,
+ v.home_public_id,v.home_name,v.home_score,v.home_formation,v.away_public_id,v.away_name,v.away_score,v.away_formation,
+ ${Object.values(TEAM_METRICS)
+   .filter((c) => c.startsWith("s."))
+   .map((c) => c.replace("s.", "v."))
+   .join(",")}
+ FROM sides s JOIN page p ON p.id=s.team_id
+ JOIN api.club_match_sides v ON ${scope("v")} AND v.match_id=s.match_id AND v.team_id=s.internal_team_id
+),
 observed AS (
  SELECT s.team_id,jsonb_build_object(${stats}) stats,
  count(*) FILTER(WHERE s.status='finished' AND NOT s.scored)::int unscored
@@ -134,7 +155,7 @@ observed AS (
 ), goal_buckets AS (
  SELECT s.team_id,g.team_id=s.internal_team_id own,least(5,greatest(0,floor((g.minute-0.01)/15)::int)) bucket,count(*)::int amount
  -- As main: the goals of the shot map (not the goal events), own goals left out.
- FROM selected s JOIN api.match_shots g ON g.season_id=s.season_id AND g.match_id=s.match_id
+ FROM selected s JOIN api.match_shots g ON g.season_id=${sid}::smallint AND g.match_id=s.match_id
  WHERE s.scored AND g.is_goal IS TRUE AND g.is_own_goal IS DISTINCT FROM true AND g.minute IS NOT NULL
  GROUP BY 1,2,3
 ), goal_times AS (
@@ -148,17 +169,14 @@ observed AS (
   const final = filters.analysis
     ? "SELECT p.*,o.stats,0 excluded_stats,o.unscored,f.forms,fo.formations,g.goal_times FROM page p LEFT JOIN observed o ON o.team_id=p.id LEFT JOIN forms f ON f.team_id=p.id LEFT JOIN formations fo ON fo.team_id=p.id LEFT JOIN goal_times g ON g.team_id=p.id"
     : "SELECT p.* FROM page p";
+  const columns = ["s.team_public_id team_id,s.match_id,s.league_id,s.league,s.league_country,s.date,s.time_utc,s.name,s.image_url,s.country"];
+  if (withRecords) columns.push("s.side,s.own,s.against,s.scored");
+  if (filters.analysis) columns.push("s.team_id internal_team_id,s.status");
   const sql = `/*vega:v2:clubs*/
 WITH publication AS MATERIALIZED (${publication}),
 sides AS MATERIALIZED (
- SELECT s.team_public_id team_id,s.team_id internal_team_id,s.match_id,s.public_id,s.season,s.season_id,s.league_id,s.league,s.league_country,
- s.date,s.time_utc,s.status,s.side,s.name,s.image_url,s.country,s.formation,s.own,s.against,s.scored,
- s.home_public_id,s.home_name,s.home_score,s.home_formation,s.away_public_id,s.away_name,s.away_score,s.away_formation,
- ${Object.values(TEAM_METRICS)
-   .filter((c) => c.startsWith("s."))
-   .map((c) => c)
-   .join(",")}
- FROM api.club_match_sides s WHERE ${scopeWhere("s", filters.scope, values)}${fence}
+ SELECT ${columns.join(",")}
+ FROM api.club_match_sides s WHERE ${scope("s")}${fence}
 ), identities AS (
  SELECT DISTINCT ON(team_id) team_id,name,image_url,league FROM sides s
  ORDER BY team_id,${chronology} ${filters.analysis ? "ASC" : "DESC"} NULLS LAST,match_id
@@ -222,7 +240,7 @@ export function createClubReadRoute(read) {
     const filters = parseClubRead(params);
     const validated = await readValidator(req, params, filters.scope, read);
     if (validated) return validated;
-    const { sql, values } = clubReadQuery(filters, params);
+    const { sql, values } = clubReadQuery(filters, params, await resolveEditions(read, filters.scope));
     const [snapshot] = await read(sql, values);
     const total = Number(snapshot?.total || 0);
     const clubs = (snapshot?.clubs || []).map((row) => clubReadRecord(row, filters.analysis));

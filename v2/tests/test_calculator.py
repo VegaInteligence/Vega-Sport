@@ -241,7 +241,7 @@ class ApiViewTest(CalculatorTest):
         views = [r[0] for r in self.db.execute(
             "SELECT table_schema||'.'||table_name FROM information_schema.views WHERE table_schema IN ('api','ops') ORDER BY 1"
         )]
-        self.assertEqual(len([v for v in views if v.startswith("api.")]), 102)  # 21 + 5 read API (016) + 3 players (019) + media (020) + 4 matches (021) + 2 (022) + cards (023) + 3 search (024) + 4 archives (025) + 4 rankings (026) + 4 Wikidata (027) + 2 cups (028) + honours (029) + 19 match details and profiles (031) + 2 power rankings (032) + cup tables (035) + power roles (037) + season keys (039) + 12 status page (043) + 2 home settings (044) + home leaders (046) + edition keys (047) + home player rows (048) + presence (053) + 2 performance peers (055) + player match keys (057) + 2 archive seasons (058)
+        self.assertEqual(len([v for v in views if v.startswith("api.")]), 105)  # 21 + 5 read API (016) + 3 players (019) + media (020) + 4 matches (021) + 2 (022) + cards (023) + 3 search (024) + 4 archives (025) + 4 rankings (026) + 4 Wikidata (027) + 2 cups (028) + honours (029) + 19 match details and profiles (031) + 2 power rankings (032) + cup tables (035) + power roles (037) + season keys (039) + 12 status page (043) + 2 home settings (044) + home leaders (046) + edition keys (047) + home player rows (048) + presence (053) + 2 performance peers (055) + player match keys (057) + 2 archive seasons (058) + 3 player list (060)
         self.assertEqual(len([v for v in views if v.startswith("ops.")]), 4)  # + live reliability (042)
         for view in views:
             self.db.execute(f"SELECT * FROM {view} LIMIT 5").fetchall()
