@@ -18,7 +18,7 @@ import { fetchWikidataClub } from "../../dashboard/frontend/src/services/wikidat
 import { resolveClubIdentity } from "../../dashboard/frontend/src/services/wikidata-club-identity.js";
 import { fetchWikidataStadium } from "../../dashboard/frontend/src/services/wikidata-stadium.js";
 import { stadiumPlans } from "../../dashboard/frontend/src/services/stadium-plans.js";
-import { findCoachPortraitBatch } from "../../dashboard/scripts/coach-portrait-source.mjs";
+import { findCoachPortraitBatch } from "./coach-portrait-source.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 let out;
@@ -31,7 +31,7 @@ else if (command === "plans") {
   out = Object.fromEntries([...new Set(source.match(/\bQ[1-9]\d{0,11}(?=:)/g) || [])].map((id) => [id, stadiumPlans(id)]));
 } else if (command === "projection") {
   if (!["open-cups", "openligadb", "nations-results"].includes(args[0])) process.exit(2);
-  const { GET } = await import(`../../dashboard/scripts/source-projections/${args[0]}.mjs`);
+  const { GET } = await import(`./projections/${args[0]}.mjs`);
   const response = await GET(new Request(`http://bridge/api/${args[0]}?${args[1] || ""}`));
   out = { status: response.status, body: await response.json().catch(() => null) };
 } else {

@@ -34,7 +34,7 @@ def build(output, kind="api"):
             check=True,
         )
         if "rds-ca.pem" in files:
-            shutil.copyfile(ROOT / "dashboard/backend/certs/rds-us-east-2.pem", stage / "rds-ca.pem")
+            shutil.copyfile(ROOT / "v2/certs/rds-us-east-2.pem", stage / "rds-ca.pem")
         # Offline: a path no route claims answers 404 without touching the database or AWS.
         check = f"""import {{handler}} from './index.mjs';
 const event={{version:'2.0',rawPath:'{nothing}',rawQueryString:'',headers:{{}},requestContext:{{http:{{method:'GET'}}}}}};

@@ -37,11 +37,6 @@ def fake_get(url, as_text=False):
 
 
 class PureTest(unittest.TestCase):
-    def test_europe_follows_main(self):
-        text = (ROOT.parent / "dashboard/scripts/collect_open_matchday.py").read_text()
-        codes = re.search(r"EUROPE = set\('([A-Z ]+)'\.split\(\)\)", text).group(1).split()
-        self.assertEqual(set(codes), open_matchday.EUROPE)
-
     def test_season_label(self):
         self.assertEqual(open_matchday.season_label("2627"), "2026/2027")
         with self.assertRaises(SourceError):

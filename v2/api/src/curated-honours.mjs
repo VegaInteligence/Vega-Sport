@@ -1,6 +1,4 @@
-import { readFileSync } from "node:fs";
-import { pathToFileURL } from "node:url";
-import { normalized, projectionGroups } from "../shared/honour-display.js";
+import { normalized } from "../../../dashboard/shared/honour-display.js";
 export const MESSI_ID = "p_1mZO3B";
 
 // Principal honours verified against FIFA, UEFA, FC Barcelona and MLS.
@@ -121,25 +119,4 @@ export function mergeMessiHonours(extra) {
     }
   }
   return groups;
-}
-
-export function curatedProjections(source) {
-  const body = source ?? { honours: [] };
-  // Capture the previous verified display order/counts alongside the original
-  // projection. The reader serves both from the same committed SQL generation.
-  const extra = body.available ? projectionGroups(body.honours) : [];
-  return [
-    {
-      name: "player-honours",
-      params: { id: MESSI_ID },
-      body: { ...body, displayGroups: mergeMessiHonours(extra) },
-    },
-  ];
-}
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
-  const source = JSON.parse(readFileSync(0, "utf8"));
-  process.stdout.write(JSON.stringify(curatedProjections(source)) + "\n");
 }

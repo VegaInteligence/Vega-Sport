@@ -16,7 +16,7 @@ import sys
 BATCH = 4  # per hourly run: about a hundred a day
 PERIOD = timedelta(days=7)
 MESSI = "p_1mZO3B"
-SCRIPTS = Path(os.environ.get("VEGA_ARCHIVE_SCRIPTS", Path(__file__).resolve().parents[3] / "dashboard/scripts"))
+SCRIPTS = Path(os.environ.get("VEGA_ARCHIVE_SCRIPTS", Path(__file__).resolve().parents[3] / "v2/archives/builders"))
 QID = re.compile(r"^https://www\.wikidata\.org/wiki/(Q[1-9]\d{0,11})$")
 
 

@@ -81,29 +81,14 @@ class PureTest(unittest.TestCase):
         site = {key: tuple(re.findall(r'"([^"]+)"', values)) for key, values in re.findall(r"(p_[A-Za-z0-9]{6}): Object\.freeze\(\[(.*?)\]\)", body)}
         self.assertEqual(site, curated.PLAYER_ALIASES)
 
-    def test_curated_club_aliases_match_main(self):
-        text = (ROOT.parent / "dashboard/scripts/collect_rankings.py").read_text()
-        body = re.search(r"aliases=(\{.*?\})\n", text).group(1)
-        self.assertEqual(dict(re.findall(r"'([^']+)':'([^']+)'", body)), curated.CLUB_ALIASES)
-
     def test_sportscore_leagues_match_the_site(self):
         text = (ROOT.parent / "dashboard/frontend/src/services/sportscore-standings.js").read_text()
         body = re.search(r"SPORTSCORE_LEAGUES = Object\.freeze\(\{(.*?)\}\);", text, re.S).group(1)
         self.assertEqual(dict(re.findall(r'(l_[A-Za-z0-9]{6}): "([a-z0-9-]+)"', body)), sportscore.LEAGUES)
 
-    def test_cup_editions_match_main(self):
-        # The editions main refreshes (scripts/aws_refresh_sources.mjs) and its national cup archives.
-        text = (ROOT.parent / "dashboard/scripts/aws_refresh_sources.mjs").read_text()
+    def test_national_cup_archives_match_the_site(self):
         archives = (ROOT.parent / "dashboard/frontend/src/services/cup-archives.js").read_text()
         self.assertEqual(re.findall(r'key: "([a-z-]+)"', archives), list(cups.NATIONAL_CUP_ARCHIVES))
-        before = text.split('jobs.push(["open-cups", { competition: "world-cup-history"')[0]
-        years = before.rsplit("for (const season of [", 1)[1]
-        self.assertEqual(tuple(re.findall(r'"(\d{4})"', years)), cups.WORLD_CUP_YEARS)
-        for kind, competition, season in cups.EDITIONS:
-            if competition.endswith("-archive"):
-                continue
-            self.assertIn(competition, text)
-            self.assertIn(f'"{season}"', text)
 
     def test_pagination_must_be_complete(self):
         get = FakeSource({("MEN_CLUB", 2027, 1): uefa_page([club(1, "A", "FRA", 1, 10)], 3)})

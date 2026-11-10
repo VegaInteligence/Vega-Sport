@@ -26,7 +26,7 @@ import { createArchiveRoute } from "./routes/archives.mjs";
 import { createRankingRoute } from "./routes/rankings.mjs";
 import { createSupportRoute } from "./routes/support.mjs";
 import { createCupRoute } from "./routes/cups.mjs";
-import { compactHomePresentation } from "../../../dashboard/backend/services/home-presentation.js";
+import { compactHomePresentation } from "./home-presentation.mjs";
 
 /** main's compact home cards (media=1), plus what the v2 choice of « Prochains matchs »
  * reads (home-upcoming.js on the site): each offered match's editorial weight and cup

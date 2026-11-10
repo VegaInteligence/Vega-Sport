@@ -2,7 +2,7 @@
  * GET /api/seasons/partition — one league season, 25 matches a page, in main's season
  * document (partitionPage of relational-core.js): meta, competitions, teams, fixtures,
  * matches and appearances; `format=columns` packs it with main's own packPartition
- * (dashboard/backend/services/partition-wire.js, imported unchanged). Pages follow the
+ * (partition-wire.mjs). Pages follow the
  * (day, id) order with the cursor of /api/fixtures; `v` is the manifest's sourceDigest of
  * the partition (409 once it changed).
  *
@@ -14,7 +14,7 @@
  * appearances carry no extra metrics (the site has its own labels); `warnings` are empty;
  * the match and appearance records are those of match-record.mjs and performance.mjs.
  */
-import { packPartition } from "../../../../dashboard/backend/services/partition-wire.js";
+import { packPartition } from "../partition-wire.mjs";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 import { assembleMatch, matchRecordColumns } from "../match-record.mjs";
 import { fixture, nextPage, pageArgs, tag } from "./matches.mjs";

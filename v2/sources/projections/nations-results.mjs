@@ -1,4 +1,4 @@
-import { parseNationsResults } from "../../frontend/src/services/nations-results.js";
+import { parseNationsResults } from "../../../dashboard/frontend/src/services/nations-results.js";
 export async function GET(request) {
   const season = new URL(request.url).searchParams.get("season");
   if (season !== "2026/2027")
