@@ -69,6 +69,9 @@ async function overview({
   now = "2026-11-01T21:00:00Z",
   summary,
   onRead = () => {},
+  v2 = false,
+  personal = null,
+  lists = [],
 }) {
   const stubs = {
     react: {
@@ -90,7 +93,7 @@ async function overview({
     },
     "../hooks/FootballContext.jsx": { useFootball: () => context },
     "../hooks/ResearchContext.jsx": {
-      useResearch: () => ({ data: { lists: [] } }),
+      useResearch: () => ({ ready: true, data: { lists } }),
     },
     "../services/resource-bootstrap.js": { useResourceBootstrap: () => null },
     "../services/home-bootstrap-preferences.js": { mirrorHomeState: () => {} },
@@ -105,10 +108,12 @@ async function overview({
     },
     "../hooks/useCompactRead.js": {
       __esModule: true,
-      default: (kind, values) => {
-        onRead(kind, values);
+      default: (kind, values, options = {}) => {
+        // A disabled read (v2's favourites read on the current API) requests nothing.
+        if (options.enabled !== false) onRead(kind, values);
         if (!summary)
           throw new Error("Legacy home must not request compact data");
+        if (kind === "home-favourites") return options.enabled === false ? { loading: false } : personal;
         return summary;
       },
     },
@@ -135,6 +140,7 @@ async function overview({
     },
     "../components/HomePlayers.jsx": {
       AlsoShone: () => null,
+      YourPlayers: ({ players }) => h("section", { "data-yours": (players || []).map((p) => p.playerId).join(",") }),
       Finishing: () => null,
       PlayerOfTheWeek: () => null,
       SeasonScorers: () => null,
@@ -143,7 +149,7 @@ async function overview({
       BallonDorRace: () => h("div", { "data-race": "" }),
       BallonDorTeaser: () => h("div", { "data-teaser": "" }),
       BestDefence: () => null,
-      NextMatches: () => null,
+      NextMatches: ({ highlights }) => h("section", { "data-next": highlights.map((m) => m.fixture.id).join(",") }),
       TitleRace: () => null,
       WinStreak: ({ next }) =>
         h("span", { "data-streak-next": next?.fixture?.id || "" }),
@@ -156,9 +162,11 @@ async function overview({
     "../services/competition-identity.js": await src(
       "services/competition-identity.js",
     ),
-    "../services/ballon-dor.js": { ballonDorRanking: () => ranking },
+    "../services/ballon-dor.js": { ballonDorRanking: () => ranking, useBallonDorRanking: () => ranking },
     "../data-url.js": { dataUrl: (file) => "/data/" + file },
     "../services/home-insights.js": await src("services/home-insights.js"),
+    "../services/v2-routes.js": { API_V2: v2 },
+    "../services/home-upcoming.js": await src("services/home-upcoming.js"),
     "../../../shared/competition-scope.js": await import(
       path.join(root, "dashboard/shared/competition-scope.js")
     ),
@@ -432,4 +440,36 @@ test("compact home hides a past next fixture even while the summary is retained"
     summary,
   });
   assert.match(future, /data-streak-next="past-next-fixture"/);
+});
+
+test("v2 home: a common read without favourites, their own read, the five upcoming matches chosen from both", async () => {
+  const f = context({
+    compactMode: true,
+    manifest: { defaultSeason: "2026/2027", publicationVersion: "g1", seasons: [], competitions: [] },
+    preferences: { favoriteLeagueIds: [PREMIER], onboardingComplete: true },
+  });
+  const later = (hours, id, extra = {}) => ({ fixture: { id }, time: Date.parse("2026-11-01T21:00:00Z") + hours * 3_600_000, ...extra });
+  const summary = homeSummary();
+  summary.value.data.highlights = [later(30, "big", { weight: 9 }), later(40, "small", { weight: 2 })];
+  summary.value.data.rules = { places: 5, favouritePlaces: 3, bigCardHours: 48 };
+  const personal = {
+    loading: false,
+    value: {
+      data: {
+        favourites: [{ teamId: "t_mine01", strength: 1 }],
+        upcoming: [later(20, "mine", { favourites: ["t_mine01"] })],
+        yourPlayers: [{ playerId: "p_mine01", matches: [], next: null }],
+      },
+    },
+  };
+  const requests = [];
+  const html = await overview({
+    context: f, summary, personal, v2: true, onRead: (...args) => requests.push(args),
+    lists: [{ entries: [{ kind: "clubs", id: "t_mine01" }, { kind: "players", id: "p_mine01" }] }],
+  });
+  assert.deepEqual(requests.map(([kind]) => kind), ["home", "home-favourites"]);
+  assert.equal(requests[0][1].personalTeams, undefined); // the common read stays common
+  assert.deepEqual([requests[1][1].personalTeams, requests[1][1].personalPlayers], ["t_mine01", "p_mine01"]);
+  assert.match(html, /data-next="mine,big,small"/); // the favourite within 48 h is the big card
+  assert.match(html, /data-yours="p_mine01"/);
 });

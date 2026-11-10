@@ -1,0 +1,45 @@
+{
+ "season": "2627",
+ "generated_utc": "2026-11-09T05:30:38Z",
+ "leagues": [
+  {
+   "league": "Premier League",
+   "folder": "data/ENG_1_premier-league",
+   "dropped_fd": 0,
+   "dropped_dup_fixtures": 0,
+   "dropped_reversed_dupes": 0,
+   "dropped_stale_postponed": 0,
+   "corners": 100,
+   "results": 100,
+   "fixtures": 280,
+   "errors": [],
+   "latest": "2026-11-08"
+  },
+  {
+   "league": "OFB Cup",
+   "folder": "data/AUT_CUP_ofb-cup",
+   "dropped_fd": 0,
+   "dropped_dup_fixtures": 0,
+   "dropped_reversed_dupes": 0,
+   "dropped_stale_postponed": 0,
+   "corners": 0,
+   "results": 56,
+   "fixtures": 4,
+   "errors": [],
+   "latest": "2026-10-29"
+  },
+  {
+   "league": "Brasileir\u00e3o S\u00e9rie A",
+   "folder": "data/BRA_1_serie-a",
+   "dropped_fd": 0,
+   "dropped_dup_fixtures": 0,
+   "dropped_reversed_dupes": 0,
+   "dropped_stale_postponed": 3,
+   "corners": 0,
+   "results": 339,
+   "fixtures": 41,
+   "errors": [],
+   "latest": "2026-11-06"
+  }
+ ]
+}

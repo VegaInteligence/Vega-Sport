@@ -16,6 +16,9 @@ import {
   readCompact,
   readCompactPages,
 } from "./compact-reads.js";
+import { apiUrl } from "../data-url.js";
+import { publicApiFetch } from "./public-api-fetch.js";
+import { API_V2 } from "./v2-routes.js";
 import {
   clubCompetitions,
   clubSquad,
@@ -294,19 +297,21 @@ export function useReferential(leagues) {
   );
 }
 
-/* ------------------------------------------------------ Europe (DEMO) */
+/* ----------------------------------------------------------- Europe */
 
 /**
- * LOCAL DEMO: the European pool is read from public/demo/europe-clubs.json,
- * built by scripts/demo-europe-clubs.mjs. It stands in for the server-side
- * aggregate a release needs (one read instead of ~130).
+ * The European pool: every club of the Top 7 leagues, their finished league
+ * and UEFA matches with the team statistics ranked here, their five-year UEFA
+ * coefficient and their level.
  *
- * Level of a club, in xG difference per match (Premier League average = 0),
- * half from the season, half from the long run:
- *  - season: league offset + 0.8 × xG difference per match in its league;
- *  - long run: 0.6 × ln(UEFA five-year club coefficient / 15). Unranked
- *    clubs take 70 % of their association's floor (20 % of its coefficient).
- * Offsets and floors are demo calibrations, to be fitted on results.
+ * On the v2 API (NEXT_PUBLIC_API_SCHEMA=v2) it is read from the base:
+ * /api/clubs/europe, then /api/clubs/europe/matches for each competition. A
+ * club's level is its Elo of the power ranking, fitted on every result,
+ * league and European cups alike (docs/calculs/04-clubs/03).
+ *
+ * The current API has no such aggregate: until the switch, the pool is read
+ * from public/demo/europe-clubs.json (scripts/demo-europe-clubs.mjs) and the
+ * level uses the demo calibrations below.
  */
 export const EUROPE_LEVELS = {
   ENG: 0,
@@ -334,77 +339,135 @@ function levelScore(country, xgd, coefficient) {
 }
 export const LEVEL_PEERS = 30;
 
-function europeLoad() {
-  return cachedLoad("demo|europe", async () => {
-    const response = await fetch("/demo/europe-clubs.json");
-    if (!response.ok)
-      throw new Error(
-        "Agrégat européen de démo absent : lancez node scripts/demo-europe-clubs.mjs.",
-      );
-    const data = await response.json();
-    const byClub = new Map();
-    for (const m of data.matches)
-      for (const id of [m.home.id, m.away.id]) {
-        if (!byClub.has(id)) byClub.set(id, []);
-        byClub.get(id).push(m);
-      }
-    const summaries = new Map(
-      [...byClub].map(([id, matches]) => [id, { matches }]),
-    );
-    const uefa = data.uefa.map((c) => c.id);
-    const strength = new Map(),
-      clubs = [];
-    for (const league of data.leagues) {
-      const members = data.clubs
-        .filter((c) => c.leagueId === league.id)
-        .map((c) => ({ ...c, league }));
-      // League matches set the level; league + UEFA matches are ranked.
-      const domestic = buildCohort({ league, cohortClubs: members, summaries });
-      for (const club of domestic.clubs)
-        strength.set(club.id, {
-          score: levelScore(
-            league.country,
-            (club.values.xg ?? 0) - (club.values.xga ?? 0),
-            members.find((m) => m.id === club.id)?.uefaCoefficient,
-          ),
-          coefficient:
-            members.find((m) => m.id === club.id)?.uefaCoefficient ?? null,
-          position: club.position,
-          xptsPosition: club.xptsPosition,
-          league,
-        });
-      const european = buildCohort({
-        league,
-        cohortClubs: members,
-        summaries,
-        scope: new Set([league.id, ...uefa]),
-      });
-      for (const club of european.clubs) {
-        club.strength = strength.get(club.id)?.score ?? null;
-        club.leaguePosition = strength.get(club.id)?.position ?? null;
-        club.leagueXptsPosition = strength.get(club.id)?.xptsPosition ?? null;
-        club.coefficient = strength.get(club.id)?.coefficient ?? null;
-      }
-      clubs.push(...european.clubs);
-    }
-    return { season: data.season, builtAt: data.builtAt, clubs, strength };
-  });
+async function readEurope(path, params) {
+  const response = await publicApiFetch(
+    apiUrl(`${path}?${new URLSearchParams(params)}`),
+    { headers: { Accept: "application/json" } },
+  );
+  const body = await response.json().catch(() => null);
+  if (!response.ok || !body?.data)
+    throw new Error(body?.error?.message || "Pool européen indisponible.");
+  return body.data;
 }
 
-/** DEMO European pool (Top 7 leagues, league + UEFA matches). */
+/** The pool of the v2 base, in the shape of the demo file. */
+export async function readEuropePool({ season, generation }) {
+  const scope = { season, ...(generation ? { generation } : {}) };
+  const head = await readEurope("/api/clubs/europe", scope);
+  const parts = await Promise.all(
+    [...head.leagues, ...head.uefa].map((league) =>
+      readEurope("/api/clubs/europe/matches", { ...scope, league: league.id }),
+    ),
+  );
+  const matches = new Map();
+  for (const part of parts) for (const m of part.matches) matches.set(m.id, m);
+  return { ...head, matches: [...matches.values()] };
+}
+
+async function demoEuropePool() {
+  const response = await fetch("/demo/europe-clubs.json");
+  if (!response.ok)
+    throw new Error(
+      "Agrégat européen de démo absent : lancez node scripts/demo-europe-clubs.mjs.",
+    );
+  return response.json();
+}
+
+function europeKey({ season, generation }) {
+  return API_V2 ? (season && generation ? `${generation}|${season}|europe` : null) : "demo|europe";
+}
+
+/** Cohorts of the pool; `data` is the v2 read or the demo file. */
+export function buildEuropePool(data) {
+  const real = data.level?.kind === "elo";
+  const byClub = new Map();
+  for (const m of data.matches)
+    for (const id of [m.home.id, m.away.id]) {
+      if (!byClub.has(id)) byClub.set(id, []);
+      byClub.get(id).push(m);
+    }
+  const summaries = new Map(
+    [...byClub].map(([id, matches]) => [id, { matches }]),
+  );
+  const uefa = data.uefa.map((c) => c.id);
+  const strength = new Map(),
+    clubs = [];
+  for (const league of data.leagues) {
+    const members = data.clubs
+      .filter((c) => c.leagueId === league.id)
+      .map((c) => ({ ...c, league }));
+    // League matches set the level; league + UEFA matches are ranked.
+    const domestic = buildCohort({ league, cohortClubs: members, summaries });
+    for (const club of domestic.clubs) {
+      const member = members.find((m) => m.id === club.id);
+      strength.set(club.id, {
+        score: real
+          ? (member?.level ?? null)
+          : levelScore(
+              league.country,
+              (club.values.xg ?? 0) - (club.values.xga ?? 0),
+              member?.uefaCoefficient,
+            ),
+        coefficient: member?.uefaCoefficient ?? null,
+        position: club.position,
+        xptsPosition: club.xptsPosition,
+        league,
+      });
+    }
+    const european = buildCohort({
+      league,
+      cohortClubs: members,
+      summaries,
+      scope: new Set([league.id, ...uefa]),
+    });
+    for (const club of european.clubs) {
+      club.strength = strength.get(club.id)?.score ?? null;
+      club.leaguePosition = strength.get(club.id)?.position ?? null;
+      club.leagueXptsPosition = strength.get(club.id)?.xptsPosition ?? null;
+      club.coefficient = strength.get(club.id)?.coefficient ?? null;
+    }
+    clubs.push(...european.clubs);
+  }
+  return {
+    season: data.season,
+    builtAt: data.builtAt,
+    demo: !real,
+    clubs,
+    strength,
+    // Elo of every club ranked in the season, the pool's clubs and the others.
+    levels: real ? new Map(Object.entries(data.levels || {})) : null,
+  };
+}
+
+function europeLoad(publication) {
+  const key = europeKey(publication);
+  return cachedLoad(key, async () =>
+    buildEuropePool(
+      API_V2 ? await readEuropePool(publication) : await demoEuropePool(),
+    ),
+  );
+}
+
+/** European pool (Top 7 leagues, league + UEFA matches). */
 export function useEuropePool(enabled = true) {
-  return useCachedState(enabled ? "demo|europe" : null, () => europeLoad());
+  const publication = usePublication();
+  const key = europeKey(publication);
+  return useCachedState(enabled ? key : null, () => europeLoad(publication));
+}
+
+/** Level of a club of the pool, else its Elo (v2), else from its own league values (demo). */
+function poolLevel(pool, clubId) {
+  return pool?.strength.get(clubId)?.score ?? pool?.levels?.get(clubId) ?? null;
 }
 
 /** Level of any club: from the pool, else from its own league values. */
 export function clubStrength(dossier, pool) {
-  return (
-    pool?.strength.get(dossier.id)?.score ??
-    levelScore(
-      dossier.league?.country,
-      (dossier.self.values.xg ?? 0) - (dossier.self.values.xga ?? 0),
-      null,
-    )
+  const level = poolLevel(pool, dossier.id);
+  if (level != null || pool?.levels) return level;
+  return levelScore(
+    dossier.league?.country,
+    (dossier.self.values.xg ?? 0) - (dossier.self.values.xga ?? 0),
+    null,
   );
 }
 
@@ -418,10 +481,10 @@ function nearestClubs(pool, score, except) {
 
 /**
  * Club ids of comparable level for a player's club (the club included), or
- * null when the club is outside the European pool.
+ * null when the club has no level (outside the pool, and no Elo on v2).
  */
 export function levelPeerClubs(pool, clubId) {
-  const score = pool?.strength.get(clubId)?.score;
+  const score = poolLevel(pool, clubId);
   if (score == null) return null;
   const clubs = nearestClubs(pool, score, clubId);
   return {
@@ -439,7 +502,8 @@ export function europeReferential(dossier, pool, { level = false } = {}) {
   const score = clubStrength(dossier, pool);
   const own = pool.clubs.find((club) => club.id === dossier.id);
   let clubs = pool.clubs;
-  if (level) {
+  const byLevel = level && score != null;
+  if (byLevel) {
     clubs = nearestClubs(pool, score, dossier.id);
     if (own) clubs = [...clubs, own];
   }
@@ -447,13 +511,13 @@ export function europeReferential(dossier, pool, { level = false } = {}) {
   const view = rebase(
     dossier,
     [{ clubs }],
-    level ? "Europe · niveau comparable" : "Top 7 Europe + UEFA",
+    byLevel ? "Europe · niveau comparable" : "Top 7 Europe + UEFA",
     {
       perMatch: true,
       multi: true,
       meta: {
         europe: true,
-        level,
+        level: byLevel,
         strength: score,
         range: [Math.min(...levels), Math.max(...levels)],
         leagues: new Set(clubs.map((club) => club.league?.id)).size,

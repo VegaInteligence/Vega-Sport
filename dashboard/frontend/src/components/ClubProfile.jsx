@@ -119,6 +119,7 @@ export function ClubFacts({ club, matches }) {
             <StadiumDialog
               name={stadium}
               id={wiki?.stadiumId}
+              clubId={club.id}
               onClose={() => setStadiumOpen(false)}
             />
           )}

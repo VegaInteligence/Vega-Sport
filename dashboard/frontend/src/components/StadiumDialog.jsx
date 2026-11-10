@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import { API_V2, stadiumPath } from "../services/v2-routes.js";
 import { Modal, AsyncState } from "./UI.jsx";
 import { useResource, json } from "../services/resources.js";
 import { number } from "../services/format.js";
@@ -129,11 +130,11 @@ function StadiumPlans({ plans }) {
   );
 }
 
-export default function StadiumDialog({ name, id, onClose }) {
+export default function StadiumDialog({ name, id, clubId, onClose }) {
   const resource = useResource(
-    `stadium:${id || "unknown"}`,
-    () => json(`/api/stadium?id=${encodeURIComponent(id)}`),
-    Boolean(id),
+    `stadium:${(API_V2 ? clubId : id) || "unknown"}`,
+    () => json(API_V2 ? stadiumPath(clubId) : `/api/stadium?id=${encodeURIComponent(id)}`),
+    Boolean(id && (!API_V2 || clubId)),
   );
   return (
     <Modal title={name} onClose={onClose} className="stadium-dialog">

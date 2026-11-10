@@ -10,6 +10,8 @@ import { mirrorHomeState } from "../services/home-bootstrap-preferences.js";
 import { AsyncState, Empty } from "../components/UI.jsx";
 import useCompactRead from "../hooks/useCompactRead.js";
 import { compactGeneration, compactScope } from "../services/compact-reads.js";
+import { API_V2 } from "../services/v2-routes.js";
+import { chooseUpcoming } from "../services/home-upcoming.js";
 import { fixtureWeek, parisDay } from "../services/fixtures.js";
 import HomePreferences from "../components/HomePreferences.jsx";
 import SeasonFilter from "../components/SeasonFilter.jsx";
@@ -19,7 +21,7 @@ import {
   NumberOfTheWeek,
 } from "../components/HomeMatchday.jsx";
 import {
-  AlsoShone,
+  AlsoShone, YourPlayers,
   Finishing,
   PlayerOfTheWeek,
   SeasonScorers,
@@ -33,7 +35,7 @@ import {
   WinStreak,
 } from "../components/HomeSeason.jsx";
 import { json, useResource } from "../services/resources.js";
-import { ballonDorRanking } from "../services/ballon-dor.js";
+import { useBallonDorRanking } from "../services/ballon-dor.js";
 import { competitionIndex } from "../services/competition-identity.js";
 import { europeFocusIds } from "../../../shared/competition-scope.js";
 import {
@@ -206,7 +208,7 @@ function LegacyOverview() {
   );
   const override = params.get("ballondor");
   // The Ballon d'Or blocks show only the STATARENA ranking, never a stand-in list.
-  const ranking = ballonDorRanking(f.season);
+  const ranking = useBallonDorRanking(f.season);
   const raceOpen =
     override === "ouvert"
       ? true
@@ -303,17 +305,28 @@ function CompactOverview() {
         .sort()
         .slice(0, 100)
         .join(","),
+    common = {
+      season: f.season,
+      leagues: scopeKey,
+      generation: compactGeneration(f.manifest),
+      archive: archived ? 1 : undefined,
+    },
+    favourites = { personalTeams: saved("clubs"), personalPlayers: saved("players") },
+    // v2 (doc "Accueil": two reads): the common read is the same for every visitor of a
+    // scope and cached as such; the favourites are a small personal read of their own.
     summary = useCompactRead(
       "home",
-      {
-        season: f.season,
-        leagues: scopeKey,
-        generation: compactGeneration(f.manifest),
-        archive: archived ? 1 : undefined,
-        personalTeams: saved("clubs"),
-        personalPlayers: saved("players"),
-      },
+      API_V2 ? common : { ...common, ...favourites },
       { clock: Math.floor(now / 300_000), refreshManifest: f.refreshManifest },
+    ),
+    personal = useCompactRead(
+      "home-favourites",
+      { ...common, ...favourites },
+      {
+        enabled: API_V2 && Boolean(favourites.personalTeams || favourites.personalPlayers),
+        clock: Math.floor(now / 300_000),
+        refreshManifest: f.refreshManifest,
+      },
     );
   useEffect(() => {
     if (!f.preferencesReady || !research?.ready) return;
@@ -371,9 +384,18 @@ function CompactOverview() {
             f.competitions,
             data.competitions || [],
           ),
-          highlights = (data.highlights || []).filter(
-            (item) => item.time >= now,
-          );
+          mine = API_V2 ? personal.value?.data : null,
+          // v2: the five upcoming matches from the big matches and the favourites'
+          // (home-upcoming.js); the current API sends them chosen.
+          highlights = API_V2
+            ? chooseUpcoming({
+                editorial: data.highlights || [],
+                favourites: mine?.favourites,
+                matches: mine?.upcoming,
+                rules: data.rules,
+                now,
+              })
+            : (data.highlights || []).filter((item) => item.time >= now);
         return (
           <>
             {summary.refreshing && (
@@ -415,6 +437,7 @@ function CompactOverview() {
                 win: validPeriod ? data.win : null,
                 tables: data.tables || [],
                 highlights,
+                yourPlayers: API_V2 ? mine?.yourPlayers || [] : data.yourPlayers,
                 streakNext:
                   data.streakNext?.time >= now ? data.streakNext : null,
                 leaders: data.leaders || {
@@ -471,6 +494,7 @@ function OverviewContent({
     ranking,
     progressValue,
     hasSeasonPlayers,
+    yourPlayers,
   } = model;
   if (
     !results.length &&
@@ -666,6 +690,7 @@ function OverviewContent({
           </div>
         )}
       </div>
+      <YourPlayers players={yourPlayers} period={matchWeek} now={now} />
       <AlsoShone
         performances={others}
         matches={matchIndex}
