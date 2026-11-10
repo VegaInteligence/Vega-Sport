@@ -37,6 +37,13 @@ test("the packed columns decode to the same season", { skip }, async () => {
 
 test("versions, validation and unknown partitions", { skip }, async () => {
   const manifest = (await get("/api/dashboard/manifest")).body;
+  // The site turns its compact reads, its search, its ordered fixtures and its versioned
+  // partitions on from these values (it loads whole seasons for any other storage).
+  assert.equal(manifest.storage, "aws-relational");
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(manifest.capabilities).filter(([, value]) => typeof value === "boolean")),
+    { boundedSearch: true, fixturePaginationOrder: true, versionedPartitions: true, playerRatingRanking: true, actorSummary: true, resolvedMedia: false, boundedArchive: true },
+  );
   const chunk = manifest.seasons.find((s) => s.id === "2025/2026").chunks.find((c) => c.leagueId === "l_3FJFUl");
   assert.equal((await get(BASE + "&v=" + chunk.sourceDigest)).response.status, 200);
   assert.equal((await get(BASE + "&v=" + "0".repeat(64))).response.status, 409);

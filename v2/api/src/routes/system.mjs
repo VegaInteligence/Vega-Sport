@@ -83,13 +83,19 @@ export function createSystemRoute(read) {
       req,
       {
         schemaVersion: 4,
-        storage: "aws-relational-v2",
+        // What the site reads to choose its reads (dashboard/frontend: compact-reads.js,
+        // season_data.js, actor-reads.js, global-search-client.js, season-version.js). Any
+        // other storage makes it load whole seasons through /api/seasons/partition, the
+        // home included: that is what "aws-relational-v2" did when the site was first
+        // pointed at this API on 10 November 2026.
+        storage: "aws-relational",
         capabilities: {
-          boundedSearch: false,
-          fixturePaginationOrder: false,
-          versionedPartitions: false,
-          playerRatingRanking: false,
-          actorSummary: false,
+          boundedSearch: true, // /api/search
+          fixturePaginationOrder: true, // /api/fixtures: order, cursor
+          versionedPartitions: true, // /api/seasons/partition: v
+          playerRatingRanking: true, // /api/read/players: ranking=rating
+          actorSummary: true, // /api/read/player and /api/read/club: detail=summary
+          // The site would add media=1 to every compact read; only /api/read/clubs takes it.
           resolvedMedia: false,
           boundedArchive: true,
           compactReads: COMPACT_READS,
