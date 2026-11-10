@@ -51,6 +51,14 @@ FOREIGN_KIND = {
 }
 
 
+def dirty_scope_order(kind, player, team):
+    """The one order in which a transaction touches an edition's rows of ops.dirty_scopes.
+    The collector marks them and the calculator clears them in this order: two transactions
+    that take the same rows in the same order cannot wait on each other in a cycle (they
+    did, about once every ten minutes, while the calculator cleared them oldest first)."""
+    return (kind, player or 0, team or 0)
+
+
 class StoreError(RuntimeError):
     """Messages are codes, never provider values or SQL rejected-row details."""
 
@@ -485,9 +493,7 @@ class Store:
             if player and team:
                 targets.add(("player_season", player, team))
                 self._bump("player", player)
-        for kind, player, team in sorted(
-            targets, key=lambda item: (item[0], item[1] or 0, item[2] or 0)
-        ):
+        for kind, player, team in sorted(targets, key=lambda item: dirty_scope_order(*item)):
             self.conn.execute(
                 "INSERT INTO ops.dirty_scopes(scope_kind,player_id,team_id,competition_season_id) VALUES(%s,%s,%s,%s) ON CONFLICT(scope_kind,player_id,team_id,competition_season_id,cohort_id) DO UPDATE SET revision=ops.dirty_scopes.revision+1,queued_at=now()",
                 (kind, player, team, edition),

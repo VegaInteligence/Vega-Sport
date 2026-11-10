@@ -7,6 +7,7 @@ scope was being computed; a newer correction therefore always triggers another p
 
 from psycopg import sql
 
+from .store import dirty_scope_order
 from .metric_catalog import (
     PLAYER_ADVANCED,
     PLAYER_BASE,
@@ -394,7 +395,10 @@ def process_dirty(conn, *, limit=500):
                 conn, cs, players=work["players"], teams=work["teams"] | {t for _, t in work["players"]}
             )
         with conn.transaction():
-            for ident, kind, player, team, _, revision in work["rows"]:
+            # In the collector's order of marking (store.dirty_scope_order), never oldest first.
+            for ident, kind, player, team, _, revision in sorted(
+                work["rows"], key=lambda row: dirty_scope_order(row[1], row[2], row[3])
+            ):
                 # Cleared only if no newer correction arrived meanwhile.
                 conn.execute(
                     "DELETE FROM ops.dirty_scopes WHERE id=%s AND revision=%s", (ident, revision)

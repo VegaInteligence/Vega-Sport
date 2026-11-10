@@ -197,6 +197,43 @@ class CalculatorTest(unittest.TestCase):
             self.db.execute("SELECT count(*) FROM ops.resource_versions WHERE published_at IS NOT NULL").fetchone()[0], 3
         )
 
+    def test_3b_scopes_are_cleared_in_the_order_the_collector_marks_them(self):
+        from vega.calculator import process_dirty
+        from vega.store import dirty_scope_order
+
+        # Queued oldest first in the reverse of the collector's order of marking.
+        queued = [("team_season", None, 2), ("team_season", None, 1), ("player_season", 11, 2), ("player_season", 10, 1), ("competition_season", None, None)]
+        for age, (kind, player, team) in enumerate(queued):
+            self.db.execute(
+                "INSERT INTO ops.dirty_scopes(scope_kind,player_id,team_id,competition_season_id,queued_at) VALUES(%s,%s,%s,1,now() - make_interval(secs => %s))",
+                (kind, player, team, 100 - age),
+            )
+        scopes = {
+            row[0]: row[1:]
+            for row in self.db.execute("SELECT id,scope_kind::text,player_id,team_id FROM ops.dirty_scopes WHERE scope_kind<>'cohort'")
+        }
+        cleared = []
+
+        class Recorder:
+            def __init__(self, conn):
+                self._conn = conn
+
+            def __getattr__(self, name):
+                return getattr(self._conn, name)
+
+            def execute(self, query, params=None, **kwargs):
+                if isinstance(query, str) and query.startswith("DELETE FROM ops.dirty_scopes"):
+                    cleared.append(scopes[params[0]])
+                return self._conn.execute(query, params, **kwargs)
+
+        self.assertEqual(process_dirty(Recorder(self.db)), 5)
+        self.assertEqual(len(cleared), 5)
+        self.assertEqual(cleared, sorted(cleared, key=lambda scope: dirty_scope_order(*scope)))
+        self.assertEqual(cleared[0], ("competition_season", None, None))
+        self.assertEqual(
+            self.db.execute("SELECT count(*) FROM ops.dirty_scopes WHERE scope_kind<>'cohort'").fetchone()[0], 0
+        )
+
     def test_4_xpts_function_matches_the_site_model(self):
         p_win, p_draw, p_loss, value = self.db.execute("SELECT (agg.xpts_v1(1.8,0.9)).*").fetchone()
         self.assertAlmostEqual(value, xpts(1.8, 0.9), places=4)
