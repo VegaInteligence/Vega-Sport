@@ -32,8 +32,6 @@ import { useResource } from "../services/resources.js";
 import { competitionFixturePreview } from "../services/fixture-pages.js";
 import { compactGeneration } from "../services/compact-reads.js";
 import { parisDay } from "../services/fixtures.js";
-import { SPORTSCORE_LEAGUES } from "../services/sportscore-standings.js";
-import { hasUefaStandings } from "../services/uefa-standings.js";
 import { cupIndex as loadCupIndex } from "../services/catalog-client.js";
 import CompetitionHighlights from "../components/CompetitionHighlights.jsx";
 import SeasonSelect from "../components/SeasonSelect.jsx";
@@ -167,15 +165,14 @@ function Fixtures({ competition, day, initialSeason }) {
     defaultCompetitionMatchStatus(day),
   );
   const [page, setPage] = useState(1);
-  const publishedTable =
-    competition &&
-    (String(competition.seasons?.[0]) === String(season)
-      ? Boolean(SPORTSCORE_LEAGUES[competition.id])
-      : hasUefaStandings(competition.id, season));
+  // A league's table is read from the API for any season (the official one, else the one
+  // the base computes from the results), so the standings view needs a preview of the
+  // fixtures, not the season's whole calendar. CompetitionStandings asks for the
+  // calendar when that table cannot be shown (needFixtures below).
   const previewEnabled =
     !day &&
+    Boolean(competition) &&
     !hasKnockout &&
-    publishedTable &&
     f.manifest.capabilities?.fixturePaginationOrder === true;
   const fixtureScope = `${competition?.id}:${season}`;
   const [fallbackScope, setFallbackScope] = useState(null);
@@ -310,6 +307,7 @@ function Fixtures({ competition, day, initialSeason }) {
             fixturesError={resource.error}
             onRetry={resource.retry}
             onNeedFixtures={needFixtures}
+            served
           />
         ) : (
           <AsyncState resource={resource}>

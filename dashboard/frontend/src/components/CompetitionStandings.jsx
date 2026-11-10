@@ -45,6 +45,21 @@ const isMatchTeam = (row, club, teams) =>
       (team.id && (team.id === row.id || team.id === club?.id)) ||
       (team.name && teamKey(team.name) === teamKey(row.name)),
   );
+/** A table the base computed from the results, as the standings read marks it. */
+const resultDerived = (body) => body?.source === "Vega";
+/**
+ * A result-derived table is only shown for a plain league phase, the rule of
+ * ResultStandings below: a league known to be one, or a finished double round-robin
+ * (every club has played every other twice). Split and play-off formats need the
+ * fixtures, which decide whether a table can be drawn at all.
+ */
+const plainLeagueTable = (competition, tables) =>
+  SIMPLE_LEAGUES.has(competition.id) ||
+  (tables.length === 1 &&
+    tables[0].rows.length >= 3 &&
+    tables[0].rows.every(
+      (row) => row.played === 2 * (tables[0].rows.length - 1),
+    ));
 /** Clubs the visitor saved, from every list. */
 function useFollowedClubs() {
   const r = useResearch();
@@ -273,6 +288,7 @@ function SportscoreTable({
   competition,
   season,
   cup,
+  derived = false,
 }) {
   const f = useFootball();
   const followed = useFollowedClubs();
@@ -300,7 +316,8 @@ function SportscoreTable({
   const display = (value) => (value == null ? "—" : number(value));
   return (
     <section className="standings-group">
-      {(table.name || multiple) && (
+      {/* The base names its own single table after the league: the card already does. */}
+      {(multiple || (table.name && !derived)) && (
         <h3>{table.name || "Tableau " + (index + 1)}</h3>
       )}
       <div
@@ -315,7 +332,9 @@ function SportscoreTable({
       >
         <table className="data-table standings-table">
           <caption className="sr-only">
-            Classement{table.name ? " : " + table.name : ""}
+            {derived
+              ? "Classement calculé à partir des résultats disponibles"
+              : "Classement" + (table.name ? " : " + table.name : "")}
           </caption>
           <thead>
             <tr>
@@ -459,20 +478,34 @@ export default function CompetitionStandings({
     },
     enabled,
   );
+  const derived = resultDerived(external.value);
+  const readable =
+    Boolean(external.value?.tables?.length) &&
+    (!derived || plainLeagueTable(competition, external.value.tables));
   useEffect(() => {
-    if (!enabled || (!external.loading && !external.value?.tables?.length))
-      onNeedFixtures?.();
-  }, [enabled, external.loading, external.value, onNeedFixtures]);
+    if (!enabled || (!external.loading && !readable)) onNeedFixtures?.();
+  }, [enabled, external.loading, readable, onNeedFixtures]);
   if (enabled && external.loading)
     return (
       <div data-page-loading="" className="loading-state" role="status">
         Chargement du classement…
       </div>
     );
-  if (enabled && external.value?.tables?.length) {
+  if (enabled && readable) {
     const tables = external.value.tables;
+    const counted =
+      tables.reduce(
+        (sum, table) =>
+          sum + table.rows.reduce((n, row) => n + (row.played || 0), 0),
+        0,
+      ) / 2;
     return (
       <div className="competition-standings">
+        {derived && (
+          <div className="standings-meta">
+            <span>{number(counted)} matchs pris en compte</span>
+          </div>
+        )}
         {tables.map((table, index) => (
           <SportscoreTable
             key={index}
@@ -485,6 +518,7 @@ export default function CompetitionStandings({
             competition={competition}
             season={season}
             cup={cup}
+            derived={derived}
           />
         ))}
         {tables.length > 1 && tables.some((table) => !table.name) && (

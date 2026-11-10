@@ -49,7 +49,7 @@ const football = () => ({
 });
 
 /** CompetitionStandings with its real services; reads are recorded, never sent. */
-async function standings(table, reads) {
+async function standings(table, reads, source = "SportScore") {
   const stubs = {
     react: React,
     "next/link": { __esModule: true, default: ({ href, children, ...props }) => e("a", { href, ...props }, children) },
@@ -64,7 +64,7 @@ async function standings(table, reads) {
         reads.push({ key, enabled });
         if (!enabled) return { loading: true };
         loader();
-        return table ? { value: { tables: [table] } } : { value: { tables: [] } };
+        return table ? { value: { source, tables: [table] } } : { value: { source, tables: [] } };
       },
       json: (url) => reads.push({ url }),
     },
@@ -91,7 +91,7 @@ const BUNDESLIGA = { id: "l_1Isor4", name: "Bundesliga", seasons: ["2026/2027", 
 
 test("a past season's table is read from the API, and its rows link to their club without any fixture", async () => {
   const reads = [];
-  const Standings = await standings({ name: null, rows: ROWS }, reads);
+  const Standings = await standings({ name: "Bundesliga", rows: ROWS }, reads, "Vega");
   const html = renderToStaticMarkup(
     e(Standings, { competition: BUNDESLIGA, season: "2025/2026", matches: [], served: true, highlightTeams: [{ id: "t_bbbbbb", name: "Bravo" }] }),
   );
@@ -101,6 +101,32 @@ test("a past season's table is read from the API, and its rows link to their clu
   assert.match(html, /<tr[^>]*data-match-team="true"[^>]*>(?:(?!<\/tr>).)*Bravo/s);
   assert.doesNotMatch(html, /<tr[^>]*data-match-team="true"[^>]*>(?:(?!<\/tr>).)*Alpha/s);
   assert.match(html, />89</);
+  // The base computed it from the results: the page says so, and does not repeat the league's name.
+  assert.match(html, /34 matchs pris en compte/);
+  assert.match(html, /Classement calculé à partir des résultats disponibles/);
+  assert.doesNotMatch(html, /<h3>/);
+});
+
+test("a result-derived table is kept to plain league formats; an official one is shown as it is", async () => {
+  const split = { id: "l_split1", name: "Split League", seasons: ["2026/2027", "2025/2026"] };
+  const uneven = [{ ...ROWS[0], played: 38 }, { ...ROWS[1], played: 38 }, { id: "t_cccccc", name: "Charlie", position: 3, points: 40, played: 38, wins: 10, draws: 10, losses: 18, goalsFor: 40, goalsAgainst: 60, difference: -20 }];
+  const reads = [];
+  // Three clubs, 38 matches each: not a double round-robin, and not a league known to be plain.
+  let Standings = await standings({ name: "Split League", rows: uneven }, reads, "Vega");
+  let html = renderToStaticMarkup(e(Standings, { competition: split, season: "2025/2026", matches: [], served: true, fixturesLoading: true }));
+  assert.doesNotMatch(html, /standings-table/);
+  assert.match(html, /Chargement du classement/);
+  // The same league, a finished double round-robin (three clubs, four matches each): shown.
+  const even = uneven.map((row) => ({ ...row, played: 4 }));
+  Standings = await standings({ name: "Split League", rows: even }, reads, "Vega");
+  html = renderToStaticMarkup(e(Standings, { competition: split, season: "2025/2026", matches: [], served: true }));
+  assert.match(html, /standings-table/);
+  assert.match(html, /6 matchs pris en compte/);
+  // An official table is never filtered, and carries no such note.
+  Standings = await standings({ name: "", rows: uneven }, reads, "SportScore");
+  html = renderToStaticMarkup(e(Standings, { competition: split, season: "2025/2026", matches: [], served: true }));
+  assert.match(html, /standings-table/);
+  assert.doesNotMatch(html, /matchs pris en compte/);
 });
 
 test("the current season keeps its read without a season; a cup is not read this way", async () => {
