@@ -10,7 +10,7 @@ const React=require("react"), {renderToStaticMarkup}=require("react-dom/server")
 
 test("cup directory groups international tournaments and national cups by country", async () => {
   const cups=await import("../dashboard/frontend/src/services/cup-catalog.js"), selector=await import("../dashboard/frontend/src/services/competition-selector.js");
-  const item=(folder,name,country)=>({folder,name,country_code:country,tables:{results:{path:"raw/seasons/2026-2027/a.gz",rows:1}}});
+  const item=(folder,name,country)=>({folder,name,country_code:country,season:"2026/2027",tables:{results:{rows:1}}});
   const catalog=cups.mergeCupCatalog([{id:"l_0bfbkO",name:"Champions League",country:"UEFA",seasons:[]}],{competitions:[item("ESP_CUP_copa-del-rey","Copa del Rey","ESP"),item("ENG_CUP_fa-cup","FA Cup","ENG"),item("GER_CUP_dfb-pokal","DFB Pokal","GER")]},[{id:"l_ABC123",name:"Coupe de Belgique",country:"BEL",seasons:["2026/2027"]},{id:"l_DEF456",name:"Nouvelle coupe mondiale",country:"INT",seasons:["2026"]}]);
   const stubs={"react":React,"./Icon.jsx":{__esModule:true,default:()=>null},"./UI.jsx":{Media:()=>null,Empty:({children})=>elem("p",null,children)},"../services/cup-catalog.js":cups,"../services/competition-selector.js":selector};
   const filename=path.join(root,"dashboard/frontend/src/components/CupDirectory.jsx"),source=await fs.readFile(filename,"utf8"),compiled=babel.transformSync(source,{presets:[[preset,{runtime:"classic"}]],plugins:[commonjs],babelrc:false,configFile:false,filename}).code,mod={exports:{}};

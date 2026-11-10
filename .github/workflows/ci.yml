@@ -55,9 +55,8 @@ jobs:
         with: {node-version: '22'}
       - run: bun install --frozen-lockfile
         working-directory: dashboard
-      # tests/known-failing.txt lists the test files that fail on the code as it is.
       - name: Site tests
-        run: node --test $(ls tests/*.test.mjs | grep -v -x -F -f <(sed -e '/^#/d' -e '/^$/d' -e 's#^#tests/#' tests/known-failing.txt))
+        run: node --test tests/*.test.mjs
       - name: Site build
         run: bun run build
         working-directory: dashboard

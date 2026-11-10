@@ -16,9 +16,9 @@ const rejectExecutableMarkup = html => {
   assert.doesNotMatch(html, /\son(?:error|load|click)=["']/i);
 };
 
-test('provider media allows only HTTPS CDN images and escapes names and attributes', () => {
+test('provider media allows only HTTPS CDN images, read through the image route, and escapes names and attributes', () => {
   const good = 'https://cdn.pitchapi.dev/images/teams/example.webp';
-  assert.equal(safeImageUrl(good), good);
+  assert.equal(safeImageUrl(good), '/api/assets?url=' + encodeURIComponent(good));
   for (const bad of ['javascript:alert(1)', 'data:image/svg+xml,<svg onload="alert(1)"/>', 'http://cdn.pitchapi.dev/a.png', 'https://cdn.pitchapi.dev.evil.example/a.png', 'https://cdn.pitchapi.dev@evil.example/a.png', 'https://user:secret@cdn.pitchapi.dev/a.png', '//cdn.pitchapi.dev/a.png', null]) {
     assert.equal(safeImageUrl(bad), '', String(bad));
     assert.doesNotMatch(media('Club', bad), /<img\s/);
@@ -206,7 +206,7 @@ test('documented own-goal flags are labelled CSC and excluded from cumulative xG
   assert.match(html, /But contre son camp/);
 });
 
-test('all thirteen live families use the proxy routes and preserve a successful null response', async t => {
+test('all thirteen live families use the match routes and preserve a successful null response', async t => {
   const calls = [];
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     calls.push({ url: String(url), options });
@@ -221,23 +221,23 @@ test('all thirteen live families use the proxy routes and preserve a successful 
     assert.equal(result.source, 'api');
     assert.equal(result.data, null);
   }
-  assert.equal(calls.length, 14); // One local-archive probe, then 13 API calls.
-  const routes = new Set(calls.map(call => call.url).filter(url => url.startsWith('/api/pitchapi/')));
-  assert.ok(routes.has(`/api/pitchapi/matches/${match.id}`));
-  assert.ok(routes.has(`/api/pitchapi/matches/${match.id}/players/halves`));
-  assert.ok(routes.has(`/api/pitchapi/matches/${match.id}/advanced/players`));
-  assert.ok(routes.has(`/api/pitchapi/matches/${match.id}/advanced/network`));
-  assert.ok(routes.has(`/api/pitchapi/matches/${match.id}/heatmaps`));
+  assert.equal(calls.length, 13); // One read per family, no archive read.
+  const routes = new Set(calls.map(call => call.url));
+  assert.ok(routes.has(`/api/matches/${match.id}`));
+  assert.ok(routes.has(`/api/matches/${match.id}/players/halves`));
+  assert.ok(routes.has(`/api/matches/${match.id}/advanced/players`));
+  assert.ok(routes.has(`/api/matches/${match.id}/advanced/network`));
+  assert.ok(routes.has(`/api/matches/${match.id}/heatmaps`));
   assert.equal(routes.size, 13);
-  assert.ok([...routes].every(route => route.startsWith('/api/pitchapi/')));
+  assert.ok([...routes].every(route => route.startsWith(`/api/matches/${match.id}`)));
   assert.doesNotMatch(JSON.stringify(calls), /x-api-key|pk_live_|pk_test_|authorization/i);
 });
 
-test('missing-key mode loads known snapshot payloads once and keeps advanced data uncollected', async t => {
+test('an unconfigured backend loads known archive payloads once and keeps advanced data uncollected', async t => {
   const calls = [];
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     calls.push({ url: String(url), options });
-    const id = String(url).match(/\/matches\/(m_[A-Za-z0-9]{6})\.json$/)?.[1];
+    const id = String(url).match(/^\/api\/archive\/matches\/(m_[A-Za-z0-9]{6})$/)?.[1];
     if (!id) throw new Error(`Unexpected network route: ${url}`);
     return shards.has(id) ? response(shards.get(id)) : response({}, 404);
   });
@@ -255,17 +255,17 @@ test('missing-key mode loads known snapshot payloads once and keeps advanced dat
     assert.equal(absent.code, 'NOT_COLLECTED');
     assert.equal(Object.hasOwn(absent, 'data'), false);
   }
-  assert.equal(calls.length, data.matches.length * 2); // Archive then static fallback.
-  assert.ok(calls.every(call => !call.url.startsWith('https:') && !call.url.includes('/api/pitchapi')));
+  assert.equal(calls.length, data.matches.length); // One archive read per match, shared by its families.
+  assert.ok(calls.every(call => call.url.startsWith('/api/archive/matches/')));
   assert.doesNotMatch(JSON.stringify(calls), /x-api-key|pk_live_|pk_test_|authorization/i);
 });
 
-test('a configured proxy failure does not trigger a larger archive read or send an API credential', async t => {
+test('a configured backend failure does not trigger a larger archive read or send an API credential', async t => {
   const match = data.matches[0];
   const calls = [];
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     calls.push({ url: String(url), options });
-    assert.ok(String(url).startsWith('/api/pitchapi/'));
+    assert.ok(String(url).startsWith('/api/matches/'));
     return response({ error: { code: 'PITCHAPI_NOT_CONFIGURED', message: 'Server key missing' } }, 503);
   });
   const app = explorer();
@@ -298,14 +298,14 @@ test('fixture fallback is scoped to the original competition and season, includi
   assert.deepEqual(result.matches.map(match => match.id), [original.id]);
 });
 
-test('explicit retry recovers a temporarily missing local shard', async t => {
+test('explicit retry recovers a temporarily missing archive', async t => {
   const match = data.matches[0];
   let calls = 0;
-  t.mock.method(globalThis, 'fetch', async () => ++calls <= 2 ? response({}, 404) : response(shards.get(match.id)));
+  t.mock.method(globalThis, 'fetch', async () => ++calls <= 1 ? response({}, 404) : response(shards.get(match.id)));
   const app = explorer();
   await app.ensureEndpoint(match, 'lineups');
   assert.equal(app.payloads.get(`${match.id}:lineups`).code, 'NOT_COLLECTED');
   await app.ensureEndpoint(match, 'lineups', true);
   assert.equal(app.payloads.get(`${match.id}:lineups`).source, 'snapshot');
-  assert.equal(calls, 3);
+  assert.equal(calls, 2); // One archive read per attempt.
 });
