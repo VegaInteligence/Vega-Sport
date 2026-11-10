@@ -11,7 +11,8 @@
 # distribution, and optionally the historical archive import.
 # The current RDS (statarena-postgres), API, distribution and workflows are not touched.
 #
-# Environment: WORKER_DESIRED_COUNT (1), IMPORT_ARCHIVES (false), ARCHIVE_SOURCES_BUCKET
+# Environment: WORKER_DESIRED_COUNT (1), BACKFILL_DESIRED_COUNT (kept from the previous
+# deploy when unset: 1 while history is collected, 0 once it is), IMPORT_ARCHIVES (false), ARCHIVE_SOURCES_BUCKET
 # (main's data bucket, read only, for the archives; kept from the previous deploy when unset), CFN_ROLE (CloudFormation service role,
 # set by the workflow), IMAGE_TAG (git HEAD), PITCHAPI_API_KEY or PITCHAPI_API_KEY_FILE
 # (needed once, to create /vega/v2/pitchapi-key), SPORTSAPI_API_KEY or SPORTSAPI_API_KEY_FILE
@@ -51,6 +52,13 @@ if [ -z "$ARCHIVES" ]; then
     --query "Stacks[0].Parameters[?ParameterKey=='ArchiveSourcesBucket'].ParameterValue" --output text 2>/dev/null || true)
   [ "$ARCHIVES" = None ] && ARCHIVES=
 fi
+# The backfill service keeps the size it has (0 or 1) unless BACKFILL_DESIRED_COUNT says otherwise.
+BACKFILL=${BACKFILL_DESIRED_COUNT:-}
+if [ -z "$BACKFILL" ]; then
+  BACKFILL=$(aws cloudformation describe-stacks --stack-name vega-v2-worker \
+    --query "Stacks[0].Parameters[?ParameterKey=='BackfillDesiredCount'].ParameterValue" --output text 2>/dev/null || true)
+  case "$BACKFILL" in 0|1) ;; *) BACKFILL=0 ;; esac
+fi
 output() { aws cloudformation describe-stacks --stack-name "$1" --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text 2>/dev/null || true; }
 stack() { aws cloudformation deploy ${role[@]+"${role[@]}"} --no-fail-on-empty-changeset --stack-name "$1" --template-file "infra/aws-v2/$2" "${@:3}"; }
 run_task() {
@@ -68,9 +76,9 @@ echo "== 2. Secrets"
 bash infra/aws-v2/ci/secrets.sh
 # The SportsAPI source is on once its key is in SSM.
 SPORTSAPI=$(aws ssm get-parameter --name /vega/v2/sportsapi-key --query Parameter.Name --output text 2>/dev/null || true)
-echo "== 3. Worker stack, worker stopped"
+echo "== 3. Worker stack, worker and backfill stopped"
 stack vega-v2-worker worker.yaml --capabilities CAPABILITY_IAM \
-  --parameter-overrides ImageTag="$TAG" DesiredCount=0 ArchiveSourcesBucket="$ARCHIVES" SportsApiKeyParameter="$SPORTSAPI"
+  --parameter-overrides ImageTag="$TAG" DesiredCount=0 BackfillDesiredCount=0 ArchiveSourcesBucket="$ARCHIVES" SportsApiKeyParameter="$SPORTSAPI"
 echo "== 4. Worker image $TAG (linux/arm64)"
 if ! aws ecr describe-images --repository-name vega-v2-worker --image-ids imageTag="$TAG" >/dev/null 2>&1; then
   aws ecr get-login-password | docker login --username AWS --password-stdin "$REGISTRY"
@@ -82,9 +90,9 @@ task=$(run_task vega-v2-migrate)
 aws ecs wait tasks-stopped --cluster vega-v2 --tasks "$task"
 code=$(aws ecs describe-tasks --cluster vega-v2 --tasks "$task" --query 'tasks[0].containers[0].exitCode' --output text)
 echo "migration exit code: $code"; [ "$code" = 0 ]
-echo "== 6. Worker: $COUNT task(s)"
+echo "== 6. Worker: $COUNT task(s); backfill: $BACKFILL task(s)"
 stack vega-v2-worker worker.yaml --capabilities CAPABILITY_IAM \
-  --parameter-overrides ImageTag="$TAG" DesiredCount="$COUNT" ArchiveSourcesBucket="$ARCHIVES" SportsApiKeyParameter="$SPORTSAPI"
+  --parameter-overrides ImageTag="$TAG" DesiredCount="$COUNT" BackfillDesiredCount="$BACKFILL" ArchiveSourcesBucket="$ARCHIVES" SportsApiKeyParameter="$SPORTSAPI"
 echo "== 6b. Live: store, broadcast, full-state read, ingestor schedule (provider '${LIVE_PROVIDER:-}', $([ -n "${LIVE_PROVIDER:-}" ] && echo on || echo off))"
 live_zip=$(python3 infra/aws-v2/package_api.py "${RUNNER_TEMP:-$(mktemp -d)}/v2-live" live | tail -1)
 live_key="releases/v2-live/$(basename "$live_zip")"

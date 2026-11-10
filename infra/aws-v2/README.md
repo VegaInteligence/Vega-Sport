@@ -5,7 +5,7 @@ Three CloudFormation stacks, one per block of the v2 backend, plus the roles of 
 | Stack | Template | Contents |
 |---|---|---|
 | `vega-v2-database` | `database.yaml` | private PostgreSQL 18 (`vega-football-db-postgres`, database `vega_v2`, `db.t4g.micro`, gp3 20→100 GB, encrypted, 7-day backups, deletion protection, snapshot on delete), master password managed by Secrets Manager, security groups of the worker and the API |
-| `vega-v2-worker` | `worker.yaml` | ECR repository, ECS cluster, the always-on worker service (Fargate ARM 0.25 vCPU / 0.5 GB, one task), the on-demand `vega-v2-backfill` and `vega-v2-migrate` task definitions, and the private bucket of the image copies (`vega-v2-media-…`, written only under `data/sources/v2/images/` by the worker's task role) |
+| `vega-v2-worker` | `worker.yaml` | ECR repository, ECS cluster, the always-on worker service (Fargate ARM 0.25 vCPU / 2 GB, one task), the `vega-v2-backfill` service (1 vCPU / 2 GB, one task while history is collected, none after), the on-demand `vega-v2-migrate` task definition, and the private bucket of the image copies (`vega-v2-media-…`, written only under `data/sources/v2/images/` by the worker's task role) |
 | `vega-v2-api` | `api.yaml` | the read API Lambda (Node 24 ARM, `v2/api`), its signed Function URL and its own CloudFront distribution (same policies as the current API); the distribution also serves the image copies at `data/*` from the media bucket (origin access control, bucket policy limited to this distribution) and `api/ops/*`, the status page's read, uncached |
 
 Account 361769570630, region us-east-2, AWS CLI profile `statarena`, default VPC `vpc-08e400afa07fc1812` and its three subnets. The subnets route to an internet gateway: the worker gets a public IP for outbound HTTPS (sources, ECR, logs) and no inbound port; no NAT gateway is needed. The database is not publicly accessible: only the worker and API security groups reach it on 5432.
@@ -66,11 +66,11 @@ From a workstation, before the workflow is on `main` (a manual workflow can only
 AWS_PROFILE=statarena PITCHAPI_API_KEY_FILE=<file holding the key> bash infra/aws-v2/deploy.sh
 ```
 
-Then, from GitHub: `gh workflow run "Vega v2 deploy" -f worker_desired_count=1`. The migration task's log line `migrations applied=N total=M logins=…` shows 63 migrations (65 with `V2_VECTOR=1`). The backfill runs on demand, for days, and stops by itself when its lane is empty: `aws ecs run-task … --task-definition vega-v2-backfill` with the network configuration `deploy.sh` uses.
+Then, from GitHub: `gh workflow run "Vega v2 deploy" -f worker_desired_count=1`. The migration task's log line `migrations applied=N total=M logins=…` shows 63 migrations (65 with `V2_VECTOR=1`). The backfill is a second service, `vega-v2-backfill`, of one task or none: `BACKFILL_DESIRED_COUNT=1 bash infra/aws-v2/deploy.sh` turns it on, `=0` turns it off, and a deploy without the variable keeps what it has. ECS starts its task again whenever it stops, on the image of the last deploy. It waits when its lane is empty and does not stop by itself: set it to 0 once `ops.collection_progress` shows history collected.
 
-A database restart (memory recovery, resize) does not stop a task: every connection sees a lost database within a minute (`store.CONNECTION`), and the worker and the backfill reconnect by themselves (`database lost error=… retry_in=N` in the log) for up to 30 minutes. After that the task exits with an error: ECS starts the worker service's task again, the backfill has to be run again by hand.
+A database restart (memory recovery, resize) does not stop a task: every connection sees a lost database within a minute (`store.CONNECTION`), and the worker and the backfill reconnect by themselves (`database lost error=… retry_in=N` in the log) for up to 30 minutes. After that the task exits with an error and ECS starts it again, the worker's and the backfill's alike.
 
-A running backfill keeps the image it was started with: `deploy.sh` stops and restarts only the worker service. After a deploy whose migration changes what the calculator reads (`calculator error=DATABASE_42703` in the backfill's log), stop the backfill task and run it again; it resumes from what is still missing. The same holds for a deploy that changes the backfill's own code: the running task keeps the old code until it is stopped and run again.
+A deploy stops the worker and the backfill before the migrations and starts both again on the new image: neither keeps code older than the base it writes to. (Until 10 November 2026 the backfill was a task run by hand, which kept the image it was started with and had to be stopped before a deploy and run again after it.)
 
 The worker collects whatever fails around the collection: the planner, the calculator, the image copies and the daily pass log their error and the loop goes on (`planner error=…`, `calculator error=…`, `media error=…`, `daily step=<step> error=… retry_at=…`). A step of the daily pass that failed (`analyze`, `archives`, `due`, `sources`, `elo`, `season <id>`) is tried again an hour later, not at the next round. An error of ours shows as `WORKER_<CLASS>@<file>:<line>`, a database error as `DATABASE_<sqlstate>`.
 
@@ -114,10 +114,10 @@ The private status page (repository VegaInteligence/Vega-Status, its own Vercel 
 
 v2 is a second base (`vega-football-db-postgres`) filled from the sources themselves: the current RDS is never copied. The move happens once v2 holds everything, in four steps:
 
-1. **Backfill everything.** Run the backfill task without bounds; it reads every edition since 2021/2022 and stops by itself:
+1. **Backfill everything.** Turn the backfill service on; it reads every edition since 2021/2022 and keeps running until it is turned off:
 
    ```sh
-   aws ecs run-task --profile statarena --region us-east-2 --cluster vega-v2 --task-definition vega-v2-backfill --launch-type FARGATE --network-configuration "awsvpcConfiguration={subnets=[subnet-0233a9567335f56ce,subnet-04c9af303f55d9718,subnet-0e72516f361932c15],securityGroups=[<WorkerSecurityGroup of vega-v2-database>],assignPublicIp=ENABLED}"
+   AWS_PROFILE=statarena BACKFILL_DESIRED_COUNT=1 bash infra/aws-v2/deploy.sh
    ```
 
    Then import every archive season with `IMPORT_ARCHIVES=true ARCHIVE_SOURCES_BUCKET=<bucket> bash infra/aws-v2/deploy.sh`.
