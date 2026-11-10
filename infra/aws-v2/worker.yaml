@@ -1,12 +1,14 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
   Vega v2 worker (planner + collector + calculator) as one small always-on Fargate
-  service, plus on-demand task definitions for the backfill and the migrations.
+  service, the backfill as a second service that is on while history is collected, and
+  an on-demand task definition for the migrations.
   Public IP in the default VPC subnets: outbound HTTPS without a NAT gateway; no
   inbound port is open.
 Parameters:
   ImageTag: {Type: String, AllowedPattern: '[a-f0-9]{12,64}', Description: Immutable image tag (git SHA) in the vega-v2-worker repository.}
   DesiredCount: {Type: Number, Default: 1, AllowedValues: [0, 1]}
+  BackfillDesiredCount: {Type: Number, Default: 0, AllowedValues: [0, 1], Description: 'The backfill service: 1 while history is collected, 0 once it is.'}
   CollectUrlParameter: {Type: String, Default: /vega/v2/collect-database-url}
   CalcUrlParameter: {Type: String, Default: /vega/v2/calc-database-url}
   PasswordParameterPrefix: {Type: String, Default: /vega/v2/password, Description: 'SecureStrings <prefix>-collect, -calc, -read'}
@@ -149,8 +151,10 @@ Resources:
         - Name: backfill
           Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/vega-v2-worker:${ImageTag}'
           Essential: true
-          # Runs for days, stops when the backfill lane is empty.
-          Command: [--lanes, backfill, --until-idle]
+          # Runs as a service (BackfillService): ECS starts it again whenever it stops, and
+          # a deploy replaces it with the new image. It waits when its lane is empty; the
+          # service is set to 0 once history is collected (BackfillDesiredCount).
+          Command: [--lanes, backfill]
           ReadonlyRootFilesystem: true
           Secrets:
             - {Name: V2_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CollectUrlParameter}'}
@@ -249,6 +253,25 @@ Resources:
       LaunchType: FARGATE
       # One worker at a time: replace, never overlap (the planner and leases allow
       # overlap, but a single process keeps the PitchAPI rate predictable).
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 0
+        MaximumPercent: 100
+        DeploymentCircuitBreaker: {Enable: true, Rollback: true}
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups: [!ImportValue vega-v2-worker-sg]
+          Subnets: [subnet-0233a9567335f56ce, subnet-04c9af303f55d9718, subnet-0e72516f361932c15]
+      Tags: [{Key: project, Value: vega-v2}]
+  BackfillService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: vega-v2-backfill
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref BackfillTask
+      DesiredCount: !Ref BackfillDesiredCount
+      LaunchType: FARGATE
+      # One backfill at a time, as the worker: the provider's pace is shared.
       DeploymentConfiguration:
         MinimumHealthyPercent: 0
         MaximumPercent: 100
