@@ -27,6 +27,7 @@ import {
 } from "../services/club-scout.js";
 import {
   Card,
+  ClubEmptySeason,
   ClubLoading,
   Crest,
   Info,
@@ -91,10 +92,12 @@ export default function ClubScoutProfile({ clubId }) {
   const dossier = state.status === "ready" ? state.dossier : null;
   return (
     <div className={`${chartTokens} ${c.shell}`}>
-      {dossier ? (
-        <Profile key={dossier.id} dossier={dossier} />
-      ) : (
+      {!dossier ? (
         <ClubLoading state={state} />
+      ) : dossier.coverage.empty ? (
+        <ClubEmptySeason dossier={dossier} played={dossier.coverage.played} />
+      ) : (
+        <Profile key={dossier.id} dossier={dossier} />
       )}
     </div>
   );
