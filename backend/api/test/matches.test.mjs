@@ -47,6 +47,22 @@ test("fixtures: cursor pages and their generation", { skip }, async () => {
   assert.equal(again.response.status, 304);
 });
 
+test("fixtures: the meetings of two clubs, whatever the season", { skip }, async () => {
+  const meetings = async (query) => ids((await get("/api/fixtures?" + query)).body);
+  assert.deepEqual(await meetings("teams=t_aaaaa1,t_aaaaa4"), ["m_aaaaa5"]);
+  assert.deepEqual(await meetings("teams=t_aaaaa4,t_aaaaa1"), ["m_aaaaa5"]);
+  assert.deepEqual(await meetings("teams=t_aaaaa1,t_aaaaa4&leagues=l_3FJFUl&status=all"), ["m_aaaaa5"]);
+  assert.deepEqual(await meetings("teams=t_aaaaa1,t_aaaaa4&leagues=l_zzzzzz"), []);
+  assert.deepEqual(await meetings("teams=t_aaaaa2,t_aaaaa3&status=played"), []);
+  assert.deepEqual(await meetings("teams=t_aaaaa2,t_aaaaa3&status=upcoming"), ["m_aaaaa6"]);
+  assert.deepEqual(await meetings("teams=t_aaaaa1,t_zzzzzz"), []);
+  for (const bad of ["teams=t_aaaaa1", "teams=t_aaaaa1,t_aaaaa1", "teams=t_aaaaa1,t_aaaaa2,t_aaaaa3", "teams=t_aaaaa1,club", "teams="])
+    assert.equal((await get("/api/fixtures?" + bad)).response.status, 400, bad);
+  // A cursor of the two clubs' pages is not one of the league's.
+  const first = (await get("/api/fixtures?teams=t_aaaaa1,t_aaaaa4&limit=1")).body;
+  assert.equal(first.pagination.nextCursor, null);
+});
+
 test("fixtures: invalid filters", { skip }, async () => {
   for (const bad of ["&status=live", "&order=up", "&from=2025-02-30", "&limit=0", "&limit=101", "&cursor=@@", "&x=1"])
     assert.equal((await get(fixtures + bad)).response.status, 400, bad);
