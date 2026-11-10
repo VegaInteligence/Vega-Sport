@@ -133,7 +133,7 @@ export default function PlayerScoutCareer({
         <VegaIndexHistoryCard />
         <section className={s.card}>
           <h2>Valeur marchande</h2>
-          <p className={s.note}>Estimations Transfermarkt · historique observé</p>
+          <p className={s.note}>Historique des estimations</p>
           {values.length ? (
             <>
               <LineChart
@@ -144,7 +144,7 @@ export default function PlayerScoutCareer({
                 ticks={[0, marketMaximum]}
                 labelEvery={Math.max(1, Math.ceil(values.length / 5))}
                 format={(value) => marketValue(Math.round(value * 1_000_000))}
-                ariaLabel="Historique des estimations de valeur marchande Transfermarkt"
+                ariaLabel="Historique des estimations de valeur marchande"
               />
               <p className={s.note}>
                 Dernière estimation {marketValue(latestValue.valueEur)} au{" "}

@@ -133,7 +133,6 @@ export default function PlayerScoutRail({
   const latestValue = market.value?.history.at(-1);
   const valuation = latestValue
     ? {
-        source: "Transfermarkt",
         amount: marketValue(latestValue.valueEur),
         updated: marketDate(latestValue.date),
       }
@@ -291,9 +290,7 @@ export default function PlayerScoutRail({
         <Facts items={facts} label="Fiche du joueur" />
       </div>
       <div className={s.railSection}>
-        <p className={s.railTitle}>
-          Valeur marchande <span>{valuation?.source ?? "Transfermarkt"}</span>
-        </p>
+        <p className={s.railTitle}>Valeur marchande</p>
         <div className={s.value}>{valuation?.amount ?? "—"}</div>
         {valuation ? (
           valuation.updated && (
