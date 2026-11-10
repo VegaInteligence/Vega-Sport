@@ -148,6 +148,11 @@ class IngestorTest(unittest.TestCase):
         x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, match_date, kickoff_at)
              VALUES (10, 1, 2025, 'pitchapi', 'not_started', 1, 2, '2025-09-20', '2025-09-20T19:00:00Z')""")
         x("INSERT INTO core.match_coverage(season_id, match_id) VALUES (2025, 10)")
+        # The same fixture as a cup source wrote it: another row, never the one a feed is linked to.
+        x("INSERT INTO core.competitions(id, name) VALUES (2, 'Coupe')")
+        x("INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label, cup_key) VALUES (2, 2, 2025, '2025/2026', 'open-cups:coupe:2025')")
+        x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, match_date, kickoff_at)
+             VALUES (11, 2, 2025, 'openfootball', 'not_started', 1, 2, '2025-09-20', '2025-09-20T19:00:00Z')""")
 
     @classmethod
     def tearDownClass(cls):
