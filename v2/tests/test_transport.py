@@ -291,3 +291,29 @@ class TransportTest(unittest.TestCase):
         with self.assertRaises(PitchError):
             client.fetch("/leagues")
         self.assertEqual(client.interval, 2.0)
+
+    def test_the_interval_returns_after_ten_minutes_without_a_429(self):
+        now = [0.0]
+        responses = []
+        client = PitchClient(
+            "pk_test_secret",
+            interval=0.5,
+            transport=lambda *_: responses.pop(0),
+            sleep=lambda _: None,
+            monotonic=lambda: now[0],
+        )
+        limited, ok = (429, {}, b'{"error":{"code":"RATE_LIMIT_EXCEEDED"}}'), (200, {}, b'{"data":[]}')
+
+        def fetch(at, *answers):
+            now[0] = at
+            responses.extend(answers)
+            client.fetch("/leagues")
+            return client.interval
+
+        self.assertEqual(fetch(0, limited, ok), 1.0)
+        self.assertEqual(fetch(599, ok), 1.0)
+        # A new 429 starts the ten minutes again.
+        self.assertEqual(fetch(600, limited, ok), 1.0)
+        self.assertEqual(fetch(1199, ok), 1.0)
+        self.assertEqual(fetch(1200, ok), 0.5)
+        self.assertEqual(fetch(1300, ok), 0.5)

@@ -12,6 +12,11 @@ from urllib.parse import urlencode
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 BASE_URL = "https://api.pitchapi.dev/v1"
+# After a 429 a client keeps at least one second between calls, then returns to its own
+# interval once this long has passed without another 429. The worker and the backfill
+# share one key: without the return, one 429 kept the backfill at half its pace for the
+# rest of its run (10 November 2026: 3,400 jobs an hour instead of 5,700, 978,000 to do).
+RECOVER_AFTER = 600
 _ID = r"[A-Za-z0-9]{6}"
 _ENDPOINTS = (
     r"/leagues",
@@ -139,6 +144,7 @@ class PitchClient:
             monotonic,
         )
         self._last = None
+        self._own_interval, self._slowed_at = interval, None
         self._on_attempt = on_attempt
         self._opener = build_opener(_NoRedirect())
         self.requests = 0
@@ -179,6 +185,8 @@ class PitchClient:
             raise PitchError("INVALID_PARAMETER")
         url = BASE_URL + endpoint + ("?" + urlencode(params) if params else "")
         for attempt in range(self.retries + 1):
+            if self._slowed_at is not None and self._clock() - self._slowed_at >= RECOVER_AFTER:
+                self.interval, self._slowed_at = self._own_interval, None
             if self._last is not None:
                 self._sleep(max(0, self.interval - (self._clock() - self._last)))
             self._last = self._clock()
@@ -283,6 +291,7 @@ class PitchClient:
             )
             if status == 429:
                 self.interval = max(self.interval, 1.0)
+                self._slowed_at = self._clock()
             if 500 <= status <= 599:
                 safe_code = "HTTP_SERVER_ERROR"
             elif status == 403 and code not in known:
