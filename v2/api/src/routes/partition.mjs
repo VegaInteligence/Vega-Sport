@@ -25,7 +25,10 @@ const LEAGUE = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/,
   SEASON = /^\d{4}(?:\/\d{4})?$/;
 const iso = (v) => (v instanceof Date ? v.toISOString() : v ?? null);
 const EDITION = "(e.season=$1 OR e.native_label=$1) AND e.league_id=$2";
-const SCOPE = "(x.season=$1 OR x.native_season=$1) AND x.league_id=$2";
+// The edition's page is read on its ids ($1 the season's, $2 the edition's): bound, they
+// prune the other seasons' partitions when the query is planned and read the indexes.
+const SEASON_ID = "$1::smallint",
+  SCOPE = `x.season_id=${SEASON_ID} AND x.competition_season_id=$2::int`;
 
 const ids = (params, key, pattern) => {
   const raw = params.get(key) || "",
@@ -39,25 +42,38 @@ const group = (rows) => {
   return out;
 };
 
+// The ids are resolved first and bound: on the ids, a player's appearances and a club's
+// matches are index reads; compared inside the query, every appearance of every season
+// was read (a timeout on 10 November 2026).
 async function scoutingRoutes(req, params, read) {
   validateParams(params, ["player", "team"]);
   const players = ids(params, "player", /^p_(?:[A-Za-z0-9]{6}|v\d{7})$/),
     teams = ids(params, "team", /^t_(?:[A-Za-z0-9]{6}|v\d{7})$/);
   if (!players.length && !teams.length) reject(400, "Précisez les identifiants.");
-  const [r] = await read(
+  const [known] = await read(
     `SELECT (SELECT generation::text FROM api.publication) AS version,
-       (SELECT coalesce(json_agg(r ORDER BY r.id,r.season,r.league_id),'[]'::json) FROM (
-          SELECT DISTINCT api.public_id('player',a.player_id) AS id,f.season,f.league_id FROM api.player_appearances a
-          JOIN api.fixtures f ON f.season_id=a.season_id AND f.match_id=a.match_id
-          WHERE a.player_id IN (SELECT api.internal_id('player',k) FROM unnest($1::text[]) k)) r) players,
-       (SELECT coalesce(json_agg(r ORDER BY r.id,r.season,r.league_id),'[]'::json) FROM (
-          SELECT DISTINCT x.id,f.season,f.league_id FROM unnest($2::text[]) x(id)
-          JOIN api.fixtures f ON api.internal_id('team',x.id) IN (f.home_internal_id,f.away_internal_id)) r) teams`,
+       ARRAY(SELECT api.internal_id('player',k) FROM unnest($1::text[]) WITH ORDINALITY x(k,n) ORDER BY n) AS players,
+       ARRAY(SELECT api.internal_id('team',k) FROM unnest($2::text[]) WITH ORDINALITY x(k,n) ORDER BY n) AS teams`,
     [players, teams],
   );
-  const etag = tag(req, r.version);
+  const etag = tag(req, known.version);
   if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 30 });
-  return send(req, { routes: group(r.players), clubRoutes: group(r.teams) }, 200, { etag, ttl: 30 });
+  const keyed = (publicIds, internal) => new Map(publicIds.map((id, i) => [internal[i], id]).filter(([key]) => key != null));
+  const playerKeys = keyed(players, known.players),
+    teamKeys = keyed(teams, known.teams);
+  const [r] = await read(
+    `SELECT (SELECT coalesce(json_agg(r ORDER BY r.key,r.season,r.league_id),'[]'::json) FROM (
+          SELECT DISTINCT a.player_id AS key,f.season,f.league_id FROM api.player_appearances a
+          JOIN api.fixtures f ON f.season_id=a.season_id AND f.match_id=a.match_id
+          WHERE a.player_id=ANY($1::int[])) r) players,
+       (SELECT coalesce(json_agg(r ORDER BY r.key,r.season,r.league_id),'[]'::json) FROM (
+          SELECT x.home_internal_id AS key,x.season,x.league_id FROM api.fixtures x WHERE x.home_internal_id=ANY($2::int[])
+          UNION SELECT x.away_internal_id,x.season,x.league_id FROM api.fixtures x WHERE x.away_internal_id=ANY($2::int[])) r) teams`,
+    [[...playerKeys.keys()], [...teamKeys.keys()]],
+  );
+  // In the order of the requested ids, as the query ordered them before.
+  const routes = (rows, keys) => group([...keys].flatMap(([key, id]) => rows.filter((row) => row.key === key).map((row) => ({ ...row, id }))));
+  return send(req, { routes: routes(r.players, playerKeys), clubRoutes: routes(r.teams, teamKeys) }, 200, { etag, ttl: 30 });
 }
 
 export function createPartitionRoute(read) {
@@ -73,7 +89,9 @@ export function createPartitionRoute(read) {
     if (params.has("v") && !/^[a-f0-9]{64}$/.test(params.get("v"))) reject(400, "Version de partition invalide.");
     const args = pageArgs(params, 25, columns ? ["partition", season, league, "columns"] : ["partition", season, league]);
     const [edition] = await read(
-      `SELECT e.*,(SELECT generation::text FROM api.publication) AS version FROM api.editions e WHERE ${EDITION} ORDER BY e.season=$1 DESC LIMIT 1`,
+      `SELECT e.*,(SELECT k.season_id FROM api.edition_keys k WHERE k.competition_season_id=e.competition_season_id) AS season_id,
+         (SELECT generation::text FROM api.publication) AS version
+       FROM api.editions e WHERE ${EDITION} ORDER BY e.season=$1 DESC LIMIT 1`,
       [season, league],
     );
     if (!edition) reject(404, "Partition introuvable.");
@@ -85,30 +103,32 @@ export function createPartitionRoute(read) {
       const etag = tag(req, digest + "|" + state.version);
       if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 30 });
     }
-    const values = [season, league, args.limit];
+    const values = [edition.season_id, edition.competition_season_id, args.limit, league];
     const after = args.cursor
       ? (values.push(args.cursor.day, args.cursor.id),
-        ` AND (x.day > $4::date OR (x.day IS NULL AND $4::date IS NOT NULL) OR (x.day IS NOT DISTINCT FROM $4::date AND x.id > $5))`)
+        ` AND (x.day > $5::date OR (x.day IS NULL AND $5::date IS NOT NULL) OR (x.day IS NOT DISTINCT FROM $5::date AND x.id > $6))`)
       : "";
     const [r] = await read(
       `WITH keys AS MATERIALIZED (SELECT x.season_id,x.match_id,x.id,x.day FROM api.fixtures x WHERE ${SCOPE}${after}
          ORDER BY x.day NULLS LAST,x.id LIMIT ($3::int+1)),
-       f AS MATERIALIZED (SELECT x.* FROM api.fixtures x JOIN (SELECT * FROM keys ORDER BY day NULLS LAST,id LIMIT $3) k
-         ON k.season_id=x.season_id AND k.match_id=x.match_id)
+       f AS MATERIALIZED (SELECT x.* FROM api.fixtures x WHERE x.season_id=${SEASON_ID}
+         AND x.match_id=ANY(ARRAY(SELECT k.match_id FROM (SELECT * FROM keys ORDER BY day NULLS LAST,id LIMIT $3) k)))
        SELECT (SELECT coalesce(json_agg(json_build_object('id',id,'day',day::text) ORDER BY day NULLS LAST,id),'[]'::json) FROM keys) keys,
          (SELECT coalesce(json_agg(row_to_json(f) ORDER BY f.day NULLS LAST,f.id),'[]'::json) FROM f) fixtures,
-         (SELECT coalesce(json_agg(r ORDER BY r.day NULLS LAST,r.id),'[]'::json) FROM (SELECT f.day,f.id,${matchRecordColumns()} FROM f) r) records,
+         (SELECT coalesce(json_agg(r ORDER BY r.day NULLS LAST,r.id),'[]'::json) FROM (SELECT f.day,f.id,${matchRecordColumns({ season: SEASON_ID })} FROM f) r) records,
          (SELECT coalesce(json_agg(r ORDER BY r.match_key,r.appearance_id),'[]'::json) FROM (
             SELECT a.*,f.id AS match_key,f.id||':'||api.public_id('player',a.player_id) AS appearance_id,
               api.public_id('player',a.player_id) AS player_key,api.public_id('team',a.team_id) AS team_key
-            FROM f JOIN api.player_appearances a ON a.season_id=f.season_id AND a.match_id=f.match_id) r) appearances,
+            FROM f JOIN api.player_appearances a ON a.season_id=f.season_id AND a.match_id=f.match_id
+            WHERE a.season_id=${SEASON_ID} AND a.match_id=ANY(ARRAY(SELECT match_id FROM f))) r) appearances,
          (SELECT coalesce(json_agg(r ORDER BY r.id),'[]'::json) FROM (
-            SELECT k.public_id AS id,k.name,k.image_url,c.country,
+            SELECT k.public_id AS id,k.name,k.image_url,k.country,
               (SELECT count(*)::int FROM api.fixtures x JOIN api.match_detail_state d ON d.season_id=x.season_id AND d.match_id=x.match_id
-                WHERE (x.home_internal_id=k.team_id OR x.away_internal_id=k.team_id) AND d.detail_collected AND ${SCOPE}) sample_matches
-            FROM api.team_keys k LEFT JOIN api.team_countries c ON c.team_id=k.public_id
+                WHERE (x.home_internal_id=k.team_id OR x.away_internal_id=k.team_id) AND d.detail_collected AND ${SCOPE}
+                  AND d.season_id=${SEASON_ID}) sample_matches
+            FROM api.team_keys k
             WHERE k.team_id IN (SELECT home_internal_id FROM api.fixtures x WHERE ${SCOPE} UNION SELECT away_internal_id FROM api.fixtures x WHERE ${SCOPE})) r) teams,
-         (SELECT coalesce(json_agg(c),'[]'::json) FROM api.competitions c WHERE c.id=$2) competitions`,
+         (SELECT coalesce(json_agg(c),'[]'::json) FROM api.competitions c WHERE c.id=$4) competitions`,
       values,
     );
     const pagination = nextPage(r.keys, state, args);

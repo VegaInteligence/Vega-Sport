@@ -136,8 +136,10 @@ Resources:
       Family: vega-v2-backfill
       RequiresCompatibilities: [FARGATE]
       NetworkMode: awsvpc
-      Cpu: '256'
-      Memory: '512'
+      # Four times the worker's size: the size of the run started on 10 November 2026
+      # (88 jobs a minute measured, of the 120 the provider's pace allows).
+      Cpu: '1024'
+      Memory: '2048'
       RuntimePlatform: {CpuArchitecture: ARM64, OperatingSystemFamily: LINUX}
       ExecutionRoleArn: !GetAtt ExecutionRole.Arn
       TaskRoleArn: !GetAtt TaskRole.Arn

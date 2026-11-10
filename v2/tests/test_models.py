@@ -4,6 +4,7 @@ Expected values are recomputed here, in plain Python, from the rows inserted, wi
 formulas of the docs; the database must agree.
 """
 
+from collections import Counter
 import os
 from pathlib import Path
 import sys
@@ -191,12 +192,17 @@ class ModelsTest(unittest.TestCase):
                     xg = None if (pid == 102 and mid == 1) else round(0.01 * (pid % 17), 2)
                     recoveries = (pid * 7 + mid) % 9
                     facts["recoveries"][pid] = facts["recoveries"].get(pid, 0) + recoveries
+                    # As in production: the line-up carries the position, the statistics row has none.
+                    x(
+                        "INSERT INTO core.lineup_players(season_id,match_id,team_id,player_id,is_starter,position_id) VALUES(2025,%s,%s,%s,true,%s)",
+                        (mid, team, pid, position),
+                    )
                     x(
                         """INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,position_id,minutes_played,goals,xg,
                              total_shots,recoveries,interceptions,tackles,clearances,shot_blocks,duels_won,duels_lost,accurate_passes,
                              accurate_passes_total,touches,chances_created,passes_into_final_third,dribbles_succeeded,touches_opp_box,saves,goals_prevented)
                            VALUES(2025,%s,%s,%s,%s,90,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                        (mid, team, pid, position, int((pid + mid) % 5 == 0), xg, pid % 4, recoveries, (pid + mid) % 4, (pid * 3 + mid) % 5,
+                        (mid, team, pid, None, int((pid + mid) % 5 == 0), xg, pid % 4, recoveries, (pid + mid) % 4, (pid * 3 + mid) % 5,
                          (pid + 2 * mid) % 6, pid % 3, (pid * 5 + mid) % 8, (pid + mid) % 7, 20 + pid % 30, 30 + pid % 30,
                          40 + (pid * 11 + mid) % 25, (pid + mid) % 4, (pid * 2 + mid) % 6, pid % 5, (pid + mid) % 3,
                          (pid + mid) % 6 if group == "G" else None, 0.1 * ((pid + mid) % 3) if group == "G" else None),
@@ -359,6 +365,84 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual(self.one("SELECT count(*) FROM agg.player_projections")[0], 0)
         # The award race is written by the power ranking (test_power_rankings_of_players).
         self.assertEqual(self.one("SELECT count(*) FROM agg.player_award_ranking")[0], 30)
+
+    def expected_distribution(self):
+        """The rows build() inserted, counted per line, metric and value (all play 90 minutes)."""
+        expected = Counter()
+        mid = 0
+        for home in TEAMS:
+            for away in TEAMS:
+                if home == away:
+                    continue
+                mid += 1
+                for pid, team, group, _ in self.facts["players"]:
+                    if team not in (home, away):
+                        continue
+                    shots = pid % 4
+                    xg = None if (pid == 102 and mid == 1) else round(0.01 * (pid % 17), 2)
+                    won, lost = (pid * 5 + mid) % 8, (pid + mid) % 7
+                    values = {
+                        "appearances": 1.0,
+                        "recoveries": float((pid * 7 + mid) % 9),
+                        # No shot: no xG and nothing on target, both worth 0; unknown otherwise.
+                        "xg": xg if xg is not None else (0.0 if shots == 0 else None),
+                        "shots_on_target": 0.0 if shots == 0 else None,
+                        "pass_accuracy": (20 + pid % 30) / (30 + pid % 30) * 100,
+                        "duel_rate": won / (won + lost) * 100 if won + lost >= 4 else None,
+                        "saves": float((pid + mid) % 6) if group == "G" else None,
+                    }
+                    for metric, value in values.items():
+                        if value is not None:
+                            expected[(group, metric, value)] += 1
+        return dict(expected)
+
+    def distribution(self, metrics):
+        rows = self.db.execute(
+            "SELECT profile_group, metric, value, appearances FROM agg.performance_distribution WHERE competition_season_id=1 AND metric = ANY(%s)",
+            (sorted(metrics),),
+        ).fetchall()
+        return {(g, m, v): n for g, m, v, n in rows}
+
+    def test_performance_distribution_counts_every_appearance(self):
+        # 055: the calculator filled the histogram (setUpClass); the read sums these rows.
+        expected = self.expected_distribution()
+        metrics = {m for _, m, _ in expected}
+        self.assertEqual(self.distribution(metrics), expected)
+        self.assertEqual(sum(n for (_, m, _), n in expected.items() if m == "appearances"), 88 * 14)
+        self.assertEqual(self.one("SELECT agg.refresh_performance_distribution(1)")[0], 0)  # nothing to rewrite
+        # One appearance changes: its old value loses a peer, the new one appears. Without a
+        # line-up position a keeper is known by his saves, anyone else joins the outfield line.
+        x = self.db.execute
+        keeper, mid_fielder = 100, 105  # both of team 1, at home in match 1
+        try:
+            x("UPDATE core.player_match_stats SET recoveries=99 WHERE season_id=2025 AND match_id=1 AND player_id=%s", (mid_fielder,))
+            x("UPDATE core.lineup_players SET position_id=NULL WHERE season_id=2025 AND match_id=1 AND player_id = ANY(%s)", ([keeper, mid_fielder],))
+            self.assertGreater(self.one("SELECT agg.refresh_performance_distribution(1)")[0], 0)
+            now = self.distribution(metrics)
+            self.assertEqual(now[("F", "recoveries", 99.0)], 1)
+            self.assertEqual(now[("F", "appearances", 1.0)], 1)
+            self.assertEqual(now[("M", "appearances", 1.0)], expected[("M", "appearances", 1.0)] - 1)
+            self.assertEqual(now[("G", "appearances", 1.0)], expected[("G", "appearances", 1.0)])
+            # Under 30 minutes the appearance is no peer.
+            x("UPDATE core.player_match_stats SET minutes_played=29 WHERE season_id=2025 AND match_id=1 AND player_id=%s", (mid_fielder,))
+            x("SELECT agg.refresh_performance_distribution(1)")
+            self.assertNotIn(("F", "appearances", 1.0), self.distribution(metrics))
+        finally:
+            x("UPDATE core.player_match_stats SET recoveries=%s, minutes_played=90 WHERE season_id=2025 AND match_id=1 AND player_id=%s",
+              ((mid_fielder * 7 + 1) % 9, mid_fielder))
+            x("UPDATE core.lineup_players SET position_id=11 WHERE season_id=2025 AND match_id=1 AND player_id=%s", (keeper,))
+            x("UPDATE core.lineup_players SET position_id=62 WHERE season_id=2025 AND match_id=1 AND player_id=%s", (mid_fielder,))
+            x("SELECT agg.refresh_performance_distribution(1)")
+        self.assertEqual(self.distribution(metrics), expected)
+
+    def test_partitioned_tables_get_their_own_statistics(self):
+        # 056: autovacuum never analyses a partitioned table itself.
+        parents = self.one("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind='p' AND n.nspname IN ('core','agg','ops')")[0]
+        self.assertGreater(parents, 5)
+        self.assertEqual(self.one("SELECT ops.analyze_partitioned()")[0], parents)
+        self.assertGreater(
+            self.one("SELECT count(*) FROM pg_stats WHERE schemaname='core' AND tablename='player_match_stats' AND inherited")[0], 10
+        )
 
     def test_z_incremental_cohort_refresh(self):
         from vega_v2.calculator import process_dirty

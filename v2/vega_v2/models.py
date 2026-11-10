@@ -373,10 +373,12 @@ def _player_values_sql():
     return f"""
 WITH grp AS (
   SELECT DISTINCT ON (player_id) player_id, g FROM (
-    SELECT s.player_id, core.position_group(s.position_id) AS g, sum(s.minutes_played) AS minutes
+    SELECT s.player_id, core.position_group(coalesce(s.position_id, lp.position_id)) AS g, sum(s.minutes_played) AS minutes
     FROM core.player_match_stats s JOIN core.matches mt ON mt.id = s.match_id AND mt.season_id = s.season_id
+    -- The line-up carries the position: the statistics rows of PitchAPI have none.
+    LEFT JOIN core.lineup_players lp ON lp.season_id = s.season_id AND lp.match_id = s.match_id AND lp.player_id = s.player_id
     WHERE mt.competition_season_id = ANY(%(editions)s) AND s.season_id = %(season)s
-      AND core.position_group(s.position_id) IS NOT NULL
+      AND core.position_group(coalesce(s.position_id, lp.position_id)) IS NOT NULL
     GROUP BY 1, 2) x
   ORDER BY player_id, minutes DESC NULLS LAST, g
 ), m AS (
@@ -758,6 +760,14 @@ def refresh_daily(conn, season, *, elo=True):
     refresh_squad_profiles(conn, season)
     for (cohort,) in conn.execute("SELECT id FROM agg.cohorts WHERE season_id=%s ORDER BY id", (season,)).fetchall():
         refresh_similarity(conn, cohort)
+    # The calculator keeps each edition's performance histogram (055) with its aggregates;
+    # this pass recounts them all, so one missed refresh never outlives the day.
+    editions = conn.execute(
+        "SELECT DISTINCT competition_season_id FROM agg.player_season_stats WHERE season_id=%s ORDER BY 1", (season,)
+    ).fetchall()
+    for (edition,) in editions:
+        with conn.transaction():
+            conn.execute("SELECT agg.refresh_performance_distribution(%s)", (edition,))
 
 
 def refresh_season(conn, season):

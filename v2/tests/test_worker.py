@@ -288,6 +288,51 @@ class WorkerTest(unittest.TestCase):
              VALUES (901,901,%s,'vega','finished',900,901,2,2,'1971-01-01')""", (archive,))
         self.assertEqual(due_seasons(self.db, self.now), [])
 
+    def test_partitioned_tables_are_analysed_once_a_day(self):
+        calls = []
+        real = self.worker.calc_conn
+
+        class Spy:
+            def __getattr__(self, name):
+                return getattr(real, name)
+
+            def execute(self, sql, *args, **kwargs):
+                if "analyze_partitioned" in str(sql):
+                    calls.append(sql)
+                return real.execute(sql, *args, **kwargs)
+
+        self.worker.calc_conn = Spy()
+        self.worker.daily()
+        self.worker.daily()
+        self.assertEqual(len(calls), 1)
+        self.now += timedelta(days=1)
+        self.worker.daily()
+        self.assertEqual(len(calls), 2)
+
+    def test_archive_seasons_are_counted_once_a_day(self):
+        x = self.db.execute
+        with self.db.transaction():
+            archive = Store(self.db).season("1970/1971")
+        x("INSERT INTO core.competitions(id,name) VALUES (900,'Old League')")
+        x("INSERT INTO core.teams(id,name) VALUES (900,'A'),(901,'B')")
+        x("INSERT INTO core.competition_seasons(id,competition_id,season_id,native_label,archive_key) VALUES (901,900,%s,'1970/1971','test:1970')", (archive,))
+        x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date,archive_key)
+             VALUES (901,901,%s,'vega','finished',900,901,2,1,'1971-01-01','r:test:0'),
+                    (902,901,%s,'vega','canceled',901,900,NULL,NULL,'1971-01-08','r:test:1')""", (archive, archive))
+        counts = "SELECT result_competitions,result_matches,results,unplayed,goal_matches,goal_events FROM agg.archive_seasons WHERE season_id=%s"
+        self.worker.daily()
+        self.assertEqual(x(counts, (archive,)).fetchone(), (1, 2, 1, 1, 0, 0))
+        # The same day the counts stay; the next day's pass sees the goals a match received.
+        x("""INSERT INTO core.match_events(season_id,match_id,seq,event_type,minute,team_id)
+             VALUES (%s,901,1,'goal',10,900),(%s,901,2,'goal',50,901),(%s,901,3,'goal',80,900)""", (archive, archive, archive))
+        self.worker.daily()
+        self.assertEqual(x(counts, (archive,)).fetchone(), (1, 2, 1, 1, 0, 0))
+        self.now += timedelta(days=1)
+        self.worker.daily()
+        self.assertEqual(x(counts, (archive,)).fetchone(), (1, 2, 1, 1, 1, 3))
+        self.assertEqual(x("SELECT season,competitions,events,matches,latest_event::text FROM api.archive_goal_seasons").fetchall(),
+                         [("1970/1971", 1, 3, 1, "1971-01-01")])
+
     def drain(self):
         count = 0
         while self.worker.step():

@@ -36,6 +36,7 @@ import {
   publicationSql,
   readResponse,
   readValidator,
+  resolveEditions,
   scopeWhere,
 } from "../publication.mjs";
 import { fixture } from "./matches.mjs";
@@ -99,18 +100,6 @@ const appearanceJson = (keys, pin) => `SELECT a.*,fx.id AS match_key,fx.id||':'|
   FROM api.player_appearances a JOIN api.fixtures fx ON fx.season_id=a.season_id AND fx.match_id=a.match_id
   WHERE ${pin("a")} AND ${pin("fx")} AND a.match_id=ANY(ARRAY(SELECT k.match_id FROM (${keys}) k)) AND fx.match_id=ANY(ARRAY(SELECT k.match_id FROM (${keys}) k))
   AND (a.season_id,a.match_id,a.player_id) IN (${keys})`;
-
-/** The scope as ids (api.edition_keys, 047): its season's id and its editions. Resolved
- * before the query and bound, so the query filters on indexed ids and the planner prunes
- * the other seasons' partitions at plan time (a subquery only prunes at run time, after
- * planning every season's partitions: 39 s of planning for the Ligue 1 home). */
-export const EDITIONS_SQL = `SELECT (SELECT k.season_id FROM api.season_keys k WHERE k.season=$1) AS season_id,
-  coalesce((SELECT array_agg(e.competition_season_id ORDER BY e.competition_season_id) FROM api.edition_keys e
-    WHERE e.season=$1 AND ($2::text[] IS NULL OR e.league_id=ANY($2::text[]))),'{}') AS ids`;
-export async function resolveEditions(read, scope) {
-  const [row] = await read(EDITIONS_SQL, [scope.season, scope.leagueIds]);
-  return { seasonId: row?.season_id ?? null, ids: (row?.ids || []).map(Number) };
-}
 
 // The scope's fixtures and its last result, then the displayed week (api.home_period):
 // the start of both reads, so that they show the same week.
