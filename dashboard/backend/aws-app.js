@@ -32,6 +32,7 @@ import { relationalClubReadRoute } from "./services/relational-clubs.js";
 import { relationalHomeReadRoute } from "./services/relational-home.js";
 import { relationalDisciplineRoute } from "./services/relational-discipline.js";
 import { relationalPlayerPresenceRoute } from "./services/relational-player-presence.js";
+import { relationalPlayerMarketValuesRoute } from "./services/relational-player-market-values.js";
 import { relationalArchiveReadRoute } from "./services/relational-archives.js";
 import {
   manifest,
@@ -278,6 +279,7 @@ async function route(req) {
     relationalHomeReadRoute,
     relationalDisciplineRoute,
     relationalPlayerPresenceRoute,
+    relationalPlayerMarketValuesRoute,
     relationalArchiveReadRoute,
   ]) {
     const response = await route(req, path, p);

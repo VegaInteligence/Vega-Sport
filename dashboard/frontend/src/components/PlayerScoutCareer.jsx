@@ -10,17 +10,20 @@ import { playerTeamSeasons } from "../services/player-team-seasons.js";
 import { nationalTeamName } from "../services/national-flags.js";
 import { seasonMetric } from "../services/season-player.js";
 import { number } from "../services/format.js";
+import {
+  loadPlayerMarketValues,
+  marketDate,
+  marketValue,
+  playerMarketValuesKey,
+} from "../services/player-market-values.js";
 import { AsyncState, Media } from "./UI.jsx";
 import NationalFlag from "./NationalFlag.jsx";
-import { fmt } from "./PlayerScoutCharts.jsx";
+import { fmt, LineChart } from "./PlayerScoutCharts.jsx";
 import {
   FAKE_CAREER_STAGE,
   FAKE_FACTS,
-  FAKE_VALUE,
   FakeBadge,
-  FakeMarket,
   InjuriesSection,
-  ValueHistoryCard,
   VegaIndexHistoryCard,
 } from "./PlayerScoutDemo.jsx";
 import s from "./PlayerScout.module.css";
@@ -58,6 +61,19 @@ export default function PlayerScoutCareer({
   children,
 }) {
   const f = useFootball();
+  const market = useResource(
+    playerMarketValuesKey(id),
+    ({ signal }) => loadPlayerMarketValues(id, { signal }),
+    Boolean(id),
+  );
+  const values = market.value?.history || [];
+  const latestValue = values.at(-1);
+  const marketPoints = values.map((row) => ({
+    x: marketDate(row.date),
+    date: row.date,
+    y: row.valueEur / 1_000_000,
+  }));
+  const marketMaximum = Math.max(1, ...marketPoints.map((point) => point.y));
   const history = useResource(playerHistoryKey(f.manifest, id), ({ signal }) =>
     loadPlayerHistory(f.manifest, id, { signal }),
   );
@@ -78,7 +94,7 @@ export default function PlayerScoutCareer({
   const kpis = [
     ["Club actuel", team?.name || "—"],
     ["Fin de contrat", contract.value, false, true],
-    ["Valeur", `${FAKE_VALUE.amount} est.`, true, true],
+    ["Valeur", latestValue ? marketValue(latestValue.valueEur) : "—", true],
     ["Matchs en club", show(clubTotals.matches)],
     ["Minutes en club", show(clubTotals.minutes)],
     [
@@ -103,18 +119,48 @@ export default function PlayerScoutCareer({
                 {label} {fake && <FakeBadge short />}
               </span>
               <strong className={accent ? s.kpiAccent : undefined}>
-                {history.loading && !fake && label !== "Club actuel"
+                {(label === "Valeur"
+                  ? market.loading
+                  : history.loading && !fake && label !== "Club actuel")
                   ? "…"
                   : value}
               </strong>
             </div>
           ))}
         </div>
-        <FakeMarket />
       </div>
       <div className={`${s.block} ${s.grid2}`}>
         <VegaIndexHistoryCard />
-        <ValueHistoryCard />
+        <section className={s.card}>
+          <h2>Valeur marchande</h2>
+          <p className={s.note}>Estimations Transfermarkt · historique observé</p>
+          {values.length ? (
+            <>
+              <LineChart
+                width={520}
+                points={marketPoints}
+                xValue={(point) => Date.parse(`${point.date}T00:00:00Z`)}
+                domain={[0, marketMaximum * 1.1]}
+                ticks={[0, marketMaximum]}
+                labelEvery={Math.max(1, Math.ceil(values.length / 5))}
+                format={(value) => marketValue(Math.round(value * 1_000_000))}
+                ariaLabel="Historique des estimations de valeur marchande Transfermarkt"
+              />
+              <p className={s.note}>
+                Dernière estimation {marketValue(latestValue.valueEur)} au{" "}
+                {marketDate(latestValue.date)}
+              </p>
+            </>
+          ) : (
+            <p className={s.note}>
+              {market.loading
+                ? "Chargement…"
+                : market.error
+                  ? "Historique indisponible."
+                  : "Aucune estimation disponible."}
+            </p>
+          )}
+        </section>
       </div>
       <section className={s.block}>
         <div className={s.sectionHead}>

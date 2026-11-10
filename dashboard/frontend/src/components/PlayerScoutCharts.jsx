@@ -880,14 +880,18 @@ export function LineChart({
   labelEvery = 1,
   color = "var(--accent)",
   ariaLabel,
+  xValue,
 }) {
   const t = useTip();
   const [active, setActive] = useState(null);
   const m = { top: 14, right: 16, bottom: 26, left: 36 };
   const iw = width - m.left - m.right,
     ih = height - m.top - m.bottom;
+  const xValues = xValue ? points.map(xValue) : points.map((_, i) => i);
+  const xMin = Math.min(...xValues);
+  const xRange = Math.max(...xValues) - xMin;
   const x = (i) =>
-    m.left + (points.length === 1 ? iw / 2 : (i / (points.length - 1)) * iw);
+    m.left + iw * (xRange > 0 ? (xValues[i] - xMin) / xRange : 0.5);
   const y = (v) =>
     m.top + ih - ((v - domain[0]) / (domain[1] - domain[0])) * ih;
   const line = points
