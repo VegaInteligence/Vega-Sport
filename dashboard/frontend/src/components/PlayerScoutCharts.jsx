@@ -881,17 +881,22 @@ export function LineChart({
   color = "var(--accent)",
   ariaLabel,
   xValue,
+  xTicks,
+  leftMargin = 36,
+  markers = [],
 }) {
   const t = useTip();
   const [active, setActive] = useState(null);
-  const m = { top: 14, right: 16, bottom: 26, left: 36 };
+  const m = { top: 14, right: 16, bottom: 26, left: leftMargin };
+  const axisGap = markers.length ? 12 : 8;
   const iw = width - m.left - m.right,
     ih = height - m.top - m.bottom;
   const xValues = xValue ? points.map(xValue) : points.map((_, i) => i);
   const xMin = Math.min(...xValues);
   const xRange = Math.max(...xValues) - xMin;
-  const x = (i) =>
-    m.left + iw * (xRange > 0 ? (xValues[i] - xMin) / xRange : 0.5);
+  const xAt = (value) =>
+    m.left + iw * (xRange > 0 ? (value - xMin) / xRange : 0.5);
+  const x = (i) => xAt(xValues[i]);
   const y = (v) =>
     m.top + ih - ((v - domain[0]) / (domain[1] - domain[0])) * ih;
   const line = points
@@ -899,25 +904,21 @@ export function LineChart({
     .join("");
   const fill = `${line}L${x(points.length - 1)} ${m.top + ih}L${x(0)} ${m.top + ih}Z`;
   const gradient = `mq-grad-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
+  const pointTip = (i) =>
+    tip ? (
+      tip(points[i], i)
+    ) : (
+      <TipBody title={points[i].x} rows={[["Valeur", format(points[i].y)]]} />
+    );
   const pick = (event) => {
-    const box = event.currentTarget.getBoundingClientRect();
+    const box = event.currentTarget.ownerSVGElement.getBoundingClientRect();
     const vx = ((event.clientX - box.left) / box.width) * width;
     let best = 0;
     points.forEach((_, i) => {
       if (Math.abs(x(i) - vx) < Math.abs(x(best) - vx)) best = i;
     });
     setActive(best);
-    t.show(
-      event,
-      tip ? (
-        tip(points[best], best)
-      ) : (
-        <TipBody
-          title={points[best].x}
-          rows={[["Valeur", format(points[best].y)]]}
-        />
-      ),
-    );
+    t.show(event, pointTip(best));
   };
   return (
     <div className={s.chart} ref={t.ref}>
@@ -938,7 +939,7 @@ export function LineChart({
               className={s.grid}
             />
             <text
-              x={m.left - 8}
+              x={m.left - axisGap}
               y={y(v) + 4}
               textAnchor="end"
               className={s.axisText}
@@ -996,25 +997,55 @@ export function LineChart({
             strokeWidth="2"
           />
         ))}
-        {points.map((p, i) =>
-          i % labelEvery === 0 || i === points.length - 1 ? (
-            <text
-              key={`l${i}`}
-              x={x(i)}
-              y={height - 6}
-              textAnchor="middle"
-              className={s.axisText}
-            >
-              {p.x}
-            </text>
-          ) : null,
-        )}
+        {markers.map(({ index, name, label }) => (
+          <g
+            key={index}
+            role="img"
+            aria-label={`${name}, ${points[index].x}, ${format(points[index].y)}`}
+            className={s.lineMarker}
+            {...tipHandlers(t, pointTip(index), (on) => setActive(on ? index : null))}
+          >
+            <circle cx={x(index)} cy={y(points[index].y)} r="8.5" />
+            <text x={x(index)} y={y(points[index].y)}>{label}</text>
+          </g>
+        ))}
+        {xTicks
+          ? xTicks.map(({ value, label }, i) => {
+              let anchor = "middle";
+              if (xTicks.length > 1 && i === 0) anchor = "start";
+              if (i > 0 && i === xTicks.length - 1) anchor = "end";
+              return (
+                <text
+                  key={value}
+                  x={xAt(value)}
+                  y={height - 6}
+                  textAnchor={anchor}
+                  className={s.axisText}
+                >
+                  {label}
+                </text>
+              );
+            })
+          : points.map((p, i) =>
+              i % labelEvery === 0 || i === points.length - 1 ? (
+                <text
+                  key={`l${i}`}
+                  x={x(i)}
+                  y={height - 6}
+                  textAnchor="middle"
+                  className={s.axisText}
+                >
+                  {p.x}
+                </text>
+              ) : null,
+            )}
         <rect
           x={m.left - 10}
           y={m.top}
           width={iw + 20}
           height={ih}
           className={s.hit}
+          onPointerDown={pick}
           onPointerMove={pick}
           onPointerLeave={() => {
             setActive(null);

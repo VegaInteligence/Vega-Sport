@@ -12,13 +12,13 @@ import { seasonMetric } from "../services/season-player.js";
 import { number } from "../services/format.js";
 import {
   loadPlayerMarketValues,
-  marketDate,
   marketValue,
   playerMarketValuesKey,
 } from "../services/player-market-values.js";
 import { AsyncState, Media } from "./UI.jsx";
 import NationalFlag from "./NationalFlag.jsx";
-import { fmt, LineChart } from "./PlayerScoutCharts.jsx";
+import { fmt } from "./PlayerScoutCharts.jsx";
+import PlayerMarketValueCard from "./PlayerMarketValueCard.jsx";
 import {
   FAKE_CAREER_STAGE,
   FAKE_FACTS,
@@ -68,12 +68,6 @@ export default function PlayerScoutCareer({
   );
   const values = market.value?.history || [];
   const latestValue = values.at(-1);
-  const marketPoints = values.map((row) => ({
-    x: marketDate(row.date),
-    date: row.date,
-    y: row.valueEur / 1_000_000,
-  }));
-  const marketMaximum = Math.max(1, ...marketPoints.map((point) => point.y));
   const history = useResource(playerHistoryKey(f.manifest, id), ({ signal }) =>
     loadPlayerHistory(f.manifest, id, { signal }),
   );
@@ -131,36 +125,12 @@ export default function PlayerScoutCareer({
       </div>
       <div className={`${s.block} ${s.grid2}`}>
         <VegaIndexHistoryCard />
-        <section className={s.card}>
-          <h2>Valeur marchande</h2>
-          <p className={s.note}>Historique des estimations</p>
-          {values.length ? (
-            <>
-              <LineChart
-                width={520}
-                points={marketPoints}
-                xValue={(point) => Date.parse(`${point.date}T00:00:00Z`)}
-                domain={[0, marketMaximum * 1.1]}
-                ticks={[0, marketMaximum]}
-                labelEvery={Math.max(1, Math.ceil(values.length / 5))}
-                format={(value) => marketValue(Math.round(value * 1_000_000))}
-                ariaLabel="Historique des estimations de valeur marchande"
-              />
-              <p className={s.note}>
-                Dernière estimation {marketValue(latestValue.valueEur)} au{" "}
-                {marketDate(latestValue.date)}
-              </p>
-            </>
-          ) : (
-            <p className={s.note}>
-              {market.loading
-                ? "Chargement…"
-                : market.error
-                  ? "Historique indisponible."
-                  : "Aucune estimation disponible."}
-            </p>
-          )}
-        </section>
+        <PlayerMarketValueCard
+          key={id}
+          values={values}
+          loading={market.loading}
+          error={market.error}
+        />
       </div>
       <section className={s.block}>
         <div className={s.sectionHead}>
