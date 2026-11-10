@@ -2,6 +2,7 @@
 import React, { useMemo } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResource } from "../services/resources.js";
+import { hasBoundedSearch } from "../services/global-search-client.js";
 import {
   loadPlayerHistory,
   playerHistoryKey,
@@ -130,6 +131,10 @@ export default function PlayerScoutCareer({
           values={values}
           loading={market.loading}
           error={market.error}
+          teams={[team, ...clubs.map((row) => row.teamInfo)].filter(Boolean)}
+          lookupSeason={
+            !history.loading && hasBoundedSearch(f.manifest) ? season : null
+          }
         />
       </div>
       <section className={s.block}>

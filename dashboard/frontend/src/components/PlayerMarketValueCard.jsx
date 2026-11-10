@@ -1,7 +1,13 @@
 "use client";
 import React from "react";
 import { marketDate, marketValue } from "../services/player-market-values.js";
+import {
+  loadMarketClubCrests,
+  marketClubCrest,
+} from "../services/player-market-clubs.js";
+import { useResource } from "../services/resources.js";
 import { LineChart, TipBody } from "./PlayerScoutCharts.jsx";
+import { Media } from "./UI.jsx";
 import s from "./PlayerScout.module.css";
 
 const day = 86_400_000;
@@ -38,7 +44,13 @@ function valueScale(points) {
   };
 }
 
-export default function PlayerMarketValueCard({ values, loading, error }) {
+export default function PlayerMarketValueCard({
+  values,
+  loading,
+  error,
+  teams,
+  lookupSeason,
+}) {
   const latest = values.at(-1);
   const clubs = [];
   let previousClub;
@@ -48,7 +60,7 @@ export default function PlayerMarketValueCard({ values, loading, error }) {
       typeof value.clubName === "string" ? value.clubName.trim() : "";
     const club = name && (value.clubId || name);
     if (club && club !== previousClub) {
-      clubs.push({ index, name, date: x, label: clubs.length + 1 });
+      clubs.push({ index, name, date: x, crest: marketClubCrest(name, teams) });
       previousClub = club;
     }
     return {
@@ -58,6 +70,24 @@ export default function PlayerMarketValueCard({ values, loading, error }) {
       club: name,
     };
   });
+  const missing = [
+    ...new Set(clubs.filter((club) => !club.crest).map((club) => club.name)),
+  ].sort();
+  const lookup = useResource(
+    `market-crests:${lookupSeason}:${JSON.stringify(missing)}`,
+    ({ signal }) => loadMarketClubCrests(missing, lookupSeason, { signal }),
+    Boolean(lookupSeason && missing.length),
+  );
+  const markers = clubs.map((club) => ({
+    ...club,
+    icon: (
+      <Media
+        name={club.name}
+        url={club.crest || lookup.value?.[club.name]}
+        className={s.marketClubCrest}
+      />
+    ),
+  }));
 
   return (
     <section className={s.card}>
@@ -84,7 +114,7 @@ export default function PlayerMarketValueCard({ values, loading, error }) {
               points={points}
               xValue={(point) => point.time}
               xTicks={timeTicks(points)}
-              markers={clubs}
+              markers={markers}
               format={marketValue}
               tip={(point) => (
                 <TipBody
@@ -102,11 +132,9 @@ export default function PlayerMarketValueCard({ values, loading, error }) {
             <div className={s.marketClubs}>
               <p className={s.note}>Clubs aux dates des estimations</p>
               <ol>
-                {clubs.map(({ index, name, date, label }) => (
+                {markers.map(({ index, name, date, icon }) => (
                   <li key={index}>
-                    <span aria-hidden="true" className={s.marketClubNumber}>
-                      {label}
-                    </span>
+                    {icon}
                     <div>
                       <strong>{name}</strong>
                       <small>{date}</small>

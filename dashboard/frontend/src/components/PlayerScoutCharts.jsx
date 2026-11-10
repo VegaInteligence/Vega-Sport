@@ -889,6 +889,7 @@ export function LineChart({
   const [active, setActive] = useState(null);
   const m = { top: 14, right: 16, bottom: 26, left: leftMargin };
   const axisGap = markers.length ? 12 : 8;
+  const markerDiameter = 20;
   const iw = width - m.left - m.right,
     ih = height - m.top - m.bottom;
   const xValues = xValue ? points.map(xValue) : points.map((_, i) => i);
@@ -997,18 +998,6 @@ export function LineChart({
             strokeWidth="2"
           />
         ))}
-        {markers.map(({ index, name, label }) => (
-          <g
-            key={index}
-            role="img"
-            aria-label={`${name}, ${points[index].x}, ${format(points[index].y)}`}
-            className={s.lineMarker}
-            {...tipHandlers(t, pointTip(index), (on) => setActive(on ? index : null))}
-          >
-            <circle cx={x(index)} cy={y(points[index].y)} r="8.5" />
-            <text x={x(index)} y={y(points[index].y)}>{label}</text>
-          </g>
-        ))}
         {xTicks
           ? xTicks.map(({ value, label }, i) => {
               let anchor = "middle";
@@ -1053,6 +1042,22 @@ export function LineChart({
           }}
         />
       </svg>
+      {markers.map(({ index, name, icon }) => (
+        <span
+          key={index}
+          role="img"
+          aria-label={`${name}, ${points[index].x}, ${format(points[index].y)}`}
+          className={s.lineMarker}
+          style={{
+            left: `${(x(index) * 100) / width}%`,
+            top: `${(y(points[index].y) * 100) / height}%`,
+            width: `${(markerDiameter * 100) / width}%`,
+          }}
+          {...tipHandlers(t, pointTip(index), (on) => setActive(on ? index : null))}
+        >
+          {icon}
+        </span>
+      ))}
       <Tip tip={t.tip} />
     </div>
   );
