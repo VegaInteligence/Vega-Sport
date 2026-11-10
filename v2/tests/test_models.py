@@ -341,6 +341,28 @@ class ModelsTest(unittest.TestCase):
         self.assertAlmostEqual(sim, 100 - sum(abs(mine[k] - theirs[k]) for k in common) / len(common), places=3)
         self.assertEqual(self.one("SELECT max(rank) FROM agg.team_similar WHERE cohort_id=%s", self.cohort("team:2025:cs:1"))[0], 7)
 
+    def test_two_calculators_write_a_season_s_index_one_after_the_other(self):
+        # Another calculator holds the season's index: this one waits for it (here, gives
+        # up at once) instead of emptying and writing the same rows.
+        from vega_v2.store import connect_local
+
+        other = connect_local(DSN)
+        try:
+            with other.transaction():
+                other.execute("SELECT pg_advisory_xact_lock(92011, 2025)")
+                self.db.execute("SET lock_timeout = '300ms'")
+                try:
+                    with self.assertRaises(psycopg.errors.LockNotAvailable):
+                        models.refresh_player_index(self.db, 2025)
+                finally:
+                    self.db.execute("RESET lock_timeout")
+            before = self.db.execute("SELECT count(*) FROM agg.player_index WHERE season_id=2025").fetchone()[0]
+            models.refresh_player_index(self.db, 2025)
+            self.assertEqual(self.db.execute("SELECT count(*) FROM agg.player_index WHERE season_id=2025").fetchone()[0], before)
+            self.assertGreater(before, 0)
+        finally:
+            other.close()
+
     def test_levels_strength_and_squad(self):
         # A club's level is its season-end Elo: the Elo it carried in plus what the season added.
         levels = self.db.execute(

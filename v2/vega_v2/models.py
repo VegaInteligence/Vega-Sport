@@ -569,6 +569,11 @@ def refresh_player_index(conn, season):
     the site shows them as fictitious.
     """
     with conn.transaction():
+        # One writer of a season's index at a time. The worker, its side process and the
+        # backfill each refresh it: two at once both emptied the season and both wrote it,
+        # and the second failed on the primary key (eight times in two hours on
+        # 10 November 2026, each retried).
+        conn.execute("SELECT pg_advisory_xact_lock(92011, %s)", (season,))
         run = _start_run(conn, "index", f"player:{season}")
         conn.execute("DELETE FROM agg.player_index WHERE season_id=%s", (season,))
         conn.execute(
