@@ -282,6 +282,23 @@ export function appearanceWhere(filters, params, values, editions, alias = "a") 
  * ("<key>_sum", "_count", "_minutes"; a ratio's "_numerator", "_denominator") and the
  * player's row `d`; nameSort is the folded name the order compares.
  */
+/**
+ * The page of the selection, each player with his rank in it (result_order).
+ * A whole selection keeps its page by that rank. Behind LIMIT … OFFSET the planner
+ * expects a single row once the offset passes the players it expects in the selection,
+ * and then reads each detail again for every player of the page: of the 36,841 profiles
+ * of every competition (30,984 expected), the page from the 33,001st took 7.5 to 11.5 s
+ * on the base on 11 November 2026, against 1.1 to 1.8 s by rank, with the same answer.
+ * A list's page keeps LIMIT … OFFSET, which stops at its twenty players (0.28 s against
+ * 0.32 s by rank, the same day).
+ */
+function pageSql(filters, order, limit, offset) {
+  const ranked = `SELECT d.*,row_number() OVER(ORDER BY ${order}) result_order FROM filtered d`;
+  return filters.whole
+    ? `page AS MATERIALIZED (SELECT n.* FROM (${ranked}) n WHERE n.result_order>${offset} ORDER BY n.result_order LIMIT ${limit})`
+    : `page AS MATERIALIZED (${ranked} ORDER BY ${order} LIMIT ${limit} OFFSET ${offset})`;
+}
+
 function playerSelection(filters, values, nameSort) {
   const b = (value) => bindValue(values, value);
   const metricValue = (key) => {
@@ -441,7 +458,7 @@ source AS MATERIALIZED (
  LEFT JOIN unknown u USING(player_id) LEFT JOIN teams t USING(player_id) LEFT JOIN leagues le USING(player_id)
  LEFT JOIN main_role r USING(player_id) LEFT JOIN api.player_search_aliases al ON al.player_id=i.player_id
 ), filtered AS MATERIALIZED (SELECT d.* FROM averages d WHERE ${thresholds}),
-page AS MATERIALIZED (SELECT d.*,row_number() OVER(ORDER BY ${order}) result_order FROM filtered d ORDER BY ${order} LIMIT ${limit} OFFSET ${offset}),
+${pageSql(filters, order, limit, offset)},
 page_metrics AS (
  SELECT p.player_id,${countProjection},${ratioProjection}
  FROM api.player_appearances p
@@ -646,8 +663,11 @@ export function playerRollupQuery(filters, params, editions, { fromAppearances =
   const roleSql = `coalesce(mr.role_code,${positionLineSql("i.position_number")})`;
   const teamsSql = `coalesce(t.names,CASE WHEN it.name IS NOT NULL AND it.name<>'' THEN ARRAY[it.name] ELSE '{}'::text[] END)`;
   const leaguesSql = `coalesce(le.names,'{}'::text[])`;
+  // The match's public id is read from its key (api.match_keys), not by api.public_id:
+  // the function is never inlined, and a page of 3,000 profiles called it 6,000 times.
+  const matchId = (alias) => `(SELECT mk.public_id FROM api.match_keys mk WHERE mk.match_id=${alias}.match_id)`;
   const identityJson = (alias, team) =>
-    `CASE WHEN ${alias}.player_id IS NULL THEN NULL ELSE json_build_object('id',api.public_id('match',${alias}.match_id)||':'||p.player_id,
+    `CASE WHEN ${alias}.player_id IS NULL THEN NULL ELSE json_build_object('id',${matchId(alias)}||':'||p.player_id,
      'name',k.name,'image_url',k.image_url,'date',${alias}.date,'team',${team}.name,'team_id',${team}.public_id,
      'league_id',${alias}.league_id,'league',${alias}.league,'position_number',${alias}.position_number) END`;
   const worked = fromAppearances ? appearanceRows(filters, params, values, editions, earlyCounts, earlyRatios) : null;
@@ -679,7 +699,7 @@ ${detailSql(true)}averages AS (
      : ""
  }
 ), filtered AS MATERIALIZED (SELECT d.* FROM averages d WHERE ${thresholds}),
-page AS MATERIALIZED (SELECT d.*,row_number() OVER(ORDER BY ${order}) result_order FROM filtered d ORDER BY ${order} LIMIT ${limit} OFFSET ${offset}),
+${pageSql(filters, order, limit, offset)},
 ${worked ? worked.afterPage : ""}${detailSql(false)}${recent("latest", "latest", false)},
 team_ids AS (
  SELECT r.player_id,array_agg(DISTINCT r.team_id) ids FROM ${rows.teams} r WHERE ${scope("r")}${paged("r", false)} GROUP BY r.player_id

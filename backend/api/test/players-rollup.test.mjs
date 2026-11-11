@@ -180,6 +180,56 @@ test("a filtered request's rows, worked out from the appearances, answer as the 
   assert.ok(found > compared, `${found} players over ${compared} requests`);
 });
 
+// A whole selection keeps its page by rank (pageSql): the same players, in the same
+// order and with the same records, as LIMIT … OFFSET keeps, page after page and past the end.
+test("a whole selection's pages, kept by rank, are those LIMIT … OFFSET keeps", { skip }, async () => {
+  for (const request of ["&minutes=0", "&minutes=0&sort=goals&basis=total", "&minutes=0&venue=home", "&minutes=0&group=O"]) {
+    const params = new URL(`https://api.test/api/read/players?season=2025/2026&leagues=all&detail=profile${request}`).searchParams;
+    const parsed = parsePlayerRead(params);
+    const editions = await resolveEditions(context.reader.read, parsed.scope);
+    const fromAppearances = !supportsPlayerRollup(parsed);
+    const page = async (whole, limit, offset) => {
+      const { sql, values } = playerRollupQuery({ ...parsed, whole, limit, offset }, params, editions, { fromAppearances });
+      assert.equal(/ n WHERE n\.result_order>\$\d+ ORDER BY n\.result_order LIMIT \$\d+\)/.test(sql), whole, request);
+      assert.equal(/ LIMIT \$\d+ OFFSET \$\d+\)/.test(sql), !whole, request);
+      const [row] = await context.reader.read(sql, values, fromAppearances ? { plan: ["hashJoins"] } : undefined);
+      return JSON.parse(JSON.stringify({ total: row.total, players: row.players, teams: row.teams }));
+    };
+    const all = await page(false, 100, 0);
+    assert.ok(all.total >= 2 && all.players.length === all.total, `${request}: ${all.total} players`);
+    // Several pages whatever the selection's size: of two players, or of one.
+    const size = all.total > 4 ? 2 : 1,
+      seen = [];
+    for (let offset = 0; offset < all.total + size; offset += size) {
+      const ranked = await page(true, size, offset);
+      same(ranked, await page(false, size, offset), `${request} from ${offset}`);
+      assert.equal(ranked.players.length, Math.max(0, Math.min(size, all.total - offset)), `${request} from ${offset}`);
+      seen.push(...ranked.players.map((player) => player.p.player_id));
+    }
+    assert.deepEqual(seen, all.players.map((player) => player.p.player_id), request);
+  }
+});
+
+// api.match_keys gives a match's public id by the rule of api.public_id: the provider's
+// current key, else the Vega key.
+test("a match's key is the public id the function gives, with or without a provider's key", { skip }, async () => {
+  await owner.query("BEGIN");
+  try {
+    await owner.query(
+      `INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date,kickoff_at)
+       VALUES (9099,9001,2025,'pitchapi','finished',1,2,1,0,'2025-10-01'::date,'2025-10-01'::date + time '19:00')`,
+    );
+    const { rows } = await owner.query("SELECT k.match_id,k.public_id,api.public_id('match',k.match_id) expected FROM api.match_keys k ORDER BY 1");
+    const { rows: [{ matches }] } = await owner.query("SELECT count(*)::int matches FROM core.matches");
+    assert.equal(rows.length, matches);
+    for (const row of rows) assert.equal(row.public_id, row.expected, `match ${row.match_id}`);
+    assert.equal(rows.find((row) => row.match_id === 9099).public_id, "m_v0009099");
+    assert.equal(rows.find((row) => row.match_id === 9011).public_id, "m_aaaab1");
+  } finally {
+    await owner.query("ROLLBACK");
+  }
+});
+
 test("one match's players are read by the statement on the appearances; a filtered scope is not", { skip }, async () => {
   const sent = [];
   const reader = { read: async (sql, values, options) => (sent.push([sql.slice(0, 40), options?.plan ?? null]), context.reader.read(sql, values, options)) };
