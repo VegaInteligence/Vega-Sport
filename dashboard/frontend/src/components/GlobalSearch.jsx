@@ -64,12 +64,12 @@ export default function GlobalSearch() {
   const legacyCups = useResource(
     "supplemental-cup-index",
     () => cupIndex("supplemental"),
-    !remote && armed && needle.length >= 2 && !f?.pro,
+    !remote && armed && needle.length >= 2,
   );
   const workerCups = useResource(
     "cup-worker-index",
     () => cupIndex("worker"),
-    !remote && armed && needle.length >= 2 && !f?.pro,
+    !remote && armed && needle.length >= 2,
   );
   // Compatibility with a backend deployed before the discovery endpoint. The
   // complete legacy index is requested only after typing, never on hover/focus.
