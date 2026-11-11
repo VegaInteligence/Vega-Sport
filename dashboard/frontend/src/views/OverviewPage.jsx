@@ -549,25 +549,28 @@ function OverviewContent({
   return (
     <Layout path="/" title="Vue d’ensemble" hideHeading className="home-page">
       <h1 className="sr-only">Vue d’ensemble</h1>
+      {/* The week's title and the season/competition filters share one row. */}
       <div className="home-toolbar">
-        <SeasonFilter f={f} compact />
-        <HomePreferences f={f} />
-      </div>
-      {matchWeek && (
-        <div className="home-section-head">
-          <h2>
-            {archived
-              ? `Archives · ${f.season}`
-              : matchWeek.latest
-                ? "Dernière semaine jouée"
-                : "Semaine en cours"}
-            <span>
-              {weekPeriodLabel(matchWeek)}
-              {!archived && !matchWeek.latest && " · résultats provisoires"}
-            </span>
-          </h2>
+        {matchWeek && (
+          <div className="home-section-head">
+            <h2>
+              {archived
+                ? `Archives · ${f.season}`
+                : matchWeek.latest
+                  ? "Dernière semaine jouée"
+                  : "Semaine en cours"}
+              <span>
+                {weekPeriodLabel(matchWeek)}
+                {!archived && !matchWeek.latest && " · résultats provisoires"}
+              </span>
+            </h2>
+          </div>
+        )}
+        <div className="home-toolbar-filters">
+          <SeasonFilter f={f} compact />
+          <HomePreferences f={f} />
         </div>
-      )}
+      </div>
       {matchWeek?.latest && !archived && (
         <p className="home-meta" role="status">
           Aucun match terminé pour l’instant cette semaine (

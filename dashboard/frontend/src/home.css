@@ -1939,9 +1939,21 @@ html[data-theme="light"] {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 12px;
+}
+.home-toolbar .home-section-head {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-bottom: 0;
+}
+/* Stays on the right, with or without a title, and when the row wraps. */
+.home-toolbar-filters {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-left: auto;
 }
 .home-toolbar .filter-season {
   flex: 0 0 140px;
