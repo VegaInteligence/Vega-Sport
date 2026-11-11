@@ -13,6 +13,7 @@ import {
   supportsCompactRead,
 } from "../dashboard/frontend/src/services/compact-reads.js";
 import { readPages } from "../dashboard/frontend/src/season_data.js";
+import { actorReadParams } from "../dashboard/frontend/src/services/actor-reads.js";
 import { EMPTY_ADVANCED } from "../dashboard/frontend/src/services/advanced-filters.js";
 import { acceptMediaPayload } from "../dashboard/frontend/src/services/media-registry.js";
 
@@ -312,6 +313,41 @@ test("the pages of a selection that names its version are fenced by it, and read
   };
   await readCompactPages("players", { season: "2026/2027", limit: 1, generation: "g1" }, { fetcher });
   assert.deepEqual(calls, [["1", null, "g1"], ["2", null, "g1"]]);
+});
+
+test("an actor's read the API validates by its version names no publication, and keeps the site's", async () => {
+  const able = { ...manifest, capabilities: { ...manifest.capabilities, actorSummary: true, versionedReads: { club: true } } };
+  const params = actorReadParams(able, "club", { id: "t_aaaaa1", season: "2026/2027" });
+  assert.equal(params.versioned, 1);
+  assert.equal(params.generation, "g1");
+  // Only the kinds the API says; a player's read keeps naming the publication here.
+  assert.equal("versioned" in actorReadParams(able, "player", { id: "p_aaaaa1", season: "2026/2027" }), false);
+  assert.equal("versioned" in actorReadParams(manifest, "club", { id: "t_aaaaa1", season: "2026/2027" }), false);
+  const calls = [];
+  const answer = (number, version, generation = "g9", total = 2) =>
+    Response.json({
+      data: { matches: [{ id: "m_" + number }], fixtures: [], appearances: [], teams: [], competitions: [] },
+      meta: { generation, ...(version && { version }) },
+      pagination: { page: number, limit: 1, total, pages: total, generation },
+    });
+  const fetcher = async (path) => {
+    const q = new URL(path, "https://example.test").searchParams;
+    calls.push(Object.fromEntries(q));
+    return answer(Number(q.get("page") || 1), "aaaaaaaaaaaaaaaa");
+  };
+  // One read: neither the publication nor the mark is sent; the answer takes the site's publication.
+  const one = await readCompact("club", { ...params, page: 1 }, { fetcher });
+  assert.deepEqual([calls[0].generation, calls[0].versioned, calls[0].team], [undefined, undefined, "t_aaaaa1"]);
+  assert.deepEqual([one.meta.generation, one.pagination.generation, one.meta.version], ["g1", "g1", "aaaaaaaaaaaaaaaa"]);
+  // Its pages: the next ones name the version, never the publication.
+  calls.length = 0;
+  const all = await readCompactPages("club", { ...params, limit: 1 }, { fetcher });
+  assert.deepEqual(calls.map((q) => [q.page, q.v, q.generation]), [["1", undefined, undefined], ["2", "aaaaaaaaaaaaaaaa", undefined]]);
+  assert.equal(all.meta.generation, "g1");
+  assert.equal(all.pages.length, 2);
+  // An answer that names no version was not validated that way: its own publication stands, and must be the site's.
+  await assert.rejects(readCompact("club", { ...params, page: 1 }, { fetcher: async () => answer(1, null) }), /publication reçue/);
+  assert.equal((await readCompact("club", { ...params, page: 1 }, { fetcher: async () => answer(1, null, "g1") })).meta.generation, "g1");
 });
 
 test("opening one directory page makes one bounded request and forwards cancellation", async () => {

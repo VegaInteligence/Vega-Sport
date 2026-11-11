@@ -146,8 +146,14 @@ export async function readCompact(
   { signal, fetcher = fetch } = {},
 ) {
   signal?.throwIfAborted();
+  // `versioned`: the API validates this read by its own version. Its address names no
+  // publication, so what a browser or the distribution holds is not asked again in full
+  // at each publication (every five minutes while anything is collected); the answer
+  // is the current one, and takes the publication the site holds.
+  const { versioned, ...named } = params;
   const query = compactQuery({
-    ...params,
+    ...named,
+    ...(versioned ? { generation: undefined } : {}),
     ...(kind !== "presence" && mediaRepresentationEnabled() ? { media: 1 } : {}),
   });
   const response = await publicApiFetch(
@@ -174,6 +180,10 @@ export async function readCompact(
     error.status = response.status;
     error.throttled = wasPublicApiThrottle(response);
     throw error;
+  }
+  if (versioned && params.generation && body.meta?.version) {
+    body.meta.generation = params.generation;
+    if (body.pagination) body.pagination.generation = params.generation;
   }
   const generation = body.pagination?.generation || body.meta?.generation;
   if (
@@ -250,7 +260,7 @@ export async function readCompactPages(
   const load = (page) =>
     readCompact(
       kind,
-      { ...params, page, limit, ...(version ? { v: version } : { generation }) },
+      { ...params, page, limit, generation, ...(version ? { v: version } : {}) },
       { signal, fetcher },
     );
   function accept(result, page) {
@@ -270,7 +280,7 @@ export async function readCompactPages(
       throw new Error("La pagination des données est invalide.");
     // An answer that names its own version fences its next pages with it (`v`); any
     // other, with the publication it was read in.
-    if (!params.generation && result.meta?.version) {
+    if ((params.versioned || !params.generation) && result.meta?.version) {
       version ||= result.meta.version;
       if (result.meta.version !== version)
         throw new Error("La publication reçue ne correspond pas à la sélection.");
