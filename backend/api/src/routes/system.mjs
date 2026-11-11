@@ -44,6 +44,7 @@ export const CAPABILITIES = {
   actorSummary: true, // /api/read/player and /api/read/club: detail=summary
   wholeSelection: true, // /api/read/players: whole=1
   roleGroups: true, // /api/read/players: group
+  playerProfiles: true, // /api/read/players: detail=profile, v
   playedLeague: true, // /api/read/league: played=1
   // Off: the site addresses a provider image's copy itself (resolved-media.js), and
   // with this on it adds media=1 to every compact read, a query each (media.mjs).

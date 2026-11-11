@@ -67,7 +67,7 @@ export function createHandler({ read: query, mediaBase = null, clock = Date.now,
       }
     }
   };
-  const routes = [createSystemRoute(read), createOpsRoute(read, { key: opsKey, clock }), createClubReadRoute(read), createPlayerReadRoute(read), createMatchRoute(read), createMatchDetailRoute(read), createProfileRoute(read), createPartitionRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPresenceRoute(read), createPerformanceRoute(read), createActorRoute(read), createHomeReadRoute(read, clock), createHomeFavouritesRoute(read, clock), createSearchRoute(read), createArchiveRoute(read), createRankingRoute(read), createSupportRoute(read, { mediaBase }), createCupRoute(read), createEuropeRoute(read)];
+  const routes = [createSystemRoute(read), createOpsRoute(read, { key: opsKey, clock }), createClubReadRoute(read), createPlayerReadRoute(read, { clock }), createMatchRoute(read), createMatchDetailRoute(read), createProfileRoute(read), createPartitionRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPresenceRoute(read), createPerformanceRoute(read), createActorRoute(read), createHomeReadRoute(read, clock), createHomeFavouritesRoute(read, clock), createSearchRoute(read), createArchiveRoute(read), createRankingRoute(read), createSupportRoute(read, { mediaBase }), createCupRoute(read), createEuropeRoute(read)];
   async function route(req) {
     const url = new URL(req.url),
       path = url.pathname;
