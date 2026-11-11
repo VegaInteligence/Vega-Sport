@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import Providers from "./providers.jsx";
 import ShellFallback from "./shell-fallback.jsx";
 import { homeBootstrapGuardScript } from "../src/services/home-bootstrap-preferences.js";
+import { apiUrl } from "../src/data-url.js";
 import "../src/brand-tokens.css";
 import "../src/fonts.css";
 import "../src/theme.css";
@@ -34,11 +35,21 @@ export const metadata = {
   twitter: { card: "summary_large_image", title: "Vega Intelligence", description, images: ["/api/vega-image?kind=og"] },
 };
 export const viewport = { themeColor: "#0E0F12", colorScheme: "dark light" };
+// The origin the reads go to; none when they stay on the site's own origin.
+const apiOrigin = (() => {
+  try {
+    return new URL(apiUrl("/api/status")).origin;
+  } catch {
+    return "";
+  }
+})();
 export default function RootLayout({ children }) {
   return (
     <html lang="fr" data-theme="dark" suppressHydrationWarning>
       <head>
         <script id="vega-home-scope" dangerouslySetInnerHTML={{ __html: homeBootstrapGuardScript }} />
+        {/* The reads go to the API's distribution: open that connection with the page. */}
+        {apiOrigin && <link rel="preconnect" href={apiOrigin} crossOrigin="anonymous" />}
         <link
           rel="preload"
           href="/fonts/inter-latin.woff2"

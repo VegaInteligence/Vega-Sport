@@ -82,7 +82,6 @@ async function imageComponent(
   };
   const stubs = {
     react: React,
-    "next/image": requireLocal("next/image"),
     "../hooks/useImageIntent.js": {
       __esModule: true,
       default: () => [visibilityRef, visible],
