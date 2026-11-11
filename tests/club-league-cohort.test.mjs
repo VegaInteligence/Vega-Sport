@@ -144,3 +144,16 @@ test("a club's league is its domestic competition with most matches played", () 
   assert.equal(scout.clubLeagues(european, "t_aaaaa1").league.id, CUP);
   assert.equal(scout.clubLeagues(data, "t_nobody").league, undefined);
 });
+
+test("the page's read of a club is recognised before its comparisons start", () => {
+  const scout = loadClubScout([]);
+  const own = MATCHES.filter((m) => [m.home.id, m.away.id].includes("t_aaaaa1"));
+  assert.equal(scout.isClubRead({ matches: own }, "t_aaaaa1"), true);
+  // The league's matches, or another club's read still on the page: not this club's.
+  assert.equal(scout.isClubRead({ matches: MATCHES }, "t_aaaaa1"), false);
+  assert.equal(scout.isClubRead({ matches: own }, "t_aaaaa2"), false);
+  // A club without match statistics is ranked against nothing.
+  assert.equal(scout.isClubRead({ matches: own.map((m) => ({ ...m, stats: [] })) }, "t_aaaaa1"), false);
+  for (const data of [null, {}, { matches: [] }]) assert.equal(scout.isClubRead(data, "t_aaaaa1"), false);
+  assert.equal(scout.isClubRead({ matches: own }, null), false);
+});

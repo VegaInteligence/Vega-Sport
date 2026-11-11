@@ -36,6 +36,7 @@ import {
   competitionCountry,
   orderedCompetitions,
 } from "../services/competition-selector.js";
+import { useClubStart } from "../services/club-scout.js";
 const EMPTY_FIXTURES = [];
 // A viewport resize must not discard a server page and fetch it again at a
 // different size. Twenty-four cards fit both three- and four-column grids.
@@ -319,6 +320,8 @@ export default function ClubsPage() {
   useEffect(() => {
     if (!remoteDirectory) setPaging({ key: pageKey, data: f.data, page: 1 });
   }, [pageKey, f.data, remoteDirectory]);
+  // What the club is ranked against starts with the page (the profile renders first).
+  useClubStart(/^t_[A-Za-z0-9]{6}$/.test(id || "") ? id : null);
   return (
     <Layout path="/clubs/" title="Clubs">
       {selected ? (

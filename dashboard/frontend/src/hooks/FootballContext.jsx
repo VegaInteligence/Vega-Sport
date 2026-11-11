@@ -273,6 +273,34 @@ export function FootballProvider({ children, loadData = true, initialState }) {
     clubDetail
       ? clubDataTeam(initial, { playerOpen: Boolean(player), comparing })
       : null;
+  // A profile's code, and a club's own reads, leave with the page's read of the actor.
+  // The page is shown once that read has answered: the code was asked for then, and the
+  // club's reads once the profile had rendered (0.3 s, then 0.3 s more, on 11 November
+  // 2026).
+  const actorGeneration = compactGeneration(manifest.value);
+  useEffect(() => {
+    if (!actorId || !actorGeneration) return;
+    const quiet = (start) => start().catch(() => {});
+    if (/^\/joueurs\/?$/.test(pathname) && /^p_[A-Za-z0-9]{6}$/.test(actorId))
+      quiet(() =>
+        import("../components/PlayerSeasonProfile.jsx").then((profile) =>
+          profile.preloadProfileParts?.(),
+        ),
+      );
+    if (clubDetail && /^t_[A-Za-z0-9]{6}$/.test(actorId)) {
+      quiet(() => import("../components/ClubScoutProfile.jsx"));
+      quiet(() =>
+        import("../services/club-scout.js").then((scout) =>
+          scout.startClubDossier(actorId, {
+            manifest: manifest.value,
+            season: chosen,
+          }),
+        ),
+      );
+    }
+    // `manifest.value` is what the generation names.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actorId, actorGeneration, chosen, clubDetail, pathname]);
   // A profile can span competitions outside the directory's discovery focus.
   const dataFocus = clubDetail || playerDetail ? "all" : focus;
   const pagedMatches = pagedMatchList(

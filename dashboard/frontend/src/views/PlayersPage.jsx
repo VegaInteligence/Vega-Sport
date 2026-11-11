@@ -18,7 +18,11 @@ import PlayerWorkspace from "../components/PlayerWorkspace.jsx";
 import PlayerMatchesPage from "./PlayerMatchesPage.jsx";
 import { ResearchComparisonTray } from "../components/ResearchUI.jsx";
 import useCompactRead from "../hooks/useCompactRead.js";
-import { compactQuery, playerReadParams } from "../services/compact-reads.js";
+import {
+  cohortGroupParams,
+  compactQuery,
+  playerReadParams,
+} from "../services/compact-reads.js";
 import {
   aggregateSeason,
   aggregateSeasonPlayers,
@@ -39,9 +43,6 @@ import {
 } from "../services/player-directory.js";
 import { EMPTY_ADVANCED } from "../services/advanced-filters.js";
 
-// The API's M filter includes attacking midfielders, and its A filter
-// includes forwards. Both lines belong to the radar's offensive cohort.
-const RADAR_POSITIONS = { G: "G", D: "D", M: "M", O: "M,A" };
 const OTHER_PROFILE_VIEWS = [
   "stats",
   "advanced",
@@ -145,20 +146,25 @@ export default function PlayersPage() {
     () => aggregateSeasonPlayers(contextRows),
     [contextRows],
   );
-  const radarPosition =
-    subject?.minutes >= MIN_SEASON_MINUTES
-      ? RADAR_POSITIONS[subject.role?.group]
-      : undefined;
-  const radarEligible = Boolean(radarPosition && radarLeagues?.length);
+  const radarGroup = cohortGroupParams(
+    f.manifest,
+    subject?.minutes >= MIN_SEASON_MINUTES ? subject.role?.group : undefined,
+  );
+  const radarEligible = Boolean(
+    Object.keys(radarGroup).length && radarLeagues?.length,
+  );
   const cohortParams = playerReadParams(id ? { ...f, filters } : f, {
     cohort: true,
     limit: 100,
   });
   if (overview) {
-    cohortParams.pos = radarPosition;
+    Object.assign(cohortParams, radarGroup);
   } else if (id && profileView !== "compare") {
     // Read every peer in the actor's complete position group, without sampling.
-    cohortParams.pos = RADAR_POSITIONS[subject?.role?.group] || "";
+    Object.assign(
+      cohortParams,
+      cohortGroupParams(f.manifest, subject?.role?.group),
+    );
   }
   const comparisonKey = `${id || "directory"}:${compactQuery(cohortParams)}`;
   const requestComparisons = useCallback(

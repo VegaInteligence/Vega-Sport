@@ -1,9 +1,11 @@
 /**
  * How many reads one page sends at once. Four was for the previous backend's capacity;
- * a club's profile queued its fifteen comparison reads behind it, four at a time.
+ * a club's profile queued its fifteen comparison reads behind it, four at a time. Six,
+ * not more: the account runs ten copies of the read function at once (its quota on
+ * 11 November 2026), and a second visitor's reads need some of them.
  */
-export const PUBLIC_API_CONCURRENCY = 8;
-export const PUBLIC_IMAGE_CONCURRENCY = 4;
+export const PUBLIC_API_CONCURRENCY = 6;
+export const PUBLIC_IMAGE_CONCURRENCY = 3;
 const throttledResponses = new WeakSet();
 export const wasPublicApiThrottle = (response) =>
   throttledResponses.has(response);
