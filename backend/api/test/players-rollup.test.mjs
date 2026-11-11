@@ -121,7 +121,7 @@ const REQUESTS = [
   "", "&minutes=0", "&minutes=0&sort=name&direction=asc", "&minutes=0&sort=name&direction=desc", "&minutes=0&sort=matches&direction=asc",
   "&minutes=0&sort=minutes", "&sort=goals", "&sort=goals&basis=total", "&sort=xg&basis=per90", "&sort=passAccuracy", "&sort=duelRate&direction=asc",
   "&sort=finishingDelta", "&ranking=goals", "&ranking=assists", "&ranking=clinical&basis=total", "&ranking=wasteful", "&ranking=rating",
-  "&pos=M", "&pos=A", "&pos=G", "&pos=D", "&minutes=0&pos=M,A", "&q=cr7", "&q=elie", "&q=union", "&q=coupe", "&q=stade", "&minutes=0&q=joueur",
+  "&pos=M", "&pos=A", "&pos=G", "&pos=D", "&minutes=0&pos=M,A", "&group=O", "&group=M", "&minutes=0&group=G,D", "&group=O&pos=M", "&q=cr7", "&q=elie", "&q=union", "&q=coupe", "&q=stade", "&minutes=0&q=joueur",
   "&q=nord&pos=M", "&stats=goals:1", "&stats=passAccuracy:80,shots:1", "&rmin=7", "&minutes=0&limit=2", "&minutes=0&limit=2&page=2",
   "&minutes=0&limit=2&page=4", "&minutes=60",
 ];

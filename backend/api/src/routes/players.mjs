@@ -77,6 +77,14 @@ function option(params, name, values, fallback) {
 }
 
 /**
+ * `group`: the role groups a player's profile is compared in (roleDefinitions: G, D, M,
+ * and O for the attacking midfielders and the forwards). `pos` reads lines, and its M
+ * holds the attacking midfielders: a forward's group was asked as `pos=M,A`, 3,081
+ * players of the Top 7 and UEFA cups on 11 November 2026 of which the page kept the O.
+ */
+const ROLE_GROUPS = ["G", "D", "M", "O"];
+
+/**
  * `whole=1`: the selection in pages of this many players, where a page holds 100 at most.
  * A player's profile compares him with his whole position group: 1,988 midfielders of
  * the Top 7 and UEFA cups on 11 November 2026. The statement works the whole selection
@@ -88,7 +96,7 @@ export const WHOLE_PAGE = 3000;
 export function parsePlayerRead(params) {
   validateParams(params, [
     "season", "league", "leagues", "generation", "q", "minutes", "pos", "role", "venue", "result",
-    "rmin", "from", "to", "stats", "match", "basis", "sort", "direction", "ranking", "page", "limit", "whole",
+    "rmin", "from", "to", "stats", "match", "basis", "sort", "direction", "ranking", "page", "limit", "whole", "group",
   ]);
   const whole = params.get("whole");
   if (whole !== null && whole !== "1") reject(400, "Pagination invalide.");
@@ -102,6 +110,8 @@ export function parsePlayerRead(params) {
   if (q.length > 100 || /[\u0000-\u001f\u007f]/.test(q)) reject(400, "Recherche invalide.");
   const positions = params.get("pos") ? [...new Set(params.get("pos").split(","))] : [];
   if (positions.some((value) => !["G", "D", "M", "A"].includes(value))) reject(400, "Poste invalide.");
+  const groups = params.get("group") ? [...new Set(params.get("group").split(","))] : [];
+  if (groups.some((value) => !ROLE_GROUPS.includes(value))) reject(400, "Poste invalide.");
   const from = params.get("from") || "",
     to = params.get("to") || "";
   if ((from && !validDay(from)) || (to && !validDay(to)) || (from && to && from > to)) reject(400, "Période invalide.");
@@ -122,6 +132,7 @@ export function parsePlayerRead(params) {
     whole: Boolean(whole),
     q,
     positions,
+    groups,
     from,
     to,
     match,
@@ -220,6 +231,15 @@ const rollupRatios = (keys) =>
     .join(",\n");
 
 /**
+ * A page's player as the statements give him: four parts side by side, his row of the
+ * page (p), the details read for the page (x), his sums (a) and his averages (v), put
+ * together by playerReadRecord. They were merged in the statement (jsonb, a new document
+ * at each merge): 0.51 s of the 0.84 s a position group of 1,988 players took on the
+ * base on 11 November 2026.
+ */
+const recordSql = (details) => `json_build_object('p',to_json(p),'x',${details},'a',to_json(a),'v',to_json(v))`;
+
+/**
  * The appearance filters of a players read (scope, generation, match, period, context).
  * editions is the scope resolved to ids (resolveEditions).
  */
@@ -292,6 +312,8 @@ function playerSelection(filters, values, nameSort) {
   if (filters.rating !== null) thresholds.push(`${comparisonNumberSql("d.rating")}>=${comparisonNumberSql(b(filters.rating))}`);
   if (filters.positions.length)
     thresholds.push(`CASE WHEN d.role_code IN('AM','M') THEN 'M' ELSE d.role_code END=ANY(${b(filters.positions)}::text[])`);
+  if (filters.groups.length)
+    thresholds.push(`CASE WHEN d.role_code IN('AM','A') THEN 'O' ELSE d.role_code END=ANY(${b(filters.groups)}::text[])`);
   for (const { key, min } of filters.conditions)
     thresholds.push(`${comparisonNumberSql(`d."${key}"`)}>=${comparisonNumberSql(b(min))}`);
   if (filters.q)
@@ -345,7 +367,7 @@ export function playerReadQuery(filters, params, editions) {
   const earlyAggregates = [countProjectionFor(earlyCounts), ratioProjectionFor(earlyRatios)].filter(Boolean).join(",\n");
   const identityColumns = `s.player_id,s.player_name AS name,s.image_url,s.match_id,s.date,s.team,s.team_id,s.league_id,s.league,s.position_number`;
   const identityJson = (alias) =>
-    `CASE WHEN ${alias}.player_id IS NULL THEN NULL ELSE jsonb_build_object('id',api.public_id('match',${alias}.match_id)||':'||p.player_id,
+    `CASE WHEN ${alias}.player_id IS NULL THEN NULL ELSE json_build_object('id',api.public_id('match',${alias}.match_id)||':'||p.player_id,
      'name',${alias}.name,'image_url',${alias}.image_url,'date',${alias}.date,'team',${alias}.team,
      'team_id',api.public_id('team',${alias}.team_id),'league_id',${alias}.league_id,'league',${alias}.league,
      'position_number',${alias}.position_number) END`;
@@ -413,16 +435,15 @@ page_metrics AS (
  WHERE ${appearanceWhere(filters, params, values, editions, "p")} AND p.minutes>0 AND p.player_id=ANY(ARRAY(SELECT internal_id FROM page))
  GROUP BY p.player_id
 ), page_records AS (
- SELECT p.result_order,(to_jsonb(p)-'result_order'-'internal_id'-'internal_team_ids')
-   ||jsonb_build_object('team_ids',coalesce((SELECT jsonb_agg(api.public_id('team',x) ORDER BY api.public_id('team',x)) FROM unnest(p.internal_team_ids) x),'[]'::jsonb),
+ SELECT p.result_order,${recordSql(`json_build_object(
+     'team_ids',coalesce((SELECT jsonb_agg(api.public_id('team',x) ORDER BY api.public_id('team',x)) FROM unnest(p.internal_team_ids) x),'[]'::jsonb),
      'identity',(SELECT ${identityJson("i")} FROM identities i WHERE i.player_id=p.internal_id),
-     'latest',(SELECT ${identityJson("l")} FROM latest l WHERE l.player_id=p.internal_id))
-   ||coalesce(to_jsonb(a)-'player_id','{}'::jsonb)||to_jsonb(v) AS record
+     'latest',(SELECT ${identityJson("l")} FROM latest l WHERE l.player_id=p.internal_id))`)} AS record
  FROM page p LEFT JOIN page_metrics a ON a.player_id=p.internal_id
  CROSS JOIN LATERAL (SELECT ${averageMetrics},(${metricValue("goals")})-(${metricValue("xg")}) AS "finishingDelta") v
 )
 SELECT publication.*,(SELECT count(*)::int FROM filtered) total,
- coalesce((SELECT jsonb_agg(p.record ORDER BY p.result_order) FROM page_records p),'[]'::jsonb) players,
+ coalesce((SELECT json_agg(p.record ORDER BY p.result_order) FROM page_records p),'[]'::json) players,
  coalesce((SELECT jsonb_agg(jsonb_build_object('id',t.public_id,'name',t.name,'imageUrl',t.image_url) ORDER BY t.public_id)
    FROM api.team_keys t WHERE t.team_id IN(SELECT unnest(internal_team_ids) FROM page)),'[]'::jsonb) teams
 FROM publication`;
@@ -461,7 +482,7 @@ export function playerRollupQuery(filters, params, editions) {
     : "";
   const earlyAggregates = [rollupCounts(earlyCounts), rollupRatios(earlyRatios)].filter(Boolean).join(",\n");
   // What the thresholds read beyond the sums; everything else waits for the page.
-  const needsRole = filters.positions.length > 0,
+  const needsRole = filters.positions.length > 0 || filters.groups.length > 0,
     needsText = Boolean(filters.q);
   const paged = (alias, early) => (early ? "" : ` AND ${alias}.player_id=ANY(ARRAY(SELECT internal_id FROM page))`);
   const edition = (alias) => `JOIN editions e ON e.competition_season_id=${alias}.competition_season_id`;
@@ -520,7 +541,7 @@ export function playerRollupQuery(filters, params, editions) {
   const teamsSql = `coalesce(t.names,CASE WHEN it.name IS NOT NULL AND it.name<>'' THEN ARRAY[it.name] ELSE '{}'::text[] END)`;
   const leaguesSql = `coalesce(le.names,'{}'::text[])`;
   const identityJson = (alias, team) =>
-    `CASE WHEN ${alias}.player_id IS NULL THEN NULL ELSE jsonb_build_object('id',api.public_id('match',${alias}.match_id)||':'||p.player_id,
+    `CASE WHEN ${alias}.player_id IS NULL THEN NULL ELSE json_build_object('id',api.public_id('match',${alias}.match_id)||':'||p.player_id,
      'name',k.name,'image_url',k.image_url,'date',${alias}.date,'team',${team}.name,'team_id',${team}.public_id,
      'league_id',${alias}.league_id,'league',${alias}.league,'position_number',${alias}.position_number) END`;
   const sql = `/*vega:v2:players:rollup*/
@@ -562,12 +583,10 @@ team_ids AS (
  SELECT r.player_id,${rollupCounts(PLAYER_COUNT_METRICS)},${rollupRatios(Object.keys(ratioDefinitions))}
  FROM api.player_list_editions r WHERE ${scope("r")}${paged("r", false)} GROUP BY r.player_id
 ), page_records AS (
- SELECT p.result_order,(to_jsonb(p)-'result_order'-'internal_id'-'sort_name')
-   ||jsonb_build_object('image_url',k.image_url,'teams',${teamsSql},'leagues',${leaguesSql},'role_code',${roleSql},
+ SELECT p.result_order,${recordSql(`json_build_object('image_url',k.image_url,'teams',${teamsSql},'leagues',${leaguesSql},'role_code',${roleSql},
      'league_ids',coalesce(li.ids,'{}'::text[]),
      'team_ids',coalesce((SELECT jsonb_agg(x.public_id ORDER BY x.public_id) FROM api.team_keys x WHERE x.team_id=ANY(ti.ids)),'[]'::jsonb),
-     'identity',${identityJson("i", "it")},'latest',${identityJson("l", "lt")})
-   ||coalesce(to_jsonb(a)-'player_id','{}'::jsonb)||to_jsonb(v) AS record
+     'identity',${identityJson("i", "it")},'latest',${identityJson("l", "lt")})`)} AS record
  FROM page p JOIN api.player_keys k ON k.player_id=p.internal_id
  LEFT JOIN identities i ON i.player_id=p.internal_id LEFT JOIN api.team_keys it ON it.team_id=i.team_id
  LEFT JOIN latest l ON l.player_id=p.internal_id LEFT JOIN api.team_keys lt ON lt.team_id=l.team_id
@@ -577,7 +596,7 @@ team_ids AS (
  CROSS JOIN LATERAL (SELECT ${averageMetrics},(${metricValue("goals")})-(${metricValue("xg")}) AS "finishingDelta") v
 )
 SELECT publication.*,(SELECT count(*)::int FROM filtered) total,
- coalesce((SELECT jsonb_agg(p.record ORDER BY p.result_order) FROM page_records p),'[]'::jsonb) players,
+ coalesce((SELECT json_agg(p.record ORDER BY p.result_order) FROM page_records p),'[]'::json) players,
  coalesce((SELECT jsonb_agg(jsonb_build_object('id',t.public_id,'name',t.name,'imageUrl',t.image_url) ORDER BY t.public_id)
    FROM api.team_keys t WHERE t.team_id IN(SELECT unnest(ids) FROM team_ids)),'[]'::jsonb) teams
 FROM publication`;
@@ -600,7 +619,11 @@ const identity = (row, playerId) =>
       }
     : null;
 
-export function playerReadRecord(row) {
+/** The record of a player, from the four parts of recordSql: the later part decides,
+ * and his sums are keyed by his internal id, which the response does not carry. */
+export function playerReadRecord({ p, x, a, v }) {
+  const { player_id: _, ...sums } = a || {};
+  const row = { ...p, ...x, ...sums, ...v };
   const role = roleDefinitions[row.role_code] || null;
   const stats = {},
     ratios = {};

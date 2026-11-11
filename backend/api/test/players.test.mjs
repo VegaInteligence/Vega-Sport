@@ -99,6 +99,12 @@ test("rankings and their eligibility", { skip }, async () => {
 test("filters: position, search and alias, venue, result, match", { skip }, async () => {
   assert.deepEqual(ids((await get(players + "&pos=G")).body), ["p_aaaab3"]);
   assert.deepEqual(ids((await get(players + "&pos=M")).body), ["p_aaaab4", "p_aaaab2"]); // AM counts as M
+  // The role groups of a profile: the attacking midfielder is with the forward, not the midfielder.
+  const grouped = async (group) => (await get(players + "&group=" + group)).body.data.players.map((p) => [p.id, p.profile.role.group]);
+  assert.deepEqual((await grouped("O")).sort(), [["p_aaaab1", "O"], ["p_aaaab4", "O"]]);
+  assert.deepEqual(await grouped("M"), [["p_aaaab2", "M"]]);
+  assert.deepEqual((await grouped("G,M")).sort(), [["p_aaaab2", "M"], ["p_aaaab3", "G"]]);
+  assert.deepEqual(ids((await get(players + "&group=O&pos=A")).body), ["p_aaaab1"]);
   assert.deepEqual(ids((await get(players + "&q=cr7")).body), ["p_aaaab4"]);
   assert.deepEqual(ids((await get(players + "&q=elie")).body), ["p_aaaab1"]);
   assert.deepEqual(ids((await get(players + "&q=union")).body), ["p_aaaab3"]);
@@ -111,7 +117,7 @@ test("filters: position, search and alias, venue, result, match", { skip }, asyn
 });
 
 test("player read errors", { skip }, async () => {
-  for (const bad of ["&pos=X", "&stats=rating:1", "&from=2025-13-01", "&match=bad", "&sort=nope", "&other=1"])
+  for (const bad of ["&pos=X", "&group=A", "&stats=rating:1", "&from=2025-13-01", "&match=bad", "&sort=nope", "&other=1"])
     assert.equal((await get(players + bad)).response.status, 400, bad);
   assert.equal((await get(players + "&generation=6")).response.status, 409);
 });
