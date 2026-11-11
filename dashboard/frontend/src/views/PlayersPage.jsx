@@ -56,6 +56,9 @@ const OTHER_PROFILE_VIEWS = [
   "matches",
 ];
 
+// The pages of the directory's cohort read at once, after the first.
+const DIRECTORY_COHORT_PAGES = 4;
+
 export default function PlayersPage() {
   const params = useSearchParams();
   const profileView = params.get("playerView") || "overview";
@@ -196,8 +199,9 @@ export default function PlayersPage() {
     enabled: needsCohort,
     allPages: true,
     // Profile cohorts (and the all-positions comparison) read a bounded
-    // pair of pages at a time.
-    parallelPages: Boolean(id),
+    // pair of pages at a time. The directory's cohort is every player of the
+    // selection: its pages are read four at a time.
+    parallelPages: id ? true : DIRECTORY_COHORT_PAGES,
     refreshManifest: f.refreshManifest,
     // A cohort that names no publication is asked again at each new one: the API
     // answers that it is unchanged, or gives the new one.

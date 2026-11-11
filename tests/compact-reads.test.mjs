@@ -696,6 +696,47 @@ test("parallel cohort pages are bounded, pinned and returned in page order", asy
   );
 });
 
+test("a selection's pages are read as many at a time as asked, after the first", async () => {
+  let active = 0,
+    maximum = 0;
+  const starts = [];
+  const result = await readCompactPages(
+    "players",
+    { limit: 1 },
+    {
+      parallelPages: 4,
+      fetcher: async (url) => {
+        const page = Number(
+          new URL(url, "https://test").searchParams.get("page"),
+        );
+        active++;
+        maximum = Math.max(maximum, active);
+        starts.push([page, active]);
+        await new Promise((resolve) => setTimeout(resolve, 5 + (page % 3) * 5));
+        active--;
+        return response(
+          { players: [{ playerId: `p_${page}` }] },
+          { page, limit: 1, total: 11 },
+        );
+      },
+    },
+  );
+  assert.equal(maximum, 4);
+  assert.deepEqual(
+    starts.map(([page]) => page),
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+  );
+  // The first page alone, then four at a time: each of these starts with nothing else in flight.
+  assert.deepEqual(
+    starts.filter(([, inFlight]) => inFlight === 1).map(([page]) => page),
+    [1, 2, 6, 10],
+  );
+  assert.deepEqual(
+    result.pages.map((p) => p.players[0].playerId),
+    Array.from({ length: 11 }, (_, index) => `p_${index + 1}`),
+  );
+});
+
 test("parallel pages retry transient failures once after their batch, but never retry 409", async () => {
   for (const status of [429, 502, 503, 504, 409]) {
     const attempts = new Map(),
