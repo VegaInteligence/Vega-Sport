@@ -101,8 +101,13 @@ test("Messi keeps his portrait and published trophies when filters leave no matc
     "the known portrait remains available without match rows",
   );
   assert.match(portrait, /<img[^>]+loading="lazy"/);
-  // ApiImage starts on visible intent; SSR must not bypass the shared budget.
-  assert.doesNotMatch(portrait, /\ssrc=/);
+  // The portrait's copy is read from the distribution as it is, in the server's HTML
+  // already: it takes none of the API's shared budget.
+  assert.match(
+    portrait,
+    /\ssrc="https:\/\/dngp6kh9jx2bl\.cloudfront\.net\/data\/sources\/v2\/images\/[a-f0-9]{64}\.webp"/,
+  );
+  assert.doesNotMatch(portrait, /api\/assets|_next\/image/);
   assert.match(html, /aria-label="Palmarès de Lionel Messi"/);
   assert.match(html, /\/trophies\/world-cup\.webp/);
   assert.match(html, /\/trophies\/ballon-or\.webp/);
