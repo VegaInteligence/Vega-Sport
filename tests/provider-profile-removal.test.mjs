@@ -72,7 +72,6 @@ test("lineups open the site's player profile and do not offer a provider profile
       download: () => {},
       json: () => {},
     },
-    "./DataExplorer.jsx": { __esModule: true, default: () => null },
     "./PlayerMetrics.jsx": {
       __esModule: true,
       default: () => null,
@@ -119,7 +118,6 @@ test("player data retains match observations but no provider profile source", as
       Empty: () => null,
       Segments: () => null,
     },
-    "./DataExplorer.jsx": { __esModule: true, default: () => null },
     "./PlayerMetrics.jsx": {
       __esModule: true,
       default: () => e("div", null, "Statistiques du joueur"),
@@ -181,7 +179,6 @@ test("match data keeps its analyses and omits the raw provider match profile", a
       download: () => {},
       json: () => {},
     },
-    "./DataExplorer.jsx": { __esModule: true, default: () => null },
     "./PlayerMetrics.jsx": {
       __esModule: true,
       default: () => null,

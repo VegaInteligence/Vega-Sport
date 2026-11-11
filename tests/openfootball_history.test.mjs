@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   historicalRows,
   historicalScore,
-} from "../dashboard/frontend/src/services/openfootball-history.js";
+} from "../dashboard/shared/openfootball-history.js";
 import { reactFixtures } from "./react-runtime.mjs";
 
 const season = {
@@ -88,7 +88,7 @@ test("extra time and shootouts remain distinct from the regulation score", async
 import {
   HISTORICAL_CSV_FIELDS,
   historicalCsvRow,
-} from "../dashboard/frontend/src/services/openfootball-history.js";
+} from "../dashboard/shared/openfootball-history.js";
 test("CSV keeps existing goal columns and separates regulation from extra time and shootouts", () => {
   const match = {
     date: "1958-05-28",
@@ -107,7 +107,7 @@ test("CSV keeps existing goal columns and separates regulation from extra time a
   assert.deepEqual([row.penalties_home, row.penalties_away], [4, 3]);
 });
 
-import { historicalScoreNotes } from "../dashboard/frontend/src/services/openfootball-history.js";
+import { historicalScoreNotes } from "../dashboard/shared/openfootball-history.js";
 test("source-only final scores, unplayed ties and neutral venues remain explicit", () => {
   const match = {
     score: { final: [2, 1], et: [2, 1], p: [4, 3] },
