@@ -50,6 +50,13 @@ export async function archivePage(params, { signal, fetcher = fetch } = {}) {
   }
 }
 export const cupIndex = (kind) => load("/api/cup-index", { kind });
+/**
+ * Whether the API serves the cup worker's own index. The current one retired it: the
+ * competitions page asked for it at each visit and was answered 404 (0.3 s on
+ * 11 November 2026), then used the other index, as it does without asking.
+ */
+export const servesCupWorkerIndex = (manifest) =>
+  manifest?.capabilities?.cupWorkerIndex === true;
 export const cupTable = (competition, season, kind) =>
   load("/api/cup-table", { competition, season, kind });
 export const associationRanking = (year) =>
