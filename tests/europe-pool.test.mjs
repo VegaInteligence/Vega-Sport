@@ -89,10 +89,11 @@ const MATCHES = [
   match("m_aaaaa4", "l_0bfbkO", "t_aaaaa1", "t_outsid", 1, 0, "2025-09-17"),
 ];
 
-test("the pool is read from the base, one read per competition", async () => {
+test("the pool is read from the base, one read per competition, asked with its head", async () => {
   const requests = [];
   const scout = loadClubScout(requests);
-  const data = await scout.readEuropePool({ season: "2025/2026", generation: "7" });
+  const competitions = [LIGUE_1, { id: "l_0bfbkO" }];
+  const data = await scout.readEuropePool({ season: "2025/2026", generation: "7" }, { competitions });
   assert.deepEqual(requests, [
     "/api/clubs/europe?season=2025%2F2026&generation=7",
     "/api/clubs/europe/matches?season=2025%2F2026&generation=7&league=l_3FJFUl",
@@ -100,6 +101,26 @@ test("the pool is read from the base, one read per competition", async () => {
   ]);
   assert.equal(data.matches.length, 4);
   assert.ok(!requests.some((url) => url.includes("/demo/")));
+  // The matches the API validates by their own version name no publication; the head does.
+  requests.length = 0;
+  const kept = await scout.readEuropePool({ season: "2025/2026", generation: "7", versioned: { europeMatches: true } }, { competitions });
+  assert.deepEqual(requests, [
+    "/api/clubs/europe?season=2025%2F2026&generation=7",
+    "/api/clubs/europe/matches?season=2025%2F2026&league=l_3FJFUl",
+    "/api/clubs/europe/matches?season=2025%2F2026&league=l_0bfbkO",
+  ]);
+  assert.deepEqual(kept.matches, data.matches);
+  // A competition the head names and the scope does not is read once the head is there;
+  // one the scope names and the head does not is not part of the pool.
+  requests.length = 0;
+  const late = await scout.readEuropePool({ season: "2025/2026", generation: "7" }, { competitions: [LIGUE_1, { id: "l_4WFCIZ" }] });
+  assert.deepEqual(requests.map((url) => new URL(url, "https://x").searchParams.get("league")), [null, "l_3FJFUl", "l_4WFCIZ", "l_0bfbkO"]);
+  assert.deepEqual(late.matches, data.matches);
+  // By default the competitions are the site's European scope: the seven leagues and the three cups.
+  requests.length = 0;
+  await scout.readEuropePool({ season: "2025/2026", generation: "7" });
+  assert.equal(requests.length, 11);
+  assert.equal(requests[0], "/api/clubs/europe?season=2025%2F2026&generation=7");
 });
 
 test("a club's level is its Elo, for pool clubs and the others", async () => {

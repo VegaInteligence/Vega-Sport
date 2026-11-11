@@ -36,7 +36,7 @@ const MATCHES = [
 const page = (matches) => ({ pages: [{ matches, fixtures: [], appearances: [], teams: [], competitions: [] }] });
 
 /** club-scout.js with its real code; React, the football context and the reads stubbed. */
-function loadClubScout(reads) {
+function loadClubScout(reads, params_seen) {
   const stubs = {
     react: React,
     "../hooks/FootballContext.jsx": { useFootball: () => null },
@@ -49,6 +49,7 @@ function loadClubScout(reads) {
       readCompact: async () => assert.fail("no single read"),
       readCompactPages: async (kind, params) => {
         reads.push([kind, params.team || params.league || params.leagues, params.detail || ""]);
+        params_seen?.push([kind, params]);
         // The league's clubs are read by name and crest alone: no analysis.
         if (kind === "clubs") return assert.equal(params.analysis, undefined), { pages: [{ clubs: CLUBS }] };
         if (kind === "league")
@@ -110,6 +111,21 @@ test("one read of the league's matches gives the cohort read club by club", asyn
   );
   // The cup match and the match to come count for no club of the league.
   assert.ok(whole.clubs.every((c) => c.rows.every((row) => row.match.leagueId === LIGUE_1.id && row.match.status === "finished")));
+});
+
+test("the league's matches name no publication where the API validates them by their version", async () => {
+  const reads = [],
+    params = [];
+  const scout = loadClubScout(reads, params);
+  const publication = { season: "2025/2026", generation: "12", whole: true, played: true };
+  const pinned = await scout.leagueCohort(LIGUE_1, publication).promise;
+  const kept = await scout.leagueCohort(LIGUE_1, { ...publication, generation: "13", versioned: { league: true } }).promise;
+  assert.deepEqual(JSON.parse(JSON.stringify(kept)), JSON.parse(JSON.stringify(pinned)));
+  // The league's clubs are still the publication's; its matches name none.
+  assert.deepEqual(
+    params.map(([kind, p]) => [kind, p.generation]),
+    [["clubs", "12"], ["league", "12"], ["clubs", "13"], ["league", undefined]],
+  );
 });
 
 test("the same publication is read once, whoever asks", async () => {

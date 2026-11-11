@@ -19,6 +19,7 @@ import {
   supportsCompactRead,
 } from "./compact-reads.js";
 import { apiUrl } from "../data-url.js";
+import { EUROPE_FOCUS } from "../../../shared/competition-scope.js";
 import { publicApiFetch } from "./public-api-fetch.js";
 import {
   clubCompetitions,
@@ -105,7 +106,7 @@ function cachedLoad(key, loader) {
  */
 export function leagueCohort(
   league,
-  { season, generation, whole = false, played = false },
+  { season, generation, whole = false, played = false, versioned = {} },
   onProgress,
 ) {
   return cachedLoad(
@@ -134,7 +135,10 @@ export function leagueCohort(
                 // The cohort ranks on finished matches (teamRows): they are asked alone
                 // when the API can, without the matches to come.
                 ...(played ? { played: 1 } : {}),
-                generation,
+                // Named by the publication, the league's matches were read again every
+                // five minutes. Where the API validates them by their own version, the
+                // request names none: whoever holds them is told they are unchanged.
+                ...(versioned.league ? {} : { generation }),
                 limit: 100,
               },
               { parallelPages: true },
@@ -205,7 +209,7 @@ export function clubLeagues(data, id) {
 }
 
 async function loadDossier(
-  { id, season, generation, whole, played },
+  { id, season, generation, whole, played, versioned },
   onProgress,
 ) {
   const base = { season, team: id, leagues: "all", generation };
@@ -224,7 +228,13 @@ async function loadDossier(
   const { competitions, league } = clubLeagues(data, id);
   let cohort = null;
   if (league) {
-    const entry = leagueCohort(league, { season, generation, whole, played });
+    const entry = leagueCohort(league, {
+      season,
+      generation,
+      whole,
+      played,
+      versioned,
+    });
     const relay = (progress) => onProgress(progress);
     entry.listeners.add(relay);
     if (entry.progress) onProgress(entry.progress);
@@ -283,6 +293,8 @@ const publicationOf = (f) => ({
   // A league's matches in one read, when the API serves it (leagueCohort).
   whole: supportsCompactRead(f?.manifest, "league"),
   played: f?.manifest?.capabilities?.playedLeague === true,
+  // The reads the API validates by their own version (no publication in their address).
+  versioned: f?.manifest?.capabilities?.versionedReads || {},
 });
 const usePublication = () => publicationOf(useFootball());
 
@@ -303,9 +315,9 @@ export function isClubRead(data, clubId) {
 
 const dossierKey = (clubId, { generation, season }) =>
   clubId && generation && season ? `${generation}|${season}|${clubId}` : null;
-const dossierLoad = (clubId, key, { season, generation, whole, played }) =>
+const dossierLoad = (clubId, key, publication) =>
   cachedLoad(key, (progress) =>
-    loadDossier({ id: clubId, season, generation, whole, played }, progress),
+    loadDossier({ ...publication, id: clubId }, progress),
   );
 
 /**
@@ -367,14 +379,13 @@ export function useClubDossier(clubId) {
 
 /** Any league's cohort, for similar clubs searched in another competition. */
 export function useLeagueCohort(league) {
-  const { generation, season, whole, played } = usePublication();
+  const publication = usePublication();
+  const { generation, season } = publication;
   const key =
     league?.id && generation && season
       ? `${generation}|${season}|league:${league.id}`
       : null;
-  return useCachedState(key, () =>
-    leagueCohort(league, { season, generation, whole, played }),
-  );
+  return useCachedState(key, () => leagueCohort(league, publication));
 }
 
 /** Several leagues read one after the other, progress summed across them. */
@@ -407,7 +418,8 @@ function referentialLoad(leagues, publication) {
 
 /** Cohorts of a user-chosen referential (null: the club's own league). */
 export function useReferential(leagues) {
-  const { generation, season, whole, played } = usePublication();
+  const publication = usePublication();
+  const { generation, season } = publication;
   const key =
     leagues?.length && generation && season
       ? `${generation}|${season}|ref:${leagues
@@ -415,9 +427,7 @@ export function useReferential(leagues) {
           .sort()
           .join(",")}`
       : null;
-  return useCachedState(key, () =>
-    referentialLoad(leagues, { season, generation, whole, played }),
-  );
+  return useCachedState(key, () => referentialLoad(leagues, publication));
 }
 
 /* ----------------------------------------------------------- Europe */
@@ -444,13 +454,36 @@ async function readEurope(path, params) {
   return body.data;
 }
 
-/** The pool of the base: its head, then the matches of each competition. */
-export async function readEuropePool({ season, generation }) {
+/**
+ * The pool of the base: its head and the matches of each competition, asked together.
+ * The head names the competitions, which are the site's European scope: their matches
+ * waited for it (0.3 to 0.9 s on 11 November 2026). A competition the head names and
+ * the scope does not is read once the head is there.
+ *
+ * `versioned.europeMatches`: the API validates a competition's matches by their own
+ * version, so their request names no publication and whoever holds them is told they
+ * are unchanged (named by the publication, they were read again every five minutes).
+ */
+export async function readEuropePool(
+  { season, generation, versioned = {} },
+  { competitions = EUROPE_FOCUS } = {},
+) {
   const scope = { season, ...(generation ? { generation } : {}) };
-  const head = await readEurope("/api/clubs/europe", scope);
+  const matchesOf = (id) => {
+    const read = readEurope("/api/clubs/europe/matches", {
+      ...(versioned.europeMatches ? { season } : scope),
+      league: id,
+    });
+    // Awaited below when the head names the competition; never left unhandled.
+    read.catch(() => {});
+    return read;
+  };
+  const headRead = readEurope("/api/clubs/europe", scope);
+  const started = new Map(competitions.map(({ id }) => [id, matchesOf(id)]));
+  const head = await headRead;
   const parts = await Promise.all(
-    [...head.leagues, ...head.uefa].map((league) =>
-      readEurope("/api/clubs/europe/matches", { ...scope, league: league.id }),
+    [...head.leagues, ...head.uefa].map(
+      (league) => started.get(league.id) || matchesOf(league.id),
     ),
   );
   const matches = new Map();
