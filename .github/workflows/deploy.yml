@@ -49,4 +49,5 @@ jobs:
           ARCHIVE_SOURCES_BUCKET: ${{ vars.V2_ARCHIVE_SOURCES_BUCKET }}
           PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
           SPORTSAPI_API_KEY: ${{ secrets.SPORTSAPI_API_KEY }}
-        run: bash infra/aws/deploy.sh | tee -a "$GITHUB_STEP_SUMMARY"
+        # pipefail: the step fails when the script does, not when tee does (it never does).
+        run: set -o pipefail; bash infra/aws/deploy.sh | tee -a "$GITHUB_STEP_SUMMARY"
