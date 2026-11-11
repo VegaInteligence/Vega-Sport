@@ -1942,7 +1942,13 @@ th[aria-sort="descending"] .sort-indicator {
     left: 50%;
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     z-index: 45;
-    display: flex;
+    /* Two tabs, the search, two tabs: the two sides share the same width, so
+       the search sits in the exact middle; on each side the longer label
+       (Compétitions) takes the larger share. */
+    display: grid;
+    grid-template-columns:
+      minmax(0, 0.8fr) minmax(0, 1.2fr) auto minmax(0, 1fr)
+      minmax(0, 1fr);
     align-items: center;
     width: min(430px, calc(100% - 24px));
     padding: 6px;
@@ -1955,8 +1961,8 @@ th[aria-sort="descending"] .sort-indicator {
     box-shadow: var(--shadow-pop);
     transform: translateX(-50%);
   }
-  /* Each tab takes the width of its own label and an equal share of what is
-     left: six equal tabs would cut the longest label. */
+  /* A tab fills its column; its label is cut only if the column cannot hold
+     it, which no phone width from 320px does. */
   .tabbar-item {
     flex: 1 1 auto;
     display: flex;
@@ -2088,15 +2094,11 @@ th[aria-sort="descending"] .sort-indicator {
       animation: none;
     }
   }
-  /* Narrow phones: the search keeps its icon alone, so the five labels fit.
-     Its label keeps its height: the icon stays level with the others. */
+  /* Narrow phones: a tab's side padding goes, so « Compétitions » keeps its
+     whole label at 320px. */
   @media (max-width: 359px) {
     .tabbar-item {
-      min-width: 0;
-    }
-    .tabbar-search span {
-      width: 0;
-      visibility: hidden;
+      padding: 0 1px;
     }
   }
   /* The comparison tray sits above the tab bar. */

@@ -12,7 +12,6 @@ const TABS = {
   competitions: ["Compétitions", "trophy"],
   clubs: ["Clubs", "shield"],
   players: ["Joueurs", "players"],
-  matches: ["Calendrier", "calendar"],
 };
 /** The search sits in the middle of the bar, after this tab. */
 const SEARCH_AFTER = "competitions";
@@ -20,7 +19,6 @@ const SEARCH_AFTER = "competitions";
 const SECTION = {
   archives: "competitions",
   "player-ranking": "players",
-  calendar: "matches",
 };
 const bare = (path = "") => path.replace(/\/+$/, "") || "/";
 const tabs = pages
@@ -47,8 +45,9 @@ function activeTab(path) {
 }
 
 /**
- * The phone navigation: a bar floating above the bottom of the screen, the
- * header's five pages with the search among them, in the middle. styles.css
+ * The phone navigation: a bar floating above the bottom of the screen, four
+ * of the header's pages with the search in the middle; the calendar is a
+ * button of the header, beside the theme (SiteHeader). styles.css
  * shows it under 640px, where the header's own links and search field are
  * hidden; wider screens keep the header. The search opens as a bar floating
  * over the page, which a touch beside it closes.

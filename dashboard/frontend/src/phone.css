@@ -19,6 +19,10 @@
 .standings-legend-fold {
   display: contents;
 }
+/* The header's calendar button: a phone's only (its tab bar has no calendar). */
+.topbar-calendar {
+  display: none;
+}
 /* In the competitions directory the scope stays first on a wide screen. */
 .competition-directory-toolbar .competition-scope-button {
   order: -1;
@@ -125,7 +129,9 @@
 
   /* Home: the season and the scope sit under the title, as two pills. */
   .home-toolbar-filters {
+    flex-wrap: wrap;
     gap: 8px;
+    max-width: 100%;
     margin-left: 0;
   }
   .home-toolbar .filter-season {
@@ -293,5 +299,26 @@
   }
   .standings-legend-fold > .phone-fold-toggle {
     margin-top: 12px;
+  }
+
+  /* Header: the calendar beside the theme, both 44px, as one pair. */
+  .topbar-actions {
+    gap: 2px;
+  }
+  .topbar-calendar {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius);
+    color: var(--muted);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .topbar-calendar .icon {
+    width: 19px;
+    height: 19px;
+  }
+  .topbar-calendar[aria-current="page"] {
+    color: var(--accent-dark);
   }
 }
