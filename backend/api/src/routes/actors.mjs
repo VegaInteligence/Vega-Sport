@@ -4,6 +4,11 @@
  * appearances, the context teams and competitions. Same parameters and same response
  * as relational-actors.js on main.
  *
+ * GET /api/read/league — every match of one competition's season, in the summary detail
+ * of the club read. A club profile ranks its club against the league's other clubs: it
+ * read each of them (twenty reads of the same matches, each match twice); this is the
+ * same matches once.
+ *
  * Differences with the legacy read, by construction: `metrics` is empty (the
  * partition metric catalogue has no counterpart here; the site has its own labels);
  * a team's `sampleMatches` counts its collected matches of the scope; the match and
@@ -23,8 +28,8 @@ const ACTOR = { player: /^p_(?:[A-Za-z0-9]{6}|v\d{7})$/, club: /^t_(?:[A-Za-z0-9
  * (the same reads on labels took 93 s for a club on 10 November 2026). */
 export async function resolveActor(read, kind, scope, actor) {
   const [row] = await read(
-    `SELECT e.season_id,e.ids,api.internal_id('${kind === "player" ? "player" : "team"}',$3) AS actor FROM (${EDITIONS_SQL}) e`,
-    [scope.season, scope.leagueIds, actor],
+    `SELECT e.season_id,e.ids,${kind === "league" ? "NULL::int" : `api.internal_id('${kind === "player" ? "player" : "team"}',$3)`} AS actor FROM (${EDITIONS_SQL}) e`,
+    kind === "league" ? [scope.season, scope.leagueIds] : [scope.season, scope.leagueIds, actor],
   );
   return { seasonId: row?.season_id ?? null, ids: (row?.ids || []).map(Number), actorId: row?.actor ?? null };
 }
@@ -34,14 +39,16 @@ export function actorQuery(kind, scope, actor, includes, pagination, generation,
     publication = publicationSql(scope, values);
   const fence = generation === null ? "" : ` AND EXISTS(SELECT 1 FROM publication WHERE generation=${bindValue(values, generation)})`;
   const season = `${bindValue(values, resolved.seasonId)}::smallint`,
-    actorId = `${bindValue(values, resolved.actorId)}::int`,
     // Bound only when used: an unused parameter has no type for PostgreSQL.
+    actorId = kind === "league" ? null : `${bindValue(values, resolved.actorId)}::int`,
     editions = scope.leagueIds === null ? null : `${bindValue(values, resolved.ids)}::int[]`;
   const pin = (alias) => `${alias}.season_id=${season}`,
     inScope = (alias) => (editions ? `${pin(alias)} AND ${alias}.competition_season_id=ANY(${editions})` : pin(alias));
   const withAppearances = kind === "player" || includes.has("appearances");
   const candidates =
-    kind === "player"
+    kind === "league"
+      ? `SELECT x.season_id,x.match_id,x.id,x.day FROM api.fixtures x WHERE ${inScope("x")}${fence}`
+      : kind === "player"
       ? `SELECT DISTINCT x.season_id,x.match_id,x.id,x.day FROM api.player_appearances a
          JOIN api.fixtures x ON x.season_id=a.season_id AND x.match_id=a.match_id
          WHERE a.player_id=${actorId} AND ${inScope("a")} AND ${pin("x")}${fence}`
@@ -85,19 +92,21 @@ export function actorQuery(kind, scope, actor, includes, pagination, generation,
 
 export function createActorRoute(read) {
   return async (req, path, params) => {
-    const kind = path === "/api/read/player" ? "player" : path === "/api/read/club" ? "club" : null;
+    const kind = { "/api/read/player": "player", "/api/read/club": "club", "/api/read/league": "league" }[path];
     if (!kind) return null;
     if (!["GET", "HEAD"].includes(req.method)) reject(405, "Méthode non autorisée.");
     const actorKey = kind === "player" ? "player" : "team";
-    validateParams(params, ["season", "leagues", "league", "generation", actorKey, "page", "limit", "include", "detail"]);
-    const actor = params.get(actorKey);
-    if (!ACTOR[kind].test(actor || "")) reject(400, "Identifiant invalide.");
+    validateParams(params, kind === "league" ? ["season", "league", "generation", "page", "limit", "detail"] : ["season", "leagues", "league", "generation", actorKey, "page", "limit", "include", "detail"]);
     const includes = new Set((params.get("include") || "").split(",").filter(Boolean));
     if ([...includes].some((value) => !["appearances", "shots"].includes(value))) reject(400, "Détail invalide.");
     const detail = params.get("detail") || "full";
     if (!["full", "summary"].includes(detail)) reject(400, "Détail invalide.");
     const scope = parseReadScope(params),
       pagination = readPageArgs(params, 25);
+    // A league is read whole in the summary detail only: one competition, no player rows.
+    if (kind === "league" && (scope.leagueIds?.length !== 1 || detail !== "summary")) reject(400, "Périmètre invalide.");
+    const actor = kind === "league" ? scope.leagueIds[0] : params.get(actorKey);
+    if (kind !== "league" && !ACTOR[kind].test(actor || "")) reject(400, "Identifiant invalide.");
     const cached = await readValidator(req, params, scope, read);
     if (cached) return cached;
     const resolved = await resolveActor(read, kind, scope, actor);
@@ -114,7 +123,7 @@ export function createActorRoute(read) {
         // As on main: a summary keeps a club's team statistics and its reliability flag only.
         if (detail === "summary") {
           if (kind === "player") m.stats = [];
-          m.coverage = kind === "club" ? { teamStatsReliable: m.coverage.teamStatsReliable } : {};
+          m.coverage = kind === "player" ? {} : { teamStatsReliable: m.coverage.teamStatsReliable };
         }
         m.players = ids.get(m.id) || [];
         return m;

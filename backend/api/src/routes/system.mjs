@@ -6,6 +6,11 @@
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 
+const CONSTANT_HEADERS = {
+  "Cache-Control": "public, max-age=3600, s-maxage=3600",
+  "CDN-Cache-Control": "public, s-maxage=3600",
+  "Vercel-CDN-Cache-Control": "public, s-maxage=3600",
+};
 const digest = (value) => createHash("sha256").update(value).digest("hex");
 const tag = (req, version) =>
   'W/"core-v3-' + digest(new URL(req.url).pathname + new URL(req.url).search + "|" + version) + '"';
@@ -23,7 +28,7 @@ export const editionCounts = (p) => ({
 export const editionDigest = (p) => digest(JSON.stringify([p.season, p.league_id, iso(p.retrieved_at), editionCounts(p)]));
 
 /** The compact reads this API serves; the others stay on the current API until ported. */
-export const COMPACT_READS = { home: true, players: true, clubs: true, player: true, club: true, performance: true, discipline: true, presence: true };
+export const COMPACT_READS = { home: true, players: true, clubs: true, player: true, club: true, league: true, performance: true, discipline: true, presence: true };
 
 /** The latest season already started: a calendar published ahead (a league's next
  * calendar year) is not the default. */
@@ -43,7 +48,9 @@ export function createSystemRoute(read) {
     }
     if (path === "/api/status") {
       validateParams(params, []);
-      return send(req, { source: "AWS", configured: true, basePath: "/api/matches", schema: "v2" });
+      // The same answer until the next deploy, asked by every page: the browser keeps it
+      // an hour (it was never kept, a call to the function for each page).
+      return send(req, { source: "AWS", configured: true, basePath: "/api/matches", schema: "v2" }, 200, { headers: CONSTANT_HEADERS });
     }
     if (path !== "/api/dashboard/manifest") return null;
     validateParams(params, ["v"]);
@@ -95,7 +102,8 @@ export function createSystemRoute(read) {
           versionedPartitions: true, // /api/seasons/partition: v
           playerRatingRanking: true, // /api/read/players: ranking=rating
           actorSummary: true, // /api/read/player and /api/read/club: detail=summary
-          // The site would add media=1 to every compact read; only /api/read/clubs takes it.
+          // Off: the site addresses a provider image's copy itself (resolved-media.js), and
+          // with this on it adds media=1 to every compact read, a query each (media.mjs).
           resolvedMedia: false,
           boundedArchive: true,
           compactReads: COMPACT_READS,

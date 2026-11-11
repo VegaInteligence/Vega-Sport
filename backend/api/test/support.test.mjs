@@ -52,5 +52,7 @@ test("player honours and image redirects", { skip }, async () => {
   const asset = await get("/api/assets?url=" + encodeURIComponent("https://img.example/t1.png"));
   assert.equal(asset.response.status, 307);
   assert.equal(asset.response.headers.get("location"), "https://media.test/data/sources/v2/images/" + "ab".repeat(32) + ".png");
+  // A source has one copy for good: the browser keeps where it is for a day.
+  assert.equal(asset.response.headers.get("cache-control"), "public, max-age=86400, s-maxage=86400");
   assert.equal((await get("/api/assets?url=" + encodeURIComponent("https://img.example/none.png"))).response.status, 404);
 });
