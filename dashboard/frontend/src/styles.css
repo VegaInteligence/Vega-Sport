@@ -1863,6 +1863,15 @@ th[aria-sort="descending"] .sort-indicator {
   margin: 14vh auto;
   padding: 24px;
 }
+/* 404 and error pages have no header: keep the footer at the bottom. */
+.route-error-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+.route-error-body {
+  flex: 1;
+}
 .route-error h1 {
   margin-bottom: 16px;
   font-size: var(--text-2xl);

@@ -4,6 +4,7 @@ import { apiUrl } from "../data-url.js";
 import { usePathname } from "next/navigation";
 import { pages } from "../../../shared/pages.js";
 import SiteHeader from "./SiteHeader.jsx";
+import SiteFooter from "./SiteFooter.jsx";
 import PageLoader from "./PageLoader.jsx";
 export default function LoadingPage({ href }) {
   const path = usePathname();
@@ -27,6 +28,7 @@ export default function LoadingPage({ href }) {
       >
         <PageLoader />
       </main>
+      <SiteFooter href={href} path={path} />
     </div>
   );
 }
