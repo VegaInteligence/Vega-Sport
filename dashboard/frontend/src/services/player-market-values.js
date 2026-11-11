@@ -2,6 +2,18 @@ import { json } from './resources.js';
 
 export const playerMarketValuesKey = (id) => `player-market-values:${id}`;
 
+/**
+ * Whether the API serves a player's market values. The current one does not: every
+ * player page asked for them and was answered 404, a read that held one of the page's
+ * places while the comparison group waited for it (0.4 s on 11 November 2026).
+ */
+export const servesMarketValues = (manifest) =>
+  manifest?.capabilities?.marketValues === true;
+/** What the page holds without the read: what its 404 gave, an unavailable history. */
+export const MARKET_VALUES_UNSERVED = Object.freeze({
+  error: 'Historique de valeur indisponible.',
+});
+
 export async function loadPlayerMarketValues(id, { signal } = {}) {
   const body = await json(`/api/player-market-values?id=${encodeURIComponent(id)}`, { signal });
   const data = body?.data;

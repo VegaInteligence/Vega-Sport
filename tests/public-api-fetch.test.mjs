@@ -23,8 +23,8 @@ function pendingFetcher() {
   return { fetcher, started };
 }
 
-test("a page sends six reads at once, three of them images at most", () => {
-  assert.deepEqual([PUBLIC_API_CONCURRENCY, PUBLIC_IMAGE_CONCURRENCY], [6, 3]);
+test("a page sends eight reads at once, four of them images at most", () => {
+  assert.deepEqual([PUBLIC_API_CONCURRENCY, PUBLIC_IMAGE_CONCURRENCY], [8, 4]);
 });
 
 test("one shared budget bounds API bursts and reserves capacity for interactive data", async () => {
