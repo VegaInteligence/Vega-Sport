@@ -104,6 +104,8 @@ export function createSystemRoute(read) {
           versionedPartitions: true, // /api/seasons/partition: v
           playerRatingRanking: true, // /api/read/players: ranking=rating
           actorSummary: true, // /api/read/player and /api/read/club: detail=summary
+          wholeSelection: true, // /api/read/players: whole=1
+          playedLeague: true, // /api/read/league: played=1
           // Off: the site addresses a provider image's copy itself (resolved-media.js), and
           // with this on it adds media=1 to every compact read, a query each (media.mjs).
           resolvedMedia: false,

@@ -4,8 +4,8 @@
  * appearances, the context teams and competitions. Same parameters and same response
  * as relational-actors.js on main.
  *
- * GET /api/read/league — every match of one competition's season, in the summary detail
- * of the club read. A club profile ranks its club against the league's other clubs: it
+ * GET /api/read/league — every match of one competition's season (`played=1`: the
+ * finished ones), in the summary detail of the club read. A club profile ranks its club against the league's other clubs: it
  * read each of them (twenty reads of the same matches, each match twice); this is the
  * same matches once.
  *
@@ -34,7 +34,8 @@ export async function resolveActor(read, kind, scope, actor) {
   return { seasonId: row?.season_id ?? null, ids: (row?.ids || []).map(Number), actorId: row?.actor ?? null };
 }
 
-export function actorQuery(kind, scope, actor, includes, pagination, generation, resolved) {
+/** `played`: a league's finished matches only (the other kinds take no such filter). */
+export function actorQuery(kind, scope, actor, includes, pagination, generation, resolved, { played = false } = {}) {
   const values = [],
     publication = publicationSql(scope, values);
   const fence = generation === null ? "" : ` AND EXISTS(SELECT 1 FROM publication WHERE generation=${bindValue(values, generation)})`;
@@ -47,7 +48,7 @@ export function actorQuery(kind, scope, actor, includes, pagination, generation,
   const withAppearances = kind === "player" || includes.has("appearances");
   const candidates =
     kind === "league"
-      ? `SELECT x.season_id,x.match_id,x.id,x.day FROM api.fixtures x WHERE ${inScope("x")}${fence}`
+      ? `SELECT x.season_id,x.match_id,x.id,x.day FROM api.fixtures x WHERE ${inScope("x")}${played ? " AND x.status='finished'" : ""}${fence}`
       : kind === "player"
       ? // His matches by their ids, then their fixtures: joined to the appearances, the
         // fixtures of the whole season were built first (0.2 s for 14 matches).
@@ -98,7 +99,11 @@ export function createActorRoute(read) {
     if (!kind) return null;
     if (!["GET", "HEAD"].includes(req.method)) reject(405, "Méthode non autorisée.");
     const actorKey = kind === "player" ? "player" : "team";
-    validateParams(params, kind === "league" ? ["season", "league", "generation", "page", "limit", "detail"] : ["season", "leagues", "league", "generation", actorKey, "page", "limit", "include", "detail"]);
+    validateParams(params, kind === "league" ? ["season", "league", "generation", "page", "limit", "detail", "played"] : ["season", "leagues", "league", "generation", actorKey, "page", "limit", "include", "detail"]);
+    // `played=1`: the finished matches alone. A club profile ranks the league on them; the
+    // matches to come were three of the four pages it read in November.
+    const played = params.get("played");
+    if (played !== null && played !== "1") reject(400, "Filtre invalide.");
     const includes = new Set((params.get("include") || "").split(",").filter(Boolean));
     if ([...includes].some((value) => !["appearances", "shots"].includes(value))) reject(400, "Détail invalide.");
     const detail = params.get("detail") || "full";
@@ -112,7 +117,7 @@ export function createActorRoute(read) {
     const cached = await readValidator(req, params, scope, read);
     if (cached) return cached;
     const resolved = await resolveActor(read, kind, scope, actor);
-    const request = actorQuery(kind, scope, actor, includes, pagination, params.get("generation"), resolved);
+    const request = actorQuery(kind, scope, actor, includes, pagination, params.get("generation"), resolved, { played: played === "1" });
     const [snapshot] = await read(request.sql, request.values);
     checkReadGeneration(params, snapshot?.generation);
     const appearances = (snapshot.appearances || []).map(appearanceRecord);

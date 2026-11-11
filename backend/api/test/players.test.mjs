@@ -115,3 +115,20 @@ test("player read errors", { skip }, async () => {
     assert.equal((await get(players + bad)).response.status, 400, bad);
   assert.equal((await get(players + "&generation=6")).response.status, 409);
 });
+
+test("a whole selection comes in one page, as its pages give it", { skip }, async () => {
+  const base = "/api/read/players?season=2025/2026&leagues=all&basis=total&sort=name&direction=asc&minutes=0";
+  const first = (await get(base + "&limit=2&page=1")).body;
+  const paged = [...first.data.players];
+  for (let page = 2; page <= first.pagination.pages; page++) paged.push(...(await get(base + "&limit=2&page=" + page)).body.data.players);
+  assert.ok(first.pagination.pages > 1 && paged.length === first.pagination.total);
+  const { response, body } = await get(base + "&whole=1");
+  assert.equal(response.status, 200);
+  assert.deepEqual(body.pagination, { page: 1, limit: 3000, total: paged.length, pages: 1, generation: "7" });
+  assert.deepEqual(body.data.players, paged);
+  // The page's size is the route's: a limit sent with it changes nothing.
+  assert.deepEqual((await get(base + "&whole=1&limit=2")).body.pagination, body.pagination);
+  assert.equal((await get(base + "&whole=1&page=2")).body.data.players.length, 0);
+  assert.equal((await get(base + "&whole=0")).response.status, 400);
+  assert.equal((await get("/api/dashboard/manifest")).body.capabilities.wholeSelection, true);
+});

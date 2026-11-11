@@ -59,7 +59,9 @@ Resources:
       Runtime: nodejs24.x
       Architectures: [arm64]
       Handler: index.handler
-      MemorySize: 512
+      # The function's processor share follows its memory. It builds and compresses its
+      # answers itself (6.6 MB for a position group's players): twice the share of 512.
+      MemorySize: 1024
       Timeout: 25
       ReservedConcurrentExecutions: !If [Reserve, !Ref ReservedConcurrency, !Ref 'AWS::NoValue']
       Role: !GetAtt RuntimeRole.Arn
