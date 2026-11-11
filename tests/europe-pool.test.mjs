@@ -119,3 +119,20 @@ test("a club's level is its Elo, for pool clubs and the others", async () => {
   assert.equal(scout.clubStrength({ id: "t_unknwn", league: LIGUE_1, self: { values: { xg: 2, xga: 0 } } }, pool), null);
   assert.equal(scout.levelPeerClubs(pool, "t_unknwn"), null);
 });
+
+test("a player's comparable-level clubs come from the pool's clubs and levels, without a match", async () => {
+  const scout = loadClubScout([]);
+  const full = scout.buildEuropePool({ ...POOL, matches: MATCHES });
+  const light = scout.buildEuropeLevels(POOL);
+  for (const id of ["t_aaaaa1", "t_aaaaa2", "t_aaaaa3", "t_outsid"]) {
+    const a = scout.levelPeerClubs(full, id),
+      b = scout.levelPeerClubs(light, id);
+    assert.deepEqual([...b.ids], [...a.ids], id);
+    assert.deepEqual(b.clubs.map((c) => [c.id, c.strength, c.league.id]), a.clubs.map((c) => [c.id, c.strength, c.league.id]), id);
+    assert.equal(b.leagues, a.leagues);
+  }
+  assert.equal(scout.levelPeerClubs(light, "t_unknwn"), null);
+  // A club without a level is nobody's peer, as in the full pool.
+  const unranked = scout.buildEuropeLevels({ ...POOL, clubs: [...POOL.clubs, { ...POOL.clubs[0], id: "t_nolevl", level: null }] });
+  assert.ok(!scout.levelPeerClubs(unranked, "t_aaaaa1").ids.has("t_nolevl"));
+});
