@@ -33,7 +33,7 @@ test("the same answer as the publication's, with its version and its own validat
     assert.match(response.headers.get("cache-control"), /s-maxage=30\b/);
     assert.match(pinned.response.headers.get("cache-control"), new RegExp(`s-maxage=${ttl}\\b`));
   }
-  assert.deepEqual((await get("/api/dashboard/manifest")).body.capabilities.versionedReads, { league: true, europeMatches: true });
+  assert.deepEqual((await get("/api/dashboard/manifest")).body.capabilities.versionedReads, { league: true, club: true, player: true, europeMatches: true });
 });
 
 test("whoever holds the answer is told it is unchanged in one statement", { skip }, async () => {
@@ -63,8 +63,7 @@ test("the pages after the first are fenced by the version", { skip }, async () =
     assert.equal((await get(path + "&v=xyz")).response.status, 400);
     assert.equal((await get(path + "&generation=7&v=" + first.meta.version)).response.status, 400);
   }
-  // The other reads of the route have no version to name.
-  assert.equal((await get("/api/read/club?season=2025/2026&leagues=all&team=t_aaaaa1&v=" + first.meta.version)).response.status, 400);
+  // The pool's head carries the power ranking: it has no version to name.
   assert.equal((await get("/api/clubs/europe?season=2025/2026&v=" + first.meta.version)).response.status, 400);
 });
 
@@ -105,4 +104,62 @@ test("the version changes with the scope's editions and with the day, not with a
   } finally {
     context.now = saved;
   }
+});
+
+
+const club = "/api/read/club?season=2025/2026&leagues=all&team=t_aaaaa1";
+const player = "/api/read/player?season=2025/2026&leagues=all&player=p_aaaab1";
+const OWN = [club + "&detail=summary&limit=100", club + "&include=shots", club + "&include=appearances", player + "&detail=summary&limit=100", player];
+
+test("a club's and a player's own reads: the publication's answer, validated by their own editions", { skip }, async () => {
+  for (const path of OWN) {
+    const pinned = await get(path + "&generation=7");
+    const { response, body } = await get(path);
+    assert.equal(response.status, 200, path);
+    assert.deepEqual(body.data, pinned.body.data, path);
+    assert.deepEqual(body.pagination, pinned.body.pagination, path);
+    assert.match(body.meta.version, /^[a-f0-9]{16}$/);
+    assert.match(response.headers.get("etag"), /^W\/"versioned-[a-f0-9]{64}"$/);
+    // Unchanged for whoever holds it: the actor's ids, then the version.
+    const again = await get(path, { "if-none-match": response.headers.get("etag") });
+    assert.equal(again.response.status, 304, path);
+    assert.equal(queries(again.response), 2);
+  }
+  // The pages after the first name the version the first gave.
+  const first = (await get(club + "&include=appearances&limit=2")).body;
+  assert.ok(first.pagination.pages > 1);
+  assert.equal((await get(club + "&include=appearances&limit=2&page=2&v=" + first.meta.version)).response.status, 200);
+  assert.equal((await get(club + "&include=appearances&limit=2&page=2&v=" + "0".repeat(16))).response.status, 409);
+  assert.equal((await get(club + "&generation=7&v=" + first.meta.version)).response.status, 400);
+  // An actor the base does not know: an empty answer, and a version all the same.
+  const nobody = await get("/api/read/club?season=2025/2026&leagues=all&team=t_zzzzzz");
+  assert.equal(nobody.response.status, 200);
+  assert.match(nobody.body.meta.version, /^[a-f0-9]{16}$/);
+});
+
+test("an actor's version follows the editions of his own matches, no other", { skip }, async () => {
+  const versions = async () => Promise.all(OWN.map(async (path) => (await get(path)).body.meta.version));
+  const bump = (id) =>
+    owner.query(
+      "INSERT INTO ops.resource_versions(resource_kind,resource_id) VALUES ('competition_season',$1) ON CONFLICT(resource_kind,resource_id) DO UPDATE SET version=ops.resource_versions.version+1",
+      [id],
+    );
+  const start = await versions();
+  // A club's and a player's reads are two forms.
+  assert.notEqual(start[0], start[3]);
+  // An edition none of his matches is in, and the actor's own version (it advances with every season's match).
+  const { rows: [edition] } = await owner.query("SELECT competition_season_id AS id FROM api.edition_keys WHERE season='2025/2026' AND league_id='l_3FJFUl'");
+  const { rows: [other] } = await owner.query("SELECT max(id)+1000 AS id FROM core.competition_seasons");
+  await bump(other.id);
+  for (const [kind, id] of [["team", "t_aaaaa1"], ["player", "p_aaaab1"]])
+    await owner.query(
+      `INSERT INTO ops.resource_versions(resource_kind,resource_id) VALUES ('${kind}',api.internal_id('${kind}',$1)) ON CONFLICT(resource_kind,resource_id) DO UPDATE SET version=ops.resource_versions.version+1`,
+      [id],
+    );
+  assert.deepEqual(await versions(), start);
+  // A match of his league written.
+  await bump(edition.id);
+  const written = await versions();
+  for (let i = 0; i < OWN.length; i++) assert.notEqual(written[i], start[i], OWN[i]);
+  await owner.query("DELETE FROM ops.resource_versions WHERE resource_kind='competition_season' AND resource_id=$1", [other.id]);
 });
