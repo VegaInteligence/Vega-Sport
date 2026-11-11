@@ -1,0 +1,187 @@
+.game {
+  --scored: #3ccf8e;
+  margin-top: 32px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+:global(html[data-theme="light"]) .game {
+  --scored: #14935b;
+}
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.title {
+  margin: 0 0 4px;
+  color: var(--ink-strong);
+  font-size: var(--text-lg);
+}
+.lead,
+.help {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.help {
+  margin-top: 8px;
+  font-size: var(--text-xs);
+}
+.series {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+  padding-top: 5px;
+}
+.mark {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+}
+.mark[data-result="goal"] {
+  border-color: var(--scored);
+  background: var(--scored);
+}
+.mark[data-result="miss"] {
+  border-color: var(--danger);
+  background: var(--danger);
+}
+.pitch {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-raised));
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.pitch[data-ready] {
+  cursor: crosshair;
+}
+.scene {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 400 / 250;
+}
+.markings,
+.net,
+.frame,
+.reticle,
+.limbs,
+.sleeves {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.markings {
+  stroke: var(--accent);
+  stroke-opacity: 0.25;
+}
+.spot {
+  fill: var(--accent);
+  fill-opacity: 0.45;
+}
+.net {
+  stroke: var(--muted);
+  stroke-opacity: 0.22;
+  stroke-width: 0.6;
+}
+.frame {
+  stroke: var(--ink-strong);
+  stroke-width: 5;
+}
+.keeper {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.limbs {
+  stroke: var(--ink);
+  stroke-width: 6;
+}
+.sleeves {
+  stroke: var(--accent);
+  stroke-width: 6;
+}
+.shirt {
+  fill: var(--accent);
+}
+.skin {
+  fill: var(--ink);
+}
+.reticle {
+  stroke: var(--ink-strong);
+  stroke-width: 1.5;
+}
+.leather {
+  fill: var(--ink-strong);
+  stroke: var(--bg);
+}
+.panel {
+  fill: var(--bg);
+}
+/* Only a shot is animated: the ball and the keeper return at once. */
+.keeper.moving {
+  transition: transform 420ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.ball.moving {
+  transition: transform 480ms cubic-bezier(0.3, 0.6, 0.4, 1);
+}
+.call {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  padding: 4px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-strong);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: call 160ms ease-out;
+}
+@keyframes call {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.9);
+  }
+}
+.call[data-tone="goal"] {
+  color: var(--scored);
+}
+.call[data-tone="miss"] {
+  color: var(--danger);
+}
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+  margin-top: 12px;
+}
+.status {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+@media (prefers-reduced-motion: reduce) {
+  .keeper.moving,
+  .ball.moving {
+    transition: none;
+  }
+  .call {
+    animation: none;
+  }
+}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SiteFooter from "../src/components/SiteFooter.jsx";
+import NotFoundGameLoader from "../src/components/NotFoundGameLoader.jsx";
 export default function NotFound() {
   return (
     <div className="route-error-shell">
@@ -10,6 +11,7 @@ export default function NotFound() {
           <Link className="button button-primary" href="/">
             Vue d’ensemble
           </Link>
+          <NotFoundGameLoader />
         </main>
       </div>
       <SiteFooter />
