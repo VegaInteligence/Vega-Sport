@@ -63,8 +63,8 @@ async function scoutingRoutes(req, params, read) {
     teamKeys = keyed(teams, known.teams);
   const [r] = await read(
     `SELECT (SELECT coalesce(json_agg(r ORDER BY r.key,r.season,r.league_id),'[]'::json) FROM (
-          SELECT DISTINCT a.player_id AS key,f.season,f.league_id FROM api.player_appearances a
-          JOIN api.fixtures f ON f.season_id=a.season_id AND f.match_id=a.match_id
+          SELECT DISTINCT a.player_id AS key,e.season,e.league_id FROM api.player_appearances a
+          JOIN api.edition_keys e ON e.competition_season_id=a.competition_season_id
           WHERE a.player_id=ANY($1::int[])) r) players,
        (SELECT coalesce(json_agg(r ORDER BY r.key,r.season,r.league_id),'[]'::json) FROM (
           SELECT x.home_internal_id AS key,x.season,x.league_id FROM api.fixtures x WHERE x.home_internal_id=ANY($2::int[])
