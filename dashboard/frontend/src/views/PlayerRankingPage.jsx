@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import Link from "next/link";
 import Layout from "../components/Layout.jsx";
 import Icon from "../components/Icon.jsx";
 import BallonDorIcon from "../components/BallonDorIcon.jsx";
@@ -54,7 +55,28 @@ function Avatar({ entry, className }) {
   );
 }
 
+// The ranking's players and clubs open their own pages, on the ranking's season.
+function useEntryLinks(entry) {
+  const f = useFootball();
+  return {
+    player: entry?.playerId && f.href("/joueurs/", { id: entry.playerId }),
+    club: entry?.teamId && f.href("/clubs/", { id: entry.teamId }),
+  };
+}
+function Cell({ href, className, children, ...props }) {
+  return href ? (
+    <Link className={className} href={href} prefetch={false}>
+      {children}
+    </Link>
+  ) : (
+    <span className={className} {...props}>
+      {children}
+    </span>
+  );
+}
+
 function PodiumPlace({ rank, medal, entry }) {
+  const links = useEntryLinks(entry);
   return (
     <li
       className={`card podium-place podium-${medal}`}
@@ -68,13 +90,27 @@ function PodiumPlace({ rank, medal, entry }) {
       <span className="podium-rank" aria-hidden="true">
         {rank}
       </span>
-      <Avatar entry={entry} className="podium-avatar" />
+      {links.player ? (
+        <Link
+          className="podium-photo"
+          href={links.player}
+          prefetch={false}
+          tabIndex={-1}
+          aria-hidden="true"
+        >
+          <Avatar entry={entry} className="podium-avatar" />
+        </Link>
+      ) : (
+        <Avatar entry={entry} className="podium-avatar" />
+      )}
       <div className="podium-identity">
         {entry ? (
           <>
-            <strong>{entry.name}</strong>
+            <strong>
+              <Cell href={links.player}>{entry.name}</Cell>
+            </strong>
             <span>
-              {entry.team} · {entry.position}
+              <Cell href={links.club}>{entry.team}</Cell> · {entry.position}
             </span>
           </>
         ) : (
@@ -93,6 +129,7 @@ function PodiumPlace({ rank, medal, entry }) {
 }
 
 function RankRow({ rank, entry }) {
+  const links = useEntryLinks(entry);
   return (
     <li
       className="rank-row"
@@ -106,14 +143,18 @@ function RankRow({ rank, entry }) {
       <span className="rank-number" aria-hidden="true">
         {String(rank).padStart(2, "0")}
       </span>
-      <span className="rank-player" aria-hidden={!entry}>
+      <Cell
+        className="rank-player"
+        href={links.player}
+        aria-hidden={!entry}
+      >
         <Avatar entry={entry} className="rank-avatar" />
         {entry ? <strong>{entry.name}</strong> : <Bar w={width(rank)} />}
-      </span>
+      </Cell>
       <span className="rank-position" aria-hidden={!entry}>
         {entry ? entry.position : <Bar w={width(rank, 1)} />}
       </span>
-      <span className="rank-club" aria-hidden={!entry}>
+      <Cell className="rank-club" href={links.club} aria-hidden={!entry}>
         {entry ? (
           <>
             <Media name={entry.team} url={entry.teamImageUrl} />
@@ -122,7 +163,7 @@ function RankRow({ rank, entry }) {
         ) : (
           <Bar w={width(rank, 2)} />
         )}
-      </span>
+      </Cell>
       <span className="rank-score" aria-hidden={!entry}>
         {entry ? number(entry.score, 1) : <Bar w="70%" />}
       </span>

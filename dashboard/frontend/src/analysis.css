@@ -79,6 +79,10 @@
   width: 80px;
   height: 80px;
 }
+.podium-photo {
+  display: flex;
+  border-radius: 50%;
+}
 .rank-avatar-empty {
   display: grid;
   place-items: center;
@@ -190,6 +194,9 @@
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+a.rank-player:hover strong {
+  color: var(--accent-dark);
 }
 .rank-avatar {
   width: 28px;
