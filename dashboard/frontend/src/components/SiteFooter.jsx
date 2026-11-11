@@ -1,7 +1,5 @@
 import Link from "next/link";
-import Icon from "./Icon.jsx";
 import StatarenaLogo from "./StatarenaLogo.jsx";
-import { date } from "../services/format.js";
 
 const repository = "https://github.com/VegaInteligence/Vega-Sport";
 /** Pages without the football context (404, error) link to plain paths. */
@@ -43,7 +41,7 @@ const groups = [
   },
 ];
 
-export default function SiteFooter({ href = plainHref, path, updatedAt }) {
+export default function SiteFooter({ href = plainHref, path }) {
   return (
     <footer className="site-footer" aria-label="Pied de page">
       <div className="site-footer-inner">
@@ -94,21 +92,6 @@ export default function SiteFooter({ href = plainHref, path, updatedAt }) {
               </ul>
             </nav>
           ))}
-        </div>
-        <div className="site-footer-bottom">
-          <div className="site-footer-copyright">
-            <a
-              className="site-footer-github"
-              href={repository}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Vega Intelligence sur GitHub"
-            >
-              GitHub <Icon name="external" />
-            </a>
-            <span>© {new Date().getFullYear()} Vega Intelligence</span>
-            {updatedAt && <span>Données au {date(updatedAt)}</span>}
-          </div>
         </div>
       </div>
     </footer>

@@ -365,11 +365,7 @@ export default function Layout({
           )}
           {children}
         </PageWorkspace>
-        <SiteFooter
-          href={f.navigationHref || f.href}
-          path={path}
-          updatedAt={f.data?.meta?.retrievedAt}
-        />
+        <SiteFooter href={f.navigationHref || f.href} path={path} />
       </div>
       <PlayerDialog />
       {performanceComparison &&
