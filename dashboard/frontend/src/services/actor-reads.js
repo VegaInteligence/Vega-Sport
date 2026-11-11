@@ -14,6 +14,12 @@ export function actorReadParams(
     include,
     ...(summary ? { detail: "summary", limit: 100 } : {}),
     generation: compactGeneration(manifest),
+    // The API validates this read by the version of the actor's own editions: its
+    // request then names no publication (readCompact), and whoever holds the answer is
+    // told it is unchanged. The site keeps the publication it was read under.
+    ...(manifest?.capabilities?.versionedReads?.[kind] === true
+      ? { versioned: 1 }
+      : {}),
   };
 }
 

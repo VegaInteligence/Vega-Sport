@@ -212,7 +212,14 @@ async function loadDossier(
   { id, season, generation, whole, played, versioned },
   onProgress,
 ) {
-  const base = { season, team: id, leagues: "all", generation };
+  const base = {
+    season,
+    team: id,
+    leagues: "all",
+    generation,
+    // Validated by the club's own editions where the API does (readCompact).
+    ...(versioned?.club ? { versioned: 1 } : {}),
+  };
   onProgress({ step: "club", done: 0, total: 1 });
   const [shots, apps] = await Promise.all([
     readActor({ ...base, include: "shots" }),
