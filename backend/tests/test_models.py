@@ -574,6 +574,14 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual(
             self.one("SELECT count(*) FROM agg.power_runs WHERE kind='players' AND season_id=2025 AND status='published'")[0], 1
         )
+        # The run's times are its real ones: from before the read to after the write (the
+        # fit alone slept 1.2 s), and no published run of any model reads as instantaneous.
+        self.assertGreater(
+            self.one("SELECT extract(epoch FROM finished_at - started_at) FROM agg.power_runs WHERE kind='players' AND season_id=2025 AND status='published'")[0],
+            1.2,
+        )
+        self.assertEqual(self.one("SELECT count(*) FROM agg.power_runs WHERE status='published' AND finished_at <= started_at")[0], 0)
+        self.assertEqual(self.one("SELECT count(*) FROM agg.calc_runs WHERE status='published' AND finished_at <= started_at")[0], 0)
 
 
 if __name__ == "__main__":

@@ -84,12 +84,12 @@ def blocks_of(role):
     return KEEPER_BLOCKS if role == "goalkeeper" else OUTFIELD_BLOCKS
 
 
-def _start(conn, kind, season=None, **counts):
+def _start(conn, kind, season=None, *, started_at=None):
     return conn.execute(
         """INSERT INTO agg.power_runs(kind, season_id, method_version, elo_initial, elo_k, elo_home_advantage, regularisation_minutes,
-             eligibility_minutes, total_weight, rate_weight, min_reference_matches)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
-        (kind, season, METHOD_VERSION, ELO_INITIAL, ELO_K, ELO_HOME, LAMBDA, ELIGIBILITY, TOTAL_WEIGHT, RATE_WEIGHT, MIN_REFERENCE),
+             eligibility_minutes, total_weight, rate_weight, min_reference_matches, started_at)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,coalesce(%s, now())) RETURNING id""",
+        (kind, season, METHOD_VERSION, ELO_INITIAL, ELO_K, ELO_HOME, LAMBDA, ELIGIBILITY, TOTAL_WEIGHT, RATE_WEIGHT, MIN_REFERENCE, started_at),
     ).fetchone()[0]
 
 
@@ -98,7 +98,8 @@ def _publish(conn, run, kind, season, matches, players=None):
         "UPDATE agg.power_runs SET status='superseded' WHERE kind=%s AND season_id IS NOT DISTINCT FROM %s AND status='published'",
         (kind, season),
     )
-    conn.execute("UPDATE agg.power_runs SET status='published', finished_at=now(), matches=%s, players=%s WHERE id=%s", (matches, players, run))
+    # clock_timestamp(): now() is the transaction's start, which is also the run's started_at.
+    conn.execute("UPDATE agg.power_runs SET status='published', finished_at=clock_timestamp(), matches=%s, players=%s WHERE id=%s", (matches, players, run))
 
 
 # Clubs: Elo (§ 3) ----------------------------------------------------------
@@ -412,6 +413,9 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     Three steps, and no transaction open during the second: the base ends a session that
     stays idle inside a transaction (60 s, infra/aws/database.yaml), and fitting the
     references of a large season takes longer than that."""
+    # The run starts here, before the read and the computation: its row is only written
+    # in step 3, so it is given this time.
+    started = conn.execute("SELECT clock_timestamp()").fetchone()[0]
     # 1. Read. Through a server-side cursor (it needs a transaction, a short one): the
     # season's rows are held once, as the dicts below, never a second time as the result.
     with conn.transaction():
@@ -441,7 +445,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     blocks, roles = season_details(detailed, scored)
     # 3. Write, in one transaction: the season's ranking changes at once or not at all.
     with conn.transaction():
-        run = _start(conn, "players", season)
+        run = _start(conn, "players", season, started_at=started)
         conn.execute("DELETE FROM agg.player_power WHERE season_id=%s", (season,))
         conn.execute("DELETE FROM agg.player_power_matches WHERE season_id=%s", (season,))
         with conn.cursor().copy(
@@ -497,7 +501,7 @@ def write_award(conn, season, scored):
     conn.execute(
         "UPDATE agg.calc_runs SET status='superseded' WHERE kind='award' AND cohort_definition=%s AND status='published' AND id<>%s", (definition, run)
     )
-    conn.execute("UPDATE agg.calc_runs SET status='published', finished_at=now() WHERE id=%s", (run,))
+    conn.execute("UPDATE agg.calc_runs SET status='published', finished_at=clock_timestamp() WHERE id=%s", (run,))
     return len(race)
 
 

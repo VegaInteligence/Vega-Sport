@@ -170,7 +170,9 @@ def _publish(conn, run, kind, definition):
         "UPDATE agg.calc_runs SET status='superseded' WHERE kind=%s AND cohort_definition=%s AND status='published' AND id<>%s",
         (kind, definition, run),
     )
-    conn.execute("UPDATE agg.calc_runs SET status='published', finished_at=now() WHERE id=%s", (run,))
+    # clock_timestamp(), not now(): inside a transaction now() is its start, the run's own
+    # started_at, and every run read as lasting 0 ms.
+    conn.execute("UPDATE agg.calc_runs SET status='published', finished_at=clock_timestamp() WHERE id=%s", (run,))
 
 
 # Cohorts ----------------------------------------------------------------
