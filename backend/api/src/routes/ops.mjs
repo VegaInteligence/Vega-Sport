@@ -27,6 +27,12 @@ export const PERMANENT = [
   "RESOURCE_NOT_FOUND", "INVALID_PARAMETER", "UNAUTHORIZED", "INVALID_ENDPOINT", "MATCH_ID_MISMATCH",
   "PROFILE_ID_MISMATCH", "MATCH_SEASON_CHANGED", "MATCH_COMPETITION_CHANGED", "CALENDAR_IDENTITY_MISMATCH",
 ];
+/**
+ * pitchapi.py: a 404 with one of these codes means the source has no such data for this
+ * match. The job is settled, nothing is retried: the page counts these calls apart. They
+ * stay in `transient` and `errors` too, so those keep their meaning for older readers.
+ */
+export const UNAVAILABLE = ["ANALYTICS_UNAVAILABLE", "HALVES_UNAVAILABLE"];
 // Lane and state are filtered on job_lane and job_state, the view's columns with the
 // table's own types: a filter on the text ones never reaches the table's partial indexes.
 const JOB = `id::text, lane, family, state, run_after, updated_at, attempts, priority, last_http, last_error_code, match_id, season_id, target
@@ -159,16 +165,18 @@ export function createOpsRoute(read, { key = null, clock = Date.now } = {}) {
       read(
         `SELECT date_trunc('hour', fetched_at) AS hour, count(*)::integer AS calls,
                 count(*) FILTER (WHERE error_code IS NULL)::integer AS ok,
-                count(*) FILTER (WHERE error_code = ANY($2::text[]))::integer AS permanent
+                count(*) FILTER (WHERE error_code = ANY($2::text[]))::integer AS permanent,
+                count(*) FILTER (WHERE http_status = 404 AND error_code = ANY($3::text[]))::integer AS unavailable
          FROM api.ops_fetch_log WHERE fetched_at >= $1 GROUP BY 1 ORDER BY 1`,
-        [since, PERMANENT],
+        [since, PERMANENT, UNAVAILABLE],
       ),
       read(
         `SELECT family, count(*)::integer AS calls, count(*) FILTER (WHERE error_code IS NOT NULL)::integer AS errors,
+                count(*) FILTER (WHERE http_status = 404 AND error_code = ANY($2::text[]))::integer AS unavailable,
                 round(avg(duration_ms))::integer AS mean_ms,
                 round(percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_ms))::integer AS p95_ms
          FROM api.ops_fetch_log WHERE fetched_at >= $1 GROUP BY family ORDER BY calls DESC, family`,
-        [since],
+        [since, UNAVAILABLE],
       ),
       read(`SELECT * FROM api.ops_data_warnings ORDER BY detected_at DESC, match_id LIMIT ${LIMITS.warnings}`),
       // One row per edition: its match families added up (the season calendar is one call),
@@ -234,9 +242,9 @@ export function createOpsRoute(read, { key = null, clock = Date.now } = {}) {
         latest: calcLatest.map(calc),
       },
       requests: requests.map((r) => ({
-        hour: r.hour, calls: r.calls, ok: r.ok, permanent: r.permanent, transient: failedCalls(r) - r.permanent,
+        hour: r.hour, calls: r.calls, ok: r.ok, permanent: r.permanent, transient: failedCalls(r) - r.permanent, unavailable: r.unavailable,
       })),
-      families: families.map((f) => ({ family: f.family, calls: f.calls, errors: f.errors, meanMs: f.mean_ms, p95Ms: f.p95_ms })),
+      families: families.map((f) => ({ family: f.family, calls: f.calls, errors: f.errors, unavailable: f.unavailable, meanMs: f.mean_ms, p95Ms: f.p95_ms })),
       warnings: warnings.map((w) => ({ matchId: w.match_id, match: w.match_label, kind: w.kind, detail: w.detail, detectedAt: w.detected_at })),
       progress: progress.map((p) => ({
         editionId: p.competition_season_id, competition: p.competition, season: p.season, seasonId: p.season_id,
