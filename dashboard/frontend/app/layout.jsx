@@ -15,7 +15,7 @@ import "../src/openfootball-history.css";
 import "../src/research.css";
 import "../src/player-profile-redesign.css";
 import "../src/home.css";
-const siteUrl = "https://statarena-analytics.vercel.app";
+const siteUrl = "https://vegasport.vercel.app";
 const faviconVersion = 2;
 const description = "Vega Intelligence : statistiques de football, analyses de matchs, joueurs et compétitions.";
 export const metadata = {

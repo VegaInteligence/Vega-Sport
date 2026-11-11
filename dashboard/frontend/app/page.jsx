@@ -6,7 +6,7 @@ import {
   HOME_STATE_COOKIE,
   decodeHomeState,
 } from "../src/services/home-bootstrap-preferences.js";
-export const metadata = { title: "Vue d’ensemble — STATARENA" };
+export const metadata = { title: "Vue d’ensemble — Vega Intelligence" };
 export default async function HomePage({ searchParams }) {
   const values = await searchParams;
   const params = new URLSearchParams(
