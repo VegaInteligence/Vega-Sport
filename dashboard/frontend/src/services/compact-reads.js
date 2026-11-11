@@ -248,6 +248,13 @@ export async function readCompactPages(
 ) {
   const pages = [],
     seen = new Set();
+  // The first page is read alone: it gives the number of pages, and what fences the
+  // others. Those are then read side by side, a pair at a time where `parallelPages`
+  // is true, or as many at a time as it says.
+  const width =
+    parallelPages === true
+      ? 2
+      : Math.max(1, Math.floor(Number(parallelPages) || 1));
   let generation = params.generation,
     version,
     expectedPages,
@@ -323,10 +330,7 @@ export async function readCompactPages(
     let final;
     for (let first = 1; first <= (expectedPages ?? 1);) {
       signal?.throwIfAborted();
-      const count = Math.min(
-        parallelPages ? 2 : 1,
-        (expectedPages ?? 1) - first + 1,
-      );
+      const count = Math.min(width, (expectedPages ?? 1) - first + 1);
       const settled = await Promise.allSettled(
         Array.from({ length: count }, (_, index) => load(first + index)),
       );
@@ -334,7 +338,7 @@ export async function readCompactPages(
       for (const item of settled)
         if (
           item.status === "rejected" &&
-          (!parallelPages ||
+          (width === 1 ||
             item.reason?.throttled ||
             ![502, 503, 504].includes(item.reason?.status))
         )
