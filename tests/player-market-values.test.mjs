@@ -15,3 +15,10 @@ test("market values are not asked from an API that does not say it serves them",
   assert.equal(MARKET_VALUES_UNSERVED.value, undefined);
   assert.match(MARKET_VALUES_UNSERVED.error, /indisponible/);
 });
+
+test("the retired cup index is not asked from an API that does not say it serves it", async () => {
+  const { servesCupWorkerIndex } = await import("../dashboard/frontend/src/services/catalog-client.js");
+  assert.equal(servesCupWorkerIndex({ capabilities: { cupWorkerIndex: true } }), true);
+  for (const manifest of [null, {}, { capabilities: {} }, { capabilities: { cupWorkerIndex: 1 } }, { capabilities: { boundedSearch: true } }])
+    assert.equal(servesCupWorkerIndex(manifest), false);
+});

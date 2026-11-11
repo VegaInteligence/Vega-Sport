@@ -32,7 +32,10 @@ import { useResource } from "../services/resources.js";
 import { competitionFixturePreview } from "../services/fixture-pages.js";
 import { compactGeneration } from "../services/compact-reads.js";
 import { parisDay } from "../services/fixtures.js";
-import { cupIndex as loadCupIndex } from "../services/catalog-client.js";
+import {
+  cupIndex as loadCupIndex,
+  servesCupWorkerIndex,
+} from "../services/catalog-client.js";
 import CompetitionHighlights from "../components/CompetitionHighlights.jsx";
 import SeasonSelect from "../components/SeasonSelect.jsx";
 import CupCompetition from "../components/CupCompetition.jsx";
@@ -483,8 +486,10 @@ export default function CompetitionsPage() {
   const legacyCupIndex = useResource("supplemental-cup-index", () =>
     loadCupIndex("supplemental"),
   );
-  const workerCupIndex = useResource("cup-worker-index", () =>
-    loadCupIndex("worker"),
+  const workerCupIndex = useResource(
+    "cup-worker-index",
+    () => loadCupIndex("worker"),
+    servesCupWorkerIndex(f.manifest),
   );
   const cupIndex = workerCupIndex.value?.competitions?.length
     ? workerCupIndex
