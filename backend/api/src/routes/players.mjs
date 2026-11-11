@@ -23,7 +23,8 @@
  * - the rows of a player are in league, date, kick-off and match order (legacy: the
  *   order of the published partition files).
  */
-import { reject, validateParams } from "../http.mjs";
+import { createHash } from "node:crypto";
+import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 import { powerOf } from "./rankings.mjs";
 import {
   bindValue,
@@ -97,7 +98,14 @@ export function parsePlayerRead(params) {
   validateParams(params, [
     "season", "league", "leagues", "generation", "q", "minutes", "pos", "role", "venue", "result",
     "rmin", "from", "to", "stats", "match", "basis", "sort", "direction", "ranking", "page", "limit", "whole", "group",
+    "detail", "v",
   ]);
+  const detail = params.get("detail");
+  if (detail !== null && detail !== "profile") reject(400, "Détail invalide.");
+  // A selection of profiles is fenced by its own version (`v`), never by the publication.
+  const pin = params.get("v");
+  if ((pin !== null && (!detail || !/^[a-f0-9]{16}$/.test(pin))) || (detail && params.has("generation")))
+    reject(400, "Publication invalide.");
   const whole = params.get("whole");
   if (whole !== null && whole !== "1") reject(400, "Pagination invalide.");
   const scope = parseReadScope(params),
@@ -130,6 +138,8 @@ export function parsePlayerRead(params) {
     scope,
     ...page,
     whole: Boolean(whole),
+    profiles: Boolean(detail),
+    pin,
     q,
     positions,
     groups,
@@ -237,7 +247,7 @@ const rollupRatios = (keys) =>
  * at each merge): 0.51 s of the 0.84 s a position group of 1,988 players took on the
  * base on 11 November 2026.
  */
-const recordSql = (details) => `json_build_object('p',to_json(p),'x',${details},'a',to_json(a),'v',to_json(v))`;
+const recordSql = (details, averages) => `json_build_object('p',to_json(p),'x',${details},'a',to_json(a)${averages ? ",'v',to_json(v)" : ""})`;
 
 /**
  * The appearance filters of a players read (scope, generation, match, period, context).
@@ -349,7 +359,10 @@ function playerSelection(filters, values, nameSort) {
     earlyRatios,
     sourceMetrics,
     earlyProfile,
-    averageMetrics,
+    // The page's averages on the asked basis: a profile carries the sums, not them.
+    averages: filters.profiles
+      ? ""
+      : `\n CROSS JOIN LATERAL (SELECT ${averageMetrics},(${metricValue("goals")})-(${metricValue("xg")}) AS "finishingDelta") v`,
     thresholds: thresholds.join(" AND "),
     order,
     limit: b(filters.limit),
@@ -362,8 +375,11 @@ export function playerReadQuery(filters, params, editions) {
   const values = [],
     publication = publicationSql(filters.scope, values);
   const where = appearanceWhere(filters, params, values, editions);
-  const { metricValue, earlyCounts, earlyRatios, sourceMetrics, earlyProfile, averageMetrics, thresholds, order, limit, offset } =
-    playerSelection(filters, values, normalizedSql("d.name"));
+  const { earlyCounts, earlyRatios, sourceMetrics, earlyProfile, averages, thresholds, order, limit, offset } = playerSelection(
+    filters,
+    values,
+    normalizedSql("d.name"),
+  );
   const earlyAggregates = [countProjectionFor(earlyCounts), ratioProjectionFor(earlyRatios)].filter(Boolean).join(",\n");
   const identityColumns = `s.player_id,s.player_name AS name,s.image_url,s.match_id,s.date,s.team,s.team_id,s.league_id,s.league,s.position_number`;
   const identityJson = (alias) =>
@@ -438,9 +454,8 @@ page_metrics AS (
  SELECT p.result_order,${recordSql(`json_build_object(
      'team_ids',coalesce((SELECT jsonb_agg(api.public_id('team',x) ORDER BY api.public_id('team',x)) FROM unnest(p.internal_team_ids) x),'[]'::jsonb),
      'identity',(SELECT ${identityJson("i")} FROM identities i WHERE i.player_id=p.internal_id),
-     'latest',(SELECT ${identityJson("l")} FROM latest l WHERE l.player_id=p.internal_id))`)} AS record
- FROM page p LEFT JOIN page_metrics a ON a.player_id=p.internal_id
- CROSS JOIN LATERAL (SELECT ${averageMetrics},(${metricValue("goals")})-(${metricValue("xg")}) AS "finishingDelta") v
+     'latest',(SELECT ${identityJson("l")} FROM latest l WHERE l.player_id=p.internal_id))`, averages)} AS record
+ FROM page p LEFT JOIN page_metrics a ON a.player_id=p.internal_id${averages}
 )
 SELECT publication.*,(SELECT count(*)::int FROM filtered) total,
  coalesce((SELECT json_agg(p.record ORDER BY p.result_order) FROM page_records p),'[]'::json) players,
@@ -472,7 +487,7 @@ export function playerRollupQuery(filters, params, editions) {
   const values = [],
     publication = publicationSql(filters.scope, values);
   const scope = (alias) => idScopeWhere(alias, filters.scope, editions, values);
-  const { metricValue, earlyCounts, earlyRatios, earlyProfile, averageMetrics, thresholds, order, limit, offset } = playerSelection(
+  const { earlyCounts, earlyRatios, earlyProfile, averages, thresholds, order, limit, offset } = playerSelection(
     filters,
     values,
     "d.sort_name",
@@ -586,14 +601,13 @@ team_ids AS (
  SELECT p.result_order,${recordSql(`json_build_object('image_url',k.image_url,'teams',${teamsSql},'leagues',${leaguesSql},'role_code',${roleSql},
      'league_ids',coalesce(li.ids,'{}'::text[]),
      'team_ids',coalesce((SELECT jsonb_agg(x.public_id ORDER BY x.public_id) FROM api.team_keys x WHERE x.team_id=ANY(ti.ids)),'[]'::jsonb),
-     'identity',${identityJson("i", "it")},'latest',${identityJson("l", "lt")})`)} AS record
+     'identity',${identityJson("i", "it")},'latest',${identityJson("l", "lt")})`, averages)} AS record
  FROM page p JOIN api.player_keys k ON k.player_id=p.internal_id
  LEFT JOIN identities i ON i.player_id=p.internal_id LEFT JOIN api.team_keys it ON it.team_id=i.team_id
  LEFT JOIN latest l ON l.player_id=p.internal_id LEFT JOIN api.team_keys lt ON lt.team_id=l.team_id
  LEFT JOIN team_names t ON t.player_id=p.internal_id LEFT JOIN league_names le ON le.player_id=p.internal_id
  LEFT JOIN main_role mr ON mr.player_id=p.internal_id LEFT JOIN team_ids ti ON ti.player_id=p.internal_id
- LEFT JOIN league_ids li ON li.player_id=p.internal_id LEFT JOIN page_metrics a ON a.player_id=p.internal_id
- CROSS JOIN LATERAL (SELECT ${averageMetrics},(${metricValue("goals")})-(${metricValue("xg")}) AS "finishingDelta") v
+ LEFT JOIN league_ids li ON li.player_id=p.internal_id LEFT JOIN page_metrics a ON a.player_id=p.internal_id${averages}
 )
 SELECT publication.*,(SELECT count(*)::int FROM filtered) total,
  coalesce((SELECT json_agg(p.record ORDER BY p.result_order) FROM page_records p),'[]'::json) players,
@@ -619,11 +633,15 @@ const identity = (row, playerId) =>
       }
     : null;
 
-/** The record of a player, from the four parts of recordSql: the later part decides,
- * and his sums are keyed by his internal id, which the response does not carry. */
-export function playerReadRecord({ p, x, a, v }) {
+/** A player's row, from the parts of recordSql: the later part decides, and his sums
+ * are keyed by his internal id, which the response does not carry. */
+function playerRow({ p, x, a, v }) {
   const { player_id: _, ...sums } = a || {};
-  const row = { ...p, ...x, ...sums, ...v };
+  return { ...p, ...x, ...sums, ...v };
+}
+
+/** A player's profile of the selection: what the site's scouting reads (season-player.js). */
+function playerProfile(row) {
   const role = roleDefinitions[row.role_code] || null;
   const stats = {},
     ratios = {};
@@ -638,7 +656,7 @@ export function playerReadRecord({ p, x, a, v }) {
         count: Number(row[`${key}_count`]),
         minutes: row[`${key}_minutes`],
       };
-  const profile = {
+  return {
     id: row.player_id,
     name: row.name,
     imageUrl: row.image_url,
@@ -660,6 +678,13 @@ export function playerReadRecord({ p, x, a, v }) {
     latest: identity(row.latest, row.player_id),
     rows: [],
   };
+}
+
+/** The record of a player of a list: his profile, and his values on the asked basis. */
+export function playerReadRecord(parts) {
+  const row = playerRow(parts),
+    profile = playerProfile(row),
+    { role, stats } = profile;
   return {
     id: row.player_id,
     playerId: row.player_id,
@@ -679,11 +704,80 @@ export function playerReadRecord({ p, x, a, v }) {
   };
 }
 
-export function createPlayerReadRoute(read) {
+/** `detail=profile`: the profile alone. A player's page compares him with his group's
+ * profiles and reads nothing else of a list's record (3.2 kB of it, of which 2.7 kB the
+ * profile, on 11 November 2026). */
+export function playerProfileRecord(parts) {
+  const row = playerRow(parts);
+  return { id: row.player_id, profile: playerProfile(row) };
+}
+
+// What a selection of profiles is made of besides its data; a change of the record
+// changes it, so that no kept answer of the previous shape is said unchanged.
+const PROFILE_SHAPE = "profile-1";
+const DAY = 86_400_000;
+
+/**
+ * The version of a selection of profiles: what its answer is made from, in 16 hexadecimal
+ * characters. An answer was fenced and validated by the publication, which changes every
+ * five minutes while anything is collected: on 11 November 2026 the ten editions of the
+ * site's European scope had not changed for twenty hours, and a player's page read his
+ * group again (1 to 1.4 s in the function, 5 MB) at each publication.
+ *
+ * It names the scope's editions with their versions (the collector advances an edition's
+ * with each match written, the calculator after each refresh of its rows) and the count
+ * and sums of the season's rows read (a daily recount advances no version). A player's or
+ * a club's name and image are not in it: their versions advance with every match of
+ * every season, a backfill's included. The day is, so none stays more than a day.
+ */
+export async function selectionVersion(read, editions, now) {
+  const [row] = await read(
+    `SELECT coalesce((SELECT json_agg(json_build_array(v.resource_id,v.version) ORDER BY v.resource_id) FROM api.versions v
+       WHERE v.resource_kind='competition_season' AND v.resource_id=ANY($2::int[])),'[]'::json) AS editions,
+     (SELECT json_build_array(count(*),sum(r.matches),sum(r.total_minutes),sum(r.unknown_matches)) FROM api.player_list_editions r
+       WHERE r.season_id=$1::smallint AND r.competition_season_id=ANY($2::int[])) AS list`,
+    [editions.seasonId, editions.ids],
+  );
+  const parts = [PROFILE_SHAPE, editions.seasonId, editions.ids, row?.editions ?? [], row?.list ?? [], Math.floor(now / DAY)];
+  return createHash("sha256").update(JSON.stringify(parts)).digest("hex").slice(0, 16);
+}
+
+/**
+ * GET /api/read/players?detail=profile: the selection's profiles, kept by whoever holds
+ * them until the selection's version changes. The request names no publication; `v`
+ * fences the pages after the first on the version the first one gave (409 otherwise).
+ */
+async function profileSelection(req, params, filters, read, now) {
+  const editions = await resolveEditions(read, filters.scope);
+  const version = await selectionVersion(read, editions, now);
+  if (filters.pin && filters.pin !== version) reject(409, "Les données ont été actualisées. Rechargez la première page.");
+  const signature = [[...params].sort(([a], [b]) => a.localeCompare(b)), version];
+  const etag = `W/"players-profile-${createHash("sha256").update(JSON.stringify(signature)).digest("hex")}"`;
+  // Unchanged for whoever holds it: neither the selection nor its answer is worked out.
+  if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 30 });
+  const { sql, values } = (supportsPlayerRollup(filters) ? playerRollupQuery : playerReadQuery)(filters, params, editions);
+  const [snapshot] = await read(sql, values);
+  const total = Number(snapshot?.total || 0);
+  return readResponse(
+    req,
+    params,
+    snapshot,
+    { players: (snapshot?.players || []).map(playerProfileRecord), teams: snapshot?.teams || [] },
+    {
+      pagination: { page: filters.page, limit: filters.limit, total, pages: Math.max(1, Math.ceil(total / filters.limit)) },
+      maxBytes: filters.whole ? 16 * 1024 * 1024 : 1024 * 1024,
+      version,
+      etag,
+    },
+  );
+}
+
+export function createPlayerReadRoute(read, { clock = Date.now } = {}) {
   return async (req, path, params) => {
     if (path !== "/api/read/players") return null;
     if (!["GET", "HEAD"].includes(req.method)) reject(405, "Méthode non autorisée.");
     const filters = parsePlayerRead(params);
+    if (filters.profiles) return profileSelection(req, params, filters, read, clock());
     const validated = await readValidator(req, params, filters.scope, read);
     if (validated) return validated;
     const editions = await resolveEditions(read, filters.scope);

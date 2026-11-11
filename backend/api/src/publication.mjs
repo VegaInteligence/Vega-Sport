@@ -111,7 +111,18 @@ export async function readValidator(req, params, scope, read, { periodKey = null
   return null;
 }
 
-export function readResponse(req, params, snapshot, data, { pagination, maxBytes = 1024 * 1024, periodKey = null, ttl = 30, stale = null, personal = false } = {}) {
+/**
+ * `version` and `etag`: an answer validated by what it is made from (players.mjs,
+ * selectionVersion), not by the publication. Its meta gives the version, for the
+ * requests that follow to name.
+ */
+export function readResponse(
+  req,
+  params,
+  snapshot,
+  data,
+  { pagination, maxBytes = 1024 * 1024, periodKey = null, ttl = 30, stale = null, personal = false, version = null, etag: given = null } = {},
+) {
   checkReadGeneration(params, snapshot?.generation);
   const meta = {
     generation: String(snapshot.generation),
@@ -122,8 +133,9 @@ export function readResponse(req, params, snapshot, data, { pagination, maxBytes
     endDate: day(snapshot.end_date),
     partitionCount: Number(snapshot.partition_count || 0),
     missingWatermarks: Number(snapshot.missing_watermarks || 0),
+    ...(version && { version }),
   };
-  const etag = readEtag(req, params, snapshot, periodKey);
+  const etag = given || readEtag(req, params, snapshot, periodKey);
   return send(
     req,
     { data, meta, ...(pagination && { pagination: { ...pagination, generation: meta.generation } }) },
