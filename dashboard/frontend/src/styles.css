@@ -1780,32 +1780,6 @@ th[aria-sort="descending"] .sort-indicator {
 .site-footer a[aria-current="page"] {
   color: var(--accent-dark);
 }
-.site-footer-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding: 14px 0 20px;
-  border-top: 1px solid var(--border);
-  font-size: var(--text-sm);
-}
-.site-footer-copyright {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 14px;
-}
-.site-footer-github {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 36px;
-}
-.site-footer-github .icon {
-  width: 14px;
-  height: 14px;
-}
 
 /* Method page */
 .method-layout {
@@ -2113,10 +2087,6 @@ th[aria-sort="descending"] .sort-indicator {
   }
   .site-footer-column h2 {
     margin-top: 0;
-  }
-  .site-footer-bottom {
-    gap: 8px;
-    padding: 12px 0 18px;
   }
 }
 @media (max-width: 380px) {
