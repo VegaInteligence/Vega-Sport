@@ -52,6 +52,39 @@ test("club profile, with and without appearances", { skip }, async () => {
   assert.ok(summary.matches[2].stats.length > 0);
 });
 
+test("a league's season: every match once, as each club's summary read gives it", { skip }, async () => {
+  const league = "season=2025/2026&league=l_3FJFUl&detail=summary";
+  const { response, body } = await get(`/api/read/league?${league}&limit=100`);
+  assert.equal(response.status, 200);
+  assert.deepEqual(Object.keys(body.data).sort(), DATA_KEYS);
+  const d = body.data;
+  assert.deepEqual(d.meta.actor, { kind: "league", id: "l_3FJFUl" });
+  assert.deepEqual([d.meta.detail, d.meta.appearancesLoaded, d.meta.shotsLoaded], ["summary", false, false]);
+  assert.deepEqual(d.appearances, []);
+  assert.equal(body.pagination.total, d.fixtures.length);
+  const matches = new Map(d.matches.map((m) => [m.id, m]));
+  assert.equal(matches.size, d.matches.length);
+  assert.ok(d.matches.some((m) => m.stats.length > 0));
+  // What a club profile read club by club: the same fixtures and the same match records.
+  const seen = new Set();
+  for (const team of d.teams) {
+    const club = (await get(`/api/read/club?season=2025/2026&leagues=l_3FJFUl&team=${team.id}&detail=summary&limit=100`)).body.data;
+    assert.ok(club.fixtures.length > 0, team.id);
+    for (const f of club.fixtures) seen.add(f.id);
+    for (const m of club.matches) assert.deepEqual(matches.get(m.id), m);
+  }
+  assert.deepEqual([...seen].sort(), d.fixtures.map((f) => f.id).sort());
+  // Pages, newest first, and the publication fence of the other reads.
+  const second = (await get(`/api/read/league?${league}&limit=2&page=2`)).body;
+  assert.deepEqual(second.data.fixtures.map((f) => f.id), d.fixtures.slice(2, 4).map((f) => f.id));
+  assert.equal(second.pagination.pages, Math.ceil(d.fixtures.length / 2));
+  assert.equal((await get(`/api/read/league?${league}&generation=6`)).response.status, 409);
+  // One competition, in the summary detail, without player rows.
+  for (const query of ["season=2025/2026&detail=summary", "season=2025/2026&league=l_3FJFUl", `${league}&include=shots`, `${league}&leagues=all`, `${league}&team=t_aaaaa1`])
+    assert.equal((await get(`/api/read/league?${query}`)).response.status, 400, query);
+  assert.equal((await get("/api/read/league?season=2025/2026&league=l_zzzzzz&detail=summary")).body.pagination.total, 0);
+});
+
 test("profile errors", { skip }, async () => {
   assert.equal((await get(`/api/read/player?${scope}&player=bad`)).response.status, 400);
   assert.equal((await get(`/api/read/club?${scope}&team=t_aaaaa1&include=goals`)).response.status, 400);

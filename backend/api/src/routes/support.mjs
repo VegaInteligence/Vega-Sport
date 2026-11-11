@@ -12,7 +12,7 @@
  * come from the portrait search as well as from Wikidata.
  */
 import { createHash } from "node:crypto";
-import { cacheHeaders, matchesEtag, reject, send, validateParams } from "../http.mjs";
+import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 import { cloudFrontObjectUrl, immutableFile } from "../media.mjs";
 import { MESSI_ID, mergeMessiHonours } from "../curated-honours.mjs";
 import { projectionGroups } from "../../../../dashboard/shared/honour-display.js";
@@ -87,7 +87,16 @@ export function createSupportRoute(read, { mediaBase = null } = {}) {
       const [row] = await read("SELECT s3_key AS path,content_type FROM api.media_assets WHERE source_url=$1", [src]);
       const type = row && IMAGE_TYPES[String(row.path).split(".").at(-1).toLowerCase()];
       if (!row || !mediaBase || !immutableFile(row.path) || type !== row.content_type) missing();
-      return new Response(null, { status: 307, headers: { Location: cloudFrontObjectUrl(row.path, mediaBase), ...cacheHeaders(60, 0) } });
+      // A source is copied once, under the hash of its bytes (vega/media.py): the browser
+      // keeps the answer a day. It was asked again for every image of every page.
+      return new Response(null, {
+        status: 307,
+        headers: {
+          Location: cloudFrontObjectUrl(row.path, mediaBase),
+          "Cache-Control": "public, max-age=86400, s-maxage=86400",
+          "CDN-Cache-Control": "public, s-maxage=86400",
+        },
+      });
     }
     if (path === "/api/club-facts") {
       const p = validate(params, SPEC["club-facts"]);

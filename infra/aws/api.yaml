@@ -182,7 +182,9 @@ Resources:
           - Id: api
             DomainName: !Select [2, !Split ['/', !GetAtt Origin.FunctionUrl]]
             OriginAccessControlId: !GetAtt OAC.Id
-            CustomOriginConfig: {OriginProtocolPolicy: https-only, OriginSSLProtocols: [TLSv1.2], OriginReadTimeout: 29}
+            # The distribution keeps its connections to the function 60 s (5 s by default):
+            # a page's first reads no longer each open a new one.
+            CustomOriginConfig: {OriginProtocolPolicy: https-only, OriginSSLProtocols: [TLSv1.2], OriginReadTimeout: 29, OriginKeepaliveTimeout: 60}
           - Id: media
             DomainName: !ImportValue vega-v2-media-domain
             OriginAccessControlId: !GetAtt MediaOAC.Id

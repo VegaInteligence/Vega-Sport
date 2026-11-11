@@ -149,7 +149,12 @@ test("manifest, health and status", { skip }, async () => {
   assert.deepEqual(body.clubCountries, { t_aaaaa1: "FRA", t_aaaaa2: "FRA", t_aaaaa4: "FRA" });
   const health = await get("/api/health");
   assert.deepEqual(health.body, { source: "AWS", status: "ok", revision: "7" });
-  assert.equal((await get("/api/status")).body.schema, "v2");
+  const status = await get("/api/status");
+  assert.equal(status.body.schema, "v2");
+  // A constant: the browser keeps it, where every page asked the function for it.
+  assert.equal(status.response.headers.get("cache-control"), "public, max-age=3600, s-maxage=3600");
+  assert.equal(health.response.headers.get("cache-control"), "no-store");
+  assert.equal(body.capabilities.compactReads.league, true);
 });
 
 test("the default season is the latest one already started", async () => {
