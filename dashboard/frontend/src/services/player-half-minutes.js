@@ -31,7 +31,12 @@ export function playerHalfMinutes(data, matchId, playerId, teamId) {
   return values.get("FirstHalf") + values.get("SecondHalf");
 }
 
-/** Reuse the match-family cache, with bounded sequential reads. */
+const AT_ONCE = 3;
+
+/**
+ * Reuse the match-family cache, three reads at a time: one at a time, each match
+ * waited for the one before it, and the playing time for all of them.
+ */
 export async function loadPlayerHalfMinutes(
   client,
   matches,
@@ -39,30 +44,46 @@ export async function loadPlayerHalfMinutes(
   teamId,
   signal,
 ) {
-  const result = new Map();
-  const seen = new Set();
+  const unique = [],
+    seen = new Set();
   for (const match of matches || []) {
-    signal?.throwIfAborted();
     if (!match?.id || seen.has(match.id)) continue;
     seen.add(match.id);
-    try {
-      const response = await client.ensureEndpoint(
-        match,
-        "players/halves",
-        false,
-        { signal },
-      );
-      signal?.throwIfAborted();
-      const minutes = playerHalfMinutes(
-        response?.data,
-        match.id,
-        playerId,
-        teamId,
-      );
-      if (minutes != null) result.set(match.id, minutes);
-    } catch (error) {
-      if (signal?.aborted) throw signal.reason || error;
-    }
+    unique.push(match);
   }
+  const minutes = new Array(unique.length).fill(null);
+  let next = 0;
+  const read = async () => {
+    while (next < unique.length) {
+      signal?.throwIfAborted();
+      const index = next++,
+        match = unique[index];
+      try {
+        const response = await client.ensureEndpoint(
+          match,
+          "players/halves",
+          false,
+          { signal },
+        );
+        signal?.throwIfAborted();
+        minutes[index] = playerHalfMinutes(
+          response?.data,
+          match.id,
+          playerId,
+          teamId,
+        );
+      } catch (error) {
+        if (signal?.aborted) throw signal.reason || error;
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(AT_ONCE, unique.length) }, read),
+  );
+  // In the matches' order, whatever order the reads ended in.
+  const result = new Map();
+  unique.forEach((match, index) => {
+    if (minutes[index] != null) result.set(match.id, minutes[index]);
+  });
   return result;
 }

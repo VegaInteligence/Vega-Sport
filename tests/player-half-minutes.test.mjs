@@ -107,3 +107,26 @@ test("loader uses shared endpoint, skips failures and duplicate matches, and pro
     { name: "AbortError" },
   );
 });
+
+test("loader reads three matches at a time and answers in the matches' order", async () => {
+  const ids = ["m_aaaaa1", "m_aaaaa2", "m_aaaaa3", "m_aaaaa4", "m_aaaaa5"];
+  const waiting = new Map();
+  let active = 0,
+    most = 0;
+  const client = {
+    ensureEndpoint(match) {
+      most = Math.max(most, ++active);
+      return new Promise((resolve) => waiting.set(match.id, () => (active--, resolve({ data: { ...payload(), match_id: match.id } }))));
+    },
+  };
+  const loading = loadPlayerHalfMinutes(client, ids.map((id) => ({ id })), "p_123456", "t_123456");
+  await Promise.resolve();
+  assert.deepEqual([...waiting.keys()], ids.slice(0, 3));
+  // The reads end out of order; the next match starts as soon as one ends.
+  for (const id of ["m_aaaaa3", "m_aaaaa1", "m_aaaaa2", "m_aaaaa5", "m_aaaaa4"]) {
+    while (!waiting.has(id)) await new Promise((resolve) => setImmediate(resolve));
+    waiting.get(id)();
+  }
+  assert.deepEqual([...(await loading).keys()], ids);
+  assert.equal(most, 3);
+});
