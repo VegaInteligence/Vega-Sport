@@ -666,7 +666,7 @@ export default function MatchDetail({ match }) {
             >
               <XgTimeline match={match} onPlayer={f.setPlayer} />
             </Card>
-            <Card title="Les chiffres du match">
+            <Card fold title="Les chiffres du match">
               <StatRows match={match} stats={overviewStats(match)} />
             </Card>
             <MatchEventHighlights match={match} />

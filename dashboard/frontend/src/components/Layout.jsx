@@ -11,6 +11,7 @@ import { AdvancedPanel, AdvancedToggle } from "./AdvancedFilters.jsx";
 import { advancedChips, countAdvanced } from "../services/advanced-filters.js";
 import SiteHeader from "./SiteHeader.jsx";
 import SiteFooter from "./SiteFooter.jsx";
+import TabBar from "./TabBar.jsx";
 import PageWorkspace from "./PageWorkspace.jsx";
 import NavigationPrefetch from "./NavigationPrefetch.jsx";
 import PlayerSearchResults from "./PlayerSearchResults.jsx";
@@ -142,71 +143,74 @@ export function Filters({ kind = "performances" }) {
             />
           </div>
         )}
-        {home ? (
-          <HomePreferences f={f} />
-        ) : (
-          <div className="filter-field">
-            <label htmlFor="league-filter">Compétition</label>
-            <div className="filter-input-wrap">
-              <Icon name="trophy" />
-              <select
-                id="league-filter"
-                value={f.filters.league}
-                onChange={(e) =>
-                  f.setFilters((v) => ({
-                    ...v,
-                    league: e.target.value,
-                    leagues: [],
-                    match: "all",
-                  }))
-                }
-              >
-                <option value="all">Toutes les compétitions</option>
-                <CompetitionOptions competitions={competitions} />
-              </select>
-              <Icon name="chevron" className="select-chevron" />
+        {/* One row of pills on a phone; transparent on a wide screen. */}
+        <div className="filter-rail">
+          {home ? (
+            <HomePreferences f={f} />
+          ) : (
+            <div className="filter-field">
+              <label htmlFor="league-filter">Compétition</label>
+              <div className="filter-input-wrap">
+                <Icon name="trophy" />
+                <select
+                  id="league-filter"
+                  value={f.filters.league}
+                  onChange={(e) =>
+                    f.setFilters((v) => ({
+                      ...v,
+                      league: e.target.value,
+                      leagues: [],
+                      match: "all",
+                    }))
+                  }
+                >
+                  <option value="all">Toutes les compétitions</option>
+                  <CompetitionOptions competitions={competitions} />
+                </select>
+                <Icon name="chevron" className="select-chevron" />
+              </div>
             </div>
-          </div>
-        )}
-        {!home && <SeasonFilter f={f} />}
-        {players && (
-          <div className="filter-field">
-            <label htmlFor="minutes-filter">Temps de jeu moyen</label>
-            <div className="filter-input-wrap">
-              <Icon name="timer" />
-              <select
-                id="minutes-filter"
-                value={f.filters.minutes}
-                onChange={(e) =>
-                  f.setFilters((v) => ({
-                    ...v,
-                    minutes: Number(e.target.value),
-                  }))
-                }
-              >
-                {minutes.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              <Icon name="chevron" className="select-chevron" />
+          )}
+          {!home && <SeasonFilter f={f} />}
+          {players && (
+            <div className="filter-field">
+              <label htmlFor="minutes-filter">Temps de jeu moyen</label>
+              <div className="filter-input-wrap">
+                <Icon name="timer" />
+                <select
+                  id="minutes-filter"
+                  value={f.filters.minutes}
+                  onChange={(e) =>
+                    f.setFilters((v) => ({
+                      ...v,
+                      minutes: Number(e.target.value),
+                    }))
+                  }
+                >
+                  {minutes.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <Icon name="chevron" className="select-chevron" />
+              </div>
             </div>
-          </div>
-        )}
-        {players && (
-          <AdvancedToggle
-            open={advancedOpen}
-            controls={panelId}
-            onToggle={() => setAdvancedOpen((open) => !open)}
-          />
-        )}
-        {!home && <CompetitionScope />}
-        {home && active && (
-          <button className="filter-reset-button" onClick={reset}>
-            <Icon name="reset" /> Réinitialiser
-          </button>
-        )}
+          )}
+          {players && (
+            <AdvancedToggle
+              open={advancedOpen}
+              controls={panelId}
+              onToggle={() => setAdvancedOpen((open) => !open)}
+            />
+          )}
+          {!home && <CompetitionScope />}
+          {home && active && (
+            <button className="filter-reset-button" onClick={reset}>
+              <Icon name="reset" /> Réinitialiser
+            </button>
+          )}
+        </div>
       </div>
       {players && advancedOpen && <AdvancedPanel id={panelId} />}
       {active && !home && (
@@ -366,6 +370,7 @@ export default function Layout({
           {children}
         </PageWorkspace>
         <SiteFooter href={f.navigationHref || f.href} path={path} />
+        <TabBar path={path} href={f.navigationHref || f.href} />
       </div>
       <PlayerDialog />
       {performanceComparison &&

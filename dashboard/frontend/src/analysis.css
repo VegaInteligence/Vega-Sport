@@ -1897,14 +1897,31 @@ select optgroup {
   }
 }
 @media (max-width: 640px) {
-  .filter-fields {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  /* A ranked player's name wraps instead of being cut. */
+  .rank-player strong {
+    white-space: normal;
   }
-  .filter-search,
-  .filter-field:has(#minutes-filter),
-  .filter-fields > .competition-scope-button {
-    grid-column: 1/-1;
+  .rank-player {
+    min-height: 44px;
+  }
+  /* A name on several lines keeps clear of the rows around it. */
+  .rank-list .rank-row {
+    padding: 6px 0;
+  }
+  .podium-identity strong a {
+    display: block;
+    padding: 8px 0 4px;
+  }
+  .podium-identity span a {
+    display: inline-block;
+    padding: 4px 0 8px;
+  }
+  /* A select drops its leading icon: its label gets the room. */
+  .filter-input-wrap:has(select) > .icon:first-child {
+    display: none;
+  }
+  .filter-input-wrap select {
+    padding-left: 12px;
   }
   .advanced-panel {
     padding: 12px;
@@ -2110,12 +2127,11 @@ select optgroup {
     font-size: 17px;
   }
   .match-view-tabs {
-    top: 0;
     gap: 18px;
     margin: 14px 0 16px;
   }
   .match-view-tabs button {
-    min-height: 42px;
+    min-height: 44px;
     font-size: var(--text-sm);
   }
   .match-view-tabs button .icon {
@@ -2674,6 +2690,115 @@ select optgroup {
   }
   .fixture-kickoff {
     max-width: 110px;
+  }
+  /* After the base rules of the players table and the page tabs, which
+     these override. */
+  .matches-view-switch a {
+    padding: 10px 0 11px;
+  }
+  /* Players table. The name stays in place while the statistics scroll under
+     it; each column takes the width of its content, its heading on two lines
+     if need be, so the first statistics show beside the names. */
+  .player-directory-table {
+    width: auto;
+    min-width: 100%;
+  }
+  .player-directory-table :is(th, td) {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+  .player-directory-table :is(th, td):first-child {
+    padding-right: 0;
+    padding-left: 0;
+  }
+  .player-directory-table :is(th, td):nth-child(2) {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    width: 166px;
+    min-width: 166px;
+    max-width: 166px;
+    padding-left: 4px;
+    background: var(--surface);
+    box-shadow: 1px 0 0 var(--border);
+  }
+  .player-directory-table thead th:nth-child(2) {
+    z-index: 2;
+  }
+  .player-directory-table tbody tr:hover td:nth-child(2) {
+    background: var(--surface-hover);
+  }
+  .player-directory-table .table-player {
+    gap: 8px;
+    min-width: 0;
+    max-width: none;
+  }
+  .player-directory-table .player-name {
+    font-size: var(--text-sm);
+  }
+  .player-directory-table .player-meta {
+    font-size: var(--text-2xs);
+  }
+  .player-directory-table thead th {
+    vertical-align: bottom;
+    white-space: normal;
+  }
+  .player-directory-table thead th button {
+    text-align: inherit;
+    white-space: normal;
+  }
+  .player-directory-table thead th:nth-child(n + 3) {
+    min-width: 64px;
+  }
+  /* A statistic's heading: the sort button is as wide as its label, on two
+     lines at most for a long one, and its definition sits under it. Their
+     tap areas do not meet: the sort button's goes up, the definition's goes
+     down. */
+  .player-directory-table thead th:nth-child(n + 3) button:not(.metric-info) {
+    display: block;
+    width: max-content;
+    min-width: 48px;
+    max-width: 124px;
+    margin-left: auto;
+  }
+  .player-directory-table
+    thead
+    th:nth-child(n + 3)
+    button:not(.metric-info)::after {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    transform: none;
+  }
+  .player-directory-table thead .metric-info {
+    display: flex;
+    margin: 2px 0 0 auto;
+  }
+  .player-directory-table thead .metric-info::after {
+    top: 0;
+    width: 44px;
+    height: 34px;
+    transform: translateX(-50%);
+  }
+  .player-directory-table .research-row-actions {
+    gap: 0;
+  }
+  .player-directory-table .research-check,
+  .player-directory-table .icon-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* Narrow phones: the two row actions stack, so the first statistic still
+     shows beside the names. */
+  @media (max-width: 359px) {
+    .player-directory-table .research-row-actions {
+      flex-direction: column;
+    }
+    .player-directory-table .research-check,
+    .player-directory-table .icon-button {
+      min-height: 38px;
+    }
   }
 }
 .chart-pending {

@@ -703,15 +703,6 @@ export default function CompetitionsPage() {
             ← Retour à la compétition
           </button>
           <div className="filter-fields competition-directory-toolbar">
-            <button
-              type="button"
-              className="competition-scope-button"
-              aria-pressed={europeOnly}
-              onClick={() => setEuropeOnly((value) => !value)}
-            >
-              <Icon name="trophy" />
-              Top 7 Europe + UEFA{europeOnly && <Icon name="check" />}
-            </button>
             <div className="filter-field filter-search competition-directory-search">
               <label htmlFor="competition-directory-search">
                 Rechercher une compétition
@@ -729,36 +720,47 @@ export default function CompetitionsPage() {
                 />
               </div>
             </div>
-            <div className="filter-field">
-              <label htmlFor="competition-directory-country">
-                Filtrer par pays
-              </label>
-              <div className="filter-input-wrap">
-                <Icon name="globe" />
-                <select
-                  id="competition-directory-country"
-                  value={directoryCountry}
-                  onChange={(e) => {
-                    setCountry(e.target.value);
-                  }}
-                >
-                  <option value="all">Tous les pays</option>
-                  {orderedCountryCodes(directoryCatalog).map((c) => (
-                    <option key={c} value={c}>
-                      {countryLabel(c)}
-                    </option>
-                  ))}
-                </select>
-                <Icon name="chevron" className="select-chevron" />
+            <div className="filter-rail">
+              <button
+                type="button"
+                className="competition-scope-button"
+                aria-pressed={europeOnly}
+                onClick={() => setEuropeOnly((value) => !value)}
+              >
+                <Icon name="trophy" />
+                Top 7 Europe + UEFA{europeOnly && <Icon name="check" />}
+              </button>
+              <div className="filter-field">
+                <label htmlFor="competition-directory-country">
+                  Filtrer par pays
+                </label>
+                <div className="filter-input-wrap">
+                  <Icon name="globe" />
+                  <select
+                    id="competition-directory-country"
+                    value={directoryCountry}
+                    onChange={(e) => {
+                      setCountry(e.target.value);
+                    }}
+                  >
+                    <option value="all">Tous les pays</option>
+                    {orderedCountryCodes(directoryCatalog).map((c) => (
+                      <option key={c} value={c}>
+                        {countryLabel(c)}
+                      </option>
+                    ))}
+                  </select>
+                  <Icon name="chevron" className="select-chevron" />
+                </div>
               </div>
+              <SeasonSelect
+                label="Filtrer par saison"
+                allLabel="Toutes les saisons"
+                value={directorySeason}
+                seasons={seasonOptions}
+                onChange={setDirectorySeason}
+              />
             </div>
-            <SeasonSelect
-              label="Filtrer par saison"
-              allLabel="Toutes les saisons"
-              value={directorySeason}
-              seasons={seasonOptions}
-              onChange={setDirectorySeason}
-            />
           </div>
           <div className="competition-directory">
             {groups.map((group, index) => (

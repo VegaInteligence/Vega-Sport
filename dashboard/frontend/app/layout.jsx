@@ -16,6 +16,7 @@ import "../src/openfootball-history.css";
 import "../src/research.css";
 import "../src/player-profile-redesign.css";
 import "../src/home.css";
+import "../src/phone.css";
 const siteUrl = "https://vegasport.vercel.app";
 const faviconVersion = 2;
 const description = "Vega Intelligence : statistiques de football, analyses de matchs, joueurs et compétitions.";
@@ -34,7 +35,13 @@ export const metadata = {
     images: [{ url: "/api/vega-image?kind=og", width: 1200, height: 630, alt: "Vega Intelligence" }] },
   twitter: { card: "summary_large_image", title: "Vega Intelligence", description, images: ["/api/vega-image?kind=og"] },
 };
-export const viewport = { themeColor: "#0E0F12", colorScheme: "dark light" };
+// viewportFit "cover": the page reaches the screen's edges, and the shell keeps clear of
+// the notch and the home indicator with the safe-area insets (styles.css).
+export const viewport = {
+  themeColor: "#0E0F12",
+  colorScheme: "dark light",
+  viewportFit: "cover",
+};
 // The origin the reads go to; none when they stay on the site's own origin.
 const apiOrigin = (() => {
   try {

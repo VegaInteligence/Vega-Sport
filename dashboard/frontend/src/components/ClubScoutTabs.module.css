@@ -439,3 +439,19 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Phones: a 44px tap area around the control, which keeps its look. */
+@media (max-width: 640px) {
+  .railLink {
+    position: relative;
+  }
+  .railLink::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+}

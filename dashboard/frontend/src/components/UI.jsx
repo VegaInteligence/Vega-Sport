@@ -1,4 +1,5 @@
 import Icon from "./Icon.jsx";
+import { useCardFold } from "./PhoneFold.jsx";
 import ApiImage from "./ApiImage.jsx";
 import DirectMediaImage from "./DirectMediaImage.jsx";
 import { useResolvedMedia } from "./MediaContext.jsx";
@@ -102,17 +103,29 @@ function MediaImage({ direct, dimension, ...props }) {
     <ApiImage {...props} />
   );
 }
-export function Card({ title, children, action, footer, className = "" }) {
+/** `fold`: on a phone the card shows closed, its heading alone (PhoneFold). */
+export function Card({
+  title,
+  children,
+  action,
+  footer,
+  className = "",
+  fold = false,
+}) {
+  const f = useCardFold(fold && Boolean(title), title);
   return (
-    <section className={`card ${className}`}>
+    <section className={`card ${className}`} {...f.section}>
       {title && (
-        <div className="card-header">
+        <div className="card-header" {...f.head}>
           <h2 className="card-title">{title}</h2>
-          {action && <div className="card-actions">{action}</div>}
+          {action && (
+            <div className={`card-actions ${f.part}`.trim()}>{action}</div>
+          )}
+          {f.button}
         </div>
       )}
-      <div className="card-body">{children}</div>
-      {footer && <div className="card-footer">{footer}</div>}
+      <div className={`card-body ${f.part}`.trim()}>{children}</div>
+      {footer && <div className={`card-footer ${f.part}`.trim()}>{footer}</div>}
     </section>
   );
 }

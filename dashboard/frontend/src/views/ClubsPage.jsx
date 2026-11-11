@@ -378,56 +378,58 @@ export default function ClubsPage() {
                 onChange={(e) => setQuery(e.target.value)}
               />
             </div>
-            <label className="club-directory-select">
-              <span>Pays</span>
-              <select
-                aria-label="Pays des clubs"
-                value={activeCountry}
-                onChange={(e) => {
-                  setCountry(e.target.value);
-                  setCompetitionId("all");
-                }}
-              >
-                <option value="all">Tous les pays</option>
-                {countries.map((value) => (
-                  <option key={value} value={value}>
-                    {value === "unknown"
-                      ? "Pays non renseigné"
-                      : countryLabel(value)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="club-directory-select">
-              <span>Compétition</span>
-              <select
-                aria-label="Compétition des clubs"
-                value={activeCompetitionId}
-                onChange={(e) => setCompetitionId(e.target.value)}
-              >
-                <option value="all">Toutes les compétitions</option>
-                <CompetitionOptions competitions={competitions} />
-              </select>
-            </label>
-            <label className="club-directory-select">
-              <span>Saison</span>
-              <select
-                aria-label="Saison"
-                value={f.season}
-                onChange={(e) => {
-                  setQuery("");
-                  setCountry("all");
-                  setCompetitionId("all");
-                  f.changeSeason(e.target.value);
-                }}
-              >
-                {f.manifest.seasons.map((s) => (
-                  <option value={s.id} key={s.id}>
-                    {s.id}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="filter-rail">
+              <label className="club-directory-select">
+                <span>Pays</span>
+                <select
+                  aria-label="Pays des clubs"
+                  value={activeCountry}
+                  onChange={(e) => {
+                    setCountry(e.target.value);
+                    setCompetitionId("all");
+                  }}
+                >
+                  <option value="all">Tous les pays</option>
+                  {countries.map((value) => (
+                    <option key={value} value={value}>
+                      {value === "unknown"
+                        ? "Pays non renseigné"
+                        : countryLabel(value)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="club-directory-select">
+                <span>Compétition</span>
+                <select
+                  aria-label="Compétition des clubs"
+                  value={activeCompetitionId}
+                  onChange={(e) => setCompetitionId(e.target.value)}
+                >
+                  <option value="all">Toutes les compétitions</option>
+                  <CompetitionOptions competitions={competitions} />
+                </select>
+              </label>
+              <label className="club-directory-select">
+                <span>Saison</span>
+                <select
+                  aria-label="Saison"
+                  value={f.season}
+                  onChange={(e) => {
+                    setQuery("");
+                    setCountry("all");
+                    setCompetitionId("all");
+                    f.changeSeason(e.target.value);
+                  }}
+                >
+                  {f.manifest.seasons.map((s) => (
+                    <option value={s.id} key={s.id}>
+                      {s.id}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           </div>
           <div
             className="club-directory-summary"

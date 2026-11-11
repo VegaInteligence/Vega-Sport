@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
+import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import useActorRead from "../hooks/useActorRead.js";
 import { useResource } from "../services/resources.js";
 import { actorReadParams } from "../services/actor-reads.js";
@@ -128,6 +129,8 @@ export default function PlayerScoutRail({
 }) {
   const { facts: published, value: publishedValue } = playerFacts(record);
   const f = useFootball();
+  // On a phone the header opens on the identity and the actions.
+  const more = usePhoneFold();
   const marketServed = servesMarketValues(f.manifest);
   const marketRead = useResource(
     playerMarketValuesKey(id),
@@ -246,7 +249,7 @@ export default function PlayerScoutRail({
   const league = mainCompetition(profile, season);
   const positions = heldPositions(profile);
   return (
-    <aside className={s.rail} aria-label="Identité du joueur">
+    <aside className={s.rail} aria-label="Identité du joueur" {...more.fold}>
       {showIdentity && (
         <div className={s.identity}>
           <div className={s.portrait}>
@@ -290,10 +293,16 @@ export default function PlayerScoutRail({
           )}
         </div>
       )}
-      <div className={s.railSection}>
+      <div className={`${s.railSection} phone-fold-row`}>
+        <PhoneFoldToggle
+          {...more.toggle}
+          label="Fiche, valeur, indice et postes"
+        />
+      </div>
+      <div className={`${s.railSection} phone-fold-part`}>
         <Facts items={facts} label="Fiche du joueur" />
       </div>
-      <div className={s.railSection}>
+      <div className={`${s.railSection} phone-fold-part`}>
         <p className={s.railTitle}>Valeur marchande</p>
         <div className={s.value}>{valuation?.amount ?? "—"}</div>
         {valuation ? (
@@ -310,7 +319,7 @@ export default function PlayerScoutRail({
           </p>
         )}
       </div>
-      <div className={s.railSection}>
+      <div className={`${s.railSection} phone-fold-part`}>
         <p className={s.railTitle}>
           Indice Vega <span>sur 100</span>
         </p>
@@ -337,14 +346,14 @@ export default function PlayerScoutRail({
         </div>
       </div>
       {positions.length > 0 && (
-        <div className={s.railSection}>
+        <div className={`${s.railSection} phone-fold-part`}>
           <p className={s.railTitle}>
             Postes occupés <span>{season}</span>
           </p>
           <PositionsPitch positions={positions} total={profile.minutes} />
         </div>
       )}
-      <div className={s.railSection}>
+      <div className={`${s.railSection} phone-fold-part`}>
         <p className={s.railTitle}>
           Disponibilité <FakeBadge />
         </p>

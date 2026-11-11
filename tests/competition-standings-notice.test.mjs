@@ -24,6 +24,7 @@ test("SportScore standings render without the update-timing message", async () =
     "../hooks/FootballContext.jsx": { useFootball: () => ({ href: (url) => url }) },
     "./UI.jsx": { Empty: ({ children }) => elem("div", null, children), Media: () => null },
     "./NationalFlag.jsx": { __esModule: true, default: () => null },
+    "./PhoneFold.jsx": { usePhoneFold: () => ({ fold: {}, toggle: {} }), PhoneFoldToggle: () => null },
     "../services/national-flags.js": { nationalFlagCode: () => null },
     "../services/format.js": { normalizeText: (value) => String(value).toLowerCase(), number: String, date: String, seasonLabel: String },
     "../services/resources.js": { useResource: () => ({ value: { tables: [{ name: "Général", rows: [{ name: "Paris", position: 1, points: 3, played: 1, wins: 1, draws: 0, losses: 0, goalsFor: 2, goalsAgainst: 0, difference: 2 }] }] } }), json: () => {} },

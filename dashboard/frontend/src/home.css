@@ -141,7 +141,7 @@ html[data-theme="light"] {
   padding: 8px 5px;
   border-right: 1px solid var(--border);
   color: var(--muted-light);
-  font-size: 10px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-align: center;
@@ -170,7 +170,7 @@ html[data-theme="light"] {
   display: flex;
   justify-content: space-between;
   color: var(--muted-light);
-  font-size: 10px;
+  font-size: var(--text-2xs);
 }
 .home-tick-top {
   font-weight: 700;
@@ -1573,8 +1573,9 @@ html[data-theme="light"] {
   .home-verdict {
     margin: 0 14px;
   }
+  /* The label column holds the longest label on one line, down to 360px. */
   .home-stat-bar {
-    grid-template-columns: 36px 1fr 76px 1fr 36px;
+    grid-template-columns: 36px 1fr clamp(76px, 32vw, 118px) 1fr 36px;
   }
   .home-race-body {
     grid-template-columns: 1fr;
@@ -1985,6 +1986,39 @@ html[data-theme="light"] {
   white-space: nowrap;
 }
 @media (max-width: 640px) {
+  /* The results strip: a team's row is 44px, the match links above and
+     below it 32px. */
+  .home-tick {
+    gap: 0;
+  }
+  .home-tick-top {
+    align-items: center;
+    min-height: 32px;
+  }
+  .home-tick-team {
+    min-height: 44px;
+  }
+  .home-tick-foot {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 32px;
+  }
+  .home-tabs button {
+    min-height: 44px;
+  }
+  /* A card's link or switch goes under its title when both do not fit. */
+  .home-card-head {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .home-card-head h2 {
+    text-wrap: balance;
+  }
+  /* The stat rows keep their labels on one line between the two bars. */
+  .home-stat-bar {
+    font-size: var(--text-xs);
+  }
   .home-bdo-row {
     grid-template-columns: 22px 28px minmax(0, 1fr) 56px;
   }

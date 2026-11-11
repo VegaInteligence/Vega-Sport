@@ -2,6 +2,7 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Icon from "./Icon.jsx";
+import { useCardFold } from "./PhoneFold.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { PercentileBar, toneVar } from "./PlayerScoutCharts.jsx";
 import { RankingTrigger } from "./RankingDialog.jsx";
@@ -120,19 +121,32 @@ export const Crest = ({ club, className = "crest" }) => (
   <Picture name={club?.name || ""} url={club?.imageUrl} className={className} />
 );
 
-export function Card({ title, text, action, children, className = "", id }) {
+/** `fold`: on a phone the card shows closed, its heading alone (PhoneFold). */
+export function Card({
+  title,
+  text,
+  action,
+  children,
+  className = "",
+  id,
+  fold = false,
+}) {
+  const f = useCardFold(fold, title);
   return (
-    <section className={`${s.card} ${className}`} id={id}>
+    <section className={`${s.card} ${className}`} id={id} {...f.section}>
       {(title || action) && (
-        <div className={s.cardHead}>
+        <div className={s.cardHead} {...f.head}>
           <div>
             {title && <h3>{title}</h3>}
-            {text && <p>{text}</p>}
+            {text && <p className={f.part || undefined}>{text}</p>}
           </div>
-          {action && <div className={s.cardAction}>{action}</div>}
+          {action && (
+            <div className={`${s.cardAction} ${f.part}`.trim()}>{action}</div>
+          )}
+          {f.button}
         </div>
       )}
-      {children}
+      {f.wrap(children)}
     </section>
   );
 }

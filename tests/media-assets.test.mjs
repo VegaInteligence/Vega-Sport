@@ -109,6 +109,16 @@ async function imageComponent(
     },
     "./DirectMediaImage.jsx": { __esModule: true, default: () => null },
     "./Icon.jsx": { __esModule: true, default: () => null },
+    // The phone fold is off in these renders: a card renders as it always did.
+    "./PhoneFold.jsx": {
+      useCardFold: () => ({
+        section: {},
+        head: {},
+        part: "",
+        button: null,
+        wrap: (children) => children,
+      }),
+    },
     "./ApiImage.jsx": { __esModule: true, default: () => null },
     "../services/format.js":
       await import("../dashboard/frontend/src/services/format.js"),

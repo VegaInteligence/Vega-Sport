@@ -820,7 +820,7 @@
 .marketClubs small {
   margin-top: 1px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--text-2xs);
   font-variant-numeric: tabular-nums;
 }
 .marketClubCrest {
@@ -1398,4 +1398,20 @@ p.similarIntro {
 }
 .grid2 > .stack > .card:last-child > .skills {
   align-content: stretch;
+}
+
+/* Phones: a 44px tap area around the control, which keeps its look. */
+@media (max-width: 640px) {
+  .railLink {
+    position: relative;
+  }
+  .railLink::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
 }

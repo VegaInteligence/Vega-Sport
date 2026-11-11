@@ -10,6 +10,9 @@ html {
 }
 body {
   margin: 0;
+  /* The page reaches the screen's edges (viewport-fit: cover): stay clear of a
+     notch on the sides. Zero on screens without one. */
+  padding: 0 env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px);
   min-width: 320px;
   background: var(--bg);
   color: var(--ink);
@@ -157,6 +160,12 @@ button:disabled {
   height: 2px;
   border-radius: 2px 2px 0 0;
   background: var(--accent);
+}
+/* The phone navigation (TabBar) and its search sheet: shown under 640px, where
+   they replace the links and the search field above. */
+.tabbar,
+.search-sheet {
+  display: none;
 }
 
 /* Navbar search: local text, results in a popover under the field. */
@@ -1911,46 +1920,273 @@ th[aria-sort="descending"] .sort-indicator {
 @media (max-width: 640px) {
   :root {
     --page-gutter: 14px;
+    /* The header row, below the status bar of an installed app. */
+    --header-h: calc(52px + env(safe-area-inset-top, 0px));
+    /* From the bottom of the screen to the top of the tab bar. */
+    --tabbar-space: calc(74px + env(safe-area-inset-bottom, 0px));
   }
   .topbar {
-    position: relative;
-    height: auto;
-    flex-wrap: wrap;
+    gap: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    border-bottom-color: transparent;
+    background: color-mix(in srgb, var(--bg) 84%, transparent);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    backdrop-filter: blur(18px) saturate(1.4);
+  }
+  /* The pages scroll under the header and end above the tab bar. */
+  .app-shell {
+    padding-bottom: calc(var(--tabbar-space) + 16px);
+  }
+  .tabbar {
+    position: fixed;
+    left: 50%;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    z-index: 45;
+    display: flex;
+    align-items: center;
+    width: min(430px, calc(100% - 24px));
+    padding: 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: 28px;
+    background: var(--surface-raised);
+    background: color-mix(in srgb, var(--surface-raised) 80%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    backdrop-filter: blur(20px) saturate(1.5);
+    box-shadow: var(--shadow-pop);
+    transform: translateX(-50%);
+  }
+  /* Each tab takes the width of its own label and an equal share of what is
+     left: six equal tabs would cut the longest label. */
+  .tabbar-item {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 44px;
+    height: 50px;
+    padding: 0 3px;
+    border-radius: 22px;
+    color: var(--muted);
+    /* Six labels share the bar: they keep 10px whatever the type scale. */
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      color 0.15s,
+      background-color 0.15s,
+      transform 0.12s;
+  }
+  .tabbar-item .icon {
+    width: 21px;
+    height: 21px;
+  }
+  .tabbar-item span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tabbar-item:hover {
+    color: var(--ink-strong);
+  }
+  .tabbar-item:active {
+    transform: scale(0.94);
+  }
+  .tabbar-item[aria-current="page"],
+  .tabbar-item[aria-current="page"]:hover {
+    color: var(--accent-dark);
+    background: var(--accent-soft);
+  }
+  /* The search floats over the page: a bar at the top, its results in a panel
+     under it. The layer behind them dims the page and closes on a touch. */
+  .search-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    display: flex;
+    flex-direction: column;
+    padding: calc(10px + env(safe-area-inset-top, 0px))
+      calc(12px + env(safe-area-inset-right, 0px)) 0
+      calc(12px + env(safe-area-inset-left, 0px));
+    background: color-mix(in srgb, var(--backdrop) 60%, transparent);
+    animation: search-layer-in 0.16s ease-out;
+  }
+  .global-search.is-sheet {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: auto;
+    min-height: 0;
+    max-height: 100%;
+    animation: search-bar-in 0.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .global-search.is-sheet .global-search-field,
+  .global-search.is-sheet .global-search-panel {
+    border: 1px solid var(--border-strong);
+    background: var(--surface-raised);
+    background: color-mix(in srgb, var(--surface-raised) 86%, transparent);
+    -webkit-backdrop-filter: blur(22px) saturate(1.5);
+    backdrop-filter: blur(22px) saturate(1.5);
+    box-shadow: var(--shadow-overlay);
+  }
+  .global-search.is-sheet .global-search-field {
+    flex: none;
+    height: 54px;
+    border-radius: 27px;
+  }
+  /* 16px: a smaller field makes iOS zoom the page on focus. */
+  .global-search.is-sheet .global-search-field input[type="search"] {
+    padding: 0 52px 0 46px;
+    font-size: 16px;
+  }
+  .global-search.is-sheet .global-search-field > .icon:first-child {
+    left: 18px;
+    width: 18px;
+    height: 18px;
+  }
+  .global-search.is-sheet .global-search-clear {
+    right: 8px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+  }
+  .global-search.is-sheet .global-search-clear .icon {
+    width: 16px;
+    height: 16px;
+  }
+  .global-search.is-sheet .global-search-panel {
+    position: static;
+    width: auto;
+    min-height: 0;
+    max-height: min(58dvh, 460px);
+    padding: 6px;
+    border-radius: 22px;
+  }
+  .global-search.is-sheet .global-search-option {
+    min-height: 52px;
+    border-radius: 16px;
+  }
+  @keyframes search-layer-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes search-bar-in {
+    from {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.98);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .search-sheet,
+    .global-search.is-sheet {
+      animation: none;
+    }
+  }
+  /* Narrow phones: the search keeps its icon alone, so the five labels fit.
+     Its label keeps its height: the icon stays level with the others. */
+  @media (max-width: 359px) {
+    .tabbar-item {
+      min-width: 0;
+    }
+    .tabbar-search span {
+      width: 0;
+      visibility: hidden;
+    }
+  }
+  /* The comparison tray sits above the tab bar. */
+  .compare-tray {
+    bottom: calc(var(--tabbar-space) + 10px);
+  }
+  /* Fields: under 16px, iOS zooms the whole page when a field takes the
+     focus. Important, so that no component's own field size brings it back. */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+  /* Buttons stand as tall as the fields they sit beside. */
+  .button,
+  .pagination .button {
+    min-height: var(--control-h);
+    padding: 0 14px;
+  }
+  /* Tap targets: what a thumb presses is 44px. Rows in a list take the real
+     height; a small control on its own keeps its look and gets a 44px tap
+     area around it (the ::after below). */
+  .brand {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .theme-toggle {
+    width: 44px;
+    height: 44px;
+  }
+  .segmented-control {
+    padding: 0;
+  }
+  .segmented-control button {
+    min-height: 44px;
+    padding: 0 12px;
+  }
+  input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+  }
+  .table-player,
+  .standings-team {
+    min-height: 44px;
+  }
+  .standings-table tbody th:nth-child(2) {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .site-footer-column ul {
     gap: 0;
   }
-  .topbar-actions {
-    flex: 1;
-    min-width: 0;
-    gap: 8px;
-    margin-left: 10px;
+  .site-footer-column a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
   }
-  .global-search {
-    position: static;
-    flex: 1;
-    width: auto;
-    min-width: 0;
+  :where(
+    .inline-link,
+    .metric-info,
+    .icon-button,
+    .data-table th button,
+    .home-scorer,
+    .match-breadcrumb a,
+    .competition-highlights-more
+  ) {
+    position: relative;
   }
-  .global-search-hint {
+  :is(
+    .inline-link,
+    .metric-info,
+    .icon-button,
+    .data-table th button,
+    .home-scorer,
+    .match-breadcrumb a,
+    .competition-highlights-more
+  )::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+  /* The header keeps the logo and the theme: the links and the search are in
+     the tab bar. */
+  .main-nav,
+  .topbar .global-search {
     display: none;
-  }
-  .global-search-panel {
-    top: 50px;
-    left: var(--page-gutter);
-    right: var(--page-gutter);
-    width: auto;
-  }
-  .brand {
-    height: 52px;
-  }
-  .main-nav {
-    order: 2;
-    flex-basis: 100%;
-    max-width: 100%;
-    height: 42px;
-    gap: 20px;
-    margin: 0 calc(var(--page-gutter) * -1);
-    padding: 0 var(--page-gutter);
-    border-top: 1px solid var(--border);
   }
   .workspace {
     padding-top: 22px;
@@ -2012,10 +2248,11 @@ th[aria-sort="descending"] .sort-indicator {
     margin-left: 14px;
     margin-right: 14px;
   }
+  /* The card already insets the rows: the names take the width instead. */
   .match-row {
     flex-wrap: wrap;
     gap: 6px 10px;
-    padding: 10px 14px;
+    padding: 10px 4px;
   }
   .match-date {
     flex-basis: 100%;
@@ -2025,7 +2262,7 @@ th[aria-sort="descending"] .sort-indicator {
     gap: 8px;
   }
   .team-name {
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
   }
   .match-row > .icon {
     display: none;

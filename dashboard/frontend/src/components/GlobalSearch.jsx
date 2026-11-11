@@ -40,16 +40,21 @@ const EMPTY_COMPETITIONS = [];
  * and no app-wide render per keystroke. Results follow in a deferred render
  * from bounded identity reads, independent of the page's competition filter.
  * The competition catalogue already in memory remains searchable immediately.
+ *
+ * `sheet` is the phone's search, opened from the tab bar: a bar floating over
+ * the page, which takes the focus as it appears, with the results in a panel
+ * under it. `onClose` is called by its close button, Escape and a followed
+ * result (with "keyboard" when the keyboard closed it).
  */
-export default function GlobalSearch() {
+export default function GlobalSearch({ sheet = false, onClose }) {
   const f = useContext(FootballContext),
     id = useId(),
     inputRef = useRef(null),
     rootRef = useRef(null),
     panelRef = useRef(null);
   const [query, setQuery] = useState(""),
-    [open, setOpen] = useState(false),
-    [armed, setArmed] = useState(false),
+    [open, setOpen] = useState(sheet),
+    [armed, setArmed] = useState(sheet),
     [active, setActive] = useState(0),
     [settledQuery, setSettledQuery] = useState("");
   const deferred = useDeferredValue(query);
@@ -184,6 +189,7 @@ export default function GlobalSearch() {
   useEffect(() => setActive(0), [results]);
   // "/" or Ctrl/⌘+K focuses the search from anywhere outside a field.
   useEffect(() => {
+    if (sheet) return;
     const onKey = (event) => {
       const target = event.target,
         typing =
@@ -201,21 +207,23 @@ export default function GlobalSearch() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [sheet]);
   useEffect(() => {
-    if (!open) return;
+    // The sheet has no outside: its results stay until it closes.
+    if (!open || sheet) return;
     const close = (event) => {
       if (!rootRef.current?.contains(event.target)) setOpen(false);
     };
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
-  }, [open]);
+  }, [open, sheet]);
 
   // Results are real links: Enter follows the highlighted one.
   function close() {
     setOpen(false);
     setQuery("");
     inputRef.current?.blur();
+    onClose?.();
   }
   const follow = (selector) =>
     panelRef.current?.querySelector(selector)?.click();
@@ -236,7 +244,8 @@ export default function GlobalSearch() {
       if (options[active]) follow(`#${CSS.escape(`${id}-option-${active}`)}`);
       else follow(".global-search-all");
     } else if (event.key === "Escape") {
-      if (open && query) setOpen(false);
+      if (sheet) onClose?.("keyboard");
+      else if (open && query) setOpen(false);
       else {
         setQuery("");
         inputRef.current?.blur();
@@ -248,7 +257,10 @@ export default function GlobalSearch() {
   const listId = `${id}-results`;
   let position = -1;
   return (
-    <div className={`global-search${show ? " is-open" : ""}`} ref={rootRef}>
+    <div
+      className={`global-search${show ? " is-open" : ""}${sheet ? " is-sheet" : ""}`}
+      ref={rootRef}
+    >
       <div className="global-search-field">
         <Icon name="search" />
         <input
@@ -263,6 +275,8 @@ export default function GlobalSearch() {
             show && options[active] ? `${id}-option-${active}` : undefined
           }
           autoComplete="off"
+          autoFocus={sheet}
+          enterKeyHint="search"
           maxLength={100}
           spellCheck="false"
           placeholder="Rechercher un joueur, un club…"
@@ -286,6 +300,18 @@ export default function GlobalSearch() {
               setQuery("");
               inputRef.current?.focus();
             }}
+          >
+            <Icon name="close" />
+          </button>
+        ) : sheet ? (
+          <button
+            type="button"
+            className="global-search-clear"
+            aria-label="Fermer la recherche"
+            // A click without a pointer (detail 0) comes from the keyboard.
+            onClick={(event) =>
+              onClose?.(event.detail ? undefined : "keyboard")
+            }
           >
             <Icon name="close" />
           </button>

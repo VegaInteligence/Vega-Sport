@@ -2,6 +2,7 @@
 import Link from "next/link";
 import React, { useId, useState } from "react";
 import Icon from "./Icon.jsx";
+import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import { Media } from "./UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
@@ -448,6 +449,8 @@ export function MatchOfTheWeek({
     h = match.home,
     a = match.away;
   const [active, setActive] = useState(null);
+  // On a phone the card opens on the score; its charts unfold on demand.
+  const detail = usePhoneFold();
   const timeline = xgTimeline(match);
   const scorers = (side) =>
     timeline.goals
@@ -492,7 +495,7 @@ export function MatchOfTheWeek({
   const hasShots = match.shots?.some((s) => Number.isFinite(s.xg));
   const text = verdict(match);
   return (
-    <article className="card home-motw">
+    <article className="card home-motw" {...detail.fold}>
       <div className="home-motw-top">
         <Kicker>
           Le choc de la semaine{period?.current === false && " · archives"}
@@ -525,8 +528,9 @@ export function MatchOfTheWeek({
         <span>{scorers("away")}</span>
       </div>
       {text && <p className="home-verdict">{text}</p>}
+      <PhoneFoldToggle {...detail.toggle} label="Détail du match" />
       <div className="home-motw-content">
-        <div className="home-motw-column">
+        <div className="home-motw-column phone-fold-part">
           {hasShots && (
             <figure>
               <figcaption>
@@ -589,7 +593,7 @@ export function MatchOfTheWeek({
         </div>
         <div className="home-motw-column">
           {hasShots && (
-            <figure>
+            <figure className="phone-fold-part">
               <figcaption>
                 <span>Carte des tirs</span>
                 <span className="home-legend">

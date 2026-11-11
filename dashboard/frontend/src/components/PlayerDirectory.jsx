@@ -67,33 +67,35 @@ export default function PlayerDirectory({
       }
     >
       <div className="player-directory-toolbar">
-        {onRanking && (
-          <label className="player-ranking-field">
-            Classement
-            <select
-              id="player-ranking-filter"
-              value={ranking}
-              onChange={(event) => onRanking(event.target.value)}
-            >
-              <option value="">Tous les joueurs</option>
-              {Object.entries(PLAYER_RANKINGS).map(([key, value]) => (
-                <option key={key} value={key}>
-                  {value.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        <Segments
-          label="Calcul des performances"
-          value={mode}
-          onChange={onMode}
-          items={[
-            ["total", "Total"],
-            ["perMatch", "Par match"],
-            ["per90", "Par 90 minutes"],
-          ]}
-        />
+        <div className="filter-rail">
+          {onRanking && (
+            <label className="player-ranking-field">
+              Classement
+              <select
+                id="player-ranking-filter"
+                value={ranking}
+                onChange={(event) => onRanking(event.target.value)}
+              >
+                <option value="">Tous les joueurs</option>
+                {Object.entries(PLAYER_RANKINGS).map(([key, value]) => (
+                  <option key={key} value={key}>
+                    {value.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <Segments
+            label="Calcul des performances"
+            value={mode}
+            onChange={onMode}
+            items={[
+              ["total", "Total"],
+              ["perMatch", "Par match"],
+              ["per90", "Par 90 minutes"],
+            ]}
+          />
+        </div>
         <span role="status">
           {number(total)} joueur{total === 1 ? "" : "s"}
           {ranking === "rating" &&
@@ -164,12 +166,14 @@ export default function PlayerDirectory({
                   <tr key={row.playerId} data-player-id={row.playerId}>
                     <td>
                       <span className="research-row-actions">
-                        <input
-                          type="checkbox"
-                          aria-label={`Comparer ${row.name}`}
-                          checked={r.isComparing(entry)}
-                          onChange={() => r.toggleComparison(entry)}
-                        />
+                        <label className="research-check">
+                          <input
+                            type="checkbox"
+                            aria-label={`Comparer ${row.name}`}
+                            checked={r.isComparing(entry)}
+                            onChange={() => r.toggleComparison(entry)}
+                          />
+                        </label>
                         <BookmarkButton
                           kind="players"
                           id={row.playerId}
