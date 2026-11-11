@@ -42,7 +42,11 @@ function Bar({ w }) {
 }
 function Avatar({ entry, className }) {
   return entry ? (
-    <Media name={entry.name} url={entry.imageUrl} className={className} />
+    <Media
+      name={entry.name}
+      url={entry.imageUrl}
+      className={`player-avatar ${className}`}
+    />
   ) : (
     <span className={`${className} rank-avatar-empty`} aria-hidden="true">
       <Icon name="players" />
