@@ -46,7 +46,6 @@ test("competition page renders a result-derived league table and its limits", as
     "../components/Icon.jsx": { __esModule: true, default: () => null },
     "../components/CompetitionOptions.jsx": { __esModule: true, default: () => null },
     "../components/CupCompetition.jsx": { __esModule: true, default: ({ competition, initialSeason }) => elem("section", { "data-cup-id": competition.id, "data-edition": initialSeason }, competition.name) },
-    "../components/CupDirectory.jsx": { __esModule: true, default: () => elem("section", { "data-cup-directory": true }, "Coupes") },
     "../components/NationsCompetition.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-nations-id": competition.id }, competition.name) },
     "../components/NativeKnockoutBracket.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-native-bracket": competition.id }, "Tableau éliminatoire") },
     "../components/CompetitionHighlights.jsx": { __esModule: true, default: ({ season }) => elem("aside", { "data-highlights-season": season }, "Prochains matchs et derniers résultats") },

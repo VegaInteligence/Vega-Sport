@@ -52,7 +52,7 @@ export async function preparePlayerHonoursBootstrap(id, name, projection) {
     },
   };
 }
-import {historicalRows,historicalScore} from '../dashboard/frontend/src/services/openfootball-history.js';
+import {historicalRows,historicalScore} from '../dashboard/shared/openfootball-history.js';
 import {ArchiveResults,ArchiveMatchDetail} from '../dashboard/frontend/src/components/Archive.jsx';
 import {archiveRows,buildArchiveSeason} from '../dashboard/frontend/src/services/archive.js';
 export const renderArchiveResults=(results,goals=null,competition='all',query='')=>serialize(<ArchiveResults rows={archiveRows(buildArchiveSeason(results,goals),competition,query)} page={1} onPage={()=>{}} matchHref={(match)=>'/archives/?m='+encodeURIComponent(match.key)}/>);
