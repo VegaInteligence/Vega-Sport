@@ -45,6 +45,8 @@ export const CAPABILITIES = {
   wholeSelection: true, // /api/read/players: whole=1
   roleGroups: true, // /api/read/players: group
   playerProfiles: true, // /api/read/players: detail=profile, v
+  // The reads validated by their own version when they name no publication (v).
+  versionedReads: { league: true, europeMatches: true }, // /api/read/league, /api/clubs/europe/matches
   playedLeague: true, // /api/read/league: played=1
   // Off: the site addresses a provider image's copy itself (resolved-media.js), and
   // with this on it adds media=1 to every compact read, a query each (media.mjs).
