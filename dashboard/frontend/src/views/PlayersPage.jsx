@@ -20,6 +20,7 @@ import { ResearchComparisonTray } from "../components/ResearchUI.jsx";
 import useCompactRead from "../hooks/useCompactRead.js";
 import {
   cohortGroupParams,
+  compactGeneration,
   compactQuery,
   playerReadParams,
 } from "../services/compact-reads.js";
@@ -198,6 +199,9 @@ export default function PlayersPage() {
     // pair of pages at a time.
     parallelPages: Boolean(id),
     refreshManifest: f.refreshManifest,
+    // A cohort that names no publication is asked again at each new one: the API
+    // answers that it is unchanged, or gives the new one.
+    clock: cohortParams.generation ? "" : compactGeneration(f.manifest),
   });
   const profiles = useMemo(
     () =>

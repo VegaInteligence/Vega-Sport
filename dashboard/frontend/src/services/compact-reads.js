@@ -92,12 +92,18 @@ export function playerReadParams(
     advanced = cohort
       ? { ...filters.advanced, positions: [], rating: null, conditions: [] }
       : filters.advanced || EMPTY_ADVANCED;
+  // A cohort is its players' profiles. Where the API gives them alone, the request names
+  // no publication: the API validates the answer by what it is made from, and whoever
+  // holds it (this browser, the distribution) keeps it until that changes. Named by the
+  // publication, it was read again every five minutes: 5 MB that had not changed.
+  const profiles = cohort && f.manifest?.capabilities?.playerProfiles === true;
   return {
     season: f.season,
     leagues: compactScope(
       directoryScopeIds(f.manifest, f.season, f.focus, filters),
     ),
-    generation: compactGeneration(f.manifest),
+    generation: profiles ? undefined : compactGeneration(f.manifest),
+    ...(profiles ? { detail: "profile" } : {}),
     q: cohort ? "" : filters.query,
     minutes: cohort ? 0 : filters.minutes,
     basis: cohort ? "total" : filters.basis,
@@ -233,6 +239,7 @@ export async function readCompactPages(
   const pages = [],
     seen = new Set();
   let generation = params.generation,
+    version,
     expectedPages,
     expectedTotal;
   const limit =
@@ -243,7 +250,7 @@ export async function readCompactPages(
   const load = (page) =>
     readCompact(
       kind,
-      { ...params, page, limit, generation },
+      { ...params, page, limit, ...(version ? { v: version } : { generation }) },
       { signal, fetcher },
     );
   function accept(result, page) {
@@ -261,7 +268,13 @@ export async function readCompactPages(
           expectedTotal !== pagination.total))
     )
       throw new Error("La pagination des données est invalide.");
-    generation ||= pagination.generation;
+    // An answer that names its own version fences its next pages with it (`v`); any
+    // other, with the publication it was read in.
+    if (!params.generation && result.meta?.version) {
+      version ||= result.meta.version;
+      if (result.meta.version !== version)
+        throw new Error("La publication reçue ne correspond pas à la sélection.");
+    } else generation ||= pagination.generation;
     expectedPages = pagination.pages;
     expectedTotal = pagination.total;
     const ids =
@@ -296,35 +309,48 @@ export async function readCompactPages(
       throw new Error("La pagination des données est invalide.");
     return { pages, meta: result.meta, pagination };
   }
-  let final;
-  for (let first = 1; first <= (expectedPages ?? 1);) {
-    signal?.throwIfAborted();
-    const count = Math.min(
-      parallelPages ? 2 : 1,
-      (expectedPages ?? 1) - first + 1,
-    );
-    const settled = await Promise.allSettled(
-      Array.from({ length: count }, (_, index) => load(first + index)),
-    );
-    signal?.throwIfAborted();
-    for (const item of settled)
-      if (
-        item.status === "rejected" &&
-        (!parallelPages ||
-          item.reason?.throttled ||
-          ![502, 503, 504].includes(item.reason?.status))
-      )
-        throw item.reason;
-    for (let index = 0; index < settled.length; index++) {
+  async function readAll() {
+    let final;
+    for (let first = 1; first <= (expectedPages ?? 1);) {
       signal?.throwIfAborted();
-      const item = settled[index];
-      const result =
-        item.status === "fulfilled" ? item.value : await load(first + index);
-      final = accept(result, first + index);
+      const count = Math.min(
+        parallelPages ? 2 : 1,
+        (expectedPages ?? 1) - first + 1,
+      );
+      const settled = await Promise.allSettled(
+        Array.from({ length: count }, (_, index) => load(first + index)),
+      );
+      signal?.throwIfAborted();
+      for (const item of settled)
+        if (
+          item.status === "rejected" &&
+          (!parallelPages ||
+            item.reason?.throttled ||
+            ![502, 503, 504].includes(item.reason?.status))
+        )
+          throw item.reason;
+      for (let index = 0; index < settled.length; index++) {
+        signal?.throwIfAborted();
+        const item = settled[index];
+        const result =
+          item.status === "fulfilled" ? item.value : await load(first + index);
+        final = accept(result, first + index);
+      }
+      first += count;
     }
-    first += count;
+    return final;
   }
-  return final;
+  try {
+    return await readAll();
+  } catch (error) {
+    // A selection fenced by its own version changed between two of its pages: it is
+    // read again from the first one, once.
+    if (!version || error?.status !== 409) throw error;
+    pages.length = 0;
+    seen.clear();
+    version = expectedPages = expectedTotal = undefined;
+    return readAll();
+  }
 }
 
 export function mergeActorPages(result, manifest, season) {
