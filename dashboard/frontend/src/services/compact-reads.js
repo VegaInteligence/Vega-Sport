@@ -116,6 +116,23 @@ export function playerReadParams(
   };
 }
 
+// The lines (`pos`) that hold a role group: the API's M line includes the attacking
+// midfielders and its A line the forwards, the two halves of the offensive group.
+const GROUP_LINES = { G: "G", D: "D", M: "M", O: "M,A" };
+
+/**
+ * The filter of a player's comparison read: his role group itself where the API filters
+ * on it, otherwise the lines that hold it. A forward's page read the midfielders too
+ * (3,081 players in two reads for the Top 7 and UEFA cups on 11 November 2026) and kept
+ * its own group of them.
+ */
+export function cohortGroupParams(manifest, group) {
+  if (!Object.hasOwn(GROUP_LINES, group ?? "")) return {};
+  return manifest?.capabilities?.roleGroups === true
+    ? { group }
+    : { pos: GROUP_LINES[group] };
+}
+
 /** An advertised compact route must fail visibly; never fall back to a bulk read. */
 export async function readCompact(
   kind,

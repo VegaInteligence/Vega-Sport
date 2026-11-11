@@ -72,8 +72,13 @@ import {
 const Similarity = lazy(() => import("./PlayerSimilarity.jsx"));
 const Projection = lazy(() => import("./PlayerProjection.jsx"));
 const SeasonShots = lazy(() => import("./SeasonShots.jsx"));
-const SeasonStats = lazy(() => import("./PlayerSeasonStats.jsx"));
-const CareerStats = lazy(() => import("./PlayerCareerStats.jsx"));
+const loadSeasonStats = () => import("./PlayerSeasonStats.jsx");
+const loadCareerStats = () => import("./PlayerCareerStats.jsx");
+const SeasonStats = lazy(loadSeasonStats);
+const CareerStats = lazy(loadCareerStats);
+/** The code of what the overview shows at once, for the page to ask for early. */
+export const preloadProfileParts = () =>
+  Promise.all([loadSeasonStats(), loadCareerStats()]);
 const PerformanceStats = lazy(() =>
   import("./PlayerSeasonStats.jsx").then(({ PlayerPerformanceStats }) => ({
     default: PlayerPerformanceStats,

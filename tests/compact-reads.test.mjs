@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  cohortGroupParams,
   compactCatalogue,
   compactScope,
   directoryScopeIds,
@@ -187,6 +188,19 @@ test("player requests preserve sample filters and apply numeric criteria only to
   };
   assert.equal(playerReadParams(able, { cohort: true }).whole, 1);
   assert.equal("whole" in playerReadParams(able, { page: 3 }), false);
+});
+
+test("a player's comparison read asks for his own role group where the API filters on it", () => {
+  const exact = { capabilities: { roleGroups: true } };
+  // An offensive player: the group itself, where both lines were read (midfielders too).
+  assert.deepEqual(cohortGroupParams(exact, "O"), { group: "O" });
+  assert.deepEqual(cohortGroupParams(exact, "M"), { group: "M" });
+  assert.deepEqual(cohortGroupParams(manifest, "O"), { pos: "M,A" });
+  assert.deepEqual(cohortGroupParams(manifest, "M"), { pos: "M" });
+  assert.deepEqual(cohortGroupParams({ capabilities: { roleGroups: "yes" } }, "G"), { pos: "G" });
+  // No known group: no position filter at all, as before.
+  for (const group of [undefined, null, "", "X", "toString"])
+    assert.deepEqual(cohortGroupParams(exact, group), {});
 });
 
 test("a cohort the API gives whole is one request", async () => {

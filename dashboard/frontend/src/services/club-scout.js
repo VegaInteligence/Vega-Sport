@@ -9,7 +9,7 @@
  * the API does not publish (squad value, age profile) live in the pages and
  * wear a « Données fictives » badge.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import {
   compactGeneration,
@@ -22,6 +22,7 @@ import { apiUrl } from "../data-url.js";
 import { publicApiFetch } from "./public-api-fetch.js";
 import {
   clubCompetitions,
+  clubMatchIndex,
   clubSquad,
   clubSummary,
   formationRecords,
@@ -274,50 +275,90 @@ function useCachedState(key, start) {
   return state;
 }
 
-function usePublication() {
-  const f = useFootball();
-  return {
-    generation: compactGeneration(f?.manifest),
-    season: f?.season || f?.manifest?.defaultSeason,
-    manifest: f?.manifest,
-    // A league's matches in one read, when the API serves it (leagueCohort).
-    whole: supportsCompactRead(f?.manifest, "league"),
-    played: f?.manifest?.capabilities?.playedLeague === true,
-  };
-}
+/** The publication a context names (its manifest and season): what reads are keyed by. */
+const publicationOf = (f) => ({
+  generation: compactGeneration(f?.manifest),
+  season: f?.season || f?.manifest?.defaultSeason,
+  manifest: f?.manifest,
+  // A league's matches in one read, when the API serves it (leagueCohort).
+  whole: supportsCompactRead(f?.manifest, "league"),
+  played: f?.manifest?.capabilities?.playedLeague === true,
+});
+const usePublication = () => publicationOf(useFootball());
 
 /**
- * What the profile ranks the club against, started with the club's own reads. The page
- * already holds the club's matches (its summary), which name its league: the league's
- * cohort and the European pool used to start once the club's reads had ended, one
- * after the other. Each is kept by its key: the dossier and the comparison find them
- * started, or read. Nothing is started for a club without match statistics.
+ * Whether `data` is the page's read of this club, with match statistics: every match
+ * in it is the club's (a page still showing another club's read is not), and one at
+ * least carries statistics (a club without any is not ranked).
+ */
+export function isClubRead(data, clubId) {
+  if (!clubId || !data?.matches?.some((match) => match.stats?.length))
+    return false;
+  const index = clubMatchIndex({ matches: data.matches });
+  return (
+    index.matches.length > 0 &&
+    index.byClub.get(clubId)?.length === index.matches.length
+  );
+}
+
+const dossierKey = (clubId, { generation, season }) =>
+  clubId && generation && season ? `${generation}|${season}|${clubId}` : null;
+const dossierLoad = (clubId, key, { season, generation, whole, played }) =>
+  cachedLoad(key, (progress) =>
+    loadDossier({ id: clubId, season, generation, whole, played }, progress),
+  );
+
+/**
+ * What the profile ranks the club against, started as soon as the page holds the club's
+ * matches (its summary), which name its league: the league's cohort and the European
+ * pool used to start once the club's reads had ended, one after the other. Each is kept
+ * by its key: the dossier and the comparison find them started, or read. Nothing is
+ * started for a club without match statistics.
  */
 function useComparisonStart(clubId, key, publication) {
   const f = useFootball();
+  const ready = useMemo(
+    () => Boolean(key) && isClubRead(f?.data, clubId),
+    [key, f?.data, clubId],
+  );
   useEffect(() => {
-    const data = f?.data;
-    if (!key || !data?.matches?.some((match) => match.stats?.length)) return;
+    if (!ready) return;
     const quiet = (entry) => entry?.promise.catch(() => {});
-    const { league } = clubLeagues(data, clubId);
+    const { league } = clubLeagues(f.data, clubId);
     if (league) quiet(leagueCohort(league, publication));
     if (europeKey(publication)) quiet(europeLoad(publication));
-    // One start per club and publication; `f.data` is the page's own read of the club.
+    // One start per club and publication, once the page's own read of the club is there.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [key, ready]);
+}
+
+/**
+ * A club's own reads (shots, appearances), started outside its profile: the data
+ * provider calls it with the page's read of the club, before the page is shown. `f`
+ * holds the manifest and the season; the profile finds the dossier started.
+ */
+export function startClubDossier(clubId, f) {
+  const publication = publicationOf(f);
+  const key = dossierKey(clubId, publication);
+  if (key) dossierLoad(clubId, key, publication).promise.catch(() => {});
+}
+
+/**
+ * What a club is ranked against, started by its page as soon as it holds the club's
+ * matches: the profile started it once it had rendered.
+ */
+export function useClubStart(clubId) {
+  const publication = usePublication();
+  useComparisonStart(clubId, dossierKey(clubId, publication), publication);
 }
 
 /** Whole dossier of one club, cached per generation and season. */
 export function useClubDossier(clubId) {
   const publication = usePublication();
-  const { generation, season, whole, played } = publication;
-  const key =
-    clubId && generation && season ? `${generation}|${season}|${clubId}` : null;
+  const key = dossierKey(clubId, publication);
   useComparisonStart(clubId, key, publication);
   const state = useCachedState(key, () =>
-    cachedLoad(key, (progress) =>
-      loadDossier({ id: clubId, season, generation, whole, played }, progress),
-    ),
+    dossierLoad(clubId, key, publication),
   );
   return state.status === "ready"
     ? { status: "ready", dossier: state.value }
