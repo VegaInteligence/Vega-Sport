@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createPublicApiTransport } from "../dashboard/frontend/src/services/public-api-fetch.js";
+import {
+  createPublicApiTransport,
+  PUBLIC_API_CONCURRENCY,
+  PUBLIC_IMAGE_CONCURRENCY,
+} from "../dashboard/frontend/src/services/public-api-fetch.js";
 import { createResourceCache } from "../dashboard/frontend/src/services/resource-cache.js";
 import { readCompactPages } from "../dashboard/frontend/src/services/compact-reads.js";
 import { readPages } from "../dashboard/frontend/src/season_data.js";
@@ -19,8 +23,12 @@ function pendingFetcher() {
   return { fetcher, started };
 }
 
+test("a page sends eight reads at once, four of them images at most", () => {
+  assert.deepEqual([PUBLIC_API_CONCURRENCY, PUBLIC_IMAGE_CONCURRENCY], [8, 4]);
+});
+
 test("one shared budget bounds API bursts and reserves capacity for interactive data", async () => {
-  const transport = createPublicApiTransport(),
+  const transport = createPublicApiTransport({ concurrency: 4, imageConcurrency: 2 }),
     { fetcher, started } = pendingFetcher();
   const jobs = ["i1", "i2", "i3", "i4", "d1", "d2", "d3"].map((name) =>
     transport.read(name, {}, fetcher, name.startsWith("i") ? "image" : "data"),
@@ -265,7 +273,7 @@ test("shared resource subscribers retain their independent cancellation ownershi
 });
 
 test("native image admission shares limits and gives queued data priority", async () => {
-  const transport = createPublicApiTransport();
+  const transport = createPublicApiTransport({ concurrency: 4, imageConcurrency: 2 });
   const { fetcher, started } = pendingFetcher();
   const first = await transport.imagePermit();
   const second = await transport.imagePermit();

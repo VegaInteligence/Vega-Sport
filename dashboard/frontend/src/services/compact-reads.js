@@ -108,6 +108,11 @@ export function playerReadParams(
     direction: cohort ? "asc" : sort?.direction || "desc",
     page,
     limit,
+    // A cohort is read whole: the API gives it in one page when it can, where it
+    // took twenty pages of a hundred players, each worked out from the whole cohort.
+    ...(cohort && f.manifest?.capabilities?.wholeSelection === true
+      ? { whole: 1 }
+      : {}),
   };
 }
 

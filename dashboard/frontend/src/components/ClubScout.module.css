@@ -636,8 +636,12 @@
 }
 
 /* ----------------------------------------------------------- line chart */
+/* As the player charts: the drawing stops growing at --chart-cap (MultiLine sets it). */
 .trend {
   position: relative;
+  width: 100%;
+  max-width: var(--chart-cap, none);
+  margin-inline: auto;
 }
 .trend svg {
   display: block;

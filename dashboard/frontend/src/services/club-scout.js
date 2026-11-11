@@ -102,17 +102,22 @@ function cachedLoad(key, loader) {
  * club's rows are taken from them, where each club was read on its own: twenty
  * reads of the same matches, each match twice.
  */
-export function leagueCohort(league, { season, generation, whole = false }, onProgress) {
+export function leagueCohort(
+  league,
+  { season, generation, whole = false, played = false },
+  onProgress,
+) {
   return cachedLoad(
     `${generation}|${season}|league:${league.id}`,
     async (progress) => {
       const [cohort, matches] = await Promise.all([
+        // The league's clubs by name and crest: their analysis is not read here (the
+        // cohort is built from the matches), and it was the slowest read of the page.
         readCompactPages(
           "clubs",
           {
             season,
             leagues: compactScope([league.id]),
-            analysis: 1,
             generation,
             limit: 100,
           },
@@ -125,6 +130,9 @@ export function leagueCohort(league, { season, generation, whole = false }, onPr
                 season,
                 league: league.id,
                 detail: "summary",
+                // The cohort ranks on finished matches (teamRows): they are asked alone
+                // when the API can, without the matches to come.
+                ...(played ? { played: 1 } : {}),
                 generation,
                 limit: 100,
               },
@@ -173,7 +181,32 @@ export function leagueCohort(league, { season, generation, whole = false }, onPr
   );
 }
 
-async function loadDossier({ id, season, generation, whole }, onProgress) {
+/**
+ * A club's competitions of the season, and the league it is ranked in: its first
+ * domestic competition (the one with most matches played), else its first competition.
+ * `data` holds the club's matches and their competitions.
+ */
+export function clubLeagues(data, id) {
+  const competitionById = new Map(
+    (data.competitions || []).map((c) => [c.id, c]),
+  );
+  const competitions = clubCompetitions(data, id).map((c) => ({
+    ...c,
+    country: competitionById.get(c.id)?.country,
+    imageUrl: competitionById.get(c.id)?.imageUrl,
+  }));
+  return {
+    competitions,
+    league:
+      competitions.find((c) => c.country && !INTERNATIONAL.has(c.country)) ||
+      competitions[0],
+  };
+}
+
+async function loadDossier(
+  { id, season, generation, whole, played },
+  onProgress,
+) {
   const base = { season, team: id, leagues: "all", generation };
   onProgress({ step: "club", done: 0, total: 1 });
   const [shots, apps] = await Promise.all([
@@ -187,18 +220,10 @@ async function loadDossier({ id, season, generation, whole }, onProgress) {
     teams: shots.teams,
     competitions: shots.competitions,
   };
-  const competitionById = new Map(data.competitions.map((c) => [c.id, c]));
-  const competitions = clubCompetitions(data, id).map((c) => ({
-    ...c,
-    country: competitionById.get(c.id)?.country,
-    imageUrl: competitionById.get(c.id)?.imageUrl,
-  }));
-  const league =
-    competitions.find((c) => c.country && !INTERNATIONAL.has(c.country)) ||
-    competitions[0];
+  const { competitions, league } = clubLeagues(data, id);
   let cohort = null;
   if (league) {
-    const entry = leagueCohort(league, { season, generation, whole });
+    const entry = leagueCohort(league, { season, generation, whole, played });
     const relay = (progress) => onProgress(progress);
     entry.listeners.add(relay);
     if (entry.progress) onProgress(entry.progress);
@@ -257,17 +282,41 @@ function usePublication() {
     manifest: f?.manifest,
     // A league's matches in one read, when the API serves it (leagueCohort).
     whole: supportsCompactRead(f?.manifest, "league"),
+    played: f?.manifest?.capabilities?.playedLeague === true,
   };
+}
+
+/**
+ * What the profile ranks the club against, started with the club's own reads. The page
+ * already holds the club's matches (its summary), which name its league: the league's
+ * cohort and the European pool used to start once the club's reads had ended, one
+ * after the other. Each is kept by its key: the dossier and the comparison find them
+ * started, or read. Nothing is started for a club without match statistics.
+ */
+function useComparisonStart(clubId, key, publication) {
+  const f = useFootball();
+  useEffect(() => {
+    const data = f?.data;
+    if (!key || !data?.matches?.some((match) => match.stats?.length)) return;
+    const quiet = (entry) => entry?.promise.catch(() => {});
+    const { league } = clubLeagues(data, clubId);
+    if (league) quiet(leagueCohort(league, publication));
+    if (europeKey(publication)) quiet(europeLoad(publication));
+    // One start per club and publication; `f.data` is the page's own read of the club.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 }
 
 /** Whole dossier of one club, cached per generation and season. */
 export function useClubDossier(clubId) {
-  const { generation, season, whole } = usePublication();
+  const publication = usePublication();
+  const { generation, season, whole, played } = publication;
   const key =
     clubId && generation && season ? `${generation}|${season}|${clubId}` : null;
+  useComparisonStart(clubId, key, publication);
   const state = useCachedState(key, () =>
     cachedLoad(key, (progress) =>
-      loadDossier({ id: clubId, season, generation, whole }, progress),
+      loadDossier({ id: clubId, season, generation, whole, played }, progress),
     ),
   );
   return state.status === "ready"
@@ -277,13 +326,13 @@ export function useClubDossier(clubId) {
 
 /** Any league's cohort, for similar clubs searched in another competition. */
 export function useLeagueCohort(league) {
-  const { generation, season, whole } = usePublication();
+  const { generation, season, whole, played } = usePublication();
   const key =
     league?.id && generation && season
       ? `${generation}|${season}|league:${league.id}`
       : null;
   return useCachedState(key, () =>
-    leagueCohort(league, { season, generation, whole }),
+    leagueCohort(league, { season, generation, whole, played }),
   );
 }
 
@@ -317,7 +366,7 @@ function referentialLoad(leagues, publication) {
 
 /** Cohorts of a user-chosen referential (null: the club's own league). */
 export function useReferential(leagues) {
-  const { generation, season, whole } = usePublication();
+  const { generation, season, whole, played } = usePublication();
   const key =
     leagues?.length && generation && season
       ? `${generation}|${season}|ref:${leagues
@@ -326,7 +375,7 @@ export function useReferential(leagues) {
           .join(",")}`
       : null;
   return useCachedState(key, () =>
-    referentialLoad(leagues, { season, generation, whole }),
+    referentialLoad(leagues, { season, generation, whole, played }),
   );
 }
 

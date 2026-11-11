@@ -49,8 +49,10 @@ function loadClubScout(reads) {
       readCompact: async () => assert.fail("no single read"),
       readCompactPages: async (kind, params) => {
         reads.push([kind, params.team || params.league || params.leagues, params.detail || ""]);
-        if (kind === "clubs") return { pages: [{ clubs: CLUBS }] };
-        if (kind === "league") return page(MATCHES.filter((m) => m.leagueId === params.league));
+        // The league's clubs are read by name and crest alone: no analysis.
+        if (kind === "clubs") return assert.equal(params.analysis, undefined), { pages: [{ clubs: CLUBS }] };
+        if (kind === "league")
+          return page(MATCHES.filter((m) => m.leagueId === params.league && (!params.played || m.status === "finished")));
         if (kind === "club") return page(MATCHES.filter((m) => m.home.id === params.team || m.away.id === params.team));
         return assert.fail("unexpected read " + kind);
       },
@@ -117,4 +119,28 @@ test("the same publication is read once, whoever asks", async () => {
   const [a, b] = await Promise.all([scout.leagueCohort(LIGUE_1, publication).promise, scout.leagueCohort(LIGUE_1, publication).promise]);
   assert.equal(a, b);
   assert.equal(reads.length, 2);
+});
+
+test("the finished matches alone give the same cohort", async () => {
+  const reads = [];
+  const scout = loadClubScout(reads);
+  const all = await scout.leagueCohort(LIGUE_1, { season: "2025/2026", generation: "10", whole: true }).promise;
+  const played = await scout.leagueCohort(LIGUE_1, { season: "2025/2026", generation: "11", whole: true, played: true }).promise;
+  assert.deepEqual(JSON.parse(JSON.stringify(played)), JSON.parse(JSON.stringify(all)));
+});
+
+test("a club's league is its domestic competition with most matches played", () => {
+  const scout = loadClubScout([]);
+  const competitions = [
+    { id: LIGUE_1.id, name: "Ligue 1", country: "FRA", imageUrl: "https://img.example/l1.png" },
+    { id: CUP, name: "Champions League", country: "UEFA", imageUrl: null },
+  ];
+  const data = { matches: MATCHES, fixtures: [], appearances: [], teams: [], competitions };
+  const { league, competitions: played } = scout.clubLeagues(data, "t_aaaaa1");
+  assert.deepEqual([league.id, league.country, league.imageUrl], [LIGUE_1.id, "FRA", "https://img.example/l1.png"]);
+  assert.deepEqual(played.map((c) => c.id), [LIGUE_1.id, CUP]);
+  // Without a domestic competition, its first one; without a match, none.
+  const european = { ...data, matches: MATCHES.filter((m) => m.leagueId === CUP) };
+  assert.equal(scout.clubLeagues(european, "t_aaaaa1").league.id, CUP);
+  assert.equal(scout.clubLeagues(data, "t_nobody").league, undefined);
 });

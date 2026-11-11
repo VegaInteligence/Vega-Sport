@@ -1,6 +1,9 @@
-/** One browser document shares the backend's limited read capacity. */
-export const PUBLIC_API_CONCURRENCY = 4;
-export const PUBLIC_IMAGE_CONCURRENCY = 2;
+/**
+ * How many reads one page sends at once. Four was for the previous backend's capacity;
+ * a club's profile queued its fifteen comparison reads behind it, four at a time.
+ */
+export const PUBLIC_API_CONCURRENCY = 8;
+export const PUBLIC_IMAGE_CONCURRENCY = 4;
 const throttledResponses = new WeakSet();
 export const wasPublicApiThrottle = (response) =>
   throttledResponses.has(response);

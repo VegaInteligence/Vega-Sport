@@ -685,6 +685,9 @@ export function MultiLine({
   ariaLabel,
   step = 1,
   details,
+  // How far the chart may grow past the 640 px it is drawn for. A chart that has a
+  // whole row to itself grows more than one beside a table.
+  grow = 1.75,
 }) {
   const [active, setActive] = useState(null);
   const width = 640,
@@ -699,7 +702,10 @@ export function MultiLine({
   const y = (v) => m.t + (1 - (v - lo) / (hi - lo)) * (height - m.t - m.b);
   const ticks = [lo, (lo + hi) / 2, hi];
   return (
-    <div className={s.trend}>
+    <div
+      className={s.trend}
+      style={{ "--chart-cap": `${Math.round(width * grow)}px` }}
+    >
       <div className={s.trendLegend}>
         {series.map((serie) => (
           <span key={serie.name}>
@@ -895,7 +901,7 @@ export function XgTrend({ rows, window = 5 }) {
   );
 }
 
-export function PointsTrend({ rows, height = 220 }) {
+export function PointsTrend({ rows, height = 220, grow }) {
   let points = 0,
     xpts = 0;
   const usable = rows.filter((row) => row.xpts != null);
@@ -910,6 +916,7 @@ export function PointsTrend({ rows, height = 220 }) {
   return (
     <MultiLine
       height={height}
+      grow={grow}
       ariaLabel="Points cumulés et points attendus cumulés, avec les points et xPts de chaque match"
       labels={usable.map((_, i) => `J${i + 1}`)}
       format={(v) => fmtNum(v, 1)}
@@ -1068,7 +1075,14 @@ function TeamShotMap({ shots }) {
       viewBox="0 0 68 40"
       role="img"
       aria-label="Carte des tirs, taille selon les xG"
-      style={{ display: "block", width: "100%", height: "auto" }}
+      // A half pitch drawn 68 units wide: it stops growing at 640 px.
+      style={{
+        display: "block",
+        width: "100%",
+        maxWidth: 640,
+        height: "auto",
+        marginInline: "auto",
+      }}
     >
       <rect x="0" y="0" width="68" height="40" fill="var(--mq-pitch)" />
       <rect x="0.5" y="0.5" width="67" height="39" {...line} />
