@@ -25,7 +25,10 @@ export const editionCounts = (p) => ({
   collectedMatches: Number(p.collected_count),
   teamCount: Number(p.team_count),
 });
-export const editionDigest = (p) => digest(JSON.stringify([p.season, p.league_id, iso(p.retrieved_at), editionCounts(p)]));
+/** What changes when an edition does: the manifest gives it, the partition reads send it
+ * back as `v`. 16 hexadecimal characters (it was the 64 of the whole hash: 304 of them
+ * were a quarter of the manifest once compressed, on 11 November 2026). */
+export const editionDigest = (p) => digest(JSON.stringify([p.season, p.league_id, iso(p.retrieved_at), editionCounts(p)])).slice(0, 16);
 
 /** The compact reads this API serves; the others stay on the current API until ported. */
 export const COMPACT_READS = { home: true, players: true, clubs: true, player: true, club: true, league: true, performance: true, discipline: true, presence: true };
@@ -73,23 +76,22 @@ export function createSystemRoute(read) {
       imageUrl: c.image_url,
       seasons: c.seasons || [],
     }));
-    const byId = new Map(catalog.map((c) => [c.id, c]));
+    // A league's entry of a season says what is its own. Until schema 5 it also repeated
+    // its competition as the catalogue below gives it, and the publication's date: half of
+    // the manifest, on every page. The site puts them back (services/manifest-shape.js).
     const seasons = new Map();
     for (const p of editions) {
       if (!seasons.has(p.season)) seasons.set(p.season, { id: p.season, chunks: [] });
-      const c = byId.get(p.league_id);
-      const counts = editionCounts(p);
       seasons.get(p.season).chunks.push({
         leagueId: p.league_id,
         sourceDigest: editionDigest(p),
-        meta: { ...counts, retrievedAt: iso(p.retrieved_at), startDate: day(p.start_date), endDate: day(p.end_date), publishedAt: iso(state.published_at) },
-        competitions: c ? [{ ...c, sampleMatches: counts.matchCount, sampleSeasons: counts.matchCount ? [p.season] : [] }] : [],
+        meta: { ...editionCounts(p), retrievedAt: iso(p.retrieved_at), startDate: day(p.start_date), endDate: day(p.end_date) },
       });
     }
     return send(
       req,
       {
-        schemaVersion: 4,
+        schemaVersion: 5,
         // What the site reads to choose its reads (dashboard/frontend: compact-reads.js,
         // season_data.js, actor-reads.js, global-search-client.js, season-version.js). Any
         // other storage makes it load whole seasons through /api/seasons/partition, the

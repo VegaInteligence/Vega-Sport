@@ -45,8 +45,14 @@ test("versions, validation and unknown partitions", { skip }, async () => {
     { boundedSearch: true, fixturePaginationOrder: true, versionedPartitions: true, playerRatingRanking: true, actorSummary: true, resolvedMedia: false, boundedArchive: true },
   );
   const chunk = manifest.seasons.find((s) => s.id === "2025/2026").chunks.find((c) => c.leagueId === "l_3FJFUl");
+  assert.match(chunk.sourceDigest, /^[a-f0-9]{16}$/);
   assert.equal((await get(BASE + "&v=" + chunk.sourceDigest)).response.status, 200);
+  assert.equal((await get(BASE + "&v=" + "0".repeat(16))).response.status, 409);
+  // A manifest served before the digest was shortened carried the whole hash: its first
+  // 16 characters are the digest.
+  assert.equal((await get(BASE + "&v=" + chunk.sourceDigest + "0".repeat(48))).response.status, 200);
   assert.equal((await get(BASE + "&v=" + "0".repeat(64))).response.status, 409);
+  assert.equal((await get(BASE + "&v=" + chunk.sourceDigest + "00")).response.status, 400);
   assert.equal((await get(BASE + "&format=rows")).response.status, 400);
   assert.equal((await get("/api/seasons/partition?season=2025%2F2026&league=l_zzzzzz")).response.status, 404);
   const first = await get(BASE);
