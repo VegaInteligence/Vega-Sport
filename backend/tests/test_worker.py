@@ -689,6 +689,28 @@ class WorkerTest(unittest.TestCase):
             "score_never_final",
         )
 
+    def test_a_match_the_day_calendar_moves_changes_day_too(self):
+        # /date/{d} gives a match its kick-off and no day (the provider's real shape). A
+        # moved match kept its first day, and the site listed it on that day.
+        def listed(key, kickoff):
+            item = match(key, kickoff, "not_started")
+            del item["date"]
+            return item
+
+        start = self.now
+        first = start + timedelta(days=2)
+        self.calendar(listed("m_dddddd", first), day=first.date())
+        self.at(start)
+        self.drain()
+        stored = "SELECT match_date, kickoff_at FROM core.matches WHERE id=%s"
+        self.assertEqual(self.db.execute(stored, (self.mid("m_dddddd"),)).fetchone(), (first.date(), first))
+        moved = first + timedelta(days=3)
+        self.calendar(day=first.date())
+        self.calendar(listed("m_dddddd", moved), day=moved.date())
+        self.at(start + timedelta(days=1, hours=1))
+        self.drain()
+        self.assertEqual(self.db.execute(stored, (self.mid("m_dddddd"),)).fetchone(), (moved.date(), moved))
+
     def test_failures_retry_then_stop_and_daily_revival(self):
         start = self.now
         kick = start - timedelta(hours=2)

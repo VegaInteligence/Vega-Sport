@@ -177,6 +177,15 @@ class NormalizeTest(unittest.TestCase):
             ),
             "2026-01-01",
         )
+        # The day calendar lists a match with its kick-off and no day: the day is the
+        # kick-off's UTC day. A match without a kick-off says nothing about its day.
+        listed = {k: v for k, v in match.items() if k != "date"}
+        listed["time_utc"] = "2026-01-03T00:30:00Z"
+        row = normalize_family("date", {"date": "2026-01-03", "matches": [listed]}).rows["core.matches"][0]
+        self.assertEqual(str(row["match_date"]), "2026-01-03")
+        listed["time_utc"] = None
+        row = normalize_family("date", {"date": "2026-01-03", "matches": [listed]}).rows["core.matches"][0]
+        self.assertNotIn("match_date", row)
         with self.assertRaises(NormalizationError):
             normalize_family(
                 "events", {"match_id": "m_654321", "events": []}, match_id="m_123456"

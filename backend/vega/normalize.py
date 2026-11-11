@@ -301,6 +301,12 @@ def _match(out, item):
                 except (ValueError, TypeError, AttributeError):
                     raise NormalizationError("INVALID_TIMESTAMP") from None
             row[dst] = value
+    # /date/{d} lists a match with its kick-off and no day of its own. Without this a match
+    # the provider moved kept the day it was first stored with, and was listed on it. The
+    # day is the kick-off's UTC day: so it is wherever the provider gives both (every
+    # finished match of the base between 20 October and 10 November 2026).
+    if "date" not in item and row.get("kickoff_at") is not None:
+        row["match_date"] = row["kickoff_at"].date()
     if "has_playoff" in item:
         row["has_playoff"] = _bool(item["has_playoff"])
     if item.get("referee"):
