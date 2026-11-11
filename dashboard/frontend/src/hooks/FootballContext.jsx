@@ -27,6 +27,7 @@ import {
   cachedResource,
 } from "../services/resources.js";
 import { warmProfiles } from "../services/player-profile.js";
+import { expandManifest } from "../services/manifest-shape.js";
 import { filterSeasonPlayerScope } from "../services/season-player.js";
 import {
   playerDirectoryRanking,
@@ -222,7 +223,15 @@ export function FootballProvider({ children, loadData = true, initialState }) {
       ),
     Boolean(requestedVersion),
   );
-  const manifest = requestedVersion ? pinnedManifest : currentManifest;
+  const receivedManifest = requestedVersion ? pinnedManifest : currentManifest;
+  // The pages read each league's entry with its competition (manifest-shape.js).
+  const manifest = useMemo(
+    () =>
+      receivedManifest.value
+        ? { ...receivedManifest, value: expandManifest(receivedManifest.value) }
+        : receivedManifest,
+    [receivedManifest],
+  );
   const readConnection = ({ signal } = {}) =>
     json("/api/status", { signal })
       .then((value) => value.configured === true)
