@@ -23,7 +23,9 @@ import {
   loadPlayerMarketValues,
   marketDate,
   marketValue,
+  MARKET_VALUES_UNSERVED,
   playerMarketValuesKey,
+  servesMarketValues,
 } from "../services/player-market-values.js";
 import {
   nationalFlagCode,
@@ -125,11 +127,14 @@ export default function PlayerScoutRail({
   onTab,
 }) {
   const { facts: published, value: publishedValue } = playerFacts(record);
-  const market = useResource(
+  const f = useFootball();
+  const marketServed = servesMarketValues(f.manifest);
+  const marketRead = useResource(
     playerMarketValuesKey(id),
     ({ signal }) => loadPlayerMarketValues(id, { signal }),
-    Boolean(id),
+    Boolean(id) && marketServed,
   );
+  const market = marketServed ? marketRead : MARKET_VALUES_UNSERVED;
   const latestValue = market.value?.history.at(-1);
   const valuation = latestValue
     ? {
@@ -137,7 +142,6 @@ export default function PlayerScoutRail({
         updated: marketDate(latestValue.date),
       }
     : publishedValue;
-  const f = useFootball();
   const history = useResource(
     playerHistoryKey(f.manifest, id),
     ({ signal }) => loadPlayerHistory(f.manifest, id, { signal }),

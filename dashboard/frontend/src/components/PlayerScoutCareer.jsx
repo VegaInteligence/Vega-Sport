@@ -14,7 +14,9 @@ import { number } from "../services/format.js";
 import {
   loadPlayerMarketValues,
   marketValue,
+  MARKET_VALUES_UNSERVED,
   playerMarketValuesKey,
+  servesMarketValues,
 } from "../services/player-market-values.js";
 import { AsyncState, Media } from "./UI.jsx";
 import NationalFlag from "./NationalFlag.jsx";
@@ -62,11 +64,13 @@ export default function PlayerScoutCareer({
   children,
 }) {
   const f = useFootball();
-  const market = useResource(
+  const marketServed = servesMarketValues(f.manifest);
+  const marketRead = useResource(
     playerMarketValuesKey(id),
     ({ signal }) => loadPlayerMarketValues(id, { signal }),
-    Boolean(id),
+    Boolean(id) && marketServed,
   );
+  const market = marketServed ? marketRead : MARKET_VALUES_UNSERVED;
   const values = market.value?.history || [];
   const latestValue = values.at(-1);
   const history = useResource(playerHistoryKey(f.manifest, id), ({ signal }) =>
