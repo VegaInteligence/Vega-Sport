@@ -24,7 +24,6 @@ import {
 } from "../services/scouting-history.js";
 import { useResource } from "../services/resources.js";
 import {
-  compactGeneration,
   compactQuery,
   compactScope,
   playerReadParams,
@@ -90,7 +89,6 @@ export async function comparisonSamples(f, entries, { signal } = {}) {
               { cohort: true, limit: 100 },
             ),
             leagues: compactScope(selectedIds),
-            generation: compactGeneration(f.manifest),
           },
           key = compactQuery(params);
         if (!cohorts.has(key))

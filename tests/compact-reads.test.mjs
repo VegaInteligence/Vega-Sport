@@ -228,6 +228,92 @@ test("a cohort the API gives whole is one request", async () => {
   assert.equal(result.pages.flatMap((page) => page.players).length, 250);
 });
 
+test("a cohort of profiles names no publication where the API validates it by its own version", () => {
+  const f = {
+    season: "2026/2027",
+    focus: "all",
+    manifest: { ...manifest, capabilities: { ...manifest.capabilities, wholeSelection: true, playerProfiles: true } },
+    filters: { league: "all", leagues: [], query: "", minutes: 90, basis: "per90", match: "all", ranking: "all", advanced: EMPTY_ADVANCED },
+  };
+  const cohort = playerReadParams(f, { cohort: true, limit: 100 });
+  assert.equal(cohort.detail, "profile");
+  assert.equal(cohort.generation, undefined);
+  assert.equal(cohort.whole, 1);
+  // A directory page is a list's page of the publication, as before.
+  const directory = playerReadParams(f, { page: 2 });
+  assert.equal(directory.generation, "g1");
+  assert.equal("detail" in directory, false);
+  // An API that does not say it gives profiles alone is asked as before.
+  const before = playerReadParams({ ...f, manifest }, { cohort: true });
+  assert.equal(before.generation, "g1");
+  assert.equal("detail" in before, false);
+});
+
+test("the pages of a selection that names its version are fenced by it, and read again once if it changed", async () => {
+  const page = (number, version, total = 3) =>
+    Response.json({
+      data: { players: [{ id: "p_" + number + version }], teams: [] },
+      meta: { generation: "g" + number, version },
+      pagination: { page: number, limit: 1, total, pages: total, generation: "g" + number },
+    });
+  const changed = () =>
+    Response.json({ error: { code: "PUBLICATION_CHANGED", message: "Les données ont été actualisées.", retry: true } }, { status: 409 });
+  // One version throughout: the next pages name it, and no publication.
+  let calls = [];
+  let fetcher = async (path) => {
+    const q = new URL(path, "https://example.test").searchParams;
+    calls.push([q.get("page"), q.get("v"), q.get("generation")]);
+    return page(Number(q.get("page")), "aaaaaaaaaaaaaaaa");
+  };
+  let result = await readCompactPages("players", { season: "2026/2027", detail: "profile", limit: 1 }, { fetcher });
+  assert.deepEqual(calls, [["1", null, null], ["2", "aaaaaaaaaaaaaaaa", null], ["3", "aaaaaaaaaaaaaaaa", null]]);
+  assert.equal(result.pages.length, 3);
+  // The selection changes after the first page: the second is refused, all is read again.
+  calls = [];
+  let current = "aaaaaaaaaaaaaaaa";
+  fetcher = async (path) => {
+    const q = new URL(path, "https://example.test").searchParams;
+    calls.push([q.get("page"), q.get("v")]);
+    if (calls.length === 1) {
+      const first = page(1, current);
+      current = "bbbbbbbbbbbbbbbb";
+      return first;
+    }
+    return q.get("v") && q.get("v") !== current ? changed() : page(Number(q.get("page")), current);
+  };
+  result = await readCompactPages("players", { season: "2026/2027", detail: "profile", limit: 1 }, { fetcher });
+  assert.deepEqual(calls, [["1", null], ["2", "aaaaaaaaaaaaaaaa"], ["1", null], ["2", "bbbbbbbbbbbbbbbb"], ["3", "bbbbbbbbbbbbbbbb"]]);
+  assert.deepEqual(result.pages.map((p) => p.players[0].id), ["p_1bbbbbbbbbbbbbbbb", "p_2bbbbbbbbbbbbbbbb", "p_3bbbbbbbbbbbbbbbb"]);
+  // It keeps changing: the second refusal is the read's error, not a loop.
+  calls = [];
+  fetcher = async (path) => {
+    const q = new URL(path, "https://example.test").searchParams;
+    calls.push(q.get("page"));
+    return q.get("v") ? changed() : page(1, "cccccccccccccccc");
+  };
+  await assert.rejects(readCompactPages("players", { season: "2026/2027", detail: "profile", limit: 1 }, { fetcher }), { status: 409 });
+  assert.deepEqual(calls, ["1", "2", "1", "2"]);
+  // A page of another version than the first is never accepted.
+  fetcher = async (path) => {
+    const q = new URL(path, "https://example.test").searchParams;
+    return page(Number(q.get("page")), q.get("page") === "1" ? "aaaaaaaaaaaaaaaa" : "dddddddddddddddd");
+  };
+  await assert.rejects(readCompactPages("players", { season: "2026/2027", detail: "profile", limit: 1 }, { fetcher }), /publication reçue/);
+  // A read pinned to a publication keeps its fence, whatever its answer names.
+  calls = [];
+  fetcher = async (path) => {
+    const q = new URL(path, "https://example.test").searchParams;
+    calls.push([q.get("page"), q.get("v"), q.get("generation")]);
+    return Response.json({
+      data: { players: [{ id: "p_" + q.get("page") }], teams: [] },
+      meta: { generation: "g1", version: "aaaaaaaaaaaaaaaa" },
+      pagination: { page: Number(q.get("page")), limit: 1, total: 2, pages: 2, generation: "g1" },
+    });
+  };
+  await readCompactPages("players", { season: "2026/2027", limit: 1, generation: "g1" }, { fetcher });
+  assert.deepEqual(calls, [["1", null, "g1"], ["2", null, "g1"]]);
+});
+
 test("opening one directory page makes one bounded request and forwards cancellation", async () => {
   const controller = new AbortController(),
     calls = [];
