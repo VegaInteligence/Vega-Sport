@@ -10,6 +10,7 @@ import CompetitionScope from "./CompetitionScope.jsx";
 import { AdvancedPanel, AdvancedToggle } from "./AdvancedFilters.jsx";
 import { advancedChips, countAdvanced } from "../services/advanced-filters.js";
 import SiteHeader from "./SiteHeader.jsx";
+import SiteFooter from "./SiteFooter.jsx";
 import PageWorkspace from "./PageWorkspace.jsx";
 import NavigationPrefetch from "./NavigationPrefetch.jsx";
 import PlayerSearchResults from "./PlayerSearchResults.jsx";
@@ -364,6 +365,11 @@ export default function Layout({
           )}
           {children}
         </PageWorkspace>
+        <SiteFooter
+          href={f.navigationHref || f.href}
+          path={path}
+          updatedAt={f.data?.meta?.retrievedAt}
+        />
       </div>
       <PlayerDialog />
       {performanceComparison &&
