@@ -139,6 +139,65 @@ test("the season's rows answer as the appearances do", { skip }, async () => {
     }
 });
 
+// A request that filters appearances over a scope: the season's rows are worked out from
+// them (appearanceRows). The statement on the appearances is the reference.
+const FILTERS = [
+  "&venue=home", "&venue=away", "&result=win", "&result=draw", "&result=loss", "&role=starter", "&role=sub",
+  "&from=2025-09-01", "&to=2025-09-03", "&from=2025-09-02&to=2025-09-05", "&venue=home&result=win", "&venue=away&role=starter&from=2025-09-01",
+];
+const SHAPES = [
+  "&minutes=0", "", "&minutes=0&sort=name&direction=asc", "&minutes=0&sort=matches&direction=asc", "&sort=goals&basis=total", "&sort=xg&basis=per90",
+  "&sort=passAccuracy", "&sort=duelRate&direction=asc", "&sort=finishingDelta", "&ranking=goals", "&ranking=clinical&basis=total", "&ranking=rating",
+  "&minutes=0&pos=M,A", "&minutes=0&group=O", "&minutes=0&group=G,D", "&minutes=0&q=elie", "&minutes=0&q=union", "&minutes=0&q=coupe", "&minutes=0&q=joueur",
+  "&stats=goals:1", "&stats=passAccuracy:80,shots:1", "&rmin=7", "&minutes=0&limit=2", "&minutes=0&limit=2&page=2", "&minutes=0&whole=1",
+];
+
+test("a filtered request's rows, worked out from the appearances, answer as the statement on the appearances does", { skip }, async () => {
+  let compared = 0,
+    found = 0;
+  for (const scope of SCOPES)
+    for (const filter of FILTERS)
+      for (const shape of SHAPES) {
+        const query = `season=2025/2026&${scope}${shape}${filter}`;
+        const params = new URL("https://api.test/api/read/players?" + query).searchParams;
+        const filters = parsePlayerRead(params);
+        const editions = await resolveEditions(context.reader.read, filters.scope);
+        assert.equal(supportsPlayerRollup(filters), false, query);
+        assert.match(playerRollupQuery(filters, params, editions, { fromAppearances: true }).sql, /^\/\*vega:v2:players:appearances\*\//);
+        const reference = playerReadQuery(filters, params, editions);
+        const [row] = await context.reader.read(reference.sql, reference.values);
+        const expected = JSON.parse(JSON.stringify({ total: row.total, players: row.players.map(playerReadRecord), teams: row.teams }));
+        const { response, body } = await get("/api/read/players?" + query);
+        assert.equal(response.status, 200, query);
+        assert.equal(body.pagination.total, expected.total, `${query}: total`);
+        same(body.data.players.map(({ power, ...player }) => player), expected.players, query);
+        assert.deepEqual(body.data.teams, expected.teams, `${query}: teams`);
+        compared++;
+        found += expected.players.length;
+      }
+  // The comparison is not of empty answers.
+  assert.equal(compared, SCOPES.length * FILTERS.length * SHAPES.length);
+  assert.ok(found > compared, `${found} players over ${compared} requests`);
+});
+
+test("one match's players are read by the statement on the appearances; a filtered scope is not", { skip }, async () => {
+  const sent = [];
+  const reader = { read: async (sql, values, options) => (sent.push([sql.slice(0, 40), options?.plan ?? null]), context.reader.read(sql, values, options)) };
+  const { createHandler } = await import("../src/handler.mjs");
+  const handle = createHandler({ read: reader.read, clock: () => context.now });
+  const tags = async (query) => {
+    sent.length = 0;
+    const response = await handle(new Request("https://api.test/api/read/players?season=2025/2026&leagues=all" + query));
+    assert.equal(response.status, 200, query);
+    return sent.filter(([sql]) => sql.startsWith("/*vega:v2:players")).map(([sql, plan]) => [/players[:a-z]*/.exec(sql)[0], plan]);
+  };
+  assert.deepEqual(await tags(""), [["players:rollup", null]]);
+  assert.deepEqual(await tags("&match=m_aaaaa1"), [["players", null]]);
+  assert.deepEqual(await tags("&match=m_aaaaa1&venue=home"), [["players", null]]);
+  assert.deepEqual(await tags("&venue=home"), [["players:appearances", ["hashJoins"]]]);
+  assert.deepEqual(await tags("&from=2025-09-01&detail=profile&whole=1"), [["players:appearances", ["hashJoins"]]]);
+});
+
 test("a player of two editions: clubs, role, identity and unknown minutes", { skip }, async () => {
   const { body } = await get("/api/read/players?season=2025/2026&leagues=all&minutes=0&limit=50");
   const by = Object.fromEntries(body.data.players.map((p) => [p.id, p]));
