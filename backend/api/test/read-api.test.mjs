@@ -3,6 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { context, get, skip } from "./context.mjs";
+import { CAPABILITIES, manifestShape } from "../src/routes/system.mjs";
 
 const clubs = "/api/read/clubs?season=2025/2026&leagues=all";
 // The keys of a club record in the previous backend's relational-clubs.js (main), plus
@@ -165,7 +166,20 @@ test("manifest, health and status", { skip }, async () => {
   assert.equal(status.response.headers.get("cache-control"), "public, max-age=3600, s-maxage=3600");
   assert.equal(health.response.headers.get("cache-control"), "no-store");
   assert.equal(body.capabilities.compactReads.league, true);
-  assert.deepEqual([body.capabilities.wholeSelection, body.capabilities.playedLeague], [true, true]);
+  assert.deepEqual([body.capabilities.wholeSelection, body.capabilities.playedLeague, body.capabilities.roleGroups], [true, true, true]);
+});
+
+test("the manifest's validator changes with what a deploy puts in it", { skip }, async () => {
+  const { response, body } = await get("/api/dashboard/manifest");
+  const etag = response.headers.get("etag");
+  assert.equal((await get("/api/dashboard/manifest", { "if-none-match": etag })).response.status, 304);
+  // The same publication under other capabilities is another manifest: its validator
+  // must not be the one browsers and the distribution hold.
+  const now = manifestShape(body.schemaVersion, CAPABILITIES);
+  assert.match(now, /^[a-f0-9]{12}$/);
+  assert.notEqual(manifestShape(body.schemaVersion, { ...CAPABILITIES, roleGroups: false }), now);
+  assert.notEqual(manifestShape(body.schemaVersion + 1, CAPABILITIES), now);
+  assert.deepEqual(body.capabilities, CAPABILITIES);
 });
 
 test("the default season is the latest one already started", async () => {

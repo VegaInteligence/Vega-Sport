@@ -14,7 +14,7 @@ const CONSTANT_HEADERS = {
 const digest = (value) => createHash("sha256").update(value).digest("hex");
 const tag = (req, version) =>
   'W/"core-v3-' + digest(new URL(req.url).pathname + new URL(req.url).search + "|" + version) + '"';
-const manifestTag = (req, version) => tag(req, `manifest-v5|v2|${version}`);
+
 const iso = (value) => (value instanceof Date ? value.toISOString() : value ?? null);
 const day = (value) => (value instanceof Date ? value.toISOString().slice(0, 10) : value ?? null);
 
@@ -32,6 +32,34 @@ export const editionDigest = (p) => digest(JSON.stringify([p.season, p.league_id
 
 /** The compact reads this API serves; the others stay on the current API until ported. */
 export const COMPACT_READS = { home: true, players: true, clubs: true, player: true, club: true, league: true, performance: true, discipline: true, presence: true };
+
+/** What the site reads to choose its reads (dashboard/frontend: compact-reads.js,
+ * season_data.js, actor-reads.js, global-search-client.js, season-version.js,
+ * club-scout.js). */
+export const CAPABILITIES = {
+  boundedSearch: true, // /api/search
+  fixturePaginationOrder: true, // /api/fixtures: order, cursor
+  versionedPartitions: true, // /api/seasons/partition: v
+  playerRatingRanking: true, // /api/read/players: ranking=rating
+  actorSummary: true, // /api/read/player and /api/read/club: detail=summary
+  wholeSelection: true, // /api/read/players: whole=1
+  roleGroups: true, // /api/read/players: group
+  playedLeague: true, // /api/read/league: played=1
+  // Off: the site addresses a provider image's copy itself (resolved-media.js), and
+  // with this on it adds media=1 to every compact read, a query each (media.mjs).
+  resolvedMedia: false,
+  boundedArchive: true,
+  compactReads: COMPACT_READS,
+};
+const SCHEMA_VERSION = 5;
+/**
+ * What this code puts around a publication in the manifest; its validator names both. A
+ * deploy that added a capability kept the validator of the manifest before it: until the
+ * next publication, the distribution and the browsers were told theirs was still good
+ * (five minutes without the new reads on 11 November 2026).
+ */
+export const manifestShape = (schemaVersion, capabilities) => digest(JSON.stringify([schemaVersion, capabilities])).slice(0, 12);
+const manifestTag = (req, version) => tag(req, `manifest|${manifestShape(SCHEMA_VERSION, CAPABILITIES)}|${version}`);
 
 /** The latest season already started: a calendar published ahead (a league's next
  * calendar year) is not the default. */
@@ -91,27 +119,14 @@ export function createSystemRoute(read) {
     return send(
       req,
       {
-        schemaVersion: 5,
+        schemaVersion: SCHEMA_VERSION,
         // What the site reads to choose its reads (dashboard/frontend: compact-reads.js,
         // season_data.js, actor-reads.js, global-search-client.js, season-version.js). Any
         // other storage makes it load whole seasons through /api/seasons/partition, the
         // home included: that is what "aws-relational-v2" did when the site was first
         // pointed at this API on 10 November 2026.
         storage: "aws-relational",
-        capabilities: {
-          boundedSearch: true, // /api/search
-          fixturePaginationOrder: true, // /api/fixtures: order, cursor
-          versionedPartitions: true, // /api/seasons/partition: v
-          playerRatingRanking: true, // /api/read/players: ranking=rating
-          actorSummary: true, // /api/read/player and /api/read/club: detail=summary
-          wholeSelection: true, // /api/read/players: whole=1
-          playedLeague: true, // /api/read/league: played=1
-          // Off: the site addresses a provider image's copy itself (resolved-media.js), and
-          // with this on it adds media=1 to every compact read, a query each (media.mjs).
-          resolvedMedia: false,
-          boundedArchive: true,
-          compactReads: COMPACT_READS,
-        },
+        capabilities: CAPABILITIES,
         defaultSeason: defaultSeason(seasons, new Date().toISOString().slice(0, 10)),
         retrievedAt: iso(state.published_at),
         publishedAt: iso(state.published_at),
