@@ -106,9 +106,12 @@ Resources:
                 Effect: Allow
                 Action: ['appsync:*']
                 Resource: !Sub 'arn:${AWS::Partition}:appsync:${AWS::Region}:${AWS::AccountId}:apis/*'
+              # Creating an API, and the actions on its keys (the browser key is renewed on each
+              # deploy), are not granted per resource: IAM only takes '*' for them.
               - Sid: LiveEventsCreate
                 Effect: Allow
-                Action: ['appsync:CreateApi', 'appsync:TagResource', 'appsync:ListApis']
+                Action: ['appsync:CreateApi', 'appsync:TagResource', 'appsync:ListApis',
+                         'appsync:CreateApiKey', 'appsync:UpdateApiKey', 'appsync:DeleteApiKey', 'appsync:ListApiKeys']
                 Resource: '*'
               # The database alarms (database.yaml).
               - Sid: DatabaseAlarms
