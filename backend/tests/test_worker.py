@@ -465,6 +465,20 @@ class WorkerTest(unittest.TestCase):
             self.assertEqual(self.worker.run(max_jobs=1), 1)
         self.assertEqual(rounds, ["tick"])
 
+    def test_a_bounded_run_ends_once_nothing_is_due(self):
+        # The pilot's loop (pilot.yml): 700 jobs at most, and an end when the calendars
+        # give fewer. Without until_idle it waited for a 700th job that never came.
+        import time
+
+        enqueue(self.db, "reference", "league", global_key="catalogue", run_after=self.now)
+        deadline = time.monotonic() + 60
+        with contextlib.redirect_stdout(io.StringIO()):
+            done = self.worker.run(max_jobs=700, until_idle=True, idle_sleep=0, stop=lambda: time.monotonic() > deadline)
+        self.assertLess(time.monotonic(), deadline, "the run did not end by itself")
+        self.assertTrue(0 < done < 700, done)
+        due = self.db.execute("SELECT count(*) FROM ops.fetch_jobs WHERE state='pending' AND run_after <= %s", (self.now,)).fetchone()[0]
+        self.assertEqual(due, 0)
+
     def test_an_error_code_never_carries_the_error_s_text(self):
         try:
             {}["a player's name"]
