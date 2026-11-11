@@ -46,12 +46,20 @@ function season(params) {
   return value;
 }
 
+// A season's id and the editions of some of its leagues: what core.matches is indexed on.
+// Filtered on the season's label and the public league id, which the view computes, the
+// fixtures of the whole season were built before the leagues were kept (0.37 s for the
+// pool on 11 November 2026, 30 ms through the editions).
+const SEASON_ID = (seasonParam) => `(SELECT k.season_id FROM api.season_keys k WHERE k.season=${seasonParam})`;
+const inEditions = (alias, seasonParam, leagues) =>
+  `${alias}.season_id=${SEASON_ID(seasonParam)} AND ${alias}.competition_season_id=ANY(ARRAY(SELECT e.competition_season_id FROM api.edition_keys e WHERE e.season=${seasonParam} AND e.league_id=ANY(${leagues}::text[])))`;
+
 // The pool: every club with a fixture of a Top 7 league in the season, in the league it
 // plays most (a club promoted mid-history keeps one league).
 const POOL_SQL = (scopeParam, leagues) => `pool AS MATERIALIZED (
   SELECT DISTINCT ON (team_id) team_id,league_id FROM (
-    SELECT x.home_internal_id team_id,x.league_id FROM api.fixtures x WHERE x.season=${scopeParam} AND x.league_id=ANY(${leagues}::text[])
-    UNION ALL SELECT x.away_internal_id,x.league_id FROM api.fixtures x WHERE x.season=${scopeParam} AND x.league_id=ANY(${leagues}::text[])) s
+    SELECT x.home_internal_id team_id,x.league_id FROM api.fixtures x WHERE ${inEditions("x", scopeParam, leagues)}
+    UNION ALL SELECT x.away_internal_id,x.league_id FROM api.fixtures x WHERE ${inEditions("x", scopeParam, leagues)}) s
   WHERE team_id IS NOT NULL GROUP BY team_id,league_id ORDER BY team_id,count(*) DESC,league_id)`;
 
 export function createEuropeRoute(read) {
@@ -81,9 +89,9 @@ export function createEuropeRoute(read) {
               'leagueId',p.league_id,'uefaCoefficient',u.points,'level',w.elo,'levelRank',w.rank) ORDER BY p.league_id,k.name,k.public_id),'[]'::json)
             FROM pool p JOIN api.team_keys k ON k.team_id=p.team_id
             LEFT JOIN uefa u ON u.team_id=p.team_id
-            LEFT JOIN api.power_clubs w ON w.team_id=k.public_id AND w.season=${seasonParam} AND w.scope='clubs') clubs,
-           (SELECT coalesce(json_object_agg(w.team_id,w.elo),'{}'::json) FROM api.power_clubs w WHERE w.season=${seasonParam} AND w.scope='clubs') levels,
-           (SELECT max(w.computed_at) FROM api.power_clubs w WHERE w.season=${seasonParam} AND w.scope='clubs') levels_at
+            LEFT JOIN api.power_clubs w ON w.team_key=p.team_id AND w.season_id=${SEASON_ID(seasonParam)} AND w.scope='clubs') clubs,
+           (SELECT coalesce(json_object_agg(w.team_id,w.elo),'{}'::json) FROM api.power_clubs w WHERE w.season_id=${SEASON_ID(seasonParam)} AND w.scope='clubs') levels,
+           (SELECT max(w.computed_at) FROM api.power_clubs w WHERE w.season_id=${SEASON_ID(seasonParam)} AND w.scope='clubs') levels_at
          FROM publication`,
         values,
       );
@@ -104,7 +112,7 @@ export function createEuropeRoute(read) {
     const [snapshot] = await read(
       `WITH publication AS MATERIALIZED (${publication}), ${POOL_SQL(seasonParam, leagues)},
        f AS MATERIALIZED (SELECT x.* FROM api.fixtures x JOIN api.match_detail_state d ON d.season_id=x.season_id AND d.match_id=x.match_id
-         WHERE x.season=${seasonParam} AND x.league_id=${leagueParam} AND x.status='finished' AND d.detail_collected
+         WHERE ${inEditions("x", seasonParam, `ARRAY[${leagueParam}]`)} AND x.status='finished' AND d.detail_collected
            AND (x.home_internal_id IN (SELECT team_id FROM pool) OR x.away_internal_id IN (SELECT team_id FROM pool)))
        SELECT publication.*,
          (SELECT coalesce(json_agg(r ORDER BY r.day,r.id),'[]'::json) FROM (

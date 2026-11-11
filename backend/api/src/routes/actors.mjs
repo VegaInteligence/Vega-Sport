@@ -49,9 +49,11 @@ export function actorQuery(kind, scope, actor, includes, pagination, generation,
     kind === "league"
       ? `SELECT x.season_id,x.match_id,x.id,x.day FROM api.fixtures x WHERE ${inScope("x")}${fence}`
       : kind === "player"
-      ? `SELECT DISTINCT x.season_id,x.match_id,x.id,x.day FROM api.player_appearances a
-         JOIN api.fixtures x ON x.season_id=a.season_id AND x.match_id=a.match_id
-         WHERE a.player_id=${actorId} AND ${inScope("a")} AND ${pin("x")}${fence}`
+      ? // His matches by their ids, then their fixtures: joined to the appearances, the
+        // fixtures of the whole season were built first (0.2 s for 14 matches).
+        `SELECT x.season_id,x.match_id,x.id,x.day FROM api.fixtures x
+         WHERE ${pin("x")} AND x.match_id=ANY(ARRAY(SELECT a.match_id FROM api.player_appearances a
+           WHERE a.player_id=${actorId} AND ${inScope("a")}))${fence}`
       : `SELECT x.season_id,x.match_id,x.id,x.day FROM api.fixtures x
          WHERE (x.home_internal_id=${actorId} OR x.away_internal_id=${actorId}) AND ${inScope("x")}${fence}`;
   const limit = bindValue(values, pagination.limit),

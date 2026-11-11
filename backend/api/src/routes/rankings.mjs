@@ -123,11 +123,17 @@ const clubSeason = (r) => ({
   results: round(r.result_sum, 1), expectedResults: round(r.expected_sum, 2),
 });
 
+// The power views by their keys (064): a season by its id, players and clubs by their
+// internal ids, which the tables index. Filtered on the public ids, a view computed them
+// for every row of the season first.
+const SEASON_KEY = "(SELECT k.season_id FROM api.season_keys k WHERE k.season=$1)";
+const keysOf = (kind) => `ARRAY(SELECT api.internal_id('${kind}',k) FROM unnest($2::text[]) k)`;
+
 /** Each role a player played in the season (§ 8), most played first. */
 async function rolesOf(read, season, ids) {
   const out = new Map();
   if (!ids.length) return out;
-  for (const r of await read("SELECT * FROM api.power_player_roles WHERE season=$1 AND player_id=ANY($2) ORDER BY minutes DESC, role", [season, ids])) {
+  for (const r of await read(`SELECT * FROM api.power_player_roles WHERE season_id=${SEASON_KEY} AND player_key=ANY(${keysOf("player")}) ORDER BY minutes DESC, role`, [season, ids])) {
     if (!out.has(r.player_id)) out.set(r.player_id, []);
     out.get(r.player_id).push({ role: r.role, position: ROLE_LABEL[r.role] ?? r.role, matches: r.matches, minutes: r.minutes,
       contribution: round(r.total, 2), rate: round(r.rate, 3) });
@@ -145,10 +151,10 @@ export async function powerOf(read, kind, season, ids) {
   const out = new Map();
   if (!season || !ids.length) return out;
   if (kind === "clubs") {
-    for (const r of await read("SELECT * FROM api.power_clubs WHERE season=$1 AND scope='clubs' AND team_id=ANY($2)", [season, ids]))
+    for (const r of await read(`SELECT * FROM api.power_clubs WHERE season_id=${SEASON_KEY} AND scope='clubs' AND team_key=ANY(${keysOf("team")})`, [season, ids]))
       out.set(r.team_id, { rank: r.rank, elo: round(r.elo, 1), eloChange: round(r.elo_change, 1), matches: r.matches, ...clubSeason(r) });
   } else {
-    const rows = await read("SELECT * FROM api.power_players WHERE season=$1 AND player_id=ANY($2)", [season, ids]);
+    const rows = await read(`SELECT * FROM api.power_players WHERE season_id=${SEASON_KEY} AND player_key=ANY(${keysOf("player")})`, [season, ids]);
     const roles = await rolesOf(read, season, rows.map((r) => r.player_id));
     for (const r of rows)
       out.set(r.player_id, {
@@ -166,7 +172,7 @@ async function powerRanking(read, params) {
     reject(400, "Paramètre invalide.");
   const limit = Number(limitRaw);
   if (kind === "players") {
-    const rows = await read("SELECT * FROM api.power_players WHERE season=$1 ORDER BY rank, player_id LIMIT $2", [season, limit]);
+    const rows = await read(`SELECT * FROM api.power_players WHERE season_id=${SEASON_KEY} ORDER BY rank, player_id LIMIT $2`, [season, limit]);
     if (!rows.length) reject(404, "Donnée indisponible.");
     const roles = await rolesOf(read, season, rows.map((r) => r.player_id));
     return {
@@ -180,7 +186,7 @@ async function powerRanking(read, params) {
       })),
     };
   }
-  const rows = await read("SELECT * FROM api.power_clubs WHERE season=$1 AND scope=$2 ORDER BY rank, team_id LIMIT $3", [season, kind, limit]);
+  const rows = await read(`SELECT * FROM api.power_clubs WHERE season_id=${SEASON_KEY} AND scope=$2 ORDER BY rank, team_id LIMIT $3`, [season, kind, limit]);
   if (!rows.length) reject(404, "Donnée indisponible.");
   return {
     season, kind, method: { version: rows[0].method_version, computedAt: iso(rows[0].computed_at) },

@@ -138,7 +138,14 @@ export async function fixturePage(req, p, read) {
     binds.push(v);
     return "$" + binds.length;
   };
-  if (leagues.length) terms.push("f.league_id=ANY(" + bind(leagues) + "::text[])");
+  if (leagues.length) {
+    // The leagues' editions first: core.matches is indexed on its edition, not on the public
+    // league id the view computes (a league's upcoming fixtures read every match to come
+    // of the base: 0.3 s on 11 November 2026, 30 ms through the editions).
+    const k = bind(leagues);
+    terms.push("f.competition_season_id=ANY(ARRAY(SELECT e.competition_season_id FROM api.edition_keys e WHERE e.league_id=ANY(" + k + "::text[])))");
+    terms.push("f.league_id=ANY(" + k + "::text[])");
+  }
   if (seasons.length) {
     const k = bind(seasons);
     terms.push("(f.season=ANY(" + k + "::text[]) OR f.native_season=ANY(" + k + "::text[]))");

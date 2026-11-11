@@ -13,12 +13,18 @@ const types = {
 };
 
 /** `role`: a group role to read as (vega_read in production, see 017_roles.sql). */
-export function createReader(connectionString, { max = 4, timeoutMs = 8000, role = null, ca = null } = {}) {
+/** `Pool`: the pool's class (tests give their own). */
+export function createReader(connectionString, { max = 4, timeoutMs = 8000, role = null, ca = null, Pool = pg.Pool } = {}) {
   if (role !== null && !/^[a-z_][a-z0-9_]{0,62}$/.test(role)) throw new Error("invalid role");
-  const pool = new pg.Pool({
+  const pool = new Pool({
     connectionString,
     max,
     types,
+    // A connection is kept five minutes (pg closes an idle one after 10 s): the first
+    // statement after a pause opened a new one, 30 to 75 ms each time and for each
+    // statement run together (measured on 11 November 2026).
+    idleTimeoutMillis: 300_000,
+    keepAlive: true,
     // RDS: TLS verified against the bundled regional CA, never disabled.
     ...(ca && { ssl: { ca, rejectUnauthorized: true } }),
     // jit=off: the reads' plans are costly enough to trigger JIT, whose compile time was
@@ -28,8 +34,21 @@ export function createReader(connectionString, { max = 4, timeoutMs = 8000, role
     // row after 14 s for 0.8 s of work).
     options: `-c default_transaction_read_only=on -c statement_timeout=${timeoutMs} -c jit=off -c max_parallel_workers_per_gather=0 -c search_path=api${role ? ` -c role=${role}` : ""}`,
   });
+  // An idle connection the base or the network closed: the pool drops it. Unheard, the
+  // event would end the process.
+  pool.on("error", () => {});
+  // A statement that found its connection closed is sent once more, on another one: the
+  // reads change nothing, so asking again is safe. A statement the base refused is not.
+  const lost = (error) => !error.severity && (["ECONNRESET", "EPIPE", "ETIMEDOUT"].includes(error.code) || /Connection terminated|connection.*(closed|ended)/i.test(error.message || ""));
   return {
-    read: async (sql, values = []) => (await pool.query(sql, values)).rows,
+    read: async (sql, values = []) => {
+      try {
+        return (await pool.query(sql, values)).rows;
+      } catch (error) {
+        if (!lost(error)) throw error;
+        return (await pool.query(sql, values)).rows;
+      }
+    },
     end: () => pool.end(),
   };
 }
