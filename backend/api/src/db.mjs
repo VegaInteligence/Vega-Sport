@@ -40,15 +40,51 @@ export function createReader(connectionString, { max = 4, timeoutMs = 8000, role
   // A statement that found its connection closed is sent once more, on another one: the
   // reads change nothing, so asking again is safe. A statement the base refused is not.
   const lost = (error) => !error.severity && (["ECONNRESET", "EPIPE", "ETIMEDOUT"].includes(error.code) || /Connection terminated|connection.*(closed|ended)/i.test(error.message || ""));
+  // A statement with planner settings of its own (PLANNER_SETTINGS): they are set for
+  // its transaction alone, on one connection, and gone when it ends.
+  const planned = async (sql, values, settings) => {
+    const client = await pool.connect();
+    let failure = null;
+    try {
+      await client.query("BEGIN");
+      for (const name of settings) await client.query(`SET LOCAL ${PLANNER_SETTINGS[name]}`);
+      const { rows } = await client.query(sql, values);
+      await client.query("COMMIT");
+      return rows;
+    } catch (error) {
+      failure = error;
+      await client.query("ROLLBACK").catch(() => {});
+      throw error;
+    } finally {
+      // A connection that was lost is not given back to the pool.
+      client.release(failure && lost(failure) ? failure : undefined);
+    }
+  };
   return {
-    read: async (sql, values = []) => {
+    /** `plan`: names of PLANNER_SETTINGS the statement is planned with. */
+    read: async (sql, values = [], { plan = [] } = {}) => {
+      if (plan.some((name) => !Object.hasOwn(PLANNER_SETTINGS, name))) throw new Error("unknown planner setting");
+      const run = plan.length ? () => planned(sql, values, plan) : async () => (await pool.query(sql, values)).rows;
       try {
-        return (await pool.query(sql, values)).rows;
+        return await run();
       } catch (error) {
         if (!lost(error)) throw error;
-        return (await pool.query(sql, values)).rows;
+        return run();
       }
     },
     end: () => pool.end(),
   };
 }
+
+/**
+ * What a statement may ask of the planner, by name.
+ *
+ * hashJoins: no nested loop. The players list read on the appearances joins small
+ * tables it has just computed, which the planner expects to hold one row: it compared
+ * them row by row (55 million comparisons for one league's home matches, 12.6 s on
+ * 11 November 2026; over 120 s for the ten leagues of the European scope, so the list
+ * answered 503 at the 8 s limit). Without nested loops: 1.5 s and 2.4 s at most, the
+ * same players and totals (the decimal sums are added in another order: they differ
+ * at their last digit).
+ */
+export const PLANNER_SETTINGS = { hashJoins: "enable_nestloop = off" };

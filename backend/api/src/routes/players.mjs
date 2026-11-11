@@ -743,6 +743,21 @@ export async function selectionVersion(read, editions, now) {
 }
 
 /**
+ * The selection, read from the season's rows or from the appearances. On the appearances
+ * of a whole scope (a venue, a result, a role or a period is asked), the statement is
+ * planned without nested loops (db.mjs, PLANNER_SETTINGS.hashJoins). One match's players
+ * keep the usual plan: they are a few rows found by the match's id.
+ */
+function readSelection(read, filters, params, editions) {
+  if (supportsPlayerRollup(filters)) {
+    const { sql, values } = playerRollupQuery(filters, params, editions);
+    return read(sql, values);
+  }
+  const { sql, values } = playerReadQuery(filters, params, editions);
+  return filters.match === "all" ? read(sql, values, { plan: ["hashJoins"] }) : read(sql, values);
+}
+
+/**
  * GET /api/read/players?detail=profile: the selection's profiles, kept by whoever holds
  * them until the selection's version changes. The request names no publication; `v`
  * fences the pages after the first on the version the first one gave (409 otherwise).
@@ -755,8 +770,7 @@ async function profileSelection(req, params, filters, read, now) {
   const etag = `W/"players-profile-${createHash("sha256").update(JSON.stringify(signature)).digest("hex")}"`;
   // Unchanged for whoever holds it: neither the selection nor its answer is worked out.
   if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 30 });
-  const { sql, values } = (supportsPlayerRollup(filters) ? playerRollupQuery : playerReadQuery)(filters, params, editions);
-  const [snapshot] = await read(sql, values);
+  const [snapshot] = await readSelection(read, filters, params, editions);
   const total = Number(snapshot?.total || 0);
   return readResponse(
     req,
@@ -781,8 +795,7 @@ export function createPlayerReadRoute(read, { clock = Date.now } = {}) {
     const validated = await readValidator(req, params, filters.scope, read);
     if (validated) return validated;
     const editions = await resolveEditions(read, filters.scope);
-    const { sql, values } = (supportsPlayerRollup(filters) ? playerRollupQuery : playerReadQuery)(filters, params, editions);
-    const [snapshot] = await read(sql, values);
+    const [snapshot] = await readSelection(read, filters, params, editions);
     const total = Number(snapshot?.total || 0);
     const players = (snapshot?.players || []).map(playerReadRecord);
     // Each player's power ranking of the season (rankings.mjs).
