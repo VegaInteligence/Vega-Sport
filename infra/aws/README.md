@@ -129,10 +129,10 @@ The base (`vega-football-db-postgres`) was filled from the sources themselves; t
 - The scheduled workflows of the old path were disabled that day, then deleted from the repository with the old backend's code (Collect football, Build serving tables, Validate production, Inspect database schema, Vega v2 collection on the existing RDS, Verify ingestion).
 - The stack `statarena-backend` is deleted (the API function and its distribution `d317dq37z1tacb.cloudfront.net`).
 - `statarena-postgres` is deleted; its final snapshot is `statarena-final-20261110` (64 GB).
-- The old bucket `statarena-football-333rosky-70db6e5f` had `_migration/`, `data/_migration/`, `data/staging/`, `data/computed/` and `data/raw/` emptied that day; `data/sources/` (the old pipeline's provider responses and source files) stayed, for the archive import, until 11 November (below).
+- The old bucket `statarena-football-333rosky-70db6e5f` had `_migration/`, `data/_migration/`, `data/staging/`, `data/computed/` and `data/raw/` emptied that day; `data/sources/` (the old pipeline's provider responses and source files) stayed, for the archive import, until the bucket's deletion on 11 November (below).
 - The stack `statarena-backend-actions` is deleted; the GitHub OIDC provider it had created is kept (the deploy and pilot roles sign in through it).
 - The API and live functions take their packages from their own release bucket (`vega-v2-releases-…`); until the repository's clean-up of 10 November they took them from the old one (`statarena-backend-releases-…`).
-- The pinned archive sources the import reads (52 files) were copied into the release bucket on 11 November 2026, identical file for file; nothing of the stack reads the old bucket any more (checked again that day on the deployed stacks, task definitions, functions, parameters and roles); its deletion is the owner's.
+- The pinned archive sources the import reads (52 files) were copied into the release bucket on 11 November 2026, identical file for file; nothing of the stack read the old bucket after that (checked that day on the deployed stacks, task definitions, functions, parameters and roles), and the owner deleted it the same day with what was left in it: the old pipeline's raw provider responses and its ranking and matchday source files. No bucket of the old name is left.
 - Kept on purpose until the backfill has finished: the final snapshot `statarena-final-20261110`.
 - Not served yet: `/api/player-market-values` (the player page's value card answers "Données indisponibles").
 
