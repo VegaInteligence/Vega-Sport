@@ -15,7 +15,6 @@ import {
   validateMatchPublication,
 } from "../services/match-resources.js";
 import { ResearchLists, useHasSaved } from "../components/ResearchUI.jsx";
-import ProMatchesPage from "./ProMatchesPage.jsx";
 import PaginatedMatches from "../components/PaginatedMatches.jsx";
 function RemoteDetail({ id }) {
   const f = useFootball(),
@@ -33,10 +32,6 @@ function RemoteDetail({ id }) {
   );
 }
 export default function MatchesPage() {
-  const f = useFootball();
-  return f.pro ? <ProMatchesPage /> : <LegacyMatchesPage />;
-}
-function LegacyMatchesPage() {
   const f = useFootball(),
     [page, setPage] = useState(1),
     search = useSearchParams(),

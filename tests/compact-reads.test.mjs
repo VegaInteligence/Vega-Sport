@@ -78,7 +78,7 @@ test("compact capability is per route and a real empty selection is not all", ()
   assert.equal(supportsCompactRead(manifest, "players"), true);
   assert.equal(supportsCompactRead(manifest, "club"), false);
   assert.equal(
-    supportsCompactRead({ ...manifest, storage: "json-packed" }, "players"),
+    supportsCompactRead({ ...manifest, storage: "other" }, "players"),
     false,
   );
   assert.equal(

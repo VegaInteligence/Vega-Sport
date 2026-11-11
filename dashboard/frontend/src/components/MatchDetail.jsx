@@ -33,7 +33,6 @@ import {
   matchReadSource,
   matchResourceKey,
 } from "../services/match-resources.js";
-import { useProResource } from "../hooks/useProResource.js";
 import { seasonLabel } from "../model.js";
 import { BookmarkButton } from "./ResearchUI.jsx";
 const views = [
@@ -366,32 +365,6 @@ function MatchShots({ match }) {
   );
 }
 function SummaryShots({ match }) {
-  const f = useFootball();
-  return f.pro ? (
-    <ProSummaryShots match={match} />
-  ) : (
-    <LegacySummaryShots match={match} />
-  );
-}
-function ProSummaryShots({ match }) {
-  const f = useFootball();
-  const client = f.client.edition(match.leagueId, match.season);
-  const resource = useProResource(
-    client.resourceKey("shots", match.id),
-    async () => {
-      if (match.representationToken !== client.representationToken)
-        throw new Error("La version du match est indisponible.");
-      const data = await client.shots(match.id);
-      return { ...match, shots: normalizeShots(data) };
-    },
-  );
-  return (
-    <AsyncState resource={resource}>
-      {(value) => <MatchShots match={value} />}
-    </AsyncState>
-  );
-}
-function LegacySummaryShots({ match }) {
   const f = useFootball();
   const resource = useResource(
     matchResourceKey(

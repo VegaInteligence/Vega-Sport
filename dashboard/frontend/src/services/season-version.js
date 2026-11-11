@@ -9,8 +9,7 @@ export function seasonVersion(manifest, season, leagueIds = null) {
       .filter((chunk) => !leagueIds || leagueIds.has(chunk.leagueId))
       .map((chunk) => [
         chunk.leagueId,
-        chunk.representationToken ||
-          chunk.sourceDigest ||
+        chunk.sourceDigest ||
           chunk.sha256 ||
           chunk.meta?.retrievedAt ||
           manifest?.retrievedAt ||

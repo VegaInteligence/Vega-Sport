@@ -11,7 +11,6 @@ import { cachedResource, primeResource } from "./resources.js";
 export function actorIntent(href, currentHref, football) {
   if (
     !football?.manifest ||
-    football.pro ||
     football.manifest.capabilities?.actorSummary !== true
   )
     return null;

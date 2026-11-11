@@ -43,8 +43,6 @@ import {
 } from "../services/advanced-filters.js";
 import { FootballDataClient } from "../services/football-client.js";
 import { matchResourceKey } from "../services/match-resources.js";
-import { ProFootballDataClient } from "../services/pro-football-client.js";
-import { isProManifest } from "../services/pro-match-data.js";
 import {
   pagedMatchList,
   seasonVersion,
@@ -225,8 +223,6 @@ export function FootballProvider({ children, loadData = true, initialState }) {
     Boolean(requestedVersion),
   );
   const manifest = requestedVersion ? pinnedManifest : currentManifest;
-  const proMode =
-    isProManifest(manifest.value) || isProManifest(currentManifest.value);
   const readConnection = ({ signal } = {}) =>
     json("/api/status", { signal })
       .then((value) => value.configured === true)
@@ -236,10 +232,8 @@ export function FootballProvider({ children, loadData = true, initialState }) {
       });
   // Start connectivity beside the manifest. Creating a client for a new route
   // must not add another status round trip before its own requests can start.
-  const connection = useResource("status:api", readConnection, !proMode);
-  const catalogueManifest = proMode
-    ? currentManifest.value || manifest.value
-    : manifest.value;
+  const connection = useResource("status:api", readConnection);
+  const catalogueManifest = manifest.value;
   // Background refresh never unpins an explicitly requested representation.
   const refreshCurrentManifest = currentManifest.revalidate;
   const refreshManifest = useCallback(
@@ -267,7 +261,7 @@ export function FootballProvider({ children, loadData = true, initialState }) {
   const clubDetail = pathname.startsWith("/clubs") && Boolean(actorId);
   const playerDetail = playerScope && Boolean(actorId);
   const clubTeam =
-    !proMode && clubDetail
+    clubDetail
       ? clubDataTeam(initial, { playerOpen: Boolean(player), comparing })
       : null;
   // A profile can span competitions outside the directory's discovery focus.
@@ -342,7 +336,6 @@ export function FootballProvider({ children, loadData = true, initialState }) {
     chosen,
     dataFocus,
     clubTeam,
-    proMode,
     pagedMatches,
     compactMode,
     compactKind,
@@ -365,7 +358,6 @@ export function FootballProvider({ children, loadData = true, initialState }) {
     // the bytes), then merges the other leagues loaded in the background.
     // Pages opened on a specific record wait for the full scope instead.
     progressive =
-      !proMode &&
       !pagedMatches &&
       !compactMode &&
       !renewingFullScope &&
@@ -375,22 +367,17 @@ export function FootballProvider({ children, loadData = true, initialState }) {
       !initial.get("id") &&
       !loadedScopes.has(scopeKey),
     fullKey = `season:${chosen}:${dataFocus}:${scopeVersion}:all:full`;
-  const proMatchPage =
-    proMode && /^\/matchs\/?$/.test(pathname) && !initial.get("id");
-  const proVersionKey = JSON.stringify(manifest.value?.editions || []);
   const seasonKey = compactMode
     ? compactActor && loadData
       ? actorReadKey(compactKind, actorParams)
       : `compact-catalogue:${chosen}:${compactKind}:${compactGeneration(manifest.value)}`
-    : proMode
-      ? `pro-season:${chosen}:${proMatchPage || !loadData ? "catalogue" : `${dataFocus}:${leagueOnly ? filters.league : "all"}`}:${proVersionKey}`
-      : clubTeam
-        ? `club-season:${chosen}:${clubTeam}:${versions.all}`
-        : pagedMatches
-          ? `match-catalogue:${chosen}:${scopeVersion}`
-          : progressive
-            ? `season:${chosen}:europe:${versions.europe}:all:full`
-            : `season:${chosen}:${loadData ? `${dataFocus}:${leagueOnly ? versions.league : scopeVersion}:${leagueOnly ? filters.league : "all"}:full` : `catalog:${scopeVersion}`}`;
+    : clubTeam
+      ? `club-season:${chosen}:${clubTeam}:${versions.all}`
+      : pagedMatches
+        ? `match-catalogue:${chosen}:${scopeVersion}`
+        : progressive
+          ? `season:${chosen}:europe:${versions.europe}:all:full`
+          : `season:${chosen}:${loadData ? `${dataFocus}:${leagueOnly ? versions.league : scopeVersion}:${leagueOnly ? filters.league : "all"}:full` : `catalog:${scopeVersion}`}`;
   const detailId =
     /^\/matchs\/?$/.test(pathname) &&
     /^m_[A-Za-z0-9]{6}$/.test(initial.get("id") || "")
@@ -409,7 +396,7 @@ export function FootballProvider({ children, loadData = true, initialState }) {
       return cached;
     return null;
   }, [detailId, seasonKey]);
-  const deferSeason = !proMode && Boolean(detailId && !warmSeason);
+  const deferSeason = Boolean(detailId && !warmSeason);
   const emptySeason = useMemo(
     () =>
       !manifest.value || !chosen
@@ -429,7 +416,7 @@ export function FootballProvider({ children, loadData = true, initialState }) {
             fixtures: [],
             metrics: [],
           },
-    [manifest.value, catalogueManifest, chosen, proMode, compactMode],
+    [manifest.value, catalogueManifest, chosen, compactMode],
   );
   function loadScope({ signal } = {}) {
     if (compactActor)
@@ -444,7 +431,7 @@ export function FootballProvider({ children, loadData = true, initialState }) {
           throw error;
         });
     if (compactMode) return Promise.resolve(emptySeason);
-    if (proMatchPage || pagedMatches) return Promise.resolve(emptySeason);
+    if (pagedMatches) return Promise.resolve(emptySeason);
     if (clubTeam)
       return loadClubSeason(manifest.value, clubTeam, chosen, fetch, {
         signal,
@@ -475,7 +462,6 @@ export function FootballProvider({ children, loadData = true, initialState }) {
               if (
                 !compactMode &&
                 !leagueOnly &&
-                !proMatchPage &&
                 !pagedMatches &&
                 !clubTeam
               )
@@ -497,7 +483,6 @@ export function FootballProvider({ children, loadData = true, initialState }) {
       progressive,
       clubTeam,
       pagedMatches,
-      proMatchPage,
       compactMode,
       compactKind,
     ]),
@@ -619,7 +604,7 @@ export function FootballProvider({ children, loadData = true, initialState }) {
       compactPerformance,
     );
   const perfIntent =
-    !proMode && !compactPerformance && deferSeason && Boolean(selectedMatch);
+    !compactPerformance && deferSeason && Boolean(selectedMatch);
   const perf = useResource(
     `detail-cohort:${detailId}:${seasonKey}`,
     async () => {
@@ -675,21 +660,11 @@ export function FootballProvider({ children, loadData = true, initialState }) {
     };
   }, [progressive, data, fullKey]);
   const clientManifest = displayedManifest;
-  const clientLeague = proMode ? filters.league : null;
-  const clientSeason = proMode ? chosen : null;
-  const relationalConnection =
-    !proMode && data?.meta?.storage === "aws-relational";
+  const relationalConnection = data?.meta?.storage === "aws-relational";
   const connectionValue = relationalConnection ? connection.value : undefined;
   const client = useMemo(
     () => {
       if (!data) return null;
-      if (proMode)
-        return new ProFootballDataClient({
-          data,
-          manifest: displayedManifest,
-          leagueId: filters.league,
-          season: chosen,
-        });
       const next = new FootballDataClient({ data, manifest: clientManifest });
       // Relational routes already own one shared connectivity resource. A
       // newly mounted client needs its state, not a new status:<sequence> job
@@ -700,20 +675,17 @@ export function FootballProvider({ children, loadData = true, initialState }) {
       }
       return next;
     },
-    [data, proMode, clientManifest, clientLeague, clientSeason, connectionValue],
+    [data, clientManifest, connectionValue],
   );
   const clientStatus = useResource(
     `status:${client?.id}`,
     async () => {
-      if (proMode) await client.checkStatus();
-      else {
-        client.configured = await primeResource("status:api", readConnection);
-        client.statusKnown = true;
-        // The relational manifest already has the catalogue. Fetching all
-        // provider leagues again only delays competitions and match views.
-        if (loadData && data.meta?.storage !== "aws-relational")
-          await client.init();
-      }
+      client.configured = await primeResource("status:api", readConnection);
+      client.statusKnown = true;
+      // The relational manifest already has the catalogue. Fetching all
+      // provider leagues again only delays competitions and match views.
+      if (loadData && data.meta?.storage !== "aws-relational")
+        await client.init();
       return client.configured;
     },
     Boolean(client) && !relationalConnection,
@@ -750,7 +722,6 @@ export function FootballProvider({ children, loadData = true, initialState }) {
   const searchDataKey = `season:${chosen}:all:${versions.all}:all:full`;
   function searchData() {
     const fullSeason =
-      !proMatchPage &&
       !pagedMatches &&
       !compactMode &&
       loadData &&
@@ -869,7 +840,7 @@ export function FootballProvider({ children, loadData = true, initialState }) {
     return get;
   }, [performanceData]);
   useEffect(() => {
-    if (proMode || !loadData || !data || deferSeason) return;
+    if (!loadData || !data || deferSeason) return;
     const cancelProfiles = warmProfiles(data.appearances),
       idle =
         window.requestIdleCallback ||
@@ -890,37 +861,21 @@ export function FootballProvider({ children, loadData = true, initialState }) {
       cancelProfiles();
       cancelIdle(handle);
     };
-  }, [data, loadData, appearanceIndex, proMode]);
+  }, [data, loadData, appearanceIndex]);
   function changeSeason(value) {
     updateQuery({
       season: value,
       league: "",
       leagues: "",
-      ...(proMode ? { v: "" } : {}),
     });
     setMatchFilter("all");
     setComparison([]);
     setPlayer(null);
   }
   const href = (page, params = {}) => {
-    const targetLeague = params.competition || params.league || filters.league;
-    const targetSeason = params.sourceSeason || params.season || chosen;
-    const candidates =
-      proMode && seasonPage(page) === "/matchs"
-        ? (manifest.value?.editions || []).filter(
-            (edition) =>
-              edition.season === targetSeason &&
-              (!targetLeague ||
-                targetLeague === "all" ||
-                edition.leagueId === targetLeague),
-          )
-        : [];
-    const targetVersion =
-      candidates.length === 1 ? candidates[0].representationToken : null;
     const query = new URLSearchParams({
       season: chosen || "",
       focus,
-      ...(targetVersion ? { v: targetVersion } : {}),
       ...(urlFilters.query ? { q: urlFilters.query } : {}),
       ...(urlFilters.league !== "all" ? { league: urlFilters.league } : {}),
       ...(urlFilters.minutes !== 1
@@ -1106,7 +1061,6 @@ export function FootballProvider({ children, loadData = true, initialState }) {
   }, [preferencesReady, chosen, initial, currentPage]);
   const value = {
     data,
-    pro: proMode,
     compactMode,
     compactKind,
     actorScope,

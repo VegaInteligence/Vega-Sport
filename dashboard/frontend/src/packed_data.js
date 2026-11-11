@@ -28,19 +28,6 @@ export function rowFactory(keys, dictionaries = {}) {
     return row;
   });
 }
-/** Copies `keys` from a row and appends `extra` fields read from a second object. */
-export function rowCopier(keys, extra = []) {
-  const fields = [
-    ...keys.map((key) => `${JSON.stringify(key)}: r[${JSON.stringify(key)}]`),
-    ...extra.map((key) => `${JSON.stringify(key)}: x[${JSON.stringify(key)}]`),
-  ];
-  return generated(["r", "x"], `return {${fields.join(",")}};`, (r, x) => {
-    const row = {};
-    for (const key of keys) row[key] = r[key];
-    for (const key of extra) row[key] = x[key];
-    return row;
-  });
-}
 export function decodeTables(payload) {
   if (payload.format !== "orion-packed-tables-v1")
     throw new Error("Format des données indisponible");

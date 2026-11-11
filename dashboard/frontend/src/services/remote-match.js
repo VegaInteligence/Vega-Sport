@@ -6,7 +6,6 @@ const unsupported = (error) =>
 
 /** Compatibility fallbacks apply to absent endpoints, not transient failures. */
 export async function loadRemoteMatch(id, client, readArchive, options = {}) {
-  if (client.pro) return client.summary(id, options);
   try {
     const summary = await readArchive(
       "/api/matches/" + encodeURIComponent(id) + "/summary",
