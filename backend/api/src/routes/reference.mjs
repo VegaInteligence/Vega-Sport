@@ -43,12 +43,17 @@ export async function standings(req, p, read) {
 /** The standings body of a competition (and season), or a 404. */
 export async function standingsBody(read, competition, season) {
   // Without a season: the current edition (else the latest one), as the legacy projection.
+  // The league's editions by their key, then the rows of the one kept: named by the
+  // league's public id, which the view computes for each row, the tables of every edition
+  // of the base were built before one was kept (0.15 s on 11 November 2026).
   const rows = await read(
     `WITH edition AS (
-       SELECT competition_season_id FROM api.standing_rows
-       WHERE league_id=$1 AND ($2::text IS NULL OR season=$2 OR native_label=$2)
-       GROUP BY competition_season_id,season,is_current ORDER BY bool_or(is_current) DESC,season DESC LIMIT 1)
-     SELECT r.* FROM api.standing_rows r JOIN edition USING(competition_season_id)
+       SELECT k.competition_season_id FROM api.edition_keys k
+       CROSS JOIN LATERAL (SELECT r.season,r.native_label,r.is_current FROM api.standing_rows r
+         WHERE r.competition_season_id=k.competition_season_id LIMIT 1) s
+       WHERE k.league_id=$1 AND ($2::text IS NULL OR s.season=$2 OR s.native_label=$2)
+       ORDER BY s.is_current DESC,s.season DESC LIMIT 1)
+     SELECT r.* FROM api.standing_rows r WHERE r.competition_season_id=(SELECT competition_season_id FROM edition)
      ORDER BY r.stage NULLS FIRST,r.group_name NULLS FIRST,r.position,r.name`,
     [competition, season ?? null],
   );
