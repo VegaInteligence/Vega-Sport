@@ -252,7 +252,9 @@ export function TitleRace({ tables, competitions, initial }) {
                 <strong>{t.name}</strong>
                 <small>
                   {i
-                    ? `−${leader.points - t.points} pts`
+                    ? leader.points > t.points
+                      ? `−${leader.points - t.points} pts`
+                      : "À égalité"
                     : second && leader.points > second.points
                       ? `+${leader.points - second.points} pts d’avance`
                       : "À égalité"}{" "}

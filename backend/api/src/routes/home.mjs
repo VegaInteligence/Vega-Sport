@@ -1,8 +1,9 @@
 /**
  * The home page in two reads (doc "Accueil et personnalisation", "Ce qui change en v2"):
  * - GET /api/read/home, the common read: the week's results, the match and player of the
- *   week, the mini tables, the season leaders, the big upcoming matches by editorial
- *   weight and the season markers. It depends on the scope and the time only, so
+ *   week, the mini tables (the title race's leagues and the European cups' league phase),
+ *   the season leaders, the big upcoming matches by editorial weight and the season
+ *   markers. It depends on the scope and the time only, so
  *   CloudFront keeps one entry per scope, served stale while it is computed again
  *   (stale-while-revalidate); a new publication changes its cache key (generation);
  * - GET /api/read/home-favourites, the personal read: the favourites' upcoming matches
@@ -71,6 +72,17 @@ const bigClubs = "(SELECT clubs FROM lists)::text[]",
   topFive = "(SELECT top_five FROM lists)::text[]",
   topSeven = "(SELECT top_seven FROM lists)::text[]",
   simpleLeagues = "(SELECT title_race FROM lists)::text[]";
+// A European cup's league phase: its numbered rounds ("4", "League Stage - Round 4"),
+// never a play-off nor a knock-out tie (1/8, 1/4, 1/2, final). Its table joins the title
+// race only: the ranks, the streak, the defences and the season's progress stay those of
+// the leagues.
+const leaguePhase = (alias) =>
+  `(${alias}.league_id=ANY(${uefa}) AND NOT coalesce(${alias}.has_playoff,false) AND ${alias}.round_name ~* '^(league stage - round )?[0-9]+$')`;
+const notCup = (column = "league_id") => `NOT ${column}=ANY(${uefa})`;
+// The title race's order: the Top 7, the Champions, Europa and Conference Leagues, then the
+// other leagues by name.
+const tableOrder = (alias) =>
+  `coalesce(array_position(${topSeven},${alias}.league_id),50+array_position(${uefa},${alias}.league_id),99),${normalizedSql("c.name")},${alias}.league_id`;
 const scoreSql = (value) => `(${finiteSql(value)} AND ${value}>=0 AND ${value}=trunc(${value}))`;
 const jsonRows = (sql) => `(SELECT coalesce(jsonb_agg(to_jsonb(r)),'[]'::jsonb) FROM (${sql}) r)`;
 const oneRow = (sql) => `(SELECT to_jsonb(r) FROM (${sql}) r)`;
@@ -162,9 +174,10 @@ ${weekSql(fixtureScope, fence, instant, filters.archive)}, league_sides AS MATER
  (f.status='finished' AND ${scoreSql("f.score_home")} AND ${scoreSql("f.score_away")}) scored
  FROM fixtures f CROSS JOIN LATERAL (VALUES(f.home_team_id,f.home_name,f.home_image_url,f.score_home,f.score_away),
  (f.away_team_id,f.away_name,f.away_image_url,f.score_away,f.score_home)) s(team_id,name,image_url,gf,ga)
- WHERE f.league_id=ANY(${simpleLeagues}) AND f.home_team_id IS NOT NULL AND f.away_team_id IS NOT NULL AND f.home_team_id<>f.away_team_id
+ WHERE (f.league_id=ANY(${simpleLeagues}) OR ${leaguePhase("f")}) AND f.home_team_id IS NOT NULL AND f.away_team_id IS NOT NULL AND f.home_team_id<>f.away_team_id
 ), league_teams AS (
- SELECT DISTINCT ON(league_id,team_id) league_id,team_id,name,image_url FROM league_sides ORDER BY league_id,team_id,day NULLS LAST,id
+ SELECT DISTINCT ON(league_id,team_id) league_id,team_id,name,image_url,count(*) OVER(PARTITION BY league_id,team_id)::int scheduled
+ FROM league_sides ORDER BY league_id,team_id,day NULLS LAST,id
 ), game_points AS (
  SELECT s.*,CASE WHEN gf>ga THEN 3 WHEN gf=ga THEN 1 ELSE 0 END points,
  CASE WHEN gf>ga THEN 'W' WHEN gf=ga THEN 'D' ELSE 'L' END outcome,
@@ -188,12 +201,15 @@ ${weekSql(fixtureScope, fence, instant, filters.archive)}, league_sides AS MATER
  SELECT r.*,row_number() OVER(PARTITION BY league_id ORDER BY points DESC,difference DESC,goals_for DESC,${normalizedSql("r.name")},r.name COLLATE "C",team_id)::int rank
  FROM league_rows r
 ), ranks AS MATERIALIZED (
- SELECT DISTINCT ON(team_id) * FROM ranked ORDER BY team_id,league_id
+ SELECT DISTINCT ON(team_id) * FROM ranked WHERE ${notCup()} ORDER BY team_id,league_id
 ), table_totals AS MATERIALIZED (
- SELECT league_id,count(*)::int team_count,max(played) played,greatest(0,(count(*)-1)*2)::int games FROM ranked GROUP BY league_id
+ -- A league's season: two games against every other side. A cup's league phase: the
+ -- games its sides have on the calendar so far (UEFA publishes its rounds as they come).
+ SELECT league_id,count(*)::int team_count,max(played) played,
+ (CASE WHEN ${notCup()} THEN greatest(0,(count(*)-1)*2) ELSE max(scheduled) END)::int games FROM ranked GROUP BY league_id
 ), displayed_tables AS (
  SELECT t.* FROM table_totals t LEFT JOIN api.competitions c ON c.id=t.league_id
- WHERE t.played>0 AND t.team_count>=4 ORDER BY coalesce(array_position(${topSeven},t.league_id),99),${normalizedSql("c.name")},t.league_id LIMIT 8
+ WHERE t.played>0 AND t.team_count>=4 ORDER BY ${tableOrder("t")} LIMIT 10
 ), weekly AS MATERIALIZED (
  SELECT m.*,${weight("m", "home_id", "away_id")} editorial_weight,
  api.home_weight_v1('showcase',m.league_id,m.home_id,m.away_id,rh.rank,ra.rank,
@@ -282,9 +298,9 @@ week_apps AS MATERIALIZED (
  row_number() OVER(ORDER BY editorial_weight DESC,kickoff,id) highlight_order
  FROM upcoming_candidates u
 ), streak AS MATERIALIZED (
- SELECT * FROM ranked WHERE streak>=3 ORDER BY streak DESC,rank,league_id LIMIT 1
+ SELECT * FROM ranked WHERE streak>=3 AND ${notCup()} ORDER BY streak DESC,rank,league_id LIMIT 1
 ), defence_candidates AS (
- SELECT r.*,goals_against/played per_game FROM ranked r WHERE played>=5
+ SELECT r.*,goals_against/played per_game FROM ranked r WHERE played>=5 AND ${notCup("r.league_id")}
 ), distinct_defences AS (
  SELECT DISTINCT ON(team_id) * FROM defence_candidates ORDER BY team_id,per_game,clean_sheets DESC,league_id,rank
 ), defences AS (SELECT * FROM distinct_defences ORDER BY per_game,clean_sheets DESC,league_id,rank LIMIT 3),
@@ -330,7 +346,7 @@ SELECT publication.*,
  'ratedMin',(SELECT rated_min FROM rating_minimum)) leaders,
  (SELECT coalesce(jsonb_agg(jsonb_build_object('leagueId',t.league_id,'played',t.played,'games',t.games,'teamCount',t.team_count,
  'rows',(SELECT jsonb_agg(${tableRow("r")} ORDER BY r.rank) FROM ranked r WHERE r.league_id=t.league_id AND r.rank<=6))
- ORDER BY coalesce(array_position(${topSeven},t.league_id),99),${normalizedSql("c.name")},t.league_id),'[]'::jsonb)
+ ORDER BY ${tableOrder("t")}),'[]'::jsonb)
  FROM displayed_tables t LEFT JOIN api.competitions c ON c.id=t.league_id) tables,
  (SELECT coalesce(jsonb_agg(jsonb_build_array(team_id,jsonb_build_object('id',team_id,'rank',rank,'leagueId',league_id,'form',form)) ORDER BY team_id),'[]'::jsonb) FROM ranks) ranks,
  (SELECT ${tableRow("s")} FROM streak s) streak,
@@ -338,7 +354,7 @@ SELECT publication.*,
  ${jsonRows(`SELECT * FROM upcoming ORDER BY highlight_order LIMIT ${UPCOMING_OFFERED}`)} highlights,
  (SELECT to_jsonb(r) FROM rules r) rules,
  ${oneRow("SELECT u.* FROM upcoming u JOIN streak s ON s.team_id IN(u.home_team_id,u.away_team_id) ORDER BY u.highlight_order LIMIT 1")} streak_next,
- (SELECT coalesce(avg(least(1,played::float8/games)),0) FROM table_totals t WHERE games>0
+ (SELECT coalesce(avg(least(1,played::float8/games)),0) FROM table_totals t WHERE games>0 AND ${notCup()}
  AND (league_id=ANY(${topFive}) OR NOT EXISTS(SELECT 1 FROM table_totals WHERE games>0 AND league_id=ANY(${topFive})))) season_progress,
  EXISTS(SELECT 1 FROM season_players) has_season_players,
  (EXISTS(SELECT 1 FROM champions_stages WHERE stage ~ '^(1/2|semi ?finals?|demi finales?|final|finale)$' AND finished)
