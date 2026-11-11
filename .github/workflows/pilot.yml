@@ -80,7 +80,10 @@ jobs:
             python -m vega.pilot --max-matches "$scope" --resume --profile-limit 2 --interval 0.25 --report work/vega-v2-pilot.md
           fi
       - name: Worker loop on the real J-1..J+7 calendars, local PostgreSQL only
-        run: python -m vega.worker --max-jobs 700 --interval 0.25 --cohort-delay 0 --report work/vega-v2-worker.md
+        # 700 jobs at most, fewer when the calendars give fewer: --until-idle ends the loop
+        # once nothing is due. Without it the loop waited for jobs that never came, up to
+        # the job's time limit (two runs cancelled at 100 minutes on 11 November 2026).
+        run: python -m vega.worker --max-jobs 700 --until-idle --interval 0.25 --cohort-delay 0 --report work/vega-v2-worker.md
       - name: Export measurements only
         if: always()
         uses: actions/upload-artifact@v4
