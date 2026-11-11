@@ -58,6 +58,10 @@ gh api -X PUT repos/VegaInteligence/Vega-Sport/environments/v2-production
 
 `deploy-roles.yaml` creates `vega-v2-deploy` (assumable only by the **Deploy** workflow of this repository, in the `v2-production` environment, through the existing GitHub OIDC provider) and `vega-v2-cloudformation` (the service role CloudFormation uses, limited to the `vega-v2-*` resources). Both trusts name the workflow: after renaming a workflow, deploy this stack again before the workflow runs.
 
+A stack the workflow has changed once keeps `vega-v2-cloudformation` as its role: later changes use it from a workstation too, where the script passes no role. A template change that needs a permission the role lacks therefore stops both paths, and its rollback fails the same way (the live stack on 10 November 2026: the role could not renew the browser key). Add the permission to `deploy-roles.yaml` and deploy that stack first; `aws iam simulate-principal-policy --policy-source-arn arn:aws:iam::361769570630:role/vega-v2-cloudformation --action-names … --resource-arns …` tells beforehand (an action that takes no resource answers only when asked with `*`). A stack left in `UPDATE_ROLLBACK_FAILED` is recovered, once the role is right, with `aws cloudformation continue-update-rollback --stack-name <stack>`.
+
+A run is checked on what it deployed, not on its colour: its log ends with `done`, and `aws lambda get-function-configuration --function-name vega-v2-api --query LastModified` gives the time of the run.
+
 ### Deploy
 
 From a workstation:
@@ -125,10 +129,10 @@ The base (`vega-football-db-postgres`) was filled from the sources themselves; t
 - The scheduled workflows of the old path were disabled that day, then deleted from the repository with the old backend's code (Collect football, Build serving tables, Validate production, Inspect database schema, Vega v2 collection on the existing RDS, Verify ingestion).
 - The stack `statarena-backend` is deleted (the API function and its distribution `d317dq37z1tacb.cloudfront.net`).
 - `statarena-postgres` is deleted; its final snapshot is `statarena-final-20261110` (64 GB).
-- The old bucket `statarena-football-333rosky-70db6e5f` keeps `data/sources/` (the archive import reads it); `_migration/`, `data/_migration/`, `data/staging/`, `data/computed/` and `data/raw/` are emptied.
+- The old bucket `statarena-football-333rosky-70db6e5f` had `_migration/`, `data/_migration/`, `data/staging/`, `data/computed/` and `data/raw/` emptied that day; `data/sources/` (the old pipeline's provider responses and source files) stayed, for the archive import, until 11 November (below).
 - The stack `statarena-backend-actions` is deleted; the GitHub OIDC provider it had created is kept (the deploy and pilot roles sign in through it).
 - The API and live functions take their packages from their own release bucket (`vega-v2-releases-…`); until the repository's clean-up of 10 November they took them from the old one (`statarena-backend-releases-…`).
-- The pinned archive sources the import reads (52 files) were copied into the release bucket on 11 November 2026, identical file for file; nothing of the stack reads the old bucket `statarena-football-333rosky-70db6e5f` any more.
+- The pinned archive sources the import reads (52 files) were copied into the release bucket on 11 November 2026, identical file for file; nothing of the stack reads the old bucket any more (checked again that day on the deployed stacks, task definitions, functions, parameters and roles); its deletion is the owner's.
 - Kept on purpose until the backfill has finished: the final snapshot `statarena-final-20261110`.
 - Not served yet: `/api/player-market-values` (the player page's value card answers "Données indisponibles").
 
