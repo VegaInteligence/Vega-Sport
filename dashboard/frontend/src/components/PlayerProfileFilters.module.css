@@ -55,25 +55,69 @@
   text-decoration: underline;
   text-underline-offset: 0.18em;
 }
-@media (max-width: 480px) {
+/* Phones: one row of pills that scrolls sideways. The season's label is read,
+   not shown; a date keeps its label, inside its pill. */
+@media (max-width: 640px) {
   .filters {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.6rem;
+    position: relative;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    margin-inline: calc(var(--page-gutter) * -1);
+    padding: 0.5rem var(--page-gutter);
+    overflow-x: auto;
+    scrollbar-width: none;
   }
-  .filters > :not(.field) {
-    grid-column: 1 / -1;
+  .filters::-webkit-scrollbar {
+    display: none;
+  }
+  .filters > * {
+    flex: none;
   }
   .filters .season {
-    width: 100%;
+    flex: none;
+    min-width: 0;
+  }
+  .filters .season > label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .filters .season > div {
+    height: 40px;
+    border-radius: 20px;
+  }
+  .filters .season select {
+    flex: none;
+    width: auto;
+    min-height: 0;
+    padding: 0 34px 0 14px;
+    field-sizing: content;
   }
   .field {
-    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 6px 0 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: 20px;
+    background: var(--surface);
   }
-  .field input {
-    width: 100%;
+  .field label {
+    font-size: var(--text-sm);
+  }
+  .filters .field input {
+    min-height: 0;
+    height: 100%;
+    padding: 0 4px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
   }
   .clear {
-    justify-self: start;
+    min-height: 40px;
   }
 }

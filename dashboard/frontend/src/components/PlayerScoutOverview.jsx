@@ -1,6 +1,7 @@
 "use client";
 import React, { useMemo, useState } from "react";
 import { Segments } from "./UI.jsx";
+import { useCardFold } from "./PhoneFold.jsx";
 import {
   cohortTraits,
   roleAssessments,
@@ -174,17 +175,20 @@ const shortDate = (value) =>
       )
     : "—";
 
-function Card({ title, text, actions, children }) {
+/** `fold`: on a phone the card shows closed, its heading alone (PhoneFold). */
+function Card({ title, text, actions, children, fold = false }) {
+  const f = useCardFold(fold, title);
   return (
-    <section className={s.card}>
-      <div className={s.cardHead}>
+    <section className={s.card} {...f.section}>
+      <div className={s.cardHead} {...f.head}>
         <div>
           <h3>{title}</h3>
-          {text && <p>{text}</p>}
+          {text && <p className={f.part || undefined}>{text}</p>}
         </div>
         {actions}
+        {f.button}
       </div>
-      {children}
+      {f.wrap(children)}
     </section>
   );
 }
@@ -527,6 +531,7 @@ export default function PlayerScoutOverview({
         </Card>
         <div className={s.stack}>
           <Card
+            fold
             title="Indice Vega par rôle"
             text="Moyenne des centiles des indicateurs de chaque rôle, sur 100."
           >
@@ -560,6 +565,7 @@ export default function PlayerScoutOverview({
             </Pending>
           </Card>
           <Card
+            fold
             title="Scores par compétence"
             text="Synthèse sur 100 des indicateurs classés de chaque famille."
           >

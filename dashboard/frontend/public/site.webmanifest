@@ -3,8 +3,8 @@
   "short_name": "Vega",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#0E0F12",
+  "theme_color": "#0E0F12",
   "icons": [
     {
       "src": "/api/vega-image?kind=icon&size=192",

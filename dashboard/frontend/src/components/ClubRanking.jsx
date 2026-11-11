@@ -15,7 +15,7 @@ function editionLabel(edition) {
 export default function ClubRanking({ clubId }) {
   const result = useResource(`club-ranking:${clubId}`, () => clubRanking(clubId));
   return (
-    <Card title="Classement UEFA" className="club-ranking">
+    <Card fold title="Classement UEFA" className="club-ranking">
       <AsyncState resource={result}>
         {(rows) =>
           rows ? (

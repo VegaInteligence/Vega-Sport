@@ -56,6 +56,7 @@ async function standings(table, reads, source = "SportScore") {
     "../hooks/FootballContext.jsx": { useFootball: football },
     "./UI.jsx": { Empty: ({ children }) => e("div", { "data-empty": "" }, children), Media: () => null },
     "./NationalFlag.jsx": { __esModule: true, default: () => null },
+    "./PhoneFold.jsx": { usePhoneFold: () => ({ fold: {}, toggle: {} }), PhoneFoldToggle: () => null },
     "../services/national-flags.js": { nationalFlagCode: () => null },
     "../services/format.js": { normalizeText: (value) => String(value).toLowerCase(), number: String, date: String, seasonLabel: String },
     "../services/resources.js": {

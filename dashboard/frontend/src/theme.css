@@ -26,6 +26,20 @@
   --page-gutter: 24px;
   --section-gap: 20px;
 }
+/* Phones: the desktop scale (10 to 13px) is too small to read at arm's length,
+   and a 34px control is too small for a thumb. Text steps up two pixels, to a
+   12px floor and a 15px body; titles keep their size. */
+@media (max-width: 640px) {
+  :root {
+    --text-2xs: 12px;
+    --text-xs: 13px;
+    --text-sm: 14px;
+    --text-md: 15px;
+    --text-lg: 17px;
+
+    --control-h: 44px;
+  }
+}
 :root,
 html[data-theme="dark"] {
   color-scheme: dark;

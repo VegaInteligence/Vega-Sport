@@ -152,6 +152,12 @@
   align-items: center;
   gap: 10px;
 }
+/* The label around a row's compare box: its tap area on a phone. */
+.research-check {
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+}
 .icon-button,
 .metric-info {
   display: inline-flex;
@@ -465,7 +471,7 @@
 }
 .research-traits dd small {
   display: block;
-  font-size: 10px;
+  font-size: var(--text-2xs);
   color: var(--muted);
 }
 .research-role-scores > div {
@@ -513,7 +519,7 @@
   white-space: nowrap;
 }
 .research-index-score small {
-  font-size: 10px;
+  font-size: var(--text-2xs);
   font-weight: 400;
 }
 .research-editor {

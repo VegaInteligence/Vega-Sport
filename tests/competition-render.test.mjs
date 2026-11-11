@@ -75,6 +75,7 @@ test("competition page renders a result-derived league table and its limits", as
   };
   stubs["./UI.jsx"] = UI;
   stubs["./NationalFlag.jsx"] = { __esModule: true, default: () => null };
+  stubs["./PhoneFold.jsx"] = { usePhoneFold: () => ({ fold: {}, toggle: {} }), PhoneFoldToggle: () => null };
   stubs["../services/national-flags.js"] = { nationalFlagCode: () => null };
   const standingsFile = path.join(root, "dashboard/frontend/src/components/CompetitionStandings.jsx");
   const standingsSource = await fs.readFile(standingsFile, "utf8");

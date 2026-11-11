@@ -39,7 +39,7 @@ export function ClubFacts({ club, matches }) {
     : null;
   const alias = wiki?.stadiumAlias;
   return (
-    <Card title="Le club en bref" className="club-facts-card">
+    <Card fold title="Le club en bref" className="club-facts-card">
       {result.loading ? (
         <div data-page-loading="" className="loading-state" role="status">
           Chargement des informations du club…

@@ -1,0 +1,297 @@
+/* Phone layout (640px and under): the pieces every page shares. Loaded last,
+   so these rules win over a page's own at equal weight. */
+
+/* A group of filters. On a wide screen the group is transparent: its children
+   lay out as they did. On a phone it is one row of pills that scrolls
+   sideways, edge to edge, where fields used to stack under one another. */
+.filter-rail {
+  display: contents;
+}
+/* A fold (PhoneFold.jsx): on a wide screen its parts always show, and neither
+   its button nor the row that holds it exists. */
+.phone-fold-toggle,
+.phone-fold-row.phone-fold-row {
+  display: none;
+}
+/* The body of a card that folds, and the wrapper of the standings' legend: no
+   box of their own. */
+.phone-fold-body,
+.standings-legend-fold {
+  display: contents;
+}
+/* In the competitions directory the scope stays first on a wide screen. */
+.competition-directory-toolbar .competition-scope-button {
+  order: -1;
+}
+
+@media (max-width: 640px) {
+  /* Positioned: a label hidden for the eye (absolute, 1px) inside the row
+     scrolls with it; left to the page, it would widen the page itself. */
+  .filter-rail {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-inline: calc(var(--page-gutter) * -1);
+    padding-inline: var(--page-gutter);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filter-rail::-webkit-scrollbar {
+    display: none;
+  }
+  .filter-rail > * {
+    flex: none;
+  }
+
+  /* A pill: a select, a toggle or a button of a rail. A select is as wide as
+     its chosen value where the browser can size it so, and is capped
+     otherwise. */
+  .filter-rail .filter-input-wrap,
+  .filter-rail .competition-scope-button,
+  .filter-rail .button,
+  .filter-rail .club-directory-select select,
+  .home-toolbar-filters .filter-input-wrap,
+  .home-toolbar-filters .button,
+  .competition-detail-controls select,
+  .player-ranking-field select {
+    height: 40px;
+    min-height: 40px;
+    border-radius: 20px;
+  }
+  .filter-rail .filter-field {
+    flex: none;
+    min-width: 0;
+  }
+  .filter-rail .filter-input-wrap select,
+  .home-toolbar-filters .filter-input-wrap select {
+    flex: none;
+    width: auto;
+    max-width: 240px;
+    padding: 0 34px 0 14px;
+    field-sizing: content;
+  }
+  .filter-rail .competition-scope-button {
+    padding: 0 14px;
+  }
+  /* The scope comes first: it frames the other filters. */
+  .filter-rail > .competition-scope-button:not(.advanced-toggle) {
+    order: -1;
+  }
+
+  /* A search field takes the same rounded shape, on its own row. */
+  .filter-search .filter-input-wrap,
+  .club-directory-search {
+    border-radius: 22px;
+  }
+  .filter-search .filter-input-wrap > .icon:first-child,
+  .club-directory-search > .icon:first-child {
+    left: 14px;
+  }
+  .filter-search .filter-input-wrap input:not([type="checkbox"]),
+  .club-directory-search input:not([type="checkbox"]) {
+    padding-left: 38px;
+  }
+
+  /* Filter panel (players, calendar, competitions): the search, then the rail. */
+  .filter-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  /* Clubs directory: the same two rows; a select's label is read, not shown. */
+  .club-directory-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .filter-rail .club-directory-select {
+    display: block;
+  }
+  .filter-rail .club-directory-select > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .filter-rail .club-directory-select select {
+    width: auto;
+    max-width: 240px;
+    padding: 0 12px 0 14px;
+    field-sizing: content;
+  }
+
+  /* Home: the season and the scope sit under the title, as two pills. */
+  .home-toolbar-filters {
+    gap: 8px;
+    margin-left: 0;
+  }
+  .home-toolbar .filter-season {
+    flex: 0 0 auto;
+  }
+  .home-toolbar-filters .button {
+    padding: 0 14px;
+  }
+
+  /* Competitions: the featured leagues are one row to swipe. */
+  .league-spotlight-grid {
+    display: flex;
+    gap: 8px;
+    margin-inline: calc(var(--page-gutter) * -1);
+    padding-inline: var(--page-gutter);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .league-spotlight-grid::-webkit-scrollbar {
+    display: none;
+  }
+  .league-spotlight-item {
+    flex: none;
+    min-height: 56px;
+    padding: 8px 16px 8px 10px;
+    border-radius: 18px;
+  }
+  .league-spotlight-logo {
+    flex-basis: 34px;
+    width: 34px;
+    height: 34px;
+  }
+  .league-spotlight-item > span:last-child {
+    gap: 1px;
+  }
+  .league-spotlight-item strong {
+    white-space: nowrap;
+  }
+  /* A competition's season and view, and the players table's ranking and
+     basis: one row each; a select's label is read, not shown (its text has no
+     element of its own to hide). */
+  .competition-detail-controls {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .competition-detail-controls::-webkit-scrollbar {
+    display: none;
+  }
+  .competition-detail-controls > * {
+    flex: none;
+  }
+  .competition-detail-controls label,
+  .player-ranking-field {
+    gap: 0;
+    font-size: 0;
+  }
+  .competition-detail-controls select,
+  .player-ranking-field select {
+    width: auto;
+    min-width: 0;
+    padding: 0 12px 0 14px;
+    field-sizing: content;
+  }
+
+  /* A switch in one of these rows is a pill too. */
+  .filter-rail .segmented-control,
+  .competition-detail-controls .segmented-control {
+    border-radius: 20px;
+  }
+  .filter-rail .segmented-control button,
+  .competition-detail-controls .segmented-control button {
+    min-height: 40px;
+    border-radius: 20px;
+  }
+  /* The players table's toolbar: its rail takes the row, the count goes
+     under it. */
+  .player-directory-toolbar {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .player-directory-toolbar .filter-rail {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  /* A fold: closed, its parts are out of the page; its button is a row to
+     press, the arrow turning when it is open. */
+  [data-phone-fold="closed"] .phone-fold-part {
+    display: none;
+  }
+  .phone-fold-row.phone-fold-row {
+    display: block;
+  }
+  .phone-fold-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 14px 0 16px;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: var(--surface-subtle);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    text-align: left;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .phone-fold-toggle .icon {
+    color: var(--muted);
+    transition: transform 0.18s;
+  }
+  .phone-fold-toggle[aria-expanded="true"] .icon {
+    transform: rotate(180deg);
+  }
+  /* A card that folds: its heading is the button, the arrow a round mark at
+     its end. Closed, the heading is all there is. */
+  .phone-fold-toggle.is-icon {
+    flex: none;
+    justify-content: center;
+    width: 44px;
+    min-height: 44px;
+    margin: -10px -10px -10px auto;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+  }
+  [data-phone-fold] > [class*="cardHead"],
+  [data-phone-fold] > .card-header {
+    align-items: center;
+    cursor: pointer;
+  }
+  [data-phone-fold="closed"] > [class*="cardHead"] {
+    margin-bottom: 0;
+  }
+
+  /* Home: a ranking shows its first five rows; the link under it has the rest. */
+  .home-dumbbells > li:nth-child(n + 6),
+  .home-scorers-list > li:nth-child(n + 6) {
+    display: none;
+  }
+  /* Footer: the « Explorer » links are the tab bar's own, always on screen:
+     the footer keeps the three other groups. */
+  .site-footer-main > nav.site-footer-column:first-of-type {
+    display: none;
+  }
+  /* Competitions: each match list shows its first three; « Voir tout » has
+     the rest. */
+  .competition-highlights-card
+    a.competition-highlight-match:nth-of-type(n + 4) {
+    display: none;
+  }
+  /* A fold's button inside a card's body keeps clear of what surrounds it. */
+  .home-defence > .phone-fold-toggle,
+  .home-potw > .phone-fold-toggle {
+    margin: 4px 0;
+  }
+  .standings-legend-fold > .phone-fold-toggle {
+    margin-top: 12px;
+  }
+}

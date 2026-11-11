@@ -2,6 +2,7 @@
 import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
+import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import BallonDorIcon from "./BallonDorIcon.jsx";
 import { Media } from "./UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -442,10 +443,16 @@ export function WinStreak({ streak, competitions, next, now }) {
 /** The meanest defence of the followed leagues. */
 export function BestDefence({ defence, contenders = [], competitions }) {
   const f = useFootball();
+  // On a phone the card opens on the figure and the two rivals.
+  const detail = usePhoneFold();
   if (!defence) return null;
   const c = competitions.get(defence.leagueId);
   return (
-    <article className="card home-trend home-defence" aria-label="Le mur">
+    <article
+      className="card home-trend home-defence"
+      aria-label="Le mur"
+      {...detail.fold}
+    >
       <Kicker>Le mur</Kicker>
       <Link
         className="home-defence-main"
@@ -467,7 +474,8 @@ export function BestDefence({ defence, contenders = [], competitions }) {
           </span>
         </div>
       </Link>
-      <dl className="home-defence-stats">
+      <PhoneFoldToggle {...detail.toggle} label="Ses chiffres" />
+      <dl className="home-defence-stats phone-fold-part">
         <div>
           <dt>Matchs joués</dt>
           <dd>{number(defence.played)}</dd>

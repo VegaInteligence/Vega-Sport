@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import React, { useState } from "react";
+import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import Icon from "./Icon.jsx";
 import { Media, Segments } from "./UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -23,10 +24,12 @@ export function PlayerOfTheWeek({
 }) {
   const f = useFootball(),
     p = performance;
+  // On a phone the card opens on the three figures; the rest unfolds on demand.
+  const detail = usePhoneFold();
   if (!p) return null;
   const duels = (p.duelsWon || 0) + (p.duelsLost || 0);
   return (
-    <article className="card home-potw">
+    <article className="card home-potw" {...detail.fold}>
       <span className="home-potw-ghost" aria-hidden="true">
         {lastName(p.name)}
       </span>
@@ -65,7 +68,8 @@ export function PlayerOfTheWeek({
           <span>Passes déc.</span>
         </div>
       </div>
-      <dl className="home-potw-stats">
+      <PhoneFoldToggle {...detail.toggle} label="Ses chiffres du match" />
+      <dl className="home-potw-stats phone-fold-part">
         <div>
           <dt>xG</dt>
           <dd>{number(p.xg, 2)}</dd>
@@ -102,7 +106,7 @@ export function PlayerOfTheWeek({
         </div>
       </dl>
       {recent.length > 1 && (
-        <div className="home-potw-form">
+        <div className="home-potw-form phone-fold-part">
           <span className="home-potw-label">Ses derniers matchs</span>
           <ol>
             {recent.map((r) => (
@@ -123,7 +127,7 @@ export function PlayerOfTheWeek({
         </div>
       )}
       {season && (
-        <p className="home-potw-season">
+        <p className="home-potw-season phone-fold-part">
           Sur la saison : <b>{plural(season.goals, "but")}</b>,{" "}
           <b>{plural(season.assists, "passe")}</b>
           {season.rating != null && (

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { Empty, Media } from "./UI.jsx";
+import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import NationalFlag from "./NationalFlag.jsx";
 import { nationalFlagCode } from "../services/national-flags.js";
 import {
@@ -110,24 +111,33 @@ function useEuropeanPlaces(competition, season) {
   }, [ranking.value, running.value, country, year]);
 }
 function ZoneLegend({ zones, places }) {
+  // On a phone the legend opens on demand, under the table.
+  const legend = usePhoneFold();
   const items = legendZones(zones);
   if (!items.length) return null;
   return (
-    <div className="standings-legend" aria-label="Légende du classement">
-      {items.map((zone) => (
-        <span key={zone} data-zone={zone}>
-          <i aria-hidden="true" />
-          {ZONES[zone].label}
-        </span>
-      ))}
-      {places?.rank && (
-        <small>
-          Places européennes selon le classement UEFA des pays ({places.rank}
-          <sup>{places.rank === 1 ? "er" : "e"}</sup>
-          {places.performanceSpot ? ", place de performance européenne" : ""}
-          {places.provisional ? ", provisoire" : ""}), hors vainqueurs de coupe.
-        </small>
-      )}
+    <div className="standings-legend-fold" {...legend.fold}>
+      <PhoneFoldToggle {...legend.toggle} label="Légende du classement" />
+      <div
+        className="standings-legend phone-fold-part"
+        aria-label="Légende du classement"
+      >
+        {items.map((zone) => (
+          <span key={zone} data-zone={zone}>
+            <i aria-hidden="true" />
+            {ZONES[zone].label}
+          </span>
+        ))}
+        {places?.rank && (
+          <small>
+            Places européennes selon le classement UEFA des pays ({places.rank}
+            <sup>{places.rank === 1 ? "er" : "e"}</sup>
+            {places.performanceSpot ? ", place de performance européenne" : ""}
+            {places.provisional ? ", provisoire" : ""}), hors vainqueurs de
+            coupe.
+          </small>
+        )}
+      </div>
     </div>
   );
 }

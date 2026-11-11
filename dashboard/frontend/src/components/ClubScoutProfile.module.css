@@ -211,3 +211,31 @@
 .radarBox > * {
   width: 100%;
 }
+/* Phones: the label, then one row of pills that scrolls sideways, where the
+   three controls used to stack. */
+@media (max-width: 640px) {
+  .compareBar {
+    padding: 10px 14px 12px;
+  }
+  .compareRow {
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-inline: -14px;
+    padding-inline: 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .compareRow::-webkit-scrollbar {
+    display: none;
+  }
+  .compareRow > * {
+    flex: none;
+  }
+  .compareRow :global(.segmented-control) {
+    border-radius: 20px;
+  }
+  .compareRow :global(.segmented-control) button {
+    min-height: 40px;
+    border-radius: 20px;
+  }
+}

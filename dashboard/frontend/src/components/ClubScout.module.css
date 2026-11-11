@@ -787,7 +787,7 @@
 }
 @container (max-width: 620px) {
   .matchRow {
-    grid-template-columns: 52px 24px minmax(0, 1fr) 44px 92px;
+    grid-template-columns: 52px 28px minmax(0, 1fr) 44px 92px;
   }
   .matchRow > :nth-child(6) {
     display: none;
@@ -795,7 +795,7 @@
 }
 @container (max-width: 380px) {
   .matchRow {
-    grid-template-columns: 48px 22px minmax(0, 1fr) 44px;
+    grid-template-columns: 48px 28px minmax(0, 1fr) 44px;
   }
   .matchRow > :nth-child(5) {
     display: none;
@@ -1144,4 +1144,28 @@
   z-index: 3;
   opacity: 1;
   background: var(--ink);
+}
+/* Phones: the menu button is a pill, and its list a panel fixed above the tab
+   bar: a list hanging under the button would be cut off where the button sits
+   in a row that scrolls sideways. */
+@media (max-width: 640px) {
+  .menuButton {
+    min-width: 0;
+    height: 40px;
+    padding: 0 12px 0 14px;
+    border-radius: 20px;
+  }
+  .menuPanel {
+    position: fixed;
+    top: auto;
+    right: 12px;
+    bottom: calc(var(--tabbar-space) + 10px);
+    left: 12px;
+    z-index: 60;
+    width: auto;
+    max-height: 56dvh;
+    overflow-y: auto;
+    border-radius: 20px;
+    box-shadow: var(--shadow-overlay);
+  }
 }

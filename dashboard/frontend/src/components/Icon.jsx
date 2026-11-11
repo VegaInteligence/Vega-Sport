@@ -27,6 +27,7 @@ import {
   Bookmark,
   GitCompareArrows,
   Save,
+  House,
 } from "lucide-react";
 const icons = {
   search: Search,
@@ -57,6 +58,7 @@ const icons = {
   bookmark: Bookmark,
   compare: GitCompareArrows,
   save: Save,
+  home: House,
 };
 export default function Icon({ name, className = "" }) {
   const Component = icons[name] || CircleDot;

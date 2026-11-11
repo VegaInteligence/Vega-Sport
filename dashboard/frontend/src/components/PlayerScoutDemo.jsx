@@ -6,6 +6,7 @@
  * Replace a block with real data once its source is connected (Linear
  * ORI-11 to ORI-16), then delete it from this file. */
 import React from "react";
+import { useCardFold } from "./PhoneFold.jsx";
 import * as D from "../../app/maquettes/_shared/data.js";
 import {
   MarketPanel as MockMarketPanel,
@@ -49,17 +50,20 @@ export function FakeZone({ text, children }) {
   );
 }
 
+/** A placeholder card: on a phone it shows closed, its heading alone. */
 function FakeCard({ title, text, children }) {
+  const f = useCardFold(true, title);
   return (
-    <section className={s.card}>
-      <div className={s.cardHead}>
+    <section className={s.card} {...f.section}>
+      <div className={s.cardHead} {...f.head}>
         <div>
           <h3>{title}</h3>
-          {text && <p>{text}</p>}
+          {text && <p className={f.part}>{text}</p>}
         </div>
         <FakeBadge />
+        {f.button}
       </div>
-      {children}
+      {f.wrap(children)}
     </section>
   );
 }

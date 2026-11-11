@@ -5,6 +5,7 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { Segments } from "./UI.jsx";
 import { BookmarkButton } from "./ResearchUI.jsx";
+import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import { FakeBadge } from "./PlayerScoutDemo.jsx";
 import ClubInformation from "./ClubInformation.jsx";
 import { PercentilePizza } from "./PlayerScoutCharts.jsx";
@@ -75,8 +76,10 @@ export function IdentityRail({ dossier, onTab }) {
   const self = dossier.self,
     r = self.record;
   const gap = r.points - (self.xptsTotal ?? 0);
+  // On a phone the header opens on the identity and the standing.
+  const more = usePhoneFold();
   return (
-    <aside className={s.rail} aria-label="Identité du club">
+    <aside className={s.rail} aria-label="Identité du club" {...more.fold}>
       <div className={s.identity}>
         <Crest club={dossier} className={`crest ${s.bigCrest}`} />
         <h2 className={s.name}>{dossier.name}</h2>
@@ -129,7 +132,13 @@ export function IdentityRail({ dossier, onTab }) {
           </div>
         </dl>
       </div>
-      <div className={s.railSection}>
+      <div className={`${s.railSection} phone-fold-row`}>
+        <PhoneFoldToggle
+          {...more.toggle}
+          label="Indice Vega, compétitions et effectif"
+        />
+      </div>
+      <div className={`${s.railSection} phone-fold-part`}>
         <div className={s.railTitle}>
           Indice Vega club <span>sur 100</span>
         </div>
@@ -145,7 +154,7 @@ export function IdentityRail({ dossier, onTab }) {
           Détail des indicateurs →
         </button>
       </div>
-      <div className={s.railSection}>
+      <div className={`${s.railSection} phone-fold-part`}>
         <div className={s.railTitle}>Toutes compétitions</div>
         <ul className={s.comps}>
           {competitionRecords(dossier).map((comp) => (
@@ -162,7 +171,7 @@ export function IdentityRail({ dossier, onTab }) {
           ))}
         </ul>
       </div>
-      <div className={s.railSection}>
+      <div className={`${s.railSection} phone-fold-part`}>
         <div className={s.railTitle}>
           Effectif <FakeBadge />
         </div>
@@ -225,6 +234,7 @@ function ExpectedCard({ dossier }) {
   const gaDiff = self.record.ga - (v.xga ?? 0) * self.record.matches;
   return (
       <Card
+        fold
         title="Résultats et attendus"
         text={`Les écarts entre le réel et l’attendu signalent la finition, le gardien ou la réussite : ils tendent à se résorber. À droite, le classement de ${dossier.league?.name || "son championnat"} si chaque match s’était joué selon ses xG.`}
       >
@@ -281,6 +291,8 @@ function ExpectedCard({ dossier }) {
 }
 
 export function Overview({ dossier, onTab, base = dossier }) {
+  // On a phone the profile card opens on the radar.
+  const readingFold = usePhoneFold();
   const self = dossier.self,
     v = self.values,
     total = dossier.clubs.length;
@@ -339,9 +351,13 @@ export function Overview({ dossier, onTab, base = dossier }) {
         title="Profil de performance"
         text={`Centiles face aux ${total} clubs du référentiel (${dossier.league?.name || "son championnat"}). Indicateurs concédés inversés : plus la part est grande, mieux c’est.`}
       >
-        <div className={s.profileGrid}>
+        <div className={s.profileGrid} {...readingFold.fold}>
           <PercentilePizza items={pizza} cohort={total} size={520} />
-          <div className={s.profileSide}>
+          <PhoneFoldToggle
+            {...readingFold.toggle}
+            label="Phases de jeu, points forts et faibles"
+          />
+          <div className={`${s.profileSide} phone-fold-part`}>
             <div>
               <h4 className={s.subTitle}>Indice Vega par phase de jeu</h4>
               <PhaseBars dossier={dossier} phases={PHASES} />
