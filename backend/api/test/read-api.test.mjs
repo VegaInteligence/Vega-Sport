@@ -137,8 +137,16 @@ test("manifest, health and status", { skip }, async () => {
   assert.equal(body.publicationVersion, "7");
   assert.equal(body.defaultSeason, "2025/2026");
   assert.equal(body.capabilities.compactReads.clubs, true);
+  assert.equal(body.schemaVersion, 5);
   const chunk = body.seasons[0].chunks[0];
   assert.equal(chunk.leagueId, "l_3FJFUl");
+  // A league's entry carries what is its own: its competition is in the catalogue, the
+  // publication's date on the manifest (the site puts both back).
+  assert.deepEqual(Object.keys(chunk).sort(), ["leagueId", "meta", "sourceDigest"]);
+  assert.deepEqual(Object.keys(chunk.meta).sort(), ["collectedMatches", "endDate", "expectedFinishedMatches", "matchCount", "retrievedAt", "startDate", "teamCount"]);
+  assert.ok(body.competitions.some((c) => c.id === chunk.leagueId) && body.publishedAt);
+  // What the request spent, for whoever measures it.
+  assert.match(response.headers.get("server-timing"), /^total;dur=\d+\.\d, db;dur=\d+\.\d;desc="4 queries"$/);
   assert.deepEqual(
     [chunk.meta.matchCount, chunk.meta.expectedFinishedMatches, chunk.meta.collectedMatches, chunk.meta.teamCount],
     [6, 5, 5, 4],
@@ -151,6 +159,8 @@ test("manifest, health and status", { skip }, async () => {
   assert.deepEqual(health.body, { source: "AWS", status: "ok", revision: "7" });
   const status = await get("/api/status");
   assert.equal(status.body.schema, "v2");
+  assert.match(status.response.headers.get("server-timing"), /^total;dur=\d+\.\d, db;dur=0\.0;desc="0 queries"$/);
+  assert.match((await get("/api/nothing")).response.headers.get("server-timing"), /^total;dur=/);
   // A constant: the browser keeps it, where every page asked the function for it.
   assert.equal(status.response.headers.get("cache-control"), "public, max-age=3600, s-maxage=3600");
   assert.equal(health.response.headers.get("cache-control"), "no-store");

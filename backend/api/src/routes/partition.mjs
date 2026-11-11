@@ -86,7 +86,8 @@ export function createPartitionRoute(read) {
     const season = params.get("season"),
       league = params.get("league");
     if (!SEASON.test(season || "") || !LEAGUE.test(league || "")) reject(400, "Saison ou compétition invalide.");
-    if (params.has("v") && !/^[a-f0-9]{64}$/.test(params.get("v"))) reject(400, "Version de partition invalide.");
+    // 16 characters, or the 64 of a manifest served before the digest was shortened.
+    if (params.has("v") && !/^[a-f0-9]{16}(?:[a-f0-9]{48})?$/.test(params.get("v"))) reject(400, "Version de partition invalide.");
     const args = pageArgs(params, 25, columns ? ["partition", season, league, "columns"] : ["partition", season, league]);
     const [edition] = await read(
       `SELECT e.*,(SELECT k.season_id FROM api.edition_keys k WHERE k.competition_season_id=e.competition_season_id) AS season_id,
@@ -96,7 +97,7 @@ export function createPartitionRoute(read) {
     );
     if (!edition) reject(404, "Partition introuvable.");
     const digest = editionDigest(edition);
-    if (params.has("v") && params.get("v") !== digest) reject(409, "La publication a changé. Rechargez le catalogue.");
+    if (params.has("v") && params.get("v").slice(0, 16) !== digest) reject(409, "La publication a changé. Rechargez le catalogue.");
     const state = { version: edition.version };
     if (req.method === "HEAD" || req.headers.has("if-none-match")) {
       nextPage([], state, args);
