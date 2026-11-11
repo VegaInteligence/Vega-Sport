@@ -165,6 +165,7 @@ test("manifest, health and status", { skip }, async () => {
   assert.equal(status.response.headers.get("cache-control"), "public, max-age=3600, s-maxage=3600");
   assert.equal(health.response.headers.get("cache-control"), "no-store");
   assert.equal(body.capabilities.compactReads.league, true);
+  assert.deepEqual([body.capabilities.wholeSelection, body.capabilities.playedLeague], [true, true]);
 });
 
 test("the default season is the latest one already started", async () => {

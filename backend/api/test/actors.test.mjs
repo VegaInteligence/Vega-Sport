@@ -79,6 +79,15 @@ test("a league's season: every match once, as each club's summary read gives it"
   assert.deepEqual(second.data.fixtures.map((f) => f.id), d.fixtures.slice(2, 4).map((f) => f.id));
   assert.equal(second.pagination.pages, Math.ceil(d.fixtures.length / 2));
   assert.equal((await get(`/api/read/league?${league}&generation=6`)).response.status, 409);
+  // The finished matches alone: the same records, without the matches to come.
+  const finished = (await get(`/api/read/league?${league}&limit=100&played=1`)).body;
+  const done = d.fixtures.filter((f) => f.status === "finished").map((f) => f.id);
+  assert.ok(done.length > 0 && done.length < d.fixtures.length);
+  assert.deepEqual(finished.data.fixtures.map((f) => f.id), done);
+  assert.equal(finished.pagination.total, done.length);
+  for (const m of finished.data.matches) assert.deepEqual(matches.get(m.id), m);
+  assert.equal((await get(`/api/read/league?${league}&played=0`)).response.status, 400);
+  assert.equal((await get("/api/read/club?season=2025/2026&leagues=all&team=t_aaaaa1&played=1")).response.status, 400);
   // One competition, in the summary detail, without player rows.
   for (const query of ["season=2025/2026&detail=summary", "season=2025/2026&league=l_3FJFUl", `${league}&include=shots`, `${league}&leagues=all`, `${league}&team=t_aaaaa1`])
     assert.equal((await get(`/api/read/league?${query}`)).response.status, 400, query);

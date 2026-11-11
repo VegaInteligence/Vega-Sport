@@ -76,13 +76,28 @@ function option(params, name, values, fallback) {
   return value;
 }
 
+/**
+ * `whole=1`: the selection in pages of this many players, where a page holds 100 at most.
+ * A player's profile compares him with his whole position group: 1,988 midfielders of
+ * the Top 7 and UEFA cups on 11 November 2026. The statement works the whole selection
+ * out before it keeps a page, so twenty pages cost it twenty times (0.15 to 0.4 s each
+ * on the base), against 0.8 s for them all at once.
+ */
+export const WHOLE_PAGE = 3000;
+
 export function parsePlayerRead(params) {
   validateParams(params, [
     "season", "league", "leagues", "generation", "q", "minutes", "pos", "role", "venue", "result",
-    "rmin", "from", "to", "stats", "match", "basis", "sort", "direction", "ranking", "page", "limit",
+    "rmin", "from", "to", "stats", "match", "basis", "sort", "direction", "ranking", "page", "limit", "whole",
   ]);
+  const whole = params.get("whole");
+  if (whole !== null && whole !== "1") reject(400, "Pagination invalide.");
   const scope = parseReadScope(params),
     page = readPageArgs(params);
+  if (whole) {
+    page.limit = WHOLE_PAGE;
+    page.offset = (page.page - 1) * WHOLE_PAGE;
+  }
   const q = (params.get("q") || "").trim();
   if (q.length > 100 || /[\u0000-\u001f\u007f]/.test(q)) reject(400, "Recherche invalide.");
   const positions = params.get("pos") ? [...new Set(params.get("pos").split(","))] : [];
@@ -104,6 +119,7 @@ export function parsePlayerRead(params) {
   return {
     scope,
     ...page,
+    whole: Boolean(whole),
     q,
     positions,
     from,
@@ -662,7 +678,9 @@ export function createPlayerReadRoute(read) {
       { players, teams: snapshot?.teams || [] },
       {
         pagination: { page: filters.page, limit: filters.limit, total, pages: Math.max(1, Math.ceil(total / filters.limit)) },
-        maxBytes: 1024 * 1024,
+        // A whole selection: 330 kB for 100 players on 11 November 2026, so 10 MB for
+        // 3,000; compressed by the transport (about a sixth), within its 6 MB.
+        maxBytes: filters.whole ? 16 * 1024 * 1024 : 1024 * 1024,
       },
     );
   };
