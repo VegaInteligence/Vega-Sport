@@ -73,6 +73,56 @@ export function publicationSql(scope, values) {
       FROM api.editions p WHERE ${predicate}) s`;
 }
 
+const DAY = 86_400_000;
+const sha = (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+
+/**
+ * The version of a read made of a scope's matches: its editions, each with its version
+ * (the collector advances it in the transaction that writes a match of the edition) and
+ * its published counts and date, in 16 hexadecimal characters. A read that names no
+ * publication is validated by it: the publication changes every five minutes while
+ * anything is collected, a backfill included, and what a browser or the distribution
+ * held was read again each time (on 11 November 2026 the ten editions of the European
+ * scope had not changed for twenty hours).
+ *
+ * A club's name and image are not in it (a club's version advances with every match of
+ * every season); the day is, so none stays more than a day. `shape` names the answer's
+ * form: a change of it changes the version, so no kept answer of another form is said
+ * unchanged.
+ */
+export async function scopeVersion(read, shape, scope, now) {
+  const [row] = await read(
+    `SELECT coalesce(json_agg(json_build_array(e.competition_season_id,coalesce(v.version,0),p.retrieved_at,p.match_count,
+        p.finished_count,p.collected_count,p.team_count) ORDER BY e.competition_season_id),'[]'::json) AS editions
+     FROM api.edition_keys e
+     LEFT JOIN api.versions v ON v.resource_kind='competition_season' AND v.resource_id=e.competition_season_id
+     LEFT JOIN api.editions p ON p.competition_season_id=e.competition_season_id
+     WHERE e.season=$1 AND ($2::text[] IS NULL OR e.league_id=ANY($2::text[]))`,
+    [scope.season, scope.leagueIds],
+  );
+  return sha([shape, scope.season, row?.editions ?? [], Math.floor(now / DAY)]).slice(0, 16);
+}
+
+/**
+ * What a read validated by its version answers before working anything out: 409 when
+ * `v` (the version a first page gave) is no longer the version, and "unchanged" to
+ * whoever holds the answer. Gives the answer's validator, and that response if any.
+ */
+export function versionGate(req, params, version, { ttl = 30 } = {}) {
+  const pin = params.get("v");
+  if (pin !== null && pin !== version) reject(409, "Les données ont été actualisées. Rechargez la première page.");
+  const etag = `W/"versioned-${sha([new URL(req.url).pathname, [...params].sort(([a], [b]) => a.localeCompare(b)), version])}"`;
+  const held = req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag);
+  return { version, etag, unchanged: held ? send(req, null, 200, { etag, ttl }) : null };
+}
+
+/** `v` belongs to a read that names no publication, and is a version. */
+export function versionParam(params) {
+  const pin = params.get("v");
+  if (pin !== null && (params.has("generation") || !/^[a-f0-9]{16}$/.test(pin))) reject(400, "Publication invalide.");
+  return !params.has("generation");
+}
+
 export function checkReadGeneration(params, generation) {
   if (generation == null) reject(503, "Publication indisponible.");
   if (params.has("generation") && params.get("generation") !== String(generation))

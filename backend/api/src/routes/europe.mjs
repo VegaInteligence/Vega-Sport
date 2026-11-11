@@ -15,7 +15,16 @@
  * The demo's league offsets and association floors are gone.
  */
 import { reject, validateParams } from "../http.mjs";
-import { bindValue, checkReadGeneration, publicationSql, readResponse, readValidator } from "../publication.mjs";
+import {
+  bindValue,
+  checkReadGeneration,
+  publicationSql,
+  readResponse,
+  readValidator,
+  scopeVersion,
+  versionGate,
+  versionParam,
+} from "../publication.mjs";
 import { TEAM_STAT_KEYS, teamStats } from "../team-stats.mjs";
 import { EUROPE_FOCUS } from "../../../../dashboard/shared/competition-scope.js";
 
@@ -23,6 +32,8 @@ export const POOL_LEAGUES = EUROPE_FOCUS.filter((c) => c.country !== "UEFA");
 export const POOL_CUPS = EUROPE_FOCUS.filter((c) => c.country === "UEFA");
 const SCOPE_IDS = EUROPE_FOCUS.map((c) => c.id).sort();
 const LEAGUE_IDS = POOL_LEAGUES.map((c) => c.id);
+// The form of a competition's pool matches (scopeVersion): to change with it.
+const MATCHES_SHAPE = "europe-matches-1";
 
 // The team statistics the club profiles rank (scripts/demo-europe-clubs.mjs, KEEP).
 const KEPT = new Set([
@@ -62,17 +73,24 @@ const POOL_SQL = (scopeParam, leagues) => `pool AS MATERIALIZED (
     UNION ALL SELECT x.away_internal_id,x.league_id FROM api.fixtures x WHERE ${inEditions("x", scopeParam, leagues)}) s
   WHERE team_id IS NOT NULL GROUP BY team_id,league_id ORDER BY team_id,count(*) DESC,league_id)`;
 
-export function createEuropeRoute(read) {
+export function createEuropeRoute(read, { clock = Date.now } = {}) {
   return async (req, path, params) => {
     if (path !== "/api/clubs/europe" && path !== "/api/clubs/europe/matches") return null;
     if (!["GET", "HEAD"].includes(req.method)) reject(405, "Méthode non autorisée.");
     const matchesRead = path === "/api/clubs/europe/matches";
-    validateParams(params, matchesRead ? ["season", "league", "generation"] : ["season", "generation"]);
+    validateParams(params, matchesRead ? ["season", "league", "generation", "v"] : ["season", "generation"]);
     const label = season(params);
     const league = matchesRead ? params.get("league") : null;
     if (matchesRead && !SCOPE_IDS.includes(league || "")) reject(400, "Compétition invalide.");
     const scope = { season: label, leagueIds: matchesRead ? [league] : SCOPE_IDS };
-    const cached = await readValidator(req, params, scope, read, { ttl: 300 });
+    // A competition's matches read without a publication are validated by the version of
+    // what they are made from: the competition, and the Top 7 leagues that make the pool.
+    const gate =
+      matchesRead && versionParam(params)
+        ? versionGate(req, params, await scopeVersion(read, MATCHES_SHAPE, { season: label, leagueIds: [...new Set([league, ...LEAGUE_IDS])].sort() }, clock()))
+        : null;
+    if (gate?.unchanged) return gate.unchanged;
+    const cached = gate ? null : await readValidator(req, params, scope, read, { ttl: 300 });
     if (cached) return cached;
     const values = [];
     const publication = publicationSql(scope, values);
@@ -132,6 +150,14 @@ export function createEuropeRoute(read) {
       coverage: { teamStatsReliable: Boolean(team_stats_ok) },
       stats: teamStats(strip(home_stats), strip(away_stats), POOL_STAT_KEYS).map(({ key, home, away }) => ({ key, home, away })),
     }));
-    return readResponse(req, params, snapshot, { season: label, leagueId: league, matches }, { maxBytes: 3 * 1024 * 1024, ttl: 300 });
+    return readResponse(
+      req,
+      params,
+      snapshot,
+      { season: label, leagueId: league, matches },
+      // Validated by its version, it is asked again after 30 s (the publication's answer
+      // has another address at each publication, and is kept five minutes).
+      { maxBytes: 3 * 1024 * 1024, ...(gate ? { version: gate.version, etag: gate.etag } : { ttl: 300 }) },
+    );
   };
 }

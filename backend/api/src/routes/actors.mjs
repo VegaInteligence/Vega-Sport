@@ -15,7 +15,19 @@
  * appearance records are those of match-record.mjs and performance.mjs.
  */
 import { reject, validateParams } from "../http.mjs";
-import { EDITIONS_SQL, bindValue, checkReadGeneration, parseReadScope, publicationSql, readPageArgs, readResponse, readValidator } from "../publication.mjs";
+import {
+  EDITIONS_SQL,
+  bindValue,
+  checkReadGeneration,
+  parseReadScope,
+  publicationSql,
+  readPageArgs,
+  readResponse,
+  readValidator,
+  scopeVersion,
+  versionGate,
+  versionParam,
+} from "../publication.mjs";
 import { assembleMatch, matchRecordColumns } from "../match-record.mjs";
 import { fixture } from "./matches.mjs";
 import { appearanceRecord } from "./performance.mjs";
@@ -93,13 +105,16 @@ export function actorQuery(kind, scope, actor, includes, pagination, generation,
   return { sql, values, withAppearances };
 }
 
-export function createActorRoute(read) {
+// The form of a league's answer (scopeVersion): to change with it.
+const LEAGUE_SHAPE = "league-1";
+
+export function createActorRoute(read, { clock = Date.now } = {}) {
   return async (req, path, params) => {
     const kind = { "/api/read/player": "player", "/api/read/club": "club", "/api/read/league": "league" }[path];
     if (!kind) return null;
     if (!["GET", "HEAD"].includes(req.method)) reject(405, "Méthode non autorisée.");
     const actorKey = kind === "player" ? "player" : "team";
-    validateParams(params, kind === "league" ? ["season", "league", "generation", "page", "limit", "detail", "played"] : ["season", "leagues", "league", "generation", actorKey, "page", "limit", "include", "detail"]);
+    validateParams(params, kind === "league" ? ["season", "league", "generation", "page", "limit", "detail", "played", "v"] : ["season", "leagues", "league", "generation", actorKey, "page", "limit", "include", "detail"]);
     // `played=1`: the finished matches alone. A club profile ranks the league on them; the
     // matches to come were three of the four pages it read in November.
     const played = params.get("played");
@@ -114,7 +129,11 @@ export function createActorRoute(read) {
     if (kind === "league" && (scope.leagueIds?.length !== 1 || detail !== "summary")) reject(400, "Périmètre invalide.");
     const actor = kind === "league" ? scope.leagueIds[0] : params.get(actorKey);
     if (kind !== "league" && !ACTOR[kind].test(actor || "")) reject(400, "Identifiant invalide.");
-    const cached = await readValidator(req, params, scope, read);
+    // A league read that names no publication is validated by its edition's version: a
+    // club's page keeps the league's matches until one of them changes.
+    const gate = kind === "league" && versionParam(params) ? versionGate(req, params, await scopeVersion(read, LEAGUE_SHAPE, scope, clock())) : null;
+    if (gate?.unchanged) return gate.unchanged;
+    const cached = gate ? null : await readValidator(req, params, scope, read);
     if (cached) return cached;
     const resolved = await resolveActor(read, kind, scope, actor);
     const request = actorQuery(kind, scope, actor, includes, pagination, params.get("generation"), resolved, { played: played === "1" });
@@ -165,6 +184,7 @@ export function createActorRoute(read) {
     return readResponse(req, params, snapshot, data, {
       pagination: { page: pagination.page, limit: pagination.limit, total, pages: Math.max(1, Math.ceil(total / pagination.limit)) },
       maxBytes: 2 * 1024 * 1024,
+      ...(gate && { version: gate.version, etag: gate.etag }),
     });
   };
 }
