@@ -132,10 +132,12 @@ export function createOpsRoute(read, { key = null, clock = Date.now } = {}) {
       ),
       // The queue: everything not finished, with what is due now and what a retry cannot fix.
       read(
-        `SELECT lane, family, state, count(*)::integer AS jobs, min(run_after) AS oldest_run_after,
+        // Grouped on the lane and the state as they are stored: their names are written
+        // once per group, not once per job (764,000 of them on 11 November 2026).
+        `SELECT job_lane::text AS lane, family, job_state::text AS state, count(*)::integer AS jobs, min(run_after) AS oldest_run_after,
                 count(*) FILTER (WHERE job_state = 'pending' AND run_after <= $1)::integer AS due,
                 count(*) FILTER (WHERE job_state = 'failed' AND last_error_code = ANY($2::text[]))::integer AS permanent
-         FROM api.ops_jobs WHERE job_state <> 'done' GROUP BY 1, 2, 3 ORDER BY 1, 2, 3`,
+         FROM api.ops_jobs WHERE job_state <> 'done' GROUP BY job_lane, family, job_state ORDER BY 1, 2, 3`,
         [now, PERMANENT],
       ),
       // Beyond the bound, the matches kept are the ones still waiting for their final score,
@@ -161,7 +163,14 @@ export function createOpsRoute(read, { key = null, clock = Date.now } = {}) {
          WHERE status IN ('published', 'superseded') AND (started_at >= $1 OR finished_at >= $1) GROUP BY 1, 2 ORDER BY 2, 1`,
         [since],
       ),
-      read("SELECT DISTINCT ON (kind) * FROM api.ops_calc_runs ORDER BY kind, started_at DESC"),
+      // The latest run of each kind: its date first, then its row. Every run of the base
+      // was sorted whole to keep nine (84,000 rows, 0.26 s on 11 November 2026).
+      read(
+        `SELECT DISTINCT ON (r.kind) r.* FROM api.ops_calc_runs r
+         JOIN (SELECT kind, max(started_at) AS started_at FROM api.ops_calc_runs GROUP BY kind) l
+           ON l.kind = r.kind AND l.started_at = r.started_at
+         ORDER BY r.kind, r.started_at DESC`,
+      ),
       read(
         `SELECT date_trunc('hour', fetched_at) AS hour, count(*)::integer AS calls,
                 count(*) FILTER (WHERE error_code IS NULL)::integer AS ok,
