@@ -571,13 +571,6 @@ function OverviewContent({
           <HomePreferences f={f} />
         </div>
       </div>
-      {matchWeek?.latest && !archived && (
-        <p className="home-meta" role="status">
-          Aucun match terminé pour l’instant cette semaine (
-          {weekPeriodLabel(fixtureWeek(parisDay(now)))}). Elle remplacera ces
-          résultats dès le premier score.
-        </p>
-      )}
       {!results.length && !archived && (
         <p className="home-meta" role="status">
           Aucun match terminé disponible pour cette semaine.

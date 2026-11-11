@@ -306,7 +306,8 @@ test("a new week keeps the latest played week until its first result", async () 
   });
   assert.match(monday, /Dernière semaine jouée/);
   assert.match(monday, /data-motw="arsenal-match"/);
-  assert.match(monday, /Aucun match terminé pour l’instant cette semaine/);
+  // The last played week stands on its own: no note about the week in progress.
+  assert.doesNotMatch(monday, /Aucun match terminé pour l’instant cette semaine/);
   assert.doesNotMatch(monday, /résultats provisoires/);
   // Results more than 14 days old no longer stand in for the current week.
   const stale = await overview({
