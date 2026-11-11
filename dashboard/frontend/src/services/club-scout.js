@@ -2,9 +2,10 @@
 /**
  * Club profile: real published data, read once per club and generation.
  *
- * The club is read with its shots and appearances; its domestic league is
- * read club by club (summary detail) so every team indicator below can be
- * ranked against the same twenty clubs. Nothing here is fictitious: values
+ * The club is read with its shots and appearances; its domestic league's
+ * matches are read once (club by club on an API without that read) so every
+ * team indicator below can be ranked against the same twenty clubs. Nothing
+ * here is fictitious: values
  * the API does not publish (squad value, age profile) live in the pages and
  * wear a « Données fictives » badge.
  */
@@ -15,6 +16,7 @@ import {
   compactScope,
   readCompact,
   readCompactPages,
+  supportsCompactRead,
 } from "./compact-reads.js";
 import { apiUrl } from "../data-url.js";
 import { publicApiFetch } from "./public-api-fetch.js";
@@ -95,22 +97,41 @@ function cachedLoad(key, loader) {
 /**
  * One league, every club read with the same indicators: positions, centiles,
  * ranks and Vega indices are computed once per league and shared.
+ *
+ * `whole`: the API reads a league's matches in one read (/api/read/league). Each
+ * club's rows are taken from them, where each club was read on its own: twenty
+ * reads of the same matches, each match twice.
  */
-function leagueCohort(league, { season, generation }, onProgress) {
+export function leagueCohort(league, { season, generation, whole = false }, onProgress) {
   return cachedLoad(
     `${generation}|${season}|league:${league.id}`,
     async (progress) => {
-      const cohort = await readCompactPages(
-        "clubs",
-        {
-          season,
-          leagues: compactScope([league.id]),
-          analysis: 1,
-          generation,
-          limit: 100,
-        },
-        {},
-      );
+      const [cohort, matches] = await Promise.all([
+        readCompactPages(
+          "clubs",
+          {
+            season,
+            leagues: compactScope([league.id]),
+            analysis: 1,
+            generation,
+            limit: 100,
+          },
+          {},
+        ),
+        whole
+          ? readCompactPages(
+              "league",
+              {
+                season,
+                league: league.id,
+                detail: "summary",
+                generation,
+                limit: 100,
+              },
+              { parallelPages: true },
+            ).then((read) => merge(read.pages))
+          : null,
+      ]);
       const cohortClubs = cohort.pages.flatMap((page) => page.clubs || []);
       const summaries = new Map();
       let done = 0;
@@ -120,6 +141,16 @@ function leagueCohort(league, { season, generation }, onProgress) {
         done,
         total: cohortClubs.length,
       });
+      if (matches) {
+        for (const club of cohortClubs) summaries.set(club.id, matches);
+        progress({
+          step: "league",
+          league: league.name,
+          done: cohortClubs.length,
+          total: cohortClubs.length,
+        });
+        return buildCohort({ league, cohortClubs, summaries });
+      }
       await pool(cohortClubs, 6, async (club) => {
         const read = await readActor({
           season,
@@ -142,7 +173,7 @@ function leagueCohort(league, { season, generation }, onProgress) {
   );
 }
 
-async function loadDossier({ id, season, generation }, onProgress) {
+async function loadDossier({ id, season, generation, whole }, onProgress) {
   const base = { season, team: id, leagues: "all", generation };
   onProgress({ step: "club", done: 0, total: 1 });
   const [shots, apps] = await Promise.all([
@@ -167,7 +198,7 @@ async function loadDossier({ id, season, generation }, onProgress) {
     competitions[0];
   let cohort = null;
   if (league) {
-    const entry = leagueCohort(league, { season, generation });
+    const entry = leagueCohort(league, { season, generation, whole });
     const relay = (progress) => onProgress(progress);
     entry.listeners.add(relay);
     if (entry.progress) onProgress(entry.progress);
@@ -224,17 +255,19 @@ function usePublication() {
     generation: compactGeneration(f?.manifest),
     season: f?.season || f?.manifest?.defaultSeason,
     manifest: f?.manifest,
+    // A league's matches in one read, when the API serves it (leagueCohort).
+    whole: supportsCompactRead(f?.manifest, "league"),
   };
 }
 
 /** Whole dossier of one club, cached per generation and season. */
 export function useClubDossier(clubId) {
-  const { generation, season } = usePublication();
+  const { generation, season, whole } = usePublication();
   const key =
     clubId && generation && season ? `${generation}|${season}|${clubId}` : null;
   const state = useCachedState(key, () =>
     cachedLoad(key, (progress) =>
-      loadDossier({ id: clubId, season, generation }, progress),
+      loadDossier({ id: clubId, season, generation, whole }, progress),
     ),
   );
   return state.status === "ready"
@@ -244,13 +277,13 @@ export function useClubDossier(clubId) {
 
 /** Any league's cohort, for similar clubs searched in another competition. */
 export function useLeagueCohort(league) {
-  const { generation, season } = usePublication();
+  const { generation, season, whole } = usePublication();
   const key =
     league?.id && generation && season
       ? `${generation}|${season}|league:${league.id}`
       : null;
   return useCachedState(key, () =>
-    leagueCohort(league, { season, generation }),
+    leagueCohort(league, { season, generation, whole }),
   );
 }
 
@@ -284,7 +317,7 @@ function referentialLoad(leagues, publication) {
 
 /** Cohorts of a user-chosen referential (null: the club's own league). */
 export function useReferential(leagues) {
-  const { generation, season } = usePublication();
+  const { generation, season, whole } = usePublication();
   const key =
     leagues?.length && generation && season
       ? `${generation}|${season}|ref:${leagues
@@ -293,7 +326,7 @@ export function useReferential(leagues) {
           .join(",")}`
       : null;
   return useCachedState(key, () =>
-    referentialLoad(leagues, { season, generation }),
+    referentialLoad(leagues, { season, generation, whole }),
   );
 }
 
@@ -407,6 +440,49 @@ export function useEuropePool(enabled = true) {
   const publication = usePublication();
   const key = europeKey(publication);
   return useCachedState(enabled ? key : null, () => europeLoad(publication));
+}
+
+/**
+ * The pool's clubs and their levels, without a match: what "niveau comparable" needs on
+ * a player's page (levelPeerClubs). The matches are for the club profile's European
+ * ranking: ten more reads, 1.6 MB for the season 2026/2027 on 11 November 2026.
+ */
+export function buildEuropeLevels(head) {
+  const leagues = new Map(head.leagues.map((league) => [league.id, league]));
+  const strength = new Map(),
+    clubs = [];
+  for (const member of head.clubs) {
+    const league = leagues.get(member.leagueId);
+    if (!league || member.level == null) continue;
+    const coefficient = member.uefaCoefficient ?? null;
+    strength.set(member.id, { score: member.level, coefficient, league });
+    clubs.push({ ...member, league, strength: member.level, coefficient });
+  }
+  return {
+    season: head.season,
+    builtAt: head.builtAt,
+    clubs,
+    strength,
+    levels: new Map(Object.entries(head.levels || {})),
+  };
+}
+
+/** The pool's clubs and levels alone (buildEuropeLevels): one read. */
+export function useEuropeLevels(enabled = true) {
+  const publication = usePublication();
+  const pool = europeKey(publication);
+  const key = pool ? `${pool}:levels` : null;
+  return useCachedState(enabled ? key : null, () =>
+    cachedLoad(key, async () => {
+      const { season, generation } = publication;
+      return buildEuropeLevels(
+        await readEurope("/api/clubs/europe", {
+          season,
+          ...(generation ? { generation } : {}),
+        }),
+      );
+    }),
+  );
 }
 
 /** Level of a club of the pool, else its Elo when it is ranked outside the pool. */

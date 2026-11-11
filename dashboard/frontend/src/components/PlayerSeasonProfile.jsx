@@ -54,7 +54,7 @@ import { chartTokens } from "./PlayerScoutCharts.jsx";
 import scout from "./PlayerScout.module.css";
 import { nationalFlagCode } from "../services/national-flags.js";
 import MessiGoats from "./MessiGoats.jsx";
-import { levelPeerClubs, useEuropePool } from "../services/club-scout.js";
+import { levelPeerClubs, useEuropeLevels } from "../services/club-scout.js";
 import { RankingProvider, RankingTrigger } from "./RankingDialog.jsx";
 import { PlayerLevelBar, PlayerRankingDialog } from "./PlayerRanking.jsx";
 import { MESSI_ID } from "../services/player-honours.js";
@@ -370,7 +370,7 @@ export default function PlayerSeasonProfile({
     view === "overview" ? MIN_SEASON_MINUTES : minMinutes;
   // Peers restricted to the clubs closest to the player's club in level.
   const [level, setLevel] = useState(true);
-  const europe = useEuropePool(level);
+  const europe = useEuropeLevels(level);
   const levelPeers = useMemo(
     () =>
       level && europe.status === "ready" && team
