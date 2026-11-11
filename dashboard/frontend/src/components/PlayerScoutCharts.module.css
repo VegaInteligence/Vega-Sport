@@ -33,9 +33,17 @@
   --mq-gap: var(--surface);
 }
 
+/* A drawing stops growing at --chart-cap, which each chart sets from its own size: it
+   kept the width of its column, so on a wide screen it and its text grew with the page
+   (a petal chart drawn for 520 px shown 1155 px wide on a 2560 px screen). */
 .chart {
   position: relative;
   min-width: 0;
+  /* The whole of its place up to the cap, centred beyond it: with automatic margins
+     alone, a chart placed in a grid shrinks to its drawing's default 300 px. */
+  width: 100%;
+  max-width: var(--chart-cap, none);
+  margin-inline: auto;
 }
 .chart svg {
   display: block;

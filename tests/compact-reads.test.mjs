@@ -174,6 +174,44 @@ test("player requests preserve sample filters and apply numeric criteria only to
     "total",
     "switching display basis does not redownload a cohort",
   );
+  // A cohort is asked whole when the API says it gives one in a page; a directory
+  // page never is, and neither is a cohort on an API that does not.
+  assert.equal("whole" in cohort, false);
+  assert.equal("whole" in directory, false);
+  const able = {
+    ...f,
+    manifest: {
+      ...f.manifest,
+      capabilities: { ...f.manifest.capabilities, wholeSelection: true },
+    },
+  };
+  assert.equal(playerReadParams(able, { cohort: true }).whole, 1);
+  assert.equal("whole" in playerReadParams(able, { page: 3 }), false);
+});
+
+test("a cohort the API gives whole is one request", async () => {
+  const calls = [];
+  const rows = Array.from({ length: 250 }, (_, index) => ({
+    playerId: "p_" + String(index).padStart(6, "0"),
+  }));
+  const fetcher = async (path) => {
+    const url = new URL(path, "https://example.test");
+    calls.push(url.searchParams);
+    assert.equal(url.searchParams.get("whole"), "1");
+    return Response.json({
+      data: { players: rows, teams: [] },
+      meta: { generation: "42" },
+      // The page's size is the API's own, whatever limit was sent.
+      pagination: { page: 1, limit: 3000, total: 250, pages: 1, generation: "42" },
+    });
+  };
+  const result = await readCompactPages(
+    "players",
+    { season: "2026/2027", leagues: "all", limit: 100, whole: 1, generation: "42" },
+    { fetcher, parallelPages: true },
+  );
+  assert.equal(calls.length, 1);
+  assert.equal(result.pages.flatMap((page) => page.players).length, 250);
 });
 
 test("opening one directory page makes one bounded request and forwards cancellation", async () => {

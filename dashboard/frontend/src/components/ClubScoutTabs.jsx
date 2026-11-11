@@ -272,7 +272,7 @@ function ExpectedCard({ dossier }) {
                 <small>xGOT concédés − buts encaissés</small>
               </div>
             </dl>
-            <PointsTrend rows={self.rows} height={250} />
+            <PointsTrend rows={self.rows} height={250} grow={1.3} />
           </div>
           <LeagueTable dossier={dossier} sort="xpts" compact window={10} fill />
         </div>

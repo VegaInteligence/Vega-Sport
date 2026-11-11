@@ -232,6 +232,10 @@ function AxisLabel({ x, y, angle, lines, className, extra }) {
 
 /* --------------------------------------------------------- pizza chart */
 
+/** How far a chart may grow past the size it is drawn for (its text grows with it). */
+const GROW = 1.3;
+const cap = (width) => ({ "--chart-cap": `${Math.round(width)}px` });
+
 export function PercentilePizza({ items, cohort, size = 560 }) {
   const t = useTip();
   const [active, setActive] = useState(null);
@@ -241,7 +245,7 @@ export function PercentilePizza({ items, cohort, size = 560 }) {
   const step = (Math.PI * 2) / items.length;
   const radius = (p) => r0 + ((r1 - r0) * p) / 100;
   return (
-    <div className={s.chart} ref={t.ref}>
+    <div className={s.chart} ref={t.ref} style={cap(size * GROW)}>
       <svg
         viewBox={`0 0 ${size} ${size}`}
         role="img"
@@ -355,7 +359,7 @@ export function RadarChart({ axes, series, size = 420, showValues = true }) {
   const ring = (p) => axes.map((_, i) => point(i, p).join(",")).join(" ");
   const main = series[0];
   return (
-    <div className={s.chart} ref={t.ref}>
+    <div className={s.chart} ref={t.ref} style={cap(size * GROW)}>
       <svg
         viewBox={`0 0 ${size} ${size}`}
         role="img"
@@ -548,7 +552,7 @@ export function PositionsPitch({ positions, total }) {
   const t = useTip();
   const max = Math.max(...positions.map((p) => p.minutes));
   return (
-    <div className={s.chart} ref={t.ref}>
+    <div className={s.chart} ref={t.ref} style={cap(600)}>
       <svg
         viewBox="0 0 105 68"
         role="img"
@@ -619,7 +623,7 @@ export function HeatmapPitch({ grid }) {
   const w = 105 / cols,
     h = 68 / rows;
   return (
-    <div className={s.chart}>
+    <div className={s.chart} style={cap(600)}>
       <svg
         viewBox="0 0 105 68"
         role="img"
@@ -664,7 +668,7 @@ export function ShotMap({ shots }) {
     strokeWidth: 0.35,
   };
   return (
-    <div className={s.chart} ref={t.ref}>
+    <div className={s.chart} ref={t.ref} style={cap(640)}>
       <svg
         viewBox="0 0 68 40"
         role="img"
@@ -922,7 +926,7 @@ export function LineChart({
     t.show(event, pointTip(best));
   };
   return (
-    <div className={s.chart} ref={t.ref}>
+    <div className={s.chart} ref={t.ref} style={cap(width * GROW)}>
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={ariaLabel}>
         <defs>
           <linearGradient id={gradient} x1="0" x2="0" y1="0" y2="1">
