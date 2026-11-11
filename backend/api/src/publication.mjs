@@ -90,17 +90,30 @@ const sha = (value) => createHash("sha256").update(JSON.stringify(value)).digest
  * form: a change of it changes the version, so no kept answer of another form is said
  * unchanged.
  */
-export async function scopeVersion(read, shape, scope, now) {
-  const [row] = await read(
-    `SELECT coalesce(json_agg(json_build_array(e.competition_season_id,coalesce(v.version,0),p.retrieved_at,p.match_count,
-        p.finished_count,p.collected_count,p.team_count) ORDER BY e.competition_season_id),'[]'::json) AS editions
-     FROM api.edition_keys e
-     LEFT JOIN api.versions v ON v.resource_kind='competition_season' AND v.resource_id=e.competition_season_id
-     LEFT JOIN api.editions p ON p.competition_season_id=e.competition_season_id
-     WHERE e.season=$1 AND ($2::text[] IS NULL OR e.league_id=ANY($2::text[]))`,
+export function scopeVersion(read, shape, scope, now) {
+  return editionsVersion(
+    read,
+    [shape, scope.season],
+    `SELECT e.competition_season_id AS id FROM api.edition_keys e WHERE e.season=$1 AND ($2::text[] IS NULL OR e.league_id=ANY($2::text[]))`,
     [scope.season, scope.leagueIds],
+    now,
   );
-  return sha([shape, scope.season, row?.editions ?? [], Math.floor(now / DAY)]).slice(0, 16);
+}
+
+/**
+ * The version of a read made of the editions `source` gives (a statement of their ids,
+ * with `values`): `key` names the read's form and what it is of.
+ */
+export async function editionsVersion(read, key, source, values, now) {
+  const [row] = await read(
+    `SELECT coalesce(json_agg(json_build_array(e.id,coalesce(v.version,0),p.retrieved_at,p.match_count,
+        p.finished_count,p.collected_count,p.team_count) ORDER BY e.id),'[]'::json) AS editions
+     FROM (${source}) e
+     LEFT JOIN api.versions v ON v.resource_kind='competition_season' AND v.resource_id=e.id
+     LEFT JOIN api.editions p ON p.competition_season_id=e.id`,
+    values,
+  );
+  return sha([...key, row?.editions ?? [], Math.floor(now / DAY)]).slice(0, 16);
 }
 
 /**
