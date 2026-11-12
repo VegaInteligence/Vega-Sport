@@ -327,6 +327,9 @@ export function comingMatches(fixtures, count = COMING) {
 }
 
 const BREAKOUTS_SHOWN = 30;
+// breakout.MODEL_VERSION (vega/breakout.py): a list computed under an earlier rule is not
+// served as the present one's; it comes back when the season is computed again.
+export const BREAKOUT_RULE = "breakout-v2";
 const breakoutOf = (r) => ({ rank: r.rank, minutes: r.minutes, percentile: round(r.percentile, 1), regulars: r.regulars, role: r.role, position: ROLE_LABEL[r.role] ?? r.role });
 
 /**
@@ -339,7 +342,7 @@ async function breakouts(read, params) {
   const season = params.get("season");
   if (!/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
   const [run] = await read(`SELECT * FROM api.breakout_runs WHERE season_id=${SEASON_KEY}`, [season]);
-  if (!run) reject(404, "Donnée indisponible.");
+  if (!run || run.version !== BREAKOUT_RULE) reject(404, "Donnée indisponible.");
   const rows = await read(`SELECT * FROM api.player_breakouts WHERE season_id=${SEASON_KEY} ORDER BY rank LIMIT ${BREAKOUTS_SHOWN}`, [season]);
   return {
     season, computedAt: iso(run.computed_at), candidates: run.candidates, flagged: run.flagged,
@@ -354,7 +357,8 @@ async function powerPlayer(read, params) {
   if (!/^\d{4}\/\d{4}$/.test(season || "") || !PLAYER.test(id || "")) reject(400, "Paramètre invalide.");
   const [power, [flag]] = await Promise.all([
     powerOf(read, "players", season, [id]).then((found) => found.get(id)),
-    read(`SELECT * FROM api.player_breakouts WHERE season_id=${SEASON_KEY} AND player_key=api.internal_id('player',$2)`, [season, id]),
+    read(`SELECT b.* FROM api.player_breakouts b JOIN api.breakout_runs r ON r.season_id=b.season_id AND r.version=$3
+          WHERE b.season_id=${SEASON_KEY} AND b.player_key=api.internal_id('player',$2)`, [season, id, BREAKOUT_RULE]),
   ]);
   // A player below the ranking's minutes has no ranking of his own, but may be flagged as a breakout.
   if (!power && !flag) reject(404, "Donnée indisponible.");

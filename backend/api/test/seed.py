@@ -188,7 +188,7 @@ def main(dsn):
          VALUES (2025,101,'centre_forward',1,3,260,4.2,0.535,true,90,80,87.5,1,1,%(run)s,3.0,1.2,1.4),(2025,104,'winger',2,2,160,1.1,0.161,true,50,50,50,2,1,%(run)s,1.3,-0.2,0),
                 (2025,103,'goalkeeper',4,2,180,0.3,0.042,false,NULL,NULL,NULL,NULL,NULL,%(run)s,0.3,0,NULL)""", {"run": run})
     # A breakout (088): the keeper below the ranking's minutes, ahead of 91.3 % of his role's regulars.
-    x("INSERT INTO agg.breakout_runs(season_id, version, computed_at, candidates, flagged) VALUES (2025, 'breakout-v1', '2025-09-06T03:12:00Z', 12, 1)")
+    x("INSERT INTO agg.breakout_runs(season_id, version, computed_at, candidates, flagged) VALUES (2025, 'breakout-v2', '2025-09-06T03:12:00Z', 12, 1)")
     x("INSERT INTO agg.player_breakouts(season_id, player_id, role, team_id, minutes, rate, percentile, regulars, rank) VALUES (2025, 103, 'goalkeeper', 4, 180, 0.042, 91.3, 40, 1)")
     # Élie Durand's season by block and by role (two roles: 200 minutes up front, 60 on the wing).
     x("UPDATE agg.player_power SET finishing_total=3.1,creation_total=0.8,defence_total=0.3,finishing_percentile=95,creation_percentile=70.5,defence_percentile=40 WHERE player_id=101")
