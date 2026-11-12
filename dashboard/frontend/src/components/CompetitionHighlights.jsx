@@ -12,6 +12,8 @@ import {
   highlightTeam,
   recentResultCapacity,
 } from "../services/competition-highlights.js";
+import { leagueStrength, useLeagueLevels } from "../services/league-levels.js";
+import LeagueStrengthCard from "./LeagueStrengthCard.jsx";
 
 function HighlightMatch({ match, competition, season, upcoming }) {
   const f = useFootball();
@@ -59,10 +61,13 @@ export default function CompetitionHighlights({ matches, competition, season, on
   );
   const upcoming = allUpcoming.slice(0, 4);
   const recent = allRecent.slice(0, recentLimit);
+  const levels = useLeagueLevels();
+  const strength = useMemo(() => leagueStrength(levels, competition.id), [levels, competition.id]);
   useEffect(() => {
     const aside = highlightsRef.current;
     const standings = aside?.closest(".competition-detail-layout--overview")?.querySelector(".competition-detail");
     const nextCard = aside?.querySelector(".competition-highlights-upcoming");
+    const levelCard = aside?.querySelector(".competition-level");
     const resultsCard = aside?.querySelector(".competition-highlights-results");
     const header = resultsCard?.querySelector(".card-header");
     if (!aside || !standings || !nextCard || !resultsCard || !header) return;
@@ -76,7 +81,8 @@ export default function CompetitionHighlights({ matches, competition, season, on
       const gap = Number.parseFloat(window.getComputedStyle(aside).rowGap) || 0;
       const limit = recentResultCapacity({
         standingsHeight: standings.getBoundingClientRect().height,
-        upcomingHeight: nextCard.getBoundingClientRect().height,
+        // The league's level card stands above the two others: its height and its gap are theirs to give.
+        upcomingHeight: nextCard.getBoundingClientRect().height + (levelCard ? levelCard.getBoundingClientRect().height + gap : 0),
         headerHeight: header.getBoundingClientRect().height,
         rowHeight: row.getBoundingClientRect().height,
         gap,
@@ -86,13 +92,15 @@ export default function CompetitionHighlights({ matches, competition, season, on
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
     observer?.observe(standings);
     observer?.observe(nextCard);
+    if (levelCard) observer?.observe(levelCard);
     observer?.observe(header);
     window.addEventListener("resize", update);
     update();
     return () => { observer?.disconnect(); window.removeEventListener("resize", update); };
-  }, [competition.id, season, matches, upcoming.length]);
+  }, [competition.id, season, matches, upcoming.length, Boolean(strength)]);
   return (
-    <aside ref={highlightsRef} className="competition-highlights" aria-label="Matchs de la compétition">
+    <aside ref={highlightsRef} className={"competition-highlights" + (strength ? " competition-highlights--level" : "")} aria-label="Matchs de la compétition">
+      <LeagueStrengthCard strength={strength} />
       <Card title="Prochains matchs" className="competition-highlights-card competition-highlights-upcoming" action={
         <button type="button" className="competition-highlights-more" onClick={() => onShowMatches("not_started")}>Voir tout</button>
       }>

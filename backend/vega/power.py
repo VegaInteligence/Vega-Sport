@@ -355,6 +355,22 @@ def league_means(strengths, leagues):
     return {league: (total / n, n) for league, (total, n) in sums.items()}
 
 
+def league_seasons(rows, leagues):
+    """Each league's level at the end of each season: {(league, season): (mean, clubs)},
+    the mean strength of its clubs after their last match of the season. `rows` are
+    elo_updates', in match order."""
+    last = {}
+    for _, team, season, _, _, after, _, _ in rows:
+        if team in leagues:
+            last[(season, team)] = after
+    sums = defaultdict(lambda: [0.0, 0])
+    for (season, team), value in last.items():
+        entry = sums[(leagues[team], season)]
+        entry[0] += value
+        entry[1] += 1
+    return {key: (total / n, n) for key, (total, n) in sums.items()}
+
+
 def league_levels(matches, leagues, *, rounds=SEED_ROUNDS, tolerance=SEED_TOLERANCE, initial=ELO_INITIAL, prior=LEVEL_PRIOR_MATCHES, weights=None):
     """The level each league's clubs enter at: the mean strength of its clubs after an Elo
     started from the levels themselves, repeated (half a step at a time) until no level
@@ -426,6 +442,13 @@ def refresh_elo(conn):
             conn.execute(
                 "INSERT INTO agg.league_levels(competition_id, entry_level, level, teams, links, linked, run_id) VALUES (%s,%s,%s,%s,%s,%s,%s)",
                 (league, seeds.get(league, ELO_INITIAL), mean, teams, links.get(league, 0), league in scale, run),
+            )
+        # The same level season by season (the site's league strength index and its trend).
+        conn.execute("DELETE FROM agg.league_level_seasons")
+        for (league, season), (mean, teams) in sorted(league_seasons(rows, leagues).items()):
+            conn.execute(
+                "INSERT INTO agg.league_level_seasons(competition_id, season_id, level, teams, run_id) VALUES (%s,%s,%s,%s,%s)",
+                (league, season, mean, teams, run),
             )
         conn.execute(
             "UPDATE agg.power_runs SET seed_rounds=%s, link_matches=%s, level_prior_matches=%s WHERE id=%s",

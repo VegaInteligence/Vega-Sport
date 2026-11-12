@@ -66,6 +66,19 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
     assert.equal(Math.round(r.eloStart + r.eloChange), Math.round(r.elo));
   }
   assert.equal(Math.round(clubs.rows.reduce((s, r) => s + r.results, 0) * 2), 10); // five matches, one point shared each
+  // The league strength index: the levels the Elo run keeps, a rank on the common scale only, the level of each season.
+  const levels = (await get("/api/rankings/leagues")).body;
+  assert.equal(levels.method.version, "power-ranking-v3");
+  assert.ok(levels.leagues.length >= 1);
+  for (const league of levels.leagues) {
+    assert.match(league.id, /^l_/);
+    assert.equal(league.rank === null, !league.onScale);
+    assert.ok(league.seasons.every((s) => /^\d{4}\/\d{4}$/.test(s.season) && Number.isFinite(s.level) && s.teams > 0));
+  }
+  assert.deepEqual(levels.leagues.filter((l) => l.onScale).map((l) => l.rank), levels.leagues.filter((l) => l.onScale).map((_, i) => i + 1));
+  assert.equal(levels.onScale, levels.leagues.filter((l) => l.onScale).length);
+  assert.ok(levels.leagues.some((l) => l.seasons.length > 0));
+  assert.equal((await get("/api/rankings/leagues?season=2025/2026")).response.status, 400);
   // One player's ranking, for his page: the object of the player reads and the ranked players of his role.
   const own = (await get("/api/rankings/power/player?season=2025/2026&player=p_aaaab1")).body;
   assert.deepEqual([own.season, own.player.id, own.player.score, own.player.role, own.player.position, own.player.roleRank, own.player.roleCount],

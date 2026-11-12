@@ -21,6 +21,10 @@
  * `ballonDorRanking(season)` entries), clubs and national teams by their Elo strength
  * after their last match of the season.
  *
+ * GET /api/rankings/leagues — the league strength index: each league's level on the
+ * Elo's scale, its rank among the leagues on the common scale, and its level at the end
+ * of each season.
+ *
  * GET /api/rankings/power/player?season=&player= — one player's power ranking of a
  * season, for his page: the object of the player reads (powerOf) and `roleCount`, the
  * number of ranked players of his role.
@@ -172,6 +176,32 @@ export async function powerOf(read, kind, season, ids) {
   return out;
 }
 
+async function leagueLevels(read, params) {
+  validateParams(params, []);
+  const [rows, seasons] = await Promise.all([
+    read("SELECT * FROM api.league_levels ORDER BY linked DESC, level DESC, competition_id"),
+    read("SELECT competition_key, season, level, teams FROM api.league_level_seasons ORDER BY competition_key, season_id"),
+  ]);
+  if (!rows.length) reject(404, "Donnée indisponible.");
+  const history = new Map();
+  for (const s of seasons) {
+    if (!history.has(s.competition_key)) history.set(s.competition_key, []);
+    history.get(s.competition_key).push({ season: s.season, level: round(s.level, 1), teams: s.teams });
+  }
+  const onScale = rows.filter((r) => r.linked).length;
+  let rank = 0;
+  return {
+    method: { version: rows[0].method_version, computedAt: iso(rows[0].computed_at) },
+    onScale,
+    leagues: rows.map((r) => ({
+      id: r.competition_id, name: r.name, country: r.country ?? null, level: round(r.level, 1),
+      // A league off the common scale has a level of its own, which says nothing against the others: no rank.
+      rank: r.linked ? ++rank : null, onScale: r.linked, teams: r.teams, links: r.links,
+      seasons: history.get(r.competition_key) ?? [],
+    })),
+  };
+}
+
 async function powerPlayer(read, params) {
   validateParams(params, ["season", "player"]);
   const season = params.get("season"), id = params.get("player");
@@ -224,6 +254,7 @@ export function createRankingRoute(read) {
   return async (req, path, params) => {
     if (path === "/api/rankings/power") return respond(req, await powerRanking(read, params));
     if (path === "/api/rankings/power/player") return respond(req, await powerPlayer(read, params));
+    if (path === "/api/rankings/leagues") return respond(req, await leagueLevels(read, params));
     if (path === "/api/rankings/index") {
       validate(params, {});
       const [editions, [mapping]] = await Promise.all([

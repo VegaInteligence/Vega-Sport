@@ -19,6 +19,15 @@ test("competition overview renders linked fixtures, results, scores and empty st
   const fixtures = await import("../dashboard/frontend/src/services/fixtures.js");
   const Link = ({ href, children, prefetch, ...props }) => elem("a", { href, ...props }, children);
   const Card = ({ title, children, action }) => elem("section", null, elem("h2", null, title), action, children);
+  const levelService = await import("../dashboard/frontend/src/services/league-levels.js").catch(() => null) || {};
+  let levels = null;
+  const compile = async (file, known) => {
+    const source = path.join(root, file);
+    const code = babel.transformSync(await fs.readFile(source, "utf8"), { presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename: source }).code;
+    const out = { exports: {} };
+    vm.runInThisContext("(function(require,module,exports){" + code + "\n})", { filename: source })((name) => { if (!(name in known)) throw Error("Unexpected import " + name); return known[name]; }, out, out.exports);
+    return out.exports.default;
+  };
   const stubs = {
     "react": React,
     "next/link": { __esModule: true, default: Link },
@@ -27,6 +36,11 @@ test("competition overview renders linked fixtures, results, scores and empty st
     "../services/format.js": { date: (value) => value.slice(0, 10) },
     "../services/fixtures.js": fixtures,
     "../services/competition-highlights.js": highlights,
+    // The league's level card: the service's own reading of a fixed answer, the card's markup.
+    "../services/league-levels.js": { leagueStrength: levelService.leagueStrength, useLeagueLevels: () => levels },
+    "./LeagueStrengthCard.jsx": { __esModule: true, default: await compile("dashboard/frontend/src/components/LeagueStrengthCard.jsx", {
+      "react": React, "./UI.jsx": { Card }, "../services/format.js": { number: (value) => String(value) },
+    }) },
   };
   const filename = path.join(root, "dashboard/frontend/src/components/CompetitionHighlights.jsx");
   const compiled = babel.transformSync(await fs.readFile(filename, "utf8"), { presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename }).code;
@@ -55,5 +69,21 @@ test("competition overview renders linked fixtures, results, scores and empty st
   assert.equal((five.match(/class="competition-highlight-match"/g) || []).length, 5);
   assert.match(five, /m_done_5/);
   assert.doesNotMatch(five, /m_done_0/);
+  // No level known for the competition: no card. A league on the scale: its level, rank, seasons and neighbours.
+  assert.doesNotMatch(html, /Niveau du championnat/);
+  levels = { onScale: 41, leagues: [
+    { id: "l_top", name: "Premier League", level: 1777.2, rank: 1, onScale: true, seasons: [] },
+    { id: "l_123", name: "Ligue 1", level: 1636.4, rank: 2, onScale: true, seasons: [{ season: "2025/2026", level: 1630 }, { season: "2026/2027", level: 1636.4 }] },
+    { id: "l_off", name: "MLS", level: 1500, rank: null, onScale: false, seasons: [] },
+  ] };
+  const level = renderToStaticMarkup(elem(mod.exports.default, props));
+  assert.match(level, /Niveau du championnat/);
+  assert.match(level, /<strong>1636<\/strong><span>2e sur 41 championnats<\/span>/);
+  assert.match(level, /2026\/2027<\/span><span>1636<small>\+6<\/small>/);
+  assert.match(level, /Devant : Premier League/);
+  assert.doesNotMatch(level, /Derrière/);
+  assert.match(level, /competition-highlights--level/);
+  const off = renderToStaticMarkup(elem(mod.exports.default, { ...props, competition: { id: "l_off" } }));
+  assert.match(off, /trop peu de matchs/);
 
 });

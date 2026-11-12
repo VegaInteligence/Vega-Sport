@@ -157,6 +157,14 @@ class LeagueLevelTest(unittest.TestCase):
         free = power.league_levels(few, leagues, prior=0)[0]
         self.assertTrue(1500 < held[1] < free[1])
 
+    def test_a_league_s_level_season_by_season(self):
+        # Two seasons: each club's strength after its last match of the season, by its league.
+        rows = [(1, "A", 2024, None, 1500, 1510, 0.5, 1.0), (1, "B", 2024, None, 1500, 1490, 0.5, 0.0),
+                (2, "A", 2024, None, 1510, 1520, 0.5, 1.0), (2, "C", 2024, None, 1500, 1490, 0.5, 0.0),
+                (3, "A", 2025, None, 1520, 1500, 0.5, 0.0), (3, "X", 2025, None, 1500, 1520, 0.5, 1.0)]
+        levels = power.league_seasons(rows, {"A": 1, "B": 1, "C": 2})  # X has no league
+        self.assertEqual(levels, {(1, 2024): (1505.0, 2), (2, 2024): (1490.0, 1), (1, 2025): (1500.0, 1)})
+
     def test_the_common_scale_grows_from_the_most_connected_league(self):
         # 1 and 2 met often; 3 met each of them a little (enough together); 4 and 5 only each other; 6 nobody.
         pairs = {(1, 2): 40, (1, 3): 6, (2, 3): 5, (4, 5): 30, (3, 4): 2}
