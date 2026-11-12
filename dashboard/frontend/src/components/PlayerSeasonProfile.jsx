@@ -58,6 +58,7 @@ import { levelPeerClubs, useEuropeLevels } from "../services/club-scout.js";
 import { RankingProvider, RankingTrigger } from "./RankingDialog.jsx";
 import { PlayerLevelBar, PlayerRankingDialog } from "./PlayerRanking.jsx";
 import { MESSI_ID } from "../services/player-honours.js";
+import { usePlayerPower } from "../services/ballon-dor.js";
 import {
   cachedResource,
   primeResource,
@@ -414,8 +415,19 @@ export default function PlayerSeasonProfile({
     window.history.replaceState(null, "", url.pathname + url.search);
   };
   const cohort = cohorts.groups.get(profile.role?.group);
-  // Rail « Indice Vega »: best role index and its rank among the cohort.
+  // Rail « Indice Vega »: the player's score in Vega's power ranking of the season and
+  // his rank among the ranked players of his position; for a season or a player without
+  // one, his best role index and its rank among the cohort.
+  const power = usePlayerPower(f.season, id);
   const vega = useMemo(() => {
+    if (power === undefined) return null;
+    if (power?.score != null)
+      return {
+        value: Math.round(power.score),
+        label: power.position,
+        rank: power.roleRank ?? null,
+        of: power.roleRank ? power.roleCount : null,
+      };
     if (!comparisonsReady || !profile.matches) return null;
     const best = roleAssessments(profile, cohorts).find(
       (role) => role.value != null,
@@ -435,7 +447,7 @@ export default function PlayerSeasonProfile({
       rank: scores.filter((value) => value > best.value).length + 1,
       of: scores.length + 1,
     };
-  }, [comparisonsReady, profile, cohorts]);
+  }, [power, comparisonsReady, profile, cohorts]);
   const performanceSeason = params?.get("performanceSeason");
   const showCurrentShots =
     view === "stats" &&

@@ -66,6 +66,15 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
     assert.equal(Math.round(r.eloStart + r.eloChange), Math.round(r.elo));
   }
   assert.equal(Math.round(clubs.rows.reduce((s, r) => s + r.results, 0) * 2), 10); // five matches, one point shared each
+  // One player's ranking, for his page: the object of the player reads and the ranked players of his role.
+  const own = (await get("/api/rankings/power/player?season=2025/2026&player=p_aaaab1")).body;
+  assert.deepEqual([own.season, own.player.id, own.player.score, own.player.role, own.player.position, own.player.roleRank, own.player.roleCount],
+    ["2025/2026", "p_aaaab1", 87.5, "centre_forward", "Avant-centre", 1, 1]);
+  assert.deepEqual(own.player.blocks.finishing, { contribution: 3.1, percentile: 95 });
+  assert.equal((await get("/api/rankings/power/player?season=2025/2026&player=p_zzzzz9")).response.status, 404);
+  assert.equal((await get("/api/rankings/power/player?season=2024/2025&player=p_aaaab1")).response.status, 404);
+  assert.equal((await get("/api/rankings/power/player?season=2025/2026&player=aaaab1")).response.status, 400);
+  assert.equal((await get("/api/rankings/power/player?season=2025/2026")).response.status, 400);
   assert.equal((await get("/api/rankings/power?kind=players&season=2025/2026&limit=1")).body.rows.length, 1);
   assert.equal((await get("/api/rankings/power?kind=nations&season=2025/2026")).response.status, 404);
   assert.equal((await get("/api/rankings/power?kind=players&season=2025")).response.status, 400);

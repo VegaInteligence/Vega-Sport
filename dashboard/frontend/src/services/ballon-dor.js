@@ -19,3 +19,22 @@ export function useBallonDorRanking(season) {
   );
   return resource.value ?? null;
 }
+
+/**
+ * One player's power ranking of a season, for his page (/api/rankings/power/player):
+ * { score, role, position, roleRank, roleCount, … }; null for a player or a season
+ * without one, undefined while it loads.
+ */
+export function usePlayerPower(season, id) {
+  const enabled = Boolean(season && /^p_(?:[A-Za-z0-9]{6}|v\d{7})$/.test(id || ""));
+  const resource = useResource(
+    `power-ranking:player:${season || "none"}:${id || "none"}`,
+    () =>
+      json("/api/rankings/power/player?" + new URLSearchParams({ season, player: id }))
+        .then((body) => body.player || null)
+        .catch((error) => (/\bHTTP 404\b/.test(error?.message || "") ? null : Promise.reject(error))),
+    enabled,
+  );
+  if (!enabled || resource.error) return null;
+  return resource.value === undefined ? undefined : resource.value;
+}
