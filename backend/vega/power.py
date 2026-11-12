@@ -355,20 +355,24 @@ def league_means(strengths, leagues):
     return {league: (total / n, n) for league, (total, n) in sums.items()}
 
 
-def league_seasons(rows, leagues):
+def league_seasons(rows, matches):
     """Each league's level at the end of each season: {(league, season): (mean, clubs)},
-    the mean strength of its clubs after their last match of the season. `rows` are
-    elo_updates', in match order."""
-    last = {}
+    the mean strength, after their last match of the season, of the clubs that played the
+    league that season (a relegated club leaves it, a promoted one joins). `rows` are
+    elo_updates', in match order; a league match is neither complementary nor
+    international."""
+    last, members = {}, defaultdict(set)
     for _, team, season, _, _, after, _, _ in rows:
-        if team in leagues:
-            last[(season, team)] = after
-    sums = defaultdict(lambda: [0.0, 0])
-    for (season, team), value in last.items():
-        entry = sums[(leagues[team], season)]
-        entry[0] += value
-        entry[1] += 1
-    return {key: (total / n, n) for key, (total, n) in sums.items()}
+        last[(season, team)] = after
+    for m in matches:
+        if not m[10] and not m[11]:
+            members[(m[9], m[1])].update((m[3], m[4]))
+    out = {}
+    for (league, season), teams in members.items():
+        values = [last[(season, team)] for team in teams if (season, team) in last]
+        if values:
+            out[(league, season)] = (sum(values) / len(values), len(values))
+    return out
 
 
 def league_levels(matches, leagues, *, rounds=SEED_ROUNDS, tolerance=SEED_TOLERANCE, initial=ELO_INITIAL, prior=LEVEL_PRIOR_MATCHES, weights=None):
@@ -445,7 +449,7 @@ def refresh_elo(conn):
             )
         # The same level season by season (the site's league strength index and its trend).
         conn.execute("DELETE FROM agg.league_level_seasons")
-        for (league, season), (mean, teams) in sorted(league_seasons(rows, leagues).items()):
+        for (league, season), (mean, teams) in sorted(league_seasons(rows, matches).items()):
             conn.execute(
                 "INSERT INTO agg.league_level_seasons(competition_id, season_id, level, teams, run_id) VALUES (%s,%s,%s,%s,%s)",
                 (league, season, mean, teams, run),

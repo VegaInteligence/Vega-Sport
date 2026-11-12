@@ -40,6 +40,7 @@ test("competition overview renders linked fixtures, results, scores and empty st
     "../services/league-levels.js": { leagueStrength: levelService.leagueStrength, useLeagueLevels: () => levels },
     "./LeagueStrengthCard.jsx": { __esModule: true, default: await compile("dashboard/frontend/src/components/LeagueStrengthCard.jsx", {
       "react": React, "./UI.jsx": { Card }, "../services/format.js": { number: (value) => String(value) },
+      "../services/competition-selector.js": { COUNTRY_NAMES: { ENG: "Angleterre" } },
     }) },
   };
   const filename = path.join(root, "dashboard/frontend/src/components/CompetitionHighlights.jsx");
@@ -72,7 +73,7 @@ test("competition overview renders linked fixtures, results, scores and empty st
   // No level known for the competition: no card. A league on the scale: its level, rank, seasons and neighbours.
   assert.doesNotMatch(html, /Niveau du championnat/);
   levels = { onScale: 41, leagues: [
-    { id: "l_top", name: "Premier League", level: 1777.2, rank: 1, onScale: true, seasons: [] },
+    { id: "l_top", name: "Premier League", country: "ENG", level: 1777.2, rank: 1, onScale: true, seasons: [] },
     { id: "l_123", name: "Ligue 1", level: 1636.4, rank: 2, onScale: true, seasons: [{ season: "2025/2026", level: 1630 }, { season: "2026/2027", level: 1636.4 }] },
     { id: "l_off", name: "MLS", level: 1500, rank: null, onScale: false, seasons: [] },
   ] };
@@ -80,7 +81,7 @@ test("competition overview renders linked fixtures, results, scores and empty st
   assert.match(level, /Niveau du championnat/);
   assert.match(level, /<strong>1636<\/strong><span>2e sur 41 championnats<\/span>/);
   assert.match(level, /2026\/2027<\/span><span>1636<small>\+6<\/small>/);
-  assert.match(level, /Devant : Premier League/);
+  assert.match(level, /Devant : Premier League \(Angleterre\)/);
   assert.doesNotMatch(level, /Derrière/);
   assert.match(level, /competition-highlights--level/);
   const off = renderToStaticMarkup(elem(mod.exports.default, { ...props, competition: { id: "l_off" } }));

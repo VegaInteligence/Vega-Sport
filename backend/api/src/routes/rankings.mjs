@@ -179,7 +179,7 @@ export async function powerOf(read, kind, season, ids) {
 async function leagueLevels(read, params) {
   validateParams(params, []);
   const [rows, seasons] = await Promise.all([
-    read("SELECT * FROM api.league_levels ORDER BY linked DESC, level DESC, competition_id"),
+    read("SELECT * FROM api.league_levels ORDER BY competition_id"),
     read("SELECT competition_key, season, level, teams FROM api.league_level_seasons ORDER BY competition_key, season_id"),
   ]);
   if (!rows.length) reject(404, "Donnée indisponible.");
@@ -188,17 +188,20 @@ async function leagueLevels(read, params) {
     if (!history.has(s.competition_key)) history.set(s.competition_key, []);
     history.get(s.competition_key).push({ season: s.season, level: round(s.level, 1), teams: s.teams });
   }
-  const onScale = rows.filter((r) => r.linked).length;
+  // The level shown is that of the league's last season (the clubs that play it now); the
+  // Elo's own level, over every club that started in the league, decides the common scale.
+  const leagues = rows.map((r) => {
+    const own = history.get(r.competition_key) ?? [];
+    return { id: r.competition_id, name: r.name, country: r.country ?? null, level: own.at(-1)?.level ?? round(r.level, 1),
+      onScale: r.linked, teams: own.at(-1)?.teams ?? r.teams, links: r.links, seasons: own };
+  }).sort((a, b) => Number(b.onScale) - Number(a.onScale) || b.level - a.level || a.id.localeCompare(b.id));
   let rank = 0;
   return {
     method: { version: rows[0].method_version, computedAt: iso(rows[0].computed_at) },
-    onScale,
-    leagues: rows.map((r) => ({
-      id: r.competition_id, name: r.name, country: r.country ?? null, level: round(r.level, 1),
-      // A league off the common scale has a level of its own, which says nothing against the others: no rank.
-      rank: r.linked ? ++rank : null, onScale: r.linked, teams: r.teams, links: r.links,
-      seasons: history.get(r.competition_key) ?? [],
-    })),
+    onScale: leagues.filter((l) => l.onScale).length,
+    // A league off the common scale has a level of its own, which says nothing against the others: no rank.
+    leagues: leagues.map(({ id, name, country, level, onScale, teams, links, seasons: own }) => (
+      { id, name, country, level, rank: onScale ? ++rank : null, onScale, teams, links, seasons: own })),
   };
 }
 
