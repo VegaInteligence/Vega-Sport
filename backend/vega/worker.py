@@ -94,6 +94,8 @@ def due_seasons(conn, now):
       (power.METHOD_VERSION), or read another common scale of the leagues than the
       present one (a league joined it since), after the same wait: neither waits for the
       next day, nor for a match of the season to change.
+    - a season with matches still to play and no forecast of them (forecast.py: the
+      forecasts are new to it, or its last pass stopped before them), after the same wait.
     Only PitchAPI editions count: the models read nothing of the archives and cups (whose
     seasons would otherwise all fall due when they are imported)."""
     from .power import METHOD_VERSION
@@ -119,6 +121,9 @@ def due_seasons(conn, now):
                                    WHERE r.kind = 'players' AND r.season_id = m.season_id AND r.status = 'published'
                                      AND (r.method_version <> %(method)s
                                           OR r.linked_leagues IS DISTINCT FROM (SELECT count(*) FROM agg.league_levels WHERE linked))))
+                   OR (l.started_at < %(now)s - %(after)s
+                       AND bool_or(m.status = 'not_started' AND m.kickoff_at > %(now)s)
+                       AND NOT EXISTS (SELECT 1 FROM agg.match_forecasts f WHERE f.season_id = m.season_id))
                ORDER BY 1""",
             {"now": now, "after": RECOMPUTE_AFTER, "method": METHOD_VERSION},
         ).fetchall()

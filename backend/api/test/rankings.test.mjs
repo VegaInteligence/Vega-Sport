@@ -93,3 +93,25 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   assert.equal((await get("/api/rankings/power?kind=players&season=2025")).response.status, 400);
   assert.equal((await get("/api/rankings/power?kind=ballon&season=2025/2026")).response.status, 400);
 });
+
+test("the forecast of a match still to play and a league replayed to its end", { skip }, async () => {
+  const season = (await get("/api/forecasts/season?competition=l_3FJFUl&season=2025/2026")).body;
+  assert.deepEqual([season.competition, season.season, season.model.version, season.model.replays], ["l_3FJFUl", "2025/2026", "forecast-v1", 1000]);
+  // The clubs by projected points; one share per place, 0 where a club never finished.
+  assert.deepEqual(season.teams.map((t) => [t.id, t.played, t.points, t.projectedPoints, t.places]),
+    [["t_aaaaa1", 3, 7, 71.4, [0.6, 0.4]], ["t_aaaaa2", 3, 4, 55.3, [0.4, 0.6]]]);
+  assert.equal(season.teams[0].imageUrl !== undefined, true);
+  assert.equal((await get("/api/forecasts/season?competition=l_3FJFUl&season=2024/2025")).response.status, 404);
+  assert.equal((await get("/api/forecasts/season?competition=l_3FJFUl")).response.status, 400);
+  assert.equal((await get("/api/forecasts/season?competition=ligue1&season=2025/2026")).response.status, 400);
+  // The seed's first match still to play.
+  const matches = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => "m_aaaaa" + n);
+  const answers = await Promise.all(matches.map((id) => get("/api/forecasts/match?match=" + id)));
+  const found = answers.filter((a) => a.response.status === 200);
+  assert.equal(found.length, 1);
+  const { forecast, model } = found[0].body;
+  assert.deepEqual(forecast, { home: 0.5123, draw: 0.2501, away: 0.2376, homeGoals: 1.62, awayGoals: 1.04, score: [1, 0] });
+  assert.deepEqual([model.version, model.matches], ["forecast-v1", 60000]);
+  assert.ok(answers.filter((a) => a.response.status !== 200).every((a) => a.response.status === 404));
+  assert.equal((await get("/api/forecasts/match?match=12")).response.status, 400);
+});

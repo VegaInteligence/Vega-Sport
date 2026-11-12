@@ -20,6 +20,7 @@ import MatchStandings from "./MatchStandings.jsx";
 import MatchEventHighlights from "./MatchEventHighlights.jsx";
 import { StatRow, StatRows } from "./StatRows.jsx";
 const MatchContext = lazy(() => import("./MatchContext.jsx"));
+const MatchForecast = lazy(() => import("./MatchForecast.jsx"));
 import { periodShort } from "./PlayerMetrics.jsx";
 import { number, date, isNumber } from "../services/format.js";
 import {
@@ -698,6 +699,7 @@ export default function MatchDetail({ match }) {
               </div>
             }
           >
+            {upcoming && <MatchForecast match={match} />}
             <MatchContext match={match} />
           </Suspense>
         )}

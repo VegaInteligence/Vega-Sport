@@ -13,8 +13,8 @@ Application d'analyse du football : matchs, compétitions, clubs et joueurs, ave
 | Page | Contenu |
 | --- | --- |
 | Accueil (`/`) | matchs de la semaine, joueur de la semaine, meneurs de la saison, course au Ballon d'Or |
-| Matchs (`/matchs`, `/calendrier`) | résultats et calendrier ; fiche de match : statistiques, chronologie des xG, carte des tirs, compositions, réseau de passes, zones de chaleur, momentum, face-à-face, suivi en direct |
-| Compétitions (`/competitions`) | classement, journées et tableaux des championnats et des coupes d'Europe, coupes nationales et tournois des sources complémentaires, niveau du championnat sur l'échelle commune |
+| Matchs (`/matchs`, `/calendrier`) | résultats et calendrier ; fiche de match : statistiques, chronologie des xG, carte des tirs, compositions, réseau de passes, zones de chaleur, momentum, face-à-face, suivi en direct ; avant un match, ses probabilités (victoire, nul, défaite, score le plus probable) |
+| Compétitions (`/competitions`) | classement, journées et tableaux des championnats et des coupes d'Europe, coupes nationales et tournois des sources complémentaires, niveau du championnat sur l'échelle commune, projection de fin de saison (points, titre, places) |
 | Clubs (`/clubs`) | fiche club : résultats, style, effectif, niveau européen |
 | Joueurs (`/joueurs`) | annuaire filtrable (Explorer, Indices), fiche joueur : statistiques par 90 minutes, centiles et rangs dans sa cohorte, rôles, Indice Vega (son score au classement de puissance), comparaison, profils similaires, matchs |
 | Classement des joueurs (`/classement-joueurs`) | la course au Ballon d'Or de chaque saison et sa méthode |
@@ -64,6 +64,7 @@ Les formules sont documentées telles que le code les applique dans [docs/calcul
   - joueurs : contribution par match relative au rôle et à l'adversaire, niveau du club, année du trophée du 1ᵉʳ août au 31 juillet, Coupe du monde comprise ;
   - enjeu : un match compte pour le prestige de sa compétition × son tour (championnat 1, Ligue des champions 1,15, sa finale 1,32, finale de Coupe du monde 1,50).
 - **Niveau des championnats** : la force moyenne des clubs de chaque championnat, saison par saison.
+- **Pronostics et projections** ([méthode et vérifications](docs/calculs/06-accueil-et-matchs/03-pronostics-et-projections.md)) : un modèle de buts ajusté sur la force des deux équipes, jugé sur des matchs non vus ; chaque championnat en cours est rejoué 1 000 fois jusqu'à son terme.
 
 ## Infrastructure
 
@@ -84,9 +85,9 @@ Les ressources AWS gardent leurs noms d'origine (`vega-v2-…`). Procédure, rô
 
 - Le backend actuel sert le site depuis le 10 novembre 2026 ; le précédent a été retiré ce jour-là.
 - Le rattrapage de l'historique (saisons depuis 2021/2022) est en cours.
-- En service depuis le 12 novembre : classements de puissance version 3 (enjeu des matchs, Coupe du monde), championnats brésiliens sur l'échelle commune, zéros omis par la source rendus aux fiches et aux listes, niveau des championnats, équipes des Coupes du monde des clubs et sélections de la Ligue des nations reliées à leurs équipes.
+- En service depuis le 12 novembre : classements de puissance version 3 (enjeu des matchs, Coupe du monde), championnats brésiliens sur l'échelle commune, zéros omis par la source rendus aux fiches et aux listes, niveau des championnats, pronostics de match et projections de fin de saison, équipes des Coupes du monde des clubs et sélections de la Ligue des nations reliées à leurs équipes.
 - Limites connues : les championnats sans assez de matchs contre les autres (MLS, Arabie saoudite, Mexique, Argentine…) donnent un score à leurs joueurs, pas de rang ; aucune date de naissance, taille ni pied fort (la source ne les fournit pas) ; hors Coupe du monde, le football de sélections n'a que des résultats.
-- Suites de tests au 12 novembre : plus de 210 tests Python, 115 tests de l'API, 520 tests du site, toutes vertes.
+- Suites de tests au 12 novembre : 219 tests Python, 116 tests de l'API, 522 tests du site, toutes vertes.
 
 ## Organisation du dépôt
 

@@ -175,6 +175,18 @@ def main(dsn):
     x("UPDATE agg.player_power SET finishing_total=3.1,creation_total=0.8,defence_total=0.3,finishing_percentile=95,creation_percentile=70.5,defence_percentile=40 WHERE player_id=101")
     x("""INSERT INTO agg.player_power_roles(season_id,player_id,role,matches,minutes,total,rate,run_id)
          VALUES (2025,101,'centre_forward',2,200,3.9,0.539,%(run)s),(2025,101,'winger',1,60,0.3,0.053,%(run)s)""", {"run": run})
+    # A match forecast and a league projection, as forecast.refresh writes them (076).
+    model = x("""INSERT INTO agg.forecast_models(version,fitted_at,matches,home_base,home_slope,away_base,away_slope,rho,strength_spread,simulations)
+                 VALUES ('forecast-v1','2025-09-06T03:10:00Z',60000,0.26,0.93,0.32,0.91,-0.03,90,1000) RETURNING id""").fetchone()[0]
+    pending = x("SELECT id, home_team_id, away_team_id FROM core.matches WHERE status='not_started' ORDER BY id LIMIT 1").fetchone()
+    if pending:
+        x("""INSERT INTO agg.match_forecasts(match_id,season_id,home_win,draw,away_win,home_goals,away_goals,likely_home,likely_away,home_elo,away_elo,model_id)
+             VALUES (%s,2025,0.5123,0.2501,0.2376,1.62,1.04,1,0,1540,1490,%s)""", (pending[0], model))
+    for team, played, points, projected, places in ((1, 3, 7, 71.4, {1: 0.6, 2: 0.4}), (2, 3, 4, 55.25, {1: 0.4, 2: 0.6})):
+        x("INSERT INTO agg.season_projections(competition_season_id,team_id,season_id,played,points,projected_points,model_id) VALUES (1,%s,2025,%s,%s,%s,%s)",
+          (team, played, points, projected, model))
+        for place, share in places.items():
+            x("INSERT INTO agg.season_projection_places(competition_season_id,team_id,place,probability) VALUES (1,%s,%s,%s)", (team, place, share))
     # The players' season totals, as the calculator writes them (the home's leaders read them).
     from vega import calculator
 

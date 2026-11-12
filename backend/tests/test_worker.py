@@ -423,6 +423,15 @@ class WorkerTest(unittest.TestCase):
         self.assertEqual(due_seasons(self.db, noon), [season])
         x("UPDATE agg.power_runs SET linked_leagues=1 WHERE kind='players' AND season_id=%s", (season,))
         self.assertEqual(due_seasons(self.db, noon), [])
+        # A match still to play and no forecast of the season's matches: due; forecast, it is not.
+        x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,match_date,kickoff_at,updated_at)
+             VALUES (910,900,%s,'pitchapi','not_started',900,901,%s,%s,%s)""", (season, (noon + timedelta(days=5)).date(), noon + timedelta(days=5), noon - timedelta(days=9)))
+        self.assertEqual(due_seasons(self.db, noon), [season])
+        model = x("""INSERT INTO agg.forecast_models(version,matches,home_base,home_slope,away_base,away_slope,rho,strength_spread,simulations)
+                     VALUES ('forecast-v1',1000,0.2,0.9,0.3,0.9,0,90,1000) RETURNING id""").fetchone()[0]
+        x("""INSERT INTO agg.match_forecasts(match_id,season_id,home_win,draw,away_win,home_goals,away_goals,likely_home,likely_away,home_elo,away_elo,model_id)
+             VALUES (910,%s,0.5,0.25,0.25,1.5,1.1,1,1,1500,1500,%s)""", (season, model))
+        self.assertEqual(due_seasons(self.db, noon), [])
 
     def due_season(self):
         """A season with a finished match and no models yet: due at once."""

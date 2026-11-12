@@ -46,6 +46,8 @@ import {
   inEuropeFocus,
 } from "../../../shared/competition-scope.js";
 import CompetitionStandings from "../components/CompetitionStandings.jsx";
+import SeasonProjection from "../components/SeasonProjection.jsx";
+import { useSeasonProjection } from "../services/forecasts.js";
 import {
   WORLD_CUP_ID,
   mergeCupCatalog,
@@ -234,6 +236,8 @@ function Fixtures({ competition, day, initialSeason }) {
     f.statusKnown && needsFullCalendar,
   );
   const showHighlights = supported && view === "standings";
+  // The league replayed to its end, where the base projects it (a domestic league in progress).
+  const projection = useSeasonProjection(supported ? competition?.id : null, seasonLabel(season));
   const overviewFixtures = resource.value || preview.value;
   return (
     <div
@@ -295,6 +299,7 @@ function Fixtures({ competition, day, initialSeason }) {
                   ["standings", "Classement"],
                   ["matches", "Matchs"],
                   ...(hasKnockout ? [["bracket", "Tableau"]] : []),
+                  ...(projection ? [["projection", "Projection"]] : []),
                 ]}
               />
             )}
@@ -312,6 +317,8 @@ function Fixtures({ competition, day, initialSeason }) {
             onNeedFixtures={needFixtures}
             served
           />
+        ) : supported && view === "projection" && projection ? (
+          <SeasonProjection projection={projection} />
         ) : (
           <AsyncState resource={resource}>
             {(value) => {
