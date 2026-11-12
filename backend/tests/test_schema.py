@@ -41,6 +41,7 @@ class SchemaTests(unittest.TestCase):
             "006_reference_state.sql",
             "007_unknown_player_name.sql",
             "008_validated_core_ops.sql",
+            "074_source_fields.sql",  # the statistics columns the contract gained since
         ):
             cls.db.execute((ROOT / "sql" / name).read_text(encoding="utf-8"))
         cls.db.execute(
