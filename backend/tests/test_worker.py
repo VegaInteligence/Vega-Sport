@@ -469,6 +469,18 @@ class WorkerTest(unittest.TestCase):
             self.assertEqual(due_seasons(self.db, noon), [])
         finally:
             inplay.MIN_FIT = floor
+        # No return curve yet in a base with appearances enough to learn one: due; with a curve, not.
+        from vega import worker as worker_module
+
+        x("INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,minutes_played) VALUES (%s,911,900,8001,90)", (season,))
+        self.assertEqual(due_seasons(self.db, noon), [])  # one appearance is no base to learn a curve from
+        appearances, worker_module.RETURNS_MIN_APPEARANCES = worker_module.RETURNS_MIN_APPEARANCES, 0
+        try:
+            self.assertEqual(due_seasons(self.db, noon), [season])
+            x("INSERT INTO agg.return_curves(bucket,match_no,returns,minutes,usual_minutes,version) VALUES ('30_59',1,100,37,54,'returns-v1')")
+            self.assertEqual(due_seasons(self.db, noon), [])
+        finally:
+            worker_module.RETURNS_MIN_APPEARANCES = appearances
 
     def due_season(self):
         """A season with a finished match and no models yet: due at once."""

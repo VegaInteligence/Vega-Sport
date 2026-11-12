@@ -228,3 +228,16 @@ test("the triangle needs its three sides", async () => {
   assert.deepEqual(passingTriangle([{ a: 1, b: 2, passes: 3 }]), { triangle: null, pair: { players: [1, 2], passes: 3 } });
   assert.deepEqual(passingTriangle([]), { triangle: null, pair: null });
 });
+
+test("the absence a player is coming back from, with the base's curve for its length", { skip }, async () => {
+  const { data } = (await get("/api/players/p_aaaab2/return")).body;
+  assert.deepEqual(data, {
+    id: "p_aaaab2", team: { id: "t_aaaaa1", name: "Olympique Été" },
+    absence: { from: "2025-08-16", returnedOn: "2025-09-27", days: 42, matchesMissed: 5 },
+    matchesBack: 2, minutesBack: 52, usualMinutes: 84,
+    curve: [{ match: 1, returns: 7000, share: 0.69 }, { match: 2, returns: 6000, share: 0.89 }, { match: 3, returns: 5000, share: 0.98 }],
+  });
+  // A player who is not coming back from anything; a parameter the route does not take.
+  assert.equal((await get("/api/players/p_aaaab1/return")).response.status, 404);
+  assert.equal((await get("/api/players/p_aaaab2/return?season=2025/2026")).response.status, 400);
+});

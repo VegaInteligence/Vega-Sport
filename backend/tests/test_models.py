@@ -1037,6 +1037,54 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual(set(seen.values()), {TransactionStatus.IDLE})
         self.assertEqual(self.db.info.transaction_status, TransactionStatus.IDLE)
 
+    def test_zzzzzzzzzz_a_return_from_absence_is_read_from_the_line_ups(self):
+        # 087: returns.refresh, on a club playing every week and a player away for six of them.
+        from datetime import date, timedelta
+        from psycopg.pq import TransactionStatus
+        from vega import returns
+
+        x = self.db.execute
+        start = date(2026, 1, 3)
+        x("INSERT INTO core.teams(id, name) VALUES (9477, 'Club Hebdo'), (9478, 'Adversaire')")
+        x("INSERT INTO core.players(id, name) VALUES (7960, 'Revenant Test'), (7961, 'Toujours Là')")
+        for week in range(12):
+            x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date)
+                 VALUES (%s,1,2025,'pitchapi','finished',9477,9478,1,0,%s)""", (9400 + week, start + timedelta(days=7 * week)))
+            x("INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,minutes_played) VALUES (2025,%s,9477,7961,90)", (9400 + week,))
+            if week < 5 or week >= 10:
+                x("INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,minutes_played) VALUES (2025,%s,9477,7960,%s)",
+                  (9400 + week, 80 if week < 5 else 30 if week == 10 else 50))
+        today = start + timedelta(days=7 * 11 + 2)
+        seen = []
+        original, minimum = returns.curve, returns.MIN_RETURNS
+
+        def spy(*args, **kwargs):
+            seen.append(self.db.info.transaction_status)
+            return original(*args, **kwargs)
+
+        returns.curve, returns.MIN_RETURNS = spy, 1
+        try:
+            self.assertEqual(returns.refresh(self.db, today), (2, 1))
+            self.assertEqual(seen, [TransactionStatus.IDLE])  # the appearances are gone through with no transaction open
+            self.assertEqual(x("SELECT bucket, match_no, returns, minutes, usual_minutes, version FROM agg.return_curves ORDER BY 2").fetchall(),
+                             [("30_59", 1, 1, 30.0, 80.0, returns.MODEL_VERSION), ("30_59", 2, 1, 50.0, 80.0, returns.MODEL_VERSION)])
+            self.assertEqual(self.one("""SELECT player_id, team_id, absent_from, returned_on, days, matches_missed, matches_back, bucket, usual_minutes, minutes_back
+                                         FROM agg.player_returns"""),
+                             (7960, 9477, start + timedelta(days=28), start + timedelta(days=70), 42, 5, 2, "30_59", 80.0, 40.0))
+            self.assertEqual(self.one("SELECT team, days, matches_back, usual_minutes FROM api.player_returns WHERE player_key=7960"), ("Club Hebdo", 42, 2, 80.0))
+            self.assertEqual(self.one("SELECT count(*) FROM api.return_curves")[0], 2)
+            # Four months later nobody is coming back any more; the curve stays.
+            self.assertEqual(returns.refresh(self.db, today + timedelta(days=120)), (2, 0))
+            self.assertEqual(self.one("SELECT count(*) FROM agg.player_returns")[0], 0)
+        finally:
+            returns.curve, returns.MIN_RETURNS = original, minimum
+            x("DELETE FROM agg.player_returns")
+            x("DELETE FROM agg.return_curves")
+            x("DELETE FROM core.player_match_stats WHERE player_id IN (7960, 7961)")
+            x("DELETE FROM core.matches WHERE id BETWEEN 9400 AND 9411")
+            x("DELETE FROM core.players WHERE id IN (7960, 7961)")
+            x("DELETE FROM core.teams WHERE id IN (9477, 9478)")
+
 
 if __name__ == "__main__":
     unittest.main()

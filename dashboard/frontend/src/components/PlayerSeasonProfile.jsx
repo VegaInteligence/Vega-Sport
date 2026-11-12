@@ -53,6 +53,7 @@ import PlayerPresenceCard from "./PlayerPresenceCard.jsx";
 import PlayerPassPartners from "./PlayerPassPartners.jsx";
 import PlayerNeighbours from "./PlayerNeighbours.jsx";
 import PlayerHalves from "./PlayerHalves.jsx";
+import PlayerReturn from "./PlayerReturn.jsx";
 import { chartTokens } from "./PlayerScoutCharts.jsx";
 import scout from "./PlayerScout.module.css";
 import { nationalFlagCode } from "../services/national-flags.js";
@@ -788,6 +789,9 @@ export default function PlayerSeasonProfile({
                     )}
                   </section>
                   <PlayerPresenceCard id={id} rows={rows} />
+                </div>
+                <div className={scout.block}>
+                  <PlayerReturn id={id} />
                 </div>
                 <div className={scout.block}>
                   <PlayerPassPartners id={id} />
