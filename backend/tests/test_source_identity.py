@@ -111,6 +111,19 @@ class ParseTest(unittest.TestCase):
         self.assertIsNone(match("Chelsea FC"))  # the reviewed spelling is the tournament's, not every source's
         self.assertIsNone(match("Al Ain FC"))
 
+    def test_national_team_spellings(self):
+        pitch = {("germany", True): {(1, None)}, ("turkiye", True): {(2, None)}, ("usa", True): {(3, None)}, ("france", True): {(4, None)},
+                 ("germany", False): {(9, "GER")}}
+        match = lambda name, national=True: identity.match_team(pitch, name, national, None)
+        self.assertEqual([match(n) for n in ("Allemagne", "Germany", "Turquie", "Turkey", "United States", "France")], [1, 1, 2, 2, 3, 4])
+        self.assertIsNone(match("Italie"))  # PitchAPI holds no Italy
+        self.assertIsNone(match("West Germany"))  # another team
+        self.assertIsNone(match("Allemagne", national=False))  # a club is never a national team's spelling
+        # Every reviewed spelling names a team PitchAPI's own list holds (12 November 2026).
+        held = {"Austria", "Belgium", "Bosnia and Herzegovina", "Croatia", "Czechia", "Denmark", "England", "Germany", "Ivory Coast", "Netherlands",
+                "Norway", "Poland", "Scotland", "Serbia", "Spain", "Sweden", "Switzerland", "Turkiye", "USA", "Wales"}
+        self.assertEqual(set(identity.NATION_SPELLINGS.values()), held)
+
     def test_no_key_no_scope(self):
         os.environ.pop("V2_SPORTSAPI_API_KEY", None)
         self.assertEqual(sportsapi.scopes(NOW), {})

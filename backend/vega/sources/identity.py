@@ -8,6 +8,10 @@ names exactly one:
 - clubs: the PitchAPI club of the same normalized name, or of a reviewed spelling
   (curated.CLUB_ALIASES), in the same country when both countries are known.
 
+A national team the sources name otherwise than PitchAPI (the site's French names of the
+Nations League, an older English spelling) is the PitchAPI team of its reviewed spelling
+(NATION_SPELLINGS).
+
 The Club World Cup's source writes a club with its country after it ("Al Hilal (KSA)"):
 the club is looked for under the name alone, in that country, and under the spelling
 reviewed for it when PitchAPI writes another (WORLD_CLUB_SPELLINGS, WORLD_CLUB_KEYS).
@@ -113,6 +117,21 @@ WORLD_CLUB_SPELLINGS = {
 WORLD_CLUB_KEYS = {"Al Hilal (KSA)": "t_2r8ytM", "Al Ittihad (KSA)": "t_4BG5Jn"}
 
 
+# National teams the complementary sources name otherwise than PitchAPI does, reviewed on
+# 12 November 2026 against PitchAPI's 54 national teams: the site's French names (the
+# Nations League editions) and OpenFootball's spellings (the Euros, the World Cups). A
+# national team PitchAPI does not hold (Italy, Greece, Ukraine…) has no entry and stays
+# apart, like the teams of states that no longer exist.
+NATION_SPELLINGS = {
+    "Allemagne": "Germany", "Angleterre": "England", "Autriche": "Austria", "Belgique": "Belgium", "Bosnie-Herzégovine": "Bosnia and Herzegovina",
+    "Croatie": "Croatia", "Danemark": "Denmark", "Écosse": "Scotland", "Espagne": "Spain", "Norvège": "Norway", "Pays-Bas": "Netherlands",
+    "Pays de Galles": "Wales", "Pologne": "Poland", "Serbie": "Serbia", "Suède": "Sweden", "Suisse": "Switzerland", "Tchéquie": "Czechia",
+    "Turquie": "Turkiye",
+    "Bosnia & Herzegovina": "Bosnia and Herzegovina", "Bosnia-Herzegovina": "Bosnia and Herzegovina", "Côte d'Ivoire": "Ivory Coast",
+    "Czech Republic": "Czechia", "Turkey": "Turkiye", "United States": "USA",
+}
+
+
 def _reviewed_clubs(conn):
     """The PitchAPI team of each key of WORLD_CLUB_KEYS."""
     return dict(conn.execute(
@@ -134,6 +153,8 @@ def match_team(pitch, name, national, country, reviewed=None):
     names = {normalize(name)}
     if spelling:
         names.add(normalize(spelling))
+    if national and name in NATION_SPELLINGS:
+        names.add(normalize(NATION_SPELLINGS[name]))
     if not national and name in CLUB_ALIASES:
         names.add(normalize(CLUB_ALIASES[name]))
     found = set()
