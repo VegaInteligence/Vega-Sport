@@ -793,11 +793,13 @@ def refresh_daily(conn, season, *, elo=True):
     ).fetchall()
     # The forecasts of the matches still to play and the leagues' projections (forecast.py),
     # from the strengths the Elo has just settled.
-    from . import forecast, xg
+    from . import embedding, forecast, xg
 
     forecast.refresh(conn, season)
     # Vega's own expected goals of the season's shots (xg.py).
     xg.refresh(conn, season)
+    # The players' whole profile as a short vector, for "players like him" (embedding.py).
+    embedding.refresh(conn, season)
     for (edition,) in editions:
         with conn.transaction():
             # The blanks that are zeros (068) first: the list's rows read them.

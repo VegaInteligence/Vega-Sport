@@ -440,6 +440,20 @@ class WorkerTest(unittest.TestCase):
         self.assertEqual(due_seasons(self.db, noon), [season])
         x("INSERT INTO agg.shot_xg(season_id,match_id,shot_no,xg,model_id) VALUES (%s,910,1,0.1,%s)", (season, fitted))
         self.assertEqual(due_seasons(self.db, noon), [])
+        # Enough players for the profile axes and no vector yet: due; with the season's model row, not.
+        from vega import embedding
+
+        x("INSERT INTO core.players(id,name) SELECT 8000 + g, 'P' || g FROM generate_series(1, 3) g")
+        x("""INSERT INTO agg.player_season_stats(player_id,team_id,competition_season_id,season_id,appearances,starts,minutes)
+             SELECT 8000 + g, 900, 900, %s, 10, 10, 900 FROM generate_series(1, 3) g""", (season,))
+        self.assertEqual(due_seasons(self.db, noon), [])  # three players are no base to learn axes from
+        minimum, embedding.MIN_PLAYERS = embedding.MIN_PLAYERS, 3
+        try:
+            self.assertEqual(due_seasons(self.db, noon), [season])
+            x("INSERT INTO agg.embedding_models(season_id,version,players,statistics,variance_kept) VALUES (%s,'profile-embedding-v1',3,12,0.8)", (season,))
+            self.assertEqual(due_seasons(self.db, noon), [])
+        finally:
+            embedding.MIN_PLAYERS = minimum
 
     def due_season(self):
         """A season with a finished match and no models yet: due at once."""

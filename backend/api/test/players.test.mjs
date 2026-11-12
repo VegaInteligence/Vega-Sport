@@ -159,3 +159,22 @@ test("a player's passing partners of a season, the most exchanged first", { skip
   assert.equal((await get("/api/players/p_aaaab1/partners")).response.status, 400);
   assert.equal((await get("/api/players/p_aaaab1/partners?season=2025")).response.status, 400);
 });
+
+test("the players whose season's profile is the closest to a player's", { skip }, async () => {
+  const { data } = (await get("/api/players/p_aaaab1/similar?season=2025/2026")).body;
+  assert.deepEqual([data.id, data.season, data.compared], ["p_aaaab1", "2025/2026", 2]);
+  // 102 at a distance of 5, 103 at 10: the median is 7.5. The player of the women's competition is not compared with him.
+  assert.deepEqual(data.similar.map((p) => [p.id, p.name, p.similarity, p.minutes]), [["p_aaaab2", "Marc Petit", 33, 800], ["p_aaaab3", "Hugo Sud", 0, 700]]);
+  // The club, role and score come from the power ranking when the player is in it.
+  const ranked = data.similar.filter((p) => p.role);
+  assert.ok(ranked.every((p) => typeof p.position === "string" && p.position.length > 0));
+  // Alone in her pool: nobody to compare with.
+  assert.equal((await get("/api/players/p_aaaab4/similar?season=2025/2026")).response.status, 404);
+  assert.equal((await get("/api/players/p_aaaab1/similar?season=2024/2025")).response.status, 404);
+  assert.equal((await get("/api/players/p_aaaab1/similar")).response.status, 400);
+});
+
+test("the similarity runs from 100 for the same profile to 0 at the median distance", async () => {
+  const { similarity } = await import("../src/routes/profiles.mjs");
+  assert.deepEqual([similarity(0, 12), similarity(3, 12), similarity(12, 12), similarity(30, 12), similarity(1, 0)], [100, 75, 0, 0, 0]);
+});

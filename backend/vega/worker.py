@@ -99,9 +99,12 @@ def due_seasons(conn, now):
     - a season played in the last 400 days whose shots have no Vega expected goals (xg.py:
       the values are new to it), after the same wait, when a model exists or the base
       holds enough shots to fit one.
+    - a season played in the last 400 days without the players' profile vectors
+      (embedding.py), after the same wait, when it has enough players to learn the axes.
     Only PitchAPI editions count: the models read nothing of the archives and cups (whose
     seasons would otherwise all fall due when they are imported)."""
     from .power import METHOD_VERSION
+    from .embedding import MIN_MINUTES as PROFILE_MIN_MINUTES, MIN_PLAYERS as PROFILE_MIN_PLAYERS
     from .xg import MIN_FIT as XG_MIN_FIT
 
     return [
@@ -134,8 +137,15 @@ def due_seasons(conn, now):
                        AND NOT EXISTS (SELECT 1 FROM agg.shot_xg v WHERE v.season_id = m.season_id)
                        AND (EXISTS (SELECT 1 FROM agg.xg_models)
                             OR EXISTS (SELECT 1 FROM core.shots OFFSET %(shots)s LIMIT 1)))
+                   OR (l.started_at < %(now)s - %(after)s
+                       AND bool_or(m.kickoff_at > %(now)s - interval '400 days' AND m.kickoff_at <= %(now)s)
+                       AND NOT EXISTS (SELECT 1 FROM agg.embedding_models e WHERE e.season_id = m.season_id)
+                       AND (SELECT count(*) FROM (SELECT 1 FROM agg.player_season_stats s WHERE s.season_id = m.season_id
+                                                  GROUP BY s.player_id HAVING sum(s.minutes) >= %(profile_minutes)s
+                                                  LIMIT %(profiles)s) q) >= %(profiles)s)
                ORDER BY 1""",
-            {"now": now, "after": RECOMPUTE_AFTER, "method": METHOD_VERSION, "shots": XG_MIN_FIT},
+            {"now": now, "after": RECOMPUTE_AFTER, "method": METHOD_VERSION, "shots": XG_MIN_FIT,
+             "profiles": PROFILE_MIN_PLAYERS, "profile_minutes": PROFILE_MIN_MINUTES},
         ).fetchall()
     ]
 

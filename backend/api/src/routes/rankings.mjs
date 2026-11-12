@@ -115,7 +115,7 @@ async function editionBody(read, kind, edition) {
   };
 }
 
-const ROLE_LABEL = {
+export const ROLE_LABEL = {
   centre_forward: "Avant-centre", winger: "Ailier / milieu offensif", central_midfielder: "Milieu central",
   defensive_midfielder: "Milieu défensif", full_back: "Latéral / piston", centre_back: "Défenseur central", goalkeeper: "Gardien",
 };
