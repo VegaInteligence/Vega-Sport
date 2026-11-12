@@ -85,22 +85,37 @@ class ModelsTest(unittest.TestCase):
     def test_power_rankings_of_players(self):
         from vega import power
 
-        for slot in range(0, 121):
-            self.assertEqual(self.db.execute("SELECT core.power_role(%s)", (slot,)).fetchone()[0], power.ROLE_OF_SLOT(slot), slot)
+        # One league in the base: it is its own scale, and its country's top division.
+        self.assertEqual(self.db.execute("SELECT count(*), bool_and(linked), sum(links) FROM agg.league_levels").fetchone(), (1, True, 0))
         ranked = self.db.execute(
             "SELECT player_id, role, minutes, total, rate, score, rank, role_rank FROM agg.player_power WHERE season_id=2025 AND eligible ORDER BY rank"
         ).fetchall()
         self.assertEqual(len(ranked), 88)  # 14 matches of 90 minutes: everyone is eligible
-        self.assertEqual({r[1] for r in ranked}, {"goalkeeper", "full_back", "centre_back", "defensive_midfielder", "winger", "centre_forward"})
+        # The synthetic line-ups name no formation: each slot keeps its own reading (role_of).
+        self.assertEqual({r[1] for r in ranked}, {"goalkeeper", "full_back", "centre_back", "defensive_midfielder", "central_midfielder", "winger", "centre_forward"})
         self.assertTrue(all(0 <= r[5] <= 100 for r in ranked))
         self.assertEqual(ranked[0][6], 1)
-        for player, role, minutes, total, rate, *_ in ranked[:5]:
+        weight = self.db.execute("SELECT level_weight FROM agg.power_runs WHERE kind='players' AND status='published'").fetchone()[0]
+        self.assertGreater(weight, 0)
+        own_of = {}
+        for player, role, minutes, total, rate, *_ in ranked:
+            own, level, index, linked, top = self.db.execute(
+                "SELECT own_total, level_total, index, linked, top_division FROM agg.player_power WHERE season_id=2025 AND player_id=%s", (player,)
+            ).fetchone()
+            own_of[player] = own
+            self.assertTrue(linked and top)
+            self.assertAlmostEqual(own + level, total, places=3)  # what he does, and the level of his club
             self.assertAlmostEqual(rate, 90 * total / (minutes + 450), places=3)
             summed = self.db.execute(
-                "SELECT sum(contribution), sum(minutes) FROM agg.player_power_matches WHERE season_id=2025 AND player_id=%s", (player,)
+                "SELECT sum(contribution), sum(level), sum(minutes) FROM agg.player_power_matches WHERE season_id=2025 AND player_id=%s", (player,)
             ).fetchone()
-            self.assertAlmostEqual(summed[0], total, places=3)
-            self.assertEqual(summed[1], minutes)
+            self.assertAlmostEqual(summed[0], own, places=3)
+            self.assertAlmostEqual(weight * summed[1], level, places=3)
+            self.assertEqual(summed[2], minutes)
+        # The rank is the index's; the score shown follows it.
+        indexes = [r[0] for r in self.db.execute("SELECT index FROM agg.player_power WHERE season_id=2025 AND eligible ORDER BY rank").fetchall()]
+        self.assertEqual(indexes, sorted(indexes, reverse=True))
+        self.assertEqual([r[5] for r in ranked], sorted((r[5] for r in ranked), reverse=True))
         # Each block's share of T: they add up to T; percentiles within the role for its blocks.
         blocks = ("finishing", "creation", "progression", "defence", "retention", "shot_stopping", "aerial", "depth", "distribution")
         for player, role, minutes, total, *_ in ranked:
@@ -109,20 +124,27 @@ class ModelsTest(unittest.TestCase):
                 (player,),
             ).fetchone()
             totals, percentiles = row[:9], row[9:]
-            self.assertAlmostEqual(sum(v or 0 for v in totals), total, places=3)
+            self.assertAlmostEqual(sum(v or 0 for v in totals), own_of[player], places=3)
             mine = dict(zip(blocks, percentiles))
             self.assertEqual({b for b, v in mine.items() if v is not None}, set(power.blocks_of(role)))
             self.assertTrue(all(0 <= v <= 100 for v in mine.values() if v is not None))
             # One row per role played; they add up to the season.
             roles = self.db.execute("SELECT sum(minutes), sum(total), sum(matches) FROM agg.player_power_roles WHERE season_id=2025 AND player_id=%s", (player,)).fetchone()
             self.assertEqual(roles[0], minutes)
-            self.assertAlmostEqual(roles[1], total, places=3)
+            self.assertAlmostEqual(roles[1], own_of[player], places=3)
         # The best of each role is first of his role.
         for role in {r[1] for r in ranked}:
             mine = [r for r in ranked if r[1] == role]
             self.assertEqual(min(r[7] for r in mine), 1)
-        run = self.db.execute("SELECT method_version, elo_k, regularisation_minutes, eligibility_minutes FROM agg.power_runs WHERE kind='players' AND status='published'").fetchone()
-        self.assertEqual(run, ("power-ranking-v1", 20.0, 450.0, 900.0))
+        run = self.db.execute(
+            """SELECT method_version, elo_k, regularisation_minutes, eligibility_minutes, eligibility_share, level_share, score_scale, year_start, year_end
+               FROM agg.power_runs WHERE kind='players' AND status='published'"""
+        ).fetchone()
+        # 14 matches of 90 minutes: the year is young, half the most used player's minutes make a player eligible.
+        self.assertEqual(run[:7], ("power-ranking-v2", 20.0, 450.0, 630.0, 0.5, 0.5, 4.0))
+        self.assertEqual([d.isoformat() for d in run[7:]], ["2025-08-01", "2026-07-31"])
+        elo = self.db.execute("SELECT seed_rounds, link_matches, level_prior_matches FROM agg.power_runs WHERE kind='elo' AND status='published'").fetchone()
+        self.assertEqual(elo, (1, 10, 30))  # nothing ties the league to another: its level does not move
         # The award race: the first 30 of the ranking, numbered 1..30, with its calc run.
         race = self.db.execute(
             """SELECT a.rank, a.player_id, a.score, r.kind, r.status FROM agg.player_award_ranking a JOIN agg.calc_runs r ON r.id=a.calc_run_id

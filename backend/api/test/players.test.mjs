@@ -38,7 +38,8 @@ test("player directory: envelope, rating order, records", { skip }, async () => 
   );
   // The player power ranking of the season; p_aaaab3 is not ranked (under 900 minutes in the seed).
   assert.deepEqual(p1.power, {
-    rank: 1, score: 87.5, role: "centre_forward", position: "Avant-centre", roleRank: 1,
+    rank: 1, score: 87.5, index: 1.4, role: "centre_forward", position: "Avant-centre", roleRank: 1,
+    ownContribution: 3, clubLevel: 1.2, linked: true, topDivision: true,
     blocks: {
       finishing: { contribution: 3.1, percentile: 95 }, creation: { contribution: 0.8, percentile: 70.5 }, defence: { contribution: 0.3, percentile: 40 },
     },

@@ -1,25 +1,40 @@
 """Power rankings of clubs and players: docs/METHODE_CLASSEMENT_BALLON_D_OR.md (main).
 
 Club power ranking (§ 3): an Elo strength, updated chronologically over every finished
-match the base holds; a match is contextualised with the strengths *before* it. Leagues are tied
-together by the European club matches; clubs and national teams are ranked apart.
+match the base holds; a match is contextualised with the strengths *before* it. Clubs and
+national teams are ranked apart.
 
 Player power ranking (§§ 4–8), the role-relative method:
   x̂ = expected value for the role, the minutes and the opponent;
   c = d · (x − x̂) / s           (§ 6.1)
   C = Σ_b W_r,b · mean_k∈b(c)    (§ 6.2, over the blocks the match has)
-  T = Σ_m C,  R* = 90 T / (M + λ),  B = 0.75 Pct_r(T) + 0.25 Pct_r(R*)   (§ 8)
+  T = Σ_m (C + κ L),  R* = 90 T / (M + λ)                                  (§ 8)
 
 The method leaves points open (its § 12). Each choice is a named setting below, stored
-with every run (agg.power_runs) and listed in backend/README.md:
-- Elo: initial 1500, K 20, home advantage 60 points (none on neutral ground), expected
-  score 1 / (1 + 10^((R_opp − R_own − h) / 400)), result after extra time (a shoot-out
-  is a draw), every finished club or national-team match of the PitchAPI era (archives
-  and complementary cup sources join once their teams are linked to the same clubs).
-- Universe of a season: its finished club matches, national teams excluded; a
-  player-match counts when the player played.
-- Roles: the line-up slot of the match (core.power_role); a substitute takes his most
-  played role of the season, else his line's default.
+with every run (agg.power_runs) and listed in backend/README.md. Version 2 (12 November
+2026) answers four of them from what version 1 gave on the base (docs/calculs/05-joueurs/
+08-audit-classement-puissance.md): the leagues' common scale, the role of a slot, the
+period, and the comparison between roles.
+- Elo: K 20, home advantage 60 points (none on neutral ground), expected score
+  1 / (1 + 10^((R_opp − R_own − h) / 400)), result after extra time (a shoot-out is a
+  draw), every finished club or national-team match of the PitchAPI era, and the matches
+  of the complementary cups between two clubs the PitchAPI editions know (they tie the
+  divisions of a country together).
+- Common scale (§ 3: "des Elo calculés séparément avec la même moyenne ne créent pas
+  automatiquement une échelle commune"): a club enters at its league's level, not at 1500
+  whatever the league. The levels are the fixed point of the Elo itself: run it, take
+  each league's mean, start again from those means, until they stop moving. A level
+  drawn from few matches against other leagues is held towards 1500 (links / (links +
+  LEVEL_PRIOR_MATCHES)). The common scale starts from the league with the most matches
+  against others and takes in, step by step, every league whose clubs played
+  LINK_MATCHES matches against the clubs of the leagues already on it. Another keeps
+  its own scale: its players have a score, and no rank among the others.
+- Universe of a season: the finished club matches from 1 August of its first year to 31
+  July of the next (the award's year), national teams excluded; a calendar-year league
+  gives the second half of one edition and the first half of the next. A player-match
+  counts when the player played.
+- Roles: the line-up slot of the match read with its formation (role_of); a substitute
+  takes his most played role of the season, else his line's default.
 - Volume indicators: x̂ = (t / 90) · exp(α + β Δ), Δ = (Elo_opp − Elo_own) / 400 before
   the match, α and β fitted by Poisson maximum likelihood per role and indicator on the
   season (β = 0 below MIN_FIT matches): the "régression simple" of § 5.1.
@@ -29,21 +44,41 @@ with every run (agg.power_runs) and listed in backend/README.md:
   MIN_REFERENCE matches is left out. A missing value is never a zero: its indicator, or
   its block, is left out of that match, the block weights renormalised.
 - Blocks: the indicators below, with equal weights inside a block.
-- Main role: the role with the most minutes; eligibility 900 minutes; percentiles are
-  the site's "rang moyen" (#below + ½ #equal) / n within the main role.
+- Club level: C measures a player against what is expected of his role in his club's
+  situation, so it says how far he stands from his club's own level, not where that
+  level is. L = (t / 90) · (Elo_own − mean) / 400 puts it back, and κ gives the two
+  parts the same spread among the eligible players (LEVEL_SHARE: half of what separates
+  two players is the level they play at, half what they do there).
+- Main role: the role with the most minutes; eligibility 900 minutes, or half the
+  minutes of the most used player while the period is young; percentiles are the site's
+  "rang moyen" (#below + ½ #equal) / n within the main role.
+- The award race (the site's Ballon d'Or): the ranked players of a top division, the
+  highest league of its country on the common scale.
+- Ranking between roles: the percentile score B of § 8.3 reaches its ceiling for the
+  first players of every role, and a larger role gave a higher ceiling. The rank is that
+  of the standardised index Z = 0.75 z_r(T) + 0.25 z_r(R*), z within the main role; the
+  score shown is 100 / (1 + 10^(−Z / 4)).
 """
 
 from collections import defaultdict
+from datetime import date, timedelta
 from math import exp, log, sqrt
 
-METHOD_VERSION = "power-ranking-v1"
+METHOD_VERSION = "power-ranking-v2"
 ELO_INITIAL = 1500.0
 ELO_K = 20.0
 ELO_HOME = 60.0
+SEED_ROUNDS = 200  # passes of the Elo to settle the leagues' levels
+SEED_TOLERANCE = 0.5  # Elo points: the levels have stopped moving
+LINK_MATCHES = 10  # matches against the clubs of the leagues on the common scale that put a league on it
+LEVEL_PRIOR_MATCHES = 30  # a league's level counts for links / (links + this), the rest stays at ELO_INITIAL
 LAMBDA = 450.0
 ELIGIBILITY = 900.0
+ELIGIBILITY_SHARE = 0.5  # of the most used player's minutes, while that is less than ELIGIBILITY
 TOTAL_WEIGHT = 0.75
 RATE_WEIGHT = 0.25
+LEVEL_SHARE = 0.5  # of the spread between players given to the level of their club
+SCORE_SCALE = 4.0  # standard deviations of the index for ten to one, as the Elo's 400 points
 MIN_REFERENCE = 30
 MIN_FIT = 200
 LINE_DEFAULT = {0: "goalkeeper", 1: "centre_back", 2: "central_midfielder", 3: "centre_forward"}
@@ -109,13 +144,16 @@ def expected_score(own, opponent, home_advantage):
     return 1 / (1 + 10 ** ((opponent - own - home_advantage) / 400))
 
 
-def elo_updates(matches, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME):
+def elo_updates(matches, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME, seeds=None, leagues=None):
     """`matches`: (match, season, kickoff, home team, away team, home score, away score,
-    neutral) in match order. Yields one row per side: (match, team, season, kickoff,
-    before, after, expected, result)."""
-    rating = defaultdict(lambda: initial)
-    for mid, season, kickoff, h, a, hs, as_, neutral in matches:
-        rh, ra = rating[h], rating[a]
+    neutral, …) in match order. Yields one row per side: (match, team, season, kickoff,
+    before, after, expected, result). A club's first strength is its league's level
+    (`seeds`, by `leagues[team]`), `initial` without one."""
+    rating = {}
+    seeds, leagues = seeds or {}, leagues or {}
+    for mid, season, kickoff, h, a, hs, as_, neutral, *_ in matches:
+        rh = rating[h] if h in rating else seeds.get(leagues.get(h), initial)
+        ra = rating[a] if a in rating else seeds.get(leagues.get(a), initial)
         advantage = 0.0 if neutral else home
         eh = expected_score(rh, ra, advantage)
         result = 1.0 if hs > as_ else 0.0 if hs < as_ else 0.5
@@ -125,20 +163,142 @@ def elo_updates(matches, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME):
         yield (mid, a, season, kickoff, ra, rating[a], 1 - eh, 1 - result)
 
 
+# Columns 8 to 11: the match's day, its competition, whether it comes from a complementary
+# source (a cup-source edition), whether it is international (a European competition, or
+# national teams). A complementary match counts between two clubs the PitchAPI editions know.
 ELO_MATCHES = """
-SELECT m.id, m.season_id, m.kickoff_at, m.home_team_id, m.away_team_id, m.home_score, m.away_score, coalesce(m.is_neutral, false)
+WITH known AS (
+  SELECT DISTINCT v.team_id FROM core.matches m
+  JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL AND cs.cup_key IS NULL
+  CROSS JOIN LATERAL (VALUES (m.home_team_id), (m.away_team_id)) v(team_id))
+SELECT m.id, m.season_id, coalesce(m.kickoff_at, m.match_date::timestamp AT TIME ZONE 'UTC') AS kickoff,
+  m.home_team_id, m.away_team_id, m.home_score, m.away_score, coalesce(m.is_neutral, false),
+  m.match_date, cs.competition_id, cs.cup_key IS NOT NULL,
+  coalesce(left(c.country_code, 3) = 'INT', false) OR coalesce(th.is_national, false)
 FROM core.matches m
-JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL AND cs.cup_key IS NULL
+JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL
+JOIN core.competitions c ON c.id = cs.competition_id
+JOIN core.teams th ON th.id = m.home_team_id
 WHERE m.status = 'finished' AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL
   AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL
-ORDER BY m.kickoff_at NULLS LAST, m.match_date NULLS LAST, m.id"""
+  AND (cs.cup_key IS NULL OR (m.match_date IS NOT NULL
+       AND m.home_team_id IN (SELECT team_id FROM known) AND m.away_team_id IN (SELECT team_id FROM known)))
+ORDER BY 3 NULLS LAST, m.match_date NULLS LAST, m.id"""
+
+
+def elo_matches(rows):
+    """The Elo's matches, in order: the PitchAPI ones, and the complementary ones that copy
+    neither one of them (the same clubs within three days: a league both sources hold) nor
+    one another (two sources of one cup)."""
+    played = defaultdict(list)
+    for r in rows:
+        if not r[10] and r[8] is not None:
+            played[(r[3], r[4])].append(r[8])
+    kept, seen = [], set()
+    for r in rows:
+        if r[10]:
+            day = r[8]
+            if any(abs((d - day).days) <= 3 for d in played.get((r[3], r[4]), ())):
+                continue
+            if any((r[3], r[4], day + timedelta(days=x)) in seen for x in (-1, 0, 1)):
+                continue
+            seen.add((r[3], r[4], day))
+        kept.append(r)
+    return kept
+
+
+def home_leagues(matches):
+    """A club's league: the domestic PitchAPI competition it played most in its first season."""
+    first = {}
+    for m in matches:
+        if m[10] or m[11]:
+            continue
+        for team in (m[3], m[4]):
+            season, counts = first.setdefault(team, (m[1], defaultdict(int)))
+            if season == m[1]:
+                counts[m[9]] += 1
+    return {team: max(sorted(counts), key=lambda c: counts[c]) for team, (_, counts) in first.items()}
+
+
+def league_links(matches, leagues):
+    """The matches between clubs of two leagues: {(league, league): matches}, each pair once."""
+    pairs = defaultdict(int)
+    for m in matches:
+        a, b = leagues.get(m[3]), leagues.get(m[4])
+        if a is not None and b is not None and a != b:
+            pairs[(a, b) if a < b else (b, a)] += 1
+    return pairs
+
+
+def links_of(pairs):
+    """Per league, its matches against the clubs of every other league."""
+    links = defaultdict(int)
+    for (a, b), n in pairs.items():
+        links[a] += n
+        links[b] += n
+    return links
+
+
+def common_scale(pairs, *, link=LINK_MATCHES):
+    """The leagues on the common scale: the league with the most matches against others,
+    then, step by step, every league whose clubs played `link` matches against the clubs
+    of the leagues already there (a champion meets a different league every European night)."""
+    links = links_of(pairs)
+    if not links:
+        return set()
+    reached = {max(sorted(links), key=lambda league: links[league])}
+    while True:
+        tied = defaultdict(int)
+        for (a, b), n in pairs.items():
+            if (a in reached) != (b in reached):
+                tied[b if a in reached else a] += n
+        joining = {league for league, n in tied.items() if n >= link}
+        if not joining:
+            return reached if links[next(iter(reached))] >= link or len(reached) > 1 else set()
+        reached |= joining
+
+
+def league_means(strengths, leagues):
+    sums = defaultdict(lambda: [0.0, 0])
+    for team, value in strengths.items():
+        if team in leagues:
+            entry = sums[leagues[team]]
+            entry[0] += value
+            entry[1] += 1
+    return {league: (total / n, n) for league, (total, n) in sums.items()}
+
+
+def league_levels(matches, leagues, *, rounds=SEED_ROUNDS, tolerance=SEED_TOLERANCE, initial=ELO_INITIAL, prior=LEVEL_PRIOR_MATCHES):
+    """The level each league's clubs enter at: the mean strength of its clubs after an Elo
+    started from the levels themselves, repeated (half a step at a time) until no level
+    moves by `tolerance`. A league without a match against another keeps `initial` (its
+    Elo is zero-sum), and one with few keeps a part of it: links / (links + `prior`) of
+    its mean. Returns (levels, rounds done, last move)."""
+    links = links_of(league_links(matches, leagues))
+    seeds, done, shift = {}, 0, 0.0
+    for done in range(1, rounds + 1):
+        strengths = {}
+        for _, team, _, _, _, after, _, _ in elo_updates(matches, initial=initial, seeds=seeds, leagues=leagues):
+            strengths[team] = after
+        new = {}
+        for league, (mean, _) in league_means(strengths, leagues).items():
+            weight = links[league] / (links[league] + prior) if links[league] + prior > 0 else 0.0
+            new[league] = 0.5 * (initial + weight * (mean - initial) + seeds.get(league, initial))
+        shift = max((abs(v - seeds.get(k, initial)) for k, v in new.items()), default=0.0)
+        seeds = new
+        if shift < tolerance:
+            break
+    return seeds, done, shift
 
 
 def refresh_elo(conn):
     """Recompute every strength in match order, then each season's club power ranking."""
     with conn.transaction():
         run = _start(conn, "elo")
-        rows = list(elo_updates(conn.execute(ELO_MATCHES).fetchall()))
+        matches = elo_matches(conn.execute(ELO_MATCHES).fetchall())
+        leagues = home_leagues(matches)
+        seeds, rounds, _ = league_levels(matches, leagues)
+        rows = list(elo_updates(matches, seeds=seeds, leagues=leagues))
         conn.execute("DELETE FROM agg.team_power")
         conn.execute("DELETE FROM agg.team_elo")
         with conn.cursor().copy(
@@ -166,15 +326,34 @@ def refresh_elo(conn):
                FROM last l JOIN season s USING (season_id, team_id) JOIN core.teams t ON t.id = l.team_id""",
             (run,),
         )
+        # Each league's place on the common scale, for the players' ranking and the reads.
+        strengths = {}
+        for _, team, _, _, _, after, _, _ in rows:
+            strengths[team] = after
+        pairs = league_links(matches, leagues)
+        # A base whose leagues never met has nothing to tie: each league is its own scale.
+        links, scale = links_of(pairs), common_scale(pairs) or set(leagues.values())
+        conn.execute("DELETE FROM agg.league_levels")
+        for league, (mean, teams) in sorted(league_means(strengths, leagues).items()):
+            conn.execute(
+                "INSERT INTO agg.league_levels(competition_id, entry_level, level, teams, links, linked, run_id) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                (league, seeds.get(league, ELO_INITIAL), mean, teams, links.get(league, 0), league in scale, run),
+            )
+        conn.execute(
+            "UPDATE agg.power_runs SET seed_rounds=%s, link_matches=%s, level_prior_matches=%s WHERE id=%s",
+            (rounds, LINK_MATCHES, LEVEL_PRIOR_MATCHES, run),
+        )
         _publish(conn, run, "elo", None, len(rows) // 2)
     return len(rows) // 2
 
 
 # Players: the role-relative method (§§ 4–8) --------------------------------
 
+# The first parameters: the seasons read (the award year spans two), then the year's first
+# day and the day after its last.
 PLAYER_MATCHES = """
 SELECT s.match_id, s.player_id, s.team_id, s.minutes_played, coalesce(lp.position_id, s.position_id) AS position_id, lp.is_starter,
-  own.elo_before AS own_elo, opp.elo_before AS opponent_elo,
+  l.formation, cs.competition_id, own.elo_before AS own_elo, opp.elo_before AS opponent_elo,
   CASE WHEN mc.events = 'ok' THEN s.goals - (SELECT count(*) FROM core.match_events e
     WHERE e.season_id = s.season_id AND e.match_id = s.match_id AND e.player_id = s.player_id
       AND e.event_type = 'goal' AND e.is_penalty AND e.is_own_goal IS NOT TRUE) END AS np_goals,
@@ -189,25 +368,85 @@ JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archi
 JOIN core.teams t ON t.id = s.team_id AND t.is_national IS NOT TRUE
 LEFT JOIN core.match_coverage mc ON mc.season_id = s.season_id AND mc.match_id = s.match_id
 LEFT JOIN core.lineup_players lp ON lp.season_id = s.season_id AND lp.match_id = s.match_id AND lp.player_id = s.player_id
+LEFT JOIN core.lineups l ON l.season_id = s.season_id AND l.match_id = s.match_id AND l.team_id = s.team_id
 LEFT JOIN core.player_match_advanced a ON a.season_id = s.season_id AND a.match_id = s.match_id AND a.player_id = s.player_id
 LEFT JOIN agg.team_elo own ON own.match_id = s.match_id AND own.team_id = s.team_id
 LEFT JOIN agg.team_elo opp ON opp.match_id = s.match_id AND opp.team_id <> s.team_id
-WHERE s.season_id = %s AND s.minutes_played > 0"""
+WHERE s.season_id = ANY(%s) AND s.minutes_played > 0 AND m.match_date >= %s AND m.match_date < %s"""
+_KEPT = ("match_id", "player_id", "team_id", "position_id", "is_starter", "formation", "competition_id")
+
+
+def award_year(season):
+    """The award's year of a season: from 1 August of its first year to 31 July of the next
+    (the day after, excluded). The matches are those of the season and of the next one."""
+    return date(season, 8, 1), date(season + 1, 8, 1)
 
 
 def _num(v):
     return None if v is None else float(v)
 
 
+def role_of(formation, pos, top):
+    """The role of a starter's slot, read with his team's formation and its highest slot.
+
+    A slot is a row (its tens: 3 the defence … 10 and 11 the attack) and a place across
+    the pitch (its units: 1 and 9 the touchlines, 5 the axis). The same slot is not the
+    same role everywhere: 103 and 107 are the wingers of a 4-3-3 and the strikers of a
+    4-2-4; 72 and 78 the wide midfielders of a 4-4-2 and the wing-backs of a 3-4-3; 84 and
+    86 the interiors of a 4-1-4-1 and the playmakers of a 3-4-2-1 (slots seen on the base,
+    12 November 2026)."""
+    if pos is None or pos <= 3:
+        return None
+    if pos == 11:
+        return "goalkeeper"
+    try:
+        lines = [int(x) for x in (formation or "").split("-")]
+    except ValueError:
+        lines = []
+    back_three = bool(lines) and lines[0] == 3
+    row, place = pos // 10, pos % 10
+    wide = place in (1, 2, 8, 9)
+    if row == 3:
+        return "full_back" if wide else "centre_back"
+    if row == 4:
+        return "full_back"
+    if row == 5:
+        return "full_back" if place in (1, 9) else "defensive_midfielder"
+    if row in (6, 7):
+        if wide:
+            return "full_back" if back_three else "winger"
+        if row == 7:
+            return "central_midfielder"
+        return "central_midfielder" if place in (3, 7) else "defensive_midfielder"
+    if row == 8:
+        if wide:
+            return "full_back" if back_three else "winger"
+        # Behind a single holding midfielder the row is the midfield itself.
+        return "central_midfielder" if len(lines) >= 3 and lines[1] == 1 else "winger"
+    if row == 9:
+        if wide:
+            return "winger"
+        return "centre_forward" if (top or pos) // 10 == 9 else "winger"
+    if row in (10, 11):
+        if wide:
+            return "winger"
+        if place in (3, 7):
+            return "centre_forward" if lines and lines[-1] == 4 else "winger"
+        return "centre_forward"
+    return None
+
+
 def assign_roles(rows):
     """The role of each player-match: its slot's, else the player's most played role."""
+    top = defaultdict(int)
+    for r in rows:
+        if r["position_id"]:
+            key = (r["match_id"], r["team_id"])
+            top[key] = max(top[key], r["position_id"])
     slot_role = {}
     minutes = defaultdict(lambda: defaultdict(float))
     for r in rows:
-        pos = r["position_id"]
-        role = None
-        if pos is not None and pos > 3:
-            role = ROLE_OF_SLOT(pos)
+        role = role_of(r.get("formation"), r["position_id"], top[(r["match_id"], r["team_id"])])
         slot_role[(r["match_id"], r["player_id"])] = role
         if role:
             minutes[r["player_id"]][role] += r["minutes_played"]
@@ -226,24 +465,6 @@ def assign_roles(rows):
                 role = "goalkeeper"
         r["role"] = role
     return [r for r in rows if r["role"]]
-
-
-def ROLE_OF_SLOT(pos):  # core.power_role, mirrored for the in-memory pass (tested equal)
-    if pos in (0, 11):
-        return "goalkeeper"
-    if pos in (51, 59):
-        return "full_back"
-    if 30 <= pos <= 39:
-        return "full_back" if pos % 10 in (1, 2, 8, 9) else "centre_back"
-    if 50 <= pos <= 69:
-        return "defensive_midfielder"
-    if 70 <= pos <= 79:
-        return "central_midfielder"
-    if 80 <= pos <= 89:
-        return "winger"
-    if 90 <= pos <= 119:
-        return "winger" if pos % 10 in (1, 2, 8, 9) else "centre_forward"
-    return None
 
 
 def fit_poisson(obs, iterations=25):
@@ -349,7 +570,7 @@ def season_details(contributions, scored, *, lam=LAMBDA):
     for player, items in contributions.items():
         totals = defaultdict(float)
         by_role = defaultdict(lambda: [0, 0.0, 0.0])
-        for role, minutes, c, _, shares in items:
+        for role, minutes, c, _, shares, *_ in items:
             for b, v in shares.items():
                 totals[b] += v
             row = by_role[role]
@@ -373,42 +594,124 @@ def percentile(values, mine):
     return 100.0 * (below + 0.5 * equal) / len(values)
 
 
-def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA):
-    """contributions: {player: [(role, minutes, C, team)]} -> {player: row} (§ 8)."""
+def _spread(values):
+    mean = sum(values) / len(values)
+    return mean, sqrt(sum((v - mean) ** 2 for v in values) / len(values))
+
+
+def eligibility_minutes(minutes, *, eligibility=ELIGIBILITY, share=ELIGIBILITY_SHARE):
+    """The minutes that make a player eligible: `eligibility` for a full season (§ 8.3),
+    `share` of the most used player's minutes while the period is younger than that."""
+    return min(eligibility, share * max(minutes, default=0.0))
+
+
+def level_weight(players, *, share=LEVEL_SHARE):
+    """κ: the weight of the club level that gives it `share` of the spread between the
+    eligible players. `players`: (role, regularised rate of C, regularised rate of L). The
+    rate of C is centred by role (the roles do not share a scale), the level is not."""
+    if len(players) < 2 or not 0 < share < 1:
+        return 0.0
+    by_role = defaultdict(list)
+    for role, rate, _ in players:
+        by_role[role].append(rate)
+    centre = {role: sum(v) / len(v) for role, v in by_role.items()}
+    own = sqrt(sum((rate - centre[role]) ** 2 for role, rate, _ in players) / len(players))
+    _, level = _spread([lv for _, _, lv in players])
+    return sqrt(share / (1 - share)) * own / level if level > 1e-9 else 0.0
+
+
+def score_of(index, *, scale=SCORE_SCALE):
+    """The score shown for an index: 50 at the role's mean, ten to one every `scale`
+    standard deviations (the form of the Elo's expected score)."""
+    return 100 / (1 + 10 ** (-index / scale))
+
+
+def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA, linked=None, top=None, share=LEVEL_SHARE):
+    """contributions: {player: [(role, minutes, C, team, level)]} -> ({player: row}, settings)
+    (§ 8). `level` is the club-level part of the match, (t / 90) · (Elo_own − mean) / 400,
+    or None; `linked` the teams whose league is on the common scale and `top` those of a
+    top division (None: every team)."""
     out = {}
     for player, items in contributions.items():
-        minutes = sum(m for _, m, _, _ in items)
-        total = sum(c for _, _, c, _ in items)
+        minutes = sum(i[1] for i in items)
         by_role, by_team = defaultdict(float), defaultdict(float)
-        for role, m, _, team in items:
+        for role, m, _, team, *_ in items:
             by_role[role] += m
             by_team[team] += m
         role = max(sorted(by_role), key=lambda x: by_role[x])
         team = max(sorted(by_team, key=str), key=lambda x: by_team[x])
-        out[player] = {"role": role, "team": team, "matches": len(items), "minutes": minutes, "total": total,
-                       "rate": 90 * total / (minutes + lam), "eligible": minutes >= eligibility}
+        out[player] = {"role": role, "team": team, "matches": len(items), "minutes": minutes,
+                       "own": sum(i[2] for i in items), "level": sum(i[4] or 0.0 for i in items if len(i) > 4),
+                       "linked": linked is None or team in linked, "top_division": top is None or team in top}
+    threshold = eligibility_minutes([r["minutes"] for r in out.values()], eligibility=eligibility)
+    for r in out.values():
+        r["eligible"] = r["minutes"] >= threshold and r["minutes"] > 0
+    ranked = [r for r in out.values() if r["eligible"] and r["linked"]]
+    kappa = level_weight([(r["role"], 90 * r["own"] / (r["minutes"] + lam), 90 * r["level"] / (r["minutes"] + lam)) for r in ranked], share=share)
+    for r in out.values():
+        r["total"] = r["own"] + kappa * r["level"]
+        r["rate"] = 90 * r["total"] / (r["minutes"] + lam)
     for role in {r["role"] for r in out.values()}:
         group = [r for r in out.values() if r["role"] == role and r["eligible"]]
+        if not group:
+            continue
         totals, rates = [r["total"] for r in group], [r["rate"] for r in group]
+        scale = [r for r in group if r["linked"]] or group
+        (mt, st), (mr, sr) = _spread([r["total"] for r in scale]), _spread([r["rate"] for r in scale])
         for r in group:
             r["total_percentile"] = percentile(totals, r["total"])
             r["rate_percentile"] = percentile(rates, r["rate"])
-            r["score"] = TOTAL_WEIGHT * r["total_percentile"] + RATE_WEIGHT * r["rate_percentile"]
-    ranked = sorted((p for p, r in out.items() if r["eligible"]), key=lambda p: (-out[p]["score"], -out[p]["total"], -out[p]["minutes"], p))
+            r["index"] = TOTAL_WEIGHT * ((r["total"] - mt) / st if st > 1e-9 else 0.0) + RATE_WEIGHT * ((r["rate"] - mr) / sr if sr > 1e-9 else 0.0)
+            r["score"] = score_of(r["index"])
+    order = sorted((p for p, r in out.items() if r["eligible"] and r["linked"]), key=lambda p: (-out[p]["index"], -out[p]["total"], -out[p]["minutes"], p))
     role_seen = defaultdict(int)
     previous = None
-    for i, p in enumerate(ranked, 1):
+    for i, p in enumerate(order, 1):
         r = out[p]
-        key = (round(r["score"], 9), round(r["total"], 9))
+        key = (round(r["index"], 9), round(r["total"], 9))
         r["rank"] = previous[1] if previous and previous[0] == key else i
         previous = (key, r["rank"])
         role_seen[r["role"]] += 1
         r["role_rank"] = role_seen[r["role"]]
-    return out
+    return out, {"eligibility": threshold, "level_weight": kappa}
+
+
+def team_leagues(rows, leagues):
+    """The teams of a league on the common scale, and those of a top division: a team's
+    league of the year is the league (`leagues`: {competition: (on the scale, top)}) it
+    played most player-matches in; the European competitions are no league."""
+    played = defaultdict(lambda: defaultdict(int))
+    for r in rows:
+        if r.get("competition_id") in leagues:
+            played[r["team_id"]][r["competition_id"]] += 1
+    linked, top = set(), set()
+    for team, counts in played.items():
+        on_scale, is_top = leagues[max(sorted(counts), key=lambda c: counts[c])]
+        if on_scale:
+            linked.add(team)
+        if is_top:
+            top.add(team)
+    return linked, top
+
+
+def previous_year_changed(conn, season):
+    """`season` holds the first half of the calendar-year editions, which belongs to the
+    award year before: has one of those matches changed since that year's last ranking?"""
+    start, _ = award_year(season)
+    row = conn.execute(
+        """SELECT max(m.updated_at) > coalesce((SELECT max(r.started_at) FROM agg.power_runs r
+                    WHERE r.kind = 'players' AND r.season_id = %(previous)s AND r.status = 'published'), '-infinity'::timestamptz)
+           FROM core.matches m
+           JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL AND cs.cup_key IS NULL
+           WHERE m.season_id = %(season)s AND m.status = 'finished' AND m.match_date < %(start)s
+             AND EXISTS (SELECT 1 FROM core.seasons s WHERE s.id = %(previous)s)""",
+        {"season": season, "previous": season - 1, "start": start},
+    ).fetchone()
+    return bool(row and row[0])
 
 
 def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
-    """The player power ranking of one season (after refresh_elo).
+    """The player power ranking of one season's award year (after refresh_elo).
 
     Three steps, and no transaction open during the second: the base ends a session that
     stays idle inside a transaction (60 s, infra/aws/database.yaml), and fitting the
@@ -416,53 +719,68 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     # The run starts here, before the read and the computation: its row is only written
     # in step 3, so it is given this time.
     started = conn.execute("SELECT clock_timestamp()").fetchone()[0]
+    start, end = award_year(season)
     # 1. Read. Through a server-side cursor (it needs a transaction, a short one): the
-    # season's rows are held once, as the dicts below, never a second time as the result.
+    # year's rows are held once, as the dicts below, never a second time as the result.
     with conn.transaction():
         with conn.cursor(name="power_player_matches") as cur:
-            cur.execute(PLAYER_MATCHES, (season,))
+            cur.execute(PLAYER_MATCHES, ([season, season + 1], start, end))
             names = [d.name for d in cur.description]
-            rows = [{k: (_num(v) if k not in ("match_id", "player_id", "team_id", "position_id", "is_starter") else v) for k, v in zip(names, row)}
-                    for row in cur]
+            rows = [{k: (_num(v) if k not in _KEPT else v) for k, v in zip(names, row)} for row in cur]
+        # The leagues: on the common scale or not, and the highest of each country on it.
+        leagues = {league: (on_scale, is_top) for league, on_scale, is_top in conn.execute(
+            """SELECT l.competition_id, l.linked,
+                      l.linked AND l.level = max(l.level) FILTER (WHERE l.linked) OVER (PARTITION BY coalesce(c.country_code, 'competition ' || c.id))
+               FROM agg.league_levels l JOIN core.competitions c ON c.id = l.competition_id"""
+        ).fetchall()}
     # 2. Compute, outside any transaction.
     for r in rows:
         r["delta"] = 0.0 if r["own_elo"] is None or r["opponent_elo"] is None else (r["opponent_elo"] - r["own_elo"]) / 400
     rows = assign_roles(rows)
     refs = references(rows)
     count = len(rows)
+    linked, top = team_leagues(rows, leagues)
+    known = [(r["minutes_played"], r["own_elo"]) for r in rows if r["own_elo"] is not None]
+    centre = sum(m * e for m, e in known) / sum(m for m, _ in known) if known else ELO_INITIAL
     matches = []
     detailed = defaultdict(list)
     for i, r in enumerate(rows):
         scores, c = match_contribution(r, refs)
+        level = None if r["own_elo"] is None else r["minutes_played"] / 90 * (r["own_elo"] - centre) / 400
         matches.append((r["match_id"], r["player_id"], r["team_id"], r["role"], int(r["minutes_played"]), r["opponent_elo"],
-                        *[scores.get(b) for b in BLOCK_COLUMNS], c))
+                        *[scores.get(b) for b in BLOCK_COLUMNS], c, level))
         if c is not None:
-            detailed[r["player_id"]].append((r["role"], r["minutes_played"], c, r["team_id"], block_shares(r["role"], scores)))
-        rows[i] = None  # the match's row is its tuple from here on: the season is not held twice
+            detailed[r["player_id"]].append((r["role"], r["minutes_played"], c, r["team_id"], block_shares(r["role"], scores), level))
+        rows[i] = None  # the match's row is its tuple from here on: the year is not held twice
     del rows
-    contributions = {p: [item[:4] for item in items] for p, items in detailed.items()}
-    scored = season_scores(contributions, eligibility=eligibility)
+    contributions = {p: [(role, m, c, team, level) for role, m, c, team, _, level in items] for p, items in detailed.items()}
+    scored, settings = season_scores(contributions, eligibility=eligibility, linked=linked, top=top)
     blocks, roles = season_details(detailed, scored)
     # 3. Write, in one transaction: the season's ranking changes at once or not at all.
     with conn.transaction():
         run = _start(conn, "players", season, started_at=started)
+        conn.execute(
+            "UPDATE agg.power_runs SET eligibility_minutes=%s, eligibility_share=%s, level_share=%s, level_weight=%s, score_scale=%s, year_start=%s, year_end=%s WHERE id=%s",
+            (settings["eligibility"], ELIGIBILITY_SHARE, LEVEL_SHARE, settings["level_weight"], SCORE_SCALE, start, end - timedelta(days=1), run),
+        )
         conn.execute("DELETE FROM agg.player_power WHERE season_id=%s", (season,))
         conn.execute("DELETE FROM agg.player_power_matches WHERE season_id=%s", (season,))
         with conn.cursor().copy(
-            f"COPY agg.player_power_matches(season_id, match_id, player_id, team_id, role, minutes, opponent_elo, {', '.join(BLOCK_COLUMNS)}, contribution, run_id) FROM STDIN"
+            f"COPY agg.player_power_matches(season_id, match_id, player_id, team_id, role, minutes, opponent_elo, {', '.join(BLOCK_COLUMNS)}, contribution, level, run_id) FROM STDIN"
         ) as copy:
             for match in matches:
                 copy.write_row((season, *match, run))
         conn.execute("DELETE FROM agg.player_power_roles WHERE season_id=%s", (season,))
         with conn.cursor().copy(
             f"""COPY agg.player_power(season_id, player_id, role, team_id, matches, minutes, total, rate, eligible, total_percentile,
-                 rate_percentile, score, rank, role_rank, run_id, {', '.join(b + '_total' for b in BLOCK_COLUMNS)},
-                 {', '.join(b + '_percentile' for b in BLOCK_COLUMNS)}) FROM STDIN"""
+                 rate_percentile, score, rank, role_rank, run_id, own_total, level_total, index, linked, top_division,
+                 {', '.join(b + '_total' for b in BLOCK_COLUMNS)}, {', '.join(b + '_percentile' for b in BLOCK_COLUMNS)}) FROM STDIN"""
         ) as copy:
             for player, r in scored.items():
                 b = blocks[player]
                 copy.write_row((season, player, r["role"], r["team"], r["matches"], int(r["minutes"]), r["total"], r["rate"], r["eligible"],
                                 r.get("total_percentile"), r.get("rate_percentile"), r.get("score"), r.get("rank"), r.get("role_rank"), run,
+                                r["own"], settings["level_weight"] * r["level"], r.get("index"), r["linked"], r["top_division"],
                                 *[b["totals"].get(k) for k in BLOCK_COLUMNS], *[b["percentiles"].get(k) for k in BLOCK_COLUMNS]))
         with conn.cursor().copy("COPY agg.player_power_roles(season_id, player_id, role, matches, minutes, total, rate, run_id) FROM STDIN") as copy:
             for player, by_role in roles.items():
@@ -479,7 +797,7 @@ AWARD_SIZE = 30  # the race shown on the home (ballon-dor.js reads the first 30)
 def award_race(scored, size=AWARD_SIZE):
     """The award race: the first eligible players of the power ranking, numbered 1..size
     (agg.player_award_ranking keys a season's award by rank, so ties take the ranking order)."""
-    ranked = sorted((p for p, r in scored.items() if r["eligible"] and r.get("rank") is not None),
+    ranked = sorted((p for p, r in scored.items() if r["eligible"] and r.get("rank") is not None and r.get("top_division", True)),
                     key=lambda p: (scored[p]["rank"], -scored[p]["total"], -scored[p]["minutes"], p))
     return [(i, p, scored[p]["team"], scored[p]["score"]) for i, p in enumerate(ranked[:size], 1)]
 

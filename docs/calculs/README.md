@@ -15,7 +15,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 | Centiles, rangs, indice Vega club et joueur, similarités, tags de style | **Calculés par Vega**, toujours relativement à un groupe de comparaison. |
 | Classements dérivés des résultats, zones européennes | **Calculés par Vega** quand aucun classement officiel n'est utilisé. |
 | Classements FIFA, coefficients UEFA | **Collectés** par le worker (`backend/vega/sources/fifa.py`, `uefa.py`), jamais recalculés. |
-| Classement Ballon d'Or Vega | **Pas encore calculé** (la méthode proposée est dans [METHODE_CLASSEMENT_BALLON_D_OR.md](../METHODE_CLASSEMENT_BALLON_D_OR.md)). |
+| Classement Ballon d'Or Vega | **Calculé par Vega** chaque jour (`backend/vega/power.py`), selon [METHODE_CLASSEMENT_BALLON_D_OR.md](../METHODE_CLASSEMENT_BALLON_D_OR.md) ; les choix de la version 2 sont dans [l'audit du 12 novembre 2026](05-joueurs/08-audit-classement-puissance.md). |
 
 ## Sections
 
@@ -50,6 +50,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 - [Classements joueurs](05-joueurs/05-classements-joueurs.md) — meilleures notes, buteurs, efficaces, maladroits.
 - [Compatibilité par niveau](05-joueurs/06-compatibilite-par-niveau.md) — onglet Projection : le joueur face aux titulaires de chaque club.
 - [Carte « Lecture du scout »](05-joueurs/07-lecture-du-scout.md) — les quatre phrases de synthèse de la vue d'ensemble et d'où vient chaque chiffre.
+- [Audit du classement de puissance et version 2](05-joueurs/08-audit-classement-puissance.md) — ce que donnait la première version, l'échelle commune des championnats, le rôle par formation, le poids du niveau du club.
 
 ### 6. Accueil et fiches de match
 - [Accueil](06-accueil-et-matchs/01-accueil.md) — semaine affichée, match de la semaine, joueur de la semaine, séries.
