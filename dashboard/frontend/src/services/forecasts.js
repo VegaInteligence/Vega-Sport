@@ -98,7 +98,17 @@ export function probabilityChart(answer, frame = CHART) {
       score[event.side === "home" ? 0 : 1]++;
       return { x: fixed(x(event.minute)), side: event.side, minute: event.minute, label: `${score[0]}–${score[1]}` };
     });
+  // Each goal with what it did to the scoring side's chances of winning, the minute before and at the goal.
+  const at = (minute) => points[Math.max(0, Math.min(points.length - 1, minute))];
+  const swings = goals.map((goal) => ({
+    minute: goal.minute,
+    label: goal.label,
+    side: goal.side,
+    from: at(goal.minute - 1)[goal.side],
+    to: at(goal.minute)[goal.side],
+  }));
   return {
+    swings,
     paths: {
       home: area(() => 0, (p) => p.home),
       draw: area((p) => p.home, (p) => p.home + p.draw),
