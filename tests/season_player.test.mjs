@@ -130,6 +130,31 @@ test("season percentiles compare aggregated players in the same position and cov
   assert.equal(result.metrics.xa.percentile, null);
 });
 
+test("expected assists are ranked like any measure observed on every match", () => {
+  const rows = [];
+  for (let i = 0; i < 32; i++) {
+    for (let match = 0; match < 5; match++) {
+      rows.push({
+        playerId: `p_${i}`,
+        matchId: `m_${i}_${match}`,
+        name: `Player ${i}`,
+        minutes: 90,
+        positionId: 91,
+        // The API gives a blank its zero where the source publishes the statistic;
+        // one player keeps a match without it and is left out of the distribution.
+        xa: i === 31 && match === 0 ? null : i / 10,
+      });
+    }
+  }
+  const target = aggregateSeason(rows, "p_15");
+  const builder = createSeasonPeerBuilder(rows, target);
+  while (!builder.step(7)) {}
+  const result = builder.result();
+  assert.equal(result.peers, 32);
+  assert.equal(result.metrics.xa.peers, 31);
+  assert.equal(result.metrics.xa.percentile, 50);
+});
+
 test("incomplete target coverage does not produce a season percentile", () => {
   const rows = [];
   for (let player = 0; player < 31; player++) {

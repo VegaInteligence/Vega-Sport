@@ -14,7 +14,7 @@ const definitions = {
   xg: "Somme des probabilités de but des tirs renseignés.",
   npxg: "Buts attendus en excluant les penalties, lorsqu’ils sont renseignés.",
   xgot: "Buts attendus après placement du tir cadré.",
-  xa: "Passes décisives attendues renseignées. Certaines observations nulles sont absentes : pas de centile ou de score sur cette mesure.",
+  xa: "Passes décisives attendues. Classées lorsque la source les publie sur tous les matchs du joueur.",
   shots: "Tirs tentés renseignés, indépendamment de leur résultat.",
   shotsOnTarget: "Tirs cadrés renseignés.",
   touchesBox: "Ballons touchés dans la surface adverse.",
@@ -50,7 +50,9 @@ export const SCOUT_METRICS = Object.fromEntries(
     {
       ...value,
       description: definitions[key] || value.label,
-      rankable: key !== "xa",
+      // Every measure is ranked where it is observed on all of a player's matches:
+      // the API gives a blank its zero where the source publishes the statistic.
+      rankable: true,
       source: "PitchAPI",
     },
   ]),

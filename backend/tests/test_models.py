@@ -319,10 +319,12 @@ class ModelsTest(unittest.TestCase):
             self.assertAlmostEqual(value, per90[pid], places=4)
             self.assertEqual(pct, centile(list(per90.values()), per90[pid]))
             self.assertEqual(rank, 1 + sum(v > per90[pid] for v in per90.values()))
-        # xG missing on one of his matches: no xG value for player 102 (and still 31 others).
-        self.assertIsNone(self.one("SELECT 1 FROM agg.player_percentiles WHERE cohort_id=%s AND player_id=102 AND metric_key='xg'", defenders))
+        # Player 102's xG is blank in one match that shows xG for others: a zero the source
+        # did not write (068), so he is ranked on xG like the 31 others.
+        self.assertEqual(self.one("SELECT xg_n, appearances FROM agg.player_season_stats WHERE player_id=102 AND competition_season_id=1"), (14, 14))
+        self.assertIsNotNone(self.one("SELECT 1 FROM agg.player_percentiles WHERE cohort_id=%s AND player_id=102 AND metric_key='xg'", defenders))
         self.assertEqual(
-            self.one("SELECT count(*) FROM agg.player_percentiles WHERE cohort_id=%s AND metric_key='xg'", defenders)[0], 31
+            self.one("SELECT count(*) FROM agg.player_percentiles WHERE cohort_id=%s AND metric_key='xg'", defenders)[0], 32
         )
         # 8 keepers: values and ranks, but fewer than 30 peers so no percentile.
         self.assertEqual(
@@ -513,7 +515,7 @@ class ModelsTest(unittest.TestCase):
             mids = matches[team]  # all on the same day: the first one is his identity and his latest
             expected[pid] = (
                 14, 14 * 90, 0, 14, 14, sum((pid + m) % 5 == 0 for m in mids), 14, 14 * 90,
-                13 if pid == 102 else 14, self.facts["recoveries"][pid], 14 * (20 + pid % 30), 14 * (30 + pid % 30), 14,
+                14, self.facts["recoveries"][pid], 14 * (20 + pid % 30), 14 * (30 + pid % 30), 14,
                 mids[0], team, mids[0], position,
             )
         self.assertEqual(editions(), expected)
@@ -542,6 +544,66 @@ class ModelsTest(unittest.TestCase):
             x("SELECT agg.refresh_player_list(1)")
         self.assertEqual(editions(), expected)
         self.assertEqual(clubs(), [(pid, team, 1) for pid, team, _, _ in players])
+
+    def test_blanks_are_zeros_where_the_match_shows_the_statistic(self):
+        # 068: agg.match_zeros says, match by match, the statistics whose blank is a zero.
+        from vega.metric_catalog import ZERO_STATS
+
+        x = self.db.execute
+        columns = [r[0] for r in x(
+            "SELECT column_name FROM information_schema.columns WHERE table_schema='agg' AND table_name='match_zeros' ORDER BY ordinal_position"
+        )]
+        self.assertEqual(tuple(columns[3:]), ZERO_STATS)
+
+        def zero(match, column):
+            return self.one(f"SELECT {column} FROM agg.match_zeros WHERE season_id=2025 AND match_id=%s", match)[0]
+
+        def counts(player):
+            return self.one(
+                """SELECT xg_count, big_chances_created_count, big_chances_created_sum FROM agg.player_list_editions
+                   WHERE competition_season_id=1 AND player_id=%s""", player)
+
+        def read(player, match):
+            return self.one(
+                "SELECT xg, big_chances_created FROM api.player_appearances WHERE season_id=2025 AND match_id=%s AND player_id=%s",
+                match, player)
+
+        def refresh():
+            x("SELECT agg.refresh_match_zeros(1)")
+            x("SELECT agg.refresh_player_list(1)")
+
+        # Player 102 has no xG in match 1 (the seed): his row is measured and the match
+        # shows xG, so it is a zero. No big chance in the edition: the statistic stays blank.
+        self.assertTrue(zero(1, "xg"))
+        self.assertFalse(zero(1, "big_chances_created"))
+        self.assertEqual(read(102, 1), (0.0, None))
+        self.assertEqual(counts(102), (14, 0, None))
+        self.assertEqual(self.one("SELECT agg.refresh_match_zeros(1)")[0], 0)  # nothing to rewrite
+        try:
+            # His row of match 1 is no longer measured; match 2 shows no xG at all; one
+            # big chance appears in match 3 (the three matches are his club's, and 105's).
+            x("UPDATE core.player_match_stats SET touches=NULL WHERE season_id=2025 AND match_id=1 AND player_id=102")
+            x("UPDATE core.player_match_stats SET xg=NULL WHERE season_id=2025 AND match_id=2")
+            x("UPDATE core.player_match_stats SET big_chances_created=1 WHERE season_id=2025 AND match_id=3 AND player_id=105")
+            refresh()
+            # The edition now shows big chances: a zero in every complete match. Match 2
+            # lacks the xG the edition shows elsewhere: it is not complete, its blanks stay.
+            self.assertEqual([zero(m, "xg") for m in (1, 2, 3)], [True, False, True])
+            self.assertEqual([zero(m, "big_chances_created") for m in (1, 2, 3)], [True, False, True])
+            self.assertEqual(read(102, 1), (None, None))  # not measured: nothing is known of his match
+            self.assertEqual(read(105, 2), (None, None))
+            self.assertEqual(read(105, 1)[1], 0.0)
+            self.assertEqual(read(105, 3)[1], 1.0)
+            self.assertEqual(counts(102), (12, 12, 0))
+            self.assertEqual(counts(105), (13, 13, 1))
+        finally:
+            x("UPDATE core.player_match_stats SET touches=40 + mod(player_id * 11 + match_id, 25) WHERE season_id=2025 AND match_id=1 AND player_id=102")
+            x("""UPDATE core.player_match_stats SET xg=round((0.01 * mod(player_id, 17))::numeric, 2)::real
+                 WHERE season_id=2025 AND match_id=2""")
+            x("UPDATE core.player_match_stats SET big_chances_created=NULL WHERE season_id=2025 AND match_id=3 AND player_id=105")
+            refresh()
+        self.assertEqual(counts(102), (14, 0, None))
+        self.assertEqual(counts(105), (14, 0, None))
 
     def test_partitioned_tables_get_their_own_statistics(self):
         # 056: autovacuum never analyses a partitioned table itself.

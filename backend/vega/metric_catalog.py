@@ -50,6 +50,20 @@ class Ratio:
     columns: tuple  # source columns that must all be non-null
 
 
+# The player statistics the source leaves blank at zero: a blank of a measured row (its
+# touches are filled) is a zero where agg.match_zeros (068) says so for the match. The
+# table has one column per name; the goalkeepers' statistics, the physical ones and the
+# statistics the source always fills are not in it.
+ZERO_STATS = (
+    "goals", "assists", "own_goals", "total_shots", "shots_on_target", "shots_off_target", "blocked_shots",
+    "shots_woodwork", "big_chances_created", "big_chances_missed", "penalties_won", "penalties_missed",
+    "passes_into_final_third", "chances_created", "accurate_crosses", "accurate_crosses_total", "long_balls_accurate",
+    "long_balls_total", "corners", "throw_ins", "touches_opp_box", "dribbles_succeeded", "dribbles_total",
+    "dispossessed", "offsides", "was_fouled", "last_man_tackles", "headed_clearances", "clearances_off_line",
+    "shot_blocks", "dribbled_past", "errors_led_to_goal", "penalties_conceded", "duels_won", "duels_lost",
+    "ground_duels_won", "ground_duels_total", "aerials_won", "aerials_total", "xg", "npxg", "xgot", "xa",
+)
+
 # Source columns that are identities or the coverage base, not metrics.
 NOT_METRICS = {
     PLAYER_BASE: {"position_id", "minutes_played"},

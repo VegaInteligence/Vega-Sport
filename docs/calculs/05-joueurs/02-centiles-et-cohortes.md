@@ -49,7 +49,7 @@ Code : `buildCohorts`, `rankMetric` dans [scouting.js](../../../dashboard/fronte
 | Taille minimum | **30** joueurs ayant une valeur (`MIN_SEASON_PEERS`) |
 | Valeurs comparées | **par 90 minutes** (taux en %) |
 | Couverture exigée | la mesure doit être observée sur **tous les matchs joués** (`count = matches` et `minutes = minutes totales`), pour le joueur comme pour chaque pair |
-| Mesure non classée | xA |
+| Zéros omis | un vide vaut zéro là où le fournisseur publie la mesure pour le match (voir [Valeurs absentes](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md)) ; le xA est classé comme les autres depuis |
 | Option « niveau comparable » | la cohorte est réduite aux joueurs des 30 clubs de niveau le plus proche (voir [Référentiels](../04-clubs/03-referentiels-et-niveau-europeen.md)) |
 
 La règle de couverture évite de comparer un par 90 calculé sur 3 matchs avec un par 90 calculé sur 30.
@@ -71,5 +71,4 @@ Un milieu joue 1 600 minutes avec 6,1 récupérations par 90. Dans sa cohorte, 2
 - moins de 450 minutes (ou du seuil choisi) ;
 - une mesure absente sur au moins un match joué ;
 - moins de 30 pairs comparables ;
-- mesure non classable (xA) ;
 - joueur sans poste connu (aucun groupe saison).

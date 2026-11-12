@@ -7,6 +7,7 @@ scope was being computed; a newer correction therefore always triggers another p
 
 from psycopg import sql
 
+from .schema_contract import PLAYER_STATS_COLUMNS
 from .store import dirty_scope_order
 from .metric_catalog import (
     PLAYER_ADVANCED,
@@ -17,6 +18,7 @@ from .metric_catalog import (
     TEAM_BASE,
     TEAM_METRICS,
     TEAM_RATIOS,
+    ZERO_STATS,
     metric_columns,
     ratio_columns,
 )
@@ -103,6 +105,11 @@ def _player_sql():
     a_cols = [i.rsplit(" AS ", 1)[1] for i in a_items]
     columns = ["appearances", "starts", "minutes", *b_cols, *a_cols]
     scope = "AND (%(all)s OR ({x}.player_id, {x}.team_id) IN (SELECT player_id, team_id FROM scope))"
+    # The statistics rows, a blank given its zero where the match says so (068).
+    read = ", ".join(
+        f"coalesce(r.{c}, CASE WHEN r.touches IS NOT NULL AND z.{c} THEN 0 END) AS {c}" if c in ZERO_STATS else f"r.{c}"
+        for c in PLAYER_STATS_COLUMNS
+    )
     statement = f"""
 WITH scope AS (
   SELECT unnest(%(players)s::integer[]) AS player_id, unnest(%(teams)s::integer[]) AS team_id
@@ -111,7 +118,9 @@ WITH scope AS (
     count(*) FILTER (WHERE s.minutes_played > 0)::integer AS appearances,
     coalesce(sum(s.minutes_played), 0)::integer AS minutes,
     {", ".join(b_items)}
-  FROM core.player_match_stats s
+  FROM (SELECT r.season_id, r.match_id, r.player_id, r.team_id, {read}
+        FROM core.player_match_stats r
+        LEFT JOIN agg.match_zeros z ON z.season_id = r.season_id AND z.match_id = r.match_id) s
   JOIN core.matches m ON m.id = s.match_id AND m.season_id = s.season_id
   WHERE m.competition_season_id = %(cs)s AND s.season_id = %(sid)s {scope.format(x="s")}
   GROUP BY s.player_id, s.team_id
@@ -355,6 +364,8 @@ def refresh_competition_season(conn, cs, *, players=None, teams=None):
     team_args = {"cs": cs, "sid": sid, "all": teams is None, "teams": sorted(teams or [])}
     with conn.transaction():
         conn.execute("SELECT pg_advisory_xact_lock(92002, %s)", (cs,))
+        # The blanks that are zeros (068): the edition's matches first, the sums read them.
+        conn.execute("SELECT agg.refresh_match_zeros(%s)", (cs,))
         conn.execute(PLAYER_SQL, player_args)
         conn.execute(PLAYER_STALE_SQL, player_args)
         conn.execute(TEAM_SQL, team_args)

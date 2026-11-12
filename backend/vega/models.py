@@ -793,6 +793,8 @@ def refresh_daily(conn, season, *, elo=True):
     ).fetchall()
     for (edition,) in editions:
         with conn.transaction():
+            # The blanks that are zeros (068) first: the list's rows read them.
+            conn.execute("SELECT agg.refresh_match_zeros(%s)", (edition,))
             conn.execute("SELECT agg.refresh_player_list(%s)", (edition,))
 
 
