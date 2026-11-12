@@ -864,6 +864,61 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM agg.xg_models")
             x("DELETE FROM core.shots WHERE season_id=2025 AND shot_no >= 900")
 
+    def test_zzzzzz_players_are_placed_on_the_axes_learnt_from_their_season(self):
+        # 081: embedding.refresh, on season rows written here (two kinds of players, 240 of them).
+        from vega import embedding
+
+        x = self.db.execute
+        stats = ["goals", "assists", "total_shots", "shots_on_target", "accurate_passes", "touches", "tackles", "interceptions",
+                 "clearances", "recoveries", "duels_won", "duels_lost", "dribbles_succeeded", "chances_created"]
+        # Per match: a forward shoots and dribbles, a defender tackles and clears; g varies each a little.
+        forward = [0.5, 0.2, 3, 1.2, 20, 40, 0.5, 0.3, 0.2, 2, 3, 4, 2.5, 1.5]
+        defender = [0.05, 0.05, 0.4, 0.1, 55, 70, 2.5, 2, 4.5, 6, 5, 3, 0.3, 0.3]
+        values = ", ".join(f"round((CASE WHEN mod(g, 2) = 0 THEN {f} ELSE {d} END) * 20 * (0.85 + mod(g * {7 + i}, 30) / 100.0))::int, 1800"
+                           for i, (f, d) in enumerate(zip(forward, defender)))
+        columns = ", ".join(f"{key}_sum, {key}_min" for key in stats)
+        x("INSERT INTO core.competitions(id, name) VALUES (990, 'Women''s Test League')")
+        x("INSERT INTO core.competition_seasons(id, competition_id, season_id) VALUES (990, 990, 2025)")
+        x("INSERT INTO core.players(id, name) SELECT 7000 + g, 'Synthetic ' || g FROM generate_series(1, 240) g")
+        x(f"""INSERT INTO agg.player_season_stats(player_id, team_id, competition_season_id, season_id, appearances, starts, minutes, {columns})
+              SELECT 7000 + g, 1, CASE WHEN g > 234 THEN 990 ELSE 1 END, 2025, 20, 20, CASE WHEN g = 1 THEN 300 ELSE 1800 END, {values}
+              FROM generate_series(1, 240) g""")
+        minimum, embedding.MIN_PLAYERS = embedding.MIN_PLAYERS, 100
+        try:
+            held = self.one("SELECT count(*) FROM (SELECT player_id FROM agg.player_season_stats WHERE season_id=2025 GROUP BY 1 HAVING sum(minutes) >= 450) q")[0]
+            self.assertEqual(embedding.refresh(self.db, 2025), held)
+            version, players, kept, share = self.one("SELECT version, players, statistics, variance_kept FROM agg.embedding_models WHERE season_id=2025")
+            self.assertEqual((version, players), (embedding.MODEL_VERSION, held))
+            self.assertTrue(kept >= embedding.DIMENSIONS and 0 < share <= 1)
+            # The player short of minutes has no vector; those of the women's competition are marked.
+            self.assertEqual(self.one("SELECT count(*) FROM agg.player_embeddings WHERE player_id = 7001")[0], 0)
+            self.assertEqual([r[0] for r in x("SELECT player_id FROM agg.player_embeddings WHERE women ORDER BY 1").fetchall()], list(range(7235, 7241)))
+            # A forward's nearest players are forwards (even numbers), a defender's are defenders.
+            for player in (7010, 7011):
+                near = x("""SELECT o.player_key FROM api.player_embedding_vectors o, api.player_embedding_vectors me
+                            WHERE me.season_id = 2025 AND me.player_key = %s AND o.season_id = 2025 AND o.player_key <> me.player_key AND o.player_key > 7000
+                            ORDER BY power(o.e1-me.e1,2)+power(o.e2-me.e2,2)+power(o.e3-me.e3,2)+power(o.e4-me.e4,2)+power(o.e5-me.e5,2)
+                                   + power(o.e6-me.e6,2)+power(o.e7-me.e7,2)+power(o.e8-me.e8,2)+power(o.e9-me.e9,2)+power(o.e10-me.e10,2) LIMIT 10""", (player,)).fetchall()
+                self.assertTrue(all(o % 2 == player % 2 for (o,) in near), near)
+            self.assertEqual(self.one("SELECT name, minutes FROM api.player_embedding_people WHERE season_id=2025 AND player_key=7010"), ("Synthetic 10", 1800))
+            self.assertEqual(self.one("SELECT players FROM api.embedding_models WHERE season_id=2025")[0], held)
+            # A second pass gives the same vectors.
+            before = x("SELECT player_id, e1, e5, e10 FROM agg.player_embeddings WHERE season_id=2025 ORDER BY 1").fetchall()
+            self.assertEqual(embedding.refresh(self.db, 2025), held)
+            self.assertEqual(x("SELECT player_id, e1, e5, e10 FROM agg.player_embeddings WHERE season_id=2025 ORDER BY 1").fetchall(), before)
+            # Too few players for axes to be learnt: the season keeps no vector.
+            embedding.MIN_PLAYERS = held + 1
+            self.assertEqual(embedding.refresh(self.db, 2025), 0)
+            self.assertEqual(self.one("SELECT (SELECT count(*) FROM agg.player_embeddings), (SELECT count(*) FROM agg.embedding_models)"), (0, 0))
+        finally:
+            embedding.MIN_PLAYERS = minimum
+            x("DELETE FROM agg.player_embeddings")
+            x("DELETE FROM agg.embedding_models")
+            x("DELETE FROM agg.player_season_stats WHERE player_id > 7000")
+            x("DELETE FROM core.players WHERE id > 7000")
+            x("DELETE FROM core.competition_seasons WHERE id = 990")
+            x("DELETE FROM core.competitions WHERE id = 990")
+
 
 if __name__ == "__main__":
     unittest.main()

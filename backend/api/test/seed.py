@@ -85,6 +85,11 @@ def main(dsn):
         x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('player','pitchapi',%s,%s)", (key, pid))
     x("INSERT INTO core.entity_names(entity_type,entity_id,name,normalized,kind,source) VALUES ('player',104,'CR7','cr7','alias','vega')")
     x("UPDATE core.players SET birth_date='1999-05-06', height_cm=181 WHERE id=102")
+    # Profile vectors (081): four players placed on the axes, one of them in a women's competition.
+    x("INSERT INTO agg.embedding_models(season_id, version, players, statistics, variance_kept) VALUES (2025, 'profile-embedding-v1', 4, 60, 0.78)")
+    zeros = ",".join(["0"] * 8)
+    x(f"""INSERT INTO agg.player_embeddings(season_id, player_id, minutes, women, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10) VALUES
+          (2025,101,900,false,0,0,{zeros}), (2025,102,800,false,3,4,{zeros}), (2025,103,700,false,6,8,{zeros}), (2025,104,600,true,0.1,0,{zeros})""")
     # Pass network edges (079): player 101 with two team-mates over two matches.
     x("""INSERT INTO core.pass_network_edges(season_id, match_id, team_id, from_player_id, to_player_id, passes) VALUES
          (2025,1,1,101,102,7), (2025,1,1,102,101,4), (2025,5,1,101,102,3), (2025,1,1,101,104,2), (2025,1,1,102,104,9)""")

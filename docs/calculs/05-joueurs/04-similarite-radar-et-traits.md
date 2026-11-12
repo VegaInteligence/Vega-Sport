@@ -21,6 +21,22 @@ $$
 
 Exemple : 12 axes classés pour le joueur → il faut 9 axes communs. Sur 10 axes communs, écarts moyens de 7 centiles → similarité **93**.
 
+## Profils les plus proches (plongement du profil)
+
+En tête de l'onglet « Profils similaires », une seconde lecture, apprise des données au lieu d'une liste d'axes choisis ([embedding.py](../../../backend/vega/embedding.py), `/api/players/{id}/similar`).
+
+**Ce qui est lu.** Pour chaque joueur d'au moins 450 minutes sur la saison, toutes compétitions réunies : chaque statistique qui s'additionne d'un match à l'autre (tirs, passes, duels, conduites, actions défensives, valeurs d'action…), ramenée à 90 minutes du temps où elle est mesurée. La discipline, les buts contre son camp, les penalties et le score « fantasy » de la source sont laissés de côté ; une statistique mesurée pour moins de 60 % des joueurs aussi (celles des gardiens, les données physiques).
+
+**Le calcul.**
+
+1. Chaque statistique est centrée et réduite sur les joueurs de la saison, puis bornée à ±3 écarts-types ; une valeur non mesurée prend la moyenne.
+2. Les axes principaux de ce tableau (les directions le long desquelles les joueurs diffèrent le plus) sont calculés ; chaque joueur est placé sur les 10 premiers (`agg.player_embeddings`).
+3. Les joueurs les plus proches d'un joueur sont ceux à la plus petite distance dans cet espace. La **proximité** affichée vaut `100 × (1 − distance / distance médiane du joueur aux autres)`, bornée à 0 : 100 pour le même profil, 0 pour un joueur aussi loin que la moitié des joueurs de la saison.
+
+Le poste n'entre pas dans le calcul, ni le niveau du championnat : deux joueurs proches ont le même genre de saison, pas forcément le même niveau (qui se lit à l'Indice Vega). Les joueuses de la compétition féminine de la base sont comparées entre elles.
+
+**Vérification (12 novembre 2026, saison 2025/2026, 20 614 joueurs, 93 statistiques retenues).** Les 10 axes gardent 78 % de la variance. Sans connaître le poste, les 10 plus proches voisins d'un joueur ont le même rôle que lui (parmi les sept rôles du classement) dans 68 % des cas, contre 16 % au hasard, et jouent sur la même ligne dans 84 % des cas, contre 31 %. Exemples : Lamine Yamal a pour voisins Michael Olise, Désiré Doué et Khvicha Kvaratskhelia ; Virgil van Dijk, des défenseurs centraux ; Thibaut Courtois, des gardiens. La liste ci-dessous (centiles sur 15 axes, dans la cohorte du poste) reste affichée : elle répond à une autre question, « qui lui ressemble parmi les joueurs de son poste ».
+
 ## Traits marquants
 
 `cohortTraits` : parmi les 15 axes de style classés, les **3 centiles les plus hauts** (points forts) et les **3 plus bas** (points faibles).
