@@ -43,6 +43,14 @@ period, and the comparison between roles.
 - s: the root mean square of x − x̂ for the role; an indicator with s = 0 or fewer than
   MIN_REFERENCE matches is left out. A missing value is never a zero: its indicator, or
   its block, is left out of that match, the block weights renormalised.
+- A zero the source leaves out is a zero (restore_zeros). PitchAPI never publishes an
+  expected goal, an expected assist or a big chance at 0 and leaves a count blank as
+  often as it writes 0: on the 259,937 player-matches of 45 minutes or more of season
+  2026, xG is blank on 48 % and never 0, shots on target blank on 75 %. Read as unknown,
+  a striker without a shot had no finishing that day, and a missed big chance was only
+  ever compared with other missed big chances. A blank is a zero when the player's row
+  carries statistics (his touches are known) and the source shows it publishes that
+  statistic: in the same match for the common ones, in the same edition for the rare.
 - Blocks: the indicators below, with equal weights inside a block.
 - Club level: C measures a player against what is expected of his role in his club's
   situation, so it says how far he stands from his club's own level, not where that
@@ -353,7 +361,8 @@ def refresh_elo(conn):
 # day and the day after its last.
 PLAYER_MATCHES = """
 SELECT s.match_id, s.player_id, s.team_id, s.minutes_played, coalesce(lp.position_id, s.position_id) AS position_id, lp.is_starter,
-  l.formation, cs.competition_id, own.elo_before AS own_elo, opp.elo_before AS opponent_elo,
+  l.formation, cs.competition_id, m.competition_season_id, s.touches IS NOT NULL AS measured,
+  own.elo_before AS own_elo, opp.elo_before AS opponent_elo,
   CASE WHEN mc.events = 'ok' THEN s.goals - (SELECT count(*) FROM core.match_events e
     WHERE e.season_id = s.season_id AND e.match_id = s.match_id AND e.player_id = s.player_id
       AND e.event_type = 'goal' AND e.is_penalty AND e.is_own_goal IS NOT TRUE) END AS np_goals,
@@ -373,7 +382,40 @@ LEFT JOIN core.player_match_advanced a ON a.season_id = s.season_id AND a.match_
 LEFT JOIN agg.team_elo own ON own.match_id = s.match_id AND own.team_id = s.team_id
 LEFT JOIN agg.team_elo opp ON opp.match_id = s.match_id AND opp.team_id <> s.team_id
 WHERE s.season_id = ANY(%s) AND s.minutes_played > 0 AND m.match_date >= %s AND m.match_date < %s"""
-_KEPT = ("match_id", "player_id", "team_id", "position_id", "is_starter", "formation", "competition_id")
+_KEPT = ("match_id", "player_id", "team_id", "position_id", "is_starter", "formation", "competition_id", "competition_season_id", "measured")
+# The statistics the source leaves blank at zero. A match of a few dozen players shows the
+# common ones whenever the source publishes them; the rare ones need the edition.
+ZERO_IN_MATCH = ("npxg", "shots_on_target", "xa", "chances_created", "passes_into_final_third", "dribbles_succeeded", "dribbles_total",
+                 "shot_blocks", "duels_won", "duels_attempted", "aerials_won", "aerials_total", "dribbled_past", "dispossessed")
+ZERO_IN_EDITION = ("np_goals", "assists", "big_chances_missed", "big_chances_created", "errors_led_to_goal")
+
+
+def restore_zeros(rows):
+    """Give a blank its zero where the source publishes the statistic (see the module's
+    notes): `rows` are changed in place, and the number of values restored is returned."""
+    in_match, in_edition = defaultdict(set), defaultdict(set)
+    for r in rows:
+        for name in ZERO_IN_MATCH:
+            if (r.get(name) or 0) > 0:
+                in_match[r["match_id"]].add(name)
+        for name in ZERO_IN_EDITION:
+            if (r.get(name) or 0) > 0:
+                in_edition[r.get("competition_season_id")].add(name)
+    restored = 0
+    for r in rows:
+        if not r.get("measured"):
+            continue
+        seen = in_match.get(r["match_id"], ())
+        for name in ZERO_IN_MATCH:
+            if r.get(name) is None and name in seen:
+                r[name] = 0.0
+                restored += 1
+        seen = in_edition.get(r.get("competition_season_id"), ())
+        for name in ZERO_IN_EDITION:
+            if r.get(name) is None and name in seen:
+                r[name] = 0.0
+                restored += 1
+    return restored
 
 
 def award_year(season):
@@ -738,6 +780,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     # 2. Compute, outside any transaction.
     for r in rows:
         r["delta"] = 0.0 if r["own_elo"] is None or r["opponent_elo"] is None else (r["opponent_elo"] - r["own_elo"]) / 400
+    restore_zeros(rows)
     rows = assign_roles(rows)
     refs = references(rows)
     count = len(rows)
