@@ -11,7 +11,7 @@ Code : [`backend/vega/power.py`](../../../backend/vega/power.py), `METHOD_VERSIO
 | 2026/2027 | 1. Aron Sigurdarson (KR, Islande), 2. Arturo Vidal (Colo Colo), 3. Eldin Jakupović (Chattanooga) | Lamine Yamal 62ᵉ |
 | 2025/2026 | 1. Berkan Taz (Verl, 3ᵉ division allemande), 2. Manuel Locatelli, 3. Christos Tzolis, 4. Vitinha | Dembélé 8ᵉ, Yamal 28ᵉ, Kvaratskhelia 43ᵉ, Doué 81ᵉ, Kane 177ᵉ |
 
-Cinq causes, toutes dans la méthode ou ses réglages, aucune dans un joueur en particulier.
+Six causes, toutes dans la méthode, ses réglages ou la lecture des données, aucune dans un joueur en particulier.
 
 ### 1. Les championnats n'étaient pas sur une échelle commune
 
@@ -41,7 +41,15 @@ L'identifiant de saison 2026 réunit les éditions 2026/2027 et les éditions de
 
 B = 0,75 Pct(T) + 0,25 Pct(R*) atteint son plafond pour les premiers de chaque rôle, et ce plafond, 100 × (n − ½) / n, dépend du nombre de joueurs du rôle : 99,97 pour 1 735 défenseurs centraux, 99,93 pour 720 gardiens (saison 2025). L'ordre entre les meilleurs de chaque rôle suivait la taille des groupes. Le § 9 de la méthode prévient que B mesure une excellence relative au rôle ; le § 12 laisse ouverts le traitement des égalités et la comparaison entre rôles.
 
-### 5. Des matchs manquaient encore
+### 5. Un zéro omis par le fournisseur était lu comme une valeur inconnue
+
+PitchAPI ne publie jamais un xG, un xA ou une grosse occasion à zéro, et laisse un compte vide aussi souvent qu'il écrit 0. Sur les 259 937 lignes joueur-match de 45 minutes ou plus de la saison 2026 dont les ballons touchés sont connus : xG vide sur 48 % des lignes et jamais à 0, tirs cadrés vides sur 75 %, dribbles sur 23 %, grosses occasions manquées sur 96 %, erreurs menant à un but sur 99 %. La règle « une valeur absente ne vaut pas zéro » écartait alors l'indicateur du match : un avant-centre sans tir n'avait pas de finition ce jour-là, et une grosse occasion manquée n'était comparée qu'à d'autres grosses occasions manquées.
+
+La version 2 rend son zéro à un vide (`restore_zeros`) quand la ligne du joueur porte des statistiques (ses ballons touchés sont connus) et que le fournisseur montre qu'il publie la statistique : dans le même match pour les statistiques courantes, dans la même édition pour les rares. 2 035 205 valeurs sur les 526 627 lignes de l'année 2025/2026.
+
+Le même défaut touche les moyennes par 90 minutes et les centiles des fiches joueur, calculés ailleurs (`seasonMetric`, `buildCohorts`) : il n'est pas corrigé ici (voir « Ce que la version 2 ne fait pas »).
+
+### 6. Des matchs manquaient encore
 
 Le rattrapage de l'historique n'était pas fini : le 12 novembre au matin, 11 des 17 matchs de Ligue des champions 2025/2026 du Paris Saint-Germain avaient leurs statistiques joueurs. Ce point se règle seul avec la collecte.
 
@@ -72,7 +80,7 @@ Niveaux obtenus : Premier League 1772, Bundesliga 1691, Serie A 1646, LaLiga 164
 C'est le réglage qui décide de l'influence du club sur le score du joueur. Deux mesures :
 
 - **Les joueurs qui changent de club.** 7 521 joueurs ont les deux années, 1 390 ont changé de club. Leur contribution par 90 minutes baisse de 0,086 (± 0,014) par 400 points d'Elo gagnés par leur club (0,082 ± 0,012 sur tous les joueurs). C'est une borne basse : on ne voit que ceux qui jouent encore assez dans le club plus fort.
-- **Le partage de la dispersion.** κ est fixé pour que le niveau du club et la contribution propre aient la même dispersion parmi les joueurs classés (`LEVEL_SHARE = 0,5`) : la moitié de ce qui sépare deux joueurs est le niveau où ils jouent, l'autre ce qu'ils y font. Cela donne κ = 0,60 pour 2025/2026 et 0,69 pour 2026/2027, au-dessus de la borne basse.
+- **Le partage de la dispersion.** κ est fixé pour que le niveau du club et la contribution propre aient la même dispersion parmi les joueurs classés (`LEVEL_SHARE = 0,5`) : la moitié de ce qui sépare deux joueurs est le niveau où ils jouent, l'autre ce qu'ils y font. Cela donne κ = 0,60 pour 2025/2026 et 0,68 pour 2026/2027, au-dessus de la borne basse.
 
 Le choix reste un réglage : à κ = 1 le classement suit davantage la hiérarchie des clubs, à κ = 0,25 les vedettes des divisions inférieures remontent.
 
@@ -80,12 +88,14 @@ Le choix reste un réglage : à κ = 1 le classement suit davantage la hiérarch
 
 | Année | Course (clubs de première division) |
 | --- | --- |
-| 2025/2026 | 1. Vitinha 98,7 · 2. Olise 98,5 · 3. Mbappé 97,1 · 4. Dembélé 96,8 · 5. Yamal 96,7 · 6. Kimmich · 7. Kane · 8. Van Dijk · 9. Locatelli · 10. Szoboszlai |
-| 2026/2027 | 1. Yamal · 2. Mbappé · 3. Olise · 4. Vitinha · 5. Güler |
+| 2025/2026 | 1. Vitinha 98,7 · 2. Olise 98,5 · 3. Yamal 97,5 · 4. Kane 97,3 · 5. Mbappé 97,1 · 6. Dembélé 96,8 · 7. Kimmich · 8. Dimarco · 9. Rice · 10. Szoboszlai |
+| 2026/2027 (au 12 novembre) | 1. Yamal 94,7 · 2. Mbappé 92,7 · 3. Vitinha 92,1 · 4. Olise 92,0 · 5. Güler 90,6 · 6. Raphinha · 7. Kimmich |
 
-Kvaratskhelia est 44ᵉ et Doué 50ᵉ de la course 2025/2026 (9 149 joueurs classés en tout, divisions inférieures comprises) : leur contribution propre est bonne sans être parmi les toutes premières des ailiers, et le niveau de leur club les porte comme il porte leurs coéquipiers. Le rôle corrigé seul les faisait reculer, de la 40ᵉ à la 347ᵉ place et de la 85ᵉ à la 296ᵉ lors du premier essai (comparés à des avants-centres, leur progression et leur conservation sortaient du lot) ; c'est le niveau du club qui les replace.
+Kvaratskhelia est 51ᵉ et Doué 74ᵉ de la course 2025/2026 (9 233 joueurs classés en tout, divisions inférieures comprises) : leur contribution propre est bonne sans être parmi les toutes premières des ailiers, et le niveau de leur club les porte comme il porte leurs coéquipiers. Le rôle corrigé seul les faisait reculer, de la 40ᵉ à la 347ᵉ place et de la 85ᵉ à la 296ᵉ lors du premier essai (comparés à des avants-centres, leur progression et leur conservation sortaient du lot) ; c'est le niveau du club qui les replace.
 
 ## Ce que la version 2 ne fait pas
+
+- **Les fiches joueur.** Les moyennes par 90 minutes, les centiles et les indices de rôle des fiches (« Indice Vega » de la colonne de droite, onglet « Stats avancées ») lisent encore un zéro omis comme une valeur inconnue : une mesure n'est classée que si elle est renseignée sur tous les matchs joués, et parmi les 84 attaquants les plus utilisés de 2026/2027, 35 seulement ont un xG « complet » et 30 des dribbles. Un joueur comme Lamine Yamal n'y a qu'un indice de rôle calculable (Récupération, 63) et son « Indice Vega » vaut ce nombre. La correction demande de rendre leurs zéros aux lignes que lisent ces pages et de recalculer les lignes préparées de chaque édition.
 
 - **L'enjeu du match.** Une finale compte comme un autre match contre le même adversaire. Le § 9 de la méthode garde l'enjeu hors du modèle ; son annexe A.4 propose un coefficient (1,05 en huitième et quart, 1,10 en demi-finale, 1,15 en finale) comme « choix de récompense à expliciter ». Il n'est pas appliqué.
 - **Les championnats hors de l'échelle commune.** Il faut des matchs entre continents. La Coupe du monde des clubs 2025 est dans la base, mais ses 33 équipes n'y sont pas reliées à leurs clubs (leur nom porte le pays entre parenthèses, « Al Hilal (KSA) ») : les relier donnerait les seuls matchs entre confédérations de la base.

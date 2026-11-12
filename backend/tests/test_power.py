@@ -143,6 +143,21 @@ class RoleTest(unittest.TestCase):
         self.assertEqual(power.team_leagues(rows, leagues), ({"A", "B"}, {"A"}))
 
 
+class OmittedZeroTest(unittest.TestCase):
+    def test_a_blank_is_a_zero_where_the_source_publishes_the_statistic(self):
+        row = lambda match, edition, measured=True, **values: {"match_id": match, "competition_season_id": edition, "measured": measured, **values}
+        rows = [
+            row(1, 10, npxg=0.4, big_chances_missed=None, assists=1.0),  # the match has an xG, the edition an assist
+            row(1, 10, npxg=None, big_chances_missed=None, assists=None),
+            row(1, 10, measured=False, npxg=None, assists=None),  # a row without statistics stays unknown
+            row(2, 10, npxg=None, assists=None, big_chances_missed=1.0),  # no xG in this match: unknown; a missed chance in the edition
+            row(3, 20, npxg=None, assists=None, big_chances_missed=None),  # another edition, which shows nothing
+        ]
+        self.assertEqual(power.restore_zeros(rows), 5)
+        self.assertEqual([(r.get("npxg"), r.get("assists"), r.get("big_chances_missed")) for r in rows],
+                         [(0.4, 1.0, 0.0), (0.0, 0.0, 0.0), (None, None, None), (None, 0.0, 1.0), (None, None, None)])
+
+
 class ExpectationTest(unittest.TestCase):
     def test_poisson_fit_recovers_the_opponent_effect(self):
         rng = random.Random(7)
