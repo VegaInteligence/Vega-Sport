@@ -149,6 +149,25 @@ def record_failure(store, kind, provider_key, code, lease=None, *, now=None, ret
     return entity_id
 
 
+def record_unavailable(store, kind, provider_key, lease=None, *, now=None):
+    """The provider gives no profile of this entity under the plan in use: nothing failed.
+    The job ends, the state says unavailable, and the profile is asked again in 30 days (a
+    plan can change)."""
+    if kind not in KINDS:
+        raise StoreError("INVALID_PROFILE_TARGET")
+    instant = _at(now)
+    with store.conn.transaction():
+        entity_id = store.resolve(kind, provider_key)
+        _lock_lease(store.conn, kind, entity_id, lease)
+        store.conn.execute(
+            "INSERT INTO ops.reference_state(provider,entity_type,entity_id,status,last_attempt_at,next_due) VALUES('pitchapi',%s,%s,'unavailable',%s,%s) ON CONFLICT(provider,entity_type,entity_id) DO UPDATE SET status='unavailable',last_attempt_at=EXCLUDED.last_attempt_at,next_due=EXCLUDED.next_due,updated_at=EXCLUDED.last_attempt_at",
+            (kind, entity_id, instant, instant + timedelta(days=30)),
+        )
+        if lease:
+            ack(store.conn, *lease)
+    return entity_id
+
+
 def enqueue_due(conn, *, now=None, limit=100):
     instant = _at(now)
     if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 1000:

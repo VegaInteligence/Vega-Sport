@@ -689,6 +689,33 @@ class WorkerTest(unittest.TestCase):
             "score_never_final",
         )
 
+    def test_a_match_left_not_started_after_its_kickoff_is_asked_again_once_a_day(self):
+        start = self.now
+        old = start - timedelta(days=10)
+        self.calendar(match("m_gggggg", start + timedelta(days=2), "not_started"), match("m_hhhhhh", start + timedelta(days=2), "not_started"))
+        self.at(start)
+        self.drain()
+        # Both were to be played ten days ago and nothing follows them (the base met them after their day).
+        ids = [self.mid("m_gggggg"), self.mid("m_hhhhhh")]
+        self.db.execute("UPDATE core.matches SET kickoff_at=%s, match_date=%s WHERE id = ANY(%s)", (old, old.date(), ids))
+        self.db.execute("DELETE FROM ops.match_watch WHERE match_id = ANY(%s)", (ids,))
+        self.db.execute("DELETE FROM ops.fetch_jobs WHERE entity_type='match' AND entity_id = ANY(%s)", (ids,))
+        # The provider has given the first a new date and left the second where it was.
+        moved = start + timedelta(days=15)
+        self.api.routes["/matches/m_gggggg"] = match("m_gggggg", moved, "not_started")
+        self.api.routes["/matches/m_hhhhhh"] = match("m_hhhhhh", old, "not_started")
+        self.calendar()
+        self.worker.lanes = ("score",)
+        self.assertEqual(self.at(start + timedelta(minutes=1))["overdue"], 2)
+        self.drain()
+        self.assertEqual(self.db.execute("SELECT kickoff_at FROM core.matches WHERE id=%s", (ids[0],)).fetchone()[0], moved)
+        self.assertEqual(self.watch("m_gggggg")[:2], ("scheduled", moved + timedelta(minutes=105)))
+        self.assertEqual(self.watch("m_hhhhhh")[:2], ("stopped", None))
+        self.assertEqual(self.db.execute("SELECT kind::text FROM ops.data_warnings WHERE match_id=%s", (ids[1],)).fetchone()[0], "score_never_final")
+        # Once a day: nothing more the same day, the one still overdue the day after.
+        self.assertEqual(self.at(start + timedelta(minutes=10))["overdue"], 0)
+        self.assertEqual(self.at(start + timedelta(days=1, minutes=10))["overdue"], 1)
+
     def test_a_match_the_day_calendar_moves_changes_day_too(self):
         # /date/{d} gives a match its kick-off and no day (the provider's real shape). A
         # moved match kept its first day, and the site listed it on that day.
@@ -755,6 +782,31 @@ class WorkerTest(unittest.TestCase):
             self.assertTrue(self.worker.step())
         self.assertRegex(out.getvalue(), r"family=player job=\d+ error=HTTP_ACCESS_DENIED reason=access_denied\n")
         self.assertNotIn("this resource", out.getvalue())
+
+    def test_a_profile_the_plan_does_not_hold_is_unavailable_not_failed(self):
+        # 403 PLAN_UPGRADE_REQUIRED on a player of a league we do not collect: the job ends, nothing is logged as failed.
+        def refuse(request, timeout):
+            return 403, {}, json.dumps({"error": {"code": "PLAN_UPGRADE_REQUIRED", "message": "this league is on the Pro plan"}}).encode()
+
+        self.db.execute("INSERT INTO core.players(id,name) VALUES (902,'Synthetic Player')")
+        self.db.execute("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('player','pitchapi','p_bbbbbb',902)")
+        enqueue(self.db, "reference", "player", entity_type="player", entity_id=902, run_after=self.now)
+        self.worker.client._transport = refuse
+        self.worker.lanes = ("reference",)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertTrue(self.worker.step())
+        self.assertNotIn("error=", out.getvalue())
+        self.assertEqual(self.db.execute("SELECT state::text, last_error_code FROM ops.fetch_jobs WHERE family='player' AND entity_id=902").fetchone(), ("done", None))
+        status, due = self.db.execute("SELECT status::text, next_due - last_attempt_at FROM ops.reference_state WHERE entity_type='player' AND entity_id=902").fetchone()
+        self.assertEqual((status, due), ("unavailable", timedelta(days=30)))
+        self.assertEqual(self.db.execute("SELECT count(*) FROM ops.parse_failures WHERE entity_type='player' AND entity_id=902").fetchone()[0], 0)
+        # The same answer for a match is no answer: the plan no longer covers a league we collect.
+        from vega.pitchapi import PitchError
+
+        with self.assertRaises(PitchError) as refused:
+            self.worker.client.fetch("/matches/m_aaaaaa/lineups")
+        self.assertEqual((refused.exception.code, refused.exception.status), ("PLAN_UPGRADE_REQUIRED", 403))
 
     def test_date_matches_without_edition_and_new_statuses(self):
         # Real /date responses name the competition but not the edition.

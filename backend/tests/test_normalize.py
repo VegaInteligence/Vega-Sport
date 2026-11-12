@@ -116,6 +116,30 @@ class NormalizeTest(unittest.TestCase):
         row = normalize_family("lineups", data).rows["core.lineup_players"][0]
         self.assertEqual(row["pitch_x"], 0.5)
 
+    def test_source_gaps_seen_on_the_backfill(self):
+        # 2026-11-12, seen on 97 line-ups of one league: a coach the source does not name ({"name": ""}) is none.
+        side = lambda coach: {"formation": "4-2-3-1", "coach": coach, "starters": [dict(P, player_id="p_123456")], "subs": []}
+        data = {"home_team": T, "away_team": {"id": "t_654321", "name": "Other"}, "home": side({"name": ""}), "away": side({"name": "Ana Coach"})}
+        got = normalize_family("lineups", data)
+        self.assertEqual([r.get("coach_id") for r in got.rows["core.lineups"]], [None, "Ana Coach"])
+        self.assertEqual([r.natural_name for r in got.references if r.entity_type == "coach"], ["Ana Coach"])
+        with self.assertRaises(NormalizationError):
+            normalize_family("lineups", dict(data, home=side({"name": 7})))
+        # A line-up not published yet names a formation and no player: unavailable, to be asked again.
+        empty = {"formation": "4-3-3", "confirmed": True, "starters": None, "subs": None}
+        self.assertEqual(normalize_family("lineups", dict(data, home=empty, away=empty)).coverage, "unavailable")
+        # One side published: it is kept, the other has its formation and no player.
+        half = normalize_family("lineups", dict(data, home=empty))
+        self.assertEqual((half.coverage, len(half.rows["core.lineups"]), [r["team_id"] for r in half.rows["core.lineup_players"]]), ("ok", 2, ["t_654321"]))
+        # Extra time: the statistics of its two halves are left out; the match and its halves are kept.
+        item = {"key": "total_shots", "home": "9", "away": "4", "format_type": "integer"}
+        stats = {"home_team": T, "away_team": {"id": "t_654321", "name": "Other"},
+                 "periods": [{"period": name, "groups": [{"items": [item]}]} for name in ("All", "FirstHalf", "SecondHalf", "FirstExtraHalf", "SecondExtraHalf")]}
+        rows = normalize_family("stats", stats).rows["core.team_match_stats"]
+        self.assertEqual(sorted({r["period"] for r in rows}), ["all", "first_half", "second_half"])
+        with self.assertRaises(NormalizationError):  # a period nobody knows is still refused
+            normalize_family("stats", dict(stats, periods=[{"period": "ThirdHalf", "groups": []}]))
+
     def test_official_shot_enums_and_both_team_stat_percentages(self):
         shot = {
             "team_id": T["id"],

@@ -250,6 +250,7 @@ class PitchClient:
                 "ANALYTICS_UNAVAILABLE",
                 "HALVES_UNAVAILABLE",
                 "INTERNAL_SERVER_ERROR",
+                "PLAN_UPGRADE_REQUIRED",
             )
             data_present = (
                 isinstance(value, dict)
@@ -303,6 +304,15 @@ class PitchClient:
                 continue
             if 500 <= status <= 599:
                 raise PitchError("HTTP_SERVER_ERROR", status, shape)
+            if status == 403 and code == "PLAN_UPGRADE_REQUIRED":
+                # "this league is on the Pro plan": the plan in use does not hold the league the
+                # entity belongs to. For a player seen in a match of ours (a profile of a league
+                # we do not collect) that is the answer: no profile under this plan, 1,949 players
+                # on 12 November 2026. For anything else the plan no longer covers what we
+                # collect, and that must show as an error.
+                if re.fullmatch(rf"/players/p_{_ID}", endpoint):
+                    return PitchResult(coverage="unavailable", code=code)
+                raise PitchError("PLAN_UPGRADE_REQUIRED", status, shape)
             if status == 403 and code not in known:
                 raise PitchError(
                     "HTTP_ACCESS_DENIED", status, shape, _access_reason(value)

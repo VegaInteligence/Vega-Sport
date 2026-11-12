@@ -26,6 +26,8 @@ WEEK = timedelta(days=7)
 ACTIVE_WINDOW = timedelta(days=30)
 DONE_RETENTION = timedelta(days=14)
 RETRY_FAILED_AFTER = timedelta(hours=24)
+OVERDUE_AFTER = timedelta(hours=6)  # past its kick-off and still not started: asked again
+OVERDUE_FOR = timedelta(days=365)  # and for this long after the kick-off
 # Codes a retry cannot fix: the job stays failed and shows in ops.v_backlog.
 PERMANENT_CODES = (
     "RESOURCE_NOT_FOUND",
@@ -65,6 +67,7 @@ def plan(conn, now=None, *, profile_limit=200):
         counts["revived"] = _revive_failed(conn, instant)
         counts["calendar"] = _calendar(conn, instant)
         counts["summary"] = _scores(conn, instant)
+        counts["overdue"] = _overdue(conn, instant)
         counts["lineups"] = _lineups(conn, instant)
         counts["h2h"] = _h2h(conn, instant)
         counts["reference"] = _weekly(conn, instant)
@@ -236,6 +239,30 @@ def _prune(conn, now):
              SELECT id FROM ops.fetch_jobs WHERE state='done' AND updated_at < %s LIMIT 5000)""",
         (now - DONE_RETENTION,),
     ).rowcount
+
+
+def _overdue(conn, now):
+    """A match still not started hours after its kick-off, that no watch follows: one
+    summary a day. Its watch ended after a week, or it never had one (it was not in a
+    calendar of its day: 34 matches of the season on 12 November 2026, some of them given
+    a new date by the provider since). The provider answers with a new date, and the watch
+    starts again on it, or with the same one, and the match is noted as never final."""
+    rows = conn.execute(
+        """SELECT m.id FROM core.matches m
+           JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL AND cs.cup_key IS NULL
+           LEFT JOIN ops.match_watch w ON w.match_id = m.id
+           WHERE m.status = 'not_started' AND m.source = 'pitchapi' AND m.kickoff_at < %s AND m.kickoff_at >= %s
+             AND (w.match_id IS NULL OR w.state = 'stopped')
+           ORDER BY m.kickoff_at DESC, m.id LIMIT 200""",
+        (now - OVERDUE_AFTER, now - OVERDUE_FOR),
+    ).fetchall()
+    count = 0
+    for (match_id,) in rows:
+        if _recent(conn, "summary", now - timedelta(days=1), entity_type="match", entity_id=match_id):
+            continue
+        if enqueue(conn, "score", "summary", entity_type="match", entity_id=match_id, run_after=now, priority=PRIORITY["calendar"]):
+            count += 1
+    return count
 
 
 def observe(conn, match_id, *, kickoff_at, status, now):

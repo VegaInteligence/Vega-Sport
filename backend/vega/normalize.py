@@ -50,6 +50,9 @@ _PERIOD = {
 }
 
 
+_EXTRA_PERIODS = ("FirstExtraHalf", "SecondExtraHalf")
+
+
 def number(value, kind):
     if value is None:
         return None
@@ -148,7 +151,10 @@ def _natural(out, kind, value):
     if not value:
         return None
     name = value.get("name") if isinstance(value, dict) else value
-    if not isinstance(name, str) or not name.strip():
+    # A reference the source leaves blank ({"name": ""}, a coach it does not know): none.
+    if name is None or (isinstance(name, str) and not name.strip()):
+        return None
+    if not isinstance(name, str):
         raise NormalizationError("INVALID_REFERENCE")
     out.references.append(EntityRef(kind, natural_name=name))
     return name
@@ -762,6 +768,13 @@ def normalize_family(family, data, *, match_id=None):
                 out.add("shots", row)
     elif family == "lineups":
         obj = _object(data)
+        # A line-up the source has not published yet names a formation and no player
+        # ("starters": null, "subs": null): unavailable for now, not an error.
+        if all(
+            not (_object(obj.get(side)).get("starters") or _object(obj.get(side)).get("substitutes") or _object(obj.get(side)).get("subs"))
+            for side in ("home", "away")
+        ):
+            return NormalizedFamily(coverage="unavailable")
         listed = set()
         for side in ("home", "away"):
             block = _object(obj.get(side))
@@ -781,7 +794,7 @@ def normalize_family(family, data, *, match_id=None):
                 players = block.get(
                     key, block.get("subs") if key == "substitutes" else None
                 )
-                for order, item in enumerate(_list(players)):
+                for order, item in enumerate(_list(players if players is not None else [])):
                     item = _object(item)
                     player = _ref(out, "player", item)
                     # A player the source lists twice keeps his first entry (starters come first).
@@ -845,6 +858,10 @@ def normalize_family(family, data, *, match_id=None):
         }
         for period in _list(obj.get("periods")):
             period = _object(period)
+            # The halves of extra time: core.team_match_stats holds the match and its two
+            # halves, and "All" already counts extra time. They are left out, not refused.
+            if period.get("period") in _EXTRA_PERIODS:
+                continue
             rows = {
                 side: {"team_id": teams[side], "period": _period(period.get("period"))}
                 for side in teams

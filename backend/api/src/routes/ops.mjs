@@ -33,6 +33,18 @@ export const PERMANENT = [
  * stay in `transient` and `errors` too, so those keep their meaning for older readers.
  */
 export const UNAVAILABLE = ["ANALYTICS_UNAVAILABLE", "HALVES_UNAVAILABLE"];
+/**
+ * pitchapi.py: a player profile the plan in use does not hold (403 with this code) is the
+ * same kind of answer, the source has nothing to give. Counted with the unavailable calls.
+ */
+export const PLAN_LIMITED = "PLAN_UPGRADE_REQUIRED";
+const UNAVAILABLE_CALL = (codes) => `((http_status = 404 AND error_code = ANY(${codes}::text[])) OR (family = 'player' AND error_code = '${PLAN_LIMITED}'))`;
+/**
+ * A warning of this kind is no anomaly: a complementary source holds a match PitchAPI
+ * holds too, which is what those sources are read for (4,460 of them on 12 November 2026,
+ * and no other warning). They are counted apart (`totals.overlaps`), not listed.
+ */
+export const OVERLAP = "duplicate_match";
 // Lane and state are filtered on job_lane and job_state, the view's columns with the
 // table's own types: a filter on the text ones never reaches the table's partial indexes.
 const JOB = `id::text, lane, family, state, run_after, updated_at, attempts, priority, last_http, last_error_code, match_id, season_id, target
@@ -104,7 +116,7 @@ export function createOpsRoute(read, { key = null, clock = Date.now } = {}) {
 
     const [
       jobs, jobBuckets, backfillEditions, backfillProgress, backlog, matches, sources, calcRuns, calcBuckets, calcLatest,
-      requests, families, warnings, progress, parseFailures, unknownFields, [summary], finished, [publication],
+      requests, families, warnings, progress, parseFailures, unknownFields, [summary], finished, [publication], [warned],
     ] = await Promise.all([
       read(JOB_SAMPLE, [since, until]),
       // Finished and failed jobs by when they ended, queued ones by when they are due. The
@@ -175,19 +187,19 @@ export function createOpsRoute(read, { key = null, clock = Date.now } = {}) {
         `SELECT date_trunc('hour', fetched_at) AS hour, count(*)::integer AS calls,
                 count(*) FILTER (WHERE error_code IS NULL)::integer AS ok,
                 count(*) FILTER (WHERE error_code = ANY($2::text[]))::integer AS permanent,
-                count(*) FILTER (WHERE http_status = 404 AND error_code = ANY($3::text[]))::integer AS unavailable
+                count(*) FILTER (WHERE ${UNAVAILABLE_CALL("$3")})::integer AS unavailable
          FROM api.ops_fetch_log WHERE fetched_at >= $1 GROUP BY 1 ORDER BY 1`,
         [since, PERMANENT, UNAVAILABLE],
       ),
       read(
         `SELECT family, count(*)::integer AS calls, count(*) FILTER (WHERE error_code IS NOT NULL)::integer AS errors,
-                count(*) FILTER (WHERE http_status = 404 AND error_code = ANY($2::text[]))::integer AS unavailable,
+                count(*) FILTER (WHERE ${UNAVAILABLE_CALL("$2")})::integer AS unavailable,
                 round(avg(duration_ms))::integer AS mean_ms,
                 round(percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_ms))::integer AS p95_ms
          FROM api.ops_fetch_log WHERE fetched_at >= $1 GROUP BY family ORDER BY calls DESC, family`,
         [since, UNAVAILABLE],
       ),
-      read(`SELECT * FROM api.ops_data_warnings ORDER BY detected_at DESC, match_id LIMIT ${LIMITS.warnings}`),
+      read(`SELECT * FROM api.ops_data_warnings WHERE kind <> '${OVERLAP}' ORDER BY detected_at DESC, match_id LIMIT ${LIMITS.warnings}`),
       // One row per edition: its match families added up (the season calendar is one call),
       // the latest worked on first, with the number of editions there are.
       read(
@@ -206,6 +218,10 @@ export function createOpsRoute(read, { key = null, clock = Date.now } = {}) {
       read("SELECT * FROM api.ops_summary"),
       read(`SELECT kickoff_at, first_finished_at, last_family_at FROM api.ops_finished_matches WHERE first_finished_at >= $1 AND ${FOLLOWED}`, [since]),
       read("SELECT generation::text AS revision, published_at, (SELECT count(*) FROM api.editions)::integer AS editions FROM api.publication"),
+      read(
+        `SELECT count(*) FILTER (WHERE kind <> '${OVERLAP}')::integer AS warnings, count(*) FILTER (WHERE kind = '${OVERLAP}')::integer AS overlaps
+         FROM api.ops_data_warnings`,
+      ),
     ]);
 
     const failedCalls = (r) => r.calls - r.ok;
@@ -262,7 +278,8 @@ export function createOpsRoute(read, { key = null, clock = Date.now } = {}) {
       // How many there are of what the lists above bound.
       totals: {
         matches: matches[0]?.total ?? 0,
-        warnings: summary?.data_warnings ?? warnings.length,
+        warnings: warned?.warnings ?? warnings.length,
+        overlaps: warned?.overlaps ?? 0,
         editions: progress[0]?.total ?? 0,
       },
       quality: {
