@@ -402,6 +402,8 @@ class WorkerTest(unittest.TestCase):
             x("INSERT INTO agg.calc_runs(kind,model_version,cohort_definition,status,started_at,finished_at) VALUES ('levels','m',%s,'published',%s,%s)",
               (f"season:{s}", noon - timedelta(hours=2), noon - timedelta(hours=2)))
             x("INSERT INTO agg.power_runs(kind,season_id,method_version,status,linked_leagues) VALUES ('players',%s,%s,'published',0)", (s, METHOD_VERSION))
+            # Its breakouts were looked for with that ranking (088): the season is not due for them either.
+            x("INSERT INTO agg.breakout_runs(season_id,version,candidates,flagged) VALUES (%s,'breakout-v1',0,0)", (s,))
         self.assertEqual(due_seasons(self.db, noon), [])  # computed today, by the method of today
         # Both rankings come from another version: the season in progress is due, the one long over waits for its matches to change.
         x("UPDATE agg.power_runs SET method_version='power-ranking-v0' WHERE kind='players'")
@@ -469,6 +471,11 @@ class WorkerTest(unittest.TestCase):
             self.assertEqual(due_seasons(self.db, noon), [])
         finally:
             inplay.MIN_FIT = floor
+        # A published player ranking and no breakout run for the season: due; with its run, not.
+        x("DELETE FROM agg.breakout_runs WHERE season_id=%s", (season,))
+        self.assertEqual(due_seasons(self.db, noon), [season])
+        x("INSERT INTO agg.breakout_runs(season_id,version,candidates,flagged) VALUES (%s,'breakout-v1',0,0)", (season,))
+        self.assertEqual(due_seasons(self.db, noon), [])
         # No return curve yet in a base with appearances enough to learn one: due; with a curve, not.
         from vega import worker as worker_module
 

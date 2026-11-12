@@ -8,7 +8,7 @@ import { Media } from "../components/UI.jsx";
 import SeasonSelect from "../components/SeasonSelect.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
-import { useBallonDorRanking } from "../services/ballon-dor.js";
+import { useBallonDorRanking, useBreakouts } from "../services/ballon-dor.js";
 
 const PODIUM = [
   { rank: 2, medal: "silver" },
@@ -196,6 +196,47 @@ function RankColumn({ from, to, ranking }) {
   );
 }
 
+// The breakouts take the ranking's rows; their last column is a share of the regulars.
+function BreakoutColumn({ entries, from }) {
+  return (
+    <div className="rank-column">
+      <div className="rank-head" aria-hidden="true">
+        <span>Rang</span>
+        <span>Joueur</span>
+        <span>Poste</span>
+        <span>Club</span>
+        <span title="Part des titulaires de son poste que son rendement par 90 minutes dépasse">Devant</span>
+      </div>
+      <ol className="rank-list" start={from} role="list">
+        {entries.map((entry) => (
+          <RankRow key={entry.playerId} rank={entry.rank} entry={entry} />
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function Breakouts({ season }) {
+  const entries = useBreakouts(season);
+  if (!entries?.length) return null;
+  const shown = entries.slice(0, 20),
+    half = Math.ceil(shown.length / 2);
+  return (
+    <section className="rank-board" aria-labelledby="breakouts-title">
+      <h2 id="breakouts-title">Révélations</h2>
+      <p className="standings-note">
+        Des joueurs qui n’ont pas encore assez joué pour être classés, jamais titulaires une saison entière
+        auparavant, et dont le rendement par 90 minutes dépasse déjà celui de la plupart des titulaires de leur
+        poste. « Devant » : la part de ces titulaires qu’ils dépassent (en %).
+      </p>
+      <div className="rank-columns">
+        <BreakoutColumn entries={shown.slice(0, half)} from={1} />
+        {shown.length > half && <BreakoutColumn entries={shown.slice(half)} from={half + 1} />}
+      </div>
+    </section>
+  );
+}
+
 export default function PlayerRankingPage() {
   const f = useFootball(),
     seasons = f.manifest?.seasons || [],
@@ -236,6 +277,8 @@ export default function PlayerRankingPage() {
           <RankColumn from={18} to={30} ranking={ranking} />
         </div>
       </section>
+
+      <Breakouts season={f.season} />
 
       <section className="award-method" aria-labelledby="award-method-title">
         <h2 id="award-method-title">Comment le classement est construit</h2>

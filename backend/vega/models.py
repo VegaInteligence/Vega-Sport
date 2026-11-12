@@ -802,6 +802,10 @@ def refresh_daily(conn, season, *, elo=True):
     xg.refresh(conn, season)
     # The players' whole profile as a short vector, for "players like him" (embedding.py).
     embedding.refresh(conn, season)
+    # The players below the ranking's minutes who already play like its regulars (breakout.py).
+    from . import breakout
+
+    breakout.refresh(conn, season)
     # How playing time comes back after an absence, and who is coming back now (returns.py).
     from datetime import datetime, timezone
 
