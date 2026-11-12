@@ -1060,9 +1060,31 @@ export function GameState({ states }) {
           <dd>{states.pointsDropped}</dd>
           <small>{states.collapses.length} avance(s) non conservée(s)</small>
         </div>
+        {states.halves && states.matches > 0 && (
+          <>
+            {[
+              ["1re mi-temps", states.halves.first],
+              ["2e mi-temps", states.halves.second],
+            ].map(([label, half]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>
+                  {half.gf - half.ga > 0 ? "+" : ""}
+                  {half.gf - half.ga} <small>de différence</small>
+                </dd>
+                <small>
+                  {half.gf} marqués · {half.ga} encaissés
+                </small>
+              </div>
+            ))}
+          </>
+        )}
       </dl>
       <p className={s.note}>
         {states.matches} matchs dont la chronologie des buts est complète.
+        {states.halves &&
+          states.matches > 0 &&
+          ` Arrêtés à la pause, ils donneraient ${states.halves.halfTimePoints} points ; le club en a pris ${states.halves.points}.`}
       </p>
     </div>
   );

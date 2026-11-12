@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { date, isNumber, number } from "../services/format.js";
-import { shotOutcome, shotPosition } from "../services/season-shots.js";
+import { shotOutcome, shotPosition, strikeQuality } from "../services/season-shots.js";
 import Icon from "./Icon.jsx";
 import styles from "./SeasonShots.module.css";
 
@@ -324,6 +324,7 @@ export default function SeasonShots({
   const totalXg = knownXg.length
     ? knownXg.reduce((total, { shot }) => total + shot.xg, 0)
     : null;
+  const strike = strikeQuality(filtered.map(({ shot }) => shot));
   const hasDistance = positioned.some(({ pos }) => pos.distance != null);
   const usesReferencePitch = positioned.some(
     ({ pos }) => pos.distance != null && pos.approximate,
@@ -351,6 +352,16 @@ export default function SeasonShots({
               </small>
             )}
           </div>
+          {strike && (
+            <div title="Somme des xGOT moins les xG : ce que le placement des frappes ajoute ou retire aux occasions. Un tir non cadré ou bloqué vaut 0 après la frappe.">
+              <dt>Après la frappe</dt>
+              <dd>
+                {strike.value > 0 ? "+" : ""}
+                {number(strike.value, 2)}
+              </dd>
+              <small>xGOT − xG · {number(strike.onTarget)} cadrés</small>
+            </div>
+          )}
         </dl>
       </div>
       <div

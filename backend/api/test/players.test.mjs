@@ -146,3 +146,16 @@ test("a player's profile carries his birth date and height when the base holds t
   const unknown = (await get("/api/players/p_aaaab1")).body.data;
   assert.equal("birth_date" in unknown || "height_cm" in unknown, false);
 });
+
+test("a player's passing partners of a season, the most exchanged first", { skip }, async () => {
+  const { data } = (await get("/api/players/p_aaaab1/partners?season=2025/2026")).body;
+  assert.deepEqual(data, { id: "p_aaaab1", season: "2025/2026", partners: [
+    { id: "p_aaaab2", name: "Marc Petit", given: 10, received: 4, matches: 2 },
+    { id: "p_aaaab4", name: "Cristiano Test", given: 2, received: 0, matches: 1 },
+  ] });
+  // A player without a network that season, a missing or malformed season.
+  assert.equal((await get("/api/players/p_aaaab3/partners?season=2025/2026")).response.status, 404);
+  assert.equal((await get("/api/players/p_aaaab1/partners?season=2024/2025")).response.status, 404);
+  assert.equal((await get("/api/players/p_aaaab1/partners")).response.status, 400);
+  assert.equal((await get("/api/players/p_aaaab1/partners?season=2025")).response.status, 400);
+});

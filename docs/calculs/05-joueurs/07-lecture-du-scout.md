@@ -73,3 +73,7 @@ La carte affiche :
 - **Un même axe peut être point fort et point de vigilance** quand deux axes au plus sont classés : les deux listes sont tirées des mêmes valeurs.
 - **« Face aux milieux » sous-entend la cohorte de la page.** Avec l'option « Clubs de niveau comparable » activée (par défaut), ce sont les milieux de clubs de niveau proche, pas tous les milieux des compétitions sélectionnées.
 - **La phrase de production affiche 0 pour une mesure absente.** Si les buts sont renseignés mais jamais les passes décisives (ou l'inverse), la valeur manquante s'écrit « 0,00 » au lieu d'être omise (`goals.value ?? 0`), contrairement à la règle « absent ≠ zéro » ([Points d'attention](../07-limites/02-points-d-attention.md), point 12).
+
+## Partenaires de passe
+
+Sous la carte des tirs, la fiche nomme les trois coéquipiers avec qui le joueur a échangé le plus de passes sur la saison (`/api/players/{id}/partners`, vue `api.player_pass_partners`) : pour chaque match du joueur, les passes qu'il a données à un coéquipier et celles qu'il en a reçues dans le réseau de passes, additionnées sur la saison ; les partenaires sont rangés par passes échangées (données + reçues). Le réseau de passes de la source couvre un match jusqu'à son premier changement (la deuxième période n'y est le plus souvent pas) : ces nombres comparent les partenaires entre eux, ils ne sont pas le total des passes de la saison. Un coéquipier de sélection y figure au même titre qu'un coéquipier de club.

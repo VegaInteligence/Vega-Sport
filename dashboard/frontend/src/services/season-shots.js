@@ -36,3 +36,24 @@ export function shotPosition(s) {
     verified,
   };
 }
+
+/**
+ * What the strikes added to the chances: the sum of xGOT minus xG over the shots whose
+ * two values are known. A shot off target or blocked is worth 0 after the strike; a shot
+ * on target without an xGOT is left out, as is an own goal. Null without any such shot.
+ */
+export function strikeQuality(shots) {
+  let value = 0,
+    counted = 0,
+    onTarget = 0;
+  for (const shot of shots || []) {
+    if (!shot || shot.isOwnGoal || !Number.isFinite(shot.xg)) continue;
+    const framed = shot.isGoal === true || shot.isOnTarget === true;
+    if (framed && !Number.isFinite(shot.xgot)) continue;
+    const after = framed ? shot.xgot : Number.isFinite(shot.xgot) ? shot.xgot : 0;
+    value += after - shot.xg;
+    counted++;
+    if (framed) onTarget++;
+  }
+  return counted ? { value, shots: counted, onTarget } : null;
+}
