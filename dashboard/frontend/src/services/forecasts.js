@@ -60,3 +60,55 @@ export function projectionRows(projection) {
     };
   });
 }
+
+/** A finished or running match minute by minute, or null without one (a match to play, no goal timeline). */
+export function useMatchWinProbability(matchId, enabled = true) {
+  const on = Boolean(enabled && /^m_/.test(matchId || ""));
+  const resource = useResource(
+    `match-win-probability:${matchId || "none"}`,
+    () => json("/api/forecasts/live?" + new URLSearchParams({ match: matchId })).catch(none),
+    on,
+  );
+  return on && !resource.error ? (resource.value ?? null) : null;
+}
+
+const CHART = { width: 720, height: 240, left: 30, right: 700, top: 24, bottom: 200 };
+
+/**
+ * The drawing of a match's probabilities: three stacked areas (home at the bottom, the
+ * draw, away at the top) over the minutes, a marker at each goal with the score it made,
+ * and the three shares at kick-off. Null without at least two points.
+ */
+export function probabilityChart(answer, frame = CHART) {
+  const points = answer?.points || [];
+  if (points.length < 2) return null;
+  const span = Math.max(90, points.at(-1).minute);
+  const x = (minute) => frame.left + (Math.min(minute, span) / span) * (frame.right - frame.left);
+  const y = (share) => frame.bottom - share * (frame.bottom - frame.top);
+  const fixed = (value) => Math.round(value * 10) / 10;
+  const area = (low, high) => {
+    const up = points.map((p) => `${fixed(x(p.minute))},${fixed(y(high(p)))}`);
+    const down = [...points].reverse().map((p) => `${fixed(x(p.minute))},${fixed(y(low(p)))}`);
+    return `M${up.join("L")}L${down.join("L")}Z`;
+  };
+  const score = [0, 0];
+  const goals = (answer.events || [])
+    .filter((event) => event.kind === "goal")
+    .map((event) => {
+      score[event.side === "home" ? 0 : 1]++;
+      return { x: fixed(x(event.minute)), side: event.side, minute: event.minute, label: `${score[0]}–${score[1]}` };
+    });
+  return {
+    paths: {
+      home: area(() => 0, (p) => p.home),
+      draw: area((p) => p.home, (p) => p.home + p.draw),
+      away: area((p) => p.home + p.draw, () => 1),
+    },
+    goals,
+    reds: (answer.events || []).filter((event) => event.kind === "red").map((event) => ({ x: fixed(x(event.minute)), side: event.side, minute: event.minute })),
+    ticks: [0, 15, 30, 45, 60, 75, 90].map((minute) => ({ minute, x: fixed(x(minute)) })),
+    start: points[0],
+    live: answer.status === "in_play" ? points.at(-1) : null,
+    frame,
+  };
+}

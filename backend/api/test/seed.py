@@ -146,9 +146,8 @@ def main(dsn):
     # A player's two halves (083): player 101 in match 1.
     x("""INSERT INTO core.player_match_half_stats(season_id, match_id, team_id, player_id, period, minutes_played, goals, total_shots, xg, accurate_passes, touches, duels_won, touches_opp_box, dribbles_succeeded, tackles)
          VALUES (2025,1,1,101,'first_half',45,2,3,0.9,8,20,3,4,1,NULL), (2025,1,1,101,'second_half',45,0,1,0.3,12,25,NULL,2,NULL,1)""")
-    # Substitutions (082). Match 1 (2-0): each goal's score before it, then the home side's first change
+    # Substitutions (082, 085). Match 1 (2-0): after its two goals, the home side's first change
     # while leading. Match 5 (0-0): each side's first change, level.
-    x("UPDATE core.match_events SET score_home=seq - 1, score_away=0 WHERE season_id=2025 AND match_id=1 AND event_type='goal'")
     x("""INSERT INTO core.match_events(season_id,match_id,team_id,seq,event_type,minute,period) VALUES
          (2025,1,1,12,'substitution',65,'second_half'), (2025,5,1,20,'substitution',60,'second_half'), (2025,5,4,21,'substitution',70,'second_half')""")
     # Activity maps (16 x 12, cells[y * 16 + x]): Élie Durand's of m1 and m3, one of m5 whose
@@ -204,6 +203,13 @@ def main(dsn):
           (team, played, points, projected, model))
         for place, share in places.items():
             x("INSERT INTO agg.season_projection_places(competition_season_id,team_id,place,probability) VALUES (1,%s,%s,%s)", (team, place, share))
+    # The in-play model (086) and the two strengths of match 1 (2-0, goals at 11' and 21').
+    x("""INSERT INTO agg.inplay_models(version, fitted_at, matches, goals, red_matches, q1, q2, q3, q4, q5, q6, after_90, down, up)
+         VALUES ('inplay-v1', '2025-09-06T03:11:00Z', 16000, 43000, 3000, 0.13, 0.14, 0.18, 0.16, 0.16, 0.16, 0.07, 0.6, 1.7)""")
+    if not x("SELECT 1 FROM agg.team_elo WHERE match_id=1").fetchone():
+        elo_run = x("INSERT INTO agg.power_runs(kind, method_version, status) VALUES ('elo', 'seed', 'published') RETURNING id").fetchone()[0]
+        x("""INSERT INTO agg.team_elo(match_id, team_id, season_id, kickoff_at, elo_before, elo_after, expected, result, run_id)
+             VALUES (1, 1, 2025, '2025-08-16T19:00:00Z', 1540, 1552, 0.6, 1, %(r)s), (1, 2, 2025, '2025-08-16T19:00:00Z', 1490, 1478, 0.4, 0, %(r)s)""", {"r": elo_run})
     # The players' season totals, as the calculator writes them (the home's leaders read them).
     from vega import calculator
 

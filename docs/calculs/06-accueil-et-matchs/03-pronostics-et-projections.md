@@ -47,6 +47,31 @@ Les 55 saisons de championnat complètes de 2024/2025 et 2025/2026 (12 clubs ou 
 
 90 points donnent la plus petite perte au total. À cette valeur, parmi les clubs annoncés champions entre 60 et 80 % (15 clubs, 68 % en moyenne), 73 % l'ont été.
 
+## Pendant le match
+
+La fiche d'un match joué ou en cours trace « Probabilité de victoire » : les chances de victoire, de nul et de défaite minute par minute ([inplay.py](../../../backend/vega/inplay.py), `/api/forecasts/live`).
+
+À une minute donnée, avec le score et les expulsions du moment :
+
+- les buts encore à venir de chaque équipe suivent une loi de Poisson de moyenne `λ × R(minute) × facteur d'expulsion`, où `λ` est le nombre de buts attendus du pronostic d'avant-match (les deux Elo d'avant le match) ;
+- `R(minute)` est la part des buts d'un match marqués après cette minute, lue sur les buts de la base par quart d'heure, les buts d'après la 90e minute comptés à part et étalés sur 8 minutes de temps additionnel ;
+- une équipe réduite à dix marque `down` fois son rythme et son adversaire `up` fois, les deux mesurés sur ce que les équipes marquent après un carton rouge, rapportés à ce qu'elles marquent à onze contre onze ;
+- le score final est le score du moment plus ces buts ; les petits scores finaux gardent la correction du pronostic, si bien qu'au coup d'envoi les trois probabilités sont celles du pronostic.
+
+Les buts sont comptés pour l'équipe à qui la source les attribue. Le score que la source écrit sur un événement de but n'est pas lu : c'est celui d'avant le but dans certains matchs, d'après dans d'autres. Un match n'entre dans l'ajustement, et n'a de courbe, que si ses événements de but donnent son score final. Le dernier point d'un match terminé est son résultat. Pour un match en cours, l'heure est la dernière minute que la source a mesurée (momentum ou événement).
+
+### Vérification sur des matchs non vus (12 novembre 2026)
+
+Ajusté sur 16 326 matchs de clubs de 2025/2026 (43 877 buts, 3 040 matchs avec expulsion) : parts des buts par quart d'heure 12,8 % · 13,7 % · 18,0 % (temps additionnel de la première période compris) · 16,2 % · 15,8 % · 16,0 %, et 7,5 % après la 90e minute ; à dix, une équipe marque 0,59 fois son rythme et son adversaire 1,73 fois. Jugé sur les 11 420 matchs de 2026/2027 :
+
+| Minute | 0 | 15 | 30 | 45 | 60 | 75 | 85 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Perte logarithmique (trois issues) | 1,021 | 0,973 | 0,917 | 0,835 | 0,738 | 0,584 | 0,426 |
+
+À la 60e minute, par dixième de probabilité de victoire à domicile (annoncé → observé) : 0,04 → 0,06 ; 0,14 → 0,16 ; 0,26 → 0,26 ; 0,34 → 0,36 ; 0,44 → 0,47 ; 0,55 → 0,54 ; 0,66 → 0,62 ; 0,75 → 0,71 ; 0,84 → 0,80 ; 0,97 → 0,96. Juste après une première expulsion (1 349 matchs), l'équipe réduite à dix est annoncée gagnante, à égalité ou perdante dans 18,7 % / 21,0 % / 60,3 % des cas ; elle l'est dans 18,0 % / 23,0 % / 59,0 %.
+
+Limite mesurée : passé l'heure de jeu, une équipe qui mène l'emporte 3 à 5 points moins souvent qu'annoncé (une équipe menée marque un peu plus que son rythme, ce que le modèle ne lit pas). Il ne connaît que le score, l'heure et les expulsions : ni la pression, ni les occasions, ni les changements.
+
 ## Le calendrier à venir
 
 La colonne « Adv. à venir » de la projection lit les pronostics des matchs restant à jouer de l'édition (`api.schedule_forecasts`, la route `/api/forecasts/season` rend `next` pour chaque club) :

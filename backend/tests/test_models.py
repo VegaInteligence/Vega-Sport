@@ -926,13 +926,14 @@ class ModelsTest(unittest.TestCase):
                                                WHERE season_id=2025 AND status='finished' AND home_score = 2 AND away_score = 1 ORDER BY id LIMIT 1""")
         x("INSERT INTO core.players(id, name) VALUES (7900, 'Joker Test')")
         try:
-            # A goal event carries the score before it, as the source writes it.
+            # The running score on a goal event is not read (the source writes it before the goal in some
+            # matches, after it in others): the goals are counted by the team they are credited to.
             # 1-0, the home side changes (leading); 1-1, the away side changes (level); 2-1 at the end.
             x("DELETE FROM core.match_events WHERE season_id=2025 AND match_id=%s AND event_type IN ('goal', 'substitution')", (match,))
             x("""INSERT INTO core.match_events(season_id, match_id, team_id, seq, event_type, minute, score_home, score_away) VALUES
                  (2025, %(m)s, %(h)s, 501, 'goal', 20, 0, 0), (2025, %(m)s, %(h)s, 502, 'substitution', 58, NULL, NULL),
-                 (2025, %(m)s, %(a)s, 503, 'goal', 61, 1, 0), (2025, %(m)s, %(a)s, 504, 'substitution', 66, NULL, NULL),
-                 (2025, %(m)s, %(h)s, 505, 'substitution', 70, NULL, NULL), (2025, %(m)s, %(h)s, 506, 'goal', 88, 1, 1)""", {"m": match, "h": home, "a": away})
+                 (2025, %(m)s, %(a)s, 503, 'goal', 61, 1, 1), (2025, %(m)s, %(a)s, 504, 'substitution', 66, NULL, NULL),
+                 (2025, %(m)s, %(h)s, 505, 'substitution', 70, NULL, NULL), (2025, %(m)s, %(h)s, 506, 'goal', 88, NULL, NULL)""", {"m": match, "h": home, "a": away})
             x("INSERT INTO core.lineup_players(season_id, match_id, team_id, player_id, is_starter) VALUES (2025, %s, %s, 7900, false)", (match, home))
             x("INSERT INTO core.player_match_stats(season_id, match_id, team_id, player_id, minutes_played, goals, assists) VALUES (2025, %s, %s, 7900, 32, 1, 0)", (match, home))
             rows = x("""SELECT team_key, change_minute, goals_for_then, goals_against_then, goals_for, goals_against, complete
@@ -948,6 +949,63 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM core.player_match_stats WHERE player_id=7900")
             x("DELETE FROM core.lineup_players WHERE player_id=7900")
             x("DELETE FROM core.players WHERE id=7900")
+
+    def test_zzzzzzzz_the_in_play_model_is_fitted_on_the_matches_whose_goals_give_the_score(self):
+        # 086: inplay.refresh, on goal events written here for the seed's finished club matches.
+        from vega import inplay
+
+        x = self.db.execute
+        x("DELETE FROM core.match_events WHERE season_id=2025 AND event_type IN ('goal', 'red_card')")
+        matches = x("""SELECT m.id, m.home_team_id, m.away_team_id, m.home_score, m.away_score FROM core.matches m
+                       JOIN agg.team_elo e ON e.match_id = m.id AND e.team_id = m.home_team_id
+                       JOIN core.teams t ON t.id = m.home_team_id AND t.is_national IS NOT TRUE
+                       WHERE m.season_id=2025 AND m.status='finished' ORDER BY m.id""").fetchall()
+        goals = 0
+        for index, (match, home, away, hs, as_) in enumerate(matches):
+            if index == 0:
+                continue  # a match without its goal events: left out of the fit when it has goals
+            for k in range(hs):
+                x("INSERT INTO core.match_events(season_id, match_id, team_id, seq, event_type, minute, minute_added) VALUES (2025,%s,%s,%s,'goal',%s,0)", (match, home, 600 + k, 5 + 17 * k))
+            for k in range(as_):
+                x("INSERT INTO core.match_events(season_id, match_id, team_id, seq, event_type, minute, minute_added) VALUES (2025,%s,%s,%s,'goal',%s,%s)", (match, away, 650 + k, 90 if k == 2 else 40 + 20 * k, 3 if k == 2 else 0))
+            goals += hs + as_
+        first = matches[0]
+        model = x("""INSERT INTO agg.forecast_models(version,matches,home_base,home_slope,away_base,away_slope,rho,strength_spread,simulations)
+                     VALUES ('forecast-v1',1000,0.3,0.9,0.1,0.9,-0.03,90,1000) RETURNING id""").fetchone()[0]
+        minimum, inplay.MIN_FIT = inplay.MIN_FIT, 20
+        try:
+            fitted = len(matches) - (1 if first[3] + first[4] > 0 else 0)
+            self.assertEqual(inplay.refresh(self.db), fitted)
+            row = self.one("SELECT version, matches, goals, red_matches, q1 + q2 + q3 + q4 + q5 + q6 + after_90, down, up FROM agg.inplay_models")
+            self.assertEqual(row[:4], (inplay.MODEL_VERSION, fitted, goals, 0))
+            self.assertAlmostEqual(row[4], 1.0, places=9)
+            self.assertEqual(row[5:], (1.0, 1.0))  # no dismissal in the base: none assumed to matter
+            # A second pass keeps one model; the reads.
+            self.assertEqual(inplay.refresh(self.db), fitted)
+            self.assertEqual(self.one("SELECT count(*) FROM api.inplay_models")[0], 1)
+            self.assertEqual(self.one("SELECT count(*) FROM api.forecast_models WHERE id=%s", model)[0], 1)
+            played = matches[1]
+            status, home_elo, away_elo = self.one("SELECT status, home_elo, away_elo FROM api.match_strengths WHERE match_key=%s", played[0])
+            self.assertEqual(status, "finished")
+            self.assertTrue(home_elo > 0 and away_elo > 0)
+            sides = x("SELECT kind, side FROM api.match_inplay_events WHERE season_id=2025 AND match_key=%s ORDER BY seq", (played[0],)).fetchall()
+            self.assertEqual((sum(1 for k, s_ in sides if s_ == "home"), sum(1 for k, s_ in sides if s_ == "away")), (played[3], played[4]))
+            # A match not rated yet takes each side's strength after its last rated match.
+            x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,match_date)
+                 VALUES (9300,1,2025,'pitchapi','in_play',%s,%s,'2026-05-25')""", (played[1], played[2]))
+            live = self.one("SELECT status, home_elo, away_elo FROM api.match_strengths WHERE match_key=9300")
+            self.assertEqual(live[0], "in_play")
+            self.assertTrue(live[1] > 0 and live[2] > 0)
+            # Too few matches: nothing is fitted and the model in place stays.
+            inplay.MIN_FIT = 10_000
+            self.assertEqual(inplay.refresh(self.db), 0)
+            self.assertEqual(self.one("SELECT count(*) FROM agg.inplay_models")[0], 1)
+        finally:
+            inplay.MIN_FIT = minimum
+            x("DELETE FROM core.matches WHERE id=9300")
+            x("DELETE FROM agg.inplay_models")
+            x("DELETE FROM agg.forecast_models WHERE id=%s", (model,))
+            x("DELETE FROM core.match_events WHERE season_id=2025 AND seq >= 600")
 
 
 if __name__ == "__main__":
