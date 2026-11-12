@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega import sources
-from vega.sources import SourceError, cups, curated, fifa, honours, normalize, sportscore, uefa, wikidata
+from vega.sources import SourceError, cups, curated, fifa, honours, normalize, player_facts, sportscore, uefa, wikidata
 sys.path.insert(0, str(ROOT / "tests"))
 from cup_samples import SAMPLES
 
@@ -33,6 +33,19 @@ def club(ident, name, country, position, value, official=None):
                        "logoUrl": f"https://img.uefa.com/{ident}.png"},
             "overallRanking": {"position": position, "totalValue": value, "totalPoints": value - 1, "numberOfTeamsStillInPlaying": 1},
             "seasonRankings": [{"seasonYear": 2027, "totalPoints": 9.5, "nationalAssociationPoints": 2.0, "numberOfTeamsStillInPlaying": 1}]}
+
+
+def person(qid, names, birth=None, precision="11", height=None, unit="Q11573"):
+    row = {"p": {"value": "http://www.wikidata.org/entity/" + qid}, "names": {"value": "|".join(names)}}
+    if birth:
+        row["birth"], row["prec"] = {"value": birth + "T00:00:00Z"}, {"value": precision}
+    if height is not None:
+        row["height"], row["unit"] = {"value": str(height)}, {"value": "http://www.wikidata.org/entity/" + unit}
+    return row
+
+
+def no_players(url, headers=None):
+    return {"results": {"bindings": []}}
 
 
 class FakeSource:
@@ -89,6 +102,35 @@ class PureTest(unittest.TestCase):
     def test_national_cup_archives_match_the_site(self):
         archives = (ROOT.parent / "dashboard/frontend/src/services/cup-archives.js").read_text()
         self.assertEqual(re.findall(r'key: "([a-z-]+)"', archives), list(cups.NATIONAL_CUP_ARCHIVES))
+
+    def test_player_facts_read_one_person_per_name(self):
+        found = player_facts.people([
+            person("Q1", ["Jean Dupont", "Dupont, Jean"], "2000-03-04", height=1.82),
+            person("Q2", ["Rodri"], "1996-06-22", height=191, unit="Q174728"),
+            person("Q3", ["Rodri", "Rodrigo Sánchez"], "1999-01-01"),
+            person("Q4", ["Marc Année"], "2001-01-01", precision="9"),
+            person("Q5", ["Karim Deux"], "2002-02-02", height=1.80),
+            person("Q5", ["Karim Deux"], "2002-02-02", height=178, unit="Q174728"),
+            person("Q6", ["Deux Dates"], "2003-03-03"), person("Q6", ["Deux Dates"], "2003-03-13"),
+            person("Q7", ["Sans Date"]), person("Q8", ["Géant"], "2000-01-01", height=19.1),
+            {"p": {"value": "https://example.org/Q9"}, "names": {"value": "Ailleurs"}},
+        ])
+        self.assertEqual(found["Q1"], ({"jeandupont", "dupontjean"}, datetime(2000, 3, 4).date(), 182))
+        self.assertEqual(found["Q2"][1:], (datetime(1996, 6, 22).date(), 191))
+        # A year is not a birth date; two days or two heights are no fact; an impossible height is dropped.
+        self.assertEqual([found[q][1:] for q in ("Q4", "Q6", "Q7", "Q8")], [(None, None), (None, None), (None, None), (datetime(2000, 1, 1).date(), None)])
+        self.assertEqual(found["Q5"][1:], (datetime(2002, 2, 2).date(), None))
+        self.assertNotIn("Q9", found)
+        squad = {1: {"jeandupont"}, 2: {"rodri"}, 3: {"karimdeux"}, 4: {"karimdeux"}, 5: {"inconnu"}}
+        # One person for the name, and one player for the person: the two Rodri and the two Karim stay unlinked.
+        self.assertEqual(player_facts.pair(squad, found), {1: "Q1"})
+        day = lambda text: datetime.fromisoformat(text).date()
+        self.assertTrue(player_facts.plausible(day("2000-03-04"), day("2021-08-01"), day("2026-05-01")))
+        self.assertFalse(player_facts.plausible(day("2008-09-01"), day("2021-08-01"), day("2026-05-01")))  # 12 years old at his first match
+        self.assertFalse(player_facts.plausible(day("1978-01-01"), day("2021-08-01"), day("2026-05-01")))  # 48 at his last
+        self.assertFalse(player_facts.plausible(None, day("2021-08-01"), day("2026-05-01")))
+        self.assertIn("wd:Q483020", player_facts.query("Q483020"))
+        self.assertRaises(ValueError, player_facts.query, "Q1 } DROP")
 
     def test_pagination_must_be_complete(self):
         get = FakeSource({("MEN_CLUB", 2027, 1): uefa_page([club(1, "A", "FRA", 1, 10)], 3)})
@@ -366,8 +408,9 @@ class UefaTest(unittest.TestCase):
 
         original, wikidata.bridge = wikidata.bridge, fake
         try:
-            results = sources.run_due(self.db, None, NOW, names={"wikidata"})
-            self.assertEqual(results, {("wikidata", "clubs"): "ok", ("wikidata", "stadiums"): "ok", ("wikidata", "portraits"): "ok"})
+            results = sources.run_due(self.db, no_players, NOW, names={"wikidata"})
+            self.assertEqual(results, {("wikidata", "clubs"): "ok", ("wikidata", "stadiums"): "ok", ("wikidata", "portraits"): "ok",
+                                       ("wikidata", "players"): "ok"})
             with self.db.transaction():
                 self.assertEqual(curated.stadium_plans(self.db), (1, 1))  # Q999 is not a known stadium yet
         finally:
@@ -386,7 +429,7 @@ class UefaTest(unittest.TestCase):
         calls.clear()
         wikidata.bridge = fake
         try:
-            sources.run_due(self.db, None, NOW + timedelta(hours=2), names={"wikidata"})
+            sources.run_due(self.db, no_players, NOW + timedelta(hours=2), names={"wikidata"})
         finally:
             wikidata.bridge = original
         self.assertEqual(calls, [])
@@ -427,6 +470,63 @@ class UefaTest(unittest.TestCase):
             self.assertEqual(x(read).fetchall(), [(47, True), (48, True)])
         finally:
             wikidata.bridge = original
+
+    def test_wikidata_players_are_linked_inside_their_club(self):
+        from vega.store import Store
+
+        x = self.db.execute
+        with self.db.transaction():
+            Store(self.db).season("2025/2026")
+        x("INSERT INTO core.competitions(id, name) VALUES (87, 'Liga Joueurs')")
+        x("INSERT INTO core.competition_seasons(id, competition_id, season_id, is_current) VALUES (87, 87, 2025, true)")
+        x("INSERT INTO core.teams(id, name, country_code) VALUES (70, 'Club Soixante', 'FRA'), (71, 'Club En Panne', 'FRA'), (72, 'Club Sans Lien', 'FRA')")
+        x("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES
+             ('team','wikidata','Q60',70), ('team','wikidata','Q61',71)""")
+        x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, home_team_id, away_team_id, match_date) VALUES
+             (960, 87, 2025, 'pitchapi', 70, 71, '2025-09-01'), (961, 87, 2025, 'pitchapi', 71, 70, '2026-04-01')""")
+        names = {601: "Jean Dupont", 602: "Rodri", 603: "Paul Martin", 604: "Paul Martin", 605: "Luis Vieux", 606: "Karim Deux", 607: "Déjà Lié", 611: "Autre Club"}
+        for player, name in names.items():
+            x("INSERT INTO core.players(id, name) VALUES (%s, %s)", (player, name))
+            for match in (960, 961):
+                x("INSERT INTO core.lineup_players(season_id, match_id, team_id, player_id) VALUES (2025, %s, %s, %s)", (match, 71 if player == 611 else 70, player))
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player','wikidata','Q699',607), ('player','wikidata','Q605',611)")
+        answers = {"Q60": [
+            person("Q601", ["Jean Dupont", "J. Dupont"], "2000-03-04", height=1.82),
+            person("Q602", ["Rodri"], "1996-06-22"), person("Q612", ["Rodri"], "1999-01-01"),
+            person("Q603", ["Paul Martin"], "1998-08-08"),
+            person("Q605", ["Luis Vieux"], "1999-09-09"),
+            person("Q606", ["Karim Deux"], "1977-02-02"),
+            person("Q607", ["Déjà Lié"], "2001-01-01"),
+        ]}
+        asked = []
+
+        def get(url, headers=None):
+            club = re.search(r"ps:P54 wd:(Q\d+)", parse_qs(urlparse(url).query)["query"][0]).group(1)
+            asked.append((club, headers))
+            if club not in answers:
+                raise SourceError("TRANSPORT_ERROR")
+            return {"results": {"bindings": answers[club]}}
+
+        with self.db.transaction():
+            self.assertEqual(wikidata.run(self.db, get, "players", NOW + timedelta(days=40)), (1, 5))
+        # One query per linked club, under a client name that says nothing of the project.
+        self.assertEqual([club for club, _ in asked if club in ("Q60", "Q61")], ["Q60", "Q61"])
+        self.assertTrue(all(headers == {"User-Agent": "football-facts-reader/1.0"} for _, headers in asked))
+        facts = x("SELECT id, birth_date::text, height_cm FROM core.players WHERE id BETWEEN 601 AND 611 AND birth_date IS NOT NULL").fetchall()
+        self.assertEqual(facts, [(601, "2000-03-04", 182)])
+        # Two persons for one name, two players for one person, a person already another player,
+        # an age no footballer has, a player already linked to someone else: none is written.
+        links = x("SELECT entity_id, provider_key FROM core.provider_ids WHERE entity_type='player' AND provider='wikidata' AND entity_id BETWEEN 601 AND 611 ORDER BY 1").fetchall()
+        self.assertEqual(links, [(601, "Q601"), (607, "Q699"), (611, "Q605")])
+        read = dict(x("SELECT id, wikidata_players_at FROM core.teams WHERE id IN (70, 71, 72)").fetchall())
+        # The club the service failed on comes back tomorrow; a club without a Wikidata link is never asked.
+        self.assertEqual((read[70], read[71], read[72]), (NOW + timedelta(days=40), NOW + timedelta(days=11), None))
+        asked.clear()
+        with self.db.transaction():
+            self.assertEqual(wikidata.run(self.db, get, "players", NOW + timedelta(days=40, hours=1)), (0, 0))
+        self.assertEqual(asked, [])
+        # The player's profile carries the two facts.
+        self.assertEqual(x("SELECT birth_date, height_cm FROM api.player_profiles WHERE player_id=601").fetchone(), ("2000-03-04", 182))
 
     def test_cup_editions_typed_and_kept_on_failure(self):
         x = self.db.execute

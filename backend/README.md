@@ -131,6 +131,7 @@ Chaque route liste en tête de fichier ses écarts voulus avec l'API précédent
 - classement FIFA, toutes les éditions depuis 2021 ;
 - classements officiels SportScore, écrits seulement si chaque ligne désigne un club de l'édition ;
 - Wikidata et Commons : fondation, stade, entraîneur, portraits. Leurs lecteurs Node tournent via [`sources/bridge.mjs`](sources/bridge.mjs), par lots de vingt par heure.
+- Wikidata, faits des joueurs ([`player_facts.py`](vega/sources/player_facts.py)) : date de naissance et taille, lues club par club (vingt clubs par heure, chaque club relu tous les trente jours). Un nom seul ne relie personne : le joueur n'est relié à une personne de Wikidata que dans un club où les deux le placent (Wikidata le dit membre du club, la base l'a dans ses compositions), si son nom y désigne une seule personne et cette personne un seul joueur, et si la date de naissance lui donne entre 15 et 45 ans à ses matchs. Une année sans jour, deux dates ou deux tailles différentes ne sont pas des faits : rien n'est écrit. Wikidata tient mal les transferts récents ; un joueur arrivé depuis peu attend que son ancien club (s'il est dans la base) le relie.
 - palmarès Wikipédia, par le collecteur `archives/builders/player_honours.py`, une centaine de joueurs par jour, Messi en premier ;
 - alias de recherche et orthographes UEFA revues ;
 - coupes OpenFootball, OpenLigaDB et International Results, par les projections de `sources/projections/`, pour les éditions qu'il actualise ; une source indisponible garde la dernière édition.

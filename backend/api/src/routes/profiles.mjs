@@ -32,7 +32,11 @@ export function createProfileRoute(read) {
       if (!r) reject(404, "Donnée indisponible.");
       const data = { id: r.public_id, name: r.name };
       for (const k of ["short_name", "country_code", "image_url", "position_id"]) put(data, k, r[k]);
-      if (player) put(data, "shirt_number", r.shirt_number === null ? null : String(r.shirt_number));
+      if (player) {
+        put(data, "shirt_number", r.shirt_number === null ? null : String(r.shirt_number));
+        put(data, "birth_date", r.birth_date);
+        put(data, "height_cm", r.height_cm);
+      }
       return respond(req, data);
     }
     if (path === "/api/competitions") {
