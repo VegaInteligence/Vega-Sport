@@ -55,6 +55,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 ### 6. Accueil et fiches de match
 - [Accueil](06-accueil-et-matchs/01-accueil.md) — semaine affichée, match de la semaine, joueur de la semaine, séries.
 - [Fiche de match](06-accueil-et-matchs/02-fiche-match.md) — courbe des xG, carte des tirs, contexte avant match, discipline.
+- [Pronostics et projections](06-accueil-et-matchs/03-pronostics-et-projections.md) — probabilités d'un match à venir, championnat rejoué jusqu'à son terme, vérifications.
 
 ### 7. Limites
 - [Non calculé ou fictif](07-limites/01-non-calcule-fictif-demo.md)

@@ -25,6 +25,11 @@
  * Elo's scale, its rank among the leagues on the common scale, and its level at the end
  * of each season.
  *
+ * GET /api/forecasts/match?match= — the forecast of a match still to play (vega/forecast.py,
+ * from the two Elo strengths): win, draw, loss, expected goals and the likeliest score.
+ * GET /api/forecasts/season?competition=&season= — a league replayed to its end: each
+ * club's points now and projected, and the share of the replays it finishes at each place.
+ *
  * GET /api/rankings/power/player?season=&player= — one player's power ranking of a
  * season, for his page: the object of the player reads (powerOf) and `roleCount`, the
  * number of ranked players of his role.
@@ -205,6 +210,44 @@ async function leagueLevels(read, params) {
   };
 }
 
+const MATCH = /^m_(?:[A-Za-z0-9]{6}|v\d{7})$/, LEAGUE = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/;
+
+async function matchForecast(read, params) {
+  validateParams(params, ["match"]);
+  const id = params.get("match");
+  if (!MATCH.test(id || "")) reject(400, "Paramètre invalide.");
+  const [r] = await read("SELECT * FROM api.match_forecasts WHERE match_key=api.internal_id('match',$1)", [id]);
+  if (!r) reject(404, "Donnée indisponible.");
+  return {
+    match: id,
+    forecast: { home: round(r.home_win, 4), draw: round(r.draw, 4), away: round(r.away_win, 4),
+      homeGoals: round(r.home_goals, 2), awayGoals: round(r.away_goals, 2), score: [r.likely_home, r.likely_away] },
+    model: { version: r.model_version, fittedAt: iso(r.fitted_at), matches: r.model_matches },
+  };
+}
+
+async function seasonProjection(read, params) {
+  validateParams(params, ["competition", "season"]);
+  const competition = params.get("competition"), season = params.get("season");
+  if (!LEAGUE.test(competition || "") || !/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
+  const [edition] = await read("SELECT competition_season_id FROM api.edition_keys WHERE league_id=$1 AND season=$2 ORDER BY competition_season_id DESC LIMIT 1", [competition, season]);
+  if (!edition) reject(404, "Donnée indisponible.");
+  const [teams, places] = await Promise.all([
+    read("SELECT * FROM api.season_projections WHERE competition_season_id=$1 ORDER BY projected_points DESC, name", [edition.competition_season_id]),
+    read("SELECT team_key, place, probability FROM api.season_projection_places WHERE competition_season_id=$1", [edition.competition_season_id]),
+  ]);
+  if (!teams.length) reject(404, "Donnée indisponible.");
+  // One share per place, 0 for a place the club never reached.
+  const shares = new Map(teams.map((team) => [team.team_key, Array(teams.length).fill(0)]));
+  for (const p of places) if (shares.has(p.team_key) && p.place <= teams.length) shares.get(p.team_key)[p.place - 1] = round(p.probability, 4);
+  return {
+    competition, season,
+    model: { version: teams[0].model_version, fittedAt: iso(teams[0].fitted_at), replays: teams[0].simulations },
+    teams: teams.map((team) => ({ id: team.team_id, name: team.name, imageUrl: team.image_url ?? null, played: team.played, points: team.points,
+      projectedPoints: round(team.projected_points, 1), places: shares.get(team.team_key) })),
+  };
+}
+
 async function powerPlayer(read, params) {
   validateParams(params, ["season", "player"]);
   const season = params.get("season"), id = params.get("player");
@@ -258,6 +301,8 @@ export function createRankingRoute(read) {
     if (path === "/api/rankings/power") return respond(req, await powerRanking(read, params));
     if (path === "/api/rankings/power/player") return respond(req, await powerPlayer(read, params));
     if (path === "/api/rankings/leagues") return respond(req, await leagueLevels(read, params));
+    if (path === "/api/forecasts/match") return respond(req, await matchForecast(read, params));
+    if (path === "/api/forecasts/season") return respond(req, await seasonProjection(read, params));
     if (path === "/api/rankings/index") {
       validate(params, {});
       const [editions, [mapping]] = await Promise.all([

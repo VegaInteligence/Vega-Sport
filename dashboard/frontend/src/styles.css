@@ -2810,3 +2810,53 @@ th[aria-sort="descending"] .sort-indicator {
   .stadium-embedded-actions { justify-content: flex-start; }
   .stadium-plan-image { max-height: 55vh; }
 }
+
+/* Match forecast (before kick-off) and season projection */
+.match-forecast-bar {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+}
+.match-forecast-bar span {
+  flex-basis: 0;
+  min-width: 6px;
+  background: var(--muted);
+}
+.match-forecast-bar span[data-side="home"] {
+  background: var(--accent);
+}
+.match-forecast-bar span[data-side="draw"] {
+  opacity: 0.45;
+}
+.match-forecast-shares {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: center;
+}
+.match-forecast-shares strong {
+  display: block;
+  color: var(--ink-strong);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.match-forecast-shares span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.match-forecast-note {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+.season-projection td {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

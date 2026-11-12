@@ -791,6 +791,11 @@ def refresh_daily(conn, season, *, elo=True):
            ORDER BY 1""",
         {"season": season},
     ).fetchall()
+    # The forecasts of the matches still to play and the leagues' projections (forecast.py),
+    # from the strengths the Elo has just settled.
+    from . import forecast
+
+    forecast.refresh(conn, season)
     for (edition,) in editions:
         with conn.transaction():
             # The blanks that are zeros (068) first: the list's rows read them.

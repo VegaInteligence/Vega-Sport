@@ -202,6 +202,48 @@ class ModelsTest(unittest.TestCase):
             self.one("SELECT count(*) FROM agg.league_levels WHERE linked")[0],
         )
 
+    def test_zzzz_matches_to_play_are_forecast_and_the_league_projected(self):
+        # 076: forecast.refresh, from the Elo the season's models have settled.
+        from vega import forecast
+
+        x = self.db.execute
+        self.assertEqual(self.one("SELECT count(*) FROM agg.match_forecasts")[0], 0)  # nothing left to play in the seed
+        x("INSERT INTO core.countries(code) VALUES ('FRA') ON CONFLICT DO NOTHING")
+        x("UPDATE core.competitions SET country_code='FRA' WHERE id=1")  # a domestic league
+        x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,match_date)
+             VALUES (9100,1,2025,'pitchapi','not_started',1,2,'2026-05-20'), (9101,1,2025,'pitchapi','not_started',3,4,'2026-05-20')""")
+        minimum, forecast.MIN_FIT = forecast.MIN_FIT, 20  # the seed has 56 club matches
+        try:
+            self.assertEqual(forecast.refresh(self.db, 2025), (2, 1))
+            rows = x("SELECT match_id, home_win + draw + away_win, home_goals, away_goals, likely_home, likely_away FROM agg.match_forecasts ORDER BY 1").fetchall()
+            self.assertEqual([r[0] for r in rows], [9100, 9101])
+            for _, total, home_goals, away_goals, likely_home, likely_away in rows:
+                self.assertAlmostEqual(total, 1.0, places=5)
+                self.assertTrue(home_goals > 0 and away_goals > 0 and likely_home >= 0 and likely_away >= 0)
+            model = self.one("SELECT version, matches, strength_spread, simulations FROM agg.forecast_models")
+            self.assertEqual(model, (forecast.MODEL_VERSION, 56, forecast.STRENGTH_SPREAD, forecast.SIMULATIONS))  # the World Cup final is no club match
+            # The league: eight clubs, each somewhere, each place taken once; nobody loses points.
+            teams = x("SELECT team_id, played, points, projected_points FROM agg.season_projections WHERE competition_season_id=1 ORDER BY 1").fetchall()
+            self.assertEqual([t[0] for t in teams], list(TEAMS))
+            self.assertTrue(all(played == 14 and projected >= points for _, played, points, projected in teams))
+            self.assertEqual([round(v, 4) for (v,) in x("SELECT sum(probability) FROM agg.season_projection_places WHERE competition_season_id=1 GROUP BY team_id")], [1.0] * 8)
+            self.assertEqual([round(v, 4) for (v,) in x("SELECT sum(probability) FROM agg.season_projection_places WHERE competition_season_id=1 GROUP BY place ORDER BY place")], [1.0] * 8)
+            # Only the four clubs with a match left can still move.
+            fixed = x("SELECT team_id FROM agg.season_projection_places WHERE competition_season_id=1 GROUP BY team_id HAVING count(*) = 1 ORDER BY 1").fetchall()
+            self.assertTrue(set(t for (t,) in fixed) <= {5, 6, 7, 8})
+            # A second pass replaces the first: one model, the same rows.
+            self.assertEqual(forecast.refresh(self.db, 2025), (2, 1))
+            self.assertEqual(self.one("SELECT count(*) FROM agg.forecast_models")[0], 1)
+            self.assertEqual(self.one("SELECT count(*) FROM agg.match_forecasts")[0], 2)
+            # The reads.
+            self.assertEqual(self.one("SELECT count(*) FROM api.match_forecasts WHERE match_key = 9100")[0], 1)
+            self.assertEqual(self.one("SELECT count(*) FROM api.season_projections WHERE competition_season_id = 1")[0], 8)
+        finally:
+            forecast.MIN_FIT = minimum
+        # Too few matches to fit a model: nothing is forecast, and what was is gone.
+        self.assertEqual(forecast.refresh(self.db, 2025), (0, 0))
+        self.assertEqual(self.one("SELECT (SELECT count(*) FROM agg.match_forecasts), (SELECT count(*) FROM agg.season_projections)"), (0, 0))
+
     @classmethod
     def tearDownClass(cls):
         cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
