@@ -203,3 +203,28 @@ test("points before and after the changes, by the state of the score", async () 
     leading: { matches: 1, pointsThen: 3, points: 1 }, level: { matches: 1, pointsThen: 1, points: 1 }, behind: { matches: 2, pointsThen: 0, points: 4 } });
   assert.equal(changeImpact([]).matches, 0);
 });
+
+test("a player's season by half", { skip }, async () => {
+  const { data } = (await get("/api/players/p_aaaab1/halves?season=2025/2026")).body;
+  assert.deepEqual(data.first, { matches: 1, minutes: 45, goals: 2, shots: 3, xg: 0.9, chances_created: 0, passes: 8, touches: 20, duels_won: 3, recoveries: 0 });
+  assert.deepEqual(data.second, { matches: 1, minutes: 45, goals: 0, shots: 1, xg: 0.3, chances_created: 0, passes: 12, touches: 25, duels_won: 0, recoveries: 0 });
+  assert.equal((await get("/api/players/p_aaaab3/halves?season=2025/2026")).response.status, 404);
+  assert.equal((await get("/api/players/p_aaaab1/halves")).response.status, 400);
+});
+
+test("a club's most used passing triangle and its most linked pair", { skip }, async () => {
+  // The seed's edges of team 1: 101-102 (7+4+3), 101-104 (2), 102-104 (9).
+  const { data } = (await get("/api/teams/t_aaaaa1/passing?season=2025/2026")).body;
+  assert.deepEqual([data.triangle.passes, data.triangle.players.map((p) => p.id)], [25, ["p_aaaab1", "p_aaaab2", "p_aaaab4"]]);
+  assert.deepEqual([data.pair.passes, data.pair.players.map((p) => p.name)], [14, ["Élie Durand", "Marc Petit"]]);
+  assert.equal((await get("/api/teams/t_aaaaa3/passing?season=2025/2026")).response.status, 404);
+});
+
+test("the triangle needs its three sides", async () => {
+  const { passingTriangle } = await import("../src/routes/profiles.mjs");
+  const found = passingTriangle([{ a: 1, b: 2, passes: 50 }, { a: 2, b: 3, passes: 5 }, { a: 1, b: 3, passes: 4 }, { a: 4, b: 5, passes: 60 }, { a: 5, b: 6, passes: 40 }, { a: 4, b: 7, passes: 0 }]);
+  // 4-5-6 exchanges more in total but 4 and 6 never pass to each other: no triangle there.
+  assert.deepEqual(found, { triangle: { players: [1, 2, 3], passes: 59 }, pair: { players: [4, 5], passes: 60 } });
+  assert.deepEqual(passingTriangle([{ a: 1, b: 2, passes: 3 }]), { triangle: null, pair: { players: [1, 2], passes: 3 } });
+  assert.deepEqual(passingTriangle([]), { triangle: null, pair: null });
+});

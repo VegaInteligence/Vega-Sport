@@ -89,7 +89,7 @@ Les ressources AWS gardent leurs noms d'origine (`vega-v2-…`). Procédure, rô
 - Le rattrapage de l'historique (saisons depuis 2021/2022) est en cours.
 - En service depuis le 12 novembre : classements de puissance version 3 (enjeu des matchs, Coupe du monde), championnats brésiliens sur l'échelle commune, zéros omis par la source rendus aux fiches et aux listes, niveau des championnats, pronostics de match et projections de fin de saison, équipes des Coupes du monde des clubs et sélections de la Ligue des nations reliées à leurs équipes, date de naissance et taille des joueurs lues de Wikidata, xG de Vega sur les tirs, partenaires de passe des joueurs, lecture des deux mi-temps des clubs, profils les plus proches d'un joueur.
 - Limites connues : les championnats sans assez de matchs contre les autres (MLS, Arabie saoudite, Mexique, Argentine…) donnent un score à leurs joueurs, pas de rang ; la date de naissance et la taille viennent de Wikidata, club par club, pour les seuls joueurs reliés sans doute possible (environ quatre sur dix dans les grands clubs, moins ailleurs), aucun pied fort ; hors Coupe du monde, le football de sélections n'a que des résultats.
-- Suites de tests au 12 novembre : 235 tests Python, 124 tests de l'API, 538 tests du site, toutes vertes.
+- Suites de tests au 12 novembre : 235 tests Python, 127 tests de l'API, 541 tests du site, toutes vertes.
 
 ## Organisation du dépôt
 

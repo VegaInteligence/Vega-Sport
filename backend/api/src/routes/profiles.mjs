@@ -17,6 +17,11 @@
  * finished match (082): the points the score then would have given against the points
  * taken, by the state of the score at that moment, and its most decisive substitutes.
  *
+ * GET /api/players/{id}/halves?season= — the player's season by half (083): his minutes
+ * and totals in first halves and in second halves.
+ * GET /api/teams/{id}/passing?season= — the club's most used passing triangle and its most
+ * linked pair, from the season's pass networks (083).
+ *
  * Differences with the legacy read: a field without a value is omitted; a competition
  * carries no `is_free` (a plan of the source, not a fact of the competition); team
  * profiles are served (legacy: none was kept).
@@ -33,6 +38,42 @@ const SIMILAR = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/similar$/;
 const SIMILAR_COUNT = 8;
 const DIMENSIONS = 10;
 const SQUARES = Array.from({ length: DIMENSIONS }, (_, i) => `power(o.e${i + 1}-me.e${i + 1},2)`).join("+");
+
+const HALVES = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/halves$/;
+const PASSING = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/passing$/;
+const HALF_FIELDS = ["matches", "minutes", "goals", "shots", "xg", "chances_created", "passes", "touches", "duels_won", "recoveries"];
+
+/**
+ * The three players of a club who exchange the most passes: among the trios whose three
+ * pairs all exchanged passes, the one with the largest total; and the most linked pair.
+ * `pairs`: [{a, b, passes}] with a < b.
+ */
+export function passingTriangle(pairs) {
+  const links = new Map(), players = new Set();
+  let pair = null;
+  for (const p of pairs) {
+    if (!(p.passes > 0)) continue;
+    links.set(`${p.a}:${p.b}`, p.passes);
+    players.add(p.a).add(p.b);
+    if (!pair || p.passes > pair.passes || (p.passes === pair.passes && (p.a < pair.players[0] || (p.a === pair.players[0] && p.b < pair.players[1]))))
+      pair = { players: [p.a, p.b], passes: p.passes };
+  }
+  const ids = [...players].sort((x, y) => x - y);
+  const of = (x, y) => links.get(`${x}:${y}`) ?? 0;
+  let triangle = null;
+  for (let i = 0; i < ids.length; i++)
+    for (let j = i + 1; j < ids.length; j++) {
+      const ab = of(ids[i], ids[j]);
+      if (!ab) continue;
+      for (let k = j + 1; k < ids.length; k++) {
+        const ac = of(ids[i], ids[k]), bc = of(ids[j], ids[k]);
+        if (!ac || !bc) continue;
+        const passes = ab + ac + bc;
+        if (!triangle || passes > triangle.passes) triangle = { players: [ids[i], ids[j], ids[k]], passes };
+      }
+    }
+  return { triangle, pair };
+}
 
 const CHANGES = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/substitutions$/;
 const SUBSTITUTES_SHOWN = 3;
@@ -93,6 +134,45 @@ export function createProfileRoute(read) {
         id: partners[1], season,
         partners: rows.map((r) => put({ id: r.partner_id, name: r.partner_name, given: r.given, received: r.received, matches: r.matches }, "image_url", r.partner_image_url)),
       });
+    }
+    const halves = path.match(HALVES);
+    if (halves) {
+      validateParams(params, ["season"]);
+      const season = params.get("season");
+      if (!/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
+      const rows = await read(
+        `SELECT * FROM api.player_half_totals
+         WHERE season_id=(SELECT k.season_id FROM api.season_keys k WHERE k.season=$2) AND player_key=api.internal_id('player',$1)`,
+        [halves[1], season],
+      );
+      const half = (name) => {
+        const r = rows.find((row) => row.period === name);
+        return r ? Object.fromEntries(HALF_FIELDS.map((k) => [k, k === "xg" ? Math.round(r[k] * 100) / 100 : r[k]])) : null;
+      };
+      const first = half("first_half"), second = half("second_half");
+      if (!first && !second) reject(404, "Donnée indisponible.");
+      return respond(req, { id: halves[1], season, first, second });
+    }
+    const passing = path.match(PASSING);
+    if (passing) {
+      validateParams(params, ["season"]);
+      const season = params.get("season");
+      if (!/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
+      const pairs = await read(
+        `SELECT least(e.from_player_id, e.to_player_id) AS a, greatest(e.from_player_id, e.to_player_id) AS b, sum(e.passes)::int AS passes
+         FROM api.team_pass_edges e
+         WHERE e.season_id=(SELECT k.season_id FROM api.season_keys k WHERE k.season=$2) AND e.team_key=api.internal_id('team',$1)
+           AND e.from_player_id <> e.to_player_id
+         GROUP BY 1, 2`,
+        [passing[1], season],
+      );
+      const { triangle, pair } = passingTriangle(pairs);
+      if (!pair) reject(404, "Donnée indisponible.");
+      const wanted = [...new Set([...(triangle?.players ?? []), ...pair.players])];
+      const people = new Map((await read("SELECT player_id, public_id, name, image_url FROM api.player_profiles WHERE player_id = ANY($1::int[])", [wanted]))
+        .map((r) => [r.player_id, put({ id: r.public_id, name: r.name }, "image_url", r.image_url)]));
+      const named = (group) => (group ? { passes: group.passes, players: group.players.map((key) => people.get(key)).filter(Boolean) } : null);
+      return respond(req, { id: passing[1], season, triangle: named(triangle), pair: named(pair) });
     }
     const changes = path.match(CHANGES);
     if (changes) {

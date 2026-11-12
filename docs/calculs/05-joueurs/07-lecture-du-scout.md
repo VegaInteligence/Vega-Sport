@@ -77,3 +77,7 @@ La carte affiche :
 ## Partenaires de passe
 
 Sous la carte des tirs, la fiche nomme les trois coéquipiers avec qui le joueur a échangé le plus de passes sur la saison (`/api/players/{id}/partners`, vue `api.player_pass_partners`) : pour chaque match du joueur, les passes qu'il a données à un coéquipier et celles qu'il en a reçues dans le réseau de passes, additionnées sur la saison ; les partenaires sont rangés par passes échangées (données + reçues). Le réseau de passes de la source couvre un match jusqu'à son premier changement (la deuxième période n'y est le plus souvent pas) : ces nombres comparent les partenaires entre eux, ils ne sont pas le total des passes de la saison. Un coéquipier de sélection y figure au même titre qu'un coéquipier de club.
+
+## Par mi-temps
+
+Sous les partenaires de passe, un tableau compare ce que le joueur produit en première et en seconde mi-temps (`/api/players/{id}/halves`, vue `api.player_half_totals`) : pour chaque mi-temps, la somme sur la saison des statistiques que la source publie par mi-temps (buts, tirs, xG, occasions créées, passes réussies, ballons touchés, duels gagnés, récupérations), ramenée à 90 minutes jouées dans cette mi-temps (`90 × total / minutes de la mi-temps`). Rapporter chaque mi-temps à ses propres minutes compare un titulaire remplacé à l'heure de jeu et un remplaçant entré tard sur la même base. Le tableau ne s'affiche qu'à partir de 180 minutes jouées dans chacune des deux mi-temps.

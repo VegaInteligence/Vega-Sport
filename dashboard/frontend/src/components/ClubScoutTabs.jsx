@@ -44,6 +44,7 @@ import {
   styleTags,
 } from "./ClubScoutUI.jsx";
 import ClubSubstitutions from "./ClubSubstitutions.jsx";
+import ClubPassingTriangle from "./ClubPassingTriangle.jsx";
 import s from "./ClubScoutTabs.module.css";
 
 function competitionRecords(dossier) {
@@ -616,6 +617,7 @@ export function Style({ dossier }) {
           </Card>
         </div>
       </div>
+      <ClubPassingTriangle id={dossier.id} season={dossier.season} />
     </div>
   );
 }
