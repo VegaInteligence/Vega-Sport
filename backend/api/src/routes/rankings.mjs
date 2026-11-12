@@ -27,6 +27,8 @@
  *
  * GET /api/forecasts/match?match= — the forecast of a match still to play (vega/forecast.py,
  * from the two Elo strengths): win, draw, loss, expected goals and the likeliest score.
+ * GET /api/forecasts/live?match= — a finished or running match minute by minute: win, draw
+ * and loss from the forecast, the score, the clock and the dismissals (vega/inplay.py).
  * GET /api/forecasts/season?competition=&season= — a league replayed to its end: each
  * club's points now and projected, the share of the replays it finishes at each place, and
  * `next`, its coming league matches (the opponents' mean strength, the points forecast).
@@ -37,6 +39,7 @@
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+import { rates as inplayRates, timeline as inplayTimeline } from "../inplay.mjs";
 
 const TEAM = /^t_(?:[A-Za-z0-9]{6}|v\d{7})$/;
 const PLAYER = /^p_(?:[A-Za-z0-9]{6}|v\d{7})$/;
@@ -227,6 +230,47 @@ async function matchForecast(read, params) {
   };
 }
 
+/**
+ * A match minute by minute: win, draw and loss from the forecast's expected goals, the
+ * score, the clock and the dismissals (src/inplay.mjs). A finished match runs to the 90th
+ * minute, where its last point is its result; a match in play stops at its clock.
+ */
+async function liveProbability(read, params) {
+  validateParams(params, ["match"]);
+  const id = params.get("match");
+  if (!MATCH.test(id || "")) reject(400, "Paramètre invalide.");
+  const [s] = await read("SELECT * FROM api.match_strengths WHERE match_key=api.internal_id('match',$1)", [id]);
+  if (!s || s.home_elo === null || s.away_elo === null || !["finished", "in_play"].includes(s.status)) reject(404, "Donnée indisponible.");
+  const at = [s.season_id, s.match_key];
+  const [[forecast], [model], events, [clock]] = await Promise.all([
+    read("SELECT * FROM api.forecast_models ORDER BY fitted_at DESC, id DESC LIMIT 1"),
+    read("SELECT * FROM api.inplay_models ORDER BY fitted_at DESC, id DESC LIMIT 1"),
+    read("SELECT kind, minute, minute_added AS added, side FROM api.match_inplay_events WHERE season_id=$1 AND match_key=$2 AND side IS NOT NULL ORDER BY seq", at),
+    read("SELECT minute FROM api.match_clocks WHERE season_id=$1 AND match_key=$2", at),
+  ]);
+  if (!forecast || !model) reject(404, "Donnée indisponible.");
+  const finished = s.status === "finished";
+  const goals = (side) => events.filter((e) => e.kind === "goal" && e.side === side).length;
+  // A finished match whose goal events do not give its score has no timeline to show.
+  if (finished && (goals("home") !== s.home_score || goals("away") !== s.away_score)) reject(404, "Donnée indisponible.");
+  const seen = Math.max(clock?.minute ?? 0, ...events.map((e) => e.minute), 0);
+  const last = finished ? 90 : Math.max(0, Math.min(90, Math.floor(seen)));
+  const [rateHome, rateAway] = inplayRates(forecast, s.home_elo, s.away_elo, s.neutral);
+  const inplay = { profile: [model.q1, model.q2, model.q3, model.q4, model.q5, model.q6, model.after_90], down: model.down, up: model.up };
+  const points = inplayTimeline(rateHome, rateAway, events, inplay, forecast.rho, last);
+  if (finished) {
+    const end = points.at(-1), [h, a] = end.score;
+    Object.assign(end, { home: h > a ? 1 : 0, draw: h === a ? 1 : 0, away: h < a ? 1 : 0 });
+  }
+  return {
+    match: id, status: s.status,
+    rates: { home: round(rateHome, 2), away: round(rateAway, 2) },
+    model: { version: model.version, fittedAt: iso(model.fitted_at), matches: model.matches },
+    points: points.map((p) => ({ minute: p.minute, home: round(p.home, 4), draw: round(p.draw, 4), away: round(p.away, 4), score: p.score })),
+    events: events.map((e) => ({ minute: e.minute, added: e.added, kind: e.kind, side: e.side })),
+  };
+}
+
 async function seasonProjection(read, params) {
   validateParams(params, ["competition", "season"]);
   const competition = params.get("competition"), season = params.get("season");
@@ -334,6 +378,7 @@ export function createRankingRoute(read) {
     if (path === "/api/rankings/leagues") return respond(req, await leagueLevels(read, params));
     if (path === "/api/forecasts/match") return respond(req, await matchForecast(read, params));
     if (path === "/api/forecasts/season") return respond(req, await seasonProjection(read, params));
+    if (path === "/api/forecasts/live") return respond(req, await liveProbability(read, params));
     if (path === "/api/rankings/index") {
       validate(params, {});
       const [editions, [mapping]] = await Promise.all([

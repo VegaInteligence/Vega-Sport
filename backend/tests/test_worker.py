@@ -454,6 +454,21 @@ class WorkerTest(unittest.TestCase):
             self.assertEqual(due_seasons(self.db, noon), [])
         finally:
             embedding.MIN_PLAYERS = minimum
+        # No in-play model yet, a forecast model and goal events to fit one on: a season being played is due.
+        from vega import inplay
+
+        x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date,kickoff_at,updated_at)
+             VALUES (911,900,%s,'pitchapi','finished',900,901,1,0,%s,%s,%s)""", (season, (noon - timedelta(days=3)).date(), noon - timedelta(days=3), noon - timedelta(days=9)))
+        x("INSERT INTO core.match_events(season_id,match_id,team_id,seq,event_type,minute) VALUES (%s,911,900,1,'goal',30)", (season,))
+        self.assertEqual(due_seasons(self.db, noon), [])  # one goal event is no base to fit on
+        floor, inplay.MIN_FIT = inplay.MIN_FIT, 0
+        try:
+            self.assertEqual(due_seasons(self.db, noon), [season])
+            x("""INSERT INTO agg.inplay_models(version,matches,goals,red_matches,q1,q2,q3,q4,q5,q6,after_90,down,up)
+                 VALUES ('inplay-v1',600,1500,90,0.13,0.14,0.18,0.16,0.16,0.16,0.07,0.6,1.7)""")
+            self.assertEqual(due_seasons(self.db, noon), [])
+        finally:
+            inplay.MIN_FIT = floor
 
     def due_season(self):
         """A season with a finished match and no models yet: due at once."""

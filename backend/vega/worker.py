@@ -101,10 +101,13 @@ def due_seasons(conn, now):
       holds enough shots to fit one.
     - a season played in the last 400 days without the players' profile vectors
       (embedding.py), after the same wait, when it has enough players to learn the axes.
+    - a season played in the last 30 days while no in-play model exists (inplay.py), after
+      the same wait, when there is a forecast model and enough goal events to fit one.
     Only PitchAPI editions count: the models read nothing of the archives and cups (whose
     seasons would otherwise all fall due when they are imported)."""
     from .power import METHOD_VERSION
     from .embedding import MIN_MINUTES as PROFILE_MIN_MINUTES, MIN_PLAYERS as PROFILE_MIN_PLAYERS
+    from .inplay import MIN_FIT as INPLAY_MIN_FIT
     from .xg import MIN_FIT as XG_MIN_FIT
 
     return [
@@ -143,8 +146,13 @@ def due_seasons(conn, now):
                        AND (SELECT count(*) FROM (SELECT 1 FROM agg.player_season_stats s WHERE s.season_id = m.season_id
                                                   GROUP BY s.player_id HAVING sum(s.minutes) >= %(profile_minutes)s
                                                   LIMIT %(profiles)s) q) >= %(profiles)s)
+                   OR (l.started_at < %(now)s - %(after)s
+                       AND bool_or(m.kickoff_at > %(now)s - interval '30 days' AND m.kickoff_at <= %(now)s)
+                       AND NOT EXISTS (SELECT 1 FROM agg.inplay_models)
+                       AND EXISTS (SELECT 1 FROM agg.forecast_models)
+                       AND EXISTS (SELECT 1 FROM core.match_events g WHERE g.event_type = 'goal' OFFSET %(goals)s LIMIT 1))
                ORDER BY 1""",
-            {"now": now, "after": RECOMPUTE_AFTER, "method": METHOD_VERSION, "shots": XG_MIN_FIT,
+            {"now": now, "after": RECOMPUTE_AFTER, "method": METHOD_VERSION, "shots": XG_MIN_FIT, "goals": INPLAY_MIN_FIT,
              "profiles": PROFILE_MIN_PLAYERS, "profile_minutes": PROFILE_MIN_MINUTES},
         ).fetchall()
     ]

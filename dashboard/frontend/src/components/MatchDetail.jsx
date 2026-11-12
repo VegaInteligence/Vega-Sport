@@ -21,6 +21,7 @@ import MatchEventHighlights from "./MatchEventHighlights.jsx";
 import { StatRow, StatRows } from "./StatRows.jsx";
 const MatchContext = lazy(() => import("./MatchContext.jsx"));
 const MatchForecast = lazy(() => import("./MatchForecast.jsx"));
+import MatchWinProbability from "./MatchWinProbability.jsx";
 import { periodShort } from "./PlayerMetrics.jsx";
 import { number, date, isNumber } from "../services/format.js";
 import {
@@ -670,6 +671,7 @@ export default function MatchDetail({ match }) {
             <Card fold title="Les chiffres du match">
               <StatRows match={match} stats={overviewStats(match)} />
             </Card>
+            {!upcoming && <MatchWinProbability match={match} />}
             <MatchEventHighlights match={match} />
             <Card
               title="Meilleures notes"

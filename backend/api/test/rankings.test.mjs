@@ -139,3 +139,22 @@ test("a club's coming matches: five at most, ranked by the opponents' strength",
   assert.deepEqual(comingMatches(["AB", "CA", "BC"].map(fixture)).get("A"), { matches: 2, home: 1, opponentLevel: 1550, expectedPoints: 2.8, rank: null });
   assert.equal(comingMatches([]).size, 0);
 });
+
+test("a finished match minute by minute", { skip }, async () => {
+  const { body } = await get("/api/forecasts/live?match=m_aaaaa1");
+  assert.deepEqual([body.match, body.status, body.model.version, body.model.matches], ["m_aaaaa1", "finished", "inplay-v1", 16000]);
+  assert.equal(body.points.length, 91);
+  const at = (minute) => body.points[minute];
+  // Kick-off: the three shares add up to 1; the home side's rises with each of its goals (11', 21').
+  assert.ok(Math.abs(at(0).home + at(0).draw + at(0).away - 1) < 2e-4);
+  assert.deepEqual([at(10).score, at(11).score, at(21).score], [[0, 0], [1, 0], [2, 0]]);
+  assert.ok(at(11).home > at(10).home && at(21).home > at(20).home);
+  // The 90th minute is the result.
+  assert.deepEqual([at(90).home, at(90).draw, at(90).away, at(90).score], [1, 0, 0, [2, 0]]);
+  assert.deepEqual(body.events.filter((e) => e.kind === "goal").map((e) => [e.minute, e.side]), [[11, "home"], [21, "home"]]);
+  assert.ok(body.rates.home > 0 && body.rates.away > 0);
+  // A match still to play, an unknown one, a malformed id.
+  assert.equal((await get("/api/forecasts/live?match=m_aaaaa6")).response.status, 404);
+  assert.equal((await get("/api/forecasts/live?match=m_zzzzzz")).response.status, 404);
+  assert.equal((await get("/api/forecasts/live?match=1")).response.status, 400);
+});

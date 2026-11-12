@@ -1335,6 +1335,10 @@ select optgroup {
   gap: 16px;
   align-items: start;
 }
+/* A card of the overview that takes the whole row (a chart over the match's minutes). */
+.match-overview-wide {
+  grid-column: 1 / -1;
+}
 .match-detail .card {
   border-color: var(--border);
   background: var(--surface);
