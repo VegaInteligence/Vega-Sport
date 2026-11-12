@@ -206,8 +206,8 @@ test("points before and after the changes, by the state of the score", async () 
 
 test("a player's season by half", { skip }, async () => {
   const { data } = (await get("/api/players/p_aaaab1/halves?season=2025/2026")).body;
-  assert.deepEqual(data.first, { matches: 1, minutes: 45, goals: 2, shots: 3, xg: 0.9, chances_created: 0, passes: 8, touches: 20, duels_won: 3, recoveries: 0 });
-  assert.deepEqual(data.second, { matches: 1, minutes: 45, goals: 0, shots: 1, xg: 0.3, chances_created: 0, passes: 12, touches: 25, duels_won: 0, recoveries: 0 });
+  assert.deepEqual(data.first, { matches: 1, minutes: 45, goals: 2, shots: 3, xg: 0.9, touches_box: 4, dribbles: 1, passes: 8, touches: 20, duels_won: 3, tackles: 0, recoveries: 0 });
+  assert.deepEqual(data.second, { matches: 1, minutes: 45, goals: 0, shots: 1, xg: 0.3, touches_box: 2, dribbles: 0, passes: 12, touches: 25, duels_won: 0, tackles: 1, recoveries: 0 });
   assert.equal((await get("/api/players/p_aaaab3/halves?season=2025/2026")).response.status, 404);
   assert.equal((await get("/api/players/p_aaaab1/halves")).response.status, 400);
 });

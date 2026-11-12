@@ -8,10 +8,12 @@ export const HALF_METRICS = [
   ["goals", "Buts", 2],
   ["shots", "Tirs", 2],
   ["xg", "xG", 2],
-  ["chances_created", "Occasions créées", 2],
+  ["touches_box", "Ballons dans la surface", 2],
+  ["dribbles", "Dribbles réussis", 2],
   ["passes", "Passes réussies", 1],
   ["touches", "Ballons touchés", 1],
   ["duels_won", "Duels gagnés", 2],
+  ["tackles", "Tacles", 2],
   ["recoveries", "Récupérations", 2],
 ];
 // Below this, a half's rates say too little to be set beside the other's.
