@@ -144,8 +144,8 @@ def main(dsn):
         x("INSERT INTO core.match_events(season_id,match_id,team_id,seq,event_type,minute,period,player_id) VALUES (2025,%s,1,%s,%s,%s,'second_half',101)", (mid, seq, kind, minute))
     x("UPDATE core.match_coverage SET events='ok' WHERE match_id IN (1,3,5)")
     # A player's two halves (083): player 101 in match 1.
-    x("""INSERT INTO core.player_match_half_stats(season_id, match_id, team_id, player_id, period, minutes_played, goals, total_shots, xg, accurate_passes, touches, duels_won)
-         VALUES (2025,1,1,101,'first_half',45,2,3,0.9,8,20,3), (2025,1,1,101,'second_half',45,0,1,0.3,12,25,NULL)""")
+    x("""INSERT INTO core.player_match_half_stats(season_id, match_id, team_id, player_id, period, minutes_played, goals, total_shots, xg, accurate_passes, touches, duels_won, touches_opp_box, dribbles_succeeded, tackles)
+         VALUES (2025,1,1,101,'first_half',45,2,3,0.9,8,20,3,4,1,NULL), (2025,1,1,101,'second_half',45,0,1,0.3,12,25,NULL,2,NULL,1)""")
     # Substitutions (082). Match 1 (2-0): each goal's score before it, then the home side's first change
     # while leading. Match 5 (0-0): each side's first change, level.
     x("UPDATE core.match_events SET score_home=seq - 1, score_away=0 WHERE season_id=2025 AND match_id=1 AND event_type='goal'")

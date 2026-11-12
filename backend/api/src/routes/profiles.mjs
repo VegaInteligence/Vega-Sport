@@ -41,7 +41,8 @@ const SQUARES = Array.from({ length: DIMENSIONS }, (_, i) => `power(o.e${i + 1}-
 
 const HALVES = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/halves$/;
 const PASSING = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/passing$/;
-const HALF_FIELDS = ["matches", "minutes", "goals", "shots", "xg", "chances_created", "passes", "touches", "duels_won", "recoveries"];
+// Only what the source publishes per half: it gives no chances created or expected assists there.
+const HALF_FIELDS = ["matches", "minutes", "goals", "shots", "xg", "touches_box", "dribbles", "passes", "touches", "duels_won", "tackles", "recoveries"];
 
 /**
  * The three players of a club who exchange the most passes: among the trios whose three
