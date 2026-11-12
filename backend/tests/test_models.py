@@ -145,6 +145,8 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual([d.isoformat() for d in run[7:]], ["2025-08-01", "2026-07-31"])
         elo = self.db.execute("SELECT seed_rounds, link_matches, level_prior_matches FROM agg.power_runs WHERE kind='elo' AND status='published'").fetchone()
         self.assertEqual(elo, (1, 10, 30))  # nothing ties the league to another: its level does not move
+        # The season before has no statistics: its award year is not computed from this season's first months.
+        self.assertFalse(power.previous_year_changed(self.db, 2025))
         # The award race: the first 30 of the ranking, numbered 1..30, with its calc run.
         race = self.db.execute(
             """SELECT a.rank, a.player_id, a.score, r.kind, r.status FROM agg.player_award_ranking a JOIN agg.calc_runs r ON r.id=a.calc_run_id

@@ -696,7 +696,9 @@ def team_leagues(rows, leagues):
 
 def previous_year_changed(conn, season):
     """`season` holds the first half of the calendar-year editions, which belongs to the
-    award year before: has one of those matches changed since that year's last ranking?"""
+    award year before: has one of those matches changed since that year's last ranking?
+    Only for a year whose own season has statistics: the first half of the calendar-year
+    leagues alone would rank a year the European seasons are missing from."""
     start, _ = award_year(season)
     row = conn.execute(
         """SELECT max(m.updated_at) > coalesce((SELECT max(r.started_at) FROM agg.power_runs r
@@ -704,7 +706,7 @@ def previous_year_changed(conn, season):
            FROM core.matches m
            JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL AND cs.cup_key IS NULL
            WHERE m.season_id = %(season)s AND m.status = 'finished' AND m.match_date < %(start)s
-             AND EXISTS (SELECT 1 FROM core.seasons s WHERE s.id = %(previous)s)""",
+             AND EXISTS (SELECT 1 FROM core.player_match_stats s WHERE s.season_id = %(previous)s)""",
         {"season": season, "previous": season - 1, "start": start},
     ).fetchone()
     return bool(row and row[0])
