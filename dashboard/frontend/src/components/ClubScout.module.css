@@ -143,6 +143,19 @@
 .cardAction {
   flex: none;
 }
+/* On a phone a card's selector goes under its title when both do not fit, and scrolls
+   within the card instead of widening the page. */
+@media (max-width: 640px) {
+  .cardHead {
+    flex-wrap: wrap;
+  }
+  .cardAction {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
 .grid2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

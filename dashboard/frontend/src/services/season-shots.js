@@ -53,7 +53,8 @@ export function strikeQuality(shots) {
     const after = framed ? shot.xgot : Number.isFinite(shot.xgot) ? shot.xgot : 0;
     value += after - shot.xg;
     counted++;
-    if (framed) onTarget++;
+    // The source also marks a blocked shot as on target, with an xGOT of 0: it never reached the goal.
+    if (framed && !shot.isBlocked && after > 0) onTarget++;
   }
   return counted ? { value, shots: counted, onTarget } : null;
 }

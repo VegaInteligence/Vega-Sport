@@ -44,13 +44,15 @@ test("what the strikes add to the chances: xGOT minus xG over the shots fully kn
     { xg: 0.3, xgot: 0.05, isOnTarget: true },
     { xg: 0.2, xgot: null, isOnTarget: false },
     { xg: 0.1, isBlocked: true },
+    // Blocked, yet marked on target by the source with an xGOT of 0: worth 0, not counted as on target.
+    { xg: 0.05, xgot: 0, isOnTarget: true, isBlocked: true },
     // Left out: on target without an xGOT, an own goal, a shot without xG.
     { xg: 0.4, xgot: null, isOnTarget: true },
     { xg: 0.2, xgot: 0.9, isGoal: true, isOwnGoal: true },
     { xgot: 0.3, isOnTarget: true },
   ]);
-  assert.equal(Math.round(quality.value * 100) / 100, -0.05);
-  assert.deepEqual([quality.shots, quality.onTarget], [4, 2]);
+  assert.equal(Math.round(quality.value * 100) / 100, -0.1);
+  assert.deepEqual([quality.shots, quality.onTarget], [5, 2]);
   assert.equal(strikeQuality([]), null);
   assert.equal(strikeQuality([{ xg: 0.4, xgot: null, isOnTarget: true }]), null);
   assert.equal(strikeQuality(null), null);
