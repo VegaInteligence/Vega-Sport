@@ -8,6 +8,10 @@ names exactly one:
 - clubs: the PitchAPI club of the same normalized name, or of a reviewed spelling
   (curated.CLUB_ALIASES), in the same country when both countries are known.
 
+The Club World Cup's source writes a club with its country after it ("Al Hilal (KSA)"):
+the club is looked for under the name alone, in that country, and under the spelling
+reviewed for it when PitchAPI writes another (WORLD_CLUB_SPELLINGS, WORLD_CLUB_KEYS).
+
 Archive teams (every archive season, the ones after 2020/2021 included) are keyed by their
 country's French name and their own name. One is the PitchAPI club of that country
 (core.countries.name_fr) that has the same name; when no club has it, the club that has the
@@ -90,10 +94,46 @@ def _pitch_teams(conn):
     return out
 
 
-def match_team(pitch, name, national, country):
+# A club's name followed by its country, as the Club World Cup's source (OpenFootball)
+# writes its teams: "Real Madrid (ESP)". No other cup-source team of the base was named
+# so on 12 November 2026.
+COUNTRY_SUFFIX = re.compile(r"^(.*\S)\s*\(([A-Z]{3})\)$")
+# The teams of the 2025 edition that PitchAPI names otherwise, reviewed one by one on
+# 12 November 2026: the source's team named as the key is PitchAPI's club of that country
+# named as the value ("Botafogo RJ" is Serie A's Botafogo, not Botafogo SP; "Al Ain FC"
+# the Emirati club, not the Saudi one).
+WORLD_CLUB_SPELLINGS = {
+    "Al Ain FC (UAE)": "Al Ain", "Botafogo RJ (BRA)": "Botafogo", "CF Monterrey (MEX)": "Monterrey", "CF Pachuca (MEX)": "Pachuca",
+    "Chelsea FC (ENG)": "Chelsea", "Flamengo RJ (BRA)": "Flamengo", "Fluminense RJ (BRA)": "Fluminense",
+    "Mamelodi Sundowns (RSA)": "Mamelodi Sundowns FC", "RB Salzburg (AUT)": "Salzburg",
+    "Seattle Sounders (USA)": "Seattle Sounders FC", "SL Benfica (POR)": "Benfica",
+}
+# PitchAPI has two clubs named Al Hilal in Saudi Arabia, the club and its women's team: the
+# tournament's is the club, named here by its PitchAPI key.
+WORLD_CLUB_KEYS = {"Al Hilal (KSA)": "t_2r8ytM"}
+
+
+def _reviewed_clubs(conn):
+    """The PitchAPI team of each key of WORLD_CLUB_KEYS."""
+    return dict(conn.execute(
+        "SELECT provider_key, entity_id FROM core.provider_ids WHERE entity_type = 'team' AND provider = 'pitchapi' AND provider_key = ANY(%s)",
+        (sorted(set(WORLD_CLUB_KEYS.values())),),
+    ).fetchall())
+
+
+def match_team(pitch, name, national, country, reviewed=None):
     from .curated import CLUB_ALIASES
 
+    spelling = None
+    if not national:
+        if name in WORLD_CLUB_KEYS:
+            return (reviewed or {}).get(WORLD_CLUB_KEYS[name])
+        suffix = COUNTRY_SUFFIX.match(name or "")
+        if suffix:
+            spelling, name, country = WORLD_CLUB_SPELLINGS.get(name), suffix.group(1), suffix.group(2)
     names = {normalize(name)}
+    if spelling:
+        names.add(normalize(spelling))
     if not national and name in CLUB_ALIASES:
         names.add(normalize(CLUB_ALIASES[name]))
     found = set()
@@ -202,11 +242,11 @@ def match_archive_team(clubs, name, country):
 def pairs(conn):
     """Every merge the rules name, as (source-only team, PitchAPI team, provider, spelling),
     and the number of source-only teams looked at."""
-    pitch = _pitch_teams(conn)
+    pitch, reviewed = _pitch_teams(conn), _reviewed_clubs(conn)
     found, seen = {}, set()
     for team, name, provider, national, country in _candidates(conn):
         seen.add(team)
-        keep = match_team(pitch, name, bool(national), country)
+        keep = match_team(pitch, name, bool(national), country, reviewed)
         if keep is not None:
             found.setdefault(team, (keep, provider, name))
     clubs = _pitch_clubs(conn)
