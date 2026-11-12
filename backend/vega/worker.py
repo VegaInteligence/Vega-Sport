@@ -103,6 +103,8 @@ def due_seasons(conn, now):
       (embedding.py), after the same wait, when it has enough players to learn the axes.
     - a season played in the last 30 days while no in-play model exists (inplay.py), after
       the same wait, when there is a forecast model and enough goal events to fit one.
+    - a season played in the last 400 days with a published player ranking and no breakout
+      run (breakout.py), after the same wait.
     - a season played in the last 30 days while no return curve exists (returns.py), after
       the same wait, in a base with enough appearances to learn one.
     Only PitchAPI editions count: the models read nothing of the archives and cups (whose
@@ -153,6 +155,11 @@ def due_seasons(conn, now):
                        AND NOT EXISTS (SELECT 1 FROM agg.inplay_models)
                        AND EXISTS (SELECT 1 FROM agg.forecast_models)
                        AND EXISTS (SELECT 1 FROM core.match_events g WHERE g.event_type = 'goal' OFFSET %(goals)s LIMIT 1))
+                   OR (l.started_at < %(now)s - %(after)s
+                       AND bool_or(m.kickoff_at > %(now)s - interval '400 days' AND m.kickoff_at <= %(now)s)
+                       AND NOT EXISTS (SELECT 1 FROM agg.breakout_runs b WHERE b.season_id = m.season_id)
+                       AND EXISTS (SELECT 1 FROM agg.power_runs r
+                                   WHERE r.kind = 'players' AND r.season_id = m.season_id AND r.status = 'published'))
                    OR (l.started_at < %(now)s - %(after)s
                        AND bool_or(m.kickoff_at > %(now)s - interval '30 days' AND m.kickoff_at <= %(now)s)
                        AND NOT EXISTS (SELECT 1 FROM agg.return_curves)

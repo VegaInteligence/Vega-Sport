@@ -33,6 +33,9 @@
  * club's points now and projected, the share of the replays it finishes at each place, and
  * `next`, its coming league matches (the opponents' mean strength, the points forecast).
  *
+ * GET /api/rankings/breakouts?season= — the season's breakouts: players below the ranking's
+ * minutes whose rate per 90 minutes is among the best of their role's regulars.
+ *
  * GET /api/rankings/power/player?season=&player= — one player's power ranking of a
  * season, for his page: the object of the player reads (powerOf) and `roleCount`, the
  * number of ranked players of his role.
@@ -323,14 +326,42 @@ export function comingMatches(fixtures, count = COMING) {
   }]));
 }
 
+const BREAKOUTS_SHOWN = 30;
+const breakoutOf = (r) => ({ rank: r.rank, minutes: r.minutes, percentile: round(r.percentile, 1), regulars: r.regulars, role: r.role, position: ROLE_LABEL[r.role] ?? r.role });
+
+/**
+ * The season's players below the ranking's minutes who already play like its regulars
+ * (vega/breakout.py): the first BREAKOUTS_SHOWN, each with the share of his role's
+ * regulars his rate per 90 minutes is ahead of.
+ */
+async function breakouts(read, params) {
+  validateParams(params, ["season"]);
+  const season = params.get("season");
+  if (!/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
+  const [run] = await read(`SELECT * FROM api.breakout_runs WHERE season_id=${SEASON_KEY}`, [season]);
+  if (!run) reject(404, "Donnée indisponible.");
+  const rows = await read(`SELECT * FROM api.player_breakouts WHERE season_id=${SEASON_KEY} ORDER BY rank LIMIT ${BREAKOUTS_SHOWN}`, [season]);
+  return {
+    season, computedAt: iso(run.computed_at), candidates: run.candidates, flagged: run.flagged,
+    rows: rows.map((r) => ({ ...breakoutOf(r), playerId: r.player_id, name: r.name, imageUrl: r.image_url ?? null,
+      teamId: r.team_id ?? null, team: r.team ?? null, teamImageUrl: r.team_image_url ?? null })),
+  };
+}
+
 async function powerPlayer(read, params) {
   validateParams(params, ["season", "player"]);
   const season = params.get("season"), id = params.get("player");
   if (!/^\d{4}\/\d{4}$/.test(season || "") || !PLAYER.test(id || "")) reject(400, "Paramètre invalide.");
-  const power = (await powerOf(read, "players", season, [id])).get(id);
-  if (!power) reject(404, "Donnée indisponible.");
+  const [power, [flag]] = await Promise.all([
+    powerOf(read, "players", season, [id]).then((found) => found.get(id)),
+    read(`SELECT * FROM api.player_breakouts WHERE season_id=${SEASON_KEY} AND player_key=api.internal_id('player',$2)`, [season, id]),
+  ]);
+  // A player below the ranking's minutes has no ranking of his own, but may be flagged as a breakout.
+  if (!power && !flag) reject(404, "Donnée indisponible.");
+  const breakout = flag ? breakoutOf(flag) : null;
+  if (!power) return { season, player: { id, breakout } };
   const [count] = await read(`SELECT ranked FROM api.power_role_counts WHERE season_id=${SEASON_KEY} AND role=$2`, [season, power.role]);
-  return { season, player: { id, ...power, roleCount: count?.ranked ?? null } };
+  return { season, player: { id, ...power, roleCount: count?.ranked ?? null, breakout } };
 }
 
 async function powerRanking(read, params) {
@@ -376,6 +407,7 @@ export function createRankingRoute(read) {
     if (path === "/api/rankings/power") return respond(req, await powerRanking(read, params));
     if (path === "/api/rankings/power/player") return respond(req, await powerPlayer(read, params));
     if (path === "/api/rankings/leagues") return respond(req, await leagueLevels(read, params));
+    if (path === "/api/rankings/breakouts") return respond(req, await breakouts(read, params));
     if (path === "/api/forecasts/match") return respond(req, await matchForecast(read, params));
     if (path === "/api/forecasts/season") return respond(req, await seasonProjection(read, params));
     if (path === "/api/forecasts/live") return respond(req, await liveProbability(read, params));

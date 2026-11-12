@@ -62,7 +62,7 @@ import { levelPeerClubs, useEuropeLevels } from "../services/club-scout.js";
 import { RankingProvider, RankingTrigger } from "./RankingDialog.jsx";
 import { PlayerLevelBar, PlayerRankingDialog } from "./PlayerRanking.jsx";
 import { MESSI_ID } from "../services/player-honours.js";
-import { usePlayerPower, vegaParts } from "../services/ballon-dor.js";
+import { breakoutSignal, usePlayerPower, vegaParts } from "../services/ballon-dor.js";
 import {
   cachedResource,
   primeResource,
@@ -432,12 +432,15 @@ export default function PlayerSeasonProfile({
         rank: power.roleRank ?? null,
         of: power.roleRank ? power.roleCount : null,
         parts: vegaParts(power),
+        signal: breakoutSignal(power.breakout),
       };
-    if (!comparisonsReady || !profile.matches) return null;
+    // Below the ranking's minutes: no score of his own, but he may be flagged as a breakout.
+    const signal = breakoutSignal(power?.breakout);
+    if (!comparisonsReady || !profile.matches) return signal ? { signal } : null;
     const best = roleAssessments(profile, cohorts).find(
       (role) => role.value != null,
     );
-    if (!best) return null;
+    if (!best) return signal ? { signal } : null;
     const scores = (cohorts.groups.get(profile.role?.group)?.profiles || [])
       .filter((peer) => peer.id !== profile.id)
       .map(
@@ -451,6 +454,7 @@ export default function PlayerSeasonProfile({
       label: best.label,
       rank: scores.filter((value) => value > best.value).length + 1,
       of: scores.length + 1,
+      signal,
     };
   }, [power, comparisonsReady, profile, cohorts]);
   const performanceSeason = params?.get("performanceSeason");

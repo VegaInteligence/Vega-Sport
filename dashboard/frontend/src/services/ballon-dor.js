@@ -52,3 +52,32 @@ export function vegaParts(power) {
   if (!Number.isFinite(own) || !Number.isFinite(club)) return null;
   return `Ce qu’il produit : ${points(own)} · niveau de son club : ${points(club)} (points du classement de la saison).`;
 }
+
+/**
+ * The season's breakouts (/api/rankings/breakouts): players below the ranking's minutes
+ * whose rate per 90 minutes is among the best of their role's regulars. Entries take the
+ * ranking's shape ({ rank, playerId, name, team, position, … }) with `score` the share of
+ * the regulars the player is ahead of; null for a season without a run.
+ */
+export function useBreakouts(season) {
+  const resource = useResource(
+    `power-ranking:breakouts:${season || "none"}`,
+    () =>
+      json("/api/rankings/breakouts?" + new URLSearchParams({ season }))
+        .then((body) => breakoutEntries(body))
+        .catch((error) => (/\bHTTP 404\b/.test(error?.message || "") ? null : Promise.reject(error))),
+    Boolean(season),
+  );
+  return resource.value ?? null;
+}
+
+export function breakoutEntries(body) {
+  return (body?.rows || []).map((row) => ({ ...row, score: row.percentile }));
+}
+
+/** One sentence for a flagged player's page; null when he is not flagged. */
+export function breakoutSignal(breakout) {
+  if (!Number.isFinite(breakout?.percentile) || !Number.isFinite(breakout?.minutes)) return null;
+  const ahead = Math.min(99, Math.round(breakout.percentile));
+  return `Révélation : en ${breakout.minutes.toLocaleString("fr-FR")} minutes, son rendement par 90 minutes le place devant ${ahead} % des titulaires à son poste.`;
+}

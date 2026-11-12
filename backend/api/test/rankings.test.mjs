@@ -158,3 +158,18 @@ test("a finished match minute by minute", { skip }, async () => {
   assert.equal((await get("/api/forecasts/live?match=m_zzzzzz")).response.status, 404);
   assert.equal((await get("/api/forecasts/live?match=1")).response.status, 400);
 });
+
+test("the season's breakouts, and a player's own flag", { skip }, async () => {
+  const { body } = await get("/api/rankings/breakouts?season=2025/2026");
+  assert.deepEqual([body.season, body.candidates, body.flagged, body.rows.length], ["2025/2026", 12, 1, 1]);
+  const [row] = body.rows;
+  assert.deepEqual([row.rank, row.playerId, row.name, row.teamId, row.minutes, row.percentile, row.regulars, row.role], [1, "p_aaaab3", "Hugo Sud", "t_aaaaa4", 180, 91.3, 40, "goalkeeper"]);
+  assert.equal(typeof row.position, "string");
+  // The flagged player has no ranking of his own (below its minutes): his page still learns he is flagged.
+  const flagged = (await get("/api/rankings/power/player?season=2025/2026&player=p_aaaab3")).body.player;
+  assert.deepEqual([flagged.id, flagged.breakout.percentile, flagged.breakout.minutes, flagged.score], ["p_aaaab3", 91.3, 180, undefined]);
+  // A ranked player is not a breakout.
+  assert.equal((await get("/api/rankings/power/player?season=2025/2026&player=p_aaaab1")).body.player.breakout, null);
+  assert.equal((await get("/api/rankings/breakouts?season=2024/2025")).response.status, 404);
+  assert.equal((await get("/api/rankings/breakouts")).response.status, 400);
+});
