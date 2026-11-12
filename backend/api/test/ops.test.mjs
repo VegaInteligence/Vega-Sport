@@ -83,10 +83,13 @@ before(async () => {
   await x(
     `INSERT INTO ops.fetch_log(family, http_status, error_code, duration_ms, fetched_at) VALUES
        ('summary', 200, NULL, 300, $1), ('summary', 200, NULL, 500, $1), ('heatmaps', 404, 'RESOURCE_NOT_FOUND', 100, $1),
-       ('network', 503, 'HTTP_SERVER_ERROR', 900, $2), ('player_halves', 404, 'HALVES_UNAVAILABLE', 200, $2), ('summary', 200, NULL, 50, $3)`,
+       ('network', 503, 'HTTP_SERVER_ERROR', 900, $2), ('player_halves', 404, 'HALVES_UNAVAILABLE', 200, $2), ('summary', 200, NULL, 50, $3),
+       ('player', 403, 'PLAN_UPGRADE_REQUIRED', 150, $2)`,
     [iso(-175), iso(-110), iso(-1800)],
   );
   await x("INSERT INTO ops.data_warnings(match_id, kind, detail, detected_at) VALUES (5, 'score_disagreement', '2-0 / 2-1', $1)", [iso(-60)]);
+  // A match a complementary source holds too: counted apart, never listed as a warning.
+  await x("INSERT INTO ops.data_warnings(match_id, kind, detail, detected_at) VALUES (4, 'duplicate_match', 'm_aaaaa4', $1)", [iso(-30)]);
   await x(
     `INSERT INTO ops.collection_progress(source, competition_season_id, family, expected, done, empty, failed, last_success_at, updated_at) VALUES
        ('pitchapi', 1, 'shots', 6, 3, 1, 1, $1, $1), ('pitchapi', 1, 'league_matches', 1, 1, 0, 0, $2, $2)`,
@@ -200,12 +203,14 @@ test("provider calls, warnings, progress, quality, freshness, publication", { sk
   assert.deepEqual(body.requests, [
     { hour: "2025-09-06T09:00:00.000Z", calls: 3, ok: 2, permanent: 1, transient: 0, unavailable: 0 },
     // The source's "no such data for this match" stays among the transient ones and is counted apart.
-    { hour: "2025-09-06T10:00:00.000Z", calls: 2, ok: 0, permanent: 0, transient: 2, unavailable: 1 },
+    // So does a player profile the plan in use does not hold.
+    { hour: "2025-09-06T10:00:00.000Z", calls: 3, ok: 0, permanent: 0, transient: 3, unavailable: 2 },
   ]);
   assert.deepEqual(body.families, [
     { family: "summary", calls: 2, errors: 0, unavailable: 0, meanMs: 400, p95Ms: 490 },
     { family: "heatmaps", calls: 1, errors: 1, unavailable: 0, meanMs: 100, p95Ms: 100 },
     { family: "network", calls: 1, errors: 1, unavailable: 0, meanMs: 900, p95Ms: 900 },
+    { family: "player", calls: 1, errors: 1, unavailable: 1, meanMs: 150, p95Ms: 150 },
     { family: "player_halves", calls: 1, errors: 1, unavailable: 1, meanMs: 200, p95Ms: 200 },
   ]);
   assert.deepEqual(body.warnings, [{ matchId: 5, match: "Union Sud – Olympique Été", kind: "score_disagreement", detail: "2-0 / 2-1", detectedAt: iso(-60) }]);
@@ -213,7 +218,7 @@ test("provider calls, warnings, progress, quality, freshness, publication", { sk
   assert.deepEqual(body.progress, [
     { editionId: 1, competition: "Ligue 1", season: "2025/2026", seasonId: 2025, expected: 6, done: 3, empty: 1, failed: 1, lastSuccessAt: iso(-60) },
   ]);
-  assert.deepEqual(body.totals, { matches: 3, warnings: 1, editions: 1 });
+  assert.deepEqual(body.totals, { matches: 3, warnings: 1, overlaps: 1, editions: 1 });
   assert.deepEqual(body.quality.parseFailures, [{ family: "calendar", code: "INVALID_ENVELOPE", count: 2 }]);
   assert.deepEqual(body.quality.unknownFields, [{ family: "shots", path: "data.foo", occurrences: 3, firstSeenAt: iso(-7200), lastSeenAt: iso(-60) }]);
   assert.ok(body.quality.coverageGaps >= 1); // match 5 still lacks families

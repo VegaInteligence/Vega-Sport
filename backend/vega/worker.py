@@ -647,6 +647,10 @@ class Worker:
         kind = job["family"]
         key = self._provider_key(kind, job["entity_id"])
         result = self.fetch(kind, "/" + kind + "s/" + key, job=job)
+        if result.coverage == "unavailable":
+            # No profile under the plan in use (pitchapi.py): an answer, not a failure.
+            profiles.record_unavailable(self.store, kind, key, (job["id"], job["lease_token"]))
+            return
         batch = normalize_family(kind, result.data)
         profiles.save_profile(self.store, kind, key, batch, (job["id"], job["lease_token"]))
 
