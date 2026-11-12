@@ -23,6 +23,7 @@ import {
   normalizedFixture,
 } from "../services/club-analysis.js";
 import { date, isNumber, number, seasonLabel } from "../services/format.js";
+import { headToHeadNote } from "../services/head-to-head.js";
 import { AsyncState, Card, Empty, Media } from "./UI.jsx";
 import { MatchLink } from "./MatchLink.jsx";
 import { StatRows } from "./StatRows.jsx";
@@ -159,6 +160,7 @@ function Content({ match, value }) {
   for (const m of h2h)
     if (m.home.score === m.away.score) h2hRecord.draws++;
     else h2hRecord[m.home.score > m.away.score ? m.home.id : m.away.id]++;
+  const h2hNote = headToHeadNote(h2h, match.home, match.away);
   const stat = (key, label, get, format = "double", lowerIsBetter = false) => ({
     key,
     label,
@@ -246,11 +248,14 @@ function Content({ match, value }) {
           }
         >
           {h2h.length ? (
-            <div className="club-match-list">
-              {h2h.slice(0, 6).map((m) => (
-                <MatchLink key={m.id} match={m} />
-              ))}
-            </div>
+            <>
+              {h2hNote && <p className="match-context-note">{h2hNote}</p>}
+              <div className="club-match-list">
+                {h2h.slice(0, 6).map((m) => (
+                  <MatchLink key={m.id} match={m} />
+                ))}
+              </div>
+            </>
           ) : (
             <Empty>Aucune confrontation antérieure collectée.</Empty>
           )}

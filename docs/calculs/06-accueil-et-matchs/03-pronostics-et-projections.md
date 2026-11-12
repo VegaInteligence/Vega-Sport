@@ -47,6 +47,18 @@ Les 55 saisons de championnat complètes de 2024/2025 et 2025/2026 (12 clubs ou 
 
 90 points donnent la plus petite perte au total. À cette valeur, parmi les clubs annoncés champions entre 60 et 80 % (15 clubs, 68 % en moyenne), 73 % l'ont été.
 
+## Le calendrier à venir
+
+La colonne « Adv. à venir » de la projection lit les pronostics des matchs restant à jouer de l'édition (`api.schedule_forecasts`, la route `/api/forecasts/season` rend `next` pour chaque club) :
+
+- les cinq prochains matchs de championnat du club, par date ;
+- `opponentLevel` : la moyenne des forces (Elo avant le match) de ces adversaires ;
+- `expectedPoints` : la somme, sur ces matchs, de 3 × P(victoire) + P(nul) du pronostic, qui tient compte du terrain ;
+- `home` : le nombre de ces matchs joués à domicile ;
+- `rank` : le rang de ce calendrier parmi les clubs qui ont encore cinq matchs, 1 pour la moyenne d'adversaires la plus haute. Un club à qui il en reste moins n'est pas classé.
+
+Le niveau des adversaires ne dit rien du club lui-même : deux clubs au même calendrier n'en attendent pas les mêmes points.
+
 ## Limites
 
 - Les colonnes « 4 premiers » et « 3 derniers » sont des places, pas les zones du règlement de chaque championnat (qualifications européennes, barrages, nombre de relégués).

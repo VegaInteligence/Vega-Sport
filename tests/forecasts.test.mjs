@@ -17,3 +17,9 @@ test("a projection's rows: the title, the first four places, the last three", ()
   assert.equal(projectionRows({ teams: [{ id: "t_a", places: [0.6, 0.4] }] })[0].bottomThree, null);
   assert.deepEqual(projectionRows(null), []);
 });
+
+test("a projection's rows carry the club's coming matches when the answer has them", () => {
+  const next = { matches: 5, home: 3, opponentLevel: 1648, expectedPoints: 7.9, rank: 2 };
+  const rows = projectionRows({ teams: [{ id: "t_a", places: [1], next }, { id: "t_b", places: [1], next: { matches: 0 } }, { id: "t_c", places: [1] }] });
+  assert.deepEqual(rows.map((row) => row.next), [next, null, null]);
+});

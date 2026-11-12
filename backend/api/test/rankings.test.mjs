@@ -2,6 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { get, skip } from "./context.mjs";
+import { comingMatches } from "../src/routes/rankings.mjs";
 
 test("club links and a club's UEFA ranking history", { skip }, async () => {
   const links = (await get("/api/club-links?club=t_aaaaa1")).body;
@@ -101,6 +102,15 @@ test("the forecast of a match still to play and a league replayed to its end", {
   assert.deepEqual(season.teams.map((t) => [t.id, t.played, t.points, t.projectedPoints, t.places]),
     [["t_aaaaa1", 3, 7, 71.4, [0.6, 0.4]], ["t_aaaaa2", 3, 4, 55.3, [0.4, 0.6]]]);
   assert.equal(season.teams[0].imageUrl !== undefined, true);
+  // The one match still to play of the edition: its sides' coming opponent and the points the
+  // forecast gives them; a club with no match ahead has none.
+  const coming = season.teams.map((t) => t.next).filter(Boolean);
+  const sides = [
+    { matches: 1, home: 1, opponentLevel: 1490, expectedPoints: 1.8, rank: null },
+    { matches: 1, home: 0, opponentLevel: 1540, expectedPoints: 1, rank: null },
+  ];
+  assert.ok(coming.length >= 1 && coming.every((next) => sides.some((side) => JSON.stringify(side) === JSON.stringify(next))), JSON.stringify(coming));
+  assert.ok(season.teams.every((t) => "next" in t));
   assert.equal((await get("/api/forecasts/season?competition=l_3FJFUl&season=2024/2025")).response.status, 404);
   assert.equal((await get("/api/forecasts/season?competition=l_3FJFUl")).response.status, 400);
   assert.equal((await get("/api/forecasts/season?competition=ligue1&season=2025/2026")).response.status, 400);
@@ -114,4 +124,18 @@ test("the forecast of a match still to play and a league replayed to its end", {
   assert.deepEqual([model.version, model.matches], ["forecast-v1", 60000]);
   assert.ok(answers.filter((a) => a.response.status !== 200).every((a) => a.response.status === 404));
   assert.equal((await get("/api/forecasts/match?match=12")).response.status, 400);
+});
+
+test("a club's coming matches: five at most, ranked by the opponents' strength", () => {
+  const elo = { A: 1700, B: 1600, C: 1500 };
+  const fixture = ([home, away]) => ({ home_key: home, away_key: away, home_elo: elo[home], away_elo: elo[away], home_win: 0.5, draw: 0.25, away_win: 0.25 });
+  const round = ["AB", "CA", "BC", "BA", "AC", "CB"];
+  const next = comingMatches([...round, ...round].map(fixture));
+  // The weakest club meets the two strongest: the hardest run. Home matches are worth 1.75 points here, away ones 1.
+  assert.deepEqual(next.get("C"), { matches: 5, home: 3, opponentLevel: 1660, expectedPoints: 7.3, rank: 1 });
+  assert.deepEqual(next.get("B"), { matches: 5, home: 2, opponentLevel: 1620, expectedPoints: 6.5, rank: 2 });
+  assert.deepEqual(next.get("A"), { matches: 5, home: 3, opponentLevel: 1560, expectedPoints: 7.3, rank: 3 });
+  // A club with fewer matches ahead than the others is not ranked against them.
+  assert.deepEqual(comingMatches(["AB", "CA", "BC"].map(fixture)).get("A"), { matches: 2, home: 1, opponentLevel: 1550, expectedPoints: 2.8, rank: null });
+  assert.equal(comingMatches([]).size, 0);
 });

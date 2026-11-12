@@ -16,6 +16,7 @@ import {
 } from "../services/match-resources.js";
 import PlayerMetrics, { periodLabel } from "./PlayerMetrics.jsx";
 import { MATCH_SECTIONS, number, isNumber } from "../services/format.js";
+import { momentumSpells } from "../services/momentum.js";
 import { ShotMap, XgTimeline } from "./Charts.jsx";
 import { MatchLink } from "./MatchLink.jsx";
 const MATCH_ANALYSES = MATCH_SECTIONS.filter(([key]) =>
@@ -347,6 +348,7 @@ export function Momentum({ match, payload }) {
   if (!points.length) return <Empty>Momentum indisponible.</Empty>;
   const limit = Math.max(...points.map((p) => Math.abs(p.value)), 0.01),
     duration = Math.max(90, ...points.map((p) => p.minute));
+  const spells = momentumSpells(points);
   return (
     <figure className="chart-figure">
       <svg
@@ -387,6 +389,17 @@ export function Momentum({ match, payload }) {
           {match.away.name}
         </text>
       </svg>
+      {spells.length > 0 && (
+        <figcaption>
+          Temps forts (cinq minutes de suite) :{" "}
+          {spells
+            .map(
+              (spell) =>
+                `${match[spell.side].name} ${number(spell.from)}′–${number(spell.to)}′`,
+            )
+            .join(" · ")}
+        </figcaption>
+      )}
     </figure>
   );
 }

@@ -9,6 +9,8 @@ export default function SeasonProjection({ projection }) {
   const rows = projectionRows(projection);
   if (!rows.length) return null;
   const relegation = rows.some((row) => row.bottomThree !== null);
+  const coming = rows.some((row) => row.next);
+  const ordinal = (rank) => (rank === 1 ? "1er" : `${rank}e`);
   return (
     <>
       <div className="table-scroll standings-scroll" role="region" aria-label="Projection de fin de saison" tabIndex={0}>
@@ -25,6 +27,14 @@ export default function SeasonProjection({ projection }) {
               <th scope="col" title="Part des simulations où le club finit dans les quatre premiers">4 premiers</th>
               {relegation && (
                 <th scope="col" title="Part des simulations où le club finit dans les trois derniers">3 derniers</th>
+              )}
+              {coming && (
+                <th
+                  scope="col"
+                  title="Niveau moyen (Elo) des cinq prochains adversaires en championnat ; entre parenthèses, le rang de ce calendrier, 1er pour le plus dur"
+                >
+                  Adv. à venir
+                </th>
               )}
             </tr>
           </thead>
@@ -43,6 +53,19 @@ export default function SeasonProjection({ projection }) {
                 <td>{share(row.title)}</td>
                 <td>{share(row.topFour)}</td>
                 {relegation && <td>{share(row.bottomThree)}</td>}
+                {coming && (
+                  <td
+                    title={
+                      row.next
+                        ? `${row.next.matches} matchs dont ${row.next.home} à domicile · ${number(row.next.expectedPoints, 1)} points attendus`
+                        : undefined
+                    }
+                  >
+                    {row.next
+                      ? `${number(row.next.opponentLevel)}${row.next.rank ? ` (${ordinal(row.next.rank)})` : ""}`
+                      : "—"}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -52,6 +75,8 @@ export default function SeasonProjection({ projection }) {
         Les matchs restants sont rejoués {number(projection.model?.replays || 0)} fois d’après la force de chaque
         club (son Elo), laquelle peut encore bouger d’ici la fin de saison. Une estimation, pas un pronostic
         garanti ; elle ne connaît ni blessures ni mercato.
+        {coming &&
+          " « Adv. à venir » : le niveau moyen des cinq prochains adversaires de championnat, et le rang de ce calendrier (1er pour le plus dur)."}
       </p>
     </>
   );

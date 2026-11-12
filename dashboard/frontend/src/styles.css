@@ -2850,6 +2850,12 @@ th[aria-sort="descending"] .sort-indicator {
   color: var(--muted);
   font-size: var(--text-xs);
 }
+.match-context-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
 .match-forecast-note {
   margin: 12px 0 0;
   color: var(--muted);
