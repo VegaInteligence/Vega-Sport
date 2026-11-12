@@ -27,6 +27,10 @@ const WORLD_CUP_YEARS = new Set([
   "2022",
   "2026",
 ]);
+// The yearly Club World Cups played since the base's first season (2021/2022), in
+// Football.TXT (openfootball/club-worldcup): an edition is played in December of its
+// year or in February of the next. The 2025 tournament has its own JSON file.
+const CLUB_WORLD_CUP_YEARS = new Set(["2021", "2022", "2023"]);
 const SOURCES = {
   euro: {
     repo: "euro.json",
@@ -41,8 +45,9 @@ const SOURCES = {
   },
   "club-world-cup": {
     repo: "worldcup.json",
-    seasons: new Set(["2025"]),
+    seasons: new Set(["2025", ...CLUB_WORLD_CUP_YEARS]),
     file: "clubworldcup.json",
+    yearly: { repo: "club-worldcup", file: "clubworldcup.txt", format: "year-text" },
   },
   "world-cup-history": {
     repo: "worldcup.json",
@@ -61,9 +66,13 @@ export async function GET(request) {
   const url = new URL(request.url);
   const competition = url.searchParams.get("competition");
   const season = url.searchParams.get("season");
-  const source = Object.hasOwn(SOURCES, competition || "")
+  const found = Object.hasOwn(SOURCES, competition || "")
     ? SOURCES[competition]
     : null;
+  const source =
+    found?.yearly && CLUB_WORLD_CUP_YEARS.has(season)
+      ? { ...found, ...found.yearly }
+      : found;
   if (!source || !source.seasons.has(season))
     return Response.json(
       { error: "Compétition ou édition indisponible." },
@@ -87,7 +96,12 @@ export async function GET(request) {
             name: "Coupe de France 2024/2025",
             matches: parseFranceCup(await response.text()),
           }
-        : source.format === "cup-text"
+        : source.format === "year-text"
+          ? {
+              name: "Club World Cup " + season,
+              matches: parseOpenCupText(await response.text(), Number(season)),
+            }
+          : source.format === "cup-text"
           ? {
               name: competition,
               matches: parseOpenCupText(

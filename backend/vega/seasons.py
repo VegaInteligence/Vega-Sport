@@ -17,6 +17,10 @@ EXCEPTIONS = {
     ("afcon", 2021): 2021,  # Played Jan 2022.
     ("euro", 2020): 2020,  # Played in 2021.
     ("asian_cup", 2023): 2023,
+    # The yearly Club World Cup was a winter tournament until 2023.
+    ("club_world_cup", 2021): 2021,  # Played Feb 2022.
+    ("club_world_cup", 2022): 2022,  # Played Feb 2023.
+    ("club_world_cup", 2023): 2023,  # Played Dec 2023.
 }
 FIRST_SEASON = 1850
 LAST_ARCHIVE_SEASON = 2020

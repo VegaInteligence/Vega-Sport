@@ -24,7 +24,8 @@ NATIONAL_CUP_ARCHIVES = ("austria-cup-archive", "germany-cup-archive", "fa-cup-a
 EDITIONS = (
     *[("open-cups", "euro", s) for s in ("2020", "2024", "2028")],
     *[("open-cups", "world-cup-history", s) for s in WORLD_CUP_YEARS],
-    ("open-cups", "club-world-cup", "2025"),
+    # The yearly Club World Cups played since the base's first season (2021/2022).
+    *[("open-cups", "club-world-cup", s) for s in ("2021", "2022", "2023", "2025")],
     ("open-cups", "france-cup", "2024/2025"),
     ("nations-results", "nations-league", "2026/2027"),
     *[("open-cups", key, "2024/2025") for key in NATIONAL_CUP_ARCHIVES],
@@ -109,6 +110,9 @@ def _team(conn, provider, key, name):
         return row[0]
     team = conn.execute("INSERT INTO core.teams(name) VALUES (%s) RETURNING id", (name or key,)).fetchone()[0]
     conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team',%s,%s,%s)", (provider, key, team))
+    # A team the base did not know: the identity pass (identity.py), due once a day, looks
+    # at it at its next turn (an hour after its last one at the earliest) rather than the next day.
+    conn.execute("UPDATE ops.source_runs SET last_success_at = NULL WHERE source = 'vega' AND scope = 'team_identity'")
     return team
 
 

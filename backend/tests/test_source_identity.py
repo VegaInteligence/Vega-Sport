@@ -98,10 +98,12 @@ class ParseTest(unittest.TestCase):
         # "Name (XXX)": the club of that name in that country, or of its reviewed spelling.
         pitch = {("chelsea", False): {(1, "ENG")}, ("alain", False): {(2, "UAE"), (3, "KSA")}, ("realmadrid", False): {(4, "ESP")},
                  ("alhilal", False): {(5, "KSA"), (6, "KSA")}, ("botafogo", False): {(7, "BRA")}, ("botafogosp", False): {(8, "BRA")},
-                 ("aucklandfc", False): {(9, "AUS")}}
-        reviewed = {identity.WORLD_CLUB_KEYS["Al Hilal (KSA)"]: 5}
+                 ("aucklandfc", False): {(9, "AUS")}, ("aljazira", False): {(10, "UAE")}, ("leon", False): {(11, "MEX")},
+                 ("alittihad", False): {(12, "KSA"), (13, "KSA")}}
+        reviewed = {identity.WORLD_CLUB_KEYS["Al Hilal (KSA)"]: 5, identity.WORLD_CLUB_KEYS["Al Ittihad (KSA)"]: 12}
         match = lambda name: identity.match_team(pitch, name, False, None, reviewed)
         self.assertEqual([match(n) for n in ("Real Madrid (ESP)", "Chelsea FC (ENG)", "Al Ain FC (UAE)", "Botafogo RJ (BRA)")], [4, 1, 2, 7])
+        self.assertEqual([match(n) for n in ("Al Jazira Club (UAE)", "Club León (MEX)", "Al Ittihad (KSA)")], [10, 11, 12])  # the yearly editions
         self.assertEqual(match("Al Hilal (KSA)"), 5)  # the club, not its women's team: named by its key
         self.assertIsNone(identity.match_team(pitch, "Al Hilal (KSA)", False, None))  # a key the base does not hold names no club
         self.assertIsNone(match("Real Madrid (ITA)"))  # another country
@@ -370,11 +372,27 @@ class SourceIdentityTest(unittest.TestCase):
                 "matches": [{"round": "Matchday 1", "date": "2025-06-18", "team1": "Real Madrid (ESP)", "team2": "Al Hilal (KSA)", "score": {"ft": [1, 1]}},
                             {"round": "Matchday 1", "date": "2025-06-19", "team1": "Chelsea FC (ENG)", "team2": "Botafogo RJ (BRA)", "score": {"ft": [2, 0]}},
                             {"round": "Matchday 1", "date": "2025-06-20", "team1": "Al Ain FC (UAE)", "team2": "Auckland City FC (NZL)", "score": {"ft": [6, 0]}}]}
+        from vega import sources
+
+        sources.record_run(self.db, "vega", "team_identity", NOW, None, 0, 0)
+        due = lambda: x("SELECT last_success_at IS NULL FROM ops.source_runs WHERE source='vega' AND scope='team_identity'").fetchone()[0]
+        self.assertFalse(due())
         with self.db.transaction():
             cups.save(self.db, "open-cups", "club-world-cup", "2025", body, NOW)
+        self.assertTrue(due())  # teams the base did not know: the identity pass does not wait for the next day
         with self.db.transaction():
             merged, _ = identity.run(self.db, None, "teams", NOW)
         self.assertEqual(merged, 5)  # Auckland City names no PitchAPI club and stays
+        # A yearly edition, in the season of its year; its known teams are the clubs at once, no pass needed.
+        sources.record_run(self.db, "vega", "team_identity", NOW, None, 0, 0)
+        yearly = {"name": "Club World Cup 2023", "season": "2023", "source": {"name": "OpenFootball", "url": "https://github.com/openfootball/club-worldcup"},
+                  "matches": [{"round": "Final", "date": "2023-12-22", "team1": "Chelsea FC (ENG)", "team2": "Botafogo RJ (BRA)", "score": {"ft": [4, 0]}}]}
+        with self.db.transaction():
+            cups.save(self.db, "open-cups", "club-world-cup", "2023", yearly, NOW)
+        self.assertEqual(x("""SELECT s.label, m.home_team_id, m.away_team_id FROM core.matches m JOIN core.seasons s ON s.id = m.season_id
+                              JOIN core.competition_seasons cs ON cs.id = m.competition_season_id WHERE cs.cup_key = 'open-cups:club-world-cup:2023'""").fetchall(),
+                         [("2023/2024", 761, 766)])
+        self.assertFalse(due())
         owners = dict(x("SELECT provider_key, entity_id FROM core.provider_ids WHERE entity_type='team' AND provider='openfootball' AND provider_key LIKE %s", ("name:% (___)",)).fetchall())
         self.assertEqual([owners[f"name:{n}"] for n in ("Real Madrid (ESP)", "Al Hilal (KSA)", "Chelsea FC (ENG)", "Botafogo RJ (BRA)", "Al Ain FC (UAE)")],
                          [760, 762, 761, 766, 764])

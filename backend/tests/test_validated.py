@@ -26,6 +26,8 @@ class SeasonRuleTest(unittest.TestCase):
         self.assertEqual(sporting_season("2020", None, "UEFA Euro"), "2020/2021")
         self.assertEqual(sporting_season("2025", None, "Africa Cup of Nations"), "2025/2026")
         self.assertEqual(sporting_season("2025", None, "Club World Cup"), "2024/2025")
+        # The yearly Club World Cup was played in winter until 2023: in the season of its year.
+        self.assertEqual([sporting_season(y, None, "Club World Cup") for y in ("2021", "2022", "2023")], ["2021/2022", "2022/2023", "2023/2024"])
 
     def test_calendar_year_leagues_and_qualifiers_keep_their_year(self):
         self.assertEqual(sporting_season("2026", "l_0eg6C9", "Major League Soccer"), "2026/2027")
