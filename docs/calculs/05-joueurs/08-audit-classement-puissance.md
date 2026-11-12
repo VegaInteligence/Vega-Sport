@@ -105,7 +105,9 @@ Les moyennes par 90 minutes, les centiles et les indices de rôle des fiches lis
 - **Une nouvelle version de la méthode** recalcule la saison en cours dans l'heure (`due_seasons`), sans attendre le passage quotidien. Le classement 2026/2027, resté sur la version 1 depuis minuit, est passé en version 2 à 12 h 49 UTC : 1. Lamine Yamal 94,7 ; 2. Kylian Mbappé 92,7 ; 3. Vitinha 92,1 ; 4. Michael Olise 92,0.
 - **Lu sur le site après déploiement** (colonne de droite) : Lamine Yamal 2026/2027, 95 et 1ᵉʳ sur 537 à son poste (92 et 4ᵉ sur 68 avec l'ancien indice) ; Khvicha Kvaratskhelia 2025/2026, 89 et 14ᵉ sur 1 814 ; Désiré Doué 2025/2026, 87 et 19ᵉ sur 1 814.
 
-Non fait : les statistiques de gardien (arrêts, buts encaissés…) gardent leurs vides, la ligne de statistiques ne portant pas le poste ; le classement de puissance garde sa propre restauration (`restore_zeros`), de même idée, sans lire `agg.match_zeros`.
+- **Les gardiens** (migration 070). Mesure faite, le fournisseur écrit déjà leurs zéros d'arrêts et de buts encaissés ; il laisse vides le xGOT subi et les buts évités d'un match sans tir cadré. Ces vides valent zéro pour le gardien titulaire (poste 11 de la feuille de match) dont la ligne ne montre ni arrêt ni but encaissé. Détail dans [Valeurs absentes](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md).
+
+Non fait : le classement de puissance garde sa propre restauration (`restore_zeros`), de même idée, sans lire `agg.match_zeros`.
 
 ## Ce que la version 2 ne fait pas
 

@@ -44,9 +44,17 @@ Ce qui reste vide :
 - une mesure que l'édition ne publie pas : npxG, xGOT et xA dans 68 éditions sur 151, tirs cadrés dans 65, grosses occasions créées dans 66, xG dans 3 ;
 - les matchs joués avant que le fournisseur ne commence à publier une mesure (une édition des 151 a commencé en cours de saison) ;
 - une ligne non mesurée ;
-- les statistiques de gardien et les mesures physiques, lues comme avant.
+- les mesures physiques, lues comme avant.
 
-Les 43 mesures concernées sont listées dans `ZERO_STATS` ([metric_catalog.py](../../../backend/vega/metric_catalog.py)). Les lignes du fournisseur (`core.player_match_stats`) ne sont pas modifiées : le zéro est rendu à la lecture, par `api.player_appearances` (fiche joueur, matchs), `api.home_player_matches` (accueil), `agg.refresh_player_list` (listes et cohortes) et le calculateur des lignes saison (`agg.player_season_stats`). Le classement de puissance applique la même idée dans son propre calcul (`restore_zeros` dans [power.py](../../../backend/vega/power.py)).
+Les 43 mesures concernées sont listées dans `ZERO_STATS` (et les trois du gardien dans `KEEPER_ZERO_STATS`) ([metric_catalog.py](../../../backend/vega/metric_catalog.py)). Les lignes du fournisseur (`core.player_match_stats`) ne sont pas modifiées : le zéro est rendu à la lecture, par `api.player_appearances` (fiche joueur, matchs), `api.home_player_matches` (accueil), `agg.refresh_player_list` (listes et cohortes) et le calculateur des lignes saison (`agg.player_season_stats`). Le classement de puissance applique la même idée dans son propre calcul (`restore_zeros` dans [power.py](../../../backend/vega/power.py)).
+
+**Les gardiens** (migration `070_keeper_zeros.sql`). Relevé du 12 novembre 2026 sur les 49 664 lignes mesurées de gardiens titulaires des deux saisons : le fournisseur écrit leurs zéros pour les arrêts, les sorties, les dégagements du poing et les buts encaissés (aucun vide dans les éditions qui publient ces mesures). Il laisse vides deux mesures quand le gardien n'a eu aucun tir cadré à arrêter : le **xGOT subi** et les **buts évités**. Un gardien resté un match sans tir cadré n'avait donc plus de buts évités « complets », donc pas de rang : en 2026/2027, 184 des 764 gardiens d'au moins 450 minutes d'une édition qui publie la mesure, d'abord ceux des clubs qui concèdent le moins de tirs.
+
+La ligne de statistiques ne porte pas le poste : le gardien est le poste 11 de la feuille de match. Pour lui, dans une ligne mesurée d'un match où `agg.match_zeros` dit que la mesure est montrée (même règle, trois colonnes de plus) :
+- le xGOT subi et les buts évités valent zéro quand sa ligne ne montre **ni arrêt ni but encaissé** ;
+- les penalties arrêtés valent zéro (lignes saison du calculateur).
+
+Un vide à côté d'un arrêt ou d'un but encaissé reste vide (le fournisseur n'a pas valorisé ce tir), comme ceux d'un gardien entré en jeu (sa ligne de feuille de match n'a pas de poste) et des éditions qui ne publient pas ces mesures (68 sur 151).
 
 Conséquences :
 - **xA** : classé comme les autres mesures, là où il est observé sur tous les matchs du joueur. Le profil d'**une performance** le laisse toujours de côté (`RANKED` dans [shared/player-profile.js](../../../dashboard/shared/player-profile.js#L104)) ;

@@ -547,13 +547,13 @@ class ModelsTest(unittest.TestCase):
 
     def test_blanks_are_zeros_where_the_match_shows_the_statistic(self):
         # 068: agg.match_zeros says, match by match, the statistics whose blank is a zero.
-        from vega.metric_catalog import ZERO_STATS
+        from vega.metric_catalog import KEEPER_ZERO_STATS, ZERO_STATS
 
         x = self.db.execute
         columns = [r[0] for r in x(
             "SELECT column_name FROM information_schema.columns WHERE table_schema='agg' AND table_name='match_zeros' ORDER BY ordinal_position"
         )]
-        self.assertEqual(tuple(columns[3:]), ZERO_STATS)
+        self.assertEqual(tuple(columns[3:]), ZERO_STATS + KEEPER_ZERO_STATS)
 
         def zero(match, column):
             return self.one(f"SELECT {column} FROM agg.match_zeros WHERE season_id=2025 AND match_id=%s", match)[0]
@@ -604,6 +604,53 @@ class ModelsTest(unittest.TestCase):
             refresh()
         self.assertEqual(counts(102), (14, 0, None))
         self.assertEqual(counts(105), (14, 0, None))
+
+    def test_a_keeper_who_faced_no_shot_prevented_no_goal(self):
+        # 070: the starting goalkeeper's blanks. Club 1's keeper is player 100, club 3's 300;
+        # they meet in match 2, where 100 made no save (the seed); in match 1 he made five.
+        from vega.calculator import refresh_competition_season
+
+        x = self.db.execute
+
+        def listed(player):
+            return self.one(
+                "SELECT goals_prevented_count, saves_count FROM agg.player_list_editions WHERE competition_season_id=1 AND player_id=%s", player)
+
+        def season(player):
+            return self.one(
+                "SELECT goals_prevented_n, penalties_saved_n, penalties_saved_sum FROM agg.player_season_stats WHERE competition_season_id=1 AND player_id=%s",
+                player)
+
+        def read(player, match):
+            return self.one(
+                "SELECT goals_prevented, xgot_faced FROM api.player_appearances WHERE season_id=2025 AND match_id=%s AND player_id=%s",
+                match, player)
+
+        self.assertEqual((listed(100), season(100)), ((14, 14), (14, 0, None)))
+        self.assertEqual(self.one("SELECT saves FROM core.player_match_stats WHERE season_id=2025 AND match_id=2 AND player_id=100")[0], 0)
+        blank = "UPDATE core.player_match_stats SET goals_prevented=%s WHERE season_id=2025 AND match_id=%s AND player_id=100"
+        try:
+            # No goals prevented written for him in either match; the other keeper of match 2 saved a penalty.
+            x(blank, (None, 1))
+            x(blank, (None, 2))
+            x("UPDATE core.player_match_stats SET penalties_saved=1 WHERE season_id=2025 AND match_id=2 AND player_id=300")
+            refresh_competition_season(self.db, 1)
+            # Nothing to stop in match 2: zero. Five saves in match 1: the blank stays.
+            self.assertEqual(read(100, 2)[0], 0.0)
+            self.assertIsNone(read(100, 1)[0])
+            self.assertEqual(read(100, 2)[1], None)  # the edition shows no expected goals on target faced
+            self.assertEqual(listed(100), (13, 14))
+            # The edition shows penalties saved: a zero for each starting keeper, for him alone.
+            self.assertEqual(season(100), (13, 14, 0))
+            self.assertEqual(season(300)[1:], (14, 1))
+            self.assertEqual(season(105)[:2], (0, 0))
+            self.assertEqual(read(105, 2), (None, None))
+        finally:
+            x(blank, (0.2, 1))
+            x(blank, (0.0, 2))
+            x("UPDATE core.player_match_stats SET penalties_saved=NULL WHERE season_id=2025 AND match_id=2 AND player_id=300")
+            refresh_competition_season(self.db, 1)
+        self.assertEqual((listed(100), season(100)), ((14, 14), (14, 0, None)))
 
     def test_partitioned_tables_get_their_own_statistics(self):
         # 056: autovacuum never analyses a partitioned table itself.
