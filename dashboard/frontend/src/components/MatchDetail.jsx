@@ -664,7 +664,7 @@ export default function MatchDetail({ match }) {
                 </button>
               }
             >
-              <XgTimeline match={match} onPlayer={f.setPlayer} />
+              <XgTimeline match={match} onPlayer={f.setPlayer} maxHeight={290} />
             </Card>
             <Card fold title="Les chiffres du match">
               <StatRows match={match} stats={overviewStats(match)} />

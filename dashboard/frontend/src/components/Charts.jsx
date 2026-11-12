@@ -264,7 +264,39 @@ export function ShotMap({ match, teamId = "all", onPlayer = () => {} }) {
     </figure>
   );
 }
-export function XgTimeline({ match, teamId = "all", onPlayer = () => {} }) {
+/** The width of the box a drawing is given, once it is on the page. */
+function useBoxWidth() {
+  const ref = React.useRef(null);
+  const [width, setWidth] = React.useState(0);
+  React.useEffect(() => {
+    const node = ref.current;
+    if (!node || typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(([entry]) =>
+      setWidth(Math.round(entry.contentRect.width)),
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, width];
+}
+
+/**
+ * `maxHeight`: the height its place caps the drawing at (the match overview: 290 px).
+ * A wide box then gets a wider drawing at the same scale, where the 640 px one sat in
+ * the middle of it with a third of the width left empty (1 015 px wide at 1920).
+ */
+export function XgTimeline({
+  match,
+  teamId = "all",
+  onPlayer = () => {},
+  maxHeight,
+}) {
+  const [box, boxWidth] = useBoxWidth();
+  const width =
+      maxHeight && boxWidth
+        ? Math.max(640, Math.round((boxWidth * 280) / maxHeight))
+        : 640,
+    plot = width - 70;
   if (match.coverage?.shots === false || !match.shots?.length)
     return <Empty>Données de tirs indisponibles.</Empty>;
   const selected = match.shots.filter(
@@ -315,10 +347,10 @@ export function XgTimeline({ match, teamId = "all", onPlayer = () => {} }) {
         Math.abs(s.total - match[s.side].xg) > 0.02,
     );
   return (
-    <figure className="chart-figure">
+    <figure className="chart-figure" ref={box}>
       <svg
         className="xg-timeline"
-        viewBox="0 0 640 280"
+        viewBox={`0 0 ${width} 280`}
         role="img"
         aria-label={`xG cumulés · ${match.home.name} et ${match.away.name}`}
       >
@@ -328,7 +360,7 @@ export function XgTimeline({ match, teamId = "all", onPlayer = () => {} }) {
           <g key={value}>
             <line
               x1="44"
-              x2="614"
+              x2={width - 26}
               y1={245 - (value / max) * 220}
               y2={245 - (value / max) * 220}
               stroke="light-dark(#dadadc, #303032)"
@@ -349,7 +381,7 @@ export function XgTimeline({ match, teamId = "all", onPlayer = () => {} }) {
           <text
             key={value}
             className="chart-tick"
-            x={44 + (value / duration) * 570}
+            x={44 + (value / duration) * plot}
             y="268"
             textAnchor="middle"
             fill="light-dark(#666668, #9a9a9c)"
@@ -370,7 +402,7 @@ export function XgTimeline({ match, teamId = "all", onPlayer = () => {} }) {
         {series.map(({ side, events }, i) => (
           <g key={side}>
             <path
-              d={`M44 245 ${events.map((e) => `H${44 + (e.shot.minute / duration) * 570} V${245 - (e.total / max) * 220}`).join(" ")}`}
+              d={`M44 245 ${events.map((e) => `H${44 + (e.shot.minute / duration) * plot} V${245 - (e.total / max) * 220}`).join(" ")}`}
               stroke={colors[side === "home" ? 0 : 1]}
               strokeWidth="2"
               fill="none"
@@ -380,7 +412,7 @@ export function XgTimeline({ match, teamId = "all", onPlayer = () => {} }) {
                 key={e.shot.id || j}
                 match={match}
                 shot={e.shot}
-                x={44 + (e.shot.minute / duration) * 570}
+                x={44 + (e.shot.minute / duration) * plot}
                 y={245 - (e.total / max) * 220}
                 onPlayer={onPlayer}
               />
