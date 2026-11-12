@@ -1095,20 +1095,23 @@ class ModelsTest(unittest.TestCase):
             Store(self.db).season("2024/2025")
         run = x("INSERT INTO agg.power_runs(kind, season_id, method_version, status) VALUES ('players', 2025, 'test', 'published') RETURNING id").fetchone()[0]
         x("INSERT INTO core.players(id, name) SELECT 7700 + g, 'Régulier ' || g FROM generate_series(1, 40) g")
-        x("""INSERT INTO core.players(id, name, birth_date) VALUES (7751, 'Révélation', NULL), (7752, 'Moyen', NULL), (7753, 'Trop peu', NULL),
-             (7754, 'Ancien titulaire', NULL), (7755, 'Vétéran', '1990-05-05'), (7756, 'Jeune', '2006-09-09'), (7757, 'Hors échelle', NULL)""")
+        x("""INSERT INTO core.players(id, name, birth_date) VALUES (7751, 'Révélation', '2004-03-03'), (7752, 'Moyen', '2005-01-01'), (7753, 'Trop peu', '2005-01-01'),
+             (7754, 'Ancien titulaire', '2004-01-01'), (7755, 'Vétéran', '1990-05-05'), (7756, 'Jeune', '2006-09-09'), (7757, 'Hors échelle', '2005-01-01'),
+             (7758, 'Âge inconnu', NULL), (7759, 'Vingt-trois ans', '2002-07-31')""")
         row = "INSERT INTO agg.player_power(season_id, player_id, role, team_id, matches, minutes, total, rate, eligible, linked, run_id) "
         # Forty regulars of the role, their rates from 0.00 to 0.39: the top fifth starts at 0.312.
         x(row + "SELECT 2025, 7700 + g, 'test_role', 1, 30, 2400, 1, (g - 1) / 100.0, true, true, %s FROM generate_series(1, 40) g", (run,))
         x(row + """VALUES (2025, 7751, 'test_role', 1, 8, 600, 1, 0.36, false, true, %(r)s), (2025, 7752, 'test_role', 1, 8, 600, 1, 0.20, false, true, %(r)s),
                           (2025, 7753, 'test_role', 1, 3, 200, 1, 0.38, false, true, %(r)s), (2025, 7754, 'test_role', 1, 8, 600, 1, 0.39, false, true, %(r)s),
                           (2025, 7755, 'test_role', 1, 8, 600, 1, 0.37, false, true, %(r)s), (2025, 7756, 'test_role', 1, 8, 500, 1, 0.35, false, true, %(r)s),
-                          (2025, 7757, 'test_role', 1, 8, 600, 1, 0.39, false, false, %(r)s), (2024, 7754, 'test_role', 1, 30, 2500, 1, 0.30, true, true, %(r)s)""", {"r": run})
+                          (2025, 7757, 'test_role', 1, 8, 600, 1, 0.39, false, false, %(r)s), (2024, 7754, 'test_role', 1, 30, 2500, 1, 0.30, true, true, %(r)s),
+                          (2025, 7758, 'test_role', 1, 8, 600, 1, 0.39, false, true, %(r)s), (2025, 7759, 'test_role', 1, 8, 600, 1, 0.39, false, true, %(r)s)""", {"r": run})
         try:
             candidates, flagged = breakout.refresh(self.db, 2025)
             self.assertEqual(flagged, 2)
             self.assertGreaterEqual(candidates, 5)
-            # Too low a rate, too few minutes, a regular of an earlier season, 26 or older, a league off the scale: not flagged.
+            # Too low a rate, too few minutes, a regular of an earlier season, a league off the scale, an age unknown,
+            # 23 on the first of August or older: not flagged.
             rows = x("SELECT player_id, rank, minutes, percentile, regulars FROM agg.player_breakouts WHERE season_id=2025 ORDER BY rank").fetchall()
             self.assertEqual(rows, [(7751, 1, 600, 90.0, 40), (7756, 2, 500, 87.5, 40)])
             self.assertEqual(self.one("SELECT version, candidates, flagged FROM agg.breakout_runs WHERE season_id=2025"), (breakout.MODEL_VERSION, candidates, 2))
@@ -1123,7 +1126,7 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM agg.breakout_runs")
             x("DELETE FROM agg.player_power WHERE run_id=%s", (run,))
             x("DELETE FROM agg.power_runs WHERE id=%s", (run,))
-            x("DELETE FROM core.players WHERE id BETWEEN 7701 AND 7757")
+            x("DELETE FROM core.players WHERE id BETWEEN 7701 AND 7759")
 
 
 if __name__ == "__main__":
