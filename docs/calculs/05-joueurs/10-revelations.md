@@ -10,9 +10,9 @@ Un joueur est signalé sur une saison quand :
 2. son championnat est **sur l'échelle commune** ;
 3. son **rendement par 90 minutes régularisé** (celui du classement, § 8 de la méthode : il ramène vers la moyenne un joueur qui a peu joué) est **au niveau du meilleur cinquième des titulaires de son rôle** (les joueurs classés du même rôle, au moins 30) ;
 4. il n'a **jamais été titulaire** (classé) lors d'une saison antérieure de la base ;
-5. il a **moins de 26 ans** au 1ᵉʳ août de la saison, quand sa date de naissance est connue. Elle ne l'est que pour une minorité de joueurs : un âge inconnu n'écarte pas.
+5. sa date de naissance est **connue** et il a **moins de 23 ans** au 1ᵉʳ août de la saison. Elle n'est connue que pour une minorité de joueurs (Wikidata, club par club) : un joueur dont l'âge est inconnu n'est pas signalé.
 
-Les règles 4 et 5 écartent les joueurs établis qui ont peu joué (un titulaire blessé a le rendement d'un titulaire). Le « centile » affiché est la part des titulaires de son rôle que le joueur dépasse ; les signalés sont rangés par ce centile.
+Les règles 4 et 5 écartent les joueurs établis qui ont peu joué (un titulaire blessé a le rendement d'un titulaire). La première liste, calculée sans exiger l'âge, s'ouvrait sur un international de retour de blessure et deux joueurs de 35 ans et plus : la base ne détient ni leurs saisons d'avant 2025/2026 ni leur âge. La liste est donc courte aujourd'hui (les 119 joueurs que la règle 3 retient en 2026/2027 n'ont pas tous un âge connu) et s'allonge à mesure que les dates de naissance arrivent. Le « centile » affiché est la part des titulaires de son rôle que le joueur dépasse ; les signalés sont rangés par ce centile.
 
 ## Vérification : les signalés de 2025/2026, un an après
 
@@ -28,7 +28,7 @@ Sur les 4 355 joueurs de 2025/2026 entre 270 et 899 minutes, dans un championnat
 
 Un joueur signalé rejoue plus souvent, plus longtemps, et garde un rendement nettement supérieur, même s'il revient vers la moyenne (0,31 → 0,12). Il ne rejoint **pas** plus souvent un club plus fort : le signal ne dit rien des transferts. Exemples : Rio Ngumoha (Liverpool), 614 minutes en 2025/2026, en compte déjà 488 cette saison ; Charalampos Kostoulas (Brighton), 353 minutes, en compte 731.
 
-Ce que la vérification ne couvre pas : les règles 4 et 5 (2025/2026 est la première saison de la base, et 47 seulement de ces joueurs ont une date de naissance connue et moins de 22 ans) ; elles retirent des joueurs, elles n'en ajoutent pas.
+Ce que la vérification ne couvre pas : les règles 4 et 5 (2025/2026 est la première saison de la base, et 47 seulement de ces joueurs ont une date de naissance connue et moins de 22 ans) ; elles retirent des joueurs, elles n'en ajoutent pas. La comparaison ci-dessus mesure donc la règle 3, sur tous les âges.
 
 ## Où il se lit
 

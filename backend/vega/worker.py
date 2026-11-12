@@ -104,13 +104,14 @@ def due_seasons(conn, now):
     - a season played in the last 30 days while no in-play model exists (inplay.py), after
       the same wait, when there is a forecast model and enough goal events to fit one.
     - a season played in the last 400 days with a published player ranking and no breakout
-      run (breakout.py), after the same wait.
+      run of the present rule (breakout.MODEL_VERSION), after the same wait.
     - a season played in the last 30 days while no return curve exists (returns.py), after
       the same wait, in a base with enough appearances to learn one.
     Only PitchAPI editions count: the models read nothing of the archives and cups (whose
     seasons would otherwise all fall due when they are imported)."""
     from .power import METHOD_VERSION
     from .embedding import MIN_MINUTES as PROFILE_MIN_MINUTES, MIN_PLAYERS as PROFILE_MIN_PLAYERS
+    from .breakout import MODEL_VERSION as BREAKOUT_VERSION
     from .inplay import MIN_FIT as INPLAY_MIN_FIT
     from .xg import MIN_FIT as XG_MIN_FIT
 
@@ -157,7 +158,7 @@ def due_seasons(conn, now):
                        AND EXISTS (SELECT 1 FROM core.match_events g WHERE g.event_type = 'goal' OFFSET %(goals)s LIMIT 1))
                    OR (l.started_at < %(now)s - %(after)s
                        AND bool_or(m.kickoff_at > %(now)s - interval '400 days' AND m.kickoff_at <= %(now)s)
-                       AND NOT EXISTS (SELECT 1 FROM agg.breakout_runs b WHERE b.season_id = m.season_id)
+                       AND NOT EXISTS (SELECT 1 FROM agg.breakout_runs b WHERE b.season_id = m.season_id AND b.version = %(breakout)s)
                        AND EXISTS (SELECT 1 FROM agg.power_runs r
                                    WHERE r.kind = 'players' AND r.season_id = m.season_id AND r.status = 'published'))
                    OR (l.started_at < %(now)s - %(after)s
@@ -165,7 +166,7 @@ def due_seasons(conn, now):
                        AND NOT EXISTS (SELECT 1 FROM agg.return_curves)
                        AND EXISTS (SELECT 1 FROM core.player_match_stats a WHERE a.minutes_played > 0 OFFSET %(appearances)s LIMIT 1))
                ORDER BY 1""",
-            {"now": now, "after": RECOMPUTE_AFTER, "method": METHOD_VERSION, "shots": XG_MIN_FIT, "goals": INPLAY_MIN_FIT, "appearances": RETURNS_MIN_APPEARANCES,
+            {"now": now, "after": RECOMPUTE_AFTER, "method": METHOD_VERSION, "shots": XG_MIN_FIT, "goals": INPLAY_MIN_FIT, "appearances": RETURNS_MIN_APPEARANCES, "breakout": BREAKOUT_VERSION,
              "profiles": PROFILE_MIN_PLAYERS, "profile_minutes": PROFILE_MIN_MINUTES},
         ).fetchall()
     ]

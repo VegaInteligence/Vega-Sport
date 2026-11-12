@@ -225,9 +225,10 @@ function Breakouts({ season }) {
     <section className="rank-board" aria-labelledby="breakouts-title">
       <h2 id="breakouts-title">Révélations</h2>
       <p className="standings-note">
-        Des joueurs qui n’ont pas encore assez joué pour être classés, jamais titulaires une saison entière
-        auparavant, et dont le rendement par 90 minutes dépasse déjà celui de la plupart des titulaires de leur
-        poste. « Devant » : la part de ces titulaires qu’ils dépassent (en %).
+        Des joueurs de moins de 23 ans qui n’ont pas encore assez joué pour être classés, jamais titulaires une
+        saison entière auparavant, et dont le rendement par 90 minutes dépasse déjà celui de la plupart des
+        titulaires de leur poste. « Devant » : la part de ces titulaires qu’ils dépassent (en %). Seuls les
+        joueurs dont la date de naissance est connue y figurent.
       </p>
       <div className="rank-columns">
         <BreakoutColumn entries={shown.slice(0, half)} from={1} />
