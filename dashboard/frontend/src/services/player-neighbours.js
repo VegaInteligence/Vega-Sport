@@ -14,7 +14,10 @@ export function neighbourRows(answer) {
       name: player.name,
       imageUrl: player.image_url || null,
       similarity: Number.isFinite(player.similarity) ? player.similarity : null,
-      context: [player.team?.name, player.position].filter(Boolean).join(" · "),
+      // His Vega score beside the club: the neighbours are close in style, not in level.
+      context: [player.team?.name, player.position, Number.isFinite(player.score) ? `Indice ${Math.round(player.score)}` : null]
+        .filter(Boolean)
+        .join(" · "),
     }));
 }
 
