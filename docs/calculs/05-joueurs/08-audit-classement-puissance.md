@@ -137,6 +137,13 @@ Les coefficients de tour sont ceux de l'annexe A.4 (le tour qui précède les hu
 
 **Limite visible.** Lionel Messi a la plus forte contribution de la Coupe du monde 2026 (+15,4 en 8 matchs) et n'a pas de rang : son club est en MLS, hors de l'échelle commune (8 matchs contre elle pour 10 demandés).
 
+**Vérifié en service** (12 novembre, 16 h 12 UTC, lu dans la base) :
+- les enjeux gardés avec chaque match sont ceux du tableau : Ligue des champions 1,15 en phase de ligue, 1,2075 du barrage aux quarts, 1,265 en demi-finale, 1,3225 en finale ; Coupe du monde 1,30, 1,365, 1,43 et 1,495 pour la finale Espagne – Argentine du 19 juillet 2026, le plus fort enjeu de la base ; finale de Ligue Europa 1,242, de Coupe du monde des clubs 1,265 ; demi-finales de barrage d'un championnat 1,10 ;
+- le total de chaque joueur est bien la somme, sur ses matchs, de l'enjeu × la contribution (plus grand écart : 0,000006) ;
+- course 2025/2026 : Olise 99,4, Mbappé 99,2, Vitinha 99,2, Kane 98,2, Dembélé 98,2, Yamal 97,8 ; 10 507 joueurs classés, dont 698 de clubs brésiliens ; Kvaratskhelia 56ᵉ de l'ensemble, Doué 70ᵉ ; 3 288 matchs-joueurs de Coupe du monde pour 1 039 joueurs ;
+- course 2026/2027 : Yamal 95,4, Mbappé 93,4, Olise 92,9, Vitinha 92,7 ; 3 809 classés, dont 225 de clubs brésiliens (Léo Pereira 156ᵉ, sans rang la veille).
+- Lionel Messi a le plus haut score de 2025/2026 (99,6) et pas de rang : un score hors de l'échelle commune ne se compare pas aux autres.
+
 ## Ce que la version 2 ne fait pas
 
 - **L'enjeu du match** : fait par la version 3, ci-dessus.
