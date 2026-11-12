@@ -59,6 +59,6 @@ test("the peer median remains available when the player's own value is missing",
   };
   assert.deepEqual(
     cohortMedianPercentiles(["duelsWon", "xg", "xa"], profile, cohorts),
-    { duelsWon: 50 },
+    { duelsWon: 50, xa: 50 },
   );
 });

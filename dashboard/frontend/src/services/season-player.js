@@ -75,9 +75,6 @@ const SECTION_ORDER = {
   O: ["finishing", "creation", "passing", "defence"],
   F: ["finishing", "creation", "passing", "defence"],
 };
-// PitchAPI omits zero xA observations, so its reported values alone cannot
-// form an unbiased distribution across all players.
-const UNRANKED = new Set(["xa"]);
 
 export function seasonSections(group) {
   return (SECTION_ORDER[group] || SECTION_ORDER.F).map((id) => ({
@@ -356,7 +353,6 @@ export function createSeasonPeerBuilder(rows, target) {
         for (const key of keys) {
           const metric = seasonMetric(profile, key, "per90");
           if (
-            !UNRANKED.has(key) &&
             isNumber(metric.value) &&
             metric.minutes >= MIN_SEASON_MINUTES &&
             metric.minutes === profile.minutes
@@ -371,7 +367,6 @@ export function createSeasonPeerBuilder(rows, target) {
         metrics[key] = {
           peers: distribution.length,
           percentile:
-            !UNRANKED.has(key) &&
             own.minutes >= MIN_SEASON_MINUTES &&
             own.minutes === target.minutes &&
             distribution.length >= MIN_SEASON_PEERS

@@ -34,7 +34,7 @@ Dans `Gaps`, `self.centiles[key] ?? 0` : si un club n'a pas de centile sur un ax
 Au niveau d'un match, `xg` et `shotsOnTarget` valent 0 quand le joueur n'a pas tiré. Au niveau saison, la valeur reste absente ; or un centile saison exige une mesure observée sur **tous** les matchs. Un joueur qui a eu un seul match sans tir (fréquent chez les défenseurs et milieux défensifs) perd son centile saison de xG et de tirs cadrés.
 → [shared/player-profile.js](../../../dashboard/shared/player-profile.js#L57) vs [season-player.js](../../../dashboard/frontend/src/services/season-player.js#L203)
 
-**9. Les grosses occasions créées sont classées au niveau saison malgré leurs zéros omis.**
+**9. Les grosses occasions créées sont classées au niveau saison malgré leurs zéros omis.** *(levé le 12 novembre 2026 : un vide vaut zéro là où le fournisseur publie la mesure, voir [Valeurs absentes](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md) ; le xA est classé à la même condition)*
 Le code indique que le fournisseur ne publie jamais 0 pour le xA ni pour les grosses occasions. Le xA est exclu des classements, mais `bigChancesCreated` reste classable (`rankable: key !== "xa"`) et figure dans la pizza des milieux offensifs et attaquants. Avec la règle de couverture complète, seuls les joueurs ayant une valeur à **chaque** match entrent dans la distribution : le centile compare un groupe très sélectionné, et la plupart des joueurs n'en ont pas.
 → [scouting.js](../../../dashboard/frontend/src/services/scouting.js#L47), [PlayerScoutOverview.jsx](../../../dashboard/frontend/src/components/PlayerScoutOverview.jsx#L146)
 
