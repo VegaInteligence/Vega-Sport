@@ -13,6 +13,10 @@
  * axes, each with a similarity from 100 (the same profile) to 0 (as far as his median
  * distance to the season's other players).
  *
+ * GET /api/teams/{id}/substitutions?season= — what followed the club's first change of each
+ * finished match (082): the points the score then would have given against the points
+ * taken, by the state of the score at that moment, and its most decisive substitutes.
+ *
  * Differences with the legacy read: a field without a value is omitted; a competition
  * carries no `is_free` (a plan of the source, not a fact of the competition); team
  * profiles are served (legacy: none was kept).
@@ -29,6 +33,37 @@ const SIMILAR = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/similar$/;
 const SIMILAR_COUNT = 8;
 const DIMENSIONS = 10;
 const SQUARES = Array.from({ length: DIMENSIONS }, (_, i) => `power(o.e${i + 1}-me.e${i + 1},2)`).join("+");
+
+const CHANGES = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/substitutions$/;
+const SUBSTITUTES_SHOWN = 3;
+const pointsOf = (scored, conceded) => (scored > conceded ? 3 : scored === conceded ? 1 : 0);
+
+/**
+ * What followed a club's first change of each match: the points the score at that moment
+ * would have given, the points taken, and the same split by the state of the score then.
+ */
+export function changeImpact(rows) {
+  const state = () => ({ matches: 0, pointsThen: 0, points: 0 });
+  const out = { matches: 0, pointsThen: 0, points: 0, gained: 0, minute: null, leading: state(), level: state(), behind: state() };
+  let minutes = 0, timed = 0;
+  for (const r of rows) {
+    if (!r.complete) continue;
+    const then = pointsOf(r.goals_for_then, r.goals_against_then), final = pointsOf(r.goals_for, r.goals_against);
+    const bucket = out[then === 3 ? "leading" : then === 1 ? "level" : "behind"];
+    for (const target of [out, bucket]) {
+      target.matches++;
+      target.pointsThen += then;
+      target.points += final;
+    }
+    if (Number.isFinite(r.change_minute)) {
+      minutes += r.change_minute;
+      timed++;
+    }
+  }
+  out.gained = out.points - out.pointsThen;
+  out.minute = timed ? Math.round(minutes / timed) : null;
+  return out;
+}
 
 /** 100 for the same profile, 0 from the median distance between the player and the others. */
 export const similarity = (distance, median) => (median > 0 ? Math.max(0, Math.round(100 * (1 - distance / median))) : 0);
@@ -57,6 +92,32 @@ export function createProfileRoute(read) {
       return respond(req, {
         id: partners[1], season,
         partners: rows.map((r) => put({ id: r.partner_id, name: r.partner_name, given: r.given, received: r.received, matches: r.matches }, "image_url", r.partner_image_url)),
+      });
+    }
+    const changes = path.match(CHANGES);
+    if (changes) {
+      validateParams(params, ["season"]);
+      const season = params.get("season");
+      if (!/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
+      const key = [changes[1], season];
+      const scope = "season_id=(SELECT k.season_id FROM api.season_keys k WHERE k.season=$2) AND team_key=api.internal_id('team',$1)";
+      const [matches, substitutes] = await Promise.all([
+        read(`SELECT change_minute, goals_for_then, goals_against_then, goals_for, goals_against, complete FROM api.team_change_matches WHERE ${scope}`, key),
+        read(
+          `SELECT api.public_id('player', s.player_key) AS id, p.name, p.image_url, count(*)::int AS entries, sum(s.minutes)::int AS minutes,
+                  sum(s.goals)::int AS goals, sum(s.assists)::int AS assists
+           FROM api.team_substitute_matches s JOIN api.player_profiles p ON p.player_id = s.player_key
+           WHERE ${scope.replace(/season_id/, "s.season_id").replace(/team_key/, "s.team_key")}
+           GROUP BY s.player_key, p.name, p.image_url HAVING sum(s.goals) + sum(s.assists) > 0
+           ORDER BY sum(s.goals) + sum(s.assists) DESC, sum(s.goals) DESC, sum(s.minutes), p.name LIMIT ${SUBSTITUTES_SHOWN}`,
+          key,
+        ),
+      ]);
+      const impact = changeImpact(matches);
+      if (!impact.matches) reject(404, "Donnée indisponible.");
+      return respond(req, {
+        id: changes[1], season, ...impact,
+        substitutes: substitutes.map((r) => put({ id: r.id, name: r.name, entries: r.entries, minutes: r.minutes, goals: r.goals, assists: r.assists }, "image_url", r.image_url)),
       });
     }
     const similar = path.match(SIMILAR);

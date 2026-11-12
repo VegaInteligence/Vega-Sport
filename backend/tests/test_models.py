@@ -919,6 +919,36 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM core.competition_seasons WHERE id = 990")
             x("DELETE FROM core.competitions WHERE id = 990")
 
+    def test_zzzzzzz_a_clubs_changes_and_its_substitutes_are_read_per_match(self):
+        # 082: the two views behind /api/teams/{id}/substitutions, on events written here.
+        x = self.db.execute
+        match, home, away, hs, as_ = self.one("""SELECT id, home_team_id, away_team_id, home_score, away_score FROM core.matches
+                                               WHERE season_id=2025 AND status='finished' AND home_score = 2 AND away_score = 1 ORDER BY id LIMIT 1""")
+        x("INSERT INTO core.players(id, name) VALUES (7900, 'Joker Test')")
+        try:
+            # A goal event carries the score before it, as the source writes it.
+            # 1-0, the home side changes (leading); 1-1, the away side changes (level); 2-1 at the end.
+            x("DELETE FROM core.match_events WHERE season_id=2025 AND match_id=%s AND event_type IN ('goal', 'substitution')", (match,))
+            x("""INSERT INTO core.match_events(season_id, match_id, team_id, seq, event_type, minute, score_home, score_away) VALUES
+                 (2025, %(m)s, %(h)s, 501, 'goal', 20, 0, 0), (2025, %(m)s, %(h)s, 502, 'substitution', 58, NULL, NULL),
+                 (2025, %(m)s, %(a)s, 503, 'goal', 61, 1, 0), (2025, %(m)s, %(a)s, 504, 'substitution', 66, NULL, NULL),
+                 (2025, %(m)s, %(h)s, 505, 'substitution', 70, NULL, NULL), (2025, %(m)s, %(h)s, 506, 'goal', 88, 1, 1)""", {"m": match, "h": home, "a": away})
+            x("INSERT INTO core.lineup_players(season_id, match_id, team_id, player_id, is_starter) VALUES (2025, %s, %s, 7900, false)", (match, home))
+            x("INSERT INTO core.player_match_stats(season_id, match_id, team_id, player_id, minutes_played, goals, assists) VALUES (2025, %s, %s, 7900, 32, 1, 0)", (match, home))
+            rows = x("""SELECT team_key, change_minute, goals_for_then, goals_against_then, goals_for, goals_against, complete
+                        FROM api.team_change_matches WHERE season_id=2025 AND match_key=%s ORDER BY change_minute""", (match,)).fetchall()
+            self.assertEqual(rows, [(home, 58, 1, 0, 2, 1, True), (away, 66, 1, 1, 1, 2, True)])
+            self.assertEqual(x("SELECT team_key, player_key, minutes, goals, assists FROM api.team_substitute_matches WHERE season_id=2025 AND player_key=7900").fetchall(),
+                             [(home, 7900, 32, 1, 0)])
+            # A timeline short of a goal is marked incomplete.
+            x("DELETE FROM core.match_events WHERE season_id=2025 AND match_id=%s AND seq=506", (match,))
+            self.assertEqual([r[0] for r in x("SELECT complete FROM api.team_change_matches WHERE season_id=2025 AND match_key=%s", (match,)).fetchall()], [False, False])
+        finally:
+            x("DELETE FROM core.match_events WHERE season_id=2025 AND match_id=%s AND seq >= 500", (match,))
+            x("DELETE FROM core.player_match_stats WHERE player_id=7900")
+            x("DELETE FROM core.lineup_players WHERE player_id=7900")
+            x("DELETE FROM core.players WHERE id=7900")
+
 
 if __name__ == "__main__":
     unittest.main()

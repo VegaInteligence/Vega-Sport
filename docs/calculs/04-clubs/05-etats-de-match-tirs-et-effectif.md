@@ -23,6 +23,18 @@ Un club dont la différence chute en seconde période, ou qui prend moins de poi
 
 Exemple : mené 0-1 puis vainqueur 2-1 → 3 points « pris après avoir été mené ». Mené 1-0 puis 1-1 → 2 points « perdus après avoir mené ».
 
+## Après les changements
+
+Sous les états de match, la carte « Après les changements » lit `/api/teams/{id}/substitutions` (vues `api.team_change_matches` et `api.team_substitute_matches`), toutes compétitions de la saison :
+
+- pour chaque match terminé du club où la source a noté un remplacement, le **score au premier remplacement du club** : c'est le score dont part le but suivant (la source écrit sur chaque but le score d'avant ce but), ou le score final si aucun but ne suit ;
+- **points au premier changement** : 3, 1 ou 0 selon ce score, additionnés ; **points à la fin** : ceux réellement pris sur ces matchs ; la différence est ce qui a été gagné ou perdu ensuite ;
+- les mêmes comptes selon que le club **menait**, était à **égalité** ou était **mené** à ce moment ;
+- la minute moyenne du premier changement ;
+- les **remplaçants décisifs** : les trois joueurs entrés en jeu (non titulaires de la composition, avec des minutes) qui comptent le plus de buts et de passes décisives sur ces entrées.
+
+Un match n'est retenu que s'il a autant d'événements de but que de buts au score final. La carte dit ce qui a suivi les changements, pas ce qu'ils ont causé : un score évolue aussi sans eux.
+
 ## Buts par tranche de 15 minutes
 
 Calculé en SQL par l'annuaire ([clubs.mjs](../../../backend/api/src/routes/clubs.mjs)) et dans `clubSummary` ([club-analysis.js](../../../dashboard/frontend/src/services/club-analysis.js#L242)) :
