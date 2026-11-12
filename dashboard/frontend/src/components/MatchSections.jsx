@@ -239,6 +239,7 @@ export function normalizeShots(payload) {
       y: s.y,
       xg: s.expected_goals,
       xgot: s.expected_goals_on_target,
+      vegaXg: s.expected_goals_vega,
       minute: s.minute,
       type: s.is_own_goal ? "OwnGoal" : s.event_type,
       isGoal:
@@ -255,6 +256,8 @@ export function normalizeShots(payload) {
 export function Shots({ match, payload, onPlayer = () => {} }) {
   const shots = normalizeShots(payload),
     normalized = { ...match, shots };
+  // Vega's own reading of each chance, when the base has scored the match's shots.
+  const withVega = shots.some((s) => isNumber(s.vegaXg));
   return (
     <>
       <div className="data-chart-grid">
@@ -269,6 +272,11 @@ export function Shots({ match, payload, onPlayer = () => {} }) {
               <th>Joueur</th>
               <th>Événement</th>
               <th>xG</th>
+              {withVega && (
+                <th title="Le xG de Vega : la chance de but d’après la distance, l’angle, la partie du corps et la situation du tir, sans la position des défenseurs ni du gardien.">
+                  xG Vega
+                </th>
+              )}
               <th>xGOT</th>
             </tr>
           </thead>
@@ -279,6 +287,7 @@ export function Shots({ match, payload, onPlayer = () => {} }) {
                 <td>{s.playerName}</td>
                 <td>{s.isOwnGoal ? "CSC" : s.type}</td>
                 <td>{number(s.xg, 3)}</td>
+                {withVega && <td>{number(s.vegaXg, 3)}</td>}
                 <td>{number(s.xgot, 3)}</td>
               </tr>
             ))}

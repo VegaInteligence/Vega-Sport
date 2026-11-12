@@ -432,6 +432,14 @@ class WorkerTest(unittest.TestCase):
         x("""INSERT INTO agg.match_forecasts(match_id,season_id,home_win,draw,away_win,home_goals,away_goals,likely_home,likely_away,home_elo,away_elo,model_id)
              VALUES (910,%s,0.5,0.25,0.25,1.5,1.1,1,1,1500,1500,%s)""", (season, model))
         self.assertEqual(due_seasons(self.db, noon), [])
+        # Shots without Vega expected goals: due once a model exists (or could be fitted), not after.
+        x("INSERT INTO core.shots(season_id,match_id,shot_no,x,y,outcome) SELECT season_id, id, 1, 95, 34, 'miss' FROM core.matches WHERE id=910")
+        self.assertEqual(due_seasons(self.db, noon), [])  # one shot is no base to fit a model on
+        terms = "intercept,angle,distance,distance_sq,angle_distance,header,other_body,from_corner,set_piece,fast_break,free_kick,throw_in,individual_play,header_distance"
+        fitted = x(f"INSERT INTO agg.xg_models(version,shots,goals,{terms}) VALUES ('xg-v1',1000,100,{','.join(['0'] * 14)}) RETURNING id").fetchone()[0]
+        self.assertEqual(due_seasons(self.db, noon), [season])
+        x("INSERT INTO agg.shot_xg(season_id,match_id,shot_no,xg,model_id) VALUES (%s,910,1,0.1,%s)", (season, fitted))
+        self.assertEqual(due_seasons(self.db, noon), [])
 
     def due_season(self):
         """A season with a finished match and no models yet: due at once."""

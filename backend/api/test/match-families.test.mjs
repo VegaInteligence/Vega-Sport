@@ -102,3 +102,12 @@ test("unknown matches, families and parameters", { skip }, async () => {
   const first = await get(BASE + "/events");
   assert.equal((await get(BASE + "/events", { "if-none-match": first.response.headers.get("etag") })).response.status, 304);
 });
+
+test("a shot carries Vega's own expected goals when the base has scored it", async () => {
+  const { shotsBody } = await import("../src/match-families.mjs");
+  const row = { period: "first_half", team_id: "t_aaaaa1", id: "s1", x: 94, y: 30, minute: 12, xg: 0.21, xgot: 0.4, vega_xg: 0.18, outcome: "saved", is_on_target: true };
+  const body = shotsBody("m_aaaaa1", [row, { ...row, id: "s2", vega_xg: null }]);
+  const [scored, unscored] = body.periods[0].shots;
+  assert.deepEqual([scored.expected_goals, scored.expected_goals_vega, scored.expected_goals_on_target], [0.21, 0.18, 0.4]);
+  assert.equal("expected_goals_vega" in unscored, false);
+});

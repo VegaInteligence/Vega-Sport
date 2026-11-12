@@ -325,7 +325,7 @@ export function shotsBody(mid, rows) {
     if (s.player_id) shot.player = person(s.player_id, s.player_name, s.player_image_url);
     if (s.keeper_id) shot.keeper = person(s.keeper_id, s.keeper_name, s.keeper_image_url);
     for (const [k, c] of [["x", "x"], ["y", "y"], ["minute", "minute"], ["minute_added", "minute_added"], ["expected_goals", "xg"],
-      ["expected_goals_on_target", "xgot"], ["goal_crossed_y", "goal_crossed_y"], ["goal_crossed_z", "goal_crossed_z"], ["blocked_x", "blocked_x"],
+      ["expected_goals_on_target", "xgot"], ["expected_goals_vega", "vega_xg"], ["goal_crossed_y", "goal_crossed_y"], ["goal_crossed_z", "goal_crossed_z"], ["blocked_x", "blocked_x"],
       ["blocked_y", "blocked_y"], ["is_on_target", "is_on_target"], ["is_inside_box", "is_inside_box"], ["is_blocked", "is_blocked"],
       ["is_own_goal", "is_own_goal"], ["is_saved_off_line", "is_saved_off_line"]])
       put(shot, k, s[c]);
