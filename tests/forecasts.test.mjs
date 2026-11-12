@@ -32,6 +32,8 @@ test("a match's probabilities are drawn as three stacked areas with a marker at 
   assert.ok(chart.paths.home.includes("L700,59.2L700,200"));
   assert.ok(chart.paths.away.includes("30,24") && chart.paths.away.endsWith("Z"));
   assert.deepEqual(chart.goals, [{ x: 253.3, side: "home", minute: 30, label: "1–0" }]);
+  // What the goal changed for the side that scored: its chances the minute before, and at the goal.
+  assert.deepEqual(chart.swings, [{ minute: 30, label: "1–0", side: "home", from: 0.5, to: 0.8 }]);
   assert.deepEqual(chart.reds, [{ x: 551.1, side: "away", minute: 70 }]);
   assert.deepEqual([chart.start.home, chart.live, chart.ticks.length], [0.5, null, 7]);
   // A match in play ends on its present state.

@@ -58,7 +58,7 @@ La fiche d'un match joué ou en cours trace « Probabilité de victoire » : les
 - une équipe réduite à dix marque `down` fois son rythme et son adversaire `up` fois, les deux mesurés sur ce que les équipes marquent après un carton rouge, rapportés à ce qu'elles marquent à onze contre onze ;
 - le score final est le score du moment plus ces buts ; les petits scores finaux gardent la correction du pronostic, si bien qu'au coup d'envoi les trois probabilités sont celles du pronostic.
 
-Les buts sont comptés pour l'équipe à qui la source les attribue. Le score que la source écrit sur un événement de but n'est pas lu : c'est celui d'avant le but dans certains matchs, d'après dans d'autres. Un match n'entre dans l'ajustement, et n'a de courbe, que si ses événements de but donnent son score final. Le dernier point d'un match terminé est son résultat. Pour un match en cours, l'heure est la dernière minute que la source a mesurée (momentum ou événement).
+Les buts sont comptés pour l'équipe à qui la source les attribue. Le score que la source écrit sur un événement de but n'est pas lu : c'est celui d'avant le but dans certains matchs, d'après dans d'autres. Un match n'entre dans l'ajustement, et n'a de courbe, que si ses événements de but donnent son score final. Le dernier point d'un match terminé est son résultat. À côté du graphique, chaque but est suivi de ce qu'il a changé : les chances de victoire de l'équipe qui marque, la minute d'avant et à la minute du but. Pour un match en cours, l'heure est la dernière minute que la source a mesurée (momentum ou événement).
 
 ### Vérification sur des matchs non vus (12 novembre 2026)
 

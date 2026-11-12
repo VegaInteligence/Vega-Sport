@@ -18,6 +18,7 @@ export default function MatchWinProbability({ match }) {
   const shares = (point) => `${home} ${share(point.home)} · nul ${share(point.draw)} · ${away} ${share(point.away)}`;
   return (
     <Card title="Probabilité de victoire" className="match-overview-wide">
+      <div className="win-probability">
       <figure className="chart-figure">
         <svg
           viewBox={`0 0 ${frame.width} ${frame.height}`}
@@ -59,6 +60,21 @@ export default function MatchWinProbability({ match }) {
           lui-même.
         </figcaption>
       </figure>
+      {chart.swings.length > 0 && (
+        <ol className="win-probability-swings" aria-label="Ce que chaque but a changé">
+          {chart.swings.map((swing, i) => (
+            <li key={i}>
+              <strong>
+                {swing.minute}′ · {swing.label}
+              </strong>
+              <span>
+                {swing.side === "home" ? home : away} : {share(swing.from)} → {share(swing.to)} de chances de victoire
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+      </div>
     </Card>
   );
 }

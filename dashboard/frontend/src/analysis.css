@@ -1339,6 +1339,39 @@ select optgroup {
 .match-overview-wide {
   grid-column: 1 / -1;
 }
+/* The chart keeps a readable size; what each goal changed stands beside it, or under it on a phone. */
+.win-probability {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px 28px;
+}
+.win-probability .chart-figure {
+  flex: 1 1 520px;
+  min-width: 0;
+  max-width: 860px;
+}
+.win-probability-swings {
+  display: grid;
+  flex: 1 1 220px;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.win-probability-swings li {
+  display: grid;
+  gap: 2px;
+}
+.win-probability-swings strong {
+  color: var(--ink-strong);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.win-probability-swings span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
 .match-detail .card {
   border-color: var(--border);
   background: var(--surface);
