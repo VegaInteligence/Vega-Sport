@@ -29,23 +29,118 @@ class EloTest(unittest.TestCase):
         self.assertAlmostEqual(rows[0][6], 0.5)  # neutral ground: no home advantage
 
 
+class LeagueLevelTest(unittest.TestCase):
+    # (match, season, kickoff, home, away, home score, away score, neutral, day, competition, complementary, international)
+    @staticmethod
+    def match(i, home, away, hs, as_, competition, *, season=2025, complementary=False, international=False, day=None):
+        from datetime import date, timedelta
+
+        return (i, season, None, home, away, hs, as_, True, day or date(2025, 8, 1) + timedelta(days=i), competition, complementary, international)
+
+    def season(self):
+        # Two leagues of two clubs, and a European competition where the first league's clubs beat the second's.
+        m, rows, i = self.match, [], 0
+        for _ in range(6):
+            for home, away, competition in (("A", "B", 1), ("B", "A", 1), ("C", "D", 2), ("D", "C", 2)):
+                i += 1
+                rows.append(m(i, home, away, 1, 1, competition))
+        for _ in range(12):
+            for home, away in (("A", "C"), ("D", "B")):
+                i += 1
+                rows.append(m(i, home, away, *((2, 0) if home == "A" else (0, 2)), 9, international=True))
+        return rows
+
+    def test_a_club_s_league_is_the_domestic_one_of_its_first_season(self):
+        rows = self.season() + [self.match(900, "A", "C", 1, 0, 2, season=2026)]
+        self.assertEqual(power.home_leagues(rows), {"A": 1, "B": 1, "C": 2, "D": 2})
+
+    def test_complementary_matches_copy_no_other(self):
+        from datetime import date
+
+        m = self.match
+        rows = [
+            m(1, "A", "B", 1, 0, 1, day=date(2025, 9, 1)),
+            m(2, "A", "B", 1, 0, 7, complementary=True, day=date(2025, 9, 2)),  # the league match, in another source
+            m(3, "A", "C", 2, 1, 8, complementary=True, day=date(2025, 10, 1)),  # a cup match
+            m(4, "A", "C", 2, 1, 8, complementary=True, day=date(2025, 10, 2)),  # the same, from a second cup source
+            m(5, "A", "B", 0, 0, 8, complementary=True, day=date(2025, 12, 1)),  # another meeting, in the cup
+        ]
+        self.assertEqual([r[0] for r in power.elo_matches(rows)], [1, 3, 5])
+
+    def test_leagues_enter_at_the_level_their_results_against_each_other_give(self):
+        rows = self.season()
+        leagues = power.home_leagues(rows)
+        pairs = power.league_links(rows, leagues)
+        self.assertEqual((dict(pairs), dict(power.links_of(pairs))), ({(1, 2): 24}, {1: 24, 2: 24}))
+        levels, rounds, move = power.league_levels(rows, leagues)
+        self.assertGreater(levels[1], 1500 + 40)
+        self.assertAlmostEqual(levels[1] + levels[2], 3000, places=3)  # what one league takes, the other gives
+        self.assertLess(move, power.SEED_TOLERANCE)
+        self.assertLess(rounds, power.SEED_ROUNDS)
+        # The clubs start there: before its first match, a club of the first league stands above one of the second.
+        first = {}
+        for _, team, _, _, before, *_ in power.elo_updates(rows, seeds=levels, leagues=leagues):
+            first.setdefault(team, before)
+        self.assertEqual((first["A"], first["C"]), (levels[1], levels[2]))
+        # Without a match between them, the two leagues keep 1500: an Elo only moves points inside a league.
+        alone = [r for r in rows if not r[11]]
+        self.assertEqual(power.league_levels(alone, leagues)[0], {1: 1500.0, 2: 1500.0})
+        # Few matches against the others: the level is held towards 1500.
+        few = alone + [r for r in rows if r[11]][:4]
+        held = power.league_levels(few, leagues)[0]
+        free = power.league_levels(few, leagues, prior=0)[0]
+        self.assertTrue(1500 < held[1] < free[1])
+
+    def test_the_common_scale_grows_from_the_most_connected_league(self):
+        # 1 and 2 met often; 3 met each of them a little (enough together); 4 and 5 only each other; 6 nobody.
+        pairs = {(1, 2): 40, (1, 3): 6, (2, 3): 5, (4, 5): 30, (3, 4): 2}
+        self.assertEqual(power.common_scale(pairs), {1, 2, 3})
+        self.assertEqual(power.common_scale({}), set())
+        self.assertEqual(power.common_scale({(1, 2): 3}), set())
+
+
 class RoleTest(unittest.TestCase):
     def test_slots(self):
-        cases = {11: "goalkeeper", 0: "goalkeeper", 32: "full_back", 38: "full_back", 34: "centre_back", 35: "centre_back", 51: "full_back",
-                 59: "full_back", 64: "defensive_midfielder", 55: "defensive_midfielder", 73: "central_midfielder", 83: "winger", 85: "winger",
-                 115: "centre_forward", 104: "centre_forward", 92: "winger", 1: None, 3: None}
-        for slot, role in cases.items():
-            self.assertEqual(power.ROLE_OF_SLOT(slot), role, slot)
+        cases = [
+            # (formation, slot, the team's highest slot, role)
+            ("4-2-3-1", 11, 115, "goalkeeper"), ("4-2-3-1", 32, 115, "full_back"), ("4-2-3-1", 34, 115, "centre_back"),
+            ("4-2-3-1", 64, 115, "defensive_midfielder"), ("4-2-3-1", 83, 115, "winger"), ("4-2-3-1", 85, 115, "winger"),
+            ("4-2-3-1", 115, 115, "centre_forward"),
+            # The wide forwards of a front three are wingers; those of a front four's centre are strikers.
+            ("4-3-3", 103, 107, "winger"), ("4-3-3", 105, 107, "centre_forward"), ("4-3-3", 107, 107, "winger"),
+            ("4-2-4", 103, 107, "centre_forward"), ("4-2-4", 92, 107, "winger"),
+            ("4-3-3", 73, 107, "central_midfielder"), ("4-3-3", 75, 107, "central_midfielder"),
+            # The wide players of a midfield line: wing-backs behind three defenders, wingers otherwise.
+            ("4-4-2", 72, 106, "winger"), ("4-4-2", 74, 106, "central_midfielder"), ("4-4-2", 104, 106, "centre_forward"),
+            ("3-4-3", 72, 107, "full_back"), ("3-4-3", 33, 107, "centre_back"), ("3-4-2-1", 62, 105, "full_back"),
+            ("3-4-2-1", 64, 105, "defensive_midfielder"), ("3-4-2-1", 84, 105, "winger"), ("3-5-2", 71, 106, "full_back"),
+            ("4-5-1", 71, 115, "winger"), ("5-3-2", 51, 106, "full_back"), ("5-2-3", 41, 105, "full_back"),
+            # Behind a single holding midfielder the row above is the midfield.
+            ("4-1-4-1", 65, 115, "defensive_midfielder"), ("4-1-4-1", 82, 115, "winger"), ("4-1-4-1", 84, 115, "central_midfielder"),
+            ("3-1-4-2", 82, 106, "full_back"), ("4-3-2-1", 63, 115, "central_midfielder"), ("4-3-2-1", 65, 115, "defensive_midfielder"),
+            # A lone man in the 90s row: the striker when nobody stands above him, a playmaker otherwise.
+            ("4-4-1-1", 95, 115, "winger"), ("5-2-2-1", 95, 95, "centre_forward"),
+            # A substitute's line code is no slot; a formation that is none leaves the slot's own reading.
+            ("4-3-3", 1, 107, None), ("4-3-3", 3, 107, None), (None, 105, 105, "centre_forward"), ("343d", 34, 105, "centre_back"),
+        ]
+        for formation, slot, top, role in cases:
+            self.assertEqual(power.role_of(formation, slot, top), role, (formation, slot))
 
     def test_substitutes_take_their_most_played_role(self):
         rows = [
-            {"match_id": 1, "player_id": 7, "position_id": 115, "minutes_played": 90.0},
-            {"match_id": 2, "player_id": 7, "position_id": 3, "minutes_played": 20.0},
-            {"match_id": 2, "player_id": 8, "position_id": 2, "minutes_played": 30.0},
-            {"match_id": 2, "player_id": 9, "position_id": None, "minutes_played": 30.0},
+            {"match_id": 1, "team_id": 5, "player_id": 7, "position_id": 115, "formation": "4-2-3-1", "minutes_played": 90.0},
+            {"match_id": 2, "team_id": 5, "player_id": 7, "position_id": 3, "formation": "4-2-3-1", "minutes_played": 20.0},
+            {"match_id": 2, "team_id": 5, "player_id": 8, "position_id": 2, "formation": "4-2-3-1", "minutes_played": 30.0},
+            {"match_id": 2, "team_id": 5, "player_id": 9, "position_id": None, "formation": "4-2-3-1", "minutes_played": 30.0},
         ]
         out = {(r["match_id"], r["player_id"]): r["role"] for r in power.assign_roles(rows)}
         self.assertEqual(out, {(1, 7): "centre_forward", (2, 7): "centre_forward", (2, 8): "central_midfielder"})
+
+    def test_a_team_s_league_of_the_year(self):
+        leagues = {1: (True, True), 2: (True, False), 3: (False, False)}
+        rows = [{"team_id": "A", "competition_id": 1}] * 3 + [{"team_id": "A", "competition_id": 9}] * 5  # 9: a European competition
+        rows += [{"team_id": "B", "competition_id": 2}] * 2 + [{"team_id": "C", "competition_id": 3}] * 2 + [{"team_id": "D", "competition_id": 9}]
+        self.assertEqual(power.team_leagues(rows, leagues), ({"A", "B"}, {"A"}))
 
 
 class ExpectationTest(unittest.TestCase):
@@ -115,19 +210,73 @@ class ScoreTest(unittest.TestCase):
 
     def test_season_score_regularises_and_ranks_within_the_role(self):
         contributions = {
-            1: [("winger", 900, 3.0, 10), ("winger", 900, 1.0, 10)],
-            2: [("winger", 1800, 2.0, 11)],
-            3: [("winger", 200, 9.0, 11)],  # not eligible: under 900 minutes
-            4: [("centre_back", 1000, -1.0, 12)],
+            1: [("winger", 900, 3.0, 10, None), ("winger", 900, 1.0, 10, None)],
+            2: [("winger", 1800, 2.0, 11, None)],
+            3: [("winger", 200, 9.0, 11, None)],  # not eligible: under 900 minutes
+            4: [("centre_back", 1000, -1.0, 12, None)],
         }
-        out = power.season_scores(contributions)
+        out, settings = power.season_scores(contributions)
+        self.assertEqual(settings, {"eligibility": 900.0, "level_weight": 0.0})  # no club strength known: no level
         self.assertAlmostEqual(out[1]["rate"], 90 * 4.0 / (1800 + 450))
         self.assertFalse(out[3]["eligible"])
         self.assertNotIn("score", out[3])
         self.assertEqual((out[1]["total_percentile"], out[2]["total_percentile"]), (75.0, 25.0))
-        self.assertAlmostEqual(out[1]["score"], 0.75 * 75 + 0.25 * 75)
-        self.assertEqual(out[4]["score"], 50.0)  # alone in his role
+        # Two players of a role stand one standard deviation either side of its mean on both measures.
+        self.assertAlmostEqual(out[1]["index"], 1.0)
+        self.assertAlmostEqual(out[2]["index"], -1.0)
+        self.assertAlmostEqual(out[1]["score"], 100 / (1 + 10 ** (-1 / 4)))
+        self.assertEqual((out[4]["index"], out[4]["score"]), (0.0, 50.0))  # alone in his role
         self.assertEqual([out[p]["rank"] for p in (1, 4, 2)], [1, 2, 3])
+        self.assertEqual([out[p]["role_rank"] for p in (1, 2, 4)], [1, 2, 1])
+
+    def test_a_young_year_asks_for_half_the_most_used_player_s_minutes(self):
+        self.assertEqual(power.eligibility_minutes([3000, 1200]), 900)
+        self.assertEqual(power.eligibility_minutes([1000, 300]), 500)
+        self.assertEqual(power.eligibility_minutes([]), 0)
+        contributions = {1: [("winger", 600, 1.0, 10, None)], 2: [("winger", 320, 2.0, 11, None)], 3: [("winger", 200, 3.0, 11, None)]}
+        out, settings = power.season_scores(contributions)
+        self.assertEqual(settings["eligibility"], 300)
+        self.assertEqual([out[p]["eligible"] for p in (1, 2, 3)], [True, True, False])
+
+    def test_the_club_level_takes_its_share_of_the_spread(self):
+        # (role, rate of what the player does, rate of his club's level): the first centred by role.
+        players = [("winger", 0.2, 0.5), ("winger", -0.2, -0.5), ("centre_back", 1.1, 0.25), ("centre_back", 0.9, -0.25)]
+        own = (2 * 0.2**2 / 4 + 2 * 0.1**2 / 4) ** 0.5
+        level = ((2 * 0.5**2 + 2 * 0.25**2) / 4) ** 0.5
+        self.assertAlmostEqual(power.level_weight(players), own / level)
+        self.assertAlmostEqual(power.level_weight(players, share=0.8), 2 * own / level)
+        self.assertEqual(power.level_weight(players[:1]), 0.0)
+        self.assertEqual(power.level_weight([("winger", 0.2, 0.0), ("winger", -0.2, 0.0)]), 0.0)
+        # In a season: the same output in a stronger club ranks higher, and the total keeps its two parts.
+        contributions = {
+            1: [("winger", 1800, 2.0, 10, 4.0)], 2: [("winger", 1800, 2.0, 11, -4.0)],
+            3: [("winger", 1800, 3.0, 12, 0.0)], 4: [("winger", 1800, 1.0, 13, 0.0)],
+        }
+        out, settings = power.season_scores(contributions)
+        kappa = settings["level_weight"]
+        self.assertGreater(kappa, 0)
+        self.assertAlmostEqual(out[1]["total"], 2.0 + kappa * 4.0)
+        self.assertAlmostEqual(out[1]["own"] + kappa * out[1]["level"], out[1]["total"])
+        self.assertLess(out[1]["rank"], out[2]["rank"])
+
+    def test_a_league_off_the_common_scale_has_a_score_and_no_rank(self):
+        contributions = {
+            1: [("winger", 1800, 2.0, 10, None)], 2: [("winger", 1800, 1.0, 10, None)], 3: [("winger", 1800, 0.0, 10, None)],
+            4: [("winger", 1800, 9.0, 20, None)],  # the best output, in a league nothing ties to the others
+            5: [("winger", 1800, 3.0, 30, None)],  # on the scale, in a second division
+        }
+        out, _ = power.season_scores(contributions, linked={10, 30}, top={10})
+        self.assertNotIn("rank", out[4])
+        self.assertTrue(out[4]["eligible"] and out[4]["score"] > out[5]["score"])
+        self.assertEqual([out[p]["rank"] for p in (5, 1, 2, 3)], [1, 2, 3, 4])
+        self.assertEqual([out[p]["top_division"] for p in (1, 4, 5)], [True, False, False])
+        # The award race: the ranked players of a top division, numbered in their order.
+        self.assertEqual([(no, player) for no, player, _, _ in power.award_race(out)], [(1, 1), (2, 2), (3, 3)])
+
+    def test_the_award_year(self):
+        from datetime import date
+
+        self.assertEqual(power.award_year(2026), (date(2026, 8, 1), date(2027, 8, 1)))
 
 
 if __name__ == "__main__":

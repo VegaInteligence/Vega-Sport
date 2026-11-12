@@ -26,11 +26,11 @@ const STEPS = [
   ],
   [
     "Sur la saison",
-    "Contribution cumulée et niveau par 90 minutes, corrigé pour les temps de jeu courts.",
+    "Du 1ᵉʳ août au 31 juillet : contribution cumulée et niveau par 90 minutes, plus le niveau du club, mesuré sur une échelle commune aux championnats.",
   ],
   [
-    "Au sein du poste",
-    "Chaque joueur est situé en centiles de son poste, puis les 30 meilleurs sont réunis.",
+    "Entre les postes",
+    "Chaque joueur est situé par rapport à la moyenne de son poste ; les 30 meilleurs des clubs de première division sont réunis.",
   ],
 ];
 // Varied placeholder widths, so empty rows read as names rather than bars.

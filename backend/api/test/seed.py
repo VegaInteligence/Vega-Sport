@@ -166,10 +166,11 @@ def main(dsn):
         open_matchday.run(db, fake_get, "europe", datetime(2026, 11, 9, 6, tzinfo=timezone.utc))
     # Power rankings: the clubs' Elo for real; players synthetic (too few matches for the role references).
     power.refresh_elo(db)
-    run = x("INSERT INTO agg.power_runs(kind,season_id,method_version,status,finished_at) VALUES ('players',2025,'power-ranking-v1','published','2025-09-06T03:00:00Z') RETURNING id").fetchone()[0]
-    x("""INSERT INTO agg.player_power(season_id,player_id,role,team_id,matches,minutes,total,rate,eligible,total_percentile,rate_percentile,score,rank,role_rank,run_id)
-         VALUES (2025,101,'centre_forward',1,3,260,4.2,0.535,true,90,80,87.5,1,1,%(run)s),(2025,104,'winger',2,2,160,1.1,0.161,true,50,50,50,2,1,%(run)s),
-                (2025,103,'goalkeeper',4,2,180,0.3,0.042,false,NULL,NULL,NULL,NULL,NULL,%(run)s)""", {"run": run})
+    run = x("INSERT INTO agg.power_runs(kind,season_id,method_version,status,finished_at) VALUES ('players',2025,'power-ranking-v2','published','2025-09-06T03:00:00Z') RETURNING id").fetchone()[0]
+    # A total is what the player does and the level of his club (own_total + level_total); the index ranks.
+    x("""INSERT INTO agg.player_power(season_id,player_id,role,team_id,matches,minutes,total,rate,eligible,total_percentile,rate_percentile,score,rank,role_rank,run_id,own_total,level_total,index)
+         VALUES (2025,101,'centre_forward',1,3,260,4.2,0.535,true,90,80,87.5,1,1,%(run)s,3.0,1.2,1.4),(2025,104,'winger',2,2,160,1.1,0.161,true,50,50,50,2,1,%(run)s,1.3,-0.2,0),
+                (2025,103,'goalkeeper',4,2,180,0.3,0.042,false,NULL,NULL,NULL,NULL,NULL,%(run)s,0.3,0,NULL)""", {"run": run})
     # Élie Durand's season by block and by role (two roles: 200 minutes up front, 60 on the wing).
     x("UPDATE agg.player_power SET finishing_total=3.1,creation_total=0.8,defence_total=0.3,finishing_percentile=95,creation_percentile=70.5,defence_percentile=40 WHERE player_id=101")
     x("""INSERT INTO agg.player_power_roles(season_id,player_id,role,matches,minutes,total,rate,run_id)

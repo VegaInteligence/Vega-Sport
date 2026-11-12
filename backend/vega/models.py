@@ -762,6 +762,10 @@ def refresh_daily(conn, season, *, elo=True):
         power.refresh_power(conn, season)
     else:
         power.refresh_players(conn, season)
+    # The first half of this season's calendar-year editions is the end of the award year
+    # before: that year's ranking follows when one of those matches has changed.
+    if power.previous_year_changed(conn, season):
+        power.refresh_players(conn, season - 1)
     refresh_levels(conn, season)
     refresh_strength(conn, season)
     refresh_squad_profiles(conn, season)

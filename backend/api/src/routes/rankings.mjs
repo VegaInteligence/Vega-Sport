@@ -17,8 +17,9 @@
  *
  * GET /api/rankings/power?kind=players|clubs|nations&season=&limit= — Vega's power
  * rankings (docs/METHODE_CLASSEMENT_BALLON_D_OR.md on main, vega/power.py): players by
- * the role-relative score B (the site's `ballonDorRanking(season)` entries), clubs and
- * national teams by their Elo strength after their last match of the season.
+ * their standardised index, the ranked players of a top division (the site's
+ * `ballonDorRanking(season)` entries), clubs and national teams by their Elo strength
+ * after their last match of the season.
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
@@ -158,7 +159,8 @@ export async function powerOf(read, kind, season, ids) {
     const roles = await rolesOf(read, season, rows.map((r) => r.player_id));
     for (const r of rows)
       out.set(r.player_id, {
-        rank: r.rank, score: round(r.score, 1), role: r.role, position: ROLE_LABEL[r.role] ?? r.role, roleRank: r.role_rank,
+        rank: r.rank, score: round(r.score, 1), index: round(r.index, 2), role: r.role, position: ROLE_LABEL[r.role] ?? r.role, roleRank: r.role_rank,
+        ownContribution: round(r.own_total, 2), clubLevel: round(r.level_total, 2), linked: r.linked !== false, topDivision: r.top_division !== false,
         blocks: blocksOf(r), roles: roles.get(r.player_id) ?? [],
       });
   }
@@ -172,15 +174,21 @@ async function powerRanking(read, params) {
     reject(400, "Paramètre invalide.");
   const limit = Number(limitRaw);
   if (kind === "players") {
-    const rows = await read(`SELECT * FROM api.power_players WHERE season_id=${SEASON_KEY} ORDER BY rank, player_id LIMIT $2`, [season, limit]);
+    // The award race: the ranked players of a top division, numbered in their order
+    // (`powerRank` is the player's rank among every ranked player).
+    const rows = await read(
+      `SELECT * FROM api.power_players WHERE season_id=${SEASON_KEY} AND rank IS NOT NULL AND top_division ORDER BY rank, player_id LIMIT $2`,
+      [season, limit],
+    );
     if (!rows.length) reject(404, "Donnée indisponible.");
     const roles = await rolesOf(read, season, rows.map((r) => r.player_id));
     return {
       season, kind, method: { version: rows[0].method_version, computedAt: iso(rows[0].computed_at) },
-      rows: rows.map((r) => ({
-        rank: r.rank, playerId: r.player_id, name: r.name, imageUrl: r.image_url ?? null, teamId: r.team_id ?? null, team: r.team ?? null,
-        teamImageUrl: r.team_image_url ?? null, position: ROLE_LABEL[r.role] ?? r.role, role: r.role, roleRank: r.role_rank,
-        score: round(r.score, 1), matches: r.matches, minutes: r.minutes, contribution: round(r.total, 2), rate: round(r.rate, 3),
+      rows: rows.map((r, i) => ({
+        rank: i + 1, playerId: r.player_id, name: r.name, imageUrl: r.image_url ?? null, teamId: r.team_id ?? null, team: r.team ?? null,
+        teamImageUrl: r.team_image_url ?? null, position: ROLE_LABEL[r.role] ?? r.role, role: r.role, roleRank: r.role_rank, powerRank: r.rank,
+        score: round(r.score, 1), index: round(r.index, 2), matches: r.matches, minutes: r.minutes,
+        contribution: round(r.total, 2), ownContribution: round(r.own_total, 2), clubLevel: round(r.level_total, 2), rate: round(r.rate, 3),
         contributionPercentile: round(r.total_percentile, 1), ratePercentile: round(r.rate_percentile, 1),
         blocks: blocksOf(r), roles: roles.get(r.player_id) ?? [],
       })),
