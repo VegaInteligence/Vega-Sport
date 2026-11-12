@@ -28,7 +28,8 @@
  * GET /api/forecasts/match?match= — the forecast of a match still to play (vega/forecast.py,
  * from the two Elo strengths): win, draw, loss, expected goals and the likeliest score.
  * GET /api/forecasts/season?competition=&season= — a league replayed to its end: each
- * club's points now and projected, and the share of the replays it finishes at each place.
+ * club's points now and projected, the share of the replays it finishes at each place, and
+ * `next`, its coming league matches (the opponents' mean strength, the points forecast).
  *
  * GET /api/rankings/power/player?season=&player= — one player's power ranking of a
  * season, for his page: the object of the player reads (powerOf) and `roleCount`, the
@@ -232,11 +233,13 @@ async function seasonProjection(read, params) {
   if (!LEAGUE.test(competition || "") || !/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
   const [edition] = await read("SELECT competition_season_id FROM api.edition_keys WHERE league_id=$1 AND season=$2 ORDER BY competition_season_id DESC LIMIT 1", [competition, season]);
   if (!edition) reject(404, "Donnée indisponible.");
-  const [teams, places] = await Promise.all([
+  const [teams, places, fixtures] = await Promise.all([
     read("SELECT * FROM api.season_projections WHERE competition_season_id=$1 ORDER BY projected_points DESC, name", [edition.competition_season_id]),
     read("SELECT team_key, place, probability FROM api.season_projection_places WHERE competition_season_id=$1", [edition.competition_season_id]),
+    read("SELECT * FROM api.schedule_forecasts WHERE competition_season_id=$1 ORDER BY kickoff_at NULLS LAST, match_key", [edition.competition_season_id]),
   ]);
   if (!teams.length) reject(404, "Donnée indisponible.");
+  const next = comingMatches(fixtures);
   // One share per place, 0 for a place the club never reached.
   const shares = new Map(teams.map((team) => [team.team_key, Array(teams.length).fill(0)]));
   for (const p of places) if (shares.has(p.team_key) && p.place <= teams.length) shares.get(p.team_key)[p.place - 1] = round(p.probability, 4);
@@ -244,8 +247,36 @@ async function seasonProjection(read, params) {
     competition, season,
     model: { version: teams[0].model_version, fittedAt: iso(teams[0].fitted_at), replays: teams[0].simulations },
     teams: teams.map((team) => ({ id: team.team_id, name: team.name, imageUrl: team.image_url ?? null, played: team.played, points: team.points,
-      projectedPoints: round(team.projected_points, 1), places: shares.get(team.team_key) })),
+      projectedPoints: round(team.projected_points, 1), places: shares.get(team.team_key), next: next.get(team.team_key) ?? null })),
   };
+}
+
+const COMING = 5;
+
+/**
+ * Each club's next COMING league matches: how many, how many at home, the mean strength
+ * of the opponents (their Elo before the match), the points the forecasts give it, and
+ * `rank`, 1 for the hardest run of opponents among the clubs with as many matches ahead.
+ */
+export function comingMatches(fixtures, count = COMING) {
+  const runs = new Map();
+  const add = (team, home, opponent, win, draw) => {
+    const run = runs.get(team) ?? runs.set(team, { matches: 0, home: 0, level: 0, points: 0 }).get(team);
+    if (run.matches >= count) return;
+    run.matches++;
+    run.home += home ? 1 : 0;
+    run.level += opponent;
+    run.points += 3 * win + draw;
+  };
+  for (const f of fixtures) {
+    add(f.home_key, true, f.away_elo, f.home_win, f.draw);
+    add(f.away_key, false, f.home_elo, f.away_win, f.draw);
+  }
+  const full = [...runs.values()].filter((run) => run.matches === count).map((run) => run.level).sort((a, b) => b - a);
+  return new Map([...runs].map(([team, run]) => [team, {
+    matches: run.matches, home: run.home, opponentLevel: Math.round(run.level / run.matches), expectedPoints: round(run.points, 1),
+    rank: run.matches === count ? full.indexOf(run.level) + 1 : null,
+  }]));
 }
 
 async function powerPlayer(read, params) {

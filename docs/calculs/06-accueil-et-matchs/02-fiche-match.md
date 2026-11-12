@@ -35,6 +35,14 @@ Sur la carte de saison d'un joueur ([season-shots.js](../../../dashboard/fronten
 - confrontations directes de la saison antérieures au match : victoires de chaque club et nuls ;
 - les 5 joueurs les plus utilisés de chaque club.
 
+### La phrase des confrontations
+
+Sous le bilan des confrontations, une phrase dit la série en cours quand elle compte au moins trois matchs de suite, du plus récent au plus ancien (`services/head-to-head.js`) : une série de victoires d'un club (« reste sur 3 victoires de suite »), une série de nuls, sinon la plus longue série sans victoire d'un des deux clubs (« n'a plus battu … depuis 4 confrontations », ou « dans aucune des N confrontations collectées » quand la série couvre tout ce que la base détient). Deux résultats ne font pas une phrase.
+
+## Temps forts du momentum
+
+Sous le graphique du momentum (la pression minute par minute que publie la source, positive pour le club à domicile), la fiche nomme les trois périodes de cinq minutes de suite où un club a le plus pressé (`services/momentum.js`) : la somme de la pression sur cinq minutes consécutives toutes mesurées, la plus forte d'abord en valeur absolue, sans chevauchement entre deux périodes. Un match de moins de trente minutes mesurées n'en a pas.
+
 ## Profil d'un joueur dans le match
 
 Centiles de la performance par rapport aux performances du même poste dans la saison, et rang de sa note parmi les joueurs du match : voir [Centiles et cohortes](../05-joueurs/02-centiles-et-cohortes.md) et [Note du match](../02-metriques-attendues/04-note-du-match.md).

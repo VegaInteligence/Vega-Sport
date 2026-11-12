@@ -40,7 +40,8 @@ export function share(value) {
 
 const sum = (values) => values.reduce((total, value) => total + value, 0);
 
-/** The table's rows, by projected points: the title, the first four places, the last three. */
+/** The table's rows, by projected points: the title, the first four places, the last three,
+ * and the club's coming league matches when the answer carries them. */
 export function projectionRows(projection) {
   const teams = projection?.teams || [];
   return teams.map((team) => {
@@ -55,6 +56,7 @@ export function projectionRows(projection) {
       title: places[0] ?? 0,
       topFour: sum(places.slice(0, 4)),
       bottomThree: places.length > 7 ? sum(places.slice(-3)) : null,
+      next: team.next?.matches > 0 ? team.next : null,
     };
   });
 }
