@@ -344,6 +344,7 @@ export default function PlayerScoutRail({
             </span>
           </div>
         </div>
+        {vega?.parts && <p className={s.valueMeta}>{vega.parts}</p>}
       </div>
       {positions.length > 0 && (
         <div className={`${s.railSection} phone-fold-part`}>
