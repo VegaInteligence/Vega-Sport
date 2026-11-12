@@ -43,6 +43,7 @@ import {
   ordinal,
   styleTags,
 } from "./ClubScoutUI.jsx";
+import ClubSubstitutions from "./ClubSubstitutions.jsx";
 import s from "./ClubScoutTabs.module.css";
 
 function competitionRecords(dossier) {
@@ -655,6 +656,7 @@ export function Matches({ dossier }) {
           <GameState states={dossier.states} />
         </Card>
       </div>
+      <ClubSubstitutions id={dossier.id} season={dossier.season} />
       <Card
         title="Cartes des tirs"
         text="Toutes compétitions, tirs à moins de 40 m du but · taille selon les xG, plein = but."

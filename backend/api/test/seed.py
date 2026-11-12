@@ -143,6 +143,11 @@ def main(dsn):
     for mid, seq, kind, minute in [(1, 10, "yellow_card", 30), (3, 10, "red_card", 60), (5, 10, "second_yellow", 80), (5, 11, "red_card", 80)]:
         x("INSERT INTO core.match_events(season_id,match_id,team_id,seq,event_type,minute,period,player_id) VALUES (2025,%s,1,%s,%s,%s,'second_half',101)", (mid, seq, kind, minute))
     x("UPDATE core.match_coverage SET events='ok' WHERE match_id IN (1,3,5)")
+    # Substitutions (082). Match 1 (2-0): each goal's score before it, then the home side's first change
+    # while leading. Match 5 (0-0): each side's first change, level.
+    x("UPDATE core.match_events SET score_home=seq - 1, score_away=0 WHERE season_id=2025 AND match_id=1 AND event_type='goal'")
+    x("""INSERT INTO core.match_events(season_id,match_id,team_id,seq,event_type,minute,period) VALUES
+         (2025,1,1,12,'substitution',65,'second_half'), (2025,5,1,20,'substitution',60,'second_half'), (2025,5,4,21,'substitution',70,'second_half')""")
     # Activity maps (16 x 12, cells[y * 16 + x]): Élie Durand's of m1 and m3, one of m5 whose
     # cells do not add up to its actions, Marc Petit's of m3 (on the bench) and m5 (minutes unknown).
     for pid, mid, actions, cells in [(101, 1, 5, {(2, 3): 4, (15, 11): 1}), (101, 3, 5, {(2, 3): 2, (0, 0): 3}), (101, 5, 9, {(1, 1): 2}),

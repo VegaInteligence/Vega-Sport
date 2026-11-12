@@ -178,3 +178,28 @@ test("the similarity runs from 100 for the same profile to 0 at the median dista
   const { similarity } = await import("../src/routes/profiles.mjs");
   assert.deepEqual([similarity(0, 12), similarity(3, 12), similarity(12, 12), similarity(30, 12), similarity(1, 0)], [100, 75, 0, 0, 0]);
 });
+
+test("what followed a club's first change of each match", { skip }, async () => {
+  const { data } = (await get("/api/teams/t_aaaaa1/substitutions?season=2025/2026")).body;
+  // Match 1: leading 2-0 at its first change (65'), won. Match 5: level at 60', drawn. Match 3 has no change recorded.
+  assert.deepEqual(data, { id: "t_aaaaa1", season: "2025/2026", matches: 2, pointsThen: 4, points: 4, gained: 0, minute: 63,
+    leading: { matches: 1, pointsThen: 3, points: 3 }, level: { matches: 1, pointsThen: 1, points: 1 }, behind: { matches: 0, pointsThen: 0, points: 0 }, substitutes: [] });
+  assert.equal((await get("/api/teams/t_aaaaa3/substitutions?season=2025/2026")).response.status, 404);
+  assert.equal((await get("/api/teams/t_aaaaa1/substitutions")).response.status, 400);
+});
+
+test("points before and after the changes, by the state of the score", async () => {
+  const { changeImpact } = await import("../src/routes/profiles.mjs");
+  const row = (thenFor, thenAgainst, goalsFor, goalsAgainst, minute = 60, complete = true) =>
+    ({ change_minute: minute, goals_for_then: thenFor, goals_against_then: thenAgainst, goals_for: goalsFor, goals_against: goalsAgainst, complete });
+  const impact = changeImpact([
+    row(0, 1, 2, 1, 55), // behind, then won: +3
+    row(0, 1, 1, 1, 46), // behind, then drawn: +1
+    row(1, 0, 1, 1, 70), // leading, then drawn: -2
+    row(0, 0, 0, 0, 65), // level, stayed level
+    row(0, 2, 3, 2, 30, false), // a timeline that does not give the final score is left out
+  ]);
+  assert.deepEqual(impact, { matches: 4, pointsThen: 4, points: 6, gained: 2, minute: 59,
+    leading: { matches: 1, pointsThen: 3, points: 1 }, level: { matches: 1, pointsThen: 1, points: 1 }, behind: { matches: 2, pointsThen: 0, points: 4 } });
+  assert.equal(changeImpact([]).matches, 0);
+});
