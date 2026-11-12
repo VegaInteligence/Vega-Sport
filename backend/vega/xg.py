@@ -166,23 +166,27 @@ def refresh(conn, season):
     """Score a season's shots (after its matches changed); fits the model first when there
     is none, or when the base holds REFIT_GROWTH times the shots of the last fit, and then
     scores every season again so that all shots are read by one model. Returns the number
-    of shots scored."""
+    of shots scored.
+
+    The fit runs outside any transaction: the base ends a session that stays idle inside
+    one (60 s), and a fit takes longer than that on the worker."""
+    model = _latest(conn)
+    if model is not None:
+        held = conn.execute(f"SELECT count(*) {_SHOTS} AND s.situation IS DISTINCT FROM 'penalty'").fetchone()[0]
+        if held > model[1] * REFIT_GROWTH:
+            model = None
+    fitted = None
+    if model is None:
+        bins = conn.execute(BINS).fetchall()
+        coefficients = fit(bins)
+        if coefficients is None:
+            return 0
+        taken, scored = conn.execute(PENALTIES).fetchone()
+        fitted = (sum(b[4] for b in bins), sum(b[5] for b in bins), scored / taken if taken else None, coefficients)
     with conn.transaction():
-        model = _latest(conn)
-        bins = None
-        if model is not None:
-            held = conn.execute(f"SELECT count(*) {_SHOTS} AND s.situation IS DISTINCT FROM 'penalty'").fetchone()[0]
-            if held > model[1] * REFIT_GROWTH:
-                model = None
         scope = season
-        if model is None:
-            bins = conn.execute(BINS).fetchall()
-            coefficients = fit(bins)
-            if coefficients is None:
-                return 0
-            taken, scored = conn.execute(PENALTIES).fetchone()
-            penalty = scored / taken if taken else None
-            shots, goals = sum(b[4] for b in bins), sum(b[5] for b in bins)
+        if fitted is not None:
+            shots, goals, penalty, coefficients = fitted
             ident = conn.execute(
                 f"""INSERT INTO agg.xg_models(version, shots, goals, penalty, {', '.join(TERMS)})
                     VALUES (%s, %s, %s, %s, {', '.join(['%s'] * len(TERMS))}) RETURNING id""",
