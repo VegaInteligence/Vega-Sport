@@ -386,6 +386,34 @@ class WorkerTest(unittest.TestCase):
              VALUES (901,901,%s,'vega','finished',900,901,2,2,'1971-01-01')""", (archive,))
         self.assertEqual(due_seasons(self.db, self.now), [])
 
+    def test_a_new_ranking_method_recomputes_the_season_in_progress(self):
+        from vega.power import METHOD_VERSION
+
+        x = self.db.execute
+        noon = self.now.replace(hour=12, minute=0)
+        with self.db.transaction():
+            season, older = Store(self.db).season("2019/2020"), Store(self.db).season("2018/2019")
+        x("INSERT INTO core.competitions(id,name) VALUES (900,'League')")
+        x("INSERT INTO core.teams(id,name) VALUES (900,'A'),(901,'B')")
+        for edition, s, played in ((900, season, noon - timedelta(days=3)), (901, older, noon - timedelta(days=400))):
+            x("INSERT INTO core.competition_seasons(id,competition_id,season_id,native_label) VALUES (%s,900,%s,'x')", (edition, s))
+            x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date,kickoff_at,updated_at)
+                 VALUES (%s,%s,%s,'pitchapi','finished',900,901,1,0,%s,%s,%s)""", (edition, edition, s, played.date(), played, played))
+            x("INSERT INTO agg.calc_runs(kind,model_version,cohort_definition,status,started_at,finished_at) VALUES ('levels','m',%s,'published',%s,%s)",
+              (f"season:{s}", noon - timedelta(hours=2), noon - timedelta(hours=2)))
+            x("INSERT INTO agg.power_runs(kind,season_id,method_version,status) VALUES ('players',%s,%s,'published')", (s, METHOD_VERSION))
+        self.assertEqual(due_seasons(self.db, noon), [])  # computed today, by the method of today
+        # Both rankings come from another version: the season in progress is due, the one long over waits for its matches to change.
+        x("UPDATE agg.power_runs SET method_version='power-ranking-v0' WHERE kind='players'")
+        self.assertEqual(due_seasons(self.db, noon), [season])
+        # A superseded run is not the ranking; and a computation under RECOMPUTE_AFTER old waits.
+        x("UPDATE agg.power_runs SET status='superseded' WHERE season_id=%s", (season,))
+        self.assertEqual(due_seasons(self.db, noon), [])
+        x("UPDATE agg.power_runs SET status='published' WHERE season_id=%s", (season,))
+        x("UPDATE agg.calc_runs SET started_at=%(t)s, finished_at=%(t)s WHERE cohort_definition=%(c)s",
+          {"t": noon - RECOMPUTE_AFTER + timedelta(minutes=10), "c": f"season:{season}"})
+        self.assertEqual(due_seasons(self.db, noon), [])
+
     def due_season(self):
         """A season with a finished match and no models yet: due at once."""
         x = self.db.execute

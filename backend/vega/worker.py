@@ -88,9 +88,14 @@ def due_seasons(conn, now):
     - a season played in the last 30 days, once a UTC day;
     - a season with finished matches never computed (a backfilled one);
     - a season whose matches changed after its last computation (a backfill that went on,
-      a correction), once RECOMPUTE_AFTER has passed since that computation.
+      a correction), once RECOMPUTE_AFTER has passed since that computation;
+    - a season played in the last 30 days whose player ranking was computed by another
+      version of the method (power.METHOD_VERSION), after the same wait: a new method
+      does not wait for the next day to rank the season in progress.
     Only PitchAPI editions count: the models read nothing of the archives and cups (whose
     seasons would otherwise all fall due when they are imported)."""
+    from .power import METHOD_VERSION
+
     return [
         s
         for (s,) in conn.execute(
@@ -106,8 +111,13 @@ def due_seasons(conn, now):
                        AND (l.started_at IS NULL OR l.started_at < date_trunc('day', %(now)s)))
                    OR (l.started_at < %(now)s - %(after)s
                        AND max(m.updated_at) FILTER (WHERE m.status = 'finished') > l.started_at)
+                   OR (l.started_at < %(now)s - %(after)s
+                       AND bool_or(m.kickoff_at > %(now)s - interval '30 days' AND m.kickoff_at <= %(now)s)
+                       AND EXISTS (SELECT 1 FROM agg.power_runs r
+                                   WHERE r.kind = 'players' AND r.season_id = m.season_id AND r.status = 'published'
+                                     AND r.method_version <> %(method)s))
                ORDER BY 1""",
-            {"now": now, "after": RECOMPUTE_AFTER},
+            {"now": now, "after": RECOMPUTE_AFTER, "method": METHOD_VERSION},
         ).fetchall()
     ]
 
