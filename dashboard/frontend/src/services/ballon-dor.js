@@ -38,3 +38,17 @@ export function usePlayerPower(season, id) {
   if (!enabled || resource.error) return null;
   return resource.value === undefined ? undefined : resource.value;
 }
+
+const points = (value) =>
+  value.toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+/**
+ * The two parts of a player's power ranking total, as one sentence for his page: what he
+ * produced on the pitch and what the level of his club adds. Null without both.
+ */
+export function vegaParts(power) {
+  const own = power?.ownContribution,
+    club = power?.clubLevel;
+  if (!Number.isFinite(own) || !Number.isFinite(club)) return null;
+  return `Ce qu’il produit : ${points(own)} · niveau de son club : ${points(club)} (points du classement de la saison).`;
+}

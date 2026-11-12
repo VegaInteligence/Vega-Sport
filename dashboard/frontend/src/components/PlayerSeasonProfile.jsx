@@ -58,7 +58,7 @@ import { levelPeerClubs, useEuropeLevels } from "../services/club-scout.js";
 import { RankingProvider, RankingTrigger } from "./RankingDialog.jsx";
 import { PlayerLevelBar, PlayerRankingDialog } from "./PlayerRanking.jsx";
 import { MESSI_ID } from "../services/player-honours.js";
-import { usePlayerPower } from "../services/ballon-dor.js";
+import { usePlayerPower, vegaParts } from "../services/ballon-dor.js";
 import {
   cachedResource,
   primeResource,
@@ -427,6 +427,7 @@ export default function PlayerSeasonProfile({
         label: power.position,
         rank: power.roleRank ?? null,
         of: power.roleRank ? power.roleCount : null,
+        parts: vegaParts(power),
       };
     if (!comparisonsReady || !profile.matches) return null;
     const best = roleAssessments(profile, cohorts).find(
