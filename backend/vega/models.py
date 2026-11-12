@@ -802,6 +802,12 @@ def refresh_daily(conn, season, *, elo=True):
     xg.refresh(conn, season)
     # The players' whole profile as a short vector, for "players like him" (embedding.py).
     embedding.refresh(conn, season)
+    # How playing time comes back after an absence, and who is coming back now (returns.py).
+    from datetime import datetime, timezone
+
+    from . import returns
+
+    returns.refresh(conn, datetime.now(timezone.utc).date())
     for (edition,) in editions:
         with conn.transaction():
             # The blanks that are zeros (068) first: the list's rows read them.

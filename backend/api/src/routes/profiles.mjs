@@ -17,6 +17,9 @@
  * finished match (082): the points the score then would have given against the points
  * taken, by the state of the score at that moment, and its most decisive substitutes.
  *
+ * GET /api/players/{id}/return — the absence the player is coming back from, when he is in
+ * the middle of a return (vega/returns.py, 087): its length, his minutes since against his
+ * usual ones, and the base's curve for an absence of that length.
  * GET /api/players/{id}/halves?season= — the player's season by half (083): his minutes
  * and totals in first halves and in second halves.
  * GET /api/teams/{id}/passing?season= — the club's most used passing triangle and its most
@@ -39,6 +42,7 @@ const SIMILAR_COUNT = 8;
 const DIMENSIONS = 10;
 const SQUARES = Array.from({ length: DIMENSIONS }, (_, i) => `power(o.e${i + 1}-me.e${i + 1},2)`).join("+");
 
+const RETURN = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/return$/;
 const HALVES = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/halves$/;
 const PASSING = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/passing$/;
 // Only what the source publishes per half: it gives no chances created or expected assists there.
@@ -134,6 +138,21 @@ export function createProfileRoute(read) {
       return respond(req, {
         id: partners[1], season,
         partners: rows.map((r) => put({ id: r.partner_id, name: r.partner_name, given: r.given, received: r.received, matches: r.matches }, "image_url", r.partner_image_url)),
+      });
+    }
+    const back = path.match(RETURN);
+    if (back) {
+      validateParams(params, []);
+      const [r] = await read("SELECT * FROM api.player_returns WHERE player_key=api.internal_id('player',$1)", [back[1]]);
+      if (!r) reject(404, "Donnée indisponible.");
+      const curve = await read("SELECT match_no, returns, minutes, usual_minutes FROM api.return_curves WHERE bucket=$1 ORDER BY match_no", [r.bucket]);
+      return respond(req, {
+        id: back[1],
+        team: { id: r.team_id, name: r.team },
+        absence: { from: r.absent_from, returnedOn: r.returned_on, days: r.days, matchesMissed: r.matches_missed },
+        matchesBack: r.matches_back, minutesBack: Math.round(r.minutes_back), usualMinutes: Math.round(r.usual_minutes),
+        // The base's curve for an absence of this length: the share of his usual minutes a player gets in each match back.
+        curve: curve.map((c) => ({ match: c.match_no, returns: c.returns, share: Math.round((100 * c.minutes) / c.usual_minutes) / 100 })),
       });
     }
     const halves = path.match(HALVES);

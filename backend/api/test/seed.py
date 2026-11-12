@@ -203,6 +203,12 @@ def main(dsn):
           (team, played, points, projected, model))
         for place, share in places.items():
             x("INSERT INTO agg.season_projection_places(competition_season_id,team_id,place,probability) VALUES (1,%s,%s,%s)", (team, place, share))
+    # A return from absence (087): the curve of one length of absence, and player 102 in the middle of one.
+    x("""INSERT INTO agg.return_curves(bucket, match_no, returns, minutes, usual_minutes, version) VALUES
+         ('30_59', 1, 7000, 37, 54, 'returns-v1'), ('30_59', 2, 6000, 49, 55, 'returns-v1'), ('30_59', 3, 5000, 55, 56, 'returns-v1'),
+         ('60_119', 1, 4000, 37, 55, 'returns-v1')""")
+    x("""INSERT INTO agg.player_returns(player_id, team_id, absent_from, returned_on, days, matches_missed, matches_back, bucket, usual_minutes, minutes_back)
+         VALUES (102, 1, '2025-08-16', '2025-09-27', 42, 5, 2, '30_59', 84.4, 51.5)""")
     # The in-play model (086) and the two strengths of match 1 (2-0, goals at 11' and 21').
     x("""INSERT INTO agg.inplay_models(version, fitted_at, matches, goals, red_matches, q1, q2, q3, q4, q5, q6, after_90, down, up)
          VALUES ('inplay-v1', '2025-09-06T03:11:00Z', 16000, 43000, 3000, 0.13, 0.14, 0.18, 0.16, 0.16, 0.16, 0.07, 0.6, 1.7)""")

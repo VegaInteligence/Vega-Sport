@@ -103,6 +103,8 @@ def due_seasons(conn, now):
       (embedding.py), after the same wait, when it has enough players to learn the axes.
     - a season played in the last 30 days while no in-play model exists (inplay.py), after
       the same wait, when there is a forecast model and enough goal events to fit one.
+    - a season played in the last 30 days while no return curve exists (returns.py), after
+      the same wait, in a base with enough appearances to learn one.
     Only PitchAPI editions count: the models read nothing of the archives and cups (whose
     seasons would otherwise all fall due when they are imported)."""
     from .power import METHOD_VERSION
@@ -151,12 +153,20 @@ def due_seasons(conn, now):
                        AND NOT EXISTS (SELECT 1 FROM agg.inplay_models)
                        AND EXISTS (SELECT 1 FROM agg.forecast_models)
                        AND EXISTS (SELECT 1 FROM core.match_events g WHERE g.event_type = 'goal' OFFSET %(goals)s LIMIT 1))
+                   OR (l.started_at < %(now)s - %(after)s
+                       AND bool_or(m.kickoff_at > %(now)s - interval '30 days' AND m.kickoff_at <= %(now)s)
+                       AND NOT EXISTS (SELECT 1 FROM agg.return_curves)
+                       AND EXISTS (SELECT 1 FROM core.player_match_stats a WHERE a.minutes_played > 0 OFFSET %(appearances)s LIMIT 1))
                ORDER BY 1""",
-            {"now": now, "after": RECOMPUTE_AFTER, "method": METHOD_VERSION, "shots": XG_MIN_FIT, "goals": INPLAY_MIN_FIT,
+            {"now": now, "after": RECOMPUTE_AFTER, "method": METHOD_VERSION, "shots": XG_MIN_FIT, "goals": INPLAY_MIN_FIT, "appearances": RETURNS_MIN_APPEARANCES,
              "profiles": PROFILE_MIN_PLAYERS, "profile_minutes": PROFILE_MIN_MINUTES},
         ).fetchall()
     ]
 
+
+# Appearances a base must hold before a return curve is looked for (returns.py): below, no
+# length of absence would gather the returns a point of the curve needs.
+RETURNS_MIN_APPEARANCES = 100000
 
 # The publication generation (the site's fence and cache key) advances at most this often.
 PUBLISH_EVERY = timedelta(minutes=5)
