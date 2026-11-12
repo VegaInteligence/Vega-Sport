@@ -5,7 +5,7 @@ Three CloudFormation stacks, one per block of the backend, plus the live stack (
 | Stack | Template | Contents |
 |---|---|---|
 | `vega-v2-database` | `database.yaml` | private PostgreSQL 18 (`vega-football-db-postgres`, database `vega_v2`, `db.t4g.medium` since 2026-11-09, gp3 20→100 GB, encrypted, 7-day backups, deletion protection, snapshot on delete), master password managed by Secrets Manager, security groups of the worker and the API |
-| `vega-v2-worker` | `worker.yaml` | ECR repository, ECS cluster, the always-on worker service (Fargate ARM 0.25 vCPU / 2 GB, one task), the `vega-v2-backfill` service (1 vCPU / 2 GB, one task while history is collected, none after), the on-demand `vega-v2-migrate` task definition, the private bucket of the image copies (`vega-v2-media-…`, written only under `data/sources/v2/images/` by the worker's task role), and the private release bucket (`vega-v2-releases-…`: the function packages, and the pinned archive sources under `data/sources/`) |
+| `vega-v2-worker` | `worker.yaml` | ECR repository, ECS cluster, the always-on worker service (Fargate ARM 0.5 vCPU / 4 GB since 2026-11-13, one task), the `vega-v2-backfill` service (1 vCPU / 2 GB, one task while history is collected, none after), the on-demand `vega-v2-migrate` task definition, the private bucket of the image copies (`vega-v2-media-…`, written only under `data/sources/v2/images/` by the worker's task role), and the private release bucket (`vega-v2-releases-…`: the function packages, and the pinned archive sources under `data/sources/`) |
 | `vega-v2-api` | `api.yaml` | the read API Lambda (Node 24 ARM, `backend/api`), its signed Function URL and its own CloudFront distribution; the distribution also serves the image copies at `data/*` from the media bucket (origin access control, bucket policy limited to this distribution) and `api/ops/*`, the status page's read, uncached |
 
 Account 361769570630, region us-east-2, AWS CLI profile `statarena`, default VPC `vpc-08e400afa07fc1812` and its three subnets. The subnets route to an internet gateway: the worker gets a public IP for outbound HTTPS (sources, ECR, logs) and no inbound port; no NAT gateway is needed. The database is not publicly accessible: only the worker and API security groups reach it on 5432.
@@ -143,12 +143,12 @@ The base (`vega-football-db-postgres`) was filled from the sources themselves; t
 | RDS `db.t4g.medium` single-AZ | ~$47 |
 | gp3 20 GB, backups within the free allocation | ~$2.5 |
 | Secrets Manager (managed master secret) | $0.40 |
-| Fargate ARM 0.25 vCPU / 2 GB, always on (the worker) | ~$11 |
+| Fargate ARM 0.5 vCPU / 4 GB, always on (the worker; 0.25 vCPU / 2 GB and ~$11 until 2026-11-13) | ~$22 |
 | Public IPv4 of the worker task | ~$3.6 |
 | ECR, CloudWatch Logs (30 days), Lambda, CloudFront, S3 image copies (a few GB) | usage-based, a few dollars |
 | Live: DynamoDB on demand, AppSync Events, the live read function | nothing without a live provider; per match and viewer once one runs |
 | Live ingestor (Fargate ARM, like the worker) | ~$7 once started, 0 until a provider is chosen |
-| **Total** | **≈ $65–70** |
+| **Total** | **≈ $76–81** |
 
 The backfill task (1 vCPU / 2 GB) costs about $1 a day while it runs. No NAT gateway, load balancer, provisioned concurrency or reserved instance.
 
