@@ -57,3 +57,12 @@ Exemple : écarts de centile 5, 10, 0, 20, 15, 5, 10, 0, 5, 10 → moyenne 8 →
 ## Ancienne implémentation
 
 [club-analysis.js](../../../dashboard/frontend/src/services/club-analysis.js#L294) contient une autre version (`clubStyleCohort`, `clubCentile`, `similarClubs`) avec des seuils plus stricts : au moins 3 matchs, 80 % de couverture de la mesure, 10 clubs dans la cohorte, et au moins `max(5, ⌈0,75 × axes disponibles⌉)` axes communs. Elle n'est plus appelée par les pages actuelles.
+
+## Circuits de passes
+
+En bas de l'onglet « Style de jeu », la carte « Circuits de passes » lit `/api/teams/{id}/passing` (vue `api.team_pass_edges`) : les passes de chaque paire de joueurs du club, dans les deux sens, additionnées sur les réseaux de passes de la saison.
+
+- **Duo le plus lié** : la paire au plus grand total.
+- **Triangle le plus utilisé** : parmi les trios dont les trois paires ont échangé au moins une passe, celui dont la somme des trois paires est la plus grande. Deux joueurs très liés à un troisième mais qui ne se trouvent jamais ne forment pas un triangle.
+
+Le réseau de passes de la source couvre un match jusqu'à son premier changement : ces totaux comparent les circuits entre eux, ils ne sont pas le nombre de passes de la saison.
