@@ -20,11 +20,16 @@
  * their standardised index, the ranked players of a top division (the site's
  * `ballonDorRanking(season)` entries), clubs and national teams by their Elo strength
  * after their last match of the season.
+ *
+ * GET /api/rankings/power/player?season=&player= — one player's power ranking of a
+ * season, for his page: the object of the player reads (powerOf) and `roleCount`, the
+ * number of ranked players of his role.
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 
 const TEAM = /^t_(?:[A-Za-z0-9]{6}|v\d{7})$/;
+const PLAYER = /^p_(?:[A-Za-z0-9]{6}|v\d{7})$/;
 const iso = (v) => (v instanceof Date ? v.toISOString() : v ?? null);
 
 function validate(p, spec) {
@@ -167,6 +172,16 @@ export async function powerOf(read, kind, season, ids) {
   return out;
 }
 
+async function powerPlayer(read, params) {
+  validateParams(params, ["season", "player"]);
+  const season = params.get("season"), id = params.get("player");
+  if (!/^\d{4}\/\d{4}$/.test(season || "") || !PLAYER.test(id || "")) reject(400, "Paramètre invalide.");
+  const power = (await powerOf(read, "players", season, [id])).get(id);
+  if (!power) reject(404, "Donnée indisponible.");
+  const [count] = await read(`SELECT ranked FROM api.power_role_counts WHERE season_id=${SEASON_KEY} AND role=$2`, [season, power.role]);
+  return { season, player: { id, ...power, roleCount: count?.ranked ?? null } };
+}
+
 async function powerRanking(read, params) {
   validateParams(params, ["kind", "season", "limit"]);
   const kind = params.get("kind") ?? "players", season = params.get("season"), limitRaw = params.get("limit") ?? "30";
@@ -208,6 +223,7 @@ async function powerRanking(read, params) {
 export function createRankingRoute(read) {
   return async (req, path, params) => {
     if (path === "/api/rankings/power") return respond(req, await powerRanking(read, params));
+    if (path === "/api/rankings/power/player") return respond(req, await powerPlayer(read, params));
     if (path === "/api/rankings/index") {
       validate(params, {});
       const [editions, [mapping]] = await Promise.all([

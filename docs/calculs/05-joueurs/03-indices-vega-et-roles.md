@@ -39,14 +39,19 @@ Les rôles sont triés du plus haut au plus bas.
 
 ## Indice Vega du joueur (colonne de droite)
 
-`vega` dans [PlayerSeasonProfile.jsx](../../../dashboard/frontend/src/components/PlayerSeasonProfile.jsx#L412) :
+`vega` dans [PlayerSeasonProfile.jsx](../../../dashboard/frontend/src/components/PlayerSeasonProfile.jsx) lit le **classement de puissance** de la saison (`/api/rankings/power/player`, voir [Classements joueurs](05-classements-joueurs.md)) :
+1. **Niveau actuel** = score du joueur dans le classement, arrondi (0 à 100) ;
+2. **Rang** = son rang parmi les joueurs classés de son rôle (`roleRank`) ;
+3. **Sur** = nombre de joueurs classés de ce rôle (`roleCount`).
+
+Un joueur qui a un score sans être classé (championnat hors de l'échelle commune) a son niveau, pas de rang.
+
+Pour une saison sans classement de puissance, ou un joueur qui n'y a pas de score (trop peu de minutes), la colonne garde l'ancien calcul :
 1. **Niveau actuel** = valeur arrondie du **meilleur rôle** du joueur (le premier rôle dont l'indice existe) ;
 2. **Rang** = `1 + nombre de joueurs de la cohorte dont l'indice sur ce même rôle est strictement supérieur` ;
 3. **Sur** = nombre de joueurs de la cohorte ayant un indice sur ce rôle, plus le joueur.
 
 Le « Potentiel » affiché à côté est une **donnée fictive** (badge « Données fictives »).
-
-Exemple : un milieu a Construction 78, Création 71, Récupération 52 → indice Vega **78** (Construction) ; 14 milieux ont une Construction plus haute sur 160 → **15e sur 161**.
 
 ## Version
 
