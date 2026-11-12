@@ -2,11 +2,18 @@
 import React from "react";
 import { Card } from "./UI.jsx";
 import { number } from "../services/format.js";
+import { COUNTRY_NAMES } from "../services/competition-selector.js";
 
 const ordinal = (rank) => (rank === 1 ? "1er" : `${rank}e`);
 const signed = (value) => {
   const rounded = Math.round(value);
   return rounded > 0 ? `+${rounded}` : rounded < 0 ? `−${Math.abs(rounded)}` : "=";
+};
+
+// Two leagues may share a name (Serie A in Italy and in Brazil): a neighbour is named with its country.
+const named = (league) => {
+  const country = COUNTRY_NAMES[league.country] || "";
+  return country ? `${league.name} (${country})` : league.name;
 };
 
 /** A league's level on the scale common to the leagues, with its last seasons and its neighbours. */
@@ -39,13 +46,13 @@ export default function LeagueStrengthCard({ strength }) {
             <ul className="competition-level-rows competition-level-neighbours" aria-label="Championnats voisins">
               {strength.above && (
                 <li>
-                  <span>Devant : {strength.above.name}</span>
+                  <span>Devant : {named(strength.above)}</span>
                   <span>{number(Math.round(strength.above.level))}</span>
                 </li>
               )}
               {strength.below && (
                 <li>
-                  <span>Derrière : {strength.below.name}</span>
+                  <span>Derrière : {named(strength.below)}</span>
                   <span>{number(Math.round(strength.below.level))}</span>
                 </li>
               )}

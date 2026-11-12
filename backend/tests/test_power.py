@@ -158,12 +158,19 @@ class LeagueLevelTest(unittest.TestCase):
         self.assertTrue(1500 < held[1] < free[1])
 
     def test_a_league_s_level_season_by_season(self):
-        # Two seasons: each club's strength after its last match of the season, by its league.
-        rows = [(1, "A", 2024, None, 1500, 1510, 0.5, 1.0), (1, "B", 2024, None, 1500, 1490, 0.5, 0.0),
-                (2, "A", 2024, None, 1510, 1520, 0.5, 1.0), (2, "C", 2024, None, 1500, 1490, 0.5, 0.0),
-                (3, "A", 2025, None, 1520, 1500, 0.5, 0.0), (3, "X", 2025, None, 1500, 1520, 0.5, 1.0)]
-        levels = power.league_seasons(rows, {"A": 1, "B": 1, "C": 2})  # X has no league
-        self.assertEqual(levels, {(1, 2024): (1505.0, 2), (2, 2024): (1490.0, 1), (1, 2025): (1500.0, 1)})
+        # Each club's strength after its last match of the season, in the league it played that season.
+        m = lambda mid, season, home, away, league, cup=False, international=False: (mid, season, None, home, away, 1, 0, False, None, league, cup, international)
+        matches = [m(1, 2024, "A", "B", 1), m(2, 2024, "C", "D", 2), m(3, 2024, "A", "C", 9, international=True),
+                   m(4, 2025, "A", "C", 1), m(5, 2025, "B", "D", 2), m(6, 2025, "A", "D", 8, cup=True)]
+        rows = list(power.elo_updates(matches))
+        last = {(season, team): after for _, team, season, _, _, after, _, _ in rows}
+        levels = power.league_seasons(rows, matches)
+        self.assertEqual(set(levels), {(1, 2024), (2, 2024), (1, 2025), (2, 2025)})  # a European night and a cup are no league
+        self.assertAlmostEqual(levels[(1, 2024)][0], (last[(2024, "A")] + last[(2024, "B")]) / 2)
+        # C was promoted and B relegated: the league of 2025 is A and C, whatever league they started in.
+        self.assertEqual(levels[(1, 2025)][1], 2)
+        self.assertAlmostEqual(levels[(1, 2025)][0], (last[(2025, "A")] + last[(2025, "C")]) / 2)
+        self.assertAlmostEqual(levels[(2, 2025)][0], (last[(2025, "B")] + last[(2025, "D")]) / 2)
 
     def test_the_common_scale_grows_from_the_most_connected_league(self):
         # 1 and 2 met often; 3 met each of them a little (enough together); 4 and 5 only each other; 6 nobody.
