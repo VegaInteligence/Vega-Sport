@@ -47,7 +47,7 @@ test("ranking index and editions", { skip }, async () => {
 test("power rankings of players and clubs for a season", { skip }, async () => {
   const { response, body } = await get("/api/rankings/power?kind=players&season=2025/2026");
   assert.equal(response.status, 200);
-  assert.deepEqual([body.season, body.kind, body.method.version], ["2025/2026", "players", "power-ranking-v2"]);
+  assert.deepEqual([body.season, body.kind, body.method.version], ["2025/2026", "players", "power-ranking-v3"]);
   assert.deepEqual(body.rows.map((r) => [r.rank, r.playerId, r.position, r.score]), [[1, "p_aaaab1", "Avant-centre", 87.5], [2, "p_aaaab4", "Ailier / milieu offensif", 50]]);
   // The race numbers its players; each keeps his rank among every ranked player, his index and the two parts of his total.
   assert.deepEqual(body.rows.map((r) => [r.powerRank, r.index, r.contribution, r.ownContribution, r.clubLevel]), [[1, 1.4, 4.2, 3, 1.2], [2, 0, 1.1, 1.3, -0.2]]);

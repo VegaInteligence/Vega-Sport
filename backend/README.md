@@ -45,13 +45,14 @@ Le worker prend les travaux dans l'ordre score, détails, référentiel (le back
 
 Les points que la méthode laisse ouverts (son § 12) sont tranchés ainsi. Chaque réglage est nommé dans `power.py` et conservé avec chaque calcul (`agg.power_runs`) :
 
-| Point ouvert | Choix (version 2, 12 novembre 2026 : `docs/calculs/05-joueurs/08-audit-classement-puissance.md`) |
+| Point ouvert | Choix (versions 2 et 3, 12 novembre 2026 : `docs/calculs/05-joueurs/08-audit-classement-puissance.md`) |
 |---|---|
 | Elo | K = 20, avantage du terrain 60 points (aucun en terrain neutre), attendu 1 / (1 + 10^((R_adv − R − h)/400)), résultat après prolongation (tirs au but = nul) |
 | Niveau d'entrée | celui du championnat du club (la compétition nationale de sa première saison), point fixe de l'Elo : moyenne des clubs de chaque championnat, reprise comme départ jusqu'à ne plus bouger de 0,5 point (200 passages au plus) ; retenu vers 1500 par liens / (liens + 30) ; 1500 sans lien |
 | Matchs de la force | tous les matchs terminés de l'ère PitchAPI, et ceux des coupes complémentaires entre deux clubs connus des éditions PitchAPI, sans les copies (mêmes clubs à trois jours près) |
 | Échelle commune | le championnat le plus relié, puis tout championnat dont les clubs ont joué 10 matchs contre des clubs déjà dessus ; hors d'elle, un score et pas de rang |
-| Période et univers | l'année du trophée, du 1ᵉʳ août au 31 juillet (deux saisons Vega lues), matchs de clubs (sélections exclues), joueur entré en jeu |
+| Période et univers | l'année du trophée, du 1ᵉʳ août au 31 juillet (deux saisons Vega lues), matchs des éditions PitchAPI, ceux des sélections (la Coupe du monde) avec ceux des clubs depuis la version 3 ; joueur entré en jeu. Un joueur est classé par son club : connu par sa seule sélection, il a un score et pas de rang |
+| Enjeu (version 3, 12 novembre 2026) | un match compte pour I = prestige de la compétition × tour (`PRESTIGE`, `CUP_PRESTIGE`, `STAGE`) : championnat 1, Ligue Conférence 1,04, Ligue Europa 1,08, Ligue des champions 1,15, Coupe du monde des clubs 1,10, Euro 1,20, Coupe du monde 1,30 ; tour à élimination ×1,05, demi-finale ×1,10, finale ×1,15 (annexe A.4 de la méthode). Finale de Ligue des champions 1,32, finale de Coupe du monde 1,50. L'Elo des clubs et des sélections bouge de K × I ; le match d'un joueur ajoute I × (C + κ L). L'enjeu appliqué est gardé par match (`agg.team_elo.stakes`, `agg.player_power_matches.stakes`) |
 | Rôles | emplacement de la composition lu avec la formation (`role_of`) ; un remplaçant prend son rôle le plus joué, sinon le défaut de sa ligne |
 | Niveau du club | L = (t/90) · (Elo du club − moyenne) / 400 ; κ donne à L la même dispersion qu'à la contribution propre parmi les joueurs classés (`LEVEL_SHARE = 0,5`) |
 | Attendu, volumes | (t/90) · exp(α + β Δ), Δ = (Elo adverse − Elo propre)/400 avant le match, α et β ajustés par maximum de vraisemblance de Poisson par rôle et indicateur (β = 0 sous 200 matchs) |

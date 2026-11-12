@@ -29,6 +29,72 @@ class EloTest(unittest.TestCase):
         self.assertAlmostEqual(rows[0][6], 0.5)  # neutral ground: no home advantage
 
 
+class StakesTest(unittest.TestCase):
+    """Version 3: a match counts for its competition's prestige × its round's."""
+
+    LEAGUE, CHAMPIONS, EUROPA, CONFERENCE, WORLD_CUP = "l_0ErfuF", "l_0bfbkO", "l_38d9HA", "l_2WZ2tt", "l_1XLtP0"
+
+    def test_rounds(self):
+        for stage, name, expected in (
+            ("regular", "12", None), ("regular", "21/22", None), ("regular", "bronze", None), ("regular", "League Stage - Round 3", None),
+            ("knockout", "1/16", "knockout"), ("knockout", "1/8", "knockout"), ("knockout", "1/4", "knockout"), ("knockout", "1/2", "semi_final"),
+            ("final", "final", "final"), ("playoff", "Promotion Play-offs - Final", "final"), ("playoff", "Promotion Play-offs - Semi-finals", "semi_final"),
+            # A cup source's rounds, by their name.
+            (None, "Final", "final"), (None, "Semifinals", "semi_final"), (None, "Semi-final", "semi_final"), (None, "Quarter-finals, Replays", "knockout"),
+            (None, "Round of 16", "knockout"), (None, "Round of 32", "knockout"), (None, "Match 3rd place", None), (None, "Third-place play-off", None),
+            (None, "Qualification, Playoffs", None), (None, "Matchday 21", None), (None, "Group A", None), (None, None, None),
+        ):
+            self.assertEqual(power.round_of(stage, name), expected, (stage, name))
+
+    def test_the_orders_the_stakes_must_keep(self):
+        s = power.stakes
+        league, champions = s(self.LEAGUE, None, "regular", "12"), s(self.CHAMPIONS, None, "regular", "3")
+        self.assertEqual(league, 1.0)
+        self.assertGreater(champions, league)  # a Champions League match outweighs a league match
+        self.assertGreater(s(self.CHAMPIONS, None, "knockout", "1/8"), champions)
+        self.assertGreater(s(self.CHAMPIONS, None, "knockout", "1/2"), s(self.CHAMPIONS, None, "knockout", "1/4"))
+        final = s(self.CHAMPIONS, None, "final", "final")
+        self.assertAlmostEqual(final, 1.15 * 1.15)
+        # … its final every other club final: the other European ones, a league's, a national cup's, the Club World Cup's.
+        others = [s(self.EUROPA, None, "final", "final"), s(self.CONFERENCE, None, "final", "final"), s("l_3v84VE", None, "final", "final"),
+                  s(None, "open-cups:fa-cup-archive:2024/2025", "regular", "Final"), s(None, "open-cups:club-world-cup:2025", "regular", "Final")]
+        self.assertTrue(all(1.0 < other < final for other in others), others)
+        # … and the World Cup final every match.
+        world = s(self.WORLD_CUP, None, "final", "final")
+        every = [final, *others, s(None, "open-cups:euro:2024", "regular", "Final"), s(self.WORLD_CUP, None, "knockout", "1/2"),
+                 s(None, "open-cups:world-cup-history:2022", "regular", "Semi-finals")]
+        self.assertTrue(all(world > other for other in every), every)
+        self.assertAlmostEqual(s(None, "open-cups:world-cup-history:2022", "regular", "Final"), world)  # the same final, read from a cup source
+        # A cup source's rounds are read by their name, whatever stage their rows hold.
+        self.assertAlmostEqual(s(None, "open-cups:club-world-cup:2025", "regular", "Semifinals"), 1.10 * 1.10)
+        self.assertEqual(s(None, "open-matchday:ENG_1_premier-league:2026/2027", "regular", "7"), 1.0)
+
+    def test_a_match_moves_the_strengths_by_its_stakes(self):
+        matches = [(1, 2025, None, "A", "B", 1, 0, True), (2, 2025, None, "C", "D", 1, 0, True)]
+        rows = list(power.elo_updates(matches, weights={2: 1.3225}))
+        plain, staked = rows[0][5] - rows[0][4], rows[2][5] - rows[2][4]
+        self.assertAlmostEqual(plain, 10.0)  # K 20, level teams on neutral ground
+        self.assertAlmostEqual(staked, 13.225)
+        self.assertAlmostEqual(rows[2][5] + rows[3][5], 3000)  # still zero-sum
+        # The leagues' levels are the fixed point of the same weighted Elo.
+        levels = power.league_levels(matches, {"A": 1, "B": 1, "C": 2, "D": 2}, weights={2: 1.3225})[0]
+        self.assertEqual({round(v) for v in levels.values()}, {1500})  # no match between the two leagues
+
+    def test_a_player_s_match_counts_for_its_stakes(self):
+        role, minutes, c, team, shares, level = power.staked("winger", 90, 2.0, "T", {"finishing": 1.5, "creation": 0.5}, -0.4, 1.3)
+        self.assertEqual((role, minutes, team), ("winger", 90, "T"))
+        self.assertAlmostEqual(c, 2.6)
+        self.assertAlmostEqual(sum(shares.values()), c)  # the blocks still add up to the contribution
+        self.assertAlmostEqual(level, -0.52)  # "pénalités comprises": what counts against him counts more too
+        self.assertIsNone(power.staked("winger", 90, 2.0, "T", {}, None, 1.3)[5])
+
+    def test_the_level_is_measured_among_clubs_or_among_national_teams(self):
+        rows = [{"own_elo": 1900, "minutes_played": 90, "national": False}, {"own_elo": 1500, "minutes_played": 270, "national": False},
+                {"own_elo": 1650, "minutes_played": 90, "national": True}, {"own_elo": None, "minutes_played": 90, "national": True}]
+        self.assertEqual(power.level_centres(rows), {False: 1600.0, True: 1650.0})
+        self.assertEqual(power.level_centres([]), {False: power.ELO_INITIAL, True: power.ELO_INITIAL})
+
+
 class LeagueLevelTest(unittest.TestCase):
     # (match, season, kickoff, home, away, home score, away score, neutral, day, competition, complementary, international)
     @staticmethod

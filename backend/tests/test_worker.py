@@ -395,13 +395,13 @@ class WorkerTest(unittest.TestCase):
             season, older = Store(self.db).season("2019/2020"), Store(self.db).season("2018/2019")
         x("INSERT INTO core.competitions(id,name) VALUES (900,'League')")
         x("INSERT INTO core.teams(id,name) VALUES (900,'A'),(901,'B')")
-        for edition, s, played in ((900, season, noon - timedelta(days=3)), (901, older, noon - timedelta(days=400))):
+        for edition, s, played in ((900, season, noon - timedelta(days=3)), (901, older, noon - timedelta(days=500))):
             x("INSERT INTO core.competition_seasons(id,competition_id,season_id,native_label) VALUES (%s,900,%s,'x')", (edition, s))
             x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date,kickoff_at,updated_at)
                  VALUES (%s,%s,%s,'pitchapi','finished',900,901,1,0,%s,%s,%s)""", (edition, edition, s, played.date(), played, played))
             x("INSERT INTO agg.calc_runs(kind,model_version,cohort_definition,status,started_at,finished_at) VALUES ('levels','m',%s,'published',%s,%s)",
               (f"season:{s}", noon - timedelta(hours=2), noon - timedelta(hours=2)))
-            x("INSERT INTO agg.power_runs(kind,season_id,method_version,status) VALUES ('players',%s,%s,'published')", (s, METHOD_VERSION))
+            x("INSERT INTO agg.power_runs(kind,season_id,method_version,status,linked_leagues) VALUES ('players',%s,%s,'published',0)", (s, METHOD_VERSION))
         self.assertEqual(due_seasons(self.db, noon), [])  # computed today, by the method of today
         # Both rankings come from another version: the season in progress is due, the one long over waits for its matches to change.
         x("UPDATE agg.power_runs SET method_version='power-ranking-v0' WHERE kind='players'")
@@ -412,6 +412,16 @@ class WorkerTest(unittest.TestCase):
         x("UPDATE agg.power_runs SET status='published' WHERE season_id=%s", (season,))
         x("UPDATE agg.calc_runs SET started_at=%(t)s, finished_at=%(t)s WHERE cohort_definition=%(c)s",
           {"t": noon - RECOMPUTE_AFTER + timedelta(minutes=10), "c": f"season:{season}"})
+        self.assertEqual(due_seasons(self.db, noon), [])
+        # The same when a league has joined the common scale since the ranking was computed
+        # (the ranking read none on it; there is one now): the recent season follows, the old one does not.
+        x("UPDATE agg.power_runs SET method_version=%s WHERE kind='players'", (METHOD_VERSION,))
+        x("UPDATE agg.calc_runs SET started_at=%(t)s, finished_at=%(t)s WHERE cohort_definition=%(c)s", {"t": noon - timedelta(hours=2), "c": f"season:{season}"})
+        self.assertEqual(due_seasons(self.db, noon), [])
+        run = x("INSERT INTO agg.power_runs(kind,method_version,status) VALUES ('elo',%s,'published') RETURNING id", (METHOD_VERSION,)).fetchone()[0]
+        x("INSERT INTO agg.league_levels(competition_id,entry_level,level,teams,links,linked,run_id) VALUES (900,1500,1500,2,12,true,%s)", (run,))
+        self.assertEqual(due_seasons(self.db, noon), [season])
+        x("UPDATE agg.power_runs SET linked_leagues=1 WHERE kind='players' AND season_id=%s", (season,))
         self.assertEqual(due_seasons(self.db, noon), [])
 
     def due_season(self):

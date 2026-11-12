@@ -8,13 +8,23 @@ Player power ranking (§§ 4–8), the role-relative method:
   x̂ = expected value for the role, the minutes and the opponent;
   c = d · (x − x̂) / s           (§ 6.1)
   C = Σ_b W_r,b · mean_k∈b(c)    (§ 6.2, over the blocks the match has)
-  T = Σ_m (C + κ L),  R* = 90 T / (M + λ)                                  (§ 8)
+  T = Σ_m I_m (C + κ L),  R* = 90 T / (M + λ)                              (§ 8, annex A.4)
 
 The method leaves points open (its § 12). Each choice is a named setting below, stored
 with every run (agg.power_runs) and listed in backend/README.md. Version 2 (12 November
 2026) answers four of them from what version 1 gave on the base (docs/calculs/05-joueurs/
 08-audit-classement-puissance.md): the leagues' common scale, the role of a slot, the
 period, and the comparison between roles.
+- Stakes (version 3, 12 November 2026; § 9 leaves a match's stakes out "au départ" and
+  calls a bonus "un choix de récompense à expliciter": this is that choice). A match
+  counts for I_m = its competition's prestige × its round's (PRESTIGE, CUP_PRESTIGE,
+  STAGE; annex A.4 for the rounds): 1 for a league match, 1.15 for a Champions League
+  match, 1.30 for a World Cup match; ×1.05 from the first knockout round, ×1.10 in a
+  semi-final, ×1.15 in a final. So a Champions League final (1.32) outweighs any other
+  club final and the World Cup final (1.50) every match. The clubs' and the national
+  teams' Elo moves by K × I_m; a player's match adds I_m (C + κ L), "pénalités comprises"
+  (A.5). The World Cup's matches therefore enter the players' ranking: their level L is
+  that of the national team among the national teams, the clubs' among the clubs.
 - Elo: K 20, home advantage 60 points (none on neutral ground), expected score
   1 / (1 + 10^((R_opp − R_own − h) / 400)), result after extra time (a shoot-out is a
   draw), every finished club or national-team match of the PitchAPI era, and the matches
@@ -29,10 +39,12 @@ period, and the comparison between roles.
   against others and takes in, step by step, every league whose clubs played
   LINK_MATCHES matches against the clubs of the leagues already on it. Another keeps
   its own scale: its players have a score, and no rank among the others.
-- Universe of a season: the finished club matches from 1 August of its first year to 31
-  July of the next (the award's year), national teams excluded; a calendar-year league
-  gives the second half of one edition and the first half of the next. A player-match
-  counts when the player played.
+- Universe of a season: the finished matches of the PitchAPI editions from 1 August of
+  its first year to 31 July of the next (the award's year), the national teams' (the
+  World Cup) with the clubs' since version 3; a calendar-year league gives the second
+  half of one edition and the first half of the next. A player-match counts when the
+  player played. A player is ranked through his club: one the base knows by his
+  national team alone has a score and no rank.
 - Roles: the line-up slot of the match read with its formation (role_of); a substitute
   takes his most played role of the season, else his line's default.
 - Volume indicators: x̂ = (t / 90) · exp(α + β Δ), Δ = (Elo_opp − Elo_own) / 400 before
@@ -72,7 +84,7 @@ from collections import defaultdict
 from datetime import date, timedelta
 from math import exp, log, sqrt
 
-METHOD_VERSION = "power-ranking-v2"
+METHOD_VERSION = "power-ranking-v3"
 ELO_INITIAL = 1500.0
 ELO_K = 20.0
 ELO_HOME = 60.0
@@ -89,6 +101,16 @@ LEVEL_SHARE = 0.5  # of the spread between players given to the level of their c
 SCORE_SCALE = 4.0  # standard deviations of the index for ten to one, as the Elo's 400 points
 MIN_REFERENCE = 30
 MIN_FIT = 200
+# Stakes: a competition's prestige, by its PitchAPI key, and a complementary cup's, by the
+# competition of its cup key; 1 for every other (the leagues, the national cups).
+PRESTIGE = {"l_1XLtP0": 1.30,  # World Cup
+            "l_0bfbkO": 1.15,  # Champions League
+            "l_38d9HA": 1.08,  # Europa League
+            "l_2WZ2tt": 1.04}  # Conference League
+CUP_PRESTIGE = {"world-cup-history": 1.30, "euro": 1.20, "club-world-cup": 1.10, "nations-league": 1.05,
+                "UEFA_1_champions-league": 1.15, "UEFA_1_europa-league": 1.08, "UEFA_1_conference-league": 1.04}
+# A round's (annex A.4; the round before the round of 16 counts as it does).
+STAGE = {"knockout": 1.05, "semi_final": 1.10, "final": 1.15}
 LINE_DEFAULT = {0: "goalkeeper", 1: "centre_back", 2: "central_midfielder", 3: "centre_forward"}
 
 # Blocks and their indicators: (name, kind, direction[, attempts column]).
@@ -145,6 +167,61 @@ def _publish(conn, run, kind, season, matches, players=None):
     conn.execute("UPDATE agg.power_runs SET status='published', finished_at=clock_timestamp(), matches=%s, players=%s WHERE id=%s", (matches, players, run))
 
 
+# Stakes (§ 9, annex A.4) ----------------------------------------------------
+
+_SEMI_WORDS = ("semi", "halbfinal", "demi")
+_KNOCKOUT_WORDS = ("quarter", "viertelfinal", "achtelfinal", "quarts de finale", "huitièmes", "huitiemes", "seizièmes", "seiziemes",
+                   "round of 16", "round of 32", "last 16", "last 32")
+
+
+def round_of(stage, name):
+    """A round's place in STAGE, or None for an ordinary one: PitchAPI's stage and name
+    ("knockout" and "1/8", "final" and "final"), or a cup source's name ("Semifinals",
+    "Round of 16"; it has no stage). A league round, a third-place match, a qualifying
+    round and a play-off's rounds before its semi-finals are ordinary."""
+    name = (name or "").strip().lower()
+    if stage == "regular":
+        return None
+    if name == "1/2" or any(word in name for word in _SEMI_WORDS):
+        return "semi_final"
+    if name in ("1/4", "1/8", "1/16") or any(word in name for word in _KNOCKOUT_WORDS):
+        return "knockout"
+    if name in ("final", "finale", "finals", "the final") or name.endswith(" - final"):
+        return "final"
+    return None
+
+
+def stakes(competition_key, cup_key, stage, name):
+    """I_m: the competition's prestige × the round's. A complementary cup's rounds carry
+    no stage of their own (their rows hold the default): they are read by their name."""
+    cup = (cup_key or "").split(":")
+    prestige = PRESTIGE.get(competition_key, CUP_PRESTIGE.get(cup[1], 1.0) if len(cup) == 3 else 1.0)
+    return prestige * STAGE.get(round_of(None if cup_key else stage, name), 1.0)
+
+
+# The finished matches of the PitchAPI and complementary editions with what their stakes
+# are read from; `seasons` None is every season.
+MATCH_STAKES = """
+SELECT m.id, cp.provider_key, cs.cup_key, r.stage::text, r.name
+FROM core.matches m
+JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL
+LEFT JOIN core.provider_ids cp ON cp.entity_type = 'competition' AND cp.entity_id = cs.competition_id
+  AND cp.provider = 'pitchapi' AND cp.is_current
+LEFT JOIN core.rounds r ON r.id = m.round_id
+WHERE m.status = 'finished' AND (%(seasons)s::smallint[] IS NULL OR m.season_id = ANY(%(seasons)s::smallint[]))
+  AND (r.stage IS DISTINCT FROM 'regular' OR cs.cup_key IS NOT NULL OR cp.provider_key = ANY(%(keys)s))"""
+
+
+def match_stakes(conn, seasons=None):
+    """{match: I_m} for the matches whose stakes are not 1."""
+    out = {}
+    for match, key, cup, stage, name in conn.execute(MATCH_STAKES, {"seasons": seasons, "keys": sorted(PRESTIGE)}):
+        weight = stakes(key, cup, stage, name)
+        if weight != 1.0:
+            out[match] = weight
+    return out
+
+
 # Clubs: Elo (§ 3) ----------------------------------------------------------
 
 
@@ -152,21 +229,23 @@ def expected_score(own, opponent, home_advantage):
     return 1 / (1 + 10 ** ((opponent - own - home_advantage) / 400))
 
 
-def elo_updates(matches, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME, seeds=None, leagues=None):
+def elo_updates(matches, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME, seeds=None, leagues=None, weights=None):
     """`matches`: (match, season, kickoff, home team, away team, home score, away score,
     neutral, …) in match order. Yields one row per side: (match, team, season, kickoff,
     before, after, expected, result). A club's first strength is its league's level
-    (`seeds`, by `leagues[team]`), `initial` without one."""
+    (`seeds`, by `leagues[team]`), `initial` without one. A match moves the strengths by
+    `k` × its stakes (`weights`: {match: I_m}, 1 without one)."""
     rating = {}
-    seeds, leagues = seeds or {}, leagues or {}
+    seeds, leagues, weights = seeds or {}, leagues or {}, weights or {}
     for mid, season, kickoff, h, a, hs, as_, neutral, *_ in matches:
         rh = rating[h] if h in rating else seeds.get(leagues.get(h), initial)
         ra = rating[a] if a in rating else seeds.get(leagues.get(a), initial)
         advantage = 0.0 if neutral else home
         eh = expected_score(rh, ra, advantage)
         result = 1.0 if hs > as_ else 0.0 if hs < as_ else 0.5
-        rating[h] = rh + k * (result - eh)
-        rating[a] = ra + k * ((1 - result) - (1 - eh))
+        step = k * weights.get(mid, 1.0)
+        rating[h] = rh + step * (result - eh)
+        rating[a] = ra + step * ((1 - result) - (1 - eh))
         yield (mid, h, season, kickoff, rh, rating[h], eh, result)
         yield (mid, a, season, kickoff, ra, rating[a], 1 - eh, 1 - result)
 
@@ -276,7 +355,7 @@ def league_means(strengths, leagues):
     return {league: (total / n, n) for league, (total, n) in sums.items()}
 
 
-def league_levels(matches, leagues, *, rounds=SEED_ROUNDS, tolerance=SEED_TOLERANCE, initial=ELO_INITIAL, prior=LEVEL_PRIOR_MATCHES):
+def league_levels(matches, leagues, *, rounds=SEED_ROUNDS, tolerance=SEED_TOLERANCE, initial=ELO_INITIAL, prior=LEVEL_PRIOR_MATCHES, weights=None):
     """The level each league's clubs enter at: the mean strength of its clubs after an Elo
     started from the levels themselves, repeated (half a step at a time) until no level
     moves by `tolerance`. A league without a match against another keeps `initial` (its
@@ -286,7 +365,7 @@ def league_levels(matches, leagues, *, rounds=SEED_ROUNDS, tolerance=SEED_TOLERA
     seeds, done, shift = {}, 0, 0.0
     for done in range(1, rounds + 1):
         strengths = {}
-        for _, team, _, _, _, after, _, _ in elo_updates(matches, initial=initial, seeds=seeds, leagues=leagues):
+        for _, team, _, _, _, after, _, _ in elo_updates(matches, initial=initial, seeds=seeds, leagues=leagues, weights=weights):
             strengths[team] = after
         new = {}
         for league, (mean, _) in league_means(strengths, leagues).items():
@@ -305,15 +384,16 @@ def refresh_elo(conn):
         run = _start(conn, "elo")
         matches = elo_matches(conn.execute(ELO_MATCHES).fetchall())
         leagues = home_leagues(matches)
-        seeds, rounds, _ = league_levels(matches, leagues)
-        rows = list(elo_updates(matches, seeds=seeds, leagues=leagues))
+        weights = match_stakes(conn)
+        seeds, rounds, _ = league_levels(matches, leagues, weights=weights)
+        rows = list(elo_updates(matches, seeds=seeds, leagues=leagues, weights=weights))
         conn.execute("DELETE FROM agg.team_power")
         conn.execute("DELETE FROM agg.team_elo")
         with conn.cursor().copy(
-            "COPY agg.team_elo(match_id, team_id, season_id, kickoff_at, elo_before, elo_after, expected, result, run_id) FROM STDIN"
+            "COPY agg.team_elo(match_id, team_id, season_id, kickoff_at, elo_before, elo_after, expected, result, run_id, stakes) FROM STDIN"
         ) as copy:
             for row in rows:
-                copy.write_row((*row, run))
+                copy.write_row((*row, run, weights.get(row[0], 1.0)))
         conn.execute(
             """WITH season AS (
                  SELECT season_id, team_id, max(elo_after) AS peak, min(elo_after) AS low,
@@ -361,7 +441,7 @@ def refresh_elo(conn):
 # day and the day after its last.
 PLAYER_MATCHES = """
 SELECT s.match_id, s.player_id, s.team_id, s.minutes_played, coalesce(lp.position_id, s.position_id) AS position_id, lp.is_starter,
-  l.formation, cs.competition_id, m.competition_season_id, s.touches IS NOT NULL AS measured,
+  l.formation, cs.competition_id, m.competition_season_id, s.touches IS NOT NULL AS measured, t.is_national IS TRUE AS national,
   own.elo_before AS own_elo, opp.elo_before AS opponent_elo,
   CASE WHEN mc.events = 'ok' THEN s.goals - (SELECT count(*) FROM core.match_events e
     WHERE e.season_id = s.season_id AND e.match_id = s.match_id AND e.player_id = s.player_id
@@ -374,7 +454,7 @@ SELECT s.match_id, s.player_id, s.team_id, s.minutes_played, coalesce(lp.positio
 FROM core.player_match_stats s
 JOIN core.matches m ON m.id = s.match_id AND m.season_id = s.season_id AND m.status = 'finished'
 JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL AND cs.cup_key IS NULL
-JOIN core.teams t ON t.id = s.team_id AND t.is_national IS NOT TRUE
+JOIN core.teams t ON t.id = s.team_id
 LEFT JOIN core.match_coverage mc ON mc.season_id = s.season_id AND mc.match_id = s.match_id
 LEFT JOIN core.lineup_players lp ON lp.season_id = s.season_id AND lp.match_id = s.match_id AND lp.player_id = s.player_id
 LEFT JOIN core.lineups l ON l.season_id = s.season_id AND l.match_id = s.match_id AND l.team_id = s.team_id
@@ -382,7 +462,7 @@ LEFT JOIN core.player_match_advanced a ON a.season_id = s.season_id AND a.match_
 LEFT JOIN agg.team_elo own ON own.match_id = s.match_id AND own.team_id = s.team_id
 LEFT JOIN agg.team_elo opp ON opp.match_id = s.match_id AND opp.team_id <> s.team_id
 WHERE s.season_id = ANY(%s) AND s.minutes_played > 0 AND m.match_date >= %s AND m.match_date < %s"""
-_KEPT = ("match_id", "player_id", "team_id", "position_id", "is_starter", "formation", "competition_id", "competition_season_id", "measured")
+_KEPT = ("match_id", "player_id", "team_id", "position_id", "is_starter", "formation", "competition_id", "competition_season_id", "measured", "national")
 # The statistics the source leaves blank at zero. A match of a few dozen players shows the
 # common ones whenever the source publishes them; the rare ones need the edition.
 ZERO_IN_MATCH = ("npxg", "shots_on_target", "xa", "chances_created", "passes_into_final_third", "dribbles_succeeded", "dribbles_total",
@@ -736,6 +816,24 @@ def team_leagues(rows, leagues):
     return linked, top
 
 
+def level_centres(rows):
+    """The mean strength the level L is measured from, by minutes played: the clubs'
+    (False) and the national teams' (True), each on its own Elo."""
+    sums = {False: [0.0, 0.0], True: [0.0, 0.0]}
+    for r in rows:
+        if r["own_elo"] is not None:
+            entry = sums[bool(r.get("national"))]
+            entry[0] += r["minutes_played"] * r["own_elo"]
+            entry[1] += r["minutes_played"]
+    return {k: (total / minutes if minutes else ELO_INITIAL) for k, (total, minutes) in sums.items()}
+
+
+def staked(role, minutes, c, team, shares, level, weight):
+    """A player-match as the season reads it, its contribution, its blocks' shares and its
+    level counted for the match's stakes (annex A.5: "l'enjeu multiplie l'ensemble")."""
+    return (role, minutes, weight * c, team, {b: weight * v for b, v in shares.items()}, None if level is None else weight * level)
+
+
 def previous_year_changed(conn, season):
     """`season` holds the first half of the calendar-year editions, which belongs to the
     award year before: has one of those matches changed since that year's last ranking?
@@ -777,6 +875,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
                       l.linked AND l.level = max(l.level) FILTER (WHERE l.linked) OVER (PARTITION BY coalesce(c.country_code, 'competition ' || c.id))
                FROM agg.league_levels l JOIN core.competitions c ON c.id = l.competition_id"""
         ).fetchall()}
+        weights = match_stakes(conn, [season, season + 1])
     # 2. Compute, outside any transaction.
     for r in rows:
         r["delta"] = 0.0 if r["own_elo"] is None or r["opponent_elo"] is None else (r["opponent_elo"] - r["own_elo"]) / 400
@@ -785,17 +884,17 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     refs = references(rows)
     count = len(rows)
     linked, top = team_leagues(rows, leagues)
-    known = [(r["minutes_played"], r["own_elo"]) for r in rows if r["own_elo"] is not None]
-    centre = sum(m * e for m, e in known) / sum(m for m, _ in known) if known else ELO_INITIAL
+    centre = level_centres(rows)
     matches = []
     detailed = defaultdict(list)
     for i, r in enumerate(rows):
         scores, c = match_contribution(r, refs)
-        level = None if r["own_elo"] is None else r["minutes_played"] / 90 * (r["own_elo"] - centre) / 400
+        level = None if r["own_elo"] is None else r["minutes_played"] / 90 * (r["own_elo"] - centre[bool(r.get("national"))]) / 400
+        weight = weights.get(r["match_id"], 1.0)
         matches.append((r["match_id"], r["player_id"], r["team_id"], r["role"], int(r["minutes_played"]), r["opponent_elo"],
-                        *[scores.get(b) for b in BLOCK_COLUMNS], c, level))
+                        *[scores.get(b) for b in BLOCK_COLUMNS], c, level, weight))
         if c is not None:
-            detailed[r["player_id"]].append((r["role"], r["minutes_played"], c, r["team_id"], block_shares(r["role"], scores), level))
+            detailed[r["player_id"]].append(staked(r["role"], r["minutes_played"], c, r["team_id"], block_shares(r["role"], scores), level, weight))
         rows[i] = None  # the match's row is its tuple from here on: the year is not held twice
     del rows
     contributions = {p: [(role, m, c, team, level) for role, m, c, team, _, level in items] for p, items in detailed.items()}
@@ -805,13 +904,15 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     with conn.transaction():
         run = _start(conn, "players", season, started_at=started)
         conn.execute(
-            "UPDATE agg.power_runs SET eligibility_minutes=%s, eligibility_share=%s, level_share=%s, level_weight=%s, score_scale=%s, year_start=%s, year_end=%s WHERE id=%s",
-            (settings["eligibility"], ELIGIBILITY_SHARE, LEVEL_SHARE, settings["level_weight"], SCORE_SCALE, start, end - timedelta(days=1), run),
+            """UPDATE agg.power_runs SET eligibility_minutes=%s, eligibility_share=%s, level_share=%s, level_weight=%s, score_scale=%s,
+                 year_start=%s, year_end=%s, linked_leagues=%s WHERE id=%s""",
+            (settings["eligibility"], ELIGIBILITY_SHARE, LEVEL_SHARE, settings["level_weight"], SCORE_SCALE, start, end - timedelta(days=1),
+             sum(1 for on_scale, _ in leagues.values() if on_scale), run),
         )
         conn.execute("DELETE FROM agg.player_power WHERE season_id=%s", (season,))
         conn.execute("DELETE FROM agg.player_power_matches WHERE season_id=%s", (season,))
         with conn.cursor().copy(
-            f"COPY agg.player_power_matches(season_id, match_id, player_id, team_id, role, minutes, opponent_elo, {', '.join(BLOCK_COLUMNS)}, contribution, level, run_id) FROM STDIN"
+            f"COPY agg.player_power_matches(season_id, match_id, player_id, team_id, role, minutes, opponent_elo, {', '.join(BLOCK_COLUMNS)}, contribution, level, stakes, run_id) FROM STDIN"
         ) as copy:
             for match in matches:
                 copy.write_row((season, *match, run))

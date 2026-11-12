@@ -141,7 +141,7 @@ class ModelsTest(unittest.TestCase):
                FROM agg.power_runs WHERE kind='players' AND status='published'"""
         ).fetchone()
         # 14 matches of 90 minutes: the year is young, half the most used player's minutes make a player eligible.
-        self.assertEqual(run[:7], ("power-ranking-v2", 20.0, 450.0, 630.0, 0.5, 0.5, 4.0))
+        self.assertEqual(run[:7], ("power-ranking-v3", 20.0, 450.0, 630.0, 0.5, 0.5, 4.0))
         self.assertEqual([d.isoformat() for d in run[7:]], ["2025-08-01", "2026-07-31"])
         elo = self.db.execute("SELECT seed_rounds, link_matches, level_prior_matches FROM agg.power_runs WHERE kind='elo' AND status='published'").fetchone()
         self.assertEqual(elo, (1, 10, 30))  # nothing ties the league to another: its level does not move
@@ -157,6 +157,50 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual([rank_of[r[1]] for r in race], [r[6] for r in ranked[:30]])  # ties may come in either order
         self.assertTrue(all(r[3] == "award" and r[4] == "published" for r in race))
         self.assertAlmostEqual(race[0][2], ranked[0][5], places=3)
+
+    def test_zzz_a_world_cup_final_counts_for_its_stakes(self):
+        # Version 3 (072): the World Cup's matches enter the players' ranking, each match
+        # counted for its stakes, the clubs' Elo and the national teams' alike.
+        from vega import power
+
+        x = self.db.execute
+        x("INSERT INTO core.competitions(id,name,kind) VALUES(90,'World Cup','international')")
+        x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES('competition','pitchapi','l_1XLtP0',90)")
+        x("INSERT INTO core.competition_seasons(id,competition_id,season_id,native_label) VALUES(90,90,2025,'2026')")
+        x("INSERT INTO core.teams(id,name,is_national) VALUES(900,'Nation A',true),(901,'Nation B',true)")
+        final = x("INSERT INTO core.rounds(competition_season_id,name,stage) VALUES(90,'final','final') RETURNING id").fetchone()[0]
+        x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date,round_id,is_neutral)
+             VALUES(9000,90,2025,'pitchapi','finished',900,901,2,1,'2026-07-19',%s,true)""", (final,))
+        x("INSERT INTO core.match_coverage(season_id,match_id) VALUES(2025,9000)")
+        for player, nation, position in ((100, 900, 11), (201, 901, 32)):  # club 1's keeper, a defender of club 2
+            x("INSERT INTO core.lineup_players(season_id,match_id,team_id,player_id,is_starter,position_id) VALUES(2025,9000,%s,%s,true,%s)", (nation, player, position))
+            x("""INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,minutes_played,goals,total_shots,recoveries,interceptions,tackles,
+                   clearances,shot_blocks,duels_won,duels_lost,accurate_passes,accurate_passes_total,touches,saves,goals_prevented)
+                 VALUES(2025,9000,%s,%s,90,0,0,9,3,4,5,2,6,2,40,45,60,%s,%s)""", (nation, player, 4 if position == 11 else None, 0.2 if position == 11 else None))
+        power.refresh_power(self.db, 2025)
+        final_stakes = power.stakes("l_1XLtP0", None, "final", "final")
+        self.assertAlmostEqual(final_stakes, 1.30 * 1.15)
+        # The national teams' Elo moved by K × the stakes; a league match by K.
+        elo = dict(x("SELECT team_id, stakes FROM agg.team_elo WHERE match_id=9000").fetchall())
+        self.assertEqual({k: round(v, 4) for k, v in elo.items()}, {900: 1.495, 901: 1.495})
+        before, after, expected = self.one("SELECT elo_before, elo_after, expected FROM agg.team_elo WHERE match_id=9000 AND team_id=900")
+        self.assertAlmostEqual(after - before, power.ELO_K * final_stakes * (1 - expected), places=3)
+        self.assertEqual(self.one("SELECT count(*), min(stakes), max(stakes) FROM agg.team_elo WHERE match_id<>9000"), (112, 1.0, 1.0))
+        # The two players' final is one of their matches of the year, with their national team.
+        rows = x("SELECT player_id, team_id, role, round(stakes::numeric, 4), contribution IS NOT NULL FROM agg.player_power_matches WHERE match_id=9000 ORDER BY 1").fetchall()
+        self.assertEqual([(r[0], r[1], float(r[3]), r[4]) for r in rows], [(100, 900, 1.495, True), (201, 901, 1.495, True)])
+        self.assertEqual(rows[0][2], "goalkeeper")
+        for player, club in ((100, 1), (201, 2)):
+            team, matches, own = self.one("SELECT team_id, matches, own_total FROM agg.player_power WHERE season_id=2025 AND player_id=%s", player)
+            self.assertEqual((team, matches), (club, 15))  # he is ranked through his club
+            self.assertAlmostEqual(own, self.one("SELECT sum(stakes * contribution) FROM agg.player_power_matches WHERE season_id=2025 AND player_id=%s", player)[0], places=3)
+            self.assertIsNotNone(self.one("SELECT rank FROM agg.player_power WHERE season_id=2025 AND player_id=%s", player)[0])
+        self.assertEqual(self.one("SELECT max(stakes), min(stakes) FROM agg.player_power_matches WHERE match_id<>9000"), (1.0, 1.0))
+        # The run keeps the scale it read (worker.due_seasons compares it with the present one).
+        self.assertEqual(
+            self.one("SELECT linked_leagues FROM agg.power_runs WHERE kind='players' AND season_id=2025 AND status='published'")[0],
+            self.one("SELECT count(*) FROM agg.league_levels WHERE linked")[0],
+        )
 
     @classmethod
     def tearDownClass(cls):
