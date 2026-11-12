@@ -29,6 +29,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 - [xA — passes décisives attendues](02-metriques-attendues/02-xa.md)
 - [Buts évités (gardien)](02-metriques-attendues/03-buts-evites.md)
 - [Note du match](02-metriques-attendues/04-note-du-match.md)
+- [Le xG de Vega](02-metriques-attendues/05-xg-vega.md)
 
 ### 3. Résultats et points attendus
 - [Points attendus (xPts) et victoires attendues](03-resultats-et-points-attendus/01-points-attendus-xpts.md)

@@ -64,6 +64,7 @@ Les formules sont documentées telles que le code les applique dans [docs/calcul
   - joueurs : contribution par match relative au rôle et à l'adversaire, niveau du club, année du trophée du 1ᵉʳ août au 31 juillet, Coupe du monde comprise ;
   - enjeu : un match compte pour le prestige de sa compétition × son tour (championnat 1, Ligue des champions 1,15, sa finale 1,32, finale de Coupe du monde 1,50).
 - **Niveau des championnats** : la force moyenne des clubs de chaque championnat, saison par saison.
+- **xG de Vega** ([méthode et vérification](docs/calculs/02-metriques-attendues/05-xg-vega.md)) : un second calcul des buts attendus, d'après la distance, l'angle, la partie du corps et la situation du tir, jugé sur une saison non vue ; il double le xG de la source sans le remplacer.
 - **Pronostics et projections** ([méthode et vérifications](docs/calculs/06-accueil-et-matchs/03-pronostics-et-projections.md)) : un modèle de buts ajusté sur la force des deux équipes, jugé sur des matchs non vus ; chaque championnat en cours est rejoué 1 000 fois jusqu'à son terme.
 
 ## Infrastructure
@@ -85,9 +86,9 @@ Les ressources AWS gardent leurs noms d'origine (`vega-v2-…`). Procédure, rô
 
 - Le backend actuel sert le site depuis le 10 novembre 2026 ; le précédent a été retiré ce jour-là.
 - Le rattrapage de l'historique (saisons depuis 2021/2022) est en cours.
-- En service depuis le 12 novembre : classements de puissance version 3 (enjeu des matchs, Coupe du monde), championnats brésiliens sur l'échelle commune, zéros omis par la source rendus aux fiches et aux listes, niveau des championnats, pronostics de match et projections de fin de saison, équipes des Coupes du monde des clubs et sélections de la Ligue des nations reliées à leurs équipes, date de naissance et taille des joueurs lues de Wikidata.
+- En service depuis le 12 novembre : classements de puissance version 3 (enjeu des matchs, Coupe du monde), championnats brésiliens sur l'échelle commune, zéros omis par la source rendus aux fiches et aux listes, niveau des championnats, pronostics de match et projections de fin de saison, équipes des Coupes du monde des clubs et sélections de la Ligue des nations reliées à leurs équipes, date de naissance et taille des joueurs lues de Wikidata, xG de Vega sur les tirs, partenaires de passe des joueurs, lecture des deux mi-temps des clubs.
 - Limites connues : les championnats sans assez de matchs contre les autres (MLS, Arabie saoudite, Mexique, Argentine…) donnent un score à leurs joueurs, pas de rang ; la date de naissance et la taille viennent de Wikidata, club par club, pour les seuls joueurs reliés sans doute possible (environ quatre sur dix dans les grands clubs, moins ailleurs), aucun pied fort ; hors Coupe du monde, le football de sélections n'a que des résultats.
-- Suites de tests au 12 novembre : 221 tests Python, 117 tests de l'API, 524 tests du site, toutes vertes.
+- Suites de tests au 12 novembre : 227 tests Python, 120 tests de l'API, 535 tests du site, toutes vertes.
 
 ## Organisation du dépôt
 

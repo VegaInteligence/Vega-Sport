@@ -802,6 +802,68 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual(self.one("SELECT count(*) FROM agg.power_runs WHERE status='published' AND finished_at <= started_at")[0], 0)
         self.assertEqual(self.one("SELECT count(*) FROM agg.calc_runs WHERE status='published' AND finished_at <= started_at")[0], 0)
 
+    def test_zzzzz_every_shot_is_given_vega_expected_goals(self):
+        # 080: xg.refresh, on shots written here (the seed has too few to fit a model).
+        from vega import xg
+
+        x = self.db.execute
+        matches = [m for (m,) in x("SELECT id FROM core.matches WHERE season_id=2025 AND status='finished' ORDER BY id LIMIT 40").fetchall()]
+
+        def write(first, count):
+            # Shots from 1 to 30 metres, one in five a header, one in ninety-seven a penalty;
+            # the closer the shot, the more often it is a goal.
+            x("""INSERT INTO core.shots(season_id, match_id, shot_no, x, y, outcome, situation, body_part, is_own_goal)
+                 SELECT 2025, (%(matches)s::int[])[1 + mod(g, %(n)s)], 1000 + g / %(n)s, 105 - (1 + mod(g, 30)), 34 + (mod(g, 7) - 3) * 3,
+                   (CASE WHEN mod(g, 97) = 0 THEN (CASE WHEN mod(g, 4) = 0 THEN 'miss' ELSE 'goal' END)
+                         WHEN mod(g * 7919, 1000) / 1000.0 < exp(-(1 + mod(g, 30)) / 8.0) THEN 'goal' ELSE 'miss' END)::core.shot_outcome,
+                   (CASE WHEN mod(g, 97) = 0 THEN 'penalty' ELSE (ARRAY['regular_play','from_corner','set_piece','fast_break','free_kick','throw_in_set_piece','individual_play'])[1 + mod(g, 7)] END)::core.shot_situation,
+                   (CASE WHEN mod(g, 5) = 0 THEN 'header' WHEN mod(g, 211) = 0 THEN 'other' ELSE 'right_foot' END)::core.body_part, false
+                 FROM generate_series(%(first)s, %(first)s + %(count)s - 1) g""", {"matches": matches, "n": len(matches), "first": first, "count": count})
+
+        self.assertEqual(xg.refresh(self.db, 2025), 0)  # below the minimum: no model, no value
+        self.assertEqual(self.one("SELECT count(*) FROM agg.xg_models")[0], 0)
+        write(0, 6000)
+        x("INSERT INTO core.shots(season_id, match_id, shot_no, x, y, outcome, is_own_goal) VALUES (2025, %s, 900, 100, 34, 'goal', true), (2025, %s, 901, 130, 34, 'miss', false)", (matches[0], matches[0]))
+        minimum, xg.MIN_FIT = xg.MIN_FIT, 1000
+        try:
+            readable = "is_own_goal IS NOT TRUE AND outcome IS NOT NULL AND x BETWEEN 0 AND 105 AND y BETWEEN 0 AND 68"
+            held = self.one(f"SELECT count(*) FROM core.shots WHERE season_id=2025 AND {readable}")[0]
+            self.assertEqual(xg.refresh(self.db, 2025), held)
+            model, shots, penalty = self.one("SELECT id, shots, penalty FROM agg.xg_models")
+            self.assertEqual(shots, self.one(f"SELECT count(*) FROM core.shots WHERE {readable} AND situation IS DISTINCT FROM 'penalty'")[0])
+            # An own goal and a shot placed outside the pitch have no value.
+            self.assertEqual(self.one("SELECT count(*) FROM agg.shot_xg WHERE shot_no IN (900, 901)")[0], 0)
+            low, high = self.one("SELECT min(xg), max(xg) FROM agg.shot_xg")
+            self.assertTrue(0 < low < high < 1)
+            near, far = self.one("""SELECT avg(v.xg) FILTER (WHERE s.x >= 100), avg(v.xg) FILTER (WHERE s.x <= 85) FROM agg.shot_xg v
+                                    JOIN core.shots s USING (season_id, match_id, shot_no) WHERE s.situation <> 'penalty' AND s.shot_no >= 1000""")
+            self.assertGreater(near, 3 * far)
+            # The values add up to the goals scored (the fit is on bins: within two per cent).
+            total, goals = self.one("""SELECT sum(v.xg), count(*) FILTER (WHERE s.outcome = 'goal') FROM agg.shot_xg v
+                                       JOIN core.shots s USING (season_id, match_id, shot_no) WHERE s.situation IS DISTINCT FROM 'penalty'""")
+            self.assertLess(abs(total - goals) / goals, 0.02)
+            # A penalty is worth the share of the base's penalties that were scored.
+            taken, scored, value = self.one("""SELECT count(*), count(*) FILTER (WHERE s.outcome = 'goal'), min(v.xg) FROM agg.shot_xg v
+                                               JOIN core.shots s USING (season_id, match_id, shot_no) WHERE s.situation = 'penalty'""")
+            self.assertAlmostEqual(value, scored / taken, places=5)
+            self.assertAlmostEqual(penalty, scored / taken, places=9)
+            # The same base again: the same model, the season scored anew.
+            self.assertEqual(xg.refresh(self.db, 2025), held)
+            self.assertEqual(self.one("SELECT count(*), min(id) FROM agg.xg_models"), (1, model))
+            # A base grown by more than a quarter: a new fit, every shot read by it, the old model gone.
+            write(6000, 2400)
+            self.assertEqual(xg.refresh(self.db, 2025), held + 2400)
+            self.assertEqual(self.one("SELECT count(*) FROM agg.xg_models WHERE id <> %s", model)[0], 1)
+            self.assertEqual(self.one("SELECT count(*) FROM agg.xg_models")[0], 1)
+            self.assertEqual(self.one("SELECT count(DISTINCT model_id) FROM agg.shot_xg")[0], 1)
+            # The match page's shots carry the value.
+            self.assertEqual(self.one("SELECT count(*), count(vega_xg) FROM api.match_shot_rows WHERE season_id=2025 AND shot_no >= 1000"), (8400, 8400))
+        finally:
+            xg.MIN_FIT = minimum
+            x("DELETE FROM agg.shot_xg")
+            x("DELETE FROM agg.xg_models")
+            x("DELETE FROM core.shots WHERE season_id=2025 AND shot_no >= 900")
+
 
 if __name__ == "__main__":
     unittest.main()

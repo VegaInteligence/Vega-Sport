@@ -96,9 +96,13 @@ def due_seasons(conn, now):
       next day, nor for a match of the season to change.
     - a season with matches still to play and no forecast of them (forecast.py: the
       forecasts are new to it, or its last pass stopped before them), after the same wait.
+    - a season played in the last 400 days whose shots have no Vega expected goals (xg.py:
+      the values are new to it), after the same wait, when a model exists or the base
+      holds enough shots to fit one.
     Only PitchAPI editions count: the models read nothing of the archives and cups (whose
     seasons would otherwise all fall due when they are imported)."""
     from .power import METHOD_VERSION
+    from .xg import MIN_FIT as XG_MIN_FIT
 
     return [
         s
@@ -124,8 +128,14 @@ def due_seasons(conn, now):
                    OR (l.started_at < %(now)s - %(after)s
                        AND bool_or(m.status = 'not_started' AND m.kickoff_at > %(now)s)
                        AND NOT EXISTS (SELECT 1 FROM agg.match_forecasts f WHERE f.season_id = m.season_id))
+                   OR (l.started_at < %(now)s - %(after)s
+                       AND bool_or(m.kickoff_at > %(now)s - interval '400 days' AND m.kickoff_at <= %(now)s)
+                       AND EXISTS (SELECT 1 FROM core.shots sh WHERE sh.season_id = m.season_id)
+                       AND NOT EXISTS (SELECT 1 FROM agg.shot_xg v WHERE v.season_id = m.season_id)
+                       AND (EXISTS (SELECT 1 FROM agg.xg_models)
+                            OR EXISTS (SELECT 1 FROM core.shots OFFSET %(shots)s LIMIT 1)))
                ORDER BY 1""",
-            {"now": now, "after": RECOMPUTE_AFTER, "method": METHOD_VERSION},
+            {"now": now, "after": RECOMPUTE_AFTER, "method": METHOD_VERSION, "shots": XG_MIN_FIT},
         ).fetchall()
     ]
 
