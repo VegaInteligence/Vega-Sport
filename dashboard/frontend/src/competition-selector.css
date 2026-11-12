@@ -229,6 +229,48 @@
   font-size: var(--text-xs);
   line-height: 1.4;
 }
+.competition-level-value {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+}
+.competition-level-value strong {
+  color: var(--ink-strong);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.competition-level-value span {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.competition-level-rows {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.competition-level-rows li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink);
+  font-size: var(--text-sm);
+}
+.competition-level-rows li span:last-child {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.competition-level-rows small {
+  margin-left: 6px;
+  color: var(--muted);
+}
+.competition-level-neighbours {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
 .competition-highlights-card .competition-highlights-empty {
   margin: 12px 0 4px;
   color: var(--muted);
@@ -286,6 +328,9 @@
 @media (min-width: 1051px) {
   .competition-highlights {
     grid-template-rows: auto 1fr;
+  }
+  .competition-highlights--level {
+    grid-template-rows: auto auto 1fr;
   }
 }
 @media (max-width: 1050px) {
