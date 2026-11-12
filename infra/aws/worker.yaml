@@ -119,10 +119,11 @@ Resources:
       Family: vega-v2-worker
       RequiresCompatibilities: [FARGATE]
       NetworkMode: awsvpc
-      Cpu: '256'
-      # The collection and its side process (the daily pass holds a season's appearances
-      # in memory): 2 GB is the most a quarter vCPU takes.
-      Memory: '2048'
+      Cpu: '512'
+      # The collection and its side process. The daily pass holds a season's appearances in
+      # memory: the player ranking of a full season took the task to 100 % of 2 GB (the most
+      # a quarter vCPU takes), and the kernel killed the side process on 12 November 2026.
+      Memory: '4096'
       RuntimePlatform: {CpuArchitecture: ARM64, OperatingSystemFamily: LINUX}
       ExecutionRoleArn: !GetAtt ExecutionRole.Arn
       TaskRoleArn: !GetAtt TaskRole.Arn
