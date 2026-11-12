@@ -140,6 +140,47 @@ class NormalizeTest(unittest.TestCase):
         with self.assertRaises(NormalizationError):  # a period nobody knows is still refused
             normalize_family("stats", dict(stats, periods=[{"period": "ThirdHalf", "groups": []}]))
 
+    def test_fields_the_collector_left_out_until_november_2026(self):
+        # The source's own answers of 12 November 2026 (a Premier League match, a Serie B one).
+        items = [
+            {"key": "physical_metrics_distance_covered", "home": "116276", "away": "108097", "format_type": "distance"},
+            {"key": "physical_metrics_number_of_sprints", "home": "96", "away": "97", "format_type": "integer"},
+            {"key": "physical_metrics_running", "home": "24904", "away": "22307", "format_type": "distance"},
+            {"key": "physical_metrics_sprinting", "home": "1731", "away": "1702", "format_type": "distance"},
+            {"key": "poss_won_att_3rd", "home": "3", "away": "3", "format_type": "integer"},
+            {"key": "poss_won_mid_3rd", "home": "19", "away": "22", "format_type": "integer"},
+            {"key": "poss_won_def_3rd", "home": "18", "away": "16", "format_type": "integer"},
+            {"key": "ppda", "home": "7.60", "away": "16.70", "format_type": "double"},
+            {"key": "recoveries", "home": "47", "away": "46", "format_type": "integer"},
+            {"key": "final_third_entries", "home": "38 (68%)", "away": "32 (55%)", "format_type": "integerWithPercentage"},
+            {"key": "penalty_area_entries", "home": "13 (68%)", "away": "6 (25%)", "format_type": "integerWithPercentage"},
+        ]
+        stats = {"home_team": T, "away_team": {"id": "t_654321", "name": "Other"}, "periods": [{"period": "All", "groups": [{"items": items}]}]}
+        got = normalize_family("stats", stats)
+        self.assertEqual(got.unknown_paths, set())
+        home, away = got.rows["core.team_match_stats"]
+        self.assertEqual([home[k] for k in ("distance_m", "sprints", "running_m", "sprinting_m")], [116276.0, 96, 24904.0, 1731.0])
+        self.assertEqual([home[k] for k in ("poss_won_att_3rd", "poss_won_mid_3rd", "poss_won_def_3rd", "recoveries")], [3, 19, 18, 47])
+        self.assertEqual((home["ppda"], away["ppda"]), (7.6, 16.7))
+        self.assertEqual([away[k] for k in ("final_third_entries", "final_third_entries_pct", "penalty_area_entries", "penalty_area_entries_pct")], [32, 55.0, 6, 25.0])
+        # A player's running distance comes with his distance covered; his walking distance and a keeper's shoot-out saves are kept.
+        stat = lambda key, value: {"key": key, "stat": value}
+        groups = [{"stats": {
+            "Running": stat("physical_metrics_running", {"total": 12102, "type": "distanceWithPercentage", "value": 2865}),
+            "Sprinting": stat("physical_metrics_sprinting", {"total": 12102, "type": "distanceWithPercentage", "value": 98}),
+            "Walking": stat("physical_metrics_walking", {"type": "distance", "value": 4012}),
+            "Saved penalties in shootout": stat("saved_penalties_in_shootout", {"type": "integer", "value": 2}),
+        }}]
+        from vega import normalize as module
+
+        class Out:
+            unknown_paths = set()
+
+        out, row = Out(), {}
+        module._player_stats(out, row, groups)
+        self.assertEqual(out.unknown_paths, set())
+        self.assertEqual([row[k] for k in ("running_m", "sprinting_m", "distance_m", "walking_m", "shootout_penalties_saved")], [2865.0, 98.0, 12102.0, 4012.0, 2])
+
     def test_official_shot_enums_and_both_team_stat_percentages(self):
         shot = {
             "team_id": T["id"],

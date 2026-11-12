@@ -21,6 +21,8 @@ from dataclasses import dataclass
 from .schema_contract import (
     PLAYER_ADVANCED_COLUMNS,
     PLAYER_STATS_COLUMNS,
+    SOURCE_ONLY_PLAYER_COLUMNS,
+    SOURCE_ONLY_TEAM_COLUMNS,
     TEAM_ADVANCED_COLUMNS,
     TEAM_STATS_COLUMNS,
 )
@@ -70,10 +72,11 @@ KEEPER_ZERO_STATS = ("penalties_saved", "goals_prevented", "xgot_faced")
 NO_SHOT_FACED = ("goals_prevented", "xgot_faced")
 
 # Source columns that are identities or the coverage base, not metrics.
+# The columns of 074 are kept match by match and have no season aggregate yet.
 NOT_METRICS = {
-    PLAYER_BASE: {"position_id", "minutes_played"},
+    PLAYER_BASE: {"position_id", "minutes_played", *SOURCE_ONLY_PLAYER_COLUMNS},
     PLAYER_ADVANCED: {"minutes_played"},
-    TEAM_BASE: set(),
+    TEAM_BASE: set(SOURCE_ONLY_TEAM_COLUMNS),
     TEAM_ADVANCED: set(),
 }
 

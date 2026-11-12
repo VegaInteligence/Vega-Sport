@@ -111,3 +111,30 @@ PITCHAPI_PLAYER_KEYS.update(
 )
 # The team endpoint can publish a count and percentage with no total.
 TEAM_STATS_COLUMNS["accurate_passes_pct"] = "real"
+
+# Fields the source sent and the collector left out until 12 November 2026
+# (ops.unknown_fields listed them): a team's physical figures under the players' own
+# spellings, its possession won by third of the pitch, its recoveries, its pressing
+# figure and its entries (074 adds their columns); a player's walking distance and the
+# penalties a keeper saved in a shoot-out. A player's running and sprinting distances come
+# with his total distance, which is his distance covered.
+PITCHAPI_TEAM_KEYS.update(
+    {
+        "physical_metrics_distance_covered": "distance_m",
+        "physical_metrics_number_of_sprints": "sprints",
+        "physical_metrics_running": "running_m",
+        "physical_metrics_sprinting": "sprinting_m",
+        "physical_metrics_walking": "walking_m",
+    }
+)
+SOURCE_ONLY_TEAM_COLUMNS = {
+    "poss_won_att_3rd": "smallint", "poss_won_mid_3rd": "smallint", "poss_won_def_3rd": "smallint", "recoveries": "smallint",
+    "final_third_entries": "smallint", "penalty_area_entries": "smallint",
+    "ppda": "real", "final_third_entries_pct": "real", "penalty_area_entries_pct": "real",
+}
+TEAM_STATS_COLUMNS.update(SOURCE_ONLY_TEAM_COLUMNS)
+PITCHAPI_TEAM_KEYS.update({name: name for name in SOURCE_ONLY_TEAM_COLUMNS if not name.endswith("_pct")})
+SOURCE_ONLY_PLAYER_COLUMNS = {"walking_m": "real"}
+PLAYER_STATS_COLUMNS.update(SOURCE_ONLY_PLAYER_COLUMNS)
+PITCHAPI_PLAYER_KEYS.update({"physical_metrics_walking": "walking_m", "saved_penalties_in_shootout": "shootout_penalties_saved"})
+PLAYER_TOTAL_KEYS.update({"physical_metrics_running": "distance_m", "physical_metrics_sprinting": "distance_m"})
