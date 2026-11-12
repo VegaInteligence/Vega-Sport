@@ -94,6 +94,21 @@ class ParseTest(unittest.TestCase):
         self.assertIsNone(match("FC", "france"))  # nothing left of the name
         self.assertIsNone(match("West Ham United", ""))
 
+    def test_club_world_cup_spellings(self):
+        # "Name (XXX)": the club of that name in that country, or of its reviewed spelling.
+        pitch = {("chelsea", False): {(1, "ENG")}, ("alain", False): {(2, "UAE"), (3, "KSA")}, ("realmadrid", False): {(4, "ESP")},
+                 ("alhilal", False): {(5, "KSA"), (6, "KSA")}, ("botafogo", False): {(7, "BRA")}, ("botafogosp", False): {(8, "BRA")},
+                 ("aucklandfc", False): {(9, "AUS")}}
+        reviewed = {identity.WORLD_CLUB_KEYS["Al Hilal (KSA)"]: 5}
+        match = lambda name: identity.match_team(pitch, name, False, None, reviewed)
+        self.assertEqual([match(n) for n in ("Real Madrid (ESP)", "Chelsea FC (ENG)", "Al Ain FC (UAE)", "Botafogo RJ (BRA)")], [4, 1, 2, 7])
+        self.assertEqual(match("Al Hilal (KSA)"), 5)  # the club, not its women's team: named by its key
+        self.assertIsNone(identity.match_team(pitch, "Al Hilal (KSA)", False, None))  # a key the base does not hold names no club
+        self.assertIsNone(match("Real Madrid (ITA)"))  # another country
+        self.assertIsNone(match("Auckland City FC (NZL)"))  # not Australia's Auckland FC
+        self.assertIsNone(match("Chelsea FC"))  # the reviewed spelling is the tournament's, not every source's
+        self.assertIsNone(match("Al Ain FC"))
+
     def test_no_key_no_scope(self):
         os.environ.pop("V2_SPORTSAPI_API_KEY", None)
         self.assertEqual(sportsapi.scopes(NOW), {})
@@ -337,6 +352,43 @@ class SourceIdentityTest(unittest.TestCase):
         self.assertEqual(self.db.execute("SELECT name FROM core.teams WHERE id = 2").fetchone()[0], "Germany")
         self.assertEqual(self.db.execute("SELECT count(*) FROM core.teams").fetchone()[0], teams)
         self.assertEqual(self.db.execute("SELECT count(*), count(DISTINCT match_id) FROM api.cup_matches").fetchone(), (3, 3))
+
+    def test_world_cup_of_clubs_teams_merge_into_their_clubs(self):
+        from vega.sources import cups
+
+        x = self.db.execute
+        x("INSERT INTO core.countries(code) VALUES ('KSA'), ('UAE'), ('BRA'), ('AUS'), ('ESP'), ('ENG') ON CONFLICT DO NOTHING")
+        # PitchAPI clubs: two Al Hilal (the club and its women's team), two Al Ain, two Botafogo.
+        x("""INSERT INTO core.teams(id, name, country_code) VALUES (760, 'Real Madrid', 'ESP'), (761, 'Chelsea', 'ENG'), (762, 'Al Hilal', 'KSA'),
+             (763, 'Al Hilal', 'KSA'), (764, 'Al Ain', 'UAE'), (765, 'Al Ain', 'KSA'), (766, 'Botafogo', 'BRA'), (767, 'Botafogo SP', 'BRA'),
+             (768, 'Auckland FC', 'AUS')""")
+        keys = {760: "t_wcaa60", 761: "t_wcaa61", 762: identity.WORLD_CLUB_KEYS["Al Hilal (KSA)"], 763: "t_wcaa63", 764: "t_wcaa64",
+                765: "t_wcaa65", 766: "t_wcaa66", 767: "t_wcaa67", 768: "t_wcaa68"}
+        for team, key in keys.items():
+            x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team', 'pitchapi', %s, %s)", (key, team))
+        body = {"name": "Club World Cup 2025", "season": "2025", "source": {"name": "OpenFootball", "url": "https://github.com/openfootball/club-world-cup"},
+                "matches": [{"round": "Matchday 1", "date": "2025-06-18", "team1": "Real Madrid (ESP)", "team2": "Al Hilal (KSA)", "score": {"ft": [1, 1]}},
+                            {"round": "Matchday 1", "date": "2025-06-19", "team1": "Chelsea FC (ENG)", "team2": "Botafogo RJ (BRA)", "score": {"ft": [2, 0]}},
+                            {"round": "Matchday 1", "date": "2025-06-20", "team1": "Al Ain FC (UAE)", "team2": "Auckland City FC (NZL)", "score": {"ft": [6, 0]}}]}
+        with self.db.transaction():
+            cups.save(self.db, "open-cups", "club-world-cup", "2025", body, NOW)
+        with self.db.transaction():
+            merged, _ = identity.run(self.db, None, "teams", NOW)
+        self.assertEqual(merged, 5)  # Auckland City names no PitchAPI club and stays
+        owners = dict(x("SELECT provider_key, entity_id FROM core.provider_ids WHERE entity_type='team' AND provider='openfootball' AND provider_key LIKE %s", ("name:% (___)",)).fetchall())
+        self.assertEqual([owners[f"name:{n}"] for n in ("Real Madrid (ESP)", "Al Hilal (KSA)", "Chelsea FC (ENG)", "Botafogo RJ (BRA)", "Al Ain FC (UAE)")],
+                         [760, 762, 761, 766, 764])
+        self.assertEqual(x("SELECT name FROM core.teams WHERE id=%s", (owners["name:Auckland City FC (NZL)"],)).fetchone()[0], "Auckland City FC (NZL)")
+        # The matches are the clubs' own; the source's spelling stays known, and shown by the cup read.
+        played = x("""SELECT m.home_team_id, m.away_team_id FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+                      WHERE cs.cup_key = 'open-cups:club-world-cup:2025' ORDER BY m.match_date""").fetchall()
+        self.assertEqual(played[:2], [(760, 762), (761, 766)])
+        self.assertEqual(played[2][0], 764)
+        self.assertEqual(x("SELECT count(*) FROM core.entity_names WHERE entity_type='team' AND entity_id=761 AND name='Chelsea FC (ENG)' AND kind='source_spelling'").fetchone()[0], 1)
+        self.assertEqual(x("SELECT count(*) FROM core.teams WHERE name LIKE %s", ("% (___)",)).fetchone()[0], 1)
+        with self.db.transaction():
+            self.assertEqual(identity.run(self.db, None, "teams", NOW)[0], 0)  # nothing left to merge
+
 
 if __name__ == "__main__":
     unittest.main()
