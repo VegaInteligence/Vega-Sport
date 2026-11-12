@@ -9,6 +9,7 @@
  * the API does not publish (squad value, age profile) live in the pages and
  * wear a « Données fictives » badge.
  */
+import { gameStates } from "./club-game-states.js";
 import { useEffect, useMemo, useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import {
@@ -1462,67 +1463,6 @@ function shotProfile(rows, clubId) {
           opponent: row.opponent.name,
           date: row.match.date,
         });
-    }
-  }
-  return out;
-}
-
-/** Goal timeline per match, kept only when it reproduces the final score. */
-function gameStates(rows, clubId) {
-  const out = {
-    matches: 0,
-    scoredFirst: { matches: 0, points: 0, w: 0, d: 0, l: 0 },
-    concededFirst: { matches: 0, points: 0, w: 0, d: 0, l: 0 },
-    goalless: 0,
-    pointsFromBehind: 0,
-    pointsDropped: 0,
-    minutes: { lead: 0, level: 0, behind: 0 },
-    comebacks: [],
-    collapses: [],
-  };
-  for (const row of rows) {
-    const goals = (row.match.shots || [])
-      .filter((s) => s.isGoal || s.isOwnGoal)
-      .map((s) => ({
-        minute: (num(s.minute) || 0) + (num(s.minuteAdded) || 0) / 100,
-        mine: s.isOwnGoal ? s.teamId !== clubId : s.teamId === clubId,
-      }))
-      .sort((a, b) => a.minute - b.minute);
-    if (
-      goals.filter((g) => g.mine).length !== row.gf ||
-      goals.filter((g) => !g.mine).length !== row.ga
-    )
-      continue;
-    out.matches++;
-    let diff = 0,
-      last = 0,
-      led = false,
-      trailed = false;
-    const end = Math.max(93, ...goals.map((g) => g.minute + 1));
-    for (const goal of goals) {
-      const span = goal.minute - last;
-      out.minutes[diff > 0 ? "lead" : diff < 0 ? "behind" : "level"] += span;
-      last = goal.minute;
-      diff += goal.mine ? 1 : -1;
-      if (diff > 0) led = true;
-      if (diff < 0) trailed = true;
-    }
-    out.minutes[diff > 0 ? "lead" : diff < 0 ? "behind" : "level"] +=
-      end - last;
-    if (!goals.length) out.goalless++;
-    else {
-      const bucket = goals[0].mine ? out.scoredFirst : out.concededFirst;
-      bucket.matches++;
-      bucket.points += row.points;
-      bucket[row.result === "V" ? "w" : row.result === "N" ? "d" : "l"]++;
-    }
-    if (trailed && row.points) {
-      out.pointsFromBehind += row.points;
-      out.comebacks.push(row);
-    }
-    if (led && row.points < 3) {
-      out.pointsDropped += 3 - row.points;
-      out.collapses.push(row);
     }
   }
   return out;

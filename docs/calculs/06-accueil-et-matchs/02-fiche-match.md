@@ -27,6 +27,8 @@ Résultat d'un tir (`shotOutcome`) : contre son camp, but, poteau, contré, arr�
 
 Sur la carte de saison d'un joueur ([season-shots.js](../../../dashboard/frontend/src/services/season-shots.js#L13)), la **distance au but** `√((longueur − x)² + (largeur / 2 − y)²)` n'est calculée que si le repère est vérifié (`coordinateFrame = acting_ltr`, l'équipe attaque de gauche à droite) ; sinon la position est marquée approximative.
 
+La même carte donne « Après la frappe » (`strikeQuality`) : la somme des xGOT moins les xG des tirs affichés, c'est-à-dire ce que le placement des frappes ajoute ou retire à la qualité des occasions. Un tir non cadré ou bloqué vaut 0 après la frappe ; un tir cadré sans xGOT publié et un but contre son camp sont laissés de côté. Sur la saison 2025/2026, la somme des xGOT de la base (41 939) est proche des buts marqués (41 090) : la mesure est calibrée.
+
 ## Contexte avant le match
 
 [MatchContext.jsx](../../../dashboard/frontend/src/components/MatchContext.jsx) compare les deux équipes **uniquement sur les matchs joués avant le coup d'envoi** (`clubSummary` avec `before = match`, comparaison au coup d'envoi UTC, sinon à la date) :

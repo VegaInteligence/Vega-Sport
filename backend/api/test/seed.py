@@ -85,6 +85,9 @@ def main(dsn):
         x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('player','pitchapi',%s,%s)", (key, pid))
     x("INSERT INTO core.entity_names(entity_type,entity_id,name,normalized,kind,source) VALUES ('player',104,'CR7','cr7','alias','vega')")
     x("UPDATE core.players SET birth_date='1999-05-06', height_cm=181 WHERE id=102")
+    # Pass network edges (079): player 101 with two team-mates over two matches.
+    x("""INSERT INTO core.pass_network_edges(season_id, match_id, team_id, from_player_id, to_player_id, passes) VALUES
+         (2025,1,1,101,102,7), (2025,1,1,102,101,4), (2025,5,1,101,102,3), (2025,1,1,101,104,2), (2025,1,1,102,104,9)""")
     for pid, mid, team, minutes, rating, goals, xg, shots, ok, att, position, starter, saves, prevented in STATS:
         x(
             "INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,position_id,minutes_played,rating,goals,xg,total_shots,accurate_passes,accurate_passes_total,saves,goals_prevented) VALUES (2025,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",

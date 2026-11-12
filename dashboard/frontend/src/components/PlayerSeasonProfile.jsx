@@ -50,6 +50,7 @@ import PlayerScoutOverview, {
 import PlayerScoutCareer from "./PlayerScoutCareer.jsx";
 import { FakePhysical } from "./PlayerScoutDemo.jsx";
 import PlayerPresenceCard from "./PlayerPresenceCard.jsx";
+import PlayerPassPartners from "./PlayerPassPartners.jsx";
 import { chartTokens } from "./PlayerScoutCharts.jsx";
 import scout from "./PlayerScout.module.css";
 import { nationalFlagCode } from "../services/national-flags.js";
@@ -785,6 +786,9 @@ export default function PlayerSeasonProfile({
                     )}
                   </section>
                   <PlayerPresenceCard id={id} rows={rows} />
+                </div>
+                <div className={scout.block}>
+                  <PlayerPassPartners id={id} />
                 </div>
               </>
             )}
