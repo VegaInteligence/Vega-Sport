@@ -141,21 +141,25 @@ def statistics():
 def refresh(conn, season):
     """Place the season's players (MIN_MINUTES or more, all competitions together) on the
     axes learnt from them; returns the number of players placed. A season with too few
-    players keeps no vector."""
+    players keeps no vector.
+
+    Read, compute, write: no transaction is open while the axes are computed. The base ends
+    a session that stays idle inside a transaction (60 s), and the computation of a full
+    season takes longer than that on the worker."""
     keys = statistics()
     columns = ", ".join(f"sum(s.{key}_sum), sum(s.{key}_min)" for key in keys)
+    rows = conn.execute(
+        f"""SELECT s.player_id, sum(s.minutes)::integer, bool_and(c.name ~* %(women)s), {columns}
+            FROM agg.player_season_stats s
+            JOIN core.competition_seasons cs ON cs.id = s.competition_season_id
+            JOIN core.competitions c ON c.id = cs.competition_id
+            WHERE s.season_id = %(season)s GROUP BY s.player_id HAVING sum(s.minutes) >= %(minutes)s ORDER BY s.player_id""",
+        {"season": season, "minutes": MIN_MINUTES, "women": WOMEN},
+    ).fetchall()
+    result = embed([[per90(row[3 + 2 * i], row[4 + 2 * i]) for i in range(len(keys))] for row in rows])
     with conn.transaction():
-        rows = conn.execute(
-            f"""SELECT s.player_id, sum(s.minutes)::integer, bool_and(c.name ~* %(women)s), {columns}
-                FROM agg.player_season_stats s
-                JOIN core.competition_seasons cs ON cs.id = s.competition_season_id
-                JOIN core.competitions c ON c.id = cs.competition_id
-                WHERE s.season_id = %(season)s GROUP BY s.player_id HAVING sum(s.minutes) >= %(minutes)s ORDER BY s.player_id""",
-            {"season": season, "minutes": MIN_MINUTES, "women": WOMEN},
-        ).fetchall()
         conn.execute("DELETE FROM agg.player_embeddings WHERE season_id = %s", (season,))
         conn.execute("DELETE FROM agg.embedding_models WHERE season_id = %s", (season,))
-        result = embed([[per90(row[3 + 2 * i], row[4 + 2 * i]) for i in range(len(keys))] for row in rows])
         if result is None:
             return 0
         vectors, kept_share, kept = result

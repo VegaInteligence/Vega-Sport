@@ -1007,6 +1007,36 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM agg.forecast_models WHERE id=%s", (model,))
             x("DELETE FROM core.match_events WHERE season_id=2025 AND seq >= 600")
 
+    def test_zzzzzzzzz_no_transaction_is_open_while_a_model_computes(self):
+        # The base ends a session idle inside a transaction after 60 s, and these computations
+        # take longer than that on a full season: each must run with no transaction open.
+        from psycopg.pq import TransactionStatus
+        from vega import embedding, inplay, xg
+
+        x = self.db.execute
+        seen = {}
+
+        def spy(name, real):
+            def wrapped(*args, **kwargs):
+                seen[name] = self.db.info.transaction_status
+                return real(*args, **kwargs)
+            return wrapped
+
+        model = x("""INSERT INTO agg.forecast_models(version,matches,home_base,home_slope,away_base,away_slope,rho,strength_spread,simulations)
+                     VALUES ('forecast-v1',1000,0.3,0.9,0.1,0.9,-0.03,90,1000) RETURNING id""").fetchone()[0]
+        originals = (embedding.embed, xg.fit, inplay.fit)
+        embedding.embed, xg.fit, inplay.fit = spy("embedding", embedding.embed), spy("xg", xg.fit), spy("inplay", inplay.fit)
+        try:
+            embedding.refresh(self.db, 2025)
+            xg.refresh(self.db, 2025)
+            inplay.refresh(self.db)
+        finally:
+            embedding.embed, xg.fit, inplay.fit = originals
+            x("DELETE FROM agg.forecast_models WHERE id=%s", (model,))
+        self.assertEqual(sorted(seen), ["embedding", "inplay", "xg"])
+        self.assertEqual(set(seen.values()), {TransactionStatus.IDLE})
+        self.assertEqual(self.db.info.transaction_status, TransactionStatus.IDLE)
+
 
 if __name__ == "__main__":
     unittest.main()

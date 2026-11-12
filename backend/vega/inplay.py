@@ -172,25 +172,28 @@ def match_events(rows, home, home_score, away_score):
 def refresh(conn):
     """Fit the in-play model on every finished club match whose goal events give its score,
     with the forecast's present coefficients; one model is kept. Returns the number of
-    matches fitted on (0 when there is no forecast model or too few matches)."""
+    matches fitted on (0 when there is no forecast model or too few matches).
+
+    The fit runs outside any transaction: the base ends a session that stays idle inside
+    one (60 s)."""
+    coefficients = conn.execute(
+        "SELECT home_base, home_slope, away_base, away_slope FROM agg.forecast_models ORDER BY fitted_at DESC, id DESC LIMIT 1"
+    ).fetchone()
+    if coefficients is None:
+        return 0
+    forecast_model = {"home": (coefficients[0], coefficients[1]), "away": (coefficients[2], coefficients[3])}
+    by_match = defaultdict(list)
+    for match, minute, added, kind, team in conn.execute(EVENTS).fetchall():
+        by_match[match].append((minute, added, kind, team))
+    matches = []
+    for match, elo_home, elo_away, neutral, home_score, away_score, home in conn.execute(MATCHES).fetchall():
+        events = match_events(by_match.get(match, []), home, home_score, away_score)
+        if events is not None:
+            matches.append((*rates(forecast_model, elo_home, elo_away, neutral), events))
+    model = fit(matches)
+    if model is None:
+        return 0
     with conn.transaction():
-        coefficients = conn.execute(
-            "SELECT home_base, home_slope, away_base, away_slope FROM agg.forecast_models ORDER BY fitted_at DESC, id DESC LIMIT 1"
-        ).fetchone()
-        if coefficients is None:
-            return 0
-        forecast_model = {"home": (coefficients[0], coefficients[1]), "away": (coefficients[2], coefficients[3])}
-        by_match = defaultdict(list)
-        for match, minute, added, kind, team in conn.execute(EVENTS).fetchall():
-            by_match[match].append((minute, added, kind, team))
-        matches = []
-        for match, elo_home, elo_away, neutral, home_score, away_score, home in conn.execute(MATCHES).fetchall():
-            events = match_events(by_match.get(match, []), home, home_score, away_score)
-            if events is not None:
-                matches.append((*rates(forecast_model, elo_home, elo_away, neutral), events))
-        model = fit(matches)
-        if model is None:
-            return 0
         conn.execute("DELETE FROM agg.inplay_models")
         conn.execute(
             """INSERT INTO agg.inplay_models(version, matches, goals, red_matches, q1, q2, q3, q4, q5, q6, after_90, down, up)
