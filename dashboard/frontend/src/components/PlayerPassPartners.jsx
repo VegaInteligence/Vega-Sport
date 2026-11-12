@@ -26,7 +26,7 @@ export default function PlayerPassPartners({ id }) {
           <li key={partner.id}>
             <Link href={f.href("/joueurs/", { id: partner.id, season: f.season, league: "", q: "" })}>
               <Media name={partner.name} url={partner.image_url} className="player-avatar" />
-              <span>
+              <span className={s.partnerText}>
                 <strong>{partner.name}</strong>
                 <small>
                   {number(partner.given)} données · {number(partner.received)} reçues · {number(partner.matches)}{" "}
