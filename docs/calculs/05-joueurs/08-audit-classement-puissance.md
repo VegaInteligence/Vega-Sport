@@ -47,7 +47,7 @@ PitchAPI ne publie jamais un xG, un xA ou une grosse occasion à zéro, et laiss
 
 La version 2 rend son zéro à un vide (`restore_zeros`) quand la ligne du joueur porte des statistiques (ses ballons touchés sont connus) et que le fournisseur montre qu'il publie la statistique : dans le même match pour les statistiques courantes, dans la même édition pour les rares. 2 035 205 valeurs sur les 526 627 lignes de l'année 2025/2026.
 
-Le même défaut touche les moyennes par 90 minutes et les centiles des fiches joueur, calculés ailleurs (`seasonMetric`, `buildCohorts`) : il n'est pas corrigé ici (voir « Ce que la version 2 ne fait pas »).
+Le même défaut touche les moyennes par 90 minutes et les centiles des fiches joueur, calculés ailleurs (`seasonMetric`, `buildCohorts`) : il a été corrigé le même jour par la migration 068 (voir « Les fiches joueur » plus bas).
 
 ### 6. Des matchs manquaient encore
 
@@ -93,9 +93,21 @@ Le choix reste un réglage : à κ = 1 le classement suit davantage la hiérarch
 
 Kvaratskhelia est 51ᵉ et Doué 74ᵉ de la course 2025/2026 (9 233 joueurs classés en tout, divisions inférieures comprises) : leur contribution propre est bonne sans être parmi les toutes premières des ailiers, et le niveau de leur club les porte comme il porte leurs coéquipiers. Le rôle corrigé seul les faisait reculer, de la 40ᵉ à la 347ᵉ place et de la 85ᵉ à la 296ᵉ lors du premier essai (comparés à des avants-centres, leur progression et leur conservation sortaient du lot) ; c'est le niveau du club qui les replace.
 
-## Ce que la version 2 ne fait pas
+## Les fiches joueur (12 novembre, migrations 068 et 069)
 
-- **Les fiches joueur.** Les moyennes par 90 minutes, les centiles et les indices de rôle des fiches (« Indice Vega » de la colonne de droite, onglet « Stats avancées ») lisent encore un zéro omis comme une valeur inconnue : une mesure n'est classée que si elle est renseignée sur tous les matchs joués, et parmi les 84 attaquants les plus utilisés de 2026/2027, 35 seulement ont un xG « complet » et 30 des dribbles. Un joueur comme Lamine Yamal n'y a qu'un indice de rôle calculable (Récupération, 63) et son « Indice Vega » vaut ce nombre. La correction demande de rendre leurs zéros aux lignes que lisent ces pages et de recalculer les lignes préparées de chaque édition.
+Les moyennes par 90 minutes, les centiles et les indices de rôle des fiches lisaient un zéro omis comme une valeur inconnue : une mesure n'est classée que si elle est observée sur tous les matchs joués, et un attaquant resté un match sans tirer n'avait plus de xG « complet ».
+
+- **Un vide vaut zéro là où le fournisseur publie la mesure pour le match** (`agg.match_zeros`, règle et relevé dans [Valeurs absentes](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md)). Les lignes du fournisseur ne changent pas ; les fiches, les listes, l'accueil et les lignes saison rendent le zéro à la lecture.
+- **Résultat sur la base**, parmi les 17 741 lignes joueur-édition d'au moins 450 minutes de 2026/2027, mesure observée sur tous les matchs joués, avant → après : xG 519 → 16 915 (3 % → 95 %), tirs 9 011 → 17 741, dribbles 9 033 → 17 566, duels gagnés 12 299 → 17 566, passes dans le dernier tiers 11 616 → 16 785, tirs cadrés 340 → 9 070, npxG 320 → 8 891, xA 2 016 → 8 891, grosses occasions créées 0 → 8 895. Les quatre dernières plafonnent à la moitié : ce sont les éditions qui les publient. Les sommes ne bougent pas (un zéro n'ajoute rien).
+- **Sur une fiche** (Lamine Yamal, 2026/2027, onglet « Stats avancées », 135 joueurs à son poste) : xG 9ᵉ sur 30 → 22ᵉ sur 135, tirs 1ᵉʳ sur 30 → 2ᵉ sur 135, tirs cadrés 9ᵉ sur 30 → 18ᵉ sur 135, xGOT « non classé » → 20ᵉ sur 135. Les 30 étaient les seuls joueurs à avoir tiré à chaque match.
+- **Le xA est classé** comme les autres mesures, là où il est observé sur tous les matchs.
+- **L'« Indice Vega » de la colonne de droite** lit le score du classement de puissance de la saison et le rang du joueur parmi les classés de son rôle (`/api/rankings/power/player`) ; l'ancien calcul (meilleur indice de rôle) reste pour une saison ou un joueur sans score.
+- **Une nouvelle version de la méthode** recalcule la saison en cours dans l'heure (`due_seasons`), sans attendre le passage quotidien. Le classement 2026/2027, resté sur la version 1 depuis minuit, est passé en version 2 à 12 h 49 UTC : 1. Lamine Yamal 94,7 ; 2. Kylian Mbappé 92,7 ; 3. Vitinha 92,1 ; 4. Michael Olise 92,0.
+- **Lu sur le site après déploiement** (colonne de droite) : Lamine Yamal 2026/2027, 95 et 1ᵉʳ sur 537 à son poste (92 et 4ᵉ sur 68 avec l'ancien indice) ; Khvicha Kvaratskhelia 2025/2026, 89 et 14ᵉ sur 1 814 ; Désiré Doué 2025/2026, 87 et 19ᵉ sur 1 814.
+
+Non fait : les statistiques de gardien (arrêts, buts encaissés…) gardent leurs vides, la ligne de statistiques ne portant pas le poste ; le classement de puissance garde sa propre restauration (`restore_zeros`), de même idée, sans lire `agg.match_zeros`.
+
+## Ce que la version 2 ne fait pas
 
 - **L'enjeu du match.** Une finale compte comme un autre match contre le même adversaire. Le § 9 de la méthode garde l'enjeu hors du modèle ; son annexe A.4 propose un coefficient (1,05 en huitième et quart, 1,10 en demi-finale, 1,15 en finale) comme « choix de récompense à expliciter ». Il n'est pas appliqué.
 - **Les championnats hors de l'échelle commune.** Il faut des matchs entre continents. La Coupe du monde des clubs 2025 est dans la base, mais ses 33 équipes n'y sont pas reliées à leurs clubs (leur nom porte le pays entre parenthèses, « Al Hilal (KSA) ») : les relier donnerait les seuls matchs entre confédérations de la base.
