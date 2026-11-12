@@ -139,3 +139,10 @@ test("a whole selection comes in one page, as its pages give it", { skip }, asyn
   assert.equal((await get(base + "&whole=0")).response.status, 400);
   assert.equal((await get("/api/dashboard/manifest")).body.capabilities.wholeSelection, true);
 });
+
+test("a player's profile carries his birth date and height when the base holds them", { skip }, async () => {
+  const known = (await get("/api/players/p_aaaab2")).body.data;
+  assert.deepEqual([known.name, known.birth_date, known.height_cm], ["Marc Petit", "1999-05-06", 181]);
+  const unknown = (await get("/api/players/p_aaaab1")).body.data;
+  assert.equal("birth_date" in unknown || "height_cm" in unknown, false);
+});

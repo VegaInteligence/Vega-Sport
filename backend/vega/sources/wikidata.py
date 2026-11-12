@@ -6,7 +6,8 @@ readers through backend/sources/bridge.mjs and written as typed facts (027_wikid
   else main's name-and-country resolution; founded year, home stadium, current coach and
   his Commons portrait;
 - stadiums: capacity (and when it was observed), coordinates, opening and creation dates;
-- portraits: the coaches seen in line-ups without a portrait, in batches, as main does.
+- portraits: the coaches seen in line-ups without a portrait, in batches, as main does;
+- players: birth dates and heights, club by club (player_facts.py).
 
 Each scope reads at most BATCH entities per run, the oldest first, and runs hourly: the
 whole set is refreshed every few days without a burst of requests.
@@ -19,7 +20,7 @@ from pathlib import Path
 import re
 import subprocess
 
-from . import SourceError
+from . import SourceError, player_facts
 
 BATCH = 20
 CLUB_PERIOD = timedelta(days=7)
@@ -53,7 +54,7 @@ bridge = node_bridge  # tests replace it
 
 def scopes(now):
     hour = timedelta(hours=1)
-    return {"clubs": hour, "stadiums": hour, "portraits": hour}
+    return {"clubs": hour, "stadiums": hour, "portraits": hour, "players": hour}
 
 
 def _asset(conn, kind, photo):
@@ -235,6 +236,8 @@ def _portraits(conn, now):
 
 
 def run(conn, get, scope, now):
+    if scope == "players":
+        return player_facts.run(conn, get, now)
     handler = {"clubs": _clubs, "stadiums": _stadiums, "portraits": _portraits}.get(scope)
     if handler is None:
         raise ValueError(scope)

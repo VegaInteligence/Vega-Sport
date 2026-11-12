@@ -21,7 +21,7 @@ Application d'analyse du football : matchs, compétitions, clubs et joueurs, ave
 | Archives (`/archives`) | saisons de 1850 à 2020 |
 | Méthode (`/methode`) | comment les chiffres sont calculés |
 
-Sur téléphone, le site se présente comme une application (barre d'onglets, recherche flottante). Quelques rubriques des fiches joueur affichent encore des valeurs fictives, signalées par un badge (âge, taille, potentiel, disponibilité) : la source ne fournit pas ces données.
+Sur téléphone, le site se présente comme une application (barre d'onglets, recherche flottante). Quelques rubriques des fiches joueur affichent encore des valeurs fictives, signalées par un badge (potentiel, disponibilité, pied fort, et l'âge ou la taille des joueurs que Wikidata ne permet pas de relier) : la source ne fournit pas ces données.
 
 ## Architecture
 
@@ -51,7 +51,7 @@ Principes tenus par le code et ses tests :
 ## Données
 
 - **PitchAPI** : 77 compétitions (73 championnats nationaux, les trois coupes d'Europe de clubs, la Coupe du monde) ; par match : résumé, événements, tirs avec coordonnées et xG, compositions, statistiques d'équipe et de joueur (match et mi-temps), statistiques avancées (passes et conduites progressives, valeurs d'action), réseau de passes, zones de chaleur, momentum, face-à-face.
-- **Sources complémentaires** (`backend/vega/sources`) : OpenFootball (coupes nationales, Euros, Coupes du monde, Coupes du monde des clubs), OpenLigaDB, International Results, open-matchday, classements UEFA et FIFA, Wikidata et Wikimedia (clubs, entraîneurs, palmarès, stades). Sources et licences : [docs/CUP_COMPETITIONS.md](docs/CUP_COMPETITIONS.md), [docs/OPENFOOTBALL_HISTORY.md](docs/OPENFOOTBALL_HISTORY.md).
+- **Sources complémentaires** (`backend/vega/sources`) : OpenFootball (coupes nationales, Euros, Coupes du monde, Coupes du monde des clubs), OpenLigaDB, International Results, open-matchday, classements UEFA et FIFA, Wikidata et Wikimedia (clubs, entraîneurs, palmarès, stades, date de naissance et taille des joueurs). Sources et licences : [docs/CUP_COMPETITIONS.md](docs/CUP_COMPETITIONS.md), [docs/OPENFOOTBALL_HISTORY.md](docs/OPENFOOTBALL_HISTORY.md).
 - **Archives** 1850–2020, importées une fois.
 
 ## Calculs
@@ -85,9 +85,9 @@ Les ressources AWS gardent leurs noms d'origine (`vega-v2-…`). Procédure, rô
 
 - Le backend actuel sert le site depuis le 10 novembre 2026 ; le précédent a été retiré ce jour-là.
 - Le rattrapage de l'historique (saisons depuis 2021/2022) est en cours.
-- En service depuis le 12 novembre : classements de puissance version 3 (enjeu des matchs, Coupe du monde), championnats brésiliens sur l'échelle commune, zéros omis par la source rendus aux fiches et aux listes, niveau des championnats, pronostics de match et projections de fin de saison, équipes des Coupes du monde des clubs et sélections de la Ligue des nations reliées à leurs équipes.
-- Limites connues : les championnats sans assez de matchs contre les autres (MLS, Arabie saoudite, Mexique, Argentine…) donnent un score à leurs joueurs, pas de rang ; aucune date de naissance, taille ni pied fort (la source ne les fournit pas) ; hors Coupe du monde, le football de sélections n'a que des résultats.
-- Suites de tests au 12 novembre : 219 tests Python, 116 tests de l'API, 522 tests du site, toutes vertes.
+- En service depuis le 12 novembre : classements de puissance version 3 (enjeu des matchs, Coupe du monde), championnats brésiliens sur l'échelle commune, zéros omis par la source rendus aux fiches et aux listes, niveau des championnats, pronostics de match et projections de fin de saison, équipes des Coupes du monde des clubs et sélections de la Ligue des nations reliées à leurs équipes, date de naissance et taille des joueurs lues de Wikidata.
+- Limites connues : les championnats sans assez de matchs contre les autres (MLS, Arabie saoudite, Mexique, Argentine…) donnent un score à leurs joueurs, pas de rang ; la date de naissance et la taille viennent de Wikidata, club par club, pour les seuls joueurs reliés sans doute possible (environ quatre sur dix dans les grands clubs, moins ailleurs), aucun pied fort ; hors Coupe du monde, le football de sélections n'a que des résultats.
+- Suites de tests au 12 novembre : 221 tests Python, 117 tests de l'API, 524 tests du site, toutes vertes.
 
 ## Organisation du dépôt
 
