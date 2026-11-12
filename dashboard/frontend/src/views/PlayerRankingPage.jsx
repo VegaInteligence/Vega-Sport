@@ -18,7 +18,7 @@ const PODIUM = [
 const STEPS = [
   [
     "Chaque match",
-    "La performance du joueur est comparée à ce qu’on attend d’un joueur au même poste, dans ce match.",
+    "La performance du joueur est comparée à ce qu’on attend d’un joueur au même poste, dans ce match. Un match compte davantage selon son enjeu : Ligue des champions, phases finales, Coupe du monde.",
   ],
   [
     "Par blocs",

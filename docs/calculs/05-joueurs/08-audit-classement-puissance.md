@@ -109,9 +109,37 @@ Les moyennes par 90 minutes, les centiles et les indices de rôle des fiches lis
 
 Non fait : le classement de puissance garde sa propre restauration (`restore_zeros`), de même idée, sans lire `agg.match_zeros`.
 
+## Version 3 : l'enjeu des matchs (12 novembre 2026)
+
+La méthode laisse l'enjeu hors du modèle « au départ » et appelle un bonus « un choix de récompense à expliciter » (§ 9, annexe A.4). Le choix a été fait le 12 novembre : un match de Ligue des champions pèse plus qu'un match de championnat, une finale de Ligue des champions plus que toute autre finale de clubs, et la finale de la Coupe du monde plus que tout.
+
+**La règle.** Un match compte pour I = prestige de sa compétition × tour.
+
+| Compétition | Prestige | | Tour | Coefficient |
+|---|---:|---|---|---:|
+| Championnat, coupe nationale | 1,00 | | Match ordinaire, phase de ligue, match pour la 3ᵉ place | 1,00 |
+| Ligue Conférence | 1,04 | | Tour à élimination avant les demi-finales | 1,05 |
+| Ligue Europa | 1,08 | | Demi-finale | 1,10 |
+| Coupe du monde des clubs | 1,10 | | Finale | 1,15 |
+| Ligue des champions | 1,15 | | | |
+| Euro | 1,20 | | | |
+| Coupe du monde | 1,30 | | | |
+
+Les coefficients de tour sont ceux de l'annexe A.4 (le tour qui précède les huitièmes compte comme eux) ; ceux de prestige sont un choix, non un ajustement sur des données. Ils donnent : finale de Ligue des champions 1,32, de Ligue Europa 1,24, de Coupe du monde des clubs 1,27, d'un championnat ou d'une coupe nationale 1,15 ; finale de l'Euro 1,38 ; demi-finale de Coupe du monde 1,43, finale 1,50.
+
+**Où il s'applique.** L'Elo des clubs et celui des sélections bougent de K × I. Le match d'un joueur ajoute I × (C + κ L) à son total, « pénalités comprises » (A.5) : un mauvais match de finale coûte plus cher aussi. Les matchs de la Coupe du monde, que le classement des joueurs ignorait, y entrent donc ; leur niveau L est celui de la sélection parmi les sélections, celui du club parmi les clubs. Un joueur reste classé par son club : les 95 joueurs que la base ne connaît que par leur sélection ont un score et pas de rang.
+
+**Rejoué hors ligne avant mise en service** (base de production, 12 novembre) :
+- 3 449 matchs ont un enjeu différent de 1.
+- L'Elo ne prédit pas moins bien : erreur quadratique à un match d'avance 0,1659 → 0,1655 sur les 729 matchs européens de clubs des deux saisons, inchangée sur les championnats (0,1643 et 0,1640), 0,1618 → 0,1583 sur les 104 matchs de la Coupe du monde 2026. L'ordre des clubs ne change presque pas (le Real Madrid passe devant Manchester City, 5ᵉ et 6ᵉ), celui des sélections non plus.
+- Course 2025/2026, avec les 3 288 matchs-joueurs de la Coupe du monde : Olise 1ᵉʳ (1ᵉʳ), Mbappé 2ᵉ (3ᵉ), Vitinha 3ᵉ (2ᵉ), Dembélé 4ᵉ (7ᵉ), Kane 5ᵉ (4ᵉ), Kimmich 6ᵉ, Yamal 7ᵉ (5ᵉ) ; Pedri 35ᵉ → 22ᵉ, Rodri 96ᵉ → 41ᵉ, Hakimi 84ᵉ → 44ᵉ, Wirtz 81ᵉ → 48ᵉ, Kvaratskhelia 56ᵉ → 53ᵉ, Doué 92ᵉ → 67ᵉ.
+- Course 2026/2027 (pas encore de match de sélection) : les treize premiers gardent leur place à une permutation près.
+
+**Limite visible.** Lionel Messi a la plus forte contribution de la Coupe du monde 2026 (+15,4 en 8 matchs) et n'a pas de rang : son club est en MLS, hors de l'échelle commune (8 matchs contre elle pour 10 demandés).
+
 ## Ce que la version 2 ne fait pas
 
-- **L'enjeu du match.** Une finale compte comme un autre match contre le même adversaire. Le § 9 de la méthode garde l'enjeu hors du modèle ; son annexe A.4 propose un coefficient (1,05 en huitième et quart, 1,10 en demi-finale, 1,15 en finale) comme « choix de récompense à expliciter ». Il n'est pas appliqué.
+- **L'enjeu du match** : fait par la version 3, ci-dessus.
 - **Les championnats hors de l'échelle commune.** Il faut des matchs entre continents, et la base n'en a presque pas. Les équipes de la Coupe du monde des clubs 2025 ont été reliées à leurs clubs le 12 novembre (30 sur 33 ; Auckland City, l'Espérance de Tunis et le Wydad n'ont pas de club PitchAPI) : leur source écrit le pays après le nom (« Al Hilal (KSA) »), ce que la règle d'identité lit désormais ([identity.py](../../../backend/vega/sources/identity.py)). L'Elo lit ainsi 55 des 64 matchs du tournoi. Rejoué hors ligne avant la fusion, cela déplace peu les clubs (Flamengo 33ᵉ → 30ᵉ, Palmeiras 38ᵉ → 34ᵉ, Fluminense 102ᵉ → 87ᵉ, Botafogo 232ᵉ → 196ᵉ ; Serie A brésilienne 1594 → 1605) et **ne fait entrer aucun championnat sur l'échelle commune** (38 sur 72 avant et après) : il faut 10 matchs contre des clubs de championnats déjà dessus, et le Brésil en a 9, la MLS 5, le Mexique 4, l'Arabie saoudite 3, l'Argentine 3. Le seuil n'a pas été abaissé pour autant : ce serait régler la méthode sur le résultat voulu.
 - **Les Coupes du monde des clubs de 2021, 2022 et 2023** (12 novembre). Le même projet libre (OpenFootball, domaine public) publie les éditions annuelles ; celles jouées depuis la première saison de la base (2021/2022) sont lues, chacune dans la saison de son année (février 2022, février 2023, décembre 2023) : 22 matchs, dont Chelsea – Palmeiras et Manchester City – Fluminense. Les éditions plus anciennes sont antérieures à tout l'historique des clubs dans la base et ne sont pas lues. Le Brésil passe ainsi de 9 à 11 matchs contre des championnats de l'échelle : **la Serie A brésilienne, la Serie B et le Paulista la rejoignent (41 championnats sur 72)**. Rejoué hors ligne avant l'import : 225 joueurs de plus sont classés en 2026/2027 et 675 en 2025/2026 ; les trente premiers de la course ne changent que par permutations d'une ou deux places ; le premier joueur d'un club brésilien est 140ᵉ de l'ensemble en 2026/2027 (Léo Pereira, Flamengo) et 168ᵉ en 2025/2026 (José López, Palmeiras). Restent hors de l'échelle, avec leurs matchs contre elle : MLS 8, Arabie saoudite 7, Égypte 6, Équateur 4, Mexique 4, Argentine 3. La Coupe intercontinentale de la FIFA (2024, 2025) n'est dans aucune source libre branchée ; le fichier de ce nom chez OpenFootball est un tournoi de sélections.
 - **Le niveau par les transferts.** Les joueurs qui changent de championnat pourraient relier les championnats sans match commun ; non fait.

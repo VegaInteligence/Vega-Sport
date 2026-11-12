@@ -89,9 +89,11 @@ def due_seasons(conn, now):
     - a season with finished matches never computed (a backfilled one);
     - a season whose matches changed after its last computation (a backfill that went on,
       a correction), once RECOMPUTE_AFTER has passed since that computation;
-    - a season played in the last 30 days whose player ranking was computed by another
-      version of the method (power.METHOD_VERSION), after the same wait: a new method
-      does not wait for the next day to rank the season in progress.
+    - a season played in the last 400 days (the season in progress and the award year
+      before it) whose player ranking was computed by another version of the method
+      (power.METHOD_VERSION), or read another common scale of the leagues than the
+      present one (a league joined it since), after the same wait: neither waits for the
+      next day, nor for a match of the season to change.
     Only PitchAPI editions count: the models read nothing of the archives and cups (whose
     seasons would otherwise all fall due when they are imported)."""
     from .power import METHOD_VERSION
@@ -112,10 +114,11 @@ def due_seasons(conn, now):
                    OR (l.started_at < %(now)s - %(after)s
                        AND max(m.updated_at) FILTER (WHERE m.status = 'finished') > l.started_at)
                    OR (l.started_at < %(now)s - %(after)s
-                       AND bool_or(m.kickoff_at > %(now)s - interval '30 days' AND m.kickoff_at <= %(now)s)
+                       AND bool_or(m.kickoff_at > %(now)s - interval '400 days' AND m.kickoff_at <= %(now)s)
                        AND EXISTS (SELECT 1 FROM agg.power_runs r
                                    WHERE r.kind = 'players' AND r.season_id = m.season_id AND r.status = 'published'
-                                     AND r.method_version <> %(method)s))
+                                     AND (r.method_version <> %(method)s
+                                          OR r.linked_leagues IS DISTINCT FROM (SELECT count(*) FROM agg.league_levels WHERE linked))))
                ORDER BY 1""",
             {"now": now, "after": RECOMPUTE_AFTER, "method": METHOD_VERSION},
         ).fetchall()

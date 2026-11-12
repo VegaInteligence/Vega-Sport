@@ -166,7 +166,7 @@ def main(dsn):
         open_matchday.run(db, fake_get, "europe", datetime(2026, 11, 9, 6, tzinfo=timezone.utc))
     # Power rankings: the clubs' Elo for real; players synthetic (too few matches for the role references).
     power.refresh_elo(db)
-    run = x("INSERT INTO agg.power_runs(kind,season_id,method_version,status,finished_at) VALUES ('players',2025,'power-ranking-v2','published','2025-09-06T03:00:00Z') RETURNING id").fetchone()[0]
+    run = x("INSERT INTO agg.power_runs(kind,season_id,method_version,status,finished_at) VALUES ('players',2025,'power-ranking-v3','published','2025-09-06T03:00:00Z') RETURNING id").fetchone()[0]
     # A total is what the player does and the level of his club (own_total + level_total); the index ranks.
     x("""INSERT INTO agg.player_power(season_id,player_id,role,team_id,matches,minutes,total,rate,eligible,total_percentile,rate_percentile,score,rank,role_rank,run_id,own_total,level_total,index)
          VALUES (2025,101,'centre_forward',1,3,260,4.2,0.535,true,90,80,87.5,1,1,%(run)s,3.0,1.2,1.4),(2025,104,'winger',2,2,160,1.1,0.161,true,50,50,50,2,1,%(run)s,1.3,-0.2,0),
