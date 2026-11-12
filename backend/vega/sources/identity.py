@@ -98,19 +98,19 @@ def _pitch_teams(conn):
 # writes its teams: "Real Madrid (ESP)". No other cup-source team of the base was named
 # so on 12 November 2026.
 COUNTRY_SUFFIX = re.compile(r"^(.*\S)\s*\(([A-Z]{3})\)$")
-# The teams of the 2025 edition that PitchAPI names otherwise, reviewed one by one on
-# 12 November 2026: the source's team named as the key is PitchAPI's club of that country
-# named as the value ("Botafogo RJ" is Serie A's Botafogo, not Botafogo SP; "Al Ain FC"
-# the Emirati club, not the Saudi one).
+# The teams of the editions of 2021, 2022, 2023 and 2025 that PitchAPI names otherwise,
+# reviewed one by one on 12 November 2026: the source's team named as the key is PitchAPI's
+# club of that country named as the value ("Botafogo RJ" is Serie A's Botafogo, not
+# Botafogo SP; "Al Ain FC" the Emirati club, not the Saudi one).
 WORLD_CLUB_SPELLINGS = {
-    "Al Ain FC (UAE)": "Al Ain", "Botafogo RJ (BRA)": "Botafogo", "CF Monterrey (MEX)": "Monterrey", "CF Pachuca (MEX)": "Pachuca",
-    "Chelsea FC (ENG)": "Chelsea", "Flamengo RJ (BRA)": "Flamengo", "Fluminense RJ (BRA)": "Fluminense",
-    "Mamelodi Sundowns (RSA)": "Mamelodi Sundowns FC", "RB Salzburg (AUT)": "Salzburg",
+    "Al Ain FC (UAE)": "Al Ain", "Al Jazira Club (UAE)": "Al Jazira", "Botafogo RJ (BRA)": "Botafogo", "CF Monterrey (MEX)": "Monterrey",
+    "CF Pachuca (MEX)": "Pachuca", "Chelsea FC (ENG)": "Chelsea", "Club León (MEX)": "León", "Flamengo RJ (BRA)": "Flamengo",
+    "Fluminense RJ (BRA)": "Fluminense", "Mamelodi Sundowns (RSA)": "Mamelodi Sundowns FC", "RB Salzburg (AUT)": "Salzburg",
     "Seattle Sounders (USA)": "Seattle Sounders FC", "SL Benfica (POR)": "Benfica",
 }
-# PitchAPI has two clubs named Al Hilal in Saudi Arabia, the club and its women's team: the
-# tournament's is the club, named here by its PitchAPI key.
-WORLD_CLUB_KEYS = {"Al Hilal (KSA)": "t_2r8ytM"}
+# PitchAPI has two clubs named Al Hilal in Saudi Arabia, and two named Al Ittihad: the club
+# and its women's team. The tournament's is the club, named here by its PitchAPI key.
+WORLD_CLUB_KEYS = {"Al Hilal (KSA)": "t_2r8ytM", "Al Ittihad (KSA)": "t_4BG5Jn"}
 
 
 def _reviewed_clubs(conn):

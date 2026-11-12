@@ -58,3 +58,29 @@ test("Nations results cover other leagues without assigning teams to the wrong g
   assert.equal(rows[1].group, 3);
   assert.throws(() => parseNationsResults(csv + "2026-09-26,Scotland,Switzerland,0,3,UEFA Nations League,Glasgow,Scotland,FALSE\n"), /Duplicate/);
 });
+
+test("the yearly Club World Cups are read from their text files, in the season of their year", async () => {
+  // openfootball/club-worldcup, 2021/clubworldcup.txt (CC0): played in February 2022.
+  const text = "= Club World Cup 2021\n\n# Date       Thu Feb 3 - Sat Feb 12 2022 (9d)\n# Teams      7\n# Matches    8\n\n\n\n▪ Round 1\n  Thu Feb 3 2022\n    20:30  Al Jazira Club (UAE)    v AS Pirae (TAH)           4-1 (3-0)\n\n\n▪ Round 2\n  Sat Feb 5\n    20:30  Al Ahly SC (EGY)        v CF Monterrey (MEX)       1-0 (0-0)\n  Sun Feb 6\n    20:30  Al Hilal (KSA)          v Al Jazira Club (UAE)     6-1 (2-1)\n\n\n▪ Match 5th place\n  Wed Feb 9\n    17:30  CF Monterrey (MEX)      v Al Jazira Club (UAE)     3-1 (3-0)\n\n\n▪ Semifinals\n  Tue Feb 8\n    20:30  Palmeiras (BRA)         v Al Ahly SC (EGY)         2-0 (1-0)\n  Wed Feb 9\n    20:30  Al Hilal (KSA)          v Chelsea FC (ENG)         0-1 (0-1)\n\n\n▪ Match 3rd place\n  Sat Feb 12\n    17:00  Al Hilal (KSA)          v Al Ahly SC (EGY)         0-4 (0-3)\n\n\n▪ Final\n  Sat Feb 12\n    20:30  Chelsea FC (ENG)        v Palmeiras (BRA)          2-1 a.e.t. (1-1, 0-0)\n";
+  const { GET } = await import("../backend/sources/projections/open-cups.mjs");
+  const asked = [];
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url) => { asked.push(String(url)); return new Response(text); };
+  try {
+    const read = async (season) => {
+      const response = await GET(new Request("http://bridge/api/open-cups?competition=club-world-cup&season=" + season));
+      return [response.status, await response.json()];
+    };
+    const [status, body] = await read("2021");
+    assert.equal(status, 200);
+    assert.deepEqual(asked, ["https://raw.githubusercontent.com/openfootball/club-worldcup/master/2021/clubworldcup.txt"]);
+    assert.deepEqual([body.name, body.season, body.matches.length, body.source.url], ["Club World Cup 2021", "2021", 8, "https://github.com/openfootball/club-worldcup"]);
+    assert.deepEqual(body.matches[0], { round: "Round 1", date: "2022-02-03", team1: "Al Jazira Club (UAE)", team2: "AS Pirae (TAH)", score: { ft: [4, 1] } });
+    assert.deepEqual(body.matches.at(-1), { round: "Final", date: "2022-02-12", team1: "Chelsea FC (ENG)", team2: "Palmeiras (BRA)", score: { ft: [2, 1], et: [2, 1] } });
+    // An edition before the base's first season is not read.
+    assert.equal((await read("2019"))[0], 400);
+    assert.equal(asked.length, 1);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
