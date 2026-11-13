@@ -18,7 +18,7 @@ Elles sont mesurées sur toutes les minutes des saisons 2025/2026 et 2026/2027.
 
 Onglet « Stats avancées » de la fiche d'un joueur, carte « Valeur des actions » :
 
-1. **Son championnat seulement.** Les sommes du joueur dans le championnat où il a le plus joué de la saison (ses clubs de ce championnat réunis), rapportées à 90 minutes. Les coupes et les compétitions internationales n'y entrent pas.
+1. **Son championnat seulement.** Les sommes du joueur dans le championnat où il a le plus joué de la saison (ses clubs de ce championnat réunis), rapportées à 90 minutes. Un championnat est une compétition à laquelle le classement donne un niveau (la compétition nationale qu'un club joue le plus) : les coupes et les compétitions internationales n'y entrent pas.
 2. **Au moins 450 minutes** mesurées dans ce championnat.
 3. **Parmi son poste, dans ce championnat.** Le rang et le centile de chaque total parmi les joueurs du même rôle (celui du classement de puissance) du même championnat, quand ils sont **au moins 20**. En dessous, la carte donne les valeurs sans rang. Le centile est le rang moyen : (joueurs en dessous + la moitié des ex æquo) / joueurs.
 4. **Pas de gardiens.**

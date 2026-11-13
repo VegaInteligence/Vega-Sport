@@ -8,14 +8,18 @@ action to check them against.
 
 A player's reading is that of his league: each sum per 90 minutes over the league he
 played the most in the season, and its place among the players of his role in that
-league. The values are not corrected for a league's level, which is why a player is set
+league. A league is a competition the ranking gives a level to (agg.league_levels: the
+domestic competition a club plays the most), so a cup or an international competition is
+none. The values are not corrected for a league's level, which is why a player is set
 among his own league only. Goalkeepers have no reading.
 
 The ranking does not read these values (docs/calculs/05-joueurs/11-valeur-des-actions.md
 gives the measures behind that choice and behind the goalkeepers' exclusion).
 """
 
-MODEL_VERSION = "actions-v1"
+# v2: a league is a competition the ranking gives a level to. v1 asked for a competition
+# of kind "league", which the collected competitions do not carry: it read nobody.
+MODEL_VERSION = "actions-v2"
 MIN_MINUTES = 450  # of a league, measured; the site's lowest threshold for a rate per 90
 MIN_PEERS = 20  # players of a role in a league below which nobody is placed among them
 EXCLUDED_ROLES = ("goalkeeper",)
@@ -48,7 +52,7 @@ WITH league AS (
   SELECT s.player_id, cs.competition_id, {_SUMS}
   FROM agg.player_season_stats s
   JOIN core.competition_seasons cs ON cs.id = s.competition_season_id AND cs.archive_key IS NULL AND cs.cup_key IS NULL
-  JOIN core.competitions c ON c.id = cs.competition_id AND c.kind = 'league'
+  JOIN agg.league_levels ll ON ll.competition_id = cs.competition_id
   WHERE s.season_id = %(season)s
   GROUP BY s.player_id, cs.competition_id
   HAVING {_MEASURED}),
