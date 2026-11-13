@@ -222,7 +222,7 @@ test("a player's action values of his league season, placed among his role", { s
       { key: "pv", value: 0.387, rank: 5, percentile: 81.3, offensive: 0.38, defensive: 0.007 },
       { key: "xt", value: 0.083, rank: 14, percentile: 43.8 },
     ],
-    method: { version: "actions-v1", computedAt: "2025-09-06T03:13:00.000Z" },
+    method: { version: "actions-v2", computedAt: "2025-09-06T03:13:00.000Z" },
   });
   assert.match(data.competition.id, /^l_/);
   // Too few players of his role in his league: his values, without a place; a part the source did not send is left out.

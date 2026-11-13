@@ -389,9 +389,9 @@ class Worker:
 
     def daily(self):
         """Levels, competition strength, squad profiles, similarities and power rankings
-        (models.refresh_daily) for the seasons due_seasons() names, then the action values
-        of the seasons that lack them. Each step stands alone: one that fails is logged and
-        waits RETRY_DAILY_AFTER, the others run."""
+        (models.refresh_daily) for the seasons due_seasons() names, after the action values
+        of the ranked seasons that lack them. Each step stands alone: one that fails is logged
+        and waits RETRY_DAILY_AFTER, the others run."""
         now = self.clock()
         scalar = lambda sql: lambda: self.calc_conn.execute(sql).fetchone()[0]
         if self._analyzed != now.date():
@@ -424,6 +424,17 @@ class Worker:
                     uefa.reconcile_teams(self.conn)
 
             self._daily_step(("sources",), now, run_sources)
+        # The action values of a season whose ranking exists and that has none of the present
+        # version (actions.py): one statement, so such a season never becomes due for a whole
+        # pass because of them (a past season's pass is its whole ranking again), and before
+        # the seasons' models, which can take the rest of the hour.
+        from . import actions
+
+        _, waiting = self._daily_step(("actions",), now, lambda: actions.pending(self.calc_conn))
+        for season in waiting or []:
+            ok, counts = self._daily_step(("actions", season), now, lambda: actions.refresh(self.calc_conn, season))
+            if ok:
+                print(f"action values season={season} players={counts[0]} placed={counts[1]}", flush=True)
         if seasons:
             # The Elo covers every match in order: once for the pass, never once per season
             # (with ~140 archive seasons due at once it rewrote agg.team_elo 95 times).
@@ -434,16 +445,6 @@ class Worker:
             ok, _ = self._daily_step(("season", season), now, lambda: models.refresh_daily(self.calc_conn, season, elo=False))
             if ok:
                 print(f"daily models season={season} outcome=ok", flush=True)
-        # The action values of a season whose ranking exists and that has none of the present
-        # version (actions.py): one statement, so such a season never becomes due for a whole
-        # pass because of them (a past season's pass is its whole ranking again).
-        from . import actions
-
-        _, waiting = self._daily_step(("actions",), now, lambda: actions.pending(self.calc_conn))
-        for season in waiting or []:
-            ok, counts = self._daily_step(("actions", season), now, lambda: actions.refresh(self.calc_conn, season))
-            if ok:
-                print(f"action values season={season} players={counts[0]} placed={counts[1]}", flush=True)
         return seasons
 
     def mirror(self, limit=200):

@@ -191,7 +191,7 @@ def main(dsn):
     x("INSERT INTO agg.breakout_runs(season_id, version, computed_at, candidates, flagged) VALUES (2025, 'breakout-v2', '2025-09-06T03:12:00Z', 12, 1)")
     x("INSERT INTO agg.player_breakouts(season_id, player_id, role, team_id, minutes, rate, percentile, regulars, rank) VALUES (2025, 103, 'goalkeeper', 4, 180, 0.042, 91.3, 40, 1)")
     # Action values (089): the forward's league season, third of the 24 of his role by VAEP; a team-mate too alone in his role to be placed.
-    x("INSERT INTO agg.action_value_runs(season_id, version, computed_at, players, placed) VALUES (2025, 'actions-v1', '2025-09-06T03:13:00Z', 2, 1)")
+    x("INSERT INTO agg.action_value_runs(season_id, version, computed_at, players, placed) VALUES (2025, 'actions-v2', '2025-09-06T03:13:00Z', 2, 1)")
     x("""INSERT INTO agg.player_action_values(season_id, player_id, competition_id, role, minutes, vaep, vaep_offensive, vaep_defensive, pv, pv_offensive, pv_defensive, xt,
            peers, vaep_rank, vaep_percentile, pv_rank, pv_percentile, xt_rank, xt_percentile) VALUES
          (2025, 101, 1, 'centre_forward', 1260, 0.4126, 0.4391, -0.0268, 0.3871, 0.3802, 0.0069, 0.0834, 24, 3, 89.58, 5, 81.25, 14, 43.75),

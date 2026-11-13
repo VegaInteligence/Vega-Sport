@@ -1137,7 +1137,9 @@ class ModelsTest(unittest.TestCase):
         with self.db.transaction():
             Store(self.db).season("2024/2025")
         run = x("INSERT INTO agg.power_runs(kind, season_id, method_version, status) VALUES ('players', 2025, 'test', 'published') RETURNING id").fetchone()[0]
-        x("INSERT INTO core.competitions(id, name, kind) VALUES (9500, 'Ligue des valeurs', 'league'), (9501, 'Coupe des valeurs', 'cup'), (9502, 'Autre ligue', 'league')")
+        # Collected competitions carry no kind: a league is one the ranking gives a level to.
+        x("INSERT INTO core.competitions(id, name) VALUES (9500, 'Ligue des valeurs'), (9501, 'Coupe des valeurs'), (9502, 'Autre ligue')")
+        x("INSERT INTO agg.league_levels(competition_id, entry_level, level, teams, links, linked, run_id) VALUES (9500, 1500, 1500, 20, 0, false, %s), (9502, 1500, 1500, 20, 0, false, %s)", (run, run))
         x("INSERT INTO core.competition_seasons(id, competition_id, season_id) VALUES (9500, 9500, 2025), (9501, 9501, 2025), (9502, 9502, 2025)")
         x("INSERT INTO core.teams(id, name) VALUES (9500, 'Club A'), (9501, 'Club B')")
         x("INSERT INTO core.players(id, name) SELECT 7800 + g, 'Pair ' || g FROM generate_series(1, 37) g")
@@ -1159,7 +1161,7 @@ class ModelsTest(unittest.TestCase):
         row(7801, 9501, 9500, 450, 0.5, 10, 1)
         row(7831, 9500, 9500, 900, 30, 30)  # a goalkeeper
         row(7832, 9500, 9500, 400, 30, 30)  # under the minutes
-        row(7833, 9500, 9501, 900, 30, 30)  # a cup is no league
+        row(7833, 9500, 9501, 900, 30, 30)  # a competition without a level is no league
         row(7834, 9500, 9502, 900, 3, 3)  # alone of his role in his league
         row(7835, 9500, 9500, 500, 30, 30)  # more minutes in the other league: read there, not here
         row(7835, 9501, 9502, 1000, 5, 5)
@@ -1204,6 +1206,7 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM agg.power_runs WHERE method_version='test-actions'")
             x("DELETE FROM agg.player_action_values")
             x("DELETE FROM agg.action_value_runs")
+            x("DELETE FROM agg.league_levels WHERE competition_id IN (9500, 9502)")
             x("DELETE FROM agg.player_power WHERE run_id=%s", (run,))
             x("DELETE FROM agg.power_runs WHERE id=%s", (run,))
             x("DELETE FROM agg.player_season_stats WHERE competition_season_id IN (9500, 9501, 9502)")
