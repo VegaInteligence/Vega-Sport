@@ -389,8 +389,9 @@ class Worker:
 
     def daily(self):
         """Levels, competition strength, squad profiles, similarities and power rankings
-        (models.refresh_daily) for the seasons due_seasons() names. Each step stands alone:
-        one that fails is logged and waits RETRY_DAILY_AFTER, the others run."""
+        (models.refresh_daily) for the seasons due_seasons() names, then the action values
+        of the seasons that lack them. Each step stands alone: one that fails is logged and
+        waits RETRY_DAILY_AFTER, the others run."""
         now = self.clock()
         scalar = lambda sql: lambda: self.calc_conn.execute(sql).fetchone()[0]
         if self._analyzed != now.date():
@@ -433,6 +434,16 @@ class Worker:
             ok, _ = self._daily_step(("season", season), now, lambda: models.refresh_daily(self.calc_conn, season, elo=False))
             if ok:
                 print(f"daily models season={season} outcome=ok", flush=True)
+        # The action values of a season whose ranking exists and that has none of the present
+        # version (actions.py): one statement, so such a season never becomes due for a whole
+        # pass because of them (a past season's pass is its whole ranking again).
+        from . import actions
+
+        _, waiting = self._daily_step(("actions",), now, lambda: actions.pending(self.calc_conn))
+        for season in waiting or []:
+            ok, counts = self._daily_step(("actions", season), now, lambda: actions.refresh(self.calc_conn, season))
+            if ok:
+                print(f"action values season={season} players={counts[0]} placed={counts[1]}", flush=True)
         return seasons
 
     def mirror(self, limit=200):
