@@ -33,6 +33,10 @@
  * club's points now and projected, the share of the replays it finishes at each place, and
  * `next`, its coming league matches (the opponents' mean strength, the points forecast).
  *
+ * GET /api/forecasts/swap?season=&out=&in= — what a club's league results would become if
+ * the player `in` played in the place of its player `out` (vega/lineup.py, 090): the gap
+ * between their own rates, the Elo points it is worth and the expected points per match.
+ * An estimate, for two outfield players of the same role.
  * GET /api/rankings/breakouts?season= — the season's breakouts: players below the ranking's
  * minutes whose rate per 90 minutes is among the best of their role's regulars.
  *
@@ -43,6 +47,7 @@
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 import { rates as inplayRates, timeline as inplayTimeline } from "../inplay.mjs";
+import { ownRate, replace as replacePlayer } from "../lineup.mjs";
 
 const TEAM = /^t_(?:[A-Za-z0-9]{6}|v\d{7})$/;
 const PLAYER = /^p_(?:[A-Za-z0-9]{6}|v\d{7})$/;
@@ -126,6 +131,7 @@ export const ROLE_LABEL = {
   defensive_midfielder: "Milieu défensif", full_back: "Latéral / piston", centre_back: "Défenseur central", goalkeeper: "Gardien",
 };
 const round = (v, d) => (v === null || v === undefined ? null : Math.round(v * 10 ** d) / 10 ** d);
+const put = (o, k, v) => (v === null || v === undefined ? o : ((o[k] = v), o));
 const BLOCKS = { finishing: "finishing", creation: "creation", progression: "progression", defence: "defence", retention: "retention",
   shot_stopping: "shotStopping", aerial: "aerial", depth: "depth", distribution: "distribution" };
 
@@ -274,6 +280,74 @@ async function liveProbability(read, params) {
   };
 }
 
+// A player needs this many minutes over the two award years his rate is read on.
+export const SWAP_MIN_MINUTES = 450;
+
+/** Why no estimate is given for two players ({role, minutes} each), or null when one is. */
+export const swapReason = (leaving, coming) =>
+  leaving.role === "goalkeeper" || coming.role === "goalkeeper" ? "goalkeeper"
+    : leaving.role !== coming.role ? "role"
+    : Math.min(leaving.minutes, coming.minutes) < SWAP_MIN_MINUTES ? "minutes" : null;
+
+/**
+ * What a club's league results would become if `in` played in the place of `out`
+ * (src/lineup.mjs). The club and the role are `out`'s of the season; a rate is read on the
+ * season and the one before. Without an estimate, `reason` says why: the two roles differ,
+ * a goalkeeper (no effect of a goalkeeper's rate could be measured), or too few minutes.
+ */
+async function swap(read, params) {
+  validateParams(params, ["season", "out", "in"]);
+  const season = params.get("season"), out = params.get("out"), into = params.get("in");
+  if (!/^\d{4}\/\d{4}$/.test(season || "") || !PLAYER.test(out || "") || !PLAYER.test(into || "") || out === into) reject(400, "Paramètre invalide.");
+  const [[forecast], [model], rows] = await Promise.all([
+    read("SELECT * FROM api.forecast_models ORDER BY fitted_at DESC, id DESC LIMIT 1"),
+    read("SELECT * FROM api.lineup_models ORDER BY fitted_at DESC, id DESC LIMIT 1"),
+    read(
+      `SELECT o.*, o.season_id=${SEASON_KEY} AS present FROM api.player_own_totals o
+       WHERE o.season_id IN (${SEASON_KEY}, ${SEASON_KEY}-1) AND o.player_key IN (api.internal_id('player',$2), api.internal_id('player',$3))`,
+      [season, out, into],
+    ),
+  ]);
+  const player = (id) => {
+    const own = rows.filter((r) => r.player_id === id && r.own_total !== null), now = own.find((r) => r.present);
+    if (!now) return null;
+    const total = own.reduce((sum, r) => sum + r.own_total, 0), minutes = own.reduce((sum, r) => sum + r.minutes, 0);
+    return { ...now, minutes, rate: ownRate(total, minutes) };
+  };
+  const leaving = player(out), coming = player(into);
+  if (!forecast || !model || !leaving || !coming || leaving.team_key === null) reject(404, "Donnée indisponible.");
+  const side = (p, team) => put({ id: p.player_id, name: p.name, rate: round(p.rate, 3), minutes: p.minutes }, "team", team && p.team_id ? { id: p.team_id, name: p.team } : null);
+  const answer = {
+    season, role: leaving.role, position: ROLE_LABEL[leaving.role] ?? leaving.role,
+    club: { id: leaving.team_id, name: leaving.team },
+    out: side(leaving, false), in: side(coming, true),
+    model: { version: model.version, fittedAt: iso(model.fitted_at), matches: model.matches, eloPerUnit: round(model.elo_per_unit, 1), error: round(model.elo_per_unit_error, 1) },
+  };
+  const reason = swapReason(leaving, coming);
+  if (reason) return { ...answer, reason, ...(reason === "role" ? { inRole: coming.role, inPosition: ROLE_LABEL[coming.role] ?? coming.role } : {}) };
+  const at = [leaving.season_id, leaving.team_key];
+  const [[club], [league]] = await Promise.all([
+    read("SELECT elo FROM api.power_clubs WHERE season_id=$1 AND scope='clubs' AND team_key=$2", at),
+    read("SELECT competition_key, count(*)::int AS matches FROM api.team_league_matches WHERE season_id=$1 AND team_key=$2 GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 1", at),
+  ]);
+  const [level] = league
+    ? await read(
+        `SELECT s.level, s.teams, l.name, l.competition_id FROM api.league_level_seasons s JOIN api.league_levels l ON l.competition_key=s.competition_key
+         WHERE s.competition_key=$1 AND s.season_id=$2`,
+        [league.competition_key, leaving.season_id],
+      )
+    : [];
+  if (!club || club.elo === null || !level || !(level.teams > 1)) reject(404, "Donnée indisponible.");
+  // The league's other clubs: its mean level without the club itself.
+  const opponents = (level.level * level.teams - club.elo) / (level.teams - 1);
+  const gain = replacePlayer(forecast, model.elo_per_unit, club.elo, opponents, coming.rate, leaving.rate);
+  return {
+    ...answer,
+    club: { ...answer.club, elo: round(club.elo, 0), league: { id: level.competition_id, name: level.name, matches: league.matches, opponentsElo: round(opponents, 0) } },
+    estimate: { rateGap: round(coming.rate - leaving.rate, 3), elo: round(gain.shift, 1), pointsPerMatch: round(gain.points, 3), pointsPerSeason: round(gain.points * league.matches, 1) },
+  };
+}
+
 async function seasonProjection(read, params) {
   validateParams(params, ["competition", "season"]);
   const competition = params.get("competition"), season = params.get("season");
@@ -415,6 +489,7 @@ export function createRankingRoute(read) {
     if (path === "/api/forecasts/match") return respond(req, await matchForecast(read, params));
     if (path === "/api/forecasts/season") return respond(req, await seasonProjection(read, params));
     if (path === "/api/forecasts/live") return respond(req, await liveProbability(read, params));
+    if (path === "/api/forecasts/swap") return respond(req, await swap(read, params));
     if (path === "/api/rankings/index") {
       validate(params, {});
       const [editions, [mapping]] = await Promise.all([

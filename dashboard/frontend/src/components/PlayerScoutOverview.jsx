@@ -34,6 +34,7 @@ import {
   TeamContextCard,
 } from "./PlayerScoutDemo.jsx";
 import { RankingTrigger } from "./RankingDialog.jsx";
+import PlayerSwap from "./PlayerSwap.jsx";
 import s from "./PlayerScout.module.css";
 
 /** Metric families of mock-up C, filled with the PitchAPI indicators. */
@@ -1291,6 +1292,7 @@ export function PlayerScoutCompare({ profile, cohorts, ready }) {
           )}
         </div>
       </section>
+      <PlayerSwap player={profile} others={selected} />
       {keys.length < 3 ? (
         <p className={`${s.block} ${s.note}`}>
           Pas assez d’indicateurs classés pour comparer ce joueur.

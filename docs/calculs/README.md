@@ -55,6 +55,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 - [Retour d'absence et forme](05-joueurs/09-retour-d-absence.md)
 - [Révélations](05-joueurs/10-revelations.md) — les joueurs sous le seuil de minutes du classement qui jouent déjà comme ses titulaires, et ce qu'ils deviennent un an après.
 - [Valeur des actions](05-joueurs/11-valeur-des-actions.md) — les VAEP, PV et xT du fournisseur, lues par 90 minutes du championnat du joueur et situées parmi son poste ; pourquoi le classement ne s'appuie pas dessus.
+- [Et si un joueur en remplaçait un autre ?](05-joueurs/12-et-si-un-joueur-en-remplacait-un-autre.md) — ce que les compositions de départ changent aux résultats au-delà de l'Elo, et l'estimation en points d'un remplacement.
 
 ### 6. Accueil et fiches de match
 - [Accueil](06-accueil-et-matchs/01-accueil.md) — semaine affichée, match de la semaine, joueur de la semaine, séries.

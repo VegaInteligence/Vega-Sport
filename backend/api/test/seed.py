@@ -187,6 +187,13 @@ def main(dsn):
     x("""INSERT INTO agg.player_power(season_id,player_id,role,team_id,matches,minutes,total,rate,eligible,total_percentile,rate_percentile,score,rank,role_rank,run_id,own_total,level_total,index)
          VALUES (2025,101,'centre_forward',1,3,260,4.2,0.535,true,90,80,87.5,1,1,%(run)s,3.0,1.2,1.4),(2025,104,'winger',2,2,160,1.1,0.161,true,50,50,50,2,1,%(run)s,1.3,-0.2,0),
                 (2025,103,'goalkeeper',4,2,180,0.3,0.042,false,NULL,NULL,NULL,NULL,NULL,%(run)s,0.3,0,NULL)""", {"run": run})
+    # A replacement (090): a second centre-forward this season, the first one's season before, and the
+    # worth of a line-up as lineup.refresh writes it.
+    with db.transaction():
+        Store(db).season("2024/2025")
+    x("""INSERT INTO agg.player_power(season_id,player_id,role,team_id,matches,minutes,total,rate,eligible,run_id,own_total,level_total)
+         VALUES (2025,102,'centre_forward',2,6,540,0.6,0.055,false,%(run)s,0.55,0.05),(2024,101,'centre_forward',1,30,2400,14,0.44,true,%(run)s,12.0,2.0)""", {"run": run})
+    x("INSERT INTO agg.lineup_models(version, fitted_at, matches, rated, elo_per_unit, elo_per_unit_error) VALUES ('lineup-v1', '2025-09-06T03:14:00Z', 28524, 75907, 44.8, 3.2)")
     # A breakout (088): the keeper below the ranking's minutes, ahead of 91.3 % of his role's regulars.
     x("INSERT INTO agg.breakout_runs(season_id, version, computed_at, candidates, flagged) VALUES (2025, 'breakout-v2', '2025-09-06T03:12:00Z', 12, 1)")
     x("INSERT INTO agg.player_breakouts(season_id, player_id, role, team_id, minutes, rate, percentile, regulars, rank) VALUES (2025, 103, 'goalkeeper', 4, 180, 0.042, 91.3, 40, 1)")

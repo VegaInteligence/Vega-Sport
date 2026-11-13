@@ -61,6 +61,11 @@ def _now():
 # A season whose matches changed after its last daily models waits this long before the
 # models run again (a backfill writes a season's matches for hours).
 RECOMPUTE_AFTER = timedelta(hours=1)
+# The same for a season without a match in the last 30 days. A backfill writes a few hundred
+# matches an hour into such a season for days, and each pass is its whole player ranking
+# again: at RECOMPUTE_AFTER, two seasons being backfilled were each computed every hour
+# (13 November 2026).
+RECOMPUTE_PAST_AFTER = timedelta(hours=6)
 # A step of the daily pass that failed waits this long before it is tried again. Without
 # the wait a season whose models fail stays due, and every planning round runs the Elo of
 # every match again before failing at the same place.
@@ -88,7 +93,8 @@ def due_seasons(conn, now):
     - a season played in the last 30 days, once a UTC day;
     - a season with finished matches never computed (a backfilled one);
     - a season whose matches changed after its last computation (a backfill that went on,
-      a correction), once RECOMPUTE_AFTER has passed since that computation;
+      a correction), once RECOMPUTE_AFTER has passed since that computation, or
+      RECOMPUTE_PAST_AFTER when the season has no match in the last 30 days;
     - a season played in the last 400 days (the season in progress and the award year
       before it) whose player ranking was computed by another version of the method
       (power.METHOD_VERSION), or read another common scale of the leagues than the
@@ -131,8 +137,9 @@ def due_seasons(conn, now):
                HAVING (l.started_at IS NULL AND bool_or(m.status = 'finished'))
                    OR (bool_or(m.kickoff_at > %(now)s - interval '30 days' AND m.kickoff_at <= %(now)s)
                        AND (l.started_at IS NULL OR l.started_at < date_trunc('day', %(now)s)))
-                   OR (l.started_at < %(now)s - %(after)s
-                       AND max(m.updated_at) FILTER (WHERE m.status = 'finished') > l.started_at)
+                   OR (max(m.updated_at) FILTER (WHERE m.status = 'finished') > l.started_at
+                       AND l.started_at < %(now)s - CASE WHEN bool_or(m.kickoff_at > %(now)s - interval '30 days' AND m.kickoff_at <= %(now)s)
+                                                        THEN %(after)s::interval ELSE %(past)s::interval END)
                    OR (l.started_at < %(now)s - %(after)s
                        AND bool_or(m.kickoff_at > %(now)s - interval '400 days' AND m.kickoff_at <= %(now)s)
                        AND EXISTS (SELECT 1 FROM agg.power_runs r
@@ -169,7 +176,7 @@ def due_seasons(conn, now):
                        AND NOT EXISTS (SELECT 1 FROM agg.return_curves)
                        AND EXISTS (SELECT 1 FROM core.player_match_stats a WHERE a.minutes_played > 0 OFFSET %(appearances)s LIMIT 1))
                ORDER BY 1""",
-            {"now": now, "after": RECOMPUTE_AFTER, "method": METHOD_VERSION, "shots": XG_MIN_FIT, "goals": INPLAY_MIN_FIT, "appearances": RETURNS_MIN_APPEARANCES, "breakout": BREAKOUT_VERSION,
+            {"now": now, "after": RECOMPUTE_AFTER, "past": RECOMPUTE_PAST_AFTER, "method": METHOD_VERSION, "shots": XG_MIN_FIT, "goals": INPLAY_MIN_FIT, "appearances": RETURNS_MIN_APPEARANCES, "breakout": BREAKOUT_VERSION,
              "profiles": PROFILE_MIN_PLAYERS, "profile_minutes": PROFILE_MIN_MINUTES},
         ).fetchall()
     ]
@@ -223,6 +230,7 @@ class Worker:
         self.done = 0  # jobs run since this worker started, across run() calls
         self._analyzed = None  # UTC day of the last ops.analyze_partitioned()
         self._archives = None  # UTC day of the last agg.refresh_archive_seasons()
+        self._lineups = None  # UTC day of the last look at the line-up model (lineup.refresh)
         self._retry_at = {}  # step of the daily pass that failed -> when it is tried again
         # SideProcess when the daily pass and the image copies run in a process of their own.
         self.side_process = None
@@ -435,6 +443,16 @@ class Worker:
             ok, counts = self._daily_step(("actions", season), now, lambda: actions.refresh(self.calc_conn, season))
             if ok:
                 print(f"action values season={season} players={counts[0]} placed={counts[1]}", flush=True)
+        if self._lineups != now.date():
+            # What a line-up is worth (lineup.py): looked at once a day, fitted when there is
+            # no model yet or when the base has grown enough since the last fit.
+            from . import lineup
+
+            ok, fitted = self._daily_step(("lineups",), now, lambda: lineup.refresh(self.calc_conn))
+            if ok:
+                self._lineups = now.date()
+                if fitted is not None:
+                    print(f"lineup model matches={fitted}", flush=True)
         if seasons:
             # The Elo covers every match in order: once for the pass, never once per season
             # (with ~140 archive seasons due at once it rewrote agg.team_elo 95 times).

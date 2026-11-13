@@ -20,7 +20,7 @@ from vega import calculator, models, planner
 from vega.jobs import DETAIL_FAMILIES, claim, enqueue, enqueue_or_revive
 from vega.pitchapi import PitchClient
 from vega.store import Store, StoreError, connect_local, migrate
-from vega.worker import (HEALTHY_AFTER, PUBLISH_EVERY, RECOMPUTE_AFTER, RECONNECT_FOR, RETRY_DAILY_AFTER, SideProcess, Worker, connect,
+from vega.worker import (HEALTHY_AFTER, PUBLISH_EVERY, RECOMPUTE_AFTER, RECOMPUTE_PAST_AFTER, RECONNECT_FOR, RETRY_DAILY_AFTER, SideProcess, Worker, connect,
                             due_seasons, error_code, keep_running, main, prefer_as_oom_victim, publish, report, side_loop)
 
 DSN = os.environ.get("VEGA_V2_WORKER_TEST_DSN")
@@ -370,14 +370,30 @@ class WorkerTest(unittest.TestCase):
         x("INSERT INTO agg.calc_runs(kind,model_version,cohort_definition,status,started_at,finished_at) VALUES ('levels','m',%s,'published',%s,%s)",
           (f"season:{season}", self.now - timedelta(hours=2), self.now - timedelta(hours=2)))
         self.assertEqual(due_seasons(self.db, self.now), [])  # computed after its last change
-        # The backfill went on after the computation: due, since the computation is over RECOMPUTE_AFTER old.
+        # The backfill went on after the computation. The season is long over: it waits RECOMPUTE_PAST_AFTER,
+        # not RECOMPUTE_AFTER (each pass of a season being backfilled is its whole ranking again).
+        computed = lambda ago: x("UPDATE agg.calc_runs SET started_at=%(t)s, finished_at=%(t)s WHERE cohort_definition=%(c)s",
+                                 {"t": self.now - ago, "c": f"season:{season}"})
         x("UPDATE core.matches SET updated_at=%s WHERE id=900", (self.now - timedelta(minutes=30),))
-        self.assertEqual(due_seasons(self.db, self.now), [season])
-        # Changed after a computation under RECOMPUTE_AFTER old: it waits.
-        x("UPDATE agg.calc_runs SET started_at=%(t)s, finished_at=%(t)s WHERE cohort_definition=%(c)s",
-          {"t": self.now - RECOMPUTE_AFTER + timedelta(minutes=10), "c": f"season:{season}"})
-        x("UPDATE core.matches SET updated_at=%s WHERE id=900", (self.now - timedelta(minutes=5),))
         self.assertEqual(due_seasons(self.db, self.now), [])
+        computed(RECOMPUTE_PAST_AFTER - timedelta(minutes=10))
+        self.assertEqual(due_seasons(self.db, self.now), [])
+        computed(RECOMPUTE_PAST_AFTER + timedelta(minutes=10))
+        self.assertEqual(due_seasons(self.db, self.now), [season])
+        # A season with a match in the last 30 days follows its matches within RECOMPUTE_AFTER
+        # (read at noon, so that "once a UTC day" does not make it due by itself).
+        noon = self.now.replace(hour=12, minute=0)
+        played = noon - timedelta(days=3)
+        x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date,kickoff_at,updated_at)
+             VALUES (902,900,%s,'pitchapi','finished',901,900,0,0,%s,%s,%s)""", (season, played.date(), played, noon - timedelta(minutes=5)))
+        at = lambda ago: x("UPDATE agg.calc_runs SET started_at=%(t)s, finished_at=%(t)s WHERE cohort_definition=%(c)s", {"t": noon - ago, "c": f"season:{season}"})
+        at(RECOMPUTE_AFTER + timedelta(minutes=10))
+        self.assertEqual(due_seasons(self.db, noon), [season])
+        # Changed after a computation under RECOMPUTE_AFTER old: it waits.
+        at(RECOMPUTE_AFTER - timedelta(minutes=10))
+        self.assertEqual(due_seasons(self.db, noon), [])
+        x("DELETE FROM core.matches WHERE id=902")
+        computed(timedelta(0))  # computed now: nothing is due for what follows
         # An archive season imported now is never due: the models read PitchAPI editions only.
         with self.db.transaction():
             archive = Store(self.db).season("1970/1971")
@@ -576,6 +592,38 @@ class WorkerTest(unittest.TestCase):
             self.worker.daily()
         self.assertEqual(failed, [(season,)])
         self.assertRegex(out.getvalue(), rf"daily step=actions {season} error=WORKER_ZERODIVISIONERROR@test_worker\.py:\d+ retry_at=")
+
+    def test_the_line_up_model_is_looked_at_once_a_day(self):
+        # 090: lineup.refresh decides by itself whether a fit is due; the daily pass asks it once a UTC day.
+        from vega import lineup
+
+        answers, calls = [None, 28524], []
+
+        def refresh(conn):
+            calls.append(conn is self.worker.calc_conn)
+            return answers.pop(0)
+
+        self.addCleanup(setattr, lineup, "refresh", lineup.refresh)
+        lineup.refresh = refresh
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.worker.daily()
+            self.now += timedelta(minutes=1)
+            self.worker.daily()
+        self.assertEqual(calls, [True])  # asked once; nothing was due, nothing is logged
+        self.assertNotIn("lineup model", out.getvalue())
+        self.now += timedelta(days=1)
+        with contextlib.redirect_stdout(out):
+            self.worker.daily()
+        self.assertEqual(calls, [True, True])
+        self.assertIn("lineup model matches=28524", out.getvalue())
+        # A look that fails is logged and tried again after the usual wait, the same day.
+        lineup.refresh = lambda conn: 1 / 0
+        self.now += timedelta(days=1)
+        with contextlib.redirect_stdout(out):
+            self.worker.daily()
+        self.assertRegex(out.getvalue(), r"daily step=lineups error=WORKER_ZERODIVISIONERROR@test_worker\.py:\d+ retry_at=")
+        self.assertNotEqual(self.worker._lineups, self.now.date())
 
     def test_the_collection_goes_on_whatever_fails_around_it(self):
         # The daily pass, the calculator and the planner all fail on a bug: the worker
