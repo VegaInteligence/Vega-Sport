@@ -70,6 +70,19 @@ Pour situer un écart : parmi les joueurs à 900 minutes sur deux saisons, le re
 
 Pas d'estimation quand les deux joueurs n'ont pas le même rôle au classement, quand l'un est gardien, ou quand l'un a trop peu joué.
 
+### En service
+
+Le modèle ajusté en production le 13 novembre 2026 (20 h 59 UTC) : **45,4 ± 3,2 points Elo par unité**, sur 28 645 matchs (la base avait grandi depuis les mesures ci-dessus). Lu sur l'API ce soir-là, saison 2026/2027 :
+
+| Remplacement | Rendements | Points Elo | Par match | Sur la saison |
+| --- | --- | --- | --- | --- |
+| Lamine Yamal à la place de Sondre Ørjasæter, à Twente | +0,79 / +0,37 | +19,2 | +0,076 | +2,6 sur 34 matchs |
+| L'inverse, à Barcelone | +0,37 / +0,79 | −19,2 | −0,055 | −2,1 sur 38 matchs |
+| Vítinha à la place d'Unai López, au Rayo Vallecano | +0,69 / +0,22 | +20,9 | +0,088 | +3,3 sur 38 matchs |
+| Kylian Mbappé à la place de Relebohile Mofokeng, à l'Union Saint-Gilloise | +0,64 / +0,50 | +6,1 | +0,019 | +0,7 sur 34 matchs |
+
+Le même écart vaut moins de points pour un club qui domine son championnat (Barcelone) que pour un club du milieu (Twente). La dernière ligne montre la limite de l'exercice : le rendement propre se lit face aux adversaires de chacun et n'est pas ramené à une échelle commune des championnats, si bien qu'un très bon joueur d'un championnat plus faible paraît proche d'un des meilleurs du monde. C'est entre championnats de niveaux éloignés que l'estimation est la moins sûre (43 ± 19 ci-dessus).
+
 ## Limites
 
 - **C'est une estimation**, tirée de la relation entre compositions et résultats. Elle ne sait rien de l'adaptation d'un joueur à un autre club, à un autre championnat ou à un autre système, ni de ce que son arrivée change au jeu des autres.
