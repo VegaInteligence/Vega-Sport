@@ -1234,7 +1234,8 @@ class ModelsTest(unittest.TestCase):
         x("INSERT INTO core.teams(id, name) SELECT 9600 + g, 'Club ' || g FROM generate_series(1, 4) g")
         x("INSERT INTO core.players(id, name) SELECT 9700 + g, 'Joueur ' || g FROM generate_series(1, 48) g")
         elo = x("INSERT INTO agg.power_runs(kind, method_version, status) VALUES ('elo', 'test-lineup', 'published') RETURNING id").fetchone()[0]
-        run = x("INSERT INTO agg.power_runs(kind, season_id, method_version, status, players) VALUES ('players', %s, 'test-lineup', 'published', 48) RETURNING id", (year,)).fetchone()[0]
+        run = x("""INSERT INTO agg.power_runs(kind, season_id, method_version, status, players, finished_at)
+                   VALUES ('players', %s, 'test-lineup', 'published', 48, now() - interval '1 hour') RETURNING id""", (year,)).fetchone()[0]
         x("INSERT INTO agg.league_levels(competition_id, entry_level, level, teams, links, linked, run_id) VALUES (9600, 1500, 1500, 4, 0, false, %s)", (elo,))
         forecast_model = x("""INSERT INTO agg.forecast_models(version, matches, home_base, home_slope, away_base, away_slope, rho, strength_spread, simulations)
                               VALUES ('forecast-v1', 60000, 0.26, 0.93, 0.32, 0.91, -0.03, 90, 1000) RETURNING id""").fetchone()[0]
@@ -1286,14 +1287,90 @@ class ModelsTest(unittest.TestCase):
             x("UPDATE agg.lineup_models SET rated = 1")
             self.assertEqual(lineup.refresh(self.db), 0)
             self.assertEqual(self.one("SELECT matches FROM agg.lineup_models")[0], kept)
-            # The reads behind a replacement: a player's own part of the year, and a club's league matches.
+            # The ranking's season of each player: the strong eleventh starter of a club, its weak one, its goalkeeper.
             x("""INSERT INTO agg.player_power(season_id, player_id, role, team_id, matches, minutes, total, rate, eligible, linked, run_id, own_total, level_total)
-                 VALUES (%s, 9711, 'winger', 9601, 20, 1800, 19.5, 0.8, true, true, %s, 18.0, 1.5)""", (year, run))
+                 SELECT %s, 9700 + i * 12 + j, CASE WHEN j = 1 THEN 'goalkeeper' ELSE 'winger' END, 9601 + i, 20, 1800, 0, 0, true, true, %s,
+                        CASE j WHEN 11 THEN 18.0 WHEN 12 THEN -18.0 WHEN 1 THEN 60.0 ELSE 0 END, 0
+                 FROM generate_series(0, 3) i, generate_series(1, 12) j""", (year, run))
+            # The reads behind a replacement: a player's own part of the year, and a club's league matches.
             self.assertEqual(self.one("SELECT name, role, team, minutes, own_total FROM api.player_own_totals WHERE season_id=%s AND player_key=9711", year),
                              ("Joueur 11", "winger", "Club 1", 1800, 18.0))
             self.assertEqual(self.one("SELECT competition_key, count(*) FROM api.team_league_matches WHERE season_id=%s AND team_key=9601 GROUP BY 1", year), (9600, 20))
+
+            # 091. Each club's usual line-up of the year: written again after each ranking of the year.
+            lineup.MIN_FIT = 5
+            x("UPDATE agg.lineup_models SET rated = 1")
+            lineup.refresh(self.db)
+            worth = self.one("SELECT elo_per_unit FROM agg.lineup_models")[0]
+            autumn = date(2031, 10, 1)
+            self.assertEqual(lineup.usuals_due(self.db, autumn), [year])
+            self.assertEqual(lineup.refresh_usuals(self.db, year), 4)
+            self.assertEqual(lineup.usuals_due(self.db, autumn), [])
+            usual = {team: total / count for team, count, total in x("SELECT team_id, lineups, total FROM agg.lineup_usuals WHERE season_id=%s", (year,)).fetchall()}
+            # Forty matches, two line-ups each.
+            self.assertEqual(self.one("SELECT sum(lineups), min(lineups) >= 15 FROM agg.lineup_usuals WHERE season_id=%s", year), (80, True))
+            self.assertEqual(self.one("SELECT clubs FROM agg.lineup_usual_runs WHERE season_id=%s", year)[0], 4)
+            x("UPDATE agg.power_runs SET finished_at = now() + interval '1 minute' WHERE id=%s", (run,))
+            self.assertEqual(lineup.usuals_due(self.db, autumn), [year])
+            self.assertEqual(lineup.usuals_due(self.db, date(2031, 7, 1)), [])  # another award year
+
+            # A match about to start between two of the clubs, forecast from their strengths alone.
+            now = datetime(2031, 10, 1, 12, tzinfo=timezone.utc)
+            x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, match_date, kickoff_at)
+                 VALUES (9641, 9600, %s, 'pitchapi', 'not_started', 9601, 9602, %s, %s)""", (year, autumn, now + timedelta(minutes=40)))
+            x("""INSERT INTO agg.match_forecasts(match_id, season_id, home_win, draw, away_win, home_goals, away_goals, likely_home, likely_away, home_elo, away_elo, model_id)
+                 VALUES (9641, %s, 0.45, 0.27, 0.28, 1.4, 1.3, 1, 1, 1500, 1500, %s)""", (year, forecast_model))
+            self.assertEqual(lineup.forecast_matches(self.db, now), 0)  # no line-up yet
+            # Club 1 starts its strong eleventh player, club 2 its weak one; each club's goalkeeper is left out.
+            x("""INSERT INTO core.lineups(season_id, match_id, team_id, side, confirmed) VALUES (%(y)s, 9641, 9601, 'home', true), (%(y)s, 9641, 9602, 'away', false)""", {"y": year})
+            x("""INSERT INTO core.lineup_players(season_id, match_id, team_id, player_id, is_starter)
+                 SELECT %s, 9641, 9601 + i, 9700 + i * 12 + j, true FROM generate_series(0, 1) i, generate_series(1, 12) j WHERE j <= 10 OR j = 11 + i""", (year,))
+            self.assertEqual(lineup.forecast_matches(self.db, now), 0)  # one of the two is not confirmed
+            x("UPDATE core.lineups SET confirmed = true WHERE match_id = 9641")
+            self.assertEqual(lineup.forecast_matches(self.db, now - timedelta(hours=5)), 0)  # too long before kick-off
+            self.assertEqual(lineup.forecast_matches(self.db, now), 1)
+            row = self.one("""SELECT home_deviation, away_deviation, elo_per_unit, home_elo, away_elo, home_win, draw, away_win, first_computed_at, computed_at
+                              FROM agg.match_lineup_forecasts WHERE match_id = 9641""")
+            strong = lineup.rate(18.0, 1800)
+            self.assertAlmostEqual(row[0], strong - usual[9601], places=5)
+            self.assertAlmostEqual(row[1], -strong - usual[9602], places=5)
+            self.assertEqual(row[2:5], (worth, 1500.0, 1500.0))
+            from vega import forecast
+
+            model = {"home": (0.26, 0.93), "away": (0.32, 0.91), "rho": -0.03}
+            expected = forecast.forecast(model, 1500 + worth * row[0], 1500 + worth * row[1])
+            before = forecast.forecast(model, 1500, 1500)
+            self.assertAlmostEqual(row[5], expected["home"], places=5)
+            self.assertAlmostEqual(row[5] + row[6] + row[7], 1.0, places=5)
+            self.assertGreater(row[5], before["home"])  # the stronger eleven against the weaker one
+            shifts = self.one("SELECT home_shift, away_shift, home_win FROM api.match_lineup_forecasts WHERE match_key = 9641")
+            self.assertAlmostEqual(shifts[0], worth * row[0], places=3)
+            self.assertAlmostEqual(shifts[1], worth * row[1], places=3)
+            # Read once, a match is not read again until one of its line-ups is written again.
+            self.assertEqual(lineup.forecast_matches(self.db, now), 0)
+            x("UPDATE core.lineups SET updated_at = clock_timestamp() + interval '1 minute' WHERE match_id = 9641 AND team_id = 9602")
+            self.assertEqual(lineup.forecast_matches(self.db, now), 1)
+            again = self.one("SELECT first_computed_at, computed_at FROM agg.match_lineup_forecasts WHERE match_id = 9641")
+            self.assertEqual(again[0], row[8])
+            # A club without enough earlier line-ups: nothing is written, and the match is not looked at
+            # again as long as its line-ups stay as they are.
+            x("DELETE FROM agg.match_lineup_forecasts WHERE match_id = 9641")
+            x("UPDATE agg.lineup_usuals SET lineups = 2 WHERE season_id=%s AND team_id = 9602", (year,))
+            seen = {}
+            self.assertEqual(lineup.forecast_matches(self.db, now, seen), 0)
+            self.assertEqual(list(seen), [9641])
+            x("UPDATE agg.lineup_usuals SET lineups = 20 WHERE season_id=%s AND team_id = 9602", (year,))
+            self.assertEqual(lineup.forecast_matches(self.db, now, seen), 0)
+            self.assertEqual(lineup.forecast_matches(self.db, now, {}), 1)
+            # Once the match is no longer about to start, it is forgotten.
+            self.assertEqual(lineup.forecast_matches(self.db, now + timedelta(days=1), seen), 0)
+            self.assertEqual(seen, {})
         finally:
             lineup.MIN_FIT, lineup.fit = minimum, original
+            x("DELETE FROM agg.match_lineup_forecasts WHERE match_id = 9641")
+            x("DELETE FROM agg.match_forecasts WHERE match_id = 9641")
+            x("DELETE FROM agg.lineup_usuals WHERE season_id=%s", (year,))
+            x("DELETE FROM agg.lineup_usual_runs WHERE season_id=%s", (year,))
             x("DELETE FROM agg.lineup_models")
             x("DELETE FROM agg.player_power WHERE run_id=%s", (run,))
             x("DELETE FROM agg.player_power_matches WHERE run_id=%s", (run,))
@@ -1301,7 +1378,7 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM agg.league_levels WHERE competition_id=9600")
             x("DELETE FROM agg.forecast_models WHERE id=%s", (forecast_model,))
             x("DELETE FROM agg.power_runs WHERE method_version='test-lineup'")
-            x("DELETE FROM core.matches WHERE id BETWEEN 9601 AND 9640")
+            x("DELETE FROM core.matches WHERE id BETWEEN 9601 AND 9641")
             x("DELETE FROM core.players WHERE id BETWEEN 9701 AND 9748")
             x("DELETE FROM core.teams WHERE id BETWEEN 9601 AND 9604")
             x("DELETE FROM core.competition_seasons WHERE id=9600")

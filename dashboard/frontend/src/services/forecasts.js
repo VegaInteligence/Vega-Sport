@@ -38,6 +38,38 @@ export function share(value) {
   return `${Math.round(value * 100)} %`;
 }
 
+// A side's deviation (the sum of its outfield starters' rates less its club's usual one) below
+// which its eleven reads as its usual one, and from which it reads as clearly apart.
+const ELEVEN_NEAR = 0.15, ELEVEN_FAR = 0.6;
+
+/** How a side's confirmed eleven compares with its usual one. */
+export function elevenWord(deviation) {
+  const size = Math.abs(deviation);
+  if (!(size >= ELEVEN_NEAR)) return "proche de son onze habituel";
+  return `${size >= ELEVEN_FAR ? "nettement " : ""}${deviation > 0 ? "plus fort" : "moins fort"} que son onze habituel`;
+}
+
+/**
+ * What a match's card shows: the forecast that read the two confirmed line-ups when the
+ * answer carries one (with what each eleven is against its club's usual one, and the
+ * forecast before the line-ups), else the forecast from the two strengths alone.
+ */
+export function matchForecastReading(answer, home, away) {
+  if (!answer?.forecast) return null;
+  const read = answer.lineups?.forecast;
+  if (!read || !answer.lineups.home || !answer.lineups.away)
+    return { forecast: answer.forecast, lineups: false,
+      basis: "D’après la force des deux équipes avant le match ; le modèle ne connaît ni les compositions ni les absents." };
+  const before = answer.forecast;
+  // A share and its sign are not split between two lines of the sentence.
+  const whole = (value) => share(value).replace(/ /g, "\u00a0");
+  return {
+    forecast: read, lineups: true,
+    basis: `D’après la force des deux équipes et leurs compositions confirmées : le onze de ${home} est ${elevenWord(answer.lineups.home.deviation)}, celui de ${away} ${elevenWord(answer.lineups.away.deviation)}.`,
+    before: `Sans les compositions : ${home} ${whole(before.home)} · nul ${whole(before.draw)} · ${away} ${whole(before.away)}.`,
+  };
+}
+
 const sum = (values) => values.reduce((total, value) => total + value, 0);
 
 /** The table's rows, by projected points: the title, the first four places, the last three,
@@ -119,6 +151,8 @@ export function probabilityChart(answer, frame = CHART) {
     ticks: [0, 15, 30, 45, 60, 75, 90].map((minute) => ({ minute, x: fixed(x(minute)) })),
     start: points[0],
     live: answer.status === "in_play" ? points.at(-1) : null,
+    // The kick-off's shares come from the forecast that read the two confirmed line-ups.
+    lineups: answer.lineups === true,
     frame,
   };
 }

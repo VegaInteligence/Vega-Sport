@@ -214,6 +214,13 @@ def main(dsn):
     if pending:
         x("""INSERT INTO agg.match_forecasts(match_id,season_id,home_win,draw,away_win,home_goals,away_goals,likely_home,likely_away,home_elo,away_elo,model_id)
              VALUES (%s,2025,0.5123,0.2501,0.2376,1.62,1.04,1,0,1540,1490,%s)""", (pending[0], model))
+    # The same forecast read with the two confirmed line-ups (091), and a finished match that was forecast with its own.
+    lineup_forecast = """INSERT INTO agg.match_lineup_forecasts(match_id, season_id, home_win, draw, away_win, home_goals, away_goals, likely_home, likely_away,
+                           home_elo, away_elo, home_deviation, away_deviation, elo_per_unit, first_computed_at, computed_at)
+                         VALUES (%s, 2025, 0.5642, 0.2389, 0.1969, 1.74, 0.97, 2, 0, 1540, 1490, %s, %s, 44.8, '2025-09-06T11:10:00Z', '2025-09-06T11:10:00Z')"""
+    if pending:
+        x(lineup_forecast, (pending[0], 0.31, -0.72))
+    x(lineup_forecast, (1, 0.2, -0.1))
     for team, played, points, projected, places in ((1, 3, 7, 71.4, {1: 0.6, 2: 0.4}), (2, 3, 4, 55.25, {1: 0.4, 2: 0.6})):
         x("INSERT INTO agg.season_projections(competition_season_id,team_id,season_id,played,points,projected_points,model_id) VALUES (1,%s,2025,%s,%s,%s,%s)",
           (team, played, points, projected, model))

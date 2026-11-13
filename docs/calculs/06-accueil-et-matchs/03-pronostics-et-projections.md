@@ -11,7 +11,7 @@ Le modèle ne lit que la **force des deux équipes avant le match** (leur Elo, v
 - petits scores : deux lois de Poisson indépendantes donnent trop peu de nuls ; les probabilités de 0-0, 1-0, 0-1 et 1-1 sont corrigées par le facteur de Dixon et Coles (1997), dont le paramètre ρ est ajusté sur les mêmes matchs ;
 - victoire, nul, défaite : sommes sur la grille des scores de 0 à 10 buts ; le score affiché est le plus probable de la grille.
 
-Le modèle ne connaît ni les compositions, ni les absents, ni les jours de repos, ni aucune cote de bookmaker. Ce que les compositions de départ y ajoutent est mesuré à part ([Et si un joueur en remplaçait un autre ?](../05-joueurs/12-et-si-un-joueur-en-remplacait-un-autre.md)) ; le pronostic affiché ne s'en sert pas.
+Ce premier pronostic ne connaît ni les compositions, ni les absents, ni les jours de repos, ni aucune cote de bookmaker. Les compositions s'y ajoutent quand les deux clubs ont confirmé leur onze (ci-dessous).
 
 ### Vérification sur des matchs non vus
 
@@ -26,6 +26,22 @@ Modèle ajusté sur les 63 560 matchs de clubs des saisons jusqu'à 2025/2026, j
 Le « taux de base » est la fréquence des trois résultats dans l'historique, la même pour tous les matchs. Calibration de la victoire à domicile : parmi les matchs annoncés entre 50 et 60 % (2 196 matchs, 54,5 % en moyenne), 54,6 % ont été gagnés ; entre 30 et 40 %, 36,0 % pour 35,3 % annoncés ; entre 70 et 80 %, 75,3 % pour 74,0 %. Les nuls sont un peu sous-estimés (24,6 % annoncés, 25,5 % observés). La correction des petits scores change peu (1,0207 contre 1,0212 sans elle).
 
 Aucune comparaison avec les cotes de clôture n'a été faite : la base n'en contient pas.
+
+## Avec les compositions confirmées
+
+Quand la base détient le onze **confirmé** des deux clubs, le pronostic du match est relu avec eux ([lineup.py](../../../backend/vega/lineup.py), mesures et vérification dans [Et si un joueur en remplaçait un autre ?](../05-joueurs/12-et-si-un-joueur-en-remplacait-un-autre.md)) :
+
+- composition d'un côté : la somme des rendements propres de ses titulaires de champ, tels que le classement les connaît avant le match (l'année du trophée en cours et la précédente) ;
+- écart : cette somme moins la moyenne des compositions précédentes du club dans l'année (`agg.lineup_usuals`, réécrite après chaque classement de l'année ; au moins cinq compositions) ;
+- la force de chaque équipe est déplacée de E × son écart, E étant les points Elo que vaut une unité de rendement (environ 45), puis le pronostic est recalculé comme plus haut.
+
+La carte « Probabilités » affiche alors ce pronostic, dit ce que vaut chaque onze face à l'habituel de son club (proche en dessous de 0,15 d'écart, « nettement » à partir de 0,6) et rappelle les probabilités sans les compositions. La courbe du match part elle aussi de ce pronostic.
+
+**Quand les compositions sont lues.** 48 heures avant le match (une composition probable), **50 puis 25 minutes avant le coup d'envoi**, et au coup d'envoi. Les deux lectures d'avant-match datent du 13 novembre 2026. Jusque-là la base ne recevait un onze confirmé qu'au coup d'envoi : ce jour-là, sur 54 matchs à jouer dans les 24 heures, 8 avaient une composition des deux côtés, toutes non confirmées (le dernier onze aligné, selon le fournisseur).
+
+**Ce qui n'est pas encore mesuré.** La part des matchs dont le fournisseur confirme les onze avant le coup d'envoi. Chaque pronostic relu garde l'heure de son premier calcul (`agg.match_lineup_forecasts`, conservé après le match) : cette part, et la justesse de ces pronostics sur les matchs joués, se liront là.
+
+Seules les compositions confirmées sont lues : le « dernier onze » ou le onze « probable » du fournisseur ne déplace pas le pronostic.
 
 ## La projection d'un championnat
 

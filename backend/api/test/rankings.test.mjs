@@ -120,8 +120,14 @@ test("the forecast of a match still to play and a league replayed to its end", {
   const answers = await Promise.all(matches.map((id) => get("/api/forecasts/match?match=" + id)));
   const found = answers.filter((a) => a.response.status === 200);
   assert.equal(found.length, 1);
-  const { forecast, model } = found[0].body;
+  const { forecast, model, lineups } = found[0].body;
   assert.deepEqual(forecast, { home: 0.5123, draw: 0.2501, away: 0.2376, homeGoals: 1.62, awayGoals: 1.04, score: [1, 0] });
+  // Both elevens confirmed: the forecast that read them, and what each eleven is against its club's usual one
+  // (a deviation in rate units, and the Elo points it moves the side by).
+  assert.deepEqual(lineups, {
+    forecast: { home: 0.5642, draw: 0.2389, away: 0.1969, homeGoals: 1.74, awayGoals: 0.97, score: [2, 0] },
+    home: { deviation: 0.31, elo: 13.9 }, away: { deviation: -0.72, elo: -32.3 }, computedAt: "2025-09-06T11:10:00.000Z",
+  });
   assert.deepEqual([model.version, model.matches], ["forecast-v1", 60000]);
   assert.ok(answers.filter((a) => a.response.status !== 200).every((a) => a.response.status === 404));
   assert.equal((await get("/api/forecasts/match?match=12")).response.status, 400);
@@ -154,6 +160,8 @@ test("a finished match minute by minute", { skip }, async () => {
   assert.deepEqual([at(90).home, at(90).draw, at(90).away, at(90).score], [1, 0, 0, [2, 0]]);
   assert.deepEqual(body.events.filter((e) => e.kind === "goal").map((e) => [e.minute, e.side]), [[11, "home"], [21, "home"]]);
   assert.ok(body.rates.home > 0 && body.rates.away > 0);
+  // Its two line-ups were read before it: the timeline starts from the forecast that read them.
+  assert.equal(body.lineups, true);
   // A match still to play, an unknown one, a malformed id.
   assert.equal((await get("/api/forecasts/live?match=m_aaaaa6")).response.status, 404);
   assert.equal((await get("/api/forecasts/live?match=m_zzzzzz")).response.status, 404);

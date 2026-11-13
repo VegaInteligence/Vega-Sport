@@ -56,8 +56,8 @@ export default function MatchWinProbability({ match }) {
         </svg>
         <figcaption>
           {live ? `En cours (${live.minute}′) : ${shares(live)}. ` : ""}
-          Au coup d’envoi : {shares(start)}. Le modèle connaît le score, l’heure et les expulsions, pas le jeu
-          lui-même.
+          Au coup d’envoi{chart.lineups ? ", compositions prises en compte" : ""} : {shares(start)}. Le modèle connaît le score,
+          l’heure et les expulsions, pas le jeu lui-même.
         </figcaption>
       </figure>
       {chart.swings.length > 0 && (

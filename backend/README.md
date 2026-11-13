@@ -24,7 +24,7 @@ Le [compte rendu de validation](VERIFICATION.md) contient les preuves : tests, p
 - le calendrier `/date` de J−1 à J+7, une fois par jour ;
 - le score à coup d'envoi +105 min, puis toutes les 2 min jusqu'à +150, toutes les 15 min jusqu'à +4 h, toutes les heures pendant 2 jours et chaque jour jusqu'à +7 jours ; un statut reporté, annulé ou attribué arrête la surveillance, et une nouvelle date la relance ;
 - un match encore « non commencé » six heures après son coup d'envoi et qu'aucune surveillance ne suit (elle s'est arrêtée après une semaine, ou le match n'a jamais été vu dans un calendrier de son jour) : son résumé une fois par jour. Le fournisseur répond par une nouvelle date, qui relance la surveillance, ou par la même, et le match est noté `score_never_final` ;
-- les compositions 48 h avant le match et au coup d'envoi, le h2h une fois avant le match ;
+- les compositions 48 h avant le match, 50 et 25 minutes avant le coup d'envoi (le onze confirmé corrige le pronostic) et au coup d'envoi, le h2h une fois avant le match ;
 - au statut `finished`, les 12 familles de détail, puis la correction à +24 h, qui refait les détails si le fournisseur a changé le match ;
 - le catalogue, les compétitions actives et leurs calendriers chaque semaine, les profils à la première apparition puis chaque mois.
 

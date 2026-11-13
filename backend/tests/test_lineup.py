@@ -36,7 +36,7 @@ class LineupTest(unittest.TestCase):
             2: [(1, "winger", 90.0, 0.0), (2, "winger", 90.0, 0.0), (3, "centre_back", 90.0, 0.0)],
         }
         starters = {(1, "A"): [1, 9], (1, "B"): [2, 3], (2, "B"): [2, 3], (2, "A"): [1, 9], (3, "A"): [1], (3, "B"): [2, 3], (4, "B"): [2, 3], (4, "A"): [1, 9]}
-        kept, totals = lineup.deviations(matches, appearances, starters, previous)
+        kept, totals, usual = lineup.deviations(matches, appearances, starters, previous)
         # Match 1: no earlier line-up to compare with. Match 3: a side without its starters.
         self.assertEqual([(row[0], row[2], row[3]) for row in kept], [(0.1, 1, 1), (0.1, 3, 0)])
         # Match 2. A: its winger alone counts (the goalkeeper is left out), last year's 4.5 over 450 minutes
@@ -51,6 +51,21 @@ class LineupTest(unittest.TestCase):
         self.assertEqual(totals[1], (0.9, 180.0, "winger"))
         self.assertEqual(totals[9], (5.0, 90.0, "goalkeeper"))
         self.assertEqual(totals[2][2], "winger")
+        # Each club's line-ups of the year: A's three complete ones, B's four.
+        self.assertEqual(usual["A"][0], 3)
+        self.assertAlmostEqual(usual["A"][1], 0.45 + winger + now_a)
+        self.assertEqual(usual["B"][0], 4)
+        self.assertAlmostEqual(usual["B"][1], 0.0 + other + now_b + now_b)
+
+    def test_a_date_belongs_to_the_award_year_that_starts_in_august(self):
+        from datetime import date
+
+        self.assertEqual([lineup.year_of(date(2026, 8, 1)), lineup.year_of(date(2026, 7, 31)), lineup.year_of(date(2027, 2, 14))], [2026, 2025, 2026])
+
+    def test_a_sides_sum_leaves_its_goalkeeper_out_and_needs_eleven_starters(self):
+        eleven = [("A", "goalkeeper", 9.0, 900.0)] + [("A", "winger", 4.5, 450.0)] * 2 + [("A", None, 0.0, 0.0)] * 8
+        ten = [("B", "winger", 4.5, 450.0)] * 10
+        self.assertEqual(lineup.side_sums(eleven + ten), {"A": 0.9})
 
     def test_the_worth_of_a_line_up_is_found_again_in_scores_drawn_from_it(self):
         rng = random.Random(7)

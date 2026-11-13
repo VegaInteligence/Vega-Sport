@@ -231,6 +231,7 @@ class Worker:
         self._analyzed = None  # UTC day of the last ops.analyze_partitioned()
         self._archives = None  # UTC day of the last agg.refresh_archive_seasons()
         self._lineups = None  # UTC day of the last look at the line-up model (lineup.refresh)
+        self._lineup_seen = {}  # matches whose line-ups gave no forecast: lineup.forecast_matches
         self._retry_at = {}  # step of the daily pass that failed -> when it is tried again
         # SideProcess when the daily pass and the image copies run in a process of their own.
         self.side_process = None
@@ -380,6 +381,21 @@ class Worker:
             print(f"calculator error={error_code(error)}", flush=True)
             return 0
 
+    def lineup_forecasts(self):
+        """The forecast of the matches about to start, read again with their two confirmed
+        line-ups (lineup.forecast_matches). In the collection's own process: a line-up is
+        confirmed shortly before kick-off, and the side work can be an hour into a season."""
+        from . import lineup
+
+        try:
+            written = lineup.forecast_matches(self.calc_conn, self.clock(), self._lineup_seen)
+            if written:
+                print(f"lineup forecasts matches={written}", flush=True)
+            return written
+        except Exception as error:
+            print(f"lineup forecasts error={error_code(error)}", flush=True)
+            return 0
+
     def _daily_step(self, step, now, call):
         """Run one step of the daily pass unless it failed less than RETRY_DAILY_AFTER ago;
         (True, its result), or (False, None) when it waited or failed."""
@@ -443,16 +459,23 @@ class Worker:
             ok, counts = self._daily_step(("actions", season), now, lambda: actions.refresh(self.calc_conn, season))
             if ok:
                 print(f"action values season={season} players={counts[0]} placed={counts[1]}", flush=True)
+        from . import lineup
+
         if self._lineups != now.date():
             # What a line-up is worth (lineup.py): looked at once a day, fitted when there is
             # no model yet or when the base has grown enough since the last fit.
-            from . import lineup
-
             ok, fitted = self._daily_step(("lineups",), now, lambda: lineup.refresh(self.calc_conn))
             if ok:
                 self._lineups = now.date()
                 if fitted is not None:
                     print(f"lineup model matches={fitted}", flush=True)
+        # Each club's usual line-up of the award year, written again after each ranking of
+        # the year: the forecast of a match reads its two confirmed elevens against them.
+        _, years = self._daily_step(("usual lineups",), now, lambda: lineup.usuals_due(self.calc_conn, now.date()))
+        for year in years or []:
+            ok, clubs = self._daily_step(("usual lineups", year), now, lambda: lineup.refresh_usuals(self.calc_conn, year))
+            if ok:
+                print(f"usual lineups year={year} clubs={clubs}", flush=True)
         if seasons:
             # The Elo covers every match in order: once for the pass, never once per season
             # (with ~140 archive seasons due at once it rewrote agg.team_elo 95 times).
@@ -522,6 +545,8 @@ class Worker:
                         planner.plan_backfill(self.conn, self.clock(), **self.backfill)
                 except Exception as error:
                     print(f"planner error={error_code(error)}", flush=True)
+                if self.backfill is None:
+                    self.lineup_forecasts()
                 if self.side_process is not None:
                     self.side_process.tick()
                 elif self.backfill is None:

@@ -83,6 +83,10 @@ Le modèle ajusté en production le 13 novembre 2026 (20 h 59 UTC) : **45,4 ± 3
 
 Le même écart vaut moins de points pour un club qui domine son championnat (Barcelone) que pour un club du milieu (Twente). La dernière ligne montre la limite de l'exercice : le rendement propre se lit face aux adversaires de chacun et n'est pas ramené à une échelle commune des championnats, si bien qu'un très bon joueur d'un championnat plus faible paraît proche d'un des meilleurs du monde. C'est entre championnats de niveaux éloignés que l'estimation est la moins sûre (43 ± 19 ci-dessus).
 
+## Dans le pronostic d'un match
+
+La même mesure corrige le pronostic d'un match dès que les deux clubs ont confirmé leur onze : la force de chaque côté est déplacée de E × l'écart de sa composition à l'habituelle. Le détail (quand les compositions sont lues, ce que la carte affiche) est dans [Pronostics et projections](../06-accueil-et-matchs/03-pronostics-et-projections.md#avec-les-compositions-confirmées).
+
 ## Limites
 
 - **C'est une estimation**, tirée de la relation entre compositions et résultats. Elle ne sait rien de l'adaptation d'un joueur à un autre club, à un autre championnat ou à un autre système, ni de ce que son arrivée change au jeu des autres.

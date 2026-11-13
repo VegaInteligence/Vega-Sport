@@ -26,9 +26,11 @@
  * of each season.
  *
  * GET /api/forecasts/match?match= — the forecast of a match still to play (vega/forecast.py,
- * from the two Elo strengths): win, draw, loss, expected goals and the likeliest score.
+ * from the two Elo strengths): win, draw, loss, expected goals and the likeliest score; and,
+ * once both clubs have confirmed their eleven, `lineups`: the same forecast read with them.
  * GET /api/forecasts/live?match= — a finished or running match minute by minute: win, draw
- * and loss from the forecast, the score, the clock and the dismissals (vega/inplay.py).
+ * and loss from the forecast (the one that read the line-ups when there is one), the score,
+ * the clock and the dismissals (vega/inplay.py).
  * GET /api/forecasts/season?competition=&season= — a league replayed to its end: each
  * club's points now and projected, the share of the replays it finishes at each place, and
  * `next`, its coming league matches (the opponents' mean strength, the points forecast).
@@ -229,12 +231,20 @@ async function matchForecast(read, params) {
   validateParams(params, ["match"]);
   const id = params.get("match");
   if (!MATCH.test(id || "")) reject(400, "Paramètre invalide.");
-  const [r] = await read("SELECT * FROM api.match_forecasts WHERE match_key=api.internal_id('match',$1)", [id]);
+  const [[r], [l]] = await Promise.all([
+    read("SELECT * FROM api.match_forecasts WHERE match_key=api.internal_id('match',$1)", [id]),
+    read("SELECT * FROM api.match_lineup_forecasts WHERE match_key=api.internal_id('match',$1)", [id]),
+  ]);
   if (!r) reject(404, "Donnée indisponible.");
+  const shares = (f) => ({ home: round(f.home_win, 4), draw: round(f.draw, 4), away: round(f.away_win, 4),
+    homeGoals: round(f.home_goals, 2), awayGoals: round(f.away_goals, 2), score: [f.likely_home, f.likely_away] });
+  const side = (deviation, shift) => ({ deviation: round(deviation, 2), elo: round(shift, 1) });
   return {
     match: id,
-    forecast: { home: round(r.home_win, 4), draw: round(r.draw, 4), away: round(r.away_win, 4),
-      homeGoals: round(r.home_goals, 2), awayGoals: round(r.away_goals, 2), score: [r.likely_home, r.likely_away] },
+    forecast: shares(r),
+    // Once both clubs have confirmed their eleven (vega/lineup.py, 091): the same forecast with each side's
+    // strength moved by what its eleven is worth against its usual one.
+    ...(l ? { lineups: { forecast: shares(l), home: side(l.home_deviation, l.home_shift), away: side(l.away_deviation, l.away_shift), computedAt: iso(l.computed_at) } } : {}),
     model: { version: r.model_version, fittedAt: iso(r.fitted_at), matches: r.model_matches },
   };
 }
@@ -251,11 +261,12 @@ async function liveProbability(read, params) {
   const [s] = await read("SELECT * FROM api.match_strengths WHERE match_key=api.internal_id('match',$1)", [id]);
   if (!s || s.home_elo === null || s.away_elo === null || !["finished", "in_play"].includes(s.status)) reject(404, "Donnée indisponible.");
   const at = [s.season_id, s.match_key];
-  const [[forecast], [model], events, [clock]] = await Promise.all([
+  const [[forecast], [model], events, [clock], [lineups]] = await Promise.all([
     read("SELECT * FROM api.forecast_models ORDER BY fitted_at DESC, id DESC LIMIT 1"),
     read("SELECT * FROM api.inplay_models ORDER BY fitted_at DESC, id DESC LIMIT 1"),
     read("SELECT kind, minute, minute_added AS added, side FROM api.match_inplay_events WHERE season_id=$1 AND match_key=$2 AND side IS NOT NULL ORDER BY seq", at),
     read("SELECT minute FROM api.match_clocks WHERE season_id=$1 AND match_key=$2", at),
+    read("SELECT home_shift, away_shift FROM api.match_lineup_forecasts WHERE match_key=$1", [s.match_key]),
   ]);
   if (!forecast || !model) reject(404, "Donnée indisponible.");
   const finished = s.status === "finished";
@@ -264,7 +275,8 @@ async function liveProbability(read, params) {
   if (finished && (goals("home") !== s.home_score || goals("away") !== s.away_score)) reject(404, "Donnée indisponible.");
   const seen = Math.max(clock?.minute ?? 0, ...events.map((e) => e.minute), 0);
   const last = finished ? 90 : Math.max(0, Math.min(90, Math.floor(seen)));
-  const [rateHome, rateAway] = inplayRates(forecast, s.home_elo, s.away_elo, s.neutral);
+  // A match whose two confirmed line-ups were read before it (091) starts from the forecast that read them.
+  const [rateHome, rateAway] = inplayRates(forecast, s.home_elo + (lineups?.home_shift ?? 0), s.away_elo + (lineups?.away_shift ?? 0), s.neutral);
   const inplay = { profile: [model.q1, model.q2, model.q3, model.q4, model.q5, model.q6, model.after_90], down: model.down, up: model.up };
   const points = inplayTimeline(rateHome, rateAway, events, inplay, forecast.rho, last);
   if (finished) {
@@ -274,6 +286,7 @@ async function liveProbability(read, params) {
   return {
     match: id, status: s.status,
     rates: { home: round(rateHome, 2), away: round(rateAway, 2) },
+    ...(lineups ? { lineups: true } : {}),
     model: { version: model.version, fittedAt: iso(model.fitted_at), matches: model.matches },
     points: points.map((p) => ({ minute: p.minute, home: round(p.home, 4), draw: round(p.draw, 4), away: round(p.away, 4), score: p.score })),
     events: events.map((e) => ({ minute: e.minute, added: e.added, kind: e.kind, side: e.side })),
