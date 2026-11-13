@@ -11,7 +11,7 @@ Le modèle ne lit que la **force des deux équipes avant le match** (leur Elo, v
 - petits scores : deux lois de Poisson indépendantes donnent trop peu de nuls ; les probabilités de 0-0, 1-0, 0-1 et 1-1 sont corrigées par le facteur de Dixon et Coles (1997), dont le paramètre ρ est ajusté sur les mêmes matchs ;
 - victoire, nul, défaite : sommes sur la grille des scores de 0 à 10 buts ; le score affiché est le plus probable de la grille.
 
-Le modèle ne connaît ni les compositions, ni les absents, ni les jours de repos, ni aucune cote de bookmaker.
+Le modèle ne connaît ni les compositions, ni les absents, ni les jours de repos, ni aucune cote de bookmaker. Ce que les compositions de départ y ajoutent est mesuré à part ([Et si un joueur en remplaçait un autre ?](../05-joueurs/12-et-si-un-joueur-en-remplacait-un-autre.md)) ; le pronostic affiché ne s'en sert pas.
 
 ### Vérification sur des matchs non vus
 

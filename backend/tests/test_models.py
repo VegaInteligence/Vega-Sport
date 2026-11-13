@@ -1216,5 +1216,97 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM core.competitions WHERE id IN (9500, 9501, 9502)")
 
 
+    def test_zzzzzzzzzzzzz_the_worth_of_a_line_up_is_fitted_on_rates_known_before_each_match(self):
+        # 090: lineup.refresh, on an award year written here: four clubs whose eleventh starter is a strong
+        # player one match and a weak one the next, and who score more with the strong one.
+        from datetime import date, datetime, timedelta, timezone
+
+        from psycopg.pq import TransactionStatus
+
+        from vega import lineup
+        from vega.store import Store
+
+        x = self.db.execute
+        with self.db.transaction():
+            year = Store(self.db).season("2031/2032")
+        x("INSERT INTO core.competitions(id, name) VALUES (9600, 'Ligue des compositions')")
+        x("INSERT INTO core.competition_seasons(id, competition_id, season_id) VALUES (9600, 9600, %s)", (year,))
+        x("INSERT INTO core.teams(id, name) SELECT 9600 + g, 'Club ' || g FROM generate_series(1, 4) g")
+        x("INSERT INTO core.players(id, name) SELECT 9700 + g, 'Joueur ' || g FROM generate_series(1, 48) g")
+        elo = x("INSERT INTO agg.power_runs(kind, method_version, status) VALUES ('elo', 'test-lineup', 'published') RETURNING id").fetchone()[0]
+        run = x("INSERT INTO agg.power_runs(kind, season_id, method_version, status, players) VALUES ('players', %s, 'test-lineup', 'published', 48) RETURNING id", (year,)).fetchone()[0]
+        x("INSERT INTO agg.league_levels(competition_id, entry_level, level, teams, links, linked, run_id) VALUES (9600, 1500, 1500, 4, 0, false, %s)", (elo,))
+        forecast_model = x("""INSERT INTO agg.forecast_models(version, matches, home_base, home_slope, away_base, away_slope, rho, strength_spread, simulations)
+                              VALUES ('forecast-v1', 60000, 0.26, 0.93, 0.32, 0.91, -0.03, 90, 1000) RETURNING id""").fetchone()[0]
+        first = date(2031, 8, 10)
+        for g in range(1, 41):
+            home, away = g % 4, (g + 1 + (g // 4) % 3) % 4
+            strong = [(g + team) % 2 == 0 for team in (home, away)]
+            score = (2 if strong[0] and not strong[1] else 0 if strong[1] and not strong[0] else 1, 1)
+            day = first + timedelta(days=g)
+            kickoff = datetime(day.year, day.month, day.day, 12, tzinfo=timezone.utc)
+            x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, home_score, away_score, match_date, kickoff_at)
+                 VALUES (%s, 9600, %s, 'pitchapi', 'finished', %s, %s, %s, %s, %s, %s)""", (9600 + g, year, 9601 + home, 9601 + away, *score, day, kickoff))
+            for team, with_strong, result in ((home, strong[0], score[0] > score[1]), (away, strong[1], score[1] > score[0])):
+                x("INSERT INTO agg.team_elo(match_id, team_id, season_id, kickoff_at, elo_before, elo_after, expected, result, run_id) VALUES (%s, %s, %s, %s, 1500, 1500, 0.5, %s, %s)",
+                  (9600 + g, 9601 + team, year, kickoff, 1.0 if result else 0.5, elo))
+                # Players 1 to 10 of the club start every match (the first is its goalkeeper); the eleventh starter is its strong or its weak one.
+                x("""INSERT INTO core.lineup_players(season_id, match_id, team_id, player_id, is_starter)
+                     SELECT %(y)s, %(m)s, %(t)s, 9700 + %(i)s * 12 + j, true FROM generate_series(1, 12) j WHERE j <= 10 OR j = %(last)s""",
+                  {"y": year, "m": 9600 + g, "t": 9601 + team, "i": team, "last": 11 if with_strong else 12})
+                x("""INSERT INTO agg.player_power_matches(season_id, match_id, player_id, team_id, role, minutes, contribution, stakes, run_id)
+                     SELECT %(y)s, %(m)s, 9700 + %(i)s * 12 + j, %(t)s, CASE WHEN j = 1 THEN 'goalkeeper' ELSE 'winger' END, 90,
+                            CASE j WHEN 11 THEN 0.9 WHEN 12 THEN -0.9 WHEN 1 THEN 3.0 ELSE 0 END, 1, %(r)s
+                     FROM generate_series(1, 12) j WHERE j <= 10 OR j = %(last)s""",
+                  {"y": year, "m": 9600 + g, "t": 9601 + team, "i": team, "last": 11 if with_strong else 12, "r": run})
+        minimum, original, seen = lineup.MIN_FIT, lineup.fit, []
+
+        def spy(*args, **kwargs):
+            seen.append(self.db.info.transaction_status)
+            return original(*args, **kwargs)
+
+        lineup.MIN_FIT, lineup.fit = 5, spy
+        try:
+            kept = lineup.refresh(self.db)
+            self.assertEqual(seen, [TransactionStatus.IDLE])  # the years are gone through with no transaction open
+            self.assertGreaterEqual(kept, 15)
+            version, matches, rated, worth, error = self.one("SELECT version, matches, rated, elo_per_unit, elo_per_unit_error FROM agg.lineup_models")
+            self.assertEqual((version, matches, rated), (lineup.MODEL_VERSION, kept, self.one("SELECT count(*) / 2 FROM agg.team_elo")[0]))
+            # The clubs score more with their strong eleventh starter: a better line-up is worth Elo points.
+            self.assertGreater(worth, 0)
+            self.assertGreater(error, 0)
+            self.assertEqual(self.one("SELECT version, matches FROM api.lineup_models"), (lineup.MODEL_VERSION, kept))
+            # Fitted once, it is not fitted again until the base has grown enough; then one model is kept.
+            self.assertIsNone(lineup.refresh(self.db))
+            x("UPDATE agg.lineup_models SET rated = 1")
+            self.assertEqual(lineup.refresh(self.db), kept)
+            self.assertEqual(self.one("SELECT count(*) FROM agg.lineup_models")[0], 1)
+            # Too few matches to fit on: nothing is written over the model held.
+            lineup.MIN_FIT = 100000
+            x("UPDATE agg.lineup_models SET rated = 1")
+            self.assertEqual(lineup.refresh(self.db), 0)
+            self.assertEqual(self.one("SELECT matches FROM agg.lineup_models")[0], kept)
+            # The reads behind a replacement: a player's own part of the year, and a club's league matches.
+            x("""INSERT INTO agg.player_power(season_id, player_id, role, team_id, matches, minutes, total, rate, eligible, linked, run_id, own_total, level_total)
+                 VALUES (%s, 9711, 'winger', 9601, 20, 1800, 19.5, 0.8, true, true, %s, 18.0, 1.5)""", (year, run))
+            self.assertEqual(self.one("SELECT name, role, team, minutes, own_total FROM api.player_own_totals WHERE season_id=%s AND player_key=9711", year),
+                             ("Joueur 11", "winger", "Club 1", 1800, 18.0))
+            self.assertEqual(self.one("SELECT competition_key, count(*) FROM api.team_league_matches WHERE season_id=%s AND team_key=9601 GROUP BY 1", year), (9600, 20))
+        finally:
+            lineup.MIN_FIT, lineup.fit = minimum, original
+            x("DELETE FROM agg.lineup_models")
+            x("DELETE FROM agg.player_power WHERE run_id=%s", (run,))
+            x("DELETE FROM agg.player_power_matches WHERE run_id=%s", (run,))
+            x("DELETE FROM agg.team_elo WHERE run_id=%s", (elo,))
+            x("DELETE FROM agg.league_levels WHERE competition_id=9600")
+            x("DELETE FROM agg.forecast_models WHERE id=%s", (forecast_model,))
+            x("DELETE FROM agg.power_runs WHERE method_version='test-lineup'")
+            x("DELETE FROM core.matches WHERE id BETWEEN 9601 AND 9640")
+            x("DELETE FROM core.players WHERE id BETWEEN 9701 AND 9748")
+            x("DELETE FROM core.teams WHERE id BETWEEN 9601 AND 9604")
+            x("DELETE FROM core.competition_seasons WHERE id=9600")
+            x("DELETE FROM core.competitions WHERE id=9600")
+
+
 if __name__ == "__main__":
     unittest.main()
