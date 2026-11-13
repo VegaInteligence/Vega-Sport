@@ -54,6 +54,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 - [Audit du classement de puissance et version 2](05-joueurs/08-audit-classement-puissance.md) — ce que donnait la première version, l'échelle commune des championnats, le rôle par formation, le poids du niveau du club.
 - [Retour d'absence et forme](05-joueurs/09-retour-d-absence.md)
 - [Révélations](05-joueurs/10-revelations.md) — les joueurs sous le seuil de minutes du classement qui jouent déjà comme ses titulaires, et ce qu'ils deviennent un an après.
+- [Valeur des actions](05-joueurs/11-valeur-des-actions.md) — les VAEP, PV et xT du fournisseur, lues par 90 minutes du championnat du joueur et situées parmi son poste ; pourquoi le classement ne s'appuie pas dessus.
 
 ### 6. Accueil et fiches de match
 - [Accueil](06-accueil-et-matchs/01-accueil.md) — semaine affichée, match de la semaine, joueur de la semaine, séries.

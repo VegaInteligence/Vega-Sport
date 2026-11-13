@@ -543,6 +543,40 @@ class WorkerTest(unittest.TestCase):
             self.assertEqual(self.worker.daily(), [season])
         self.assertEqual(self.worker._retry_at, {})
 
+    def test_a_ranked_season_gets_its_action_values_without_a_whole_pass(self):
+        # 089: a season with a published player ranking and no reading of the present version is
+        # read by one light step; the season's models are not run for it.
+        from vega import actions
+
+        x = self.db.execute
+        with self.db.transaction():
+            season = Store(self.db).season("2019/2020")
+        x("INSERT INTO agg.power_runs(kind,season_id,method_version,status) VALUES ('players',%s,'test','published')", (season,))
+        passes = self.broken(models, "refresh_daily")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.worker.daily(), [])  # no season is due for its models
+        self.assertEqual(passes, [])
+        self.assertIn(f"action values season={season} players=0 placed=0", out.getvalue())
+        self.assertEqual(x("SELECT season_id, version, players FROM agg.action_value_runs").fetchall(), [(season, actions.MODEL_VERSION, 0)])
+        # Read once, the season is left alone at the next rounds.
+        self.now += timedelta(minutes=1)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.worker.daily(), [])
+        self.assertNotIn("action values", out.getvalue())
+        # A reading that fails is logged and waits like any step; the rest of the pass is not held back.
+        x("DELETE FROM agg.action_value_runs")
+        failed = self.broken(actions, "refresh")
+        self.now += timedelta(minutes=1)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.worker.daily()
+            self.now += timedelta(minutes=1)
+            self.worker.daily()
+        self.assertEqual(failed, [(season,)])
+        self.assertRegex(out.getvalue(), rf"daily step=actions {season} error=WORKER_ZERODIVISIONERROR@test_worker\.py:\d+ retry_at=")
+
     def test_the_collection_goes_on_whatever_fails_around_it(self):
         # The daily pass, the calculator and the planner all fail on a bug: the worker
         # still takes its job. Before, the first of them ended the process, and the task

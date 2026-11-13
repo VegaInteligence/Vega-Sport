@@ -1128,6 +1128,90 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM agg.power_runs WHERE id=%s", (run,))
             x("DELETE FROM core.players WHERE id BETWEEN 7701 AND 7759")
 
+    def test_zzzzzzzzzzzz_action_values_are_read_per_90_of_a_league_and_placed_among_the_role(self):
+        # 089: actions.refresh, on season rows and ranking roles written here.
+        from vega import actions
+        from vega.store import Store
+
+        x = self.db.execute
+        with self.db.transaction():
+            Store(self.db).season("2024/2025")
+        run = x("INSERT INTO agg.power_runs(kind, season_id, method_version, status) VALUES ('players', 2025, 'test', 'published') RETURNING id").fetchone()[0]
+        x("INSERT INTO core.competitions(id, name, kind) VALUES (9500, 'Ligue des valeurs', 'league'), (9501, 'Coupe des valeurs', 'cup'), (9502, 'Autre ligue', 'league')")
+        x("INSERT INTO core.competition_seasons(id, competition_id, season_id) VALUES (9500, 9500, 2025), (9501, 9501, 2025), (9502, 9502, 2025)")
+        x("INSERT INTO core.teams(id, name) VALUES (9500, 'Club A'), (9501, 'Club B')")
+        x("INSERT INTO core.players(id, name) SELECT 7800 + g, 'Pair ' || g FROM generate_series(1, 37) g")
+        names = [f"adv_{key}" for key in ("vaep_total", "vaep_offensive", "vaep_defensive", "pv_total", "pv_offensive", "pv_defensive", "xt_total")]
+        columns = ", ".join(f"{name}_sum, {name}_min" for name in names)
+        insert = f"INSERT INTO agg.player_season_stats(player_id, team_id, competition_season_id, season_id, appearances, starts, minutes, {columns}) "
+
+        def row(player, team, edition, minutes, vaep, pv, xt=2):
+            # Offensive part 1.5 times the total, defensive part its remainder.
+            values = (vaep, vaep * 1.5, -vaep * 0.5, pv, pv, 0, xt)
+            x(insert + f"VALUES (%s, %s, %s, 2025, 10, 10, %s, {', '.join(['%s, %s'] * 7)})",
+              (player, team, edition, minutes, *(v for value in values for v in (value, minutes))))
+
+        # Twenty players of a role in the league: VAEP rising with g, PV falling, xT the same for all.
+        for g in range(2, 21):
+            row(7800 + g, 9500, 9500, 900, g, 21 - g)
+        # The first of them played for two clubs of the league: his two halves are read as one.
+        row(7801, 9500, 9500, 450, 0.5, 10, 1)
+        row(7801, 9501, 9500, 450, 0.5, 10, 1)
+        row(7831, 9500, 9500, 900, 30, 30)  # a goalkeeper
+        row(7832, 9500, 9500, 400, 30, 30)  # under the minutes
+        row(7833, 9500, 9501, 900, 30, 30)  # a cup is no league
+        row(7834, 9500, 9502, 900, 3, 3)  # alone of his role in his league
+        row(7835, 9500, 9500, 500, 30, 30)  # more minutes in the other league: read there, not here
+        row(7835, 9501, 9502, 1000, 5, 5)
+        row(7836, 9500, 9500, 900, 30, 30)  # no role in the ranking
+        x(insert.replace(f", {columns}", "") + "VALUES (7837, 9500, 9500, 2025, 10, 10, 900)")  # nothing measured
+        power = "INSERT INTO agg.player_power(season_id, player_id, role, team_id, matches, minutes, total, rate, eligible, linked, run_id) "
+        x(power + "SELECT 2025, 7800 + g, 'test_role', 9500, 10, 900, 1, 0.1, true, true, %s FROM generate_series(1, 35) g WHERE g <= 20 OR g BETWEEN 32 AND 35", (run,))
+        x(power + "VALUES (2025, 7831, 'goalkeeper', 9500, 10, 900, 1, 0.1, true, true, %s), (2025, 7837, 'test_role', 9500, 10, 900, 1, 0.1, true, true, %s)", (run, run))
+        # The season's pass has read it already (models.refresh_daily): start from a season never read.
+        x("DELETE FROM agg.player_action_values WHERE season_id=2025")
+        x("DELETE FROM agg.action_value_runs WHERE season_id=2025")
+        try:
+            self.assertEqual(actions.pending(self.db), [2025])
+            self.assertEqual(actions.refresh(self.db, 2025), (22, 20))
+            read = lambda player: self.one(
+                """SELECT competition_id, role, minutes, vaep, vaep_offensive, vaep_defensive, pv, xt, peers, vaep_rank, vaep_percentile,
+                          pv_rank, pv_percentile, xt_rank, xt_percentile FROM agg.player_action_values WHERE season_id=2025 AND player_id=%s""", player)
+            near = lambda found, expected: [self.assertAlmostEqual(a, b, places=4) if isinstance(b, float) else self.assertEqual(a, b) for a, b in zip(found, expected, strict=True)]
+            # The best VAEP of the twenty: rank 1, and 19 below him plus half of himself; the worst PV.
+            near(read(7820), (9500, "test_role", 900, 2.0, 3.0, -1.0, 0.1, 0.2, 20, 1, 97.5, 20, 2.5, 1, 50.0))
+            # Two clubs, one league: 1 over 900 minutes; the lowest VAEP, the highest PV.
+            near(read(7801), (9500, "test_role", 900, 0.1, 0.15, -0.05, 2.0, 0.2, 20, 20, 2.5, 1, 97.5, 1, 50.0))
+            # Too few players of his role in his league: his values, no place among them.
+            near(read(7834), (9502, "test_role", 900, 0.3, 0.45, -0.15, 0.3, 0.2, 2, None, None, None, None, None, None))
+            near(read(7835)[:4], (9502, "test_role", 1000, 0.45))
+            # No goalkeeper, nobody under the minutes, in a cup only, without a role or without a measure.
+            self.assertEqual(x("SELECT player_id FROM agg.player_action_values WHERE player_id IN (7831, 7832, 7833, 7836, 7837)").fetchall(), [])
+            self.assertEqual(self.one("SELECT version, players, placed FROM agg.action_value_runs WHERE season_id=2025"), (actions.MODEL_VERSION, 22, 20))
+            self.assertEqual(self.one("SELECT competition, role, peers, vaep_rank, version FROM api.player_action_values WHERE season_id=2025 AND player_key=7820"),
+                             ("Ligue des valeurs", "test_role", 20, 1, actions.MODEL_VERSION))
+            # Read once, a season is no longer waited for; a second pass replaces the first.
+            self.assertEqual(actions.pending(self.db), [])
+            self.assertEqual(actions.refresh(self.db, 2025), (22, 20))
+            self.assertEqual(self.one("SELECT count(*) FROM agg.player_action_values WHERE season_id=2025")[0], 22)
+            # A reading of another version is waited for again; a season whose only ranking was superseded never is.
+            x("UPDATE agg.action_value_runs SET version='actions-v0'")
+            with self.db.transaction():
+                older = Store(self.db).season("2019/2020")
+            x("INSERT INTO agg.power_runs(kind, season_id, method_version, status) VALUES ('players', %s, 'test-actions', 'superseded')", (older,))
+            self.assertEqual(actions.pending(self.db), [2025])
+        finally:
+            x("DELETE FROM agg.power_runs WHERE method_version='test-actions'")
+            x("DELETE FROM agg.player_action_values")
+            x("DELETE FROM agg.action_value_runs")
+            x("DELETE FROM agg.player_power WHERE run_id=%s", (run,))
+            x("DELETE FROM agg.power_runs WHERE id=%s", (run,))
+            x("DELETE FROM agg.player_season_stats WHERE competition_season_id IN (9500, 9501, 9502)")
+            x("DELETE FROM core.players WHERE id BETWEEN 7801 AND 7837")
+            x("DELETE FROM core.teams WHERE id IN (9500, 9501)")
+            x("DELETE FROM core.competition_seasons WHERE id IN (9500, 9501, 9502)")
+            x("DELETE FROM core.competitions WHERE id IN (9500, 9501, 9502)")
+
 
 if __name__ == "__main__":
     unittest.main()

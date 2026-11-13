@@ -212,6 +212,27 @@ test("a player's season by half", { skip }, async () => {
   assert.equal((await get("/api/players/p_aaaab1/halves")).response.status, 400);
 });
 
+test("a player's action values of his league season, placed among his role", { skip }, async () => {
+  const { data } = (await get("/api/players/p_aaaab1/actions?season=2025/2026")).body;
+  assert.deepEqual(data, {
+    id: "p_aaaab1", season: "2025/2026", competition: { id: data.competition.id, name: "Ligue 1" },
+    role: "centre_forward", position: "Avant-centre", minutes: 1260, peers: 24,
+    values: [
+      { key: "vaep", value: 0.413, rank: 3, percentile: 89.6, offensive: 0.439, defensive: -0.027 },
+      { key: "pv", value: 0.387, rank: 5, percentile: 81.3, offensive: 0.38, defensive: 0.007 },
+      { key: "xt", value: 0.083, rank: 14, percentile: 43.8 },
+    ],
+    method: { version: "actions-v1", computedAt: "2025-09-06T03:13:00.000Z" },
+  });
+  assert.match(data.competition.id, /^l_/);
+  // Too few players of his role in his league: his values, without a place; a part the source did not send is left out.
+  const alone = (await get("/api/players/p_aaaab2/actions?season=2025/2026")).body.data;
+  assert.deepEqual([alone.peers, alone.values], [7, [{ key: "vaep", value: 0.151, offensive: 0.14, defensive: 0.011 }, { key: "pv", value: 0.13 }, { key: "xt", value: 0.091 }]]);
+  assert.equal((await get("/api/players/p_aaaab3/actions?season=2025/2026")).response.status, 404);
+  assert.equal((await get("/api/players/p_aaaab1/actions?season=2024/2025")).response.status, 404);
+  assert.equal((await get("/api/players/p_aaaab1/actions")).response.status, 400);
+});
+
 test("a club's most used passing triangle and its most linked pair", { skip }, async () => {
   // The seed's edges of team 1: 101-102 (7+4+3), 101-104 (2), 102-104 (9).
   const { data } = (await get("/api/teams/t_aaaaa1/passing?season=2025/2026")).body;

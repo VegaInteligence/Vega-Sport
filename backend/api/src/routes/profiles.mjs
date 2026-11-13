@@ -24,6 +24,9 @@
  * and totals in first halves and in second halves.
  * GET /api/teams/{id}/passing?season= — the club's most used passing triangle and its most
  * linked pair, from the season's pass networks (083).
+ * GET /api/players/{id}/actions?season= — the source's action values of the player's league
+ * season (vega/actions.py, 089): each per 90 minutes of that league, with its rank and
+ * percentile among the players of his role there when they are enough to place him.
  *
  * Differences with the legacy read: a field without a value is omitted; a competition
  * carries no `is_free` (a plan of the source, not a fact of the competition); team
@@ -45,6 +48,9 @@ const SQUARES = Array.from({ length: DIMENSIONS }, (_, i) => `power(o.e${i + 1}-
 const RETURN = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/return$/;
 const HALVES = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/halves$/;
 const PASSING = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/passing$/;
+const ACTIONS = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/actions$/;
+// The source's three totals, and the two parts it gives of two of them.
+const ACTION_VALUES = [["vaep", true], ["pv", true], ["xt", false]];
 // Only what the source publishes per half: it gives no chances created or expected assists there.
 const HALF_FIELDS = ["matches", "minutes", "goals", "shots", "xg", "touches_box", "dribbles", "passes", "touches", "duels_won", "tackles", "recoveries"];
 
@@ -172,6 +178,36 @@ export function createProfileRoute(read) {
       const first = half("first_half"), second = half("second_half");
       if (!first && !second) reject(404, "Donnée indisponible.");
       return respond(req, { id: halves[1], season, first, second });
+    }
+    const actions = path.match(ACTIONS);
+    if (actions) {
+      validateParams(params, ["season"]);
+      const season = params.get("season");
+      if (!/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
+      const [r] = await read(
+        `SELECT * FROM api.player_action_values
+         WHERE season_id=(SELECT k.season_id FROM api.season_keys k WHERE k.season=$2) AND player_key=api.internal_id('player',$1)`,
+        [actions[1], season],
+      );
+      if (!r) reject(404, "Donnée indisponible.");
+      const rounded = (v, d) => (v === null || v === undefined ? null : Math.round(v * 10 ** d) / 10 ** d);
+      return respond(req, {
+        id: actions[1], season,
+        competition: { id: r.competition_id, name: r.competition },
+        role: r.role, position: ROLE_LABEL[r.role] ?? r.role, minutes: r.minutes, peers: r.peers,
+        // Per 90 minutes of the league; a rank and a percentile only among enough players of the role.
+        values: ACTION_VALUES.map(([key, parts]) => {
+          const value = { key, value: rounded(r[key], 3) };
+          put(value, "rank", r[`${key}_rank`]);
+          put(value, "percentile", rounded(r[`${key}_percentile`], 1));
+          if (parts) {
+            put(value, "offensive", rounded(r[`${key}_offensive`], 3));
+            put(value, "defensive", rounded(r[`${key}_defensive`], 3));
+          }
+          return value;
+        }),
+        method: { version: r.version, computedAt: new Date(r.computed_at).toISOString() },
+      });
     }
     const passing = path.match(PASSING);
     if (passing) {

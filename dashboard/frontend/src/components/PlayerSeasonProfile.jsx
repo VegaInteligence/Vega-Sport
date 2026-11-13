@@ -54,6 +54,7 @@ import PlayerPassPartners from "./PlayerPassPartners.jsx";
 import PlayerNeighbours from "./PlayerNeighbours.jsx";
 import PlayerHalves from "./PlayerHalves.jsx";
 import PlayerReturn from "./PlayerReturn.jsx";
+import PlayerActionValues from "./PlayerActionValues.jsx";
 import { chartTokens } from "./PlayerScoutCharts.jsx";
 import scout from "./PlayerScout.module.css";
 import { nationalFlagCode } from "../services/national-flags.js";
@@ -725,13 +726,16 @@ export default function PlayerSeasonProfile({
           >
             {view === "overview" && overview}
             {view === "advanced" && (
-              <PlayerAdvancedStats
-                profile={profile}
-                cohorts={cohorts}
-                minMinutes={minMinutes}
-                onMinMinutes={setMinMinutes}
-                ready={comparisonsReady}
-              />
+              <>
+                <PlayerAdvancedStats
+                  profile={profile}
+                  cohorts={cohorts}
+                  minMinutes={minMinutes}
+                  onMinMinutes={setMinMinutes}
+                  ready={comparisonsReady}
+                />
+                <PlayerActionValues id={id} />
+              </>
             )}
             {view === "stats" && (
               <>

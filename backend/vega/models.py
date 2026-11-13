@@ -806,6 +806,10 @@ def refresh_daily(conn, season, *, elo=True):
     from . import breakout
 
     breakout.refresh(conn, season)
+    # The source's action values of each player's league, set among his role (actions.py).
+    from . import actions
+
+    actions.refresh(conn, season)
     # How playing time comes back after an absence, and who is coming back now (returns.py).
     from datetime import datetime, timezone
 
