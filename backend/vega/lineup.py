@@ -21,9 +21,14 @@ moves the club by ELO × (r_in − r_out) points, and its expected points per le
 by what the forecast gives for that move against its league's other clubs (replace()).
 It is an estimate from how line-ups relate to results. It knows nothing of how a player
 adapts to another club, league or system.
+
+The same reading corrects a match's forecast once both clubs have confirmed their eleven
+(forecast_matches()): each side's deviation from its usual line-up of the year
+(agg.lineup_usuals, kept by refresh_usuals()) moves its strength by ELO × D points.
 """
 
 from collections import defaultdict
+from datetime import timedelta
 from math import exp, sqrt
 
 from . import forecast
@@ -35,6 +40,15 @@ MIN_HISTORY = 5  # earlier line-ups of the year a club needs before one is compa
 MIN_FIT = 2000  # matches with two comparable line-ups, below which nothing is fitted
 REFIT_GROWTH = 1.25  # the base rates this many times the matches of the last fit: fit again
 EXCLUDED_ROLES = ("goalkeeper",)
+# A match's confirmed line-ups are looked for from this long before its kick-off to this
+# long after it (a line-up confirmed late still corrects the forecast the match page shows).
+LOOK_BEFORE = timedelta(hours=3)
+LOOK_AFTER = timedelta(hours=3)
+
+
+def year_of(day):
+    """The award year of a date: it starts on 1 August (power.award_year)."""
+    return day.year if day.month >= 8 else day.year - 1
 
 
 def rate(total, minutes):
@@ -51,9 +65,10 @@ def deviations(matches, appearances, starters, previous):
     contribution, minutes, main role)} of the award year before.
 
     Returns ([(Δ, D_home − D_away, home goals, away goals)], the year's totals in the
-    shape of `previous`). A match is kept when both sides list STARTERS starters and have
-    MIN_HISTORY earlier line-ups to be compared with. Nothing of a match enters its own
-    line-ups: its appearances are counted after it.
+    shape of `previous`, {club: (its line-ups of the year, their sums added up)}). A match
+    is kept when both sides list STARTERS starters and have MIN_HISTORY earlier line-ups
+    to be compared with. Nothing of a match enters its own line-ups: its appearances are
+    counted after it.
     """
     running = {}  # player: [own contribution, minutes, {role: minutes}]
     history = defaultdict(lambda: [0, 0.0])  # club: [line-ups so far, their sums added up]
@@ -85,7 +100,7 @@ def deviations(matches, appearances, starters, previous):
             entry[1] += minutes
             entry[2][role] += minutes
     totals = {player: (entry[0], entry[1], max(sorted(entry[2]), key=entry[2].get)) for player, entry in running.items()}
-    return kept, totals
+    return kept, totals, {club: (count, total) for club, (count, total) in history.items() if count}
 
 
 def likelihood(rows, coefficients, weight):
@@ -172,7 +187,8 @@ WHERE l.season_id = ANY(%(seasons)s) AND l.is_starter AND l.team_id IS NOT NULL
 
 
 def read(conn, year, previous):
-    """An award year's rows for the fit, and its players' totals for the year after."""
+    """An award year's rows for the fit, its players' totals for the year after, and its
+    clubs' line-ups so far."""
     start, end = award_year(year)
     args = {"year": year, "seasons": [year, year + 1], "start": start, "end": end}
     matches = [(match, home, away, forecast.delta(elo_home, elo_away, neutral), home_goals, away_goals)
@@ -208,7 +224,7 @@ def refresh(conn):
     rows, previous, before = [], {}, None
     for (year,) in conn.execute(YEARS).fetchall():
         # A year the base does not hold the one before of starts from nothing.
-        kept, previous = read(conn, year, previous if before == year - 1 else {})
+        kept, previous, _ = read(conn, year, previous if before == year - 1 else {})
         rows += kept
         before = year
     fitted = fit(rows, ((coefficients[0], coefficients[1]), (coefficients[2], coefficients[3])))
@@ -221,3 +237,124 @@ def refresh(conn):
             (MODEL_VERSION, len(rows), rated, fitted[0], fitted[1]),
         )
     return len(rows)
+
+
+# The line-ups a match's forecast reads --------------------------------------
+
+# The present award year when the ranking has been computed since its clubs' usual
+# line-ups were last written (or they never were).
+USUALS_DUE = """
+SELECT r.season_id FROM agg.power_runs r
+WHERE r.kind = 'players' AND r.status = 'published' AND r.season_id = %(year)s AND r.players > 0
+  AND NOT EXISTS (SELECT 1 FROM agg.lineup_usual_runs u WHERE u.season_id = r.season_id AND u.computed_at >= r.finished_at)"""
+# Matches about to start or just started whose two line-ups are confirmed and whose forecast
+# has not read them as they stand: (match, season, date, home, away, neutral, the strengths
+# the forecast read, its model, when the line-ups were last written).
+MATCHES_DUE = """
+SELECT m.id, m.season_id, m.match_date, m.home_team_id, m.away_team_id, coalesce(m.is_neutral, false),
+  f.home_elo, f.away_elo, f.model_id, l.written
+FROM core.matches m
+JOIN agg.match_forecasts f ON f.match_id = m.id
+JOIN LATERAL (SELECT count(*) FILTER (WHERE s.confirmed) AS confirmed, max(s.updated_at) AS written
+              FROM core.lineups s WHERE s.season_id = m.season_id AND s.match_id = m.id) l ON l.confirmed = 2
+WHERE m.status IN ('not_started', 'in_play') AND m.kickoff_at > %(now)s - %(after)s AND m.kickoff_at < %(now)s + %(before)s
+  AND m.match_date IS NOT NULL AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM agg.match_lineup_forecasts x WHERE x.match_id = m.id AND x.computed_at >= l.written)
+ORDER BY m.kickoff_at, m.id"""
+# A match's starters, each with his role and his own totals of the award year and of the
+# year before (the ranking's, as it last computed them: nothing of the match is in them).
+MATCH_STARTERS = """
+SELECT l.team_id, coalesce(cur.role, prev.role),
+  coalesce(cur.own_total, 0) + coalesce(prev.own_total, 0),
+  CASE WHEN cur.own_total IS NULL THEN 0 ELSE cur.minutes END + CASE WHEN prev.own_total IS NULL THEN 0 ELSE prev.minutes END
+FROM core.lineup_players l
+LEFT JOIN agg.player_power cur ON cur.season_id = %(year)s AND cur.player_id = l.player_id
+LEFT JOIN agg.player_power prev ON prev.season_id = %(year)s - 1 AND prev.player_id = l.player_id
+WHERE l.season_id = %(season)s AND l.match_id = %(match)s AND l.is_starter AND l.team_id IS NOT NULL"""
+
+
+def usuals_due(conn, today):
+    """The award year whose clubs' usual line-ups are to be written again, in a list."""
+    return [year for (year,) in conn.execute(USUALS_DUE, {"year": year_of(today)}).fetchall()]
+
+
+def refresh_usuals(conn, year):
+    """Write each club's line-ups of the award year so far: how many, and their sums added
+    up, each sum from the rates known before its match (deviations()). Returns the clubs
+    written. Read, compute, write: no transaction is open while the year is gone through."""
+    previous = {
+        player: (float(own), float(minutes), role)
+        for player, own, minutes, role in conn.execute(
+            "SELECT player_id, own_total, minutes, role FROM agg.player_power WHERE season_id = %s AND own_total IS NOT NULL", (year - 1,)
+        ).fetchall()
+    }
+    _, _, usual = read(conn, year, previous)
+    with conn.transaction():
+        conn.execute("DELETE FROM agg.lineup_usuals WHERE season_id = %s", (year,))
+        with conn.cursor().copy("COPY agg.lineup_usuals(season_id, team_id, lineups, total) FROM STDIN") as copy:
+            for team, (count, total) in sorted(usual.items()):
+                copy.write_row((year, team, count, total))
+        conn.execute(
+            """INSERT INTO agg.lineup_usual_runs(season_id, clubs) VALUES (%s, %s)
+               ON CONFLICT (season_id) DO UPDATE SET computed_at = now(), clubs = EXCLUDED.clubs""",
+            (year, len(usual)),
+        )
+    return len(usual)
+
+
+def side_sums(starters):
+    """{club: the sum of its outfield starters' rates}, for the clubs listing STARTERS
+    starters. starters: [(club, role, own contribution, minutes)]."""
+    count, total = defaultdict(int), defaultdict(float)
+    for team, role, own, minutes in starters:
+        count[team] += 1
+        if role not in EXCLUDED_ROLES:
+            total[team] += rate(float(own), float(minutes))
+    return {team: total[team] for team, n in count.items() if n == STARTERS}
+
+
+def forecast_matches(conn, now, seen=None):
+    """Forecast again the matches about to start whose two confirmed line-ups the forecast
+    has not read: each side's strength moved by what its eleven is worth against its usual
+    one. Returns the matches written. `seen`: {match: when its line-ups were written}, the
+    matches already looked at for which nothing can be said (a club without enough
+    earlier line-ups); they are not looked at again until their line-ups change."""
+    seen = {} if seen is None else seen
+    rows = conn.execute(MATCHES_DUE, {"now": now, "before": LOOK_BEFORE, "after": LOOK_AFTER}).fetchall()
+    for match in set(seen) - {row[0] for row in rows}:
+        del seen[match]  # no longer about to start: forgotten
+    due = [row for row in rows if seen.get(row[0]) != row[9]]
+    if not due:
+        return 0
+    worth = conn.execute("SELECT elo_per_unit FROM agg.lineup_models WHERE version = %s ORDER BY fitted_at DESC, id DESC LIMIT 1", (MODEL_VERSION,)).fetchone()
+    written = 0
+    for match, season, day, home, away, neutral, home_elo, away_elo, model_id, lineups_written in due:
+        seen[match] = lineups_written
+        coefficients = conn.execute("SELECT home_base, home_slope, away_base, away_slope, rho FROM agg.forecast_models WHERE id = %s", (model_id,)).fetchone()
+        if worth is None or coefficients is None:
+            continue
+        year = year_of(day)
+        sums = side_sums(conn.execute(MATCH_STARTERS, {"year": year, "season": season, "match": match}).fetchall())
+        usual = {team: total / count for team, count, total in conn.execute(
+            "SELECT team_id, lineups, total FROM agg.lineup_usuals WHERE season_id = %s AND team_id = ANY(%s) AND lineups >= %s", (year, [home, away], MIN_HISTORY)
+        ).fetchall()}
+        if not all(team in sums and team in usual for team in (home, away)):
+            continue
+        deviation_home, deviation_away = sums[home] - usual[home], sums[away] - usual[away]
+        model = {"home": (coefficients[0], coefficients[1]), "away": (coefficients[2], coefficients[3]), "rho": coefficients[4]}
+        f = forecast.forecast(model, home_elo + worth[0] * deviation_home, away_elo + worth[0] * deviation_away, neutral)
+        with conn.transaction():
+            conn.execute(
+                """INSERT INTO agg.match_lineup_forecasts(match_id, season_id, home_win, draw, away_win, home_goals, away_goals, likely_home, likely_away,
+                     home_elo, away_elo, home_deviation, away_deviation, elo_per_unit)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                   ON CONFLICT (match_id) DO UPDATE SET home_win = EXCLUDED.home_win, draw = EXCLUDED.draw, away_win = EXCLUDED.away_win,
+                     home_goals = EXCLUDED.home_goals, away_goals = EXCLUDED.away_goals, likely_home = EXCLUDED.likely_home, likely_away = EXCLUDED.likely_away,
+                     home_elo = EXCLUDED.home_elo, away_elo = EXCLUDED.away_elo, home_deviation = EXCLUDED.home_deviation, away_deviation = EXCLUDED.away_deviation,
+                     elo_per_unit = EXCLUDED.elo_per_unit, computed_at = now()""",
+                (match, season, f["home"], f["draw"], f["away"], f["home_goals"], f["away_goals"], f["score"][0], f["score"][1],
+                 home_elo, away_elo, deviation_home, deviation_away, worth[0]),
+            )
+        seen.pop(match, None)
+        written += 1
+    return written

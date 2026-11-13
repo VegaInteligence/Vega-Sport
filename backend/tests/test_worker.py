@@ -2,6 +2,7 @@
 
 import contextlib
 import io
+import re
 import json
 import os
 from datetime import datetime, timedelta, timezone
@@ -625,6 +626,38 @@ class WorkerTest(unittest.TestCase):
         self.assertRegex(out.getvalue(), r"daily step=lineups error=WORKER_ZERODIVISIONERROR@test_worker\.py:\d+ retry_at=")
         self.assertNotEqual(self.worker._lineups, self.now.date())
 
+    def test_the_usual_line_ups_follow_the_ranking_and_the_matches_about_to_start_are_forecast_again(self):
+        # 091: the side work writes the award year's usual line-ups when lineup.usuals_due names it; the
+        # collection's own round reads the matches about to start (lineup.forecast_matches).
+        from vega import lineup
+
+        years, matches, calls = [[2026], []], [2, 0], []
+        for name in ("usuals_due", "refresh_usuals", "forecast_matches", "refresh"):
+            self.addCleanup(setattr, lineup, name, getattr(lineup, name))
+        lineup.refresh = lambda conn: None
+        lineup.usuals_due = lambda conn, today: (calls.append(("due", today)), years.pop(0))[1]
+        lineup.refresh_usuals = lambda conn, year: (calls.append(("usuals", year)), 310)[1]
+        lineup.forecast_matches = lambda conn, now, seen: (calls.append(("matches", seen is self.worker._lineup_seen)), matches.pop(0))[1]
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.worker.daily()
+            self.worker.daily()
+        self.assertEqual(calls, [("due", self.now.date()), ("usuals", 2026), ("due", self.now.date())])
+        self.assertEqual(out.getvalue().count("usual lineups year=2026 clubs=310"), 1)
+        # The collection's round: once per planning round, with the worker's own memory of the matches seen.
+        del calls[:]
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.worker.lineup_forecasts(), 2)
+            self.assertEqual(self.worker.lineup_forecasts(), 0)
+        self.assertEqual(calls, [("matches", True), ("matches", True)])
+        self.assertEqual(out.getvalue().count("lineup forecasts matches=2"), 1)
+        # Whatever fails there is logged; the collection goes on.
+        lineup.forecast_matches = lambda conn, now, seen: 1 / 0
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.worker.lineup_forecasts(), 0)
+            self.worker.run(max_jobs=1)
+        self.assertEqual(len(re.findall(r"lineup forecasts error=WORKER_ZERODIVISIONERROR@test_worker\.py:\d+", out.getvalue())), 2)
+
     def test_the_collection_goes_on_whatever_fails_around_it(self):
         # The daily pass, the calculator and the planner all fail on a bug: the worker
         # still takes its job. Before, the first of them ended the process, and the task
@@ -840,6 +873,32 @@ class WorkerTest(unittest.TestCase):
         for secret in (HOME["name"], AWAY["name"], PLAYER["name"], "m_aaaaaa", "t_aaaaaa"):
             self.assertNotIn(secret, text)
         self.assertIn("## Watches", text)
+
+    def test_line_ups_are_read_again_shortly_before_kick_off(self):
+        # 48 hours before (the forecast), 50 and 25 minutes before (the eleven a club has announced), at kick-off.
+        start = self.now
+        kick = start + timedelta(hours=30)
+        self.calendar(match("m_bbbbbb", kick, "not_started"))
+        self.api.routes.update(details("m_bbbbbb", goals=1))
+        read = lambda: sum(1 for call in self.api.calls if call == "/matches/m_bbbbbb/lineups")
+
+        def fetch():
+            # The store dates an attempt by the database's clock; the test's clock is ahead of it.
+            self.drain()
+            self.db.execute("UPDATE ops.family_state SET last_attempt_at=%s WHERE family='lineups'", (self.now,))
+
+        self.at(start)
+        fetch()
+        if not read():  # the calendar's match is watched from the round after
+            self.assertEqual(self.at(start + timedelta(minutes=1))["lineups"], 1)
+            fetch()
+        self.assertEqual(read(), 1)
+        steps = [(-51, 0), (-49, 1), (-40, 0), (-24, 1), (-5, 0), (1, 1), (3, 0)]
+        for minutes, due in steps:
+            self.assertEqual(self.at(kick + timedelta(minutes=minutes)).get("lineups", 0), due, minutes)
+            fetch()
+        self.assertEqual(read(), 4)
+        self.assertEqual(self.jobs("m_bbbbbb", "lineups")[0][1], "done")
 
     def test_rescheduled_and_never_final_watches(self):
         start = self.now

@@ -6,7 +6,8 @@ validated schedule (doc "Collecte et opérations"):
 - /date/{d}?status=all once a UTC day for each date from J-1 to J+7 (score lane);
 - /matches/{id} at kickoff +105 min, then the cadence of jobs.next_score_check,
   then once more at +24 h for provider corrections;
-- lineups 48 h before kickoff (forecast) and at kickoff; h2h once before the match;
+- lineups 48 h before kickoff (forecast), 50 and 25 minutes before it (announced) and at
+  kickoff; h2h once before the match;
 - the league catalogue, each active competition and its calendar once a week;
 - team and player profiles at first sight, then monthly (profiles.enqueue_due).
 """
@@ -19,6 +20,9 @@ from .jobs import _aware, enqueue, enqueue_or_revive, next_score_check, target_c
 
 CALENDAR_DAYS = range(-1, 8)
 LINEUP_FORECAST = timedelta(hours=48)
+# Line-ups are read again twice shortly before kick-off, for the eleven a club has confirmed
+# by then: the forecast is corrected with it (lineup.forecast_matches).
+LINEUP_ANNOUNCED = (timedelta(minutes=50), timedelta(minutes=25))
 H2H_HORIZON = timedelta(days=7)
 SCORE_HORIZON = timedelta(days=1)
 CORRECTION_DELAY = timedelta(hours=24)
@@ -48,6 +52,7 @@ PRIORITY = {
     "calendar_near": 15,
     "calendar": 10,
     "lineups_kickoff": 9,
+    "lineups_announced": 9,
     "details": 8,
     "lineups_forecast": 5,
     "h2h": 1,
@@ -133,17 +138,23 @@ def _scores(conn, now):
 
 
 def _lineups(conn, now):
-    """Forecast lineups 48 h before kickoff, confirmed lineups at kickoff."""
+    """Forecast lineups 48 h before kickoff, the announced ones 50 and 25 minutes before
+    it, the confirmed ones at kickoff: one read for each of these moments."""
+    early, late = LINEUP_ANNOUNCED
     rows = conn.execute(
-        """SELECT w.match_id, w.kickoff_at <= %s AS started FROM ops.match_watch w
+        """SELECT w.match_id, CASE WHEN w.kickoff_at <= %(now)s THEN 'kickoff' WHEN w.kickoff_at - %(early)s <= %(now)s THEN 'announced' ELSE 'forecast' END
+           FROM ops.match_watch w
            JOIN core.matches m ON m.id = w.match_id
            LEFT JOIN ops.family_state f ON f.match_id = w.match_id AND f.family = 'lineups'
            WHERE w.state IN ('scheduled','waiting_final') AND m.status IN ('not_started','in_play')
-             AND w.kickoff_at > %s - %s AND w.kickoff_at <= %s + %s
+             AND w.kickoff_at > %(now)s - %(first)s AND w.kickoff_at <= %(now)s + %(forecast)s
              AND (f.last_attempt_at IS NULL OR f.last_attempt_at <
-                  CASE WHEN w.kickoff_at <= %s THEN w.kickoff_at ELSE w.kickoff_at - %s END)
+                  CASE WHEN w.kickoff_at <= %(now)s THEN w.kickoff_at
+                       WHEN w.kickoff_at - %(late)s <= %(now)s THEN w.kickoff_at - %(late)s
+                       WHEN w.kickoff_at - %(early)s <= %(now)s THEN w.kickoff_at - %(early)s
+                       ELSE w.kickoff_at - %(forecast)s END)
            ORDER BY w.kickoff_at, w.match_id""",
-        (now, now, FIRST_SCORE_CHECK, now, LINEUP_FORECAST, now, LINEUP_FORECAST),
+        {"now": now, "first": FIRST_SCORE_CHECK, "forecast": LINEUP_FORECAST, "early": early, "late": late},
     ).fetchall()
     return sum(
         enqueue_or_revive(
@@ -153,10 +164,10 @@ def _lineups(conn, now):
             entity_type="match",
             entity_id=mid,
             run_after=now,
-            priority=PRIORITY["lineups_kickoff" if started else "lineups_forecast"],
+            priority=PRIORITY["lineups_" + moment],
         )
         is not None
-        for mid, started in rows
+        for mid, moment in rows
     )
 
 

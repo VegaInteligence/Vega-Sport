@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { probabilityChart, projectionRows, share } from "../dashboard/frontend/src/services/forecasts.js";
+import { elevenWord, matchForecastReading, probabilityChart, projectionRows, share } from "../dashboard/frontend/src/services/forecasts.js";
 
 test("shares read as the site writes them", () => {
   assert.deepEqual([0, null, 0.004, 0.005, 0.5, 0.994, 0.999, 1].map(share), ["—", "—", "< 1 %", "1 %", "50 %", "99 %", "> 99 %", "100 %"]);
@@ -40,4 +40,32 @@ test("a match's probabilities are drawn as three stacked areas with a marker at 
   assert.equal(probabilityChart({ status: "in_play", points: points.slice(0, 41), events: [] }).live.minute, 40);
   assert.equal(probabilityChart({ points: points.slice(0, 1) }), null);
   assert.equal(probabilityChart(null), null);
+});
+
+test("a match's card shows the forecast that read the two confirmed line-ups, when there is one", () => {
+  const forecast = { home: 0.45, draw: 0.27, away: 0.28, homeGoals: 1.4, awayGoals: 1.1, score: [1, 1] };
+  const alone = matchForecastReading({ match: "m_aaaaa1", forecast }, "Lille", "Lens");
+  assert.deepEqual([alone.forecast, alone.lineups, alone.before], [forecast, false, undefined]);
+  assert.match(alone.basis, /ne connaît ni les compositions ni les absents/);
+  const read = { home: 0.52, draw: 0.25, away: 0.23, homeGoals: 1.6, awayGoals: 1.0, score: [1, 0] };
+  const both = matchForecastReading({ match: "m_aaaaa1", forecast, lineups: { forecast: read, home: { deviation: 0.31, elo: 14.1 }, away: { deviation: -0.72, elo: -32.7 }, computedAt: "2026-11-14T16:12:00.000Z" } }, "Lille", "Lens");
+  assert.deepEqual([both.forecast, both.lineups], [read, true]);
+  assert.equal(both.basis, "D’après la force des deux équipes et leurs compositions confirmées : le onze de Lille est plus fort que son onze habituel, celui de Lens nettement moins fort que son onze habituel.");
+  assert.equal(both.before, "Sans les compositions : Lille 45\u00a0% · nul 27\u00a0% · Lens 28\u00a0%.");
+  // An answer whose line-ups lack a side is read as one without them; no answer gives nothing.
+  assert.equal(matchForecastReading({ forecast, lineups: { forecast: read, home: { deviation: 0.3 } } }, "A", "B").lineups, false);
+  assert.equal(matchForecastReading(null, "A", "B"), null);
+});
+
+test("an eleven reads as its usual one, stronger or weaker, clearly so beyond a threshold", () => {
+  assert.deepEqual([0, 0.14, -0.14, 0.15, -0.2, 0.6, -0.9].map(elevenWord), [
+    "proche de son onze habituel", "proche de son onze habituel", "proche de son onze habituel", "plus fort que son onze habituel",
+    "moins fort que son onze habituel", "nettement plus fort que son onze habituel", "nettement moins fort que son onze habituel",
+  ]);
+});
+
+test("the chart says when its kick-off comes from the forecast that read the line-ups", () => {
+  const points = Array.from({ length: 91 }, (_, minute) => ({ minute, home: 0.5, draw: 0.3, away: 0.2, score: [0, 0] }));
+  assert.equal(probabilityChart({ status: "finished", points, events: [], lineups: true }).lineups, true);
+  assert.equal(probabilityChart({ status: "finished", points, events: [] }).lineups, false);
 });

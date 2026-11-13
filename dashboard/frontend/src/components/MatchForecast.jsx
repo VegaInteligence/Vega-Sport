@@ -1,19 +1,22 @@
 "use client";
 import React from "react";
 import { Card } from "./UI.jsx";
-import { useMatchForecast, share } from "../services/forecasts.js";
+import { matchForecastReading, useMatchForecast, share } from "../services/forecasts.js";
 
 const goals = (value) => value.toFixed(1).replace(".", ",");
 
-/** Before kick-off: what the model gives for the match, from the two teams' strengths. */
+/** Before kick-off: what the model gives for the match, from the two teams' strengths and,
+ *  once both have confirmed their eleven, from those line-ups. */
 export default function MatchForecast({ match }) {
-  const answer = useMatchForecast(match?.id);
-  const forecast = answer?.forecast;
-  if (!forecast) return null;
+  const home = match?.home?.name || "Domicile",
+    away = match?.away?.name || "Extérieur";
+  const reading = matchForecastReading(useMatchForecast(match?.id), home, away);
+  if (!reading) return null;
+  const { forecast } = reading;
   const parts = [
-    [match.home?.name || "Domicile", forecast.home, "home"],
+    [home, forecast.home, "home"],
     ["Nul", forecast.draw, "draw"],
-    [match.away?.name || "Extérieur", forecast.away, "away"],
+    [away, forecast.away, "away"],
   ];
   return (
     <Card title="Probabilités">
@@ -32,8 +35,8 @@ export default function MatchForecast({ match }) {
       </ul>
       <p className="match-forecast-note">
         Score le plus probable {forecast.score[0]}–{forecast.score[1]} · buts attendus {goals(forecast.homeGoals)} –{" "}
-        {goals(forecast.awayGoals)}. D’après la force des deux équipes avant le match ; le modèle ne connaît ni les
-        compositions ni les absents.
+        {goals(forecast.awayGoals)}. {reading.basis}
+        {reading.before ? ` ${reading.before}` : ""}
       </p>
     </Card>
   );
