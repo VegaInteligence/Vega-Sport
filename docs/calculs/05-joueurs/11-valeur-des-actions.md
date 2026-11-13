@@ -57,6 +57,26 @@ Moyennes par 90 minutes selon le rôle (mêmes titulaires), qui montrent pourquo
 | Milieu défensif | 1 073 | 0,061 | 0,113 | 0,128 | −0,015 | 0,113 |
 | Gardien | 868 | 0,030 | 0,157 | 0,104 | 0,053 | 0,097 |
 
+## Vérification en service
+
+Lu sur l'API le 13 novembre 2026, pour les 200 premiers du classement de chaque saison :
+
+| | 2025/2026 | 2026/2027 (un tiers de saison) |
+| --- | --- | --- |
+| Joueurs de champ parmi les 200 | 189 | 170 |
+| Avec une lecture | 189 | 170 |
+| Avec un rang (20 joueurs ou plus à leur poste dans leur championnat) | 185 | 162 |
+| Joueurs au même poste dans leur championnat, médiane | 70 | 41 |
+| Centile VAEP dans leur championnat et leur poste, médiane (quartile bas) | 91,6 (78,4) | 85,6 (70,2) |
+| Centile PV, médiane | 89,1 | 84,5 |
+| Centile xT, médiane | 89,2 | 89,0 |
+
+Les meilleurs du classement sont donc, dans leur championnat et à leur poste, en haut de ces valeurs sans s'y confondre. En 2025/2026 : Michael Olise 1ᵉʳ des 75 ailiers et milieux offensifs de Bundesliga, Lamine Yamal 1ᵉʳ des 103 de LaLiga, Harry Kane 1ᵉʳ des 47 avants-centres de Bundesliga, Vítinha 1ᵉʳ des 45 milieux centraux de Ligue 1. Aucun gardien n'a de lecture.
+
+L'instabilité se voit sur un seul joueur : Harry Kane, 0,54 de VAEP par 90 minutes en 2025/2026, en est à 0,05 sur ses 739 premières minutes de 2026/2027. Et tant qu'une saison est jeune, un poste peu fourni n'a pas de rang : les avants-centres de Bundesliga à 450 minutes ne sont que 18 à cette date.
+
 ## Calcul
 
-Une requête par saison, après le classement (qui donne le rôle de chaque joueur) : `agg.player_action_values` et `agg.action_value_runs`. Une saison déjà classée qui n'a pas encore de lecture la reçoit par cette seule requête, sans que ses modèles soient recalculés.
+Une requête par saison, après le classement (qui donne le rôle de chaque joueur) : `agg.player_action_values` et `agg.action_value_runs`. Une saison déjà classée qui n'a pas encore de lecture de la version en vigueur la reçoit par cette seule requête, avant les modèles des saisons et sans qu'ils soient recalculés.
+
+La première version cherchait les compétitions de genre « championnat » ; les compétitions collectées n'ont pas de genre renseigné, elle n'a donc lu personne. Depuis la version 2 (13 novembre 2026), un championnat est une compétition à laquelle le classement donne un niveau.
