@@ -3,6 +3,7 @@
  * clubs' strengths gives for a match still to play, and a league replayed to its end.
  */
 import { useResource, json } from "./resources.js";
+import { timeline } from "../../../shared/inplay.js";
 
 const none = (error) =>
   /\bHTTP 404\b/.test(error?.message || "") ? null : Promise.reject(error);
@@ -93,6 +94,39 @@ export function projectionRows(projection) {
       next: team.next?.matches > 0 ? team.next : null,
     };
   });
+}
+
+// The live feed's goals (any kind: each counts for the side whose score it raises) and dismissals.
+const LIVE_GOALS = new Set(["goal", "own_goal", "penalty_goal"]);
+
+/**
+ * The match minute by minute from the live feed, while the base has not read it yet: the
+ * API's kick-off point and model (`answer.inplay`, `answer.rho`, `answer.rates`) carried on
+ * with the feed's goals and red cards, by the same calculation (shared/inplay.js). The
+ * answer as it is when the base already has the match's events, when the feed has not
+ * started, or when its goal events do not give its score (no chart is better than a wrong
+ * one). `live`: the state of /live/matches/{id} (hooks/useLiveMatch.js); `match`: the
+ * match, for its two teams' ids.
+ */
+export function withLive(answer, live, match) {
+  if (!answer || !live || !answer.inplay || !answer.rates) return answer;
+  if (live.families?.events === "core" || !["in_play", "half_time", "finished"].includes(live.status)) return answer;
+  const side = (teamId) => (teamId === match?.home?.id ? "home" : teamId === match?.away?.id ? "away" : null);
+  const events = (live.events || [])
+    .filter((e) => !e.cancelled && e.minute != null && (LIVE_GOALS.has(e.type) || e.type === "red_card"))
+    .map((e) => ({ minute: e.minute, added: e.minuteAdded || 0, kind: e.type === "red_card" ? "red" : "goal", side: side(e.teamId) }));
+  if (events.some((e) => !e.side)) return answer;
+  const goals = (name) => events.filter((e) => e.kind === "goal" && e.side === name).length;
+  if (goals("home") !== live.score?.home || goals("away") !== live.score?.away) return answer;
+  const finished = live.status === "finished";
+  const clock = live.status === "half_time" ? 45 : Math.max(live.minute ?? 0, ...events.map((e) => e.minute));
+  const last = finished ? 90 : Math.max(0, Math.min(90, Math.floor(clock)));
+  const points = timeline(answer.rates.home, answer.rates.away, events, answer.inplay, answer.rho ?? 0, last);
+  if (finished) {
+    const end = points.at(-1), [h, a] = end.score;
+    Object.assign(end, { home: h > a ? 1 : 0, draw: h === a ? 1 : 0, away: h < a ? 1 : 0 });
+  }
+  return { ...answer, status: finished ? "finished" : "in_play", points, events, live: true };
 }
 
 /** A finished or running match minute by minute, or null without one (a match to play, no goal timeline). */

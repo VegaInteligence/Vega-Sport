@@ -46,3 +46,38 @@ export function parseNationsResults(csv) {
   }
   return result;
 }
+
+// The national-team tournaments read from the same dataset, by its `tournament` column and
+// the days each edition was played (its name is the year the confederation gives it: the
+// Africa Cup of Nations 2023 was played in January and February 2024). Editions since the
+// base's first season (2021/2022).
+export const TOURNAMENT_EDITIONS = {
+  afcon: { tournament: "African Cup of Nations", name: "Coupe d’Afrique des nations",
+    seasons: { 2021: ["2022-01-01", "2022-02-28"], 2023: ["2024-01-01", "2024-02-29"], 2025: ["2025-12-01", "2026-01-31"] } },
+  "copa-america": { tournament: "Copa América", name: "Copa América", seasons: { 2024: ["2024-06-01", "2024-07-31"] } },
+  "asian-cup": { tournament: "AFC Asian Cup", name: "Coupe d’Asie des nations", seasons: { 2023: ["2024-01-01", "2024-02-29"] } },
+  "gold-cup": { tournament: "Gold Cup", name: "Gold Cup", seasons: { 2023: ["2023-06-01", "2023-07-31"], 2025: ["2025-06-01", "2025-07-31"] } },
+};
+
+/** One edition of a national-team tournament from the CC0 dataset: its played matches,
+ * home and away as the dataset writes them, with whether the ground was neutral. */
+export function parseTournamentResults(csv, competition, season) {
+  const edition = TOURNAMENT_EDITIONS[competition], days = edition?.seasons[season];
+  if (!days) throw new Error("Unknown tournament edition");
+  if (typeof csv !== "string" || csv.length > 12 * 1024 * 1024) throw new Error("Invalid results data");
+  const lines = csv.split(/\r?\n/), header = csvRow(lines[0] || "");
+  if (!header || header.slice(0, 9).join(",") !== "date,home_team,away_team,home_score,away_score,tournament,city,country,neutral") throw new Error("Invalid results header");
+  const result = [], seen = new Set();
+  for (const line of lines.slice(1)) {
+    if (line.slice(0, 10) < days[0] || line.slice(0, 10) > days[1]) continue;
+    const row = csvRow(line);
+    if (!row || row.length < 9 || row[5] !== edition.tournament) continue;
+    if (!/^\d+$/.test(row[3]) || !/^\d+$/.test(row[4])) continue;
+    const key = [row[0], row[1], row[2]].join("|");
+    if (seen.has(key)) throw new Error("Duplicate tournament result");
+    seen.add(key);
+    result.push({ key: `${competition}:${key}`, date: row[0], home: row[1], away: row[2], homeId: row[1], awayId: row[2],
+      score: [Number(row[3]), Number(row[4])], status: "finished", neutral: row[8] === "TRUE" });
+  }
+  return result;
+}

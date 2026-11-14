@@ -1,16 +1,18 @@
 "use client";
 import React from "react";
 import { Card } from "./UI.jsx";
-import { probabilityChart, share, useMatchWinProbability } from "../services/forecasts.js";
+import { probabilityChart, share, useMatchWinProbability, withLive } from "../services/forecasts.js";
 
 const HOME = "light-dark(#1d6fd6, #3b8eff)";
 const AWAY = "light-dark(#53687f, #9cc7ff)";
 const DRAW = "light-dark(#d5d9df, #33383f)";
 const LINE = "light-dark(#707072, #5a5a5c)";
 
-/** A match minute by minute: the chances of each result as the score and the clock move. */
-export default function MatchWinProbability({ match }) {
-  const chart = probabilityChart(useMatchWinProbability(match?.id));
+/** A match minute by minute: the chances of each result as the score and the clock move.
+ * `live`: the match's live state (hooks/useLiveMatch.js), drawn from while the base has not
+ * read the match yet. */
+export default function MatchWinProbability({ match, live: feed = null }) {
+  const chart = probabilityChart(withLive(useMatchWinProbability(match?.id), feed, match));
   if (!chart) return null;
   const { frame, start, live } = chart;
   const home = match.home?.name || "Domicile",

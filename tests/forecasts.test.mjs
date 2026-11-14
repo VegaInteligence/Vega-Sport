@@ -74,3 +74,50 @@ test("the chart says when its kick-off comes from the forecast that read the lin
   assert.equal(probabilityChart({ status: "finished", points, events: [], lineups: true }).lineups, true);
   assert.equal(probabilityChart({ status: "finished", points, events: [] }).lineups, false);
 });
+
+test("a match the base has not read yet is drawn from the live feed, by the read API's own calculation", async () => {
+  const { withLive } = await import("../dashboard/frontend/src/services/forecasts.js");
+  const { timeline } = await import("../dashboard/shared/inplay.js");
+  const inplay = { profile: [0.13, 0.14, 0.18, 0.16, 0.16, 0.16, 0.07], down: 0.6, up: 1.7, ahead: 0.9, behind: 1.1 };
+  const answer = { status: "not_started", rates: { home: 1.6, away: 1.1 }, inplay, rho: -0.03, points: timeline(1.6, 1.1, [], inplay, -0.03, 0), events: [] };
+  const match = { home: { id: "t_aaaaa1" }, away: { id: "t_aaaaa2" } };
+  const event = (type, minute, teamId, extra = {}) => ({ type, minute, minuteAdded: null, teamId, cancelled: false, ...extra });
+  const live = {
+    status: "in_play", minute: 63, score: { home: 1, away: 1 }, families: { score: "live", events: "live", stats: "live" },
+    events: [event("goal", 12, "t_aaaaa1"), event("yellow_card", 30, "t_aaaaa2"), event("goal", 40, "t_aaaaa1", { cancelled: true }),
+      event("own_goal", 55, "t_aaaaa2"), event("red_card", 58, "t_aaaaa1")],
+  };
+  const drawn = withLive(answer, live, match);
+  // The same points as the API would draw from the base's events: a cancelled goal and a yellow card do not count.
+  const core = [{ minute: 12, added: 0, kind: "goal", side: "home" }, { minute: 55, added: 0, kind: "goal", side: "away" }, { minute: 58, added: 0, kind: "red", side: "home" }];
+  assert.deepEqual(drawn.points, timeline(1.6, 1.1, core, inplay, -0.03, 63));
+  assert.deepEqual([drawn.status, drawn.live, drawn.points.length, drawn.points.at(-1).score], ["in_play", true, 64, [1, 1]]);
+  assert.equal(probabilityChart(drawn).live.minute, 63);
+  assert.deepEqual(probabilityChart(drawn).reds.map((r) => [r.minute, r.side]), [[58, "home"]]);
+  // Half-time stops at the 45th minute; a provisional result ends on the result, as a finished match does.
+  assert.equal(withLive(answer, { ...live, status: "half_time", minute: 45, score: { home: 1, away: 0 }, events: live.events.slice(0, 1) }, match).points.length, 46);
+  const over = withLive(answer, { ...live, status: "finished", minute: 94 }, match).points.at(-1);
+  assert.deepEqual([over.minute, over.home, over.draw, over.away], [90, 0, 1, 0]);
+  // Left as it is: the base already has the events, the feed has not started, its goals do not give its score, a goal without a side.
+  assert.equal(withLive(answer, { ...live, families: { ...live.families, events: "core" } }, match), answer);
+  assert.equal(withLive(answer, { ...live, status: "scheduled" }, match), answer);
+  assert.equal(withLive(answer, { ...live, score: { home: 2, away: 1 } }, match), answer);
+  assert.equal(withLive(answer, { ...live, events: [...live.events, event("goal", 70, null)], score: { home: 2, away: 1 } }, match), answer);
+  assert.equal(withLive(null, live, match), null);
+  assert.equal(withLive(answer, null, match), answer);
+});
+
+test("the live read route's state is what the chart reads", async () => {
+  const { withLive } = await import("../dashboard/frontend/src/services/forecasts.js");
+  const { liveBody } = await import("../backend/api/src/live.mjs");
+  const { timeline } = await import("../dashboard/shared/inplay.js");
+  const inplay = { profile: [0.13, 0.14, 0.18, 0.16, 0.16, 0.16, 0.07], down: 0.6, up: 1.7, ahead: 0.9, behind: 1.1 };
+  const answer = { status: "not_started", rates: { home: 1.4, away: 1.2 }, inplay, rho: -0.03, points: timeline(1.4, 1.2, [], inplay, -0.03, 0), events: [] };
+  // The items the ingestor writes (backend/vega/live/ingestor.py), as GET /live/matches/{id} serves them.
+  const state = { match: "m_aaaaa1", revision: 3, provider: "replay", status: "in_play", minute: 71, home_score: 0, away_score: 1,
+    kickoff_at: "2026-11-14T15:00:00Z", core_families: [], expires_at: 1_900_000_000 };
+  const events = [{ seq: 1, revision: 2, event_type: "penalty_goal", minute: 33, team_id: "t_aaaaa2", is_cancelled: false }];
+  const body = liveBody(state, events, []);
+  const drawn = withLive(answer, body, { home: { id: "t_aaaaa1" }, away: { id: "t_aaaaa2" } });
+  assert.deepEqual(drawn.points, timeline(1.4, 1.2, [{ minute: 33, added: 0, kind: "goal", side: "away" }], inplay, -0.03, 71));
+});

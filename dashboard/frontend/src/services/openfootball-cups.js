@@ -4,7 +4,10 @@ const DATE = /^\s*(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(Jan|Feb|Mar|Apr|May|Jun|Jul
 const MATCH = /^\s*(?:(\d{1,2}:\d{2})\s+)?(.+?)\s+v\s+(.+?)\s{2,}(\d+)\s*[-–]\s*(\d+)(.*)$/i;
 const PAIR = /(\d+)\s*[-–]\s*(\d+)/;
 
-export function parseOpenCupText(text, startYear, roundNames = {}) {
+// `calendar`: the competition is played within one calendar year (the South and North
+// American club cups): a date without its year is in `startYear`, not in the season's
+// second year from January to June.
+export function parseOpenCupText(text, startYear, roundNames = {}, { calendar = false } = {}) {
   if (typeof text !== "string" || !Number.isInteger(startYear)) throw new Error("Invalid cup archive");
   let day = "", round = "", candidates = 0;
   const matches = [];
@@ -14,8 +17,8 @@ export function parseOpenCupText(text, startYear, roundNames = {}) {
     const foundDate = line.match(DATE);
     if (foundDate) {
       const month = MONTHS[foundDate[1][0].toUpperCase() + foundDate[1].slice(1).toLowerCase()];
-      const year = foundDate[3] ? Number(foundDate[3]) : startYear + (month < 7 ? 1 : 0);
-      if (year !== startYear && year !== startYear + 1) throw new Error("Unexpected cup date");
+      const year = foundDate[3] ? Number(foundDate[3]) : startYear + (!calendar && month < 7 ? 1 : 0);
+      if (year !== startYear && (calendar || year !== startYear + 1)) throw new Error("Unexpected cup date");
       day = year + "-" + String(month).padStart(2, "0") + "-" + foundDate[2].padStart(2, "0");
       continue;
     }

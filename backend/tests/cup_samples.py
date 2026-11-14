@@ -20,5 +20,14 @@ NATIONS = {"season": "2026/2027", "source": {"name": "International Results", "u
     {"key": "nations:2026-09-04|Scotland|Switzerland", "date": "2026-09-04", "home": "Écosse", "away": "Suisse", "homeId": "Scotland",
      "awayId": "Switzerland", "score": [1, 1], "status": "finished", "league": "B", "group": 1, "round": "Groupe 1"},
 ]}
+# A tournament of the other confederations (International Results): played in January and
+# February 2024, named for 2023; the dataset says whether the ground was neutral.
+AFCON_2023 = {"name": "Coupe d’Afrique des nations 2023", "season": "2023", "source": NATIONS["source"], "matches": [
+    {"key": "afcon:2024-01-13|Ivory Coast|Guinea-Bissau", "date": "2024-01-13", "home": "Ivory Coast", "away": "Guinea-Bissau", "homeId": "Ivory Coast",
+     "awayId": "Guinea-Bissau", "score": [2, 0], "status": "finished", "neutral": False},
+    {"key": "afcon:2024-01-14|Nigeria|Equatorial Guinea", "date": "2024-01-14", "home": "Nigeria", "away": "Equatorial Guinea", "homeId": "Nigeria",
+     "awayId": "Equatorial Guinea", "score": [1, 1], "status": "finished", "neutral": True},
+]}
 SAMPLES = (("open-cups", "euro", "2024", EURO_2024), ("open-cups", "euro", "2028", EURO_2028),
-           ("openligadb", "germany-cup", "2025/2026", GERMANY_CUP), ("nations-results", "nations-league", "2026/2027", NATIONS))
+           ("openligadb", "germany-cup", "2025/2026", GERMANY_CUP), ("nations-results", "nations-league", "2026/2027", NATIONS),
+           ("nations-results", "afcon", "2023", AFCON_2023))

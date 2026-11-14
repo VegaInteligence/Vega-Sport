@@ -2,7 +2,7 @@
 // (backend/tests/test_inplay.py checks the same numbers with the Python functions).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { outcome, poisson, rates, remaining, timeline, lateShare } from "../src/inplay.mjs";
+import { outcome, poisson, rates, remaining, timeline, lateShare } from "../../../dashboard/shared/inplay.js";
 
 const MODEL = { profile: [0.13, 0.14, 0.18, 0.16, 0.16, 0.16, 0.07], down: 0.6, up: 1.7 };
 const RHO = -0.03;

@@ -59,7 +59,7 @@ def scopes(now):
 NATIONAL_COMPETITIONS = ("l_1XLtP0",)
 # The competitions of the cup sources that national teams play: the second part of an
 # edition's key ("nations-results:nations-league:2026/2027").
-NATIONAL_CUPS = ("nations-league", "euro", "world-cup-history")
+NATIONAL_CUPS = ("nations-league", "euro", "world-cup-history", "afcon", "copa-america", "asian-cup", "gold-cup")
 
 
 def national_teams(conn):
@@ -169,6 +169,7 @@ COUNTRY_NAMES_FR = {
     "QAT": "Qatar", "ROU": "Roumanie", "RSA": "Afrique du Sud", "RUS": "Russie", "SCO": "Écosse", "SRB": "Serbie",
     "SUI": "Suisse", "SVK": "Slovaquie", "SVN": "Slovénie", "SWE": "Suède", "THA": "Thaïlande", "TUR": "Turquie",
     "UAE": "Émirats arabes unis", "UKR": "Ukraine", "USA": "États-Unis", "VEN": "Venezuela", "WAL": "Pays de Galles", "UEFA": "Europe",
+    "CONMEBOL": "Amérique du Sud", "CONCACAF": "Amérique du Nord et centrale", "CAF": "Afrique", "AFC": "Asie",
 }
 
 

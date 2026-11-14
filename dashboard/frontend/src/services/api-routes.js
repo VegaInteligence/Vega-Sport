@@ -55,7 +55,8 @@ export async function cupId(kind, competition, read) {
     throw error;
   });
   const { cups } = await cupIndex;
-  const key = kind === "nations-results" ? "nations-league" : competition;
+  // International Results serves the Nations League's leagues B to D and the other confederations' tournaments.
+  const key = kind === "nations-results" ? competition || "nations-league" : competition;
   return cups.find((c) => c.key === key && c.format === CUP_FORMAT[kind])?.id ?? null;
 }
 

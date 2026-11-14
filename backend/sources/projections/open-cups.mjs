@@ -31,6 +31,21 @@ const WORLD_CUP_YEARS = new Set([
 // Football.TXT (openfootball/club-worldcup): an edition is played in December of its
 // year or in February of the next. The 2025 tournament has its own JSON file.
 const CLUB_WORLD_CUP_YEARS = new Set(["2021", "2022", "2023"]);
+// The other confederations' club competitions, in Football.TXT (each club written with its
+// country, "SE Palmeiras (BRA)"), the editions played since the base's first season. The
+// South and North American ones are played within a calendar year, the African one from
+// August to May. "N.N." is a team still to be decided.
+const CONTINENTAL = {
+  "copa-libertadores": { repo: "south-america", name: "Copa Libertadores", seasons: ["2021", "2022", "2023", "2024", "2025", "2026"],
+    file: (season) => `copa-libertadores/${season}_copal.txt`, calendar: true },
+  "copa-sudamericana": { repo: "south-america", name: "Copa Sudamericana", seasons: ["2021", "2022", "2023", "2024", "2025"],
+    file: (season) => `copa-libertadores/${season}_copas.txt`, calendar: true },
+  "concacaf-champions": { repo: "world", name: "Coupe des champions de la CONCACAF", seasons: ["2021", "2022", "2023", "2024", "2025"],
+    file: (season) => `north-america/champions-league/${season}_concacafcl.txt`, calendar: true },
+  "caf-champions-league": { repo: "world", name: "Ligue des champions de la CAF", seasons: ["2023/2024", "2024/2025"],
+    file: (season) => `africa/champions-league/${season.slice(0, 4)}-${season.slice(7)}_cafcl.txt`, calendar: false },
+};
+const UNDECIDED = "N.N.";
 const SOURCES = {
   euro: {
     repo: "euro.json",
@@ -55,6 +70,9 @@ const SOURCES = {
     file: "worldcup.json",
   },
   ...Object.fromEntries(
+    Object.entries(CONTINENTAL).map(([key, item]) => [key, { ...item, seasons: new Set(item.seasons), format: "continental-text" }]),
+  ),
+  ...Object.fromEntries(
     Object.values(NATIONAL_CUP_ARCHIVES).map((item) => [
       item.key,
       { ...item, seasons: new Set([item.season]), format: "cup-text" },
@@ -78,7 +96,7 @@ export async function GET(request) {
       { error: "Compétition ou édition indisponible." },
       { status: 400 },
     );
-  const path = source.path || season + "/" + source.file;
+  const path = source.path || (typeof source.file === "function" ? source.file(season) : season + "/" + source.file);
   const upstream =
     "https://raw.githubusercontent.com/openfootball/" +
     source.repo +
@@ -101,6 +119,11 @@ export async function GET(request) {
               name: "Club World Cup " + season,
               matches: parseOpenCupText(await response.text(), Number(season)),
             }
+          : source.format === "continental-text"
+          ? {
+              name: source.name + " " + season,
+              matches: parseOpenCupText(await response.text(), Number(season.slice(0, 4)), {}, { calendar: source.calendar }),
+            }
           : source.format === "cup-text"
           ? {
               name: competition,
@@ -118,8 +141,8 @@ export async function GET(request) {
       group: match.group,
       num: match.num,
       date: match.date,
-      team1: match.team1,
-      team2: match.team2,
+      team1: match.team1 === UNDECIDED ? null : match.team1,
+      team2: match.team2 === UNDECIDED ? null : match.team2,
       score: match.score,
     }));
     return Response.json(

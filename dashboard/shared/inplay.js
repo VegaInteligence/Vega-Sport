@@ -1,7 +1,9 @@
 /**
  * Win, draw and loss during a match: the forecast carried through its minutes. The same
  * calculation as backend/vega/inplay.py (which fits the model and documents it); the two
- * are held together by the values both test suites check.
+ * are held together by the values both test suites check. Shared by the read API
+ * (/api/forecasts/live, from the base's events) and the site (from the live feed's, while
+ * the base has not read the match yet).
  */
 export const MAX_GOALS = 10;
 export const QUARTERS = 6;

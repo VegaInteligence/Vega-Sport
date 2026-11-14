@@ -49,6 +49,11 @@ class Event:
     provider_event_id: str
     event_type: str
     minute: int | None
+    # The side the event counts for: for a goal of any kind, own goal included, the side
+    # whose score it raises (as core credits goals, and as handoff.discrepancies compares
+    # them); for a card or a change, the player's side. The site draws a live match's
+    # probabilities from these and the score (shared/inplay.js), and draws nothing when
+    # the goals do not give the score.
     side: str | None
     minute_added: int | None = None
     period: str | None = None

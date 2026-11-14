@@ -12,6 +12,10 @@ const NATIONAL_COMPETITIONS = new Set([
   "open-cup:euro",
   "openligadb:nations-league",
   "open-cup:world-cup-history",
+  "nations-results:afcon",
+  "nations-results:copa-america",
+  "nations-results:asian-cup",
+  "nations-results:gold-cup",
 ]);
 const CLUB_COMPETITIONS = new Set([
   ...FEATURED_EUROPE_IDS,

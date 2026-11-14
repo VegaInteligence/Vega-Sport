@@ -84,3 +84,66 @@ test("the yearly Club World Cups are read from their text files, in the season o
     globalThis.fetch = original;
   }
 });
+
+test("the other confederations' club competitions are read from their text files, dated in their own year", async () => {
+  // openfootball/south-america, copa-libertadores/2025_copal.txt (CC0): played from February to November.
+  const text = "= Copa Libertadores 2025\n\n# Date       Tue Feb 4 - Sat Nov 29 2025 (298d)\n# Teams      4\n# Matches    4\n\n▪ Qualifying, Round 1\n  Tue Feb 4 2025\n    21:30  Monagas SC (VEN)        v Defensor SC (URU)        2-0 (0-0)\n  Thu Feb 13\n    21:30  CSCyD El Nacional (ECU) v CD Blooming (BOL)        4-3 pen. (2-1, 0-1)\n\n▪ Finals, Final\n  Sat Nov 29\n    18:15  SE Palmeiras (BRA)      v CR Flamengo (BRA)        0-1 (0-0)\n  Sun Nov 30\n    18:15  N.N.                    v N.N.\n";
+  // A season-long text parse would put February 2025 in 2026; the calendar mode keeps it in its year.
+  assert.equal(parseOpenCupText(text, 2025, {}, { calendar: true })[1].date, "2025-02-13");
+  assert.throws(() => parseOpenCupText(text.replace("Sun Nov 30", "Sun Nov 30 2026"), 2025, {}, { calendar: true }), /Unexpected/);
+  const { GET } = await import("../backend/sources/projections/open-cups.mjs");
+  const asked = [];
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url) => { asked.push(String(url)); return new Response(text); };
+  try {
+    const response = await GET(new Request("http://bridge/api/open-cups?competition=copa-libertadores&season=2025"));
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.deepEqual(asked, ["https://raw.githubusercontent.com/openfootball/south-america/master/copa-libertadores/2025_copal.txt"]);
+    assert.deepEqual([body.name, body.matches.length, body.source.url], ["Copa Libertadores 2025", 4, "https://github.com/openfootball/south-america"]);
+    assert.deepEqual(body.matches[1], { round: "Qualifying, Round 1", date: "2025-02-13", team1: "CSCyD El Nacional (ECU)", team2: "CD Blooming (BOL)", score: { ft: [2, 1], p: [4, 3] } });
+    // A team still to be decided names nobody.
+    assert.deepEqual([body.matches[3].team1, body.matches[3].team2], [null, null]);
+    // The African competition is read by its season, from August to May.
+    const caf = await GET(new Request("http://bridge/api/open-cups?competition=caf-champions-league&season=2024%2F2025"));
+    assert.equal(caf.status, 200);
+    // From August to May: November is in the season's first year, February in its second.
+    assert.deepEqual((await caf.json()).matches.map((m) => m.date), ["2025-02-04", "2025-02-13", "2024-11-29", "2024-11-30"]);
+    assert.equal(asked.at(-1), "https://raw.githubusercontent.com/openfootball/world/master/africa/champions-league/2024-25_cafcl.txt");
+    assert.equal((await GET(new Request("http://bridge/api/open-cups?competition=copa-sudamericana&season=2026"))).status, 400);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("the other confederations' national-team tournaments are read from International Results by name and days", async () => {
+  const { parseTournamentResults } = await import("../dashboard/frontend/src/services/nations-results.js");
+  const head = "date,home_team,away_team,home_score,away_score,tournament,city,country,neutral\n";
+  const csv = head + [
+    "2023-11-16,Ivory Coast,Seychelles,9,0,FIFA World Cup qualification,Abidjan,Ivory Coast,FALSE",
+    "2024-01-13,Ivory Coast,Guinea-Bissau,2,0,African Cup of Nations,Ebimpé,Ivory Coast,FALSE",
+    "2024-01-14,Nigeria,Equatorial Guinea,1,1,African Cup of Nations,Abidjan,Ivory Coast,TRUE",
+    "2024-01-14,Japan,Vietnam,4,2,AFC Asian Cup,Doha,Qatar,TRUE",
+    "2024-02-11,Ivory Coast,Nigeria,2,1,African Cup of Nations,Ebimpé,Ivory Coast,FALSE",
+  ].join("\n") + "\n";
+  const rows = parseTournamentResults(csv, "afcon", "2023");
+  assert.deepEqual(rows.map((r) => [r.date, r.home, r.away, r.score, r.neutral]), [
+    ["2024-01-13", "Ivory Coast", "Guinea-Bissau", [2, 0], false], ["2024-01-14", "Nigeria", "Equatorial Guinea", [1, 1], true], ["2024-02-11", "Ivory Coast", "Nigeria", [2, 1], false],
+  ]);
+  assert.equal(rows[0].key, "afcon:2024-01-13|Ivory Coast|Guinea-Bissau");
+  assert.deepEqual(parseTournamentResults(csv, "asian-cup", "2023").map((r) => r.home), ["Japan"]);
+  assert.throws(() => parseTournamentResults(csv, "afcon", "2019"), /Unknown/);
+  assert.throws(() => parseTournamentResults(csv + "2024-01-13,Ivory Coast,Guinea-Bissau,2,0,African Cup of Nations,Ebimpé,Ivory Coast,FALSE\n", "afcon", "2023"), /Duplicate/);
+  const { GET } = await import("../backend/sources/projections/nations-results.mjs");
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => new Response(csv);
+  try {
+    const body = await (await GET(new Request("http://bridge/api/nations-results?competition=afcon&season=2023"))).json();
+    assert.deepEqual([body.name, body.season, body.matches.length], ["Coupe d’Afrique des nations 2023", "2023", 3]);
+    assert.equal((await GET(new Request("http://bridge/api/nations-results?competition=gold-cup&season=2021"))).status, 400);
+    // The Nations League keeps its own read.
+    assert.equal((await GET(new Request("http://bridge/api/nations-results?season=2026%2F2027"))).status, 502);
+  } finally {
+    globalThis.fetch = original;
+  }
+});

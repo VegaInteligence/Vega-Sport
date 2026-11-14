@@ -1,7 +1,10 @@
-import { parseNationsResults } from "../../../dashboard/frontend/src/services/nations-results.js";
+import { parseNationsResults, parseTournamentResults, TOURNAMENT_EDITIONS } from "../../../dashboard/frontend/src/services/nations-results.js";
+// competition: the Nations League's leagues B to D (the default), or a tournament of TOURNAMENT_EDITIONS.
 export async function GET(request) {
-  const season = new URL(request.url).searchParams.get("season");
-  if (season !== "2026/2027")
+  const params = new URL(request.url).searchParams;
+  const season = params.get("season"), competition = params.get("competition") || "nations-league";
+  const tournament = TOURNAMENT_EDITIONS[competition];
+  if (competition === "nations-league" ? season !== "2026/2027" : !tournament?.seasons[season])
     return Response.json({ error: "Édition indisponible." }, { status: 400 });
   try {
     const response = await fetch(
@@ -9,10 +12,12 @@ export async function GET(request) {
       { signal: AbortSignal.timeout(20000), cache: "no-store" },
     );
     if (!response.ok) throw new Error("Source unavailable");
-    const matches = parseNationsResults(await response.text());
+    const text = await response.text();
+    const matches = tournament ? parseTournamentResults(text, competition, season) : parseNationsResults(text);
     if (!matches.length) throw new Error("Source unavailable");
     return Response.json(
       {
+        ...(tournament ? { name: `${tournament.name} ${season}` } : {}),
         season,
         matches,
         source: {
