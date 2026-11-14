@@ -23,6 +23,9 @@ LINEUP_FORECAST = timedelta(hours=48)
 # Line-ups are read again twice shortly before kick-off, for the eleven a club has confirmed
 # by then: the forecast is corrected with it (lineup.forecast_matches).
 LINEUP_ANNOUNCED = (timedelta(minutes=50), timedelta(minutes=25))
+# And once more for a match whose two elevens are not both confirmed by then: on 14 November
+# 2026 the source confirmed some only between the 25-minute read and the kick-off.
+LINEUP_LAST_CALL = timedelta(minutes=10)
 H2H_HORIZON = timedelta(days=7)
 SCORE_HORIZON = timedelta(days=1)
 CORRECTION_DELAY = timedelta(hours=24)
@@ -139,7 +142,8 @@ def _scores(conn, now):
 
 def _lineups(conn, now):
     """Forecast lineups 48 h before kickoff, the announced ones 50 and 25 minutes before
-    it, the confirmed ones at kickoff: one read for each of these moments."""
+    it (and 10 minutes before while the two elevens are not both confirmed), the confirmed
+    ones at kickoff: one read for each of these moments."""
     early, late = LINEUP_ANNOUNCED
     rows = conn.execute(
         """SELECT w.match_id, CASE WHEN w.kickoff_at <= %(now)s THEN 'kickoff' WHEN w.kickoff_at - %(early)s <= %(now)s THEN 'announced' ELSE 'forecast' END
@@ -150,11 +154,15 @@ def _lineups(conn, now):
              AND w.kickoff_at > %(now)s - %(first)s AND w.kickoff_at <= %(now)s + %(forecast)s
              AND (f.last_attempt_at IS NULL OR f.last_attempt_at <
                   CASE WHEN w.kickoff_at <= %(now)s THEN w.kickoff_at
+                       WHEN w.kickoff_at - %(last)s <= %(now)s AND (
+                              SELECT count(*) FROM core.lineups l
+                              WHERE l.season_id = m.season_id AND l.match_id = m.id AND l.confirmed) < 2
+                         THEN w.kickoff_at - %(last)s
                        WHEN w.kickoff_at - %(late)s <= %(now)s THEN w.kickoff_at - %(late)s
                        WHEN w.kickoff_at - %(early)s <= %(now)s THEN w.kickoff_at - %(early)s
                        ELSE w.kickoff_at - %(forecast)s END)
            ORDER BY w.kickoff_at, w.match_id""",
-        {"now": now, "first": FIRST_SCORE_CHECK, "forecast": LINEUP_FORECAST, "early": early, "late": late},
+        {"now": now, "first": FIRST_SCORE_CHECK, "forecast": LINEUP_FORECAST, "early": early, "late": late, "last": LINEUP_LAST_CALL},
     ).fetchall()
     return sum(
         enqueue_or_revive(

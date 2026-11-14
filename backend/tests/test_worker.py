@@ -875,7 +875,8 @@ class WorkerTest(unittest.TestCase):
         self.assertIn("## Watches", text)
 
     def test_line_ups_are_read_again_shortly_before_kick_off(self):
-        # 48 hours before (the forecast), 50 and 25 minutes before (the eleven a club has announced), at kick-off.
+        # 48 hours before (the forecast), 50 and 25 minutes before (the eleven a club has announced), 10 minutes
+        # before while the two elevens are not both confirmed, at kick-off.
         start = self.now
         kick = start + timedelta(hours=30)
         self.calendar(match("m_bbbbbb", kick, "not_started"))
@@ -893,12 +894,39 @@ class WorkerTest(unittest.TestCase):
             self.assertEqual(self.at(start + timedelta(minutes=1))["lineups"], 1)
             fetch()
         self.assertEqual(read(), 1)
-        steps = [(-51, 0), (-49, 1), (-40, 0), (-24, 1), (-5, 0), (1, 1), (3, 0)]
+        steps = [(-51, 0), (-49, 1), (-40, 0), (-24, 1), (-15, 0), (-9, 1), (-5, 0), (1, 1), (3, 0)]
         for minutes, due in steps:
             self.assertEqual(self.at(kick + timedelta(minutes=minutes)).get("lineups", 0), due, minutes)
             fetch()
-        self.assertEqual(read(), 4)
+        self.assertEqual(read(), 5)
         self.assertEqual(self.jobs("m_bbbbbb", "lineups")[0][1], "done")
+
+    def test_two_confirmed_elevens_are_not_read_again_ten_minutes_before(self):
+        start = self.now
+        kick = start + timedelta(hours=30)
+        self.calendar(match("m_bbbbbb", kick, "not_started"))
+        self.api.routes.update(details("m_bbbbbb", goals=1))
+
+        def fetch():
+            self.drain()
+            self.db.execute("UPDATE ops.family_state SET last_attempt_at=%s WHERE family='lineups'", (self.now,))
+
+        self.at(start)
+        fetch()
+        self.at(start + timedelta(minutes=1))
+        fetch()
+        self.assertEqual(self.at(kick - timedelta(minutes=24)).get("lineups", 0), 1)
+        fetch()
+        # Both clubs have confirmed their eleven by then.
+        key = self.db.execute("SELECT season_id, id, home_team_id, away_team_id FROM core.matches WHERE id = (SELECT match_id FROM ops.family_state WHERE family='lineups')").fetchone()
+        self.db.execute("DELETE FROM core.lineups WHERE match_id = %s", (key[1],))
+        self.db.execute(
+            "INSERT INTO core.lineups(season_id, match_id, team_id, side, confirmed) VALUES (%s, %s, %s, 'home', true), (%s, %s, %s, 'away', true)",
+            (key[0], key[1], key[2], key[0], key[1], key[3]),
+        )
+        self.assertEqual(self.at(kick - timedelta(minutes=9)).get("lineups", 0), 0)
+        self.db.execute("UPDATE core.lineups SET confirmed = false WHERE match_id = %s AND side = 'away'", (key[1],))
+        self.assertEqual(self.at(kick - timedelta(minutes=8)).get("lineups", 0), 1)
 
     def test_rescheduled_and_never_final_watches(self):
         start = self.now
