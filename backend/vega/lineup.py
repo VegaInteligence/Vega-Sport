@@ -249,10 +249,11 @@ WHERE r.kind = 'players' AND r.status = 'published' AND r.season_id = %(year)s A
   AND NOT EXISTS (SELECT 1 FROM agg.lineup_usual_runs u WHERE u.season_id = r.season_id AND u.computed_at >= r.finished_at)"""
 # Matches about to start or just started whose two line-ups are confirmed and whose forecast
 # has not read them as they stand: (match, season, date, home, away, neutral, the strengths
-# the forecast read, its model, when the line-ups were last written).
+# the forecast read (each club's Elo and its form), its model, when the line-ups were last
+# written).
 MATCHES_DUE = """
 SELECT m.id, m.season_id, m.match_date, m.home_team_id, m.away_team_id, coalesce(m.is_neutral, false),
-  f.home_elo, f.away_elo, f.model_id, l.written
+  f.home_elo + f.home_form, f.away_elo + f.away_form, f.model_id, l.written
 FROM core.matches m
 JOIN agg.match_forecasts f ON f.match_id = m.id
 JOIN LATERAL (SELECT count(*) FILTER (WHERE s.confirmed) AS confirmed, max(s.updated_at) AS written

@@ -12,7 +12,7 @@ export const OPEN_CUP_CATALOG = [
   { id: "open-cup:france-cup", name: "Coupe de France", country: "FRA", source: "openfootball", sourceKey: "france-cup", seasons: ["2024/2025"], defaultSeason: "2024/2025", aliases: ["French Cup"], coverage: "Archive 2024/2025" },
   { id: "openligadb:nations-league", name: "Ligue des Nations", country: "UEFA", source: "openligadb", sourceKey: "nations-league", seasons: ["2026/2027"], defaultSeason: "2026/2027", aliases: ["UEFA Nations League", "Nations League"], coverage: "Ligues A à D · 2026/2027" },
   { id: "open-cup:euro", name: "Euro", country: "UEFA", source: "openfootball", sourceKey: "euro", seasons: ["2028", "2024", "2020"], defaultSeason: "2024", aliases: ["Championnat d’Europe", "European Championship"] },
-  { id: "open-cup:club-world-cup", name: "Coupe du monde des clubs", country: "INT", source: "openfootball", sourceKey: "club-world-cup", seasons: ["2025"], defaultSeason: "2025", aliases: ["Club World Cup"] },
+  { id: "open-cup:club-world-cup", name: "Coupe du monde des clubs", country: "INT", source: "openfootball", sourceKey: "club-world-cup", seasons: ["2025", "2023", "2022", "2021"], defaultSeason: "2025", aliases: ["Club World Cup"] },
   { id: "open-cup:world-cup-history", name: "Coupe du monde — archives", country: "INT", source: "openfootball", sourceKey: "world-cup-history", seasons: ["2018", "2014", "2010", "2006", "2002", "1998", "1994", "1990", "1986", "1982", "1978", "1974", "1970", "1966", "1962", "1958", "1954", "1950", "1938", "1934", "1930"], defaultSeason: "2018", aliases: ["World Cup", "Mondial"] },
 ];
 const CUP_LABELS = {

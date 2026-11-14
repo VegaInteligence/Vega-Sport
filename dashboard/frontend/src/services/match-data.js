@@ -42,17 +42,30 @@ const definitions = [
 ];
 // Section order also balances the two reading columns: attack and contest on
 // the left, circulation, defence and discipline on the right.
+// The pressing and territory figures the source sends for some competitions only: read
+// from their own rows (the API's "Pressing" group), listed after the season's statistics.
+const pressing = [
+  ["ppda", "Passes adverses par action défensive · PPDA", "Pressing et territoire"],
+  ["poss_won_att_3rd", "Ballons gagnés dans le tiers offensif", "Pressing et territoire"],
+  ["poss_won_mid_3rd", "Ballons gagnés au milieu", "Pressing et territoire"],
+  ["poss_won_def_3rd", "Ballons gagnés dans son tiers", "Pressing et territoire"],
+  ["recoveries", "Récupérations", "Pressing et territoire"],
+  ["final_third_entries", "Entrées dans le dernier tiers", "Pressing et territoire"],
+  ["penalty_area_entries", "Entrées dans la surface", "Pressing et territoire"],
+];
+
 export const STAT_GROUPS = [
   "Possession",
   "Tirs",
   "Buts attendus",
   "Duels",
   "Passes",
+  "Pressing et territoire",
   "Défense",
   "Discipline",
 ];
 const known = new Map(
-  definitions.map(([key, label, group], order) => [
+  [...definitions, ...pressing].map(([key, label, group], order) => [
     key,
     { label, group, order },
   ]),

@@ -242,6 +242,8 @@ async function matchForecast(read, params) {
   return {
     match: id,
     forecast: shares(r),
+    // The Elo points each club's recent form added to its strength (forecast version 2); absent on a match too far ahead.
+    ...(r.home_form || r.away_form ? { form: { home: round(r.home_form, 1), away: round(r.away_form, 1) } } : {}),
     // Once both clubs have confirmed their eleven (vega/lineup.py, 091): the same forecast with each side's
     // strength moved by what its eleven is worth against its usual one.
     ...(l ? { lineups: { forecast: shares(l), home: side(l.home_deviation, l.home_shift), away: side(l.away_deviation, l.away_shift), computedAt: iso(l.computed_at) } } : {}),
@@ -266,7 +268,7 @@ async function liveProbability(read, params) {
     read("SELECT * FROM api.inplay_models ORDER BY fitted_at DESC, id DESC LIMIT 1"),
     read("SELECT kind, minute, minute_added AS added, side FROM api.match_inplay_events WHERE season_id=$1 AND match_key=$2 AND side IS NOT NULL ORDER BY seq", at),
     read("SELECT minute FROM api.match_clocks WHERE season_id=$1 AND match_key=$2", at),
-    read("SELECT home_shift, away_shift FROM api.match_lineup_forecasts WHERE match_key=$1", [s.match_key]),
+    read("SELECT home_shift, away_shift, home_strength, away_strength FROM api.match_lineup_forecasts WHERE match_key=$1", [s.match_key]),
   ]);
   if (!forecast || !model) reject(404, "Donnée indisponible.");
   const finished = s.status === "finished";
@@ -275,9 +277,12 @@ async function liveProbability(read, params) {
   if (finished && (goals("home") !== s.home_score || goals("away") !== s.away_score)) reject(404, "Donnée indisponible.");
   const seen = Math.max(clock?.minute ?? 0, ...events.map((e) => e.minute), 0);
   const last = finished ? 90 : Math.max(0, Math.min(90, Math.floor(seen)));
-  // A match whose two confirmed line-ups were read before it (091) starts from the forecast that read them.
-  const [rateHome, rateAway] = inplayRates(forecast, s.home_elo + (lineups?.home_shift ?? 0), s.away_elo + (lineups?.away_shift ?? 0), s.neutral);
-  const inplay = { profile: [model.q1, model.q2, model.q3, model.q4, model.q5, model.q6, model.after_90], down: model.down, up: model.up };
+  // A match whose two confirmed line-ups were read before it (091) starts from the forecast that read them:
+  // the strengths that forecast had (each club's Elo and its form), moved by what each eleven was worth.
+  const [rateHome, rateAway] = lineups
+    ? inplayRates(forecast, lineups.home_strength + lineups.home_shift, lineups.away_strength + lineups.away_shift, s.neutral)
+    : inplayRates(forecast, s.home_elo, s.away_elo, s.neutral);
+  const inplay = { profile: [model.q1, model.q2, model.q3, model.q4, model.q5, model.q6, model.after_90], down: model.down, up: model.up, ahead: model.ahead ?? 1, behind: model.behind ?? 1 };
   const points = inplayTimeline(rateHome, rateAway, events, inplay, forecast.rho, last);
   if (finished) {
     const end = points.at(-1), [h, a] = end.score;

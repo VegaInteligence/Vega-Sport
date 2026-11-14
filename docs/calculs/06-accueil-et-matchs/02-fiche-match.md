@@ -6,6 +6,12 @@ Valeurs PitchAPI, ordonnées en sections (possession, tirs, buts attendus, duels
 - les décimales : 2 pour les clés `expected_goals*`, 0 sinon ;
 - le pourcentage affiché entre parenthèses, repris du texte fournisseur (`"508 (87%)"` → 87 %).
 
+### Pressing et territoire
+
+Une section de plus quand la source envoie ces chiffres pour le match (vue `api.match_team_pressing_rows`, groupe « Pressing » de `/api/matches/{id}/stats`) : passes adverses par action défensive (PPDA, celui de la source, à ne pas confondre avec l'[approximation Vega](../04-clubs/01-indicateurs-club.md) des pages club), ballons gagnés dans chaque tiers, récupérations, entrées dans le dernier tiers et dans la surface avec la part que la source écrit à côté. Aucun calcul.
+
+La source ne les envoie que pour **certaines compétitions et pour les matchs lus depuis le 12 novembre 2026** : relus ce jour-là, environ 100 000 matchs passés n'en ont rendu aucun. Un match qui ne les a pas n'a pas la section ; aucune moyenne de saison n'en est tirée tant que la couverture d'une compétition n'est pas complète.
+
 ## Courbe des xG cumulés
 
 `xgTimeline` ([home-insights.js](../../../dashboard/frontend/src/services/home-insights.js#L220)) et le graphique de [Charts.jsx](../../../dashboard/frontend/src/components/Charts.jsx#L280) :

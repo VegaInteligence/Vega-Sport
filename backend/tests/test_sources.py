@@ -291,6 +291,8 @@ class UefaTest(unittest.TestCase):
                 return native
             raise SourceError("HTTP_404")
 
+        # Spain has no national team here (the Euro sample another test saves holds one, which the curated pass flags).
+        x("UPDATE core.teams SET is_national = false WHERE name = 'Spain'")
         self.assertEqual(sources.run_due(self.db, get, NOW, names={"fifa"}), {("fifa", "fifa_men:editions"): "ok"})
         editions = x("SELECT label, is_current FROM core.ranking_editions WHERE kind='fifa_men' ORDER BY label").fetchall()
         self.assertEqual(editions, [("2025-09-18", False), ("2026-10-07", True)])  # 1993 and the future are left out

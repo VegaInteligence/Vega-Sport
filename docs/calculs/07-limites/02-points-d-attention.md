@@ -53,3 +53,13 @@ La phrase de production s'affiche dès que les buts **ou** les passes décisives
 
 **13. Hypothèses fortes du modèle de Poisson.**
 Buts indépendants, xG d'équipe agrégé (la répartition des occasions est ignorée), plancher λ = 0,01, troncature à 10 buts, défaite obtenue par complément. Ce sont des choix standard, mais ils expliquent par exemple qu'un 0-0 sans aucun tir vaille 1,01 xPts.
+
+## Mesuré, non construit (14 novembre 2026)
+
+Trois idées de la feuille de route ont été mesurées sur la base de production avant d'être écrites, et laissées de côté parce que la mesure ne les soutient pas.
+
+**14. Courbe d'âge des joueurs.** Rendement propre par 90 minutes (classement de puissance) des joueurs à 450 minutes ou plus dans deux années de suite, par âge au 1ᵉʳ août : de 2024/2025 à 2025/2026 (2 127 joueurs), la variation moyenne va de −0,012 à +0,023 selon la tranche d'âge, avec une erreur type de 0,008 à 0,011 ; seuls les moins de 21 ans s'écartent de zéro (+0,023 ± 0,010), et les 21-23 ans reculent (−0,012). Aucune forme de courbe. L'échantillon est de plus biaisé : la date de naissance (Wikidata) n'est connue que pour 3 759 joueurs sur 56 385, et pour 26,5 % du meilleur quart du classement contre 4,3 % du moins bon. Une courbe tirée de ces joueurs décrirait les bons joueurs connus, pas les joueurs. À reprendre quand la source des dates de naissance couvrira la base.
+
+**15. Jours de repos dans le pronostic.** Aucun effet mesurable ; chiffres dans [Pronostics](../06-accueil-et-matchs/03-pronostics-et-projections.md).
+
+**16. Une seule règle pour les zéros omis.** Le classement de puissance garde sa restauration (`restore_zeros`) à côté de la règle commune (`agg.match_zeros`). Comparées sur les 227 718 joueurs-matchs de l'année en cours et les 17 mesures qu'elles partagent : elles rendent le même zéro partout, sauf 17 à 92 vides de plus pour la règle commune sur sept mesures (au plus 1,1 % des vides de la mesure) et 1 155 de plus pour le classement sur trois mesures rares (grosses occasions manquées et créées, erreurs menant à un but ; 0,5 % de leurs vides). Les réunir ne changerait aucun rang de façon visible et obligerait à recalculer toutes les années : laissé tel quel.

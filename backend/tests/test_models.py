@@ -222,6 +222,15 @@ class ModelsTest(unittest.TestCase):
                 self.assertTrue(home_goals > 0 and away_goals > 0 and likely_home >= 0 and likely_away >= 0)
             model = self.one("SELECT version, matches, strength_spread, simulations FROM agg.forecast_models")
             self.assertEqual(model, (forecast.MODEL_VERSION, 56, forecast.STRENGTH_SPREAD, forecast.SIMULATIONS))  # the World Cup final is no club match
+            # Version 2: what a club's recent form adds, fitted on the matches where both sides have one; each
+            # side's form in Elo points beside its forecast, 0 for a match further ahead than the horizon.
+            weights = self.one("SELECT form_xg, form_luck, form_matches FROM agg.forecast_models")
+            self.assertTrue(weights[2] >= 0 and (weights[2] >= forecast.MIN_FIT or weights[:2] == (0.0, 0.0)))
+            x("UPDATE core.matches SET kickoff_at = now() + interval '60 days' WHERE id = 9101")
+            forecast.refresh(self.db, 2025)
+            self.assertEqual(self.one("SELECT home_form, away_form FROM agg.match_forecasts WHERE match_id = 9101"), (0.0, 0.0))
+            self.assertEqual(self.one("SELECT count(*) FROM api.match_forecasts WHERE match_key = 9100 AND home_form IS NOT NULL")[0], 1)
+            x("UPDATE core.matches SET kickoff_at = NULL WHERE id = 9101")
             # The league: eight clubs, each somewhere, each place taken once; nobody loses points.
             teams = x("SELECT team_id, played, points, projected_points FROM agg.season_projections WHERE competition_season_id=1 ORDER BY 1").fetchall()
             self.assertEqual([t[0] for t in teams], list(TEAMS))
@@ -980,8 +989,19 @@ class ModelsTest(unittest.TestCase):
             self.assertEqual(row[:4], (inplay.MODEL_VERSION, fitted, goals, 0))
             self.assertAlmostEqual(row[4], 1.0, places=9)
             self.assertEqual(row[5:], (1.0, 1.0))  # no dismissal in the base: none assumed to matter
-            # A second pass keeps one model; the reads.
-            self.assertEqual(inplay.refresh(self.db), fitted)
+            # Too few matches with a side ahead to say what the score changes: the two factors stay at 1 (version 2).
+            self.assertEqual(self.one("SELECT ahead, behind, state_matches FROM agg.inplay_models"), (1.0, 1.0, fitted))
+            # A second pass keeps one model, and the two factors as they were found: the base has not grown.
+            searched = []
+            search, inplay.fit_state = inplay.fit_state, lambda *args: searched.append(1) or (0.9, 1.2)
+            try:
+                self.assertEqual(inplay.refresh(self.db), fitted)
+                self.assertEqual((searched, self.one("SELECT ahead, behind FROM api.inplay_models")), ([], (1.0, 1.0)))
+                x("UPDATE agg.inplay_models SET state_matches = 1")
+                self.assertEqual(inplay.refresh(self.db), fitted)
+                self.assertEqual((searched, self.one("SELECT ahead, behind, state_matches FROM agg.inplay_models")), ([1], (0.9, 1.2, fitted)))
+            finally:
+                inplay.fit_state = search
             self.assertEqual(self.one("SELECT count(*) FROM api.inplay_models")[0], 1)
             self.assertEqual(self.one("SELECT count(*) FROM api.forecast_models WHERE id=%s", model)[0], 1)
             played = matches[1]
@@ -1383,6 +1403,40 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM core.teams WHERE id BETWEEN 9601 AND 9604")
             x("DELETE FROM core.competition_seasons WHERE id=9600")
             x("DELETE FROM core.competitions WHERE id=9600")
+
+
+    def test_zzzzzzzzzzzzzz_a_keepers_shots_faced_and_a_teams_pressing_figures_are_read(self):
+        # 092: two reads of facts held. The season's match 1 and two players written here.
+        x = self.db.execute
+        match, team = self.one("SELECT id, home_team_id FROM core.matches WHERE season_id = 2025 AND home_team_id IS NOT NULL ORDER BY id LIMIT 1")
+        x("INSERT INTO core.players(id, name) VALUES (9801, 'Gardien'), (9802, 'Tireur')")
+        try:
+            # Three shots reach the keeper, one of them a goal; a blocked shot, an own goal and a shot without xGOT are not counted.
+            for no, xgot, outcome, blocked, own in ((9801, 0.42, "saved", False, False), (9802, 0.71, "goal", False, False), (9803, 0.12, "saved", False, False),
+                                                   (9804, 0.0, "saved", True, False), (9805, 0.9, "goal", False, True), (9806, None, "saved", False, False)):
+                x("""INSERT INTO core.shots(season_id, match_id, team_id, shot_no, provider_shot_key, period, minute, player_id, keeper_id, xg, xgot, outcome, is_on_target, is_blocked, is_own_goal)
+                     VALUES (2025, %s, %s, %s, %s, 'second_half', 70, 9802, 9801, 0.2, %s, %s, true, %s, %s)""", (match, team, no, f"faced-{no}", xgot, outcome, blocked, own))
+            shots, goals, xgot = self.one("SELECT shots, goals, xgot FROM api.keeper_shot_totals WHERE season_id = 2025 AND keeper_key = 9801")
+            self.assertEqual((shots, goals), (3, 1))
+            self.assertAlmostEqual(xgot, 1.25, places=5)
+            # A team's pressing figures of a period; a row without any of them is not listed.
+            self.assertEqual(self.one("SELECT count(*) FROM api.match_team_pressing_rows WHERE season_id = 2025 AND match_id = %s", match)[0], 0)
+            x("""INSERT INTO core.team_match_stats(season_id, match_id, team_id, period, poss_won_att_3rd, poss_won_mid_3rd, poss_won_def_3rd, recoveries, ppda,
+                   final_third_entries, final_third_entries_pct, penalty_area_entries, penalty_area_entries_pct)
+                 VALUES (2025, %s, %s, 'all', 4, 25, 25, 57, 14.4, 38, 58, 11, 28)
+                 ON CONFLICT (season_id, match_id, team_id, period) DO UPDATE SET poss_won_att_3rd = 4, poss_won_mid_3rd = 25, poss_won_def_3rd = 25, recoveries = 57,
+                   ppda = 14.4, final_third_entries = 38, final_third_entries_pct = 58, penalty_area_entries = 11, penalty_area_entries_pct = 28""", (match, team))
+            row = self.one("""SELECT period_name, poss_won_att_3rd, recoveries, ppda, final_third_entries, final_third_entries_pct, penalty_area_entries_pct
+                              FROM api.match_team_pressing_rows WHERE season_id = 2025 AND match_id = %s AND team_id = %s""", match, team)
+            self.assertEqual(row[:3], ("all", 4, 57))
+            self.assertAlmostEqual(row[3], 14.4, places=4)
+            self.assertEqual(row[4:], (38, 58.0, 28.0))
+        finally:
+            x("DELETE FROM core.shots WHERE keeper_id = 9801")
+            x("""UPDATE core.team_match_stats SET poss_won_att_3rd = NULL, poss_won_mid_3rd = NULL, poss_won_def_3rd = NULL, recoveries = NULL, ppda = NULL,
+                   final_third_entries = NULL, final_third_entries_pct = NULL, penalty_area_entries = NULL, penalty_area_entries_pct = NULL
+                 WHERE season_id = 2025 AND match_id = %s AND team_id = %s""", (match, team))
+            x("DELETE FROM core.players WHERE id IN (9801, 9802)")
 
 
 if __name__ == "__main__":

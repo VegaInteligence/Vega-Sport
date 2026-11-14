@@ -52,6 +52,11 @@ test("a match's card shows the forecast that read the two confirmed line-ups, wh
   assert.deepEqual([both.forecast, both.lineups], [read, true]);
   assert.equal(both.basis, "D’après la force des deux équipes et leurs compositions confirmées : le onze de Lille est plus fort que son onze habituel, celui de Lens nettement moins fort que son onze habituel.");
   assert.equal(both.before, "Sans les compositions : Lille 45\u00a0% · nul 27\u00a0% · Lens 28\u00a0%.");
+  // A match about to be played also read each club's recent matches: the card says so, with or without line-ups.
+  assert.equal(matchForecastReading({ forecast, form: { home: 12.3, away: -8 } }, "Lille", "Lens").basis,
+    "D’après la force des deux équipes avant le match et leurs dix derniers matchs (xG) ; le modèle ne connaît ni les compositions ni les absents.");
+  assert.match(matchForecastReading({ forecast, form: { home: 12.3, away: -8 }, lineups: { forecast: read, home: { deviation: 0 }, away: { deviation: 0 } } }, "Lille", "Lens").basis,
+    /^D’après la force des deux équipes, leurs dix derniers matchs \(xG\) et leurs compositions confirmées : /);
   // An answer whose line-ups lack a side is read as one without them; no answer gives nothing.
   assert.equal(matchForecastReading({ forecast, lineups: { forecast: read, home: { deviation: 0.3 } } }, "A", "B").lineups, false);
   assert.equal(matchForecastReading(null, "A", "B"), null);

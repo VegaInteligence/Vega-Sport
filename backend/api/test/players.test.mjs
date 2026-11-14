@@ -212,6 +212,23 @@ test("a player's season by half", { skip }, async () => {
   assert.equal((await get("/api/players/p_aaaab1/halves")).response.status, 400);
 });
 
+test("a keeper's shots faced: the goals they should have given, the goals they gave, his place", async () => {
+  const { keeperStanding } = await import("../src/routes/profiles.mjs");
+  const others = Array.from({ length: 9 }, (_, i) => ({ own: false, shots: 100, goals: 30, xgot: 32 + i }));
+  // 40 shots worth 14.3 goals for 11 conceded: 3.3 prevented, 8.25 per 100 shots; only the keepers at +9 and +10 per 100 do better.
+  assert.deepEqual(keeperStanding([{ own: true, shots: 40, goals: 11, xgot: 14.3 }, ...others, { own: false, shots: 12, goals: 0, xgot: 6 }]),
+    { shots: 40, goals: 11, xgot: 14.3, prevented: 3.3, per100: 8.3, rank: 3, keepers: 10 });
+  // Too few shots faced: his figures, without a place; a player who faced none has no reading.
+  assert.deepEqual(keeperStanding([{ own: true, shots: 12, goals: 5, xgot: 3.5 }, ...others]), { shots: 12, goals: 5, xgot: 3.5, prevented: -1.5, per100: -12.5 });
+  assert.equal(keeperStanding(others), null);
+});
+
+test("a player no shot on target names as its keeper has no such reading", { skip }, async () => {
+  // The view behind the route is checked on shots of its own in backend/tests/test_models.py.
+  assert.equal((await get("/api/players/p_aaaab1/faced?season=2025/2026")).response.status, 404);
+  assert.equal((await get("/api/players/p_aaaab3/faced")).response.status, 400);
+});
+
 test("a player's action values of his league season, placed among his role", { skip }, async () => {
   const { data } = (await get("/api/players/p_aaaab1/actions?season=2025/2026")).body;
   assert.deepEqual(data, {

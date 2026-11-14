@@ -57,15 +57,17 @@ export function elevenWord(deviation) {
 export function matchForecastReading(answer, home, away) {
   if (!answer?.forecast) return null;
   const read = answer.lineups?.forecast;
+  // A match about to be played also reads each club's last ten matches (their chances, and what the results owe to something else).
+  const recent = answer.form ? " et leurs dix derniers matchs (xG)" : "";
   if (!read || !answer.lineups.home || !answer.lineups.away)
     return { forecast: answer.forecast, lineups: false,
-      basis: "D’après la force des deux équipes avant le match ; le modèle ne connaît ni les compositions ni les absents." };
+      basis: `D’après la force des deux équipes avant le match${recent} ; le modèle ne connaît ni les compositions ni les absents.` };
   const before = answer.forecast;
   // A share and its sign are not split between two lines of the sentence.
   const whole = (value) => share(value).replace(/ /g, "\u00a0");
   return {
     forecast: read, lineups: true,
-    basis: `D’après la force des deux équipes et leurs compositions confirmées : le onze de ${home} est ${elevenWord(answer.lineups.home.deviation)}, celui de ${away} ${elevenWord(answer.lineups.away.deviation)}.`,
+    basis: `D’après la force des deux équipes${answer.form ? ", leurs dix derniers matchs (xG)" : ""} et leurs compositions confirmées : le onze de ${home} est ${elevenWord(answer.lineups.home.deviation)}, celui de ${away} ${elevenWord(answer.lineups.away.deviation)}.`,
     before: `Sans les compositions : ${home} ${whole(before.home)} · nul ${whole(before.draw)} · ${away} ${whole(before.away)}.`,
   };
 }

@@ -24,6 +24,9 @@
  * and totals in first halves and in second halves.
  * GET /api/teams/{id}/passing?season= — the club's most used passing triangle and its most
  * linked pair, from the season's pass networks (083).
+ * GET /api/players/{id}/faced?season= — a goalkeeper's shots on target faced in the season
+ * (092): how many, the goals they were expected to give once struck, the goals they gave,
+ * and his place among the keepers who faced enough of them.
  * GET /api/players/{id}/actions?season= — the source's action values of the player's league
  * season (vega/actions.py, 089): each per 90 minutes of that league, with its rank and
  * percentile among the players of his role there when they are enough to place him.
@@ -49,6 +52,28 @@ const RETURN = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/return$/;
 const HALVES = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/halves$/;
 const PASSING = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/passing$/;
 const ACTIONS = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/actions$/;
+const FACED = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/faced$/;
+// Shots on target a keeper must have faced in the season to be placed among the others.
+export const FACED_MIN_SHOTS = 30;
+
+/**
+ * A keeper's shots faced and his place: goals prevented are the expected goals of the
+ * shots once struck less the goals they gave; the rank is that of the goals prevented per
+ * shot, among the keepers with `min` shots or more. `rows`: [{own, shots, goals, xgot}].
+ */
+export function keeperStanding(rows, min = FACED_MIN_SHOTS) {
+  const own = rows.find((r) => r.own);
+  if (!own || !(own.shots > 0)) return null;
+  const rate = (r) => (r.xgot - r.goals) / r.shots;
+  const round = (v, d) => Math.round(v * 10 ** d) / 10 ** d;
+  const out = { shots: own.shots, goals: own.goals, xgot: round(own.xgot, 2), prevented: round(own.xgot - own.goals, 2), per100: round(100 * rate(own), 1) };
+  if (own.shots >= min) {
+    const field = rows.filter((r) => r.shots >= min);
+    out.rank = 1 + field.filter((r) => rate(r) > rate(own)).length;
+    out.keepers = field.length;
+  }
+  return out;
+}
 // The source's three totals, and the two parts it gives of two of them.
 const ACTION_VALUES = [["vaep", true], ["pv", true], ["xt", false]];
 // Only what the source publishes per half: it gives no chances created or expected assists there.
@@ -178,6 +203,20 @@ export function createProfileRoute(read) {
       const first = half("first_half"), second = half("second_half");
       if (!first && !second) reject(404, "Donnée indisponible.");
       return respond(req, { id: halves[1], season, first, second });
+    }
+    const faced = path.match(FACED);
+    if (faced) {
+      validateParams(params, ["season"]);
+      const season = params.get("season");
+      if (!/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
+      const rows = await read(
+        `SELECT k.shots, k.goals, k.xgot, k.keeper_key=api.internal_id('player',$1) AS own FROM api.keeper_shot_totals k
+         WHERE k.season_id=(SELECT s.season_id FROM api.season_keys s WHERE s.season=$2)`,
+        [faced[1], season],
+      );
+      const standing = keeperStanding(rows);
+      if (!standing) reject(404, "Donnée indisponible.");
+      return respond(req, { id: faced[1], season, ...standing, minShots: FACED_MIN_SHOTS });
     }
     const actions = path.match(ACTIONS);
     if (actions) {

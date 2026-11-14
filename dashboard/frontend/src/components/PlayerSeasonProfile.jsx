@@ -55,6 +55,7 @@ import PlayerNeighbours from "./PlayerNeighbours.jsx";
 import PlayerHalves from "./PlayerHalves.jsx";
 import PlayerReturn from "./PlayerReturn.jsx";
 import PlayerActionValues from "./PlayerActionValues.jsx";
+import PlayerFaced from "./PlayerFaced.jsx";
 import { chartTokens } from "./PlayerScoutCharts.jsx";
 import scout from "./PlayerScout.module.css";
 import { nationalFlagCode } from "../services/national-flags.js";
@@ -800,6 +801,9 @@ export default function PlayerSeasonProfile({
                 </div>
                 <div className={scout.block}>
                   <PlayerReturn id={id} />
+                </div>
+                <div className={scout.block}>
+                  <PlayerFaced id={id} enabled={profile.role?.group === "G"} />
                 </div>
                 <div className={scout.block}>
                   <PlayerPassPartners id={id} />
