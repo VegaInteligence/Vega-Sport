@@ -3,18 +3,32 @@
  * (the API's distribution, cached 2 s), then each revision as AppSync Events publishes it on
  * /live/match/{id}: one message per revision, applied in order, the full state read again
  * when one is missing. The browser never talks to the live provider: one feed per match,
- * on the server. Built with the three NEXT_PUBLIC_LIVE_EVENTS_* settings (outputs of
- * infra/aws/live.yaml); without them nothing here runs.
+ * on the server. The settings come from GET /live/config at run time (loadLiveConfig): while
+ * no live provider is chosen it names none, and nothing here runs.
  */
 
-export const LIVE = {
-  origin: process.env.NEXT_PUBLIC_API_ORIGIN || "",
-  http: process.env.NEXT_PUBLIC_LIVE_EVENTS_HTTP || "",
-  realtime: process.env.NEXT_PUBLIC_LIVE_EVENTS_REALTIME || "",
-  key: process.env.NEXT_PUBLIC_LIVE_EVENTS_KEY || "",
+const ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN || "";
+
+let reading = null;
+/** The live settings, read once per visit when a match first enters its live window:
+ * { origin, provider, http, realtime, key }. A failed read is tried again next time. */
+export function loadLiveConfig({ origin = ORIGIN, fetcher = fetch } = {}) {
+  if (!reading)
+    reading = fetcher(`${origin}/live/config`, { headers: { Accept: "application/json" } })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => ({ origin, provider: body?.provider || null, http: body?.http || "", realtime: body?.realtime || "", key: body?.key || "" }))
+      .catch(() => {
+        reading = null;
+        return null;
+      });
+  return reading;
+}
+/** Forget the settings read (tests). */
+export const forgetLiveConfig = () => {
+  reading = null;
 };
-export const liveConfigured = (config = LIVE) =>
-  Boolean(config.http && config.realtime && config.key);
+export const liveConfigured = (config) =>
+  Boolean(config && config.provider && config.http && config.realtime && config.key);
 
 const MATCH = /^m_(?:[A-Za-z0-9]{6}|v\d{7})$/;
 const AHEAD = 30 * 60 * 1000,
@@ -29,9 +43,9 @@ export function isLiveWindow(match, now = Date.now()) {
 }
 
 /** The full live state, or null when the match has none (404). */
-export async function readLive(id, { config = LIVE, fetcher = fetch, signal } = {}) {
+export async function readLive(id, { config, fetcher = fetch, signal } = {}) {
   if (!MATCH.test(id || "")) return null;
-  const response = await fetcher(`${config.origin}/live/matches/${id}`, { signal, headers: { Accept: "application/json" } });
+  const response = await fetcher(`${config?.origin ?? ORIGIN}/live/matches/${id}`, { signal, headers: { Accept: "application/json" } });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error("Direct indisponible.");
   return response.json();
@@ -96,8 +110,8 @@ const base64url = (text) =>
   btoa(String.fromCharCode(...new TextEncoder().encode(text))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
 /** Subscribe to /live/match/{id} (AppSync Events WebSocket); returns the unsubscribe. */
-export function subscribeLive(id, onChange, { config = LIVE, WebSocketImpl = globalThis.WebSocket } = {}) {
-  if (!WebSocketImpl || !MATCH.test(id || "")) return () => {};
+export function subscribeLive(id, onChange, { config, WebSocketImpl = globalThis.WebSocket } = {}) {
+  if (!WebSocketImpl || !MATCH.test(id || "") || !liveConfigured(config)) return () => {};
   const authorization = { host: config.http, "x-api-key": config.key };
   const socket = new WebSocketImpl(`wss://${config.realtime}/event/realtime`, [
     "aws-appsync-event-ws",

@@ -2,7 +2,7 @@
 // revision, the families handed over to core, the expiry, and what it refuses.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createLiveHandler, snapshot } from "../src/live.mjs";
+import { createLiveHandler, liveConfig, snapshot } from "../src/live.mjs";
 
 const NOW = Date.parse("2025-09-20T21:00:00Z");
 const later = NOW / 1000 + 3600;
@@ -71,6 +71,21 @@ test("one revision only: items newer than the state are read again, then left ou
   reads = 0;
   const held = await snapshot(behind, "m_live01", NOW / 1000);
   assert.deepEqual([reads, held.events.map((e) => e.seq), held.stats.length], [3, [1], 1]);
+});
+
+test("the live settings: none while no provider is chosen, the browsers' three once one is", async () => {
+  const { response, body } = await get("/live/config");
+  assert.equal(response.status, 200);
+  assert.deepEqual(body, { provider: null });
+  const settings = { provider: "replay", http: "abc.appsync-api.us-east-2.amazonaws.com", realtime: "abc.appsync-realtime-api.us-east-2.amazonaws.com", key: "da2-public" };
+  const on = createLiveHandler(read, { clock: () => NOW, config: settings });
+  const answer = await on(new Request("https://api.test/live/config"));
+  assert.match(answer.headers.get("cache-control"), /s-maxage=60\b/);
+  assert.deepEqual(await answer.json(), settings);
+  // A provider without its settings is no provider: nothing to subscribe to.
+  assert.deepEqual(liveConfig({ ...settings, key: "" }), { provider: null });
+  assert.equal((await get("/live/config?x=1")).response.status, 400);
+  assert.equal((await get("/live/config", "POST")).response.status, 405);
 });
 
 test("no live state: expired, unknown, or not a match", async () => {

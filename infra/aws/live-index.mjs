@@ -41,4 +41,12 @@ const read = {
   events: (match) => query("events", match),
   stats: (match) => query("stats", match),
 };
-export const handler = adapt(createLiveHandler(read));
+// GET /live/config: the provider and the browsers' settings, given by the stack only when a
+// provider is chosen (live.yaml).
+const config = {
+  provider: process.env.V2_LIVE_PROVIDER || "",
+  http: process.env.V2_LIVE_EVENTS_HTTP || "",
+  realtime: process.env.V2_LIVE_EVENTS_REALTIME || "",
+  key: process.env.V2_LIVE_BROWSER_KEY || "",
+};
+export const handler = adapt(createLiveHandler(read, { config }));

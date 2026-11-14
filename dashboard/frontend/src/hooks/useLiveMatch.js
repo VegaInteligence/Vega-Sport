@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { applyLive, liveConfigured, missing, newer, readLive, subscribeLive } from "../services/live-client.js";
+import { applyLive, liveConfigured, loadLiveConfig, missing, newer, readLive, subscribeLive } from "../services/live-client.js";
 
 // The full state is read again every 30 s: a missed broadcast never lasts.
 const REFRESH_MS = 30_000;
@@ -10,13 +10,26 @@ const RETRY_MS = 2_000,
 
 const visible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
 
-/** The live state of a match while `enabled` (services/live-client.js), else null. It only
- * listens while the tab is on screen (doc "Onglet visible uniquement"): a hidden tab
+/** The live state of a match while `enabled` (services/live-client.js), else null. The live
+ * settings are read once (GET /live/config); without a provider nothing more is asked. It
+ * only listens while the tab is on screen (doc "Onglet visible uniquement"): a hidden tab
  * unsubscribes, and coming back reads the full state and subscribes again. */
 export default function useLiveMatch(id, enabled) {
   const [state, setState] = useState(null);
+  const [config, setConfig] = useState(null);
   const current = useRef(null);
-  const active = Boolean(enabled && id && liveConfigured());
+  const wanted = Boolean(enabled && id);
+  useEffect(() => {
+    if (!wanted) return undefined;
+    let live = true;
+    loadLiveConfig().then((settings) => {
+      if (live) setConfig(settings);
+    });
+    return () => {
+      live = false;
+    };
+  }, [wanted]);
+  const active = wanted && liveConfigured(config);
   useEffect(() => {
     current.current = null;
     if (!active) {
@@ -33,7 +46,7 @@ export default function useLiveMatch(id, enabled) {
       setState(next);
     };
     const load = (atLeast = 0, attempt = 1) =>
-      readLive(id, { signal: controller.signal })
+      readLive(id, { config, signal: controller.signal })
         .then((body) => {
           if (!live) return;
           if (newer(current.current, body)) set(body);
@@ -50,7 +63,7 @@ export default function useLiveMatch(id, enabled) {
       if (timer) return;
       load();
       timer = setInterval(load, REFRESH_MS);
-      unsubscribe = subscribeLive(id, onMessage);
+      unsubscribe = subscribeLive(id, onMessage, { config });
     };
     const stop = () => {
       clearInterval(timer);
@@ -68,6 +81,6 @@ export default function useLiveMatch(id, enabled) {
       stop();
       if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [id, active]);
+  }, [id, active, config]);
   return state;
 }

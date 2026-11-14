@@ -69,15 +69,29 @@ export async function snapshot(read, id, now) {
   }
 }
 
-/** read: { state(id), events(id), stats(id) } over the live tables; clock in ms. */
-export function createLiveHandler(read, { clock = () => Date.now() } = {}) {
+/**
+ * GET /live/config — what a browser needs to follow a match live, or { provider: null }
+ * while no live provider is chosen (the ingestor is off and nothing is published). The
+ * site reads it at run time, so switching live on needs no new build of the site: the
+ * deploy that names a provider gives this function its settings (infra/aws/live.yaml).
+ * The key only lets a browser subscribe (publishing needs IAM).
+ */
+export function liveConfig({ provider = "", http = "", realtime = "", key = "" } = {}) {
+  return provider && http && realtime && key ? { provider, http, realtime, key } : { provider: null };
+}
+
+/** read: { state(id), events(id), stats(id) } over the live tables; clock in ms; config the
+ * live settings (liveConfig). */
+export function createLiveHandler(read, { clock = () => Date.now(), config = {} } = {}) {
   return async (req) => {
     try {
       const url = new URL(req.url);
+      const settings = url.pathname === "/live/config";
       const found = url.pathname.match(MATCH);
-      if (!found) reject(404, "Ressource introuvable.");
+      if (!found && !settings) reject(404, "Ressource introuvable.");
       if (!["GET", "HEAD"].includes(req.method)) reject(405, "Méthode non autorisée.");
       if (url.search) reject(400, "Paramètre invalide.");
+      if (settings) return send(req, liveConfig(config), 200, { ttl: 60 });
       const snap = await snapshot(read, found[1], clock() / 1000);
       if (!snap) reject(404, "Pas de direct pour ce match.");
       return send(req, liveBody(snap.state, snap.events, snap.stats), 200, { ttl: 2 });
