@@ -35,6 +35,26 @@ class StepsTest(unittest.TestCase):
         # The side leading a man down: less often a winner.
         self.close(inplay.outcome(1.6, 1.1, 0.39, 1, 0, 1, 0, MODEL, RHO), [0.590557, 0.284731, 0.124712])
         self.close(inplay.outcome(1.2, 1.9, 0.07, 2, 2, 0, 1, MODEL, RHO), [0.123551, 0.809582, 0.066867])
+        # A side ahead scores less for the rest of the match, a side behind more (version 2); a level score changes nothing.
+        state = {**MODEL, "ahead": 0.85, "behind": 1.1}
+        self.close(inplay.outcome(1.6, 1.1, 0.39, 1, 0, 0, 0, state, RHO), [0.745134, 0.202399, 0.052467])
+        self.close(inplay.outcome(1.6, 1.1, 0.39, 0, 1, 0, 0, state, RHO), [0.114505, 0.281145, 0.60435])
+        self.close(inplay.outcome(1.6, 1.1, 0.39, 2, 1, 1, 0, state, RHO), [0.552454, 0.296477, 0.151069])
+        self.close(inplay.outcome(1.6, 1.1, 0.39, 1, 1, 0, 0, state, RHO), inplay.outcome(1.6, 1.1, 0.39, 1, 1, 0, 0, MODEL, RHO))
+        self.close(inplay.outcome(1.6, 1.1, 1.0, 0, 0, 0, 0, state, RHO), [0.486025, 0.256008, 0.257967])
+        self.assertEqual([inplay.state_factors(2, 1, 0.85, 1.1), inplay.state_factors(0, 3, 0.85, 1.1), inplay.state_factors(1, 1, 0.85, 1.1)],
+                         [(0.85, 1.1), (1.1, 0.85), (1.0, 1.0)])
+        # The score changes the rates of the goals expected after the hour only: before it, the part of the match still to come after it.
+        tilt = {**MODEL, "ahead": 0.85, "behind": 1.15}
+        self.close([inplay.late_share(MODEL["profile"], m, a) for m, a in ((0, 0), (30, 0), (60, 0), (75, 0), (90, 4))], [0.39, 0.39, 0.39, 0.23, 0.035])
+        at = lambda minute, home, away: inplay.outcome(1.6, 1.1, inplay.remaining(MODEL["profile"], minute, 0), home, away, 0, 0, tilt, RHO,
+                                                       inplay.late_share(MODEL["profile"], minute, 0))
+        self.close(at(30, 1, 0), [0.706589, 0.196064, 0.097347])
+        self.close(at(75, 0, 1), [0.057434, 0.245146, 0.69742])
+        events = [(23, 0, "goal", "home"), (45, 3, "goal", "away"), (61, 0, "red", "away"), (90, 4, "goal", "home")]
+        points = inplay.timeline(1.6, 1.1, events, tilt, RHO)
+        for minute, want in ((23, (0.705142, 0.19164, 0.103218)), (40, (0.711598, 0.203393, 0.085009)), (70, (0.468921, 0.447483, 0.083596))):
+            self.close(points[minute][1:4], want)
         # No time left: the score is the result.
         self.assertEqual(inplay.outcome(1.6, 1.1, 0.0, 0, 1, 0, 0, MODEL, RHO), (0.0, 0.0, 1.0))
         self.assertEqual(inplay.outcome(1.6, 1.1, 0.0, 1, 1, 0, 0, MODEL, RHO), (0.0, 1.0, 0.0))
@@ -60,6 +80,39 @@ class StepsTest(unittest.TestCase):
         self.assertIsNone(inplay.match_events(rows, 7, 3, 1))
         self.assertIsNone(inplay.match_events(rows[:1], 7, 2, 1))
         self.assertEqual(inplay.match_events([], 7, 0, 0), [])
+
+    def test_the_fit_finds_what_being_ahead_or_behind_changes(self):
+        from math import exp
+
+        rng = random.Random(11)
+        profile = MODEL["profile"]
+        model = {"profile": profile, "down": 1.0, "up": 1.0}
+        late = inplay.remaining(profile, 60, 0)
+
+        def drawn(mean):
+            limit, k, p = exp(-mean), 0, rng.random()
+            while p > limit:
+                k += 1
+                p *= rng.random()
+            return k
+
+        matches = []
+        for _ in range(4000):
+            # Up to the hour the goals come at the forecast's rates; after it, a side ahead scores 0.7 times its rate, a side behind 1.3 times.
+            early = [drawn(1.5 * (1 - late)), drawn(1.2 * (1 - late))]
+            ahead, behind = (1.0, 1.0) if early[0] == early[1] else (0.7, 1.3)
+            factor = (ahead, behind) if early[0] > early[1] else (behind, ahead)
+            rest = [drawn(1.5 * late * factor[0]), drawn(1.2 * late * factor[1])]
+            events = [(30, 0, "goal", side) for side, n in zip(("home", "away"), early) for _ in range(n)]
+            events += [(80, 0, "goal", side) for side, n in zip(("home", "away"), rest) for _ in range(n)]
+            matches.append((1.5, 1.2, events))
+        self.addCleanup(setattr, inplay, "STATE_MINUTES", inplay.STATE_MINUTES)
+        inplay.STATE_MINUTES = (60,)
+        ahead, behind = inplay.fit_state(matches, model)
+        self.assertAlmostEqual(ahead, 0.7, delta=0.1)
+        self.assertAlmostEqual(behind, 1.3, delta=0.15)
+        # Too few matches with a side ahead: the factors stay at 1.
+        self.assertEqual(inplay.fit_state(matches[:200], model), (1.0, 1.0))
 
     def test_the_fit_finds_when_goals_come_and_what_a_red_card_costs(self):
         rng = random.Random(4)
@@ -103,6 +156,9 @@ class StepsTest(unittest.TestCase):
         self.assertAlmostEqual(model["down"], down, delta=0.06)
         self.assertAlmostEqual(model["up"], up, delta=0.1)
         self.assertIsNone(inplay.fit(matches[:inplay.MIN_FIT - 1]))
+        # These goals were drawn whatever the score: the two factors of the score stay near 1.
+        self.assertAlmostEqual(model["ahead"], 1.0, delta=0.15)
+        self.assertAlmostEqual(model["behind"], 1.0, delta=0.15)
         # Without a red card in the base, a dismissal changes nothing.
         clean = inplay.fit([m for m in matches if not any(kind == "red" for _, _, kind, _ in m[2])])
         self.assertEqual((clean["down"], clean["up"]), (1.0, 1.0))

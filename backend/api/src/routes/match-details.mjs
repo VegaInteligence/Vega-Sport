@@ -47,7 +47,12 @@ async function body(read, f, suffix, params) {
     case "/shots":
       return F.shotsBody(f.id, await read(`SELECT * FROM api.match_shot_rows ${where} ORDER BY shot_no`, at));
     case "/stats": {
-      const rows = await read(`SELECT * FROM api.match_team_stat_rows ${where}`, at);
+      const [stats, pressing] = await Promise.all([
+        read(`SELECT * FROM api.match_team_stat_rows ${where}`, at),
+        read(`SELECT * FROM api.match_team_pressing_rows ${where}`, at),
+      ]);
+      // A team's pressing and territory figures of a period (092), beside its other statistics.
+      const rows = stats.map((r) => ({ ...r, ...pressing.find((p) => p.team_id === r.team_id && p.period_name === r.period_name) }));
       return {
         match_id: f.id, away_team: { id: f.away_team_id, name: f.away_name, image_url: f.away_image_url },
         home_team: { id: f.home_team_id, name: f.home_name, image_url: f.home_image_url },

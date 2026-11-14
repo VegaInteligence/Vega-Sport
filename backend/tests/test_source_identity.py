@@ -322,14 +322,29 @@ class SourceIdentityTest(unittest.TestCase):
         x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, match_date)
              VALUES (60, 2, 2026, 'pitchapi', 'not_started', 60, 61, '2026-06-20')""")
         x("UPDATE core.competitions SET kind = NULL WHERE id = 2")  # as PitchAPI leaves it
+        # A team another test's World Cup archive left unflagged is a national team too.
+        left = x("""SELECT count(*) FROM core.teams t WHERE t.is_national IS NOT TRUE AND EXISTS (
+                      SELECT 1 FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+                      WHERE split_part(cs.cup_key, ':', 2) = ANY(%s) AND t.id IN (m.home_team_id, m.away_team_id))""",
+                 (list(curated.NATIONAL_CUPS),)).fetchone()[0]
         with self.db.transaction():
             # The competition, and the two teams not flagged yet (Germany and Scotland are).
-            self.assertEqual(curated.run(self.db, None, "national_teams", NOW), (3, 0))
+            self.assertEqual(curated.run(self.db, None, "national_teams", NOW), (3 + left, 0))
         self.assertEqual(self.db.execute("SELECT kind::text FROM core.competitions WHERE id = 2").fetchone()[0], "international")
-        self.assertEqual(self.db.execute("SELECT count(*) FROM core.teams WHERE is_national").fetchone()[0], 5)
-        self.assertEqual(self.db.execute("SELECT count(*) FROM core.teams WHERE id > 100 AND is_national").fetchone()[0], 0)  # Serie A clubs
+        self.assertEqual(self.db.execute("SELECT count(*) FROM core.teams WHERE is_national").fetchone()[0], 5 + left)
+        self.assertEqual(self.db.execute("SELECT count(*) FROM core.teams WHERE id > 100 AND is_national").fetchone()[0], left)  # no Serie A club
         with self.db.transaction():
             self.assertEqual(curated.run(self.db, None, "national_teams", NOW), (0, 0))
+        # National teams a cup source holds and PitchAPI does not: flagged from their competition. A cup of clubs flags nobody.
+        x("INSERT INTO core.teams(id, name) VALUES (62, 'Syldavie'), (63, 'Bordurie'), (64, 'Club de coupe'), (65, 'Autre club')")
+        x("INSERT INTO core.competitions(id, name) VALUES (970, 'Ligue des Nations'), (971, 'Coupe')")
+        x("""INSERT INTO core.competition_seasons(id, competition_id, season_id, cup_key)
+             VALUES (970, 970, 2026, 'nations-results:nations-league:2026/2027'), (971, 971, 2026, 'open-cups:france-cup:2026/2027')""")
+        x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, match_date)
+             VALUES (61, 970, 2026, 'vega', 'finished', 62, 63, '2026-09-05'), (62, 971, 2026, 'vega', 'finished', 64, 65, '2026-09-05')""")
+        with self.db.transaction():
+            self.assertEqual(curated.run(self.db, None, "national_teams", NOW), (2, 0))
+        self.assertEqual(x("SELECT id FROM core.teams WHERE id BETWEEN 62 AND 65 AND is_national ORDER BY 1").fetchall(), [(62,), (63,)])
 
     def test_cup_teams_merge_into_the_same_pitchapi_teams(self):
         from vega.sources import cups

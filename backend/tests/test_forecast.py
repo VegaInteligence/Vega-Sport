@@ -74,6 +74,49 @@ class ForecastTest(unittest.TestCase):
         done = forecast.simulate({0: (9, 5, 1, 3), 1: (4, 3, 3, 3), 2: (1, 1, 5, 3)}, [], MODEL, {0: 1700, 1: 1600, 2: 1500}, simulations=50)
         self.assertEqual([done[t]["positions"].index(1.0) for t in (0, 1, 2)], [0, 1, 2])
 
+    def test_a_clubs_form_is_its_last_matches_chances_and_what_its_results_owe_to_something_else(self):
+        # Ten matches at most, five with an xG at least: the mean xG difference, and the mean of the goal difference less it.
+        self.assertIsNone(forecast.form_of([(0.5, 1)] * 4))
+        xg, luck = forecast.form_of([(0.5, 1), (-0.2, 0), (1.1, 3), (0.0, 0), (0.6, 1)])
+        self.assertAlmostEqual(xg, 0.4)
+        self.assertAlmostEqual(luck, 0.6)
+        # Each side's form before each match: nothing of a match enters its own; a match without xG enters nobody's.
+        rows = [(1, 2, 2, 0, 1.5, 0.5)] * 5 + [(1, 2, 0, 0, None, None), (2, 1, 1, 1, 1.0, 1.0)]
+        before, present = forecast.with_forms(rows)
+        self.assertEqual(before[:5], [(None, None)] * 5)
+        self.assertEqual(before[5], ((1.0, 1.0), (-1.0, -1.0)))
+        self.assertEqual(before[6], ((-1.0, -1.0), (1.0, 1.0)))  # club 2 at home: the match without xG changed nothing
+        self.assertAlmostEqual(present[1][0], 5 / 6)
+        self.assertAlmostEqual(present[1][1], 5 / 6)
+        # Only the last ten matches count.
+        _, late = forecast.with_forms([(1, 2, 0, 0, 0.0, 2.0)] * 10 + [(1, 2, 3, 0, 2.0, 0.0)] * 10)
+        self.assertEqual(late[1], (2.0, 1.0))
+        # In Elo points.
+        self.assertAlmostEqual(forecast.form_shift((0.07, -0.05), (0.5, 0.4)), 400 * (0.035 - 0.02))
+        self.assertEqual(forecast.form_shift((0.07, -0.05), None), 0.0)
+
+    def test_what_a_form_adds_is_found_again_in_scores_drawn_from_it(self):
+        from math import exp
+
+        rng = random.Random(5)
+
+        def drawn(mean):
+            limit, k, p = exp(-mean), 0, rng.random()
+            while p > limit:
+                k += 1
+                p *= rng.random()
+            return k
+
+        cases = []
+        for _ in range(8000):
+            d, xg, luck = rng.uniform(-0.6, 0.6), rng.gauss(0, 0.8), rng.gauss(0, 0.65)
+            x = d + 0.07 * xg - 0.05 * luck
+            cases.append((d, xg, luck, drawn(exp(MODEL["home"][0] + MODEL["home"][1] * x)), drawn(exp(MODEL["away"][0] - MODEL["away"][1] * x))))
+        found = forecast.fit_form(cases, MODEL)
+        self.assertAlmostEqual(found[0], 0.07, delta=0.025)
+        self.assertAlmostEqual(found[1], -0.05, delta=0.03)
+        self.assertEqual(forecast.fit_form(cases[:forecast.MIN_FIT - 1], MODEL), (0.0, 0.0))  # too few matches with two forms
+
     def test_a_league_s_state_from_its_matches(self):
         row = lambda match, edition, home, away, status, hs=None, as_=None, regular=True, domestic=True: (match, edition, home, away, False, status, hs, as_, regular, domestic)
         rows = [row(i, 1, h, a, "finished", 2, 1) for i, (h, a) in enumerate([(t, t + 1) for t in range(1, 8)])]

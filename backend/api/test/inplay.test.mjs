@@ -2,7 +2,7 @@
 // (backend/tests/test_inplay.py checks the same numbers with the Python functions).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { outcome, poisson, rates, remaining, timeline } from "../src/inplay.mjs";
+import { outcome, poisson, rates, remaining, timeline, lateShare } from "../src/inplay.mjs";
 
 const MODEL = { profile: [0.13, 0.14, 0.18, 0.16, 0.16, 0.16, 0.07], down: 0.6, up: 1.7 };
 const RHO = -0.03;
@@ -18,6 +18,23 @@ test("the state of a match moves the probabilities", () => {
   close(outcome(1.6, 1.1, 0.39, 1, 0, 0, 0, MODEL, RHO), [0.782823, 0.17635, 0.040828]);
   close(outcome(1.6, 1.1, 0.39, 1, 0, 1, 0, MODEL, RHO), [0.590557, 0.284731, 0.124712]);
   close(outcome(1.2, 1.9, 0.07, 2, 2, 0, 1, MODEL, RHO), [0.123551, 0.809582, 0.066867]);
+  // A side ahead scores less for the rest of the match, a side behind more (version 2); a level score changes nothing.
+  const state = { ...MODEL, ahead: 0.85, behind: 1.1 };
+  close(outcome(1.6, 1.1, 0.39, 1, 0, 0, 0, state, RHO), [0.745134, 0.202399, 0.052467]);
+  close(outcome(1.6, 1.1, 0.39, 0, 1, 0, 0, state, RHO), [0.114505, 0.281145, 0.60435]);
+  close(outcome(1.6, 1.1, 0.39, 2, 1, 1, 0, state, RHO), [0.552454, 0.296477, 0.151069]);
+  close(outcome(1.6, 1.1, 0.39, 1, 1, 0, 0, state, RHO), outcome(1.6, 1.1, 0.39, 1, 1, 0, 0, MODEL, RHO));
+  close(outcome(1.6, 1.1, 1.0, 0, 0, 0, 0, state, RHO), [0.486025, 0.256008, 0.257967]);
+  // The score changes the rates of the goals expected after the hour only.
+  const tilt = { ...MODEL, ahead: 0.85, behind: 1.15 };
+  close([[0, 0], [30, 0], [60, 0], [75, 0], [90, 4]].map(([m, a]) => lateShare(MODEL.profile, m, a)), [0.39, 0.39, 0.39, 0.23, 0.035]);
+  const at = (minute, home, away) => outcome(1.6, 1.1, remaining(MODEL.profile, minute, 0), home, away, 0, 0, tilt, RHO, lateShare(MODEL.profile, minute, 0));
+  close(at(30, 1, 0), [0.706589, 0.196064, 0.097347]);
+  close(at(75, 0, 1), [0.057434, 0.245146, 0.69742]);
+  const tilted = timeline(1.6, 1.1, [{ minute: 23, added: 0, kind: "goal", side: "home" }, { minute: 45, added: 3, kind: "goal", side: "away" },
+    { minute: 61, added: 0, kind: "red", side: "away" }, { minute: 90, added: 4, kind: "goal", side: "home" }], tilt, RHO);
+  for (const [minute, want] of [[23, [0.705142, 0.19164, 0.103218]], [40, [0.711598, 0.203393, 0.085009]], [70, [0.468921, 0.447483, 0.083596]]])
+    close([tilted[minute].home, tilted[minute].draw, tilted[minute].away], want);
   assert.deepEqual(outcome(1.6, 1.1, 0, 0, 1, 0, 0, MODEL, RHO), [0, 0, 1]);
   assert.deepEqual(outcome(1.6, 1.1, 0, 1, 1, 0, 0, MODEL, RHO), [0, 1, 0]);
 });

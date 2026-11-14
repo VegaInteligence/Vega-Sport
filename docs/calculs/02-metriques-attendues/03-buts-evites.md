@@ -9,6 +9,16 @@ Champ PitchAPI `goals_prevented`, par match. Il mesure les buts que le gardien a
 - **Saison** : total, par match, par 90, comme toute mesure de comptage ([Agrégation](../05-joueurs/01-agregation-saison.md)).
 - **Classable** : oui, dans la cohorte des gardiens (centile, indice « Arrêts », radar gardien).
 
+## Gardien : tirs cadrés subis (Vega, 14 novembre 2026)
+
+La carte « Tirs cadrés subis » de la page d'un gardien refait le compte tir par tir, sur toute la saison et toutes les compétitions (vue `api.keeper_shot_totals`, route `/api/players/{id}/faced?season=`, [profiles.mjs](../../../backend/api/src/routes/profiles.mjs) `keeperStanding`) :
+
+- un tir compte s'il est cadré, non contré, n'est pas un but contre son camp, porte un xGOT et le nom du gardien (la source ne nomme le gardien que sur les tirs cadrés) ;
+- buts évités = Σ xGOT de ces tirs − buts encaissés sur ces tirs ; « pour 100 tirs cadrés » = 100 × buts évités / tirs ;
+- rang : celui des buts évités par tir parmi les gardiens à **30 tirs cadrés subis ou plus** dans la saison (978 gardiens en 2025/2026) ; pas de rang en dessous.
+
+Ce n'est pas le champ `goals_prevented` du fournisseur : les deux peuvent différer (tirs sans xGOT, buts contre son camp), et le classement de puissance garde le champ du fournisseur.
+
 ## Équipe : « Buts évités par le gardien / match » (Vega)
 
 Calculé match par match dans [club-scout.js](../../../dashboard/frontend/src/services/club-scout.js#L771) (`keeper`) :

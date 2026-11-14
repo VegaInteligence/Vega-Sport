@@ -7,6 +7,7 @@ export const MAX_GOALS = 10;
 export const QUARTERS = 6;
 export const ADDED = 8;
 export const MAX_RED = 2;
+export const STATE_FROM = 60; // inplay.STATE_FROM: the minute from which the score changes the rates
 export const ELO_HOME = 60; // power.ELO_HOME: the home side's advantage, 0 on neutral ground
 
 /** P(0..top) of a Poisson law, the last cell taking the tail. */
@@ -48,10 +49,17 @@ export function remaining(profile, minute, added = 0) {
 }
 
 /** (home win, draw, away win) from the present state. */
-export function outcome(rateHome, rateAway, share, scoreHome, scoreAway, redsHome, redsAway, model, rho = 0) {
+/** The share of a match's goals still to come after STATE_FROM (the present minute once past it). */
+export const lateShare = (profile, minute, added = 0) => (minute >= STATE_FROM ? remaining(profile, minute, added) : remaining(profile, STATE_FROM, 0));
+
+/** `late`: lateShare(...), the part of `share` the score changes the rates of (all of it when not given). */
+export function outcome(rateHome, rateAway, share, scoreHome, scoreAway, redsHome, redsAway, model, rho = 0, late = null) {
   const home = Math.min(redsHome || 0, MAX_RED), away = Math.min(redsAway || 0, MAX_RED);
-  const lh = rateHome * share * model.down ** home * model.up ** away;
-  const la = rateAway * share * model.down ** away * model.up ** home;
+  // A side ahead and a side behind score `ahead` and `behind` times their rate (version 2); a level score changes neither.
+  const lead = scoreHome === scoreAway ? [1, 1] : scoreHome > scoreAway ? [model.ahead ?? 1, model.behind ?? 1] : [model.behind ?? 1, model.ahead ?? 1];
+  const tilted = late === null ? share : Math.min(late, share);
+  const lh = rateHome * model.down ** home * model.up ** away * (share - tilted + tilted * lead[0]);
+  const la = rateAway * model.down ** away * model.up ** home * (share - tilted + tilted * lead[1]);
   if (lh <= 0 && la <= 0) return scoreHome > scoreAway ? [1, 0, 0] : scoreHome === scoreAway ? [0, 1, 0] : [0, 0, 1];
   const ph = poisson(lh), pa = poisson(la);
   let win = 0, draw = 0, loss = 0;
@@ -81,7 +89,8 @@ export function timeline(rateHome, rateAway, events, model, rho = 0, last = 90) 
       const e = ordered[index++];
       state[(e.kind === "goal" ? 0 : 2) + (e.side === "home" ? 0 : 1)]++;
     }
-    const [home, draw, away] = outcome(rateHome, rateAway, remaining(model.profile, minute, 0), state[0], state[1], state[2], state[3], model, rho);
+    const [home, draw, away] = outcome(rateHome, rateAway, remaining(model.profile, minute, 0), state[0], state[1], state[2], state[3], model, rho,
+      lateShare(model.profile, minute, 0));
     points.push({ minute, home, draw, away, score: [state[0], state[1]] });
   }
   return points;

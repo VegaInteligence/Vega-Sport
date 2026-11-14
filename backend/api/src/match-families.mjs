@@ -159,6 +159,12 @@ const TEAM_STATS = [
     ["long_balls_accurate", "Accurate long balls", "integerWithPercentage", "long_balls_accurate", "long_balls_pct"],
     ["opposition_half_passes", "Opposition half", ""], ["own_half_passes", "Own half", ""], ["passes", "Passes", "integer"],
     ["player_throws", "Throws", "integer", "throw_ins"], ["touches_opp_box", "Touches in opposition box", ""]]],
+  // The source sends these for some competitions only (074): a match without them has no such group.
+  ["Pressing", [["final_third_entries", "Final third entries", "integerWithPercentage", "final_third_entries", "final_third_entries_pct"],
+    ["penalty_area_entries", "Penalty area entries", "integerWithPercentage", "penalty_area_entries", "penalty_area_entries_pct"],
+    ["poss_won_att_3rd", "Possession won in the attacking third", "integer"], ["poss_won_def_3rd", "Possession won in the defensive third", "integer"],
+    ["poss_won_mid_3rd", "Possession won in the middle third", "integer"], ["ppda", "Passes per defensive action (PPDA)", "double"],
+    ["recoveries", "Recoveries", "integer"]]],
   ["Shots", [["ShotsOffTarget", "Shots off target", "integer", "shots_off_target"], ["ShotsOnTarget", "Shots on target", "integer", "shots_on_target"],
     ["blocked_shots", "Blocked shots", "integer"], ["shots_inside_box", "Shots inside box", "integer"],
     ["shots_outside_box", "Shots outside box", "integer"], ["shots_woodwork", "Hit woodwork", "integer"], ["total_shots", "Total shots", "integer"]]],
