@@ -66,7 +66,7 @@ Quand la base détient le onze **confirmé** des deux clubs, le pronostic du mat
 
 La carte « Probabilités » affiche alors ce pronostic, dit ce que vaut chaque onze face à l'habituel de son club (proche en dessous de 0,15 d'écart, « nettement » à partir de 0,6) et rappelle les probabilités sans les compositions. La courbe du match part elle aussi de ce pronostic.
 
-**Quand les compositions sont lues.** 48 heures avant le match (une composition probable), **50 puis 25 minutes avant le coup d'envoi**, et au coup d'envoi. Les deux lectures d'avant-match datent du 13 novembre 2026. Jusque-là la base ne recevait un onze confirmé qu'au coup d'envoi : ce jour-là, sur 54 matchs à jouer dans les 24 heures, 8 avaient une composition des deux côtés, toutes non confirmées (le dernier onze aligné, selon le fournisseur).
+**Quand les compositions sont lues.** 48 heures avant le match (une composition probable), **50 puis 25 minutes avant le coup d'envoi**, une fois encore **10 minutes avant** si les deux onze ne sont pas tous deux confirmés (depuis le 14 novembre 2026), et au coup d'envoi. Les deux lectures d'avant-match datent du 13 novembre 2026. Jusque-là la base ne recevait un onze confirmé qu'au coup d'envoi : ce jour-là, sur 54 matchs à jouer dans les 24 heures, 8 avaient une composition des deux côtés, toutes non confirmées (le dernier onze aligné, selon le fournisseur).
 
 **Premières mesures (14 novembre 2026).** Les quatre premiers matchs joués après la mise en service ont tous reçu leur pronostic relu **avant** le coup d'envoi, deux à la lecture de 50 minutes et deux à celle de 25 minutes ; aucun match n'est resté sans.
 
@@ -77,7 +77,9 @@ La carte « Probabilités » affiche alors ce pronostic, dit ce que vaut chaque 
 | Giravanz Kitakyushu – Thespa Gunma | 48 min avant | +0,24 / −0,46 | 52,5 % → 57,4 % | 4–3 |
 | Fukushima United – Sagamihara | 48 min avant | +0,19 / −0,33 | 37,8 % → 41,3 % | 1–0 |
 
-Quatre matchs ne jugent rien de la justesse : elle se lira sur `agg.match_lineup_forecasts` (conservé après le match, avec l'heure du premier calcul de chaque pronostic) quand il y en aura quelques centaines.
+**Une journée entière (14 novembre 2026, 30 matchs).** 17 ont eu leur pronostic relu avant le coup d'envoi (la plupart à la lecture de 50 minutes). Pour 2 (Exeter City – Cheltenham Town, Real Sociedad B – Sporting Gijón), la source n'avait pas confirmé les onze 25 minutes avant et ne l'a fait qu'ensuite : le pronostic relu est arrivé deux minutes après le coup d'envoi ; la lecture de 10 minutes a été ajoutée pour eux. Pour 11 (8 de League One, 3 de League Two, tous à 15 h UTC), la source ne donnait toujours qu'un « dernier onze » non confirmé une minute après le coup d'envoi : ces matchs n'ont pas de pronostic relu, et aucune lecture de plus n'y changerait rien.
+
+Ces matchs ne jugent rien de la justesse : elle se lira sur `agg.match_lineup_forecasts` (conservé après le match, avec l'heure du premier calcul de chaque pronostic) quand il y en aura quelques centaines.
 
 Seules les compositions confirmées sont lues : le « dernier onze » ou le onze « probable » du fournisseur ne déplace pas le pronostic.
 
@@ -101,9 +103,11 @@ Les 55 saisons de championnat complètes de 2024/2025 et 2025/2026 (12 clubs ou 
 
 90 points donnent la plus petite perte au total. À cette valeur, parmi les clubs annoncés champions entre 60 et 80 % (15 clubs, 68 % en moyenne), 73 % l'ont été.
 
-## Pendant le match
+## Minute par minute
 
-La fiche d'un match joué ou en cours trace « Probabilité de victoire » : les chances de victoire, de nul et de défaite minute par minute ([inplay.py](../../../backend/vega/inplay.py), `/api/forecasts/live`).
+La fiche d'un match joué trace « Probabilité de victoire » : les chances de victoire, de nul et de défaite minute par minute ([inplay.py](../../../backend/vega/inplay.py), `/api/forecasts/live`).
+
+**Ce n'est pas un suivi en direct.** La base ne reçoit rien d'un match pendant qu'il se joue : la source n'a pas de direct, et le score est lu pour la première fois 105 minutes après le coup d'envoi. Le 14 novembre 2026, les 24 matchs en cours à 15 h 37 UTC étaient tous encore « à jouer » dans la base, sans score ni événement, et la route répondait 404 pour chacun. La courbe paraît donc quand le match est lu, en pratique à son coup de sifflet final. La route accepte un match « en cours » : elle tracerait la courbe pendant le match le jour où un fournisseur de direct alimentera la base (le circuit existe, sans fournisseur, voir `backend/README.md`, « Live »).
 
 À une minute donnée, avec le score et les expulsions du moment :
 
@@ -115,7 +119,7 @@ La fiche d'un match joué ou en cours trace « Probabilité de victoire » : les
 
 Les forces de départ sont les deux Elo d'avant le match ; quand le match a un pronostic relu avec ses compositions confirmées, ce sont celles de ce pronostic (Elo, forme et écart du onze).
 
-Les buts sont comptés pour l'équipe à qui la source les attribue. Le score que la source écrit sur un événement de but n'est pas lu : c'est celui d'avant le but dans certains matchs, d'après dans d'autres. Un match n'entre dans l'ajustement, et n'a de courbe, que si ses événements de but donnent son score final. Le dernier point d'un match terminé est son résultat. À côté du graphique, chaque but est suivi de ce qu'il a changé : les chances de victoire de l'équipe qui marque, la minute d'avant et à la minute du but. Pour un match en cours, l'heure est la dernière minute que la source a mesurée (momentum ou événement).
+Les buts sont comptés pour l'équipe à qui la source les attribue. Le score que la source écrit sur un événement de but n'est pas lu : c'est celui d'avant le but dans certains matchs, d'après dans d'autres. Un match n'entre dans l'ajustement, et n'a de courbe, que si ses événements de but donnent son score final. Le dernier point d'un match terminé est son résultat. À côté du graphique, chaque but est suivi de ce qu'il a changé : les chances de victoire de l'équipe qui marque, la minute d'avant et à la minute du but. Pour un match lu avant sa fin (une lecture à la 105ᵉ minute d'un match qui joue encore), l'heure est la dernière minute que la source a mesurée (momentum ou événement).
 
 ### Vérification sur des matchs non vus (12 novembre 2026)
 
