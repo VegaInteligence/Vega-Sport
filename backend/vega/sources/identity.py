@@ -12,9 +12,11 @@ A national team the sources name otherwise than PitchAPI (the site's French name
 Nations League, an older English spelling) is the PitchAPI team of its reviewed spelling
 (NATION_SPELLINGS).
 
-The Club World Cup's source writes a club with its country after it ("Al Hilal (KSA)"):
-the club is looked for under the name alone, in that country, and under the spelling
-reviewed for it when PitchAPI writes another (WORLD_CLUB_SPELLINGS, WORLD_CLUB_KEYS).
+The Club World Cup's source writes a club with its country after it ("Al Hilal (KSA)"), and
+so do its files of the other confederations' club competitions (Copa Libertadores and
+Sudamericana, the CONCACAF Champions Cup, the CAF Champions League): the club is looked for
+under the name alone, in that country, and under the spelling reviewed for it when PitchAPI
+writes another (WORLD_CLUB_SPELLINGS, WORLD_CLUB_KEYS).
 
 Archive teams (every archive season, the ones after 2020/2021 included) are keyed by their
 country's French name and their own name. One is the PitchAPI club of that country
@@ -98,9 +100,8 @@ def _pitch_teams(conn):
     return out
 
 
-# A club's name followed by its country, as the Club World Cup's source (OpenFootball)
-# writes its teams: "Real Madrid (ESP)". No other cup-source team of the base was named
-# so on 12 November 2026.
+# A club's name followed by its country, as OpenFootball writes the teams of the Club World
+# Cup and of the confederations' club competitions: "Real Madrid (ESP)".
 COUNTRY_SUFFIX = re.compile(r"^(.*\S)\s*\(([A-Z]{3})\)$")
 # The teams of the editions of 2021, 2022, 2023 and 2025 that PitchAPI names otherwise,
 # reviewed one by one on 12 November 2026: the source's team named as the key is PitchAPI's
@@ -111,10 +112,58 @@ WORLD_CLUB_SPELLINGS = {
     "CF Pachuca (MEX)": "Pachuca", "Chelsea FC (ENG)": "Chelsea", "Club León (MEX)": "León", "Flamengo RJ (BRA)": "Flamengo",
     "Fluminense RJ (BRA)": "Fluminense", "Mamelodi Sundowns (RSA)": "Mamelodi Sundowns FC", "RB Salzburg (AUT)": "Salzburg",
     "Seattle Sounders (USA)": "Seattle Sounders FC", "SL Benfica (POR)": "Benfica",
+    # The confederations' club competitions of 2021 to 2026, reviewed one by one on 14 November
+    # 2026 against the PitchAPI clubs of each country (a club PitchAPI does not hold has no entry:
+    # Uruguay's, most of Africa's). "Universidad Técnica" is UTC Cajamarca, not ADT.
+    "Atlanta United FC (USA)": "Atlanta United", "Houston Dynamo (USA)": "Houston Dynamo FC", "Los Angeles Galaxy (USA)": "LA Galaxy",
+    "St. Louis City SC (USA)": "St. Louis City",
+    "Atlético Goianiense (BRA)": "Atlético-GO", "Atlético Mineiro (BRA)": "Atlético-MG", "CA Mineiro (BRA)": "Atlético-MG", "Bahia BA (BRA)": "Bahia", "EC Bahia (BRA)": "Bahia", "Botafogo FR (BRA)": "Botafogo",
+    "CA Paranaense (BRA)": "Athletico Paranaense", "CR Flamengo (BRA)": "Flamengo", "Ceará CE (BRA)": "Ceará",
+    "Corinthians SP (BRA)": "Corinthians", "SC Corinthians Paulista (BRA)": "Corinthians", "Cruzeiro EC (BRA)": "Cruzeiro",
+    "Cuiabá MT (BRA)": "Cuiabá", "Fluminense FC (BRA)": "Fluminense", "Fortaleza CE (BRA)": "Fortaleza", "Fortaleza EC (BRA)": "Fortaleza",
+    "Goiás GO (BRA)": "Goiás", "Grêmio FBPA (BRA)": "Grêmio", "Grêmio Porto Alegre (BRA)": "Grêmio", "Mirassol FC (BRA)": "Mirassol",
+    "Red Bull Bragantino (BRA)": "RB Bragantino", "SC Internacional (BRA)": "Internacional", "SE Palmeiras (BRA)": "Palmeiras",
+    "Santos FC (BRA)": "Santos", "São Paulo FC (BRA)": "São Paulo", "Vasco da Gama RJ (BRA)": "Vasco da Gama", "Vitória BA (BRA)": "Vitória",
+    "AA Argentinos Juniors (ARG)": "Argentinos Juniors", "Arsenal de Sarandí (ARG)": "Arsenal Sarandi", "Belgrano de Córdoba (ARG)": "Belgrano",
+    "CA Boca Juniors (ARG)": "Boca Juniors", "CA Central Córdoba (ARG)": "Central Córdoba de Santiago", "CA Huracán (ARG)": "Huracán",
+    "CA Lanús (ARG)": "Lanús", "CA Platense (ARG)": "Club Atlético Platense", "CA River Plate (ARG)": "River Plate",
+    "CA Rosario Central (ARG)": "Rosario Central", "CA San Lorenzo de Almagro (ARG)": "San Lorenzo", "CA Talleres (ARG)": "Talleres",
+    "Talleres de Córdoba (ARG)": "Talleres", "CA Vélez Sarsfield (ARG)": "Vélez Sarsfield", "CD Godoy Cruz Antonio Tomba (ARG)": "Godoy Cruz",
+    "CS Independiente Rivadavia (ARG)": "Independiente Rivadavia", "Colón de Santa Fe (ARG)": "Colon", "Estudiantes de La Plata (ARG)": "Estudiantes",
+    "Gimnasia de La Plata (ARG)": "Gimnasia LP", "Unión de Santa Fe (ARG)": "Unión",
+    "AD Tarma (PER)": "ADT", "Ayacucho FC (PER)": "Ayacucho", "CS Cristal (PER)": "Sporting Cristal", "CSD Sport Huancayo (PER)": "Sport Huancayo",
+    "Club Alianza Lima (PER)": "Alianza Lima", "Club Universitario de Deportes (PER)": "Universitario", "Universitario de Deportes (PER)": "Universitario",
+    "Cusco FC (PER)": "Cusco", "FBC Melgar (PER)": "Melgar", "Mannucci (PER)": "Carlos Mannucci", "Universidad Cesar Vallejo (PER)": "César Vallejo",
+    "Universidad Técnica (PER)": "UTC Cajamarca",
+    "Alianza FC (COL)": "Alianza", "Atlético Junior (COL)": "Junior", "CDP Junior FC (COL)": "Junior", "CA Bucaramanga (COL)": "Atlético Bucaramanga",
+    "CD Independiente Medellín (COL)": "Independiente Medellín", "CD Tolima (COL)": "Deportes Tolima", "CDC Atlético Nacional (COL)": "Atlético Nacional",
+    "Millonarios FC (COL)": "Millonarios", "Rionegro Águilas (COL)": "Águilas Doradas", "Santa Fe (COL)": "Independiente Santa Fe",
+    "Atlas Guadalajara (MEX)": "Atlas", "Deportivo Guadalajara (MEX)": "Chivas", "Deportivo Toluca (MEX)": "Toluca", "Pumas UNAM (MEX)": "Pumas",
+    "UANL Tigres (MEX)": "Tigres",
+    "Barcelona SC (ECU)": "Barcelona", "CAR Independiente del Valle (ECU)": "Independiente Valle", "Independiente del Valle (ECU)": "Independiente Valle",
+    "CSCyD El Nacional (ECU)": "El Nacional", "Delfín SC (ECU)": "Delfín", "LDU de Quito (ECU)": "LDU Quito", "Orense SC (ECU)": "Orense",
+    "SD Aucas (ECU)": "Aucas",
+    "CD Cobresal (CHI)": "Cobresal", "CD Coquimbo Unido (CHI)": "Coquimbo Unido", "CD Huachipato (CHI)": "Huachipato", "CD Iquique (CHI)": "Deportes Iquique",
+    "CD Nublense (CHI)": "Ñublense", "CD Palestino (CHI)": "Palestino", "CD Universidad Católica (CHI)": "Universidad Católica",
+    "CF Universidad de Chile (CHI)": "Universidad de Chile", "CSD Colo-Colo (CHI)": "Colo Colo", "O'Higgins FC (CHI)": "O'Higgins",
+    "CD Blooming (BOL)": "Blooming", "CD Guabirá (BOL)": "Guabirá", "Club Always Ready (BOL)": "Always Ready", "Club Aurora (BOL)": "Aurora",
+    "Club Bolívar (BOL)": "Bolívar", "Club Nacional Potosí (BOL)": "Nacional Potosí", "Club The Strongest (BOL)": "The Strongest",
+    "Independiente Petrolero (BOL)": "Independiente",
+    "Carabobo FC (VEN)": "Carabobo", "Caracas FC (VEN)": "Caracas", "Deportivo La Guaira FC (VEN)": "Deportivo La Guaira",
+    "Deportivo Táchira FC (VEN)": "Deportivo Táchira", "Metropolitanos FC (VEN)": "Metropolitanos", "Monagas SC (VEN)": "Monagas",
+    "Portuguesa FC (VEN)": "Portuguesa", "Universidad Central de Venezuela FC (VEN)": "UCV", "Zamora FC (VEN)": "Zamora",
+    "Club Cerro Porteño (PAR)": "Cerro Porteño", "Club Libertad Asuncion (PAR)": "Libertad", "Club Nacional (PAR)": "Nacional Asunción",
+    "Club Olimpia (PAR)": "Olimpia", "Olimpia Asuncion (PAR)": "Olimpia", "General Caballero DJLM (PAR)": "General Caballero JLM",
+    "Guaraní (PAR)": "Club Guaraní",
+    "Cavalry FC (CAN)": "Cavalry", "Forge FC (CAN)": "Forge",
 }
 # PitchAPI has two clubs named Al Hilal in Saudi Arabia, and two named Al Ittihad: the club
 # and its women's team. The tournament's is the club, named here by its PitchAPI key.
-WORLD_CLUB_KEYS = {"Al Hilal (KSA)": "t_2r8ytM", "Al Ittihad (KSA)": "t_4BG5Jn"}
+WORLD_CLUB_KEYS = {"Al Hilal (KSA)": "t_2r8ytM", "Al Ittihad (KSA)": "t_4BG5Jn",
+                   # The three Canadian MLS clubs, which PitchAPI files under the United States (CAN in the
+                   # source): "Toronto FC" is not the Canadian league's Inter Toronto, nor "Vancouver
+                   # Whitecaps" its Vancouver FC.
+                   "CF Montréal (CAN)": "t_0vjCk0", "Toronto FC (CAN)": "t_1TFG85", "Vancouver Whitecaps (CAN)": "t_2CuHdk"}
 
 
 # National teams the complementary sources name otherwise than PitchAPI does, reviewed on

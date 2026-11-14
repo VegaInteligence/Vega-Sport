@@ -162,8 +162,16 @@ test("a finished match minute by minute", { skip }, async () => {
   assert.ok(body.rates.home > 0 && body.rates.away > 0);
   // Its two line-ups were read before it: the timeline starts from the forecast that read them.
   assert.equal(body.lineups, true);
-  // A match still to play, an unknown one, a malformed id.
-  assert.equal((await get("/api/forecasts/live?match=m_aaaaa6")).response.status, 404);
+  // The model the points were drawn with, for the site to carry on with a live feed.
+  assert.deepEqual(Object.keys(body.inplay), ["profile", "down", "up", "ahead", "behind"]);
+  assert.equal(body.inplay.profile.length, 7);
+  assert.equal(typeof body.rho, "number");
+  // A match the base has not read yet: its kick-off point only, and the same model.
+  const ahead = (await get("/api/forecasts/live?match=m_aaaaa6")).body;
+  assert.deepEqual([ahead.status, ahead.points.length, ahead.points[0].minute, ahead.points[0].score], ["not_started", 1, 0, [0, 0]]);
+  assert.ok(Math.abs(ahead.points[0].home + ahead.points[0].draw + ahead.points[0].away - 1) < 2e-4);
+  assert.deepEqual(ahead.inplay, body.inplay);
+  // An unknown match, a malformed id.
   assert.equal((await get("/api/forecasts/live?match=m_zzzzzz")).response.status, 404);
   assert.equal((await get("/api/forecasts/live?match=1")).response.status, 400);
 });

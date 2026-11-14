@@ -3,7 +3,7 @@
  * calculation as backend/vega/lineup.py (rate, points, replace), which fits the model and
  * documents it; the two are held together by the values both test suites check.
  */
-import { outcome, rates } from "./inplay.mjs";
+import { outcome, rates } from "../../../dashboard/shared/inplay.js";
 
 export const LAMBDA = 450; // power.LAMBDA: the minutes that draw a rate towards 0
 const WHOLE_MATCH = { down: 1, up: 1 };

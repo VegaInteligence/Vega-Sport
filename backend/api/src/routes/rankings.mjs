@@ -48,7 +48,7 @@
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
-import { rates as inplayRates, timeline as inplayTimeline } from "../inplay.mjs";
+import { rates as inplayRates, timeline as inplayTimeline } from "../../../../dashboard/shared/inplay.js";
 import { ownRate, replace as replacePlayer } from "../lineup.mjs";
 
 const TEAM = /^t_(?:[A-Za-z0-9]{6}|v\d{7})$/;
@@ -253,15 +253,18 @@ async function matchForecast(read, params) {
 
 /**
  * A match minute by minute: win, draw and loss from the forecast's expected goals, the
- * score, the clock and the dismissals (src/inplay.mjs). A finished match runs to the 90th
- * minute, where its last point is its result; a match in play stops at its clock.
+ * score, the clock and the dismissals (dashboard/shared/inplay.js). A finished match runs to the 90th
+ * minute, where its last point is its result; a match in play stops at its clock. A match
+ * the base has not read yet (still "not_started" there, though it may be under way) gets
+ * its kick-off point only; `inplay` and `rho` are the model the points were drawn with,
+ * which the site carries on with the live feed's goals and red cards.
  */
 async function liveProbability(read, params) {
   validateParams(params, ["match"]);
   const id = params.get("match");
   if (!MATCH.test(id || "")) reject(400, "Paramètre invalide.");
   const [s] = await read("SELECT * FROM api.match_strengths WHERE match_key=api.internal_id('match',$1)", [id]);
-  if (!s || s.home_elo === null || s.away_elo === null || !["finished", "in_play"].includes(s.status)) reject(404, "Donnée indisponible.");
+  if (!s || s.home_elo === null || s.away_elo === null || !["finished", "in_play", "not_started"].includes(s.status)) reject(404, "Donnée indisponible.");
   const at = [s.season_id, s.match_key];
   const [[forecast], [model], events, [clock], [lineups]] = await Promise.all([
     read("SELECT * FROM api.forecast_models ORDER BY fitted_at DESC, id DESC LIMIT 1"),
@@ -276,7 +279,7 @@ async function liveProbability(read, params) {
   // A finished match whose goal events do not give its score has no timeline to show.
   if (finished && (goals("home") !== s.home_score || goals("away") !== s.away_score)) reject(404, "Donnée indisponible.");
   const seen = Math.max(clock?.minute ?? 0, ...events.map((e) => e.minute), 0);
-  const last = finished ? 90 : Math.max(0, Math.min(90, Math.floor(seen)));
+  const last = finished ? 90 : s.status === "not_started" ? 0 : Math.max(0, Math.min(90, Math.floor(seen)));
   // A match whose two confirmed line-ups were read before it (091) starts from the forecast that read them:
   // the strengths that forecast had (each club's Elo and its form), moved by what each eleven was worth.
   const [rateHome, rateAway] = lineups
@@ -290,9 +293,11 @@ async function liveProbability(read, params) {
   }
   return {
     match: id, status: s.status,
-    rates: { home: round(rateHome, 2), away: round(rateAway, 2) },
+    // Four decimals: the site draws a live match's minutes from them (shared/inplay.js).
+    rates: { home: round(rateHome, 4), away: round(rateAway, 4) },
     ...(lineups ? { lineups: true } : {}),
     model: { version: model.version, fittedAt: iso(model.fitted_at), matches: model.matches },
+    inplay, rho: forecast.rho,
     points: points.map((p) => ({ minute: p.minute, home: round(p.home, 4), draw: round(p.draw, 4), away: round(p.away, 4), score: p.score })),
     events: events.map((e) => ({ minute: e.minute, added: e.added, kind: e.kind, side: e.side })),
   };

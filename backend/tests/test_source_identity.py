@@ -111,6 +111,20 @@ class ParseTest(unittest.TestCase):
         self.assertIsNone(match("Chelsea FC"))  # the reviewed spelling is the tournament's, not every source's
         self.assertIsNone(match("Al Ain FC"))
 
+    def test_continental_club_spellings(self):
+        # The confederations' club competitions name clubs like the Club World Cup: "Name (XXX)".
+        pitch = {("flamengo", False): {(1, "BRA")}, ("adt", False): {(2, "PER")}, ("utccajamarca", False): {(3, "PER")},
+                 ("intertoronto", False): {(4, "CAN")}, ("vancouverfc", False): {(5, "CAN")}, ("lagalaxy", False): {(6, "USA")},
+                 ("losangelesfc", False): {(7, "USA")}, ("riverplate", False): {(8, "ARG")}}
+        reviewed = {identity.WORLD_CLUB_KEYS["Toronto FC (CAN)"]: 9, identity.WORLD_CLUB_KEYS["Vancouver Whitecaps (CAN)"]: 10}
+        match = lambda name: identity.match_team(pitch, name, False, None, reviewed)
+        self.assertEqual([match(n) for n in ("CR Flamengo (BRA)", "Universidad Técnica (PER)", "AD Tarma (PER)", "Los Angeles Galaxy (USA)", "CA River Plate (ARG)")],
+                         [1, 3, 2, 6, 8])
+        # Canada's MLS clubs, filed under the United States by PitchAPI, are named by their keys: never the Canadian league's.
+        self.assertEqual([match("Toronto FC (CAN)"), match("Vancouver Whitecaps (CAN)")], [9, 10])
+        self.assertIsNone(match("River Plate (PAR)"))  # Paraguay's River Plate is not Argentina's
+        self.assertIsNone(match("Defensor SC (URU)"))  # a country PitchAPI holds no club of
+
     def test_national_team_spellings(self):
         pitch = {("germany", True): {(1, None)}, ("turkiye", True): {(2, None)}, ("usa", True): {(3, None)}, ("france", True): {(4, None)},
                  ("germany", False): {(9, "GER")}}

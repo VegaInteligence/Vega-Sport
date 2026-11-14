@@ -535,7 +535,7 @@ class UefaTest(unittest.TestCase):
         answers = {}
         for kind, competition, season, body in SAMPLES:
             from urllib.parse import urlencode
-            query = urlencode({"competition": competition, "season": season} if kind != "nations-results" else {"season": season})
+            query = urlencode({"competition": competition, "season": season})
             answers[(kind, query)] = {"status": 200, "body": body}
         original, cups.bridge = cups.bridge, lambda command, kind, query: answers.get((kind, query), {"status": 502, "body": None})
         try:
@@ -555,6 +555,12 @@ class UefaTest(unittest.TestCase):
             answers.clear()
             sources.run_due(self.db, None, NOW + timedelta(days=16), names={"openfootball"})
             self.assertEqual(x("SELECT count(*) FROM api.cup_matches m JOIN api.cup_editions e USING (competition_season_id) WHERE e.season='2024'").fetchone(), (3,))
+            # A tournament of another confederation: in the season it ends in, its neutral grounds kept.
+            self.assertEqual(done[("international_results", "nations-results:afcon:2023")], "ok")
+            rows = x("""SELECT m.home_team_name, m.home_score, m.away_score, m.is_neutral, s.label FROM core.matches m JOIN core.seasons s ON s.id=m.season_id
+                        JOIN core.competition_seasons cs ON cs.id=m.competition_season_id WHERE cs.cup_key='nations-results:afcon:2023' ORDER BY m.archive_position""").fetchall()
+            self.assertEqual(rows, [("Ivory Coast", 2, 0, False, "2023/2024"), ("Nigeria", 1, 1, True, "2023/2024")])
+            self.assertEqual(x("SELECT is_neutral FROM core.matches m JOIN core.competition_seasons cs ON cs.id=m.competition_season_id WHERE cs.cup_key='open-cups:euro:2024' LIMIT 1").fetchone(), (None,))
         finally:
             cups.bridge = original
 

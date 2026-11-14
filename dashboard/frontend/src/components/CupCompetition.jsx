@@ -7,7 +7,7 @@ import KnockoutBracket from "./KnockoutBracket.jsx";
 import { useResource } from "../services/resources.js";
 import { cupTable } from "../services/catalog-client.js";
 import { competitionCountryLabel } from "../services/competition-selector.js";
-import { normalizeOpenCup, normalizeSupplementalCup, filterCupMatches } from "../services/cup-matches.js";
+import { normalizeOpenCup, normalizeSupplementalCup, filterCupMatches, resultsAsOpenCup } from "../services/cup-matches.js";
 import { combineCupLegs, knockoutStage } from "../services/knockout-bracket.js";
 import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, isGermanCupSeason } from "../services/cup-archives.js";
@@ -39,7 +39,7 @@ export default function CupCompetition({ competition, initialSeason }) {
   );
   const [view, setView] = useState("matches");
   const supportsBracket = competition.source === "openfootball" || competition.source === "open-matchday";
-  const nationalTeams = ["euro", "world-cup-history"].includes(competition.sourceKey);
+  const nationalTeams = ["euro", "world-cup-history", "afcon", "copa-america", "asian-cup", "gold-cup"].includes(competition.sourceKey);
   const archive = NATIONAL_CUP_ARCHIVES[competition.folder];
   const germany = competition.folder === GERMAN_CUP_FOLDER;
   const [status, setStatus] = useState(competition.source === "open-matchday" && !Number(competition.tables?.results?.rows) ? "scheduled" : "finished");
@@ -47,7 +47,8 @@ export default function CupCompetition({ competition, initialSeason }) {
   const [page, setPage] = useState(1);
   const tables = competition.editions?.[season] || (season === competition.defaultSeason ? competition.tables : null);
   const version = competition.source === "open-matchday" ? [tables?.results?.sha256, tables?.fixtures?.sha256].join(":") : season;
-  const mode = competition.source !== "open-matchday" ? "openfootball"
+  const mode = competition.source === "nations-results" ? "results"
+    : competition.source !== "open-matchday" ? "openfootball"
     : view === "bracket" && germany && isGermanCupSeason(season) ? "openligadb"
     : view === "bracket" && archive && season === archive.season ? "archive"
     : tables ? "supplemental"
@@ -62,6 +63,11 @@ export default function CupCompetition({ competition, initialSeason }) {
     }
     if (mode === "unavailable") return { matches: [], unavailable: true };
     if (mode === "openligadb") return cupWorkerSnapshot("openligadb", "germany-cup", season, "/api/openligadb?competition=germany-cup&season=" + encodeURIComponent(season));
+    if (mode === "results") {
+      // International Results: played matches only, without rounds (results-v1).
+      const payload = await cupWorkerSnapshot("nations-results", competition.sourceKey, season, null);
+      return { matches: normalizeOpenCup(resultsAsOpenCup(payload.matches)), source: payload.source };
+    }
     const key = mode === "archive" ? archive.key : competition.sourceKey;
     const payload = await cupWorkerSnapshot("open-cups", key, season, "/api/open-cups?competition=" + encodeURIComponent(key) + "&season=" + encodeURIComponent(season));
     const matches = normalizeOpenCup(payload.matches);

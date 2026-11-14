@@ -52,6 +52,11 @@ export function normalizeSupplementalCup(results, fixtures) {
   return [...completed, ...scheduled];
 }
 
+/** The results-v1 matches of International Results in the open-cups shape normalizeOpenCup reads. */
+export function resultsAsOpenCup(matches) {
+  return (matches || []).map((match) => ({ date: match.date, team1: match.home, team2: match.away, round: match.round || "", score: Array.isArray(match.score) ? { ft: match.score } : undefined }));
+}
+
 export function normalizeOpenCup(matches) {
   return (matches || []).flatMap((match, index) => {
     const home = String(match.team1 || "").trim(), away = String(match.team2 || "").trim();

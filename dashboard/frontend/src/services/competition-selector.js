@@ -80,6 +80,11 @@ export const COUNTRY_NAMES = {
   VEN: "Venezuela",
   WAL: "Pays de Galles",
   UEFA: "Europe",
+  // The other confederations, for their competitions (cup-catalog.js).
+  CONMEBOL: "Amérique du Sud",
+  CONCACAF: "Amérique du Nord et centrale",
+  CAF: "Afrique",
+  AFC: "Asie",
 };
 export const countryLabel = (country) =>
   COUNTRY_NAMES[country] || country || "International";
@@ -148,7 +153,7 @@ const LEAGUE_ORDER = {
 export function isTopFlight(competition, catalog = []) {
   if (!competition || competition.source || competition.cupWorker) return false;
   const country = competitionCountry(competition);
-  if (!country || ["UEFA", "INT", "INT-2", "FIFA"].includes(country))
+  if (!country || ["UEFA", "INT", "INT-2", "FIFA", "CONMEBOL", "CONCACAF", "CAF", "AFC"].includes(country))
     return false;
   const pyramid = LEAGUE_ORDER[country];
   if (pyramid)

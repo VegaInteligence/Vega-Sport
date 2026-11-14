@@ -671,7 +671,7 @@ export default function MatchDetail({ match }) {
             <Card fold title="Les chiffres du match">
               <StatRows match={match} stats={overviewStats(match)} />
             </Card>
-            {!upcoming && <MatchWinProbability match={match} />}
+            {(!upcoming || liveScore) && <MatchWinProbability match={match} live={liveScore ? live : null} />}
             <MatchEventHighlights match={match} />
             <Card
               title="Meilleures notes"

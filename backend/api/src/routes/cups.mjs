@@ -105,6 +105,12 @@ const openLigaMatch = (competition) => (m) => {
   };
 };
 
+// A tournament of the other confederations (International Results): no league or group, its neutral grounds.
+const tournamentMatch = (competition) => (m) => ({
+  key: `${competition}:${m.key}`, date: m.date ?? "", home: m.home, away: m.away, homeId: m.home_key, awayId: m.away_key,
+  score: pair(m.home_score, m.away_score), status: "finished", neutral: m.is_neutral,
+});
+
 const nationsMatch = (m) => ({
   key: `nations:${m.key}`, date: m.date ?? "", home: m.home, away: m.away, homeId: m.home_key, awayId: m.away_key,
   score: pair(m.home_score, m.away_score), status: "finished",
@@ -131,7 +137,9 @@ export async function cupBody(read, competitionId, season) {
       ? { name: e.name, season, matches: rows.map(openCupMatch), source }
       : e.format === "rounds-v1"
         ? { competition: e.competition, season, matches: rows.map(openLigaMatch(e.competition)), source }
-        : { season, matches: rows.map(nationsMatch), source };
+        : e.competition === "nations-league"
+          ? { season, matches: rows.map(nationsMatch), source }
+          : { name: e.name, season, matches: rows.map(tournamentMatch(e.competition)), source };
   return { body, worker: { checkedAt: iso(e.checked_at), updatedAt: iso(e.updated_at) } };
 }
 

@@ -152,6 +152,15 @@ Chaque source a sa période dans `ops.source_runs`. Une erreur de base de donné
 - les données live expirent 24 h après que `core` est complet, 72 h après le match au plus tard ; les lectures filtrent sur `expires_at` ;
 - indépendant du fournisseur : un adaptateur par fournisseur ([`adapters.py`](vega/live/adapters.py)) ; l'adaptateur `replay` rejoue un flux enregistré à travers tout le circuit (tests, essai à blanc). Brancher un fournisseur : une classe dans `adapters.py`, puis `LIVE_PROVIDER=<nom>` au déploiement, qui allume la planification EventBridge de l'ingestor ;
 - côté site (`services/live-client.js`, `hooks/useLiveMatch.js`) : la fiche match affiche la minute et le score du direct, puis « Résultat provisoire », puis le score de `core` ; il faut les réglages `NEXT_PUBLIC_LIVE_EVENTS_HTTP`, `_REALTIME` et `_KEY` (sorties de la pile `vega-v2-live`).
+- la courbe « Probabilité de victoire » d'un match en cours se trace aussi depuis le direct : `/api/forecasts/live` rend pour un match que la base n'a pas encore lu son point du coup d'envoi et le modèle (`inplay`, `rho`, `rates`), et le site le prolonge avec les buts et les expulsions du flux (`withLive` dans `services/forecasts.js`), par le même calcul que l'API (`dashboard/shared/inplay.js`, partagé par les deux). Un but du flux compte pour le côté dont il fait monter le score, contre son camp compris (`model.Event`) ; si les buts du flux ne donnent pas son score, rien n'est tracé.
+
+**Brancher un fournisseur de direct (14 novembre 2026 : aucun ; le site est construit sans les réglages du direct, il ne lit donc rien).**
+1. Une classe dans [`adapters.py`](vega/live/adapters.py) (`fixtures`, `poll`, `name`, `provider`) et son nom dans `ADAPTERS`, testée avec un flux enregistré du fournisseur comme `test_live.py` le fait avec `replay`.
+2. La variable GitHub `V2_LIVE_PROVIDER` (Settings → Variables du dépôt) à ce nom, puis le workflow Deploy : `LIVE_PROVIDER` allume la planification `vega-v2-live-ingestor`.
+3. Sur Vercel, les trois réglages du site, lus des sorties de la pile :
+   `aws cloudformation describe-stacks --stack-name vega-v2-live --query "Stacks[0].Outputs[?OutputKey=='EventsHttp'||OutputKey=='EventsRealtime'||OutputKey=='BrowserKey'].[OutputKey,OutputValue]" --output text`
+   → `NEXT_PUBLIC_LIVE_EVENTS_HTTP`, `NEXT_PUBLIC_LIVE_EVENTS_REALTIME`, `NEXT_PUBLIC_LIVE_EVENTS_KEY` (une clé publique, faite pour les navigateurs, renouvelée pour 360 jours à chaque déploiement), puis un nouveau déploiement du site.
+4. Vérifier sur un match en cours : `GET /live/matches/{id}` répond, la fiche montre la minute, le score et la courbe, puis passe à `core` après le match ; les écarts vont dans `ops.live_reliability`.
 
 ## Ce qui reste
 

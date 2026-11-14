@@ -32,9 +32,14 @@ test("every rewritten read is served", { skip }, async () => {
 test("cups by their Vega id", { skip }, async () => {
   const read = async (url) => (await get(url)).body;
   const euro = await cupId("open-cups", "euro", read);
-  const nations = await cupId("nations-results", "ignored", read);
+  const nations = await cupId("nations-results", "nations-league", read);
+  const afcon = await cupId("nations-results", "afcon", read);
   assert.match(euro, /^l_v\d{7}$/);
   assert.match(nations, /^l_v\d{7}$/);
+  // International Results serves several competitions: each by its own key.
+  assert.match(afcon, /^l_v\d{7}$/);
+  assert.notEqual(afcon, nations);
+  assert.equal(await cupId("nations-results", "", read), nations);
   assert.equal(await cupId("native", "l_3FJFUl", read), null);
   const { snapshot, edition } = cupPaths(euro, "2024");
   assert.equal((await get(snapshot)).response.status, 200);

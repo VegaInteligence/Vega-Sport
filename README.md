@@ -51,7 +51,7 @@ Principes tenus par le code et ses tests :
 ## Données
 
 - **PitchAPI** : 77 compétitions (73 championnats nationaux, les trois coupes d'Europe de clubs, la Coupe du monde) ; par match : résumé, événements, tirs avec coordonnées et xG, compositions, statistiques d'équipe et de joueur (match et mi-temps), statistiques avancées (passes et conduites progressives, valeurs d'action), réseau de passes, zones de chaleur, momentum, face-à-face.
-- **Sources complémentaires** (`backend/vega/sources`) : OpenFootball (coupes nationales, Euros, Coupes du monde, Coupes du monde des clubs), OpenLigaDB, International Results, open-matchday, classements UEFA et FIFA, Wikidata et Wikimedia (clubs, entraîneurs, palmarès, stades, date de naissance et taille des joueurs). Sources et licences : [docs/CUP_COMPETITIONS.md](docs/CUP_COMPETITIONS.md), [docs/OPENFOOTBALL_HISTORY.md](docs/OPENFOOTBALL_HISTORY.md).
+- **Sources complémentaires** (`backend/vega/sources`) : OpenFootball (coupes nationales, Euros, Coupes du monde, Coupes du monde des clubs, Copa Libertadores et Sudamericana, coupes des champions de la CONCACAF et de la CAF), OpenLigaDB, International Results (dont les Coupes d'Afrique et d'Asie, la Copa América et la Gold Cup), open-matchday, classements UEFA et FIFA, Wikidata et Wikimedia (clubs, entraîneurs, palmarès, stades, date de naissance et taille des joueurs). Sources et licences : [docs/CUP_COMPETITIONS.md](docs/CUP_COMPETITIONS.md), [docs/OPENFOOTBALL_HISTORY.md](docs/OPENFOOTBALL_HISTORY.md).
 - **Archives** 1850–2020, importées une fois.
 
 ## Calculs
@@ -96,7 +96,8 @@ Les ressources AWS gardent leurs noms d'origine (`vega-v2-…`). Procédure, rô
 - Limites connues : les championnats sans assez de matchs contre les autres (MLS, Arabie saoudite, Mexique, Argentine…) donnent un score à leurs joueurs, pas de rang ; la date de naissance et la taille viennent de Wikidata, club par club, pour les seuls joueurs reliés sans doute possible (environ quatre sur dix dans les grands clubs, moins ailleurs), aucun pied fort ; hors Coupe du monde, le football de sélections n'a que des résultats.
 - En service depuis le 14 novembre : forme récente dans le pronostic d'un match (version 2), équipe qui mène dans les probabilités minute par minute d'un match (version 2), tirs cadrés subis sur la page d'un gardien, chiffres de pressing et de territoire sur la fiche d'un match quand la source les envoie, Coupes du monde des clubs 2021 à 2023 dans le sélecteur, sélections des sources de coupes marquées comme telles.
 - Mesuré et laissé de côté ([détail](docs/calculs/07-limites/02-points-d-attention.md)) : courbe d'âge, jours de repos dans le pronostic, règle unique des zéros omis.
-- Suites de tests au 14 novembre : 268 tests Python, 141 tests de l'API, 557 tests du site, toutes vertes.
+- Ajouté le 14 novembre au soir : les coupes continentales et les tournois de sélections des autres confédérations sur la page « Coupes » (les coupes de clubs restent hors des forces, [pourquoi](docs/calculs/05-joueurs/08-audit-classement-puissance.md)), la courbe de probabilités d'un match en cours prête à lire un fournisseur de direct, le flux de l'UEFA écarté (ses conditions interdisent la collecte).
+- Suites de tests au 14 novembre : 269 tests Python, 141 tests de l'API, 561 tests du site, toutes vertes.
 
 ## Organisation du dépôt
 

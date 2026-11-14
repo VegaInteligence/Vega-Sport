@@ -108,7 +108,12 @@ PRESTIGE = {"l_1XLtP0": 1.30,  # World Cup
             "l_38d9HA": 1.08,  # Europa League
             "l_2WZ2tt": 1.04}  # Conference League
 CUP_PRESTIGE = {"world-cup-history": 1.30, "euro": 1.20, "club-world-cup": 1.10, "nations-league": 1.05,
-                "UEFA_1_champions-league": 1.15, "UEFA_1_europa-league": 1.08, "UEFA_1_conference-league": 1.04}
+                "UEFA_1_champions-league": 1.15, "UEFA_1_europa-league": 1.08, "UEFA_1_conference-league": 1.04,
+                # The other confederations' competitions weigh as their European counterpart: the
+                # top club competition as the Champions League, the second as the Europa League,
+                # the continental championship of national teams as the Euro.
+                "copa-libertadores": 1.15, "concacaf-champions": 1.15, "caf-champions-league": 1.15, "copa-sudamericana": 1.08,
+                "afcon": 1.20, "copa-america": 1.20, "asian-cup": 1.20, "gold-cup": 1.20}
 # A round's (annex A.4; the round before the round of 16 counts as it does).
 STAGE = {"knockout": 1.05, "semi_final": 1.10, "final": 1.15}
 LINE_DEFAULT = {0: "goalkeeper", 1: "centre_back", 2: "central_midfielder", 3: "centre_forward"}
@@ -250,6 +255,14 @@ def elo_updates(matches, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME, seeds=N
         yield (mid, a, season, kickoff, ra, rating[a], 1 - eh, 1 - result)
 
 
+# The other confederations' club competitions (cups.py) are kept out of the strengths. Measured
+# on 14 November 2026: with their 1,402 matches between two clubs PitchAPI knows, Brazil's level
+# rose from 1607 to 1654 (3rd, above LaLiga) and Argentina's to 1598 (7th), while 11 Club World
+# Cup matches still tie South America to Europe: the levels count matches between leagues, not
+# between confederations, so a continent tied to the rest by a few matches reads as well
+# measured. They enter once a league's evidence is counted by confederation.
+ELO_APART = ("copa-libertadores", "copa-sudamericana", "concacaf-champions", "caf-champions-league")
+
 # Columns 8 to 11: the match's day, its competition, whether it comes from a complementary
 # source (a cup-source edition), whether it is international (a European competition, or
 # national teams). A complementary match counts between two clubs the PitchAPI editions know.
@@ -268,7 +281,7 @@ JOIN core.competitions c ON c.id = cs.competition_id
 JOIN core.teams th ON th.id = m.home_team_id
 WHERE m.status = 'finished' AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL
   AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL
-  AND (cs.cup_key IS NULL OR (m.match_date IS NOT NULL
+  AND (cs.cup_key IS NULL OR (m.match_date IS NOT NULL AND split_part(cs.cup_key, ':', 2) <> ALL(%(apart)s)
        AND m.home_team_id IN (SELECT team_id FROM known) AND m.away_team_id IN (SELECT team_id FROM known)))
 ORDER BY 3 NULLS LAST, m.match_date NULLS LAST, m.id"""
 
@@ -402,7 +415,7 @@ def refresh_elo(conn):
     """Recompute every strength in match order, then each season's club power ranking."""
     with conn.transaction():
         run = _start(conn, "elo")
-        matches = elo_matches(conn.execute(ELO_MATCHES).fetchall())
+        matches = elo_matches(conn.execute(ELO_MATCHES, {"apart": list(ELO_APART)}).fetchall())
         leagues = home_leagues(matches)
         weights = match_stakes(conn)
         seeds, rounds, _ = league_levels(matches, leagues, weights=weights)

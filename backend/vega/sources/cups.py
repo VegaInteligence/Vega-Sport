@@ -32,11 +32,22 @@ EDITIONS = (
     ("openligadb", "nations-league", "2026/2027"),
     ("openligadb", "germany-cup", "2025/2026"),
     ("openligadb", "germany-cup", "2026/2027"),
+    # The other confederations' club competitions (OpenFootball), since the base's first season.
+    *[("open-cups", "copa-libertadores", s) for s in ("2021", "2022", "2023", "2024", "2025", "2026")],
+    *[("open-cups", "copa-sudamericana", s) for s in ("2021", "2022", "2023", "2024", "2025")],
+    *[("open-cups", "concacaf-champions", s) for s in ("2021", "2022", "2023", "2024", "2025")],
+    *[("open-cups", "caf-champions-league", s) for s in ("2023/2024", "2024/2025")],
+    # The other confederations' national-team tournaments (International Results).
+    *[("nations-results", "afcon", s) for s in ("2021", "2023", "2025")],
+    ("nations-results", "copa-america", "2024"),
+    ("nations-results", "asian-cup", "2023"),
+    *[("nations-results", "gold-cup", s) for s in ("2023", "2025")],
 )
 PROVIDER = {"open-cups": "openfootball", "openligadb": "openligadb", "nations-results": "international_results"}
 # The tournament each summer cup is, for its Vega season (seasons.py: played in June/July,
 # it belongs to the season that ends then).
-TOURNAMENTS = {"euro": "Euro", "world-cup-history": "World Cup", "club-world-cup": "Club World Cup"}
+TOURNAMENTS = {"euro": "Euro", "world-cup-history": "World Cup", "club-world-cup": "Club World Cup",
+               "afcon": "Africa Cup of Nations", "copa-america": "Copa America", "asian-cup": "Asian Cup", "gold-cup": "Gold Cup"}
 
 
 def scopes(now):
@@ -75,7 +86,7 @@ def match_rows(kind, competition, season, body):
                 "home_score_90": ft[0] if ft and et else None, "away_score_90": ft[1] if ft and et else None,
                 "home_score_ht": ht and ht[0], "away_score_ht": ht and ht[1],
                 "home_score_et": et and et[0], "away_score_et": et and et[1],
-                "home_penalty_score": p and p[0], "away_penalty_score": p and p[1],
+                "home_penalty_score": p and p[0], "away_penalty_score": p and p[1], "is_neutral": None,
             }
         else:
             score, penalties = _pair(m.get("score")), _pair(m.get("penalties"))
@@ -89,6 +100,8 @@ def match_rows(kind, competition, season, body):
                 "home_score_ht": None, "away_score_ht": None,
                 "home_score_et": score[0] if score and extra else None, "away_score_et": score[1] if score and extra else None,
                 "home_penalty_score": penalties and penalties[0], "away_penalty_score": penalties and penalties[1],
+                # A tournament's dataset says whether the ground was neutral (the Nations League's rows do not).
+                "is_neutral": m["neutral"] if isinstance(m.get("neutral"), bool) else None,
             }
             key = str(m["key"]).split(":", 1)[1]
         out.append((key, dict(row, position=position)))
@@ -157,7 +170,7 @@ def save(conn, kind, competition, season, body, now):
             (edition, m["round"]),
         ).fetchone()[0] if m["round"] else None
         values = {k: m[k] for k in ("status", "home_score", "away_score", "home_score_90", "away_score_90", "home_score_ht",
-                                     "away_score_ht", "home_score_et", "away_score_et", "home_penalty_score", "away_penalty_score")}
+                                     "away_score_ht", "home_score_et", "away_score_et", "home_penalty_score", "away_penalty_score", "is_neutral")}
         values.update(competition_season_id=edition, season_id=season_id, match_date=m["date"], home_team_id=home, away_team_id=away,
                       home_team_name=m["home"] or None, away_team_name=m["away"] or None,
                       round_id=round_id, group_name=m["group"], match_number=m["number"], archive_position=m["position"], source=provider)
@@ -180,7 +193,7 @@ def run(conn, get, scope, now):
     kind, competition, season = scope.split(":", 2)
     if (kind, competition, season) not in EDITIONS:
         raise ValueError(scope)
-    query = {"competition": competition, "season": season} if kind != "nations-results" else {"season": season}
+    query = {"competition": competition, "season": season}
     answer = bridge("projection", kind, urlencode(query)) or {}
     if answer.get("status") != 200 or not isinstance(answer.get("body"), dict):
         raise SourceError(f"HTTP_{answer.get('status') or 'ERROR'}")
