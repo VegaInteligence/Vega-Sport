@@ -33,6 +33,11 @@ def adapters():
 
 # A failed scope is tried again after this delay (or its period, if shorter), not at every round.
 RETRY_AFTER = timedelta(hours=1)
+# A scope waits this long, at most, for rows another transaction holds, then fails and
+# retries at RETRY_AFTER: the sources run first in the daily pass, before the rankings and
+# the models, which a scope waiting on another writer would hold up as long as that writer
+# (on 14 November 2026 a merge of teams held them for five hours).
+LOCK_WAIT = "30s"
 
 
 def due(conn, now, adapter_name, adapter):
@@ -63,6 +68,7 @@ def run_due(conn, get, now=None, *, names=None):
             code, written, unmatched = None, 0, 0
             try:
                 with conn.transaction():
+                    conn.execute(f"SET LOCAL lock_timeout = '{LOCK_WAIT}'")
                     written, unmatched = adapter.run(conn, get, scope, instant)
             except (SourceError, StoreError, ValueError, KeyError, TypeError, psycopg.Error) as error:
                 # The scope's writes are rolled back; the other scopes still run.

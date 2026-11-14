@@ -63,6 +63,9 @@ CUP_PROVIDERS = ("openfootball", "openligadb", "international_results", "open_ma
 # The country of an archive key whose edition is a European cup.
 EUROPE = "europe"
 CHUNK = 100
+# The longest a statement of the pass may run (run): on 14 November 2026 removing a set of
+# a hundred teams was still running after five hours and held the daily pass behind it.
+STATEMENT_LIMIT = "10min"
 
 
 def scopes(now):
@@ -455,6 +458,9 @@ def duplicates(conn):
 def run(conn, get, scope, now):
     if scope != "teams":
         raise ValueError(scope)
+    # No statement of the pass may run longer than STATEMENT_LIMIT: past it the pass fails,
+    # is rolled back and retried later, and the daily pass that runs it goes on.
+    conn.execute(f"SET LOCAL statement_timeout = '{STATEMENT_LIMIT}'")
     found, candidates = pairs(conn)
     columns = team_columns(conn, [row[0] for row in found]) if found else []
     merged = sum(_merge(conn, found[start:start + CHUNK], columns) for start in range(0, len(found), CHUNK))
