@@ -97,7 +97,7 @@ Les ressources AWS gardent leurs noms d'origine (`vega-v2-…`). Procédure, rô
 - En service depuis le 14 novembre : forme récente dans le pronostic d'un match (version 2), équipe qui mène dans les probabilités minute par minute d'un match (version 2), tirs cadrés subis sur la page d'un gardien, chiffres de pressing et de territoire sur la fiche d'un match quand la source les envoie, Coupes du monde des clubs 2021 à 2023 dans le sélecteur, sélections des sources de coupes marquées comme telles.
 - Mesuré et laissé de côté ([détail](docs/calculs/07-limites/02-points-d-attention.md)) : courbe d'âge, jours de repos dans le pronostic, règle unique des zéros omis.
 - Ajouté le 14 novembre au soir : les coupes continentales et les tournois de sélections des autres confédérations sur la page « Coupes » (les coupes de clubs restent hors des forces, [pourquoi](docs/calculs/05-joueurs/08-audit-classement-puissance.md)), la courbe de probabilités d'un match en cours prête à lire un fournisseur de direct, le flux de l'UEFA écarté (ses conditions interdisent la collecte).
-- Suites de tests au 14 novembre : 269 tests Python, 141 tests de l'API, 561 tests du site, toutes vertes.
+- Suites de tests au 14 novembre : 269 tests Python, 141 tests de l'API, 562 tests du site, toutes vertes.
 
 ## Organisation du dépôt
 

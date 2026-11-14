@@ -147,3 +147,10 @@ test("the other confederations' national-team tournaments are read from Internat
     globalThis.fetch = original;
   }
 });
+
+test("the confederations' cups' rounds read in French", () => {
+  const rows = normalizeOpenCup(["Finals, Final", "Finals, Semifinals", "Finals, Round of 16", "Qualifying, Round 2", "Qual. Round 1", "Preliminary round", "Group, Matchday 3", "Gruppe G", "Playoffs"]
+    .map((round, i) => ({ round, date: "2025-03-0" + (i % 9 + 1), team1: "A", team2: "B", score: { ft: [1, 0] } })));
+  assert.deepEqual(rows.map((r) => r.round), ["Finale", "Demi-finales", "Huitièmes de finale", "Tour préliminaire 2", "Tour préliminaire 1", "Tour préliminaire",
+    "Phase de groupes · Journée 3", "Groupe G", "Barrages"]);
+});

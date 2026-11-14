@@ -16,6 +16,13 @@ function identity(date, home, away) {
 }
 function readableRound(round, group) {
   const convert = (value) => String(value || "")
+    // The confederations' cups (OpenFootball): "Finals, Semifinals", "Qualifying, Round 2", "Gruppe G".
+    .replace(/^Finals,\s*/i, "")
+    .replace(/^(?:Qualifying,|Qual\.)\s*Round\s+(\d+)$/i, "Tour préliminaire $1")
+    .replace(/^Preliminary round$/i, "Tour préliminaire")
+    .replace(/^Group,\s*Matchday\s+(\d+)$/i, "Phase de groupes · Journée $1")
+    .replace(/^Playoffs$/i, "Barrages")
+    .replace(/^Gruppe\s+([A-Z0-9]+)$/i, "Groupe $1")
     .replace(/^Group\s+([A-Z])$/i, "Groupe $1")
     .replace(/^Matchday\s+(\d+)$/i, "Journée $1")
     .replace(/^Round\s+(\d+)$/i, "Tour $1")
