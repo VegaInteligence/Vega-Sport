@@ -5,15 +5,17 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   applyLive,
+  forgetLiveConfig,
   isLiveWindow,
   liveConfigured,
+  loadLiveConfig,
   missing,
   newer,
   readLive,
   subscribeLive,
 } from "../dashboard/frontend/src/services/live-client.js";
 
-const CONFIG = { origin: "https://api.example", http: "abc.appsync-api.us-east-2.amazonaws.com", realtime: "abc.appsync-realtime-api.us-east-2.amazonaws.com", key: "da2-public" };
+const CONFIG = { origin: "https://api.example", provider: "replay", http: "abc.appsync-api.us-east-2.amazonaws.com", realtime: "abc.appsync-realtime-api.us-east-2.amazonaws.com", key: "da2-public" };
 const KICKOFF = Date.parse("2025-09-20T19:00:00Z");
 const STATE = {
   match: "m_live01", revision: 4, status: "in_play", provisional: false, minute: 12, minuteAdded: null, period: "first_half",
@@ -23,9 +25,44 @@ const STATE = {
 const round = (revision, body) => ({ match: "m_live01", revision, ...body });
 const live = (status, minute, home, away) => ({ status, minute, minute_added: null, period: "second_half", home_score: home, away_score: away, finished_at: null });
 
-test("live only with the three AppSync settings", () => {
+test("live only with a provider and the three AppSync settings", () => {
   assert.equal(liveConfigured(CONFIG), true);
   assert.equal(liveConfigured({ ...CONFIG, key: "" }), false);
+  assert.equal(liveConfigured({ ...CONFIG, provider: null }), false);
+  assert.equal(liveConfigured(null), false);
+});
+
+test("the live settings are read once from the API, and again only after a failure", async () => {
+  const calls = [];
+  const answer = (body) => async (url) => {
+    calls.push(url);
+    return { ok: true, status: 200, json: async () => body };
+  };
+  forgetLiveConfig();
+  const off = await loadLiveConfig({ origin: "https://api.example", fetcher: answer({ provider: null }) });
+  assert.equal(liveConfigured(off), false);
+  // Read once per visit: the second call takes the first answer.
+  await loadLiveConfig({ origin: "https://api.example", fetcher: answer({}) });
+  assert.deepEqual(calls, ["https://api.example/live/config"]);
+  forgetLiveConfig();
+  const { origin, ...settings } = CONFIG;
+  assert.deepEqual(await loadLiveConfig({ origin, fetcher: answer(settings) }), CONFIG);
+  forgetLiveConfig();
+  const failing = async () => {
+    throw new Error("offline");
+  };
+  assert.equal(await loadLiveConfig({ origin, fetcher: failing }), null);
+  assert.deepEqual(await loadLiveConfig({ origin, fetcher: answer(settings) }), CONFIG);
+  forgetLiveConfig();
+  // Nothing subscribes without the settings.
+  let opened = 0;
+  const Counted = class {
+    constructor() {
+      opened += 1;
+    }
+  };
+  subscribeLive("m_live01", () => {}, { config: { ...CONFIG, provider: null }, WebSocketImpl: Counted })();
+  assert.equal(opened, 0);
 });
 
 test("the live window: 30 minutes before kick-off to 3 hours after, never once over", () => {

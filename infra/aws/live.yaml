@@ -105,6 +105,12 @@ Resources:
           V2_LIVE_STATE_TABLE: !Ref StateTable
           V2_LIVE_EVENTS_TABLE: !Ref EventsTable
           V2_LIVE_STATS_TABLE: !Ref StatsTable
+          # GET /live/config: the site reads these at run time; empty until a provider is
+          # chosen, so browsers subscribe to nothing while nothing is published.
+          V2_LIVE_PROVIDER: !Ref LiveProvider
+          V2_LIVE_EVENTS_HTTP: !If [HasProvider, !GetAtt EventsApi.Dns.Http, '']
+          V2_LIVE_EVENTS_REALTIME: !If [HasProvider, !GetAtt EventsApi.Dns.Realtime, '']
+          V2_LIVE_BROWSER_KEY: !If [HasProvider, !GetAtt BrowserKey.ApiKey, '']
   ReadUrl:
     Type: AWS::Lambda::Url
     Properties: {AuthType: AWS_IAM, TargetFunctionArn: !GetAtt Read.Arn, InvokeMode: BUFFERED}
