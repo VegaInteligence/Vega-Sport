@@ -39,7 +39,16 @@ La carte « Probabilités » affiche alors ce pronostic, dit ce que vaut chaque 
 
 **Quand les compositions sont lues.** 48 heures avant le match (une composition probable), **50 puis 25 minutes avant le coup d'envoi**, et au coup d'envoi. Les deux lectures d'avant-match datent du 13 novembre 2026. Jusque-là la base ne recevait un onze confirmé qu'au coup d'envoi : ce jour-là, sur 54 matchs à jouer dans les 24 heures, 8 avaient une composition des deux côtés, toutes non confirmées (le dernier onze aligné, selon le fournisseur).
 
-**Ce qui n'est pas encore mesuré.** La part des matchs dont le fournisseur confirme les onze avant le coup d'envoi. Chaque pronostic relu garde l'heure de son premier calcul (`agg.match_lineup_forecasts`, conservé après le match) : cette part, et la justesse de ces pronostics sur les matchs joués, se liront là.
+**Premières mesures (14 novembre 2026).** Les quatre premiers matchs joués après la mise en service ont tous reçu leur pronostic relu **avant** le coup d'envoi, deux à la lecture de 50 minutes et deux à celle de 25 minutes ; aucun match n'est resté sans.
+
+| Match | Premier calcul | Écarts (domicile / extérieur) | Victoire à domicile | Résultat |
+| --- | --- | --- | --- | --- |
+| Inter Bogotá – Independiente Santa Fe | 23 min avant | −0,39 / +0,04 | 23,9 % → 21,7 % | 0–2 |
+| Gifu – Matsumoto Yamaga | 24 min avant | +0,16 / −0,28 | 56,2 % → 59,2 % | 0–0 |
+| Giravanz Kitakyushu – Thespa Gunma | 48 min avant | +0,24 / −0,46 | 52,5 % → 57,4 % | 4–3 |
+| Fukushima United – Sagamihara | 48 min avant | +0,19 / −0,33 | 37,8 % → 41,3 % | 1–0 |
+
+Quatre matchs ne jugent rien de la justesse : elle se lira sur `agg.match_lineup_forecasts` (conservé après le match, avec l'heure du premier calcul de chaque pronostic) quand il y en aura quelques centaines.
 
 Seules les compositions confirmées sont lues : le « dernier onze » ou le onze « probable » du fournisseur ne déplace pas le pronostic.
 
