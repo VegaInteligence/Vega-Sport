@@ -153,6 +153,21 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual(graded, total)
         self.assertGreater(self.one("SELECT count(*) FROM agg.match_grade_roles")[0], 0)
         self.assertLess(abs(self.one("SELECT avg(match_index) FROM agg.player_power_matches WHERE season_id=2025 AND minutes >= 60")[0]), 0.5)
+        # The grades are kept where the statistics are, one per graded player-match, with the
+        # finished year they were read against (none: the year's own rows) and their first value.
+        kept, same, firsts = self.one("""SELECT count(*), count(*) FILTER (WHERE g.z = p.match_index), count(*) FILTER (WHERE g.first_z = g.z)
+            FROM agg.player_match_grades g JOIN agg.player_power_matches p ON p.season_id = g.award_season AND p.match_id = g.match_id AND p.player_id = g.player_id""")
+        self.assertEqual((kept, same, firsts), (graded, graded, graded))
+        self.assertEqual(self.one("SELECT count(*) FROM agg.player_match_grades")[0], graded)
+        # The editions' sums: matches of 20 minutes or more, the minutes-weighted z.
+        sums = self.one("""SELECT sum(grade_count), sum(grade_minutes), round(sum(zm_sum)::numeric, 3) FROM agg.player_grade_editions""")
+        direct = self.one("""SELECT count(*), sum(minutes), round(sum(minutes * z::float8)::numeric, 3) FROM agg.player_match_grades WHERE minutes >= 20""")
+        self.assertEqual(sums, direct)
+        # A second run rewrites no grade that did not move.
+        changed = self.one("SELECT max(changed_at) FROM agg.player_match_grades")[0]
+        power.refresh_players(self.db, 2025)
+        self.assertEqual(self.one("SELECT max(changed_at) FROM agg.player_match_grades")[0], changed)
+        self.assertEqual(self.one("SELECT count(*) FROM agg.player_match_grades")[0], graded)
         # Its level is known exactly against itself: measured, a top division of the men's universe.
         self.assertEqual(self.db.execute("SELECT level_se, tier, universe, movers FROM agg.league_levels").fetchone(), (0.0, 1, "men", 0))
         # The season before has no statistics: its award year is not computed from this season's first months.

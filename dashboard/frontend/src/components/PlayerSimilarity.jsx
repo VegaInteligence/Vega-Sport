@@ -42,7 +42,7 @@ export default function PlayerSimilarity({ profile, cohorts }) {
                   href={f.href("/joueurs/", {
                     id: item.profile.id,
                     q: "",
-                    rmin: "",
+                    gmin: "",
                     stats: "",
                     minutes: "1",
                     playerView: "overview",

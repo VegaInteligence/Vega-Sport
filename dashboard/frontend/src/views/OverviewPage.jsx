@@ -50,7 +50,7 @@ import {
   matchdayWindow,
   playerOfTheWeek,
   personalClubIds,
-  recentRatings,
+  recentGrades,
   seasonLeaders,
   seasonProgress,
   seasonTotals,
@@ -173,9 +173,9 @@ function LegacyOverview() {
       featured
         ? scopedRows
             .filter(
-              (r) => r.matchId === featured.id && Number.isFinite(r.rating),
+              (r) => r.matchId === featured.id && r.minutes >= 60 && Number.isFinite(r.gradeZ),
             )
-            .sort((a, b) => b.rating - a.rating)[0]
+            .sort((a, b) => b.gradeZ - a.gradeZ)[0]
         : null,
     [featured, scopedRows],
   );
@@ -232,7 +232,7 @@ function LegacyOverview() {
   const potwMatch = potw && matchIndex.get(potw.matchId);
   const potwSeason = potw && totals.find((p) => p.playerId === potw.playerId);
   const potwRecent = potw
-    ? recentRatings(scopedRows, potw.playerId, f.season)
+    ? recentGrades(scopedRows, potw.playerId, f.season)
     : [];
   const others = performances
     .filter((p) => p.playerId !== potw?.playerId)

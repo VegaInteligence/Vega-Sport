@@ -8,7 +8,7 @@ const text = (value, length = 100) =>
 export const DEFAULT_COLUMNS = [
   "matches",
   "minutes",
-  "rating",
+  "grade",
   "goals",
   "assists",
   "xg",
@@ -140,7 +140,7 @@ export function cleanSettings(value = {}) {
     const valid = [...new Set(Array.isArray(items) ? items : fallback)].filter(
       (key) =>
         SCOUT_METRICS[key] ||
-        (meta && ["matches", "minutes", "rating"].includes(key)),
+        (meta && ["matches", "minutes", "grade"].includes(key)),
     );
     return valid.length ? valid.slice(0, 32) : fallback;
   };
@@ -212,7 +212,7 @@ export function cleanResearch(value) {
         "role",
         "venue",
         "result",
-        "rmin",
+        "gmin",
         "from",
         "to",
         "stats",

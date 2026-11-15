@@ -58,14 +58,14 @@ export const EMPTY_ADVANCED = Object.freeze({
   role: "all",
   venue: "all",
   result: "all",
-  rating: null,
+  grade: null,
   from: "",
   to: "",
   conditions: [],
 });
 
 export function parseAdvanced(params) {
-  const rating = Number.parseFloat(params.get("rmin") ?? "");
+  const grade = Number.parseFloat(params.get("gmin") ?? "");
   return {
     positions: (params.get("pos") || "")
       .split(",")
@@ -73,7 +73,7 @@ export function parseAdvanced(params) {
     role: option(params.get("role"), ROLES),
     venue: option(params.get("venue"), VENUES),
     result: option(params.get("result"), RESULTS),
-    rating: Number.isFinite(rating) ? rating : null,
+    grade: Number.isFinite(grade) ? grade : null,
     from: day(params.get("from")),
     to: day(params.get("to")),
     conditions: (params.get("stats") || "")
@@ -96,7 +96,7 @@ export function advancedQuery(advanced = EMPTY_ADVANCED) {
     role: advanced.role === "all" ? "" : advanced.role,
     venue: advanced.venue === "all" ? "" : advanced.venue,
     result: advanced.result === "all" ? "" : advanced.result,
-    rmin: isNumber(advanced.rating) ? String(advanced.rating) : "",
+    gmin: isNumber(advanced.grade) ? String(advanced.grade) : "",
     from: advanced.from,
     to: advanced.to,
     stats: advanced.conditions
@@ -136,8 +136,8 @@ export function advancedTest(advanced, matches) {
     if (advanced.role === "starter" && row.starter !== true) return false;
     if (advanced.role === "sub" && row.starter !== false) return false;
     if (
-      isNumber(advanced.rating) &&
-      !(isNumber(row.rating) && row.rating >= advanced.rating)
+      isNumber(advanced.grade) &&
+      !(isNumber(row.grade) && row.grade >= advanced.grade)
     )
       return false;
     if (advanced.from && !(row.date >= advanced.from)) return false;
@@ -193,11 +193,11 @@ export function advancedChips(advanced) {
       label: labelOf(RESULTS, advanced.result),
       clear: (a) => ({ ...a, result: "all" }),
     });
-  if (isNumber(advanced.rating))
+  if (isNumber(advanced.grade))
     chips.push({
-      key: "rmin",
-      label: `Note ≥ ${String(advanced.rating).replace(".", ",")}`,
-      clear: (a) => ({ ...a, rating: null }),
+      key: "gmin",
+      label: `Note Vega ≥ ${String(advanced.grade).replace(".", ",")}`,
+      clear: (a) => ({ ...a, grade: null }),
     });
   if (advanced.from || advanced.to)
     chips.push({

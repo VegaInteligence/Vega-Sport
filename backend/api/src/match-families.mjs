@@ -55,7 +55,7 @@ const DUELS = [integer("Duels won", "duel_won", "duels_won"), integer("Duels los
 export const PLAYER_LAYOUTS = {
   outfield: [
     ["top_stats", "Top stats", [
-      integer("Goals", "goals"), double("Rating", "rating_title", "rating"), integer("Assists", "assists"),
+      integer("Goals", "goals"), double("Vega grade", "vega_grade", "grade"), integer("Assists", "assists"),
       ["Shotmap", "", "boolean", "shotmap"], double("xG + xA", "xg_and_xa", "xg_and_xa"), integer("Total shots", "total_shots"),
       SHOT_ACCURACY, integer("Minutes played", "minutes_played"), PASSES, integer("Chances created", "chances_created"),
       integer("Shots on target", "ShotsOnTarget", "shots_on_target"), integer("Shots off target", "ShotsOffTarget", "shots_off_target"),
@@ -84,7 +84,7 @@ export const PLAYER_LAYOUTS = {
   ],
   keeper: [
     ["top_stats", "Top stats", [
-      integer("Saves", "saves"), double("Rating", "rating_title", "rating"), integer("Throws", "player_throws", "throw_ins"),
+      integer("Saves", "saves"), double("Vega grade", "vega_grade", "grade"), integer("Throws", "player_throws", "throw_ins"),
       integer("Punches", "punches"), ["Shotmap", "", "boolean", "shotmap"], TACKLES, integer("Touches", "touches"),
       integer("Duels won", "duel_won", "duels_won"), integer("Clearances", "clearances"), integer("High claim", "keeper_high_claim", "high_claims"),
       integer("Recoveries", "recoveries"), integer("Was fouled", "was_fouled"), double("xGOT faced", "expected_goals_on_target_faced", "xgot_faced"),

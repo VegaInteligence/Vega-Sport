@@ -129,7 +129,7 @@ export function mergeSeason(manifest, selected, parts) {
       xaAppearanceCount: sum("xaAppearanceCount"),
       startDate: dates[0] || null,
       endDate: dates.at(-1) || null,
-      ratingSource: "PitchAPI",
+      gradeSource: "Vega",
       rankingAvailable: false,
     },
     competitions,

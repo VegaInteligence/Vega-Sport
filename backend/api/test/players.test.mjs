@@ -15,15 +15,15 @@ const METRICS = [
   "goalsPrevented", "passAccuracy", "duelRate",
 ];
 const RECORD_KEYS = [
-  "id", "playerId", "name", "imageUrl", "team", "league", "position", "power", "positionId", "matches", "minutes", "rating",
+  "id", "playerId", "name", "imageUrl", "team", "league", "position", "power", "positionId", "matches", "minutes", "grade",
   ...METRICS, "finishingDelta", "totals", "profile",
 ].sort();
 const PROFILE_KEYS = [
   "id", "name", "imageUrl", "role", "teams", "teamIds", "leagueIds", "leagues", "matches", "minutes", "unknownMinutes",
-  "starts", "knownStarts", "rating", "ratingCount", "stats", "ratios", "identity", "latest", "rows",
+  "starts", "knownStarts", "grade", "gradeCount", "stats", "ratios", "identity", "latest", "rows",
 ].sort();
 
-test("player directory: envelope, rating order, records", { skip }, async () => {
+test("player directory: envelope, grade order, records", { skip }, async () => {
   const { response, body } = await get(players);
   assert.equal(response.status, 200);
   assert.deepEqual(Object.keys(body).sort(), ["data", "meta", "pagination"]);
@@ -50,7 +50,8 @@ test("player directory: envelope, rating order, records", { skip }, async () => 
   });
   assert.equal(body.data.players.find((p) => p.id === "p_aaaab3").power, null);
   close(p1.minutes, 260 / 3);
-  close(p1.rating, 20.5 / 3, 6);
+  // The season grade: the grade of his minutes-weighted mean z (2.5, −3 and 0 over 90, 90 and 80 minutes).
+  close(p1.grade, 100 / (1 + 10 ** (((90 * 3 - 90 * 2.5) / 260) / 4)), 6);
   close(p1.goals, 2 / 3);
   close(p1.xg, 1.9 / 3);
   close(p1.passAccuracy, (100 * 45) / 57);
@@ -91,8 +92,8 @@ test("unknown minutes, bench entries and starts", { skip }, async () => {
 
 test("rankings and their eligibility", { skip }, async () => {
   assert.deepEqual(ids((await get(players + "&ranking=goals")).body), ["p_aaaab4", "p_aaaab1"]);
-  // Fewer than five rated matches: nobody is ranked on rating.
-  assert.equal((await get(players + "&ranking=rating")).body.pagination.total, 0);
+  // Fewer than five graded matches: nobody is ranked on the season grade.
+  assert.equal((await get(players + "&ranking=grade")).body.pagination.total, 0);
   assert.deepEqual(ids((await get(players + "&basis=total&sort=goals")).body), ["p_aaaab4", "p_aaaab1", "p_aaaab3", "p_aaaab2"]);
   assert.deepEqual(ids((await get(players + "&sort=name&direction=asc")).body), ["p_aaaab4", "p_aaaab1", "p_aaaab3", "p_aaaab2"]);
 });

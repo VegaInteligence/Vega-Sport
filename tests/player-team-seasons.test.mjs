@@ -37,8 +37,8 @@ function entry(season, rows) {
 test("splits played team seasons, aggregates competitions, and retains missing metrics", () => {
   const rows = playerTeamSeasons([
     entry("2026/2027", [
-      row("1", "a", "l_0ErfuF", { goals: 1, rating: 8 }),
-      row("2", "a", "cup", { goals: 0, rating: 6 }),
+      row("1", "a", "l_0ErfuF", { goals: 1, gradeZ: 1 }),
+      row("2", "a", "cup", { goals: 0, gradeZ: -1 }),
       row("3", "b", "l_1XLtP0", { assists: 0 }),
       row("4", "c", "l_0ErfuF", { minutes: 25, goals: 2 }),
       row("4", "c", "l_0ErfuF", { minutes: 25, goals: 2 }),
@@ -56,7 +56,7 @@ test("splits played team seasons, aggregates competitions, and retains missing m
   );
   assert.equal(rows[0].profile.matches, 2);
   assert.equal(rows[0].profile.minutes, 180);
-  assert.equal(rows[0].profile.rating, 7);
+  assert.equal(rows[0].profile.grade, 50);
   assert.equal(seasonMetric(rows[0].profile, "goals").value, 1);
   assert.equal(seasonMetric(rows[0].profile, "assists").value, null);
   assert.equal(seasonMetric(rows[2].profile, "assists").value, 0);

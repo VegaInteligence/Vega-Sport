@@ -212,7 +212,19 @@ def main(dsn):
     # Match grades (099): match 1's players, a forward's great match, a winger's ordinary one, and a
     # keeper's ten minutes, too short and too ordinary for a grade to show.
     x("""INSERT INTO agg.player_power_matches(season_id,match_id,player_id,team_id,role,minutes,contribution,run_id,match_index)
-         VALUES (2025,1,101,1,'centre_forward',90,1.6,%(run)s,2.5),(2025,1,104,2,'winger',90,0.0,%(run)s,0.0),(2025,1,103,4,'goalkeeper',10,0.1,%(run)s,0.4)""", {"run": run})
+         VALUES (2025,1,101,1,'centre_forward',90,1.6,%(run)s,2.5),(2025,1,104,2,'winger',70,0.0,%(run)s,0.0),(2025,1,103,4,'goalkeeper',10,0.1,%(run)s,0.4)""", {"run": run})
+    # Vega's grades where the statistics are (107): every rated match of the seed gets the
+    # normal score z = 3 (rating − 7), the source's order kept; match 1's three ranked ones are those above.
+    x("""INSERT INTO agg.player_match_grades(season_id,match_id,player_id,award_season,team_id,role,minutes,z,first_z,run_id)
+         SELECT season_id,match_id,player_id,2025,team_id,'centre_forward',minutes_played,3*(rating-7),3*(rating-7),%(run)s
+         FROM core.player_match_stats s WHERE rating IS NOT NULL AND minutes_played>0
+           AND NOT EXISTS (SELECT 1 FROM agg.player_power_matches p WHERE p.match_id=s.match_id AND p.player_id=s.player_id)""", {"run": run})
+    x("""INSERT INTO agg.player_match_grades(season_id,match_id,player_id,award_season,team_id,role,minutes,z,first_z,run_id)
+         SELECT 2025,match_id,player_id,2025,team_id,role,minutes,match_index,match_index,run_id FROM agg.player_power_matches WHERE match_id=1""")
+    x("""INSERT INTO agg.player_grade_editions(season_id,competition_season_id,player_id,grade_count,grade_minutes,zm_sum)
+         SELECT g.season_id,m.competition_season_id,g.player_id,count(*),sum(g.minutes),sum(g.minutes*g.z::float8)
+         FROM agg.player_match_grades g JOIN core.matches m ON m.id=g.match_id AND m.season_id=g.season_id
+         WHERE g.minutes>=20 GROUP BY 1,2,3""")
     # A breakout (088): the keeper below the ranking's minutes, ahead of 91.3 % of his role's regulars.
     x("INSERT INTO agg.breakout_runs(season_id, version, computed_at, candidates, flagged) VALUES (2025, 'breakout-v2', '2025-09-06T03:12:00Z', 12, 1)")
     x("INSERT INTO agg.player_breakouts(season_id, player_id, role, team_id, minutes, rate, percentile, regulars, rank) VALUES (2025, 103, 'goalkeeper', 4, 180, 0.042, 91.3, 40, 1)")

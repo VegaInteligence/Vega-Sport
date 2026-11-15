@@ -208,7 +208,7 @@ export async function powerOf(read, kind, season, ids) {
         ownContribution: round(r.own_total, 2), clubLevel: round(r.level_total, 2), linked: r.linked !== false, topDivision: r.top_division !== false,
         // A provisional rank: under the minutes bar, in a league whose level is still uncertain, in a
         // club the base knows in no league, or known by his national team alone (provisionalReason).
-        eligible: r.eligible !== false, provisional: r.eligible === false || r.linked === false,
+        eligible: r.eligible !== false, provisional: provisionalReason(r) !== null,
         universe: r.universe ?? "men", inLeague: r.in_league ?? null, provisionalReason: provisionalReason(r),
         blocks: blocksOf(r), roles: roles.get(r.player_id) ?? [],
       });
@@ -498,13 +498,12 @@ async function matchGrades(read, params) {
   validateParams(params, ["match"]);
   const id = params.get("match");
   if (!MATCH.test(id || "")) reject(400, "Paramètre invalide.");
-  // The award year of the match's day (1 August to 31 July) is the ranking's season: its rows,
-  // each with the player's appearance (name, photo, team, goals), so a match the source rated no
+  // The match's grades, read where its statistics are (the edition's season, the match), each with the player's appearance (name, photo, team, goals), so a match the source rated no
   // one in still lists its best players.
   const rows = await read(
     `SELECT g.*, a.player_name AS name, a.image_url, a.team, a.goals, a.assists
      FROM api.fixtures f JOIN api.match_grades g
-       ON g.match_key=f.match_id AND g.season_id=extract(year FROM f.day - interval '7 months')::smallint
+       ON g.edition_season=f.season_id AND g.match_key=f.match_id
      LEFT JOIN api.player_appearances a
        ON a.season_id=f.season_id AND a.match_id=f.match_id AND a.player_id=api.internal_id('player',g.player_id)
      WHERE f.match_id=api.internal_id('match',$1)

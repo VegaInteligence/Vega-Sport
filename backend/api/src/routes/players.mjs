@@ -40,8 +40,12 @@ import {
   resolveEditions,
 } from "../publication.mjs";
 
-// dashboard/shared/player-profile.js (main).
-export const MIN_RATED_MATCHES = 5;
+// The fewest graded matches (of 20 minutes or more) for the ranking by season grade.
+export const MIN_GRADED_MATCHES = 5;
+// A season grade: the grade of the minutes-weighted mean z of the player's matches of 20
+// minutes or more (vega/power.py, GRADE_SEASON_MINUTES), on the 0–100 curve.
+const GRADED = (a) => `${a}.minutes>=20 AND ${a}.grade_z IS NOT NULL`;
+const seasonGradeSql = (zm, minutes) => `CASE WHEN ${minutes}>0 THEN 100/(1+power(10,-(${zm})/(${minutes})/4.0)) END`;
 
 // The observed metrics of season-player.js; the columns of api.player_appearances.
 export const PLAYER_COUNT_METRICS = [
@@ -97,7 +101,7 @@ export const WHOLE_PAGE = 3000;
 export function parsePlayerRead(params) {
   validateParams(params, [
     "season", "league", "leagues", "generation", "q", "minutes", "pos", "role", "venue", "result",
-    "rmin", "from", "to", "stats", "match", "basis", "sort", "direction", "ranking", "page", "limit", "whole", "group",
+    "gmin", "from", "to", "stats", "match", "basis", "sort", "direction", "ranking", "page", "limit", "whole", "group",
     "detail", "v",
   ]);
   const detail = params.get("detail");
@@ -148,14 +152,14 @@ export function parsePlayerRead(params) {
     match,
     conditions,
     minutes: numberParam(params, "minutes", 1, { min: 0, max: 150 }),
-    rating: numberParam(params, "rmin", null, { min: 0, max: 10 }),
+    grade: numberParam(params, "gmin", null, { min: 0, max: 100 }),
     role: option(params, "role", ["all", "starter", "sub"], "all"),
     venue: option(params, "venue", ["all", "home", "away"], "all"),
     result: option(params, "result", ["all", "win", "draw", "loss"], "all"),
     basis: option(params, "basis", ["total", "perMatch", "per90"], "perMatch"),
-    sort: option(params, "sort", ["name", "matches", "minutes", "rating", "finishingDelta", ...metricKeys], "rating"),
+    sort: option(params, "sort", ["name", "matches", "minutes", "grade", "finishingDelta", ...metricKeys], "grade"),
     direction: option(params, "direction", ["asc", "desc"], "desc"),
-    ranking: option(params, "ranking", ["", "rating", "goals", "assists", "clinical", "wasteful"], ""),
+    ranking: option(params, "ranking", ["", "grade", "goals", "assists", "clinical", "wasteful"], ""),
   };
 }
 
@@ -312,7 +316,7 @@ function playerSelection(filters, values, nameSort) {
   // Eligibility and ordering aggregate only the metrics they need; the page's
   // players get their complete profile after LIMIT, from the same played rows.
   const requiredMetrics = new Set(filters.conditions.map(({ key }) => key));
-  const rankingMetrics = { rating: [], goals: ["goals", "xg"], assists: ["assists", "xa"], clinical: ["goals", "xg"], wasteful: ["goals", "xg"] };
+  const rankingMetrics = { grade: [], goals: ["goals", "xg"], assists: ["assists", "xa"], clinical: ["goals", "xg"], wasteful: ["goals", "xg"] };
   const finishingRequired = filters.ranking ? ["clinical", "wasteful"].includes(filters.ranking) : filters.sort === "finishingDelta";
   for (const key of filters.ranking
     ? rankingMetrics[filters.ranking]
@@ -336,7 +340,7 @@ function playerSelection(filters, values, nameSort) {
   const averageMetrics = metricKeys.map((key) => `${metricValue(key)} AS "${key}"`).join(",\n");
   const thresholds = ["true"];
   if (filters.minutes) thresholds.push(`${comparisonNumberSql("d.minutes")}>=${comparisonNumberSql(b(filters.minutes))}`);
-  if (filters.rating !== null) thresholds.push(`${comparisonNumberSql("d.rating")}>=${comparisonNumberSql(b(filters.rating))}`);
+  if (filters.grade !== null) thresholds.push(`${comparisonNumberSql("d.grade")}>=${comparisonNumberSql(b(filters.grade))}`);
   if (filters.positions.length)
     thresholds.push(`CASE WHEN d.role_code IN('AM','M') THEN 'M' ELSE d.role_code END=ANY(${b(filters.positions)}::text[])`);
   if (filters.groups.length)
@@ -348,9 +352,9 @@ function playerSelection(filters, values, nameSort) {
       `${normalizedSql("concat_ws(' ',d.name,array_to_string(d.teams,' · '),array_to_string(d.leagues,' · '),d.search_aliases)")} LIKE ${b(`%${likeText(filters.q)}%`)}`,
     );
   const ranking = {
-    rating: {
-      eligible: `d.rating_count>=${MIN_RATED_MATCHES}`,
-      order: `${comparisonNumberSql("d.rating")} DESC NULLS LAST,d.rating_count DESC`,
+    grade: {
+      eligible: `d.grade_count>=${MIN_GRADED_MATCHES}`,
+      order: `${comparisonNumberSql("d.grade")} DESC NULLS LAST,d.grade_count DESC`,
     },
     goals: {
       eligible: `d."goals_count">0 AND ${comparisonNumberSql('d."goals_sum"')}>0`,
@@ -408,7 +412,7 @@ export function playerReadQuery(filters, params, editions) {
 WITH publication AS MATERIALIZED (${publication}),
 source AS MATERIALIZED (
  SELECT a.season_id,a.match_id,a.player_id,a.player_name,a.image_url,a.team_id,a.team,a.league_id,a.league,a.date,
- a.minutes,a.rating,a.starter,a.position_number,${[...sourceMetrics].map((key) => `a.${snake(key)},`).join("")}
+ a.minutes,a.grade_z,a.starter,a.position_number,${[...sourceMetrics].map((key) => `a.${snake(key)},`).join("")}
  row_number() OVER(ORDER BY a.league_id,a.date NULLS LAST,a.kickoff_at NULLS LAST,a.match_id,a.player_id) source_order
  FROM api.player_appearances a WHERE ${where}
 ), identities AS (
@@ -440,7 +444,8 @@ source AS MATERIALIZED (
 ), aggregates AS (
  SELECT p.player_id,count(*)::int matches,sum(p.minutes) total_minutes,
  count(*) FILTER(WHERE p.starter IS TRUE)::int starts,count(*) FILTER(WHERE p.starter IS NOT NULL)::int known_starts,
- avg(p.rating) FILTER(WHERE ${finiteSql("p.rating")}) rating,count(*) FILTER(WHERE ${finiteSql("p.rating")})::int rating_count,
+ ${seasonGradeSql(`sum(p.minutes*p.grade_z) FILTER(WHERE ${GRADED("p")})`, `sum(p.minutes) FILTER(WHERE ${GRADED("p")})`)} grade,
+ count(*) FILTER(WHERE ${GRADED("p")})::int grade_count,
  array_agg(DISTINCT p.team_id) FILTER(WHERE p.team_id IS NOT NULL) internal_team_ids,
  array_agg(DISTINCT p.league_id) FILTER(WHERE p.league_id IS NOT NULL) league_ids${earlyAggregates ? `,\n${earlyAggregates}` : ""}
  FROM played p GROUP BY p.player_id
@@ -451,7 +456,7 @@ source AS MATERIALIZED (
  coalesce(le.names,'{}'::text[]) leagues,coalesce(r.role_code,${positionLineSql("i.position_number")}) role_code,
  coalesce(a.matches,0) matches,CASE WHEN a.matches>0 THEN a.total_minutes/a.matches WHEN u.amount>0 THEN NULL ELSE 0 END minutes,
  coalesce(a.total_minutes,0) total_minutes,coalesce(a.starts,0) starts,coalesce(a.known_starts,0) known_starts,
- coalesce(u.amount,0) unknown_minutes,a.rating,coalesce(a.rating_count,0) rating_count,
+ coalesce(u.amount,0) unknown_minutes,a.grade,coalesce(a.grade_count,0) grade_count,
  coalesce(a.internal_team_ids,'{}'::int[]) internal_team_ids,coalesce(a.league_ids,'{}'::text[]) league_ids,
  al.search_aliases${earlyProfile ? `,\n${earlyProfile}` : ""}
  FROM identities i LEFT JOIN aggregates a USING(player_id) LEFT JOIN latest l USING(player_id)
@@ -535,7 +540,7 @@ function appearanceRows(filters, params, values, editions, earlyCounts, earlyRat
    nullif(x.${key}[4],-1)::int ${prefix}_team_id,nullif(x.${key}[5],-1)::int ${prefix}_position`;
   const early = [...listCounts(earlyCounts), ...listRatios(earlyRatios)];
   const before = `facts AS MATERIALIZED (
- SELECT a.season_id,a.competition_season_id,a.match_id,a.player_id,a.team_id,a.position_number,a.starter,a.minutes,a.rating,
+ SELECT a.season_id,a.competition_season_id,a.match_id,a.player_id,a.team_id,a.position_number,a.starter,a.minutes,a.grade_z,
  ${PLAYER_COUNT_METRICS.map((key) => `a.${snake(key)}`).join(",")},
  ${day} AS day,${kick} AS kick,ARRAY[coalesce(${day},${LAST}),${kick},a.match_id::bigint] AS ord
  FROM api.player_appearances a WHERE ${appearanceWhere(filters, params, values, editions)}
@@ -546,8 +551,9 @@ function appearanceRows(filters, params, values, editions, earlyCounts, earlyRat
    count(*) FILTER(WHERE f.minutes IS NULL)::int unknown_matches,
    count(*) FILTER(WHERE f.minutes>0 AND f.starter IS TRUE)::int starts,
    count(*) FILTER(WHERE f.minutes>0 AND f.starter IS NOT NULL)::int known_starts,
-   sum(f.rating) FILTER(WHERE f.minutes>0 AND ${finiteSql("f.rating")}) rating_sum,
-   count(*) FILTER(WHERE f.minutes>0 AND ${finiteSql("f.rating")})::int rating_count,
+   sum(f.minutes*f.grade_z) FILTER(WHERE ${GRADED("f")}) grade_zm,
+   coalesce(sum(f.minutes) FILTER(WHERE ${GRADED("f")}),0)::int grade_minutes,
+   count(*) FILTER(WHERE ${GRADED("f")})::int grade_count,
    min(${recent}) i,min(${recent}) FILTER(WHERE f.minutes>0) l${early.length ? `,\n   ${early.join(",")}` : ""}
    FROM facts f GROUP BY f.season_id,f.competition_season_id,f.player_id
  ) x
@@ -678,7 +684,7 @@ ${worked ? worked.before : ""}editions AS MATERIALIZED (
 ), aggregates AS (
  SELECT r.player_id,sum(r.matches)::int matches,sum(r.total_minutes)::float8 total_minutes,
  sum(r.unknown_matches)::int unknown_minutes,sum(r.starts)::int starts,sum(r.known_starts)::int known_starts,
- sum(r.rating_sum)/nullif(sum(r.rating_count),0) rating,sum(r.rating_count)::int rating_count${earlyAggregates ? `,\n${earlyAggregates}` : ""}
+ ${seasonGradeSql("sum(r.grade_zm)", "sum(r.grade_minutes)")} grade,coalesce(sum(r.grade_count),0)::int grade_count${earlyAggregates ? `,\n${earlyAggregates}` : ""}
  FROM ${rows.editions} r WHERE ${scope("r")}${generation}
  GROUP BY r.player_id
 ),
@@ -687,7 +693,7 @@ ${detailSql(true)}averages AS (
  -- The stored folded name (the folding of normalizedSql); 'Joueur' folds to 'joueur'.
  CASE WHEN k.name IS NULL OR k.name='' THEN 'joueur' ELSE k.search_name END sort_name,
  a.matches,CASE WHEN a.matches>0 THEN a.total_minutes/a.matches WHEN a.unknown_minutes>0 THEN NULL ELSE 0 END minutes,
- a.total_minutes,a.starts,a.known_starts,a.unknown_minutes,a.rating,a.rating_count${needsRole ? `,\n ${roleSql} role_code` : ""}${
+ a.total_minutes,a.starts,a.known_starts,a.unknown_minutes,a.grade,a.grade_count${needsRole ? `,\n ${roleSql} role_code` : ""}${
    needsText ? `,\n ${teamsSql} teams,${leaguesSql} leagues,al.search_aliases` : ""
  }${earlyProfile ? `,\n${earlyProfile}` : ""}
  FROM aggregates a JOIN api.player_keys k ON k.player_id=a.player_id${
@@ -782,8 +788,8 @@ function playerProfile(row) {
     unknownMinutes: Number(row.unknown_minutes),
     starts: Number(row.starts),
     knownStarts: Number(row.known_starts),
-    rating: row.rating,
-    ratingCount: Number(row.rating_count),
+    grade: row.grade,
+    gradeCount: Number(row.grade_count),
     stats,
     ratios,
     identity: identity(row.identity, row.player_id),
@@ -808,7 +814,7 @@ export function playerReadRecord(parts) {
     positionId: role?.positionId ?? null,
     matches: profile.matches,
     minutes: row.minutes,
-    rating: row.rating,
+    grade: row.grade,
     ...Object.fromEntries(metricKeys.map((key) => [key, row[key] ?? null])),
     finishingDelta: row.finishingDelta,
     totals: { goals: stats.goals?.sum ?? null, assists: stats.assists?.sum ?? null, xg: stats.xg?.sum ?? null },

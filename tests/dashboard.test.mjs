@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import {filterAppearances, filterMatches, seasonLabel, sortRows, per90, sumKnown, csvString, escapeHtml} from '../dashboard/frontend/src/model.js';
 
 const rows = [
-  {id:'a', name:'Álex', team:'Liège', leagueId:'A', season:'2026', matchId:'m1', minutes:45, xg:0, rating:7},
-  {id:'b', name:'Bob', team:'Lens', leagueId:'B', season:'2026/2027', matchId:'m2', minutes:90, xg:null, rating:null},
-  {id:'c', name:'Clément', team:'Lille', leagueId:'B', season:'2026/2027', matchId:'m2', minutes:0, xg:null, rating:null},
-  {id:'d', name:'Dan', team:'Lens', leagueId:'B', season:'2026/2027', matchId:'m2', minutes:20, xg:1, rating:8}
+  {id:'a', name:'Álex', team:'Liège', leagueId:'A', season:'2026', matchId:'m1', minutes:45, xg:0, grade:70},
+  {id:'b', name:'Bob', team:'Lens', leagueId:'B', season:'2026/2027', matchId:'m2', minutes:90, xg:null, grade:null},
+  {id:'c', name:'Clément', team:'Lille', leagueId:'B', season:'2026/2027', matchId:'m2', minutes:0, xg:null, grade:null},
+  {id:'d', name:'Dan', team:'Lens', leagueId:'B', season:'2026/2027', matchId:'m2', minutes:20, xg:1, grade:80}
 ];
 const filters = {query:'',league:'all',season:'all',minutes:1};
 
@@ -24,12 +24,12 @@ test('missing values always sort last and observed zero remains a real value', (
   assert.deepEqual(sortRows(rows,'xg','asc').map(x=>x.id),['a','d','b','c']);
   assert.deepEqual(sortRows(rows,'xg','desc').map(x=>x.id),['d','a','b','c']);
 });
-test('per-90 transformations preserve missingness and never transform supplier ratings', () => {
+test('per-90 transformations preserve missingness and never transform Vega grades', () => {
   assert.equal(per90(null,45),null);
   assert.equal(per90(2,0),null);
   assert.equal(per90(0,45),0);
   assert.equal(per90(2,45),4);
-  assert.equal(sortRows(rows,'rating','desc','per90')[0].id,'d');
+  assert.equal(sortRows(rows,'grade','desc','per90')[0].id,'d');
   assert.equal(sumKnown([null,undefined]),null);
 });
 test('a player search resolves the correct match without depending on the minutes filter', () => {

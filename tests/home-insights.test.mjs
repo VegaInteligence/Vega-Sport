@@ -164,7 +164,7 @@ test("weekly results and appearances use the Paris day of the match timestamp", 
       matchId: late.id,
       date: "2026-11-01",
       minutes: 90,
-      rating: 9,
+      gradeZ: 2,
     };
   assert.equal(inWindow(late, period), true);
   assert.deepEqual(
@@ -192,7 +192,7 @@ test("in-progress and cancelled matches cannot supply weekly winners", () => {
       matchId: m.id,
       date: m.date,
       minutes: 90,
-      rating: 8 + i,
+      gradeZ: 1 + i,
     }));
   assert.equal(finishedMatch(live), false);
   assert.equal(finishedMatch(cancelled), false);
@@ -379,7 +379,7 @@ test("the player of the week comes from a Top 5 league or a European cup first",
       leagueId: ERE,
       date: "2026-11-01",
       minutes: 90,
-      rating: 9.9,
+      gradeZ: 2.9,
       goals: 4,
     },
     {
@@ -389,7 +389,7 @@ test("the player of the week comes from a Top 5 league or a European cup first",
       leagueId: L1,
       date: "2026-10-30",
       minutes: 71,
-      rating: 9.8,
+      gradeZ: 2.8,
       goals: 3,
     },
     {
@@ -399,7 +399,7 @@ test("the player of the week comes from a Top 5 league or a European cup first",
       leagueId: L1,
       date: "2026-10-30",
       minutes: 30,
-      rating: 10,
+      gradeZ: 3,
     },
   ];
   const week = weekPerformances(rows, window);
@@ -422,7 +422,7 @@ test("season leaders compare goals with expected goals", () => {
       minutes: 90,
       goals: 2,
       xg: 1,
-      rating: 8,
+      gradeZ: 1,
     })),
     ...Array.from({ length: 10 }, (_, i) => ({
       id: "g" + i,
@@ -434,14 +434,14 @@ test("season leaders compare goals with expected goals", () => {
       minutes: 90,
       goals: i ? 0 : 1,
       xg: 0.5,
-      rating: 6.5,
+      gradeZ: -0.5,
     })),
   ];
   const leaders = seasonLeaders(seasonTotals(rows));
   assert.equal(leaders.goals[0].name, "Raphinha");
   assert.equal(leaders.clinical[0].goals - leaders.clinical[0].xg, 10);
   assert.equal(leaders.wasteful[0].name, "García");
-  assert.equal(leaders.rating[0].name, "Raphinha");
+  assert.equal(leaders.grade[0].name, "Raphinha");
   assert.equal(leaders.goals[0].lastId, "r9");
 });
 
@@ -454,7 +454,7 @@ test("missing or partial xG coverage stays unknown and cannot create a finishing
     minutes: 90,
     goals: 4,
     assists: 1,
-    rating: 8,
+    gradeZ: 1,
   };
   const totals = seasonTotals(
     [

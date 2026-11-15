@@ -25,7 +25,7 @@ export const matchRecordColumns = ({ shots = true, players = true, teamStats = t
  ${shots ? `(SELECT coalesce(json_agg(json_build_object(${SHOT_FIELDS}) ORDER BY x.shot_no),'[]'::json) FROM api.match_shots x WHERE x.season_id=${season} AND x.match_id=f.match_id)` : "'[]'::json"} shots,
  (SELECT row_to_json(d) FROM api.match_detail_state d WHERE d.season_id=${season} AND d.match_id=f.match_id) state,
  ${players ? `(SELECT json_build_object('listed',count(*),'played',count(*) FILTER(WHERE a.minutes>0),
-   'rated',count(*) FILTER(WHERE a.minutes>0 AND a.rating IS NOT NULL),'xg',count(*) FILTER(WHERE a.minutes>0 AND a.xg IS NOT NULL),
+   'graded',count(*) FILTER(WHERE a.minutes>0 AND a.grade IS NOT NULL),'xg',count(*) FILTER(WHERE a.minutes>0 AND a.xg IS NOT NULL),
    'xa',count(*) FILTER(WHERE a.minutes>0 AND a.xa IS NOT NULL),
    'ids',coalesce(json_agg(f.id||':'||api.public_id('player',a.player_id) ORDER BY api.public_id('player',a.player_id)),'[]'::json))
    FROM api.player_appearances a WHERE a.season_id=${season} AND a.match_id=f.match_id)` : "NULL::json"} players,
@@ -57,9 +57,9 @@ export function assembleMatch(r, { statKeys, allowPending = false } = {}) {
     shots: r.shots || [],
     stats: teamStats(strip(r.home_stats), strip(r.away_stats), statKeys),
     coverage: {
-      players: Boolean(state.player_stats_ok) && n.listed > 0, playerStats: n.played > 0, ratings: n.rated > 0,
+      players: Boolean(state.player_stats_ok) && n.listed > 0, playerStats: n.played > 0, grades: n.graded > 0,
       xg: n.xg > 0, xa: n.xa > 0, shots: Boolean(state.shots_ok), teamStatsReliable: Boolean(state.team_stats_ok),
-      listedPlayers: n.listed ?? 0, playedPlayers: n.played ?? 0, ratedPlayers: n.rated ?? 0, xgPlayers: n.xg ?? 0, xaPlayers: n.xa ?? 0,
+      listedPlayers: n.listed ?? 0, playedPlayers: n.played ?? 0, gradedPlayers: n.graded ?? 0, xgPlayers: n.xg ?? 0, xaPlayers: n.xa ?? 0,
     },
     warnings: [],
     warningCodes: [],

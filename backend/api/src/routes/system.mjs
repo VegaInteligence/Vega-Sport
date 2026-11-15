@@ -40,7 +40,7 @@ export const CAPABILITIES = {
   boundedSearch: true, // /api/search
   fixturePaginationOrder: true, // /api/fixtures: order, cursor
   versionedPartitions: true, // /api/seasons/partition: v
-  playerRatingRanking: true, // /api/read/players: ranking=rating
+  playerGradeRanking: true, // /api/read/players: ranking=grade
   actorSummary: true, // /api/read/player and /api/read/club: detail=summary
   wholeSelection: true, // /api/read/players: whole=1
   roleGroups: true, // /api/read/players: group

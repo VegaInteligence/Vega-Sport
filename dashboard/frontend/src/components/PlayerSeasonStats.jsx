@@ -99,10 +99,10 @@ function ProfileCells({
       })}
       <td>
         <ObservedValue
-          value={profile.rating}
-          count={profile.ratingCount}
+          value={profile.grade}
+          count={profile.gradeCount}
           total={total}
-          decimals={2}
+          decimals={0}
         />
       </td>
       {discipline &&
@@ -131,7 +131,7 @@ function hasCoverageGaps(
   return (
     profile.matches === 0 ||
     profile.unknownMinutes > 0 ||
-    profile.ratingCount < profile.matches ||
+    profile.gradeCount < profile.matches ||
     (discipline && cardMatchIds.some((matchId) => !discipline.has(matchId))) ||
     METRICS.some(([metric]) => {
       const { count } = seasonMetric(profile, metric);
@@ -167,7 +167,7 @@ function SeasonTable({
                 "Buts",
                 "Passes déc.",
                 "xG",
-                "Note",
+                "Note Vega",
               ].map((column) => (
                 <th key={column} scope="col">
                   {column}

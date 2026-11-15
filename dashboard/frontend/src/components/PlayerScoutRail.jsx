@@ -421,9 +421,9 @@ export function PlayerScoutStrip({
       label: "Buts · PD",
       value: `${number(goals)} · ${number(assists ?? 0)}`,
     },
-    profile?.rating != null && {
-      label: "Note",
-      value: number(profile.rating, 2),
+    profile?.grade != null && {
+      label: "Note Vega",
+      value: number(profile.grade, 0),
     },
   ].filter(Boolean);
   if (!mounted) return null;

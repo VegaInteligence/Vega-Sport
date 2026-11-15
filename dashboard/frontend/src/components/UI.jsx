@@ -5,6 +5,7 @@ import DirectMediaImage from "./DirectMediaImage.jsx";
 import { useResolvedMedia } from "./MediaContext.jsx";
 import mediaStyles from "./Media.module.css";
 import React, { useEffect, useRef, useState } from "react";
+import { GRADE_HIGH } from "../services/grades.js";
 import {
   number,
   safeImageUrl,
@@ -152,13 +153,11 @@ export function AsyncState({ resource, children, loading }) {
     children(resource.value)
   );
 }
-export function Rating({ value }) {
+/** Vega's grade of a match or a season, out of 100 (50 an ordinary match of the role). */
+export function Grade({ value, title = "Note Vega sur 100" }) {
   return (
-    <span
-      className={`rating-pill${value >= 8 ? " rating-high" : ""}`}
-      title="Note sur 10"
-    >
-      {number(value, 2)}
+    <span className={`rating-pill${value >= GRADE_HIGH ? " rating-high" : ""}`} title={title}>
+      {number(value, 0)}
     </span>
   );
 }

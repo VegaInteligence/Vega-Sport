@@ -12,7 +12,7 @@ import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useLiveMatch from "../hooks/useLiveMatch.js";
 import { isLiveWindow } from "../services/live-client.js";
-import { Card, Media, Rating, Segments, Empty, AsyncState } from "./UI.jsx";
+import { Card, Media, Grade, Segments, Empty, AsyncState } from "./UI.jsx";
 import Icon from "./Icon.jsx";
 import { XgTimeline, ShotMap } from "./Charts.jsx";
 import { MatchSections, normalizeShots } from "./MatchSections.jsx";
@@ -245,11 +245,8 @@ function MatchPlayer({ row, rank, grade }) {
         </span>
       </span>
       <span className="match-player-minutes">{number(row.minutes)}′</span>
-      <Rating value={row.rating} />
-      {grade && (
-        <span className="rating-pill" title={gradeTitle(grade)}>
-          {number(grade.grade, 0)}
-        </span>
+      {(grade?.grade ?? row.grade) != null && (
+        <Grade value={grade?.grade ?? row.grade} title={grade ? gradeTitle(grade) : undefined} />
       )}
     </button>
   );
@@ -472,7 +469,7 @@ export default function MatchDetail({ match }) {
     () =>
       f.data.appearances
         .filter((r) => r.matchId === match.id)
-        .sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1)),
+        .sort((a, b) => (b.gradeZ ?? -99) - (a.gradeZ ?? -99)),
     [f.data, match.id],
   );
   const leading = leadingPlayers(players.length ? players : match.leadingPlayers, grades, { match: match.id });

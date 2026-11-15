@@ -3,19 +3,20 @@ import React, { useMemo, useState } from "react";
 import Icon from "./Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number, date, isNumber } from "../services/format.js";
-import { Modal, Rating, Media, Segments } from "./UI.jsx";
+import { Modal, Media, Segments } from "./UI.jsx";
+import { GRADE_HIGH, GRADE_LOW } from "../services/grades.js";
 import PlayerData from "./PlayerData.jsx";
 import MessiGoats from "./MessiGoats.jsx";
 import {
   keyFigures,
-  matchRatingRank,
+  matchGradeRank,
   MIN_PEER_MINUTES,
   performanceProfile,
   positionOf,
 } from "../services/player-profile.js";
 export const metrics = [
   ["minutes", "Minutes"],
-  ["rating", "Note"],
+  ["grade", "Note Vega"],
   ["goals", "Buts"],
   ["assists", "Passes décisives"],
   ["xg", "xG"],
@@ -88,7 +89,7 @@ export function PlayerDialog() {
         remote
           ? remote.value?.data.rank
           : row && !f.compactMode
-            ? matchRatingRank(row, appearances)
+            ? matchGradeRank(row, appearances)
             : null,
       [row, appearances, remote, f.compactMode],
     );
@@ -159,12 +160,13 @@ export function PlayerDialog() {
                 {row.shirtNumber && <span>N° {row.shirtNumber}</span>}
               </p>
             </div>
-            {isNumber(row.rating) && (
+            {isNumber(row.grade) && (
               <div
-                className={`pc-rating${row.rating >= 8 ? " is-high" : row.rating < 6 ? " is-low" : ""}`}
+                className={`pc-rating${row.grade >= GRADE_HIGH ? " is-high" : row.grade < GRADE_LOW ? " is-low" : ""}`}
+                title="Note Vega du match sur 100 : 50 est un match ordinaire du poste"
               >
-                <strong>{number(row.rating, 2)}</strong>
-                <span>Note</span>
+                <strong>{number(row.grade, 0)}</strong>
+                <span>Note Vega</span>
                 {rank && rank.total > 1 && (
                   <small>
                     {rank.rank === 1
@@ -380,7 +382,7 @@ export function Comparison() {
                       <td key={r.id}>
                         {number(
                           r[key],
-                          ["xg", "xa", "rating", "goalsPrevented"].includes(key)
+                          ["xg", "xa", "goalsPrevented"].includes(key)
                             ? 2
                             : 0,
                         )}

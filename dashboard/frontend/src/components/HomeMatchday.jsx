@@ -621,7 +621,7 @@ export function MatchOfTheWeek({
                   <strong>{bestPlayer.name}</strong>
                   <span>{bestPlayer.team}</span>
                 </span>
-                <b>{number(bestPlayer.rating, 2)}</b>
+                <b>{number(bestPlayer.grade, 0)}</b>
               </button>
             )}
             <Link className="button button-primary" href={matchHref(f, match)}>

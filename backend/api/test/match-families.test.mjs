@@ -25,6 +25,9 @@ const byId = (key) => (list) => [...list].sort((a, b) => (key(a) < key(b) ? -1 :
 // A stat the source sent without a value is not kept.
 const valued = (groups) =>
   groups.map((g) => ({ ...g, stats: Object.fromEntries(Object.entries(g.stats).filter(([, s]) => s.stat.value !== null)) })).filter((g) => Object.keys(g.stats).length);
+// The source's rating is not read any more: Vega's own grade stands in its place, and this
+// match of the source's fixture has none (it is not in the seed's ranking).
+const unrated = (groups) => groups.map((g) => ({ ...g, stats: Object.fromEntries(Object.entries(g.stats).filter(([label]) => label !== "Rating")) }));
 
 async function read(suffix) {
   const { response, body } = await get(BASE + suffix);
@@ -44,7 +47,7 @@ test("team statistics: groups, labels and display strings of every period", { sk
 test("player statistics and halves, with the source's groups and labels", { skip }, async () => {
   const id = (r) => r.player.id;
   const players = await read("/players");
-  assert.deepEqual(numbers(byId(id)(players)), numbers(byId(id)(fixture("players").map((r) => ({ ...r, stats: valued(r.stats) })))));
+  assert.deepEqual(numbers(byId(id)(players)), numbers(byId(id)(fixture("players").map((r) => ({ ...r, stats: valued(unrated(r.stats)) })))));
   const halves = await read("/players/halves");
   const expected = fixture("players_halves");
   assert.deepEqual(

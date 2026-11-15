@@ -36,7 +36,9 @@ test("home: the week, its featured match and player", { skip }, async () => {
   assert.deepEqual(d.otherMatches.map((m) => m.id), ["m_aaaaa1", "m_aaaaa2"]);
   const s = d.potwSeason;
   assert.deepEqual([s.playerId, s.teamId, s.apps, s.minutes, s.goals, s.xa, s.lastId], ["p_aaaab4", "t_aaaaa2", 2, 160, 3, null, "m_aaaaa4:p_aaaab4"]);
-  assert.ok(Math.abs(s.rating - 1212 / 160) < 1e-9 && Math.abs(s.xg - 2.3) < 1e-9);
+  // The season grade: the grade of his minutes-weighted mean z (0 over 70 minutes, 3.3 over 90).
+  assert.ok(Math.abs(s.grade - 100 / (1 + 10 ** (-((90 * 3.3) / 160) / 4))) < 1e-4 && Math.abs(s.xg - 2.3) < 1e-9);
+  assert.deepEqual([s.gradeMinutes, s.gradeCount], [160, 2]);
   assert.equal(d.win, null); // no win by three goals or more
 });
 
@@ -50,7 +52,7 @@ test("home: tables, ranks, leaders, highlights and markers", { skip }, async () 
   assert.deepEqual(table.rows[0].cumulative, [3, 3, 4]);
   assert.deepEqual(d.ranks[0], ["t_aaaaa1", { id: "t_aaaaa1", rank: 1, leagueId: "l_3FJFUl", form: ["W", "L", "D"] }]);
   assert.deepEqual(d.leaders.goals.map((p) => [p.playerId, p.goals]), [["p_aaaab4", 3], ["p_aaaab1", 2]]);
-  assert.deepEqual([d.leaders.rating, d.leaders.ratedMin], [[], 450]);
+  assert.deepEqual([d.leaders.grade, d.leaders.gradedMin], [[], 450]);
   assert.deepEqual(d.highlights.map((h) => [h.fixture.id, h.europe, h.weight]), [["m_aaaaa6", false, 3]]); // Top 5 + two top-3 sides
   assert.equal(d.highlights[0].time, Date.parse("2025-09-06T19:00:00Z"));
   assert.deepEqual(d.rules, { places: 5, favouritePlaces: 3, upcomingDays: 7, favouriteDays: 21, bigCardHours: 48, latestWeekDays: 14 });
@@ -72,9 +74,10 @@ test("favourites: your players this week (design doc, retained)", { skip }, asyn
   assert.match(response.headers.get("cache-control"), /^private/);
   const [mine] = body.data.yourPlayers;
   assert.deepEqual([mine.playerId, mine.name, mine.teamId, mine.team], ["p_aaaab4", "Cristiano Test", "t_aaaaa2", "Racing Club"]);
-  assert.deepEqual(mine.matches.map((m) => [m.matchId, m.date, m.minutes, m.rating, m.goals, m.opponentId, m.score]), [
-    ["m_aaaaa1", "2025-09-01", 70, 6.9, 0, "t_aaaaa1", [0, 2]],
-    ["m_aaaaa4", "2025-09-04", 90, 8.1, 3, "t_aaaaa4", [3, 2]],
+  const grade = (z) => 100 / (1 + 10 ** (-z / 4));
+  assert.deepEqual(mine.matches.map((m) => [m.matchId, m.date, m.minutes, Math.round(m.grade * 10) / 10, m.goals, m.opponentId, m.score]), [
+    ["m_aaaaa1", "2025-09-01", 70, 50, 0, "t_aaaaa1", [0, 2]],
+    ["m_aaaaa4", "2025-09-04", 90, Math.round(grade(3.3) * 10) / 10, 3, "t_aaaaa4", [3, 2]],
   ]);
   assert.deepEqual([mine.next.id, mine.next.time, mine.next.home.id, mine.next.away.id], ["m_aaaaa6", Date.parse("2025-09-06T19:00:00Z"), "t_aaaaa2", "t_aaaaa3"]);
 });

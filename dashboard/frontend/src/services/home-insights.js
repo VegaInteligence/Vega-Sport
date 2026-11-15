@@ -3,6 +3,7 @@ import { FEATURED_CLUB_IDS } from "./home.js";
 import { knockoutStage } from "./knockout-bracket.js";
 import { SIMPLE_LEAGUES } from "./competition-standings.js";
 import { rankSeasonPlayers } from "./player-leaderboard.js";
+import { GRADE_SEASON_MINUTES, gradeOf } from "./grades.js";
 
 export const CHAMPIONS_LEAGUE_ID = "l_0bfbkO";
 export const EUROPA_LEAGUE_ID = "l_38d9HA";
@@ -502,7 +503,7 @@ export function bestDefences(progress, limit = 3) {
     .slice(0, limit);
 }
 
-/** Best rated performance per player in the window, 60 minutes or more. */
+/** Best Vega grade per player in the window, 60 minutes or more (by the normal score z). */
 export function weekPerformances(
   appearances,
   window,
@@ -524,15 +525,15 @@ export function weekPerformances(
       row.finished === false ||
       (!matches && !inWindow(row, window)) ||
       !(row.minutes >= minMinutes) ||
-      !Number.isFinite(row.rating)
+      !Number.isFinite(row.gradeZ)
     )
       continue;
     const previous = best.get(row.playerId);
-    if (!previous || row.rating > previous.rating) best.set(row.playerId, row);
+    if (!previous || row.gradeZ > previous.gradeZ) best.set(row.playerId, row);
   }
   return [...best.values()].sort(
     (a, b) =>
-      b.rating - a.rating ||
+      b.gradeZ - a.gradeZ ||
       (b.goals || 0) - (a.goals || 0) ||
       String(a.name).localeCompare(String(b.name), "fr"),
   );
@@ -585,8 +586,9 @@ export function seasonTotals(appearances, season) {
           xa: 0,
           xgMatches: 0,
           xaMatches: 0,
-          ratingSum: 0,
-          ratingMinutes: 0,
+          gradeZm: 0,
+          gradeMinutes: 0,
+          gradeCount: 0,
         }),
       );
     p.apps++;
@@ -601,9 +603,11 @@ export function seasonTotals(appearances, season) {
       p.xa += row.xa;
       p.xaMatches++;
     }
-    if (Number.isFinite(row.rating)) {
-      p.ratingSum += row.rating * row.minutes;
-      p.ratingMinutes += row.minutes;
+    // The season grade: the minutes-weighted mean z of his matches of 20 minutes or more.
+    if (Number.isFinite(row.gradeZ) && row.minutes >= GRADE_SEASON_MINUTES) {
+      p.gradeZm += row.gradeZ * row.minutes;
+      p.gradeMinutes += row.minutes;
+      p.gradeCount++;
     }
     // The club shown is the most recent domestic one: a European game keeps the same club.
     if ((row.date || "") >= p.date) {
@@ -621,24 +625,24 @@ export function seasonTotals(appearances, season) {
     // xG sum is not zero and must not create a false finishing outperformance.
     xg: p.xgMatches === p.apps ? p.xg : null,
     xa: p.xaMatches === p.apps ? p.xa : null,
-    rating: p.ratingMinutes ? p.ratingSum / p.ratingMinutes : null,
+    grade: p.gradeMinutes ? gradeOf(p.gradeZm / p.gradeMinutes) : null,
   }));
 }
 export function seasonLeaders(totals) {
   const top = (list, compare, n = 5) => [...list].sort(compare).slice(0, n);
   const maxMinutes = Math.max(0, ...totals.map((p) => p.minutes));
-  const ratedMin = Math.max(450, Math.round(maxMinutes * 0.4));
+  const gradedMin = Math.max(450, Math.round(maxMinutes * 0.4));
   return {
     goals: rankSeasonPlayers(totals, "goals").slice(0, 10),
     assists: rankSeasonPlayers(totals, "assists").slice(0, 10),
     clinical: rankSeasonPlayers(totals, "clinical").slice(0, 8),
     wasteful: rankSeasonPlayers(totals, "wasteful").slice(0, 8),
-    rating: top(
-      totals.filter((p) => p.rating != null && p.minutes >= ratedMin),
-      (a, b) => b.rating - a.rating,
+    grade: top(
+      totals.filter((p) => p.grade != null && p.gradeMinutes >= gradedMin),
+      (a, b) => b.grade - a.grade,
       10,
     ),
-    ratedMin,
+    gradedMin,
   };
 }
 export function biggestWin(results) {
@@ -791,14 +795,14 @@ export function ballonDorRaceOpen({
   return stages.quarter.length >= 8 && stages.quarter.every(Boolean);
 }
 
-/** Ratings of a player's last games of the season, oldest first. */
-export function recentRatings(appearances, playerId, season, count = 6) {
+/** Vega grades of a player's last games of the season, oldest first. */
+export function recentGrades(appearances, playerId, season, count = 6) {
   return (appearances || [])
     .filter(
       (row) =>
         row.playerId === playerId &&
         row.minutes > 0 &&
-        Number.isFinite(row.rating) &&
+        Number.isFinite(row.grade) &&
         inSeason(row, season),
     )
     .sort((a, b) => (a.date || "").localeCompare(b.date || ""))

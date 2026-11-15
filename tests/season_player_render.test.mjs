@@ -20,7 +20,8 @@ const rows = [
     assists: 0,
     xg: 0.81,
     xa: 0.01,
-    rating: 7.19,
+    grade: 51.2,
+    gradeZ: 0.19,
   },
   {
     id: "m_2:p_1",
@@ -37,7 +38,8 @@ const rows = [
     assists: 0,
     xg: 0.01,
     xa: 0.07,
-    rating: 6.17,
+    grade: 38.4,
+    gradeZ: -0.83,
   },
 ];
 const matches = [

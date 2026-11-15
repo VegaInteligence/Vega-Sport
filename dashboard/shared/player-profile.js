@@ -1,6 +1,7 @@
 const isNumber = (value) =>
   typeof value === "number" && Number.isFinite(value);
-export const MIN_RATED_MATCHES = 5;
+// The fewest graded matches (20 minutes or more) for the ranking by season grade.
+export const MIN_GRADED_MATCHES = 5;
 
 /** Position lines from the source formation slot (positionId).
  *  Starters carry a slot (11 = keeper, 3x = back line, 6x–7x = midfield,

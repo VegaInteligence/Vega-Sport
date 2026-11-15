@@ -175,7 +175,7 @@ export default function PlayerCompetitionMatches({
                       <>
                         <th scope="col">xG</th>
                         <th scope="col">xA</th>
-                        <th scope="col">Note</th>
+                        <th scope="col">Note Vega</th>
                       </>
                     )}
                   </tr>
@@ -220,7 +220,7 @@ export default function PlayerCompetitionMatches({
                           <>
                             <td>{number(row?.xg, 2)}</td>
                             <td>{number(row?.xa, 2)}</td>
-                            <td>{number(row?.rating, 2)}</td>
+                            <td>{number(row?.grade, 0)}</td>
                           </>
                         )}
                       </tr>

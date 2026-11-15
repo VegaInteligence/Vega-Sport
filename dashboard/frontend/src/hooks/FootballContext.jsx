@@ -1048,7 +1048,7 @@ export function FootballProvider({ children, loadData = true, initialState }) {
       "league",
       "season",
       "minutes",
-      "rating",
+      "grade",
       "goals",
       "assists",
       "xg",
@@ -1075,7 +1075,7 @@ export function FootballProvider({ children, loadData = true, initialState }) {
               "league",
               "season",
               "minutes",
-              "rating",
+              "grade",
             ].includes(key)
               ? per90(r[key], r.minutes)
               : key === "season"

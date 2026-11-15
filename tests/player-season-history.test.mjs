@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { gradeOf } from "../dashboard/frontend/src/services/grades.js";
 import {
   aggregateSeason,
   seasonMetric,
@@ -83,7 +84,7 @@ test("history groups competitions under one team total per season", () => {
       goals: 1,
       assists: 0,
       xg: 0.4,
-      rating: 8,
+      gradeZ: 1,
     },
     {
       playerId: id,
@@ -95,7 +96,7 @@ test("history groups competitions under one team total per season", () => {
       league: "Ligue",
       goals: 0,
       assists: 1,
-      rating: 6,
+      gradeZ: -1,
     },
     {
       playerId: id,
@@ -106,7 +107,7 @@ test("history groups competitions under one team total per season", () => {
       leagueId: "l2",
       league: "Coupe",
       goals: 2,
-      rating: 9,
+      gradeZ: 2,
     },
     {
       playerId: id,
@@ -153,7 +154,8 @@ test("history groups competitions under one team total per season", () => {
   assert.equal(club.profile.matches, 3);
   assert.equal(club.profile.minutes, 180);
   assert.equal(club.profile.unknownMinutes, 1);
-  assert.equal(club.profile.rating, 23 / 3);
+  // The minutes-weighted mean z: 1 over 90 minutes, −1 over 60, 2 over 30.
+  assert.equal(club.profile.grade, gradeOf((90 - 60 + 60) / 180));
   assert.equal(seasonMetric(club.profile, "goals").value, 3);
   assert.deepEqual(
     club.competitions.map(({ competition }) => competition.id),

@@ -114,23 +114,23 @@ export function performanceProfile(row, appearances) {
   );
 }
 
-/** Rank of a rating among the players of the same match. */
-const ratingsByMatch = new WeakMap();
-export function matchRatingRank(row, appearances) {
-  if (!isNumber(row.rating)) return null;
-  let index = ratingsByMatch.get(appearances);
+/** Rank of a Vega grade among the grades shown in the same match (by the normal score z). */
+const gradesByMatch = new WeakMap();
+export function matchGradeRank(row, appearances) {
+  if (!isNumber(row.grade) || !isNumber(row.gradeZ)) return null;
+  let index = gradesByMatch.get(appearances);
   if (!index) {
     index = new Map();
     for (const r of appearances) {
-      if (!isNumber(r.rating)) continue;
+      if (!isNumber(r.grade) || !isNumber(r.gradeZ)) continue;
       if (!index.has(r.matchId)) index.set(r.matchId, []);
-      index.get(r.matchId).push(r.rating);
+      index.get(r.matchId).push(r.gradeZ);
     }
-    ratingsByMatch.set(appearances, index);
+    gradesByMatch.set(appearances, index);
   }
-  const rated = index.get(row.matchId) || [];
+  const graded = index.get(row.matchId) || [];
   return {
-    rank: rated.filter((rating) => rating > row.rating).length + 1,
-    total: rated.length,
+    rank: graded.filter((z) => z > row.gradeZ).length + 1,
+    total: graded.length,
   };
 }
