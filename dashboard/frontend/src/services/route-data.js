@@ -29,6 +29,7 @@ export function routeNeedsSeason(pathname, params) {
       "/archives",
       "/methode",
       "/classement-joueurs",
+      "/power-ranking",
       "/calendrier",
       "/joueurs/matchs",
     ].includes(path)

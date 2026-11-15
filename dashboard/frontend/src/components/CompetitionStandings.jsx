@@ -77,7 +77,7 @@ function useFollowedClubs() {
  * ranking of the season (edition = first year of the season) and the
  * performance spots of the season itself.
  */
-function useEuropeanPlaces(competition, season) {
+export function useEuropeanPlaces(competition, season) {
   const f = useFootball();
   const year = seasonStartYear(season),
     country = competitionCountry(competition),
@@ -110,7 +110,7 @@ function useEuropeanPlaces(competition, season) {
     };
   }, [ranking.value, running.value, country, year]);
 }
-function ZoneLegend({ zones, places }) {
+export function ZoneLegend({ zones, places }) {
   // On a phone the legend opens on demand, under the table.
   const legend = usePhoneFold();
   const items = legendZones(zones);

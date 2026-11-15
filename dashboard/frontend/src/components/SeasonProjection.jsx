@@ -3,11 +3,21 @@ import React from "react";
 import { Media } from "./UI.jsx";
 import { number } from "../services/format.js";
 import { projectionRows, share } from "../services/forecasts.js";
+import { ZONES, leagueZones, tableZones } from "../services/standings-zones.js";
+import { useEuropeanPlaces, ZoneLegend } from "./CompetitionStandings.jsx";
 
-/** A league replayed to its end: each club's points now and projected, and its chances. */
-export default function SeasonProjection({ projection }) {
+/**
+ * A league replayed to its end: each club's points now and projected, and its chances. Each
+ * row wears the zone of its projected place (Europe, promotion, relegation), as the table does.
+ */
+export default function SeasonProjection({ projection, competition, season }) {
   const rows = projectionRows(projection);
+  const places = useEuropeanPlaces(competition, season);
   if (!rows.length) return null;
+  const zones = tableZones(rows.length, {
+    european: places.places,
+    league: leagueZones(competition?.id, rows.length),
+  });
   const relegation = rows.some((row) => row.bottomThree !== null);
   const coming = rows.some((row) => row.next);
   const ordinal = (rank) => (rank === 1 ? "1er" : `${rank}e`);
@@ -40,7 +50,11 @@ export default function SeasonProjection({ projection }) {
           </thead>
           <tbody>
             {rows.map((row, index) => (
-              <tr key={row.id}>
+              <tr
+                key={row.id}
+                data-zone={zones[index] || undefined}
+                title={zones[index] ? ZONES[zones[index]].label : undefined}
+              >
                 <td>{index + 1}</td>
                 <th scope="row">
                   <span className="standings-team">
@@ -71,6 +85,7 @@ export default function SeasonProjection({ projection }) {
           </tbody>
         </table>
       </div>
+      <ZoneLegend zones={zones} places={places} />
       <p className="standings-note">
         Les matchs restants sont rejoués {number(projection.model?.replays || 0)} fois d’après la force de chaque
         club (son Elo), laquelle peut encore bouger d’ici la fin de saison. Une estimation, pas un pronostic

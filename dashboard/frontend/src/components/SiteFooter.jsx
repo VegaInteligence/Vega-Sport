@@ -19,6 +19,7 @@ const groups = [
     links: [
       ["Performances", "/joueurs/"],
       ["Classement Ballon d’Or", "/classement-joueurs/"],
+      ["Power Ranking", "/power-ranking/"],
     ],
   },
   {
