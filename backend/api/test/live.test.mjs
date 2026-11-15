@@ -76,14 +76,16 @@ test("one revision only: items newer than the state are read again, then left ou
 test("the live settings: none while no provider is chosen, the browsers' three once one is", async () => {
   const { response, body } = await get("/live/config");
   assert.equal(response.status, 200);
-  assert.deepEqual(body, { provider: null });
+  assert.deepEqual(body, { enabled: false });
   const settings = { provider: "replay", http: "abc.appsync-api.us-east-2.amazonaws.com", realtime: "abc.appsync-realtime-api.us-east-2.amazonaws.com", key: "da2-public" };
   const on = createLiveHandler(read, { clock: () => NOW, config: settings });
   const answer = await on(new Request("https://api.test/live/config"));
   assert.match(answer.headers.get("cache-control"), /s-maxage=60\b/);
-  assert.deepEqual(await answer.json(), settings);
+  // The provider is never named (no answer names a source).
+  const { provider, ...browser } = settings;
+  assert.deepEqual(await answer.json(), { enabled: true, ...browser });
   // A provider without its settings is no provider: nothing to subscribe to.
-  assert.deepEqual(liveConfig({ ...settings, key: "" }), { provider: null });
+  assert.deepEqual(liveConfig({ ...settings, key: "" }), { enabled: false });
   assert.equal((await get("/live/config?x=1")).response.status, 400);
   assert.equal((await get("/live/config", "POST")).response.status, 405);
 });

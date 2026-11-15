@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { applyLive, liveConfigured, loadLiveConfig, missing, newer, readLive, subscribeLive } from "../services/live-client.js";
+import { applyLive, forgetLiveConfig, liveConfigured, loadLiveConfig, missing, newer, readLive, subscribeLive } from "../services/live-client.js";
 
 // The full state is read again every 30 s: a missed broadcast never lasts.
 const REFRESH_MS = 30_000;
@@ -11,9 +11,11 @@ const RETRY_MS = 2_000,
 const visible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
 
 /** The live state of a match while `enabled` (services/live-client.js), else null. The live
- * settings are read once (GET /live/config); without a provider nothing more is asked. It
- * only listens while the tab is on screen (doc "Onglet visible uniquement"): a hidden tab
- * unsubscribes, and coming back reads the full state and subscribes again. */
+ * settings (GET /live/config) are looked at every 30 s while the match is in its window:
+ * read again after a failure, after five minutes of "live off", or when AppSync refuses the
+ * key; without live nothing more is asked. It only listens while the tab is on screen (doc
+ * "Onglet visible uniquement"): a hidden tab unsubscribes, and coming back reads the full
+ * state and subscribes again. */
 export default function useLiveMatch(id, enabled) {
   const [state, setState] = useState(null);
   const [config, setConfig] = useState(null);
@@ -22,11 +24,15 @@ export default function useLiveMatch(id, enabled) {
   useEffect(() => {
     if (!wanted) return undefined;
     let live = true;
-    loadLiveConfig().then((settings) => {
-      if (live) setConfig(settings);
-    });
+    const check = () =>
+      loadLiveConfig().then((settings) => {
+        if (live) setConfig((old) => (JSON.stringify(old) === JSON.stringify(settings) ? old : settings));
+      });
+    check();
+    const timer = setInterval(check, REFRESH_MS);
     return () => {
       live = false;
+      clearInterval(timer);
     };
   }, [wanted]);
   const active = wanted && liveConfigured(config);
@@ -63,7 +69,7 @@ export default function useLiveMatch(id, enabled) {
       if (timer) return;
       load();
       timer = setInterval(load, REFRESH_MS);
-      unsubscribe = subscribeLive(id, onMessage, { config });
+      unsubscribe = subscribeLive(id, onMessage, { config, onRefused: forgetLiveConfig });
     };
     const stop = () => {
       clearInterval(timer);

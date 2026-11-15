@@ -70,14 +70,15 @@ export async function snapshot(read, id, now) {
 }
 
 /**
- * GET /live/config — what a browser needs to follow a match live, or { provider: null }
+ * GET /live/config — what a browser needs to follow a match live, or { enabled: false }
  * while no live provider is chosen (the ingestor is off and nothing is published). The
  * site reads it at run time, so switching live on needs no new build of the site: the
  * deploy that names a provider gives this function its settings (infra/aws/live.yaml).
- * The key only lets a browser subscribe (publishing needs IAM).
+ * The key only lets a browser subscribe (publishing needs IAM). The provider is not named:
+ * no answer of the API names a source.
  */
 export function liveConfig({ provider = "", http = "", realtime = "", key = "" } = {}) {
-  return provider && http && realtime && key ? { provider, http, realtime, key } : { provider: null };
+  return provider && http && realtime && key ? { enabled: true, http, realtime, key } : { enabled: false };
 }
 
 /** read: { state(id), events(id), stats(id) } over the live tables; clock in ms; config the

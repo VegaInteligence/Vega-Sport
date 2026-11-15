@@ -15,7 +15,7 @@ import {
   subscribeLive,
 } from "../dashboard/frontend/src/services/live-client.js";
 
-const CONFIG = { origin: "https://api.example", provider: "replay", http: "abc.appsync-api.us-east-2.amazonaws.com", realtime: "abc.appsync-realtime-api.us-east-2.amazonaws.com", key: "da2-public" };
+const CONFIG = { origin: "https://api.example", enabled: true, http: "abc.appsync-api.us-east-2.amazonaws.com", realtime: "abc.appsync-realtime-api.us-east-2.amazonaws.com", key: "da2-public" };
 const KICKOFF = Date.parse("2025-09-20T19:00:00Z");
 const STATE = {
   match: "m_live01", revision: 4, status: "in_play", provisional: false, minute: 12, minuteAdded: null, period: "first_half",
@@ -28,41 +28,53 @@ const live = (status, minute, home, away) => ({ status, minute, minute_added: nu
 test("live only with a provider and the three AppSync settings", () => {
   assert.equal(liveConfigured(CONFIG), true);
   assert.equal(liveConfigured({ ...CONFIG, key: "" }), false);
-  assert.equal(liveConfigured({ ...CONFIG, provider: null }), false);
+  assert.equal(liveConfigured({ ...CONFIG, enabled: false }), false);
   assert.equal(liveConfigured(null), false);
 });
 
-test("the live settings are read once from the API, and again only after a failure", async () => {
+test("the live settings: kept for the visit when on, five minutes when off, never after a failure", async () => {
   const calls = [];
   const answer = (body) => async (url) => {
     calls.push(url);
     return { ok: true, status: 200, json: async () => body };
   };
-  forgetLiveConfig();
-  const off = await loadLiveConfig({ origin: "https://api.example", fetcher: answer({ provider: null }) });
-  assert.equal(liveConfigured(off), false);
-  // Read once per visit: the second call takes the first answer.
-  await loadLiveConfig({ origin: "https://api.example", fetcher: answer({}) });
-  assert.deepEqual(calls, ["https://api.example/live/config"]);
-  forgetLiveConfig();
   const { origin, ...settings } = CONFIG;
-  assert.deepEqual(await loadLiveConfig({ origin, fetcher: answer(settings) }), CONFIG);
   forgetLiveConfig();
-  const failing = async () => {
-    throw new Error("offline");
-  };
-  assert.equal(await loadLiveConfig({ origin, fetcher: failing }), null);
-  assert.deepEqual(await loadLiveConfig({ origin, fetcher: answer(settings) }), CONFIG);
+  const off = await loadLiveConfig({ origin, fetcher: answer({ enabled: false }), now: 0 });
+  assert.equal(liveConfigured(off), false);
+  await loadLiveConfig({ origin, fetcher: answer(settings), now: 60_000 }); // still "off": not asked
+  assert.equal(calls.length, 1);
+  assert.deepEqual(await loadLiveConfig({ origin, fetcher: answer(settings), now: 6 * 60_000 }), CONFIG);
+  await loadLiveConfig({ origin, fetcher: answer({ enabled: false }), now: 60 * 60_000 }); // on: kept
+  assert.equal(calls.length, 2);
   forgetLiveConfig();
-  // Nothing subscribes without the settings.
+  const failing = async () => ({ ok: false, status: 503 });
+  assert.equal(await loadLiveConfig({ origin, fetcher: failing, now: 0 }), null);
+  assert.deepEqual(await loadLiveConfig({ origin, fetcher: answer(settings), now: 1 }), CONFIG);
+  forgetLiveConfig();
+  // Nothing subscribes without the settings; a refused key asks for them again.
   let opened = 0;
   const Counted = class {
     constructor() {
       opened += 1;
     }
   };
-  subscribeLive("m_live01", () => {}, { config: { ...CONFIG, provider: null }, WebSocketImpl: Counted })();
+  subscribeLive("m_live01", () => {}, { config: { ...CONFIG, enabled: false }, WebSocketImpl: Counted })();
   assert.equal(opened, 0);
+  let socket = null,
+    refused = 0;
+  const Refusing = class {
+    constructor() {
+      socket = this;
+      this.readyState = 1;
+    }
+    send() {}
+    close() {}
+  };
+  const stop = subscribeLive("m_live01", () => {}, { config: CONFIG, WebSocketImpl: Refusing, onRefused: () => (refused += 1) });
+  socket.onmessage({ data: JSON.stringify({ type: "connection_error", errors: [{ errorType: "UnauthorizedException" }] }) });
+  assert.equal(refused, 1);
+  stop();
 });
 
 test("the live window: 30 minutes before kick-off to 3 hours after, never once over", () => {
