@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
-import { Empty, Pager } from "./UI.jsx";
+import { Empty, Pager, Skeleton } from "./UI.jsx";
 import { MatchLink } from "./MatchLink.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { json, useResource } from "../services/resources.js";
@@ -162,9 +162,7 @@ export default function MatchdaySchedule({
   return (
     <section className="matchday-schedule" aria-label="Matchs par journée">
       {resource.loading && (
-        <p role="status" className="matchday-note">
-          Chargement des journées…
-        </p>
+        <Skeleton label="Chargement des journées…" lines={2} />
       )}
       <div className="matchday-toolbar">
         <div className="matchday-heading">

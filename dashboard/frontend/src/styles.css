@@ -2875,6 +2875,25 @@ th[aria-sort="descending"] .sort-indicator {
   background: var(--surface-hover);
   animation: progress-pulse 1.2s ease-in-out infinite;
 }
+.skeleton {
+  display: grid;
+  gap: 10px;
+  padding: 16px 0;
+}
+.skeleton-table {
+  gap: 8px;
+}
+.skeleton-table .skeleton-line {
+  height: 2em;
+}
+.skeleton-inline {
+  display: inline-block;
+  width: 6em;
+  vertical-align: middle;
+}
+.skeleton-inline .skeleton-line {
+  height: 0.7em;
+}
 @media (prefers-reduced-motion: reduce) {
   .skeleton-line {
     animation: none;

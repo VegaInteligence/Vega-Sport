@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useFootball } from "../hooks/FootballContext.jsx";
-import { Empty, Media } from "./UI.jsx";
+import { Empty, Media, Skeleton } from "./UI.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import NationalFlag from "./NationalFlag.jsx";
 import { nationalFlagCode } from "../services/national-flags.js";
@@ -513,9 +513,7 @@ export default function CompetitionStandings({
   }, [enabled, external.loading, readable, onNeedFixtures]);
   if (enabled && external.loading)
     return (
-      <div data-page-loading="" className="loading-state" role="status">
-        Chargement du classement…
-      </div>
+      <Skeleton data-page-loading="" label="Chargement du classement…" kind="table" lines={8} />
     );
   if (enabled && readable) {
     const tables = external.value.tables;
@@ -558,9 +556,7 @@ export default function CompetitionStandings({
   }
   if (fixturesLoading)
     return (
-      <div data-page-loading="" className="loading-state" role="status">
-        Chargement du classement…
-      </div>
+      <Skeleton data-page-loading="" label="Chargement du classement…" kind="table" lines={8} />
     );
   if (fixturesError)
     return (

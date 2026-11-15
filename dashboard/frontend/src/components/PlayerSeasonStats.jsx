@@ -26,7 +26,7 @@ import { UEFA_NATIONS_ID } from "../services/uefa-nations-snapshot.js";
 import { number } from "../services/format.js";
 import { nationalTeamName } from "../services/national-flags.js";
 import { isNationalTeamCompetition } from "../services/player-team-seasons.js";
-import { AsyncState, Media } from "./UI.jsx";
+import { AsyncState, Media, Skeleton } from "./UI.jsx";
 import NationalFlag from "./NationalFlag.jsx";
 import ObservedValue from "./PlayerObservedValue.jsx";
 import PlayerCompetitionMatches, {
@@ -495,9 +495,7 @@ function PerformanceRows({
                   linkMatches
                 />
                 {fixtureEnabled && fixtures.loading && (
-                  <p className="club-note" role="status">
-                    Chargement des feuilles de match…
-                  </p>
+                  <Skeleton label="Chargement des feuilles de match…" lines={2} />
                 )}
                 {fixtures.error && (
                   <p role="alert">
@@ -506,9 +504,7 @@ function PerformanceRows({
                   </p>
                 )}
                 {disciplineEnabled && discipline.loading && (
-                  <p className="club-note" role="status">
-                    Chargement des cartons…
-                  </p>
+                  <Skeleton label="Chargement des cartons…" lines={2} />
                 )}
               </>
             ) : (

@@ -29,7 +29,7 @@ import {
   SCOUT_METRICS,
 } from "../services/scouting.js";
 import { number } from "../services/format.js";
-import { Segments } from "./UI.jsx";
+import { Segments, Skeleton } from "./UI.jsx";
 import {
   BookmarkButton,
   ComparePlayerButton,
@@ -526,9 +526,7 @@ export default function PlayerSeasonProfile({
     [showCurrentShots, shotMatches, matchIds, id],
   );
   const historyLoading = (
-    <div data-page-loading="" className="loading-state" role="status">
-      Chargement des saisons…
-    </div>
+    <Skeleton data-page-loading="" label="Chargement des saisons…" />
   );
   const palmares = (honours.loading || honours.value?.groups?.length > 0) && (
     <section className={`${scout.block} ${scout.palmares}`}>
@@ -730,9 +728,7 @@ export default function PlayerSeasonProfile({
           {view === "similar" && cohortControls}
           <Suspense
             fallback={
-              <div data-page-loading="" className="loading-state" role="status">
-                Chargement de l’analyse…
-              </div>
+              <Skeleton data-page-loading="" label="Chargement de l’analyse…" />
             }
           >
             {view === "overview" && overview}
@@ -786,13 +782,7 @@ export default function PlayerSeasonProfile({
                           <button onClick={shotDetails.retry}>Réessayer</button>
                         </p>
                       ) : (
-                        <p
-                          role="status"
-                          data-page-loading=""
-                          className="loading-state"
-                        >
-                          Chargement des tirs de la saison…
-                        </p>
+                        <Skeleton data-page-loading="" label="Chargement des tirs de la saison…" lines={2} />
                       )
                     ) : (
                       <Suspense fallback={historyLoading}>
@@ -832,9 +822,7 @@ export default function PlayerSeasonProfile({
               (comparisonsReady ? (
                 <Similarity profile={profile} cohorts={cohorts} />
               ) : (
-                <p className="notice" role="status">
-                  Chargement des joueurs du même poste…
-                </p>
+                <Skeleton label="Chargement des joueurs du même poste…" lines={2} />
               ))}
             {view === "evolution" && (
               <PlayerScoutCareer

@@ -12,7 +12,7 @@ import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useLiveMatch from "../hooks/useLiveMatch.js";
 import { isLiveWindow } from "../services/live-client.js";
-import { Card, Media, Grade, Segments, Empty, AsyncState } from "./UI.jsx";
+import { Card, Media, Grade, Segments, Empty, AsyncState, Skeleton } from "./UI.jsx";
 import Icon from "./Icon.jsx";
 import { XgTimeline, ShotMap } from "./Charts.jsx";
 import { MatchSections, normalizeShots } from "./MatchSections.jsx";
@@ -235,7 +235,7 @@ function MatchPlayer({ row, rank, grade }) {
         <strong className="player-name">{row.name}</strong>
         <span className="player-meta">
           {f.player === row.id && f.deferredPerformance?.loading
-            ? "Chargement…"
+            ? <Skeleton kind="inline" label="Chargement de la performance…" />
             : row.team}
           {isNumber(row.goals) && row.goals > 0
             ? ` · ${number(row.goals)} but${row.goals > 1 ? "s" : ""}`
@@ -700,9 +700,7 @@ export default function MatchDetail({ match }) {
         {view === "context" && (
           <Suspense
             fallback={
-              <div data-page-loading="" className="loading-state" role="status">
-                Chargement du contexte…
-              </div>
+              <Skeleton data-page-loading="" label="Chargement du contexte…" />
             }
           >
             {upcoming && <MatchForecast match={match} />}

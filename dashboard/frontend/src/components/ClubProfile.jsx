@@ -1,7 +1,7 @@
 "use client";
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import { Card, Media } from "./UI.jsx";
+import { Card, Media, Skeleton } from "./UI.jsx";
 import { useResource } from "../services/resources.js";
 import { loadClubFacts } from "../services/club-facts.js";
 import { clubRoster, ROSTER_GROUPS } from "../services/club-roster.js";
@@ -41,9 +41,7 @@ export function ClubFacts({ club, matches }) {
   return (
     <Card fold title="Le club en bref" className="club-facts-card">
       {result.loading ? (
-        <div data-page-loading="" className="loading-state" role="status">
-          Chargement des informations du club…
-        </div>
+        <Skeleton data-page-loading="" label="Chargement des informations du club…" />
       ) : (
         <>
           <div className="club-facts-grid">

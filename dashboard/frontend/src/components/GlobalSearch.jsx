@@ -10,7 +10,7 @@ import React, {
 } from "react";
 import Link from "next/link";
 import Icon from "./Icon.jsx";
-import { Media } from "./UI.jsx";
+import { Media, Skeleton } from "./UI.jsx";
 import { FootballContext } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
 import {
@@ -330,9 +330,7 @@ export default function GlobalSearch({ sheet = false, onClose }) {
           aria-label="Résultats de recherche"
         >
           {loading && !results.total ? (
-            <p className="global-search-note" role="status">
-              Chargement des données…
-            </p>
+            <Skeleton label="Chargement des données…" lines={2} />
           ) : (
             <>
               {results.order.map((kind) =>

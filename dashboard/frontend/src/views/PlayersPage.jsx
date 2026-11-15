@@ -1,4 +1,5 @@
 "use client";
+import { Skeleton } from "../components/UI.jsx";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import React, {
@@ -310,9 +311,7 @@ export default function PlayersPage() {
           </Link>
         )}
         {id && !overview && cohortTab && needsCohort && cohort.loading && (
-          <p role="status" className="notice">
-            Chargement des comparaisons de saison…
-          </p>
+          <Skeleton label="Chargement des comparaisons de saison…" lines={2} />
         )}
         {id && !overview && cohortTab && needsCohort && cohort.error && (
           <p role="alert" className="notice notice-warning">
@@ -323,9 +322,7 @@ export default function PlayersPage() {
         {id && (
           <Suspense
             fallback={
-              <p data-page-loading="" role="status">
-                Chargement du profil…
-              </p>
+              <Skeleton data-page-loading="" label="Chargement du profil…" lines={2} />
             }
           >
             <PlayerSeasonProfile

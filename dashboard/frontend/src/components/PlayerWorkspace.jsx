@@ -1,4 +1,5 @@
 "use client";
+import { Skeleton } from "./UI.jsx";
 import React, { lazy, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import PlayerDirectory from "./PlayerDirectory.jsx";
@@ -38,16 +39,16 @@ export default function PlayerWorkspace({ profiles, resource, ...props }) {
       >
         <Suspense
           fallback={
-            <div data-page-loading="" className="loading-state" role="status">
-              Chargement de l’analyse…
-            </div>
+            <Skeleton data-page-loading="" label="Chargement de l’analyse…" />
           }
         >
           {resource?.loading ? (
-            <p data-page-loading="" className="loading-state" role="status">
-              Chargement{" "}
-              {view === "table" ? "des joueurs" : "de la cohorte complète"}…
-            </p>
+            <Skeleton
+              data-page-loading=""
+              kind={view === "table" ? "table" : "block"}
+              lines={view === "table" ? 10 : 4}
+              label={`Chargement ${view === "table" ? "des joueurs" : "de la cohorte complète"}…`}
+            />
           ) : resource?.error ? (
             <div role="alert">
               {resource.error}{" "}

@@ -20,6 +20,7 @@ import {
   AsyncState,
   Segments,
   Empty,
+  Skeleton,
 } from "../components/UI.jsx";
 import { MatchLink } from "../components/MatchLink.jsx";
 import MatchdaySchedule from "../components/MatchdaySchedule.jsx";
@@ -686,9 +687,7 @@ export default function CompetitionsPage() {
             )
           ) : (!id && !choice.ready) ||
             (id?.startsWith("open-matchday:") && cupIndex.loading) ? (
-            <div data-page-loading="" className="loading-state" role="status">
-              Chargement de la compétition…
-            </div>
+            <Skeleton data-page-loading="" label="Chargement de la compétition…" />
           ) : id?.startsWith("open-matchday:") && cupIndex.error ? (
             <div className="notice" role="alert">
               Les coupes nationales sont indisponibles.{" "}
@@ -822,9 +821,7 @@ export default function CompetitionsPage() {
           </div>
           {!rows.length &&
             (cupIndex.loading ? (
-              <div data-page-loading="" className="loading-state" role="status">
-                Chargement des compétitions…
-              </div>
+              <Skeleton data-page-loading="" label="Chargement des compétitions…" kind="table" lines={8} />
             ) : (
               <Empty>Aucune compétition ne correspond à ces filtres.</Empty>
             ))}
