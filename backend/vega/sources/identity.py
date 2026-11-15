@@ -33,16 +33,17 @@ itself (two teams of one match naming the same club) is refused.
 
 The source's team is then merged into the PitchAPI one: its matches and their facts, its
 provider ids and its names move, its spelling stays as a `source_spelling` name of that
-source, and the source-only row is removed. A team's matches keep the names their source
+source, and the source-only row stays as a pointer to the team it is (core.teams.merged_into,
+094), with nothing left naming it. A team's matches keep the names their source
 gave (core.matches.home_team_name, away_team_name, 034): the archive and cup reads show
 them. A club known to a source under several spellings holds one key per spelling, one of
 them current (core.provider_ids.is_current). A team no rule names stays as it is.
 
-Removing a team row makes PostgreSQL look for it in every table that names teams, most of
-them without an index on the team: a fraction of a second per team on 10 November 2026,
-more as the match facts grow. Merges run by sets (CHUNK), each in its own savepoint; a set
-PostgreSQL refuses (something computed still names one of its teams, or another writer
-holds its rows) is halved down to the refused pair, which waits for a later run.
+The row is kept rather than removed: removing it made PostgreSQL look for the team in every
+table that names teams, most of them without an index on the team, minutes per team by 14
+November 2026. Merges run by sets (CHUNK), each in its own savepoint; a set PostgreSQL
+refuses (a deadlock, a pointer that would loop) is halved down to the refused pair, which
+waits for a later run.
 
 A cup-source match between two merged teams that PitchAPI also has (same two teams, within
 a day) exists for the site once: PitchAPI-era reads leave cup editions out. The pair is
@@ -66,11 +67,9 @@ CHUNK = 100
 # The longest a statement of the pass may run (run): on 14 November 2026 removing a set of
 # a hundred teams was still running after five hours and held the daily pass behind it.
 STATEMENT_LIMIT = "10min"
-# Merges are off until a merged team stays as a pointer instead of being removed: removing a
-# row makes PostgreSQL read every table naming teams that has no index on them (38 columns,
-# about 40 million rows on 14 November 2026) once per team, minutes each, so a set of a
-# hundred cannot finish within STATEMENT_LIMIT. The pass still notes the duplicate matches.
-MERGES = False
+# Merges on (a merged team stays as a pointer, 094). Turned off, the pass only notes the
+# duplicate matches.
+MERGES = True
 
 
 def scopes(now):
@@ -414,7 +413,14 @@ def merge_teams(conn, found, columns):
            ON CONFLICT DO NOTHING""",
         (keeps, [row[3] or "" for row in found], [row[2] for row in found]),
     )
-    conn.execute("DELETE FROM core.teams WHERE id = ANY(%s)", (drops,))
+    # A pointer, never a removal (094); a team merged before into one merged now points to
+    # the team that stays, so a pointer never leads to another.
+    conn.execute(
+        """UPDATE core.teams t SET merged_into = m.kept, updated_at = now()
+           FROM unnest(%s::int[], %s::int[]) m(gone, kept)
+           WHERE t.id = m.gone OR t.merged_into = m.gone""",
+        (drops, keeps),
+    )
 
 
 def _merge(conn, found, columns):

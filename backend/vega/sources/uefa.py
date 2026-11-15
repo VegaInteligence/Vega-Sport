@@ -269,6 +269,7 @@ def reconcile_teams(conn):
             (target, team),
         )
         conn.execute("DELETE FROM core.entity_names WHERE entity_type='team' AND entity_id=%s", (team,))
-        conn.execute("DELETE FROM core.teams WHERE id=%s", (team,))
+        # A pointer to the team it is, never a removal (094, identity.py).
+        conn.execute("UPDATE core.teams SET merged_into=%s, updated_at=now() WHERE id=%s OR merged_into=%s", (target, team, team))
         merged += 1
     return merged
