@@ -1,10 +1,10 @@
 # Notes Vega : toutes les formules et leurs raisons
 
-Ce document rassemble, en un seul endroit, chaque calcul qui donne une note à un championnat, à un club et à un joueur, avec sa formule, ses réglages et la raison de chacun. Il décrit ce que fait le code en service (`backend/vega/power.py`, méthode `power-ranking-v4`, 15 novembre 2026).
+Ce document rassemble, en un seul endroit, chaque calcul qui donne une note à un championnat, à un club et à un joueur, avec sa formule, ses réglages et la raison de chacun. Il décrit ce que fait le code en service (`backend/vega/power.py`, méthode `power-ranking-v5`, 15 novembre 2026).
 
-Pour chaque réglage, il dit s'il est **mesuré** sur la base ou **choisi**. Un réglage choisi exprime une préférence ou reprend la méthode de départ ([METHODE_CLASSEMENT_BALLON_D_OR.md](METHODE_CLASSEMENT_BALLON_D_OR.md)) ; il n'a pas été ajusté sur les données.
+Pour chaque réglage, il dit s'il est **mesuré** sur la base ou **choisi**. Un réglage choisi exprime une préférence ou reprend la méthode de départ ([METHODE_CLASSEMENT_BALLON_D_OR.md](../../METHODE_CLASSEMENT_BALLON_D_OR.md)) ; il n'a pas été ajusté sur les données.
 
-Les validations et les chiffres viennent de la base de production, lus en lecture seule. Le détail des essais est dans [l'audit du classement](calculs/05-joueurs/08-audit-classement-puissance.md).
+Les validations et les chiffres viennent de la base de production, lus en lecture seule. Le détail des essais est dans [l'audit du classement](../05-joueurs/08-audit-classement-puissance.md).
 
 ## 0. Vue d'ensemble
 
@@ -326,7 +326,7 @@ $$
 
 ### 5.6 L'indice, le score et le rang
 
-**Éligibilité** : 900 minutes dans l'année (§ 8.3), ou la moitié des minutes du joueur le plus utilisé tant que l'année est jeune (810 le 14 novembre 2026). Raison : en dessous, on compare un joueur aux titulaires sur trop peu de matchs. Un joueur sous le seuil a ses totaux, mais pas de score. La question de donner un rang à chaque joueur dès son premier match est posée au conseiller, voir § 7.
+**Éligibilité** : 900 minutes dans l'année (§ 8.3), ou la moitié des minutes du joueur le plus utilisé tant que l'année est jeune (810 le 14 novembre 2026). Elle ne décide plus qui a un score, mais qui sert de **référence** : κ, moyennes et écarts-types du rôle, centiles, course au Ballon d'Or.
 
 **Indice.** Pour un joueur éligible de rôle principal r :
 
@@ -334,7 +334,22 @@ $$
 Z = 0{,}75\,\frac{T - \overline{T}_r}{\sigma_{T,r}} + 0{,}25\,\frac{R^\ast - \overline{R^\ast}_r}{\sigma_{R^\ast,r}}
 $$
 
-Moyennes et écarts-types sont pris parmi les éligibles classés du rôle. Les poids 0,75 et 0,25 sont ceux de la méthode (§ 8.3) : la contribution cumulée d'abord, le niveau moyen ensuite.
+Moyennes et écarts-types sont pris parmi les éligibles du rôle dans un championnat mesuré. Les poids 0,75 et 0,25 sont ceux de la méthode (§ 8.3) : la contribution cumulée d'abord, le niveau moyen ensuite.
+
+**Sous le seuil de minutes** (version 5) : tout joueur qui a joué a un indice. Il part du bas de son rôle et rejoint son propre indice à mesure que ses minutes approchent du seuil :
+
+$$
+Z = Z_\text{bas} + \min\!\left(1, \frac{M}{\text{seuil}}\right)(Z_\text{propre} - Z_\text{bas})
+$$
+
+$Z_\text{bas}$ est le 10ᵉ centile de l'indice des joueurs classés du rôle, $Z_\text{propre}$ l'indice calculé comme pour un éligible.
+
+Pourquoi : prolonger la formule telle quelle mettait un joueur qui n'a pas joué au niveau moyen de son rôle (T = 0 vaut « autant qu'un joueur moyen »). Mesuré : environ 40 % des titulaires classés seraient passés derrière lui.
+
+Une autre construction, mesurer chacun au-dessus d'un niveau de remplacement, a échoué sur la base : ce niveau change d'une année à l'autre et devient positif en début de saison. Celle-ci, mesurée en lecture seule sur 2024/2025 à 2026/2027 :
+- aucun joueur de moins de 180 minutes dans le premier cinquième ;
+- le rang médian s'améliore avec les minutes ;
+- les éligibles gardent exactement leur indice et leur ordre ; la course au Ballon d'Or ne change pas.
 
 Pourquoi un indice standardisé et pas des centiles (§ 8.3) : les centiles plafonnaient pour les premiers de chaque rôle, et ce plafond dépendait de la taille du rôle. L'ordre entre les meilleurs suivait donc le nombre de joueurs du rôle (audit, cause 4).
 
@@ -351,11 +366,50 @@ $$
 50 est la moyenne du rôle parmi les classés. Quatre écarts-types d'indice font dix contre un, comme 400 points d'Elo.
 
 **Rangs.**
-- Le **rang** est l'ordre de Z parmi les éligibles d'un championnat mesuré (§ 4.6), puis T, puis les minutes, à égalité le même rang. Le **rang dans le rôle** suit le même ordre dans le rôle principal.
+- Le **rang** est l'ordre de Z parmi tous les joueurs d'un club, puis T, puis les minutes, à égalité le même rang. Le **rang dans le rôle** suit le même ordre dans le rôle principal.
+- Un rang est **provisoire** sous le seuil de minutes (`eligible` faux) ou dans un championnat provisoire (`linked` faux). Le site le dit sur la fiche du joueur. L'incertitude d'un championnat provisoire est commune à tous ses joueurs : l'ordre entre eux est exact. Face aux autres, elle vaut environ ± 200 à 300 places dans les 500 premiers, et beaucoup plus au milieu du classement, où les joueurs sont serrés.
 - **Centiles** des blocs et de T, R\* : rang moyen dans le rôle, (nombre en dessous + ½ égaux) / n.
 - **Course au Ballon d'Or** : les trente premiers classés d'un club de première division.
 
 Un joueur que la base ne connaît que par sa sélection a un score, sans rang : il est classé par son club. Les joueuses d'un championnat féminin sont notées entre elles.
+
+### 5.7 La note d'un match
+
+Un joueur reçoit, pour chaque match, une note qui ne dépend **que de ce match** : un joueur faible qui fait un très grand match a une très bonne note ce jour-là, quel que soit son classement.
+
+**Ce qu'elle mesure.**
+- **La contribution C du match seule** (§ 5.3) : ce qu'il a fait au-dessus de l'attendu de son rôle face à cet adversaire.
+- **Ni le niveau du club** : il ne dépend pas de ce que le joueur a fait. Un écart-type de niveau pèserait κ·132/400 ≈ 0,2, soit 26 à 59 % de l'écart-type d'un match.
+- **Ni l'enjeu** : c'est la récompense du trophée, montrée à côté.
+
+C est une somme sur le match dont l'attendu suit déjà les minutes : une entrée en jeu n'est ni favorisée ni pénalisée parce qu'elle est courte.
+
+**Formule.**
+
+$$
+z_1 = \frac{C - \bar{c}_r}{\sigma_{r,\text{compétition}}}, \qquad \sigma^2_{r,\text{comp}} = \frac{n\,\sigma^2_\text{comp} + 300\,\sigma_r^2}{n + 300}
+$$
+
+$$
+z = \Phi^{-1}\big(p\big), \quad p = \text{part des matchs de référence du rôle sous } z_1, \qquad \text{note} = \frac{100}{1 + 10^{-z/4}}
+$$
+
+- $\bar{c}_r$ et $\sigma_r$ sont la moyenne et l'écart-type des matchs complets (60 minutes ou plus) du rôle, dans l'**année de référence**. C'est la dernière année du trophée terminée ; une année terminée est sa propre référence. L'échelle existe ainsi dès le premier jour d'une saison et ne bouge pas avec elle. Une année en cours n'est jamais gardée comme référence : une saison qui suit celle en cours, sans année terminée juste avant elle, est notée sur ses propres matchs, et rien n'est gardé.
+- **La dispersion d'une compétition** est rapprochée de celle du rôle : 56 couples compétition-rôle sur 493 avaient une dispersion hors de 0,8 à 1,25 fois celle de leur rôle.
+- **Le score normal** Φ⁻¹(p) est la valeur d'une loi normale qui laisse la même part p en dessous. Avec un z simple, les gardiens n'avaient que 0,38 fois leur part des 1 % meilleurs matchs, leur dispersion gonflée par de rares grosses erreurs.
+- 50 est un match ordinaire du rôle. La note du meilleur match jamais vu d'un rôle approche 90.
+
+**Affichage** : à partir de 20 minutes, ou en dessous quand le match s'écarte d'un écart-type de l'ordinaire. Les minutes sont toujours à côté. Le joueur a aussi un rang dans le match.
+
+**Mesuré sur 2025/2026 avant la mise en service.**
+
+| Épreuve | Résultat | Critère |
+| --- | ---: | --- |
+| Centre, moyenne / écart-type des matchs complets | ≤ 0,034 | ≤ 0,05 |
+| Écart-type d'un rôle, 2024/2025 → 2025/2026 | ± 1,3 % | ± 5 % |
+| Matchs de moins de 30 minutes parmi les 1 % meilleurs | 3,0 % | ≤ 5 % |
+| Corrélation de rang avec la note PitchAPI dans un match (médiane) | 0,57 | ≥ 0,5 |
+| Joueurs du dernier quart des titulaires avec au moins un match noté 75 ou plus | 25 % | sensible |
 
 ## 6. Les sélections
 
@@ -378,9 +432,11 @@ Un joueur que la base ne connaît que par sa sélection a un score, sans rang : 
 | Enjeux | § 2 | choisis |
 | Poids des blocs par rôle | § 5.3 | choisis (méthode § 6.2, 7.3) |
 | 75 % / 25 %, λ = 450, 900 minutes | | choisis (méthode § 8) |
+| Bas d'un rôle pour les joueurs sous le seuil | 10ᵉ centile | choisi, vérifié en lecture seule |
+| Note d'un match : référence, 300 matchs de rapprochement, 20 minutes | § 5.7 | référence mesurée, réglages choisis |
 | Part du niveau du club | 0,5 (κ ≈ 0,65) | choisie ; à décider face à κ\* |
 | Divisions des championnats | `TIERS` | relues à la main |
 
 **Questions ouvertes :**
-- donner un rang à chaque joueur à chaque match (seuil d'éligibilité, championnats provisoires) : posée au conseiller le 15 novembre 2026 ;
-- la part du niveau du club (§ 5.4).
+- la part du niveau du club (§ 5.4) ;
+- λ : sur la base, la variance des matchs et celle entre joueurs donnent λ ≈ 175 à 250 minutes plutôt que 450. Le changer déplacerait tous les scores ; c'est une décision à part.
