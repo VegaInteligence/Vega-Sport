@@ -206,6 +206,26 @@ class ModelsTest(unittest.TestCase):
             self.one("SELECT count(*) FROM agg.league_levels WHERE linked")[0],
         )
 
+    def test_a_season_ranked_by_an_older_method_is_ranked_again(self):
+        from vega import power
+        from vega.store import Store
+
+        with self.db.transaction():
+            season = Store(self.db).season("1999/2000")
+        self.db.execute(
+            "INSERT INTO agg.power_runs(kind, season_id, method_version, status, finished_at) VALUES ('players', %s, 'power-ranking-v1', 'published', now())",
+            (season,),
+        )
+        self.assertIn(season, power.stale_rankings(self.db))
+        # No player statistics that year: a quick, empty run of the present method.
+        self.assertEqual(power.refresh_players(self.db, season), 0)
+        self.assertNotIn(season, power.stale_rankings(self.db))
+        self.assertEqual(self.one("SELECT method_version FROM agg.power_runs WHERE kind='players' AND season_id=%s AND status='published'", season)[0],
+                         power.METHOD_VERSION)
+        # The other tests read the published seasons: this one leaves none behind.
+        self.db.execute("DELETE FROM agg.calc_runs WHERE kind = 'award' AND cohort_definition = %s", (f"ballon_dor:{season}",))
+        self.db.execute("DELETE FROM agg.power_runs WHERE season_id = %s", (season,))
+
     def test_zzzz_matches_to_play_are_forecast_and_the_league_projected(self):
         # 076: forecast.refresh, from the Elo the season's models have settled.
         from vega import forecast

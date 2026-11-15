@@ -1344,6 +1344,15 @@ def write_award(conn, season, scored):
     return len(race)
 
 
+def stale_rankings(conn):
+    """The seasons whose published player ranking is of another method than METHOD_VERSION,
+    most recent first."""
+    return [s for (s,) in conn.execute(
+        """SELECT season_id FROM agg.power_runs WHERE kind = 'players' AND status = 'published' AND method_version <> %s
+           ORDER BY season_id DESC""", (METHOD_VERSION,)
+    ).fetchall()]
+
+
 def refresh_power(conn, season):
     """Both rankings: strengths first (they contextualise the players' matches)."""
     refresh_elo(conn)
