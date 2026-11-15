@@ -278,13 +278,7 @@
   width: 100%;
   max-width: 34px;
   border-radius: 4px 4px 0 0;
-  background: repeating-linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--warning-ink) 40%, transparent) 0 4px,
-    transparent 4px 8px
-  );
-  box-shadow: inset 0 0 0 1px
-    color-mix(in srgb, var(--warning-ink) 55%, transparent);
+  background: var(--accent);
 }
 .ages b {
   color: var(--ink);

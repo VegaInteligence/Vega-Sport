@@ -74,17 +74,10 @@ const availability = injuryTotals(D.INJURIES, D.PLAYER.season);
 
 /** Facts of the identity rail that no source publishes yet. */
 export const FAKE_FACTS = [
-  { label: "Âge", value: `${D.PLAYER.age} ans`, note: D.PLAYER.birthDate },
   {
     label: "Taille",
     value: `${fmt(D.PLAYER.height / 100, 2)} m`,
     note: `${D.PLAYER.weight} kg`,
-  },
-  { label: "Pied fort", value: D.PLAYER.foot, note: "Droit utilisé à 14 %" },
-  {
-    label: "Fin de contrat",
-    value: "06/2031",
-    note: `Clause ${D.PLAYER.releaseClause}`,
   },
 ].map((item) => ({ ...item, fake: true }));
 

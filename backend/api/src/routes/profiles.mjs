@@ -22,6 +22,7 @@
  * usual ones, and the base's curve for an absence of that length.
  * GET /api/players/{id}/halves?season= — the player's season by half (083): his minutes
  * and totals in first halves and in second halves.
+ * GET /api/teams/{id}/age-profile?season= — minutes played by age on the match date.
  * GET /api/teams/{id}/passing?season= — the club's most used passing triangle and its most
  * linked pair, from the season's pass networks (083).
  * GET /api/players/{id}/faced?season= — a goalkeeper's shots on target faced in the season
@@ -51,6 +52,7 @@ const SQUARES = Array.from({ length: DIMENSIONS }, (_, i) => `power(o.e${i + 1}-
 const RETURN = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/return$/;
 const HALVES = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/halves$/;
 const PASSING = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/passing$/;
+const AGE_PROFILE = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/age-profile$/;
 const ACTIONS = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/actions$/;
 const FACED = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/faced$/;
 // Shots on target a keeper must have faced in the season to be placed among the others.
@@ -248,6 +250,20 @@ export function createProfileRoute(read) {
         method: { version: r.version, computedAt: new Date(r.computed_at).toISOString() },
       });
     }
+    const ageProfile = path.match(AGE_PROFILE);
+    if (ageProfile) {
+      validateParams(params, ["season"]);
+      const season = params.get("season");
+      if (!/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
+      const minutesByAge = await read(
+        `SELECT age, minutes FROM api.team_age_minutes
+         WHERE season_id=(SELECT season_id FROM api.season_keys WHERE season=$2)
+           AND team_id=api.internal_id('team',$1)
+         ORDER BY age`,
+        [ageProfile[1], season],
+      );
+      return respond(req, { id: ageProfile[1], season, minutesByAge });
+    }
     const passing = path.match(PASSING);
     if (passing) {
       validateParams(params, ["season"]);
@@ -340,6 +356,9 @@ export function createProfileRoute(read) {
         put(data, "shirt_number", r.shirt_number === null ? null : String(r.shirt_number));
         put(data, "birth_date", r.birth_date);
         put(data, "height_cm", r.height_cm);
+        put(data, "preferred_foot", r.preferred_foot);
+        put(data, "contract_until", r.contract_until);
+        put(data, "contract_team", r.contract_team);
       }
       return respond(req, data);
     }
