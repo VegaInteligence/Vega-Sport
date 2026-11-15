@@ -18,6 +18,7 @@ import {
 const labels = {
   matches: "Matchs",
   minutes: "Min. moy.",
+  score: "Score Vega",
   grade: "Note Vega",
   finishingDelta: "Écart buts − xG",
 };
@@ -225,7 +226,9 @@ export default function PlayerDirectory({
                               : undefined
                           }
                         >
-                          {key === "grade" ? (
+                          {key === "score" ? (
+                            row.score == null ? "—" : <Grade value={row.score} title="Score Vega de la saison sur 100 : toute sa saison, volume, qualité par match et niveau de son club" />
+                          ) : key === "grade" ? (
                             row.grade == null ? "—" : <Grade value={row.grade} title="Note Vega de la saison sur 100 : la note de son match moyen" />
                           ) : (
                             <>

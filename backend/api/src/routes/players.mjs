@@ -157,9 +157,9 @@ export function parsePlayerRead(params) {
     venue: option(params, "venue", ["all", "home", "away"], "all"),
     result: option(params, "result", ["all", "win", "draw", "loss"], "all"),
     basis: option(params, "basis", ["total", "perMatch", "per90"], "perMatch"),
-    sort: option(params, "sort", ["name", "matches", "minutes", "grade", "finishingDelta", ...metricKeys], "grade"),
+    sort: option(params, "sort", ["name", "matches", "minutes", "score", "grade", "finishingDelta", ...metricKeys], "grade"),
     direction: option(params, "direction", ["asc", "desc"], "desc"),
-    ranking: option(params, "ranking", ["", "grade", "goals", "assists", "clinical", "wasteful"], ""),
+    ranking: option(params, "ranking", ["", "score", "grade", "goals", "assists", "clinical", "wasteful"], ""),
   };
 }
 
@@ -316,7 +316,7 @@ function playerSelection(filters, values, nameSort) {
   // Eligibility and ordering aggregate only the metrics they need; the page's
   // players get their complete profile after LIMIT, from the same played rows.
   const requiredMetrics = new Set(filters.conditions.map(({ key }) => key));
-  const rankingMetrics = { grade: [], goals: ["goals", "xg"], assists: ["assists", "xa"], clinical: ["goals", "xg"], wasteful: ["goals", "xg"] };
+  const rankingMetrics = { score: [], grade: [], goals: ["goals", "xg"], assists: ["assists", "xa"], clinical: ["goals", "xg"], wasteful: ["goals", "xg"] };
   const finishingRequired = filters.ranking ? ["clinical", "wasteful"].includes(filters.ranking) : filters.sort === "finishingDelta";
   for (const key of filters.ranking
     ? rankingMetrics[filters.ranking]
@@ -352,6 +352,11 @@ function playerSelection(filters, values, nameSort) {
       `${normalizedSql("concat_ws(' ',d.name,array_to_string(d.teams,' · '),array_to_string(d.leagues,' · '),d.search_aliases)")} LIKE ${b(`%${likeText(filters.q)}%`)}`,
     );
   const ranking = {
+    // The Vega score of the season (the power ranking, rankings.mjs): every ranked player.
+    score: {
+      eligible: "d.vega_score IS NOT NULL",
+      order: `${comparisonNumberSql("d.vega_score")} DESC NULLS LAST,d.matches DESC`,
+    },
     grade: {
       eligible: `d.grade_count>=${MIN_GRADED_MATCHES}`,
       order: `${comparisonNumberSql("d.grade")} DESC NULLS LAST,d.grade_count DESC`,
@@ -373,7 +378,7 @@ function playerSelection(filters, values, nameSort) {
     ? `${ranking.order},${names}`
     : filters.sort === "name"
       ? `${nameSort} ${filters.direction},d.name COLLATE "C" ${filters.direction},d.player_id ASC`
-      : `${filters.sort === "matches" ? 'd."matches"' : comparisonNumberSql(`d."${filters.sort}"`)} ${filters.direction} NULLS LAST,${names}`;
+      : `${filters.sort === "matches" ? 'd."matches"' : comparisonNumberSql(`d."${filters.sort === "score" ? "vega_score" : filters.sort}"`)} ${filters.direction} NULLS LAST,${names}`;
   return {
     metricValue,
     earlyCounts,
@@ -402,6 +407,8 @@ export function playerReadQuery(filters, params, editions) {
     normalizedSql("d.name"),
   );
   const earlyAggregates = [countProjectionFor(earlyCounts), ratioProjectionFor(earlyRatios)].filter(Boolean).join(",\n");
+  // The Vega score of the season, read only for a ranking or a sort by it.
+  const scored = filters.ranking === "score" || filters.sort === "score";
   const identityColumns = `s.player_id,s.player_name AS name,s.image_url,s.match_id,s.date,s.team,s.team_id,s.league_id,s.league,s.position_number`;
   const identityJson = (alias) =>
     `CASE WHEN ${alias}.player_id IS NULL THEN NULL ELSE json_build_object('id',api.public_id('match',${alias}.match_id)||':'||p.player_id,
@@ -458,10 +465,12 @@ source AS MATERIALIZED (
  coalesce(a.total_minutes,0) total_minutes,coalesce(a.starts,0) starts,coalesce(a.known_starts,0) known_starts,
  coalesce(u.amount,0) unknown_minutes,a.grade,coalesce(a.grade_count,0) grade_count,
  coalesce(a.internal_team_ids,'{}'::int[]) internal_team_ids,coalesce(a.league_ids,'{}'::text[]) league_ids,
- al.search_aliases${earlyProfile ? `,\n${earlyProfile}` : ""}
+ al.search_aliases${scored ? ",vs.score vega_score" : ""}${earlyProfile ? `,\n${earlyProfile}` : ""}
  FROM identities i LEFT JOIN aggregates a USING(player_id) LEFT JOIN latest l USING(player_id)
  LEFT JOIN unknown u USING(player_id) LEFT JOIN teams t USING(player_id) LEFT JOIN leagues le USING(player_id)
- LEFT JOIN main_role r USING(player_id) LEFT JOIN api.player_search_aliases al ON al.player_id=i.player_id
+ LEFT JOIN main_role r USING(player_id) LEFT JOIN api.player_search_aliases al ON al.player_id=i.player_id${
+   scored ? `\n LEFT JOIN (SELECT player_key,score FROM api.power_players WHERE season_id=${bindValue(values, editions.seasonId)}::smallint) vs ON vs.player_key=i.player_id` : ""
+ }
 ), filtered AS MATERIALIZED (SELECT d.* FROM averages d WHERE ${thresholds}),
 ${pageSql(filters, order, limit, offset)},
 page_metrics AS (
@@ -610,6 +619,8 @@ export function playerRollupQuery(filters, params, editions, { fromAppearances =
     ? ` AND EXISTS(SELECT 1 FROM publication WHERE generation=${bindValue(values, params.get("generation"))})`
     : "";
   const earlyAggregates = [rollupCounts(earlyCounts), rollupRatios(earlyRatios)].filter(Boolean).join(",\n");
+  // The Vega score of the season, read only for a ranking or a sort by it.
+  const scored = filters.ranking === "score" || filters.sort === "score";
   // What the thresholds read beyond the sums; everything else waits for the page.
   const needsRole = filters.positions.length > 0 || filters.groups.length > 0,
     needsText = Boolean(filters.q);
@@ -693,10 +704,12 @@ ${detailSql(true)}averages AS (
  -- The stored folded name (the folding of normalizedSql); 'Joueur' folds to 'joueur'.
  CASE WHEN k.name IS NULL OR k.name='' THEN 'joueur' ELSE k.search_name END sort_name,
  a.matches,CASE WHEN a.matches>0 THEN a.total_minutes/a.matches WHEN a.unknown_minutes>0 THEN NULL ELSE 0 END minutes,
- a.total_minutes,a.starts,a.known_starts,a.unknown_minutes,a.grade,a.grade_count${needsRole ? `,\n ${roleSql} role_code` : ""}${
+ a.total_minutes,a.starts,a.known_starts,a.unknown_minutes,a.grade,a.grade_count${scored ? ",vs.score vega_score" : ""}${needsRole ? `,\n ${roleSql} role_code` : ""}${
    needsText ? `,\n ${teamsSql} teams,${leaguesSql} leagues,al.search_aliases` : ""
  }${earlyProfile ? `,\n${earlyProfile}` : ""}
  FROM aggregates a JOIN api.player_keys k ON k.player_id=a.player_id${
+   scored ? `\n LEFT JOIN (SELECT player_key,score FROM api.power_players WHERE season_id=${bindValue(values, editions.seasonId)}::smallint) vs ON vs.player_key=a.player_id` : ""
+ }${
    needsRole || needsText ? "\n LEFT JOIN identities i ON i.player_id=a.player_id" : ""
  }${needsRole ? "\n LEFT JOIN main_role mr ON mr.player_id=a.player_id" : ""}${
    needsText

@@ -19,10 +19,6 @@ const TABS = [
   ["players", "Joueurs"],
   ["clubs", "Clubs"],
 ];
-const UNIVERSES = [
-  ["men", "Hommes"],
-  ["women", "Femmes"],
-];
 
 /** The page's state lives in its URL, so a view can be shared. */
 function useUrlState(key, fallback, allowed) {
@@ -54,10 +50,9 @@ function SkeletonRows({ count = 12, columns = 5 }) {
 
 function PlayersTab({ season }) {
   const f = useFootball();
-  const [universe, setUniverse] = useUrlState("universe", "men", ["men", "women"]);
   const [role, setRole] = useUrlState("role", "", RANKING_ROLES.map(([id]) => id));
   const [page, setPage] = useState(1);
-  const resource = useWholeRanking(season, { page, role, universe });
+  const resource = useWholeRanking(season, { page, role });
   const body = resource.value;
   const pages = body ? Math.max(1, Math.ceil(body.total / PLAYERS_PER_PAGE)) : 1;
   const head = (
@@ -74,17 +69,20 @@ function PlayersTab({ season }) {
   return (
     <>
       <div className="match-section-toolbar">
-        <Segments label="Classement" value={universe} items={UNIVERSES} onChange={(v) => (setUniverse(v), setPage(1))} />
         <Segments label="Poste" value={role} items={RANKING_ROLES} onChange={(v) => (setRole(v), setPage(1))} />
       </div>
       <Card
         title="Classement des joueurs"
-        text={
+      >
+        {(
           body
             ? `${number(body.total)} joueurs classés${role ? " à ce poste" : ""} · un rang provisoire est marqué, avec sa raison`
             : "Tous les joueurs qui ont joué cette saison, classés par leur score Vega"
-        }
-      >
+        ) && <p className="card-note">{
+          body
+            ? `${number(body.total)} joueurs classés${role ? " à ce poste" : ""} · un rang provisoire est marqué, avec sa raison`
+            : "Tous les joueurs qui ont joué cette saison, classés par leur score Vega"
+        }</p>}
         <div className="table-scroll">
           <table className="data-table power-ranking-table">
             {head}
@@ -146,7 +144,8 @@ function ClubsTab({ season }) {
   const f = useFootball();
   const resource = useClubRanking(season);
   return (
-    <Card title="Classement des clubs" text="Force de chaque club, mesurée par son Elo sur tous ses matchs ; la variation porte sur la saison">
+    <Card title="Classement des clubs">
+      <p className="card-note">Force de chaque club, mesurée par son Elo sur tous ses matchs ; la variation porte sur la saison.</p>
       <div className="table-scroll">
         <table className="data-table power-ranking-table">
           <thead>

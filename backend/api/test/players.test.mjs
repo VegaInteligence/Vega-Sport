@@ -94,6 +94,9 @@ test("rankings and their eligibility", { skip }, async () => {
   assert.deepEqual(ids((await get(players + "&ranking=goals")).body), ["p_aaaab4", "p_aaaab1"]);
   // Fewer than five graded matches: nobody is ranked on the season grade.
   assert.equal((await get(players + "&ranking=grade")).body.pagination.total, 0);
+  // By the Vega score of the season: the ranked players, best first.
+  assert.deepEqual(ids((await get(players + "&ranking=score")).body), ["p_aaaab1", "p_aaaab4"]);
+  assert.deepEqual(ids((await get(players + "&sort=score&direction=asc")).body).slice(0, 2), ["p_aaaab4", "p_aaaab1"]);
   assert.deepEqual(ids((await get(players + "&basis=total&sort=goals")).body), ["p_aaaab4", "p_aaaab1", "p_aaaab3", "p_aaaab2"]);
   assert.deepEqual(ids((await get(players + "&sort=name&direction=asc")).body), ["p_aaaab4", "p_aaaab1", "p_aaaab3", "p_aaaab2"]);
 });
