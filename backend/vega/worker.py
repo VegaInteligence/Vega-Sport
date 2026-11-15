@@ -490,6 +490,17 @@ class Worker:
             ok, _ = self._daily_step(("season", season), now, lambda: models.refresh_daily(self.calc_conn, season, elo=False))
             if ok:
                 print(f"daily models season={season} outcome=ok", flush=True)
+        # The leagues' matchweeks (rounds.py): a round that is over closes, with its Team of the
+        # Round and the Player of the Season race, and the leagues' projections take it in.
+        from . import forecast, rounds
+
+        _, live = self._daily_step(("live seasons",), now, lambda: [s for (s,) in self.calc_conn.execute(
+            "SELECT DISTINCT season_id FROM core.matches WHERE kickoff_at > %s - interval '21 days' AND kickoff_at <= %s ORDER BY 1", (now, now)).fetchall()])
+        for season in live or []:
+            ok, closed = self._daily_step(("rounds", season), now, lambda: rounds.refresh(self.calc_conn, season, now))
+            if ok and closed:
+                print(f"rounds season={season} closed_editions={len(closed)}", flush=True)
+                self._daily_step(("projections", season), now, lambda: forecast.refresh(self.calc_conn, season))
         # Every season's player ranking is of the present method: a season the rules above leave
         # out (no match in 400 days, an archive season) is ranked again, its ranking alone, most
         # recent first and STALE_RANKINGS a pass. Without player statistics it is a quick, empty run.

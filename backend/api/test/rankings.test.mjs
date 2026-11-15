@@ -107,6 +107,16 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   assert.equal((await get("/api/rankings/match?match=m_aaaaa1&x=1")).response.status, 400);
   assert.equal((await get("/api/rankings/power/player?season=2025/2026")).response.status, 400);
   assert.equal((await get("/api/rankings/power?kind=players&season=2025/2026&limit=1")).body.rows.length, 1);
+  // A league's matchweeks: in order, the latest closed one; a closed round's Team of the Round and the race after it.
+  const weeks = (await get("/api/rankings/rounds?competition=l_3FJFUl&season=2025/2026")).body;
+  assert.deepEqual([weeks.latest, weeks.rounds.map((r) => [r.key, r.status, r.played])], ["r1", [["r1", "closed", 2], ["w2025-09-02", "open", 1]]]);
+  const latest = (await get("/api/rankings/round?competition=l_3FJFUl&season=2025/2026")).body;
+  assert.deepEqual([latest.round.key, latest.team.formation, latest.team.players.map((p) => [p.slot, p.slotRole, p.playerId, p.grade])],
+    ["r1", "4-3-3", [[0, "GK", "p_aaaab3", 58.5], [10, "CF", "p_aaaab1", 80.8]]]);
+  assert.deepEqual(latest.race.map((r) => [r.rank, r.playerId, r.name, r.grade]), [[1, "p_aaaab1", "Élie Durand", 62.7], [2, "p_aaaab4", "Cristiano Test", 57.1]]);
+  assert.equal((await get("/api/rankings/round?competition=l_3FJFUl&season=2025/2026&round=w2025-09-02")).response.status, 404); // still open
+  assert.equal((await get("/api/rankings/round?competition=l_3FJFUl&season=2025/2026&round=x1")).response.status, 400);
+  assert.equal((await get("/api/rankings/rounds?competition=l_3FJFUl&season=2024/2025")).response.status, 404);
   // The whole ranking (the Power Ranking page): every ranked player of the universe, a page at a time, by role if asked.
   const whole = (await get("/api/rankings/power?kind=players&season=2025/2026&scope=all&limit=1")).body;
   assert.deepEqual([whole.total, whole.page, whole.universe, whole.rows.map((r) => [r.rank, r.playerId, r.provisionalReason])], [2, 1, "men", [[1, "p_aaaab1", null]]]);

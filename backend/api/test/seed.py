@@ -223,6 +223,15 @@ def main(dsn):
                  VALUES (2025,%s,%s,2025,%s,'centre_forward',%s,%s,%s,%s)""", (mid, pid, team, minutes, 3 * (level - 7), 3 * (level - 7), run))
     x("""INSERT INTO agg.player_match_grades(season_id,match_id,player_id,award_season,team_id,role,minutes,z,first_z,run_id)
          SELECT 2025,match_id,player_id,2025,team_id,role,minutes,match_index,match_index,run_id FROM agg.player_power_matches WHERE match_id=1""")
+    # The league's rounds (109): round 1 closed, with a Team of the Round of two players shown
+    # here (a real one has eleven) and the race after it; the next week still open.
+    x("""INSERT INTO agg.league_rounds(competition_season_id,round_key,season_id,round_id,label,window_start,window_end,matches,played,excused,last_match_at,status,closed_at)
+         VALUES (1,'r1',2025,1,'1','2025-09-01T19:00Z','2025-09-02T19:00Z',2,2,0,'2025-09-02T19:00Z','closed','2025-09-03T03:00Z'),
+                (1,'w2025-09-02',2025,NULL,'Semaine du 2025-09-02','2025-09-04T19:00Z','2025-09-05T19:00Z',2,1,0,'2025-09-04T19:00Z','open',NULL)""")
+    x("""INSERT INTO agg.round_teams(competition_season_id,round_key,slot,line,slot_role,formation,player_id,team_id,match_id,season_id,role,minutes,z)
+         VALUES (1,'r1',0,0,'GK','4-3-3',103,4,2,2025,'goalkeeper',90,0.6),(1,'r1',10,3,'CF','4-3-3',101,1,1,2025,'centre_forward',90,2.5)""")
+    x("""INSERT INTO agg.round_season_race(competition_season_id,round_key,rank,player_id,team_id,z,matches,minutes)
+         VALUES (1,'r1',1,101,1,0.9,3,260),(1,'r1',2,104,2,0.5,2,160)""")
     x("""INSERT INTO agg.player_grade_editions(season_id,competition_season_id,player_id,grade_count,grade_minutes,zm_sum)
          SELECT g.season_id,m.competition_season_id,g.player_id,count(*),sum(g.minutes),sum(g.minutes*g.z::float8)
          FROM agg.player_match_grades g JOIN core.matches m ON m.id=g.match_id AND m.season_id=g.season_id

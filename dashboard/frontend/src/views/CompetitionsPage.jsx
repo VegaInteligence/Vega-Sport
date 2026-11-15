@@ -37,6 +37,7 @@ import {
   servesCupWorkerIndex,
 } from "../services/catalog-client.js";
 import CompetitionHighlights from "../components/CompetitionHighlights.jsx";
+import LeagueRoundCards from "../components/LeagueRoundCards.jsx";
 import SeasonSelect from "../components/SeasonSelect.jsx";
 import CupCompetition from "../components/CupCompetition.jsx";
 import NationsCompetition from "../components/NationsCompetition.jsx";
@@ -398,6 +399,7 @@ function Fixtures({ competition, day, initialSeason }) {
           </AsyncState>
         )}
       </Card>
+      {showHighlights && <LeagueRoundCards competition={competition?.id} season={seasonLabel(season)} />}
       {showHighlights && overviewFixtures && (
         <CompetitionHighlights
           matches={overviewFixtures.matches || []}

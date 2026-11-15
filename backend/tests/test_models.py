@@ -63,6 +63,32 @@ class ModelsTest(unittest.TestCase):
         refresh_competition_season(cls.db, 1)
         cls.cohorts = models.refresh_season(cls.db, 2025)
 
+    def test_a_league_round_closes_with_its_team_and_the_race(self):
+        from vega import rounds
+
+        # The synthetic league's matches carry no round: one week, long over, closes.
+        closed = rounds.refresh(self.db, 2025)
+        self.assertEqual(closed, {1})
+        status, played, matches = self.one("SELECT status, played, matches FROM agg.league_rounds WHERE competition_season_id = 1")
+        self.assertEqual(status, "closed")
+        self.assertEqual(played, matches)
+        self.assertEqual(self.one("SELECT count(*) FROM agg.league_round_matches WHERE competition_season_id = 1")[0], matches)
+        # The Team of the Round: eleven distinct players, each in a slot of his role, or none when the round cannot fill one.
+        team = self.db.execute("SELECT slot, slot_role, role, player_id, minutes FROM agg.round_teams WHERE competition_season_id = 1 ORDER BY slot").fetchall()
+        self.assertIn(len(team), (0, 11))
+        if team:
+            self.assertEqual(len({t[3] for t in team}), 11)
+            self.assertTrue(all(t[2] in rounds.SLOT_ROLES[t[1]] for t in team))
+        # The race: best first, its players read with their grade.
+        race = self.db.execute("SELECT rank, z FROM agg.round_season_race WHERE competition_season_id = 1 ORDER BY rank").fetchall()
+        self.assertTrue(race)
+        self.assertEqual([r[1] for r in race], sorted((r[1] for r in race), reverse=True))
+        self.assertEqual(self.one("SELECT count(*) FROM api.round_season_race WHERE competition_season_id = 1")[0], len(race))
+        # A second pass closes nothing again and rewrites nothing.
+        self.assertEqual(rounds.refresh(self.db, 2025), set())
+        self.assertEqual(self.one("SELECT count(*) FROM agg.round_season_race WHERE competition_season_id = 1")[0], len(race))
+        self.assertEqual(rounds.open_league_matches(self.db, 2025), set())
+
     def test_power_rankings_of_clubs(self):
         rows = self.db.execute("SELECT team_id, elo, rank, matches, scope FROM agg.team_power WHERE season_id=2025 ORDER BY rank").fetchall()
         self.assertEqual(len(rows), 8)
