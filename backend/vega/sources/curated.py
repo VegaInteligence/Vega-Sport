@@ -5,7 +5,7 @@ identity, never to every player with that name. An alias whose player is not kno
 yet is counted as unmatched and written on a later run, once PitchAPI has seen him.
 """
 
-from datetime import timedelta
+from datetime import date, timedelta
 import json
 import os
 from pathlib import Path
@@ -15,6 +15,19 @@ SHARED = Path(os.environ.get("VEGA_SHARED_DIR", Path(__file__).resolve().parents
 
 # dashboard/shared/player-aliases.js (main); a drift test compares the two.
 PLAYER_ALIASES = {"p_3yEwhj": ("cr7",)}
+# The contract date below is the formal signing reported by the club on 16 July:
+# https://www.fcbarcelona.com/en/news/4314453/lamine-yamal-is-the-fc-barcelona-no10/amp
+PLAYER_FACTS = {
+    "p_2e0FPo": {
+        "birth": date(2007, 7, 13),
+        "foot": "left",
+        "foot_url": "https://www.uefa.com/uefachampionsleague/news/02a7-211e6967ce56-e8c3af6961a3-1000--lamine-yamal-in-the-champions-league-records-stats-who-h/",
+        "club": "t_32jSEF",
+        "signed": date(2025, 7, 16),
+        "expiry": date(2031, 6, 30),
+        "contract_url": "https://www.fcbarcelona.com/en/football/first-team/news/4274403/lamine-yamal-extends-contract-with-fc-barcelona-to-2031/featured",
+    },
+}
 # Reviewed UEFA spellings of clubs (club_links() of the previous pipeline's collect_rankings.py
 # on main): a club named as the key is also known by the value. A drift test compares them.
 CLUB_ALIASES = {
@@ -48,7 +61,7 @@ EDITORIAL_LISTS = {
 def scopes(now):
     day = timedelta(days=1)
     # national_teams before team_identity: the merge reads the flag it sets.
-    return {"player_aliases": day, "club_aliases": day, "stadium_plans": day, "league_zones": day, "cup_logos": day,
+    return {"player_aliases": day, "player_facts": day, "club_aliases": day, "stadium_plans": day, "league_zones": day, "cup_logos": day,
             "sportscore_ids": day, "country_names": day, "national_teams": day, "team_identity": day, "editorial_lists": day}
 
 
@@ -289,6 +302,39 @@ def club_aliases(conn):
     return written, 0
 
 
+def player_facts(conn):
+    """Write reviewed profile fields against known provider identities."""
+    written = unmatched = 0
+    for key, facts in PLAYER_FACTS.items():
+        player = conn.execute(
+            """SELECT p.id FROM core.provider_ids i JOIN core.players p ON p.id = i.entity_id
+               WHERE i.entity_type = 'player' AND i.provider = 'pitchapi' AND i.provider_key = %s
+                 AND i.is_current AND p.birth_date = %s""",
+            (key, facts["birth"]),
+        ).fetchone()
+        team = conn.execute(
+            """SELECT coalesce(t.merged_into, t.id) FROM core.provider_ids i JOIN core.teams t ON t.id = i.entity_id
+               WHERE i.entity_type = 'team' AND i.provider = 'pitchapi' AND i.provider_key = %s AND i.is_current""",
+            (facts["club"],),
+        ).fetchone()
+        if player is None or team is None:
+            unmatched += 1
+            continue
+        written += conn.execute(
+            """UPDATE core.players SET preferred_foot = %s, preferred_foot_source_url = %s, updated_at = now()
+               WHERE id = %s AND (preferred_foot IS NULL OR
+                 (preferred_foot = %s AND preferred_foot_source_url IS NULL))""",
+            (facts["foot"], facts["foot_url"], player[0], facts["foot"]),
+        ).rowcount
+        written += conn.execute(
+            """INSERT INTO core.player_contracts(player_id, team_id, start_date, end_date, source, as_of, source_url)
+               VALUES (%s, %s, %s, %s, 'other', %s, %s)
+               ON CONFLICT (player_id, team_id, start_date) DO NOTHING""",
+            (player[0], team[0], facts["signed"], facts["expiry"], facts["signed"], facts["contract_url"]),
+        ).rowcount
+    return written, unmatched
+
+
 def run(conn, get, scope, now):
     if scope == "team_identity":
         from . import identity
@@ -296,7 +342,7 @@ def run(conn, get, scope, now):
         return identity.run(conn, get, "teams", now)
     for name, handler in (("league_zones", league_zones), ("cup_logos", cup_logos), ("sportscore_ids", sportscore_ids),
                           ("country_names", country_names), ("national_teams", national_teams),
-                          ("editorial_lists", editorial_lists)):
+                          ("editorial_lists", editorial_lists), ("player_facts", player_facts)):
         if scope == name:
             return handler(conn)
     if scope == "club_aliases":

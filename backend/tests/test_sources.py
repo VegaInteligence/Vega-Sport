@@ -273,10 +273,30 @@ class UefaTest(unittest.TestCase):
         x("INSERT INTO core.players(id, name) VALUES (50, 'Cristiano Ronaldo'), (51, 'Cristiano Ronaldo')")
         x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player','pitchapi','p_3yEwhj',50), ('player','pitchapi','p_other1',51)")
         x("INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source) VALUES ('player', 50, 'Old', 'old', 'alias', 'vega'), ('player', 50, 'CR', 'cr', 'alias', 'wikidata')")
-        self.assertEqual(sources.run_due(self.db, None, NOW, names={"vega"}), {("vega", scope): "ok" for scope in ("player_aliases", "club_aliases", "stadium_plans", "league_zones", "cup_logos", "sportscore_ids", "country_names", "national_teams", "team_identity", "editorial_lists")})
+        self.assertEqual(sources.run_due(self.db, None, NOW, names={"vega"}), {("vega", scope): "ok" for scope in ("player_aliases", "player_facts", "club_aliases", "stadium_plans", "league_zones", "cup_logos", "sportscore_ids", "country_names", "national_teams", "team_identity", "editorial_lists")})
         names = self.db.execute("SELECT entity_id, normalized, source::text FROM core.entity_names WHERE entity_type='player' ORDER BY 1, 2").fetchall()
         # The homonym gets nothing; the removed Vega alias goes; Wikidata's stays.
         self.assertEqual(names, [(50, "cr", "wikidata"), (50, "cr7", "vega")])
+
+    def test_curated_player_facts_require_matching_identity_and_can_be_retried(self):
+        x = self.db.execute
+        with self.db.transaction(force_rollback=True):
+            x("INSERT INTO core.players(id, name, birth_date) VALUES (340, 'Lamine Yamal', '2007-07-14')")
+            x("INSERT INTO core.teams(id, name, country_code) VALUES (340, 'Barcelona', 'ESP')")
+            x("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES
+                 ('player','pitchapi','p_2e0FPo',340), ('team','pitchapi','t_32jSEF',340)""")
+            self.assertEqual(curated.player_facts(self.db), (0, 1))
+            x("UPDATE core.players SET birth_date = '2007-07-13' WHERE id = 340")
+            x("SET LOCAL ROLE vega_collect")
+            self.assertEqual(curated.player_facts(self.db), (2, 0))
+            self.assertEqual(curated.player_facts(self.db), (0, 0))
+            x("RESET ROLE")
+            self.assertIn("uefa.com", x("SELECT preferred_foot_source_url FROM core.players WHERE id=340").fetchone()[0])
+            self.assertIn("fcbarcelona.com", x("SELECT source_url FROM core.player_contracts WHERE player_id=340").fetchone()[0])
+            self.assertEqual(
+                x("SELECT preferred_foot, contract_until, contract_team FROM api.player_profiles WHERE player_id=340").fetchone(),
+                ("left", "2031-06-30", "Barcelona"),
+            )
 
     def test_fifa_editions(self):
         x = self.db.execute
