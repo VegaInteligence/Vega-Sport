@@ -31,7 +31,7 @@ import {
   statValue,
 } from "../services/match-data.js";
 import { useResource } from "../services/resources.js";
-import { gradeTitle, leadingPlayers, useMatchGrades } from "../services/match-grades.js";
+import { gradeTitle, leadingPlayers, playerOf, useMatchGrades } from "../services/match-grades.js";
 import {
   matchReadSource,
   matchResourceKey,
@@ -281,7 +281,7 @@ function MatchPlayers({ match, players }) {
             {rows
               .filter((r) => r.teamId === team.id)
               .map((r) => (
-                <MatchPlayer row={r} key={r.id} grade={grades.get(r.id)} />
+                <MatchPlayer row={r} key={r.id} grade={grades.get(playerOf(r))} />
               ))}
             {!rows.some((r) => r.teamId === team.id) && (
               <Empty>Aucune performance collectée.</Empty>
@@ -475,7 +475,7 @@ export default function MatchDetail({ match }) {
         .sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1)),
     [f.data, match.id],
   );
-  const leading = leadingPlayers(players.length ? players : match.leadingPlayers, grades);
+  const leading = leadingPlayers(players.length ? players : match.leadingPlayers, grades, { match: match.id });
   const competition = f.allCompetitions.find((c) => c.id === match.leagueId);
   const homeName = match.home.name ?? "Équipe non renseignée";
   const awayName = match.away.name ?? "Équipe non renseignée";
@@ -693,7 +693,7 @@ export default function MatchDetail({ match }) {
               }
             >
               {leading.map((r, i) => (
-                <MatchPlayer key={r.id} row={r} rank={i + 1} grade={grades.get(r.id)} />
+                <MatchPlayer key={r.id} row={r} rank={i + 1} grade={grades.get(playerOf(r))} />
               ))}
               {!leading.length && <Empty>Aucune note collectée.</Empty>}
             </Card>

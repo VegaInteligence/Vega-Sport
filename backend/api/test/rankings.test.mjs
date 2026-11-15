@@ -98,6 +98,9 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   assert.deepEqual(graded.grades.map((g) => [g.playerId, g.minutes, g.grade, g.rank]), [
     ["p_aaaab1", 90, 80.8, 1], ["p_aaaab4", 90, 50, 2], ["p_aaaab3", 10, null, null],
   ]);
+  // Each grade carries the player's appearance, for a match the source rated no one in.
+  const best = graded.grades[0];
+  assert.deepEqual([best.name, best.imageUrl, best.team, best.goals], ["Élie Durand", "https://img.example/p1.png", "Olympique Été", 2]);
   assert.equal((await get("/api/rankings/match?match=m_aaaaa2")).response.status, 404);
   assert.equal((await get("/api/rankings/match?match=aaaaa1")).response.status, 400);
   assert.equal((await get("/api/rankings/match?match=m_aaaaa1&x=1")).response.status, 400);
