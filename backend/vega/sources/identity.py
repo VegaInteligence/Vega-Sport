@@ -66,6 +66,11 @@ CHUNK = 100
 # The longest a statement of the pass may run (run): on 14 November 2026 removing a set of
 # a hundred teams was still running after five hours and held the daily pass behind it.
 STATEMENT_LIMIT = "10min"
+# Merges are off until a merged team stays as a pointer instead of being removed: removing a
+# row makes PostgreSQL read every table naming teams that has no index on them (38 columns,
+# about 40 million rows on 14 November 2026) once per team, minutes each, so a set of a
+# hundred cannot finish within STATEMENT_LIMIT. The pass still notes the duplicate matches.
+MERGES = False
 
 
 def scopes(now):
@@ -462,6 +467,9 @@ def run(conn, get, scope, now):
     # is rolled back and retried later, and the daily pass that runs it goes on.
     conn.execute(f"SET LOCAL statement_timeout = '{STATEMENT_LIMIT}'")
     found, candidates = pairs(conn)
+    if not MERGES:
+        duplicates(conn)
+        return 0, candidates
     columns = team_columns(conn, [row[0] for row in found]) if found else []
     merged = sum(_merge(conn, found[start:start + CHUNK], columns) for start in range(0, len(found), CHUNK))
     duplicates(conn)
