@@ -399,7 +399,6 @@ function Fixtures({ competition, day, initialSeason }) {
           </AsyncState>
         )}
       </Card>
-      {showHighlights && <LeagueRoundCards competition={competition?.id} season={seasonLabel(season)} />}
       {showHighlights && overviewFixtures && (
         <CompetitionHighlights
           matches={overviewFixtures.matches || []}
@@ -412,6 +411,7 @@ function Fixtures({ competition, day, initialSeason }) {
           }}
         />
       )}
+      {showHighlights && <LeagueRoundCards competition={competition?.id} season={seasonLabel(season)} />}
     </div>
   );
 }

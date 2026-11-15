@@ -41,9 +41,9 @@ export default function LeagueRoundCards({ competition, season }) {
     <div className="league-round-cards">
       <Card
         title="Joueur de la saison"
-        text={body ? `Après la ${roundLabel(body.round).toLowerCase()} · note Vega moyenne de ses matchs, resserrée vers 50 tant qu’il a peu joué` : undefined}
         className="league-race"
       >
+        {(body ? `Après la ${roundLabel(body.round).toLowerCase()} · note Vega moyenne de ses matchs, resserrée vers 50 tant qu’il a peu joué` : undefined) && <p className="card-note">{body ? `Après la ${roundLabel(body.round).toLowerCase()} · note Vega moyenne de ses matchs, resserrée vers 50 tant qu’il a peu joué` : undefined}</p>}
         {round.loading || rounds.loading ? (
           <Skeleton />
         ) : !body?.race?.length ? (
@@ -70,7 +70,6 @@ export default function LeagueRoundCards({ competition, season }) {
       </Card>
       <Card
         title="Équipe de la journée"
-        text={body?.team ? `${body.team.formation} · les meilleures notes Vega de la journée, à partir de 60 minutes` : undefined}
         className="league-team"
         action={
           closed.length > 1 && (
@@ -93,6 +92,7 @@ export default function LeagueRoundCards({ competition, season }) {
           )
         }
       >
+        {(body?.team ? `${body.team.formation} · les meilleures notes Vega de la journée, à partir de 60 minutes` : undefined) && <p className="card-note">{body?.team ? `${body.team.formation} · les meilleures notes Vega de la journée, à partir de 60 minutes` : undefined}</p>}
         {round.loading || rounds.loading ? (
           <Skeleton rows={4} />
         ) : !body?.team ? (
