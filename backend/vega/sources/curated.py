@@ -280,7 +280,7 @@ def club_aliases(conn):
 
     written = 0
     for name, alias in CLUB_ALIASES.items():
-        for (team,) in conn.execute("SELECT id FROM core.teams WHERE name = %s AND is_national IS NOT TRUE", (name,)).fetchall():
+        for (team,) in conn.execute("SELECT id FROM core.teams WHERE name = %s AND is_national IS NOT TRUE AND merged_into IS NULL", (name,)).fetchall():
             written += conn.execute(
                 """INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source)
                    VALUES ('team', %s, %s, %s, 'alias', 'vega') ON CONFLICT DO NOTHING""",

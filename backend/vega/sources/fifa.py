@@ -97,7 +97,7 @@ def link_national_team(conn, fifa_id, name, code):
     key = normalize(name)
     candidates = {
         team for team, country, team_name in conn.execute(
-            "SELECT id, country_code, name FROM core.teams WHERE is_national IS TRUE"
+            "SELECT id, country_code, name FROM core.teams WHERE is_national IS TRUE AND merged_into IS NULL"
         ).fetchall()
         if (code and country == code) or (key and normalize(team_name) == key)
     }

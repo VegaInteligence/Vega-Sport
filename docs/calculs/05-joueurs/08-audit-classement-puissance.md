@@ -176,7 +176,7 @@ Les coefficients de tour sont ceux de l'annexe A.4 (le tour qui précède les hu
 
 ## Version 4 : un niveau pour chaque championnat (15 novembre 2026)
 
-Tous les championnats, clubs et joueurs ont désormais une note sur la même échelle. Conseil pris auprès d'un second modèle, relu et mesuré ici avant d'être appliqué.
+Tous les championnats, clubs et joueurs ont désormais une note sur la même échelle. Conseil pris auprès d'un second modèle. Sa relecture du code a trouvé deux erreurs avant la mise en service : les compétitions européennes comptées comme des championnats dans les passages, et les équipes fusionnées encore listées par leur nom. Toutes deux sont corrigées, et les mesures ci-dessous refaites après correction.
 
 **Ce qui n'allait pas.** La version 3 retenait le niveau d'un championnat vers 1500 dans la proportion liens / (liens + 30), « liens » comptant ses matchs contre tous les autres championnats. Deux défauts :
 - cette retenue n'est pas un a priori cohérent : à l'équilibre, elle revient à un a priori dont la force baisse quand les liens augmentent, et 1500 est arbitraire ;
@@ -184,37 +184,51 @@ Tous les championnats, clubs et joueurs ont désormais une note sur la même éc
 
 **Le modèle** ([`power.py`](../../../backend/vega/power.py), « League levels (version 4) »). Le niveau ℓ de chaque championnat est le maximum a posteriori d'un seul modèle, qui réunit trois preuves :
 - **Les matchs entre championnats.** Avec l'Elo relancé depuis les niveaux, un match apporte le score I_m (r − E)·c et l'information I_m E(1 − E)·c² sur les deux championnats (c = ln 10 / 400), divisés par la dispersion des résultats (φ = 0,73 ; les nuls la font passer sous 1).
-- **Les joueurs qui changent de championnat.** Son rendement par 90 minutes est pris par rapport à la moyenne de son championnat cette saison-là. On en retire ce qu'en garde n'importe quel joueur d'une année sur l'autre, mesuré sur ceux qui sont restés (c' = α + 0,62 c sur 9 521 joueurs restés). Ce qui reste vaut −κ\* (ℓ_b − ℓ_a) / 400 par passage, avec la variance d'un passage et l'écart propre à une paire (τ_u = 0,09).
-- **Un a priori, sous forme d'écarts plutôt que d'un retour à 1500.** Une deuxième division se tient sous la première de son pays d'un écart de division b (162 points, écart-type 49, mesuré sur 11 paires). Une première division se tient à la moyenne de sa confédération (écart-type 122 entre championnats européens).
+- **Les joueurs qui changent de championnat.** On ne lit que ses matchs de championnat : un séjour en coupe d'Europe ou en sélection ne s'intercale jamais entre deux années. Son rendement par 90 minutes est pris par rapport à la moyenne de son championnat cette saison-là. On en retire ce qu'en garde n'importe quel joueur d'une année sur l'autre, mesuré sur ceux qui sont restés (c' = α + 0,63 c sur 9 599 joueurs restés des années 2024 et 2025). Ce qui reste vaut −κ\* (ℓ_b − ℓ_a) / 400 par passage (3 120 passages), avec la variance d'un passage et l'écart propre à une paire (τ_u = 0,09).
+- **Un a priori, sous forme d'écarts plutôt que d'un retour à 1500.** Une deuxième division se tient sous la première de son pays d'un écart de division b (162 points, écart-type 49, mesuré sur 11 paires). Une première division se tient à la moyenne de sa confédération si au moins trois de ses championnats sont mesurés : UEFA 1492, CONMEBOL 1499, CONCACAF 1482, AFC 1439 ; la CAF prend la moyenne d'ensemble. L'écart-type entre championnats européens est de 111.
 
-Tous ces réglages sont mesurés à chaque calcul sur les championnats que les seuls matchs et passages mesurent, à l'exception de κ\*. Les divisions de chaque championnat ont été relues une par une (`TIERS`) ; le Paulista A1, championnat d'État joué par des clubs de Serie A et de Serie B, est classé en deuxième division. Un championnat sans aucune preuve reçoit son a priori, et son erreur-type le dit. Un championnat est **mesuré** (`linked`, ses joueurs classés) quand son erreur-type est d'au plus 60 points ; les autres ont un niveau marqué « provisoire » sur le site, avec sa marge, et leurs joueurs un score sans rang. Les coupes continentales des autres confédérations entrent dans l'Elo (`ELO_APART` supprimé), une fois leurs clubs reliés à ceux de PitchAPI.
+Tous ces réglages sont mesurés à chaque calcul sur les championnats que les seuls matchs et passages mesurent, à l'exception de κ\*. Les divisions de chaque championnat ont été relues une par une (`TIERS`) ; le Paulista A1, championnat d'État joué par des clubs de Serie A et de Serie B, est classé en deuxième division. Un championnat sans aucune preuve reçoit son a priori, et son erreur-type le dit. Un calcul qui ne converge pas en 40 pas échoue et laisse les niveaux d'avant.
 
-**κ\*, le taux d'échange entre rendement et niveau.** Mesuré par profil de la vraisemblance du modèle complet : κ\* = 0,132 ± 0,006. La pente naïve des passages (0,22) était gonflée par la sélection : un joueur part après une bonne saison, et sa saison suivante redescend en partie. Mesurée seulement sur les paires de championnats que les matchs mesurent à 25 points près, elle donnait 0,169 ; mais les écarts entre championnats de pays différents, petits devant l'erreur, l'atténuent.
+**Mesuré.** Un championnat est **mesuré** (`linked`, ses joueurs classés) quand son erreur-type est d'au plus 45 points ; il le reste jusqu'à 52, pour qu'aucun championnat n'entre et ne sorte du classement à chaque calcul.
 
-**Validations, en lecture seule sur une copie de la base du 14 novembre.**
+Pourquoi 45 : à ce seuil, une erreur sur le niveau déplace l'indice d'un joueur d'au plus un quart d'écart-type de son rôle. Le calcul est e / (√2 σ), σ = 132 étant l'écart-type des forces des clubs sur les matchs de championnat de 2026/2027 ; à 60 points, ce serait 0,32.
+
+Les autres championnats ont un niveau marqué « provisoire » sur le site, avec sa marge, et leurs joueurs un score sans rang.
+
+**Les coupes des autres confédérations** entrent dans l'Elo (`ELO_APART` supprimé). Les clubs de ces coupes sont reliés à ceux de PitchAPI par la passe d'identité, qui tourne avant l'Elo dans le même passage quotidien.
+
+**Les équipes fusionnées.** Une équipe fusionnée reste comme pointeur vers celle qu'elle est (`core.teams.merged_into`, 094) : la supprimer faisait relire 40 millions de lignes par équipe, et une série de cent équipes a tourné cinq heures le 14 novembre. Les listes par nom (recherche, liens FIFA, SportsAPI, UEFA, alias) laissent ces lignes de côté.
+
+**κ\*, le taux d'échange entre rendement et niveau.** Mesuré par profil de la vraisemblance du modèle complet : 0,131 ± 0,006 (erreur statistique), gardé à 0,132.
+- La pente naïve des passages (0,22) était gonflée par la sélection : un joueur part après une bonne saison, et sa saison suivante redescend en partie.
+- Mesurée seulement sur les paires de championnats que les matchs mesurent à 25 points près, elle donne 0,167. Les passages d'un même pays (montées, descentes, prêts) donnent 0,17 ; ceux entre deux pays 0,08 ± 0,03. L'écart peut venir de l'erreur sur les petits écarts entre pays, ou de ce que les clubs recrutent à l'étranger des joueurs meilleurs que leurs statistiques. Il faut donc lire κ\* entre 0,13 et 0,17.
+- À 0,17, aucun championnat mesuré ne bouge de plus de 0,44 de son erreur (médiane 0,15). Les plus grands déplacements sont des championnats non mesurés : Islande −49, J3 League +23.
+
+**Validations, en lecture seule** sur une copie de la base du 14 novembre où les fusions d'équipes en attente sont appliquées comme le fera la passe d'identité. Les deux méthodes lisent les coupes des autres confédérations.
 
 | Épreuve | Version 3 | Version 4 | Critère |
 | --- | ---: | ---: | --- |
-| Prédire les 4 876 matchs entre championnats joués après le 1ᵉʳ août 2025, niveaux calculés avant cette date (log-loss) | 0,6522 | 0,6467 | plus bas |
-| La même épreuve, championnats de moins de 100 liens (1 794 matchs) | 0,6543 | 0,6395 | plus bas |
-| Championnats dont le résultat après le 1ᵉʳ août reste à ±2 écarts-types de l'attendu | 68 % de 41 | 95 % de 41 | ≥ 90 % |
-| Prédire les 1 241 passages de 2026/2027 (pente observé / prédit) | 1,29 ± 0,21 | 1,03 ± 0,12 | entre 0,85 et 1,15 |
-| Matchs seuls contre transferts seuls, 31 championnats que les deux mesurent (rms des écarts réduits) | — | 0,97 | ≤ 1,3 |
+| Prédire les 5 004 matchs entre championnats joués après le 1ᵉʳ août 2025, niveaux calculés avant cette date (log-loss) | 0,6517 | 0,6466 | plus bas |
+| La même épreuve, championnats de moins de 100 liens (1 794 matchs) | 0,6542 | 0,6395 | plus bas |
+| Championnats dont le résultat après le 1ᵉʳ août reste à ±2 écarts-types de l'attendu | 73 % de 49 | 94 % de 49 | ≥ 90 % |
+| Prédire les 1 282 passages de 2026/2027 (pente observé / prédit) | 1,30 ± 0,19 | 1,11 ± 0,12 | entre 0,85 et 1,15 |
+| Matchs seuls contre transferts seuls, 31 championnats que les deux mesurent (rms des écarts réduits) | — | 1,03 | ≤ 1,3 |
 | Ajouter les coupes continentales : déplacement du Brésil | — | −25 (erreur-type 42) | < 1 erreur-type |
 | Ajouter les coupes continentales : déplacement des championnats européens | — | ≤ 2 points | ≤ 5 points |
 
-Les deux championnats hors de ±2 sur l'épreuve des matchs sont Israël (−2,8) et le Danemark (+2,1) ; la version 3 les manquait déjà (−3,1 et +3,5).
+Hors de ±2 sur l'épreuve des matchs : Israël (−2,8), le Venezuela (+2,3) et le Danemark (+2,1) ; la version 3 manquait déjà Israël et le Danemark (−3,1 et +3,5).
+
+L'Argentine et la Liga MX montent avec les coupes de leur confédération (+124 et +113 points). Ce n'est pas un retard des clubs qui entrent au niveau de leur championnat. Leur surplus dans ces coupes, Σ(r − E) par saison, reste faible chaque année (|z| ≤ 1,3) et n'est pas plus fort au début.
 
 **Ce que cela change** (base du 14 novembre, coupes continentales comprises ; erreur-type contre les onze championnats qui tiennent l'échelle) :
 - les cinq grands championnats et le Championship restent à quelques points de leur niveau d'avant ;
-- les petits championnats, que la version 3 retenait vers 1500, descendent : Finlande 1186 ± 59 (1492 avant), Suède 1357 ± 38 (1486), Slovaquie 1299 ± 50 (1492), Suisse 1432 ± 31 (1532), Danemark 1457 ± 28 (1549) ;
-- les 31 championnats hors de l'échelle reçoivent un niveau. Argentine 1588 ± 32, Liga MX 1562 ± 42, Saudi Pro League 1537 ± 49, MLS 1504 ± 38, Équateur 1530 ± 35, J. League 1362 ± 66, Chine 1258 ± 77 ;
-- 52 championnats d'hommes sur 71 sont mesurés. En 2026/2027, la part des joueurs éligibles classés passe de 58 % à 84 %.
+- les petits championnats, que la version 3 retenait vers 1500, descendent : Finlande, Suède, Slovaquie, Suisse et Danemark perdent entre 90 et 300 points ;
+- les 31 championnats hors de l'échelle reçoivent un niveau (Argentine, Liga MX, MLS, Équateur, Japon, Chine…) ;
+- 47 championnats d'hommes sur 71 sont mesurés, soit environ 77 % des séjours de 900 minutes en championnat de 2026/2027 (58 % des éligibles étaient classés avant). Saudi Pro League (± 51) et Russie (± 55) restent provisoires.
 
-Calculée sur 2026/2027 en lecture seule, la course au Ballon d'Or change peu dans ses trente premiers. Rúben Neves (Al Hilal, 16ᵉ) et Antoine Griezmann (Orlando City, 17ᵉ) y entrent : leurs championnats sont désormais mesurés.
-
-**Ce qui n'est pas changé : le poids du niveau du club (κ).** Le score garde LEVEL_SHARE = 0,5 (κ ≈ 0,65 en 2026/2027) : la moitié de ce qui sépare deux joueurs est le niveau où ils jouent. Un κ égal au taux d'échange (0,132) laisserait la note d'un joueur inchangée quand il change de championnat. Essayé en lecture seule, il remplit les trente premiers de joueurs de Bolivie, du Paraguay, de Norvège et de Roumanie. La raison : le taux d'échange est mesuré sur le rendement pris par rapport à la moyenne de son championnat, alors que le score lit le rendement brut, plus facile à produire dans un championnat faible. Une version cohérente demanderait de prendre aussi le rendement par rapport à son championnat dans le score. C'est un changement de la méthode à décider à part ; il n'est pas fait.
+**Ce qui n'est pas changé : le poids du niveau du club (κ).** Le score garde LEVEL_SHARE = 0,5 : la moitié de ce qui sépare deux joueurs est le niveau où ils jouent. Un κ égal au taux d'échange (0,132) laisserait la note d'un joueur inchangée quand il change de championnat. Essayé en lecture seule sur 2026/2027, il remplit les trente premiers de joueurs de Bolivie, du Paraguay, de Norvège et de Roumanie. L'explication avancée n'est pas vérifiée : le taux d'échange est mesuré sur le rendement pris par rapport à la moyenne de son championnat, alors que le score lit le rendement brut. Il faudrait rejouer avec le rendement pris par rapport à son championnat. Si ces joueurs restaient en tête, ce serait que le taux d'échange vaut en moyenne mais pas pour les meilleurs : il faudrait alors une standardisation dans le championnat, pas seulement un centrage. C'est un changement de la méthode à décider à part ; il n'est pas fait. Avec plus de joueurs classés, le κ publié pour la même part de 0,5 change ; sa valeur après la mise en service est lue dans `agg.power_runs`.
 
 **Limites.**
 - Les sélections nationales gardent leur Elo de la version 3 ; la confédération comme « championnat » des sélections reste à faire.
-- Le taux d'échange est fixé pour la version 4. Il est à mesurer de nouveau quand la base aura plus d'années de transferts : seules les années du trophée terminées comptent (2024 et 2025 ; 3 550 passages).
+- Les joueuses du championnat féminin entrent encore dans les références de rôle communes (`references()`) ; leur score est calculé entre elles.
+- Le taux d'échange est fixé pour la version 4. Il est à mesurer de nouveau quand la base aura plus d'années de transferts : seules les années du trophée terminées comptent (2024 et 2025).
