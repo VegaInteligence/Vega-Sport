@@ -10,8 +10,16 @@ def _columns(counts, values):
 
 PLAYER_STATS_COLUMNS = _columns(
     """position_id minutes_played goals assists own_goals total_shots shots_on_target shots_off_target blocked_shots shots_woodwork big_chances_created big_chances_missed penalties_won penalties_missed accurate_passes accurate_passes_total passes_into_final_third chances_created crosses accurate_crosses accurate_crosses_total long_balls_accurate long_balls_total line_breaking_passes corners throw_ins touches touches_opp_box dribbles_succeeded dribbles_total dispossessed offsides was_fouled tackles last_man_tackles interceptions clearances headed_clearances clearances_off_line shot_blocks recoveries defensive_actions dribbled_past errors_led_to_goal penalties_conceded fouls duels_won duels_lost ground_duels_won ground_duels_total aerials_won aerials_total saves saves_inside_box diving_saves high_claims punches sweeper_actions goals_conceded penalties_saved shootout_penalties_saved sprints""",
-    """rating fantasy_points xg npxg xgot xa goals_prevented xgot_faced distance_m running_m sprinting_m top_speed_kmh""",
+    """fantasy_points xg npxg xgot xa goals_prevented xgot_faced distance_m running_m sprinting_m top_speed_kmh""",
 )
+# The source's player rating, stored until 15 November 2026 and replaced by Vega's own match
+# grade (agg.player_match_grades): the migrations generated before carry it (009, 012, 049),
+# so their generators read the columns as they were.
+HISTORY_PLAYER_STATS_COLUMNS = {
+    **{key: typ for key, typ in PLAYER_STATS_COLUMNS.items() if typ == "smallint"},
+    "rating": "real",
+    **{key: typ for key, typ in PLAYER_STATS_COLUMNS.items() if typ == "real"},
+}
 TEAM_STATS_COLUMNS = _columns(
     """total_shots shots_on_target shots_off_target blocked_shots shots_woodwork shots_inside_box shots_outside_box big_chances big_chances_missed passes accurate_passes own_half_passes opposition_half_passes long_balls_accurate accurate_crosses touches_opp_box corners offsides throw_ins tackles interceptions clearances shot_blocks keeper_saves duels_won ground_duels_won aerials_won dribbles_succeeded fouls yellow_cards red_cards sprints""",
     """xg npxg xgot xg_open_play xg_set_play possession_pct long_balls_pct crosses_pct ground_duels_pct aerials_pct dribbles_pct distance_m walking_m running_m sprinting_m""",
@@ -31,10 +39,11 @@ PLAYER_ADVANCED_COLUMNS = _columns(
     + " xg_chain xg_buildup claim_rate launch_pct avg_pass_length distribution_accuracy",
 )
 # Identity mappings plus observed provider spellings from the approved specification.
+# The source's statistics read and dropped: its rating (Vega grades every match itself).
+IGNORED_PLAYER_KEYS = frozenset({"rating_title"})
 PITCHAPI_PLAYER_KEYS = {name: name for name in PLAYER_STATS_COLUMNS}
 PITCHAPI_PLAYER_KEYS.update(
     {
-        "rating_title": "rating",
         "owngoal": "own_goals",
         "ShotsOnTarget": "shots_on_target",
         "ShotsOffTarget": "shots_off_target",

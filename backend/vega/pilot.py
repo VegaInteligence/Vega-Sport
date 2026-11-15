@@ -348,7 +348,6 @@ class Pilot:
             "player_match_stats": (
                 "minutes_played",
                 "goals",
-                "rating",
                 "xg",
                 "distance_m",
                 "sprints",
