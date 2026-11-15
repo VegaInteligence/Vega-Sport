@@ -8,14 +8,14 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 
 | Valeur | Origine |
 | --- | --- |
-| xG, xG hors penalty, xG en jeu / sur CPA, xGOT, xA, buts évités, note du match | **Fournies par PitchAPI**. Vega lit, additionne et compare ces valeurs ; son propre xG ([Le xG de Vega](02-metriques-attendues/05-xg-vega.md)) les double sans les remplacer à l'affichage. |
+| xG, xG hors penalty, xG en jeu / sur CPA, xGOT, xA, buts évités | **Fournies par PitchAPI**. Vega lit, additionne et compare ces valeurs ; son propre xG ([Le xG de Vega](02-metriques-attendues/05-xg-vega.md)) les double sans les remplacer à l'affichage. |
 | Points attendus (xPts), probabilités victoire / nul / défaite | **Calculés par Vega** à partir des xG d'équipe (loi de Poisson). |
 | Écarts « réel − attendu » (finition, gardien, qualité de frappe, points) | **Calculés par Vega**. |
 | Totaux, moyennes par match, valeurs par 90 minutes, taux | **Calculés par Vega** à partir des observations par match. |
 | Centiles, rangs, indice Vega club et joueur, similarités, tags de style | **Calculés par Vega**, toujours relativement à un groupe de comparaison. |
 | Classements dérivés des résultats, zones européennes | **Calculés par Vega** quand aucun classement officiel n'est utilisé. |
 | Classements FIFA, coefficients UEFA | **Collectés** par le worker (`backend/vega/sources/fifa.py`, `uefa.py`), jamais recalculés. |
-| Classement Ballon d'Or Vega, niveaux des championnats, forces des clubs | **Calculés par Vega** chaque jour (`backend/vega/power.py`), selon [METHODE_CLASSEMENT_BALLON_D_OR.md](../METHODE_CLASSEMENT_BALLON_D_OR.md). Toutes les formules et leurs raisons : [les notes Vega](08-notes-vega/01-formules-et-raisons.md) ; les essais et validations : [l'audit](05-joueurs/08-audit-classement-puissance.md). |
+| Classement Ballon d'Or Vega, niveaux des championnats, forces des clubs, note de chaque match | **Calculés par Vega** chaque jour (`backend/vega/power.py`), selon [METHODE_CLASSEMENT_BALLON_D_OR.md](../METHODE_CLASSEMENT_BALLON_D_OR.md). Toutes les formules et leurs raisons : [les notes Vega](08-notes-vega/01-formules-et-raisons.md) ; les essais et validations : [l'audit](05-joueurs/08-audit-classement-puissance.md). |
 
 ## Sections
 
@@ -28,7 +28,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 - [xG, xG hors penalty, xGOT](02-metriques-attendues/01-xg-npxg-xgot.md)
 - [xA — passes décisives attendues](02-metriques-attendues/02-xa.md)
 - [Buts évités (gardien)](02-metriques-attendues/03-buts-evites.md)
-- [Note du match](02-metriques-attendues/04-note-du-match.md)
+- [Note du match](02-metriques-attendues/04-note-du-match.md) — la note Vega de chaque match, sur 100, et la note de saison qui en découle.
 - [Le xG de Vega](02-metriques-attendues/05-xg-vega.md)
 
 ### 3. Résultats et points attendus

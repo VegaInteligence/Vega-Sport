@@ -38,8 +38,8 @@ Au niveau d'un match, `xg` et `shotsOnTarget` valent 0 quand le joueur n'a pas t
 Le code indique que le fournisseur ne publie jamais 0 pour le xA ni pour les grosses occasions. Le xA est exclu des classements, mais `bigChancesCreated` reste classable (`rankable: key !== "xa"`) et figure dans la pizza des milieux offensifs et attaquants. Avec la règle de couverture complète, seuls les joueurs ayant une valeur à **chaque** match entrent dans la distribution : le centile compare un groupe très sélectionné, et la plupart des joueurs n'en ont pas.
 → [scouting.js](../../../dashboard/frontend/src/services/scouting.js#L47), [PlayerScoutOverview.jsx](../../../dashboard/frontend/src/components/PlayerScoutOverview.jsx#L146)
 
-**10. Deux définitions de la note saison.**
-Profil et annuaire : moyenne simple des notes. Accueil : moyenne pondérée par les minutes. Un même joueur peut afficher deux notes saison différentes.
+**10. Deux définitions de la note saison (résolu le 15 novembre 2026).**
+La note du fournisseur avait deux moyennes de saison : une moyenne simple sur le profil et l'annuaire, une moyenne pondérée par les minutes sur l'accueil. La note Vega qui la remplace n'a qu'une définition, partout : la note du z moyen pondéré par les minutes, sur les matchs de 20 minutes ou plus.
 → [Note du match](../02-metriques-attendues/04-note-du-match.md)
 
 **11. La cohorte d'une performance compte des performances, pas des joueurs.**

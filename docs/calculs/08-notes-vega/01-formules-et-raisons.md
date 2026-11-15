@@ -1,6 +1,6 @@
 # Notes Vega : toutes les formules et leurs raisons
 
-Ce document rassemble, en un seul endroit, chaque calcul qui donne une note à un championnat, à un club et à un joueur, avec sa formule, ses réglages et la raison de chacun. Il décrit ce que fait le code en service (`backend/vega/power.py`, méthode `power-ranking-v6`, 15 novembre 2026).
+Ce document rassemble, en un seul endroit, chaque calcul qui donne une note à un championnat, à un club et à un joueur, avec sa formule, ses réglages et la raison de chacun. Il décrit ce que fait le code en service (`backend/vega/power.py`, méthode `power-ranking-v7`, 15 novembre 2026).
 
 Pour chaque réglage, il dit s'il est **mesuré** sur la base ou **choisi**. Un réglage choisi exprime une préférence ou reprend la méthode de départ ([METHODE_CLASSEMENT_BALLON_D_OR.md](../../METHODE_CLASSEMENT_BALLON_D_OR.md)) ; il n'a pas été ajusté sur les données.
 
@@ -410,6 +410,25 @@ $$
 | Matchs de moins de 30 minutes parmi les 1 % meilleurs | 3,0 % | ≤ 5 % |
 | Corrélation de rang avec la note PitchAPI dans un match (médiane) | 0,57 | ≥ 0,5 |
 | Joueurs du dernier quart des titulaires avec au moins un match noté 75 ou plus | 25 % | sensible |
+
+**La seule note de match du site (version 7, 15 novembre 2026).** La note Vega remplace partout la note du fournisseur, qui n'est plus lue. Elle est gardée où sont les statistiques du match (`agg.player_match_grades` : z, l'année de référence, la première valeur, la date du dernier changement), et seule une note qui bouge est réécrite.
+
+**Note de saison.** C'est la note du z moyen pondéré par les minutes, sur les matchs de 20 minutes ou plus :
+
+$$
+\bar{z} = \frac{\sum_i m_i\, z_i}{\sum_i m_i}, \qquad \text{note de saison} = \frac{100}{1 + 10^{-\bar{z}/4}}
+$$
+
+- **Pourquoi la moyenne des z.** La courbe écrase ses extrémités : environ 14 points par unité de z autour de 50, 10 vers z = 2. La moyenne des notes sous-estimerait les grands matchs.
+- **Pourquoi pondérer par les minutes.** L'attendu de C croît avec les minutes, si bien que le z d'une courte entrée est tiré vers 0.
+- **Pourquoi 20 minutes et non le seuil d'affichage.** Une courte entrée affichée parce que |z| ≥ 1 est choisie sur son résultat : la compter fausserait la moyenne.
+- Les sommes de chaque édition (`agg.player_grade_editions`) s'additionnent entre éditions. La note de saison décrit les matchs joués ; le niveau du joueur reste le score du classement.
+
+**Classer des notes de match.** Les meilleurs joueurs d'un match, le joueur de la semaine et le meilleur match de vos joueurs ne lisent que les matchs de 60 minutes ou plus, les matchs complets de la référence. Ils sont ordonnés par z.
+
+**Couleurs.** Les paliers suivent les parts de matchs complets : 70 ou plus correspond à z ≥ 1,47, soit les 7 % meilleurs environ ; moins de 30, aux 7 % moins bons ; 40 à 60, au match ordinaire.
+
+**Choisi** : 20 et 60 minutes, les paliers de couleur. **Mesuré** : la référence de chaque rôle.
 
 ## 6. Les sélections
 
