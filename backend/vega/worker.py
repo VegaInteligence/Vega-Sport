@@ -75,6 +75,8 @@ RETRY_DAILY_AFTER = timedelta(hours=1)
 # The side work on its own rhythm (side_loop): a daily pass every minute (it does
 # nothing when nothing is due), the image copies every five.
 SIDE_DAILY_EVERY = 60
+# Seasons ranked again a pass because their ranking is of an older method (Worker.daily).
+STALE_RANKINGS = 20
 SIDE_MEDIA_EVERY = 300
 
 
@@ -488,6 +490,16 @@ class Worker:
             ok, _ = self._daily_step(("season", season), now, lambda: models.refresh_daily(self.calc_conn, season, elo=False))
             if ok:
                 print(f"daily models season={season} outcome=ok", flush=True)
+        # Every season's player ranking is of the present method: a season the rules above leave
+        # out (no match in 400 days, an archive season) is ranked again, its ranking alone, most
+        # recent first and STALE_RANKINGS a pass. Without player statistics it is a quick, empty run.
+        from . import power
+
+        _, stale = self._daily_step(("stale rankings",), now, lambda: power.stale_rankings(self.calc_conn))
+        for season in (stale or [])[:STALE_RANKINGS]:
+            ok, players = self._daily_step(("ranking", season), now, lambda: power.refresh_players(self.calc_conn, season))
+            if ok:
+                print(f"player ranking season={season} method={power.METHOD_VERSION} players={players}", flush=True)
         return seasons
 
     def mirror(self, limit=200):
