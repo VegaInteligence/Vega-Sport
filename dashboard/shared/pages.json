@@ -31,6 +31,12 @@
     "component": "PlayersPage"
   },
   {
+    "key": "power-ranking",
+    "path": "/power-ranking/",
+    "title": "Power Ranking",
+    "component": "PowerRankingPage"
+  },
+  {
     "key": "matches",
     "path": "/matchs/",
     "title": "Calendrier",

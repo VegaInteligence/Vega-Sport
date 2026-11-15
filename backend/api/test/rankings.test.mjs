@@ -107,6 +107,15 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   assert.equal((await get("/api/rankings/match?match=m_aaaaa1&x=1")).response.status, 400);
   assert.equal((await get("/api/rankings/power/player?season=2025/2026")).response.status, 400);
   assert.equal((await get("/api/rankings/power?kind=players&season=2025/2026&limit=1")).body.rows.length, 1);
+  // The whole ranking (the Power Ranking page): every ranked player of the universe, a page at a time, by role if asked.
+  const whole = (await get("/api/rankings/power?kind=players&season=2025/2026&scope=all&limit=1")).body;
+  assert.deepEqual([whole.total, whole.page, whole.universe, whole.rows.map((r) => [r.rank, r.playerId, r.provisionalReason])], [2, 1, "men", [[1, "p_aaaab1", null]]]);
+  assert.deepEqual((await get("/api/rankings/power?kind=players&season=2025/2026&scope=all&limit=1&page=2")).body.rows.map((r) => r.playerId), ["p_aaaab4"]);
+  const wingers = (await get("/api/rankings/power?kind=players&season=2025/2026&scope=all&role=winger")).body;
+  assert.deepEqual([wingers.total, wingers.rows.map((r) => [r.playerId, r.roleRank])], [1, [["p_aaaab4", 1]]]);
+  assert.equal((await get("/api/rankings/power?kind=players&season=2025/2026&scope=all&universe=women")).response.status, 404);
+  assert.equal((await get("/api/rankings/power?kind=players&season=2025/2026&scope=all&role=striker")).response.status, 400);
+  assert.equal((await get("/api/rankings/power?kind=players&season=2025/2026&page=2")).response.status, 400);
   assert.equal((await get("/api/rankings/power?kind=nations&season=2025/2026")).response.status, 404);
   assert.equal((await get("/api/rankings/power?kind=players&season=2025")).response.status, 400);
   assert.equal((await get("/api/rankings/power?kind=ballon&season=2025/2026")).response.status, 400);

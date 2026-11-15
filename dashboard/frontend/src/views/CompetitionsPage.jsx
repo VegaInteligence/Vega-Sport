@@ -318,7 +318,7 @@ function Fixtures({ competition, day, initialSeason }) {
             served
           />
         ) : supported && view === "projection" && projection ? (
-          <SeasonProjection projection={projection} />
+          <SeasonProjection projection={projection} competition={competition} season={season} />
         ) : (
           <AsyncState resource={resource}>
             {(value) => {

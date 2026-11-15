@@ -19,6 +19,7 @@ const SEARCH_AFTER = "competitions";
 const SECTION = {
   archives: "competitions",
   "player-ranking": "players",
+  "power-ranking": "players",
 };
 const bare = (path = "") => path.replace(/\/+$/, "") || "/";
 const tabs = pages

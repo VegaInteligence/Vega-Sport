@@ -2866,3 +2866,30 @@ th[aria-sort="descending"] .sort-indicator {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* Skeleton lines: the shape of what is loading, never a spinner or a « Chargement… » text. */
+.skeleton-line {
+  display: block;
+  height: 0.8em;
+  border-radius: 6px;
+  background: var(--surface-hover);
+  animation: progress-pulse 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line {
+    animation: none;
+  }
+}
+/* Power Ranking: a player's or a club's cell, avatar beside the name. */
+.power-ranking-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+}
+.power-ranking-name span {
+  display: grid;
+}
+.power-ranking-name small {
+  color: var(--muted);
+}

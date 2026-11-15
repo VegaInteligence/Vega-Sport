@@ -526,11 +526,13 @@ async function matchGrades(read, params) {
 }
 
 async function powerRanking(read, params) {
-  validateParams(params, ["kind", "season", "limit"]);
+  validateParams(params, ["kind", "season", "limit", "scope", "page", "role", "universe"]);
   const kind = params.get("kind") ?? "players", season = params.get("season"), limitRaw = params.get("limit") ?? "30";
   if (!/^(players|clubs|nations)$/.test(kind) || !/^\d{4}\/\d{4}$/.test(season || "") || !/^[1-9]\d{0,2}$/.test(limitRaw) || Number(limitRaw) > 200)
     reject(400, "Paramètre invalide.");
   const limit = Number(limitRaw);
+  if (kind === "players" && params.get("scope") === "all") return wholeRanking(read, params, season, limit);
+  if (params.has("scope") || params.has("page") || params.has("role") || params.has("universe")) reject(400, "Paramètre invalide.");
   if (kind === "players") {
     // The award race: the eligible players of a measured top division, numbered in their
     // order (`powerRank` is the player's rank among every ranked player; since
@@ -562,6 +564,35 @@ async function powerRanking(read, params) {
     rows: rows.map((r) => ({
       rank: r.rank, teamId: r.team_id, name: r.name, imageUrl: r.image_url ?? null, country: r.country ?? null,
       elo: round(r.elo, 1), eloChange: round(r.elo_change, 1), matches: r.matches, lastMatchAt: iso(r.last_match_at), ...clubSeason(r),
+    })),
+  };
+}
+
+/**
+ * The whole player ranking of a season (`scope=all`), for the Power Ranking page: every
+ * ranked player of a universe (men by default, or women: their own ranking), optionally of
+ * one role, in the ranking's order, a page of `limit` at a time. `rank` is the player's rank
+ * in his universe; a provisional rank says why (provisionalReason).
+ */
+async function wholeRanking(read, params, season, limit) {
+  const pageRaw = params.get("page") ?? "1", role = params.get("role"), universe = params.get("universe") ?? "men";
+  if (!/^[1-9]\d{0,4}$/.test(pageRaw) || (role && !Object.hasOwn(ROLE_LABEL, role)) || !["men", "women"].includes(universe))
+    reject(400, "Paramètre invalide.");
+  const page = Number(pageRaw);
+  const where = `season_id=${SEASON_KEY} AND rank IS NOT NULL AND universe=$2${role ? " AND role=$5" : ""}`;
+  const values = [season, universe, limit, (page - 1) * limit, ...(role ? [role] : [])];
+  const [rows, [count]] = await Promise.all([
+    read(`SELECT * FROM api.power_players WHERE ${where} ORDER BY ${role ? "role_rank" : "rank"}, player_id LIMIT $3 OFFSET $4`, values),
+    read(`SELECT count(*)::int AS total FROM api.power_players WHERE ${where.replace("$5", "$3")}`, [season, universe, ...(role ? [role] : [])]),
+  ]);
+  if (!count?.total) reject(404, "Donnée indisponible.");
+  return {
+    season, kind: "players", scope: "all", universe, role: role ?? null, page, limit, total: count.total,
+    method: rows.length ? { version: rows[0].method_version, computedAt: iso(rows[0].computed_at) } : null,
+    rows: rows.map((r) => ({
+      rank: r.rank, roleRank: r.role_rank, playerId: r.player_id, name: r.name, imageUrl: r.image_url ?? null, teamId: r.team_id ?? null,
+      team: r.team ?? null, teamImageUrl: r.team_image_url ?? null, position: ROLE_LABEL[r.role] ?? r.role, role: r.role,
+      score: round(r.score, 1), matches: r.matches, minutes: r.minutes, provisional: provisionalReason(r) !== null, provisionalReason: provisionalReason(r),
     })),
   };
 }
