@@ -105,7 +105,7 @@ test("home: archive week, media representation", { skip }, async () => {
   assert.equal(media.response.status, 200);
   assert.match(media.response.headers.get("etag"), /^W\/"media-home-v2-/);
   assert.deepEqual(media.body.media, { "https://img.example/t1.png": "https://media.test/data/sources/v2/images/" + "ab".repeat(32) + ".png" });
-  assert.equal(media.body.data.leaders.rating, undefined); // the compact cards drop the rating leaders
+  assert.equal(media.body.data.leaders.grade, undefined); // the compact cards drop the grade leaders
   // The choice of « Prochains matchs » still has each match's weight and cup flag.
   assert.deepEqual(media.body.data.highlights.map((h) => [h.fixture.id, h.weight, h.europe]), [["m_aaaaa6", 3, false]]);
   assert.deepEqual(media.body.data.rules.places, 5);

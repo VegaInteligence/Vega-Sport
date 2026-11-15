@@ -15,7 +15,8 @@ from vega.worker import publish
 from vega.store import Store, connect_local, migrate
 
 TEAMS = {1: ("t_aaaaa1", "Olympique Été", "FRA"), 2: ("t_aaaaa2", "Racing Club", "FRA"), 3: ("t_aaaaa3", "Stade Nord", None), 4: ("t_aaaaa4", "Union Sud", "FRA")}
-# Players: (id, key, name, team); stats per match: (match, minutes, rating, goals, xg, shots, passes ok/att, position, starter, saves, prevented)
+# Players: (id, key, name, team); stats per match: (match, minutes, level, goals, xg, shots, passes ok/att, position, starter, saves, prevented),
+# the level giving the match's Vega grade below: z = 3 (level − 7).
 PLAYERS = {101: ("p_aaaab1", "Élie Durand"), 102: ("p_aaaab2", "Marc Petit"), 103: ("p_aaaab3", "Hugo Sud"), 104: ("p_aaaab4", "Cristiano Test")}
 STATS = [
     (101, 1, 1, 90, 7.5, 2, 1.2, 4, 20, 25, 91, True, None, None),
@@ -108,11 +109,11 @@ def main(dsn):
     # Pass network edges (079): player 101 with two team-mates over two matches.
     x("""INSERT INTO core.pass_network_edges(season_id, match_id, team_id, from_player_id, to_player_id, passes) VALUES
          (2025,1,1,101,102,7), (2025,1,1,102,101,4), (2025,5,1,101,102,3), (2025,1,1,101,104,2), (2025,1,1,102,104,9)""")
-    for pid, mid, team, minutes, rating, goals, xg, shots, ok, att, position, starter, saves, prevented in STATS:
+    for pid, mid, team, minutes, level, goals, xg, shots, ok, att, position, starter, saves, prevented in STATS:
         x(
-            "INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,position_id,minutes_played,rating,goals,xg,total_shots,accurate_passes,accurate_passes_total,saves,goals_prevented) VALUES (2025,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            "INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,position_id,minutes_played,goals,xg,total_shots,accurate_passes,accurate_passes_total,saves,goals_prevented) VALUES (2025,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
             # As in production: the statistics carry no position, the line-up does.
-            (mid, team, pid, None, minutes, rating, goals, xg, shots, ok, att, saves, prevented),
+            (mid, team, pid, None, minutes, goals, xg, shots, ok, att, saves, prevented),
         )
         x("INSERT INTO core.lineup_players(season_id,match_id,team_id,player_id,is_starter,position_id) VALUES (2025,%s,%s,%s,%s,%s)", (mid, team, pid, starter, position))
     for pid, mid, team in BENCH:
@@ -213,12 +214,13 @@ def main(dsn):
     # keeper's ten minutes, too short and too ordinary for a grade to show.
     x("""INSERT INTO agg.player_power_matches(season_id,match_id,player_id,team_id,role,minutes,contribution,run_id,match_index)
          VALUES (2025,1,101,1,'centre_forward',90,1.6,%(run)s,2.5),(2025,1,104,2,'winger',70,0.0,%(run)s,0.0),(2025,1,103,4,'goalkeeper',10,0.1,%(run)s,0.4)""", {"run": run})
-    # Vega's grades where the statistics are (107): every rated match of the seed gets the
-    # normal score z = 3 (rating − 7), the source's order kept; match 1's three ranked ones are those above.
-    x("""INSERT INTO agg.player_match_grades(season_id,match_id,player_id,award_season,team_id,role,minutes,z,first_z,run_id)
-         SELECT season_id,match_id,player_id,2025,team_id,'centre_forward',minutes_played,3*(rating-7),3*(rating-7),%(run)s
-         FROM core.player_match_stats s WHERE rating IS NOT NULL AND minutes_played>0
-           AND NOT EXISTS (SELECT 1 FROM agg.player_power_matches p WHERE p.match_id=s.match_id AND p.player_id=s.player_id)""", {"run": run})
+    # Vega's grades where the statistics are (107): every played match of the seed with a level
+    # gets the normal score z = 3 (level − 7); match 1's three ranked ones are those above.
+    ranked = {(1, 101), (1, 104), (1, 103)}
+    for pid, mid, team, minutes, level, *_ in STATS:
+        if level is not None and minutes and (mid, pid) not in ranked:
+            x("""INSERT INTO agg.player_match_grades(season_id,match_id,player_id,award_season,team_id,role,minutes,z,first_z,run_id)
+                 VALUES (2025,%s,%s,2025,%s,'centre_forward',%s,%s,%s,%s)""", (mid, pid, team, minutes, 3 * (level - 7), 3 * (level - 7), run))
     x("""INSERT INTO agg.player_match_grades(season_id,match_id,player_id,award_season,team_id,role,minutes,z,first_z,run_id)
          SELECT 2025,match_id,player_id,2025,team_id,role,minutes,match_index,match_index,run_id FROM agg.player_power_matches WHERE match_id=1""")
     x("""INSERT INTO agg.player_grade_editions(season_id,competition_season_id,player_id,grade_count,grade_minutes,zm_sum)

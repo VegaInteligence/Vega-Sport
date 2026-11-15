@@ -75,10 +75,10 @@ class CalculatorTest(unittest.TestCase):
             (2025,1,1,'all',1.8,400,340,55),(2025,1,2,'all',0.9,300,240,45),
             (2025,2,2,'all',NULL,350,280,50),(2025,2,3,'all',0.5,350,290,50),
             (2025,3,3,'all',1.0,250,200,40),(2025,3,1,'all',2.2,450,400,60)""")
-        x("""INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,minutes_played,goals,xg,rating,accurate_passes,accurate_passes_total,top_speed_kmh) VALUES
-            (2025,1,1,10,90,1,0.8,7.5,40,50,31.5),
-            (2025,3,1,10,45,2,NULL,8.0,20,NULL,33.0),
-            (2025,1,2,11,90,1,0.4,6.5,30,40,NULL)""")
+        x("""INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,minutes_played,goals,xg,accurate_passes,accurate_passes_total,top_speed_kmh) VALUES
+            (2025,1,1,10,90,1,0.8,40,50,31.5),
+            (2025,3,1,10,45,2,NULL,20,NULL,33.0),
+            (2025,1,2,11,90,1,0.4,30,40,NULL)""")
         x("""INSERT INTO core.lineup_players(season_id,match_id,team_id,player_id,is_starter) VALUES
             (2025,1,1,10,true),(2025,3,1,10,false),(2025,1,2,11,true)""")
         x("""INSERT INTO core.match_events(season_id,match_id,team_id,seq,event_type,minute,period,score_home,score_away) VALUES
@@ -145,9 +145,6 @@ class CalculatorTest(unittest.TestCase):
         self.assertEqual((xg_n, xg_min), (1, 90))
         num, den, n = self.player(10, "pass_completion_num", "pass_completion_den", "pass_completion_n")
         self.assertEqual((num, den, n), (40, 50, 1))
-        rating_sum, rating_minutes = self.player(10, "rating_sum", "rating_minutes")
-        self.assertEqual(rating_minutes, 135)  # integer minutes, as the doc names them
-        self.assertAlmostEqual(rating_sum / rating_minutes, (7.5 * 90 + 8.0 * 45) / 135, places=4)
         self.assertAlmostEqual(self.player(10, "top_speed_kmh_max")[0], 33.0, places=4)
         # Team Alpha: the final is excluded from the standings, not from the season totals.
         matches, won, gf, ga, pts, cs, xp, xpm = self.team(
@@ -284,12 +281,11 @@ class ApiViewTest(CalculatorTest):
             self.db.execute(f"SELECT * FROM {view} LIMIT 5").fetchall()
 
     def test_season_values_are_computed_on_covered_minutes(self):
-        xg_p90, pass_pct, rating = self.one(
-            "SELECT xg_p90, pass_completion_pct, rating_avg FROM api.player_season WHERE player_id=10"
-        )
+        xg_p90, pass_pct = self.one("SELECT xg_p90, pass_completion_pct FROM api.player_season WHERE player_id=10")
         self.assertAlmostEqual(xg_p90, 0.8, places=4)
         self.assertAlmostEqual(pass_pct, 80.0, places=4)
-        self.assertAlmostEqual(rating, (7.5 * 90 + 8.0 * 45) / 135, places=4)
+        # The source's rating is gone (108): Vega grades every match itself.
+        self.assertNotIn("rating_avg", [d.name for d in self.db.execute("SELECT * FROM api.player_season LIMIT 0").description])
         ppm, xg_pm, tilt = self.one("SELECT ppm, xg_pm, pass_accuracy_pct FROM api.team_season WHERE team_id=1")
         self.assertAlmostEqual(ppm, 2.0, places=4)
         self.assertAlmostEqual(xg_pm, 2.0, places=4)

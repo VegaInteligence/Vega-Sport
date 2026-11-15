@@ -11,6 +11,7 @@ from .schema_contract import (
     TEAM_ADVANCED_COLUMNS,
     PLAYER_ADVANCED_COLUMNS,
     PITCHAPI_PLAYER_KEYS,
+    IGNORED_PLAYER_KEYS,
     PITCHAPI_TEAM_KEYS,
     PLAYER_TOTAL_KEYS,
 )
@@ -341,8 +342,10 @@ def _player_stats(out, row, groups, *, half=False):
                 continue
             if not isinstance(key, str):
                 raise NormalizationError("INVALID_STAT_KEY")
+            if key in IGNORED_PLAYER_KEYS:
+                continue
             column = PITCHAPI_PLAYER_KEYS.get(key)
-            if not column or (half and column in ("rating", "fantasy_points")):
+            if not column or (half and column == "fantasy_points"):
                 if isinstance(key, str):
                     _unknown(out, "player_stats." + key)
                 continue

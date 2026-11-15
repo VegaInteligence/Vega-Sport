@@ -21,7 +21,8 @@ const CUP_MATCHES = [
   [9013, 3, 2, "2025-09-10", "pending"],
   [9014, 4, 1, null, "ok"],
 ];
-// (player, match, team, minutes, rating, goals, xg, shots, passes ok, passes, duels won, duels lost, position, starter)
+// (player, match, team, minutes, level, goals, xg, shots, passes ok, passes, duels won, duels lost, position, starter): the level is
+// what the source once rated, kept for the rows' shape; the cup's matches have no Vega grade.
 const CUP_STATS = [
   // Élie Durand plays the cup for another club and in midfield, then for his league club.
   [101, 9011, 3, 90, 8.0, 1, 0.6, 3, 30, 40, 4, 2, 61, true],
@@ -31,7 +32,7 @@ const CUP_STATS = [
   // Cristiano Test: as many cup minutes as striker as league minutes as attacking midfielder.
   [104, 9012, 2, 90, 7.7, 2, 1.4, 5, 20, 26, 3, 3, 91, true],
   [104, 9013, 2, 70, 6.1, 0, 0.3, 2, 11, 16, 1, 4, 91, true],
-  // Zoé Coupe plays only the cup; her rating is not a number.
+  // Zoé Coupe plays only the cup.
   [105, 9011, 1, 90, "NaN", 0, 0.0, 0, 50, 55, 6, 1, 33, true],
 ];
 // Line-up entries without statistics: (player, match, team). 106 has no name and no public
@@ -68,12 +69,12 @@ before(async () => {
     await x("INSERT INTO core.players(id,name) VALUES ($1,$2)", [id, name]);
     if (key) await x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('player','pitchapi',$1,$2)", [key, id]);
   }
-  for (const [player, match, team, minutes, rating, goals, xg, shots, ok, passes, won, lost, position, starter] of CUP_STATS) {
+  for (const [player, match, team, minutes, , goals, xg, shots, ok, passes, won, lost, position, starter] of CUP_STATS) {
     await x(
-      `INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,minutes_played,rating,goals,xg,total_shots,
+      `INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,minutes_played,goals,xg,total_shots,
          accurate_passes,accurate_passes_total,duels_won,duels_lost)
-       VALUES (2025,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-      [match, team, player, minutes, rating, goals, xg, shots, ok, passes, won, lost],
+       VALUES (2025,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      [match, team, player, minutes, goals, xg, shots, ok, passes, won, lost],
     );
     await x("INSERT INTO core.lineup_players(season_id,match_id,team_id,player_id,is_starter,position_id) VALUES (2025,$1,$2,$3,$4,$5)", [
       match, team, player, starter, position,

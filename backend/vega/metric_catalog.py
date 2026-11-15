@@ -20,6 +20,7 @@ from dataclasses import dataclass
 
 from .schema_contract import (
     PLAYER_ADVANCED_COLUMNS,
+    HISTORY_PLAYER_STATS_COLUMNS,
     PLAYER_STATS_COLUMNS,
     SOURCE_ONLY_PLAYER_COLUMNS,
     SOURCE_ONLY_TEAM_COLUMNS,
@@ -119,6 +120,11 @@ TEAM_BASE_COLUMNS = {**TEAM_STATS_COLUMNS, "accurate_passes_pct": "real"}
 PLAYER_METRICS = _metrics(PLAYER_BASE, PLAYER_STATS_COLUMNS, "") + _metrics(
     PLAYER_ADVANCED, PLAYER_ADVANCED_COLUMNS, "adv_"
 )
+# The metrics as migrations 009, 012 and 049 were generated with: the source's rating among
+# them (retired on 15 November 2026, schema_contract.HISTORY_PLAYER_STATS_COLUMNS).
+HISTORY_PLAYER_METRICS = _metrics(PLAYER_BASE, HISTORY_PLAYER_STATS_COLUMNS, "") + _metrics(
+    PLAYER_ADVANCED, PLAYER_ADVANCED_COLUMNS, "adv_"
+)
 TEAM_METRICS = _metrics(TEAM_BASE, TEAM_BASE_COLUMNS, "") + _metrics(
     TEAM_ADVANCED, TEAM_ADVANCED_COLUMNS, "adv_"
 )
@@ -175,9 +181,9 @@ def ratio_columns(ratio, *, prefix=""):
     return [(stem + "_num", "real"), (stem + "_den", "real"), (stem + "_n", "integer")]
 
 
-def player_season_columns(*, legacy=False):
+def player_season_columns(*, legacy=False, history=False):
     cols = []
-    for metric in PLAYER_METRICS:
+    for metric in HISTORY_PLAYER_METRICS if history else PLAYER_METRICS:
         cols += metric_columns(metric, minutes=True, legacy=legacy)
     for ratio in PLAYER_RATIOS:
         cols += ratio_columns(ratio)

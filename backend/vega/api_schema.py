@@ -11,7 +11,7 @@ without a PitchAPI key gets a Vega key of another length, so the two never colli
 
 import re
 from .metric_catalog import (
-    PLAYER_METRICS,
+    HISTORY_PLAYER_METRICS as PLAYER_METRICS,
     PLAYER_RATIOS,
     TEAM_BASE,
     TEAM_METRICS,
