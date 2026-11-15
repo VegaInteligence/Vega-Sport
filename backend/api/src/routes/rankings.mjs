@@ -597,6 +597,68 @@ async function wholeRanking(read, params, season, limit) {
   };
 }
 
+/** A league edition's competition_season_id from its public id and season, or a 404. */
+async function editionOf(read, params) {
+  const competition = params.get("competition"), season = params.get("season");
+  if (!LEAGUE.test(competition || "") || !/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
+  const [edition] = await read("SELECT competition_season_id FROM api.edition_keys WHERE league_id=$1 AND season=$2 ORDER BY competition_season_id DESC LIMIT 1", [competition, season]);
+  if (!edition) reject(404, "Donnée indisponible.");
+  return { competition, season, edition: edition.competition_season_id };
+}
+
+const roundOf = (r) => ({
+  key: r.round_key, label: r.label, status: r.status, closedAt: iso(r.closed_at), matches: r.matches, played: r.played, excused: r.excused,
+  start: iso(r.window_start), end: iso(r.window_end),
+});
+
+/**
+ * A league edition's matchweeks (vega/rounds.py), in order, and the latest closed one: a
+ * round closes once its matches are over (a postponed match never blocks it); « amended »
+ * when a late match of a closed round was played since.
+ */
+async function leagueRounds(read, params) {
+  validateParams(params, ["competition", "season"]);
+  const { competition, season, edition } = await editionOf(read, params);
+  const rows = await read("SELECT * FROM api.league_rounds WHERE competition_season_id=$1 ORDER BY window_start, round_key", [edition]);
+  if (!rows.length) reject(404, "Donnée indisponible.");
+  const closed = rows.filter((r) => r.status !== "open");
+  return { competition, season, rounds: rows.map(roundOf), latest: closed.length ? closed[closed.length - 1].round_key : null };
+}
+
+/**
+ * One closed round of a league (the latest by default): its Team of the Round, the best
+ * eleven by Vega's match grades in the formation that fits them best, and the league's
+ * Player of the Season race after it (the shrunk mean grade of the season), both frozen at
+ * the round's closure.
+ */
+async function leagueRound(read, params) {
+  validateParams(params, ["competition", "season", "round"]);
+  const { competition, season, edition } = await editionOf(read, params);
+  const key = params.get("round");
+  if (key !== null && !/^(r\d{1,9}|w\d{4}-\d{2}-\d{2})$/.test(key)) reject(400, "Paramètre invalide.");
+  const [current] = await read(
+    key
+      ? "SELECT * FROM api.league_rounds WHERE competition_season_id=$1 AND round_key=$2 AND status<>'open'"
+      : "SELECT * FROM api.league_rounds WHERE competition_season_id=$1 AND status<>'open' ORDER BY window_start DESC, round_key DESC LIMIT 1",
+    key ? [edition, key] : [edition],
+  );
+  if (!current) reject(404, "Donnée indisponible.");
+  const [team, race] = await Promise.all([
+    read("SELECT * FROM api.round_teams WHERE competition_season_id=$1 AND round_key=$2 ORDER BY slot", [edition, current.round_key]),
+    read("SELECT * FROM api.round_season_race WHERE competition_season_id=$1 AND round_key=$2 ORDER BY rank", [edition, current.round_key]),
+  ]);
+  const person = (r) => ({ playerId: r.player_id, name: r.player_name, imageUrl: r.image_url ?? null, teamId: r.team_id ?? null, team: r.team ?? null,
+    teamImageUrl: r.team_image_url ?? null });
+  return {
+    competition, season, round: roundOf(current),
+    team: team.length
+      ? { formation: team[0].formation, players: team.map((r) => ({ slot: r.slot, line: r.line, slotRole: r.slot_role, position: ROLE_LABEL[r.role] ?? r.role,
+          ...person(r), matchId: r.match_id, minutes: r.minutes, grade: round(r.grade, 1) })) }
+      : null,
+    race: race.map((r) => ({ rank: r.rank, ...person(r), grade: round(r.grade, 1), matches: r.matches, minutes: r.minutes })),
+  };
+}
+
 export function createRankingRoute(read) {
   return async (req, path, params) => {
     if (path === "/api/rankings/power") return respond(req, await powerRanking(read, params));
@@ -604,6 +666,8 @@ export function createRankingRoute(read) {
     if (path === "/api/rankings/leagues") return respond(req, await leagueLevels(read, params));
     if (path === "/api/rankings/breakouts") return respond(req, await breakouts(read, params));
     if (path === "/api/rankings/match") return respond(req, await matchGrades(read, params));
+    if (path === "/api/rankings/rounds") return respond(req, await leagueRounds(read, params));
+    if (path === "/api/rankings/round") return respond(req, await leagueRound(read, params));
     if (path === "/api/forecasts/match") return respond(req, await matchForecast(read, params));
     if (path === "/api/forecasts/season") return respond(req, await seasonProjection(read, params));
     if (path === "/api/forecasts/live") return respond(req, await liveProbability(read, params));

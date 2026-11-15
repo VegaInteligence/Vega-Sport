@@ -317,22 +317,24 @@ WHERE m.season_id = %s AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT 
 MIN_LEAGUE = 8  # clubs: a table of fewer is no league to project
 
 
-def league_state(rows):
+def league_state(rows, held=frozenset()):
     """Per edition, from SEASON's rows: {edition: (table, fixtures)} of its regular rounds,
     for the domestic leagues with a match still to play. table: {team: (points, goals
-    for, goals against, played)}; fixtures: [(home, away)]."""
+    for, goals against, played)}; fixtures: [(home, away)]. A finished match in `held` (its
+    round is still open, rounds.py) counts as still to play: a league's projection moves
+    once a whole matchweek is over."""
     tables, fixtures = defaultdict(lambda: defaultdict(lambda: [0, 0, 0, 0])), defaultdict(list)
-    for _, edition, home, away, _, status, hs, as_, regular, domestic, *_ in rows:
+    for match, edition, home, away, _, status, hs, as_, regular, domestic, *_ in rows:
         if not (regular and domestic):
             continue
-        if status == "finished" and hs is not None and as_ is not None:
+        if status == "finished" and hs is not None and as_ is not None and match not in held:
             for team, gf, ga in ((home, hs, as_), (away, as_, hs)):
                 entry = tables[edition][team]
                 entry[0] += 3 if gf > ga else 1 if gf == ga else 0
                 entry[1] += gf
                 entry[2] += ga
                 entry[3] += 1
-        elif status == "not_started":
+        elif status == "not_started" or match in held:
             fixtures[edition].append((home, away))
             tables[edition][home], tables[edition][away]  # a club that has not played yet is in the table
     return {edition: ({team: tuple(v) for team, v in tables[edition].items()}, games)
@@ -363,8 +365,12 @@ def refresh(conn, season):
         near = r[10] is not None and r[10] <= now + FORM_HORIZON
         shifts = [form_shift(weights, present.get(team)) if near else 0.0 for team in (r[2], r[3])]
         forecasts.append((r[0], forecast(model, strengths[r[2]] + shifts[0], strengths[r[3]] + shifts[1], r[4]), strengths[r[2]], strengths[r[3]], shifts))
+    # A league's matches of a round still open wait for the round's close (rounds.py).
+    from .rounds import open_league_matches
+
+    held = open_league_matches(conn, season)
     leagues = {edition: (table, simulate(table, games, model, strengths, seed=edition))
-               for edition, (table, games) in sorted(league_state(rows).items())} if model else {}
+               for edition, (table, games) in sorted(league_state(rows, held).items())} if model else {}
     with conn.transaction():
         conn.execute("DELETE FROM agg.match_forecasts WHERE season_id = %s", (season,))
         conn.execute("DELETE FROM agg.season_projections WHERE season_id = %s", (season,))

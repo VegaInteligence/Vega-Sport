@@ -573,3 +573,82 @@
 @media (max-width: 600px) { .cup-directory-heading input { width: 100%; } .cup-country-list { grid-template-columns: minmax(0, 1fr); } }
 .cup-return { display: inline-block; margin: 0 0 12px; }
 .nations-league-switch { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; color: var(--muted); font-size: var(--text-sm); }
+
+/* A league's Player of the Season race and Team of the Round (LeagueRoundCards), side by
+   side under the table and its column; one under the other on a narrow screen. */
+.league-round-cards {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .league-round-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.round-skeleton {
+  display: grid;
+  gap: 12px;
+  padding: 8px 0;
+}
+.league-race-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.league-race-list li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.league-race-rank {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.league-round-select select {
+  min-width: 150px;
+}
+/* The pitch: forwards at the top, the goalkeeper at the bottom. */
+.team-pitch {
+  display: grid;
+  gap: 14px;
+  padding: 16px 8px;
+  border: 1px solid var(--line, var(--surface-hover));
+  border-radius: 12px;
+  background: var(--surface-raised);
+}
+.team-pitch-line {
+  display: flex;
+  justify-content: space-evenly;
+  gap: 6px;
+}
+.team-pitch-player {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 96px;
+  color: inherit;
+  text-align: center;
+}
+.team-pitch-avatar {
+  position: relative;
+}
+.team-pitch-avatar .rating-pill {
+  position: absolute;
+  left: -18px;
+  bottom: -2px;
+}
+.team-pitch-name {
+  font-size: 12px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 96px;
+}

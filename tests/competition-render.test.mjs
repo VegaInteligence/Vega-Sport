@@ -51,6 +51,7 @@ test("competition page renders a result-derived league table and its limits", as
     "../components/CompetitionHighlights.jsx": { __esModule: true, default: ({ season }) => elem("aside", { "data-highlights-season": season }, "Prochains matchs et derniers résultats") },
     // The league's projection (its own tests are in forecasts.test.mjs): none here, so no "Projection" view.
     "../components/SeasonProjection.jsx": { __esModule: true, default: () => elem("div", null, "Projection") },
+    "../components/LeagueRoundCards.jsx": { __esModule: true, default: () => elem("div", null, "Joueur de la saison et équipe de la journée") },
     "../services/forecasts.js": { useSeasonProjection: () => null },
     "../components/Layout.jsx": { __esModule: true, default: ({ children, title, actions }) => elem("main", null, elem("h1", null, title), actions, children) },
     "../hooks/FootballContext.jsx": { useFootball: () => context }, "../components/UI.jsx": UI,
