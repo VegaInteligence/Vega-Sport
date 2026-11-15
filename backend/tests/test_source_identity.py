@@ -320,6 +320,9 @@ class SourceIdentityTest(unittest.TestCase):
                          {30: 20, 40: 20, 33: 23, 37: 26})
         self.assertEqual(self.db.execute(
             "SELECT count(*) FROM core.matches WHERE home_team_id IN (30, 40, 33, 37) OR away_team_id IN (30, 40, 33, 37)").fetchone()[0], 0)
+        # A link kept from before the merge opens the club it became.
+        self.assertEqual(self.db.execute("SELECT api.internal_id('team', api.public_id('team', 30))").fetchone()[0], 20)
+        self.assertEqual(self.db.execute("SELECT api.internal_id('team', api.public_id('team', 31))").fetchone()[0], 31)
         # Its matches and their facts are the club's.
         self.assertEqual(self.db.execute("SELECT id, home_team_id, away_team_id FROM core.matches WHERE id IN (50, 51, 52) ORDER BY id").fetchall(),
                          [(50, 20, 32), (51, 38, 39), (52, 20, 32)])
