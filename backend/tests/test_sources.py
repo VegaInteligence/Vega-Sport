@@ -212,7 +212,7 @@ class UefaTest(unittest.TestCase):
             self.assertEqual(uefa.reconcile_teams(self.db), 1)
         self.assertEqual(self.db.execute("SELECT entity_id FROM core.provider_ids WHERE provider='uefa' AND provider_key='13'").fetchone()[0], 6)
         self.assertEqual(self.db.execute("SELECT count(*) FROM core.ranking_rows WHERE team_id=6").fetchone()[0], 1)
-        self.assertIsNone(self.db.execute("SELECT 1 FROM core.teams WHERE id=%s", (celta_uefa_only,)).fetchone())
+        self.assertEqual(self.db.execute("SELECT merged_into FROM core.teams WHERE id=%s", (celta_uefa_only,)).fetchone(), (6,))  # a pointer
 
     def test_a_club_without_country_takes_its_league_country(self):
         from vega.store import Store
@@ -237,7 +237,7 @@ class UefaTest(unittest.TestCase):
         self.assertGreaterEqual(merged, 1)
         self.assertEqual(x("SELECT country_code FROM core.teams WHERE id=60").fetchone(), ("FRA",))
         self.assertEqual(x("SELECT entity_id FROM core.provider_ids WHERE provider='uefa' AND provider_key='uefa-brest'").fetchone(), (60,))
-        self.assertIsNone(x("SELECT 1 FROM core.teams WHERE id=62").fetchone())
+        self.assertEqual(x("SELECT merged_into FROM core.teams WHERE id=62").fetchone(), (60,))
         # A UEFA-only club known by its display name ("Paris") merges through its official spelling.
         x("INSERT INTO core.teams(id, name) VALUES (63, 'Paris Saint-Germain')")
         x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','pitchapi','t_psg001',63)")

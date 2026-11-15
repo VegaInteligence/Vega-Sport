@@ -300,15 +300,11 @@ class SourceIdentityTest(unittest.TestCase):
         # Merges off: the pass looks at every candidate and merges none.
         with mock.patch.object(identity, "MERGES", False), self.db.transaction():
             self.assertEqual(identity.run(self.db, None, "teams", NOW), (0, 11))
-        self.assertEqual(x("SELECT count(*) FROM core.teams WHERE id = 33").fetchone()[0], 1)
+        self.assertIsNone(x("SELECT merged_into FROM core.teams WHERE id = 33").fetchone()[0])
+        # Something computed still names the archive Telstar: no matter, its row stays (as a
+        # pointer) and the next pass computes the club.
         with self.db.transaction():
-            self.assertEqual(identity.run(self.db, None, "teams", NOW), (3, 8))
-        x("RESET ROLE")
-        self.assertEqual(x("SELECT count(*) FROM core.teams WHERE id = 33").fetchone()[0], 1)
-        x("DELETE FROM agg.team_power WHERE team_id = 33")
-        x("SET ROLE vega_collect")
-        with self.db.transaction():
-            self.assertEqual(identity.run(self.db, None, "teams", NOW), (1, 7))
+            self.assertEqual(identity.run(self.db, None, "teams", NOW), (4, 7))
         x("RESET ROLE")
         # West Ham under its two spellings, Telstar ("pays bas" is Pays-Bas) and Grimsby (a
         # European cup names no country). Racing names two Spanish clubs, Leicester none, CA
@@ -319,7 +315,11 @@ class SourceIdentityTest(unittest.TestCase):
             ("archive:%s:%s" % (archive[team][0], archives.normalize(archive[team][1])),)).fetchone()[0]
         self.assertEqual({team: owner(team) for team in archive},
                          {30: 20, 40: 20, 33: 23, 37: 26, 31: 31, 32: 32, 34: 34, 35: 35, 36: 36, 38: 38, 39: 39})
-        self.assertEqual(self.db.execute("SELECT count(*) FROM core.teams WHERE id = ANY(%s)", (list(archive),)).fetchone()[0], 7)
+        # The merged rows stay, each a pointer to its club, with nothing left naming them.
+        self.assertEqual(dict(self.db.execute("SELECT id, merged_into FROM core.teams WHERE id = ANY(%s) AND merged_into IS NOT NULL", (list(archive),)).fetchall()),
+                         {30: 20, 40: 20, 33: 23, 37: 26})
+        self.assertEqual(self.db.execute(
+            "SELECT count(*) FROM core.matches WHERE home_team_id IN (30, 40, 33, 37) OR away_team_id IN (30, 40, 33, 37)").fetchone()[0], 0)
         # Its matches and their facts are the club's.
         self.assertEqual(self.db.execute("SELECT id, home_team_id, away_team_id FROM core.matches WHERE id IN (50, 51, 52) ORDER BY id").fetchall(),
                          [(50, 20, 32), (51, 38, 39), (52, 20, 32)])
@@ -390,7 +390,7 @@ class SourceIdentityTest(unittest.TestCase):
         self.assertEqual(self.db.execute("SELECT name FROM core.teams WHERE id=%s", (narnia,)).fetchone()[0], "Narnia")
         owners = dict(self.db.execute("SELECT provider_key, entity_id FROM core.provider_ids WHERE entity_type='team' AND provider='openfootball'").fetchall())
         self.assertEqual((owners["name:Germany"], owners["name:Deutschland"], owners["name:Scotland"]), (2, 2, 3))
-        self.assertEqual(self.db.execute("SELECT count(*) FROM core.teams WHERE name IN ('Germany', 'Scotland', 'Deutschland')").fetchone()[0], 2)
+        self.assertEqual(self.db.execute("SELECT count(*) FROM core.teams WHERE name IN ('Germany', 'Scotland', 'Deutschland') AND merged_into IS NULL").fetchone()[0], 2)
         self.assertEqual(self.db.execute(
             "SELECT count(*) FROM core.provider_ids WHERE entity_type = 'team' AND entity_id = 2 AND provider = 'openfootball' AND is_current").fetchone()[0], 1)
         # The cup read keeps the source's spelling and key, each match once; the duplicate and
@@ -456,7 +456,7 @@ class SourceIdentityTest(unittest.TestCase):
         self.assertEqual(played[:2], [(760, 762), (761, 766)])
         self.assertEqual(played[2][0], 764)
         self.assertEqual(x("SELECT count(*) FROM core.entity_names WHERE entity_type='team' AND entity_id=761 AND name='Chelsea FC (ENG)' AND kind='source_spelling'").fetchone()[0], 1)
-        self.assertEqual(x("SELECT count(*) FROM core.teams WHERE name LIKE %s", ("% (___)",)).fetchone()[0], 1)
+        self.assertEqual(x("SELECT count(*) FROM core.teams WHERE name LIKE %s AND merged_into IS NULL", ("% (___)",)).fetchone()[0], 1)
         with self.db.transaction():
             self.assertEqual(identity.run(self.db, None, "teams", NOW)[0], 0)  # nothing left to merge
 
