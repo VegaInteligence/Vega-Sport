@@ -10,22 +10,27 @@ import { isNumber } from "./format.js";
 /** A player row's player id: an appearance's own id, or a leader's `playerId` (its id is the match's and the player's). */
 export const playerOf = (row) => row?.playerId ?? row?.id;
 
+/** The fewest minutes for a match's best players: the reference's full matches (cameos are shown, not ranked). */
+export const LEADING_MINUTES = 60;
+
 /**
- * The match's best players (at most `count`): by the source's rating, as before; in a match the
- * source rated no one (some leagues have no ratings), by Vega's grade, best rank first, each row
- * built from the grade itself (its player's name, photo, team, minutes, goals) with the id of an
- * appearance of `match` (« match:player »), as the rows it stands in for.
+ * The match's best players (at most `count`), by Vega's grade from 60 minutes: the rows' own
+ * normal score z when they carry it, else the grades' rank, each row then built from the grade
+ * itself (its player's name, photo, team, minutes, goals) with the id of an appearance of
+ * `match` (« match:player »), as the rows it stands in for.
  */
 export function leadingPlayers(pool, grades, { match, count = 5 } = {}) {
-  const rated = (pool || []).filter((r) => r.minutes > 0 && isNumber(r.rating));
-  if (rated.length) return rated.slice(0, count);
+  const graded = (pool || [])
+    .filter((r) => r.minutes >= LEADING_MINUTES && isNumber(r.gradeZ))
+    .sort((a, b) => b.gradeZ - a.gradeZ);
+  if (graded.length) return graded.slice(0, count);
   return [...(grades || new Map()).entries()]
-    .filter(([, g]) => g.minutes > 0 && g.name)
+    .filter(([, g]) => g.minutes >= LEADING_MINUTES && g.name)
     .sort(([, a], [, b]) => a.rank - b.rank)
     .slice(0, count)
     .map(([playerId, g]) => ({
       id: match ? `${match}:${playerId}` : playerId, playerId, name: g.name, imageUrl: g.imageUrl, team: g.team,
-      teamId: g.teamId, minutes: g.minutes, goals: g.goals, assists: g.assists, rating: null,
+      teamId: g.teamId, minutes: g.minutes, goals: g.goals, assists: g.assists, grade: g.grade,
     }));
 }
 

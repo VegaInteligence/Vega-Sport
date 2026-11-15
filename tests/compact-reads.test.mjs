@@ -143,14 +143,14 @@ test("player requests preserve sample filters and apply numeric criteria only to
         result: "win",
         from: "2026-10-01",
         to: "2026-11-02",
-        rating: 7,
+        grade: 70,
         conditions: [{ key: "xg", min: 0.4 }],
       },
     },
   };
   const directory = playerReadParams(f, {
     page: 3,
-    sort: { key: "rating", direction: "desc" },
+    sort: { key: "grade", direction: "desc" },
   });
   assert.equal(directory.leagues, "l_3FJFUl,l_4WFCIZ");
   assert.equal(directory.page, 3);
@@ -168,7 +168,7 @@ test("player requests preserve sample filters and apply numeric criteria only to
     "to",
   ])
     assert.equal(cohort[key], directory[key], key);
-  for (const key of ["q", "ranking", "pos", "stats", "rmin"])
+  for (const key of ["q", "ranking", "pos", "stats", "gmin"])
     assert.equal(cohort[key], "", key);
   assert.equal(cohort.minutes, 0);
   assert.equal(

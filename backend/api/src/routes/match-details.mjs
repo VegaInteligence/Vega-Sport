@@ -62,7 +62,12 @@ async function body(read, f, suffix, params) {
     case "/players":
     case "/players/halves": {
       const [rows, lineup] = await Promise.all([
-        read(`SELECT * FROM api.${suffix === "/players" ? "match_player_stat_rows" : "match_player_half_rows"} ${where}`, at),
+        // The whole match's rows carry each player's Vega grade (the halves have none).
+        suffix === "/players"
+          ? read(`SELECT r.*,g.grade FROM api.match_player_stat_rows r LEFT JOIN api.match_grades g
+               ON g.edition_season=r.season_id AND g.match_key=r.match_id AND g.player_id=r.player_public_id
+             WHERE r.season_id=$1 AND r.match_id=$2`, at)
+          : read(`SELECT * FROM api.match_player_half_rows ${where}`, at),
         read(`SELECT player_id,is_starter,lineup_order FROM api.match_lineup_player_rows ${where}`, at),
       ]);
       const order = F.playerOrder(f, lineup);

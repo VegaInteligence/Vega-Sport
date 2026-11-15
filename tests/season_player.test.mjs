@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { gradeOf } from "../dashboard/frontend/src/services/grades.js";
 import {
   aggregateSeason,
   createSeasonPeerBuilder,
@@ -23,7 +24,7 @@ test("a season keeps observed zero, missing values and metric-specific minutes d
       passesAttempted: 10,
       duelsWon: 2,
       duelsLost: 2,
-      rating: 8,
+      gradeZ: 1,
     },
     {
       playerId: "p_A",
@@ -39,7 +40,7 @@ test("a season keeps observed zero, missing values and metric-specific minutes d
       passesAttempted: 2,
       duelsWon: 0,
       duelsLost: 1,
-      rating: 6,
+      gradeZ: -1,
     },
     { playerId: "p_A", matchId: "m_2", name: "Neymar", minutes: 30, goals: 20 },
     {
@@ -62,7 +63,8 @@ test("a season keeps observed zero, missing values and metric-specific minutes d
   assert.equal(p.matches, 2);
   assert.equal(p.minutes, 120);
   assert.equal(p.unknownMinutes, 1);
-  assert.equal(p.rating, 7);
+  // The season grade: the grade of the minutes-weighted mean z (1 over 90 minutes, −1 over 30).
+  assert.equal(p.grade, gradeOf((90 - 30) / 120));
   assert.deepEqual(
     p.rows.map((r) => r.matchId),
     ["m_1", "m_2"],

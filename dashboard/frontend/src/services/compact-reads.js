@@ -12,8 +12,8 @@ export function supportsCompactRead(manifest, kind, { ranking } = {}) {
     manifest?.storage === "aws-relational" &&
     manifest.capabilities?.compactReads?.[kind] === true &&
     (kind !== "players" ||
-      ranking !== "rating" ||
-      manifest.capabilities.playerRatingRanking === true)
+      ranking !== "grade" ||
+      manifest.capabilities.playerGradeRanking === true)
   );
 }
 
@@ -90,7 +90,7 @@ export function playerReadParams(
 ) {
   const filters = f.filters,
     advanced = cohort
-      ? { ...filters.advanced, positions: [], rating: null, conditions: [] }
+      ? { ...filters.advanced, positions: [], grade: null, conditions: [] }
       : filters.advanced || EMPTY_ADVANCED;
   // A cohort is its players' profiles. Where the API gives them alone, the request names
   // no publication: the API validates the answer by what it is made from, and whoever
@@ -110,7 +110,7 @@ export function playerReadParams(
     match: filters.match !== "all" ? filters.match : "",
     ...advancedQuery(advanced),
     ranking: cohort || ranking === "all" ? "" : ranking,
-    sort: cohort ? "name" : sort?.key || "rating",
+    sort: cohort ? "name" : sort?.key || "grade",
     direction: cohort ? "asc" : sort?.direction || "desc",
     page,
     limit,

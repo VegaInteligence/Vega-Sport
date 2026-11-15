@@ -16,7 +16,7 @@ import { playerSearchAliases } from "./player-aliases.js";
 export const DIRECTORY_FIELDS = [
   ["matches", "Matchs"],
   ["minutes", "Min. moy."],
-  ["rating", "Note moy."],
+  ["grade", "Note Vega"],
   ["goals", "Buts"],
   ["assists", "PD"],
   ["xg", "xG"],
@@ -32,7 +32,7 @@ export function playerDirectoryScope(rows, season, filters, matches) {
   const context = {
     ...filters.advanced,
     positions: [],
-    rating: null,
+    grade: null,
     conditions: [],
   };
   const sample = filterAppearances(rows, {
@@ -71,7 +71,7 @@ export function playerAverage(profile, basis) {
       : profile.unknownMinutes
         ? null
         : 0,
-    rating: profile.rating,
+    grade: profile.grade,
     ...Object.fromEntries(
       Object.keys(SEASON_METRICS).map((key) => [
         key,
@@ -94,8 +94,8 @@ export function filterPlayerAverages(rows, filters) {
     (row) =>
       (filters.minutes === 0 ||
         (isNumber(row.minutes) && row.minutes >= filters.minutes)) &&
-      (!isNumber(filters.advanced.rating) ||
-        (isNumber(row.rating) && row.rating >= filters.advanced.rating)) &&
+      (!isNumber(filters.advanced.grade) ||
+        (isNumber(row.grade) && row.grade >= filters.advanced.grade)) &&
       filters.advanced.conditions.every(
         ({ key, min }) => isNumber(row[key]) && row[key] >= min,
       ) &&
@@ -156,7 +156,7 @@ export function directoryCSV(rows, basis, columns) {
     "position",
     "matches",
     "meanMinutes",
-    "meanRating",
+    "seasonGrade",
     "basis",
     ...metrics.flatMap((key) => [key, key + "_observed_matches"]),
   ];
@@ -169,7 +169,7 @@ export function directoryCSV(rows, basis, columns) {
       row.position,
       row.matches,
       row.minutes,
-      row.rating,
+      row.grade,
       basis,
       ...metrics.flatMap((key) => [
         row[key],

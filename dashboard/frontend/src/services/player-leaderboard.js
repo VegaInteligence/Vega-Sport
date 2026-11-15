@@ -1,18 +1,18 @@
-import { MIN_RATED_MATCHES } from "../../../shared/player-profile.js";
+import { MIN_GRADED_MATCHES } from "../../../shared/player-profile.js";
 import { compareText } from "../model.js";
 
 /** Shared, season-scoped ranking definitions for home cards and the directory. */
 export const PLAYER_RANKINGS = {
-  rating: {
+  grade: {
     label: "Meilleures notes",
-    sort: { key: "rating", direction: "desc" },
-    columns: ["rating", "matches"],
+    sort: { key: "grade", direction: "desc" },
+    columns: ["grade", "matches"],
     eligible: (_totals, row) =>
-      Number.isFinite(row.rating) &&
-      row.profile?.ratingCount >= MIN_RATED_MATCHES,
+      Number.isFinite(row.grade) &&
+      row.profile?.gradeCount >= MIN_GRADED_MATCHES,
     compare: (a, b) =>
-      b.rating - a.rating ||
-      b.profile.ratingCount - a.profile.ratingCount ||
+      b.grade - a.grade ||
+      b.profile.gradeCount - a.profile.gradeCount ||
       compareText(a.name, b.name) ||
       compareText(a.playerId, b.playerId),
   },
@@ -56,7 +56,7 @@ export function playerDirectoryRanking(filters, defaults = false) {
     filters.match === "all" &&
     filters.league === "all" &&
     !filters.leagues?.length
-    ? "rating"
+    ? "grade"
     : "";
 }
 
@@ -97,7 +97,7 @@ export function playerLeaderboardHref(f, ranking, scopeIds) {
     role: "",
     venue: "",
     result: "",
-    rmin: "",
+    gmin: "",
     from: "",
     to: "",
     stats: "",

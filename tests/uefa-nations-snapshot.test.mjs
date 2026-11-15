@@ -27,7 +27,7 @@ test("official UEFA supplement produces a sourced Spain competition with observe
   assert.equal(profile.minutes, 281);
   assert.equal(profile.stats.goals.sum, 4);
   assert.equal(profile.stats.assists.sum, 1);
-  assert.equal(profile.rating, null);
+  assert.equal(profile.grade, null);
   assert.equal(profile.stats.xg, undefined);
 });
 test("matching provider observations replace the corresponding UEFA date", () => {

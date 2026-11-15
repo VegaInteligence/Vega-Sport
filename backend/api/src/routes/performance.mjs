@@ -1,6 +1,6 @@
 /**
  * GET /api/read/performance — one player's match, its percentiles among the season's
- * performances of the same line, and his rating rank in the match. Same parameters and
+ * performances of the same line, and his Vega grade's rank in the match. Same parameters and
  * same response as relational-performance.js on main, read from api.player_appearances.
  *
  * The profile itself is computed by shared/player-profile.js (imported, not copied):
@@ -38,9 +38,13 @@ const peerGroupSql = (alias) => `CASE (${positionLineSql(`${alias}.position_numb
   WHEN 'G' THEN 'G' WHEN 'D' THEN 'D' WHEN 'M' THEN 'M'
   ELSE CASE WHEN ${finiteSql(`${alias}.saves`)} AND ${alias}.saves>0 THEN 'G' ELSE 'F' END END`;
 
+// A grade the match page shows: from 20 minutes, or below them when the match stood a full
+// standard deviation from the ordinary (rankings.mjs, GRADE_MINUTES); its rank is among those.
+const SHOWN = (a) => `(${a}.grade_z IS NOT NULL AND (${a}.minutes>=20 OR abs(${a}.grade_z)>=1))`;
+
 // Legacy appearance record keys (appearanceRecord on main) -> api.player_appearances columns.
 const RECORD = [
-  "team", "league", "country", "season", "raw_pitch_x", "raw_pitch_y", "shirt_number", "minutes", "rating", "goals", "assists",
+  "team", "league", "country", "season", "raw_pitch_x", "raw_pitch_y", "shirt_number", "minutes", "grade", "grade_z", "goals", "assists",
   "xg", "npxg", "xa", "xgot", "shots", "shots_on_target", "chances_created", "big_chances_created", "passes_accurate",
   "defensive_actions", "interceptions", "tackles", "recoveries", "duels_won", "duels_lost", "touches", "touches_box",
   "passes_final_third", "clearances", "blocks", "dribbles", "saves", "goals_prevented", "shots_off_target", "blocked_shots",
@@ -121,9 +125,9 @@ export function createPerformanceRoute(read) {
         (SELECT row_to_json(r) FROM (SELECT t.*,f.id AS match_key,f.id||':'||api.public_id('player',t.player_id) AS appearance_id,
            api.public_id('player',t.player_id) AS player_key,api.public_id('team',t.team_id) AS team_key FROM target t,f) r) AS appearance,
         (SELECT ${PEER_COUNTS} FROM counts c) AS profile_counts,
-        (SELECT CASE WHEN ${finiteSql("t.rating")} THEN json_build_object(
-           'rank',1+(SELECT count(*) FROM api.player_appearances a WHERE a.season_id=${season} AND a.match_id=t.match_id AND ${finiteSql("a.rating")} AND a.rating>t.rating),
-           'total',(SELECT count(*) FROM api.player_appearances a WHERE a.season_id=${season} AND a.match_id=t.match_id AND ${finiteSql("a.rating")})) END FROM target t) AS rank,
+        (SELECT CASE WHEN ${SHOWN("t")} THEN json_build_object(
+           'rank',1+(SELECT count(*) FROM api.player_appearances a WHERE a.season_id=${season} AND a.match_id=t.match_id AND ${SHOWN("a")} AND a.grade_z>t.grade_z),
+           'total',(SELECT count(*) FROM api.player_appearances a WHERE a.season_id=${season} AND a.match_id=t.match_id AND ${SHOWN("a")})) END FROM target t) AS rank,
         (SELECT row_to_json(m) FROM (SELECT ${matchRecordColumns({ shots: params.get("include") === "shots" })} FROM f) m) AS match,
         (SELECT row_to_json(c) FROM api.competitions c JOIN target t ON c.id=t.league_id) AS competition
       FROM publication`;

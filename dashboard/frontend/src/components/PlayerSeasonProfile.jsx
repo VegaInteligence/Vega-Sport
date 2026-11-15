@@ -443,7 +443,7 @@ export default function PlayerSeasonProfile({
         parts: vegaParts(power),
         women: power.universe === "women",
         // A provisional rank, and why (the API's provisionalReason).
-        provisional: PROVISIONAL[power.provisionalReason ?? (power.eligible === false ? "minutes" : power.linked === false ? "league" : "")] ?? null,
+        provisional: PROVISIONAL[power.provisionalReason] ?? null,
         signal: breakoutSignal(power.breakout),
       };
     // Below the ranking's minutes: no score of his own, but he may be flagged as a breakout.

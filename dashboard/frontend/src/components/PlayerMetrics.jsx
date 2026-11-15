@@ -72,6 +72,7 @@ const LABELS = {
   "Penalties won": "Penaltys obtenus",
   Punches: "Dégagements du poing",
   Rating: "Note",
+  "Vega grade": "Note Vega",
   Recoveries: "Récupérations",
   Saves: "Arrêts",
   "Saves inside box": "Arrêts dans la surface",

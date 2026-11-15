@@ -165,7 +165,7 @@ export function profileValue(profile, key, basis = "per90") {
   if (!profile) return null;
   if (key === "minutes") return profile.minutes;
   if (key === "matches") return profile.matches;
-  if (key === "rating") return profile.rating;
+  if (key === "grade") return profile.grade;
   return seasonMetric(profile, key, basis).value;
 }
 
@@ -416,8 +416,8 @@ export function playerSnapshot(profile, season) {
     minutes: profile.minutes,
     starts: profile.starts,
     knownStarts: profile.knownStarts,
-    rating: profile.rating,
-    ratingCount: profile.ratingCount,
+    grade: profile.grade,
+    gradeCount: profile.gradeCount,
     metrics: Object.fromEntries(
       Object.keys(SCOUT_METRICS).map((key) => [
         key,

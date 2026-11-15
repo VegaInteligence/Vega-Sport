@@ -122,6 +122,8 @@ async function imageComponent(
     "./ApiImage.jsx": { __esModule: true, default: () => null },
     "../services/format.js":
       await import("../dashboard/frontend/src/services/format.js"),
+    "../services/grades.js":
+      await import("../dashboard/frontend/src/services/grades.js"),
   };
   const code = babel.transformSync(await fs.readFile(filename, "utf8"), {
     presets: [[preset, { runtime: "classic" }]],

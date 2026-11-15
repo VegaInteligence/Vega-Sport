@@ -65,7 +65,7 @@ export default function PlayersPage() {
   const directoryView = playerDirectoryView(params.get("playersView"));
   const f = useFootball(),
     [manualSort, setManualSort] = useState({
-      key: "rating",
+      key: "grade",
       direction: "desc",
     }),
     [directoryPage, setDirectoryPage] = useState({ key: "", page: 1 }),
@@ -356,7 +356,7 @@ export default function PlayersPage() {
               f.setFilters((current) => ({
                 ...current,
                 ranking: value || "all",
-                basis: value && value !== "rating" ? "total" : current.basis,
+                basis: value && value !== "grade" ? "total" : current.basis,
               }))
             }
             mode={mode}

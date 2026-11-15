@@ -204,14 +204,14 @@ SELECT g.version||':'||f.revision AS version,row_to_json(f) AS fixture,
    ORDER BY x.shot_no),'[]'::json) FROM api.match_shots x WHERE x.season_id=f.season_id AND x.match_id=f.match_id) shots,
  (SELECT row_to_json(d) FROM api.match_detail_state d WHERE d.season_id=f.season_id AND d.match_id=f.match_id) state,
  (SELECT json_build_object('listed',count(*),'played',count(*) FILTER(WHERE a.minutes>0),
-   'rated',count(*) FILTER(WHERE a.minutes>0 AND a.rating IS NOT NULL),'xg',count(*) FILTER(WHERE a.minutes>0 AND a.xg IS NOT NULL),
+   'graded',count(*) FILTER(WHERE a.minutes>0 AND a.grade IS NOT NULL),'xg',count(*) FILTER(WHERE a.minutes>0 AND a.xg IS NOT NULL),
    'xa',count(*) FILTER(WHERE a.minutes>0 AND a.xa IS NOT NULL))
    FROM api.player_appearances a WHERE a.season_id=f.season_id AND a.match_id=f.match_id) players,
- (SELECT coalesce(json_agg(l ORDER BY l.rating DESC,l.id),'[]'::json) FROM (
+ (SELECT coalesce(json_agg(l ORDER BY l.grade_z DESC,l.id),'[]'::json) FROM (
    SELECT f.id||':'||api.public_id('player',a.player_id) id,api.public_id('player',a.player_id) player_id,f.id match_id,
-   api.public_id('team',a.team_id) team_id,a.team,a.player_name AS name,a.image_url,a.minutes,a.rating,a.goals,a.assists
-   FROM api.player_appearances a WHERE a.season_id=f.season_id AND a.match_id=f.match_id AND a.minutes>0 AND a.rating IS NOT NULL
-   ORDER BY a.rating DESC,1 LIMIT 5) l) leaders,
+   api.public_id('team',a.team_id) team_id,a.team,a.player_name AS name,a.image_url,a.minutes,a.grade,a.grade_z,a.goals,a.assists
+   FROM api.player_appearances a WHERE a.season_id=f.season_id AND a.match_id=f.match_id AND a.minutes>=60 AND a.grade_z IS NOT NULL
+   ORDER BY a.grade_z DESC,1 LIMIT 5) l) leaders,
  f.referee AS referee,
  f.stadium AS stadium
 FROM (${publication}) g,f`;
@@ -294,14 +294,14 @@ export function summaryMatch(r) {
       coverage: {
         players: Boolean(r.state.player_stats_ok) && n.listed > 0,
         playerStats: n.played > 0,
-        ratings: n.rated > 0,
+        grades: n.graded > 0,
         xg: n.xg > 0,
         xa: n.xa > 0,
         shots: Boolean(r.state.shots_ok),
         teamStatsReliable: Boolean(r.state.team_stats_ok),
         listedPlayers: n.listed ?? 0,
         playedPlayers: n.played ?? 0,
-        ratedPlayers: n.rated ?? 0,
+        gradedPlayers: n.graded ?? 0,
         xgPlayers: n.xg ?? 0,
         xaPlayers: n.xa ?? 0,
       },

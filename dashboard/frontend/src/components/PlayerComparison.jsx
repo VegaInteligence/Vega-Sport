@@ -190,7 +190,7 @@ function ComparisonContent({ samples, basis, keys, withMedian, minMinutes }) {
           {[
             ["matches", "Matchs"],
             ["minutes", "Minutes jouées"],
-            ["rating", "Note"],
+            ["grade", "Note Vega"],
           ].map(([key, label]) => (
             <tr key={key}>
               <th scope="row">{label}</th>
@@ -198,7 +198,7 @@ function ComparisonContent({ samples, basis, keys, withMedian, minMinutes }) {
                 <td key={i}>
                   {number(
                     profileValue(item.profile, key),
-                    key === "rating" ? 2 : 0,
+                    0,
                   )}
                 </td>
               ))}

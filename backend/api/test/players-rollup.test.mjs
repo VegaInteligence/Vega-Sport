@@ -120,9 +120,9 @@ const SCOPES = ["leagues=all", `leagues=${LEAGUE}`, `leagues=${CUP}`, `leagues=$
 const REQUESTS = [
   "", "&minutes=0", "&minutes=0&sort=name&direction=asc", "&minutes=0&sort=name&direction=desc", "&minutes=0&sort=matches&direction=asc",
   "&minutes=0&sort=minutes", "&sort=goals", "&sort=goals&basis=total", "&sort=xg&basis=per90", "&sort=passAccuracy", "&sort=duelRate&direction=asc",
-  "&sort=finishingDelta", "&ranking=goals", "&ranking=assists", "&ranking=clinical&basis=total", "&ranking=wasteful", "&ranking=rating",
+  "&sort=finishingDelta", "&ranking=goals", "&ranking=assists", "&ranking=clinical&basis=total", "&ranking=wasteful", "&ranking=grade",
   "&pos=M", "&pos=A", "&pos=G", "&pos=D", "&minutes=0&pos=M,A", "&group=O", "&group=M", "&minutes=0&group=G,D", "&group=O&pos=M", "&q=cr7", "&q=elie", "&q=union", "&q=coupe", "&q=stade", "&minutes=0&q=joueur",
-  "&q=nord&pos=M", "&stats=goals:1", "&stats=passAccuracy:80,shots:1", "&rmin=7", "&minutes=0&limit=2", "&minutes=0&limit=2&page=2",
+  "&q=nord&pos=M", "&stats=goals:1", "&stats=passAccuracy:80,shots:1", "&gmin=60", "&minutes=0&limit=2", "&minutes=0&limit=2&page=2",
   "&minutes=0&limit=2&page=4", "&minutes=60",
 ];
 
@@ -147,9 +147,9 @@ const FILTERS = [
 ];
 const SHAPES = [
   "&minutes=0", "", "&minutes=0&sort=name&direction=asc", "&minutes=0&sort=matches&direction=asc", "&sort=goals&basis=total", "&sort=xg&basis=per90",
-  "&sort=passAccuracy", "&sort=duelRate&direction=asc", "&sort=finishingDelta", "&ranking=goals", "&ranking=clinical&basis=total", "&ranking=rating",
+  "&sort=passAccuracy", "&sort=duelRate&direction=asc", "&sort=finishingDelta", "&ranking=goals", "&ranking=clinical&basis=total", "&ranking=grade",
   "&minutes=0&pos=M,A", "&minutes=0&group=O", "&minutes=0&group=G,D", "&minutes=0&q=elie", "&minutes=0&q=union", "&minutes=0&q=coupe", "&minutes=0&q=joueur",
-  "&stats=goals:1", "&stats=passAccuracy:80,shots:1", "&rmin=7", "&minutes=0&limit=2", "&minutes=0&limit=2&page=2", "&minutes=0&whole=1",
+  "&stats=goals:1", "&stats=passAccuracy:80,shots:1", "&gmin=60", "&minutes=0&limit=2", "&minutes=0&limit=2&page=2", "&minutes=0&whole=1",
 ];
 
 test("a filtered request's rows, worked out from the appearances, answer as the statement on the appearances does", { skip }, async () => {
@@ -269,8 +269,8 @@ test("a player of two editions: clubs, role, identity and unknown minutes", { sk
   assert.equal(by.p_aaaab4.position, "Attaquant");
   // Marc Petit: one unknown match in each edition.
   assert.deepEqual([by.p_aaaab2.matches, by.p_aaaab2.profile.unknownMinutes], [1, 2]);
-  // Zoé Coupe: a rating that is not a number is not a rating.
-  assert.deepEqual([by.p_aaaab5.matches, by.p_aaaab5.rating, by.p_aaaab5.profile.ratingCount], [1, null, 0]);
+  // Zoé Coupe: a cup match the ranking did not grade has no grade.
+  assert.deepEqual([by.p_aaaab5.matches, by.p_aaaab5.grade, by.p_aaaab5.profile.gradeCount], [1, null, 0]);
   // Bench only: no match played. With statistics collected the minutes are 0, without they are unknown.
   assert.deepEqual([by.p_v0000106.name, by.p_v0000106.matches, by.p_v0000106.minutes, by.p_v0000106.profile.latest], ["Joueur", 0, 0, null]);
   assert.deepEqual([by.p_aaaab7.matches, by.p_aaaab7.minutes, by.p_aaaab7.profile.unknownMinutes], [0, null, 1]);

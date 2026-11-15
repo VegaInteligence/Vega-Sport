@@ -30,7 +30,7 @@ const displayedStats = new Set([
   "keeper_saves",
 ]);
 const smallPlayerFields = fields(
-  "id playerId matchId name imageUrl team rating goals assists",
+  "id playerId matchId name imageUrl team grade goals assists",
 );
 const potwFields = [
   ...smallPlayerFields,
@@ -90,11 +90,11 @@ export function compactHomePresentation(data) {
   apply("potw", (value) => pick(value, potwFields));
   apply("potwMatch", (value) => match(value));
   apply("potwSeason", (value) =>
-    pick(value, fields("goals assists rating apps")),
+    pick(value, fields("goals assists grade apps")),
   );
   apply(
     "potwRecent",
-    list((value) => pick(value, fields("id rating date timeUtc time_utc"))),
+    list((value) => pick(value, fields("id grade date timeUtc time_utc"))),
   );
   apply(
     "others",

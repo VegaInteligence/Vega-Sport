@@ -209,7 +209,7 @@ export function MetricPicker({
       ? [
           ["matches", { label: "Matchs" }],
           ["minutes", { label: "Minutes moyennes" }],
-          ["rating", { label: "Note" }],
+          ["grade", { label: "Note Vega" }],
         ]
       : []),
     ...Object.entries(SCOUT_METRICS),
@@ -512,7 +512,7 @@ export function ResearchLists({ kind = "players" }) {
                     season: entry.season || f.season,
                     league: "all",
                     q: "",
-                    rmin: "",
+                    gmin: "",
                     stats: "",
                   },
                 )}

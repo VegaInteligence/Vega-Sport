@@ -97,12 +97,12 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   // A match's grades: how exceptional for his role, whatever his season; ranked among those shown.
   const graded = (await get("/api/rankings/match?match=m_aaaaa1")).body;
   assert.deepEqual(graded.grades.map((g) => [g.playerId, g.minutes, g.grade, g.rank]), [
-    ["p_aaaab1", 90, 80.8, 1], ["p_aaaab4", 90, 50, 2], ["p_aaaab3", 10, null, null],
+    ["p_aaaab1", 90, 80.8, 1], ["p_aaaab4", 70, 50, 2], ["p_aaaab2", 90, 29.7, 3], ["p_aaaab3", 10, null, null],
   ]);
   // Each grade carries the player's appearance, for a match the source rated no one in.
   const best = graded.grades[0];
   assert.deepEqual([best.name, best.imageUrl, best.team, best.goals], ["Élie Durand", "https://img.example/p1.png", "Olympique Été", 2]);
-  assert.equal((await get("/api/rankings/match?match=m_aaaaa2")).response.status, 404);
+  assert.equal((await get("/api/rankings/match?match=m_aaaaa6")).response.status, 404);
   assert.equal((await get("/api/rankings/match?match=aaaaa1")).response.status, 400);
   assert.equal((await get("/api/rankings/match?match=m_aaaaa1&x=1")).response.status, 400);
   assert.equal((await get("/api/rankings/power/player?season=2025/2026")).response.status, 400);
@@ -215,4 +215,5 @@ test("why a rank is provisional: the minutes first, then a team the base knows i
   assert.equal(provisionalReason({ eligible: true, linked: false, in_league: true }), "league");
   // The women are ranked among themselves: no league of theirs is on the men's scale.
   assert.equal(provisionalReason({ eligible: true, linked: false, universe: "women", in_league: true }), null);
+  assert.equal(provisionalReason({ eligible: false, linked: false, universe: "women" }), "minutes");
 });

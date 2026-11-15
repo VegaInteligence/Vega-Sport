@@ -5,10 +5,10 @@ import { useResearch } from "../hooks/ResearchContext.jsx";
 import { playerSelection } from "../services/research-storage.js";
 import { SCOUT_METRICS } from "../services/scouting.js";
 import { number } from "../services/format.js";
-import { Card, Empty, Media, Pager, Rating, Segments } from "./UI.jsx";
+import { Card, Empty, Media, Pager, Grade, Segments } from "./UI.jsx";
 import PerformanceContext from "./PerformanceContext.jsx";
 import { PLAYER_RANKINGS } from "../services/player-leaderboard.js";
-import { MIN_RATED_MATCHES } from "../../../shared/player-profile.js";
+import { MIN_GRADED_MATCHES } from "../../../shared/player-profile.js";
 import {
   BookmarkButton,
   MetricInfo,
@@ -18,7 +18,7 @@ import {
 const labels = {
   matches: "Matchs",
   minutes: "Min. moy.",
-  rating: "Note",
+  grade: "Note Vega",
   finishingDelta: "Écart buts − xG",
 };
 export default function PlayerDirectory({
@@ -98,8 +98,8 @@ export default function PlayerDirectory({
         </div>
         <span role="status">
           {number(total)} joueur{total === 1 ? "" : "s"}
-          {ranking === "rating" &&
-            ` · Au moins ${MIN_RATED_MATCHES} matchs notés`}
+          {ranking === "grade" &&
+            ` · Au moins ${MIN_GRADED_MATCHES} matchs notés`}
         </span>
       </div>
       {rows.length ? (
@@ -212,8 +212,8 @@ export default function PlayerDirectory({
                     </td>
                     {fields.map(([key]) => {
                       const observed =
-                        key === "rating"
-                          ? row.profile.ratingCount
+                        key === "grade"
+                          ? row.profile.gradeCount
                           : (row.profile.stats[key]?.count ??
                             row.profile.ratios[key]?.count);
                       return (
@@ -225,8 +225,8 @@ export default function PlayerDirectory({
                               : undefined
                           }
                         >
-                          {key === "rating" ? (
-                            <Rating value={row.rating} />
+                          {key === "grade" ? (
+                            row.grade == null ? "—" : <Grade value={row.grade} title="Note Vega de la saison sur 100 : la note de son match moyen" />
                           ) : (
                             <>
                               {number(

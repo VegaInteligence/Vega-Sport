@@ -56,8 +56,8 @@ export function PlayerOfTheWeek({
       </button>
       <div className="home-potw-big">
         <div>
-          <b>{number(p.rating, 2)}</b>
-          <span>Note du match</span>
+          <b>{number(p.grade, 0)}</b>
+          <span>Note Vega du match</span>
         </div>
         <div>
           <b>{number(p.goals || 0)}</b>
@@ -112,15 +112,15 @@ export function PlayerOfTheWeek({
             {recent.map((r) => (
               <li
                 key={r.id}
-                title={`${shortDay(matchDay(r))} · ${number(r.rating, 2)}`}
+                title={`${shortDay(matchDay(r))} · ${number(r.grade, 0)} sur 100`}
               >
                 <i
                   className={r.id === p.id ? "is-current" : ""}
                   style={{
-                    height: `${Math.max(8, ((r.rating - 5) / 5) * 100)}%`,
+                    height: `${Math.max(8, r.grade)}%`,
                   }}
                 />
-                <span>{number(r.rating, 1)}</span>
+                <span>{number(r.grade, 0)}</span>
               </li>
             ))}
           </ol>
@@ -130,9 +130,9 @@ export function PlayerOfTheWeek({
         <p className="home-potw-season phone-fold-part">
           Sur la saison : <b>{plural(season.goals, "but")}</b>,{" "}
           <b>{plural(season.assists, "passe")}</b>
-          {season.rating != null && (
+          {season.grade != null && (
             <>
-              , note moyenne <b>{number(season.rating, 2)}</b>
+              , note Vega <b>{number(season.grade, 0)}</b>
             </>
           )}{" "}
           en {plural(season.apps, "match")}.
@@ -195,7 +195,7 @@ export function AlsoShone({ performances, matches, period }) {
                   url={p.imageUrl}
                   className="player-avatar"
                 />
-                <b>{number(p.rating, 2)}</b>
+                <b>{number(p.grade, 0)}</b>
               </span>
               <span>
                 <strong>{p.name}</strong>
@@ -382,8 +382,8 @@ export function YourPlayers({ players, period, now }) {
           <Link key={p.playerId} className="card home-rail-card" href={f.href("/joueurs/", { id: p.playerId })}>
             <span className="home-rail-top">
               <Media name={p.name} url={p.imageUrl} className="player-avatar" />
-              {p.matches.some((m) => Number.isFinite(m.rating)) && (
-                <b>{number(Math.max(...p.matches.filter((m) => Number.isFinite(m.rating)).map((m) => m.rating)), 2)}</b>
+              {p.matches.some((m) => Number.isFinite(m.grade)) && (
+                <b>{number(Math.max(...p.matches.filter((m) => Number.isFinite(m.grade)).map((m) => m.grade)), 0)}</b>
               )}
             </span>
             <span>
@@ -394,7 +394,7 @@ export function YourPlayers({ players, period, now }) {
               p.matches.map((m) => (
                 <span className="home-rail-line" key={m.matchId}>
                   {shortDay(m.date)} · {m.opponent} {m.score?.[0] ?? "–"}–{m.score?.[1] ?? "–"} · {number(m.minutes || 0)}′
-                  {Number.isFinite(m.rating) && <> · <b>{number(m.rating, 2)}</b></>}
+                  {Number.isFinite(m.grade) && <> · <b>{number(m.grade, 0)}</b></>}
                   {" · "}
                   <b>{number(m.goals || 0)}</b> but{m.goals > 1 ? "s" : ""} · <b>{number(m.assists || 0)}</b> passe{m.assists > 1 ? "s" : ""}
                 </span>

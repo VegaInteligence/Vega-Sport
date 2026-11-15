@@ -12,6 +12,7 @@ import { normalizeText } from "../services/format.js";
 import { percentile } from "../services/player-profile.js";
 import { aggregateSeason, seasonMetric } from "../services/season-player.js";
 import { number } from "../services/format.js";
+import { gradeTone, seasonGrade } from "../services/grades.js";
 import { advancedMetric } from "./PlayerAdvancedStats.jsx";
 import {
   fmt,
@@ -254,9 +255,9 @@ function SeasonKpis({ profile, season, scope, onScope }) {
       xa.count ? `xA ${number(xa.value, 2)}${partial(xa)}` : null,
     ],
     [
-      "Note moyenne",
-      subject.rating == null ? "—" : number(subject.rating, 2),
-      subject.rating == null ? null : "sur 10",
+      "Note Vega",
+      subject.grade == null ? "—" : number(subject.grade, 0),
+      subject.grade == null ? null : "sur 100",
     ],
     [
       "Min. par but ou PD",
@@ -341,7 +342,7 @@ function ScoutReading({ profile, best, traits }) {
         )
         .join(" et ")}.`,
     (goals.count > 0 || assists.count > 0) &&
-      `Production : ${fmt(goals.value ?? 0, 2)} but et ${fmt(assists.value ?? 0, 2)} passe décisive par 90 min${profile.rating != null ? `, note moyenne ${fmt(profile.rating, 2)}` : ""}.`,
+      `Production : ${fmt(goals.value ?? 0, 2)} but et ${fmt(assists.value ?? 0, 2)} passe décisive par 90 min${profile.grade != null ? `, note Vega ${fmt(profile.grade, 0)} sur 100` : ""}.`,
     traits.low.length > 0 &&
       `Point de vigilance : ${label(traits.low[0].key).toLowerCase()} (${ordinalP(traits.low[0].percentile)}).`,
   ].filter(Boolean);
@@ -362,11 +363,11 @@ function RecentForm({ profile, matches, onTab }) {
     [matches],
   );
   const recent = [...profile.rows]
-    .filter((row) => Number.isFinite(row.rating))
+    .filter((row) => Number.isFinite(row.grade))
     .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")))
     .slice(-10);
-  const average =
-    recent.reduce((sum, row) => sum + row.rating, 0) / (recent.length || 1);
+  // The period's grade: the grade of its minutes-weighted mean z (grades.js).
+  const average = seasonGrade(recent).grade ?? 50;
   const opponent = (row) => {
     const match = index.get(row.matchId);
     if (!match?.home || !match?.away) return row.league || "";
@@ -399,24 +400,21 @@ function RecentForm({ profile, matches, onTab }) {
           height={210}
           points={recent.map((row) => ({
             x: shortDate(row.date),
-            y: row.rating,
+            y: row.grade,
             row,
           }))}
-          domain={[
-            Math.min(5, Math.floor(Math.min(...recent.map((r) => r.rating)))),
-            10,
-          ]}
-          ticks={[6, 7, 8, 9, 10]}
+          domain={[0, 100]}
+          ticks={[25, 50, 75, 100]}
           labelEvery={2}
-          format={(value) => fmt(value, value % 1 ? 1 : 0)}
-          reference={{ y: average, label: `Moy. ${fmt(average, 2)}` }}
+          format={(value) => fmt(value, 0)}
+          reference={{ y: average, label: `Moy. ${fmt(average, 0)}` }}
           ariaLabel="Note des derniers matchs"
           tip={(point) => (
             <TipBody
               title={opponent(point.row) || shortDate(point.row.date)}
               rows={[
                 ["Date", shortDate(point.row.date)],
-                ["Note", fmt(point.row.rating, 1)],
+                ["Note Vega", fmt(point.row.grade, 0)],
                 [
                   "Buts / PD",
                   `${point.row.goals ?? 0} / ${point.row.assists ?? 0}`,
@@ -614,18 +612,10 @@ export default function PlayerScoutOverview({
   );
 }
 
-const ratingTone = (rating) =>
-  rating >= 9
-    ? 90
-    : rating >= 8
-      ? 70
-      : rating >= 7
-        ? 50
-        : rating >= 6
-          ? 30
-          : 10;
+// The badge's shade by the grade's tail share of full matches (grades.js): 10 to 90.
+const gradeShade = (grade) => [10, 30, 50, 70, 90][gradeTone(grade) - 1];
 
-/** Version C match log: rating curve and one row per published appearance. */
+/** Version C match log: Vega grade curve and one row per published appearance. */
 export function PlayerGames({ profile, matches }) {
   const index = useMemo(
     () => new Map((matches || []).map((match) => [match.id, match])),
@@ -636,9 +626,8 @@ export function PlayerGames({ profile, matches }) {
   );
   const rated = [...rows]
     .reverse()
-    .filter((row) => Number.isFinite(row.rating));
-  const average =
-    rated.reduce((sum, row) => sum + row.rating, 0) / (rated.length || 1);
+    .filter((row) => Number.isFinite(row.grade));
+  const average = seasonGrade(rated).grade ?? 50;
   const opponent = (row) => {
     const match = index.get(row.matchId);
     if (!match?.home || !match?.away) return { name: "—" };
@@ -694,7 +683,7 @@ export function PlayerGames({ profile, matches }) {
                 <th className={s.num}>xG</th>
                 <th className={s.num}>xA</th>
                 <th className={s.num}>Min / B+PD</th>
-                <th className={s.num}>Note</th>
+                <th className={s.num}>Note Vega</th>
               </tr>
             </thead>
             <tbody>
@@ -716,7 +705,7 @@ export function PlayerGames({ profile, matches }) {
                         : "—"}
                     </td>
                     <td className={s.num}>
-                      {split.rating == null ? "—" : fmt(split.rating, 2)}
+                      {split.grade == null ? "—" : fmt(split.grade, 0)}
                     </td>
                   </tr>
                 );
@@ -736,26 +725,20 @@ export function PlayerGames({ profile, matches }) {
               height={200}
               points={rated.map((row) => ({
                 x: shortDate(row.date),
-                y: row.rating,
+                y: row.grade,
                 row,
               }))}
-              domain={[
-                Math.min(
-                  5,
-                  Math.floor(Math.min(...rated.map((r) => r.rating))),
-                ),
-                10,
-              ]}
-              ticks={[6, 7, 8, 9, 10]}
+              domain={[0, 100]}
+              ticks={[25, 50, 75, 100]}
               labelEvery={Math.max(1, Math.ceil(rated.length / 15))}
-              reference={{ y: average, label: `Moyenne ${fmt(average, 2)}` }}
+              reference={{ y: average, label: `Moyenne ${fmt(average, 0)}` }}
               ariaLabel="Note par match"
               tip={(point) => (
                 <TipBody
                   title={`${opponent(point.row).name} · ${shortDate(point.row.date)}`}
                   rows={[
                     ["Compétition", point.row.league || "—"],
-                    ["Note", fmt(point.row.rating, 1)],
+                    ["Note Vega", fmt(point.row.grade, 0)],
                     [
                       "Buts / PD",
                       `${point.row.goals ?? 0} / ${point.row.assists ?? 0}`,
@@ -786,7 +769,7 @@ export function PlayerGames({ profile, matches }) {
                 <th className={s.num}>xA</th>
                 <th className={s.num}>Tirs</th>
                 <th className={s.num}>Dribbles</th>
-                <th className={s.num}>Note</th>
+                <th className={s.num}>Note Vega</th>
               </tr>
             </thead>
             <tbody>
@@ -815,11 +798,11 @@ export function PlayerGames({ profile, matches }) {
                     <td className={s.num}>{cell(row, "shots")}</td>
                     <td className={s.num}>{cell(row, "dribbles")}</td>
                     <td className={s.num}>
-                      {Number.isFinite(row.rating) ? (
+                      {Number.isFinite(row.grade) ? (
                         <PercentileBadge
-                          value={ratingTone(row.rating)}
-                          label={fmt(row.rating, 1)}
-                          title={`Note ${fmt(row.rating, 1)} sur 10`}
+                          value={gradeShade(row.grade)}
+                          label={fmt(row.grade, 0)}
+                          title={`Note Vega ${fmt(row.grade, 0)} sur 100`}
                         />
                       ) : (
                         "—"

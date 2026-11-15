@@ -1,6 +1,7 @@
 import { filterAppearances, isNumber, normalizeText } from "../model.js";
 import { percentile, positionOf } from "./player-profile.js";
 import { playerSearchAliases } from "./player-aliases.js";
+import { GRADE_SEASON_MINUTES, gradeOf } from "./grades.js";
 
 // A season percentile is useful only when both the player and the comparison
 // group have accumulated a meaningful amount of observed playing time.
@@ -138,8 +139,9 @@ function accumulator(id, keepRows = false) {
     unknownMatches: new Set(),
     stats: Object.create(null),
     ratios: Object.create(null),
-    ratingSum: 0,
-    ratingCount: 0,
+    gradeZm: 0,
+    gradeMinutes: 0,
+    gradeCount: 0,
     starts: 0,
     knownStarts: 0,
     leagueIds: new Set(),
@@ -193,9 +195,11 @@ function addAppearance(acc, row) {
     value.minutes += row.minutes;
     acc.positions.set(line.label, value);
   }
-  if (isNumber(row.rating)) {
-    acc.ratingSum += row.rating;
-    acc.ratingCount++;
+  // The season grade reads the matches of 20 minutes or more, weighted by their minutes (grades.js).
+  if (isNumber(row.gradeZ) && row.minutes >= GRADE_SEASON_MINUTES) {
+    acc.gradeZm += row.minutes * row.gradeZ;
+    acc.gradeMinutes += row.minutes;
+    acc.gradeCount++;
   }
   for (const key of COUNTS) {
     if (!isNumber(row[key])) continue;
@@ -247,7 +251,8 @@ function finish(acc) {
     teams: [...acc.teams],
     leagueIds: [...acc.leagueIds],
     teamIds: [...acc.teamIds],
-    rating: acc.ratingCount ? acc.ratingSum / acc.ratingCount : null,
+    grade: acc.gradeMinutes ? gradeOf(acc.gradeZm / acc.gradeMinutes) : null,
+    gradeCount: acc.gradeCount,
     rows: acc.rows.sort((a, b) =>
       String(b.date || "").localeCompare(String(a.date || "")),
     ),

@@ -169,7 +169,7 @@ export default function PlayerScoutCareer({
                         <th className={s.num}>Min</th>
                         <th className={s.num}>Buts</th>
                         <th className={s.num}>PD</th>
-                        <th className={s.num}>Note</th>
+                        <th className={s.num}>Note Vega</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -227,9 +227,9 @@ export default function PlayerScoutCareer({
                               {show(total(row.profile, "assists"))}
                             </td>
                             <td className={s.num}>
-                              {row.profile.rating == null
+                              {row.profile.grade == null
                                 ? "—"
-                                : fmt(row.profile.rating, 2)}
+                                : fmt(row.profile.grade, 0)}
                             </td>
                           </tr>
                         );

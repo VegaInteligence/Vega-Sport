@@ -16,8 +16,8 @@ test("a performance: record, rank, match, competition, profile", { skip }, async
     ["m_aaaaa1:p_aaaab1", "p_aaaab1", "t_aaaaa1", "m_aaaaa1", "l_3FJFUl", "Ligue 1", "FRA", "2025/2026", "2025-09-01", 91],
   );
   assert.deepEqual(
-    [row.minutes, row.rating, row.goals, row.xg, row.shots, row.passesAccurate, row.passesAttempted, row.starter, row.assists],
-    [90, 7.5, 2, 1.2, 4, 20, 25, true, null],
+    [row.minutes, Math.round(row.grade * 10) / 10, row.goals, row.xg, row.shots, row.passesAccurate, row.passesAttempted, row.starter, row.assists],
+    [90, 80.8, 2, 1.2, 4, 20, 25, true, null],
   );
   assert.equal(row.name, "Élie Durand");
   assert.deepEqual(rank, { rank: 1, total: 3 });

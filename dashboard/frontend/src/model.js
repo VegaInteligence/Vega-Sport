@@ -163,7 +163,7 @@ const isMissing = (value) =>
 // comparator called millions of times.
 function sortedOrder(rows, key, direction, mode) {
   const per =
-      mode === "per90" && !["rating", "minutes", "name", "team"].includes(key),
+      mode === "per90" && !["grade", "minutes", "name", "team"].includes(key),
     n = rows.length,
     names = rankedNames(rows),
     values = new Float64Array(n),

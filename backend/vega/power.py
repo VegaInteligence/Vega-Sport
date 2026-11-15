@@ -828,7 +828,7 @@ def refresh_elo(conn):
 # The first parameters: the seasons read (the award year spans two), then the year's first
 # day and the day after its last.
 PLAYER_MATCHES = """
-SELECT s.match_id, s.player_id, s.team_id, s.minutes_played, coalesce(lp.position_id, s.position_id) AS position_id, lp.is_starter,
+SELECT s.match_id, s.player_id, s.season_id AS edition, s.team_id, s.minutes_played, coalesce(lp.position_id, s.position_id) AS position_id, lp.is_starter,
   l.formation, cs.competition_id, m.competition_season_id, s.touches IS NOT NULL AS measured, t.is_national IS TRUE AS national,
   own.elo_before AS own_elo, opp.elo_before AS opponent_elo,
   CASE WHEN mc.events = 'ok' THEN s.goals - (SELECT count(*) FROM core.match_events e
@@ -850,7 +850,7 @@ LEFT JOIN core.player_match_advanced a ON a.season_id = s.season_id AND a.match_
 LEFT JOIN agg.team_elo own ON own.match_id = s.match_id AND own.team_id = s.team_id
 LEFT JOIN agg.team_elo opp ON opp.match_id = s.match_id AND opp.team_id <> s.team_id
 WHERE s.season_id = ANY(%s) AND s.minutes_played > 0 AND m.match_date >= %s AND m.match_date < %s"""
-_KEPT = ("match_id", "player_id", "team_id", "position_id", "is_starter", "formation", "competition_id", "competition_season_id", "measured", "national")
+_KEPT = ("match_id", "player_id", "edition", "team_id", "position_id", "is_starter", "formation", "competition_id", "competition_season_id", "measured", "national")
 # The statistics the source leaves blank at zero. A match of a few dozen players shows the
 # common ones whenever the source publishes them; the rare ones need the edition.
 ZERO_IN_MATCH = ("npxg", "shots_on_target", "xa", "chances_created", "passes_into_final_third", "dribbles_succeeded", "dribbles_total",
@@ -1325,12 +1325,14 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     centre = level_centres(rows)
     matches = []
     graded = []  # (role, competition, minutes, C) of each player-match, for the match grades
+    editions = []  # the edition's season of each player-match: where its grade is kept
     detailed = defaultdict(list)
     for i, r in enumerate(rows):
         scores, c = match_contribution(r, refs)
         level = None if r["own_elo"] is None else r["minutes_played"] / 90 * (r["own_elo"] - centre[bool(r.get("national"))]) / 400
         weight = weights.get(r["match_id"], 1.0)
         graded.append((r["role"], r.get("competition_id"), r["minutes_played"], c))
+        editions.append(r["edition"])
         matches.append((r["match_id"], r["player_id"], r["team_id"], r["role"], int(r["minutes_played"]), r["opponent_elo"],
                         *[scores.get(b) for b in BLOCK_COLUMNS], c, level, weight))
         if c is not None:
@@ -1341,13 +1343,16 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     # year before's when it is over, kept or read from its player-matches (and then kept), else
     # this year's own rows (kept nowhere: a year in progress is no reference).
     write_refs = None
+    graded_against = reference_season if grade_refs is not None else None  # the finished year read, None for the year's own rows
     if grade_refs is None:
         if finished:
             grade_refs = grade_references(graded)
             write_refs = (season, grade_refs)
+            graded_against = season
         elif reference_rows:
             grade_refs = grade_references(reference_rows)
             write_refs = (reference_season, grade_refs)
+            graded_against = reference_season
         else:
             grade_refs = grade_references(graded)
     matches = [(*match, match_index(role, competition, c, grade_refs)) for match, (role, competition, _, c) in zip(matches, graded)]
@@ -1390,6 +1395,8 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
                     copy.write_row((season, player, role, x["matches"], int(x["minutes"]), x["total"], x["rate"], run))
         if write_refs:
             write_grade_references(conn, *write_refs)
+        write_match_grades(conn, season, [(edition, match[0], match[1], match[2], match[3], match[4], match[-1])
+                                          for edition, match in zip(editions, matches) if match[-1] is not None], graded_against, run)
         _publish(conn, run, "players", season, count, len(scored))
         write_award(conn, season, scored)
     return len(scored)
@@ -1420,6 +1427,9 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
 # 30 minutes were 3 % of the best 1 %.
 
 GRADE_FULL_MINUTES = 60  # the full matches that give a role its reference
+# A season's grade is the grade of the player's minutes-weighted mean z over his matches of
+# this many minutes or more (the grades shown, less the cameos shown for an extreme match).
+GRADE_SEASON_MINUTES = 20
 GRADE_SHRINK = 300  # appearances: a competition's own spread counts n / (n + 300)
 GRADE_QUANTILES = 2000  # the role's reference distribution, kept as this many steps
 
@@ -1490,6 +1500,47 @@ def grade_reference_year(season, today):
     if award_year(season - 1)[1] <= today:
         return season - 1
     return None
+
+
+def write_match_grades(conn, season, grades, ref_season, run):
+    """The award year's grades where the statistics are (agg.player_match_grades), then the
+    season sums of the editions it reads (agg.player_grade_editions). grades: [(edition,
+    match, player, team, role, minutes, z)]. Only a grade that moved (or whose match changed)
+    is rewritten, so changed_at and first_z show the drift between runs; a player-match no
+    longer graded this year is removed."""
+    conn.execute("""CREATE TEMP TABLE grades_now (season_id smallint, match_id integer, player_id integer, team_id integer,
+                      role text, minutes smallint, z real) ON COMMIT DROP""")
+    with conn.cursor().copy("COPY grades_now(season_id, match_id, player_id, team_id, role, minutes, z) FROM STDIN") as copy:
+        for row in grades:
+            copy.write_row(row)
+    conn.execute(
+        """INSERT INTO agg.player_match_grades AS g (season_id, match_id, player_id, award_season, team_id, role, minutes, z, first_z, ref_season, run_id)
+           SELECT n.season_id, n.match_id, n.player_id, %(season)s, n.team_id, n.role, n.minutes, n.z, n.z, %(ref)s, %(run)s FROM grades_now n
+           ON CONFLICT (season_id, match_id, player_id) DO UPDATE SET award_season = EXCLUDED.award_season, team_id = EXCLUDED.team_id,
+             role = EXCLUDED.role, minutes = EXCLUDED.minutes, z = EXCLUDED.z, ref_season = EXCLUDED.ref_season, run_id = EXCLUDED.run_id,
+             changed_at = now()
+           WHERE abs(g.z - EXCLUDED.z) > 1e-4 OR g.minutes <> EXCLUDED.minutes OR g.role <> EXCLUDED.role
+             OR g.team_id IS DISTINCT FROM EXCLUDED.team_id OR g.ref_season IS DISTINCT FROM EXCLUDED.ref_season
+             OR g.award_season <> EXCLUDED.award_season""",
+        {"season": season, "ref": ref_season, "run": run},
+    )
+    conn.execute(
+        """DELETE FROM agg.player_match_grades g WHERE g.award_season = %s
+           AND NOT EXISTS (SELECT 1 FROM grades_now n WHERE n.season_id = g.season_id AND n.match_id = g.match_id AND n.player_id = g.player_id)""",
+        (season,),
+    )
+    # The editions this year reads (its seasons and the next): each player's sums over his
+    # matches of GRADE_SEASON_MINUTES or more, from both award years' grades.
+    editions = [season, season + 1]
+    conn.execute("DELETE FROM agg.player_grade_editions WHERE season_id = ANY(%s)", (editions,))
+    conn.execute(
+        """INSERT INTO agg.player_grade_editions(season_id, competition_season_id, player_id, grade_count, grade_minutes, zm_sum)
+           SELECT g.season_id, m.competition_season_id, g.player_id, count(*), sum(g.minutes), sum(g.minutes * g.z::float8)
+           FROM agg.player_match_grades g JOIN core.matches m ON m.id = g.match_id AND m.season_id = g.season_id
+           WHERE g.season_id = ANY(%s) AND g.minutes >= %s
+           GROUP BY g.season_id, m.competition_season_id, g.player_id""",
+        (editions, GRADE_SEASON_MINUTES),
+    )
 
 
 GRADE_REFERENCE = """

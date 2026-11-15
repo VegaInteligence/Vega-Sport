@@ -1360,7 +1360,7 @@ export function SquadTable({ dossier, limit = 30 }) {
             <th scope="col">Buts</th>
             <th scope="col">PD</th>
             <th scope="col">xG + xA</th>
-            <th scope="col">Note</th>
+            <th scope="col">Note Vega</th>
           </tr>
         </thead>
         <tbody>
@@ -1407,7 +1407,7 @@ export function SquadTable({ dossier, limit = 30 }) {
                     ? "—"
                     : fmtNum((xg || 0) + (xa || 0), 1)}
                 </td>
-                <td>{fmtNum(player.rating, 2)}</td>
+                <td>{fmtNum(player.grade, 0)}</td>
               </tr>
             );
           })}

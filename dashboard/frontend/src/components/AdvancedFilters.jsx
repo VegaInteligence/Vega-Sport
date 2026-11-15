@@ -131,18 +131,18 @@ export function AdvancedPanel({ id }) {
         />
       </div>
       <div className="advanced-field">
-        <label className="advanced-label" htmlFor={`${base}-rating`}>
-          Note moyenne minimale
+        <label className="advanced-label" htmlFor={`${base}-grade`}>
+          Note Vega minimale
         </label>
         <NumberField
-          id={`${base}-rating`}
+          id={`${base}-grade`}
           className="advanced-input"
           min="0"
-          max="10"
-          step="0.1"
-          placeholder="Ex. 7"
-          value={advanced.rating}
-          onChange={(rating) => update(() => ({ rating }))}
+          max="100"
+          step="1"
+          placeholder="Ex. 60"
+          value={advanced.grade}
+          onChange={(grade) => update(() => ({ grade }))}
         />
       </div>
       <div className="advanced-field">

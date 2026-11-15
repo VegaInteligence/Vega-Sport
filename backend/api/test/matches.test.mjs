@@ -92,13 +92,17 @@ test("match summary of a collected match", { skip }, async () => {
     ["s1", "t_aaaaa1", "p_aaaab1", 11, true], ["s2", "t_aaaaa2", "p_aaaab4", 30, false], ["s3", "t_aaaaa1", "p_aaaab1", 21, true],
   ]);
   assert.deepEqual(m.coverage, {
-    players: true, playerStats: true, ratings: true, xg: true, xa: false, shots: true, teamStatsReliable: true,
-    listedPlayers: 3, playedPlayers: 3, ratedPlayers: 3, xgPlayers: 3, xaPlayers: 0,
+    players: true, playerStats: true, grades: true, xg: true, xa: false, shots: true, teamStatsReliable: true,
+    listedPlayers: 3, playedPlayers: 3, gradedPlayers: 3, xgPlayers: 3, xaPlayers: 0,
   });
-  assert.deepEqual(m.leadingPlayers.map((p) => [p.playerId, p.rating]), [["p_aaaab1", 7.5], ["p_aaaab4", 6.9], ["p_aaaab2", 6.5]]);
-  assert.deepEqual(m.leadingPlayers[0], {
+  // The match's best Vega grades, from 60 minutes: by the normal score z (2.5, 0 and −1.5).
+  const grade = (z) => 100 / (1 + 10 ** (-z / 4));
+  assert.deepEqual(m.leadingPlayers.map((p) => [p.playerId, p.gradeZ]), [["p_aaaab1", 2.5], ["p_aaaab4", 0], ["p_aaaab2", -1.5]]);
+  const { grade: best, ...first } = m.leadingPlayers[0];
+  assert.ok(Math.abs(best - grade(2.5)) < 1e-9);
+  assert.deepEqual(first, {
     id: "m_aaaaa1:p_aaaab1", playerId: "p_aaaab1", matchId: "m_aaaaa1", teamId: "t_aaaaa1", team: "Olympique Été",
-    name: "Élie Durand", imageUrl: "https://img.example/p1.png", minutes: 90, rating: 7.5, goals: 2, assists: null,
+    name: "Élie Durand", imageUrl: "https://img.example/p1.png", minutes: 90, gradeZ: 2.5, goals: 2, assists: null,
   });
   assert.equal(response.headers.get("cache-control").includes("s-maxage=15"), true);
   const again = await get("/api/matches/m_aaaaa1/summary", { "if-none-match": response.headers.get("etag") });
