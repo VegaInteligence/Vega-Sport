@@ -72,19 +72,26 @@ test("competition overview renders linked fixtures, results, scores and empty st
   assert.doesNotMatch(five, /m_done_0/);
   // No level known for the competition: no card. A league on the scale: its level, rank, seasons and neighbours.
   assert.doesNotMatch(html, /Niveau du championnat/);
-  levels = { onScale: 41, leagues: [
-    { id: "l_top", name: "Premier League", country: "ENG", level: 1777.2, rank: 1, onScale: true, seasons: [] },
-    { id: "l_123", name: "Ligue 1", level: 1636.4, rank: 2, onScale: true, seasons: [{ season: "2025/2026", level: 1630 }, { season: "2026/2027", level: 1636.4 }] },
-    { id: "l_off", name: "MLS", level: 1500, rank: null, onScale: false, seasons: [] },
+  levels = { onScale: 52, ranked: 71, leagues: [
+    { id: "l_top", name: "Premier League", country: "ENG", level: 1777.2, rank: 1, onScale: true, provisional: false, margin: 10, universe: "men", seasons: [] },
+    { id: "l_123", name: "Ligue 1", level: 1636.4, rank: 2, onScale: true, provisional: false, margin: 16, universe: "men", seasons: [{ season: "2025/2026", level: 1630 }, { season: "2026/2027", level: 1636.4 }] },
+    { id: "l_off", name: "A-League", level: 1518, rank: 3, onScale: false, provisional: true, margin: 85, universe: "men", seasons: [] },
+    { id: "l_w", name: "Women's Premier League", level: 1500, rank: null, onScale: false, provisional: false, margin: null, universe: "women", seasons: [] },
   ] };
   const level = renderToStaticMarkup(elem(mod.exports.default, props));
   assert.match(level, /Niveau du championnat/);
-  assert.match(level, /<strong>1636<\/strong><span>2e sur 41 championnats<\/span>/);
+  assert.match(level, /<strong>1636<\/strong><span>2e sur 71 championnats<\/span>/);
   assert.match(level, /2026\/2027<\/span><span>1636<small>\+6<\/small>/);
   assert.match(level, /Devant : Premier League \(Angleterre\)/);
-  assert.doesNotMatch(level, /Derrière/);
+  assert.match(level, /Derrière : A-League/);
+  assert.doesNotMatch(level, /provisoire/);
   assert.match(level, /competition-highlights--level/);
-  const off = renderToStaticMarkup(elem(mod.exports.default, { ...props, competition: { id: "l_off" } }));
-  assert.match(off, /trop peu de matchs/);
+  // A provisional league: its level, its rank and its margin.
+  const provisional = renderToStaticMarkup(elem(mod.exports.default, { ...props, competition: { id: "l_off" } }));
+  assert.match(provisional, /<strong>1518<\/strong><span>3e sur 71 championnats<\/span>/);
+  assert.match(provisional, /Niveau provisoire, à ± 85 points près/);
+  // A women's league: a universe of its own.
+  const women = renderToStaticMarkup(elem(mod.exports.default, { ...props, competition: { id: "l_w" } }));
+  assert.match(women, /Championnat féminin/);
 
 });

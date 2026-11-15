@@ -76,9 +76,9 @@ class StakesTest(unittest.TestCase):
         self.assertAlmostEqual(plain, 10.0)  # K 20, level teams on neutral ground
         self.assertAlmostEqual(staked, 13.225)
         self.assertAlmostEqual(rows[2][5] + rows[3][5], 3000)  # still zero-sum
-        # The leagues' levels are the fixed point of the same weighted Elo.
-        levels = power.league_levels(matches, {"A": 1, "B": 1, "C": 2, "D": 2}, weights={2: 1.3225})[0]
-        self.assertEqual({round(v) for v in levels.values()}, {1500})  # no match between the two leagues
+        # The leagues' levels read the same weighted Elo: with no match between the two leagues, each holds its prior.
+        levels = power.league_model(matches, {"A": 1, "B": 1, "C": 2, "D": 2}, weights={2: 1.3225})[0]
+        self.assertEqual({round(v) for v in levels.values()}, {1500})
 
     def test_a_player_s_match_counts_for_its_stakes(self):
         role, minutes, c, team, shares, level = power.staked("winger", 90, 2.0, "T", {"finishing": 1.5, "creation": 0.5}, -0.4, 1.3)
@@ -110,10 +110,12 @@ class LeagueLevelTest(unittest.TestCase):
             for home, away, competition in (("A", "B", 1), ("B", "A", 1), ("C", "D", 2), ("D", "C", 2)):
                 i += 1
                 rows.append(m(i, home, away, 1, 1, competition))
-        for _ in range(12):
+        for k in range(12):
             for home, away in (("A", "C"), ("D", "B")):
                 i += 1
-                rows.append(m(i, home, away, *((2, 0) if home == "A" else (0, 2)), 9, international=True))
+                # The first league's clubs win three in four.
+                won = k % 4 != 3
+                rows.append(m(i, home, away, *((2, 0) if (home == "A") == won else (0, 2)), 9, international=True))
         return rows
 
     def test_a_club_s_league_is_the_domestic_one_of_its_first_season(self):
@@ -138,24 +140,83 @@ class LeagueLevelTest(unittest.TestCase):
         leagues = power.home_leagues(rows)
         pairs = power.league_links(rows, leagues)
         self.assertEqual((dict(pairs), dict(power.links_of(pairs))), ({(1, 2): 24}, {1: 24, 2: 24}))
-        levels, rounds, move = power.league_levels(rows, leagues)
-        self.assertGreater(levels[1], 1500 + 40)
-        self.assertAlmostEqual(levels[1] + levels[2], 3000, places=3)  # what one league takes, the other gives
-        self.assertLess(move, power.SEED_TOLERANCE)
-        self.assertLess(rounds, power.SEED_ROUNDS)
+        levels, se, settings = power.league_model(rows, leagues)
+        self.assertGreater(levels[1], levels[2] + 80)
+        self.assertAlmostEqual(levels[1] + levels[2], 3000, places=3)  # the matches say only the gap; the priors are alike
+        self.assertLess(settings["rounds"], power.NEWTON_ROUNDS)
         # The clubs start there: before its first match, a club of the first league stands above one of the second.
         first = {}
         for _, team, _, _, before, *_ in power.elo_updates(rows, seeds=levels, leagues=leagues):
             first.setdefault(team, before)
         self.assertEqual((first["A"], first["C"]), (levels[1], levels[2]))
-        # Without a match between them, the two leagues keep 1500: an Elo only moves points inside a league.
+        # Without a match between them, the two leagues hold their prior: an Elo only moves points inside a league.
         alone = [r for r in rows if not r[11]]
-        self.assertEqual(power.league_levels(alone, leagues)[0], {1: 1500.0, 2: 1500.0})
-        # Few matches against the others: the level is held towards 1500.
-        few = alone + [r for r in rows if r[11]][:4]
-        held = power.league_levels(few, leagues)[0]
-        free = power.league_levels(few, leagues, prior=0)[0]
-        self.assertTrue(1500 < held[1] < free[1])
+        self.assertEqual({round(v) for v in power.league_model(alone, leagues)[0].values()}, {1500})
+        # Fewer matches between them, the first league winning two in three: a smaller gap, known less well.
+        cross = [r for r in rows if r[11]]
+        few = alone + [cross[k] for k in (0, 1, 2, 3, 6, 7)]
+        held, held_se, _ = power.league_model(few, leagues)
+        self.assertTrue(0 < held[1] - held[2] < levels[1] - levels[2])
+        self.assertGreater(held_se[2], se[2])
+
+    def test_a_league_without_matches_against_others_takes_its_division_and_its_moves(self):
+        m, rows, i = self.match, self.season(), 1000
+        # A second division (3, under league 1's country) and a far league (4), whose clubs only meet each other.
+        for home, away, competition in (("E", "F", 3), ("F", "E", 3), ("G", "H", 4), ("H", "G", 4)):
+            i += 1
+            rows.append(m(i, home, away, 1, 1, competition))
+        leagues = power.home_leagues(rows)
+        countries, tiers = {1: "ENG", 2: "GER", 3: "ENG", 4: "USA"}, {3: 2}
+        levels, se, _ = power.league_model(rows, leagues, tiers=tiers, countries=countries)
+        self.assertAlmostEqual(levels[1] - levels[3], power.TIER_GAP, places=6)  # a division below, nothing else said
+        alone = levels[4]
+        # Twenty players left league 1 for league 4 and did much better there: league 4 is well below league 1.
+        moves = ([(1, 4, 20, 0.10)], 0.02)
+        moved, moved_se, _ = power.league_model(rows, leagues, tiers=tiers, countries=countries, moves=moves)
+        self.assertLess(moved[4], alone - 50)
+        self.assertLess(moved_se[4], se[4])
+        # The same move told from league 4's side says the same.
+        back, *_ = power.league_model(rows, leagues, tiers=tiers, countries=countries, moves=([(4, 1, 20, -0.10)], 0.02))
+        self.assertAlmostEqual(back[4], moved[4], places=6)
+        # A women's league is apart: no level on this scale.
+        self.assertNotIn(4, power.league_model(rows, leagues, countries=countries, apart={4})[0])
+
+    def test_moves_between_leagues_with_the_regression_of_a_good_season_removed(self):
+        from datetime import date
+
+        d = lambda y, mth: date(y, mth, 1)
+        stints = []
+        # Stayers in league 1: a year's rate (per 90, against the league-season's) keeps half of itself the next year.
+        for k in range(40):
+            first = 0.2 if k % 2 else -0.2
+            stints += [(2024, 100 + k, 1, 1800, (1.0 + first) * 20, d(2023, 8), d(2024, 5), "winger"),
+                       (2025, 100 + k, 1, 1800, (1.0 + first / 2) * 20, d(2024, 8), d(2025, 5), "winger")]
+        # Two movers from 1 to 2 after a good season, a mover from 2 to 1, and a goalkeeper (left out).
+        stints += [(2024, 1, 1, 1800, 1.4 * 20, d(2023, 8), d(2024, 5), "winger"), (2025, 1, 2, 1800, 1.0 * 20, d(2024, 8), d(2025, 5), "winger"),
+                   (2024, 2, 1, 1800, 1.4 * 20, d(2023, 8), d(2024, 5), "winger"), (2025, 2, 2, 1800, 1.0 * 20, d(2024, 8), d(2025, 5), "winger"),
+                   (2024, 3, 2, 1800, 1.0 * 20, d(2023, 8), d(2024, 5), "winger"), (2025, 3, 1, 1800, 1.2 * 20, d(2024, 8), d(2025, 5), "winger"),
+                   (2024, 4, 1, 1800, 9.0 * 20, d(2023, 8), d(2024, 5), "goalkeeper"), (2025, 4, 2, 1800, 0.0, d(2024, 8), d(2025, 5), "goalkeeper")]
+        pairs, variance, facts = power.move_evidence(stints)
+        self.assertEqual((facts["stayers"], facts["moves"]), (40, 3))
+        self.assertAlmostEqual(facts["persistence"], 0.5, places=6)
+        ((a, b, movers, change),) = pairs
+        self.assertEqual((a, b, movers), (1, 2, 3))  # the move from 2 to 1 counts with its sign changed
+        self.assertGreater(variance, 0)
+        # Against the regression the stayers show, a good season before the move says nothing of the leagues.
+        naive = sum([(1.0 - 1.4), (1.0 - 1.4), -(1.2 - 1.0)]) / 3
+        self.assertGreater(change, naive)
+
+    def test_the_linear_algebra(self):
+        a = [[4.0, 1.0, 0.0], [1.0, 3.0, 1.0], [0.0, 1.0, 2.0]]
+        x = power._solve(a, [1.0, 2.0, 3.0])
+        self.assertTrue(all(abs(sum(a[i][j] * x[j] for j in range(3)) - b) < 1e-12 for i, b in enumerate([1.0, 2.0, 3.0])))
+        inv = power._inverse(a)
+        for i in range(3):
+            for j in range(3):
+                self.assertAlmostEqual(sum(a[i][k] * inv[k][j] for k in range(3)), 1.0 if i == j else 0.0, places=12)
+        # Against the mean of a reference set, the reference itself has the error of its own spread.
+        self.assertAlmostEqual(power._relative_se([[1.0, 0.0], [0.0, 1.0]], [0])[0], 0.0)
+        self.assertAlmostEqual(power._relative_se([[1.0, 0.0], [0.0, 1.0]], [0])[1], 2 ** 0.5)
 
     def test_a_league_s_level_season_by_season(self):
         # Each club's strength after its last match of the season, in the league it played that season.
@@ -171,13 +232,6 @@ class LeagueLevelTest(unittest.TestCase):
         self.assertEqual(levels[(1, 2025)][1], 2)
         self.assertAlmostEqual(levels[(1, 2025)][0], (last[(2025, "A")] + last[(2025, "C")]) / 2)
         self.assertAlmostEqual(levels[(2, 2025)][0], (last[(2025, "B")] + last[(2025, "D")]) / 2)
-
-    def test_the_common_scale_grows_from_the_most_connected_league(self):
-        # 1 and 2 met often; 3 met each of them a little (enough together); 4 and 5 only each other; 6 nobody.
-        pairs = {(1, 2): 40, (1, 3): 6, (2, 3): 5, (4, 5): 30, (3, 4): 2}
-        self.assertEqual(power.common_scale(pairs), {1, 2, 3})
-        self.assertEqual(power.common_scale({}), set())
-        self.assertEqual(power.common_scale({(1, 2): 3}), set())
 
 
 class RoleTest(unittest.TestCase):
@@ -221,7 +275,7 @@ class RoleTest(unittest.TestCase):
         leagues = {1: (True, True), 2: (True, False), 3: (False, False)}
         rows = [{"team_id": "A", "competition_id": 1}] * 3 + [{"team_id": "A", "competition_id": 9}] * 5  # 9: a European competition
         rows += [{"team_id": "B", "competition_id": 2}] * 2 + [{"team_id": "C", "competition_id": 3}] * 2 + [{"team_id": "D", "competition_id": 9}]
-        self.assertEqual(power.team_leagues(rows, leagues), ({"A", "B"}, {"A"}))
+        self.assertEqual(power.team_leagues(rows, leagues), ({"A", "B"}, {"A"}, set()))
 
 
 class OmittedZeroTest(unittest.TestCase):
@@ -312,7 +366,7 @@ class ScoreTest(unittest.TestCase):
             4: [("centre_back", 1000, -1.0, 12, None)],
         }
         out, settings = power.season_scores(contributions)
-        self.assertEqual(settings, {"eligibility": 900.0, "level_weight": 0.0})  # no club strength known: no level
+        self.assertEqual(settings, {"eligibility": 900.0, "level_weight": 0.0, "level_weights": {"men": 0.0}})  # no club strength known: no level
         self.assertAlmostEqual(out[1]["rate"], 90 * 4.0 / (1800 + 450))
         self.assertFalse(out[3]["eligible"])
         self.assertNotIn("score", out[3])

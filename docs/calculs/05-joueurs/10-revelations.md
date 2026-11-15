@@ -7,7 +7,7 @@ Des joueurs que le classement de puissance ne classe pas encore, faute de minute
 Un joueur est signalé sur une saison quand :
 
 1. il a joué **au moins 270 minutes** mais reste **sous le seuil de minutes du classement** (900 minutes sur une saison entière, la moitié des minutes du joueur le plus utilisé tant que la saison n'en est pas là) ;
-2. son championnat est **sur l'échelle commune** ;
+2. son championnat est **mesuré** (erreur-type de son niveau d'au plus 60 points, version 4) ;
 3. son **rendement par 90 minutes régularisé** (celui du classement, § 8 de la méthode : il ramène vers la moyenne un joueur qui a peu joué) est **au niveau du meilleur cinquième des titulaires de son rôle** (les joueurs classés du même rôle, au moins 30) ;
 4. il n'a **jamais été titulaire** (classé) lors d'une saison antérieure de la base ;
 5. sa date de naissance est **connue** et il a **moins de 23 ans** au 1ᵉʳ août de la saison. Elle n'est connue que pour une minorité de joueurs (Wikidata, club par club) : un joueur dont l'âge est inconnu n'est pas signalé.

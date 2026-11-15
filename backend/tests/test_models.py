@@ -141,10 +141,14 @@ class ModelsTest(unittest.TestCase):
                FROM agg.power_runs WHERE kind='players' AND status='published'"""
         ).fetchone()
         # 14 matches of 90 minutes: the year is young, half the most used player's minutes make a player eligible.
-        self.assertEqual(run[:7], ("power-ranking-v3", 20.0, 450.0, 630.0, 0.5, 0.5, 4.0))
+        self.assertEqual(run[:7], ("power-ranking-v4", 20.0, 450.0, 630.0, 0.5, 0.5, 4.0))
         self.assertEqual([d.isoformat() for d in run[7:]], ["2025-08-01", "2026-07-31"])
-        elo = self.db.execute("SELECT seed_rounds, link_matches, level_prior_matches FROM agg.power_runs WHERE kind='elo' AND status='published'").fetchone()
-        self.assertEqual(elo, (1, 10, 30))  # nothing ties the league to another: its level does not move
+        elo = self.db.execute("SELECT seed_rounds, level_exchange, measured_se FROM agg.power_runs WHERE kind='elo' AND status='published'").fetchone()
+        self.assertEqual(elo[0], 1)  # nothing ties the league to another: its level does not move
+        self.assertAlmostEqual(elo[1], power.LEVEL_EXCHANGE, places=5)
+        self.assertEqual(elo[2], power.MEASURED_SE)
+        # Its level is known exactly against itself: measured, a top division of the men's universe.
+        self.assertEqual(self.db.execute("SELECT level_se, tier, universe, movers FROM agg.league_levels").fetchone(), (0.0, 1, "men", 0))
         # The season before has no statistics: its award year is not computed from this season's first months.
         self.assertFalse(power.previous_year_changed(self.db, 2025))
         # The award race: the first 30 of the ranking, numbered 1..30, with its calc run.
