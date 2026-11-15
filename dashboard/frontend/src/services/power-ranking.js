@@ -38,7 +38,7 @@ export function useWholeRanking(season, { page = 1, role = "", universe = "men" 
   );
 }
 
-/** The clubs' ranking by Elo: [{ rank, teamId, name, imageUrl, country, elo, eloChange, matches }], null without one. */
+/** The clubs' ranking by Elo: [{ rank, teamId, name, imageUrl, country, score (out of 100), elo, eloChange, matches }], null without one. */
 export function useClubRanking(season) {
   return useResource(
     `power-ranking:clubs:${season || "none"}`,

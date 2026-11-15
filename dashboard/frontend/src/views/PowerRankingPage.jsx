@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Layout from "../components/Layout.jsx";
-import { Card, Media, Pager, Segments } from "../components/UI.jsx";
+import { Card, Grade, Media, Pager, Segments } from "../components/UI.jsx";
 import SeasonSelect from "../components/SeasonSelect.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
@@ -145,7 +145,10 @@ function ClubsTab({ season }) {
   const resource = useClubRanking(season);
   return (
     <Card title="Classement des clubs">
-      <p className="card-note">Force de chaque club, mesurée par son Elo sur tous ses matchs ; la variation porte sur la saison.</p>
+      <p className="card-note">
+        Force de chaque club, mesurée par son Elo sur tous ses matchs ; la variation porte sur la saison. Le score sur 100 est sa
+        chance de battre un club moyen des premières divisions mesurées sur terrain neutre, un nul comptant pour moitié.
+      </p>
       <div className="table-scroll">
         <table className="data-table power-ranking-table">
           <thead>
@@ -153,6 +156,7 @@ function ClubsTab({ season }) {
               <th scope="col">Rang</th>
               <th scope="col">Club</th>
               <th scope="col">Pays</th>
+              <th scope="col">Score</th>
               <th scope="col">Elo</th>
               <th scope="col">Variation</th>
               <th scope="col">Matchs</th>
@@ -160,10 +164,10 @@ function ClubsTab({ season }) {
           </thead>
           <tbody>
             {resource.loading ? (
-              <SkeletonRows columns={6} />
+              <SkeletonRows columns={7} />
             ) : !resource.value?.length ? (
               <tr>
-                <td colSpan={6}>{resource.error || "Aucun classement publié pour cette saison."}</td>
+                <td colSpan={7}>{resource.error || "Aucun classement publié pour cette saison."}</td>
               </tr>
             ) : (
               resource.value.map((r) => (
@@ -176,9 +180,8 @@ function ClubsTab({ season }) {
                     </Link>
                   </td>
                   <td>{r.country || "—"}</td>
-                  <td>
-                    <strong>{number(r.elo, 0)}</strong>
-                  </td>
+                  <td>{r.score == null ? "—" : <Grade value={r.score} title="Score du club sur 100" />}</td>
+                  <td>{number(r.elo, 0)}</td>
                   <td>{r.eloChange == null ? "—" : `${r.eloChange > 0 ? "+" : ""}${number(r.eloChange, 0)}`}</td>
                   <td>{number(r.matches)}</td>
                 </tr>

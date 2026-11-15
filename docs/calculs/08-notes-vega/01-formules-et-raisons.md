@@ -230,6 +230,29 @@ Pourquoi 45 : une erreur e sur le niveau déplace l'indice d'un joueur d'environ
 | Prédire les 1 282 passages de 2026/2027 (pente observé / prédit) | 1,30 ± 0,19 | 1,11 ± 0,12 | 0,85 à 1,15 |
 | Matchs seuls contre passages seuls, 31 championnats (rms des écarts réduits) | — | 1,03 | ≤ 1,3 |
 
+### 4.8 Le score sur 100 d'un club et d'un championnat
+
+Route : `/api/rankings/power?kind=clubs` (champ `score`) et `/api/rankings/leagues` (champ `score`), dans [rankings.mjs](../../../backend/api/src/routes/rankings.mjs) (`outOf100`). Le site les montre dans l'onglet Clubs du Power Ranking et sur la carte « Niveau du championnat ». L'Elo et le niveau restent affichés à côté.
+
+Le score est la **chance de battre la référence sur terrain neutre**, un nul comptant pour moitié, c'est-à-dire l'espérance de l'Elo :
+
+$$
+\text{score} = \frac{100}{1 + 10^{-(R - R_\text{réf})/400}}
+$$
+
+- **R** : l'Elo du club après son dernier match de la saison, ou le niveau du championnat (la force moyenne de ses clubs, dernière saison).
+- **R_réf** : le niveau moyen des premières divisions masculines mesurées (§ 4.6), chacune comptant pour une. Tant qu'aucune n'est mesurée, c'est la moyenne de tous les championnats masculins.
+
+**Lecture.** 50 = au niveau d'un championnat moyen de premier rang mesuré. 76 = 200 points au-dessus : il battrait trois fois sur quatre un club de ce niveau. 91 = 400 points au-dessus.
+
+**Pourquoi cette forme.** Elle ne demande aucun réglage de plus : c'est la loi de l'Elo lui-même, et le score garde l'ordre de l'Elo. Une échelle de 0 à 100 bornée par le meilleur et le moins bon club changerait de sens à chaque match du dernier club.
+
+**Ce qui est choisi.** La référence, une moyenne de championnats et non un club. Elle bouge un peu à chaque calcul des niveaux, et tous les scores avec elle.
+
+Pas de score pour un championnat féminin, univers à part, ni pour une sélection nationale : la référence est faite de clubs.
+
+**Ce qui étaye le niveau, sur la carte.** Le nombre de matchs contre d'autres championnats (`links`) et le nombre de joueurs passés d'un championnat à l'autre (`movers`), avec la marge quand le niveau est mesuré. Un niveau provisoire garde sa phrase et sa marge.
+
 ## 5. La note d'un joueur
 
 ### 5.1 Son rôle dans chaque match
