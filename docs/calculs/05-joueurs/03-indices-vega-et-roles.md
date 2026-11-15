@@ -44,7 +44,7 @@ Les rôles sont triés du plus haut au plus bas.
 2. **Rang** = son rang parmi les joueurs classés de son rôle (`roleRank`) ;
 3. **Sur** = nombre de joueurs classés de ce rôle (`roleCount`).
 
-Un joueur qui a un score sans être classé (championnat au niveau provisoire, erreur-type au-dessus de 60 points ; ou championnat féminin, noté entre joueuses) a son niveau, pas de rang.
+Un joueur qui a un score sans être classé (championnat au niveau provisoire, erreur-type au-dessus de 45 points ; ou championnat féminin, noté entre joueuses) a son niveau, pas de rang.
 
 Pour une saison sans classement de puissance, ou un joueur qui n'y a pas de score (trop peu de minutes), la colonne garde l'ancien calcul :
 1. **Niveau actuel** = valeur arrondie du **meilleur rôle** du joueur (le premier rôle dont l'indice existe) ;

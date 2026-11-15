@@ -205,6 +205,10 @@ class LeagueLevelTest(unittest.TestCase):
         # Against the regression the stayers show, a good season before the move says nothing of the leagues.
         naive = sum([(1.0 - 1.4), (1.0 - 1.4), -(1.2 - 1.0)]) / 3
         self.assertGreater(change, naive)
+        # A European competition's stint between two years of one league hides the stay; only the leagues count.
+        europe = stints + [(2024, 100 + k, 9, 900, 18.0, d(2023, 9), d(2024, 4), "winger") for k in range(40)]
+        self.assertEqual(power.move_evidence(europe, leagues={1, 2})[2]["stayers"], 40)
+        self.assertLess(power.move_evidence(europe)[2]["stayers"], 40)
 
     def test_the_linear_algebra(self):
         a = [[4.0, 1.0, 0.0], [1.0, 3.0, 1.0], [0.0, 1.0, 2.0]]

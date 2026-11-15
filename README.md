@@ -60,7 +60,7 @@ Les formules sont documentées telles que le code les applique dans [docs/calcul
 
 - **Saisons** de joueur et de club, états de jeu, classements, xPts, cohortes, centiles et rangs, rôles et indices.
 - **Classements de puissance** ([méthode](docs/METHODE_CLASSEMENT_BALLON_D_OR.md), [audit et versions](docs/calculs/05-joueurs/08-audit-classement-puissance.md)), version 3 depuis le 12 novembre 2026 :
-  - clubs et sélections : un Elo sur tous les matchs, les clubs entrant au niveau de leur championnat ; depuis le 15 novembre 2026, chaque championnat a un niveau et son erreur-type (matchs entre championnats, transferts, division et confédération), 52 championnats d'hommes sur 71 mesurés à 60 points près ;
+  - clubs et sélections : un Elo sur tous les matchs, les clubs entrant au niveau de leur championnat ; depuis le 15 novembre 2026, chaque championnat a un niveau et son erreur-type (matchs entre championnats, transferts, division et confédération), 47 championnats d'hommes sur 71 mesurés à 45 points près, les autres provisoires ;
   - joueurs : contribution par match relative au rôle et à l'adversaire, niveau du club, année du trophée du 1ᵉʳ août au 31 juillet, Coupe du monde comprise ;
   - enjeu : un match compte pour le prestige de sa compétition × son tour (championnat 1, Ligue des champions 1,15, sa finale 1,32, finale de Coupe du monde 1,50).
 - **Niveau des championnats** : la force moyenne des clubs de chaque championnat, saison par saison.

@@ -90,7 +90,7 @@ def _candidates(conn, country, key):
     for team, name, short, alias in conn.execute(
         """SELECT t.id, t.name, t.short_name, n.name FROM core.teams t
            LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
-           WHERE t.country_code = %s AND t.is_national IS NOT TRUE""",
+           WHERE t.country_code = %s AND t.is_national IS NOT TRUE AND t.merged_into IS NULL""",
         (country,),
     ):
         if key in {normalize(name), normalize(short), normalize(alias)} - {""}:

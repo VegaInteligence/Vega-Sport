@@ -61,7 +61,7 @@ def national_team(conn, key, name, code):
     if known:
         return known
     wanted = normalize(name)
-    return _link(conn, key, {t for t, country, n in conn.execute("SELECT id, country_code, name FROM core.teams WHERE is_national IS TRUE").fetchall()
+    return _link(conn, key, {t for t, country, n in conn.execute("SELECT id, country_code, name FROM core.teams WHERE is_national IS TRUE AND merged_into IS NULL").fetchall()
                              if (code and country == code) or normalize(n) == wanted})
 
 
