@@ -15,7 +15,7 @@ import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
 import CompetitionOptions from "../components/CompetitionOptions.jsx";
 import { FootballContext, useFootball } from "../hooks/FootballContext.jsx";
-import { Media, Pager, Empty } from "../components/UI.jsx";
+import { Media, Pager, Empty, Skeleton } from "../components/UI.jsx";
 const ClubScoutProfile = lazy(
   () => import("../components/ClubScoutProfile.jsx"),
 );
@@ -335,9 +335,7 @@ export default function ClubsPage() {
           <FootballContext.Provider value={profileContext}>
             <Suspense
               fallback={
-                <p data-page-loading="" role="status">
-                  Chargement du profil du club…
-                </p>
+                <Skeleton data-page-loading="" label="Chargement du profil du club…" lines={2} />
               }
             >
               <ClubScoutProfile key={selected.id} clubId={selected.id} />
@@ -346,9 +344,7 @@ export default function ClubsPage() {
         </>
       ) : fromStandings ? (
         loadFixtures && additional.loading ? (
-          <div data-page-loading="" className="loading-state" role="status">
-            Chargement de l’équipe…
-          </div>
+          <Skeleton data-page-loading="" label="Chargement de l’équipe…" />
         ) : (
           <StandingsClubProfile
             leagueId={clubLeague}
@@ -461,9 +457,7 @@ export default function ClubsPage() {
             )}
           </div>
           {remoteDirectory && directory.loading && (
-            <p role="status" data-page-loading="" className="loading-state">
-              Chargement des clubs…
-            </p>
+            <Skeleton data-page-loading="" label="Chargement des clubs…" kind="table" lines={8} />
           )}
           {remoteDirectory && directory.error && (
             <p role="alert">

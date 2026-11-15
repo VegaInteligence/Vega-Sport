@@ -7,7 +7,7 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
 import { useResourceBootstrap } from "../services/resource-bootstrap.js";
 import { mirrorHomeState } from "../services/home-bootstrap-preferences.js";
-import { AsyncState, Empty } from "../components/UI.jsx";
+import { AsyncState, Empty, Skeleton } from "../components/UI.jsx";
 import useCompactRead from "../hooks/useCompactRead.js";
 import { compactGeneration, compactScope } from "../services/compact-reads.js";
 import { chooseUpcoming } from "../services/home-upcoming.js";
@@ -351,7 +351,7 @@ function CompactOverview() {
       >
         <AsyncState
           resource={summary}
-          loading={<p role="status">Chargement de la synthèse…</p>}
+          loading={<Skeleton label="Chargement de la synthèse…" lines={2} />}
         >
           {() => null}
         </AsyncState>
@@ -362,7 +362,7 @@ function CompactOverview() {
       resource={summary}
       loading={
         <Layout path="/" title="Vue d’ensemble">
-          <p role="status">Chargement de la synthèse…</p>
+          <Skeleton label="Chargement de la synthèse…" lines={2} />
         </Layout>
       }
     >

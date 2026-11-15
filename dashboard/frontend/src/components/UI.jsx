@@ -133,15 +133,37 @@ export function Card({
 export function Empty({ children = "Aucune donnée disponible." }) {
   return <div className="chart-empty">{children}</div>;
 }
+const SKELETON_WIDTHS = ["92%", "76%", "84%", "62%", "88%", "70%"];
+/**
+ * The shape of what is loading: grey lines in place of the content, its label read by
+ * screen readers only. `kind`: "block" (lines of text), "table" (full rows) or "inline" (a
+ * short line inside a sentence). Extra props (data-page-loading…) go to the outer element.
+ */
+export function Skeleton({ label = "Chargement…", lines = 3, kind = "block", className = "", ...rest }) {
+  if (kind === "inline")
+    return (
+      <span className={`skeleton-inline ${className}`.trim()} role="status" {...rest}>
+        <span className="sr-only">{label}</span>
+        <span className="skeleton-line" aria-hidden="true" />
+      </span>
+    );
+  return (
+    <div className={`skeleton skeleton-${kind} ${className}`.trim()} role="status" aria-busy="true" {...rest}>
+      <span className="sr-only">{label}</span>
+      {Array.from({ length: lines }, (_, i) => (
+        <span
+          key={i}
+          className="skeleton-line"
+          aria-hidden="true"
+          style={kind === "table" ? undefined : { width: SKELETON_WIDTHS[i % SKELETON_WIDTHS.length] }}
+        />
+      ))}
+    </div>
+  );
+}
 export function AsyncState({ resource, children, loading }) {
   return resource.loading ? (
-    <div data-page-loading="">
-      {loading || (
-        <div role="status" className="loading-state">
-          Chargement…
-        </div>
-      )}
-    </div>
+    <div data-page-loading="">{loading || <Skeleton />}</div>
   ) : resource.error ? (
     <div role="alert" className="notice notice-warning">
       {resource.error}{" "}

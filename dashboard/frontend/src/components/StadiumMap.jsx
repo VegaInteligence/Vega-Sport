@@ -1,4 +1,5 @@
 "use client";
+import { Skeleton } from "./UI.jsx";
 import React, { useEffect, useRef, useState } from "react";
 
 let loader;
@@ -146,9 +147,7 @@ export default function StadiumMap({ name, coordinates }) {
         aria-label={`Carte autour de ${name}`}
       />
       {status === "loading" && (
-        <div className="stadium-map-state" role="status">
-          Chargement de la carte 3D…
-        </div>
+        <Skeleton label="Chargement de la carte 3D…" />
       )}
       {status === "error" && (
         <div className="stadium-map-state" role="status">

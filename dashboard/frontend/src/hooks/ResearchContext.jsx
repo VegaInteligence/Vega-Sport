@@ -1,4 +1,5 @@
 "use client";
+import { Skeleton } from "../components/UI.jsx";
 import React, {
   createContext,
   lazy,
@@ -132,9 +133,7 @@ export function ResearchProvider({ children, initialState }) {
       {comparing && (
         <Suspense
           fallback={
-            <div role="status" className="loading-state">
-              Chargement de la comparaison…
-            </div>
+            <Skeleton label="Chargement de la comparaison…" />
           }
         >
           <ComparisonDialog onClose={() => setComparing(false)} />

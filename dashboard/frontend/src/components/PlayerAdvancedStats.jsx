@@ -1,6 +1,6 @@
 "use client";
 import React, { useMemo, useState } from "react";
-import { Segments } from "./UI.jsx";
+import { Segments, Skeleton } from "./UI.jsx";
 import {
   rankMetric,
   roleAssessments,
@@ -400,9 +400,7 @@ export default function PlayerAdvancedStats({
         </div>
       </div>
       {!ready ? (
-        <p className={s.notice} role="status">
-          Chargement de la cohorte du poste…
-        </p>
+        <Skeleton label="Chargement de la cohorte du poste…" lines={2} />
       ) : !role ? (
         <p className={s.notice}>
           Le poste de ce joueur n’est pas renseigné : aucune cohorte de

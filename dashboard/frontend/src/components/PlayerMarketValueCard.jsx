@@ -7,7 +7,7 @@ import {
 } from "../services/player-market-clubs.js";
 import { useResource } from "../services/resources.js";
 import { LineChart, TipBody } from "./PlayerScoutCharts.jsx";
-import { Media } from "./UI.jsx";
+import { Media, Skeleton } from "./UI.jsx";
 import s from "./PlayerScout.module.css";
 
 const day = 86_400_000;
@@ -148,7 +148,7 @@ export default function PlayerMarketValueCard({
       ) : (
         <p className={s.note}>
           {loading
-            ? "Chargement…"
+            ? <Skeleton kind="inline" label="Chargement de l’historique…" />
             : error
               ? "Historique indisponible."
               : "Aucune estimation disponible."}

@@ -16,7 +16,7 @@ import {
   playerHistoryKey,
 } from "../services/scouting-history.js";
 import { playerTeamSeasons } from "../services/player-team-seasons.js";
-import { Media } from "./UI.jsx";
+import { Media, Skeleton } from "./UI.jsx";
 import NationalFlag from "./NationalFlag.jsx";
 import { number } from "../services/format.js";
 import { playerFacts } from "../services/player-bio.js";
@@ -230,7 +230,7 @@ export default function PlayerScoutRail({
   } else if (time) {
     timeFact.note = `Couverture partielle · ${time.covered}/${time.matches}`;
   } else if (calendar.loading) {
-    timeFact.note = "Chargement…";
+    timeFact.note = <Skeleton kind="inline" label="Chargement du temps de jeu…" />;
   }
   const facts = [
     ...published.filter((item) => item.label !== "Nom complet"),
@@ -305,7 +305,7 @@ export default function PlayerScoutRail({
         ) : (
           <p className={s.valueMeta}>
             {market.loading
-              ? "Chargement…"
+              ? <Skeleton kind="inline" label="Chargement de la valeur marchande…" />
               : market.error
                 ? "Données indisponibles"
                 : "Aucune estimation disponible"}

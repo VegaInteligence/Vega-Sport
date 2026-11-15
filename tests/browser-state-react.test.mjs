@@ -563,10 +563,11 @@ async function providers() {
     "./usePublishedDataRefresh.js": { __esModule: true, default: () => {} },
     "../components/UI.jsx": {
       AsyncState: ({ resource, children }) => children(resource.value),
+      Skeleton: () => null,
     },
     "../components/LoadingPage.jsx": { __esModule: true, default: () => null },
   });
-  return { ...football, ...(await compile("hooks/ResearchContext.jsx", {})) };
+  return { ...football, ...(await compile("hooks/ResearchContext.jsx", { "../components/UI.jsx": { Skeleton: () => null } })) };
 }
 
 test("actual Football and Research providers commit once on a warm Home remount", async () => {

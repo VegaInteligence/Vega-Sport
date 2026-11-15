@@ -3,7 +3,7 @@
  * matches and squad tabs (the player profile adapted to a club). */
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import { Segments } from "./UI.jsx";
+import { Segments, Skeleton } from "./UI.jsx";
 import { BookmarkButton } from "./ResearchUI.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import { FakeBadge } from "./PlayerScoutDemo.jsx";
@@ -720,9 +720,7 @@ function SquadAgeProfile({ id, season }) {
       text="Répartition des minutes renseignées, selon l’âge au jour du match."
     >
       {loading ? (
-        <p className={c.note} role="status">
-          Chargement…
-        </p>
+        <Skeleton label="Chargement…" lines={2} />
       ) : error || !covered ? (
         <p className={c.note}>Profil d’âge indisponible pour cette saison.</p>
       ) : (

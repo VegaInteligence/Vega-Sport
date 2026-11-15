@@ -1,6 +1,6 @@
 "use client";
 import React, { useMemo, useState } from "react";
-import { Segments } from "./UI.jsx";
+import { Segments, Skeleton } from "./UI.jsx";
 import { useCardFold } from "./PhoneFold.jsx";
 import {
   cohortTraits,
@@ -199,9 +199,7 @@ function Pending({ ready, children }) {
   return ready ? (
     children
   ) : (
-    <p className={s.note} role="status">
-      Chargement des joueurs du même poste…
-    </p>
+    <Skeleton label="Chargement des joueurs du même poste…" lines={2} />
   );
 }
 
@@ -833,9 +831,7 @@ export function PlayerScoutStats({ profile, cohorts, mode, ready }) {
   const size = cohorts.groups.get(group)?.profiles.length || 0;
   if (!ready)
     return (
-      <p className={s.note} role="status">
-        Chargement des joueurs du même poste…
-      </p>
+      <Skeleton label="Chargement des joueurs du même poste…" lines={2} />
     );
   return (
     <div className={s.overview}>
@@ -1165,9 +1161,7 @@ export function PlayerScoutCompare({ profile, cohorts, ready }) {
   }));
   if (!ready)
     return (
-      <p className={s.note} role="status">
-        Chargement des joueurs du même poste…
-      </p>
+      <Skeleton label="Chargement des joueurs du même poste…" lines={2} />
     );
   return (
     <div className={s.overview}>

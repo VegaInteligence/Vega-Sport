@@ -66,7 +66,7 @@ import { directoryCSV } from "../services/player-directory.js";
 import { enrichSeasonCompetitions } from "../services/competition-identity.js";
 import { clubDataTeam, loadClubSeason } from "../services/scouting-history.js";
 import { actorReadKey, actorReadParams } from "../services/actor-reads.js";
-import { AsyncState } from "../components/UI.jsx";
+import { AsyncState, Skeleton } from "../components/UI.jsx";
 import LoadingPage from "../components/LoadingPage.jsx";
 import {
   europeFocusIds,
@@ -1196,7 +1196,7 @@ export function FootballProvider({ children, loadData = true, initialState }) {
                   {children}
                 </>
               ) : (
-                <div role="status">Chargement de la saison…</div>
+                <Skeleton label="Chargement de la saison…" />
               )
             }
           </AsyncState>

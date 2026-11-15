@@ -455,7 +455,7 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
           React.createElement("a", props, children),
       },
       "./Icon.jsx": { __esModule: true, default: () => null },
-      "./UI.jsx": { Media: () => null },
+      "./UI.jsx": { Media: () => null, Skeleton: () => null },
       "../hooks/FootballContext.jsx": { FootballContext: {} },
       "../services/format.js": { number: String },
       "../services/global-search.js": globalSearch,

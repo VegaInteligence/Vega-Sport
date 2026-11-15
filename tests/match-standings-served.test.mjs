@@ -54,7 +54,7 @@ async function standings(table, reads, source = "SportScore") {
     react: React,
     "next/link": { __esModule: true, default: ({ href, children, ...props }) => e("a", { href, ...props }, children) },
     "../hooks/FootballContext.jsx": { useFootball: football },
-    "./UI.jsx": { Empty: ({ children }) => e("div", { "data-empty": "" }, children), Media: () => null },
+    "./UI.jsx": { Empty: ({ children }) => e("div", { "data-empty": "" }, children), Media: () => null, Skeleton: ({ label }) => e("div", { role: "status" }, label) },
     "./NationalFlag.jsx": { __esModule: true, default: () => null },
     "./PhoneFold.jsx": { usePhoneFold: () => ({ fold: {}, toggle: {} }), PhoneFoldToggle: () => null },
     "../services/national-flags.js": { nationalFlagCode: () => null },
@@ -180,7 +180,7 @@ test("a match page asks for the served table and does not load the season's fixt
           return e("div", { "data-standings": "" });
         },
       },
-      "./UI.jsx": { Card: ({ children }) => e("section", null, children), Empty: ({ children }) => e("div", null, children) },
+      "./UI.jsx": { Card: ({ children }) => e("section", null, children), Empty: ({ children }) => e("div", null, children), Skeleton: ({ label }) => e("div", { role: "status" }, label) },
     })
   ).default;
   const html = renderToStaticMarkup(

@@ -1,4 +1,5 @@
 "use client";
+import { Skeleton } from "./UI.jsx";
 import React, { useId, useMemo } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useCompactRead from "../hooks/useCompactRead.js";
@@ -86,9 +87,7 @@ export default function PlayerPresenceCard({ id, rows }) {
     );
   } else if (ready && !data) {
     content = (
-      <p className={s.note} role="status">
-        Chargement des zones de présence…
-      </p>
+      <Skeleton label="Chargement des zones de présence…" lines={2} />
     );
   }
   return (

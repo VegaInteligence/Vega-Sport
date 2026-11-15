@@ -3,7 +3,7 @@ import React, { useMemo, useState } from "react";
 import Icon from "./Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number, date, isNumber } from "../services/format.js";
-import { Modal, Media, Segments } from "./UI.jsx";
+import { Modal, Media, Segments, Skeleton } from "./UI.jsx";
 import { GRADE_HIGH, GRADE_LOW } from "../services/grades.js";
 import PlayerData from "./PlayerData.jsx";
 import MessiGoats from "./MessiGoats.jsx";
@@ -98,9 +98,7 @@ export function PlayerDialog() {
     if (state.loading)
       return (
         <Modal title="Performance du joueur" onClose={() => f.setPlayer(null)}>
-          <p role="status" aria-busy="true">
-            Chargement de la performance…
-          </p>
+          <Skeleton label="Chargement de la performance…" lines={2} />
         </Modal>
       );
     return (

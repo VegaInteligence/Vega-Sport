@@ -1,4 +1,5 @@
 "use client";
+import { Skeleton } from "./UI.jsx";
 import React, { useState } from "react";
 import { useResource } from "../services/resources.js";
 import { loadPlayerHonours } from "../services/player-honours.js";
@@ -33,9 +34,7 @@ export default function PlayerHonours({ name, result }) {
   if (!trophies.length && !otherAwards.length) {
     if (result.loading)
       return (
-        <div data-page-loading="" className="player-trophy-loading" role="status">
-          Chargement du palmarès…
-        </div>
+        <Skeleton data-page-loading="" className="player-trophy-loading" label="Chargement du palmarès…" />
       );
     return null;
   }
