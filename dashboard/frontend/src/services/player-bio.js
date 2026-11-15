@@ -45,7 +45,9 @@ export function ageOn(birth, today = new Date()) {
 }
 
 export function marketValueLabel(euros) {
-  if (!positive(euros)) return null;
+  if (typeof euros !== "number" || !Number.isFinite(euros) || euros < 0)
+    return null;
+  if (euros < 1e3) return `${euros.toLocaleString("fr-FR")} €`;
   if (euros >= 1e6) {
     const millions = euros / 1e6;
     return `${millions.toLocaleString("fr-FR", { maximumFractionDigits: millions < 10 ? 1 : 0 })} M€`;
@@ -54,23 +56,39 @@ export function marketValueLabel(euros) {
 }
 
 export function playerContractFact(record) {
+  const team = text(record?.contract_team);
   const active = isoDate(record?.contract_until || record?.contract_expires);
-  if (active)
+  if (active) {
+    const note = [frenchDate(active), team].filter(Boolean).join(" · ");
     return {
       label: "Fin de contrat",
       value: `${String(active.month).padStart(2, "0")}/${active.year}`,
-      note: [frenchDate(active), text(record.contract_team)]
-        .filter(Boolean)
-        .join(" · "),
+      note,
+      summary: note,
     };
+  }
+  const season = record?.contract_until_season;
+  const competition = text(record?.contract_season_competition);
+  if (Number.isInteger(season) && competition) {
+    const value = `Saison ${competition} ${season}`;
+    return {
+      label: "Fin de contrat",
+      value,
+      note: team,
+      summary: [value, team].filter(Boolean).join(" · "),
+    };
+  }
   const expiry = isoDate(record?.observed_contract_until);
   const observed = isoDate(record?.observed_contract_on);
   const club = text(record?.observed_contract_team);
   if (!expiry || !observed || !club) return null;
+  const value = frenchDate(expiry);
+  const note = `${club} · Relevé du ${frenchDate(observed)}`;
   return {
-    label: "Échéance relevée",
-    value: frenchDate(expiry),
-    note: `${club} · Relevé du ${frenchDate(observed)}`,
+    label: "Fin de contrat",
+    value,
+    note,
+    summary: `${value} · ${note}`,
   };
 }
 

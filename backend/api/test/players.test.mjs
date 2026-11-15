@@ -177,7 +177,24 @@ test("snapshot expiry remains dated and separate from the confirmed contract", {
   const { data: coverage } = (await get("/api/players/facts-coverage")).body;
   assert.equal(coverage.snapshot_matches, 1);
   assert.equal(coverage.observed_expiries, 1);
-  assert.equal(coverage.confirmed_expiries, 1);
+  assert.equal(coverage.confirmed_expiries, 2);
+  assert.equal(coverage.market_value_players, 1);
+  assert.equal(coverage.market_value_points, 2);
+});
+
+test("a season contract and dated market values are published without inventing a calendar expiry", { skip }, async () => {
+  const { data: season } = (await get("/api/players/p_aaaab4")).body;
+  assert.equal(season.contract_until, undefined);
+  assert.equal(season.contract_until_season, 2099);
+  assert.equal(season.contract_season_competition, "MLS");
+  const { data } = (await get("/api/players/p_aaaab2")).body;
+  assert.deepEqual([data.market_value_eur, data.market_value_updated_at], [15000000, "2026-06-02"]);
+  assert.deepEqual((await get("/api/player-market-values?id=p_aaaab2")).body.data, {
+    currency: "EUR", source: "Transfermarkt",
+    history: [{ date: "2025-06-01", valueEur: 0 }, { date: "2026-06-02", valueEur: 15000000 }],
+  });
+  assert.equal((await get("/api/player-market-values?id=p_aaaab1")).response.status, 404);
+  assert.equal((await get("/api/player-market-values?id=bad")).response.status, 400);
 });
 
 test("a player's passing partners of a season, the most exchanged first", { skip }, async () => {

@@ -344,6 +344,20 @@ export function createProfileRoute(read) {
         }),
       });
     }
+    if (path === "/api/player-market-values") {
+      validateParams(params, ["id"]);
+      const id = params.get("id");
+      if (!PLAYER.test(`/api/players/${id}`)) reject(400, "Paramètre invalide.");
+      const rows = await read(
+        `SELECT valued_at::text AS date, value_eur AS "valueEur"
+         FROM api.player_market_values
+         WHERE player_id=api.internal_id('player',$1)
+         ORDER BY valued_at`,
+        [id],
+      );
+      if (!rows.length) reject(404, "Donnée indisponible.");
+      return respond(req, { currency: "EUR", source: "Transfermarkt", history: rows });
+    }
     if (path === "/api/players/facts-coverage") {
       validateParams(params, []);
       const [coverage] = await read("SELECT * FROM api.player_fact_coverage");
@@ -365,9 +379,13 @@ export function createProfileRoute(read) {
         put(data, "preferred_foot", r.preferred_foot);
         put(data, "contract_until", r.contract_until);
         put(data, "contract_team", r.contract_team);
+        put(data, "contract_until_season", r.contract_until_season);
+        put(data, "contract_season_competition", r.contract_season_competition);
         put(data, "observed_contract_until", r.observed_contract_until);
         put(data, "observed_contract_team", r.observed_contract_team);
         put(data, "observed_contract_on", r.observed_contract_on);
+        put(data, "market_value_eur", r.market_value_eur);
+        put(data, "market_value_updated_at", r.market_value_updated_at);
       }
       return respond(req, data);
     }

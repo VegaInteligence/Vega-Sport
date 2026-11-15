@@ -2,11 +2,7 @@ import { json } from './resources.js';
 
 export const playerMarketValuesKey = (id) => `player-market-values:${id}`;
 
-/**
- * Whether the API serves a player's market values. The current one does not: every
- * player page asked for them and was answered 404, a read that held one of the page's
- * places while the comparison group waited for it (0.4 s on 11 November 2026).
- */
+/** Whether the backing API serves market value history. */
 export const servesMarketValues = (manifest) =>
   manifest?.capabilities?.marketValues === true;
 /** What the page holds without the read: what its 404 gave, an unavailable history. */
@@ -42,3 +38,10 @@ export const marketDate = (value) => {
   const [year, month, day] = value.split('-');
   return `${day}/${month}/${year}`;
 };
+
+export function latestMarketEstimate(history, publishedValue) {
+  const latest = history?.at(-1);
+  return latest
+    ? { amount: marketValue(latest.valueEur), updated: marketDate(latest.date) }
+    : publishedValue;
+}

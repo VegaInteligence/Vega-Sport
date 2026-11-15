@@ -22,8 +22,7 @@ import { number } from "../services/format.js";
 import { playerFacts } from "../services/player-bio.js";
 import {
   loadPlayerMarketValues,
-  marketDate,
-  marketValue,
+  latestMarketEstimate,
   MARKET_VALUES_UNSERVED,
   playerMarketValuesKey,
   servesMarketValues,
@@ -138,13 +137,7 @@ export default function PlayerScoutRail({
     Boolean(id) && marketServed,
   );
   const market = marketServed ? marketRead : MARKET_VALUES_UNSERVED;
-  const latestValue = market.value?.history.at(-1);
-  const valuation = latestValue
-    ? {
-        amount: marketValue(latestValue.valueEur),
-        updated: marketDate(latestValue.date),
-      }
-    : publishedValue;
+  const valuation = latestMarketEstimate(market.value?.history, publishedValue);
   const history = useResource(
     playerHistoryKey(f.manifest, id),
     ({ signal }) => loadPlayerHistory(f.manifest, id, { signal }),

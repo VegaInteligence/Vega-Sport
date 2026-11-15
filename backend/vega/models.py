@@ -694,7 +694,7 @@ def refresh_squad_profiles(conn, season):
         conn.execute("DELETE FROM agg.team_squad_profile WHERE season_id=%s", (season,))
         conn.execute(
             """WITH a AS (
-                 SELECT s.team_id, s.player_id, s.minutes_played AS minutes, core.age_on(p.birth_date, m.match_date) AS age
+                 SELECT s.team_id, s.player_id, m.match_date, s.minutes_played AS minutes, core.age_on(p.birth_date, m.match_date) AS age
                  FROM core.player_match_stats s
                  JOIN core.matches m ON m.id = s.match_id AND m.season_id = s.season_id
                  JOIN core.players p ON p.id = s.player_id
@@ -702,8 +702,8 @@ def refresh_squad_profiles(conn, season):
                v AS (
                  SELECT team_id, sum(value_eur) AS value FROM (
                    SELECT DISTINCT ON (a.team_id, a.player_id) a.team_id, mv.value_eur
-                   FROM (SELECT DISTINCT team_id, player_id FROM a) a
-                   JOIN core.player_market_values mv ON mv.player_id = a.player_id
+                   FROM (SELECT team_id, player_id, max(match_date) AS last_match FROM a GROUP BY 1, 2) a
+                   JOIN core.player_market_values mv ON mv.player_id = a.player_id AND mv.valued_at <= a.last_match
                    ORDER BY a.team_id, a.player_id, mv.valued_at DESC, mv.as_of DESC) x GROUP BY team_id),
                g AS (
                  SELECT team_id,
