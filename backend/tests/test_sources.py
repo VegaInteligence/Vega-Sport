@@ -249,6 +249,24 @@ class UefaTest(unittest.TestCase):
         with self.db.transaction():
             uefa.reconcile_teams(self.db)
         self.assertEqual(x("SELECT entity_id FROM core.provider_ids WHERE provider='uefa' AND provider_key='uefa-psg'").fetchone(), (63,))
+        # A club PitchAPI knows from European nights alone has no league to give it a country: it
+        # takes its UEFA namesake's (club-form words aside), then merges with it (same name, same country).
+        x("INSERT INTO core.countries(code) VALUES ('SVN'), ('ROU'), ('GEO') ON CONFLICT DO NOTHING")
+        x("INSERT INTO core.teams(id, name) VALUES (65, 'Celje (test)')")
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','pitchapi','t_celje1',65)")
+        x("UPDATE core.matches SET home_team_id=65 WHERE id=1951")
+        x("INSERT INTO core.teams(id, name, country_code) VALUES (66, 'Celje (test)', 'SVN')")
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','uefa','uefa-celje',66)")
+        # Two UEFA clubs of one name in two countries say nothing.
+        x("INSERT INTO core.teams(id, name) VALUES (67, 'Dinamo (test)')")
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','pitchapi','t_dinam1',67)")
+        x("INSERT INTO core.teams(id, name, country_code) VALUES (68, 'Dinamo (test)', 'ROU'), (69, 'FC Dinamo (test)', 'GEO')")
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','uefa','uefa-dinamo1',68), ('team','uefa','uefa-dinamo2',69)")
+        with self.db.transaction():
+            uefa.reconcile_teams(self.db)
+        self.assertEqual(x("SELECT country_code FROM core.teams WHERE id=65").fetchone(), ("SVN",))
+        self.assertEqual(x("SELECT entity_id FROM core.provider_ids WHERE provider='uefa' AND provider_key='uefa-celje'").fetchone(), (65,))
+        self.assertEqual(x("SELECT country_code FROM core.teams WHERE id=67").fetchone(), (None,))
 
     def test_curated_aliases(self):
         x = self.db.execute

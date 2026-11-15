@@ -121,6 +121,15 @@ class LeagueLevelTest(unittest.TestCase):
     def test_a_club_s_league_is_the_domestic_one_of_its_first_season(self):
         rows = self.season() + [self.match(900, "A", "C", 1, 0, 2, season=2026)]
         self.assertEqual(power.home_leagues(rows), {"A": 1, "B": 1, "C": 2, "D": 2})
+        # A club whose league the base does not hold (it plays a European competition only) has its country's.
+        rows += [self.match(901, "A", "Q", 0, 1, 9, international=True), self.match(902, "N", "A", 1, 1, 9, international=True)]
+        leagues = power.home_leagues(rows, {"A": "ENG", "Q": "AZE"})
+        self.assertEqual((leagues["A"], leagues["Q"], "N" in leagues), (1, (power.COUNTRY_LEAGUE, "AZE"), False))
+        # It is fitted like a league, with its confederation's prior, and holds no reference.
+        levels, se, settings = power.league_model(rows, leagues, countries={1: "ENG", 2: "GER", (power.COUNTRY_LEAGUE, "AZE"): "AZE"})
+        self.assertIn((power.COUNTRY_LEAGUE, "AZE"), levels)
+        self.assertNotIn((power.COUNTRY_LEAGUE, "AZE"), settings["reference"])
+        self.assertEqual(dict(power.league_links(rows, leagues)), {(1, 2): 25, (1, (power.COUNTRY_LEAGUE, "AZE")): 1})  # 900 is a match between the two leagues too
 
     def test_complementary_matches_copy_no_other(self):
         from datetime import date

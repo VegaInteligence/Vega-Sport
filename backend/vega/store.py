@@ -27,6 +27,11 @@ FAMILY_TABLES = {
     "heatmaps": ("team_heatmaps", "player_heatmaps"),
     "h2h": ("match_h2h", "match_h2h_meetings"),
 }
+# A competition's country where PitchAPI gives the wrong one, by its key, reviewed one by one:
+# it writes "INT" for the Turkish second division (TFF 1. Lig, all clubs Turkish), which made
+# its matches read as international ones.
+COMPETITION_COUNTRIES = {"l_1BFfna": "TUR"}
+
 ENTITY_TABLE = {
     "competition": "competitions",
     "team": "teams",
@@ -263,6 +268,8 @@ class Store:
             for k, v in fields.items()
             if k in self.columns[table] and k not in ("id", "updated_at")
         }
+        if kind == "competition" and key in COMPETITION_COUNTRIES and "country_code" in self.columns[table]:
+            row["country_code"] = COMPETITION_COUNTRIES[key]
         if (
             kind == "player"
             and isinstance(row.get("name"), str)

@@ -298,8 +298,11 @@ def elo_matches(rows):
     return kept
 
 
-def home_leagues(matches):
-    """A club's league: the domestic PitchAPI competition it played most in its first season."""
+def home_leagues(matches, countries=None):
+    """A club's league: the domestic PitchAPI competition it played most in its first season.
+    A club without one (its league is not in the base: it plays a European competition, and
+    its country's league only through a cup source) has its country's (COUNTRY_LEAGUE, code),
+    from `countries` ({club: country}, national teams left out)."""
     first = {}
     for m in matches:
         if m[10] or m[11]:
@@ -308,16 +311,25 @@ def home_leagues(matches):
             season, counts = first.setdefault(team, (m[1], defaultdict(int)))
             if season == m[1]:
                 counts[m[9]] += 1
-    return {team: max(sorted(counts), key=lambda c: counts[c]) for team, (_, counts) in first.items()}
+    leagues = {team: max(sorted(counts), key=lambda c: counts[c]) for team, (_, counts) in first.items()}
+    for team, country in (countries or {}).items():
+        if team not in leagues and country and not country.startswith("INT"):
+            leagues[team] = (COUNTRY_LEAGUE, country)
+    return leagues
+
+
+# A country's league that the base does not hold: the clubs of that country it knows (league_model).
+COUNTRY_LEAGUE = "country"
 
 
 def league_links(matches, leagues):
     """The matches between clubs of two leagues: {(league, league): matches}, each pair once."""
     pairs = defaultdict(int)
+    order = lambda league: (1, str(league)) if isinstance(league, tuple) else (0, league)  # a country's league after the others
     for m in matches:
         a, b = leagues.get(m[3]), leagues.get(m[4])
         if a is not None and b is not None and a != b:
-            pairs[(a, b) if a < b else (b, a)] += 1
+            pairs[(a, b) if order(a) < order(b) else (b, a)] += 1
     return pairs
 
 
@@ -406,6 +418,7 @@ TIERS = {
     "l_1pQOHK": 2, "l_1rPvVD": 2, "l_49KZaB": 2, "l_4auCPk": 2,  # Challenger Pro League, 1. Division, Eerste Divisie, Challenge League
     "l_3CB6qX": 2, "l_271pqa": 2, "l_3fglZv": 3,  # Saudi First Division, K League 2, J3 League
     "l_3yVUAO": 2, "l_3Kf7Ni": 3, "l_3Tn1kG": 3,  # USL Championship, USL League One, MLS Next Pro
+    "l_1BFfna": 2,  # TFF 1. Lig, Turkey's second division
 }
 # Women's leagues: a universe of their own (their clubs never meet the others').
 WOMEN = frozenset({"l_1SGwQT"})
@@ -557,7 +570,7 @@ def league_model(matches, leagues, *, weights=None, moves=None, tiers=None, coun
             nearest = max(tier[u] for u in above)
             upper[l] = max((u for u in above if tier[u] == nearest), key=lambda u: (lam[index[u]][index[u]], str(u)))
     gaps = []
-    for l in upper:
+    for l in [l for l in upper if not isinstance(l, tuple)]:
         i, u, dt = index[l], index[upper[l]], tier[l] - tier[upper[l]]
         if se[i] < 40 and se[u] < 40:
             gaps.append(((ell[u] - ell[i]) / dt, (cov[i][i] + cov[u][u] - 2 * cov[i][u]) / dt ** 2))
@@ -568,7 +581,9 @@ def league_model(matches, leagues, *, weights=None, moves=None, tiers=None, coun
     conf = {l: CONFEDERATIONS.get(countries.get(l)) for l in ids}
     # The top divisions the matches and the moves say something of (a level with nothing but
     # the gauge says nothing of the means), and their errors against their own mean.
-    tops = [l for l in ids if tier[l] == 1]
+    # A country's league the base does not hold (COUNTRY_LEAGUE) is the few clubs of it that
+    # play elsewhere, its best: it takes the prior and says nothing of it.
+    tops = [l for l in ids if tier[l] == 1 and not isinstance(l, tuple)]
     informed = [l for l in tops if se[index[l]] < LEVEL_PRIOR_SD / 2] or tops
     spread = _relative_se(cov, [index[l] for l in informed]) if informed else se
     europe = [l for l in informed if conf[l] == "UEFA" and se[index[l]] < 60]
@@ -605,7 +620,7 @@ def league_model(matches, leagues, *, weights=None, moves=None, tiers=None, coun
     cov = _inverse(lam)
     best = max(range(n), key=lambda k: lam[k][k])
     near = _relative_se(cov, [best])
-    ref = [k for k in range(n) if near[k] < REFERENCE_SE] or [best]
+    ref = [k for k in range(n) if near[k] < REFERENCE_SE and not isinstance(ids[k], tuple)] or [best]
     se = _relative_se(cov, ref)
     held = [k for k in ref if ids[k] in previous]
     shift = (sum(previous[ids[k]] - ell[k] for k in held) / len(held)) if held else 0.0
@@ -716,13 +731,16 @@ def refresh_elo(conn):
     session idle inside one after 60 s), then written at once."""
     started = conn.execute("SELECT clock_timestamp()").fetchone()[0]
     matches = elo_matches(conn.execute(ELO_MATCHES).fetchall())
-    leagues = home_leagues(matches)
+    teams = {t for m in matches for t in (m[3], m[4])}
+    clubs = dict(conn.execute("SELECT id, country_code FROM core.teams WHERE id = ANY(%s) AND is_national IS NOT TRUE", (sorted(teams),)).fetchall())
+    leagues = home_leagues(matches, clubs)
     weights = match_stakes(conn)
     facts = {league: (country, key) for league, country, key in conn.execute(
         """SELECT c.id, c.country_code, (SELECT p.provider_key FROM core.provider_ids p WHERE p.entity_type = 'competition'
              AND p.entity_id = c.id AND p.provider = 'pitchapi' AND p.is_current LIMIT 1)
-           FROM core.competitions c WHERE c.id = ANY(%s)""", (sorted(set(leagues.values())),)
+           FROM core.competitions c WHERE c.id = ANY(%s)""", (sorted(l for l in set(leagues.values()) if not isinstance(l, tuple)),)
     ).fetchall()}
+    facts.update({l: (l[1], None) for l in set(leagues.values()) if isinstance(l, tuple)})
     women = {league for league, (_, key) in facts.items() if key in WOMEN}
     tiers = {league: TIERS.get(key, 1) for league, (_, key) in facts.items()}
     countries = {league: country for league, (country, _) in facts.items()}
@@ -731,7 +749,7 @@ def refresh_elo(conn):
         previous[league] = entry
         if linked:
             was_measured.add(league)
-    moves = league_moves(conn, conn.execute("SELECT current_date").fetchone()[0], set(leagues.values()))
+    moves = league_moves(conn, conn.execute("SELECT current_date").fetchone()[0], {l for l in leagues.values() if not isinstance(l, tuple)})
     seeds, errors, settings = league_model(matches, leagues, weights=weights, moves=moves, tiers=tiers, countries=countries,
                                            apart=women, previous=previous)
     rows = list(elo_updates(matches, seeds=seeds, leagues=leagues, weights=weights))
@@ -774,7 +792,8 @@ def refresh_elo(conn):
             strengths[team] = after
         links = links_of(league_links(matches, leagues))
         conn.execute("DELETE FROM agg.league_levels")
-        for league, (mean, teams) in sorted(league_means(strengths, leagues).items()):
+        # A country's league the base does not hold has no row: its clubs only enter at its level.
+        for league, (mean, teams) in sorted((k, v) for k, v in league_means(strengths, leagues).items() if not isinstance(k, tuple)):
             se = errors.get(league)
             conn.execute(
                 """INSERT INTO agg.league_levels(competition_id, entry_level, level, teams, links, linked, run_id, level_se, tier,
