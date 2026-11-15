@@ -600,6 +600,34 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+/* The race fills its card beside the Team of the Round: the card is a column, the list sits
+   in what the header and the note leave and never sets the row's height. Stacked on a
+   narrow screen, it is an ordinary list. */
+.league-race {
+  display: flex;
+  flex-direction: column;
+}
+.league-race > .card-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.league-race-fill {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.league-race-fill > .league-race-list {
+  position: absolute;
+  inset: 0 0 auto;
+}
+@media (max-width: 900px) {
+  .league-race-fill > .league-race-list {
+    position: static;
+  }
+}
 .round-skeleton {
   display: grid;
   gap: 12px;

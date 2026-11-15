@@ -1,11 +1,14 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Icon from "./Icon.jsx";
 import { Card, Grade, Media } from "./UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
-import { roundLabel, teamLines, useLeagueRound, useLeagueRounds } from "../services/league-rounds.js";
+import { raceRowsThatFit, roundLabel, teamLines, useLeagueRound, useLeagueRounds } from "../services/league-rounds.js";
+
+// The race's rows on a phone, where the two cards stand one under the other.
+const STACKED_RACE_ROWS = 5;
 
 /** Lines standing in for a card while it loads. */
 function Skeleton({ rows = 3 }) {
@@ -34,6 +37,26 @@ export default function LeagueRoundCards({ competition, season }) {
   const [picked, setPicked] = useState("");
   const round = useLeagueRound(competition, season, picked || rounds.value?.latest || "");
   const closed = (rounds.value?.rounds || []).filter((r) => r.status !== "open").reverse();
+  // Beside the Team of the Round the race fills its card: its list sits in what the card
+  // leaves (it never sets the row's height) and shows the whole rows that fit there.
+  const fill = useRef(null);
+  const [fits, setFits] = useState(null);
+  useEffect(() => {
+    const box = fill.current;
+    if (!box || typeof ResizeObserver === "undefined") return undefined;
+    const measure = () => {
+      const list = box.firstElementChild;
+      const row = list?.querySelector("li");
+      if (!list || !row) return;
+      const style = getComputedStyle(list);
+      if (style.position !== "absolute") return setFits(STACKED_RACE_ROWS);
+      setFits(raceRowsThatFit({ available: box.clientHeight, rowHeight: row.getBoundingClientRect().height, gap: parseFloat(style.rowGap) || 0, max: list.childElementCount }));
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(box);
+    measure();
+    return () => observer.disconnect();
+  }, [round.value]);
   if (!rounds.loading && !rounds.value?.latest) return null;
   const body = round.value;
   const lines = teamLines(body?.team);
@@ -49,8 +72,9 @@ export default function LeagueRoundCards({ competition, season }) {
         ) : !body?.race?.length ? (
           <p className="standings-note">Pas encore assez de matchs joués pour départager les joueurs.</p>
         ) : (
+          <div className="league-race-fill" ref={fill}>
           <ol className="league-race-list">
-            {body.race.slice(0, 3).map((p) => (
+            {body.race.slice(0, fits ?? body.race.length).map((p) => (
               <li key={p.playerId}>
                 <span className="league-race-rank">{p.rank}</span>
                 <Link className="power-ranking-name" href={f.href("/joueurs/", { id: p.playerId })} prefetch={false}>
@@ -66,6 +90,7 @@ export default function LeagueRoundCards({ competition, season }) {
               </li>
             ))}
           </ol>
+          </div>
         )}
       </Card>
       <Card
