@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import sys
 import unittest
+from unittest import mock
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -145,6 +146,12 @@ class ParseTest(unittest.TestCase):
 
 @unittest.skipUnless(DSN and psycopg, "requires disposable local sources DB and psycopg")
 class SourceIdentityTest(unittest.TestCase):
+    def setUp(self):
+        # Merges are off in production for now (identity.MERGES); these tests check their rules.
+        patcher = mock.patch.object(identity, "MERGES", True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     @classmethod
     def setUpClass(cls):
         from vega.store import Store, connect_local, migrate
@@ -290,6 +297,10 @@ class SourceIdentityTest(unittest.TestCase):
         # As the worker does it: the collect role, which reads and writes core and ops only.
         x("SET ROLE vega_collect")
         self.addCleanup(x, "RESET ROLE")
+        # Merges off: the pass looks at every candidate and merges none.
+        with mock.patch.object(identity, "MERGES", False), self.db.transaction():
+            self.assertEqual(identity.run(self.db, None, "teams", NOW), (0, 11))
+        self.assertEqual(x("SELECT count(*) FROM core.teams WHERE id = 33").fetchone()[0], 1)
         with self.db.transaction():
             self.assertEqual(identity.run(self.db, None, "teams", NOW), (3, 8))
         x("RESET ROLE")

@@ -445,6 +445,8 @@ class Worker:
                 for (name, scope), outcome in sources.run_due(self.conn, self.source_get, now).items():
                     print(f"source={name} scope={scope} outcome={outcome}", flush=True)
                 with self.conn.transaction():
+                    # As every source scope (sources.LOCK_WAIT): never wait on another writer.
+                    self.conn.execute(f"SET LOCAL lock_timeout = '{sources.LOCK_WAIT}'")
                     uefa.reconcile_teams(self.conn)
 
             self._daily_step(("sources",), now, run_sources)
