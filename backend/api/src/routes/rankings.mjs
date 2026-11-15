@@ -193,12 +193,28 @@ export function provisionalReason(r) {
   return "league";
 }
 
+/**
+ * A club's or a league's score out of 100: its expected score (a draw counting half) on
+ * neutral ground against the scale's reference, the mean level of the measured men's top
+ * divisions (every men's league while none is measured). The Elo's own form: 50 at the
+ * reference, 76 at 200 points above it, 91 at 400.
+ */
+export const outOf100 = (elo, reference) => (elo == null || reference == null ? null : round(100 / (1 + 10 ** (-(elo - reference) / 400)), 1));
+const REFERENCE_LEVEL = `SELECT coalesce(
+    (SELECT avg(level) FROM api.league_levels WHERE universe = 'men' AND linked AND coalesce(tier, 1) = 1),
+    (SELECT avg(level) FROM api.league_levels WHERE universe = 'men'))::float8 AS level`;
+const referenceLevel = async (read) => (await read(REFERENCE_LEVEL))[0]?.level ?? null;
+
 export async function powerOf(read, kind, season, ids) {
   const out = new Map();
   if (!season || !ids.length) return out;
   if (kind === "clubs") {
-    for (const r of await read(`SELECT * FROM api.power_clubs WHERE season_id=${SEASON_KEY} AND scope='clubs' AND team_key=ANY(${keysOf("team")})`, [season, ids]))
-      out.set(r.team_id, { rank: r.rank, elo: round(r.elo, 1), eloChange: round(r.elo_change, 1), matches: r.matches, ...clubSeason(r) });
+    const [rows, reference] = await Promise.all([
+      read(`SELECT * FROM api.power_clubs WHERE season_id=${SEASON_KEY} AND scope='clubs' AND team_key=ANY(${keysOf("team")})`, [season, ids]),
+      referenceLevel(read),
+    ]);
+    for (const r of rows)
+      out.set(r.team_id, { rank: r.rank, score: outOf100(r.elo, reference), elo: round(r.elo, 1), eloChange: round(r.elo_change, 1), matches: r.matches, ...clubSeason(r) });
   } else {
     const rows = await read(`SELECT * FROM api.power_players WHERE season_id=${SEASON_KEY} AND player_key=ANY(${keysOf("player")})`, [season, ids]);
     const roles = await rolesOf(read, season, rows.map((r) => r.player_id));
@@ -218,9 +234,10 @@ export async function powerOf(read, kind, season, ids) {
 
 async function leagueLevels(read, params) {
   validateParams(params, []);
-  const [rows, seasons] = await Promise.all([
+  const [rows, seasons, reference] = await Promise.all([
     read("SELECT * FROM api.league_levels ORDER BY competition_id"),
     read("SELECT competition_key, season, level, teams FROM api.league_level_seasons ORDER BY competition_key, season_id"),
+    referenceLevel(read),
   ]);
   if (!rows.length) reject(404, "Donnée indisponible.");
   const history = new Map();
@@ -232,21 +249,25 @@ async function leagueLevels(read, params) {
   // men's league has a level on the common scale (power-ranking-v4) and a rank; one whose
   // standard error is above the measured bound (onScale false) is provisional, its margin
   // the error. A women's league is a universe of its own: a level that says nothing against
-  // the others, no rank.
+  // the others, no rank, no score. What the level rests on: its matches against the other
+  // leagues, the players who moved between it and another league, its division.
   const leagues = rows.map((r) => {
     const own = history.get(r.competition_key) ?? [];
     const women = r.universe === "women";
-    return { id: r.competition_id, name: r.name, country: r.country ?? null, level: own.at(-1)?.level ?? round(r.level, 1),
+    const level = own.at(-1)?.level ?? round(r.level, 1);
+    return { id: r.competition_id, name: r.name, country: r.country ?? null, level, score: women ? null : outOf100(level, reference),
       onScale: r.linked, provisional: !women && !r.linked, margin: women || r.level_se == null ? null : Math.round(r.level_se),
-      universe: r.universe ?? "men", teams: own.at(-1)?.teams ?? r.teams, links: r.links, seasons: own };
+      universe: r.universe ?? "men", teams: own.at(-1)?.teams ?? r.teams, links: r.links,
+      evidence: { matches: r.links, movers: r.movers ?? null, tier: r.tier ?? null }, seasons: own };
   }).sort((a, b) => Number(a.universe !== "men") - Number(b.universe !== "men") || b.level - a.level || a.id.localeCompare(b.id));
   let rank = 0;
   return {
     method: { version: rows[0].method_version, computedAt: iso(rows[0].computed_at) },
+    reference: round(reference, 1),
     onScale: leagues.filter((l) => l.onScale).length,
     ranked: leagues.filter((l) => l.universe === "men").length,
-    leagues: leagues.map(({ id, name, country, level, onScale, provisional, margin, universe, teams, links, seasons: own }) => (
-      { id, name, country, level, rank: universe === "men" ? ++rank : null, onScale, provisional, margin, universe, teams, links, seasons: own })),
+    leagues: leagues.map(({ id, name, country, level, score, onScale, provisional, margin, universe, teams, links, evidence, seasons: own }) => (
+      { id, name, country, level, score, rank: universe === "men" ? ++rank : null, onScale, provisional, margin, universe, teams, links, evidence, seasons: own })),
   };
 }
 
@@ -593,13 +614,18 @@ async function powerRanking(read, params) {
       })),
     };
   }
-  const rows = await read(`SELECT * FROM api.power_clubs WHERE season_id=${SEASON_KEY} AND scope=$2 ORDER BY rank, team_id LIMIT $3`, [season, kind, limit]);
+  const [rows, reference] = await Promise.all([
+    read(`SELECT * FROM api.power_clubs WHERE season_id=${SEASON_KEY} AND scope=$2 ORDER BY rank, team_id LIMIT $3`, [season, kind, limit]),
+    referenceLevel(read),
+  ]);
   if (!rows.length) reject(404, "Donnée indisponible.");
+  // A club's score out of 100 is read against the clubs' leagues: national teams have none.
   return {
     season, kind, method: { version: rows[0].method_version, computedAt: iso(rows[0].computed_at) },
+    ...(kind === "clubs" ? { reference: round(reference, 1) } : {}),
     rows: rows.map((r) => ({
       rank: r.rank, teamId: r.team_id, name: r.name, imageUrl: r.image_url ?? null, country: r.country ?? null,
-      elo: round(r.elo, 1), eloChange: round(r.elo_change, 1), matches: r.matches, lastMatchAt: iso(r.last_match_at), ...clubSeason(r),
+      ...(kind === "clubs" ? { score: outOf100(r.elo, reference) } : {}), elo: round(r.elo, 1), eloChange: round(r.elo_change, 1), matches: r.matches, lastMatchAt: iso(r.last_match_at), ...clubSeason(r),
     })),
   };
 }

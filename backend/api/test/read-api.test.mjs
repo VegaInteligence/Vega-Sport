@@ -27,7 +27,7 @@ test("club directory: envelope, order, facets", { skip }, async () => {
     country: "FRA", count: 3, competitionCounts: { l_3FJFUl: 3 },
   });
   // The club power ranking (Elo after its last match of the season): moved points only.
-  assert.deepEqual(Object.keys(power).sort(), ["draws", "elo", "eloChange", "eloLow", "eloPeak", "eloStart", "expectedResults", "losses", "matches", "rank", "results", "wins"]);
+  assert.deepEqual(Object.keys(power).sort(), ["draws", "elo", "eloChange", "eloLow", "eloPeak", "eloStart", "expectedResults", "losses", "matches", "rank", "results", "score", "wins"]);
   assert.equal(power.matches, 3);
   // t_aaaaa1: won 2–0, lost 0–1, drew 0–0.
   assert.deepEqual([power.wins, power.draws, power.losses, power.results, power.eloStart], [1, 1, 1, 1.5, 1500]);

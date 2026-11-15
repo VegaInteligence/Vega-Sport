@@ -24,8 +24,9 @@ export default function LeagueStrengthCard({ strength }) {
       {strength.onScale ? (
         <>
           <p className="competition-level-value">
-            <strong>{number(Math.round(strength.level))}</strong>
+            <strong>{strength.score != null ? number(Math.round(strength.score)) : number(Math.round(strength.level))}</strong>
             <span>
+              {strength.score != null && <>sur 100 · niveau {number(Math.round(strength.level))} · </>}
               {ordinal(strength.rank)} sur {number(strength.of)} championnats
             </span>
           </p>
@@ -59,8 +60,16 @@ export default function LeagueStrengthCard({ strength }) {
             </ul>
           )}
           <p className="competition-highlights-caption">
-            Force moyenne de ses clubs, sur une échelle commune aux championnats.
+            Force moyenne de ses clubs, sur une échelle commune aux championnats
+            {strength.score != null ? " ; sur 100, la chance d’un de ses clubs de battre un club moyen des premières divisions mesurées" : ""}.
           </p>
+          {strength.evidence && (strength.evidence.matches > 0 || strength.evidence.movers > 0) && (
+            <p className="competition-highlights-caption">
+              Mesuré sur {number(strength.evidence.matches || 0)} matchs contre d’autres championnats
+              {strength.evidence.movers > 0 ? ` et ${number(strength.evidence.movers)} joueurs venus d’autres championnats ou partis vers eux` : ""}
+              {strength.margin != null && !strength.provisional ? `, à ± ${number(strength.margin)} points près` : ""}.
+            </p>
+          )}
           {strength.provisional && (
             <p className="competition-highlights-caption">
               Niveau provisoire{strength.margin != null ? `, à ± ${number(strength.margin)} points près` : ""} : ses clubs ont joué

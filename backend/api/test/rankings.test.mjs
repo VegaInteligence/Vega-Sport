@@ -67,6 +67,10 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
     assert.equal(Math.round(r.eloStart + r.eloChange), Math.round(r.elo));
   }
   assert.equal(Math.round(clubs.rows.reduce((s, r) => s + r.results, 0) * 2), 10); // five matches, one point shared each
+  // A club's score out of 100: its expected score against the scale's reference, in the Elo's order.
+  assert.ok(Number.isFinite(clubs.reference));
+  for (const r of clubs.rows) assert.ok(Math.abs(r.score - 100 / (1 + 10 ** (-(r.elo - clubs.reference) / 400))) <= 0.11);
+  assert.ok(clubs.rows.every((r, i) => !i || clubs.rows[i - 1].score >= r.score));
   // The league strength index: every men's league ranked by its level, a provisional one with its margin, the level of each season.
   const levels = (await get("/api/rankings/leagues")).body;
   assert.equal(levels.method.version, "power-ranking-v8");
@@ -77,6 +81,10 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
     assert.equal(league.provisional, league.universe === "men" && !league.onScale);
     assert.ok(league.universe !== "men" || Number.isInteger(league.margin));
     assert.ok(league.seasons.every((s) => /^\d{4}\/\d{4}$/.test(s.season) && Number.isFinite(s.level) && s.teams > 0));
+    // Out of 100 against the reference (men only), and what the level rests on.
+    if (league.universe === "men") assert.ok(Math.abs(league.score - 100 / (1 + 10 ** (-(league.level - levels.reference) / 400))) <= 0.11);
+    else assert.equal(league.score, null);
+    assert.equal(league.evidence.matches, league.links);
   }
   const men = levels.leagues.filter((l) => l.universe === "men");
   assert.deepEqual(men.map((l) => l.rank), men.map((_, i) => i + 1));

@@ -41,6 +41,8 @@ export function leagueStrength(levels, competitionId, { seasons = 4 } = {}) {
     provisional: Boolean(league.provisional),
     margin: league.margin ?? null,
     level: league.level,
+    score: league.score ?? null,
+    evidence: league.evidence ?? null,
     rank: league.rank,
     of: levels.ranked ?? ranked.length,
     history: history.reverse(),
