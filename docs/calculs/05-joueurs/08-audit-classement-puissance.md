@@ -226,6 +226,12 @@ L'Argentine et la Liga MX montent avec les coupes de leur confédération (+124 
 - les 31 championnats hors de l'échelle reçoivent un niveau (Argentine, Liga MX, MLS, Équateur, Japon, Chine…) ;
 - 47 championnats d'hommes sur 71 sont mesurés, soit environ 77 % des séjours de 900 minutes en championnat de 2026/2027 (58 % des éligibles étaient classés avant). Saudi Pro League (± 51) et Russie (± 55) restent provisoires.
 
+**En service** (15 novembre, 1 h 25 UTC, lu dans la base) :
+- 259 équipes des sources de coupes fusionnées en pointeurs ; 100 des 119 clubs de la Copa Libertadores sont désormais ceux de leur championnat (5 la veille) ;
+- le calcul des niveaux converge en 7 pas : écart de division 162 ± 49, écart-type entre premières divisions 112, φ = 0,73 ; 3 410 passages lus (années 2024 et 2025) ;
+- 48 championnats d'hommes mesurés : les 47 du seuil, plus la Slovaquie (± 51), gardée par la marge de 52 points puisqu'elle était sur l'échelle la veille. Argentine 1596 ± 32, Liga MX 1575 ± 42 et MLS 1520 ± 39 sont mesurées ; Saudi Pro League 1567 ± 51 reste provisoire ;
+- classement 2026/2027 : 5 115 joueurs classés sur 6 601 éligibles (77 %, contre 3 859 la veille), κ = 0,651. La course commence par Yamal, Mbappé, Olise, Vitinha et Güler ; Antoine Griezmann (Orlando City, 16ᵉ) et Carles Gil (New England Revolution, 25ᵉ) y entrent, la MLS étant mesurée.
+
 **Ce qui n'est pas changé : le poids du niveau du club (κ).** Le score garde LEVEL_SHARE = 0,5 : la moitié de ce qui sépare deux joueurs est le niveau où ils jouent. Un κ égal au taux d'échange (0,132) laisserait la note d'un joueur inchangée quand il change de championnat. Essayé en lecture seule sur 2026/2027, il remplit les trente premiers de joueurs de Bolivie, du Paraguay, de Norvège et de Roumanie. L'explication avancée n'est pas vérifiée : le taux d'échange est mesuré sur le rendement pris par rapport à la moyenne de son championnat, alors que le score lit le rendement brut. Il faudrait rejouer avec le rendement pris par rapport à son championnat. Si ces joueurs restaient en tête, ce serait que le taux d'échange vaut en moyenne mais pas pour les meilleurs : il faudrait alors une standardisation dans le championnat, pas seulement un centrage. C'est un changement de la méthode à décider à part ; il n'est pas fait. Avec plus de joueurs classés, le κ publié pour la même part de 0,5 change ; sa valeur après la mise en service est lue dans `agg.power_runs`.
 
 **Limites.**
