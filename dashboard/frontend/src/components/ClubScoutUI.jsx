@@ -1419,62 +1419,15 @@ export function SquadTable({ dossier, limit = 30 }) {
 
 /* --------------------------------------------------------- league table */
 
-/**
- * Rows a table can show to end level with its neighbour in a side-by-side
- * grid (no gap under the shorter column); `fallback` when stacked.
- */
-function useFillRows(ref, fallback, enabled) {
-  const [rows, setRows] = useState(fallback);
-  useEffect(() => {
-    const el = ref.current,
-      grid = el?.parentElement;
-    if (!enabled || !grid) return;
-    const measure = () => {
-      const me = el.getBoundingClientRect();
-      const beside = [...grid.children]
-        .filter((child) => child !== el)
-        .map((child) => child.getBoundingClientRect())
-        .filter((r) => Math.abs(r.top - me.top) < 4 && r.left !== me.left);
-      if (!beside.length) return setRows(fallback);
-      const target = Math.max(...beside.map((r) => r.height));
-      const head = el.querySelector("thead")?.getBoundingClientRect().height;
-      const row = el.querySelector("tbody tr")?.getBoundingClientRect().height;
-      if (!head || !row) return;
-      setRows(Math.max(5, Math.floor((target - head) / row)));
-    };
-    const observer = new ResizeObserver(measure);
-    for (const child of grid.children) if (child !== el) observer.observe(child);
-    observer.observe(grid);
-    measure();
-    return () => observer.disconnect();
-  }, [ref, fallback, enabled]);
-  return rows;
-}
-
-export function LeagueTable({
-  dossier,
-  sort = "points",
-  compact = false,
-  window: minimum = 0,
-  fill = false,
-}) {
-  const box = useRef(null);
-  const size = useFillRows(box, minimum, fill && minimum > 0);
+export function LeagueTable({ dossier, sort = "points", compact = false }) {
   const rows = [...dossier.clubs].sort((a, b) =>
     sort === "xpts" ? a.xptsPosition - b.xptsPosition : a.position - b.position,
   );
-  // Window: only the clubs around this one, ranks kept.
-  const at = rows.findIndex((club) => club.id === dossier.id);
-  const first =
-    size && size < rows.length
-      ? Math.max(0, Math.min(rows.length - size, at - Math.floor(size / 2)))
-      : 0;
-  const shown = size ? rows.slice(first, first + size) : rows;
   const xgd = (club) =>
     (club.values.xg ?? 0) * club.rows.length -
     (club.values.xga ?? 0) * club.rows.length;
   return (
-    <div className={s.tableScroll} ref={box}>
+    <div className={s.tableScroll}>
       <table className={s.table}>
         <caption className="sr-only">
           Classement réel et classement aux points attendus
@@ -1505,7 +1458,7 @@ export function LeagueTable({
           </tr>
         </thead>
         <tbody>
-          {shown.map((club, i) => {
+          {rows.map((club, i) => {
             const gap = club.record.points - club.xptsTotal;
             return (
               <tr key={club.id} data-self={club.id === dossier.id}>
@@ -1515,7 +1468,7 @@ export function LeagueTable({
                       className={s.muted}
                       style={{ width: 18, textAlign: "right" }}
                     >
-                      {first + i + 1}
+                      {i + 1}
                     </span>
                     <Crest club={club} />
                     {club.name}

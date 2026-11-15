@@ -287,7 +287,7 @@ function ExpectedCard({ dossier }) {
             </dl>
             <PointsTrend rows={self.rows} height={250} grow={1.3} />
           </div>
-          <LeagueTable dossier={dossier} sort="xpts" compact window={10} fill />
+          <LeagueTable dossier={dossier} sort="xpts" compact />
         </div>
       </Card>
   );
