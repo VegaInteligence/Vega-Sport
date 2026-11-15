@@ -365,13 +365,14 @@ class ScoreTest(unittest.TestCase):
         self.assertEqual(roles[1]["winger"]["minutes"], 90)
 
     def test_award_race_numbers_ties_in_ranking_order(self):
+        # By the year's own index; equal indices by total, then minutes.
         scored = {
-            1: {"eligible": True, "rank": 1, "total": 5.0, "minutes": 1000, "team": 9, "score": 80.0},
-            2: {"eligible": True, "rank": 2, "total": 4.0, "minutes": 1000, "team": 9, "score": 70.0},
-            3: {"eligible": True, "rank": 2, "total": 4.0, "minutes": 1200, "team": 8, "score": 70.0},
-            4: {"eligible": False, "rank": None, "total": 9.0, "minutes": 300, "team": 8, "score": None},
+            1: {"eligible": True, "rank": 1, "total": 5.0, "minutes": 1000, "team": 9, "index": 2.0, "index_season": 2.4},
+            2: {"eligible": True, "rank": 2, "total": 4.0, "minutes": 1000, "team": 9, "index": 1.6, "index_season": 1.5},
+            3: {"eligible": True, "rank": 2, "total": 4.0, "minutes": 1200, "team": 8, "index": 1.6, "index_season": 1.5},
+            4: {"eligible": False, "rank": None, "total": 9.0, "minutes": 300, "team": 8, "index": 3.0, "index_season": 3.0},
         }
-        self.assertEqual(power.award_race(scored), [(1, 1, 9, 80.0), (2, 3, 8, 70.0), (3, 2, 9, 70.0)])
+        self.assertEqual(power.award_race(scored), [(1, 1, 9, power.score_of(2.4)), (2, 3, 8, power.score_of(1.5)), (3, 2, 9, power.score_of(1.5))])
         self.assertEqual(len(power.award_race({i: dict(scored[1], rank=i) for i in range(1, 50)})), 30)
 
     def test_season_score_regularises_and_ranks_within_the_role(self):
@@ -452,6 +453,28 @@ class ScoreTest(unittest.TestCase):
         self.assertEqual([out[p]["top_division"] for p in (1, 4, 5)], [True, False, False])
         # The award race: the ranked players of a top division, numbered in their order.
         self.assertEqual([(no, player) for no, player, _, _ in power.award_race(out)], [(1, 1), (2, 2), (3, 3)])
+
+    def test_last_season_is_a_prior_that_fades_with_the_minutes(self):
+        contributions = {p: [("winger", 1800, 1.0 + 0.1 * p, 10, None)] for p in range(1, 9)}
+        contributions[9] = [("winger", 180, 0.4, 10, None)]  # two matches so far
+        base, _ = power.season_scores(contributions)
+        previous = {9: (2.0, "winger", 10), 1: (-3.0, "winger", 10)}
+        out, _ = power.season_scores(contributions, previous=previous)
+        # The year's own index is kept; the index shown leans on last season while he has hardly played.
+        self.assertEqual(out[9]["index_season"], base[9]["index"])
+        m, w0 = 180, power.PRIOR_MINUTES
+        w = w0 / (m + w0) * (1 - m / power.PRIOR_FADE)
+        self.assertAlmostEqual(out[9]["index"], w * power.PRIOR_RHO * 2.0 + (1 - w) * base[9]["index"])
+        self.assertGreater(out[9]["index"], base[9]["index"])
+        self.assertAlmostEqual(out[9]["score"], power.score_of(out[9]["index"]))
+        # From PRIOR_FADE minutes on, the prior is gone.
+        self.assertEqual(out[1]["index"], base[1]["index"])
+        # A change of club or role halves its weight.
+        moved, _ = power.season_scores(contributions, previous={9: (2.0, "winger", 99)})
+        wh = (w0 / 2) / (m + w0 / 2) * (1 - m / power.PRIOR_FADE)
+        self.assertAlmostEqual(moved[9]["index"], wh * power.PRIOR_RHO * 2.0 + (1 - wh) * base[9]["index"])
+        # The award race reads the year's own index.
+        self.assertEqual(power.award_race(out), power.award_race(base))
 
     def test_the_women_have_a_ranking_of_their_own_and_a_lone_role_is_placed(self):
         contributions = {

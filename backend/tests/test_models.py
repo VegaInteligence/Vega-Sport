@@ -167,7 +167,7 @@ class ModelsTest(unittest.TestCase):
                FROM agg.power_runs WHERE kind='players' AND status='published'"""
         ).fetchone()
         # 14 matches of 90 minutes: the year is young, half the most used player's minutes make a player eligible.
-        self.assertEqual(run[:7], ("power-ranking-v7", 20.0, 450.0, 630.0, 0.5, 0.5, 4.0))
+        self.assertEqual(run[:7], ("power-ranking-v8", 20.0, 450.0, 630.0, 0.5, 0.5, 4.0))
         self.assertEqual([d.isoformat() for d in run[7:]], ["2025-08-01", "2026-07-31"])
         elo = self.db.execute("SELECT seed_rounds, level_exchange, measured_se FROM agg.power_runs WHERE kind='elo' AND status='published'").fetchone()
         self.assertEqual(elo[0], 1)  # nothing ties the league to another: its level does not move
