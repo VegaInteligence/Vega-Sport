@@ -621,7 +621,9 @@
 }
 .league-race-fill > .league-race-list {
   position: absolute;
-  inset: 0 0 auto;
+  inset: 0;
+  /* The rows that fit share the whole height: the list ends at the card's foot. */
+  align-content: space-between;
 }
 @media (max-width: 900px) {
   .league-race-fill > .league-race-list {
