@@ -42,6 +42,11 @@
  * GET /api/rankings/breakouts?season= — the season's breakouts: players below the ranking's
  * minutes whose rate per 90 minutes is among the best of their role's regulars.
  *
+ * GET /api/rankings/match?match= — each player's grade in one match (vega/power.py, « Match
+ * grades »): how exceptional the match was for his role, whatever his season, on the season's
+ * 0–100 curve; ranked within the match among the grades shown (20 minutes or more, or a
+ * match a full standard deviation from the ordinary), the minutes beside each.
+ *
  * GET /api/rankings/power/player?season=&player= — one player's power ranking of a
  * season, for his page: the object of the player reads (powerOf) and `roleCount`, the
  * number of ranked players of his role.
@@ -190,6 +195,8 @@ export async function powerOf(read, kind, season, ids) {
       out.set(r.player_id, {
         rank: r.rank, score: round(r.score, 1), index: round(r.index, 2), role: r.role, position: ROLE_LABEL[r.role] ?? r.role, roleRank: r.role_rank,
         ownContribution: round(r.own_total, 2), clubLevel: round(r.level_total, 2), linked: r.linked !== false, topDivision: r.top_division !== false,
+        // A provisional rank: under the minutes bar, or in a league whose level is still uncertain.
+        eligible: r.eligible !== false, provisional: r.eligible === false || r.linked === false,
         blocks: blocksOf(r), roles: roles.get(r.player_id) ?? [],
       });
   }
@@ -470,6 +477,36 @@ async function powerPlayer(read, params) {
   return { season, player: { id, ...power, roleCount: count?.ranked ?? null, breakout } };
 }
 
+// A match grade is shown from this many minutes, or below them when it is a full standard
+// deviation from an ordinary match of the role (something worth noting happened).
+const GRADE_MINUTES = 20;
+
+async function matchGrades(read, params) {
+  validateParams(params, ["match"]);
+  const id = params.get("match");
+  if (!MATCH.test(id || "")) reject(400, "Paramètre invalide.");
+  // The award year of the match's day (1 August to 31 July) is the ranking's season: its rows.
+  const rows = await read(
+    `SELECT g.* FROM api.fixtures f JOIN api.match_grades g
+       ON g.match_key=f.match_id AND g.season_id=extract(year FROM f.day - interval '7 months')::smallint
+     WHERE f.match_id=api.internal_id('match',$1)
+     ORDER BY g.match_index DESC, g.player_id`,
+    [id],
+  );
+  if (!rows.length) reject(404, "Donnée indisponible.");
+  // The grades shown first, best first; the others after them, by minutes.
+  const shown = (r) => r.minutes >= GRADE_MINUTES || Math.abs(r.match_index) >= 1;
+  const ordered = [...rows.filter(shown), ...rows.filter((r) => !shown(r)).sort((a, b) => b.minutes - a.minutes)];
+  let rank = 0;
+  return {
+    match: id,
+    grades: ordered.map((r) => ({
+      playerId: r.player_id, teamId: r.team_id ?? null, role: r.role, position: ROLE_LABEL[r.role] ?? r.role, minutes: r.minutes,
+      grade: shown(r) ? round(r.grade, 1) : null, rank: shown(r) ? ++rank : null,
+    })),
+  };
+}
+
 async function powerRanking(read, params) {
   validateParams(params, ["kind", "season", "limit"]);
   const kind = params.get("kind") ?? "players", season = params.get("season"), limitRaw = params.get("limit") ?? "30";
@@ -477,10 +514,12 @@ async function powerRanking(read, params) {
     reject(400, "Paramètre invalide.");
   const limit = Number(limitRaw);
   if (kind === "players") {
-    // The award race: the ranked players of a top division, numbered in their order
-    // (`powerRank` is the player's rank among every ranked player).
+    // The award race: the eligible players of a measured top division, numbered in their
+    // order (`powerRank` is the player's rank among every ranked player; since
+    // power-ranking-v5 every player who played has one, provisional below the minutes bar or
+    // in a provisional league, and the race keeps the others).
     const rows = await read(
-      `SELECT * FROM api.power_players WHERE season_id=${SEASON_KEY} AND rank IS NOT NULL AND top_division ORDER BY rank, player_id LIMIT $2`,
+      `SELECT * FROM api.power_players WHERE season_id=${SEASON_KEY} AND rank IS NOT NULL AND top_division AND eligible AND linked ORDER BY rank, player_id LIMIT $2`,
       [season, limit],
     );
     if (!rows.length) reject(404, "Donnée indisponible.");
@@ -491,6 +530,7 @@ async function powerRanking(read, params) {
         rank: i + 1, playerId: r.player_id, name: r.name, imageUrl: r.image_url ?? null, teamId: r.team_id ?? null, team: r.team ?? null,
         teamImageUrl: r.team_image_url ?? null, position: ROLE_LABEL[r.role] ?? r.role, role: r.role, roleRank: r.role_rank, powerRank: r.rank,
         score: round(r.score, 1), index: round(r.index, 2), matches: r.matches, minutes: r.minutes,
+        eligible: r.eligible !== false, measured: r.linked !== false, provisional: r.eligible === false || r.linked === false,
         contribution: round(r.total, 2), ownContribution: round(r.own_total, 2), clubLevel: round(r.level_total, 2), rate: round(r.rate, 3),
         contributionPercentile: round(r.total_percentile, 1), ratePercentile: round(r.rate_percentile, 1),
         blocks: blocksOf(r), roles: roles.get(r.player_id) ?? [],
@@ -514,6 +554,7 @@ export function createRankingRoute(read) {
     if (path === "/api/rankings/power/player") return respond(req, await powerPlayer(read, params));
     if (path === "/api/rankings/leagues") return respond(req, await leagueLevels(read, params));
     if (path === "/api/rankings/breakouts") return respond(req, await breakouts(read, params));
+    if (path === "/api/rankings/match") return respond(req, await matchGrades(read, params));
     if (path === "/api/forecasts/match") return respond(req, await matchForecast(read, params));
     if (path === "/api/forecasts/season") return respond(req, await seasonProjection(read, params));
     if (path === "/api/forecasts/live") return respond(req, await liveProbability(read, params));

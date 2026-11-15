@@ -31,6 +31,7 @@ import {
   statValue,
 } from "../services/match-data.js";
 import { useResource } from "../services/resources.js";
+import { gradeTitle, useMatchGrades } from "../services/match-grades.js";
 import {
   matchReadSource,
   matchResourceKey,
@@ -215,7 +216,7 @@ function MatchViewTabs({ view, onChange, panelId, views }) {
     </div>
   );
 }
-function MatchPlayer({ row, rank }) {
+function MatchPlayer({ row, rank, grade }) {
   const f = useFootball();
   return (
     <button
@@ -245,11 +246,17 @@ function MatchPlayer({ row, rank }) {
       </span>
       <span className="match-player-minutes">{number(row.minutes)}′</span>
       <Rating value={row.rating} />
+      {grade && (
+        <span className="rating-pill" title={gradeTitle(grade)}>
+          {number(grade.grade, 0)}
+        </span>
+      )}
     </button>
   );
 }
 function MatchPlayers({ match, players }) {
   const [scope, setScope] = useState("played");
+  const grades = useMatchGrades(match.id);
   const rows = players.filter((r) => scope === "all" || r.minutes > 0);
   return (
     <>
@@ -274,7 +281,7 @@ function MatchPlayers({ match, players }) {
             {rows
               .filter((r) => r.teamId === team.id)
               .map((r) => (
-                <MatchPlayer row={r} key={r.id} />
+                <MatchPlayer row={r} key={r.id} grade={grades.get(r.id)} />
               ))}
             {!rows.some((r) => r.teamId === team.id) && (
               <Empty>Aucune performance collectée.</Empty>
@@ -460,6 +467,7 @@ export default function MatchDetail({ match }) {
     else url.searchParams.set("view", value);
     window.history.replaceState(null, "", url.pathname + url.search);
   };
+  const grades = useMatchGrades(match.id);
   const players = useMemo(
     () =>
       f.data.appearances
@@ -687,7 +695,7 @@ export default function MatchDetail({ match }) {
               }
             >
               {leading.map((r, i) => (
-                <MatchPlayer key={r.id} row={r} rank={i + 1} />
+                <MatchPlayer key={r.id} row={r} rank={i + 1} grade={grades.get(r.id)} />
               ))}
               {!leading.length && <Empty>Aucune note collectée.</Empty>}
             </Card>

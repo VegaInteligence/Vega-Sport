@@ -345,6 +345,7 @@ export default function PlayerScoutRail({
           </div>
         </div>
         {vega?.parts && <p className={s.valueMeta}>{vega.parts}</p>}
+        {vega?.provisional && <p className={s.valueMeta}>{vega.provisional}</p>}
         {vega?.signal && <p className={s.valueMeta}>{vega.signal}</p>}
       </div>
       {positions.length > 0 && (
