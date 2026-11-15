@@ -256,9 +256,10 @@ export function createProfileRoute(read) {
       const season = params.get("season");
       if (!/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
       const minutesByAge = await read(
-        `SELECT age, minutes FROM api.team_age_minutes
-         WHERE season_id=(SELECT season_id FROM api.season_keys WHERE season=$2)
-           AND team_id=api.internal_id('team',$1)
+        `SELECT age, minutes FROM api.club_age_minutes(
+           (SELECT season_id FROM api.season_keys WHERE season=$2),
+           api.internal_id('team',$1)
+         )
          ORDER BY age`,
         [ageProfile[1], season],
       );
