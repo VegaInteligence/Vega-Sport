@@ -639,9 +639,13 @@
 .team-pitch-avatar {
   position: relative;
 }
+.team-pitch-avatar .player-avatar {
+  width: 44px;
+  height: 44px;
+}
 .team-pitch-avatar .rating-pill {
   position: absolute;
-  left: -18px;
+  right: calc(100% - 10px);
   bottom: -2px;
 }
 .team-pitch-name {

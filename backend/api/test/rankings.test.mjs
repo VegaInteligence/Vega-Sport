@@ -69,7 +69,7 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   assert.equal(Math.round(clubs.rows.reduce((s, r) => s + r.results, 0) * 2), 10); // five matches, one point shared each
   // The league strength index: every men's league ranked by its level, a provisional one with its margin, the level of each season.
   const levels = (await get("/api/rankings/leagues")).body;
-  assert.equal(levels.method.version, "power-ranking-v7");
+  assert.equal(levels.method.version, "power-ranking-v8");
   assert.ok(levels.leagues.length >= 1);
   for (const league of levels.leagues) {
     assert.match(league.id, /^l_/);

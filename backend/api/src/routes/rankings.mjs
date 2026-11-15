@@ -539,7 +539,9 @@ async function powerRanking(read, params) {
     // power-ranking-v5 every player who played has one, provisional below the minutes bar or
     // in a provisional league, and the race keeps the others).
     const rows = await read(
-      `SELECT * FROM api.power_players WHERE season_id=${SEASON_KEY} AND rank IS NOT NULL AND top_division AND eligible AND linked ORDER BY rank, player_id LIMIT $2`,
+      // By the year's own index (index_season): last season's prior plays no part in the award race (power-ranking-v8).
+      `SELECT * FROM api.power_players WHERE season_id=${SEASON_KEY} AND rank IS NOT NULL AND top_division AND eligible AND linked
+       ORDER BY coalesce(index_season, index) DESC NULLS LAST, rank, player_id LIMIT $2`,
       [season, limit],
     );
     if (!rows.length) reject(404, "Donnée indisponible.");
@@ -549,7 +551,8 @@ async function powerRanking(read, params) {
       rows: rows.map((r, i) => ({
         rank: i + 1, playerId: r.player_id, name: r.name, imageUrl: r.image_url ?? null, teamId: r.team_id ?? null, team: r.team ?? null,
         teamImageUrl: r.team_image_url ?? null, position: ROLE_LABEL[r.role] ?? r.role, role: r.role, roleRank: r.role_rank, powerRank: r.rank,
-        score: round(r.score, 1), index: round(r.index, 2), matches: r.matches, minutes: r.minutes,
+        score: round(r.index_season == null ? r.score : 100 / (1 + 10 ** (-r.index_season / 4)), 1), index: round(r.index_season ?? r.index, 2),
+        matches: r.matches, minutes: r.minutes,
         eligible: r.eligible !== false, measured: r.linked !== false, provisional: r.eligible === false || r.linked === false,
         contribution: round(r.total, 2), ownContribution: round(r.own_total, 2), clubLevel: round(r.level_total, 2), rate: round(r.rate, 3),
         contributionPercentile: round(r.total_percentile, 1), ratePercentile: round(r.rate_percentile, 1),

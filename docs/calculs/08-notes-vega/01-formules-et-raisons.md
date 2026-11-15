@@ -1,6 +1,6 @@
 # Notes Vega : toutes les formules et leurs raisons
 
-Ce document rassemble, en un seul endroit, chaque calcul qui donne une note à un championnat, à un club et à un joueur, avec sa formule, ses réglages et la raison de chacun. Il décrit ce que fait le code en service (`backend/vega/power.py`, méthode `power-ranking-v7`, 15 novembre 2026).
+Ce document rassemble, en un seul endroit, chaque calcul qui donne une note à un championnat, à un club et à un joueur, avec sa formule, ses réglages et la raison de chacun. Il décrit ce que fait le code en service (`backend/vega/power.py`, méthode `power-ranking-v8`, 15 novembre 2026).
 
 Pour chaque réglage, il dit s'il est **mesuré** sur la base ou **choisi**. Un réglage choisi exprime une préférence ou reprend la méthode de départ ([METHODE_CLASSEMENT_BALLON_D_OR.md](../../METHODE_CLASSEMENT_BALLON_D_OR.md)) ; il n'a pas été ajusté sur les données.
 
@@ -372,6 +372,27 @@ $$
 - **Course au Ballon d'Or** : les trente premiers classés d'un club de première division.
 
 Depuis la version 6 (15 novembre 2026), **tout joueur qui a joué a un rang**. Un joueur connu seulement par sa sélection, ou d'un club vu seulement en coupe d'Europe, est classé parmi les hommes, provisoirement : sa part de niveau vient de l'Elo de son équipe, mesurée contre les équipes de même nature (la moyenne des sélections pour une sélection), et son championnat n'est pas mesuré. Les joueuses d'un championnat féminin sont notées entre elles (leur propre κ, leurs propres moyennes et écarts-types) et ont leur propre classement. Un poste qui n'a encore aucun joueur éligible dans son univers (premiers jours d'une année, petit championnat féminin) est placé face aux joueurs éligibles de tous les postes de l'univers : C est déjà relatif à l'attendu du rôle, son centre est commun.
+
+**L'a priori de la saison passée (version 8, 15 novembre 2026).** En début de saison, quelques matchs ne disent pas grand-chose ; la saison passée du joueur en dit davantage. L'indice affiché les mêle :
+
+$$
+Z = w\,\rho\,Z_{\text{préc}} + (1 - w)\,Z_{\text{saison}}, \qquad w = \frac{W}{M + W}\,\max\!\left(0,\ 1 - \frac{M}{B}\right)
+$$
+
+- **Les notations.** $Z_{\text{saison}}$ est l'indice de la seule saison (plancher compris sous le seuil de minutes) ; $Z_{\text{préc}}$ est l'indice de la seule saison passée ; $M$ est le nombre de minutes jouées cette saison.
+- **W = 450 minutes** : le poids de l'a priori, comme λ. **B = 1 800 minutes** : à partir d'une vingtaine de matchs complets, l'a priori disparaît et le score ne décrit plus que la saison en cours.
+- **ρ = 0,81 (mesuré)** : la corrélation de l'indice d'une année à l'autre, sur 11 070 joueurs éligibles les deux années (2024/2025 → 2025/2026). Elle ramène l'a priori vers la moyenne du poste.
+- **W est divisé par deux** quand le joueur a changé de club ou de poste : son indice passé portait le niveau de l'ancien club et l'échelle de l'ancien poste.
+- **Un joueur sans saison passée** garde son indice de la saison.
+
+**La course au Ballon d'Or et le joueur de la saison** lisent l'indice de la seule saison : une récompense ne paie que cette saison.
+
+**Mesuré avant la mise en service** (lecture seule, 2025/2026). On prédit l'indice du reste de la saison, calculé sur les seuls matchs suivants, à partir des premières semaines. La corrélation de rang passe :
+- de 0,49 à 0,69 fin août ;
+- de 0,59 à 0,72 fin septembre ;
+- de 0,64 à 0,73 fin octobre.
+
+Les 50 premiers prévus contiennent 23 des 50 premiers réels fin août, contre 5 sans a priori. Un réglage plus long (W = 900, B = 2 700) ne gagnait que 0,005 de corrélation et aurait gardé l'a priori presque toute la saison.
 
 ### 5.7 La note d'un match
 

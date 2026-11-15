@@ -89,7 +89,7 @@ from bisect import bisect_left, bisect_right
 from math import exp, log, sqrt
 from statistics import NormalDist
 
-METHOD_VERSION = "power-ranking-v7"
+METHOD_VERSION = "power-ranking-v8"
 ELO_INITIAL = 1500.0
 ELO_K = 20.0
 ELO_HOME = 60.0
@@ -100,6 +100,16 @@ TOTAL_WEIGHT = 0.75
 RATE_WEIGHT = 0.25
 LEVEL_SHARE = 0.5  # of the spread between players given to the level of their club
 BELOW_BAR_FLOOR = 0.10  # below the minutes bar, an index starts at this percentile of the role's ranked players
+# Last season's index as a prior (version 8, 15 November 2026): Z = w·ρ·Z_prev + (1 − w)·Z_cur,
+# w = W / (M + W) · max(0, 1 − M / B): it weighs W minutes and fades out at B minutes; W is
+# halved for a player whose club or role changed. ρ is the index's correlation between two
+# years among players eligible in both (measured: 0.809 on 11,070 players, 2024/25 → 2025/26).
+# Measured read-only on 2025/26 (docs/calculs/08-notes-vega): the rank correlation between the
+# index of the year's first weeks and the index of its rest rises from 0.49 to 0.69 (end of
+# August), 0.59 to 0.72 (September), 0.64 to 0.73 (October). The award race reads Z_cur alone.
+PRIOR_MINUTES = 450
+PRIOR_FADE = 1800
+PRIOR_RHO = 0.81
 SCORE_SCALE = 4.0  # standard deviations of the index for ten to one, as the Elo's 400 points
 MIN_REFERENCE = 30
 MIN_FIT = 200
@@ -1136,7 +1146,7 @@ def score_of(index, *, scale=SCORE_SCALE):
     return 100 / (1 + 10 ** (-index / scale))
 
 
-def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA, linked=None, top=None, share=LEVEL_SHARE, women=None, clubs=None):
+def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA, linked=None, top=None, share=LEVEL_SHARE, women=None, clubs=None, previous=None):
     """contributions: {player: [(role, minutes, C, team, level)]} -> ({player: row}, settings)
     (§ 8). `level` is the club-level part of the match, (t / 90) · (Elo_own − mean) / 400,
     or None; `linked` the teams whose league is measured and `top` those of a top division
@@ -1208,6 +1218,20 @@ def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA, linked=
             if r["role"] == role and r["universe"] == universe and not r["eligible"] and r["minutes"] > 0:
                 r["index"] = floor + min(1.0, r["minutes"] / threshold) * (own_index(r) - floor)
                 r["score"] = score_of(r["index"])
+    # Last season's index as a prior (version 8): `previous` {player: (index, role, team)}. The
+    # year's own index stays as index_season (the award race reads it); the index shown blends
+    # in ρ·Z_prev with a weight that fades out with the minutes played (PRIOR_*).
+    for player, r in out.items():
+        r["index_season"] = r.get("index")
+        before = (previous or {}).get(player)
+        if r.get("index") is None or before is None or before[0] is None:
+            continue
+        z_prev, role, team = before
+        prior = PRIOR_MINUTES / 2 if (role != r["role"] or team != r["team"]) else PRIOR_MINUTES
+        w = prior / (r["minutes"] + prior) * max(0.0, 1 - r["minutes"] / PRIOR_FADE)
+        if w > 0:
+            r["index"] = w * PRIOR_RHO * z_prev + (1 - w) * r["index"]
+            r["score"] = score_of(r["index"])
     # Every player with an index has a rank (version 6, 15 November 2026), numbered within his
     # universe: the men's ranking and the women's ranking each start at 1. A club the base knows
     # in no league (European cups only) and a player it knows by his national team alone are
@@ -1307,6 +1331,9 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
                FROM agg.league_levels l"""
         ).fetchall()}
         weights = match_stakes(conn, [season, season + 1])
+        # Last season's own index of each player, his role and club then: the prior (version 8).
+        previous = {p: (z, role, team) for p, z, role, team in conn.execute(
+            "SELECT player_id, coalesce(index_season, index), role, team_id FROM agg.player_power WHERE season_id = %s", (season - 1,)).fetchall()}
         # The match grades' reference (grade_reference_year).
         reference_season = grade_reference_year(season, started.date())
         finished = reference_season == season
@@ -1358,7 +1385,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     matches = [(*match, match_index(role, competition, c, grade_refs)) for match, (role, competition, _, c) in zip(matches, graded)]
     del graded, reference_rows
     contributions = {p: [(role, m, c, team, level) for role, m, c, team, _, level in items] for p, items in detailed.items()}
-    scored, settings = season_scores(contributions, eligibility=eligibility, linked=linked, top=top, women=women, clubs=clubs)
+    scored, settings = season_scores(contributions, eligibility=eligibility, linked=linked, top=top, women=women, clubs=clubs, previous=previous)
     blocks, roles = season_details(detailed, scored)
     # 3. Write, in one transaction: the season's ranking changes at once or not at all.
     with conn.transaction():
@@ -1379,7 +1406,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
         conn.execute("DELETE FROM agg.player_power_roles WHERE season_id=%s", (season,))
         with conn.cursor().copy(
             f"""COPY agg.player_power(season_id, player_id, role, team_id, matches, minutes, total, rate, eligible, total_percentile,
-                 rate_percentile, score, rank, role_rank, run_id, own_total, level_total, index, linked, top_division, universe, in_league,
+                 rate_percentile, score, rank, role_rank, run_id, own_total, level_total, index, linked, top_division, universe, in_league, index_season,
                  {', '.join(b + '_total' for b in BLOCK_COLUMNS)}, {', '.join(b + '_percentile' for b in BLOCK_COLUMNS)}) FROM STDIN"""
         ) as copy:
             for player, r in scored.items():
@@ -1387,7 +1414,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
                 copy.write_row((season, player, r["role"], r["team"], r["matches"], int(r["minutes"]), r["total"], r["rate"], r["eligible"],
                                 r.get("total_percentile"), r.get("rate_percentile"), r.get("score"), r.get("rank"), r.get("role_rank"), run,
                                 r["own"], settings["level_weights"].get(r["universe"], 0.0) * r["level"], r.get("index"), r["linked"], r["top_division"],
-                                r["universe"], r["club"],
+                                r["universe"], r["club"], r.get("index_season"),
                                 *[b["totals"].get(k) for k in BLOCK_COLUMNS], *[b["percentiles"].get(k) for k in BLOCK_COLUMNS]))
         with conn.cursor().copy("COPY agg.player_power_roles(season_id, player_id, role, matches, minutes, total, rate, run_id) FROM STDIN") as copy:
             for player, by_role in roles.items():
@@ -1583,12 +1610,12 @@ AWARD_SIZE = 30  # the race shown on the home (ballon-dor.js reads the first 30)
 
 
 def award_race(scored, size=AWARD_SIZE):
-    """The award race: the first eligible players of the power ranking, numbered 1..size
-    (agg.player_award_ranking keys a season's award by rank, so ties take the ranking order)."""
-    # Every player has a rank since version 5: the race keeps the eligible players of a measured top division.
+    """The award race: the eligible players of a measured top division by the year's own
+    index (index_season: last season's prior plays no part in an award), numbered 1..size
+    (agg.player_award_ranking keys a season's award by rank)."""
     ranked = sorted((p for p, r in scored.items() if r["eligible"] and r.get("rank") is not None and r.get("top_division", True) and r.get("linked", True)),
-                    key=lambda p: (scored[p]["rank"], -scored[p]["total"], -scored[p]["minutes"], p))
-    return [(i, p, scored[p]["team"], scored[p]["score"]) for i, p in enumerate(ranked[:size], 1)]
+                    key=lambda p: (-scored[p].get("index_season", scored[p]["index"]), -scored[p]["total"], -scored[p]["minutes"], p))
+    return [(i, p, scored[p]["team"], score_of(scored[p].get("index_season", scored[p]["index"]))) for i, p in enumerate(ranked[:size], 1)]
 
 
 def write_award(conn, season, scored):
