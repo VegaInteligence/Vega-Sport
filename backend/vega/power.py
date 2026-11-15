@@ -89,7 +89,7 @@ from bisect import bisect_left, bisect_right
 from math import exp, log, sqrt
 from statistics import NormalDist
 
-METHOD_VERSION = "power-ranking-v6"
+METHOD_VERSION = "power-ranking-v7"
 ELO_INITIAL = 1500.0
 ELO_K = 20.0
 ELO_HOME = 60.0
