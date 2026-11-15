@@ -277,6 +277,39 @@ async function matchForecast(read, params) {
 }
 
 /**
+ * A coming match's bookmakers' odds (vega/sources/odds.py): each bookmaker's full-time result
+ * prices now and when first read, its margin, the market's consensus (each bookmaker's
+ * chances with its margin taken out, averaged), the best price of each outcome, and Vega's own
+ * forecast beside them with its fair odds (1 / chance).
+ */
+async function matchOdds(read, params) {
+  validateParams(params, ["match"]);
+  const id = params.get("match");
+  if (!MATCH.test(id || "")) reject(400, "Paramètre invalide.");
+  const [rows, [f]] = await Promise.all([
+    read("SELECT o.* FROM api.match_odds o WHERE o.match_key=api.internal_id('match',$1) ORDER BY o.title", [id]),
+    read("SELECT * FROM api.match_forecasts WHERE match_key=api.internal_id('match',$1)", [id]),
+  ]);
+  if (!rows.length) reject(404, "Donnée indisponible.");
+  const mean = (key) => round(rows.reduce((sum, r) => sum + r[key], 0) / rows.length, 4);
+  const best = (key) => round(Math.max(...rows.map((r) => r[key])), 2);
+  const fair = (chance) => (chance > 0 ? round(1 / chance, 2) : null);
+  return {
+    match: id,
+    bookmakers: rows.map((r) => ({
+      key: r.bookmaker, name: r.title, home: round(r.home, 2), draw: round(r.draw, 2), away: round(r.away, 2),
+      opening: { home: round(r.first_home, 2), draw: round(r.first_draw, 2), away: round(r.first_away, 2) },
+      margin: round(r.overround - 1, 4), updatedAt: iso(r.updated_at), readAt: iso(r.fetched_at),
+    })),
+    market: { home: mean("home_chance"), draw: mean("draw_chance"), away: mean("away_chance") },
+    best: { home: best("home"), draw: best("draw"), away: best("away") },
+    vega: f
+      ? { home: round(f.home_win, 4), draw: round(f.draw, 4), away: round(f.away_win, 4), fair: { home: fair(f.home_win), draw: fair(f.draw), away: fair(f.away_win) } }
+      : null,
+  };
+}
+
+/**
  * A match minute by minute: win, draw and loss from the forecast's expected goals, the
  * score, the clock and the dismissals (dashboard/shared/inplay.js). A finished match runs to the 90th
  * minute, where its last point is its result; a match in play stops at its clock. A match
@@ -672,6 +705,7 @@ export function createRankingRoute(read) {
     if (path === "/api/rankings/rounds") return respond(req, await leagueRounds(read, params));
     if (path === "/api/rankings/round") return respond(req, await leagueRound(read, params));
     if (path === "/api/forecasts/match") return respond(req, await matchForecast(read, params));
+    if (path === "/api/forecasts/odds") return respond(req, await matchOdds(read, params));
     if (path === "/api/forecasts/season") return respond(req, await seasonProjection(read, params));
     if (path === "/api/forecasts/live") return respond(req, await liveProbability(read, params));
     if (path === "/api/forecasts/swap") return respond(req, await swap(read, params));

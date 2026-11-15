@@ -71,9 +71,11 @@ echo "== 2. Secrets"
 bash infra/aws/ci/secrets.sh
 # The SportsAPI source is on once its key is in SSM.
 SPORTSAPI=$(aws ssm get-parameter --name /vega/v2/sportsapi-key --query Parameter.Name --output text 2>/dev/null || true)
+# Optional, once: /vega/v2/odds-api-key (The Odds API, bookmakers' odds of the coming matches).
+ODDS=$(aws ssm get-parameter --name /vega/v2/odds-api-key --query Parameter.Name --output text 2>/dev/null || true)
 echo "== 3. Worker stack, worker and backfill stopped"
 stack vega-v2-worker worker.yaml --capabilities CAPABILITY_IAM \
-  --parameter-overrides ImageTag="$TAG" DesiredCount=0 BackfillDesiredCount=0 ArchiveSourcesBucket="$ARCHIVES" SportsApiKeyParameter="$SPORTSAPI"
+  --parameter-overrides ImageTag="$TAG" DesiredCount=0 BackfillDesiredCount=0 ArchiveSourcesBucket="$ARCHIVES" SportsApiKeyParameter="$SPORTSAPI" OddsApiKeyParameter="$ODDS"
 echo "== 4. Worker image $TAG (linux/arm64)"
 if ! aws ecr describe-images --repository-name vega-v2-worker --image-ids imageTag="$TAG" >/dev/null 2>&1; then
   aws ecr get-login-password | docker login --username AWS --password-stdin "$REGISTRY"
@@ -87,7 +89,7 @@ code=$(aws ecs describe-tasks --cluster vega-v2 --tasks "$task" --query 'tasks[0
 echo "migration exit code: $code"; [ "$code" = 0 ]
 echo "== 6. Worker: $COUNT task(s); backfill: $BACKFILL task(s)"
 stack vega-v2-worker worker.yaml --capabilities CAPABILITY_IAM \
-  --parameter-overrides ImageTag="$TAG" DesiredCount="$COUNT" BackfillDesiredCount="$BACKFILL" ArchiveSourcesBucket="$ARCHIVES" SportsApiKeyParameter="$SPORTSAPI"
+  --parameter-overrides ImageTag="$TAG" DesiredCount="$COUNT" BackfillDesiredCount="$BACKFILL" ArchiveSourcesBucket="$ARCHIVES" SportsApiKeyParameter="$SPORTSAPI" OddsApiKeyParameter="$ODDS"
 echo "== 6b. Live: store, broadcast, full-state read, ingestor schedule (provider '${LIVE_PROVIDER:-}', $([ -n "${LIVE_PROVIDER:-}" ] && echo on || echo off))"
 live_zip=$(python3 infra/aws/package_api.py "${RUNNER_TEMP:-$(mktemp -d)}/live-package" live | tail -1)
 live_key="releases/v2-live/$(basename "$live_zip")"

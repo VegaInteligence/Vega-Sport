@@ -2893,3 +2893,20 @@ th[aria-sort="descending"] .sort-indicator {
 .power-ranking-name small {
   color: var(--muted);
 }
+
+/* A coming match's odds (MatchOdds): the best price of each outcome in bold, Vega's fair odds apart. */
+.match-odds-table td {
+  font-variant-numeric: tabular-nums;
+}
+.match-odds-table td[data-best] {
+  font-weight: 700;
+}
+.match-odds-table .match-odds-vega th,
+.match-odds-table .match-odds-vega td {
+  color: var(--muted);
+}
+.match-odds-warning {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}

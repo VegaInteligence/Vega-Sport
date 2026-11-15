@@ -21,6 +21,7 @@ import MatchEventHighlights from "./MatchEventHighlights.jsx";
 import { StatRow, StatRows } from "./StatRows.jsx";
 const MatchContext = lazy(() => import("./MatchContext.jsx"));
 const MatchForecast = lazy(() => import("./MatchForecast.jsx"));
+const MatchOdds = lazy(() => import("./MatchOdds.jsx"));
 import MatchWinProbability from "./MatchWinProbability.jsx";
 import { periodShort } from "./PlayerMetrics.jsx";
 import { number, date, isNumber } from "../services/format.js";
@@ -705,6 +706,7 @@ export default function MatchDetail({ match }) {
             }
           >
             {upcoming && <MatchForecast match={match} />}
+            {upcoming && <MatchOdds match={match} />}
             <MatchContext match={match} />
           </Suspense>
         )}

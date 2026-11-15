@@ -17,6 +17,10 @@ Parameters:
     Type: String
     Default: ''
     Description: SSM parameter of the SportsAPI key (ranking snapshots); empty to leave that source off
+  OddsApiKeyParameter:
+    Type: String
+    Default: ''
+    Description: SSM parameter of The Odds API key (bookmakers' odds of the coming matches); empty to leave that source off
   ArchiveSourcesBucket:
     Type: String
     Default: ''
@@ -25,6 +29,7 @@ Parameters:
 Conditions:
   HasArchiveSources: !Not [!Equals [!Ref ArchiveSourcesBucket, '']]
   HasSportsApi: !Not [!Equals [!Ref SportsApiKeyParameter, '']]
+  HasOddsApi: !Not [!Equals [!Ref OddsApiKeyParameter, '']]
 Resources:
   Repository:
     Type: AWS::ECR::Repository
@@ -66,6 +71,7 @@ Resources:
                   - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PasswordParameterPrefix}-*'
                   - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PitchApiKeyParameter}'
                   - !If [HasSportsApi, !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SportsApiKeyParameter}', !Ref AWS::NoValue]
+                  - !If [HasOddsApi, !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${OddsApiKeyParameter}', !Ref AWS::NoValue]
               - Effect: Allow
                 Action: ['secretsmanager:GetSecretValue']
                 Resource: !ImportValue vega-v2-db-master-secret
@@ -143,6 +149,10 @@ Resources:
             - !If
               - HasSportsApi
               - {Name: V2_SPORTSAPI_API_KEY, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SportsApiKeyParameter}'}
+              - !Ref AWS::NoValue
+            - !If
+              - HasOddsApi
+              - {Name: V2_ODDS_API_KEY, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${OddsApiKeyParameter}'}
               - !Ref AWS::NoValue
           LogConfiguration:
             LogDriver: awslogs
