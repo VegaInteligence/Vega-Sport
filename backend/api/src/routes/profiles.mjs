@@ -344,6 +344,11 @@ export function createProfileRoute(read) {
         }),
       });
     }
+    if (path === "/api/players/facts-coverage") {
+      validateParams(params, []);
+      const [coverage] = await read("SELECT * FROM api.player_fact_coverage");
+      return respond(req, coverage);
+    }
     const player = path.match(PLAYER), team = path.match(TEAM);
     if (player || team) {
       validateParams(params, []);
@@ -360,6 +365,9 @@ export function createProfileRoute(read) {
         put(data, "preferred_foot", r.preferred_foot);
         put(data, "contract_until", r.contract_until);
         put(data, "contract_team", r.contract_team);
+        put(data, "observed_contract_until", r.observed_contract_until);
+        put(data, "observed_contract_team", r.observed_contract_team);
+        put(data, "observed_contract_on", r.observed_contract_on);
       }
       return respond(req, data);
     }

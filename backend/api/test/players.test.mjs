@@ -167,6 +167,19 @@ test("a club's age profile counts known and unknown ages from played minutes onl
   assert.equal((await get("/api/teams/t_aaaaa1/age-profile")).response.status, 400);
 });
 
+test("snapshot expiry remains dated and separate from the confirmed contract", { skip }, async () => {
+  const { data } = (await get("/api/players/p_aaaab2")).body;
+  assert.deepEqual(
+    [data.observed_contract_until, data.observed_contract_team, data.observed_contract_on],
+    ["2027-06-30", "Former Club", "2026-07-06"],
+  );
+  assert.equal(data.contract_team, "Olympique Été");
+  const { data: coverage } = (await get("/api/players/facts-coverage")).body;
+  assert.equal(coverage.snapshot_matches, 1);
+  assert.equal(coverage.observed_expiries, 1);
+  assert.equal(coverage.confirmed_expiries, 1);
+});
+
 test("a player's passing partners of a season, the most exchanged first", { skip }, async () => {
   const { data } = (await get("/api/players/p_aaaab1/partners?season=2025/2026")).body;
   assert.deepEqual(data, { id: "p_aaaab1", season: "2025/2026", partners: [

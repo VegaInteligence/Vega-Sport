@@ -10,6 +10,8 @@ import json
 import os
 from pathlib import Path
 
+from . import player_fact_snapshot
+
 # main's dashboard/shared (copied into the worker image), read as they are.
 SHARED = Path(os.environ.get("VEGA_SHARED_DIR", Path(__file__).resolve().parents[3] / "dashboard/shared"))
 
@@ -61,7 +63,8 @@ EDITORIAL_LISTS = {
 def scopes(now):
     day = timedelta(days=1)
     # national_teams before team_identity: the merge reads the flag it sets.
-    return {"player_aliases": day, "player_facts": day, "club_aliases": day, "stadium_plans": day, "league_zones": day, "cup_logos": day,
+    return {"player_aliases": day, "player_facts": day, **player_fact_snapshot.scopes(now),
+            "club_aliases": day, "stadium_plans": day, "league_zones": day, "cup_logos": day,
             "sportscore_ids": day, "country_names": day, "national_teams": day, "team_identity": day, "editorial_lists": day}
 
 
@@ -336,6 +339,8 @@ def player_facts(conn):
 
 
 def run(conn, get, scope, now):
+    if scope in player_fact_snapshot.scopes(now):
+        return player_fact_snapshot.run(conn, get, scope, now)
     if scope == "team_identity":
         from . import identity
 

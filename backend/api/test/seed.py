@@ -90,6 +90,10 @@ def main(dsn):
          (102,2,current_date-366,current_date-1,'vega',current_date-366),
          (103,1,current_date-1,current_date+365,'vega',current_date),
          (103,4,current_date-1,current_date+90,'vega',current_date)""")
+    x("""INSERT INTO core.player_fact_observations
+         (source,source_player_id,player_id,source_url,observed_on,club_name,contract_until)
+         VALUES ('transfermarkt_snapshot','987654',102,'https://www.transfermarkt.com/profil/spieler/987654',
+                 '2026-07-06','Former Club','2027-06-30')""")
     # Profile vectors (081): four players placed on the axes, one of them in a women's competition.
     x("INSERT INTO agg.embedding_models(season_id, version, players, statistics, variance_kept) VALUES (2025, 'profile-embedding-v1', 4, 60, 0.78)")
     zeros = ",".join(["0"] * 8)

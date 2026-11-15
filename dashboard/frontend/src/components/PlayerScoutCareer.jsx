@@ -8,7 +8,7 @@ import {
   playerHistoryKey,
 } from "../services/scouting-history.js";
 import { playerTeamSeasons } from "../services/player-team-seasons.js";
-import { playerFacts } from "../services/player-bio.js";
+import { playerContractFact } from "../services/player-bio.js";
 import { nationalTeamName } from "../services/national-flags.js";
 import { seasonMetric } from "../services/season-player.js";
 import { number } from "../services/format.js";
@@ -89,12 +89,16 @@ export default function PlayerScoutCareer({
   const selections = seasons.filter((row) => row.kind === "selection");
   const clubTotals = sumRows(clubs);
   const selectionTotals = sumRows(selections);
-  const contract = playerFacts(record).facts.find(
-    (item) => item.label === "Fin de contrat",
-  );
+  const contract = playerContractFact(record);
+  const contractLabel = contract?.label || "Fin de contrat";
   const kpis = [
     ["Club actuel", team?.name || "—"],
-    ["Fin de contrat", contract?.note || "—"],
+    [
+      contractLabel,
+      contract?.label === "Échéance relevée"
+        ? `${contract.value} · ${contract.note}`
+        : contract?.note || "—",
+    ],
     ["Valeur", latestValue ? marketValue(latestValue.valueEur) : "—", true],
     ["Matchs en club", show(clubTotals.matches)],
     ["Minutes en club", show(clubTotals.minutes)],
@@ -126,7 +130,7 @@ export default function PlayerScoutCareer({
                     : history.loading &&
                       !fake &&
                       label !== "Club actuel" &&
-                      label !== "Fin de contrat"
+                      label !== contractLabel
                 )
                   ? "…"
                   : value}
