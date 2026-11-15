@@ -29,16 +29,19 @@ period, and the comparison between roles.
   1 / (1 + 10^((R_opp − R_own − h) / 400)), result after extra time (a shoot-out is a
   draw), every finished club or national-team match of the PitchAPI era, and the matches
   of the complementary cups between two clubs the PitchAPI editions know (they tie the
-  divisions of a country together).
+  divisions of a country together, and since version 4 the other confederations' club
+  competitions tie their leagues: Copa Libertadores and Sudamericana, the CONCACAF and CAF
+  Champions Cups).
 - Common scale (§ 3: "des Elo calculés séparément avec la même moyenne ne créent pas
   automatiquement une échelle commune"): a club enters at its league's level, not at 1500
-  whatever the league. The levels are the fixed point of the Elo itself: run it, take
-  each league's mean, start again from those means, until they stop moving. A level
-  drawn from few matches against other leagues is held towards 1500 (links / (links +
-  LEVEL_PRIOR_MATCHES)). The common scale starts from the league with the most matches
-  against others and takes in, step by step, every league whose clubs played
-  LINK_MATCHES matches against the clubs of the leagues already on it. Another keeps
-  its own scale: its players have a score, and no rank among the others.
+  whatever the league. Version 4 (15 November 2026) gives every league a level and its
+  standard error, the maximum a posteriori of one model over the matches between leagues,
+  the players who change league and a prior by division and confederation (« League
+  levels (version 4) » below). It replaces version 3's fixed point, whose pull of a level
+  towards 1500 by links / (links + 30) held weakly measured leagues near 1500 and left 31
+  leagues without a level. A league is measured when its error is at most MEASURED_SE: its
+  players are ranked; another's have a score, and no rank. A women's league is a universe
+  of its own: its players are scored among themselves.
 - Universe of a season: the finished matches of the PitchAPI editions from 1 August of
   its first year to 31 July of the next (the award's year), the national teams' (the
   World Cup) with the clubs' since version 3; a calendar-year league gives the second
@@ -84,14 +87,10 @@ from collections import defaultdict
 from datetime import date, timedelta
 from math import exp, log, sqrt
 
-METHOD_VERSION = "power-ranking-v3"
+METHOD_VERSION = "power-ranking-v4"
 ELO_INITIAL = 1500.0
 ELO_K = 20.0
 ELO_HOME = 60.0
-SEED_ROUNDS = 200  # passes of the Elo to settle the leagues' levels
-SEED_TOLERANCE = 0.5  # Elo points: the levels have stopped moving
-LINK_MATCHES = 10  # matches against the clubs of the leagues on the common scale that put a league on it
-LEVEL_PRIOR_MATCHES = 30  # a league's level counts for links / (links + this), the rest stays at ELO_INITIAL
 LAMBDA = 450.0
 ELIGIBILITY = 900.0
 ELIGIBILITY_SHARE = 0.5  # of the most used player's minutes, while that is less than ELIGIBILITY
@@ -255,14 +254,6 @@ def elo_updates(matches, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME, seeds=N
         yield (mid, a, season, kickoff, ra, rating[a], 1 - eh, 1 - result)
 
 
-# The other confederations' club competitions (cups.py) are kept out of the strengths. Measured
-# on 14 November 2026: with their 1,402 matches between two clubs PitchAPI knows, Brazil's level
-# rose from 1607 to 1654 (3rd, above LaLiga) and Argentina's to 1598 (7th), while 11 Club World
-# Cup matches still tie South America to Europe: the levels count matches between leagues, not
-# between confederations, so a continent tied to the rest by a few matches reads as well
-# measured. They enter once a league's evidence is counted by confederation.
-ELO_APART = ("copa-libertadores", "copa-sudamericana", "concacaf-champions", "caf-champions-league")
-
 # Columns 8 to 11: the match's day, its competition, whether it comes from a complementary
 # source (a cup-source edition), whether it is international (a European competition, or
 # national teams). A complementary match counts between two clubs the PitchAPI editions know.
@@ -281,7 +272,7 @@ JOIN core.competitions c ON c.id = cs.competition_id
 JOIN core.teams th ON th.id = m.home_team_id
 WHERE m.status = 'finished' AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL
   AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL
-  AND (cs.cup_key IS NULL OR (m.match_date IS NOT NULL AND split_part(cs.cup_key, ':', 2) <> ALL(%(apart)s)
+  AND (cs.cup_key IS NULL OR (m.match_date IS NOT NULL
        AND m.home_team_id IN (SELECT team_id FROM known) AND m.away_team_id IN (SELECT team_id FROM known)))
 ORDER BY 3 NULLS LAST, m.match_date NULLS LAST, m.id"""
 
@@ -339,25 +330,6 @@ def links_of(pairs):
     return links
 
 
-def common_scale(pairs, *, link=LINK_MATCHES):
-    """The leagues on the common scale: the league with the most matches against others,
-    then, step by step, every league whose clubs played `link` matches against the clubs
-    of the leagues already there (a champion meets a different league every European night)."""
-    links = links_of(pairs)
-    if not links:
-        return set()
-    reached = {max(sorted(links), key=lambda league: links[league])}
-    while True:
-        tied = defaultdict(int)
-        for (a, b), n in pairs.items():
-            if (a in reached) != (b in reached):
-                tied[b if a in reached else a] += n
-        joining = {league for league, n in tied.items() if n >= link}
-        if not joining:
-            return reached if links[next(iter(reached))] >= link or len(reached) > 1 else set()
-        reached |= joining
-
-
 def league_means(strengths, leagues):
     sums = defaultdict(lambda: [0.0, 0])
     for team, value in strengths.items():
@@ -388,38 +360,369 @@ def league_seasons(rows, matches):
     return out
 
 
-def league_levels(matches, leagues, *, rounds=SEED_ROUNDS, tolerance=SEED_TOLERANCE, initial=ELO_INITIAL, prior=LEVEL_PRIOR_MATCHES, weights=None):
-    """The level each league's clubs enter at: the mean strength of its clubs after an Elo
-    started from the levels themselves, repeated (half a step at a time) until no level
-    moves by `tolerance`. A league without a match against another keeps `initial` (its
-    Elo is zero-sum), and one with few keeps a part of it: links / (links + `prior`) of
-    its mean. Returns (levels, rounds done, last move)."""
-    links = links_of(league_links(matches, leagues))
-    seeds, done, shift = {}, 0, 0.0
-    for done in range(1, rounds + 1):
-        strengths = {}
-        for _, team, _, _, _, after, _, _ in elo_updates(matches, initial=initial, seeds=seeds, leagues=leagues, weights=weights):
-            strengths[team] = after
-        new = {}
-        for league, (mean, _) in league_means(strengths, leagues).items():
-            weight = links[league] / (links[league] + prior) if links[league] + prior > 0 else 0.0
-            new[league] = 0.5 * (initial + weight * (mean - initial) + seeds.get(league, initial))
-        shift = max((abs(v - seeds.get(k, initial)) for k, v in new.items()), default=0.0)
-        seeds = new
-        if shift < tolerance:
-            break
-    return seeds, done, shift
+# League levels (version 4) --------------------------------------------------
+#
+# Every league's level ℓ_j is the maximum a posteriori of one model over three kinds of
+# evidence (docs/calculs/05-joueurs/08-audit-classement-puissance.md, « Niveaux des ligues ») :
+# - the matches between clubs of two leagues: with the Elo run from the levels, a match gives
+#   the score I_m (r − E) c and the information I_m E(1 − E) c² on the two leagues (c = ln 10 /
+#   400), both divided by the dispersion φ of the results (draws make it below 1). Within a
+#   league they cancel: a league's level is what its clubs' matches against the others say;
+# - the players who change league: the change of a player's contribution per 90 minutes, as
+#   a share of what his league-season gives on average and once what any player's next season
+#   regresses towards is removed (the players who stayed give it), is −κ* (ℓ_b − ℓ_a) / 400
+#   per move, κ* = LEVEL_EXCHANGE, with the variance of a move and the spread τ_u of a pair
+#   beyond its movers;
+# - a prior, as edges rather than a pull to 1500: a lower division sits a tier gap b below the
+#   division above it in its country (sd τ_b), a top division at its confederation's mean
+#   (sd τ_c). b, τ_b, τ_c and the confederations' means are measured each run on the levels
+#   the matches and the moves alone give, where they are precise.
+# The level of a league without any evidence is its prior; its standard error says how much
+# that is. Newton steps on the levels, each over a new Elo pass from the levels found.
+
+LEVEL_EXCHANGE = 0.132  # κ*: measured on 15 November 2026 (profile of the joint fit, ± 0.006); it was 0.22 before the
+# stayers' regression was removed from the moves
+MOVER_MINUTES = 600  # a stint of a player in a league-season counts for a move from this many minutes
+MEASURED_SE = 60.0  # a league is measured (its players ranked) at this standard error or below, in Elo points
+REFERENCE_SE = 25.0  # the leagues the scale is held by: standard error below this against the best-measured one
+LEVEL_PRIOR_SD = 400.0  # the gauge of the first fit, with no prior of its own
+TIER_GAP, TIER_GAP_SD, TOP_SD = 160.0, 40.0, 120.0  # the prior's settings when the base has too few leagues to measure them
+NEWTON_ROUNDS, NEWTON_TOLERANCE = 40, 0.25
+_C = log(10) / 400
+# Each league's division in its country, by its PitchAPI key (1 when not named): reviewed one by
+# one on 15 November 2026. Paulista A1 is the state championship of São Paulo, played by Serie A
+# and Serie B clubs before the national season; MLS Next Pro is MLS's reserve league.
+TIERS = {
+    "l_4DWyTT": 2, "l_0ahLw8": 3, "l_1W6idJ": 4,  # Championship, League One, League Two
+    "l_3hvsne": 2, "l_47077Y": 3,  # 2. Bundesliga, 3. Liga
+    "l_3kyHLd": 2, "l_0jy5yE": 2, "l_0275VP": 2,  # LaLiga2, Serie B (ITA), Ligue 2
+    "l_3qUkB8": 2, "l_4V6jPs": 2,  # Serie B (BRA), Paulista A1
+    "l_1pQOHK": 2, "l_1rPvVD": 2, "l_49KZaB": 2, "l_4auCPk": 2,  # Challenger Pro League, 1. Division, Eerste Divisie, Challenge League
+    "l_3CB6qX": 2, "l_271pqa": 2, "l_3fglZv": 3,  # Saudi First Division, K League 2, J3 League
+    "l_3yVUAO": 2, "l_3Kf7Ni": 3, "l_3Tn1kG": 3,  # USL Championship, USL League One, MLS Next Pro
+}
+# Women's leagues: a universe of their own (their clubs never meet the others').
+WOMEN = frozenset({"l_1SGwQT"})
+CONFEDERATIONS = {
+    **{c: "UEFA" for c in ("ENG", "GER", "ESP", "ITA", "FRA", "BEL", "GRE", "DEN", "TUR", "NED", "SUI", "POL", "POR", "CRO", "CZE", "ROU",
+                           "RUS", "IRL", "ISL", "NOR", "ISR", "SRB", "LVA", "SVK", "FIN", "SWE", "AUT", "SCO", "UKR", "WAL", "CYP",
+                           "SVN", "KAZ", "HUN", "BUL")},
+    **{c: "CONMEBOL" for c in ("BRA", "ARG", "ECU", "COL", "VEN", "CHI", "PER", "PAR", "BOL", "URU")},
+    **{c: "CONCACAF" for c in ("USA", "MEX", "CAN", "CRC", "HON", "GUA", "PAN", "JAM")},
+    **{c: "AFC" for c in ("KSA", "IND", "CHN", "KOR", "JPN", "THA", "QAT", "AUS", "UAE", "IRN", "UZB")},
+    **{c: "CAF" for c in ("EGY", "RSA", "MAR", "TUN", "ALG", "NGA")},
+}
+
+
+def _solve(a, b):
+    """x with a x = b (Gaussian elimination, partial pivoting); a is not changed."""
+    n = len(b)
+    m = [row[:] + [b[i]] for i, row in enumerate(a)]
+    for col in range(n):
+        piv = max(range(col, n), key=lambda r: abs(m[r][col]))
+        m[col], m[piv] = m[piv], m[col]
+        top = m[col]
+        for r in range(col + 1, n):
+            f = m[r][col] / top[col]
+            if f:
+                row = m[r]
+                for k in range(col, n + 1):
+                    row[k] -= f * top[k]
+    x = [0.0] * n
+    for i in range(n - 1, -1, -1):
+        x[i] = (m[i][n] - sum(m[i][k] * x[k] for k in range(i + 1, n))) / m[i][i]
+    return x
+
+
+def _inverse(a):
+    """a⁻¹ by Gauss-Jordan elimination."""
+    n = len(a)
+    m = [row[:] + [1.0 if i == j else 0.0 for j in range(n)] for i, row in enumerate(a)]
+    for col in range(n):
+        piv = max(range(col, n), key=lambda r: abs(m[r][col]))
+        m[col], m[piv] = m[piv], m[col]
+        p = m[col][col]
+        m[col] = [v / p for v in m[col]]
+        top = m[col]
+        for r in range(n):
+            if r != col and m[r][col]:
+                f = m[r][col]
+                m[r] = [v - f * w for v, w in zip(m[r], top)]
+    return [row[n:] for row in m]
+
+
+def _relative_se(cov, ref):
+    """The standard error of each level against the mean of the `ref` indices."""
+    n, share = len(cov), 1 / len(ref)
+    refset = set(ref)
+    col_ref = [sum(cov[i][r] for r in ref) * share for i in range(n)]
+    ref_ref = sum(col_ref[r] for r in ref) * share
+    return [sqrt(max(0.0, cov[j][j] - 2 * col_ref[j] + ref_ref)) for j in range(n)]
+
+
+def level_pass(matches, leagues, index, seeds, weights, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME):
+    """One Elo pass from the leagues' levels `seeds`: the matches between leagues as the
+    information matrix and the score of the levels (unit dispersion), and the dispersion φ."""
+    n = len(index)
+    lam, grad = [[0.0] * n for _ in range(n)], [0.0] * n
+    rating, resid, spread = {}, 0.0, 0.0
+    for mid, _, _, h, a, hs, as_, neutral, *_ in matches:
+        lh, la = leagues.get(h), leagues.get(a)
+        rh = rating[h] if h in rating else seeds.get(lh, initial)
+        ra = rating[a] if a in rating else seeds.get(la, initial)
+        eh = expected_score(rh, ra, 0.0 if neutral else home)
+        result = 1.0 if hs > as_ else 0.0 if hs < as_ else 0.5
+        weight = weights.get(mid, 1.0)
+        i, j = index.get(lh), index.get(la)
+        if i is not None and j is not None and i != j:
+            info = weight * eh * (1 - eh) * _C * _C
+            lam[i][i] += info; lam[j][j] += info; lam[i][j] -= info; lam[j][i] -= info
+            score = weight * (result - eh) * _C
+            grad[i] += score; grad[j] -= score
+            resid += (result - eh) ** 2
+            spread += eh * (1 - eh)
+        rating[h] = rh + k * weight * (result - eh)
+        rating[a] = ra + k * weight * ((1 - result) - (1 - eh))
+    return lam, grad, (resid / spread if spread else 1.0)
+
+
+def _edge(lam, grad, i, j, mean, precision, ell):
+    """ℓ_j − ℓ_i ~ N(mean, 1 / precision) added to the system."""
+    r = precision * (mean - (ell[j] - ell[i]))
+    lam[i][i] += precision; lam[j][j] += precision; lam[i][j] -= precision; lam[j][i] -= precision
+    grad[j] += r; grad[i] -= r
+
+
+def league_model(matches, leagues, *, weights=None, moves=None, tiers=None, countries=None, apart=(), previous=None,
+                 exchange=LEVEL_EXCHANGE):
+    """Every league's level and its standard error ({league: level}, {league: se}, settings).
+
+    `leagues`: {team: league}; `moves`: ([(league a, league b, movers, mean change)], variance of
+    one move), a move from a to b counted as is, from b to a with its sign changed; `tiers` and
+    `countries`: {league: …}; `apart`: leagues of another universe (left at ELO_INITIAL);
+    `previous`: the last levels, which the scale keeps for the leagues that hold it."""
+    weights, tiers, countries, previous = weights or {}, tiers or {}, countries or {}, previous or {}
+    ids = sorted({l for l in leagues.values() if l not in apart}, key=str)
+    if not ids:
+        return {}, {}, {"rounds": 0}
+    index = {l: k for k, l in enumerate(ids)}
+    n = len(ids)
+    pairs, variance = moves or ([], 0.0)
+    pairs = [(index[a], index[b], m, y) for a, b, m, y in pairs if a in index and b in index and a != b and m > 0]
+
+    def fit(ell, tau, prior):
+        rounds = 0
+        for rounds in range(1, NEWTON_ROUNDS + 1):
+            lam, grad, phi = level_pass(matches, leagues, index, dict(zip(ids, ell)), weights)
+            lam = [[v / phi for v in row] for row in lam]
+            grad = [g / phi for g in grad]
+            for i, j, m, y in pairs:
+                _edge(lam, grad, i, j, -400 * y / exchange, 1 / ((400 / exchange) ** 2 * (variance / m + tau * tau)), ell)
+            prior(lam, grad, ell)
+            step = _solve(lam, grad)
+            ell = [e + s for e, s in zip(ell, step)]
+            if max(abs(s) for s in step) < NEWTON_TOLERANCE:
+                break
+        return ell, lam, phi, rounds
+
+    def gauge(lam, grad, ell):
+        for k in range(n):
+            lam[k][k] += 1 / LEVEL_PRIOR_SD ** 2
+            grad[k] += (ELO_INITIAL - ell[k]) / LEVEL_PRIOR_SD ** 2
+
+    # 1. Matches and moves alone; τ_u, the spread of a pair beyond its movers, by moments.
+    ell, tau = [previous.get(l, ELO_INITIAL) for l in ids], 0.0
+    for _ in range(2):
+        ell, lam, phi, _ = fit(ell, tau, gauge)
+        if pairs:
+            tau = sqrt(max(0.0, sum((y + exchange * (ell[j] - ell[i]) / 400) ** 2 - variance / m for i, j, m, y in pairs) / len(pairs)))
+    best = max(range(n), key=lambda k: lam[k][k])
+    cov = _inverse(lam)
+    se = _relative_se(cov, [best])
+    # 2. The prior's settings, from the leagues those alone measure.
+    tier = {l: tiers.get(l, 1) for l in ids}
+    upper = {}
+    for l in ids:
+        above = [u for u in ids if countries.get(u) == countries.get(l) and countries.get(l) is not None and tier[u] < tier[l]]
+        if above:
+            nearest = max(tier[u] for u in above)
+            upper[l] = max((u for u in above if tier[u] == nearest), key=lambda u: (lam[index[u]][index[u]], str(u)))
+    gaps = []
+    for l in upper:
+        i, u, dt = index[l], index[upper[l]], tier[l] - tier[upper[l]]
+        if se[i] < 40 and se[u] < 40:
+            gaps.append(((ell[u] - ell[i]) / dt, (cov[i][i] + cov[u][u] - 2 * cov[i][u]) / dt ** 2))
+    gap, gap_sd = TIER_GAP, TIER_GAP_SD
+    if len(gaps) >= 3:
+        gap = sum(g for g, _ in gaps) / len(gaps)
+        gap_sd = sqrt(max(100.0, sum((g - gap) ** 2 for g, _ in gaps) / (len(gaps) - 1) - sum(v for _, v in gaps) / len(gaps)))
+    conf = {l: CONFEDERATIONS.get(countries.get(l)) for l in ids}
+    # The top divisions the matches and the moves say something of (a level with nothing but
+    # the gauge says nothing of the means), and their errors against their own mean.
+    tops = [l for l in ids if tier[l] == 1]
+    informed = [l for l in tops if se[index[l]] < LEVEL_PRIOR_SD / 2] or tops
+    spread = _relative_se(cov, [index[l] for l in informed]) if informed else se
+    europe = [l for l in informed if conf[l] == "UEFA" and se[index[l]] < 60]
+    top_sd = TOP_SD
+    if len(europe) >= 3:
+        mean = sum(ell[index[l]] for l in europe) / len(europe)
+        noise = sum(spread[index[l]] ** 2 for l in europe) / len(europe)
+        top_sd = sqrt(max(400.0, sum((ell[index[l]] - mean) ** 2 for l in europe) / (len(europe) - 1) - noise))
+    weight = {l: 1 / (top_sd ** 2 + spread[index[l]] ** 2) for l in informed}
+    overall = sum(weight[l] * ell[index[l]] for l in informed) / sum(weight.values()) if informed else ELO_INITIAL
+    means = {}
+    for c in {conf[l] for l in informed}:
+        members = [l for l in informed if conf[l] == c]
+        # A confederation's mean is drawn towards the overall one as much as one more league would.
+        means[c] = (sum(weight[l] * ell[index[l]] for l in members) + overall / top_sd ** 2) / (sum(weight[l] for l in members) + 1 / top_sd ** 2)
+
+    def structure(lam, grad, ell):
+        for l in ids:
+            k = index[l]
+            if l in upper:
+                dt = tier[l] - tier[upper[l]]
+                _edge(lam, grad, index[upper[l]], k, -gap * dt, 1 / (dt * gap_sd ** 2), ell)
+            else:
+                # A top division, or a lower one alone in the base: its confederation's mean, lowered by its tiers.
+                mu = means.get(conf[l], overall) - gap * (tier[l] - 1)
+                var = top_sd ** 2 + (tier[l] - 1) * gap_sd ** 2
+                lam[k][k] += 1 / var
+                grad[k] += (mu - ell[k]) / var
+
+    # 3. The three together.
+    ell, lam, phi, rounds = fit(ell, tau, structure)
+    cov = _inverse(lam)
+    best = max(range(n), key=lambda k: lam[k][k])
+    near = _relative_se(cov, [best])
+    ref = [k for k in range(n) if near[k] < REFERENCE_SE] or [best]
+    se = _relative_se(cov, ref)
+    held = [k for k in ref if ids[k] in previous]
+    shift = (sum(previous[ids[k]] - ell[k] for k in held) / len(held)) if held else 0.0
+    levels = {l: ell[index[l]] + shift for l in ids}
+    errors = {l: se[index[l]] for l in ids}
+    return levels, errors, {"rounds": rounds, "dispersion": phi, "pair_sd": tau, "tier_gap": gap, "tier_gap_sd": gap_sd,
+                            "top_sd": top_sd, "reference": [ids[k] for k in ref], "exchange": exchange,
+                            "confederations": {c: v + shift for c, v in means.items()}}
+
+
+def move_evidence(stints, *, minutes=MOVER_MINUTES):
+    """The moves between leagues and what they say: ([(league a, league b, movers, mean change)],
+    variance of one move, {"stayers", "moves", "persistence"}).
+
+    `stints`: (award year, player, league, minutes, contribution, first day, last day, role):
+    a player's league matches of one award year in one league. A stint's rate is its
+    contribution per 90 minutes less its league-season's (per minute, goalkeepers apart): the
+    league's style cancels. Players who stayed in their league from one year to the next give
+    how much of a year's rate the next keeps (c' = α + ρ c); a mover's change is his rate in
+    the new league less that expectation, so a good season before a move, and its regression
+    after, say nothing of the leagues."""
+    stints = [s for s in stints if s[7] != "goalkeeper" and s[3] > 0]
+    totals = defaultdict(lambda: [0.0, 0.0])
+    for year, _, league, mins, total, *_ in stints:
+        totals[(league, year)][0] += total
+        totals[(league, year)][1] += mins
+    mean = {k: 90 * t / m for k, (t, m) in totals.items() if m}
+    by_player = defaultdict(list)
+    for year, player, league, mins, total, first, last, _ in stints:
+        if mins >= minutes:
+            by_player[player].append((first, last, league, year, 90 * total / mins - mean[(league, year)]))
+    stay, move = [], []
+    for items in by_player.values():
+        items.sort(key=lambda s: (s[0], s[1], str(s[2])))
+        for x, y in zip(items, items[1:]):
+            if x[2] == y[2] and y[3] == x[3] + 1:
+                stay.append((x[4], y[4]))
+            elif x[2] != y[2] and x[1] <= y[0]:
+                move.append((x, y))
+    if len(stay) < 2:
+        return [], 0.0, {"stayers": len(stay), "moves": 0, "persistence": None}
+    mx = sum(a for a, _ in stay) / len(stay)
+    my = sum(b for _, b in stay) / len(stay)
+    sxx = sum((a - mx) ** 2 for a, _ in stay)
+    rho = sum((a - mx) * (b - my) for a, b in stay) / sxx if sxx else 0.0
+    alpha = my - rho * mx
+    pairs = defaultdict(list)
+    for x, y in move:
+        change = y[4] - (alpha + rho * x[4])
+        a, b = x[2], y[2]
+        if str(a) < str(b):
+            pairs[(a, b)].append(change)
+        else:
+            pairs[(b, a)].append(-change)
+    means = {k: sum(v) / len(v) for k, v in pairs.items()}
+    spread = [(c - means[k]) ** 2 for k, v in pairs.items() if len(v) > 1 for c in v]
+    variance = sum(spread) / len(spread) if spread else 0.0
+    out = [(a, b, len(v), means[(a, b)]) for (a, b), v in sorted(pairs.items(), key=lambda kv: (str(kv[0][0]), str(kv[0][1])))]
+    return out, variance, {"stayers": len(stay), "moves": len(move), "persistence": rho}
+
+
+# A player's league matches of an award year in one league (move_evidence's stints).
+STINTS = """
+SELECT p.season_id, p.player_id, cs.competition_id, sum(p.minutes)::int, sum(p.contribution)::float8, min(m.match_date), max(m.match_date),
+  mode() WITHIN GROUP (ORDER BY p.role)
+FROM agg.player_power_matches p
+JOIN core.matches m ON m.id = p.match_id
+JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.cup_key IS NULL AND cs.archive_key IS NULL
+WHERE p.contribution IS NOT NULL AND p.season_id = ANY(%s)
+GROUP BY 1, 2, 3 HAVING sum(p.minutes) >= 300"""
+
+
+def league_moves(conn, today):
+    """The moves between leagues the levels read (move_evidence): those of the award years
+    that are over, computed again only when one of their rankings changes, so a level never
+    reads the rates the season in progress gives back from it. ([…], variance of a move)."""
+    finished = [s for (s,) in conn.execute(
+        "SELECT DISTINCT season_id FROM agg.power_runs WHERE kind = 'players' AND status = 'published' AND season_id IS NOT NULL"
+    ).fetchall() if award_year(s)[1] <= today]
+    if not finished:
+        return [], 0.0
+    source = conn.execute(
+        "SELECT max(id) FROM agg.power_runs WHERE kind = 'players' AND status = 'published' AND season_id = ANY(%s)", (finished,)
+    ).fetchone()[0]
+    cached = conn.execute("SELECT id, variance FROM agg.league_move_sets WHERE source_run = %s ORDER BY id DESC LIMIT 1", (source,)).fetchone()
+    if cached:
+        pairs = conn.execute("SELECT competition_a, competition_b, movers, mean_change FROM agg.league_moves WHERE set_id = %s", (cached[0],)).fetchall()
+        return [tuple(r) for r in pairs], cached[1]
+    pairs, variance, facts = move_evidence(conn.execute(STINTS, (finished,)).fetchall())
+    with conn.transaction():
+        set_id = conn.execute(
+            """INSERT INTO agg.league_move_sets(source_run, variance, stayers, moves, persistence) VALUES (%s,%s,%s,%s,%s) RETURNING id""",
+            (source, variance, facts["stayers"], facts["moves"], facts["persistence"]),
+        ).fetchone()[0]
+        with conn.cursor().copy("COPY agg.league_moves(set_id, competition_a, competition_b, movers, mean_change) FROM STDIN") as copy:
+            for a, b, movers, change in pairs:
+                copy.write_row((set_id, a, b, movers, change))
+        conn.execute("DELETE FROM agg.league_move_sets WHERE id <> %s", (set_id,))
+    return pairs, variance
 
 
 def refresh_elo(conn):
-    """Recompute every strength in match order, then each season's club power ranking."""
+    """Recompute every league's level and every strength in match order, then each season's
+    club power ranking. The levels are computed outside any transaction (the base ends a
+    session idle inside one after 60 s), then written at once."""
+    started = conn.execute("SELECT clock_timestamp()").fetchone()[0]
+    matches = elo_matches(conn.execute(ELO_MATCHES).fetchall())
+    leagues = home_leagues(matches)
+    weights = match_stakes(conn)
+    facts = {league: (country, key) for league, country, key in conn.execute(
+        """SELECT c.id, c.country_code, (SELECT p.provider_key FROM core.provider_ids p WHERE p.entity_type = 'competition'
+             AND p.entity_id = c.id AND p.provider = 'pitchapi' AND p.is_current LIMIT 1)
+           FROM core.competitions c WHERE c.id = ANY(%s)""", (sorted(set(leagues.values())),)
+    ).fetchall()}
+    women = {league for league, (_, key) in facts.items() if key in WOMEN}
+    tiers = {league: TIERS.get(key, 1) for league, (_, key) in facts.items()}
+    countries = {league: country for league, (country, _) in facts.items()}
+    previous = dict(conn.execute("SELECT competition_id, entry_level FROM agg.league_levels").fetchall())
+    moves = league_moves(conn, conn.execute("SELECT current_date").fetchone()[0])
+    seeds, errors, settings = league_model(matches, leagues, weights=weights, moves=moves, tiers=tiers, countries=countries,
+                                           apart=women, previous=previous)
+    rows = list(elo_updates(matches, seeds=seeds, leagues=leagues, weights=weights))
+    movers = defaultdict(int)
+    for a, b, n, _ in moves[0]:
+        movers[a] += n
+        movers[b] += n
     with conn.transaction():
-        run = _start(conn, "elo")
-        matches = elo_matches(conn.execute(ELO_MATCHES, {"apart": list(ELO_APART)}).fetchall())
-        leagues = home_leagues(matches)
-        weights = match_stakes(conn)
-        seeds, rounds, _ = league_levels(matches, leagues, weights=weights)
-        rows = list(elo_updates(matches, seeds=seeds, leagues=leagues, weights=weights))
+        run = _start(conn, "elo", started_at=started)
         conn.execute("DELETE FROM agg.team_power")
         conn.execute("DELETE FROM agg.team_elo")
         with conn.cursor().copy(
@@ -447,18 +750,20 @@ def refresh_elo(conn):
                FROM last l JOIN season s USING (season_id, team_id) JOIN core.teams t ON t.id = l.team_id""",
             (run,),
         )
-        # Each league's place on the common scale, for the players' ranking and the reads.
+        # Each league's level, its standard error and what it rests on, for the players' ranking and the reads.
         strengths = {}
         for _, team, _, _, _, after, _, _ in rows:
             strengths[team] = after
-        pairs = league_links(matches, leagues)
-        # A base whose leagues never met has nothing to tie: each league is its own scale.
-        links, scale = links_of(pairs), common_scale(pairs) or set(leagues.values())
+        links = links_of(league_links(matches, leagues))
         conn.execute("DELETE FROM agg.league_levels")
         for league, (mean, teams) in sorted(league_means(strengths, leagues).items()):
+            se = errors.get(league)
             conn.execute(
-                "INSERT INTO agg.league_levels(competition_id, entry_level, level, teams, links, linked, run_id) VALUES (%s,%s,%s,%s,%s,%s,%s)",
-                (league, seeds.get(league, ELO_INITIAL), mean, teams, links.get(league, 0), league in scale, run),
+                """INSERT INTO agg.league_levels(competition_id, entry_level, level, teams, links, linked, run_id, level_se, tier,
+                     confederation, movers, universe) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (league, seeds.get(league, ELO_INITIAL), mean, teams, links.get(league, 0), se is not None and se <= MEASURED_SE, run, se,
+                 tiers.get(league, 1), CONFEDERATIONS.get(countries.get(league)), movers.get(league, 0),
+                 "women" if league in women else "men"),
             )
         # The same level season by season (the site's league strength index and its trend).
         conn.execute("DELETE FROM agg.league_level_seasons")
@@ -468,8 +773,10 @@ def refresh_elo(conn):
                 (league, season, mean, teams, run),
             )
         conn.execute(
-            "UPDATE agg.power_runs SET seed_rounds=%s, link_matches=%s, level_prior_matches=%s WHERE id=%s",
-            (rounds, LINK_MATCHES, LEVEL_PRIOR_MATCHES, run),
+            """UPDATE agg.power_runs SET seed_rounds=%s, level_exchange=%s, tier_gap=%s, tier_gap_sd=%s, top_sd=%s, pair_sd=%s,
+                 dispersion=%s, measured_se=%s WHERE id=%s""",
+            (settings["rounds"], settings.get("exchange"), settings.get("tier_gap"), settings.get("tier_gap_sd"), settings.get("top_sd"),
+             settings.get("pair_sd"), settings.get("dispersion"), MEASURED_SE, run),
         )
         _publish(conn, run, "elo", None, len(rows) // 2)
     return len(rows) // 2
@@ -788,11 +1095,12 @@ def score_of(index, *, scale=SCORE_SCALE):
     return 100 / (1 + 10 ** (-index / scale))
 
 
-def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA, linked=None, top=None, share=LEVEL_SHARE):
+def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA, linked=None, top=None, share=LEVEL_SHARE, women=None):
     """contributions: {player: [(role, minutes, C, team, level)]} -> ({player: row}, settings)
     (§ 8). `level` is the club-level part of the match, (t / 90) · (Elo_own − mean) / 400,
-    or None; `linked` the teams whose league is on the common scale and `top` those of a
-    top division (None: every team)."""
+    or None; `linked` the teams whose league is measured (ranked) and `top` those of a top
+    division (None: every team); `women` the teams of a women's league, scored among
+    themselves (their own κ and spreads) and never ranked with the others."""
     out = {}
     for player, items in contributions.items():
         minutes = sum(i[1] for i in items)
@@ -802,19 +1110,26 @@ def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA, linked=
             by_team[team] += m
         role = max(sorted(by_role), key=lambda x: by_role[x])
         team = max(sorted(by_team, key=str), key=lambda x: by_team[x])
+        universe = "women" if women and team in women else "men"
         out[player] = {"role": role, "team": team, "matches": len(items), "minutes": minutes,
                        "own": sum(i[2] for i in items), "level": sum(i[4] or 0.0 for i in items if len(i) > 4),
-                       "linked": linked is None or team in linked, "top_division": top is None or team in top}
+                       "linked": (linked is None or team in linked) and universe == "men",
+                       "top_division": (top is None or team in top) and universe == "men", "universe": universe}
     threshold = eligibility_minutes([r["minutes"] for r in out.values()], eligibility=eligibility)
     for r in out.values():
         r["eligible"] = r["minutes"] >= threshold and r["minutes"] > 0
-    ranked = [r for r in out.values() if r["eligible"] and r["linked"]]
-    kappa = level_weight([(r["role"], 90 * r["own"] / (r["minutes"] + lam), 90 * r["level"] / (r["minutes"] + lam)) for r in ranked], share=share)
-    for r in out.values():
-        r["total"] = r["own"] + kappa * r["level"]
-        r["rate"] = 90 * r["total"] / (r["minutes"] + lam)
-    for role in {r["role"] for r in out.values()}:
-        group = [r for r in out.values() if r["role"] == role and r["eligible"]]
+    weight_of = {}
+    for universe in sorted({r["universe"] for r in out.values()}):
+        members = [r for r in out.values() if r["universe"] == universe]
+        ranked = [r for r in members if r["eligible"] and r["linked"]] or [r for r in members if r["eligible"]]
+        weight_of[universe] = level_weight(
+            [(r["role"], 90 * r["own"] / (r["minutes"] + lam), 90 * r["level"] / (r["minutes"] + lam)) for r in ranked], share=share)
+        for r in members:
+            r["total"] = r["own"] + weight_of[universe] * r["level"]
+            r["rate"] = 90 * r["total"] / (r["minutes"] + lam)
+    kappa = weight_of.get("men", 0.0)
+    for role, universe in {(r["role"], r["universe"]) for r in out.values()}:
+        group = [r for r in out.values() if r["role"] == role and r["universe"] == universe and r["eligible"]]
         if not group:
             continue
         totals, rates = [r["total"] for r in group], [r["rate"] for r in group]
@@ -835,25 +1150,27 @@ def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA, linked=
         previous = (key, r["rank"])
         role_seen[r["role"]] += 1
         r["role_rank"] = role_seen[r["role"]]
-    return out, {"eligibility": threshold, "level_weight": kappa}
+    return out, {"eligibility": threshold, "level_weight": kappa, "level_weights": weight_of}
 
 
 def team_leagues(rows, leagues):
-    """The teams of a league on the common scale, and those of a top division: a team's
-    league of the year is the league (`leagues`: {competition: (on the scale, top)}) it
-    played most player-matches in; the European competitions are no league."""
+    """The teams of a measured league, those of a top division and those of a women's league:
+    a team's league of the year is the league (`leagues`: {competition: (measured, top,
+    women)}) it played most player-matches in; the European competitions are no league."""
     played = defaultdict(lambda: defaultdict(int))
     for r in rows:
         if r.get("competition_id") in leagues:
             played[r["team_id"]][r["competition_id"]] += 1
-    linked, top = set(), set()
+    linked, top, women = set(), set(), set()
     for team, counts in played.items():
-        on_scale, is_top = leagues[max(sorted(counts), key=lambda c: counts[c])]
+        on_scale, is_top, is_women = (tuple(leagues[max(sorted(counts), key=lambda c: counts[c])]) + (False,))[:3]
         if on_scale:
             linked.add(team)
         if is_top:
             top.add(team)
-    return linked, top
+        if is_women:
+            women.add(team)
+    return linked, top, women
 
 
 def level_centres(rows):
@@ -909,11 +1226,10 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
             cur.execute(PLAYER_MATCHES, ([season, season + 1], start, end))
             names = [d.name for d in cur.description]
             rows = [{k: (_num(v) if k not in _KEPT else v) for k, v in zip(names, row)} for row in cur]
-        # The leagues: on the common scale or not, and the highest of each country on it.
-        leagues = {league: (on_scale, is_top) for league, on_scale, is_top in conn.execute(
-            """SELECT l.competition_id, l.linked,
-                      l.linked AND l.level = max(l.level) FILTER (WHERE l.linked) OVER (PARTITION BY coalesce(c.country_code, 'competition ' || c.id))
-               FROM agg.league_levels l JOIN core.competitions c ON c.id = l.competition_id"""
+        # The leagues: measured or not, a top division or not (TIERS), a women's league or not.
+        leagues = {league: (on_scale, is_top, women) for league, on_scale, is_top, women in conn.execute(
+            """SELECT l.competition_id, l.linked, coalesce(l.tier, 1) = 1 AND l.universe = 'men', l.universe = 'women'
+               FROM agg.league_levels l"""
         ).fetchall()}
         weights = match_stakes(conn, [season, season + 1])
     # 2. Compute, outside any transaction.
@@ -923,7 +1239,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     rows = assign_roles(rows)
     refs = references(rows)
     count = len(rows)
-    linked, top = team_leagues(rows, leagues)
+    linked, top, women = team_leagues(rows, leagues)
     centre = level_centres(rows)
     matches = []
     detailed = defaultdict(list)
@@ -938,7 +1254,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
         rows[i] = None  # the match's row is its tuple from here on: the year is not held twice
     del rows
     contributions = {p: [(role, m, c, team, level) for role, m, c, team, _, level in items] for p, items in detailed.items()}
-    scored, settings = season_scores(contributions, eligibility=eligibility, linked=linked, top=top)
+    scored, settings = season_scores(contributions, eligibility=eligibility, linked=linked, top=top, women=women)
     blocks, roles = season_details(detailed, scored)
     # 3. Write, in one transaction: the season's ranking changes at once or not at all.
     with conn.transaction():
@@ -947,7 +1263,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
             """UPDATE agg.power_runs SET eligibility_minutes=%s, eligibility_share=%s, level_share=%s, level_weight=%s, score_scale=%s,
                  year_start=%s, year_end=%s, linked_leagues=%s WHERE id=%s""",
             (settings["eligibility"], ELIGIBILITY_SHARE, LEVEL_SHARE, settings["level_weight"], SCORE_SCALE, start, end - timedelta(days=1),
-             sum(1 for on_scale, _ in leagues.values() if on_scale), run),
+             sum(1 for on_scale, *_ in leagues.values() if on_scale), run),
         )
         conn.execute("DELETE FROM agg.player_power WHERE season_id=%s", (season,))
         conn.execute("DELETE FROM agg.player_power_matches WHERE season_id=%s", (season,))

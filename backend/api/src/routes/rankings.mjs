@@ -208,20 +208,25 @@ async function leagueLevels(read, params) {
     if (!history.has(s.competition_key)) history.set(s.competition_key, []);
     history.get(s.competition_key).push({ season: s.season, level: round(s.level, 1), teams: s.teams });
   }
-  // The level shown is that of the league's last season (the clubs that play it now); the
-  // Elo's own level, over every club that started in the league, decides the common scale.
+  // The level shown is that of the league's last season (the clubs that play it now). Every
+  // men's league has a level on the common scale (power-ranking-v4) and a rank; one whose
+  // standard error is above the measured bound (onScale false) is provisional, its margin
+  // the error. A women's league is a universe of its own: a level that says nothing against
+  // the others, no rank.
   const leagues = rows.map((r) => {
     const own = history.get(r.competition_key) ?? [];
+    const women = r.universe === "women";
     return { id: r.competition_id, name: r.name, country: r.country ?? null, level: own.at(-1)?.level ?? round(r.level, 1),
-      onScale: r.linked, teams: own.at(-1)?.teams ?? r.teams, links: r.links, seasons: own };
-  }).sort((a, b) => Number(b.onScale) - Number(a.onScale) || b.level - a.level || a.id.localeCompare(b.id));
+      onScale: r.linked, provisional: !women && !r.linked, margin: women || r.level_se == null ? null : Math.round(r.level_se),
+      universe: r.universe ?? "men", teams: own.at(-1)?.teams ?? r.teams, links: r.links, seasons: own };
+  }).sort((a, b) => Number(a.universe !== "men") - Number(b.universe !== "men") || b.level - a.level || a.id.localeCompare(b.id));
   let rank = 0;
   return {
     method: { version: rows[0].method_version, computedAt: iso(rows[0].computed_at) },
     onScale: leagues.filter((l) => l.onScale).length,
-    // A league off the common scale has a level of its own, which says nothing against the others: no rank.
-    leagues: leagues.map(({ id, name, country, level, onScale, teams, links, seasons: own }) => (
-      { id, name, country, level, rank: onScale ? ++rank : null, onScale, teams, links, seasons: own })),
+    ranked: leagues.filter((l) => l.universe === "men").length,
+    leagues: leagues.map(({ id, name, country, level, onScale, provisional, margin, universe, teams, links, seasons: own }) => (
+      { id, name, country, level, rank: universe === "men" ? ++rank : null, onScale, provisional, margin, universe, teams, links, seasons: own })),
   };
 }
 

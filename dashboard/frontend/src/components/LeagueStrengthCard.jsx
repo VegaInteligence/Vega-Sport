@@ -61,11 +61,19 @@ export default function LeagueStrengthCard({ strength }) {
           <p className="competition-highlights-caption">
             Force moyenne de ses clubs, sur une échelle commune aux championnats.
           </p>
+          {strength.provisional && (
+            <p className="competition-highlights-caption">
+              Niveau provisoire{strength.margin != null ? `, à ± ${number(strength.margin)} points près` : ""} : ses clubs ont joué
+              peu de matchs contre ceux des autres championnats, il tient aussi compte des joueurs venus d’autres championnats ou
+              partis vers eux et de sa division.
+            </p>
+          )}
         </>
       ) : (
         <p className="competition-highlights-empty">
-          Ses clubs ont joué trop peu de matchs contre ceux des autres championnats pour le situer sur
-          l’échelle commune.
+          {strength.women
+            ? "Championnat féminin : ses clubs ne rencontrent pas ceux des autres championnats, son niveau ne se compare pas au leur."
+            : "Ses clubs ont joué trop peu de matchs contre ceux des autres championnats pour le situer sur l’échelle commune."}
         </p>
       )}
     </Card>

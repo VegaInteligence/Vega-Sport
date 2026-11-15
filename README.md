@@ -60,7 +60,7 @@ Les formules sont documentées telles que le code les applique dans [docs/calcul
 
 - **Saisons** de joueur et de club, états de jeu, classements, xPts, cohortes, centiles et rangs, rôles et indices.
 - **Classements de puissance** ([méthode](docs/METHODE_CLASSEMENT_BALLON_D_OR.md), [audit et versions](docs/calculs/05-joueurs/08-audit-classement-puissance.md)), version 3 depuis le 12 novembre 2026 :
-  - clubs et sélections : un Elo sur tous les matchs, les clubs entrant au niveau de leur championnat, sur une échelle commune aux championnats reliés par assez de matchs (41 sur 72) ;
+  - clubs et sélections : un Elo sur tous les matchs, les clubs entrant au niveau de leur championnat ; depuis le 15 novembre 2026, chaque championnat a un niveau et son erreur-type (matchs entre championnats, transferts, division et confédération), 52 championnats d'hommes sur 71 mesurés à 60 points près ;
   - joueurs : contribution par match relative au rôle et à l'adversaire, niveau du club, année du trophée du 1ᵉʳ août au 31 juillet, Coupe du monde comprise ;
   - enjeu : un match compte pour le prestige de sa compétition × son tour (championnat 1, Ligue des champions 1,15, sa finale 1,32, finale de Coupe du monde 1,50).
 - **Niveau des championnats** : la force moyenne des clubs de chaque championnat, saison par saison.
@@ -97,7 +97,7 @@ Les ressources AWS gardent leurs noms d'origine (`vega-v2-…`). Procédure, rô
 - En service depuis le 14 novembre : forme récente dans le pronostic d'un match (version 2), équipe qui mène dans les probabilités minute par minute d'un match (version 2), tirs cadrés subis sur la page d'un gardien, chiffres de pressing et de territoire sur la fiche d'un match quand la source les envoie, Coupes du monde des clubs 2021 à 2023 dans le sélecteur, sélections des sources de coupes marquées comme telles.
 - Mesuré et laissé de côté ([détail](docs/calculs/07-limites/02-points-d-attention.md)) : courbe d'âge, jours de repos dans le pronostic, règle unique des zéros omis.
 - Ajouté le 14 novembre au soir : les coupes continentales et les tournois de sélections des autres confédérations sur la page « Coupes » (les coupes de clubs restent hors des forces, [pourquoi](docs/calculs/05-joueurs/08-audit-classement-puissance.md)), la courbe de probabilités d'un match en cours prête à lire un fournisseur de direct, le flux de l'UEFA écarté (ses conditions interdisent la collecte).
-- Suites de tests au 14 novembre : 269 tests Python, 141 tests de l'API, 562 tests du site, toutes vertes.
+- Suites de tests au 15 novembre : 271 tests Python, 142 tests de l'API, 563 tests du site, toutes vertes.
 
 ## Organisation du dépôt
 
