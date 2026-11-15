@@ -7,6 +7,7 @@ country and an exact normalized name or alias that designates one team; otherwis
 UEFA club becomes its own team, linked later by reconcile_teams (never a fuzzy match).
 """
 
+from collections import defaultdict
 from datetime import timedelta
 from urllib.parse import urlencode
 
@@ -211,8 +212,10 @@ NOT_A_COUNTRY = ("UEFA", "INT", "INT-2", "FIFA", "EUR", "WORLD")
 def club_countries(conn):
     """A PitchAPI club the source gives no country takes the country of the last domestic
     competition it played (main reads a club's country the same way); the UEFA links need
-    it. Returns the clubs given a country."""
-    return conn.execute(
+    it. One PitchAPI knows from European competitions alone (its league is not in the base:
+    Ferencváros, Shakhtar Donetsk, Pafos) takes the country of the UEFA club of its name, the
+    club-form words aside, when exactly one UEFA club has it. Returns the clubs given a country."""
+    written = conn.execute(
         """UPDATE core.teams t SET country_code = x.country, updated_at = now()
            FROM (SELECT t2.id, (SELECT c.country_code FROM core.matches m
                    JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL AND cs.cup_key IS NULL
@@ -226,6 +229,28 @@ def club_countries(conn):
            WHERE t.id = x.id AND x.country IS NOT NULL""",
         (list(NOT_A_COUNTRY),),
     ).rowcount
+    from .identity import club_parts
+
+    by_name = defaultdict(set)
+    for name, country in conn.execute(
+        """SELECT n.name, t.country_code FROM core.teams t
+           CROSS JOIN LATERAL (SELECT t.name UNION SELECT e.name FROM core.entity_names e WHERE e.entity_type = 'team' AND e.entity_id = t.id) n(name)
+           WHERE t.country_code IS NOT NULL AND t.is_national IS NOT TRUE AND t.merged_into IS NULL
+             AND EXISTS (SELECT 1 FROM core.provider_ids p WHERE p.entity_type = 'team' AND p.entity_id = t.id AND p.provider = 'uefa')
+             AND NOT EXISTS (SELECT 1 FROM core.provider_ids p WHERE p.entity_type = 'team' AND p.entity_id = t.id AND p.provider = 'pitchapi')"""
+    ).fetchall():
+        key = club_parts(name)[0]
+        if key:
+            by_name[key].add(country)
+    for team, name in conn.execute(
+        """SELECT t.id, t.name FROM core.teams t
+           WHERE t.country_code IS NULL AND t.is_national IS NOT TRUE AND t.merged_into IS NULL
+             AND EXISTS (SELECT 1 FROM core.provider_ids p WHERE p.entity_type = 'team' AND p.entity_id = t.id AND p.provider = 'pitchapi')"""
+    ).fetchall():
+        countries = by_name.get(club_parts(name)[0], set())
+        if len(countries) == 1:
+            written += conn.execute("UPDATE core.teams SET country_code = %s, updated_at = now() WHERE id = %s", (countries.pop(), team)).rowcount
+    return written
 
 
 def reconcile_teams(conn):
