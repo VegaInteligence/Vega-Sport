@@ -21,14 +21,16 @@ def normalize(name):
 
 
 def adapters():
-    from . import cups, curated, fifa, honours, open_matchday, sportsapi, sportscore, uefa, wikidata
+    from . import cups, curated, fifa, honours, odds, open_matchday, sportsapi, sportscore, uefa, wikidata
 
     # Keys are core.provider values (ops.source_runs.source). Curated names first: the
     # UEFA links read the reviewed aliases.
     return {"vega": curated, "uefa": uefa, "fifa": fifa, "sportsapi": sportsapi, "sportscore": sportscore, "wikidata": wikidata, "wikimedia": honours,
             # Cup editions: one adapter per source provider of ops.source_runs.
             "openfootball": cups.For("open-cups"), "openligadb": cups.For("openligadb"),
-            "international_results": cups.For("nations-results"), "open_matchday": open_matchday}
+            "international_results": cups.For("nations-results"), "open_matchday": open_matchday,
+            # Bookmakers' odds of the coming matches (needs V2_ODDS_API_KEY).
+            "oddsapi": odds}
 
 
 # A failed scope is tried again after this delay (or its period, if shorter), not at every round.

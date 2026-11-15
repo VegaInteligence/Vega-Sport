@@ -170,3 +170,14 @@ Le niveau des adversaires ne dit rien du club lui-même : deux clubs au même ca
 - Les forces de deux championnats hors de l'échelle commune ne se comparent pas ; cela ne gêne pas un championnat national, dont tous les clubs sont sur la même échelle.
 - La forme récente et les compositions ne déplacent que le pronostic d'un match ; la projection d'un championnat et les points attendus de la colonne « Adv. à venir » au-delà de quatorze jours lisent les forces seules.
 - Calculé avec les modèles quotidiens de la saison (après l'Elo) : au plus tard une fois par jour, et dans l'heure qui suit un match terminé.
+
+## Les cotes des bookmakers
+
+Pour un match à venir, la fiche montre les cotes « résultat final » des bookmakers agréés en France (1, N, 2), lues une fois par jour ([odds.py](../../../backend/vega/sources/odds.py)).
+
+- **Chances implicites d'un bookmaker** : $p_i = \dfrac{1/c_i}{\sum_j 1/c_j}$ pour chaque issue $i$ de cote $c_i$. La somme $\sum_j 1/c_j - 1$ est sa **marge** ; la diviser l'enlève.
+- **Chances du marché** : la moyenne de ces chances sur les bookmakers.
+- **Cote juste de Vega** : $1 / p$, la cote sans marge que donnerait le pronostic Vega (§ ci-dessus). Elle se lit à côté des cotes des bookmakers ; le site ne recommande aucun pari.
+- **Ouverture** : la première cote lue de chaque bookmaker reste en mémoire, pour voir comment elle a bougé.
+- Le message de prévention exigé en France accompagne chaque affichage de cotes.
+

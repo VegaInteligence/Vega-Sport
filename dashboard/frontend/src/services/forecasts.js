@@ -192,3 +192,17 @@ export function probabilityChart(answer, frame = CHART) {
     frame,
   };
 }
+
+/** A coming match's bookmakers' odds and Vega's fair odds (/api/forecasts/odds), or null without any. */
+export function useMatchOdds(matchId, enabled = true) {
+  const on = Boolean(enabled && /^m_/.test(matchId || ""));
+  const resource = useResource(
+    `match-odds:${matchId || "none"}`,
+    () => json("/api/forecasts/odds?" + new URLSearchParams({ match: matchId })).catch(none),
+    on,
+  );
+  return on && !resource.error ? (resource.value ?? null) : null;
+}
+
+/** Odds as the site writes them: two decimals with a comma; "—" for none. */
+export const oddsText = (value) => (Number.isFinite(value) ? value.toFixed(2).replace(".", ",") : "—");

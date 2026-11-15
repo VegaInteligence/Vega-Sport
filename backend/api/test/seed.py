@@ -256,6 +256,10 @@ def main(dsn):
     if pending:
         x("""INSERT INTO agg.match_forecasts(match_id,season_id,home_win,draw,away_win,home_goals,away_goals,likely_home,likely_away,home_elo,away_elo,model_id)
              VALUES (%s,2025,0.5123,0.2501,0.2376,1.62,1.04,1,0,1540,1490,%s)""", (pending[0], model))
+        # Two bookmakers' odds of that match (111): one moved since its opening line.
+        x("""INSERT INTO core.match_odds(season_id,match_id,bookmaker,title,home,draw,away,first_home,first_draw,first_away,updated_at,fetched_at)
+             VALUES (2025,%(m)s,'betclic_fr','Betclic',2.00,3.40,3.50,2.10,3.30,3.40,'2025-09-06T10:00Z','2025-09-06T10:05Z'),
+                    (2025,%(m)s,'winamax_fr','Winamax',1.95,3.35,3.60,1.95,3.35,3.60,'2025-09-06T09:00Z','2025-09-06T10:05Z')""", {"m": pending[0]})
     # The same forecast read with the two confirmed line-ups (091), and a finished match that was forecast with its own.
     lineup_forecast = """INSERT INTO agg.match_lineup_forecasts(match_id, season_id, home_win, draw, away_win, home_goals, away_goals, likely_home, likely_away,
                            home_elo, away_elo, home_deviation, away_deviation, elo_per_unit, first_computed_at, computed_at)

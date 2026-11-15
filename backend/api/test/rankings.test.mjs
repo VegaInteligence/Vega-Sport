@@ -117,6 +117,17 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   assert.equal((await get("/api/rankings/round?competition=l_3FJFUl&season=2025/2026&round=w2025-09-02")).response.status, 404); // still open
   assert.equal((await get("/api/rankings/round?competition=l_3FJFUl&season=2025/2026&round=x1")).response.status, 400);
   assert.equal((await get("/api/rankings/rounds?competition=l_3FJFUl&season=2024/2025")).response.status, 404);
+  // A coming match's odds: each bookmaker (its opening line, its margin), the market's consensus, the best prices, Vega's forecast and fair odds.
+  const odds = (await get("/api/forecasts/odds?match=m_aaaaa6")).body;
+  assert.deepEqual(odds.bookmakers.map((b) => [b.name, b.home, b.draw, b.away, b.opening.home]), [["Betclic", 2, 3.4, 3.5, 2.1], ["Winamax", 1.95, 3.35, 3.6, 1.95]]);
+  const chances = (h, d, a) => [1 / h, 1 / d, 1 / a].map((x, _, all) => x / all.reduce((s, y) => s + y, 0));
+  const [bh] = chances(2, 3.4, 3.5), [wh] = chances(1.95, 3.35, 3.6);
+  assert.ok(Math.abs(odds.market.home - (bh + wh) / 2) < 1e-4);
+  assert.deepEqual(odds.best, { home: 2, draw: 3.4, away: 3.6 });
+  assert.ok(Math.abs(odds.bookmakers[0].margin - (1 / 2 + 1 / 3.4 + 1 / 3.5 - 1)) < 1e-4);
+  assert.deepEqual([odds.vega.home, odds.vega.fair.home], [0.5123, 1.95]);
+  assert.equal((await get("/api/forecasts/odds?match=m_aaaaa1")).response.status, 404);
+  assert.equal((await get("/api/forecasts/odds?match=x")).response.status, 400);
   // The whole ranking (the Power Ranking page): every ranked player of the universe, a page at a time, by role if asked.
   const whole = (await get("/api/rankings/power?kind=players&season=2025/2026&scope=all&limit=1")).body;
   assert.deepEqual([whole.total, whole.page, whole.universe, whole.rows.map((r) => [r.rank, r.playerId, r.provisionalReason])], [2, 1, "men", [[1, "p_aaaab1", null]]]);
