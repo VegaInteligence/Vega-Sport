@@ -7,24 +7,38 @@
 import { useResource, json } from "./resources.js";
 import { isNumber } from "./format.js";
 
+/** A player row's player id: an appearance's own id, or a leader's `playerId` (its id is the match's and the player's). */
+export const playerOf = (row) => row?.playerId ?? row?.id;
+
 /**
  * The match's best players (at most `count`): by the source's rating, as before; in a match the
- * source rated no one (some leagues have no ratings), by Vega's grade, best rank first.
+ * source rated no one (some leagues have no ratings), by Vega's grade, best rank first, each row
+ * built from the grade itself (its player's name, photo, team, minutes, goals) with the id of an
+ * appearance of `match` (« match:player »), as the rows it stands in for.
  */
-export function leadingPlayers(pool, grades, count = 5) {
-  const played = (pool || []).filter((r) => r.minutes > 0);
-  const rated = played.filter((r) => isNumber(r.rating));
+export function leadingPlayers(pool, grades, { match, count = 5 } = {}) {
+  const rated = (pool || []).filter((r) => r.minutes > 0 && isNumber(r.rating));
   if (rated.length) return rated.slice(0, count);
-  return played
-    .filter((r) => grades?.get(r.id))
-    .sort((a, b) => grades.get(a.id).rank - grades.get(b.id).rank)
-    .slice(0, count);
+  return [...(grades || new Map()).entries()]
+    .filter(([, g]) => g.minutes > 0 && g.name)
+    .sort(([, a], [, b]) => a.rank - b.rank)
+    .slice(0, count)
+    .map(([playerId, g]) => ({
+      id: match ? `${match}:${playerId}` : playerId, playerId, name: g.name, imageUrl: g.imageUrl, team: g.team,
+      teamId: g.teamId, minutes: g.minutes, goals: g.goals, assists: g.assists, rating: null,
+    }));
 }
 
-/** { playerId → { grade, rank } } from the route's body; an empty map without one. */
+/** { playerId → { grade, rank, and the player's appearance } } from the route's body, the grades shown only; an empty map without one. */
 export function gradesOf(body) {
   const out = new Map();
-  for (const g of body?.grades || []) if (g.grade != null) out.set(g.playerId, { grade: g.grade, rank: g.rank });
+  for (const g of body?.grades || []) {
+    if (g.grade == null) continue;
+    out.set(g.playerId, {
+      grade: g.grade, rank: g.rank, name: g.name ?? null, imageUrl: g.imageUrl ?? null, team: g.team ?? null,
+      teamId: g.teamId ?? null, minutes: g.minutes, goals: g.goals ?? null, assists: g.assists ?? null,
+    });
+  }
   return out;
 }
 
