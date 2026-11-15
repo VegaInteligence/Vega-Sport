@@ -53,6 +53,27 @@ export function marketValueLabel(euros) {
   return `${Math.round(euros / 1e3).toLocaleString("fr-FR")} k€`;
 }
 
+export function playerContractFact(record) {
+  const active = isoDate(record?.contract_until || record?.contract_expires);
+  if (active)
+    return {
+      label: "Fin de contrat",
+      value: `${String(active.month).padStart(2, "0")}/${active.year}`,
+      note: [frenchDate(active), text(record.contract_team)]
+        .filter(Boolean)
+        .join(" · "),
+    };
+  const expiry = isoDate(record?.observed_contract_until);
+  const observed = isoDate(record?.observed_contract_on);
+  const club = text(record?.observed_contract_team);
+  if (!expiry || !observed || !club) return null;
+  return {
+    label: "Échéance relevée",
+    value: frenchDate(expiry),
+    note: `${club} · Relevé du ${frenchDate(observed)}`,
+  };
+}
+
 /**
  * Identity and market facts published with the player record (Transfermarkt
  * fields such as birth date, contract and market value). Absent fields are
@@ -61,7 +82,6 @@ export function marketValueLabel(euros) {
 export function playerFacts(record, today = new Date()) {
   if (!record || typeof record !== "object") return { facts: [], value: null };
   const birth = isoDate(record.birth_date || record.date_of_birth);
-  const contract = isoDate(record.contract_until || record.contract_expires);
   const height = positive(record.height_cm);
   const foot =
     FEET[record.preferred_foot] ||
@@ -86,13 +106,7 @@ export function playerFacts(record, today = new Date()) {
       label: "Nationalité",
       value: text(record.nationality),
     },
-    contract && {
-      label: "Fin de contrat",
-      value: `${String(contract.month).padStart(2, "0")}/${contract.year}`,
-      note: [frenchDate(contract), text(record.contract_team)]
-        .filter(Boolean)
-        .join(" · "),
-    },
+    playerContractFact(record),
     text(record.position_label) && {
       label: "Poste",
       value: text(record.position_label),

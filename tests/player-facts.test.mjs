@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { playerFacts } from "../dashboard/frontend/src/services/player-bio.js";
+import { playerContractFact, playerFacts } from "../dashboard/frontend/src/services/player-bio.js";
 
 const today = new Date("2026-11-12T12:00:00Z");
 
@@ -18,4 +18,22 @@ test("a player's published birth date and height become his age and size", () =>
 test("a profile without these facts publishes none", () => {
   assert.deepEqual(playerFacts({ name: "Sans Faits" }, today).facts, []);
   assert.deepEqual(playerFacts({ birth_date: "1998", height_cm: 0 }, today).facts, []);
+});
+
+test("a dated expiry is identified as an observation and a confirmed contract takes precedence", () => {
+  const observed = {
+    observed_contract_until: "2027-06-30",
+    observed_contract_team: "Former Club",
+    observed_contract_on: "2026-07-06",
+  };
+  assert.deepEqual(playerContractFact(observed), {
+    label: "Échéance relevée",
+    value: "30/06/2027",
+    note: "Former Club · Relevé du 06/07/2026",
+  });
+  assert.deepEqual(
+    playerContractFact({ ...observed, contract_until: "2031-06-30", contract_team: "Barcelona" }),
+    { label: "Fin de contrat", value: "06/2031", note: "30/06/2031 · Barcelona" },
+  );
+  assert.equal(playerContractFact({ observed_contract_until: observed.observed_contract_until }), null);
 });

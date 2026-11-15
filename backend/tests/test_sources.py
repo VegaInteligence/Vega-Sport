@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega import sources
-from vega.sources import SourceError, cups, curated, fifa, honours, normalize, player_facts, sportscore, uefa, wikidata
+from vega.sources import SourceError, cups, curated, fifa, honours, normalize, player_fact_snapshot, player_facts, sportscore, uefa, wikidata
 sys.path.insert(0, str(ROOT / "tests"))
 from cup_samples import SAMPLES
 
@@ -273,7 +273,7 @@ class UefaTest(unittest.TestCase):
         x("INSERT INTO core.players(id, name) VALUES (50, 'Cristiano Ronaldo'), (51, 'Cristiano Ronaldo')")
         x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player','pitchapi','p_3yEwhj',50), ('player','pitchapi','p_other1',51)")
         x("INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source) VALUES ('player', 50, 'Old', 'old', 'alias', 'vega'), ('player', 50, 'CR', 'cr', 'alias', 'wikidata')")
-        self.assertEqual(sources.run_due(self.db, None, NOW, names={"vega"}), {("vega", scope): "ok" for scope in ("player_aliases", "player_facts", "club_aliases", "stadium_plans", "league_zones", "cup_logos", "sportscore_ids", "country_names", "national_teams", "team_identity", "editorial_lists")})
+        self.assertEqual(sources.run_due(self.db, None, NOW, names={"vega"}), {("vega", scope): "ok" for scope in ("player_aliases", "player_facts", "transfermarkt:2026-07-06", "club_aliases", "stadium_plans", "league_zones", "cup_logos", "sportscore_ids", "country_names", "national_teams", "team_identity", "editorial_lists")})
         names = self.db.execute("SELECT entity_id, normalized, source::text FROM core.entity_names WHERE entity_type='player' ORDER BY 1, 2").fetchall()
         # The homonym gets nothing; the removed Vega alias goes; Wikidata's stays.
         self.assertEqual(names, [(50, "cr", "wikidata"), (50, "cr7", "vega")])
@@ -296,6 +296,22 @@ class UefaTest(unittest.TestCase):
             self.assertEqual(
                 x("SELECT preferred_foot, contract_until, contract_team FROM api.player_profiles WHERE player_id=340").fetchone(),
                 ("left", "2031-06-30", "Barcelona"),
+            )
+
+    def test_bulk_player_snapshot_writes_under_the_production_collect_role(self):
+        x = self.db.execute
+        with self.db.transaction(force_rollback=True):
+            x("INSERT INTO core.players(id,name,birth_date) VALUES (341,'Lionel Messi','1987-06-24')")
+            x("SET LOCAL ROLE vega_collect")
+            count, unmatched = player_fact_snapshot.run(self.db, None, "transfermarkt:2026-07-06", NOW)
+            self.assertEqual(count, 2)  # one source observation and one canonical player
+            self.assertGreater(unmatched, 50000)
+            x("RESET ROLE")
+            self.assertEqual(
+                x("""SELECT p.preferred_foot::text, o.source_player_id, o.observed_on::text
+                     FROM core.players p JOIN core.player_fact_observations o ON o.player_id=p.id
+                     WHERE p.id=341""").fetchone(),
+                ("left", "28003", "2026-07-06"),
             )
 
     def test_fifa_editions(self):
