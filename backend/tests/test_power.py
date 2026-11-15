@@ -6,6 +6,8 @@ from pathlib import Path
 import random
 import sys
 import unittest
+from math import sqrt
+from statistics import NormalDist
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from vega import power
@@ -288,7 +290,8 @@ class RoleTest(unittest.TestCase):
         leagues = {1: (True, True), 2: (True, False), 3: (False, False)}
         rows = [{"team_id": "A", "competition_id": 1}] * 3 + [{"team_id": "A", "competition_id": 9}] * 5  # 9: a European competition
         rows += [{"team_id": "B", "competition_id": 2}] * 2 + [{"team_id": "C", "competition_id": 3}] * 2 + [{"team_id": "D", "competition_id": 9}]
-        self.assertEqual(power.team_leagues(rows, leagues), ({"A", "B"}, {"A"}, set()))
+        # Clubs: the teams of a league, measured or not (D plays a European competition only).
+        self.assertEqual(power.team_leagues(rows, leagues), ({"A", "B"}, {"A"}, set(), {"A", "B", "C"}))
 
 
 class OmittedZeroTest(unittest.TestCase):
@@ -382,15 +385,24 @@ class ScoreTest(unittest.TestCase):
         self.assertEqual(settings, {"eligibility": 900.0, "level_weight": 0.0, "level_weights": {"men": 0.0}})  # no club strength known: no level
         self.assertAlmostEqual(out[1]["rate"], 90 * 4.0 / (1800 + 450))
         self.assertFalse(out[3]["eligible"])
-        self.assertNotIn("score", out[3])
+        self.assertNotIn("total_percentile", out[3])  # percentiles stay among the eligible
         self.assertEqual((out[1]["total_percentile"], out[2]["total_percentile"]), (75.0, 25.0))
         # Two players of a role stand one standard deviation either side of its mean on both measures.
         self.assertAlmostEqual(out[1]["index"], 1.0)
         self.assertAlmostEqual(out[2]["index"], -1.0)
         self.assertAlmostEqual(out[1]["score"], 100 / (1 + 10 ** (-1 / 4)))
         self.assertEqual((out[4]["index"], out[4]["score"]), (0.0, 50.0))  # alone in his role
-        self.assertEqual([out[p]["rank"] for p in (1, 4, 2)], [1, 2, 3])
-        self.assertEqual([out[p]["role_rank"] for p in (1, 2, 4)], [1, 2, 1])
+        # Under the bar: from the role's floor (its 10th percentile, here the lower of two) to his own
+        # index, in proportion to his minutes. 200 of 900: two ninths of the way.
+        own = 0.75 * (9.0 - 3.0) / 1.0 + 0.25 * (90 * 9.0 / 650 - 0.12) / 0.04
+        self.assertAlmostEqual(out[3]["index"], -1.0 + 200 / 900 * (own + 1.0))
+        self.assertAlmostEqual(out[3]["score"], power.score_of(out[3]["index"]))
+        # Everyone is ranked; an extreme short run (nine times the regulars' output in a ninth of their minutes) can lead.
+        self.assertEqual([out[p]["rank"] for p in (3, 1, 4, 2)], [1, 2, 3, 4])
+        self.assertEqual([out[p]["role_rank"] for p in (3, 1, 2, 4)], [1, 2, 3, 1])
+        # A short run like the regulars' stays below them: half their rate over 100 minutes.
+        modest = power.season_scores({**contributions, 3: [("winger", 100, 0.1, 11, None)]})[0]
+        self.assertLess(modest[3]["index"], modest[2]["index"])
 
     def test_a_young_year_asks_for_half_the_most_used_player_s_minutes(self):
         self.assertEqual(power.eligibility_minutes([3000, 1200]), 900)
@@ -422,19 +434,55 @@ class ScoreTest(unittest.TestCase):
         self.assertAlmostEqual(out[1]["own"] + kappa * out[1]["level"], out[1]["total"])
         self.assertLess(out[1]["rank"], out[2]["rank"])
 
-    def test_a_league_off_the_common_scale_has_a_score_and_no_rank(self):
+    def test_a_provisional_league_s_player_is_ranked_and_out_of_the_award_race(self):
         contributions = {
             1: [("winger", 1800, 2.0, 10, None)], 2: [("winger", 1800, 1.0, 10, None)], 3: [("winger", 1800, 0.0, 10, None)],
             4: [("winger", 1800, 9.0, 20, None)],  # the best output, in a league nothing ties to the others
             5: [("winger", 1800, 3.0, 30, None)],  # on the scale, in a second division
         }
         out, _ = power.season_scores(contributions, linked={10, 30}, top={10})
-        self.assertNotIn("rank", out[4])
-        self.assertTrue(out[4]["eligible"] and out[4]["score"] > out[5]["score"])
-        self.assertEqual([out[p]["rank"] for p in (5, 1, 2, 3)], [1, 2, 3, 4])
+        # Ranked, marked provisional (linked false); the references stay those of measured leagues.
+        self.assertTrue(out[4]["eligible"] and not out[4]["linked"] and out[4]["score"] > out[5]["score"])
+        self.assertEqual([out[p]["rank"] for p in (4, 5, 1, 2, 3)], [1, 2, 3, 4, 5])
+        # A player the base knows by his national team alone has a score and no rank.
+        alone = power.season_scores(contributions, linked={10, 30}, top={10}, clubs={10, 20})[0]
+        self.assertNotIn("rank", alone[5])
+        self.assertIn("score", alone[5])
         self.assertEqual([out[p]["top_division"] for p in (1, 4, 5)], [True, False, False])
         # The award race: the ranked players of a top division, numbered in their order.
         self.assertEqual([(no, player) for no, player, _, _ in power.award_race(out)], [(1, 1), (2, 2), (3, 3)])
+
+    def test_a_match_grade_reads_the_match_alone_against_its_role(self):
+        # Reference year: wingers' full matches spread around 0 in two competitions, one wider; keepers' around 0.
+        rows = [("winger", 1, 90, c) for c in (-0.5, -0.25, 0.0, 0.25, 0.5) * 80] + [("winger", 2, 90, c) for c in (-1.0, 0.0, 1.0) * 120]
+        rows += [("goalkeeper", 1, 90, c) for c in (-2.0, -0.5, 0.0, 0.0, 0.3, 0.4) * 50] + [("winger", 1, 15, 3.0)]  # a cameo: not a reference
+        refs = power.grade_references(rows)
+        n, mean, sd = refs["roles"]["winger"]
+        self.assertEqual(n, 760)
+        # A competition's spread is drawn to its role's: n / (n + 300) of its own.
+        n2, sd2 = refs["spreads"][("winger", 2)]
+        self.assertEqual(n2, 360)
+        self.assertTrue(sd < sd2 < sqrt(sum((c - mean) ** 2 for r, comp, m, c in rows if r == "winger" and comp == 2) / 360))
+        # An ordinary match of the role is 50; the same contribution weighs less where matches spread wider.
+        self.assertAlmostEqual(power.score_of(power.match_index("winger", 1, mean, refs)), 50.0, delta=1.0)
+        one, two = power.match_index("winger", 1, 0.5, refs), power.match_index("winger", 2, 0.5, refs)
+        self.assertGreater(one, two)
+        # Above every reference match: half a match from the edge, the normal score of the best ever seen.
+        self.assertAlmostEqual(power.match_index("winger", 1, 99.0, refs), NormalDist().inv_cdf(1 - 0.5 / 760))
+        # The same share of the role's matches below is the same grade, whatever the role.
+        best_keeper = power.match_index("goalkeeper", 1, 0.45, refs)
+        self.assertAlmostEqual(best_keeper, NormalDist().inv_cdf(1 - 0.5 / 300))
+        self.assertIsNone(power.match_index("centre_back", 1, 0.5, refs))  # no reference for the role
+
+    def test_a_match_grade_is_read_against_a_finished_year_only(self):
+        from datetime import date
+
+        today = date(2026, 11, 15)  # the 2026 award year is in progress, 2025's is over
+        self.assertEqual(power.grade_reference_year(2024, today), 2024)  # over: itself
+        self.assertEqual(power.grade_reference_year(2025, today), 2025)
+        self.assertEqual(power.grade_reference_year(2026, today), 2025)  # in progress: the year before
+        self.assertIsNone(power.grade_reference_year(2027, today))  # after it: no finished year before
+        self.assertEqual(power.grade_reference_year(2026, date(2027, 8, 1)), 2026)  # over on 1 August
 
     def test_the_award_year(self):
         from datetime import date

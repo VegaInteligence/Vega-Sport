@@ -194,6 +194,10 @@ def main(dsn):
     x("""INSERT INTO agg.player_power(season_id,player_id,role,team_id,matches,minutes,total,rate,eligible,run_id,own_total,level_total)
          VALUES (2025,102,'centre_forward',2,6,540,0.6,0.055,false,%(run)s,0.55,0.05),(2024,101,'centre_forward',1,30,2400,14,0.44,true,%(run)s,12.0,2.0)""", {"run": run})
     x("INSERT INTO agg.lineup_models(version, fitted_at, matches, rated, elo_per_unit, elo_per_unit_error) VALUES ('lineup-v1', '2025-09-06T03:14:00Z', 28524, 75907, 44.8, 3.2)")
+    # Match grades (099): match 1's players, a forward's great match, a winger's ordinary one, and a
+    # keeper's ten minutes, too short and too ordinary for a grade to show.
+    x("""INSERT INTO agg.player_power_matches(season_id,match_id,player_id,team_id,role,minutes,contribution,run_id,match_index)
+         VALUES (2025,1,101,1,'centre_forward',90,1.6,%(run)s,2.5),(2025,1,104,2,'winger',90,0.0,%(run)s,0.0),(2025,1,103,4,'goalkeeper',10,0.1,%(run)s,0.4)""", {"run": run})
     # A breakout (088): the keeper below the ranking's minutes, ahead of 91.3 % of his role's regulars.
     x("INSERT INTO agg.breakout_runs(season_id, version, computed_at, candidates, flagged) VALUES (2025, 'breakout-v2', '2025-09-06T03:12:00Z', 12, 1)")
     x("INSERT INTO agg.player_breakouts(season_id, player_id, role, team_id, minutes, rate, percentile, regulars, rank) VALUES (2025, 103, 'goalkeeper', 4, 180, 0.042, 91.3, 40, 1)")

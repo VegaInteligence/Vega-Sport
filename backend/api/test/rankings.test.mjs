@@ -69,7 +69,7 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   assert.equal(Math.round(clubs.rows.reduce((s, r) => s + r.results, 0) * 2), 10); // five matches, one point shared each
   // The league strength index: every men's league ranked by its level, a provisional one with its margin, the level of each season.
   const levels = (await get("/api/rankings/leagues")).body;
-  assert.equal(levels.method.version, "power-ranking-v4");
+  assert.equal(levels.method.version, "power-ranking-v5");
   assert.ok(levels.leagues.length >= 1);
   for (const league of levels.leagues) {
     assert.match(league.id, /^l_/);
@@ -93,6 +93,14 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   // A season the player is not ranked in (the seed ranks only p_aaaab1 in 2024/2025, for his rate over two seasons).
   assert.equal((await get("/api/rankings/power/player?season=2024/2025&player=p_aaaab4")).response.status, 404);
   assert.equal((await get("/api/rankings/power/player?season=2025/2026&player=aaaab1")).response.status, 400);
+  // A match's grades: how exceptional for his role, whatever his season; ranked among those shown.
+  const graded = (await get("/api/rankings/match?match=m_aaaaa1")).body;
+  assert.deepEqual(graded.grades.map((g) => [g.playerId, g.minutes, g.grade, g.rank]), [
+    ["p_aaaab1", 90, 80.8, 1], ["p_aaaab4", 90, 50, 2], ["p_aaaab3", 10, null, null],
+  ]);
+  assert.equal((await get("/api/rankings/match?match=m_aaaaa2")).response.status, 404);
+  assert.equal((await get("/api/rankings/match?match=aaaaa1")).response.status, 400);
+  assert.equal((await get("/api/rankings/match?match=m_aaaaa1&x=1")).response.status, 400);
   assert.equal((await get("/api/rankings/power/player?season=2025/2026")).response.status, 400);
   assert.equal((await get("/api/rankings/power?kind=players&season=2025/2026&limit=1")).body.rows.length, 1);
   assert.equal((await get("/api/rankings/power?kind=nations&season=2025/2026")).response.status, 404);

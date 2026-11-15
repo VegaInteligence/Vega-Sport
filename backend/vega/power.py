@@ -85,9 +85,11 @@ period, and the comparison between roles.
 
 from collections import defaultdict
 from datetime import date, timedelta
+from bisect import bisect_left, bisect_right
 from math import exp, log, sqrt
+from statistics import NormalDist
 
-METHOD_VERSION = "power-ranking-v4"
+METHOD_VERSION = "power-ranking-v5"
 ELO_INITIAL = 1500.0
 ELO_K = 20.0
 ELO_HOME = 60.0
@@ -97,6 +99,7 @@ ELIGIBILITY_SHARE = 0.5  # of the most used player's minutes, while that is less
 TOTAL_WEIGHT = 0.75
 RATE_WEIGHT = 0.25
 LEVEL_SHARE = 0.5  # of the spread between players given to the level of their club
+BELOW_BAR_FLOOR = 0.10  # below the minutes bar, an index starts at this percentile of the role's ranked players
 SCORE_SCALE = 4.0  # standard deviations of the index for ten to one, as the Elo's 400 points
 MIN_REFERENCE = 30
 MIN_FIT = 200
@@ -1133,12 +1136,24 @@ def score_of(index, *, scale=SCORE_SCALE):
     return 100 / (1 + 10 ** (-index / scale))
 
 
-def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA, linked=None, top=None, share=LEVEL_SHARE, women=None):
+def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA, linked=None, top=None, share=LEVEL_SHARE, women=None, clubs=None):
     """contributions: {player: [(role, minutes, C, team, level)]} -> ({player: row}, settings)
     (§ 8). `level` is the club-level part of the match, (t / 90) · (Elo_own − mean) / 400,
-    or None; `linked` the teams whose league is measured (ranked) and `top` those of a top
-    division (None: every team); `women` the teams of a women's league, scored among
-    themselves (their own κ and spreads) and never ranked with the others."""
+    or None; `linked` the teams whose league is measured and `top` those of a top division
+    (None: every team); `women` the teams of a women's league, scored among themselves
+    (their own κ and spreads) and never ranked with the others; `clubs` the teams that are
+    clubs of a league (None: every team): a player the base knows by his national team
+    alone has a score and no rank.
+
+    Every player who played has a score and a rank (version 5, 15 November 2026). The
+    references (κ, the role's means and spreads) are the eligible players of measured
+    leagues', as before; an eligible player's index is unchanged. Below the minutes bar,
+    the index starts at the role's 10th percentile of ranked players (BELOW_BAR_FLOOR) and
+    reaches the player's own index at the bar: Z = Z_low + min(1, M / bar) (Z_own − Z_low).
+    A player who has hardly played sits low, never at the role's average; his own index
+    counts in proportion to his minutes. Measured on 2024/25 to 2026/27 before going live:
+    no player under 180 minutes in the top fifth, the eligible players' order unchanged.
+    `eligible` (above the bar) and `linked` (measured league) say which ranks are provisional."""
     out = {}
     for player, items in contributions.items():
         minutes = sum(i[1] for i in items)
@@ -1152,7 +1167,8 @@ def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA, linked=
         out[player] = {"role": role, "team": team, "matches": len(items), "minutes": minutes,
                        "own": sum(i[2] for i in items), "level": sum(i[4] or 0.0 for i in items if len(i) > 4),
                        "linked": (linked is None or team in linked) and universe == "men",
-                       "top_division": (top is None or team in top) and universe == "men", "universe": universe}
+                       "top_division": (top is None or team in top) and universe == "men", "universe": universe,
+                       "club": clubs is None or team in clubs}
     threshold = eligibility_minutes([r["minutes"] for r in out.values()], eligibility=eligibility)
     for r in out.values():
         r["eligible"] = r["minutes"] >= threshold and r["minutes"] > 0
@@ -1173,12 +1189,21 @@ def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA, linked=
         totals, rates = [r["total"] for r in group], [r["rate"] for r in group]
         scale = [r for r in group if r["linked"]] or group
         (mt, st), (mr, sr) = _spread([r["total"] for r in scale]), _spread([r["rate"] for r in scale])
+        own_index = lambda r: TOTAL_WEIGHT * ((r["total"] - mt) / st if st > 1e-9 else 0.0) + RATE_WEIGHT * ((r["rate"] - mr) / sr if sr > 1e-9 else 0.0)
         for r in group:
             r["total_percentile"] = percentile(totals, r["total"])
             r["rate_percentile"] = percentile(rates, r["rate"])
-            r["index"] = TOTAL_WEIGHT * ((r["total"] - mt) / st if st > 1e-9 else 0.0) + RATE_WEIGHT * ((r["rate"] - mr) / sr if sr > 1e-9 else 0.0)
+            r["index"] = own_index(r)
             r["score"] = score_of(r["index"])
-    order = sorted((p for p, r in out.items() if r["eligible"] and r["linked"]), key=lambda p: (-out[p]["index"], -out[p]["total"], -out[p]["minutes"], p))
+        # Below the bar: from the role's floor to the player's own index as his minutes reach the bar.
+        ranked = sorted(own_index(r) for r in scale)
+        floor = ranked[int(BELOW_BAR_FLOOR * len(ranked))] if ranked else 0.0
+        for r in out.values():
+            if r["role"] == role and r["universe"] == universe and not r["eligible"] and r["minutes"] > 0:
+                r["index"] = floor + min(1.0, r["minutes"] / threshold) * (own_index(r) - floor)
+                r["score"] = score_of(r["index"])
+    order = sorted((p for p, r in out.items() if r.get("index") is not None and r["universe"] == "men" and r["club"]),
+                   key=lambda p: (-out[p]["index"], -out[p]["total"], -out[p]["minutes"], p))
     role_seen = defaultdict(int)
     previous = None
     for i, p in enumerate(order, 1):
@@ -1200,6 +1225,7 @@ def team_leagues(rows, leagues):
         if r.get("competition_id") in leagues:
             played[r["team_id"]][r["competition_id"]] += 1
     linked, top, women = set(), set(), set()
+    clubs = set(played)
     for team, counts in played.items():
         on_scale, is_top, is_women = (tuple(leagues[max(sorted(counts), key=lambda c: counts[c])]) + (False,))[:3]
         if on_scale:
@@ -1208,7 +1234,7 @@ def team_leagues(rows, leagues):
             top.add(team)
         if is_women:
             women.add(team)
-    return linked, top, women
+    return linked, top, women, clubs
 
 
 def level_centres(rows):
@@ -1270,6 +1296,13 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
                FROM agg.league_levels l"""
         ).fetchall()}
         weights = match_stakes(conn, [season, season + 1])
+        # The match grades' reference (grade_reference_year).
+        reference_season = grade_reference_year(season, started.date())
+        finished = reference_season == season
+        before = reference_season == season - 1
+        grade_refs = read_grade_references(conn, reference_season) if before else None
+        reference_rows = conn.execute(GRADE_REFERENCE, ([reference_season, reference_season + 1], reference_season, GRADE_FULL_MINUTES)
+                                      ).fetchall() if before and grade_refs is None else []
     # 2. Compute, outside any transaction.
     for r in rows:
         r["delta"] = 0.0 if r["own_elo"] is None or r["opponent_elo"] is None else (r["opponent_elo"] - r["own_elo"]) / 400
@@ -1277,22 +1310,39 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     rows = assign_roles(rows)
     refs = references(rows)
     count = len(rows)
-    linked, top, women = team_leagues(rows, leagues)
+    linked, top, women, clubs = team_leagues(rows, leagues)
     centre = level_centres(rows)
     matches = []
+    graded = []  # (role, competition, minutes, C) of each player-match, for the match grades
     detailed = defaultdict(list)
     for i, r in enumerate(rows):
         scores, c = match_contribution(r, refs)
         level = None if r["own_elo"] is None else r["minutes_played"] / 90 * (r["own_elo"] - centre[bool(r.get("national"))]) / 400
         weight = weights.get(r["match_id"], 1.0)
+        graded.append((r["role"], r.get("competition_id"), r["minutes_played"], c))
         matches.append((r["match_id"], r["player_id"], r["team_id"], r["role"], int(r["minutes_played"]), r["opponent_elo"],
                         *[scores.get(b) for b in BLOCK_COLUMNS], c, level, weight))
         if c is not None:
             detailed[r["player_id"]].append(staked(r["role"], r["minutes_played"], c, r["team_id"], block_shares(r["role"], scores), level, weight))
         rows[i] = None  # the match's row is its tuple from here on: the year is not held twice
     del rows
+    # Each match's grade (match_index): the year's own reference once it is over (kept), else the
+    # year before's when it is over, kept or read from its player-matches (and then kept), else
+    # this year's own rows (kept nowhere: a year in progress is no reference).
+    write_refs = None
+    if grade_refs is None:
+        if finished:
+            grade_refs = grade_references(graded)
+            write_refs = (season, grade_refs)
+        elif reference_rows:
+            grade_refs = grade_references(reference_rows)
+            write_refs = (reference_season, grade_refs)
+        else:
+            grade_refs = grade_references(graded)
+    matches = [(*match, match_index(role, competition, c, grade_refs)) for match, (role, competition, _, c) in zip(matches, graded)]
+    del graded, reference_rows
     contributions = {p: [(role, m, c, team, level) for role, m, c, team, _, level in items] for p, items in detailed.items()}
-    scored, settings = season_scores(contributions, eligibility=eligibility, linked=linked, top=top, women=women)
+    scored, settings = season_scores(contributions, eligibility=eligibility, linked=linked, top=top, women=women, clubs=clubs)
     blocks, roles = season_details(detailed, scored)
     # 3. Write, in one transaction: the season's ranking changes at once or not at all.
     with conn.transaction():
@@ -1306,7 +1356,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
         conn.execute("DELETE FROM agg.player_power WHERE season_id=%s", (season,))
         conn.execute("DELETE FROM agg.player_power_matches WHERE season_id=%s", (season,))
         with conn.cursor().copy(
-            f"COPY agg.player_power_matches(season_id, match_id, player_id, team_id, role, minutes, opponent_elo, {', '.join(BLOCK_COLUMNS)}, contribution, level, stakes, run_id) FROM STDIN"
+            f"COPY agg.player_power_matches(season_id, match_id, player_id, team_id, role, minutes, opponent_elo, {', '.join(BLOCK_COLUMNS)}, contribution, level, stakes, match_index, run_id) FROM STDIN"
         ) as copy:
             for match in matches:
                 copy.write_row((season, *match, run))
@@ -1326,9 +1376,144 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
             for player, by_role in roles.items():
                 for role, x in by_role.items():
                     copy.write_row((season, player, role, x["matches"], int(x["minutes"]), x["total"], x["rate"], run))
+        if write_refs:
+            write_grade_references(conn, *write_refs)
         _publish(conn, run, "players", season, count, len(scored))
         write_award(conn, season, scored)
     return len(scored)
+
+
+# Match grades (15 November 2026) -------------------------------------------------
+#
+# A player's grade in one match says how exceptional that match was for his role, whatever
+# his season: the contribution C of the match alone (§ 6.2), neither his club's level (the
+# same whatever he does: one standard deviation of it, κ·132/400 ≈ 0.2, would weigh 26 to
+# 59 % of a match's spread) nor the match's stakes (the award's reward for prestige, shown
+# beside the grade instead). C is a sum over the match whose expectation already scales with
+# the minutes, so a cameo is neither rewarded nor penalised for being short.
+#
+# z₁ = (C − c̄_r) / σ_{r,competition}: the role's mean and spread over the full matches (60
+# minutes or more) of the reference year, the spread of a competition drawn to the role's
+# (σ² = (n σ²_comp + 300 σ_r²) / (n + 300)): 56 of 493 competition-roles had a spread outside
+# 0.8 to 1.25 times their role's. Then the normal score of z₁ among the role's reference
+# matches, z = Φ⁻¹(p): with plain z, goalkeepers had 0.38 times their share of the best 1 %
+# of matches, their spread swollen by the rare heavy errors. The grade is score_of(z), the
+# season's curve (50 an ordinary match of the role).
+#
+# The reference year is the last finished award year (a finished year is its own), so the
+# scale is there from a season's first day and does not move with it; the spreads moved by
+# less than 1.5 % between 2024/25 and 2025/26. Measured before going live on 2025/26:
+# against PitchAPI's own rating, a median within-match rank correlation of 0.57; 25 % of
+# the weakest quarter of regulars had at least one match graded 75 or more; matches under
+# 30 minutes were 3 % of the best 1 %.
+
+GRADE_FULL_MINUTES = 60  # the full matches that give a role its reference
+GRADE_SHRINK = 300  # appearances: a competition's own spread counts n / (n + 300)
+GRADE_QUANTILES = 2000  # the role's reference distribution, kept as this many steps
+
+
+def grade_references(rows, *, full=GRADE_FULL_MINUTES, shrink=GRADE_SHRINK, steps=GRADE_QUANTILES):
+    """The match grades' reference from a year's player-matches (role, competition, minutes,
+    C): {"roles": {role: (matches, mean, spread)}, "spreads": {(role, competition):
+    (matches, spread)}, "quantiles": {role: [steps + 1 values of z₁]}}."""
+    by_role = defaultdict(list)
+    for role, competition, minutes, c in rows:
+        if c is not None and minutes >= full:
+            by_role[role].append((competition, c))
+    roles, spreads, quantiles = {}, {}, {}
+    for role, items in by_role.items():
+        if len(items) < 2:
+            continue
+        mean = sum(c for _, c in items) / len(items)
+        sd = sqrt(sum((c - mean) ** 2 for _, c in items) / len(items))
+        if sd <= 1e-9:
+            continue
+        roles[role] = (len(items), mean, sd)
+        by_comp = defaultdict(list)
+        for competition, c in items:
+            by_comp[competition].append(c - mean)
+        for competition, values in by_comp.items():
+            n = len(values)
+            own = sum(v * v for v in values) / n
+            spreads[(role, competition)] = (n, sqrt((n * own + shrink * sd * sd) / (n + shrink)))
+        z1 = sorted((c - mean) / spreads[(role, competition)][1] for competition, c in items)
+        quantiles[role] = [z1[round(k * (len(z1) - 1) / steps)] for k in range(steps + 1)]
+    return {"roles": roles, "spreads": spreads, "quantiles": quantiles}
+
+
+def match_index(role, competition, c, refs):
+    """A match's grade index z for the role (None without a reference): the normal score of
+    z₁ among the role's reference matches (see above)."""
+    if c is None or role not in refs["roles"]:
+        return None
+    n, mean, sd = refs["roles"][role]
+    spread = refs["spreads"].get((role, competition), (0, sd))[1]
+    z1 = (c - mean) / spread
+    q = refs["quantiles"][role]
+    steps = len(q) - 1
+    # p: the share of reference matches below z₁ (the middle of equal ones, as the percentiles'
+    # « rang moyen »), read between the stored steps; beyond the extremes, half a match from the
+    # edge (the normal score of the best match ever seen).
+    if z1 < q[0]:
+        p = 0.5 / n
+    elif z1 > q[-1]:
+        p = 1 - 0.5 / n
+    else:
+        lo, hi = bisect_left(q, z1), bisect_right(q, z1)
+        if hi > lo:
+            p = (lo + hi - 1) / 2 / steps
+        else:
+            k = hi - 1
+            p = (k + (z1 - q[k]) / (q[k + 1] - q[k])) / steps
+        p = min(1 - 0.5 / n, max(0.5 / n, p))
+    return NormalDist().inv_cdf(p)
+
+
+def grade_reference_year(season, today):
+    """The finished award year whose player-matches set a season's match grades: the season
+    itself once it is over, else the year before when that one is over, else none (a year after
+    the one in progress: it is graded against its own rows, and they are kept nowhere)."""
+    if award_year(season)[1] <= today:
+        return season
+    if award_year(season - 1)[1] <= today:
+        return season - 1
+    return None
+
+
+GRADE_REFERENCE = """
+SELECT p.role, cs.competition_id, p.minutes, p.contribution
+FROM agg.player_power_matches p
+JOIN core.matches m ON m.id = p.match_id AND m.season_id = ANY(%s)
+JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+WHERE p.season_id = %s AND p.contribution IS NOT NULL AND p.minutes >= %s"""
+
+
+def write_grade_references(conn, season, refs):
+    conn.execute("DELETE FROM agg.match_grade_roles WHERE ref_season = %s", (season,))
+    with conn.cursor().copy("COPY agg.match_grade_roles(ref_season, role, matches, mean, spread) FROM STDIN") as copy:
+        for role, (n, mean, sd) in refs["roles"].items():
+            copy.write_row((season, role, n, mean, sd))
+    with conn.cursor().copy("COPY agg.match_grade_spreads(ref_season, role, competition_id, matches, spread) FROM STDIN") as copy:
+        for (role, competition), (n, sd) in refs["spreads"].items():
+            copy.write_row((season, role, competition, n, sd))
+    with conn.cursor().copy("COPY agg.match_grade_quantiles(ref_season, role, step, value) FROM STDIN") as copy:
+        for role, values in refs["quantiles"].items():
+            for k, v in enumerate(values):
+                copy.write_row((season, role, k, v))
+
+
+def read_grade_references(conn, season):
+    """The references kept for `season` (None when it has none)."""
+    roles = {r: (n, m, s) for r, n, m, s in conn.execute(
+        "SELECT role, matches, mean, spread FROM agg.match_grade_roles WHERE ref_season = %s", (season,)).fetchall()}
+    if not roles:
+        return None
+    spreads = {(r, c): (n, s) for r, c, n, s in conn.execute(
+        "SELECT role, competition_id, matches, spread FROM agg.match_grade_spreads WHERE ref_season = %s", (season,)).fetchall()}
+    quantiles = defaultdict(list)
+    for r, v in conn.execute("SELECT role, value FROM agg.match_grade_quantiles WHERE ref_season = %s ORDER BY role, step", (season,)).fetchall():
+        quantiles[r].append(v)
+    return {"roles": roles, "spreads": spreads, "quantiles": dict(quantiles)}
 
 
 AWARD_SIZE = 30  # the race shown on the home (ballon-dor.js reads the first 30)
@@ -1337,7 +1522,8 @@ AWARD_SIZE = 30  # the race shown on the home (ballon-dor.js reads the first 30)
 def award_race(scored, size=AWARD_SIZE):
     """The award race: the first eligible players of the power ranking, numbered 1..size
     (agg.player_award_ranking keys a season's award by rank, so ties take the ranking order)."""
-    ranked = sorted((p for p, r in scored.items() if r["eligible"] and r.get("rank") is not None and r.get("top_division", True)),
+    # Every player has a rank since version 5: the race keeps the eligible players of a measured top division.
+    ranked = sorted((p for p, r in scored.items() if r["eligible"] and r.get("rank") is not None and r.get("top_division", True) and r.get("linked", True)),
                     key=lambda p: (scored[p]["rank"], -scored[p]["total"], -scored[p]["minutes"], p))
     return [(i, p, scored[p]["team"], scored[p]["score"]) for i, p in enumerate(ranked[:size], 1)]
 

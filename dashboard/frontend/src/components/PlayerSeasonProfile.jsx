@@ -434,6 +434,13 @@ export default function PlayerSeasonProfile({
         rank: power.roleRank ?? null,
         of: power.roleRank ? power.roleCount : null,
         parts: vegaParts(power),
+        // A provisional rank: under the season's minutes bar, or in a league still measured roughly.
+        provisional:
+          power.eligible === false
+            ? "Rang provisoire : il a moins de minutes que le seuil de la saison ; son indice part du bas de son poste et rejoint le sien à mesure qu’il joue."
+            : power.linked === false
+              ? "Rang provisoire : le niveau de son championnat n’est encore mesuré qu’à peu près."
+              : null,
         signal: breakoutSignal(power.breakout),
       };
     // Below the ranking's minutes: no score of his own, but he may be flagged as a breakout.
