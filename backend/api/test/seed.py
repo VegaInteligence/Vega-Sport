@@ -94,6 +94,12 @@ def main(dsn):
          (source,source_player_id,player_id,source_url,observed_on,club_name,contract_until)
          VALUES ('transfermarkt_snapshot','987654',102,'https://www.transfermarkt.com/profil/spieler/987654',
                  '2026-07-06','Former Club','2027-06-30')""")
+    x("""INSERT INTO core.player_contracts (player_id,team_id,start_date,source,as_of,end_season_year,end_season_competition)
+         VALUES (104,2,'2025-07-01','other','2025-07-01',2099,'MLS')""")
+    x("""INSERT INTO core.player_market_values(player_id,valued_at,value_eur,source,as_of) VALUES
+         (102,'2026-06-02',15000000,'transfermarkt','2026-07-06'),
+         (102,'2025-06-01',0,'transfermarkt','2026-07-06'),
+         (102,'2026-06-10',16000000,'other','2026-07-06')""")
     # Profile vectors (081): four players placed on the axes, one of them in a women's competition.
     x("INSERT INTO agg.embedding_models(season_id, version, players, statistics, variance_kept) VALUES (2025, 'profile-embedding-v1', 4, 60, 0.78)")
     zeros = ",".join(["0"] * 8)

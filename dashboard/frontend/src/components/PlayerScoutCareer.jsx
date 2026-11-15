@@ -8,13 +8,13 @@ import {
   playerHistoryKey,
 } from "../services/scouting-history.js";
 import { playerTeamSeasons } from "../services/player-team-seasons.js";
-import { playerContractFact } from "../services/player-bio.js";
+import { playerContractFact, playerFacts } from "../services/player-bio.js";
 import { nationalTeamName } from "../services/national-flags.js";
 import { seasonMetric } from "../services/season-player.js";
 import { number } from "../services/format.js";
 import {
   loadPlayerMarketValues,
-  marketValue,
+  latestMarketEstimate,
   MARKET_VALUES_UNSERVED,
   playerMarketValuesKey,
   servesMarketValues,
@@ -72,7 +72,7 @@ export default function PlayerScoutCareer({
   );
   const market = marketServed ? marketRead : MARKET_VALUES_UNSERVED;
   const values = market.value?.history || [];
-  const latestValue = values.at(-1);
+  const valuation = latestMarketEstimate(values, playerFacts(record).value);
   const history = useResource(playerHistoryKey(f.manifest, id), ({ signal }) =>
     loadPlayerHistory(f.manifest, id, { signal }),
   );
@@ -90,16 +90,10 @@ export default function PlayerScoutCareer({
   const clubTotals = sumRows(clubs);
   const selectionTotals = sumRows(selections);
   const contract = playerContractFact(record);
-  const contractLabel = contract?.label || "Fin de contrat";
   const kpis = [
     ["Club actuel", team?.name || "—"],
-    [
-      contractLabel,
-      contract?.label === "Échéance relevée"
-        ? `${contract.value} · ${contract.note}`
-        : contract?.note || "—",
-    ],
-    ["Valeur", latestValue ? marketValue(latestValue.valueEur) : "—", true],
+    ["Fin de contrat", contract?.summary || "—"],
+    ["Valeur marchande", valuation?.amount || "—", true],
     ["Matchs en club", show(clubTotals.matches)],
     ["Minutes en club", show(clubTotals.minutes)],
     [
@@ -125,12 +119,12 @@ export default function PlayerScoutCareer({
               </span>
               <strong className={accent ? s.kpiAccent : undefined}>
                 {(
-                  label === "Valeur"
-                    ? market.loading
+                  label === "Valeur marchande"
+                    ? market.loading && !valuation
                     : history.loading &&
                       !fake &&
                       label !== "Club actuel" &&
-                      label !== contractLabel
+                      label !== "Fin de contrat"
                 )
                   ? "…"
                   : value}

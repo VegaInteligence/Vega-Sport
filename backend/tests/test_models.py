@@ -539,6 +539,18 @@ class ModelsTest(unittest.TestCase):
         # The award race is written by the power ranking (test_power_rankings_of_players).
         self.assertEqual(self.one("SELECT count(*) FROM agg.player_award_ranking")[0], 30)
 
+    def test_historical_squad_value_uses_only_estimates_available_at_the_matches(self):
+        with self.db.transaction(force_rollback=True):
+            self.db.execute("""INSERT INTO core.player_market_values(player_id,valued_at,value_eur,source,as_of)
+                SELECT p.player_id, v.day, v.euros, 'transfermarkt', current_date
+                FROM (SELECT player_id FROM core.player_match_stats WHERE team_id=1 ORDER BY player_id LIMIT 1) p
+                CROSS JOIN (VALUES (DATE '1900-01-01', 100), (DATE '2200-01-01', 999)) v(day, euros)""")
+            models.refresh_squad_profiles(self.db, 2025)
+            self.assertEqual(
+                self.one("SELECT squad_value_eur FROM agg.team_squad_profile WHERE team_id=1 AND season_id=2025"),
+                (100,),
+            )
+
     def expected_distribution(self):
         """The rows build() inserted, counted per line, metric and value (all play 90 minutes)."""
         expected = Counter()

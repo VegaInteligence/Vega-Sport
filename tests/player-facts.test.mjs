@@ -27,13 +27,26 @@ test("a dated expiry is identified as an observation and a confirmed contract ta
     observed_contract_on: "2026-07-06",
   };
   assert.deepEqual(playerContractFact(observed), {
-    label: "Échéance relevée",
+    label: "Fin de contrat",
     value: "30/06/2027",
     note: "Former Club · Relevé du 06/07/2026",
+    summary: "30/06/2027 · Former Club · Relevé du 06/07/2026",
   });
   assert.deepEqual(
     playerContractFact({ ...observed, contract_until: "2031-06-30", contract_team: "Barcelona" }),
-    { label: "Fin de contrat", value: "06/2031", note: "30/06/2031 · Barcelona" },
+    { label: "Fin de contrat", value: "06/2031", note: "30/06/2031 · Barcelona", summary: "30/06/2031 · Barcelona" },
   );
   assert.equal(playerContractFact({ observed_contract_until: observed.observed_contract_until }), null);
+});
+
+test("a confirmed MLS season wins over a separately dated observation", () => {
+  assert.deepEqual(playerContractFact({
+    contract_until_season: 2028, contract_season_competition: "MLS", contract_team: "Inter Miami CF",
+    observed_contract_until: "2028-12-31", observed_contract_on: "2026-07-06",
+    observed_contract_team: "Inter Miami CF",
+  }), {
+    label: "Fin de contrat", value: "Saison MLS 2028", note: "Inter Miami CF",
+    summary: "Saison MLS 2028 · Inter Miami CF",
+  });
+  assert.equal(playerFacts({ market_value_eur: 0 }, today).value.amount, "0 €");
 });

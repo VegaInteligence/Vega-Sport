@@ -10,7 +10,7 @@ import json
 import os
 from pathlib import Path
 
-from . import player_fact_snapshot
+from . import market_value_snapshot, player_fact_snapshot
 
 # main's dashboard/shared (copied into the worker image), read as they are.
 SHARED = Path(os.environ.get("VEGA_SHARED_DIR", Path(__file__).resolve().parents[3] / "dashboard/shared"))
@@ -28,6 +28,14 @@ PLAYER_FACTS = {
         "signed": date(2025, 7, 16),
         "expiry": date(2031, 6, 30),
         "contract_url": "https://www.fcbarcelona.com/en/football/first-team/news/4274403/lamine-yamal-extends-contract-with-fc-barcelona-to-2031/featured",
+    },
+    "p_1mZO3B": {
+        "birth": date(1987, 6, 24),
+        "club": "t_1rgPN4",
+        "signed": date(2025, 10, 23),
+        "end_season_year": 2028,
+        "end_season_competition": "MLS",
+        "contract_url": "https://www.intermiamicf.com/news/inter-miami-cf-signs-leo-messi-to-contract-extension",
     },
 }
 # Reviewed UEFA spellings of clubs (club_links() of the previous pipeline's collect_rankings.py
@@ -63,7 +71,7 @@ EDITORIAL_LISTS = {
 def scopes(now):
     day = timedelta(days=1)
     # national_teams before team_identity: the merge reads the flag it sets.
-    return {"player_aliases": day, "player_facts": day, **player_fact_snapshot.scopes(now),
+    return {"player_aliases": day, "player_facts": day, **player_fact_snapshot.scopes(now), **market_value_snapshot.scopes(now),
             "club_aliases": day, "stadium_plans": day, "league_zones": day, "cup_logos": day,
             "sportscore_ids": day, "country_names": day, "national_teams": day, "team_identity": day, "editorial_lists": day}
 
@@ -323,17 +331,20 @@ def player_facts(conn):
         if player is None or team is None:
             unmatched += 1
             continue
+        if "foot" in facts:
+            written += conn.execute(
+                """UPDATE core.players SET preferred_foot = %s, preferred_foot_source_url = %s, updated_at = now()
+                   WHERE id = %s AND (preferred_foot IS NULL OR
+                     (preferred_foot = %s AND preferred_foot_source_url IS NULL))""",
+                (facts["foot"], facts["foot_url"], player[0], facts["foot"]),
+            ).rowcount
         written += conn.execute(
-            """UPDATE core.players SET preferred_foot = %s, preferred_foot_source_url = %s, updated_at = now()
-               WHERE id = %s AND (preferred_foot IS NULL OR
-                 (preferred_foot = %s AND preferred_foot_source_url IS NULL))""",
-            (facts["foot"], facts["foot_url"], player[0], facts["foot"]),
-        ).rowcount
-        written += conn.execute(
-            """INSERT INTO core.player_contracts(player_id, team_id, start_date, end_date, source, as_of, source_url)
-               VALUES (%s, %s, %s, %s, 'other', %s, %s)
+            """INSERT INTO core.player_contracts(player_id, team_id, start_date, end_date, source, as_of, source_url,
+                                                 end_season_year, end_season_competition)
+               VALUES (%s, %s, %s, %s, 'other', %s, %s, %s, %s)
                ON CONFLICT (player_id, team_id, start_date) DO NOTHING""",
-            (player[0], team[0], facts["signed"], facts["expiry"], facts["signed"], facts["contract_url"]),
+            (player[0], team[0], facts["signed"], facts.get("expiry"), facts["signed"], facts["contract_url"],
+             facts.get("end_season_year"), facts.get("end_season_competition")),
         ).rowcount
     return written, unmatched
 
@@ -341,6 +352,8 @@ def player_facts(conn):
 def run(conn, get, scope, now):
     if scope in player_fact_snapshot.scopes(now):
         return player_fact_snapshot.run(conn, get, scope, now)
+    if scope in market_value_snapshot.scopes(now):
+        return market_value_snapshot.run(conn, get, scope, now)
     if scope == "team_identity":
         from . import identity
 

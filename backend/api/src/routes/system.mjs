@@ -45,6 +45,7 @@ export const CAPABILITIES = {
   wholeSelection: true, // /api/read/players: whole=1
   roleGroups: true, // /api/read/players: group
   playerProfiles: true, // /api/read/players: detail=profile, v
+  marketValues: true, // /api/player-market-values
   // The reads validated by their own version when they name no publication (v).
   // /api/read/league, /api/read/club, /api/read/player, /api/clubs/europe/matches
   versionedReads: { league: true, club: true, player: true, europeMatches: true },

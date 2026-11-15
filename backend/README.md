@@ -130,6 +130,7 @@ Chaque route liste en tête de fichier ses écarts voulus avec l'API précédent
 **Sources hors PitchAPI.**
 
 - Le [jeu Transfermarkt de dcaribou](https://github.com/dcaribou/transfermarkt-datasets), arrêté au 6 juillet 2026, est relu par le collecteur sur l’ensemble de la base. La [projection reproductible](tools/build_player_fact_snapshot.py) conserve les identifiants source et les preuves de rapprochement. L’import complète les dates de naissance et pieds forts manquants. Les échéances et leurs clubs sont conservés dans `core.player_fact_observations` avec la date du jeu. Les contrats confirmés gardent la priorité dans les fiches. La route `/api/players/facts-coverage` donne les comptes de couverture.
+- Les [estimations Transfermarkt datées](tools/build_market_value_snapshot.py) réutilisent ces correspondances. Leur date d’évaluation reste distincte de la date du jeu. La fiche donne la dernière estimation connue et `/api/player-market-values?id=` en donne l’historique.
 - coefficients UEFA, avec les points par saison et les clubs encore en lice ;
 - classement FIFA, toutes les éditions depuis 2021 ;
 - classements officiels SportScore, écrits seulement si chaque ligne désigne un club de l'édition ;
