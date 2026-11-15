@@ -31,7 +31,7 @@ import {
   statValue,
 } from "../services/match-data.js";
 import { useResource } from "../services/resources.js";
-import { gradeTitle, useMatchGrades } from "../services/match-grades.js";
+import { gradeTitle, leadingPlayers, useMatchGrades } from "../services/match-grades.js";
 import {
   matchReadSource,
   matchResourceKey,
@@ -475,9 +475,7 @@ export default function MatchDetail({ match }) {
         .sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1)),
     [f.data, match.id],
   );
-  const leading = (players.length ? players : match.leadingPlayers || [])
-    .filter((r) => r.minutes > 0 && isNumber(r.rating))
-    .slice(0, 5);
+  const leading = leadingPlayers(players.length ? players : match.leadingPlayers, grades);
   const competition = f.allCompetitions.find((c) => c.id === match.leagueId);
   const homeName = match.home.name ?? "Équipe non renseignée";
   const awayName = match.away.name ?? "Équipe non renseignée";

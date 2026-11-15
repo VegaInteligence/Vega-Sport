@@ -5,6 +5,21 @@
  * them when the match stood a full standard deviation from the ordinary.
  */
 import { useResource, json } from "./resources.js";
+import { isNumber } from "./format.js";
+
+/**
+ * The match's best players (at most `count`): by the source's rating, as before; in a match the
+ * source rated no one (some leagues have no ratings), by Vega's grade, best rank first.
+ */
+export function leadingPlayers(pool, grades, count = 5) {
+  const played = (pool || []).filter((r) => r.minutes > 0);
+  const rated = played.filter((r) => isNumber(r.rating));
+  if (rated.length) return rated.slice(0, count);
+  return played
+    .filter((r) => grades?.get(r.id))
+    .sort((a, b) => grades.get(a.id).rank - grades.get(b.id).rank)
+    .slice(0, count);
+}
 
 /** { playerId → { grade, rank } } from the route's body; an empty map without one. */
 export function gradesOf(body) {
