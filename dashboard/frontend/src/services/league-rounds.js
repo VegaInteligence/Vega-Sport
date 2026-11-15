@@ -38,3 +38,10 @@ export function teamLines(team) {
   }
   return [...lines.entries()].sort((a, b) => b[0] - a[0]).map(([, players]) => players.sort((a, b) => a.slot - b.slot));
 }
+
+/** Rows of the Player of the Season race that fit, whole, in `available` pixels (rows of
+ * `rowHeight` separated by `gap`), at least one and at most `max` (the race kept). */
+export function raceRowsThatFit({ available, rowHeight, gap = 0, max }) {
+  if (![available, rowHeight, gap, max].every(Number.isFinite) || rowHeight <= 0) return max;
+  return Math.min(max, Math.max(1, Math.floor((available + gap) / (rowHeight + gap))));
+}
