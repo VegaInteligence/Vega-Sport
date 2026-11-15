@@ -2,7 +2,7 @@
 
 ## Origine
 
-Depuis le 15 novembre 2026, la note d'un joueur dans un match est **la note Vega**, calculée par Vega à partir de ce que le joueur a fait dans ce match seul. La note du fournisseur n'est plus lue nulle part sur le site ni dans l'API. Elle est retirée de la base une fois la note Vega vérifiée en production.
+Depuis le 15 novembre 2026, la note d'un joueur dans un match est **la note Vega**, calculée par Vega à partir de ce que le joueur a fait dans ce match seul. La note du fournisseur n'est plus lue nulle part. Elle a été retirée de la base le même jour (migration 108), une fois la note Vega vérifiée en production : 354 893 matchs joués notés sur 354 951 en 2026/2027, et 671 351 sur 672 536 en 2025/2026, quand le fournisseur en notait 369 157. Les relevés bruts gardés dans les archives de la source la contiennent toujours ; l'ingestion l'ignore.
 
 La formule complète et ses raisons sont dans [les notes Vega](../08-notes-vega/01-formules-et-raisons.md) (§ 5.7). En bref :
 

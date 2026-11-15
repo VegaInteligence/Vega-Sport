@@ -411,7 +411,7 @@ $$
 | Corrélation de rang avec la note PitchAPI dans un match (médiane) | 0,57 | ≥ 0,5 |
 | Joueurs du dernier quart des titulaires avec au moins un match noté 75 ou plus | 25 % | sensible |
 
-**La seule note de match du site (version 7, 15 novembre 2026).** La note Vega remplace partout la note du fournisseur, qui n'est plus lue. Elle est gardée où sont les statistiques du match (`agg.player_match_grades` : z, l'année de référence, la première valeur, la date du dernier changement), et seule une note qui bouge est réécrite.
+**La seule note de match du site (version 7, 15 novembre 2026).** La note Vega remplace partout la note du fournisseur, qui n'est plus lue et a été retirée de la base (migration 108). Elle est gardée où sont les statistiques du match (`agg.player_match_grades` : z, l'année de référence, la première valeur, la date du dernier changement), et seule une note qui bouge est réécrite.
 
 **Note de saison.** C'est la note du z moyen pondéré par les minutes, sur les matchs de 20 minutes ou plus :
 
