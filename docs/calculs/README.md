@@ -15,7 +15,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 | Centiles, rangs, indice Vega club et joueur, similarités, tags de style | **Calculés par Vega**, toujours relativement à un groupe de comparaison. |
 | Classements dérivés des résultats, zones européennes | **Calculés par Vega** quand aucun classement officiel n'est utilisé. |
 | Classements FIFA, coefficients UEFA | **Collectés** par le worker (`backend/vega/sources/fifa.py`, `uefa.py`), jamais recalculés. |
-| Classement Ballon d'Or Vega | **Calculé par Vega** chaque jour (`backend/vega/power.py`), selon [METHODE_CLASSEMENT_BALLON_D_OR.md](../METHODE_CLASSEMENT_BALLON_D_OR.md) ; les choix de la version 2 sont dans [l'audit du 12 novembre 2026](05-joueurs/08-audit-classement-puissance.md). |
+| Classement Ballon d'Or Vega, niveaux des championnats, forces des clubs | **Calculés par Vega** chaque jour (`backend/vega/power.py`), selon [METHODE_CLASSEMENT_BALLON_D_OR.md](../METHODE_CLASSEMENT_BALLON_D_OR.md). Toutes les formules et leurs raisons : [NOTES_VEGA.md](../NOTES_VEGA.md) ; les essais et validations : [l'audit](05-joueurs/08-audit-classement-puissance.md). |
 
 ## Sections
 

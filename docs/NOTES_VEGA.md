@@ -1,0 +1,386 @@
+# Notes Vega : toutes les formules et leurs raisons
+
+Ce document rassemble, en un seul endroit, chaque calcul qui donne une note à un championnat, à un club et à un joueur, avec sa formule, ses réglages et la raison de chacun. Il décrit ce que fait le code en service (`backend/vega/power.py`, méthode `power-ranking-v4`, 15 novembre 2026).
+
+Pour chaque réglage, il dit s'il est **mesuré** sur la base ou **choisi**. Un réglage choisi exprime une préférence ou reprend la méthode de départ ([METHODE_CLASSEMENT_BALLON_D_OR.md](METHODE_CLASSEMENT_BALLON_D_OR.md)) ; il n'a pas été ajusté sur les données.
+
+Les validations et les chiffres viennent de la base de production, lus en lecture seule. Le détail des essais est dans [l'audit du classement](calculs/05-joueurs/08-audit-classement-puissance.md).
+
+## 0. Vue d'ensemble
+
+Tout est sur une seule échelle, en **points Elo**. 400 points d'écart entre deux équipes donnent dix contre un.
+
+| Objet | Sa note | En une phrase |
+| --- | --- | --- |
+| Championnat | son niveau ℓ, avec une erreur-type | la force moyenne de ses clubs, tirée des matchs entre championnats, des joueurs qui changent de championnat et de sa division |
+| Club | sa force Elo R | il entre au niveau de son championnat, puis chaque résultat la corrige, selon ce que les deux forces prévoyaient |
+| Joueur | son score de 0 à 100 | ce qu'il fait au-dessus de l'attendu de son rôle, match par match, plus le niveau du club où il le fait, comparé aux joueurs de son rôle |
+
+L'ordre des calculs :
+1. lire les matchs ;
+2. calculer les niveaux des championnats ;
+3. dérouler l'Elo des clubs ;
+4. évaluer chaque joueur dans chaque match ;
+5. faire la somme sur l'année ;
+6. donner l'indice, le score et le rang.
+
+Chaque étape lit les forces **d'avant** le match : une performance garde le niveau de l'adversaire à cette date.
+
+## 1. Les matchs lus
+
+| Règle | Raison |
+| --- | --- |
+| Tous les matchs terminés des éditions PitchAPI : championnats, coupes, coupes d'Europe, Coupe du monde | la base de la méthode (§ 3) |
+| Les matchs des sources complémentaires (coupes nationales, coupes des autres confédérations, tournois de sélections) entre deux équipes que PitchAPI connaît, quand ils ne doublent pas un match déjà lu (mêmes équipes à trois jours près) | ils relient les divisions d'un pays et les championnats entre eux ; un doublon compterait deux fois le même résultat |
+| Le résultat est celui après prolongation ; une séance de tirs au but est un nul | les tirs au but ne disent rien de la force sur 120 minutes |
+| Clubs et sélections sont deux ensembles à part | la méthode le demande (§ 3) : ils ne se rencontrent jamais |
+| **Année du trophée** : du 1ᵉʳ août au 31 juillet ; un championnat d'année civile en donne la seconde moitié d'une édition et la première de la suivante | sinon une « saison » mêlait des championnats finis et d'autres au quatorzième match (audit, cause 3) |
+| **Un vide vaut zéro** quand la ligne du joueur porte des statistiques et que la source publie la mesure, dans le même match (mesures courantes) ou la même édition (rares) | PitchAPI n'écrit jamais un xG à 0 et laisse vides la moitié des comptes : lus comme inconnus, un avant-centre sans tir n'avait pas de finition ce jour-là (audit, cause 5) |
+
+## 2. L'enjeu d'un match
+
+$$
+I_m = \text{prestige de la compétition} \times \text{coefficient du tour}
+$$
+
+| Compétition | Prestige | Tour | Coefficient |
+| --- | ---: | --- | ---: |
+| Championnat, coupe nationale | 1,00 | Match ordinaire, phase de ligue, 3ᵉ place | 1,00 |
+| Ligue Conférence | 1,04 | Élimination directe avant les demi-finales | 1,05 |
+| Ligue Europa, Copa Sudamericana | 1,08 | Demi-finale | 1,10 |
+| Coupe du monde des clubs | 1,10 | Finale | 1,15 |
+| Ligue des champions, Copa Libertadores, Coupes des champions CONCACAF et CAF | 1,15 | | |
+| Nations League | 1,05 | | |
+| Euro, Copa América, CAN, Coupe d'Asie, Gold Cup | 1,20 | | |
+| Coupe du monde | 1,30 | | |
+
+- **Choisi** (version 3, 12 novembre 2026). La méthode garde l'enjeu hors du modèle « au départ » et appelle un bonus « un choix de récompense à expliciter » (§ 9). Le choix fait : un match de Ligue des champions pèse plus qu'un match de championnat, sa finale (1,32) plus que toute autre finale de clubs, et la finale de la Coupe du monde (1,50) plus que tout.
+- Les coefficients de tour sont ceux de l'annexe A.4 de la méthode.
+- Les compétitions des autres confédérations pèsent comme leur équivalent européen.
+- **Contrôlé** : l'Elo ne prédit pas moins bien avec l'enjeu. Erreur quadratique à un match d'avance sur 729 matchs européens : 0,1659 → 0,1655.
+
+## 3. La force d'un club (Elo)
+
+Résultat attendu de l'équipe A contre B, avant le match :
+
+$$
+E_A = \frac{1}{1 + 10^{(R_B - R_A - h)/400}}
+$$
+
+Après le match, avec $r_A$ = 1 (victoire), ½ (nul) ou 0 (défaite) :
+
+$$
+R_A \leftarrow R_A + K\, I_m\,(r_A - E_A), \qquad R_B \leftarrow R_B + K\, I_m\,\big((1 - r_A) - (1 - E_A)\big)
+$$
+
+| Réglage | Valeur | Statut | Raison |
+| --- | --- | --- | --- |
+| $K$ | 20 | choisi | la méthode laisse $K$ ouvert (§ 12) ; valeur fixée à la mise en place, non ajustée sur la base |
+| $h$, avantage du terrain | 60 points, 0 sur terrain neutre | choisi | idem ; le terrain neutre vient de la source (tournois, finales) |
+| Entrée d'un club | le niveau ℓ de son championnat (§ 4) | mesuré | des Elo partis tous de 1500 n'ont pas d'échelle commune : un championnat sans match contre les autres garde 1500 de moyenne quel que soit son niveau (§ 3 de la méthode, audit cause 1) |
+| Championnat d'un club | la compétition nationale PitchAPI où il a joué le plus de matchs dans sa première saison | — | un club promu ou relégué garde sa force ; son championnat d'entrée ne sert qu'à son point de départ |
+| Club sans championnat dans la base | le championnat de son pays, qui ne la tient pas, est un « championnat de pays » du modèle (§ 4.6) | mesuré | sinon il entrait à 1500, valeur arbitraire |
+
+- **Le rang d'un club** est celui de sa force après son dernier match de la saison, parmi les clubs (les sélections à part). Tout club qui a joué a une force et un rang.
+- **Les sélections** suivent la même formule, entre sélections seulement.
+- **Le niveau d'un championnat pour une saison**, celui que montre le site, est la force moyenne, après leur dernier match de la saison, des clubs qui l'ont joué cette saison-là. Un promu y entre, un relégué en sort.
+
+## 4. Le niveau d'un championnat
+
+### 4.1 Ce qu'on cherche
+
+ℓ_j, le niveau du championnat j : la force à laquelle ses clubs entrent dans l'Elo. Trois preuves le disent, avec des précisions différentes. Le niveau retenu est le **maximum a posteriori** d'un seul modèle qui les réunit, chacune comptée selon sa précision : plus une preuve est précise, plus elle pèse.
+
+**Pourquoi un seul modèle.** La version 3 retenait le niveau vers 1500 dans la proportion liens / (liens + 30). Elle avait deux défauts :
+- **Ce n'était pas un a priori cohérent.** À l'équilibre, sa force baissait quand les liens augmentaient, et 1500 est arbitraire.
+- **Compter les matchs ne dit pas si le niveau est mesuré.** Un groupe de championnats qui ne jouent qu'entre eux paraît bien mesuré alors que sa place face aux autres ne l'est pas.
+
+Résultat : les petits championnats restaient près de 1500, et 31 championnats n'avaient pas de niveau du tout.
+
+### 4.2 Les matchs entre championnats
+
+On déroule l'Elo depuis les niveaux. Chaque match m entre un club du championnat a (à domicile) et un club du championnat b apporte à ces deux niveaux :
+
+$$
+g_a \mathrel{+}= I_m (r - E)\,c, \quad g_b \mathrel{-}= I_m (r - E)\,c, \qquad c = \frac{\ln 10}{400}
+$$
+
+$$
+\Lambda_{aa} \mathrel{+}= I_m E(1-E)c^2, \quad \Lambda_{bb} \mathrel{+}= I_m E(1-E)c^2, \quad \Lambda_{ab} = \Lambda_{ba} \mathrel{-}= I_m E(1-E)c^2
+$$
+
+- $g$ est la **pente** de la vraisemblance des résultats, $\Lambda$ son **information**. Les matchs à l'intérieur d'un championnat s'annulent : seul compte ce que ses clubs font contre les autres.
+- Les deux sont divisés par la **dispersion** $\varphi = \sum (r - E)^2 / \sum E(1-E)$, sur ces mêmes matchs (0,73). Les nuls rendent les résultats moins dispersés qu'un pile ou face, et l'information est d'autant plus grande.
+- Matchs lus : coupes d'Europe, coupes nationales entre divisions, Coupe du monde des clubs, Copa Libertadores et Sudamericana, Coupes des champions CONCACAF et CAF.
+
+### 4.3 Les joueurs qui changent de championnat
+
+Un joueur qui change de championnat est le même joueur. Si son rendement baisse, son nouveau championnat est plus difficile.
+
+**1. Le rendement d'un séjour.** Un séjour = les matchs de championnat d'un joueur de champ, sur une année du trophée, dans un championnat, d'au moins 600 minutes. Seuls les matchs de championnat comptent : un séjour en coupe d'Europe ou en sélection ne s'intercale jamais entre deux années d'un championnat.
+
+$$
+c = \frac{90\,T_\text{séjour}}{M_\text{séjour}} - \bar{c}_{\text{championnat, année}}
+$$
+
+On retire la moyenne du championnat cette saison-là, pondérée par les minutes. Raison : le style d'un championnat, plus ou moins ouvert, change le rendement de tous ses joueurs. Sans ce retrait, la Bundesliga et la Ligue 1 passaient sous le Championship.
+
+**2. Ce qu'un joueur garde d'une année sur l'autre**, mesuré sur ceux qui sont restés dans leur championnat (9 599 joueurs) :
+
+$$
+c' = \alpha + \rho\, c, \qquad \rho = 0{,}63
+$$
+
+**3. Le changement d'un passage** du championnat a vers b :
+
+$$
+y = c_\text{après} - (\alpha + \rho\, c_\text{avant})
+$$
+
+Raison : un joueur part souvent après une bonne saison, et sa saison suivante redescend de toute façon. Sans ce retrait, la pente était gonflée (0,22 au lieu de 0,13).
+
+**4. Le modèle.** Pour une paire de championnats, ȳ est la moyenne des passages : ceux de a vers b tels quels, ceux de b vers a de signe changé.
+
+$$
+\bar{y}_{ab} \sim \mathcal{N}\!\left(-\kappa^\ast \frac{\ell_b - \ell_a}{400},\; \frac{s^2}{n_{ab}} + \tau_u^2\right)
+$$
+
+- $s^2$ est la variance d'un passage.
+- $\tau_u$ est l'écart propre à une paire au-delà de ses joueurs, mesuré par la méthode des moments (0,09) :
+
+$$
+\tau_u^2 = \overline{(\bar{y} + \kappa^\ast(\ell_b - \ell_a)/400)^2 - s^2/n}
+$$
+
+En points Elo, c'est un lien entre les deux niveaux :
+
+$$
+\ell_b - \ell_a \approx -400\,\bar{y}/\kappa^\ast, \qquad \text{précision } \frac{1}{(400/\kappa^\ast)^2 (s^2/n + \tau_u^2)}
+$$
+
+**κ\*, le taux d'échange** entre rendement et niveau : 0,132, **mesuré**. C'est la valeur qui rend le plus vraisemblables ensemble les matchs et les passages (profil de la vraisemblance : 0,131 ± 0,006).
+- Les seuls passages à l'intérieur d'un pays donnent 0,17 ; il faut donc le lire entre 0,13 et 0,17.
+- À 0,17, aucun championnat mesuré ne bouge de plus de la moitié de son erreur.
+
+Seules les années du trophée **terminées** comptent. Un niveau ne relit donc jamais ce que la saison en cours lui renvoie.
+
+### 4.4 L'a priori : la division et la confédération
+
+Quand les preuves manquent, il faut un point de départ. Il est donné **en écarts** plutôt qu'en « retour à 1500 » :
+
+- **Une division inférieure** se tient sous la division au-dessus d'elle, dans son pays, d'un écart de division $b$ par division. On prend la plus proche au-dessus, et la plus informée s'il y en a plusieurs :
+
+$$
+\ell_t - \ell_u \sim \mathcal{N}\big(-b\,(t-u),\; (t-u)\,\tau_b^2\big)
+$$
+
+  $b$ = 162 points et $\tau_b$ = 49, **mesurés** à chaque calcul sur les 11 paires de divisions que les matchs et les passages mesurent à 40 points près. On retire de leur dispersion ce qu'y met l'erreur de mesure.
+- **Une première division** se tient à la moyenne de sa confédération :
+
+$$
+\ell \sim \mathcal{N}(\mu_\text{conf}, \tau_c^2)
+$$
+
+  - $\tau_c$ est l'écart-type entre premières divisions européennes mesurées à 60 points près, moins leur erreur de mesure : environ 112, **mesuré**.
+  - $\mu_\text{conf}$ est la moyenne des premières divisions informées de la confédération, chacune pesée par $1/(\tau_c^2 + \text{se}^2)$, rapprochée de la moyenne d'ensemble comme le ferait un championnat de plus.
+  - Il faut au moins **trois** championnats informés pour une moyenne propre. Sinon, c'est la moyenne d'ensemble (cas de la CAF, deux championnats).
+  - Environ 1490 pour l'UEFA et la CONMEBOL, 1480 pour la CONCACAF, 1430 pour l'AFC.
+- **Une division inférieure seule de son pays** dans la base :
+
+$$
+\ell \sim \mathcal{N}\big(\mu_\text{conf} - b(t-1),\; \tau_c^2 + (t-1)\tau_b^2\big)
+$$
+
+Les divisions sont relues une par une (`TIERS`). Le Paulista A1, championnat d'État joué par des clubs de Serie A et de Serie B, compte comme une deuxième division.
+
+### 4.5 Le calcul
+
+1. **Matchs et passages seuls**, avec un a priori très large (1500 ± 400) qui ne fixe que l'origine de l'échelle. On en tire $\tau_u$, puis $b$, $\tau_b$, $\tau_c$ et les moyennes de confédération.
+2. **Les trois preuves ensemble.** Pas de Newton :
+
+$$
+\ell \leftarrow \ell + (\Lambda_\text{matchs} + \Lambda_\text{passages} + \Lambda_\text{a priori})^{-1}\,(g_\text{matchs} + g_\text{passages} + g_\text{a priori})
+$$
+
+   L'Elo est redéroulé à chaque pas, depuis les nouveaux niveaux. Le calcul s'arrête quand plus aucun niveau ne bouge de 0,25 point (7 pas en service). Au-delà de 40 pas, il échoue et les niveaux d'avant restent.
+3. **L'origine de l'échelle.** Matchs et passages ne disent que des écarts. On décale tous les niveaux d'une même constante, pour que les championnats qui tiennent l'échelle gardent leur niveau d'avant. Ces championnats sont ceux mesurés à 25 points près contre le mieux mesuré : les cinq grands championnats, les championnats anglais, la 2. Bundesliga, les Pays-Bas, le Portugal.
+4. **L'erreur-type** d'un niveau, contre la moyenne de ces championnats :
+
+$$
+\text{se}_j = \sqrt{v^\top \Lambda^{-1} v}, \qquad v = e_j - \tfrac{1}{|\text{réf}|}\mathbf{1}_\text{réf}
+$$
+
+### 4.6 Mesuré ou provisoire
+
+Un championnat est **mesuré** quand se ≤ **45 points**. Il le reste jusqu'à **52**, pour qu'aucun championnat n'entre et ne sorte du classement à chaque calcul. Ses joueurs reçoivent un rang. Un championnat au-dessus est **provisoire** : il garde son niveau, affiché avec sa marge, et ses joueurs un score sans rang.
+
+Pourquoi 45 : une erreur e sur le niveau déplace l'indice d'un joueur d'environ $e/(\sqrt{2}\,\sigma)$ écart-type de son rôle, σ = 132 étant l'écart-type des forces des clubs sur les matchs de championnat de 2026/2027. On veut au plus un quart d'écart-type : e ≤ 0,25 × √2 × 132 ≈ 47, arrondi à 45. À 60 points, ce serait 0,32.
+
+**Les autres cas :**
+- **Un club que la base ne connaît que par les coupes d'Europe** (Ferencváros, Shakhtar Donetsk) prend le pays de son homonyme dans le classement UEFA, quand un seul club porte ce nom. Le championnat de son pays, que la base ne tient pas, est un « championnat de pays » du modèle : ajusté sur les matchs de ses clubs, avec l'a priori de sa confédération. Il est tenu hors des réglages de l'a priori, parce que seuls les meilleurs clubs d'un pays jouent en Europe, et n'a pas de ligne à lui.
+- **Un championnat féminin** est un univers à part : ses clubs ne rencontrent jamais les autres.
+
+### 4.7 Validations (lecture seule, base du 14 novembre)
+
+| Épreuve | Version 3 | Version 4 | Critère |
+| --- | ---: | ---: | --- |
+| Prédire les 5 004 matchs entre championnats joués après le 1ᵉʳ août 2025, niveaux calculés avant (log-loss) | 0,6517 | 0,6466 | plus bas |
+| Idem, championnats de moins de 100 liens | 0,6542 | 0,6395 | plus bas |
+| Championnats dont le résultat après le 1ᵉʳ août reste à ±2 écarts-types | 73 % | 94 % | ≥ 90 % |
+| Prédire les 1 282 passages de 2026/2027 (pente observé / prédit) | 1,30 ± 0,19 | 1,11 ± 0,12 | 0,85 à 1,15 |
+| Matchs seuls contre passages seuls, 31 championnats (rms des écarts réduits) | — | 1,03 | ≤ 1,3 |
+
+## 5. La note d'un joueur
+
+### 5.1 Son rôle dans chaque match
+
+- Un **titulaire** a le rôle de son emplacement, lu avec la formation de son équipe (`role_of`). Le même emplacement n'est pas le même rôle partout : 103 et 107 sont les ailiers d'un 4-3-3 et les attaquants d'un 4-2-4.
+- Un **remplaçant** prend le rôle qu'il a le plus joué dans la saison, sinon le rôle par défaut de sa ligne.
+- Sept rôles : avant-centre, ailier / milieu offensif, milieu central, milieu défensif, latéral / piston, défenseur central, gardien.
+- **Son rôle principal** est celui où il a le plus de minutes.
+
+### 5.2 L'attendu de chaque mesure
+
+**Mesures de volume** (buts hors penalty, xG hors penalty, tirs cadrés, passes décisives, xA, occasions et grosses occasions créées, passes dans le dernier tiers, passes et courses progressives, tacles, interceptions, récupérations, dégagements, tirs contrés, ballons touchés, ainsi que, comptées contre lui, grosses occasions manquées, dribbles subis, erreurs menant à un but, pertes de balle) :
+
+$$
+\hat{x} = \frac{t}{90}\,\exp(\alpha + \beta\,\Delta), \qquad \Delta = \frac{R_\text{adversaire} - R_\text{équipe}}{400} \text{ avant le match}
+$$
+
+- α et β sont ajustés par **maximum de vraisemblance de Poisson**, par rôle et par mesure, sur l'année. β = 0 en dessous de 200 matchs.
+- Raison : c'est la « régression simple » de la méthode (§ 5.1). On attend moins d'un joueur dont l'équipe est dominée, et plus en jouant plus longtemps.
+
+**Mesures conditionnelles** (dribbles réussis, duels et duels aériens gagnés, passes réussies) :
+
+$$
+\hat{x} = \text{tentatives} \times \text{taux de réussite du rôle}
+$$
+
+Raison : six duels gagnés sur huit ne disent pas la même chose que six sur vingt (§ 5.2).
+
+**Gardiens.** Les buts évités (xGOT subis − buts encaissés) sont déjà un écart à l'attendu, donc $\hat{x} = 0$ (§ 7.2). S'y ajoutent les sorties aériennes et les poings, les sorties dans la profondeur, et les passes et longs ballons réussis.
+
+Une mesure avec moins de 30 matchs de référence dans le rôle n'est pas évaluée.
+
+### 5.3 L'écart standardisé et la contribution du match
+
+$$
+c_k = d_k\,\frac{x_k - \hat{x}_k}{s_{r,k}}, \qquad s_{r,k} = \sqrt{\overline{(x - \hat{x})^2}} \text{ dans le rôle}
+$$
+
+- $d_k$ vaut +1 si plus est mieux, −1 pour une erreur ou une perte. $s$ met les mesures sur une même échelle (§ 6.1).
+- Une mesure **absente** est écartée du match, jamais lue comme zéro. Les poids des blocs sont alors répartis sur les blocs mesurés.
+
+**Blocs.** Les mesures sont regroupées en blocs, à poids égaux à l'intérieur d'un bloc, pour ne pas compter deux fois des mesures liées (passes décisives, xA, occasions créées). Les blocs sont ensuite pondérés selon le rôle (§ 6.2 et § 7.3, poids choisis par la méthode) :
+
+$$
+C = \sum_\text{blocs} W_{r,b}\;\overline{c}_{b}
+$$
+
+| Rôle | Finition | Création | Progression | Défense | Conservation |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Avant-centre | 45 % | 20 % | 15 % | 10 % | 10 % |
+| Ailier / milieu offensif | 20 % | 35 % | 25 % | 10 % | 10 % |
+| Milieu central | 10 % | 25 % | 25 % | 20 % | 20 % |
+| Milieu défensif | 5 % | 15 % | 20 % | 40 % | 20 % |
+| Latéral / piston | 5 % | 25 % | 25 % | 30 % | 15 % |
+| Défenseur central | 5 % | 5 % | 15 % | 55 % | 20 % |
+
+Gardien : arrêts 60 %, jeu aérien 15 %, profondeur 10 %, relance 15 %.
+
+$C$ est la **note du match** : 0 pour ce qu'on attend de son rôle dans cette situation, positif au-dessus.
+
+### 5.4 Le niveau où il joue
+
+$C$ compare un joueur à l'attendu de son rôle **dans la situation de son club**. Elle dit de combien il s'écarte du niveau de son club, pas où se trouve ce niveau. On le rajoute :
+
+$$
+L = \frac{t}{90}\,\frac{R_\text{club} - \bar{R}}{400}
+$$
+
+$\bar{R}$ est la force moyenne des clubs sur les matchs-joueurs de l'année, pondérée par les minutes. Les sélections ont leur propre moyenne.
+
+Le poids κ du niveau est **choisi** pour que la moitié de ce qui sépare deux joueurs classés soit le niveau où ils jouent, et l'autre moitié ce qu'ils y font (`LEVEL_SHARE` = 0,5) :
+
+$$
+\kappa = \sqrt{\frac{\text{part}}{1 - \text{part}}}\;\frac{\sigma_\text{propre}}{\sigma_\text{niveau}}
+$$
+
+σ_propre et σ_niveau sont les écarts-types, parmi les éligibles classés, des taux régularisés de C (centrés par rôle) et de L. On trouve κ ≈ 0,65 en 2026/2027.
+
+**Ce qui est mesuré à côté.** Le taux d'échange κ\* = 0,132 (§ 4.3) serait la valeur pour laquelle la note d'un joueur ne change pas quand il change de championnat. Le choix de la moitié vient de la version 2 et reste une décision à part. Essayé à 0,132 en lecture seule, κ remplit les trente premiers de joueurs de championnats faibles. La cause supposée, qu'un score lisant le rendement brut et non celui pris par rapport au championnat ne tient pas ce taux, n'est pas vérifiée.
+
+### 5.5 L'année
+
+$$
+T = \sum_m I_m\,(C_m + \kappa L_m) \qquad \text{(contribution cumulée, § 8.1)}
+$$
+
+$$
+R^\ast = \frac{90\,T}{M + \lambda}, \qquad \lambda = 450 \text{ minutes} \qquad \text{(par 90 minutes, régularisée, § 8.2)}
+$$
+
+- On fait la somme des contributions et des minutes **avant** de diviser. La moyenne des notes de match donnerait trop de poids aux courtes apparitions.
+- λ = 450 minutes (réglage de la méthode) rapproche de zéro le taux d'un petit échantillon : 5 matchs ne valent pas 30.
+- **L'enjeu multiplie l'ensemble**, « pénalités comprises » (annexe A.5) : un mauvais match de finale coûte plus cher aussi.
+
+### 5.6 L'indice, le score et le rang
+
+**Éligibilité** : 900 minutes dans l'année (§ 8.3), ou la moitié des minutes du joueur le plus utilisé tant que l'année est jeune (810 le 14 novembre 2026). Raison : en dessous, on compare un joueur aux titulaires sur trop peu de matchs. Un joueur sous le seuil a ses totaux, mais pas de score. La question de donner un rang à chaque joueur dès son premier match est posée au conseiller, voir § 7.
+
+**Indice.** Pour un joueur éligible de rôle principal r :
+
+$$
+Z = 0{,}75\,\frac{T - \overline{T}_r}{\sigma_{T,r}} + 0{,}25\,\frac{R^\ast - \overline{R^\ast}_r}{\sigma_{R^\ast,r}}
+$$
+
+Moyennes et écarts-types sont pris parmi les éligibles classés du rôle. Les poids 0,75 et 0,25 sont ceux de la méthode (§ 8.3) : la contribution cumulée d'abord, le niveau moyen ensuite.
+
+Pourquoi un indice standardisé et pas des centiles (§ 8.3) : les centiles plafonnaient pour les premiers de chaque rôle, et ce plafond dépendait de la taille du rôle. L'ordre entre les meilleurs suivait donc le nombre de joueurs du rôle (audit, cause 4).
+
+**Score affiché** (0 à 100, la forme du résultat attendu de l'Elo) :
+
+$$
+\text{score} = \frac{100}{1 + 10^{-Z/4}}
+$$
+
+| Z | −2 | 0 | 1 | 2 | 3 | 4 | 6 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Score | 24 | 50 | 64 | 76 | 85 | 91 | 97 |
+
+50 est la moyenne du rôle parmi les classés. Quatre écarts-types d'indice font dix contre un, comme 400 points d'Elo.
+
+**Rangs.**
+- Le **rang** est l'ordre de Z parmi les éligibles d'un championnat mesuré (§ 4.6), puis T, puis les minutes, à égalité le même rang. Le **rang dans le rôle** suit le même ordre dans le rôle principal.
+- **Centiles** des blocs et de T, R\* : rang moyen dans le rôle, (nombre en dessous + ½ égaux) / n.
+- **Course au Ballon d'Or** : les trente premiers classés d'un club de première division.
+
+Un joueur que la base ne connaît que par sa sélection a un score, sans rang : il est classé par son club. Les joueuses d'un championnat féminin sont notées entre elles.
+
+## 6. Les sélections
+
+- Même Elo, entre sélections.
+- Leurs matchs entrent dans le classement des joueurs avec leur enjeu : Coupe du monde 1,30 ; Euro, Copa América, CAN, Coupe d'Asie et Gold Cup 1,20 ; Nations League 1,05.
+- Le niveau L d'un match de sélection est celui de la sélection parmi les sélections.
+
+## 7. Ce qui est mesuré et ce qui est choisi
+
+| Réglage | Valeur | Statut |
+| --- | --- | --- |
+| Niveaux des championnats ℓ et leurs erreurs | § 4 | mesuré |
+| Taux d'échange κ\* | 0,132 | mesuré (0,13 à 0,17) |
+| Écart de division b, τ_b | 162, 49 | mesurés à chaque calcul |
+| τ_c, moyennes de confédération | 112 ; 1430 à 1490 | mesurés à chaque calcul |
+| Dispersion des résultats φ | 0,73 | mesurée à chaque calcul |
+| α, β des attendus ; taux de réussite ; s | par rôle et mesure | mesurés chaque année |
+| Seuil « mesuré » | 45 (52 pour rester) | déduit d'une tolérance choisie (¼ d'écart-type) |
+| K, avantage du terrain | 20, 60 | choisis |
+| Enjeux | § 2 | choisis |
+| Poids des blocs par rôle | § 5.3 | choisis (méthode § 6.2, 7.3) |
+| 75 % / 25 %, λ = 450, 900 minutes | | choisis (méthode § 8) |
+| Part du niveau du club | 0,5 (κ ≈ 0,65) | choisie ; à décider face à κ\* |
+| Divisions des championnats | `TIERS` | relues à la main |
+
+**Questions ouvertes :**
+- donner un rang à chaque joueur à chaque match (seuil d'éligibilité, championnats provisoires) : posée au conseiller le 15 novembre 2026 ;
+- la part du niveau du club (§ 5.4).
