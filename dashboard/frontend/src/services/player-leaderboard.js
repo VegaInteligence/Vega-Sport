@@ -3,6 +3,18 @@ import { compareText } from "../model.js";
 
 /** Shared, season-scoped ranking definitions for home cards and the directory. */
 export const PLAYER_RANKINGS = {
+  // The Vega score of the season (the power ranking): the site's main ranking of players.
+  score: {
+    label: "Score Vega",
+    sort: { key: "score", direction: "desc" },
+    columns: ["score", "matches"],
+    eligible: (_totals, row) => Number.isFinite(row.score),
+    compare: (a, b) =>
+      b.score - a.score ||
+      (b.matches || 0) - (a.matches || 0) ||
+      compareText(a.name, b.name) ||
+      compareText(a.playerId, b.playerId),
+  },
   grade: {
     label: "Meilleures notes",
     sort: { key: "grade", direction: "desc" },
@@ -49,14 +61,16 @@ export const PLAYER_RANKINGS = {
 export const playerRankingKey = (value) =>
   value === "all" || Object.hasOwn(PLAYER_RANKINGS, value) ? value : "";
 
-export function playerDirectoryRanking(filters, defaults = false) {
+export function playerDirectoryRanking(filters, defaults = false, compact = true) {
   if (filters.ranking) return filters.ranking === "all" ? "" : filters.ranking;
   return defaults &&
     !filters.query?.trim() &&
     filters.match === "all" &&
     filters.league === "all" &&
     !filters.leagues?.length
-    ? "grade"
+    ? compact
+      ? "score"
+      : "grade"
     : "";
 }
 

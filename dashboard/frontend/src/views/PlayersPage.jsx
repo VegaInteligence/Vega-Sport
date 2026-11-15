@@ -91,6 +91,7 @@ export default function PlayersPage() {
   const ranking = playerDirectoryRanking(
     f.filters,
     !id && directoryView === "table",
+    f.compactMode,
   );
   const sort = PLAYER_RANKINGS[ranking]?.sort || manualSort;
   const setSort = (next) => {
@@ -242,7 +243,7 @@ export default function PlayersPage() {
   const directoryRows = useMemo(
     () =>
       f.compactMode && !id && directoryView === "table"
-        ? directory.value?.data.players || []
+        ? (directory.value?.data.players || []).map((row) => ({ ...row, score: row.power?.score ?? null }))
         : ranking
           ? rankSeasonPlayers(
               searchPlayerAverages(eligible, filters.query),
