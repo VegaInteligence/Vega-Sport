@@ -236,5 +236,5 @@ Outputs:
   ReadFunction: {Value: !Ref Read, Export: {Name: vega-v2-live-read-function}}
   EventsHttp: {Value: !GetAtt EventsApi.Dns.Http}
   EventsRealtime: {Value: !GetAtt EventsApi.Dns.Realtime}
-  # Public by design: it only lets a browser subscribe (NEXT_PUBLIC_LIVE_EVENTS_KEY).
+  # Public by design: it only lets a browser subscribe (GET /live/config gives it to the site once a provider is set).
   BrowserKey: {Value: !GetAtt BrowserKey.ApiKey}
