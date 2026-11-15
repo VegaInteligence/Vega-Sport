@@ -61,6 +61,7 @@ test("each standings team links to its matching profile or a source-backed fallb
       await import("../dashboard/frontend/src/services/uefa-standings.js"),
     "../services/standings-clubs.js":
       await import("../dashboard/frontend/src/services/standings-clubs.js"),
+    "../services/league-fates.js": { useLeagueFates: () => ({ value: null }) },
     "../services/cup-worker-client.js": {
       cupWorkerSnapshot: async () => ({ tables: [] }),
     },

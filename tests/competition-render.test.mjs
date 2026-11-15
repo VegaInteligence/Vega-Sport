@@ -74,6 +74,7 @@ test("competition page renders a result-derived league table and its limits", as
     "../services/sportscore-standings.js": sportscore,
     "../services/uefa-standings.js": uefa,
     "../services/standings-clubs.js": await import("../dashboard/frontend/src/services/standings-clubs.js"),
+    "../services/league-fates.js": { useLeagueFates: () => ({ value: null }) },
     "../services/cup-worker-client.js": { cupWorkerSnapshot: async () => ({ tables: [] }) },
     "../services/competition-matches.js": ordering,
   };

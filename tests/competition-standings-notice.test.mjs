@@ -32,6 +32,7 @@ test("SportScore standings render without the update-timing message", async () =
     "../services/sportscore-standings.js": sportscore,
     "../services/uefa-standings.js": await import("../dashboard/frontend/src/services/uefa-standings.js"),
     "../services/standings-clubs.js": await import("../dashboard/frontend/src/services/standings-clubs.js"),
+    "../services/league-fates.js": { useLeagueFates: () => ({ value: null }) },
     "../services/cup-worker-client.js": { cupWorkerSnapshot: async () => ({ tables: [] }) },
     "../services/cup-catalog.js": { WORLD_CUP_ID: "l_1XLtP0" },
     "../services/competition-selector.js": { FEATURED_EUROPE_IDS: [], competitionCountry: () => "", isTopFlight: () => false },

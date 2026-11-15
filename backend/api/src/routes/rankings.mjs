@@ -695,6 +695,18 @@ async function leagueRound(read, params) {
   };
 }
 
+/**
+ * What became of each club of a finished league edition, read from the next season: a
+ * European competition, a promotion or a relegation (api.league_team_fates). An edition
+ * without a next season in the base has none ({}): its table keeps the league's rules.
+ */
+async function teamFates(read, params) {
+  validateParams(params, ["competition", "season"]);
+  const { competition, season, edition } = await editionOf(read, params);
+  const rows = await read("SELECT team_id, fate FROM api.league_team_fates WHERE competition_season_id=$1 AND fate IS NOT NULL", [edition]);
+  return { competition, season, teams: Object.fromEntries(rows.map((r) => [r.team_id, r.fate])) };
+}
+
 export function createRankingRoute(read) {
   return async (req, path, params) => {
     if (path === "/api/rankings/power") return respond(req, await powerRanking(read, params));
@@ -704,6 +716,7 @@ export function createRankingRoute(read) {
     if (path === "/api/rankings/match") return respond(req, await matchGrades(read, params));
     if (path === "/api/rankings/rounds") return respond(req, await leagueRounds(read, params));
     if (path === "/api/rankings/round") return respond(req, await leagueRound(read, params));
+    if (path === "/api/rankings/fates") return respond(req, await teamFates(read, params));
     if (path === "/api/forecasts/match") return respond(req, await matchForecast(read, params));
     if (path === "/api/forecasts/odds") return respond(req, await matchOdds(read, params));
     if (path === "/api/forecasts/season") return respond(req, await seasonProjection(read, params));

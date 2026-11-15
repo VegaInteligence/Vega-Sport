@@ -128,6 +128,9 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   assert.deepEqual([odds.vega.home, odds.vega.fair.home], [0.5123, 1.95]);
   assert.equal((await get("/api/forecasts/odds?match=m_aaaaa1")).response.status, 404);
   assert.equal((await get("/api/forecasts/odds?match=x")).response.status, 400);
+  // What became of a league's clubs: none for an edition the base holds no next season of.
+  assert.deepEqual((await get("/api/rankings/fates?competition=l_3FJFUl&season=2025/2026")).body.teams, {});
+  assert.equal((await get("/api/rankings/fates?competition=l_3FJFUl&season=1999/2000")).response.status, 404);
   // The whole ranking (the Power Ranking page): every ranked player of the universe, a page at a time, by role if asked.
   const whole = (await get("/api/rankings/power?kind=players&season=2025/2026&scope=all&limit=1")).body;
   assert.deepEqual([whole.total, whole.page, whole.universe, whole.rows.map((r) => [r.rank, r.playerId, r.provisionalReason])], [2, 1, "men", [[1, "p_aaaab1", null]]]);
