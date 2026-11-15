@@ -55,5 +55,6 @@ export function competitionHighlights(matches, now = Date.now(), limit = 4) {
 export function recentResultCapacity({ standingsHeight, upcomingHeight, headerHeight, rowHeight, gap = 16, padding = 10, max = 20 }) {
   if (![standingsHeight, upcomingHeight, headerHeight, rowHeight, gap, padding, max].every(Number.isFinite) || rowHeight <= 0) return 5;
   const available = standingsHeight - upcomingHeight - headerHeight - gap - padding;
-  return Math.min(max, Math.max(5, Math.floor(available / rowHeight)));
+  // At least two results, so the column never runs below a short table (the card stretches to its foot).
+  return Math.min(max, Math.max(2, Math.floor(available / rowHeight)));
 }

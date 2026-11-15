@@ -202,10 +202,16 @@
   max-width: none;
   margin: 0;
 }
+/* The column beside the table: its last card (the latest results) stretches to the table's
+   foot, so neither leaves a gap below the other. */
 .competition-highlights {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
   min-width: 0;
+}
+.competition-highlights > :last-child {
+  flex: 1 1 auto;
 }
 .competition-highlights-card .card-header {
   border-bottom: 1px solid var(--border);
@@ -338,6 +344,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .competition-highlights {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -581,7 +588,12 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
   gap: 18px;
-  align-items: start;
+  /* The last row's two cards share one height. */
+  align-items: stretch;
+}
+.league-round-cards > .card {
+  height: 100%;
+  margin: 0;
 }
 @media (max-width: 900px) {
   .league-round-cards {

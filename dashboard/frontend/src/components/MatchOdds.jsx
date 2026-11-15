@@ -15,7 +15,8 @@ export default function MatchOdds({ match }) {
   const sides = ["home", "draw", "away"];
   const label = { home: "1", draw: "N", away: "2" };
   return (
-    <Card title="Cotes" text="Résultat final · bookmakers agréés en France">
+    <Card title="Cotes">
+      <p className="card-note">Résultat final · bookmakers agréés en France.</p>
       <div className="table-scroll">
         <table className="data-table match-odds-table">
           <thead>
