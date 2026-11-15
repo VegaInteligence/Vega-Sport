@@ -182,6 +182,17 @@ async function rolesOf(read, season, ids) {
  * terms }, players { rank, score, role, position, roleRank, blocks, roles }. A club or
  * player without one (not ranked) has none.
  */
+/** Why a player's rank is provisional, the first that holds: « minutes » (under the season's
+ * bar), « national » (known by his national team alone), « no_league » (his club plays in no
+ * league of the base), « league » (his league's level is still measured roughly); else null. */
+export function provisionalReason(r) {
+  if (r.eligible === false) return "minutes";
+  if (r.universe === "women" || r.linked !== false) return null;
+  if (r.team_is_national) return "national";
+  if (r.in_league === false) return "no_league";
+  return "league";
+}
+
 export async function powerOf(read, kind, season, ids) {
   const out = new Map();
   if (!season || !ids.length) return out;
@@ -195,8 +206,10 @@ export async function powerOf(read, kind, season, ids) {
       out.set(r.player_id, {
         rank: r.rank, score: round(r.score, 1), index: round(r.index, 2), role: r.role, position: ROLE_LABEL[r.role] ?? r.role, roleRank: r.role_rank,
         ownContribution: round(r.own_total, 2), clubLevel: round(r.level_total, 2), linked: r.linked !== false, topDivision: r.top_division !== false,
-        // A provisional rank: under the minutes bar, or in a league whose level is still uncertain.
+        // A provisional rank: under the minutes bar, in a league whose level is still uncertain, in a
+        // club the base knows in no league, or known by his national team alone (provisionalReason).
         eligible: r.eligible !== false, provisional: r.eligible === false || r.linked === false,
+        universe: r.universe ?? "men", inLeague: r.in_league ?? null, provisionalReason: provisionalReason(r),
         blocks: blocksOf(r), roles: roles.get(r.player_id) ?? [],
       });
   }
@@ -473,7 +486,7 @@ async function powerPlayer(read, params) {
   if (!power && !flag) reject(404, "Donnée indisponible.");
   const breakout = flag ? breakoutOf(flag) : null;
   if (!power) return { season, player: { id, breakout } };
-  const [count] = await read(`SELECT ranked FROM api.power_role_counts WHERE season_id=${SEASON_KEY} AND role=$2`, [season, power.role]);
+  const [count] = await read(`SELECT ranked FROM api.power_role_counts WHERE season_id=${SEASON_KEY} AND role=$2 AND universe=$3`, [season, power.role, power.universe]);
   return { season, player: { id, ...power, roleCount: count?.ranked ?? null, breakout } };
 }
 

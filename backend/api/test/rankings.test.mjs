@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { get, skip } from "./context.mjs";
-import { comingMatches } from "../src/routes/rankings.mjs";
+import { comingMatches, provisionalReason } from "../src/routes/rankings.mjs";
 
 test("club links and a club's UEFA ranking history", { skip }, async () => {
   const links = (await get("/api/club-links?club=t_aaaaa1")).body;
@@ -69,7 +69,7 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   assert.equal(Math.round(clubs.rows.reduce((s, r) => s + r.results, 0) * 2), 10); // five matches, one point shared each
   // The league strength index: every men's league ranked by its level, a provisional one with its margin, the level of each season.
   const levels = (await get("/api/rankings/leagues")).body;
-  assert.equal(levels.method.version, "power-ranking-v5");
+  assert.equal(levels.method.version, "power-ranking-v6");
   assert.ok(levels.leagues.length >= 1);
   for (const league of levels.leagues) {
     assert.match(league.id, /^l_/);
@@ -89,6 +89,7 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   assert.deepEqual([own.season, own.player.id, own.player.score, own.player.role, own.player.position, own.player.roleRank, own.player.roleCount],
     ["2025/2026", "p_aaaab1", 87.5, "centre_forward", "Avant-centre", 1, 1]);
   assert.deepEqual(own.player.blocks.finishing, { contribution: 3.1, percentile: 95 });
+  assert.deepEqual([own.player.universe, own.player.provisionalReason], ["men", null]);
   assert.equal((await get("/api/rankings/power/player?season=2025/2026&player=p_zzzzz9")).response.status, 404);
   // A season the player is not ranked in (the seed ranks only p_aaaab1 in 2024/2025, for his rate over two seasons).
   assert.equal((await get("/api/rankings/power/player?season=2024/2025&player=p_aaaab4")).response.status, 404);
@@ -204,4 +205,14 @@ test("the season's breakouts, and a player's own flag", { skip }, async () => {
   assert.equal((await get("/api/rankings/power/player?season=2025/2026&player=p_aaaab1")).body.player.breakout, null);
   assert.equal((await get("/api/rankings/breakouts?season=2024/2025")).response.status, 404);
   assert.equal((await get("/api/rankings/breakouts")).response.status, 400);
+});
+
+test("why a rank is provisional: the minutes first, then a team the base knows in no league", () => {
+  assert.equal(provisionalReason({ eligible: false, linked: false }), "minutes");
+  assert.equal(provisionalReason({ eligible: true, linked: true }), null);
+  assert.equal(provisionalReason({ eligible: true, linked: false, team_is_national: true, in_league: false }), "national");
+  assert.equal(provisionalReason({ eligible: true, linked: false, team_is_national: false, in_league: false }), "no_league");
+  assert.equal(provisionalReason({ eligible: true, linked: false, in_league: true }), "league");
+  // The women are ranked among themselves: no league of theirs is on the men's scale.
+  assert.equal(provisionalReason({ eligible: true, linked: false, universe: "women", in_league: true }), null);
 });

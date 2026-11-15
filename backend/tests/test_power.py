@@ -444,13 +444,31 @@ class ScoreTest(unittest.TestCase):
         # Ranked, marked provisional (linked false); the references stay those of measured leagues.
         self.assertTrue(out[4]["eligible"] and not out[4]["linked"] and out[4]["score"] > out[5]["score"])
         self.assertEqual([out[p]["rank"] for p in (4, 5, 1, 2, 3)], [1, 2, 3, 4, 5])
-        # A player the base knows by his national team alone has a score and no rank.
+        # A player of a team the base knows in no league (a national team, a club seen in European
+        # cups only) is ranked among the men all the same, provisionally (not linked), not in_league.
         alone = power.season_scores(contributions, linked={10, 30}, top={10}, clubs={10, 20})[0]
-        self.assertNotIn("rank", alone[5])
-        self.assertIn("score", alone[5])
+        self.assertEqual([alone[p]["rank"] for p in (4, 5, 1, 2, 3)], [1, 2, 3, 4, 5])
+        self.assertEqual([alone[p]["club"] for p in (4, 5)], [True, False])
         self.assertEqual([out[p]["top_division"] for p in (1, 4, 5)], [True, False, False])
         # The award race: the ranked players of a top division, numbered in their order.
         self.assertEqual([(no, player) for no, player, _, _ in power.award_race(out)], [(1, 1), (2, 2), (3, 3)])
+
+    def test_the_women_have_a_ranking_of_their_own_and_a_lone_role_is_placed(self):
+        contributions = {
+            1: [("winger", 1800, 2.0, 10, None)], 2: [("winger", 1800, 1.0, 10, None)],
+            3: [("winger", 1800, 3.0, 50, None)], 4: [("winger", 1800, 0.5, 50, None)],
+            5: [("goalkeeper", 300, 0.4, 50, None)],  # the only keeper of the women, under the bar
+        }
+        out, settings = power.season_scores(contributions, linked={10}, top={10}, women={50})
+        # Each universe is numbered from 1, and so is each role within it.
+        self.assertEqual([(out[p]["universe"], out[p]["rank"]) for p in (1, 2)], [("men", 1), ("men", 2)])
+        self.assertEqual(sorted(out[p]["rank"] for p in (3, 4, 5)), [1, 2, 3])
+        self.assertEqual(out[3]["rank"], 1)
+        self.assertEqual([out[p]["role_rank"] for p in (1, 3, 5)], [1, 1, 1])
+        # A role without an eligible player of its universe is placed against the universe's eligible
+        # players: between their floor and his own index, as any player under the bar.
+        self.assertIsNotNone(out[5]["index"])
+        self.assertIn("women", settings["level_weights"])
 
     def test_a_match_grade_reads_the_match_alone_against_its_role(self):
         # Reference year: wingers' full matches spread around 0 in two competitions, one wider; keepers' around 0.

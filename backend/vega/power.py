@@ -89,7 +89,7 @@ from bisect import bisect_left, bisect_right
 from math import exp, log, sqrt
 from statistics import NormalDist
 
-METHOD_VERSION = "power-ranking-v5"
+METHOD_VERSION = "power-ranking-v6"
 ELO_INITIAL = 1500.0
 ELO_K = 20.0
 ELO_HOME = 60.0
@@ -1141,11 +1141,13 @@ def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA, linked=
     (§ 8). `level` is the club-level part of the match, (t / 90) · (Elo_own − mean) / 400,
     or None; `linked` the teams whose league is measured and `top` those of a top division
     (None: every team); `women` the teams of a women's league, scored among themselves
-    (their own κ and spreads) and never ranked with the others; `clubs` the teams that are
-    clubs of a league (None: every team): a player the base knows by his national team
-    alone has a score and no rank.
+    (their own κ and spreads) and ranked among themselves; `clubs` the teams that play in a
+    league of the base (None: every team), written as `in_league`: a club seen in European
+    cups only and a national team are not, and their players' ranks are provisional.
 
-    Every player who played has a score and a rank (version 5, 15 November 2026). The
+    Every player who played has a score and a rank (version 5, 15 November 2026; version 6
+    the same day: also the players of a club without a league, those known by their national
+    team alone and the women, each universe numbered from 1). The
     references (κ, the role's means and spreads) are the eligible players of measured
     leagues', as before; an eligible player's index is unchanged. Below the minutes bar,
     the index starts at the role's 10th percentile of ranked players (BELOW_BAR_FLOOR) and
@@ -1184,12 +1186,16 @@ def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA, linked=
     kappa = weight_of.get("men", 0.0)
     for role, universe in {(r["role"], r["universe"]) for r in out.values()}:
         group = [r for r in out.values() if r["role"] == role and r["universe"] == universe and r["eligible"]]
-        if not group:
+        # A role with no eligible player of its universe yet (the first days of a year, a small
+        # women's league): its players are placed against the universe's eligible players of
+        # every role (C is already relative to the role's expectation, so its centre is common).
+        pool = group or [r for r in out.values() if r["universe"] == universe and r["eligible"]]
+        if not pool:
             continue
-        totals, rates = [r["total"] for r in group], [r["rate"] for r in group]
-        scale = [r for r in group if r["linked"]] or group
+        scale = [r for r in pool if r["linked"]] or pool
         (mt, st), (mr, sr) = _spread([r["total"] for r in scale]), _spread([r["rate"] for r in scale])
         own_index = lambda r: TOTAL_WEIGHT * ((r["total"] - mt) / st if st > 1e-9 else 0.0) + RATE_WEIGHT * ((r["rate"] - mr) / sr if sr > 1e-9 else 0.0)
+        totals, rates = [r["total"] for r in group], [r["rate"] for r in group]
         for r in group:
             r["total_percentile"] = percentile(totals, r["total"])
             r["rate_percentile"] = percentile(rates, r["rate"])
@@ -1197,22 +1203,27 @@ def season_scores(contributions, *, eligibility=ELIGIBILITY, lam=LAMBDA, linked=
             r["score"] = score_of(r["index"])
         # Below the bar: from the role's floor to the player's own index as his minutes reach the bar.
         ranked = sorted(own_index(r) for r in scale)
-        floor = ranked[int(BELOW_BAR_FLOOR * len(ranked))] if ranked else 0.0
+        floor = ranked[int(BELOW_BAR_FLOOR * len(ranked))]
         for r in out.values():
             if r["role"] == role and r["universe"] == universe and not r["eligible"] and r["minutes"] > 0:
                 r["index"] = floor + min(1.0, r["minutes"] / threshold) * (own_index(r) - floor)
                 r["score"] = score_of(r["index"])
-    order = sorted((p for p, r in out.items() if r.get("index") is not None and r["universe"] == "men" and r["club"]),
-                   key=lambda p: (-out[p]["index"], -out[p]["total"], -out[p]["minutes"], p))
-    role_seen = defaultdict(int)
-    previous = None
-    for i, p in enumerate(order, 1):
-        r = out[p]
-        key = (round(r["index"], 9), round(r["total"], 9))
-        r["rank"] = previous[1] if previous and previous[0] == key else i
-        previous = (key, r["rank"])
-        role_seen[r["role"]] += 1
-        r["role_rank"] = role_seen[r["role"]]
+    # Every player with an index has a rank (version 6, 15 November 2026), numbered within his
+    # universe: the men's ranking and the women's ranking each start at 1. A club the base knows
+    # in no league (European cups only) and a player it knows by his national team alone are
+    # ranked among the men, provisionally (their league is not measured).
+    for universe in sorted({r["universe"] for r in out.values()}):
+        order = sorted((p for p, r in out.items() if r.get("index") is not None and r["universe"] == universe),
+                       key=lambda p: (-out[p]["index"], -out[p]["total"], -out[p]["minutes"], p))
+        role_seen = defaultdict(int)
+        previous = None
+        for i, p in enumerate(order, 1):
+            r = out[p]
+            key = (round(r["index"], 9), round(r["total"], 9))
+            r["rank"] = previous[1] if previous and previous[0] == key else i
+            previous = (key, r["rank"])
+            role_seen[r["role"]] += 1
+            r["role_rank"] = role_seen[r["role"]]
     return out, {"eligibility": threshold, "level_weight": kappa, "level_weights": weight_of}
 
 
@@ -1363,14 +1374,15 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
         conn.execute("DELETE FROM agg.player_power_roles WHERE season_id=%s", (season,))
         with conn.cursor().copy(
             f"""COPY agg.player_power(season_id, player_id, role, team_id, matches, minutes, total, rate, eligible, total_percentile,
-                 rate_percentile, score, rank, role_rank, run_id, own_total, level_total, index, linked, top_division,
+                 rate_percentile, score, rank, role_rank, run_id, own_total, level_total, index, linked, top_division, universe, in_league,
                  {', '.join(b + '_total' for b in BLOCK_COLUMNS)}, {', '.join(b + '_percentile' for b in BLOCK_COLUMNS)}) FROM STDIN"""
         ) as copy:
             for player, r in scored.items():
                 b = blocks[player]
                 copy.write_row((season, player, r["role"], r["team"], r["matches"], int(r["minutes"]), r["total"], r["rate"], r["eligible"],
                                 r.get("total_percentile"), r.get("rate_percentile"), r.get("score"), r.get("rank"), r.get("role_rank"), run,
-                                r["own"], settings["level_weight"] * r["level"], r.get("index"), r["linked"], r["top_division"],
+                                r["own"], settings["level_weights"].get(r["universe"], 0.0) * r["level"], r.get("index"), r["linked"], r["top_division"],
+                                r["universe"], r["club"],
                                 *[b["totals"].get(k) for k in BLOCK_COLUMNS], *[b["percentiles"].get(k) for k in BLOCK_COLUMNS]))
         with conn.cursor().copy("COPY agg.player_power_roles(season_id, player_id, role, matches, minutes, total, rate, run_id) FROM STDIN") as copy:
             for player, by_role in roles.items():

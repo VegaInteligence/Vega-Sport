@@ -341,6 +341,7 @@ export default function PlayerScoutRail({
             </strong>
             <span>
               {vega?.of ? `sur ${number(vega.of)} au poste` : "au poste"}
+              {vega?.women ? ", parmi les joueuses" : ""}
             </span>
           </div>
         </div>

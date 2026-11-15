@@ -259,3 +259,12 @@ Demande du propriétaire : un joueur doit avoir un rang dès son premier match, 
   - **En production** : chaque match joué des trois dernières saisons a sa note (651 805 en 2025/2026) ; un match complet moyen vaut 0,000 en écart standardisé, soit 50. Seules 2024/2025 et 2025/2026, terminées, sont gardées comme références.
   - **Sans note du fournisseur** (certains championnats n'en ont pas), la carte « Meilleures notes » liste les meilleures notes Vega du match.
   - **Sans minutes jouées** dans la source, un match n'a pas de note : le classement ne lit que les matchs où le joueur a des minutes.
+
+## Version 6 : le dernier pour cent classé (15 novembre 2026)
+
+Demande du propriétaire : classer aussi les joueurs restés sans rang en version 5.
+
+- **Joueurs d'un club vu seulement en coupe d'Europe** et **joueurs connus seulement par leur sélection** : classés parmi les hommes, rang provisoire, avec la raison sur leur fiche.
+- **Joueuses** : un classement à part, numéroté à partir de 1, « sur N au poste, parmi les joueuses ».
+- **Poste sans joueur éligible dans son univers** : placé face aux joueurs éligibles de tous les postes de cet univers.
+- Les joueurs déjà classés gardent leur indice ; seul leur numéro change quand un joueur nouvellement classé passe devant eux. La course au Ballon d'Or ne change pas : elle ne lit que les joueurs éligibles d'une première division mesurée.

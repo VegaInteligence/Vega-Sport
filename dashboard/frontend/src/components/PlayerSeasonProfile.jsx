@@ -111,6 +111,13 @@ const UNFILTERED_VIEWS = new Set([
   "projection",
 ]);
 const HISTORY_TABS = TABS.slice(0, 2);
+// Why a player's rank in Vega's ranking is provisional (the API's provisionalReason).
+const PROVISIONAL = {
+  minutes: "Rang provisoire : il a moins de minutes que le seuil de la saison ; son indice part du bas de son poste et rejoint le sien à mesure qu’il joue.",
+  league: "Rang provisoire : le niveau de son championnat n’est encore mesuré qu’à peu près.",
+  no_league: "Rang provisoire : son club ne joue dans aucun championnat suivi par Vega ; son niveau ne vient que de ses matchs de coupe d’Europe.",
+  national: "Rang provisoire : il n’est connu que par ses matchs en sélection, sans club suivi par Vega.",
+};
 const STAT_MODES = [
   ["total", "Totaux"],
   ["per90", "Par 90 min"],
@@ -434,13 +441,9 @@ export default function PlayerSeasonProfile({
         rank: power.roleRank ?? null,
         of: power.roleRank ? power.roleCount : null,
         parts: vegaParts(power),
-        // A provisional rank: under the season's minutes bar, or in a league still measured roughly.
-        provisional:
-          power.eligible === false
-            ? "Rang provisoire : il a moins de minutes que le seuil de la saison ; son indice part du bas de son poste et rejoint le sien à mesure qu’il joue."
-            : power.linked === false
-              ? "Rang provisoire : le niveau de son championnat n’est encore mesuré qu’à peu près."
-              : null,
+        women: power.universe === "women",
+        // A provisional rank, and why (the API's provisionalReason).
+        provisional: PROVISIONAL[power.provisionalReason ?? (power.eligible === false ? "minutes" : power.linked === false ? "league" : "")] ?? null,
         signal: breakoutSignal(power.breakout),
       };
     // Below the ranking's minutes: no score of his own, but he may be flagged as a breakout.
