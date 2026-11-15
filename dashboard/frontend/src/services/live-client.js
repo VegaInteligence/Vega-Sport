@@ -4,31 +4,42 @@
  * /live/match/{id}: one message per revision, applied in order, the full state read again
  * when one is missing. The browser never talks to the live provider: one feed per match,
  * on the server. The settings come from GET /live/config at run time (loadLiveConfig): while
- * no live provider is chosen it names none, and nothing here runs.
+ * no live provider is chosen it says so, and nothing here runs.
  */
 
 const ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN || "";
+// "Live off" is asked again after this long: a provider switched on reaches an open page.
+const OFF_FOR_MS = 5 * 60 * 1000;
 
-let reading = null;
-/** The live settings, read once per visit when a match first enters its live window:
- * { origin, provider, http, realtime, key }. A failed read is tried again next time. */
-export function loadLiveConfig({ origin = ORIGIN, fetcher = fetch } = {}) {
-  if (!reading)
-    reading = fetcher(`${origin}/live/config`, { headers: { Accept: "application/json" } })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((body) => ({ origin, provider: body?.provider || null, http: body?.http || "", realtime: body?.realtime || "", key: body?.key || "" }))
-      .catch(() => {
-        reading = null;
-        return null;
+let cached = null,
+  cachedAt = 0,
+  pending = null;
+/** The live settings: { origin, enabled, http, realtime, key }, or null when they could not
+ * be read. Settings that turn live on are kept for the visit (forgetLiveConfig drops them),
+ * "live off" for OFF_FOR_MS, a failed read not at all: the next call asks again. */
+export function loadLiveConfig({ origin = ORIGIN, fetcher = fetch, now = Date.now() } = {}) {
+  if (cached && (liveConfigured(cached) || now - cachedAt < OFF_FOR_MS)) return Promise.resolve(cached);
+  if (!pending)
+    pending = fetcher(`${origin}/live/config`, { headers: { Accept: "application/json" } })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
+      .then((body) => {
+        cached = { origin, enabled: body?.enabled === true, http: body?.http || "", realtime: body?.realtime || "", key: body?.key || "" };
+        cachedAt = now;
+        return cached;
+      })
+      .catch(() => null)
+      .finally(() => {
+        pending = null;
       });
-  return reading;
+  return pending;
 }
-/** Forget the settings read (tests). */
+/** Forget the settings read: the next loadLiveConfig asks the API again (a refused key). */
 export const forgetLiveConfig = () => {
-  reading = null;
+  cached = null;
+  pending = null;
 };
 export const liveConfigured = (config) =>
-  Boolean(config && config.provider && config.http && config.realtime && config.key);
+  Boolean(config && config.enabled && config.http && config.realtime && config.key);
 
 const MATCH = /^m_(?:[A-Za-z0-9]{6}|v\d{7})$/;
 const AHEAD = 30 * 60 * 1000,
@@ -109,8 +120,10 @@ export const newer = (current, body) => !current || !body || (body.revision ?? 0
 const base64url = (text) =>
   btoa(String.fromCharCode(...new TextEncoder().encode(text))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
-/** Subscribe to /live/match/{id} (AppSync Events WebSocket); returns the unsubscribe. */
-export function subscribeLive(id, onChange, { config, WebSocketImpl = globalThis.WebSocket } = {}) {
+/** Subscribe to /live/match/{id} (AppSync Events WebSocket); returns the unsubscribe.
+ * `onRefused` is called when AppSync refuses the connection or the subscription (an expired
+ * key): the caller reads the settings again. */
+export function subscribeLive(id, onChange, { config, WebSocketImpl = globalThis.WebSocket, onRefused = () => {} } = {}) {
   if (!WebSocketImpl || !MATCH.test(id || "") || !liveConfigured(config)) return () => {};
   const authorization = { host: config.http, "x-api-key": config.key };
   const socket = new WebSocketImpl(`wss://${config.realtime}/event/realtime`, [
@@ -129,6 +142,7 @@ export function subscribeLive(id, onChange, { config, WebSocketImpl = globalThis
     // AppSync channel segments take letters, digits and dashes only: m_2fkSwK -> m-2fkSwK.
     if (data.type === "connection_ack")
       socket.send(JSON.stringify({ type: "subscribe", id: subscription, channel: `/live/match/${id.replace(/_/g, "-")}`, authorization }));
+    else if (["connection_error", "subscribe_error", "error"].includes(data.type)) onRefused();
     else if (data.type === "data" && data.id === subscription) {
       try {
         onChange(JSON.parse(data.event));
