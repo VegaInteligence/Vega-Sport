@@ -30,8 +30,7 @@ import {
   legendZones,
   performanceSpots,
   seasonStartYear,
-  leagueZones,
-  tableZones,
+  standingZones,
 } from "../services/standings-zones.js";
 import {
   SIMPLE_LEAGUES,
@@ -39,6 +38,7 @@ import {
   hasCompleteHomeAwaySchedule,
 } from "../services/competition-standings.js";
 import { matchStandingsClubs } from "../services/standings-clubs.js";
+import { useLeagueFates } from "../services/league-fates.js";
 const teamKey = (name) => normalizeText(name).replace(/[^a-z0-9]/g, "");
 const isMatchTeam = (row, club, teams) =>
   teams.some(
@@ -110,7 +110,7 @@ export function useEuropeanPlaces(competition, season) {
     };
   }, [ranking.value, running.value, country, year]);
 }
-export function ZoneLegend({ zones, places }) {
+export function ZoneLegend({ zones, places, observed = false }) {
   // On a phone the legend opens on demand, under the table.
   const legend = usePhoneFold();
   const items = legendZones(zones);
@@ -128,7 +128,12 @@ export function ZoneLegend({ zones, places }) {
             {ZONES[zone].label}
           </span>
         ))}
-        {places?.rank && (
+        {observed ? (
+          <small>
+            Couleurs : la compétition que chaque club a jouée la saison
+            suivante.
+          </small>
+        ) : places?.rank && (
           <small>
             Places européennes selon le classement UEFA des pays ({places.rank}
             <sup>{places.rank === 1 ? "er" : "e"}</sup>
@@ -168,9 +173,11 @@ function ResultStandings({
   const table = useMemo(() => standingsFromFixtures(matches), [matches]);
   const followed = useFollowedClubs();
   const places = useEuropeanPlaces(competition, season);
-  const zones = tableZones(table.rows?.length || 0, {
+  const fates = useLeagueFates(competition?.id, seasonLabel(season)).value;
+  const { zones, observed } = standingZones(table.rows || [], {
     european: places.places,
-    league: leagueZones(competition?.id, table.rows?.length || 0),
+    competitionId: competition?.id,
+    fates,
   });
   if (table.complexSchedule)
     return (
@@ -275,7 +282,7 @@ function ResultStandings({
           </tbody>
         </table>
       </div>
-      <ZoneLegend zones={zones} places={places} />
+      <ZoneLegend zones={zones} places={places} observed={observed} />
       <p className="standings-note">
         Classement calculé à partir des résultats disponibles. Les sanctions et
         certains critères de départage ne sont pas pris en compte.
@@ -295,6 +302,7 @@ function SportscoreTable({
   matches,
   highlightTeams,
   places,
+  fates,
   competition,
   season,
   cup,
@@ -303,10 +311,13 @@ function SportscoreTable({
   const f = useFootball();
   const followed = useFollowedClubs();
   // European places only apply to a single league table.
-  const zones = tableZones(table.rows.length, {
-    european: multiple ? [] : places?.places || [],
-    league: multiple ? [] : leagueZones(competition.id, table.rows.length),
-  });
+  const { zones, observed } = multiple
+    ? { zones: [], observed: false }
+    : standingZones(table.rows, {
+        european: places?.places || [],
+        competitionId: competition.id,
+        fates,
+      });
   const clubs = useMemo(() => {
     const resolved = matchStandingsClubs(table.rows, matches);
     const indexed = new Map();
@@ -433,7 +444,11 @@ function SportscoreTable({
           </tbody>
         </table>
       </div>
-      <ZoneLegend zones={zones} places={multiple ? null : places} />
+      <ZoneLegend
+        zones={zones}
+        places={multiple ? null : places}
+        observed={observed}
+      />
     </section>
   );
 }
@@ -466,6 +481,7 @@ export default function CompetitionStandings({
     (current && Boolean(SPORTSCORE_LEAGUES[competition.id])) ||
     servedSeason;
   const places = useEuropeanPlaces(competition, season);
+  const fates = useLeagueFates(competition.id, seasonLabel(season)).value;
   const external = useResource(
     "sportscore-standings:" +
       competition.id +
@@ -525,6 +541,7 @@ export default function CompetitionStandings({
             matches={matches}
             highlightTeams={highlightTeams}
             places={places}
+            fates={fates}
             competition={competition}
             season={season}
             cup={cup}

@@ -38,7 +38,26 @@ La place EPS va au club le mieux classé qui n'est pas déjà qualifié, c'est-�
 - `promotion` premières places → Montée ;
 - `promotionPlayoff` places suivantes → Barrage de montée.
 
-Les règles ne s'appliquent que si le tableau a **le nombre d'équipes enregistré** : une saison plus ancienne à un autre format n'est pas colorée.
+Les règles ne s'appliquent que si le tableau a **le nombre d'équipes enregistré**. Une saison plus ancienne à un autre format, ou un championnat sans règles enregistrées, prend les destins observés (ci-dessous).
+
+## Destins observés d'une saison terminée
+
+Vue `api.league_team_fates` ([112_league_team_fates.sql](../../../backend/sql/112_league_team_fates.sql)), route `/api/rankings/fates`. Pour chaque club d'une édition terminée, on lit **ce qu'il a joué la saison suivante** dans la base :
+
+1. **Une coupe d'Europe** : Ligue des champions, Ligue Europa ou Ligue Conférence, dans cet ordre. « Qualifications » quand le club n'en a joué que les tours préliminaires.
+2. **Sinon, un championnat de son pays d'un autre niveau** : plus haut, c'est une montée ; plus bas, une relégation.
+3. **Sinon, en première division seulement** : un club absent de l'édition suivante a quitté la division, c'est une relégation. Cette règle ne joue que si l'édition suivante compte au moins les trois quarts des clubs de celle-ci, pour ne pas lire une saison dont seuls les premiers matchs sont chargés.
+
+Ce sont des faits, pas des règles : un vainqueur de coupe est coloré par la coupe d'Europe qu'il a jouée, à sa place au classement. Un barrage gagné ne se voit pas, puisque le club est resté.
+
+**Quand on s'en sert.** Seulement là où les règles enregistrées ne s'appliquent pas. Des règles qui correspondent au tableau gardent la priorité, avec leurs barrages. La légende dit alors : « la compétition que chaque club a jouée la saison suivante ».
+
+**Ce qui reste sans couleur.**
+- Une saison dont la suivante n'est pas dans la base.
+- Une coupe continentale hors Europe (Libertadores, Ligue des champions de la CONCACAF ou de l'AFC) : elle n'est pas lue.
+- Un championnat sans montée ni relégation, comme la MLS.
+
+Mesuré le 15 novembre 2026 : 211 éditions ont des destins, 830 clubs en portent un. Exemples : Ligue 1 2022/23 a ses 4 relégués ; Bundesliga 2021/22 a 5 clubs en Ligue des champions, dont Francfort, vainqueur de la Ligue Europa ; Argentine 2024 n'a aucun relégué, comme dans la réalité.
 
 ## Combinaison
 

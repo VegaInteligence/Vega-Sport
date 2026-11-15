@@ -4,6 +4,7 @@ import {
   europeanPlaces,
   leagueZones,
   performanceSpots,
+  standingZones,
   tableZones,
 } from "../dashboard/frontend/src/services/standings-zones.js";
 import { inEuropeFocus } from "../dashboard/shared/competition-scope.js";
@@ -41,6 +42,19 @@ test("relegation and promotion come from the recorded league places", () => {
   const zones = tableZones(18, { european: ["cl", "cl"], league: ligue1 });
   assert.equal(zones[0], "cl");
   assert.equal(zones[17], "relegation");
+});
+
+test("a past season the rules no longer fit takes what became of its clubs", () => {
+  const rows = Array.from({ length: 20 }, (_, i) => ({ id: "t" + i }));
+  const fates = { t0: "cl", t4: "el", t17: "relegation", t19: "relegation" };
+  const past = standingZones(rows, { european: ["cl", "cl"], competitionId: "l_3FJFUl", fates });
+  assert.equal(past.observed, true);
+  assert.deepEqual([past.zones[0], past.zones[1], past.zones[4], past.zones[17], past.zones[18]], ["cl", null, "el", "relegation", null]);
+  // Rules that fit the table stay: the observed fates never replace them.
+  const now = standingZones(rows.slice(0, 18), { european: ["cl"], competitionId: "l_3FJFUl", fates });
+  assert.deepEqual([now.observed, now.zones[0], now.zones[17]], [false, "cl", "relegation"]);
+  // Neither rules nor fates: the European places alone.
+  assert.deepEqual(standingZones(rows, { european: ["cl"], competitionId: "l_3FJFUl" }).zones.slice(0, 2), ["cl", null]);
 });
 
 test("Top 7 Europe + UEFA covers national and super cups but not lower divisions", () => {

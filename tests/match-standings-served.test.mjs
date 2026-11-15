@@ -72,6 +72,7 @@ async function standings(table, reads, source = "SportScore") {
     "../services/sportscore-standings.js": await import("../dashboard/frontend/src/services/sportscore-standings.js"),
     "../services/uefa-standings.js": await import("../dashboard/frontend/src/services/uefa-standings.js"),
     "../services/standings-clubs.js": await import("../dashboard/frontend/src/services/standings-clubs.js"),
+    "../services/league-fates.js": { useLeagueFates: () => ({ value: null }) },
     "../services/cup-worker-client.js": { cupWorkerSnapshot: async (...args) => reads.push({ cup: args }) },
     "../services/cup-catalog.js": { WORLD_CUP_ID: "l_1XLtP0" },
     "../services/catalog-client.js": { associationRanking: async () => [] },
