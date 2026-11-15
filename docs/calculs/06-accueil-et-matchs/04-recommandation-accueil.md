@@ -1,94 +1,106 @@
-# Vega Sport: home page recommender
+# Vega Sport : recommandation de l'accueil
 
-Proposal of 14 November 2026: nothing below is built yet; the decisions it waits for are at the end. Kept in the repository from the shared document.
+Proposition du 14 novembre 2026 : rien de ce qui suit n'est construit ; les décisions qu'elle attend sont à la fin. Gardée dans le dépôt à partir du document partagé.
 
-## What we want
+## Ce que l'on veut
 
-The home page shows the same matches and players in the same order to every visitor. The recommender adds one row, « Pour vous », at the top of the week page: four matches chosen for that visitor by one of a few fixed orderings, and the site learns which ordering visitors open most.
+L'accueil montre les mêmes matchs et les mêmes joueurs, dans le même ordre, à chaque visiteur. La recommandation ajoute une rangée, « Pour vous », en haut de la page de la semaine : quatre matchs choisis pour ce visiteur par l'un de quelques ordres fixes, et le site apprend quel ordre les visiteurs ouvrent le plus.
 
-- **Stays as it is:** every existing card, its rules (match of the week, results feed, leaders) and the design. The new row takes the style of the cards beside it.
-- **No accounts, no profile:** the row uses what the browser already holds (saved clubs and players) and what the base computes (forecasts, standings, projections).
-- **Nothing is personalised by a model trained on one person:** the site chooses between orderings that are the same for everyone in a group of visitors, and counts which one gets clicked.
+- **Ce qui ne change pas :** chaque carte existante, ses règles (match de la semaine, fil des résultats, meneurs) et le design. La nouvelle rangée prend le style des cartes voisines.
+- **Ni compte, ni profil :** la rangée utilise ce que le navigateur garde déjà (clubs et joueurs suivis) et ce que la base calcule (pronostics, classements, projections).
+- **Rien n'est personnalisé par un modèle entraîné sur une seule personne :** le site choisit entre des ordres identiques pour tous les visiteurs d'un même groupe, et compte lequel est cliqué.
 
-## How the home page is ordered today
+## Comment l'accueil est ordonné aujourd'hui
 
-Every visitor gets the same fixed rules (`docs/calculs/06-accueil-et-matchs/01-accueil.md`); the only personal input is the clubs and players a visitor saved, kept in their own browser.
+Chaque visiteur reçoit les mêmes règles fixes ([accueil](01-accueil.md)) ; la seule donnée personnelle est la liste des clubs et joueurs qu'il suit, gardée dans son propre navigateur.
 
-| Block | Rule today |
+| Bloc | Règle actuelle |
 | --- | --- |
-| Results feed | editorial weight: 2 × big clubs (a fixed list of 29) + 3 Champions League, 1 Europa or Conference + 1 Top 5 league + 1 per side ranked in its top 3 |
-| Match of the week | 4 × big clubs + points for both sides near the top, the Champions League, the Top 5, shots available; ties go to the latest |
-| Coming matches | your saved clubs first (European nights first that day), then editorial weight, then kick-off |
-| Leaders, streaks, defences | season tables, the same for everyone |
+| Fil des résultats | poids éditorial : 2 × grands clubs (une liste fixe de 29) + 3 pour la Ligue des champions, 1 pour la Ligue Europa ou la Ligue Conférence + 1 pour un championnat du Top 5 + 1 par équipe classée dans les trois premiers de son championnat |
+| Match de la semaine | 4 × grands clubs + des points quand les deux équipes sont près du sommet, pour la Ligue des champions, pour le Top 5, pour des tirs disponibles ; à égalité, le plus récent |
+| Matchs à venir | vos clubs suivis d'abord (les soirées européennes en tête ce jour-là), puis le poids éditorial, puis l'heure du coup d'envoi |
+| Meneurs, séries, défenses | tableaux de la saison, les mêmes pour tous |
 
-Nothing tells us which of these a visitor opens. Vercel Web Analytics, already on the site, counts page views without cookies; it does not say which card was clicked, nor in which order the cards were shown.
+Rien ne dit quelle carte un visiteur ouvre. Vercel Web Analytics, déjà sur le site, compte les pages vues sans cookie ; il ne dit ni quelle carte a été cliquée, ni dans quel ordre les cartes étaient montrées.
 
-## The proposal: four orderings, chosen by a bandit
+## La proposition : quatre ordres, choisis par un bandit
 
-The row is filled by one of four orderings of the week's coming matches; a Thompson-sampling bandit picks the ordering for each visit and moves traffic towards the one visitors click most.
+La rangée est remplie par l'un des quatre ordres des matchs à venir de la semaine ; un bandit à échantillonnage de Thompson choisit l'ordre de chaque visite et oriente les visites vers celui que les visiteurs cliquent le plus.
 
-| Ordering | Puts first | Built from |
+| Ordre | Met en premier | Construit à partir de |
 | --- | --- | --- |
-| A. Éditorial (today's rule, the baseline) | the highest editorial weight | the rule above |
-| B. Vos équipes | matches of saved clubs and of saved players' clubs, then their leagues, then weight | the browser's saved lists |
-| C. Matchs serrés | the most open matches: the smallest gap between home and away win chances in our forecast | `/api/forecasts/match` (form and confirmed line-ups included) |
-| D. Enjeu au classement | both clubs in the top four or bottom three of their league's projection | `/api/forecasts/season` |
+| A. Éditorial (la règle actuelle, la référence) | le poids éditorial le plus haut | la règle ci-dessus |
+| B. Vos équipes | les matchs des clubs suivis et des clubs des joueurs suivis, puis leurs championnats, puis le poids | les listes gardées par le navigateur |
+| C. Matchs serrés | les matchs les plus ouverts : le plus petit écart entre les chances de victoire à domicile et à l'extérieur de notre pronostic | `/api/forecasts/match` (forme et compositions confirmées comprises) |
+| D. Enjeu au classement | les deux clubs dans les quatre premiers ou les trois derniers de la projection de leur championnat | `/api/forecasts/season` |
 
-- **Groups of visitors:** new, returning with saved clubs, returning without. Each group has its own counts, so ordering B can win for visitors with saved clubs and lose for the others.
-- **One ordering per visit:** chosen once when the page opens and kept for the visit, so the row never reshuffles under the reader.
-- **Choice:** for each ordering and group, a Beta(1 + clicks, 1 + views without a click); each visit draws one value per ordering and shows the highest. Every ordering keeps at least 10 % of visits for the first two weeks.
-- **Reward:** a click on one of the row's four cards during the visit.
+- **Groupes de visiteurs :** nouveau, revenant avec des clubs suivis, revenant sans. Chaque groupe a ses propres comptes : l'ordre B peut gagner auprès des visiteurs qui suivent des clubs et perdre auprès des autres.
+- **Un ordre par visite :** choisi une fois à l'ouverture de la page et gardé pour la visite, pour que la rangée ne se réordonne jamais sous les yeux du lecteur.
+- **Choix :** pour chaque ordre et chaque groupe, une loi Bêta(1 + clics, 1 + vues sans clic) ; chaque visite tire une valeur par ordre et montre la plus haute. Chaque ordre garde au moins 10 % des visites pendant les deux premières semaines.
+- **Récompense :** un clic sur l'une des quatre cartes de la rangée pendant la visite.
 
-## What is recorded
+### Pourquoi ce choix
 
-Two kinds of event, a view of the row and a click on one of its cards, with no account, no IP address and nothing that follows a visitor from one day to the next.
+La probabilité qu'un ordre soit cliqué est inconnue ; après c clics sur v vues, avec un a priori uniforme Bêta(1, 1), elle suit la loi Bêta(1 + c, 1 + v − c). Tirer une valeur par ordre et montrer la plus haute montre chaque ordre avec la probabilité qu'il soit le meilleur : un ordre encore peu vu garde sa chance, un ordre nettement moins cliqué la perd peu à peu. Le plancher de 10 % pendant deux semaines évite qu'un ordre soit écarté sur quelques visites.
 
-| Field | Example | Why |
+## Ce qui est enregistré
+
+Deux sortes d'événements, une vue de la rangée et un clic sur l'une de ses cartes, sans compte, sans adresse IP et sans rien qui suive un visiteur d'un jour à l'autre.
+
+| Champ | Exemple | Pourquoi |
 | --- | --- | --- |
-| Event | view, click | the reward |
-| Minute | 2026-11-21 15:04 | the daily counts |
-| Visit | a random id, new for each tab session, never stored past it | one ordering per visit, one reward per visit |
-| Group | new, returning with saved clubs, returning without | the bandit's counts |
-| Ordering | A, B, C, D | what the visit was shown |
-| Card | its position (1–4) and the match's Vega id | which card drew the click |
+| Événement | vue, clic | la récompense |
+| Minute | 2026-11-21 15:04 | les comptes du jour |
+| Visite | un identifiant aléatoire, nouveau à chaque session d'onglet, jamais gardé au-delà | un ordre par visite, une récompense par visite |
+| Groupe | nouveau, revenant avec des clubs suivis, revenant sans | les comptes du bandit |
+| Ordre | A, B, C, D | ce que la visite a montré |
+| Carte | sa position (1 à 4) et l'identifiant Vega du match | la carte qui a attiré le clic |
 
-- **Storage:** typed rows in a new table `ops.home_events`, one partition a day, deleted after 90 days; the worker sums them each night into `agg.home_bandit` (ordering, group, views, clicks), which is all the bandit reads.
-- **Write path:** the read API stays read-only. A small separate route takes the events (sent in batches when the tab is hidden, `navigator.sendBeacon`), checks each field against its type and writes through a role that can only insert into that table.
-- **Privacy:** recording which card a visitor clicks is new for the site. Whether it needs a consent banner, or counts as anonymous audience measurement that does not, is to be checked against the CNIL's rules before anything is recorded.
+- **Stockage :** des lignes typées dans une nouvelle table `ops.home_events`, une partition par jour, effacées après 90 jours ; le worker les additionne chaque nuit dans `agg.home_bandit` (ordre, groupe, vues, clics), seule table que lit le bandit.
+- **Écriture :** l'API de lecture reste en lecture seule. Une petite route à part reçoit les événements (envoyés par lots quand l'onglet est masqué, `navigator.sendBeacon`), vérifie le type de chaque champ et écrit avec un rôle qui ne peut qu'insérer dans cette table.
+- **Vie privée :** enregistrer la carte qu'un visiteur clique est nouveau pour le site. Faut-il un bandeau de consentement, ou est-ce une mesure d'audience anonyme qui n'en demande pas ? C'est à vérifier auprès des règles de la CNIL avant tout enregistrement.
 
-## How we judge it
+## Comment on le juge
 
-An ordering is kept only if more visits click in the row with it than with today's editorial ordering; the rest are dropped.
+Un ordre n'est gardé que si plus de visites cliquent dans la rangée avec lui qu'avec l'ordre éditorial actuel ; les autres sont abandonnés.
 
-- **Main measure:** the share of visits that click one of the row's cards, per ordering and group.
-- **Watched beside it:** the share of visits that click anything on the home page (the row must not take clicks from the cards below it), and visits back within seven days.
-- **Dropping an ordering:** once it and ordering A each have 2,000 visits in a group, it is dropped for that group if its chance of beating A, read from the two Beta counts, is under 5 %.
-- **How long it takes:** telling a 10 % click share from 12 % takes about 3,800 visits per ordering (5 % false alarm, 80 % power). The 10 % is an assumption: the two weeks of recording below give the real figure, and with it the length of the test.
-- **Reported:** the counts per ordering and group each week, on the status page.
+- **Mesure principale :** la part des visites qui cliquent sur l'une des cartes de la rangée, par ordre et par groupe.
+- **Surveillé à côté :** la part des visites qui cliquent sur n'importe quel élément de l'accueil (la rangée ne doit pas prendre les clics des cartes du dessous), et les visites de retour sous sept jours.
+- **Abandon d'un ordre :** dès que lui et l'ordre A ont chacun 2 000 visites dans un groupe, il est abandonné pour ce groupe si sa chance de battre A, lue sur les deux lois Bêta, est sous 5 %.
+- **Durée :** distinguer une part de clics de 10 % d'une part de 12 % demande environ 3 800 visites par ordre (5 % de fausse alerte, puissance de 80 %). Les 10 % sont une hypothèse : les deux semaines d'enregistrement ci-dessous donnent le vrai chiffre, et avec lui la durée du test.
+- **Compte rendu :** les comptes par ordre et par groupe chaque semaine, sur la page d'état.
 
-## Build steps
+### D'où vient le chiffre de 3 800
 
-The row can be built and shown with ordering A alone before anything is recorded; recording waits for the privacy decision.
+Pour deux proportions p₁ = 0,10 et p₂ = 0,12, un test bilatéral au seuil α = 5 % (z = 1,96) avec une puissance de 80 % (z = 0,84) demande par groupe
 
-1. **The row, ordering A only.** « Pour vous » on the week page, four coming matches by today's editorial weight. No recording, nothing changes elsewhere on the page.
-2. **Orderings B, C, D in the code**, each tested on the week's real matches; a visit still sees A.
-3. **Recording** (after the decision below): the table, its nightly sums, the insert-only route and the site's batched events. Two weeks with A only: the baseline click share, and a check that views and clicks add up.
-4. **The bandit on:** the API serves each group's counts; the site draws one ordering per visit from them.
-5. **Weekly report** on the status page, and the drop rule applied by hand for the first month.
+n = (1,96 × √(2 p̄ (1 − p̄)) + 0,84 × √(p₁(1 − p₁) + p₂(1 − p₂)))² / (p₂ − p₁)², avec p̄ = (p₁ + p₂) / 2 = 0,11,
 
-## Mock-up
+soit n = (1,96 × 0,4425 + 0,84 × 0,4427)² / 0,02² ≈ 3 840 visites par ordre.
 
-The row as it would sit on the week page, above the match of the week, filled here by ordering C on the real coming matches and our real forecasts of 14 November 2026. Only the choice of ordering is invented, and the badge says so; the screenshots come from a local copy of the site, nothing was put on the live site.
+## Étapes de construction
 
-![The « Pour vous » row on the week page, desktop](images/pour-vous-bureau.png)
+La rangée peut être construite et montrée avec le seul ordre A avant tout enregistrement ; l'enregistrement attend la décision sur la vie privée.
 
-On a phone the four matches become one row that scrolls sideways, like the filters, never a stack of four cards.
+1. **La rangée, ordre A seul.** « Pour vous » sur la page de la semaine, quatre matchs à venir selon le poids éditorial actuel. Aucun enregistrement, rien ne change ailleurs sur la page.
+2. **Les ordres B, C et D dans le code**, chacun testé sur les vrais matchs de la semaine ; une visite voit toujours A.
+3. **L'enregistrement** (après la décision ci-dessous) : la table, ses sommes de la nuit, la route qui ne fait qu'insérer et les événements envoyés par lots par le site. Deux semaines avec A seul : la part de clics de référence, et la vérification que vues et clics se correspondent.
+4. **Le bandit en marche :** l'API sert les comptes de chaque groupe ; le site tire un ordre par visite à partir d'eux.
+5. **Compte rendu hebdomadaire** sur la page d'état, et la règle d'abandon appliquée à la main le premier mois.
 
-![The same row on a phone, scrolling sideways](images/pour-vous-telephone.png)
+## Maquette
 
-## Decisions needed from you
+La rangée telle qu'elle se placerait sur la page de la semaine, au-dessus du match de la semaine, remplie ici par l'ordre C avec les vrais matchs à venir et nos vrais pronostics du 14 novembre 2026. Seul le choix de l'ordre est inventé, et le badge le dit ; les captures viennent d'une copie locale du site, rien n'a été mis sur le site en ligne.
 
-- [ ] Record which card a visitor clicks: yes or no, and with a consent banner or as anonymous audience measurement (to check against the CNIL's rules first).
-- [ ] The four orderings to test: A to D as above, or others.
-- [ ] The row's place: top of the week page (the mock-up), or inside « Matchs à venir » in place of its present order.
-- [ ] Step 1 now: the row with ordering A, on the live site, with nothing recorded.
+![La rangée « Pour vous » sur la page de la semaine, sur ordinateur](images/pour-vous-bureau.png)
+
+Sur téléphone, les quatre matchs deviennent une seule rangée qui défile sur le côté, comme les filtres, jamais une pile de quatre cartes.
+
+![La même rangée sur téléphone, qui défile sur le côté](images/pour-vous-telephone.png)
+
+## Décisions à prendre
+
+- [ ] Enregistrer la carte qu'un visiteur clique : oui ou non, et avec un bandeau de consentement ou comme mesure d'audience anonyme (à vérifier d'abord auprès des règles de la CNIL).
+- [ ] Les quatre ordres à tester : A à D comme ci-dessus, ou d'autres.
+- [ ] La place de la rangée : en haut de la page de la semaine (la maquette), ou dans « Matchs à venir » à la place de son ordre actuel.
+- [ ] L'étape 1 maintenant : la rangée avec l'ordre A, sur le site en ligne, sans rien enregistrer.

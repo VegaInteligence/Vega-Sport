@@ -244,3 +244,13 @@ L'Argentine et la Liga MX montent avec les coupes de leur confédération (+124 
 - Les sélections nationales gardent leur Elo de la version 3 ; la confédération comme « championnat » des sélections reste à faire.
 - Les joueuses du championnat féminin entrent encore dans les références de rôle communes (`references()`) ; leur score est calculé entre elles.
 - Le taux d'échange est fixé pour la version 4. Il est à mesurer de nouveau quand la base aura plus d'années de transferts : seules les années du trophée terminées comptent (2024 et 2025).
+
+## Version 5 : un rang pour chaque joueur, une note pour chaque match (15 novembre 2026)
+
+Demande du propriétaire : un joueur doit avoir un rang dès son premier match, et une note de match qui ne dépend que de ce match. Conseil pris auprès d'un second modèle ; formules, raisons et mesures dans [les notes Vega](../08-notes-vega/01-formules-et-raisons.md) (§ 5.6 et § 5.7).
+
+- **Rang pour tous.** Sous le seuil de minutes, l'indice part du 10ᵉ centile du rôle et rejoint celui du joueur au seuil. Les éligibles gardent leur indice et leur ordre ; la course au Ballon d'Or ne change pas.
+  - **Mesuré** sur 2024/2025, 2025/2026 et 2026/2027 avant la mise en service : 32 627, 37 269 et 29 691 joueurs classés ; aucun joueur de moins de 180 minutes dans le premier cinquième ; le rang médian s'améliore avec les minutes.
+  - **Rangs provisoires** : sous le seuil, et dans un championnat provisoire (21 à 28 joueurs dans les 500 premiers).
+  - **Écartée, la mesure au-dessus d'un niveau de remplacement** : ce niveau variait de plus de 25 % d'une année à l'autre pour trois rôles, et devenait positif en début de saison.
+- **Note de match.** La contribution du match seule, ramenée à la dispersion de son rôle (et de sa compétition) dans la dernière année terminée, en score normal, sur la courbe 0–100. Elle est montrée sur la fiche du match à côté de la note PitchAPI, avec le rang du joueur dans le match.

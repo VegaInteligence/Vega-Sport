@@ -8,14 +8,14 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 
 | Valeur | Origine |
 | --- | --- |
-| xG, xG hors penalty, xG en jeu / sur CPA, xGOT, xA, buts évités, note du match | **Fournies par PitchAPI**. Vega n'a pas de modèle de tir : il lit, additionne et compare ces valeurs. |
+| xG, xG hors penalty, xG en jeu / sur CPA, xGOT, xA, buts évités, note du match | **Fournies par PitchAPI**. Vega lit, additionne et compare ces valeurs ; son propre xG ([Le xG de Vega](02-metriques-attendues/05-xg-vega.md)) les double sans les remplacer à l'affichage. |
 | Points attendus (xPts), probabilités victoire / nul / défaite | **Calculés par Vega** à partir des xG d'équipe (loi de Poisson). |
 | Écarts « réel − attendu » (finition, gardien, qualité de frappe, points) | **Calculés par Vega**. |
 | Totaux, moyennes par match, valeurs par 90 minutes, taux | **Calculés par Vega** à partir des observations par match. |
 | Centiles, rangs, indice Vega club et joueur, similarités, tags de style | **Calculés par Vega**, toujours relativement à un groupe de comparaison. |
 | Classements dérivés des résultats, zones européennes | **Calculés par Vega** quand aucun classement officiel n'est utilisé. |
 | Classements FIFA, coefficients UEFA | **Collectés** par le worker (`backend/vega/sources/fifa.py`, `uefa.py`), jamais recalculés. |
-| Classement Ballon d'Or Vega, niveaux des championnats, forces des clubs | **Calculés par Vega** chaque jour (`backend/vega/power.py`), selon [METHODE_CLASSEMENT_BALLON_D_OR.md](../METHODE_CLASSEMENT_BALLON_D_OR.md). Toutes les formules et leurs raisons : [NOTES_VEGA.md](../NOTES_VEGA.md) ; les essais et validations : [l'audit](05-joueurs/08-audit-classement-puissance.md). |
+| Classement Ballon d'Or Vega, niveaux des championnats, forces des clubs | **Calculés par Vega** chaque jour (`backend/vega/power.py`), selon [METHODE_CLASSEMENT_BALLON_D_OR.md](../METHODE_CLASSEMENT_BALLON_D_OR.md). Toutes les formules et leurs raisons : [les notes Vega](08-notes-vega/01-formules-et-raisons.md) ; les essais et validations : [l'audit](05-joueurs/08-audit-classement-puissance.md). |
 
 ## Sections
 
@@ -61,10 +61,14 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 - [Accueil](06-accueil-et-matchs/01-accueil.md) — semaine affichée, match de la semaine, joueur de la semaine, séries.
 - [Fiche de match](06-accueil-et-matchs/02-fiche-match.md) — courbe des xG, carte des tirs, contexte avant match, discipline.
 - [Pronostics et projections](06-accueil-et-matchs/03-pronostics-et-projections.md) — probabilités d'un match à venir, championnat rejoué jusqu'à son terme, vérifications.
+- [Recommandation de l'accueil](06-accueil-et-matchs/04-recommandation-accueil.md) — proposition, rien n'est construit : la rangée « Pour vous », quatre ordres choisis par un bandit, la loi Bêta et le nombre de visites qu'il faut pour trancher.
 
 ### 7. Limites
 - [Non calculé ou fictif](07-limites/01-non-calcule-fictif-demo.md)
 - [Points d'attention relevés dans le code](07-limites/02-points-d-attention.md)
+
+### 8. Notes Vega des championnats, des clubs et des joueurs
+- [Toutes les formules et leurs raisons](08-notes-vega/01-formules-et-raisons.md) — l'enjeu d'un match, l'Elo des clubs, le niveau de chaque championnat (matchs entre championnats, joueurs qui en changent, a priori de division et de confédération), la note d'un joueur sur l'année et sa note de chaque match ; pour chaque réglage, s'il est mesuré sur la base ou choisi.
 
 ## Trois règles qui reviennent partout
 
