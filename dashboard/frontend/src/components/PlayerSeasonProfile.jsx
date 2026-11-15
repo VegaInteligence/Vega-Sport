@@ -837,7 +837,7 @@ export default function PlayerSeasonProfile({
               <PlayerScoutCareer
                 key={id}
                 id={id}
-                profile={profile}
+                record={record}
                 team={team}
                 season={f.season}
               >

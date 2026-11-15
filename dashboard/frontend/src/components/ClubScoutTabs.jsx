@@ -7,6 +7,7 @@ import { Segments } from "./UI.jsx";
 import { BookmarkButton } from "./ResearchUI.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import { FakeBadge } from "./PlayerScoutDemo.jsx";
+import { json, useResource } from "../services/resources.js";
 import ClubInformation from "./ClubInformation.jsx";
 import { PercentilePizza } from "./PlayerScoutCharts.jsx";
 import {
@@ -686,6 +687,68 @@ export function Matches({ dossier }) {
 
 /* ------------------------------------------------------------- squad */
 
+const AGE_BANDS = [
+  ["< 21", 21],
+  ["21–23", 24],
+  ["24–26", 27],
+  ["27–29", 30],
+  ["30–32", 33],
+  ["33 +", Infinity],
+];
+
+function SquadAgeProfile({ id, season }) {
+  const { value, loading, error } = useResource(
+    `team-age-profile:${id}:${season}`,
+    ({ signal }) =>
+      json(
+        `/api/teams/${encodeURIComponent(id)}/age-profile?${new URLSearchParams({ season })}`,
+        { signal },
+      ).then((body) => body.data),
+  );
+  const bands = AGE_BANDS.map(() => 0);
+  let total = 0;
+  for (const { age, minutes } of value?.minutesByAge || []) {
+    total += minutes;
+    if (age != null && age >= 0)
+      bands[AGE_BANDS.findIndex(([, limit]) => age < limit)] += minutes;
+  }
+  const covered = bands.reduce((sum, minutes) => sum + minutes, 0);
+
+  return (
+    <Card
+      title="Profil d’âge de l’effectif"
+      text="Répartition des minutes renseignées, selon l’âge au jour du match."
+    >
+      {loading ? (
+        <p className={c.note} role="status">
+          Chargement…
+        </p>
+      ) : error || !covered ? (
+        <p className={c.note}>Profil d’âge indisponible pour cette saison.</p>
+      ) : (
+        <>
+          <div className={s.ages}>
+            {AGE_BANDS.map(([label], index) => {
+              const share = (100 * bands[index]) / covered;
+              return (
+                <div key={label}>
+                  <span style={{ height: `${share * 1.6}px` }} />
+                  <b>{fmtNum(share, 1)} %</b>
+                  <small>{label}</small>
+                </div>
+              );
+            })}
+          </div>
+          <p className={c.note}>
+            Âge connu pour {fmtNum(covered)} / {fmtNum(total)} minutes
+            documentées ({fmtNum((100 * covered) / total, 1)} %).
+          </p>
+        </>
+      )}
+    </Card>
+  );
+}
+
 export function Squad({ dossier }) {
   const squad = dossier.squad;
   const top = [...squad.profiles]
@@ -758,32 +821,7 @@ export function Squad({ dossier }) {
             </span>
           </div>
         </Card>
-        <Card
-          title="Profil d’âge de l’effectif"
-          text="Part des minutes par tranche d’âge : avant le pic (< 24 ans), au pic (24–29), après (30 et +)."
-          action={<FakeBadge />}
-        >
-          <div className={s.ages}>
-            {[
-              ["< 21", 9],
-              ["21–23", 24],
-              ["24–26", 31],
-              ["27–29", 21],
-              ["30–32", 12],
-              ["33 +", 3],
-            ].map(([label, value]) => (
-              <div key={label}>
-                <span style={{ height: `${value * 4.4}px` }} />
-                <b>{value} %</b>
-                <small>{label}</small>
-              </div>
-            ))}
-          </div>
-          <p className={c.note}>
-            Les dates de naissance ne sont pas encore jointes aux apparitions :
-            exemple à remplacer.
-          </p>
-        </Card>
+        <SquadAgeProfile id={dossier.id} season={dossier.season} />
       </div>
       <Card
         title="Temps de jeu et contributions"

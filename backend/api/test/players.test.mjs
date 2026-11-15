@@ -147,6 +147,26 @@ test("a player's profile carries his birth date and height when the base holds t
   assert.equal("birth_date" in unknown || "height_cm" in unknown, false);
 });
 
+test("player profiles publish known feet and only unambiguous active contract dates", { skip }, async () => {
+  const { data: known } = (await get("/api/players/p_aaaab2")).body;
+  assert.equal(known.preferred_foot, "both");
+  assert.match(known.contract_until, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(known.contract_team, "Olympique Été");
+  const { data: ambiguous } = (await get("/api/players/p_aaaab3")).body;
+  assert.equal("preferred_foot" in ambiguous || "contract_until" in ambiguous, false);
+});
+
+test("a club's age profile counts known and unknown ages from played minutes only", { skip }, async () => {
+  const { response, body } = await get("/api/teams/t_aaaaa1/age-profile?season=2025/2026");
+  assert.equal(response.status, 200);
+  assert.deepEqual(body.data, {
+    id: "t_aaaaa1",
+    season: "2025/2026",
+    minutesByAge: [{ age: 26, minutes: 90 }, { age: null, minutes: 260 }],
+  });
+  assert.equal((await get("/api/teams/t_aaaaa1/age-profile")).response.status, 400);
+});
+
 test("a player's passing partners of a season, the most exchanged first", { skip }, async () => {
   const { data } = (await get("/api/players/p_aaaab1/partners?season=2025/2026")).body;
   assert.deepEqual(data, { id: "p_aaaab1", season: "2025/2026", partners: [

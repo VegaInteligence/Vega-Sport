@@ -84,7 +84,12 @@ def main(dsn):
         x("INSERT INTO core.players(id,name,photo_asset_id) VALUES (%s,%s,%s)", (pid, name, 3 if pid == 101 else None))
         x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('player','pitchapi',%s,%s)", (key, pid))
     x("INSERT INTO core.entity_names(entity_type,entity_id,name,normalized,kind,source) VALUES ('player',104,'CR7','cr7','alias','vega')")
-    x("UPDATE core.players SET birth_date='1999-05-06', height_cm=181 WHERE id=102")
+    x("UPDATE core.players SET birth_date='1999-05-06', height_cm=181, preferred_foot='both' WHERE id=102")
+    x("""INSERT INTO core.player_contracts(player_id,team_id,start_date,end_date,source,as_of) VALUES
+         (102,1,current_date-1,current_date+365,'vega',current_date),
+         (102,2,current_date-366,current_date-1,'vega',current_date-366),
+         (103,1,current_date-1,current_date+365,'vega',current_date),
+         (103,4,current_date-1,current_date+90,'vega',current_date)""")
     # Profile vectors (081): four players placed on the axes, one of them in a women's competition.
     x("INSERT INTO agg.embedding_models(season_id, version, players, statistics, variance_kept) VALUES (2025, 'profile-embedding-v1', 4, 60, 0.78)")
     zeros = ",".join(["0"] * 8)

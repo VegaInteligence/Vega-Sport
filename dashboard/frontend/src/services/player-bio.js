@@ -89,7 +89,9 @@ export function playerFacts(record, today = new Date()) {
     contract && {
       label: "Fin de contrat",
       value: `${String(contract.month).padStart(2, "0")}/${contract.year}`,
-      note: frenchDate(contract),
+      note: [frenchDate(contract), text(record.contract_team)]
+        .filter(Boolean)
+        .join(" · "),
     },
     text(record.position_label) && {
       label: "Poste",
