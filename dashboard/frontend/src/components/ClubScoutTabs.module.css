@@ -460,14 +460,15 @@
   }
 }
 
-/* The rail's actions side by side: save, then the club's report. */
-.railActions {
+/* The rail's actions side by side: save, then the club's report. Two classes, so the
+   shared toolbar's flex row (research.css) cannot win on stylesheet order. */
+.rail .railActions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin: 0;
 }
-.railActions > * {
+.rail .railActions > * {
   justify-content: center;
   width: 100%;
 }
