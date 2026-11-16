@@ -504,7 +504,7 @@ $$
 **Questions ouvertes :**
 - la part du niveau du club (§ 5.4) ;
 - λ : sur la base, la variance des matchs et celle entre joueurs donnent λ ≈ 175 à 250 minutes plutôt que 450. Le changer déplacerait tous les scores ; c'est une décision à part.
-- la force des clubs sans Elo dans les coupes nationales : un Elo de coupe rangé à part est proposé ([pronostics](../06-accueil-et-matchs/03-pronostics-et-projections.md)), non appliqué.
+- les clubs sans Elo (2 066 au 16 novembre 2026, copies non reliées et clubs des seules sources complémentaires) : les faire entrer dans l'Elo unique ([pronostics](../06-accueil-et-matchs/03-pronostics-et-projections.md)), en attente.
 
 ## 8. Les blocs du profil lus dans la base (16 novembre 2026)
 
