@@ -1,6 +1,6 @@
 # WORKLOG — 2026-11-16
 
-- Goal: nation pages — an index of national teams and a page per national team ([VI-18](https://linear.app/vegainteligence/issue/VI-18/pages-nations-index-des-selections-et-page-par-selection), In Progress; mock-up approved 16 Nov « yes implement as the mockup »).
+- Goal: nation pages — an index of national teams and a page per national team ([VI-18](https://linear.app/vegainteligence/issue/VI-18/pages-nations-index-des-selections-et-page-par-selection), Done; mock-up approved 16 Nov « yes implement as the mockup »).
 - This checkout: Vega-Sport, worktree `claude/v2-complete`, pushed direct to main; Linear label `repo:vega-sport`.
 - Done today: VI-17 (player page and club rail) shipped and verified (8c8dd52633, 8d87993452); the club stadium's blue underline was removed (803fc14499).
 - Constraints: approved mock-up before any code; real API-backed data only; no provider names in routes or visible text; Vega ids; typed tables; French UI; phones get one scrolling row of pills.
@@ -21,7 +21,10 @@
 - Decisions:
   - Duplicates are handled at read time: a collected match and its archive copy are kept once. A final or third-place match without a score names the stage only.
   - The French-named Nations League teams (Italie, Grèce, Hongrie… source-only, no PitchAPI anchor) stay separate for now. Merging them changes the Elo, so it is a follow-up for the user.
-- Progress:
-  - API 12a1df4d1d is pushed: migration 119 (read functions) plus /api/nations and /api/nations/{id}. Its tests came first; the API suite is 162/162 locally. Deploy run 43951876581 is in progress.
-  - Frontend (uncommitted): /nations/ index and page, « Nations » in the top nav, player rail nation link, search results, player card, home hover. Site suite 602/602 and bounded-reads 12/12; build OK.
-- Next action: after the deploy, verify locally against the production API, push the frontend, then run production E2E (desktop + iPhone 16) with evidence and close VI-18.
+- Progress: shipped and verified in production at 1440 px and 393 px. Evidence is in the session scratchpad (evidence-vi18/README.md), summarised in VI-18.
+  - Commits: 12a1df4d1d (API + migration 119); 20e728414c (player card + home hover); 333036b680 (migration 120, round and penalties from the archive copy); 2cf6249ffa (pages and links).
+  - Deploy runs 43951876581 and 43954174171 succeeded; World Cup 2022 now reads « Finaliste ».
+  - Tests were written before the code; the API suite is 162/162 and the site suite 602/602.
+- Answered: season grades sit near 64 because the season grade applies the match curve 100/(1+10^(−z/4)) to the minutes-weighted mean z. Averaging halves the spread: match z sd 0.93, season mean z sd 0.45, so p99 ≈ 65.7 for 900+ min in 2026/27. Any rescale is a method change for the user.
+- Open: merge the French-named Nations League teams (follow-up proposed; changes the Elo, needs the user's yes). « Enregistrer » for nations is not built.
+- Next action: wait for the user's feedback.
