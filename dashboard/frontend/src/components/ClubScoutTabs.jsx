@@ -5,6 +5,7 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { Segments, Skeleton } from "./UI.jsx";
 import { BookmarkButton } from "./ResearchUI.jsx";
+import Icon from "./Icon.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { Term } from "./Hint.jsx";
@@ -79,6 +80,7 @@ function competitionRecords(dossier) {
 }
 
 export function IdentityRail({ dossier, onTab }) {
+  const f = useFootball();
   const self = dossier.self,
     r = self.record;
   const gap = r.points - (self.xptsTotal ?? 0);
@@ -179,7 +181,7 @@ export function IdentityRail({ dossier, onTab }) {
       </div>
       <SquadFacts dossier={dossier} />
       <div className={s.railSection}>
-        <div className="research-toolbar">
+        <div className={`research-toolbar ${s.railActions}`}>
           <BookmarkButton
             kind="clubs"
             id={dossier.id}
@@ -187,6 +189,13 @@ export function IdentityRail({ dossier, onTab }) {
             imageUrl={dossier.imageUrl}
             season={dossier.season}
           />
+          <Link
+            className="button button-secondary"
+            href={f.href("/rapport/", { id: dossier.id })}
+          >
+            <Icon name="eye" />
+            Rapport
+          </Link>
         </div>
       </div>
     </aside>
@@ -275,50 +284,50 @@ function ExpectedCard({ dossier }) {
         title="Résultats et attendus"
         text={`Les écarts entre le réel et l’attendu signalent la finition, le gardien ou la réussite : ils tendent à se résorber. À droite, le classement de ${dossier.league?.name || "son championnat"} si chaque match s’était joué selon ses xG.`}
       >
+        <dl className={`${c.facts} ${s.factsLine}`}>
+          <div>
+            <dt><Term>Points · xPts</Term></dt>
+            <dd>
+              {self.record.points} · {fmtNum(self.xptsTotal, 1)}
+            </dd>
+            <small
+              className={
+                self.record.points >= self.xptsTotal ? c.up : c.down
+              }
+            >
+              {fmtNum(self.record.points - self.xptsTotal, 1, true)} pts
+            </small>
+          </div>
+          <div>
+            <dt><Term>Buts · xG</Term></dt>
+            <dd>
+              {self.record.gf} ·{" "}
+              {fmtNum((v.xg ?? 0) * self.record.matches, 1)}
+            </dd>
+            <small className={gfDiff >= 0 ? c.up : c.down}>
+              {fmtNum(gfDiff, 1, true)} buts
+            </small>
+          </div>
+          <div>
+            <dt><Term>Encaissés · xG contre</Term></dt>
+            <dd>
+              {self.record.ga} ·{" "}
+              {fmtNum((v.xga ?? 0) * self.record.matches, 1)}
+            </dd>
+            <small className={gaDiff <= 0 ? c.up : c.down}>
+              {fmtNum(gaDiff, 1, true)} buts
+            </small>
+          </div>
+          <div>
+            <dt><Term>Buts évités par le gardien</Term></dt>
+            <dd>
+              {fmtNum((v.keeper ?? 0) * self.record.matches, 1, true)}
+            </dd>
+            <small>xGOT concédés − buts encaissés</small>
+          </div>
+        </dl>
         <div className={s.expectedGrid}>
           <div className={s.expectedSide}>
-            <dl className={c.facts}>
-              <div>
-                <dt><Term>Points · xPts</Term></dt>
-                <dd>
-                  {self.record.points} · {fmtNum(self.xptsTotal, 1)}
-                </dd>
-                <small
-                  className={
-                    self.record.points >= self.xptsTotal ? c.up : c.down
-                  }
-                >
-                  {fmtNum(self.record.points - self.xptsTotal, 1, true)} pts
-                </small>
-              </div>
-              <div>
-                <dt><Term>Buts · xG</Term></dt>
-                <dd>
-                  {self.record.gf} ·{" "}
-                  {fmtNum((v.xg ?? 0) * self.record.matches, 1)}
-                </dd>
-                <small className={gfDiff >= 0 ? c.up : c.down}>
-                  {fmtNum(gfDiff, 1, true)} buts
-                </small>
-              </div>
-              <div>
-                <dt><Term>Encaissés · xG contre</Term></dt>
-                <dd>
-                  {self.record.ga} ·{" "}
-                  {fmtNum((v.xga ?? 0) * self.record.matches, 1)}
-                </dd>
-                <small className={gaDiff <= 0 ? c.up : c.down}>
-                  {fmtNum(gaDiff, 1, true)} buts
-                </small>
-              </div>
-              <div>
-                <dt><Term>Buts évités par le gardien</Term></dt>
-                <dd>
-                  {fmtNum((v.keeper ?? 0) * self.record.matches, 1, true)}
-                </dd>
-                <small>xGOT concédés − buts encaissés</small>
-              </div>
-            </dl>
             {/* The chart takes the room the league table leaves under the figures. */}
             <FillChart base={250} cap={640 * 1.3}>
               {(height) => <PointsTrend rows={self.rows} height={height} grow={1.3} />}

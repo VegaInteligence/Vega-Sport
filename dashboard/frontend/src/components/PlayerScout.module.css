@@ -166,6 +166,27 @@
 .rail :global(.player-trophy-shelf) {
   flex: none;
 }
+.chipLink {
+  text-decoration: none;
+}
+.chipLink:hover {
+  background: var(--surface-raised);
+  color: var(--ink-strong);
+}
+.chipLink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (max-width: 640px) {
+  .chipLink {
+    position: relative;
+  }
+  .chipLink::after {
+    content: "";
+    position: absolute;
+    inset: -10px -4px;
+  }
+}
 .rail :global(.research-toolbar) {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -728,6 +749,16 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
+/* Strengths, weaknesses, the scout's reading and the play profile on one row. */
+.grid4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+/* The six skill scores on one line. */
+.skills.skillsLine {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
 .stack {
   display: grid;
   align-content: start;
@@ -884,15 +915,78 @@
   height: 100%;
   object-fit: contain;
 }
-.pizzaWrap {
-  max-width: 460px;
-  margin: -12px auto 0;
-}
-.gaugeRow {
+/* « Profil statistique », the club card's design: the radar, then the role index
+   as level bars with the rank at the position, the style tags across the foot. */
+.profileGrid {
   display: grid;
-  grid-template-columns: 132px minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 28px;
   align-items: center;
+}
+.profileSide {
+  display: grid;
+  gap: 24px;
+}
+.subTitle {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.roleBars {
+  display: grid;
+  gap: 14px;
+}
+.roleBar {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 2fr 34px;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--text-sm);
+}
+.roleBar > span:first-child {
+  color: var(--ink);
+}
+.roleBar small {
+  display: block;
+  color: var(--muted-light);
+  font-size: var(--text-xs);
+}
+.roleBar strong {
+  color: var(--ink-strong);
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.profileTags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.retry {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+.profileLink {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
 }
 .skills {
   display: grid;
@@ -916,26 +1010,46 @@
   font-weight: 700;
   line-height: 1;
 }
+/* In a quarter of the row, a trait's value goes under its name, the centile beside both. */
+.grid4 .traits li {
+  grid-template-columns: minmax(0, 1fr) auto;
+  row-gap: 2px;
+}
+.grid4 .traits li > small {
+  grid-row: 2;
+}
+.grid4 .traits li > :last-child {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
 @media (max-width: 1280px) {
   .kpis {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .grid3 {
+  .grid3,
+  .grid4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 1050px) {
   .grid2,
-  .grid3 {
+  .grid3,
+  .profileGrid {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .skills.skillsLine {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 @media (max-width: 640px) {
   .kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .gaugeRow {
+  .grid4 {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .roleBar {
+    grid-template-columns: minmax(110px, 1fr) 1.4fr 30px;
   }
 }
 .tableCard {
@@ -1446,14 +1560,12 @@ p.similarIntro {
   color: var(--ink-strong);
   font-weight: 650;
 }
-.palmares :global(.player-trophy-label) {
-  display: none;
-}
 
 /* Side-by-side cards end level: each card is a column whose last block takes
    the spare height and spreads its rows, so no card ends on an empty band. */
 .grid2 > .card,
 .grid3 > .card,
+.grid4 > .card,
 .grid2 > .stack > .card:last-child,
 .cols2 > .panel {
   display: flex;
@@ -1461,6 +1573,7 @@ p.similarIntro {
 }
 .grid2 > .card > :last-child,
 .grid3 > .card > :last-child,
+.grid4 > .card > :last-child,
 .grid2 > .stack > .card:last-child > :last-child {
   flex: 1 1 auto;
   align-content: space-between;

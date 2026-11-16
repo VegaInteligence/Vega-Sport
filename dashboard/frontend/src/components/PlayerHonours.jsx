@@ -5,6 +5,8 @@ import { useResource } from "../services/resources.js";
 import { loadPlayerHonours } from "../services/player-honours.js";
 import { trophyArt } from "../services/trophy-art.js";
 import Icon from "./Icon.jsx";
+import scout from "./PlayerScout.module.css";
+import st from "./PlayerHonours.module.css";
 
 export function usePlayerHonours(id, name) {
   const enabled = /^p_[A-Za-z0-9]{6}$/.test(id || "");
@@ -16,9 +18,11 @@ export function usePlayerHonours(id, name) {
   return enabled ? result : { ...result, loading: false };
 }
 
-/** A compact shelf belongs to the player header, independent of the active tab. */
-export default function PlayerHonours({ name, result }) {
-  const [selected, setSelected] = useState(null);
+/** The palmarès in the identity rail: one row per trophy (art, title, club and
+ * seasons, number of titles), the first six then the rest on demand, and the
+ * individual awards without art folded underneath. */
+export default function PlayerHonours({ name, result, limit = 6 }) {
+  const [all, setAll] = useState(false);
   const groups = result.value?.groups || [];
   const otherAwards = groups
     .filter(({ group }) => group === "Distinctions individuelles")
@@ -26,7 +30,7 @@ export default function PlayerHonours({ name, result }) {
   const trophies = groups.flatMap(({ group, items }) =>
     items.flatMap((item) => {
       const image = trophyArt(item);
-      // Keep the existing illustrated individual awards in the header.
+      // Individual awards without art are listed under « Autres distinctions ».
       if (!image && group === "Distinctions individuelles") return [];
       return [{ ...item, image, group, key: `${group}:${item.title}` }];
     }),
@@ -38,63 +42,45 @@ export default function PlayerHonours({ name, result }) {
       );
     return null;
   }
-  const current = trophies.find((item) => item.key === selected) || trophies[0];
+  const titles = trophies.reduce((sum, item) => sum + (item.count || 1), 0);
+  const shown = all ? trophies : trophies.slice(0, limit);
   return (
     <section
       className="player-trophy-shelf"
       aria-label={name ? `Palmarès de ${name}` : "Palmarès"}
     >
-      <span className="player-trophy-label">Palmarès</span>
-      {trophies.length > 0 && (
-        <>
-          <div className="player-trophy-grid">
-            {trophies.map((item) => (
-              <button
-                type="button"
-                className="player-trophy-item"
-                key={item.key}
-                onClick={() => setSelected(item.key)}
-                aria-pressed={current.key === item.key}
-                aria-label={`${item.title}${item.count > 1 ? `, ${item.count} titres` : ""}, ${item.group}`}
-              >
-                <span className="player-trophy-visual" aria-hidden="true">
-                  <span className="player-trophy-image">
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    ) : (
-                      <Icon name="trophy" />
-                    )}
-                  </span>
-                  {item.count > 1 && (
-                    <span className="player-trophy-count">×{item.count}</span>
-                  )}
-                </span>
-                <span className="player-trophy-name">{item.title}</span>
-              </button>
-            ))}
-          </div>
-          <div className="player-trophy-caption">
-            <div
-              className="player-trophy-details"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              <strong>{current.title}</strong>
-              <span>
-                {current.group}
-                {current.years ? ` · ${current.years}` : ""}
+      <p className={scout.railTitle}>
+        <i className={scout.railName}>Palmarès</i>
+        {titles > 0 && <span>{titles} titre{titles > 1 ? "s" : ""}</span>}
+      </p>
+      {shown.length > 0 && (
+        <ul className={st.list}>
+          {shown.map((item) => (
+            <li key={item.key}>
+              <span className={st.art} aria-hidden="true">
+                {item.image ? (
+                  <img src={item.image} alt="" loading="lazy" decoding="async" />
+                ) : (
+                  <Icon name="trophy" />
+                )}
               </span>
-            </div>
-          </div>
-        </>
+              <span className={st.what}><b>{item.title}</b><small>{item.group}{item.years ? ` · ${item.years}` : ""}</small></span><em>{item.count > 1 ? `×${item.count}` : ""}</em>
+            </li>
+          ))}
+        </ul>
+      )}
+      {trophies.length > limit && (
+        <button
+          type="button"
+          className={st.more}
+          aria-expanded={all}
+          onClick={() => setAll((open) => !open)}
+        >
+          {all ? "Réduire le palmarès" : `Tout le palmarès (${trophies.length})`}
+        </button>
       )}
       {otherAwards.length > 0 && (
-        <details open={!trophies.length}>
+        <details className={st.others} open={!trophies.length}>
           <summary>Autres distinctions ({otherAwards.length})</summary>
           <ul>
             {otherAwards.map((item, index) => (

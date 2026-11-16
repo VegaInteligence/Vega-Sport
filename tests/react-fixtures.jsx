@@ -39,7 +39,7 @@ import {ResearchRadar} from '../dashboard/frontend/src/components/ResearchCharts
 export const renderResearchRadar=(axes,series)=>renderToStaticMarkup(<ResearchRadar axes={axes} series={series}/>);
 export const renderSeasonSearch=(rows,query)=>renderToStaticMarkup(<FootballContext.Provider value={{rows,filters:{query},partial:false,href:(path,params={})=>path+'?'+new URLSearchParams(params)}}><PlayerSearchResults/></FootballContext.Provider>);
 import {ResearchProvider} from '../dashboard/frontend/src/hooks/ResearchContext.jsx';
-export const renderSeasonProfile=(rows,matches,id,bootstrap)=>renderToStaticMarkup(<ResourceBootstrap bootstrap={bootstrap}><FootballContext.Provider value={{season:'2026/2027',competitions:[],filters:{league:'all',minutes:1},focus:'all',data:{matches},setPlayer:()=>{}}}><ResearchProvider><PlayerSeasonProfile id={id} rows={rows} scopeRows={rows}/></ResearchProvider></FootballContext.Provider></ResourceBootstrap>);
+export const renderSeasonProfile=(rows,matches,id,bootstrap)=>renderToStaticMarkup(<ResourceBootstrap bootstrap={bootstrap}><FootballContext.Provider value={{season:'2026/2027',competitions:[],filters:{league:'all',minutes:1},focus:'all',data:{matches},setPlayer:()=>{},href:(page,params={})=>`${page}?${new URLSearchParams({season:'2026/2027',...params})}`}}><ResearchProvider><PlayerSeasonProfile id={id} rows={rows} scopeRows={rows}/></ResearchProvider></FootballContext.Provider></ResourceBootstrap>);
 export async function preparePlayerHonoursBootstrap(id, name, projection) {
   // SSR receives data explicitly from this render's request. Priming the
   // browser's module cache must not make values visible to another request.

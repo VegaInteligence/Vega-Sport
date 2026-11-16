@@ -16,7 +16,9 @@ import {
   playerHistoryKey,
 } from "../services/scouting-history.js";
 import { playerTeamSeasons } from "../services/player-team-seasons.js";
+import Link from "next/link";
 import { Media, Skeleton } from "./UI.jsx";
+import PlayerHonours from "./PlayerHonours.jsx";
 import NationalFlag from "./NationalFlag.jsx";
 import { number } from "../services/format.js";
 import { playerFacts } from "../services/player-bio.js";
@@ -103,8 +105,8 @@ function Facts({ items, label }) {
   );
 }
 
-/** Identity column of mock-up C: who, facts, value, Vega index, positions,
- *  availability and actions. Values without a source wear a « Fictif » tag. */
+/** Identity column: who (the club opens its page), facts, value, Vega index,
+ *  positions, availability, palmarès and actions. */
 export default function PlayerScoutRail({
   id,
   identity,
@@ -116,6 +118,7 @@ export default function PlayerScoutRail({
   team,
   playingTime,
   vega,
+  honours,
   actions,
   onTab,
 }) {
@@ -270,12 +273,15 @@ export default function PlayerScoutRail({
           {(team || league) && (
             <div className={s.chips}>
               {team && (
-                <span className={s.chip}>
+                <Link
+                  className={`${s.chip} ${s.chipLink}`}
+                  href={f.href("/clubs/", { id: team.id })}
+                >
                   {team.imageUrl && (
                     <Media name={team.name} url={team.imageUrl} />
                   )}
                   {team.name}
-                </span>
+                </Link>
               )}
               {league && <span className={s.chip}>{league}</span>}
             </div>
@@ -285,7 +291,11 @@ export default function PlayerScoutRail({
       <div className={`${s.railSection} phone-fold-row`}>
         <PhoneFoldToggle
           {...more.toggle}
-          label="Fiche, valeur, indice et postes"
+          label={
+            honours?.value?.groups?.length
+              ? "Fiche, valeur, indice, postes et palmarès"
+              : "Fiche, valeur, indice et postes"
+          }
         />
       </div>
       <div className={`${s.railSection} phone-fold-part`}>
@@ -371,6 +381,11 @@ export default function PlayerScoutRail({
           </button>
         )}
       </div>
+      {honours && (
+        <div className={`${s.railSection} phone-fold-part`}>
+          <PlayerHonours name={identity.name || undefined} result={honours} />
+        </div>
+      )}
       {actions && <div className={s.railSection}>{actions}</div>}
     </aside>
   );
