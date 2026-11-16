@@ -255,7 +255,11 @@ async function loadDossier(
   return buildDossier({ id, season, data, competitions, league, cohort });
 }
 
+// A failed read is tried once more on its own before the error shows; the error
+// then offers `retry`. A failed entry has already left the cache (cachedLoad).
 function useCachedState(key, start) {
+  const [attempt, setAttempt] = useState({ key, count: 0 });
+  const tries = attempt.key === key ? attempt.count : 0;
   const [state, setState] = useState(() =>
     key && cache.get(key)?.value
       ? { status: "ready", value: cache.get(key).value }
@@ -279,9 +283,12 @@ function useCachedState(key, start) {
     setState({ status: "loading", progress: entry.progress });
     entry.promise.then(
       (value) => live && setState({ status: "ready", value }),
-      (error) =>
-        live &&
-        setState({ status: "error", error: error?.message || String(error) }),
+      (error) => {
+        if (!live) return;
+        if (tries === 0) setAttempt({ key, count: 1 });
+        else
+          setState({ status: "error", error: error?.message || String(error) });
+      },
     );
     return () => {
       live = false;
@@ -289,8 +296,10 @@ function useCachedState(key, start) {
     };
     // `start` is derived from `key`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
-  return state;
+  }, [key, tries]);
+  return state.status === "error"
+    ? { ...state, retry: () => setAttempt({ key, count: tries + 1 }) }
+    : state;
 }
 
 /** The publication a context names (its manifest and season): what reads are keyed by. */

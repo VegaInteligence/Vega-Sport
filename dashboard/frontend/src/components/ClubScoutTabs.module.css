@@ -459,3 +459,26 @@
     transform: translate(-50%, -50%);
   }
 }
+
+/* The rail's actions side by side: save, then the club's report. */
+.railActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0;
+}
+.railActions > * {
+  justify-content: center;
+  width: 100%;
+}
+
+/* « Résultats et attendus »: the four figures on one line above the chart and the table. */
+dl.factsLine {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0 0 16px;
+}
+@media (max-width: 640px) {
+  dl.factsLine {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

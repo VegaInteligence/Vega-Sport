@@ -66,7 +66,12 @@ export function TeamContextCard({ id, season, team }) {
         ) : !visible || cohort.status === "loading" || cohort.status === "idle" ? (
           <Skeleton label="Chargement du style de l’équipe…" lines={3} />
         ) : cohort.status === "error" ? (
-          <p className={s.note} role="alert">Style de l’équipe indisponible.</p>
+          <p className={s.note} role="alert">
+            Style de l’équipe indisponible.{" "}
+            <button type="button" className={s.retry} onClick={cohort.retry}>
+              Réessayer
+            </button>
+          </p>
         ) : club ? (
           <>
             {tags.length > 0 && (

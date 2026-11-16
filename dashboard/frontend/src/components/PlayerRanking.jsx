@@ -8,39 +8,44 @@ import { SCOUT_METRICS } from "../services/scouting.js";
 import { percentile } from "../services/player-profile.js";
 import { number } from "../services/format.js";
 import { RankingDialog } from "./RankingDialog.jsx";
+import { FilterGroup } from "./PlayerProfileFilters.jsx";
 import s from "./PlayerRanking.module.css";
 
-/**
- * Level switch above the analysis. `peers` is levelPeerClubs()'s result,
- * null when the club is outside the European pool.
- */
-export function PlayerLevelBar({ level, onLevel, state, peers, team }) {
-  const outside = level && state.status === "ready" && !peers;
+/** « Comparer à » in the player's bar: peers from clubs of a comparable level, or
+ *  from every club. */
+export function PlayerLevelGroup({ level, onLevel }) {
   return (
-    <section className={s.bar} aria-label="Joueurs comparés">
-      <span className={s.label}>Comparer à</span>
+    <FilterGroup label="Comparer à" end>
       <div
         className="segmented-control"
         role="group"
         aria-label="Niveau des clubs des joueurs comparés"
       >
         <button aria-pressed={level} onClick={() => onLevel(true)}>
-          Clubs de niveau comparable
+          Niveau comparable
         </button>
         <button aria-pressed={!level} onClick={() => onLevel(false)}>
           Tous les clubs
         </button>
       </div>
-      {level && (state.status !== "ready" || outside) && (
-        <p className={s.summary} role="status">
-          {state.status === "loading"
-            ? "Lecture des niveaux des clubs du Top 7 européen…"
-            : state.status === "error"
-              ? state.error
-              : `${team?.name || "Son club"} n’est pas dans le Top 7 européen : comparaison avec tous les clubs.`}
-        </p>
-      )}
-    </section>
+    </FilterGroup>
+  );
+}
+
+/** The level switch's state under the bar while the levels load, fail or leave the
+ *  club out. `peers` is levelPeerClubs()'s result, null when the club is outside
+ *  the European pool. */
+export function PlayerLevelStatus({ level, state, peers, team }) {
+  const outside = level && state.status === "ready" && !peers;
+  if (!level || (state.status === "ready" && !outside)) return null;
+  return (
+    <p className={s.summary} role="status">
+      {state.status === "loading"
+        ? "Lecture des niveaux des clubs du Top 7 européen…"
+        : state.status === "error"
+          ? state.error
+          : `${team?.name || "Son club"} n’est pas dans le Top 7 européen : comparaison avec tous les clubs.`}
+    </p>
   );
 }
 

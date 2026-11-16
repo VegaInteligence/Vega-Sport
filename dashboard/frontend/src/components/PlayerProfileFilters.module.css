@@ -1,9 +1,104 @@
+/* The player's one bar: season, period, then the tab's groups, on one row. */
+.bar {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
 .filters {
   display: flex;
   flex-wrap: wrap;
-  align-items: end;
-  gap: 0.65rem 0.9rem;
-  padding: 0.75rem 0;
+  align-items: center;
+  gap: 8px 10px;
+}
+.filters > * {
+  flex: none;
+}
+.filters .season {
+  display: block;
+  flex: 0 0 172px;
+  min-width: 0;
+}
+/* The season's label is read, not shown: the calendar says what it is. */
+.filters .season > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.filters .season select {
+  min-height: 2.25rem;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 2.25rem;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-subtle);
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pill b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.pill[data-active] {
+  border-color: var(--accent);
+}
+.pill :global(.icon) {
+  width: 15px;
+  height: 15px;
+}
+.pill:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+}
+.group[data-end] {
+  margin-left: auto;
+}
+.group :global(.segmented-control) button {
+  white-space: nowrap;
+}
+.label {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: var(--panel-left, 0);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 300px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: 0 18px 40px -12px rgb(0 0 0 / 0.45);
 }
 .field {
   display: flex;
@@ -14,25 +109,6 @@
 .field label {
   font-size: 0.75rem;
   color: var(--muted);
-}
-.filters .season {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  flex: 0 1 180px;
-  min-width: 160px;
-}
-.filters .season > label {
-  position: static;
-  width: auto;
-  height: auto;
-  overflow: visible;
-  clip-path: none;
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-.season select {
-  min-height: 2.5rem;
 }
 .field input {
   min-height: 2.5rem;
@@ -45,25 +121,31 @@
   font: inherit;
 }
 .clear {
-  min-height: 2.5rem;
-  padding: 0.4rem 0.6rem;
-  border: 0;
-  color: inherit;
-  background: transparent;
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: 2.25rem;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--ink);
+  background: var(--surface-subtle);
   font: inherit;
+  font-size: var(--text-sm);
   cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
 }
-/* Phones: one row of pills that scrolls sideways. The season's label is read,
-   not shown; a date keeps its label, inside its pill. */
+/* Phones: one row of pills that scrolls sideways, edge to edge; the period's
+   panel opens under the row, the comparison's status under it. */
 @media (max-width: 640px) {
-  .filters {
-    position: relative;
-    flex-wrap: nowrap;
-    align-items: center;
-    gap: 8px;
+  .bar {
     margin-inline: calc(var(--page-gutter) * -1);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .filters {
+    flex-wrap: nowrap;
+    gap: 8px;
     padding: 0.5rem var(--page-gutter);
     overflow-x: auto;
     scrollbar-width: none;
@@ -71,19 +153,8 @@
   .filters::-webkit-scrollbar {
     display: none;
   }
-  .filters > * {
-    flex: none;
-  }
   .filters .season {
     flex: none;
-    min-width: 0;
-  }
-  .filters .season > label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
   }
   .filters .season > div {
     height: 40px;
@@ -96,28 +167,33 @@
     padding: 0 34px 0 14px;
     field-sizing: content;
   }
-  .field {
-    flex-direction: row;
-    align-items: center;
-    gap: 6px;
+  .pill {
     height: 40px;
-    padding: 0 6px 0 14px;
-    border: 1px solid var(--border-strong);
+    border-color: var(--border-strong);
     border-radius: 20px;
     background: var(--surface);
   }
-  .field label {
-    font-size: var(--text-sm);
+  .group {
+    padding-left: 0;
+    border-left: 0;
   }
-  .filters .field input {
-    min-height: 0;
-    height: 100%;
-    padding: 0 4px;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
+  .group[data-end] {
+    margin-left: 0;
   }
-  .clear {
+  .group :global(.segmented-control) {
+    border-radius: 20px;
+  }
+  .group :global(.segmented-control) button {
     min-height: 40px;
+    border-radius: 20px;
+  }
+  .panel {
+    left: var(--page-gutter);
+    right: var(--page-gutter);
+    width: auto;
+    top: calc(100% - 4px);
+  }
+  .bar > p {
+    padding: 0 var(--page-gutter);
   }
 }

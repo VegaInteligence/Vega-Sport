@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Segments, Skeleton } from "./UI.jsx";
 import { useCardFold } from "./PhoneFold.jsx";
 import {
@@ -16,7 +16,6 @@ import { gradeTone, seasonGrade } from "../services/grades.js";
 import { advancedMetric } from "./PlayerAdvancedStats.jsx";
 import {
   fmt,
-  Gauge,
   LineChart,
   PercentileBadge,
   PercentileBar,
@@ -27,7 +26,8 @@ import {
   ToneLegend,
   toneClass,
 } from "./PlayerScoutCharts.jsx";
-import { PlayStyleCard, TeamContextCard } from "./PlayerStyleCards.jsx";
+import { PlayStyleCard } from "./PlayerStyleCards.jsx";
+import { clubStyles as c } from "./ClubScoutUI.jsx";
 import { Hint, Term } from "./Hint.jsx";
 import { explain } from "../services/glossary.js";
 import { seasonShort } from "../services/previous-season.js";
@@ -204,13 +204,8 @@ function Pending({ ready, children }) {
   );
 }
 
-function SeasonKpis({ profile, season, scope, onScope }) {
-  const competitions = useMemo(() => {
-    const names = new Map();
-    for (const row of profile.rows)
-      if (row.league) names.set(row.league, (names.get(row.league) || 0) + 1);
-    return [...names].sort((a, b) => b[1] - a[1]).map(([name]) => name);
-  }, [profile.rows]);
+/** The season's six figures, for every competition or the one picked in the bar. */
+function SeasonKpis({ profile, season, scope }) {
   const subject = useMemo(
     () =>
       scope === "all"
@@ -265,24 +260,7 @@ function SeasonKpis({ profile, season, scope, onScope }) {
     ],
   ];
   return (
-    <section className={s.block}>
-      <div className={s.sectionHead}>
-        <div>
-          <h2>Saison {season}</h2>
-          <p>{profile.teams.join(" · ")}</p>
-        </div>
-        {competitions.length > 1 && (
-          <Segments
-            label="Compétition"
-            value={scope}
-            onChange={onScope}
-            items={[
-              ["all", "Toutes"],
-              ...competitions.slice(0, 4).map((name) => [name, name]),
-            ]}
-          />
-        )}
-      </div>
+    <section className={s.block} aria-label={`Saison ${season}`}>
       <div className={s.kpis}>
         {kpis.map(([title, value, note]) => (
           <div className={s.kpi} key={title}>
@@ -296,6 +274,34 @@ function SeasonKpis({ profile, season, scope, onScope }) {
       </div>
     </section>
   );
+}
+
+// Plain-language tags from the player's centiles at his position, like the club's
+// style tags: a tag needs the indicator in his position's top fifth.
+const STYLE_TAGS = [
+  ["goals", "Marque beaucoup"],
+  ["touchesBox", "Présent dans la surface"],
+  ["shots", "Tente souvent sa chance"],
+  ["shotsOnTarget", "Cadre ses tirs"],
+  ["dribbles", "Dribbleur"],
+  ["chancesCreated", "Crée des occasions"],
+  ["passesFinalThird", "Fait avancer le jeu"],
+  ["passAccuracy", "Passe sûre"],
+  ["touches", "Très impliqué dans le jeu"],
+  ["duelRate", "Gagne ses duels"],
+  ["recoveries", "Récupérateur"],
+  ["interceptions", "Lit les trajectoires"],
+  ["tackles", "Tacleur"],
+  ["clearances", "Solide dans sa surface"],
+  ["saves", "Beaucoup d’arrêts"],
+  ["goalsPrevented", "Évite des buts"],
+];
+export function playerStyleTags(metrics, limit = 6) {
+  return STYLE_TAGS.map(([key, tag]) => ({ tag, percentile: metrics.get(key)?.percentile }))
+    .filter((item) => item.percentile != null && item.percentile >= 80)
+    .sort((a, b) => b.percentile - a.percentile)
+    .slice(0, limit)
+    .map((item) => item.tag);
 }
 
 function TraitList({ items, metrics }) {
@@ -359,7 +365,22 @@ function ScoutReading({ profile, best, traits }) {
   );
 }
 
-function RecentForm({ profile, matches, onTab }) {
+/** Phones draw the narrow frame; a wider screen gives the chart its whole row. */
+function useNarrow(query = "(max-width: 640px)") {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const update = () => setNarrow(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, [query]);
+  return narrow;
+}
+
+function RecentForm({ profile, matches, onTab, wide = false }) {
+  const narrow = useNarrow();
+  const frame = wide && !narrow ? { width: 1000, height: 230 } : { width: 380, height: 210 };
   const index = useMemo(
     () => new Map((matches || []).map((match) => [match.id, match])),
     [matches],
@@ -398,8 +419,8 @@ function RecentForm({ profile, matches, onTab }) {
     >
       {recent.length >= 2 ? (
         <LineChart
-          width={380}
-          height={210}
+          width={frame.width}
+          height={frame.height}
           points={recent.map((row) => ({
             x: shortDate(row.date),
             y: row.grade,
@@ -443,11 +464,7 @@ export default function PlayerScoutOverview({
   matches,
   comparisonRef,
   onTab,
-  team,
-  club,
   competition = "all",
-  onCompetition,
-  children,
 }) {
   const group = profile.role?.group;
   const peers = cohorts.groups.get(group)?.profiles.length || 0;
@@ -479,9 +496,26 @@ export default function PlayerScoutOverview({
         unit: SCOUT_METRICS[key].unit || "",
       };
     });
-  const roles = roleAssessments(profile, cohorts).sort(
-    (a, b) => (b.value ?? -1) - (a.value ?? -1),
-  );
+  // Each role index with the player's rank among the peers of his position.
+  const roles = useMemo(() => {
+    const own = roleAssessments(profile, cohorts);
+    const others = (cohorts.groups.get(group)?.profiles || [])
+      .filter((peer) => peer.id !== profile.id)
+      .map((peer) => roleAssessments(peer, cohorts));
+    return own
+      .map((role) => {
+        if (role.value == null) return role;
+        const values = others
+          .map((list) => list.find((item) => item.id === role.id)?.value)
+          .filter((value) => value != null);
+        return {
+          ...role,
+          rank: 1 + values.filter((value) => value > role.value).length,
+          of: values.length + 1,
+        };
+      })
+      .sort((a, b) => (b.value ?? -1) - (a.value ?? -1));
+  }, [profile, cohorts, group]);
   const best = roles.find((role) => role.value != null);
   const families = scoutFamilies(group).map((section) => {
     const ranked = section.keys.map((key) => metrics.get(key)).filter(Boolean);
@@ -496,6 +530,7 @@ export default function PlayerScoutOverview({
     };
   });
   const traits = cohortTraits(profile, cohorts);
+  const tags = playerStyleTags(metrics);
   const enoughMinutes = profile.minutes >= cohorts.minMinutes;
   return (
     <div className={s.overview}>
@@ -503,89 +538,109 @@ export default function PlayerScoutOverview({
         profile={profile}
         season={season}
         scope={competition}
-        onScope={onCompetition}
       />
-      <div className={`${s.block} ${s.grid2}`} ref={comparisonRef}>
+      <div className={s.block} ref={comparisonRef}>
         <Card
           title="Profil statistique"
           text={`Centiles par 90 min face aux ${profile.role?.peers || "joueurs du même poste"} des compétitions sélectionnées${ready && peers ? ` (${peers} joueurs, ${cohorts.minMinutes} min minimum)` : ""}.`}
         >
           <Pending ready={ready}>
-            {enoughMinutes ? (
-              <>
-                <div className={s.pizzaWrap}>
-                  <PercentilePizza items={pizza} cohort={peers} />
-                </div>
-                <ToneLegend />
-                <p className={s.note} style={{ marginTop: 8 }}>
-                  Un tiret signale un indicateur non classé : il doit être
-                  renseigné sur tous les matchs joués et partagé par au moins{" "}
-                  {cohorts.minPeers} joueurs.
+            <div className={s.profileGrid}>
+              {enoughMinutes ? (
+                <PercentilePizza items={pizza} cohort={peers} size={520} />
+              ) : (
+                <p className={s.note}>
+                  {number(profile.minutes)} minutes jouées : les centiles
+                  demandent au moins {cohorts.minMinutes} minutes.
                 </p>
-              </>
-            ) : (
-              <p className={s.note}>
-                {number(profile.minutes)} minutes jouées : les centiles
-                demandent au moins {cohorts.minMinutes} minutes.
-              </p>
+              )}
+              <div className={s.profileSide}>
+                <div>
+                  <h4 className={s.subTitle}>Indice Vega par rôle</h4>
+                  {best ? (
+                    <div className={s.roleBars}>
+                      {roles.map((role) => (
+                        <div className={s.roleBar} key={role.id}>
+                          <span>
+                            <Term>{role.label}</Term>
+                            <small>
+                              {role.rank
+                                ? `${role.rank === 1 ? "1er" : `${role.rank}e`} sur ${number(role.of)}`
+                                : "non classé"}
+                            </small>
+                          </span>
+                          {role.value == null ? (
+                            <span />
+                          ) : (
+                            <PercentileBar value={Math.round(role.value)} />
+                          )}
+                          <strong>
+                            {role.value == null ? "—" : Math.round(role.value)}
+                          </strong>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={s.note}>
+                      Aucun indice de rôle calculable sur cette période.
+                    </p>
+                  )}
+                </div>
+                {enoughMinutes && (
+                  <div>
+                    <ToneLegend />
+                    <p className={s.note} style={{ marginTop: 8 }}>
+                      Un tiret signale un indicateur non classé : il doit être
+                      renseigné sur tous les matchs joués et partagé par au moins{" "}
+                      {cohorts.minPeers} joueurs.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+            {(tags.length > 0 || onTab) && (
+              <div className={s.profileTags}>
+                <div className={c.tags}>
+                  {tags.map((tag) => (
+                    <span key={tag} className={c.tag}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                {onTab && (
+                  <button
+                    type="button"
+                    className={s.profileLink}
+                    onClick={() => onTab("advanced")}
+                  >
+                    Voir les stats avancées →
+                  </button>
+                )}
+              </div>
             )}
           </Pending>
         </Card>
-        <div className={s.stack}>
-          <Card
-            fold
-            title="Indice Vega par rôle"
-            text="Moyenne des centiles des indicateurs de chaque rôle, sur 100."
-          >
-            <Pending ready={ready}>
-              {best ? (
-                <div className={s.gaugeRow}>
-                  <Gauge value={Math.round(best.value)} label={best.label} />
-                  <ul className={s.roles}>
-                    {roles.map((role) => (
-                      <li key={role.id}>
-                        <span><Term>{role.label}</Term></span>
-                        <b>
-                          {role.value == null ? "—" : Math.round(role.value)}
-                        </b>
-                        <div>
-                          <PercentileBar
-                            value={
-                              role.value == null ? 0 : Math.round(role.value)
-                            }
-                          />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : (
-                <p className={s.note}>
-                  Aucun indice de rôle calculable sur cette période.
-                </p>
-              )}
-            </Pending>
-          </Card>
-          <Card
-            fold
-            title="Scores par compétence"
-            text="Synthèse sur 100 des indicateurs classés de chaque famille."
-          >
-            <Pending ready={ready}>
-              <div className={s.skills}>
-                {families.map((family) => (
-                  <div className={s.skill} key={family.id}>
-                    <span><Term>{family.title}</Term></span>
-                    <strong>{family.value ?? "—"}</strong>
-                    <PercentileBar value={family.value ?? 0} />
-                  </div>
-                ))}
-              </div>
-            </Pending>
-          </Card>
-        </div>
       </div>
-      <div className={`${s.block} ${s.grid3}`}>
+      <div className={s.block}>
+        <Card
+          fold
+          title="Scores par compétence"
+          text="Synthèse sur 100 des indicateurs classés de chaque famille."
+        >
+          <Pending ready={ready}>
+            <div className={`${s.skills} ${s.skillsLine}`}>
+              {families.map((family) => (
+                <div className={s.skill} key={family.id}>
+                  <span><Term>{family.title}</Term></span>
+                  <strong>{family.value ?? "—"}</strong>
+                  <PercentileBar value={family.value ?? 0} />
+                </div>
+              ))}
+            </div>
+          </Pending>
+        </Card>
+      </div>
+      <div className={`${s.block} ${s.grid4}`}>
         <Card title="Points forts" text="Centiles les plus élevés">
           <Pending ready={ready}>
             <TraitList items={traits.high} metrics={metrics} />
@@ -604,15 +659,11 @@ export default function PlayerScoutOverview({
             <ScoutReading profile={profile} best={best} traits={traits} />
           </Pending>
         </Card>
-      </div>
-      <div className={`${s.block} ${s.grid2}`}>
-        <RecentForm profile={profile} matches={matches} onTab={onTab} />
         <PlayStyleCard id={profile.id} season={season} />
       </div>
       <div className={s.block}>
-        <TeamContextCard id={profile.id} season={season} team={club} />
+        <RecentForm profile={profile} matches={matches} onTab={onTab} wide />
       </div>
-      {children}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useActorRead from "../hooks/useActorRead.js";
@@ -23,7 +24,6 @@ import {
 } from "../services/season-player.js";
 import {
   buildCohorts,
-  playerSnapshot,
   rankMetric,
   roleAssessments,
   SCOUT_METRICS,
@@ -34,12 +34,12 @@ import {
   BookmarkButton,
   ComparePlayerButton,
   MetricInfo,
-  ReportButton,
   ResearchTabs,
 } from "./ResearchUI.jsx";
-import PlayerHonours, { usePlayerHonours } from "./PlayerHonours.jsx";
+import Icon from "./Icon.jsx";
+import { usePlayerHonours } from "./PlayerHonours.jsx";
 import PlayerOverviewRadar from "./PlayerOverviewRadar.jsx";
-import PlayerProfileFilters from "./PlayerProfileFilters.jsx";
+import PlayerProfileFilters, { FilterGroup } from "./PlayerProfileFilters.jsx";
 import PlayerScoutRail, { PlayerScoutStrip } from "./PlayerScoutRail.jsx";
 import PlayerAdvancedStats from "./PlayerAdvancedStats.jsx";
 import PlayerScoutOverview, {
@@ -55,6 +55,7 @@ import PlayerNeighbours from "./PlayerNeighbours.jsx";
 import PlayerHalves from "./PlayerHalves.jsx";
 import PlayerReturn from "./PlayerReturn.jsx";
 import PlayerActionValues from "./PlayerActionValues.jsx";
+import { TeamContextCard } from "./PlayerStyleCards.jsx";
 import PlayerFaced from "./PlayerFaced.jsx";
 import { chartTokens } from "./PlayerScoutCharts.jsx";
 import scout from "./PlayerScout.module.css";
@@ -62,7 +63,11 @@ import { nationalFlagCode } from "../services/national-flags.js";
 import MessiGoats from "./MessiGoats.jsx";
 import { levelPeerClubs, useEuropeLevels } from "../services/club-scout.js";
 import { RankingProvider, RankingTrigger } from "./RankingDialog.jsx";
-import { PlayerLevelBar, PlayerRankingDialog } from "./PlayerRanking.jsx";
+import {
+  PlayerLevelGroup,
+  PlayerLevelStatus,
+  PlayerRankingDialog,
+} from "./PlayerRanking.jsx";
 import { MESSI_ID } from "../services/player-honours.js";
 import { breakoutSignal, usePlayerPower, vegaParts } from "../services/ballon-dor.js";
 import {
@@ -220,6 +225,7 @@ function ProfileLayout({
   team,
   playingTime,
   vega,
+  honours,
   actions,
   stripActions,
   onTab,
@@ -252,6 +258,7 @@ function ProfileLayout({
             team={team}
             playingTime={playingTime}
             vega={vega}
+            honours={honours}
             actions={actions}
             onTab={onTab}
           />
@@ -344,8 +351,7 @@ export default function PlayerSeasonProfile({
     [allProfiles, scopeRows],
   );
   const [mode, setMode] = useState("total"),
-    [minMinutes, setMinMinutes] = useState(450),
-    [keys] = useState(Object.keys(SCOUT_METRICS));
+    [minMinutes, setMinMinutes] = useState(450);
   const requestedView = params?.get("playerView");
   const view = TABS.some(([key]) => key === requestedView)
     ? requestedView
@@ -358,6 +364,13 @@ export default function PlayerSeasonProfile({
     profile.rows.some((row) => row.league === overviewScope.competition)
       ? overviewScope.competition
       : "all";
+  // The competitions he played this season, most matches first: the bar's pills.
+  const competitions = useMemo(() => {
+    const names = new Map();
+    for (const row of profile.rows)
+      if (row.league) names.set(row.league, (names.get(row.league) || 0) + 1);
+    return [...names].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+  }, [profile.rows]);
   const timeRows = useMemo(
     () =>
       competition === "all"
@@ -529,18 +542,6 @@ export default function PlayerSeasonProfile({
   const historyLoading = (
     <Skeleton data-page-loading="" label="Chargement des saisons…" />
   );
-  const palmares = (honours.loading || honours.value?.groups?.length > 0) && (
-    <section className={`${scout.block} ${scout.palmares}`}>
-      <div className={scout.sectionHead}>
-        <h2>Palmarès</h2>
-      </div>
-      <PlayerHonours
-        key={id}
-        name={identity.name || undefined}
-        result={honours}
-      />
-    </section>
-  );
   const historyOverview = (
     <div className="player-overview">
       <Suspense fallback={historyLoading}>
@@ -560,7 +561,6 @@ export default function PlayerSeasonProfile({
           <CareerStats id={id} season={f.season} overview />
         </Suspense>
       </div>
-      <div className={scout.overview}>{palmares}</div>
     </div>
   );
   const overview = (
@@ -572,15 +572,8 @@ export default function PlayerSeasonProfile({
       matches={f.data?.matches}
       comparisonRef={comparisonRef}
       onTab={change}
-      team={team?.name}
-      club={team}
       competition={competition}
-      onCompetition={(value) =>
-        setOverviewScope({ key: scopeKey, competition: value })
-      }
-    >
-      {palmares}
-    </PlayerScoutOverview>
+    />
   );
   if (!profile.matches) {
     const historyView = view === "stats" ? "stats" : "overview";
@@ -597,6 +590,7 @@ export default function PlayerSeasonProfile({
           season={f.season}
           team={team}
           playingTime={playingTime}
+          honours={honours}
           onTab={change}
         >
           <ResearchTabs
@@ -630,14 +624,6 @@ export default function PlayerSeasonProfile({
       </article>
     );
   }
-  const metricTable = (
-    <PlayerMetricTable
-      profile={profile}
-      keys={keys}
-      mode={mode}
-      cohorts={cohorts}
-    />
-  );
   const cohortControls = (
     <div className="research-context">
       <span>
@@ -672,13 +658,10 @@ export default function PlayerSeasonProfile({
         season={f.season}
       />
       <ComparePlayerButton profile={profile} season={f.season} />
-      <ReportButton
-        title={`${profile.name} · ${f.season}`}
-        context={`${profile.teams.join(" · ")} · ${profile.matches} matchs · ${profile.minutes} minutes · minimum de cohorte ${minMinutes} min`}
-        data={playerSnapshot(profile, f.season)}
-      >
-        {metricTable}
-      </ReportButton>
+      <Link className="button button-secondary" href={f.href("/rapport/", { id })}>
+        <Icon name="eye" />
+        Rapport
+      </Link>
     </div>
   );
   return (
@@ -696,6 +679,7 @@ export default function PlayerSeasonProfile({
         team={team}
         playingTime={playingTime}
         vega={vega}
+        honours={honours}
         onTab={change}
         actions={playerActions}
         stripActions={
@@ -717,16 +701,46 @@ export default function PlayerSeasonProfile({
           role="tabpanel"
           aria-label={TABS.find(([key]) => key === view)[1]}
         >
-          {!UNFILTERED_VIEWS.has(view) && <PlayerProfileFilters />}
-          {COHORT_VIEWS.has(view) && (
-            <PlayerLevelBar
-              level={level}
-              onLevel={setLevel}
-              state={level ? europe : { status: "ready" }}
-              peers={levelPeers}
-              team={team}
-            />
-          )}
+          <PlayerProfileFilters
+            period={!UNFILTERED_VIEWS.has(view)}
+            after={
+              (view === "overview" && competitions.length > 1) ||
+              COHORT_VIEWS.has(view) ? (
+                <>
+                  {view === "overview" && competitions.length > 1 && (
+                    <FilterGroup>
+                      <Segments
+                        label="Compétition"
+                        value={competition}
+                        onChange={(value) =>
+                          setOverviewScope({ key: scopeKey, competition: value })
+                        }
+                        items={[
+                          ["all", "Toutes"],
+                          ...competitions
+                            .slice(0, 4)
+                            .map((name) => [name, name]),
+                        ]}
+                      />
+                    </FilterGroup>
+                  )}
+                  {COHORT_VIEWS.has(view) && (
+                    <PlayerLevelGroup level={level} onLevel={setLevel} />
+                  )}
+                </>
+              ) : null
+            }
+            status={
+              COHORT_VIEWS.has(view) && (
+                <PlayerLevelStatus
+                  level={level}
+                  state={level ? europe : { status: "ready" }}
+                  peers={levelPeers}
+                  team={team}
+                />
+              )
+            }
+          />
           {view === "similar" && cohortControls}
           <Suspense
             fallback={
@@ -744,6 +758,7 @@ export default function PlayerSeasonProfile({
                   ready={comparisonsReady}
                 />
                 <PlayerActionValues id={id} />
+                <TeamContextCard id={id} season={f.season} team={team} />
               </>
             )}
             {view === "stats" && (
@@ -833,9 +848,7 @@ export default function PlayerSeasonProfile({
                 record={record}
                 team={team}
                 season={f.season}
-              >
-                {palmares}
-              </PlayerScoutCareer>
+              />
             )}
             {view === "physical" && <PlayerPhysical id={id} season={f.season} rows={profile.rows} />}
             {view === "projection" && (

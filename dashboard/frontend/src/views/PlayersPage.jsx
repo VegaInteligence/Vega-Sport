@@ -310,11 +310,6 @@ export default function PlayersPage() {
             ← Tous les joueurs
           </Link>
         )}
-        {id && (
-          <Link className="inline-link competition-back report-link" href={f.href("/rapport/", { id })}>
-            Rapport du joueur →
-          </Link>
-        )}
         {id && !overview && cohortTab && needsCohort && cohort.loading && (
           <Skeleton label="Chargement des comparaisons de saison…" lines={2} />
         )}

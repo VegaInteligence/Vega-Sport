@@ -65,13 +65,25 @@ test("search presents one navigable player for multiple match performances", () 
 test("season overview shows the scout layout without a detailed statistics shortcut", () => {
   const html = renderSeasonProfile(rows, matches, "p_1");
   assert.match(html, /<h1 class="player-profile-name">Neymar<\/h1>/);
-  assert.match(html, /<h2>Saison 2026\/2027<\/h2>/);
+  // One bar above the analysis: season, period and comparison; the season title is gone.
+  assert.doesNotMatch(html, /<h2>Saison 2026\/2027<\/h2>/);
+  assert.match(html, /role="group" aria-label="Filtres du joueur"/);
+  assert.match(html, /aria-expanded="false"[^>]*>[\s\S]{0,400}Période[\s\S]{0,200}Toute la saison/);
+  assert.match(html, /Comparer à/);
+  // A single competition: no competition pills.
+  assert.doesNotMatch(html, /aria-label="Compétition"/);
   // The names are read without their « i » (Hint.jsx) and its no-wrap span.
   const bare = html.replace(/<span class="hint"[^>]*>i<\/span>/g, "").replace(/<span class="term-tail">([^<]*)<\/span>/g, "$1");
   assert.match(bare, /<span>Passes décisives<\/span><strong>0<\/strong>/);
   assert.match(bare, /<h3>Profil statistique<\/h3>/);
-  assert.match(bare, /<h3>Indice Vega par rôle<\/h3>/);
+  // The role index sits inside the statistical profile, as level bars only (no gauge).
+  assert.doesNotMatch(bare, /<h3>Indice Vega par rôle<\/h3>/);
+  assert.match(bare, /<h4[^>]*>Indice Vega par rôle<\/h4>/);
+  assert.match(bare, /<h3>Scores par compétence<\/h3>/);
+  assert.match(bare, /<h3>Profil de jeu<\/h3>/);
   assert.match(bare, /<h3>Forme récente<\/h3>/);
+  // The team context lives in « Stats avancées ».
+  assert.doesNotMatch(bare, /<h3>Contexte d’équipe<\/h3>/);
   // 37 minutes cannot be ranked: the notice replaces percentiles.
   assert.match(html, /37 minutes jouées : les centiles demandent au moins 450/);
   assert.match(html, /aria-label="Note des derniers matchs"/);
@@ -165,7 +177,7 @@ test("unillustrated individual awards remain available without illustrated troph
   assert.doesNotMatch(html, /class="player-trophy-grid"/);
 });
 
-test("Yamal's Liga and Euro artwork remain clickable", async () => {
+test("Yamal's Liga and Euro are listed in the rail with their club and seasons", async () => {
   const id = "p_2e0FPo";
   const name = "Lamine Yamal";
   const bootstrap = await preparePlayerHonoursBootstrap(id, name, {
@@ -187,16 +199,22 @@ test("Yamal's Liga and Euro artwork remain clickable", async () => {
     ],
   });
   const html = renderSeasonProfile(
-    [{ ...rows[0], playerId: id, name }],
+    [{ ...rows[0], playerId: id, name, teamId: "t_barca", team: "Barcelona" }],
     matches,
     id,
     bootstrap,
   );
-  assert.match(html, /<button[^>]+aria-label="Liga, 3 titres, FC Barcelone"/);
+  // The palmarès sits in the identity rail, one row per trophy: art, title, club and
+  // seasons, number of titles.
+  const shelf = html.indexOf('aria-label="Palmarès de Lamine Yamal"');
+  assert.ok(shelf > html.indexOf('aria-label="Identité du joueur"'));
+  assert.ok(shelf < html.indexOf("</aside>"));
   assert.match(html, /src="\/trophies\/liga-current\.webp"/);
-  assert.match(html, /<button[^>]+aria-label="Euro, Espagne"/);
+  assert.match(html, /<b>Liga<\/b><small>FC Barcelone · 2025–26, 2024–25, 2022–23<\/small><\/span><em>×3<\/em>/);
   assert.match(html, /src="\/trophies\/euro-modern\.webp"/);
-  assert.match(html, /FC Barcelone · 2025–26, 2024–25, 2022–23/);
+  assert.match(html, /<b>Euro<\/b><small>Espagne · 2024<\/small><\/span><em><\/em>/);
+  // The club chip under his name opens the club's page.
+  assert.match(html, /<a[^>]+href="\/clubs\/?\?[^"]*id=t_barca[^"]*"[^>]*>[\s\S]{0,300}Barcelona<\/a>/);
   assert.doesNotMatch(html, /Faire défiler les trophées|Trophées suivants/);
   assert.doesNotMatch(
     html,

@@ -1,0 +1,91 @@
+/* The palmarès in the identity rail: compact rows, art on the left. */
+.list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.list li {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 5px 4px;
+  border-radius: var(--radius-sm);
+}
+.list li:hover {
+  background: var(--surface-subtle);
+}
+.art {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: var(--muted);
+}
+.art img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+.art :global(.icon) {
+  width: 20px;
+  height: 20px;
+}
+.what {
+  display: grid;
+  min-width: 0;
+}
+.what b {
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.25;
+}
+.what small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.list em {
+  color: var(--ink-strong);
+  font-size: var(--text-sm);
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.more {
+  justify-self: start;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+.others {
+  justify-self: start;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.others summary {
+  color: var(--ink);
+  cursor: pointer;
+}
+.others ul {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding-left: 16px;
+}
+@media (max-width: 640px) {
+  .more {
+    min-height: 44px;
+  }
+}

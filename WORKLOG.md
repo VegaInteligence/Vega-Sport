@@ -1,13 +1,12 @@
 # WORKLOG — 2026-11-16
 
-- Goal: perform the final README/AGENTS consistency review across the four Vega repositories, especially roles, Linear identity and frontend mockup approval; commit and push documentation fixes.
-- This checkout: Vega-Sport; Linear label `repo:vega-sport`.
-- Constraints: documentation only; preserve project roles, research scope, existing approval requirements, code/data and unrelated local work.
-- Coordination: live Linear read-back confirms Vega Inteligence (VI), https://linear.app/vegainteligence, all four repository labels and the multi-select Repository group. No active started issues returned; no new issue needed for this small documentation update.
-- Findings: roles and repository links agree; common Linear instructions match; frontend approval blocks match in Sport, Business and Status and are intentionally absent from research-only Prediction. READMEs need a direct contribution-rules link. Business needs to distinguish published-site restrictions from private design review and dated content decisions from current model availability.
-- Direction: add concise README contribution guidance referring to AGENTS.md; surface the existing frontend approval gate in the three web repositories; clarify the Business-specific wording without changing site content or owner decisions.
-- Progress: reviewed all eight root documents and Sport’s nested Next.js instructions. Every README now links to AGENTS.md; the three web READMEs surface explicit mockup approval. Business publishing restrictions and dated model-copy decisions are clarified without changing the website.
-- Validation: all four repository-link maps and live Linear identities/labels agree; common Linear sections and the three frontend approval sections are identical. All 33 local README links resolve; 85 tracked README/AGENTS files contain no old Linear references. Documentation diffs and whitespace checks pass. No application tests or E2E run.
-- Suggested commit: `[UPD] align contribution guidance with agent approval rules`.
-- Delivery: commit and push the focused documentation changes to main and verify remote inclusion.
-- Next action: follow the linked contribution rules; keep these sections aligned when roles or workflows change.
+- Goal: reorganise the player page and the matching club points per the approved mock-up ([VI-17](https://linear.app/vegainteligence/issue/VI-17/pages-joueur-et-club-barre-de-filtres-unique-profil-statistique-facon), In Progress).
+- This checkout: Vega-Sport, worktree `claude/v2-complete`, pushed direct to main; Linear label `repo:vega-sport`. Previous task here (README/AGENTS consistency review) is done and pushed (27363a4a77).
+- Constraints: approved mock-up only; keep every tab, link and block; no helper text; French UI; phones get one scrolling row of pills; ship only API-backed data.
+- Approved direction (16 Nov), with the user's changes:
+  - Player overview: one bar = saison · Période (popover Du/Au) · compétitions · Comparer à; KPI strip; Profil statistique full width like the club card. It has the radar left and role level bars right, with **no big gauge**. Below them, a row of style tags and a link, **as on the club card** (added later the same day). Next come Scores par compétence (6 tiles on one line) and Points forts / Points faibles / Lecture du scout / Profil de jeu. Forme récente is full width.
+  - Rail: Palmarès list before the actions; « Rapport » button opens /rapport/ (top link removed); **club chip links to the club page**.
+  - Contexte d'équipe: keeps its current design (tags + Possession/Territoire/Jeu long/PPDA + passes received); moves to « Stats avancées » after « Valeur des actions »; fix « Style de l'équipe indisponible » (Real Madrid).
+  - Club: top report link → rail « Rapport » beside « Enregistrer »; Résultats et attendus figures on one line.
+- Progress: implemented; tests updated before the code (season_player_render), site suite 602/602, build OK; checked locally at 1440 px and 393 px. The Real Madrid team-context error was transient: one failed club read failed the whole cohort. A failed league read is now retried once, then offers « Réessayer ».
+- Next action: push to main, verify in production (desktop + iPhone 16) with saved evidence, close VI-17.
