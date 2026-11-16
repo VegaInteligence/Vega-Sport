@@ -1,4 +1,4 @@
-import { normalizeText } from "../model.js";
+import { compareText, normalizeText } from "../model.js";
 import { positionOf } from "./player-profile.js";
 import { competitionCountryLabel } from "./competition-selector.js";
 import { mergeCupCatalog } from "./cup-catalog.js";
@@ -203,6 +203,75 @@ function score(item, needle, tokens) {
   return null;
 }
 
+/**
+ * A matched player's relevance, as /api/search ranks players: tier 0 the exact
+ * name (word for word) or an alias; 1 every word typed is a whole word of the
+ * name or an alias, wherever it stands; 2 every word is in the name (else in an
+ * alias), the larger share of the words they fall in first ("messi" is 5/7 of
+ * Messias), then the more words beginning theirs; 3 words left to the club,
+ * the fewest first. Ties go by name, then id, not by minutes played.
+ */
+function relevance(item, needle, tokens, terms) {
+  if (
+    item.key === needle ||
+    item.aliases.includes(needle) ||
+    (item.words.length === tokens.length &&
+      item.words.every((word, i) => word === tokens[i]))
+  )
+    return { tier: 0, missed: 0, coverage: 1, prefixes: terms.length };
+  let missed = 0,
+    whole = 0,
+    letters = 0,
+    span = 0,
+    prefixes = 0;
+  for (const term of terms) {
+    const fit = item.aliasWords.includes(term)
+      ? 2 * term.length
+      : (fitOf(item.words, term) ?? fitOf(item.aliasWords, term));
+    if (fit === undefined) {
+      missed++;
+      continue;
+    }
+    letters += term.length;
+    span += fit >> 1;
+    if (!(fit & 1)) prefixes++;
+    if (fit === 2 * term.length) whole++;
+  }
+  return {
+    tier: missed ? 3 : terms.length && whole === terms.length ? 1 : 2,
+    missed,
+    coverage: span ? letters / span : 0,
+    prefixes,
+  };
+}
+
+/**
+ * 2 × the length of the shortest word holding the term, + 1 when the term does
+ * not begin it; undefined when no word holds it.
+ */
+function fitOf(words, term) {
+  let fit;
+  for (const word of words) {
+    const at = word.indexOf(term);
+    if (at < 0) continue;
+    const value = 2 * word.length + (at > 0 ? 1 : 0);
+    if (fit === undefined || value < fit) fit = value;
+  }
+  return fit;
+}
+
+const byScore = (a, b) =>
+  a[0] - b[0] ||
+  b[1].weight - a[1].weight ||
+  a[1].name.localeCompare(b[1].name, "fr");
+const byRelevance = ([, a, x], [, b, y]) =>
+  x.tier - y.tier ||
+  x.missed - y.missed ||
+  y.coverage - x.coverage ||
+  y.prefixes - x.prefixes ||
+  compareText(a.name, b.name) ||
+  (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+
 const previous = { index: null, needle: "", tokens: 0, candidates: null };
 
 export function searchIndex(index, query) {
@@ -227,23 +296,29 @@ export function searchIndex(index, query) {
     needle.startsWith(previous.needle);
   const result = { needle, total: 0 },
     candidates = {},
-    best = {};
+    best = {},
+    terms = [...new Set(tokens)];
   for (const kind of CATEGORIES) {
     const source = narrowing ? previous.candidates[kind] : index[kind];
     const matched = [];
+    let closest = Infinity;
     for (const item of source) {
       const s = score(item, needle, tokens);
-      if (s !== null) matched.push([s, item]);
+      if (s === null) continue;
+      matched.push([
+        s,
+        item,
+        kind === "players" ? relevance(item, needle, tokens, terms) : null,
+      ]);
+      if (s < closest) closest = s;
     }
     candidates[kind] = matched.map(([, item]) => item);
-    matched.sort(
-      (a, b) =>
-        a[0] - b[0] ||
-        b[1].weight - a[1].weight ||
-        a[1].name.localeCompare(b[1].name, "fr"),
-    );
+    // What matches is decided as before (score) for every kind; players are
+    // then ranked as /api/search ranks them, clubs and competitions as before.
+    matched.sort(kind === "players" ? byRelevance : byScore);
     result[kind] = matched.slice(0, LIMITS[kind]).map(([, item]) => item);
-    best[kind] = matched.length ? matched[0][0] : Infinity;
+    // The category order still compares the closest name of each.
+    best[kind] = closest;
     result[`${kind}Count`] = matched.length;
     result.total += result[kind].length;
   }

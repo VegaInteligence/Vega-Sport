@@ -1,13 +1,25 @@
 /**
- * GET /api/search — players and clubs of a season by name, same parameters, same
- * ranking and same response as relational-discovery.js on main.
+ * GET /api/search — players and clubs of a season by name, same parameters and same
+ * response as relational-discovery.js on main.
  *
  * A player is found by a name containing every term (the terms may also match his
  * team or league in the season), or by a curated alias equal to a term; a club by
- * its name or its initials. Ranks: 0 exact name, alias or initials; 1 prefix; 2 other.
- * Only players and clubs present in the season are returned (six and four, with a
- * "has more" flag). Differences with the legacy read: aliases come from
- * core.entity_names; a club's main edition is the one where it played most matches.
+ * its name or its initials. Only players and clubs present in the season are returned
+ * (six and four, with a "has more" flag). Differences with the legacy read: aliases come
+ * from core.entity_names; a club's main edition is the one where it played most matches;
+ * players are ranked by how well their name answers the terms, not by its first letters.
+ *
+ * Players, most relevant first, judged on their names and aliases alone (the season
+ * decides who is shown, never in which order):
+ *  0. the exact name, word for word (accents, case and separators aside), or an alias
+ *     typed whole ("cr7");
+ *  1. every term a whole word of the name or an alias, wherever it stands ("messi":
+ *     Lionel Messi, Messi Bouli, Rayane Messi);
+ *  2. every term in the name: the larger share of the words they fall in first ("messi"
+ *     is 5/7 of Messias, 5/8 of Messineo), then the more terms beginning their word;
+ *  3. terms left to the team or the league: the fewest first, then as in 2.
+ * Then the name, then the id. A player's rank in the response is 0, 1, or 2 for the rest
+ * (2 and 3). Clubs: 0 exact name or initials, 1 prefix, 2 other.
  */
 import { createHash } from "node:crypto";
 import { inEuropeFocus } from "../../../../dashboard/shared/competition-scope.js";
@@ -17,11 +29,19 @@ const LIMITS = { players: 6, clubs: 4 };
 const normalized = (value) => value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 // Players and clubs are compared on their stored search names (057): the same folding.
 const textSql = (column) => `regexp_replace(normalize(lower(${column}),NFD),'[̀-ͯ]','','g')`;
+// What separates two words of a query (JavaScript's white space, the hyphen, both
+// apostrophes and the dot); then the same characters one by one, which the SQL turns
+// into spaces to cut a name into the same words as the terms.
+export const WORD_SPLIT = /[\s\-'’.]+/;
+export const WORD_SEPARATORS =
+  "\t\n\v\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff-'’.";
+// v2: players ranked by relevance (an answer kept under v1 had the prefix order).
 const searchTag = (version, season, needle) =>
-  `W/"search-v1-${createHash("sha256").update(JSON.stringify([version, season, needle])).digest("hex")}"`;
+  `W/"search-v2-${createHash("sha256").update(JSON.stringify([version, season, needle])).digest("hex")}"`;
 
 // $1 needle, $2 season, $3 %needle%, $4 needle%, $5 %term% patterns, $6 terms, $7 the
-// season's id (bound, so only that season's partitions are planned and read).
+// season's id (bound, so only that season's partitions are planned and read), $8 the
+// needle's words in order, $9 WORD_SEPARATORS, $10 as many spaces.
 //
 // A short needle matches thousands of names and the season holds a million appearances,
 // so the season is read as little as possible:
@@ -33,10 +53,22 @@ const searchTag = (version, season, needle) =>
 //    reading the season; the others are checked on their appearances' ids
 //    (api.player_match_keys): the club first, the match's edition only when a league
 //    names a term;
-//  - the candidates are sorted first (rank, name), then checked in that order, and the
-//    check stops at the seventh that passes. The inner ORDER BY ... OFFSET 0 keeps the
+//  - the candidates are sorted first (relevance, name), then checked in that order, and
+//    the check stops at the seventh that passes. The inner ORDER BY ... OFFSET 0 keeps the
 //    sorted list as it is (PostgreSQL does not merge it into the outer query), and the
 //    CASE is evaluated per row, in order.
+//
+// A candidate's relevance is read on his name alone, in the scan: its words (w), and for
+// each term (t) its fit, the best word holding it as 2 × the word's length + 1 when the
+// term does not begin it (a whole word is 2 × the term's length; an alias equal to the
+// term counts as one; none when the term is missing). The subqueries end with OFFSET 0 so
+// that each is computed once per candidate and term, not once per use. Every step of the
+// order (candidates, those kept, the seven, the response) sorts on the same keys: tier,
+// missed (terms left to the context), coverage (the terms' letters over their words'),
+// prefixes (terms beginning their word), the name, and the public id once it is known.
+// The scan lists those keys before the name: thousands of candidates are sorted on them,
+// and behind a text column each comparison would walk the row to find them (measured on
+// 40,000 names: "an" in 96 ms instead of 120, the same order).
 const searchSql = `/*vega:v2:search*/
 WITH alias_hits AS MATERIALIZED (
  SELECT DISTINCT a.player_id,x.pattern FROM api.player_search_aliases a
@@ -51,16 +83,24 @@ WITH alias_hits AS MATERIALIZED (
  SELECT coalesce(array_agg(DISTINCT u.pattern),'{}') AS patterns
  FROM (SELECT pattern FROM term_teams UNION ALL SELECT pattern FROM term_leagues) u
 ), player_candidates AS MATERIALIZED (
- SELECT c.player_id,k.public_id AS id,c.label AS name,k.image_url,c.rank FROM (
-  SELECT n.player_id,n.label,n.rank FROM (
-   SELECT p.player_id,p.name AS label,
-   CASE WHEN p.search_name=$1 OR p.player_id IN (SELECT player_id FROM alias_hits) THEN 0
-     WHEN p.search_name LIKE $4 THEN 1 ELSE 2 END AS rank,
-   ARRAY(SELECT x.pattern FROM unnest($5::text[]) AS x(pattern) WHERE p.search_name NOT LIKE x.pattern
-     AND (p.player_id,x.pattern) NOT IN (SELECT player_id,pattern FROM alias_hits)) AS missing
+ SELECT c.player_id,k.public_id AS id,c.label AS name,k.image_url,least(c.tier,2) AS rank,c.tier,c.missed,c.coverage,c.prefixes FROM (
+  SELECT n.player_id,n.label,n.tier,n.missed,n.coverage,n.prefixes FROM (
+   SELECT r.tier,cardinality(r.missing) AS missed,r.coverage,r.prefixes,p.player_id,p.name AS label,r.missing
    FROM api.player_keys p
+   CROSS JOIN LATERAL (SELECT array_remove(string_to_array(translate(p.search_name,$9,$10),' '),'') AS words OFFSET 0) w
+   CROSS JOIN LATERAL (
+    SELECT CASE WHEN p.search_name=$1 OR w.words=$8::text[] OR (cardinality($8::text[])=1 AND bool_or(t.alias)) THEN 0
+      WHEN bool_and(coalesce(t.fit=2*length(t.term),false)) THEN 1 WHEN bool_and(t.fit IS NOT NULL) THEN 2 ELSE 3 END AS tier,
+     coalesce(array_agg(t.pattern) FILTER (WHERE t.fit IS NULL),'{}') AS missing,
+     coalesce(sum(length(t.term)) FILTER (WHERE t.fit IS NOT NULL)::float8/sum(t.fit/2),0) AS coverage,
+     count(*) FILTER (WHERE t.fit%2=0) AS prefixes
+    FROM (SELECT u.term,u.pattern,u.alias,CASE WHEN u.alias THEN 2*length(u.term) WHEN p.search_name LIKE u.pattern
+       THEN coalesce((SELECT min(2*length(y)+(strpos(y,u.term)>1)::int) FROM unnest(w.words) AS y WHERE strpos(y,u.term)>0),
+         2*length(p.search_name)+1) END AS fit
+     FROM (SELECT x.term,x.pattern,(p.player_id,x.pattern) IN (SELECT player_id,pattern FROM alias_hits) AS alias
+       FROM unnest($6::text[],$5::text[]) AS x(term,pattern) OFFSET 0) u OFFSET 0) t) r
    WHERE p.search_name LIKE ANY($5::text[]) OR p.player_id IN (SELECT player_id FROM alias_hits)
-   ORDER BY rank,label OFFSET 0) n
+   ORDER BY tier,missed,coverage DESC,prefixes DESC,label OFFSET 0) n
   WHERE CASE
    WHEN n.missing='{}' THEN (SELECT true FROM api.player_match_keys a
      WHERE a.player_id=n.player_id AND a.season_id=$7::smallint LIMIT 1)
@@ -73,11 +113,11 @@ WITH alias_hits AS MATERIALIZED (
            AND ((term.pattern,a.competition_season_id) IN (SELECT pattern,competition_season_id FROM term_leagues)) IS NOT TRUE)))
      LIMIT 1)
    END
-  ORDER BY n.rank,n.label FETCH FIRST 7 ROWS WITH TIES) c
+  ORDER BY n.tier,n.missed,n.coverage DESC,n.prefixes DESC,n.label FETCH FIRST 7 ROWS WITH TIES) c
  JOIN api.player_keys k ON k.player_id=c.player_id
- ORDER BY c.rank,c.label,k.public_id LIMIT 7
+ ORDER BY c.tier,c.missed,c.coverage DESC,c.prefixes DESC,c.label,k.public_id LIMIT 7
 ), players AS (
- SELECT c.id,c.rank,c.name,c.image_url,a.team,a.league_id,a.league,a.country
+ SELECT c.id,c.rank,c.tier,c.missed,c.coverage,c.prefixes,c.name,c.image_url,a.team,a.league_id,a.league,a.country
  FROM player_candidates c
  CROSS JOIN LATERAL (SELECT a.team,a.league_id,a.league,a.country FROM api.player_appearances a
    WHERE a.player_id=c.player_id AND a.season_id=$7::smallint
@@ -100,7 +140,7 @@ WITH alias_hits AS MATERIALIZED (
    WHERE e.team_id=c.team_id AND e.season=$2 ORDER BY e.matches DESC,e.league_id LIMIT 1) e
 )
 SELECT g.generation::text AS version,
- coalesce((SELECT json_agg(p ORDER BY p.rank,p.name,p.id) FROM players p),'[]'::json) AS players,
+ coalesce((SELECT json_agg(p ORDER BY p.tier,p.missed,p.coverage DESC,p.prefixes DESC,p.name,p.id) FROM players p),'[]'::json) AS players,
  coalesce((SELECT json_agg(t ORDER BY t.rank,t.name,t.id) FROM clubs t),'[]'::json) AS clubs
 FROM api.publication g`;
 
@@ -126,7 +166,8 @@ export function createSearchRoute(read) {
     if (raw.length > 100 || /[\u0000-\u001f\u007f]/.test(raw) || !/^\d{4}(?:\/\d{4})?$/.test(season || "")) reject(400, "Recherche invalide.");
     const needle = normalized(raw);
     if (needle.length < 2) return send(req, { players: [], clubs: [], playersHasMore: false, clubsHasMore: false }, 200);
-    const terms = [...new Set(needle.split(/[\s\-'’.]+/).filter(Boolean))];
+    const words = needle.split(WORD_SPLIT).filter(Boolean);
+    const terms = [...new Set(words)];
     if (terms.length > 8) reject(400, "La recherche accepte huit termes au maximum.");
     // The season's id is resolved before the search and bound: a season the database does
     // not know has no player (null matches no partition).
@@ -149,6 +190,9 @@ export function createSearchRoute(read) {
       terms.map((t) => `%${escape(t)}%`),
       terms,
       state.season_id,
+      words,
+      WORD_SEPARATORS,
+      " ".repeat(WORD_SEPARATORS.length),
     ]);
     if (row?.version == null) reject(503, "Catalogue indisponible.");
     const body = {
