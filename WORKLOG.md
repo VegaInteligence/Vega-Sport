@@ -16,4 +16,8 @@
   - the strength of a club without an Elo (league level?);
   - random draws for rounds not yet drawn;
   - how to count knockout ties already played.
-- Next action: wait for the user's validation; then advisor review, tests first, worker + API + « Projection » tab, production E2E.
+- Also shipped and verified today: [VI-20](https://linear.app/vegainteligence/issue/VI-20/selections-une-equipe-par-nation-et-tous-leurs-matchs-dans-lelo), 3d123eeead.
+  - 28 national twins were merged (Italie→Italy…), and every match between two national teams now counts in the Elo.
+  - Fixture placeholders are out of the nations list.
+  - France is 4-1-1 in both the ranking and its page; 54 nations ranked; evidence in evidence-vi20/README.md.
+- Next action: wait for the user's validation of the cup predictions; then advisor review, tests first, worker + API + « Projection » tab, production E2E.
