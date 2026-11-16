@@ -237,6 +237,8 @@ class Worker:
         self._retry_at = {}  # step of the daily pass that failed -> when it is tried again
         # SideProcess when the daily pass and the image copies run in a process of their own.
         self.side_process = None
+        # SideProcess of the Transfermarkt reader (--transfermarkt process), else None.
+        self.reader_process = None
         self._events = []
         client._on_attempt = self._events.append
 
@@ -572,6 +574,8 @@ class Worker:
                     print(f"planner error={error_code(error)}", flush=True)
                 if self.backfill is None:
                     self.lineup_forecasts()
+                if self.reader_process is not None:
+                    self.reader_process.tick()
                 if self.side_process is not None:
                     self.side_process.tick()
                 elif self.backfill is None:
@@ -882,8 +886,8 @@ class SideProcess:
     the process the kernel kills first when the task runs out of memory (prefer_as_oom_victim).
     When it ends, however it ends, it is started again `retry_after` seconds later."""
 
-    def __init__(self, command, *, retry_after=RETRY_DAILY_AFTER.total_seconds(), clock=time.monotonic, popen=subprocess.Popen):
-        self.command, self.retry_after, self.clock, self.popen = list(command), retry_after, clock, popen
+    def __init__(self, command, *, retry_after=RETRY_DAILY_AFTER.total_seconds(), clock=time.monotonic, popen=subprocess.Popen, name="side"):
+        self.command, self.retry_after, self.clock, self.popen, self.name = list(command), retry_after, clock, popen, name
         self.process = None
         self.next_start = float("-inf")
 
@@ -895,7 +899,7 @@ class SideProcess:
             if code is None:
                 return
             # A negative code is the signal that killed it (-9: the kernel, out of memory).
-            print(f"side process exit={code} restart_in={int(self.retry_after)}", flush=True)
+            print(f"{self.name} process exit={code} restart_in={int(self.retry_after)}", flush=True)
             self.process = None
             self.next_start = now + self.retry_after
         if now >= self.next_start:
@@ -903,9 +907,9 @@ class SideProcess:
                 self.process = self.popen(self.command)
             except OSError as error:
                 self.next_start = now + self.retry_after
-                print(f"side process error={error_code(error)} restart_in={int(self.retry_after)}", flush=True)
+                print(f"{self.name} process error={error_code(error)} restart_in={int(self.retry_after)}", flush=True)
                 return
-            print(f"side process started pid={self.process.pid}", flush=True)
+            print(f"{self.name} process started pid={self.process.pid}", flush=True)
 
     def stop(self, wait=10):
         if self.process is None or self.process.poll() is not None:
@@ -1072,7 +1076,16 @@ def main(argv=None):
         help="the daily pass and the image copies: in the loop (inline), in a child process this one starts and watches (process), "
         "or nothing else (only: what the child runs)",
     )
+    parser.add_argument(
+        "--transfermarkt",
+        choices=("off", "process", "only"),
+        default="off",
+        help="the Transfermarkt reader (vega/transfermarkt.py): off, in a child process this one starts and watches (process), "
+        "or nothing else (only: what the child runs)",
+    )
     args = parser.parse_args(argv)
+    if args.transfermarkt != "off" and (args.lanes == "backfill" or args.until_idle or args.max_jobs is not None or args.report or args.side_work == "only"):
+        parser.error("--transfermarkt process/only is for the long-running worker")
     if args.side_work != "inline" and (args.lanes == "backfill" or args.until_idle or args.max_jobs is not None or args.report):
         parser.error("--side-work process/only is for the long-running worker")
     dsn, key = os.environ.get("V2_DATABASE_URL"), os.environ.get("PITCHAPI_API_KEY")
@@ -1092,6 +1105,11 @@ def main(argv=None):
         side = SideProcess([sys.executable, "-m", "vega.worker", "--side-work", "only", "--cohort-delay", str(args.cohort_delay)])
     elif args.side_work == "only":
         print(f"side work oom_victim={prefer_as_oom_victim()}", flush=True)
+    reader = None
+    if args.transfermarkt == "process":
+        # The reader waits a second or more between its requests and pauses for hours when it
+        # is refused: a process of its own, so neither ever holds the collection or the daily pass.
+        reader = SideProcess([sys.executable, "-m", "vega.worker", "--transfermarkt", "only"], retry_after=300, name="transfermarkt")
 
     def session():
         conns = [connect(dsn)]
@@ -1100,6 +1118,11 @@ def main(argv=None):
             if state["migrate"]:
                 migrate(conns[0])
                 state["migrate"] = False
+            if args.transfermarkt == "only":
+                from . import transfermarkt
+
+                transfermarkt.run(conns[0], stop=lambda: bool(stopping))
+                return
             if calc_dsn:
                 conns.append(connect(calc_dsn))
             worker = Worker(
@@ -1122,6 +1145,7 @@ def main(argv=None):
                 side_loop(worker, stop=lambda: bool(stopping))
                 return
             worker.side_process = side
+            worker.reader_process = reader
             left = None if args.max_jobs is None else args.max_jobs - state["done"]
             worker.run(max_jobs=left, until_idle=args.until_idle, stop=lambda: bool(stopping))
             if args.report:
@@ -1139,8 +1163,9 @@ def main(argv=None):
     try:
         ended = keep_running(session, stop=lambda: bool(stopping))
     finally:
-        if side is not None:
-            side.stop()
+        for child in (side, reader):
+            if child is not None:
+                child.stop()
     for (family, outcome), count in sorted(results.items()):
         print(f"family={family} outcome={outcome} count={count}", flush=True)
     print(f"jobs={state['done']}", flush=True)

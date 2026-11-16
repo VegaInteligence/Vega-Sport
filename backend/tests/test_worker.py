@@ -194,6 +194,12 @@ class KeepRunningTest(unittest.TestCase):
 class SideProcessTest(unittest.TestCase):
     """The daily pass and the image copies in a process of their own."""
 
+    def test_the_transfermarkt_reader_is_for_the_long_running_worker(self):
+        # A backfill task or a run that ends never starts the reader.
+        for argv in (["--transfermarkt", "process", "--lanes", "backfill"], ["--transfermarkt", "only", "--until-idle"]):
+            with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+                __import__("vega.worker", fromlist=["main"]).main(argv)
+
     def test_the_child_is_started_watched_and_started_again_after_the_wait(self):
         now, started = [0.0], []
 
