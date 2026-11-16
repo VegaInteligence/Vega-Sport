@@ -231,8 +231,12 @@ function LegacyOverview() {
       .sort((a, b) => a.time - b.time)[0];
   const potwMatch = potw && matchIndex.get(potw.matchId);
   const potwSeason = potw && totals.find((p) => p.playerId === potw.playerId);
+  // Each recent grade with its match, for the widget's hover.
   const potwRecent = potw
-    ? recentGrades(scopedRows, potw.playerId, f.season)
+    ? recentGrades(scopedRows, potw.playerId, f.season).map((row) => ({
+        ...row,
+        match: matchIndex.get(row.matchId) || null,
+      }))
     : [];
   const others = performances
     .filter((p) => p.playerId !== potw?.playerId)

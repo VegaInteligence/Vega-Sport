@@ -1823,6 +1823,27 @@ html[data-theme="light"] {
   gap: 3px;
   height: 100%;
 }
+.home-potw-bar {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.home-potw-bar:hover i,
+.home-potw-bar:focus-visible i {
+  background: var(--home-win);
+}
+.home-potw-bar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .home-potw-form li i {
   width: 100%;
   border-radius: 4px 4px 2px 2px;

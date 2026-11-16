@@ -4,6 +4,9 @@ import React, { useState } from "react";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import Icon from "./Icon.jsx";
 import { Media, Segments } from "./UI.jsx";
+import { useHoverBubble } from "./HoverCard.jsx";
+import { json, useResource } from "../services/resources.js";
+import tip from "./MatchTabs.module.css";
 import { Term } from "./Hint.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
@@ -14,6 +17,48 @@ import { matchDay, weekPeriodLabel } from "../services/home-insights.js";
 const plural = (n, word) => `${number(n)} ${word}${n > 1 ? "s" : ""}`;
 const share = (a, b) =>
   Number.isFinite(a) && b > 0 ? `${number((a / b) * 100)} %` : "—";
+
+/** One of the recent grades as words: the date, the score, the grade. */
+function recentLabel(r) {
+  const m = r.match;
+  const score = m ? `${m.home.name} ${m.home.score}–${m.away.score} ${m.away.name}` : r.team || "";
+  return `${shortDay(matchDay(r))} · ${score} · note ${number(r.grade, 0)} sur 100`;
+}
+
+/** The bubble over a recent grade: the match, its competition and the player's figures in it. */
+function RecentMatch({ row: r }) {
+  const m = r.match;
+  const facts = [
+    r.minutes != null && `${number(r.minutes)}′`,
+    r.goals > 0 && plural(r.goals, "but"),
+    r.assists > 0 && `${plural(r.assists, "passe")} déc.`,
+  ].filter(Boolean);
+  return (
+    <>
+      <p className={tip.bubbleHead}>
+        {shortDay(matchDay(r))}
+        {r.league ? ` · ${r.league}` : ""}
+      </p>
+      {m ? (
+        <div className={tip.bubbleLine}>
+          <span>
+            {m.home.name} – {m.away.name}
+          </span>
+          <b>
+            {m.home.score}–{m.away.score}
+          </b>
+        </div>
+      ) : (
+        r.team && <p className={tip.bubbleNote}>{r.team}</p>
+      )}
+      <div className={tip.bubbleLine}>
+        <span>Note Vega</span>
+        <b>{number(r.grade, 0)}</b>
+      </div>
+      {facts.length > 0 && <p className={tip.bubbleNote}>{facts.join(" · ")}</p>}
+    </>
+  );
+}
 
 /** Poster-style card of the week's best performance, with its recent form and season. */
 export function PlayerOfTheWeek({
@@ -27,6 +72,23 @@ export function PlayerOfTheWeek({
     p = performance;
   // On a phone the card opens on the three figures; the rest unfolds on demand.
   const detail = usePhoneFold();
+  const bubble = useHoverBubble({ width: 260 });
+  // The week's matches are on the page; an older one is read from its summary.
+  const missing = recent.filter((r) => !r.match && r.matchId).map((r) => r.matchId);
+  const older = useResource(
+    `potw-recent:${missing.join(",")}`,
+    () =>
+      Promise.all(
+        missing.map((id) =>
+          json(`/api/matches/${encodeURIComponent(id)}/summary`)
+            .then((body) => body?.data?.match || null)
+            .catch(() => null),
+        ),
+      ),
+    missing.length > 0,
+  );
+  const known = new Map((older.value || []).filter(Boolean).map((m) => [m.id, m]));
+  const form = recent.map((r) => (r.match ? r : { ...r, match: known.get(r.matchId) || null }));
   if (!p) return null;
   const duels = (p.duelsWon || 0) + (p.duelsLost || 0);
   return (
@@ -106,25 +168,53 @@ export function PlayerOfTheWeek({
           <dd>{number(p.minutes)}′</dd>
         </div>
       </dl>
-      {recent.length > 1 && (
+      {form.length > 1 && (
         <div className="home-potw-form phone-fold-part">
           <span className="home-potw-label">Ses derniers matchs</span>
           <ol>
-            {recent.map((r) => (
-              <li
-                key={r.id}
-                title={`${shortDay(matchDay(r))} · ${number(r.grade, 0)} sur 100`}
-              >
-                <i
-                  className={r.id === p.id ? "is-current" : ""}
-                  style={{
-                    height: `${Math.max(8, r.grade)}%`,
-                  }}
-                />
-                <span>{number(r.grade, 0)}</span>
-              </li>
-            ))}
+            {form.map((r) => {
+              const body = (
+                <>
+                  <i
+                    className={r.id === p.id ? "is-current" : ""}
+                    style={{
+                      height: `${Math.max(8, r.grade)}%`,
+                    }}
+                  />
+                  <span>{number(r.grade, 0)}</span>
+                </>
+              );
+              // Hovered, focused or touched: which match the grade was.
+              const show = (event) =>
+                bubble.show(event.currentTarget, <RecentMatch row={r} />);
+              const hover = {
+                onMouseEnter: show,
+                onFocus: show,
+                onMouseLeave: bubble.hide,
+                onBlur: bubble.hide,
+                "aria-label": recentLabel(r),
+              };
+              return (
+                <li key={r.id}>
+                  {r.match ? (
+                    <Link
+                      className="home-potw-bar"
+                      href={matchHref(f, r.match)}
+                      prefetch={false}
+                      {...hover}
+                    >
+                      {body}
+                    </Link>
+                  ) : (
+                    <span className="home-potw-bar" tabIndex={0} {...hover}>
+                      {body}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
           </ol>
+          {bubble.bubble}
         </div>
       )}
       {season && (
