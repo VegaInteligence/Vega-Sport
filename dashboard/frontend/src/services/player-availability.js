@@ -4,6 +4,7 @@
  * availability. A player without any has none (HTTP 404 or an empty list: null).
  */
 import { useResource, json } from "./resources.js";
+import { injuryLabel } from "./injury-labels.js";
 
 const missing = (error) => (/\bHTTP 404\b/.test(error?.message || "") ? null : Promise.reject(error));
 const DAY = 86400000;
@@ -34,7 +35,7 @@ export function injuryRows(injuries, today = new Date()) {
   return (injuries || []).filter((i) => i.start).map((i) => {
     const end = i.end && i.end <= now ? i.end : now;
     const year = Number.isInteger(i.season) ? i.season : Number(i.start.slice(0, 4)) - (Number(i.start.slice(5, 7)) < 7 ? 1 : 0);
-    return { season: shortSeason(year), start: i.start, end, ongoing: !i.end || i.end > now, label: i.label || "Blessure",
+    return { season: shortSeason(year), start: i.start, end, ongoing: !i.end || i.end > now, label: injuryLabel(i.label, i.kind),
       type: i.kind === "suspension" ? "suspension" : "injury", missed: i.matchesMissed ?? 0,
       days: Math.round((parse(end) - parse(i.start)) / DAY) + 1 };
   });
