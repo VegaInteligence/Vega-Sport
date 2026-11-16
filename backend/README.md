@@ -139,7 +139,8 @@ Chaque route liste en tête de fichier ses écarts voulus avec l'API précédent
   - **Liens** (règle de chacun dans `ops.provider_links`) :
     - le jeu du 6 juillet tel quel ;
     - un club par les votes des valeurs de nos joueurs : au moins 3 joueurs et 60 % de chaque côté, jamais une équipe réserve vers l’équipe première ; un conflit va dans `ops.provider_link_conflicts` ;
-    - un joueur, dans un club relié, par la même date de naissance et le même nom.
+    - un club qu’aucun vote n’atteint, par une recherche de son nom confirmée par son effectif (au moins 5 noms exacts communs, un seul candidat) ;
+    - un joueur, dans un club relié, par la même date de naissance et le même nom, ou sans date chez nous par le même nom exact dans une saison commune.
     - Une date de naissance qui diffère de la nôtre met le lien en quarantaine : plus rien de lui n’est montré.
   - **Politesse :** une requête à la fois, toutes les 2,5 s environ (`V2_TM_INTERVAL`). Un refus (contrôle anti-robot, 403, 429) met le lecteur en pause une heure, doublée jusqu’à un jour ; après une semaine de refus ou 8 refus de suite, il s’arrête.
   - **Le relancer** après lecture des refus (`ops.transfermarkt_blocks`) :

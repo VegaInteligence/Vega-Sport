@@ -96,19 +96,38 @@ class PureTest(unittest.TestCase):
         self.assertEqual((links, conflicts), ({}, [("583", 1, "already_linked")]))
 
     def test_a_player_is_linked_by_birth_date_and_name_inside_his_club(self):
-        ours = [(13, "Achraf Hakimi", "A. Hakimi", date(1998, 11, 4)), (14, "Lucas Beraldo", None, None),
-                (16, "Lamine Yamal Nasraoui Ebana", "Lamine Yamal", date(2007, 7, 13)),
-                (17, "Twin One", None, date(2000, 1, 1)), (18, "Twin Two", None, date(2000, 1, 1))]
-        theirs = [("340324", "Achraf Hakimi", date(1998, 11, 4)), ("999001", "Lucas Beraldo", date(2003, 11, 24)),
-                  ("937958", "Lamine Yamal", date(2007, 7, 13)), ("1", "Twin Three", date(2000, 1, 1))]
+        span = ({2026}, date(2026, 8, 20), date(2026, 11, 1))
+        ours = [(13, "Achraf Hakimi", "A. Hakimi", date(1998, 11, 4), *span), (16, "Lamine Yamal Nasraoui Ebana", "Lamine Yamal", date(2007, 7, 13), *span),
+                (17, "Twin One", None, date(2000, 1, 1), *span), (18, "Twin Two", None, date(2000, 1, 1), *span)]
+        theirs = [("340324", "Achraf Hakimi", date(1998, 11, 4), {2026}), ("937958", "Lamine Yamal", date(2007, 7, 13), {2026}),
+                  ("1", "Twin Three", date(2000, 1, 1), {2026})]
         self.assertEqual(tm.pick_players(ours, theirs), {"340324": (13, "club_name_birth"), "937958": (16, "club_name_birth")})
         # The same birth date and a shared name token, the only pair of that day.
-        self.assertEqual(tm.pick_players([(16, "Lamine Yamal Nasraoui Ebana", None, date(2007, 7, 13))], [("937958", "Lamine Yamal", date(2007, 7, 13))]),
+        self.assertEqual(tm.pick_players([(16, "Lamine Yamal Nasraoui Ebana", None, date(2007, 7, 13), *span)], [("937958", "Lamine Yamal", date(2007, 7, 13), {2026})]),
                          {"937958": (16, "club_birth_name_token")})
         # No name in common: the birth date alone never links.
-        self.assertEqual(tm.pick_players([(19, "Vítor Machado Ferreira", None, date(2000, 2, 13))], [("487969", "Vitinha", date(2000, 2, 13))]), {})
-        self.assertEqual(tm.pick_players([(19, "Vítor Machado Ferreira", "Vitinha", date(2000, 2, 13))], [("487969", "Vitinha", date(2000, 2, 13))]),
+        self.assertEqual(tm.pick_players([(19, "Vítor Machado Ferreira", None, date(2000, 2, 13), *span)], [("487969", "Vitinha", date(2000, 2, 13), {2026})]), {})
+        self.assertEqual(tm.pick_players([(19, "Vítor Machado Ferreira", "Vitinha", date(2000, 2, 13), *span)], [("487969", "Vitinha", date(2000, 2, 13), {2026})]),
                          {"487969": (19, "club_name_birth")})
+
+    def test_without_a_birth_date_the_exact_name_in_a_season_of_his_links(self):
+        span = ({2025, 2026}, date(2025, 8, 20), date(2026, 11, 1))
+        beraldo = (14, "Lucas Beraldo", "L. Beraldo", None, *span)
+        self.assertEqual(tm.pick_players([beraldo], [("999001", "Lucas Beraldo", date(2003, 11, 24), {2026})]), {"999001": (14, "club_season_name")})
+        # Listed by the provider in no season he played for us there (nor the year before).
+        self.assertEqual(tm.pick_players([beraldo], [("999001", "Lucas Beraldo", date(2003, 11, 24), {2020})]), {})
+        # A birth date that makes him 12 at his matches for us is another man.
+        self.assertEqual(tm.pick_players([beraldo], [("999001", "Lucas Beraldo", date(2014, 1, 1), {2026})]), {})
+        # Two of that name in the club, on either side: nobody.
+        self.assertEqual(tm.pick_players([beraldo, (15, "Lucas Beraldo", None, None, *span)], [("999001", "Lucas Beraldo", None, {2026})]), {})
+        self.assertEqual(tm.pick_players([beraldo], [("999001", "Lucas Beraldo", None, {2026}), ("999002", "Lucas Beraldo", None, {2026})]), {})
+
+    def test_a_search_is_confirmed_by_the_squad(self):
+        ours = {"kylianmbappe", "ousmanedembele", "achrafhakimi", "lucasberaldo", "vitinha", "marquinhos"}
+        psg = ("583", {"kylianmbappe", "ousmanedembele", "achrafhakimi", "lucasberaldo", "vitinha", "someoneelse"})
+        self.assertEqual(tm.pick_search(ours, [psg, ("9", {"kylianmbappe"})]), ("583", 5))
+        self.assertIsNone(tm.pick_search(ours, [("583", {"kylianmbappe", "vitinha"})]))  # too few
+        self.assertIsNone(tm.pick_search(ours, [psg, ("9", psg[1])]))  # two candidates as good: nobody
 
 
 class FakeApi:
@@ -126,6 +145,7 @@ class FakeApi:
             "999001": player("999001", "Lucas Beraldo", "2003-11-24", club=583, value=30000000),
         }
         self.clubs = {"583": "Paris Saint-Germain", "1041": "Olympique Lyon", "3524": "AS Monaco"}
+        self.search = {"Paris Saint-Germain": [583, 9], "Lyon": [1041]}
 
     def __call__(self, path, params=()):
         self.calls.append((path, list(params)))
@@ -134,6 +154,8 @@ class FakeApi:
         query = [v for _, v in params]
         if path == "/players":
             return 200, {}, body([self.players[k] for k in query if k in self.players])
+        if path == "/quick-search":
+            return 200, {}, body({"result": {"clubIds": self.search.get(query[0], [])}, "totalCount": {"clubs": 1}})
         if path == "/clubs":
             return 200, {}, body([{"id": int(k), "name": self.clubs[k], "baseDetails": {"countryId": 50}} for k in query if k in self.clubs])
         parts = urlparse(path).path.strip("/").split("/")
@@ -213,11 +235,13 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(reader.step(), "planned")
         self.assertEqual(q("SELECT count(*) FROM core.provider_ids WHERE provider = 'transfermarkt' AND entity_type = 'player'"), [(5,)])
         self.assertEqual(q("SELECT kind, count(*) FROM ops.transfermarkt_reads GROUP BY 1 ORDER BY 1"),
-                         [("injuries", 5), ("profile", 5), ("transfers", 5), ("values", 5)])
+                         [("injuries", 5), ("profile", 5), ("search", 2), ("transfers", 5), ("values", 5)])
         self.drain(reader)
-        # The five profiles in one request, then each player's three histories.
-        self.assertEqual([c[0] for c in api.calls].count("/players"), 1)
-        self.assertEqual(len(api.calls), 16)
+        # The five profiles in one request, both clubs searched (PSG's squad has 4 of our names,
+        # 5 are needed: not linked so), then each player's three histories.
+        paths = [c[0] for c in api.calls]
+        self.assertEqual((paths.count("/players"), paths.count("/quick-search"), len(paths) - paths.count("/players") - paths.count("/quick-search")), (2, 2, 20))
+        self.assertEqual(q("SELECT count(*) FROM core.provider_ids WHERE entity_type = 'team'"), [(0,)])
         # Barcola's birth date differs from ours: quarantined, his values shown nowhere.
         reader.plan(link=True)
         self.assertEqual(q("SELECT provider_key, quarantine_reason FROM ops.provider_links WHERE quarantined_at IS NOT NULL"), [("580195", "birth_date_differs")])
@@ -234,9 +258,10 @@ class ReaderTest(unittest.TestCase):
         reader.plan(link=True)
         self.drain(reader)
         reader.plan(link=True)
-        # Hakimi: the same birth date and name in the club; Beraldo: no birth date of ours, no link.
-        self.assertEqual(q("SELECT entity_id, provider_key FROM core.provider_ids WHERE provider_key IN ('340324', '999001')"), [(13, "340324")])
-        self.assertEqual(q("SELECT rule FROM ops.provider_links WHERE provider_key = '340324'"), [("club_name_birth",)])
+        # Hakimi: the same birth date and name in the club; Beraldo, no birth date of ours: his exact name in a season he played for us.
+        self.assertEqual(q("SELECT entity_id, provider_key FROM core.provider_ids WHERE provider_key IN ('340324', '999001') ORDER BY 1"), [(13, "340324"), (14, "999001")])
+        self.assertEqual(q("SELECT provider_key, rule FROM ops.provider_links WHERE provider_key IN ('340324', '999001') ORDER BY 1"),
+                         [("340324", "club_name_birth"), ("999001", "club_season_name")])
         # The writes of a linked player: values with their club, his transfer, his injury.
         self.assertEqual(q("SELECT valued_at, value_eur, provider_club FROM core.player_market_values WHERE player_id = 10 ORDER BY 1"),
                          [(date(2019, 1, 1), 500000, "3524"), (date(2026, 9, 15), 1000000, "583")])

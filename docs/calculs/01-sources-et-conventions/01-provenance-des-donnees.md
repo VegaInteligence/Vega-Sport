@@ -88,7 +88,12 @@ Les transferts et les blessures sont remplacés en entier à chaque lecture, par
 **Comment un joueur est relié.** Jamais par le nom seul.
 - **Le jeu du 6 juillet 2026** : ses liens sont repris tels quels.
 - **Un club** est relié par les valeurs de nos joueurs déjà reliés. Une estimation compte si elle tombe pendant la période où le joueur était sur nos feuilles de match pour ce club, à 30 jours près. Il faut au moins 3 joueurs, et au moins 60 % des votes du club comme de notre équipe. Une équipe réserve (B, II, U19…) n’est jamais reliée à une équipe première. Deux prétendants font un conflit qu’une personne tranche ; aucun lien n’est écrit.
-- **Un joueur** est relié dans un club relié : la même date de naissance et le même nom (complet ou court), chacun le seul de son espèce dans le club. À défaut, la même date de naissance et un mot du nom en commun, s’ils sont la seule paire de ce jour. Un joueur sans date de naissance chez nous n’est pas relié.
+- **Un club qu’aucun vote n’atteint** (ses joueurs ne sont pas dans le jeu de juillet) est cherché par son nom sur Transfermarkt. On lit l’effectif des 3 premiers clubs trouvés pour la dernière saison où nous l’avons, ou l’année d’avant. Il est relié si un seul de ces clubs compte au moins 5 joueurs dont le nom exact est celui d’un de nos joueurs de cette saison, chaque nom unique des deux côtés.
+- **Un joueur** est relié dans un club relié :
+  - la même date de naissance et le même nom (complet ou court), chacun le seul de son espèce dans le club ;
+  - à défaut, la même date de naissance et un mot du nom en commun, s’ils sont la seule paire de ce jour ;
+  - sans date de naissance chez nous (91 % de nos joueurs le 16 novembre 2026) : le même nom exact, le seul des deux côtés dans le club, que Transfermarkt place dans une saison où il a joué pour nous dans ce club (ou l’année d’avant). Quand Transfermarkt donne sa date de naissance, il doit avoir de 15 à 45 ans lors de ses matchs pour nous. C’est la règle du lecteur Wikidata.
+- Transfermarkt ne remplit jamais nos dates de naissance : elles restent celles de nos sources.
 
 **Quarantaine.** Si Transfermarkt donne une autre date de naissance que la nôtre, le lien est mis en doute. Rien de ce joueur n’est alors montré, ni valeur ni contrat, jusqu’à ce qu’une personne regarde.
 
