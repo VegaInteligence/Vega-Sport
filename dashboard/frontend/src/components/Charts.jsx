@@ -164,24 +164,23 @@ const shotText = (s) =>
   `${s.playerName || "Joueur inconnu"} · ${number(s.minute)}′ · ${s.isOwnGoal ? "But contre son camp" : s.isGoal ? "But" : s.type || "Tir"} · xG : ${isNumber(s.xg) ? compact(s.xg) : "Non renseigné"}`;
 const eventId = (match, s) =>
   s.playerId ? `${match.id}:${s.playerId}` : undefined;
-function Point({ match, shot, x, y, onPlayer }) {
+function Point({ match, shot, x, y, onPlayer, showGoalBall = false }) {
   const id = eventId(match, shot);
-  return (
+  const label = shotText(shot);
+  const teamColor = colors[shot.teamId === match.home.id ? 0 : 1];
+  const ball = showGoalBall && shot.isGoal;
+  const point = (
     <circle
       className="chart-point shot-point"
       data-open-player={id}
       cx={x}
       cy={y}
-      r={shot.isGoal ? 6 : 4}
-      fill={
-        shot.isGoal
-          ? colors[shot.teamId === match.home.id ? 0 : 1]
-          : "transparent"
-      }
-      stroke={colors[shot.teamId === match.home.id ? 0 : 1]}
+      r={ball ? 8 : shot.isGoal ? 6 : 4}
+      fill={ball ? "#f8fafc" : shot.isGoal ? teamColor : "transparent"}
+      stroke={teamColor}
       role={id ? "button" : undefined}
       tabIndex={id ? 0 : undefined}
-      aria-label={shotText(shot)}
+      aria-label={label}
       onClick={() => id && onPlayer(id)}
       onKeyDown={(e) => {
         if (id && ["Enter", " "].includes(e.key)) {
@@ -190,8 +189,31 @@ function Point({ match, shot, x, y, onPlayer }) {
         }
       }}
     >
-      <title>{shotText(shot)}</title>
+      <title>{label}</title>
     </circle>
+  );
+
+  if (!ball) return point;
+  return (
+    <g className="xg-goal-marker">
+      {point}
+      <path
+        d="M0-3.5 3.3-1.1 2 2.8h-4L-3.3-1.1Z
+           M-2.3-7.1h4.6L0-5.5Z
+           M6-4.3l1.4 4.4-2.3-1.8Z M6 4.5 2.3 7.2l1-2.6Z
+           M-2.3 7.2-6 4.5l2.7.1Z M-7.4.1-6-4.3l.9 2.6Z
+           M0-3.5V-5.7 M3.3-1.1l2-.7 M2 2.8l1.4 1.9
+           M-2 2.8l-1.4 1.9 M-3.3-1.1l-2-.7"
+        transform={`translate(${x} ${y})`}
+        fill="#1e293b"
+        stroke="#1e293b"
+        strokeWidth="0.7"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        pointerEvents="none"
+        aria-hidden="true"
+      />
+    </g>
   );
 }
 export function ShotMap({ match, teamId = "all", onPlayer = () => {} }) {
@@ -355,7 +377,10 @@ export function XgTimeline({
         aria-label={`xG cumulés · ${match.home.name} et ${match.away.name}`}
       >
         <title>{`xG cumulés · ${match.home.name} — ${match.away.name}`}</title>
-        <desc>Somme des xG renseignés, hors buts contre son camp.</desc>
+        <desc>
+          Somme des xG renseignés, hors buts contre son camp. Les ballons
+          indiquent les buts.
+        </desc>
         {ticks.map((value) => (
           <g key={value}>
             <line
@@ -415,6 +440,7 @@ export function XgTimeline({
                 x={44 + (e.shot.minute / duration) * plot}
                 y={245 - (e.total / max) * 220}
                 onPlayer={onPlayer}
+                showGoalBall
               />
             ))}
           </g>
