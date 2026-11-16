@@ -1,14 +1,13 @@
 # WORKLOG — 2026-11-16
 
-- Goal: clarify Sport, Business and Status in their READMEs, including the relationship to the research repository, and update renamed Linear references across all four repositories; commit and push.
+- Goal: perform the final README/AGENTS consistency review across the four Vega repositories, especially roles, Linear identity and frontend mockup approval; commit and push documentation fixes.
 - This checkout: Vega-Sport; Linear label `repo:vega-sport`.
-- User clarification: Sport is the application, including the dashboard frontend and its backend. Prediction is the research repository; Business presents Vega; Status displays the operational state of Sport’s backend.
-- Constraints: documentation only; preserve runtime behavior, commands, contracts, data and unrelated local changes. Keep existing README languages.
-- Linear: verified the renamed workspace/team as Vega Inteligence (VI), https://linear.app/vegainteligence. Repository label names are unchanged. No active (started) issues returned; no issue needed for this documentation update.
-- Decisions: use the exact Linear display name and URL; retain repository/brand names and unrelated hosting identifiers. Research integration into Sport is explicit; Status consumes the API contract owned by Sport.
-- Progress: the three README role/relationship sections and all four AGENTS.md workspace references are complete. Sport explicitly includes the application frontend and backend; its Linear label description matches. The existing research README is retained. Business’s obsolete pause-button description now matches the documented automatic pauses.
-- Validation: documentation diffs and whitespace checks passed; all 29 local root README links resolve. Scanned 85 tracked README/AGENTS files across the four repositories with no old Linear names, URLs or issue-prefix references remaining. No application tests or E2E run for documentation-only changes.
-- Suggested commit: `[UPD] clarify Vega repository roles and Linear workspace`.
-- Preservation: fast-forwarded the new upstream match-page commit without overlap; existing LICENSE deletion and untracked local work remain outside this documentation commit.
-- Delivery: commit and push each repository to main, then verify remote inclusion.
-- Next action: keep repository ownership and coordination references current as the projects evolve.
+- Constraints: documentation only; preserve project roles, research scope, existing approval requirements, code/data and unrelated local work.
+- Coordination: live Linear read-back confirms Vega Inteligence (VI), https://linear.app/vegainteligence, all four repository labels and the multi-select Repository group. No active started issues returned; no new issue needed for this small documentation update.
+- Findings: roles and repository links agree; common Linear instructions match; frontend approval blocks match in Sport, Business and Status and are intentionally absent from research-only Prediction. READMEs need a direct contribution-rules link. Business needs to distinguish published-site restrictions from private design review and dated content decisions from current model availability.
+- Direction: add concise README contribution guidance referring to AGENTS.md; surface the existing frontend approval gate in the three web repositories; clarify the Business-specific wording without changing site content or owner decisions.
+- Progress: reviewed all eight root documents and Sport’s nested Next.js instructions. Every README now links to AGENTS.md; the three web READMEs surface explicit mockup approval. Business publishing restrictions and dated model-copy decisions are clarified without changing the website.
+- Validation: all four repository-link maps and live Linear identities/labels agree; common Linear sections and the three frontend approval sections are identical. All 33 local README links resolve; 85 tracked README/AGENTS files contain no old Linear references. Documentation diffs and whitespace checks pass. No application tests or E2E run.
+- Suggested commit: `[UPD] align contribution guidance with agent approval rules`.
+- Delivery: commit and push the focused documentation changes to main and verify remote inclusion.
+- Next action: follow the linked contribution rules; keep these sections aligned when roles or workflows change.
