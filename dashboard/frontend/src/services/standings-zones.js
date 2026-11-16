@@ -111,16 +111,24 @@ export function leagueZones(competitionId, rowCount) {
   return zones;
 }
 
+const EUROPEAN = new Set(["cl", "cl-q", "el", "el-q", "ecl"]);
+
 /**
  * A table's zones: the league's recorded rules where they fit the table (with the European
  * places of the association ranking), else, for a finished season, what became of each
  * club the next season (fates, by club id: « observed »), else the European places alone.
+ * A season the association ranking does not cover (editions before 2024) takes its
+ * European places from the fates, its promotion and relegation still from the rules.
  */
 export function standingZones(rows, { european = [], competitionId, fates } = {}) {
   const count = rows.length;
   const league = leagueZones(competitionId, count);
   if (!league.some(Boolean) && fates)
     return { zones: rows.map((row) => fates[row.id] || null), observed: true };
+  if (!european.length && fates && rows.some((row) => EUROPEAN.has(fates[row.id]))) {
+    const observed = rows.map((row) => (EUROPEAN.has(fates[row.id]) ? fates[row.id] : null));
+    return { zones: tableZones(count, { european: [], league }).map((zone, i) => zone || observed[i]), observed: true };
+  }
   return { zones: tableZones(count, { european, league }), observed: false };
 }
 
