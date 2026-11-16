@@ -5,6 +5,7 @@ import Layout from "../components/Layout.jsx";
 import Icon from "../components/Icon.jsx";
 import BallonDorIcon from "../components/BallonDorIcon.jsx";
 import { Media } from "../components/UI.jsx";
+import { Term } from "../components/Hint.jsx";
 import SeasonSelect from "../components/SeasonSelect.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
@@ -121,7 +122,9 @@ function PodiumPlace({ rank, medal, entry }) {
         )}
       </div>
       <div className="podium-score">
-        <span>Score STATARENA</span>
+        <span>
+          <Term hint="Score Vega sur 100 de cette saison seule, sans la saison précédente : c’est lui qui départage la course au Ballon d’Or.">Score de la saison</Term>
+        </span>
         <b>{entry ? number(entry.score, 1) : "—"}</b>
       </div>
     </li>
@@ -174,12 +177,14 @@ function RankRow({ rank, entry }) {
 function RankColumn({ from, to, ranking }) {
   return (
     <div className="rank-column">
-      <div className="rank-head" aria-hidden="true">
+      <div className="rank-head">
         <span>Rang</span>
         <span>Joueur</span>
         <span>Poste</span>
         <span>Club</span>
-        <span>Score</span>
+        <span>
+          <Term hint="Score Vega sur 100 de cette saison seule, sans la saison précédente : c’est lui qui départage la course au Ballon d’Or.">Score</Term>
+        </span>
       </div>
       <ol className="rank-list" start={from} role="list">
         {Array.from({ length: to - from + 1 }, (_, i) => from + i).map(

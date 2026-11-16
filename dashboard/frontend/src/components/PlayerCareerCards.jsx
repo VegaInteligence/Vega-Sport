@@ -9,10 +9,10 @@ import { availability, injuryRows, usePlayerInjuries, usePowerHistory } from "..
 import s from "./PlayerScout.module.css";
 
 /** A card of the profile: on a phone it shows closed, its heading alone. */
-export function FoldCard({ title, text, sectionRef, children }) {
+export function FoldCard({ title, text, sectionRef, className = "", children }) {
   const f = useCardFold(true, title);
   return (
-    <section className={s.card} ref={sectionRef} {...f.section}>
+    <section className={`${s.card} ${className}`.trim()} ref={sectionRef} {...f.section}>
       <div className={s.cardHead} {...f.head}>
         <div>
           <h3>

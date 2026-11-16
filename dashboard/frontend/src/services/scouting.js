@@ -7,7 +7,7 @@ import {
   seasonMetric,
 } from "./season-player.js";
 
-export const SCOUTING_VERSION = "statarena-descriptive-v1";
+export const SCOUTING_VERSION = "vega-descriptive-v1";
 const definitions = {
   goals: "Buts inscrits dans les performances renseignées.",
   assists: "Passes décisives attribuées.",

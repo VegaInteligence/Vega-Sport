@@ -549,7 +549,7 @@ export function ReportButton({ title, context, children }) {
             <Modal title={title} onClose={() => setOpen(false)}>
               <article className="research-report">
                 <header>
-                  <strong>STATARENA</strong>
+                  <strong>Vega</strong>
                   <p>{context}</p>
                   <small>
                     {new Date().toLocaleDateString("fr-FR")} ·{" "}

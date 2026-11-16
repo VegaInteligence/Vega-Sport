@@ -566,12 +566,12 @@ export function BallonDorTeaser({ progress, ranking, raceOpen }) {
         <span className="home-chip home-chip-gold">
           <BallonDorIcon className="home-bdo-icon" />
           {raceOpen
-            ? "Ballon d’Or STATARENA · la course est lancée"
-            : "Ballon d’Or STATARENA · après les quarts de finale"}
+            ? "Ballon d’Or Vega · la course est lancée"
+            : "Ballon d’Or Vega · après les quarts de finale"}
         </span>
         <span className="home-bdo-title">
           {top
-            ? "Le classement STATARENA de la saison"
+            ? "Le classement Vega de la saison"
             : "Le classement n’est pas encore publié"}
         </span>
         <span className="home-bdo-text">
@@ -644,7 +644,7 @@ export function BallonDorRace({ ranking }) {
         <h2>La course au Ballon d’Or</h2>
         <p>
           Les quarts de finale de la Ligue des champions sont joués : place au
-          sprint final. Voici le classement STATARENA de la saison.
+          sprint final. Voici le classement Vega de la saison.
         </p>
         <div className="home-podium">
           {podium(at(2), 2)}

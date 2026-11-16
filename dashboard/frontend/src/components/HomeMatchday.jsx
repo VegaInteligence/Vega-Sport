@@ -4,6 +4,7 @@ import React, { useId, useState } from "react";
 import Icon from "./Icon.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import { Media } from "./UI.jsx";
+import { Term } from "./Hint.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
 import {
@@ -399,7 +400,9 @@ function StatBar({ label, home, away, format = (v) => number(v) }) {
       <span className="home-stat-track is-home">
         <i style={{ width: `${(home / total) * 100}%` }} />
       </span>
-      <span>{label}</span>
+      <span>
+        <Term>{label}</Term>
+      </span>
       <span className="home-stat-track is-away">
         <i style={{ width: `${(away / total) * 100}%` }} />
       </span>

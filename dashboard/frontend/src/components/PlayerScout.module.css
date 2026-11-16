@@ -1128,6 +1128,23 @@ p.similarIntro {
   }
 }
 
+/* « Profil de jeu » beside « Forme récente »: its lines spread over the card's height. */
+@media (min-width: 900px) {
+  .styleCard {
+    display: flex;
+    flex-direction: column;
+  }
+  .styleCard > :global(.phone-fold-body) {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+  .styleCard .styleLines {
+    flex: 1 1 auto;
+    align-content: space-around;
+  }
+}
+
 /* « Profil de jeu »: one line per fact, its reading then its figures */
 .styleLines {
   display: grid;

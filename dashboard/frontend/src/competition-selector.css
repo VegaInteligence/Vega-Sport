@@ -202,6 +202,11 @@
   max-width: none;
   margin: 0;
 }
+/* A short league (18 clubs) beside a longer column: the table's card ends at its last row
+   instead of stretching empty to the column's foot. */
+.competition-detail-layout--overview > .competition-detail {
+  align-self: start;
+}
 /* The column beside the table: its last card (the latest results) stretches to the table's
    foot, so neither leaves a gap below the other. */
 .competition-highlights {
