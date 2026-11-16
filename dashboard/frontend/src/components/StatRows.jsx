@@ -1,5 +1,6 @@
 import React from "react";
 import Icon from "./Icon.jsx";
+import { Term } from "./Hint.jsx";
 import { isNumber } from "../services/format.js";
 import { statPercentage, statValue } from "../services/match-data.js";
 /** Two-team comparison rows shared by the match overview and its context. */
@@ -41,7 +42,7 @@ export function StatRow({ match, stat: s }) {
   return (
     <div className={`stat-row${share ? " is-share" : ""}`}>
       <dt>
-        {s.label}
+        <Term>{s.label}</Term>
         {s.reliable === false && (
           <span title="Valeur signalée comme non fiable">
             <Icon name="info" />

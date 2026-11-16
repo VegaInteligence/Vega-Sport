@@ -1339,11 +1339,44 @@ select optgroup {
 .match-overview-wide {
   grid-column: 1 / -1;
 }
+/* Two cards side by side end together: the shorter one (the match's figures beside the xG
+   chart, the season's markers beside the form, the goals beside the best grades) spreads
+   its rows over the row's height instead of leaving it empty under it. */
+@media (min-width: 851px) {
+  .match-overview-grid {
+    align-items: stretch;
+  }
+  .match-overview-grid > .card {
+    display: flex;
+    flex-direction: column;
+  }
+  .match-overview-grid > .card > .card-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+  .match-overview-grid > .card > .card-body > :is(.stat-rows, .match-goals, .club-match-list, .context-players) {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    justify-content: space-around;
+  }
+  .match-overview-grid > .match-leaders-card > .card-body {
+    justify-content: space-around;
+  }
+  /* The goals keep their separators touching: each row grows, its content centred. */
+  .match-overview-grid > .card > .card-body > .match-goals {
+    justify-content: flex-start;
+  }
+  .match-overview-grid > .card > .card-body > .match-goals > li {
+    flex: 1 1 auto;
+  }
+}
 /* The chart keeps a readable size; what each goal changed stands beside it, or under it on a phone. */
 .win-probability {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   gap: 16px 28px;
 }
 .win-probability .chart-figure {

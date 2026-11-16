@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { Card } from "./UI.jsx";
+import { Term } from "./Hint.jsx";
 import { number } from "../services/format.js";
 import { COUNTRY_NAMES } from "../services/competition-selector.js";
 
@@ -16,11 +17,25 @@ const named = (league) => {
   return country ? `${league.name} (${country})` : league.name;
 };
 
+// Seasons shown under the level: the column beside the table stays shorter than it.
+const SEASONS_SHOWN = 3;
+
+/** What the level is, said by the title's « i » rather than in paragraphs under the card. */
+function levelHint(strength) {
+  const parts = ["Force moyenne de ses clubs, sur une échelle commune à tous les championnats."];
+  if (strength.score != null) parts.push("Sur 100 : la chance d’un de ses clubs de battre un club moyen de première division.");
+  if (strength.margin != null && !strength.provisional) parts.push(`Précision : ± ${number(strength.margin)} points.`);
+  return parts.join(" ");
+}
+
 /** A league's level on the scale common to the leagues, with its last seasons and its neighbours. */
 export default function LeagueStrengthCard({ strength }) {
   if (!strength) return null;
   return (
-    <Card title="Niveau du championnat" className="competition-highlights-card competition-level">
+    <Card
+      title={<Term label="Niveau du championnat" hint={strength.onScale ? levelHint(strength) : undefined}>Niveau du championnat</Term>}
+      className="competition-highlights-card competition-level"
+    >
       {strength.onScale ? (
         <>
           <p className="competition-level-value">
@@ -32,7 +47,7 @@ export default function LeagueStrengthCard({ strength }) {
           </p>
           {strength.history.length > 0 && (
             <ul className="competition-level-rows" aria-label="Niveau par saison">
-              {strength.history.map((row) => (
+              {strength.history.slice(0, SEASONS_SHOWN).map((row) => (
                 <li key={row.season}>
                   <span>{row.season}</span>
                   <span>
@@ -59,22 +74,9 @@ export default function LeagueStrengthCard({ strength }) {
               )}
             </ul>
           )}
-          <p className="competition-highlights-caption">
-            Force moyenne de ses clubs, sur une échelle commune aux championnats
-            {strength.score != null ? " ; sur 100, la chance d’un de ses clubs de battre un club moyen des premières divisions mesurées" : ""}.
-          </p>
-          {strength.evidence && (strength.evidence.matches > 0 || strength.evidence.movers > 0) && (
-            <p className="competition-highlights-caption">
-              Mesuré sur {number(strength.evidence.matches || 0)} matchs contre d’autres championnats
-              {strength.evidence.movers > 0 ? ` et ${number(strength.evidence.movers)} joueurs venus d’autres championnats ou partis vers eux` : ""}
-              {strength.margin != null && !strength.provisional ? `, à ± ${number(strength.margin)} points près` : ""}.
-            </p>
-          )}
           {strength.provisional && (
             <p className="competition-highlights-caption">
-              Niveau provisoire{strength.margin != null ? `, à ± ${number(strength.margin)} points près` : ""} : ses clubs ont joué
-              peu de matchs contre ceux des autres championnats, il tient aussi compte des joueurs venus d’autres championnats ou
-              partis vers eux et de sa division.
+              Niveau provisoire{strength.margin != null ? `, à ± ${number(strength.margin)} points près` : ""}.
             </p>
           )}
         </>

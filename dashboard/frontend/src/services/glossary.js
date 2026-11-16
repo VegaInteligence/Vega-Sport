@@ -246,6 +246,26 @@ const TERMS = {
   "total club": "Somme avec ses clubs.",
   "variation": "Évolution depuis le calcul précédent.",
 
+  /* ----------------------------------------------------- match figures */
+  "possession moyenne (%)": "Part du temps où l'équipe a eu le ballon, en moyenne sur ses matchs.",
+  "ballons dans la surface adverse": "Ballons touchés dans la surface adverse.",
+  "ballons gagnés au milieu": "Ballons repris à l'adversaire au milieu du terrain.",
+  "ballons gagnés dans le tiers offensif": "Ballons repris à l'adversaire près de son but : la trace d'un pressing haut.",
+  "ballons gagnés dans son tiers": "Ballons repris à l'adversaire près de son propre but.",
+  "duels au sol gagnés": "Duels balle au sol gagnés.",
+  "entrées dans la surface": "Ballons amenés dans la surface adverse, par une passe ou une course.",
+  "entrées dans le dernier tiers": "Ballons amenés dans le tiers adverse du terrain.",
+  "grosses occasions manquées": "Occasions très nettes qui n'ont pas fini au fond.",
+  "hors-jeu": "Hors-jeu signalés.",
+  "montants touchés": "Tirs sur le poteau ou la barre.",
+  "passes dans le camp adverse": "Passes jouées dans la moitié adverse.",
+  "passes dans son camp": "Passes jouées dans sa propre moitié.",
+  "passes longues réussies": "Longs ballons arrivés à un coéquipier.",
+  "tirs contrés": "Tirs bloqués par un adversaire avant le but.",
+  "tirs hors surface": "Tirs pris de l'extérieur de la surface.",
+  "tirs non cadrés": "Tirs à côté ou au-dessus du but.",
+  "pressing": "Ce que l'équipe fait pour reprendre le ballon haut.",
+
   /* --------------------------------------------------------- rankings */
   "elo": "Force du club : elle monte quand il bat plus fort que lui et baisse dans le cas contraire.",
   "niveau du championnat": "Force moyenne des clubs du championnat sur une échelle commune à tous les championnats.",

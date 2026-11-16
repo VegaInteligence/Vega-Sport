@@ -52,9 +52,26 @@ export function competitionHighlights(matches, now = Date.now(), limit = 4) {
 }
 
 /** Number of whole result rows that fit beside the standings on wide screens. */
-export function recentResultCapacity({ standingsHeight, upcomingHeight, headerHeight, rowHeight, gap = 16, padding = 10, max = 20 }) {
-  if (![standingsHeight, upcomingHeight, headerHeight, rowHeight, gap, padding, max].every(Number.isFinite) || rowHeight <= 0) return 5;
-  const available = standingsHeight - upcomingHeight - headerHeight - gap - padding;
+/** How many result rows fit under the column's other cards beside the table (may be below 2). */
+export function recentResultRoom({ standingsHeight, upcomingHeight, headerHeight, rowHeight, gap = 16, padding = 10 }) {
+  if (![standingsHeight, upcomingHeight, headerHeight, rowHeight, gap, padding].every(Number.isFinite) || rowHeight <= 0) return null;
+  return Math.floor((standingsHeight - upcomingHeight - headerHeight - gap - padding) / rowHeight);
+}
+
+export function recentResultCapacity({ max = 20, ...sizes }) {
+  const room = recentResultRoom(sizes);
+  if (room === null || !Number.isFinite(max)) return 5;
   // At least two results, so the column never runs below a short table (the card stretches to its foot).
-  return Math.min(max, Math.max(2, Math.floor(available / rowHeight)));
+  return Math.min(max, Math.max(2, room));
+}
+
+/**
+ * The next matches to show beside a short table: one fewer while two results do not fit
+ * under them (down to one), one more back when an upcoming row's room is free again.
+ */
+export function nextUpcomingLimit({ limit, room, upcomingRow, resultRow, most = 4 }) {
+  if (room === null || !(upcomingRow > 0) || !(resultRow > 0)) return limit;
+  if (room < 2 && limit > 1) return limit - 1;
+  if (limit < most && room >= 2 + Math.ceil(upcomingRow / resultRow)) return limit + 1;
+  return limit;
 }
