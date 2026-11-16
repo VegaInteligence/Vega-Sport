@@ -140,20 +140,20 @@ La route `/api/forecasts/season` rend alors `format: "league-phase"` et, pour ch
 
 Cette projection n'a pas encore été rejouée sur des saisons passées (2024/2025 et 2025/2026, les deux premières du format). La vérification prévue : rejouer chaque coupe depuis le milieu de sa phase de ligue avec un modèle ajusté avant, puis mesurer la perte logarithmique et le score de Brier des parts « huit premiers », « barrages », « huitièmes » et « vainqueur ».
 
-## Les coupes nationales et les clubs sans Elo (proposition, non appliquée)
+## Les coupes nationales et les clubs sans Elo (en attente)
 
-Les coupes nationales (Coupe de France, FA Cup…) mêlent des clubs de première division et des clubs amateurs. Au 16 novembre 2026, **1 108 des 1 530 clubs** de ces coupes n'avaient pas d'Elo, faute de matchs de championnat dans la base ; ce nombre compte aussi les championnats eux-mêmes et doit être recompté.
+Il n'y a qu'**un seul Elo de club** : tous les matchs d'un club, coupes comprises, le corrigent (§ 1 et 3 des [formules](../08-notes-vega/01-formules-et-raisons.md)). Pas d'Elo à part pour les coupes (décision du 16 novembre 2026, qui écarte la proposition d'un « Elo de coupe » rangé à part).
 
-La méthode proposée, un **Elo de coupe** calculé seulement pour ces pronostics :
+Ce qui manque pour projeter une coupe nationale, mesuré en lecture seule le 16 novembre 2026 : **2 066 clubs** qui ont joué un match n'ont pas d'Elo (1 476 en ont un). Tous ne viennent que des sources complémentaires (championnats et coupes lus en plus de la source principale), dont l'Elo ne lit les matchs qu'entre deux clubs déjà connus. Ils sont de deux sortes :
 
-1. **Groupes** : chaque club sans Elo est rangé dans le groupe de son championnat connu (pays, division) ; un club qu'on ne voit qu'en coupe va dans le groupe (pays, division la plus basse connue + 1).
-2. **Niveau d'un groupe** : ajusté par maximum a posteriori sur les matchs de coupe de ses clubs contre des clubs qui ont un Elo, avec, comme loi a priori, le niveau de la division du dessus moins un écart par division ; l'erreur type du niveau doit descendre sous 45 points (environ 20 matchs contre des clubs classés).
-3. **Club** : à partir du niveau de son groupe, les résultats du club en coupe le corrigent avec la règle de mise à jour de l'Elo, à partir de 10 résultats.
-4. **Séparation** : ces forces sont rangées à part (`agg.cup_strengths`) ; l'Elo des clubs, le classement de puissance et le classement des joueurs ne changent pas.
-5. **Affichage** : en dessous des seuils (groupe à plus de 45 points d'erreur, club à moins de 10 résultats), la projection est marquée « provisoire ».
-6. **Vérification avant mise en service** : rejouer les coupes passées tour par tour et comparer la perte logarithmique et le score de Brier à deux références, « la division la plus haute gagne » et 50/50, par écart de division.
+1. **Des copies de clubs qui ont déjà un Elo**, sous un autre nom, que l'identification des équipes n'a pas reliées : « Man City », « Paris », « Atleti », « FC Bayern München », « SL Benfica »… Exemples : 17 des 19 clubs de la copie de la Ligue 1, 11 des 20 de la Premier League, 14 des 36 de la Ligue des champions. Leurs matchs de coupe ne comptent dans l'Elo d'aucun club.
+2. **Des clubs que la source principale ne tient pas** : divisions inférieures (National League anglaise et en dessous, Cymru Premier…) et clubs amateurs des coupes (FA Cup : 146 clubs, Taça de Portugal : 125, KNVB Beker : 107, Copa del Rey : 95…).
 
-Cette méthode attend l'accord sur son principe et la mesure sur la base (lecture seule).
+La suite proposée, dans l'Elo unique :
+
+1. relier les copies à leur club, comme les sélections le 16 novembre (VI-20) : leurs matchs comptent alors dans l'Elo du club ;
+2. laisser l'Elo lire les championnats et coupes des sources complémentaires : un club nouveau entre au niveau de sa division (le dossier de la source donne pays et division : ENG_5 = 5ᵉ division anglaise), avec la loi a priori de division du § 4, puis chaque résultat le corrige comme pour tout club. Les résultats de coupe des clubs professionnels contre ces clubs comptent aussi : leur Elo bougera un peu, ce qui sera mesuré avant la mise en service ;
+3. projeter ensuite chaque coupe tour par tour, avec les règles du tableau ci-dessus (prolongation au tiers d'un match, tirs au but à 50/50, matchs joués fixés).
 
 ## Minute par minute
 
@@ -219,7 +219,7 @@ Le niveau des adversaires ne dit rien du club lui-même : deux clubs au même ca
 
 - Les colonnes « 4 premiers » et « 3 derniers » sont des places, pas les zones du règlement de chaque championnat (qualifications européennes, barrages, nombre de relégués).
 - Un championnat à phases (tournois d'ouverture et de clôture, play-offs) est projeté sur ses seuls tours réguliers.
-- Les coupes nationales et les compétitions internationales autres que les trois coupes européennes ne sont pas projetées (voir la proposition plus haut).
+- Les coupes nationales et les compétitions internationales autres que les trois coupes européennes ne sont pas projetées (voir « Les coupes nationales et les clubs sans Elo »).
 - Les forces de deux championnats hors de l'échelle commune ne se comparent pas ; cela ne gêne pas un championnat national, dont tous les clubs sont sur la même échelle.
 - La forme récente et les compositions ne déplacent que le pronostic d'un match ; la projection d'un championnat et les points attendus de la colonne « Adv. à venir » au-delà de quatorze jours lisent les forces seules.
 - Calculé avec les modèles quotidiens de la saison (après l'Elo) : au plus tard une fois par jour, et dans l'heure qui suit un match terminé.

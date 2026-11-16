@@ -1,23 +1,21 @@
 # WORKLOG — 2026-11-16
 
-- Goal: cup predictions — the UEFA league phases projected (Champions, Europa, Conference League) and the chance of each club or nation to reach each stage of every cup ([VI-19](https://linear.app/vegainteligence/issue/VI-19/predictions-des-coupes-phases-de-ligue-europeennes-et-chances-par-tour), In Progress; mock-up sent, awaiting validation).
+- Goal: cup predictions — the UEFA league phases projected (Champions, Europa, Conference League) and the chance of each club or nation to reach each stage of every cup ([VI-19](https://linear.app/vegainteligence/issue/VI-19/predictions-des-coupes-phases-de-ligue-europeennes-et-chances-par-tour), In Progress).
 - This checkout: Vega-Sport, worktree `claude/v2-complete`, pushed direct to main; Linear label `repo:vega-sport`.
-- Done today:
-  - VI-17 player page and club rail; VI-18 nation pages (API 119–120 + pages).
-  - Player profile in the club card's design; home grade hover.
-  - Background refresh with no banner; European colours of past tables from observed fates (f97b5aa165, verified on Ligue 1 and Premier League 2022/23–2023/24).
 - Constraints: mock-up and method approval before code; ask before method changes; advisor review for big method choices; tests first; real data only.
-- Facts (read-only, 16 Nov):
-  - The season projection (`backend/vega/forecast.py`) skips INT competitions.
-  - The UEFA league phases of 2026/27 have rounds 1–4 played and 72 fixtures left (54 in the Conference League); the fixtures left have no round.
-  - Domestic cups: 1 108 of 1 530 clubs have no Elo.
-- Prototype (diag-clproj.py, read-only): the forecast-v2 model plus a UEFA bracket (seeded play-off pairs, R16 by rank, two legs, extra time at one third of the rate, penalties at 50 %, neutral final). It gives each club its projected points, top 8, play-offs, out, 8es, QF, SF, final and winner, and the totals sum to 100 %.
-- Open method choices for the user:
-  - the strength of a club without an Elo (league level?);
-  - random draws for rounds not yet drawn;
-  - how to count knockout ties already played.
-- Also shipped and verified today: [VI-20](https://linear.app/vegainteligence/issue/VI-20/selections-une-equipe-par-nation-et-tous-leurs-matchs-dans-lelo), 3d123eeead.
-  - 28 national twins were merged (Italie→Italy…), and every match between two national teams now counts in the Elo.
-  - Fixture placeholders are out of the nations list.
-  - France is 4-1-1 in both the ranking and its page; 54 nations ranked; evidence in evidence-vi20/README.md.
-- Next action: wait for the user's validation of the cup predictions; then advisor review, tests first, worker + API + « Projection » tab, production E2E.
+- User decisions (16 Nov): mock-up validated; extra time = a third of a match, penalties 50/50; ties already played stay as they are; « ajoute tout dans calculs ».
+- Shipped (903a09eb83, deploy run 43966708027):
+  - worker `simulate_cup` (league phase, 8 matches a club, then the UEFA bracket);
+  - migration 122 `agg.cup_stage_odds`; `/api/forecasts/season` gives `format` + `stages`;
+  - « Projection » view with the stage columns;
+  - note in docs/calculs/06-accueil-et-matchs/03-pronostics-et-projections.md.
+- Evidence: scratchpad evidence-vi19 (local check against a stand-in API with the prototype's numbers; production check pending the worker's next forecast pass).
+- User decision (16 Nov, later): no separate cup Elo — one club Elo for every match, cups included (same for players). The note now says so.
+- Measured (read-only, 16 Nov): 2 066 clubs that played have no Elo, all from the complementary feeds only:
+  - copies of rated clubs never linked (« Man City », « Paris », « Atleti »: 17/19 of the Ligue 1 copy, 14/36 of the CL copy);
+  - clubs the main source does not hold (lower divisions, cup amateurs).
+- Proposed, awaiting the user's yes: (1) link the copies (like VI-20); (2) let the one Elo read the complementary leagues and cups, new clubs entering at their division's level; (3) then domestic cups by stage.
+- Past-season colours swept: 12 European top leagues × 2021/22–2024/25 all show Europe + relegation (evidence-zones/sweep.txt).
+- Not yet measured: a backtest of the cup projection on 2024/25 and 2025/26.
+- Done earlier today: VI-17 player page; VI-18 nation pages; VI-20 national twins merged; home grade hover; background refresh; European colours of past tables.
+- Next action: verify the CL/EL/ECL projection in production after the worker's next forecast pass (check-prod.mjs); on the user's yes, link the club copies and measure the one Elo with the complementary matches.
