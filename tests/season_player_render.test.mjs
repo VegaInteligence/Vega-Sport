@@ -66,10 +66,12 @@ test("season overview shows the scout layout without a detailed statistics short
   const html = renderSeasonProfile(rows, matches, "p_1");
   assert.match(html, /<h1 class="player-profile-name">Neymar<\/h1>/);
   assert.match(html, /<h2>Saison 2026\/2027<\/h2>/);
-  assert.match(html, /<span>Passes décisives(?:<span class="hint"[^>]*>i<\/span>)?<\/span><strong>0<\/strong>/);
-  assert.match(html, /<h3>Profil statistique(?:<span class="hint"[^>]*>i<\/span>)?<\/h3>/);
-  assert.match(html, /<h3>Indice Vega par rôle(?:<span class="hint"[^>]*>i<\/span>)?<\/h3>/);
-  assert.match(html, /<h3>Forme récente(?:<span class="hint"[^>]*>i<\/span>)?<\/h3>/);
+  // The names are read without their « i » (Hint.jsx) and its no-wrap span.
+  const bare = html.replace(/<span class="hint"[^>]*>i<\/span>/g, "").replace(/<span style="white-space:nowrap">([^<]*)<\/span>/g, "$1");
+  assert.match(bare, /<span>Passes décisives<\/span><strong>0<\/strong>/);
+  assert.match(bare, /<h3>Profil statistique<\/h3>/);
+  assert.match(bare, /<h3>Indice Vega par rôle<\/h3>/);
+  assert.match(bare, /<h3>Forme récente<\/h3>/);
   // 37 minutes cannot be ranked: the notice replaces percentiles.
   assert.match(html, /37 minutes jouées : les centiles demandent au moins 450/);
   assert.match(html, /aria-label="Note des derniers matchs"/);

@@ -69,13 +69,30 @@ export function Hint({ text, label }) {
   );
 }
 
-/** A value's name followed by its « i », when the glossary (or `hint`) explains it. */
+/**
+ * A value's name followed by its « i », when the glossary (or `hint`) explains it. The « i »
+ * stays on the line of the name's last word, never alone on the next one.
+ */
 export function Term({ children, label, hint }) {
   const name = label ?? (typeof children === "string" ? children : "");
+  const text = hint ?? explain(name);
+  if (!text) return <>{children}</>;
+  if (typeof children === "string") {
+    const at = children.trimEnd().lastIndexOf(" ");
+    return (
+      <>
+        {at > 0 ? children.slice(0, at + 1) : ""}
+        <span style={{ whiteSpace: "nowrap" }}>
+          {at > 0 ? children.slice(at + 1).trimEnd() : children.trimEnd()}
+          <Hint text={text} label={name} />
+        </span>
+      </>
+    );
+  }
   return (
     <>
       {children}
-      <Hint text={hint ?? explain(name)} label={name} />
+      <Hint text={text} label={name} />
     </>
   );
 }
