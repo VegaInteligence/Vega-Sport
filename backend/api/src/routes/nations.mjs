@@ -1,0 +1,212 @@
+/**
+ * The nation pages (119, VI-18):
+ *
+ * GET /api/nations?season= — every national team that played a match the base holds: its
+ * matches, its last match, its latest Elo, and its place in the season's nations power
+ * ranking when it has one (`ranked`: how many nations that ranking holds).
+ *
+ * GET /api/nations/{id}?season= — one nation: its place in the season's ranking, its record
+ * of the season, its Elo after each match, its matches (a match held twice, collected and
+ * archived, once), its runs in the major tournaments (World Cup, Euro, Africa Cup of Nations…)
+ * and the players of its latest edition with player statistics, with the club they last
+ * played for. A team that is no national team is not served.
+ */
+import { createHash } from "node:crypto";
+import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+
+const NATION = /^\/api\/nations\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))$/;
+const SEASON_KEY = "(SELECT season_id FROM api.season_keys WHERE season=$1)";
+
+// The major tournaments: the key of their editions (cup or archive key) or the name of their
+// collected competition, and the name the site gives them.
+const TOURNAMENTS = [
+  { key: "world-cup", label: "Coupe du monde", edition: /:world-cup(?:-history)?:(\d{4})$/, name: /^World Cup/ },
+  { key: "euro", label: "Euro", edition: /:euro:(\d{4})$/, name: /^(?:Euro|European Championship)/ },
+  { key: "afcon", label: "CAN", edition: /:afcon:(\d{4})$/, name: /^(?:Coupe d’Afrique des nations|Africa Cup of Nations)/ },
+  { key: "copa-america", label: "Copa América", edition: /:copa-america:(\d{4})$/, name: /^Copa Am[ée]rica/ },
+  { key: "asian-cup", label: "Coupe d’Asie", edition: /:asian-cup:(\d{4})$/, name: /^(?:AFC )?Asian Cup/ },
+  { key: "gold-cup", label: "Gold Cup", edition: /:gold-cup:(\d{4})$/, name: /^(?:CONCACAF )?Gold Cup/ },
+];
+
+/** The tournament and year of a match, or null for a competition that is no major tournament. */
+function tournamentOf(match) {
+  for (const t of TOURNAMENTS) {
+    const fromKey = match.edition && match.edition.match(t.edition);
+    if (fromKey) return { tournament: t, year: Number(fromKey[1]) };
+    // A collected edition carries no key: its year is the year it was played.
+    if (!match.edition && t.name.test(match.competition || "") && match.date)
+      return { tournament: t, year: Number(match.date.slice(0, 4)) };
+  }
+  return null;
+}
+
+/** The round of a match as a stage: final, third, semi, quarter, r16, r32 or group. */
+function stageKind(round) {
+  const r = String(round || "").trim().toLowerCase();
+  if (/third|3rd|bronze|troisi[eè]me/.test(r)) return "third";
+  if (/^(?:the )?finale?s?$/.test(r)) return "final";
+  if (/semi|^1\/2$|demi/.test(r)) return "semi";
+  if (/quarter|^1\/4$|quart/.test(r)) return "quarter";
+  if (/round of 16|^1\/8$|huiti[eè]me/.test(r)) return "r16";
+  if (/round of 32|^1\/16$|seizi[eè]me/.test(r)) return "r32";
+  return "group";
+}
+
+/** The match from `teamId`'s side: "won", "lost" or null when the base cannot tell. */
+function outcome(match, teamId) {
+  const home = match.home?.id === teamId;
+  const own = home ? match.homeScore : match.awayScore, other = home ? match.awayScore : match.homeScore;
+  if (own == null || other == null) return null;
+  if (own !== other) return own > other ? "won" : "lost";
+  const ownPens = home ? match.homePenalties : match.awayPenalties, otherPens = home ? match.awayPenalties : match.homePenalties;
+  if (ownPens == null || otherPens == null || ownPens === otherPens) return null;
+  return ownPens > otherPens ? "won" : "lost";
+}
+
+const STAGES = {
+  final: { won: ["Vainqueur", "gold"], lost: ["Finaliste", "silver"], null: ["Finale", null] },
+  third: { won: ["3e", "bronze"], lost: ["4e", null], null: ["Match 3e place", null] },
+  semi: "Demi", quarter: "Quarts", r16: "8es", r32: "16es", group: "1er tour",
+};
+const ORDER = ["group", "r32", "r16", "quarter", "semi", "third", "final"];
+
+/**
+ * A nation's runs in the major tournaments, oldest first: per edition, the stage its last match
+ * reached and how it ended (a final or third-place match with no score claims nothing).
+ * `matches`: the nation's matches ({date, competition, edition, round, home, away, scores}).
+ */
+export function tournamentRuns(matches, teamId) {
+  const editions = new Map();
+  for (const match of matches) {
+    const of = tournamentOf(match);
+    if (!of) continue;
+    const key = `${of.tournament.key}:${of.year}`;
+    if (!editions.has(key)) editions.set(key, { ...of, games: new Map() });
+    // An edition held twice (collected and archived) counts each match once.
+    const pair = [match.home?.id, match.away?.id].sort().join(":");
+    const id = `${match.date || match.id}:${pair}`;
+    const known = editions.get(key).games.get(id);
+    if (!known || (known.homeScore == null && match.homeScore != null)) editions.get(key).games.set(id, match);
+  }
+  return [...editions.values()]
+    .map(({ tournament, year, games }) => {
+      const list = [...games.values()].sort(
+        (a, b) => String(a.date || "").localeCompare(String(b.date || "")) || ORDER.indexOf(stageKind(a.round)) - ORDER.indexOf(stageKind(b.round)),
+      );
+      const last = list.at(-1);
+      const kind = stageKind(last.round);
+      const stage = STAGES[kind];
+      const [label, tone] = typeof stage === "string" ? [stage, null] : stage[outcome(last, teamId)];
+      const out = { tournament: tournament.key, label: `${tournament.label} ${year}`, year, stage: label, matches: list.length, games: list };
+      if (tone) out.tone = tone;
+      return out;
+    })
+    .sort((a, b) => a.year - b.year || a.tournament.localeCompare(b.tournament));
+}
+
+/** The nation's played matches of `season` (finished, with a score): its record and goals. */
+export function seasonRecord(matches, teamId, season) {
+  const record = { played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0 };
+  for (const match of matches) {
+    if (match.season !== season || match.status !== "finished" || match.homeScore == null || match.awayScore == null) continue;
+    const home = match.home?.id === teamId;
+    const own = home ? match.homeScore : match.awayScore, other = home ? match.awayScore : match.homeScore;
+    record.played++;
+    record.goalsFor += own;
+    record.goalsAgainst += other;
+    if (own > other) record.wins++;
+    else if (own < other) record.losses++;
+    else record.draws++;
+  }
+  return record;
+}
+
+const num = (v) => (v == null ? null : Number(v));
+const put = (o, k, v) => (v === null || v === undefined ? o : ((o[k] = v), o));
+
+function respond(req, data) {
+  const etag = `W/"nations-v1-${createHash("sha256").update(JSON.stringify(data)).digest("hex")}"`;
+  if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 300 });
+  return send(req, { data }, 200, { etag, ttl: 300, maxBytes: 2 * 1024 * 1024 });
+}
+
+function seasonParam(params) {
+  validateParams(params, ["season"]);
+  const season = params.get("season");
+  if (!/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
+  return season;
+}
+
+function nationOf(r) {
+  const out = { id: r.team_id, name: r.name, imageUrl: r.image_url ?? null, matches: r.matches };
+  put(out, "lastMatch", r.last_match ? String(r.last_match).slice(0, 10) : null);
+  put(out, "elo", num(r.elo));
+  if (r.rank != null)
+    out.ranking = {
+      rank: r.rank, elo: num(r.season_elo), eloChange: num(r.elo_change), matches: r.season_matches,
+      wins: r.wins, draws: r.draws, losses: r.losses, results: num(r.result_sum), expected: num(r.expected_sum),
+    };
+  return out;
+}
+
+function matchOf(r) {
+  const out = {
+    date: r.match_date ? String(r.match_date).slice(0, 10) : null, season: r.season, competition: r.competition,
+    edition: r.edition ?? null, round: r.round ?? null, status: r.status,
+    home: { id: r.home_id, name: r.home_name, imageUrl: r.home_image ?? null },
+    away: { id: r.away_id, name: r.away_name, imageUrl: r.away_image ?? null },
+    homeScore: r.home_score, awayScore: r.away_score, homePenalties: r.home_penalties, awayPenalties: r.away_penalties,
+  };
+  // Only a collected match has its page on the site.
+  if (r.collected) out.id = r.match_id;
+  return out;
+}
+
+export function createNationRoute(read) {
+  return async (req, path, params) => {
+    if (path === "/api/nations") {
+      const season = seasonParam(params);
+      const rows = await read(`SELECT * FROM api.nation_list(${SEASON_KEY})`, [season]);
+      const nations = rows.map(nationOf).sort((a, b) => (a.ranking?.rank ?? Infinity) - (b.ranking?.rank ?? Infinity) || (b.elo ?? -Infinity) - (a.elo ?? -Infinity) || a.name.localeCompare(b.name));
+      return respond(req, { season, ranked: nations.filter((n) => n.ranking).length, nations });
+    }
+    const nation = path.match(NATION);
+    if (!nation) return null;
+    const season = seasonParam(params);
+    const [list, [key]] = await Promise.all([
+      read(`SELECT * FROM api.nation_list(${SEASON_KEY})`, [season]),
+      read("SELECT api.internal_id('team',$1) AS key", [nation[1]]),
+    ]);
+    const own = key?.key == null ? null : list.find((r) => r.team_key === key.key);
+    if (!own) reject(404, "Ressource introuvable.");
+    const [matchRows, eloRows, playerRows] = await Promise.all([
+      read("SELECT * FROM api.nation_matches($1::integer) ORDER BY match_date DESC NULLS LAST", [own.team_key]),
+      read("SELECT * FROM api.nation_elo($1::integer)", [own.team_key]),
+      read("SELECT * FROM api.nation_players($1::integer)", [own.team_key]),
+    ]);
+    const matches = matchRows.map(matchOf);
+    const data = {
+      ...nationOf(own),
+      season,
+      ranked: list.filter((r) => r.rank != null).length,
+      record: seasonRecord(matches, own.team_id, season),
+      elo: eloRows.map((r) => ({ date: r.match_date ? String(r.match_date).slice(0, 10) : null, elo: num(r.elo), result: num(r.result) })),
+      matches,
+      tournaments: tournamentRuns(matches, own.team_id),
+    };
+    if (playerRows.length) {
+      const first = playerRows[0];
+      const of = tournamentOf({ competition: first.competition, edition: first.edition, date: first.last_date ? String(first.last_date).slice(0, 10) : null });
+      data.players = {
+        competition: of ? `${TOURNAMENTS.find((t) => t === of.tournament).label} ${of.year}` : first.competition,
+        rows: playerRows.map((r) => {
+          const p = { id: r.player_id, name: r.name, imageUrl: r.image_url ?? null, matches: r.matches, minutes: r.minutes, goals: r.goals, assists: r.assists };
+          put(p, "xg", r.xg == null ? null : Math.round(Number(r.xg) * 100) / 100);
+          if (r.club_id) p.club = { id: r.club_id, name: r.club_name, imageUrl: r.club_image ?? null };
+          return p;
+        }),
+      };
+    }
+    return respond(req, data);
+  };
+}
