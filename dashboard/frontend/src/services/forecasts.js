@@ -92,9 +92,14 @@ export function projectionRows(projection) {
       topFour: sum(places.slice(0, 4)),
       bottomThree: places.length > 7 ? sum(places.slice(-3)) : null,
       next: team.next?.matches > 0 ? team.next : null,
+      stages: projection.format === "league-phase" ? cupStages(team.stages) : null,
     };
   });
 }
+
+// A UEFA cup's stages (122): the league phase's three outcomes, then each knockout round reached.
+export const CUP_STAGES = ["top8", "playoff", "out", "r16", "qf", "sf", "final", "win"];
+const cupStages = (stages) => Object.fromEntries(CUP_STAGES.map((stage) => [stage, Number(stages?.[stage]) || 0]));
 
 // The live feed's goals (any kind: each counts for the side whose score it raises) and dismissals.
 const LIVE_GOALS = new Set(["goal", "own_goal", "penalty_goal"]);

@@ -1,6 +1,6 @@
 # Pronostics de match et projections de fin de saison
 
-Code : [forecast.py](../../../backend/vega/forecast.py) ; lectures `/api/forecasts/match` et `/api/forecasts/season` ; sur le site, la carte « Probabilités » de l'avant-match et la vue « Projection » d'un championnat. Version du modèle : `forecast-v2` (14 novembre 2026 ; la version 1, du 12 novembre, ne lisait que l'Elo).
+Code : [forecast.py](../../../backend/vega/forecast.py) ; lectures `/api/forecasts/match` et `/api/forecasts/season` ; sur le site, la carte « Probabilités » de l'avant-match et la vue « Projection » d'un championnat ou d'une coupe européenne. Version du modèle : `forecast-v2` (14 novembre 2026 ; la version 1, du 12 novembre, ne lisait que l'Elo).
 
 ## Le pronostic d'un match
 
@@ -103,6 +103,58 @@ Les 55 saisons de championnat complètes de 2024/2025 et 2025/2026 (12 clubs ou 
 
 90 points donnent la plus petite perte au total. À cette valeur, parmi les clubs annoncés champions entre 60 et 80 % (15 clubs, 68 % en moyenne), 73 % l'ont été.
 
+## La projection d'une coupe européenne
+
+Depuis 2024/2025, la Ligue des champions, la Ligue Europa et la Ligue Conférence commencent par une **phase de ligue** : 36 clubs, huit matchs chacun, un seul classement. Les huit premiers vont directement en huitièmes de finale, les 9ᵉ à 24ᵉ jouent des barrages, les 25ᵉ à 36ᵉ sont éliminés. Chacune de ces trois coupes est projetée tant que sa finale n'est pas jouée (code : `simulate_cup` dans [forecast.py](../../../backend/vega/forecast.py), table `agg.cup_stage_odds`, migration 122).
+
+### La phase de ligue
+
+Elle est rejouée comme un championnat (même modèle, mêmes 1 000 simulations, même décalage des forces), avec deux règles propres :
+
+- **huit matchs par club** : un match à élimination directe peut apparaître dans la base avant que son tour soit nommé ; une fois qu'un club a ses huit matchs (joués, puis à jouer par date), tout match suivant n'est pas de la phase de ligue ;
+- **classement** aux points, puis à la différence de buts, puis aux buts marqués, puis au hasard (les critères suivants du règlement, buts à l'extérieur, victoires, coefficient, ne sont pas lus).
+
+Une coupe dont un club n'a pas d'Elo n'est pas projetée : ses matchs seraient rejoués avec une force nulle.
+
+### Le tableau
+
+Chaque simulation joue ensuite le tableau, selon le règlement UEFA :
+
+| Tour | Qui rencontre qui |
+|---|---|
+| Barrages | 9ᵉ/10ᵉ contre 23ᵉ/24ᵉ, 11ᵉ/12ᵉ contre 21ᵉ/22ᵉ, 13ᵉ/14ᵉ contre 19ᵉ/20ᵉ, 15ᵉ/16ᵉ contre 17ᵉ/18ᵉ ; dans chaque paire, l'adversaire est tiré au sort ; le club le mieux classé reçoit au retour |
+| Huitièmes | 1ᵉʳ/2ᵉ contre les vainqueurs des barrages 15ᵉ/16ᵉ – 17ᵉ/18ᵉ, 3ᵉ/4ᵉ contre ceux de 13ᵉ/14ᵉ – 19ᵉ/20ᵉ, 5ᵉ/6ᵉ contre ceux de 11ᵉ/12ᵉ – 21ᵉ/22ᵉ, 7ᵉ/8ᵉ contre ceux de 9ᵉ/10ᵉ – 23ᵉ/24ᵉ, tirés au sort |
+| Quarts, demies | Tableau fixe selon la place en phase de ligue du club le mieux classé de chaque huitième : ordre 1, 8, 4, 5, 2, 7, 3, 6 ; le 1ᵉʳ et le 2ᵉ sont dans deux moitiés opposées |
+| Finale | Un seul match, terrain neutre |
+
+- **Matchs aller-retour** : le club le mieux classé en phase de ligue reçoit au retour ; l'avantage du terrain (60 points d'Elo) vaut pour chaque match.
+- **Prolongation** : si les deux matchs (ou la finale) laissent les clubs à égalité, une prolongation est jouée avec **un tiers** des buts attendus d'un match.
+- **Tirs au but** : à égalité après la prolongation, chaque club passe **une fois sur deux** (50/50). Ces deux règles ont été choisies le 16 novembre 2026.
+- **Tours déjà tirés ou joués** : un tirage connu remplace le tirage au sort ; un match déjà joué compte avec son score réel (tirs au but compris) et seuls les matchs restants sont rejoués. Un tirage partiel des barrages garde les rencontres tirées et tire les clubs restants dans leurs paires.
+
+Chaque club reçoit la part des simulations où il finit dans les huit premiers, de la 9ᵉ à la 24ᵉ place, au-delà de la 24ᵉ, puis où il joue les huitièmes, les quarts, les demies, la finale, et où il gagne. Sur 1 000 simulations, les parts d'un tour font toujours le nombre de clubs du tour : 16 en huitièmes, 8 en quarts, 4 en demies, 2 en finale, 1 vainqueur.
+
+La route `/api/forecasts/season` rend alors `format: "league-phase"` et, pour chaque club, `stages` (`top8`, `playoff`, `out`, `r16`, `qf`, `sf`, `final`, `win`) ; sur le site, la vue « Projection » de la coupe en fait une colonne chacune, ombrée selon la part, et colore les huit premières places et les places 9 à 24 du classement projeté.
+
+### Pas encore vérifié
+
+Cette projection n'a pas encore été rejouée sur des saisons passées (2024/2025 et 2025/2026, les deux premières du format). La vérification prévue : rejouer chaque coupe depuis le milieu de sa phase de ligue avec un modèle ajusté avant, puis mesurer la perte logarithmique et le score de Brier des parts « huit premiers », « barrages », « huitièmes » et « vainqueur ».
+
+## Les coupes nationales et les clubs sans Elo (proposition, non appliquée)
+
+Les coupes nationales (Coupe de France, FA Cup…) mêlent des clubs de première division et des clubs amateurs. Au 16 novembre 2026, **1 108 des 1 530 clubs** de ces coupes n'avaient pas d'Elo, faute de matchs de championnat dans la base ; ce nombre compte aussi les championnats eux-mêmes et doit être recompté.
+
+La méthode proposée, un **Elo de coupe** calculé seulement pour ces pronostics :
+
+1. **Groupes** : chaque club sans Elo est rangé dans le groupe de son championnat connu (pays, division) ; un club qu'on ne voit qu'en coupe va dans le groupe (pays, division la plus basse connue + 1).
+2. **Niveau d'un groupe** : ajusté par maximum a posteriori sur les matchs de coupe de ses clubs contre des clubs qui ont un Elo, avec, comme loi a priori, le niveau de la division du dessus moins un écart par division ; l'erreur type du niveau doit descendre sous 45 points (environ 20 matchs contre des clubs classés).
+3. **Club** : à partir du niveau de son groupe, les résultats du club en coupe le corrigent avec la règle de mise à jour de l'Elo, à partir de 10 résultats.
+4. **Séparation** : ces forces sont rangées à part (`agg.cup_strengths`) ; l'Elo des clubs, le classement de puissance et le classement des joueurs ne changent pas.
+5. **Affichage** : en dessous des seuils (groupe à plus de 45 points d'erreur, club à moins de 10 résultats), la projection est marquée « provisoire ».
+6. **Vérification avant mise en service** : rejouer les coupes passées tour par tour et comparer la perte logarithmique et le score de Brier à deux références, « la division la plus haute gagne » et 50/50, par écart de division.
+
+Cette méthode attend l'accord sur son principe et la mesure sur la base (lecture seule).
+
 ## Minute par minute
 
 La fiche d'un match joué trace « Probabilité de victoire » : les chances de victoire, de nul et de défaite minute par minute ([inplay.py](../../../backend/vega/inplay.py), `/api/forecasts/live`).
@@ -167,6 +219,7 @@ Le niveau des adversaires ne dit rien du club lui-même : deux clubs au même ca
 
 - Les colonnes « 4 premiers » et « 3 derniers » sont des places, pas les zones du règlement de chaque championnat (qualifications européennes, barrages, nombre de relégués).
 - Un championnat à phases (tournois d'ouverture et de clôture, play-offs) est projeté sur ses seuls tours réguliers.
+- Les coupes nationales et les compétitions internationales autres que les trois coupes européennes ne sont pas projetées (voir la proposition plus haut).
 - Les forces de deux championnats hors de l'échelle commune ne se comparent pas ; cela ne gêne pas un championnat national, dont tous les clubs sont sur la même échelle.
 - La forme récente et les compositions ne déplacent que le pronostic d'un match ; la projection d'un championnat et les points attendus de la colonne « Adv. à venir » au-delà de quatorze jours lisent les forces seules.
 - Calculé avec les modèles quotidiens de la saison (après l'Elo) : au plus tard une fois par jour, et dans l'heure qui suit un match terminé.

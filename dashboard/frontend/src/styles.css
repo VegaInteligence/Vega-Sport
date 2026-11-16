@@ -2472,6 +2472,8 @@ th[aria-sort="descending"] .sort-indicator {
 :is(.standings-table tr, .standings-legend span)[data-zone="promotion-po"] { --zone: var(--zone-promotion-po); }
 :is(.standings-table tr, .standings-legend span)[data-zone="relegation-po"] { --zone: var(--zone-relegation-po); }
 :is(.standings-table tr, .standings-legend span)[data-zone="relegation"] { --zone: var(--zone-relegation); }
+:is(.standings-table tr, .standings-legend span)[data-zone="ko"] { --zone: var(--accent); }
+:is(.standings-table tr, .standings-legend span)[data-zone="ko-po"] { --zone: color-mix(in srgb, var(--accent) 45%, transparent); }
 /* The visitor's saved clubs. */
 .standings-table tr[data-followed="true"],
 .standings-table tr[data-followed="true"] th:nth-child(2) {
@@ -2864,6 +2866,33 @@ th[aria-sort="descending"] .sort-indicator {
 .season-projection td {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+/* A UEFA cup's projection: the league phase, then the bracket, each share shaded by its size. */
+.season-projection th.projection-group {
+  text-align: center;
+}
+.season-projection th.projection-group small {
+  display: block;
+  color: var(--muted-light);
+  font-size: 10px;
+  font-weight: 500;
+}
+.season-projection :is(th, td)[data-first] {
+  border-left: 1px solid var(--border);
+}
+.season-projection td.projection-heat {
+  --heat: var(--accent);
+  background: color-mix(in srgb, var(--heat) calc(var(--p) * 72%), transparent);
+  text-align: center;
+}
+.season-projection td.projection-heat[data-tone="po"] {
+  --heat: color-mix(in srgb, var(--accent) 50%, var(--surface));
+}
+.season-projection td.projection-heat[data-tone="out"] {
+  --heat: var(--danger);
+}
+.season-projection td.projection-heat[data-tone="round"] {
+  --heat: #2fb380;
 }
 
 /* Skeleton lines: the shape of what is loading, never a spinner or a « Chargement… » text. */
