@@ -1355,11 +1355,15 @@ select optgroup {
     flex: 1 1 auto;
     flex-direction: column;
   }
-  .match-overview-grid > .card > .card-body > :is(.stat-rows, .match-goals, .club-match-list, .context-players) {
+  .match-overview-grid > .card > .card-body > :is(.comparison-stats, .match-goals, .club-match-list, .context-players),
+  .match-overview-grid > .card > .card-body > .comparison-stats > .stat-rows {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
     justify-content: space-around;
+  }
+  .match-overview-grid > .card > .card-body > .comparison-stats {
+    justify-content: flex-start;
   }
   .match-overview-grid > .match-leaders-card > .card-body {
     justify-content: space-around;

@@ -1285,7 +1285,7 @@ function bestOf(values) {
 
 function PercentileTable({ columns, keys }) {
   return (
-    <div className={s.tableCard} style={{ alignSelf: "start" }}>
+    <div className={`${s.tableCard} ${s.fillTable}`}>
       <div className="table-scroll">
         <table className="data-table" style={{ minWidth: 420 }}>
           <thead>

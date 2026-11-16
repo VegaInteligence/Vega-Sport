@@ -3086,3 +3086,13 @@ th[aria-sort="descending"] .sort-indicator {
     inset: 0;
   }
 }
+
+/* A name's last word and its « i », kept on one line (components/Hint.jsx Term). Doubled class:
+   it looks like the rest of the name even where titles style their spans. */
+.term-tail.term-tail {
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  white-space: nowrap;
+}

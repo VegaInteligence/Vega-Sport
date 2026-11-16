@@ -82,7 +82,7 @@ export function Term({ children, label, hint }) {
     return (
       <>
         {at > 0 ? children.slice(0, at + 1) : ""}
-        <span style={{ whiteSpace: "nowrap" }}>
+        <span className="term-tail">
           {at > 0 ? children.slice(at + 1).trimEnd() : children.trimEnd()}
           <Hint text={text} label={name} />
         </span>

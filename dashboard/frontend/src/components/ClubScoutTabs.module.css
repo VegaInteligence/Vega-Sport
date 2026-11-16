@@ -106,8 +106,7 @@
   text-transform: uppercase;
 }
 .railName {
-  display: inline-flex;
-  align-items: center;
+  display: inline;
 }
 .railTitle span {
   color: var(--muted-light);
