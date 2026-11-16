@@ -73,10 +73,11 @@ MIN_AGE, MAX_AGE = 15, 45
 KINDS = ("profile", "club", "injuries", "search", "values", "squad", "transfers")
 # Days before a unit is read again, by priority (1 = the season in progress, 2 the one before,
 # 3 the one before that, 4 and more older): a profile weekly for a player of the season, the
-# values and transfers when the profile says they changed, else monthly.
+# values and transfers when the profile says they changed, else monthly; a club's record monthly
+# for the two last seasons, its squad's value and age move (16 Nov 2026).
 PERIODS = {
     "profile": (7, 30, 90, 365), "values": (30, 90, 365, 365), "transfers": (30, 90, 365, 365),
-    "injuries": (7, 30, 90, 365), "squad": (7, 365, 365, 365), "club": (180, 180, 180, 180),
+    "injuries": (7, 30, 90, 365), "squad": (7, 365, 365, 365), "club": (30, 30, 180, 180),
     "search": (30, 90, 365, 365),  # a club not found yet is searched again
 }
 NOT_FOUND_AGAIN = timedelta(days=90)
@@ -228,12 +229,30 @@ def parse_player(record):
     }
 
 
+def _squad_age(value):
+    try:
+        age = round(float(value), 1)
+    except (TypeError, ValueError):
+        return None
+    return age if 14 <= age <= 45 else None
+
+
+def _size(value):
+    return value if isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= 150 else None
+
+
 def parse_club(record):
+    """A club record: its name, country, whether it is a national team, and its squad (the value
+    of the squad and of its 18 most valued players, their average age and their number)."""
     if not isinstance(record, dict) or not _key(record.get("id")):
         return None
     base = record.get("baseDetails") or {}
+    squad = record.get("squadDetails") if isinstance(record.get("squadDetails"), dict) else {}
     return {"key": _key(record["id"]), "name": record.get("name") if isinstance(record.get("name"), str) else None,
-            "country": _key(base.get("countryId")), "national": bool(base.get("isNationalTeam"))}
+            "country": _key(base.get("countryId")), "national": bool(base.get("isNationalTeam")),
+            "squad_value": _money(squad.get("currentMarketValue")), "top18_value": _money(squad.get("top18PlayersMarketValue")),
+            "average_age": _squad_age(squad.get("averageAgeDisplay") if squad.get("averageAgeDisplay") is not None else squad.get("averageAge")),
+            "squad_size": _size(squad.get("squadSize"))}
 
 
 def parse_values(data):
@@ -915,10 +934,13 @@ class Reader:
                 self.done("club", key, priority, 0, status=404, error="NOT_FOUND", again=NOT_FOUND_AGAIN)
                 continue
             self.conn.execute(
-                """INSERT INTO core.provider_clubs(provider, provider_key, name, country_key, is_national, read_on)
-                   VALUES ('transfermarkt', %s, %s, %s, %s, %s)
+                """INSERT INTO core.provider_clubs(provider, provider_key, name, country_key, is_national, read_on,
+                     squad_value_eur, top18_value_eur, average_age, squad_size)
+                   VALUES ('transfermarkt', %s, %s, %s, %s, %s, %s, %s, %s, %s)
                    ON CONFLICT (provider, provider_key) DO UPDATE SET name = EXCLUDED.name, country_key = EXCLUDED.country_key,
-                     is_national = EXCLUDED.is_national, read_on = EXCLUDED.read_on""", (key, c["name"], c["country"], c["national"], today))
+                     is_national = EXCLUDED.is_national, read_on = EXCLUDED.read_on, squad_value_eur = EXCLUDED.squad_value_eur,
+                     top18_value_eur = EXCLUDED.top18_value_eur, average_age = EXCLUDED.average_age, squad_size = EXCLUDED.squad_size""",
+                (key, c["name"], c["country"], c["national"], today, c["squad_value"], c["top18_value"], c["average_age"], c["squad_size"]))
             self.done("club", key, priority, 1)
         return len(clubs)
 

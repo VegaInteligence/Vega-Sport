@@ -32,7 +32,6 @@ import {
   nationalTeamName,
 } from "../services/national-flags.js";
 import { PositionsPitch } from "./PlayerScoutCharts.jsx";
-import { FakeBadge } from "./PlayerScoutDemo.jsx";
 import { availability, injuryRows, usePlayerInjuries } from "../services/player-availability.js";
 import s from "./PlayerScout.module.css";
 
@@ -94,10 +93,7 @@ function Facts({ items, label }) {
     <dl className={s.facts} aria-label={label}>
       {items.map((item) => (
         <div key={item.label}>
-          <dt>
-            {item.label}
-            {item.fake && <FakeBadge short />}
-          </dt>
+          <dt>{item.label}</dt>
           <dd>{item.value}</dd>
           {item.note && <small title={item.title}>{item.note}</small>}
         </div>

@@ -1,6 +1,5 @@
 "use client";
-/* The career tab's Vega index season by season and the player's injuries: real data,
- * in the cards and charts the placeholders used (PlayerScoutDemo.jsx). */
+/* The career tab's Vega index season by season and the player's injuries. */
 import React from "react";
 import { useCardFold } from "./PhoneFold.jsx";
 import { Skeleton } from "./UI.jsx";
@@ -8,10 +7,11 @@ import { dateFr, fmt, InjuryTimeline, Legend, LineChart, TipBody } from "./Playe
 import { availability, injuryRows, usePlayerInjuries, usePowerHistory } from "../services/player-availability.js";
 import s from "./PlayerScout.module.css";
 
-function FoldCard({ title, text, children }) {
+/** A card of the profile: on a phone it shows closed, its heading alone. */
+export function FoldCard({ title, text, sectionRef, children }) {
   const f = useCardFold(true, title);
   return (
-    <section className={s.card} {...f.section}>
+    <section className={s.card} ref={sectionRef} {...f.section}>
       <div className={s.cardHead} {...f.head}>
         <div>
           <h3>{title}</h3>

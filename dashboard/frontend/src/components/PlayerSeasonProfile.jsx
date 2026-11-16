@@ -48,7 +48,7 @@ import PlayerScoutOverview, {
   PlayerScoutStats,
 } from "./PlayerScoutOverview.jsx";
 import PlayerScoutCareer from "./PlayerScoutCareer.jsx";
-import { FakePhysical } from "./PlayerScoutDemo.jsx";
+import PlayerPhysical from "./PlayerPhysical.jsx";
 import PlayerPresenceCard from "./PlayerPresenceCard.jsx";
 import PlayerPassPartners from "./PlayerPassPartners.jsx";
 import PlayerNeighbours from "./PlayerNeighbours.jsx";
@@ -572,6 +572,7 @@ export default function PlayerSeasonProfile({
       comparisonRef={comparisonRef}
       onTab={change}
       team={team?.name}
+      club={team}
       competition={competition}
       onCompetition={(value) =>
         setOverviewScope({ key: scopeKey, competition: value })
@@ -835,7 +836,7 @@ export default function PlayerSeasonProfile({
                 {palmares}
               </PlayerScoutCareer>
             )}
-            {view === "physical" && <FakePhysical />}
+            {view === "physical" && <PlayerPhysical id={id} season={f.season} />}
             {view === "projection" && (
               <Projection
                 profile={profile}

@@ -27,12 +27,9 @@ import {
   ToneLegend,
   toneClass,
 } from "./PlayerScoutCharts.jsx";
-import {
-  FakeBadge,
-  fakePreviousSeason,
-  PlayStyleCard,
-  TeamContextCard,
-} from "./PlayerScoutDemo.jsx";
+import { PlayStyleCard, TeamContextCard } from "./PlayerStyleCards.jsx";
+import { seasonShort } from "../services/previous-season.js";
+import usePreviousSeason from "../hooks/usePreviousSeason.js";
 import { RankingTrigger } from "./RankingDialog.jsx";
 import PlayerSwap from "./PlayerSwap.jsx";
 import s from "./PlayerScout.module.css";
@@ -437,6 +434,7 @@ export default function PlayerScoutOverview({
   comparisonRef,
   onTab,
   team,
+  club,
   competition = "all",
   onCompetition,
   children,
@@ -599,8 +597,8 @@ export default function PlayerScoutOverview({
       </div>
       <div className={`${s.block} ${s.grid3}`}>
         <RecentForm profile={profile} matches={matches} onTab={onTab} />
-        <PlayStyleCard />
-        <TeamContextCard team={team} />
+        <PlayStyleCard id={profile.id} season={season} />
+        <TeamContextCard id={profile.id} season={season} team={club} />
       </div>
       {children}
     </div>
@@ -825,7 +823,6 @@ const MODE_LABELS = {
 export function PlayerScoutStats({ profile, cohorts, mode, ready }) {
   const group = profile.role?.group;
   const sections = scoutFamilies(group);
-  const size = cohorts.groups.get(group)?.profiles.length || 0;
   if (!ready)
     return (
       <Skeleton label="Chargement des joueurs du même poste…" lines={2} />
@@ -945,57 +942,6 @@ export function PlayerScoutStats({ profile, cohorts, mode, ready }) {
                         </tr>
                       );
                     })}
-                    {(section.fake || []).map((metric) => (
-                      <tr key={metric.key}>
-                        <th scope="row">
-                          {metric.label}
-                          {metric.inverted && (
-                            <span style={{ color: "var(--muted)" }}>
-                              {" "}
-                              · moins = mieux
-                            </span>
-                          )}{" "}
-                          <FakeBadge short />
-                        </th>
-                        <td className={s.num}>
-                          {fmt(
-                            mode === "total"
-                              ? (metric.value * profile.minutes) / 90
-                              : mode === "perMatch"
-                                ? (metric.value * profile.minutes) /
-                                  90 /
-                                  profile.matches
-                                : metric.value,
-                            mode === "per90" ? metric.decimals : 1,
-                          )}
-                        </td>
-                        <td className={s.num} style={{ color: "var(--muted)" }}>
-                          {fmt(metric.dist[2], metric.decimals)}
-                        </td>
-                        <td className={s.barCell}>
-                          <PercentileBar value={metric.percentile} />
-                        </td>
-                        <td className={s.num}>
-                          <PercentileBadge
-                            value={metric.percentile}
-                            label={String(metric.percentile)}
-                          />
-                        </td>
-                        <td className={s.num}>
-                          {Math.max(
-                            1,
-                            Math.round(
-                              ((100 - metric.percentile) / 100) * size,
-                            ),
-                          )}
-                          e
-                          <span style={{ color: "var(--muted-light)" }}>
-                            {" "}
-                            / {size}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
                   </tbody>
                 </table>
               </div>
@@ -1041,6 +987,16 @@ export function PlayerScoutCompare({ profile, cohorts, ready }) {
       ]),
     );
   const base = percentiles(profile);
+  // His previous season, read once asked for: same group, competitions and minutes floor.
+  const previous = usePreviousSeason({
+    profile,
+    group,
+    keys,
+    minMinutes: cohorts.minMinutes,
+    enabled: autoId === "previous",
+    percentileOf: (player, key, pool) => advancedMetric(player, key, pool)?.percentile ?? null,
+  });
+  const before = previous.result;
   // Second competition by minutes: the player's own season there.
   const competition = useMemo(() => {
     const minutes = new Map();
@@ -1074,13 +1030,20 @@ export function PlayerScoutCompare({ profile, cohorts, ready }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, cohorts, group, keys.join()]);
   const autos = [
-    {
+    previous.season && {
       id: "previous",
       label: "Saison précédente",
-      detail: "Données fictives",
-      name: `${profile.name} · saison précédente`,
-      fake: true,
-      values: fakePreviousSeason(base),
+      detail: before?.profile
+        ? `${seasonShort(previous.season)} · ${number(before.profile.matches)} matchs · ${number(before.profile.minutes)} min${before.enough ? "" : ` · moins de ${number(cohorts.minMinutes)} min, non classé`}`
+        : autoId !== "previous"
+          ? seasonShort(previous.season)
+          : previous.error
+            ? "Saison précédente indisponible"
+            : before?.missing
+              ? `${seasonShort(previous.season)} · absent de ces compétitions à ce poste`
+              : "Chargement…",
+      name: `${profile.name} · ${seasonShort(previous.season)}`,
+      values: before?.profile && before.enough ? before.values : {},
     },
     {
       id: "median",
@@ -1131,7 +1094,6 @@ export function PlayerScoutCompare({ profile, cohorts, ready }) {
             name: auto.name,
             sub: auto.detail,
             values: auto.values,
-            fake: auto.fake,
             dashed: auto.dashed,
             onRemove: () => setAutoId(null),
           },
@@ -1192,7 +1154,7 @@ export function PlayerScoutCompare({ profile, cohorts, ready }) {
               onClick={() => setAutoId(autoId === item.id ? null : item.id)}
             >
               <span>
-                {item.label} {item.fake && <FakeBadge short />}
+                {item.label}
               </span>
               <small>{item.detail}</small>
             </button>
@@ -1215,7 +1177,7 @@ export function PlayerScoutCompare({ profile, cohorts, ready }) {
             >
               <div>
                 <strong>
-                  {column.name} {column.fake && <FakeBadge short />}
+                  {column.name}
                 </strong>
                 <small>{column.sub}</small>
               </div>
@@ -1385,7 +1347,7 @@ function SideBySide({ profile, cohorts, columns }) {
                 >
                   <div className={s.compareHead}>
                     <strong>
-                      {column.name} {column.fake && <FakeBadge short />}
+                      {column.name}
                     </strong>
                     <small>{column.sub}</small>
                     <i />

@@ -1,6 +1,6 @@
 # Non calculé ou fictif
 
-Tout chiffre du site n'est pas un calcul sur données réelles. Cette page liste ce qui ne l'est pas, pour ne pas le confondre avec le reste.
+Tout chiffre du site n'est pas un calcul de Vega. Cette page liste ce qui est fourni tel quel ou pas encore calculé, pour ne pas le confondre avec le reste.
 
 ## Fourni tel quel par une source
 
@@ -17,25 +17,11 @@ Tout chiffre du site n'est pas un calcul sur données réelles. Cette page liste
 
 - **Victoires attendues** : le modèle les produit (`outcomeChances`), mais elles ne sont ni conservées ni affichées (voir [xPts](../03-resultats-et-points-attendus/01-points-attendus-xpts.md)).
 - **Projection entre championnats** (indice ajusté au niveau d'un autre championnat) : pas de modèle. L'onglet Projection compare les indices tels quels ([Compatibilité par niveau](../05-joueurs/06-compatibilite-par-niveau.md)).
-- **Compatibilité athlétique** : aucune source de suivi physique, non affichée.
+- **Compatibilité athlétique** : le suivi physique ne couvre que certaines compétitions (§ 8.2 des formules) ; pas de compatibilité calculée.
 
-## Données fictives (badge « Données fictives » / « Fictif »)
+## Données fictives
 
-Ces blocs affichent des valeurs d'exemple de la maquette, sans aucun calcul sur les données réelles :
-
-**Profil joueur** ([PlayerScoutDemo.jsx](../../../dashboard/frontend/src/components/PlayerScoutDemo.jsx))
-- âge, taille, poids, pied fort, fin de contrat et clause ;
-- valeur marchande, tendance, fourchette, historique de valeur, zone « revente, clause, intérêts » ;
-- **potentiel** (à côté de l'indice Vega réel) et historique de l'indice Vega par saison ;
-- blessures, suspensions, disponibilité ;
-- profil de jeu et contexte d'équipe ;
-- lignes « sécurité de balle » (fautes subies, pertes de balle, fautes) ;
-- données physiques ;
-- **saison précédente** dans les comparaisons : centiles fabriqués à partir des centiles actuels par `fakePreviousSeason` (`centile − 6 + ((rang de l'axe × 7) mod 11)`, borné à [1, 99]) — ce ne sont pas des données de la saison précédente.
-
-**Profil club** ([ClubScoutTabs.jsx](../../../dashboard/frontend/src/components/ClubScoutTabs.jsx))
-- valeur estimée de l'effectif et bloc « Effectif » de la colonne d'identité ;
-- profil d'âge de l'effectif (part des minutes par tranche d'âge).
+Plus aucune depuis le 16 novembre 2026. Les derniers blocs de maquette (effectif du club, physique, profil de jeu, contexte d'équipe, saison précédente des comparaisons) sont calculés sur les données collectées : voir [Formules et raisons, § 8](../08-notes-vega/01-formules-et-raisons.md). Les pages de maquettes (`/maquettes`) ont été retirées du site.
 
 ## Ancien code non utilisé
 

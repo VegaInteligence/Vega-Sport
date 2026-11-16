@@ -6,7 +6,8 @@ import Link from "next/link";
 import { Segments, Skeleton } from "./UI.jsx";
 import { BookmarkButton } from "./ResearchUI.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
-import { FakeBadge } from "./PlayerScoutDemo.jsx";
+import { useFootball } from "../hooks/FootballContext.jsx";
+import { euros, readDay, useClubSquad, weightedAge } from "../services/profile-blocks.js";
 import { json, useResource } from "../services/resources.js";
 import ClubInformation from "./ClubInformation.jsx";
 import { PercentilePizza } from "./PlayerScoutCharts.jsx";
@@ -174,23 +175,7 @@ export function IdentityRail({ dossier, onTab }) {
           ))}
         </ul>
       </div>
-      <div className={`${s.railSection} phone-fold-part`}>
-        <div className={s.railTitle}>
-          Effectif <FakeBadge />
-        </div>
-        <dl className={c.facts}>
-          <div>
-            <dt>Valeur estimée</dt>
-            <dd>1,21 Md€</dd>
-            <small>3e d’Europe</small>
-          </div>
-          <div>
-            <dt>Âge pondéré</dt>
-            <dd>25,4 ans</dd>
-            <small>par minutes jouées</small>
-          </div>
-        </dl>
-      </div>
+      <SquadFacts dossier={dossier} />
       <div className={s.railSection}>
         <div className="research-toolbar">
           <BookmarkButton
@@ -203,6 +188,50 @@ export function IdentityRail({ dossier, onTab }) {
         </div>
       </div>
     </aside>
+  );
+}
+
+/**
+ * The rail's squad: its value and average age as the club's record gives them today (shown
+ * for the season in progress only), and the age weighted by the minutes played when the
+ * ages known cover enough of them.
+ */
+function SquadFacts({ dossier }) {
+  const f = useFootball();
+  const current = Boolean(dossier.season) && dossier.season === f?.manifest?.defaultSeason;
+  const squad = useClubSquad(dossier.id, dossier.season, current).value;
+  const ages = useAgeProfile(dossier.id, dossier.season).value;
+  const weighted = weightedAge(ages?.minutesByAge);
+  if (!(current && squad) && !weighted) return null;
+  return (
+    <div className={`${s.railSection} phone-fold-part`}>
+      <div className={s.railTitle}>Effectif</div>
+      <dl className={c.facts}>
+        {current && squad && (
+          <div>
+            <dt>Valeur estimée</dt>
+            <dd>{euros(squad.value)}</dd>
+            <small>
+              {squad.league ? `${ordinal(squad.league.rank)} du championnat sur ${squad.league.clubs} · ` : ""}au {readDay(squad.readOn)}
+            </small>
+          </div>
+        )}
+        {current && squad?.averageAge != null && (
+          <div>
+            <dt>Âge moyen</dt>
+            <dd>{fmtNum(squad.averageAge, 1)} ans</dd>
+            <small>{squad.size ? `${squad.size} joueurs dans l’effectif` : "de l’effectif"}</small>
+          </div>
+        )}
+        {weighted && (
+          <div>
+            <dt>Âge pondéré</dt>
+            <dd>{fmtNum(weighted.age, 1)} ans</dd>
+            <small>par minutes jouées</small>
+          </div>
+        )}
+      </dl>
+    </div>
   );
 }
 
@@ -696,15 +725,20 @@ const AGE_BANDS = [
   ["33 +", Infinity],
 ];
 
-function SquadAgeProfile({ id, season }) {
-  const { value, loading, error } = useResource(
+function useAgeProfile(id, season) {
+  return useResource(
     `team-age-profile:${id}:${season}`,
     ({ signal }) =>
       json(
         `/api/teams/${encodeURIComponent(id)}/age-profile?${new URLSearchParams({ season })}`,
         { signal },
       ).then((body) => body.data),
+    Boolean(id && season),
   );
+}
+
+function SquadAgeProfile({ id, season }) {
+  const { value, loading, error } = useAgeProfile(id, season);
   const bands = AGE_BANDS.map(() => 0);
   let total = 0;
   for (const { age, minutes } of value?.minutesByAge || []) {

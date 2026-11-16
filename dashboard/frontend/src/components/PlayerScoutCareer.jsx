@@ -23,7 +23,6 @@ import { AsyncState, Media } from "./UI.jsx";
 import NationalFlag from "./NationalFlag.jsx";
 import { fmt } from "./PlayerScoutCharts.jsx";
 import PlayerMarketValueCard from "./PlayerMarketValueCard.jsx";
-import { FakeBadge } from "./PlayerScoutDemo.jsx";
 import { PlayerInjuries, VegaIndexHistory } from "./PlayerCareerCards.jsx";
 import s from "./PlayerScout.module.css";
 
@@ -107,17 +106,14 @@ export default function PlayerScoutCareer({
     <div className={s.overview}>
       <div className={`${s.block} ${s.stack}`}>
         <div className={s.kpiStrip}>
-          {kpis.map(([label, value, accent, fake]) => (
+          {kpis.map(([label, value, accent]) => (
             <div key={label}>
-              <span>
-                {label} {fake && <FakeBadge short />}
-              </span>
+              <span>{label}</span>
               <strong className={accent ? s.kpiAccent : undefined}>
                 {(
                   label === "Valeur marchande"
                     ? market.loading && !valuation
                     : history.loading &&
-                      !fake &&
                       label !== "Club actuel" &&
                       label !== "Fin de contrat"
                 )
