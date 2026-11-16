@@ -550,6 +550,14 @@ export function FootballProvider({ children, loadData = true, initialState }) {
   const refreshError = displayedSnapshot.retained
     ? dataset.error
     : dataset.refreshError;
+  // The season's data refreshes in the background: the last version stays on screen, and a
+  // failed refresh is tried again a minute later without a word on the page.
+  const retryDataset = dataset.retry;
+  useEffect(() => {
+    if (!refreshError || !retryDataset) return undefined;
+    const timer = setTimeout(retryDataset, 60_000);
+    return () => clearTimeout(timer);
+  }, [refreshError, retryDataset]);
   const data = deferSeason ? emptySeason : warmSeason || displayedDataset.value;
   const lastRecoveryManifest = useRef(currentManifest.value);
   useEffect(() => {
@@ -1177,22 +1185,6 @@ export function FootballProvider({ children, loadData = true, initialState }) {
             {(value) =>
               value ? (
                 <>
-                  {refreshing && (
-                    <div role="status" className="notice">
-                      Actualisation des données…
-                    </div>
-                  )}
-                  {refreshError && (
-                    <div role="alert" className="notice notice-warning">
-                      La dernière version reste affichée. {refreshError}{" "}
-                      <button
-                        className="button button-secondary"
-                        onClick={dataset.retry}
-                      >
-                        Réessayer
-                      </button>
-                    </div>
-                  )}
                   {children}
                 </>
               ) : (
