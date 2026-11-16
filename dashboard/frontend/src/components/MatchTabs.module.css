@@ -1,0 +1,785 @@
+/* The match page's header bubbles, line-ups, players and analyses (MatchKpis, MatchLineups,
+   MatchPlayersBoard, MatchAnalyses, MatchWinProbability, HoverCard). */
+
+.stack {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+/* A card of these tabs: the site's card, with its inner margin. */
+.panel {
+  padding: 16px;
+}
+/* The site's pitch (as the player pages draw it): neutral, dark or light with the theme. */
+.pitch,
+.pitchSvg {
+  --pitch-ground: light-dark(#f3f6f9, #12151a);
+  --pitch-mark: light-dark(#cdd5df, #2e333b);
+}
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+/* The two teams' colours, as the match header gives them. */
+.homeText {
+  color: var(--home);
+}
+.awayText {
+  color: var(--away);
+}
+.muted {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 400;
+}
+.label {
+  display: block;
+  margin: 14px 0 6px;
+  color: var(--muted);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.good {
+  color: light-dark(#0f8a5f, #34d399);
+}
+.big {
+  display: block;
+  color: var(--ink-strong);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 50%;
+}
+
+/* ---------------------------------------------------------------- bubble */
+.hoverable {
+  cursor: default;
+  outline: none;
+}
+.hoverable:hover,
+.hoverable:focus-visible,
+.hoverable[aria-expanded="true"] {
+  background: var(--surface-hover);
+}
+.bubble {
+  position: fixed;
+  z-index: 1000;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-pop);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  text-align: left;
+  pointer-events: none;
+}
+.bubbleHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  color: var(--ink-strong);
+  font-weight: 650;
+}
+.bubbleNote {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.bubbleHint {
+  margin: 6px 0 0;
+  color: var(--muted-light);
+  font-size: var(--text-2xs);
+}
+.bubbleTitle {
+  margin: 10px 0 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.bubbleTeams {
+  display: flex;
+  justify-content: space-between;
+  margin: 6px 0 4px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.bubbleRow,
+.bubbleLine {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  padding: 3px 0;
+  font-variant-numeric: tabular-nums;
+}
+.bubbleRow b,
+.bubbleLine b {
+  min-width: 40px;
+  text-align: right;
+  font-weight: 600;
+}
+.bubbleLine {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+.bubbleLine small {
+  color: var(--muted);
+}
+.bubbleCard {
+  display: grid;
+  grid-template-columns: 34px 12px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 3px 0;
+}
+.bubbleCard small {
+  font-size: var(--text-2xs);
+}
+
+/* ----------------------------------------------------------------- header */
+.fiveKpis {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.kpi {
+  position: relative;
+}
+.cardIcon {
+  display: inline-block;
+  width: 9px;
+  height: 13px;
+  border-radius: 2px;
+  vertical-align: -1px;
+}
+.yellow {
+  background: #facc15;
+}
+.red {
+  background: #ef4444;
+}
+.cardCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.cardCount .cardIcon + .cardIcon,
+.cardCount .red {
+  margin-left: 6px;
+}
+@media (max-width: 760px) {
+  .fiveKpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ------------------------------------------------------- win probability */
+.winFigure {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+.winChart {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+.swings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.swings li {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.swings b {
+  color: var(--ink-strong);
+}
+
+/* ---------------------------------------------------------------- line-ups */
+.lineupHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.lineupHead h3 {
+  margin: 0 0 2px;
+  color: var(--ink-strong);
+  font-size: var(--text-md);
+}
+.pitch {
+  position: relative;
+  aspect-ratio: 105 / 64;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--pitch-ground);
+}
+.pitchStanding {
+  aspect-ratio: 64 / 105;
+  max-width: 460px;
+  margin: 0 auto;
+}
+.pitchLines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: var(--pitch-mark);
+  stroke-width: 0.35;
+}
+.marker {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 96px;
+  color: inherit;
+  text-decoration: none;
+  transform: translate(-50%, -50%);
+}
+.marker:hover,
+.marker:focus-visible {
+  z-index: 2;
+  outline: none;
+}
+.marker:hover .markerName,
+.marker:focus-visible .markerName {
+  text-decoration: underline;
+}
+.markerPhoto {
+  position: relative;
+  display: grid;
+}
+.markerAvatar {
+  width: 44px !important;
+  height: 44px !important;
+  border: 2px solid;
+  border-radius: 50%;
+  background: var(--surface);
+}
+.homeRing {
+  border-color: var(--home);
+}
+.awayRing {
+  border-color: var(--away);
+}
+.markerNumber {
+  position: absolute;
+  bottom: -3px;
+  left: -7px;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 3px;
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 600;
+}
+.markerGrade {
+  position: absolute;
+  top: -7px;
+  right: -12px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--ink-strong);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.markerName {
+  max-width: 96px;
+  overflow: hidden;
+  color: var(--ink-strong);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.markerTags {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink);
+  font-size: 10.5px;
+}
+.ownGoal {
+  filter: grayscale(1);
+}
+.off {
+  color: light-dark(#c0263c, #fda4af);
+}
+.on {
+  color: light-dark(#0f8a5f, #86efac);
+}
+.grade {
+  display: inline-block;
+  min-width: 32px;
+  padding: 1px 6px;
+  border-radius: 7px;
+  background: var(--surface-raised);
+  color: var(--ink-strong);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.gradeHigh {
+  background: light-dark(#0f8a5f, #34d399);
+  color: light-dark(#fff, #052e1f);
+}
+.gradeLow {
+  background: light-dark(#fde2e2, #3b2a2a);
+  color: light-dark(#b42318, #fca5a5);
+}
+.bench {
+  min-width: 0;
+}
+.benchHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.benchHead h3 {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: var(--text-md);
+}
+.benchHead strong {
+  margin-left: auto;
+  color: var(--muted);
+  font-weight: 500;
+}
+.benchMeta {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.subRow {
+  display: grid;
+  grid-template-columns: 48px 32px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+.subMinute {
+  color: light-dark(#0f8a5f, #86efac);
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+.subAvatar {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50%;
+}
+.subWho {
+  display: grid;
+  min-width: 0;
+}
+.subWho a,
+.subWho b {
+  overflow: hidden;
+  color: var(--ink-strong);
+  font-weight: 600;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.subWho a:hover {
+  text-decoration: underline;
+}
+.subWho small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.benchChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.benchChips span {
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.benchChips a {
+  color: inherit;
+  text-decoration: none;
+}
+.benchChips a:hover {
+  color: var(--ink-strong);
+}
+@media (max-width: 760px) {
+  .markerAvatar {
+    width: 30px !important;
+    height: 30px !important;
+  }
+  .marker {
+    width: 62px;
+  }
+  .markerName {
+    max-width: 62px;
+    font-size: 10px;
+  }
+  .markerGrade {
+    top: -6px;
+    right: -10px;
+    padding: 0 4px;
+    font-size: 9.5px;
+  }
+  .markerNumber {
+    min-width: 15px;
+    height: 15px;
+    font-size: 9px;
+  }
+  .markerTags {
+    font-size: 9.5px;
+  }
+}
+
+/* ----------------------------------------------------------------- players */
+.leaders {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.leader,
+.motm {
+  color: inherit;
+  text-decoration: none;
+}
+.leader:hover,
+.motm:hover {
+  border-color: var(--border-strong);
+}
+.leader .label {
+  margin-top: 0;
+}
+.leaderWho {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.leaderWho b {
+  display: block;
+  color: var(--ink-strong);
+  font-size: var(--text-sm);
+}
+.leaderWho small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.motm {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+.motm .label {
+  margin-top: 0;
+}
+.motmAvatar {
+  width: 76px !important;
+  height: 76px !important;
+  border: 2px solid light-dark(#0f8a5f, #34d399);
+  border-radius: 50%;
+}
+.motmName {
+  display: block;
+  color: var(--ink-strong);
+  font-size: 18px;
+}
+.motmLine {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 6px;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.board th,
+.board td {
+  white-space: nowrap;
+}
+.board td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.board thead th {
+  text-align: right;
+}
+.board thead th:first-child {
+  text-align: left;
+}
+.sortButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.sortButton:hover,
+.sorted {
+  color: var(--ink-strong);
+}
+.best {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--ink-strong);
+  font-weight: 650;
+}
+.clickable {
+  cursor: pointer;
+}
+.clickable:hover > * {
+  background: var(--surface-hover);
+}
+.playerCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+.playerCell > span {
+  display: grid;
+}
+.playerCell a {
+  color: var(--ink-strong);
+  font-weight: 600;
+  text-decoration: none;
+}
+.playerCell a:hover {
+  text-decoration: underline;
+}
+.teamBar {
+  width: 4px;
+  height: 28px;
+  border-radius: 2px;
+}
+@media (max-width: 1050px) {
+  .leaders {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .leaders,
+  .grid2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --------------------------------------------------------------- analyses */
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 8px 0;
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+.axis {
+  stroke: var(--grid, rgb(128 128 128 / 25%));
+}
+.goalLine {
+  stroke: var(--muted-light);
+  stroke-dasharray: 3 3;
+}
+.mirror {
+  display: grid;
+  gap: 8px;
+}
+.groupTitle {
+  margin: 12px 0 2px;
+  color: var(--muted);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.mirrorRow {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) minmax(120px, 180px) minmax(0, 1fr) 64px;
+  gap: 10px;
+  align-items: center;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.mirrorRow > b {
+  white-space: nowrap;
+}
+.mirrorRow > b:first-child {
+  text-align: right;
+}
+.mirrorName {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+.bar {
+  display: flex;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--surface-raised);
+}
+.barLeft {
+  justify-content: flex-end;
+}
+.bar i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+}
+.halves {
+  width: 100%;
+  min-width: 0 !important;
+}
+.halves th,
+.halves td {
+  padding: 7px 6px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.halves tbody th {
+  text-align: left;
+}
+.valueRow {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) minmax(90px, 180px) 48px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+  color: inherit;
+  text-decoration: none;
+}
+.valueRow:hover {
+  background: var(--surface-hover);
+}
+.valueRow > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+}
+.valueRow b {
+  overflow: hidden;
+  color: var(--ink-strong);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.valueRow small {
+  font-size: var(--text-xs);
+}
+.valueRow strong {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.pitchSvg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+  background: var(--pitch-ground);
+}
+.pitchLine {
+  fill: none;
+  stroke: var(--pitch-mark);
+}
+.node {
+  cursor: default;
+  outline: none;
+}
+.nodeDisc {
+  fill: var(--surface);
+  stroke-width: 2;
+}
+.nodeNumber {
+  fill: var(--ink-strong);
+  font-size: 10px;
+  font-weight: 700;
+  pointer-events: none;
+}
+.nodeName {
+  fill: var(--ink-strong);
+  font-size: 9.5px;
+  paint-order: stroke;
+  stroke: var(--pitch-ground);
+  stroke-width: 3px;
+  pointer-events: none;
+}
+.zoneSelect {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.zoneSelect select {
+  max-width: 60%;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+}
+@media (max-width: 1100px) {
+  .grid2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
