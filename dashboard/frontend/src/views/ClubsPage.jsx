@@ -332,6 +332,9 @@ export default function ClubsPage() {
           >
             ← Tous les clubs
           </Link>
+          <Link className="inline-link competition-back report-link" href={f.href("/rapport/", { id: selected.id })}>
+            Rapport du club →
+          </Link>
           <FootballContext.Provider value={profileContext}>
             <Suspense
               fallback={

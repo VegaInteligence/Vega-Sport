@@ -13,6 +13,8 @@ const config = {
   devIndicators: false,
   outputFileTracingRoot: path.resolve(directory, "../.."),
   turbopack: { root: path.resolve(directory, "../..") },
+  // The report images read their fonts from disk (app/api/rapport/image).
+  outputFileTracingIncludes: { "/api/rapport/image": ["./src/server/fonts/**"] },
   outputFileTracingExcludes: {
     "/*": ["../../data/**/*", "../outputs/**/*", "../.env", "../.env.*"],
   },
