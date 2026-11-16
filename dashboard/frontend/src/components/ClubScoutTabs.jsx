@@ -203,38 +203,36 @@ function SquadFacts({ dossier }) {
   const ages = useAgeProfile(dossier.id, dossier.season).value;
   const weighted = weightedAge(ages?.minutesByAge);
   if (!(current && squad) && !weighted) return null;
+  const facts = [
+    current && squad && {
+      label: "Valeur estimée",
+      value: euros(squad.value),
+      note: !squad.league
+        ? squad.top18Value ? `${euros(squad.top18Value)} pour ses 18 premiers` : ""
+        : squad.league.valued === squad.league.clubs
+          ? `${ordinal(squad.league.rank)} du championnat sur ${squad.league.clubs}`
+          : `${ordinal(squad.league.rank)} des ${squad.league.valued} clubs estimés (sur ${squad.league.clubs})`,
+    },
+    current && squad?.averageAge != null && {
+      label: "Âge moyen",
+      value: `${fmtNum(squad.averageAge, 1)} ans`,
+      note: squad.size ? `${squad.size} joueurs dans l’effectif` : "de l’effectif",
+    },
+    weighted && { label: "Âge pondéré", value: `${fmtNum(weighted.age, 1)} ans`, note: "par minutes jouées" },
+  ].filter(Boolean);
   return (
     <div className={`${s.railSection} phone-fold-part`}>
-      <div className={s.railTitle}>Effectif</div>
+      <div className={s.railTitle}>
+        Effectif {current && squad && <span>au {readDay(squad.readOn)}</span>}
+      </div>
       <dl className={c.facts}>
-        {current && squad && (
-          <div>
-            <dt>Valeur estimée</dt>
-            <dd>{euros(squad.value)}</dd>
-            <small>
-              {squad.league
-                ? squad.league.valued === squad.league.clubs
-                  ? `${ordinal(squad.league.rank)} du championnat sur ${squad.league.clubs} · `
-                  : `${ordinal(squad.league.rank)} des ${squad.league.valued} clubs estimés du championnat (sur ${squad.league.clubs}) · `
-                : ""}
-              au {readDay(squad.readOn)}
-            </small>
+        {facts.map((fact, i) => (
+          <div key={fact.label} style={facts.length % 2 && i === facts.length - 1 ? { gridColumn: "1 / -1" } : undefined}>
+            <dt>{fact.label}</dt>
+            <dd>{fact.value}</dd>
+            {fact.note && <small>{fact.note}</small>}
           </div>
-        )}
-        {current && squad?.averageAge != null && (
-          <div>
-            <dt>Âge moyen</dt>
-            <dd>{fmtNum(squad.averageAge, 1)} ans</dd>
-            <small>{squad.size ? `${squad.size} joueurs dans l’effectif` : "de l’effectif"}</small>
-          </div>
-        )}
-        {weighted && (
-          <div>
-            <dt>Âge pondéré</dt>
-            <dd>{fmtNum(weighted.age, 1)} ans</dd>
-            <small>par minutes jouées</small>
-          </div>
-        )}
+        ))}
       </dl>
     </div>
   );
