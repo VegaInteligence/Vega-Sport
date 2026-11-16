@@ -64,6 +64,14 @@ class PureTest(unittest.TestCase):
         self.assertEqual(len(set(open_matchday.COVERED.values())), len(COPIES))  # one PitchAPI league each
         self.assertFalse(OWN & set(open_matchday.COVERED))  # every cup and every league PitchAPI lacks stays read
 
+    def test_a_folder_s_country_is_the_base_s(self):
+        # open-matchday writes Ireland « IRE »; the base (and PitchAPI) « IRL »: a club of the same
+        # name in two countries is never linked (Cork City, 17 Nov 2026). UEFA folders name no country.
+        self.assertEqual(open_matchday.country_of("IRE_2_first-division"), "IRL")
+        self.assertEqual(open_matchday.country_of("ENG_5_national-league"), "ENG")
+        self.assertEqual(open_matchday.country_of("GER_CUP_dfb-pokal"), "GER")
+        self.assertIsNone(open_matchday.country_of("UEFA_1_champions-league"))
+
     def test_season_label(self):
         self.assertEqual(open_matchday.season_label("2627"), "2026/2027")
         with self.assertRaises(SourceError):
