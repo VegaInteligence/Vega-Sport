@@ -80,3 +80,25 @@ test("the previous season is the one before, when the site publishes it", () => 
   assert.equal(previousSeason("2026", ["2025"]), null);
   assert.equal(seasonShort("2024/2025"), "2024/25");
 });
+
+test("the match load: minutes, starts, rest between matches and the last four weeks", async () => {
+  const { matchLoad } = await import("../dashboard/frontend/src/services/profile-blocks.js");
+  const rows = [
+    { matchId: "m1", date: "2026-09-13", minutes: 90, starter: true, league: "LaLiga" },
+    { matchId: "m2", date: "2026-09-16T19:00:00Z", minutes: 75, starter: true, league: "Champions League" },
+    { matchId: "m3", date: "2026-09-20", minutes: 20, starter: false, league: "LaLiga" },
+    { matchId: "m3", date: "2026-09-20", minutes: 20, starter: false, league: "LaLiga" },
+    { matchId: "m4", date: "2026-10-20", minutes: 95, starter: true, league: "LaLiga" },
+    { matchId: "m5", date: "2026-10-25", minutes: 0, starter: false, league: "LaLiga" },
+  ];
+  const load = matchLoad(rows);
+  assert.deepEqual(
+    [load.matches, load.minutes, load.starts, load.full, load.restMedian, load.shortRest],
+    [4, 280, 3, 2, 4, 1],
+  );
+  // 28 days ending on 20 October: that match alone.
+  assert.deepEqual(load.recent, { matches: 1, minutes: 95, until: "2026-10-20" });
+  assert.deepEqual(load.games.map((g) => g.rest), [null, 3, 4, 30]);
+  assert.equal(matchLoad([{ matchId: "x", date: "2026-09-13", minutes: 90 }]).starts, null);
+  assert.equal(matchLoad([]), null);
+});

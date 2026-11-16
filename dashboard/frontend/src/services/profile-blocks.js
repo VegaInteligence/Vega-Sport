@@ -161,3 +161,54 @@ export function speedZones(metrics) {
     { label: "Reste de la distance", value: rest },
   ];
 }
+
+/* ---------------------------------------------------------- match load */
+
+// A short turnaround: the next match three days or fewer after the previous one (Saturday to
+// Tuesday). The recent load: the minutes of the 28 days ending on his last match.
+export const SHORT_REST_DAYS = 3;
+export const LOAD_WINDOW_DAYS = 28;
+const DAY_MS = 86400000;
+
+const middle = (values) => {
+  const sorted = [...values].sort((a, b) => a - b), m = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[m] : (sorted[m - 1] + sorted[m]) / 2;
+};
+
+/**
+ * His match load over the season's rows (one per match played, with its date and minutes):
+ * minutes, starts, full matches, rest between matches, short turnarounds and the last four
+ * weeks. Every player has it: it needs no tracking.
+ */
+export function matchLoad(rows) {
+  const seen = new Set();
+  const games = (rows || [])
+    .filter((row) => row.minutes > 0 && row.date && !seen.has(row.matchId) && seen.add(row.matchId))
+    .map((row) => ({ row, day: Date.parse(`${String(row.date).slice(0, 10)}T00:00:00Z`) }))
+    .filter((game) => Number.isFinite(game.day))
+    .sort((a, b) => a.day - b.day);
+  if (!games.length) return null;
+  const rests = games.slice(1).map((game, i) => Math.round((game.day - games[i].day) / DAY_MS));
+  const total = (list) => list.reduce((t, game) => t + game.row.minutes, 0);
+  const known = games.filter((game) => typeof game.row.starter === "boolean");
+  const last = games[games.length - 1].day;
+  const recent = games.filter((game) => game.day > last - LOAD_WINDOW_DAYS * DAY_MS);
+  const minutes = total(games);
+  return {
+    matches: games.length,
+    minutes,
+    perMatch: minutes / games.length,
+    starts: known.length === games.length ? known.filter((game) => game.row.starter).length : null,
+    full: games.filter((game) => game.row.minutes >= 90).length,
+    restMedian: rests.length ? middle(rests) : null,
+    shortRest: rests.filter((days) => days <= SHORT_REST_DAYS).length,
+    recent: { matches: recent.length, minutes: total(recent), until: games[games.length - 1].row.date },
+    games: games.map((game, i) => ({
+      date: String(game.row.date).slice(0, 10),
+      minutes: game.row.minutes,
+      starter: game.row.starter ?? null,
+      league: game.row.league || null,
+      rest: i ? rests[i - 1] : null,
+    })),
+  };
+}

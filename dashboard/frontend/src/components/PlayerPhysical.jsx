@@ -1,12 +1,21 @@
 "use client";
-/* The « Physique » tab: the player's tracked matches of the season (/api/players/{id}/physical),
- * per competition, his figures per 90 minutes placed among the players of his role tracked
- * there, his top speed match by match and his distance split by pace. */
-import React, { useId, useState } from "react";
+/* The « Physique » tab: his match load of the season (every player: minutes, starts, rest
+ * between matches, the last four weeks) and, where his competition is tracked
+ * (/api/players/{id}/physical), his figures per 90 minutes placed among the players of his
+ * role, his top speed match by match and his distance split by pace. */
+import React, { useId, useMemo, useState } from "react";
 import { Segments, Skeleton } from "./UI.jsx";
 import { DistributionStrip, fmt, LineChart, PercentileBadge, SegmentBar, TipBody } from "./PlayerScoutCharts.jsx";
 import { number } from "../services/format.js";
-import { PHYSICAL_ROWS, physicalValue, speedZones, usePlayerPhysical } from "../services/profile-blocks.js";
+import {
+  LOAD_WINDOW_DAYS,
+  matchLoad,
+  PHYSICAL_ROWS,
+  physicalValue,
+  SHORT_REST_DAYS,
+  speedZones,
+  usePlayerPhysical,
+} from "../services/profile-blocks.js";
 import s from "./PlayerScout.module.css";
 
 const dayMonth = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : "");
@@ -122,45 +131,116 @@ function Zones({ block }) {
   );
 }
 
-export default function PlayerPhysical({ id, season }) {
+const days = (n) => `${number(n, n % 1 ? 1 : 0)} jour${n >= 2 ? "s" : ""}`;
+
+function MatchLoad({ load }) {
+  const heading = useId();
+  if (!load)
+    return <p className={s.note}>Aucun match joué sur cette sélection.</p>;
+  const kpis = [
+    ["Matchs joués", number(load.matches), load.starts == null ? "" : `${number(load.starts)} titulaire${load.starts > 1 ? "s" : ""}`],
+    ["Minutes", number(load.minutes), `${number(load.perMatch, 0)} par match`],
+    ["Matchs complets", number(load.full), "90 minutes ou plus"],
+    ["Repos médian", load.restMedian == null ? "—" : days(load.restMedian), "entre deux matchs joués"],
+    ["Enchaînements courts", number(load.shortRest), `${SHORT_REST_DAYS} jours ou moins après le précédent`],
+    [`${LOAD_WINDOW_DAYS} derniers jours`, `${number(load.recent.minutes)} min`, `${number(load.recent.matches)} match${load.recent.matches > 1 ? "s" : ""} jusqu’au ${dayMonth(load.recent.until)}`],
+  ];
+  const points = load.games.map((game) => ({ x: dayMonth(game.date), y: game.minutes, game }));
+  const high = Math.max(100, Math.ceil(Math.max(...load.games.map((g) => g.minutes)) / 10) * 10 + 10);
+  return (
+    <>
+      <div className={`${s.kpiStrip} ${s.loadStrip}`}>
+        {kpis.map(([label, value, note]) => (
+          <div key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+            {note && <small>{note}</small>}
+          </div>
+        ))}
+      </div>
+      {points.length >= 2 && (
+        <section className={s.panel} aria-labelledby={heading}>
+          <div className={s.panelTitle}>
+            <h3 id={heading}>Minutes par match</h3>
+            <p>Dans l’ordre des matchs · au survol, le repos avant chacun</p>
+          </div>
+          <div className={s.panelBody}>
+            <LineChart
+              width={1040}
+              height={220}
+              points={points}
+              domain={[0, high]}
+              ticks={Array.from({ length: high / 30 + 1 }, (_, i) => i * 30).filter((v) => v <= high)}
+              labelEvery={Math.max(1, Math.ceil(points.length / 12))}
+              reference={{ y: 90, label: "90 min" }}
+              format={(v) => `${number(v)}`}
+              ariaLabel="Minutes jouées par match"
+              tip={(point) => (
+                <TipBody
+                  title={`${point.game.league || "Match"} · ${dayMonth(point.game.date)}`}
+                  rows={[
+                    ["Minutes", number(point.y)],
+                    ["Titulaire", point.game.starter == null ? "—" : point.game.starter ? "oui" : "non"],
+                    ["Repos avant", point.game.rest == null ? "—" : days(point.game.rest)],
+                  ]}
+                />
+              )}
+            />
+          </div>
+        </section>
+      )}
+    </>
+  );
+}
+
+export default function PlayerPhysical({ id, season, rows }) {
   const physical = usePlayerPhysical(id, season);
+  const load = useMemo(() => matchLoad(rows), [rows]);
   const [chosen, setChosen] = useState(null);
   const blocks = physical.value?.competitions || [];
   const block = blocks.find((b) => b.name === chosen) || blocks[0];
   return (
-    <div className={s.block}>
-      <div className={s.sectionHead}>
-        <div>
-          <h2>Physique</h2>
-          <p>
-            {block
-              ? `${block.name} · ${number(block.matches)} match${block.matches > 1 ? "s" : ""} suivi${block.matches > 1 ? "s" : ""}, ${number(block.minutes)} min${block.tracked != null && block.finished && block.tracked < block.finished ? ` · suivi sur ${number(block.tracked)} des ${number(block.finished)} matchs de la compétition` : ""}`
-              : "Distances, sprints et vitesse de pointe des matchs suivis"}
-          </p>
-        </div>
-        {blocks.length > 1 && (
-          <Segments label="Compétition" value={block.name} items={blocks.map((b) => [b.name, b.name])} onChange={setChosen} />
-        )}
-      </div>
-      {physical.loading ? (
-        <Skeleton label="Chargement du suivi physique…" lines={3} />
-      ) : physical.error ? (
-        <p className={s.note} role="alert">
-          Suivi physique indisponible. <button onClick={physical.retry}>Réessayer</button>
-        </p>
-      ) : !block ? (
-        <p className={s.note}>
-          Aucun de ses matchs de la saison n’a de suivi physique : seules certaines compétitions sont suivies.
-        </p>
-      ) : (
-        <div className={s.grid2}>
-          <Metrics block={block} />
-          <div className={s.stack}>
-            <TopSpeed block={block} />
-            <Zones block={block} />
+    <>
+      {block && (
+        <div className={s.block}>
+          <div className={s.sectionHead}>
+            <div>
+              <h2>Suivi physique</h2>
+              <p>
+                {`${block.name} · ${number(block.matches)} match${block.matches > 1 ? "s" : ""} suivi${block.matches > 1 ? "s" : ""}, ${number(block.minutes)} min${block.tracked != null && block.finished && block.tracked < block.finished ? ` · suivi sur ${number(block.tracked)} des ${number(block.finished)} matchs de la compétition` : ""}`}
+              </p>
+            </div>
+            {blocks.length > 1 && (
+              <Segments label="Compétition" value={block.name} items={blocks.map((b) => [b.name, b.name])} onChange={setChosen} />
+            )}
+          </div>
+          <div className={s.grid2}>
+            <Metrics block={block} />
+            <div className={s.stack}>
+              <TopSpeed block={block} />
+              <Zones block={block} />
+            </div>
           </div>
         </div>
       )}
-    </div>
+      <div className={s.block}>
+        <div className={s.sectionHead}>
+          <div>
+            <h2>Charge de matchs</h2>
+            <p>
+              Temps de jeu et récupération sur les matchs de la sélection
+              {physical.loading
+                ? ""
+                : physical.error
+                  ? " · suivi des distances et de la vitesse indisponible"
+                  : !block
+                    ? " · aucun de ses matchs de la saison n’a de suivi des distances et de la vitesse, qui ne couvre que certaines compétitions"
+                    : ""}
+            </p>
+          </div>
+        </div>
+        <MatchLoad load={load} />
+      </div>
+    </>
   );
 }

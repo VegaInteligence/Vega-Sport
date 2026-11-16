@@ -524,6 +524,7 @@ Ces cinq blocs montraient des valeurs de maquette. Ils sont maintenant calculés
 - Centile : part des joueurs en dessous, les égalités comptées pour moitié.
 - « Reste de la distance » : distance − course − sprint, sans seuil de vitesse connu.
 - Accélérations, décélérations et baisse en deuxième mi-temps : pas de donnée, rien n'est affiché.
+- **Charge de matchs** (tous les joueurs, sans suivi) : sur les matchs joués de la sélection (minutes > 0), le nombre de matchs, de titularisations, de matchs complets (90 minutes ou plus), les minutes et leur moyenne par match ; le repos médian en jours entre deux matchs joués ; les enchaînements courts, un match 3 jours ou moins après le précédent (samedi-mardi) ; les minutes des 28 jours qui finissent à son dernier match. Les matchs où il n'est pas entré ne comptent pas : le repos se mesure entre ses matchs joués.
 
 ### 8.3 Le profil de jeu
 

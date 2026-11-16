@@ -1357,6 +1357,25 @@ p.similarIntro {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+/* The match load's six figures: two rows of three, one row on a wide screen. */
+.loadStrip {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+.loadStrip small {
+  color: var(--muted);
+  font-size: var(--text-2xs);
+}
+@media (min-width: 1400px) {
+  .loadStrip {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .loadStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .cell {
   display: inline-flex;
   align-items: center;
