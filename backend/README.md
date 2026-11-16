@@ -131,6 +131,20 @@ Chaque route liste en tête de fichier ses écarts voulus avec l'API précédent
 
 - Le [jeu Transfermarkt de dcaribou](https://github.com/dcaribou/transfermarkt-datasets), arrêté au 6 juillet 2026, est relu par le collecteur sur l’ensemble de la base. La [projection reproductible](tools/build_player_fact_snapshot.py) conserve les identifiants source et les preuves de rapprochement. L’import complète les dates de naissance et pieds forts manquants. Les échéances et leurs clubs sont conservés dans `core.player_fact_observations` avec la date du jeu. Les contrats confirmés gardent la priorité dans les fiches. La route `/api/players/facts-coverage` donne les comptes de couverture.
 - Les [estimations Transfermarkt datées](tools/build_market_value_snapshot.py) réutilisent ces correspondances. Leur date d’évaluation reste distincte de la date du jeu. La fiche donne la dernière estimation connue et `/api/player-market-values?id=` en donne l’historique.
+- **Lecteur Transfermarkt** ([transfermarkt.py](vega/transfermarkt.py), migrations 113 et 114) : un processus enfant du worker (`--transfermarkt process`) lit l’API JSON de Transfermarkt, celle que documente le projet MIT felipeall/transfermarkt-api (v5), avec un client à lui (six routes, bibliothèque standard).
+  - **Ce qu’il garde, en lignes typées :**
+    - les joueurs lus (`core.provider_players`), les effectifs (`core.provider_squads`) et les noms de clubs (`core.provider_clubs`) ;
+    - pour un joueur relié : ses valeurs avec le club de chaque estimation, ses transferts et ses blessures, remplacés en entier à chaque lecture ;
+    - son contrat avec un de nos clubs, quand le début est connu.
+  - **Liens** (règle de chacun dans `ops.provider_links`) :
+    - le jeu du 6 juillet tel quel ;
+    - un club par les votes des valeurs de nos joueurs : au moins 3 joueurs et 60 % de chaque côté, jamais une équipe réserve vers l’équipe première ; un conflit va dans `ops.provider_link_conflicts` ;
+    - un joueur, dans un club relié, par la même date de naissance et le même nom.
+    - Une date de naissance qui diffère de la nôtre met le lien en quarantaine : plus rien de lui n’est montré.
+  - **Politesse :** une requête à la fois, toutes les 2,5 s environ (`V2_TM_INTERVAL`). Un refus (contrôle anti-robot, 403, 429) met le lecteur en pause une heure, doublée jusqu’à un jour ; après une semaine de refus ou 8 refus de suite, il s’arrête.
+  - **Le relancer** après lecture des refus (`ops.transfermarkt_blocks`) :
+    `UPDATE ops.transfermarkt_state SET gave_up_at = NULL, paused_until = NULL, blocks_in_row = 0, blocked_since = NULL WHERE id = 1;`
+  - **Avancement :** la vue `api.provider_reader_progress`.
 - coefficients UEFA, avec les points par saison et les clubs encore en lice ;
 - classement FIFA, toutes les éditions depuis 2021 ;
 - classements officiels SportScore, écrits seulement si chaque ligne désigne un club de l'édition ;

@@ -73,6 +73,36 @@ Règles de lecture :
 - Pour une fraction (passes, longs ballons, centres, duels au sol / aériens, dribbles), le numérateur vient de `value` et les tentatives de `total` (`ATTEMPTED_METRICS`).
 - Le poste n'est pas un champ statistique : il vient de la composition (`position_id`), voir [Postes et groupes](03-postes-et-groupes.md).
 
+## Transfermarkt : valeurs, transferts, blessures, contrats
+
+Code : [transfermarkt.py](../../../backend/vega/transfermarkt.py). Un processus du worker lit l’API JSON de Transfermarkt en continu. Une requête à la fois, environ toutes les 2,5 secondes.
+
+**Ce qu’on en garde.** Pour un joueur relié à l’un des nôtres :
+- l’historique de ses valeurs, avec le club de chaque estimation ;
+- ses transferts (date, clubs, montant, prêt ou non) ;
+- ses blessures (dates, jours, matchs manqués) ;
+- son contrat avec un de nos clubs.
+
+Les transferts et les blessures sont remplacés en entier à chaque lecture, parce que Transfermarkt corrige ses noms et ses dates.
+
+**Comment un joueur est relié.** Jamais par le nom seul.
+- **Le jeu du 6 juillet 2026** : ses liens sont repris tels quels.
+- **Un club** est relié par les valeurs de nos joueurs déjà reliés. Une estimation compte si elle tombe pendant la période où le joueur était sur nos feuilles de match pour ce club, à 30 jours près. Il faut au moins 3 joueurs, et au moins 60 % des votes du club comme de notre équipe. Une équipe réserve (B, II, U19…) n’est jamais reliée à une équipe première. Deux prétendants font un conflit qu’une personne tranche ; aucun lien n’est écrit.
+- **Un joueur** est relié dans un club relié : la même date de naissance et le même nom (complet ou court), chacun le seul de son espèce dans le club. À défaut, la même date de naissance et un mot du nom en commun, s’ils sont la seule paire de ce jour. Un joueur sans date de naissance chez nous n’est pas relié.
+
+**Quarantaine.** Si Transfermarkt donne une autre date de naissance que la nôtre, le lien est mis en doute. Rien de ce joueur n’est alors montré, ni valeur ni contrat, jusqu’à ce qu’une personne regarde.
+
+**Ordre de lecture.** Les joueurs de la saison en cours d’abord, puis les saisons précédentes. Ensuite, chaque élément est relu à son rythme :
+- un joueur de la saison en cours : profil et blessures chaque semaine, valeurs et transferts quand le profil dit qu’ils ont changé, au plus tard tous les mois ;
+- un joueur plus ancien : de tous les 3 mois à une fois par an ;
+- l’effectif d’un club : chaque semaine pour la saison en cours, une fois par an pour les saisons passées.
+
+**Refus.** Transfermarkt peut refuser (contrôle anti-robot, 403, 429). Le lecteur fait alors une pause d’une heure, doublée à chaque refus jusqu’à un jour. Après une semaine de refus, ou 8 refus de suite, il s’arrête jusqu’à ce qu’une personne le relance. Il ne contourne jamais un contrôle.
+
+**Ce qui est choisi, pas mesuré.** Les seuils des liens (3 joueurs, 60 %, 30 jours), les rythmes de relecture et l’intervalle entre deux requêtes.
+
+**Conditions d’usage.** Les conditions d’utilisation de Transfermarkt n’ont pas pu être lues. Les valeurs sont ses propres estimations : le site cite la source.
+
 ## Voie « Pro » (expérimentale, hors production)
 
 Le lecteur Pro (`STATARENA_PRO_API`) n'est pas utilisé en production (README racine). Ses agrégats (orion_pro_season_aggregates.py (ancien backend, supprimé le 10 novembre 2026)) diffèrent sur deux points :

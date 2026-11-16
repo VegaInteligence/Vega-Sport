@@ -137,7 +137,8 @@ Resources:
         - Name: worker
           Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/vega-v2-worker:${ImageTag}'
           Essential: true
-          Command: [--lanes, 'score,details,reference', --side-work, process]
+          # The Transfermarkt reader (vega/transfermarkt.py) runs in a child process of this task.
+          Command: [--lanes, 'score,details,reference', --side-work, process, --transfermarkt, process]
           StopTimeout: 60
           ReadonlyRootFilesystem: true
           Environment:
