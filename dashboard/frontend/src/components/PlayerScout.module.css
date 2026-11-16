@@ -166,8 +166,18 @@
 .rail :global(.player-trophy-shelf) {
   flex: none;
 }
-.chipLink {
+.chipLink,
+.nationLink {
   text-decoration: none;
+}
+.nationLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+}
+.nationLink:hover {
+  color: var(--accent);
 }
 .chipLink:hover {
   background: var(--surface-raised);

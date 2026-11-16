@@ -18,6 +18,7 @@ const SEARCH_AFTER = "competitions";
 /** Pages without a tab light the tab of the section they belong to. */
 const SECTION = {
   archives: "competitions",
+  nations: "clubs",
   "player-ranking": "players",
   "power-ranking": "players",
 };

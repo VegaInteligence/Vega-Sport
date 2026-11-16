@@ -24,6 +24,7 @@ export function routeNeedsSeason(pathname, params) {
       "/methode",
       "/classement-joueurs",
       "/power-ranking",
+      "/nations",
       "/rapport",
       "/calendrier",
       "/joueurs/matchs",

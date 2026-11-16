@@ -1,3 +1,4 @@
+import { nationalFlagCode } from "../services/national-flags.js";
 import React, {
   lazy,
   Suspense,
@@ -413,6 +414,12 @@ function LiveTimeline({ events, match }) {
   );
 }
 
+/** A team's page: its nation's for a national team (named like a country), else its club's. */
+const teamHref = (f, match, team) =>
+  nationalFlagCode(team.name, match.season)
+    ? f.href("/nations/", { id: team.id })
+    : f.href("/clubs/", { id: team.id });
+
 export default function MatchDetail({ match }) {
   const f = useFootball(),
     search = useSearchParams(),
@@ -524,7 +531,7 @@ export default function MatchDetail({ match }) {
         <div className="scoreboard-main">
           <Link
             className="scoreboard-team"
-            href={f.href("/clubs/", { id: match.home.id })}
+            href={teamHref(f, match, match.home)}
           >
             <Media name={homeName} url={match.home.imageUrl} />
             <div>
@@ -562,7 +569,7 @@ export default function MatchDetail({ match }) {
           </div>
           <Link
             className="scoreboard-team scoreboard-away"
-            href={f.href("/clubs/", { id: match.away.id })}
+            href={teamHref(f, match, match.away)}
           >
             <Media name={awayName} url={match.away.imageUrl} />
             <div>
