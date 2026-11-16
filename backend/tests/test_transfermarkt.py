@@ -236,6 +236,35 @@ class ReaderTest(unittest.TestCase):
                 return outcomes
         self.fail("the queue never emptied")
 
+    def test_a_profiles_current_club_votes_like_a_valuation(self):
+        # Three linked players whose profiles name club 244 while they play for our team 7: linked
+        # before any value history is read.
+        reader = tm.Reader(self.db, FakeApi(), interval=0, jitter=0, sleep=lambda s: None, log=lambda *a, **k: None)
+        x = self.db.execute
+        try:
+            x("INSERT INTO core.teams(id, name, country_code) VALUES (7, 'Marseille', 'FRA')")
+            x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, kickoff_at, match_date)
+                 VALUES (700, 30, 2026, 'pitchapi', 'finished', 7, 2, now() - interval '3 days', current_date - 3)""")
+            x("INSERT INTO core.provider_clubs(provider, provider_key, name, read_on) VALUES ('transfermarkt', '244', 'Olympique Marseille', current_date)")
+            for p in (70, 71, 72):
+                x("INSERT INTO core.players(id, name) VALUES (%s, %s)", (p, f"Joueur {p}"))
+                x("INSERT INTO core.player_match_stats(season_id, match_id, team_id, player_id, minutes_played) VALUES (2026, 700, 7, %s, 90)", (p,))
+                x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player', 'transfermarkt', %s, %s)", (f"700{p}", p))
+                x("""INSERT INTO core.provider_players(provider, provider_key, name, provider_club, read_on)
+                     VALUES ('transfermarkt', %s, %s, '244', current_date)""", (f"700{p}", f"Joueur {p}"))
+            self.assertEqual(reader.link_clubs(), 1)
+            self.assertEqual(x("SELECT entity_id, provider_key FROM core.provider_ids WHERE entity_type = 'team'").fetchall(), [(7, "244")])
+            self.assertEqual(x("SELECT evidence FROM ops.provider_links WHERE entity_type = 'team'").fetchall(), [(3,)])
+        finally:
+            x("DELETE FROM ops.provider_links WHERE provider_key IN ('244', '70070', '70071', '70072')")
+            x("DELETE FROM core.provider_ids WHERE provider = 'transfermarkt' AND provider_key IN ('244', '70070', '70071', '70072')")
+            x("DELETE FROM core.provider_players WHERE provider_key IN ('70070', '70071', '70072')")
+            x("DELETE FROM core.provider_clubs WHERE provider_key = '244'")
+            x("DELETE FROM core.player_match_stats WHERE season_id = 2026 AND match_id = 700")
+            x("DELETE FROM core.matches WHERE id = 700")
+            x("DELETE FROM core.players WHERE id IN (70, 71, 72)")
+            x("DELETE FROM core.teams WHERE id = 7")
+
     def test_injuries_come_first_after_profiles_and_clubs(self):
         # Every player page shows them: within a priority they come before searches, values,
         # squads and transfers; a better priority still comes first.
@@ -278,7 +307,8 @@ class ReaderTest(unittest.TestCase):
         # PSG: four of our players valued at club 583 while they played for us; Lyon one only.
         reader.plan(link=True)
         self.assertEqual(q("SELECT entity_id, provider_key FROM core.provider_ids WHERE entity_type = 'team'"), [(1, "583")])
-        self.assertEqual(q("SELECT rule, evidence FROM ops.provider_links WHERE entity_type = 'team'"), [("club_votes", 4)])
+        # Barcola is doubted: his valuations do not vote.
+        self.assertEqual(q("SELECT rule, evidence FROM ops.provider_links WHERE entity_type = 'team'"), [("club_votes", 3)])
         # The values and the transfer read before the club was linked now name our team.
         self.assertEqual(q("SELECT count(*) FROM core.player_market_values WHERE provider_club = '583' AND team_id IS DISTINCT FROM 1"), [(0,)])
         self.assertEqual(q("SELECT to_team_id FROM core.player_transfers WHERE player_id = 10"), [(1,)])

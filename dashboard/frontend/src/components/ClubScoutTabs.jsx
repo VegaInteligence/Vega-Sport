@@ -212,7 +212,12 @@ function SquadFacts({ dossier }) {
             <dt>Valeur estimée</dt>
             <dd>{euros(squad.value)}</dd>
             <small>
-              {squad.league ? `${ordinal(squad.league.rank)} du championnat sur ${squad.league.clubs} · ` : ""}au {readDay(squad.readOn)}
+              {squad.league
+                ? squad.league.valued === squad.league.clubs
+                  ? `${ordinal(squad.league.rank)} du championnat sur ${squad.league.clubs} · `
+                  : `${ordinal(squad.league.rank)} des ${squad.league.valued} clubs estimés du championnat (sur ${squad.league.clubs}) · `
+                : ""}
+              au {readDay(squad.readOn)}
             </small>
           </div>
         )}

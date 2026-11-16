@@ -33,8 +33,8 @@
  * percentile among the players of his role there when they are enough to place him.
  *
  * GET /api/teams/{id}/squad?season= — the club record's squad (117): its value, its top 18's,
- * the players' average age and number, the day it was read, and its place by value in its
- * league when every club of that league has one.
+ * the players' average age and number, the day it was read, and its place by value among the
+ * clubs of its league that have one, once three quarters of them do.
  * GET /api/players/{id}/physical?season= — the player's tracked matches (117), per competition:
  * his figures per 90 minutes and the median of his match top speeds, each placed among the
  * players of his role tracked there for 450 minutes or more.
@@ -68,6 +68,8 @@ const FACED = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/faced$/;
 // GET /api/players/{id}/injuries: a player's injuries, most recent first (api.player_injuries, 116).
 const INJURIES = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/injuries$/;
 const SQUAD = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/squad$/;
+// Share of a league's clubs with a squad value before a club's rank among them is given.
+export const SQUAD_RANKED = 0.75;
 const PHYSICAL = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/physical$/;
 const STYLE = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/style$/;
 // Shots on target a keeper must have faced in the season to be placed among the others.
@@ -287,8 +289,10 @@ export function createProfileRoute(read) {
       put(data, "top18Value", r.top18_value_eur == null ? null : Number(r.top18_value_eur));
       put(data, "averageAge", r.average_age);
       put(data, "size", r.squad_size);
-      // A rank only among clubs that all have a value: otherwise it says nothing.
-      if (r.league_clubs > 1 && r.league_valued === r.league_clubs) data.league = { rank: r.league_rank, clubs: r.league_clubs };
+      // A rank among the league's clubs that have a value, once three quarters of them have one;
+      // the page says how many were valued.
+      if (r.league_clubs > 1 && r.league_valued >= SQUAD_RANKED * r.league_clubs)
+        data.league = { rank: r.league_rank, valued: r.league_valued, clubs: r.league_clubs };
       return respond(req, data);
     }
     const physical = path.match(PHYSICAL);
