@@ -2,6 +2,11 @@
 European part main reads (the previous pipeline's collect_open_matchday.py): leagues and cups
 PitchAPI does not cover, for the season the source publishes.
 
+The source also publishes copies of leagues PitchAPI holds (Premier League, Ligue 1, the UEFA
+cups…), under its own club names: read, they doubled PitchAPI's matches with clubs no rule
+links (« Man City », « Paris »). Such a folder (COVERED, with the PitchAPI league it copies) is
+not read in a season PitchAPI holds that league; in a season it does not, the folder is read.
+
 Each competition is a cup-source edition (cup_key `open-matchday:<folder>:<season>`):
 results and fixtures become matches (source open_matchday), with the half-time score, and
 the team statistics the source gives (shots, shots on target, fouls, corners, per half
@@ -26,6 +31,21 @@ RAW = "https://raw.githubusercontent.com/oladeeayo/open-matchday/master/"
 EUROPE = set("ALB AND ARM AUT AZE BEL BIH BLR BUL CRO CYP CZE DEN ENG ESP EST FIN FRA FRO GEO GER GIB GRE HUN IRE IRL ISL ISR ITA KAZ KOS LIE "
              "LTU LUX LVA MDA MKD MLT MNE NED NIR NOR POL POR ROU RUS SCO SMR SRB SUI SVK SVN SWE TUR UEFA UKR WAL".split())
 FOLDER = re.compile(r"^[A-Z0-9_]+_[a-z0-9-]+$")
+# The folders that copy a league PitchAPI holds, with that league's PitchAPI key (reviewed
+# 17 Nov 2026 against core: same country, same division). Cups and the leagues PitchAPI does not
+# hold (English fifth division and below, Wales, Ireland's second and third, Scotland's lower
+# divisions, Poland's second and third, Cyprus, Kazakhstan, Ukraine, Slovenia…) are not here.
+COVERED = {
+    "AUT_1_bundesliga": "l_3zsMpo", "BEL_1_pro-league": "l_2L6d1F", "CRO_1_hnl": "l_2tFk9k", "CZE_1_chance-liga": "l_0F4I4F",
+    "DEN_1_superliga": "l_49Zmno", "ENG_1_premier-league": "l_4WFCIZ", "ENG_2_championship": "l_4DWyTT", "ENG_3_league-one": "l_0ahLw8",
+    "ENG_4_league-two": "l_1W6idJ", "ESP_1_la-liga": "l_0ErfuF", "ESP_2_segunda-division": "l_3kyHLd", "FIN_1_veikkausliiga": "l_3Ci5Cg",
+    "FRA_1_ligue-1": "l_3FJFUl", "FRA_2_ligue-2": "l_0275VP", "GER_1_bundesliga": "l_1Isor4", "GER_2_2-bundesliga": "l_3hvsne",
+    "GER_3_3-liga": "l_47077Y", "GRE_1_super-league": "l_3xwVF2", "ITA_1_serie-a": "l_0ALvwF", "ITA_2_serie-b": "l_0jy5yE",
+    "NED_1_eredivisie": "l_4H43wr", "NED_2_eerste-divisie": "l_49KZaB", "NOR_1_eliteserien": "l_0uqFK8", "POL_1_ekstraklasa": "l_214sqK",
+    "POR_1_primeira-liga": "l_4QexZg", "ROU_1_liga-1": "l_0kSJLz", "RUS_1_premier-liga": "l_2Mh0jT", "SCO_1_premiership": "l_1LMdEO",
+    "SUI_1_super-league": "l_4d6Bwl", "SVK_1_nike-liga": "l_4MU9Yh", "SWE_1_allsvenskan": "l_1XsMdH", "TUR_1_super-lig": "l_0S1uaf",
+    "UEFA_1_champions-league": "l_0bfbkO", "UEFA_1_europa-league": "l_38d9HA", "UEFA_1_conference-league": "l_2WZ2tt",
+}
 # CSV columns -> team_match_stats columns, per side and period.
 STATS = {"shots": "total_shots", "target": "shots_on_target", "fouls": "fouls", "corners": "corners", "yellow": "yellow_cards", "red": "red_cards"}
 
@@ -126,6 +146,18 @@ def save(conn, folder, name, season, results, fixtures, now):
     return len(keep)
 
 
+def held(conn, folder, season):
+    """Whether PitchAPI holds, in `season` ("YYYY/YYYY+1"), the league `folder` copies."""
+    key = COVERED.get(folder)
+    return key is not None and conn.execute(
+        """SELECT 1 FROM core.provider_ids p
+           JOIN core.competition_seasons cs ON cs.competition_id = p.entity_id AND cs.cup_key IS NULL AND cs.archive_key IS NULL
+           JOIN core.seasons s ON s.id = cs.season_id
+           WHERE p.entity_type = 'competition' AND p.provider = 'pitchapi' AND p.provider_key = %s AND s.label = %s""",
+        (key, sporting_season(season)),
+    ).fetchone() is not None
+
+
 def run(conn, get, scope, now):
     if scope != "europe":
         raise ValueError(scope)
@@ -138,6 +170,8 @@ def run(conn, get, scope, now):
         folder = str(league.get("folder") or "").split("/")[-1]
         if not FOLDER.fullmatch(folder) or folder.split("_", 1)[0] not in EUROPE:
             continue
+        if held(conn, folder, season):
+            continue  # PitchAPI holds this league this season: its copy would double its matches
         try:
             results = rows(get(f"{RAW}data/{folder}/results_{code}.csv", as_text=True)) if league.get("results") else []
             fixtures = rows(get(f"{RAW}data/{folder}/fixtures_{code}.csv", as_text=True)) if league.get("fixtures") else []
