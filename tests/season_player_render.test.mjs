@@ -67,7 +67,7 @@ test("season overview shows the scout layout without a detailed statistics short
   assert.match(html, /<h1 class="player-profile-name">Neymar<\/h1>/);
   assert.match(html, /<h2>Saison 2026\/2027<\/h2>/);
   // The names are read without their « i » (Hint.jsx) and its no-wrap span.
-  const bare = html.replace(/<span class="hint"[^>]*>i<\/span>/g, "").replace(/<span style="white-space:nowrap">([^<]*)<\/span>/g, "$1");
+  const bare = html.replace(/<span class="hint"[^>]*>i<\/span>/g, "").replace(/<span class="term-tail">([^<]*)<\/span>/g, "$1");
   assert.match(bare, /<span>Passes décisives<\/span><strong>0<\/strong>/);
   assert.match(bare, /<h3>Profil statistique<\/h3>/);
   assert.match(bare, /<h3>Indice Vega par rôle<\/h3>/);

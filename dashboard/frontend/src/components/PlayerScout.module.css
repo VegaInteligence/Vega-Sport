@@ -111,8 +111,7 @@
   text-transform: uppercase;
 }
 .railName {
-  display: inline-flex;
-  align-items: center;
+  display: inline;
   font-style: normal;
 }
 .railTitle span {
@@ -947,6 +946,17 @@
 }
 .tableCard :global(.data-table) {
   min-width: 760px;
+}
+/* A table beside a taller card (the comparison's radar): its rows share the card's height. */
+.fillTable {
+  display: flex;
+  flex-direction: column;
+}
+.fillTable > :global(.table-scroll) {
+  flex: 1 1 auto;
+}
+.fillTable :global(.data-table) {
+  height: 100%;
 }
 .tableCard :global(.data-table) th,
 .tableCard :global(.data-table) td {
