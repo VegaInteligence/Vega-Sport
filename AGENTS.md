@@ -29,11 +29,12 @@ Use the [Orion Technology workspace](https://linear.app/oriontechsport), team **
 | GitHub repository | Required Linear label | Scope |
 | --- | --- | --- |
 | `VegaInteligence/Vega-Sport` | `repo:vega-sport` | Sports analytics application, read API, worker and infrastructure |
-| `VegaInteligence/Vega-Prediction` | `repo:vega-prediction` | Prediction research, models, datasets and experiments |
+| `VegaInteligence/Vega-Prediction` | `repo:vega-prediction` | Research: papers, methods, algorithms, datasets and reproducible experiments |
 | `VegaInteligence/Vega-Business` | `repo:vega-business` | Business website, brand presentation and legal pages |
 | `VegaInteligence/Vega-Status` | `repo:vega-status` | Operational status website consuming the Sport API |
 
 - Every issue created or adopted for implementation must carry the label of each repository it affects. Keep its existing component and issue-type labels.
+- Vega-Prediction is the research repository. Do not route an issue there solely because it mentions predictions or models; choose repository labels according to where the work belongs.
 - Choose the Linear project by its actual scope and repository links; its name may differ from the repository. A component such as `Web / UI` or `Prediction / ML` does not identify a repository.
 - For a coordinated task affecting several repositories, apply all relevant repository labels and describe the scope, acceptance criteria and owner for each. Split independently owned implementations into linked issues or sub-issues, each with its own repository labels; do not duplicate the same implementation.
 - Search across projects and include unlabeled legacy issues and related repositories when checking overlap. A repository label is a filter, not proof that work elsewhere cannot overlap.
