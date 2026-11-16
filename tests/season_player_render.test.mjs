@@ -79,7 +79,9 @@ test("season overview shows the scout layout without a detailed statistics short
   // The role index sits inside the statistical profile, as level bars only (no gauge).
   assert.doesNotMatch(bare, /<h3>Indice Vega par rôle<\/h3>/);
   assert.match(bare, /<h4[^>]*>Indice Vega par rôle<\/h4>/);
-  assert.match(bare, /<h3>Scores par compétence<\/h3>/);
+  // The skill scores sit in the same card, beside the radar, as on the club's card.
+  assert.doesNotMatch(bare, /<h3>Scores par compétence<\/h3>/);
+  assert.match(bare, /<h4[^>]*>Scores par compétence<\/h4>/);
   assert.match(bare, /<h3>Profil de jeu<\/h3>/);
   assert.match(bare, /<h3>Forme récente<\/h3>/);
   // The team context lives in « Stats avancées ».

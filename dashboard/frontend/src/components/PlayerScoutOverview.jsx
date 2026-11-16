@@ -4,6 +4,7 @@ import { Segments, Skeleton } from "./UI.jsx";
 import { useCardFold } from "./PhoneFold.jsx";
 import {
   cohortTraits,
+  rankMetric,
   roleAssessments,
   SCOUT_METRICS,
   similarPlayers,
@@ -276,6 +277,65 @@ function SeasonKpis({ profile, season, scope }) {
   );
 }
 
+/** A family's score out of 100: the mean centile of its ranked indicators. */
+function familyScores(target, cohorts, group) {
+  return scoutFamilies(group).map((section) => {
+    const centiles = section.keys
+      .map((key) => {
+        const definition = SCOUT_METRICS[key];
+        if (!definition?.rankable) return null;
+        const ranked = rankMetric(target, key, cohorts);
+        if (ranked.percentile == null) return null;
+        return definition.lowerIsBetter ? 100 - ranked.percentile : ranked.percentile;
+      })
+      .filter((value) => value != null);
+    return {
+      ...section,
+      label: section.title,
+      value: centiles.length
+        ? Math.round(centiles.reduce((sum, value) => sum + value, 0) / centiles.length)
+        : null,
+    };
+  });
+}
+
+/** `own`'s items with their rank among the same items of `others` (higher is better). */
+function withRanks(own, others) {
+  return own.map((item) => {
+    if (item.value == null) return item;
+    const values = others
+      .map((list) => list.find((other) => other.id === item.id)?.value)
+      .filter((value) => value != null);
+    return {
+      ...item,
+      rank: 1 + values.filter((value) => value > item.value).length,
+      of: values.length + 1,
+    };
+  });
+}
+
+/** The club card's phase bars, for a player's roles or skills: name, rank, bar, value. */
+function RankedBars({ items }) {
+  return (
+    <div className={s.roleBars}>
+      {items.map((item) => (
+        <div className={s.roleBar} key={item.id}>
+          <span>
+            <Term>{item.label}</Term>
+            <small>
+              {item.rank
+                ? `${item.rank === 1 ? "1er" : `${item.rank}e`} sur ${number(item.of)}`
+                : "non classé"}
+            </small>
+          </span>
+          {item.value == null ? <span /> : <PercentileBar value={Math.round(item.value)} />}
+          <strong>{item.value == null ? "—" : Math.round(item.value)}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Plain-language tags from the player's centiles at his position, like the club's
 // style tags: a tag needs the indicator in his position's top fifth.
 const STYLE_TAGS = [
@@ -502,33 +562,19 @@ export default function PlayerScoutOverview({
     const others = (cohorts.groups.get(group)?.profiles || [])
       .filter((peer) => peer.id !== profile.id)
       .map((peer) => roleAssessments(peer, cohorts));
-    return own
-      .map((role) => {
-        if (role.value == null) return role;
-        const values = others
-          .map((list) => list.find((item) => item.id === role.id)?.value)
-          .filter((value) => value != null);
-        return {
-          ...role,
-          rank: 1 + values.filter((value) => value > role.value).length,
-          of: values.length + 1,
-        };
-      })
-      .sort((a, b) => (b.value ?? -1) - (a.value ?? -1));
+    return withRanks(own, others).sort(
+      (a, b) => (b.value ?? -1) - (a.value ?? -1),
+    );
   }, [profile, cohorts, group]);
   const best = roles.find((role) => role.value != null);
-  const families = scoutFamilies(group).map((section) => {
-    const ranked = section.keys.map((key) => metrics.get(key)).filter(Boolean);
-    return {
-      ...section,
-      value: ranked.length
-        ? Math.round(
-            ranked.reduce((sum, item) => sum + item.percentile, 0) /
-              ranked.length,
-          )
-        : null,
-    };
-  });
+  // Each skill score with the player's rank among the peers of his position.
+  const families = useMemo(() => {
+    const own = familyScores(profile, cohorts, group);
+    const others = (cohorts.groups.get(group)?.profiles || [])
+      .filter((peer) => peer.id !== profile.id)
+      .map((peer) => familyScores(peer, cohorts, group));
+    return withRanks(own, others);
+  }, [profile, cohorts, group]);
   const traits = cohortTraits(profile, cohorts);
   const tags = playerStyleTags(metrics);
   const enoughMinutes = profile.minutes >= cohorts.minMinutes;
@@ -546,56 +592,45 @@ export default function PlayerScoutOverview({
         >
           <Pending ready={ready}>
             <div className={s.profileGrid}>
-              {enoughMinutes ? (
-                <PercentilePizza items={pizza} cohort={peers} size={520} />
-              ) : (
-                <p className={s.note}>
-                  {number(profile.minutes)} minutes jouées : les centiles
-                  demandent au moins {cohorts.minMinutes} minutes.
-                </p>
-              )}
-              <div className={s.profileSide}>
-                <div>
-                  <h4 className={s.subTitle}>Indice Vega par rôle</h4>
-                  {best ? (
-                    <div className={s.roleBars}>
-                      {roles.map((role) => (
-                        <div className={s.roleBar} key={role.id}>
-                          <span>
-                            <Term>{role.label}</Term>
-                            <small>
-                              {role.rank
-                                ? `${role.rank === 1 ? "1er" : `${role.rank}e`} sur ${number(role.of)}`
-                                : "non classé"}
-                            </small>
-                          </span>
-                          {role.value == null ? (
-                            <span />
-                          ) : (
-                            <PercentileBar value={Math.round(role.value)} />
-                          )}
-                          <strong>
-                            {role.value == null ? "—" : Math.round(role.value)}
-                          </strong>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className={s.note}>
-                      Aucun indice de rôle calculable sur cette période.
-                    </p>
-                  )}
-                </div>
-                {enoughMinutes && (
-                  <div>
+              <div>
+                {enoughMinutes ? (
+                  <>
+                    <PercentilePizza items={pizza} cohort={peers} size={520} />
                     <ToneLegend />
                     <p className={s.note} style={{ marginTop: 8 }}>
                       Un tiret signale un indicateur non classé : il doit être
                       renseigné sur tous les matchs joués et partagé par au moins{" "}
                       {cohorts.minPeers} joueurs.
                     </p>
-                  </div>
+                  </>
+                ) : (
+                  <p className={s.note}>
+                    {number(profile.minutes)} minutes jouées : les centiles
+                    demandent au moins {cohorts.minMinutes} minutes.
+                  </p>
                 )}
+              </div>
+              <div className={s.profileSide}>
+                <div>
+                  <h4 className={s.subTitle}>Indice Vega par rôle</h4>
+                  {best ? (
+                    <RankedBars items={roles} />
+                  ) : (
+                    <p className={s.note}>
+                      Aucun indice de rôle calculable sur cette période.
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <h4 className={s.subTitle}>Scores par compétence</h4>
+                  {families.some((family) => family.value != null) ? (
+                    <RankedBars items={families} />
+                  ) : (
+                    <p className={s.note}>
+                      Aucun score de compétence calculable sur cette période.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
             {(tags.length > 0 || onTab) && (
@@ -618,25 +653,6 @@ export default function PlayerScoutOverview({
                 )}
               </div>
             )}
-          </Pending>
-        </Card>
-      </div>
-      <div className={s.block}>
-        <Card
-          fold
-          title="Scores par compétence"
-          text="Synthèse sur 100 des indicateurs classés de chaque famille."
-        >
-          <Pending ready={ready}>
-            <div className={`${s.skills} ${s.skillsLine}`}>
-              {families.map((family) => (
-                <div className={s.skill} key={family.id}>
-                  <span><Term>{family.title}</Term></span>
-                  <strong>{family.value ?? "—"}</strong>
-                  <PercentileBar value={family.value ?? 0} />
-                </div>
-              ))}
-            </div>
           </Pending>
         </Card>
       </div>
