@@ -49,3 +49,16 @@ test("expanded highlights retain their chronological order", () => {
   const result = competitionHighlights(matches, now, 7);
   assert.deepEqual(result.recent.map((m) => m.id), ["r9", "r8", "r7", "r6", "r5", "r4", "r3"]);
 });
+
+test("a short table shows fewer next matches before the column runs past it", async () => {
+  const { nextUpcomingLimit, recentResultRoom } = await import("../dashboard/frontend/src/services/competition-highlights.js");
+  const sizes = { standingsHeight: 900, upcomingHeight: 760, headerHeight: 50, rowHeight: 60 };
+  assert.equal(recentResultRoom(sizes), 1);
+  // One result only would fit: one next match fewer, down to one.
+  assert.equal(nextUpcomingLimit({ limit: 4, room: 1, upcomingRow: 80, resultRow: 60 }), 3);
+  assert.equal(nextUpcomingLimit({ limit: 1, room: 0, upcomingRow: 80, resultRow: 60 }), 1);
+  // Room for two results and an upcoming row again: one more, up to four.
+  assert.equal(nextUpcomingLimit({ limit: 3, room: 4, upcomingRow: 80, resultRow: 60 }), 4);
+  assert.equal(nextUpcomingLimit({ limit: 3, room: 3, upcomingRow: 80, resultRow: 60 }), 3);
+  assert.equal(nextUpcomingLimit({ limit: 4, room: 9, upcomingRow: 80, resultRow: 60 }), 4);
+});

@@ -29,6 +29,8 @@ test("competition overview renders linked fixtures, results, scores and empty st
     return out.exports.default;
   };
   const stubs = {
+    // The « i » beside a value (Hint.jsx) renders its name alone here.
+    "./Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
     "react": React,
     "next/link": { __esModule: true, default: Link },
     "./UI.jsx": { Card, Media: () => null },
@@ -40,6 +42,7 @@ test("competition overview renders linked fixtures, results, scores and empty st
     "../services/league-levels.js": { leagueStrength: levelService.leagueStrength, useLeagueLevels: () => levels },
     "./LeagueStrengthCard.jsx": { __esModule: true, default: await compile("dashboard/frontend/src/components/LeagueStrengthCard.jsx", {
       "react": React, "./UI.jsx": { Card }, "../services/format.js": { number: (value) => String(value) },
+      "./Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
       "../services/competition-selector.js": { COUNTRY_NAMES: { ENG: "Angleterre" } },
     }) },
   };
