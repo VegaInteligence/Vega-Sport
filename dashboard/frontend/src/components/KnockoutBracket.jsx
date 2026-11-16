@@ -54,7 +54,7 @@ export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams =
       {early && <details className="knockout-early"><summary>Trente-deuxièmes de finale · {early.matches.length} matchs</summary><div className="knockout-preliminary-grid">{early.matches.map((match) => <MatchCard key={match.key} match={match} hrefForMatch={hrefForMatch} nationalTeams={nationalTeams} season={season} />)}</div></details>}
       {bracket.preliminary && <section className="knockout-preliminary"><h3>{bracket.preliminary.label}</h3><div className="knockout-preliminary-grid">{bracket.preliminary.matches.map((match) => <MatchCard key={match.key} match={match} hrefForMatch={hrefForMatch} nationalTeams={nationalTeams} season={season} />)}</div></section>}
       {rounds.length > 0 && <>
-        {!bracket.connected && rounds.length > 1 && <p className="knockout-note">Les matchs sont regroupés par tour lorsque leurs croisements ne sont pas précisés par la source.</p>}
+        {!bracket.connected && rounds.length > 1 && <p className="knockout-note">Les matchs sont regroupés par tour lorsque leurs croisements ne sont pas connus.</p>}
         <p className="knockout-scroll-hint" aria-hidden="true">Faites défiler pour voir les autres tours.</p>
         <div className="knockout-scroll" role="region" aria-label="Parcourir le tableau éliminatoire" tabIndex="0">
           <div className={"knockout-columns" + (bracket.connected ? " knockout-columns-linked" : "")} style={{ "--knockout-slots": rounds[0].matches.length }}>

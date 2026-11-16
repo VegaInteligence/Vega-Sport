@@ -55,6 +55,8 @@ const PASSING = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/passing$/;
 const AGE_PROFILE = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/age-profile$/;
 const ACTIONS = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/actions$/;
 const FACED = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/faced$/;
+// GET /api/players/{id}/injuries: a player's injuries, most recent first (api.player_injuries, 116).
+const INJURIES = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/injuries$/;
 // Shots on target a keeper must have faced in the season to be placed among the others.
 export const FACED_MIN_SHOTS = 30;
 
@@ -156,6 +158,26 @@ function respond(req, data) {
 
 export function createProfileRoute(read) {
   return async (req, path, params) => {
+    const injuries = path.match(INJURIES);
+    if (injuries) {
+      validateParams(params, []);
+      const [rows, [known]] = await Promise.all([
+        read(
+          `SELECT kind, label, start_date::text AS start_date, end_date::text AS end_date, days, matches_missed, season_year
+           FROM api.player_injuries WHERE player_key=api.internal_id('player',$1)
+           ORDER BY start_date DESC, label`,
+          [injuries[1]],
+        ),
+        read(`SELECT read_at FROM api.player_injury_reads WHERE player_key=api.internal_id('player',$1) LIMIT 1`, [injuries[1]]),
+      ]);
+      // A player whose injuries were never read is not known: no list, rather than an empty one.
+      if (!known) reject(404, "Donnée indisponible.");
+      return respond(req, {
+        id: injuries[1],
+        injuries: rows.map((r) => ({ kind: r.kind ?? null, label: r.label ?? null, start: r.start_date, end: r.end_date ?? null,
+          days: r.days ?? null, matchesMissed: r.matches_missed ?? null, season: r.season_year ?? null })),
+      });
+    }
     const partners = path.match(PARTNERS);
     if (partners) {
       validateParams(params, ["season"]);

@@ -53,6 +53,8 @@ export const PLAYER_COUNT_METRICS = [
   "chancesCreated", "bigChancesCreated", "passesFinalThird", "dribbles", "touches",
   "passesAccurate", "passesAttempted", "duelsWon", "duelsLost", "tackles", "interceptions",
   "recoveries", "clearances", "defensiveActions", "blocks", "saves", "goalsPrevented",
+  // Fouls committed and suffered, balls lost (116): the list's rows sum them too.
+  "fouls", "wasFouled", "dispossessed",
 ];
 const metricKeys = [...PLAYER_COUNT_METRICS, "passAccuracy", "duelRate"];
 const conditionKeys = new Set([

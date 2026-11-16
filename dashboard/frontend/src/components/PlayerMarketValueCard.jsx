@@ -94,7 +94,7 @@ export default function PlayerMarketValueCard({
       <div className={s.marketHeading}>
         <div>
           <h2>Valeur marchande</h2>
-          <p className={s.note}>Historique des estimations · source Transfermarkt</p>
+          <p className={s.note}>Historique des estimations</p>
         </div>
         {latest && (
           <div className={s.marketLatest}>

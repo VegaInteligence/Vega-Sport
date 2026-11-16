@@ -20,7 +20,7 @@ function Groups({ matches }) {
         </table></div>
       </section>)}
     </div>
-    <p className="nations-note">Classements calculés à partir des résultats disponibles.{groups.some((group) => group.unresolved) ? " Les derniers critères de départage ne sont pas fournis par la source." : ""}</p>
+    <p className="nations-note">Classements calculés à partir des résultats disponibles.{groups.some((group) => group.unresolved) ? " Les derniers critères de départage ne sont pas connus." : ""}</p>
   </>;
 }
 export default function NationsCompetition({ competition }) {

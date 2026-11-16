@@ -32,12 +32,8 @@ import {
   nationalTeamName,
 } from "../services/national-flags.js";
 import { PositionsPitch } from "./PlayerScoutCharts.jsx";
-import {
-  FAKE_AVAILABILITY,
-  FAKE_FACTS,
-  FAKE_POTENTIAL,
-  FakeBadge,
-} from "./PlayerScoutDemo.jsx";
+import { FakeBadge } from "./PlayerScoutDemo.jsx";
+import { availability, injuryRows, usePlayerInjuries } from "../services/player-availability.js";
 import s from "./PlayerScout.module.css";
 
 // Formation lines placed on a horizontal pitch, attack to the right.
@@ -144,7 +140,6 @@ export default function PlayerScoutRail({
     Boolean(id && f.manifest),
   );
   const nation = useMemo(() => selection(history.value), [history.value]);
-  const known = new Set(published.map((item) => item.label));
   const timeTeam = playingTime?.team;
   const playerMeta = f.data?.meta;
   const generation = compactGeneration(f.manifest);
@@ -232,11 +227,15 @@ export default function PlayerScoutRail({
   } else if (calendar.loading) {
     timeFact.note = <Skeleton kind="inline" label="Chargement du temps de jeu…" />;
   }
+  // The contract's end is shown by its month alone: no date and club line under it.
   const facts = [
-    ...published.filter((item) => item.label !== "Nom complet"),
-    ...FAKE_FACTS.filter((item) => !known.has(item.label)),
+    ...published
+      .filter((item) => item.label !== "Nom complet")
+      .map((item) => (item.label === "Fin de contrat" ? { ...item, note: undefined } : item)),
     timeFact,
   ];
+  const injuries = usePlayerInjuries(id);
+  const absent = injuries.value ? availability(injuryRows(injuries.value)) : null;
   if (nation) facts.splice(Math.min(4, facts.length), 0, nation);
   const role = profile?.role;
   const league = mainCompetition(profile, season);
@@ -322,13 +321,6 @@ export default function PlayerScoutRail({
             <span>Niveau actuel</span>
           </div>
           <div>
-            <strong>{FAKE_POTENTIAL}</strong>
-            <span>Potentiel</span>
-            <div>
-              <FakeBadge short />
-            </div>
-          </div>
-          <div>
             <strong>
               {vega?.rank ? (vega.rank === 1 ? "1er" : `${vega.rank}e`) : "—"}
             </strong>
@@ -352,22 +344,26 @@ export default function PlayerScoutRail({
       )}
       <div className={`${s.railSection} phone-fold-part`}>
         <p className={s.railTitle}>
-          Disponibilité <FakeBadge />
+          Disponibilité <span>12 derniers mois</span>
         </p>
-        <div className={s.indexRow}>
-          <div>
-            <strong>{FAKE_AVAILABILITY.count}</strong>
-            <span>absences</span>
+        {injuries.loading ? (
+          <Skeleton label="Chargement de la disponibilité…" lines={1} />
+        ) : (
+          <div className={s.indexRow}>
+            <div>
+              <strong>{absent ? number(absent.count) : "—"}</strong>
+              <span>{absent?.count === 1 ? "absence" : "absences"}</span>
+            </div>
+            <div>
+              <strong>{absent ? `${number(absent.weeks)} sem.` : "—"}</strong>
+              <span>d’arrêt cumulé</span>
+            </div>
+            <div>
+              <strong>{absent?.current != null ? `${number(absent.current)} j` : "—"}</strong>
+              <span>{!absent ? "pas encore relevée" : absent.current != null ? "absence en cours" : "disponible"}</span>
+            </div>
           </div>
-          <div>
-            <strong>{FAKE_AVAILABILITY.weeks} sem.</strong>
-            <span>d’arrêt cumulé</span>
-          </div>
-          <div>
-            <strong>{FAKE_AVAILABILITY.current} j</strong>
-            <span>cette saison</span>
-          </div>
-        </div>
+        )}
         {onTab && (
           <button
             type="button"

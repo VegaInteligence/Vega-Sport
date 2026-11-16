@@ -26,7 +26,7 @@ import {
 import s from "./PlayerScout.module.css";
 
 const FAKE_TITLE =
-  "Exemple repris de la maquette C : à remplacer dès que la source est branchée.";
+  "Exemple de maquette : ce n’est pas une donnée réelle.";
 
 /** Visible marker on every value that is not real data. */
 export function FakeBadge({ short = false }) {
@@ -282,7 +282,7 @@ export function InjuriesSection() {
 
 export function FakePhysical() {
   return (
-    <FakeZone text="Aucune source de suivi physique (vitesse, distances) n’est branchée : exemple de la maquette.">
+    <FakeZone text="Le suivi physique (vitesse, distances) n’est pas encore disponible : exemple de maquette.">
       <MockPhysical />
     </FakeZone>
   );

@@ -90,8 +90,8 @@ export default function CupCompetition({ competition, initialSeason }) {
       {mode === "archive" ? <p className="cup-source">Archive {season}</p> : mode === "openligadb" ? <p className="cup-source">Résultats et calendrier</p> : competition.source === "open-matchday" ? (competition.sourceDate && <p className="cup-source">Données du {date(competition.sourceDate)}</p>) : <p className="cup-source">{competition.coverage || "Résultats et calendrier"}</p>}
       {competition.sourceKey === "euro" && season === "2028" && <p className="cup-source">Les équipes indiquées par des codes restent à déterminer.</p>}
       <AsyncState resource={resource}>
-        {(value) => value.unavailable ? <div className="cup-bracket-unavailable"><Empty>Les tours de cette édition ne sont pas disponibles dans la source.</Empty>{archive && season !== archive.season && <button className="button button-secondary" onClick={() => setSeason(archive.season)}>Voir le tableau {archive.season}</button>}</div> : <>
-          {value.matches.some((match) => match.status === "scheduled" && match.date && match.date < parisDay(Date.now())) && <p className="cup-source">Certains scores de cette édition ne sont pas renseignés dans la source.</p>}
+        {(value) => value.unavailable ? <div className="cup-bracket-unavailable"><Empty>Les tours de cette édition ne sont pas disponibles.</Empty>{archive && season !== archive.season && <button className="button button-secondary" onClick={() => setSeason(archive.season)}>Voir le tableau {archive.season}</button>}</div> : <>
+          {value.matches.some((match) => match.status === "scheduled" && match.date && match.date < parisDay(Date.now())) && <p className="cup-source">Certains scores de cette édition ne sont pas encore renseignés.</p>}
           {view === "bracket" ? <KnockoutBracket matches={value.matches} nationalTeams={nationalTeams} season={season} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} />}
         </>}
       </AsyncState>
@@ -103,7 +103,7 @@ export function CupMatchList({ matches, status, query, page, onPage, nationalTea
   const pages = Math.max(1, Math.ceil(rows.length / 30)), current = Math.min(page, pages);
   return <>
     <div className="cup-match-list">{rows.slice((current - 1) * 30, current * 30).map((match) => <CupMatch key={match.key} match={match} nationalTeams={nationalTeams} season={season} />)}</div>
-    {!rows.length && <Empty>{status === "scheduled" ? "Aucune rencontre à venir disponible dans cette source." : "Aucun résultat disponible pour cette sélection."}</Empty>}
+    {!rows.length && <Empty>{status === "scheduled" ? "Aucune rencontre à venir disponible." : "Aucun résultat disponible pour cette sélection."}</Empty>}
     <Pager page={current} total={pages} onChange={onPage} />
   </>;
 }

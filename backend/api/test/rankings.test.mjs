@@ -102,6 +102,16 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   // A season the player is not ranked in (the seed ranks only p_aaaab1 in 2024/2025, for his rate over two seasons).
   assert.equal((await get("/api/rankings/power/player?season=2024/2025&player=p_aaaab4")).response.status, 404);
   assert.equal((await get("/api/rankings/power/player?season=2025/2026&player=aaaab1")).response.status, 400);
+  // His Vega score season by season, oldest first (the player page's index history).
+  const history = (await get("/api/rankings/power/history?player=p_aaaab1")).body;
+  assert.equal(history.id, "p_aaaab1");
+  assert.deepEqual(history.seasons.map((r) => r.season), [...history.seasons.map((r) => r.season)].sort());
+  assert.deepEqual(Object.keys(history.seasons.at(-1)), ["season", "score", "rank", "roleRank", "position", "team", "minutes", "matches", "provisional"]);
+  assert.deepEqual([history.seasons.at(-1).season, history.seasons.at(-1).score, history.seasons.at(-1).position], ["2025/2026", 87.5, "Avant-centre"]);
+  assert.equal((await get("/api/rankings/power/history?player=p_zzzzz9")).response.status, 404);
+  assert.equal((await get("/api/rankings/power/history?player=aaaab1")).response.status, 400);
+  assert.equal((await get("/api/rankings/power/history")).response.status, 400);
+  assert.equal((await get("/api/rankings/power/history?player=p_aaaab1&season=2025/2026")).response.status, 400);
   // A match's grades: how exceptional for his role, whatever his season; ranked among those shown.
   const graded = (await get("/api/rankings/match?match=m_aaaaa1")).body;
   assert.deepEqual(graded.grades.map((g) => [g.playerId, g.minutes, g.grade, g.rank]), [

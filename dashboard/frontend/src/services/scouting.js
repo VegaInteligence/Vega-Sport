@@ -14,7 +14,7 @@ const definitions = {
   xg: "Somme des probabilités de but des tirs renseignés.",
   npxg: "Buts attendus en excluant les penalties, lorsqu’ils sont renseignés.",
   xgot: "Buts attendus après placement du tir cadré.",
-  xa: "Passes décisives attendues. Classées lorsque la source les publie sur tous les matchs du joueur.",
+  xa: "Passes décisives attendues. Classées lorsqu’elles sont renseignées sur tous les matchs du joueur.",
   shots: "Tirs tentés renseignés, indépendamment de leur résultat.",
   shotsOnTarget: "Tirs cadrés renseignés.",
   touchesBox: "Ballons touchés dans la surface adverse.",
@@ -40,6 +40,9 @@ const definitions = {
   defensiveActions:
     "Agrégat d’actions défensives fourni dans les observations.",
   blocks: "Tirs bloqués par le joueur.",
+  wasFouled: "Fautes subies : les fautes commises sur le joueur.",
+  dispossessed: "Ballons perdus balle au pied, sur un tacle ou une pression adverse.",
+  fouls: "Fautes commises par le joueur.",
   saves: "Arrêts du gardien.",
   goalsPrevented:
     "Buts évités, disponible sur une partie des gardiens.",
@@ -53,7 +56,6 @@ export const SCOUT_METRICS = Object.fromEntries(
       // Every measure is ranked where it is observed on all of a player's matches:
       // the API gives a blank its zero where the source publishes the statistic.
       rankable: true,
-      source: "PitchAPI",
     },
   ]),
 );
