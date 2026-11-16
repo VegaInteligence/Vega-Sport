@@ -331,6 +331,14 @@ function CompactOverview() {
         refreshManifest: f.refreshManifest,
       },
     );
+  // The synthesis refreshes in the background: the last one stays on screen, and a failed
+  // refresh is tried again a minute later without a word on the page.
+  const retrySummary = summary.retry;
+  useEffect(() => {
+    if (!summary.refreshError || !retrySummary) return undefined;
+    const timer = setTimeout(retrySummary, 60_000);
+    return () => clearTimeout(timer);
+  }, [summary.refreshError, retrySummary]);
   useEffect(() => {
     if (!f.preferencesReady || !research?.ready) return;
     mirrorHomeState({
@@ -399,17 +407,6 @@ function CompactOverview() {
           });
         return (
           <>
-            {summary.refreshing && (
-              <p className="notice" role="status">
-                Actualisation de la synthèse…
-              </p>
-            )}
-            {summary.refreshError && (
-              <p className="notice notice-warning" role="status">
-                La dernière synthèse reste affichée. {summary.refreshError}{" "}
-                <button onClick={summary.retry}>Réessayer</button>
-              </p>
-            )}
             <OverviewContent
               f={f}
               scope={scope}
