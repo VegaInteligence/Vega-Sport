@@ -6,7 +6,7 @@ This repository is **Vega-Sport**. Its required Linear label is **`repo:vega-spo
 
 ## Project identity
 
-- Repository: `VegaInteligence/Vega-Sport`; sports analytics application, read API, worker and AWS infrastructure.
+- Repository: `VegaInteligence/Vega-Sport`; sports analytics application: dashboard frontend, read API, worker and AWS infrastructure.
 - Consult `README.md` and the relevant component documentation for current architecture and commands.
 - Read `dashboard/frontend/AGENTS.md` for additional Next.js guidance before changing the frontend.
 
@@ -24,11 +24,11 @@ Prevent duplicate implementations, preserve the reasoning behind decisions, and 
 
 ### Repository identity
 
-Use the [Orion Technology workspace](https://linear.app/oriontechsport), team **Orion Technology (ORI)**. Its **Repository** label group allows multiple selections and distinguishes these repositories independently of project, component, or issue type:
+Use the [Vega Inteligence workspace](https://linear.app/vegainteligence), team **Vega Inteligence (VI)**. Its **Repository** label group allows multiple selections and distinguishes these repositories independently of project, component, or issue type:
 
 | GitHub repository | Required Linear label | Scope |
 | --- | --- | --- |
-| `VegaInteligence/Vega-Sport` | `repo:vega-sport` | Sports analytics application, read API, worker and infrastructure |
+| `VegaInteligence/Vega-Sport` | `repo:vega-sport` | Sports application: dashboard frontend, backend/API, worker and infrastructure |
 | `VegaInteligence/Vega-Prediction` | `repo:vega-prediction` | Research: papers, methods, algorithms, datasets and reproducible experiments |
 | `VegaInteligence/Vega-Business` | `repo:vega-business` | Business website, brand presentation and legal pages |
 | `VegaInteligence/Vega-Status` | `repo:vega-status` | Operational status website consuming the Sport API |
