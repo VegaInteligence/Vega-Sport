@@ -226,6 +226,22 @@ class ReaderTest(unittest.TestCase):
                 return outcomes
         self.fail("the queue never emptied")
 
+    def test_injuries_come_first_after_profiles_and_clubs(self):
+        # Every player page shows them: within a priority they come before searches, values,
+        # squads and transfers; a better priority still comes first.
+        reader = tm.Reader(self.db, FakeApi(), interval=0, jitter=0, sleep=lambda s: None, log=lambda *a, **k: None)
+        rows = [("search", "77001:2026", 1), ("values", "77002", 1), ("transfers", "77003", 1), ("squad", "77004:2026", 1),
+                ("injuries", "77005", 1), ("injuries", "77006", 2)]
+        try:
+            for kind, key, priority in rows:
+                self.db.execute("""INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at)
+                                   VALUES (%s, %s, %s, now() - interval '1 hour')""", (kind, key, priority))
+            self.assertEqual(reader.next_units(), ("injuries", [("77005", 1)]))
+            self.db.execute("UPDATE ops.transfermarkt_reads SET priority = 3 WHERE provider_key = '77005'")
+            self.assertEqual(reader.next_units(), ("search", [("77001:2026", 1)]))
+        finally:
+            self.db.execute("DELETE FROM ops.transfermarkt_reads WHERE provider_key LIKE '7700%'")
+
     def test_the_reader_links_reads_and_pauses(self):
         api = FakeApi()
         now = datetime.now(timezone.utc)
