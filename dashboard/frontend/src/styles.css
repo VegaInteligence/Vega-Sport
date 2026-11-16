@@ -2590,8 +2590,7 @@ th[aria-sort="descending"] .sort-indicator {
 .stadium-link {
   border: 0; padding: 0; background: none; color: var(--ink-strong);
   font: inherit; font-size: var(--text-lg); font-weight: 600;
-  text-align: left; text-decoration: underline; text-decoration-color: var(--accent);
-  text-underline-offset: 4px; cursor: pointer;
+  text-align: left; text-decoration: none; cursor: pointer;
 }
 .stadium-link:hover { color: var(--accent); }
 .stadium-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
