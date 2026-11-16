@@ -78,6 +78,14 @@ Use the [Orion Technology workspace](https://linear.app/oriontechsport), team **
 - At the end of every E2E run, save an inspectable evidence artifact containing the required setup and inputs, exact rerun command, expected outcomes, actual results, and relevant logs, traces, screenshots, or output files. Another person or agent must be able to reproduce the run and verify its conclusions.
 - Report failures and unverified behavior accurately. Never describe an unexecuted check as passed.
 
+## Frontend design approval
+
+- For frontend-related work, create a visual mockup or interactive prototype of the proposed direction before implementing the frontend changes.
+- Present the mockup to the user in a reviewable form (preview link or screenshots). Show the affected screens, layout, hierarchy and key interactions or states; include desktop and mobile views when relevant.
+- Wait for the user's explicit validation of the design direction before implementation. Preparing the mockup or prototype is part of this review step; do not treat an issue's In Progress status or silence as design approval.
+- Reuse an already approved mockup when it still covers the requested scope; do not ask for the same approval again. If the direction or scope changes materially, update the mockup and obtain validation for the changed parts before implementing them.
+- Record the approved direction and requested changes or exclusions in WORKLOG.md and, when an issue exists, its Linear comments. Keep the implementation aligned with that decision and validate the delivered frontend through the required E2E workflow.
+
 ## Interface design
 
 - Cut taglines, helper text, and secondary labels.
