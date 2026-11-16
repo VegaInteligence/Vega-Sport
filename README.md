@@ -23,6 +23,10 @@ Les pages et interactions de l'application se développent ici, avec les donnée
 
 Vega-Status lit `GET /api/ops/status`, dont la route et les vues SQL sont maintenues dans ce dépôt. Les changements de ce contrat se coordonnent entre Sport et Status. Vega-Business présente le projet et renvoie vers les rubriques de l'application ; ses pages et son déploiement sont maintenus dans son propre dépôt.
 
+## Contribuer
+
+Lire [AGENTS.md](AGENTS.md) avant de commencer : coordination dans Linear, vérification des tâches en cours, propriété du travail et preuves de validation. Pour tout travail frontend, présenter une maquette ou un prototype et obtenir la validation explicite de l'utilisateur avant l'implémentation. Une direction déjà approuvée reste valable à périmètre inchangé ; les changements importants doivent être validés.
+
 ## Ce que montre le site
 
 | Page | Contenu |
