@@ -100,7 +100,7 @@ function Style({ match, teams }) {
   const groups = styleGroups(teams, match);
   if (!groups) return null;
   return (
-    <Card title="Comment chaque équipe a joué">
+    <Card title="Comment chaque équipe a joué" className={s.fillCard}>
       <p className={s.muted}>Le meilleur des deux en plein. Chaque ligne a son « i ».</p>
       <div className={s.mirror}>
         {groups.map((group) => (
@@ -192,8 +192,12 @@ function Values({ match, players, images }) {
   if (!top.length) return null;
   const max = Math.max(...top.map((p) => p.possession_value.vaep_total), 0.01);
   return (
-    <Card title={<Term label="Valeur des actions" hint="Ce que toutes ses actions ont changé aux chances de son équipe de marquer et d’encaisser.">Les actions qui ont pesé le plus</Term>}>
+    <Card
+      className={s.fillCard}
+      title={<Term label="Valeur des actions" hint="Ce que toutes ses actions ont changé aux chances de son équipe de marquer et d’encaisser.">Les actions qui ont pesé le plus</Term>}
+    >
       <p className={s.muted}>Survolez un joueur pour le détail, cliquez pour sa fiche.</p>
+      <div className={s.valueList}>
       {top.map((p) => {
         const v = p.possession_value, home = p.team_id === match.home.id;
         const detail = (
@@ -229,6 +233,7 @@ function Values({ match, players, images }) {
           </Link>
         );
       })}
+      </div>
       <div className={s.legend}>
         <span><i className={s.dot} style={{ background: HOME }} /> en attaque</span>
         <span><i className={s.dot} style={{ background: "var(--good, #34d399)" }} /> en défense</span>
@@ -432,7 +437,7 @@ export default function MatchAnalyses({ match }) {
   return (
     <div className={s.stack}>
       <Momentum match={match} points={momentum.data?.points} goals={goals} />
-      <div className={s.grid2}>
+      <div className={`${s.grid2} ${s.balanced}`}>
         <Style match={match} teams={advanced.data?.teams} />
         <div className={s.stack}>
           <Halves match={match} periods={periods} />

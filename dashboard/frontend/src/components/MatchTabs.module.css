@@ -783,3 +783,34 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Two columns that end together (the team style beside the halves and the action values):
+   the shorter side stretches, its rows spread over the height it is given. */
+.valueList {
+  display: grid;
+}
+@media (min-width: 1101px) {
+  .balanced {
+    align-items: stretch;
+  }
+  .balanced > .stack {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .fillCard {
+    display: flex;
+    flex-direction: column;
+  }
+  .fillCard > :global(.card-body) {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+  .fillCard .mirror {
+    flex: 1 1 auto;
+    align-content: space-between;
+  }
+  .fillCard .valueList {
+    flex: 1 1 auto;
+    align-content: space-around;
+  }
+}
