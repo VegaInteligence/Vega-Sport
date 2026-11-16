@@ -63,7 +63,7 @@ test("his share of the passes is placed among his role once he is in five networ
   assert.equal(passShare(rows, 99), null);
 });
 
-test("a club's squad: its record's figures, and a place only when every club of its league has one", { skip }, async () => {
+test("a club's squad: its record's figures, and a place once three quarters of its league have one", { skip }, async () => {
   assert.equal((await get("/api/teams/t_aaaaa1/squad?season=2025/2026")).response.status, 404);
   assert.equal((await get("/api/teams/t_aaaaa1/squad")).response.status, 400);
   for (const [team, key, value] of [[1, "131", 1300000000], [2, "418", 500000000]]) {
@@ -74,12 +74,16 @@ test("a club's squad: its record's figures, and a place only when every club of 
   const { response, body } = await get("/api/teams/t_aaaaa1/squad?season=2025/2026");
   assert.equal(response.status, 200);
   assert.deepEqual(body.data, { id: "t_aaaaa1", season: "2025/2026", value: 1300000000, readOn: "2026-11-16", top18Value: 1210000000, averageAge: 25.4, size: 27 });
-  for (const [team, key] of [[3, "583"], [4, "1041"]]) {
+  const valued = async (team, key) => {
     await owner.query("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team', 'transfermarkt', $1, $2)", [key, team]);
     await owner.query("INSERT INTO core.provider_clubs(provider, provider_key, name, read_on, squad_value_eur) VALUES ('transfermarkt', $1, 'Club', '2026-11-16', 800000000)", [key]);
-  }
-  assert.deepEqual((await get("/api/teams/t_aaaaa2/squad?season=2025/2026")).body.data.league, { rank: 4, clubs: 4 });
-  assert.deepEqual((await get("/api/teams/t_aaaaa1/squad?season=2025/2026")).body.data.league, { rank: 1, clubs: 4 });
+  };
+  // Three clubs of four valued: a rank among them, with how many they are.
+  await valued(3, "583");
+  assert.deepEqual((await get("/api/teams/t_aaaaa2/squad?season=2025/2026")).body.data.league, { rank: 3, valued: 3, clubs: 4 });
+  await valued(4, "1041");
+  assert.deepEqual((await get("/api/teams/t_aaaaa2/squad?season=2025/2026")).body.data.league, { rank: 4, valued: 4, clubs: 4 });
+  assert.deepEqual((await get("/api/teams/t_aaaaa1/squad?season=2025/2026")).body.data.league, { rank: 1, valued: 4, clubs: 4 });
   // A quarantined link shows nothing.
   await owner.query("INSERT INTO ops.provider_links(entity_type, provider, provider_key, entity_id, rule, evidence, quarantined_at, quarantine_reason) VALUES ('team', 'transfermarkt', '131', 1, 'club_votes', 3, now(), 'test')");
   assert.equal((await get("/api/teams/t_aaaaa1/squad?season=2025/2026")).response.status, 404);
@@ -110,4 +114,15 @@ test("a player's style: his zones by third and side, the foot he shoots with", {
   assert.deepEqual(body.data.shots, { shots: 1, rightFoot: 0, leftFoot: 1, header: 0, other: 0, insideBox: 1 });
   // Two networks only: too few to give his share.
   assert.equal("passes" in body.data, false);
+});
+
+test("a player without a birth date of ours takes his linked profile's in the club's ages", { skip }, async () => {
+  const ages = async () => (await get("/api/teams/t_aaaaa1/age-profile?season=2025/2026")).body.data.minutesByAge;
+  assert.deepEqual(await ages(), [{ age: 26, minutes: 90 }, { age: null, minutes: 260 }]);
+  await owner.query("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player', 'transfermarkt', '555001', 101)");
+  await owner.query("INSERT INTO core.provider_players(provider, provider_key, name, birth_date, read_on) VALUES ('transfermarkt', '555001', 'Élie Durand', '2000-01-01', '2026-11-16')");
+  assert.deepEqual(await ages(), [{ age: 25, minutes: 260 }, { age: 26, minutes: 90 }]);
+  // A doubted link gives no age.
+  await owner.query("INSERT INTO ops.provider_links(entity_type, provider, provider_key, entity_id, rule, quarantined_at, quarantine_reason) VALUES ('player', 'transfermarkt', '555001', 101, 'unknown', now(), 'test')");
+  assert.deepEqual(await ages(), [{ age: 26, minutes: 90 }, { age: null, minutes: 260 }]);
 });

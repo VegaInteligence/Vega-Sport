@@ -512,8 +512,9 @@ Ces cinq blocs montraient des valeurs de maquette. Ils sont maintenant calculés
 
 - La fiche du club donne la valeur de l'effectif, celle de ses 18 joueurs les mieux cotés, l'âge moyen et le nombre de joueurs, le jour où elle est lue. Elle est relue chaque mois pour les deux dernières saisons (migration 117).
 - La valeur n'existe qu'au présent : elle n'est montrée que pour la saison en cours, avec sa date.
-- Le rang « Xᵉ du championnat » n'est donné que si **tous** les clubs du championnat ont une valeur. Sinon le rang ne veut rien dire (au 16 novembre, aucun championnat n'est complet : 176 clubs reliés).
-- Âge pondéré par les minutes : Σ (âge + 0,5) × minutes / Σ minutes, sur les minutes dont l'âge est connu. L'âge est en années révolues au jour du match ; + 0,5 corrige ce demi-an manquant en moyenne. Montré seulement si les âges connus couvrent au moins 90 % des minutes et au moins 4 950 minutes (cinq matchs complets).
+- Le rang se calcule parmi les clubs du championnat qui ont une valeur, dès que les trois quarts en ont une. La page dit combien : « 2ᵉ des 19 clubs estimés du championnat (sur 20) », ou « 2ᵉ du championnat sur 20 » quand tous en ont une.
+- Un club de la base est relié à sa fiche quand au moins 3 de nos joueurs reliés y sont vus pendant qu'ils jouent pour lui (à 30 jours près), avec 60 % des voix dans les deux sens. Un joueur est vu à un club par chacune de ses valeurs (le club du jour de l'estimation) et, depuis le 16 novembre, par sa fiche (son club le jour où elle est lue). Un joueur mis en doute ne vote pas. Le rattachement passe une fois par jour.
+- Âge pondéré par les minutes : Σ (âge + 0,5) × minutes / Σ minutes, sur les minutes dont l'âge est connu. Un joueur sans date de naissance chez nous prend celle de sa fiche quand il y est relié (jamais pour un lien mis en doute) ; la base garde la sienne seule. L'âge est en années révolues au jour du match ; + 0,5 corrige ce demi-an manquant en moyenne. Montré seulement si les âges connus couvrent au moins 90 % des minutes et au moins 4 950 minutes (cinq matchs complets).
 
 ### 8.2 Le physique
 

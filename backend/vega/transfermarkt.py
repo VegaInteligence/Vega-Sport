@@ -542,9 +542,17 @@ class Reader:
         return sum(self._link("player", key, player, "snapshot") for key, player in rows)
 
     def link_clubs(self):
+        """A vote: a linked player seen at a provider club while he played for one of our teams
+        (within SPAN_MARGIN days of his matches there). He is seen at a club by each valuation
+        (the club of its day) and, since 16 Nov 2026, by his profile (his club on the day it was
+        read): the profiles are read before the value histories, and a player's current club
+        is the same fact as his latest valuation's. A doubted (quarantined) player never votes."""
         votes = self.conn.execute(
             """WITH linked AS (
-                 SELECT entity_id AS player_id FROM core.provider_ids WHERE entity_type = 'player' AND provider = 'transfermarkt' AND is_current),
+                 SELECT i.entity_id AS player_id, i.provider_key FROM core.provider_ids i
+                 WHERE i.entity_type = 'player' AND i.provider = 'transfermarkt' AND i.is_current
+                   AND NOT EXISTS (SELECT 1 FROM ops.provider_links l WHERE l.entity_type = 'player' AND l.provider = 'transfermarkt'
+                                   AND l.provider_key = i.provider_key AND l.quarantined_at IS NOT NULL)),
                spans AS (
                  SELECT s.player_id, s.team_id, s.season_id, min(m.match_date) AS first_day, max(m.match_date) AS last_day
                  FROM core.player_match_stats s
@@ -552,12 +560,18 @@ class Reader:
                  JOIN core.matches m ON m.id = s.match_id AND m.season_id = s.season_id
                  JOIN core.teams t ON t.id = s.team_id AND t.is_national IS NOT TRUE
                  WHERE s.minutes_played > 0 AND m.match_date IS NOT NULL
-                 GROUP BY 1, 2, 3)
-               SELECT v.provider_club, sp.team_id, count(DISTINCT v.player_id)::int
-               FROM core.player_market_values v
-               JOIN spans sp ON sp.player_id = v.player_id AND v.valued_at BETWEEN sp.first_day - %s::int AND sp.last_day + %s::int
-               JOIN core.provider_clubs c ON c.provider = 'transfermarkt' AND c.provider_key = v.provider_club AND c.is_national IS NOT TRUE
-               WHERE v.source = 'transfermarkt' AND v.provider_club IS NOT NULL
+                 GROUP BY 1, 2, 3),
+               seen AS (
+                 SELECT v.player_id, v.provider_club, v.valued_at AS day FROM core.player_market_values v
+                 WHERE v.source = 'transfermarkt' AND v.provider_club IS NOT NULL
+                 UNION ALL
+                 SELECT l.player_id, pp.provider_club, pp.read_on FROM linked l
+                 JOIN core.provider_players pp ON pp.provider = 'transfermarkt' AND pp.provider_key = l.provider_key
+                 WHERE pp.provider_club IS NOT NULL)
+               SELECT o.provider_club, sp.team_id, count(DISTINCT o.player_id)::int
+               FROM seen o
+               JOIN spans sp ON sp.player_id = o.player_id AND o.day BETWEEN sp.first_day - %s::int AND sp.last_day + %s::int
+               JOIN core.provider_clubs c ON c.provider = 'transfermarkt' AND c.provider_key = o.provider_club AND c.is_national IS NOT TRUE
                GROUP BY 1, 2""", (SPAN_MARGIN, SPAN_MARGIN)).fetchall()
         names = dict(self.conn.execute("SELECT provider_key, name FROM core.provider_clubs WHERE provider = 'transfermarkt'").fetchall())
         teams = {team for _, team, _ in votes}
