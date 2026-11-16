@@ -178,7 +178,7 @@ export default function PlayerExplorer({ rows, mode, onMode }) {
             aria-label={`${SCOUT_METRICS[xKey].label}${view === "scatter" ? ` et ${SCOUT_METRICS[yKey].label}` : " · distribution des joueurs"}`}
           >
             <title>
-              STATARENA · {f.season} · {mode}
+              Vega · {f.season} · {mode}
             </title>
             <desc>
               {points.length} joueurs. Une ligne par joueur. Les mesures

@@ -20,7 +20,7 @@ export function PlayStyleCard({ id, season }) {
   const style = usePlayerStyle(id, season, visible);
   const lines = [zoneReading(style.value?.zones), footReading(style.value?.shots), boxReading(style.value?.shots)].filter(Boolean);
   return (
-    <FoldCard title="Profil de jeu" text="Où il joue et comment il frappe, sur la saison" sectionRef={ref}>
+    <FoldCard title="Profil de jeu" text="Où il joue et comment il frappe, sur la saison" sectionRef={ref} className={s.styleCard}>
         {!visible || style.loading ? (
           <Skeleton label="Chargement du profil de jeu…" lines={3} />
         ) : style.error ? (

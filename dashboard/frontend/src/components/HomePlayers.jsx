@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import Icon from "./Icon.jsx";
 import { Media, Segments } from "./UI.jsx";
+import { Term } from "./Hint.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
 import { Kicker, lastName, matchHref, relativeDay, shortDay } from "./HomeCommon.jsx";
@@ -57,51 +58,51 @@ export function PlayerOfTheWeek({
       <div className="home-potw-big">
         <div>
           <b>{number(p.grade, 0)}</b>
-          <span>Note Vega du match</span>
+          <span><Term>Note Vega du match</Term></span>
         </div>
         <div>
           <b>{number(p.goals || 0)}</b>
-          <span>Buts</span>
+          <span><Term>Buts</Term></span>
         </div>
         <div>
           <b>{number(p.assists || 0)}</b>
-          <span>Passes déc.</span>
+          <span><Term>Passes déc.</Term></span>
         </div>
       </div>
       <PhoneFoldToggle {...detail.toggle} label="Ses chiffres du match" />
       <dl className="home-potw-stats phone-fold-part">
         <div>
-          <dt>xG</dt>
+          <dt><Term>xG</Term></dt>
           <dd>{number(p.xg, 2)}</dd>
         </div>
         <div>
-          <dt>Tirs (cadrés)</dt>
+          <dt><Term>Tirs (cadrés)</Term></dt>
           <dd>
             {number(p.shots)} ({number(p.shotsOnTarget)})
           </dd>
         </div>
         <div>
-          <dt>Occasions créées</dt>
+          <dt><Term>Occasions créées</Term></dt>
           <dd>{number(p.chancesCreated)}</dd>
         </div>
         <div>
-          <dt>Passes réussies</dt>
+          <dt><Term>Passes réussies</Term></dt>
           <dd>{share(p.passesAccurate, p.passesAttempted)}</dd>
         </div>
         <div>
-          <dt>Duels gagnés</dt>
+          <dt><Term>Duels gagnés</Term></dt>
           <dd>{duels ? `${number(p.duelsWon || 0)}/${number(duels)}` : "—"}</dd>
         </div>
         <div>
-          <dt>Touches</dt>
+          <dt><Term>Touches</Term></dt>
           <dd>{number(p.touches)}</dd>
         </div>
         <div>
-          <dt>Actions défensives</dt>
+          <dt><Term>Actions défensives</Term></dt>
           <dd>{number(p.defensiveActions)}</dd>
         </div>
         <div>
-          <dt>Temps de jeu</dt>
+          <dt><Term hint="Minutes jouées dans ce match.">Temps de jeu</Term></dt>
           <dd>{number(p.minutes)}′</dd>
         </div>
       </dl>

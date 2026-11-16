@@ -63,7 +63,7 @@ function PlayersTab({ season }) {
         <th scope="col"><Term>Joueur</Term></th>
         <th scope="col"><Term>Poste</Term></th>
         <th scope="col"><Term>Club</Term></th>
-        <th scope="col" title="Score Vega de la saison sur 100"><Term>Score</Term></th>
+        <th scope="col"><Term hint="Score Vega sur 100 : ce qu’il apporte, corrigé du niveau où il joue. En début de saison, sa saison précédente compte encore un peu.">Score</Term></th>
       </tr>
     </thead>
   );
@@ -157,7 +157,7 @@ function ClubsTab({ season }) {
               <th scope="col"><Term>Rang</Term></th>
               <th scope="col"><Term>Club</Term></th>
               <th scope="col"><Term>Pays</Term></th>
-              <th scope="col"><Term>Score</Term></th>
+              <th scope="col"><Term hint="Force du club (Elo) ramenée sur 100.">Score</Term></th>
               <th scope="col"><Term>Elo</Term></th>
               <th scope="col"><Term>Variation</Term></th>
               <th scope="col"><Term>Matchs</Term></th>
