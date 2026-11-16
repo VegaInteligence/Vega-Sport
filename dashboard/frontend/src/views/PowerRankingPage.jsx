@@ -14,6 +14,7 @@ import {
   useClubRanking,
   useWholeRanking,
 } from "../services/power-ranking.js";
+import { Term } from "../components/Hint.jsx";
 
 const TABS = [
   ["players", "Joueurs"],
@@ -58,11 +59,11 @@ function PlayersTab({ season }) {
   const head = (
     <thead>
       <tr>
-        <th scope="col">Rang</th>
-        <th scope="col">Joueur</th>
-        <th scope="col">Poste</th>
-        <th scope="col">Club</th>
-        <th scope="col" title="Score Vega de la saison sur 100">Score</th>
+        <th scope="col"><Term>Rang</Term></th>
+        <th scope="col"><Term>Joueur</Term></th>
+        <th scope="col"><Term>Poste</Term></th>
+        <th scope="col"><Term>Club</Term></th>
+        <th scope="col" title="Score Vega de la saison sur 100"><Term>Score</Term></th>
       </tr>
     </thead>
   );
@@ -153,13 +154,13 @@ function ClubsTab({ season }) {
         <table className="data-table power-ranking-table">
           <thead>
             <tr>
-              <th scope="col">Rang</th>
-              <th scope="col">Club</th>
-              <th scope="col">Pays</th>
-              <th scope="col">Score</th>
-              <th scope="col">Elo</th>
-              <th scope="col">Variation</th>
-              <th scope="col">Matchs</th>
+              <th scope="col"><Term>Rang</Term></th>
+              <th scope="col"><Term>Club</Term></th>
+              <th scope="col"><Term>Pays</Term></th>
+              <th scope="col"><Term>Score</Term></th>
+              <th scope="col"><Term>Elo</Term></th>
+              <th scope="col"><Term>Variation</Term></th>
+              <th scope="col"><Term>Matchs</Term></th>
             </tr>
           </thead>
           <tbody>

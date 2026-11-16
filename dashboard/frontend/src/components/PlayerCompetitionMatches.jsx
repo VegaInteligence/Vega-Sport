@@ -18,6 +18,7 @@ import { Media, Segments } from "./UI.jsx";
 import NationalFlag from "./NationalFlag.jsx";
 import { playerCompetitionHref } from "../services/player-competition-navigation.js";
 import styles from "./PlayerCompetitionMatches.module.css";
+import { Term } from "./Hint.jsx";
 
 function Team({ team, national, season }) {
   if (!team) return <span>Équipe inconnue</span>;
@@ -157,15 +158,15 @@ export default function PlayerCompetitionMatches({
                 </caption>
                 <thead>
                   <tr>
-                    <th scope="col">Date</th>
-                    <th scope="col">Domicile</th>
-                    <th scope="col">Score</th>
-                    <th scope="col">Extérieur</th>
-                    {suppliedSections && <th scope="col">Participation</th>}
-                    <th scope="col">Poste</th>
-                    <th scope="col">Buts</th>
-                    <th scope="col">Passes déc.</th>
-                    <th scope="col">Min.</th>
+                    <th scope="col"><Term>Date</Term></th>
+                    <th scope="col"><Term>Domicile</Term></th>
+                    <th scope="col"><Term>Score</Term></th>
+                    <th scope="col"><Term>Extérieur</Term></th>
+                    {suppliedSections && <th scope="col"><Term>Participation</Term></th>}
+                    <th scope="col"><Term>Poste</Term></th>
+                    <th scope="col"><Term>Buts</Term></th>
+                    <th scope="col"><Term>Passes déc.</Term></th>
+                    <th scope="col"><Term>Min.</Term></th>
                     {DISCIPLINE_COLUMNS.map(([key, color, label]) => (
                       <th scope="col" key={key}>
                         <CardHeading color={color} text={label} />
@@ -173,9 +174,9 @@ export default function PlayerCompetitionMatches({
                     ))}
                     {view === "detailed" && (
                       <>
-                        <th scope="col">xG</th>
-                        <th scope="col">xA</th>
-                        <th scope="col">Note Vega</th>
+                        <th scope="col"><Term>xG</Term></th>
+                        <th scope="col"><Term>xA</Term></th>
+                        <th scope="col"><Term>Note Vega</Term></th>
                       </>
                     )}
                   </tr>

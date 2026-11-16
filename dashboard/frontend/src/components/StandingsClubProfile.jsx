@@ -6,6 +6,7 @@ import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { json, useResource } from "../services/resources.js";
 import { number } from "../services/format.js";
 import { AsyncState, Card, Empty, Media } from "./UI.jsx";
+import { Term } from "./Hint.jsx";
 
 export default function StandingsClubProfile({
   leagueId,
@@ -71,15 +72,15 @@ export default function StandingsClubProfile({
                     <table className="data-table club-record-table">
                       <thead>
                         <tr>
-                          <th>Position</th>
-                          <th>Pts</th>
-                          <th>J</th>
-                          <th>V</th>
-                          <th>N</th>
-                          <th>D</th>
-                          <th>BP</th>
-                          <th>BC</th>
-                          <th>Diff.</th>
+                          <th><Term>Position</Term></th>
+                          <th><Term>Pts</Term></th>
+                          <th><Term>J</Term></th>
+                          <th><Term>V</Term></th>
+                          <th><Term>N</Term></th>
+                          <th><Term>D</Term></th>
+                          <th><Term>BP</Term></th>
+                          <th><Term>BC</Term></th>
+                          <th><Term>Diff.</Term></th>
                         </tr>
                       </thead>
                       <tbody>

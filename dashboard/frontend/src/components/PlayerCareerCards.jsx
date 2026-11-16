@@ -3,6 +3,7 @@
 import React from "react";
 import { useCardFold } from "./PhoneFold.jsx";
 import { Skeleton } from "./UI.jsx";
+import { Term } from "./Hint.jsx";
 import { dateFr, fmt, InjuryTimeline, Legend, LineChart, TipBody } from "./PlayerScoutCharts.jsx";
 import { availability, injuryRows, usePlayerInjuries, usePowerHistory } from "../services/player-availability.js";
 import s from "./PlayerScout.module.css";
@@ -14,7 +15,9 @@ export function FoldCard({ title, text, sectionRef, children }) {
     <section className={s.card} ref={sectionRef} {...f.section}>
       <div className={s.cardHead} {...f.head}>
         <div>
-          <h3>{title}</h3>
+          <h3>
+            <Term>{title}</Term>
+          </h3>
           {text && <p className={f.part}>{text}</p>}
         </div>
         {f.button}
@@ -95,12 +98,12 @@ export function PlayerInjuries({ id }) {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Saison</th>
-                    <th>Motif</th>
-                    <th>Du</th>
-                    <th>Au</th>
-                    <th className={s.num}>Jours</th>
-                    <th className={s.num}>Matchs manqués</th>
+                    <th><Term>Saison</Term></th>
+                    <th><Term>Motif</Term></th>
+                    <th><Term>Du</Term></th>
+                    <th><Term>Au</Term></th>
+                    <th className={s.num}><Term>Jours</Term></th>
+                    <th className={s.num}><Term>Matchs manqués</Term></th>
                   </tr>
                 </thead>
                 <tbody>

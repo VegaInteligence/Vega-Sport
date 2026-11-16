@@ -16,6 +16,7 @@ import {
   speedZones,
   usePlayerPhysical,
 } from "../services/profile-blocks.js";
+import { Term } from "./Hint.jsx";
 import s from "./PlayerScout.module.css";
 
 const dayMonth = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : "");
@@ -25,7 +26,9 @@ function Metrics({ block }) {
   return (
     <section className={s.panel} aria-labelledby={heading}>
       <div className={s.panelTitle}>
-        <h3 id={heading}>Indicateurs physiques</h3>
+        <h3 id={heading}>
+          <Term>Indicateurs physiques</Term>
+        </h3>
         <p>
           {block.cohort
             ? `Comparé aux ${block.cohort.label} suivis 450 min ou plus (${number(block.cohort.players)} joueurs) · bande P25–P75, trait : médiane`
@@ -40,7 +43,9 @@ function Metrics({ block }) {
           return (
             <div className={s.distRow} key={metric.key}>
               <div className={s.distLabel}>
-                <strong>{row.label}</strong>
+                <strong>
+                  <Term>{row.label}</Term>
+                </strong>
                 <small>
                   {row.unit}
                   {metric.median != null && block.cohort ? ` · médiane ${physicalValue(metric.key, metric.median)}` : ""}
@@ -81,7 +86,9 @@ function TopSpeed({ block }) {
   return (
     <section className={s.panel} aria-labelledby={heading}>
       <div className={s.panelTitle}>
-        <h3 id={heading}>Vitesse de pointe par match</h3>
+        <h3 id={heading}>
+          <Term>Vitesse de pointe par match</Term>
+        </h3>
         <p>
           km/h · pointe de la saison {fmt(block.maxSpeed, 1)}
           {median != null && block.cohort ? ` · pointillés : médiane du poste ${fmt(median, 1)}` : ""}
@@ -121,7 +128,9 @@ function Zones({ block }) {
   return (
     <section className={s.panel} aria-labelledby={heading}>
       <div className={s.panelTitle}>
-        <h3 id={heading}>Distance par allure</h3>
+        <h3 id={heading}>
+          <Term>Distance par allure</Term>
+        </h3>
         <p>m / 90 min</p>
       </div>
       <div className={s.panelBody}>
@@ -152,7 +161,9 @@ function MatchLoad({ load }) {
       <div className={`${s.kpiStrip} ${s.loadStrip}`}>
         {kpis.map(([label, value, note]) => (
           <div key={label}>
-            <span>{label}</span>
+            <span>
+              <Term>{label}</Term>
+            </span>
             <strong>{value}</strong>
             {note && <small>{note}</small>}
           </div>
@@ -161,7 +172,9 @@ function MatchLoad({ load }) {
       {points.length >= 2 && (
         <section className={s.panel} aria-labelledby={heading}>
           <div className={s.panelTitle}>
-            <h3 id={heading}>Minutes par match</h3>
+            <h3 id={heading}>
+          <Term>Minutes par match</Term>
+        </h3>
             <p>Dans l’ordre des matchs · au survol, le repos avant chacun</p>
           </div>
           <div className={s.panelBody}>
@@ -205,7 +218,9 @@ export default function PlayerPhysical({ id, season, rows }) {
         <div className={s.block}>
           <div className={s.sectionHead}>
             <div>
-              <h2>Suivi physique</h2>
+              <h2>
+                <Term>Suivi physique</Term>
+              </h2>
               <p>
                 {`${block.name} · ${number(block.matches)} match${block.matches > 1 ? "s" : ""} suivi${block.matches > 1 ? "s" : ""}, ${number(block.minutes)} min${block.tracked != null && block.finished && block.tracked < block.finished ? ` · suivi sur ${number(block.tracked)} des ${number(block.finished)} matchs de la compétition` : ""}`}
               </p>
@@ -226,7 +241,9 @@ export default function PlayerPhysical({ id, season, rows }) {
       <div className={s.block}>
         <div className={s.sectionHead}>
           <div>
-            <h2>Charge de matchs</h2>
+            <h2>
+            <Term>Charge de matchs</Term>
+          </h2>
             <p>
               Temps de jeu et récupération sur les matchs de la sélection
               {physical.loading

@@ -78,7 +78,9 @@ export function TeamContextCard({ id, season, team }) {
                 ))}
               </div>
             )}
-            <StyleSpectrum dossier={cohort.value} club={club} axes={TEAM_AXES} />
+            <div className={s.teamSpectrum}>
+              <StyleSpectrum dossier={cohort.value} club={club} axes={TEAM_AXES} />
+            </div>
           </>
         ) : (
           <p className={s.note}>Son équipe n’a pas encore de match analysé dans ce championnat.</p>

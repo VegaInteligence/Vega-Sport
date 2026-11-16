@@ -41,6 +41,10 @@ test("competition page renders a result-derived league table and its limits", as
   const Card = ({ title, children }) => elem("section", null, elem("h2", null, title), children);
   const UI = { Card, Media: () => null, Pager: () => null, Segments: ({ items, value }) => elem("div", null, items.map(([id, text]) => elem("button", { key: id, "aria-pressed": value === id }, text))), Empty: ({ children }) => elem("div", null, children), AsyncState: ({ resource, children }) => children(resource.value) };
   const stubs = {
+    // The « i » beside a value (Hint.jsx) renders its name alone here.
+    "./Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
+    "../components/Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
+    "../services/glossary.js": { explain: () => null },
     "react": reactStub, "next/navigation": { useSearchParams: () => new URLSearchParams({ id: requestedId, edition: requestedEdition }) },
     "next/link": { __esModule: true, default: Link },
     "../components/Icon.jsx": { __esModule: true, default: () => null },

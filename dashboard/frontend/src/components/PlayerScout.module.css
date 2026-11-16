@@ -110,6 +110,11 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+.railName {
+  display: inline-flex;
+  align-items: center;
+  font-style: normal;
+}
 .railTitle span {
   color: var(--muted-light);
   font-weight: 500;
@@ -1109,6 +1114,18 @@ p.similarIntro {
 }
 .quickPicks button:hover {
   background: var(--surface-hover);
+}
+
+/* « Contexte d'équipe » on the whole width: its four axes two by two. */
+.teamSpectrum > :first-child {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 32px;
+}
+@media (max-width: 760px) {
+  .teamSpectrum > :first-child {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* « Profil de jeu »: one line per fact, its reading then its figures */

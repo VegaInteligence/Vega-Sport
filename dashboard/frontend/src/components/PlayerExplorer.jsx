@@ -12,6 +12,7 @@ import {
   MetricInfo,
   SavedViews,
 } from "./ResearchUI.jsx";
+import { Term } from "./Hint.jsx";
 
 export default function PlayerExplorer({ rows, mode, onMode }) {
   const f = useFootball(),
@@ -306,10 +307,10 @@ export default function PlayerExplorer({ rows, mode, onMode }) {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Joueur</th>
+                <th><Term>Joueur</Term></th>
                 <th>{SCOUT_METRICS[xKey].label}</th>
                 {view === "scatter" && <th>{SCOUT_METRICS[yKey].label}</th>}
-                <th>Sélectionner</th>
+                <th><Term>Sélectionner</Term></th>
               </tr>
             </thead>
             <tbody>

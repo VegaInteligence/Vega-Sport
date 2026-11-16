@@ -3019,3 +3019,70 @@ th[aria-sort="descending"] .sort-indicator {
   align-items: center;
   gap: 12px;
 }
+
+/* The « i » beside a value's name (components/Hint.jsx) and its bubble, drawn over the page.
+   Doubled class: it keeps its look inside titles and labels that style their spans. */
+.hint.hint {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: none;
+  vertical-align: 1px;
+  cursor: help;
+  user-select: none;
+}
+.hint.hint::after {
+  position: absolute;
+  inset: -9px;
+  content: "";
+}
+.hint.hint:hover,
+.hint.hint:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: none;
+}
+.hint-bubble {
+  position: fixed;
+  z-index: 1000;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-pop);
+  color: var(--ink);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.45;
+  text-transform: none;
+  pointer-events: none;
+}
+
+/* A chart that fills its column beside a taller neighbour (components/FillChart.jsx): the
+   drawing is laid over the room, so it never makes the row taller than its neighbour. */
+.fill-chart {
+  position: relative;
+  flex: 1 1 auto;
+}
+@media (min-width: 1101px) {
+  .fill-chart {
+    min-height: 240px;
+  }
+  .fill-chart > .fill-chart-inner {
+    position: absolute;
+    inset: 0;
+  }
+}

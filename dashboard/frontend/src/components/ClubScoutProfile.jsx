@@ -56,6 +56,7 @@ import {
 } from "./ClubScoutAdvanced.jsx";
 import sA from "./ClubScoutTabs.module.css";
 import s from "./ClubScoutProfile.module.css";
+import { Term } from "./Hint.jsx";
 
 const TABS = [
   ["overview", "Vue d’ensemble"],
@@ -637,7 +638,7 @@ function Comparison({ dossier, rival, onRival }) {
                 <table className={c.table}>
                   <thead>
                     <tr>
-                      <th scope="col">Indicateur</th>
+                      <th scope="col"><Term>Indicateur</Term></th>
                       <th scope="col">{dossier.name}</th>
                       <th scope="col">{other.name}</th>
                     </tr>
@@ -657,7 +658,7 @@ function Comparison({ dossier, rival, onRival }) {
                         <tr key={key}>
                           <th scope="row">
                             {METRICS[key].label}
-                            <Info text={METRICS[key].info} />
+                            <Info text={METRICS[key].info} label={METRICS[key].label} />
                           </th>
                           {[self, other.self].map((club, i) => (
                             <td

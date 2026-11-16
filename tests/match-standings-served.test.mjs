@@ -51,6 +51,10 @@ const football = () => ({
 /** CompetitionStandings with its real services; reads are recorded, never sent. */
 async function standings(table, reads, source = "SportScore") {
   const stubs = {
+    // The « i » beside a value (Hint.jsx) renders its name alone here.
+    "./Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
+    "../components/Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
+    "../services/glossary.js": { explain: () => null },
     react: React,
     "next/link": { __esModule: true, default: ({ href, children, ...props }) => e("a", { href, ...props }, children) },
     "../hooks/FootballContext.jsx": { useFootball: football },

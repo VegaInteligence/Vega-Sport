@@ -29,6 +29,7 @@ import NationalFlag from "./NationalFlag.jsx";
 import ObservedValue from "./PlayerObservedValue.jsx";
 import PlayerPositionPitch from "./PlayerPositionPitch.jsx";
 import { AsyncState, Media } from "./UI.jsx";
+import { Term } from "./Hint.jsx";
 
 const TABLES = [
   ["clubs", "Performance par club", "Club", "Aucun match en club recensé."],
@@ -70,12 +71,11 @@ function CareerTable({
                 <th
                   scope="col"
                   className="player-career-stat"
-                  title="Matchs joués"
                 >
-                  MJ
+                  <Term>MJ</Term>
                 </th>
                 <th scope="col" className="player-career-stat">
-                  Buts
+                  <Term>Buts</Term>
                 </th>
                 <th scope="col" className="player-career-stat">
                   {international ? "1er match recensé" : "Passes déc."}

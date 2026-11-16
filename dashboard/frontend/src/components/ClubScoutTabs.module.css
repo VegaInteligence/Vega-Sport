@@ -105,6 +105,10 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+.railName {
+  display: inline-flex;
+  align-items: center;
+}
 .railTitle span {
   color: var(--muted-light);
   font-weight: 500;
@@ -425,7 +429,14 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
+}
+/* The figures, then the chart down to the table's foot. */
+.expectedSide {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
 }
 @media (max-width: 1100px) {
   .profileGrid,

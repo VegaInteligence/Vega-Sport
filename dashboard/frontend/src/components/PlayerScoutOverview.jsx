@@ -28,6 +28,8 @@ import {
   toneClass,
 } from "./PlayerScoutCharts.jsx";
 import { PlayStyleCard, TeamContextCard } from "./PlayerStyleCards.jsx";
+import { Hint, Term } from "./Hint.jsx";
+import { explain } from "../services/glossary.js";
 import { seasonShort } from "../services/previous-season.js";
 import usePreviousSeason from "../hooks/usePreviousSeason.js";
 import { RankingTrigger } from "./RankingDialog.jsx";
@@ -159,6 +161,9 @@ const SHORT = {
   goalsPrevented: "Buts évités",
 };
 const label = (key) => SHORT[key] || SCOUT_METRICS[key]?.label || key;
+// A statistic's sentence: by its full name, else its short one, else its definition.
+const metricHint = (key) =>
+  explain(SCOUT_METRICS[key]?.label) || explain(label(key)) || SCOUT_METRICS[key]?.description || null;
 const total = (profile, key) => {
   const stat = profile.stats?.[key];
   return stat?.count ? stat.sum : null;
@@ -178,7 +183,9 @@ function Card({ title, text, actions, children, fold = false }) {
     <section className={s.card} {...f.section}>
       <div className={s.cardHead} {...f.head}>
         <div>
-          <h3>{title}</h3>
+          <h3>
+            <Term>{title}</Term>
+          </h3>
           {text && <p className={f.part || undefined}>{text}</p>}
         </div>
         {actions}
@@ -279,7 +286,9 @@ function SeasonKpis({ profile, season, scope, onScope }) {
       <div className={s.kpis}>
         {kpis.map(([title, value, note]) => (
           <div className={s.kpi} key={title}>
-            <span>{title}</span>
+            <span>
+              <Term>{title}</Term>
+            </span>
             <strong>{value}</strong>
             {note && <small>{note}</small>}
           </div>
@@ -303,6 +312,7 @@ function TraitList({ items, metrics }) {
               <RankingTrigger target={{ type: "metric", key: item.key }}>
                 {label(item.key)}
               </RankingTrigger>
+              <Hint text={metricHint(item.key)} label={label(item.key)} />
             </span>
             <small>
               {fmt(item.value, metric?.decimals ?? 2, { unit: metric?.unit })}
@@ -534,7 +544,7 @@ export default function PlayerScoutOverview({
                   <ul className={s.roles}>
                     {roles.map((role) => (
                       <li key={role.id}>
-                        <span>{role.label}</span>
+                        <span><Term>{role.label}</Term></span>
                         <b>
                           {role.value == null ? "—" : Math.round(role.value)}
                         </b>
@@ -565,7 +575,7 @@ export default function PlayerScoutOverview({
               <div className={s.skills}>
                 {families.map((family) => (
                   <div className={s.skill} key={family.id}>
-                    <span>{family.title}</span>
+                    <span><Term>{family.title}</Term></span>
                     <strong>{family.value ?? "—"}</strong>
                     <PercentileBar value={family.value ?? 0} />
                   </div>
@@ -595,9 +605,11 @@ export default function PlayerScoutOverview({
           </Pending>
         </Card>
       </div>
-      <div className={`${s.block} ${s.grid3}`}>
+      <div className={`${s.block} ${s.grid2}`}>
         <RecentForm profile={profile} matches={matches} onTab={onTab} />
         <PlayStyleCard id={profile.id} season={season} />
+      </div>
+      <div className={s.block}>
         <TeamContextCard id={profile.id} season={season} team={club} />
       </div>
       {children}
@@ -668,15 +680,15 @@ export function PlayerGames({ profile, matches }) {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Compétition</th>
-                <th className={s.num}>MJ</th>
-                <th className={s.num}>Min</th>
-                <th className={s.num}>Buts</th>
-                <th className={s.num}>PD</th>
-                <th className={s.num}>xG</th>
-                <th className={s.num}>xA</th>
-                <th className={s.num}>Min / B+PD</th>
-                <th className={s.num}>Note Vega</th>
+                <th><Term>Compétition</Term></th>
+                <th className={s.num}><Term>MJ</Term></th>
+                <th className={s.num}><Term>Min</Term></th>
+                <th className={s.num}><Term>Buts</Term></th>
+                <th className={s.num}><Term>PD</Term></th>
+                <th className={s.num}><Term>xG</Term></th>
+                <th className={s.num}><Term>xA</Term></th>
+                <th className={s.num}><Term>Min / B+PD</Term></th>
+                <th className={s.num}><Term>Note Vega</Term></th>
               </tr>
             </thead>
             <tbody>
@@ -751,18 +763,18 @@ export function PlayerGames({ profile, matches }) {
             <caption className="sr-only">Matchs de la période</caption>
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Compétition</th>
-                <th>Adversaire</th>
-                <th>Résultat</th>
-                <th className={s.num}>Min</th>
-                <th className={s.num}>B</th>
-                <th className={s.num}>PD</th>
-                <th className={s.num}>xG</th>
-                <th className={s.num}>xA</th>
-                <th className={s.num}>Tirs</th>
-                <th className={s.num}>Dribbles</th>
-                <th className={s.num}>Note Vega</th>
+                <th><Term>Date</Term></th>
+                <th><Term>Compétition</Term></th>
+                <th><Term>Adversaire</Term></th>
+                <th><Term>Résultat</Term></th>
+                <th className={s.num}><Term>Min</Term></th>
+                <th className={s.num}><Term>B</Term></th>
+                <th className={s.num}><Term>PD</Term></th>
+                <th className={s.num}><Term>xG</Term></th>
+                <th className={s.num}><Term>xA</Term></th>
+                <th className={s.num}><Term>Tirs</Term></th>
+                <th className={s.num}><Term>Dribbles</Term></th>
+                <th className={s.num}><Term>Note Vega</Term></th>
               </tr>
             </thead>
             <tbody>
@@ -856,12 +868,12 @@ export function PlayerScoutStats({ profile, cohorts, mode, ready }) {
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Indicateur</th>
+                      <th><Term>Indicateur</Term></th>
                       <th className={s.num}>{MODE_LABELS[mode]}</th>
-                      <th className={s.num}>Médiane / 90</th>
-                      <th>Position dans la cohorte</th>
-                      <th className={s.num}>Centile</th>
-                      <th className={s.num}>Rang</th>
+                      <th className={s.num}><Term>Médiane / 90</Term></th>
+                      <th><Term>Position dans la cohorte</Term></th>
+                      <th className={s.num}><Term>Centile</Term></th>
+                      <th className={s.num}><Term>Rang</Term></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -885,6 +897,7 @@ export function PlayerScoutStats({ profile, cohorts, mode, ready }) {
                             ) : (
                               label(key)
                             )}
+                            <Hint text={metricHint(key)} label={label(key)} />
                             {definition.lowerIsBetter && (
                               <span style={{ color: "var(--muted)" }}>
                                 {" "}
@@ -1277,7 +1290,7 @@ function PercentileTable({ columns, keys }) {
         <table className="data-table" style={{ minWidth: 420 }}>
           <thead>
             <tr>
-              <th>Indicateur</th>
+              <th><Term>Indicateur</Term></th>
               {columns.map((column) => (
                 <th key={column.id} className={s.num}>
                   {column.name}
@@ -1291,7 +1304,10 @@ function PercentileTable({ columns, keys }) {
               const best = bestOf(values);
               return (
                 <tr key={key}>
-                  <th scope="row">{label(key)}</th>
+                  <th scope="row">
+                    {label(key)}
+                    <Hint text={metricHint(key)} label={label(key)} />
+                  </th>
                   {values.map((value, index) => (
                     <td
                       key={columns[index].id}
@@ -1338,7 +1354,7 @@ function SideBySide({ profile, cohorts, columns }) {
         <table className="data-table">
           <thead>
             <tr>
-              <th>Indicateur</th>
+              <th><Term>Indicateur</Term></th>
               {columns.map((column) => (
                 <th
                   key={column.id}
@@ -1367,7 +1383,10 @@ function SideBySide({ profile, cohorts, columns }) {
                 const own = advancedMetric(profile, key, cohorts);
                 return (
                   <tr key={key}>
-                    <th scope="row">{label(key)}</th>
+                    <th scope="row">
+                    {label(key)}
+                    <Hint text={metricHint(key)} label={label(key)} />
+                  </th>
                     {values.map((value, index) => (
                       <td key={columns[index].id} className={s.num}>
                         <span className={s.compareCell}>
@@ -1400,7 +1419,7 @@ function SideBySide({ profile, cohorts, columns }) {
           ))}
           <tbody>
             <tr className={s.highlight}>
-              <th scope="row">Moyenne des centiles</th>
+              <th scope="row"><Term>Moyenne des centiles</Term></th>
               {averages.map((value, index) => (
                 <td
                   key={columns[index].id}

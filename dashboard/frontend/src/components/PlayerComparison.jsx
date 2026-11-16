@@ -36,6 +36,7 @@ import { AsyncState, Empty, Modal, Segments } from "./UI.jsx";
 import { MetricInfo, MetricPicker, ReportButton } from "./ResearchUI.jsx";
 import { ResearchRadar } from "./ResearchCharts.jsx";
 import CompetitionOptions from "./CompetitionOptions.jsx";
+import { Term } from "./Hint.jsx";
 
 export async function comparisonSamples(f, entries, { signal } = {}) {
   const routing = await playerRoutes(
@@ -175,7 +176,7 @@ function ComparisonContent({ samples, basis, keys, withMedian, minMinutes }) {
         </caption>
         <thead>
           <tr>
-            <th scope="col">Indicateur</th>
+            <th scope="col"><Term>Indicateur</Term></th>
             {samples.map((item, i) => (
               <th scope="col" key={i}>
                 {item.name}

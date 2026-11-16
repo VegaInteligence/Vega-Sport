@@ -4,6 +4,7 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
 import { ACTION_MIN_MINUTES, actionRows, usePlayerActions } from "../services/player-actions.js";
 import { fmt, ordinal, PercentileBadge, PercentileBar } from "./PlayerScoutCharts.jsx";
+import { Hint } from "./Hint.jsx";
 import s from "./PlayerScout.module.css";
 
 /** The source's action values of the player's league season, among the players of his role there. */
@@ -25,7 +26,10 @@ export default function PlayerActionValues({ id }) {
         {table.rows.map((row) => (
           <div className={s.distRow} key={row.key}>
             <div className={s.distLabel}>
-              <strong title={row.hint}>{row.label}</strong>
+              <strong>
+                {row.label}
+                <Hint text={row.hint} label={row.label} />
+              </strong>
               <small>
                 {row.rank ? `${ordinal(row.rank)} sur ${table.peers}` : row.hint}
                 {row.parts ? ` · offensif ${fmt(row.parts.offensive, 2, { signed: true })} · défensif ${fmt(row.parts.defensive, 2, { signed: true })}` : ""}

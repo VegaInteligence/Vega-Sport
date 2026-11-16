@@ -75,6 +75,7 @@ import {
   loadSummaryIdentity,
   resolvePlayerIdentity,
 } from "../services/player-identity.js";
+import { Term } from "./Hint.jsx";
 
 const Similarity = lazy(() => import("./PlayerSimilarity.jsx"));
 const Projection = lazy(() => import("./PlayerProjection.jsx"));
@@ -154,7 +155,7 @@ export function PlayerMetricTable({ profile, keys, mode, cohorts }) {
         </caption>
         <thead>
           <tr>
-            <th>Indicateur</th>
+            <th><Term>Indicateur</Term></th>
             <th>
               {mode === "total"
                 ? "Total"
@@ -162,12 +163,12 @@ export function PlayerMetricTable({ profile, keys, mode, cohorts }) {
                   ? "Par 90 ou %"
                   : "Par match ou %"}
             </th>
-            <th>Matchs renseignés</th>
-            <th>Médiane / 90 ou %</th>
-            <th title="Un centile proche de 100 indique une place parmi les meilleurs joueurs du même poste sur cet indicateur.">
-              Centile au poste
+            <th><Term>Matchs renseignés</Term></th>
+            <th><Term>Médiane / 90 ou %</Term></th>
+            <th>
+              <Term>Centile au poste</Term>
             </th>
-            <th>Pairs</th>
+            <th><Term>Pairs</Term></th>
           </tr>
         </thead>
         <tbody>

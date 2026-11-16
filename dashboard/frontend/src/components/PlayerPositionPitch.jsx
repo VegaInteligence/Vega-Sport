@@ -2,6 +2,7 @@ import React from "react";
 import { number } from "../services/format.js";
 import ObservedValue from "./PlayerObservedValue.jsx";
 import styles from "./PlayerPositionPitch.module.css";
+import { Term } from "./Hint.jsx";
 
 export default function PlayerPositionPitch({ positions = [] }) {
   const mapped = positions.filter(
@@ -70,10 +71,10 @@ export default function PlayerPositionPitch({ positions = [] }) {
               <table aria-label="Statistiques par poste joué">
                 <thead>
                   <tr>
-                    <th scope="col">Poste</th>
-                    <th scope="col">Matchs</th>
-                    <th scope="col">Buts</th>
-                    <th scope="col">Passes déc.</th>
+                    <th scope="col"><Term>Poste</Term></th>
+                    <th scope="col"><Term>Matchs</Term></th>
+                    <th scope="col"><Term>Buts</Term></th>
+                    <th scope="col"><Term>Passes déc.</Term></th>
                   </tr>
                 </thead>
                 <tbody>

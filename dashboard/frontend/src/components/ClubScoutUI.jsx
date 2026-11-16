@@ -6,6 +6,8 @@ import { useCardFold } from "./PhoneFold.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { PercentileBar, toneVar } from "./PlayerScoutCharts.jsx";
 import { RankingTrigger } from "./RankingDialog.jsx";
+import { Hint, Term } from "./Hint.jsx";
+import { explain } from "../services/glossary.js";
 import {
   METRICS,
   SITUATION_LABELS,
@@ -137,7 +139,11 @@ export function Card({
       {(title || action) && (
         <div className={s.cardHead} {...f.head}>
           <div>
-            {title && <h3>{title}</h3>}
+            {title && (
+              <h3>
+                <Term>{title}</Term>
+              </h3>
+            )}
             {text && <p className={f.part || undefined}>{text}</p>}
           </div>
           {action && (
@@ -156,7 +162,9 @@ export function Kpis({ items }) {
     <div className={s.kpis}>
       {items.map(([label, value, meta, tone]) => (
         <div key={label}>
-          <span>{label}</span>
+          <span>
+            <Term>{label}</Term>
+          </span>
           <strong className={tone ? s[tone] : undefined}>{value}</strong>
           {meta && <small>{meta}</small>}
         </div>
@@ -184,12 +192,9 @@ export function FormStrip({ rows, limit = 5 }) {
   );
 }
 
-export function Info({ text }) {
-  return text ? (
-    <span className={s.info} title={text} aria-label={text}>
-      i
-    </span>
-  ) : null;
+/** The « i » of a value: its own note, else the glossary's sentence for its name. */
+export function Info({ text, label }) {
+  return <Hint text={text || explain(label)} label={label} />;
 }
 
 export const dateShort = (value) =>
@@ -248,11 +253,11 @@ export function MetricTable({ dossier, keys, club = dossier.self, caption }) {
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead>
           <tr>
-            <th scope="col">Indicateur</th>
+            <th scope="col"><Term>Indicateur</Term></th>
             <th scope="col">{club.name}</th>
-            <th scope="col">Médiane</th>
-            <th scope="col">Rang</th>
-            <th scope="col">Centile</th>
+            <th scope="col"><Term>Médiane</Term></th>
+            <th scope="col"><Term>Rang</Term></th>
+            <th scope="col"><Term>Centile</Term></th>
           </tr>
         </thead>
         <tbody>
@@ -267,7 +272,7 @@ export function MetricTable({ dossier, keys, club = dossier.self, caption }) {
                     {metric.label}
                     {metric.better === -1 ? " ↓" : ""}
                   </RankingTrigger>
-                  <Info text={metric.info} />
+                  <Info text={metric.info} label={metric.label} />
                 </th>
                 <td>
                   {formatMetric(key, club.values[key], { total: metric.total })}
@@ -326,6 +331,7 @@ export function PhaseBars({
               <RankingTrigger target={{ type: "phase", key: phase.key, base }}>
                 {phase.label}
               </RankingTrigger>
+              <Hint text={explain(phase.label)} label={phase.label} />
               <small>
                 {rank ? `${ordinal(rank)} sur ${total}` : "non classé"}
               </small>
@@ -637,7 +643,7 @@ export function StyleSpectrum({
             <div className={s.spectrumTitle}>
               <strong>
                 {metric.label}
-                <Info text={metric.info} />
+                <Info text={metric.info} label={metric.label} />
               </strong>
               <span>
                 {formatMetric(axis.key, value)} · médiane{" "}
@@ -1247,13 +1253,13 @@ export function SituationTable({ profile }) {
         </caption>
         <thead>
           <tr>
-            <th scope="col">Situation</th>
-            <th scope="col">Tirs pour</th>
-            <th scope="col">xG pour</th>
-            <th scope="col">Buts</th>
-            <th scope="col">Tirs contre</th>
-            <th scope="col">xG contre</th>
-            <th scope="col">Encaissés</th>
+            <th scope="col"><Term>Situation</Term></th>
+            <th scope="col"><Term>Tirs pour</Term></th>
+            <th scope="col"><Term>xG pour</Term></th>
+            <th scope="col"><Term>Buts</Term></th>
+            <th scope="col"><Term>Tirs contre</Term></th>
+            <th scope="col"><Term>xG contre</Term></th>
+            <th scope="col"><Term>Encaissés</Term></th>
           </tr>
         </thead>
         <tbody>
@@ -1352,15 +1358,15 @@ export function SquadTable({ dossier, limit = 30 }) {
         </caption>
         <thead>
           <tr>
-            <th scope="col">Joueur</th>
-            <th scope="col">MJ</th>
-            <th scope="col">Tit.</th>
-            <th scope="col">Minutes</th>
-            <th scope="col">Part du temps</th>
-            <th scope="col">Buts</th>
-            <th scope="col">PD</th>
-            <th scope="col">xG + xA</th>
-            <th scope="col">Note Vega</th>
+            <th scope="col"><Term>Joueur</Term></th>
+            <th scope="col"><Term>MJ</Term></th>
+            <th scope="col"><Term>Tit.</Term></th>
+            <th scope="col"><Term>Minutes</Term></th>
+            <th scope="col"><Term>Part du temps</Term></th>
+            <th scope="col"><Term>Buts</Term></th>
+            <th scope="col"><Term>PD</Term></th>
+            <th scope="col"><Term>xG + xA</Term></th>
+            <th scope="col"><Term>Note Vega</Term></th>
           </tr>
         </thead>
         <tbody>
@@ -1435,26 +1441,21 @@ export function LeagueTable({ dossier, sort = "points", compact = false }) {
         <thead>
           <tr>
             <th scope="col">
-              {sort === "xpts" ? "Rang aux xPts · club" : "Club"}
+              {sort === "xpts" ? <Term label="Rang aux xPts">Rang aux xPts · club</Term> : "Club"}
             </th>
-            <th
-              scope="col"
-              title={
-                sort === "xpts"
-                  ? "Rang au classement réel (points)"
-                  : "Rang aux points attendus"
-              }
-            >
-              {sort === "xpts" ? "Réel" : "xPts"}
+            <th scope="col">
+              {sort === "xpts" ? (
+                <Term>Réel</Term>
+              ) : (
+                <Term hint="Rang aux points attendus : le classement si chaque match s'était joué selon ses occasions.">xPts</Term>
+              )}
             </th>
-            <th scope="col">MJ</th>
-            <th scope="col">Pts</th>
-            <th scope="col">xPts</th>
-            <th scope="col" title="Points moins points attendus">
-              Écart
-            </th>
-            {!compact && <th scope="col">Diff.</th>}
-            {!compact && <th scope="col">Diff. xG</th>}
+            <th scope="col"><Term>MJ</Term></th>
+            <th scope="col"><Term>Pts</Term></th>
+            <th scope="col"><Term>xPts</Term></th>
+            <th scope="col"><Term>Écart</Term></th>
+            {!compact && <th scope="col"><Term>Diff.</Term></th>}
+            {!compact && <th scope="col"><Term label="Diff. xG / match">Diff. xG</Term></th>}
           </tr>
         </thead>
         <tbody>
@@ -1535,15 +1536,15 @@ export function ExpectedGapTable({ dossier }) {
         </caption>
         <thead>
           <tr>
-            <th scope="col">Club</th>
-            <th scope="col" title="Rang réel · rang aux points attendus, dans son championnat">
-              Champ. réel · xPts
+            <th scope="col"><Term>Club</Term></th>
+            <th scope="col">
+              <Term>Champ. réel · xPts</Term>
             </th>
-            <th scope="col">MJ</th>
-            <th scope="col">Pts / m</th>
-            <th scope="col">xPts / m</th>
-            <th scope="col" title="Points moins points attendus, par match">
-              Écart / m
+            <th scope="col"><Term>MJ</Term></th>
+            <th scope="col"><Term>Pts / m</Term></th>
+            <th scope="col"><Term>xPts / m</Term></th>
+            <th scope="col">
+              <Term>Écart / m</Term>
             </th>
           </tr>
         </thead>

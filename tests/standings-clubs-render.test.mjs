@@ -20,6 +20,10 @@ test("each standings team links to its matching profile or a source-backed fallb
   const Link = ({ href, children, ...props }) =>
     e("a", { href, ...props }, children);
   const stubs = {
+    // The « i » beside a value (Hint.jsx) renders its name alone here.
+    "./Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
+    "../components/Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
+    "../services/glossary.js": { explain: () => null },
     react: React,
     "next/link": { __esModule: true, default: Link },
     "../hooks/FootballContext.jsx": {

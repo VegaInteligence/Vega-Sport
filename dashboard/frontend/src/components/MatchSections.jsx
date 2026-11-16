@@ -19,6 +19,7 @@ import { MATCH_SECTIONS, number, isNumber } from "../services/format.js";
 import { momentumSpells } from "../services/momentum.js";
 import { ShotMap, XgTimeline } from "./Charts.jsx";
 import { MatchLink } from "./MatchLink.jsx";
+import { Term } from "./Hint.jsx";
 const MATCH_ANALYSES = MATCH_SECTIONS.filter(([key]) =>
   [
     "lineups",
@@ -268,16 +269,16 @@ export function Shots({ match, payload, onPlayer = () => {} }) {
         <table className="data-table">
           <thead>
             <tr>
-              <th>Minute</th>
-              <th>Joueur</th>
-              <th>Événement</th>
-              <th>xG</th>
+              <th><Term>Minute</Term></th>
+              <th><Term>Joueur</Term></th>
+              <th><Term>Événement</Term></th>
+              <th><Term>xG</Term></th>
               {withVega && (
-                <th title="Le xG de Vega : la chance de but d’après la distance, l’angle, la partie du corps et la situation du tir, sans la position des défenseurs ni du gardien.">
-                  xG Vega
+                <th>
+                  <Term>xG Vega</Term>
                 </th>
               )}
-              <th>xGOT</th>
+              <th><Term>xGOT</Term></th>
             </tr>
           </thead>
           <tbody>

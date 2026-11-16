@@ -4,6 +4,7 @@ import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
 import { halfRows, usePlayerHalves } from "../services/player-halves.js";
 import s from "./PlayerScout.module.css";
+import { Term } from "./Hint.jsx";
 
 /** What the player produces per 90 minutes in first halves and in second halves. */
 export default function PlayerHalves({ id }) {
@@ -23,14 +24,14 @@ export default function PlayerHalves({ id }) {
         <table className="data-table">
           <thead>
             <tr>
-              <th scope="col">Statistique</th>
-              <th scope="col">1re mi-temps</th>
-              <th scope="col">2e mi-temps</th>
+              <th scope="col"><Term>Statistique</Term></th>
+              <th scope="col"><Term>1re mi-temps</Term></th>
+              <th scope="col"><Term>2e mi-temps</Term></th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <th scope="row">Minutes jouées</th>
+              <th scope="row"><Term>Minutes jouées</Term></th>
               <td>{number(table.minutes[0])}</td>
               <td>{number(table.minutes[1])}</td>
             </tr>

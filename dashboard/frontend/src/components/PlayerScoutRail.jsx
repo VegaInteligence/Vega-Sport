@@ -33,6 +33,7 @@ import {
 } from "../services/national-flags.js";
 import { PositionsPitch } from "./PlayerScoutCharts.jsx";
 import { availability, injuryRows, usePlayerInjuries } from "../services/player-availability.js";
+import { Term } from "./Hint.jsx";
 import s from "./PlayerScout.module.css";
 
 // Formation lines placed on a horizontal pitch, attack to the right.
@@ -93,7 +94,7 @@ function Facts({ items, label }) {
     <dl className={s.facts} aria-label={label}>
       {items.map((item) => (
         <div key={item.label}>
-          <dt>{item.label}</dt>
+          <dt><Term>{item.label}</Term></dt>
           <dd>{item.value}</dd>
           {item.note && <small title={item.title}>{item.note}</small>}
         </div>
@@ -291,7 +292,7 @@ export default function PlayerScoutRail({
         <Facts items={facts} label="Fiche du joueur" />
       </div>
       <div className={`${s.railSection} phone-fold-part`}>
-        <p className={s.railTitle}>Valeur marchande</p>
+        <p className={s.railTitle}><Term>Valeur marchande</Term></p>
         <div className={s.value}>{valuation?.amount ?? "—"}</div>
         {valuation ? (
           valuation.updated && (
@@ -309,12 +310,12 @@ export default function PlayerScoutRail({
       </div>
       <div className={`${s.railSection} phone-fold-part`}>
         <p className={s.railTitle}>
-          Indice Vega <span>sur 100</span>
+          <i className={s.railName}><Term>Indice Vega</Term></i> <span>sur 100</span>
         </p>
         <div className={s.indexRow}>
           <div>
             <strong>{vega?.value ?? "—"}</strong>
-            <span>Niveau actuel</span>
+            <span><Term>Niveau actuel</Term></span>
           </div>
           <div>
             <strong>
@@ -333,14 +334,14 @@ export default function PlayerScoutRail({
       {positions.length > 0 && (
         <div className={`${s.railSection} phone-fold-part`}>
           <p className={s.railTitle}>
-            Postes occupés <span>{season}</span>
+            <i className={s.railName}><Term>Postes occupés</Term></i> <span>{season}</span>
           </p>
           <PositionsPitch positions={positions} total={profile.minutes} />
         </div>
       )}
       <div className={`${s.railSection} phone-fold-part`}>
         <p className={s.railTitle}>
-          Disponibilité <span>12 derniers mois</span>
+          <i className={s.railName}><Term>Disponibilité</Term></i> <span>12 derniers mois</span>
         </p>
         {injuries.loading ? (
           <Skeleton label="Chargement de la disponibilité…" lines={1} />
@@ -440,7 +441,7 @@ export function PlayerScoutStrip({
       <dl className={s.floatingFacts}>
         {items.map((item) => (
           <div key={item.label}>
-            <dt>{item.label}</dt>
+            <dt><Term>{item.label}</Term></dt>
             <dd>{item.value}</dd>
           </div>
         ))}

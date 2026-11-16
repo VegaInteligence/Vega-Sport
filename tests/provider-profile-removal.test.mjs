@@ -57,6 +57,10 @@ test("lineups open the site's player profile and do not offer a provider profile
     Media: () => null,
   };
   const stubs = {
+    // The « i » beside a value (Hint.jsx) renders its name alone here.
+    "./Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
+    "../components/Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
+    "../services/glossary.js": { explain: () => null },
     react: React,
     "next/link": {
       __esModule: true,
@@ -109,6 +113,10 @@ test("lineups open the site's player profile and do not offer a provider profile
 test("player data retains match observations but no provider profile source", async () => {
   const requested = [];
   const stubs = {
+    // The « i » beside a value (Hint.jsx) renders its name alone here.
+    "./Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
+    "../components/Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
+    "../services/glossary.js": { explain: () => null },
     react: React,
     "./UI.jsx": {
       AsyncState: ({ children }) =>
@@ -159,6 +167,10 @@ test("match data keeps its analyses and omits the raw provider match profile", a
     Media: () => null,
   };
   const stubs = {
+    // The « i » beside a value (Hint.jsx) renders its name alone here.
+    "./Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
+    "../components/Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
+    "../services/glossary.js": { explain: () => null },
     react: React,
     "next/link": {
       __esModule: true,

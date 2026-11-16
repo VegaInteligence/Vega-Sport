@@ -14,6 +14,7 @@ import { cleanIndex } from "../services/research-storage.js";
 import { number } from "../services/format.js";
 import { Card, Empty, Modal, Pager } from "./UI.jsx";
 import { BookmarkButton, MetricInfo, SavedViews } from "./ResearchUI.jsx";
+import { Term } from "./Hint.jsx";
 
 export default function PlayerIndices({ rows, profiles }) {
   const f = useFootball(),
@@ -241,10 +242,10 @@ export default function PlayerIndices({ rows, profiles }) {
             <table className="data-table research-weight-table">
               <thead>
                 <tr>
-                  <th>Indicateur</th>
-                  <th>Objectif</th>
-                  <th>Importance</th>
-                  <th>Retirer</th>
+                  <th><Term>Indicateur</Term></th>
+                  <th><Term>Objectif</Term></th>
+                  <th><Term>Importance</Term></th>
+                  <th><Term>Retirer</Term></th>
                 </tr>
               </thead>
               <tbody>
@@ -354,11 +355,11 @@ export default function PlayerIndices({ rows, profiles }) {
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Joueur</th>
-                  <th>Poste</th>
-                  <th>Minutes</th>
-                  <th>Indice / 100</th>
-                  <th>Détail</th>
+                  <th><Term>Joueur</Term></th>
+                  <th><Term>Poste</Term></th>
+                  <th><Term>Minutes</Term></th>
+                  <th><Term>Indice / 100</Term></th>
+                  <th><Term>Détail</Term></th>
                 </tr>
               </thead>
               <tbody>
@@ -431,12 +432,12 @@ export default function PlayerIndices({ rows, profiles }) {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Indicateur</th>
-                  <th>Valeur / 90 ou %</th>
-                  <th>Pairs</th>
-                  <th>Centile</th>
-                  <th>Poids</th>
-                  <th>Contribution</th>
+                  <th><Term>Indicateur</Term></th>
+                  <th><Term>Valeur / 90 ou %</Term></th>
+                  <th><Term>Pairs</Term></th>
+                  <th><Term>Centile</Term></th>
+                  <th><Term>Poids</Term></th>
+                  <th><Term>Contribution</Term></th>
                 </tr>
               </thead>
               <tbody>

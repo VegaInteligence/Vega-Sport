@@ -7,6 +7,8 @@ import { Segments, Skeleton } from "./UI.jsx";
 import { BookmarkButton } from "./ResearchUI.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
+import { Term } from "./Hint.jsx";
+import FillChart from "./FillChart.jsx";
 import { euros, readDay, useClubSquad, weightedAge } from "../services/profile-blocks.js";
 import { json, useResource } from "../services/resources.js";
 import ClubInformation from "./ClubInformation.jsx";
@@ -99,7 +101,7 @@ export function IdentityRail({ dossier, onTab }) {
       </div>
       <div className={s.railSection}>
         <div className={s.railTitle}>
-          Classement <span>{dossier.league?.name}</span>
+          <div className={s.railName}><Term>Classement</Term></div> <span>{dossier.league?.name}</span>
         </div>
         <div className={s.position}>
           <strong>{ordinal(self.position)}</strong>
@@ -110,26 +112,26 @@ export function IdentityRail({ dossier, onTab }) {
         </div>
         <dl className={c.facts}>
           <div>
-            <dt>Bilan</dt>
+            <dt><Term>Bilan</Term></dt>
             <dd>
               {r.w}-{r.d}-{r.l}
             </dd>
           </div>
           <div>
-            <dt>Buts</dt>
+            <dt><Term hint="Buts marqués et encaissés.">Buts</Term></dt>
             <dd>
               {r.gf}–{r.ga}
             </dd>
           </div>
           <div>
-            <dt>xPts</dt>
+            <dt><Term>xPts</Term></dt>
             <dd>{fmtNum(self.xptsTotal, 1)}</dd>
             <small className={gap >= 0 ? c.up : c.down}>
               {fmtNum(gap, 1, true)} pts vs attendu
             </small>
           </div>
           <div>
-            <dt>Forme</dt>
+            <dt><Term>Forme</Term></dt>
             <dd>
               <FormStrip rows={dossier.allRows} />
             </dd>
@@ -144,7 +146,7 @@ export function IdentityRail({ dossier, onTab }) {
       </div>
       <div className={`${s.railSection} phone-fold-part`}>
         <div className={s.railTitle}>
-          Indice Vega club <span>sur 100</span>
+          <div className={s.railName}><Term>Indice Vega club</Term></div> <span>sur 100</span>
         </div>
         <div className={s.index}>
           <strong>{self.vegaIndex ?? "—"}</strong>
@@ -159,7 +161,7 @@ export function IdentityRail({ dossier, onTab }) {
         </button>
       </div>
       <div className={`${s.railSection} phone-fold-part`}>
-        <div className={s.railTitle}>Toutes compétitions</div>
+        <div className={s.railTitle}><Term>Toutes compétitions</Term></div>
         <ul className={s.comps}>
           {competitionRecords(dossier).map((comp) => (
             <li key={comp.id}>
@@ -223,12 +225,12 @@ function SquadFacts({ dossier }) {
   return (
     <div className={`${s.railSection} phone-fold-part`}>
       <div className={s.railTitle}>
-        Effectif {current && squad && <span>au {readDay(squad.readOn)}</span>}
+        <div className={s.railName}><Term>Effectif</Term></div> {current && squad && <span>au {readDay(squad.readOn)}</span>}
       </div>
       <dl className={c.facts}>
         {facts.map((fact, i) => (
           <div key={fact.label} style={facts.length % 2 && i === facts.length - 1 ? { gridColumn: "1 / -1" } : undefined}>
-            <dt>{fact.label}</dt>
+            <dt><Term>{fact.label}</Term></dt>
             <dd>{fact.value}</dd>
             {fact.note && <small>{fact.note}</small>}
           </div>
@@ -274,10 +276,10 @@ function ExpectedCard({ dossier }) {
         text={`Les écarts entre le réel et l’attendu signalent la finition, le gardien ou la réussite : ils tendent à se résorber. À droite, le classement de ${dossier.league?.name || "son championnat"} si chaque match s’était joué selon ses xG.`}
       >
         <div className={s.expectedGrid}>
-          <div className={c.stack}>
+          <div className={s.expectedSide}>
             <dl className={c.facts}>
               <div>
-                <dt>Points · xPts</dt>
+                <dt><Term>Points · xPts</Term></dt>
                 <dd>
                   {self.record.points} · {fmtNum(self.xptsTotal, 1)}
                 </dd>
@@ -290,7 +292,7 @@ function ExpectedCard({ dossier }) {
                 </small>
               </div>
               <div>
-                <dt>Buts · xG</dt>
+                <dt><Term>Buts · xG</Term></dt>
                 <dd>
                   {self.record.gf} ·{" "}
                   {fmtNum((v.xg ?? 0) * self.record.matches, 1)}
@@ -300,7 +302,7 @@ function ExpectedCard({ dossier }) {
                 </small>
               </div>
               <div>
-                <dt>Encaissés · xG contre</dt>
+                <dt><Term>Encaissés · xG contre</Term></dt>
                 <dd>
                   {self.record.ga} ·{" "}
                   {fmtNum((v.xga ?? 0) * self.record.matches, 1)}
@@ -310,14 +312,17 @@ function ExpectedCard({ dossier }) {
                 </small>
               </div>
               <div>
-                <dt>Buts évités par le gardien</dt>
+                <dt><Term>Buts évités par le gardien</Term></dt>
                 <dd>
                   {fmtNum((v.keeper ?? 0) * self.record.matches, 1, true)}
                 </dd>
                 <small>xGOT concédés − buts encaissés</small>
               </div>
             </dl>
-            <PointsTrend rows={self.rows} height={250} grow={1.3} />
+            {/* The chart takes the room the league table leaves under the figures. */}
+            <FillChart base={250} cap={640 * 1.3}>
+              {(height) => <PointsTrend rows={self.rows} height={height} grow={1.3} />}
+            </FillChart>
           </div>
           <LeagueTable dossier={dossier} sort="xpts" compact />
         </div>
@@ -592,11 +597,11 @@ export function Style({ dossier }) {
                 <table className={c.table}>
                   <thead>
                     <tr>
-                      <th scope="col">Système</th>
-                      <th scope="col">MJ</th>
-                      <th scope="col">V-N-D</th>
-                      <th scope="col">Buts</th>
-                      <th scope="col">Pts / match</th>
+                      <th scope="col"><Term>Système</Term></th>
+                      <th scope="col"><Term>MJ</Term></th>
+                      <th scope="col"><Term>V-N-D</Term></th>
+                      <th scope="col"><Term>Buts</Term></th>
+                      <th scope="col"><Term>Pts / match</Term></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -679,6 +684,7 @@ export function Matches({ dossier }) {
       </Card>
       <div className={c.grid2}>
         <Card
+          className={c.fillCard}
           title="Buts par période"
           text="Toutes compétitions, buts datés dans la carte des tirs."
         >
