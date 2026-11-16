@@ -30,6 +30,8 @@ test("a zone is named only when it clearly leads", () => {
   assert.match(plain(winger.text), /^60 % de ses actions dans le dernier tiers, 70 % côté droit, 10 % côté gauche$/);
   // 47 % against 40 %: under ten points ahead, so spread.
   assert.equal(zoneReading({ matches: 12, actions: 100, thirds: [13, 47, 40], sides: [34, 33, 33] }).title, "Présence répartie");
+  // A centre-forward: more actions in the middle third, but it is a larger third.
+  assert.equal(zoneReading({ matches: 13, actions: 329, thirds: [26, 168, 135], sides: [46, 226, 57] }).title, "Surtout dans l’axe");
   assert.equal(zoneReading({ matches: 4, actions: 100, thirds: [0, 0, 100], sides: [100, 0, 0] }), null);
   assert.equal(zoneReading(null), null);
 });
@@ -38,7 +40,7 @@ test("the foot he shoots with, from ten shots, penalties left out", () => {
   assert.equal(footReading({ shots: 40, rightFoot: 6, leftFoot: 30, header: 4, other: 0, insideBox: 30 }).title, "Frappe surtout du pied gauche");
   assert.equal(footReading({ shots: 20, rightFoot: 10, leftFoot: 8, header: 2, other: 0, insideBox: 12 }).title, "Frappe des deux pieds");
   assert.equal(footReading({ shots: 12, rightFoot: 0, leftFoot: 0, header: 12, other: 0, insideBox: 12 }).title, "Frappe surtout de la tête");
-  assert.match(plain(footReading({ shots: 40, rightFoot: 6, leftFoot: 30, header: 4, other: 0, insideBox: 30 }).text), /17 % de ses frappes du pied droit, 83 % du gauche, 10 % de la tête \(40 tirs hors penalty\)/);
+  assert.match(plain(footReading({ shots: 40, rightFoot: 6, leftFoot: 30, header: 4, other: 0, insideBox: 30 }).text), /^Frappes du pied : 83 % du gauche, 17 % du droit · 10 % de ses tirs de la tête \(40 tirs hors penalty\)$/);
   assert.equal(footReading({ shots: 9, rightFoot: 9, leftFoot: 0, header: 0, other: 0, insideBox: 9 }), null);
   assert.equal(boxReading({ shots: 40, insideBox: 34 }).title, "Tire de près");
   assert.equal(boxReading({ shots: 40, insideBox: 18 }).title, "Tire souvent de loin");
@@ -49,6 +51,8 @@ test("his share of the passes says among whom it is placed", () => {
   const reading = passReading({ competition: "Ligue 1", networks: 12, share: 14.2, percentile: 88, cohort: { label: "milieux centraux" } });
   assert.equal(plain(reading.text), "Reçoit 14,2 % des passes de son équipe");
   assert.equal(plain(reading.rank), "plus que 88 % des milieux centraux de Ligue 1");
+  assert.equal(plain(passReading({ competition: "Premier League", networks: 10, share: 2, percentile: 1, cohort: { label: "attaquants" } }).rank),
+    "moins que 99 % des attaquants de Premier League");
   assert.equal(passReading({ competition: "Ligue 1", networks: 6, share: 9, percentile: null, cohort: null }).rank, null);
   assert.equal(passReading(null), null);
 });

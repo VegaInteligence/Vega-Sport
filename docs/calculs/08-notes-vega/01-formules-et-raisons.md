@@ -527,15 +527,15 @@ Ces cinq blocs montraient des valeurs de maquette. Ils sont maintenant calculés
 
 ### 8.3 Le profil de jeu
 
-- **Zone** : les cartes d'activité de la saison additionnées (16 cases dans la longueur, attaque vers la droite ; 12 dans la largeur). Tiers : cases 0 à 4, 5 à 10, 11 à 15. Côtés : cases 0 à 3 de la largeur pour sa droite, 8 à 11 pour sa gauche (vérifié sur des ailiers et latéraux connus des deux côtés). Une carte dont les cases ne font pas le total de ses actions est écartée. Une zone est nommée si elle a au moins 45 % des actions et 10 points de plus que la suivante ; sinon « répartie ». Il faut 5 matchs.
-- **Pied** : les tirs de la saison hors penalties et contre son camp. « Surtout du pied droit » (ou gauche) à 70 % des tirs du pied ou plus ; la part de la tête à part. C'est le pied avec lequel il frappe, pas son pied fort déclaré. Il faut 10 tirs.
+- **Zone** : les cartes d'activité de la saison additionnées (16 cases dans la longueur, attaque vers la droite ; 12 dans la largeur). Tiers : cases 0 à 4, 5 à 10, 11 à 15. Côtés : cases 0 à 3 de la largeur pour sa droite, 8 à 11 pour sa gauche (vérifié sur des ailiers et latéraux connus des deux côtés). Une carte dont les cases ne font pas le total de ses actions est écartée. Une zone est nommée si elle a au moins 45 % des actions et 10 points de plus que la suivante ; sinon « répartie ». Les tiers n'ont pas la même surface (5, 6 et 5 cases) : la part de chaque tiers est d'abord rapportée à son nombre de cases, sinon le tiers central passerait devant par sa seule taille (un avant-centre y a souvent le plus d'actions). Le texte affiche les parts brutes. Il faut 5 matchs.
+- **Pied** : les tirs de la saison hors penalties et contre son camp. « Surtout du pied droit » (ou gauche) à 70 % des tirs du pied ou plus ; la part de la tête à part. C'est le pied avec lequel il frappe, pas son pied fort déclaré. La répartition entre les pieds ne compte que les tirs du pied ; la part de la tête est donnée sur tous ses tirs. Il faut 10 tirs.
 - **Surface** : part de ces tirs pris dans la surface ; « de près » à 80 % ou plus, « souvent de loin » à 50 % ou moins.
 - Pas d'étiquette tirée des centiles (« dribbleur » au-dessus d'un seuil) : elle répéterait « Points forts » avec un seuil arbitraire.
 
 ### 8.4 Le contexte d'équipe
 
 - Le style du club est celui de la page club : mêmes valeurs, mêmes centiles dans son championnat, mêmes étiquettes (seuils 75 et 25 des centiles).
-- Part des passes reçues : Σ passes reçues / Σ passes de son équipe, sur les réseaux de passes où il figure. Un réseau couvre un match jusqu'au premier changement. Il faut 5 réseaux. Son centile se calcule parmi les joueurs de son rôle dans le même championnat, avec la même règle de repli qu'au § 8.2.
+- Part des passes reçues : Σ passes reçues / Σ passes de son équipe, sur les réseaux de passes où il figure. Un réseau couvre un match jusqu'au premier changement. Il faut 5 réseaux. Son centile se calcule parmi les joueurs de son rôle dans le même championnat, avec la même règle de repli qu'au § 8.2. Au-dessus de 50, il se lit « plus que X % des … » ; en dessous, « moins que (100 − X) % des … ».
 
 ### 8.5 La saison précédente dans les comparaisons
 
