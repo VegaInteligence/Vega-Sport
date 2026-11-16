@@ -1,30 +1,19 @@
 # WORKLOG — 2026-11-16
 
-- Goal: nation pages — an index of national teams and a page per national team ([VI-18](https://linear.app/vegainteligence/issue/VI-18/pages-nations-index-des-selections-et-page-par-selection), Done; mock-up approved 16 Nov « yes implement as the mockup »).
+- Goal: cup predictions — the UEFA league phases projected (Champions, Europa, Conference League) and the chance of each club or nation to reach each stage of every cup ([VI-19](https://linear.app/vegainteligence/issue/VI-19/predictions-des-coupes-phases-de-ligue-europeennes-et-chances-par-tour), In Progress; mock-up sent, awaiting validation).
 - This checkout: Vega-Sport, worktree `claude/v2-complete`, pushed direct to main; Linear label `repo:vega-sport`.
-- Done today: VI-17 (player page and club rail) shipped and verified (8c8dd52633, 8d87993452); the club stadium's blue underline was removed (803fc14499).
-- Constraints: approved mock-up before any code; real API-backed data only; no provider names in routes or visible text; Vega ids; typed tables; French UI; phones get one scrolling row of pills.
-- Facts (read-only DB, 16 Nov):
-  - 235 national teams, 54 with a crest, none linked to a country.
-  - Matches: World Cup 2026 (stored twice: collected + archive), Nations League 2026/27 (two sources), World Cups since 1930 and Euros 2020/2024 (archives).
-  - Player stats only for the 48 World Cup 2026 squads.
-  - Elo: 54 nations have a history; 19 are ranked in 2026/27.
-  - Data gaps: « Italie » and « Grèce » are separate teams from Italy and Greece, so the France–Italie matches are missing from the Elo. Many archive scores are empty (1998 final). There is no coach, line-up or confederation.
-- Proposed direction (mock-up):
-  - `/nations/`: Vega Elo ranking with search, « Classées cette saison / Toutes ».
-  - `/nations/?id=`:
-    - rail: rank, bilan, form, World Cup 2026;
-    - tabs Vue d'ensemble / Matchs / Joueurs / Historique;
-    - overview: KPI strip, Elo curve + latest matches, World Cup 2026 path, World Cup 2026 players, tournaments grid.
-  - Links: « Nations » in the top nav, player rail nation chip, international match teams, search.
-- Same request: the player « Profil statistique » becomes the club card adapted. It shows the radar, then role and skill bars ranked at the position, then tags; the separate skills card goes. The home « Joueur de la semaine » recent grades get a hover with the match and a link to it.
-- Decisions:
-  - Duplicates are handled at read time: a collected match and its archive copy are kept once. A final or third-place match without a score names the stage only.
-  - The French-named Nations League teams (Italie, Grèce, Hongrie… source-only, no PitchAPI anchor) stay separate for now. Merging them changes the Elo, so it is a follow-up for the user.
-- Progress: shipped and verified in production at 1440 px and 393 px. Evidence is in the session scratchpad (evidence-vi18/README.md), summarised in VI-18.
-  - Commits: 12a1df4d1d (API + migration 119); 20e728414c (player card + home hover); 333036b680 (migration 120, round and penalties from the archive copy); 2cf6249ffa (pages and links).
-  - Deploy runs 43951876581 and 43954174171 succeeded; World Cup 2022 now reads « Finaliste ».
-  - Tests were written before the code; the API suite is 162/162 and the site suite 602/602.
-- Answered: season grades sit near 64 because the season grade applies the match curve 100/(1+10^(−z/4)) to the minutes-weighted mean z. Averaging halves the spread: match z sd 0.93, season mean z sd 0.45, so p99 ≈ 65.7 for 900+ min in 2026/27. Any rescale is a method change for the user.
-- Open: merge the French-named Nations League teams (follow-up proposed; changes the Elo, needs the user's yes). « Enregistrer » for nations is not built.
-- Next action: wait for the user's feedback.
+- Done today:
+  - VI-17 player page and club rail; VI-18 nation pages (API 119–120 + pages).
+  - Player profile in the club card's design; home grade hover.
+  - Background refresh with no banner; European colours of past tables from observed fates (f97b5aa165, verified on Ligue 1 and Premier League 2022/23–2023/24).
+- Constraints: mock-up and method approval before code; ask before method changes; advisor review for big method choices; tests first; real data only.
+- Facts (read-only, 16 Nov):
+  - The season projection (`backend/vega/forecast.py`) skips INT competitions.
+  - The UEFA league phases of 2026/27 have rounds 1–4 played and 72 fixtures left (54 in the Conference League); the fixtures left have no round.
+  - Domestic cups: 1 108 of 1 530 clubs have no Elo.
+- Prototype (diag-clproj.py, read-only): the forecast-v2 model plus a UEFA bracket (seeded play-off pairs, R16 by rank, two legs, extra time at one third of the rate, penalties at 50 %, neutral final). It gives each club its projected points, top 8, play-offs, out, 8es, QF, SF, final and winner, and the totals sum to 100 %.
+- Open method choices for the user:
+  - the strength of a club without an Elo (league level?);
+  - random draws for rounds not yet drawn;
+  - how to count knockout ties already played.
+- Next action: wait for the user's validation; then advisor review, tests first, worker + API + « Projection » tab, production E2E.
