@@ -4,9 +4,24 @@
   <img src=".github/branding/vega-banner-dark.svg" alt="Vega Intelligence" width="100%">
 </picture>
 
-# Vega Intelligence
+# Vega Sport — Application et backend
 
-Application d'analyse du football : matchs, compétitions, clubs et joueurs, avec ses propres calculs (centiles, rôles, classements de puissance). Le site (Next.js) est hébergé sur Vercel ; il lit une API de lecture servie par CloudFront et Lambda, sur une base PostgreSQL (RDS) qu'un worker remplit depuis les sources et recalcule en continu.
+Vega Sport est **l'application d'analyse sportive de Vega Intelligence**, actuellement centrée sur le football : matchs, compétitions, clubs et joueurs, avec ses propres calculs (centiles, rôles, classements de puissance).
+
+Ce dépôt contient **le frontend du dashboard et le backend qui l'alimente** : interface Next.js dans `dashboard/frontend`, API de lecture, worker et migrations PostgreSQL dans `backend`, infrastructure AWS dans `infra/aws`. Le site est hébergé sur Vercel ; il lit l'API via CloudFront et Lambda, sur une base RDS que le worker remplit et recalcule en continu.
+
+## Place dans les projets Vega
+
+| Dépôt | Rôle |
+| --- | --- |
+| [Vega-Sport](https://github.com/VegaInteligence/Vega-Sport) — ce dépôt | Application : frontend du dashboard, collecte, calculs, base, API et infrastructure |
+| [Vega-Prediction](https://github.com/VegaInteligence/Vega-Prediction) | Recherche : articles, méthodes, algorithmes, jeux de données et expériences reproductibles |
+| [Vega-Business](https://github.com/VegaInteligence/Vega-Business) | Site de présentation de Vega Intelligence, de ses activités et de ses méthodes ; liens vers l'application |
+| [Vega-Status](https://github.com/VegaInteligence/Vega-Status) | Dashboard opérationnel : collecte, file de tâches, calculs et qualité des données du backend de Sport |
+
+Les pages et interactions de l'application se développent ici, avec les données et les contrats API dont elles dépendent. Une méthode étudiée dans Vega-Prediction est intégrée explicitement dans Sport, avec sa validation, lorsqu'elle doit alimenter l'application.
+
+Vega-Status lit `GET /api/ops/status`, dont la route et les vues SQL sont maintenues dans ce dépôt. Les changements de ce contrat se coordonnent entre Sport et Status. Vega-Business présente le projet et renvoie vers les rubriques de l'application ; ses pages et son déploiement sont maintenus dans son propre dépôt.
 
 ## Ce que montre le site
 
@@ -37,7 +52,7 @@ PitchAPI + sources complémentaires
             ▼
    API de lecture Node (Lambda) derrière CloudFront, réponses versionnées et mises en cache
             ▼
-   site Next.js (Vercel)        page d'état (dépôt séparé, lit /api/ops/status)
+   dashboard Vega Sport (Next.js/Vercel)     Vega Status (dépôt séparé, lit /api/ops/status)
 ```
 
 Principes tenus par le code et ses tests :
