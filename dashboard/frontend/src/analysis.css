@@ -1366,7 +1366,7 @@ select optgroup {
     justify-content: flex-start;
   }
   .match-overview-grid > .match-leaders-card > .card-body {
-    justify-content: space-around;
+    justify-content: flex-start;
   }
   /* The goals keep their separators touching: each row grows, its content centred. */
   .match-overview-grid > .card > .card-body > .match-goals {
@@ -3013,5 +3013,24 @@ select optgroup {
   }
   .competition-selection-count {
     flex-basis: 100%;
+  }
+}
+
+/* The match's best grades on the whole width: two columns of rows, each opening the player. */
+.match-leaders-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 32px;
+}
+.match-leaders-grid .match-player-row:last-child {
+  border-bottom: 1px solid var(--border);
+}
+a.match-player-row {
+  color: inherit;
+  text-decoration: none;
+}
+@media (max-width: 760px) {
+  .match-leaders-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

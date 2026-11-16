@@ -177,6 +177,8 @@ export function probabilityChart(answer, frame = CHART) {
   }));
   return {
     swings,
+    // Each minute where the pointer can stop: its place and its three chances, with the score then.
+    series: points.map((p) => ({ minute: p.minute, x: fixed(x(p.minute)), home: p.home, draw: p.draw, away: p.away, score: p.score ?? null })),
     paths: {
       home: area(() => 0, (p) => p.home),
       draw: area((p) => p.home, (p) => p.home + p.draw),

@@ -15,14 +15,17 @@ import { isLiveWindow } from "../services/live-client.js";
 import { Card, Media, Grade, Segments, Empty, AsyncState, Skeleton } from "./UI.jsx";
 import Icon from "./Icon.jsx";
 import { XgTimeline, ShotMap } from "./Charts.jsx";
-import { MatchSections, normalizeShots } from "./MatchSections.jsx";
+import { normalizeShots } from "./MatchSections.jsx";
 import MatchStandings from "./MatchStandings.jsx";
-import MatchEventHighlights from "./MatchEventHighlights.jsx";
 import { StatRow, StatRows } from "./StatRows.jsx";
 const MatchContext = lazy(() => import("./MatchContext.jsx"));
 const MatchForecast = lazy(() => import("./MatchForecast.jsx"));
 const MatchOdds = lazy(() => import("./MatchOdds.jsx"));
 import MatchWinProbability from "./MatchWinProbability.jsx";
+import MatchKpis from "./MatchKpis.jsx";
+import MatchLineups from "./MatchLineups.jsx";
+import MatchPlayersBoard from "./MatchPlayersBoard.jsx";
+import MatchAnalyses from "./MatchAnalyses.jsx";
 import { periodShort } from "./PlayerMetrics.jsx";
 import { number, date, isNumber } from "../services/format.js";
 import {
@@ -217,16 +220,16 @@ function MatchViewTabs({ view, onChange, panelId, views }) {
     </div>
   );
 }
-function MatchPlayer({ row, rank, grade }) {
+function MatchPlayer({ row, rank, grade, link = false }) {
   const f = useFootball();
+  const id = playerOf(row);
+  // A best grade opens the player's page; elsewhere a row opens his performance of the match.
+  const Element = link && /^p_/.test(id || "") ? Link : "button";
+  const props = Element === Link
+    ? { href: f.href("/joueurs/", { id }), "aria-label": `Voir la fiche de ${row.name}` }
+    : { onClick: () => f.setPlayer(row.id), "aria-busy": (f.player === row.id && f.deferredPerformance?.loading) || undefined };
   return (
-    <button
-      className="match-player-row"
-      aria-busy={
-        (f.player === row.id && f.deferredPerformance?.loading) || undefined
-      }
-      onClick={() => f.setPlayer(row.id)}
-    >
+    <Element className="match-player-row" {...props}>
       {rank && (
         <span className="leader-rank">{String(rank).padStart(2, "0")}</span>
       )}
@@ -249,45 +252,7 @@ function MatchPlayer({ row, rank, grade }) {
       {(grade?.grade ?? row.grade) != null && (
         <Grade value={grade?.grade ?? row.grade} title={grade ? gradeTitle(grade) : undefined} />
       )}
-    </button>
-  );
-}
-function MatchPlayers({ match, players }) {
-  const [scope, setScope] = useState("played");
-  const grades = useMatchGrades(match.id);
-  const rows = players.filter((r) => scope === "all" || r.minutes > 0);
-  return (
-    <>
-      <div className="match-section-toolbar">
-        <Segments
-          label="Participation des joueurs"
-          value={scope}
-          onChange={setScope}
-          items={[
-            ["played", "Entrés en jeu"],
-            ["all", "Tous les joueurs"],
-          ]}
-        />
-      </div>
-      <div className="match-team-players">
-        {[match.home, match.away].map((team) => (
-          <Card
-            key={team.id}
-            title={team.name}
-            action={<Media name={team.name} url={team.imageUrl} />}
-          >
-            {rows
-              .filter((r) => r.teamId === team.id)
-              .map((r) => (
-                <MatchPlayer row={r} key={r.id} grade={grades.get(playerOf(r))} />
-              ))}
-            {!rows.some((r) => r.teamId === team.id) && (
-              <Empty>Aucune performance collectée.</Empty>
-            )}
-          </Card>
-        ))}
-      </div>
-    </>
+    </Element>
   );
 }
 function MatchShots({ match }) {
@@ -623,22 +588,7 @@ export default function MatchDetail({ match }) {
               </div>
             ))}
           </div>
-        ) : !upcoming && (
-          <div className="match-kpis">
-            {overviewStats(match)
-              .slice(0, 4)
-              .map((s) => (
-                <div key={s.key}>
-                  <span>{s.label}</span>
-                  <strong>
-                    <b className="home-number">{statValue(s, "home")}</b>
-                    <i>–</i>
-                    <b className="away-number">{statValue(s, "away")}</b>
-                  </strong>
-                </div>
-              ))}
-          </div>
-        )}
+        ) : !upcoming && <MatchKpis match={match} />}
       </section>
       {match.coverage?.teamStatsReliable === false && (
         <p role="status" className="notice notice-warning">
@@ -679,10 +629,9 @@ export default function MatchDetail({ match }) {
               <StatRows match={match} stats={overviewStats(match)} />
             </Card>
             {(!upcoming || liveScore) && <MatchWinProbability match={match} live={liveScore ? live : null} />}
-            <MatchEventHighlights match={match} />
             <Card
               title="Meilleures notes"
-              className="match-leaders-card"
+              className="match-leaders-card match-overview-wide"
               footer={
                 <button
                   className="inline-link"
@@ -693,9 +642,11 @@ export default function MatchDetail({ match }) {
                 </button>
               }
             >
-              {leading.map((r, i) => (
-                <MatchPlayer key={r.id} row={r} rank={i + 1} grade={grades.get(playerOf(r))} />
-              ))}
+              <div className="match-leaders-grid">
+                {leading.map((r, i) => (
+                  <MatchPlayer key={r.id} row={r} rank={i + 1} grade={grades.get(playerOf(r))} link />
+                ))}
+              </div>
               {!leading.length && <Empty>Aucune note collectée.</Empty>}
             </Card>
           </div>
@@ -719,31 +670,9 @@ export default function MatchDetail({ match }) {
           ) : (
             <MatchShots match={match} />
           ))}
-        {view === "lineups" && (
-          <MatchSections
-            key={`${match.id}:lineups`}
-            match={match}
-            showNavigation={false}
-            initialSection="lineups"
-          />
-        )}
-        {view === "players" &&
-          (match.summaryVersion && !players.length ? (
-            <MatchSections
-              match={match}
-              showNavigation={false}
-              initialSection="players"
-            />
-          ) : (
-            <MatchPlayers match={match} players={players} />
-          ))}
-        {view === "analyses" && (
-          <MatchSections
-            key={`${match.id}:analyses`}
-            match={match}
-            initialSection="events"
-          />
-        )}
+        {view === "lineups" && <MatchLineups key={`${match.id}:lineups`} match={match} />}
+        {view === "players" && <MatchPlayersBoard key={`${match.id}:players`} match={match} />}
+        {view === "analyses" && <MatchAnalyses key={`${match.id}:analyses`} match={match} />}
       </div>
     </div>
   );
