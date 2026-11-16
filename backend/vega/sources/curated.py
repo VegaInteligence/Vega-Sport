@@ -48,6 +48,47 @@ CLUB_ALIASES = {
     "Barcelona": "FC Barcelona", "Atletico Madrid": "Atlético de Madrid", "Atlético Madrid": "Atlético de Madrid",
     "Sporting CP": "Sporting Clube de Portugal", "FC Porto": "FC Porto", "FC København": "FC København", "FCSB": "FCSB",
     "Bodø/Glimt": "Bodø/Glimt",
+    # The domestic cups' sources (open-matchday, OpenLigaDB) write PitchAPI's clubs their own way:
+    # each spelling below was reviewed against PitchAPI's club of the same country (VI-21, 17 Nov
+    # 2026). Near names of other clubs are left out on purpose: « A. Salzburg » (SV Austria
+    # Salzburg), « C.F. Benfica » (Clube Futebol Benfica), « Excelsior '31 », « RKAV Volendam »,
+    # « FC Lustenau », « FC United » (of Manchester), the U21 teams, « Deportivo » and « Estrela ».
+    # Germany.
+    "1. FC Union Berlin": "Union Berlin", "1. FC Magdeburg": "Magdeburg", "Bayer 04 Leverkusen": "Bayer Leverkusen",
+    "SV Werder Bremen": "Werder Bremen", "VfL Bochum": "Bochum", "VfL Wolfsburg": "Wolfsburg", "FC St. Pauli": "St. Pauli",
+    "TSG Hoffenheim": "Hoffenheim", "1. FC Heidenheim 1846": "FC Heidenheim", "SC Freiburg": "Freiburg",
+    "SV Darmstadt 98": "Darmstadt", "SC Paderborn 07": "Paderborn", "1. FC Kaiserslautern": "Kaiserslautern",
+    "SpVgg Greuther Fürth": "Greuther Fürth", "FC Schalke 04": "Schalke 04", "SV 07 Elversberg": "Elversberg",
+    "SV Elversberg": "Elversberg", "FC Augsburg": "Augsburg", "1. FSV Mainz 05": "Mainz 05", "Mainz": "Mainz 05",
+    "SV Wehen Wiesbaden": "Wehen Wiesbaden", "FC Bayern München": "Bayern München", "SV Waldhof Mannheim": "Waldhof Mannheim",
+    "1. FC Saarbrücken": "Saarbrücken", "SC Verl": "Verl", "SC Verl 1924": "Verl", "FC Erzgebirge Aue": "Erzgebirge Aue",
+    "SG Sonnenhof Großaspach": "Sonnenhof Großaspach", "SG Sonnenhof Großaspch": "Sonnenhof Großaspach",
+    "Grossaspach": "Sonnenhof Großaspach", "Preußen Münster": "Preussen Münster", "TSV Eintracht Braunschweig": "Eintracht Braunschweig",
+    "DSC Arminia Bielefeld": "Arminia Bielefeld", "Hamburg SV": "Hamburger SV", "TSV 1860 München": "1860 München",
+    "Hertha Berlin": "Hertha BSC",
+    # England.
+    "Cambridge Utd": "Cambridge United", "Oxford Utd": "Oxford United", "Huddersfield": "Huddersfield Town",
+    "Sheffield Wed": "Sheffield Wednesday", "Northampton": "Northampton Town", "Cheltenham": "Cheltenham Town",
+    "Shrewsbury": "Shrewsbury Town", "Harrogate": "Harrogate Town", "Leicester": "Leicester City", "Fleetwood": "Fleetwood Town",
+    "Mansfield": "Mansfield Town", "Forest Green": "Forest Green Rovers", "Peterborough": "Peterborough United",
+    "Hartlepool": "Hartlepool United", "Salford": "Salford City", "Colchester": "Colchester United", "Swindon": "Swindon Town",
+    "Grimsby": "Grimsby Town", "Crawley": "Crawley Town", "Rotherham": "Rotherham United", "Doncaster": "Doncaster Rovers",
+    "Accrington": "Accrington Stanley", "Exeter": "Exeter City", "Carlisle": "Carlisle United", "Tranmere": "Tranmere Rovers",
+    "Plymouth": "Plymouth Argyle", "Luton": "Luton Town", "Newport": "Newport County", "Oldham": "Oldham Athletic",
+    "Burton": "Burton Albion", "Sutton": "Sutton United", "Crewe": "Crewe Alexandra", "Wigan": "Wigan Athletic",
+    "Wycombe": "Wycombe Wanderers",
+    # Scotland, Spain, Italy.
+    "Dundee Utd": "Dundee United", "Mirandés": "CD Mirandes", "Huesca": "SD Huesca", "Burgos": "Burgos CF", "CD Sabadell": "Sabadell",
+    "Dep. A Coruna": "Deportivo A Coruña", "Ceuta": "AD Ceuta FC", "Alavés": "Deportivo Alavés", "US Avellino": "Avellino",
+    "AS Roma": "Roma", "AC Milan": "Milan", "Vicenza": "LR Vicenza",
+    # Netherlands, Portugal, Austria, Switzerland, Poland.
+    "FC Eindhoven": "Eindhoven", "SC Cambuur": "Cambuur", "FC Den Bosch": "Den Bosch", "Almere City": "Almere City FC",
+    "FC Dordrecht": "Dordrecht", "Heerenveen": "SC Heerenveen", "G.A. Eagles": "Go Ahead Eagles", "Zwolle": "PEC Zwolle",
+    "Heracles Almelo": "Heracles", "Feyenoord Rotterdam": "Feyenoord", "Roda JC Kerkrade": "Roda JC", "Oss": "TOP Oss",
+    "Ajax Amsterdam": "Ajax", "SC Farense": "Farense", "Casa Pia": "Casa Pia AC", "Vitoria Guimaraes": "Vitória de Guimarães",
+    "Pacos Ferreira": "Pacos de Ferreira", "Austria Vienna": "Austria Wien", "A. Klagenfurt": "SK Austria Klagenfurt",
+    "A. Lustenau": "Austria Lustenau", "SK Rapid": "Rapid Wien", "Tirol": "WSG Tirol", "Admira": "Admira Moedling",
+    "Zurich": "FC Zürich", "Grasshoppers": "Grasshopper", "Termalica B-B.": "Termalica Nieciecza",
 }
 
 

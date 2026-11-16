@@ -97,6 +97,20 @@ class ParseTest(unittest.TestCase):
         self.assertIsNone(match("Chelsea FC"))  # the reviewed spelling is the tournament's, not every source's
         self.assertIsNone(match("Al Ain FC"))
 
+    def test_cup_spellings_of_professional_clubs(self):
+        # The domestic cups' sources write PitchAPI's clubs their own way (VI-21, 17 Nov 2026): each
+        # reviewed spelling names its club, in its country; a near name of another club names none.
+        pitch = {("freiburg", False): {(1, "GER")}, ("salzburg", False): {(2, "AUT")}, ("benfica", False): {(3, "POR")},
+                 ("hamburgersv", False): {(4, "GER")}, ("sheffieldwednesday", False): {(5, "ENG")}, ("corkcity", False): {(6, "IRL")},
+                 ("excelsior", False): {(7, "NED")}, ("wycombewanderers", False): {(8, "ENG")}}
+        match = lambda name, country: identity.match_team(pitch, name, False, country)
+        self.assertEqual([match("SC Freiburg", "GER"), match("Hamburg SV", "GER"), match("Sheffield Wed", "ENG"), match("Wycombe", "ENG")], [1, 4, 5, 8])
+        self.assertEqual(match("Cork City", "IRL"), 6)  # the same name, once Ireland is IRL on both sides
+        self.assertIsNone(match("A. Salzburg", "AUT"))  # SV Austria Salzburg, not Red Bull Salzburg
+        self.assertIsNone(match("C.F. Benfica", "POR"))  # Clube Futebol Benfica, not SL Benfica
+        self.assertIsNone(match("Excelsior '31", "NED"))  # Rijssen's amateur club, not Excelsior Rotterdam
+        self.assertIsNone(match("SC Freiburg", "AUT"))  # another country
+
     def test_continental_club_spellings(self):
         # The confederations' club competitions name clubs like the Club World Cup: "Name (XXX)".
         pitch = {("flamengo", False): {(1, "BRA")}, ("adt", False): {(2, "PER")}, ("utccajamarca", False): {(3, "PER")},

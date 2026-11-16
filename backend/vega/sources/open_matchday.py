@@ -50,6 +50,16 @@ COVERED = {
 STATS = {"shots": "total_shots", "target": "shots_on_target", "fouls": "fouls", "corners": "corners", "yellow": "yellow_cards", "red": "red_cards"}
 
 
+# The source's country codes the base writes otherwise (core.countries, PitchAPI's teams).
+COUNTRY_CODES = {"IRE": "IRL"}
+
+
+def country_of(folder):
+    """The base's country of a folder ("IRE_2_first-division" -> "IRL"); None for a UEFA one."""
+    code = folder.split("_", 1)[0]
+    return COUNTRY_CODES.get(code, code) if len(code) == 3 else None
+
+
 def scopes(now):
     return {"europe": timedelta(hours=6)}
 
@@ -75,18 +85,21 @@ def save(conn, folder, name, season, results, fixtures, now):
     if label is None:
         raise SourceError("INVALID_SEASON")
     season_id = Store(conn).season(label)
-    country = folder.split("_", 1)[0]
+    country = country_of(folder)
     family = f"cup:open-matchday:{folder}"
     found = conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type='competition' AND provider='vega' AND provider_key=%s", (family,)).fetchone()
+    if country:
+        conn.execute("INSERT INTO core.countries(code) VALUES (%s) ON CONFLICT DO NOTHING", (country,))
     if found:
         comp = found[0]
-        conn.execute("UPDATE core.competitions SET name=%s, updated_at=now() WHERE id=%s AND name IS DISTINCT FROM %s", (name, comp, name))
+        # The name, and the country of an edition written before its code was the base's (IRE).
+        conn.execute(
+            """UPDATE core.competitions SET name=%s, country_code=%s, updated_at=now()
+               WHERE id=%s AND (name IS DISTINCT FROM %s OR country_code IS DISTINCT FROM %s)""",
+            (name, country, comp, name, country),
+        )
     else:
-        if len(country) == 3:
-            conn.execute("INSERT INTO core.countries(code) VALUES (%s) ON CONFLICT DO NOTHING", (country,))
-        comp = conn.execute(
-            "INSERT INTO core.competitions(name, country_code) VALUES (%s, %s) RETURNING id", (name, country if len(country) == 3 else None)
-        ).fetchone()[0]
+        comp = conn.execute("INSERT INTO core.competitions(name, country_code) VALUES (%s, %s) RETURNING id", (name, country)).fetchone()[0]
         conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition','vega',%s,%s)", (family, comp))
     edition = conn.execute(
         """INSERT INTO core.competition_seasons(competition_id, season_id, native_label, cup_key, cup_name, cup_source_url, cup_checked_at, cup_updated_at)

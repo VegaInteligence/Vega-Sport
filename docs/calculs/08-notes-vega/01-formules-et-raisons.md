@@ -81,7 +81,8 @@ $$
 | Championnat d'un club | la compétition nationale PitchAPI où il a joué le plus de matchs dans sa première saison | — | un club promu ou relégué garde sa force ; son championnat d'entrée ne sert qu'à son point de départ |
 | Club sans championnat dans la base | le championnat de son pays, qui ne la tient pas, est un « championnat de pays » du modèle (§ 4.6) | mesuré | sinon il entrait à 1500, valeur arbitraire |
 
-- **Le rang d'un club** est celui de sa force après son dernier match de la saison, parmi les clubs (les sélections à part). Tout club qui a joué a une force et un rang.
+- **Le rang d'un club** est celui de sa force après son dernier match de la saison, parmi les clubs (les sélections à part). Tout club de la source principale qui a joué a une force et un rang.
+- **Les clubs sans force** (mesuré le 17 novembre 2026, VI-21) : 9 586 des 11 062 clubs qui ont joué un match de la base. 2 066 ne viennent que des sources complémentaires (divisions inférieures, clubs amateurs des coupes et une quarantaine de clubs professionnels écrits autrement, à relier), dont l'Elo ne lit que les matchs entre deux clubs connus ; 7 520 ne viennent que des archives, que l'Elo ne lit pas. Les faire entrer dans l'Elo unique est en cours d'étude ([pronostics](../06-accueil-et-matchs/03-pronostics-et-projections.md)).
 - **Les sélections** suivent la même formule, entre sélections seulement.
 - **Le niveau d'un championnat pour une saison**, celui que montre le site, est la force moyenne, après leur dernier match de la saison, des clubs qui l'ont joué cette saison-là. Un promu y entre, un relégué en sort.
 
