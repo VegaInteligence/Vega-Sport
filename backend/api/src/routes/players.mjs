@@ -847,7 +847,7 @@ export function playerProfileRecord(parts) {
 
 // What a selection of profiles is made of besides its data; a change of the record
 // changes it, so that no kept answer of the previous shape is said unchanged.
-const PROFILE_SHAPE = "profile-1";
+const PROFILE_SHAPE = "profile-2"; // 2: fouls, fouls suffered and balls lost (116)
 const DAY = 86_400_000;
 
 /**
