@@ -57,6 +57,22 @@ test("a past season the rules no longer fit takes what became of its clubs", () 
   assert.deepEqual(standingZones(rows, { european: ["cl"], competitionId: "l_3FJFUl" }).zones.slice(0, 2), ["cl", null]);
 });
 
+test("a past season without the UEFA association ranking takes its European places from what became of its clubs", () => {
+  // Ligue 1 2023/2024: 18 clubs (the rules fit), no association ranking for edition 2023.
+  const rows = Array.from({ length: 18 }, (_, i) => ({ id: "t" + i }));
+  const fates = { t0: "cl", t1: "cl", t2: "cl", t3: "cl", t4: "el", t5: "el", t16: "relegation", t17: "relegation" };
+  const past = standingZones(rows, { european: [], competitionId: "l_3FJFUl", fates });
+  assert.equal(past.observed, true);
+  assert.deepEqual(past.zones.slice(0, 7), ["cl", "cl", "cl", "cl", "el", "el", null]);
+  // The rules keep the bottom: their relegation play-off and places stay.
+  assert.deepEqual(past.zones.slice(15), ["relegation-po", "relegation", "relegation"]);
+  // With the association ranking, its places stay and the fates are not read.
+  const ranked = standingZones(rows, { european: ["cl", "cl", "cl"], competitionId: "l_3FJFUl", fates });
+  assert.deepEqual([ranked.observed, ranked.zones[3], ranked.zones[4]], [false, null, null]);
+  // No fates: nothing European to show.
+  assert.deepEqual(standingZones(rows, { european: [], competitionId: "l_3FJFUl" }).zones.slice(0, 2), [null, null]);
+});
+
 test("Top 7 Europe + UEFA covers national and super cups but not lower divisions", () => {
   assert.equal(inEuropeFocus({ id: "l_3FJFUl" }), true);
   assert.equal(inEuropeFocus({ id: "open-matchday:ENG_CUP_fa-cup" }), true);
