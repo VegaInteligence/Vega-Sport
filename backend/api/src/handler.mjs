@@ -25,6 +25,7 @@ import { createArchiveRoute } from "./routes/archives.mjs";
 import { createRankingRoute } from "./routes/rankings.mjs";
 import { createSupportRoute } from "./routes/support.mjs";
 import { createCupRoute } from "./routes/cups.mjs";
+import { createNationRoute } from "./routes/nations.mjs";
 import { compactHomePresentation } from "./home-presentation.mjs";
 
 /** The compact home cards (media=1), plus what the choice of « Prochains matchs »
@@ -67,7 +68,7 @@ export function createHandler({ read: query, mediaBase = null, clock = Date.now,
       }
     }
   };
-  const routes = [createSystemRoute(read), createOpsRoute(read, { key: opsKey, clock }), createClubReadRoute(read), createPlayerReadRoute(read, { clock }), createMatchRoute(read), createMatchDetailRoute(read), createProfileRoute(read), createPartitionRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPresenceRoute(read), createPerformanceRoute(read), createActorRoute(read, { clock }), createHomeReadRoute(read, clock), createHomeFavouritesRoute(read, clock), createSearchRoute(read), createArchiveRoute(read), createRankingRoute(read), createSupportRoute(read, { mediaBase }), createCupRoute(read), createEuropeRoute(read, { clock })];
+  const routes = [createSystemRoute(read), createOpsRoute(read, { key: opsKey, clock }), createClubReadRoute(read), createPlayerReadRoute(read, { clock }), createMatchRoute(read), createMatchDetailRoute(read), createProfileRoute(read), createPartitionRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPresenceRoute(read), createPerformanceRoute(read), createActorRoute(read, { clock }), createHomeReadRoute(read, clock), createHomeFavouritesRoute(read, clock), createSearchRoute(read), createArchiveRoute(read), createRankingRoute(read), createSupportRoute(read, { mediaBase }), createCupRoute(read), createEuropeRoute(read, { clock }), createNationRoute(read)];
   async function route(req) {
     const url = new URL(req.url),
       path = url.pathname;
