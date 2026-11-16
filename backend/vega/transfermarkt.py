@@ -68,7 +68,9 @@ CLUB_VOTES, CLUB_SHARE, SPAN_MARGIN = 3, 0.6, 30
 SEARCH_CANDIDATES, SEARCH_MATCHES = 3, 5
 MIN_TOKEN = 3
 MIN_AGE, MAX_AGE = 15, 45
-KINDS = ("profile", "club", "search", "values", "squad", "transfers", "injuries")
+# Within a priority, the kinds in this order. Injuries come right after the profiles and the
+# clubs: every player page shows them, and nothing else gives them (16 Nov 2026).
+KINDS = ("profile", "club", "injuries", "search", "values", "squad", "transfers")
 # Days before a unit is read again, by priority (1 = the season in progress, 2 the one before,
 # 3 the one before that, 4 and more older): a profile weekly for a player of the season, the
 # values and transfers when the profile says they changed, else monthly.
