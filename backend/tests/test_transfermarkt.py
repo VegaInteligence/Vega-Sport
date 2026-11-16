@@ -252,6 +252,9 @@ class ReaderTest(unittest.TestCase):
         reader.plan(link=True)
         self.assertEqual(q("SELECT entity_id, provider_key FROM core.provider_ids WHERE entity_type = 'team'"), [(1, "583")])
         self.assertEqual(q("SELECT rule, evidence FROM ops.provider_links WHERE entity_type = 'team'"), [("club_votes", 4)])
+        # The values and the transfer read before the club was linked now name our team.
+        self.assertEqual(q("SELECT count(*) FROM core.player_market_values WHERE provider_club = '583' AND team_id IS DISTINCT FROM 1"), [(0,)])
+        self.assertEqual(q("SELECT to_team_id FROM core.player_transfers WHERE player_id = 10"), [(1,)])
         # Its squads (this season and the one before), then the profiles of the members never read.
         self.drain(reader)
         self.assertEqual(q("SELECT season_year, count(*) FROM core.provider_squads GROUP BY 1"), [(2026, 4)])

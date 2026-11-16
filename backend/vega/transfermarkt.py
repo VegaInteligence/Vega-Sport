@@ -544,11 +544,24 @@ class Reader:
         linked = self.conn.execute("SELECT provider_key, entity_id FROM core.provider_ids WHERE entity_type = 'team' AND provider = 'transfermarkt' AND is_current").fetchall()
         links, conflicts = pick_clubs(votes, names, team_names, dict(linked), {t: k for k, t in linked})
         written = sum(self._link("team", club, team, "club_votes", n) for club, (team, n) in links.items())
+        self.attach_teams()
         for club, team, reason in conflicts:
             self.conn.execute(
                 """INSERT INTO ops.provider_link_conflicts(entity_type, provider, provider_key, entity_id, reason) VALUES ('team', %s, %s, %s, %s)
                    ON CONFLICT DO NOTHING""", (PROVIDER, club, team, reason))
         return written
+
+    def attach_teams(self):
+        """The values and transfers read before their club was linked: our team set now."""
+        link = """FROM core.provider_ids i WHERE i.entity_type = 'team' AND i.provider = 'transfermarkt' AND i.is_current"""
+        return sum(self.conn.execute(sql).rowcount for sql in (
+            f"""UPDATE core.player_market_values v SET team_id = i.entity_id {link}
+                AND i.provider_key = v.provider_club AND v.source = 'transfermarkt' AND v.team_id IS NULL""",
+            f"""UPDATE core.player_transfers t SET from_team_id = i.entity_id {link}
+                AND i.provider_key = t.from_provider_club AND t.source = 'transfermarkt' AND t.from_team_id IS NULL""",
+            f"""UPDATE core.player_transfers t SET to_team_id = i.entity_id {link}
+                AND i.provider_key = t.to_provider_club AND t.source = 'transfermarkt' AND t.to_team_id IS NULL""",
+        ))
 
     def link_players(self):
         ours, theirs = defaultdict(list), defaultdict(list)
@@ -830,7 +843,7 @@ class Reader:
             candidates.append((club, {n for n, c in names.items() if c == 1 and n}))
         chosen = pick_search(ours, candidates)
         if chosen and self._link("team", chosen[0], data["team"], "club_search_squad", chosen[1]):
-            written += 1
+            written += 1 + self.attach_teams()
         self.done("search", key, priority, written)
         return written
 
