@@ -146,12 +146,14 @@ Il n'y a qu'**un seul Elo de club** : tous les matchs d'un club, coupes comprise
 
 Ce qui manque pour projeter une coupe nationale, mesuré en lecture seule le 16 novembre 2026 : **2 066 clubs** qui ont joué un match n'ont pas d'Elo (1 476 en ont un). Tous ne viennent que des sources complémentaires (championnats et coupes lus en plus de la source principale), dont l'Elo ne lit les matchs qu'entre deux clubs déjà connus. Ils sont de deux sortes :
 
-1. **Des copies de clubs qui ont déjà un Elo**, sous un autre nom, que l'identification des équipes n'a pas reliées : « Man City », « Paris », « Atleti », « FC Bayern München », « SL Benfica »… Exemples : 17 des 19 clubs de la copie de la Ligue 1, 11 des 20 de la Premier League, 14 des 36 de la Ligue des champions. Leurs matchs de coupe ne comptent dans l'Elo d'aucun club.
-2. **Des clubs que la source principale ne tient pas** : divisions inférieures (National League anglaise et en dessous, Cymru Premier…) et clubs amateurs des coupes (FA Cup : 146 clubs, Taça de Portugal : 125, KNVB Beker : 107, Copa del Rey : 95…).
+1. **Des copies de clubs qui ont déjà un Elo**, sous un autre nom, que l'identification des équipes n'a pas reliées : elle ne relie un club que sous le même nom ou une orthographe revue à la main. Deux cas :
+   - dans les copies des championnats (« Man City » contre « Manchester City », « Paris », « Atleti »… : 17 des 19 clubs de la copie de la Ligue 1, 14 des 36 de la Ligue des champions), les matchs sont ceux que la source principale tient déjà : l'Elo n'y perd rien, la copie n'est qu'une ligne de trop ;
+   - dans les coupes (« SC Freiburg », « TSG Hoffenheim » et 9 autres en Coupe d'Allemagne, « Internazionale » en Coupe d'Italie, « SK Rapid » et « Austria Vienna » en Coupe d'Autriche… : une quarantaine de clubs en 2026/2027), leurs matchs de coupe ne comptent dans l'Elo d'aucun club.
+2. **Des clubs que la source principale ne tient pas** : divisions inférieures (National League anglaise et en dessous, Cymru Premier…) et clubs amateurs des coupes (FA Cup : 146 clubs, aucun copie d'un club professionnel ; Taça de Portugal : 125 ; KNVB Beker : 98 ; Copa del Rey : 92…).
 
 La suite proposée, dans l'Elo unique :
 
-1. relier les copies à leur club, comme les sélections le 16 novembre (VI-20) : leurs matchs comptent alors dans l'Elo du club ;
+1. relier les copies à leur club, comme les sélections le 16 novembre (VI-20) : leurs matchs de coupe comptent alors dans l'Elo du club ;
 2. laisser l'Elo lire les championnats et coupes des sources complémentaires : un club nouveau entre au niveau de sa division (le dossier de la source donne pays et division : ENG_5 = 5ᵉ division anglaise), avec la loi a priori de division du § 4, puis chaque résultat le corrige comme pour tout club. Les résultats de coupe des clubs professionnels contre ces clubs comptent aussi : leur Elo bougera un peu, ce qui sera mesuré avant la mise en service ;
 3. projeter ensuite chaque coupe tour par tour, avec les règles du tableau ci-dessus (prolongation au tiers d'un match, tirs au but à 50/50, matchs joués fixés).
 
