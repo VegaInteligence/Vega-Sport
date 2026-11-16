@@ -1,21 +1,17 @@
-# WORKLOG — 2026-11-16
+# WORKLOG — 2026-11-17
 
-- Goal: cup predictions — the UEFA league phases projected (Champions, Europa, Conference League) and the chance of each club or nation to reach each stage of every cup ([VI-19](https://linear.app/vegainteligence/issue/VI-19/predictions-des-coupes-phases-de-ligue-europeennes-et-chances-par-tour), In Progress).
+- Goal: platform audit — every earlier request verified, data sources cut to what Vega needs with no double data, a rating for every club, match and player ([VI-21](https://linear.app/vegainteligence/issue/VI-21/audit-de-la-plateforme-coherence-sources-de-donnees-sans-doublon-une), In Progress). VI-19 (cup predictions) stays open for the cups beyond the European ones.
 - This checkout: Vega-Sport, worktree `claude/v2-complete`, pushed direct to main; Linear label `repo:vega-sport`.
-- Constraints: mock-up and method approval before code; ask before method changes; advisor review for big method choices; tests first; real data only.
-- User decisions (16 Nov): mock-up validated; extra time = a third of a match, penalties 50/50; ties already played stay as they are; « ajoute tout dans calculs ».
-- Shipped (903a09eb83, deploy run 43966708027):
-  - worker `simulate_cup` (league phase, 8 matches a club, then the UEFA bracket);
-  - migration 122 `agg.cup_stage_odds`; `/api/forecasts/season` gives `format` + `stages`;
-  - « Projection » view with the stage columns;
-  - note in docs/calculs/06-accueil-et-matchs/03-pronostics-et-projections.md.
-- Evidence: scratchpad evidence-vi19 (local check against a stand-in API with the prototype's numbers; production check pending the worker's next forecast pass).
-- User decision (16 Nov, later): no separate cup Elo — one club Elo for every match, cups included (same for players). The note now says so.
-- Measured (read-only, 16 Nov): 2 066 clubs that played have no Elo, all from the complementary feeds only:
-  - copies of rated clubs never linked (« Man City », « Paris », « Atleti »: 17/19 of the Ligue 1 copy, 14/36 of the CL copy);
-  - clubs the main source does not hold (lower divisions, cup amateurs).
-- Proposed, awaiting the user's yes: (1) link the copies (like VI-20); (2) let the one Elo read the complementary leagues and cups, new clubs entering at their division's level; (3) then domestic cups by stage.
-- Past-season colours swept: 12 European top leagues × 2021/22–2024/25 all show Europe + relegation (evidence-zones/sweep.txt).
-- Not yet measured: a backtest of the cup projection on 2024/25 and 2025/26.
-- Done earlier today: VI-17 player page; VI-18 nation pages; VI-20 national twins merged; home grade hover; background refresh; European colours of past tables.
-- Next action: verify the CL/EL/ECL projection in production after the worker's next forecast pass (check-prod.mjs); on the user's yes, link the club copies and measure the one Elo with the complementary matches.
+- Constraints: measure before any DB correction or method change and ask first; deletions need an explicit yes after the replacement is verified; tests first; read-only diagnostics.
+- User decisions: one club Elo for every match, no separate cup Elo (16 Nov); cups: extra time ⅓, penalties 50/50, played ties fixed.
+- Audit (17 Nov, read-only; full table in VI-21's comment):
+  - Earlier requests: all done and verified, except cups beyond CL/EL/ECL. The CL/EL/ECL stage odds are live (totals exact, evidence-vi19).
+  - Sources: open-matchday copies 35 leagues PitchAPI holds (4,304 duplicate warnings in 7 days); DFB-Pokal and Nations League each come from two sources; SportsAPI is unused; three site-side Wikidata helpers are dead; two static data files sit in the frontend.
+  - Coverage:
+    - clubs: 1,476 of 11,062 rated (2,066 complementary-only, 7,520 archive-only);
+    - matches 2026/27: 11,427 of 11,626 graded (provider gives no player stats for the rest);
+    - players 2026/27: all graded players scored;
+    - seasons 2021/22 and half of 2022/23: backfill ends in about 1–2 days;
+    - birth dates for 15 % of scored players.
+  - Jobs: healthy; 43 deadlocks in 7 days to fix.
+- Next action: on the user's go, start the plan in VI-21 (sources first, then copies, then the one Elo over the complementary matches, then cups by stage).
