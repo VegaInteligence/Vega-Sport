@@ -18,6 +18,17 @@ test("a projection's rows: the title, the first four places, the last three", ()
   assert.deepEqual(projectionRows(null), []);
 });
 
+test("a UEFA cup's rows: its league phase and each stage of its bracket, as the API gives them", () => {
+  // A cup of the league-phase format (122): top 8, play-offs (9th–24th), out (25th–36th), then
+  // each knockout round reached; the title and first four of a league do not apply.
+  const stages = { top8: 0.95, playoff: 0.05, out: 0, r16: 0.99, qf: 0.76, sf: 0.47, final: 0.26, win: 0.13 };
+  const [row] = projectionRows({ format: "league-phase", teams: [{ id: "t_a", places: [0.5, 0.5], stages }] });
+  assert.deepEqual(row.stages, stages);
+  // A league has none, a cup row missing a stage reads it as none.
+  assert.equal(projectionRows({ teams: [{ id: "t_a", places: [1] }] })[0].stages, null);
+  assert.equal(projectionRows({ format: "league-phase", teams: [{ id: "t_a", places: [1], stages: { top8: 0.2 } }] })[0].stages.win, 0);
+});
+
 test("a projection's rows carry the club's coming matches when the answer has them", () => {
   const next = { matches: 5, home: 3, opponentLevel: 1648, expectedPoints: 7.9, rank: 2 };
   const rows = projectionRows({ teams: [{ id: "t_a", places: [1], next }, { id: "t_b", places: [1], next: { matches: 0 } }, { id: "t_c", places: [1] }] });

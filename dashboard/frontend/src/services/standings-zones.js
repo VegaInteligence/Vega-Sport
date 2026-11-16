@@ -27,6 +27,8 @@ export const ZONES = {
   "promotion-po": { label: "Barrage de montée" },
   "relegation-po": { label: "Barrage de relégation" },
   relegation: { label: "Relégation" },
+  ko: { label: "8es de finale directs" },
+  "ko-po": { label: "Barrages" },
 };
 export const ZONE_ORDER = Object.keys(ZONES);
 
@@ -109,6 +111,15 @@ export function leagueZones(competitionId, rowCount) {
   fill(0, rules.promotion, "promotion");
   fill(rules.promotion, rules.promotionPlayoff, "promotion-po");
   return zones;
+}
+
+/**
+ * A UEFA league phase (36 clubs, from 2024/25): the first eight go straight to the round of
+ * 16, the next sixteen to the knockout play-offs, the last twelve are out.
+ */
+export function leaguePhaseZones(rowCount) {
+  if (rowCount !== 36) return Array(rowCount).fill(null);
+  return Array.from({ length: rowCount }, (_, i) => (i < 8 ? "ko" : i < 24 ? "ko-po" : null));
 }
 
 const EUROPEAN = new Set(["cl", "cl-q", "el", "el-q", "ecl"]);

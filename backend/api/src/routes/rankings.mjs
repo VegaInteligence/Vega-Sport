@@ -34,6 +34,10 @@
  * GET /api/forecasts/season?competition=&season= — a league replayed to its end: each
  * club's points now and projected, the share of the replays it finishes at each place, and
  * `next`, its coming league matches (the opponents' mean strength, the points forecast).
+ * A UEFA cup of the league-phase format (122) gives each club `stages` too: its share of the
+ * replays finishing the league phase in the first eight (top8), 9th to 24th (playoff) or below
+ * (out), then reaching the round of 16, the quarter-finals, the semi-finals, the final, and
+ * winning (r16, qf, sf, final, win); `format` is "league-phase".
  *
  * GET /api/forecasts/swap?season=&out=&in= — what a club's league results would become if
  * the player `in` played in the place of its player `out` (vega/lineup.py, 090): the gap
@@ -450,17 +454,32 @@ async function swap(read, params) {
   };
 }
 
+// The stages of a UEFA cup's projection (122), in order.
+const CUP_STAGES = ["top8", "playoff", "out", "r16", "qf", "sf", "final", "win"];
+
+/** Each club's share of every stage of a cup's projection, 0 for a stage it never reaches. */
+export function cupStages(rows) {
+  const out = new Map();
+  for (const r of rows) {
+    if (!out.has(r.team_key)) out.set(r.team_key, Object.fromEntries(CUP_STAGES.map((stage) => [stage, 0])));
+    if (CUP_STAGES.includes(r.stage)) out.get(r.team_key)[r.stage] = round(r.probability, 4);
+  }
+  return out;
+}
+
 async function seasonProjection(read, params) {
   validateParams(params, ["competition", "season"]);
   const competition = params.get("competition"), season = params.get("season");
   if (!LEAGUE.test(competition || "") || !/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
   const [edition] = await read("SELECT competition_season_id FROM api.edition_keys WHERE league_id=$1 AND season=$2 ORDER BY competition_season_id DESC LIMIT 1", [competition, season]);
   if (!edition) reject(404, "Donnée indisponible.");
-  const [teams, places, fixtures] = await Promise.all([
+  const [teams, places, fixtures, stageRows] = await Promise.all([
     read("SELECT * FROM api.season_projections WHERE competition_season_id=$1 ORDER BY projected_points DESC, name", [edition.competition_season_id]),
     read("SELECT team_key, place, probability FROM api.season_projection_places WHERE competition_season_id=$1", [edition.competition_season_id]),
     read("SELECT * FROM api.schedule_forecasts WHERE competition_season_id=$1 ORDER BY kickoff_at NULLS LAST, match_key", [edition.competition_season_id]),
+    read("SELECT team_key, stage, probability FROM api.cup_stage_odds WHERE competition_season_id=$1", [edition.competition_season_id]),
   ]);
+  const stages = cupStages(stageRows);
   if (!teams.length) reject(404, "Donnée indisponible.");
   const next = comingMatches(fixtures);
   // One share per place, 0 for a place the club never reached.
@@ -470,7 +489,10 @@ async function seasonProjection(read, params) {
     competition, season,
     model: { version: teams[0].model_version, fittedAt: iso(teams[0].fitted_at), replays: teams[0].simulations },
     teams: teams.map((team) => ({ id: team.team_id, name: team.name, imageUrl: team.image_url ?? null, played: team.played, points: team.points,
-      projectedPoints: round(team.projected_points, 1), places: shares.get(team.team_key), next: next.get(team.team_key) ?? null })),
+      projectedPoints: round(team.projected_points, 1), places: shares.get(team.team_key), next: next.get(team.team_key) ?? null,
+      ...(stages.size ? { stages: stages.get(team.team_key) ?? cupStages([{ team_key: team.team_key }]).get(team.team_key) } : {}) })),
+    // A UEFA cup of the league-phase format: its league phase, then its bracket (122).
+    ...(stages.size ? { format: "league-phase" } : {}),
   };
 }
 

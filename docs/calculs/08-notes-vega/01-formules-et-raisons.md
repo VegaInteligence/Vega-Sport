@@ -499,10 +499,12 @@ $$
 | Note d'un match : référence, 300 matchs de rapprochement, 20 minutes | § 5.7 | référence mesurée, réglages choisis |
 | Part du niveau du club | 0,5 (κ ≈ 0,65) | choisie ; à décider face à κ\* |
 | Divisions des championnats | `TIERS` | relues à la main |
+| Coupes européennes : prolongation, tirs au but | ⅓ d'un match ; 50/50 | choisis le 16 novembre 2026 ([pronostics](../06-accueil-et-matchs/03-pronostics-et-projections.md)) |
 
 **Questions ouvertes :**
 - la part du niveau du club (§ 5.4) ;
 - λ : sur la base, la variance des matchs et celle entre joueurs donnent λ ≈ 175 à 250 minutes plutôt que 450. Le changer déplacerait tous les scores ; c'est une décision à part.
+- la force des clubs sans Elo dans les coupes nationales : un Elo de coupe rangé à part est proposé ([pronostics](../06-accueil-et-matchs/03-pronostics-et-projections.md)), non appliqué.
 
 ## 8. Les blocs du profil lus dans la base (16 novembre 2026)
 

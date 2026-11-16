@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { get, skip } from "./context.mjs";
-import { comingMatches, provisionalReason } from "../src/routes/rankings.mjs";
+import { comingMatches, cupStages, provisionalReason } from "../src/routes/rankings.mjs";
 
 test("club links and a club's UEFA ranking history", { skip }, async () => {
   const links = (await get("/api/club-links?club=t_aaaaa1")).body;
@@ -267,4 +267,16 @@ test("why a rank is provisional: the minutes first, then a team the base knows i
   // The women are ranked among themselves: no league of theirs is on the men's scale.
   assert.equal(provisionalReason({ eligible: true, linked: false, universe: "women", in_league: true }), null);
   assert.equal(provisionalReason({ eligible: false, linked: false, universe: "women" }), "minutes");
+});
+
+// A UEFA cup's projection (122): each club's share of every stage, 0 for a stage it never
+// reaches; a league has none.
+test("a cup's stages per club, every stage given", () => {
+  const stages = cupStages([
+    { team_key: 1, stage: "top8", probability: 0.9512 }, { team_key: 1, stage: "win", probability: 0.12 },
+    { team_key: 2, stage: "out", probability: 1 },
+  ]);
+  assert.deepEqual(stages.get(1), { top8: 0.9512, playoff: 0, out: 0, r16: 0, qf: 0, sf: 0, final: 0, win: 0.12 });
+  assert.deepEqual(stages.get(2), { top8: 0, playoff: 0, out: 1, r16: 0, qf: 0, sf: 0, final: 0, win: 0 });
+  assert.equal(cupStages([]).size, 0);
 });

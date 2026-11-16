@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   europeanPlaces,
+  leaguePhaseZones,
   leagueZones,
   performanceSpots,
   standingZones,
@@ -71,6 +72,12 @@ test("a past season without the UEFA association ranking takes its European plac
   assert.deepEqual([ranked.observed, ranked.zones[3], ranked.zones[4]], [false, null, null]);
   // No fates: nothing European to show.
   assert.deepEqual(standingZones(rows, { european: [], competitionId: "l_3FJFUl" }).zones.slice(0, 2), [null, null]);
+});
+
+test("a UEFA league phase: the first eight to the round of 16, the next sixteen to the play-offs", () => {
+  const zones = leaguePhaseZones(36);
+  assert.deepEqual([zones[0], zones[7], zones[8], zones[23], zones[24], zones[35], zones.length], ["ko", "ko", "ko-po", "ko-po", null, null, 36]);
+  assert.deepEqual(leaguePhaseZones(10), Array(10).fill(null));
 });
 
 test("Top 7 Europe + UEFA covers national and super cups but not lower divisions", () => {
