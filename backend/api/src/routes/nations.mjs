@@ -15,6 +15,10 @@ import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 
 const NATION = /^\/api\/nations\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))$/;
+// A fixture's team still to qualify, which a source files as a national team (the Euro 2028
+// fixtures: « A1 », « Winner Group A », « 3rd Group A/B/C », « Winner Match 37 »).
+const PLACEHOLDER = /^(?:[A-L][1-4]|(?:Winner|Runner-up|Loser|3rd|Third) (?:Group|Match)\b.*)$/;
+export const placeholderTeam = (name) => PLACEHOLDER.test(String(name || "").trim());
 const SEASON_KEY = "(SELECT season_id FROM api.season_keys WHERE season=$1)";
 
 // The major tournaments: the key of their editions (cup or archive key) or the name of their
@@ -166,7 +170,7 @@ export function createNationRoute(read) {
   return async (req, path, params) => {
     if (path === "/api/nations") {
       const season = seasonParam(params);
-      const rows = await read(`SELECT * FROM api.nation_list(${SEASON_KEY})`, [season]);
+      const rows = (await read(`SELECT * FROM api.nation_list(${SEASON_KEY})`, [season])).filter((r) => !placeholderTeam(r.name));
       const nations = rows.map(nationOf).sort((a, b) => (a.ranking?.rank ?? Infinity) - (b.ranking?.rank ?? Infinity) || (b.elo ?? -Infinity) - (a.elo ?? -Infinity) || a.name.localeCompare(b.name));
       return respond(req, { season, ranked: nations.filter((n) => n.ranking).length, nations });
     }
@@ -177,7 +181,7 @@ export function createNationRoute(read) {
       read(`SELECT * FROM api.nation_list(${SEASON_KEY})`, [season]),
       read("SELECT api.internal_id('team',$1) AS key", [nation[1]]),
     ]);
-    const own = key?.key == null ? null : list.find((r) => r.team_key === key.key);
+    const own = key?.key == null ? null : list.find((r) => r.team_key === key.key && !placeholderTeam(r.name));
     if (!own) reject(404, "Ressource introuvable.");
     const [matchRows, eloRows, playerRows] = await Promise.all([
       read("SELECT * FROM api.nation_matches($1::integer) ORDER BY match_date DESC NULLS LAST", [own.team_key]),
@@ -188,7 +192,7 @@ export function createNationRoute(read) {
     const data = {
       ...nationOf(own),
       season,
-      ranked: list.filter((r) => r.rank != null).length,
+      ranked: list.filter((r) => r.rank != null && !placeholderTeam(r.name)).length,
       record: seasonRecord(matches, own.team_id, season),
       elo: eloRows.map((r) => ({ date: r.match_date ? String(r.match_date).slice(0, 10) : null, elo: num(r.elo), result: num(r.result) })),
       matches,

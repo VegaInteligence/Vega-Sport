@@ -16,7 +16,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { get, skip } from "./context.mjs";
-import { seasonRecord, tournamentRuns } from "../src/routes/nations.mjs";
+import { placeholderTeam, seasonRecord, tournamentRuns } from "../src/routes/nations.mjs";
 
 const FR = "t_fr", m = (over) => ({
   date: "2026-06-16", competition: "World Cup", edition: null, round: "1", season: "2025/2026", status: "finished",
@@ -77,6 +77,14 @@ test("a season's record counts the played matches with a score", () => {
   ], FR, "2026/2027");
   assert.deepEqual(record, { played: 3, wins: 1, draws: 1, losses: 1, goalsFor: 4, goalsAgainst: 5 });
   assert.deepEqual(seasonRecord([], FR, "2026/2027"), { played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0 });
+});
+
+test("a fixture's placeholder is no national team", () => {
+  // The Euro 2028 fixtures name the teams still to qualify: none is a nation.
+  for (const name of ["A1", "F4", "Winner Group A", "Runner-up Group F", "3rd Group A/B/C", "3rd Group A/D/E/F", "Winner Match 37", "Loser Match 49"])
+    assert.equal(placeholderTeam(name), true, name);
+  for (const name of ["France", "Italy", "Wales", "Winners FC", "Iceland", "West Germany", "Bosnia and Herzegovina"])
+    assert.equal(placeholderTeam(name), false, name);
 });
 
 test("the nations and a nation are served", { skip }, async () => {

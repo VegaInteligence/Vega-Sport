@@ -176,8 +176,9 @@ WORLD_CLUB_KEYS = {"Al Hilal (KSA)": "t_2r8ytM", "Al Ittihad (KSA)": "t_4BG5Jn",
 # National teams the complementary sources name otherwise than PitchAPI does, reviewed on
 # 12 November 2026 against PitchAPI's 54 national teams: the site's French names (the
 # Nations League editions) and OpenFootball's spellings (the Euros, the World Cups). A
-# national team PitchAPI does not hold (Italy, Greece, Ukraine…) has no entry and stays
-# apart, like the teams of states that no longer exist.
+# national team PitchAPI does not hold (Italy, Greece, Ukraine…) has no entry here: its
+# twins join each other (NATION_TWINS, nation_twins). The teams of states that no longer
+# exist stay apart.
 NATION_SPELLINGS = {
     "Allemagne": "Germany", "Angleterre": "England", "Autriche": "Austria", "Belgique": "Belgium", "Bosnie-Herzégovine": "Bosnia and Herzegovina",
     "Croatie": "Croatia", "Danemark": "Denmark", "Écosse": "Scotland", "Espagne": "Spain", "Norvège": "Norway", "Pays-Bas": "Netherlands",
@@ -186,6 +187,43 @@ NATION_SPELLINGS = {
     "Bosnia & Herzegovina": "Bosnia and Herzegovina", "Bosnia-Herzegovina": "Bosnia and Herzegovina", "Côte d'Ivoire": "Ivory Coast",
     "Czech Republic": "Czechia", "Turkey": "Turkiye", "United States": "USA",
 }
+
+# National teams PitchAPI does not hold, which one source names in French (the Nations League
+# editions of OpenLigaDB and International Results) and another in English (OpenFootball's
+# World Cups and Euros, International Results' other tournaments), reviewed on 16 November
+# 2026: the French name is the English one's twin. A French name with no English twin in the
+# base yet keeps its row until one comes.
+NATION_TWINS = {
+    "Albanie": "Albania", "Andorre": "Andorra", "Arménie": "Armenia", "Azerbaïdjan": "Azerbaijan", "Biélorussie": "Belarus",
+    "Bulgarie": "Bulgaria", "Chypre": "Cyprus", "Estonie": "Estonia", "Finlande": "Finland", "Géorgie": "Georgia",
+    "Grèce": "Greece", "Hongrie": "Hungary", "Îles Féroé": "Faroe Islands", "Irlande": "Ireland", "Irlande du Nord": "Northern Ireland",
+    "Islande": "Iceland", "Israël": "Israel", "Italie": "Italy", "Lettonie": "Latvia", "Lituanie": "Lithuania",
+    "Macédoine du Nord": "North Macedonia", "Malte": "Malta", "Moldavie": "Moldova", "Monténégro": "Montenegro",
+    "Roumanie": "Romania", "Russie": "Russia", "Saint-Marin": "San Marino", "Slovaquie": "Slovakia", "Slovénie": "Slovenia",
+}
+
+
+def nation_twins(rows):
+    """Merges of the source-only national teams that are one team: those whose name, or the
+    English name of their French one (NATION_TWINS), is the same. `rows`: (team, name,
+    provider) of source-only national teams no PitchAPI team claims. Returns (team, the twin
+    it joins, provider, name): the twin named in English stays, else the oldest row."""
+    groups = {}
+    for team, name, provider in rows:
+        english = NATION_TWINS.get(name, name)
+        groups.setdefault(normalize(english), []).append((team, name, provider, name == english))
+    found = []
+    for members in groups.values():
+        teams = {team for team, *_ in members}
+        if len(teams) < 2:
+            continue
+        keep = min(members, key=lambda m: (not m[3], m[0]))[0]
+        seen = set()
+        for team, name, provider, _ in sorted(members):
+            if team != keep and team not in seen:
+                seen.add(team)
+                found.append((team, keep, provider, name))
+    return found
 
 
 def _reviewed_clubs(conn):
@@ -320,11 +358,17 @@ def pairs(conn):
     """Every merge the rules name, as (source-only team, PitchAPI team, provider, spelling),
     and the number of source-only teams looked at."""
     pitch, reviewed = _pitch_teams(conn), _reviewed_clubs(conn)
-    found, seen = {}, set()
+    found, seen, apart = {}, set(), []
     for team, name, provider, national, country in _candidates(conn):
         seen.add(team)
         keep = match_team(pitch, name, bool(national), country, reviewed)
         if keep is not None:
+            found.setdefault(team, (keep, provider, name))
+        elif national:
+            apart.append((team, name, provider))
+    # National teams PitchAPI does not hold: twins of two sources are one team.
+    for team, keep, provider, name in nation_twins([row for row in apart if row[0] not in found]):
+        if keep not in found:
             found.setdefault(team, (keep, provider, name))
     clubs = _pitch_clubs(conn)
     by_club = {}

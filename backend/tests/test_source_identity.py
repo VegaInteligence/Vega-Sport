@@ -139,6 +139,31 @@ class ParseTest(unittest.TestCase):
                 "Norway", "Poland", "Scotland", "Serbia", "Spain", "Sweden", "Switzerland", "Turkiye", "USA", "Wales"}
         self.assertEqual(set(identity.NATION_SPELLINGS.values()), held)
 
+    def test_source_only_national_teams_join_their_twin(self):
+        # Source-only national teams (no PitchAPI team): (team, name, provider), as the base held them on 16 November 2026.
+        rows = [
+            (1032, "Italy", "openfootball"), (2129, "Italie", "openligadb"),
+            (1051, "Hungary", "openfootball"), (2230, "Hongrie", "international_results"),
+            (1157, "Nigeria", "openfootball"), (13464, "Nigeria", "international_results"),
+            (1155, "Ireland", "openfootball"), (2223, "Irlande", "international_results"),
+            (1132, "Northern Ireland", "openfootball"), (2229, "Irlande du Nord", "international_results"),
+            (1042, "Ukraine", "openfootball"), (2231, "Ukraine", "international_results"),
+            (2224, "Andorre", "international_results"),  # no twin: stays as it is
+            (1130, "West Germany", "openfootball"),  # a state that no longer exists: another team
+            (1060, "A1", "openfootball"), (1084, "Winner Group A", "openfootball"),  # a fixture's placeholders
+        ]
+        found = sorted(identity.nation_twins(rows))
+        self.assertEqual(found, sorted([
+            (2129, 1032, "openligadb", "Italie"), (2230, 1051, "international_results", "Hongrie"),
+            (13464, 1157, "international_results", "Nigeria"), (2223, 1155, "international_results", "Irlande"),
+            (2229, 1132, "international_results", "Irlande du Nord"), (2231, 1042, "international_results", "Ukraine"),
+        ]))
+        # The French name of a team with no twin names no team; the English twin is kept, else the oldest row.
+        self.assertEqual(identity.nation_twins([(2246, "Albanie", "international_results")]), [])
+        self.assertEqual(identity.nation_twins([(13477, "Angola", "international_results"), (1168, "Angola", "openfootball")]),
+                         [(13477, 1168, "international_results", "Angola")])
+        self.assertEqual(identity.nation_twins([(9, "Grèce", "openligadb"), (12, "Greece", "openfootball")]), [(9, 12, "openligadb", "Grèce")])
+
     def test_no_key_no_scope(self):
         os.environ.pop("V2_SPORTSAPI_API_KEY", None)
         self.assertEqual(sportsapi.scopes(NOW), {})
