@@ -39,7 +39,7 @@ export default function PlayerActionValues({ id }) {
       </div>
       <div className={s.panelBody}>
         <p className={s.note}>
-          Valeurs calculées par le fournisseur des données, action par action, et lues ici telles quelles. Elles ne sont pas corrigées
+          Valeurs calculées action par action. Elles ne sont pas corrigées
           du niveau du championnat : le joueur est situé parmi les joueurs de sa propre compétition
           {table.placed ? "" : ", trop peu nombreux à son poste pour lui donner un rang"}. Le score Vega ne les utilise pas.
         </p>

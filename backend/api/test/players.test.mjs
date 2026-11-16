@@ -12,6 +12,7 @@ const METRICS = [
   "goals", "assists", "xg", "npxg", "xgot", "xa", "shots", "shotsOnTarget", "touchesBox", "chancesCreated",
   "bigChancesCreated", "passesFinalThird", "dribbles", "touches", "passesAccurate", "passesAttempted", "duelsWon",
   "duelsLost", "tackles", "interceptions", "recoveries", "clearances", "defensiveActions", "blocks", "saves",
+  "fouls", "wasFouled", "dispossessed",
   "goalsPrevented", "passAccuracy", "duelRate",
 ];
 const RECORD_KEYS = [

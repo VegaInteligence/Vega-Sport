@@ -219,7 +219,7 @@ export default function MatchdaySchedule({
       </div>
       {selected.matches.some((match) => match.fixtureIdentityUncertain) && (
         <p className="matchday-note">
-          Certaines rencontres apparaissent plusieurs fois dans la source ; leur
+          Certaines rencontres apparaissent plusieurs fois dans les données ; leur
           fiche et leur horaire restent à confirmer.
         </p>
       )}

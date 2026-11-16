@@ -443,9 +443,9 @@ export default function PlayerAdvancedStats({
             <Distribution sections={sections} metrics={metrics} />
           )}
           <p className={s.note}>
-            Source : statistiques de match PitchAPI. Un indicateur n’est classé
-            que s’il est renseigné sur tous les matchs joués ; les xA ne sont
-            pas classés car les valeurs nulles sont absentes de la source.
+            Un indicateur n’est classé que s’il est renseigné sur tous les
+            matchs joués ; les xA ne sont pas classés, faute de valeurs nulles
+            dans les données.
           </p>
         </>
       )}

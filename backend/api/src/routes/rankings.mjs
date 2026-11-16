@@ -527,6 +527,30 @@ async function breakouts(read, params) {
   };
 }
 
+/**
+ * A player's Vega score season by season (the player page's « Évolution de l'indice Vega »):
+ * every season of the ranking he has a score in, oldest first.
+ */
+async function powerHistory(read, params) {
+  validateParams(params, ["player"]);
+  const id = params.get("player");
+  if (!PLAYER.test(id || "")) reject(400, "Paramètre invalide.");
+  const rows = await read(
+    `SELECT season, rank, role_rank, role, team, score, index_season, minutes, matches, eligible, linked
+     FROM api.power_players WHERE player_key=api.internal_id('player',$1) AND score IS NOT NULL ORDER BY season`,
+    [id],
+  );
+  if (!rows.length) reject(404, "Donnée indisponible.");
+  return {
+    id,
+    seasons: rows.map((r) => ({
+      season: r.season, score: round(r.score, 1), rank: r.rank ?? null, roleRank: r.role_rank ?? null,
+      position: ROLE_LABEL[r.role] ?? r.role ?? null, team: r.team ?? null, minutes: r.minutes ?? null, matches: r.matches ?? null,
+      provisional: r.eligible === false || r.linked === false,
+    })),
+  };
+}
+
 async function powerPlayer(read, params) {
   validateParams(params, ["season", "player"]);
   const season = params.get("season"), id = params.get("player");
@@ -737,6 +761,7 @@ export function createRankingRoute(read) {
   return async (req, path, params) => {
     if (path === "/api/rankings/power") return respond(req, await powerRanking(read, params));
     if (path === "/api/rankings/power/player") return respond(req, await powerPlayer(read, params));
+    if (path === "/api/rankings/power/history") return respond(req, await powerHistory(read, params));
     if (path === "/api/rankings/leagues") return respond(req, await leagueLevels(read, params));
     if (path === "/api/rankings/breakouts") return respond(req, await breakouts(read, params));
     if (path === "/api/rankings/match") return respond(req, await matchGrades(read, params));

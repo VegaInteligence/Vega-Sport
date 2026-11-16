@@ -28,7 +28,6 @@ import {
   toneClass,
 } from "./PlayerScoutCharts.jsx";
 import {
-  FAKE_SECURITY_ROWS,
   FakeBadge,
   fakePreviousSeason,
   PlayStyleCard,
@@ -83,12 +82,10 @@ export function scoutFamilies(group) {
         "blocks",
       ],
     },
-    // PitchAPI has no fouls or ball losses per player: those rows are fake.
     {
       id: "security",
       title: "Sécurité de balle",
-      keys: ["duelsLost"],
-      fake: FAKE_SECURITY_ROWS,
+      keys: ["duelsLost", "dispossessed", "wasFouled", "fouls"],
     },
   ];
   return group === "G"

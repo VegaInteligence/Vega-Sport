@@ -205,13 +205,13 @@ function playerCard(r, n, images) {
   if (n === 5) {
     const history = r.values.history;
     if (history.length < 2)
-      return <Frame report={r} n={n} subtitle="Source : Transfermarkt"><Empty text="Aucune estimation disponible." /></Frame>;
+      return <Frame report={r} n={n}><Empty text="Aucune estimation disponible." /></Frame>;
     const w = 936, h = 560, times = history.map((v) => Date.parse(v.date)), max = Math.max(...history.map((v) => v.valueEur));
     const t0 = Math.min(...times), t1 = Math.max(...times);
     const x = (t) => ((t - t0) / Math.max(1, t1 - t0)) * (w - 20) + 10, y = (v) => h - 20 - (v / max) * (h - 60);
     const path = history.map((v, i) => `${i ? "L" : "M"} ${x(times[i]).toFixed(1)} ${y(v.valueEur).toFixed(1)}`).join(" ");
     return (
-      <Frame report={r} n={n} subtitle={`Estimations Transfermarkt · ${history.length} évaluations depuis ${history[0].date.slice(0, 4)}`}>
+      <Frame report={r} n={n} subtitle={`${history.length} estimations depuis ${history[0].date.slice(0, 4)}`}>
         <div style={{ display: "flex", alignItems: "flex-end" }}>
           <div style={{ display: "flex", fontSize: 110, fontWeight: 700, color: ACCENT }}>{money(r.values.current?.valueEur)}</div>
           <div style={{ display: "flex", fontSize: 28, color: MUTED, marginLeft: 20, marginBottom: 22 }}>{`au ${day(r.values.current?.date)}`}</div>

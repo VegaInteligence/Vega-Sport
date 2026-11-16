@@ -107,8 +107,7 @@ function Technical({ report }) {
       </div>
       {report.kind === "player" ? <PlayerTechnical r={report} /> : report.kind === "club" ? <ClubTechnical r={report} /> : <MatchTechnical r={report} />}
       <p className="card-note">
-        {`Rapport établi le ${new Date(report.generatedAt).toLocaleDateString("fr-FR")} à partir des données de Vega. Notes et scores : méthode décrite dans « Données & méthode ».`}
-        {report.kind === "player" ? " Valeurs marchandes : Transfermarkt." : ""}
+        {`Rapport établi le ${new Date(report.generatedAt).toLocaleDateString("fr-FR")}. Notes et scores : méthode décrite dans « Données & méthode ».`}
       </p>
     </div>
   );
@@ -147,7 +146,7 @@ function PlayerTechnical({ r }) {
             a.grade == null ? "—" : <Grade value={a.grade} />, a.goals, a.assists, fmt(a.xg, 2), fmt(a.xa, 2), a.shots, a.shotsOnTarget, a.chancesCreated, fmt(a.passesAccurate), fmt(a.duelsWon)])} />
       </Card>
       {r.values.history.length ? (
-        <Card title="Valeur marchande (Transfermarkt)">
+        <Card title="Valeur marchande">
           <Table caption="Valeurs" head={["Date", "Valeur"]} rows={r.values.history.slice().reverse().map((v) => [v.date, `${number(v.valueEur / 1e6, 1)} M€`])} />
         </Card>
       ) : null}

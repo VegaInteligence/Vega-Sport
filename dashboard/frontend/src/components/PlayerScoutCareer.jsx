@@ -23,12 +23,8 @@ import { AsyncState, Media } from "./UI.jsx";
 import NationalFlag from "./NationalFlag.jsx";
 import { fmt } from "./PlayerScoutCharts.jsx";
 import PlayerMarketValueCard from "./PlayerMarketValueCard.jsx";
-import {
-  FAKE_CAREER_STAGE,
-  FakeBadge,
-  InjuriesSection,
-  VegaIndexHistoryCard,
-} from "./PlayerScoutDemo.jsx";
+import { FakeBadge } from "./PlayerScoutDemo.jsx";
+import { PlayerInjuries, VegaIndexHistory } from "./PlayerCareerCards.jsx";
 import s from "./PlayerScout.module.css";
 
 const total = (profile, key) => {
@@ -100,7 +96,6 @@ export default function PlayerScoutCareer({
       "Buts · PD",
       `${show(clubTotals.goals)} B · ${show(clubTotals.assists)} PD`,
     ],
-    ["Stade de carrière", FAKE_CAREER_STAGE, true, true],
     [
       "Sélection",
       selections.length
@@ -134,7 +129,7 @@ export default function PlayerScoutCareer({
         </div>
       </div>
       <div className={`${s.block} ${s.grid2}`}>
-        <VegaIndexHistoryCard />
+        <VegaIndexHistory id={id} />
         <PlayerMarketValueCard
           key={id}
           values={values}
@@ -257,7 +252,7 @@ export default function PlayerScoutCareer({
           }
         </AsyncState>
       </section>
-      <InjuriesSection />
+      <PlayerInjuries id={id} />
       {children}
     </div>
   );

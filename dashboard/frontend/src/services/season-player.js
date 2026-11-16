@@ -35,6 +35,9 @@ export const SEASON_METRICS = {
   clearances: { label: "Dégagements" },
   defensiveActions: { label: "Actions défensives" },
   blocks: { label: "Tirs bloqués" },
+  wasFouled: { label: "Fautes subies" },
+  dispossessed: { label: "Ballons perdus", lowerIsBetter: true },
+  fouls: { label: "Fautes commises", lowerIsBetter: true },
   saves: { label: "Arrêts" },
   goalsPrevented: { label: "Buts évités", decimals: 2 },
 };
