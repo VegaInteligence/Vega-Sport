@@ -2936,3 +2936,86 @@ th[aria-sort="descending"] .sort-indicator {
   font-size: var(--text-sm);
   line-height: 1.4;
 }
+/* Reports (/rapport): six images for a thread on X, and the technical version to print. */
+.report-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.report-text {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 10px);
+  background: var(--surface-raised, var(--surface));
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.report-images {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.report-image {
+  margin: 0;
+}
+.report-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: #06080c;
+}
+.report-image figcaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.report-technical > .card {
+  margin-bottom: 16px;
+}
+.report-table td {
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 900px) {
+  .report-images {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .report-images {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media print {
+  .report-print-hide,
+  .report-head,
+  header,
+  nav,
+  footer {
+    display: none !important;
+  }
+}
+.report-link {
+  margin-left: 20px;
+}
+.match-breadcrumb-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}

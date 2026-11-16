@@ -529,6 +529,9 @@ export default function MatchDetail({ match }) {
           <span>{match.season || f.season}</span>
         </nav>
         <div className="match-breadcrumb-actions">
+          <Link className="inline-link" href={f.href("/rapport/", { id: match.id })}>
+            Rapport du match →
+          </Link>
           <BookmarkButton
             kind="matches"
             id={match.id}
