@@ -269,7 +269,9 @@ def elo_updates(matches, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME, seeds=N
 
 # Columns 8 to 11: the match's day, its competition, whether it comes from a complementary
 # source (a cup-source edition), whether it is international (a European competition, or
-# national teams). A complementary match counts between two clubs the PitchAPI editions know.
+# national teams). A complementary match counts between two clubs the PitchAPI editions know,
+# and between two national teams, whichever source holds them (16 November 2026: Italy,
+# Hungary or Greece, which PitchAPI does not hold, played their matches outside the Elo).
 ELO_MATCHES = """
 WITH known AS (
   SELECT DISTINCT v.team_id FROM core.matches m
@@ -283,10 +285,12 @@ FROM core.matches m
 JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL
 JOIN core.competitions c ON c.id = cs.competition_id
 JOIN core.teams th ON th.id = m.home_team_id
+JOIN core.teams ta ON ta.id = m.away_team_id
 WHERE m.status = 'finished' AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL
   AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL
   AND (cs.cup_key IS NULL OR (m.match_date IS NOT NULL
-       AND m.home_team_id IN (SELECT team_id FROM known) AND m.away_team_id IN (SELECT team_id FROM known)))
+       AND ((m.home_team_id IN (SELECT team_id FROM known) AND m.away_team_id IN (SELECT team_id FROM known))
+            OR (th.is_national AND ta.is_national))))
 ORDER BY 3 NULLS LAST, m.match_date NULLS LAST, m.id"""
 
 

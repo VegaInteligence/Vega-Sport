@@ -31,7 +31,7 @@ Chaque étape lit les forces **d'avant** le match : une performance garde le niv
 | Règle | Raison |
 | --- | --- |
 | Tous les matchs terminés des éditions PitchAPI : championnats, coupes, coupes d'Europe, Coupe du monde | la base de la méthode (§ 3) |
-| Les matchs des sources complémentaires (coupes nationales, coupes des autres confédérations, tournois de sélections) entre deux équipes que PitchAPI connaît, quand ils ne doublent pas un match déjà lu (mêmes équipes à trois jours près) | ils relient les divisions d'un pays et les championnats entre eux ; un doublon compterait deux fois le même résultat |
+| Les matchs des sources complémentaires (coupes nationales, coupes des autres confédérations, tournois de sélections) entre deux équipes que PitchAPI connaît, et tous ceux entre deux sélections (depuis le 16 novembre 2026), quand ils ne doublent pas un match déjà lu (mêmes équipes à trois jours près) | ils relient les divisions d'un pays et les championnats entre eux ; un doublon compterait deux fois le même résultat |
 | Le résultat est celui après prolongation ; une séance de tirs au but est un nul | les tirs au but ne disent rien de la force sur 120 minutes |
 | Clubs et sélections sont deux ensembles à part | la méthode le demande (§ 3) : ils ne se rencontrent jamais |
 | **Année du trophée** : du 1ᵉʳ août au 31 juillet ; un championnat d'année civile en donne la seconde moitié d'une édition et la première de la suivante | sinon une « saison » mêlait des championnats finis et d'autres au quatorzième match (audit, cause 3) |
