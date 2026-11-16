@@ -836,7 +836,7 @@ export default function PlayerSeasonProfile({
                 {palmares}
               </PlayerScoutCareer>
             )}
-            {view === "physical" && <PlayerPhysical id={id} season={f.season} />}
+            {view === "physical" && <PlayerPhysical id={id} season={f.season} rows={profile.rows} />}
             {view === "projection" && (
               <Projection
                 profile={profile}
