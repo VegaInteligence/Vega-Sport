@@ -16,10 +16,17 @@ Links (core.provider_ids, how each was made in ops.provider_links):
   (30 days either side), at least CLUB_VOTES players, at least CLUB_SHARE of the club's and of
   the team's votes, a reserve side never to a first team; two claims make a conflict for a
   person (ops.provider_link_conflicts), never a link;
+- a club no vote reaches (its players are not in the snapshot): searched by its name, the
+  first SEARCH_CANDIDATES clubs found read with their squad of our club's last season (or the
+  year before); linked when one alone has at least SEARCH_MATCHES members whose exact name is
+  one of our players of that season, each name the only one on both sides;
 - a player: inside a linked club, one of ours and one of the club's squads with the same
   birth date and the same name (or a name token of 3 letters or more), each the only one
-  there; a player of ours without a birth date is not linked. A link whose provider's birth
-  date differs from ours is quarantined: none of its data is shown.
+  there; a player of ours without a birth date, by the same exact name, the only one on both
+  sides in the club, listed by the provider in a season he played for us there (or the year
+  before), the provider's birth date, when it gives one, making him 15 to 45 at his matches
+  for us (the rule of the Wikidata reader). A link whose provider's birth date differs from
+  ours is quarantined: none of its data is shown.
 
 Politeness: one request at a time, INTERVAL seconds apart and a jitter. A refusal (a WAF
 challenge, 403, 429) pauses the reader one hour, doubling to a day; a week of refusals, or
@@ -58,14 +65,17 @@ GIVE_UP_AFTER, GIVE_UP_BLOCKS = timedelta(days=7), 8
 SCHEMA_STOP = 20  # unreadable responses in a row: the format changed, the reader stops a day
 PLAN_EVERY, LINK_EVERY = timedelta(hours=1), timedelta(hours=24)
 CLUB_VOTES, CLUB_SHARE, SPAN_MARGIN = 3, 0.6, 30
+SEARCH_CANDIDATES, SEARCH_MATCHES = 3, 5
 MIN_TOKEN = 3
-KINDS = ("profile", "club", "values", "squad", "transfers", "injuries")
+MIN_AGE, MAX_AGE = 15, 45
+KINDS = ("profile", "club", "search", "values", "squad", "transfers", "injuries")
 # Days before a unit is read again, by priority (1 = the season in progress, 2 the one before,
 # 3 the one before that, 4 and more older): a profile weekly for a player of the season, the
 # values and transfers when the profile says they changed, else monthly.
 PERIODS = {
     "profile": (7, 30, 90, 365), "values": (30, 90, 365, 365), "transfers": (30, 90, 365, 365),
     "injuries": (7, 30, 90, 365), "squad": (7, 365, 365, 365), "club": (180, 180, 180, 180),
+    "search": (30, 90, 365, 365),  # a club not found yet is searched again
 }
 NOT_FOUND_AGAIN = timedelta(days=90)
 # Names that are no club: a player without one, retired, unknown or on a break.
@@ -342,10 +352,19 @@ def pick_clubs(votes, names, team_names, linked_clubs, linked_teams):
     return links, conflicts
 
 
+def _age(birth, day):
+    return day.year - birth.year - ((day.month, day.day) < (birth.month, birth.day))
+
+
 def pick_players(ours, theirs):
-    """Inside one club: ours [(player, name, short name, birth date)], theirs [(key, name, birth
-    date)] -> {key: (player, rule)}. The only pair of a birth date with the same name (full or
-    short), else the only pair of that birth date sharing a name token; no birth date, no link."""
+    """Inside one club: ours [(player, name, short name, birth date, seasons, first day, last
+    day)], theirs [(key, name, birth date, seasons)] -> {key: (player, rule)}.
+    - the only pair of a birth date with the same name (full or short): club_name_birth;
+    - else the only pair of that birth date sharing a name token: club_birth_name_token;
+    - a player of ours without a birth date: the same exact name, the only one on both sides
+      in the club, the provider listing him in a season he played for us there or the year
+      before, the provider's birth date (if any) giving him 15 to 45 at his matches for us:
+      club_season_name."""
     def names(*values):
         return {normalize(v) for v in values if v} - {""}
 
@@ -364,7 +383,40 @@ def pick_players(ours, theirs):
             out[pairs[0][0][0]] = (pairs[0][1][0], "club_name_birth")
         elif not pairs and len(candidates) == 1 and len(mine) == 1 and tokens(candidates[0][1]) & (tokens(mine[0][1]) | tokens(mine[0][2])):
             out[candidates[0][0]] = (mine[0][0], "club_birth_name_token")
+    # Without a birth date of ours: the exact name, each the only one of it in the club.
+    our, their = {p[0]: p for p in ours}, {t[0]: t for t in theirs}
+    ours_by_name, theirs_by_name = defaultdict(set), defaultdict(set)
+    for p in ours:
+        for n in names(p[1], p[2]):
+            ours_by_name[n].add(p[0])
+    for t in theirs:
+        for n in names(t[1]):
+            theirs_by_name[n].add(t[0])
+    linked = {p for p, _ in out.values()}
+    for n, mine in ours_by_name.items():
+        found = theirs_by_name.get(n, set())
+        if len(mine) != 1 or len(found) != 1:
+            continue
+        p, t = our[next(iter(mine))], their[next(iter(found))]
+        if p[3] is not None or t[0] in out or p[0] in linked:
+            continue
+        if not any(y in (s_, s_ - 1) for y in t[3] for s_ in p[4]):
+            continue
+        if t[2] is not None and not (MIN_AGE <= _age(t[2], p[5]) and _age(t[2], p[6]) <= MAX_AGE):
+            continue
+        out[t[0]] = (p[0], "club_season_name")
+        linked.add(p[0])
     return out
+
+
+def pick_search(ours, candidates):
+    """ours {name: player} (exact names of our club's players of the season, each the only one);
+    candidates [(club key, {name: member key})] -> (club key, matches) when one candidate alone
+    has at least SEARCH_MATCHES of them, else None."""
+    counts = sorted(((sum(1 for n in members if n in ours), club) for club, members in candidates), reverse=True)
+    if not counts or counts[0][0] < SEARCH_MATCHES or (len(counts) > 1 and counts[1][0] >= SEARCH_MATCHES):
+        return None
+    return counts[0][1], counts[0][0]
 
 
 # The reader -------------------------------------------------------------------
@@ -500,25 +552,30 @@ class Reader:
 
     def link_players(self):
         ours, theirs = defaultdict(list), defaultdict(list)
-        for club, player, name, short, birth in self.conn.execute(
+        for club, player, name, short, birth, seasons, first, last in self.conn.execute(
             """WITH clubs AS (SELECT provider_key AS club, entity_id AS team FROM core.provider_ids
                               WHERE entity_type = 'team' AND provider = 'transfermarkt' AND is_current),
-                    unlinked AS (SELECT DISTINCT c.club, s.player_id FROM core.player_match_stats s JOIN clubs c ON c.team = s.team_id
-                                 WHERE s.minutes_played > 0)
-               SELECT u.club, p.id, p.name, p.short_name, p.birth_date FROM unlinked u JOIN core.players p ON p.id = u.player_id
+                    played AS (SELECT c.club, s.player_id, array_agg(DISTINCT s.season_id) AS seasons, min(m.match_date) AS first_day,
+                                 max(m.match_date) AS last_day
+                               FROM core.player_match_stats s JOIN clubs c ON c.team = s.team_id
+                               JOIN core.matches m ON m.id = s.match_id AND m.season_id = s.season_id
+                               WHERE s.minutes_played > 0 AND m.match_date IS NOT NULL GROUP BY 1, 2)
+               SELECT u.club, p.id, p.name, p.short_name, p.birth_date, u.seasons, u.first_day, u.last_day
+               FROM played u JOIN core.players p ON p.id = u.player_id
                WHERE NOT EXISTS (SELECT 1 FROM core.provider_ids i WHERE i.entity_type = 'player' AND i.provider = 'transfermarkt'
                                  AND i.entity_id = p.id AND i.is_current)"""
         ).fetchall():
-            ours[club].append((player, name, short, birth))
-        for club, key, name, birth in self.conn.execute(
-            """SELECT DISTINCT q.club_key, q.player_key, pp.name, pp.birth_date FROM core.provider_squads q
+            ours[club].append((player, name, short, birth, set(seasons), first, last))
+        for club, key, name, birth, seasons in self.conn.execute(
+            """SELECT q.club_key, q.player_key, pp.name, pp.birth_date, array_agg(DISTINCT q.season_year) FROM core.provider_squads q
                JOIN core.provider_ids c ON c.entity_type = 'team' AND c.provider = 'transfermarkt' AND c.provider_key = q.club_key AND c.is_current
                JOIN core.provider_players pp ON pp.provider = q.provider AND pp.provider_key = q.player_key
                WHERE q.provider = 'transfermarkt'
                  AND NOT EXISTS (SELECT 1 FROM core.provider_ids i WHERE i.entity_type = 'player' AND i.provider = 'transfermarkt'
-                                 AND i.provider_key = q.player_key)"""
+                                 AND i.provider_key = q.player_key)
+               GROUP BY 1, 2, 3, 4"""
         ).fetchall():
-            theirs[club].append((key, name, birth))
+            theirs[club].append((key, name, birth, set(seasons)))
         claims, found = defaultdict(set), {}
         for club in theirs:
             for key, (player, rule) in pick_players(ours.get(club, []), theirs[club]).items():
@@ -574,6 +631,16 @@ class Reader:
                CROSS JOIN LATERAL (VALUES (s.season_id), (s.season_id - 1)) y(year)
                WHERE i.entity_type = 'team' AND i.provider = 'transfermarkt' AND i.is_current AND y.year <= %s
                ON CONFLICT DO NOTHING""", (current, now, current)).rowcount
+        # Every club of ours no link reached: its search, priority by its last season.
+        queued += self.conn.execute(
+            """WITH last AS (SELECT v.team, max(m.season_id) AS season FROM core.matches m
+                             CROSS JOIN LATERAL (VALUES (m.home_team_id), (m.away_team_id)) v(team) WHERE v.team IS NOT NULL GROUP BY 1)
+               INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at)
+               SELECT 'search', t.id::text, least(9, greatest(1, %s - l.season + 1))::smallint, %s::timestamptz
+               FROM last l JOIN core.teams t ON t.id = l.team AND t.is_national IS NOT TRUE
+               WHERE NOT EXISTS (SELECT 1 FROM core.provider_ids i WHERE i.entity_type = 'team' AND i.provider = 'transfermarkt'
+                                 AND i.entity_id = t.id AND i.is_current)
+               ON CONFLICT DO NOTHING""", (current, now)).rowcount
         # Every club met (a valuation, a transfer, a squad, a player's club) without a name.
         queued += self.conn.execute(
             """INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at)
@@ -649,7 +716,9 @@ class Reader:
         queue row, in one transaction. A refusal pauses the reader; nothing is written."""
         keys = [key for key, _ in units]
         try:
-            if kind == "profile":
+            if kind == "search":
+                data = self.fetch_search(int(keys[0]))
+            elif kind == "profile":
                 data = self.get("/players", [("ids[]", k) for k in keys])
             elif kind == "club":
                 data = self.get("/clubs", [("ids[]", k) for k in keys])
@@ -699,7 +768,84 @@ class Reader:
             self.blocked(Blocked("SCHEMA_CHANGED", error.status))
         return "schema"
 
+    def fetch_search(self, team):
+        """Our club's name searched, the first candidates' squads of its last season (or the
+        year before) and their members' records: what write_search decides from. None when
+        the club is linked already or has no player of that season."""
+        if self.conn.execute("SELECT 1 FROM core.provider_ids WHERE entity_type = 'team' AND provider = 'transfermarkt' AND entity_id = %s AND is_current", (team,)).fetchone():
+            return None
+        name, season = self.conn.execute(
+            """SELECT t.name, (SELECT max(m.season_id) FROM core.matches m WHERE m.home_team_id = t.id OR m.away_team_id = t.id)
+               FROM core.teams t WHERE t.id = %s""", (team,)).fetchone()
+        if not name or season is None:
+            return None
+        found = self.get("/quick-search", [("term", name), ("page", "1")])
+        if not isinstance(found, dict) or not isinstance((found.get("result") or {}).get("clubIds", []), list):
+            raise Failed("SCHEMA_CHANGED")
+        clubs = [k for k in (_key(i) for i in found["result"].get("clubIds") or []) if k][:SEARCH_CANDIDATES]
+        squads = []
+        for club in clubs:
+            for year in (season, season - 1):
+                members = parse_squad(self.get(f"/club/{club}/squad", [("season", str(year))]))
+                if members:
+                    squads.append((club, year, members))
+                    break
+        keys = sorted({k for _, _, members in squads for k, _ in members})
+        records = {}
+        for i in range(0, len(keys), BATCH):
+            data = self.get("/players", [("ids[]", k) for k in keys[i:i + BATCH]])
+            if not isinstance(data, list):
+                raise Failed("SCHEMA_CHANGED")
+            records.update({p["key"]: p for p in (parse_player(r) for r in data) if p})
+        return {"team": team, "season": season, "squads": squads, "players": records}
+
     # Writes -------------------------------------------------------------------
+
+    def write_search(self, units, data):
+        (key, priority), = units
+        if data is None:
+            self.done("search", key, priority, 0)
+            return 0
+        today = self.now().date()
+        written = 0
+        for p in data["players"].values():
+            written += self.provider_player(p, today)
+        for club, year, members in data["squads"]:
+            self.conn.execute("DELETE FROM core.provider_squads WHERE provider = 'transfermarkt' AND club_key = %s AND season_year = %s", (club, year))
+            for player, shirt in members:
+                self.conn.execute(
+                    "INSERT INTO core.provider_squads(provider, club_key, season_year, player_key, shirt_number, read_on) VALUES ('transfermarkt', %s, %s, %s, %s, %s)",
+                    (club, year, player, shirt, today))
+        # Our players of that season (or the year before), by exact name, each name the only one.
+        counts = Counter()
+        for name, short in self.conn.execute(
+            """SELECT DISTINCT p.name, p.short_name FROM core.player_match_stats s JOIN core.players p ON p.id = s.player_id
+               WHERE s.team_id = %s AND s.season_id IN (%s, %s) AND s.minutes_played > 0""", (data["team"], data["season"], data["season"] - 1)).fetchall():
+            for n in {normalize(name), normalize(short)} - {""}:
+                counts[n] += 1
+        ours = {n for n, c in counts.items() if c == 1}
+        candidates = []
+        for club, _, members in data["squads"]:
+            names = Counter(normalize(data["players"][k]["name"]) for k, _ in members if k in data["players"] and data["players"][k]["name"])
+            candidates.append((club, {n for n, c in names.items() if c == 1 and n}))
+        chosen = pick_search(ours, candidates)
+        if chosen and self._link("team", chosen[0], data["team"], "club_search_squad", chosen[1]):
+            written += 1
+        self.done("search", key, priority, written)
+        return written
+
+    def provider_player(self, p, today):
+        self.conn.execute(
+            """INSERT INTO core.provider_players(provider, provider_key, name, birth_date, position, height_cm, preferred_foot, contract_until,
+                 provider_club, joined_on, market_value_eur, market_value_on, read_on)
+               VALUES ('transfermarkt', %(key)s, %(name)s, %(birth_date)s, %(position)s, %(height_cm)s, %(foot)s, %(contract_until)s,
+                 %(club)s, %(joined_on)s, %(value)s, %(value_on)s, %(today)s)
+               ON CONFLICT (provider, provider_key) DO UPDATE SET name = EXCLUDED.name, birth_date = EXCLUDED.birth_date,
+                 position = EXCLUDED.position, height_cm = EXCLUDED.height_cm, preferred_foot = EXCLUDED.preferred_foot,
+                 contract_until = EXCLUDED.contract_until, provider_club = EXCLUDED.provider_club, joined_on = EXCLUDED.joined_on,
+                 market_value_eur = EXCLUDED.market_value_eur, market_value_on = EXCLUDED.market_value_on, read_on = EXCLUDED.read_on""",
+            {**p, "today": today})
+        return 1
 
     def write_profile(self, units, data):
         if not isinstance(data, list):
@@ -716,17 +862,7 @@ class Reader:
             before = self.conn.execute(
                 "SELECT market_value_eur, market_value_on, provider_club, contract_until FROM core.provider_players WHERE provider = 'transfermarkt' AND provider_key = %s",
                 (key,)).fetchone()
-            self.conn.execute(
-                """INSERT INTO core.provider_players(provider, provider_key, name, birth_date, position, height_cm, preferred_foot, contract_until,
-                     provider_club, joined_on, market_value_eur, market_value_on, read_on)
-                   VALUES ('transfermarkt', %(key)s, %(name)s, %(birth_date)s, %(position)s, %(height_cm)s, %(foot)s, %(contract_until)s,
-                     %(club)s, %(joined_on)s, %(value)s, %(value_on)s, %(today)s)
-                   ON CONFLICT (provider, provider_key) DO UPDATE SET name = EXCLUDED.name, birth_date = EXCLUDED.birth_date,
-                     position = EXCLUDED.position, height_cm = EXCLUDED.height_cm, preferred_foot = EXCLUDED.preferred_foot,
-                     contract_until = EXCLUDED.contract_until, provider_club = EXCLUDED.provider_club, joined_on = EXCLUDED.joined_on,
-                     market_value_eur = EXCLUDED.market_value_eur, market_value_on = EXCLUDED.market_value_on, read_on = EXCLUDED.read_on""",
-                {**p, "today": today})
-            written += 1
+            written += self.provider_player(p, today)
             player = self.player_of(key)
             if player is not None:
                 written += self.contract(player, p, today)
