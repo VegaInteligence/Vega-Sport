@@ -82,6 +82,14 @@ class PureTest(unittest.TestCase):
         self.assertEqual([(i["kind"], i["days"], i["games"], i["season"]) for i in injuries],
                          [("injury", 20, 4, 2025), ("illness", 7, None, 2024), (None, 3, None, 2024)])
         self.assertEqual(tm.parse_squad({"squad": [{"playerId": 2}, {"playerId": "1", "shirtNumber": 10}, {"playerId": None}]}), [("1", 10), ("2", None)])
+        # A club record: its squad's value, its top 18's, their average age and their number.
+        club = tm.parse_club({"id": 131, "name": "FC Barcelona", "baseDetails": {"countryId": 157}, "squadDetails": {
+            "currentMarketValue": {"value": 1300000000, "currency": "EUR"}, "top18PlayersMarketValue": {"value": 1210000000},
+            "averageAgeDisplay": "25.4", "squadSize": 27}})
+        self.assertEqual((club["key"], club["squad_value"], club["top18_value"], club["average_age"], club["squad_size"]),
+                         ("131", 1300000000, 1210000000, 25.4, 27))
+        bare = tm.parse_club({"id": 1, "name": "No squad", "squadDetails": {"currentMarketValue": {"value": 0}, "averageAge": 99, "squadSize": True}})
+        self.assertEqual((bare["squad_value"], bare["top18_value"], bare["average_age"], bare["squad_size"]), (None, None, None, None))
 
     def test_a_club_is_linked_by_mutual_majorities(self):
         names = {"583": "Paris Saint-Germain", "1041": "Olympique Lyon", "515": "Without Club", "9": "Paris Saint-Germain B"}
@@ -157,7 +165,9 @@ class FakeApi:
         if path == "/quick-search":
             return 200, {}, body({"result": {"clubIds": self.search.get(query[0], [])}, "totalCount": {"clubs": 1}})
         if path == "/clubs":
-            return 200, {}, body([{"id": int(k), "name": self.clubs[k], "baseDetails": {"countryId": 50}} for k in query if k in self.clubs])
+            return 200, {}, body([{"id": int(k), "name": self.clubs[k], "baseDetails": {"countryId": 50},
+                                   "squadDetails": {"currentMarketValue": {"value": 900000000 + int(k)}, "averageAge": 25.1, "squadSize": 26}}
+                                  for k in query if k in self.clubs])
         parts = urlparse(path).path.strip("/").split("/")
         if parts[0] == "player" and parts[2] == "market-value-history":
             club = self.players[parts[1]]["clubAssignments"][0]["clubId"] if self.players[parts[1]]["clubAssignments"] else None
@@ -264,6 +274,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(q("SELECT count(*) FROM api.player_market_values WHERE player_id = 15"), [(0,)])
         self.drain(reader)  # the clubs' names
         self.assertEqual(q("SELECT provider_key, name FROM core.provider_clubs ORDER BY 1"), [("1041", "Olympique Lyon"), ("3524", "AS Monaco"), ("583", "Paris Saint-Germain")])
+        self.assertEqual(q("SELECT squad_value_eur, average_age::float8, squad_size FROM core.provider_clubs WHERE provider_key = '583'"), [(900000583, 25.1, 26)])
         # PSG: four of our players valued at club 583 while they played for us; Lyon one only.
         reader.plan(link=True)
         self.assertEqual(q("SELECT entity_id, provider_key FROM core.provider_ids WHERE entity_type = 'team'"), [(1, "583")])

@@ -503,3 +503,51 @@ $$
 **Questions ouvertes :**
 - la part du niveau du club (§ 5.4) ;
 - λ : sur la base, la variance des matchs et celle entre joueurs donnent λ ≈ 175 à 250 minutes plutôt que 450. Le changer déplacerait tous les scores ; c'est une décision à part.
+
+## 8. Les blocs du profil lus dans la base (16 novembre 2026)
+
+Ces cinq blocs montraient des valeurs de maquette. Ils sont maintenant calculés sur les données collectées ; aucune étiquette n'est inventée : une zone, un pied ou un style n'est nommé que si les chiffres le disent nettement.
+
+### 8.1 L'effectif d'un club
+
+- La fiche du club donne la valeur de l'effectif, celle de ses 18 joueurs les mieux cotés, l'âge moyen et le nombre de joueurs, le jour où elle est lue. Elle est relue chaque mois pour les deux dernières saisons (migration 117).
+- La valeur n'existe qu'au présent : elle n'est montrée que pour la saison en cours, avec sa date.
+- Le rang « Xᵉ du championnat » n'est donné que si **tous** les clubs du championnat ont une valeur. Sinon le rang ne veut rien dire (au 16 novembre, aucun championnat n'est complet : 176 clubs reliés).
+- Âge pondéré par les minutes : Σ (âge + 0,5) × minutes / Σ minutes, sur les minutes dont l'âge est connu. L'âge est en années révolues au jour du match ; + 0,5 corrige ce demi-an manquant en moyenne. Montré seulement si les âges connus couvrent au moins 90 % des minutes et au moins 4 950 minutes (cinq matchs complets).
+
+### 8.2 Le physique
+
+- Données : distance, distance en course, distance en sprint, nombre de sprints et vitesse de pointe de chaque match suivi. Seules certaines compétitions sont suivies (au 16 novembre : Ligue des champions 2024/25 et 2025/26, Premier League 2026/27 sur 93 des 100 matchs).
+- Chaque valeur est ramenée à 90 minutes : 90 × Σ valeur / Σ minutes, sur les matchs qui la donnent.
+- Vitesse de pointe : une valeur au-dessus de 38 km/h est écartée (aucun joueur suivi n'y arrive ; 24 valeurs au-dessus de 100 dans la base), comme une valeur sur moins de 20 minutes. Le centile porte sur la **médiane** des pointes de match, pas sur le maximum de la saison : le maximum grandit avec le nombre de matchs. Le maximum est affiché à part.
+- Comparaison : les joueurs du même rôle du classement Vega suivis au moins 450 minutes dans la même compétition et la même saison. Si le rôle en compte moins de 30, sa ligne (défenseurs, milieux, attaquants) ; un gardien n'est comparé qu'aux gardiens. Moins de 10 joueurs : pas de centile.
+- Centile : part des joueurs en dessous, les égalités comptées pour moitié.
+- « Reste de la distance » : distance − course − sprint, sans seuil de vitesse connu.
+- Accélérations, décélérations et baisse en deuxième mi-temps : pas de donnée, rien n'est affiché.
+
+### 8.3 Le profil de jeu
+
+- **Zone** : les cartes d'activité de la saison additionnées (16 cases dans la longueur, attaque vers la droite ; 12 dans la largeur). Tiers : cases 0 à 4, 5 à 10, 11 à 15. Côtés : cases 0 à 3 de la largeur pour sa droite, 8 à 11 pour sa gauche (vérifié sur des ailiers et latéraux connus des deux côtés). Une carte dont les cases ne font pas le total de ses actions est écartée. Une zone est nommée si elle a au moins 45 % des actions et 10 points de plus que la suivante ; sinon « répartie ». Il faut 5 matchs.
+- **Pied** : les tirs de la saison hors penalties et contre son camp. « Surtout du pied droit » (ou gauche) à 70 % des tirs du pied ou plus ; la part de la tête à part. C'est le pied avec lequel il frappe, pas son pied fort déclaré. Il faut 10 tirs.
+- **Surface** : part de ces tirs pris dans la surface ; « de près » à 80 % ou plus, « souvent de loin » à 50 % ou moins.
+- Pas d'étiquette tirée des centiles (« dribbleur » au-dessus d'un seuil) : elle répéterait « Points forts » avec un seuil arbitraire.
+
+### 8.4 Le contexte d'équipe
+
+- Le style du club est celui de la page club : mêmes valeurs, mêmes centiles dans son championnat, mêmes étiquettes (seuils 75 et 25 des centiles).
+- Part des passes reçues : Σ passes reçues / Σ passes de son équipe, sur les réseaux de passes où il figure. Un réseau couvre un match jusqu'au premier changement. Il faut 5 réseaux. Son centile se calcule parmi les joueurs de son rôle dans le même championnat, avec la même règle de repli qu'au § 8.2.
+
+### 8.5 La saison précédente dans les comparaisons
+
+- Ses centiles de la saison précédente, face aux joueurs de son groupe de poste de cette saison-là, dans les mêmes compétitions, avec les mêmes indicateurs et le même seuil de minutes. La lecture ne part que si la comparaison est demandée.
+- Sous le seuil de minutes, ou absent de ces compétitions à ce poste : rien n'est tracé, la raison est dite.
+
+| Réglage | Valeur | Statut |
+| --- | --- | --- |
+| Vitesse de pointe retenue | ≤ 38 km/h, 20 minutes ou plus | choisi |
+| Minutes pour être comparé (physique) | 450 | choisi |
+| Taille d'un rôle avant repli sur la ligne | 30 joueurs | choisi |
+| Zone nommée | 45 % et 10 points d'avance | choisi |
+| Pied nommé | 70 %, 10 tirs | choisi |
+| Couverture de l'âge pondéré | 90 %, 4 950 minutes | choisi |
+| Réseaux de passes | 5 | choisi |

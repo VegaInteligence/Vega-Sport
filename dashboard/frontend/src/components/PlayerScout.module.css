@@ -1111,47 +1111,22 @@ p.similarIntro {
   background: var(--surface-hover);
 }
 
-/* ------------------------------------------------ placeholder (fake) data */
-.fakeBadge {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  height: 20px;
-  padding: 0 7px;
-  border: 1px dashed currentColor;
-  border-radius: 999px;
-  color: var(--warning-ink);
-  font-size: var(--text-2xs);
+/* « Profil de jeu »: one line per fact, its reading then its figures */
+.styleLines {
+  display: grid;
+  gap: 12px;
+}
+.styleLines strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--ink-strong);
+  font-size: var(--text-sm);
   font-weight: 600;
-  letter-spacing: 0;
-  line-height: 1;
-  text-transform: none;
-  vertical-align: 2px;
-  white-space: nowrap;
 }
-.fakeZone {
-  padding: 12px;
-  border: 1px dashed color-mix(in srgb, var(--warning-ink) 55%, transparent);
-  border-radius: var(--radius-lg);
-}
-.fakeBanner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 14px;
+.styleLines p {
   color: var(--muted);
   font-size: var(--text-xs);
-}
-.sectionHead h2 .fakeBadge,
-.railTitle .fakeBadge {
-  margin-left: 6px;
-}
-.facts .fakeBadge {
-  height: 16px;
-  margin-left: 4px;
-  padding: 0 5px;
-  vertical-align: 1px;
+  line-height: 1.5;
 }
 
 /* Rail blocks of mock-up C */
@@ -1199,9 +1174,6 @@ p.similarIntro {
 .indexRow span {
   color: var(--muted);
   font-size: var(--text-2xs);
-}
-.indexRow .fakeBadge {
-  margin-top: 4px;
 }
 .railLink {
   display: inline-block;

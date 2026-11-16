@@ -32,6 +32,16 @@
  * season (vega/actions.py, 089): each per 90 minutes of that league, with its rank and
  * percentile among the players of his role there when they are enough to place him.
  *
+ * GET /api/teams/{id}/squad?season= — the club record's squad (117): its value, its top 18's,
+ * the players' average age and number, the day it was read, and its place by value in its
+ * league when every club of that league has one.
+ * GET /api/players/{id}/physical?season= — the player's tracked matches (117), per competition:
+ * his figures per 90 minutes and the median of his match top speeds, each placed among the
+ * players of his role tracked there for 450 minutes or more.
+ * GET /api/players/{id}/style?season= — where he acts (his activity maps summed by third and
+ * side), the foot he shoots with and his share of his team's passes in its pass networks,
+ * placed among the players of his role in his league (117).
+ *
  * Differences with the legacy read: a field without a value is omitted; a competition
  * carries no `is_free` (a plan of the source, not a fact of the competition); team
  * profiles are served (legacy: none was kept).
@@ -57,6 +67,9 @@ const ACTIONS = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/actions$/;
 const FACED = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/faced$/;
 // GET /api/players/{id}/injuries: a player's injuries, most recent first (api.player_injuries, 116).
 const INJURIES = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/injuries$/;
+const SQUAD = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/squad$/;
+const PHYSICAL = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/physical$/;
+const STYLE = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/style$/;
 // Shots on target a keeper must have faced in the season to be placed among the others.
 export const FACED_MIN_SHOTS = 30;
 
@@ -156,8 +169,178 @@ function respond(req, data) {
   return send(req, { data }, 200, { etag, ttl: 300, maxBytes: 2 * 1024 * 1024 });
 }
 
+// A role's players, and its line where the role has too few to place anyone (fewer than
+// ROLE_PEERS); goalkeepers are only ever compared with goalkeepers.
+export const ROLE_PEERS = 30;
+const LINE = { goalkeeper: "G", centre_back: "D", full_back: "D", defensive_midfielder: "M", central_midfielder: "M", winger: "A", centre_forward: "A" };
+const PEERS_LABEL = {
+  centre_forward: "avant-centres", winger: "ailiers et milieux offensifs", central_midfielder: "milieux centraux",
+  defensive_midfielder: "milieux défensifs", full_back: "latéraux", centre_back: "défenseurs centraux", goalkeeper: "gardiens",
+  G: "gardiens", D: "défenseurs", M: "milieux", A: "attaquants",
+};
+
+/** The players a player of `role` is placed among: his role's, or his line's when it has too few. */
+export function roleCohort(rows, role, min = ROLE_PEERS) {
+  if (!role || !LINE[role]) return null;
+  const own = rows.filter((r) => r.role === role);
+  if (own.length >= min) return { scope: "role", key: role, label: PEERS_LABEL[role], rows: own };
+  const line = rows.filter((r) => LINE[r.role] === LINE[role]);
+  return { scope: "line", key: LINE[role], label: PEERS_LABEL[LINE[role]], rows: line };
+}
+
+/** Share of `values` below `value`, ties counted half, from 0 to 100; null without a value. */
+export function centileOf(values, value) {
+  if (value == null || !values.length) return null;
+  let below = 0, same = 0;
+  for (const v of values) if (v < value) below++; else if (v === value) same++;
+  return Math.round((100 * (below + same / 2)) / values.length);
+}
+
+const quantile = (sorted, q) => {
+  if (!sorted.length) return null;
+  const at = (sorted.length - 1) * q, low = Math.floor(at);
+  return sorted[low] + (sorted[Math.min(low + 1, sorted.length - 1)] - sorted[low]) * (at - low);
+};
+const round1 = (v) => (v == null ? null : Math.round(v * 10) / 10);
+
+// Tracked figures: per 90 minutes (distances in metres), and the median of match top speeds.
+export const PHYSICAL_METRICS = ["distance", "running", "sprinting", "sprints", "topSpeed"];
+export const PHYSICAL_MINUTES = 450;
+const PLACE_MIN = 10;
+
+/** A player's figures of one competition from his tracked matches, as the peers' read gives them. */
+export function physicalTotals(games) {
+  const per90 = (key) => {
+    const kept = games.filter((g) => g[key] != null);
+    const minutes = kept.reduce((t, g) => t + g.minutes, 0);
+    return minutes ? (90 * kept.reduce((t, g) => t + g[key], 0)) / minutes : null;
+  };
+  const speeds = games.map((g) => g.topSpeed).filter((v) => v != null).sort((a, b) => a - b);
+  return {
+    minutes: games.reduce((t, g) => t + g.minutes, 0),
+    distance: per90("distance"), running: per90("running"), sprinting: per90("sprinting"), sprints: per90("sprints"),
+    topSpeed: quantile(speeds, 0.5), maxSpeed: speeds.length ? speeds[speeds.length - 1] : null,
+  };
+}
+
+/** One competition's block: the player's figures, each placed among his role's tracked players. */
+export function physicalBlock({ name, games, peers, role }) {
+  const own = physicalTotals(games);
+  const cohort = roleCohort(peers.filter((p) => p.minutes >= PHYSICAL_MINUTES), role);
+  const placed = own.minutes >= PHYSICAL_MINUTES && cohort && cohort.rows.length >= PLACE_MIN;
+  const column = { distance: "distance_m", running: "running_m", sprinting: "sprinting_m", sprints: "sprints", topSpeed: "top_speed_kmh" };
+  const metrics = PHYSICAL_METRICS.map((key) => {
+    const values = (cohort?.rows || []).map((r) => r[column[key]]).filter((v) => v != null).sort((a, b) => a - b);
+    return {
+      key, value: round1(own[key]),
+      percentile: placed && values.length >= PLACE_MIN ? centileOf(values, own[key]) : null,
+      p10: round1(quantile(values, 0.1)), p25: round1(quantile(values, 0.25)), median: round1(quantile(values, 0.5)),
+      p75: round1(quantile(values, 0.75)), p90: round1(quantile(values, 0.9)),
+    };
+  });
+  const first = peers[0];
+  return {
+    name, matches: games.length, minutes: own.minutes, maxSpeed: round1(own.maxSpeed),
+    tracked: first?.tracked ?? null, finished: first?.finished ?? null,
+    cohort: cohort && placed ? { scope: cohort.scope, key: cohort.key, label: cohort.label, players: cohort.rows.length } : null,
+    metrics,
+    games: games.map((g) => ({ date: g.date, opponent: g.opponent, minutes: g.minutes, distance: round1(g.distance),
+      sprints: g.sprints, topSpeed: round1(g.topSpeed) })),
+  };
+}
+
+/** His share of his team's passes in the networks he is in, placed among his role's players. */
+export function passShare(rows, playerKey, min = 5) {
+  const share = (r) => (r.total > 0 ? r.received / r.total : null);
+  const me = rows.find((r) => r.player_id === playerKey);
+  if (!me || me.networks < min) return null;
+  const cohort = roleCohort(rows.filter((r) => r.networks >= min), me.role);
+  const values = (cohort?.rows || []).map(share).filter((v) => v != null);
+  return {
+    competition: me.competition_name, networks: me.networks, received: me.received, total: me.total,
+    share: Math.round(1000 * share(me)) / 10,
+    percentile: cohort && values.length >= PLACE_MIN ? centileOf(values, share(me)) : null,
+    cohort: cohort && values.length >= PLACE_MIN ? { scope: cohort.scope, key: cohort.key, label: cohort.label, players: values.length } : null,
+  };
+}
+
+const seasonParam = (params) => {
+  validateParams(params, ["season"]);
+  const season = params.get("season");
+  if (!/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
+  return season;
+};
+const SEASON_KEY = "(SELECT season_id FROM api.season_keys WHERE season=$2)";
+
 export function createProfileRoute(read) {
   return async (req, path, params) => {
+    const squad = path.match(SQUAD);
+    if (squad) {
+      const season = seasonParam(params);
+      const [r] = await read(
+        `SELECT squad_value_eur, top18_value_eur, average_age, squad_size, read_on::text AS read_on, league_rank, league_clubs, league_valued
+         FROM api.club_squad(${SEASON_KEY}, api.internal_id('team',$1))`,
+        [squad[1], season],
+      );
+      if (!r) reject(404, "Donnée indisponible.");
+      const data = { id: squad[1], season, value: Number(r.squad_value_eur), readOn: r.read_on };
+      put(data, "top18Value", r.top18_value_eur == null ? null : Number(r.top18_value_eur));
+      put(data, "averageAge", r.average_age);
+      put(data, "size", r.squad_size);
+      // A rank only among clubs that all have a value: otherwise it says nothing.
+      if (r.league_clubs > 1 && r.league_valued === r.league_clubs) data.league = { rank: r.league_rank, clubs: r.league_clubs };
+      return respond(req, data);
+    }
+    const physical = path.match(PHYSICAL);
+    if (physical) {
+      const season = seasonParam(params);
+      const rows = await read(
+        `SELECT competition_id, competition_name, match_date::text AS match_date, opponent_name, role, minutes,
+                distance_m, running_m, sprinting_m, sprints, top_speed_kmh
+         FROM api.player_physical_matches(${SEASON_KEY}, api.internal_id('player',$1))
+         ORDER BY match_date, match_id`,
+        [physical[1], season],
+      );
+      if (!rows.length) reject(404, "Donnée indisponible.");
+      const byCompetition = new Map();
+      for (const r of rows) {
+        if (!byCompetition.has(r.competition_id)) byCompetition.set(r.competition_id, { name: r.competition_name, games: [] });
+        byCompetition.get(r.competition_id).games.push({ date: r.match_date, opponent: r.opponent_name, minutes: r.minutes,
+          distance: r.distance_m, running: r.running_m, sprinting: r.sprinting_m, sprints: r.sprints, topSpeed: r.top_speed_kmh });
+      }
+      const blocks = await Promise.all([...byCompetition].map(async ([key, { name, games }]) => {
+        const peers = await read(
+          `SELECT * FROM api.competition_physical_peers(${SEASON_KEY.replace("$2", "$1")}, $2::integer)`,
+          [season, key],
+        );
+        return physicalBlock({ name, games, peers, role: rows[0].role });
+      }));
+      blocks.sort((a, b) => b.minutes - a.minutes);
+      return respond(req, { id: physical[1], season, competitions: blocks });
+    }
+    const style = path.match(STYLE);
+    if (style) {
+      const season = seasonParam(params);
+      const args = [style[1], season];
+      const [[zones], [shots], passes] = await Promise.all([
+        read(`SELECT * FROM api.player_zones(${SEASON_KEY}, api.internal_id('player',$1))`, args),
+        read(`SELECT * FROM api.player_shot_profile(${SEASON_KEY}, api.internal_id('player',$1))`, args),
+        read(`SELECT *, player_id = api.internal_id('player',$1) AS me FROM api.player_pass_share(${SEASON_KEY}, api.internal_id('player',$1))`, args),
+      ]);
+      const me = passes.find((r) => r.me);
+      const data = { id: style[1], season };
+      put(data, "zones", zones?.matches ? {
+        matches: zones.matches, minutes: zones.minutes, actions: Number(zones.actions),
+        thirds: [zones.own_third, zones.middle_third, zones.final_third].map(Number),
+        sides: [zones.right_side, zones.centre, zones.left_side].map(Number),
+      } : null);
+      put(data, "shots", shots?.shots ? {
+        shots: shots.shots, rightFoot: shots.right_foot, leftFoot: shots.left_foot, header: shots.header, other: shots.other, insideBox: shots.inside_box,
+      } : null);
+      put(data, "passes", me ? passShare(passes, me.player_id) : null);
+      if (!data.zones && !data.shots && !data.passes) reject(404, "Donnée indisponible.");
+      return respond(req, data);
+    }
     const injuries = path.match(INJURIES);
     if (injuries) {
       validateParams(params, []);

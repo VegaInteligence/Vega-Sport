@@ -11,18 +11,12 @@ const pageRoutes = new Set([
  */
 export function routeExists(pathname) {
   const path = routePath(pathname);
-  return (
-    pageRoutes.has(path) ||
-    path === "/maquettes" ||
-    path.startsWith("/maquettes/")
-  );
+  return pageRoutes.has(path);
 }
 
 /** Pages with their own readers must not download a season before mounting. */
 export function routeNeedsSeason(pathname, params) {
   const path = routePath(pathname);
-  // Design mock-ups render their own fictitious data.
-  if (path === "/maquettes" || path.startsWith("/maquettes/")) return false;
   if (
     [
       "/competitions",
