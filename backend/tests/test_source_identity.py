@@ -1,9 +1,8 @@
-"""SportsAPI rankings (real captures), the site data of dashboard/shared as rows (zones,
-cup logos, SportScore ids) and one team per real team across cup sources."""
+"""The site data of dashboard/shared as rows (zones, cup logos, SportScore ids) and one team
+per real team across cup sources. (SportsAPI, a second source of the FIFA and UEFA rankings that
+never ran without its key, was removed on 17 Nov 2026: VI-21.)"""
 
 from datetime import datetime, timezone
-import gzip
-import json
 import os
 from pathlib import Path
 import sys
@@ -13,31 +12,17 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from vega.sources import curated, identity, sportsapi
+from vega.sources import curated, identity
 
 try:
     import psycopg
 except ImportError:
     psycopg = None
 DSN = os.environ.get("VEGA_V2_SOURCES_TEST_DSN")
-CAPTURES = ROOT / "tests/fixtures/rankings"
 NOW = datetime(2026, 11, 9, 6, tzinfo=timezone.utc)
 
 
-def capture(kind):
-    """The SportsAPI response main read on 2026-11-01, rebuilt from its kept rows."""
-    edition = json.loads(gzip.open(CAPTURES / f"raw__rankings__{kind}__2026-11-01.sportsapi.json.gz").read())
-    return {"data": [r["sourceRow"] for r in edition["rows"]], "meta": {"updatedAt": edition["sourceUpdatedAt"]}}
-
-
 class ParseTest(unittest.TestCase):
-    def test_real_responses(self):
-        rows = sportsapi.parse(capture("fifa-men"))
-        self.assertEqual(rows[0], ("293151", "Spain", "ESP", 1, 1, 2011.571862, "https://cdn.sportsapi.app/v2/teams/293151/logo"))
-        self.assertEqual(len(sportsapi.parse(capture("uefa-associations"))), 55)
-        self.assertEqual(sportsapi.parse(capture("uefa-associations"))[0][:2], ("EN", "England"))
-        self.assertEqual(len(sportsapi.parse(capture("uefa-clubs"))), 415)
-
     def test_country_names_follow_the_site(self):
         import re
 
@@ -164,10 +149,6 @@ class ParseTest(unittest.TestCase):
                          [(13477, 1168, "international_results", "Angola")])
         self.assertEqual(identity.nation_twins([(9, "Grèce", "openligadb"), (12, "Greece", "openfootball")]), [(9, 12, "openligadb", "Grèce")])
 
-    def test_no_key_no_scope(self):
-        os.environ.pop("V2_SPORTSAPI_API_KEY", None)
-        self.assertEqual(sportsapi.scopes(NOW), {})
-
 
 @unittest.skipUnless(DSN and psycopg, "requires disposable local sources DB and psycopg")
 class SourceIdentityTest(unittest.TestCase):
@@ -205,7 +186,7 @@ class SourceIdentityTest(unittest.TestCase):
         x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, home_score, away_score, match_date)
              VALUES (1, 2, 2026, 'pitchapi', 'finished', 2, 3, 5, 1, '2026-06-14')""")
         x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('match','pitchapi','m_aaaaa1',1)")
-        # UEFA rows the SportsAPI rows are linked through.
+        # UEFA ranking rows (a club and an association).
         x("INSERT INTO core.ranking_editions(id, kind, provider, label) VALUES (1, 'uefa_clubs', 'uefa', '2025/2026'), (2, 'uefa_associations', 'uefa', '2025/2026')")
         x("INSERT INTO core.ranking_rows(edition_id, row_no, team_id, position, entity_name, provider_key) VALUES (1, 1, 4, 1, 'FC Bayern München', '50037')")
         x("INSERT INTO core.ranking_rows(edition_id, row_no, country_code, position, entity_name, provider_key) VALUES (2, 1, 'ENG', 1, 'England', '1')")
@@ -217,26 +198,6 @@ class SourceIdentityTest(unittest.TestCase):
     def tearDownClass(cls):
         cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
         cls.db.close()
-
-    def test_sportsapi_snapshots_link_like_the_official_sources(self):
-        for name, kind in sportsapi.KINDS.items():
-            body = capture({"uefa-countries": "uefa-associations"}.get(name, name))  # main's file names
-            with self.db.transaction():
-                written, unmatched = sportsapi.save(self.db, kind, "2026-11-01", sportsapi.parse(body), sportsapi.BASE + name, body["meta"]["updatedAt"])
-            # The known ones only: Spain, Germany, Scotland; England; Bayern.
-            self.assertEqual(written, {"fifa_men": 3, "uefa_associations": 1, "uefa_clubs": 1}[kind], kind)
-            self.assertEqual(written + unmatched, {"fifa_men": 211, "uefa_associations": 55, "uefa_clubs": 415}[kind])
-        rows = self.db.execute(
-            """SELECT e.kind::text, r.team_id, r.country_code, r.position FROM core.ranking_rows r JOIN core.ranking_editions e ON e.id = r.edition_id
-               WHERE e.provider = 'sportsapi' AND r.position = 1 ORDER BY 1"""
-        ).fetchall()
-        self.assertEqual(rows, [("fifa_men", 1, None, 1), ("uefa_associations", None, "ENG", 1), ("uefa_clubs", 4, None, 1)])
-        self.assertEqual(self.db.execute("SELECT provider_key FROM core.provider_ids WHERE provider='sportsapi' AND entity_id=4").fetchone()[0], "4441")
-        # Served under its date; an official edition of the same date is served first.
-        self.db.execute("INSERT INTO core.ranking_editions(kind, provider, label) VALUES ('fifa_men', 'fifa', '2026-11-01')")
-        served = self.db.execute("SELECT provider, official_edition FROM api.ranking_editions WHERE kind='fifa-men' AND edition='2026-11-01'").fetchall()
-        self.assertEqual(served, [("FIFA", True)])
-        self.assertEqual(self.db.execute("SELECT provider FROM api.ranking_editions WHERE kind='uefa-clubs' AND edition='2026-11-01'").fetchone()[0], "SportsAPI")
 
     def test_scopes_naming_provider_ids_are_recorded(self):
         # SportScore scopes carry PitchAPI league ids (upper case): their status rows must be

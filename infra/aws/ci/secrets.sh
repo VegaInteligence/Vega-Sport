@@ -20,11 +20,6 @@ if [ -n "${PITCHAPI_API_KEY:-}" ]; then
   printf '%s' "$PITCHAPI_API_KEY" > "$work/pitchapi"
   put /vega/v2/pitchapi-key "$work/pitchapi"
 fi
-# Optional: the SportsAPI key (ranking snapshots); without it that source stays off.
-if [ -n "${SPORTSAPI_API_KEY:-}" ]; then
-  printf '%s' "$SPORTSAPI_API_KEY" > "$work/sportsapi"
-  put /vega/v2/sportsapi-key "$work/sportsapi"
-fi
 # The key of the read API's /api/ops/status, read by the private status page (Vega Status).
 openssl rand -hex 32 | tr -d '\n' > "$work/ops"
 put /vega/v2/ops-key "$work/ops"

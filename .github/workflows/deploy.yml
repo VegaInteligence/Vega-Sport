@@ -48,7 +48,6 @@ jobs:
           IMPORT_ARCHIVES: ${{ inputs.import_archives }}
           ARCHIVE_SOURCES_BUCKET: ${{ vars.V2_ARCHIVE_SOURCES_BUCKET }}
           PITCHAPI_API_KEY: ${{ secrets.PITCHAPI_API_KEY }}
-          SPORTSAPI_API_KEY: ${{ secrets.SPORTSAPI_API_KEY }}
           # The live provider's adapter (backend/vega/live/adapters.py); unset, the live ingestor stays off.
           LIVE_PROVIDER: ${{ vars.V2_LIVE_PROVIDER }}
         # pipefail: the step fails when the script does, not when tee does (it never does).
