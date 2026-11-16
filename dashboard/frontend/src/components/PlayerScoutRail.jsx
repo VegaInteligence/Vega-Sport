@@ -71,9 +71,10 @@ function selection(history) {
     (sum, row) => sum + (row.profile.stats?.goals?.sum || 0),
     0,
   );
-  const { team, season } = rows[0];
+  const { team, season, teamId } = rows[0];
   return {
     team,
+    teamId,
     season,
     label: "Sélection",
     value: `${number(caps)} sél.`,
@@ -264,10 +265,17 @@ export default function PlayerScoutRail({
           </div>
           {nation && (
             <div className={s.nations}>
-              <span>
-                <NationalFlag name={nation.team} season={nation.season} />
-                {nationalTeamName(nation.team, nation.season)}
-              </span>
+              {nation.teamId ? (
+                <Link className={s.nationLink} href={f.href("/nations/", { id: nation.teamId })}>
+                  <NationalFlag name={nation.team} season={nation.season} />
+                  {nationalTeamName(nation.team, nation.season)}
+                </Link>
+              ) : (
+                <span>
+                  <NationalFlag name={nation.team} season={nation.season} />
+                  {nationalTeamName(nation.team, nation.season)}
+                </span>
+              )}
             </div>
           )}
           {(team || league) && (

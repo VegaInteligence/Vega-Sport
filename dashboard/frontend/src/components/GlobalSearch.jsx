@@ -12,7 +12,7 @@ import Link from "next/link";
 import Icon from "./Icon.jsx";
 import { Media, Skeleton } from "./UI.jsx";
 import { FootballContext } from "../hooks/FootballContext.jsx";
-import { number } from "../services/format.js";
+import { normalizeText, number } from "../services/format.js";
 import {
   buildSearchIndex,
   searchIndex,
@@ -21,6 +21,7 @@ import {
   SEARCH_LABELS,
 } from "../services/global-search.js";
 import { cachedResource, useResource } from "../services/resources.js";
+import { nationName, useNations } from "../services/nations.js";
 import { cupIndex } from "../services/catalog-client.js";
 import {
   hasBoundedSearch,
@@ -30,8 +31,33 @@ import {
 const PAGES = {
   players: "/joueurs/",
   clubs: "/clubs/",
+  nations: "/nations/",
   competitions: "/competitions/",
 };
+const NATION_LIMIT = 4;
+
+/** The national teams whose French or English name holds the typed text, a name that starts with it first. */
+function matchNations(list, text) {
+  const needle = normalizeText(String(text || "").trim());
+  if (needle.length < 2 || !list?.length) return [];
+  return list
+    .map((n) => {
+      const french = nationName(n.name);
+      const names = [normalizeText(french), normalizeText(n.name)];
+      const at = Math.min(...names.map((name) => (name.includes(needle) ? (name.startsWith(needle) ? 0 : 1) : 9)));
+      return { n, french, at };
+    })
+    .filter((x) => x.at < 9)
+    .sort((a, b) => a.at - b.at || (a.n.ranking?.rank ?? 999) - (b.n.ranking?.rank ?? 999) || a.french.localeCompare(b.french))
+    .slice(0, NATION_LIMIT)
+    .map(({ n, french }) => ({
+      kind: "nations",
+      id: n.id,
+      name: french,
+      imageUrl: n.imageUrl,
+      meta: n.ranking ? `${n.ranking.rank === 1 ? "1re" : `${n.ranking.rank}e`} au classement Vega` : "Sélection nationale",
+    }));
+}
 const EMPTY_DATA = { appearances: [], matches: [] };
 const EMPTY_COMPETITIONS = [];
 
@@ -137,12 +163,24 @@ export default function GlobalSearch({ sheet = false, onClose }) {
     needle.length >= 2 &&
     (remote ? !ready || remoteResult.loading : legacySearch.loading);
   const searchError = remote ? currentRemote?.error : legacySearch.error;
+  // The national teams, read once the search is in use.
+  const nationList = useNations(armed ? f?.season : null);
+  const nationResults = useMemo(
+    () => matchNations(nationList.value?.nations, deferred),
+    [nationList.value, deferred],
+  );
   const results = useMemo(() => {
-    if (!remote) return localResults;
+    const withNations = (r) => ({
+      ...r,
+      nations: nationResults,
+      order: (r.order || []).flatMap((kind) => (kind === "clubs" ? ["clubs", "nations"] : [kind])),
+      total: (r.total || 0) + nationResults.length,
+    });
+    if (!remote) return withNations(localResults);
     const players = currentRemote?.value?.players || [],
       clubs = currentRemote?.value?.clubs || [],
       competitions = localResults.competitions || [];
-    return {
+    return withNations({
       ...localResults,
       players,
       clubs,
@@ -150,8 +188,8 @@ export default function GlobalSearch({ sheet = false, onClose }) {
       playersCount: undefined,
       clubsCount: undefined,
       total: players.length + clubs.length + competitions.length,
-    };
-  }, [remote, localResults, currentRemote?.value]);
+    });
+  }, [remote, localResults, currentRemote?.value, nationResults]);
   const options = useMemo(
     () => results.order.flatMap((kind) => results[kind] || []),
     [results],

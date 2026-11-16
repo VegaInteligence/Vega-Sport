@@ -337,5 +337,6 @@ export function searchIndex(index, query) {
 export const SEARCH_LABELS = {
   players: "Joueurs",
   clubs: "Clubs",
+  nations: "Nations",
   competitions: "Compétitions",
 };

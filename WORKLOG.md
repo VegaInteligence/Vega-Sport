@@ -1,6 +1,6 @@
 # WORKLOG — 2026-11-16
 
-- Goal: nation pages — an index of national teams and a page per national team ([VI-18](https://linear.app/vegainteligence/issue/VI-18/pages-nations-index-des-selections-et-page-par-selection), In Progress, mock-up awaiting validation).
+- Goal: nation pages — an index of national teams and a page per national team ([VI-18](https://linear.app/vegainteligence/issue/VI-18/pages-nations-index-des-selections-et-page-par-selection), In Progress; mock-up approved 16 Nov « yes implement as the mockup »).
 - This checkout: Vega-Sport, worktree `claude/v2-complete`, pushed direct to main; Linear label `repo:vega-sport`.
 - Done today: VI-17 (player page and club rail) shipped and verified (8c8dd52633, 8d87993452); the club stadium's blue underline was removed (803fc14499).
 - Constraints: approved mock-up before any code; real API-backed data only; no provider names in routes or visible text; Vega ids; typed tables; French UI; phones get one scrolling row of pills.
@@ -17,4 +17,11 @@
     - tabs Vue d'ensemble / Matchs / Joueurs / Historique;
     - overview: KPI strip, Elo curve + latest matches, World Cup 2026 path, World Cup 2026 players, tournaments grid.
   - Links: « Nations » in the top nav, player rail nation chip, international match teams, search.
-- Next action: wait for the user's validation of the mock-up, then plan API routes, data fixes (team aliases, de-duplication) and the frontend.
+- Same request: the player « Profil statistique » becomes the club card adapted. It shows the radar, then role and skill bars ranked at the position, then tags; the separate skills card goes. The home « Joueur de la semaine » recent grades get a hover with the match and a link to it.
+- Decisions:
+  - Duplicates are handled at read time: a collected match and its archive copy are kept once. A final or third-place match without a score names the stage only.
+  - The French-named Nations League teams (Italie, Grèce, Hongrie… source-only, no PitchAPI anchor) stay separate for now. Merging them changes the Elo, so it is a follow-up for the user.
+- Progress:
+  - API 12a1df4d1d is pushed: migration 119 (read functions) plus /api/nations and /api/nations/{id}. Its tests came first; the API suite is 162/162 locally. Deploy run 43951876581 is in progress.
+  - Frontend (uncommitted): /nations/ index and page, « Nations » in the top nav, player rail nation link, search results, player card, home hover. Site suite 602/602 and bounded-reads 12/12; build OK.
+- Next action: after the deploy, verify locally against the production API, push the frontend, then run production E2E (desktop + iPhone 16) with evidence and close VI-18.

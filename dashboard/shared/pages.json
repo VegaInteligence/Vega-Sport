@@ -25,6 +25,12 @@
     "component": "ClubsPage"
   },
   {
+    "key": "nations",
+    "path": "/nations/",
+    "title": "Nations",
+    "component": "NationsPage"
+  },
+  {
     "key": "players",
     "path": "/joueurs/",
     "title": "Joueurs",

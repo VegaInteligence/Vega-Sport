@@ -457,7 +457,9 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
       "./Icon.jsx": { __esModule: true, default: () => null },
       "./UI.jsx": { Media: () => null, Skeleton: () => null },
       "../hooks/FootballContext.jsx": { FootballContext: {} },
-      "../services/format.js": { number: String },
+      "../services/format.js": { number: String, normalizeText: (value) => String(value || "").toLowerCase() },
+      // The national teams: one cached read of the season's list, outside the typed reads.
+      "../services/nations.js": { nationName: (name) => name, useNations: () => ({ loading: false, value: null }) },
       "../services/global-search.js": globalSearch,
       "../services/resources.js": {
         cachedResource: () => undefined,
