@@ -39,6 +39,7 @@ import {
 } from "../services/competition-standings.js";
 import { matchStandingsClubs } from "../services/standings-clubs.js";
 import { useLeagueFates } from "../services/league-fates.js";
+import { Term } from "./Hint.jsx";
 const teamKey = (name) => normalizeText(name).replace(/[^a-z0-9]/g, "");
 const isMatchTeam = (row, club, teams) =>
   teams.some(
@@ -213,30 +214,30 @@ function ResultStandings({
           <thead>
             <tr>
               <th scope="col">#</th>
-              <th scope="col">Équipe</th>
-              <th scope="col" title="Points">
-                Pts
+              <th scope="col"><Term>Équipe</Term></th>
+              <th scope="col">
+                <Term>Pts</Term>
               </th>
-              <th scope="col" title="Matchs joués">
-                J
+              <th scope="col">
+                <Term>J</Term>
               </th>
-              <th scope="col" title="Victoires">
-                G
+              <th scope="col">
+                <Term>G</Term>
               </th>
-              <th scope="col" title="Matchs nuls">
-                N
+              <th scope="col">
+                <Term>N</Term>
               </th>
-              <th scope="col" title="Défaites">
-                D
+              <th scope="col">
+                <Term>D</Term>
               </th>
-              <th scope="col" title="Buts pour">
-                BP
+              <th scope="col">
+                <Term>BP</Term>
               </th>
-              <th scope="col" title="Buts contre">
-                BC
+              <th scope="col">
+                <Term>BC</Term>
               </th>
-              <th scope="col" title="Différence de buts">
-                Diff.
+              <th scope="col">
+                <Term>Diff.</Term>
               </th>
             </tr>
           </thead>
@@ -360,30 +361,30 @@ function SportscoreTable({
           <thead>
             <tr>
               <th scope="col">#</th>
-              <th scope="col">Équipe</th>
-              <th scope="col" title="Points">
-                Pts
+              <th scope="col"><Term>Équipe</Term></th>
+              <th scope="col">
+                <Term>Pts</Term>
               </th>
-              <th scope="col" title="Matchs joués">
-                J
+              <th scope="col">
+                <Term>J</Term>
               </th>
-              <th scope="col" title="Victoires">
-                G
+              <th scope="col">
+                <Term>G</Term>
               </th>
-              <th scope="col" title="Matchs nuls">
-                N
+              <th scope="col">
+                <Term>N</Term>
               </th>
-              <th scope="col" title="Défaites">
-                D
+              <th scope="col">
+                <Term>D</Term>
               </th>
-              <th scope="col" title="Buts pour">
-                BP
+              <th scope="col">
+                <Term>BP</Term>
               </th>
-              <th scope="col" title="Buts contre">
-                BC
+              <th scope="col">
+                <Term>BC</Term>
               </th>
-              <th scope="col" title="Différence de buts">
-                Diff.
+              <th scope="col">
+                <Term>Diff.</Term>
               </th>
             </tr>
           </thead>

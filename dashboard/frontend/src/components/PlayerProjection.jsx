@@ -21,6 +21,7 @@ import { number } from "../services/format.js";
 import { Picture } from "./ClubScoutUI.jsx";
 import scout from "./PlayerScout.module.css";
 import s from "./PlayerProjection.module.css";
+import { Term } from "./Hint.jsx";
 
 const signed = (value) =>
   value == null
@@ -86,10 +87,10 @@ function ClubDepth({ club, result, profile }) {
           </caption>
           <thead>
             <tr>
-              <th>Joueur</th>
-              <th className={s.num}>Minutes</th>
-              <th className={s.num}>Indice Vega</th>
-              <th className={s.num}>Écart</th>
+              <th><Term>Joueur</Term></th>
+              <th className={s.num}><Term>Minutes</Term></th>
+              <th className={s.num}><Term>Indice Vega</Term></th>
+              <th className={s.num}><Term>Écart</Term></th>
             </tr>
           </thead>
           <tbody>

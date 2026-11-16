@@ -19,6 +19,10 @@ test("SportScore standings render without the update-timing message", async () =
   const sportscore = await import("../dashboard/frontend/src/services/sportscore-standings.js");
   const Link = ({ href, children, ...props }) => elem("a", { href, ...props }, children);
   const stubs = {
+    // The « i » beside a value (Hint.jsx) renders its name alone here.
+    "./Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
+    "../components/Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
+    "../services/glossary.js": { explain: () => null },
     "react": React,
     "next/link": { __esModule: true, default: Link },
     "../hooks/FootballContext.jsx": { useFootball: () => ({ href: (url) => url }) },

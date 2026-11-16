@@ -1,6 +1,8 @@
 "use client";
 import React, { useMemo, useState } from "react";
 import { Segments, Skeleton } from "./UI.jsx";
+import { Hint } from "./Hint.jsx";
+import { explain } from "../services/glossary.js";
 import {
   rankMetric,
   roleAssessments,
@@ -83,6 +85,7 @@ function DistRow({ metric }) {
             {metric.label}
             {metric.unit ? "" : " / 90"}
           </RankingTrigger>
+          <Hint text={explain(metric.label) || SCOUT_METRICS[metric.key]?.description} label={metric.label} />
         </strong>
         <small>
           Médiane {format(metric.dist[2])} · {ordinal(metric.rank)} sur{" "}
@@ -226,7 +229,10 @@ function Telemetry({ sections, metrics, unit }) {
                       className={`${s.tile} ${toneClass(item.percentile)}`}
                       key={item.key}
                     >
-                      <span title={item.label}>{item.label}</span>
+                      <span title={item.label}>
+                        {item.label}
+                        <Hint text={explain(item.label) || SCOUT_METRICS[item.key]?.description} label={item.label} />
+                      </span>
                       <div className={s.tileFoot}>
                         <strong>
                           {fmt(

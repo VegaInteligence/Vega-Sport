@@ -7,6 +7,7 @@ import { useResource } from "../services/resources.js";
 import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { nationsStandings } from "../services/nations-standings.js";
 import NationalFlag from "./NationalFlag.jsx";
+import { Term } from "./Hint.jsx";
 
 function Groups({ matches }) {
   const groups = useMemo(() => nationsStandings(matches), [matches]);
@@ -15,7 +16,7 @@ function Groups({ matches }) {
       {groups.map((group) => <section className="nations-group" key={group.group}>
         <h3>Groupe {group.group}</h3>
         <div className="table-scroll"><table className="data-table nations-table" aria-label={"Classement du groupe " + group.group}>
-          <thead><tr><th scope="col">#</th><th scope="col">Équipe</th><th scope="col">J</th><th scope="col">G</th><th scope="col">N</th><th scope="col">D</th><th scope="col">BP</th><th scope="col">BC</th><th scope="col">Diff.</th><th scope="col">Pts</th></tr></thead>
+          <thead><tr><th scope="col">#</th><th scope="col"><Term>Équipe</Term></th><th scope="col"><Term>J</Term></th><th scope="col"><Term>G</Term></th><th scope="col"><Term>N</Term></th><th scope="col"><Term>D</Term></th><th scope="col"><Term>BP</Term></th><th scope="col"><Term>BC</Term></th><th scope="col"><Term>Diff.</Term></th><th scope="col"><Term>Pts</Term></th></tr></thead>
           <tbody>{group.rows.map((team) => <tr key={team.id}><td>{team.position}</td><th scope="row"><span className="national-team"><NationalFlag name={team.name} season="2026/2027" />{team.name}</span></th><td>{team.played}</td><td>{team.wins}</td><td>{team.draws}</td><td>{team.losses}</td><td>{team.goals}</td><td>{team.against}</td><td>{team.difference > 0 ? "+" : ""}{team.difference}</td><td><strong>{team.points}</strong></td></tr>)}</tbody>
         </table></div>
       </section>)}

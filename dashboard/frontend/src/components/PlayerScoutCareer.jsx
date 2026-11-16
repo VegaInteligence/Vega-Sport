@@ -25,6 +25,7 @@ import { fmt } from "./PlayerScoutCharts.jsx";
 import PlayerMarketValueCard from "./PlayerMarketValueCard.jsx";
 import { PlayerInjuries, VegaIndexHistory } from "./PlayerCareerCards.jsx";
 import s from "./PlayerScout.module.css";
+import { Term } from "./Hint.jsx";
 
 const total = (profile, key) => {
   const metric = seasonMetric(profile, key, "total");
@@ -108,7 +109,9 @@ export default function PlayerScoutCareer({
         <div className={s.kpiStrip}>
           {kpis.map(([label, value, accent]) => (
             <div key={label}>
-              <span>{label}</span>
+              <span>
+                <Term>{label}</Term>
+              </span>
               <strong className={accent ? s.kpiAccent : undefined}>
                 {(
                   label === "Valeur marchande"
@@ -152,15 +155,15 @@ export default function PlayerScoutCareer({
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Saison</th>
-                        <th>Équipe</th>
-                        <th>Compétitions</th>
-                        <th className={s.num}>MJ</th>
-                        <th className={s.num}>Tit.</th>
-                        <th className={s.num}>Min</th>
-                        <th className={s.num}>Buts</th>
-                        <th className={s.num}>PD</th>
-                        <th className={s.num}>Note Vega</th>
+                        <th><Term>Saison</Term></th>
+                        <th><Term>Équipe</Term></th>
+                        <th><Term>Compétitions</Term></th>
+                        <th className={s.num}><Term>MJ</Term></th>
+                        <th className={s.num}><Term>Tit.</Term></th>
+                        <th className={s.num}><Term>Min</Term></th>
+                        <th className={s.num}><Term>Buts</Term></th>
+                        <th className={s.num}><Term>PD</Term></th>
+                        <th className={s.num}><Term>Note Vega</Term></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -226,7 +229,7 @@ export default function PlayerScoutCareer({
                         );
                       })}
                       <tr className={s.totalRow}>
-                        <th scope="row">Total club</th>
+                        <th scope="row"><Term>Total club</Term></th>
                         <td>{team?.name || ""}</td>
                         <td />
                         <td className={s.num}>{show(clubTotals.matches)}</td>

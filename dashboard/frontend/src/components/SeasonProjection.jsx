@@ -5,6 +5,7 @@ import { number } from "../services/format.js";
 import { projectionRows, share } from "../services/forecasts.js";
 import { ZONES, leagueZones, tableZones } from "../services/standings-zones.js";
 import { useEuropeanPlaces, ZoneLegend } from "./CompetitionStandings.jsx";
+import { Term } from "./Hint.jsx";
 
 /**
  * A league replayed to its end: each club's points now and projected, and its chances. Each
@@ -29,21 +30,20 @@ export default function SeasonProjection({ projection, competition, season }) {
           <thead>
             <tr>
               <th scope="col">#</th>
-              <th scope="col">Équipe</th>
-              <th scope="col" title="Points actuels">Pts</th>
-              <th scope="col" title="Matchs joués">J</th>
-              <th scope="col" title="Points en fin de saison, en moyenne des simulations">Pts projetés</th>
-              <th scope="col" title="Part des simulations où le club finit premier">Titre</th>
-              <th scope="col" title="Part des simulations où le club finit dans les quatre premiers">4 premiers</th>
+              <th scope="col"><Term>Équipe</Term></th>
+              <th scope="col" title="Points actuels"><Term>Pts</Term></th>
+              <th scope="col" title="Matchs joués"><Term>J</Term></th>
+              <th scope="col" title="Points en fin de saison, en moyenne des simulations"><Term>Pts projetés</Term></th>
+              <th scope="col" title="Part des simulations où le club finit premier"><Term>Titre</Term></th>
+              <th scope="col" title="Part des simulations où le club finit dans les quatre premiers"><Term>4 premiers</Term></th>
               {relegation && (
-                <th scope="col" title="Part des simulations où le club finit dans les trois derniers">3 derniers</th>
+                <th scope="col" title="Part des simulations où le club finit dans les trois derniers"><Term>3 derniers</Term></th>
               )}
               {coming && (
                 <th
                   scope="col"
-                  title="Niveau moyen (Elo) des cinq prochains adversaires en championnat ; entre parenthèses, le rang de ce calendrier, 1er pour le plus dur"
                 >
-                  Adv. à venir
+                  <Term>Adv. à venir</Term>
                 </th>
               )}
             </tr>

@@ -33,6 +33,7 @@ import PlayerCompetitionMatches, {
   CardHeading,
   DISCIPLINE_COLUMNS,
 } from "./PlayerCompetitionMatches.jsx";
+import { Term } from "./Hint.jsx";
 
 const METRICS = [
   ["goals", 0],
@@ -299,7 +300,7 @@ function SeasonTable({
             <tfoot>
               <tr className="player-season-total">
                 <th scope="row" colSpan={3}>
-                  Total
+                  <Term>Total</Term>
                 </th>
                 <ProfileCells
                   profile={totalProfile}

@@ -2,6 +2,7 @@
 import React from "react";
 import { Card } from "./UI.jsx";
 import { oddsText, share, useMatchOdds } from "../services/forecasts.js";
+import { Term } from "./Hint.jsx";
 
 /**
  * A coming match's odds: each licensed bookmaker's full-time result prices (1 · N · 2), the
@@ -21,7 +22,7 @@ export default function MatchOdds({ match }) {
         <table className="data-table match-odds-table">
           <thead>
             <tr>
-              <th scope="col">Opérateur</th>
+              <th scope="col"><Term>Opérateur</Term></th>
               {sides.map((side) => (
                 <th key={side} scope="col">
                   {label[side]}
@@ -42,8 +43,8 @@ export default function MatchOdds({ match }) {
             ))}
             {odds.vega && (
               <tr className="match-odds-vega">
-                <th scope="row" title="Les cotes justes du pronostic Vega : 1 ÷ sa probabilité, sans marge">
-                  Vega (cote juste)
+                <th scope="row">
+                  <Term>Vega (cote juste)</Term>
                 </th>
                 {sides.map((side) => (
                   <td key={side} title={`Vega ${share(odds.vega[side])} · marché ${share(odds.market[side])}`}>

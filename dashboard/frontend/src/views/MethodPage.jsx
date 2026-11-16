@@ -24,9 +24,9 @@ export default function MethodPage() {
           <section>
             <h2>Notes et classement</h2>
             <p>
-              Les notes affichées sont les notes de match. Le classement
-              STATARENA, ses pondérations par rôle et son agrégation saisonnière
-              restent à calibrer et à valider.
+              La note Vega d’un match et l’indice Vega de la saison mesurent ce
+              qu’un joueur apporte selon son rôle, corrigé du niveau où il joue.
+              La documentation du projet détaille chaque calcul.
             </p>
           </section>
           <section>
@@ -105,9 +105,11 @@ export default function MethodPage() {
           <dl className="method-figures">
             {[
               ["Saison", f.season],
-              ["Matchs collectés", number(coverage.matches)],
-              ["Apparitions", number(coverage.appearances)],
-            ].map(([k, v]) => (
+              ["Matchs collectés", coverage.matches == null ? null : number(coverage.matches)],
+              ["Apparitions", coverage.appearances == null ? null : number(coverage.appearances)],
+            ]
+              .filter(([, v]) => v != null && v !== "")
+              .map(([k, v]) => (
               <div key={k}>
                 <dt>{k}</dt>
                 <dd>{v}</dd>

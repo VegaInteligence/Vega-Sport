@@ -1182,3 +1182,20 @@
     box-shadow: var(--shadow-overlay);
   }
 }
+
+/* A card beside a taller one: its bars grow to the row's height (« Buts par période »). */
+.fillCard {
+  display: flex;
+  flex-direction: column;
+}
+.fillCard .periods {
+  flex: 1 1 auto;
+  align-items: stretch;
+}
+.fillCard .period {
+  grid-template-rows: minmax(0, 1fr) auto auto;
+}
+.fillCard .periodBars {
+  height: auto;
+  min-height: 185px;
+}

@@ -5,6 +5,7 @@ import { useResource } from "../services/resources.js";
 import { number } from "../services/format.js";
 import { clubRanking } from "../services/catalog-client.js";
 import { editionYear } from "../services/api-routes.js";
+import { Term } from "./Hint.jsx";
 
 function editionLabel(edition) {
   const now = new Date();
@@ -23,9 +24,9 @@ export default function ClubRanking({ clubId }) {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Saison</th>
-                    <th>Rang européen</th>
-                    <th>Coefficient</th>
+                    <th><Term>Saison</Term></th>
+                    <th><Term>Rang européen</Term></th>
+                    <th><Term>Coefficient</Term></th>
                   </tr>
                 </thead>
                 <tbody>

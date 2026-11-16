@@ -14,6 +14,7 @@ import {
   performanceProfile,
   positionOf,
 } from "../services/player-profile.js";
+import { Term } from "./Hint.jsx";
 export const metrics = [
   ["minutes", "Minutes"],
   ["grade", "Note Vega"],
@@ -360,7 +361,7 @@ export function Comparison() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Indicateur</th>
+                  <th><Term>Indicateur</Term></th>
                   {rows.map((r) => (
                     <th key={r.id}>
                       {r.name}
