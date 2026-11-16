@@ -64,6 +64,9 @@ export const SHOTS_MIN = 10;
 export const FOOT_SHARE = 70;
 
 const THIRDS = ["son tiers défensif", "le milieu de terrain", "le dernier tiers"];
+// The thirds span 5, 6 and 5 of the map's 16 cells: each share is taken per cell before the
+// rule, or the middle third would lead by its size alone.
+const THIRD_CELLS = [5, 6, 5];
 const SIDES = ["côté droit", "dans l’axe", "côté gauche"];
 
 const shares = (values) => {
@@ -79,7 +82,8 @@ const dominant = (values) => {
 export function zoneReading(zones) {
   if (!zones?.actions || zones.matches < ZONE_MATCHES) return null;
   const thirds = shares(zones.thirds), sides = shares(zones.sides);
-  const third = dominant(thirds), side = dominant(sides);
+  const third = dominant(shares(thirds.map((share, i) => share / THIRD_CELLS[i])));
+  const side = dominant(sides);
   const where = [third == null ? null : THIRDS[third], side == null ? null : SIDES[side]].filter(Boolean);
   return {
     thirds, sides,
@@ -99,10 +103,11 @@ export function footReading(shots) {
     : right >= FOOT_SHARE ? "Frappe surtout du pied droit"
       : 100 - right >= FOOT_SHARE ? "Frappe surtout du pied gauche"
         : "Frappe des deux pieds";
-  const parts = [];
-  if (feet) parts.push(`${number(right, 0)} % de ses frappes du pied droit, ${number(100 - right, 0)} % du gauche`);
-  parts.push(`${number(header, 0)} % de la tête`);
-  return { title, text: `${parts.join(", ")} (${number(shots.shots)} tirs hors penalty)` };
+  const feetText = right == null ? null
+    : right >= 50 ? `${number(right, 0)} % du droit, ${number(100 - right, 0)} % du gauche`
+      : `${number(100 - right, 0)} % du gauche, ${number(right, 0)} % du droit`;
+  const parts = [feetText && `Frappes du pied : ${feetText}`, `${number(header, 0)} % de ses tirs de la tête`].filter(Boolean);
+  return { title, text: `${parts.join(" · ")} (${number(shots.shots)} tirs hors penalty)` };
 }
 
 /** Where he shoots from: the share of his shots inside the box, penalties left out. */
@@ -121,7 +126,9 @@ export function passReading(passes) {
   return {
     share: passes.share,
     text: `Reçoit ${number(passes.share, 1)} % des passes de son équipe`,
-    rank: passes.percentile == null ? null : `plus que ${number(passes.percentile, 0)} % des ${passes.cohort.label} de ${passes.competition}`,
+    rank: passes.percentile == null ? null
+      : passes.percentile >= 50 ? `plus que ${number(passes.percentile, 0)} % des ${passes.cohort.label} de ${passes.competition}`
+        : `moins que ${number(100 - passes.percentile, 0)} % des ${passes.cohort.label} de ${passes.competition}`,
     note: `${number(passes.networks)} matchs, jusqu’au premier changement de chaque équipe`,
   };
 }
