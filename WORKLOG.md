@@ -30,19 +30,21 @@
     - which cups: drawn round not begun, all clubs entered, all rated;
     - replayed with the user's rules; opponent of the round in play;
     - calc note 7eebf9707c.
-- Waiting:
-  - the user's validation of the cups' mockup (scratchpad cups2/mock-*.png, sent 17 Nov) before building the « Projection » view of a cup;
-  - the identity pass (21:30 UTC): 152 merges; until then 118 unmerged copies (« FC Bayern München »…) are ranked as cup clubs, and the Coppa Italia is not projected;
-  - the worker's next projection pass for the cups' numbers (watcher on the public API, evidence-cups/check-knockout.mjs).
-- Kept outside on purpose (measured):
-  - OpenFootball's national cup archives and the continental cups. They still count only between known clubs: their unlinked professional clubs inflated the cup groups, and the African cups moved Egypt +104.
-  - The next step is to link the archives' professional clubs (diag-cands4.py is ready). It is blocked: the AWS session expired on 17 Nov and the user must run `aws login`.
-- Evidence: scratchpad evidence-vi21 (diag-*.py/.out, sweep, README), evidence-cups.
+- 17 Nov, afternoon (« fixe et implémente tout ce qui reste »; the cups' mockup validated by it):
+  - Cups' « Projection » view shipped (5374d0d396).
+  - Single Elo over the national cup archives, Coupe de France, American cups and Club World Cup (499f1e3b4c):
+    - 170 reviewed archive spellings;
+    - the Elo applies the identity merges in memory;
+    - German cup from OpenLigaDB only;
+    - CAF kept out (needs an African prior).
+  - Measured beforehand: 3,060 teams; PitchAPI clubs median change 2.9.
+  - Forcing the identity pass was refused by the permission classifier; it runs at 21:30 UTC and the Elo no longer depends on it.
+- Backfill: 68,748 jobs left (about 15 h). 2021/22 has 9,321 scored players and 2022/23 has 14,844, recomputed automatically.
+- Evidence: scratchpad evidence-vi21, evidence-cups (check-knockout.mjs, local-dfb.png), diag-elofinal.
 - Next action:
-  - After the identity pass: verify the merges and the Coppa Italia.
-  - After the user's yes: build the cups' view.
-  - After `aws login`: link the archive clubs and measure them in the Elo.
-  - After the backfill: verify 2021/22–2022/23.
+  - after the next daily pass, verify the Elo (3,060 teams, no copy) and the cups' numbers and view in production;
+  - after 21:30, verify the merges;
+  - left for the user: the CAF Champions League's prior, and the 7,520 clubs found only in the historic archives.
 
 ## VI-22 — club page and featured competitions (scratchpad worktree `club-tasks`, 17 Nov 2026)
 
