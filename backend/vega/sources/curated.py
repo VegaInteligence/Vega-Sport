@@ -297,37 +297,59 @@ def country_names(conn):
 
 
 # Site keys of shared/cup-logos.json -> the Vega key of the cup-source competition.
-CUP_FAMILY = {"open-cup": "cup:open-cups:", "openligadb": "cup:openligadb:"}
+CUP_FAMILY = {"open-cup": "cup:open-cups:", "openligadb": "cup:openligadb:", "open-matchday": "cup:open-matchday:"}
+# The same cup under another source's key, which takes the logo of its site key: the site shows each
+# as an edition of that cup (cup-archives.js NATIONAL_CUP_ARCHIVES and GERMAN_CUP_FOLDER; cup-catalog.js,
+# the Nations League « Ligues A à D » of OpenLigaDB and International Results). Never by a name (VI-27).
+CUP_LOGO_ALSO = {
+    "open-matchday:AUT_CUP_ofb-cup": ("cup:open-cups:austria-cup-archive",),
+    "open-matchday:GER_CUP_dfb-pokal": ("cup:open-cups:germany-cup-archive", "cup:openligadb:germany-cup"),
+    "open-matchday:ENG_CUP_fa-cup": ("cup:open-cups:fa-cup-archive",),
+    "open-matchday:ENG_CUP_efl-cup": ("cup:open-cups:efl-cup-archive",),
+    "open-matchday:ESP_CUP_copa-del-rey": ("cup:open-cups:copa-del-rey-archive",),
+    "open-matchday:ITA_CUP_coppa-italia": ("cup:open-cups:coppa-italia-archive",),
+    "open-matchday:NED_CUP_knvb-beker": ("cup:open-cups:knvb-beker-archive",),
+    "open-matchday:POR_CUP_taca-de-portugal": ("cup:open-cups:portugal-cup-archive",),
+    "open-matchday:SUI_CUP_swiss-cup": ("cup:open-cups:swiss-cup-archive",),
+    "openligadb:nations-league": ("cup:nations-results:nations-league",),
+}
 
 
 def cup_logos(conn):
     """Competition logos of shared/cup-logos.json (main, SportScore): the logo of a
-    cup-source competition, and of a PitchAPI one that has none."""
+    cup-source competition, of the same cup under another source's key (CUP_LOGO_ALSO), and of
+    a PitchAPI competition that has none. A competition not in the base yet counts unmatched."""
     written = unmatched = 0
     for key, logo in sorted(_shared("cup-logos.json")["logos"].items()):
         family, _, name = key.partition(":")
         if key.startswith("l_"):
-            ref = ("pitchapi", key)
+            refs = [("pitchapi", key)]
         elif family in CUP_FAMILY:
-            ref = ("vega", CUP_FAMILY[family] + name)
+            refs = [("vega", CUP_FAMILY[family] + name), *(("vega", also) for also in CUP_LOGO_ALSO.get(key, ()))]
         else:
-            continue  # open-matchday: main's frozen catalogue
-        row = conn.execute(
-            "SELECT c.id, c.logo_asset_id FROM core.provider_ids p JOIN core.competitions c ON c.id = p.entity_id WHERE p.entity_type = 'competition' AND p.provider = %s AND p.provider_key = %s",
-            ref,
-        ).fetchone()
-        if not row or not logo.get("imageUrl"):
-            unmatched += 1
+            unmatched += 1  # a site key no source family names (test_source_snapshots L5)
             continue
-        if ref[0] == "pitchapi" and row[1] is not None:
-            continue
-        asset = conn.execute(
-            """INSERT INTO core.assets(kind, source_url, author) VALUES ('logo', %s, %s)
-               ON CONFLICT (source_url) DO UPDATE SET author = EXCLUDED.author RETURNING id""",
-            (logo["imageUrl"], logo.get("source")),
-        ).fetchone()[0]
-        conn.execute("UPDATE core.competitions SET logo_asset_id = %s, updated_at = now() WHERE id = %s AND logo_asset_id IS DISTINCT FROM %s", (asset, row[0], asset))
-        written += 1
+        asset = None
+        for ref in refs:
+            row = conn.execute(
+                "SELECT c.id, c.logo_asset_id FROM core.provider_ids p JOIN core.competitions c ON c.id = p.entity_id WHERE p.entity_type = 'competition' AND p.provider = %s AND p.provider_key = %s",
+                ref,
+            ).fetchone()
+            if not row or not logo.get("imageUrl"):
+                unmatched += 1
+                continue
+            if ref[0] == "pitchapi" and row[1] is not None:
+                continue
+            if asset is None:
+                # One asset per image, whatever the number of competitions it is the logo of.
+                found = conn.execute("SELECT id FROM core.assets WHERE source_url = %s", (logo["imageUrl"],)).fetchone()
+                asset = found[0] if found else conn.execute(
+                    "INSERT INTO core.assets(kind, source_url, author) VALUES ('logo', %s, %s) RETURNING id", (logo["imageUrl"], logo.get("source"))
+                ).fetchone()[0]
+                conn.execute("UPDATE core.assets SET author = %s, updated_at = now() WHERE id = %s AND author IS DISTINCT FROM %s",
+                             (logo.get("source"), asset, logo.get("source")))
+            conn.execute("UPDATE core.competitions SET logo_asset_id = %s, updated_at = now() WHERE id = %s AND logo_asset_id IS DISTINCT FROM %s", (asset, row[0], asset))
+            written += 1
     return written, unmatched
 
 
