@@ -140,7 +140,7 @@ Le détail du backend est dans [backend/README.md](backend/README.md).
 
 ## Développement
 
-Prérequis : Node.js 24 ou plus (26 pour le site, comme Vercel ; 24 pour l'API, comme ses Lambdas), Bun 1.4.4, Python 3.12 et PostgreSQL 18 (un conteneur suffit) pour les tests du backend.
+Prérequis : Node.js 24 ou plus (26 pour le site, comme Vercel ; 24 pour l'API, comme ses Lambdas), Bun 1.4.4, Python 3.14 et PostgreSQL 18 (un conteneur suffit) pour les tests du backend.
 
 ```sh
 cd dashboard

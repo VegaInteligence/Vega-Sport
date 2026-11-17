@@ -32,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
-        with: {python-version: '3.12'}
+        with: {python-version: '3.14'}
       - uses: actions/setup-node@v7
         with: {node-version: '24', package-manager-cache: false}
       - run: pip install -r backend/requirements.txt
@@ -69,7 +69,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
-        with: {python-version: '3.12'}
+        with: {python-version: '3.14'}
       - run: pip install cfn-lint==1.43.0
       - run: cfn-lint --regions us-east-2 -- infra/aws/*.yaml
       - name: Deployment scripts parse
