@@ -84,6 +84,7 @@ period, and the comparison between roles.
 """
 
 from collections import defaultdict
+import re
 from datetime import date, timedelta
 from bisect import bisect_left, bisect_right
 from math import exp, log, sqrt
@@ -267,11 +268,16 @@ def elo_updates(matches, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME, seeds=N
         yield (mid, a, season, kickoff, ra, rating[a], 1 - eh, 1 - result)
 
 
-# Columns 8 to 11: the match's day, its competition, whether it comes from a complementary
+# Columns 8 to 12: the match's day, its competition, whether it comes from a complementary
 # source (a cup-source edition), whether it is international (a European competition, or
-# national teams). A complementary match counts between two clubs the PitchAPI editions know,
-# and between two national teams, whichever source holds them (16 November 2026: Italy,
-# Hungary or Greece, which PitchAPI does not hold, played their matches outside the Elo).
+# national teams), the edition's cup key. One Elo for every match (the user, 16 November 2026;
+# VI-21, 17 November): every match of open-matchday's leagues and cups and of OpenLigaDB's German
+# cup counts, a club no PitchAPI league holds entering at its group's level (complementary_leagues);
+# their professional clubs' spellings are reviewed (curated.CLUB_ALIASES). The other cup sources
+# (OpenFootball's national cup archives and the continental cups of the other confederations) still
+# count only between two clubs PitchAPI knows, and two national teams: measured on 17 November,
+# their professional clubs written otherwise counted as amateurs (England's cup clubs at 1327, above
+# its 7th division), and the African cups set leagues with no other link (Egypt +104).
 ELO_MATCHES = """
 WITH known AS (
   SELECT DISTINCT v.team_id FROM core.matches m
@@ -280,7 +286,7 @@ WITH known AS (
 SELECT m.id, m.season_id, coalesce(m.kickoff_at, m.match_date::timestamp AT TIME ZONE 'UTC') AS kickoff,
   m.home_team_id, m.away_team_id, m.home_score, m.away_score, coalesce(m.is_neutral, false),
   m.match_date, cs.competition_id, cs.cup_key IS NOT NULL,
-  coalesce(left(c.country_code, 3) = 'INT', false) OR coalesce(th.is_national, false)
+  coalesce(left(c.country_code, 3) = 'INT', false) OR coalesce(th.is_national, false), cs.cup_key
 FROM core.matches m
 JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL
 JOIN core.competitions c ON c.id = cs.competition_id
@@ -288,9 +294,9 @@ JOIN core.teams th ON th.id = m.home_team_id
 JOIN core.teams ta ON ta.id = m.away_team_id
 WHERE m.status = 'finished' AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL
   AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL
-  AND (cs.cup_key IS NULL OR (m.match_date IS NOT NULL
+  AND (cs.cup_key IS NULL OR (m.match_date IS NOT NULL AND (th.is_national IS TRUE) = (ta.is_national IS TRUE)
        AND ((m.home_team_id IN (SELECT team_id FROM known) AND m.away_team_id IN (SELECT team_id FROM known))
-            OR (th.is_national AND ta.is_national))))
+            OR th.is_national OR cs.cup_key LIKE 'open-matchday:%%' OR cs.cup_key LIKE 'openligadb:germany-cup:%%')))
 ORDER BY 3 NULLS LAST, m.match_date NULLS LAST, m.id"""
 
 
@@ -337,6 +343,90 @@ def home_leagues(matches, countries=None):
 
 # A country's league that the base does not hold: the clubs of that country it knows (league_model).
 COUNTRY_LEAGUE = "country"
+# The groups of the clubs only a complementary source holds (VI-21): ("league", folder), a league of
+# open-matchday PitchAPI does not hold; ("cup", country), a country's clubs seen only in its cups.
+# Like a country's league, a group is fitted with its prior and holds no reference (league_model).
+COMPLEMENTARY_LEAGUE, CUP_CLUBS = "league", "cup"
+# The country of each national cup of the cup sources (OpenFootball, OpenLigaDB), by its key.
+CUP_COUNTRIES = {
+    "france-cup": "FRA", "germany-cup": "GER", "germany-cup-archive": "GER", "fa-cup-archive": "ENG", "efl-cup-archive": "ENG",
+    "copa-del-rey-archive": "ESP", "coppa-italia-archive": "ITA", "knvb-beker-archive": "NED", "portugal-cup-archive": "POR",
+    "swiss-cup-archive": "SUI", "austria-cup-archive": "AUT",
+}
+# A reserve league's division (open-matchday's U21 folders): below the second division.
+RESERVE_TIER = 3
+COUNTRY_SUFFIX = re.compile(r"\(([A-Z]{3})\)$")
+
+
+def _folder(cup_key):
+    """The open-matchday folder of a cup key, else None."""
+    parts = str(cup_key or "").split(":")
+    return parts[1] if len(parts) == 3 and parts[0] == "open-matchday" else None
+
+
+def group_facts(group):
+    """(country, division) of a complementary league ("league", folder); (country, None) of a cup group."""
+    from .sources.open_matchday import country_of
+
+    kind, name = group
+    if kind != COMPLEMENTARY_LEAGUE:
+        return name, None
+    token = name.split("_")[1] if "_" in name else ""
+    return country_of(name), int(token) if token.isdigit() else RESERVE_TIER
+
+
+def _cup_country(cup_key):
+    """The country of a national cup's edition, else None (a league, a continental cup)."""
+    folder = _folder(cup_key)
+    if folder is not None:
+        from .sources.open_matchday import country_of
+
+        return country_of(folder) if "_CUP_" in folder else None
+    parts = str(cup_key or "").split(":")
+    return CUP_COUNTRIES.get(parts[1]) if len(parts) == 3 else None
+
+
+def complementary_leagues(matches, leagues, names=None):
+    """`leagues` (home_leagues') with a group for each club no PitchAPI league holds: the open-matchday
+    league it played most in its first season there, else, for a club written « Name (XXX) » (a
+    continental cup's), its country's league, else its country's cup clubs. A club with only its
+    country's league keeps it unless it plays a complementary league."""
+    out, names = dict(leagues), names or {}
+    first, cups = {}, {}
+    for m in matches:
+        key = m[12] if len(m) > 12 else None
+        folder = _folder(key)
+        for team in (m[3], m[4]):
+            if folder is not None and "_CUP_" not in folder:
+                season, counts = first.setdefault(team, (m[1], defaultdict(int)))
+                if season == m[1]:
+                    counts[folder] += 1
+            elif key is not None and team not in cups and _cup_country(key):
+                cups[team] = _cup_country(key)
+    for team in {t for m in matches if not m[11] for t in (m[3], m[4])}:
+        current = out.get(team)
+        if current is not None and not (isinstance(current, tuple) and current[0] == COUNTRY_LEAGUE):
+            continue  # a PitchAPI league
+        if team in first:
+            counts = first[team][1]
+            out[team] = (COMPLEMENTARY_LEAGUE, max(sorted(counts), key=lambda f: counts[f]))
+        elif current is not None:
+            continue
+        elif COUNTRY_SUFFIX.search(names.get(team) or ""):
+            out[team] = (COUNTRY_LEAGUE, COUNTRY_SUFFIX.search(names[team]).group(1))
+        elif team in cups:
+            out[team] = (CUP_CLUBS, cups[team])
+    return out
+
+
+def cup_tiers(groups, tiers, countries):
+    """Each cup group's division: one below the lowest league the Elo holds of its country."""
+    lowest = defaultdict(lambda: 1)
+    for league, tier in tiers.items():
+        country = countries.get(league)
+        if country and not (isinstance(league, tuple) and league[0] == CUP_CLUBS):
+            lowest[country] = max(lowest[country], tier)
+    return {group: lowest[group[1]] + 1 for group in groups}
 
 
 def league_links(matches, leagues):
@@ -713,7 +803,7 @@ WHERE p.contribution IS NOT NULL AND p.season_id = ANY(%s) AND cs.competition_id
 GROUP BY 1, 2, 3 HAVING sum(p.minutes) >= 300"""
 
 
-def league_moves(conn, today, leagues):
+def league_moves(conn, today, leagues, *, cache=True):
     """The moves between leagues the levels read (move_evidence): those of the award years
     that are over, computed again only when one of their rankings changes, so a level never
     reads the rates the season in progress gives back from it. ([…], variance of a move)."""
@@ -730,6 +820,8 @@ def league_moves(conn, today, leagues):
         pairs = conn.execute("SELECT competition_a, competition_b, movers, mean_change FROM agg.league_moves WHERE set_id = %s", (cached[0],)).fetchall()
         return [tuple(r) for r in pairs], cached[1]
     pairs, variance, facts = move_evidence(conn.execute(STINTS, (finished, sorted(leagues))).fetchall(), leagues=leagues)
+    if not cache:
+        return pairs, variance
     with conn.transaction():
         set_id = conn.execute(
             """INSERT INTO agg.league_move_sets(source_run, variance, stayers, moves, persistence) VALUES (%s,%s,%s,%s,%s) RETURNING id""",
@@ -742,16 +834,16 @@ def league_moves(conn, today, leagues):
     return pairs, variance
 
 
-def refresh_elo(conn):
-    """Recompute every league's level and every strength in match order, then each season's
-    club power ranking. The levels are computed outside any transaction (the base ends a
-    session idle inside one after 60 s), then written at once."""
-    started = conn.execute("SELECT clock_timestamp()").fetchone()[0]
-    matches = elo_matches(conn.execute(ELO_MATCHES).fetchall())
+def elo_groups(conn, matches):
+    """Each team's league or group and each one's division and country, and the women's leagues:
+    (leagues, tiers, countries, women). Reads only."""
     teams = {t for m in matches for t in (m[3], m[4])}
-    clubs = dict(conn.execute("SELECT id, country_code FROM core.teams WHERE id = ANY(%s) AND is_national IS NOT TRUE", (sorted(teams),)).fetchall())
-    leagues = home_leagues(matches, clubs)
-    weights = match_stakes(conn)
+    clubs, names = {}, {}
+    for team, country, name in conn.execute(
+        "SELECT id, country_code, name FROM core.teams WHERE id = ANY(%s) AND is_national IS NOT TRUE", (sorted(teams),)
+    ).fetchall():
+        clubs[team], names[team] = country, name
+    leagues = complementary_leagues(matches, home_leagues(matches, clubs), names)
     facts = {league: (country, key) for league, country, key in conn.execute(
         """SELECT c.id, c.country_code, (SELECT p.provider_key FROM core.provider_ids p WHERE p.entity_type = 'competition'
              AND p.entity_id = c.id AND p.provider = 'pitchapi' AND p.is_current LIMIT 1)
@@ -761,6 +853,20 @@ def refresh_elo(conn):
     women = {league for league, (_, key) in facts.items() if key in WOMEN}
     tiers = {league: TIERS.get(key, 1) for league, (_, key) in facts.items()}
     countries = {league: country for league, (country, _) in facts.items()}
+    for group in [l for l in facts if isinstance(l, tuple) and l[0] == COMPLEMENTARY_LEAGUE]:
+        countries[group], tiers[group] = group_facts(group)
+    tiers.update(cup_tiers([l for l in facts if isinstance(l, tuple) and l[0] == CUP_CLUBS], tiers, countries))
+    return leagues, tiers, countries, women
+
+
+def refresh_elo(conn):
+    """Recompute every league's level and every strength in match order, then each season's
+    club power ranking. The levels are computed outside any transaction (the base ends a
+    session idle inside one after 60 s), then written at once."""
+    started = conn.execute("SELECT clock_timestamp()").fetchone()[0]
+    matches = elo_matches(conn.execute(ELO_MATCHES).fetchall())
+    leagues, tiers, countries, women = elo_groups(conn, matches)
+    weights = match_stakes(conn)
     previous, was_measured = {}, set()
     for league, entry, linked in conn.execute("SELECT competition_id, entry_level, linked FROM agg.league_levels").fetchall():
         previous[league] = entry

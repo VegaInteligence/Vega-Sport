@@ -120,6 +120,34 @@ class OpenMatchdayTest(unittest.TestCase):
             open_matchday.run(self.db, fake_get, "europe", NOW)
         self.assertEqual(self.db.execute("SELECT count(*) FROM core.matches WHERE source='open_matchday'").fetchone()[0], 19)
 
+    def test_a_copy_written_before_is_removed_once_pitchapi_holds_its_league(self):
+        # The copies read before VI-21 (17 Nov 2026) go with the next read: matches, rounds, edition,
+        # competition and their ids; the cup of the same summary stays as it is.
+        from vega.store import Store
+
+        try:
+            with self.db.transaction():
+                self.db.execute("DELETE FROM core.matches; DELETE FROM core.provider_ids; DELETE FROM core.rounds; DELETE FROM core.competition_seasons; DELETE FROM core.competitions")
+                open_matchday.run(self.db, fake_get, "europe", NOW)  # PitchAPI does not hold the league yet: the copy is written
+                self.assertEqual(self.db.execute("SELECT count(*) FROM core.matches WHERE home_team_name = 'Arsenal' OR away_team_name = 'Arsenal'").fetchone()[0] > 0, True)
+                comp = self.db.execute("INSERT INTO core.competitions(name, country_code) VALUES ('Premier League', NULL) RETURNING id").fetchone()[0]
+                self.db.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition','pitchapi','l_4WFCIZ',%s)", (comp,))
+                season = Store(self.db).season("2026/2027")
+                self.db.execute("INSERT INTO core.competition_seasons(competition_id, season_id, native_label) VALUES (%s,%s,'2026/2027')", (comp, season))
+                written, _ = open_matchday.run(self.db, fake_get, "europe", NOW)
+                self.assertEqual(written, 7 + 4)
+                left = self.db.execute("SELECT split_part(cup_key, ':', 2) FROM core.competition_seasons WHERE cup_key IS NOT NULL").fetchall()
+                self.assertEqual(left, [("AUT_CUP_ofb-cup",)])
+                self.assertEqual(self.db.execute("SELECT count(*) FROM core.matches WHERE source = 'open_matchday'").fetchone()[0], 7 + 4)
+                self.assertEqual(self.db.execute("SELECT count(*) FROM core.provider_ids WHERE provider = 'vega' AND provider_key = 'cup:open-matchday:ENG_1_premier-league'").fetchone()[0], 0)
+                self.assertEqual(self.db.execute("SELECT count(*) FROM core.competitions WHERE name = 'Premier League'").fetchone()[0], 1)  # PitchAPI's alone
+                self.assertEqual(self.db.execute(
+                    "SELECT count(*) FROM core.provider_ids p WHERE p.entity_type = 'match' AND p.provider = 'open_matchday' AND NOT EXISTS (SELECT 1 FROM core.matches m WHERE m.id = p.entity_id)"
+                ).fetchone()[0], 0)
+                raise psycopg.Rollback()
+        except psycopg.Rollback:
+            pass
+
     def test_a_league_pitchapi_holds_this_season_is_not_read(self):
         # PitchAPI holds the Premier League in 2026/2027: open-matchday's copy is skipped, its cup still read.
         # Without that edition (an earlier season only), the copy is read: PitchAPI's coverage decides, not the list alone.

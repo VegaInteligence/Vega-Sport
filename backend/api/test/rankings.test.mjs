@@ -58,15 +58,20 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   assert.deepEqual(body.rows[0].roles.map((r) => [r.role, r.minutes]), [["centre_forward", 200], ["winger", 60]]);
   assert.deepEqual([body.rows[1].blocks, body.rows[1].roles], [{}, []]);
   const clubs = (await get("/api/rankings/power?kind=clubs&season=2025/2026")).body;
-  assert.equal(clubs.rows.length, 4);
-  assert.deepEqual(clubs.rows.map((r) => r.rank), [1, 2, 3, 4]);
+  // The four Ligue 1 clubs, and the four clubs of the German cup's sample (one Elo for every match,
+  // VI-21): a club no PitchAPI league holds is ranked too, from its country's cup clubs' level.
+  assert.equal(clubs.rows.length, 8);
+  assert.deepEqual(clubs.rows.map((r) => r.rank), [1, 2, 3, 4, 5, 6, 7, 8]);
   assert.ok(clubs.rows.every((r, i) => !i || clubs.rows[i - 1].elo >= r.elo));
-  assert.equal(Math.round(clubs.rows.reduce((s, r) => s + r.elo, 0)), 6000); // Elo moves points between clubs only
+  const league = clubs.rows.filter((r) => /^t_aaaaa\d$/.test(r.teamId));
+  assert.equal(league.length, 4);
+  assert.equal(Math.round(league.reduce((s, r) => s + r.elo, 0)), 6000); // Elo moves points between clubs only: the cup clubs met each other
   for (const r of clubs.rows) {
     assert.equal(r.wins + r.draws + r.losses, r.matches);
     assert.equal(Math.round(r.eloStart + r.eloChange), Math.round(r.elo));
   }
-  assert.equal(Math.round(clubs.rows.reduce((s, r) => s + r.results, 0) * 2), 10); // five matches, one point shared each
+  assert.equal(Math.round(league.reduce((s, r) => s + r.results, 0) * 2), 10); // five matches, one point shared each
+  assert.equal(Math.round(clubs.rows.filter((r) => !league.includes(r)).reduce((s, r) => s + r.results, 0) * 2), 4); // the cup's two matches
   // A club's score out of 100: its expected score against the scale's reference, in the Elo's order.
   assert.ok(Number.isFinite(clubs.reference));
   for (const r of clubs.rows) assert.ok(Math.abs(r.score - 100 / (1 + 10 ** (-(r.elo - clubs.reference) / 400))) <= 0.11);

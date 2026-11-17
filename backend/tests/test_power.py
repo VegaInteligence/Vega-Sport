@@ -133,6 +133,56 @@ class LeagueLevelTest(unittest.TestCase):
         self.assertNotIn((power.COUNTRY_LEAGUE, "AZE"), settings["reference"])
         self.assertEqual(dict(power.league_links(rows, leagues)), {(1, 2): 25, (1, (power.COUNTRY_LEAGUE, "AZE")): 1})  # 900 is a match between the two leagues too
 
+    def test_a_club_only_a_complementary_source_holds_has_its_group(self):
+        # One Elo for every club (the user, 16 Nov 2026; VI-21): a club no PitchAPI league holds enters
+        # at the level of its group: the complementary league it plays in (its folder: country and
+        # division), else its country's clubs of the national cups, else, for a club of a continental cup
+        # written « Name (XXX) », its country's league; a PitchAPI club keeps its league.
+        from datetime import date
+
+        m = lambda i, h, a, key, competition=50: (i, 2026, None, h, a, 1, 0, False, date(2026, 9, 1 + i), competition, True, False, key)
+        rows = [self.match(1, "P", "Q", 1, 0, 1, season=2026)]
+        rows += [m(2, "N1", "N2", "open-matchday:ENG_5_national-league:2026/2027", 60), m(3, "P", "N1", "open-matchday:ENG_CUP_fa-cup:2026/2027", 61),
+                 m(4, "N2", "AM", "open-matchday:ENG_CUP_fa-cup:2026/2027", 61), m(5, "FR", "P", "open-cups:france-cup:2024/2025", 62),
+                 m(6, "UY", "AR", "open-cups:copa-libertadores:2026", 63), m(7, "IE", "AM", "open-matchday:IRE_2_first-division:2026/2027", 64),
+                 m(8, "DE", "P", "openligadb:germany-cup:2026/2027", 65)]
+        leagues = power.home_leagues(rows, {"P": "ENG", "Q": "ENG", "AR": "ARG"})
+        names = {"UY": "Peñarol (URU)", "AR": "Boca Juniors (ARG)"}
+        leagues = power.complementary_leagues(rows, leagues, names)
+        self.assertEqual(leagues["P"], 1)
+        self.assertEqual((leagues["N1"], leagues["N2"]), (("league", "ENG_5_national-league"),) * 2)
+        self.assertEqual(leagues["AM"], ("league", "IRE_2_first-division"))  # a league it plays in, before a cup
+        self.assertEqual((leagues["FR"], leagues["DE"]), (("cup", "FRA"), ("cup", "GER")))
+        self.assertEqual(leagues["UY"], (power.COUNTRY_LEAGUE, "URU"))
+        self.assertEqual(leagues["AR"], (power.COUNTRY_LEAGUE, "ARG"))  # its country, as before
+        self.assertEqual(leagues["IE"], ("league", "IRE_2_first-division"))
+
+    def test_a_complementary_group_s_country_and_division(self):
+        self.assertEqual(power.group_facts(("league", "ENG_5_national-league")), ("ENG", 5))
+        self.assertEqual(power.group_facts(("league", "IRE_2_first-division")), ("IRL", 2))
+        self.assertEqual(power.group_facts(("league", "BEL_U21_pro-league")), ("BEL", 3))  # a reserve league: below the second division
+        # A country's cup clubs stand one division below the lowest league the Elo holds of that country.
+        tiers = {1: 1, 2: 2, ("league", "ENG_5_national-league"): 5, ("league", "ENG_7_northern-premier-league"): 7, 9: 1}
+        countries = {1: "ENG", 2: "ENG", ("league", "ENG_5_national-league"): "ENG", ("league", "ENG_7_northern-premier-league"): "ENG", 9: "ESP"}
+        self.assertEqual(power.cup_tiers([("cup", "ENG"), ("cup", "ESP"), ("cup", "SUI")], tiers, countries), {("cup", "ENG"): 8, ("cup", "ESP"): 2, ("cup", "SUI"): 2})
+        # Every national cup the sources hold names its country.
+        from vega.sources import cups
+
+        self.assertTrue(all(power.CUP_COUNTRIES.get(key) for key in cups.NATIONAL_CUP_ARCHIVES))
+
+    def test_complementary_groups_measure_no_reference(self):
+        # A complementary league or cup group is fitted with its prior, but holds no reference and sets no tier gap.
+        rows = self.season()
+        from datetime import date
+
+        rows += [(900 + k, 2025, None, "A" if k % 2 else "X", "X" if k % 2 else "A", 2, 0, False, date(2026, 1, 1 + k), 70, True, False,
+                  "open-matchday:ENG_CUP_fa-cup:2025/2026") for k in range(6)]
+        leagues = dict(power.home_leagues(rows), X=("cup", "ENG"))
+        levels, se, settings = power.league_model(rows, leagues, countries={1: "ENG", 2: "GER", ("cup", "ENG"): "ENG"}, tiers={1: 1, 2: 1, ("cup", "ENG"): 2})
+        self.assertIn(("cup", "ENG"), levels)
+        self.assertNotIn(("cup", "ENG"), settings["reference"])
+        self.assertLess(levels[("cup", "ENG")], levels[1])
+
     def test_complementary_matches_copy_no_other(self):
         from datetime import date
 
