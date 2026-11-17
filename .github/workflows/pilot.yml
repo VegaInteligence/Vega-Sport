@@ -46,7 +46,7 @@ jobs:
             dashboard/shared
             dashboard/frontend/src
       - uses: actions/setup-python@v7
-        with: {python-version: '3.12'}
+        with: {python-version: '3.14'}
       - uses: actions/setup-node@v7
         with: {node-version: '24', package-manager-cache: false}
       - run: pip install -r backend/requirements.txt

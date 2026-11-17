@@ -1,6 +1,6 @@
 # Vega worker image. Build from the repository root:
 #   docker build --platform linux/arm64 -f backend/Dockerfile -t vega-v2-worker:<sha> .
-FROM python:3.12-slim
+FROM python:3.14-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     VEGA_ARCHIVE_SCRIPTS=/app/backend/archives/builders VEGA_ARCHIVE_EDITION=/app/backend/archives/edition.mjs \
     VEGA_SOURCE_BRIDGE=/app/backend/sources/bridge.mjs VEGA_SHARED_DIR=/app/dashboard/shared
