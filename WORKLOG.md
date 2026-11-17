@@ -57,3 +57,7 @@
 - Display handoff from VI-23, done at the user's request (« Do them here »): `08955914db` — each pair on the same matches (`services/club-supported.js` reads VI-23's paired fields and coverage when served, the rows otherwise), totals on their own support, unknown shown « — », shot map keeps unknown xG null, game states skip goals without a minute, coming matches without a fabricated level 1, comparison and suggestions from the similar route (browser `similarClubs` removed). Tests first; site 627/627; browser check with Le Havre's xG removed on 5 of 10 matches by a local proxy (no partial coverage exists in production).
 - For VI-23 when it merges: one-line conflict on the shot map (`xg ?? 0.01` → `xg`), two calc notes, its test `audit-club-metrics.test.mjs:470` expects 0.01; set pieces and the situation buckets show correctly only with its producer.
 - Next action: none for VI-22; the similarity cost (free 50, 0.15 per point) is the knob if the user wants the lists tighter or wider.
+
+## Next.js security update (17 Nov 2026)
+
+- 16.4.3 → 16.4.6 (`dashboard/package.json`, `bun.lock`): GHSA-mfr8-8qww-v76h (`use cache` through `unstable_cache`, fixed in 16.4.5; the site uses neither). Build no longer stops on Next's notice; site tests 627/627; built site checked against production on 10 pages and the phone club page, identical, no console error. Next action: push and check the Vercel deployment.
