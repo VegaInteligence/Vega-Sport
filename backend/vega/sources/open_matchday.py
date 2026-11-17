@@ -171,6 +171,25 @@ def held(conn, folder, season):
     ).fetchone() is not None
 
 
+def drop_copy(conn, folder, season):
+    """Remove the edition of `folder` written for `season` before PitchAPI held its league (VI-21):
+    its matches (their statistics go with them), rounds, the edition, and the competition with its
+    id when it holds no other edition. Returns the matches removed."""
+    edition = conn.execute("SELECT id, competition_id FROM core.competition_seasons WHERE cup_key = %s", (f"open-matchday:{folder}:{season}",)).fetchone()
+    if edition is None:
+        return 0
+    removed = conn.execute("DELETE FROM core.matches WHERE competition_season_id = %s", (edition[0],)).rowcount
+    conn.execute("DELETE FROM core.rounds WHERE competition_season_id = %s", (edition[0],))
+    conn.execute("DELETE FROM core.competition_seasons WHERE id = %s", (edition[0],))
+    if not conn.execute("SELECT 1 FROM core.competition_seasons WHERE competition_id = %s", (edition[1],)).fetchone():
+        conn.execute("DELETE FROM core.provider_ids WHERE entity_type = 'competition' AND entity_id = %s", (edition[1],))
+        conn.execute("DELETE FROM core.competitions WHERE id = %s", (edition[1],))
+    conn.execute(
+        "DELETE FROM core.provider_ids p WHERE p.entity_type='match' AND p.provider='open_matchday' AND NOT EXISTS (SELECT 1 FROM core.matches m WHERE m.id=p.entity_id)"
+    )
+    return removed
+
+
 def run(conn, get, scope, now):
     if scope != "europe":
         raise ValueError(scope)
@@ -184,7 +203,11 @@ def run(conn, get, scope, now):
         if not FOLDER.fullmatch(folder) or folder.split("_", 1)[0] not in EUROPE:
             continue
         if held(conn, folder, season):
-            continue  # PitchAPI holds this league this season: its copy would double its matches
+            # PitchAPI holds this league this season: its copy would double its matches. One read
+            # before (until 17 Nov 2026) is removed (the user's yes, VI-21).
+            with conn.transaction():
+                drop_copy(conn, folder, season)
+            continue
         try:
             results = rows(get(f"{RAW}data/{folder}/results_{code}.csv", as_text=True)) if league.get("results") else []
             fixtures = rows(get(f"{RAW}data/{folder}/fixtures_{code}.csv", as_text=True)) if league.get("fixtures") else []

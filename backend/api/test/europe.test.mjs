@@ -23,7 +23,9 @@ test("the pool: Top 7 leagues, UEFA cups, clubs with coefficient and Elo level",
   // Elo only moves points between clubs: four clubs started at 1500.
   assert.equal(Math.round(pool.clubs.reduce((sum, c) => sum + c.level, 0)), 6000);
   assert.deepEqual(pool.clubs.map((c) => c.levelRank).sort(), [1, 2, 3, 4]);
-  assert.deepEqual(Object.keys(pool.levels).sort(), CLUBS);
+  // `levels`: every club ranked in the season, the German cup sample's four clubs too (one Elo for every match, VI-21).
+  assert.deepEqual(Object.keys(pool.levels).filter((id) => CLUBS.includes(id)).sort(), CLUBS);
+  assert.equal(Object.keys(pool.levels).length, CLUBS.length + 4);
   for (const c of pool.clubs) assert.equal(pool.levels[c.id], c.level);
 });
 

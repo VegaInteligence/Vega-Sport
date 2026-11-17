@@ -140,22 +140,42 @@ La route `/api/forecasts/season` rend alors `format: "league-phase"` et, pour ch
 
 Cette projection n'a pas encore été rejouée sur des saisons passées (2024/2025 et 2025/2026, les deux premières du format). La vérification prévue : rejouer chaque coupe depuis le milieu de sa phase de ligue avec un modèle ajusté avant, puis mesurer la perte logarithmique et le score de Brier des parts « huit premiers », « barrages », « huitièmes » et « vainqueur ».
 
-## Les coupes nationales et les clubs sans Elo (en attente)
+## Les coupes nationales et les clubs sans Elo
 
-Il n'y a qu'**un seul Elo de club** : tous les matchs d'un club, coupes comprises, le corrigent (§ 1 et 3 des [formules](../08-notes-vega/01-formules-et-raisons.md)). Pas d'Elo à part pour les coupes (décision du 16 novembre 2026, qui écarte la proposition d'un « Elo de coupe » rangé à part).
+Il n'y a qu'**un seul Elo de club** : tous les matchs d'un club, coupes comprises, le corrigent (§ 1 et 3 des [formules](../08-notes-vega/01-formules-et-raisons.md)). Il n'y a pas d'Elo à part pour les coupes ; la décision du 16 novembre 2026 a écarté la proposition d'un « Elo de coupe » rangé à part.
 
-Ce qui manque pour projeter une coupe nationale, mesuré en lecture seule le 16 novembre 2026 : **2 066 clubs** qui ont joué un match n'ont pas d'Elo (1 476 en ont un). Tous ne viennent que des sources complémentaires (championnats et coupes lus en plus de la source principale), dont l'Elo ne lit les matchs qu'entre deux clubs déjà connus. Ils sont de deux sortes :
+### Ce qui a été fait le 17 novembre 2026 (VI-21)
 
-1. **Des copies de clubs qui ont déjà un Elo**, sous un autre nom, que l'identification des équipes n'a pas reliées : elle ne relie un club que sous le même nom ou une orthographe revue à la main. Deux cas :
-   - dans les copies des championnats (« Man City » contre « Manchester City », « Paris », « Atleti »… : 17 des 19 clubs de la copie de la Ligue 1, 14 des 36 de la Ligue des champions), les matchs sont ceux que la source principale tient déjà : l'Elo n'y perd rien, la copie n'est qu'une ligne de trop ;
-   - dans les coupes (« SC Freiburg », « TSG Hoffenheim » et 9 autres en Coupe d'Allemagne, « Internazionale » en Coupe d'Italie, « SK Rapid » et « Austria Vienna » en Coupe d'Autriche… : une quarantaine de clubs en 2026/2027), leurs matchs de coupe ne comptent dans l'Elo d'aucun club.
-2. **Des clubs que la source principale ne tient pas** : divisions inférieures (National League anglaise et en dessous, Cymru Premier…) et clubs amateurs des coupes (FA Cup : 146 clubs, aucun copie d'un club professionnel ; Taça de Portugal : 125 ; KNVB Beker : 98 ; Copa del Rey : 92…).
+1. **Sources.** open-matchday ne lit plus ses 35 copies des championnats que PitchAPI tient : elles doublaient ses matchs sous d'autres noms (« Man City », « Paris »…). Les copies déjà lues (9 539 matchs de 2026/2027) sont supprimées avec l'accord de l'utilisateur. Restent lus : les 11 coupes nationales et les 19 championnats que PitchAPI n'a pas.
+2. **Clubs professionnels des coupes.** 73 orthographes ont été revues une à une (« SC Freiburg », « Hamburg SV », « Sheffield Wed »…) et rattachées à leur club. Les noms proches d'autres clubs sont écartés exprès (« A. Salzburg », « C.F. Benfica », « Excelsior '31 »…). L'Irlande est écrite IRL des deux côtés.
+3. **Elo unique.** Tous les matchs des championnats et coupes d'open-matchday et de la Coupe d'Allemagne entrent dans l'Elo. Un club que PitchAPI ne tient pas part :
+   - du niveau de son championnat (pays et division lus dans le nom du dossier),
+   - sinon du niveau des « clubs de coupe » de son pays, une division sous le plus bas championnat connu.
+   
+   Ensuite, chaque résultat corrige sa force comme pour tout club ([formules § 3](../08-notes-vega/01-formules-et-raisons.md)).
 
-La suite proposée, dans l'Elo unique :
+### Niveaux mesurés (Elo ± erreur, 17 novembre 2026, en mémoire)
 
-1. relier les copies à leur club, comme les sélections le 16 novembre (VI-20) : leurs matchs de coupe comptent alors dans l'Elo du club ;
-2. laisser l'Elo lire les championnats et coupes des sources complémentaires : un club nouveau entre au niveau de sa division (le dossier de la source donne pays et division : ENG_5 = 5ᵉ division anglaise), avec la loi a priori de division du § 4, puis chaque résultat le corrige comme pour tout club. Les résultats de coupe des clubs professionnels contre ces clubs comptent aussi : leur Elo bougera un peu, ce qui sera mesuré avant la mise en service ;
-3. projeter ensuite chaque coupe tour par tour, avec les règles du tableau ci-dessus (prolongation au tiers d'un match, tirs au but à 50/50, matchs joués fixés).
+| Groupe | Niveau |
+|---|---:|
+| National League (5ᵉ division anglaise) | 1237 ± 30 |
+| National League North / South (6ᵉ) | 1158 ± 44 / 1084 ± 50 |
+| Northern Premier League (7ᵉ) | 1133 ± 53 |
+| Clubs de la FA Cup hors de ces divisions | 1094 ± 48 |
+| Championship / League One / League Two écossaises | 1209 ± 48 / 1033 ± 61 / 896 ± 80 |
+| Clubs de la Coupe d'Écosse hors championnats | 761 ± 91 |
+| Championnat d'Ukraine | 1573 ± 44 |
+| Championnat de Chypre | 1486 ± 61 |
+| 2ᵉ division polonaise | 1416 ± 51 |
+| Championnat du Kazakhstan | 1312 ± 65 |
+| Championnat du pays de Galles | 1363 ± 98 |
+| Clubs de coupe du Portugal, d'Allemagne, d'Espagne, d'Autriche, des Pays-Bas, de Suisse | 1360, 1382, 1295, 1237, 1189, 1058 |
+
+### Pas encore fait
+
+- Les clubs des archives des coupes nationales d'OpenFootball (2024/2025) et des coupes continentales des autres confédérations. Ils ne comptent qu'entre clubs connus tant que leurs clubs professionnels ne sont pas reliés. Sinon, ils faussent les groupes : mesuré, les clubs de coupe anglais montaient à 1327 et le championnat d'Égypte de 104 points.
+- Les clubs des seules archives (7 520), que l'Elo ne lit pas.
+- La projection des coupes nationales tour par tour, avec les règles du tableau ci-dessus (prolongation au tiers d'un match, tirs au but à 50/50, matchs joués fixés).
 
 ## Minute par minute
 
