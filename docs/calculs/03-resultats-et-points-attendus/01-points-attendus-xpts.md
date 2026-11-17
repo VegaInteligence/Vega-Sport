@@ -28,7 +28,7 @@ P(N) = \sum_{i} P_A(i)\,P_B(i) \qquad
 P(D) = \sum_{i < j} P_A(i)\,P_B(j)
 $$
 
-Les trois sont additionnées séparément, puis divisées par leur somme (qui vaut 1 à 10⁻¹² près) : la loi est symétrique (P(V) d'un camp est P(D) de l'autre) et les xPts ne baissent jamais quand le xG pour monte. C'est une approximation numérique des sommes infinies, pas une valeur exacte. La même loi est calculée en SQL par `agg.xpts_v2` (migration 127), que lisent `api.match_xpts` et le calcul des saisons ([calculator.py](../../../backend/vega/calculator.py)) ; `agg.xpts_v1` reste pour ce qui a été calculé avec lui.
+Les trois sont additionnées séparément, puis divisées par leur somme (qui vaut 1 à 10⁻¹² près) : la loi est symétrique (P(V) d'un camp est P(D) de l'autre) et les xPts ne baissent jamais quand le xG pour monte. C'est une approximation numérique des sommes infinies, pas une valeur exacte. La même loi est calculée en SQL par `agg.xpts_v2` (migration 128), que lisent `api.match_xpts` et le calcul des saisons ([calculator.py](../../../backend/vega/calculator.py)) ; `agg.xpts_v1` reste pour ce qui a été calculé avec lui.
 
 ## Points attendus
 

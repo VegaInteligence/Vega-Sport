@@ -15,7 +15,7 @@ Each indicator is (value, covered), two expressions over a row `t` of agg.team_s
 - value: the indicator, a double precision (red_total: an integer);
 - covered: the matches its value stands on.
 
-A ratio reads the pair_* columns (migration 128, filled by calculator.py): its terms summed
+A ratio reads the pair_* columns (migration 129, filled by calculator.py): its terms summed
 over the matches that know every input of it, and the count of those matches. Penalty
 attempts and own goals are established, never inferred:
 - penalties: the match's complete, reconciled shot set (shot coverage ok, the shoot-out left
@@ -26,7 +26,7 @@ attempts and own goals are established, never inferred:
   going up one goal at a time to the final score; an own goal counts for the side whose score
   it raises.
 
-api.team_season (128) publishes the same expressions: the cohort percentiles and the published
+api.team_season (129) publishes the same expressions: the cohort percentiles and the published
 season row are one definition (test_audit_club_aggregates.py checks they agree).
 """
 

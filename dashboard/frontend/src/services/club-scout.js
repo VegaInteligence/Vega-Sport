@@ -826,7 +826,7 @@ const finite = (v) => typeof v === "number" && Number.isFinite(v);
 
 /**
  * Poisson probabilities of 0 to n goals at a rate, n = ⌈rate + 12√rate + 12⌉: the goals left
- * out weigh less than 1e-12 (VI-23 B6). agg.xpts_v2 (127) computes the same law in SQL.
+ * out weigh less than 1e-12 (VI-23 B6). agg.xpts_v2 (128) computes the same law in SQL.
  */
 function poisson(lambda) {
   const n = Math.ceil(lambda + 12 * Math.sqrt(lambda) + 12);
@@ -854,7 +854,7 @@ const MAX_XG = 100;
  * Win/draw/loss chances when each side scores Poisson(xG) goals; null for an xG that is not a
  * finite number in [0, MAX_XG]. xG is floored at 0.01 (documented choice); win, draw and loss
  * are each summed over the support, then normalised by their total (the dropped tail is
- * < 1e-12). agg.xpts_v2 (127) has the same domain.
+ * < 1e-12). agg.xpts_v2 (128) has the same domain.
  */
 export function outcomeChances(xgFor, xgAgainst) {
   if (
