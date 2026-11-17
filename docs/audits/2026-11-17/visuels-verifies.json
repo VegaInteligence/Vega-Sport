@@ -1,11 +1,43 @@
 {
-  "records": 962,
+  "records": 1012,
   "by_type": {
-    "competition": 103,
-    "team": 859
+    "competition": 104,
+    "team": 908
   },
-  "distinct_images": 925,
-  "manifest_sha256": "d71d1531f0ccc269e2406c4b34ea9b797d6fbdc6eeb097a288904137ae835450",
-  "zip_sha256": "1824ea4d628d3c327010f91a6057299172b634d691bc77c3bea1356a1cda5c34",
-  "zip_bytes": 79994537
+  "distinct_images": 975,
+  "converted": 84,
+  "manifest_sha256": "1a01f3cb2f8ad422a595f9ed69227034ac9dd2d74b64e06193d503c563399634",
+  "zip_sha256": "d7062a5763ed624810ca0fd89368f9a747917828689e88610b465db11cbc481c",
+  "zip_bytes": 85670020,
+  "inputs": [
+    {
+      "source_pack": "artwork-complete",
+      "manifest_sha256": "d71d1531f0ccc269e2406c4b34ea9b797d6fbdc6eeb097a288904137ae835450",
+      "by_type": {
+        "competition": 103,
+        "team": 859
+      }
+    },
+    {
+      "source_pack": "tracks/7-artwork/supplement/profile-pack",
+      "manifest_sha256": "2b7299e7873ac090b54b87147833af1049fa097fe260b6a6b805c89df4c6861d",
+      "by_type": {
+        "team": 44
+      }
+    },
+    {
+      "source_pack": "tracks/7-artwork/supplement/arthurian/verified-profile-pack",
+      "manifest_sha256": "2b3776787a92dc41a9611bfdafa274cf2c065e144fe90c1a74ef45c388294c8d",
+      "by_type": {
+        "team": 5
+      }
+    },
+    {
+      "source_pack": "tracks/7-artwork/competition-traces/supplement/output/current-profile",
+      "manifest_sha256": "facb4cbba73cc1ae04bba7f945106a333a8eca20f651117909be0d877842f7b6",
+      "by_type": {
+        "competition": 1
+      }
+    }
+  ]
 }

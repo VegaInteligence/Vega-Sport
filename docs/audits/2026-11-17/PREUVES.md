@@ -31,3 +31,7 @@ Les calendriers UEFA et DFB match par match, les tirages des scores de prolongat
 
 
 La collecte annuelle et la comparaison du top 100 sont dans `tracks/5-players/top100`. Les quatre sorties du vérificateur ont été reproduites à l’identique. Le relevé numérique complet de l’Elo et le contrôle des six directions se trouvent sous `tracks/6-teams`, notamment `snapshot/inputs.json.zlib` et `gradient/`. Le trajet du classement officiel jusqu’au lecteur HTTP est dans `tracks/2-ingestion/sportscore-red`. Les huit lectures observées d’un même fichier, leur fournisseur et leur volume figurent dans `tracks/2-ingestion/shared-download`. Les mesures compactes sont réunies dans les [contrôles de calcul et d’ingestion](CONTROLES.md).
+
+Les [91 entrées du registre](registres/requirements.csv) couvrent les sous-points du document initial, la demande du 17 novembre, les tickets clos et les constats de traçabilité. Les [26 changements de calcul](registres/new-calculations.csv) citent leur commit et le fichier qui produit ou lit le résultat. Les [instructions de reproduction](registres/requirements-README.md) explicitent le périmètre et la date de chaque état.
+
+Le fichier `visuels-manifeste.json.gz` identifie chaque vrai logo par sa source, sa clé typée et son empreinte. Les 1 012 associations et les 1 611 liens existants ont été revérifiés sur une copie de la base, en import complet puis à partir du lot de 962. Le passage suivant retrouve les 1 012 associations à l’identique. [Reçu de rejeu](controles/visuels-1012-rejeu.json)

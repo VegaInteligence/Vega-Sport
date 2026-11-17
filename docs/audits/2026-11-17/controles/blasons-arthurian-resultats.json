@@ -1,0 +1,17 @@
+{
+  "accepted": 5,
+  "source_witnesses": 69,
+  "distinct_production_matches": 65,
+  "manifest_sha256": "2b3776787a92dc41a9611bfdafa274cf2c065e144fe90c1a74ef45c388294c8d",
+  "zip_sha256": "0bf77f1c2e306949540f473c289e54a79d1374502cf25603a44d4b3f1eee7dad",
+  "manifest": "verified-profile-pack/manifest.json",
+  "zip": "verified-arthurian-profile-crests.zip",
+  "actual_importer_loaded": 5,
+  "verified_archive_members": 11,
+  "legacy_http_url_replaced_using_byte_identical_https_captures": [
+    5643,
+    5648
+  ],
+  "historical_candidate_manifest_sha256": "aafda763f32824d214ae21326e1bd9147e1699d980fbc6058f7a574044cb16ed",
+  "tested_importer_sha256": "e53dd0f791456eb419df6ffc7a87cfc1e67d0a73f0d123ad7b07b145e81f400a"
+}

@@ -1,0 +1,35 @@
+{
+  "scope": {
+    "England": {
+      "held": 236,
+      "unavailable_in_examined_sources": 555,
+      "verified_current_profile": 40
+    },
+    "Germany": {
+      "unavailable_in_examined_sources": 236,
+      "verified_current_profile": 4,
+      "held": 17
+    }
+  },
+  "unique_canonical_ids": 1088,
+  "league_roster_records": 252,
+  "fa_seasons": 91,
+  "fa_scored_rows": 11794,
+  "dfb_editions": 123,
+  "dfb_scored_rows": 39144,
+  "prior_byte_collisions": 8,
+  "edition_only_teams": 2,
+  "edition_only_bindings": 4,
+  "edition_only_verified_matches": 130,
+  "edition_archive_sha256": "8db16cda01390c80324b25dbee4eb3b3edf4c9a88e8ccc5d91347480da9490e4",
+  "profile_release": {
+    "verified": 44,
+    "english": 40,
+    "german": 4,
+    "distinct_displays": 44,
+    "rds_match_witnesses": 361,
+    "manifest_sha256": "2b7299e7873ac090b54b87147833af1049fa097fe260b6a6b805c89df4c6861d",
+    "zip_sha256": "b487a795066c1ed74cb2cf80a435a7647fe5be9f27c0cc6aa21cc5de99abe9ca",
+    "sha256_frozen_manifest": "d71d1531f0ccc269e2406c4b34ea9b797d6fbdc6eeb097a288904137ae835450"
+  }
+}
