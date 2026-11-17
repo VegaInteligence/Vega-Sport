@@ -24,14 +24,25 @@
     - Every open-matchday match and every match of the German cup (OpenLigaDB) counts.
     - Clubs PitchAPI does not hold enter at their group's level: their league (division from the folder), else their country's cup clubs.
     - Measured beforehand, in memory: 967 more clubs ranked; median change 1.2 points for clubs already ranked; top 30 within 6 points.
-  - The reader removes the 35 copy editions (9,539 matches) at its next read.
+  - The reader removed the 35 copy editions (9,539 matches); verified 17 Nov, 07:43 UTC: 0 copies left, 2,443 clubs ranked (as measured), no copy-only club ranked.
+  - The Elo never reads a copy (adad382925), after the 00:32 run ranked 208 of them.
+  - Domestic knockout cups, data and API (1f3c1b2113, migration 124; 123 is VI-22's):
+    - which cups: drawn round not begun, all clubs entered, all rated;
+    - replayed with the user's rules; opponent of the round in play;
+    - calc note 7eebf9707c.
+- Waiting:
+  - the user's validation of the cups' mockup (scratchpad cups2/mock-*.png, sent 17 Nov) before building the « Projection » view of a cup;
+  - the identity pass (21:30 UTC): 152 merges; until then 118 unmerged copies (« FC Bayern München »…) are ranked as cup clubs, and the Coppa Italia is not projected;
+  - the worker's next projection pass for the cups' numbers (watcher on the public API, evidence-cups/check-knockout.mjs).
 - Kept outside on purpose (measured):
   - OpenFootball's national cup archives and the continental cups. They still count only between known clubs: their unlinked professional clubs inflated the cup groups, and the African cups moved Egypt +104.
-- Evidence: scratchpad evidence-vi21 (diag-*.py/.out, sweep, README).
+  - The next step is to link the archives' professional clubs (diag-cands4.py is ready). It is blocked: the AWS session expired on 17 Nov and the user must run `aws login`.
+- Evidence: scratchpad evidence-vi21 (diag-*.py/.out, sweep, README), evidence-cups.
 - Next action:
-  - Verify in production: copies gone, Elo run done, merges made.
-  - Then: link the archive and continental clubs, and project domestic cups by stage.
-  - After the backfill: recompute and verify 2021/22–2022/23.
+  - After the identity pass: verify the merges and the Coppa Italia.
+  - After the user's yes: build the cups' view.
+  - After `aws login`: link the archive clubs and measure them in the Elo.
+  - After the backfill: verify 2021/22–2022/23.
 
 ## VI-22 — club page and featured competitions (scratchpad worktree `club-tasks`, 17 Nov 2026)
 
