@@ -13,6 +13,14 @@
  * axes, each with a similarity from 100 (the same profile) to 0 (as far as his median
  * distance to the season's other players).
  *
+ * GET /api/teams/{id}/similar?season=&league= — the clubs whose style of play is the closest,
+ * across every league of the base (123, VI-22): 100 less the mean distance between the two
+ * clubs' centiles on the ten style axes, each club placed among its own league's clubs, less
+ * LEAGUE_GAP_COST per point of the two leagues' gap on the league strength scale beyond
+ * LEAGUE_GAP_FREE: a club dominating a much weaker league does not pass for a club of a strong
+ * one. The clubs' own level never counts. `league` narrows the pool to one league, whatever its
+ * level, with the same numbers. Each club with its league, its place, its record, its closest axes.
+ *
  * GET /api/teams/{id}/substitutions?season= — what followed the club's first change of each
  * finished match (082): the points the score then would have given against the points
  * taken, by the state of the score at that moment, and its most decisive substitutes.
@@ -56,6 +64,22 @@ const PARTNERS = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/partners$/;
 const PARTNER_COUNT = 5;
 const SIMILAR = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/similar$/;
 const SIMILAR_COUNT = 8;
+const CLUB_SIMILAR = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/similar$/;
+const LEAGUE = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/;
+// Style axes (vega/models.py TEAM_SIMILARITY_AXES) and the site's name of each (club-scout.js).
+const STYLE_AXES = {
+  possession_pct: "possession", field_tilt_pct: "fieldTilt", directness_pct: "directness", ppda_approx: "ppda",
+  crosses_pm: "crosses", set_share_pct: "setShare", def_actions_adj: "defActions", xg_pm: "xg", xga_pm: "xga",
+  pass_accuracy_pct: "passAccuracy",
+};
+// The cost of a league gap on the league strength scale (Elo points): free up to 50, then 0.15
+// point of similarity per point. Measured on 17 November 2026: a window cut at 125 let Ecuador's
+// champion lead Paris's list, then dropped it when the levels moved by 3 points; this cost
+// keeps LaLiga, Serie A and the Bundesliga for Arsenal and sends the leaders of much weaker
+// leagues down for Paris, with no threshold.
+export const LEAGUE_GAP_FREE = 50, LEAGUE_GAP_COST = 0.15;
+// A league ranks a club once it has this many clubs; an axis counts on this many matches.
+const LEAGUE_CLUBS = 10, AXIS_MATCHES = 5, CLUB_SIMILAR_COUNT = 10;
 const DIMENSIONS = 10;
 const SQUARES = Array.from({ length: DIMENSIONS }, (_, i) => `power(o.e${i + 1}-me.e${i + 1},2)`).join("+");
 
@@ -520,6 +544,68 @@ export function createProfileRoute(read) {
         id: changes[1], season, ...impact,
         substitutes: substitutes.map((r) => put({ id: r.id, name: r.name, entries: r.entries, minutes: r.minutes, goals: r.goals, assists: r.assists }, "image_url", r.image_url)),
       });
+    }
+    const club = path.match(CLUB_SIMILAR);
+    if (club) {
+      validateParams(params, ["season", "league"]);
+      const season = params.get("season"), league = params.get("league");
+      if (!/^\d{4}\/\d{4}$/.test(season || "") || (params.has("league") && !LEAGUE.test(league))) reject(400, "Paramètre invalide.");
+      // One league cohort per club (the one with the most matches); a pair needs
+      // max(5, ⌈0.75 × the club's axes⌉) axes in common (as agg.player_similar).
+      const rows = await read(
+        // The ids are resolved once (k), not for each of the season's rows.
+        `WITH k AS MATERIALIZED (SELECT api.internal_id('team',$1) AS team, api.internal_id('competition',$3) AS league),
+              s AS (SELECT * FROM api.team_style_centiles WHERE season_id=${SEASON_KEY} AND league_clubs >= ${LEAGUE_CLUBS}),
+              pick AS (SELECT DISTINCT ON (team_key) team_key, competition_season_id FROM s
+                       GROUP BY 1, 2 ORDER BY team_key, max(covered_matches) DESC, competition_season_id),
+              p AS (SELECT s.* FROM s JOIN pick USING (team_key, competition_season_id)
+                    WHERE s.percentile IS NOT NULL AND s.covered_matches >= ${AXIS_MATCHES}),
+              me AS (SELECT * FROM p WHERE team_key=(SELECT team FROM k)),
+              mine AS (SELECT max(league_level) AS level, bool_or(women) AS women, count(*)::int AS axes FROM me),
+              pool AS (
+                SELECT o.team_key, o.competition_season_id, o.competition_key, o.league_name, o.country,
+                       100 - avg(abs(me.percentile - o.percentile))
+                         - greatest(0, coalesce(abs(max(o.league_level) - max(mine.level))::numeric, 0) - ${LEAGUE_GAP_FREE}) * ${LEAGUE_GAP_COST} AS similarity,
+                       (array_agg(o.metric_key ORDER BY abs(me.percentile - o.percentile), array_position($4::text[], o.metric_key)))[1:3] AS closest
+                FROM me JOIN p o USING (metric_key) CROSS JOIN mine
+                WHERE o.team_key <> me.team_key AND o.women = mine.women
+                  AND CASE WHEN $3::text IS NOT NULL THEN o.competition_key = (SELECT league FROM k)
+                           ELSE mine.level IS NULL OR o.league_level IS NOT NULL END
+                GROUP BY 1, 2, 3, 4, 5
+                HAVING count(*) >= greatest(5, ceil(0.75 * max(mine.axes)))),
+              top AS (SELECT * FROM pool ORDER BY similarity DESC, team_key LIMIT ${CLUB_SIMILAR_COUNT})
+         SELECT mine.axes, (SELECT count(*) FROM pool)::int AS compared,
+                api.public_id('team', t.team_key) AS id, pr.name, pr.image_url, t.similarity, t.closest,
+                api.public_id('competition', t.competition_key) AS league_id, t.league_name, t.country,
+                st.position, st.matches, st.won, st.drawn, st.lost
+         FROM mine LEFT JOIN top t ON true
+         LEFT JOIN api.team_profiles pr ON pr.team_id = t.team_key
+         LEFT JOIN LATERAL (
+           SELECT x.* FROM (SELECT team_id, matches, won, drawn, lost,
+                                   rank() OVER (ORDER BY points DESC, goals_for - goals_against DESC, goals_for DESC)::int AS position
+                            FROM api.team_season WHERE competition_season_id = t.competition_season_id) x
+           WHERE x.team_id = t.team_key) st ON true
+         ORDER BY t.similarity DESC, t.team_key`,
+        [club[1], season, league, Object.keys(STYLE_AXES)],
+      );
+      if (!rows[0]?.axes) reject(404, "Donnée indisponible.");
+      const data = { id: club[1], season, compared: rows[0].compared };
+      put(data, "league", league);
+      data.similar = rows
+        .filter((r) => r.id)
+        .map((r) => {
+          const row = { id: r.id, name: r.name };
+          put(row, "image_url", r.image_url);
+          row.similarity = Math.max(0, Math.round(r.similarity));
+          row.closest = r.closest.map((key) => STYLE_AXES[key]);
+          row.league = { id: r.league_id, name: r.league_name, country: r.country ?? null };
+          if (r.position != null) {
+            row.position = r.position;
+            row.record = { matches: r.matches, won: r.won, drawn: r.drawn, lost: r.lost };
+          }
+          return row;
+        });
+      return respond(req, data);
     }
     const similar = path.match(SIMILAR);
     if (similar) {

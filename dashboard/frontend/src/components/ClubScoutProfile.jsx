@@ -3,8 +3,9 @@
  * the user chooses, comparison and similar clubs across every competition. */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Icon from "./Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
-import { Segments } from "./UI.jsx";
+import { Segments, Skeleton } from "./UI.jsx";
 import { ResearchTabs } from "./ResearchUI.jsx";
 import { chartTokens, RadarChart } from "./PlayerScoutCharts.jsx";
 import { countryLabel } from "../services/competition-selector.js";
@@ -20,11 +21,11 @@ import {
   useClubDossier,
   useClubSearch,
   useEuropePool,
-  useLeagueCohort,
   useReferential,
   useSeasonCompetitions,
   useSeasonLeagues,
 } from "../services/club-scout.js";
+import { useClubNeighbours } from "../services/club-neighbours.js";
 import {
   Card,
   ClubEmptySeason,
@@ -705,31 +706,51 @@ const MAJOR = [
   ["POR", "Liga Portugal"],
   ["NED", "Eredivisie"],
 ];
+const ALL_LEAGUES = { id: "all", name: "Tous les championnats", all: true };
+
+/** The whole base in the league menu: a globe where a league has its crest. */
+const AllLeaguesItem = ({ meta }) => (
+  <span className={c.menuItem}>
+    <Icon name="globe" className={c.menuIcon} />
+    <span>
+      <strong>{ALL_LEAGUES.name}</strong>
+      {meta && <small>{meta}</small>}
+    </span>
+  </span>
+);
+
+/** Where a neighbour plays: its place, its league and country, its record. */
+const neighbourMeta = (club) =>
+  [
+    club.position != null && ordinal(club.position),
+    club.league && [club.league.name, countryLabel(club.league.country)].filter(Boolean).join(", "),
+    club.record && `${club.record.won}-${club.record.drawn}-${club.record.lost}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
 function Similar({ dossier, onCompare }) {
   const f = useFootball();
   const leagues = useSeasonLeagues();
-  const [league, setLeague] = useState(dossier.league);
-  const state = useLeagueCohort(league);
+  const [league, setLeague] = useState(ALL_LEAGUES);
+  const state = useClubNeighbours(dossier.season, dossier.id, league.all ? null : league.id);
   const suggestions = useMemo(() => {
     const own = leagues.find((item) => item.id === dossier.league?.id);
     const major = MAJOR.map(([country, name]) =>
       leagues.find((item) => item.country === country && item.name === name),
     );
-    return [own, ...major].filter(
+    return [ALL_LEAGUES, own, ...major].filter(
       (item, i, list) => item && list.findIndex((x) => x?.id === item.id) === i,
     );
   }, [leagues, dossier.league]);
-  const list =
-    state.status === "ready" ? similarClubs(dossier, 9, state.value.clubs) : [];
-  const own = league?.id === dossier.league?.id;
+  const list = state.value || [];
   return (
     <div className={c.stack}>
       <div className={s.toolbar}>
         <SearchMenu
           label="Chercher des profils proches dans"
           placeholder="Chercher un championnat…"
-          suggestionsLabel="Championnat du club et grands championnats"
+          suggestionsLabel="Toute la base, championnat du club et grands championnats"
           suggestions={suggestions}
           minLength={1}
           search={(query) => {
@@ -741,55 +762,74 @@ function Similar({ dossier, onCompare }) {
             );
           }}
           button={
-            <MenuItem item={league} meta={countryLabel(league?.country)} />
+            league.all ? (
+              <AllLeaguesItem />
+            ) : (
+              <MenuItem item={league} meta={countryLabel(league.country)} />
+            )
           }
-          renderItem={(item) => (
-            <MenuItem
-              item={item}
-              meta={`${countryLabel(item.country)}${item.id === dossier.league?.id ? " · championnat du club" : ""}`}
-            />
-          )}
+          renderItem={(item) =>
+            item.all ? (
+              <AllLeaguesItem meta="Championnats de niveau comparable" />
+            ) : (
+              <MenuItem
+                item={item}
+                meta={`${countryLabel(item.country)}${item.id === dossier.league?.id ? " · championnat du club" : ""}`}
+              />
+            )
+          }
           onSelect={setLeague}
         />
+        <Info
+          label="Clubs similaires"
+          text="Style de jeu seulement : possession, territoire, jeu direct, pressing, centres, coups de pied arrêtés, actions défensives, xG pour et contre, précision des passes. Chaque club est classé en centiles dans son championnat ; par défaut, parmi les championnats de niveau comparable au sien."
+        />
       </div>
-      <p className={c.note} style={{ margin: 0 }}>
-        {own
-          ? "Proximité des centiles de style et de niveau (possession, territoire, jeu direct, pressing, centres, CPA, xG pour et contre) dans le même championnat."
-          : `Chaque club est décrit en centiles dans son propre championnat : un voisin en ${league?.name} joue, dans sa ligue, comme ${dossier.name} dans la sienne. Ce n’est pas un niveau égal.`}
-      </p>
-      {state.status !== "ready" ? (
-        <ClubLoading state={state} compact />
+      {state.error && !state.value ? (
+        <ClubLoading state={{ status: "error", error: state.error }} compact />
+      ) : state.value === undefined ? (
+        <Skeleton label="Recherche des clubs similaires…" kind="table" lines={4} />
+      ) : !list.length ? (
+        <p className={c.muted}>
+          {league.all
+            ? "Pas assez de statistiques de style pour comparer ce club."
+            : `Aucun club comparable en ${league.name}.`}
+        </p>
       ) : (
         <div className={sA.similar}>
-          {list.map(({ club, similarity, parts }) => (
+          {list.map((club) => (
             <article key={club.id} className={c.card}>
               <div className={sA.similarHead}>
                 <Crest club={club} />
                 <span>
                   <strong>{club.name}</strong>
-                  <small>
-                    {ordinal(club.position)} de {league?.name} · {club.record.w}
-                    -{club.record.d}-{club.record.l}
-                  </small>
+                  <small>{neighbourMeta(club)}</small>
                 </span>
                 <b>
-                  {similarity}
+                  {club.similarity}
                   <small>/100</small>
                 </b>
               </div>
               <p className={c.note}>
                 Plus proches :{" "}
-                {parts
-                  .slice(0, 3)
-                  .map((part) =>
-                    METRICS[part.key].label.replace(" / match", ""),
-                  )
+                {club.closest
+                  .filter((key) => METRICS[key])
+                  .map((key) => METRICS[key].label.replace(" / match", ""))
                   .join(" · ")}
               </p>
               <div className={sA.similarActions}>
                 <button
                   className="button button-secondary"
-                  onClick={() => onCompare(brief(club, league))}
+                  onClick={() =>
+                    onCompare({
+                      id: club.id,
+                      name: club.name,
+                      imageUrl: club.imageUrl,
+                      meta: [countryLabel(club.league?.country), club.league?.name]
+                        .filter(Boolean)
+                        .join(" · "),
+                    })
+                  }
                 >
                   Comparer
                 </button>

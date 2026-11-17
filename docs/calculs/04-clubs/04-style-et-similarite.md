@@ -44,11 +44,36 @@ $$
 $$
 
 - `K` : nombre d'axes où les deux clubs ont un centile.
-- Les clubs sont triés par similarité décroissante ; les 6 premiers sont proposés (9 dans l'onglet « Similaires »).
+- Les clubs sont triés par similarité décroissante ; les 6 premiers sont proposés dans le menu « Comparer avec » (voisins du même championnat).
 - Les axes les plus proches sont listés en premier pour expliquer la ressemblance.
-- La recherche peut se faire dans une autre ligue : les centiles sont alors ceux de cette ligue.
 
 Exemple : écarts de centile 5, 10, 0, 20, 15, 5, 10, 0, 5, 10 → moyenne 8 → similarité **92**.
+
+### Onglet « Clubs similaires » : toute la base (VI-22, 17 novembre 2026)
+
+L'onglet lit `/api/teams/{id}/similar?season=` ([profiles.mjs](../../../backend/api/src/routes/profiles.mjs), vue `api.team_style_centiles`, migration 123) : les 10 clubs les plus proches parmi **tous les championnats de la saison**, ou parmi un seul avec `&league=`.
+
+- **Centiles** : ceux de `agg.team_percentiles` sur les 10 mêmes axes (`TEAM_SIMILARITY_AXES`), chaque club classé parmi les clubs de **son** championnat (cohorte `league` de l'édition ; ni le pool Europe, ni les coupes). Un championnat compte à partir de 10 clubs ; un axe compte s'il repose sur 5 matchs ou plus ; deux clubs se comparent sur au moins max(5, ⌈0,75 × axes du club⌉) axes communs. Un club présent dans deux championnats de la saison est pris dans celui où il a le plus de matchs.
+- **Contexte du championnat** : un centile dit comment un club joue face aux adversaires de sa ligue. Le leader d'un championnat faible a les centiles d'un grand club sans jouer comme lui. La similarité perd donc des points selon l'écart de niveau entre les **deux championnats** (échelle de la force des championnats, `agg.league_levels`, en points Elo), au-delà d'une marge :
+
+$$
+\text{similarité} = 100 - \frac{1}{K}\sum_{k} \left|\,c_k^{\text{club}} - c_k^{\text{autre}}\,\right| - 0{,}15 \times \max\left(0,\ \left|N^{\text{ligue du club}} - N^{\text{ligue de l'autre}}\right| - 50\right)
+$$
+
+- Le niveau **du club** (son Elo) n'entre jamais : Côme, milieu de tableau en Serie A, reste un voisin possible de Paris. Pas de seuil : un écart de 100 coûte 7,5 points, un écart de 200 en coûte 22,5.
+- Un championnat sans niveau est écarté de la vue « Tous les championnats », sauf si le championnat du club n'en a pas (aucune pénalité alors). Les championnats féminins ne se comparent qu'entre eux.
+- Restreinte à un championnat, la liste garde **les mêmes chiffres** (même formule ; un championnat sans niveau ne paie rien).
+- Chaque club vient avec son championnat, sa place (points, puis différence de buts, puis buts marqués, `api.team_season`), son bilan et ses 3 axes les plus proches.
+
+Mesure du 17 novembre 2026 (2026/2027, 71 championnats, 1 209 clubs ; 220 ms pour Paris) :
+
+| Club | Plus proches |
+| --- | --- |
+| Paris SG | Barcelone, Inter, Toluca, Villarreal, América, Bayern, River Plate, Argentinos Juniors, Monterrey, Middlesbrough |
+| Arsenal | Fulham, Manchester City, Leverkusen, Bayern, Villarreal, Leipzig, Liverpool, Brighton, Dortmund, Tottenham |
+| Côme | Leverkusen, Vasco da Gama, Inter, Middlesbrough, Bayern, AEK Athènes, Argentinos Juniors, Panathinaïkos, Villarreal, Cruzeiro |
+
+Sans cette pénalité, le champion d'Équateur (Universidad Católica) arrivait premier pour Paris. Une fenêtre stricte de ±125 l'écartait, puis l'a laissé entrer quand les niveaux ont bougé de 3 points : la pénalité continue n'a pas cet effet de seuil.
 
 ## Écarts entre deux clubs
 
