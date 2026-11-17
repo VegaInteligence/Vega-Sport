@@ -1,0 +1,110 @@
+{
+  "rds_time": "2026-11-17 22:59:52.834845+00:00",
+  "rds_rows": 859,
+  "uefa": [
+    {
+      "competition": 3,
+      "ending": 2024,
+      "reference": 239,
+      "single_exact_day": 0,
+      "any_adjacent_or_exact": 0,
+      "duplicates_same_day": 0
+    },
+    {
+      "competition": 17,
+      "ending": 2022,
+      "reference": 258,
+      "single_exact_day": 0,
+      "any_adjacent_or_exact": 0,
+      "duplicates_same_day": 0
+    },
+    {
+      "competition": 17,
+      "ending": 2026,
+      "reference": 204,
+      "single_exact_day": 0,
+      "any_adjacent_or_exact": 0,
+      "duplicates_same_day": 0
+    },
+    {
+      "competition": 2014,
+      "ending": 2021,
+      "reference": 170,
+      "single_exact_day": 0,
+      "any_adjacent_or_exact": 0,
+      "duplicates_same_day": 0
+    },
+    {
+      "competition": 2014,
+      "ending": 2023,
+      "reference": 168,
+      "single_exact_day": 0,
+      "any_adjacent_or_exact": 0,
+      "duplicates_same_day": 0
+    },
+    {
+      "competition": 2014,
+      "ending": 2025,
+      "reference": 188,
+      "single_exact_day": 0,
+      "any_adjacent_or_exact": 0,
+      "duplicates_same_day": 0
+    },
+    {
+      "competition": 2014,
+      "ending": 2027,
+      "reference": 156,
+      "single_exact_day": 120,
+      "any_adjacent_or_exact": 120,
+      "duplicates_same_day": 0
+    }
+  ],
+  "other_bounded_source": [
+    {
+      "tournament": "African Cup of Nations",
+      "upstream": 156,
+      "typed_exact": 156,
+      "typed_ids": 156
+    },
+    {
+      "tournament": "African Cup of Nations qualification",
+      "upstream": 401,
+      "typed_exact": 0,
+      "typed_ids": 0
+    },
+    {
+      "tournament": "Copa América",
+      "upstream": 60,
+      "typed_exact": 32,
+      "typed_ids": 32
+    },
+    {
+      "tournament": "Copa América qualification",
+      "upstream": 2,
+      "typed_exact": 0,
+      "typed_ids": 0
+    },
+    {
+      "tournament": "FIFA World Cup qualification",
+      "upstream": 1610,
+      "typed_exact": 0,
+      "typed_ids": 0
+    },
+    {
+      "tournament": "UEFA Euro qualification",
+      "upstream": 239,
+      "typed_exact": 0,
+      "typed_ids": 0
+    }
+  ],
+  "competitions_in_core": {
+    "Euro 2021": 102,
+    "Coupe d’Afrique des nations 2021": 156,
+    "World Cup 1930": 168,
+    "World Cup": 168,
+    "Gold Cup 2023": 62,
+    "Coupe d’Asie des nations 2023": 51,
+    "Copa América 2024": 32,
+    "nations-league": 120
+  }
+}

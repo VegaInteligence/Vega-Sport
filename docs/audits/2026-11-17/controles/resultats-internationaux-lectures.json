@@ -1,0 +1,476 @@
+{
+  "release": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "source": {
+    "provider": "International Results",
+    "revision": "b0948cb558c927c357db4067eac5b37b96d0e4bb",
+    "url": "https://raw.githubusercontent.com/martj42/international_results/b0948cb558c927c357db4067eac5b37b96d0e4bb/results.csv",
+    "at": "2026-11-17T22:43:54.474700+00:00",
+    "bytes": 3764347,
+    "sha256": "09aac809e317f3004c69720a38addb656c49ebb19f1937deab96f96e3362257a",
+    "headers": {
+      "ETag": "W/\"b6ce506da05fd7dfb77abf493a8b6b491b0839323aa1604d8b06693d078468ea\"",
+      "Date": "Tue, 17 Nov 2026 22:43:54 GMT",
+      "Content-Length": "654376"
+    }
+  },
+  "start": "2026-11-17T22:47:12.240827+00:00",
+  "profile": "isolated local PostgreSQL (no live writes)",
+  "passes": [
+    {
+      "phase": "initial",
+      "time": "2026-11-17T15:00:00+00:00",
+      "scopes": {
+        "nations-results:nations-league:2026/2027": "ok",
+        "nations-results:afcon:2021": "ok",
+        "nations-results:afcon:2023": "ok",
+        "nations-results:afcon:2025": "ok",
+        "nations-results:copa-america:2024": "ok",
+        "nations-results:asian-cup:2023": "ok",
+        "nations-results:gold-cup:2023": "ok",
+        "nations-results:gold-cup:2025": "ok"
+      },
+      "actual_http_gets": 8,
+      "uncompressed_bytes": 30114776,
+      "writes_reported": 373,
+      "editions": [
+        [
+          "nations-results:afcon:2021",
+          52,
+          52
+        ],
+        [
+          "nations-results:afcon:2023",
+          52,
+          52
+        ],
+        [
+          "nations-results:afcon:2025",
+          52,
+          52
+        ],
+        [
+          "nations-results:asian-cup:2023",
+          51,
+          51
+        ],
+        [
+          "nations-results:copa-america:2024",
+          32,
+          32
+        ],
+        [
+          "nations-results:gold-cup:2023",
+          31,
+          31
+        ],
+        [
+          "nations-results:gold-cup:2025",
+          31,
+          31
+        ],
+        [
+          "nations-results:nations-league:2026/2027",
+          72,
+          72
+        ]
+      ],
+      "scope_ops": [
+        [
+          "nations-results:afcon:2021",
+          "ok",
+          52,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:afcon:2023",
+          "ok",
+          52,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:afcon:2025",
+          "ok",
+          52,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:asian-cup:2023",
+          "ok",
+          51,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:copa-america:2024",
+          "ok",
+          32,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:gold-cup:2023",
+          "ok",
+          31,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:gold-cup:2025",
+          "ok",
+          31,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:nations-league:2026/2027",
+          "ok",
+          72,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ]
+      ]
+    },
+    {
+      "phase": "immediate",
+      "time": "2026-11-17T15:01:00+00:00",
+      "scopes": {},
+      "actual_http_gets": 0,
+      "uncompressed_bytes": 0,
+      "writes_reported": 0,
+      "editions": [
+        [
+          "nations-results:afcon:2021",
+          52,
+          52
+        ],
+        [
+          "nations-results:afcon:2023",
+          52,
+          52
+        ],
+        [
+          "nations-results:afcon:2025",
+          52,
+          52
+        ],
+        [
+          "nations-results:asian-cup:2023",
+          51,
+          51
+        ],
+        [
+          "nations-results:copa-america:2024",
+          32,
+          32
+        ],
+        [
+          "nations-results:gold-cup:2023",
+          31,
+          31
+        ],
+        [
+          "nations-results:gold-cup:2025",
+          31,
+          31
+        ],
+        [
+          "nations-results:nations-league:2026/2027",
+          72,
+          72
+        ]
+      ],
+      "scope_ops": [
+        [
+          "nations-results:afcon:2021",
+          "ok",
+          52,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:afcon:2023",
+          "ok",
+          52,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:afcon:2025",
+          "ok",
+          52,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:asian-cup:2023",
+          "ok",
+          51,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:copa-america:2024",
+          "ok",
+          32,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:gold-cup:2023",
+          "ok",
+          31,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:gold-cup:2025",
+          "ok",
+          31,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:nations-league:2026/2027",
+          "ok",
+          72,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ]
+      ]
+    },
+    {
+      "phase": "recent",
+      "time": "2026-11-17T18:00:00+00:00",
+      "scopes": {
+        "nations-results:nations-league:2026/2027": "ok",
+        "nations-results:afcon:2025": "ok",
+        "nations-results:gold-cup:2025": "ok"
+      },
+      "actual_http_gets": 3,
+      "uncompressed_bytes": 11293041,
+      "writes_reported": 0,
+      "editions": [
+        [
+          "nations-results:afcon:2021",
+          52,
+          52
+        ],
+        [
+          "nations-results:afcon:2023",
+          52,
+          52
+        ],
+        [
+          "nations-results:afcon:2025",
+          52,
+          52
+        ],
+        [
+          "nations-results:asian-cup:2023",
+          51,
+          51
+        ],
+        [
+          "nations-results:copa-america:2024",
+          32,
+          32
+        ],
+        [
+          "nations-results:gold-cup:2023",
+          31,
+          31
+        ],
+        [
+          "nations-results:gold-cup:2025",
+          31,
+          31
+        ],
+        [
+          "nations-results:nations-league:2026/2027",
+          72,
+          72
+        ]
+      ],
+      "scope_ops": [
+        [
+          "nations-results:afcon:2021",
+          "ok",
+          52,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:afcon:2023",
+          "ok",
+          52,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:afcon:2025",
+          "ok",
+          0,
+          "2026-11-17 18:00:00+00:00",
+          "2026-11-17 18:00:00+00:00"
+        ],
+        [
+          "nations-results:asian-cup:2023",
+          "ok",
+          51,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:copa-america:2024",
+          "ok",
+          32,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:gold-cup:2023",
+          "ok",
+          31,
+          "2026-11-17 15:00:00+00:00",
+          "2026-11-17 15:00:00+00:00"
+        ],
+        [
+          "nations-results:gold-cup:2025",
+          "ok",
+          0,
+          "2026-11-17 18:00:00+00:00",
+          "2026-11-17 18:00:00+00:00"
+        ],
+        [
+          "nations-results:nations-league:2026/2027",
+          "ok",
+          0,
+          "2026-11-17 18:00:00+00:00",
+          "2026-11-17 18:00:00+00:00"
+        ]
+      ]
+    },
+    {
+      "phase": "all_again",
+      "time": "2026-11-25T15:00:00+00:00",
+      "scopes": {
+        "nations-results:nations-league:2026/2027": "ok",
+        "nations-results:afcon:2021": "ok",
+        "nations-results:afcon:2023": "ok",
+        "nations-results:afcon:2025": "ok",
+        "nations-results:copa-america:2024": "ok",
+        "nations-results:asian-cup:2023": "ok",
+        "nations-results:gold-cup:2023": "ok",
+        "nations-results:gold-cup:2025": "ok"
+      },
+      "actual_http_gets": 8,
+      "uncompressed_bytes": 30114776,
+      "writes_reported": 0,
+      "editions": [
+        [
+          "nations-results:afcon:2021",
+          52,
+          52
+        ],
+        [
+          "nations-results:afcon:2023",
+          52,
+          52
+        ],
+        [
+          "nations-results:afcon:2025",
+          52,
+          52
+        ],
+        [
+          "nations-results:asian-cup:2023",
+          51,
+          51
+        ],
+        [
+          "nations-results:copa-america:2024",
+          32,
+          32
+        ],
+        [
+          "nations-results:gold-cup:2023",
+          31,
+          31
+        ],
+        [
+          "nations-results:gold-cup:2025",
+          31,
+          31
+        ],
+        [
+          "nations-results:nations-league:2026/2027",
+          72,
+          72
+        ]
+      ],
+      "scope_ops": [
+        [
+          "nations-results:afcon:2021",
+          "ok",
+          0,
+          "2026-11-25 15:00:00+00:00",
+          "2026-11-25 15:00:00+00:00"
+        ],
+        [
+          "nations-results:afcon:2023",
+          "ok",
+          0,
+          "2026-11-25 15:00:00+00:00",
+          "2026-11-25 15:00:00+00:00"
+        ],
+        [
+          "nations-results:afcon:2025",
+          "ok",
+          0,
+          "2026-11-25 15:00:00+00:00",
+          "2026-11-25 15:00:00+00:00"
+        ],
+        [
+          "nations-results:asian-cup:2023",
+          "ok",
+          0,
+          "2026-11-25 15:00:00+00:00",
+          "2026-11-25 15:00:00+00:00"
+        ],
+        [
+          "nations-results:copa-america:2024",
+          "ok",
+          0,
+          "2026-11-25 15:00:00+00:00",
+          "2026-11-25 15:00:00+00:00"
+        ],
+        [
+          "nations-results:gold-cup:2023",
+          "ok",
+          0,
+          "2026-11-25 15:00:00+00:00",
+          "2026-11-25 15:00:00+00:00"
+        ],
+        [
+          "nations-results:gold-cup:2025",
+          "ok",
+          0,
+          "2026-11-25 15:00:00+00:00",
+          "2026-11-25 15:00:00+00:00"
+        ],
+        [
+          "nations-results:nations-league:2026/2027",
+          "ok",
+          0,
+          "2026-11-25 15:00:00+00:00",
+          "2026-11-25 15:00:00+00:00"
+        ]
+      ]
+    }
+  ],
+  "db": "vega_v2_shared_csv_20261117224712240827",
+  "finish": "2026-11-17T22:47:18.674943+00:00"
+}

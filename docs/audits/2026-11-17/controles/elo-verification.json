@@ -1,0 +1,44 @@
+{
+  "matches": 81921,
+  "bound_matches": 13808,
+  "matched_contrasts": 6,
+  "max_abs_error": 6.401573229841695e-10,
+  "results": [
+    {
+      "direction": "Premier League (ENG) \u2013 Championship (ENG)",
+      "deployed_generator_finite_difference": 0.03345709264067409,
+      "analytic": 0.033457093280831414,
+      "error": -6.401573229841695e-10
+    },
+    {
+      "direction": "Premier League (ENG) \u2013 LaLiga (ESP)",
+      "deployed_generator_finite_difference": 0.016462907660752535,
+      "analytic": 0.016462907843037684,
+      "error": -1.8228514878093627e-10
+    },
+    {
+      "direction": "Ligue 1 (FRA) \u2013 Ligue 2 (FRA)",
+      "deployed_generator_finite_difference": -0.012126081164751668,
+      "analytic": -0.012126081078987551,
+      "error": -8.576411629490632e-11
+    },
+    {
+      "direction": "Bundesliga (GER) \u2013 2. Bundesliga (GER)",
+      "deployed_generator_finite_difference": -0.01819471597627853,
+      "analytic": -0.01819471545365388,
+      "error": -5.226246518885702e-10
+    },
+    {
+      "direction": "Serie A (BRA) \u2013 Liga Profesional (ARG)",
+      "deployed_generator_finite_difference": -0.018979717679030728,
+      "analytic": -0.018979717359286587,
+      "error": -3.1974414088642433e-10
+    },
+    {
+      "direction": "K League 1 (KOR) \u2013 K League 2 (KOR)",
+      "deployed_generator_finite_difference": -0.0016522005898877978,
+      "analytic": -0.0016522005746677404,
+      "error": -1.5220057419246258e-11
+    }
+  ]
+}

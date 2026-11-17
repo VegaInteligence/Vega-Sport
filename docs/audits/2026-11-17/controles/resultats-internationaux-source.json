@@ -1,0 +1,13 @@
+{
+  "provider": "International Results",
+  "revision": "b0948cb558c927c357db4067eac5b37b96d0e4bb",
+  "url": "https://raw.githubusercontent.com/martj42/international_results/b0948cb558c927c357db4067eac5b37b96d0e4bb/results.csv",
+  "at": "2026-11-17T22:43:54.474700+00:00",
+  "bytes": 3764347,
+  "sha256": "09aac809e317f3004c69720a38addb656c49ebb19f1937deab96f96e3362257a",
+  "headers": {
+    "ETag": "W/\"b6ce506da05fd7dfb77abf493a8b6b491b0839323aa1604d8b06693d078468ea\"",
+    "Date": "Tue, 17 Nov 2026 22:43:54 GMT",
+    "Content-Length": "654376"
+  }
+}

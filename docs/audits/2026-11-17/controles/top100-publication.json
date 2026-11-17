@@ -1,0 +1,130 @@
+{
+  "snapshot_sha256": "18ff6cc9098c2ccdd3f81201b43f9616f84c3709ea3c4669d6ec884a73803dbf",
+  "counts": {
+    "unexposed_changed_own_contribution": 0,
+    "directly_exposed_players": 8028,
+    "exposed_participations": 16221
+  },
+  "prior_comparison": {
+    "all": {
+      "players": 14844,
+      "max_abs_own_year_score_drift": 0.025863329451674133,
+      "max_abs_power_score_drift": 21.934472335945742,
+      "median_abs_power_score_drift": 0.000987157582947873,
+      "max_abs_change_in_prior_effect": 21.93354631634938,
+      "count_abs_power_drift_gt_0_03": 5263,
+      "count_abs_power_drift_gt_1": 1226
+    },
+    "active_new_prior": {
+      "players": 5881,
+      "max_abs_own_year_score_drift": 0.023835825086031548,
+      "max_abs_power_score_drift": 21.934472335945742,
+      "median_abs_power_score_drift": 0.3453341758277588,
+      "max_abs_change_in_prior_effect": 21.93354631634938,
+      "count_abs_power_drift_gt_0_03": 5263,
+      "count_abs_power_drift_gt_1": 1226
+    },
+    "no_new_prior_effect": {
+      "players": 8963,
+      "max_abs_own_year_score_drift": 0.025863329451674133,
+      "max_abs_power_score_drift": 0.025857983524169015,
+      "median_abs_power_score_drift": 0.00046284521710049376,
+      "max_abs_change_in_prior_effect": 0.00011396916228534337,
+      "count_abs_power_drift_gt_0_03": 0,
+      "count_abs_power_drift_gt_1": 0
+    }
+  },
+  "prior_examples": {
+    "largest_upward_score_drift": {
+      "id": 61690,
+      "public_id": "p_0pgvsh",
+      "name": null,
+      "own_score_published": 37.31369037343225,
+      "own_score_replayed": 37.314616393028615,
+      "power_score_published": 37.756,
+      "power_score_replayed": 59.69047233594574,
+      "published_rank": 9847,
+      "replayed_rank": 1314,
+      "minutes": 144,
+      "prior_weight": 0.696969696969697,
+      "previous_own_index": 1.6917411,
+      "power_score_delta": 21.934472335945742,
+      "own_delta": 0.0009260195963634033,
+      "change_in_prior_effect": 21.93354631634938
+    },
+    "largest_downward_score_drift": {
+      "id": 37388,
+      "public_id": "p_1pAAmp",
+      "name": null,
+      "own_score_published": 35.40851795609397,
+      "own_score_replayed": 35.40889253157624,
+      "power_score_published": 37.4988,
+      "power_score_replayed": 26.832152343457505,
+      "published_rank": 10210,
+      "replayed_rank": 14609,
+      "minutes": 10,
+      "prior_weight": 0.9521276595744681,
+      "previous_own_index": -2.194784,
+      "power_score_delta": -10.666647656542498,
+      "own_delta": 0.0003745754822759295,
+      "change_in_prior_effect": -10.667022232024774
+    },
+    "largest_upward_rank_drift": {
+      "id": 40401,
+      "public_id": "p_35tbTJ",
+      "name": null,
+      "own_score_published": 36.29612971817198,
+      "own_score_replayed": 36.29642707163703,
+      "power_score_published": 36.2961,
+      "power_score_replayed": 51.143252488137534,
+      "published_rank": 11687,
+      "replayed_rank": 3012,
+      "minutes": 90,
+      "prior_weight": 0.6785714285714286,
+      "previous_own_index": 0.7160196,
+      "power_score_delta": 14.847152488137532,
+      "own_delta": 0.00029735346504367044,
+      "change_in_prior_effect": 14.846855134672488
+    },
+    "largest_downward_rank_drift": {
+      "id": 58298,
+      "public_id": "p_0VZuH5",
+      "name": null,
+      "own_score_published": 39.876636444453865,
+      "own_score_replayed": 39.87713304642403,
+      "power_score_published": 39.1457,
+      "power_score_replayed": 34.992119393950425,
+      "published_rank": 8558,
+      "replayed_rank": 13264,
+      "minutes": 485,
+      "prior_weight": 0.3516042780748663,
+      "previous_own_index": -2.1541696,
+      "power_score_delta": -4.153580606049573,
+      "own_delta": 0.0004966019701626578,
+      "change_in_prior_effect": -4.154077208019736
+    }
+  },
+  "route_table_reconciliation": {
+    "eligible_award": {
+      "population": 5247,
+      "distinct_primary_competition_ids": 19,
+      "no_primary_league": 0,
+      "directly_exposed_players": 3375,
+      "baseline_top100_directly_exposed": 81
+    },
+    "men": {
+      "population": 14844,
+      "distinct_primary_competition_ids": 28,
+      "no_primary_league": 758,
+      "directly_exposed_players": 8028,
+      "baseline_top100_directly_exposed": 81
+    },
+    "women": {
+      "population": 0,
+      "distinct_primary_competition_ids": 0,
+      "no_primary_league": 0,
+      "directly_exposed_players": 0,
+      "baseline_top100_directly_exposed": 0
+    }
+  }
+}

@@ -1,0 +1,104 @@
+{
+ "at": "2026-11-17 22:52:48.730670+00:00",
+ "database": "vega_v2",
+ "columns": [
+  "id",
+  "public_id",
+  "edition",
+  "cup_key",
+  "source",
+  "match_date",
+  "status",
+  "home_team_id",
+  "home",
+  "away_team_id",
+  "away",
+  "home_score",
+  "away_score",
+  "home_score_90",
+  "away_score_90",
+  "home_score_et",
+  "away_score_et",
+  "provider",
+  "provider_key",
+  "elo",
+  "currently_persisted_forecasts",
+  "updated_at"
+ ],
+ "rows": [
+  [
+   1753,
+   "m_v0001753",
+   295,
+   "open-cups:france-cup:2024/2025",
+   "openfootball",
+   "2024-12-21",
+   "finished",
+   1318,
+   "Tours FC",
+   715,
+   "Lorient",
+   0,
+   3,
+   null,
+   null,
+   null,
+   null,
+   "openfootball",
+   "france-cup:2024/2025:2024-12-21|Tours FC|FC Lorient|",
+   [
+    [
+     715,
+     1583.6157,
+     1588.2408,
+     1
+    ],
+    [
+     1318,
+     1314.9396,
+     1310.3145,
+     0
+    ]
+   ],
+   0,
+   "2026-11-09 13:43:24.539717+00:00"
+  ],
+  [
+   739082,
+   "m_v0739082",
+   53156,
+   "nations-results:afcon:2025",
+   "international_results",
+   "2026-01-18",
+   "finished",
+   5497,
+   "Morocco",
+   5488,
+   "Senegal",
+   3,
+   0,
+   null,
+   null,
+   null,
+   null,
+   "international_results",
+   "2026-01-18|Morocco|Senegal",
+   [
+    [
+     5488,
+     1619.6517,
+     1607.6522,
+     0
+    ],
+    [
+     5497,
+     1559.6654,
+     1571.6649,
+     1
+    ]
+   ],
+   0,
+   "2026-11-14 17:07:21.782809+00:00"
+  ]
+ ]
+}

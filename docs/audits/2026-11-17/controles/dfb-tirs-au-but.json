@@ -1,0 +1,1045 @@
+[
+ {
+  "year": "2025",
+  "dfb_id": "2397665",
+  "rds_id": "2661",
+  "provider_key": "77189",
+  "teams": [
+   "Eintracht Norderstedt",
+   "FC St. Pauli"
+  ],
+  "dfb_90": [
+   0,
+   0
+  ],
+  "dfb_after_et": [
+   0,
+   0
+  ],
+  "dfb_kicks": [
+   2,
+   3
+  ],
+  "rds_penalty_columns": [
+   2,
+   3
+  ],
+  "provider_90": [
+   0,
+   0
+  ],
+  "provider_results": [
+   {
+    "resultID": 118429,
+    "resultName": "Halbzeit",
+    "pointsTeam1": 0,
+    "pointsTeam2": 0,
+    "resultOrderID": 1,
+    "resultTypeID": 1,
+    "resultTypeKind": "HalfTime",
+    "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+   },
+   {
+    "resultID": 118430,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 0,
+    "pointsTeam2": 0,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   },
+   {
+    "resultID": 118447,
+    "resultName": "Nachspielzeit",
+    "pointsTeam1": 0,
+    "pointsTeam2": 0,
+    "resultOrderID": 3,
+    "resultTypeID": 3,
+    "resultTypeKind": "Unknown",
+    "resultDescription": "Ergebnis nach Nachspielzeit"
+   },
+   {
+    "resultID": 118446,
+    "resultName": "Elfmeterschießen",
+    "pointsTeam1": 2,
+    "pointsTeam2": 3,
+    "resultOrderID": 4,
+    "resultTypeID": 5,
+    "resultTypeKind": "AfterPenalties",
+    "resultDescription": "Ergebnis nach Elfmeterschießen"
+   }
+  ],
+  "normalized": [
+   2,
+   3
+  ],
+  "difference": "match",
+  "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/eintracht-norderstedt-fc-st-pauli-2397665",
+  "dfb_sha256": "96a576d52449b869733ce79ce4d927055b58a89b49c024b985bbd3bccffa3676",
+  "provider_url": "https://api.openligadb.de/getmatchdata/dfb/2025",
+  "provider_sha256": "b72e3d698a5262a130c6d77a505497ab9d08b0f1c31aaa1765e4f7039843b6e3"
+ },
+ {
+  "year": "2025",
+  "dfb_id": "2397668",
+  "rds_id": "2660",
+  "provider_key": "77186",
+  "teams": [
+   "FV Illertissen",
+   "1. FC Nürnberg"
+  ],
+  "dfb_90": [
+   3,
+   3
+  ],
+  "dfb_after_et": [
+   3,
+   3
+  ],
+  "dfb_kicks": [
+   6,
+   5
+  ],
+  "rds_penalty_columns": [
+   9,
+   8
+  ],
+  "provider_90": [
+   3,
+   3
+  ],
+  "provider_results": [
+   {
+    "resultID": 118427,
+    "resultName": "Halbzeit",
+    "pointsTeam1": 2,
+    "pointsTeam2": 0,
+    "resultOrderID": 1,
+    "resultTypeID": 1,
+    "resultTypeKind": "HalfTime",
+    "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+   },
+   {
+    "resultID": 118428,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 3,
+    "pointsTeam2": 3,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   },
+   {
+    "resultID": 118444,
+    "resultName": "Nachspielzeit",
+    "pointsTeam1": 3,
+    "pointsTeam2": 3,
+    "resultOrderID": 3,
+    "resultTypeID": 3,
+    "resultTypeKind": "Unknown",
+    "resultDescription": "Ergebnis nach Nachspielzeit"
+   },
+   {
+    "resultID": 118445,
+    "resultName": "Elfmeterschießen",
+    "pointsTeam1": 9,
+    "pointsTeam2": 8,
+    "resultOrderID": 4,
+    "resultTypeID": 5,
+    "resultTypeKind": "AfterPenalties",
+    "resultDescription": "Ergebnis nach Elfmeterschießen"
+   }
+  ],
+  "normalized": [
+   9,
+   8
+  ],
+  "difference": "disagrees",
+  "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/fv-illertissen-1-fc-nuernberg-2397668",
+  "dfb_sha256": "77198d5f142763599eaf502152287521d6db1303fa5d27f50d0187e23e8880af",
+  "provider_url": "https://api.openligadb.de/getmatchdata/dfb/2025",
+  "provider_sha256": "b72e3d698a5262a130c6d77a505497ab9d08b0f1c31aaa1765e4f7039843b6e3"
+ },
+ {
+  "year": "2025",
+  "dfb_id": "2397661",
+  "rds_id": "2680",
+  "provider_key": "77193",
+  "teams": [
+   "Preußen Münster",
+   "Hertha BSC"
+  ],
+  "dfb_90": [
+   0,
+   0
+  ],
+  "dfb_after_et": [
+   0,
+   0
+  ],
+  "dfb_kicks": [
+   3,
+   5
+  ],
+  "rds_penalty_columns": [
+   3,
+   5
+  ],
+  "provider_90": [
+   0,
+   0
+  ],
+  "provider_results": [
+   {
+    "resultID": 118475,
+    "resultName": "Halbzeit",
+    "pointsTeam1": 0,
+    "pointsTeam2": 0,
+    "resultOrderID": 1,
+    "resultTypeID": 1,
+    "resultTypeKind": "HalfTime",
+    "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+   },
+   {
+    "resultID": 118476,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 0,
+    "pointsTeam2": 0,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   },
+   {
+    "resultID": 127391,
+    "resultName": "Nachspielzeit",
+    "pointsTeam1": 0,
+    "pointsTeam2": 0,
+    "resultOrderID": 3,
+    "resultTypeID": 3,
+    "resultTypeKind": "Unknown",
+    "resultDescription": "Ergebnis nach Nachspielzeit"
+   },
+   {
+    "resultID": 118479,
+    "resultName": "Elfmeterschießen",
+    "pointsTeam1": 3,
+    "pointsTeam2": 5,
+    "resultOrderID": 4,
+    "resultTypeID": 5,
+    "resultTypeKind": "AfterPenalties",
+    "resultDescription": "Ergebnis nach Elfmeterschießen"
+   }
+  ],
+  "normalized": [
+   3,
+   5
+  ],
+  "difference": "match",
+  "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/preussen-muenster-hertha-bsc-2397661",
+  "dfb_sha256": "dfe67f839b628c67e3858101b94ac2d215c16b0a84bb820786603c6ee0c1bbc4",
+  "provider_url": "https://api.openligadb.de/getmatchdata/dfb/2025",
+  "provider_sha256": "b72e3d698a5262a130c6d77a505497ab9d08b0f1c31aaa1765e4f7039843b6e3"
+ },
+ {
+  "year": "2025",
+  "dfb_id": "2397670",
+  "rds_id": "2683",
+  "provider_key": "77184",
+  "teams": [
+   "Eintracht Braunschweig",
+   "VfB Stuttgart"
+  ],
+  "dfb_90": [
+   3,
+   3
+  ],
+  "dfb_after_et": [
+   4,
+   4
+  ],
+  "dfb_kicks": [
+   7,
+   8
+  ],
+  "rds_penalty_columns": [
+   11,
+   12
+  ],
+  "provider_90": [
+   3,
+   4
+  ],
+  "provider_results": [
+   {
+    "resultID": 118568,
+    "resultName": "Halbzeit",
+    "pointsTeam1": 1,
+    "pointsTeam2": 1,
+    "resultOrderID": 1,
+    "resultTypeID": 1,
+    "resultTypeKind": "HalfTime",
+    "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+   },
+   {
+    "resultID": 118569,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 3,
+    "pointsTeam2": 4,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   },
+   {
+    "resultID": 118570,
+    "resultName": "Nachspielzeit",
+    "pointsTeam1": 4,
+    "pointsTeam2": 4,
+    "resultOrderID": 3,
+    "resultTypeID": 3,
+    "resultTypeKind": "Unknown",
+    "resultDescription": "Ergebnis nach Nachspielzeit"
+   },
+   {
+    "resultID": 118571,
+    "resultName": "Elfmeterschießen",
+    "pointsTeam1": 11,
+    "pointsTeam2": 12,
+    "resultOrderID": 4,
+    "resultTypeID": 5,
+    "resultTypeKind": "AfterPenalties",
+    "resultDescription": "Ergebnis nach Elfmeterschießen"
+   }
+  ],
+  "normalized": [
+   11,
+   12
+  ],
+  "difference": "disagrees",
+  "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/eintracht-braunschweig-vfb-stuttgart-2397670",
+  "dfb_sha256": "01b1138349552d90f324ed7edb9959c7694d5142330376c59b04b783d23775bf",
+  "provider_url": "https://api.openligadb.de/getmatchdata/dfb/2025",
+  "provider_sha256": "b72e3d698a5262a130c6d77a505497ab9d08b0f1c31aaa1765e4f7039843b6e3"
+ },
+ {
+  "year": "2025",
+  "dfb_id": "2411114",
+  "rds_id": "2687",
+  "provider_key": "79589",
+  "teams": [
+   "Eintracht Frankfurt",
+   "Borussia Dortmund"
+  ],
+  "dfb_90": [
+   1,
+   1
+  ],
+  "dfb_after_et": [
+   1,
+   1
+  ],
+  "dfb_kicks": [
+   2,
+   4
+  ],
+  "rds_penalty_columns": [
+   3,
+   5
+  ],
+  "provider_90": [
+   1,
+   1
+  ],
+  "provider_results": [
+   {
+    "resultID": 119896,
+    "resultName": "Halbzeit",
+    "pointsTeam1": 1,
+    "pointsTeam2": 0,
+    "resultOrderID": 1,
+    "resultTypeID": 1,
+    "resultTypeKind": "HalfTime",
+    "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+   },
+   {
+    "resultID": 119897,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 1,
+    "pointsTeam2": 1,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   },
+   {
+    "resultID": 127392,
+    "resultName": "Nachspielzeit",
+    "pointsTeam1": 1,
+    "pointsTeam2": 1,
+    "resultOrderID": 3,
+    "resultTypeID": 3,
+    "resultTypeKind": "Unknown",
+    "resultDescription": "Ergebnis nach Nachspielzeit"
+   },
+   {
+    "resultID": 120732,
+    "resultName": "Elfmeterschießen",
+    "pointsTeam1": 3,
+    "pointsTeam2": 5,
+    "resultOrderID": 4,
+    "resultTypeID": 5,
+    "resultTypeKind": "AfterPenalties",
+    "resultDescription": "Ergebnis nach Elfmeterschießen"
+   }
+  ],
+  "normalized": [
+   3,
+   5
+  ],
+  "difference": "disagrees",
+  "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/eintracht-frankfurt-borussia-dortmund-2411114",
+  "dfb_sha256": "3d80db111abc71cf016550f4e4cad6b529008a32b11da209c76378eca4736b15",
+  "provider_url": "https://api.openligadb.de/getmatchdata/dfb/2025",
+  "provider_sha256": "b72e3d698a5262a130c6d77a505497ab9d08b0f1c31aaa1765e4f7039843b6e3"
+ },
+ {
+  "year": "2025",
+  "dfb_id": "2411122",
+  "rds_id": "2692",
+  "provider_key": "79597",
+  "teams": [
+   "FC St. Pauli",
+   "TSG Hoffenheim"
+  ],
+  "dfb_90": [
+   1,
+   1
+  ],
+  "dfb_after_et": [
+   2,
+   2
+  ],
+  "dfb_kicks": [
+   8,
+   7
+  ],
+  "rds_penalty_columns": [
+   10,
+   9
+  ],
+  "provider_90": [
+   1,
+   1
+  ],
+  "provider_results": [
+   {
+    "resultID": 119906,
+    "resultName": "Halbzeit",
+    "pointsTeam1": 1,
+    "pointsTeam2": 0,
+    "resultOrderID": 1,
+    "resultTypeID": 1,
+    "resultTypeKind": "HalfTime",
+    "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+   },
+   {
+    "resultID": 119907,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 1,
+    "pointsTeam2": 1,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   },
+   {
+    "resultID": 127393,
+    "resultName": "Nachspielzeit",
+    "pointsTeam1": 2,
+    "pointsTeam2": 2,
+    "resultOrderID": 3,
+    "resultTypeID": 3,
+    "resultTypeKind": "Unknown",
+    "resultDescription": "Ergebnis nach Nachspielzeit"
+   },
+   {
+    "resultID": 120733,
+    "resultName": "Elfmeterschießen",
+    "pointsTeam1": 10,
+    "pointsTeam2": 9,
+    "resultOrderID": 4,
+    "resultTypeID": 5,
+    "resultTypeKind": "AfterPenalties",
+    "resultDescription": "Ergebnis nach Elfmeterschießen"
+   }
+  ],
+  "normalized": [
+   10,
+   9
+  ],
+  "difference": "disagrees",
+  "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/fc-st-pauli-tsg-hoffenheim-2411122",
+  "dfb_sha256": "057825a2b6f191683faaa560349c7b137760c8672d2f6cae0842468fa4e10df8",
+  "provider_url": "https://api.openligadb.de/getmatchdata/dfb/2025",
+  "provider_sha256": "b72e3d698a5262a130c6d77a505497ab9d08b0f1c31aaa1765e4f7039843b6e3"
+ },
+ {
+  "year": "2025",
+  "dfb_id": "2412762",
+  "rds_id": "2707",
+  "provider_key": "79781",
+  "teams": [
+   "Hamburger SV",
+   "Holstein Kiel"
+  ],
+  "dfb_90": [
+   0,
+   0
+  ],
+  "dfb_after_et": [
+   1,
+   1
+  ],
+  "dfb_kicks": [
+   2,
+   4
+  ],
+  "rds_penalty_columns": [
+   3,
+   5
+  ],
+  "provider_90": [
+   1,
+   1
+  ],
+  "provider_results": [
+   {
+    "resultID": 120796,
+    "resultName": "Halbzeit",
+    "pointsTeam1": 0,
+    "pointsTeam2": 0,
+    "resultOrderID": 1,
+    "resultTypeID": 1,
+    "resultTypeKind": "HalfTime",
+    "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+   },
+   {
+    "resultID": 120797,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 1,
+    "pointsTeam2": 1,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   },
+   {
+    "resultID": 127394,
+    "resultName": "Nachspielzeit",
+    "pointsTeam1": 1,
+    "pointsTeam2": 1,
+    "resultOrderID": 3,
+    "resultTypeID": 3,
+    "resultTypeKind": "Unknown",
+    "resultDescription": "Ergebnis nach Nachspielzeit"
+   },
+   {
+    "resultID": 120800,
+    "resultName": "Elfmeterschießen",
+    "pointsTeam1": 3,
+    "pointsTeam2": 5,
+    "resultOrderID": 4,
+    "resultTypeID": 5,
+    "resultTypeKind": "AfterPenalties",
+    "resultDescription": "Ergebnis nach Elfmeterschießen"
+   }
+  ],
+  "normalized": [
+   3,
+   5
+  ],
+  "difference": "disagrees",
+  "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/achtelfinale/hamburger-sv-holstein-kiel-2412762",
+  "dfb_sha256": "58973ef43b3f954597780a2f470049ba4e1c4625f8c5d81f7bfd2110799d6687",
+  "provider_url": "https://api.openligadb.de/getmatchdata/dfb/2025",
+  "provider_sha256": "b72e3d698a5262a130c6d77a505497ab9d08b0f1c31aaa1765e4f7039843b6e3"
+ },
+ {
+  "year": "2025",
+  "dfb_id": "2413233",
+  "rds_id": "2711",
+  "provider_key": "80173",
+  "teams": [
+   "Hertha BSC",
+   "SC Freiburg"
+  ],
+  "dfb_90": [
+   0,
+   0
+  ],
+  "dfb_after_et": [
+   1,
+   1
+  ],
+  "dfb_kicks": [
+   4,
+   5
+  ],
+  "rds_penalty_columns": [
+   5,
+   6
+  ],
+  "provider_90": [
+   0,
+   1
+  ],
+  "provider_results": [
+   {
+    "resultID": 123093,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 0,
+    "pointsTeam2": 1,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   },
+   {
+    "resultID": 123107,
+    "resultName": "Nachspielzeit",
+    "pointsTeam1": 1,
+    "pointsTeam2": 1,
+    "resultOrderID": 3,
+    "resultTypeID": 3,
+    "resultTypeKind": "Unknown",
+    "resultDescription": "Ergebnis nach Nachspielzeit"
+   },
+   {
+    "resultID": 123108,
+    "resultName": "Elfmeterschießen",
+    "pointsTeam1": 5,
+    "pointsTeam2": 6,
+    "resultOrderID": 4,
+    "resultTypeID": 5,
+    "resultTypeKind": "AfterPenalties",
+    "resultDescription": "Ergebnis nach Elfmeterschießen"
+   }
+  ],
+  "normalized": [
+   5,
+   6
+  ],
+  "difference": "disagrees",
+  "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/viertelfinale/hertha-bsc-sc-freiburg-2413233",
+  "dfb_sha256": "70b67b4712f27e63168ef2cd62cb1255419a3dea69dc1dce8a35bc095f3640d6",
+  "provider_url": "https://api.openligadb.de/getmatchdata/dfb/2025",
+  "provider_sha256": "b72e3d698a5262a130c6d77a505497ab9d08b0f1c31aaa1765e4f7039843b6e3"
+ },
+ {
+  "year": "2026",
+  "dfb_id": "2418325",
+  "rds_id": "2725",
+  "provider_key": "81850",
+  "teams": [
+   "Viktoria Köln",
+   "1. FC Nürnberg"
+  ],
+  "dfb_90": [
+   1,
+   1
+  ],
+  "dfb_after_et": [
+   1,
+   1
+  ],
+  "dfb_kicks": [
+   4,
+   5
+  ],
+  "rds_penalty_columns": [
+   5,
+   6
+  ],
+  "provider_90": [
+   1,
+   1
+  ],
+  "provider_results": [
+   {
+    "resultID": 127273,
+    "resultName": "Halbzeit",
+    "pointsTeam1": 0,
+    "pointsTeam2": 0,
+    "resultOrderID": 1,
+    "resultTypeID": 1,
+    "resultTypeKind": "HalfTime",
+    "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+   },
+   {
+    "resultID": 127274,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 1,
+    "pointsTeam2": 1,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   },
+   {
+    "resultID": 127295,
+    "resultName": "Verlängerung",
+    "pointsTeam1": 1,
+    "pointsTeam2": 1,
+    "resultOrderID": 3,
+    "resultTypeID": 4,
+    "resultTypeKind": "AfterExtraTime",
+    "resultDescription": "Ergebnis nach Verlängerung"
+   },
+   {
+    "resultID": 127293,
+    "resultName": "Elfmeterschießen",
+    "pointsTeam1": 5,
+    "pointsTeam2": 6,
+    "resultOrderID": 4,
+    "resultTypeID": 5,
+    "resultTypeKind": "AfterPenalties",
+    "resultDescription": "Ergebnis nach Elfmeterschießen"
+   }
+  ],
+  "normalized": [
+   5,
+   6
+  ],
+  "difference": "disagrees",
+  "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/fc-viktoria-koeln-1-fc-nuernberg-2418325",
+  "dfb_sha256": "2f4fd8f7c7d0f987caaae3114cb9e3d4a4a9224d9fba49541ea795ed0d23101a",
+  "provider_url": "https://api.openligadb.de/getmatchdata/dfb/2026",
+  "provider_sha256": "85220cbd34ffa016837098f4e11e4b9532e57d0da431dbf8aa0f250a82cd23c9"
+ },
+ {
+  "year": "2026",
+  "dfb_id": "2418324",
+  "rds_id": "2724",
+  "provider_key": "81849",
+  "teams": [
+   "1. FC Saarbrücken",
+   "Hertha BSC"
+  ],
+  "dfb_90": [
+   1,
+   1
+  ],
+  "dfb_after_et": [
+   1,
+   1
+  ],
+  "dfb_kicks": [
+   2,
+   4
+  ],
+  "rds_penalty_columns": [
+   3,
+   5
+  ],
+  "provider_90": [
+   1,
+   1
+  ],
+  "provider_results": [
+   {
+    "resultID": 127271,
+    "resultName": "Halbzeit",
+    "pointsTeam1": 0,
+    "pointsTeam2": 0,
+    "resultOrderID": 1,
+    "resultTypeID": 1,
+    "resultTypeKind": "HalfTime",
+    "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+   },
+   {
+    "resultID": 127272,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 1,
+    "pointsTeam2": 1,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   },
+   {
+    "resultID": 127294,
+    "resultName": "Verlängerung",
+    "pointsTeam1": 1,
+    "pointsTeam2": 1,
+    "resultOrderID": 3,
+    "resultTypeID": 4,
+    "resultTypeKind": "AfterExtraTime",
+    "resultDescription": "Ergebnis nach Verlängerung"
+   },
+   {
+    "resultID": 127289,
+    "resultName": "Elfmeterschießen",
+    "pointsTeam1": 3,
+    "pointsTeam2": 5,
+    "resultOrderID": 4,
+    "resultTypeID": 5,
+    "resultTypeKind": "AfterPenalties",
+    "resultDescription": "Ergebnis nach Elfmeterschießen"
+   }
+  ],
+  "normalized": [
+   3,
+   5
+  ],
+  "difference": "disagrees",
+  "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/1-fc-saarbruecken-hertha-bsc-2418324",
+  "dfb_sha256": "d97b278e3a0b66c0e523a4fa5b6826662c1f9ad812293597ab28ed38a5627d72",
+  "provider_url": "https://api.openligadb.de/getmatchdata/dfb/2026",
+  "provider_sha256": "85220cbd34ffa016837098f4e11e4b9532e57d0da431dbf8aa0f250a82cd23c9"
+ },
+ {
+  "year": "2026",
+  "dfb_id": "2418315",
+  "rds_id": "2729",
+  "provider_key": "81840",
+  "teams": [
+   "SG Sonnenhof Großaspach",
+   "DSC Arminia Bielefeld"
+  ],
+  "dfb_90": [
+   2,
+   2
+  ],
+  "dfb_after_et": [
+   2,
+   2
+  ],
+  "dfb_kicks": [
+   3,
+   0
+  ],
+  "rds_penalty_columns": [
+   5,
+   2
+  ],
+  "provider_90": [
+   2,
+   2
+  ],
+  "provider_results": [
+   {
+    "resultID": 127285,
+    "resultName": "Halbzeit",
+    "pointsTeam1": 1,
+    "pointsTeam2": 2,
+    "resultOrderID": 1,
+    "resultTypeID": 1,
+    "resultTypeKind": "HalfTime",
+    "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+   },
+   {
+    "resultID": 127286,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 2,
+    "pointsTeam2": 2,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   },
+   {
+    "resultID": 127298,
+    "resultName": "Verlängerung",
+    "pointsTeam1": 2,
+    "pointsTeam2": 2,
+    "resultOrderID": 3,
+    "resultTypeID": 4,
+    "resultTypeKind": "AfterExtraTime",
+    "resultDescription": "Ergebnis nach Verlängerung"
+   },
+   {
+    "resultID": 127301,
+    "resultName": "Elfmeterschießen",
+    "pointsTeam1": 5,
+    "pointsTeam2": 2,
+    "resultOrderID": 4,
+    "resultTypeID": 5,
+    "resultTypeKind": "AfterPenalties",
+    "resultDescription": "Ergebnis nach Elfmeterschießen"
+   }
+  ],
+  "normalized": [
+   5,
+   2
+  ],
+  "difference": "disagrees",
+  "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sg-sonnenhof-grossaspach-arminia-bielefeld-2418315",
+  "dfb_sha256": "4d32e5fdbac41983f9d538db4c5403c3bed4bbf5f322dc45f1c585e4f6f981bc",
+  "provider_url": "https://api.openligadb.de/getmatchdata/dfb/2026",
+  "provider_sha256": "85220cbd34ffa016837098f4e11e4b9532e57d0da431dbf8aa0f250a82cd23c9"
+ },
+ {
+  "year": "2026",
+  "dfb_id": "2418337",
+  "rds_id": "2743",
+  "provider_key": "81862",
+  "teams": [
+   "VSG Altglienicke Berlin",
+   "VfL Wolfsburg"
+  ],
+  "dfb_90": [
+   2,
+   2
+  ],
+  "dfb_after_et": [
+   3,
+   3
+  ],
+  "dfb_kicks": [
+   5,
+   6
+  ],
+  "rds_penalty_columns": [
+   8,
+   9
+  ],
+  "provider_90": [
+   2,
+   2
+  ],
+  "provider_results": [
+   {
+    "resultID": 127376,
+    "resultName": "Halbzeit",
+    "pointsTeam1": 1,
+    "pointsTeam2": 0,
+    "resultOrderID": 1,
+    "resultTypeID": 1,
+    "resultTypeKind": "HalfTime",
+    "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+   },
+   {
+    "resultID": 127377,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 2,
+    "pointsTeam2": 2,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   },
+   {
+    "resultID": 127382,
+    "resultName": "Verlängerung",
+    "pointsTeam1": 3,
+    "pointsTeam2": 3,
+    "resultOrderID": 3,
+    "resultTypeID": 4,
+    "resultTypeKind": "AfterExtraTime",
+    "resultDescription": "Ergebnis nach Verlängerung"
+   },
+   {
+    "resultID": 127383,
+    "resultName": "Elfmeterschießen",
+    "pointsTeam1": 8,
+    "pointsTeam2": 9,
+    "resultOrderID": 4,
+    "resultTypeID": 5,
+    "resultTypeKind": "AfterPenalties",
+    "resultDescription": "Ergebnis nach Elfmeterschießen"
+   }
+  ],
+  "normalized": [
+   8,
+   9
+  ],
+  "difference": "disagrees",
+  "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/vsg-altglienicke-vfl-wolfsburg-2418337",
+  "dfb_sha256": "75477ff29a460b89381dd03203ca3385af1fcfc991b968307578d9d026969382",
+  "provider_url": "https://api.openligadb.de/getmatchdata/dfb/2026",
+  "provider_sha256": "85220cbd34ffa016837098f4e11e4b9532e57d0da431dbf8aa0f250a82cd23c9"
+ },
+ {
+  "year": "2026",
+  "dfb_id": "2430552",
+  "rds_id": "2760",
+  "provider_key": "87627",
+  "teams": [
+   "Holstein Kiel",
+   "TSG Hoffenheim"
+  ],
+  "dfb_90": [
+   1,
+   1
+  ],
+  "dfb_after_et": [
+   1,
+   1
+  ],
+  "dfb_kicks": [
+   4,
+   3
+  ],
+  "rds_penalty_columns": [
+   5,
+   4
+  ],
+  "provider_90": [
+   1,
+   1
+  ],
+  "provider_results": [
+   {
+    "resultID": 130476,
+    "resultName": "Halbzeit",
+    "pointsTeam1": 1,
+    "pointsTeam2": 1,
+    "resultOrderID": 1,
+    "resultTypeID": 1,
+    "resultTypeKind": "HalfTime",
+    "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+   },
+   {
+    "resultID": 130477,
+    "resultName": "Endergebnis",
+    "pointsTeam1": 1,
+    "pointsTeam2": 1,
+    "resultOrderID": 2,
+    "resultTypeID": 2,
+    "resultTypeKind": "After90Minutes",
+    "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+   },
+   {
+    "resultID": 130480,
+    "resultName": "Verlängerung",
+    "pointsTeam1": 1,
+    "pointsTeam2": 1,
+    "resultOrderID": 3,
+    "resultTypeID": 4,
+    "resultTypeKind": "AfterExtraTime",
+    "resultDescription": "Ergebnis nach Verlängerung"
+   },
+   {
+    "resultID": 130481,
+    "resultName": "Elfmeterschießen",
+    "pointsTeam1": 5,
+    "pointsTeam2": 4,
+    "resultOrderID": 4,
+    "resultTypeID": 5,
+    "resultTypeKind": "AfterPenalties",
+    "resultDescription": "Ergebnis nach Elfmeterschießen"
+   }
+  ],
+  "normalized": [
+   5,
+   4
+  ],
+  "difference": "disagrees",
+  "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/holstein-kiel-tsg-hoffenheim-2430552",
+  "dfb_sha256": "9b3a705a3ac964592a42f01604acacd11f9a81ec979f3f43c871076fa0f31905",
+  "provider_url": "https://api.openligadb.de/getmatchdata/dfb/2026",
+  "provider_sha256": "85220cbd34ffa016837098f4e11e4b9532e57d0da431dbf8aa0f250a82cd23c9"
+ }
+]

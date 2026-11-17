@@ -1,0 +1,74 @@
+{
+  "replay": {
+    "fields": {
+      "national": {
+        "sides": 1860,
+        "before_binary32_exceptions": 0,
+        "after_binary32_exceptions": 0,
+        "expected_binary32_exceptions": 0,
+        "result_binary32_exceptions": 0,
+        "stakes_binary32_exceptions": 0
+      },
+      "club": {
+        "sides": 161982,
+        "before_binary32_exceptions": 37644,
+        "after_binary32_exceptions": 38256,
+        "expected_binary32_exceptions": 25727,
+        "result_binary32_exceptions": 0,
+        "stakes_binary32_exceptions": 0
+      }
+    },
+    "largest_binary32_ulp_distance": {
+      "national": {
+        "before": 0,
+        "after": 0,
+        "expected": 0,
+        "result": 0,
+        "stakes": 0
+      },
+      "club": {
+        "before": 1,
+        "after": 1,
+        "expected": 8,
+        "result": 0,
+        "stakes": 0
+      }
+    }
+  },
+  "refit": {
+    "fields": {
+      "national": {
+        "sides": 1860,
+        "before_binary32_exceptions": 0,
+        "after_binary32_exceptions": 0,
+        "expected_binary32_exceptions": 0,
+        "result_binary32_exceptions": 0,
+        "stakes_binary32_exceptions": 0
+      },
+      "club": {
+        "sides": 161982,
+        "before_binary32_exceptions": 983,
+        "after_binary32_exceptions": 1003,
+        "expected_binary32_exceptions": 178,
+        "result_binary32_exceptions": 0,
+        "stakes_binary32_exceptions": 0
+      }
+    },
+    "largest_binary32_ulp_distance": {
+      "national": {
+        "before": 0,
+        "after": 0,
+        "expected": 0,
+        "result": 0,
+        "stakes": 0
+      },
+      "club": {
+        "before": 1,
+        "after": 1,
+        "expected": 1,
+        "result": 0,
+        "stakes": 0
+      }
+    }
+  }
+}

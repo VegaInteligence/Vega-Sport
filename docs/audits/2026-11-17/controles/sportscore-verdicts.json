@@ -1,0 +1,326 @@
+[
+  {
+    "case": "subset",
+    "result": "RED",
+    "assertions": {
+      "storage_preserved": false,
+      "accepted_timestamp_preserved": false,
+      "scope_rejection_visible": false,
+      "wrong_source_spelling_absent": true,
+      "public_unchanged": false,
+      "etag_unchanged": false,
+      "version_unchanged": false
+    },
+    "baseline": [
+      "SportScore",
+      "2026-11-17T08:00:00.000Z",
+      [
+        [
+          "Aster City",
+          8
+        ],
+        [
+          "Birch Town",
+          7
+        ],
+        [
+          "Cedar Athletic",
+          1
+        ]
+      ],
+      "W/\"support-v1-4012e48258620feb65dd5973d43e22c640f53cb8cf0fe15b8eaa5d361e5988dc\"",
+      [
+        {
+          "version": 1,
+          "updated_at": "2026-11-17 22:34:00.506929+00:00"
+        }
+      ],
+      [
+        {
+          "status": "ok",
+          "error_code": null,
+          "last_attempt_at": "2026-11-17 08:00:00+00:00",
+          "last_success_at": "2026-11-17 08:00:00+00:00",
+          "rows_written": 3,
+          "unmatched": 0
+        }
+      ]
+    ],
+    "candidate": [
+      "SportScore",
+      "2026-11-17T11:00:00.000Z",
+      [
+        [
+          "Aster City",
+          8
+        ],
+        [
+          "Birch Town",
+          7
+        ]
+      ],
+      "W/\"support-v1-50ba5ebb6f8e88cad4669055f729aea291788dabbf612cf7b0525024b3f3d5c0\"",
+      [
+        {
+          "version": 2,
+          "updated_at": "2026-11-17 22:34:00.734086+00:00"
+        }
+      ],
+      [
+        {
+          "status": "ok",
+          "error_code": null,
+          "last_attempt_at": "2026-11-17 11:00:00+00:00",
+          "last_success_at": "2026-11-17 11:00:00+00:00",
+          "rows_written": 2,
+          "unmatched": 0
+        }
+      ]
+    ]
+  },
+  {
+    "case": "empty",
+    "result": "RED",
+    "assertions": {
+      "storage_preserved": false,
+      "accepted_timestamp_preserved": false,
+      "scope_rejection_visible": false,
+      "wrong_source_spelling_absent": true,
+      "public_unchanged": false,
+      "etag_unchanged": false,
+      "version_unchanged": false
+    },
+    "baseline": [
+      "SportScore",
+      "2026-11-17T08:00:00.000Z",
+      [
+        [
+          "Aster City",
+          8
+        ],
+        [
+          "Birch Town",
+          7
+        ],
+        [
+          "Cedar Athletic",
+          1
+        ]
+      ],
+      "W/\"support-v1-22d3d78a5ceb4f0c3ffd905f3b77d5e9c1ecc9b481c449344db542fb293525ed\"",
+      [
+        {
+          "version": 1,
+          "updated_at": "2026-11-17 22:34:00.416040+00:00"
+        }
+      ],
+      [
+        {
+          "status": "ok",
+          "error_code": null,
+          "last_attempt_at": "2026-11-17 08:00:00+00:00",
+          "last_success_at": "2026-11-17 08:00:00+00:00",
+          "rows_written": 3,
+          "unmatched": 0
+        }
+      ]
+    ],
+    "candidate": [
+      "Vega",
+      "2026-11-17T07:50:00.000Z",
+      [
+        [
+          "Aster City",
+          10
+        ],
+        [
+          "Birch Town",
+          7
+        ],
+        [
+          "Cedar Athletic",
+          1
+        ]
+      ],
+      "W/\"support-v1-30ba5582fd14941077761af13062ca32319d74ae62462cc426348bc2fab7e491\"",
+      [
+        {
+          "version": 2,
+          "updated_at": "2026-11-17 22:34:00.647911+00:00"
+        }
+      ],
+      [
+        {
+          "status": "ok",
+          "error_code": null,
+          "last_attempt_at": "2026-11-17 11:00:00+00:00",
+          "last_success_at": "2026-11-17 11:00:00+00:00",
+          "rows_written": 0,
+          "unmatched": 0
+        }
+      ]
+    ]
+  },
+  {
+    "case": "wrong_last",
+    "result": "RED",
+    "assertions": {
+      "storage_preserved": false,
+      "accepted_timestamp_preserved": false,
+      "scope_rejection_visible": false,
+      "wrong_source_spelling_absent": false,
+      "public_correct": false
+    },
+    "baseline": [
+      "SportScore",
+      "2026-11-17T08:00:00.000Z",
+      [
+        [
+          "Aster City",
+          8
+        ],
+        [
+          "Birch Town",
+          7
+        ],
+        [
+          "Cedar Athletic",
+          1
+        ]
+      ],
+      "W/\"support-v1-b9d82c2e76143396931bad82e642061db2607227348dec36f7fa22ef74572b64\"",
+      [
+        {
+          "version": 1,
+          "updated_at": "2026-11-17 22:34:00.515785+00:00"
+        }
+      ],
+      [
+        {
+          "status": "ok",
+          "error_code": null,
+          "last_attempt_at": "2026-11-17 08:00:00+00:00",
+          "last_success_at": "2026-11-17 08:00:00+00:00",
+          "rows_written": 3,
+          "unmatched": 0
+        }
+      ]
+    ],
+    "candidate": [
+      "SportScore",
+      "2026-11-17T11:00:00.000Z",
+      [
+        [
+          "Aster City",
+          8
+        ],
+        [
+          "Birch Town",
+          7
+        ],
+        [
+          "Cedar Athletic",
+          2
+        ]
+      ],
+      "W/\"support-v1-a5d9d51b22623da7754fbeecd9ec33533954856ff1a402f63afce5754b6fd05b\"",
+      [
+        {
+          "version": 2,
+          "updated_at": "2026-11-17 22:34:00.743020+00:00"
+        }
+      ],
+      [
+        {
+          "status": "ok",
+          "error_code": null,
+          "last_attempt_at": "2026-11-17 11:00:00+00:00",
+          "last_success_at": "2026-11-17 11:00:00+00:00",
+          "rows_written": 3,
+          "unmatched": 0
+        }
+      ]
+    ]
+  },
+  {
+    "case": "known_alias",
+    "result": "GREEN",
+    "assertions": {
+      "accepted": true,
+      "public_official": true,
+      "candidate_points_on_correct_club": true,
+      "version_changed": true,
+      "conditional_200": true
+    },
+    "baseline": [
+      "SportScore",
+      "2026-11-17T08:00:00.000Z",
+      [
+        [
+          "Aster City",
+          8
+        ],
+        [
+          "Birch Town",
+          7
+        ],
+        [
+          "Cedar Athletic",
+          1
+        ]
+      ],
+      "W/\"support-v1-18702b3561fb07f02701697b64b56d11ef2a13b9b50e11cdaafa8cd116f87d00\"",
+      [
+        {
+          "version": 1,
+          "updated_at": "2026-11-17 22:34:00.583783+00:00"
+        }
+      ],
+      [
+        {
+          "status": "ok",
+          "error_code": null,
+          "last_attempt_at": "2026-11-17 08:00:00+00:00",
+          "last_success_at": "2026-11-17 08:00:00+00:00",
+          "rows_written": 3,
+          "unmatched": 0
+        }
+      ]
+    ],
+    "candidate": [
+      "SportScore",
+      "2026-11-17T11:00:00.000Z",
+      [
+        [
+          "Aster City",
+          8
+        ],
+        [
+          "Birch Town",
+          7
+        ],
+        [
+          "Cedar Athletic",
+          2
+        ]
+      ],
+      "W/\"support-v1-3df4b24818adce148114ac8cd3c53c31647260d95a97045915cc2ea2d898b030\"",
+      [
+        {
+          "version": 2,
+          "updated_at": "2026-11-17 22:34:00.829278+00:00"
+        }
+      ],
+      [
+        {
+          "status": "ok",
+          "error_code": null,
+          "last_attempt_at": "2026-11-17 11:00:00+00:00",
+          "last_success_at": "2026-11-17 11:00:00+00:00",
+          "rows_written": 3,
+          "unmatched": 0
+        }
+      ]
+    ]
+  }
+]
