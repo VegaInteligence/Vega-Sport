@@ -188,12 +188,13 @@ export function createCupRoute(read) {
   return async (req, path, params) => {
     if (path === "/api/cups/index") {
       validate(params, {});
-      const rows = await read("SELECT competition_id,competition,name,season,format,kind,source_url,data_url FROM api.cup_editions ORDER BY competition_id,season");
+      const rows = await read("SELECT competition_id,competition,name,season,format,kind,source_url,data_url,logo_url FROM api.cup_editions ORDER BY competition_id,season");
       const cups = new Map();
       for (const e of rows) {
         const cup = cups.get(e.competition_id) ?? { id: e.competition_id, key: e.competition, seasons: [] };
-        // The latest edition names the cup and its source.
-        cups.set(e.competition_id, { ...cup, name: e.name ?? e.competition, format: e.format, source: SOURCES[e.kind](e), seasons: [...cup.seasons, e.season] });
+        // The latest edition names the cup and its source; the competition's own verified logo, when it has one (§22).
+        cups.set(e.competition_id, { ...cup, name: e.name ?? e.competition, format: e.format, source: SOURCES[e.kind](e), seasons: [...cup.seasons, e.season],
+          ...(e.logo_url && { imageUrl: e.logo_url }) });
       }
       return respond(req, { cups: [...cups.values()] }, "catalog");
     }
@@ -203,7 +204,7 @@ export function createCupRoute(read) {
       if (p.kind !== "supplemental") reject(404, "Donnée indisponible.");
       const [revision] = await read("SELECT * FROM api.source_revisions WHERE source='open-matchday'");
       const editions = await read(
-        `SELECT e.competition,e.name,e.season,(SELECT count(*) FILTER(WHERE t.status='finished')::int FROM api.cup_table_rows t WHERE t.competition_season_id=e.competition_season_id) results,
+        `SELECT e.competition,e.name,e.season,e.logo_url,(SELECT count(*) FILTER(WHERE t.status='finished')::int FROM api.cup_table_rows t WHERE t.competition_season_id=e.competition_season_id) results,
            (SELECT count(*) FILTER(WHERE t.status<>'finished')::int FROM api.cup_table_rows t WHERE t.competition_season_id=e.competition_season_id) fixtures
          FROM api.cup_editions e WHERE e.kind='open-matchday' ORDER BY e.competition,e.season`,
       );
@@ -219,6 +220,8 @@ export function createCupRoute(read) {
         competitions: editions.map((e) => ({
           name: e.name, folder: e.competition, season: e.season,
           tables: { goals: { rows: 0 }, results: { rows: e.results }, fixtures: { rows: e.fixtures } }, country_code: e.competition.split("_")[0],
+          // The edition's own competition's verified logo (its FK), additive (§22).
+          ...(e.logo_url && { image_url: e.logo_url }),
         })),
       }, "catalog");
     }

@@ -1,3 +1,4 @@
+import { acceptedImageSource } from "./image-source.js";
 import { apiUrl } from "../data-url.js";
 export {
   formatNumber as number,
@@ -18,23 +19,9 @@ export const date = (value) =>
       )
     : "—";
 export function safeImageUrl(value) {
-  try {
-    const u = new URL(value);
-    return u.protocol === "https:" &&
-      (u.hostname === "cdn.pitchapi.dev" ||
-        (u.hostname === "upload.wikimedia.org" &&
-          /^\/wikipedia\/commons\//.test(u.pathname)) ||
-        (u.hostname === "img.thesports.com" &&
-          /^\/football\/(?:team|competition)\/[a-z0-9]+\.(?:png|webp|jpe?g)$/i.test(
-            u.pathname,
-          ))) &&
-      !u.username &&
-      !u.password
-      ? apiUrl(`/api/assets?url=${encodeURIComponent(u.href)}`)
-      : "";
-  } catch {
-    return "";
-  }
+  return acceptedImageSource(value)
+    ? apiUrl(`/api/assets?url=${encodeURIComponent(new URL(value).href)}`)
+    : "";
 }
 export function mediaImageSource(
   url,

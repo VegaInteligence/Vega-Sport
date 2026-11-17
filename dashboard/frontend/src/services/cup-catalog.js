@@ -38,6 +38,9 @@ const CUP_LABELS = {
   "SUI_CUP_swiss-cup": ["Coupe de Suisse", "Swiss Cup"],
 };
 
+/** The verified logo the API gives for the edition's own competition (its FK), never another's (FAILURE_MODES.md §22). */
+const ownLogo = (item) => (typeof item.image_url === "string" && item.image_url ? { imageUrl: item.image_url } : {});
+
 /** Only promote actual cup datasets with at least one collected match. */
 export function supplementalCupCatalog(index) {
   if (!Array.isArray(index?.competitions)) return [];
@@ -49,7 +52,7 @@ export function supplementalCupCatalog(index) {
     const labels = CUP_LABELS[item.folder] || [item.name || item.folder];
     const archive = NATIONAL_CUP_ARCHIVES[item.folder];
     const editions = [season, ...Object.keys(item.editions || {}).filter((value) => /^\d{4}\/\d{4}$/.test(value)), ...(archive ? [archive.season] : []), ...(item.folder === GERMAN_CUP_FOLDER ? GERMAN_CUP_SEASONS : [])];
-    return [{ id: "open-matchday:" + item.folder, name: labels[0], country: item.country_code || "", source: "open-matchday", folder: item.folder, seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...labels.slice(1), item.name || ""], tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null }];
+    return [{ id: "open-matchday:" + item.folder, name: labels[0], country: item.country_code || "", source: "open-matchday", folder: item.folder, seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...labels.slice(1), item.name || ""], tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null, ...ownLogo(item) }];
   });
 }
 
@@ -105,7 +108,7 @@ export function supplementalLeagueCatalog(index, native = []) {
     const editions = [season, ...Object.keys(item.editions || {}).filter((value) => /^\d{4}\/\d{4}$/.test(value))];
     return [{ id: "open-matchday:" + item.folder, name: labels[0], country, source: "open-matchday", kind: "league", folder: item.folder,
       seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...new Set([...labels.slice(1), item.name || ""])].filter(Boolean),
-      tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null }];
+      tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null, ...ownLogo(item) }];
   });
 }
 

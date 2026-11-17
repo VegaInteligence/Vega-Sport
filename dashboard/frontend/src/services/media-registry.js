@@ -1,28 +1,10 @@
+import { acceptedImageSource } from "./image-source.js";
 import { safeResolvedMedia } from "./resolved-media.js";
 let enabled = false;
 let snapshot = Object.freeze(Object.create(null));
 const listeners = new Set();
 const limit = 2048;
-const sourceAllowed = (value) => {
-  try {
-    const u = new URL(value);
-    return (
-      value.length <= 2048 &&
-      u.protocol === "https:" &&
-      !u.username &&
-      !u.password &&
-      (u.hostname === "cdn.pitchapi.dev" ||
-        (u.hostname === "upload.wikimedia.org" &&
-          /^\/wikipedia\/commons\//.test(u.pathname)) ||
-        (u.hostname === "img.thesports.com" &&
-          /^\/football\/(?:team|competition)\/[a-z0-9]+\.(?:png|webp|jpe?g)$/i.test(
-            u.pathname,
-          )))
-    );
-  } catch {
-    return false;
-  }
-};
+const sourceAllowed = acceptedImageSource;
 export function mediaRepresentationEnabled() {
   return typeof window !== "undefined" && enabled;
 }
