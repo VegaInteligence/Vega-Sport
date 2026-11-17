@@ -61,10 +61,9 @@
   - Production, read-only with the deployed code: migration 126 applied; 2,050 complementary matches to forecast; 17 complementary leagues projected; the Nations League's totals exact (18 per league). Evidence: scratchpad 41a8837f…/evidence.
   - Mockup validated (« Yes, implement », scratchpad 41a8837f…/mock/mock-predictions*.png) and shipped (dd640008dc, migration 127): each upcoming match's forecast in the cup lists (bar + three shares; API by match id), League A's Maintien and En A 2028–29, Leagues B–D's outcomes and 2028–29 league; a complementary league's projection tab. Local E2E against a stand-in API with read-only production figures: scratchpad 41a8837f…/evidence/allcomp.
   - Verified in production after the worker's 14:20 UTC projection pass: Nations League totals exact (18 per league in 2028–29), forecasts in the lists (League Cup 4/4, FA Cup 7/20, National League 350/352), League Cup and Scottish League Cup projected; live pages as the mockup (evidence/allcomp prod-*.png).
-  - Found: the 19 open-matchday leagues have no page on the site (the catalogue lists cups only); their forecasts and projections are served but not shown. A league page needs its own mockup (standings, no bracket).
+  - The 19 open-matchday leagues get their pages (user: « by pass the mockup and do for all of them directly i trust you », 17 Nov): standings from the results, matches with forecasts, projection; no bracket; a league the main source holds never listed twice.
 - Not covered yet, by data: Euro 2028 (teams unknown), MLS/Liga MX play-offs (the source names « 2nd ranked »), Libertadores 2026 (source stopped).
 - Next action:
-  - ask the user about pages for the 19 open-matchday leagues (mockup first);
   - the new Elo (every competition, shared confederation mean) at the worker's next Elo pass; the other five domestic cups after the 21:30 UTC merges;
   - after 21:30 UTC, verify the merges.
 

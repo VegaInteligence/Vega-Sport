@@ -261,7 +261,11 @@ La Coupe d'Italie attend la fusion de trois de ses clubs.
 Sur le site (maquette validée le 17 novembre) :
 
 - Chaque match à venir de la liste d'une coupe montre son pronostic : une barre en trois parts (domicile, nul, extérieur), puis les trois parts. L'API le donne avec le match (`forecast`), lu par l'identifiant du match (migration 127 pour les tables d'open-matchday).
-- Les 19 championnats d'open-matchday n'ont pas encore de page sur le site. Leurs pronostics et projections sont calculés et servis, et attendent une page.
+- Les 19 championnats d'open-matchday ont leur page depuis le 17 novembre (décision de l'utilisateur, sans maquette) :
+  - leur classement, calculé à partir des résultats que donne la source (points, différence de buts, buts marqués, puis le nom ; aucune pénalité ni confrontation directe ne se lit dans les scores) ;
+  - leurs matchs, chacun à venir avec son pronostic ;
+  - leur projection, comme celle d'un championnat de la source principale.
+  Un championnat que la source principale tient déjà (même nom, même pays) n'est jamais listé deux fois.
 
 Pas encore couvert : l'Euro 2028 (les équipes ne sont pas encore qualifiées), les phases finales de la MLS et de la Liga MX (la source nomme encore « 2nd ranked » et « 3rd ranked » à la place des clubs).
 

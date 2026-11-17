@@ -36,6 +36,30 @@ function readableRound(round, group) {
   return [first, second && second !== first ? second : ""].filter(Boolean).join(" · ");
 }
 
+/**
+ * A league's standings from its matches (a complementary league, VI-19): points, goal difference, goals scored, then
+ * the name; a team with no match played yet is in the table all the same. Computed from the results the source gives:
+ * no deduction or head-to-head rule can be read from them.
+ */
+export function leagueTable(matches) {
+  const rows = new Map();
+  const row = (name) => rows.get(name) || rows.set(name, { name, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, points: 0 }).get(name);
+  for (const match of matches || []) {
+    const home = row(match.home), away = row(match.away);
+    if (match.status !== "finished" || !Array.isArray(match.score)) continue;
+    const [hs, as] = match.score;
+    home.played++; away.played++;
+    home.goalsFor += hs; home.goalsAgainst += as; away.goalsFor += as; away.goalsAgainst += hs;
+    if (hs > as) { home.wins++; away.losses++; home.points += 3; }
+    else if (hs < as) { away.wins++; home.losses++; away.points += 3; }
+    else { home.draws++; away.draws++; home.points++; away.points++; }
+  }
+  return [...rows.values()]
+    .map((r) => ({ ...r, difference: r.goalsFor - r.goalsAgainst }))
+    .sort((a, b) => b.points - a.points || b.difference - a.difference || b.goalsFor - a.goalsFor || a.name.localeCompare(b.name, "fr"))
+    .map((r, i) => ({ position: i + 1, ...r }));
+}
+
 /** A match's forecast as the API gives it (VI-19): three shares (home, draw, away) that make a law, else null. */
 export function matchForecast(value) {
   if (!value || typeof value !== "object") return null;
