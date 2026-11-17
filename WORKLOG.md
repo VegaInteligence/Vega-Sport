@@ -41,8 +41,13 @@
   - Forcing the identity pass was refused by the permission classifier; it runs at 21:30 UTC and the Elo no longer depends on it.
 - Backfill: 68,748 jobs left (about 15 h). 2021/22 has 9,321 scored players and 2022/23 has 14,844, recomputed automatically.
 - Evidence: scratchpad evidence-vi21, evidence-cups (check-knockout.mjs, local-dfb.png), diag-elofinal.
+- 17 Nov, late morning:
+  - Elo verified in production (3,060 teams, no copy ranked).
+  - User decisions: no strength for the 7,520 clubs found only in the historic archives; « oui » to the Nations League by stage.
+  - The Nations League mockup was sent (scratchpad unl/mock-unl*.png).
+  - CAF question answered: it is about including the African Champions League's matches in the club Elo.
 - Next action:
-  - after the next daily pass, verify the Elo (3,060 teams, no copy) and the cups' numbers and view in production;
+  - the Nations League view and worker projection, once the user validates the mockup;
   - after 21:30, verify the merges;
   - left for the user: the CAF Champions League's prior, and the 7,520 clubs found only in the historic archives.
 
