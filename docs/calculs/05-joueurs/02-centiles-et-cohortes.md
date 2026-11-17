@@ -27,7 +27,7 @@ Code : `performanceProfile` ([player-profile.js](../../../dashboard/frontend/src
 | Groupe F (poste inconnu) | comparé à toutes les performances de joueurs de champ (D, M, O et F) |
 | Mesures non classées | buts, passes décisives, xA |
 
-La cohorte compte des **performances**, pas des joueurs : un joueur régulier y figure autant de fois qu'il a joué au moins 30 minutes. Seuls les matchs terminés y entrent (migration 124), y compris dans la lecture non compacte du site, où la fiche d'une performance se compare aux performances terminées de la saison lue (17 novembre 2026, étape 7). La performance ouverte, même d'un match annulé ou en cours, reste affichée avec ses valeurs et son rang parmi les notes de son match.
+La cohorte compte des **performances**, pas des joueurs : un joueur régulier y figure autant de fois qu'il a joué au moins 30 minutes. Seuls les matchs terminés y entrent (migration 125), y compris dans la lecture non compacte du site, où la fiche d'une performance se compare aux performances terminées de la saison lue (17 novembre 2026, étape 7). La performance ouverte, même d'un match annulé ou en cours, reste affichée avec ses valeurs et son rang parmi les notes de son match.
 
 Le seuil de 30 vaut **pour chaque mesure** : une mesure connue de 12 pairs n'a pas de centile, même dans une cohorte de 200 performances (côté serveur, `known ≥ 30` dans `performanceProfileFromCounts` ; côté site, les valeurs connues de la mesure dans [player-profile.js](../../../dashboard/frontend/src/services/player-profile.js)). Corrigé le 17 novembre 2026 (audit 13c).
 

@@ -115,7 +115,7 @@ branch's copy in brackets.
 | `ClubScoutAdvanced.jsx:346` « Conversion » | `` `${fmtNum(values.conversion, 1)} %` `` | missing → unavailable (not « — % ») |
 | `ClubScoutTabs.jsx:280-281, 303-319` [279-280, 302-318] « Buts · xG », « Encaissés · xG contre » | `record.gf − (v.xg ?? 0) × record.matches` (and `ga`, `xga`) | actual goals **and** xG on one explicit matched support. The paired xG fields carry no paired actual goals: replacing only the xG while keeping `record.gf` stays wrong. The service provides no paired goals field yet |
 | `ClubScoutUI.jsx:1015-1037` | adds and renders game-state durations | B7 contract (§8) |
-| `profiles.mjs` halves route | publishes complete halves only, without saying how many were left out | read `excluded_matches`, `excluded_minutes` (125) |
+| `profiles.mjs` halves route | publishes complete halves only, without saying how many were left out | read `excluded_matches`, `excluded_minutes` (126) |
 | Club similarity (`agg.team_percentiles`) | reads `covered_matches` | now the true count per indicator: some clubs' axes fall under the 5-match gate |
 | `ClubScoutAdvanced.jsx:235-236` `setXg`, `:287-288` « Contre-attaques et CPA réunis » (this branch only; not in the snapshot) | adds a null category xG as 0: an unknown fast-break xG beside 1.2 at corners shows 1.2; all-null categories show 0 | unavailable when any included category is null, all-null unavailable, all-known summed and an observed 0 kept, « for » and « against » alike (FAILURE_MODES §16.6) |
 | `ClubScoutTabs.jsx:482-485, 526` [481-484, 525] `Upcoming` | `opponentStrength` null (stage 7: no centile below five measured clubs) prints « hors référentiel » and hides the position | wording that distinguishes a club outside the reference from an insufficiently measured one |
@@ -124,7 +124,7 @@ The stage-2 version of this table cited `ClubScoutUI.jsx:1463, 1528, 1577-1578` 
 
 ## Halves: coverage loss
 
-A half counts only when every statistic the route reads is known (125). On the committed real
+A half counts only when every statistic the route reads is known (126). On the committed real
 fixture `match_m_08LEIz` (`players_halves.json`, sha256 `d70d442a…`), 46 of 50 played halves stay
 (1,800 minutes) and 4 are left out (180 minutes), all four for missing touches
 (`context/half-fixture-coverage.json`). That is one match sheet, not production incidence. The
@@ -202,8 +202,8 @@ version the change. Proposed tests and their RED logs: `evidence/b7-handoff/`. N
 
 ## Migration and recompute (« Recalcul »)
 
-**Migrations** (new files only; 123 is VI-22's): `124_finished_player_seasons.sql`,
-`125_complete_half_totals.sql`, `126_expected_points_law.sql`, `127_paired_club_indicators.sql`,
+**Migrations** (new files only; 123 is VI-22's, 124 the domestic cups' projection; renumbered from 124–127 when VI-23 was rebased on main, 17 Nov 2026): `125_finished_player_seasons.sql`,
+`126_complete_half_totals.sql`, `127_expected_points_law.sql`, `128_paired_club_indicators.sql`,
 applied in order by `vega.store.migrate` (each file commits alone). No existing migration and no
 generated file (009, 012, 015, `api_schema.py`) changes; their drift tests stay green.
 
@@ -233,8 +233,8 @@ dedicated local databases):
    ON CONFLICT (scope_kind, player_id, team_id, competition_season_id, cohort_id)
    DO UPDATE SET revision = ops.dirty_scopes.revision + 1, queued_at = now();
    ```
-   This applies B1 (finished matches only, stale rows deleted), the player list and peers (124), the
-   xPts law (126), the paired club supports (127) and placement's own support (stage 5). The club
+   This applies B1 (finished matches only, stale rows deleted), the player list and peers (125), the
+   xPts law (127), the paired club supports (128) and placement's own support (stage 5). The club
    and player cohorts follow through `models.process_cohorts` (club cohorts read
    `club-indicators-v2` with true covered counts; a player's position group reads his finished
    matches, stage 5).
