@@ -38,20 +38,20 @@ jobs:
       PYTHONPATH: backend
       V2_DATABASE_URL: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_pilot
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # The worker's sources run the site's readers (shared/, frontend services).
           sparse-checkout: |
             backend
             dashboard/shared
             dashboard/frontend/src
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: {python-version: '3.12'}
-      - uses: actions/setup-node@v4
-        with: {node-version: '22'}
+      - uses: actions/setup-node@v7
+        with: {node-version: '24', package-manager-cache: false}
       - run: pip install -r backend/requirements.txt
       - name: AWS session (vega-v2-pilot, provider key only)
-        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: arn:aws:iam::361769570630:role/vega-v2-pilot
           aws-region: us-east-2
@@ -86,7 +86,7 @@ jobs:
         run: python -m vega.worker --max-jobs 700 --until-idle --interval 0.25 --cohort-delay 0 --report work/vega-v2-worker.md
       - name: Export measurements only
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vega-v2-pilot-measurements
           path: work/vega-v2-*.md

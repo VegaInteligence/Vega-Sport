@@ -60,4 +60,10 @@
 
 ## Next.js security update (17 Nov 2026)
 
-- 16.4.3 → 16.4.6 (`dashboard/package.json`, `bun.lock`): GHSA-mfr8-8qww-v76h (`use cache` through `unstable_cache`, fixed in 16.4.5; the site uses neither). Build no longer stops on Next's notice; site tests 627/627; built site checked against production on 10 pages and the phone club page, identical, no console error. Next action: push and check the Vercel deployment.
+- 16.4.3 → 16.4.6 (`dashboard/package.json`, `bun.lock`): GHSA-mfr8-8qww-v76h (`use cache` through `unstable_cache`, fixed in 16.4.5; the site uses neither). Build no longer stops on Next's notice; site tests 627/627; built site checked against production on 10 pages and the phone club page, identical, no console error. Shipped `1c61a7ed93`: CI green, Vercel production serves 16.4.6 (`window.next.version`), the same 11 checks identical.
+
+## Dependencies and tools ([VI-24](https://linear.app/vegainteligence/issue/VI-24/dependances-et-outils-a-jour-site-api-worker-et-ci), 17 Nov 2026)
+
+- Site: lucide-react 1.74.0, @vercel/speed-insights 2.1.0, prettier 3.10.1 (react 19.3.1 already the latest); worker: psycopg 3.3.9, boto3 1.44.4; read API: pg already the latest.
+- CI and deploy: bun 1.4.4 everywhere (was 1.2.21 for the API package and the deploy); Node 26 for the site (Vercel) and 24 elsewhere (Lambda nodejs24.x); actions checkout/setup-node/setup-python/upload-artifact v7, configure-aws-credentials v6.3.0 (pinned SHA).
+- Kept on purpose: Python 3.12 in the worker, Lambda nodejs24.x. Local checks: Python 328 OK, API 170/170, site 627/627, build, packages, 11 pages identical to production. Next action: push, then CI (incl. Isolated pilot's AWS login) and Vercel.

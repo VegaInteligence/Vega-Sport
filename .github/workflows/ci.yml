@@ -30,11 +30,11 @@ jobs:
     env:
       PYTHONPATH: backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: {python-version: '3.12'}
-      - uses: actions/setup-node@v4
-        with: {node-version: '22'}
+      - uses: actions/setup-node@v7
+        with: {node-version: '24', package-manager-cache: false}
       - run: pip install -r backend/requirements.txt
       - name: Disposable test databases
         run: python backend/ci/test_databases.py postgresql://postgres:v2-ci-only@127.0.0.1:5432 >> "$GITHUB_ENV"
@@ -47,12 +47,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # The version dashboard/package.json names (packageManager): it wrote bun.lock.
       - uses: oven-sh/setup-bun@v2
         with: {bun-version: '1.4.4'}
-      - uses: actions/setup-node@v4
-        with: {node-version: '22'}
+      - uses: actions/setup-node@v7
+        with: {node-version: '26', package-manager-cache: false}
       - run: bun install --frozen-lockfile
         working-directory: dashboard
       - name: Site tests
@@ -67,8 +67,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: {python-version: '3.12'}
       - run: pip install cfn-lint==1.43.0
       - run: cfn-lint --regions us-east-2 -- infra/aws/*.yaml
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build
         run: docker build --platform linux/arm64 -f backend/Dockerfile -t vega-worker:${{ github.sha }} .
       - name: The image runs its tools
@@ -94,14 +94,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
-        with: {bun-version: '1.2.21'}
-      - uses: actions/setup-node@v4
-        with: {node-version: '22'}
+        with: {bun-version: '1.4.4'}
+      - uses: actions/setup-node@v7
+        with: {node-version: '24', package-manager-cache: false}
       - run: npm ci --prefix backend/api
       - run: python3 infra/aws/package_api.py "$RUNNER_TEMP/api"
       # GET /live/matches/{id}: its own function, the runtime's AWS SDK left out of the bundle.
       - run: python3 infra/aws/package_api.py "$RUNNER_TEMP/live" live
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: {name: api-package, path: '${{ runner.temp }}/api/*.zip', retention-days: 14}
