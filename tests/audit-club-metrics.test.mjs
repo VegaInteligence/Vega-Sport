@@ -465,9 +465,9 @@ test("a missing xG leaves its bucket's xG unknown; a known zero stays zero (FM-S
   assert.deepEqual([p.for.open.shots, p.for.open.xg], [3, null], "missing, then known: still unknown");
   assert.equal(p.for.corner.xg, 0, "known zeros");
   assert.equal(p.against.open.xg, null, "not a finite number");
-  // A known 0 keeps its point at 0; a missing xG keeps the legacy 0.01 on the map, which the
-  // owned ShotPair header still adds as a value (unresolved, VI-22 handoff).
-  assert.deepEqual(p.mapFor.map((point) => point.xg), [0.3, 0.01, 0.2, 0, 0]);
+  // A known 0 keeps its point at 0; a missing xG stays null on the map: ShotPair draws the point
+  // small, says « xG indisponible » and leaves its header total unknown (VI-22, 17 Nov 2026).
+  assert.deepEqual(p.mapFor.map((point) => point.xg), [0.3, null, 0.2, 0, 0]);
   // All known: the sums as before.
   shotNo = 0;
   const known = profileOf([attempt(CLUB, "regular_play", 0.3), attempt(CLUB, "regular_play", 0.2, { isGoal: true })]);
