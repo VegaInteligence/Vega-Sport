@@ -1390,3 +1390,51 @@ can fail, so the measured support leans very slightly towards fewer goals — re
 Values differ from main's, which credited an opponent's own goal to finishing. Readers of the shot
 flag left as they are (handed off): `club-game-states.js`, `club-analysis.js`, `home-insights.js`;
 the normalizer's NULL for an ordinary goal shot (VI-21).
+
+## 18. A cohort re-marked without pause is never refreshed (VI-26, written before the tests)
+
+### 18.1 What production holds (read-only, 17 Nov 2026, 16:42 UTC)
+
+- `models.process_cohorts` claims a queued cohort only once its `ops.dirty_scopes.queued_at` is 600 s old.
+- `mark_cohorts` sets `queued_at = now()` and bumps `revision` each time an edition of the cohort changes.
+- `team:2021:europe` (cohort 5146) is at revision 2,853. The 2021 backfill rewrites its seven leagues' team
+  rows every few minutes, so the cohort has not been refreshed since 9 Nov: calc run 5466, still on
+  `docs-calculs-2026-11-09`.
+- Its 2022–2026 counterparts republished in `club-indicators-v2` on 17 Nov at 15:02–15:18 UTC.
+
+### 18.2 The rule
+
+- A queued cohort keeps the time of its first mark not yet refreshed, `first_queued_at` (migration 133). A
+  re-mark leaves it unchanged.
+- The cohort is due at the earlier of `queued_at + 10 min` (the debounce: a match day refreshes a league a few
+  times, not once per match) and `first_queued_at + 60 min` (the maximum wait).
+- Each pass claims the 50 cohorts due first, oldest due time first, and refreshes them.
+- A cohort re-marked while it was refreshed stays queued. Its wait starts again from the time of the claim:
+  the refresh read every change made before it.
+- 60 min bounds the age of a cohort that keeps changing to about an hour, which is a long match window.
+  Such a cohort refreshes at most once an hour while marks continue, plus once 10 min after they stop.
+
+### 18.3 Failure modes and expected outcomes
+
+| # | Situation | Expected |
+|---|---|---|
+| 18a | Marked once, 5 min ago | Not due (debounce kept) |
+| 18b | Marked once, 11 min ago | Due |
+| 18c | First marked 61 min ago, re-marked 1 min ago (starving) | Due |
+| 18d | First marked 30 min ago, re-marked 1 min ago | Not due: within the maximum wait |
+| 18e | A forced cohort re-marked during its refresh | Stays queued; due again only 60 min after the claim (or 10 min after its last mark), not on every pass |
+| 18f | A forced cohort not re-marked during its refresh | Deleted from the queue, as today |
+| 18g | More than 50 due cohorts | The 50 with the oldest due time (`least(queued_at + delay, first_queued_at + max wait)`, then id) |
+| 18h | `min_age_seconds=0` (tests, `cohort_delay=0`) | Every queued cohort due, as today |
+| 18i | `player_season`, `team_season`, `competition_season` scopes | Unchanged: the calculator reads neither column; an insert without the column gets `now()` |
+| 18j | Rows already queued when migration 133 runs | `first_queued_at` = the migration's time, so a starving cohort is refreshed within 60 min of the deploy |
+| 18k | A cohort marked after its row was deleted | A new row: both times `now()` |
+
+**Not changed (recorded):**
+- A refresh that raises still ends the whole pass (`Worker.calculate` logs `calculator error`), so a cohort that
+  always fails keeps the cohorts behind it waiting. That was already true before this change.
+- The status views' `oldest_dirty_at` still reads `min(queued_at)`.
+
+End to end: on a local database, one cohort is re-marked every minute for 70 simulated minutes while another
+is marked once. The first is refreshed at the maximum wait, once only, and stays queued after its last
+re-mark. The second is refreshed 10 minutes after its mark.

@@ -241,16 +241,22 @@ def ensure_cohorts(conn, edition):
     return cohorts
 
 
+def mark_cohort(conn, cohort):
+    """Queue one cohort for recalculation. Marked again before it is recalculated, it keeps its
+    first_queued_at (migration 133), so its wait has an end (process_cohorts)."""
+    conn.execute(
+        """INSERT INTO ops.dirty_scopes(scope_kind, cohort_id) VALUES ('cohort', %s)
+           ON CONFLICT (scope_kind, player_id, team_id, competition_season_id, cohort_id)
+           DO UPDATE SET revision = ops.dirty_scopes.revision + 1, queued_at = now()""",
+        (cohort,),
+    )
+
+
 def mark_cohorts(conn, edition):
     """After an edition's aggregates change: its cohorts are queued for recalculation."""
     cohorts = ensure_cohorts(conn, edition)
     for cohort in cohorts:
-        conn.execute(
-            """INSERT INTO ops.dirty_scopes(scope_kind, cohort_id) VALUES ('cohort', %s)
-               ON CONFLICT (scope_kind, player_id, team_id, competition_season_id, cohort_id)
-               DO UPDATE SET revision = ops.dirty_scopes.revision + 1, queued_at = now()""",
-            (cohort,),
-        )
+        mark_cohort(conn, cohort)
     return cohorts
 
 
@@ -735,20 +741,31 @@ def refresh_squad_profiles(conn, season):
 # Orchestration -------------------------------------------------------------
 
 
-def process_cohorts(conn, *, limit=50, min_age_seconds=600):
-    """Recalculate queued cohorts. A cohort waits `min_age_seconds` after its last change,
-    so a match day recalculates a league a few times, not once per match."""
+# The longest a queued cohort waits, counted from its first change not yet recalculated
+# (FAILURE_MODES §18): a cohort that keeps changing, such as a league during a match window or
+# one whose seasons a backfill rewrites every few minutes, is still recalculated about hourly.
+COHORT_MAX_WAIT_SECONDS = 3600
+
+
+def process_cohorts(conn, *, limit=50, min_age_seconds=600, max_wait_seconds=COHORT_MAX_WAIT_SECONDS):
+    """Recalculate queued cohorts, the earliest due first. A cohort is due `min_age_seconds` after
+    its last change, so a match day recalculates a league a few times, not once per match, and at
+    the latest `max_wait_seconds` after its first change not yet recalculated."""
+    due = "least(queued_at + make_interval(secs => %(delay)s), first_queued_at + make_interval(secs => %(wait)s))"
     claimed = conn.execute(
-        """SELECT id, cohort_id, revision FROM ops.dirty_scopes
-           WHERE scope_kind='cohort' AND queued_at <= now() - make_interval(secs => %s)
-           ORDER BY queued_at, id LIMIT %s""",
-        (min_age_seconds, limit),
+        f"""SELECT id, cohort_id, revision, now() FROM ops.dirty_scopes
+            WHERE scope_kind='cohort' AND {due} <= now()
+            ORDER BY {due}, id LIMIT %(limit)s""",
+        {"delay": min_age_seconds, "wait": max_wait_seconds, "limit": limit},
     ).fetchall()
     seasons = set()
-    for ident, cohort, revision in claimed:
+    for ident, cohort, revision, claimed_at in claimed:
         c = refresh_cohort(conn, cohort)
         seasons.add(c["season"])
-        conn.execute("DELETE FROM ops.dirty_scopes WHERE id=%s AND revision=%s", (ident, revision))
+        if not conn.execute("DELETE FROM ops.dirty_scopes WHERE id=%s AND revision=%s", (ident, revision)).rowcount:
+            # Marked again while it was recalculated: the recalculation read every change made
+            # before the claim, so the wait starts again from there.
+            conn.execute("UPDATE ops.dirty_scopes SET first_queued_at=%s WHERE id=%s", (claimed_at, ident))
         conn.execute(
             """INSERT INTO ops.resource_versions(resource_kind, resource_id, published_at) VALUES ('cohort', %s, now())
                ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1,
