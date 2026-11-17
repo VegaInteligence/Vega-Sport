@@ -271,17 +271,18 @@ def elo_updates(matches, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME, seeds=N
 # Columns 8 to 12: the match's day, its competition, whether it comes from a complementary
 # source (a cup-source edition), whether it is international (a European competition, or
 # national teams), the edition's cup key. One Elo for every match (the user, 16 November 2026;
-# VI-21, 17 November): every match of open-matchday's leagues and cups, OpenLigaDB's German cup,
-# OpenFootball's national cup archives and the American and world club cups counts, a club no
-# PitchAPI league holds entering at its group's level (complementary_leagues); their professional
-# clubs' spellings are reviewed (curated.CLUB_ALIASES) and applied before the identity pass merges
-# them (merged_rows). The CAF Champions League still counts only between two clubs PitchAPI knows:
-# measured on 17 November, it set African leagues with no other link (Egypt +104).
+# VI-21, 17 November): every competition counts (« chaque compétition doit être prise en compte dans
+# les scores des équipes »), its matches read whatever the source: PitchAPI's, open-matchday's leagues
+# and cups, OpenLigaDB's, OpenFootball's cups and archives of national cups, the continental cups
+# (CAF Champions League included) and International Results' national teams. A club no PitchAPI
+# league holds enters at its group's level (complementary_leagues); their professional clubs'
+# spellings are reviewed (curated.CLUB_ALIASES) and applied before the identity pass merges them
+# (merged_rows). Left out: a club against a national team, a cup match without its day, two teams not
+# marked national in a national teams' competition (historic nations, no clubs), the historic archives
+# (archive_key; the user's decision of 17 November), and the copies elo_matches drops.
 ELO_MATCHES = """
-WITH known AS (
-  SELECT DISTINCT v.team_id FROM core.matches m
-  JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL AND cs.cup_key IS NULL
-  CROSS JOIN LATERAL (VALUES (m.home_team_id), (m.away_team_id)) v(team_id))
+WITH nations AS (
+  SELECT DISTINCT m.competition_season_id FROM core.matches m JOIN core.teams t ON t.id = m.home_team_id AND t.is_national)
 SELECT m.id, m.season_id, coalesce(m.kickoff_at, m.match_date::timestamp AT TIME ZONE 'UTC') AS kickoff,
   m.home_team_id, m.away_team_id, m.home_score, m.away_score, coalesce(m.is_neutral, false),
   m.match_date, cs.competition_id, cs.cup_key IS NOT NULL,
@@ -294,11 +295,7 @@ JOIN core.teams ta ON ta.id = m.away_team_id
 WHERE m.status = 'finished' AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL
   AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL
   AND (cs.cup_key IS NULL OR (m.match_date IS NOT NULL AND (th.is_national IS TRUE) = (ta.is_national IS TRUE)
-       AND ((m.home_team_id IN (SELECT team_id FROM known) AND m.away_team_id IN (SELECT team_id FROM known))
-            OR th.is_national OR cs.cup_key LIKE 'open-matchday:%%' OR cs.cup_key LIKE 'openligadb:germany-cup:%%'
-            OR cs.cup_key LIKE 'open-cups:%%-archive:%%' OR cs.cup_key LIKE 'open-cups:france-cup:%%'
-            OR cs.cup_key LIKE 'open-cups:copa-libertadores:%%' OR cs.cup_key LIKE 'open-cups:copa-sudamericana:%%'
-            OR cs.cup_key LIKE 'open-cups:concacaf-champions:%%' OR cs.cup_key LIKE 'open-cups:club-world-cup:%%')))
+       AND (th.is_national OR cs.id NOT IN (SELECT competition_season_id FROM nations))))
 ORDER BY 3 NULLS LAST, m.match_date NULLS LAST, m.id"""
 
 
@@ -535,7 +532,8 @@ REFERENCE_SE = 25.0  # the leagues the scale is held by: standard error below th
 LEVEL_PRIOR_SD = 400.0  # the gauge of the first fit, with no prior of its own
 TIER_GAP, TIER_GAP_SD, TOP_SD = 160.0, 40.0, 120.0  # the prior's settings when the base has too few leagues to measure them
 NEWTON_ROUNDS, NEWTON_TOLERANCE = 40, 0.25
-CONFEDERATION_LEAGUES = 3  # informed top divisions a confederation's own mean needs
+CONFEDERATION_LEAGUES = 3  # informed top divisions a confederation needs to measure the spread of the means
+CONF_SD, CONF_SD_FLOOR = 100.0, 60.0  # σ_c, the confederations' means around the overall one: when unmeasured, and its floor
 MEASURED_SE_KEEP = 52.0  # a measured league stays measured up to this error: no league in and out of the ranking at the bound
 _C = log(10) / 400
 # Each league's division in its country, by its PitchAPI key (1 when not named): reviewed one by
@@ -553,15 +551,22 @@ TIERS = {
 }
 # Women's leagues: a universe of their own (their clubs never meet the others').
 WOMEN = frozenset({"l_1SGwQT"})
-CONFEDERATIONS = {
-    **{c: "UEFA" for c in ("ENG", "GER", "ESP", "ITA", "FRA", "BEL", "GRE", "DEN", "TUR", "NED", "SUI", "POL", "POR", "CRO", "CZE", "ROU",
-                           "RUS", "IRL", "ISL", "NOR", "ISR", "SRB", "LVA", "SVK", "FIN", "SWE", "AUT", "SCO", "UKR", "WAL", "CYP",
-                           "SVN", "KAZ", "HUN", "BUL")},
-    **{c: "CONMEBOL" for c in ("BRA", "ARG", "ECU", "COL", "VEN", "CHI", "PER", "PAR", "BOL", "URU")},
-    **{c: "CONCACAF" for c in ("USA", "MEX", "CAN", "CRC", "HON", "GUA", "PAN", "JAM")},
-    **{c: "AFC" for c in ("KSA", "IND", "CHN", "KOR", "JPN", "THA", "QAT", "AUS", "UAE", "IRN", "UZB")},
-    **{c: "CAF" for c in ("EGY", "RSA", "MAR", "TUN", "ALG", "NGA")},
+# Every FIFA member's confederation (and the associate members the sources name: Zanzibar, Réunion, the French
+# departments of the Americas), by FIFA code: a country's group takes its confederation's mean, never the world's
+# (17 November 2026: the CAF Champions League brought clubs of thirty African countries into the Elo).
+_FIFA = {
+    "UEFA": "ALB AND ARM AUT AZE BLR BEL BIH BUL CRO CYP CZE DEN ENG EST FRO FIN FRA GEO GER GIB GRE HUN ISL ISR ITA KAZ KOS LVA "
+            "LIE LTU LUX MLT MDA MNE NED MKD NIR NOR POL POR IRL ROU RUS SMR SCO SRB SVK SVN ESP SWE SUI TUR UKR WAL",
+    "CONMEBOL": "ARG BOL BRA CHI COL ECU PAR PER URU VEN",
+    "CONCACAF": "AIA ATG ARU BAH BRB BLZ BER VGB CAN CAY CRC CUB CUW DMA DOM SLV GRN GUY HAI HON JAM MEX MSR NCA PAN PUR SKN "
+                "LCA VIN SUR TRI TCA USA VIR GUA GUF GLP MTQ SXM SMN BOE",
+    "AFC": "AFG AUS BHR BAN BHU BRU CAM CHN TPE GUM HKG IND IDN IRN IRQ JPN JOR PRK KOR KUW KGZ LAO LIB MAC MAS MDV MNG MYA "
+           "NEP OMA PAK PLE PHI QAT KSA SGP SRI SYR TJK THA TLS TKM UAE UZB VIE YEM NMI",
+    "CAF": "ALG ANG BEN BOT BFA BDI CMR CPV CTA CHA COM CGO COD DJI EGY EQG ERI SWZ ETH GAB GAM GHA GUI GNB CIV KEN LES LBR LBY "
+           "MAD MWI MLI MTN MRI MAR MOZ NAM NIG NGA RWA STP SEN SEY SLE SOM RSA SSD SDN TAN TOG TUN UGA ZAM ZIM ZAN REU",
+    "OFC": "ASA COK FIJ NCL NZL PNG SAM SOL TAH TGA VAN KIR TUV",
 }
+CONFEDERATIONS = {code: conf for conf, codes in _FIFA.items() for code in codes.split()}
 
 
 def _solve(a, b):
@@ -725,26 +730,59 @@ def league_model(matches, leagues, *, weights=None, moves=None, tiers=None, coun
         top_sd = sqrt(max(400.0, sum((ell[index[l]] - mean) ** 2 for l in europe) / (len(europe) - 1) - noise))
     weight = {l: 1 / (top_sd ** 2 + spread[index[l]] ** 2) for l in informed}
     overall = sum(weight[l] * ell[index[l]] for l in informed) / sum(weight.values()) if informed else ELO_INITIAL
-    means = {}
-    for c in {conf[l] for l in informed}:
+    # The spread σ_c of the confederations' means around the overall one, by moments over those with
+    # CONFEDERATION_LEAGUES informed top divisions or more, their own errors removed (CONF_SD otherwise).
+    raw = {}
+    for c in {conf[l] for l in informed} - {None}:
         members = [l for l in informed if conf[l] == c]
-        if len(members) < CONFEDERATION_LEAGUES:
-            continue  # too few to say where the confederation stands: the overall mean
-        # A confederation's mean is drawn towards the overall one as much as one more league would.
-        means[c] = (sum(weight[l] * ell[index[l]] for l in members) + overall / top_sd ** 2) / (sum(weight[l] for l in members) + 1 / top_sd ** 2)
+        if len(members) >= CONFEDERATION_LEAGUES:
+            w = sum(weight[l] for l in members)
+            raw[c] = (sum(weight[l] * ell[index[l]] for l in members) / w, 1 / w)
+    conf_sd = CONF_SD
+    if len(raw) >= 2:
+        between = sum((m - overall) ** 2 for m, _ in raw.values()) / (len(raw) - 1) - sum(v for _, v in raw.values()) / len(raw)
+        conf_sd = min(top_sd, max(CONF_SD_FLOOR, sqrt(max(0.0, between))))
+    # The top divisions and the leagues alone in their country, by confederation: they share its mean m_c, itself
+    # unknown (m_c ~ N(overall, σ_c²)) and estimated with them; each sits at m_c (lowered by its tiers) with sd top_sd.
+    # A cluster of groups that play only one another and a held league (the CAF Champions League's) then says how far
+    # apart they stand, not where their confederation stands: that is left to the matches and moves between continents.
+    # Integrated out, m_c gives the members a joint prior N(μ, D + σ_c² 11ᵀ), its precision by Sherman–Morrison.
+    heads = defaultdict(list)
+    for l in ids:
+        if l not in upper:
+            heads[conf[l]].append(l)
+    offsets = {l: -gap * (tier[l] - 1) for l in ids}
+    variances = {l: top_sd ** 2 + (tier[l] - 1) * gap_sd ** 2 for l in ids}
 
     def structure(lam, grad, ell):
-        for l in ids:
-            k = index[l]
-            if l in upper:
-                dt = tier[l] - tier[upper[l]]
-                _edge(lam, grad, index[upper[l]], k, -gap * dt, 1 / (dt * gap_sd ** 2), ell)
-            else:
-                # A top division, or a lower one alone in the base: its confederation's mean, lowered by its tiers.
-                mu = means.get(conf[l], overall) - gap * (tier[l] - 1)
-                var = top_sd ** 2 + (tier[l] - 1) * gap_sd ** 2
-                lam[k][k] += 1 / var
-                grad[k] += (mu - ell[k]) / var
+        for l in upper:
+            k, dt = index[l], tier[l] - tier[upper[l]]
+            _edge(lam, grad, index[upper[l]], k, -gap * dt, 1 / (dt * gap_sd ** 2), ell)
+        for c, members in heads.items():
+            ks = [index[l] for l in members]
+            a = [1 / variances[l] for l in members]
+            r = [overall + offsets[l] - ell[k] for l, k in zip(members, ks)]
+            if c is None:  # a country no confederation names: the overall mean, alone
+                for k, ak, rk in zip(ks, a, r):
+                    lam[k][k] += ak
+                    grad[k] += ak * rk
+                continue
+            total = 1 / conf_sd ** 2 + sum(a)
+            ar = sum(ak * rk for ak, rk in zip(a, r)) / total
+            for i, (ki, ai) in enumerate(zip(ks, a)):
+                lam[ki][ki] += ai
+                for kj, aj in zip(ks, a):
+                    lam[ki][kj] -= ai * aj / total
+                grad[ki] += ai * (r[i] - ar)
+
+    def confederation_means(ell):
+        """Each confederation's mean m_c as the members' levels give it, with the overall one as its prior."""
+        out = {}
+        for c, members in heads.items():
+            if c is not None:
+                a = [1 / variances[l] for l in members]
+                out[c] = (overall / conf_sd ** 2 + sum(ak * (ell[index[l]] - offsets[l]) for ak, l in zip(a, members))) / (1 / conf_sd ** 2 + sum(a))
+        return out
 
     # 3. The three together.
     ell, lam, phi, rounds = fit(ell, tau, structure)
@@ -758,8 +796,8 @@ def league_model(matches, leagues, *, weights=None, moves=None, tiers=None, coun
     levels = {l: ell[index[l]] + shift for l in ids}
     errors = {l: se[index[l]] for l in ids}
     return levels, errors, {"rounds": rounds, "dispersion": phi, "pair_sd": tau, "tier_gap": gap, "tier_gap_sd": gap_sd,
-                            "top_sd": top_sd, "reference": [ids[k] for k in ref], "exchange": exchange,
-                            "confederations": {c: v + shift for c, v in means.items()}}
+                            "top_sd": top_sd, "confederation_sd": conf_sd, "reference": [ids[k] for k in ref], "exchange": exchange,
+                            "confederations": {c: v + shift for c, v in confederation_means(ell).items()}}
 
 
 def move_evidence(stints, *, minutes=MOVER_MINUTES, leagues=None):

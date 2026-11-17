@@ -34,7 +34,8 @@ Chaque étape lit les forces **d'avant** le match : une performance garde le niv
 | Les matchs des sources complémentaires (coupes nationales, coupes des autres confédérations, tournois de sélections) entre deux équipes que PitchAPI connaît, et tous ceux entre deux sélections (depuis le 16 novembre 2026), quand ils ne doublent pas un match déjà lu (mêmes équipes à trois jours près) | ils relient les divisions d'un pays et les championnats entre eux ; un doublon compterait deux fois le même résultat |
 | Depuis le 17 novembre 2026 (VI-21) : **tous** les matchs des championnats et coupes d'open-matchday, de la Coupe d'Allemagne (OpenLigaDB seule : la copie d'open-matchday écrivait ses amateurs autrement, un match comptait deux fois), des archives des coupes nationales d'OpenFootball, de la Coupe de France, des Copas Libertadores et Sudamericana, de la Coupe des champions de la CONCACAF et de la Coupe du monde des clubs, même entre clubs que PitchAPI ne connaît pas | un seul Elo pour tous les matchs (décision du 16 novembre) ; les clubs professionnels de ces sources sont reliés à leur club (près de 250 orthographes revues une à une) |
 | L'Elo applique lui-même les fusions que nomment les règles d'identification, avant le passage quotidien qui les écrit | une copie pas encore fusionnée joue comme son club, jamais comme un club à part (118 l'étaient le 17 novembre) |
-| La Ligue des champions africaine reste lue entre deux clubs connus | mesuré le 17 novembre : elle fixait des championnats africains sans autre lien (Égypte +104) |
+| Depuis le 17 novembre 2026, après-midi : **toutes** les compétitions comptent, quelle que soit leur source, Ligue des champions africaine comprise (« chaque compétition doit être prise en compte dans les scores des équipes ») | un seul Elo, nourri de tous les matchs ; le niveau des pays africains que la base ne tient pas vient de l'a priori de leur confédération, estimé avec eux (§ 4.4) |
+| Restent hors de l'Elo : un club contre une sélection, un match de coupe sans date, deux équipes non marquées « sélection » dans une compétition de sélections (nations historiques), les archives historiques (décision de l'utilisateur) et les copies d'une même compétition | ce ne sont pas des matchs entre clubs, ou ils compteraient deux fois |
 | Le résultat est celui après prolongation ; une séance de tirs au but est un nul | les tirs au but ne disent rien de la force sur 120 minutes |
 | Clubs et sélections sont deux ensembles à part | la méthode le demande (§ 3) : ils ne se rencontrent jamais |
 | **Année du trophée** : du 1ᵉʳ août au 31 juillet ; un championnat d'année civile en donne la seconde moitié d'une édition et la première de la suivante | sinon une « saison » mêlait des championnats finis et d'autres au quatorzième match (audit, cause 3) |
@@ -87,7 +88,7 @@ $$
 | Club vu seulement dans les coupes de son pays (17 novembre 2026) | le niveau des « clubs de coupe » de son pays : une division sous le plus bas championnat que l'Elo tient de ce pays, corrigé par leurs matchs de coupe contre les clubs classés | mesuré | même raison ; un club amateur part sous la plus basse division connue |
 
 - **Le rang d'un club** est celui de sa force après son dernier match de la saison, parmi les clubs (les sélections à part). Tout club de la source principale qui a joué a une force et un rang.
-- **Les clubs sans force.** Mesuré le 17 novembre 2026 (VI-21), avant ces règles : 9 586 des 11 062 clubs qui ont joué un match de la base n'avaient pas de force. Après les deux étapes du 17 novembre (open-matchday, puis archives et coupes américaines), mesuré en mémoire sur la base : 3 060 équipes classées. Ce sont 607 clubs de plus que la veille ; 139 copies se fondent dans leur club. Pour les clubs de la source principale, l'écart médian est de 2,9 points (90ᵉ centile 15, maximum 37 : le championnat des Émirats, +32 pour une erreur de 65, par la Coupe du monde des clubs). Restent sans force : les clubs des seules archives historiques (7 520, que l'Elo ne lit pas), ceux de la Ligue des champions africaine et les clubs amateurs que la source principale n'a pas, tant qu'ils n'ont joué qu'entre eux dans une source non lue.
+- **Les clubs sans force.** Mesuré le 17 novembre 2026 (VI-21), avant ces règles : 9 586 des 11 062 clubs qui ont joué un match de la base n'avaient pas de force. Après les deux étapes du 17 novembre (open-matchday, puis archives et coupes américaines), mesuré en mémoire sur la base : 3 060 équipes classées. Ce sont 607 clubs de plus que la veille ; 139 copies se fondent dans leur club. Pour les clubs de la source principale, l'écart médian est de 2,9 points (90ᵉ centile 15, maximum 37 : le championnat des Émirats, +32 pour une erreur de 65, par la Coupe du monde des clubs). Le 17 novembre après-midi, toutes les compétitions comptent : 3 141 équipes classées (83 de plus, surtout les clubs africains de la Ligue des champions de la CAF). Restent sans force : les clubs des seules archives historiques (7 520, que l'Elo ne lit pas, décision de l'utilisateur) et les équipes « à déterminer » des calendriers (« 2nd ranked », les places de l'Euro 2028).
 - **Les sélections** suivent la même formule, entre sélections seulement.
 - **Le niveau d'un championnat pour une saison**, celui que montre le site, est la force moyenne, après leur dernier match de la saison, des clubs qui l'ont joué cette saison-là. Un promu y entre, un relégué en sort.
 
@@ -181,16 +182,17 @@ $$
 $$
 
   $b$ = 162 points et $\tau_b$ = 49, **mesurés** à chaque calcul sur les 11 paires de divisions que les matchs et les passages mesurent à 40 points près. On retire de leur dispersion ce qu'y met l'erreur de mesure.
-- **Une première division** se tient à la moyenne de sa confédération :
+- **Une première division** (ou un « championnat de pays » : les clubs d'un pays que la base ne tient pas) se tient à la moyenne de sa confédération, elle-même **inconnue et estimée avec eux** (depuis le 17 novembre 2026) :
 
 $$
-\ell \sim \mathcal{N}(\mu_\text{conf}, \tau_c^2)
+\ell = m_c + e, \qquad e \sim \mathcal{N}(0, \tau_c^2), \qquad m_c \sim \mathcal{N}(\mu, \sigma_c^2)
 $$
 
-  - $\tau_c$ est l'écart-type entre premières divisions européennes mesurées à 60 points près, moins leur erreur de mesure : environ 112, **mesuré**.
-  - $\mu_\text{conf}$ est la moyenne des premières divisions informées de la confédération, chacune pesée par $1/(\tau_c^2 + \text{se}^2)$, rapprochée de la moyenne d'ensemble comme le ferait un championnat de plus.
-  - Il faut au moins **trois** championnats informés pour une moyenne propre. Sinon, c'est la moyenne d'ensemble (cas de la CAF, deux championnats).
-  - Environ 1490 pour l'UEFA et la CONMEBOL, 1480 pour la CONCACAF, 1430 pour l'AFC.
+  - $\tau_c$ est l'écart-type entre premières divisions européennes mesurées à 60 points près, moins leur erreur de mesure : environ 148, **mesuré**.
+  - $\mu$ est la moyenne d'ensemble des premières divisions informées. $\sigma_c$ est l'écart des moyennes de confédération autour d'elle, mesuré sur celles qui ont au moins trois championnats informés, leur erreur retirée ; au moins 60 points.
+  - Pourquoi : avant, chaque championnat de pays recevait son propre a priori, indépendant, à la moyenne mondiale. Une grappe de pays qui ne jouent qu'entre eux (la Ligue des champions africaine) comptait alors la même inconnue — le niveau de l'Afrique — une fois par pays. Elle tirait toute la grappe vers la moyenne mondiale, et l'Égypte avec (+108, deux fois son erreur). Avec une moyenne partagée, les matchs entre ces pays disent leurs écarts entre eux ; le niveau de l'Afrique face au monde vient des matchs entre continents (Coupe du monde des clubs) et des transferts.
+  - Toutes les associations de la FIFA sont rattachées à leur confédération (et les membres associés que nomment les sources : Zanzibar, la Réunion, les départements français d'Amérique).
+  - Mesuré le 17 novembre (lecture seule) : championnat d'Égypte +70 (erreur 55), d'Afrique du Sud +63 (erreur 63), Al Ahly 1779 ; les 12 championnats de référence bougent de 1,5 point au plus, les clubs PitchAPI de 1,4 en médiane. Avec $\sigma_c$ à 60, 100 ou 150, Al Ahly vaut 1779, 1764 ou 1755 : moins d'une erreur d'écart. Moyennes : UEFA 1425, CONMEBOL 1434, CONCACAF 1391, OFC 1382, AFC 1367, CAF 1363.
 - **Une division inférieure seule de son pays** dans la base :
 
 $$

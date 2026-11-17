@@ -775,16 +775,24 @@ WHERE m.status = 'finished' AND m.home_score IS NOT NULL AND m.away_score IS NOT
 ORDER BY coalesce(m.kickoff_at, m.match_date::timestamp AT TIME ZONE 'UTC') NULLS FIRST, m.id"""
 # The season's matches of the PitchAPI editions: (match, edition, home, away, neutral,
 # status, home score, away score, regular round?, domestic league?, kick-off).
+# Every competition's matches of a season (the user, 17 November 2026: « chaque compétition doit avoir ses
+# prédictions »): each match still to play between two rated teams is forecast, whatever its source. A league,
+# replayed to its end, is a PitchAPI domestic competition or one of open-matchday's leagues (a folder that is no
+# cup); the cups' rounds are projected apart (knockout_projections, nations_projections), never as a league.
 SEASON = """
 SELECT m.id, m.competition_season_id, m.home_team_id, m.away_team_id, coalesce(m.is_neutral, false), m.status::text,
   m.home_score, m.away_score, coalesce(r.stage::text, 'regular') = 'regular',
-  c.country_code IS NOT NULL AND left(c.country_code, 3) <> 'INT',
-  coalesce(m.kickoff_at, m.match_date::timestamp AT TIME ZONE 'UTC')
+  CASE WHEN cs.cup_key IS NULL THEN c.country_code IS NOT NULL AND left(c.country_code, 3) <> 'INT'
+       ELSE cs.cup_key LIKE 'open-matchday:%%' AND split_part(cs.cup_key, ':', 2) NOT LIKE '%%\\_CUP\\_%%' END,
+  coalesce(m.kickoff_at, m.match_date::timestamp AT TIME ZONE 'UTC'), cs.cup_key IS NOT NULL
 FROM core.matches m
-JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL AND cs.cup_key IS NULL
+JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL
 JOIN core.competitions c ON c.id = cs.competition_id
 LEFT JOIN core.rounds r ON r.id = m.round_id
 WHERE m.season_id = %s AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL"""
+# A cup source's match still « to play » this long after its day: the source stopped updating (OpenFootball's
+# Libertadores 2026 at its August play-offs), no match to forecast.
+STALE_AFTER = timedelta(days=3)
 MIN_LEAGUE = 8  # clubs: a table of fewer is no league to project
 # The UEFA cups played in the league-phase format since 2024/2025 (PitchAPI keys): their league
 # phase is projected like a league, then their bracket (simulate_cup).
@@ -882,7 +890,8 @@ def refresh(conn, season):
         cases = [(delta(row[0], row[1], row[2]), home[0] - away[0], home[1] - away[1], row[3], row[4])
                  for row, (home, away) in zip(observed, before) if home and away]
         weights = fit_form(cases, model)
-    upcoming = [r for r in rows if r[5] == "not_started" and r[2] in strengths and r[3] in strengths]
+    upcoming = [r for r in rows if r[5] == "not_started" and r[2] in strengths and r[3] in strengths
+                and not (r[11] and r[10] is not None and r[10] < now - STALE_AFTER)]
     forecasts = []
     for r in upcoming if model else []:
         # The form counts for the matches about to be played; further ahead, the strengths alone.

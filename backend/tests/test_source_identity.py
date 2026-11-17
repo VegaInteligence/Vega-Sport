@@ -470,6 +470,30 @@ class SourceIdentityTest(unittest.TestCase):
         with self.db.transaction():
             self.assertEqual(identity.run(self.db, None, "teams", NOW)[0], 0)  # nothing left to merge
 
+    def test_every_competition_s_matches_enter_the_elo(self):
+        # Every competition counts in the one Elo (the user, 17 Nov 2026: « chaque compétition doit être prise en compte
+        # dans les scores des équipes »): a continental cup's match between two clubs PitchAPI does not know (the CAF
+        # Champions League) and a national teams' match are read. Left out: a club against a national team, a match
+        # without its day, two teams not marked national in a national teams' competition (historic nations: no clubs),
+        # and a historic archive's match (the user's decision).
+        from vega import power
+
+        x = self.db.execute
+        self.addCleanup(lambda: [x(q) for q in ("DELETE FROM core.matches WHERE id BETWEEN 960 AND 965", "DELETE FROM core.competition_seasons WHERE id IN (960, 961, 962)",
+                                                "DELETE FROM core.competitions WHERE id IN (960, 961, 962)", "DELETE FROM core.teams WHERE id BETWEEN 960 AND 965")])
+        x("""INSERT INTO core.teams(id, name, is_national) VALUES (960, 'Simba SC (TAN)', false), (961, 'Al Hilal Omdurman (SUD)', false),
+             (962, 'Tanzania', true), (963, 'Sudan', true), (964, 'West Germany', false), (965, 'Zaire', false)""")
+        x("INSERT INTO core.competitions(id, name) VALUES (960, 'caf-champions-league'), (961, 'Old league'), (962, 'world-cup-history')")
+        x("""INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label, cup_key, archive_key) VALUES
+             (960, 960, 2026, '2026/2027', 'open-cups:caf-champions-league:2026/2027', NULL), (961, 961, 2026, '2026/2027', NULL, 'archive:old-league:2026'),
+             (962, 962, 2026, '1974', 'open-cups:world-cup-history:1974', NULL)""")
+        x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, home_score, away_score, match_date) VALUES
+             (960, 960, 2026, 'openfootball', 'finished', 960, 961, 2, 1, '2026-10-01'), (961, 962, 2026, 'openfootball', 'finished', 962, 963, 1, 1, '2026-10-02'),
+             (962, 962, 2026, 'openfootball', 'finished', 960, 963, 0, 3, '2026-10-03'), (963, 960, 2026, 'openfootball', 'finished', 961, 960, 1, 0, NULL),
+             (964, 961, 2026, 'openfootball', 'finished', 960, 961, 4, 0, '2026-10-04'), (965, 962, 2026, 'openfootball', 'finished', 964, 965, 2, 0, '2026-10-05')""")
+        read = {r[0] for r in x(power.ELO_MATCHES).fetchall()}
+        self.assertEqual(read & set(range(960, 966)), {960, 961})
+
     def test_a_team_two_sources_share_keeps_its_name(self):
         # Italy, merged from OpenLigaDB (League A) and International Results (Leagues B to D): neither renames it at
         # each pass; each spelling stays a name of its source. A team one source alone holds still takes its spelling.

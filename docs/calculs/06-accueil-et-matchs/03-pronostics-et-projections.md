@@ -249,6 +249,17 @@ Comme pour les coupes européennes, une prolongation vaut un tiers de match et l
 
 La Coupe d'Italie attend la fusion de trois de ses clubs.
 
+## Toutes les compétitions (17 novembre 2026, VI-19)
+
+« Chaque compétition doit avoir ses prédictions » : depuis ce jour, le calcul des pronostics lit toutes les compétitions, quelle que soit leur source (PitchAPI, open-matchday, OpenLigaDB, OpenFootball, International Results).
+
+- **Chaque match à jouer** entre deux équipes classées par l'Elo a son pronostic, même modèle que pour un match de championnat.
+- **Un championnat d'une source complémentaire** (les 19 championnats d'open-matchday que PitchAPI n'a pas : National League, divisions écossaises et galloises, Ukraine, Chypre…) est rejoué jusqu'à son terme comme un championnat.
+- **Une coupe** n'est jamais rejouée comme un championnat : ses tours le sont (coupes nationales, Ligue des nations).
+- **Une source arrêtée.** Un match d'une source complémentaire encore « à jouer » plus de trois jours après sa date n'a pas de pronostic : sa source a cessé de suivre la compétition. C'est le cas de la Copa Libertadores 2026 d'OpenFootball, arrêtée aux barrages d'août.
+
+Pas encore couvert : l'Euro 2028 (les équipes ne sont pas encore qualifiées), les phases finales de la MLS et de la Liga MX (la source nomme encore « 2nd ranked » et « 3rd ranked » à la place des clubs).
+
 ## La projection de la Ligue des nations (17 novembre 2026)
 
 Code : `nations_projections`, `simulate_nations` et `uefa_order` dans [forecast.py](../../../backend/vega/forecast.py), places de groupe dans `agg.cup_stage_odds` et vue `api.cup_team_groups` (migration 125), route `/api/forecasts/season` (`format: "nations"`). Sur le site : l'onglet « Projection » de la Ligue des nations, ligue par ligue.
