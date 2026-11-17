@@ -36,7 +36,12 @@ test("the matches of one competition, in the demo's match shape", { skip }, asyn
   const first = matches[0];
   assert.deepEqual(Object.keys(first).sort(), ["away", "coverage", "date", "home", "id", "leagueId", "stats", "status", "timeUtc"]);
   assert.deepEqual([first.id, first.leagueId, first.date, first.status], ["m_aaaaa1", "l_3FJFUl", "2025-09-01", "finished"]);
-  assert.deepEqual(first.home, { id: "t_aaaaa1", name: "Olympique Été", imageUrl: "https://img.example/t1.png", score: 2 });
+  // Each side's scoring (FAILURE_MODES §17): m1's events were read, its shot list does not match its
+  // statistics; m3's goal is team 1's own goal, for team 3; m2 has no events.
+  assert.deepEqual(first.home, { id: "t_aaaaa1", name: "Olympique Été", imageUrl: "https://img.example/t1.png", score: 2, ownGoalsFor: 0, penaltyAttempts: null });
+  const sides = (id) => { const m = matches.find((x) => x.id === id); return [m.home.ownGoalsFor, m.home.penaltyAttempts, m.away.ownGoalsFor, m.away.penaltyAttempts]; };
+  assert.deepEqual(sides("m_aaaaa3"), [0, null, 1, null]);
+  assert.deepEqual(sides("m_aaaaa2"), [null, null, null, null]);
   assert.deepEqual(first.coverage, { teamStatsReliable: true });
   assert.equal(matches[1].coverage.teamStatsReliable, false);
   assert.deepEqual(first.stats.find((s) => s.key === "expected_goals"), { key: "expected_goals", home: 0.75, away: 1 });

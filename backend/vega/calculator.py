@@ -216,55 +216,6 @@ WITH side AS (
   WHERE m.competition_season_id = %(cs)s AND m.season_id = %(sid)s AND m.status = 'finished'
     AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL AND x.team_id IS NOT NULL
     AND (%(all)s OR x.team_id = ANY(%(teams)s::integer[]))
-), goals AS (
-  -- A match's goals in the order of the score (VI-23 B10): what each one adds to either side.
-  SELECT e.season_id, e.match_id, e.is_own_goal, e.score_home, e.score_away,
-    e.score_home - lag(e.score_home, 1, 0::smallint) OVER w AS up_home,
-    e.score_away - lag(e.score_away, 1, 0::smallint) OVER w AS up_away
-  FROM core.match_events e
-  WHERE e.event_type = 'goal' AND e.period IS DISTINCT FROM 'penalties'  -- shoot-out kicks are not goals
-    AND (e.season_id, e.match_id) IN (SELECT season_id, match_id FROM side)
-  WINDOW w AS (PARTITION BY e.season_id, e.match_id ORDER BY e.score_home + e.score_away, e.seq)
-), scoring AS (
-  -- The own goals of a match by the side they count for, when its events were read, each of its
-  -- goals says whether it is an own goal (a NULL flag is unknown, never false) and they go up one
-  -- at a time to the final score; any other match classifies none.
-  SELECT m.season_id, m.id AS match_id,
-    (count(g.match_id) FILTER (WHERE g.is_own_goal IS TRUE AND g.up_home = 1))::integer AS own_home,
-    (count(g.match_id) FILTER (WHERE g.is_own_goal IS TRUE AND g.up_away = 1))::integer AS own_away
-  FROM core.matches m
-  JOIN core.match_coverage c ON c.season_id = m.season_id AND c.match_id = m.id AND c.events = 'ok'
-  LEFT JOIN goals g ON g.season_id = m.season_id AND g.match_id = m.id
-  WHERE (m.season_id, m.id) IN (SELECT season_id, match_id FROM side)
-  GROUP BY m.season_id, m.id, m.home_score, m.away_score
-  HAVING count(g.match_id) = m.home_score + m.away_score
-     AND count(g.match_id) FILTER (WHERE g.is_own_goal IS NULL) = 0
-     AND count(g.match_id) FILTER (WHERE g.up_home IS NULL OR g.up_away IS NULL OR g.up_home < 0 OR g.up_away < 0
-                                      OR g.up_home + g.up_away <> 1) = 0
-     AND coalesce(max(g.score_home), 0) = m.home_score AND coalesce(max(g.score_away), 0) = m.away_score
-), shot_sets AS (
-  -- A side's penalty attempts, counted on its match's complete, reconciled shot set (amendment
-  -- §1): shot coverage ok, the shoot-out left out; each side's shots other than own goals as
-  -- many as its statistics count, the side's own each classified, every goal saying whether it
-  -- is an own goal (a non-goal attempt may not), and the goals reproducing both scores. Any other
-  -- match has no count: equal xG and non-penalty xG establish nothing.
-  SELECT side.season_id, side.match_id, side.team_id,
-    (count(sh.shot_no) FILTER (WHERE sh.team_id = side.team_id AND sh.is_own_goal IS NOT TRUE AND sh.situation = 'penalty'))::integer AS penalties
-  FROM side
-  JOIN core.match_coverage c ON c.season_id = side.season_id AND c.match_id = side.match_id AND c.shots = 'ok'
-  JOIN core.team_match_stats o ON o.season_id = side.season_id AND o.match_id = side.match_id AND o.team_id = side.team_id AND o.period = 'all'
-  JOIN core.team_match_stats p ON p.season_id = side.season_id AND p.match_id = side.match_id AND p.team_id = side.opp_id AND p.period = 'all'
-  LEFT JOIN core.shots sh ON sh.season_id = side.season_id AND sh.match_id = side.match_id AND sh.period IS DISTINCT FROM 'penalties'
-  GROUP BY side.season_id, side.match_id, side.team_id, side.opp_id, side.gf, side.ga, o.total_shots, p.total_shots
-  HAVING count(sh.shot_no) FILTER (WHERE sh.team_id = side.team_id AND sh.is_own_goal IS NOT TRUE) = o.total_shots
-     AND count(sh.shot_no) FILTER (WHERE sh.team_id = side.opp_id AND sh.is_own_goal IS NOT TRUE) = p.total_shots
-     AND count(sh.shot_no) FILTER (WHERE sh.team_id = side.team_id AND sh.is_own_goal IS NOT TRUE AND sh.situation IS NULL) = 0
-     AND count(sh.shot_no) FILTER (WHERE sh.team_id IS DISTINCT FROM side.team_id AND sh.team_id IS DISTINCT FROM side.opp_id) = 0
-     AND count(sh.shot_no) FILTER (WHERE sh.outcome = 'goal' AND sh.is_own_goal IS NULL) = 0
-     AND count(sh.shot_no) FILTER (WHERE sh.outcome = 'goal' AND ((sh.team_id = side.team_id AND sh.is_own_goal IS NOT TRUE)
-                                                              OR (sh.team_id = side.opp_id AND sh.is_own_goal IS TRUE))) = side.gf
-     AND count(sh.shot_no) FILTER (WHERE sh.outcome = 'goal' AND ((sh.team_id = side.opp_id AND sh.is_own_goal IS NOT TRUE)
-                                                              OR (sh.team_id = side.team_id AND sh.is_own_goal IS TRUE))) = side.ga
 )
 INSERT INTO agg.team_season_stats (team_id, competition_season_id, season_id, {", ".join(fixed)}, {", ".join(cols)})
 SELECT side.team_id, %(cs)s, %(sid)s,
@@ -294,11 +245,12 @@ LEFT JOIN core.team_match_stats p ON p.season_id = side.season_id AND p.match_id
 LEFT JOIN core.team_match_advanced oa ON oa.season_id = side.season_id AND oa.match_id = side.match_id AND oa.team_id = side.team_id
 LEFT JOIN core.team_match_advanced pa ON pa.season_id = side.season_id AND pa.match_id = side.match_id AND pa.team_id = side.opp_id
 CROSS JOIN LATERAL (SELECT (agg.xpts_v2(o.xg, p.xg)).xpts) xl
-LEFT JOIN scoring sc ON sc.season_id = side.season_id AND sc.match_id = side.match_id
-LEFT JOIN shot_sets ss ON ss.season_id = side.season_id AND ss.match_id = side.match_id AND ss.team_id = side.team_id
-CROSS JOIN LATERAL (SELECT CASE WHEN side.home THEN sc.own_home ELSE sc.own_away END AS own_goals_for,
-                           CASE WHEN side.home THEN sc.own_away ELSE sc.own_home END AS own_goals_against,
-                           ss.penalties) q
+-- The match's scoring, one definition with the read API (130, agg.match_scoring: VI-23 stage 8,
+-- FAILURE_MODES §17): own goals from the goal events, penalty attempts from the reconciled shot set.
+LEFT JOIN LATERAL (SELECT ms.* FROM agg.match_scoring ms WHERE ms.season_id = side.season_id AND ms.match_id = side.match_id) sc ON true
+CROSS JOIN LATERAL (SELECT CASE WHEN side.home THEN sc.own_goals_for_home ELSE sc.own_goals_for_away END AS own_goals_for,
+                           CASE WHEN side.home THEN sc.own_goals_for_away ELSE sc.own_goals_for_home END AS own_goals_against,
+                           CASE WHEN side.home THEN sc.penalties_home ELSE sc.penalties_away END AS penalties) q
 GROUP BY side.team_id
 ON CONFLICT (team_id, competition_season_id) DO UPDATE SET
   {", ".join(f"{c} = EXCLUDED.{c}" for c in [*fixed, *cols])}, updated_at = now()

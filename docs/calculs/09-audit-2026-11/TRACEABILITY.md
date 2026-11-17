@@ -75,7 +75,7 @@ An item can carry two statuses: for example corrected locally and with real-data
 | Interim (Astra, 17 Nov, P2) — xPts above ~700 xG: SQL underflow error, JS NaN, unbounded allocation | Corrected locally + verified (domain ≤ 100 xG a side, an engineering guard) | `club-scout.js`, 128 | `ExpectedPointsLawTest.test_5`, `audit-club-metrics.test.mjs` |
 | Interim (coordinator, 17 Nov) — embedding counted NaN/±∞ as measured; one all-NaN row collapsed the geometry | Corrected locally + verified | `embedding.py` | `EmbeddingEligibilityTest` (6–8), `EmbeddingNonFiniteRefreshTest` |
 | Stage 2 — the server's game states raise on a goal event without its score: the edition's whole recompute fails | **Recorded, handed off with B7** (baseline behaviour, `calculator._match_states`, unchanged) | — | post-implementation probe (evidence) |
-| Stage 2→3 — `shotProfile`: normalized codes (and `ThrowInSetPiece`) and unknown situations fell into « jeu placé », another team's shots counted against, a missing xG added 0, a known zero xG became 0.01 (FAILURE_MODES §7.5) | Corrected locally + verified (one canonical parser shared with `penaltiesOf`; real sides; sticky-null bucket xG; zero kept; unclassified shots counted apart, points labelled « — »). **Unresolved, VI-22 handoff:** a missing map xG still shows 0.01 and the owned `ShotPair` header adds it; showing the unclassified count | `club-scout.js` `situationOf`, `shotProfile` (exported for its test) | `audit-club-metrics.test.mjs` (4 shot-profile tests: RED 4 failures, GREEN) |
+| Stage 2→3 — `shotProfile`: normalized codes (and `ThrowInSetPiece`) and unknown situations fell into « jeu placé », another team's shots counted against, a missing xG added 0, a known zero xG became 0.01 (FAILURE_MODES §7.5) | Corrected locally + verified (one canonical parser shared with `penaltiesOf`; real sides; sticky-null bucket xG; zero kept; unclassified shots counted apart, points labelled « — »). **VI-22 handoff, resolved by VI-22** (`08955914db`, shipped 17 Nov 2026): an unknown map xG stays unknown and the `ShotPair` total is « — »; showing the unclassified count stays open | `club-scout.js` `situationOf`, `shotProfile` (exported for its test) | `audit-club-metrics.test.mjs` (4 shot-profile tests: RED 4 failures, GREEN) |
 | Stage 3 — a fit that did not converge (or not finite, or infeasible) was published and every season rescored with it; the evaluator called such a comparison successful (Astra/xhigh interim review; real-fitter `iterations=0` probe) | Corrected locally + verified: `refresh` raises `xg.FitFailed` before the publication transaction, nothing changes; the evaluator reports `complete`/`status`/`failed_fits` and exits 3 | `xg.py` (`FitFailed`, `unpublishable`, `refresh`), `evaluate_xg.py` | `XgFailedFitTest` (1–3: RED, models replaced and 16,000 scores rewritten; GREEN), `XgEvaluationInputTest.test_6` |
 | Stage 4 — the stage-3 `FitFailed` stopped the season's daily pass at the xG: embedding, breakout, actions, returns and the editions' recount never ran, in every due season (the model is global); flagged in stage 3, confirmed by Astra/xhigh (`context/astra-interim-xg-daily-review.md`) | Corrected locally + verified (FAILURE_MODES §10.3): `models.refresh_daily` catches `FitFailed` only, prints `daily models season=<s> xg=rejected error=FitFailed`, finishes the pass and re-raises it at the end, so the worker logs the step as failed with its backoff and no `outcome=ok`. A later error is the one logged; any other xG error still stops the pass at once | `models.py` `refresh_daily` | `DailyPassXgRejectionTest` (1–6, the real `Worker.daily()` on two due seasons: RED, tests 1–2 failed with each pass stopped at the xG; the 4 controls passed; GREEN 6/6) |
 | Stage 5 (Astra F1) — the cohorts' position group (`grp`) read every match's minutes, unfinished ones included, while the statistics read finished matches: 10 finished attacking matches and 12 canceled defensive ones put a player in the defensive cohort | Corrected locally + verified (FAILURE_MODES §14.2): `grp` reads finished matches only; a cancellation after a publication moves the player at the next refresh | `models._player_values_sql` | `test_audit_player_aggregates.py::CohortRoleFinishedTest` (1–2: RED, player 10 absent from the 31-member attacking cohort; GREEN) |
@@ -91,13 +91,21 @@ An item can carry two statuses: for example corrected locally and with real-data
 | Stage 7 (v2 nit) — `opponentStrength` returned `{ club, centile: null }` below five measured clubs; the owned `Upcoming` showed the weakest level | Corrected locally + verified (§16.2): null without a centile. **Residual, VI-22:** null renders « hors référentiel » even for a thinly measured club of the reference | `club-scout.js` `opponentStrength` | `audit-club-metrics.test.mjs` (RED: the null-centile object; GREEN) |
 | Stage 7 (v2 nit) — both grade tooltips printed `goals ?? 0` and `assists ?? 0` | Corrected locally + verified at the component level (§16.3): unknown « — », known « 0 », at both sites; grades, plots and logs unchanged. **Real-browser GREEN12/12 passed**, desktop/mobile on stable stage7 code, after the pre-fix RED (`review-evidence/browser-stage7-red/`: 8 expected failures, 4 passing zero controls) | `PlayerScoutOverview.jsx` (`RecentForm`, `PlayerGames`) | `audit-player-boundaries.test.mjs` (2 tests through the charts' `tip`: RED « 1 / 0 », « 0 / 0 »; GREEN) |
 | Stage 7 (v2 nit) — `shootersOf` counted shoot-out kicks in the match's shooters (`match-tabs.js:54`, `MatchKpis.jsx:35`) | Corrected locally + verified (§16.4): the `penalties` / `Penalties` predicate; in-match penalties and extra time stay; sticky missing xG and inputs hold | `match-tabs.js` | `audit-match-tabs.test.mjs` (service test and an actual `MatchKpis` render: RED, a shoot-out-only shooter listed; GREEN) |
-| Stage 7 (v2, Opus major 1) — if goals lack the own-goal flag, the four classified indicators are measured on goalless matches only | **Recorded; accepted contract retained** (Astra's reconciliation): per-indicator measured support stays. No whole-scope suppression, inferred flag, backend marker or migration: that would need a new joint design. Root's probe: a classified 0–0 and an unflagged 1–0 give finishing −1, keeper 0.7, conversion 0, xG per shot 1, each on 1 match. Not an unbiased season estimate. The source contract and incidence stay with VI-21; presenting coverage without extrapolating to season totals stays with VI-22 | docs (§16.6, `04-clubs/01`) | root's probe `review-evidence/review-v2-probes*` (exploratory) |
+| Stage 7 (v2, Opus major 1) — if goals lack the own-goal flag, the four classified indicators are measured on goalless matches only | **Superseded by stage 8 (§17)** — measured on production: goal shots never carry FALSE, so it happened to 99.4 % of the matches with a goal. Previously: **recorded; accepted contract retained** (Astra's reconciliation): per-indicator measured support stays. No whole-scope suppression, inferred flag, backend marker or migration: that would need a new joint design. Root's probe: a classified 0–0 and an unflagged 1–0 give finishing −1, keeper 0.7, conversion 0, xG per shot 1, each on 1 match. Not an unbiased season estimate. The source contract and incidence stay with VI-21; presenting coverage without extrapolating to season totals stays with VI-22 | docs (§16.6, `04-clubs/01`) | root's probe `review-evidence/review-v2-probes*` (exploratory) |
+| Stage 8 (final review of the rebased branch, 17 Nov, BLOCKER) — goal shots' own-goal flag is TRUE or NULL in production, never FALSE: finishing, keeper, conversion and xG per shot measured on goalless matches only (Le Havre's conversion 0,0 %, Paris's keeper « — ») | Corrected locally + verified (§17): one scoring per match, `agg.match_scoring` (130), own goals from the goal events' teams (the side credited), penalty attempts from the shot set reconciled with them; read by the calculator and by every club, league and Europe match record (`ownGoalsFor`, `penaltyAttempts`); the site reads the fields only. Production read-only: 98.9 % of 2026's matches with shots classified (55 % under the calculator's previous running-score rule) | `130_match_scoring.sql`, `calculator.py`, `match-record.mjs`, `actors.mjs`, `europe.mjs`, `club-scout.js` | `MatchScoringTest` (a–o: RED, the view missing; GREEN), `OwnGoalFlagSupportTest` 3–4 (RED; GREEN), `actors.test.mjs` and `europe.test.mjs` scoring (RED; GREEN), `audit-club-metrics.test.mjs` (7 RED; GREEN 24/24) |
+| Stage 8 (same review, HIGH) — summary reads carry no shot list: every peer unmeasured, « — sur N » ranks, the pizza's axes, the « Finition et gardien » phase and the Vega index lost for every club | Corrected locally + verified with the blocker: the fields are in the summary records; a league's clubs are measured from their summaries (the Europe pool still lacks xGOT and npxG: its peers' keeper and xG per shot stay unmeasured) | as above | `audit-club-metrics.test.mjs` « every club of the league is measured from its summary », « a rank of the four needs five measured clubs » |
+| Stage 8 (found while measuring) — the calculator's goal-event rule read the running score after the goal; the source stores it before the goal in about half the matches (15,898 of 32,778 goals in 2026) | Corrected locally + verified: the running score is no longer read (§17.2); fixtures whose own-goal events carried the scorer's team now carry the side credited, as production (16,879 of 16,880 goals) | `130_match_scoring.sql` | `MatchScoringTest.test_m` (both conventions) |
+| Stage 8 (same review, MEDIUM / LOW) — recompute queue order, deploy order, 126's backfill under its lock, a manual xG refit racing the daily pass, missed renumbering references, stale docs, `club-supported.js` fallbacks, local databases migrated under the old names | Fallbacks removed (test first); references and docs corrected; the rest is the rollout procedure (below and the Linear issue) | `club-supported.js`, docs | `club-supported.test.mjs` (RED; GREEN) |
 | Stage 7 (v2, Opus major 2) — the owned SetPieces display adds a null category xG as 0 | **Handed off, unresolved (VI-22)**: `ClubScoutAdvanced.jsx:235-236`, `:287-288` (table below). The truthful category nulls stay | — | root's probe (1.2 shown for an unknown fast-break category plus 1.2 at corners; 0 when all null) |
 | Stage 7 (v2, Opus minor 3) — a rejected refit leaves new shots unscored | **Recorded (docs)**: the scores already published stay; shots ingested since have no Vega xG; a modified shot keeps its previous score; during a version transition the previous version's scores stay. Retry after the daily backoff; no older-model fallback. The accepted rejection contract (no model and no score written) is unchanged | docs (`02-metriques-attendues/05-xg-vega.md`, §16.6) | existing `XgFailedFitTest`, `DailyPassXgRejectionTest` |
 | Stage 7 (v2 nit, optional) — `rebase`'s `copy` recomputed `pairedFields` once per nullish key | Refactored: at most once per copied club, provided values (zeros included) kept | `club-scout.js` `rebase` | the existing rebase tests (no new test) |
 | Stage 5 — `models._team_index` ranks xPts on totals under partial coverage | **Recorded, producer limitation**: no route reads `agg.team_index.xpts_position`; N7 is corrected on the site only | — | — |
 
 ## VI-22 consumer handoff
+
+**Status, 17 Nov 2026 (stage 8):** VI-22 shipped every display item below (`08955914db`), except the
+halves route's exclusions and B7, which stay with their owners. The summary-read recommendation at the
+end of this section is done by stage 8 (§17): every match record carries each side's scoring.
 
 The service publishes the paired fields; these owned lines still compute unpaired values and must
 switch (FAILURE_MODES §11, corrected in stage 5 by the current expressions, §14.7). Lines: the owner
@@ -204,13 +212,21 @@ version the change. Proposed tests and their RED logs: `evidence/b7-handoff/`. N
 
 **Migrations** (new files only; 123 is VI-22's, 124 the domestic cups' projection, 125 the Nations League's; renumbered from 124–127 when VI-23 was rebased on main, 17 Nov 2026, then 125–128 the same day): `126_finished_player_seasons.sql`,
 `127_complete_half_totals.sql`, `128_expected_points_law.sql`, `129_paired_club_indicators.sql`,
+and stage 8's `130_match_scoring.sql` (two views, `agg.match_scoring` and `api.match_scoring`),
 applied in order by `vega.store.migrate` (each file commits alone). No existing migration and no
 generated file (009, 012, 015, `api_schema.py`) changes; their drift tests stay green.
 
 **Backfills.** 126 fills the new `finishing_*` columns of `agg.player_list_editions` from the
 finished `player_match_stats` in the migration itself. 127 and 128 replace views and add a function:
 no data to backfill. 129 adds the `pair_*` columns empty: until an edition is recomputed, its 13
-paired club indicators are unavailable, never a value of the old definition.
+paired club indicators are unavailable, never a value of the old definition. 130 adds views only:
+the match records read it at once, with no backfill.
+
+**Deploy order** (final review, 17 Nov). The push deploys the site (Vercel); the API, the worker and
+the migrations go out with the manual « Deploy » workflow, to dispatch right after the push and in a
+quiet window: until the API serves `profile-3` and the stage-8 match records, the site's « Efficaces »
+and « Maladroits » are empty and the four club indicators unknown. 126's backfill `UPDATE` runs under
+its `ALTER`'s lock and blocks readers of `api.player_list_editions` while it runs (as 116 did).
 
 **ALL-SCOPE recompute** (on the deployed database, by its operator; nothing here was run outside the
 dedicated local databases):
@@ -225,8 +241,11 @@ dedicated local databases):
    ```
    An edition listed there fails its recompute and stays queued (baseline behaviour): resolve it with
    its owner first.
-2. *Every edition.* Queue each competition-season; the worker's calculator (`process_dirty`) drains
-   them, and each one queues its cohorts and advances the publication:
+2. *Every edition, in batches.* The calculator drains its queue oldest first, 500 scopes per pass,
+   inside the collection process (final review, 17 Nov): queued at once, the live editions would wait
+   behind the whole backlog. Queue the current season's leagues first, outside match windows, then the
+   older seasons, the cups and the archives last; each batch drains before the next. The statement for
+   one batch (restrict `cs.id` to the batch):
    ```sql
    INSERT INTO ops.dirty_scopes(scope_kind, competition_season_id)
    SELECT 'competition_season', cs.id FROM core.competition_seasons cs
@@ -238,9 +257,10 @@ dedicated local databases):
    and player cohorts follow through `models.process_cohorts` (club cohorts read
    `club-indicators-v2` with true covered counts; a player's position group reads his finished
    matches, stage 5).
-3. *Season models.* From the worker's environment, once: `xg.refresh(conn, season)` for any season
-   (no `xg-v2` model exists, so it fits one and rescores every season's shots), and
-   `returns.refresh(conn, today)` (rebuilt whole, `returns-v2`). For **every** season with editions,
+3. *Season models.* Let the worker's daily pass fit `xg-v2` (no `xg-v2` model exists, so it fits one
+   and rescores every season's shots): a manual `xg.refresh` racing it would make the second
+   publication fail on its unique key and abort that season's pass once (final review). The same pass
+   rebuilds `returns-v2`. For **every** season with editions,
    including those older than 400 days that the worker no longer schedules:
    `embedding.refresh(conn, season)`. Within 400 days the worker also does this on its own, a model
    of another version being due.

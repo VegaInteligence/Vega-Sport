@@ -93,11 +93,16 @@ const NAMES = ["xg", "npxg", "xgOpen", "xgSet", "xgot", "shots", "sot", "shotsIn
 const side = (values) => Object.fromEntries(NAMES.map((name) => [name, values[name] ?? null]));
 /**
  * A row as teamRows gives it, the match carrying its real sides (the club at home, or away with
- * `away`); `shots` the match's shot list (own goals: the scorer's own team).
+ * `away`); `shots` the match's shot list (own goals: the scorer's own team). `scoring`, the match's
+ * scoring as every match record carries it since stage 8 (api.match_scoring, FAILURE_MODES §17):
+ * { ownFor, ownAgainst, penalties, oppPenalties } on the club's and the opponent's sides (`ownGoalsFor`,
+ * `penaltyAttempts`); a missing value is unknown, as the API's null. No `scoring`: neither field.
  */
-function row({ gf = 2, ga = 1, own = {}, opp = {}, shots = [], away = false } = {}) {
+function row({ gf = 2, ga = 1, own = {}, opp = {}, shots = [], away = false, scoring = undefined } = {}) {
   const o = side(own), p = side(opp);
-  const us = { id: CLUB, name: "Club" }, them = { id: OPP, name: "Opp" };
+  const fields = (ownGoalsFor, penaltyAttempts) => (scoring ? { ownGoalsFor: ownGoalsFor ?? null, penaltyAttempts: penaltyAttempts ?? null } : {});
+  const us = { id: CLUB, name: "Club", ...fields(scoring?.ownFor, scoring?.penalties) },
+    them = { id: OPP, name: "Opp", ...fields(scoring?.ownAgainst, scoring?.oppPenalties) };
   return {
     match: { id: "m", home: away ? them : us, away: away ? us : them, shots }, side: away ? "away" : "home", opponent: them, gf, ga,
     result: gf > ga ? "V" : gf === ga ? "N" : "D", points: gf > ga ? 3 : gf === ga ? 1 : 0, own: o, opp: p,
@@ -121,11 +126,15 @@ const OPP_SIDE = { xg: 0.9, npxg: 0.9, xgOpen: 0.7, xgSet: 0.2, xgot: 1.2, shots
 // The complete, reconciled shot set: all 12 of the club's shots (its 2 goals) and all 9 of the
 // opponent's (its goal); none is a penalty.
 const SHOTS = [goal(CLUB), goal(CLUB), ...Array.from({ length: 10 }, () => miss(CLUB)), goal(OPP), ...Array.from({ length: 8 }, () => miss(OPP))];
-const complete = (change = {}) => row({ own: { ...OWN, ...change.own }, opp: { ...OPP_SIDE, ...change.opp }, shots: change.shots ?? SHOTS });
+// The match's scoring as the server establishes it: no own goal either way, no penalty attempt.
+const SCORED = { ownFor: 0, ownAgainst: 0, penalties: 0, oppPenalties: 0 };
+const complete = (change = {}) => row({ own: { ...OWN, ...change.own }, opp: { ...OPP_SIDE, ...change.opp }, shots: change.shots ?? SHOTS,
+  scoring: "scoring" in change ? change.scoring : SCORED });
 
-// metric: [value on the complete row, inputs ("own.x", "opp.x" or "shots": the shot list)]
+// metric: [value on the complete row, inputs ("own.x", "opp.x", "scoring": the match's own goals,
+// "penalties": the club's penalty attempts)]
 const MATRIX = {
-  keeper: [1.2 - 1, ["opp.xgot", "shots"]],
+  keeper: [1.2 - 1, ["opp.xgot", "scoring"]],
   fieldTilt: [(100 * 250) / 400, ["own.oppHalfPasses", "opp.oppHalfPasses"]],
   boxShare: [(100 * 25) / 40, ["own.touchesBox", "opp.touchesBox"]],
   duels: [(100 * 50) / 95, ["own.duels", "opp.duels"]],
@@ -137,10 +146,10 @@ const MATRIX = {
   boxShots: [(100 * 8) / 12, ["own.shotsIn", "own.shots"]],
   setShare: [(100 * 0.4) / 1.4, ["own.xgSet", "own.xg"]],
   placement: [1.6 - 1.4, ["own.xgot", "own.xg"]],
-  // Penalty attempts are counted on the complete shot set only (no xG = npxG shortcut).
-  xgPerShot: [1.4 / 12, ["own.npxg", "own.shots", "shots"]],
-  finishing: [2 - 1.4, ["own.xg", "shots"]],
-  conversion: [(100 * 2) / 12, ["own.shots", "shots"]],
+  // Penalty attempts as the server counts them on the complete shot set (no xG = npxG shortcut).
+  xgPerShot: [1.4 / 12, ["own.npxg", "own.shots", "penalties"]],
+  finishing: [2 - 1.4, ["own.xg", "scoring"]],
+  conversion: [(100 * 2) / 12, ["own.shots", "scoring"]],
   red: [0, ["own.red"]],
 };
 
@@ -153,7 +162,8 @@ test("each input removed alone makes its indicator unknown (failure matrix)", ()
   for (const [key, [, inputs]] of Object.entries(MATRIX))
     for (const input of inputs) {
       const [where, name] = input.split(".");
-      const change = input === "shots" ? { shots: [] } : { [where]: { [name]: null } };
+      const change = input === "scoring" ? { scoring: { ...SCORED, ownFor: null } }
+        : input === "penalties" ? { scoring: { ...SCORED, penalties: null } } : { [where]: { [name]: null } };
       const value = METRICS[key].get([complete(change)]);
       if (value !== null) wrong.push(`${key} without ${input}: ${value}`);
     }
@@ -187,80 +197,63 @@ test("known zeros stay values; an empty denominator is unknown", () => {
 });
 
 test("a penalty changes neither side of the shot quality (15e)", () => {
-  // Complete shot sets (the club's 10 or 11 shots, the opponent's 3): the penalties are counted
-  // on them and left out of both terms.
-  const misses = (team, n) => Array.from({ length: n }, () => miss(team));
-  const ten = [goal(CLUB), ...misses(CLUB, 9), ...misses(OPP, 3)];
-  const eleven = [...ten, miss(CLUB, { situation: "Penalty" })];
-  const match = (own, shots) => row({ gf: 1, ga: 0, own, opp: { xg: 0.5, shots: 3 }, shots });
-  close(METRICS.xgPerShot.get([match({ xg: 1, npxg: 1, shots: 10 }, ten)]), 0.1, 1e-12, "no penalty");
-  close(METRICS.xgPerShot.get([match({ xg: 1.78, npxg: 1, shots: 11 }, eleven)]), 0.1, 1e-12, "one penalty more");
-  // Without the shot set, or with one that misses a shot, the penalties are not counted: equal
-  // xG and non-penalty xG establish nothing (FAILURE_MODES §7.2).
-  assert.equal(METRICS.xgPerShot.get([match({ xg: 1.78, npxg: 1, shots: 11 }, [])]), null, "no shot set");
-  assert.equal(METRICS.xgPerShot.get([match({ xg: 1, npxg: 1, shots: 10 }, [])]), null, "equal totals, no shot set");
-  assert.equal(METRICS.xgPerShot.get([match({ xg: 1.78, npxg: 1, shots: 11 }, ten)]), null, "a shot missing from the set");
-  // A complete count with one of the club's shots of unknown situation: it may be the penalty.
-  const unknown = [goal(CLUB), ...misses(CLUB, 8), unclassified(CLUB), ...misses(OPP, 3)];
-  assert.equal(METRICS.xgPerShot.get([match({ xg: 1.78, npxg: 1, shots: 10 }, unknown)]), null, "an unknown classification");
-  // The opponent's shots are counted, not classified: theirs may be unknown.
-  const theirs = [goal(CLUB), ...misses(CLUB, 9), unclassified(OPP), ...misses(OPP, 2)];
-  close(METRICS.xgPerShot.get([match({ xg: 1, npxg: 1, shots: 10 }, theirs)]), 0.1, 1e-12, "the opponent's classification is not read");
+  // The club's penalty attempts as the server counts them on the match's complete, reconciled shot
+  // set (agg.match_scoring, FAILURE_MODES §17): left out of both terms.
+  const match = (own, penalties, extra = {}) => row({ gf: 1, ga: 0, own, opp: { xg: 0.5, shots: 3 }, scoring: { ...SCORED, penalties }, ...extra });
+  const xgPerShot = (r) => METRICS.xgPerShot.get([r]);
+  close(xgPerShot(match({ xg: 1, npxg: 1, shots: 10 }, 0)), 0.1, 1e-12, "no penalty");
+  close(xgPerShot(match({ xg: 1.78, npxg: 1, shots: 11 }, 1)), 0.1, 1e-12, "one penalty more");
+  // Attempts unknown (the API's null, or a record read without the field): equal xG and non-penalty
+  // xG establish nothing (FAILURE_MODES §7.2).
+  assert.equal(xgPerShot(match({ xg: 1.78, npxg: 1, shots: 11 }, null)), null, "attempts unknown");
+  assert.equal(xgPerShot(match({ xg: 1, npxg: 1, shots: 10 }, null)), null, "equal totals, attempts unknown");
+  assert.equal(xgPerShot(row({ gf: 1, ga: 0, own: { xg: 1, npxg: 1, shots: 10 }, opp: { xg: 0.5, shots: 3 } })), null, "a record without the field");
+  // The shot list is not read: its penalty is not the match's count.
+  close(xgPerShot(match({ xg: 1, npxg: 1, shots: 10 }, 0, { shots: [miss(CLUB, { situation: "penalty" })] })), 0.1, 1e-12, "a listed penalty");
+  // Nothing but penalties: no non-penalty attempt to divide by.
+  assert.equal(xgPerShot(match({ xg: 0.76, npxg: 0, shots: 1 }, 1)), null, "a non-penalty denominator of 0");
 });
 
-test("the shot set's spelling, teams and flags (15e, 15f, interim reviews of 17 Nov)", () => {
-  // 11 club attempts: one goal, nine misses and one penalty, all classified; npxG 2: 2 / 10.
-  const misses = (team, n, extra) => Array.from({ length: n }, () => miss(team, extra));
-  const set = (penalty = "penalty", normal = "regular_play") =>
-    [goal(CLUB, { situation: normal }), ...misses(CLUB, 9, { situation: normal }), miss(CLUB, { situation: penalty }), ...misses(OPP, 3, { situation: normal })];
-  const match = (shots, away = false) =>
-    row({ gf: 1, ga: 0, own: { xg: 2.76, npxg: 2, xgot: 1.5, shots: 11 }, opp: { xg: 0.5, xgot: 0.4, shots: 3 }, shots, away });
-  const xgPerShot = (shots, away) => METRICS.xgPerShot.get([match(shots, away)]);
-  close(xgPerShot(set()), 0.2, 1e-12, "the API's lowercase penalty");
-  close(xgPerShot(set("Penalty", "RegularPlay")), 0.2, 1e-12, "the provider's spelling");
-  close(xgPerShot(set(), true), 0.2, 1e-12, "the club away");
-  // A club attempt of unknown situation: the penalties are unknown, not zero.
-  assert.equal(xgPerShot(set("banana")), null, "an unknown code");
-  assert.equal(xgPerShot(set(null)), null, "a null situation");
-  assert.equal(xgPerShot(set().map((s, i) => (i === 10 ? unclassified(CLUB) : s))), null, "no situation key");
-  // Every shot must be one of the two teams': another team's attempts never make up the count,
-  // nor its goals the score.
-  const alien = set().map((s, i) => (i === 3 ? miss("t_alien") : s));
-  assert.equal(xgPerShot(alien), null, "another team's attempt");
-  assert.equal(xgPerShot(set().map((s, i) => (i === 3 ? miss(undefined) : s))), null, "an attempt without a team");
-  assert.equal(xgPerShot(alien, true), null, "another team's attempt, the club away");
-  const alienGoal = set().map((s, i) => (i === 0 ? goal("t_alien") : s));
-  for (const key of ["finishing", "conversion", "keeper", "xgPerShot"])
-    assert.equal(METRICS[key].get([match(alienGoal)]), null, `${key}: another team's goal`);
-  // A goal without its own-goal flag: the scoring is unknown, never read as an ordinary goal.
-  const unflagged = set().map((s, i) => (i === 0 ? { teamId: CLUB, isGoal: true, situation: "regular_play" } : s));
-  for (const key of ["finishing", "conversion", "keeper", "xgPerShot"])
-    assert.equal(METRICS[key].get([match(unflagged)]), null, `${key}: a goal without its flag`);
-  // An unknown situation hides the shot quality only: the scoring is still classified.
-  const unknown = set(null);
-  close(METRICS.finishing.get([match(unknown)]), 1 - 2.76, 1e-12, "finishing with an unclassified attempt");
-  close(METRICS.conversion.get([match(unknown)]), 100 / 11, 1e-12, "conversion with an unclassified attempt");
-  close(METRICS.keeper.get([match(unknown)]), 0.4, 1e-12, "keeper with an unclassified attempt");
-  // Nothing but penalties: no non-penalty attempt to divide by.
-  const onlyPenalty = row({ gf: 0, ga: 0, own: { xg: 0.76, npxg: 0, shots: 1 }, opp: { xg: 0.1, shots: 1 },
-    shots: [miss(CLUB, { situation: "penalty" }), miss(OPP)] });
-  assert.equal(METRICS.xgPerShot.get([onlyPenalty]), null, "a non-penalty denominator of 0");
+test("the four read the match's scoring, never its shot list (§17, stage 8)", () => {
+  // Written before the correction. The shot set's spellings, teams and flags are the server's
+  // (agg.match_scoring, MatchScoringTest a–n); the client reads each side's two fields.
+  const keys = ["finishing", "conversion", "keeper", "xgPerShot"];
+  const want = Object.fromEntries(keys.map((key) => [key, MATRIX[key][0]]));
+  // Production's goal shots: an ordinary goal's flag is null, never false (§17.1). The match's
+  // scoring still measures it — before stage 8, every match with a goal was left out.
+  const unflagged = SHOTS.map((s) => (s.isGoal ? { teamId: s.teamId, isGoal: true, situation: "regular_play" } : s));
+  for (const key of keys) close(METRICS[key].get([complete({ shots: unflagged })]), want[key], 1e-12, `${key}: unflagged goals`);
+  // No shot list (the league's summary read), another team's goal or an unknown situation in it: the same values.
+  const alien = SHOTS.map((s, i) => (i === 0 ? goal("t_alien") : i === 3 ? unclassified(CLUB) : s));
+  for (const shots of [[], alien])
+    for (const key of keys) close(METRICS[key].get([complete({ shots })]), want[key], 1e-12, `${key}: ${shots.length} shots`);
+  // The scoring unknown: the API's nulls, or a record read without the fields.
+  for (const key of keys) {
+    assert.equal(METRICS[key].get([complete({ scoring: { ownFor: null, ownAgainst: null, penalties: null, oppPenalties: null } })]), null, `${key}: null scoring`);
+    assert.equal(METRICS[key].get([complete({ scoring: undefined })]), null, `${key}: no scoring fields`);
+  }
+  // The opponent's side unknown: the own-goal-adjusted three are; the shot quality reads the attempts alone.
+  const half = complete({ scoring: { ...SCORED, ownAgainst: null } });
+  for (const key of ["finishing", "conversion", "keeper"]) assert.equal(METRICS[key].get([half]), null, `${key}: one side unknown`);
+  close(METRICS.xgPerShot.get([half]), want.xgPerShot, 1e-12, "xgPerShot on its attempts");
+  // A value that is no count is unknown.
+  for (const bad of [-1, 0.5, "1", Number.NaN]) {
+    assert.equal(METRICS.finishing.get([complete({ scoring: { ...SCORED, ownFor: bad } })]), null, `ownGoalsFor ${String(bad)}`);
+    assert.equal(METRICS.xgPerShot.get([complete({ scoring: { ...SCORED, penalties: bad } })]), null, `penaltyAttempts ${String(bad)}`);
+  }
 });
 
 test("an own goal is neither the scorer's finishing nor the keeper's fault (15f)", () => {
   // Two goals for, one of them the opponent's own goal: finishing 1 − 1.0, conversion 1 in 10.
-  const forUs = row({ gf: 2, ga: 0, own: { xg: 1.0, shots: 10 }, opp: { xg: 0.4, xgot: 0.5 }, shots: [goal(CLUB), ownGoal(OPP), miss(CLUB)] });
-  close(METRICS.finishing.get([forUs]), 0, 1e-12, "finishing");
-  close(METRICS.conversion.get([forUs]), 10, 1e-12, "conversion");
+  const forUs = (away) => row({ gf: 2, ga: 0, own: { xg: 1.0, shots: 10 }, opp: { xg: 0.4, xgot: 0.5 }, scoring: { ...SCORED, ownFor: 1 }, away });
   // Two goals against, one of them the club's own goal: the keeper let in one, for 1.5 xGOT.
-  const againstUs = row({ gf: 0, ga: 2, own: { xg: 0.3, shots: 4 }, opp: { xg: 1.1, xgot: 1.5 }, shots: [goal(OPP), ownGoal(CLUB), miss(CLUB)] });
-  close(METRICS.keeper.get([againstUs]), 0.5, 1e-12, "keeper");
-  // The same matches with the club away: an own goal still counts for the side it does not belong to.
-  const forUsAway = row({ gf: 2, ga: 0, own: { xg: 1.0, shots: 10 }, opp: { xg: 0.4, xgot: 0.5 }, shots: [goal(CLUB), ownGoal(OPP), miss(CLUB)], away: true });
-  close(METRICS.finishing.get([forUsAway]), 0, 1e-12, "finishing, away");
-  close(METRICS.conversion.get([forUsAway]), 10, 1e-12, "conversion, away");
-  const againstUsAway = row({ gf: 0, ga: 2, own: { xg: 0.3, shots: 4 }, opp: { xg: 1.1, xgot: 1.5 }, shots: [goal(OPP), ownGoal(CLUB), miss(CLUB)], away: true });
-  close(METRICS.keeper.get([againstUsAway]), 0.5, 1e-12, "keeper, away");
+  const againstUs = (away) => row({ gf: 0, ga: 2, own: { xg: 0.3, shots: 4 }, opp: { xg: 1.1, xgot: 1.5 }, scoring: { ...SCORED, ownAgainst: 1 }, away });
+  for (const away of [false, true]) {
+    const where = away ? ", away" : "";
+    close(METRICS.finishing.get([forUs(away)]), 0, 1e-12, "finishing" + where);
+    close(METRICS.conversion.get([forUs(away)]), 10, 1e-12, "conversion" + where);
+    close(METRICS.keeper.get([againstUs(away)]), 0.5, 1e-12, "keeper" + where);
+  }
 });
 
 /* -------------------------------------------------------------- xPts law */
@@ -484,7 +477,9 @@ test("shoot-out shots stay out of the classified metrics, the buckets and the ma
     attempt(OPP, "regular_play", 0.3, { isGoal: true }), attempt(OPP, "regular_play", 0.1)];
   const shootout = [attempt(CLUB, "penalty", 0.78, { isGoal: true, period: "penalties" }), attempt(CLUB, "penalty", 0.78, { period: "penalties" }),
     attempt(OPP, "Penalty", 0.78, { isGoal: true, period: "Penalties" }), attempt(OPP, "Penalty", 0.78, { period: "Penalties" })];
-  const match = (shots) => row({ gf: 1, ga: 1, own: { xg: 0.4, npxg: 0.4, xgot: 0.5, shots: 2 }, opp: { xg: 0.4, npxg: 0.4, xgot: 0.8, shots: 2 }, shots });
+  // The match's scoring as the server gives it (it leaves the shoot-out out: MatchScoringTest h).
+  const match = (shots, penalties = 0) => row({ gf: 1, ga: 1, own: { xg: 0.4, npxg: 0.4, xgot: 0.5, shots: 2 }, opp: { xg: 0.4, npxg: 0.4, xgot: 0.8, shots: 2 }, shots,
+    scoring: { ...SCORED, penalties } });
   for (const key of ["finishing", "keeper", "conversion", "xgPerShot"]) {
     const plain = METRICS[key].get([match(ordinary)]), with_ = METRICS[key].get([match([...ordinary, ...shootout])]);
     assert.notEqual(plain, null, `${key} on the ordinary match`);
@@ -496,7 +491,7 @@ test("shoot-out shots stay out of the classified metrics, the buckets and the ma
   shotNo = 0;
   const inMatch = [attempt(CLUB, "regular_play", 0.3, { isGoal: true }), attempt(CLUB, "penalty", 0.76, { period: "second_half" }),
     attempt(OPP, "regular_play", 0.3, { isGoal: true }), attempt(OPP, "regular_play", 0.1)];
-  close(METRICS.xgPerShot.get([match([...inMatch, ...shootout])]), 0.4 / 1, 1e-12, "npxG over the one non-penalty attempt");
+  close(METRICS.xgPerShot.get([match([...inMatch, ...shootout], 1)]), 0.4 / 1, 1e-12, "npxG over the one non-penalty attempt");
   const profile = scout.shotProfile([match([...inMatch, ...shootout])], CLUB);
   assert.deepEqual([profile.for.penalty.shots, profile.against.penalty.shots], [1, 0]);
 });
@@ -508,31 +503,39 @@ const SEL_LEAGUE = { id: "l_sel", name: "Ligue Sel", country: "FRA" };
 const CUP5 = { id: "l_cup", name: "Coupe", country: "FRA" };
 let recordNo = 0;
 /** A match record as the API embeds it (match-record.mjs): the club's full read carries its shot
- * list; the league's summary read carries `shots: []`. `side`: {statistic key: [home, away]}. */
-function record5(leagueId, home, away, hs, as, side, shots = []) {
+ * list; the league's summary read carries `shots: []`; both carry each side's scoring (stage 8,
+ * §17) when `scoring` is given: { home: [ownGoalsFor, penaltyAttempts], away: [...] }.
+ * `side`: {statistic key: [home, away]}. */
+function record5(leagueId, home, away, hs, as, side, shots = [], scoring = null) {
   const n = ++recordNo;
+  const fields = (name) => (scoring ? { ownGoalsFor: scoring[name][0], penaltyAttempts: scoring[name][1] } : {});
   return { id: `m${n}`, leagueId, date: `2026-0${1 + (n % 8)}-${String(10 + (n % 18)).padStart(2, "0")}`, timeUtc: "19:00", status: "finished",
-    home: { id: home, name: home, imageUrl: null, score: hs }, away: { id: away, name: away, imageUrl: null, score: as },
+    home: { id: home, name: home, imageUrl: null, score: hs, ...fields("home") }, away: { id: away, name: away, imageUrl: null, score: as, ...fields("away") },
     coverage: { teamStatsReliable: true }, stats: Object.entries(side).map(([key, [h, a]]) => ({ key, home: h, away: a })), shots };
 }
 const STATS5 = (shots, xg, npxg, xgot) => ({ total_shots: shots, expected_goals: xg, expected_goals_non_penalty: npxg, expected_goals_on_target: xgot });
 const flagged = (teamId, isGoal, extra = {}) => ({ teamId, isGoal, isOwnGoal: false, situation: "regular_play", period: "first_half", ...extra });
 /**
- * The selected club's season: s1, its one complete shot set (2 goals from 2 shots, 1.2 xG; the
- * opponent's one shot, 0.4 xGOT): finishing 0.8, keeper 0.4, conversion 100 %, xG/shot 0.6 — the
- * coordinator's browser fixture; s2 and s3 without a shot list. c1: a cup match, its own set.
+ * The selected club's season: s1, its one match whose scoring the server established (2 goals from
+ * 2 shots, 1.2 xG; the opponent's one shot, 0.4 xGOT): finishing 0.8, keeper 0.4, conversion 100 %,
+ * xG/shot 0.6 — the coordinator's browser fixture; s2 and s3 with their scoring unknown. c1: a cup
+ * match, its scoring established. The peers' own matches carry theirs (stage 8: a summary read
+ * measures every club). `variant`: "penaltiesUnknown" (s1's attempts of the club unknown),
+ * "unscored" (s1's scoring unknown).
  */
 function selectedSeason({ variant = "complete" } = {}) {
   recordNo = 0;
+  const none = { home: [0, 0], away: [0, 0] };
+  const s1scoring = variant === "unscored" ? { home: [null, null], away: [null, null] }
+    : variant === "penaltiesUnknown" ? { home: [0, null], away: [0, 0] } : none;
   const s1shots = [flagged(SEL, true), flagged(SEL, true), flagged("t_p1", false)];
-  if (variant === "unclassified") s1shots[1] = { ...s1shots[1], situation: undefined };
-  const s1 = record5(SEL_LEAGUE.id, SEL, "t_p1", 2, 0, STATS5([variant === "incomplete" ? 3 : 2, 1], [1.2, 0.2], [1.2, 0.2], [1.3, 0.4]), s1shots);
+  const s1 = record5(SEL_LEAGUE.id, SEL, "t_p1", 2, 0, STATS5([2, 1], [1.2, 0.2], [1.2, 0.2], [1.3, 0.4]), s1shots, s1scoring);
   const s2 = record5(SEL_LEAGUE.id, "t_p2", SEL, 1, 1, STATS5([4, 3], [1.1, 0.7], [1.1, 0.7], [0.9, 0.6]));
   const s3 = record5(SEL_LEAGUE.id, SEL, "t_p3", 0, 1, STATS5([5, 2], [0.6, 0.9], [0.6, 0.9], [0.5, 0.7]));
   const c1 = record5(CUP5.id, SEL, "t_c1", 1, 0, STATS5([3, 1], [0.9, 0.3], [0.9, 0.3], [1.0, 0.2]),
-    [flagged(SEL, true), flagged(SEL, false), flagged(SEL, false), flagged("t_c1", false)]);
-  const peers = [record5(SEL_LEAGUE.id, "t_p1", "t_p2", 2, 2, STATS5([6, 6], [1.5, 1.4], [1.5, 1.4], [1.1, 1.0])),
-    record5(SEL_LEAGUE.id, "t_p3", "t_p1", 0, 0, STATS5([7, 4], [0.8, 0.5], [0.8, 0.5], [0.6, 0.3]))];
+    [flagged(SEL, true), flagged(SEL, false), flagged(SEL, false), flagged("t_c1", false)], none);
+  const peers = [record5(SEL_LEAGUE.id, "t_p1", "t_p2", 2, 2, STATS5([6, 6], [1.5, 1.4], [1.5, 1.4], [1.1, 1.0]), [], none),
+    record5(SEL_LEAGUE.id, "t_p3", "t_p1", 0, 0, STATS5([7, 4], [0.8, 0.5], [0.8, 0.5], [0.6, 0.3]), [], none)];
   const summary = (m) => ({ ...m, shots: [] });
   return {
     full: { matches: [s1, s2, s3, c1], fixtures: [], appearances: [], teams: [], competitions: [SEL_LEAGUE, CUP5] },
@@ -562,20 +565,32 @@ const assertMeasured = (club, want, label) => {
 };
 const DOMESTIC = { finishing: 0.8, keeper: 0.4, conversion: 100, xgPerShot: 0.6 };
 
-test("the selected club's four shot-backed values come from its own full records (§14.1)", async () => {
+test("every club of the league is measured from its summary, the selected club alike (§14.1, §17)", async () => {
   const { cohort, dossier } = await selectedDossier();
   const before = structuredClone(cohort);
   const d = dossier();
   assertMeasured(d.self, DOMESTIC, "self");
+  // The summary measures the club as its full read does (the same scoring fields).
+  assertMeasured(cohort.clubs.find((c) => c.id === SEL), DOMESTIC, "the cohort's member");
   assert.equal(d.clubs.find((c) => c.id === SEL), d.self, "the dossier's clubs carry the same measured self");
+  // The peers, on their matches whose scoring is established: t_p1 three (both peer matches and s1),
+  // t_p2 and t_p3 one each (s2 and s3 unknown). Before stage 8, a peer stayed unmeasured.
+  const support = { t_p1: 3, t_p2: 1, t_p3: 1 };
   for (const peer of d.clubs.filter((c) => c.id !== SEL))
-    assert.deepEqual(Object.values(measures(peer)).map(([value]) => value), [null, null, null, null], `${peer.id}: a peer stays unmeasured`);
+    for (const [key, [value, covered]] of Object.entries(measures(peer))) {
+      assert.ok(value != null, `${peer.id} ${key}: measured`);
+      assert.equal(covered, support[peer.id], `${peer.id} ${key}'s support`);
+    }
+  // t_p1's finishing on its three: (2 − 1.5) + (0 − 0.5) + (0 − 0.2), its conversion 2 goals in 11 shots.
+  const p1 = d.clubs.find((c) => c.id === "t_p1");
+  close(p1.values.finishing, (0.5 - 0.5 - 0.2) / 3, 1e-9, "t_p1 finishing");
+  close(p1.values.conversion, (100 * 2) / 11, 1e-9, "t_p1 conversion");
   const member = cohort.clubs.find((c) => c.id === SEL);
   assert.deepEqual(d.self.record, member.record);
   assert.equal(d.self.values.xg, member.values.xg);
   assert.equal(d.self.pairedXgDelta, member.pairedXgDelta);
   for (const key of FOUR) {
-    assert.deepEqual([d.self.ranks[key], d.self.centiles[key]], [null, null], `${key}: no rank with one measured club`);
+    assert.deepEqual([d.self.ranks[key], d.self.centiles[key]], [null, null], `${key}: no rank with four measured clubs`);
     assert.equal(d.stats[key].median, null, `${key}: no league median of the club's own value`);
   }
   assert.deepEqual(d.stats.xg, cohort.stats.xg, "another metric's statistics are the cohort's");
@@ -616,14 +631,14 @@ test("every reference keeps a measured self and leaves its inputs unchanged (§1
 test("a rank of the four needs five measured clubs (§14.1)", async () => {
   const { s, dossier } = await selectedDossier();
   const d = dossier();
-  // Peers measured on their own complete sets (a read that carries the shot lists).
+  // Peers measured on their records' scoring (any read since stage 8).
   const peers = (count) => {
     recordNo = 100;
     const ids = Array.from({ length: count }, (_, i) => `t_m${i}`);
     return { clubs: ids.map((id, i) => ({ id, name: id, imageUrl: null, country: "FRA", league: { id: "l_meas", name: "Mesurés" },
       ...(() => {
         const m = record5("l_meas", id, "t_x", 1 + i, 0, STATS5([2 + i, 1], [0.5 + i / 10, 0.2], [0.5 + i / 10, 0.2], [0.6, 0.3 + i / 10]),
-          [...Array.from({ length: 1 + i }, () => flagged(id, true)), flagged(id, false), flagged("t_x", false)]);
+          [], { home: [0, 0], away: [0, 0] });
         const rows = s.teamRows([m], id);
         return { rows, record: { matches: 1, points: 3, gf: 1 + i, ga: 0 }, values: Object.fromEntries(Object.keys(s.METRICS).map((k) => [k, s.METRICS[k].get(rows)])),
           coverage: Object.fromEntries(Object.keys(s.METRICS).map((k) => [k, s.METRICS[k].count(rows)])) };
@@ -642,14 +657,17 @@ test("a rank of the four needs five measured clubs (§14.1)", async () => {
   assert.ok(four.clubs.every((c) => Number.isInteger(c.ranks.ppm)));
 });
 
-test("the selected club's controls: a count that does not match, an unknown situation (§14.1)", async () => {
-  const incomplete = (await selectedDossier({ variant: "incomplete" })).dossier().self;
-  assert.equal(incomplete.values.xgPerShot, null, "a shot missing from the set: no penalty count");
-  close(incomplete.values.finishing, 0.8, 1e-9, "finishing still reads the classified scoring");
-  close(incomplete.values.conversion, 200 / 3, 1e-9, "two goals from the three shots the statistics count");
-  const unknown = (await selectedDossier({ variant: "unclassified" })).dossier().self;
-  assert.equal(unknown.values.xgPerShot, null, "an unclassified attempt: no penalty count");
-  close(unknown.values.keeper, 0.4, 1e-9, "the keeper still reads the classified scoring");
+test("the selected club's controls: its attempts or its scoring unknown (§14.1, §17)", async () => {
+  // The server could not count the club's penalty attempts in s1 (a shot set that does not match,
+  // an unclassified attempt: MatchScoringTest i, j): the shot quality alone is unknown.
+  const attempts = (await selectedDossier({ variant: "penaltiesUnknown" })).dossier().self;
+  assert.equal(attempts.values.xgPerShot, null, "no penalty count");
+  close(attempts.values.finishing, 0.8, 1e-9, "finishing still reads the established own goals");
+  close(attempts.values.keeper, 0.4, 1e-9, "the keeper too");
+  close(attempts.values.conversion, 100, 1e-9, "two goals from two shots");
+  // Its scoring unknown (events not matching the score): the four unknown, the shot list unread.
+  const unscored = (await selectedDossier({ variant: "unscored" })).dossier().self;
+  for (const key of FOUR) assert.equal(unscored.values[key], null, `${key}: unknown`);
 });
 
 /* ------------------------------- an opponent's strength without a centile (§16.2, stage 7) */

@@ -472,6 +472,10 @@ table: 70 assertions, 46 pass and 24 expected failures before the correction
 
 ### 7.2 Penalties and own goals (15e, 15f)
 
+> **Superseded by §17 (stage 8, 17 Nov 2026) where they disagree:** production's goal shots never carry
+> FALSE, so the scoring is classified once per match on the server (`agg.match_scoring`), from the goal
+> events' teams, and every match record carries it; the client no longer classifies shot lists.
+
 **Penalty attempts of a match** are established only by observed classification on a **complete, reconciled shot set**. Amendment §1 applies: equal xG and non-penalty xG establish nothing.
 
 A complete, reconciled shot set means:
@@ -1280,3 +1284,109 @@ nullish; provided values (zeros included) are kept. The existing rebase tests co
   - during a version transition, the scores stay those of the previous version, which is no longer read.
 
   The daily step is reported failed and retried after its backoff (§10.3); no older model is used to score in the meantime. The accepted rejection contract (no model and no score written) is unchanged; a fallback policy needs its own joint design and tests.
+
+## 17. Stage 8 — one scoring per match, measured on production (written before the tests)
+
+Taken over on 17 Nov 2026 by the session the user asked to finish VI-23 (Linear comment of that
+day). This section **supersedes** the own-goal and penalty-attempt rules of §7.2, §11 and §16.6
+where they disagree; the user's go-ahead before the push is the joint design §16.6 asked for.
+
+### 17.1 What production holds (read-only, 17 Nov 2026)
+
+- **Goal shots** (`core.shots`, outcome `goal`): the own-goal flag is TRUE or NULL, never FALSE
+  (2026: 991 TRUE, 31,632 NULL, 0 FALSE; the same every season 2021–2026). `normalize.py` writes it
+  only when the provider sends it, or TRUE for an `OwnGoal`. The §7.2 rule « every goal carries an
+  explicit flag » therefore left 64,712 of 65,116 matches with a goal (2021+) unclassified: the four
+  indicators were measured on goalless matches only (Le Havre's conversion 0,0 %, Paris's keeper « — »).
+- **Goal events** (`core.match_events`): explicit TRUE/FALSE since 2021; NULL only on archive
+  matches, which have no shots.
+- **The running score of a goal event** follows two conventions: the score after the goal (first goal
+  1–0) in 16,880 goals of 2026, the score **before** it (first goal 0–0) in 15,898. The calculator's
+  « each goal raises one side by one » check assumes the first, and classified 6,275 of 11,424
+  matches with shots (55 %): every goalless match, about half of the others. Outcome-selected again.
+- **The team of a goal event is the side credited**, own goals included: where the running score
+  says which side rose (the « after » matches), the event's team is that side for 16,879 of 16,880
+  goals and for all 475 own goals (2025: 24,027 of 24,030; 671 of 671).
+- **A rule on the teams**: goal events whose teams count exactly the home and the away score, every
+  flag known, none of another team, classify 11,300 of 11,424 matches with shots in 2026 (98.9 %;
+  10,572 of 10,696 with a goal) and 21,722 of 21,754 in 2025.
+- **Shots** reproduce both scores with an unflagged goal read as ordinary in 69,841 of 69,969
+  matches (2021+); their own goals (TRUE, carrying the scorer's team) disagree with the events'
+  in 226.
+
+### 17.2 The rules
+
+**Own goals of a match** (`agg.match_scoring`, read by the calculator and, through
+`api.match_scoring`, by every match record):
+- classified when the match is finished with its score, its events were read (`events = 'ok'`),
+  and its goal events outside the shoot-out each carry an own-goal flag, each belong to the home
+  or the away team, and number exactly the home score for the home team and the away score for
+  the away team;
+- own goals for a side: its credited goal events flagged TRUE;
+- otherwise both sides are unknown (NULL). A goalless match with its events read classifies 0 and
+  0: its events were read, the score decides nothing; without events it stays unknown.
+- The running score of the events is not read, and the shots never classify a goal.
+
+**Penalty attempts of a side** (same view): known only when, besides the classified own goals:
+- the shots were read (`shots = 'ok'`), the shoot-out left out, every shot of the home or the away team;
+- each side's shots other than own goals (`is_own_goal` not TRUE) number its `total_shots`;
+- the goal shots reproduce both scores, an own-goal shot counting for the other side;
+- the own-goal shots of each side agree with the events' own goals of the side they count for;
+- every attempt of **that** side (own goals aside) has a situation: one unknown leaves that side
+  unknown, the other side's count stands.
+Penalty attempts are that side's attempts whose situation is `penalty`. Any other match: unknown on
+both sides. A count is NULL when unknown, 0 when established none: never coalesced.
+
+**Shape** of the match records (full and summary detail, the league read, the Europe pool): each side
+carries `ownGoalsFor` (own goals of the opponent in that side's score) and `penaltyAttempts`; the
+shapes `club-2`, `league-2`, `player-2` and `europe-matches-2` say so to the caches.
+
+**The site** reads those fields only: finishing, keeper, conversion and xG per shot are measured
+alike for the club and for every other club of its references (ranks, centiles, phases and the
+Vega index come back). The shot lists still draw the maps; they no longer classify the scoring.
+
+### 17.3 Failure modes and expected outcomes
+
+The view, on a disposable database (one match each; home H, away A):
+
+| # | Input | Expected `own_goals_for_home/away`, `penalties_home/away` |
+|---|---|---|
+| a | 1–0, the goal event FALSE for H, complete shot set whose goal shot has a NULL flag | 0/0, 0/0 |
+| b | 1–0, the goal event TRUE for H (A's own goal); A's shot TRUE | 1/0, known |
+| c | as b, the shot list holding an ordinary goal of H instead | 1/0, unknown/unknown |
+| d | 2–0, shots missing one goal | 0/0, unknown/unknown |
+| e | an event flag NULL, a perfect shot set | all unknown |
+| f | events counting 2 for H in a 1–0 (a disallowed goal kept) | all unknown |
+| g | 0–0 with events read / with events unavailable | 0/0 and penalties per the set / all unknown |
+| h | shoot-out events and kicks, one in-match penalty of H | shoot-out ignored, penalties 1/0 |
+| i | H's shots one fewer than its `total_shots` | penalties unknown/unknown, own goals known |
+| j | one H attempt without situation | penalties unknown/known |
+| k | a shot of a third team | penalties unknown/unknown |
+| l | b and c with the club away (credited A) | mirrored |
+| m | events in the « before » convention (first goal 0–0) and in the « after » one | the same classification |
+| n | an unfinished match | no row |
+
+The calculator: its own-goal and penalty supports are the view's (`pair_finishing_n`,
+`pair_keeper_n`, `pair_conversion_n`, `pair_xg_per_shot_n`); a goal shot with a NULL flag no
+longer leaves its match out (§16.6's probe becomes a regression test: a classified 0–0 and a 1–0
+give finishing on two matches); a goal event without its flag still classifies nothing.
+
+The read API: the league summary and the club's full read give each side the same two fields for
+the same match; unknown is `null`, a known zero `0`; the shot list stays empty in the summary; the
+version of a read changes with the shape.
+
+The site (`audit-club-metrics.test.mjs`): the four metrics read the fields whatever the shot list
+says (fields null → the metric unknown on that match); a peer read from a summary is measured; a rank
+of the four still needs five measured clubs; the club's values from its summary rows equal those
+from its full rows.
+
+End to end (production data, after the migration): Le Havre's conversion near 5 %, not 0,0 %; Paris's
+keeper a number; « n sur N » ranks for the four; the pizza and the « Finition et gardien » phase
+present.
+
+**Accepted residuals:** about 1 % of the matches with a goal (events not matching the score) and 0.35 %
+more for the penalty attempts (shots and events disagreeing) stay unmeasured; only matches with a goal
+can fail, so the measured support leans very slightly towards fewer goals — recorded, not corrected.
+Values differ from main's, which credited an opponent's own goal to finishing. Readers of the shot
+flag left as they are (handed off): `club-game-states.js`, `club-analysis.js`, `home-insights.js`;
+the normalizer's NULL for an ordinary goal shot (VI-21).

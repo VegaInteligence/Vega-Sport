@@ -226,7 +226,8 @@ class ServerIndicatorSupportTest(unittest.TestCase):
 
     @classmethod
     def goal_events(cls, match, home, away, hs, as_):
-        """Goal events reproducing the score; 4–5's second goal is team 5's own goal."""
+        """Goal events reproducing the score; 4–5's second goal is team 5's own goal. The event's
+        team is the side credited, own goals included, as production stores it (FAILURE_MODES §17.1)."""
         goals = [(10 * (i + 1), "home") for i in range(hs)] + [(10 * (i + 1) + 5, "away") for i in range(as_)]
         score = [0, 0]
         for seq, (minute, side) in enumerate(sorted(goals), 1):
@@ -235,7 +236,7 @@ class ServerIndicatorSupportTest(unittest.TestCase):
             cls.db.execute(
                 """INSERT INTO core.match_events(season_id,match_id,team_id,seq,event_type,period,minute,score_home,score_away,is_own_goal)
                    VALUES(2025,%s,%s,%s,'goal','first_half',%s,%s,%s,%s)""",
-                (match, away if own else (home if side == "home" else away), seq, minute, score[0], score[1], own))
+                (match, home if side == "home" else away, seq, minute, score[0], score[1], own))
 
     def percentile_row(self, team, key):
         return self.db.execute(
@@ -324,8 +325,10 @@ class ServerIndicatorSupportTest(unittest.TestCase):
 
 @unittest.skipUnless(DSN and psycopg, "requires disposable local agg DB and psycopg")
 class OwnGoalFlagSupportTest(unittest.TestCase):
-    """FAILURE_MODES §7.2 and §11 (Astra/xhigh interim own-goal review, 17 Nov 2026): a goal must
-    carry its own-goal flag, as an event or as a shot; a non-goal row may have none."""
+    """FAILURE_MODES §7.2 and §11 (Astra/xhigh interim own-goal review, 17 Nov 2026), as §17
+    (stage 8) amends them: a goal event must carry its own-goal flag; a goal shot need not, the
+    events classify the scoring (production never stores FALSE on a shot). A non-goal row may have
+    no flag."""
 
     @classmethod
     def setUpClass(cls):
@@ -335,7 +338,7 @@ class OwnGoalFlagSupportTest(unittest.TestCase):
         x("INSERT INTO core.teams(id,name) VALUES (11,'Club'),(12,'Adversaire')")
         # (match, score, events, shots): the club at home against the same opponent.
         games = [(1, (1, 0), "ok", "pending"), (2, (1, 0), "ok", "pending"), (3, (1, 0), "ok", "pending"), (4, (0, 0), "ok", "pending"),
-                 (5, (1, 0), "unavailable", "ok"), (6, (1, 0), "unavailable", "ok")]
+                 (5, (1, 0), "ok", "ok"), (6, (1, 0), "ok", "ok")]
         for mid, (hs, as_), events, shots in games:
             x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date)
                  VALUES(%s,1,2025,'pitchapi','finished',11,12,%s,%s,%s)""", (mid, hs, as_, date(2025, 8, 1) + timedelta(days=mid)))
@@ -348,12 +351,15 @@ class OwnGoalFlagSupportTest(unittest.TestCase):
                   VALUES(2025,%s,%s,1,'goal','first_half',20,1,0,%s)"""
         x(goal, (1, 11, None))  # 1: the goal's flag unknown
         x(goal, (2, 11, False))  # 2: an ordinary goal
-        x(goal, (3, 12, True))  # 3: the opponent's own goal, for the club
+        x(goal, (3, 11, True))  # 3: the opponent's own goal, credited to the club (§17.1)
+        x(goal, (5, 11, False))  # 5 and 6: ordinary goals, their shot sets below
+        x(goal, (6, 11, False))
         # 4: no goal; a card whose flag is unknown changes nothing.
         x("""INSERT INTO core.match_events(season_id,match_id,team_id,seq,event_type,period,minute,is_own_goal)
              VALUES(2025,4,12,1,'yellow_card','first_half',30,NULL)""")
         # 5 and 6: complete shot sets, every attempt classified; the misses carry no own-goal flag
-        # (as the real fixture's); the goal's flag is unknown in 5, false in 6.
+        # (as the real fixture's); the goal shot's flag is unknown in 5 (as production stores an
+        # ordinary goal), false in 6.
         for mid, flag in ((5, None), (6, False)):
             rows = [(11, 0, "goal", flag), (11, 1, "miss", None), (11, 2, "miss", None), (12, 100, "miss", None), (12, 101, "miss", None)]
             for team, no, outcome, own in rows:
@@ -367,19 +373,32 @@ class OwnGoalFlagSupportTest(unittest.TestCase):
         return self.db.execute(f"SELECT {', '.join(columns)} FROM agg.team_season_stats WHERE team_id=11").fetchone()
 
     def test_1_a_goal_event_without_its_flag_is_not_classified(self):
-        # Classified: 2 (false), 3 (true), 4 (no goal; the card's flag is not read). 1 is not.
-        self.assertEqual(self.club("pair_finishing_n", "pair_conversion_n", "pair_keeper_n"), (3, 3, 3))
-        finishing = (1 - 1.2) + (1 - 1 - 1.2) + (0 - 1.2)
+        # Classified: 2, 5, 6 (false), 3 (true), 4 (no goal; the card's flag is not read). 1 is not.
+        # A classified 0–0 beside 1–0s: the measured matches are not the goalless ones alone (§16.6's probe).
+        self.assertEqual(self.club("pair_finishing_n", "pair_conversion_n", "pair_keeper_n"), (5, 5, 5))
+        finishing = (1 - 1.2) + (1 - 1 - 1.2) + (0 - 1.2) + 2 * (1 - 1.2)
         self.assertAlmostEqual(self.club("pair_finishing_sum")[0], finishing, places=5)
 
     def test_2_the_other_statistics_keep_every_match(self):
         self.assertEqual(self.club("matches", "for_xg_n", "for_total_shots_n"), (6, 6, 6))
 
-    def test_3_a_goal_shot_without_its_flag_reconciles_no_shot_set(self):
-        # 6 only: its goal says it is no own goal; 5's goal does not, whatever its misses say.
-        self.assertEqual(self.club("pair_xg_per_shot_n")[0], 1)
+    def test_3_a_goal_shot_without_its_flag_still_reconciles_its_shot_set(self):
+        # 5 and 6: the events say both goals are ordinary; 5's shot without a flag no longer
+        # leaves its set out (§17.2). Before stage 8: 6 only.
+        self.assertEqual(self.club("pair_xg_per_shot_n")[0], 2)
         num, den = self.club("pair_xg_per_shot_num", "pair_xg_per_shot_den")
-        self.assertAlmostEqual(num / den, 1.2 / 3, places=6)
+        self.assertAlmostEqual(num / den, 2.4 / 6, places=6)
+
+    def test_4_the_calculator_reads_the_match_scoring(self):
+        # One definition (§17.2): the calculator's statement joins agg.match_scoring and keeps no
+        # scoring or shot-set rule of its own.
+        import inspect
+        from vega import calculator
+
+        source = inspect.getsource(calculator)
+        self.assertIn("agg.match_scoring", source)
+        for gone in ("shot_sets AS", "scoring AS (", "lag(e.score_home"):
+            self.assertNotIn(gone, source)
 
 
 @unittest.skipUnless(DSN and psycopg, "requires disposable local agg DB and psycopg")
@@ -427,3 +446,167 @@ class PlacementSupportTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(DSN and psycopg, "requires disposable local agg DB and psycopg")
+class MatchScoringTest(unittest.TestCase):
+    """FAILURE_MODES §17 (stage 8, written before agg.match_scoring): one scoring per match, the
+    own goals from the goal events' teams (the side credited), the penalty attempts from a shot
+    set reconciled with them. Cases a–n of §17.3; home 21, away 22, a third team 23."""
+
+    H, A, X = 21, 22, 23
+
+    @classmethod
+    def setUpClass(cls):
+        cls.db = _connect()
+        cls.addClassCleanup(_drop, cls.db)
+        cls.db.execute("INSERT INTO core.teams(id,name) VALUES (21,'Domicile'),(22,'Extérieur'),(23,'Tiers')")
+        cls.case = {}
+        cls.cases()
+
+    @classmethod
+    def match(cls, name, score, *, events="ok", shots="ok", status="finished", totals=None):
+        """A match of the case `name`: its coverage and both sides' total shots (default: the shot
+        list's own counts, filled in by `shot`)."""
+        mid = len(cls.case) + 1
+        cls.case[name] = mid
+        hs, as_ = score
+        cls.db.execute(
+            """INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date)
+               VALUES(%s,1,2025,'pitchapi',%s,%s,%s,%s,%s,%s)""",
+            (mid, status, cls.H, cls.A, hs, as_, date(2025, 8, 1) + timedelta(days=mid)))
+        cls.db.execute("INSERT INTO core.match_coverage(season_id,match_id,events,shots) VALUES(2025,%s,%s,%s)", (mid, events, shots))
+        cls.totals = dict(totals or {})
+        cls.shots, cls.seq = [], 0
+        return mid
+
+    @classmethod
+    def goal(cls, mid, team, own=False, score=None, period="first_half"):
+        """A goal event credited to `team` (own: the opponent's own goal); `score` its running
+        score as the source stored it (either convention), unread by the rule."""
+        cls.seq += 1
+        sh, sa = score or (None, None)
+        cls.db.execute(
+            """INSERT INTO core.match_events(season_id,match_id,team_id,seq,event_type,period,minute,score_home,score_away,is_own_goal)
+               VALUES(2025,%s,%s,%s,'goal',%s,%s,%s,%s,%s)""",
+            (mid, team, cls.seq, period, 10 * cls.seq, sh, sa, own))
+
+    @classmethod
+    def shot(cls, mid, team, outcome="miss", situation="regular_play", own=None, period="first_half"):
+        """A shot of `team` (an own goal carries the scorer's team, as the source gives it)."""
+        no = len(cls.shots)
+        cls.shots.append((team, own, period))
+        cls.db.execute(
+            """INSERT INTO core.shots(season_id,match_id,team_id,shot_no,period,minute,outcome,situation,is_own_goal)
+               VALUES(2025,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (mid, team, no, period, 5 + no, outcome, situation, own))
+
+    @classmethod
+    def stats(cls, mid):
+        """Both sides' total shots: the list's non-own-goal shots of the shoot-out-free periods
+        unless the case says otherwise."""
+        for team in (cls.H, cls.A):
+            total = cls.totals.get(team, sum(1 for t, own, period in cls.shots if t == team and own is not True and period != "penalties"))
+            cls.db.execute("INSERT INTO core.team_match_stats(season_id,match_id,team_id,period,xg,npxg,total_shots) VALUES(2025,%s,%s,'all',1,1,%s)",
+                           (mid, team, total))
+
+    @classmethod
+    def cases(cls):
+        H, A, X = cls.H, cls.A, cls.X
+        # a: 1–0, the goal event says ordinary; its shot's flag NULL, as production stores it.
+        m = cls.match("a", (1, 0)); cls.goal(m, H, score=(1, 0)); cls.shot(m, H, "goal"); cls.shot(m, H); cls.shot(m, A); cls.stats(m)
+        # b: 1–0 by A's own goal: the event credited to H and TRUE; A's shot TRUE (scorer's team).
+        m = cls.match("b", (1, 0)); cls.goal(m, H, own=True, score=(1, 0)); cls.shot(m, A, "goal", own=True); cls.shot(m, H); cls.shot(m, A); cls.stats(m)
+        # c: as b, the shot list holding an ordinary goal of H instead of A's own goal.
+        m = cls.match("c", (1, 0)); cls.goal(m, H, own=True, score=(1, 0)); cls.shot(m, H, "goal"); cls.shot(m, A); cls.stats(m)
+        # d: 2–0, the shots hold one goal only.
+        m = cls.match("d", (2, 0)); cls.goal(m, H, score=(1, 0)); cls.goal(m, H, score=(2, 0)); cls.shot(m, H, "goal"); cls.shot(m, H); cls.stats(m)
+        # e: an event whose flag is unknown, a perfect shot set.
+        m = cls.match("e", (1, 0)); cls.goal(m, H, own=None, score=(1, 0)); cls.shot(m, H, "goal"); cls.shot(m, A); cls.stats(m)
+        # f: a 1–0 whose events count two goals for H (a disallowed goal kept).
+        m = cls.match("f", (1, 0)); cls.goal(m, H, score=(1, 0)); cls.goal(m, H, score=(2, 0)); cls.shot(m, H, "goal"); cls.stats(m)
+        # g: 0–0 with its events read (and a complete shot set), and 0–0 without events.
+        m = cls.match("g_read", (0, 0)); cls.shot(m, H); cls.shot(m, A); cls.stats(m)
+        m = cls.match("g_unread", (0, 0), events="unavailable"); cls.shot(m, H); cls.stats(m)
+        # h: 1–1 after extra time, won on penalties: the shoot-out's events and kicks are ignored;
+        # H's goal was an in-match penalty.
+        m = cls.match("h", (1, 1)); cls.goal(m, H, score=(1, 0)); cls.goal(m, A, score=(1, 1), period="second_half")
+        cls.goal(m, H, score=(2, 1), period="penalties"); cls.goal(m, A, score=(2, 2), period="penalties")
+        cls.shot(m, H, "goal", "penalty"); cls.shot(m, A, "goal", period="second_half"); cls.shot(m, A)
+        cls.shot(m, H, "goal", "penalty", period="penalties"); cls.shot(m, A, "goal", "penalty", period="penalties"); cls.stats(m)
+        # i: H's statistics count one shot more than the list.
+        m = cls.match("i", (1, 0), totals={H: 3}); cls.goal(m, H, score=(1, 0)); cls.shot(m, H, "goal"); cls.shot(m, A); cls.stats(m)
+        # j: one of H's attempts without its situation; A's all classified (one penalty missed).
+        m = cls.match("j", (1, 0)); cls.goal(m, H, score=(1, 0)); cls.shot(m, H, "goal"); cls.shot(m, H, situation=None)
+        cls.shot(m, A, situation="penalty"); cls.stats(m)
+        # k: a shot of a third team in the list.
+        m = cls.match("k", (1, 0)); cls.goal(m, H, score=(1, 0)); cls.shot(m, H, "goal"); cls.shot(m, X); cls.stats(m)
+        # l: b and c mirrored, the own goal credited to A (H's own goal, H's shot TRUE).
+        m = cls.match("l_b", (0, 1)); cls.goal(m, A, own=True, score=(0, 1)); cls.shot(m, H, "goal", own=True); cls.shot(m, A); cls.stats(m)
+        m = cls.match("l_c", (0, 1)); cls.goal(m, A, own=True, score=(0, 1)); cls.shot(m, A, "goal"); cls.stats(m)
+        # m: the same 2–1 (A's own goal for H, then H, then A), its events in the « before »
+        # convention (first goal 0–0) and in the « after » one.
+        for name, scores in (("m_before", [(0, 0), (1, 0), (2, 0)]), ("m_after", [(1, 0), (2, 0), (2, 1)])):
+            m = cls.match(name, (2, 1)); cls.goal(m, H, own=True, score=scores[0]); cls.goal(m, H, score=scores[1]); cls.goal(m, A, score=scores[2])
+            cls.shot(m, A, "goal", own=True); cls.shot(m, H, "goal"); cls.shot(m, A, "goal"); cls.shot(m, H, situation="penalty"); cls.stats(m)
+        # n: a match still in play.
+        m = cls.match("n", (1, 0), status="in_play"); cls.goal(m, H, score=(1, 0)); cls.shot(m, H, "goal"); cls.stats(m)
+
+    @classmethod
+    def row(cls, name):
+        return cls.db.execute(
+            """SELECT own_goals_for_home, own_goals_for_away, penalties_home, penalties_away
+               FROM agg.match_scoring WHERE season_id=2025 AND match_id=%s""", (cls.case[name],)).fetchone()
+
+    def test_a_an_ordinary_goal_is_the_events_not_the_shots_flag(self):
+        self.assertEqual(self.row("a"), (0, 0, 0, 0))
+
+    def test_b_an_own_goal_counts_for_the_side_credited(self):
+        self.assertEqual(self.row("b"), (1, 0, 0, 0))
+
+    def test_c_shots_disagreeing_with_the_events_leave_the_penalties_unknown(self):
+        self.assertEqual(self.row("c"), (1, 0, None, None))
+
+    def test_d_a_goal_missing_from_the_shots(self):
+        self.assertEqual(self.row("d"), (0, 0, None, None))
+
+    def test_e_an_event_without_its_flag_classifies_nothing(self):
+        self.assertEqual(self.row("e"), (None, None, None, None))
+
+    def test_f_events_that_do_not_count_the_score(self):
+        self.assertEqual(self.row("f"), (None, None, None, None))
+
+    def test_g_a_goalless_match_needs_its_events(self):
+        self.assertEqual(self.row("g_read"), (0, 0, 0, 0))
+        self.assertEqual(self.row("g_unread"), (None, None, None, None))
+
+    def test_h_the_shoot_out_is_ignored(self):
+        self.assertEqual(self.row("h"), (0, 0, 1, 0))
+
+    def test_i_a_shot_count_that_does_not_match(self):
+        self.assertEqual(self.row("i"), (0, 0, None, None))
+
+    def test_j_an_unknown_situation_leaves_its_side_unknown(self):
+        self.assertEqual(self.row("j"), (0, 0, None, 1))
+
+    def test_k_a_third_teams_shot(self):
+        self.assertEqual(self.row("k"), (0, 0, None, None))
+
+    def test_l_mirrored(self):
+        self.assertEqual(self.row("l_b"), (0, 1, 0, 0))
+        self.assertEqual(self.row("l_c"), (0, 1, None, None))
+
+    def test_m_both_running_score_conventions(self):
+        self.assertEqual(self.row("m_before"), (1, 0, 1, 0))
+        self.assertEqual(self.row("m_after"), (1, 0, 1, 0))
+
+    def test_n_an_unfinished_match_has_no_row(self):
+        self.assertIsNone(self.row("n"))
+
+    def test_o_the_read_api_sees_the_same_rows(self):
+        api = self.db.execute(
+            "SELECT match_id, own_goals_for_home, own_goals_for_away, penalties_home, penalties_away FROM api.match_scoring WHERE season_id=2025 ORDER BY match_id").fetchall()
+        agg = self.db.execute(
+            "SELECT match_id, own_goals_for_home, own_goals_for_away, penalties_home, penalties_away FROM agg.match_scoring WHERE season_id=2025 ORDER BY match_id").fetchall()
+        self.assertEqual(api, agg)
+        self.assertEqual(len(agg), len(self.case) - 1)

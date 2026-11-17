@@ -18,7 +18,10 @@ const SHOT_FIELDS = `'id',x.id,'playerId',api.public_id('player',x.player_id),'p
 // `season`: the SQL of the season's id when the read knows it (a bound parameter). The
 // details are season-partitioned: a constant prunes the other seasons when the query is
 // planned, the match row's own season only when it runs, after planning them all.
-export const matchRecordColumns = ({ shots = true, players = true, teamStats = true, season = "f.season_id" } = {}) => `row_to_json(f) AS fixture,
+// `scoring`: each side's own goals for and penalty attempts (130, api.match_scoring), for the reads
+// a club profile ranks clubs with (actors.mjs); a record read without it carries neither field.
+export const matchRecordColumns = ({ shots = true, players = true, teamStats = true, scoring = false, season = "f.season_id" } = {}) => `row_to_json(f) AS fixture,
+ ${scoring ? `${scoringColumn(season, "f.match_id")},` : ""}
  (SELECT json_agg(s ORDER BY s.side DESC) FROM api.match_sides s WHERE s.season_id=${season} AND s.match_id=f.match_id) sides,
  ${teamStats ? `(SELECT to_json(t) FROM api.match_team_sides t WHERE t.season_id=${season} AND t.match_id=f.match_id AND t.team_id=f.home_internal_id AND t.period='all')` : "NULL::json"} home_stats,
  ${teamStats ? `(SELECT to_json(t) FROM api.match_team_sides t WHERE t.season_id=${season} AND t.match_id=f.match_id AND t.team_id=f.away_internal_id AND t.period='all')` : "NULL::json"} away_stats,
@@ -31,6 +34,17 @@ export const matchRecordColumns = ({ shots = true, players = true, teamStats = t
    FROM api.player_appearances a WHERE a.season_id=${season} AND a.match_id=f.match_id)` : "NULL::json"} players,
  f.referee AS referee,
  f.stadium AS stadium`;
+
+/** The SQL column of a match's scoring (130, api.match_scoring): its row, or NULL (no row: the match
+ * is not finished). One correlated read of the view per match. */
+export const scoringColumn = (season, match) =>
+  `(SELECT row_to_json(v) FROM api.match_scoring v WHERE v.season_id=${season} AND v.match_id=${match}) scoring`;
+
+/** A side's scoring (VI-23 stage 8, FAILURE_MODES §17.2): `ownGoalsFor`, the opponent's own goals in
+ * its score, and `penaltyAttempts`; null when not established, 0 when established none. */
+export function sideScoring(scoring, name) {
+  return { ownGoalsFor: scoring?.[`own_goals_for_${name}`] ?? null, penaltyAttempts: scoring?.[`penalties_${name}`] ?? null };
+}
 
 const strip = (row) => (row ? Object.fromEntries(Object.entries(row).filter(([k]) => k.startsWith("for_")).map(([k, v]) => [k.slice(4), v])) : null);
 
@@ -47,6 +61,7 @@ export function assembleMatch(r, { statKeys, allowPending = false } = {}) {
       id: f[name + "_team_id"], name: f[name + "_name"], imageUrl: f[name + "_image_url"], formation: s.formation ?? null,
       coach: s.coach ?? null, score: f["score_" + name], xg: s.xg ?? null, shots: s.shots ?? null,
       shotsOnTarget: s.shots_on_target ?? null, possession: s.possession ?? null, lineupConfirmed: s.lineup_confirmed ?? null,
+      ...("scoring" in r ? sideScoring(r.scoring, name) : {}),
     };
   };
   const n = r.players || {};
