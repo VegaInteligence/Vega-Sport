@@ -220,6 +220,26 @@ const ratioProjectionFor = (keys) =>
     .join(",\n");
 const ratioProjection = ratioProjectionFor(Object.keys(ratioDefinitions));
 
+/**
+ * The finishing gap's own support (VI-23 B2): the played rows that know both goals and xG. Its
+ * sum is goals minus xG on those rows, so the gap compares one sample; « Efficaces » and
+ * « Maladroits » count the goals and the xG of that sample too. The ordinary totals keep theirs.
+ */
+export const FINISHING = ["finishing_sum", "finishing_count", "finishing_minutes", "finishing_goals", "finishing_xg"];
+const finishingProjectionFor = (a, { quote = true, played = false } = {}) => {
+  const valid = `${played ? `${a}.minutes>0 AND ` : ""}${finiteSql(`${a}.goals`)} AND ${finiteSql(`${a}.xg`)}`,
+    name = (key) => (quote ? `"${key}"` : key);
+  return [
+    `sum(${a}.goals-${a}.xg) FILTER(WHERE ${valid}) AS ${name("finishing_sum")}`,
+    `count(*) FILTER(WHERE ${valid})::int AS ${name("finishing_count")}`,
+    `sum(${a}.minutes) FILTER(WHERE ${valid}) AS ${name("finishing_minutes")}`,
+    `sum(${a}.goals) FILTER(WHERE ${valid}) AS ${name("finishing_goals")}`,
+    `sum(${a}.xg) FILTER(WHERE ${valid}) AS ${name("finishing_xg")}`,
+  ].join(",\n");
+};
+const rollupFinishing = `sum(r.finishing_sum)::float8 AS "finishing_sum",sum(r.finishing_count)::int AS "finishing_count",
+ sum(r.finishing_minutes)::float8 AS "finishing_minutes",sum(r.finishing_goals)::float8 AS "finishing_goals",sum(r.finishing_xg)::float8 AS "finishing_xg"`;
+
 // The same sums read from the season's rows (api.player_list_editions): one row per
 // player and edition, already restricted to the played matches and the finite values.
 const rollupCounts = (keys) =>
@@ -263,7 +283,10 @@ export function appearanceWhere(filters, params, values, editions, alias = "a") 
   const b = (value) => bindValue(values, value);
   const where = [idScopeWhere(alias, filters.scope, editions, values)];
   if (params.has("generation")) where.push(`EXISTS(SELECT 1 FROM publication WHERE generation=${b(params.get("generation"))})`);
+  // A season is its finished matches (VI-23 B1), as the calculator's rows (124) read them; one
+  // match asked by its id is read as it is, whatever its status.
   if (filters.match && filters.match !== "all") where.push(`${alias}.match_id=api.internal_id('match',${b(filters.match)})`);
+  else where.push(`${alias}.status='finished'`);
   if (filters.from) where.push(`${alias}.date>=${b(filters.from)}::date`);
   if (filters.to) where.push(`${alias}.date<=${b(filters.to)}::date`);
   if (filters.role && filters.role !== "all") where.push(`${alias}.starter IS ${filters.role === "starter" ? "TRUE" : "FALSE"}`);
@@ -308,6 +331,12 @@ function pageSql(filters, order, limit, offset) {
 function playerSelection(filters, values, nameSort) {
   const b = (value) => bindValue(values, value);
   const metricValue = (key) => {
+    if (key === "finishingDelta")
+      return filters.basis === "total"
+        ? `a."finishing_sum"`
+        : filters.basis === "per90"
+          ? `90.0*a."finishing_sum"/nullif(a."finishing_minutes",0)`
+          : `a."finishing_sum"/nullif(a."finishing_count",0)`;
     if (Object.hasOwn(ratioDefinitions, key)) return `100.0*a."${key}_numerator"/nullif(a."${key}_denominator",0)`;
     return filters.basis === "total"
       ? `a."${key}_sum"`
@@ -337,7 +366,7 @@ function playerSelection(filters, values, nameSort) {
     ...earlyCounts.flatMap((key) => ["sum", "count", "minutes"].map((suffix) => `a."${key}_${suffix}"`)),
     ...earlyRatios.flatMap((key) => ["numerator", "denominator", "count", "minutes"].map((suffix) => `a."${key}_${suffix}"`)),
     ...metricKeys.filter((key) => requiredMetrics.has(key)).map((key) => `${metricValue(key)} AS "${key}"`),
-    ...(finishingRequired ? [`(${metricValue("goals")})-(${metricValue("xg")}) AS "finishingDelta"`] : []),
+    ...(finishingRequired ? [...FINISHING.map((key) => `a."${key}"`), `${metricValue("finishingDelta")} AS "finishingDelta"`] : []),
   ].join(",\n");
   const averageMetrics = metricKeys.map((key) => `${metricValue(key)} AS "${key}"`).join(",\n");
   const thresholds = ["true"];
@@ -371,8 +400,15 @@ function playerSelection(filters, values, nameSort) {
       eligible: `d."assists_count">0 AND ${comparisonNumberSql('d."assists_sum"')}>0`,
       order: `${comparisonNumberSql("d.assists")} DESC,${comparisonNumberSql("coalesce(d.xa,0)")} DESC`,
     },
-    clinical: { eligible: `${comparisonNumberSql('d."goals_sum"')}>=4 AND d."xg_count">0`, order: `${comparisonNumberSql('d."finishingDelta"')} DESC` },
-    wasteful: { eligible: `${comparisonNumberSql('d."xg_sum"')}>=3 AND d."goals_count">0`, order: `${comparisonNumberSql('d."finishingDelta"')} ASC` },
+    // Four goals, or three xG, on the matches that know both (the gap's own sample).
+    clinical: {
+      eligible: `${comparisonNumberSql('d."finishing_goals"')}>=4 AND d."finishing_count">0`,
+      order: `${comparisonNumberSql('d."finishingDelta"')} DESC`,
+    },
+    wasteful: {
+      eligible: `${comparisonNumberSql('d."finishing_xg"')}>=3 AND d."finishing_count">0`,
+      order: `${comparisonNumberSql('d."finishingDelta"')} ASC`,
+    },
   }[filters.ranking];
   if (ranking) thresholds.push(ranking.eligible);
   const names = `${nameSort} ASC,d.name COLLATE "C" ASC,d.player_id ASC`;
@@ -383,6 +419,7 @@ function playerSelection(filters, values, nameSort) {
       : `${filters.sort === "matches" ? 'd."matches"' : comparisonNumberSql(`d."${filters.sort === "score" ? "vega_score" : filters.sort}"`)} ${filters.direction} NULLS LAST,${names}`;
   return {
     metricValue,
+    finishingRequired,
     earlyCounts,
     earlyRatios,
     sourceMetrics,
@@ -390,7 +427,7 @@ function playerSelection(filters, values, nameSort) {
     // The page's averages on the asked basis: a profile carries the sums, not them.
     averages: filters.profiles
       ? ""
-      : `\n CROSS JOIN LATERAL (SELECT ${averageMetrics},(${metricValue("goals")})-(${metricValue("xg")}) AS "finishingDelta") v`,
+      : `\n CROSS JOIN LATERAL (SELECT ${averageMetrics},${metricValue("finishingDelta")} AS "finishingDelta") v`,
     thresholds: thresholds.join(" AND "),
     order,
     limit: b(filters.limit),
@@ -403,12 +440,14 @@ export function playerReadQuery(filters, params, editions) {
   const values = [],
     publication = publicationSql(filters.scope, values);
   const where = appearanceWhere(filters, params, values, editions);
-  const { earlyCounts, earlyRatios, sourceMetrics, earlyProfile, averages, thresholds, order, limit, offset } = playerSelection(
+  const { finishingRequired, earlyCounts, earlyRatios, sourceMetrics, earlyProfile, averages, thresholds, order, limit, offset } = playerSelection(
     filters,
     values,
     normalizedSql("d.name"),
   );
-  const earlyAggregates = [countProjectionFor(earlyCounts), ratioProjectionFor(earlyRatios)].filter(Boolean).join(",\n");
+  const earlyAggregates = [countProjectionFor(earlyCounts), ratioProjectionFor(earlyRatios), finishingRequired ? finishingProjectionFor("p") : ""]
+    .filter(Boolean)
+    .join(",\n");
   // The Vega score of the season, read only for a ranking or a sort by it.
   const scored = filters.ranking === "score" || filters.sort === "score";
   const identityColumns = `s.player_id,s.player_name AS name,s.image_url,s.match_id,s.date,s.team,s.team_id,s.league_id,s.league,s.position_number`;
@@ -476,7 +515,7 @@ source AS MATERIALIZED (
 ), filtered AS MATERIALIZED (SELECT d.* FROM averages d WHERE ${thresholds}),
 ${pageSql(filters, order, limit, offset)},
 page_metrics AS (
- SELECT p.player_id,${countProjection},${ratioProjection}
+ SELECT p.player_id,${countProjection},${ratioProjection},${finishingProjectionFor("p")}
  FROM api.player_appearances p
  -- The played rows of the page's players: the same filters as source, minutes > 0
  -- (re-applied rather than joined to the played CTE; the page's players are given as
@@ -541,7 +580,7 @@ const LAST = "9223372036854775807";
  * four times: 7 to 9 s for the home matches of every competition of 2026/2027 on
  * 11 November 2026 (239,000 rows), against the 8 s limit.
  */
-function appearanceRows(filters, params, values, editions, earlyCounts, earlyRatios) {
+function appearanceRows(filters, params, values, editions, earlyCounts, earlyRatios, finishingRequired) {
   const day = `(a.date-DATE '1970-01-01')::bigint`,
     kick = `coalesce((extract(epoch FROM a.kickoff_at)*1000000)::bigint,${LAST})`;
   // Most recent first: date DESC NULLS LAST, kick-off NULLS LAST, match.
@@ -549,7 +588,9 @@ function appearanceRows(filters, params, values, editions, earlyCounts, earlyRat
   const unpack = (key, prefix) => `x.${key}[3]::int ${prefix}_match_id,
    CASE WHEN x.${key}[1]<>${LAST} THEN DATE '1970-01-01'+(-x.${key}[1])::int END ${prefix}_date,nullif(x.${key}[2],${LAST}) ${prefix}_kickoff,
    nullif(x.${key}[4],-1)::int ${prefix}_team_id,nullif(x.${key}[5],-1)::int ${prefix}_position`;
-  const early = [...listCounts(earlyCounts), ...listRatios(earlyRatios)];
+  // The finishing gap's own support, by the names of api.player_list_editions (124).
+  const finishing = finishingProjectionFor("f", { quote: false, played: true });
+  const early = [...listCounts(earlyCounts), ...listRatios(earlyRatios), ...(finishingRequired ? [finishing] : [])];
   const before = `facts AS MATERIALIZED (
  SELECT a.season_id,a.competition_season_id,a.match_id,a.player_id,a.team_id,a.position_number,a.starter,a.minutes,a.grade_z,
  ${PLAYER_COUNT_METRICS.map((key) => `a.${snake(key)}`).join(",")},
@@ -578,7 +619,7 @@ function appearanceRows(filters, params, values, editions, earlyCounts, earlyRat
 ),
 `;
   const afterPage = `list_metrics AS MATERIALIZED (
- SELECT f.season_id,f.competition_season_id,f.player_id,${[...listCounts(PLAYER_COUNT_METRICS), ...listRatios(Object.keys(ratioDefinitions))].join(",")}
+ SELECT f.season_id,f.competition_season_id,f.player_id,${[...listCounts(PLAYER_COUNT_METRICS), ...listRatios(Object.keys(ratioDefinitions)), finishing].join(",")}
  FROM facts f WHERE f.player_id=ANY(ARRAY(SELECT internal_id FROM page)) GROUP BY f.season_id,f.competition_season_id,f.player_id
 ),
 `;
@@ -612,7 +653,7 @@ export function playerRollupQuery(filters, params, editions, { fromAppearances =
   const rows = fromAppearances
     ? { editions: "list_editions", teams: "list_teams", positions: "list_positions", metrics: "list_metrics" }
     : { editions: "api.player_list_editions", teams: "api.player_list_teams", positions: "api.player_list_positions", metrics: "api.player_list_editions" };
-  const { earlyCounts, earlyRatios, earlyProfile, averages, thresholds, order, limit, offset } = playerSelection(
+  const { finishingRequired, earlyCounts, earlyRatios, earlyProfile, averages, thresholds, order, limit, offset } = playerSelection(
     filters,
     values,
     "d.sort_name",
@@ -620,7 +661,7 @@ export function playerRollupQuery(filters, params, editions, { fromAppearances =
   const generation = params.has("generation")
     ? ` AND EXISTS(SELECT 1 FROM publication WHERE generation=${bindValue(values, params.get("generation"))})`
     : "";
-  const earlyAggregates = [rollupCounts(earlyCounts), rollupRatios(earlyRatios)].filter(Boolean).join(",\n");
+  const earlyAggregates = [rollupCounts(earlyCounts), rollupRatios(earlyRatios), finishingRequired ? rollupFinishing : ""].filter(Boolean).join(",\n");
   // The Vega score of the season, read only for a ranking or a sort by it.
   const scored = filters.ranking === "score" || filters.sort === "score";
   // What the thresholds read beyond the sums; everything else waits for the page.
@@ -689,7 +730,7 @@ export function playerRollupQuery(filters, params, editions, { fromAppearances =
     `CASE WHEN ${alias}.player_id IS NULL THEN NULL ELSE json_build_object('id',${matchId(alias)}||':'||p.player_id,
      'name',k.name,'image_url',k.image_url,'date',${alias}.date,'team',${team}.name,'team_id',${team}.public_id,
      'league_id',${alias}.league_id,'league',${alias}.league,'position_number',${alias}.position_number) END`;
-  const worked = fromAppearances ? appearanceRows(filters, params, values, editions, earlyCounts, earlyRatios) : null;
+  const worked = fromAppearances ? appearanceRows(filters, params, values, editions, earlyCounts, earlyRatios, finishingRequired) : null;
   const sql = `/*vega:v2:players:${fromAppearances ? "appearances" : "rollup"}*/
 WITH publication AS MATERIALIZED (${publication}),
 ${worked ? worked.before : ""}editions AS MATERIALIZED (
@@ -728,7 +769,7 @@ team_ids AS (
  SELECT r.player_id,array_agg(DISTINCT e.league_id) ids FROM ${rows.editions} r ${edition("r")}
  WHERE ${scope("r")} AND r.matches>0${paged("r", false)} GROUP BY r.player_id
 ), page_metrics AS (
- SELECT r.player_id,${rollupCounts(PLAYER_COUNT_METRICS)},${rollupRatios(Object.keys(ratioDefinitions))}
+ SELECT r.player_id,${rollupCounts(PLAYER_COUNT_METRICS)},${rollupRatios(Object.keys(ratioDefinitions))},${rollupFinishing}
  FROM ${rows.metrics} r WHERE ${scope("r")}${paged("r", false)} GROUP BY r.player_id
 ), page_records AS (
  SELECT p.result_order,${recordSql(`json_build_object('image_url',k.image_url,'teams',${teamsSql},'leagues',${leaguesSql},'role_code',${roleSql},
@@ -781,6 +822,15 @@ function playerProfile(row) {
   for (const key of PLAYER_COUNT_METRICS)
     if (Number(row[`${key}_count`]) > 0)
       stats[key] = { sum: row[`${key}_sum`], count: Number(row[`${key}_count`]), minutes: row[`${key}_minutes`] };
+  // The finishing gap's own sample (VI-23 B2): its sum is goals minus xG on it.
+  if (Number(row.finishing_count) > 0)
+    stats.finishing = {
+      sum: row.finishing_sum,
+      count: Number(row.finishing_count),
+      minutes: row.finishing_minutes,
+      goals: row.finishing_goals,
+      xg: row.finishing_xg,
+    };
   for (const key of Object.keys(ratioDefinitions))
     if (Number(row[`${key}_count`]) > 0)
       ratios[key] = {
@@ -847,7 +897,7 @@ export function playerProfileRecord(parts) {
 
 // What a selection of profiles is made of besides its data; a change of the record
 // changes it, so that no kept answer of the previous shape is said unchanged.
-const PROFILE_SHAPE = "profile-2"; // 2: fouls, fouls suffered and balls lost (116)
+const PROFILE_SHAPE = "profile-3"; // 2: fouls, fouls suffered and balls lost (116); 3: the finishing gap's own support (124)
 const DAY = 86_400_000;
 
 /**

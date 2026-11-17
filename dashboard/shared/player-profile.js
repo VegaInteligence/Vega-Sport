@@ -179,7 +179,9 @@ export function keyFigures(row) {
 }
 
 export const MIN_PEER_MINUTES = 30;
-const MIN_PEERS = 30;
+// The fewest peers a percentile is read against: the line's, and the metric's own known values
+// (VI-23 B5: a metric known for one peer of a hundred is no percentile).
+export const MIN_PEERS = 30;
 export const metricValue = (row, key) => {
   const getter = PROFILE_METRICS[key]?.[4];
   if (getter) return getter(row);
@@ -212,7 +214,7 @@ export function performanceProfileFromCounts(row, counts) {
     Number(counts?.peers || 0),
     (key, value) => {
       const metric = counts?.metrics?.[key];
-      if (!metric || !isNumber(value) || !(Number(metric.known) > 0))
+      if (!metric || !isNumber(value) || !(Number(metric.known) >= MIN_PEERS))
         return null;
       return Math.round(
         ((Number(metric.below) + Number(metric.equal) / 2) /

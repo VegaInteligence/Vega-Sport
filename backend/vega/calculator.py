@@ -7,6 +7,7 @@ scope was being computed; a newer correction therefore always triggers another p
 
 from psycopg import sql
 
+from .club_indicators import PAIRED, paired_columns
 from .schema_contract import PLAYER_STATS_COLUMNS
 from .store import dirty_scope_order
 from .metric_catalog import (
@@ -107,6 +108,9 @@ def _player_sql():
     a_cols = [i.rsplit(" AS ", 1)[1] for i in a_items]
     columns = ["appearances", "starts", "minutes", *b_cols, *a_cols]
     scope = "AND (%(all)s OR ({x}.player_id, {x}.team_id) IN (SELECT player_id, team_id FROM scope))"
+    # A season is its finished matches, as on the team side (VI-23 B1): a canceled, postponed,
+    # suspended, live, awarded or future match, its statistics or its line-up, is not one of them.
+    finished = "AND m.status = 'finished'"
     # The statistics rows, a blank given its zero where the match says so (068); for the
     # starting goalkeeper's own statistics, in his rows alone (070).
     nothing_faced = " AND coalesce(r.saves, 0) = 0 AND coalesce(r.goals_conceded, 0) = 0"
@@ -133,7 +137,7 @@ WITH scope AS (
         LEFT JOIN agg.match_zeros z ON z.season_id = r.season_id AND z.match_id = r.match_id
         LEFT JOIN core.lineup_players lp ON lp.season_id = r.season_id AND lp.match_id = r.match_id AND lp.player_id = r.player_id) s
   JOIN core.matches m ON m.id = s.match_id AND m.season_id = s.season_id
-  WHERE m.competition_season_id = %(cs)s AND s.season_id = %(sid)s {scope.format(x="s")}
+  WHERE m.competition_season_id = %(cs)s AND s.season_id = %(sid)s {finished} {scope.format(x="s")}
   GROUP BY s.player_id, s.team_id
 ), a AS (
   SELECT a.player_id, a.team_id,
@@ -142,13 +146,13 @@ WITH scope AS (
     {", ".join(a_items)}
   FROM core.player_match_advanced a
   JOIN core.matches m ON m.id = a.match_id AND m.season_id = a.season_id
-  WHERE m.competition_season_id = %(cs)s AND a.season_id = %(sid)s {scope.format(x="a")}
+  WHERE m.competition_season_id = %(cs)s AND a.season_id = %(sid)s {finished} {scope.format(x="a")}
   GROUP BY a.player_id, a.team_id
 ), st AS (
   SELECT lp.player_id, lp.team_id, count(*) FILTER (WHERE lp.is_starter)::integer AS starts
   FROM core.lineup_players lp
   JOIN core.matches m ON m.id = lp.match_id AND m.season_id = lp.season_id
-  WHERE m.competition_season_id = %(cs)s AND lp.season_id = %(sid)s {scope.format(x="lp")}
+  WHERE m.competition_season_id = %(cs)s AND lp.season_id = %(sid)s {finished} {scope.format(x="lp")}
   GROUP BY lp.player_id, lp.team_id
 ), k AS (
   SELECT player_id, team_id FROM b UNION SELECT player_id, team_id FROM a
@@ -162,18 +166,31 @@ LEFT JOIN st USING (player_id, team_id)
 ON CONFLICT (player_id, team_id, competition_season_id) DO UPDATE SET
   {", ".join(f"{c} = EXCLUDED.{c}" for c in columns)}, updated_at = now()
 """
+    # A row stays while one finished match of the edition still holds its statistics.
     stale = """
 DELETE FROM agg.player_season_stats p
 WHERE p.competition_season_id = %(cs)s
   AND (%(all)s OR (p.player_id, p.team_id) IN (SELECT unnest(%(players)s::integer[]), unnest(%(teams)s::integer[])))
   AND NOT EXISTS (SELECT 1 FROM core.player_match_stats s JOIN core.matches m ON m.id = s.match_id AND m.season_id = s.season_id
-                  WHERE m.competition_season_id = p.competition_season_id AND s.season_id = p.season_id
+                  WHERE m.competition_season_id = p.competition_season_id AND s.season_id = p.season_id AND m.status = 'finished'
                     AND s.player_id = p.player_id AND s.team_id = p.team_id)
   AND NOT EXISTS (SELECT 1 FROM core.player_match_advanced a JOIN core.matches m ON m.id = a.match_id AND m.season_id = a.season_id
-                  WHERE m.competition_season_id = p.competition_season_id AND a.season_id = p.season_id
+                  WHERE m.competition_season_id = p.competition_season_id AND a.season_id = p.season_id AND m.status = 'finished'
                     AND a.player_id = p.player_id AND a.team_id = p.team_id)
 """
     return statement, stale
+
+
+def _paired_aggregates():
+    """The club indicators' paired supports (club_indicators.PAIRED, VI-23 B10): each part summed
+    over the matches that know every input of the indicator, and the count of those matches."""
+    items = []
+    for name, (parts, inputs) in PAIRED.items():
+        known = " AND ".join(f"{c} IS NOT NULL" for c in inputs)
+        for part, expr in parts:
+            items.append(f"(sum(({expr})::double precision) FILTER (WHERE {known})) AS pair_{name}_{part}")
+        items.append(f"(count(*) FILTER (WHERE {known}))::integer AS pair_{name}_n")
+    return items
 
 
 def _team_sql():
@@ -183,19 +200,71 @@ def _team_sql():
             items += _metric_aggregates(m, alias if m.table == TEAM_BASE else adv_alias, None, prefix=side)
         for r in TEAM_RATIOS:
             items += _ratio_aggregates(r, alias if r.table == TEAM_BASE else adv_alias, prefix=side)
+    paired = _paired_aggregates()
+    items += paired
+    assert [i.rsplit(" AS ", 1)[1] for i in paired] == [c for c, _ in paired_columns()]
     cols = [i.rsplit(" AS ", 1)[1] for i in items]
     fixed = ["matches", "won", "drawn", "lost", "goals_for", "goals_against", "points", "clean_sheets", "xpts", "xpts_matches",
              "has_goals_for", "has_goals_against", "has_xg_for", "has_xg_against",
              "keeper_xgot_against", "keeper_goals_against", "keeper_matches", "placement_sum", "placement_matches"]
     statement = f"""
 WITH side AS (
-  SELECT m.id AS match_id, m.season_id, x.team_id, x.opp_id, x.gf, x.ga
+  SELECT m.id AS match_id, m.season_id, x.team_id, x.opp_id, x.gf, x.ga, x.home
   FROM core.matches m
-  CROSS JOIN LATERAL (VALUES (m.home_team_id, m.away_team_id, m.home_score, m.away_score),
-                             (m.away_team_id, m.home_team_id, m.away_score, m.home_score)) AS x(team_id, opp_id, gf, ga)
+  CROSS JOIN LATERAL (VALUES (m.home_team_id, m.away_team_id, m.home_score, m.away_score, true),
+                             (m.away_team_id, m.home_team_id, m.away_score, m.home_score, false)) AS x(team_id, opp_id, gf, ga, home)
   WHERE m.competition_season_id = %(cs)s AND m.season_id = %(sid)s AND m.status = 'finished'
     AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL AND x.team_id IS NOT NULL
     AND (%(all)s OR x.team_id = ANY(%(teams)s::integer[]))
+), goals AS (
+  -- A match's goals in the order of the score (VI-23 B10): what each one adds to either side.
+  SELECT e.season_id, e.match_id, e.is_own_goal, e.score_home, e.score_away,
+    e.score_home - lag(e.score_home, 1, 0::smallint) OVER w AS up_home,
+    e.score_away - lag(e.score_away, 1, 0::smallint) OVER w AS up_away
+  FROM core.match_events e
+  WHERE e.event_type = 'goal' AND e.period IS DISTINCT FROM 'penalties'  -- shoot-out kicks are not goals
+    AND (e.season_id, e.match_id) IN (SELECT season_id, match_id FROM side)
+  WINDOW w AS (PARTITION BY e.season_id, e.match_id ORDER BY e.score_home + e.score_away, e.seq)
+), scoring AS (
+  -- The own goals of a match by the side they count for, when its events were read, each of its
+  -- goals says whether it is an own goal (a NULL flag is unknown, never false) and they go up one
+  -- at a time to the final score; any other match classifies none.
+  SELECT m.season_id, m.id AS match_id,
+    (count(g.match_id) FILTER (WHERE g.is_own_goal IS TRUE AND g.up_home = 1))::integer AS own_home,
+    (count(g.match_id) FILTER (WHERE g.is_own_goal IS TRUE AND g.up_away = 1))::integer AS own_away
+  FROM core.matches m
+  JOIN core.match_coverage c ON c.season_id = m.season_id AND c.match_id = m.id AND c.events = 'ok'
+  LEFT JOIN goals g ON g.season_id = m.season_id AND g.match_id = m.id
+  WHERE (m.season_id, m.id) IN (SELECT season_id, match_id FROM side)
+  GROUP BY m.season_id, m.id, m.home_score, m.away_score
+  HAVING count(g.match_id) = m.home_score + m.away_score
+     AND count(g.match_id) FILTER (WHERE g.is_own_goal IS NULL) = 0
+     AND count(g.match_id) FILTER (WHERE g.up_home IS NULL OR g.up_away IS NULL OR g.up_home < 0 OR g.up_away < 0
+                                      OR g.up_home + g.up_away <> 1) = 0
+     AND coalesce(max(g.score_home), 0) = m.home_score AND coalesce(max(g.score_away), 0) = m.away_score
+), shot_sets AS (
+  -- A side's penalty attempts, counted on its match's complete, reconciled shot set (amendment
+  -- §1): shot coverage ok, the shoot-out left out; each side's shots other than own goals as
+  -- many as its statistics count, the side's own each classified, every goal saying whether it
+  -- is an own goal (a non-goal attempt may not), and the goals reproducing both scores. Any other
+  -- match has no count: equal xG and non-penalty xG establish nothing.
+  SELECT side.season_id, side.match_id, side.team_id,
+    (count(sh.shot_no) FILTER (WHERE sh.team_id = side.team_id AND sh.is_own_goal IS NOT TRUE AND sh.situation = 'penalty'))::integer AS penalties
+  FROM side
+  JOIN core.match_coverage c ON c.season_id = side.season_id AND c.match_id = side.match_id AND c.shots = 'ok'
+  JOIN core.team_match_stats o ON o.season_id = side.season_id AND o.match_id = side.match_id AND o.team_id = side.team_id AND o.period = 'all'
+  JOIN core.team_match_stats p ON p.season_id = side.season_id AND p.match_id = side.match_id AND p.team_id = side.opp_id AND p.period = 'all'
+  LEFT JOIN core.shots sh ON sh.season_id = side.season_id AND sh.match_id = side.match_id AND sh.period IS DISTINCT FROM 'penalties'
+  GROUP BY side.season_id, side.match_id, side.team_id, side.opp_id, side.gf, side.ga, o.total_shots, p.total_shots
+  HAVING count(sh.shot_no) FILTER (WHERE sh.team_id = side.team_id AND sh.is_own_goal IS NOT TRUE) = o.total_shots
+     AND count(sh.shot_no) FILTER (WHERE sh.team_id = side.opp_id AND sh.is_own_goal IS NOT TRUE) = p.total_shots
+     AND count(sh.shot_no) FILTER (WHERE sh.team_id = side.team_id AND sh.is_own_goal IS NOT TRUE AND sh.situation IS NULL) = 0
+     AND count(sh.shot_no) FILTER (WHERE sh.team_id IS DISTINCT FROM side.team_id AND sh.team_id IS DISTINCT FROM side.opp_id) = 0
+     AND count(sh.shot_no) FILTER (WHERE sh.outcome = 'goal' AND sh.is_own_goal IS NULL) = 0
+     AND count(sh.shot_no) FILTER (WHERE sh.outcome = 'goal' AND ((sh.team_id = side.team_id AND sh.is_own_goal IS NOT TRUE)
+                                                              OR (sh.team_id = side.opp_id AND sh.is_own_goal IS TRUE))) = side.gf
+     AND count(sh.shot_no) FILTER (WHERE sh.outcome = 'goal' AND ((sh.team_id = side.opp_id AND sh.is_own_goal IS NOT TRUE)
+                                                              OR (sh.team_id = side.team_id AND sh.is_own_goal IS TRUE))) = side.ga
 )
 INSERT INTO agg.team_season_stats (team_id, competition_season_id, season_id, {", ".join(fixed)}, {", ".join(cols)})
 SELECT side.team_id, %(cs)s, %(sid)s,
@@ -206,21 +275,30 @@ SELECT side.team_id, %(cs)s, %(sid)s,
   sum(side.gf)::integer, sum(side.ga)::integer,
   (3 * count(*) FILTER (WHERE side.gf > side.ga) + count(*) FILTER (WHERE side.gf = side.ga))::integer,
   count(*) FILTER (WHERE side.ga = 0)::integer,
-  (sum((agg.xpts_v1(o.xg, p.xg)).xpts) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL))::real,
-  count(*) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL)::integer,
+  -- Expected points of the matches whose xG law exists (126, agg.xpts_v2: VI-23 B6).
+  (sum(xl.xpts))::real,
+  count(xl.xpts)::integer,
   (sum(side.gf) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL))::integer, (sum(side.ga) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL))::integer,
   (sum(o.xg) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL))::real, (sum(p.xg) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL))::real,
   (sum(p.xgot) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL AND p.xgot IS NOT NULL))::real,
   (sum(side.ga) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL AND p.xgot IS NOT NULL))::integer,
   count(*) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL AND p.xgot IS NOT NULL)::integer,
-  (sum(o.xgot - o.xg) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL AND o.xgot IS NOT NULL))::real,
-  count(*) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL AND o.xgot IS NOT NULL)::integer,
+  -- Placement (own xGOT − own xG) on the matches that know its two own inputs: the opponent's xG
+  -- is no input of it (VI-23 stage 5, FAILURE_MODES §14.3).
+  (sum(o.xgot - o.xg) FILTER (WHERE o.xg IS NOT NULL AND o.xgot IS NOT NULL))::real,
+  count(*) FILTER (WHERE o.xg IS NOT NULL AND o.xgot IS NOT NULL)::integer,
   {", ".join(items)}
 FROM side
 LEFT JOIN core.team_match_stats o ON o.season_id = side.season_id AND o.match_id = side.match_id AND o.team_id = side.team_id AND o.period = 'all'
 LEFT JOIN core.team_match_stats p ON p.season_id = side.season_id AND p.match_id = side.match_id AND p.team_id = side.opp_id AND p.period = 'all'
 LEFT JOIN core.team_match_advanced oa ON oa.season_id = side.season_id AND oa.match_id = side.match_id AND oa.team_id = side.team_id
 LEFT JOIN core.team_match_advanced pa ON pa.season_id = side.season_id AND pa.match_id = side.match_id AND pa.team_id = side.opp_id
+CROSS JOIN LATERAL (SELECT (agg.xpts_v2(o.xg, p.xg)).xpts) xl
+LEFT JOIN scoring sc ON sc.season_id = side.season_id AND sc.match_id = side.match_id
+LEFT JOIN shot_sets ss ON ss.season_id = side.season_id AND ss.match_id = side.match_id AND ss.team_id = side.team_id
+CROSS JOIN LATERAL (SELECT CASE WHEN side.home THEN sc.own_home ELSE sc.own_away END AS own_goals_for,
+                           CASE WHEN side.home THEN sc.own_away ELSE sc.own_home END AS own_goals_against,
+                           ss.penalties) q
 GROUP BY side.team_id
 ON CONFLICT (team_id, competition_season_id) DO UPDATE SET
   {", ".join(f"{c} = EXCLUDED.{c}" for c in [*fixed, *cols])}, updated_at = now()
