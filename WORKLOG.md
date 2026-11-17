@@ -46,10 +46,18 @@
   - User decisions: no strength for the 7,520 clubs found only in the historic archives; « oui » to the Nations League by stage.
   - The Nations League mockup was sent (scratchpad unl/mock-unl*.png).
   - CAF question answered: it is about including the African Champions League's matches in the club Elo.
+- 17 Nov, midday (« Oui, implémente », the Nations League mockup validated):
+  - Nations League projection shipped (e932b1e351, migration 125):
+    - the worker replays each edition with the UEFA tie-breakers, League A to its Final Four;
+    - the « Projection » tab on the Nations League page;
+    - tests written first; checked locally on the read-only data (Spain 26 %, England 23 %, France 18 %).
+  - Cup sources no longer rename a team another source also holds.
+  - Deployed (run 44078144860): the deployed code, run read-only on the production base, gives exact totals (Spain 28 %); the live page waits for the worker's first write.
+  - Linear VI-19 comment posted.
 - Next action:
-  - the Nations League view and worker projection, once the user validates the mockup;
+  - production numbers after the worker's next daily pass (the projections were last written 05:07 UTC);
   - after 21:30, verify the merges;
-  - left for the user: the CAF Champions League's prior, and the 7,520 clubs found only in the historic archives.
+  - CAF Champions League prior: waiting for the user's answer.
 
 ## VI-22 — club page and featured competitions (scratchpad worktree `club-tasks`, 17 Nov 2026)
 
