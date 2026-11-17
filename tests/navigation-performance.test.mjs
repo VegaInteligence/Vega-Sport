@@ -236,7 +236,7 @@ test("a known compact season reads the actor directly without a routing-index wa
               goals: 2,
             },
           ],
-          matches: [{ id: "m_000001" }],
+          matches: [{ id: "m_000001", status: "finished" }],
           fixtures: [],
           teams: [],
           competitions: [],

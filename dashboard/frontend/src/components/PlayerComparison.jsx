@@ -5,6 +5,7 @@ import { useResearch } from "../hooks/ResearchContext.jsx";
 import {
   aggregateSeason,
   aggregateSeasonPlayers,
+  finishedAppearances,
 } from "../services/season-player.js";
 import { playerDirectoryScope } from "../services/player-directory.js";
 import { EMPTY_ADVANCED } from "../services/advanced-filters.js";
@@ -134,7 +135,7 @@ export async function comparisonSamples(f, entries, { signal } = {}) {
               )
             ).data;
       if (!data) return empty;
-      const rows = playerDirectoryScope(
+      const scoped = playerDirectoryScope(
           data.appearances.filter((row) => selectedIds.includes(row.leagueId)),
           entry.season,
           {
@@ -146,6 +147,8 @@ export async function comparisonSamples(f, entries, { signal } = {}) {
           },
           new Map(data.matches.map((match) => [match.id, match])),
         ),
+        // The compared season counts finished matches, reused or loaded alike (VI-23 stage 7, §16.1).
+        rows = finishedAppearances(data, scoped),
         profiles = aggregateSeasonPlayers(rows);
       return {
         ...entry,

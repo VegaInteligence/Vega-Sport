@@ -1,5 +1,6 @@
 import { isNumber } from "./format.js";
 import {
+  MIN_PEERS,
   MIN_PEER_MINUTES,
   PROFILE_METRICS,
   RANKED,
@@ -109,8 +110,9 @@ export function warmProfiles(appearances) {
 export function performanceProfile(row, appearances) {
   const line = peerGroup(row),
     { count, values } = distributions(appearances, line.group);
+  // A metric is ranked among its own known values, thirty of them at least (VI-23 B5).
   return profileFromDistribution(row, line, count, (key, value) =>
-    percentile(values[key], value),
+    values[key].length >= MIN_PEERS ? percentile(values[key], value) : null,
   );
 }
 

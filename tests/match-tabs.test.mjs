@@ -73,7 +73,8 @@ test("the players board: who came on, sorted by any column, and the match's lead
   assert.deepEqual(sortRows(rows, { key: "passes", direction: "asc" }).map((r) => r.id).slice(0, 2), ["p_a", "p_b"]);
   assert.equal(sortRows(rows, { key: "passes", direction: "asc" }).at(-1).passes, null);
   const top = leaders(rows);
-  assert.deepEqual([top.grade.id, top.threat.id, top.passes.id, top.duels.id], ["p_a", "p_c", "p_b", "p_a"]);
+  // p_c's xG is not published: his threat is unknown and cannot lead (VI-23 B5); p_a knows both.
+  assert.deepEqual([top.grade.id, top.threat.id, top.passes.id, top.duels.id], ["p_a", "p_a", "p_b", "p_a"]);
 });
 
 test("the two teams' play by phase, a row only where both have a value", () => {

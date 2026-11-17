@@ -46,19 +46,38 @@ export function cardCount(cards) {
   return count;
 }
 
-/** A side's players by their shots: how many, their xG and goals, the most dangerous first. */
+/** A penalty shoot-out's period, normalized or in the provider's spelling (club-scout.js matchShots). */
+const SHOOTOUT_PERIODS = new Set(["penalties", "Penalties"]);
+/**
+ * A side's players by their shots: how many, their xG and goals, the most dangerous first. A
+ * shooter's xG is known only when each of his shots has one (VI-23 B5); an unknown xG comes after
+ * the known ones. A shoot-out kick is no shot of the match; an in-match penalty and an extra-time
+ * shot are (VI-23 stage 7, §16.4).
+ */
 export function shootersOf(shots, teamId, limit = 3) {
   const by = new Map();
   for (const s of shots || []) {
-    if (s.teamId !== teamId || s.isOwnGoal) continue;
+    if (s.teamId !== teamId || s.isOwnGoal || SHOOTOUT_PERIODS.has(s.period))
+      continue;
     const key = s.playerId || s.playerName;
     const row = by.get(key) || { id: s.playerId || null, name: s.playerName || "—", shots: 0, xg: 0, goals: 0 };
     row.shots++;
-    row.xg += s.xg || 0;
+    if (row.xg !== null)
+      row.xg =
+        typeof s.xg === "number" && Number.isFinite(s.xg)
+          ? row.xg + s.xg
+          : null;
     if (s.isGoal) row.goals++;
     by.set(key, row);
   }
-  return [...by.values()].sort((a, b) => b.xg - a.xg || b.shots - a.shots).slice(0, limit);
+  return [...by.values()]
+    .sort(
+      (a, b) =>
+        (a.xg === null) - (b.xg === null) ||
+        (b.xg ?? 0) - (a.xg ?? 0) ||
+        b.shots - a.shots,
+    )
+    .slice(0, limit);
 }
 
 /* ------------------------------------------------------------- players */
@@ -173,8 +192,13 @@ export function boardRows(payload, events, grades) {
         grade: g?.grade ?? r.grade,
         on: on.get(r.id) ?? null,
         off: off.get(r.id) ?? null,
-        threat: (r.xg ?? 0) + (r.xa ?? 0),
-        recovered: r.tackles == null && r.interceptions == null ? null : (r.tackles ?? 0) + (r.interceptions ?? 0),
+        // Each needs both its terms: the family leaves out what the source did not publish, and
+        // no zero is invented for it (VI-23 B5).
+        threat: r.xg != null && r.xa != null ? r.xg + r.xa : null,
+        recovered:
+          r.tackles != null && r.interceptions != null
+            ? r.tackles + r.interceptions
+            : null,
       };
     });
 }

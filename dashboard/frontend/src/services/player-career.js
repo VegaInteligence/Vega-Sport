@@ -1,5 +1,6 @@
 import { isNumber } from "../model.js";
 import { aggregateSeason } from "./season-player.js";
+import { playerSeasonLog } from "./player-season-history.js";
 import { isNationalTeamCompetition } from "./player-team-seasons.js";
 import {
   COUNTRY_NAMES,
@@ -25,11 +26,20 @@ function competitionKind(id, meta) {
     : "unknown";
 }
 
-/** One candidate per match across editions, preferring a played observation. */
-export function playerCareerObservations(history, playerId) {
+/**
+ * One candidate per match across editions, preferring a played observation: of each season's
+ * summary (finished matches), or with `log` of every played observation (VI-23 stage 5, §14.2).
+ */
+export function playerCareerObservations(
+  history,
+  playerId,
+  { log = false } = {},
+) {
   const observed = new Map();
-  for (const { season, data, profile } of history) {
-    if (!profile) continue;
+  for (const entry of history) {
+    if (!entry.profile) continue;
+    const { season, data } = entry;
+    const profile = log ? playerSeasonLog(entry, playerId) : entry.profile;
     const teamMeta = new Map((data?.teams || []).map((v) => [v.id, v]));
     const competitionMeta = new Map(
       (data?.competitions || []).map((v) => [v.id, v]),
@@ -62,8 +72,11 @@ export function playerCareerObservations(history, playerId) {
   return [...observed.values()];
 }
 
-/** Career groups preserve provider identities and deduplicate across editions. */
-export function playerCareerGroups(history, playerId) {
+/**
+ * Career groups preserve provider identities and deduplicate across editions; `log` groups every
+ * played observation, as the match logs list them.
+ */
+export function playerCareerGroups(history, playerId, { log = false } = {}) {
   const teams = new Map(),
     competitions = new Map(),
     kinds = new Map();
@@ -85,6 +98,7 @@ export function playerCareerGroups(history, playerId) {
   for (const { row, season, team, competition } of playerCareerObservations(
     history,
     playerId,
+    { log },
   )) {
     if (row.teamId) {
       append(teams, row.teamId, team, row, season);

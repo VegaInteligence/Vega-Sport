@@ -1,5 +1,5 @@
 import { compactGeneration, compactQuery } from "./compact-reads.js";
-import { aggregateSeason } from "./season-player.js";
+import { aggregateSeason, finishedAppearances } from "./season-player.js";
 
 export function actorReadParams(
   manifest,
@@ -26,7 +26,10 @@ export function actorReadParams(
 export const actorReadKey = (kind, params) =>
   `compact-actor:${kind}:${compactQuery(params)}`;
 
-/** Reuse only a complete, same-generation season covering every competition. */
+/**
+ * Reuse only a complete, same-generation season covering every competition. Its summary counts
+ * finished matches (finishedAppearances); the read is returned as it is (VI-23 stage 5, §14.2).
+ */
 export function currentPlayerSeason(context, id, season) {
   const data = context?.data;
   if (
@@ -38,5 +41,9 @@ export function currentPlayerSeason(context, id, season) {
     data.meta.generation !== compactGeneration(context.manifest)
   )
     return undefined;
-  return { season, data, profile: aggregateSeason(data.appearances, id) };
+  return {
+    season,
+    data,
+    profile: aggregateSeason(finishedAppearances(data), id),
+  };
 }

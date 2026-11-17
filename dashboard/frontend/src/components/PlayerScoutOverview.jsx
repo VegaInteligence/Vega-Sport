@@ -11,7 +11,11 @@ import {
 } from "../services/scouting.js";
 import { normalizeText } from "../services/format.js";
 import { percentile } from "../services/player-profile.js";
-import { aggregateSeason, seasonMetric } from "../services/season-player.js";
+import {
+  aggregateSeason,
+  contributionRate,
+  seasonMetric,
+} from "../services/season-player.js";
 import { number } from "../services/format.js";
 import { gradeTone, seasonGrade } from "../services/grades.js";
 import { advancedMetric } from "./PlayerAdvancedStats.jsx";
@@ -169,6 +173,10 @@ const total = (profile, key) => {
   const stat = profile.stats?.[key];
   return stat?.count ? stat.sum : null;
 };
+/** A match's goals and assists in a grade tooltip: an unknown one is « — », never 0 (VI-23 stage 7, §16.3). */
+const observed = (value) => (Number.isFinite(value) ? value : "—");
+const goalsAndAssists = (row) =>
+  `${observed(row.goals)} / ${observed(row.assists)}`;
 const shortDate = (value) =>
   value
     ? new Date(`${String(value).slice(0, 10)}T00:00:00Z`).toLocaleDateString(
@@ -221,7 +229,8 @@ function SeasonKpis({ profile, season, scope }) {
   const assists = total(subject, "assists");
   const xg = seasonMetric(subject, "xg", "total");
   const xa = seasonMetric(subject, "xa", "total");
-  const contributions = (goals ?? 0) + (assists ?? 0);
+  // Only on goals and assists known on every match (VI-23 N9): an unknown one is no zero.
+  const rate = contributionRate(subject);
   const partial = (metric) =>
     metric.count > 0 && metric.count < subject.matches ? " (partiel)" : "";
   const kpis = [
@@ -256,8 +265,8 @@ function SeasonKpis({ profile, season, scope }) {
     ],
     [
       "Min. par but ou PD",
-      contributions ? `${number(subject.minutes / contributions)}′` : "—",
-      contributions ? `${number(contributions)} contributions` : null,
+      rate ? `${number(rate.minutes)}′` : "—",
+      rate ? `${number(rate.count)} contributions` : null,
     ],
   ];
   return (
@@ -398,6 +407,11 @@ const ordinalP = (value) => `P${Math.round(value)}`;
 function ScoutReading({ profile, best, traits }) {
   const goals = seasonMetric(profile, "goals", "per90");
   const assists = seasonMetric(profile, "assists", "per90");
+  // Only the rates the player's matches know (VI-23 N8): an unknown one is not a zero.
+  const production = [
+    goals.value != null && `${fmt(goals.value, 2)} but`,
+    assists.value != null && `${fmt(assists.value, 2)} passe décisive`,
+  ].filter(Boolean);
   const lines = [
     best &&
       `Meilleur rôle : ${best.label.toLowerCase()}, indice ${Math.round(best.value)} sur 100 face aux ${profile.role?.peers || "joueurs du même poste"}.`,
@@ -409,8 +423,8 @@ function ScoutReading({ profile, best, traits }) {
             `${label(item.key).toLowerCase()} (${ordinalP(item.percentile)})`,
         )
         .join(" et ")}.`,
-    (goals.count > 0 || assists.count > 0) &&
-      `Production : ${fmt(goals.value ?? 0, 2)} but et ${fmt(assists.value ?? 0, 2)} passe décisive par 90 min${profile.grade != null ? `, note Vega ${fmt(profile.grade, 0)} sur 100` : ""}.`,
+    production.length > 0 &&
+      `Production : ${production.join(" et ")} par 90 min${profile.grade != null ? `, note Vega ${fmt(profile.grade, 0)} sur 100` : ""}.`,
     traits.low.length > 0 &&
       `Point de vigilance : ${label(traits.low[0].key).toLowerCase()} (${ordinalP(traits.low[0].percentile)}).`,
   ].filter(Boolean);
@@ -498,10 +512,7 @@ function RecentForm({ profile, matches, onTab, wide = false }) {
               rows={[
                 ["Date", shortDate(point.row.date)],
                 ["Note Vega", fmt(point.row.grade, 0)],
-                [
-                  "Buts / PD",
-                  `${point.row.goals ?? 0} / ${point.row.assists ?? 0}`,
-                ],
+                ["Buts / PD", goalsAndAssists(point.row)],
                 ["Minutes", point.row.minutes],
               ]}
             />
@@ -688,12 +699,16 @@ export default function PlayerScoutOverview({
 const gradeShade = (grade) => [10, 30, 50, 70, 90][gradeTone(grade) - 1];
 
 /** Version C match log: Vega grade curve and one row per published appearance. */
-export function PlayerGames({ profile, matches }) {
+/**
+ * The Matchs tab. « Par compétition » sums the profile's (finished) matches; the period's table and
+ * its grade plot list `logRows`, every played observation (VI-23 stage 6, §15).
+ */
+export function PlayerGames({ profile, matches, logRows = profile.rows }) {
   const index = useMemo(
     () => new Map((matches || []).map((match) => [match.id, match])),
     [matches],
   );
-  const rows = [...profile.rows].sort((a, b) =>
+  const rows = [...logRows].sort((a, b) =>
     String(b.date || "").localeCompare(String(a.date || "")),
   );
   const rated = [...rows]
@@ -760,8 +775,7 @@ export function PlayerGames({ profile, matches }) {
             </thead>
             <tbody>
               {competitions.map(({ name, split }) => {
-                const contributions =
-                  (total(split, "goals") ?? 0) + (total(split, "assists") ?? 0);
+                const rate = contributionRate(split);
                 return (
                   <tr key={name}>
                     <th scope="row">{name}</th>
@@ -772,9 +786,7 @@ export function PlayerGames({ profile, matches }) {
                     <td className={s.num}>{sum(split, "xg", 2)}</td>
                     <td className={s.num}>{sum(split, "xa", 2)}</td>
                     <td className={s.num}>
-                      {contributions
-                        ? `${number(split.minutes / contributions)}′`
-                        : "—"}
+                      {rate ? `${number(rate.minutes)}′` : "—"}
                     </td>
                     <td className={s.num}>
                       {split.grade == null ? "—" : fmt(split.grade, 0)}
@@ -811,10 +823,7 @@ export function PlayerGames({ profile, matches }) {
                   rows={[
                     ["Compétition", point.row.league || "—"],
                     ["Note Vega", fmt(point.row.grade, 0)],
-                    [
-                      "Buts / PD",
-                      `${point.row.goals ?? 0} / ${point.row.assists ?? 0}`,
-                    ],
+                    ["Buts / PD", goalsAndAssists(point.row)],
                   ]}
                 />
               )}

@@ -1,6 +1,25 @@
 import { MIN_GRADED_MATCHES } from "../../../shared/player-profile.js";
 import { compareText } from "../model.js";
 
+/**
+ * The finishing gap's own sample (VI-23 B2): a profile's goals and xG on the matches that know
+ * both. A total without a profile (home-insights.js) keeps its xG only when it covers every
+ * appearance, but counts a missing goal as 0 (the home's convention, older than this branch): a
+ * complete xG does not prove complete goals, and such a total's gap is read as given. Null
+ * without a sample.
+ */
+const finishingSample = (row) => {
+  if (row.profile) {
+    const paired = row.profile.stats?.finishing;
+    return paired?.count > 0 ? paired : null;
+  }
+  return Number.isFinite(row.goals) && Number.isFinite(row.xg)
+    ? { goals: row.goals, xg: row.xg }
+    : null;
+};
+const finishingGap = (row) =>
+  Number.isFinite(row.finishingDelta) ? row.finishingDelta : row.goals - row.xg;
+
 /** Shared, season-scoped ranking definitions for home cards and the directory. */
 export const PLAYER_RANKINGS = {
   // The Vega score of the season (the power ranking): the site's main ranking of players.
@@ -46,15 +65,15 @@ export const PLAYER_RANKINGS = {
     label: "Efficaces",
     sort: { key: "finishingDelta", direction: "desc" },
     columns: ["finishingDelta", "goals", "xg"],
-    eligible: (p) => p.goals >= 4 && Number.isFinite(p.xg),
-    compare: (a, b) => b.goals - b.xg - (a.goals - a.xg),
+    eligible: (_totals, row) => finishingSample(row)?.goals >= 4,
+    compare: (a, b) => finishingGap(b) - finishingGap(a),
   },
   wasteful: {
     label: "Maladroits",
     sort: { key: "finishingDelta", direction: "asc" },
     columns: ["finishingDelta", "goals", "xg"],
-    eligible: (p) => p.xg >= 3 && Number.isFinite(p.goals),
-    compare: (a, b) => a.goals - a.xg - (b.goals - b.xg),
+    eligible: (_totals, row) => finishingSample(row)?.xg >= 3,
+    compare: (a, b) => finishingGap(a) - finishingGap(b),
   },
 };
 

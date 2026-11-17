@@ -138,7 +138,7 @@ test("a cached complete season is filtered without changing the shared history",
     season,
     data: {
       appearances: rows,
-      matches: rows.map((row) => ({ id: row.matchId, leagueId: row.leagueId })),
+      matches: rows.map((row) => ({ id: row.matchId, leagueId: row.leagueId, status: "finished" })),
       competitions: [{ id: "l_000001" }, { id: "l_000002" }],
     },
     profile: aggregateSeason(rows, id),

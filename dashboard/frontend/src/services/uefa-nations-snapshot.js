@@ -133,6 +133,8 @@ export function addUefaNationsSnapshot(data, playerId, season) {
             id: row.matchId,
             date: row.date,
             season,
+            // Official matches played (VI-23 stage 5, §14.2): the summaries count finished matches.
+            status: "finished",
             leagueId: selectedId,
             league: native?.name || "Ligue des Nations",
             sourceUrl: `https://www.uefa.com/uefanationsleague/match/${id}/`,

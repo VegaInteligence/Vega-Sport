@@ -211,6 +211,22 @@ function addAppearance(acc, row) {
     value.count++;
     value.minutes += row.minutes;
   }
+  // The finishing gap's own sample (VI-23 B2): the matches that know both goals and xG, so
+  // that goals minus xG compares one sample (seasonMetric(profile, "finishing", mode)).
+  if (isNumber(row.goals) && isNumber(row.xg)) {
+    const value = (acc.stats.finishing ||= {
+      sum: 0,
+      count: 0,
+      minutes: 0,
+      goals: 0,
+      xg: 0,
+    });
+    value.sum += row.goals - row.xg;
+    value.count++;
+    value.minutes += row.minutes;
+    value.goals += row.goals;
+    value.xg += row.xg;
+  }
   addRatio(
     acc,
     "passAccuracy",
@@ -262,6 +278,41 @@ function finish(acc) {
   };
 }
 
+/**
+ * The appearances of finished matches, for a season summary (VI-23 stage 5, FAILURE_MODES §14.2):
+ * the server's aggregates and the directory count finished matches only. An appearance carries no
+ * status: it is read by match id from the read's collected match records, else from its fixtures
+ * (a finished fixture may have appearances without a record). An unknown status, or any other
+ * (in play, canceled, postponed, not started, suspended, awarded, a live alias), is left out. The
+ * generic aggregators, the read itself and the match logs are not filtered.
+ */
+export function finishedAppearances(data, rows = data?.appearances) {
+  const status = new Map();
+  for (const fixture of data?.fixtures || [])
+    if (fixture?.id != null) status.set(fixture.id, fixture.status);
+  for (const match of data?.matches || [])
+    if (match?.id != null && typeof match.status === "string")
+      status.set(match.id, match.status);
+  return (rows || []).filter((row) => status.get(row.matchId) === "finished");
+}
+
+const finishedByRead = new WeakMap();
+/**
+ * The finished appearances of a whole read, computed once per read object: the same array for
+ * the same read, so that what is cached on it (the performance card's sorted peer distributions,
+ * player-profile.js) is built once, and the context's idle warm-up prepares what the card reads
+ * (VI-23 stage 7, FAILURE_MODES §16.1).
+ */
+export function finishedReadAppearances(data) {
+  if (!data) return [];
+  let rows = finishedByRead.get(data);
+  if (!rows) {
+    rows = finishedAppearances(data);
+    finishedByRead.set(data, rows);
+  }
+  return rows;
+}
+
 /** Aggregate only observations with known, positive minutes, once per match. */
 export function aggregateSeason(rows, playerId) {
   const acc = accumulator(playerId, true);
@@ -300,6 +351,28 @@ export function aggregateSeasonPlayers(rows) {
       leagues: [...acc.leagues],
     };
   });
+}
+
+/**
+ * Minutes per goal or assist, and the goals and assists counted (VI-23 N9): only when both are
+ * known on every played match whose minutes the profile counts (each statistic's count equals
+ * its matches), over finite, positive minutes, with at least one of them. Null otherwise: an
+ * unknown goal or assist is no zero, and no subset of the matches stands for all of them.
+ */
+export function contributionRate(profile) {
+  const matches = profile?.matches,
+    minutes = profile?.minutes;
+  const known = (key) => {
+    const stat = profile?.stats?.[key];
+    return stat && isNumber(stat.sum) && stat.count === matches
+      ? stat.sum
+      : null;
+  };
+  const goals = known("goals"),
+    assists = known("assists");
+  if (!(matches > 0) || !isNumber(minutes) || !(minutes > 0)) return null;
+  if (goals === null || assists === null || !(goals + assists > 0)) return null;
+  return { minutes: minutes / (goals + assists), count: goals + assists };
 }
 
 /** Missing observations stay missing; per-90 uses only their observed minutes. */

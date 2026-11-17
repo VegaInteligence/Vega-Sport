@@ -814,7 +814,7 @@ export function teamRows(matches, clubId, leagueId = null) {
         opp,
         xpts:
           own?.xg != null && opp?.xg != null
-            ? outcomeChances(own.xg, opp.xg).xpts
+            ? (outcomeChances(own.xg, opp.xg)?.xpts ?? null)
             : null,
       };
     });
@@ -822,64 +822,239 @@ export function teamRows(matches, clubId, leagueId = null) {
 
 /* -------------------------------------------------------- expected points */
 
-function poisson(lambda, max = 10) {
-  const out = [];
+const finite = (v) => typeof v === "number" && Number.isFinite(v);
+
+/**
+ * Poisson probabilities of 0 to n goals at a rate, n = ⌈rate + 12√rate + 12⌉: the goals left
+ * out weigh less than 1e-12 (VI-23 B6). agg.xpts_v2 (126) computes the same law in SQL.
+ */
+function poisson(lambda) {
+  const n = Math.ceil(lambda + 12 * Math.sqrt(lambda) + 12);
+  const out = new Array(n + 1);
   let p = Math.exp(-lambda);
-  for (let k = 0; k <= max; k++) {
-    out.push(p);
+  for (let k = 0; k <= n; k++) {
+    out[k] = p;
     p = (p * lambda) / (k + 1);
   }
   return out;
 }
-/** Win/draw/loss chances when each side scores Poisson(xG) goals. */
+/** Σ p[i] × P(other side scores fewer than i): the chance that the first side wins. */
+function winMass(p, q) {
+  let total = 0,
+    below = 0;
+  for (let i = 0; i < p.length; i++) {
+    total += p[i] * below;
+    if (i < q.length) below += q[i];
+  }
+  return total;
+}
+/** The largest xG a side may have (an engineering guard, not a sporting limit: no match nears it). */
+const MAX_XG = 100;
+/**
+ * Win/draw/loss chances when each side scores Poisson(xG) goals; null for an xG that is not a
+ * finite number in [0, MAX_XG]. xG is floored at 0.01 (documented choice); win, draw and loss
+ * are each summed over the support, then normalised by their total (the dropped tail is
+ * < 1e-12). agg.xpts_v2 (126) has the same domain.
+ */
 export function outcomeChances(xgFor, xgAgainst) {
+  if (
+    !finite(xgFor) ||
+    !finite(xgAgainst) ||
+    xgFor < 0 ||
+    xgAgainst < 0 ||
+    xgFor > MAX_XG ||
+    xgAgainst > MAX_XG
+  )
+    return null;
   const a = poisson(Math.max(0.01, xgFor)),
     b = poisson(Math.max(0.01, xgAgainst));
-  let win = 0,
-    draw = 0;
-  for (let i = 0; i < a.length; i++)
-    for (let j = 0; j < b.length; j++)
-      if (i > j) win += a[i] * b[j];
-      else if (i === j) draw += a[i] * b[j];
-  return { win, draw, loss: Math.max(0, 1 - win - draw), xpts: 3 * win + draw };
+  const win = winMass(a, b),
+    loss = winMass(b, a);
+  let draw = 0;
+  for (let k = 0; k < Math.min(a.length, b.length); k++) draw += a[k] * b[k];
+  const total = win + draw + loss;
+  if (!(total > 0) || !Number.isFinite(total)) return null;
+  return {
+    win: win / total,
+    draw: draw / total,
+    loss: loss / total,
+    xpts: (3 * win + draw) / total,
+  };
 }
 
 /* ---------------------------------------------------------------- metrics */
 
-const sum = (rows, get) => {
-  let total = 0,
-    count = 0;
-  for (const row of rows) {
-    const value = get(row);
-    if (value != null && Number.isFinite(value)) {
-      total += value;
-      count++;
+/**
+ * The match's two sides as its record names them: the club's id (its `side`) and the
+ * opponent's, or null unless they are the match's home and away teams.
+ */
+function sidesOf(row) {
+  const home = row.match?.home?.id,
+    away = row.match?.away?.id,
+    us = row.side === "home" ? home : row.side === "away" ? away : null,
+    them = row.opponent?.id;
+  return us &&
+    them &&
+    us !== them &&
+    them === (row.side === "home" ? away : home)
+    ? { us, them }
+    : null;
+}
+/**
+ * The match's shot list without the penalty shoot-out's attempts (`period` « penalties » in the
+ * embedded records, « Penalties » in the source-shaped reads): a shoot-out goal is not in the score
+ * and its attempts are in no team statistic, as the server reads them. Null without a list. The
+ * one reading of a match's shots for scoringOf, penaltiesOf and shotProfile (VI-23 stage 5, §14.4).
+ */
+const SHOOTOUT_PERIODS = new Set(["penalties", "Penalties"]);
+function matchShots(row) {
+  const shots = row.match?.shots;
+  return Array.isArray(shots)
+    ? shots.filter((s) => !SHOOTOUT_PERIODS.has(s?.period))
+    : null;
+}
+/**
+ * The match's goals classified from its shot list (an own goal carries the scorer's own team, as
+ * club-game-states.js reads it): own goals for and against, or null unless every shot is one of
+ * the two teams', every goal says whether it is an own goal (`isOwnGoal` true or false: an
+ * ordinary goal is never inferred from `isGoal` alone), and the goals reproduce the score. An
+ * empty list classifies nothing, whatever the score: a « no goal, no own goal » rule would pick
+ * matches by their outcome (VI-23 B6, finding 15f; interim reviews of 17 Nov 2026).
+ */
+function scoringOf(row) {
+  const shots = matchShots(row),
+    sides = sidesOf(row);
+  if (!shots?.length || !sides) return null;
+  let goalsFor = 0,
+    goalsAgainst = 0,
+    ownGoalsFor = 0,
+    ownGoalsAgainst = 0;
+  for (const s of shots) {
+    if (s.teamId !== sides.us && s.teamId !== sides.them) return null;
+    const theirs = s.teamId === sides.them;
+    if (s.isOwnGoal === true) theirs ? ownGoalsFor++ : ownGoalsAgainst++;
+    else if (s.isGoal) {
+      if (s.isOwnGoal !== false) return null;
+      theirs ? goalsAgainst++ : goalsFor++;
     }
   }
-  return { total, count };
-};
-const mean = (rows, get) => {
-  const s = sum(rows, get);
-  return s.count ? s.total / s.count : null;
-};
-const ratio = (rows, top, bottom, scale = 100) => {
-  let a = 0,
-    b = 0;
-  for (const row of rows) {
-    const x = top(row),
-      y = bottom(row);
-    if (x == null || y == null) continue;
-    a += x;
-    b += y;
+  return goalsFor + ownGoalsFor === row.gf &&
+    goalsAgainst + ownGoalsAgainst === row.ga
+    ? { ownGoalsFor, ownGoalsAgainst }
+    : null;
+}
+/**
+ * A shot's situation, in the six display buckets of SITUATION_LABELS: the eight normalized codes
+ * of the embedded match records (api.match_shots) and the provider spellings of the source-shaped
+ * reads (match-families.mjs). Any other value, or none, is unclassified (null), never open play.
+ * The one reading of a situation for penaltiesOf and shotProfile (VI-23 stage 3, §7.5).
+ */
+const SITUATION_CODES = new Map([
+  ["regular_play", "open"],
+  ["RegularPlay", "open"],
+  ["individual_play", "open"],
+  ["IndividualPlay", "open"],
+  ["fast_break", "fastBreak"],
+  ["FastBreak", "fastBreak"],
+  ["from_corner", "corner"],
+  ["FromCorner", "corner"],
+  ["set_piece", "setPiece"],
+  ["SetPiece", "setPiece"],
+  ["throw_in_set_piece", "setPiece"],
+  ["ThrowInSetPiece", "setPiece"],
+  ["free_kick", "freeKick"],
+  ["FreeKick", "freeKick"],
+  ["penalty", "penalty"],
+  ["Penalty", "penalty"],
+]);
+const situationOf = (code) => SITUATION_CODES.get(code) ?? null;
+/**
+ * The club's penalty attempts, counted on the match's complete, reconciled shot set (the shoot-out
+ * left out, matchShots): every shot of both sides listed (as many as the team statistics count), the scoring classified
+ * (scoringOf), and each of the club's attempts of a recognized situation. Null otherwise: equal
+ * xG and non-penalty xG establish nothing, and a missing or unknown situation may be the
+ * penalty (finding 15e). The opponent's situations are not read.
+ */
+function penaltiesOf(row) {
+  const sides = scoringOf(row) && sidesOf(row);
+  if (!sides || !finite(row.own?.shots) || !finite(row.opp?.shots)) return null;
+  let mine = 0,
+    theirs = 0,
+    penalties = 0;
+  for (const s of matchShots(row)) {
+    if (s.isOwnGoal === true) continue;
+    if (s.teamId === sides.them) theirs++;
+    else {
+      const situation = situationOf(s.situation);
+      if (situation === null) return null;
+      if (situation === "penalty") penalties++;
+      mine++;
+    }
   }
-  return b > 0 ? (scale * a) / b : null;
+  return mine === row.own.shots && theirs === row.opp.shots ? penalties : null;
+}
+
+const known = (...values) => values.every(finite);
+/** A mean over the matches that know `value`; `count` says on how many it stands. */
+const meanOf = (value) => ({
+  get: (rows) => {
+    let total = 0,
+      count = 0;
+    for (const row of rows) {
+      const v = value(row);
+      if (finite(v)) {
+        total += v;
+        count++;
+      }
+    }
+    return count ? total / count : null;
+  },
+  count: (rows) => rows.filter((row) => finite(value(row))).length,
+});
+/** Σ numerator / Σ denominator over the matches that know both (one support), × scale. */
+const ratioOf = (pair, scale = 100) => {
+  const supported = (row) => {
+    const p = pair(row);
+    return p && finite(p[0]) && finite(p[1]) ? p : null;
+  };
+  return {
+    get: (rows) => {
+      let a = 0,
+        b = 0;
+      for (const row of rows) {
+        const p = supported(row);
+        if (!p) continue;
+        a += p[0];
+        b += p[1];
+      }
+      return b > 0 ? (scale * a) / b : null;
+    },
+    count: (rows) => rows.filter(supported).length,
+  };
 };
-const has = (row) =>
-  row.own && row.opp && row.own.xg != null && row.opp.xg != null;
+/** A total over the matches that know it; unknown when none does. */
+const totalOf = (value) => ({
+  get: (rows) => {
+    const values = rows.map(value).filter(finite);
+    return values.length ? values.reduce((a, b) => a + b, 0) : null;
+  },
+  count: (rows) => rows.filter((row) => finite(value(row))).length,
+});
+const own = (key) => (row) => row.own?.[key];
+const opp = (key) => (row) => row.opp?.[key];
+/** Both sides' share of a statistic that is the club's (field tilt, duels…). */
+const share = (key) =>
+  ratioOf((x) =>
+    known(x.own?.[key], x.opp?.[key])
+      ? [x.own[key], x.own[key] + x.opp[key]]
+      : null,
+  );
 
 /**
- * Every club indicator. `better`: 1 when higher is better, -1 when lower is
- * better, 0 for a style indicator with no good or bad side.
+ * Every club indicator. `better`: 1 when higher is better, -1 when lower is better, 0 for a
+ * style indicator with no good or bad side. Each reads its own inputs only and stands on the
+ * matches that know all of them (`count`): a missing input is never a 0, and an xG the
+ * indicator does not read gates nothing (VI-23 B6, finding 8).
  */
 export const METRICS = {
   ppm: {
@@ -887,14 +1062,14 @@ export const METRICS = {
     family: "results",
     better: 1,
     digits: 2,
-    get: (r) => mean(r, (x) => x.points),
+    ...meanOf((x) => x.points),
   },
   xpts: {
     label: "xPts / match",
     family: "results",
     better: 1,
     digits: 2,
-    get: (r) => mean(r.filter(has), (x) => x.xpts),
+    ...meanOf((x) => x.xpts),
     info: "Points attendus : chaque camp marque selon une loi de Poisson de moyenne égale à ses xG.",
   },
   goalsFor: {
@@ -902,70 +1077,70 @@ export const METRICS = {
     family: "attack",
     better: 1,
     digits: 2,
-    get: (r) => mean(r, (x) => x.gf),
+    ...meanOf((x) => x.gf),
   },
   goalsAgainst: {
     label: "Buts encaissés / match",
     family: "defence",
     better: -1,
     digits: 2,
-    get: (r) => mean(r, (x) => x.ga),
+    ...meanOf((x) => x.ga),
   },
   xg: {
     label: "xG / match",
     family: "attack",
     better: 1,
     digits: 2,
-    get: (r) => mean(r.filter(has), (x) => x.own.xg),
+    ...meanOf(own("xg")),
   },
   npxg: {
     label: "xG hors penalty / match",
     family: "attack",
     better: 1,
     digits: 2,
-    get: (r) => mean(r.filter(has), (x) => x.own.npxg),
+    ...meanOf(own("npxg")),
   },
   xgOpen: {
     label: "xG en jeu ouvert / match",
     family: "attack",
     better: 1,
     digits: 2,
-    get: (r) => mean(r.filter(has), (x) => x.own.xgOpen),
+    ...meanOf(own("xgOpen")),
   },
   bigChances: {
     label: "Grosses occasions / match",
     family: "attack",
     better: 1,
     digits: 1,
-    get: (r) => mean(r.filter(has), (x) => x.own.bigChances),
+    ...meanOf(own("bigChances")),
   },
   shots: {
     label: "Tirs / match",
     family: "attack",
     better: 1,
     digits: 1,
-    get: (r) => mean(r.filter(has), (x) => x.own.shots),
+    ...meanOf(own("shots")),
   },
   shotsOnTarget: {
     label: "Tirs cadrés / match",
     family: "attack",
     better: 1,
     digits: 1,
-    get: (r) => mean(r.filter(has), (x) => x.own.sot),
+    ...meanOf(own("sot")),
   },
   xgPerShot: {
     label: "xG par tir (hors penalty)",
     family: "attack",
     better: 1,
     digits: 2,
-    get: (r) =>
-      ratio(
-        r.filter(has),
-        (x) => x.own.npxg,
-        (x) => x.own.shots,
-        1,
-      ),
-    info: "Qualité moyenne des tirs : xG hors penalty divisés par le nombre de tirs.",
+    // Penalties out of both terms, counted on the match's complete shot set.
+    ...ratioOf((x) => {
+      const penalties = penaltiesOf(x);
+      return penalties === null || !known(x.own?.npxg, x.own?.shots)
+        ? null
+        : [x.own.npxg, x.own.shots - penalties];
+    }, 1),
+    info: "Qualité moyenne des tirs : xG hors penalty divisés par le nombre de tirs hors penalty.",
   },
   boxShots: {
     label: "Tirs dans la surface",
@@ -973,19 +1148,14 @@ export const METRICS = {
     better: 1,
     digits: 0,
     unit: "%",
-    get: (r) =>
-      ratio(
-        r.filter(has),
-        (x) => x.own.shotsIn,
-        (x) => x.own.shots,
-      ),
+    ...ratioOf((x) => [x.own?.shotsIn, x.own?.shots]),
   },
   touchesBox: {
     label: "Ballons dans la surface / match",
     family: "attack",
     better: 1,
     digits: 1,
-    get: (r) => mean(r.filter(has), (x) => x.own.touchesBox),
+    ...meanOf(own("touchesBox")),
   },
   finishing: {
     label: "Finition (buts − xG) / match",
@@ -993,7 +1163,13 @@ export const METRICS = {
     better: 1,
     digits: 2,
     signed: true,
-    get: (r) => mean(r.filter(has), (x) => x.gf - x.own.xg),
+    // The club's own goals: an opponent's own goal is no finishing.
+    ...meanOf((x) => {
+      const scoring = scoringOf(x);
+      return scoring && finite(x.own?.xg)
+        ? x.gf - scoring.ownGoalsFor - x.own.xg
+        : null;
+    }),
     info: "Écart entre buts marqués et xG : positif, l’équipe convertit mieux que la moyenne des tirs comparables.",
   },
   keeper: {
@@ -1002,7 +1178,13 @@ export const METRICS = {
     better: 1,
     digits: 2,
     signed: true,
-    get: (r) => mean(r.filter(has), (x) => x.opp.xgot - x.ga),
+    // The goals the keeper let in: the club's own goals are not his.
+    ...meanOf((x) => {
+      const scoring = scoringOf(x);
+      return scoring && finite(x.opp?.xgot)
+        ? x.opp.xgot - (x.ga - scoring.ownGoalsAgainst)
+        : null;
+    }),
     info: "xG cadrés concédés (xGOT) moins buts encaissés : ce que les arrêts ont empêché.",
   },
   conversion: {
@@ -1011,75 +1193,73 @@ export const METRICS = {
     better: 1,
     digits: 1,
     unit: "%",
-    get: (r) =>
-      ratio(
-        r.filter(has),
-        (x) => x.gf,
-        (x) => x.own.shots,
-      ),
+    ...ratioOf((x) => {
+      const scoring = scoringOf(x);
+      return scoring ? [x.gf - scoring.ownGoalsFor, x.own?.shots] : null;
+    }),
   },
   xga: {
     label: "xG concédés / match",
     family: "defence",
     better: -1,
     digits: 2,
-    get: (r) => mean(r.filter(has), (x) => x.opp.xg),
+    ...meanOf(opp("xg")),
   },
   npxga: {
     label: "xG concédés hors penalty / match",
     family: "defence",
     better: -1,
     digits: 2,
-    get: (r) => mean(r.filter(has), (x) => x.opp.npxg),
+    ...meanOf(opp("npxg")),
   },
   shotsAgainst: {
     label: "Tirs concédés / match",
     family: "defence",
     better: -1,
     digits: 1,
-    get: (r) => mean(r.filter(has), (x) => x.opp.shots),
+    ...meanOf(opp("shots")),
   },
   bigChancesAgainst: {
     label: "Grosses occasions concédées / match",
     family: "defence",
     better: -1,
     digits: 1,
-    get: (r) => mean(r.filter(has), (x) => x.opp.bigChances),
+    ...meanOf(opp("bigChances")),
   },
   touchesBoxAgainst: {
     label: "Ballons adverses dans la surface / match",
     family: "defence",
     better: -1,
     digits: 1,
-    get: (r) => mean(r.filter(has), (x) => x.opp.touchesBox),
+    ...meanOf(opp("touchesBox")),
   },
   shotsOnTargetAgainst: {
     label: "Tirs cadrés concédés / match",
     family: "defence",
     better: -1,
     digits: 1,
-    get: (r) => mean(r.filter(has), (x) => x.opp.sot),
+    ...meanOf(opp("sot")),
   },
   xgOpenAgainst: {
     label: "xG concédés en jeu ouvert / match",
     family: "defence",
     better: -1,
     digits: 2,
-    get: (r) => mean(r.filter(has), (x) => x.opp.xgOpen),
+    ...meanOf(opp("xgOpen")),
   },
   passesAgainst: {
     label: "Passes adverses / match",
     family: "control",
     better: 0,
     digits: 0,
-    get: (r) => mean(r.filter(has), (x) => x.opp.passes),
+    ...meanOf(opp("passes")),
   },
   xgot: {
     label: "xG cadrés (xGOT) / match",
     family: "finishing",
     better: 1,
     digits: 2,
-    get: (r) => mean(r.filter(has), (x) => x.own.xgot),
+    ...meanOf(own("xgot")),
   },
   placement: {
     label: "Qualité de frappe (xGOT − xG) / match",
@@ -1087,10 +1267,9 @@ export const METRICS = {
     better: 1,
     digits: 2,
     signed: true,
-    get: (r) =>
-      mean(r.filter(has), (x) =>
-        x.own.xgot == null ? null : x.own.xgot - x.own.xg,
-      ),
+    ...meanOf((x) =>
+      known(x.own?.xgot, x.own?.xg) ? x.own.xgot - x.own.xg : null,
+    ),
     info: "Ce que la précision des frappes ajoute aux occasions : positif, les tirs sont mieux placés que la moyenne.",
   },
   cleanSheets: {
@@ -1099,8 +1278,7 @@ export const METRICS = {
     better: 1,
     digits: 0,
     unit: "%",
-    get: (r) =>
-      r.length ? (100 * r.filter((x) => x.ga === 0).length) / r.length : null,
+    ...ratioOf((x) => (finite(x.ga) ? [x.ga === 0 ? 1 : 0, 1] : null)),
   },
   possession: {
     label: "Possession",
@@ -1108,14 +1286,14 @@ export const METRICS = {
     better: 0,
     digits: 1,
     unit: "%",
-    get: (r) => mean(r.filter(has), (x) => x.own.possession),
+    ...meanOf(own("possession")),
   },
   passes: {
     label: "Passes / match",
     family: "control",
     better: 0,
     digits: 0,
-    get: (r) => mean(r.filter(has), (x) => x.own.passes),
+    ...meanOf(own("passes")),
   },
   passAccuracy: {
     label: "Passes réussies",
@@ -1123,12 +1301,7 @@ export const METRICS = {
     better: 1,
     digits: 1,
     unit: "%",
-    get: (r) =>
-      ratio(
-        r.filter(has),
-        (x) => x.own.passesAccurate,
-        (x) => x.own.passes,
-      ),
+    ...ratioOf((x) => [x.own?.passesAccurate, x.own?.passes]),
   },
   fieldTilt: {
     label: "Territoire (field tilt)",
@@ -1136,12 +1309,7 @@ export const METRICS = {
     better: 1,
     digits: 1,
     unit: "%",
-    get: (r) =>
-      ratio(
-        r.filter(has),
-        (x) => x.own.oppHalfPasses,
-        (x) => x.own.oppHalfPasses + x.opp.oppHalfPasses,
-      ),
+    ...share("oppHalfPasses"),
     info: "Part des passes jouées dans le camp adverse par les deux équipes qui revient au club : qui joue chez l’autre.",
   },
   boxShare: {
@@ -1150,12 +1318,7 @@ export const METRICS = {
     better: 1,
     digits: 1,
     unit: "%",
-    get: (r) =>
-      ratio(
-        r.filter(has),
-        (x) => x.own.touchesBox,
-        (x) => x.own.touchesBox + x.opp.touchesBox,
-      ),
+    ...share("touchesBox"),
   },
   directness: {
     label: "Jeu long (part des longs ballons)",
@@ -1163,12 +1326,7 @@ export const METRICS = {
     better: 0,
     digits: 1,
     unit: "%",
-    get: (r) =>
-      ratio(
-        r.filter(has),
-        (x) => x.own.longBalls,
-        (x) => x.own.passesAccurate,
-      ),
+    ...ratioOf((x) => [x.own?.longBalls, x.own?.passesAccurate]),
     info: "Longs ballons réussis rapportés aux passes réussies : plus la part est haute, plus le jeu est direct.",
   },
   crosses: {
@@ -1176,20 +1334,28 @@ export const METRICS = {
     family: "control",
     better: 0,
     digits: 1,
-    get: (r) => mean(r.filter(has), (x) => x.own.crosses),
+    ...meanOf(own("crosses")),
   },
   ppda: {
     label: "PPDA (approx.)",
     family: "pressing",
     better: -1,
     digits: 1,
-    get: (r) =>
-      ratio(
-        r.filter(has),
-        (x) => x.opp.ownHalfPasses,
-        (x) => x.own.tackles + x.own.interceptions + x.own.fouls,
-        1,
-      ),
+    ...ratioOf(
+      (x) =>
+        known(
+          x.opp?.ownHalfPasses,
+          x.own?.tackles,
+          x.own?.interceptions,
+          x.own?.fouls,
+        )
+          ? [
+              x.opp.ownHalfPasses,
+              x.own.tackles + x.own.interceptions + x.own.fouls,
+            ]
+          : null,
+      1,
+    ),
     info: "Passes adverses dans leur propre moitié par action défensive (tacle, interception, faute). Bas = pressing plus agressif. Approximation : la zone des actions défensives n’est pas publiée.",
   },
   defActions: {
@@ -1197,13 +1363,13 @@ export const METRICS = {
     family: "pressing",
     better: 0,
     digits: 1,
-    get: (r) =>
-      mean(r.filter(has), (x) =>
-        x.own.possession != null && x.own.possession < 100
-          ? ((x.own.tackles + x.own.interceptions) * 50) /
-            (100 - x.own.possession)
-          : null,
-      ),
+    ...meanOf((x) =>
+      known(x.own?.tackles, x.own?.interceptions, x.own?.possession) &&
+      x.own.possession < 100
+        ? ((x.own.tackles + x.own.interceptions) * 50) /
+          (100 - x.own.possession)
+        : null,
+    ),
     info: "Volume défensif ramené à une possession adverse de 50 %.",
   },
   duels: {
@@ -1212,12 +1378,7 @@ export const METRICS = {
     better: 1,
     digits: 1,
     unit: "%",
-    get: (r) =>
-      ratio(
-        r.filter(has),
-        (x) => x.own.duels,
-        (x) => x.own.duels + x.opp.duels,
-      ),
+    ...share("duels"),
   },
   aerials: {
     label: "Duels aériens gagnés",
@@ -1225,33 +1386,28 @@ export const METRICS = {
     better: 1,
     digits: 1,
     unit: "%",
-    get: (r) =>
-      ratio(
-        r.filter(has),
-        (x) => x.own.aerials,
-        (x) => x.own.aerials + x.opp.aerials,
-      ),
+    ...share("aerials"),
   },
   fouls: {
     label: "Fautes / match",
     family: "pressing",
     better: 0,
     digits: 1,
-    get: (r) => mean(r.filter(has), (x) => x.own.fouls),
+    ...meanOf(own("fouls")),
   },
   xgSet: {
     label: "xG sur coups de pied arrêtés / match",
     family: "setpieces",
     better: 1,
     digits: 2,
-    get: (r) => mean(r.filter(has), (x) => x.own.xgSet),
+    ...meanOf(own("xgSet")),
   },
   xgSetAgainst: {
     label: "xG concédés sur CPA / match",
     family: "setpieces",
     better: -1,
     digits: 2,
-    get: (r) => mean(r.filter(has), (x) => x.opp.xgSet),
+    ...meanOf(opp("xgSet")),
   },
   setShare: {
     label: "Part des CPA dans les xG",
@@ -1259,33 +1415,28 @@ export const METRICS = {
     better: 0,
     digits: 1,
     unit: "%",
-    get: (r) =>
-      ratio(
-        r.filter(has),
-        (x) => x.own.xgSet,
-        (x) => x.own.xg,
-      ),
+    ...ratioOf((x) => [x.own?.xgSet, x.own?.xg]),
   },
   corners: {
     label: "Corners / match",
     family: "setpieces",
     better: 1,
     digits: 1,
-    get: (r) => mean(r.filter(has), (x) => x.own.corners),
+    ...meanOf(own("corners")),
   },
   cornersAgainst: {
     label: "Corners concédés / match",
     family: "setpieces",
     better: -1,
     digits: 1,
-    get: (r) => mean(r.filter(has), (x) => x.opp.corners),
+    ...meanOf(opp("corners")),
   },
   yellow: {
     label: "Cartons jaunes / match",
     family: "discipline",
     better: -1,
     digits: 2,
-    get: (r) => mean(r.filter(has), (x) => x.own.yellow),
+    ...meanOf(own("yellow")),
   },
   red: {
     label: "Cartons rouges",
@@ -1293,7 +1444,7 @@ export const METRICS = {
     better: -1,
     digits: 0,
     total: true,
-    get: (r) => sum(r.filter(has), (x) => x.own.red).total,
+    ...totalOf(own("red")),
   },
 };
 export const FAMILIES = {
@@ -1405,15 +1556,6 @@ const quantile = (sorted, q) => {
 
 /* ----------------------------------------------------- game state, shots */
 
-const SITUATIONS = {
-  RegularPlay: "open",
-  IndividualPlay: "open",
-  FastBreak: "fastBreak",
-  FromCorner: "corner",
-  SetPiece: "setPiece",
-  FreeKick: "freeKick",
-  Penalty: "penalty",
-};
 export const SITUATION_LABELS = {
   open: "Jeu placé",
   fastBreak: "Contre-attaque",
@@ -1432,48 +1574,53 @@ const shotOutcome = (shot) =>
         : "off";
 
 /**
- * The club's shots by situation and on the map. On the map a shot without xG keeps its point with
- * xG null (ShotPair draws it small, says « xG indisponible », and its header total is then
- * unknown), and a known 0 stays 0 (VI-22).
+ * The club's shots for and against, by situation, and their points on the map (VI-23 stage 3,
+ * §7.5). A shot is the club's or its opponent's by the match's actual sides; another team's, or
+ * none's, counts on neither side, and a shoot-out attempt is none of the match's (matchShots,
+ * stage 5). A bucket's xG is known only while each of its shots has one; a
+ * shot without a recognized situation is counted in `unclassified` and keeps its map point,
+ * labelled « — ». On the map, a known 0 stays 0 and a missing xG stays null: ShotPair draws the
+ * point small, says « xG indisponible » and leaves its header total unknown (VI-22).
  */
 export function shotProfile(rows, clubId) {
-  const empty = () =>
-    Object.fromEntries(
-      Object.keys(SITUATION_LABELS).map((k) => [
-        k,
-        { shots: 0, xg: 0, goals: 0 },
-      ]),
-    );
+  const empty = () => ({ shots: 0, xg: 0, goals: 0 });
+  const buckets = () =>
+    Object.fromEntries(Object.keys(SITUATION_LABELS).map((k) => [k, empty()]));
   const out = {
-    for: empty(),
-    against: empty(),
+    for: buckets(),
+    against: buckets(),
+    unclassified: { for: empty(), against: empty() },
     mapFor: [],
     mapAgainst: [],
     matches: 0,
   };
   for (const row of rows) {
-    const shots = row.match.shots || [];
-    if (!shots.length) continue;
+    const shots = matchShots(row) || [];
+    const sides = sidesOf(row);
+    if (!shots.length || !sides || sides.us !== clubId) continue;
     out.matches++;
     for (const shot of shots) {
       if (shot.isOwnGoal) continue;
-      const mine = shot.teamId === clubId;
-      const bucket = (mine ? out.for : out.against)[
-        SITUATIONS[shot.situation] || "open"
-      ];
+      const mine = shot.teamId === sides.us;
+      if (!mine && shot.teamId !== sides.them) continue;
+      const key = situationOf(shot.situation);
+      const bucket = key
+        ? (mine ? out.for : out.against)[key]
+        : out.unclassified[mine ? "for" : "against"];
+      const xg = num(shot.xg);
       bucket.shots++;
-      bucket.xg += num(shot.xg) || 0;
+      if (bucket.xg !== null) bucket.xg = xg === null ? null : bucket.xg + xg;
       if (shot.isGoal) bucket.goals++;
       if (num(shot.x) != null && num(shot.y) != null)
         (mine ? out.mapFor : out.mapAgainst).push({
           id: shot.id,
           x: Math.round((105 - shot.x) * 10) / 10,
           y: shot.y,
-          xg: num(shot.xg),
+          xg: xg,
           outcome: shotOutcome(shot),
           player: shot.playerName,
           minute: shot.minute,
-          situation: SITUATION_LABELS[SITUATIONS[shot.situation] || "open"],
+          situation: key ? SITUATION_LABELS[key] : "—",
           opponent: row.opponent.name,
           date: row.match.date,
         });
@@ -1489,6 +1636,39 @@ function clubValues(rows) {
     Object.entries(METRICS).map(([key, metric]) => [key, metric.get(rows)]),
   );
 }
+/** On how many matches each indicator stands. */
+function clubCoverage(rows) {
+  return Object.fromEntries(
+    Object.entries(METRICS).map(([key, metric]) => [key, metric.count(rows)]),
+  );
+}
+/**
+ * Actual and expected points on the same matches, those whose xPts is known; the xG for and
+ * against on the matches that know both (VI-23 B6, finding 9 and N5). Unknown without such a
+ * match. A consumer reads these, not record.points − xptsTotal nor values.xg − values.xga, whose
+ * terms stand on different matches.
+ */
+function pairedFields(rows) {
+  const points = rows.filter((row) => finite(row.xpts)),
+    xg = rows.filter((row) => finite(row.own?.xg) && finite(row.opp?.xg));
+  const actual = points.reduce((t, row) => t + row.points, 0),
+    expected = points.reduce((t, row) => t + row.xpts, 0),
+    xgFor = xg.reduce((t, row) => t + row.own.xg, 0),
+    xgAgainst = xg.reduce((t, row) => t + row.opp.xg, 0),
+    delta = xg.reduce((t, row) => t + (row.own.xg - row.opp.xg), 0);
+  return {
+    pairedMatches: points.length,
+    pairedActualPoints: points.length ? actual : null,
+    pairedExpectedPoints: points.length ? expected : null,
+    pairedPointsDelta: points.length ? actual - expected : null,
+    pairedXgMatches: xg.length,
+    pairedXgFor: xg.length ? xgFor : null,
+    pairedXgAgainst: xg.length ? xgAgainst : null,
+    pairedXgDelta: xg.length ? delta : null,
+    pairedXgDeltaPerMatch: xg.length ? delta / xg.length : null,
+  };
+}
+const PAIRED_KEYS = Object.keys(pairedFields([]));
 function record(rows) {
   const r = { matches: rows.length, w: 0, d: 0, l: 0, gf: 0, ga: 0, points: 0 };
   for (const row of rows) {
@@ -1500,6 +1680,34 @@ function record(rows) {
   return r;
 }
 
+/**
+ * The indicators that read a match's shot list. A league cohort is read with `detail=summary`, whose
+ * records carry none: its clubs are unmeasured, and a rank or a reference statistic of these needs
+ * MIN_MEASURED measured clubs (rankCohort). VI-23 stage 5, §14.1.
+ */
+const SHOT_METRICS = ["xgPerShot", "finishing", "keeper", "conversion"];
+const MIN_MEASURED = 5;
+/**
+ * The selected club as a reference's member, with its own shot-backed values and supports read on
+ * its full records (`fullRows`, the dossier's allRows) of the matches the member's rows name: a
+ * summary row without a full counterpart stays unsupported, and another competition's matches are
+ * never read. A copy: the member, its values and its coverage are left as they are (cached).
+ * Peers are not measured (§14.1).
+ */
+function measuredSelf(member, fullRows) {
+  const ids = new Set(
+    (member.rows || []).map((row) => row.match?.id).filter((v) => v != null),
+  );
+  const rows = fullRows.filter((row) => ids.has(row.match?.id));
+  const values = { ...member.values },
+    coverage = { ...(member.coverage ?? clubCoverage(member.rows || [])) };
+  for (const key of SHOT_METRICS) {
+    values[key] = METRICS[key].get(rows);
+    coverage[key] = METRICS[key].count(rows);
+  }
+  return { ...member, values, coverage };
+}
+
 function buildCohort({ league, cohortClubs, summaries, scope = null }) {
   const clubs = cohortClubs
     .map((club) => {
@@ -1507,7 +1715,9 @@ function buildCohort({ league, cohortClubs, summaries, scope = null }) {
       const rows = read
         ? teamRows(read.matches, club.id, scope || league?.id)
         : [];
-      const xpts = rows.filter(has).reduce((t, x) => t + x.xpts, 0);
+      const xpts = rows
+        .filter((x) => finite(x.xpts))
+        .reduce((t, x) => t + x.xpts, 0);
       return {
         id: club.id,
         name: club.name,
@@ -1517,7 +1727,9 @@ function buildCohort({ league, cohortClubs, summaries, scope = null }) {
         rows,
         record: record(rows),
         xptsTotal: xpts,
+        ...pairedFields(rows),
         values: clubValues(rows),
+        coverage: clubCoverage(rows),
       };
     })
     .filter((club) => club.rows.length);
@@ -1540,8 +1752,24 @@ function rankCohort(clubs, { perMatch = false } = {}) {
       a.name.localeCompare(b.name, "fr"),
   );
   clubs.forEach((club, i) => (club.position = i + 1));
+  // xPts ranks on totals only in one league whose every club is covered on every match; else on
+  // xPts per covered match (a club covered less is not ranked lower for it). Clubs without xPts
+  // come last (VI-23 B6, N7).
+  const covered =
+    !perMatch &&
+    clubs.every((club) => club.pairedMatches === club.record.matches);
+  const xptsKey = (club) =>
+    club.pairedMatches > 0
+      ? covered
+        ? club.pairedExpectedPoints
+        : club.pairedExpectedPoints / club.pairedMatches
+      : null;
   [...clubs]
-    .sort((a, b) => per(b, b.xptsTotal) - per(a, a.xptsTotal))
+    .sort((a, b) => {
+      const x = xptsKey(a),
+        y = xptsKey(b);
+      return x === null || y === null ? (x === null) - (y === null) : y - x;
+    })
     .forEach((club, i) => (club.xptsPosition = i + 1));
   const distributions = Object.fromEntries(
     Object.keys(METRICS).map((key) => [
@@ -1549,6 +1777,11 @@ function rankCohort(clubs, { perMatch = false } = {}) {
       clubs.map((club) => club.values[key]).filter((v) => v != null),
     ]),
   );
+  // The shot-backed indicators: below MIN_MEASURED measured clubs, no rank and no reference
+  // statistic (a summary cohort measures the selected club alone: never rank 1 of 1, nor its own
+  // value as the league's median). Every other indicator keeps its rule (VI-23 stage 5, §14.1).
+  const scarce = (key) =>
+    SHOT_METRICS.includes(key) && distributions[key].length < MIN_MEASURED;
   for (const club of clubs) {
     club.centiles = Object.fromEntries(
       Object.entries(METRICS).map(([key, metric]) => [
@@ -1559,7 +1792,7 @@ function rankCohort(clubs, { perMatch = false } = {}) {
     club.ranks = Object.fromEntries(
       Object.entries(METRICS).map(([key, metric]) => {
         const v = club.values[key];
-        if (v == null) return [key, null];
+        if (v == null || scarce(key)) return [key, null];
         const better = metric.better === -1 ? (x) => x < v : (x) => x > v;
         return [key, 1 + distributions[key].filter(better).length];
       }),
@@ -1596,7 +1829,9 @@ function rankCohort(clubs, { perMatch = false } = {}) {
   }
   const stats = Object.fromEntries(
     Object.keys(METRICS).map((key) => {
-      const sorted = [...distributions[key]].sort((a, b) => a - b);
+      const sorted = scarce(key)
+        ? []
+        : [...distributions[key]].sort((a, b) => a - b);
       return [
         key,
         {
@@ -1626,25 +1861,40 @@ export function rebase(dossier, cohorts, label, options = {}) {
     for (const club of cohort.clubs)
       if (!pool.has(club.id)) pool.set(club.id, club);
   const own = pool.get(dossier.id);
-  const copy = (club) => ({
-    id: club.id,
-    name: club.name,
-    imageUrl: club.imageUrl,
-    country: club.country,
-    league: club.league,
-    rows: club.rows,
-    record: club.record,
-    xptsTotal: club.xptsTotal,
-    values: club.values,
-    strength: club.strength ?? null,
-    leaguePosition: club.leaguePosition ?? null,
-    leagueXptsPosition: club.leagueXptsPosition ?? null,
-    coefficient: club.coefficient ?? null,
-  });
+  const copy = (club) => {
+    // The paired fields the club does not carry, from its rows: computed at most once.
+    let fallback;
+    const paired = (key) =>
+      club[key] ?? (fallback ??= pairedFields(club.rows || []))[key];
+    return {
+      id: club.id,
+      name: club.name,
+      imageUrl: club.imageUrl,
+      country: club.country,
+      league: club.league,
+      rows: club.rows,
+      record: club.record,
+      xptsTotal: club.xptsTotal,
+      ...Object.fromEntries(PAIRED_KEYS.map((key) => [key, paired(key)])),
+      values: club.values,
+      coverage: club.coverage ?? clubCoverage(club.rows || []),
+      strength: club.strength ?? null,
+      leaguePosition: club.leaguePosition ?? null,
+      leagueXptsPosition: club.leagueXptsPosition ?? null,
+      coefficient: club.coefficient ?? null,
+    };
+  };
+  // The club: a member of the reference keeps its member's values, its shot-backed ones read on
+  // its full records of the member's matches; inserted, the base dossier's measured self (§14.1).
+  const self = own
+    ? Array.isArray(dossier.allRows)
+      ? measuredSelf(own, dossier.allRows)
+      : own
+    : dossier.self;
   const clubs = [...pool.values()]
     .filter((club) => club.id !== dossier.id)
     .map(copy)
-    .concat(copy(own || dossier.self));
+    .concat(copy(self));
   const single =
     options.perMatch == null
       ? cohorts.length === 1 && Boolean(own)
@@ -1666,7 +1916,14 @@ export function rebase(dossier, cohorts, label, options = {}) {
   };
 }
 
-function buildDossier({ id, season, data, competitions, league, cohort }) {
+export function buildDossier({
+  id,
+  season,
+  data,
+  competitions,
+  league,
+  cohort,
+}) {
   const summary = clubSummary(data, id);
   const allRows = teamRows(data.matches, id);
   const leagueRows = league ? teamRows(data.matches, id, league.id) : allRows;
@@ -1676,16 +1933,28 @@ function buildDossier({ id, season, data, competitions, league, cohort }) {
     cohortClubs: [{ id, name: summary.name, imageUrl: summary.imageUrl }],
     summaries: new Map([[id, data]]),
   });
-  const { clubs, stats } = cohort?.clubs.some((club) => club.id === id)
+  const ranked = cohort?.clubs.some((club) => club.id === id)
     ? cohort
     : fallback;
+  // The club's shot-backed values from its own full records, ranked on copies: the cached cohort
+  // is shared by every dossier of its league and is never written (VI-23 stage 5, §14.1).
+  const member = ranked.clubs.find((club) => club.id === id);
+  const { clubs, stats } = member
+    ? rankCohort(
+        ranked.clubs.map((club) =>
+          club === member ? measuredSelf(member, allRows) : { ...club },
+        ),
+      )
+    : ranked;
   const self = clubs.find((club) => club.id === id) || {
     id,
     name: summary.name,
     imageUrl: summary.imageUrl,
     rows: leagueRows,
     record: record(leagueRows),
+    ...pairedFields(leagueRows),
     values: clubValues(leagueRows),
+    coverage: clubCoverage(leagueRows),
     centiles: {},
     ranks: {},
     phases: {},
@@ -1737,13 +2006,19 @@ export function rolling(values, size = 5) {
   });
 }
 
-/** Opponent strength for the calendar: league centile of its xG difference. */
+/**
+ * Opponent strength for the calendar: league centile of its xG difference per match, read on
+ * the matches that know both xG (pairedXgDeltaPerMatch); unknown without one (VI-23 N5).
+ */
 export function opponentStrength(dossier, opponentId) {
   const club = dossier.clubs.find((c) => c.id === opponentId);
-  if (!club) return null;
-  const diff = (c) => (c.values.xg ?? 0) - (c.values.xga ?? 0);
-  const values = dossier.clubs.map(diff);
-  return { club, centile: centile(values, diff(club), 1) };
+  if (!club || !finite(club.pairedXgDeltaPerMatch)) return null;
+  const values = dossier.clubs
+    .map((c) => c.pairedXgDeltaPerMatch)
+    .filter(finite);
+  const rank = centile(values, club.pairedXgDeltaPerMatch, 1);
+  // No centile (fewer than five measured clubs), no strength: never the weakest level (VI-23 stage 7, §16.2).
+  return rank == null ? null : { club, centile: rank };
 }
 
 export const formatMetric = (key, value, { total = false } = {}) => {

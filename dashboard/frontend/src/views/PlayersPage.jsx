@@ -28,6 +28,7 @@ import {
 import {
   aggregateSeason,
   aggregateSeasonPlayers,
+  finishedAppearances,
   MIN_SEASON_MINUTES,
 } from "../services/season-player.js";
 import {
@@ -136,9 +137,15 @@ export default function PlayersPage() {
       filters.leagues,
     ],
   );
+  // The summaries count finished matches only; the match log (playerRows) keeps every
+  // observation (VI-23 stage 5, FAILURE_MODES §14.2).
+  const summaryRows = useMemo(
+    () => finishedAppearances(f.data, contextRows),
+    [f.data, contextRows],
+  );
   const subject = useMemo(
-    () => (id ? aggregateSeason(contextRows, id) : null),
-    [contextRows, id],
+    () => (id ? aggregateSeason(summaryRows, id) : null),
+    [summaryRows, id],
   );
   const radarLeagues = subject?.rows.every(
     ({ leagueId }) =>
@@ -149,8 +156,8 @@ export default function PlayersPage() {
   // Overview, Stats avancées and similar profiles rank against one cohort:
   // the whole position group in the selected competitions.
   const localProfiles = useMemo(
-    () => aggregateSeasonPlayers(contextRows),
-    [contextRows],
+    () => aggregateSeasonPlayers(summaryRows),
+    [summaryRows],
   );
   const radarGroup = cohortGroupParams(
     f.manifest,
@@ -216,25 +223,10 @@ export default function PlayersPage() {
         : localProfiles,
     [f.compactMode, cohort.value, localProfiles],
   );
+  // Each profile's averages on the basis, its paired finishing gap and its totals
+  // (player-directory.js playerAverage).
   const averages = useMemo(
-    () =>
-      profiles.map((profile) => {
-        const value = playerAverage(profile, mode);
-        return {
-          ...value,
-          finishingDelta:
-            Number.isFinite(value.goals) && Number.isFinite(value.xg)
-              ? value.goals - value.xg
-              : null,
-          totals: {
-            goals: profile.stats.goals?.count ? profile.stats.goals.sum : null,
-            assists: profile.stats.assists?.count
-              ? profile.stats.assists.sum
-              : null,
-            xg: profile.stats.xg?.count ? profile.stats.xg.sum : null,
-          },
-        };
-      }),
+    () => profiles.map((profile) => playerAverage(profile, mode)),
     [profiles, mode],
   );
   const eligible = useMemo(
@@ -328,7 +320,8 @@ export default function PlayersPage() {
             <PlayerSeasonProfile
               id={id}
               rows={playerRows}
-              scopeRows={contextRows}
+              summaryProfile={subject}
+              scopeRows={summaryRows}
               profiles={profiles}
               comparisonsReady={
                 !f.compactMode ||
