@@ -1,4 +1,19 @@
-# État de la revue — checkpoint local du 17 novembre 2026
+# État de la revue — reprise du 17 novembre 2026 (étape 8)
+
+La session à qui l’utilisateur a confié VI-23 l’a rebasée sur `main` (migrations 126–129, puis 130),
+a fait faire la revue finale (Opus) et l’a mesurée en lecture seule sur la production. Un bloquant :
+les tirs de but ne portent jamais « faux » pour l’indicateur contre son camp, si bien que la règle de
+l’étape 7 ne mesurait finition, gardien, conversion et xG par tir que sur les matchs sans but ; et les
+autres clubs d’un championnat n’étaient jamais mesurés. Corrigé par l’étape 8
+([FAILURE_MODES §17](FAILURE_MODES.md)) : une seule classification par match côté serveur, lue par le
+calculateur et par toutes les fiches de match.
+
+Validation locale (Python 3.14) : voir la preuve d’étape 8 et le ticket Linear. Rien n’est poussé ni
+déployé : le déploiement (migrations 126–130 puis recalcul) attend l’accord de l’utilisateur.
+
+---
+
+# Checkpoint précédent — 17 novembre 2026, avant la reprise
 
 Les corrections indépendantes sont implémentées et validées localement. **La vérification finale
 conjointe reste en attente : le recontrôle Opus du lot corrigé est bloqué par son quota.** VI-23

@@ -76,9 +76,11 @@ def main(dsn):
             )
         for seq in range(1, (hs or 0) + (as_ or 0) + 1):
             team = home if seq <= (hs or 0) else away
+            # The event's team is the side credited, own goals included (as production stores it,
+            # FAILURE_MODES §17.1): m3's goal is team 1's own goal, for team 3.
             x(
-                "INSERT INTO core.match_events(season_id,match_id,team_id,seq,event_type,minute,period,is_own_goal) VALUES (2025,%s,%s,%s,'goal',%s,'first_half',false)",
-                (mid, team, seq, 10 * seq + mid),
+                "INSERT INTO core.match_events(season_id,match_id,team_id,seq,event_type,minute,period,is_own_goal) VALUES (2025,%s,%s,%s,'goal',%s,'first_half',%s)",
+                (mid, team, seq, 10 * seq + mid, mid == 3),
             )
     x("INSERT INTO core.assets(id,kind,source_url) VALUES (3,'photo','https://img.example/p1.png')")
     for pid, (key, name) in PLAYERS.items():

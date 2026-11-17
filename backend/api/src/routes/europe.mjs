@@ -26,6 +26,7 @@ import {
   versionParam,
 } from "../publication.mjs";
 import { TEAM_STAT_KEYS, teamStats } from "../team-stats.mjs";
+import { scoringColumn, sideScoring } from "../match-record.mjs";
 import { EUROPE_FOCUS } from "../../../../dashboard/shared/competition-scope.js";
 
 export const POOL_LEAGUES = EUROPE_FOCUS.filter((c) => c.country !== "UEFA");
@@ -33,7 +34,8 @@ export const POOL_CUPS = EUROPE_FOCUS.filter((c) => c.country === "UEFA");
 const SCOPE_IDS = EUROPE_FOCUS.map((c) => c.id).sort();
 const LEAGUE_IDS = POOL_LEAGUES.map((c) => c.id);
 // The form of a competition's pool matches (scopeVersion): to change with it.
-const MATCHES_SHAPE = "europe-matches-1";
+// 2: each side's scoring (VI-23 stage 8): a read cached before it would read as unknown.
+const MATCHES_SHAPE = "europe-matches-2";
 
 // The team statistics the club profiles rank (scripts/demo-europe-clubs.mjs, KEEP).
 const KEPT = new Set([
@@ -137,16 +139,18 @@ export function createEuropeRoute(read, { clock = Date.now } = {}) {
            SELECT f.day,f.id,row_to_json(f) AS fixture,
              (SELECT to_json(t) FROM api.match_team_sides t WHERE t.season_id=f.season_id AND t.match_id=f.match_id AND t.team_id=f.home_internal_id AND t.period='all') home_stats,
              (SELECT to_json(t) FROM api.match_team_sides t WHERE t.season_id=f.season_id AND t.match_id=f.match_id AND t.team_id=f.away_internal_id AND t.period='all') away_stats,
-             (SELECT d.team_stats_ok FROM api.match_detail_state d WHERE d.season_id=f.season_id AND d.match_id=f.match_id) team_stats_ok
+             (SELECT d.team_stats_ok FROM api.match_detail_state d WHERE d.season_id=f.season_id AND d.match_id=f.match_id) team_stats_ok,
+             ${scoringColumn("f.season_id", "f.match_id")}
            FROM f) r) records
        FROM publication`,
       values,
     );
     checkReadGeneration(params, snapshot?.generation);
-    const side = (f, name) => ({ id: f[name + "_team_id"], name: f[name + "_name"], imageUrl: f[name + "_image_url"], score: f["score_" + name] });
-    const matches = (snapshot.records || []).map(({ fixture: f, home_stats, away_stats, team_stats_ok }) => ({
+    const side = (f, scoring, name) => ({ id: f[name + "_team_id"], name: f[name + "_name"], imageUrl: f[name + "_image_url"], score: f["score_" + name],
+      ...sideScoring(scoring, name) });
+    const matches = (snapshot.records || []).map(({ fixture: f, home_stats, away_stats, team_stats_ok, scoring }) => ({
       id: f.id, leagueId: f.league_id, date: f.day, timeUtc: f.time_utc, status: f.status,
-      home: side(f, "home"), away: side(f, "away"),
+      home: side(f, scoring, "home"), away: side(f, scoring, "away"),
       coverage: { teamStatsReliable: Boolean(team_stats_ok) },
       stats: teamStats(strip(home_stats), strip(away_stats), POOL_STAT_KEYS).map(({ key, home, away }) => ({ key, home, away })),
     }));

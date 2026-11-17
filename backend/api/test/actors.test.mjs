@@ -94,6 +94,29 @@ test("a league's season: every match once, as each club's summary read gives it"
   assert.equal((await get("/api/read/league?season=2025/2026&league=l_zzzzzz&detail=summary")).body.pagination.total, 0);
 });
 
+test("each side carries its match's scoring, alike in the league summary and the club's full read", { skip }, async () => {
+  // FAILURE_MODES §17 (VI-23 stage 8, written before the read): own goals in each side's score from
+  // the goal events, penalty attempts from the reconciled shot set; null unknown, 0 established none.
+  // Seed: events read for m1 (2–0), m3 (0–1, team 1's own goal for team 3) and m5 (0–0); m1's shot
+  // list does not match its statistics; m2 and m4 have no events.
+  const sides = (m) => [m.home.ownGoalsFor, m.home.penaltyAttempts, m.away.ownGoalsFor, m.away.penaltyAttempts];
+  const want = {
+    m_aaaaa1: [0, null, 0, null],
+    m_aaaaa2: [null, null, null, null],
+    m_aaaaa3: [0, null, 1, null],
+    m_aaaaa4: [null, null, null, null],
+    m_aaaaa5: [0, null, 0, null],
+  };
+  const league = (await get("/api/read/league?season=2025/2026&league=l_3FJFUl&detail=summary&played=1&limit=100")).body.data;
+  assert.deepEqual(Object.fromEntries(league.matches.map((m) => [m.id, sides(m)])), want);
+  assert.ok(league.matches.every((m) => Array.isArray(m.shots) && m.shots.length === 0), "a summary still carries no shot list");
+  const full = (await get(`/api/read/club?${scope}&team=t_aaaaa1&include=shots`)).body.data;
+  for (const m of full.matches) assert.deepEqual(sides(m), want[m.id], m.id);
+  assert.ok(full.matches.find((m) => m.id === "m_aaaaa1").shots.length > 0, "the full read keeps its shots");
+  const summary = (await get(`/api/read/club?${scope}&team=t_aaaaa1&detail=summary`)).body.data;
+  for (const m of summary.matches) assert.deepEqual(sides(m), want[m.id], m.id);
+});
+
 test("profile errors", { skip }, async () => {
   assert.equal((await get(`/api/read/player?${scope}&player=bad`)).response.status, 400);
   assert.equal((await get(`/api/read/club?${scope}&team=t_aaaaa1&include=goals`)).response.status, 400);

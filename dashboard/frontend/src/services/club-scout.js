@@ -904,7 +904,7 @@ function sidesOf(row) {
  * The match's shot list without the penalty shoot-out's attempts (`period` « penalties » in the
  * embedded records, « Penalties » in the source-shaped reads): a shoot-out goal is not in the score
  * and its attempts are in no team statistic, as the server reads them. Null without a list. The
- * one reading of a match's shots for scoringOf, penaltiesOf and shotProfile (VI-23 stage 5, §14.4).
+ * reading of a match's shots for shotProfile (VI-23 stage 5, §14.4); the scoring is the server's.
  */
 const SHOOTOUT_PERIODS = new Set(["penalties", "Penalties"]);
 function matchShots(row) {
@@ -914,40 +914,28 @@ function matchShots(row) {
     : null;
 }
 /**
- * The match's goals classified from its shot list (an own goal carries the scorer's own team, as
- * club-game-states.js reads it): own goals for and against, or null unless every shot is one of
- * the two teams', every goal says whether it is an own goal (`isOwnGoal` true or false: an
- * ordinary goal is never inferred from `isGoal` alone), and the goals reproduce the score. An
- * empty list classifies nothing, whatever the score: a « no goal, no own goal » rule would pick
- * matches by their outcome (VI-23 B6, finding 15f; interim reviews of 17 Nov 2026).
+ * A count the server established: a non-negative integer, else unknown.
+ */
+const count = (value) => (Number.isInteger(value) && value >= 0 ? value : null);
+/**
+ * The match's own goals, as every match record carries them on each side (`ownGoalsFor`, the
+ * opponent's own goals in that side's score: api.match_scoring, VI-23 stage 8, FAILURE_MODES §17):
+ * classified by the server from the goal events, whose team is the side credited. Null unless both
+ * sides are known: the shot list never classifies a goal (production stores no FALSE on a goal
+ * shot), and a « no goal, no own goal » rule would pick matches by their outcome.
  */
 function scoringOf(row) {
-  const shots = matchShots(row),
-    sides = sidesOf(row);
-  if (!shots?.length || !sides) return null;
-  let goalsFor = 0,
-    goalsAgainst = 0,
-    ownGoalsFor = 0,
-    ownGoalsAgainst = 0;
-  for (const s of shots) {
-    if (s.teamId !== sides.us && s.teamId !== sides.them) return null;
-    const theirs = s.teamId === sides.them;
-    if (s.isOwnGoal === true) theirs ? ownGoalsFor++ : ownGoalsAgainst++;
-    else if (s.isGoal) {
-      if (s.isOwnGoal !== false) return null;
-      theirs ? goalsAgainst++ : goalsFor++;
-    }
-  }
-  return goalsFor + ownGoalsFor === row.gf &&
-    goalsAgainst + ownGoalsAgainst === row.ga
-    ? { ownGoalsFor, ownGoalsAgainst }
-    : null;
+  const ownGoalsFor = count(row.match?.[row.side]?.ownGoalsFor),
+    ownGoalsAgainst = count(row.opponent?.ownGoalsFor);
+  return ownGoalsFor === null || ownGoalsAgainst === null
+    ? null
+    : { ownGoalsFor, ownGoalsAgainst };
 }
 /**
  * A shot's situation, in the six display buckets of SITUATION_LABELS: the eight normalized codes
  * of the embedded match records (api.match_shots) and the provider spellings of the source-shaped
  * reads (match-families.mjs). Any other value, or none, is unclassified (null), never open play.
- * The one reading of a situation for penaltiesOf and shotProfile (VI-23 stage 3, §7.5).
+ * The reading of a situation for shotProfile (VI-23 stage 3, §7.5).
  */
 const SITUATION_CODES = new Map([
   ["regular_play", "open"],
@@ -969,29 +957,12 @@ const SITUATION_CODES = new Map([
 ]);
 const situationOf = (code) => SITUATION_CODES.get(code) ?? null;
 /**
- * The club's penalty attempts, counted on the match's complete, reconciled shot set (the shoot-out
- * left out, matchShots): every shot of both sides listed (as many as the team statistics count), the scoring classified
- * (scoringOf), and each of the club's attempts of a recognized situation. Null otherwise: equal
- * xG and non-penalty xG establish nothing, and a missing or unknown situation may be the
- * penalty (finding 15e). The opponent's situations are not read.
+ * The club's penalty attempts, as the server counts them on the match's complete shot set
+ * reconciled with its statistics, its score and its goal events (`penaltyAttempts`, stage 8,
+ * §17): null when unknown — equal xG and non-penalty xG establish nothing (finding 15e).
  */
 function penaltiesOf(row) {
-  const sides = scoringOf(row) && sidesOf(row);
-  if (!sides || !finite(row.own?.shots) || !finite(row.opp?.shots)) return null;
-  let mine = 0,
-    theirs = 0,
-    penalties = 0;
-  for (const s of matchShots(row)) {
-    if (s.isOwnGoal === true) continue;
-    if (s.teamId === sides.them) theirs++;
-    else {
-      const situation = situationOf(s.situation);
-      if (situation === null) return null;
-      if (situation === "penalty") penalties++;
-      mine++;
-    }
-  }
-  return mine === row.own.shots && theirs === row.opp.shots ? penalties : null;
+  return count(row.match?.[row.side]?.penaltyAttempts);
 }
 
 const known = (...values) => values.every(finite);
@@ -1681,9 +1652,11 @@ function record(rows) {
 }
 
 /**
- * The indicators that read a match's shot list. A league cohort is read with `detail=summary`, whose
- * records carry none: its clubs are unmeasured, and a rank or a reference statistic of these needs
- * MIN_MEASURED measured clubs (rankCohort). VI-23 stage 5, §14.1.
+ * The indicators that read a match's scoring (own goals, penalty attempts). Every match record of
+ * the club, league and Europe reads carries it since stage 8 (§17), so a league's clubs are measured
+ * from their summaries; a reference that lacks an input (the Europe pool has no xGOT nor non-penalty
+ * xG) leaves its clubs unmeasured, and a rank or a reference statistic of these needs MIN_MEASURED
+ * measured clubs (rankCohort). VI-23 stage 5, §14.1.
  */
 const SHOT_METRICS = ["xgPerShot", "finishing", "keeper", "conversion"];
 const MIN_MEASURED = 5;
@@ -1692,7 +1665,8 @@ const MIN_MEASURED = 5;
  * its full records (`fullRows`, the dossier's allRows) of the matches the member's rows name: a
  * summary row without a full counterpart stays unsupported, and another competition's matches are
  * never read. A copy: the member, its values and its coverage are left as they are (cached).
- * Peers are not measured (§14.1).
+ * In its league the summary already measures it alike; in a pool whose reads lack an input (the
+ * Europe pool's xGOT and non-penalty xG) its full records still measure it (§14.1, §17).
  */
 function measuredSelf(member, fullRows) {
   const ids = new Set(

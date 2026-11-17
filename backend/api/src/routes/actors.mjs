@@ -83,7 +83,7 @@ export function actorQuery(kind, scope, actor, includes, pagination, generation,
     SELECT publication.*,(SELECT count(*)::int FROM actor_matches) AS total,
       (SELECT coalesce(json_agg(row_to_json(f) ORDER BY f.day DESC NULLS LAST,f.id DESC),'[]'::json) FROM f) fixtures,
       (SELECT coalesce(json_agg(r ORDER BY r.day DESC NULLS LAST,r.id DESC),'[]'::json) FROM (
-         SELECT f.day,f.id,${matchRecordColumns({ shots: includes.has("shots"), season })} FROM f) r) records,
+         SELECT f.day,f.id,${matchRecordColumns({ shots: includes.has("shots"), scoring: true, season })} FROM f) r) records,
       ${
         withAppearances
           ? `(SELECT coalesce(json_agg(r ORDER BY r.match_key,r.appearance_id),'[]'::json) FROM (
@@ -107,7 +107,8 @@ export function actorQuery(kind, scope, actor, includes, pagination, generation,
 }
 
 // The form of each kind's answer (its version names it): to change with it.
-const SHAPE = { league: "league-1", club: "club-1", player: "player-1" };
+// 2: each side's scoring (VI-23 stage 8): a read cached before it would read as unknown.
+const SHAPE = { league: "league-2", club: "club-2", player: "player-2" };
 
 /**
  * The version of an actor's read that names no publication. A league's is its edition's.
