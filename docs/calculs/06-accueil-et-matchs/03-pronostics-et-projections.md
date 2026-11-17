@@ -171,10 +171,29 @@ Il n'y a qu'**un seul Elo de club** : tous les matchs d'un club, coupes comprise
 | Championnat du pays de Galles | 1363 ± 98 |
 | Clubs de coupe du Portugal, d'Allemagne, d'Espagne, d'Autriche, des Pays-Bas, de Suisse | 1360, 1382, 1295, 1237, 1189, 1058 |
 
+### Deuxième étape (17 novembre 2026, après-midi)
+
+170 orthographes des archives des coupes nationales d'OpenFootball (2024/2025) ont été revues et rattachées à leur club. Les noms proches d'autres clubs sont écartés exprès : « CF Benfica », « ASK Klagenfurt », « Austria Salzburg », « AC Paris 15 »… Une fois ces clubs reliés, l'Elo lit ces archives, la Coupe de France et les coupes américaines et mondiale des clubs.
+
+L'Elo applique lui-même les fusions avant le passage quotidien d'identification. Mesuré avant la mise en service : 3 060 équipes classées ; les clubs de coupe allemands passent de 1379 à 1179, puisque le Bayern et Fribourg n'y comptent plus comme amateurs. Niveaux des groupes :
+
+| Groupe | Niveau (± erreur) |
+|---|---:|
+| Clubs de coupe portugais | 1321 ± 37 |
+| Clubs de coupe français | 1302 ± 38 |
+| Clubs de coupe espagnols | 1298 ± 33 |
+| Clubs de coupe néerlandais | 1208 ± 43 |
+| Clubs de coupe allemands | 1179 ± 44 |
+| Clubs de coupe autrichiens | 1153 ± 43 |
+| Clubs de coupe anglais | 1132 ± 41 |
+| Clubs de coupe suisses | 1044 ± 47 |
+| Clubs de coupe écossais | 766 ± 90 |
+| Championnat d'Uruguay | 1506 ± 34 |
+
 ### Pas encore fait
 
-- Les clubs des archives des coupes nationales d'OpenFootball (2024/2025) et des coupes continentales des autres confédérations. Ils ne comptent qu'entre clubs connus tant que leurs clubs professionnels ne sont pas reliés. Sinon, ils faussent les groupes : mesuré, les clubs de coupe anglais montaient à 1327 et le championnat d'Égypte de 104 points.
-- Les clubs des seules archives (7 520), que l'Elo ne lit pas.
+- La Ligue des champions africaine. Elle reste lue entre clubs connus : elle fixait des championnats africains sans autre lien (Égypte +104). Il faudrait d'abord une loi a priori propre à l'Afrique.
+- Les clubs des seules archives historiques (7 520), que l'Elo ne lit pas.
 
 ## La projection des coupes nationales (17 novembre 2026)
 
