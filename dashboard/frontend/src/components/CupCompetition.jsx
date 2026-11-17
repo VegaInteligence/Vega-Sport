@@ -7,28 +7,18 @@ import KnockoutBracket from "./KnockoutBracket.jsx";
 import { useResource } from "../services/resources.js";
 import { cupTable } from "../services/catalog-client.js";
 import { competitionCountryLabel } from "../services/competition-selector.js";
-import { normalizeOpenCup, normalizeSupplementalCup, filterCupMatches, resultsAsOpenCup, leagueTable } from "../services/cup-matches.js";
+import { normalizeOpenCup, normalizeSupplementalCup, filterCupMatches, resultsAsOpenCup, leagueTable, numberedCupRounds } from "../services/cup-matches.js";
 import { combineCupLegs, knockoutStage } from "../services/knockout-bracket.js";
 import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, isGermanCupSeason } from "../services/cup-archives.js";
 import NationalFlag from "./NationalFlag.jsx";
 import SeasonProjection from "./SeasonProjection.jsx";
 import { useCupProjection } from "../services/cup-projection.js";
-import { share } from "../services/forecasts.js";
+import MatchForecastBar from "./MatchForecastBar.jsx";
 import { Term } from "./Hint.jsx";
 
 function editionLabel(competition, season) {
   return competition.sourceKey === "euro" && season === "2020" ? "2020 (joué en 2021)" : season;
-}
-/** An upcoming match's forecast (VI-19): a bar of three parts, then the three shares. */
-function CupMatchForecast({ match }) {
-  const parts = [[match.home, match.forecast.home, "home"], ["Nul", match.forecast.draw, "draw"], [match.away, match.forecast.away, "away"]];
-  return (
-    <div className="cup-match-forecast" role="img" aria-label={parts.map(([name, value]) => `${name} ${share(value)}`).join(", ")}>
-      <span className="cup-match-forecast-bar">{parts.map(([name, value, side]) => <i key={side} data-side={side} style={{ flexGrow: Math.max(value, 0.02) }} />)}</span>
-      <span className="cup-match-forecast-shares">{parts.map(([name, value, side]) => <b key={side} data-side={side}>{share(value)}</b>)}</span>
-    </div>
-  );
 }
 /** A complementary league's standings, from the results its source gives (VI-19). */
 function LeagueStandings({ name, matches }) {
@@ -44,17 +34,20 @@ function LeagueStandings({ name, matches }) {
     <p className="nations-note">Classement calculé à partir des résultats disponibles.</p>
   </>;
 }
+/** A cup's match, in the main lists' design (date, teams around the score, round), and its forecast before kick-off. */
 function CupMatch({ match, nationalTeams, season }) {
+  const badge = (name) => (nationalTeams ? <NationalFlag name={name} season={season || match.date} /> : <Media name={name} />);
   return (
-    <div className="cup-match" data-forecast={match.status === "scheduled" && match.forecast ? "" : undefined}>
-      <div className="cup-match-meta"><time dateTime={match.date || undefined}>{match.date ? date(match.date) : "Date à préciser"}</time>{match.round && <span>{match.round}</span>}</div>
-      <div className="cup-match-teams">
-        <span className="cup-match-team">{nationalTeams && <NationalFlag name={match.home} season={season || match.date} />}<span>{match.home}</span></span>
-        <strong>{match.score ? match.score[0] + " – " + match.score[1] : "—"}</strong>
-        <span className="cup-match-team">{nationalTeams && <NationalFlag name={match.away} season={season || match.date} />}<span>{match.away}</span></span>
-      </div>
-      {match.notes?.length > 0 && <p className="cup-match-notes">{match.notes.join(" · ")}</p>}
-      {match.status === "scheduled" && match.forecast && <CupMatchForecast match={match} />}
+    <div className="match-row cup-match">
+      <span className="match-date">{match.date ? date(match.date) : "Date à préciser"}</span>
+      <span className="match-teams">
+        <span className="team-name home-team"><span>{match.home}</span>{badge(match.home)}</span>
+        <strong className="score">{match.score ? match.score[0] + " – " + match.score[1] : "À venir"}</strong>
+        <span className="team-name">{badge(match.away)}<span>{match.away}</span></span>
+        {match.notes?.length > 0 && <span className="cup-match-notes">{match.notes.join(" · ")}</span>}
+        {match.status === "scheduled" && <MatchForecastBar home={match.home} away={match.away} forecast={match.forecast} />}
+      </span>
+      <span className="match-league">{match.round || ""}</span>
     </div>
   );
 }
@@ -93,8 +86,11 @@ export default function CupCompetition({ competition, initialSeason }) {
   const resource = useResource("cup:" + competition.id + ":" + mode + ":" + view + ":" + season + ":" + version, async () => {
     if (mode === "supplemental") {
       const [results, fixtures] = await Promise.all(["results", "fixtures"].map(kind => tables?.[kind] && Number(tables[kind].rows) !== 0 ? cupTable(competition.folder,season,kind) : []));
-      const matches = normalizeSupplementalCup(results, fixtures);
-      return view === "bracket" && !matches.some((match) => knockoutStage(match.roundName)) ? { matches, unavailable: true } : { matches };
+      // A cup's numbered rounds named by their ties (its bracket, VI-19); a league's matches as they are.
+      const normalized = normalizeSupplementalCup(results, fixtures);
+      const matches = league ? normalized : numberedCupRounds(normalized);
+      if (view !== "bracket") return { matches };
+      return matches.some((match) => knockoutStage(match.roundName)) ? { matches: combineCupLegs(matches) } : { matches, unavailable: true };
     }
     if (mode === "unavailable") return { matches: [], unavailable: true };
     if (mode === "openligadb") return cupWorkerSnapshot("openligadb", "germany-cup", season, "/api/openligadb?competition=germany-cup&season=" + encodeURIComponent(season));

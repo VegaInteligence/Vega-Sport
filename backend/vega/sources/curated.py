@@ -57,6 +57,8 @@ CLUB_ALIASES = {
     "1. FC Union Berlin": "Union Berlin", "1. FC Magdeburg": "Magdeburg", "Bayer 04 Leverkusen": "Bayer Leverkusen",
     "SV Werder Bremen": "Werder Bremen", "VfL Bochum": "Bochum", "VfL Wolfsburg": "Wolfsburg", "FC St. Pauli": "St. Pauli",
     "TSG Hoffenheim": "Hoffenheim", "1. FC Heidenheim 1846": "FC Heidenheim", "SC Freiburg": "Freiburg",
+    # open-matchday's Coppa Italia and German cup (the cups' check, 17 Nov 2026).
+    "Internazionale": "Inter", "FC Cologne": "1. FC Köln",
     "SV Darmstadt 98": "Darmstadt", "SC Paderborn 07": "Paderborn", "1. FC Kaiserslautern": "Kaiserslautern",
     "SpVgg Greuther Fürth": "Greuther Fürth", "FC Schalke 04": "Schalke 04", "SV 07 Elversberg": "Elversberg",
     "SV Elversberg": "Elversberg", "FC Augsburg": "Augsburg", "1. FSV Mainz 05": "Mainz 05", "Mainz": "Mainz 05",

@@ -46,6 +46,15 @@ COVERED = {
     "SUI_1_super-league": "l_4d6Bwl", "SVK_1_nike-liga": "l_4MU9Yh", "SWE_1_allsvenskan": "l_1XsMdH", "TUR_1_super-lig": "l_0S1uaf",
     "UEFA_1_champions-league": "l_0bfbkO", "UEFA_1_europa-league": "l_38d9HA", "UEFA_1_conference-league": "l_2WZ2tt",
 }
+# Clubs the source writes two ways (its results one way, its fixtures and cups another; reviewed 17 Nov 2026 over
+# every Scottish folder): one club, under the full name its league tables use. Read otherwise, each spelling was a club
+# of its own: phantom rows in a table, a fixture without a forecast, a cup the projection could not rate.
+SPELLINGS = {
+    "Airdrie Utd": "Airdrieonians", "Queen of Sth": "Queen of the South", "Queen of South": "Queen of the South",
+    "Annan": "Annan Athletic", "Elgin": "Elgin City", "Forfar": "Forfar Athletic", "Ayr": "Ayr United",
+    "Dunfermline": "Dunfermline Athletic", "Inverness": "Inverness Caledonian Thistle", "Morton": "Greenock Morton",
+    "Raith": "Raith Rovers",
+}
 # CSV columns -> team_match_stats columns, per side and period.
 STATS = {"shots": "total_shots", "target": "shots_on_target", "fouls": "fouls", "corners": "corners", "yellow": "yellow_cards", "red": "red_cards"}
 
@@ -113,6 +122,7 @@ def save(conn, folder, name, season, results, fixtures, now):
     for status, items in (("finished", results), ("not_started", fixtures)):
         for item in items:
             home_name, away_name, day = (item.get("home") or "").strip(), (item.get("away") or "").strip(), (item.get("date") or "").strip()
+            home_name, away_name = SPELLINGS.get(home_name, home_name), SPELLINGS.get(away_name, away_name)
             if not home_name or not away_name or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day):
                 continue
             key = f"{folder}:{season}:{day}|{home_name}|{away_name}"

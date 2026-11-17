@@ -420,6 +420,14 @@ class ForecastTest(unittest.TestCase):
         self.assertIn("barrage", out[9][1][teams["B1"][1]]["stages"])
         self.assertEqual(out[8][0][w1][3], 6)  # six matches played
 
+    def test_a_copy_of_a_club_plays_at_its_club_s_strength(self):
+        # A cup source's copy of a club (« FC Bayern München », « SK Rapid ») is merged into its club by the daily identity
+        # pass; until then the forecasts read it at its club's strength, as the Elo already does (merged_rows): a cup is
+        # projected the day its round is drawn, not the day after (17 Nov 2026).
+        strengths = {1: 1700.0, 2: 1500.0}
+        self.assertEqual(forecast.with_merges(strengths, {10: 1, 11: 2, 12: 99}), {1: 1700.0, 2: 1500.0, 10: 1700.0, 11: 1500.0})
+        self.assertEqual(forecast.with_merges(strengths, {1: 2}), strengths)  # a rated team keeps its own strength
+
     def test_the_access_list_settles_a_tie_left_after_all(self):
         # The last criterion is the access list's order (the 2024–25 final ranking), never a draw; the disciplinary
         # points come before it, but the sources give no cards.

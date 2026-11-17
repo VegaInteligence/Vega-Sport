@@ -20,6 +20,21 @@ const commonjs = require("next/dist/compiled/babel/plugin-transform-modules-comm
 const elem = React.createElement;
 const forecast = { home: 0.9112, draw: 0.0634, away: 0.0254 };
 
+// Compiles a component with its imports stubbed (an unexpected import fails the test).
+async function compile(file, stubs) {
+  const filename = path.join(root, "dashboard/frontend/src/components", file);
+  const compiled = babel.transformSync(await fs.readFile(filename, "utf8"), { presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename }).code;
+  const mod = { exports: {} };
+  vm.runInThisContext("(function(require,module,exports){" + compiled + "\n})", { filename })((name) => { if (!(name in stubs)) throw Error("Unexpected import " + name); return stubs[name]; }, mod, mod.exports);
+  return mod.exports;
+}
+// The forecast bar every list shares (MatchForecastBar.jsx), with the site's share format.
+async function forecastBar() {
+  const forecasts = await import("../dashboard/frontend/src/services/forecasts.js");
+  const cupMatches = await import("../dashboard/frontend/src/services/cup-matches.js");
+  return compile("MatchForecastBar.jsx", { react: React, "../services/forecasts.js": forecasts, "../services/cup-matches.js": cupMatches });
+}
+
 test("a forecast is three shares or nothing", () => {
   assert.deepEqual(matchForecast(forecast), forecast);
   assert.equal(matchForecast(null), null);
@@ -65,22 +80,24 @@ test("an upcoming match shows its forecast in the list, a played one its score",
     "../services/cup-projection.js": { useCupProjection: () => null },
     "./Hint.jsx": { Term: ({ children }) => children },
     "../services/forecasts.js": forecasts,
+    "./MatchForecastBar.jsx": await forecastBar(),
   };
-  const filename = path.join(root, "dashboard/frontend/src/components/CupCompetition.jsx");
-  const compiled = babel.transformSync(await fs.readFile(filename, "utf8"), { presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename }).code;
-  const mod = { exports: {} };
-  vm.runInThisContext("(function(require,module,exports){" + compiled + "\n})", { filename })((name) => { if (!(name in stubs)) throw Error("Unexpected import " + name); return stubs[name]; }, mod, mod.exports);
+  const mod = { exports: await compile("CupCompetition.jsx", stubs) };
   const matches = [
     { key: "a", date: "2099-12-02", home: "Bayern München", away: "Hertha BSC", score: null, status: "scheduled", round: "8es", forecast },
     { key: "b", date: "2099-12-02", home: "Bochum", away: "Augsburg", score: null, status: "scheduled", round: "8es" },
     { key: "c", date: "2026-10-28", home: "Bochum", away: "Köln", score: [2, 1], status: "finished", round: "16es", forecast },
   ];
   const coming = renderToStaticMarkup(elem(mod.exports.CupMatchList, { matches, status: "scheduled", query: "", page: 1, onPage: () => {} }));
-  assert.match(coming, /class="cup-match-forecast" role="img" aria-label="Bayern München 91 %, Nul 6 %, Hertha BSC 3 %"/);
-  assert.equal((coming.match(/cup-match-forecast"/g) || []).length, 1); // the match without a forecast shows none
+  assert.match(coming, /class="list-forecast" role="img" aria-label="Bayern München 91 %, Nul 6 %, Hertha BSC 3 %"/);
+  assert.equal((coming.match(/class="list-forecast"/g) || []).length, 1); // the match without a forecast shows none
+  // Every cup's rows have the main lists' design (« same design », 17 Nov 2026): date, teams around the score, round.
+  assert.match(coming, /<div class="match-row cup-match"><span class="match-date">2099-12-02<\/span><span class="match-teams"><span class="team-name home-team"><span>Bayern München<\/span>/);
+  assert.match(coming, /<strong class="score">À venir<\/strong>/);
+  assert.match(coming, /<span class="match-league">8es<\/span>/);
   const played = renderToStaticMarkup(elem(mod.exports.CupMatchList, { matches, status: "finished", query: "", page: 1, onPage: () => {} }));
-  assert.doesNotMatch(played, /cup-match-forecast/);
-  assert.match(played, /2 – 1/);
+  assert.doesNotMatch(played, /list-forecast/);
+  assert.match(played, /<strong class="score">2 – 1<\/strong>/);
 });
 
 test("a complementary league's projection has its tab, as a league's", async () => {
@@ -107,6 +124,7 @@ test("a complementary league's projection has its tab, as a league's", async () 
     "../services/cup-projection.js": { useCupProjection: () => projection },
     "./Hint.jsx": { Term: ({ children }) => children },
     "../services/forecasts.js": { share: String },
+    "./MatchForecastBar.jsx": { __esModule: true, default: () => null },
   };
   const filename = path.join(root, "dashboard/frontend/src/components/CupCompetition.jsx");
   const compiled = babel.transformSync(await fs.readFile(filename, "utf8"), { presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename }).code;
@@ -116,4 +134,27 @@ test("a complementary league's projection has its tab, as a league's", async () 
   assert.match(renderToStaticMarkup(elem(mod.exports.default, { competition: league })), /<button>Projection<\/button>/);
   projection = null;
   assert.doesNotMatch(renderToStaticMarkup(elem(mod.exports.default, { competition: league })), /Projection/);
+});
+
+test("the main lists' rows show the same forecast bar before kick-off", async () => {
+  // /api/fixtures gives each match to come its forecast (VI-19): the competitions' schedules, a club's coming matches and
+  // the calendar show it in the same bar as the cups' lists.
+  const stubs = {
+    react: React,
+    "next/link": { __esModule: true, default: ({ children, href, prefetch, ...rest }) => elem("a", { href, ...rest }, children) },
+    "../hooks/FootballContext.jsx": { useFootball: () => ({ href: () => "/matchs/", client: { normalizedRemote: (m) => m } }) },
+    "../services/format.js": { number: String, date: String },
+    "../services/national-flags.js": { nationalFlagCode: () => null, nationalTeamName: (n) => n },
+    "./Icon.jsx": { __esModule: true, default: () => null },
+    "./NationalFlag.jsx": { __esModule: true, default: () => null },
+    "./UI.jsx": { Media: () => null },
+    "./MatchForecastBar.jsx": await forecastBar(),
+  };
+  const { MatchLink } = await compile("MatchLink.jsx", stubs);
+  const coming = { id: "m_aaaaa6", date: "2026-11-21", status: "not_started", home: { name: "Arsenal" }, away: { name: "Chelsea" }, league: { name: "Premier League" },
+    forecast: { home: 0.55, draw: 0.25, away: 0.2 } };
+  assert.match(renderToStaticMarkup(elem(MatchLink, { match: coming })), /class="list-forecast" role="img" aria-label="Arsenal 55 %, Nul 25 %, Chelsea 20 %"/);
+  const played = { ...coming, status: "finished", home: { name: "Arsenal", score: 2 }, away: { name: "Chelsea", score: 1 } };
+  assert.doesNotMatch(renderToStaticMarkup(elem(MatchLink, { match: played })), /list-forecast/);
+  assert.doesNotMatch(renderToStaticMarkup(elem(MatchLink, { match: { ...coming, forecast: undefined } })), /list-forecast/);
 });

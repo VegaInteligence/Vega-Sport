@@ -9,6 +9,7 @@ import {
 import Icon from "./Icon.jsx";
 import NationalFlag from "./NationalFlag.jsx";
 import { Media } from "./UI.jsx";
+import MatchForecastBar from "./MatchForecastBar.jsx";
 const kickoffFormatter = new Intl.DateTimeFormat("fr-FR", {
   hour: "2-digit",
   minute: "2-digit",
@@ -96,6 +97,9 @@ export function MatchLink({
           {teamLogo(m.away)}
           <span>{teamName(m.away)}</span>
         </span>
+        {m.status === "not_started" && (
+          <MatchForecastBar home={teamName(m.home)} away={teamName(m.away)} forecast={match.forecast} />
+        )}
       </span>
       <span className="match-league">
         {typeof m.league === "string"

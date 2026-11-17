@@ -1066,6 +1066,43 @@ input[type="date"] {
   width: 14px;
   color: var(--muted-light);
 }
+/* A match to come's forecast in a list (VI-19), under its teams: home, draw, away as a bar, then their shares. */
+.list-forecast {
+  grid-column: 1 / -1;
+  justify-self: center;
+  display: grid;
+  gap: 4px;
+  width: min(260px, 100%);
+}
+.list-forecast-bar {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+}
+.list-forecast-bar i {
+  flex-basis: 0;
+  min-width: 4px;
+  background: var(--muted);
+}
+.list-forecast-bar [data-side="home"] { background: var(--accent); }
+.list-forecast-bar [data-side="draw"] { opacity: 0.45; }
+.list-forecast-bar [data-side="away"] { background: #e0973a; }
+.list-forecast-shares {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.list-forecast-shares b { color: var(--ink-strong); font-weight: 600; }
+.list-forecast-shares b[data-side="draw"] { color: var(--muted); font-weight: 500; }
+.match-teams .cup-match-notes {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  text-align: center;
+}
 
 /* Coverage */
 .coverage-list {

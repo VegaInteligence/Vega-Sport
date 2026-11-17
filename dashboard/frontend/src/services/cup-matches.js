@@ -60,6 +60,44 @@ export function leagueTable(matches) {
     .map((r, i) => ({ position: i + 1, ...r }));
 }
 
+// A knockout round's name by its number of ties (the names knockout-bracket.js reads).
+const ROUND_BY_TIES = { 1: "Final", 2: "Semi-finals", 4: "Quarter-finals", 8: "Round of 16", 16: "Round of 32", 32: "Round of 64" };
+
+/**
+ * A cup's numbered rounds (open-matchday's gw) named by their ties, walking back from the last one: each round before
+ * holds twice as many ties; the two legs of a tie (the same pairs in two rounds) are one round; an earlier irregular
+ * round (replays, a preliminary round) is left unnamed, out of the bracket. A match that already has its round's name
+ * keeps it.
+ */
+export function numberedCupRounds(matches) {
+  const rounds = new Map();
+  for (const match of matches || []) {
+    if (!match.gw || match.roundName) continue;
+    const round = rounds.get(match.gw) || { gw: match.gw, pairs: new Set(), first: match.date || "9999" };
+    round.pairs.add([match.home, match.away].map((n) => String(n).toLowerCase()).sort().join("|"));
+    if (match.date && match.date < round.first) round.first = match.date;
+    rounds.set(match.gw, round);
+  }
+  // The two legs of a round: the same set of pairs in two numbered rounds.
+  const groups = [];
+  for (const round of [...rounds.values()].sort((a, b) => a.first.localeCompare(b.first))) {
+    const key = [...round.pairs].sort().join(",");
+    const legs = groups.find((g) => g.key === key);
+    if (legs) legs.gws.push(round.gw);
+    else groups.push({ key, gws: [round.gw], ties: round.pairs.size });
+  }
+  const names = new Map();
+  let expected = null;
+  for (const group of groups.reverse()) {
+    if (!ROUND_BY_TIES[group.ties] || (expected !== null && group.ties !== expected)) break;
+    for (const gw of group.gws) names.set(gw, ROUND_BY_TIES[group.ties]);
+    expected = group.ties * 2;
+  }
+  return (matches || []).map((match) => (names.has(match.gw) && !match.roundName
+    ? { ...match, roundName: names.get(match.gw), round: readableRound(names.get(match.gw)) }
+    : match));
+}
+
 /** A match's forecast as the API gives it (VI-19): three shares (home, draw, away) that make a law, else null. */
 export function matchForecast(value) {
   if (!value || typeof value !== "object") return null;
@@ -78,7 +116,7 @@ export function normalizeSupplementalCup(results, fixtures) {
     const day = validDay(row.date) ? row.date : "";
     keys.add(identity(day, home, away));
     const roundName = String(row.round_name || row.round || row.stage || "").trim();
-    completed.push({ key: "result:" + index, date: day, home, away, score, roundName, round: readableRound(roundName), status: "finished" });
+    completed.push({ key: "result:" + index, date: day, home, away, score, roundName, round: readableRound(roundName), status: "finished", gw: String(row.gw ?? "").trim() });
   }
   const scheduled = [];
   for (const [index, row] of (fixtures || []).entries()) {
@@ -88,7 +126,7 @@ export function normalizeSupplementalCup(results, fixtures) {
     if (keys.has(identity(day, home, away))) continue;
     const roundName = String(row.round_name || row.round || row.stage || "").trim();
     const forecast = matchForecast(row.forecast);
-    scheduled.push({ key: "fixture:" + index, date: day, home, away, score: null, roundName, round: readableRound(roundName), status: "scheduled", ...(forecast && { forecast }) });
+    scheduled.push({ key: "fixture:" + index, date: day, home, away, score: null, roundName, round: readableRound(roundName), status: "scheduled", gw: String(row.gw ?? "").trim(), ...(forecast && { forecast }) });
   }
   return [...completed, ...scheduled];
 }

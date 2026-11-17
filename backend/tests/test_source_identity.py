@@ -112,6 +112,9 @@ class ParseTest(unittest.TestCase):
         self.assertIsNone(match("C.F. Benfica", "POR"))  # Clube Futebol Benfica, not SL Benfica
         self.assertIsNone(match("Excelsior '31", "NED"))  # Rijssen's amateur club, not Excelsior Rotterdam
         self.assertIsNone(match("SC Freiburg", "AUT"))  # another country
+        # Two spellings the cups' check found unlinked (17 Nov 2026): open-matchday's Coppa Italia and its German cup.
+        pitch.update({(identity.normalize("Inter"), False): {(12, "ITA")}, (identity.normalize("1. FC Köln"), False): {(13, "GER")}})
+        self.assertEqual([match("Internazionale", "ITA"), match("FC Cologne", "GER")], [12, 13])
         # The national cup archives (OpenFootball, 2024/25), whose editions name no country.
         pitch.update({("lyon", False): {(9, "FRA")}, ("arsenal", False): {(10, "ENG")}, ("austriaklagenfurt", False): {(11, "AUT")}})
         self.assertEqual([match("Olympique Lyonnais", None), match("Arsenal FC", None), match("SL Benfica", None)], [9, 10, 3])
