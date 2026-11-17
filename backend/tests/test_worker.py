@@ -476,7 +476,10 @@ class WorkerTest(unittest.TestCase):
         minimum, embedding.MIN_PLAYERS = embedding.MIN_PLAYERS, 3
         try:
             self.assertEqual(due_seasons(self.db, noon), [season])
-            x("INSERT INTO agg.embedding_models(season_id,version,players,statistics,variance_kept) VALUES (%s,'profile-embedding-v1',3,12,0.8)", (season,))
+            # The vectors of an older definition (VI-23 B8): due as if there were none.
+            x("INSERT INTO agg.embedding_models(season_id,version,players,statistics,variance_kept) VALUES (%s,'profile-embedding-v0',3,12,0.8)", (season,))
+            self.assertEqual(due_seasons(self.db, noon), [season])
+            x("UPDATE agg.embedding_models SET version=%s WHERE season_id=%s", (embedding.MODEL_VERSION, season))
             self.assertEqual(due_seasons(self.db, noon), [])
         finally:
             embedding.MIN_PLAYERS = minimum

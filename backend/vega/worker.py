@@ -107,8 +107,9 @@ def due_seasons(conn, now):
     - a season played in the last 400 days whose shots have no Vega expected goals (xg.py:
       the values are new to it), after the same wait, when a model exists or the base
       holds enough shots to fit one.
-    - a season played in the last 400 days without the players' profile vectors
-      (embedding.py), after the same wait, when it has enough players to learn the axes.
+    - a season played in the last 400 days without the players' profile vectors of the
+      present definition (embedding.MODEL_VERSION), after the same wait, when it has enough
+      players to learn the axes.
     - a season played in the last 30 days while no in-play model exists (inplay.py), after
       the same wait, when there is a forecast model and enough goal events to fit one.
     - a season played in the last 400 days with a published player ranking and no breakout
@@ -121,7 +122,7 @@ def due_seasons(conn, now):
     Only PitchAPI editions count: the models read nothing of the archives and cups (whose
     seasons would otherwise all fall due when they are imported)."""
     from .power import METHOD_VERSION
-    from .embedding import MIN_MINUTES as PROFILE_MIN_MINUTES, MIN_PLAYERS as PROFILE_MIN_PLAYERS
+    from .embedding import MIN_MINUTES as PROFILE_MIN_MINUTES, MIN_PLAYERS as PROFILE_MIN_PLAYERS, MODEL_VERSION as PROFILE_VERSION
     from .breakout import MODEL_VERSION as BREAKOUT_VERSION
     from .inplay import MIN_FIT as INPLAY_MIN_FIT
     from .xg import MIN_FIT as XG_MIN_FIT
@@ -159,7 +160,7 @@ def due_seasons(conn, now):
                             OR EXISTS (SELECT 1 FROM core.shots OFFSET %(shots)s LIMIT 1)))
                    OR (l.started_at < %(now)s - %(after)s
                        AND bool_or(m.kickoff_at > %(now)s - interval '400 days' AND m.kickoff_at <= %(now)s)
-                       AND NOT EXISTS (SELECT 1 FROM agg.embedding_models e WHERE e.season_id = m.season_id)
+                       AND NOT EXISTS (SELECT 1 FROM agg.embedding_models e WHERE e.season_id = m.season_id AND e.version = %(profile_version)s)
                        AND (SELECT count(*) FROM (SELECT 1 FROM agg.player_season_stats s WHERE s.season_id = m.season_id
                                                   GROUP BY s.player_id HAVING sum(s.minutes) >= %(profile_minutes)s
                                                   LIMIT %(profiles)s) q) >= %(profiles)s)
@@ -179,7 +180,7 @@ def due_seasons(conn, now):
                        AND EXISTS (SELECT 1 FROM core.player_match_stats a WHERE a.minutes_played > 0 OFFSET %(appearances)s LIMIT 1))
                ORDER BY 1""",
             {"now": now, "after": RECOMPUTE_AFTER, "past": RECOMPUTE_PAST_AFTER, "method": METHOD_VERSION, "shots": XG_MIN_FIT, "goals": INPLAY_MIN_FIT, "appearances": RETURNS_MIN_APPEARANCES, "breakout": BREAKOUT_VERSION,
-             "profiles": PROFILE_MIN_PLAYERS, "profile_minutes": PROFILE_MIN_MINUTES},
+             "profiles": PROFILE_MIN_PLAYERS, "profile_minutes": PROFILE_MIN_MINUTES, "profile_version": PROFILE_VERSION},
         ).fetchall()
     ]
 

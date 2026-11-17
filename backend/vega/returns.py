@@ -10,13 +10,18 @@ match back, beside those usual minutes.
 What the base shows (docs/calculs/05-joueurs/09-retour-d-absence.md): after an absence a
 player's output per 90 minutes does not fall; his playing time does, and comes back over
 about five matches. The curve is therefore one of minutes, not of level.
+
+The appearances read are the finished matches of clubs (VI-23 B4, returns-v2): a national
+team's game is no club change that would end an absence or a return, and a canceled or
+unfinished match is no appearance, as the clubs' calendars (TEAM_DATES) already read only
+finished matches. A real change of club still stops a return.
 """
 
 from bisect import bisect_left, bisect_right
 from collections import defaultdict
 from datetime import timedelta
 
-MODEL_VERSION = "returns-v1"
+MODEL_VERSION = "returns-v2"  # v2: finished club matches only (national teams and unfinished matches out)
 MIN_DAYS = 30
 MIN_MISSED = 4  # club matches between the two appearances
 BEFORE = 8  # appearances before the absence that give the usual minutes
@@ -95,8 +100,9 @@ def current(appearances, team_dates, today):
 APPEARANCES = """
 SELECT s.player_id, coalesce(m.kickoff_at::date, m.match_date), s.team_id, s.minutes_played
 FROM core.player_match_stats s
-JOIN core.matches m ON m.id = s.match_id AND m.season_id = s.season_id
-WHERE s.minutes_played > 0 AND s.team_id IS NOT NULL AND coalesce(m.kickoff_at::date, m.match_date) >= %(since)s
+JOIN core.matches m ON m.id = s.match_id AND m.season_id = s.season_id AND m.status = 'finished'
+JOIN core.teams t ON t.id = s.team_id AND t.is_national IS NOT TRUE
+WHERE s.minutes_played > 0 AND coalesce(m.kickoff_at::date, m.match_date) >= %(since)s
 ORDER BY s.player_id, 2, s.match_id"""
 TEAM_DATES = """
 SELECT t.team, t.day FROM (

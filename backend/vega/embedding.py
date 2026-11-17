@@ -9,17 +9,28 @@ across every statistic at once, not on a hand-picked list of them
 
 Nothing here knows a player's position: that neighbours share it is the check of the
 method, not one of its inputs.
+
+A player is placed only when the source measured at least MIN_KNOWN of the statistics kept
+(VI-23 B8, calculation audit of 16 November 2026, finding 13d): a statistic not measured
+takes the season's mean, and a profile mostly made of means would sit near the centre for no
+reason of its own (two empty profiles were identical, at distance 0). The players placed
+and the statistics kept are found together (eligible), the axes are learnt from the placed
+players only, and any two of them share at least 80 % of the statistics as observations.
+A value is known when it is a finite number: NaN and infinities are missing, like None
+(coordinator's interim review, 17 Nov 2026), and a bad input never publishes a degenerate
+geometry (the guards of embed).
 """
 
-from math import sqrt
+from math import isfinite, sqrt
 
 from .metric_catalog import PLAYER_METRICS
 
-MODEL_VERSION = "profile-embedding-v1"
+MODEL_VERSION = "profile-embedding-v2"  # v1 placed every player, the unmeasured statistics imputed
 DIMENSIONS = 10
 MIN_MINUTES = 450  # a season shorter than five matches says too little
 MIN_PLAYERS = 200  # below, no axes are learnt
 MIN_COVERAGE = 0.6  # a statistic measured for fewer of the players is left out
+MIN_KNOWN = (9, 10)  # a player measured on fewer of the statistics kept than 9 in 10 is not placed
 CLIP = 3.0  # standard deviations: one extreme statistic does not place a player alone
 # Not a way of playing: discipline, own goals, penalties and what only a few matches carry.
 EXCLUDED = frozenset({
@@ -31,6 +42,11 @@ EXCLUDED = frozenset({
 WOMEN = r"\mwomen"
 
 
+def known(value):
+    """A measured value: a finite number (None, NaN and infinities are not)."""
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and isfinite(value)
+
+
 def per90(total, minutes):
     """A season total per 90 minutes of the time it was measured on; None when unmeasured."""
     return 90.0 * total / minutes if total is not None and minutes else None
@@ -40,24 +56,52 @@ def standardise(rows):
     """Columns of `rows` (lists of numbers or None) as z-scores clipped to ±CLIP.
 
     Returns (table, kept): `kept` are the indexes of the columns used, those measured for
-    at least MIN_COVERAGE of the rows and that vary. A value not measured takes the
-    column's mean (0 once standardised): it says nothing either way.
+    at least MIN_COVERAGE of the rows and that vary. A value not measured (not a finite
+    number) takes the column's mean (0 once standardised): it says nothing either way.
     """
-    count = len(rows)
     width = len(rows[0]) if rows else 0
     columns, kept = [], []
     for j in range(width):
         values = [row[j] for row in rows]
-        known = [v for v in values if v is not None]
-        if len(known) < MIN_COVERAGE * count or len(known) < 2:
+        scale = _scale(values)
+        if scale is None:
             continue
-        mean = sum(known) / len(known)
-        spread = sqrt(sum((v - mean) ** 2 for v in known) / len(known))
-        if spread <= 1e-12:
-            continue
-        columns.append([0.0 if v is None else max(-CLIP, min(CLIP, (v - mean) / spread)) for v in values])
+        mean, spread = scale
+        columns.append([max(-CLIP, min(CLIP, (v - mean) / spread)) if known(v) else 0.0 for v in values])
         kept.append(j)
     return [list(row) for row in zip(*columns)] if columns else [], kept
+
+
+def _scale(values):
+    """A column's (mean, spread) over its known values, or None when it is measured for fewer
+    than MIN_COVERAGE of the rows (or two of them), does not vary, or has moments that are not
+    finite (a value so large that its square overflows)."""
+    measured = [v for v in values if known(v)]
+    if len(measured) < MIN_COVERAGE * len(values) or len(measured) < 2:
+        return None
+    mean = sum(measured) / len(measured)
+    spread = sqrt(sum((v - mean) * (v - mean) for v in measured) / len(measured)) if isfinite(mean) else mean
+    return (mean, spread) if isfinite(mean) and isfinite(spread) and spread > 1e-12 else None
+
+
+def eligible(rows):
+    """The rows placed and the columns read, found together: (members, kept).
+
+    The columns kept are those standardise keeps on the members (measured for MIN_COVERAGE of
+    them, and varying); a member must know MIN_KNOWN of the columns kept. Leaving out the rows
+    that do not can leave a column under MIN_COVERAGE, which changes what the others must
+    know: the two steps are repeated until no row leaves. The rows only ever leave, so the
+    result is reached in a few rounds and depends on the table alone. With 9 of 10 columns
+    known each, two members share at least 8 of 10 as observations."""
+    width = len(rows[0]) if rows else 0
+    members = list(range(len(rows)))
+    need, of = MIN_KNOWN
+    while True:
+        kept = [j for j in range(width) if _scale([rows[i][j] for i in members]) is not None]
+        left = [i for i in members if of * sum(known(rows[i][j]) for j in kept) >= need * len(kept)]
+        if len(left) == len(members):
+            return members, kept
+        members = left
 
 
 def covariance(table):
@@ -114,19 +158,28 @@ def principal_axes(matrix, dimensions):
 
 
 def embed(rows, dimensions=DIMENSIONS):
-    """Place each row (a player's per-90 statistics, None where unmeasured) on the leading
-    axes of the table. Returns (vectors, share of the variance the axes keep, columns
-    used), or None below MIN_PLAYERS rows or `dimensions` usable columns."""
+    """Place each eligible row (a player's per-90 statistics, None where unmeasured) on the
+    leading axes of the eligible rows. Returns (vectors, share of the variance the axes keep,
+    columns used), a vector being None for a row not placed; or None below MIN_PLAYERS
+    eligible rows or `dimensions` usable columns, and None rather than a vector or a share
+    that is not finite."""
     if len(rows) < MIN_PLAYERS:
         return None
-    table, kept = standardise(rows)
-    if len(kept) < dimensions:
+    members, kept = eligible(rows)
+    if len(members) < MIN_PLAYERS or len(kept) < dimensions:
         return None
+    # The same columns as eligible's: standardise keeps them on the same rows.
+    table, kept = standardise([rows[i] for i in members])
     matrix, means = covariance(table)
     axes = principal_axes(matrix, dimensions)
     total = sum(matrix[i][i] for i in range(len(matrix)))
-    vectors = [[sum((value - mean) * weight for value, mean, weight in zip(row, means, axis)) for _, axis in axes] for row in table]
-    return vectors, (sum(value for value, _ in axes) / total if total else 0.0), kept
+    vectors = [None] * len(rows)
+    for i, row in zip(members, table):
+        vectors[i] = [sum((value - mean) * weight for value, mean, weight in zip(row, means, axis)) for _, axis in axes]
+    share = sum(value for value, _ in axes) / total if total else 0.0
+    if not isfinite(share) or not all(isfinite(x) for i in members for x in vectors[i]):
+        return None
+    return vectors, share, kept
 
 
 def distance(a, b):
@@ -139,9 +192,10 @@ def statistics():
 
 
 def refresh(conn, season):
-    """Place the season's players (MIN_MINUTES or more, all competitions together) on the
-    axes learnt from them; returns the number of players placed. A season with too few
-    players keeps no vector.
+    """Place the season's eligible players (MIN_MINUTES or more, all competitions together,
+    measured on MIN_KNOWN of the statistics kept) on the axes learnt from them; returns the
+    number of players placed. A season with too few eligible players keeps no vector, and a
+    player who is no longer eligible loses his.
 
     Read, compute, write: no transaction is open while the axes are computed. The base ends
     a session that stays idle inside a transaction (60 s), and the computation of a full
@@ -163,12 +217,13 @@ def refresh(conn, season):
         if result is None:
             return 0
         vectors, kept_share, kept = result
+        placed = [(row, vector) for row, vector in zip(rows, vectors) if vector is not None]
         conn.execute(
             "INSERT INTO agg.embedding_models(season_id, version, players, statistics, variance_kept) VALUES (%s, %s, %s, %s, %s)",
-            (season, MODEL_VERSION, len(rows), len(kept), kept_share),
+            (season, MODEL_VERSION, len(placed), len(kept), kept_share),
         )
         names = ", ".join(f"e{i + 1}" for i in range(DIMENSIONS))
         with conn.cursor().copy(f"COPY agg.player_embeddings(season_id, player_id, minutes, women, {names}) FROM STDIN") as copy:
-            for (player, minutes, women, *_), vector in zip(rows, vectors):
+            for (player, minutes, women, *_), vector in placed:
                 copy.write_row((season, player, minutes, bool(women), *vector))
-    return len(rows)
+    return len(placed)

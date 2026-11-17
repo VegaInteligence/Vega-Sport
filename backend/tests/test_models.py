@@ -1018,8 +1018,13 @@ class ModelsTest(unittest.TestCase):
               FROM generate_series(1, 240) g""")
         minimum, embedding.MIN_PLAYERS = embedding.MIN_PLAYERS, 100
         try:
-            held = self.one("SELECT count(*) FROM (SELECT player_id FROM agg.player_season_stats WHERE season_id=2025 GROUP BY 1 HAVING sum(minutes) >= 450) q")[0]
+            # A vector needs 90 % of the statistics kept measured (VI-23 B8): the league's own 88
+            # players (the build above) measure 12 of the 14 (no assists, no shots on target) and
+            # are not placed; the 239 synthetic players of 450 minutes or more measure all 14.
+            held = self.one("SELECT count(*) FROM (SELECT player_id FROM agg.player_season_stats WHERE season_id=2025 AND player_id > 7000 GROUP BY 1 HAVING sum(minutes) >= 450) q")[0]
+            self.assertEqual(held, 239)
             self.assertEqual(embedding.refresh(self.db, 2025), held)
+            self.assertEqual(self.one("SELECT count(*) FROM agg.player_embeddings WHERE season_id=2025 AND player_id < 7000")[0], 0)
             version, players, kept, share = self.one("SELECT version, players, statistics, variance_kept FROM agg.embedding_models WHERE season_id=2025")
             self.assertEqual((version, players), (embedding.MODEL_VERSION, held))
             self.assertTrue(kept >= embedding.DIMENSIONS and 0 < share <= 1)
