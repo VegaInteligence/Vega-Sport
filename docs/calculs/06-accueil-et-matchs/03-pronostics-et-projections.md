@@ -175,7 +175,60 @@ Il n'y a qu'**un seul Elo de club** : tous les matchs d'un club, coupes comprise
 
 - Les clubs des archives des coupes nationales d'OpenFootball (2024/2025) et des coupes continentales des autres confédérations. Ils ne comptent qu'entre clubs connus tant que leurs clubs professionnels ne sont pas reliés. Sinon, ils faussent les groupes : mesuré, les clubs de coupe anglais montaient à 1327 et le championnat d'Égypte de 104 points.
 - Les clubs des seules archives (7 520), que l'Elo ne lit pas.
-- La projection des coupes nationales tour par tour, avec les règles du tableau ci-dessus (prolongation au tiers d'un match, tirs au but à 50/50, matchs joués fixés).
+
+## La projection des coupes nationales (17 novembre 2026)
+
+Code : `knockout_projections` et `simulate_knockout` dans [forecast.py](../../../backend/vega/forecast.py), table `agg.cup_stage_odds` (migration 124), route `/api/forecasts/season` (`format: "knockout"`).
+
+**Quelles coupes.** Une coupe est projetée quand son prochain tour est tiré et pas commencé, et que tous ses clubs sont entrés. Concrètement :
+
+- **Le tour en jeu** est fait des matchs encore à jouer de l'édition : chaque club une fois, leur nombre une puissance de deux. Le match aller déjà joué d'une double confrontation en fait partie.
+- **Un tour commencé attend le tirage suivant.** C'est le cas quand un autre match de l'édition a été joué 7 jours ou moins avant le premier match du tour.
+- **Tous les clubs sont entrés** quand le tour n'en compte pas plus que celui où entrent les derniers :
+
+  | Coupe | Derniers entrants | Seuil (clubs) |
+  |---|---|---:|
+  | FA Cup | 3ᵉ tour | 64 |
+  | Coupe de la Ligue anglaise | 3ᵉ tour | 32 |
+  | Coupe d'Italie | 8es de finale | 16 |
+  | Coupe du Roi | 16es de finale | 32 |
+  | Coupe des Pays-Bas | — | 32 |
+  | Coupe de Suisse | — | 32 |
+  | Coupe d'Écosse | — | 32 |
+  | Coupe de la Ligue écossaise | — | 16 |
+  | Coupes d'Allemagne, d'Autriche et du Portugal | — | 64 |
+
+- **Tous les clubs ont un Elo.** Sinon la coupe attend, comme une coupe européenne.
+- **La Coupe d'Allemagne** est lue chez OpenLigaDB, qui donne ses tours et ses tirs au but. La copie d'open-matchday n'est pas projetée.
+
+**Le calcul.** Les tours restants sont rejoués 1 000 fois :
+
+- les rencontres déjà tirées sont jouées telles quelles, et les matchs déjà joués comptent avec leur score ;
+- chaque tour suivant est tiré au hasard, en un match, chez le premier tiré ;
+- les demi-finales se jouent en deux matchs là où la coupe le prévoit (Coupe de la Ligue anglaise, Coupe d'Italie, Coupe du Roi, Coupe du Portugal) ;
+- la finale se joue sur terrain neutre.
+
+Comme pour les coupes européennes, une prolongation vaut un tiers de match et les tirs au but se jouent à 50/50 ; les deux codes partagent les mêmes règles de match (`_knockout_play`). La force d'un club peut bouger jusqu'au 30 juin : 90 points Elo × √(part de l'année qui reste), comme pour un championnat.
+
+**Ce qui n'est pas modélisé :**
+
+- le tableau fixe de la Coupe d'Italie : chaque tour y est tiré au hasard ;
+- la règle qui fait recevoir le club de division inférieure (Allemagne, Autriche, Suisse) : seuls les tours déjà tirés la respectent ;
+- les tirs au but d'open-matchday, que la source ne donne pas. Un tour où un match nul n'a pas de vainqueur connu n'est projeté qu'une fois le tour suivant tiré.
+
+**Premier calcul.** Fait en lecture seule sur la base, avec les fusions de clubs du soir appliquées :
+
+| Coupe | Tour en jeu | Favori |
+|---|---|---|
+| Coupe d'Allemagne | 8es | Bayern 56 % |
+| Coupe de la Ligue anglaise | quarts | Manchester City 41 % |
+| Coupe du Portugal | 16es | Sporting 33 %, Benfica 29 %, Porto 27 % |
+| Coupe des Pays-Bas | 16es | PSV 31 % |
+| Coupe d'Autriche | quarts | LASK 29 % |
+| Coupe de Suisse | 8es | Lugano 19 % |
+| Coupe de la Ligue écossaise | finale | Rangers 76 % |
+
+La Coupe d'Italie attend la fusion de trois de ses clubs.
 
 ## Minute par minute
 
