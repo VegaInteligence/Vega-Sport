@@ -73,15 +73,15 @@ test("a season total multiplies the mean by its own support, not by every match"
   assert.deepEqual(seasonTotal(served, "finishing"), { value: 0.8, matches: 1 });
   assert.deepEqual(seasonTotal(served, "keeper"), { value: 0.4, matches: 1 });
   assert.deepEqual(seasonTotal(served, "placement"), { value: null, matches: 0 });
-  // Without coverage, the support is read on the rows: finishing and keeper need both xG (and the
-  // keeper the xGOT faced), placement the club's own xGOT.
+  // Without the service's coverage, the support is unknown: the rows cannot say which matches the
+  // mean stands on (VI-23 classifies the scoring of each match), so no total is made of the mean.
   const read = { ...club, values: { finishing: 0.5, keeper: -0.1, placement: 0.4 } };
-  assert.deepEqual(seasonTotal(read, "finishing"), { value: 0.5, matches: 1 });
-  assert.deepEqual(seasonTotal(read, "keeper"), { value: -0.1, matches: 1 });
-  assert.deepEqual(seasonTotal(read, "placement"), { value: 0.4, matches: 1 });
+  assert.deepEqual(seasonTotal(read, "finishing"), { value: null, matches: null });
+  assert.deepEqual(seasonTotal(read, "keeper"), { value: null, matches: null });
+  assert.deepEqual(seasonTotal(read, "placement"), { value: null, matches: null });
   // A known zero stays zero; an unknown mean stays unknown.
-  assert.deepEqual(seasonTotal({ ...read, values: { finishing: 0 } }, "finishing"), { value: 0, matches: 1 });
-  assert.deepEqual(seasonTotal({ ...read, values: {} }, "finishing"), { value: null, matches: 1 });
+  assert.deepEqual(seasonTotal({ ...served, values: { finishing: 0 } }, "finishing"), { value: 0, matches: 1 });
+  assert.deepEqual(seasonTotal({ ...served, values: {} }, "finishing"), { value: null, matches: 1 });
 });
 
 test("a sum with an unknown term is unknown, known zeros stay zero", () => {

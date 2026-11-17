@@ -224,7 +224,8 @@ test("results and expected: each pair on the same matches", () => {
     row(3, 2, 0, { xg: 1.5, xgot: 1.9 }, { xg: 0.5, xgot: 0.4 }),
     row(1, 1, 1, { xg: 0.7, xgot: null }, { xg: null, xgot: null }),
     row(0, 0, 2, null, null),
-  ]), values: { xg: 1.1, xga: 0.5, keeper: 0.4 } };
+  // As the service serves it: the keeper's mean and the one match it stands on.
+  ]), values: { xg: 1.1, xga: 0.5, keeper: 0.4 }, coverage: { keeper: 1 } };
   const markup = html(e(tabs.ExpectedCard, { dossier: { id: "t_a", self, clubs: [self], league: { name: "Ligue" } } }));
   // Points beside xPts: 3 · 1,8 on the one match with both xG (not 4 · 1,8).
   assert.match(markup, /3 · 1,8/);

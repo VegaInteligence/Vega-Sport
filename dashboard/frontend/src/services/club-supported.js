@@ -89,21 +89,14 @@ export function goalsBesideXg(club) {
   };
 }
 
-// The matches each per-match indicator stands on, as METRICS reads them (club-scout.js): both xG
-// known, and the xGOT the total needs.
-const bothXg = (row) => finite(row.own?.xg) && finite(row.opp?.xg);
-const SUPPORT = {
-  finishing: bothXg,
-  keeper: (row) => bothXg(row) && finite(row.opp?.xgot),
-  placement: (row) => bothXg(row) && finite(row.own?.xgot),
-};
-
-/** A per-match indicator over the season: its mean times the matches that support it. */
+/**
+ * A per-match indicator over the season: its mean times the matches that support it, as the
+ * service counts them (`coverage`, club-scout.js METRICS). Without that count the support is
+ * unknown, and so is the total: the rows alone cannot say which matches the mean stands on.
+ */
 export function seasonTotal(club, key) {
   const served = club?.coverage?.[key];
-  const matches = finite(served)
-    ? served
-    : (club?.rows || []).filter(SUPPORT[key] || (() => false)).length;
+  const matches = finite(served) ? served : null;
   const mean = club?.values?.[key];
   return {
     value: finite(mean) && matches > 0 ? mean * matches : null,
