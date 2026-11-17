@@ -21,6 +21,7 @@ import {
   partOf,
   sumKnown,
 } from "../services/club-supported.js";
+import { safeImageUrl } from "../services/format.js";
 import s from "./ClubScout.module.css";
 
 export const clubStyles = s;
@@ -88,7 +89,9 @@ export function ClubEmptySeason({ dossier, played = 0 }) {
 
 /**
  * Plain images: the site's reveal deadline would freeze Media elements that
- * mount after a long read into their initials.
+ * mount after a long read into their initials. The source goes through the
+ * site's checked resolver, as Media's does: a Vega reference is read through
+ * /api/assets, never from its reserved host; a refused one shows the initials.
  */
 export function Picture({
   name = "",
@@ -97,7 +100,7 @@ export function Picture({
   round = false,
 }) {
   const [failed, setFailed] = useState(false);
-  const src = failed ? null : url;
+  const src = failed ? null : safeImageUrl(url) || null;
   const initials = name
     .split(/\s+/)
     .filter(Boolean)

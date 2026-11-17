@@ -53,6 +53,8 @@ async function loadUI() {
     "../services/club-scout.js": { METRICS: {}, SITUATION_LABELS: {}, STYLE_AXES: [], formatMetric: String, rolling: () => [] },
     // What the tables show side by side, on the same matches (pure; the real module).
     "../services/club-supported.js": supported,
+    // The checked image resolver (the real module).
+    "../services/format.js": await import("../dashboard/frontend/src/services/format.js"),
     // A CSS module: every class reads as its own name.
     "./ClubScout.module.css": { __esModule: true, default: new Proxy({}, { get: (_, name) => String(name) }) },
   };

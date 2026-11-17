@@ -66,6 +66,8 @@ const common = {
   "../hooks/FootballContext.jsx": { useFootball: () => ({ href: (url, params) => `${url}?${new URLSearchParams(params)}` }) },
   "./Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
   "../services/club-supported.js": supported,
+  // The checked image resolver (the real module): Picture goes through it (FAILURE_MODES.md §22).
+  "../services/format.js": await import("../dashboard/frontend/src/services/format.js"),
 };
 const ui = await load("ClubScoutUI.jsx", {
   ...common,
