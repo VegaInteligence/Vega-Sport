@@ -1,29 +1,34 @@
 # WORKLOG — 2026-11-17
 
-- Goal: platform audit and its plan ([VI-21](https://linear.app/vegainteligence/issue/VI-21/audit-de-la-plateforme-coherence-sources-de-donnees-sans-doublon-une), In Progress):
-  - each source read only for what it alone gives;
-  - a rating for every club, match and player;
-  - cups predicted by stage (VI-19 stays open for the cups beyond CL/EL/ECL).
+- Goal: platform audit and its plan ([VI-21](https://linear.app/vegainteligence/issue/VI-21/audit-de-la-plateforme-coherence-sources-de-donnees-sans-doublon-une), In Progress).
+  - Each source is read only for what it alone gives.
+  - Every club, match and player has a rating.
+  - Cups are predicted stage by stage. VI-19 stays open for the cups beyond CL/EL/ECL.
 - This checkout: Vega-Sport, worktree `claude/v2-complete`, pushed direct to main; Linear label `repo:vega-sport`.
 - Constraints:
-  - measure before any DB correction or method change, and ask first;
-  - deletions need an explicit yes after the replacement is verified;
-  - tests first; read-only diagnostics.
+  - Measure before any DB correction or method change, and ask first.
+  - Delete only after an explicit yes, once the replacement is verified.
+  - Tests first; read-only diagnostics.
 - User decisions:
-  - one club Elo for every match, no separate cup Elo (16 Nov);
-  - « lance le plan » (17 Nov): the audit's six steps.
-- Done (17 Nov):
-  - open-matchday skips its 35 copies of PitchAPI leagues; verified read-only against the live source: 35 skipped, 30 read. SportsAPI removed (705bfc824a).
-  - 73 reviewed cup spellings link professional clubs; Ireland written IRL (4f63848258). The merges come with the identity pass's next daily turn.
-  - Formulas note corrected.
-  - Audit corrections:
-    - Nations League: two sources, two halves, no double.
-    - DFB-Pokal: two sources for two views.
-    - Wikidata helpers: used by the worker, not dead.
-- In progress: step 5, measuring in memory the one Elo over every complementary match (diag-elomeasure, evidence-vi21).
-- Waiting for the user:
-  - the method change of step 5, once measured;
-  - the deletion of the 35 copy editions (open-matchday rows of 2026/27, duplicates of PitchAPI matches).
+  - 16 Nov: one club Elo for every match, no separate cup Elo.
+  - 17 Nov: « lance le plan ».
+  - 17 Nov: « oui » to deleting the 35 copy editions, and « corrige et applique » for the one Elo.
+- Shipped (17 Nov):
+  - Sources (705bfc824a):
+    - open-matchday no longer reads its 35 copies of PitchAPI leagues.
+    - SportsAPI is removed.
+  - Cup clubs (4f63848258):
+    - 73 reviewed spellings link professional clubs.
+    - Ireland is now IRL.
+  - One Elo (a912ed319e):
+    - Every open-matchday match and every match of the German cup (OpenLigaDB) counts.
+    - Clubs PitchAPI does not hold enter at their group's level: their league (division from the folder), else their country's cup clubs.
+    - Measured beforehand, in memory: 967 more clubs ranked; median change 1.2 points for clubs already ranked; top 30 within 6 points.
+  - The reader removes the 35 copy editions (9,539 matches) at its next read.
+- Kept outside on purpose (measured):
+  - OpenFootball's national cup archives and the continental cups. They still count only between known clubs: their unlinked professional clubs inflated the cup groups, and the African cups moved Egypt +104.
+- Evidence: scratchpad evidence-vi21 (diag-*.py/.out, sweep, README).
 - Next action:
-  - after the identity pass, verify the merges;
-  - after the backfill (about 1–2 days), recompute and verify 2021/22–2022/23.
+  - Verify in production: copies gone, Elo run done, merges made.
+  - Then: link the archive and continental clubs, and project domestic cups by stage.
+  - After the backfill: recompute and verify 2021/22–2022/23.
