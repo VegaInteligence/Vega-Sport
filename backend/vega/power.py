@@ -303,7 +303,11 @@ ORDER BY 3 NULLS LAST, m.match_date NULLS LAST, m.id"""
 def elo_matches(rows):
     """The Elo's matches, in order: the PitchAPI ones, and the complementary ones that copy
     neither one of them (the same clubs within three days: a league both sources hold) nor
-    one another (two sources of one cup)."""
+    one another (two sources of one cup). An open-matchday copy of a PitchAPI league
+    (open_matchday.COVERED) is never read: its clubs are PitchAPI's under other names."""
+    from .sources.open_matchday import COVERED
+
+    rows = [r for r in rows if _folder(r[12] if len(r) > 12 else None) not in COVERED]
     played = defaultdict(list)
     for r in rows:
         if not r[10] and r[8] is not None:

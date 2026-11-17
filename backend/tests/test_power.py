@@ -183,6 +183,17 @@ class LeagueLevelTest(unittest.TestCase):
         self.assertNotIn(("cup", "ENG"), settings["reference"])
         self.assertLess(levels[("cup", "ENG")], levels[1])
 
+    def test_a_copy_of_a_pitchapi_league_never_enters_the_elo(self):
+        # open-matchday's copies of PitchAPI's leagues (open_matchday.COVERED) double PitchAPI's matches under
+        # other names: the Elo never reads them, whether or not the reader has removed them yet (17 Nov 2026,
+        # the Elo ran at 00:32 with the copies still in the base).
+        from datetime import date
+
+        row = lambda i, key: (i, 2026, None, "A", "B", 1, 0, False, date(2026, 9, i), 50, True, False, key)
+        rows = [row(1, "open-matchday:ENG_1_premier-league:2026/2027"), row(2, "open-matchday:ENG_5_national-league:2026/2027"),
+                row(3, "open-matchday:UEFA_1_champions-league:2026/2027"), row(4, "open-matchday:ENG_CUP_fa-cup:2026/2027")]
+        self.assertEqual([r[0] for r in power.elo_matches(rows)], [2, 4])
+
     def test_complementary_matches_copy_no_other(self):
         from datetime import date
 
