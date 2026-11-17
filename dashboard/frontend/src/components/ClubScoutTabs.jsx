@@ -51,6 +51,13 @@ import {
 } from "./ClubScoutUI.jsx";
 import ClubSubstitutions from "./ClubSubstitutions.jsx";
 import ClubPassingTriangle from "./ClubPassingTriangle.jsx";
+import {
+  goalsBesideXg,
+  pairedPoints,
+  pairedXg,
+  partOf,
+  seasonTotal,
+} from "../services/club-supported.js";
 import s from "./ClubScoutTabs.module.css";
 
 function competitionRecords(dossier) {
@@ -84,7 +91,9 @@ export function IdentityRail({ dossier, onTab }) {
   const f = useFootball();
   const self = dossier.self,
     r = self.record;
-  const gap = r.points - (self.xptsTotal ?? 0);
+  // Points and xPts of the same matches (club-supported.js).
+  const paired = pairedPoints(self);
+  const gap = paired.delta;
   // On a phone the header opens on the identity and the standing.
   const more = usePhoneFold();
   return (
@@ -128,10 +137,14 @@ export function IdentityRail({ dossier, onTab }) {
           </div>
           <div>
             <dt><Term>xPts</Term></dt>
-            <dd>{fmtNum(self.xptsTotal, 1)}</dd>
-            <small className={gap >= 0 ? c.up : c.down}>
-              {fmtNum(gap, 1, true)} pts vs attendu
-            </small>
+            <dd>{fmtNum(paired.expected, 1)}</dd>
+            {Number.isFinite(gap) && (
+              <small className={gap >= 0 ? c.up : c.down}>
+                {fmtNum(gap, 1, true)} pts vs attendu
+                {paired.matches < r.matches &&
+                  ` · sur ${paired.matches} match${paired.matches > 1 ? "s" : ""}`}
+              </small>
+            )}
           </div>
           <div>
             <dt><Term>Forme</Term></dt>
@@ -274,11 +287,18 @@ function readings(dossier) {
  * referential (several leagues) passes the club's own league instead: a
  * table across leagues with different calendars would not mean anything.
  */
-function ExpectedCard({ dossier }) {
-  const self = dossier.self,
-    v = self.values;
-  const gfDiff = self.record.gf - (v.xg ?? 0) * self.record.matches;
-  const gaDiff = self.record.ga - (v.xga ?? 0) * self.record.matches;
+export function ExpectedCard({ dossier }) {
+  const self = dossier.self;
+  // Each pair on the same matches; a season total on its own (club-supported.js).
+  const points = pairedPoints(self),
+    goals = goalsBesideXg(self),
+    keeper = seasonTotal(self, "keeper").value;
+  const on = (matches) =>
+    partOf(matches, self.record.matches)
+      ? ` · sur ${matches} match${matches > 1 ? "s" : ""}`
+      : "";
+  const tone = (value, better = 1) =>
+    Number.isFinite(value) ? (value * better >= 0 ? c.up : c.down) : undefined;
   return (
       <Card
         fold
@@ -289,41 +309,34 @@ function ExpectedCard({ dossier }) {
           <div>
             <dt><Term>Points · xPts</Term></dt>
             <dd>
-              {self.record.points} · {fmtNum(self.xptsTotal, 1)}
+              {fmtNum(points.actual)} · {fmtNum(points.expected, 1)}
             </dd>
-            <small
-              className={
-                self.record.points >= self.xptsTotal ? c.up : c.down
-              }
-            >
-              {fmtNum(self.record.points - self.xptsTotal, 1, true)} pts
+            <small className={tone(points.delta)}>
+              {fmtNum(points.delta, 1, true)} pts{on(points.matches)}
             </small>
           </div>
           <div>
             <dt><Term>Buts · xG</Term></dt>
             <dd>
-              {self.record.gf} ·{" "}
-              {fmtNum((v.xg ?? 0) * self.record.matches, 1)}
+              {fmtNum(goals.for.goals)} · {fmtNum(goals.for.xg, 1)}
             </dd>
-            <small className={gfDiff >= 0 ? c.up : c.down}>
-              {fmtNum(gfDiff, 1, true)} buts
+            <small className={tone(goals.for.delta)}>
+              {fmtNum(goals.for.delta, 1, true)} buts{on(goals.for.matches)}
             </small>
           </div>
           <div>
             <dt><Term>Encaissés · xG contre</Term></dt>
             <dd>
-              {self.record.ga} ·{" "}
-              {fmtNum((v.xga ?? 0) * self.record.matches, 1)}
+              {fmtNum(goals.against.goals)} · {fmtNum(goals.against.xg, 1)}
             </dd>
-            <small className={gaDiff <= 0 ? c.up : c.down}>
-              {fmtNum(gaDiff, 1, true)} buts
+            <small className={tone(goals.against.delta, -1)}>
+              {fmtNum(goals.against.delta, 1, true)} buts
+              {on(goals.against.matches)}
             </small>
           </div>
           <div>
             <dt><Term>Buts évités par le gardien</Term></dt>
-            <dd>
-              {fmtNum((v.keeper ?? 0) * self.record.matches, 1, true)}
-            </dd>
+            <dd>{fmtNum(keeper, 1, true)}</dd>
             <small>xGOT concédés − buts encaissés</small>
           </div>
         </dl>
@@ -346,6 +359,8 @@ export function Overview({ dossier, onTab, base = dossier }) {
   const self = dossier.self,
     v = self.values,
     total = dossier.clubs.length;
+  // xG for minus against on the matches that know both (club-supported.js).
+  const xgPaired = pairedXg(self);
   const { strengths, weaknesses } = readings(dossier);
   const pizza = PERFORMANCE_KEYS.map((key) => ({
     key,
@@ -386,9 +401,13 @@ export function Overview({ dossier, onTab, base = dossier }) {
           ],
           [
             "Diff. xG / match",
-            fmtNum((v.xg ?? 0) - (v.xga ?? 0), 2, true),
+            fmtNum(xgPaired.perMatch, 2, true),
             "pour moins contre",
-            (v.xg ?? 0) >= (v.xga ?? 0) ? "up" : "down",
+            Number.isFinite(xgPaired.perMatch)
+              ? xgPaired.perMatch >= 0
+                ? "up"
+                : "down"
+              : undefined,
           ],
           [
             "Sans encaisser",
@@ -479,8 +498,12 @@ export function Upcoming({ dossier, limit = 6 }) {
       {dossier.upcoming.slice(0, limit).map((match) => {
         const home = match.home.id === dossier.id;
         const opponent = home ? match.away : match.home;
+        // A member of the reference keeps its place; a difficulty needs a measured centile
+        // (never level 1 by default), and the label says which of the two is missing.
+        const member = dossier.clubs.find((club) => club.id === opponent.id);
         const strength = opponentStrength(dossier, opponent.id);
-        const level = strength
+        const measured = Boolean(strength) && Number.isFinite(strength.centile);
+        const level = measured
           ? Math.max(1, Math.ceil(strength.centile / 20))
           : 0;
         return (
@@ -493,8 +516,8 @@ export function Upcoming({ dossier, limit = 6 }) {
               <Crest club={opponent} />
               <span>
                 {opponent.name}
-                {strength && (
-                  <small> · {ordinal(strength.club.position)}</small>
+                {member?.position != null && (
+                  <small> · {ordinal(member.position)}</small>
                 )}
               </span>
             </span>
@@ -508,12 +531,14 @@ export function Upcoming({ dossier, limit = 6 }) {
             </span>
             <span
               title={
-                strength
+                measured
                   ? `Adversaire au centile ${strength.centile} de la différence de xG`
-                  : "Hors championnat de référence"
+                  : member
+                    ? "Pas assez de matchs avec xG pour le situer"
+                    : "Hors championnat de référence"
               }
             >
-              {strength ? (
+              {measured ? (
                 <span
                   className={c.difficulty}
                   aria-label={`Difficulté ${level} sur 5`}
@@ -523,7 +548,9 @@ export function Upcoming({ dossier, limit = 6 }) {
                   ))}
                 </span>
               ) : (
-                <small className={c.muted}>hors référentiel</small>
+                <small className={c.muted}>
+                  {member ? "données insuffisantes" : "hors référentiel"}
+                </small>
               )}
             </span>
             <span className={c.matchComp}>{match.league}</span>

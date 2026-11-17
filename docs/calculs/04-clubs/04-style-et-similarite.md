@@ -37,14 +37,14 @@ Le centile PPDA est déjà inversé (bas PPDA = centile haut), d'où « ≥ 75 �
 
 ## Clubs similaires
 
-`similarClubs` ([club-scout.js](../../../dashboard/frontend/src/services/club-scout.js#L1556)) compare les centiles sur 10 axes : possession, territoire, jeu long, PPDA, centres, part des CPA, actions défensives ajustées, xG, xG concédés, passes réussies.
+La route `/api/teams/{id}/similar` (détail ci-dessous) compare les centiles sur 10 axes : possession, territoire, jeu long, PPDA, centres, part des CPA, actions défensives ajustées, xG, xG concédés, passes réussies. Depuis le 17 novembre 2026 elle sert les trois usages de la page : l'onglet « Clubs similaires », le club proposé d'emblée dans « Comparaison » et les suggestions « Comparer avec » (les clubs les plus proches du championnat du club). L'ancienne fonction du navigateur `similarClubs` est supprimée : elle donnait 100 à un club sans aucun axe commun.
 
 $$
 \text{similarité} = \operatorname{arrondi}\left(100 - \frac{1}{K}\sum_{k} \left|\,c_k^{\text{club}} - c_k^{\text{autre}}\,\right|\right)
 $$
 
-- `K` : nombre d'axes où les deux clubs ont un centile.
-- Les clubs sont triés par similarité décroissante ; les 6 premiers sont proposés dans le menu « Comparer avec » (voisins du même championnat).
+- `K` : nombre d'axes où les deux clubs ont un centile, au moins max(5, ⌈0,75 × axes du club⌉).
+- Les clubs sont triés par similarité décroissante ; les 6 premiers du championnat sont proposés dans le menu « Comparer avec », le premier ouvre la comparaison.
 - Les axes les plus proches sont listés en premier pour expliquer la ressemblance.
 
 Exemple : écarts de centile 5, 10, 0, 20, 15, 5, 10, 0, 5, 10 → moyenne 8 → similarité **92**.

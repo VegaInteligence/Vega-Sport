@@ -15,6 +15,12 @@ import {
   formatMetric,
   rolling,
 } from "../services/club-scout.js";
+import {
+  pairedPoints,
+  pairedXg,
+  partOf,
+  sumKnown,
+} from "../services/club-supported.js";
 import s from "./ClubScout.module.css";
 
 export const clubStyles = s;
@@ -1011,9 +1017,13 @@ export function GoalPeriods({ times }) {
 /* ----------------------------------------------------------- game state */
 
 export function GameState({ states }) {
-  const total =
-    states.minutes.lead + states.minutes.level + states.minutes.behind || 1;
-  const pct = (v) => (100 * v) / total;
+  // No match of known chronology: the time in each state is unknown, not 0 %.
+  const minutes = states.minutes;
+  const total = minutes
+    ? minutes.lead + minutes.level + minutes.behind || 1
+    : null;
+  const pct = (v) => (total ? (100 * v) / total : 0);
+  const share = (v) => (total ? `${fmtNum(pct(v))} %` : "—");
   const line = (bucket) =>
     bucket.matches
       ? `${bucket.w}V ${bucket.d}N ${bucket.l}D · ${fmtNum(bucket.points / bucket.matches, 2)} pt/m`
@@ -1022,19 +1032,19 @@ export function GameState({ states }) {
     <div className={s.stack}>
       <div>
         <div className={s.stateBar} aria-hidden="true">
-          <i style={{ width: `${pct(states.minutes.lead)}%` }} />
-          <i style={{ width: `${pct(states.minutes.level)}%` }} />
-          <i style={{ width: `${pct(states.minutes.behind)}%` }} />
+          <i style={{ width: `${pct(minutes?.lead)}%` }} />
+          <i style={{ width: `${pct(minutes?.level)}%` }} />
+          <i style={{ width: `${pct(minutes?.behind)}%` }} />
         </div>
         <div className={s.stateLegend}>
           <span>
-            Mène <b>{fmtNum(pct(states.minutes.lead))} %</b>
+            Mène <b>{share(minutes?.lead)}</b>
           </span>
           <span>
-            Égalité <b>{fmtNum(pct(states.minutes.level))} %</b>
+            Égalité <b>{share(minutes?.level)}</b>
           </span>
           <span>
-            Mené <b>{fmtNum(pct(states.minutes.behind))} %</b>
+            Mené <b>{share(minutes?.behind)}</b>
           </span>
           <span>du temps de jeu</span>
         </div>
@@ -1066,7 +1076,7 @@ export function GameState({ states }) {
           <dd>{states.pointsDropped}</dd>
           <small>{states.collapses.length} avance(s) non conservée(s)</small>
         </div>
-        {states.halves && states.matches > 0 && (
+        {states.halves && (states.halfMatches ?? states.matches) > 0 && (
           <>
             {[
               ["1re mi-temps", states.halves.first],
@@ -1089,8 +1099,8 @@ export function GameState({ states }) {
       <p className={s.note}>
         {states.matches} matchs dont la chronologie des buts est complète.
         {states.halves &&
-          states.matches > 0 &&
-          ` Arrêtés à la pause, ils donneraient ${states.halves.halfTimePoints} points ; le club en a pris ${states.halves.points}.`}
+          (states.halfMatches ?? states.matches) > 0 &&
+          ` Arrêtés à la pause, ${(states.halfMatches ?? states.matches) < states.matches ? `${states.halfMatches} d’entre eux` : "ils"} donneraient ${states.halves.halfTimePoints} points ; le club en a pris ${states.halves.points}.`}
       </p>
     </div>
   );
@@ -1140,18 +1150,23 @@ function TeamShotMap({ shots }) {
         strokeWidth="0.9"
       />
       {[...shots]
+        // Goals on top; the others from the largest xG, a shot without xG last (the smallest).
         .sort(
           (a, b) =>
-            (a.outcome === "goal") - (b.outcome === "goal") || b.xg - a.xg,
+            (a.outcome === "goal") - (b.outcome === "goal") ||
+            (Number.isFinite(b.xg) ? b.xg : -1) -
+              (Number.isFinite(a.xg) ? a.xg : -1),
         )
         .map((shot) => {
           const goal = shot.outcome === "goal";
+          const known = Number.isFinite(shot.xg);
           return (
             <circle
               key={shot.id}
               cx={shot.y}
               cy={shot.x}
-              r={0.4 + Math.sqrt(shot.xg) * 1.7}
+              r={known ? 0.4 + Math.sqrt(Math.max(0, shot.xg)) * 1.7 : 0.4}
+              strokeDasharray={known ? undefined : "0.4 0.3"}
               fill={goal ? "var(--accent)" : "transparent"}
               fillOpacity={goal ? 0.9 : 0}
               stroke={
@@ -1165,7 +1180,7 @@ function TeamShotMap({ shots }) {
               strokeWidth={goal ? 0.25 : 0.2}
             >
               <title>
-                {`${OUTCOME[shot.outcome]} · ${shot.player || ""} ${shot.minute ?? ""}′ · xG ${fmtNum(shot.xg, 2)} · ${shot.situation} · ${shot.opponent}`}
+                {`${OUTCOME[shot.outcome]} · ${shot.player || ""} ${shot.minute ?? ""}′ · ${known ? `xG ${fmtNum(shot.xg, 2)}` : "xG indisponible"} · ${shot.situation} · ${shot.opponent}`}
               </title>
             </circle>
           );
@@ -1180,7 +1195,8 @@ export function ShotPair({
   against = "Tirs concédés",
 }) {
   const near = (list) => list.filter((shot) => shot.x <= 40);
-  const total = (list) => list.reduce((t, shot) => t + shot.xg, 0);
+  // Unknown as soon as one shot of the list has no xG; a known 0 stays 0.
+  const total = (list) => sumKnown(list.map((shot) => shot.xg));
   const goals = (list) => list.filter((shot) => shot.outcome === "goal").length;
   return (
     <div className={s.pitchPair}>
@@ -1469,9 +1485,9 @@ export function LeagueTable({ dossier, sort = "points", compact = false }) {
   const rows = [...dossier.clubs].sort((a, b) =>
     sort === "xpts" ? a.xptsPosition - b.xptsPosition : a.position - b.position,
   );
-  const xgd = (club) =>
-    (club.values.xg ?? 0) * club.rows.length -
-    (club.values.xga ?? 0) * club.rows.length;
+  // Points beside xPts, and xG for beside xG against, on the same matches (club-supported.js).
+  const tone = (value) =>
+    Number.isFinite(value) && value !== 0 ? (value > 0 ? s.up : s.down) : undefined;
   return (
     <div className={s.tableScroll}>
       <table className={s.table}>
@@ -1500,7 +1516,12 @@ export function LeagueTable({ dossier, sort = "points", compact = false }) {
         </thead>
         <tbody>
           {rows.map((club, i) => {
-            const gap = club.record.points - club.xptsTotal;
+            const paired = pairedPoints(club),
+              xg = pairedXg(club);
+            const part = partOf(paired.matches, club.record.matches);
+            const partTitle = part
+              ? `Sur ${part} : xG manquants sur les autres`
+              : undefined;
             return (
               <tr key={club.id} data-self={club.id === dossier.id}>
                 <th scope="row">
@@ -1535,14 +1556,24 @@ export function LeagueTable({ dossier, sort = "points", compact = false }) {
                 </td>
                 <td>{club.record.matches}</td>
                 <td>{club.record.points}</td>
-                <td>{fmtNum(club.xptsTotal, 1)}</td>
-                <td className={gap > 0 ? s.up : gap < 0 ? s.down : undefined}>
-                  {fmtNum(gap, 1, true)}
+                <td title={partTitle}>{fmtNum(paired.expected, 1)}</td>
+                <td className={tone(paired.delta)} title={partTitle}>
+                  {fmtNum(paired.delta, 1, true)}
                 </td>
                 {!compact && (
                   <td>{fmtNum(club.record.gf - club.record.ga, 0, true)}</td>
                 )}
-                {!compact && <td>{fmtNum(xgd(club), 1, true)}</td>}
+                {!compact && (
+                  <td
+                    title={
+                      partOf(xg.matches, club.record.matches)
+                        ? `Sur ${partOf(xg.matches, club.record.matches)}`
+                        : undefined
+                    }
+                  >
+                    {fmtNum(xg.delta, 1, true)}
+                  </td>
+                )}
               </tr>
             );
           })}
@@ -1564,9 +1595,17 @@ export const mixedReferential = (dossier) => {
  * per match (comparable everywhere), with its positions in its own league.
  */
 export function ExpectedGapTable({ dossier }) {
-  const per = (club, value) => value / (club.record.matches || 1);
-  const gap = (club) => per(club, club.record.points - club.xptsTotal);
-  const rows = [...dossier.clubs].sort((a, b) => gap(b) - gap(a));
+  // Per match on the matches whose xPts is known; unknown without one (club-supported.js).
+  const per = (club, key) => {
+    const paired = pairedPoints(club);
+    return paired.matches && Number.isFinite(paired[key])
+      ? paired[key] / paired.matches
+      : null;
+  };
+  const gap = (club) => per(club, "delta");
+  const rows = [...dossier.clubs].sort(
+    (a, b) => (gap(b) ?? -Infinity) - (gap(a) ?? -Infinity),
+  );
   return (
     <div className={s.tableScroll}>
       <table className={s.table}>
@@ -1614,9 +1653,13 @@ export function ExpectedGapTable({ dossier }) {
                     : "—"}
                 </td>
                 <td>{club.record.matches}</td>
-                <td>{fmtNum(per(club, club.record.points), 2)}</td>
-                <td>{fmtNum(per(club, club.xptsTotal), 2)}</td>
-                <td className={g > 0 ? s.up : g < 0 ? s.down : undefined}>
+                <td>{fmtNum(per(club, "actual"), 2)}</td>
+                <td>{fmtNum(per(club, "expected"), 2)}</td>
+                <td
+                  className={
+                    g > 0 ? s.up : g < 0 ? s.down : undefined
+                  }
+                >
                   {fmtNum(g, 2, true)}
                 </td>
               </tr>

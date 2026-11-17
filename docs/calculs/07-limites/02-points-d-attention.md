@@ -4,8 +4,8 @@ En parcourant les calculs pour écrire cette documentation, plusieurs comporteme
 
 ## Clubs
 
-**1. L'écart « points − xPts » mélange deux périmètres.**
-`xptsTotal` ne somme que les matchs où les deux xG sont connus, alors que `record.points` compte tous les matchs. L'écart de la colonne d'identité (`IdentityRail`), de la carte « Résultats et attendus », du classement aux points attendus et du tableau européen (`ExpectedGapTable`) est donc surestimé dès qu'un match n'a pas de xG. La courbe cumulée, elle, n'utilise que les matchs avec xPts. De même, la carte « Résultats et attendus » compare les buts réels de tous les matchs à `xG / match × nombre total de matchs`.
+**1. L'écart « points − xPts » mélangeait deux périmètres (corrigé le 17 novembre 2026, VI-22).**
+`xptsTotal` ne somme que les matchs où les deux xG sont connus, alors que `record.points` compte tous les matchs. La colonne d'identité, la carte « Résultats et attendus », le classement aux points attendus et le tableau européen comparent désormais points et xPts des mêmes matchs ; la carte compare les buts aux xG des matchs où le xG de ce côté est connu, et les totaux (finition, qualité de frappe, gardien) multiplient la moyenne par les seuls matchs qui la portent ([club-supported.js](../../../dashboard/frontend/src/services/club-supported.js)). Une valeur sans aucun match affiche « — », sans flèche.
 → [ClubScoutTabs.jsx](../../../dashboard/frontend/src/components/ClubScoutTabs.jsx#L77), [ClubScoutUI.jsx](../../../dashboard/frontend/src/components/ClubScoutUI.jsx#L1442)
 
 **2. Les indicateurs club hors xG sont calculés sur les seuls matchs avec xG.**

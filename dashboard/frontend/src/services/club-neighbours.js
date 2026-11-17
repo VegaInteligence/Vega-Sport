@@ -28,6 +28,21 @@ export function useClubNeighbours(season, id, league = null) {
   );
 }
 
+/** A neighbour as a club menu item: its country and league beside its name. */
+export function neighbourBrief(club, countryLabel) {
+  return {
+    id: club.id,
+    name: club.name,
+    imageUrl: club.imageUrl ?? null,
+    meta: [
+      club.league?.country && countryLabel(club.league.country),
+      club.league?.name,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  };
+}
+
 /** What a card shows of each neighbour, in the site's club shape. */
 export function neighbourRows(answer) {
   return (answer?.similar || [])

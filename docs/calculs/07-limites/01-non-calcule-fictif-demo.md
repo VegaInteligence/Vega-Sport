@@ -25,4 +25,4 @@ Plus aucune depuis le 16 novembre 2026. Les derniers blocs de maquette (effectif
 
 ## Ancien code non utilisé
 
-[club-analysis.js](../../../dashboard/frontend/src/services/club-analysis.js) exporte encore `clubStyleCohort`, `clubCentile`, `orientedCentile`, `cohortMedian`, `similarClubs` et `headToHead`, qui ne sont appelés par aucune page. Les centiles et la similarité club en vigueur sont ceux de [club-scout.js](../../../dashboard/frontend/src/services/club-scout.js).
+[club-analysis.js](../../../dashboard/frontend/src/services/club-analysis.js) exporte encore `clubStyleCohort`, `clubCentile`, `orientedCentile`, `cohortMedian`, `similarClubs` et `headToHead`, qui ne sont appelés par aucune page. Les centiles club en vigueur sont ceux de [club-scout.js](../../../dashboard/frontend/src/services/club-scout.js) ; la similarité club, celle de la route `/api/teams/{id}/similar` ([04-style-et-similarite](../04-clubs/04-style-et-similarite.md)).

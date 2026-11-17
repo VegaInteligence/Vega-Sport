@@ -4,7 +4,7 @@
 
 `gameStates` dans [club-game-states.js](../../../dashboard/frontend/src/services/club-game-states.js), affiché par `GameState` ([ClubScoutUI.jsx](../../../dashboard/frontend/src/components/ClubScoutUI.jsx#L969)).
 
-**Matchs retenus** : seulement ceux dont la chronologie des buts (tirs `isGoal` + contre son camp) **reproduit exactement le score final**. Un contre son camp compte pour l'équipe adverse du tireur. Les autres matchs sont ignorés, et la page indique combien de matchs ont une chronologie complète.
+**Matchs retenus** : seulement ceux dont la chronologie des buts (tirs `isGoal` + contre son camp) **reproduit exactement le score final** et donne **la minute de chaque but**. Un contre son camp compte pour l'équipe adverse du tireur. Un but sans minute n'est pas un but à la minute 0 : son match n'a pas de chronologie connue (17 novembre 2026, VI-22). Les autres matchs sont ignorés, et la page indique combien de matchs ont une chronologie complète. Sans aucun match retenu, le temps en tête, à égalité et mené est inconnu (« — »), pas 0 %.
 
 Minute d'un but : `minute + minute ajoutée / 100` (90+3 → 90,03), ce qui ordonne correctement les buts du temps additionnel.
 
@@ -16,7 +16,7 @@ Minute d'un but : `minute + minute ajoutée / 100` (90+3 → 90,03), ce qui ordo
 | Points pris après avoir été mené | somme des points des matchs où le club a été mené à un moment et a pris au moins 1 point |
 | Points perdus après avoir mené | somme de `3 − points` des matchs où le club a mené à un moment sans gagner |
 
-| 1re et 2e mi-temps | buts marqués et encaissés dans chaque mi-temps sur ces mêmes matchs, et leur différence ; la mi-temps est celle que donne la source pour le tir, sinon la minute (jusqu'à 45, temps additionnel compris, puis jusqu'à 90) ; un but en prolongation n'appartient à aucune des deux |
+| 1re et 2e mi-temps | buts marqués et encaissés dans chaque mi-temps, et leur différence ; la mi-temps est celle que donne la source pour le tir, sinon la minute (jusqu'à 45, temps additionnel compris, puis jusqu'à 90) ; un but en prolongation n'appartient à aucune des deux. Un but après la 90e sans période de la source peut être du temps additionnel ou de la prolongation : son match sort des mi-temps (`halfMatches` compte ceux qui restent, et la note le dit quand ils sont moins nombreux) |
 | Points à la pause | 3, 1 ou 0 point par match selon le score à la mi-temps, à côté des points réellement pris sur ces matchs |
 
 Un club dont la différence chute en seconde période, ou qui prend moins de points à la fin qu'à la pause, finit moins bien qu'il ne commence ; l'inverse dit un club qui finit fort.

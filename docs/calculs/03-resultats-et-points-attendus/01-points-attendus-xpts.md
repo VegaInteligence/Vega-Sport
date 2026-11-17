@@ -69,7 +69,7 @@ Aujourd'hui **le site n'affiche que les xPts** : `teamRows` ne conserve que `.xp
 | Total xPts d'un club (`xptsTotal`) | somme des xPts des matchs de la compétition |
 | Rang aux points attendus (`xptsPosition`) | clubs triés par `xptsTotal` décroissant ; par match dans un référentiel mixte |
 | Courbe « Points et points attendus » | cumul des points et cumul des xPts, **sur les seuls matchs avec xPts** ; info-bulle : points pris, xPts du match, écart ([ClubScoutUI.jsx](../../../dashboard/frontend/src/components/ClubScoutUI.jsx#L881)) |
-| Écart réel − attendu | `points − xptsTotal` (« +3,2 pts vs attendu ») ; par match dans le tableau européen (`ExpectedGapTable`) |
+| Écart réel − attendu | points et xPts **des mêmes matchs**, ceux dont les xPts sont connus (`pairedPoints`, [club-supported.js](../../../dashboard/frontend/src/services/club-supported.js)) : « +3,2 pts vs attendu », suivi de « sur 9 matchs » quand ils sont moins nombreux que le bilan ; par match dans le tableau européen (`ExpectedGapTable`) ; « — » sans aucun match avec xPts |
 | Classement aux points attendus | même tableau que le championnat, trié par `xptsPosition`, avec flèches ▲ / ▼ quand le rang réel est meilleur / moins bon |
 
 Lecture proposée par le site : un écart positif durable signale une finition ou un gardien au-dessus de la moyenne, ou de la réussite ; ces écarts tendent à se résorber.
@@ -82,4 +82,4 @@ Lecture proposée par le site : un écart positif durable signale une finition o
 
 ## Point d'attention
 
-Les écarts « points − xPts » de la carte d'identité et du tableau de classement soustraient `xptsTotal` (matchs avec xG) aux points de **tous** les matchs. Si des matchs n'ont pas de xG, l'écart est surestimé. Voir [points d'attention](../07-limites/02-points-d-attention.md).
+Depuis le 17 novembre 2026 (VI-22), les écarts « points − xPts » de la carte d'identité, de la carte « Résultats et attendus », du classement aux points attendus et du tableau européen comparent les points et les xPts des mêmes matchs. Avant, ils soustrayaient `xptsTotal` (matchs avec xG) aux points de **tous** les matchs. Le classement garde les points de tous les matchs ; la cellule xPts et l'écart disent, en info-bulle, sur combien de matchs ils reposent.
