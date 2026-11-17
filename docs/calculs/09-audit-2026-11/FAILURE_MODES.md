@@ -1081,7 +1081,7 @@ They gain `status: "finished"`, and their assertions are unchanged.
 - shoot-out goals and misses appended to an ordinary complete 1–1: the four metrics and their supports are unchanged, and the buckets and maps leave them out;
 - an in-match penalty kept.
 
-### 14.5 [P2] Non-finite half xG (126)
+### 14.5 [P2] Non-finite half xG (127)
 
 | ID | Failure |
 |---|---|
@@ -1098,7 +1098,7 @@ They gain `status: "finished"`, and their assertions are unchanged.
 - all halves invalid: no aggregate row;
 - the structural zero, the finite zero-shot xG, and a non-finite zero-shot xG.
 
-### 14.6 [P3] One xPts law per row (127)
+### 14.6 [P3] One xPts law per row (128)
 
 | ID | Failure |
 |---|---|

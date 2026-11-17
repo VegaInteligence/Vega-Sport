@@ -95,7 +95,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026, et les corrections de l'aud
 | Accueil (semaine, sélections, meneurs) | [home-insights.js](../../dashboard/frontend/src/services/home-insights.js), [home.mjs](../../backend/api/src/routes/home.mjs) |
 | Classements dérivés et zones | [competition-standings.js](../../dashboard/frontend/src/services/competition-standings.js), [standings-zones.js](../../dashboard/frontend/src/services/standings-zones.js), [nations-standings.js](../../dashboard/frontend/src/services/nations-standings.js) |
 | Lecture des données fournisseur | build_dashboard_data.py (ancien backend, supprimé le 10 novembre 2026) |
-| Agrégats saison côté base | 025_player_season_rollups.sql (ancien backend, supprimé le 10 novembre 2026), [performance.mjs](../../backend/api/src/routes/performance.mjs), [calculator.py](../../backend/vega/calculator.py), migrations 125–128 |
+| Agrégats saison côté base | 025_player_season_rollups.sql (ancien backend, supprimé le 10 novembre 2026), [performance.mjs](../../backend/api/src/routes/performance.mjs), [calculator.py](../../backend/vega/calculator.py), migrations 126–129 |
 | Indicateurs club du serveur (version 2) | [club_indicators.py](../../backend/vega/club_indicators.py) |
 | Évaluation datée du xG de Vega | [evaluate_xg.py](../../backend/tools/evaluate_xg.py) |
 
