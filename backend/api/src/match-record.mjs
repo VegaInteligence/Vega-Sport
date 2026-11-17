@@ -18,7 +18,7 @@ const SHOT_FIELDS = `'id',x.id,'playerId',api.public_id('player',x.player_id),'p
 // `season`: the SQL of the season's id when the read knows it (a bound parameter). The
 // details are season-partitioned: a constant prunes the other seasons when the query is
 // planned, the match row's own season only when it runs, after planning them all.
-// `scoring`: each side's own goals for and penalty attempts (130, api.match_scoring), for the reads
+// `scoring`: each side's own goals for and penalty attempts (132, api.match_scoring), for the reads
 // a club profile ranks clubs with (actors.mjs); a record read without it carries neither field.
 export const matchRecordColumns = ({ shots = true, players = true, teamStats = true, scoring = false, season = "f.season_id" } = {}) => `row_to_json(f) AS fixture,
  ${scoring ? `${scoringColumn(season, "f.match_id")},` : ""}
@@ -35,7 +35,7 @@ export const matchRecordColumns = ({ shots = true, players = true, teamStats = t
  f.referee AS referee,
  f.stadium AS stadium`;
 
-/** The SQL column of a match's scoring (130, api.match_scoring): its row, or NULL (no row: the match
+/** The SQL column of a match's scoring (132, api.match_scoring): its row, or NULL (no row: the match
  * is not finished). One correlated read of the view per match. */
 export const scoringColumn = (season, match) =>
   `(SELECT row_to_json(v) FROM api.match_scoring v WHERE v.season_id=${season} AND v.match_id=${match}) scoring`;

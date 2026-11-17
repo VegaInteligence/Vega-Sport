@@ -51,7 +51,7 @@ Le profil club calcule 46 indicateurs, définis dans l'objet `METRICS` de [club-
 | xG cadrés (xGOT) / match | moyenne de xGOT | + |
 | Qualité de frappe (xGOT − xG) / match | moyenne de `xGOT − xG` du club, sur les matchs qui connaissent ces deux termes (le xG adverse n'est pas lu) | + |
 
-**Penalties et contre son camp.** Ils sont établis, jamais déduits (audit 15e, 15f), par une seule vue que lisent le calculateur et l'API (`agg.match_scoring`, migration 130 ; étape 8 du 17 novembre 2026) :
+**Penalties et contre son camp.** Ils sont établis, jamais déduits (audit 15e, 15f), par une seule vue que lisent le calculateur et l'API (`agg.match_scoring`, migration 132 ; étape 8 du 17 novembre 2026) :
 - les **contre son camp** d'un match se lisent sur ses événements de but (hors séance de tirs au but), quand ils ont été lus : chacun porte son indicateur « contre son camp » et l'équipe créditée du but, et ils redonnent exactement le score de chaque camp. Le score courant de l'événement n'est pas lu : la source l'enregistre tantôt après le but, tantôt avant. Sinon, les deux camps sont inconnus. Un 0–0 dont les événements ont été lus classe 0 et 0 ;
 - les **penalties tentés** d'un camp se comptent sur la liste de tirs complète du match, réconciliée avec ses statistiques (les tirs de chaque camp hors contre son camp), son score (le tir d'un contre son camp porte l'équipe de son auteur et compte pour l'autre camp) et ces contre son camp ; chaque tir du camp a une situation. Sinon, le nombre est inconnu et le match sort de « xG par tir » : un xG égal au npxG ne prouve aucun penalty manqué.
 
@@ -123,7 +123,7 @@ L'**ajustement à la possession** ramène le volume défensif à une possession 
 
 ## Côté serveur
 
-Les centiles des clubs de la base (`agg.team_percentiles`, que lit la similarité des clubs) et la saison publiée (`api.team_season`) suivent les mêmes règles depuis le 17 novembre 2026 ([club_indicators.py](../../../backend/vega/club_indicators.py), version `club-indicators-v2` ; migration 129 ; nouveau relevé N1) :
+Les centiles des clubs de la base (`agg.team_percentiles`, que lit la similarité des clubs) et la saison publiée (`api.team_season`) suivent les mêmes règles depuis le 17 novembre 2026 ([club_indicators.py](../../../backend/vega/club_indicators.py), version `club-indicators-v2` ; migration 131 ; nouveau relevé N1) :
 - chaque indicateur compte les matchs sur lesquels il repose (`covered_matches`), au lieu de tous les matchs du club : un axe connu sur 3 matchs sur 8 ne passe plus un seuil de 5 ;
 - 13 indicateurs lisent un support apparié, rempli par le calcul des saisons (`pair_*` de `agg.team_season_stats`) : xG par tir, tirs dans la surface, finition, gardien, conversion, territoire, part des ballons dans les surfaces, jeu long, PPDA, actions défensives ajustées, duels, duels aériens, part des CPA. Les 33 autres gardent leur formule ;
 - les penalties se comptent sur la liste `core.shots` complète et réconciliée du match (couverture des tirs `ok`, séance de tirs au but exclue) ; les contre son camp, sur ses événements de but (couverture `ok`) lus dans l'ordre du score, chacun montant le score d'un camp d'un but jusqu'au score final, chaque but portant son indicateur de contre son camp ;
