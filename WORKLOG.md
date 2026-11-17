@@ -59,10 +59,11 @@
   - Forecasts for every competition (b348bd64d3): every match to play between rated teams, whatever the source; open-matchday's leagues projected; stale cup-source fixtures (Libertadores 2026 file stopped in August) skipped.
   - Nations League's transitional season (03070e2c13, migration 126): leagues A–D replayed together with 2026–27's rules (best/worst thirds and fourths of A, B/C play-offs, D all up, league in 2028–29), the real draw followed once made (20 Nov), the access list as last tie-break (no cards in the sources); League A's « Barrage » / « Relégation » columns corrected to these rules.
   - Production, read-only with the deployed code: migration 126 applied; 2,050 complementary matches to forecast; 17 complementary leagues projected; the Nations League's totals exact (18 per league). Evidence: scratchpad 41a8837f…/evidence.
-  - Mockup sent for the new displays (scratchpad 41a8837f…/mock/mock-predictions*.png): League A extra columns (Maintien, En A 2028–29), Leagues B–D outcomes and 2028–29 league, forecasts in every competition's match list. Waiting for validation.
+  - Mockup validated (« Yes, implement », scratchpad 41a8837f…/mock/mock-predictions*.png) and shipped (dd640008dc, migration 127): each upcoming match's forecast in the cup lists (bar + three shares; API by match id), League A's Maintien and En A 2028–29, Leagues B–D's outcomes and 2028–29 league; a complementary league's projection tab. Local E2E against a stand-in API with read-only production figures: scratchpad 41a8837f…/evidence/allcomp.
+  - Found: the 19 open-matchday leagues have no page on the site (the catalogue lists cups only); their forecasts and projections are served but not shown. A league page needs its own mockup (standings, no bracket).
 - Not covered yet, by data: Euro 2028 (teams unknown), MLS/Liga MX play-offs (the source names « 2nd ranked »), Libertadores 2026 (source stopped).
 - Next action:
-  - once the mockup is validated: serve each match's forecast in the cup and complementary league reads, then the displays;
+  - ask the user about pages for the 19 open-matchday leagues (mockup first);
   - production numbers after the worker's next daily pass (the projections and the new Elo);
   - after 21:30 UTC, verify the merges.
 
