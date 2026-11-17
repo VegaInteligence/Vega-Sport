@@ -38,6 +38,7 @@ test("cup view identifies the edition and preserves penalty shootouts", async ()
     // The domestic cups' projection (124): none in these cups.
     "./SeasonProjection.jsx": { __esModule: true, default: () => null },
     "../services/cup-projection.js": { useCupProjection: () => null },
+    "./Hint.jsx": { Term: ({ children }) => children },
     "../services/forecasts.js": { share: (v) => `${Math.round(v * 100)} %` },
   };
   const filename = path.join(root, "dashboard/frontend/src/components/CupCompetition.jsx");

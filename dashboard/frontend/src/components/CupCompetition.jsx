@@ -7,7 +7,7 @@ import KnockoutBracket from "./KnockoutBracket.jsx";
 import { useResource } from "../services/resources.js";
 import { cupTable } from "../services/catalog-client.js";
 import { competitionCountryLabel } from "../services/competition-selector.js";
-import { normalizeOpenCup, normalizeSupplementalCup, filterCupMatches, resultsAsOpenCup } from "../services/cup-matches.js";
+import { normalizeOpenCup, normalizeSupplementalCup, filterCupMatches, resultsAsOpenCup, leagueTable } from "../services/cup-matches.js";
 import { combineCupLegs, knockoutStage } from "../services/knockout-bracket.js";
 import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, isGermanCupSeason } from "../services/cup-archives.js";
@@ -15,6 +15,7 @@ import NationalFlag from "./NationalFlag.jsx";
 import SeasonProjection from "./SeasonProjection.jsx";
 import { useCupProjection } from "../services/cup-projection.js";
 import { share } from "../services/forecasts.js";
+import { Term } from "./Hint.jsx";
 
 function editionLabel(competition, season) {
   return competition.sourceKey === "euro" && season === "2020" ? "2020 (joué en 2021)" : season;
@@ -28,6 +29,20 @@ function CupMatchForecast({ match }) {
       <span className="cup-match-forecast-shares">{parts.map(([name, value, side]) => <b key={side} data-side={side}>{share(value)}</b>)}</span>
     </div>
   );
+}
+/** A complementary league's standings, from the results its source gives (VI-19). */
+function LeagueStandings({ name, matches }) {
+  const rows = useMemo(() => leagueTable(matches), [matches]);
+  if (!rows.length) return <Empty>Aucun résultat disponible pour cette édition.</Empty>;
+  return <>
+    <div className="table-scroll" role="region" aria-label={"Classement de la " + name} tabIndex={0}>
+      <table className="data-table nations-table" aria-label={"Classement de la " + name}>
+        <thead><tr><th scope="col">#</th><th scope="col"><Term>Équipe</Term></th><th scope="col"><Term>J</Term></th><th scope="col"><Term>G</Term></th><th scope="col"><Term>N</Term></th><th scope="col"><Term>D</Term></th><th scope="col"><Term>BP</Term></th><th scope="col"><Term>BC</Term></th><th scope="col"><Term>Diff.</Term></th><th scope="col"><Term>Pts</Term></th></tr></thead>
+        <tbody>{rows.map((row) => <tr key={row.name}><td>{row.position}</td><th scope="row"><span className="cup-match-team">{row.name}</span></th><td>{row.played}</td><td>{row.wins}</td><td>{row.draws}</td><td>{row.losses}</td><td>{row.goalsFor}</td><td>{row.goalsAgainst}</td><td>{row.difference > 0 ? "+" : ""}{row.difference}</td><td><strong>{row.points}</strong></td></tr>)}</tbody>
+      </table>
+    </div>
+    <p className="nations-note">Classement calculé à partir des résultats disponibles.</p>
+  </>;
 }
 function CupMatch({ match, nationalTeams, season }) {
   return (
@@ -51,8 +66,10 @@ export default function CupCompetition({ competition, initialSeason }) {
         competition.seasons?.find((value) => String(value) === initialSeason || seasonLabel(value) === initialSeason)) ||
       competition.defaultSeason,
   );
-  const [view, setView] = useState("matches");
-  const supportsBracket = competition.source === "openfootball" || competition.source === "open-matchday";
+  // A complementary league (VI-19): its standings first, its matches, its projection; no bracket.
+  const league = competition.kind === "league";
+  const [view, setView] = useState(league ? "standings" : "matches");
+  const supportsBracket = !league && (competition.source === "openfootball" || competition.source === "open-matchday");
   const nationalTeams = ["euro", "world-cup-history", "afcon", "copa-america", "asian-cup", "gold-cup"].includes(competition.sourceKey);
   const archive = NATIONAL_CUP_ARCHIVES[competition.folder];
   const germany = competition.folder === GERMAN_CUP_FOLDER;
@@ -100,6 +117,7 @@ export default function CupCompetition({ competition, initialSeason }) {
           </select>
         </label>
         {supportsBracket && <Segments label="Vue de la compétition" value={view} onChange={setView} items={[["matches", "Matchs"], ["bracket", "Tableau"], ...(projected ? [["projection", "Projection"]] : [])]} />}
+        {league && <Segments label="Vue de la compétition" value={view} onChange={setView} items={[["standings", "Classement"], ["matches", "Matchs"], ...(projected ? [["projection", "Projection"]] : [])]} />}
         {view === "matches" && <>
           <Segments label="Vue des matchs" value={status} onChange={(next) => { setStatus(next); setPage(1); }} items={[["finished", "Résultats"], ["scheduled", "À venir"], ["all", "Tous"]]} />
           <input type="search" aria-label="Rechercher une équipe dans la coupe" placeholder="Rechercher une équipe…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />
@@ -111,7 +129,7 @@ export default function CupCompetition({ competition, initialSeason }) {
       <AsyncState resource={resource}>
         {(value) => value.unavailable ? <div className="cup-bracket-unavailable"><Empty>Les tours de cette édition ne sont pas disponibles.</Empty>{archive && season !== archive.season && <button className="button button-secondary" onClick={() => setSeason(archive.season)}>Voir le tableau {archive.season}</button>}</div> : <>
           {value.matches.some((match) => match.status === "scheduled" && match.date && match.date < parisDay(Date.now())) && <p className="cup-source">Certains scores de cette édition ne sont pas encore renseignés.</p>}
-          {view === "bracket" ? <KnockoutBracket matches={value.matches} nationalTeams={nationalTeams} season={season} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} />}
+          {view === "bracket" ? <KnockoutBracket matches={value.matches} nationalTeams={nationalTeams} season={season} /> : view === "standings" ? <LeagueStandings name={competition.name} matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} />}
         </>}
       </AsyncState>
       </>}

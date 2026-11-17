@@ -60,6 +60,55 @@ export function competitionSearchText(competition, countryName = "") {
   return normalizeCompetitionQuery([competition.name, competition.country, countryName, ...aliases].filter(Boolean).join(" "));
 }
 
+// The complementary leagues (open-matchday's leagues PitchAPI has not), by folder: their name on the site, then other names.
+const LEAGUE_LABELS = {
+  "BEL_U21_pro-league": ["Pro League U21", "Belgian Pro League U21"],
+  "CYP_1_first-division": ["Championnat de Chypre", "Cyprus League", "Cypriot First Division"],
+  "ENG_5_national-league": ["National League", "Vanarama National League"],
+  "ENG_6_national-league-north": ["National League North"],
+  "ENG_6_national-league-south": ["National League South"],
+  "ENG_7_northern-premier-league": ["Northern Premier League"],
+  "IRE_2_first-division": ["First Division irlandaise", "League of Ireland First Division"],
+  "IRE_3_national-league": ["National League irlandaise", "League of Ireland National League"],
+  "KAZ_1_premier-league": ["Premier League du Kazakhstan", "Kazakhstan Premier League"],
+  "POL_2_division-1": ["I Liga", "Pologne deuxième division"],
+  "POL_3_division-2": ["II Liga", "Pologne troisième division"],
+  "SCO_2_championship": ["Championship écossais", "Scottish Championship"],
+  "SCO_3_league-one": ["League One écossaise", "Scottish League One"],
+  "SCO_4_league-two": ["League Two écossaise", "Scottish League Two"],
+  "SVN_1_prva-liga": ["Prva Liga", "Championnat de Slovénie"],
+  "UKR_1_premier-league": ["Premier League ukrainienne", "Ukrainian Premier League"],
+  "WAL_1_cymru-premier": ["Cymru Premier", "Championnat du pays de Galles"],
+  "WAL_2_cymru-north": ["Cymru North"],
+  "WAL_3_cymru-south": ["Cymru South"],
+};
+// The source's country codes the site names otherwise (Ireland).
+const COUNTRY_CODES = { IRE: "IRL" };
+
+/**
+ * The complementary leagues (VI-19, the user on 17 Nov 2026): every league folder of open-matchday with a match
+ * collected, a page of its own like the cups. A league the main source already lists (same name, same country: a copy)
+ * is left out, never listed twice.
+ */
+export function supplementalLeagueCatalog(index, native = []) {
+  if (!Array.isArray(index?.competitions)) return [];
+  const held = new Set((native || []).map((c) => normalizeText(c.name || "") + "|" + (c.country || "")));
+  return index.competitions.flatMap((item) => {
+    if (!/^[A-Z]{3}_[A-Z0-9]+_[a-z0-9-]+$/i.test(item.folder || "") || /_CUP_/i.test(item.folder)) return [];
+    if (!(Number(item.tables?.results?.rows) > 0 || Number(item.tables?.fixtures?.rows) > 0)) return [];
+    const season = /^\d{4}\/\d{4}$/.test(item.season || "") ? item.season : "";
+    if (!season) return [];
+    const code = item.country_code || item.folder.split("_")[0];
+    const country = COUNTRY_CODES[code] || code;
+    if (held.has(normalizeText(item.name || "") + "|" + country) || held.has(normalizeText(item.name || "") + "|" + code)) return [];
+    const labels = LEAGUE_LABELS[item.folder] || [item.name || item.folder];
+    const editions = [season, ...Object.keys(item.editions || {}).filter((value) => /^\d{4}\/\d{4}$/.test(value))];
+    return [{ id: "open-matchday:" + item.folder, name: labels[0], country, source: "open-matchday", kind: "league", folder: item.folder,
+      seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...new Set([...labels.slice(1), item.name || ""])].filter(Boolean),
+      tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null }];
+  });
+}
+
 /** Native provider IDs remain authoritative; no two sources are merged by name. */
 export function mergeCupCatalog(nativeCompetitions, supplementalIndex, workerNative = []) {
   const pending = new Map((workerNative || []).filter((item) => /^l_[A-Za-z0-9]{6}$/.test(item.id || "")).map((item) => [item.id, item]));
@@ -71,6 +120,6 @@ export function mergeCupCatalog(nativeCompetitions, supplementalIndex, workerNat
   native.push(...[...pending.values()].map((competition) => ({ ...competition, cupWorker: true })));
   const ids = new Set(native.map((competition) => competition.id));
   const world = ids.has(WORLD_CUP_ID) ? [] : [WORLD_CUP_FALLBACK];
-  const extras = supplementalCupCatalog(supplementalIndex);
+  const extras = [...supplementalCupCatalog(supplementalIndex), ...supplementalLeagueCatalog(supplementalIndex, nativeCompetitions)];
   return [...native, ...world, ...OPEN_CUP_CATALOG, ...extras.filter((cup) => !ids.has(cup.id))].map(withLogo);
 }

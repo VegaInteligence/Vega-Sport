@@ -208,7 +208,8 @@ test("the Euro results list also displays flags for both national teams", async 
       // The domestic cups' projection (124): none in these cups.
       "./SeasonProjection.jsx": { __esModule: true, default: () => null },
       "../services/cup-projection.js": { useCupProjection: () => null },
-      "../services/forecasts.js": { share: (v) => `${Math.round(v * 100)} %` },
+      "./Hint.jsx": { Term: ({ children }) => children },
+    "../services/forecasts.js": { share: (v) => `${Math.round(v * 100)} %` },
       "../services/cup-archives.js": cupArchives,
     },
   );

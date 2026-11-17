@@ -63,6 +63,7 @@ test("an upcoming match shows its forecast in the list, a played one its score",
     "../services/cup-archives.js": { NATIONAL_CUP_ARCHIVES: {}, GERMAN_CUP_FOLDER: "GER_CUP_dfb-pokal", isGermanCupSeason: () => false },
     "./SeasonProjection.jsx": { __esModule: true, default: () => null },
     "../services/cup-projection.js": { useCupProjection: () => null },
+    "./Hint.jsx": { Term: ({ children }) => children },
     "../services/forecasts.js": forecasts,
   };
   const filename = path.join(root, "dashboard/frontend/src/components/CupCompetition.jsx");
@@ -104,6 +105,7 @@ test("a complementary league's projection has its tab, as a league's", async () 
     "../services/cup-archives.js": { NATIONAL_CUP_ARCHIVES: {}, GERMAN_CUP_FOLDER: "GER_CUP_dfb-pokal", isGermanCupSeason: () => false },
     "./SeasonProjection.jsx": { __esModule: true, default: () => null },
     "../services/cup-projection.js": { useCupProjection: () => projection },
+    "./Hint.jsx": { Term: ({ children }) => children },
     "../services/forecasts.js": { share: String },
   };
   const filename = path.join(root, "dashboard/frontend/src/components/CupCompetition.jsx");
