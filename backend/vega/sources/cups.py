@@ -112,9 +112,9 @@ def _team(conn, provider, key, name):
     row = conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type='team' AND provider=%s AND provider_key=%s", (provider, key)).fetchone()
     if row:
         if name:
-            # A team merged into a PitchAPI one keeps PitchAPI's name; the source's spelling
-            # is a name of that source (identity.py).
-            if conn.execute("SELECT 1 FROM core.provider_ids WHERE entity_type='team' AND entity_id=%s AND provider='pitchapi'", (row[0],)).fetchone():
+            # A team another source also holds (PitchAPI's, or a nation two cup sources share) keeps
+            # its name; the source's spelling is a name of that source (identity.py).
+            if conn.execute("SELECT 1 FROM core.provider_ids WHERE entity_type='team' AND entity_id=%s AND provider<>%s", (row[0], provider)).fetchone():
                 from .identity import spelling_row
 
                 spelling_row(conn, row[0], provider, name)  # a name of that source (search)

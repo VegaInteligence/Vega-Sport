@@ -8,6 +8,10 @@ import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { nationsStandings } from "../services/nations-standings.js";
 import NationalFlag from "./NationalFlag.jsx";
 import { Term } from "./Hint.jsx";
+import { Heat } from "./SeasonProjection.jsx";
+import { nationsProjectionRows, useNationsProjection } from "../services/nations-projection.js";
+import { nationName } from "../services/nations.js";
+import { number } from "../services/format.js";
 
 function Groups({ matches }) {
   const groups = useMemo(() => nationsStandings(matches), [matches]);
@@ -24,18 +28,39 @@ function Groups({ matches }) {
     <p className="nations-note">Classements calculés à partir des résultats disponibles.{groups.some((group) => group.unresolved) ? " Les derniers critères de départage ne sont pas connus." : ""}</p>
   </>;
 }
+/** The league's groups replayed to their end (125): each nation's chance of each place, and League A's Final Four. */
+function Projection({ projection, league }) {
+  const { rows, columns } = nationsProjectionRows(projection, league);
+  return <>
+    <div className="table-scroll standings-scroll" role="region" aria-label="Projection de la Ligue des nations" tabIndex={0}>
+      <table className="data-table standings-table season-projection nations-projection">
+        <caption className="sr-only">Chances de chaque sélection</caption>
+        <thead><tr><th scope="col">#</th><th scope="col"><Term>Sélection</Term></th><th scope="col" title="Groupe">Gr.</th><th scope="col" title="Points actuels"><Term>Pts</Term></th><th scope="col" title="Matchs joués"><Term>J</Term></th>
+          {columns.map((column, i) => <th key={column.key} scope="col" title={column.title} className="projection-group" data-first={i === 0 || column.key === "sf" || undefined}>{column.label}{column.range && <small>{column.range}</small>}</th>)}</tr></thead>
+        <tbody>{rows.map((row, index) => {
+          const start = league !== "A" && rows[index - 1]?.group !== row.group, rank = league === "A" ? index + 1 : index - rows.findIndex((r) => r.group === row.group) + 1;
+          return <tr key={row.id} data-group-start={start || undefined}><td>{rank}</td><th scope="row"><span className="national-team"><NationalFlag name={row.name} season="2026/2027" />{nationName(row.name)}</span></th><td>{String(row.group).replace(/^[A-D]/, "")}</td><td className="standings-points">{row.points}</td><td>{row.played}</td>
+            {columns.map((column, i) => <Heat key={column.key} value={row.stages[column.key]} tone={column.tone} first={i === 0 || column.key === "sf"} />)}</tr>;
+        })}</tbody>
+      </table>
+    </div>
+    <p className="standings-note">Les matchs restants sont rejoués {number(projection.model?.replays || 0)} fois d’après la force de chaque sélection (son Elo), avec le départage UEFA (confrontations directes d’abord).{league === "A" ? " Quarts tirés au hasard entre premiers et deuxièmes de groupes différents, en aller-retour ; Final Four sur terrain neutre ; une prolongation vaut un tiers de match et les tirs au but sont à 50/50." : ""}</p>
+  </>;
+}
 export default function NationsCompetition({ competition }) {
   const [league, setLeague] = useState("A"), [view, setView] = useState("standings"), [status, setStatus] = useState("finished"), [query, setQuery] = useState(""), [page, setPage] = useState(1);
   const leagueA = useResource("nations-league-a:2026/2027", () => cupWorkerSnapshot("openligadb", "nations-league", "2026/2027", "/api/openligadb?competition=nations-league&season=2026%2F2027"), league === "A");
   const otherLeagues = useResource("nations-league-other:2026/2027", () => cupWorkerSnapshot("nations-results", "nations-league", "2026/2027", "/api/nations-results?season=2026%2F2027"), league !== "A");
   const resource = league === "A" ? leagueA : otherLeagues;
+  const projection = useNationsProjection(league, "2026/2027"), projected = nationsProjectionRows(projection, league).rows.length > 0;
+  const shown = view === "projection" && !projected ? "standings" : view;
   const chooseLeague = (next) => { setLeague(next); if (view === "bracket" && next !== "A") setView("standings"); setPage(1); };
   return <Card className="cup-detail nations-detail" title={<span className="competition-detail-title"><span><strong>{competition.name}</strong><small>2026/2027</small></span></span>}>
     <div className="nations-league-switch"><span>Ligue</span><Segments label="Ligue" value={league} onChange={chooseLeague} items={[["A", "A"], ["B", "B"], ["C", "C"], ["D", "D"]]} /></div>
-    <div className="cup-controls"><Segments label="Vue de la compétition" value={view} onChange={setView} items={[["standings", "Classements"], ["matches", "Matchs"], ...(league === "A" ? [["bracket", "Tableau"]] : [])]} />
-      {view === "matches" && <><Segments label="Vue des matchs" value={status} onChange={(next) => { setStatus(next); setPage(1); }} items={[["finished", "Résultats"], ["scheduled", "À venir"], ["all", "Tous"]]} /><input type="search" aria-label="Rechercher une sélection" placeholder="Rechercher une sélection…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></>}
+    <div className="cup-controls"><Segments label="Vue de la compétition" value={shown} onChange={setView} items={[["standings", "Classements"], ["matches", "Matchs"], ...(league === "A" ? [["bracket", "Tableau"]] : []), ...(projected ? [["projection", "Projection"]] : [])]} />
+      {shown === "matches" && <><Segments label="Vue des matchs" value={status} onChange={(next) => { setStatus(next); setPage(1); }} items={[["finished", "Résultats"], ["scheduled", "À venir"], ["all", "Tous"]]} /><input type="search" aria-label="Rechercher une sélection" placeholder="Rechercher une sélection…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></>}
     </div>
     {league !== "A" && <p className="cup-source">Résultats disponibles ; les rencontres à venir ne sont pas fournies pour cette ligue.</p>}
-    <AsyncState resource={resource}>{(value) => { const matches = league === "A" ? value.matches : value.matches.filter((match) => match.league === league); return view === "standings" ? <Groups matches={matches} /> : view === "matches" ? <CupMatchList matches={matches} status={status} query={query} page={page} onPage={setPage} nationalTeams season="2026/2027" /> : <KnockoutBracket matches={matches} nationalTeams season="2026/2027" />; }}</AsyncState>
+    <AsyncState resource={resource}>{(value) => { const matches = league === "A" ? value.matches : value.matches.filter((match) => match.league === league); return shown === "projection" ? <Projection projection={projection} league={league} /> : shown === "standings" ? <Groups matches={matches} /> : shown === "matches" ? <CupMatchList matches={matches} status={status} query={query} page={page} onPage={setPage} nationalTeams season="2026/2027" /> : <KnockoutBracket matches={matches} nationalTeams season="2026/2027" />; }}</AsyncState>
   </Card>;
 }

@@ -249,6 +249,38 @@ Comme pour les coupes européennes, une prolongation vaut un tiers de match et l
 
 La Coupe d'Italie attend la fusion de trois de ses clubs.
 
+## La projection de la Ligue des nations (17 novembre 2026)
+
+Code : `nations_projections`, `simulate_nations` et `uefa_order` dans [forecast.py](../../../backend/vega/forecast.py), places de groupe dans `agg.cup_stage_odds` et vue `api.cup_team_groups` (migration 125), route `/api/forecasts/season` (`format: "nations"`). Sur le site : l'onglet « Projection » de la Ligue des nations, ligue par ligue.
+
+**Quelles éditions.** La Ligue A (lue chez OpenLigaDB) et les Ligues B à D (lues chez International Results), à partir de 2026/2027. Chaque groupe se joue en aller-retour : une manche ni jouée ni annoncée est un match qui reste à jouer (International Results ne donne pas les matchs à venir). Une édition dont une sélection n'a pas d'Elo attend, comme une coupe.
+
+**Le calcul.** Les matchs restants sont rejoués 1 000 fois d'après l'Elo de chaque sélection ; sa force peut bouger jusqu'au 30 juin (90 points × √(part de l'année qui reste)). Chaque groupe est classé comme l'UEFA le fait, et comme le classement du site :
+
+1. les points ;
+2. entre sélections à égalité : points, différence de buts et buts de leurs matchs entre elles, repris entre celles qui restent à égalité ;
+3. puis différence de buts, buts, buts à l'extérieur, victoires et victoires à l'extérieur sur tout le groupe ;
+4. une égalité qui reste est tirée au sort.
+
+**Ligue A.** Les deux premiers de chaque groupe jouent les quarts : chaque premier contre un deuxième d'un autre groupe tiré au hasard, en aller-retour, le premier recevant au retour. Le Final Four se joue en un match sur terrain neutre. Comme pour les coupes, une prolongation vaut un tiers de match et les tirs au but se jouent à 50/50. Le site montre, par sélection : quarts (1ᵉʳ ou 2ᵉ), barrage (3ᵉ), relégation (4ᵉ), Final Four, finale et victoire.
+
+**Ligues B à D.** Le site montre la chance de chaque place du groupe. Les groupes de la Ligue D comptent trois sélections : pas de 4ᵉ place.
+
+**Ce qui n'est pas modélisé :**
+
+- le tirage réel des quarts une fois fait : les quarts restent tirés au hasard ;
+- les barrages de promotion et de relégation de mars, et la montée ou la descente qui en dépend ;
+- le fair-play et le coefficient UEFA, derniers critères de départage.
+
+**Premier calcul.** Fait en local avec le code du worker sur les données lues le 17 novembre (lecture seule), 4 000 tirages :
+
+| Ligue | Ce qui ressort |
+|---|---|
+| A | Vainqueur : Espagne 26 %, Angleterre 23 %, France 18 %. Dernière place qualificative : Danemark 68 %, Norvège 32 %. |
+| B | 1ᵉʳ de groupe : Suisse 96 %, Autriche 73 %, Suède 69 %, Irlande du Nord 58 %. |
+
+Contrôle : sur la Ligue A, les parts somment à 8 quarts de finaliste, 4 demi-finalistes, 2 finalistes et 1 vainqueur ; sur les Ligues B à D, à une sélection par place et par groupe.
+
 ## Minute par minute
 
 La fiche d'un match joué trace « Probabilité de victoire » : les chances de victoire, de nul et de défaite minute par minute ([inplay.py](../../../backend/vega/inplay.py), `/api/forecasts/live`).

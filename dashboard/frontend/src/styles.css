@@ -2905,6 +2905,10 @@ th[aria-sort="descending"] .sort-indicator {
   color: var(--muted);
   font-size: var(--text-xs);
 }
+/* The Nations League's projection: leagues B to D, group by group. */
+.nations-projection tr[data-group-start]:not(:first-child) > * {
+  border-top: 1px solid var(--border);
+}
 
 /* Skeleton lines: the shape of what is loading, never a spinner or a « Chargement… » text. */
 .skeleton-line {
