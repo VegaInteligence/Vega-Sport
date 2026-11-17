@@ -36,11 +36,13 @@ Toutes les phrases portent sur le même joueur et la même cohorte que le reste 
 
 ### 3. Production
 
-> Production : *a* but et *b* passe décisive par 90 min, note moyenne *n*.
+> Production : *a* but et *b* passe décisive par 90 min, note Vega *n* sur 100.
 
 - **Buts et passes décisives par 90** : `90 × total ÷ minutes des matchs où la mesure est renseignée` (`seasonMetric`, [season-player.js](../../../dashboard/frontend/src/services/season-player.js#L301)), deux décimales. Pas de centile ici, donc pas de règle de couverture complète ni de seuil de minutes.
-- **Note moyenne** : moyenne **simple** des notes de match, sans pondération par les minutes (voir [Note du match](../02-metriques-attendues/04-note-du-match.md)). Le morceau disparaît si aucun match n'est noté.
+- **Note Vega** : la note du z moyen des matchs de 20 minutes ou plus, pondéré par leurs minutes, la même partout sur le site (voir [Note du match](../02-metriques-attendues/04-note-du-match.md) et [Agrégation](01-agregation-saison.md#note-saison)) ; la moyenne simple des notes du fournisseur a été retirée le 15 novembre 2026. Le morceau disparaît si aucun match n'est noté.
+- **Matchs lus** : les matchs terminés seulement ; un match annulé, en cours ou à venir n'entre ni dans les taux, ni dans la note (17 novembre 2026, étape 5).
 - **Absent** : si ni les buts ni les passes décisives ne sont renseignés sur aucun match.
+- **Un taux inconnu n'est pas écrit** : la phrase ne cite que les taux connus, jamais « 0,00 » pour une valeur absente (audit N8, corrigé le 17 novembre 2026, [PlayerScoutOverview.jsx](../../../dashboard/frontend/src/components/PlayerScoutOverview.jsx)). Buts 0,69 par 90, passes décisives jamais renseignées, note 48 : « Production : 0,69 but par 90 min, note Vega 48 sur 100. » (la version précédente écrivait « 0,69 but et 0,00 passe décisive »).
 
 ### 4. Point de vigilance
 

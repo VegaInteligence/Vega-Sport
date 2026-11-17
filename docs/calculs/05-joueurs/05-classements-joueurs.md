@@ -9,16 +9,16 @@
 | Meilleures notes | note saison connue et **au moins 5 matchs notés** | note ↓, puis nombre de matchs notés ↓, puis nom |
 | Buteurs | buts > 0 | buts ↓, puis xG ↓ |
 | Passeurs | passes décisives > 0 | passes décisives ↓, puis xA ↓ |
-| Efficaces | **buts ≥ 4** et xG connu | `buts − xG` ↓ |
-| Maladroits | **xG ≥ 3** et buts connus | `buts − xG` ↑ |
+| Efficaces | **buts ≥ 4** sur les matchs où buts et xG sont connus | `buts − xG` de ces matchs ↓ |
+| Maladroits | **xG ≥ 3** sur les matchs où buts et xG sont connus | `buts − xG` de ces matchs ↑ |
 
-« Efficaces » et « Maladroits » mesurent la finition : un joueur qui marque 9 buts pour 5,2 xG a `+3,8` ; un joueur à 3 buts pour 6,1 xG a `−3,1`. Les seuils (4 buts, 3 xG) évitent qu'un seul but chanceux place un joueur en tête.
+« Efficaces » et « Maladroits » mesurent la finition : un joueur qui marque 9 buts pour 5,2 xG a `+3,8` ; un joueur à 3 buts pour 6,1 xG a `−3,1`. Les seuils (4 buts, 3 xG) évitent qu'un seul but chanceux place un joueur en tête. L'éligibilité (les seuils) et l'écart portent sur les mêmes matchs, ceux où buts et xG sont connus (`stats.finishing`, voir [Agrégation](01-agregation-saison.md)) : un but d'un match sans xG n'améliore plus la finition (audit 9, 17 novembre 2026). Les colonnes « Buts » et « xG » de ces listes gardent, elles, leur propre support : un joueur peut afficher 10 buts et 2 xG avec un écart de `+2`, si 4 de ses buts seulement tombent sur les matchs dont le xG est connu (4 − 2). L'écart ne se recalcule donc pas à partir des deux colonnes.
 
 ## Meneurs de l'accueil
 
 `seasonTotals` et `seasonLeaders` dans [home-insights.js](../../../dashboard/frontend/src/services/home-insights.js#L564), même calcul en SQL dans [home.mjs](../../../backend/api/src/routes/home.mjs).
 
-Totaux saison par joueur (matchs avec minutes > 0) : matchs, minutes, buts, passes décisives, xG et xA (**seulement s'ils couvrent tous les matchs**, sinon `null`), note pondérée par les minutes. Le club affiché est le dernier club national : un match européen ne change pas de club.
+Totaux saison par joueur (matchs avec minutes > 0) : matchs, minutes, buts, passes décisives, xG et xA (**seulement s'ils couvrent tous les matchs**, sinon `null`), note pondérée par les minutes. Le club affiché est le dernier club national : un match européen ne change pas de club. Un but ou une passe décisive absents y comptent pour 0 (convention de l'accueil, antérieure à l'audit) : un xG complet ne prouve pas des buts complets, et l'écart « Efficaces » / « Maladroits » de l'accueil, faute de profil apparié, se lit sur ces totaux tels quels.
 
 | Liste | Taille | Règle |
 | --- | --- | --- |

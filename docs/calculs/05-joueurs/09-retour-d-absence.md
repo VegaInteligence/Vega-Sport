@@ -8,6 +8,8 @@ La base ne connaît pas les blessures : une absence se lit dans les feuilles de 
 
 Les minutes habituelles du joueur sont la moyenne de ses 8 dernières apparitions avant l'absence (4 au moins).
 
+Depuis le 17 novembre 2026 (`returns-v2`, audit 15g), seules comptent les apparitions de **matchs terminés** pour un **club** : un match de sélection nationale pendant l'absence ne la coupe plus en deux, et un match annulé du club n'est ni une apparition ni un match manqué. Ce qui est mesuré reste le même : le temps de jeu rendu au joueur par son club, d'une apparition à l'autre. Les chiffres ci-dessous ont été mesurés avec la version 1 et ne sont pas recalculés ici (validation sur données réelles indisponible). Une limite reste : un match du club dont la composition n'est pas connue compte comme manqué (relevé N4, qui dépend de la déduplication des sources).
+
 ## Ce que montrent les données
 
 Sur 855 278 apparitions de 41 612 joueurs (800 derniers jours) :

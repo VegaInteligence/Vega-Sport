@@ -8,6 +8,8 @@
 
 Minute d'un but : `minute + minute ajoutée / 100` (90+3 → 90,03), ce qui ordonne correctement les buts du temps additionnel.
 
+**Non corrigé (audit 14, durées).** Ces minutes ordonnent les buts mais ne sont pas des durées : une minute du temps additionnel ou de la prolongation compte comme une fraction de minute, et une durée inconnue devient 0 dans l'affichage. La correction (une horloge réglementaire déclarée : les minutes 0 à 90, le temps additionnel ramené à la fin de sa mi-temps, la prolongation et les tirs au but sans durée) n'est pas livrée : l'affichage appartient au chantier des profils (VI-22). Contrat, cas et tests (en échec sur le code actuel) : [traçabilité](../09-audit-2026-11/TRACEABILITY.md) et section 8 des [modes de défaillance](../09-audit-2026-11/FAILURE_MODES.md). Une saison calculée avec l'une ou l'autre définition ne se compare pas à l'autre avant recalcul. Relevé aussi le 17 novembre : côté base, un but dont le score manque dans les événements fait échouer le recalcul de toute l'édition (`_match_states`).
+
 | Mesure | Calcul |
 | --- | --- |
 | Temps en tête / à égalité / mené | somme des durées entre buts selon l'écart au score ; fin du match = `max(93, dernière minute de but + 1)` ; affiché en % du total |
@@ -47,18 +49,25 @@ Tranches : 0–15′, 16–30′, 31–45′, 46–60′, 61–75′, 76–90′
 
 ## Tirs par situation
 
-`shotProfile` ([club-scout.js](../../../dashboard/frontend/src/services/club-scout.js#L1206)) répartit tirs, xG et buts, pour et contre, entre :
+`shotProfile` ([club-scout.js](../../../dashboard/frontend/src/services/club-scout.js)) répartit tirs, xG et buts, pour et contre, entre six catégories. Une seule lecture des situations sert aussi au comptage des penalties ; elle reconnaît les codes normalisés des fiches de match intégrées et la graphie du fournisseur (17 novembre 2026) :
 
-| Situation PitchAPI | Catégorie |
+| Situation (code normalisé / fournisseur) | Catégorie |
 | --- | --- |
-| `RegularPlay`, `IndividualPlay`, autre | Jeu placé |
-| `FastBreak` | Contre-attaque |
-| `FromCorner` | Corner |
-| `SetPiece` | Autre CPA |
-| `FreeKick` | Coup franc direct |
-| `Penalty` | Penalty |
+| `regular_play` / `RegularPlay`, `individual_play` / `IndividualPlay` | Jeu placé |
+| `fast_break` / `FastBreak` | Contre-attaque |
+| `from_corner` / `FromCorner` | Corner |
+| `set_piece` / `SetPiece`, `throw_in_set_piece` / `ThrowInSetPiece` | Autre CPA |
+| `free_kick` / `FreeKick` | Coup franc direct |
+| `penalty` / `Penalty` | Penalty |
 
-Contre son camp exclus ; un tir sans xG compte pour 0. Sur la carte des tirs du club, l'abscisse est retournée (`105 − x`) pour que le club attaque toujours du même côté. La carte « Coups de pied arrêtés » additionne corner + autre CPA + coup franc direct (penalties exclus).
+Auparavant, seule la graphie du fournisseur était lue : un code normalisé, un penalty compris, tombait dans « Jeu placé », comme `ThrowInSetPiece` et toute situation inconnue.
+
+- **Situation inconnue ou absente :** le tir n'est dans aucune catégorie (jamais « Jeu placé ») ; il est compté à part (`unclassified`, pour et contre) et garde son point sur la carte, avec la situation « — ». Le tableau ne montre pas encore cet écart (présentation du chantier VI-22).
+- **Équipe :** un tir est du club ou de son adversaire selon les deux équipes réelles du match ; un tir d'une autre équipe, ou sans équipe, n'est d'aucun côté.
+- **Séance de tirs au but :** ses tirs (`period` « penalties » ou « Penalties ») ne sont ni dans les catégories ni sur la carte ; un penalty du match reste dans « Penalty » (17 novembre 2026, étape 5).
+- **xG :** le xG d'une catégorie est la somme des xG connus, inconnu (« — ») dès qu'un de ses tirs n'en a pas ; un xG nul connu reste 0, sur le tableau comme sur la carte. Sur la carte, un xG **absent** vaut encore 0,01 : l'en-tête de la carte (`ShotPair`, chantier VI-22) additionne les xG des points et lirait une valeur absente comme 0. Ce xG fabriqué reste ouvert, transmis au chantier VI-22 (un xG absent devrait rendre l'en-tête « — » tout en gardant le point).
+
+Contre son camp exclus. Sur la carte des tirs du club, l'abscisse est retournée (`105 − x`) pour que le club attaque toujours du même côté. La carte « Coups de pied arrêtés » additionne corner + autre CPA + coup franc direct (penalties exclus). **Non corrigé, chantier VI-22** : cette addition (`setXg`, et la phrase « Contre-attaques et CPA réunis ») lit un xG de catégorie inconnu comme 0. Une contre-attaque à 0,4 avec un tir sans xG, à côté de corners à 1,2, s'affiche 1,2 ; des catégories toutes inconnues s'affichent 0. Le total devrait être indisponible dès qu'une catégorie l'est, et un 0 observé rester 0.
 
 ## Effectif
 
