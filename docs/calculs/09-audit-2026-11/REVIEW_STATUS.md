@@ -8,8 +8,9 @@ autres clubs d’un championnat n’étaient jamais mesurés. Corrigé par l’�
 ([FAILURE_MODES §17](FAILURE_MODES.md)) : une seule classification par match côté serveur, lue par le
 calculateur et par toutes les fiches de match.
 
-Validation locale (Python 3.14) : voir la preuve d’étape 8 et le ticket Linear. Rien n’est poussé ni
-déployé : le déploiement (migrations 128–132 puis recalcul) attend l’accord de l’utilisateur.
+Validation locale (Python 3.14) : voir la preuve d’étape 8 et le ticket Linear. Poussé et déployé le
+17 novembre 2026 (`3d4bb282a0`, migrations 128–132 appliquées) ; le site en production donne les valeurs
+attendues. Le recalcul des 2 149 éditions attend encore l’accord explicite de l’utilisateur.
 
 ---
 
