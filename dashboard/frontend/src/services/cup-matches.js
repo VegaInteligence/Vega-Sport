@@ -36,6 +36,15 @@ function readableRound(round, group) {
   return [first, second && second !== first ? second : ""].filter(Boolean).join(" · ");
 }
 
+/** A match's forecast as the API gives it (VI-19): three shares (home, draw, away) that make a law, else null. */
+export function matchForecast(value) {
+  if (!value || typeof value !== "object") return null;
+  const parts = [value.home, value.draw, value.away];
+  if (!parts.every((v) => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1)) return null;
+  const total = parts[0] + parts[1] + parts[2];
+  return total > 0.98 && total < 1.02 ? { home: value.home, draw: value.draw, away: value.away } : null;
+}
+
 export function normalizeSupplementalCup(results, fixtures) {
   const completed = [], keys = new Set();
   for (const [index, row] of (results || []).entries()) {
@@ -54,7 +63,8 @@ export function normalizeSupplementalCup(results, fixtures) {
     const day = validDay(row.date) ? row.date : "";
     if (keys.has(identity(day, home, away))) continue;
     const roundName = String(row.round_name || row.round || row.stage || "").trim();
-    scheduled.push({ key: "fixture:" + index, date: day, home, away, score: null, roundName, round: readableRound(roundName), status: "scheduled" });
+    const forecast = matchForecast(row.forecast);
+    scheduled.push({ key: "fixture:" + index, date: day, home, away, score: null, roundName, round: readableRound(roundName), status: "scheduled", ...(forecast && { forecast }) });
   }
   return [...completed, ...scheduled];
 }
@@ -73,7 +83,8 @@ export function normalizeOpenCup(matches) {
     const notes = [];
     if (extra) notes.push("après prolongation");
     if (penalties) notes.push("tirs au but " + penalties[0] + " – " + penalties[1]);
-    return [{ key: "open:" + index, date: validDay(match.date) ? match.date : "", home, away, score, penalties, notes, roundName: String(match.round || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: score ? "finished" : "scheduled" }];
+    const forecast = score ? null : matchForecast(match.forecast);
+    return [{ key: "open:" + index, date: validDay(match.date) ? match.date : "", home, away, score, penalties, notes, roundName: String(match.round || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: score ? "finished" : "scheduled", ...(forecast && { forecast }) }];
   });
 }
 

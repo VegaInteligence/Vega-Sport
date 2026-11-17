@@ -14,13 +14,24 @@ import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, isGermanCupSeason } from "../
 import NationalFlag from "./NationalFlag.jsx";
 import SeasonProjection from "./SeasonProjection.jsx";
 import { useCupProjection } from "../services/cup-projection.js";
+import { share } from "../services/forecasts.js";
 
 function editionLabel(competition, season) {
   return competition.sourceKey === "euro" && season === "2020" ? "2020 (joué en 2021)" : season;
 }
+/** An upcoming match's forecast (VI-19): a bar of three parts, then the three shares. */
+function CupMatchForecast({ match }) {
+  const parts = [[match.home, match.forecast.home, "home"], ["Nul", match.forecast.draw, "draw"], [match.away, match.forecast.away, "away"]];
+  return (
+    <div className="cup-match-forecast" role="img" aria-label={parts.map(([name, value]) => `${name} ${share(value)}`).join(", ")}>
+      <span className="cup-match-forecast-bar">{parts.map(([name, value, side]) => <i key={side} data-side={side} style={{ flexGrow: Math.max(value, 0.02) }} />)}</span>
+      <span className="cup-match-forecast-shares">{parts.map(([name, value, side]) => <b key={side} data-side={side}>{share(value)}</b>)}</span>
+    </div>
+  );
+}
 function CupMatch({ match, nationalTeams, season }) {
   return (
-    <div className="cup-match">
+    <div className="cup-match" data-forecast={match.status === "scheduled" && match.forecast ? "" : undefined}>
       <div className="cup-match-meta"><time dateTime={match.date || undefined}>{match.date ? date(match.date) : "Date à préciser"}</time>{match.round && <span>{match.round}</span>}</div>
       <div className="cup-match-teams">
         <span className="cup-match-team">{nationalTeams && <NationalFlag name={match.home} season={season || match.date} />}<span>{match.home}</span></span>
@@ -28,6 +39,7 @@ function CupMatch({ match, nationalTeams, season }) {
         <span className="cup-match-team">{nationalTeams && <NationalFlag name={match.away} season={season || match.date} />}<span>{match.away}</span></span>
       </div>
       {match.notes?.length > 0 && <p className="cup-match-notes">{match.notes.join(" · ")}</p>}
+      {match.status === "scheduled" && match.forecast && <CupMatchForecast match={match} />}
     </div>
   );
 }
@@ -44,9 +56,10 @@ export default function CupCompetition({ competition, initialSeason }) {
   const nationalTeams = ["euro", "world-cup-history", "afcon", "copa-america", "asian-cup", "gold-cup"].includes(competition.sourceKey);
   const archive = NATIONAL_CUP_ARCHIVES[competition.folder];
   const germany = competition.folder === GERMAN_CUP_FOLDER;
-  // A domestic cup whose next round is drawn: its rounds replayed (124).
+  // A domestic cup whose next round is drawn: its rounds replayed (124); a complementary league replayed to its end (VI-19).
   const projection = useCupProjection(competition, typeof season === "string" ? season : String(season));
-  const showProjection = view === "projection" && projection?.format === "knockout";
+  const projected = projection?.format === "knockout" || (!projection?.format && projection?.teams?.length > 0);
+  const showProjection = view === "projection" && projected;
   const [status, setStatus] = useState(competition.source === "open-matchday" && !Number(competition.tables?.results?.rows) ? "scheduled" : "finished");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -86,13 +99,13 @@ export default function CupCompetition({ competition, initialSeason }) {
             {competition.seasons.map((value) => <option key={value} value={value}>{editionLabel(competition, value)}</option>)}
           </select>
         </label>
-        {supportsBracket && <Segments label="Vue de la compétition" value={view} onChange={setView} items={[["matches", "Matchs"], ["bracket", "Tableau"], ...(projection?.format === "knockout" ? [["projection", "Projection"]] : [])]} />}
+        {supportsBracket && <Segments label="Vue de la compétition" value={view} onChange={setView} items={[["matches", "Matchs"], ["bracket", "Tableau"], ...(projected ? [["projection", "Projection"]] : [])]} />}
         {view === "matches" && <>
           <Segments label="Vue des matchs" value={status} onChange={(next) => { setStatus(next); setPage(1); }} items={[["finished", "Résultats"], ["scheduled", "À venir"], ["all", "Tous"]]} />
           <input type="search" aria-label="Rechercher une équipe dans la coupe" placeholder="Rechercher une équipe…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />
         </>}
       </div>
-      {showProjection ? <SeasonProjection projection={projection} /> : <>
+      {showProjection ? <SeasonProjection projection={projection} competition={competition} season={season} /> : <>
       {mode === "archive" ? <p className="cup-source">Archive {season}</p> : mode === "openligadb" ? <p className="cup-source">Résultats et calendrier</p> : competition.source === "open-matchday" ? (competition.sourceDate && <p className="cup-source">Données du {date(competition.sourceDate)}</p>) : <p className="cup-source">{competition.coverage || "Résultats et calendrier"}</p>}
       {competition.sourceKey === "euro" && season === "2028" && <p className="cup-source">Les équipes indiquées par des codes restent à déterminer.</p>}
       <AsyncState resource={resource}>

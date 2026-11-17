@@ -258,6 +258,11 @@ La Coupe d'Italie attend la fusion de trois de ses clubs.
 - **Une coupe** n'est jamais rejouée comme un championnat : ses tours le sont (coupes nationales, Ligue des nations).
 - **Une source arrêtée.** Un match d'une source complémentaire encore « à jouer » plus de trois jours après sa date n'a pas de pronostic : sa source a cessé de suivre la compétition. C'est le cas de la Copa Libertadores 2026 d'OpenFootball, arrêtée aux barrages d'août.
 
+Sur le site (maquette validée le 17 novembre) :
+
+- Chaque match à venir de la liste d'une coupe montre son pronostic : une barre en trois parts (domicile, nul, extérieur), puis les trois parts. L'API le donne avec le match (`forecast`), lu par l'identifiant du match (migration 127 pour les tables d'open-matchday).
+- Les 19 championnats d'open-matchday n'ont pas encore de page sur le site. Leurs pronostics et projections sont calculés et servis, et attendent une page.
+
 Pas encore couvert : l'Euro 2028 (les équipes ne sont pas encore qualifiées), les phases finales de la MLS et de la Liga MX (la source nomme encore « 2nd ranked » et « 3rd ranked » à la place des clubs).
 
 ## La projection de la Ligue des nations (17 novembre 2026)
@@ -291,7 +296,7 @@ Code : `nations_projections`, `simulate_nations` et `uefa_order` dans [forecast.
 - **Le tirage réel.** Une fois les quarts et les barrages tirés, leurs rencontres sont celles du tirage, leurs matchs joués comptent tels quels.
 - **Départage.** Le dernier critère est la liste d'accès 2026–27 (le classement final de 2024–25), jamais un tirage au sort. Les points disciplinaires viennent juste avant, mais les sources ne donnent pas les cartons : ce critère est sauté.
 - Chaque sélection reçoit aussi la part de ses ligues en 2028–29 (A, B ou C) ; 18 sélections par ligue au total.
-- Sur le site, les colonnes « Barrage » et « Relégation » de la Ligue A lisent ces règles : barrage A/B, relégation directe.
+- Sur le site (maquette validée le 17 novembre), Ligue A : Quarts, Maintien, Barrage A/B, Relégation directe, « En A 2028–29 », puis Final Four, Finale, Vainqueur. Ligues B à D : chaque place avec son issue (« 1er · monte », « 2e · barrage A/B »…), puis la ligue en 2028–29.
 
 **Ce qui n'est pas modélisé :** les points disciplinaires (pas de cartons dans les sources).
 
