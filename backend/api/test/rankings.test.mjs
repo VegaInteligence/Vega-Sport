@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { get, skip } from "./context.mjs";
-import { comingMatches, cupStages, provisionalReason } from "../src/routes/rankings.mjs";
+import { comingMatches, cupFormat, cupStages, provisionalReason, roundOpponents } from "../src/routes/rankings.mjs";
 
 test("club links and a club's UEFA ranking history", { skip }, async () => {
   const links = (await get("/api/club-links?club=t_aaaaa1")).body;
@@ -281,7 +281,24 @@ test("a cup's stages per club, every stage given", () => {
     { team_key: 1, stage: "top8", probability: 0.9512 }, { team_key: 1, stage: "win", probability: 0.12 },
     { team_key: 2, stage: "out", probability: 1 },
   ]);
-  assert.deepEqual(stages.get(1), { top8: 0.9512, playoff: 0, out: 0, r16: 0, qf: 0, sf: 0, final: 0, win: 0.12 });
-  assert.deepEqual(stages.get(2), { top8: 0, playoff: 0, out: 1, r16: 0, qf: 0, sf: 0, final: 0, win: 0 });
+  assert.deepEqual(stages.get(1), { top8: 0.9512, playoff: 0, out: 0, r64: 0, r32: 0, r16: 0, qf: 0, sf: 0, final: 0, win: 0.12 });
+  assert.deepEqual(stages.get(2), { top8: 0, playoff: 0, out: 1, r64: 0, r32: 0, r16: 0, qf: 0, sf: 0, final: 0, win: 0 });
   assert.equal(cupStages([]).size, 0);
+});
+
+test("a cup's format, and each club's opponent of the round in play", () => {
+  // A UEFA cup's league phase has its three outcomes; a domestic knockout cup only its rounds (VI-19, 124).
+  assert.equal(cupFormat(cupStages([{ team_key: 1, stage: "top8", probability: 0.9 }])), "league-phase");
+  assert.equal(cupFormat(cupStages([{ team_key: 1, stage: "r16", probability: 1 }, { team_key: 1, stage: "win", probability: 0.5 }])), "knockout");
+  assert.equal(cupFormat(new Map()), null);
+  // The opponent of the round's first match still to play (a two-legged tie has two rows); at home or away.
+  const rows = [
+    { team_key: 1, day: "2026-12-21", opponent_id: "t_aaaaa2", opponent_name: "B", opponent_image: null, home: false },
+    { team_key: 1, day: "2026-12-01", opponent_id: "t_aaaaa2", opponent_name: "B", opponent_image: "b.png", home: true },
+    { team_key: 3, day: "2026-12-02", opponent_id: "t_aaaaa4", opponent_name: "D", opponent_image: null, home: false },
+  ];
+  const opponents = roundOpponents(rows);
+  assert.deepEqual(opponents.get(1), { id: "t_aaaaa2", name: "B", imageUrl: "b.png", home: true });
+  assert.deepEqual(opponents.get(3), { id: "t_aaaaa4", name: "D", imageUrl: null, home: false });
+  assert.equal(roundOpponents([]).size, 0);
 });

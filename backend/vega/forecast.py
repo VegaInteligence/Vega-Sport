@@ -36,7 +36,7 @@ the Elo.
 """
 
 from collections import defaultdict, deque
-from datetime import timedelta
+from datetime import date, timedelta
 from math import exp, log, sqrt
 import random
 
@@ -301,32 +301,14 @@ def knockout_stage(name):
     return None
 
 
-def simulate_cup(table, fixtures, model, strengths, knockout, *, simulations=SIMULATIONS, spread=STRENGTH_SPREAD, seed=0):
-    """Project a UEFA cup of the league-phase format: its league phase as simulate() does,
-    then its bracket. `knockout`: {stage: [{"teams": (a, b), "legs": [(home, away, home
-    goals, away goals, home penalties, away penalties)]}]} of the ties drawn or played; a
-    leg without a score is still to play; a stage not given is drawn in each replay by the
-    competition's rules. A tie already decided stays as it is. Returns {team: {"positions",
-    "points", "stages": {top8, playoff, out, r16, qf, sf, final, win}}}."""
-    teams = sorted(set(table) | {t for f in fixtures for t in f})
-    index = {team: i for i, team in enumerate(teams)}
-    n = len(teams)
-    games = [(index[h], index[a]) for h, a in fixtures if h in strengths and a in strengths]
-    left = [0] * n
-    for h, a in games:
-        left[h] += 1
-        left[a] += 1
-    base = [tuple(table.get(team, (0, 0, 0, 0))) for team in teams]
-    reach = [spread * (left[i] / (left[i] + base[i][3])) ** 0.5 if left[i] + base[i][3] else 0.0 for i in range(n)]
-    elo = [strengths.get(team, 0.0) for team in teams]
+def _knockout_play(rng, model):
+    """The three ways a knockout tie is played, on strengths `now` (indexable by club): a match
+    (goals of each side; `share` of a match, a third for extra time), a tie of legs (the legs
+    played count as they are, the others are replayed, the seeded side at home second; level
+    after the last leg: extra time, then penalties at 50/50 unless a played leg gives them),
+    and a final (one match on neutral ground). Extra time and penalties: the user's choice,
+    16 November 2026."""
     (ah, bh), (aa, ba) = model["home"], model["away"]
-    rng = random.Random(seed)
-    counts = [[0] * n for _ in range(n)]
-    points_sum = [0.0] * n
-    reached = {key: [0] * n for key in ("top8", "playoff", "out", "r16", "qf", "sf", "final", "win")}
-    drawn = {stage: [(tuple(index[t] for t in tie["teams"]), [(index[l[0]], index[l[1]], *l[2:]) for l in tie["legs"]])
-                     for tie in knockout.get(stage, ()) if all(t in index for t in tie["teams"])]
-             for stage in KNOCKOUT_STAGES}
 
     def goals(lam):
         return _goals(rng, lam)
@@ -368,6 +350,37 @@ def simulate_cup(table, fixtures, model, strengths, knockout, *, simulations=SIM
         if ga != gb:
             return a if ga > gb else b
         return a if rng.random() < 0.5 else b
+
+    return match, tie, final
+
+
+def simulate_cup(table, fixtures, model, strengths, knockout, *, simulations=SIMULATIONS, spread=STRENGTH_SPREAD, seed=0):
+    """Project a UEFA cup of the league-phase format: its league phase as simulate() does,
+    then its bracket. `knockout`: {stage: [{"teams": (a, b), "legs": [(home, away, home
+    goals, away goals, home penalties, away penalties)]}]} of the ties drawn or played; a
+    leg without a score is still to play; a stage not given is drawn in each replay by the
+    competition's rules. A tie already decided stays as it is. Returns {team: {"positions",
+    "points", "stages": {top8, playoff, out, r16, qf, sf, final, win}}}."""
+    teams = sorted(set(table) | {t for f in fixtures for t in f})
+    index = {team: i for i, team in enumerate(teams)}
+    n = len(teams)
+    games = [(index[h], index[a]) for h, a in fixtures if h in strengths and a in strengths]
+    left = [0] * n
+    for h, a in games:
+        left[h] += 1
+        left[a] += 1
+    base = [tuple(table.get(team, (0, 0, 0, 0))) for team in teams]
+    reach = [spread * (left[i] / (left[i] + base[i][3])) ** 0.5 if left[i] + base[i][3] else 0.0 for i in range(n)]
+    elo = [strengths.get(team, 0.0) for team in teams]
+    rng = random.Random(seed)
+    counts = [[0] * n for _ in range(n)]
+    points_sum = [0.0] * n
+    reached = {key: [0] * n for key in ("top8", "playoff", "out", "r16", "qf", "sf", "final", "win")}
+    drawn = {stage: [(tuple(index[t] for t in tie["teams"]), [(index[l[0]], index[l[1]], *l[2:]) for l in tie["legs"]])
+                     for tie in knockout.get(stage, ()) if all(t in index for t in tie["teams"])]
+             for stage in KNOCKOUT_STAGES}
+
+    match, tie, final = _knockout_play(rng, model)
 
     for _ in range(simulations):
         now = [elo[i] + (rng.gauss(0.0, reach[i]) if reach[i] else 0.0) for i in range(n)]
@@ -447,6 +460,141 @@ def simulate_cup(table, fixtures, model, strengths, knockout, *, simulations=SIM
         }
         for team, i in index.items()
     }
+
+
+# Domestic knockout cups (VI-19, VI-21, 17 November 2026). For each cup of the sources, by its key: the
+# most clubs a round may hold once no club is still to enter (the FA Cup's top clubs enter its third
+# round, 64 clubs; the Coppa Italia's seeds its round of 16), and whether its semi-finals have two legs.
+# The German cup is read from OpenLigaDB, which gives its rounds and shoot-outs; open-matchday's copy of
+# it is not projected.
+KNOCKOUT_CUPS = {
+    "openligadb:germany-cup": (64, False),
+    "open-matchday:ENG_CUP_efl-cup": (32, True),
+    "open-matchday:ENG_CUP_fa-cup": (64, False),
+    "open-matchday:AUT_CUP_ofb-cup": (64, False),
+    "open-matchday:SUI_CUP_swiss-cup": (32, False),
+    "open-matchday:POR_CUP_taca-de-portugal": (64, True),
+    "open-matchday:ITA_CUP_coppa-italia": (16, True),
+    "open-matchday:ESP_CUP_copa-del-rey": (32, True),
+    "open-matchday:NED_CUP_knvb-beker": (32, False),
+    "open-matchday:SCO_CUP_league-cup": (16, False),
+    "open-matchday:SCO_CUP_scottish-cup": (32, False),
+}
+# A finished match this close before a round's first fixture (days) says the round has begun.
+ROUND_GAP = 7
+# The stage a round's size names, from the round of 64 to the winner.
+KNOCKOUT_SIZES = {64: "r64", 32: "r32", 16: "r16", 8: "qf", 4: "sf", 2: "final", 1: "win"}
+# The cups' matches of a season: (edition, cup key, home, away, status, home goals, away goals, home
+# penalties, away penalties, day).
+CUP_MATCHES = """
+SELECT m.competition_season_id, cs.cup_key, m.home_team_id, m.away_team_id, m.status::text, m.home_score, m.away_score,
+  m.home_penalty_score, m.away_penalty_score, coalesce(m.match_date, m.kickoff_at::date)
+FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.cup_key IS NOT NULL
+WHERE m.season_id = %s AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL
+  AND (cs.cup_key LIKE 'open-matchday:%%' OR cs.cup_key LIKE 'openligadb:%%')"""
+
+
+def knockout_cup(cup_key):
+    """(cup, most clubs once all are in, two-legged semi-finals) of a projected cup's edition key, else None."""
+    parts = str(cup_key or "").split(":")
+    if len(parts) != 3:
+        return None
+    cup = f"{parts[0]}:{parts[1]}"
+    rule = KNOCKOUT_CUPS.get(cup)
+    return (cup, *rule) if rule else None
+
+
+def knockout_round(rows):
+    """{edition: ties} of the editions whose next round is drawn and not begun: the ties of the
+    fixtures still to play (each club once, their number a power of two), with the legs already
+    played of a two-legged tie. An edition with a tie of the round played (a finished match of
+    other clubs ROUND_GAP days or less before its first fixture) waits for the next draw."""
+    editions = defaultdict(list)
+    for r in rows:
+        editions[r[0]].append(r)
+    out = {}
+    for edition, items in editions.items():
+        pending = [r for r in items if r[4] == "not_started"]
+        if not pending:
+            continue
+        pairs = {frozenset((r[2], r[3])) for r in pending}
+        days = [r[9] for r in pending if r[9] is not None]
+        first = min(days) if days else None
+        ties = {}
+        begun = False
+        for r in sorted(items, key=lambda r: (r[9] is None, r[9] or 0)):
+            pair = frozenset((r[2], r[3]))
+            played = r[4] == "finished" and r[5] is not None and r[6] is not None
+            if pair not in pairs:
+                if played and first is not None and r[9] is not None and (first - r[9]).days <= ROUND_GAP:
+                    begun = True
+                continue
+            if r[4] not in ("finished", "not_started"):
+                continue
+            tie = ties.setdefault(pair, {"teams": (r[2], r[3]), "legs": []})
+            tie["legs"].append((r[2], r[3], r[5], r[6], r[7], r[8]) if played else (r[2], r[3], None, None, None, None))
+        n = len(ties)
+        clubs = [t for tie in ties.values() for t in tie["teams"]]
+        if begun or not n or n & (n - 1) or len(set(clubs)) != 2 * n:
+            continue
+        out[edition] = list(ties.values())
+    return out
+
+
+def simulate_knockout(ties, model, strengths, *, simulations=SIMULATIONS, reach=0.0, seed=0, two_legged_semis=False):
+    """Replay a knockout cup from the round `ties` holds to its final: each tie as it is drawn (its
+    played legs fixed), then each round drawn at random, one match the home side drawn first,
+    the semi-finals of two legs when `two_legged_semis`, the final on neutral ground. A club's
+    strength moves by a normal draw of standard deviation `reach`. Returns {club: {stage: share}},
+    from the round in play (KNOCKOUT_SIZES) to the winner."""
+    rng = random.Random(seed)
+    match, tie, final = _knockout_play(rng, model)
+    clubs = [t for item in ties for t in item["teams"]]
+    stages = [KNOCKOUT_SIZES[size] for size in sorted(KNOCKOUT_SIZES, reverse=True) if size <= len(clubs)]
+    reached = {club: {stage: 0 for stage in stages} for club in clubs}
+    for _ in range(simulations):
+        now = {club: strengths[club] + (rng.gauss(0.0, reach) if reach else 0.0) for club in clubs}
+        for club in clubs:
+            reached[club][stages[0]] += 1
+        current = [(item["teams"], item["legs"]) for item in ties]
+        while current:
+            if len(current) == 1:
+                (a, b), legs = current[0]
+                played = any(leg[2] is not None for leg in legs)
+                winner = tie(a, b, legs, now) if played else final(a, b, [], now)
+                reached[winner]["win"] += 1
+                break
+            winners = [tie(a, b, legs, now) if legs else tie(a, b, [(a, b, None, None, None, None)], now) for (a, b), legs in current]
+            stage = KNOCKOUT_SIZES[len(winners)]
+            for club in winners:
+                reached[club][stage] += 1
+            rng.shuffle(winners)
+            pairs = [(winners[i], winners[i + 1]) for i in range(0, len(winners), 2)]
+            if len(winners) == 4 and two_legged_semis:
+                current = [((a, b), [(a, b, None, None, None, None), (b, a, None, None, None, None)]) for a, b in pairs]
+            elif len(winners) == 2:
+                current = [(pairs[0], [])]
+            else:
+                current = [((a, b), [(a, b, None, None, None, None)]) for a, b in pairs]
+    return {club: {stage: count / simulations for stage, count in shares.items()} for club, shares in reached.items()}
+
+
+def knockout_projections(rows, model, strengths, today, *, simulations=SIMULATIONS):
+    """{edition: {club: {stage: share}}} of the cups of CUP_MATCHES' rows that can be projected: a cup of
+    KNOCKOUT_CUPS whose next round is drawn and not begun (knockout_round), holds no more clubs than the
+    round its last clubs enter, every club rated. A strength may move until the season's end (30 June):
+    STRENGTH_SPREAD × √(share of the year left), as a league's."""
+    keys = {r[0]: r[1] for r in rows}
+    end = date(today.year + (today.month > 6), 6, 30)
+    reach = STRENGTH_SPREAD * sqrt(min(1.0, max(0.0, (end - today).days / 365)))
+    out = {}
+    for edition, ties in knockout_round(rows).items():
+        rule = knockout_cup(keys.get(edition))
+        clubs = [t for tie in ties for t in tie["teams"]]
+        if rule is None or len(clubs) > rule[1] or any(club not in strengths for club in clubs):
+            continue
+        out[edition] = simulate_knockout(ties, model, strengths, simulations=simulations, reach=reach, seed=edition, two_legged_semis=rule[2])
+    return out
 
 
 def evaluate(model, matches):
@@ -610,6 +758,7 @@ def refresh(conn, season):
     with conn.transaction():
         phases = {r[0] for r in conn.execute(PHASES, (season, LEAGUE_PHASE_FROM, list(LEAGUE_PHASE_CUPS))).fetchall()}
         brackets = knockout_state(conn.execute(KNOCKOUT, (sorted(phases),)).fetchall()) if phases else {}
+        cup_rows = conn.execute(CUP_MATCHES, (season,)).fetchall()
     leagues = {}
     for edition, (table, games) in sorted(league_state(rows, held, phases).items()) if model else []:
         if edition in phases:
@@ -620,6 +769,9 @@ def refresh(conn, season):
             leagues[edition] = (table, simulate_cup(table, games, model, strengths, brackets.get(edition, {}), seed=edition))
         else:
             leagues[edition] = (table, simulate(table, games, model, strengths, seed=edition))
+    # The domestic knockout cups whose next round is drawn (VI-19, 124): their rounds, from the one in play.
+    for edition, odds in (knockout_projections(cup_rows, model, strengths, now.date()) if model else {}).items():
+        leagues[edition] = ({}, {team: {"positions": [], "points": 0.0, "stages": shares} for team, shares in odds.items()})
     with conn.transaction():
         conn.execute("DELETE FROM agg.match_forecasts WHERE season_id = %s", (season,))
         conn.execute("DELETE FROM agg.season_projections WHERE season_id = %s", (season,))
