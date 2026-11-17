@@ -455,7 +455,22 @@ async function swap(read, params) {
 }
 
 // The stages of a UEFA cup's projection (122), in order.
-const CUP_STAGES = ["top8", "playoff", "out", "r16", "qf", "sf", "final", "win"];
+const CUP_STAGES = ["top8", "playoff", "out", "r64", "r32", "r16", "qf", "sf", "final", "win"];
+const LEAGUE_PHASE = ["top8", "playoff", "out"];
+
+/** "league-phase" for a UEFA cup's league phase and bracket (122), "knockout" for a domestic cup's rounds (124), else null. */
+export function cupFormat(stages) {
+  if (!stages.size) return null;
+  return [...stages.values()].some((s) => LEAGUE_PHASE.some((k) => s[k] > 0)) ? "league-phase" : "knockout";
+}
+
+/** Each club's opponent of a knockout cup's round in play: its first match still to play (124). */
+export function roundOpponents(rows) {
+  const out = new Map();
+  for (const r of [...rows].sort((a, b) => String(a.day).localeCompare(String(b.day))))
+    if (!out.has(r.team_key)) out.set(r.team_key, { id: r.opponent_id, name: r.opponent_name, imageUrl: r.opponent_image ?? null, home: Boolean(r.home) });
+  return out;
+}
 
 /** Each club's share of every stage of a cup's projection, 0 for a stage it never reaches. */
 export function cupStages(rows) {
@@ -473,13 +488,16 @@ async function seasonProjection(read, params) {
   if (!LEAGUE.test(competition || "") || !/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
   const [edition] = await read("SELECT competition_season_id FROM api.edition_keys WHERE league_id=$1 AND season=$2 ORDER BY competition_season_id DESC LIMIT 1", [competition, season]);
   if (!edition) reject(404, "Donnée indisponible.");
-  const [teams, places, fixtures, stageRows] = await Promise.all([
+  const [teams, places, fixtures, stageRows, opponentRows] = await Promise.all([
     read("SELECT * FROM api.season_projections WHERE competition_season_id=$1 ORDER BY projected_points DESC, name", [edition.competition_season_id]),
     read("SELECT team_key, place, probability FROM api.season_projection_places WHERE competition_season_id=$1", [edition.competition_season_id]),
     read("SELECT * FROM api.schedule_forecasts WHERE competition_season_id=$1 ORDER BY kickoff_at NULLS LAST, match_key", [edition.competition_season_id]),
     read("SELECT team_key, stage, probability FROM api.cup_stage_odds WHERE competition_season_id=$1", [edition.competition_season_id]),
+    read("SELECT team_key, day, opponent_id, opponent_name, opponent_image, home FROM api.cup_round_opponents WHERE competition_season_id=$1", [edition.competition_season_id]),
   ]);
   const stages = cupStages(stageRows);
+  const format = cupFormat(stages);
+  const opponents = format === "knockout" ? roundOpponents(opponentRows) : new Map();
   if (!teams.length) reject(404, "Donnée indisponible.");
   const next = comingMatches(fixtures);
   // One share per place, 0 for a place the club never reached.
@@ -490,9 +508,11 @@ async function seasonProjection(read, params) {
     model: { version: teams[0].model_version, fittedAt: iso(teams[0].fitted_at), replays: teams[0].simulations },
     teams: teams.map((team) => ({ id: team.team_id, name: team.name, imageUrl: team.image_url ?? null, played: team.played, points: team.points,
       projectedPoints: round(team.projected_points, 1), places: shares.get(team.team_key), next: next.get(team.team_key) ?? null,
-      ...(stages.size ? { stages: stages.get(team.team_key) ?? cupStages([{ team_key: team.team_key }]).get(team.team_key) } : {}) })),
-    // A UEFA cup of the league-phase format: its league phase, then its bracket (122).
-    ...(stages.size ? { format: "league-phase" } : {}),
+      ...(stages.size ? { stages: stages.get(team.team_key) ?? cupStages([{ team_key: team.team_key }]).get(team.team_key) } : {}),
+      ...(format === "knockout" ? { opponent: opponents.get(team.team_key) ?? null } : {}) })),
+    // A UEFA cup of the league-phase format: its league phase, then its bracket (122); a domestic
+    // cup: its rounds from the one in play, each club with its drawn opponent (124).
+    ...(format ? { format } : {}),
   };
 }
 

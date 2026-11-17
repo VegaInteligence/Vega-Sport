@@ -186,6 +186,73 @@ class ForecastTest(unittest.TestCase):
         self.assertGreater(cup[23]["stages"]["r16"], 0.8)  # 3–0 up after the first leg
         self.assertAlmostEqual(sum(p["stages"]["r16"] for p in cup.values()), 16, places=6)
 
+    # Domestic knockout cups (VI-19/VI-21, 17 Nov 2026). Rows: (edition, cup key, home, away, status, home goals,
+    # away goals, home penalties, away penalties, day).
+    def cup_row(self, home, away, status="not_started", hs=None, as_=None, hp=None, ap=None, day=20, edition=7, key="openligadb:germany-cup:2026/2027"):
+        from datetime import date
+
+        return (edition, key, home, away, status, hs, as_, hp, ap, date(2026, 12, day) if day > 0 else date(2026, 10, -day))
+
+    def test_a_knockout_cup_s_round_in_play(self):
+        # The clubs still in a knockout cup: the ties of the round drawn and not started, each club once;
+        # a tie of two legs counts its leg played. A round begun, half played, says nothing yet.
+        r = self.cup_row
+        round16 = [r(2 * k + 1, 2 * k + 2) for k in range(8)] + [r(90, 91, "finished", 2, 1, day=-28)]  # an earlier round's match
+        ties = forecast.knockout_round(round16)
+        self.assertEqual(sorted(t["teams"] for t in ties[7]), [(2 * k + 1, 2 * k + 2) for k in range(8)])
+        self.assertIsNone(forecast.knockout_round([r(1, 2), r(3, 4), r(5, 6)]).get(7))  # three ties: no complete round
+        begun = [r(2 * k + 1, 2 * k + 2) for k in range(7)] + [r(15, 16, "finished", 1, 0, day=1)]
+        self.assertIsNone(forecast.knockout_round(begun).get(7))  # one tie of the round already played: wait for the next draw
+        half = [r(2 * k + 1, 2 * k + 2) for k in range(4)] + [r(2 * k + 1, 2 * k + 2, "finished", 1, 0, day=18) for k in range(4, 8)]
+        self.assertIsNone(forecast.knockout_round(half).get(7))  # four of eight played two days before: the round is begun
+        semis = [r(1, 2, "finished", 2, 0, day=1), r(2, 1, day=21), r(3, 4, "finished", 1, 1, day=1), r(4, 3, day=21)]
+        ties = forecast.knockout_round(semis)[7]
+        self.assertEqual([len(t["legs"]) for t in ties], [2, 2])  # the first legs count
+        self.assertIsNone(forecast.knockout_round([r(1, 2), r(1, 3)]).get(7))  # a club twice: no round
+
+    def test_a_knockout_cup_replayed_to_its_final(self):
+        r = self.cup_row
+        strengths = {t: 1800 - 15 * t for t in range(1, 17)}
+        ties = forecast.knockout_round([r(2 * k + 1, 2 * k + 2) for k in range(8)])[7]
+        cup = forecast.simulate_knockout(ties, MODEL, strengths, simulations=400, seed=3)
+        stage = lambda key: sum(p[key] for p in cup.values())
+        for key, count in (("r16", 16), ("qf", 8), ("sf", 4), ("final", 2), ("win", 1)):
+            self.assertAlmostEqual(stage(key), count, places=6)
+        self.assertGreater(cup[1]["win"], cup[16]["win"])
+        self.assertEqual(cup, forecast.simulate_knockout(ties, MODEL, strengths, simulations=400, seed=3))
+        # Two-legged semi-finals change nothing to the counts; a final already settled stays as it is.
+        self.assertAlmostEqual(sum(p["sf"] for p in forecast.simulate_knockout(ties, MODEL, strengths, simulations=200, two_legged_semis=True).values()), 4, places=6)
+        final = forecast.knockout_round([r(1, 2, "finished", 1, 1, 4, 5, day=21)] + [r(1, 2, "not_started", day=22)][:0])
+        self.assertEqual(final, {})  # a final played has no round left
+        semis = forecast.knockout_round([r(1, 2, "finished", 3, 0, day=1), r(2, 1, day=21), r(3, 4, day=21)])[7]
+        cup = forecast.simulate_knockout(semis, MODEL, strengths, simulations=300, two_legged_semis=True)
+        self.assertGreater(cup[1]["final"], 0.85)  # 3–0 up after the first leg
+        self.assertAlmostEqual(sum(p["final"] for p in cup.values()), 2, places=6)
+
+    def test_a_knockout_cup_is_projected_once_its_clubs_are_all_in(self):
+        # A cup whose later rounds bring clubs in (the FA Cup's third round, the Coppa Italia's round of 16) is
+        # projected only once the round in play holds no more clubs than the round its last clubs enter.
+        self.assertEqual(forecast.knockout_cup("open-matchday:ENG_CUP_efl-cup:2026/2027"), ("open-matchday:ENG_CUP_efl-cup", 32, True))
+        self.assertIsNone(forecast.knockout_cup("open-matchday:GER_CUP_dfb-pokal:2026/2027"))  # OpenLigaDB holds that cup, with its rounds
+        self.assertEqual(forecast.knockout_cup("openligadb:germany-cup:2026/2027")[1:], (64, False))
+        self.assertIsNone(forecast.knockout_cup("open-matchday:ENG_5_national-league:2026/2027"))
+
+    def test_which_cups_are_projected(self):
+        # Projected: a cup of KNOCKOUT_CUPS whose round in play holds no more clubs than its last entrants'
+        # round, every club rated. Not: the Coppa Italia with 32 clubs (its seeds enter at 16), a cup with a
+        # club the Elo does not rate, open-matchday's copy of the German cup.
+        from datetime import date
+
+        r = lambda edition, key, h, a: (edition, key, h, a, "not_started", None, None, None, None, date(2026, 12, 20))
+        rows = [r(1, "open-matchday:ENG_CUP_fa-cup:2026/2027", 2 * k + 1, 2 * k + 2) for k in range(32)]
+        rows += [r(2, "open-matchday:ITA_CUP_coppa-italia:2026/2027", 100 + 2 * k, 101 + 2 * k) for k in range(16)]
+        rows += [r(3, "open-matchday:SUI_CUP_swiss-cup:2026/2027", 200 + 2 * k, 201 + 2 * k) for k in range(8)]
+        rows += [r(4, "open-matchday:GER_CUP_dfb-pokal:2026/2027", 300 + 2 * k, 301 + 2 * k) for k in range(8)]
+        strengths = {t: 1500.0 for t in list(range(1, 65)) + list(range(100, 132)) + list(range(200, 215)) + list(range(300, 316))}
+        cups = forecast.knockout_projections(rows, MODEL, strengths, date(2026, 12, 1), simulations=50)
+        self.assertEqual(sorted(cups), [1])  # the Swiss cup lacks club 215's strength
+        self.assertAlmostEqual(sum(p["r32"] for p in cups[1].values()), 32, places=6)
+
 
 if __name__ == "__main__":
     unittest.main()
