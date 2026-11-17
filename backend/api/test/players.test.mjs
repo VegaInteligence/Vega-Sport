@@ -60,7 +60,11 @@ test("player directory: envelope, grade order, records", { skip }, async () => {
   assert.equal(p1.assists, null); // never observed
   assert.deepEqual(p1.totals, { goals: 2, assists: null, xg: p1.profile.stats.xg.sum });
   assert.deepEqual(p1.profile.stats.goals, { sum: 2, count: 3, minutes: 260 });
-  assert.deepEqual(Object.keys(p1.profile.stats).sort(), ["goals", "passesAccurate", "passesAttempted", "shots", "xg"]);
+  // The finishing gap's own support (VI-23 B2): his three matches know both goals and xG.
+  assert.deepEqual(Object.keys(p1.profile.stats).sort(), ["finishing", "goals", "passesAccurate", "passesAttempted", "shots", "xg"]);
+  assert.deepEqual(Object.keys(p1.profile.stats.finishing).sort(), ["count", "goals", "minutes", "sum", "xg"]);
+  assert.deepEqual([p1.profile.stats.finishing.count, p1.profile.stats.finishing.minutes, p1.profile.stats.finishing.goals], [3, 260, 2]);
+  close(p1.profile.stats.finishing.sum, 2 - 1.9);
   assert.deepEqual(p1.profile.ratios, { passAccuracy: { numerator: 45, denominator: 57, count: 3, minutes: 260 } });
   assert.deepEqual(
     [p1.profile.teams, p1.profile.teamIds, p1.profile.leagues, p1.profile.leagueIds],
@@ -260,9 +264,10 @@ test("points before and after the changes, by the state of the score", async () 
 });
 
 test("a player's season by half", { skip }, async () => {
-  const { data } = (await get("/api/players/p_aaaab1/halves?season=2025/2026")).body;
-  assert.deepEqual(data.first, { matches: 1, minutes: 45, goals: 2, shots: 3, xg: 0.9, touches_box: 4, dribbles: 1, passes: 8, touches: 20, duels_won: 3, tackles: 0, recoveries: 0 });
-  assert.deepEqual(data.second, { matches: 1, minutes: 45, goals: 0, shots: 1, xg: 0.3, touches_box: 2, dribbles: 0, passes: 12, touches: 25, duels_won: 0, tackles: 1, recoveries: 0 });
+  // The seed's two halves of p_aaaab1 are incomplete (VI-23 B3: the first has no tackles and
+  // no recoveries, the second no duels won, dribbles or recoveries): no half to show, never a
+  // 0. Complete halves are read in player-halves.test.mjs.
+  assert.equal((await get("/api/players/p_aaaab1/halves?season=2025/2026")).response.status, 404);
   assert.equal((await get("/api/players/p_aaaab3/halves?season=2025/2026")).response.status, 404);
   assert.equal((await get("/api/players/p_aaaab1/halves")).response.status, 400);
 });

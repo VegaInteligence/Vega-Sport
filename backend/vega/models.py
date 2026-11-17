@@ -14,6 +14,7 @@ from math import ceil
 import re
 
 from .api_schema import CLUB_INDICATORS
+from . import club_indicators
 
 MODEL_VERSION = "statarena-descriptive-v1"
 FORMULA_VERSION = "docs-calculs-2026-11-09"
@@ -93,7 +94,7 @@ TEAM_INDICATORS = {
     "yellow_pm": ("Cartons jaunes / match", "discipline", -1, 2, None),
     "red_total": ("Cartons rouges", "discipline", -1, 0, None),
 }
-assert set(TEAM_INDICATORS) == set(CLUB_INDICATORS), "club indicators drifted"
+assert set(TEAM_INDICATORS) == set(CLUB_INDICATORS) == set(club_indicators.INDICATORS), "club indicators drifted"
 
 TEAM_PHASES = {
     "attack": ("xg_pm", "big_chances_pm", "touches_box_pm", "xg_per_shot"),
@@ -337,9 +338,13 @@ def _team_columns(conn):
 
 
 def _team_values_sql(conn):
+    """Each club's indicators over the cohort's editions (club_indicators.INDICATORS, the
+    expressions api.team_season publishes) and the matches each of them stands on (VI-23 B10:
+    not every match of the club)."""
     sums = ", ".join(f"sum(s.{c})::double precision AS {c}" for c in _team_columns(conn))
-    indicators = ", ".join(f"({expr}) AS {key}" for key, expr in CLUB_INDICATORS.items())
-    unpivot = ", ".join(f"('{key}', v.{key})" for key in CLUB_INDICATORS)
+    indicators = ", ".join(f"({value}) AS {key}, ({covered}) AS {key}__covered"
+                           for key, (value, covered) in club_indicators.INDICATORS.items())
+    unpivot = ", ".join(f"('{key}', v.{key}, v.{key}__covered)" for key in club_indicators.INDICATORS)
     return f"""
 WITH t AS (
   SELECT s.team_id, {sums}
@@ -347,10 +352,10 @@ WITH t AS (
   WHERE s.competition_season_id = ANY(%(editions)s)
     AND s.team_id IN (SELECT team_id FROM agg.team_season_stats WHERE competition_season_id = ANY(%(members)s))
   GROUP BY s.team_id
-), v AS (SELECT t.team_id, t.matches, {indicators} FROM t)
+), v AS (SELECT t.team_id, {indicators} FROM t)
 , u AS (
-  SELECT v.team_id AS entity, x.key, x.value::double precision AS value, v.matches::integer AS covered
-  FROM v CROSS JOIN LATERAL (VALUES {unpivot}) AS x(key, value)
+  SELECT v.team_id AS entity, x.key, x.value::double precision AS value, x.covered::integer AS covered
+  FROM v CROSS JOIN LATERAL (VALUES {unpivot}) AS x(key, value, covered)
 )"""
 
 
@@ -380,6 +385,8 @@ WITH grp AS (
     -- The line-up carries the position: the statistics rows of PitchAPI have none.
     LEFT JOIN core.lineup_players lp ON lp.season_id = s.season_id AND lp.match_id = s.match_id AND lp.player_id = s.player_id
     WHERE mt.competition_season_id = ANY(%(editions)s) AND s.season_id = %(season)s
+      -- The group reads the matches the statistics read: finished ones (VI-23 stage 5, §14.2).
+      AND mt.status = 'finished'
       AND core.position_group(coalesce(s.position_id, lp.position_id)) IS NOT NULL
     GROUP BY 1, 2) x
   ORDER BY player_id, minutes DESC NULLS LAST, g
@@ -415,7 +422,8 @@ def refresh_cohort(conn, cohort):
     with conn.transaction():
         conn.execute("SELECT pg_advisory_xact_lock(92010, %s)", (cohort,))
         c = _cohort(conn, cohort)
-        run = _start_run(conn, "percentiles", c["key"])
+        # A club cohort's run names the indicators' definition it read (club_indicators.VERSION).
+        run = _start_run(conn, "percentiles", c["key"], version=club_indicators.VERSION if c["entity"] == "team" else FORMULA_VERSION)
         params = {"cohort": cohort, "editions": c["editions"], "members": c["members"], "season": c["season"],
                   "group": c["group"], "min_minutes": c["min_minutes"] or 0}
         if c["entity"] == "team":
