@@ -1,0 +1,156 @@
+[
+  {
+    "competition": "2019-20/en.3",
+    "url": "https://raw.githubusercontent.com/openfootball/football.json/e6744429ee395bc86f247348c6184bb08d4eb361/2019-20/en.3.json",
+    "sha256": "2b70f7893b2d45e8cb5238c4a1dcadd3e1d93ff116d600af245c355872ff0873",
+    "retrieved_at": "2026-11-17T18:27:27.686957+00:00",
+    "rds_finished_unknown": 106,
+    "source_rows": 506,
+    "source_no_score": 106,
+    "explicit_status_on_unknown": {
+      "cancelled": 106
+    },
+    "example": [
+      {
+        "round": "Matchday 38",
+        "date": "2020-03-14",
+        "team1": "Bristol Rovers",
+        "team2": "Ipswich Town",
+        "score": {},
+        "status": "cancelled"
+      }
+    ]
+  },
+  {
+    "competition": "2019-20/en.4",
+    "url": "https://raw.githubusercontent.com/openfootball/football.json/e6744429ee395bc86f247348c6184bb08d4eb361/2019-20/en.4.json",
+    "sha256": "b9c0b78340d4ed8e5706c6685fbb2ca382ed4da3001ff5f4eeb0876d7c885aa1",
+    "retrieved_at": "2026-11-17T18:27:27.767850+00:00",
+    "rds_finished_unknown": 112,
+    "source_rows": 552,
+    "source_no_score": 112,
+    "explicit_status_on_unknown": {
+      "cancelled": 112
+    },
+    "example": [
+      {
+        "round": "Matchday 38",
+        "date": "2020-03-14",
+        "team1": "Port Vale FC",
+        "team2": "Crawley Town",
+        "score": {},
+        "status": "cancelled"
+      }
+    ]
+  },
+  {
+    "competition": "2019-20/be.1",
+    "url": "https://raw.githubusercontent.com/openfootball/football.json/e6744429ee395bc86f247348c6184bb08d4eb361/2019-20/be.1.json",
+    "sha256": "1e2f1b956977bcc95dc2c53c2c74520e0c787d7a85d137b235616bc15c2c7f1b",
+    "retrieved_at": "2026-11-17T18:27:27.828456+00:00",
+    "rds_finished_unknown": 8,
+    "source_rows": 240,
+    "source_no_score": 8,
+    "explicit_status_on_unknown": {
+      "cancelled": 8
+    },
+    "example": [
+      {
+        "round": "Matchday 30",
+        "date": "2020-03-15",
+        "team1": "KRC Genk",
+        "team2": "KV Mechelen",
+        "score": {},
+        "status": "cancelled"
+      }
+    ]
+  },
+  {
+    "competition": "2019-20/fr.1",
+    "url": "https://raw.githubusercontent.com/openfootball/football.json/e6744429ee395bc86f247348c6184bb08d4eb361/2019-20/fr.1.json",
+    "sha256": "0c42a7b9ab70c7bd7003bcc7085f3896c95e19965941be2d04976e7bba440205",
+    "retrieved_at": "2026-11-17T18:27:27.895023+00:00",
+    "rds_finished_unknown": 101,
+    "source_rows": 380,
+    "source_no_score": 101,
+    "explicit_status_on_unknown": {
+      "cancelled": 101
+    },
+    "example": [
+      {
+        "round": "Matchday 28",
+        "date": "2020-03-07",
+        "team1": "RC Strasbourg",
+        "team2": "Paris Saint-Germain",
+        "score": {},
+        "status": "cancelled"
+      }
+    ]
+  },
+  {
+    "competition": "2019-20/fr.2",
+    "url": "https://raw.githubusercontent.com/openfootball/football.json/e6744429ee395bc86f247348c6184bb08d4eb361/2019-20/fr.2.json",
+    "sha256": "242c8e02c211152fa4665c61d58a3e5fade22939694b9e5e75235c5be6db57db",
+    "retrieved_at": "2026-11-17T18:27:27.965216+00:00",
+    "rds_finished_unknown": 100,
+    "source_rows": 380,
+    "source_no_score": 100,
+    "explicit_status_on_unknown": {
+      "cancelled": 100
+    },
+    "example": [
+      {
+        "round": "Matchday 29",
+        "date": "2020-03-13",
+        "team1": "AS Nancy Lorraine",
+        "team2": "AC Ajaccio",
+        "score": {},
+        "status": "cancelled"
+      }
+    ]
+  },
+  {
+    "competition": "2019-20/nl.1",
+    "url": "https://raw.githubusercontent.com/openfootball/football.json/e6744429ee395bc86f247348c6184bb08d4eb361/2019-20/nl.1.json",
+    "sha256": "8fc6cd7b1059d56ff0957efceb11a881690106cd7b31604ce746c40ae0d4fba3",
+    "retrieved_at": "2026-11-17T18:27:28.018467+00:00",
+    "rds_finished_unknown": 74,
+    "source_rows": 306,
+    "source_no_score": 74,
+    "explicit_status_on_unknown": {
+      "cancelled": 74
+    },
+    "example": [
+      {
+        "round": "Matchday 22",
+        "date": "2020-04-08",
+        "team1": "AZ Alkmaar",
+        "team2": "Feyenoord",
+        "score": {},
+        "status": "cancelled"
+      }
+    ]
+  },
+  {
+    "competition": "2019-20/sco.1",
+    "url": "https://raw.githubusercontent.com/openfootball/football.json/e6744429ee395bc86f247348c6184bb08d4eb361/2019-20/sco.1.json",
+    "sha256": "cdae163de9222307f2f31556227ef3671700f538f4877f2cba98b07391be7d03",
+    "retrieved_at": "2026-11-17T18:27:28.080275+00:00",
+    "rds_finished_unknown": 19,
+    "source_rows": 198,
+    "source_no_score": 19,
+    "explicit_status_on_unknown": {
+      "cancelled": 19
+    },
+    "example": [
+      {
+        "round": "Matchday 12",
+        "date": "2019-11-02",
+        "team1": "Rangers FC",
+        "team2": "St. Johnstone FC",
+        "score": {},
+        "status": "cancelled"
+      }
+    ]
+  }
+]

@@ -1,0 +1,121 @@
+{
+ "edition_entity_rows": 6447,
+ "editions": 2149,
+ "competitions": 208,
+ "seasons": 157,
+ "receipts": "scores/score-query-snapshots.csv",
+ "known_population": {
+  "club": {
+   "expected_proven": 161982,
+   "actual_valid": 161982,
+   "recorded_matches": 588770,
+   "finished": 576510,
+   "algorithm_inputs_before_coverage": 0,
+   "admitted_without_power_match": 0,
+   "known_participations_minimum": 1149053,
+   "known_participants_without_stats": 0,
+   "known_participants_without_measured_minutes": 0,
+   "intentionally_hidden_cameo": 0
+  },
+  "national team": {
+   "expected_proven": 1860,
+   "actual_valid": 1860,
+   "recorded_matches": 588770,
+   "finished": 576510,
+   "algorithm_inputs_before_coverage": 0,
+   "admitted_without_power_match": 0,
+   "known_participations_minimum": 2184,
+   "known_participants_without_stats": 0,
+   "known_participants_without_measured_minutes": 0,
+   "intentionally_hidden_cameo": 0
+  },
+  "player": {
+   "expected_proven": 2229830,
+   "actual_valid": 2229830,
+   "recorded_matches": 588770,
+   "finished": 576510,
+   "algorithm_inputs_before_coverage": 2249579,
+   "admitted_without_power_match": 19749,
+   "known_participations_minimum": 2260025,
+   "known_participants_without_stats": 8820,
+   "known_participants_without_measured_minutes": 1895,
+   "intentionally_hidden_cameo": 329476
+  }
+ },
+ "team_as_of": "2026-11-17 21:03:47.538898+00:00",
+ "grade_integrity_partition_rows": [
+  [
+   2022,
+   250775,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   2023,
+   285184,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   2024,
+   548568,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   2025,
+   671351,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   2026,
+   355174,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   2021,
+   118778,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ]
+ ],
+ "rerun": "python3 scores/build-score-grid.py && python3 verify_grid.py"
+}

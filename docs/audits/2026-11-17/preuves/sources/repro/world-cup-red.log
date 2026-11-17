@@ -1,0 +1,2 @@
+{"year": 2022, "home": "England", "away": "USA", "expected": ["finished", 0, 0], "actual": ["not_started", null, null], "passed": false}
+{"year": 1938, "home": "Sweden", "away": "Austria", "expected": ["canceled", null, null], "actual": ["not_started", null, null], "passed": false}

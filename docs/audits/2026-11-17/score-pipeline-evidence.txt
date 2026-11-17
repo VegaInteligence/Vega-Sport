@@ -1,0 +1,41 @@
+pending ('pending_inputs', 'definitely_assignable_role', 'with_role_and_measured_touches', 'need_role_history', 'no_published_award', 'stats_newer_than_run', 'role_before_published_run')
+2021 17793 17770 17770 23 0 17780 0
+2022 113 0 0 113 0 0 0
+2023 275 0 0 275 0 0 0
+2024 88 0 0 88 0 0 0
+2025 1185 0 0 1185 0 0 0
+2026 58 0 0 58 0 0 0
+grades ('algorithm_inputs_before_coverage', 'admitted_without_power_match', 'insufficient_contribution', 'insufficient_role_reference', 'scorable_valid_persisted')
+2021 136808 18030 0 0 118778
+2022 250888 113 0 0 250775
+2023 285459 275 0 0 285184
+2024 548656 88 0 0 548568
+2025 672536 1185 0 0 671351
+2026 355232 58 0 0 355174
+recent raw inputs by competition
+2021 883 USA MLS 1999 2026-11-17 19:47:16.655980+00:00
+2021 761 ENG Championship 1361 2026-11-17 19:47:16.655980+00:00
+2021 853 MEX Liga MX 1186 2026-11-17 19:47:16.655980+00:00
+2021 755 INT-2 Champions League 984 2026-11-17 19:47:16.655980+00:00
+2021 767 INT-2 Conference League 980 2026-11-17 19:47:16.655980+00:00
+2021 792 INT-2 Europa League 975 2026-11-17 19:47:16.655980+00:00
+2021 949 ITA Serie A 954 2026-11-17 19:47:16.655980+00:00
+2021 418 FRA Ligue 1 921 2026-11-17 19:47:16.655980+00:00
+2021 829 ESP LaLiga 843 2026-11-17 19:47:16.655980+00:00
+2021 714 GER 2. Bundesliga 825 2026-11-17 19:47:16.655980+00:00
+2021 738 GER Bundesliga 777 2026-11-17 19:47:16.655980+00:00
+2021 798 BEL First Division A 751 2026-11-17 19:47:16.655980+00:00
+unresolved role history
+2025 911 RSA Premier Soccer League 1110
+2023 938 KSA Saudi Pro League 132
+2025 840 ENG League One 26
+2023 822 KOR K League 1 22
+2024 789 NED Eredivisie 22
+2024 939 KSA Saudi Pro League 22
+player universe ('recorded_matches', 'finished', 'known_participations_minimum', 'positive_minutes', 'actual_valid', 'known_participants_without_stats', 'known_participants_without_measured_minutes')
+historical archive 494713 494372 0 0 0 0 0
+native club 84192 75187 2254742 2244296 2224547 8820 1895
+native national 168 168 5283 5283 5283 0 0
+supplementary clubs 8054 5859 0 0 0 0 0
+supplementary nations 1643 924 0 0 0 0 0
+team Elo {'club': Counter({'archive_policy_excluded': 986961, 'expected_proven': 161982, 'actual_valid': 161982}), 'national team': Counter({'expected_proven': 1860, 'actual_valid': 1860, 'archive_policy_excluded': 0})}

@@ -1,0 +1,11 @@
+{
+  "records": 962,
+  "by_type": {
+    "competition": 103,
+    "team": 859
+  },
+  "distinct_images": 925,
+  "manifest_sha256": "d71d1531f0ccc269e2406c4b34ea9b797d6fbdc6eeb097a288904137ae835450",
+  "zip_sha256": "1824ea4d628d3c327010f91a6057299172b634d691bc77c3bea1356a1cda5c34",
+  "zip_bytes": 79994537
+}

@@ -1,0 +1,26 @@
+{
+  "at": "2026-11-17 21:43:21.184957+00:00",
+  "source_sha256": "75d3b2a829b585d8dbadb60d1fb2a6b4233e7f74d220a0f76bab0ebb6fdb93ff",
+  "verified": 23,
+  "new_grades": 21,
+  "still_ungradable": 2,
+  "by_role": {
+    "goalkeeper": 6,
+    "full_back": 2,
+    "defensive_midfielder": 2,
+    "centre_back": 2,
+    "central_midfielder": 4,
+    "winger": 4,
+    "centre_forward": 1,
+    "unresolved": 2
+  },
+  "by_edition": {
+    "418": 8,
+    "755": 7,
+    "883": 7,
+    "723": 1
+  },
+  "historical_run_ids": [
+    2089
+  ]
+}

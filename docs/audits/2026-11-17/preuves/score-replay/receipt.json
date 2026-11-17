@@ -1,0 +1,10 @@
+{
+  "definition": "arn:aws:ecs:us-east-2:361769570630:task-definition/vega-audit-readonly-vi27:42",
+  "image": "361769570630.dkr.ecr.us-east-2.amazonaws.com/vega-v2-worker:8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "probe_sha256": "9bc5918bf7bc79ea354d36b5509792c3d0c832371d68416634cc3a2228409be9",
+  "selector_sha256": "1a8f1c56a0154dcbeb332d889be6f2b58fcb394f406615b666b6ea1ba5ade7ed",
+  "task": "arn:aws:ecs:us-east-2:361769570630:task/vega-v2/779ad7b096634cdab91755f3ae618f21",
+  "exit_code": 0,
+  "finished": "2026-11-17T22:44:20.486000+01:00",
+  "definition_end_state": "INACTIVE"
+}

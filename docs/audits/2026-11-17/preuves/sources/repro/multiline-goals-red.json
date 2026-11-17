@@ -1,0 +1,170 @@
+[
+ {
+  "id": 721490,
+  "source": "openfootball",
+  "actual": null,
+  "whitespaceNormalisedControl": {
+   "team1": "Wolfsberger AC",
+   "team2": "Austria Wien",
+   "score": [
+    1,
+    2
+   ],
+   "suffix": "(Hinspiel 0:3)"
+  }
+ },
+ {
+  "id": 17060,
+  "source": "openfootball",
+  "actual": null,
+  "whitespaceNormalisedControl": {
+   "team1": "Bayern München",
+   "team2": "Chelsea FC",
+   "score": [
+    4,
+    1
+   ],
+   "suffix": "(Hinspiel 3:0)"
+  }
+ },
+ {
+  "id": 17061,
+  "source": "openfootball",
+  "actual": null,
+  "whitespaceNormalisedControl": {
+   "team1": "FC Barcelona",
+   "team2": "SSC Napoli",
+   "score": [
+    3,
+    1
+   ],
+   "suffix": "(Hinspiel 1:1)"
+  }
+ },
+ {
+  "id": 634887,
+  "source": "footballcsv",
+  "actual": null,
+  "whitespaceNormalisedControl": {
+   "team1": "FC Barcelona",
+   "team2": "Inter",
+   "score": [
+    1,
+    0
+   ],
+   "suffix": "(Hinspiel 1:3)"
+  }
+ },
+ {
+  "id": 634895,
+  "source": "footballcsv",
+  "actual": null,
+  "whitespaceNormalisedControl": {
+   "team1": "Olympique Lyonnais",
+   "team2": "Bayern München",
+   "score": [
+    0,
+    3
+   ],
+   "suffix": "(Hinspiel 0:1)"
+  }
+ },
+ {
+  "id": 635520,
+  "source": "footballcsv",
+  "actual": null,
+  "whitespaceNormalisedControl": {
+   "team1": "Girondins Bordeaux",
+   "team2": "Olympique Lyonnais",
+   "score": [
+    1,
+    0
+   ],
+   "suffix": "(Hinspiel 1:3)"
+  }
+ },
+ {
+  "id": 715495,
+  "source": "engsoccerdata",
+  "actual": null,
+  "whitespaceNormalisedControl": {
+   "team1": "Chelsea FC",
+   "team2": "Tottenham Hotspur",
+   "score": [
+    4,
+    2
+   ],
+   "suffix": "i.E. (Hinspiel 0:1)"
+  }
+ },
+ {
+  "id": 715502,
+  "source": "engsoccerdata",
+  "actual": null,
+  "whitespaceNormalisedControl": {
+   "team1": "Burton Albion",
+   "team2": "Manchester City",
+   "score": [
+    0,
+    1
+   ],
+   "suffix": "(Hinspiel 0:9)"
+  }
+ },
+ {
+  "id": 706375,
+  "source": "engsoccerdata",
+  "actual": null,
+  "whitespaceNormalisedControl": {
+   "team1": "Arsenal FC",
+   "team2": "Chelsea FC",
+   "score": [
+    2,
+    1
+   ],
+   "suffix": "(Hinspiel 0:0)"
+  }
+ },
+ {
+  "id": 734912,
+  "source": "worldclub",
+  "actual": null,
+  "whitespaceNormalisedControl": {
+   "team1": "FC Hradec Králové",
+   "team2": "FK Teplice",
+   "score": [
+    2,
+    0
+   ],
+   "suffix": "(Hinspiel 1:0)"
+  }
+ },
+ {
+  "id": 734958,
+  "source": "worldclub",
+  "actual": null,
+  "whitespaceNormalisedControl": {
+   "team1": "Sigma Olomouc",
+   "team2": "FC Hradec Králové",
+   "score": [
+    1,
+    3
+   ],
+   "suffix": "(Hinspiel 1:3)"
+  }
+ },
+ {
+  "id": 734959,
+  "source": "worldclub",
+  "actual": null,
+  "whitespaceNormalisedControl": {
+   "team1": "Slovan Liberec",
+   "team2": "FK Teplice",
+   "score": [
+    1,
+    2
+   ],
+   "suffix": "(Hinspiel 0:2)"
+  }
+ }
+]

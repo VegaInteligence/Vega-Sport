@@ -1,0 +1,4 @@
+{"seasons": 1, "matches": 3042, "results": 2522}
+actual archived rows [["2019-20/be.1", 240, 0, 8], ["2019-20/en.3", 506, 0, 106], ["2019-20/en.4", 552, 0, 112], ["2019-20/fr.1", 380, 0, 101], ["2019-20/fr.2", 380, 0, 100], ["2019-20/nl.1", 306, 0, 74], ["2019-20/ru.1", 240, 0, 0], ["2019-20/ru.2", 240, 0, 0], ["2019-20/sco.1", 198, 0, 19]]
+{"case": "documented unplayed matches across seven competitions", "expected_canceled": 520, "actual_canceled": 0, "passed": false}
+{"case": "published division identity", "expected_played": {"ru.1": 240, "ru.2": 0}, "actual_played": {"2019-20/ru.1": 240, "2019-20/ru.2": 240}, "passed": false}

@@ -1,0 +1,139 @@
+{
+  "input_sha256": "1853ebcb076ebcbd027b3266d33a7a199a7b5abfa42db13f9d1d7c656a500f87",
+  "module_sha256": {
+    "vega.forecast": "a189d90dc65e007286c2397129aa70da39c63f10a8327d6e33ec190d59390bf7",
+    "vega.power": "75d3b2a829b585d8dbadb60d1fb2a6b4233e7f74d220a0f76bab0ebb6fdb93ff"
+  },
+  "cutoff": "2025-08-01",
+  "first_date": "2021-08-06",
+  "last_date": "2026-11-08",
+  "train": 7155,
+  "held_out": 2252,
+  "source_fixtures": 9407,
+  "league_training_counts": {
+    "30": {
+      "1": 337,
+      "2": 447,
+      "0": 588
+    },
+    "12": {
+      "1": 306,
+      "0": 540,
+      "2": 377
+    },
+    "2": {
+      "0": 682,
+      "1": 404,
+      "2": 433
+    },
+    "55": {
+      "0": 677,
+      "2": 493,
+      "1": 350
+    },
+    "1": {
+      "2": 484,
+      "0": 619,
+      "1": 418
+    }
+  },
+  "identical_prefix_after_appending_holdout": true,
+  "fit": {
+    "home": [
+      0.2581270275324294,
+      0.9508072432881357
+    ],
+    "away": [
+      0.34654126688071346,
+      0.9208611290194616
+    ],
+    "rho": -0.05,
+    "matches": 7155
+  },
+  "metrics": [
+    {
+      "league": "All",
+      "method": "Historical league frequencies",
+      "matches": 2252,
+      "log_loss": 1.0698516938039009,
+      "brier": 0.6468456141014333
+    },
+    {
+      "league": "All",
+      "method": "Vega base",
+      "matches": 2252,
+      "log_loss": 0.9871418345943945,
+      "brier": 0.587470996946994
+    },
+    {
+      "league": "Bundesliga",
+      "method": "Historical league frequencies",
+      "matches": 387,
+      "log_loss": 1.063935904947931,
+      "brier": 0.6431293016895585
+    },
+    {
+      "league": "Bundesliga",
+      "method": "Vega base",
+      "matches": 387,
+      "log_loss": 0.9651782447670862,
+      "brier": 0.5714386715339989
+    },
+    {
+      "league": "LaLiga",
+      "method": "Historical league frequencies",
+      "matches": 499,
+      "log_loss": 1.0556199832164788,
+      "brier": 0.6365850749623924
+    },
+    {
+      "league": "LaLiga",
+      "method": "Vega base",
+      "matches": 499,
+      "log_loss": 0.9775143525096132,
+      "brier": 0.578810258320319
+    },
+    {
+      "league": "Ligue 1",
+      "method": "Historical league frequencies",
+      "matches": 396,
+      "log_loss": 1.0625328284542037,
+      "brier": 0.6420329569612606
+    },
+    {
+      "league": "Ligue 1",
+      "method": "Vega base",
+      "matches": 396,
+      "log_loss": 0.9889947224037305,
+      "brier": 0.5903021264918745
+    },
+    {
+      "league": "Premier League",
+      "method": "Historical league frequencies",
+      "matches": 480,
+      "log_loss": 1.0846572531160985,
+      "brier": 0.6563678728070175
+    },
+    {
+      "league": "Premier League",
+      "method": "Vega base",
+      "matches": 480,
+      "log_loss": 1.0252799893276707,
+      "brier": 0.6165937959197214
+    },
+    {
+      "league": "Serie A",
+      "method": "Historical league frequencies",
+      "matches": 490,
+      "log_loss": 1.0804285021284088,
+      "brier": 0.654791226310831
+    },
+    {
+      "league": "Serie A",
+      "method": "Vega base",
+      "matches": 490,
+      "log_loss": 0.9754356406739954,
+      "brier": 0.5781366045038472
+    }
+  ]
+}

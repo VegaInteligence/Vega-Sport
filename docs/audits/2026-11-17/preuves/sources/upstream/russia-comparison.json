@@ -1,0 +1,20 @@
+{
+  "ru.1": {
+    "competition_name": "Russia Premier League 2019/20",
+    "url": "https://raw.githubusercontent.com/openfootball/football.json/e6744429ee395bc86f247348c6184bb08d4eb361/2019-20/ru.1.json",
+    "sha256": "66b0f56e008fcef5303425609205d16683da444797208742ee953a2af40bef22",
+    "at": "2026-11-17T18:26:21.632281+00:00",
+    "rows": 240
+  },
+  "ru.2": {
+    "competition_name": "Russia 1. Division 2019/20",
+    "url": "https://raw.githubusercontent.com/openfootball/football.json/e6744429ee395bc86f247348c6184bb08d4eb361/2019-20/ru.2.json",
+    "sha256": "7eda7c911d458f248b24954d093fbf0790a1eab889de6030fe5cdfd220146597",
+    "at": "2026-11-17T18:26:21.952111+00:00",
+    "rows": 240
+  },
+  "equal_whole_match_arrays": true,
+  "distinct_a": 240,
+  "distinct_b": 240,
+  "shared_rows": 240
+}

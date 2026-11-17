@@ -1,0 +1,4 @@
+CHECKPOINT ['sample', 23] 2.73
+CHECKPOINT ['closed_read_transaction', 178217] 17.71
+CHECKPOINT ['fit', ['central_midfielder', 'centre_back', 'centre_forward', 'defensive_midfielder', 'full_back', 'goalkeeper', 'winger'], 178156] 19.18
+CHECKPOINT ['quantiles', 7] 35.67

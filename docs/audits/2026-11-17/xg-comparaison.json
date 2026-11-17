@@ -1,0 +1,332 @@
+{
+ "claims": "none: the constraints are a property of the model; no predictive improvement is claimed",
+ "complete": true,
+ "evaluation": "event-time retrospective evaluation",
+ "excluded": {
+  "own_goals": 105,
+  "penalties": 370
+ },
+ "failed_fits": [],
+ "input": {
+  "provenance": {
+   "description": "RDS core.shots joined to finished fixtures, seasons 2022\u201325, dates 2022-08-01..2026-06-30, deterministic match id % 47 = 17, model-supported known outcomes. Event times only.",
+   "generated_by": "params/xg-sample.sql at 2026-11-17 18:23:37.995686+00:00",
+   "kind": "snapshot",
+   "observation_times": false,
+   "seed": null,
+   "snapshot_sha256": "fe5894195fe284e6201db0a9eb3dbad1c6f722cfedac5716ef216e86ffdcd5ef"
+  },
+  "schema": "vega-xg-evaluation-input/1",
+  "sha256": "7870e13ea15874139ec1bfe8c91b4fc2534b5190d62e99a2778629c2525a8b52",
+  "shots": 30633
+ },
+ "models": {
+  "constrained": {
+   "brier": 0.07457708087656417,
+   "calibration": {
+    "distance": [
+     {
+      "expected": 184.35816505242468,
+      "goals": 155,
+      "key": "0-6m",
+      "mean_xg": 0.4368676896976888,
+      "observed_rate": 0.36729857819905215,
+      "shots": 422
+     },
+     {
+      "expected": 343.04500008920604,
+      "goals": 319,
+      "key": "6-12m",
+      "mean_xg": 0.15012910288367878,
+      "observed_rate": 0.13960612691466084,
+      "shots": 2285
+     },
+     {
+      "expected": 241.31896701382573,
+      "goals": 221,
+      "key": "12-18m",
+      "mean_xg": 0.09610472601108153,
+      "observed_rate": 0.08801274392672243,
+      "shots": 2511
+     },
+     {
+      "expected": 119.47650930006156,
+      "goals": 106,
+      "key": "18-25m",
+      "mean_xg": 0.05430750422730071,
+      "observed_rate": 0.04818181818181818,
+      "shots": 2200
+     },
+     {
+      "expected": 48.61797114045681,
+      "goals": 43,
+      "key": "25-35m",
+      "mean_xg": 0.028836281815217562,
+      "observed_rate": 0.025504151838671413,
+      "shots": 1686
+     },
+     {
+      "expected": 1.1522421766825561,
+      "goals": 7,
+      "key": "35m+",
+      "mean_xg": 0.009682707367080304,
+      "observed_rate": 0.058823529411764705,
+      "shots": 119
+     }
+    ],
+    "situation": [
+     {
+      "expected": 604.725215729744,
+      "goals": 524,
+      "key": "regular_play",
+      "mean_xg": 0.10478690274298112,
+      "observed_rate": 0.0907988216946803,
+      "shots": 5771
+     },
+     {
+      "expected": 133.97412551348026,
+      "goals": 119,
+      "key": "from_corner",
+      "mean_xg": 0.09040089440855618,
+      "observed_rate": 0.08029689608636977,
+      "shots": 1482
+     },
+     {
+      "expected": 51.910037099303345,
+      "goals": 44,
+      "key": "set_piece",
+      "mean_xg": 0.08440656438911114,
+      "observed_rate": 0.07154471544715447,
+      "shots": 615
+     },
+     {
+      "expected": 95.93022671808433,
+      "goals": 108,
+      "key": "fast_break",
+      "mean_xg": 0.14211885439716196,
+      "observed_rate": 0.16,
+      "shots": 675
+     },
+     {
+      "expected": 13.702940572254908,
+      "goals": 19,
+      "key": "free_kick",
+      "mean_xg": 0.04929115313760758,
+      "observed_rate": 0.0683453237410072,
+      "shots": 278
+     },
+     {
+      "expected": 33.97546221857011,
+      "goals": 35,
+      "key": "throw_in_set_piece",
+      "mean_xg": 0.11176138887687535,
+      "observed_rate": 0.11513157894736842,
+      "shots": 304
+     },
+     {
+      "expected": 3.7508469212201514,
+      "goals": 2,
+      "key": "individual_play",
+      "mean_xg": 0.03827394817571583,
+      "observed_rate": 0.02040816326530612,
+      "shots": 98
+     }
+    ]
+   },
+   "coefficients": {
+    "angle": 1.7182579519403902,
+    "angle_distance": 0.0,
+    "distance": -0.08273129736775309,
+    "distance_sq": 0.0,
+    "fast_break": 0.4593228590961493,
+    "free_kick": 0.43734009842218136,
+    "from_corner": -0.5921131184339338,
+    "header": -0.2535113236821335,
+    "header_distance": -0.8612720307581332,
+    "individual_play": -0.5266335034261156,
+    "intercept": -1.610519941759745,
+    "other_body": -0.9539639961483577,
+    "set_piece": -0.37534348500701975,
+    "throw_in": -0.26201239955357747
+   },
+   "fit": {
+    "converged": true,
+    "held": [
+     "distance_sq",
+     "angle_distance"
+    ],
+    "iterations": 19,
+    "max_violation": 0.0,
+    "objective": 5849.766848102406
+   },
+   "log_loss": 0.26794696857854533,
+   "train_log_loss": 0.2794670487092317,
+   "version": "xg-v2",
+   "violations": []
+  },
+  "unconstrained": {
+   "brier": 0.07451146415858911,
+   "calibration": {
+    "distance": [
+     {
+      "expected": 178.28558009439698,
+      "goals": 155,
+      "key": "0-6m",
+      "mean_xg": 0.42247767794880803,
+      "observed_rate": 0.36729857819905215,
+      "shots": 422
+     },
+     {
+      "expected": 360.92348956657065,
+      "goals": 319,
+      "key": "6-12m",
+      "mean_xg": 0.1579533871188493,
+      "observed_rate": 0.13960612691466084,
+      "shots": 2285
+     },
+     {
+      "expected": 236.7998114153504,
+      "goals": 221,
+      "key": "12-18m",
+      "mean_xg": 0.09430498264251311,
+      "observed_rate": 0.08801274392672243,
+      "shots": 2511
+     },
+     {
+      "expected": 113.55032242825395,
+      "goals": 106,
+      "key": "18-25m",
+      "mean_xg": 0.05161378292193362,
+      "observed_rate": 0.04818181818181818,
+      "shots": 2200
+     },
+     {
+      "expected": 49.434235253489156,
+      "goals": 43,
+      "key": "25-35m",
+      "mean_xg": 0.029320424231013734,
+      "observed_rate": 0.025504151838671413,
+      "shots": 1686
+     },
+     {
+      "expected": 2.1573418286383688,
+      "goals": 7,
+      "key": "35m+",
+      "mean_xg": 0.01812892292973419,
+      "observed_rate": 0.058823529411764705,
+      "shots": 119
+     }
+    ],
+    "situation": [
+     {
+      "expected": 607.1285094371511,
+      "goals": 524,
+      "key": "regular_play",
+      "mean_xg": 0.105203345943017,
+      "observed_rate": 0.0907988216946803,
+      "shots": 5771
+     },
+     {
+      "expected": 134.83538619098428,
+      "goals": 119,
+      "key": "from_corner",
+      "mean_xg": 0.0909820419642269,
+      "observed_rate": 0.08029689608636977,
+      "shots": 1482
+     },
+     {
+      "expected": 51.95027713640955,
+      "goals": 44,
+      "key": "set_piece",
+      "mean_xg": 0.08447199534375537,
+      "observed_rate": 0.07154471544715447,
+      "shots": 615
+     },
+     {
+      "expected": 96.01960056037817,
+      "goals": 108,
+      "key": "fast_break",
+      "mean_xg": 0.14225126008944913,
+      "observed_rate": 0.16,
+      "shots": 675
+     },
+     {
+      "expected": 13.686197546594048,
+      "goals": 19,
+      "key": "free_kick",
+      "mean_xg": 0.04923092642659729,
+      "observed_rate": 0.0683453237410072,
+      "shots": 278
+     },
+     {
+      "expected": 33.7998337712143,
+      "goals": 35,
+      "key": "throw_in_set_piece",
+      "mean_xg": 0.11118366372109968,
+      "observed_rate": 0.11513157894736842,
+      "shots": 304
+     },
+     {
+      "expected": 3.7309759439667243,
+      "goals": 2,
+      "key": "individual_play",
+      "mean_xg": 0.03807118310170127,
+      "observed_rate": 0.02040816326530612,
+      "shots": 98
+     }
+    ]
+   },
+   "coefficients": {
+    "angle": 1.0560207072248482,
+    "angle_distance": 1.453648665443546,
+    "distance": -0.17315268597412797,
+    "distance_sq": 0.17758588301175,
+    "fast_break": 0.4646966616417963,
+    "free_kick": 0.4419463387885291,
+    "from_corner": -0.5858533725859272,
+    "header": -0.11372405178199257,
+    "header_distance": -1.1170165166905537,
+    "individual_play": -0.526113330023649,
+    "intercept": -1.2854367906196478,
+    "other_body": -0.8721506821237763,
+    "set_piece": -0.37671033493862904,
+    "throw_in": -0.28183080316956344
+   },
+   "fit": {
+    "converged": true,
+    "held": [],
+    "iterations": 8,
+    "max_violation": 0.0,
+    "objective": 5832.958318785234
+   },
+   "log_loss": 0.26672248800337245,
+   "train_log_loss": 0.27865452350875053,
+   "version": "xg-v1 (free)",
+   "violations": [
+    "distance_sq <= 0",
+    "angle_distance = 0"
+   ]
+  }
+ },
+ "observation_times": false,
+ "real_data": "snapshot fe5894195fe284e6201db0a9eb3dbad1c6f722cfedac5716ef216e86ffdcd5ef",
+ "sha256": "0d2cc76a42ab812009ea22fcc180b042877638e15155ccccfb59ff7b8c0af100",
+ "split": {
+  "cutoff": "2025-08-01",
+  "rule": "train: date < cutoff; test: date >= cutoff; one date per match",
+  "test": {
+   "first_date": "2025-08-02",
+   "last_date": "2026-06-28",
+   "matches": 364,
+   "shots": 9223
+  },
+  "train": {
+   "first_date": "2022-08-06",
+   "last_date": "2025-07-27",
+   "matches": 830,
+   "shots": 20935
+  }
+ },
+ "status": "ok",
+ "tool": "backend/tools/evaluate_xg.py"
+}

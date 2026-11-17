@@ -1,0 +1,156 @@
+{
+ "at": "2026-11-17 18:24:57.696979+00:00",
+ "database": "vega_v2",
+ "columns": [
+  "country_code",
+  "is_national",
+  "folded",
+  "candidates",
+  "id",
+  "name",
+  "short_name",
+  "provider_evidence"
+ ],
+ "rows": [
+  [
+   "KOR",
+   null,
+   "incheon united",
+   2,
+   811,
+   "Incheon United",
+   null,
+   "pitchapi:t_3taLki, transfermarkt:2996"
+  ],
+  [
+   "KOR",
+   null,
+   "incheon united",
+   2,
+   5390,
+   "Incheon United",
+   null,
+   "pitchapi:t_2WBCGP"
+  ],
+  [
+   "KSA",
+   null,
+   "al ahli",
+   2,
+   5309,
+   "Al Ahli",
+   null,
+   "pitchapi:t_11bUft, transfermarkt:18487"
+  ],
+  [
+   "KSA",
+   null,
+   "al ahli",
+   2,
+   5327,
+   "Al Ahli",
+   null,
+   "pitchapi:t_0VRYI4"
+  ],
+  [
+   "KSA",
+   null,
+   "al hilal",
+   2,
+   5317,
+   "Al Hilal",
+   null,
+   "pitchapi:t_2r8ytM, openfootball:name:Al Hilal (KSA), transfermarkt:1114"
+  ],
+  [
+   "KSA",
+   null,
+   "al hilal",
+   2,
+   5334,
+   "Al Hilal",
+   null,
+   "pitchapi:t_49Q543"
+  ],
+  [
+   "KSA",
+   null,
+   "al ittihad",
+   2,
+   5325,
+   "Al Ittihad",
+   null,
+   "pitchapi:t_4BG5Jn, openfootball:name:Al Ittihad (KSA), transfermarkt:8023"
+  ],
+  [
+   "KSA",
+   null,
+   "al ittihad",
+   2,
+   5331,
+   "Al Ittihad",
+   null,
+   "pitchapi:t_2XE43n"
+  ],
+  [
+   "KSA",
+   null,
+   "al qadsiah",
+   2,
+   5318,
+   "Al Qadsiah",
+   null,
+   "pitchapi:t_398m23"
+  ],
+  [
+   "KSA",
+   null,
+   "al qadsiah",
+   2,
+   5328,
+   "Al Qadsiah",
+   null,
+   "pitchapi:t_1Mdqcc"
+  ],
+  [
+   "KSA",
+   null,
+   "al shabab",
+   2,
+   5315,
+   "Al Shabab",
+   null,
+   "pitchapi:t_2gdTKw, transfermarkt:9840"
+  ],
+  [
+   "KSA",
+   null,
+   "al shabab",
+   2,
+   5584,
+   "Al Shabab",
+   null,
+   "pitchapi:t_0dN31G"
+  ],
+  [
+   "KSA",
+   null,
+   "neom sc",
+   2,
+   5316,
+   "Neom SC",
+   null,
+   "pitchapi:t_2jwuK5, transfermarkt:34911"
+  ],
+  [
+   "KSA",
+   null,
+   "neom sc",
+   2,
+   5330,
+   "Neom SC",
+   null,
+   "pitchapi:t_26S1TS"
+  ]
+ ]
+}

@@ -1,0 +1,18 @@
+{
+  "club": {
+    "model_expected": 161982,
+    "valid": 161866
+  },
+  "national team": {
+    "model_expected": 1860,
+    "valid": 1860
+  },
+  "player": {
+    "model_expected": 2170870,
+    "valid": 2170870
+  },
+  "editions": 2149,
+  "entity_edition_rows": 6447,
+  "rerun": "python3 scores/build-score-grid.py && python3 grid_validation.py",
+  "expected": "2149 distinct editions \u00d7 3 unique types, 208 competitions, 157 seasons, catalog and independent policy counts reconcile"
+}

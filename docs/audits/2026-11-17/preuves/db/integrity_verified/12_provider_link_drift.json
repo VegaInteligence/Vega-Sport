@@ -1,0 +1,30 @@
+{
+ "at": "2026-11-17 18:24:58.796601+00:00",
+ "database": "vega_v2",
+ "columns": [
+  "entity_type",
+  "provider",
+  "link_evidence_rows",
+  "absent_provider_key",
+  "canonical_entity_mismatch",
+  "quarantined"
+ ],
+ "rows": [
+  [
+   "team",
+   "transfermarkt",
+   1094,
+   0,
+   0,
+   0
+  ],
+  [
+   "player",
+   "transfermarkt",
+   19731,
+   0,
+   0,
+   2
+  ]
+ ]
+}
