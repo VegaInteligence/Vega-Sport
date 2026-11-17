@@ -33,19 +33,27 @@ export function parseOpenCupText(text, startYear, roundNames = {}, { calendar = 
       continue;
     }
     const first = [Number(row[4]), Number(row[5])], tail = row[6] || "";
+    // After « a.e.t. », the brackets give the 90 minutes then the half time: « 2-1 a.e.t. (1-1, 0-0) ».
+    // The score after extra time is never the 90 minutes' too; without brackets they stay unknown.
+    const bracketed = (text) => text.match(/\(([^)]*)\)/)?.[1].match(PAIR);
+    const pairOf = (found) => [Number(found[1]), Number(found[2])];
     let score;
     if (/^\s*pen\./i.test(tail)) {
       const afterPen = tail.replace(/^\s*pen\.\s*/i, "");
       const explicit = afterPen.match(/^\s*(\d+)\s*[-–]\s*(\d+)/);
-      const inside = afterPen.match(/\(([^)]*)\)/)?.[1].match(PAIR);
+      const inside = bracketed(afterPen);
       const actual = explicit || inside;
       if (!actual) throw new Error("Missing score before penalties");
-      const goals = [Number(actual[1]), Number(actual[2])];
-      score = { ft: goals, p: first };
-      if (/a\.e\.t\./i.test(afterPen)) score.et = goals;
+      if (/a\.e\.t\./i.test(afterPen)) {
+        score = { et: pairOf(actual), p: first };
+        if (explicit && inside) score.ft = pairOf(inside);
+      } else score = { ft: pairOf(actual), p: first };
+    } else if (/a\.e\.t\./i.test(tail)) {
+      score = { et: first };
+      const inside = bracketed(tail);
+      if (inside) score.ft = pairOf(inside);
     } else {
       score = { ft: first };
-      if (/a\.e\.t\./i.test(tail)) score.et = first;
     }
     matches.push({ round, date: day, team1: row[2].trim(), team2: row[3].trim(), score });
   }

@@ -135,3 +135,18 @@ test("source-only final scores, unplayed ties and neutral venues remain explicit
     /Rencontre non disputée/,
   );
 });
+
+// FAILURE_MODES.md §19 (19y): worldcup.json writes a full-time result as an array too
+// (1962 Uruguay–Colombia, 2022 England–USA); the display and the CSV read it as the score.
+test("an OpenFootball full-time array is the match's score", () => {
+  const match = { date: "1962-05-30", team1: "Uruguay", team2: "Colombia", score: [2, 1] };
+  assert.deepEqual(historicalScore(match), [2, 1]);
+  assert.deepEqual(historicalScore({ ...match, score: [0, 0] }), [0, 0]);
+  const row = Object.fromEntries(
+    HISTORICAL_CSV_FIELDS.map((key, index) => [key, historicalCsvRow({ competition: "World Cup 1962", match })[index]]),
+  );
+  assert.deepEqual([row.home_goals, row.away_goals, row.home_goals_90, row.away_goals_90], [2, 1, 2, 1]);
+  assert.deepEqual([row.penalties_home, row.penalties_away], [null, null]);
+  assert.deepEqual(historicalScoreNotes(match), []);
+  for (const score of [[2], [2, -1], [2, 1.5], [2, "1"]]) assert.deepEqual(historicalScore({ ...match, score }), [null, null]);
+});

@@ -31,27 +31,55 @@ export function historicalRows(season, competition = "all", query = "") {
   return rows;
 }
 
+const isPair = (value) => Array.isArray(value) && value.length === 2 && value.every((item) => Number.isInteger(item) && item >= 0);
+
+/** Two non-negative integer goals, or [null, null]: half a pair is no score. */
 export function historicalPair(value) {
-  if (!Array.isArray(value) || value.length !== 2) return [null, null];
-  return value.map((item) =>
-    Number.isInteger(item) && item >= 0 ? item : null,
-  );
+  return isPair(value) ? [...value] : [null, null];
+}
+
+// worldcup.json writes a full-time result as {ft: [2, 1], ht: […]} or, in most editions from 1950
+// to 2014 and seven matches of 2022, as [2, 1]: the same full-time result.
+const scoreObject = (score) => (Array.isArray(score) ? { ft: score } : score);
+const SCORE_PARTS = ["ft", "ht", "et", "p"];
+
+/**
+ * An OpenFootball score as the cup sources store it (open-cups.mjs, vega/sources/cups.py
+ * score_parts): {ft, ht, et, p}, each a [home, away] pair, or null without a result. Throws on
+ * anything else (an INVALID_SCORE: the edition is not written).
+ */
+export function openFootballScore(score) {
+  if (score === undefined || score === null) return null;
+  const parts = scoreObject(score);
+  if (!parts || typeof parts !== "object" || Array.isArray(parts)) throw invalidScore();
+  const keys = Object.keys(parts);
+  if (keys.some((key) => !SCORE_PARTS.includes(key) || !isPair(parts[key]))) throw invalidScore();
+  if (!keys.length) return null;
+  // A half time or a shoot-out without the match's score is incomplete.
+  if (!keys.includes("ft") && !keys.includes("et")) throw invalidScore();
+  return Object.fromEntries(keys.map((key) => [key, [...parts[key]]]));
+}
+
+function invalidScore() {
+  return Object.assign(new Error("Invalid OpenFootball score"), { code: "INVALID_SCORE" });
 }
 
 /** Show the final match score, with extra time distinguished from penalties. */
 export function historicalScore(match) {
-  const final = historicalPair(match?.score?.final);
+  const score = scoreObject(match?.score);
+  const final = historicalPair(score?.final);
   if (final.every((value) => value !== null)) return final;
-  const extra = historicalPair(match?.score?.et);
+  const extra = historicalPair(score?.et);
   return extra.every((value) => value !== null)
     ? extra
-    : historicalPair(match?.score?.ft);
+    : historicalPair(score?.ft);
 }
 
 export function historicalScoreNotes(match) {
   const notes = [];
-  const extra = historicalPair(match?.score?.et);
-  const penalties = historicalPair(match?.score?.p);
+  const score = scoreObject(match?.score);
+  const extra = historicalPair(score?.et);
+  const penalties = historicalPair(score?.p);
   if (extra.every((value) => value !== null)) notes.push("après prolongation");
   if (penalties.every((value) => value !== null))
     notes.push(`tirs au but ${penalties[0]} – ${penalties[1]}`);
@@ -90,9 +118,10 @@ export const HISTORICAL_CSV_FIELDS = [
 ];
 
 export function historicalCsvRow({ competition, match }) {
-  const [home90, away90] = historicalPair(match.score?.ft);
+  const score = scoreObject(match.score);
+  const [home90, away90] = historicalPair(score?.ft);
   const [home, away] = historicalScore(match);
-  const [penaltiesHome, penaltiesAway] = historicalPair(match.score?.p);
+  const [penaltiesHome, penaltiesAway] = historicalPair(score?.p);
   return [
     match.date,
     competition,

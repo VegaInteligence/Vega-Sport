@@ -10,8 +10,8 @@
    "dropped_reversed_dupes": 0,
    "dropped_stale_postponed": 0,
    "corners": 100,
-   "results": 100,
-   "fixtures": 280,
+   "results": 5,
+   "fixtures": 3,
    "errors": [],
    "latest": "2026-11-08"
   },
@@ -23,7 +23,7 @@
    "dropped_reversed_dupes": 0,
    "dropped_stale_postponed": 0,
    "corners": 0,
-   "results": 56,
+   "results": 7,
    "fixtures": 4,
    "errors": [],
    "latest": "2026-10-29"

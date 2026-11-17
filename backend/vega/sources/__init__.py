@@ -67,7 +67,7 @@ def run_due(conn, get, now=None, *, names=None):
         if names and name not in names:
             continue
         for scope in due(conn, instant, name, adapter):
-            code, written, unmatched = None, 0, 0
+            code, detail, written, unmatched = None, None, 0, 0
             try:
                 with conn.transaction():
                     conn.execute(f"SET LOCAL lock_timeout = '{LOCK_WAIT}'")
@@ -79,8 +79,9 @@ def run_due(conn, get, now=None, *, names=None):
                     else "DATABASE_ERROR" if isinstance(error, psycopg.Error)
                     else "INVALID_SOURCE_RESPONSE"
                 )
+                detail = error.detail if isinstance(error, SourceError) else None
             try:
-                record_run(conn, name, scope, instant, code, written, unmatched)
+                record_run(conn, name, scope, instant, code, written, unmatched, detail)
             except psycopg.Error:
                 # A status that cannot be written must not stop the other scopes.
                 code = code or "STATUS_NOT_RECORDED"
@@ -88,7 +89,7 @@ def run_due(conn, get, now=None, *, names=None):
     return results
 
 
-def record_run(conn, name, scope, instant, code, written, unmatched):
+def record_run(conn, name, scope, instant, code, written, unmatched, detail=None):
     with conn.transaction():
         conn.execute(
             """INSERT INTO ops.source_runs(source, scope, last_attempt_at, last_success_at, status, error_code, rows_written, unmatched, updated_at)
@@ -99,9 +100,22 @@ def record_run(conn, name, scope, instant, code, written, unmatched):
                  unmatched=EXCLUDED.unmatched, updated_at=now()""",
             (name, scope, instant, None if code else instant, "error" if code else "ok", code, written, unmatched),
         )
+        if code and detail:
+            # What a refused snapshot would have changed (snapshot.py): the scope's status says that it
+            # failed, this says which matches.
+            failure(conn, code, f"{name}:{scope}: {detail}")
+
+
+def failure(conn, code, message, edition=None):
+    """One ops.parse_failures row: a source response that was not written (its code and why)."""
+    conn.execute("INSERT INTO ops.parse_failures(competition_season_id, error_code, message, at) VALUES (%s,%s,%s,now())",
+                 (edition, code, message[:2000]))
 
 
 class SourceError(RuntimeError):
-    def __init__(self, code):
+    """A source answer that is not written; `detail` (optional) names what it would have changed."""
+
+    def __init__(self, code, detail=None):
         super().__init__(code)
         self.code = code
+        self.detail = detail

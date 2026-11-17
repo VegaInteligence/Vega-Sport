@@ -99,6 +99,8 @@ const openCupMatch = (m) => {
     team1: m.home,
     team2: m.away,
     ...(Object.keys(score).length && { score }),
+    // The source's own word for a match never played (1938 Sweden–Austria).
+    ...(m.status === "canceled" && { status: "canceled" }),
   };
 };
 

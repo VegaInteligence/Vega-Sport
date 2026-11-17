@@ -28,6 +28,13 @@ AFCON_2023 = {"name": "Coupe d’Afrique des nations 2023", "season": "2023", "s
     {"key": "afcon:2024-01-14|Nigeria|Equatorial Guinea", "date": "2024-01-14", "home": "Nigeria", "away": "Equatorial Guinea", "homeId": "Nigeria",
      "awayId": "Equatorial Guinea", "score": [1, 1], "status": "finished", "neutral": True},
 ]}
+# Two of the 19 matches of the 1938 World Cup (openfootball/worldcup.json at 516d3825, CC0): the
+# source cancels Sweden–Austria (FAILURE_MODES.md §19, 19f); Cuba–Romania went to extra time.
+WORLD_CUP_1938 = {"name": "World Cup 1938", "season": "1938", "source": {"name": "OpenFootball", "url": "https://github.com/openfootball/worldcup.json", "license": "CC0-1.0"}, "matches": [
+    {"round": "First round", "date": "1938-06-05", "team1": "Sweden", "team2": "Austria", "status": "canceled"},
+    {"round": "First round", "date": "1938-06-05", "team1": "Cuba", "team2": "Romania", "score": {"ft": [2, 2], "ht": [1, 1], "et": [3, 3]}},
+]}
 SAMPLES = (("open-cups", "euro", "2024", EURO_2024), ("open-cups", "euro", "2028", EURO_2028),
+           ("open-cups", "world-cup-history", "1938", WORLD_CUP_1938),
            ("openligadb", "germany-cup", "2025/2026", GERMANY_CUP), ("nations-results", "nations-league", "2026/2027", NATIONS),
            ("nations-results", "afcon", "2023", AFCON_2023))

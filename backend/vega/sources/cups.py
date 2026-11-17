@@ -3,15 +3,18 @@ source projections (scripts/source-projections, through backend/sources/bridge.m
 editions main refreshes (scripts/aws_refresh_sources.mjs), written as typed matches.
 
 A source answer that is not 200 keeps the last edition written (main: "une source
-temporairement indisponible ne remplace pas son dernier instantané valide").
+temporairement indisponible ne remplace pas son dernier instantané valide"), and so does a 200
+that would drop or unplay a result already held, or whose scores cannot be read (snapshot.py,
+FAILURE_MODES.md §19).
 """
 
 from datetime import timedelta
 import hashlib
 import json
+import re
 from urllib.parse import urlencode
 
-from . import SourceError
+from . import SourceError, snapshot
 from ..seasons import sporting_season
 from ..store import Store
 
@@ -69,19 +72,56 @@ def _pair(value):
     return value if isinstance(value, list) and len(value) == 2 and all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in value) else None
 
 
+# The version of what match_rows stores: an edition's digest is that of its rows under this version,
+# so a reader that stores something else writes every edition again, once (FAILURE_MODES.md §19).
+CUP_ROWS_VERSION = "cup-rows-v2"
+SCORE_PARTS = ("ft", "ht", "et", "p")
+CANCELED = ("canceled", "cancelled")
+
+
+def score_parts(score):
+    """An OpenFootball score as {part: [home, away]} ({} without a result).
+
+    worldcup.json writes a full-time result as {"ft": [2, 1], "ht": […]} or, in most editions
+    from 1950 to 2014 and seven matches of 2022, as [2, 1]: the same full-time result.
+    shared/openfootball-history.js openFootballScore reads it alike. Anything else is
+    INVALID_SCORE: the edition is not written."""
+    if score is None:
+        return {}
+    parts = {"ft": score} if isinstance(score, list) else score
+    if not isinstance(parts, dict) or any(k not in SCORE_PARTS or _pair(v) is None for k, v in parts.items()):
+        raise SourceError("INVALID_SCORE")
+    if parts and "ft" not in parts and "et" not in parts:
+        raise SourceError("INVALID_SCORE")  # a half time or a shoot-out without the match's score
+    return {k: list(v) for k, v in parts.items()}
+
+
+def _open_cup_status(m, parts):
+    status = m.get("status")
+    if status is None:
+        return "finished" if parts else "not_started"
+    if status in CANCELED and not parts:
+        return "canceled"
+    raise SourceError("INVALID_STATUS")
+
+
+def _number(value):
+    return value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else None
+
+
 def match_rows(kind, competition, season, body):
     """(provider key, row) per source match, in source order."""
     out = []
     for position, m in enumerate(body.get("matches") or []):
         if kind == "open-cups":
-            score = m.get("score") if isinstance(m.get("score"), dict) else {}
-            ft, ht, et, p = (_pair(score.get(k)) for k in ("ft", "ht", "et", "p"))
+            parts = score_parts(m.get("score"))
+            ft, ht, et, p = (parts.get(k) for k in SCORE_PARTS)
             final = et or ft
             key = f"{competition}:{season}:{m.get('date') or ''}|{m.get('team1') or ''}|{m.get('team2') or ''}|{m.get('num') or ''}"
             row = {
                 "home": m.get("team1"), "away": m.get("team2"), "home_key": f"name:{m.get('team1')}", "away_key": f"name:{m.get('team2')}",
-                "date": m.get("date") or None, "round": m.get("round") or None, "group": m.get("group"), "number": m.get("num"),
-                "status": "finished" if final else "not_started",
+                "date": m.get("date") or None, "round": m.get("round") or None, "group": m.get("group"), "number": _number(m.get("num")),
+                "status": _open_cup_status(m, parts),
                 "home_score": final and final[0], "away_score": final and final[1],
                 "home_score_90": ft[0] if ft and et else None, "away_score_90": ft[1] if ft and et else None,
                 "home_score_ht": ht and ht[0], "away_score_ht": ht and ht[1],
@@ -90,6 +130,8 @@ def match_rows(kind, competition, season, body):
             }
         else:
             score, penalties = _pair(m.get("score")), _pair(m.get("penalties"))
+            if m.get("status") == "finished" and score is None or m.get("penalties") is not None and penalties is None:
+                raise SourceError("INVALID_SCORE")  # a finished match without its score, or unreadable penalties
             extra = "après prolongation" in (m.get("notes") or [])
             row = {
                 "home": m.get("home"), "away": m.get("away"), "home_key": str(m.get("homeId")), "away_key": str(m.get("awayId")),
@@ -129,64 +171,81 @@ def _team(conn, provider, key, name):
     return team
 
 
+def unique_rows(rows):
+    """One row per provider key, in source order. Rows sharing a key (two « N.N. » fixtures of a day)
+    are one match, written from the last of them, as the baseline writer did."""
+    last = {key: row for key, row in rows}
+    return [(key, row) for key, row in rows if last[key] is row]
+
+
+def rows_digest(name, rows):
+    """The digest of what an edition stores (CUP_ROWS_VERSION, its name, its rows in source order)."""
+    return hashlib.sha256(json.dumps({"version": CUP_ROWS_VERSION, "name": name, "rows": rows}, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+def _round(conn, edition, name):
+    found = conn.execute("SELECT id FROM core.rounds WHERE competition_season_id=%s AND name=%s", (edition, name)).fetchone()
+    return found[0] if found else conn.execute("INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s) RETURNING id", (edition, name)).fetchone()[0]
+
+
 def save(conn, kind, competition, season, body, now):
+    """Write one edition from its source body; returns the matches added, changed or removed.
+
+    Refused (SourceError, nothing written): unreadable scores or statuses, and a body that would
+    drop or unplay a result the base holds (snapshot.guard)."""
     provider = PROVIDER[kind]
     name = body.get("name") or competition
+    cup_key = f"{kind}:{competition}:{season}"
     label = sporting_season(season, league_name=TOURNAMENTS.get(competition))
     if label is None:
         raise SourceError("INVALID_SEASON")
+    rows = unique_rows(match_rows(kind, competition, season, body))
+    digest = rows_digest(body.get("name"), rows)
+    stored = conn.execute("SELECT id, cup_digest, cup_name FROM core.competition_seasons WHERE cup_key=%s", (cup_key,)).fetchone()
+    before = {}
+    if stored is None or stored[1] != digest:
+        before = snapshot.stored(conn, provider, stored and stored[0])
+        snapshot.guard(provider, before, {key: m["status"] for key, m in rows}, cup_key)
     season_id = Store(conn).season(label)
     family = f"cup:{kind}:{competition}"
     row = conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type='competition' AND provider='vega' AND provider_key=%s", (family,)).fetchone()
     comp = row[0] if row else conn.execute("INSERT INTO core.competitions(name) VALUES (%s) RETURNING id", (name,)).fetchone()[0]
     if not row:
         conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition','vega',%s,%s)", (family, comp))
-    digest = hashlib.sha256(json.dumps([body.get("name"), body.get("matches")], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     source = body.get("source") or {}
-    edition, changed = conn.execute(
+    # The read is accepted: its time, the edition's name and links (cup_checked_at: the last accepted read).
+    edition = conn.execute(
         """INSERT INTO core.competition_seasons(competition_id, season_id, native_label, cup_key, cup_name, cup_source_url, cup_data_url,
-             cup_digest, cup_checked_at, cup_updated_at)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+             cup_checked_at, cup_updated_at)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
            ON CONFLICT (cup_key) DO UPDATE SET cup_name=EXCLUDED.cup_name, cup_source_url=EXCLUDED.cup_source_url,
-             cup_data_url=EXCLUDED.cup_data_url, cup_checked_at=EXCLUDED.cup_checked_at,
-             cup_updated_at=CASE WHEN core.competition_seasons.cup_digest IS DISTINCT FROM EXCLUDED.cup_digest
-                                 THEN EXCLUDED.cup_updated_at ELSE core.competition_seasons.cup_updated_at END,
-             cup_digest=EXCLUDED.cup_digest, updated_at=now()
-           RETURNING id, cup_updated_at = %s""",
-        (comp, season_id, season, f"{kind}:{competition}:{season}", body.get("name"), source.get("url"), source.get("dataUrl"),
-         digest, now, now, now),
-    ).fetchone()
-    if not changed:
-        return 0
-    rows = match_rows(kind, competition, season, body)
-    keep = []
+             cup_data_url=EXCLUDED.cup_data_url, cup_checked_at=EXCLUDED.cup_checked_at, updated_at=now()
+           RETURNING id""",
+        (comp, season_id, season, cup_key, body.get("name"), source.get("url"), source.get("dataUrl"), now, now),
+    ).fetchone()[0]
+    if stored is not None and stored[1] == digest:
+        return 0  # the same rows: nothing written again
+    before.update(snapshot.elsewhere(conn, provider, edition, [key for key, _ in rows if key not in before]))
+    changes, keep = 0, set()
     for key, m in rows:
-        found = conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type='match' AND provider=%s AND provider_key=%s", (provider, key)).fetchone()
         home = _team(conn, provider, m["home_key"], m["home"]) if m["home"] else None
         away = _team(conn, provider, m["away_key"], m["away"]) if m["away"] else None
-        round_id = conn.execute(
-            """INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s)
-               ON CONFLICT (competition_season_id, name) DO UPDATE SET name=EXCLUDED.name RETURNING id""",
-            (edition, m["round"]),
-        ).fetchone()[0] if m["round"] else None
         values = {k: m[k] for k in ("status", "home_score", "away_score", "home_score_90", "away_score_90", "home_score_ht",
                                      "away_score_ht", "home_score_et", "away_score_et", "home_penalty_score", "away_penalty_score", "is_neutral")}
         values.update(competition_season_id=edition, season_id=season_id, match_date=m["date"], home_team_id=home, away_team_id=away,
                       home_team_name=m["home"] or None, away_team_name=m["away"] or None,
-                      round_id=round_id, group_name=m["group"], match_number=m["number"], archive_position=m["position"], source=provider)
-        columns = list(values)
-        if found:
-            conn.execute(f"UPDATE core.matches SET {', '.join(f'{c}=%s' for c in columns)}, revision=revision+1, updated_at=now() WHERE id=%s",
-                         [values[c] for c in columns] + [found[0]])
-            mid = found[0]
-        else:
-            mid = conn.execute(f"INSERT INTO core.matches({', '.join(columns)}) VALUES ({', '.join(['%s'] * len(columns))}) RETURNING id",
-                               [values[c] for c in columns]).fetchone()[0]
-            conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('match',%s,%s,%s)", (provider, key, mid))
-        keep.append(mid)
-    conn.execute("DELETE FROM core.matches WHERE competition_season_id=%s AND NOT id = ANY(%s)", (edition, keep))
-    conn.execute("DELETE FROM core.provider_ids p WHERE p.entity_type='match' AND p.provider=%s AND NOT EXISTS (SELECT 1 FROM core.matches m WHERE m.id=p.entity_id)", (provider,))
-    return len(rows)
+                      round_id=_round(conn, edition, m["round"]) if m["round"] else None, group_name=m["group"],
+                      match_number=m["number"], archive_position=m["position"], source=provider)
+        _, outcome = snapshot.write(conn, provider, key, values, before.get(key))
+        changes += outcome in ("inserted", "updated")
+        keep.add(key)
+    changes += snapshot.remove(conn, provider, before, keep)
+    renamed = stored is not None and stored[2] != body.get("name")
+    conn.execute(
+        "UPDATE core.competition_seasons SET cup_digest=%s, cup_updated_at=CASE WHEN %s THEN %s ELSE cup_updated_at END WHERE id=%s",
+        (digest, bool(changes) or renamed, now, edition),
+    )
+    return changes
 
 
 def run(conn, get, scope, now):
@@ -196,7 +255,9 @@ def run(conn, get, scope, now):
     query = {"competition": competition, "season": season}
     answer = bridge("projection", kind, urlencode(query)) or {}
     if answer.get("status") != 200 or not isinstance(answer.get("body"), dict):
-        raise SourceError(f"HTTP_{answer.get('status') or 'ERROR'}")
+        # The projection names an unreadable body (open-cups.mjs: INVALID_SCORE), else its HTTP status.
+        code = (answer.get("body") or {}).get("code") if isinstance(answer.get("body"), dict) else None
+        raise SourceError(code if isinstance(code, str) and re.fullmatch(r"[A-Z][A-Z0-9_]{0,63}", code) else f"HTTP_{answer.get('status') or 'ERROR'}")
     return save(conn, kind, competition, season, answer["body"], now), 0
 
 

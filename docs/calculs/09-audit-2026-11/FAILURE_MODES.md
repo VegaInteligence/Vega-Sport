@@ -1438,3 +1438,176 @@ the normalizer's NULL for an ordinary goal shot (VI-21).
 End to end: on a local database, one cohort is re-marked every minute for 70 simulated minutes while another
 is marked once. The first is refreshed at the maximum wait, once only, and stays queued after its last
 re-mark. The second is refreshed 10 minutes after its mark.
+
+## 19. Cup and open-matchday snapshots (VI-27, written before the tests)
+
+Batch of [VI-27](https://linear.app/vegainteligence/issue/VI-27), 17 Nov 2026, baseline `8018e0836c`.
+Source fixes only: no method version, Elo, forecast or identity rule changes (VI-19 and VI-21 keep
+them). This batch replays nothing in production.
+
+### 19.1 What production holds (read-only, 17 Nov 2026, 18:13 UTC)
+
+- `worldcup.json` at `516d3825` and `euro.json` at `7bbf6309`: 26 editions, 1,222 fixtures, the same
+  1,222 in RDS. Upstream, 1,170 are played; RDS marks 505 finished. All 665 missing results are the
+  array encoding `"score": [2, 1]` in 18 World Cups (1950 to 2014, and 2022). `cups.match_rows` reads
+  an object score only: 1962 is 0/32 finished, 1974 0/38, 2022 57/64 (England–USA 0–0 among them).
+- 1938 Sweden–Austria is `"status": "canceled"`, without a score. `open-cups.mjs` drops `status`, so
+  RDS holds the match as `not_started`.
+- `cups.save` digests the projection's raw body. A parser fix alone leaves that digest unchanged:
+  no stored edition would be written again.
+- `cups.save` and `open_matchday.save` delete every match of the edition absent from the snapshot.
+  Local reproduction (`sources/repro/red.log`): a 200 with an empty match list, a CSV with other
+  headers and a manifest describing neither file each empty a populated edition. A fixture row with
+  the key of a result turns the finished match `not_started`, without score or statistics. An
+  unreadable body (502) already keeps the edition.
+- `open_matchday.save` updates every match and rewrites its statistics every six hours, without a
+  revision: a change cannot be told from a re-read.
+- The manifest declares, per folder, the rows of each file (`results`, `fixtures`) and its `errors`.
+  At `496e94ec` each of the 65 European files parses to exactly its declared count of distinct keys.
+
+### 19.2 The rules
+
+**OpenFootball scores.** One rule for `open-cups.mjs` and `cups.match_rows`. The display helpers of
+`openfootball-history.js` read the same encodings.
+
+| Source `score` | Stored |
+|---|---|
+| absent, `null` or `{}` | no result: `not_started` (`canceled` when the source says so), every score NULL |
+| `[h, a]` | full time: `finished`, score h–a; no 90-minute, extra-time or shoot-out value |
+| `{ft}`, `{ft, ht}` | as today: the final score is `ft` |
+| `{et, …}` | the final score is `et`; the 90-minute score is `ft` when given, never inferred |
+| `{…, p}` | the shoot-out, beside a final score |
+| anything else | the edition is invalid (`INVALID_SCORE`) |
+
+A pair is two non-negative integers: no boolean, float, string or `null`. The parts are `ft`, `ht`,
+`et` and `p` only. `ht` or `p` without `ft` or `et` is incomplete. A source `status` of `canceled`
+(or `cancelled`) is stored `canceled` and comes without a score. Any other status, or a canceled
+match with a score, makes the edition invalid (`INVALID_STATUS`). The projection writes every score
+in the object form (`[h, a]` becomes `{ft: [h, a]}`) and passes `status`. The read API gives
+`status` back for a canceled match.
+
+**One version of what is stored.** A cup edition's digest is the hash of the rows it stores
+(`CUP_ROWS_VERSION`, the name, then the key and values of every match in source order), not the hash
+of the source's body. A parser change that changes a stored value changes the digest, so the
+edition is written again at its next due read, once. An edition whose rows are unchanged is not
+written again.
+
+**A match changes only when its values do.** On a write, a match whose stored values equal the new
+ones is left alone (no `revision`, no `updated_at`). One that differs is updated with
+`revision + 1`. A change of source order alone moves `archive_position` and nothing else. The
+edition's `cup_updated_at` moves only when a match is added, changed or removed, or the edition is
+renamed. `cup_checked_at` is the last accepted read. Open-matchday statistics are rewritten only when
+they differ, and a statistics change is a change of its match.
+
+**A snapshot replaces an edition only when it is complete and keeps its results.** Before any write:
+- open-matchday: the folder's manifest declares integer counts (not booleans) and no `errors`. Each
+  declared file is read. A results file has `date, home, away, ft_home, ft_away`; a fixtures file has
+  `date, home, away`. Each holds exactly its declared number of rows. Every result row has both
+  sides, a date and two non-negative integer goals. A fixture row without both sides or a date names
+  no match and is skipped, as today. A half-time score is kept only when both halves are integers;
+- a result and a fixture with the same key are one match: the result, with its score and statistics;
+- a match the base holds finished must still be in the snapshot, finished (a score correction is
+  accepted). One that is absent (`SNAPSHOT_DROPS_RESULT`) or no longer finished (`RESULT_DOWNGRADED`)
+  keeps the whole edition as it was. The exception is a match listed in the reviewed `RETRACTIONS`
+  (`vega/sources/snapshot.py`), with its reviewer, date and reason;
+- a match not yet played may leave a complete snapshot (rescheduled, decided, withdrawn).
+
+**A rejected snapshot changes nothing and says so.** A cup edition (one scope) fails with its code in
+`ops.source_runs`; its digest, `cup_checked_at`, matches, scores and keys stay unchanged. A rejected
+open-matchday folder is skipped and its edition is unchanged. The folder counts in `unmatched`, as an
+unreadable one already does, and `ops.parse_failures` holds its code and the folder. The other folders
+are written. The removal of an open-matchday copy of a league PitchAPI holds (`drop_copy`, `COVERED`,
+`SUPERSEDED`, VI-21) is a separate path and is unchanged.
+
+### 19.3 Failure modes and expected outcomes
+
+| # | Situation | Expected | Class |
+|---|---|---|---|
+| 19a | `score: [0, 0]` (2022 England–USA), `[2, 1]` | `finished` 0–0, 2–1; 90-minute, extra-time and shoot-out scores NULL | CR |
+| 19b | `{ft: [3, 3], et: [4, 4]}` (1954 England–Belgium) | final 4–4, 90 minutes 3–3, extra time 4–4 | BC |
+| 19c | `{et: [2, 1]}` without `ft` | final 2–1, 90 minutes NULL | BC |
+| 19d | `{ft: [1, 1], et: [1, 1], p: [4, 3]}` | final 1–1, 90 minutes 1–1, shoot-out 4–3 | BC |
+| 19e | no score; `{}` | `not_started`, NULL scores | BC |
+| 19f | `status: canceled` (1938 Sweden–Austria) | `canceled`, NULL scores; the read API says `canceled` | CR |
+| 19g | `[2]`, `[2, -1]`, `[2, 1.5]`, `[true, 0]`, `"2-1"`, `{ft: [1, null]}`, `{ht: [1, 0]}`, `{p: [4, 3]}`, `{ft: [1, 0], x: [0, 0]}` | `INVALID_SCORE`, edition unchanged; the projection answers 502 with that code | NC |
+| 19h | a canceled match with a score; `status: postponed` | `INVALID_STATUS`, edition unchanged | NC |
+| 19i | the 26 frozen editions | 1,170 finished, 665 of them array-encoded in 18 World Cups, 1 canceled, 51 to play; Python and JS give every match the same final score | CR |
+| 19j | 1962 and 2022 stored as the baseline stores them (raw digest, array scores `not_started`), then read again, unchanged, by the new code | written once: every played match finished, same match ids, `revision + 1` on changed matches only; the next read changes nothing | CR |
+| 19k | the same edition with its matches in another order | positions follow the source; no revision change, `cup_updated_at` unchanged | NC |
+| 19l | a populated cup edition, then a 200 with no match | `SNAPSHOT_DROPS_RESULT` in `ops.source_runs`; edition, digest and `cup_checked_at` unchanged | CR |
+| 19m | a cup snapshot without one finished match, or with it unplayed | `SNAPSHOT_DROPS_RESULT`, `RESULT_DOWNGRADED`; edition unchanged | CR |
+| 19n | a cup snapshot correcting a score (2–1 to 2–2), adding a match and dropping an unplayed one | accepted: `revision + 1` on the corrected match, the new match written, the unplayed one gone | BC |
+| 19o | a reviewed retraction in `RETRACTIONS` | that match alone may go; the others stay protected | NC |
+| 19p | open-matchday: a fixture with the key of a result (`fixtures: true`) | one match, finished 2–1, its statistics kept | CR |
+| 19q | open-matchday: other headers; a header-only file; fewer rows than declared; manifest `errors`; boolean counts | folder skipped, edition unchanged, `unmatched` + 1, one `ops.parse_failures` row with the code | CR |
+| 19r | open-matchday: a result row with an empty or non-integer goal | folder skipped, edition unchanged (`INVALID_RESULT_ROW`) | NC |
+| 19s | open-matchday: a finished match absent from the new results, or listed only as a fixture | folder skipped, edition unchanged | CR |
+| 19t | open-matchday: one folder rejected and another valid in the same summary | the valid one written, the rejected one unchanged | CR |
+| 19u | open-matchday: the same files read twice | no match update or revision, statistics untouched (`updated_at` and statistics rows unchanged); `cup_checked_at` advances | CR |
+| 19v | open-matchday: a corrected score or statistic | that match updated with `revision + 1`; `cup_updated_at` moves | NC |
+| 19w | open-matchday: a fixture no longer listed in a complete snapshot | removed | BC |
+| 19x | open-matchday: a league PitchAPI holds (`COVERED`) | removed by `drop_copy` as before | BC |
+| 19y | the display helpers (`historicalScore`, `historicalCsvRow`) on `[2, 1]` | 2–1, full time 2–1 | CR |
+| 19z | Football.TXT (`openfootball-cups.js`): `2-1 a.e.t. (1-1)`, `2-1 a.e.t. (1-1, 0-0)` | after extra time 2–1, 90 minutes 1–1 (the first pair in brackets) | CR |
+| 19z′ | `2-1 a.e.t.` without brackets | after extra time 2–1, 90 minutes unknown (no `ft`) | CR |
+| 19z″ | `5-4 pen. 1-1 a.e.t. (1-1, 0-0)`; `4-3 pen. (2-1, 0-1)`; `4-1 (3-0)` | 1–1 after extra time and 90 minutes, shoot-out 5–4; 90 minutes 2–1, shoot-out 4–3; 90 minutes 4–1 (as today) | BC |
+
+**Football.TXT scores.** A line writes the score after extra time before `a.e.t.`, then in brackets the
+90-minute score and the half time: `2-1 a.e.t. (1-1, 0-0)` (2021 Club World Cup final, Chelsea–Palmeiras,
+1–1 after 90 minutes). The parser keeps the 90-minute score from the brackets and no longer copies the
+score after extra time into it. A line without the brackets leaves the 90 minutes unknown. A shoot-out
+without extra time is unchanged: its brackets give the 90 minutes.
+
+**Existing expectations adjusted (they encode the defect).**
+- The manifest of the trimmed open-matchday fixture (`backend/tests/fixtures/open_matchday/build_summary.json`)
+  declares the full upstream counts (100 results and 280 fixtures for the Premier League, 56 and 4 for
+  the ÖFB Cup) beside files trimmed to 5 + 3 and 7 + 4 rows. Under 19q that manifest describes truncated
+  files, so its counts become those of the trimmed files. No assertion of `test_open_matchday.py` changes.
+- `tests/cup-sources.test.mjs` expects `{ft: [2, 1], et: [2, 1]}` for `2-1 a.e.t. (1-1)` and for the
+  Club World Cup final `2-1 a.e.t. (1-1, 0-0)`. Under 19z both become `{ft: [1, 1], et: [2, 1]}`.
+
+**Not changed (recorded):**
+- The Coupe de France reader (`openfootball-france-cup.js`) has no `a.e.t.` case. It is outside this
+  batch's frozen evidence and is left as it is.
+- Football.TXT half times stay unread, as before.
+- The Elo and the nation pages read `core.matches` at their next pass. There is no new dirty scope or
+  trigger (VI-21 owns the schedule).
+- Rows sharing a key still make one match, written from the last of them, as before: two undecided
+  fixtures (« N.N. ») of one day, or a result listed twice. The one exception is 19p: a fixture never
+  overrides a result.
+- `ops.parse_failures.family` is NULL for these rows. The status route's `parseFailures` lists them
+  with `family: null`, which the column already allows.
+
+End to end: the frozen 1962, 1938 and 2022 bodies go through the real projection, the real writer and
+a local PostgreSQL 18, first stored as the baseline code stores them, then replayed. The cup read
+gives the corrected matches back. Each rejection scenario of `sources/repro/probe.py` keeps its edition.
+
+### 19.4 Competition logos (written before the tests)
+
+The user asked for real logos only (17 Nov 2026): an image of the exact competition, with its
+provenance, or the missing state. In production 126 of 208 competitions have no logo link.
+`curated.cup_logos` skips the `open-matchday:` keys of `shared/cup-logos.json`, yet the eleven domestic
+cups they name are in the base (`cup:open-matchday:<folder>`, ids 87–97, no logo). The nine national cup
+archives (`cup:open-cups:<key>`), OpenLigaDB's DFB-Pokal (`cup:openligadb:germany-cup`) and
+International Results' Nations League (`cup:nations-results:nations-league`) have none either. The site
+shows each as an edition of one of those cups (`cup-archives.js` `NATIONAL_CUP_ARCHIVES` and
+`GERMAN_CUP_FOLDER`; `cup-catalog.js`, Nations League « Ligues A à D »).
+
+Rules:
+- An `open-matchday:<folder>` key gives its logo to the competition keyed `cup:open-matchday:<folder>`.
+- The same cup under another source's key takes that logo through the site's own mappings above,
+  never through a name.
+- One asset per URL. A competition keeps its logo when the file has none for it, and a PitchAPI
+  competition's own logo is never replaced.
+- The continental and national-team cups (Libertadores, Sudamericana, CONCACAF, CAF, AFCON, Copa
+  América, Asian Cup, Gold Cup), the open-matchday leagues and the archive competitions have no
+  reviewed image in the repository. They stay without a logo and are listed as missing.
+
+| # | Situation | Expected | Class |
+|---|---|---|---|
+| L1 | an `open-matchday:<folder>` key and its competition in the base | logo linked, kind `logo`, author `SportScore` | CR |
+| L2 | an archive, OpenLigaDB or International Results edition of the same cup | the same asset as its cup | CR |
+| L3 | a key whose competition is not in the base yet | counted unmatched, nothing created | BC |
+| L4 | a PitchAPI competition with its own logo | unchanged | BC |
+| L5 | a key or an alias that no source family or site mapping names | the drift test fails | NC |
+| L6 | the same pass twice | no new asset, no competition update | BC |

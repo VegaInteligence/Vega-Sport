@@ -45,6 +45,9 @@ test("cup editions round-trip main's source projections", { skip }, async () => 
   assert.deepEqual((await edition(nations, "2026/2027")).body, sample("nations-results", "nations-league", "2026/2027"));
   const afcon = await cupId("afcon", "results-v1");
   assert.deepEqual((await edition(afcon, "2023")).body, sample("nations-results", "afcon", "2023"));
+  // A match the source cancels comes back canceled, without a score (FAILURE_MODES.md §19, 19f).
+  const worldCup = await cupId("world-cup-history", "matches-v1");
+  assert.deepEqual((await edition(worldCup, "1938")).body, sample("open-cups", "world-cup-history", "1938"));
   assert.equal((await edition(euro, "1990")).response.status, 404);
   assert.equal((await get("/api/cups/edition?competition=euro&season=2024")).response.status, 400);
   assert.equal((await get(`/api/cups/edition?competition=${euro}`)).response.status, 400);

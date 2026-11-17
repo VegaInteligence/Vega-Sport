@@ -1,6 +1,7 @@
 import { parseFranceCup } from "../../../dashboard/frontend/src/services/openfootball-france-cup.js";
 import { parseOpenCupText } from "../../../dashboard/frontend/src/services/openfootball-cups.js";
 import { NATIONAL_CUP_ARCHIVES } from "../../../dashboard/frontend/src/services/cup-archives.js";
+import { openFootballScore } from "../../../dashboard/shared/openfootball-history.js";
 
 const WORLD_CUP_YEARS = new Set([
   "1930",
@@ -136,15 +137,21 @@ export async function GET(request) {
           : await response.json();
     if (!Array.isArray(data.matches) || data.matches.length > 1000)
       throw new Error("Invalid source data");
-    const matches = data.matches.map((match) => ({
-      round: match.round,
-      group: match.group,
-      num: match.num,
-      date: match.date,
-      team1: match.team1 === UNDECIDED ? null : match.team1,
-      team2: match.team2 === UNDECIDED ? null : match.team2,
-      score: match.score,
-    }));
+    const matches = data.matches.map((match) => {
+      // One score form, whatever the edition writes ([2, 1] or {ft: [2, 1]}); the source's own
+      // status (1938 Sweden–Austria: "canceled") is the cups adapter's to read (FAILURE_MODES.md §19).
+      const score = openFootballScore(match.score);
+      return {
+        round: match.round,
+        group: match.group,
+        num: match.num,
+        date: match.date,
+        team1: match.team1 === UNDECIDED ? null : match.team1,
+        team2: match.team2 === UNDECIDED ? null : match.team2,
+        ...(score && { score }),
+        ...(typeof match.status === "string" && match.status && { status: match.status }),
+      };
+    });
     return Response.json(
       {
         name: data.name,
@@ -163,11 +170,13 @@ export async function GET(request) {
         },
       },
     );
-  } catch {
+  } catch (error) {
     return Response.json(
       {
         error:
           "Les données de cette édition sont temporairement indisponibles.",
+        // A body that cannot be read names why (the cups adapter records it).
+        ...(error?.code === "INVALID_SCORE" && { code: error.code }),
       },
       { status: 502 },
     );

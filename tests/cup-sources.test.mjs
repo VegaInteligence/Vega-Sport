@@ -13,7 +13,8 @@ test("archive parser preserves shootouts, extra time and an unscored final", () 
   const text = "# Matches 3\n▪ Round of 16\nFri Jan 10 2025\n  20:00  A   v B   5-4 pen. 1-1 a.e.t. (1-1, 0-0)\n▪ Semifinals\nSat Feb 1\n  20:00  A   v C   2-1 a.e.t. (1-1)\n▪ Final\nSun May 4\n  15:00  A   v D\n";
   const rows = parseOpenCupText(text, 2024);
   assert.deepEqual(rows[0].score, { ft: [1, 1], p: [5, 4], et: [1, 1] });
-  assert.deepEqual(rows[1].score, { ft: [2, 1], et: [2, 1] });
+  // After extra time 2–1; the brackets give the 90 minutes, 1–1 (FAILURE_MODES.md §19, 19z).
+  assert.deepEqual(rows[1].score, { ft: [1, 1], et: [2, 1] });
   assert.equal(rows[2].score, undefined);
   assert.throws(() => parseOpenCupText(text.replace("# Matches 3", "# Matches 4"), 2024), /Incomplete/);
 });
@@ -76,7 +77,8 @@ test("the yearly Club World Cups are read from their text files, in the season o
     assert.deepEqual(asked, ["https://raw.githubusercontent.com/openfootball/club-worldcup/master/2021/clubworldcup.txt"]);
     assert.deepEqual([body.name, body.season, body.matches.length, body.source.url], ["Club World Cup 2021", "2021", 8, "https://github.com/openfootball/club-worldcup"]);
     assert.deepEqual(body.matches[0], { round: "Round 1", date: "2022-02-03", team1: "Al Jazira Club (UAE)", team2: "AS Pirae (TAH)", score: { ft: [4, 1] } });
-    assert.deepEqual(body.matches.at(-1), { round: "Final", date: "2022-02-12", team1: "Chelsea FC (ENG)", team2: "Palmeiras (BRA)", score: { ft: [2, 1], et: [2, 1] } });
+    // Chelsea–Palmeiras, 1–1 after 90 minutes (FAILURE_MODES.md §19, 19z).
+    assert.deepEqual(body.matches.at(-1), { round: "Final", date: "2022-02-12", team1: "Chelsea FC (ENG)", team2: "Palmeiras (BRA)", score: { ft: [1, 1], et: [2, 1] } });
     // An edition before the base's first season is not read.
     assert.equal((await read("2019"))[0], 400);
     assert.equal(asked.length, 1);
@@ -153,4 +155,50 @@ test("the confederations' cups' rounds read in French", () => {
     .map((round, i) => ({ round, date: "2025-03-0" + (i % 9 + 1), team1: "A", team2: "B", score: { ft: [1, 0] } })));
   assert.deepEqual(rows.map((r) => r.round), ["Finale", "Demi-finales", "Huitièmes de finale", "Tour préliminaire 2", "Tour préliminaire 1", "Tour préliminaire",
     "Phase de groupes · Journée 3", "Groupe G", "Barrages"]);
+});
+
+// FAILURE_MODES.md §19 (19a, 19f, 19g): openfootball/worldcup.json at 516d3825 (CC0) writes most of
+// 1950–2014 and seven 2022 results as arrays, and cancels 1938 Sweden–Austria.
+test("the World Cup projection writes array results as objects and keeps the source's status", async () => {
+  const { GET } = await import("../backend/sources/projections/open-cups.mjs");
+  const original = globalThis.fetch;
+  const read = async (season, matches) => {
+    globalThis.fetch = async () => Response.json({ name: "World Cup " + season, matches });
+    const response = await GET(new Request("http://bridge/api/open-cups?competition=world-cup-history&season=" + season));
+    return [response.status, await response.json()];
+  };
+  try {
+    const [status, body] = await read("1938", [
+      { round: "First round", date: "1938-06-05", team1: "Sweden", team2: "Austria", status: "canceled" },
+      { round: "First round", date: "1938-06-05", team1: "France", team2: "Belgium", score: { ft: [3, 1], ht: [2, 1] } },
+    ]);
+    assert.equal(status, 200);
+    assert.deepEqual(body.matches, [
+      { round: "First round", date: "1938-06-05", team1: "Sweden", team2: "Austria", status: "canceled" },
+      { round: "First round", date: "1938-06-05", team1: "France", team2: "Belgium", score: { ft: [3, 1], ht: [2, 1] } },
+    ]);
+    const [, wc1962] = await read("1962", [{ round: "Matchday 1", group: "Group 1", date: "1962-05-30", team1: "Uruguay", team2: "Colombia", score: [2, 1] }]);
+    assert.deepEqual(wc1962.matches[0].score, { ft: [2, 1] });
+    const [, wc2022] = await read("2022", [{ round: "Matchday 6", group: "Group B", date: "2022-11-25", team1: "England", team2: "USA", score: [0, 0] }]);
+    assert.deepEqual(wc2022.matches[0].score, { ft: [0, 0] });
+    // A malformed score makes the edition unreadable, with its code: the last valid one stays.
+    for (const score of [[2], [2, -1], [2, 1.5], [true, 0], "2-1", { ft: [1, null] }, { ht: [1, 0] }, { p: [4, 3] }, { ft: [1, 0], x: [0, 0] }]) {
+      const [code, failed] = await read("1962", [{ date: "1962-05-30", team1: "Uruguay", team2: "Colombia", score }]);
+      assert.equal(code, 502, JSON.stringify(score));
+      assert.equal(failed.code, "INVALID_SCORE");
+    }
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+// FAILURE_MODES.md §19 (19z′, 19z″): a score after extra time is never the 90 minutes' too.
+test("Football.TXT keeps the 90 minutes apart from extra time", () => {
+  const text = "# Matches 4\n▪ Final\nSat May 3 2025\n  20:00  A   v B   2-1 a.e.t.\n  20:00  C   v D   5-4 pen. 1-1 a.e.t. (1-1, 0-0)\nSun May 4\n  20:00  E   v F   4-3 pen. (2-1, 0-1)\n  20:00  G   v H   4-1 (3-0)\n";
+  assert.deepEqual(parseOpenCupText(text, 2024).map((row) => row.score), [
+    { et: [2, 1] },
+    { ft: [1, 1], et: [1, 1], p: [5, 4] },
+    { ft: [2, 1], p: [4, 3] },
+    { ft: [4, 1] },
+  ]);
 });

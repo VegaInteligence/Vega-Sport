@@ -13,6 +13,12 @@ the team statistics the source gives (shots, shots on target, fouls, corners, pe
 too, cards) become core.team_match_stats rows. The source's goal minutes name no side and
 are not kept. Read every six hours; an unreadable competition is skipped, the others are
 written.
+
+A competition's files replace its edition only as the complete snapshot the summary describes
+(read_files: its declared rows, no reported error) and only when they keep every result the
+base holds (snapshot.py); otherwise the edition stays as it was, the competition counts as
+unmatched and ops.parse_failures says why (FAILURE_MODES.md §19). A match whose values and
+statistics are unchanged is not written again.
 """
 
 import csv
@@ -20,7 +26,7 @@ from datetime import timedelta
 import io
 import re
 
-from . import SourceError
+from . import SourceError, failure, snapshot
 from .cups import _team
 from ..seasons import sporting_season
 from ..store import Store
@@ -57,6 +63,10 @@ SPELLINGS = {
 }
 # CSV columns -> team_match_stats columns, per side and period.
 STATS = {"shots": "total_shots", "target": "shots_on_target", "fouls": "fouls", "corners": "corners", "yellow": "yellow_cards", "red": "red_cards"}
+PERIODS = (("all", ""), ("first_half", "_1h"), ("second_half", "_2h"))
+# The columns each file must have for its rows to name a match (and a result its score).
+HEADERS = {"results": {"date", "home", "away", "ft_home", "ft_away"}, "fixtures": {"date", "home", "away"}}
+DAY = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
 # The source's country codes the base writes otherwise (core.countries, PitchAPI's teams).
@@ -74,7 +84,11 @@ def scopes(now):
 
 
 def _int(value):
-    return int(value) if isinstance(value, str) and value.strip().isdigit() else None
+    return int(value) if isinstance(value, str) and re.fullmatch(r"[0-9]+", value.strip()) else None
+
+
+def _count(value):
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
 
 
 def season_label(code):
@@ -88,11 +102,115 @@ def rows(text):
     return list(csv.DictReader(io.StringIO(text.lstrip("﻿"), newline="")))
 
 
+def read_files(get, league, code, folder):
+    """A competition's (results, fixtures) rows, as the summary describes them: integer counts and
+    no reported error, each declared file read with its columns and exactly its declared rows.
+    SourceError with a detail when they are not that complete snapshot; an unreadable file raises
+    the reader's own SourceError (no detail)."""
+    declared = {part: _count(league.get(part)) for part in HEADERS}
+    errors = league.get("errors", [])
+    if None in declared.values() or not isinstance(errors, list):
+        raise SourceError("MANIFEST_INVALID", f"results={league.get('results')!r} fixtures={league.get('fixtures')!r} errors={errors!r}")
+    if errors:
+        raise SourceError("SOURCE_REPORTED_ERRORS", "; ".join(map(str, errors)))
+    out = {}
+    for part, count in declared.items():
+        if not count:
+            out[part] = []
+            continue
+        text = get(f"{RAW}data/{folder}/{part}_{code}.csv", as_text=True)
+        reader = csv.DictReader(io.StringIO(text.lstrip("﻿"), newline=""))
+        if not HEADERS[part] <= set(reader.fieldnames or ()):
+            raise SourceError("INVALID_HEADER", f"{part}: {reader.fieldnames}")
+        out[part] = list(reader)
+        if len(out[part]) != count:
+            raise SourceError("ROW_COUNT_MISMATCH", f"{part}: {len(out[part])} rows, {count} declared")
+    return out["results"], out["fixtures"]
+
+
+def candidate(folder, season, results, fixtures, label):
+    """{provider key: row} of the snapshot, results first then fixtures, in source order.
+
+    A result row names both sides, its day and its two goals (INVALID_RESULT_ROW otherwise); a
+    fixture row without them names no match and is skipped. A fixture with the key of a result is
+    that result. Rows of one key otherwise make one match, from the last of them (as before)."""
+    out = {}
+    for status, items in (("finished", results), ("not_started", fixtures)):
+        for item in items:
+            home, away, day = (item.get("home") or "").strip(), (item.get("away") or "").strip(), (item.get("date") or "").strip()
+            home, away = SPELLINGS.get(home, home), SPELLINGS.get(away, away)
+            goals = (_int(item.get("ft_home")), _int(item.get("ft_away"))) if status == "finished" else (None, None)
+            if not home or not away or not DAY.fullmatch(day):
+                if status == "finished":
+                    raise SourceError("INVALID_RESULT_ROW", f"{label}: a result without its sides or day: {dict(item)}")
+                continue
+            if status == "finished" and None in goals:
+                raise SourceError("INVALID_RESULT_ROW", f"{label}: {day} {home}–{away} without its goals: {item.get('ft_home')!r}–{item.get('ft_away')!r}")
+            half = (_int(item.get("ht_home")), _int(item.get("ht_away")))
+            row = {
+                "status": status, "home": home, "away": away, "date": day, "round": (item.get("gw") or "").strip() or None,
+                "home_score": goals[0], "away_score": goals[1],
+                "home_score_ht": half[0] if None not in half else None, "away_score_ht": half[1] if None not in half else None,
+                "stats": _row_stats(item),
+            }
+            key = f"{folder}:{season}:{day}|{home}|{away}"
+            if key in out and out[key]["status"] == "finished" and status != "finished":
+                continue  # a fixture still listed after its result: the result is the match
+            out.pop(key, None)
+            out[key] = row
+    return out
+
+
+def _row_stats(item):
+    """{(side, period): {column: value}} of the statistics a CSV row gives (corners alone per half)."""
+    out = {}
+    for side in ("home", "away"):
+        for period, suffix in PERIODS:
+            stats = {}
+            for name, column in STATS.items():
+                value = _int(item.get(f"{side}_{name}{suffix}")) if suffix == "" or name == "corners" else None
+                if value is not None:
+                    stats[column] = value
+            out[(side, period)] = stats
+    return out
+
+
+def _by_team_period(rows):
+    return sorted(rows, key=lambda r: (r[0], r[1]))
+
+
+def _stats_rows(row, home, away):
+    """The match's team_match_stats rows: (team, period, {column: value})."""
+    teams = {"home": home, "away": away}
+    return _by_team_period((teams[side], period, stats) for (side, period), stats in row["stats"].items() if stats)
+
+
+def _stored_stats(conn, season_id, ids):
+    out = {}
+    if ids:
+        for match, team, period, *values in conn.execute(
+            f"""SELECT match_id, team_id, period::text, {', '.join(STATS.values())} FROM core.team_match_stats
+                WHERE season_id = %s AND match_id = ANY(%s)""",
+            (season_id, list(ids)),
+        ):
+            out.setdefault(match, []).append((team, period, {c: v for c, v in zip(STATS.values(), values) if v is not None}))
+    return {match: _by_team_period(rows) for match, rows in out.items()}
+
+
 def save(conn, folder, name, season, results, fixtures, now):
-    """Replace one competition's edition; returns the matches written."""
+    """Replace one competition's edition by a complete snapshot; returns the matches it holds.
+
+    Refused (SourceError with a detail, nothing written): a result row without its sides, day or
+    goals, and a snapshot that drops or unplays a result the base holds (snapshot.guard). Matches
+    and statistics are written only where they changed."""
     label = sporting_season(season)
     if label is None:
         raise SourceError("INVALID_SEASON")
+    cup_key = f"open-matchday:{folder}:{season}"
+    snap = candidate(folder, season, results, fixtures, cup_key)
+    stored = conn.execute("SELECT id FROM core.competition_seasons WHERE cup_key = %s", (cup_key,)).fetchone()
+    before = snapshot.stored(conn, "open_matchday", stored and stored[0])
+    snapshot.guard("open_matchday", before, {key: row["status"] for key, row in snap.items()}, cup_key)
     season_id = Store(conn).season(label)
     country = country_of(folder)
     family = f"cup:open-matchday:{folder}"
@@ -115,58 +233,40 @@ def save(conn, folder, name, season, results, fixtures, now):
            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
            ON CONFLICT (cup_key) DO UPDATE SET cup_name=EXCLUDED.cup_name, cup_checked_at=EXCLUDED.cup_checked_at, updated_at=now()
            RETURNING id""",
-        (comp, season_id, season, f"open-matchday:{folder}:{season}", name, SOURCE, now, now),
+        (comp, season_id, season, cup_key, name, SOURCE, now, now),
     ).fetchone()[0]
-    keep = []
-    position = 0
-    for status, items in (("finished", results), ("not_started", fixtures)):
-        for item in items:
-            home_name, away_name, day = (item.get("home") or "").strip(), (item.get("away") or "").strip(), (item.get("date") or "").strip()
-            home_name, away_name = SPELLINGS.get(home_name, home_name), SPELLINGS.get(away_name, away_name)
-            if not home_name or not away_name or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day):
-                continue
-            key = f"{folder}:{season}:{day}|{home_name}|{away_name}"
-            home = _team(conn, "open_matchday", f"name:{home_name}", home_name)
-            away = _team(conn, "open_matchday", f"name:{away_name}", away_name)
-            round_id = None
-            if (item.get("gw") or "").strip():
-                round_id = conn.execute(
-                    """INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s)
-                       ON CONFLICT (competition_season_id, name) DO UPDATE SET name=EXCLUDED.name RETURNING id""",
-                    (edition, item["gw"].strip()),
-                ).fetchone()[0]
-            hs, as_ = (_int(item.get("ft_home")), _int(item.get("ft_away"))) if status == "finished" else (None, None)
-            values = {
-                "competition_season_id": edition, "season_id": season_id, "source": "open_matchday", "status": status if hs is not None or status == "not_started" else "not_started",
-                "match_date": day, "home_team_id": home, "away_team_id": away, "home_team_name": home_name, "away_team_name": away_name,
-                "round_id": round_id, "home_score": hs, "away_score": as_, "home_score_ht": _int(item.get("ht_home")), "away_score_ht": _int(item.get("ht_away")),
-                "archive_position": position,
-            }
-            position += 1
-            mid = conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type='match' AND provider='open_matchday' AND provider_key=%s", (key,)).fetchone()
-            columns = list(values)
-            if mid:
-                mid = mid[0]
-                conn.execute(f"UPDATE core.matches SET {', '.join(f'{c}=%s' for c in columns)}, updated_at=now() WHERE id=%s", [values[c] for c in columns] + [mid])
-            else:
-                mid = conn.execute(f"INSERT INTO core.matches({', '.join(columns)}) VALUES ({', '.join(['%s'] * len(columns))}) RETURNING id",
-                                   [values[c] for c in columns]).fetchone()[0]
-                conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('match','open_matchday',%s,%s)", (key, mid))
-            keep.append(mid)
+    before.update(snapshot.elsewhere(conn, "open_matchday", edition, [key for key in snap if key not in before]))
+    stats_before = _stored_stats(conn, season_id, [m["id"] for m in before.values()])
+    changes = 0
+    for position, (key, row) in enumerate(snap.items()):
+        home = _team(conn, "open_matchday", f"name:{row['home']}", row["home"])
+        away = _team(conn, "open_matchday", f"name:{row['away']}", row["away"])
+        round_id = None
+        if row["round"]:
+            found_round = conn.execute("SELECT id FROM core.rounds WHERE competition_season_id=%s AND name=%s", (edition, row["round"])).fetchone()
+            round_id = found_round[0] if found_round else conn.execute(
+                "INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s) RETURNING id", (edition, row["round"])).fetchone()[0]
+        values = {
+            "competition_season_id": edition, "season_id": season_id, "source": "open_matchday", "status": row["status"],
+            "match_date": row["date"], "home_team_id": home, "away_team_id": away, "home_team_name": row["home"], "away_team_name": row["away"],
+            "round_id": round_id, "home_score": row["home_score"], "away_score": row["away_score"],
+            "home_score_ht": row["home_score_ht"], "away_score_ht": row["away_score_ht"], "archive_position": position,
+        }
+        found = before.get(key)
+        stats = _stats_rows(row, home, away)
+        restated = found is not None and stats_before.get(found["id"], []) != stats
+        mid, outcome = snapshot.write(conn, "open_matchday", key, values, found, changed=restated)
+        changes += outcome in ("inserted", "updated")
+        if outcome == "inserted" or restated:
             conn.execute("DELETE FROM core.team_match_stats WHERE season_id=%s AND match_id=%s", (season_id, mid))
-            for side, team in (("home", home), ("away", away)):
-                for period, suffix in (("all", ""), ("first_half", "_1h"), ("second_half", "_2h")):
-                    stats = {column: _int(item.get(f"{side}_{name}{suffix}")) for name, column in STATS.items() if suffix == "" or name == "corners"}
-                    stats = {k: v for k, v in stats.items() if v is not None}
-                    if stats:
-                        cols = ["season_id", "match_id", "team_id", "period", *stats]
-                        conn.execute(f"INSERT INTO core.team_match_stats({', '.join(cols)}) VALUES ({', '.join(['%s'] * len(cols))})",
-                                     [season_id, mid, team, period, *stats.values()])
-    conn.execute("DELETE FROM core.matches WHERE competition_season_id=%s AND NOT id = ANY(%s)", (edition, keep))
-    conn.execute(
-        "DELETE FROM core.provider_ids p WHERE p.entity_type='match' AND p.provider='open_matchday' AND NOT EXISTS (SELECT 1 FROM core.matches m WHERE m.id=p.entity_id)"
-    )
-    return len(keep)
+            for team, period, columns in stats:
+                cols = ["season_id", "match_id", "team_id", "period", *columns]
+                conn.execute(f"INSERT INTO core.team_match_stats({', '.join(cols)}) VALUES ({', '.join(['%s'] * len(cols))})",
+                             [season_id, mid, team, period, *columns.values()])
+    changes += snapshot.remove(conn, "open_matchday", before, set(snap))
+    if changes:
+        conn.execute("UPDATE core.competition_seasons SET cup_updated_at=%s WHERE id=%s", (now, edition))
+    return len(snap)
 
 
 def held(conn, folder, season):
@@ -219,13 +319,17 @@ def run(conn, get, scope, now):
                 drop_copy(conn, folder, season)
             continue
         try:
-            results = rows(get(f"{RAW}data/{folder}/results_{code}.csv", as_text=True)) if league.get("results") else []
-            fixtures = rows(get(f"{RAW}data/{folder}/fixtures_{code}.csv", as_text=True)) if league.get("fixtures") else []
-        except SourceError:
-            unmatched += 1  # this competition's files are unreadable now; the others go on
-            continue
-        with conn.transaction():
-            written += save(conn, folder, league.get("league") or folder, season, results, fixtures, now)
+            results, fixtures = read_files(get, league, code, folder)
+            with conn.transaction():
+                written += save(conn, folder, league.get("league") or folder, season, results, fixtures, now)
+        except SourceError as error:
+            # This competition is not written now (its files unreadable, or not the complete snapshot that
+            # keeps its results): its edition stays as it was; the others go on.
+            unmatched += 1
+            if error.detail is not None:
+                cup_key = f"open-matchday:{folder}:{season}"
+                edition = conn.execute("SELECT id FROM core.competition_seasons WHERE cup_key = %s", (cup_key,)).fetchone()
+                failure(conn, error.code, f"{cup_key}: {error.detail}", edition and edition[0])
     conn.execute(
         """INSERT INTO core.source_revisions(source, name, url, license, revision, retrieved_at) VALUES ('open-matchday', 'open-matchday', %s, %s, %s, %s)
            ON CONFLICT (source) DO UPDATE SET revision=EXCLUDED.revision, retrieved_at=EXCLUDED.retrieved_at""",
