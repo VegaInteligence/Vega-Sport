@@ -194,6 +194,25 @@ class LeagueLevelTest(unittest.TestCase):
                 row(3, "open-matchday:UEFA_1_champions-league:2026/2027"), row(4, "open-matchday:ENG_CUP_fa-cup:2026/2027")]
         self.assertEqual([r[0] for r in power.elo_matches(rows)], [2, 4])
 
+    def test_a_cup_two_sources_hold_is_read_from_one(self):
+        # The German cup comes from OpenLigaDB (its rounds) and open-matchday: the Elo reads OpenLigaDB's, since the
+        # two write the same amateur clubs two ways (« HEBC Hamburg », « Hamburg Eimsbütteler BC »), one match counting twice.
+        from datetime import date
+
+        row = lambda i, key: (i, 2026, None, "A", "B", 1, 0, False, date(2026, 9, i), 50, True, False, key)
+        rows = [row(1, "open-matchday:GER_CUP_dfb-pokal:2026/2027"), row(2, "openligadb:germany-cup:2026/2027")]
+        self.assertEqual([r[0] for r in power.elo_matches(rows)], [2])
+
+    def test_the_elo_reads_each_team_as_the_identity_rules_name_it(self):
+        # A copy the identity pass has not merged yet (it runs once a day) plays as its club: never a club of its own.
+        from datetime import date
+
+        rows = [(1, 2026, None, "copy", "B", 1, 0, False, date(2026, 9, 1), 50, True, False, "x"),
+                (2, 2026, None, "copy", "club", 1, 0, False, date(2026, 9, 2), 50, True, False, "x"),
+                (3, 2026, None, "C", "D", 1, 0, False, date(2026, 9, 3), 1, False, False, None)]
+        merged = power.merged_rows(rows, {"copy": "club"})
+        self.assertEqual([(r[0], r[3], r[4]) for r in merged], [(1, "club", "B"), (3, "C", "D")])  # a club against itself is no match
+
     def test_complementary_matches_copy_no_other(self):
         from datetime import date
 
