@@ -32,3 +32,12 @@
   - Verify in production: copies gone, Elo run done, merges made.
   - Then: link the archive and continental clubs, and project domestic cups by stage.
   - After the backfill: recompute and verify 2021/22–2022/23.
+
+## VI-22 — club page and featured competitions (scratchpad worktree `club-tasks`, 17 Nov 2026)
+
+- Goal ([VI-22](https://linear.app/vegainteligence/issue/VI-22/page-club-et-competitions-clubs-similaires-sur-toute-la-base-liens)): similar clubs across the whole base by default (league picker kept), « Ce club n’a pas de classement UEFA. », club links in « Résultats et attendus », match links in « Derniers / Prochains matchs », featured row squeezed with the three UEFA cups.
+- User decisions: similarity is the style of play only, never the club's Elo; but a club dominating a weak league must not pass for a top club, while Como or Roma can still match Paris.
+- Method: style centiles in each club's own league cohort, less 0.15 per point of the two leagues' level gap beyond 50 (measured read-only; a hard ±125 window flipped Ecuador's champion in and out when levels moved by 3 points). Advisor (Opus, Fable rate-limited) consulted; its club-Elo window was rejected by the user.
+- Built: migration 123 (`api.team_style_centiles`), `GET /api/teams/{id}/similar?season=&league=` with its contract test written first, the tab on it, the four UI changes, calc note 04-clubs/04.
+- Validated locally: route test 5/5, site tests 605/605, site compiles; 17 E2E checks pass through a proxy replaying production rows. Evidence: scratchpad `evidence/vi22/EVIDENCE.md`.
+- Next action: user validates the preview; then rebase on origin/main, commit, push main, deploy (migration 123 + API), verify the live route.

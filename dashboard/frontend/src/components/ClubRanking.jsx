@@ -19,7 +19,8 @@ export default function ClubRanking({ clubId }) {
     <Card fold title="Classement UEFA" className="club-ranking">
       <AsyncState resource={result}>
         {(rows) =>
-          rows ? (
+          // A club never ranked (or not matched to the UEFA list) has no table of empty rows.
+          rows?.some(({ row }) => row) ? (
             <div className="table-scroll">
               <table className="data-table">
                 <thead>
@@ -41,7 +42,7 @@ export default function ClubRanking({ clubId }) {
               </table>
             </div>
           ) : (
-            <p>Correspondance du club non établie.</p>
+            <p>Ce club n’a pas de classement UEFA.</p>
           )
         }
       </AsyncState>

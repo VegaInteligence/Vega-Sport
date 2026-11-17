@@ -1282,6 +1282,32 @@ export function SituationTable({ profile }) {
 
 /* --------------------------------------------------------------- matches */
 
+/**
+ * A club match row: a link to the match's page (as MatchLink), or a plain row when the
+ * match has no page.
+ */
+export function MatchRowLink({ match, className, children }) {
+  const f = useFootball();
+  const upcoming = match.status === "not_started";
+  if (!match.id || String(match.id).startsWith("uefa:"))
+    return <div className={className}>{children}</div>;
+  return (
+    <Link
+      prefetch={false}
+      className={`${className} ${s.matchLink}`}
+      href={f.href("/matchs/", {
+        tab: upcoming ? "upcoming" : "results",
+        ...(upcoming ? { from: "upcoming" } : {}),
+        id: match.id,
+        competition: match.league?.id || match.leagueId || "",
+        sourceSeason: match.season || "",
+      })}
+    >
+      {children}
+    </Link>
+  );
+}
+
 export function MatchRows({ rows, limit = 99, competitionName = true }) {
   const max = Math.max(
     1,
@@ -1293,7 +1319,7 @@ export function MatchRows({ rows, limit = 99, competitionName = true }) {
         .reverse()
         .slice(0, limit)
         .map((row) => (
-          <div className={s.matchRow} key={row.match.id}>
+          <MatchRowLink className={s.matchRow} key={row.match.id} match={row.match}>
             <span className={s.matchDate}>{dateShort(row.match.date)}</span>
             <span className={s.form}>
               <span data-result={row.result}>{row.result}</span>
@@ -1336,7 +1362,7 @@ export function MatchRows({ rows, limit = 99, competitionName = true }) {
             <span className={s.matchComp}>
               {competitionName ? row.match.league : ""}
             </span>
-          </div>
+          </MatchRowLink>
         ))}
     </div>
   );
@@ -1425,6 +1451,20 @@ export function SquadTable({ dossier, limit = 30 }) {
 
 /* --------------------------------------------------------- league table */
 
+/** A table's club: a link to its page, except the club the page is about. */
+function ClubCell({ club, self, children }) {
+  const f = useFootball();
+  if (self || !club.id) return <span className={s.clubCell}>{children}</span>;
+  return (
+    <Link
+      className={`${s.clubCell} ${s.clubLink}`}
+      href={f.href("/clubs/", { id: club.id, clubView: "", clubScope: "", vs: "" })}
+    >
+      {children}
+    </Link>
+  );
+}
+
 export function LeagueTable({ dossier, sort = "points", compact = false }) {
   const rows = [...dossier.clubs].sort((a, b) =>
     sort === "xpts" ? a.xptsPosition - b.xptsPosition : a.position - b.position,
@@ -1464,7 +1504,7 @@ export function LeagueTable({ dossier, sort = "points", compact = false }) {
             return (
               <tr key={club.id} data-self={club.id === dossier.id}>
                 <th scope="row">
-                  <span className={s.clubCell}>
+                  <ClubCell club={club} self={club.id === dossier.id}>
                     <span
                       className={s.muted}
                       style={{ width: 18, textAlign: "right" }}
@@ -1473,7 +1513,7 @@ export function LeagueTable({ dossier, sort = "points", compact = false }) {
                     </span>
                     <Crest club={club} />
                     {club.name}
-                  </span>
+                  </ClubCell>
                 </th>
                 <td className={s.muted}>
                   {sort === "xpts" ? club.position : club.xptsPosition}
@@ -1554,7 +1594,7 @@ export function ExpectedGapTable({ dossier }) {
             return (
               <tr key={club.id} data-self={club.id === dossier.id}>
                 <th scope="row">
-                  <span className={s.clubCell}>
+                  <ClubCell club={club} self={club.id === dossier.id}>
                     <span
                       className={s.muted}
                       style={{ width: 18, textAlign: "right" }}
@@ -1566,7 +1606,7 @@ export function ExpectedGapTable({ dossier }) {
                       {club.name}
                       <small className={s.muted}> · {club.league?.name}</small>
                     </span>
-                  </span>
+                  </ClubCell>
                 </th>
                 <td className={s.muted}>
                   {club.leaguePosition

@@ -33,6 +33,7 @@ import {
   LeaguePlot,
   LeagueTable,
   mixedReferential,
+  MatchRowLink,
   MatchRows,
   MetricTable,
   PhaseBars,
@@ -483,7 +484,7 @@ export function Upcoming({ dossier, limit = 6 }) {
           ? Math.max(1, Math.ceil(strength.centile / 20))
           : 0;
         return (
-          <div className={c.matchRow} key={match.id}>
+          <MatchRowLink className={c.matchRow} key={match.id} match={match}>
             <span className={c.matchDate}>{dateShort(match.date)}</span>
             <span className={c.muted} style={{ fontSize: 11 }}>
               {home ? "dom." : "ext."}
@@ -526,7 +527,7 @@ export function Upcoming({ dossier, limit = 6 }) {
               )}
             </span>
             <span className={c.matchComp}>{match.league}</span>
-          </div>
+          </MatchRowLink>
         );
       })}
     </div>

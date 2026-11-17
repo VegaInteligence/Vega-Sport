@@ -637,9 +637,13 @@ export default function CompetitionsPage() {
             aria-label="Choisir une compétition"
           >
             <div className="league-spotlight-grid">
-              {orderedCompetitions(
-                orderedFeatured(catalog, FEATURED_LEAGUE_IDS),
-              ).map((c) => (
+              {[
+                ...orderedCompetitions(
+                  orderedFeatured(catalog, FEATURED_LEAGUE_IDS),
+                ),
+                // The three UEFA cups after the seven leagues, in their own order.
+                ...orderedFeatured(catalog, FEATURED_EUROPE_IDS),
+              ].map((c) => (
                 <button
                   key={c.id}
                   className="league-spotlight-item"

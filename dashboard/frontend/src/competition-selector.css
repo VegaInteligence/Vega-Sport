@@ -2,18 +2,19 @@
 .league-spotlight {
   margin-bottom: 22px;
 }
+/* The seven leagues and the three UEFA cups on one row. */
 .league-spotlight-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 6px;
 }
 .league-spotlight-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 7px;
   min-width: 0;
-  min-height: 82px;
-  padding: 12px;
+  min-height: 60px;
+  padding: 8px;
   text-align: left;
   color: var(--ink);
   background: var(--surface);
@@ -36,20 +37,20 @@
   background: var(--surface-hover);
 }
 .league-spotlight-logo {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
 }
 .league-spotlight-item > span:last-child {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
 }
 .league-spotlight-item strong {
   color: var(--ink-strong);
   font-size: var(--text-sm);
-  line-height: 1.25;
-  overflow-wrap: anywhere;
+  line-height: 1.2;
+  overflow-wrap: break-word;
 }
 .league-spotlight-item small {
   color: var(--muted);
@@ -155,9 +156,9 @@
 .standings-group + .standings-group {
   margin-top: 24px;
 }
-@media (max-width: 1250px) {
+@media (max-width: 1359px) {
   .league-spotlight-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 @media (max-width: 700px) {
