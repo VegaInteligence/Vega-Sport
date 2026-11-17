@@ -54,10 +54,17 @@
   - Cup sources no longer rename a team another source also holds.
   - Deployed (run 44078144860): the deployed code, run read-only on the production base, gives exact totals (Spain 28 %); the live page waits for the worker's first write.
   - Linear VI-19 comment posted.
+- 17 Nov, afternoon (« chaque compétition doit être prise en compte dans les scores des équipes … et avoir ses prédictions », « oui » to the CAF Champions League, the Nations League's open points to implement):
+  - Every competition in the one Elo (b348bd64d3): no more whitelist (CAF Champions League in: 276 matches); every FIFA member mapped to its confederation; leagues and country groups share an estimated confederation mean (advisor: Opus 5.5 high, Fable rate-limited). Measured read-only: Egypt +70 (se 55), South Africa +63 (se 63), reference leagues ≤ 1.5, PitchAPI clubs median 1.4, 3,141 teams ranked; sensitivity σ_c 60/100/150 within one se.
+  - Forecasts for every competition (b348bd64d3): every match to play between rated teams, whatever the source; open-matchday's leagues projected; stale cup-source fixtures (Libertadores 2026 file stopped in August) skipped.
+  - Nations League's transitional season (03070e2c13, migration 126): leagues A–D replayed together with 2026–27's rules (best/worst thirds and fourths of A, B/C play-offs, D all up, league in 2028–29), the real draw followed once made (20 Nov), the access list as last tie-break (no cards in the sources); League A's « Barrage » / « Relégation » columns corrected to these rules.
+  - Production, read-only with the deployed code: migration 126 applied; 2,050 complementary matches to forecast; 17 complementary leagues projected; the Nations League's totals exact (18 per league). Evidence: scratchpad 41a8837f…/evidence.
+  - Mockup sent for the new displays (scratchpad 41a8837f…/mock/mock-predictions*.png): League A extra columns (Maintien, En A 2028–29), Leagues B–D outcomes and 2028–29 league, forecasts in every competition's match list. Waiting for validation.
+- Not covered yet, by data: Euro 2028 (teams unknown), MLS/Liga MX play-offs (the source names « 2nd ranked »), Libertadores 2026 (source stopped).
 - Next action:
-  - production numbers after the worker's next daily pass (the projections were last written 05:07 UTC);
-  - after 21:30, verify the merges;
-  - CAF Champions League prior: waiting for the user's answer.
+  - once the mockup is validated: serve each match's forecast in the cup and complementary league reads, then the displays;
+  - production numbers after the worker's next daily pass (the projections and the new Elo);
+  - after 21:30 UTC, verify the merges.
 
 ## VI-22 — club page and featured competitions (scratchpad worktree `club-tasks`, 17 Nov 2026)
 
