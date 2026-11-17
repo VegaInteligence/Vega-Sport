@@ -117,3 +117,13 @@ test("match summary of an upcoming match, and unknown ids", { skip }, async () =
   assert.equal((await get("/api/matches/m_zzzzzz/summary")).response.status, 404);
   assert.equal((await get("/api/matches/m_aaaaa1/summary?x=1")).response.status, 400);
 });
+
+// Every competition's lists show the forecast of each match to come (VI-19, 17 Nov 2026): /api/fixtures gives it,
+// as the cups' reads do, before kick-off only.
+test("a fixture to come carries its forecast, a played one none", async () => {
+  const { fixture } = await import("../src/routes/matches.mjs");
+  const row = { id: "m_aaaaa6", status: "not_started", day: "2026-11-21", home_team_id: "t_1", away_team_id: "t_2", forecast: { home_win: 0.512345, draw: 0.25, away_win: 0.237655 } };
+  assert.deepEqual(fixture(row).forecast, { home: 0.5123, draw: 0.25, away: 0.2377 });
+  assert.equal("forecast" in fixture({ ...row, status: "finished" }), false);
+  assert.equal("forecast" in fixture({ ...row, forecast: null }), false);
+});

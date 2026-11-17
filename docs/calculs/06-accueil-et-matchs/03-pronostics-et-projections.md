@@ -267,6 +267,13 @@ Sur le site (maquette validée le 17 novembre) :
   - leur projection, comme celle d'un championnat de la source principale.
   Un championnat que la source principale tient déjà (même nom, même pays) n'est jamais listé deux fois.
 
+Ajouts du 17 novembre au soir (vérification des coupes) :
+
+- **Les copies d'un club.** Une coupe d'une source complémentaire écrit certains clubs à sa façon (« FC Bayern München », « SK Rapid »). Le passage quotidien d'identification les fond dans leur club. D'ici là, le calcul des pronostics les lit à la force de leur club, comme l'Elo le fait déjà : une coupe est projetée le jour où son tour est tiré.
+- **Les clubs écrits deux fois.** open-matchday écrit dix clubs écossais d'une façon dans ses résultats et d'une autre dans ses calendriers et ses coupes (« Airdrie Utd » et « Airdrieonians »). Un seul club, sous son nom complet, depuis ce jour.
+- **Le tableau des coupes nationales.** La source numérote les tours sans les nommer. Ils sont nommés par leur nombre de rencontres, en remontant du dernier (1 finale, 2 demies, 4 quarts, 8 huitièmes…). Les deux manches d'une même rencontre comptent pour un tour, et un tour irrégulier (rejoués, tour préliminaire) reste hors du tableau.
+- **Une même présentation.** Toutes les listes de matchs ont le même dessin (date, équipes autour du score, tour) et la même barre de pronostic avant le coup d'envoi, celles des compétitions de la source principale comprises.
+
 Pas encore couvert : l'Euro 2028 (les équipes ne sont pas encore qualifiées), les phases finales de la MLS et de la Liga MX (la source nomme encore « 2nd ranked » et « 3rd ranked » à la place des clubs).
 
 ## La projection de la Ligue des nations (17 novembre 2026)

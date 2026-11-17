@@ -392,13 +392,6 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.cup-match {
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border);
-}
-.cup-match:last-child {
-  border-bottom: 0;
-}
 .cup-match-meta {
   display: flex;
   flex-wrap: wrap;
@@ -456,36 +449,6 @@
   font-size: var(--text-xs);
   text-align: center;
 }
-/* An upcoming match's forecast (VI-19): home, draw, away as a bar, then their shares. */
-.cup-match-forecast {
-  display: grid;
-  gap: 4px;
-  width: min(260px, 100%);
-  margin: 8px auto 0;
-}
-.cup-match-forecast-bar {
-  display: flex;
-  gap: 2px;
-  height: 6px;
-  overflow: hidden;
-  border-radius: 999px;
-}
-.cup-match-forecast-bar i {
-  flex-basis: 0;
-  min-width: 4px;
-  background: var(--muted);
-}
-.cup-match-forecast-bar [data-side="home"] { background: var(--accent); }
-.cup-match-forecast-bar [data-side="draw"] { opacity: 0.45; }
-.cup-match-forecast-bar [data-side="away"] { background: #e0973a; }
-.cup-match-forecast-shares {
-  display: flex;
-  justify-content: space-between;
-  font-size: var(--text-xs);
-  font-variant-numeric: tabular-nums;
-}
-.cup-match-forecast-shares b { color: var(--ink-strong); font-weight: 600; }
-.cup-match-forecast-shares b[data-side="draw"] { color: var(--muted); font-weight: 500; }
 @media (max-width: 640px) {
   .cup-controls input[type="search"] { width: 100%; }
   .cup-match-teams { gap: 8px; font-size: var(--text-sm); }

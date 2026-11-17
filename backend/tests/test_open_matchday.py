@@ -96,6 +96,30 @@ class OpenMatchdayTest(unittest.TestCase):
         cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
         cls.db.close()
 
+    def test_zz_a_club_the_source_writes_two_ways_is_one_club(self):
+        # open-matchday writes some Scottish clubs one way in its results and another in its fixtures and cups
+        # (« Airdrie Utd » and « Airdrieonians », « Queen of Sth » and « Queen of South », « Raith » for Raith Rovers):
+        # two clubs for the base, phantom rows in a table, a fixture without a forecast. One club, under its full name,
+        # in every folder (reviewed spellings, 17 Nov 2026).
+        x = self.db.execute
+        results = [{"home": "Airdrie Utd", "away": "Queen of Sth", "date": "2026-10-04", "ft_home": "2", "ft_away": "1", "gw": "8"}]
+        fixtures = [{"home": "Queen of South", "away": "Airdrieonians", "date": "2026-12-05", "gw": "16"}]
+        with self.db.transaction():
+            open_matchday.save(self.db, "SCO_3_league-one", "Scottish League One", "2026/2027", results, fixtures, NOW)
+            open_matchday.save(self.db, "SCO_CUP_scottish-cup", "Scottish Cup", "2026/2027", [],
+                               [{"home": "Raith", "away": "Morton", "date": "2026-11-28", "gw": "3"}], NOW)
+        self.addCleanup(lambda: x("DELETE FROM core.matches WHERE competition_season_id IN (SELECT id FROM core.competition_seasons WHERE cup_key LIKE 'open-matchday:SCO_%%')"))
+        rows = x("""SELECT m.home_team_name, m.away_team_name, h.name, a.name, m.home_team_id, m.away_team_id FROM core.matches m
+                    JOIN core.teams h ON h.id = m.home_team_id JOIN core.teams a ON a.id = m.away_team_id
+                    JOIN core.competition_seasons cs ON cs.id = m.competition_season_id WHERE cs.cup_key LIKE 'open-matchday:SCO_%%' ORDER BY m.match_date""").fetchall()
+        self.assertEqual([r[:4] for r in rows], [
+            ("Airdrieonians", "Queen of the South", "Airdrieonians", "Queen of the South"),
+            ("Raith Rovers", "Greenock Morton", "Raith Rovers", "Greenock Morton"),
+            ("Queen of the South", "Airdrieonians", "Queen of the South", "Airdrieonians"),
+        ])
+        self.assertEqual((rows[0][4], rows[0][5]), (rows[2][5], rows[2][4]))  # the same two clubs
+        self.assertEqual(open_matchday.SPELLINGS["Inverness"], "Inverness Caledonian Thistle")
+
     def test_european_competitions_round_trip(self):
         with self.db.transaction():
             written, unmatched = open_matchday.run(self.db, fake_get, "europe", NOW)

@@ -210,6 +210,7 @@ test("the Euro results list also displays flags for both national teams", async 
       "../services/cup-projection.js": { useCupProjection: () => null },
       "./Hint.jsx": { Term: ({ children }) => children },
     "../services/forecasts.js": { share: (v) => `${Math.round(v * 100)} %` },
+    "./MatchForecastBar.jsx": { __esModule: true, default: () => null },
       "../services/cup-archives.js": cupArchives,
     },
   );

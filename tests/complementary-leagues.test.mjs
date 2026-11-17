@@ -83,6 +83,7 @@ test("a league's page: its standings, its matches, its projection, no bracket", 
     "./SeasonProjection.jsx": { __esModule: true, default: () => elem("div", null, "projection") },
     "../services/cup-projection.js": { useCupProjection: () => projection },
     "../services/forecasts.js": { share: (v) => `${Math.round(v * 100)} %` },
+    "./MatchForecastBar.jsx": { __esModule: true, default: () => null },
   };
   const filename = path.join(root, "dashboard/frontend/src/components/CupCompetition.jsx");
   const compiled = babel.transformSync(await fs.readFile(filename, "utf8"), { presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename }).code;

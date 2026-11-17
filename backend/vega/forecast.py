@@ -1066,6 +1066,16 @@ def league_state(rows, held=frozenset(), phases=frozenset()):
             for edition in editions if len(tables[edition]) >= MIN_LEAGUE}
 
 
+def with_merges(strengths, merge):
+    """`strengths` with each copy of a club (`merge`: {team: the club it is}, identity.pairs) at its club's strength,
+    until the daily identity pass merges it; a team with its own strength keeps it."""
+    out = dict(strengths)
+    for team, club in merge.items():
+        if team not in out and club in strengths:
+            out[team] = strengths[club]
+    return out
+
+
 def refresh(conn, season):
     """The forecasts and projections of a season in progress (after power.refresh_elo);
     returns (matches forecast, leagues projected). A season with nothing left to play
@@ -1075,6 +1085,10 @@ def refresh(conn, season):
         rows = conn.execute(SEASON, (season,)).fetchall()
         strengths = dict(conn.execute("SELECT DISTINCT ON (team_id) team_id, elo FROM agg.team_power ORDER BY team_id, season_id DESC").fetchall())
         now = conn.execute("SELECT now()").fetchone()[0]
+    # A cup source's copy of a club plays at its club's strength before the identity pass merges it.
+    from .sources import identity
+
+    strengths = with_merges(strengths, {team: club for team, club, *_ in identity.pairs(conn)[0]})
     model = fit([row[:5] for row in observed])
     weights, cases, present = (0.0, 0.0), [], {}
     if model:

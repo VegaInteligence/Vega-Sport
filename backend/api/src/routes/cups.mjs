@@ -22,7 +22,7 @@
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
-import { fixture } from "./matches.mjs";
+import { fixture, forecastOf } from "./matches.mjs";
 import { standingsBody } from "./reference.mjs";
 
 const LEAGUE = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/,
@@ -44,11 +44,7 @@ const FOLDER = /^[A-Z0-9_]+_[a-z0-9-]+$/;
 const text = (v) => (v === null || v === undefined ? "" : String(v));
 const outcome = (h, a) => (h == null || a == null ? "" : h > a ? "H" : h < a ? "A" : "D");
 
-/** The model's forecast of a match still to play (api.match_forecasts' row), as the site reads it; null without one. */
-export function forecastOf(f) {
-  const r4 = (v) => Math.round(Number(v) * 10000) / 10000;
-  return f ? { home: r4(f.home_win), draw: r4(f.draw), away: r4(f.away_win) } : null;
-}
+export { forecastOf };
 
 /** A cup source's match with its forecast while it is still to play (every competition has its predictions, VI-19). */
 export function withForecast(match, f) {
