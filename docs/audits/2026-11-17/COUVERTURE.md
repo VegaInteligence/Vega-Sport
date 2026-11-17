@@ -4,9 +4,9 @@ La version de production comparée est `8018e0836ca0f32e8b2eb51fc2847154abff7f13
 
 | § du document initial | En production | Conclusion de la revue |
 | --- | --- | --- |
-| 1. Tentatives de duels | Incomplet | La restauration à zéro intervient après le calcul du dénominateur. 127 150 entrées avec réussites positives sont touchées dans la lecture figée. |
+| 1. Tentatives de duels | Incomplet | La restauration à zéro intervient après le calcul du dénominateur. 127 150 entrées avec réussites positives sont touchées dans la lecture figée. En 2022/23, une expérience sur 16 221 participations de champ mesure l’effet jusqu’au top 100. [Sensibilité](CONTROLES.md) |
 | 2. Buts hors penalty | Incomplet | L’annexe reproduit la conversion d’un inconnu en zéro. Aucun cas de buteur satisfaisant l’ensemble des conditions dans la lecture des saisons 2021–26. |
-| 3. Niveau et incertitude des ligues | Incomplet | Estimation et covariance présentes. Le gradient publié ne correspond pas au gradient numérique sur le cas du document. |
+| 3. Niveau et incertitude des ligues | Incomplet | Le gradient diverge sur le cas du document et sur le relevé de 81 921 matchs. Huit coordonnées de ligue sur 72 ont un signe inversé. [Mesures](CONTROLES.md) |
 | 4. Historique utilisable en prévision | Manquant pour l’usage à date | Réécrire les contributions avec les matchs futurs change la valeur historique utilisée par la composition. |
 | 5. Conservation des matchs simulés | Incomplet | Plusieurs états et les équipes sans force estimée font disparaître des fixtures de la simulation. |
 | 6. Loi de simulation de saison | Incomplet | Le modèle d’un match intègre ρ. La simulation peut garder la même distribution lorsque ρ change. |
@@ -21,7 +21,7 @@ La version de production comparée est `8018e0836ca0f32e8b2eb51fc2847154abff7f13
 | 15. Autres calculs | Partiellement implémenté en production | Périmètre des matchs terminés, demi-matchs complets, conversion hors penalty, buts contre son camp et retours en club corrigés sur les chemins vérifiés. Neutralité et correction tardive d’une journée restent ouvertes. |
 | 16. Risques de modèle | Partiellement implémenté en production | xG contraint déployé et évalué sur un jeu temporel réel. Pour 96 matchs admis, un but en prolongation modifie encore la cible censée être à 90 minutes. Les choix de pondération du score restent des décisions de méthode. |
 | 17. Calculs satisfaisants et documentation | Partiel | Les contrôles historiques et versions de méthodes figurent dans les annexes. Ce rapport date les preuves de production et les écarts nouvellement mesurés. |
-| 18. Validation et ordre des réparations | Partiel | Deux évaluations temporelles réelles sont livrées pour les tirs xG et les issues de match. Les effets sur le top 100 après correction de tous les modèles, et la validation des prédictions réellement émises, restent indisponibles. |
+| 18. Validation et ordre des réparations | Partiel | Deux évaluations temporelles réelles sont livrées pour les tirs xG et les issues de match. Une intervention isolée sur les duels change un membre de chacun des deux tops 100 de 2022/23. Les autres interventions et les probabilités réellement publiées à l’époque restent à valider. [Résultats](CONTROLES.md) |
 
 ## Exigences étendues du 17 novembre
 
