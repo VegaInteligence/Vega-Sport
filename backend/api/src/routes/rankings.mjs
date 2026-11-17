@@ -455,7 +455,8 @@ async function swap(read, params) {
 }
 
 // The stages of a UEFA cup's projection (122), in order.
-const CUP_STAGES = ["top8", "playoff", "out", "first", "second", "third", "fourth", "r64", "r32", "r16", "qf", "sf", "final", "win"];
+const CUP_STAGES = ["top8", "playoff", "out", "first", "second", "third", "fourth", "stay", "barrage", "relegated", "promoted",
+  "next_a", "next_b", "next_c", "r64", "r32", "r16", "qf", "sf", "final", "win"];
 const LEAGUE_PHASE = ["top8", "playoff", "out"];
 const GROUP_PLACES = ["first", "second", "third", "fourth"];
 

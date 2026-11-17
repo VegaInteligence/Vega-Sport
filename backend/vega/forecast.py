@@ -602,9 +602,11 @@ def knockout_projections(rows, model, strengths, today, *, simulations=SIMULATIO
 # away, status, home goals, away goals, day).
 NATIONS_MATCHES = """
 SELECT m.competition_season_id, cs.cup_key, m.group_name, m.home_team_id, m.away_team_id, m.status::text, m.home_score, m.away_score,
-  coalesce(m.match_date, m.kickoff_at::date)
+  coalesce(m.match_date, m.kickoff_at::date), h.name, a.name
 FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
-WHERE m.season_id = %s AND m.group_name IS NOT NULL AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL
+JOIN core.teams h ON h.id = m.home_team_id JOIN core.teams a ON a.id = m.away_team_id
+WHERE m.season_id = %s AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL
+  AND (m.group_name IS NOT NULL OR cs.cup_key LIKE 'openligadb:nations-league:%%')
   AND (cs.cup_key LIKE 'openligadb:nations-league:%%' OR cs.cup_key LIKE 'nations-results:nations-league:%%')"""
 NATIONS_LEAGUE_A = "openligadb:nations-league:"
 
@@ -614,7 +616,9 @@ def nations_groups(rows):
     A group plays home and away: a leg neither played nor given as a fixture (International Results gives
     none) is a match left."""
     out = defaultdict(lambda: defaultdict(lambda: {"members": set(), "results": [], "fixtures": []}))
-    for edition, _, group, home, away, status, hs, as_, _ in sorted(rows, key=lambda r: (r[0], str(r[2]), r[8] or 0)):
+    for edition, _, group, home, away, status, hs, as_, *_ in sorted(rows, key=lambda r: (r[0], str(r[2]), r[8] or 0)):
+        if group is None:
+            continue  # a knockout tie (nations_draws)
         g = out[edition][group]
         g["members"].update((home, away))
         if status == "finished" and hs is not None and as_ is not None:
@@ -628,24 +632,29 @@ def nations_groups(rows):
     return {edition: dict(groups) for edition, groups in out.items()}
 
 
-def uefa_order(members, results, rng):
+def group_table(teams, games):
+    """{team: [points, goal difference, goals, away goals, wins, away wins]} of `games` between `teams`."""
+    t = {team: [0, 0, 0, 0, 0, 0] for team in teams}
+    for h, a, hs, as_ in games:
+        if h in t and a in t:
+            t[h][1] += hs - as_; t[a][1] += as_ - hs; t[h][2] += hs; t[a][2] += as_; t[a][3] += as_
+            if hs > as_:
+                t[h][0] += 3; t[h][4] += 1
+            elif hs < as_:
+                t[a][0] += 3; t[a][4] += 1; t[a][5] += 1
+            else:
+                t[h][0] += 1; t[a][0] += 1
+    return t
+
+
+def uefa_order(members, results, rng, rank=None):
     """A group's order as UEFA ranks it, and as the site does (nations-standings.js): points; among teams level, the
     points, goal difference and goals of their own matches, again among those still level; then overall goal
-    difference, goals, away goals, wins, away wins; a tie left after all is drawn."""
-    def table(teams, games):
-        t = {team: [0, 0, 0, 0, 0, 0] for team in teams}  # points, goal difference, goals, away goals, wins, away wins
-        for h, a, hs, as_ in games:
-            if h in t and a in t:
-                t[h][1] += hs - as_; t[a][1] += as_ - hs; t[h][2] += hs; t[a][2] += as_; t[a][3] += as_
-                if hs > as_:
-                    t[h][0] += 3; t[h][4] += 1
-                elif hs < as_:
-                    t[a][0] += 3; t[a][4] += 1; t[a][5] += 1
-                else:
-                    t[h][0] += 1; t[a][0] += 1
-        return t
-
+    difference, goals, away goals, wins, away wins; then the disciplinary points (the sources give no cards: left
+    out); then the access list (`rank`: {team: position}, the 2024–25 final ranking); a tie left after all is drawn."""
+    table = group_table
     overall = table(members, results)
+    rank = rank or {}
 
     def split(teams, key):
         parts = defaultdict(list)
@@ -661,7 +670,7 @@ def uefa_order(members, results, rng):
         if len(parts) > 1:
             return [team for part in parts for team in level(part)]
         parts = split(teams, lambda t: (overall[t][1], overall[t][2], overall[t][3], overall[t][4], overall[t][5]))
-        return [team for part in parts for team in sorted(part, key=lambda _: rng.random())]
+        return [team for part in parts for team in sorted(part, key=lambda t: (rank.get(t, len(ACCESS_LIST) + 1), rng.random()))]
 
     return [team for part in split(members, lambda t: overall[t][0]) for team in level(part)]
 
@@ -708,6 +717,177 @@ def simulate_nations(groups, model, strengths, *, knockout, simulations=SIMULATI
     return {t: {k: v / simulations for k, v in r.items()} for t, r in reached.items()}
 
 
+# The 2026–27 access list (UEFA, from the 2024–25 final ranking), by FIFA code: the last tie-breaking criterion.
+ACCESS_LIST = tuple("""POR ESP FRA GER ITA NED DEN CRO SRB BEL ENG NOR WAL CZE GRE TUR SCO HUN POL ISR SUI BIH AUT UKR SVN GEO IRL ROU
+SWE MKD NIR KOS ISL ALB MNE KAZ FIN SVK BUL ARM BLR FRO CYP EST LVA LUX MDA SMR AZE LTU MLT GIB LIE AND""".split())
+# The names the Nations League's sources give a nation (English, French), by FIFA code.
+_NATION_NAMES = {
+    "POR": "Portugal", "ESP": "Spain|Espagne", "FRA": "France", "GER": "Germany|Allemagne", "ITA": "Italy|Italie",
+    "NED": "Netherlands|Pays-Bas|Holland", "DEN": "Denmark|Danemark", "CRO": "Croatia|Croatie", "SRB": "Serbia|Serbie",
+    "BEL": "Belgium|Belgique", "ENG": "England|Angleterre", "NOR": "Norway|Norvège", "WAL": "Wales|Pays de Galles",
+    "CZE": "Czechia|Czech Republic|Tchéquie|République tchèque", "GRE": "Greece|Grèce", "TUR": "Turkey|Türkiye|Turkiye|Turquie",
+    "SCO": "Scotland|Écosse", "HUN": "Hungary|Hongrie", "POL": "Poland|Pologne", "ISR": "Israel|Israël", "SUI": "Switzerland|Suisse",
+    "BIH": "Bosnia and Herzegovina|Bosnia-Herzegovina|Bosnie-Herzégovine", "AUT": "Austria|Autriche", "UKR": "Ukraine",
+    "SVN": "Slovenia|Slovénie", "GEO": "Georgia|Géorgie", "IRL": "Republic of Ireland|Ireland|Irlande", "ROU": "Romania|Roumanie",
+    "SWE": "Sweden|Suède", "MKD": "North Macedonia|Macédoine du Nord", "NIR": "Northern Ireland|Irlande du Nord", "KOS": "Kosovo",
+    "ISL": "Iceland|Islande", "ALB": "Albania|Albanie", "MNE": "Montenegro|Monténégro", "KAZ": "Kazakhstan", "FIN": "Finland|Finlande",
+    "SVK": "Slovakia|Slovaquie", "BUL": "Bulgaria|Bulgarie", "ARM": "Armenia|Arménie", "BLR": "Belarus|Biélorussie",
+    "FRO": "Faroe Islands|Îles Féroé|Iles Feroe", "CYP": "Cyprus|Chypre", "EST": "Estonia|Estonie", "LVA": "Latvia|Lettonie",
+    "LUX": "Luxembourg", "MDA": "Moldova|Moldavie", "SMR": "San Marino|Saint-Marin", "AZE": "Azerbaijan|Azerbaïdjan",
+    "LTU": "Lithuania|Lituanie", "MLT": "Malta|Malte", "GIB": "Gibraltar", "LIE": "Liechtenstein", "AND": "Andorra|Andorre",
+}
+
+
+def _plain(name):
+    import unicodedata
+
+    return "".join(c for c in unicodedata.normalize("NFKD", str(name or "")) if not unicodedata.combining(c)).lower().replace("-", " ").strip()
+
+
+_NATION_CODES = {_plain(n): code for code, names in _NATION_NAMES.items() for n in names.split("|")}
+
+
+def nation_code(name):
+    """A UEFA nation's FIFA code from the name a source gives it, else None."""
+    return _NATION_CODES.get(_plain(name))
+
+
+def nations_leagues(rows):
+    """The Nations League's four leagues from NATIONS_MATCHES' rows of a season, every edition together: {league: {"groups":
+    {group: …}}} (League A's groups are « 1 » to « 4 », the others « B1 »…), League A carrying "draws": {pair: legs},
+    the ties drawn so far (quarter-finals, play-offs: a match without a group), each leg (home, away, home goals, away
+    goals, None, None), the ones not played with no score."""
+    out = defaultdict(lambda: {"groups": {}})
+    for edition, groups in nations_groups(rows).items():
+        for name, g in groups.items():
+            league = "A" if str(name).isdigit() else str(name)[0]
+            out[league]["groups"][name] = g
+    draws = defaultdict(list)
+    for r in sorted((r for r in rows if r[2] is None), key=lambda r: (r[8] is None, r[8] or 0)):
+        _, _, _, home, away, status, hs, as_ = r[:8]
+        played = status == "finished" and hs is not None and as_ is not None
+        if played or status == "not_started":
+            draws[frozenset((home, away))].append((home, away, hs if played else None, as_ if played else None, None, None))
+    out["A"]["draws"] = dict(draws)
+    return dict(out)
+
+
+def simulate_nations_season(leagues, model, strengths, *, rank=None, simulations=SIMULATIONS, reach=0.0, seed=0):
+    """The 2026–27 Nations League replayed, its four leagues together (a transitional season: three leagues of 18
+    nations from 2028–29). Each group to its end (uefa_order); League A's quarter-finals (a winner against another
+    group's runner-up, two legs, the winner at home second) and Final Four (neutral ground); then:
+    - League A: the two best third-placed stay (stay); its two worst third-placed and two best fourth-placed play the
+      A/B play-offs (barrage) against League B's runners-up; its two worst fourth-placed go down (relegated). Third-
+      and fourth-placed are ranked across groups by points, goal difference, goals, away goals, wins, away wins, then
+      the access list (no head-to-head, no cards in the sources);
+    - League B: winners go up (promoted), third-placed stay, fourth-placed play the B/C play-offs against League C's
+      runners-up;
+    - League C: winners go up, third- and fourth-placed stay;
+    - League D: all go up.
+    Play-offs drawn at random (UEFA names no seeding) unless already drawn (leagues["A"]["draws"]), two legs, the higher
+    league's side at home second. Returns {team: {stage: share}}: first to fourth; qf, sf, final, win (League A);
+    stay, barrage, relegated, promoted; next_a, next_b, next_c, the league it plays in 2028–29."""
+    rng = random.Random(seed)
+    match, tie, final = _knockout_play(rng, model)
+    rank = rank or {}
+    draws = leagues.get("A", {}).get("draws", {})
+    teams = sorted({t for lg in leagues.values() for g in lg["groups"].values() for t in g["members"]})
+    keys = ["first", "second", "third", "fourth", "stay", "barrage", "relegated", "promoted", "next_a", "next_b", "next_c"]
+    reached = {t: dict.fromkeys(keys + (["qf", "sf", "final", "win"] if any(t in g["members"] for g in leagues["A"]["groups"].values()) else []), 0)
+               for t in teams}
+    places = ["first", "second", "third", "fourth"]
+
+    def legs_of(a, b, home_second):
+        """The tie's legs: the draw's when drawn (its missing leg added), else two legs, `home_second` at home second."""
+        known = list(draws.get(frozenset((a, b)), []))
+        if len(known) == 1:
+            h, w = known[0][:2]
+            known.append((w, h, None, None, None, None))
+        return known or [(a if home_second == b else b, home_second, None, None, None, None), (home_second, b if home_second == a else a, None, None, None, None)]
+
+    def pair(side, other, avoid=lambda x, y: False):
+        """side[i] against other[j]: the ties already drawn, the rest drawn at random (no two of `avoid`)."""
+        rest_a, rest_b, out = list(side), list(other), []
+        for x in list(rest_a):
+            for y in list(rest_b):
+                if frozenset((x, y)) in draws:
+                    out.append((x, y)); rest_a.remove(x); rest_b.remove(y)
+                    break
+        for _ in range(100):
+            rng.shuffle(rest_b)
+            if not any(avoid(x, y) for x, y in zip(rest_a, rest_b)):
+                break
+        return out + list(zip(rest_a, rest_b))
+
+    def ranked(entries):
+        """(group, team, table row) across groups, best first: no head-to-head, then the access list."""
+        return [t for _, t, _ in sorted(entries, key=lambda e: (-e[2][0], -e[2][1], -e[2][2], -e[2][3], -e[2][4], -e[2][5],
+                                                                rank.get(e[1], len(ACCESS_LIST) + 1), rng.random()))]
+
+    for _ in range(simulations):
+        now = {t: strengths[t] + (rng.gauss(0.0, reach) if reach else 0.0) for t in teams}
+        orders, tables = {}, {}
+        for league, lg in leagues.items():
+            for name in sorted(lg["groups"]):
+                g = lg["groups"][name]
+                results = g["results"] + [(h, a, *match(h, a, now)) for h, a in g["fixtures"]]
+                order = uefa_order(g["members"], results, rng, rank)
+                orders[(league, name)] = order
+                tables[(league, name)] = group_table(g["members"], results)
+                for k, team in enumerate(order[:4]):
+                    reached[team][places[k]] += 1
+        at = lambda league, k: [(name, orders[(league, name)][k], tables[(league, name)][orders[(league, name)][k]])
+                                for (lg, name) in sorted(orders) if lg == league and len(orders[(league, name)]) > k]
+        nxt = {}
+        # League A: quarter-finals and Final Four.
+        winners, runners = at("A", 0), at("A", 1)
+        group = {t: name for name, t, _ in winners + runners}
+        quarter = pair([t for _, t, _ in winners], [t for _, t, _ in runners], lambda x, y: group[x] == group[y])
+        for x, y in quarter:
+            reached[x]["qf"] += 1; reached[y]["qf"] += 1
+            nxt[x] = nxt[y] = "next_a"
+        four = [tie(x, y, legs_of(x, y, x), now) for x, y in quarter]
+        for t in four:
+            reached[t]["sf"] += 1
+        rng.shuffle(four)
+        finalists = [final(four[0], four[1], [], now), final(four[2], four[3], [], now)] if len(four) == 4 else []
+        for t in finalists:
+            reached[t]["final"] += 1
+        if finalists:
+            reached[final(*finalists, [], now)]["win"] += 1
+        thirds, fourths = ranked(at("A", 2)), ranked(at("A", 3))
+        for t in thirds[:2]:
+            reached[t]["stay"] += 1; nxt[t] = "next_a"
+        for t in fourths[2:]:
+            reached[t]["relegated"] += 1; nxt[t] = "next_b"
+        a_side = thirds[2:] + fourths[:2]
+        # League B, C, D.
+        for name, t, _ in at("B", 0):
+            reached[t]["promoted"] += 1; nxt[t] = "next_a"
+        for name, t, _ in at("B", 2):
+            reached[t]["stay"] += 1; nxt[t] = "next_b"
+        for name, t, _ in at("C", 0):
+            reached[t]["promoted"] += 1; nxt[t] = "next_b"
+        for k in (2, 3):
+            for name, t, _ in at("C", k):
+                reached[t]["stay"] += 1; nxt[t] = "next_c"
+        for league in ("D",):
+            for k in range(4):
+                for name, t, _ in at(league, k):
+                    reached[t]["promoted"] += 1; nxt[t] = "next_c"
+        # The play-offs: A/B (League A's side at home second), B/C (League B's).
+        for upper, lower, up, down in ((a_side, [t for _, t, _ in at("B", 1)], "next_a", "next_b"),
+                                       ([t for _, t, _ in at("B", 3)], [t for _, t, _ in at("C", 1)], "next_b", "next_c")):
+            for t in upper + lower:
+                reached[t]["barrage"] += 1
+            for x, y in pair(upper, lower):
+                w = tie(x, y, legs_of(x, y, x), now)
+                nxt[w], nxt[y if w == x else x] = up, down
+        for t, k in nxt.items():
+            reached[t][k] += 1
+    return {t: {k: v / simulations for k, v in r.items()} for t, r in reached.items()}
+
+
 def nations_projections(rows, model, strengths, today, *, simulations=SIMULATIONS):
     """{edition: (table, {team: {"positions", "points", "stages"}})} of the Nations League's editions of
     NATIONS_MATCHES' rows: League A with its knockout, Leagues B to D their groups; table: {team: (points, goals for,
@@ -715,10 +895,23 @@ def nations_projections(rows, model, strengths, today, *, simulations=SIMULATION
     keys = {r[0]: r[1] for r in rows}
     end = date(today.year + (today.month > 6), 6, 30)
     reach = STRENGTH_SPREAD * sqrt(min(1.0, max(0.0, (end - today).days / 365)))
+    # Each nation's place in the access list, by the names the rows give (columns 9 and 10, when there).
+    rank = {}
+    for r in rows:
+        for team, name in ((r[3], r[9]), (r[4], r[10])) if len(r) > 10 else ():
+            code = nation_code(name)
+            if code in ACCESS_LIST:
+                rank[team] = ACCESS_LIST.index(code) + 1
+    editions = nations_groups(rows)
+    rated = {edition for edition, groups in editions.items() if all(t in strengths for g in groups.values() for t in g["members"])}
+    # The transitional season (2026–27) once Leagues A, B and C are all in the base and rated: the play-offs link them.
+    leagues = nations_leagues([r for r in rows if r[0] in rated])
+    season = (simulate_nations_season(leagues, model, strengths, rank=rank, simulations=simulations, reach=reach, seed=min(rated))
+              if rated == set(editions) and {"A", "B", "C"} <= set(leagues) else None)
     out = {}
-    for edition, groups in nations_groups(rows).items():
+    for edition, groups in editions.items():
         teams = {t for g in groups.values() for t in g["members"]}
-        if any(t not in strengths for t in teams):
+        if edition not in rated:
             continue
         table = {t: [0, 0, 0, 0] for t in teams}
         for g in groups.values():
@@ -728,8 +921,8 @@ def nations_projections(rows, model, strengths, today, *, simulations=SIMULATION
                     table[team][1] += gf
                     table[team][2] += ga
                     table[team][3] += 1
-        odds = simulate_nations(groups, model, strengths, knockout=str(keys[edition]).startswith(NATIONS_LEAGUE_A),
-                                simulations=simulations, reach=reach, seed=edition)
+        odds = season or simulate_nations(groups, model, strengths, knockout=str(keys[edition]).startswith(NATIONS_LEAGUE_A),
+                                          simulations=simulations, reach=reach, seed=edition)
         out[edition] = ({t: tuple(v) for t, v in table.items()},
                         {t: {"positions": [], "points": float(table[t][0]), "stages": odds[t]} for t in teams})
     return out

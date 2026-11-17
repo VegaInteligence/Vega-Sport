@@ -7,17 +7,19 @@ import { useResource, json } from "./resources.js";
 import { cupId } from "./api-routes.js";
 import { useSeasonProjection } from "./forecasts.js";
 
-// League A: the group's three outcomes, then the knockout rounds.
+// League A: the group's outcomes, then the knockout rounds. 2026–27 is transitional (three leagues of 18 from
+// 2028–29): the A/B play-off is for the two worst third-placed and the two best fourth-placed, the relegation for the
+// two worst fourth-placed (126).
 const LEAGUE_A = [
   { key: "qf", label: "Quarts", range: "1er ou 2e", tone: "ko", title: "Part des simulations où la sélection finit dans les deux premiers de son groupe" },
-  { key: "third", label: "Barrage", range: "3e", tone: "po", title: "Part des simulations où la sélection finit troisième de son groupe" },
-  { key: "fourth", label: "Relégation", range: "4e", tone: "out", title: "Part des simulations où la sélection finit dernière de son groupe" },
+  { key: "barrage", label: "Barrage", range: "A/B", tone: "po", title: "Part des simulations où la sélection joue le barrage contre un deuxième de Ligue B" },
+  { key: "relegated", label: "Relégation", range: "directe", tone: "out", title: "Part des simulations où la sélection descend directement en Ligue B" },
   { key: "sf", label: "Final Four", tone: "round", title: "Part des simulations où la sélection joue le Final Four" },
   { key: "final", label: "Finale", tone: "round", title: "Part des simulations où la sélection joue la finale" },
   { key: "win", label: "Vainqueur", tone: "round", title: "Part des simulations où la sélection gagne la compétition" },
 ];
 const PLACES = [["first", "1er"], ["second", "2e"], ["third", "3e"], ["fourth", "4e"]];
-const STAGES = ["first", "second", "third", "fourth", "qf", "sf", "final", "win"];
+const STAGES = ["first", "second", "third", "fourth", "qf", "sf", "final", "win", "stay", "barrage", "relegated"];
 
 const inLeague = (group, league) => (league === "A" ? /^\d+$/.test(group || "") : String(group || "").startsWith(league));
 const byShares = (keys) => (a, b) => keys.reduce((d, k) => d || b.stages[k] - a.stages[k], 0) || b.points - a.points || String(a.name).localeCompare(String(b.name));
@@ -29,7 +31,7 @@ export function nationsProjectionRows(projection, league) {
     .map((t) => ({ id: t.id, name: t.name, imageUrl: t.imageUrl ?? null, group: t.group, points: t.points, played: t.played, elo: t.elo ?? null,
       stages: Object.fromEntries(STAGES.map((k) => [k, Number(t.stages?.[k]) || 0])) }));
   if (!rows.length) return { rows: [], columns: [] };
-  if (league === "A") return { rows: rows.sort(byShares(["win", "final", "sf", "qf", "third"])), columns: LEAGUE_A };
+  if (league === "A") return { rows: rows.sort(byShares(["win", "final", "sf", "qf", "stay", "barrage"])), columns: LEAGUE_A };
   const counts = rows.reduce((m, r) => m.set(r.group, (m.get(r.group) || 0) + 1), new Map());
   const size = Math.max(...counts.values());
   const columns = PLACES.slice(0, Math.min(size, PLACES.length)).map(([key, label], i) => ({ key, label, tone: i === 0 ? "ko" : "po", title: `Part des simulations où la sélection finit ${label} de son groupe` }));

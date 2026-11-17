@@ -277,11 +277,23 @@ Code : `nations_projections`, `simulate_nations` et `uefa_order` dans [forecast.
 
 **Ligues B à D.** Le site montre la chance de chaque place du groupe. Les groupes de la Ligue D comptent trois sélections : pas de 4ᵉ place.
 
-**Ce qui n'est pas modélisé :**
+**La saison de transition (2026–27), depuis le 17 novembre après-midi.** Dès 2028–29, la Ligue des nations compte trois ligues de 18 sélections ; les règles de montée et de descente de 2026–27 sont donc particulières. Les quatre ligues sont rejouées ensemble, parce que les barrages les relient :
 
-- le tirage réel des quarts une fois fait : les quarts restent tirés au hasard ;
-- les barrages de promotion et de relégation de mars, et la montée ou la descente qui en dépend ;
-- le fair-play et le coefficient UEFA, derniers critères de départage.
+| Ligue | 1ᵉʳ | 2ᵉ | 3ᵉ | 4ᵉ |
+|---|---|---|---|---|
+| A | quarts | quarts | les deux meilleurs restent, les deux moins bons jouent le barrage A/B | les deux meilleurs jouent le barrage A/B, les deux moins bons descendent |
+| B | montent | barrage A/B | restent | barrage B/C |
+| C | montent | barrage B/C | restent | restent |
+| D | toutes les sélections montent en Ligue C (la Ligue D disparaît) | | | |
+
+- Les troisièmes et quatrièmes de la Ligue A sont classés d'un groupe à l'autre : points, différence de buts, buts, buts à l'extérieur, victoires, victoires à l'extérieur, puis la liste d'accès (sans confrontation directe).
+- Barrages en aller-retour, l'équipe de la ligue supérieure à domicile au retour. Le tirage du 20 novembre 2026 n'annonce ni têtes de série ni restrictions : tant qu'il n'est pas fait, les barrages sont tirés au hasard.
+- **Le tirage réel.** Une fois les quarts et les barrages tirés, leurs rencontres sont celles du tirage, leurs matchs joués comptent tels quels.
+- **Départage.** Le dernier critère est la liste d'accès 2026–27 (le classement final de 2024–25), jamais un tirage au sort. Les points disciplinaires viennent juste avant, mais les sources ne donnent pas les cartons : ce critère est sauté.
+- Chaque sélection reçoit aussi la part de ses ligues en 2028–29 (A, B ou C) ; 18 sélections par ligue au total.
+- Sur le site, les colonnes « Barrage » et « Relégation » de la Ligue A lisent ces règles : barrage A/B, relégation directe.
+
+**Ce qui n'est pas modélisé :** les points disciplinaires (pas de cartons dans les sources).
 
 **Premier calcul.** Fait en local avec le code du worker sur les données lues le 17 novembre (lecture seule), 4 000 tirages :
 

@@ -331,6 +331,111 @@ class ForecastTest(unittest.TestCase):
         del strengths[104]
         self.assertNotIn(9, forecast.nations_projections(b, MODEL, strengths, date(2026, 11, 17), simulations=10))
 
+    # The 2026–27 edition is transitional (three leagues of 18 from 2028–29; UEFA's rules, read 17 Nov 2026): League A's
+    # two best third-placed stay, its two worst third-placed and two best fourth-placed play the A/B play-offs against
+    # League B's runners-up, its two worst fourth-placed go down; League B's winners go up, its third-placed stay, its
+    # fourth-placed play the B/C play-offs against League C's runners-up; League C's winners go up, its third- and
+    # fourth-placed stay; all of League D goes up. Play-offs: two legs, the higher league's side at home second.
+    def season(self, fixtures=False):
+        """Groups played out: in each, team 1 > 2 > 3 > 4 by points (double round-robin, the better side winning); in
+        League A, group g's third beats its fourth by g + 1 both times, so the thirds are ranked by goal difference
+        (groups 3 and 4 best) and the fourths the other way round (groups 1 and 2 best)."""
+        u, rows, teams = self.unl, [], {}
+        layout = [("A", str(g + 1), 4, "openligadb:nations-league:2026/2027", 8) for g in range(4)]
+        layout += [(league, f"{league}{g + 1}", 4, "nations-results:nations-league:2026/2027", 9) for league in "BC" for g in range(4)]
+        layout += [("D", f"D{g + 1}", 3, "nations-results:nations-league:2026/2027", 9) for g in range(2)]
+        base = 0
+        for league, group, size, key, edition in layout:
+            t = [base + k for k in range(1, size + 1)]
+            base += 10
+            teams[group] = t
+            g = int(group[-1]) - 1
+            for i, h in enumerate(t):
+                for j, a in enumerate(t):
+                    if h == a:
+                        continue
+                    best = min(i, j)
+                    margin = g + 1 if league == "A" and {i, j} == {2, 3} else 2
+                    hs, as_ = (margin, 0) if i == best else (0, margin)
+                    rows.append(u(group, h, a, hs, as_, key=key, edition=edition))
+        return rows, teams
+
+    def test_the_transitional_season_s_promotion_and_relegation(self):
+        rows, teams = self.season()
+        strengths = {t: 1500.0 for ts in teams.values() for t in ts}
+        leagues = forecast.nations_leagues(rows)
+        self.assertEqual(sorted(leagues), ["A", "B", "C", "D"])
+        odds = forecast.simulate_nations_season(leagues, MODEL, strengths, simulations=200, seed=3)
+        total = lambda k: round(sum(o.get(k, 0) for o in odds.values()), 6)
+        # Each stage holds its number of nations; each nation plays next season in one league; 18 in each.
+        for k, n in (("qf", 8), ("sf", 4), ("final", 2), ("win", 1), ("stay", 14), ("relegated", 2), ("promoted", 14), ("barrage", 16),
+                     ("next_a", 18), ("next_b", 18), ("next_c", 18)):
+            self.assertEqual(total(k), n, k)
+        for team, o in odds.items():
+            self.assertAlmostEqual(o["next_a"] + o["next_b"] + o["next_c"], 1.0, places=9, msg=team)
+        a = lambda g, place: odds[teams[str(g)][place - 1]]
+        # League A: the thirds of groups 3 and 4 (better goal difference) stay; those of 1 and 2 play the play-offs. The
+        # fourths of groups 1 and 2 play them; those of 3 and 4 go down.
+        self.assertEqual([a(g, 3)["stay"] for g in (1, 2, 3, 4)], [0.0, 0.0, 1.0, 1.0])
+        self.assertEqual([a(g, 3)["barrage"] for g in (1, 2, 3, 4)], [1.0, 1.0, 0.0, 0.0])
+        self.assertEqual([a(g, 4)["barrage"] for g in (1, 2, 3, 4)], [1.0, 1.0, 0.0, 0.0])
+        self.assertEqual([a(g, 4)["relegated"] for g in (1, 2, 3, 4)], [0.0, 0.0, 1.0, 1.0])
+        self.assertEqual((a(3, 4)["next_b"], a(1, 1)["qf"], a(1, 1)["next_a"]), (1.0, 1.0, 1.0))
+        b, c, d = (lambda group, place: odds[teams[group][place - 1]] for _ in range(3))
+        self.assertEqual((b("B1", 1)["promoted"], b("B1", 1)["next_a"]), (1.0, 1.0))
+        self.assertEqual((b("B1", 2)["barrage"], b("B1", 3)["stay"], b("B1", 3)["next_b"], b("B1", 4)["barrage"]), (1.0, 1.0, 1.0, 1.0))
+        self.assertAlmostEqual(b("B1", 2)["next_a"] + b("B1", 2)["next_b"], 1.0)
+        self.assertAlmostEqual(b("B1", 4)["next_b"] + b("B1", 4)["next_c"], 1.0)
+        self.assertEqual((c("C2", 1)["promoted"], c("C2", 1)["next_b"], c("C2", 3)["stay"], c("C2", 4)["stay"], c("C2", 4)["next_c"]), (1.0, 1.0, 1.0, 1.0, 1.0))
+        self.assertAlmostEqual(c("C2", 2)["next_b"] + c("C2", 2)["next_c"], 1.0)
+        self.assertEqual([(d("D1", k)["promoted"], d("D1", k)["next_c"]) for k in (1, 2, 3)], [(1.0, 1.0)] * 3)
+        self.assertEqual(odds, forecast.simulate_nations_season(leagues, MODEL, strengths, simulations=200, seed=3))
+
+    def test_a_drawn_tie_is_played_as_drawn(self):
+        # Once the quarter-finals and play-offs are drawn (20 Nov 2026), their ties are the draw's, their legs played or not.
+        rows, teams = self.season()
+        u, key = self.unl, "openligadb:nations-league:2026/2027"
+        w1, r3 = teams["1"][0], teams["3"][1]
+        rows += [u(None, r3, w1, status="not_started", key=key, edition=8, day=25), u(None, w1, r3, status="not_started", key=key, edition=8, day=28)]
+        b2, a3 = teams["B2"][1], teams["1"][2]
+        rows += [u(None, b2, a3, 3, 0, key=key, edition=8, day=26)]  # the play-off's first leg, played
+        leagues = forecast.nations_leagues(rows)
+        self.assertEqual(sorted(map(sorted, leagues["A"]["draws"])), sorted([sorted((w1, r3)), sorted((b2, a3))]))
+        strengths = {t: 1500.0 for ts in teams.values() for t in ts}
+        odds = forecast.simulate_nations_season(leagues, MODEL, strengths, simulations=200, seed=4)
+        self.assertAlmostEqual(odds[w1]["sf"] + odds[r3]["sf"], 1.0)  # exactly one of the two reaches the Final Four
+        self.assertGreater(odds[b2]["next_a"], 0.8)  # 3-0 up after the first leg
+
+    def test_the_season_is_projected_jointly_once_its_leagues_are_all_there(self):
+        # With Leagues A, B and C in the base (each edition rated), both editions carry the joint season's stages: the
+        # play-offs link them; each nation's points so far stay its edition's.
+        from datetime import date
+
+        rows, teams = self.season()
+        strengths = {t: 1500.0 for ts in teams.values() for t in ts}
+        out = forecast.nations_projections(rows, MODEL, strengths, date(2026, 11, 17), simulations=60)
+        self.assertEqual(sorted(out), [8, 9])
+        w1, b1 = teams["1"][0], teams["B1"][0]
+        self.assertEqual((out[8][1][w1]["stages"]["next_a"], out[9][1][b1]["stages"]["promoted"]), (1.0, 1.0))
+        self.assertIn("barrage", out[9][1][teams["B1"][1]]["stages"])
+        self.assertEqual(out[8][0][w1][3], 6)  # six matches played
+
+    def test_the_access_list_settles_a_tie_left_after_all(self):
+        # The last criterion is the access list's order (the 2024–25 final ranking), never a draw; the disciplinary
+        # points come before it, but the sources give no cards.
+        import random
+
+        results = [(1, 2, 1, 1), (2, 1, 1, 1), (3, 4, 0, 0), (4, 3, 0, 0), (1, 3, 1, 0), (3, 1, 0, 1), (2, 4, 1, 0), (4, 2, 0, 1),
+                   (1, 4, 0, 0), (4, 1, 0, 0), (2, 3, 0, 0), (3, 2, 0, 0)]
+        for seed in range(5):
+            self.assertEqual(forecast.uefa_order({1, 2, 3, 4}, results, random.Random(seed), rank={1: 9, 2: 4, 3: 30, 4: 12})[:2], [2, 1])
+        self.assertEqual(forecast.ACCESS_LIST[:3], ("POR", "ESP", "FRA"))
+        self.assertEqual(len(forecast.ACCESS_LIST), 54)
+        self.assertEqual(forecast.nation_code("Italie"), "ITA")
+        self.assertEqual(forecast.nation_code("Turkiye"), "TUR")
+        self.assertEqual(forecast.nation_code("Îles Féroé"), "FRO")
+        self.assertEqual(forecast.nation_code("Bosnia and Herzegovina"), "BIH")
+
 
 if __name__ == "__main__":
     unittest.main()
