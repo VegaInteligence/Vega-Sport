@@ -133,6 +133,44 @@ class LeagueLevelTest(unittest.TestCase):
         self.assertNotIn((power.COUNTRY_LEAGUE, "AZE"), settings["reference"])
         self.assertEqual(dict(power.league_links(rows, leagues)), {(1, 2): 25, (1, (power.COUNTRY_LEAGUE, "AZE")): 1})  # 900 is a match between the two leagues too
 
+    def test_every_country_has_its_confederation(self):
+        # A country's group takes its confederation's prior, not the world's: every FIFA member is mapped (17 Nov 2026,
+        # the CAF Champions League in the Elo brought clubs of Tanzania, Angola, DR Congo, Guinea… into it).
+        for code, conf in (("TAN", "CAF"), ("ANG", "CAF"), ("COD", "CAF"), ("CIV", "CAF"), ("GUI", "CAF"), ("SEN", "CAF"), ("SDN", "CAF"),
+                           ("MAR", "CAF"), ("ZAN", "CAF"), ("URU", "CONMEBOL"), ("HAI", "CONCACAF"), ("DOM", "CONCACAF"), ("ARM", "UEFA"),
+                           ("AZE", "UEFA"), ("KOS", "UEFA"), ("UAE", "AFC"), ("JOR", "AFC"), ("NZL", "OFC"), ("FIJ", "OFC")):
+            self.assertEqual(power.CONFEDERATIONS.get(code), conf, code)
+
+    def test_a_closed_continental_cluster_does_not_lift_its_held_league(self):
+        # The CAF Champions League (17 Nov 2026): a league the base holds (Egypt's), measured against the world, whose
+        # clubs beat a dozen country groups that play no one else. The groups and Egypt share their confederation's
+        # mean, itself estimated: beating them says how far above them Egypt stands, not where Africa stands against
+        # the world. Egypt's level against the world's leagues moves by less than its error (measured in production
+        # with independent priors at the world mean: +108, twice its error; here +139 against +50 now).
+        m, rows, i = self.match, [], 0
+        world = {"A": 1, "B": 1, "C": 2, "D": 2, "E": 3, "F": 3, "X": 10, "Y": 10}
+        for k in range(10):
+            for home, away in (("A", "C"), ("D", "E"), ("F", "B"), ("C", "E")):
+                i += 1
+                rows.append(m(i, home, away, *((1, 0) if k % 3 else (0, 1)), 9, international=True))
+        for k in range(40):  # Egypt's clubs against the world: they lose most.
+            i += 1
+            rows.append(m(i, "X" if k % 2 else "Y", "ABCDEF"[k % 6], *((0, 1) if k % 4 else (1, 1)), 9, international=True))
+        codes = ("TAN", "ANG", "COD", "CIV", "GUI", "SEN", "MLI", "ETH", "SDN", "GHA", "ZAM", "KEN")
+        cluster = []
+        for code in codes:
+            for k in range(6):  # Egypt's clubs beat each group three times in four.
+                i += 1
+                cluster.append(m(i, "X" if k % 2 else "Y", "G" + code, *((2, 0) if k % 4 != 3 else (0, 1)), 8, international=True))
+        countries = {1: "ENG", 2: "GER", 3: "ITA", 10: "EGY", **{(power.COUNTRY_LEAGUE, c): c for c in codes}}
+        before, se, _ = power.league_model(rows, world, countries=countries)
+        leagues = {**world, **{"G" + c: (power.COUNTRY_LEAGUE, c) for c in codes}}
+        after, _, settings = power.league_model(rows + cluster, leagues, countries=countries)
+        against_world = lambda levels: levels[10] - (levels[1] + levels[2] + levels[3]) / 3  # the scale itself is a gauge
+        self.assertLess(abs(against_world(after) - against_world(before)), se[10])
+        self.assertLess(max(after[(power.COUNTRY_LEAGUE, c)] for c in codes), after[10])  # beaten, they stand below Egypt
+        self.assertIn("CAF", settings["confederations"])
+
     def test_a_club_only_a_complementary_source_holds_has_its_group(self):
         # One Elo for every club (the user, 16 Nov 2026; VI-21): a club no PitchAPI league holds enters
         # at the level of its group: the complementary league it plays in (its folder: country and

@@ -324,6 +324,47 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual(forecast.refresh(self.db, 2025), (0, 0))
         self.assertEqual(self.one("SELECT (SELECT count(*) FROM agg.match_forecasts), (SELECT count(*) FROM agg.season_projections)"), (0, 0))
 
+    def test_zzzzz_every_competition_s_matches_are_forecast(self):
+        # Every competition has its predictions (the user, 17 Nov 2026): a complementary source's league (open-matchday's
+        # National League) is projected like a league, and every match still to play between two rated teams is
+        # forecast, a cup's included. A cup is no league: it is never projected as one.
+        from vega import forecast
+
+        x = self.db.execute
+        x("INSERT INTO core.competitions(id, name) VALUES (9200, 'national-league'), (9201, 'fa-cup')")
+        x("""INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label, cup_key) VALUES
+             (9200, 9200, 2025, '2025/2026', 'open-matchday:ENG_5_national-league:2025/2026'),
+             (9201, 9201, 2025, '2025/2026', 'open-matchday:ENG_CUP_fa-cup:2025/2026')""")
+        from datetime import date, timedelta
+
+        day = lambda n: (date.today() + timedelta(days=n)).isoformat()
+        rows = []
+        for k, (h, a) in enumerate(((1, 2), (3, 4), (5, 6), (7, 8))):
+            rows += [(9200 + k, 9200, 'finished', h, a, 1, 0, day(-40)), (9210 + k, 9201, 'finished', h, a, 2, 1, day(-39))]
+        rows += [(9204, 9200, 'not_started', 2, 3, None, None, day(10)), (9205, 9200, 'not_started', 6, 7, None, None, day(10)),
+                 (9214, 9201, 'not_started', 1, 3, None, None, day(11)), (9215, 9201, 'not_started', 5, 7, None, None, day(11)),
+                 # A source that stopped updating (OpenFootball's Libertadores 2026, at its August play-offs): a match still
+                 # « to play » weeks after its day is no match to forecast.
+                 (9206, 9200, 'not_started', 4, 8, None, None, day(-20))]
+        for row in rows:
+            x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, home_score, away_score, match_date)
+                 VALUES (%s, %s, 2025, 'openfootball', %s, %s, %s, %s, %s, %s)""", row)
+        minimum, forecast.MIN_FIT = forecast.MIN_FIT, 20
+        try:
+            forecast.refresh(self.db, 2025)
+            forecast_ids = {m for (m,) in x("SELECT match_id FROM agg.match_forecasts").fetchall()}
+            self.assertTrue({9204, 9205, 9214, 9215} <= forecast_ids)
+            self.assertNotIn(9206, forecast_ids)
+            self.assertEqual(self.one("SELECT count(*) FROM agg.season_projections WHERE competition_season_id = 9200")[0], 8)
+            self.assertEqual(self.one("SELECT count(DISTINCT team_id) FROM agg.season_projection_places WHERE competition_season_id = 9200")[0], 8)
+            # The cup's drawn round is replayed as a cup (its stages), never as a league table (no places).
+            self.assertEqual(self.one("SELECT count(*) FROM agg.season_projection_places WHERE competition_season_id = 9201")[0], 0)
+            self.assertGreater(self.one("SELECT count(*) FROM agg.cup_stage_odds WHERE competition_season_id = 9201")[0], 0)
+        finally:
+            forecast.MIN_FIT = minimum
+            x("DELETE FROM agg.match_forecasts WHERE match_id BETWEEN 9200 AND 9216")
+            x("DELETE FROM core.matches WHERE id BETWEEN 9200 AND 9215")
+
     @classmethod
     def tearDownClass(cls):
         cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
