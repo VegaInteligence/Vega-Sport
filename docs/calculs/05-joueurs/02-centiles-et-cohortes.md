@@ -22,12 +22,14 @@ Code : `performanceProfile` ([player-profile.js](../../../dashboard/frontend/src
 | --- | --- |
 | Cohorte | toutes les **performances** de la saison et des compétitions sélectionnées, du même groupe de poste |
 | Minutes minimum d'une performance pour entrer dans la cohorte | **30** (`MIN_PEER_MINUTES`) |
-| Taille minimum de la cohorte | **30** performances (`MIN_PEERS`) |
+| Taille minimum de la cohorte | **30** performances **ayant une valeur pour la mesure** (`MIN_PEERS`, mesure par mesure) |
 | Valeurs comparées | valeurs **brutes du match** (pas par 90) |
 | Groupe F (poste inconnu) | comparé à toutes les performances de joueurs de champ (D, M, O et F) |
 | Mesures non classées | buts, passes décisives, xA |
 
-La cohorte compte des **performances**, pas des joueurs : un joueur régulier y figure autant de fois qu'il a joué au moins 30 minutes.
+La cohorte compte des **performances**, pas des joueurs : un joueur régulier y figure autant de fois qu'il a joué au moins 30 minutes. Seuls les matchs terminés y entrent (migration 124), y compris dans la lecture non compacte du site, où la fiche d'une performance se compare aux performances terminées de la saison lue (17 novembre 2026, étape 7). La performance ouverte, même d'un match annulé ou en cours, reste affichée avec ses valeurs et son rang parmi les notes de son match.
+
+Le seuil de 30 vaut **pour chaque mesure** : une mesure connue de 12 pairs n'a pas de centile, même dans une cohorte de 200 performances (côté serveur, `known ≥ 30` dans `performanceProfileFromCounts` ; côté site, les valeurs connues de la mesure dans [player-profile.js](../../../dashboard/frontend/src/services/player-profile.js)). Corrigé le 17 novembre 2026 (audit 13c).
 
 Valeurs dérivées :
 - **Précision des passes** : seulement si au moins **10** passes tentées dans le match ;
@@ -54,6 +56,8 @@ Code : `buildCohorts`, `rankMetric` dans [scouting.js](../../../dashboard/fronte
 
 La règle de couverture évite de comparer un par 90 calculé sur 3 matchs avec un par 90 calculé sur 30.
 
+Côté base (`agg.player_percentiles`, `models._player_values_sql`), le groupe d'un joueur est celui où il a joué le plus de minutes, sur ses matchs **terminés** seulement, comme ses statistiques : dix matchs terminés en attaque et douze matchs annulés en défense le placent en attaque. Une annulation après une publication le déplace au recalcul suivant (17 novembre 2026, étape 5).
+
 Mesure « moins = mieux » (duels perdus) : centile affiché = `100 − centile` (`advancedMetric`, [PlayerAdvancedStats.jsx](../../../dashboard/frontend/src/components/PlayerAdvancedStats.jsx#L50)).
 
 ### Rang et distribution
@@ -70,5 +74,5 @@ Un milieu joue 1 600 minutes avec 6,1 récupérations par 90. Dans sa cohorte, 2
 
 - moins de 450 minutes (ou du seuil choisi) ;
 - une mesure absente sur au moins un match joué ;
-- moins de 30 pairs comparables ;
+- moins de 30 pairs comparables, ou moins de 30 valeurs connues de la mesure pour une performance ;
 - joueur sans poste connu (aucun groupe saison).

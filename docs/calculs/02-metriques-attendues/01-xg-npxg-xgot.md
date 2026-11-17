@@ -39,7 +39,7 @@ Sur l'accueil (meneurs de la saison), le xG d'un joueur n'est affiché **que s'i
 
 ### Pour une liste de tirs
 - **Carte des tirs d'une saison** ([SeasonShots.jsx](../../../dashboard/frontend/src/components/SeasonShots.jsx#L322)) : xG total = somme des xG connus des tirs filtrés, contre son camp exclus ; la page indique « n / m tirs renseignés » quand certains manquent.
-- **Profil de tirs d'un club** ([club-scout.js](../../../dashboard/frontend/src/services/club-scout.js#L1206), `shotProfile`) : tirs, xG et buts par situation (jeu placé, contre-attaque, corner, autre CPA, coup franc direct, penalty) ; contre son camp exclus ; un tir sans xG compte pour 0 dans la somme.
+- **Profil de tirs d'un club** ([club-scout.js](../../../dashboard/frontend/src/services/club-scout.js), `shotProfile`) : tirs, xG et buts par situation (jeu placé, contre-attaque, corner, autre CPA, coup franc direct, penalty) ; contre son camp exclus ; le xG d'une situation est inconnu dès qu'un de ses tirs n'en a pas (17 novembre 2026, voir [États de match et tirs](../04-clubs/05-etats-de-match-tirs-et-effectif.md)).
 - **Taille des bulles** : rayon `0,68 + 0,92 × √xG` (xG borné à [0, 1]) sur la carte de saison.
 
 ## Écarts dérivés du xG

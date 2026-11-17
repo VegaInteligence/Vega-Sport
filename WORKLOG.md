@@ -1,4 +1,4 @@
-# WORKLOG — 2026-11-17
+# WORKLOG — calculation audit checkpoint, 17 November 2026
 
 - Goal: platform audit and its plan ([VI-21](https://linear.app/vegainteligence/issue/VI-21/audit-de-la-plateforme-coherence-sources-de-donnees-sans-doublon-une), In Progress).
   - Each source is read only for what it alone gives.
@@ -88,3 +88,10 @@
 - Site: lucide-react 1.74.0, @vercel/speed-insights 2.1.0, prettier 3.10.1 (react 19.3.1 already the latest); worker: psycopg 3.3.9, boto3 1.44.4; read API: pg already the latest.
 - CI and deploy: bun 1.4.4 everywhere (was 1.2.21 for the API package and the deploy); Node 26 for the site (Vercel) and 24 elsewhere (Lambda nodejs24.x); actions checkout/setup-node/setup-python/upload-artifact v7, configure-aws-credentials v6.3.0 (pinned SHA).
 - Kept on purpose: Python 3.12 in the worker, Lambda nodejs24.x. Local checks: Python 328 OK, API 170/170, site 627/627, build, packages, 11 pages identical to production. Next action: push, then CI (incl. Isolated pilot's AWS login) and Vercel.
+
+## VI-23 — calculation audit (taken over 17 Nov 2026, 11:40)
+
+- Goal ([VI-23](https://linear.app/vegainteligence/issue/VI-23/audit-calculs-corriger-les-agregats-et-la-couverture-hors-des)): the 16 Nov calculation audit's independent fixes — aggregates on observed support and final matches only, paired club fields, retrospective xPts law, validated xG fits, half totals, embeddings, return stream, match-tab missing values; specs, failure modes and source audit under `docs/calculs/09-audit-2026-11/`.
+- Done by the Codex chat on `codex/calculation-audit-20261117` (5 local commits, Astra/xhigh accepted v3; the final Opus/max review stayed quota-blocked). The user reassigned it to this session (« work on all of that »): rebased on main, migrations renumbered after main's 124, reconciled with VI-22 (shot map unknown xG null; docs merged).
+- Constraint kept: measure before any production method change and ask before applying; no push or deploy without the user's yes.
+- Next action: full suites on the rebased branch, the pending final review, then the production impact (recompute) for the user's decision.

@@ -2,7 +2,7 @@
 
 Ce dossier explique, formule par formule, comment le site calcule ce qu'il affiche : xG, xA, xGOT, points attendus (xPts), probabilités de victoire, centiles, indices Vega, similarités, classements, sélections éditoriales de l'accueil.
 
-Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fichiers et aux fonctions concernés ; si le code change, le code fait foi.
+Il décrit le code tel qu'il est au 9 novembre 2026, et les corrections de l'audit des calculs du 16 novembre 2026 faites le 17 novembre (section 9). Chaque page renvoie aux fichiers et aux fonctions concernés ; si le code change, le code fait foi.
 
 ## Ce que Vega calcule, et ce qu'il ne calcule pas
 
@@ -71,11 +71,16 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 ### 8. Notes Vega des championnats, des clubs et des joueurs
 - [Toutes les formules et leurs raisons](08-notes-vega/01-formules-et-raisons.md) — l'enjeu d'un match, l'Elo des clubs, le niveau de chaque championnat (matchs entre championnats, joueurs qui en changent, a priori de division et de confédération), la note d'un joueur sur l'année et sa note de chaque match ; pour chaque réglage, s'il est mesuré sur la base ou choisi.
 
-## Trois règles qui reviennent partout
+### 9. Audit des calculs du 16 novembre 2026
+- [Modes de défaillance et contrats](09-audit-2026-11/FAILURE_MODES.md) — écrits avant les tests, puis avant le code (en anglais).
+- [Traçabilité de l'audit](09-audit-2026-11/TRACEABILITY.md) — chaque point de l'audit, son statut (corrigé et vérifié, transmis à son propriétaire, choix de modèle, validation réelle indisponible), ses preuves ; la migration et le recalcul de toutes les éditions.
+
+## Quatre règles qui reviennent partout
 
 1. **Une valeur absente n'est jamais un zéro.** Une moyenne ou un total ne prend que les matchs où la valeur est observée, et le « par 90 » divise par les minutes de ces matchs seulement.
 2. **Un centile n'existe que si la comparaison est sérieuse** : assez de minutes pour le joueur, assez de pairs (30 pour les joueurs, 5 pour les clubs), et pour la saison une mesure renseignée sur tous les matchs joués.
-3. **Un taux est un rapport de sommes, pas une moyenne de taux** : précision des passes = 100 × Σ passes réussies / Σ passes tentées sur les mêmes matchs.
+3. **Un taux est un rapport de sommes, pas une moyenne de taux** : précision des passes = 100 × Σ passes réussies / Σ passes tentées sur les mêmes matchs. De même, un **écart** (buts − xG, points − xPts, xG pour − xG contre) se lit sur les matchs où ses deux termes sont connus (audit du 16 novembre 2026).
+4. **Seuls les matchs terminés comptent** dans une saison, et un match se lit avec ce qu'il a vraiment mesuré : un nombre absent, `NaN` ou infini n'est jamais une observation.
 
 ## Fichiers de code principaux
 
@@ -90,4 +95,10 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 | Accueil (semaine, sélections, meneurs) | [home-insights.js](../../dashboard/frontend/src/services/home-insights.js), [home.mjs](../../backend/api/src/routes/home.mjs) |
 | Classements dérivés et zones | [competition-standings.js](../../dashboard/frontend/src/services/competition-standings.js), [standings-zones.js](../../dashboard/frontend/src/services/standings-zones.js), [nations-standings.js](../../dashboard/frontend/src/services/nations-standings.js) |
 | Lecture des données fournisseur | build_dashboard_data.py (ancien backend, supprimé le 10 novembre 2026) |
-| Agrégats saison côté base | 025_player_season_rollups.sql (ancien backend, supprimé le 10 novembre 2026), [performance.mjs](../../backend/api/src/routes/performance.mjs) |
+| Agrégats saison côté base | 025_player_season_rollups.sql (ancien backend, supprimé le 10 novembre 2026), [performance.mjs](../../backend/api/src/routes/performance.mjs), [calculator.py](../../backend/vega/calculator.py), migrations 124–127 |
+| Indicateurs club du serveur (version 2) | [club_indicators.py](../../backend/vega/club_indicators.py) |
+| Évaluation datée du xG de Vega | [evaluate_xg.py](../../backend/tools/evaluate_xg.py) |
+
+## Audit du 16 novembre 2026
+
+[Revue et corrections](09-audit-2026-11/REVIEW.md) · [Suivi de chaque constat](09-audit-2026-11/TRACEABILITY.md) · [Audit original inchangé](09-audit-2026-11/SOURCE_AUDIT.md).

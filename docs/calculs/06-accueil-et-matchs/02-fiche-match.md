@@ -51,6 +51,12 @@ Sous le bilan des confrontations, une phrase dit la série en cours quand elle c
 
 Sous le graphique du momentum (la pression minute par minute que publie la source, positive pour le club à domicile), la fiche nomme les trois périodes de cinq minutes de suite où un club a le plus pressé (`services/momentum.js`) : la somme de la pression sur cinq minutes consécutives toutes mesurées, la plus forte d'abord en valeur absolue, sans chevauchement entre deux périodes. Un match de moins de trente minutes mesurées n'en a pas.
 
+## Onglets des joueurs du match
+
+[match-tabs.js](../../../dashboard/frontend/src/services/match-tabs.js) : une valeur que la source n'a pas publiée n'est jamais un 0 (17 novembre 2026).
+- **Menace** = xG + xA, **récupérations** = tacles + interceptions : chacune exige ses deux termes, sinon elle est inconnue.
+- **Tireurs** : le xG d'un tireur n'est connu que si chacun de ses tirs en a un ; les xG inconnus viennent après les connus, puis les tirs départagent. Les tirs de la séance de tirs au but n'en sont pas ; un penalty du match et un tir de la prolongation le sont (17 novembre 2026, étape 7).
+
 ## Profil d'un joueur dans le match
 
 Centiles de la performance par rapport aux performances du même poste dans la saison, et rang de sa note parmi les joueurs du match : voir [Centiles et cohortes](../05-joueurs/02-centiles-et-cohortes.md) et [Note du match](../02-metriques-attendues/04-note-du-match.md).

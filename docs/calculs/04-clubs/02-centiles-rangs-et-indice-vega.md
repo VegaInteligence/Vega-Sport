@@ -71,4 +71,4 @@ Exemple : attaque 80, défense 60, contrôle 70, pressing 50, finition 40, CPA 5
 
 ## Force d'un adversaire (calendrier)
 
-`opponentStrength` : centile de la **différence de xG par match** (xG − xG concédés) de l'adversaire dans la cohorte du club.
+`opponentStrength` : centile de la **différence de xG par match** (xG − xG concédés) de l'adversaire dans la cohorte du club. Sans centile, c'est-à-dire avec moins de 5 clubs dont la différence appariée est connue, il n'y a pas de force (17 novembre 2026, étape 7). Avant, ce cas donnait le niveau le plus faible. La liste des matchs à venir (chantier VI-22) écrit alors « hors référentiel » et cache la position, même pour un club du référentiel trop peu mesuré : ce libellé reste transmis.
