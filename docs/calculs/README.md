@@ -60,7 +60,7 @@ Il décrit le code tel qu'il est au 9 novembre 2026. Chaque page renvoie aux fic
 ### 6. Accueil et fiches de match
 - [Accueil](06-accueil-et-matchs/01-accueil.md) — semaine affichée, match de la semaine, joueur de la semaine, séries.
 - [Fiche de match](06-accueil-et-matchs/02-fiche-match.md) — courbe des xG, carte des tirs, contexte avant match, discipline.
-- [Pronostics et projections](06-accueil-et-matchs/03-pronostics-et-projections.md) — probabilités d’un match à venir, championnat ou coupe européenne rejoués jusqu’à leur terme, vérifications ; clubs sans Elo.
+- [Pronostics et projections](06-accueil-et-matchs/03-pronostics-et-projections.md) — probabilités d’un match à venir, championnat, coupe européenne ou nationale et Ligue des nations rejoués jusqu’à leur terme, vérifications ; clubs sans Elo.
 - [Recommandation de l'accueil](06-accueil-et-matchs/04-recommandation-accueil.md) — proposition, rien n'est construit : la rangée « Pour vous », quatre ordres choisis par un bandit, la loi Bêta et le nombre de visites qu'il faut pour trancher.
 - [Journées, équipe de la journée et joueur de la saison](06-accueil-et-matchs/05-journees.md) — quand une journée se ferme (reports compris), ce qui l'attend, l'équipe type choisie par affectation exacte, la course au joueur de la saison.
 

@@ -253,6 +253,84 @@ class ForecastTest(unittest.TestCase):
         self.assertEqual(sorted(cups), [1])  # the Swiss cup lacks club 215's strength
         self.assertAlmostEqual(sum(p["r32"] for p in cups[1].values()), 32, places=6)
 
+    # The Nations League (VI-19, 17 Nov 2026). Rows: (edition, cup key, group, home, away, status, home goals, away goals, day).
+    def unl(self, group, h, a, hs=None, as_=None, status="finished", day=1, edition=9, key="nations-results:nations-league:2026/2027"):
+        from datetime import date
+
+        return (edition, key, group, h, a, status, hs, as_, date(2026, 9, day))
+
+    def test_a_nations_league_group_and_its_matches_left(self):
+        # A group plays home and away: the legs a source gives no fixture for are the ones not played yet.
+        u = self.unl
+        played = [u("B1", 1, 2, 1, 0), u("B1", 3, 4, 0, 0), u("B1", 1, 3, 2, 2), u("B1", 2, 4, 0, 1), u("B1", 4, 1, 1, 1), u("B1", 2, 3, 3, 0),
+                  u("B1", 2, 1, 0, 0), u("B1", 4, 3, 2, 1)]
+        group = forecast.nations_groups(played)[9]["B1"]
+        self.assertEqual(group["members"], {1, 2, 3, 4})
+        self.assertEqual(len(group["results"]), 8)
+        self.assertEqual(sorted(group["fixtures"]), [(1, 4), (3, 1), (3, 2), (4, 2)])
+        # A fixture given counts once; League A's groups are « 1 » to « 4 ».
+        a = [u("1", 1, 2, 1, 0, key="openligadb:nations-league:2026/2027", edition=8), u("1", 2, 1, status="not_started", key="openligadb:nations-league:2026/2027", edition=8)]
+        self.assertEqual(forecast.nations_groups(a)[8]["1"]["fixtures"], [(2, 1)])
+
+    def test_a_group_ranked_as_uefa_does(self):
+        # Points, then the points, goal difference and goals of the matches between the teams level, again among those
+        # still level, then overall goal difference, goals, away goals, wins, away wins (the site's own order,
+        # nations-standings.js); a tie left after all is drawn.
+        import random
+
+        results = [(1, 2, 1, 0), (2, 3, 1, 0), (3, 1, 1, 0), (1, 4, 5, 0), (2, 4, 1, 0), (3, 4, 2, 0)]
+        # 1, 2 and 3 have 6 points each and beat each other in a circle (head-to-head level): overall goal difference decides.
+        self.assertEqual(forecast.uefa_order({1, 2, 3, 4}, results, random.Random(0)), [1, 3, 2, 4])
+        # 1 and 2 level on 6 points: 2 won their meeting, so it goes first though 1's goal difference is far better.
+        results = [(1, 2, 0, 1), (1, 3, 6, 0), (1, 4, 6, 0), (2, 3, 1, 0), (2, 4, 0, 1), (3, 4, 0, 0)]
+        self.assertEqual(forecast.uefa_order({1, 2, 3, 4}, results, random.Random(0)), [2, 1, 4, 3])
+
+    def test_a_nations_league_replayed_to_its_final_four(self):
+        # League A: four groups, then quarter-finals (a winner against another group's runner-up, two legs), then the
+        # Final Four; a group already played out keeps its order.
+        u = self.unl
+        key = "openligadb:nations-league:2026/2027"
+        rows = []
+        for g in range(4):
+            t = [10 * g + k for k in range(1, 5)]
+            for i, h in enumerate(t):
+                for a in t:
+                    if h != a:
+                        hs, as_ = (2, 0) if t.index(h) < t.index(a) else (0, 1)
+                        rows.append(u(str(g + 1), h, a, hs, as_, key=key, edition=8))
+        rows[-1] = u("4", rows[-1][3], rows[-1][4], status="not_started", key=key, edition=8)  # one match left
+        groups = forecast.nations_groups(rows)[8]
+        strengths = {t: 1700 - 5 * t for g in groups.values() for t in g["members"]}
+        odds = forecast.simulate_nations(groups, MODEL, strengths, knockout=True, simulations=300, seed=2)
+        total = lambda k: sum(o[k] for o in odds.values())
+        for k, n in (("first", 4), ("second", 4), ("third", 4), ("fourth", 4), ("qf", 8), ("sf", 4), ("final", 2), ("win", 1)):
+            self.assertAlmostEqual(total(k), n, places=6)
+        self.assertEqual((odds[1]["first"], odds[4]["fourth"]), (1.0, 1.0))  # group 1 is played out
+        self.assertEqual(odds, forecast.simulate_nations(groups, MODEL, strengths, knockout=True, simulations=300, seed=2))
+        # Leagues B to D: their groups only.
+        b = forecast.simulate_nations({"B1": groups["1"]}, MODEL, strengths, knockout=False, simulations=50)
+        self.assertNotIn("win", b[1])
+        self.assertEqual(b[1]["first"], 1.0)
+
+    def test_which_nations_league_editions_are_projected(self):
+        # League A's edition with its knockout, Leagues B to D's groups alone; each club's points and matches so far;
+        # an edition with a nation the Elo does not rate waits.
+        from datetime import date
+
+        u = self.unl
+        a = [u(str(g + 1), 10 * g + i, 10 * g + j, 1, 0, key="openligadb:nations-league:2026/2027", edition=8)
+             for g in range(4) for i in range(1, 5) for j in range(1, 5) if i != j]
+        b = [u("B1", 101, 102, 2, 1), u("B1", 103, 104, 0, 0)]
+        strengths = {t: 1500.0 for t in [10 * g + i for g in range(4) for i in range(1, 5)] + [101, 102, 103, 104]}
+        out = forecast.nations_projections(a + b, MODEL, strengths, date(2026, 11, 17), simulations=40)
+        table, odds = out[8]
+        self.assertEqual(table[1], (9, 3, 3, 6))  # three home wins, three away defeats: points, goals for, goals against, played
+        self.assertIn("win", odds[1]["stages"])
+        self.assertNotIn("win", out[9][1][101]["stages"])
+        self.assertEqual(out[9][0][101], (3, 2, 1, 1))
+        del strengths[104]
+        self.assertNotIn(9, forecast.nations_projections(b, MODEL, strengths, date(2026, 11, 17), simulations=10))
+
 
 if __name__ == "__main__":
     unittest.main()

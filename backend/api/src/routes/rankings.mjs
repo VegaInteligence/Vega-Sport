@@ -455,13 +455,23 @@ async function swap(read, params) {
 }
 
 // The stages of a UEFA cup's projection (122), in order.
-const CUP_STAGES = ["top8", "playoff", "out", "r64", "r32", "r16", "qf", "sf", "final", "win"];
+const CUP_STAGES = ["top8", "playoff", "out", "first", "second", "third", "fourth", "r64", "r32", "r16", "qf", "sf", "final", "win"];
 const LEAGUE_PHASE = ["top8", "playoff", "out"];
+const GROUP_PLACES = ["first", "second", "third", "fourth"];
 
-/** "league-phase" for a UEFA cup's league phase and bracket (122), "knockout" for a domestic cup's rounds (124), else null. */
+/**
+ * "league-phase" for a UEFA cup's league phase and bracket (122), "nations" for the Nations League's groups and
+ * League A's knockout (125), "knockout" for a domestic cup's rounds (124), else null.
+ */
 export function cupFormat(stages) {
   if (!stages.size) return null;
-  return [...stages.values()].some((s) => LEAGUE_PHASE.some((k) => s[k] > 0)) ? "league-phase" : "knockout";
+  const any = (keys) => [...stages.values()].some((s) => keys.some((k) => s[k] > 0));
+  return any(LEAGUE_PHASE) ? "league-phase" : any(GROUP_PLACES) ? "nations" : "knockout";
+}
+
+/** Each nation's group in the Nations League (125). */
+export function groupsByTeam(rows) {
+  return new Map(rows.map((r) => [r.team_key, r.group_name]));
 }
 
 /** Each club's Elo (rows: one per club, its latest season's), rounded: a knockout cup's level column (124). */
@@ -503,8 +513,13 @@ async function seasonProjection(read, params) {
   const stages = cupStages(stageRows);
   const format = cupFormat(stages);
   const opponents = format === "knockout" ? roundOpponents(opponentRows) : new Map();
-  const levels = format === "knockout"
-    ? levelsByTeam(await read("SELECT DISTINCT ON (team_key) team_key, elo FROM api.power_clubs WHERE scope='clubs' AND team_key=ANY($1) ORDER BY team_key, season_id DESC", [teams.map((t) => t.team_key)]))
+  const ranked = format === "knockout" || format === "nations";
+  // A club's Elo, or a nation's (the scope of its own ranking).
+  const levels = ranked
+    ? levelsByTeam(await read("SELECT DISTINCT ON (team_key) team_key, elo FROM api.power_clubs WHERE team_key=ANY($1) ORDER BY team_key, season_id DESC", [teams.map((t) => t.team_key)]))
+    : new Map();
+  const groups = format === "nations"
+    ? groupsByTeam(await read("SELECT team_key, group_name FROM api.cup_team_groups WHERE competition_season_id=$1", [edition.competition_season_id]))
     : new Map();
   if (!teams.length) reject(404, "Donnée indisponible.");
   const next = comingMatches(fixtures);
@@ -517,7 +532,8 @@ async function seasonProjection(read, params) {
     teams: teams.map((team) => ({ id: team.team_id, name: team.name, imageUrl: team.image_url ?? null, played: team.played, points: team.points,
       projectedPoints: round(team.projected_points, 1), places: shares.get(team.team_key), next: next.get(team.team_key) ?? null,
       ...(stages.size ? { stages: stages.get(team.team_key) ?? cupStages([{ team_key: team.team_key }]).get(team.team_key) } : {}),
-      ...(format === "knockout" ? { elo: levels.get(team.team_key) ?? null, opponent: opponents.get(team.team_key) ?? null } : {}) })),
+      ...(format === "knockout" ? { elo: levels.get(team.team_key) ?? null, opponent: opponents.get(team.team_key) ?? null } : {}),
+      ...(format === "nations" ? { elo: levels.get(team.team_key) ?? null, group: groups.get(team.team_key) ?? null } : {}) })),
     // A UEFA cup of the league-phase format: its league phase, then its bracket (122); a domestic
     // cup: its rounds from the one in play, each club with its drawn opponent (124).
     ...(format ? { format } : {}),

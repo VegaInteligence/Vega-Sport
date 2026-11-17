@@ -22,7 +22,7 @@ const ROUNDS = [
 ];
 
 /** A share as a cell shaded by its size. */
-function Heat({ value, tone, first }) {
+export function Heat({ value, tone, first }) {
   return (
     <td className="projection-heat" data-tone={tone} data-first={first || undefined} style={{ "--p": value }}>
       {share(value)}

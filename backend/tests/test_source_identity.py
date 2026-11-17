@@ -470,6 +470,27 @@ class SourceIdentityTest(unittest.TestCase):
         with self.db.transaction():
             self.assertEqual(identity.run(self.db, None, "teams", NOW)[0], 0)  # nothing left to merge
 
+    def test_a_team_two_sources_share_keeps_its_name(self):
+        # Italy, merged from OpenLigaDB (League A) and International Results (Leagues B to D): neither renames it at
+        # each pass; each spelling stays a name of its source. A team one source alone holds still takes its spelling.
+        from vega.sources import cups
+
+        x = self.db.execute
+        x("INSERT INTO core.teams(id, name, is_national) VALUES (950, 'Italien', true), (951, 'Malte', true)")
+        self.addCleanup(lambda: [x(q) for q in ("DELETE FROM core.entity_names WHERE entity_type='team' AND entity_id IN (950, 951)",
+                                                "DELETE FROM core.provider_ids WHERE entity_type='team' AND entity_id IN (950, 951)",
+                                                "DELETE FROM core.teams WHERE id IN (950, 951)")])
+        x("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','openligadb','name:Italien',950),
+             ('team','international_results','name:Italy',950), ('team','international_results','name:Malte',951)""")
+        with self.db.transaction():
+            self.assertEqual(cups._team(self.db, "openligadb", "name:Italien", "Italien"), 950)
+            self.assertEqual(cups._team(self.db, "international_results", "name:Italy", "Italy"), 950)
+            self.assertEqual(cups._team(self.db, "international_results", "name:Malte", "Malta"), 951)
+        self.assertEqual(x("SELECT name FROM core.teams WHERE id=950").fetchone()[0], "Italien")
+        self.assertEqual(x("SELECT name FROM core.teams WHERE id=951").fetchone()[0], "Malta")
+        self.assertEqual(x("SELECT name, source FROM core.entity_names WHERE entity_type='team' AND entity_id=950 AND kind='source_spelling' ORDER BY 1").fetchall(),
+                         [("Italien", "openligadb"), ("Italy", "international_results")])
+
 
 if __name__ == "__main__":
     unittest.main()
