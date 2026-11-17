@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { get, skip } from "./context.mjs";
+import { forecastOf, tableRow, withForecast } from "../src/routes/cups.mjs";
 
 // The very bodies the seed wrote (backend/tests/cup_samples.py).
 const samples = JSON.parse(
@@ -103,4 +104,21 @@ test("open-matchday catalogue and tables, as main's", { skip }, async () => {
   assert.equal((await get("/api/cup-index?kind=worker")).response.status, 404);
   assert.equal((await get("/api/cup-table?competition=XYZ_1_none&season=2026%2F2027&kind=results")).response.status, 404);
   assert.equal((await get("/api/cup-table?competition=bad&season=2026%2F2027&kind=results")).response.status, 400);
+});
+
+// Every competition has its predictions (VI-19, 17 Nov 2026): a match still to play carries the model's forecast when
+// it has one (the worker forecasts every match between two rated teams, whatever the source); a played match never.
+test("a fixture carries its forecast, a played match none", () => {
+  const f = { match_key: 7, home_win: 0.541236, draw: 0.25, away_win: 0.208764 };
+  assert.deepEqual(forecastOf(f), { home: 0.5412, draw: 0.25, away: 0.2088 });
+  assert.equal(forecastOf(undefined), null);
+  const fixture = tableRow({ status: "not_started", gw: "15", home: "Aldershot", away: "Yeovil", date: "2026-11-21", match_id: 7 }, f);
+  assert.deepEqual(fixture.forecast, { home: 0.5412, draw: 0.25, away: 0.2088 });
+  const played = tableRow({ status: "finished", gw: "14", home: "Aldershot", away: "Yeovil", date: "2026-11-14", home_score: 1, away_score: 0, match_id: 7 }, f);
+  assert.equal("forecast" in played, false);
+  assert.equal("forecast" in tableRow({ status: "not_started", gw: "15", home: "A", away: "B", date: "" }), false);
+  // A cup source's match (OpenLigaDB, OpenFootball): the same field, only before kick-off.
+  assert.deepEqual(withForecast({ key: "openliga:1", status: "scheduled" }, f), { key: "openliga:1", status: "scheduled", forecast: { home: 0.5412, draw: 0.25, away: 0.2088 } });
+  assert.deepEqual(withForecast({ key: "openliga:1", status: "finished" }, f), { key: "openliga:1", status: "finished" });
+  assert.deepEqual(withForecast({ team1: "A", team2: "B" }, undefined), { team1: "A", team2: "B" });
 });

@@ -36,15 +36,15 @@ function Projection({ projection, league }) {
       <table className="data-table standings-table season-projection nations-projection">
         <caption className="sr-only">Chances de chaque sélection</caption>
         <thead><tr><th scope="col">#</th><th scope="col"><Term>Sélection</Term></th><th scope="col" title="Groupe">Gr.</th><th scope="col" title="Points actuels"><Term>Pts</Term></th><th scope="col" title="Matchs joués"><Term>J</Term></th>
-          {columns.map((column, i) => <th key={column.key} scope="col" title={column.title} className="projection-group" data-first={i === 0 || column.key === "sf" || undefined}>{column.label}{column.range && <small>{column.range}</small>}</th>)}</tr></thead>
+          {columns.map((column) => <th key={column.key} scope="col" title={column.title} className="projection-group" data-first={column.start || undefined}>{column.label}{column.range && <small>{column.range}</small>}</th>)}</tr></thead>
         <tbody>{rows.map((row, index) => {
           const start = league !== "A" && rows[index - 1]?.group !== row.group, rank = league === "A" ? index + 1 : index - rows.findIndex((r) => r.group === row.group) + 1;
           return <tr key={row.id} data-group-start={start || undefined}><td>{rank}</td><th scope="row"><span className="national-team"><NationalFlag name={row.name} season="2026/2027" />{nationName(row.name)}</span></th><td>{String(row.group).replace(/^[A-D]/, "")}</td><td className="standings-points">{row.points}</td><td>{row.played}</td>
-            {columns.map((column, i) => <Heat key={column.key} value={row.stages[column.key]} tone={column.tone} first={i === 0 || column.key === "sf"} />)}</tr>;
+            {columns.map((column) => <Heat key={column.key} value={row.stages[column.key]} tone={column.tone} first={column.start} />)}</tr>;
         })}</tbody>
       </table>
     </div>
-    <p className="standings-note">Les matchs restants sont rejoués {number(projection.model?.replays || 0)} fois d’après la force de chaque sélection (son Elo), avec le départage UEFA (confrontations directes d’abord).{league === "A" ? " Quarts et barrages suivent le tirage une fois fait, sinon tirés au hasard (un premier contre un deuxième d’un autre groupe), en aller-retour ; Final Four sur terrain neutre ; une prolongation vaut un tiers de match et les tirs au but sont à 50/50." : ""}</p>
+    <p className="standings-note">Les matchs restants sont rejoués {number(projection.model?.replays || 0)} fois d’après la force de chaque sélection (son Elo), avec le départage UEFA (confrontations directes d’abord).{league === "A" ? " Saison de transition : les deux meilleurs 3es restent, les deux autres 3es et les deux meilleurs 4es jouent le barrage contre un 2e de Ligue B, les deux derniers 4es descendent. Quarts et barrages suivent le tirage une fois fait, sinon tirés au hasard, en aller-retour ; Final Four sur terrain neutre ; une prolongation vaut un tiers de match et les tirs au but sont à 50/50." : league === "D" ? " La Ligue D disparaît en 2028–29 : toutes ses sélections montent en Ligue C." : ""}</p>
   </>;
 }
 export default function NationsCompetition({ competition }) {

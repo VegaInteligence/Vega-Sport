@@ -44,10 +44,29 @@ const FOLDER = /^[A-Z0-9_]+_[a-z0-9-]+$/;
 const text = (v) => (v === null || v === undefined ? "" : String(v));
 const outcome = (h, a) => (h == null || a == null ? "" : h > a ? "H" : h < a ? "A" : "D");
 
-/** A row of main's catalogue tables (the source's CSV line), from typed facts. */
-export function tableRow(r) {
+/** The model's forecast of a match still to play (api.match_forecasts' row), as the site reads it; null without one. */
+export function forecastOf(f) {
+  const r4 = (v) => Math.round(Number(v) * 10000) / 10000;
+  return f ? { home: r4(f.home_win), draw: r4(f.draw), away: r4(f.away_win) } : null;
+}
+
+/** A cup source's match with its forecast while it is still to play (every competition has its predictions, VI-19). */
+export function withForecast(match, f) {
+  const played = match.status === "finished" || Array.isArray(match.score) || match.score?.ft;
+  return f && !played ? { ...match, forecast: forecastOf(f) } : match;
+}
+
+/** The forecasts of these matches, by internal match id. */
+async function forecastsOf(read, ids) {
+  if (!ids.length) return new Map();
+  const rows = await read("SELECT match_key, home_win, draw, away_win FROM api.match_forecasts WHERE match_key = ANY($1)", [ids]);
+  return new Map(rows.map((r) => [Number(r.match_key), r]));
+}
+
+/** A row of main's catalogue tables (the source's CSV line), from typed facts; a fixture with its forecast. */
+export function tableRow(r, f) {
   const row = { gw: text(r.gw), away: r.away, date: r.date ?? "", home: r.home, time: "" };
-  if (r.status !== "finished") return row;
+  if (r.status !== "finished") return f ? { ...row, forecast: forecastOf(f) } : row;
   const sides = {};
   for (const side of ["home", "away"])
     for (const k of ["shots", "target", "fouls", "corners", "yellow", "red", "corners_1h", "corners_2h"]) sides[`${side}_${k}`] = text(r[`${side}_${k}`]);
@@ -125,21 +144,24 @@ export async function cupBody(read, competitionId, season) {
   const source = SOURCES[e.kind](e);
   if (e.format === "table-v1") {
     const table = await read("SELECT * FROM api.cup_table_rows WHERE competition_season_id=$1 ORDER BY position", [e.competition_season_id]);
+    const forecasts = await forecastsOf(read, table.filter((r) => r.status !== "finished" && r.match_id != null).map((r) => r.match_id));
     const body = {
       name: e.name, season, source,
-      results: table.filter((r) => r.status === "finished").map(tableRow),
-      fixtures: table.filter((r) => r.status !== "finished").map(tableRow),
+      results: table.filter((r) => r.status === "finished").map((r) => tableRow(r)),
+      fixtures: table.filter((r) => r.status !== "finished").map((r) => tableRow(r, forecasts.get(Number(r.match_id)))),
     };
     return { body, worker: { checkedAt: iso(e.checked_at), updatedAt: iso(e.updated_at) } };
   }
+  const forecasts = await forecastsOf(read, rows.filter((r) => r.status !== "finished").map((r) => r.match_id));
+  const each = (build) => (r) => withForecast(build(r), forecasts.get(Number(r.match_id)));
   const body =
     e.format === "matches-v1"
-      ? { name: e.name, season, matches: rows.map(openCupMatch), source }
+      ? { name: e.name, season, matches: rows.map(each(openCupMatch)), source }
       : e.format === "rounds-v1"
-        ? { competition: e.competition, season, matches: rows.map(openLigaMatch(e.competition)), source }
+        ? { competition: e.competition, season, matches: rows.map(each(openLigaMatch(e.competition))), source }
         : e.competition === "nations-league"
-          ? { season, matches: rows.map(nationsMatch), source }
-          : { name: e.name, season, matches: rows.map(tournamentMatch(e.competition)), source };
+          ? { season, matches: rows.map(each(nationsMatch)), source }
+          : { name: e.name, season, matches: rows.map(each(tournamentMatch(e.competition))), source };
   return { body, worker: { checkedAt: iso(e.checked_at), updatedAt: iso(e.updated_at) } };
 }
 
@@ -207,7 +229,9 @@ export function createCupRoute(read) {
       if (!p.competition || !p.season || !p.kind) reject(400, "Paramètre manquant.");
       const rows = await read("SELECT * FROM api.cup_table_rows WHERE competition=$1 AND season=$2 ORDER BY position", [p.competition, p.season]);
       if (!rows.length) reject(404, "Donnée indisponible.");
-      return respond(req, rows.filter((r) => (p.kind === "results") === (r.status === "finished")).map(tableRow), "catalog");
+      const kept = rows.filter((r) => (p.kind === "results") === (r.status === "finished"));
+      const forecasts = p.kind === "fixtures" ? await forecastsOf(read, kept.filter((r) => r.match_id != null).map((r) => r.match_id)) : new Map();
+      return respond(req, kept.map((r) => tableRow(r, forecasts.get(Number(r.match_id)))), "catalog");
     }
     if (path === "/api/cups/edition") {
       const p = validate(params, { competition: LEAGUE, season: YEAR });

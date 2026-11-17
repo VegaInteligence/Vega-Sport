@@ -2894,6 +2894,10 @@ th[aria-sort="descending"] .sort-indicator {
 .season-projection td.projection-heat[data-tone="round"] {
   --heat: #2fb380;
 }
+/* A Nations League promotion/relegation play-off (VI-19). */
+.season-projection td.projection-heat[data-tone="barrage"] {
+  --heat: #e0973a;
+}
 /* A domestic cup's projection: the opponent drawn for the round in play. */
 .season-projection :is(th, td).projection-opponent {
   padding-right: 16px;
