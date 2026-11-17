@@ -5,6 +5,7 @@ formulas of the docs; the database must agree.
 """
 
 from collections import Counter
+from datetime import timedelta
 import os
 from pathlib import Path
 import sys
@@ -879,6 +880,131 @@ class ModelsTest(unittest.TestCase):
         self.assertGreater(
             self.one("SELECT count(*) FROM pg_stats WHERE schemaname='core' AND tablename='player_match_stats' AND inherited")[0], 10
         )
+
+    def _in_one_transaction(self):
+        """A connection whose single transaction is rolled back: now() stays put and nothing is kept."""
+        return psycopg.connect(DSN)
+
+    def test_z_cohort_queue_has_a_maximum_wait(self):
+        """FAILURE_MODES §18 (VI-26): due at the earlier of 10 minutes after the last mark and 60 minutes
+        after the first mark not yet refreshed."""
+        conn = self._in_one_transaction()
+        real_refresh, real_index = models.refresh_cohort, models.refresh_player_index
+        refreshed, remark = [], set()
+
+        def refresh(c, cohort):
+            refreshed.append(cohort)
+            if cohort in remark:  # marked again while it is refreshed (§18e)
+                models.mark_cohort(c, cohort)
+            return {"season": 2025}
+
+        models.refresh_cohort, models.refresh_player_index = refresh, lambda c, season: None
+        try:
+            x = conn.execute
+            one = lambda sql, *a: x(sql, a).fetchone()
+            team, europe = self.cohort("team:2025:cs:1"), self.cohort("team:2025:europe")
+            self.assertEqual(
+                one("""SELECT is_nullable, column_default FROM information_schema.columns
+                       WHERE table_schema='ops' AND table_name='dirty_scopes' AND column_name='first_queued_at'"""),
+                ("NO", "now()"),
+            )
+            x("DELETE FROM ops.dirty_scopes WHERE scope_kind='cohort'")
+
+            def queue(cohort, first_minutes_ago, last_minutes_ago):
+                x("DELETE FROM ops.dirty_scopes WHERE scope_kind='cohort' AND cohort_id=%s", (cohort,))
+                x("""INSERT INTO ops.dirty_scopes(scope_kind, cohort_id, first_queued_at, queued_at)
+                     VALUES ('cohort', %s, now() - make_interval(mins => %s), now() - make_interval(mins => %s))""",
+                  (cohort, first_minutes_ago, last_minutes_ago))
+
+            def run(**kw):
+                refreshed.clear()
+                models.process_cohorts(conn, **kw)
+                return list(refreshed)
+
+            queued = lambda cohort: one("SELECT count(*) FROM ops.dirty_scopes WHERE scope_kind='cohort' AND cohort_id=%s", cohort)[0]
+            queue(team, 5, 5)
+            self.assertEqual(run(), [])  # 18a: the debounce is kept
+            queue(team, 11, 11)
+            self.assertEqual(run(), [team])  # 18b
+            self.assertEqual(queued(team), 0)  # 18f
+            queue(team, 61, 1)
+            self.assertEqual(run(), [team])  # 18c: starving, refreshed at the maximum wait
+            queue(team, 30, 1)
+            self.assertEqual(run(), [])  # 18d: within the maximum wait
+            queue(team, 61, 1)
+            remark.add(team)
+            self.assertEqual(run(), [team])  # 18e: forced, and marked again during its refresh
+            remark.clear()
+            self.assertEqual(
+                one("SELECT first_queued_at = now(), queued_at = now(), revision FROM ops.dirty_scopes WHERE scope_kind='cohort' AND cohort_id=%s", team),
+                (True, True, 2),
+            )  # stays queued, its wait starting again from the claim
+            self.assertEqual(run(), [])  # not on every pass
+            x("""UPDATE ops.dirty_scopes SET first_queued_at = first_queued_at - interval '61 minutes',
+                   queued_at = queued_at - interval '1 minute' WHERE scope_kind='cohort' AND cohort_id=%s""", (team,))
+            self.assertEqual(run(), [team])  # an hour after the claim, once more
+            queue(team, 70, 1)  # due 10 minutes ago (maximum wait)
+            queue(europe, 15, 15)  # due 5 minutes ago (debounce)
+            self.assertEqual((run(limit=1), run(limit=1)), ([team], [europe]))  # 18g: oldest due first
+            queue(team, 0, 0)
+            self.assertEqual(run(min_age_seconds=0), [team])  # 18h
+            # 18k and the mark itself: a new row has both times now(); a mark again keeps the first.
+            models.mark_cohort(conn, team)
+            self.assertEqual(one("SELECT first_queued_at = now(), queued_at = now(), revision FROM ops.dirty_scopes WHERE scope_kind='cohort' AND cohort_id=%s", team), (True, True, 1))
+            x("UPDATE ops.dirty_scopes SET first_queued_at = now() - interval '30 minutes', queued_at = now() - interval '30 minutes' WHERE scope_kind='cohort'")
+            cohorts = models.mark_cohorts(conn, 1)
+            self.assertIn(team, cohorts)
+            self.assertEqual(
+                one("""SELECT count(*) FILTER (WHERE first_queued_at = now() - interval '30 minutes' AND queued_at = now() AND revision = 2),
+                              count(*) FILTER (WHERE first_queued_at = now() AND queued_at = now() AND revision = 1), count(*)
+                       FROM ops.dirty_scopes WHERE scope_kind='cohort'"""),
+                (1, len(cohorts) - 1, len(cohorts)),
+            )
+        finally:
+            models.refresh_cohort, models.refresh_player_index = real_refresh, real_index
+            conn.rollback()
+            conn.close()
+
+    def test_z_cohort_re_marked_every_minute_is_still_refreshed(self):
+        """FAILURE_MODES §18, end to end with the real refresh: over 70 simulated minutes one club
+        cohort is marked every minute, the Europe cohort once; the first is refreshed at minute 60,
+        once, and stays queued after its last mark; the second at minute 10."""
+        conn = self._in_one_transaction()
+        real_refresh = models.refresh_cohort
+        timeline = []
+        minute = [0]
+
+        def refresh(c, cohort):
+            timeline.append((minute[0], cohort))
+            return real_refresh(c, cohort)
+
+        models.refresh_cohort = refresh
+        try:
+            x = conn.execute
+            team, europe = self.cohort("team:2025:cs:1"), self.cohort("team:2025:europe")
+            before = dict(x("SELECT id, calc_run_id FROM agg.cohorts WHERE id = ANY(%s)", ([team, europe],)).fetchall())
+            x("DELETE FROM ops.dirty_scopes WHERE scope_kind='cohort'")
+            models.mark_cohort(conn, europe)
+            for m in range(70):
+                minute[0] = m
+                if m:  # one simulated minute passes for every queued cohort
+                    x("""UPDATE ops.dirty_scopes SET queued_at = queued_at - interval '1 minute',
+                           first_queued_at = first_queued_at - interval '1 minute' WHERE scope_kind='cohort'""")
+                models.mark_cohort(conn, team)
+                models.process_cohorts(conn)
+            self.assertEqual(timeline, [(10, europe), (60, team)], timeline)
+            after = dict(x("SELECT id, calc_run_id FROM agg.cohorts WHERE id = ANY(%s)", ([team, europe],)).fetchall())
+            self.assertNotEqual(after[team], before[team])
+            self.assertNotEqual(after[europe], before[europe])
+            self.assertEqual(
+                x("SELECT revision, now() - first_queued_at FROM ops.dirty_scopes WHERE scope_kind='cohort' AND cohort_id=%s", (team,)).fetchone(),
+                (9, timedelta(minutes=8)),
+            )  # marked at minutes 61 to 69: queued since minute 61
+            self.assertEqual(x("SELECT count(*) FROM ops.dirty_scopes WHERE scope_kind='cohort'").fetchone()[0], 1)
+        finally:
+            models.refresh_cohort = real_refresh
+            conn.rollback()
+            conn.close()
 
     def test_z_incremental_cohort_refresh(self):
         from vega.calculator import process_dirty

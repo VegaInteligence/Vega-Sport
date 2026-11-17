@@ -76,3 +76,14 @@ Un milieu joue 1 600 minutes avec 6,1 récupérations par 90. Dans sa cohorte, 2
 - une mesure absente sur au moins un match joué ;
 - moins de 30 pairs comparables, ou moins de 30 valeurs connues de la mesure pour une performance ;
 - joueur sans poste connu (aucun groupe saison).
+
+## Quand une cohorte est recalculée
+
+Quand les agrégats d'une édition changent, ses cohortes sont mises en file (joueurs par poste et clubs, et la cohorte Europe pour les sept championnats et les coupes UEFA). Le calcul de la cohorte part à la première de ces deux échéances (VI-26, [FAILURE_MODES §18](../09-audit-2026-11/FAILURE_MODES.md)) :
+
+- **10 minutes après son dernier changement.** Une journée de matchs recalcule ainsi un championnat quelques fois, pas une fois par match.
+- **60 minutes après son premier changement non encore recalculé.** C'est le plafond d'une cohorte qui change sans cesse : un championnat pendant une longue fenêtre de matchs, ou une saison qu'un complément historique réécrit toutes les quelques minutes. Sans ce plafond, la cohorte Europe 2021 des clubs, remarquée 2 853 fois, n'avait plus été recalculée depuis le 9 novembre 2026.
+
+Chaque tour traite les 50 cohortes dont l'échéance est la plus ancienne. Si une cohorte change pendant son calcul, elle reste en file et son plafond repart du début de ce calcul. Entre deux calculs, un centile peut donc avoir jusqu'à une heure de retard sur les derniers matchs.
+
+Code : `mark_cohort` et `process_cohorts` dans [models.py](../../../backend/vega/models.py) ; colonne `ops.dirty_scopes.first_queued_at` (migration 133).

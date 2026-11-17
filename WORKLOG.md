@@ -103,4 +103,12 @@
 - Rebased three times (main shipped 124, 125, then VI-19's 126 and 127): VI-23's migrations are now 128–132.
 - Validated locally: Python 424 (3.14), API 181, site 691, build 17/17 on the pushed tree; browser behind a proxy that adds the view's values computed on production. Evidence: `scratchpad/evidence/vi23-final/EVIDENCE.md` (session scratchpad).
 - Shipped 17 Nov (« Yes push and deploy »): `3d4bb282a0` on main with VI-25; Deploy run 44099838338 green; migrations 128–132 applied 14:11–14:12 UTC; worker image `3d4bb282a0` on Python 3.14; the API serves `ownGoalsFor` and `penaltyAttempts`. Production check without proxy: Le Havre conversion 5,4 %, keeper −2,7 (26e sur 31), finishing −6,4; PSG keeper +3,9; equal to the independent expectations; one rank differs from the proxy run (Le Havre finishing 31e instead of 30e: a club outside Ligue 1 in the cohort changed, cause not traced).
-- Next action: the recompute (2,149 editions in six batches, current leagues first; pre-check clean) is a production write that the session's permission check refused; it waits for the user's explicit go-ahead. Then the daily pass fits xg-v2, embeddings for every season, post-checks, Linear VI-23 Done.
+- Recompute done 17 Nov (« Oui »), 14:32–16:37 UTC: 2,149 editions in six batches, every cohort republished; 0 club seasons without paired supports (75,785 rows); `xg-v2` (1,798,648 shots) and `returns-v2` only; profiles 2021–2024 rebuilt as `profile-embedding-v2` on the user's go-ahead (every season v2 now). Left: `team:2021:europe` on the old formula, starved by the 2021 backfill's re-marks (VI-26 below).
+- Next action: close VI-23 once VI-26 ships and `team:2021:europe` republishes.
+
+## VI-26 — cohort maximum wait (17 Nov 2026, scratchpad worktree `cohortwait`)
+
+- Goal ([VI-26](https://linear.app/vegainteligence/issue/VI-26/cohortes-un-delai-maximal-pour-celles-quon-remarque-sans-cesse)): a cohort re-marked without pause is still recalculated. `process_cohorts` waited 10 min after the last mark with no end; `team:2021:europe` (revision 2,853) had not been refreshed since 9 Nov.
+- Decision: due at the earlier of `queued_at + 10 min` and `first_queued_at + 60 min` (migration `133_cohort_max_wait.sql`, a column a re-mark leaves unchanged); claim order by due time; re-marked during its refresh → the wait restarts from the claim. FAILURE_MODES §18; French note in `05-joueurs/02-centiles-et-cohortes.md`.
+- Validated locally: Python 428 OK (3.14), API 182/182; a 70-minute simulated scenario with the real refresh (refreshed at minute 60, once). Nothing pushed.
+- Next action: the user's go-ahead to push and deploy; then check `team:2021:europe` republishes in `club-indicators-v2` within the hour.
