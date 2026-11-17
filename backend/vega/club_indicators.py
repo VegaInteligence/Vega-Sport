@@ -15,10 +15,10 @@ Each indicator is (value, covered), two expressions over a row `t` of agg.team_s
 - value: the indicator, a double precision (red_total: an integer);
 - covered: the matches its value stands on.
 
-A ratio reads the pair_* columns (migration 129, filled by calculator.py): its terms summed
+A ratio reads the pair_* columns (migration 131, filled by calculator.py): its terms summed
 over the matches that know every input of it, and the count of those matches. Penalty
 attempts and own goals are established, never inferred, by one view the read API shares
-(agg.match_scoring, migration 130: VI-23 stage 8, FAILURE_MODES §17):
+(agg.match_scoring, migration 132: VI-23 stage 8, FAILURE_MODES §17):
 - own goals: the match's goal events (event coverage ok, the shoot-out left out), each with its
   flag and the team credited, counting exactly each side's score; their running score is not read
   (the source stores it before or after the goal);
@@ -26,7 +26,7 @@ attempts and own goals are established, never inferred, by one view the read API
   own goals, the side's attempts all classified. Equal xG and non-penalty xG establish nothing
   (amendment §1).
 
-api.team_season (129) publishes the same expressions: the cohort percentiles and the published
+api.team_season (131) publishes the same expressions: the cohort percentiles and the published
 season row are one definition (test_audit_club_aggregates.py checks they agree).
 """
 

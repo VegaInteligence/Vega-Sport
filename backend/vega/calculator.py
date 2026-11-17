@@ -226,7 +226,7 @@ SELECT side.team_id, %(cs)s, %(sid)s,
   sum(side.gf)::integer, sum(side.ga)::integer,
   (3 * count(*) FILTER (WHERE side.gf > side.ga) + count(*) FILTER (WHERE side.gf = side.ga))::integer,
   count(*) FILTER (WHERE side.ga = 0)::integer,
-  -- Expected points of the matches whose xG law exists (128, agg.xpts_v2: VI-23 B6).
+  -- Expected points of the matches whose xG law exists (130, agg.xpts_v2: VI-23 B6).
   (sum(xl.xpts))::real,
   count(xl.xpts)::integer,
   (sum(side.gf) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL))::integer, (sum(side.ga) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL))::integer,
@@ -245,7 +245,7 @@ LEFT JOIN core.team_match_stats p ON p.season_id = side.season_id AND p.match_id
 LEFT JOIN core.team_match_advanced oa ON oa.season_id = side.season_id AND oa.match_id = side.match_id AND oa.team_id = side.team_id
 LEFT JOIN core.team_match_advanced pa ON pa.season_id = side.season_id AND pa.match_id = side.match_id AND pa.team_id = side.opp_id
 CROSS JOIN LATERAL (SELECT (agg.xpts_v2(o.xg, p.xg)).xpts) xl
--- The match's scoring, one definition with the read API (130, agg.match_scoring: VI-23 stage 8,
+-- The match's scoring, one definition with the read API (132, agg.match_scoring: VI-23 stage 8,
 -- FAILURE_MODES §17): own goals from the goal events, penalty attempts from the reconciled shot set.
 LEFT JOIN LATERAL (SELECT ms.* FROM agg.match_scoring ms WHERE ms.season_id = side.season_id AND ms.match_id = side.match_id) sc ON true
 CROSS JOIN LATERAL (SELECT CASE WHEN side.home THEN sc.own_goals_for_home ELSE sc.own_goals_for_away END AS own_goals_for,

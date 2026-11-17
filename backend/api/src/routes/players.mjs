@@ -283,7 +283,7 @@ export function appearanceWhere(filters, params, values, editions, alias = "a") 
   const b = (value) => bindValue(values, value);
   const where = [idScopeWhere(alias, filters.scope, editions, values)];
   if (params.has("generation")) where.push(`EXISTS(SELECT 1 FROM publication WHERE generation=${b(params.get("generation"))})`);
-  // A season is its finished matches (VI-23 B1), as the calculator's rows (126) read them; one
+  // A season is its finished matches (VI-23 B1), as the calculator's rows (128) read them; one
   // match asked by its id is read as it is, whatever its status.
   if (filters.match && filters.match !== "all") where.push(`${alias}.match_id=api.internal_id('match',${b(filters.match)})`);
   else where.push(`${alias}.status='finished'`);
@@ -588,7 +588,7 @@ function appearanceRows(filters, params, values, editions, earlyCounts, earlyRat
   const unpack = (key, prefix) => `x.${key}[3]::int ${prefix}_match_id,
    CASE WHEN x.${key}[1]<>${LAST} THEN DATE '1970-01-01'+(-x.${key}[1])::int END ${prefix}_date,nullif(x.${key}[2],${LAST}) ${prefix}_kickoff,
    nullif(x.${key}[4],-1)::int ${prefix}_team_id,nullif(x.${key}[5],-1)::int ${prefix}_position`;
-  // The finishing gap's own support, by the names of api.player_list_editions (126).
+  // The finishing gap's own support, by the names of api.player_list_editions (128).
   const finishing = finishingProjectionFor("f", { quote: false, played: true });
   const early = [...listCounts(earlyCounts), ...listRatios(earlyRatios), ...(finishingRequired ? [finishing] : [])];
   const before = `facts AS MATERIALIZED (
@@ -897,7 +897,7 @@ export function playerProfileRecord(parts) {
 
 // What a selection of profiles is made of besides its data; a change of the record
 // changes it, so that no kept answer of the previous shape is said unchanged.
-const PROFILE_SHAPE = "profile-3"; // 2: fouls, fouls suffered and balls lost (116); 3: the finishing gap's own support (126)
+const PROFILE_SHAPE = "profile-3"; // 2: fouls, fouls suffered and balls lost (116); 3: the finishing gap's own support (128)
 const DAY = 86_400_000;
 
 /**
