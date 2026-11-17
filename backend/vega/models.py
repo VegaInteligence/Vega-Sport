@@ -763,7 +763,13 @@ def process_cohorts(conn, *, limit=50, min_age_seconds=600):
 def refresh_daily(conn, season, *, elo=True):
     """Once a day per active season: levels, strength, squad profiles, similarity, and
     the club and player power rankings (power.py). The clubs' Elo runs over every match
-    at once: a pass over several seasons computes it once first (elo=False here)."""
+    at once: a pass over several seasons computes it once first (elo=False here).
+
+    A rejected xG fit (xg.FitFailed: nothing was written) does not stop the season's other
+    models, which do not read the xG: it is logged at once, the pass goes on to its end,
+    recounts included, and the rejection is raised then, so that the worker logs the season's
+    step as failed and waits before trying again (VI-23 stage 4, FAILURE_MODES §10.3). Any other
+    error stops the pass where it happens, as before, a later one included."""
     from . import power
 
     if elo:
@@ -806,8 +812,14 @@ def refresh_daily(conn, season, *, elo=True):
     forecast.refresh(conn, season)
     # The same forecast carried through a match's minutes (inplay.py).
     inplay.refresh(conn)
-    # Vega's own expected goals of the season's shots (xg.py).
-    xg.refresh(conn, season)
+    # Vega's own expected goals of the season's shots (xg.py). A rejected fit has written
+    # nothing: the models below still run, and the rejection is raised once they have.
+    rejected = None
+    try:
+        xg.refresh(conn, season)
+    except xg.FitFailed as error:
+        rejected = error
+        print(f"daily models season={season} xg=rejected error={type(error).__name__}", flush=True)
     # The players' whole profile as a short vector, for "players like him" (embedding.py).
     embedding.refresh(conn, season)
     # The players below the ranking's minutes who already play like its regulars (breakout.py).
@@ -829,6 +841,8 @@ def refresh_daily(conn, season, *, elo=True):
             # The blanks that are zeros (068) first: the list's rows read them.
             conn.execute("SELECT agg.refresh_match_zeros(%s)", (edition,))
             conn.execute("SELECT agg.refresh_player_list(%s)", (edition,))
+    if rejected is not None:
+        raise rejected
 
 
 def refresh_season(conn, season):

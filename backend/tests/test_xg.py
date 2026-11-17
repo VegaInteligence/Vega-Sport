@@ -8,7 +8,11 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from vega import xg
 
-TRUE = [-1.4, 1.0, -0.17, 0.15, 1.4, 0.1, -0.2, -0.7, -0.4, 0.5, 0.6, -0.5, -0.4, -1.3]
+# The model the shots are drawn from, inside the model's constraints (VI-23 B9: distance,
+# distance_sq and header_distance <= 0, angle >= 0, angle_distance = 0). It had distance_sq
+# +0.15 and angle_distance 1.4, a model whose chance rises again far from goal; such shots are
+# fitted in test_audit_numeric.py.
+TRUE = [-1.4, 1.0, -0.17, -0.02, 0.0, 0.1, -0.2, -0.7, -0.4, 0.5, 0.6, -0.5, -0.4, -1.3]
 
 
 def bins(shots_per_bin=40, scale=1.0):
