@@ -29,17 +29,17 @@ jobs:
     environment: v2-production
     timeout-minutes: 150
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: AWS session (vega-v2-deploy)
-        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: arn:aws:iam::361769570630:role/vega-v2-deploy
           aws-region: us-east-2
           role-duration-seconds: 7200
       - uses: oven-sh/setup-bun@v2
-        with: {bun-version: '1.2.21'}
-      - uses: actions/setup-node@v4
-        with: {node-version: '22'}
+        with: {bun-version: '1.4.4'}
+      - uses: actions/setup-node@v7
+        with: {node-version: '24', package-manager-cache: false}
       - name: Deploy (infra/aws/deploy.sh)
         env:
           CFN_ROLE: ${{ env.CFN_ROLE }}

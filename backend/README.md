@@ -189,7 +189,7 @@ Chaque source a sa période dans `ops.source_runs`. Une erreur de base de donné
 
 ## Exécution locale
 
-Python 3.12, PostgreSQL 16 ou plus avec `pg_trgm` (pgvector en option), Node 22 ou plus.
+Python 3.12, PostgreSQL 17 ou plus avec `pg_trgm` (pgvector en option ; la migration 056 utilise `ANALYZE ONLY`, apparu en 17), Node 24 ou plus (le runtime des Lambdas).
 
 ```sh
 pip install -r backend/requirements.txt
