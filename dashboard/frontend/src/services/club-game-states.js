@@ -7,10 +7,17 @@ const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
 const pointsOf = (diff) => (diff > 0 ? 3 : diff === 0 ? 1 : 0);
 
-/** Goal timeline per match, kept only when it reproduces the final score. */
+/**
+ * Goal timeline per match, kept only when it reproduces the final score and gives every goal
+ * its minute: a goal without one is not minute 0, its match's chronology is unknown and the
+ * match leaves every count. `minutes` (time leading, level, behind) is null without any match
+ * kept. The halves keep the matches whose every goal has its half (`halfMatches`): a goal after
+ * the 90th minute without the source's period may be stoppage or extra time.
+ */
 export function gameStates(rows, clubId) {
   const out = {
     matches: 0,
+    halfMatches: 0,
     // Goals of each half over the same matches, and the points the half-time scores would give.
     halves: {
       first: { gf: 0, ga: 0 },
@@ -31,35 +38,44 @@ export function gameStates(rows, clubId) {
     const goals = (row.match.shots || [])
       .filter((s) => s.isGoal || s.isOwnGoal)
       .map((s) => ({
-        minute: (num(s.minute) || 0) + (num(s.minuteAdded) || 0) / 100,
+        minute:
+          num(s.minute) == null
+            ? null
+            : num(s.minute) + (num(s.minuteAdded) || 0) / 100,
         mine: s.isOwnGoal ? s.teamId !== clubId : s.teamId === clubId,
         // The source's period when it gives one, else the minute (45+3 is still the first half).
+        // The source's period when it gives one ("extra_time" belongs to neither half), else
+        // the minute (45+3 is still the first half); after 90 without a period, unknown.
         half:
           s.period === "first_half" || s.period === "second_half"
             ? s.period
             : s.period
-              ? null
-              : (num(s.minute) || 0) <= 45
-                ? "first_half"
-                : (num(s.minute) || 0) <= 90
-                  ? "second_half"
-                  : null,
+              ? "other"
+              : num(s.minute) == null || num(s.minute) > 90
+                ? null
+                : num(s.minute) <= 45
+                  ? "first_half"
+                  : "second_half",
       }))
       .sort((a, b) => a.minute - b.minute);
     if (
       goals.filter((g) => g.mine).length !== row.gf ||
-      goals.filter((g) => !g.mine).length !== row.ga
+      goals.filter((g) => !g.mine).length !== row.ga ||
+      goals.some((g) => g.minute == null)
     )
       continue;
     out.matches++;
-    let pause = 0;
-    for (const goal of goals) {
-      const half = goal.half === "first_half" ? out.halves.first : goal.half === "second_half" ? out.halves.second : null;
-      if (half) half[goal.mine ? "gf" : "ga"]++;
-      if (goal.half === "first_half") pause += goal.mine ? 1 : -1;
+    if (goals.every((goal) => goal.half)) {
+      out.halfMatches++;
+      let pause = 0;
+      for (const goal of goals) {
+        const half = goal.half === "first_half" ? out.halves.first : goal.half === "second_half" ? out.halves.second : null;
+        if (half) half[goal.mine ? "gf" : "ga"]++;
+        if (goal.half === "first_half") pause += goal.mine ? 1 : -1;
+      }
+      out.halves.halfTimePoints += pointsOf(pause);
+      out.halves.points += row.points;
     }
-    out.halves.halfTimePoints += pointsOf(pause);
-    out.halves.points += row.points;
     let diff = 0,
       last = 0,
       led = false,
@@ -91,5 +107,6 @@ export function gameStates(rows, clubId) {
       out.collapses.push(row);
     }
   }
+  if (!out.matches) out.minutes = null;
   return out;
 }

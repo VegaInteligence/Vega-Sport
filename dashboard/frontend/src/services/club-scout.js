@@ -1431,7 +1431,12 @@ const shotOutcome = (shot) =>
         ? "saved"
         : "off";
 
-function shotProfile(rows, clubId) {
+/**
+ * The club's shots by situation and on the map. On the map a shot without xG keeps its point with
+ * xG null (ShotPair draws it small, says « xG indisponible », and its header total is then
+ * unknown), and a known 0 stays 0 (VI-22).
+ */
+export function shotProfile(rows, clubId) {
   const empty = () =>
     Object.fromEntries(
       Object.keys(SITUATION_LABELS).map((k) => [
@@ -1464,7 +1469,7 @@ function shotProfile(rows, clubId) {
           id: shot.id,
           x: Math.round((105 - shot.x) * 10) / 10,
           y: shot.y,
-          xg: num(shot.xg) || 0.01,
+          xg: num(shot.xg),
           outcome: shotOutcome(shot),
           player: shot.playerName,
           minute: shot.minute,
@@ -1719,42 +1724,6 @@ function buildDossier({ id, season, data, competitions, league, cohort }) {
 }
 
 /* -------------------------------------------------------------- helpers */
-
-/** Clubs whose style centiles sit closest, with the axes they share. */
-export function similarClubs(dossier, limit = 6, pool = dossier.clubs) {
-  const keys = [
-    "possession",
-    "fieldTilt",
-    "directness",
-    "ppda",
-    "crosses",
-    "setShare",
-    "defActions",
-    "xg",
-    "xga",
-    "passAccuracy",
-  ];
-  const own = dossier.self;
-  return pool
-    .filter((club) => club.id !== own.id)
-    .map((club) => {
-      const parts = keys
-        .filter((k) => own.centiles[k] != null && club.centiles[k] != null)
-        .map((k) => ({
-          key: k,
-          distance: Math.abs(own.centiles[k] - club.centiles[k]),
-        }));
-      const distance =
-        parts.reduce((t, p) => t + p.distance, 0) / Math.max(1, parts.length);
-      return {
-        club,
-        similarity: Math.round(100 - distance),
-        parts: parts.sort((a, b) => a.distance - b.distance),
-      };
-    })
-    .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, limit);
-}
 
 /** Rolling mean over the last `size` values of a series. */
 export function rolling(values, size = 5) {

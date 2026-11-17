@@ -8,6 +8,7 @@ import vm from "node:vm";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { clubSummary, seasonCoverage } from "../dashboard/frontend/src/services/club-analysis.js";
+const supported = await import("../dashboard/frontend/src/services/club-supported.js");
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const requireLocal = createRequire(path.join(root, "dashboard/package.json"));
@@ -50,6 +51,8 @@ async function loadUI() {
     "./PlayerScoutCharts.jsx": { PercentileBar: () => null, toneVar: () => "" },
     "./RankingDialog.jsx": { RankingTrigger: () => null },
     "../services/club-scout.js": { METRICS: {}, SITUATION_LABELS: {}, STYLE_AXES: [], formatMetric: String, rolling: () => [] },
+    // What the tables show side by side, on the same matches (pure; the real module).
+    "../services/club-supported.js": supported,
     // A CSS module: every class reads as its own name.
     "./ClubScout.module.css": { __esModule: true, default: new Proxy({}, { get: (_, name) => String(name) }) },
   };

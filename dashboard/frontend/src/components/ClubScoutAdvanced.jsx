@@ -21,6 +21,7 @@ import {
   fmtNum,
   ordinal,
 } from "./ClubScoutUI.jsx";
+import { seasonTotal, sumKnown } from "../services/club-supported.js";
 import s from "./ClubScoutAdvanced.module.css";
 
 /** One view of the tab: its blocks stacked, no heading of its own. */
@@ -232,8 +233,9 @@ export function WithoutBall({ dossier }) {
   );
 }
 
+// Unknown as soon as one category's xG is (a bucket with a shot without xG has none).
 const setXg = (side) =>
-  ["corner", "setPiece", "freeKick"].reduce((t, k) => t + side[k].xg, 0);
+  sumKnown(["corner", "setPiece", "freeKick"].map((k) => side[k].xg));
 
 export function SetPieces({ dossier }) {
   const p = dossier.shotsAll;
@@ -284,8 +286,9 @@ export function SetPieces({ dossier }) {
             {fmtNum(dossier.self.values.setShare, 0)} % des xG du club viennent
             des coups de pied arrêtés en championnat (médiane{" "}
             {fmtNum(dossier.stats.setShare?.median, 0)} %). Contre-attaques et
-            CPA réunis : {fmtNum(fast.xg + setXg(p.for), 1)} xG créés,{" "}
-            {fmtNum(fastAgainst.xg + setXg(p.against), 1)} concédés.
+            CPA réunis : {fmtNum(sumKnown([fast.xg, setXg(p.for)]), 1)} xG
+            créés, {fmtNum(sumKnown([fastAgainst.xg, setXg(p.against)]), 1)}{" "}
+            concédés.
           </p>
         </Card>
         <Card
@@ -316,34 +319,43 @@ export function SetPieces({ dossier }) {
   );
 }
 
+/** Up or down only for a known, non-zero total. */
+const toneOf = (value) =>
+  Number.isFinite(value) ? (value >= 0 ? "up" : "down") : undefined;
+
 export function Finishing({ dossier }) {
-  const self = dossier.self,
-    n = self.record.matches;
+  const self = dossier.self;
+  // Season totals on each indicator's own matches (club-supported.js), not mean × every match.
+  const finishing = seasonTotal(self, "finishing").value,
+    placement = seasonTotal(self, "placement").value,
+    keeper = seasonTotal(self, "keeper").value;
   return (
     <Section>
       <Kpis
         items={[
           [
             "Buts − xG",
-            fmtNum((self.values.finishing ?? 0) * n, 1, true),
+            fmtNum(finishing, 1, true),
             `${ordinal(self.ranks.finishing)} sur ${dossier.clubs.length}`,
-            (self.values.finishing ?? 0) >= 0 ? "up" : "down",
+            toneOf(finishing),
           ],
           [
             "Qualité de frappe",
-            fmtNum((self.values.placement ?? 0) * n, 1, true),
+            fmtNum(placement, 1, true),
             "xGOT − xG sur la saison",
-            (self.values.placement ?? 0) >= 0 ? "up" : "down",
+            toneOf(placement),
           ],
           [
             "Buts évités (gardien)",
-            fmtNum((self.values.keeper ?? 0) * n, 1, true),
+            fmtNum(keeper, 1, true),
             `${ordinal(self.ranks.keeper)} sur ${dossier.clubs.length}`,
-            (self.values.keeper ?? 0) >= 0 ? "up" : "down",
+            toneOf(keeper),
           ],
           [
             "Conversion",
-            `${fmtNum(self.values.conversion, 1)} %`,
+            Number.isFinite(self.values.conversion)
+              ? `${fmtNum(self.values.conversion, 1)} %`
+              : "—",
             "buts / tirs",
           ],
         ]}

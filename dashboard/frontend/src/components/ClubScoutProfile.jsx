@@ -17,7 +17,6 @@ import {
   europeReferential,
   formatMetric,
   rebase,
-  similarClubs,
   useClubDossier,
   useClubSearch,
   useEuropePool,
@@ -25,7 +24,10 @@ import {
   useSeasonCompetitions,
   useSeasonLeagues,
 } from "../services/club-scout.js";
-import { useClubNeighbours } from "../services/club-neighbours.js";
+import {
+  neighbourBrief,
+  useClubNeighbours,
+} from "../services/club-neighbours.js";
 import {
   Card,
   ClubEmptySeason,
@@ -125,10 +127,15 @@ function Profile({ dossier }) {
   const referentialTab = REFERENTIAL_TABS.has(tab);
   // Ranking dialog behind any indicator of the referential tabs.
   const [ranking, setRanking] = useState(null);
-  const [rival, setRival] = useState(() => {
-    const first = similarClubs(dossier, 1)[0]?.club;
-    return first ? brief(first, dossier.league) : null;
-  });
+  // The comparison opens on the closest club of the league, as the API ranks it (the same
+  // numbers as « Clubs similaires » narrowed to the league) until the visitor picks one.
+  const [chosen, setRival] = useState(null);
+  const leagueNeighbours = useLeagueNeighbours(dossier);
+  const rival =
+    chosen ??
+    (leagueNeighbours[0]
+      ? neighbourBrief(leagueNeighbours[0], countryLabel)
+      : null);
   const compare = (club) => {
     setRival(club);
     setTab("compare");
@@ -490,12 +497,25 @@ const COMPARE_KEYS = [
 ];
 
 /** Club picker over every competition: league neighbours first, then search. */
+/** The club's closest neighbours in its own league, from the API; none while they load. */
+function useLeagueNeighbours(dossier) {
+  const state = useClubNeighbours(
+    dossier.season,
+    dossier.id,
+    dossier.league?.id || null,
+  );
+  return state.value || [];
+}
+
 function ClubMenu({ dossier, value, onSelect, label = "Comparer avec" }) {
   const search = useClubSearch();
+  const neighbours = useLeagueNeighbours(dossier);
   const suggestions = useMemo(
     () =>
-      similarClubs(dossier, 6).map(({ club }) => brief(club, dossier.league)),
-    [dossier],
+      neighbours
+        .slice(0, 6)
+        .map((club) => neighbourBrief(club, countryLabel)),
+    [neighbours],
   );
   return (
     <SearchMenu
@@ -820,16 +840,7 @@ function Similar({ dossier, onCompare }) {
               <div className={sA.similarActions}>
                 <button
                   className="button button-secondary"
-                  onClick={() =>
-                    onCompare({
-                      id: club.id,
-                      name: club.name,
-                      imageUrl: club.imageUrl,
-                      meta: [countryLabel(club.league?.country), club.league?.name]
-                        .filter(Boolean)
-                        .join(" · "),
-                    })
-                  }
+                  onClick={() => onCompare(neighbourBrief(club, countryLabel))}
                 >
                   Comparer
                 </button>
