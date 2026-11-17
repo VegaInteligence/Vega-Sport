@@ -2894,6 +2894,17 @@ th[aria-sort="descending"] .sort-indicator {
 .season-projection td.projection-heat[data-tone="round"] {
   --heat: #2fb380;
 }
+/* A domestic cup's projection: the opponent drawn for the round in play. */
+.season-projection :is(th, td).projection-opponent {
+  padding-right: 16px;
+  text-align: left;
+  white-space: nowrap;
+}
+.season-projection td.projection-opponent small {
+  margin-left: 4px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
 
 /* Skeleton lines: the shape of what is loading, never a spinner or a « Chargement… » text. */
 .skeleton-line {

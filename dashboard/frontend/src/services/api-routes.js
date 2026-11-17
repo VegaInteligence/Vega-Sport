@@ -44,7 +44,7 @@ export const clubFactsPath = (clubId) => "/api/club-facts?" + new URLSearchParam
 export const stadiumPath = (clubId) => "/api/stadium?" + new URLSearchParams({ club: clubId });
 
 // The body layout of each cup kind, as the cup index names it.
-const CUP_FORMAT = { "open-cups": "matches-v1", openligadb: "rounds-v1", "nations-results": "results-v1" };
+const CUP_FORMAT = { "open-cups": "matches-v1", openligadb: "rounds-v1", "nations-results": "results-v1", "open-matchday": "table-v1" };
 let cupIndex = null;
 
 /** The Vega id of a cup of the complementary kinds (open-cups, openligadb, nations-results). */

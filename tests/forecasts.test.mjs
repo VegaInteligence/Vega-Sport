@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { elevenWord, matchForecastReading, probabilityChart, projectionRows, share } from "../dashboard/frontend/src/services/forecasts.js";
+import { elevenWord, knockoutRows, matchForecastReading, probabilityChart, projectionRows, share } from "../dashboard/frontend/src/services/forecasts.js";
 
 test("shares read as the site writes them", () => {
   assert.deepEqual([0, null, 0.004, 0.005, 0.5, 0.994, 0.999, 1].map(share), ["—", "—", "< 1 %", "1 %", "50 %", "99 %", "> 99 %", "100 %"]);
@@ -27,6 +27,21 @@ test("a UEFA cup's rows: its league phase and each stage of its bracket, as the 
   // A league has none, a cup row missing a stage reads it as none.
   assert.equal(projectionRows({ teams: [{ id: "t_a", places: [1] }] })[0].stages, null);
   assert.equal(projectionRows({ format: "league-phase", teams: [{ id: "t_a", places: [1], stages: { top8: 0.2 } }] })[0].stages.win, 0);
+});
+
+test("a domestic cup's rows: the round in play with each club's opponent, then each later round, the likeliest winner first", () => {
+  // A knockout cup's answer (124): its stages from the round in play to the winner, each club's Elo and drawn opponent.
+  const team = (id, win, qf, opponent) => ({ id, name: id, imageUrl: null, elo: 1500, opponent: { id: opponent, name: opponent, imageUrl: null, home: id < opponent },
+    stages: { top8: 0, playoff: 0, out: 0, r64: 0, r32: 0, r16: 1, qf, sf: qf / 2, final: qf / 4, win } });
+  const { rows, current, rounds } = knockoutRows({ format: "knockout", teams: [team("a", 0.1, 0.6, "b"), team("b", 0.05, 0.4, "a"), team("c", 0.5, 0.9, "d"), team("d", 0.35, 0.1, "c")] });
+  assert.deepEqual(rows.map((r) => r.id), ["c", "d", "a", "b"]);
+  assert.deepEqual([current, rounds], [{ key: "r16", label: "8es" }, [{ key: "qf", label: "Quarts" }, { key: "sf", label: "Demies" }, { key: "final", label: "Finale" }, { key: "win", label: "Vainqueur" }]]);
+  assert.deepEqual(rows[0].opponent, { id: "d", name: "d", imageUrl: null, home: true });
+  assert.equal(rows[0].elo, 1500);
+  // A final in play: the round is the final, the winner its only later column; no answer, no rows.
+  const final = knockoutRows({ format: "knockout", teams: [{ id: "x", stages: { final: 1, win: 0.76 } }, { id: "y", stages: { final: 1, win: 0.24 } }] });
+  assert.deepEqual([final.current.key, final.rounds.map((r) => r.key)], ["final", ["win"]]);
+  assert.deepEqual(knockoutRows(null), { rows: [], current: null, rounds: [] });
 });
 
 test("a projection's rows carry the club's coming matches when the answer has them", () => {

@@ -97,6 +97,26 @@ export function projectionRows(projection) {
   });
 }
 
+// A domestic knockout cup's rounds (124), from the round of 64 to the winner, and how the site names them.
+const KNOCKOUT_ROUNDS = [["r64", "32es"], ["r32", "16es"], ["r16", "8es"], ["qf", "Quarts"], ["sf", "Demies"], ["final", "Finale"], ["win", "Vainqueur"]];
+
+/**
+ * A domestic cup's projection (format "knockout"): its rows, the likeliest winner first, each with its
+ * Elo and its opponent of the round in play; `current`, that round (every club still in it reaches it);
+ * `rounds`, the later ones, one column each.
+ */
+export function knockoutRows(projection) {
+  const teams = projection?.teams || [];
+  if (!teams.length) return { rows: [], current: null, rounds: [] };
+  const present = KNOCKOUT_ROUNDS.filter(([key]) => teams.some((t) => Number(t.stages?.[key]) > 0));
+  const [current, ...later] = present.map(([key, label]) => ({ key, label }));
+  const rows = teams
+    .map((t) => ({ id: t.id, name: t.name, imageUrl: t.imageUrl ?? null, elo: t.elo ?? null, opponent: t.opponent ?? null,
+      stages: Object.fromEntries(KNOCKOUT_ROUNDS.map(([key]) => [key, Number(t.stages?.[key]) || 0])) }))
+    .sort((a, b) => b.stages.win - a.stages.win || b.stages.final - a.stages.final || String(a.name).localeCompare(String(b.name)));
+  return { rows, current: current ?? null, rounds: later };
+}
+
 // A UEFA cup's stages (122): the league phase's three outcomes, then each knockout round reached.
 export const CUP_STAGES = ["top8", "playoff", "out", "r16", "qf", "sf", "final", "win"];
 const cupStages = (stages) => Object.fromEntries(CUP_STAGES.map((stage) => [stage, Number(stages?.[stage]) || 0]));

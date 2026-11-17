@@ -2,7 +2,7 @@
 import React from "react";
 import { Media } from "./UI.jsx";
 import { number } from "../services/format.js";
-import { projectionRows, share } from "../services/forecasts.js";
+import { knockoutRows, projectionRows, share } from "../services/forecasts.js";
 import { ZONES, leaguePhaseZones, leagueZones, tableZones } from "../services/standings-zones.js";
 import { useEuropeanPlaces, ZoneLegend } from "./CompetitionStandings.jsx";
 import { Term } from "./Hint.jsx";
@@ -30,12 +30,69 @@ function Heat({ value, tone, first }) {
   );
 }
 
+/** A domestic cup replayed from its round in play (124): each club's Elo and opponent, then its chance of each later round. */
+function KnockoutProjection({ projection }) {
+  const { rows, current, rounds } = knockoutRows(projection);
+  if (!rows.length || !current) return null;
+  return (
+    <>
+      <div className="table-scroll standings-scroll" role="region" aria-label="Projection de la coupe" tabIndex={0}>
+        <table className="data-table standings-table season-projection">
+          <caption className="sr-only">Chances de chaque club à chaque tour de la coupe</caption>
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col"><Term>Équipe</Term></th>
+              <th scope="col" title="Force du club"><Term>Elo</Term></th>
+              <th scope="col" className="projection-group projection-opponent" data-first title="Adversaire tiré pour ce tour">{current.label}</th>
+              {rounds.map((round, i) => (
+                <th key={round.key} scope="col" className="projection-group" data-first={i === 0 || undefined}
+                  title={round.key === "win" ? "Part des simulations où le club gagne la coupe" : `Part des simulations où le club atteint ce tour`}>
+                  {round.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr key={row.id}>
+                <td>{index + 1}</td>
+                <th scope="row">
+                  <span className="standings-team">
+                    <Media name={row.name} url={row.imageUrl} /> <span>{row.name}</span>
+                  </span>
+                </th>
+                <td>{row.elo == null ? "—" : number(row.elo)}</td>
+                <td className="projection-opponent" data-first>
+                  {row.opponent ? <>{row.opponent.name} <small>{row.opponent.home ? "dom." : "ext."}</small></> : "—"}
+                </td>
+                {rounds.map((round, i) => (
+                  <Heat key={round.key} value={row.stages[round.key]} tone="round" first={i === 0} />
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="standings-note">
+        Les tours restants sont rejoués {number(projection.model?.replays || 0)} fois d’après la force de chaque club (son Elo) ; le
+        tirage de chaque tour est fait au hasard, une prolongation vaut un tiers de match et les tirs au but sont à 50/50.
+      </p>
+    </>
+  );
+}
+
 /**
  * A league replayed to its end: each club's points now and projected, and its chances. Each
  * row wears the zone of its projected place (Europe, promotion, relegation), as the table does.
  * A UEFA cup's league phase is replayed with its bracket: the chance of each stage.
  */
 export default function SeasonProjection({ projection, competition, season }) {
+  if (projection?.format === "knockout") return <KnockoutProjection projection={projection} />;
+  return <LeagueProjection projection={projection} competition={competition} season={season} />;
+}
+
+function LeagueProjection({ projection, competition, season }) {
   const rows = projectionRows(projection);
   const places = useEuropeanPlaces(competition, season);
   if (!rows.length) return null;

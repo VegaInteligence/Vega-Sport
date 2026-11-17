@@ -464,6 +464,11 @@ export function cupFormat(stages) {
   return [...stages.values()].some((s) => LEAGUE_PHASE.some((k) => s[k] > 0)) ? "league-phase" : "knockout";
 }
 
+/** Each club's Elo (rows: one per club, its latest season's), rounded: a knockout cup's level column (124). */
+export function levelsByTeam(rows) {
+  return new Map(rows.map((r) => [r.team_key, Math.round(r.elo)]));
+}
+
 /** Each club's opponent of a knockout cup's round in play: its first match still to play (124). */
 export function roundOpponents(rows) {
   const out = new Map();
@@ -498,6 +503,9 @@ async function seasonProjection(read, params) {
   const stages = cupStages(stageRows);
   const format = cupFormat(stages);
   const opponents = format === "knockout" ? roundOpponents(opponentRows) : new Map();
+  const levels = format === "knockout"
+    ? levelsByTeam(await read("SELECT DISTINCT ON (team_key) team_key, elo FROM api.power_clubs WHERE scope='clubs' AND team_key=ANY($1) ORDER BY team_key, season_id DESC", [teams.map((t) => t.team_key)]))
+    : new Map();
   if (!teams.length) reject(404, "Donnée indisponible.");
   const next = comingMatches(fixtures);
   // One share per place, 0 for a place the club never reached.
@@ -509,7 +517,7 @@ async function seasonProjection(read, params) {
     teams: teams.map((team) => ({ id: team.team_id, name: team.name, imageUrl: team.image_url ?? null, played: team.played, points: team.points,
       projectedPoints: round(team.projected_points, 1), places: shares.get(team.team_key), next: next.get(team.team_key) ?? null,
       ...(stages.size ? { stages: stages.get(team.team_key) ?? cupStages([{ team_key: team.team_key }]).get(team.team_key) } : {}),
-      ...(format === "knockout" ? { opponent: opponents.get(team.team_key) ?? null } : {}) })),
+      ...(format === "knockout" ? { elo: levels.get(team.team_key) ?? null, opponent: opponents.get(team.team_key) ?? null } : {}) })),
     // A UEFA cup of the league-phase format: its league phase, then its bracket (122); a domestic
     // cup: its rounds from the one in play, each club with its drawn opponent (124).
     ...(format ? { format } : {}),
