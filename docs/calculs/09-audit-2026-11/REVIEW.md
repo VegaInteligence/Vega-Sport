@@ -47,7 +47,7 @@ original est une source à vérifier ; ses recommandations ne valent pas preuve 
   - les deux infobulles de notes écrivent « — » pour un but ou une passe décisive inconnus ;
   - les tireurs de la fiche match ne comptent plus la séance de tirs au but.
 
-Les migrations nouvelles sont 124–127. Aucun fichier de migration existant ni générateur d’API
+Les migrations nouvelles sont 125–128 (124–127 avant le rebasage sur main du 17 novembre 2026). Aucun fichier de migration existant ni générateur d’API
 n’a été réécrit. La procédure de recalcul et ses préconditions figurent dans la matrice.
 
 ## Calculs ajoutés depuis l’audit et travaux en cours

@@ -275,7 +275,7 @@ SELECT side.team_id, %(cs)s, %(sid)s,
   sum(side.gf)::integer, sum(side.ga)::integer,
   (3 * count(*) FILTER (WHERE side.gf > side.ga) + count(*) FILTER (WHERE side.gf = side.ga))::integer,
   count(*) FILTER (WHERE side.ga = 0)::integer,
-  -- Expected points of the matches whose xG law exists (126, agg.xpts_v2: VI-23 B6).
+  -- Expected points of the matches whose xG law exists (127, agg.xpts_v2: VI-23 B6).
   (sum(xl.xpts))::real,
   count(xl.xpts)::integer,
   (sum(side.gf) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL))::integer, (sum(side.ga) FILTER (WHERE o.xg IS NOT NULL AND p.xg IS NOT NULL))::integer,
