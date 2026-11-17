@@ -14,6 +14,7 @@ import {
   performanceProfile,
   positionOf,
 } from "../services/player-profile.js";
+import { finishedReadAppearances } from "../services/season-player.js";
 import { Term } from "./Hint.jsx";
 export const metrics = [
   ["minutes", "Minutes"],
@@ -76,14 +77,20 @@ export function PlayerDialog() {
     remote = f.performanceSummary,
     row = remote ? remote.value?.data.row : f.byAppearance.get(f.player),
     appearances = f.performanceData.appearances;
+  // The opened performance is shown whatever its match's status, and ranked among the season's
+  // finished performances (VI-23 stage 7, §16.1); its match rank reads every observation.
+  const peers = useMemo(
+    () => (f.compactMode ? [] : finishedReadAppearances(f.performanceData)),
+    [f.compactMode, f.performanceData],
+  );
   const profile = useMemo(
       () =>
         remote
           ? remote.value?.data.profile
           : row
-            ? performanceProfile(row, f.compactMode ? [] : appearances)
+            ? performanceProfile(row, peers)
             : null,
-      [row, appearances, remote, f.compactMode],
+      [row, peers, remote],
     ),
     rank = useMemo(
       () =>

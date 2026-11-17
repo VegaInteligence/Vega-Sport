@@ -272,6 +272,7 @@ function ProfileLayout({
 export default function PlayerSeasonProfile({
   id,
   rows,
+  summaryProfile,
   scopeRows,
   profiles: allProfiles,
   comparisonsReady = true,
@@ -280,7 +281,10 @@ export default function PlayerSeasonProfile({
 }) {
   const f = useFootball(),
     params = useSearchParams();
-  const profile = useMemo(() => aggregateSeason(rows, id), [rows, id]);
+  // Every played observation, whatever the match's status: the match log (VI-23 stage 6, §15).
+  const logProfile = useMemo(() => aggregateSeason(rows, id), [rows, id]);
+  // The season's figures: the caller's finished-only summary (PlayersPage), else these rows.
+  const profile = summaryProfile ?? logProfile;
   const knownIdentity = useMemo(
     () => resolvePlayerIdentity(id, profile, f.data?.appearances),
     [id, profile, f.data?.appearances],
@@ -341,9 +345,15 @@ export default function PlayerSeasonProfile({
     [id, profile, f.data?.appearances, record, storedIdentity, summaryIdentity],
   );
   const honours = usePlayerHonours(id, identity.name);
+  // The club of the finished matches; without one, of the observed ones.
   const team = useMemo(
-    () => profileTeam(profile.rows, f.data?.teams, f.season),
-    [profile.rows, f.data?.teams, f.season],
+    () =>
+      profileTeam(
+        profile.rows.length ? profile.rows : logProfile.rows,
+        f.data?.teams,
+        f.season,
+      ),
+    [profile.rows, logProfile.rows, f.data?.teams, f.season],
   );
   const role = profile.role?.label;
   const profiles = useMemo(
@@ -575,7 +585,8 @@ export default function PlayerSeasonProfile({
       competition={competition}
     />
   );
-  if (!profile.matches) {
+  // A player observed this season keeps the tabs and his match log, even without a finished match.
+  if (!logProfile.matches) {
     const historyView = view === "stats" ? "stats" : "overview";
     return (
       <article
@@ -648,16 +659,30 @@ export default function PlayerSeasonProfile({
       </label>
     </div>
   );
+  // The actions name the resolved identity: a summary without a finished match is « Joueur ».
+  const actionProfile = {
+    ...profile,
+    name: identity.name || profile.name,
+    imageUrl: identity.imageUrl || profile.imageUrl,
+  };
+  // The Matchs tab: the season's competitions finished-only, its log every observation.
+  const games = (
+    <PlayerGames
+      profile={profile}
+      logRows={logProfile.rows}
+      matches={f.data?.matches}
+    />
+  );
   const playerActions = (
     <div className="research-toolbar">
       <BookmarkButton
         kind="players"
         id={id}
-        name={profile.name}
-        imageUrl={profile.imageUrl}
+        name={actionProfile.name}
+        imageUrl={actionProfile.imageUrl}
         season={f.season}
       />
-      <ComparePlayerButton profile={profile} season={f.season} />
+      <ComparePlayerButton profile={actionProfile} season={f.season} />
       <Link className="button button-secondary" href={f.href("/rapport/", { id })}>
         <Icon name="eye" />
         Rapport
@@ -684,7 +709,7 @@ export default function PlayerSeasonProfile({
         actions={playerActions}
         stripActions={
           <div className="research-toolbar">
-            <ComparePlayerButton profile={profile} season={f.season} />
+            <ComparePlayerButton profile={actionProfile} season={f.season} />
           </div>
         }
       >
@@ -859,9 +884,7 @@ export default function PlayerSeasonProfile({
                 ready={comparisonsReady}
               />
             )}
-            {view === "games" && (
-              <PlayerGames profile={profile} matches={f.data?.matches} />
-            )}
+            {view === "games" && games}
             {view === "compare" && (
               <PlayerScoutCompare
                 profile={profile}

@@ -14,6 +14,7 @@ import { matchExternalUrl } from "../services/player-competition-matches.js";
 import {
   playerHistoryInPeriod,
   playerSeasonGroups,
+  playerSeasonLog,
 } from "../services/player-season-history.js";
 import { isNationalTeamCompetition } from "../services/player-team-seasons.js";
 import { useResource } from "../services/resources.js";
@@ -96,7 +97,9 @@ function MatchResults({ rows, matches, label, season }) {
 
 function HistoryMatches({ seasons, id, groupKey, competitionKey, season }) {
   const group = groupKey
-    ? playerSeasonGroups(seasons, id).find((item) => item.key === groupKey)
+    ? playerSeasonGroups(seasons, id, { log: true }).find(
+        (item) => item.key === groupKey,
+      )
     : null;
   const detail = group?.competitions.find(
     (item) => JSON.stringify(item.key) === competitionKey,
@@ -114,7 +117,10 @@ function HistoryMatches({ seasons, id, groupKey, competitionKey, season }) {
     : group?.team.name;
   return (
     <MatchResults
-      rows={(detail?.profile || group?.profile || entry.profile).rows}
+      // The log lists every played observation; a season's summary counts finished matches.
+      rows={
+        (detail?.profile || group?.profile || playerSeasonLog(entry, id)).rows
+      }
       matches={entry.data?.matches || []}
       label={[team, detail?.competition.name].filter(Boolean).join(" · ")}
       season={entry.season}
@@ -123,7 +129,7 @@ function HistoryMatches({ seasons, id, groupKey, competitionKey, season }) {
 }
 
 function CareerMatches({ seasons, id, group, matchKey }) {
-  const entry = playerCareerGroups(seasons, id)[group].find(
+  const entry = playerCareerGroups(seasons, id, { log: true })[group].find(
     (item) => item.key === matchKey,
   );
   if (!entry) return <Empty>Ce périmètre de matchs est indisponible.</Empty>;

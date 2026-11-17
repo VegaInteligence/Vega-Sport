@@ -49,6 +49,7 @@ test("date windows narrow displayed totals without changing a cached season", ()
         matches: appearances.map((row) => ({
           id: row.matchId,
           date: row.date,
+          status: "finished",
         })),
       },
       profile: aggregateSeason(appearances, id),

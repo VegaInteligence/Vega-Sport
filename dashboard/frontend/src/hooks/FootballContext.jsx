@@ -28,7 +28,10 @@ import {
 } from "../services/resources.js";
 import { warmProfiles } from "../services/player-profile.js";
 import { expandManifest } from "../services/manifest-shape.js";
-import { filterSeasonPlayerScope } from "../services/season-player.js";
+import {
+  filterSeasonPlayerScope,
+  finishedReadAppearances,
+} from "../services/season-player.js";
 import {
   playerDirectoryRanking,
   playerDirectoryView,
@@ -886,7 +889,8 @@ export function FootballProvider({ children, loadData = true, initialState }) {
   }, [performanceData]);
   useEffect(() => {
     if (!loadData || !data || deferSeason) return;
-    const cancelProfiles = warmProfiles(data.appearances),
+    // The performance card's peers: the read's finished appearances (VI-23 stage 7, §16.1).
+    const cancelProfiles = warmProfiles(finishedReadAppearances(data)),
       idle =
         window.requestIdleCallback ||
         ((callback) =>

@@ -78,6 +78,13 @@ export function playerAverage(profile, basis) {
         seasonMetric(profile, key, basis).value,
       ]),
     ),
+    // Goals minus xG on the matches that know both (VI-23 B2); the totals keep their own.
+    finishingDelta: seasonMetric(profile, "finishing", basis).value,
+    totals: {
+      goals: profile.stats.goals?.count ? profile.stats.goals.sum : null,
+      assists: profile.stats.assists?.count ? profile.stats.assists.sum : null,
+      xg: profile.stats.xg?.count ? profile.stats.xg.sum : null,
+    },
     profile,
   };
 }

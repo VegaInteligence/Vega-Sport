@@ -1,7 +1,7 @@
 import { apiUrl } from "../data-url.js";
 import { publicApiFetch } from "./public-api-fetch.js";
 import { loadSeason, readPages } from "../season_data.js";
-import { aggregateSeason } from "./season-player.js";
+import { aggregateSeason, finishedAppearances } from "./season-player.js";
 import { actorReadParams } from "./actor-reads.js";
 import { createResourceCache } from "./resource-cache.js";
 import {
@@ -96,6 +96,9 @@ export async function loadClubSeason(
   return loadSeason(manifest, season, fetcher, new Set(ids), { signal });
 }
 
+// A season entry of loadPlayerSeason and loadPlayerHistory: the raw read (`data`) and its summary
+// (`profile`), which counts finished matches only (finishedAppearances). The match logs read the
+// raw observations (playerSeasonLog). VI-23 stage 5, FAILURE_MODES §14.2.
 export async function loadPlayerSeason(
   manifest,
   id,
@@ -122,7 +125,11 @@ export async function loadPlayerSeason(
       season,
     );
     data.meta.actorScope = leagues;
-    return { season, data, profile: aggregateSeason(data.appearances, id) };
+    return {
+      season,
+      data,
+      profile: aggregateSeason(finishedAppearances(data), id),
+    };
   }
   const index =
     routing ||
@@ -147,7 +154,11 @@ export async function loadPlayerSeason(
         season,
       )
     : await loadSeason(manifest, season, fetcher, new Set(ids), { signal });
-  return { season, data, profile: aggregateSeason(data.appearances, id) };
+  return {
+    season,
+    data,
+    profile: aggregateSeason(finishedAppearances(data), id),
+  };
 }
 export function playerHistorySeasons(index, id, competition = "all") {
   const routes = index.routes[id] || {};
@@ -185,7 +196,11 @@ function selectPlayerCompetition(entry, id, competition) {
       (item) => item.id === competition,
     ),
   };
-  return { ...entry, data, profile: aggregateSeason(data.appearances, id) };
+  return {
+    ...entry,
+    data,
+    profile: aggregateSeason(finishedAppearances(data), id),
+  };
 }
 
 export async function loadPlayerHistory(
@@ -235,7 +250,11 @@ export async function loadPlayerHistory(
         const combined =
           data === entry.data
             ? entry
-            : { season, data, profile: aggregateSeason(data.appearances, id) };
+            : {
+                season,
+                data,
+                profile: aggregateSeason(finishedAppearances(data), id),
+              };
         results[position] = selectPlayerCompetition(combined, id, competition);
       }
     }),

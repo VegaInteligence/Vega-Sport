@@ -1,5 +1,5 @@
 import { isNumber } from "../model.js";
-import { aggregateSeason } from "./season-player.js";
+import { aggregateSeason, finishedAppearances } from "./season-player.js";
 import { advancedTest, EMPTY_ADVANCED } from "./advanced-filters.js";
 
 export function playerDateTest({ from = "", to = "" } = {}) {
@@ -11,7 +11,11 @@ export function playerDateTest({ from = "", to = "" } = {}) {
     });
 }
 
-/** The publication cache stays complete; dates only narrow its displayed copy. */
+/**
+ * The publication cache stays complete; dates only narrow its displayed copy. The narrowed summary
+ * counts finished matches only, their status read from the season's whole read; the narrowed read
+ * keeps every observation for the logs (VI-23 stage 5, §14.2).
+ */
 export function playerHistoryInPeriod(history, playerId, period = {}) {
   if (!period.from && !period.to) return history;
   const inPeriod = playerDateTest(period);
@@ -35,7 +39,10 @@ export function playerHistoryInPeriod(history, playerId, period = {}) {
         inPeriod(match.date),
       ),
     };
-    return { ...entry, data, profile: aggregateSeason(appearances, playerId) };
+    const summary = entry.data
+      ? finishedAppearances(entry.data, appearances)
+      : appearances;
+    return { ...entry, data, profile: aggregateSeason(summary, playerId) };
   });
 }
 
@@ -67,9 +74,25 @@ function seasonAppearances(data, profile, playerId) {
   return rows;
 }
 
-/** Group a season by team identity, then calculate totals from its appearances. */
-export function playerSeasonGroups(seasons, playerId) {
-  return seasons.flatMap(({ season, data, profile }) => {
+/**
+ * A season's played observations as its match log lists them, whatever the match's status: the
+ * entry's read (narrowed by competition or dates), else its profile. The entry's own profile is
+ * its summary, finished matches only (VI-23 stage 5, §14.2).
+ */
+export function playerSeasonLog(entry, playerId) {
+  return entry.data
+    ? aggregateSeason(entry.data.appearances || [], playerId)
+    : entry.profile;
+}
+
+/**
+ * Group a season by team identity, then calculate totals from its appearances: the summary's
+ * (finished matches), or with `log` every played observation (PlayerMatchesPage).
+ */
+export function playerSeasonGroups(seasons, playerId, { log = false } = {}) {
+  return seasons.flatMap((entry) => {
+    const { season, data } = entry;
+    const profile = log ? playerSeasonLog(entry, playerId) : entry.profile;
     const teams = new Map((data?.teams || []).map((item) => [item.id, item]));
     const competitions = new Map(
       (data?.competitions || []).map((item) => [item.id, item]),
