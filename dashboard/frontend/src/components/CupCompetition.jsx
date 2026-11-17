@@ -12,6 +12,8 @@ import { combineCupLegs, knockoutStage } from "../services/knockout-bracket.js";
 import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, isGermanCupSeason } from "../services/cup-archives.js";
 import NationalFlag from "./NationalFlag.jsx";
+import SeasonProjection from "./SeasonProjection.jsx";
+import { useCupProjection } from "../services/cup-projection.js";
 
 function editionLabel(competition, season) {
   return competition.sourceKey === "euro" && season === "2020" ? "2020 (joué en 2021)" : season;
@@ -42,6 +44,9 @@ export default function CupCompetition({ competition, initialSeason }) {
   const nationalTeams = ["euro", "world-cup-history", "afcon", "copa-america", "asian-cup", "gold-cup"].includes(competition.sourceKey);
   const archive = NATIONAL_CUP_ARCHIVES[competition.folder];
   const germany = competition.folder === GERMAN_CUP_FOLDER;
+  // A domestic cup whose next round is drawn: its rounds replayed (124).
+  const projection = useCupProjection(competition, typeof season === "string" ? season : String(season));
+  const showProjection = view === "projection" && projection?.format === "knockout";
   const [status, setStatus] = useState(competition.source === "open-matchday" && !Number(competition.tables?.results?.rows) ? "scheduled" : "finished");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -81,12 +86,13 @@ export default function CupCompetition({ competition, initialSeason }) {
             {competition.seasons.map((value) => <option key={value} value={value}>{editionLabel(competition, value)}</option>)}
           </select>
         </label>
-        {supportsBracket && <Segments label="Vue de la compétition" value={view} onChange={setView} items={[["matches", "Matchs"], ["bracket", "Tableau"]]} />}
+        {supportsBracket && <Segments label="Vue de la compétition" value={view} onChange={setView} items={[["matches", "Matchs"], ["bracket", "Tableau"], ...(projection?.format === "knockout" ? [["projection", "Projection"]] : [])]} />}
         {view === "matches" && <>
           <Segments label="Vue des matchs" value={status} onChange={(next) => { setStatus(next); setPage(1); }} items={[["finished", "Résultats"], ["scheduled", "À venir"], ["all", "Tous"]]} />
           <input type="search" aria-label="Rechercher une équipe dans la coupe" placeholder="Rechercher une équipe…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />
         </>}
       </div>
+      {showProjection ? <SeasonProjection projection={projection} /> : <>
       {mode === "archive" ? <p className="cup-source">Archive {season}</p> : mode === "openligadb" ? <p className="cup-source">Résultats et calendrier</p> : competition.source === "open-matchday" ? (competition.sourceDate && <p className="cup-source">Données du {date(competition.sourceDate)}</p>) : <p className="cup-source">{competition.coverage || "Résultats et calendrier"}</p>}
       {competition.sourceKey === "euro" && season === "2028" && <p className="cup-source">Les équipes indiquées par des codes restent à déterminer.</p>}
       <AsyncState resource={resource}>
@@ -95,6 +101,7 @@ export default function CupCompetition({ competition, initialSeason }) {
           {view === "bracket" ? <KnockoutBracket matches={value.matches} nationalTeams={nationalTeams} season={season} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} />}
         </>}
       </AsyncState>
+      </>}
     </Card>
   );
 }

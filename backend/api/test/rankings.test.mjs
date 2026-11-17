@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { get, skip } from "./context.mjs";
-import { comingMatches, cupFormat, cupStages, provisionalReason, roundOpponents } from "../src/routes/rankings.mjs";
+import { comingMatches, cupFormat, cupStages, levelsByTeam, provisionalReason, roundOpponents } from "../src/routes/rankings.mjs";
 
 test("club links and a club's UEFA ranking history", { skip }, async () => {
   const links = (await get("/api/club-links?club=t_aaaaa1")).body;
@@ -301,4 +301,6 @@ test("a cup's format, and each club's opponent of the round in play", () => {
   assert.deepEqual(opponents.get(1), { id: "t_aaaaa2", name: "B", imageUrl: "b.png", home: true });
   assert.deepEqual(opponents.get(3), { id: "t_aaaaa4", name: "D", imageUrl: null, home: false });
   assert.equal(roundOpponents([]).size, 0);
+  // Each club's Elo, its latest season's (the read gives one row per club, newest first), rounded.
+  assert.deepEqual([...levelsByTeam([{ team_key: 1, elo: 2011.4 }, { team_key: 3, elo: 1497.6 }])], [[1, 2011], [3, 1498]]);
 });

@@ -35,6 +35,9 @@ test("cup view identifies the edition and preserves penalty shootouts", async ()
     "../services/knockout-bracket.js": bracket,
     "../services/cup-archives.js": archives,
     "../services/cup-worker-client.js": { cupWorkerSnapshot: async () => ({ matches: [] }) },
+    // The domestic cups' projection (124): none in these cups.
+    "./SeasonProjection.jsx": { __esModule: true, default: () => null },
+    "../services/cup-projection.js": { useCupProjection: () => null },
   };
   const filename = path.join(root, "dashboard/frontend/src/components/CupCompetition.jsx");
   const compiled = babel.transformSync(await fs.readFile(filename, "utf8"), { presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename }).code;
