@@ -271,13 +271,12 @@ def elo_updates(matches, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME, seeds=N
 # Columns 8 to 12: the match's day, its competition, whether it comes from a complementary
 # source (a cup-source edition), whether it is international (a European competition, or
 # national teams), the edition's cup key. One Elo for every match (the user, 16 November 2026;
-# VI-21, 17 November): every match of open-matchday's leagues and cups and of OpenLigaDB's German
-# cup counts, a club no PitchAPI league holds entering at its group's level (complementary_leagues);
-# their professional clubs' spellings are reviewed (curated.CLUB_ALIASES). The other cup sources
-# (OpenFootball's national cup archives and the continental cups of the other confederations) still
-# count only between two clubs PitchAPI knows, and two national teams: measured on 17 November,
-# their professional clubs written otherwise counted as amateurs (England's cup clubs at 1327, above
-# its 7th division), and the African cups set leagues with no other link (Egypt +104).
+# VI-21, 17 November): every match of open-matchday's leagues and cups, OpenLigaDB's German cup,
+# OpenFootball's national cup archives and the American and world club cups counts, a club no
+# PitchAPI league holds entering at its group's level (complementary_leagues); their professional
+# clubs' spellings are reviewed (curated.CLUB_ALIASES) and applied before the identity pass merges
+# them (merged_rows). The CAF Champions League still counts only between two clubs PitchAPI knows:
+# measured on 17 November, it set African leagues with no other link (Egypt +104).
 ELO_MATCHES = """
 WITH known AS (
   SELECT DISTINCT v.team_id FROM core.matches m
@@ -296,8 +295,28 @@ WHERE m.status = 'finished' AND m.home_score IS NOT NULL AND m.away_score IS NOT
   AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL
   AND (cs.cup_key IS NULL OR (m.match_date IS NOT NULL AND (th.is_national IS TRUE) = (ta.is_national IS TRUE)
        AND ((m.home_team_id IN (SELECT team_id FROM known) AND m.away_team_id IN (SELECT team_id FROM known))
-            OR th.is_national OR cs.cup_key LIKE 'open-matchday:%%' OR cs.cup_key LIKE 'openligadb:germany-cup:%%')))
+            OR th.is_national OR cs.cup_key LIKE 'open-matchday:%%' OR cs.cup_key LIKE 'openligadb:germany-cup:%%'
+            OR cs.cup_key LIKE 'open-cups:%%-archive:%%' OR cs.cup_key LIKE 'open-cups:france-cup:%%'
+            OR cs.cup_key LIKE 'open-cups:copa-libertadores:%%' OR cs.cup_key LIKE 'open-cups:copa-sudamericana:%%'
+            OR cs.cup_key LIKE 'open-cups:concacaf-champions:%%' OR cs.cup_key LIKE 'open-cups:club-world-cup:%%')))
 ORDER BY 3 NULLS LAST, m.match_date NULLS LAST, m.id"""
+
+
+# open-matchday's folders of a cup another source holds with its rounds: the German cup is OpenLigaDB's.
+# Read both, the same amateur clubs written two ways counted one match twice (VI-21).
+SUPERSEDED = frozenset({"GER_CUP_dfb-pokal"})
+
+
+def merged_rows(rows, merge):
+    """ELO_MATCHES' rows with each team as the identity rules name it (`merge`: {team: the club it is}),
+    whether or not the identity pass, once a day, has merged it yet; a club against itself is no match."""
+    out = []
+    for r in rows:
+        home, away = merge.get(r[3], r[3]), merge.get(r[4], r[4])
+        if home == away:
+            continue
+        out.append((*r[:3], home, away, *r[5:]) if (home, away) != (r[3], r[4]) else r)
+    return out
 
 
 def elo_matches(rows):
@@ -307,7 +326,8 @@ def elo_matches(rows):
     (open_matchday.COVERED) is never read: its clubs are PitchAPI's under other names."""
     from .sources.open_matchday import COVERED
 
-    rows = [r for r in rows if _folder(r[12] if len(r) > 12 else None) not in COVERED]
+    skipped = set(COVERED) | SUPERSEDED
+    rows = [r for r in rows if _folder(r[12] if len(r) > 12 else None) not in skipped]
     played = defaultdict(list)
     for r in rows:
         if not r[10] and r[8] is not None:
@@ -868,7 +888,10 @@ def refresh_elo(conn):
     club power ranking. The levels are computed outside any transaction (the base ends a
     session idle inside one after 60 s), then written at once."""
     started = conn.execute("SELECT clock_timestamp()").fetchone()[0]
-    matches = elo_matches(conn.execute(ELO_MATCHES).fetchall())
+    from .sources import identity
+
+    merge = {team: keep for team, keep, *_ in identity.pairs(conn)[0]}
+    matches = elo_matches(merged_rows(conn.execute(ELO_MATCHES).fetchall(), merge))
     leagues, tiers, countries, women = elo_groups(conn, matches)
     weights = match_stakes(conn)
     previous, was_measured = {}, set()

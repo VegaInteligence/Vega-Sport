@@ -94,7 +94,9 @@ class ParseTest(unittest.TestCase):
         self.assertIsNone(identity.match_team(pitch, "Al Hilal (KSA)", False, None))  # a key the base does not hold names no club
         self.assertIsNone(match("Real Madrid (ITA)"))  # another country
         self.assertIsNone(match("Auckland City FC (NZL)"))  # not Australia's Auckland FC
-        self.assertIsNone(match("Chelsea FC"))  # the reviewed spelling is the tournament's, not every source's
+        # The tournament's spelling with its country is not every source's: « Al Ain FC » alone names no club. « Chelsea FC »
+        # does since VI-21 (17 Nov 2026), a spelling reviewed for the FA Cup's archive (curated.CLUB_ALIASES).
+        self.assertEqual(match("Chelsea FC"), 1)
         self.assertIsNone(match("Al Ain FC"))
 
     def test_cup_spellings_of_professional_clubs(self):
@@ -110,6 +112,11 @@ class ParseTest(unittest.TestCase):
         self.assertIsNone(match("C.F. Benfica", "POR"))  # Clube Futebol Benfica, not SL Benfica
         self.assertIsNone(match("Excelsior '31", "NED"))  # Rijssen's amateur club, not Excelsior Rotterdam
         self.assertIsNone(match("SC Freiburg", "AUT"))  # another country
+        # The national cup archives (OpenFootball, 2024/25), whose editions name no country.
+        pitch.update({("lyon", False): {(9, "FRA")}, ("arsenal", False): {(10, "ENG")}, ("austriaklagenfurt", False): {(11, "AUT")}})
+        self.assertEqual([match("Olympique Lyonnais", None), match("Arsenal FC", None), match("SL Benfica", None)], [9, 10, 3])
+        self.assertIsNone(match("CF Benfica", None))  # Clube de Futebol Benfica, Lisbon's other club
+        self.assertIsNone(match("ASK Klagenfurt", None))  # not SK Austria Klagenfurt
 
     def test_continental_club_spellings(self):
         # The confederations' club competitions name clubs like the Club World Cup: "Name (XXX)".
