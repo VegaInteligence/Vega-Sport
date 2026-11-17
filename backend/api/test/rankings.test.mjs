@@ -281,7 +281,8 @@ test("a cup's stages per club, every stage given", () => {
     { team_key: 1, stage: "top8", probability: 0.9512 }, { team_key: 1, stage: "win", probability: 0.12 },
     { team_key: 2, stage: "out", probability: 1 },
   ]);
-  const none = { first: 0, second: 0, third: 0, fourth: 0 };
+  // The Nations League's transitional season (126): stay, play-off, down, up, and its league in 2028–29.
+  const none = { first: 0, second: 0, third: 0, fourth: 0, stay: 0, barrage: 0, relegated: 0, promoted: 0, next_a: 0, next_b: 0, next_c: 0 };
   assert.deepEqual(stages.get(1), { top8: 0.9512, playoff: 0, out: 0, ...none, r64: 0, r32: 0, r16: 0, qf: 0, sf: 0, final: 0, win: 0.12 });
   assert.deepEqual(stages.get(2), { top8: 0, playoff: 0, out: 1, ...none, r64: 0, r32: 0, r16: 0, qf: 0, sf: 0, final: 0, win: 0 });
   assert.equal(cupStages([]).size, 0);
@@ -294,6 +295,9 @@ test("a cup's format, and each club's opponent of the round in play", () => {
   assert.equal(cupFormat(new Map()), null);
   // The Nations League (125): each nation's places in its group, League A's knockout after.
   assert.equal(cupFormat(cupStages([{ team_key: 1, stage: "first", probability: 0.8 }, { team_key: 1, stage: "win", probability: 0.2 }])), "nations");
+  const nation = cupStages([{ team_key: 3, stage: "second", probability: 1 }, { team_key: 3, stage: "barrage", probability: 1 }, { team_key: 3, stage: "next_a", probability: 0.4 }, { team_key: 3, stage: "next_b", probability: 0.6 }]);
+  assert.equal(cupFormat(nation), "nations");
+  assert.deepEqual([nation.get(3).barrage, nation.get(3).next_a, nation.get(3).next_b, nation.get(3).playoff], [1, 0.4, 0.6, 0]);
   assert.deepEqual([...groupsByTeam([{ team_key: 1, group_name: "1" }, { team_key: 7, group_name: "B2" }])], [[1, "1"], [7, "B2"]]);
   // The opponent of the round's first match still to play (a two-legged tie has two rows); at home or away.
   const rows = [

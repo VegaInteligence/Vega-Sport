@@ -44,7 +44,7 @@ function Projection({ projection, league }) {
         })}</tbody>
       </table>
     </div>
-    <p className="standings-note">Les matchs restants sont rejoués {number(projection.model?.replays || 0)} fois d’après la force de chaque sélection (son Elo), avec le départage UEFA (confrontations directes d’abord).{league === "A" ? " Quarts tirés au hasard entre premiers et deuxièmes de groupes différents, en aller-retour ; Final Four sur terrain neutre ; une prolongation vaut un tiers de match et les tirs au but sont à 50/50." : ""}</p>
+    <p className="standings-note">Les matchs restants sont rejoués {number(projection.model?.replays || 0)} fois d’après la force de chaque sélection (son Elo), avec le départage UEFA (confrontations directes d’abord).{league === "A" ? " Quarts et barrages suivent le tirage une fois fait, sinon tirés au hasard (un premier contre un deuxième d’un autre groupe), en aller-retour ; Final Four sur terrain neutre ; une prolongation vaut un tiers de match et les tirs au but sont à 50/50." : ""}</p>
   </>;
 }
 export default function NationsCompetition({ competition }) {
