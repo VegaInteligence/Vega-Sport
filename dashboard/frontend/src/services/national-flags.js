@@ -52,6 +52,11 @@ for (const [name, code] of Object.entries({
   "Korea Republic": "kr",
   "Korea DPR": "kp",
   "North Macedonia": "mk",
+  // The home nations by their French names (the Nations League's lists).
+  Angleterre: "gb-eng",
+  "Écosse": "gb-sct",
+  "Pays de Galles": "gb-wls",
+  "Irlande du Nord": "gb-nir",
 }))
   add(name, code);
 
