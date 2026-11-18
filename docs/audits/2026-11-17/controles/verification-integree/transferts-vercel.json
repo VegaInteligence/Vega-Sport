@@ -1,0 +1,14 @@
+{
+  "at": "2026-11-18T18:36:19.198Z",
+  "id": "dpl_GpfZw7qX1Gs9N3vUGRLVLrdKtFLY",
+  "readyState": "READY",
+  "alias": [
+    "vegasport.vercel.app",
+    "vega-vegainteligence.vercel.app",
+    "vega-git-main-vegainteligence.vercel.app"
+  ],
+  "target": "production",
+  "sha": "5956a83cd76bf0b41924795e05b5024c8e1770d6",
+  "ref": "main",
+  "url": "vega-31j770rzy-vegainteligence.vercel.app"
+}

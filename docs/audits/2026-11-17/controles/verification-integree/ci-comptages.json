@@ -1,10 +1,10 @@
 {
-  "commit": "8bab7d71b6857380503dfd152999d2c30b465fb7",
-  "folder": "integral-tournois-1803",
-  "started": "2026-11-18T18:11:55.479752+00:00",
-  "finished": "2026-11-18T18:19:36.618467+00:00",
+  "commit": "070f7c82cf99cf240d77278eca152dcdc20803ab",
+  "folder": "integral-070f7c82",
+  "started": "2026-11-18T18:52:35.804462+00:00",
+  "finished": "2026-11-18T19:02:58.432404+00:00",
   "clean_and_unchanged": true,
-  "python": 565,
-  "api": 210,
-  "site": 754
+  "python": 578,
+  "api": 215,
+  "site": 768
 }

@@ -1,0 +1,205 @@
+{
+  "backend": {
+    "conclusion": "success",
+    "headSha": "5956a83cd76bf0b41924795e05b5024c8e1770d6",
+    "status": "completed",
+    "updatedAt": "2026-11-18T18:27:46Z",
+    "url": "https://github.com/VegaInteligence/Vega-Sport/actions/runs/44368285359",
+    "workflowName": "Deploy"
+  },
+  "initialVercel": {
+    "at": "2026-11-18T18:36:19.198Z",
+    "id": "dpl_GpfZw7qX1Gs9N3vUGRLVLrdKtFLY",
+    "readyState": "READY",
+    "alias": [
+      "vegasport.vercel.app",
+      "vega-vegainteligence.vercel.app",
+      "vega-git-main-vegainteligence.vercel.app"
+    ],
+    "target": "production",
+    "sha": "5956a83cd76bf0b41924795e05b5024c8e1770d6",
+    "ref": "main",
+    "url": "vega-31j770rzy-vegainteligence.vercel.app"
+  },
+  "observedVercel": {
+    "at": "2026-11-18T18:43:26.036Z",
+    "method": "Vercel get_deployment for exact public alias",
+    "id": "dpl_7WjuoJZrNNfDxxKcjbXFj63B4tUG",
+    "readyState": "READY",
+    "ready": "2026-11-18T18:39:58.005Z",
+    "target": "production",
+    "alias": [
+      "vegasport.vercel.app",
+      "vega-vegainteligence.vercel.app",
+      "vega-git-main-vegainteligence.vercel.app"
+    ],
+    "sha": "fc0deba100288117b0ea122e7199d1c9db9dcc37",
+    "ref": "main",
+    "url": "vega-ju1z0gr4j-vegainteligence.vercel.app"
+  },
+  "publicAt": "2026-11-18T18:40:36.252195+00:00",
+  "api": {
+    "searched": 10,
+    "matchedWithValuesAndHistory": 8,
+    "withValuesAndWithoutHistory": 0,
+    "transferRows": 47,
+    "feePositive": 7,
+    "feeUnknown": 40,
+    "feeExplicitZero": 0,
+    "sample": [
+      {
+        "key": "giroud",
+        "name": "Olivier Giroud",
+        "id": "p_1cjL14",
+        "count": 11,
+        "valuations": 44,
+        "numericZero": 0,
+        "unknown": 6,
+        "positive": 5
+      },
+      {
+        "key": "yamal",
+        "name": "Lamine Yamal",
+        "id": "p_2e0FPo",
+        "count": 4,
+        "valuations": 12,
+        "numericZero": 0,
+        "unknown": 4,
+        "positive": 0
+      },
+      {
+        "key": "cubarsi",
+        "name": "Pau Cubarsí",
+        "id": "p_1L7aow",
+        "count": 5,
+        "valuations": 10,
+        "numericZero": 0,
+        "unknown": 5,
+        "positive": 0
+      },
+      {
+        "key": "saka",
+        "name": "Bukayo Saka",
+        "id": "p_402hSM",
+        "count": 4,
+        "valuations": 24,
+        "numericZero": 0,
+        "unknown": 4,
+        "positive": 0
+      },
+      {
+        "key": "dowman",
+        "name": "Max Dowman",
+        "id": "p_0ogEyt",
+        "count": 2,
+        "valuations": 3,
+        "numericZero": 0,
+        "unknown": 2,
+        "positive": 0
+      },
+      {
+        "key": "mbaye",
+        "name": "Ibrahim Mbaye",
+        "id": "p_3xRkyt",
+        "count": 6,
+        "valuations": 8,
+        "numericZero": 0,
+        "unknown": 5,
+        "positive": 1
+      },
+      {
+        "key": "karl",
+        "name": "Lennart Karl",
+        "id": "p_0qf1Qf",
+        "count": 7,
+        "valuations": 4,
+        "numericZero": 0,
+        "unknown": 7,
+        "positive": 0
+      },
+      {
+        "key": "mbappe",
+        "name": "Kylian Mbappé",
+        "id": "p_217YMB",
+        "count": 8,
+        "valuations": 32,
+        "numericZero": 0,
+        "unknown": 7,
+        "positive": 1
+      }
+    ]
+  },
+  "browser": {
+    "desktop": {
+      "viewport": [
+        1440,
+        900
+      ],
+      "passed": 13,
+      "http200": 4,
+      "pageErrors": []
+    },
+    "phone": {
+      "viewport": [
+        393,
+        852
+      ],
+      "passed": 13,
+      "http200": 4,
+      "pageErrors": []
+    }
+  },
+  "displayed": {
+    "giroud": {
+      "name": "Olivier Giroud",
+      "values": 44,
+      "markers": 8,
+      "markersWithImage": 7,
+      "movesInList": 10
+    },
+    "yamal": {
+      "name": "Lamine Yamal",
+      "values": 12,
+      "markers": 1,
+      "markersWithImage": 1,
+      "movesInList": 1
+    }
+  },
+  "reports": {
+    "giroud": {
+      "status": 200,
+      "dimensions": [
+        1080,
+        1350
+      ],
+      "sha256": "b4cce123ced153129ac77a64afca8be09c4beda248b67ae04100392c7a550c01",
+      "body": "giroud-report-5.png"
+    },
+    "yamal": {
+      "status": 200,
+      "dimensions": [
+        1080,
+        1350
+      ],
+      "sha256": "884cc9c6b8348501009c4463c2d1ddbc3cb73c2066c3d9ec30db222ad0bbbbb2",
+      "body": "yamal-report-5.png"
+    }
+  },
+  "limits": {
+    "5956Browser": "initial Vercel address returned protected 302; only offline selection replay",
+    "noHistory": "no qualifying public witness in sampled names; controlled absent and known-empty input replays",
+    "feeZero": "absent from public samples; API preserves zero and both tested front calculations collapse it with null",
+    "inferred": "estimation tooltip contract in source; date-only list and PNG without inference label",
+    "cancellation": "no real pending-to-cancelled sequence or public explicit cancellation verified",
+    "provider": "no collector or workflow change in bounded release diff"
+  },
+  "separateRdsFeeCensus": {
+    "at": "2026-11-18 18:48:11.755805+00:00",
+    "view": "api.player_transfers",
+    "kinds": 5,
+    "rows": 136570,
+    "explicitZero": 0,
+    "freeRows": 31152,
+    "freeUnknown": 31152
+  }
+}

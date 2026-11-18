@@ -1,5 +1,5 @@
 diff --git a/backend/vega/sources/sportscore.py b/backend/vega/sources/sportscore.py
-index cb42bf2287..790e08521c 100644
+index cb42bf2287..b1ff05a930 100644
 --- a/backend/vega/sources/sportscore.py
 +++ b/backend/vega/sources/sportscore.py
 @@ -1,19 +1,39 @@
@@ -48,7 +48,7 @@ index cb42bf2287..790e08521c 100644
  from . import SourceError, normalize
  
  URL = "https://sportscore.com/api/widget/standings/"
-@@ -99,49 +119,176 @@ LEAGUES = {
+@@ -99,47 +119,238 @@ LEAGUES = {
      "l_4WFCIZ": "english-premier-league",
  }
  
@@ -77,6 +77,7 @@ index cb42bf2287..790e08521c 100644
 +# The counts of a row, never negative; in core.table_results' order, the basis: what Vega counted
 +# of a club when its row was observed.
 +RESULTS = ("played", "won", "drawn", "lost", "goals_for", "goals_against")
++OUTCOMES = ("won", "drawn", "lost")
 +NO_RESULT = (0,) * len(RESULTS)
 +# Not every club can be this far ahead of the matches the edition has kicked off for it: last
 +# season's final table seen at the next season's start is about thirty ahead, and four leaves
@@ -179,7 +180,6 @@ index cb42bf2287..790e08521c 100644
      return tables
  
  
--def _edition_teams(conn, edition):
 +def check(tables):
 +    """The response's own coherence, before any name is read (§2.1); SourceError otherwise."""
 +    if not tables:
@@ -191,6 +191,10 @@ index cb42bf2287..790e08521c 100644
 +        label = group or "the table"
 +        seen, ranks = set(), {}
 +        for row in rows:
++            outcomes = [row[field] for field in OUTCOMES if row[field] is not None]
++            total = sum(outcomes)
++            if total > row["played"] or (len(outcomes) == len(OUTCOMES) and total != row["played"]):
++                raise SourceError("INVALID_ROW", f"{label}: {row['name']}: {total} reported results for {row['played']} matches")
 +            key = normalize(row["name"])
 +            if key in seen:
 +                raise SourceError("DUPLICATE_ROW", f"{row['name']} twice in {label}")
@@ -207,44 +211,115 @@ index cb42bf2287..790e08521c 100644
 +            raise SourceError("INCOMPLETE_TABLE", f"position {max(ranks)} in a table of {len(rows)} rows")
 +
 +
++# Pairs confirmed by the clubs or organisers, bound to the current PitchAPI identity
++# and its canonical name. "B" and "U23" do not imply equivalence for other clubs.
++REVIEWED_SPELLINGS = {
++    # https://www.kaagent.be/nl/nieuws/07-08-2025/jong-kaa-gent-begint-aan-competitie
++    # https://sportscore.com/football/team/gent-b/k82rekh3o61repz/
++    ("t_1ekXAt", "gentu23"): ("Gent B",),
++    # https://www.krcgenk.be/nl/nieuws/5167/maandag-eerste-training-jong-genk
++    ("t_48QCy0", "genku23"): ("Jong Genk",),
++    # https://rccelta.es/app/uploads/2024/10/RCCelta_CCAA_T23-24_definitiva.pdf
++    ("t_4YXkkv", "celtafortuna"): ("Celta Vigo B",),
++    # https://liga1.pe/bienvenidos-alianza-udh-y-juan-pablo-ii/
++    ("t_1XzLP9", "juanpabloiicollege"): ("Juan Pablo II",),
++}
++BRANDED_RESERVES = {"celtafortuna": "reserve-b"}
++AGE_GROUP = re.compile(r"\b(?:u(?:nder)?|sub)[ -]*(\d{1,2})s?\b")
++SIDE_SUFFIXES = {"b": "reserve-b", "ii": "reserve-b", "c": "reserve-c", "iii": "reserve-c", "iv": "reserve-d",
++                 "reserves": "reserve-b", "reserve": "reserve-b", "reserva": "reserve-b", "amateure": "reserve-b",
++                 "youth": "youth", "academy": "academy", "juvenil": "youth", "primavera": "primavera"}
++CLUB_SUFFIXES = frozenset({"fc", "cf", "sc", "ac", "afc", "fk", "sk", "sv"})
++
++
++def _ascii(name):
++    return unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode().lower()
++
++
++def _squad(name):
++    # Classify affirmative squad markers. An initial letter or a club's founding year is
++    # part of its name, while a separate final B/II or an age group identifies a side.
++    separate = re.sub(r"(?<=[a-z])(?=(?:III?|U-?\d+|[BC])\b)", " ", name)
++    plain = _ascii(separate)
++    branded = BRANDED_RESERVES.get(normalize(name))
++    if branded:
++        return branded
++    age = AGE_GROUP.search(plain)
++    if age:
++        return "u" + age[1]
++    plain = re.sub(r"\b(?:[a-z]\.)+[a-z]\.?", lambda form: form[0].replace(".", ""), plain)
++    words = re.findall(r"[a-z0-9]+", plain)
++    while len(words) > 1 and words[-1] in CLUB_SUFFIXES:
++        words.pop()
++    if len(words) > 1:
++        if words[0] == "jong":
++            return "reserve-b"
++        return SIDE_SUFFIXES.get(words[-1])
++
++
 +def _spellings(conn, query, args):
-     names, spelled = {}, {}
++    names, spelled, squads, rejected = {}, {}, {}, set()
++    for team, canonical, short, alias, provider_key in conn.execute(query, args).fetchall():
++        squad = squads.setdefault(team, _squad(canonical))
++        reviewed = REVIEWED_SPELLINGS.get((provider_key, normalize(canonical)), ())
++        reviewed_keys = {normalize(name) for name in reviewed}
++        for spelling in (canonical, short, alias, *reviewed):
++            if not spelling:
++                continue
++            key = normalize(spelling)
++            if _squad(spelling) == squad or key in reviewed_keys:
++                names.setdefault(team, set()).add(key)
++                spelled.setdefault(team, set()).add(spelling)
++            else:
++                rejected.add(key)
++    return names, spelled, squads, rejected
++
++
+ def _edition_teams(conn, edition):
+-    names, spelled = {}, {}
 -    for team, *spellings in conn.execute(
 -        """SELECT t.id, t.name, t.short_name, n.name FROM core.team_seasons ts JOIN core.teams t ON t.id = ts.team_id
--           LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
++    return _spellings(conn, """SELECT t.id, t.name, t.short_name, n.name, p.provider_key
++           FROM core.team_seasons ts JOIN core.teams t ON t.id = ts.team_id
+            LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
 -           WHERE ts.competition_season_id = %s""",
 -        (edition,),
 -    ).fetchall():
-+    for team, *spellings in conn.execute(query, args).fetchall():
-         names.setdefault(team, set()).update(normalize(s) for s in spellings if s)
-         spelled.setdefault(team, set()).update(s for s in spellings if s)
-     return names, spelled
- 
- 
-+def _edition_teams(conn, edition):
-+    return _spellings(conn, """SELECT t.id, t.name, t.short_name, n.name FROM core.team_seasons ts JOIN core.teams t ON t.id = ts.team_id
-+           LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
+-        names.setdefault(team, set()).update(normalize(s) for s in spellings if s)
+-        spelled.setdefault(team, set()).update(s for s in spellings if s)
+-    return names, spelled
++           LEFT JOIN core.provider_ids p ON p.entity_type='team' AND p.provider='pitchapi' AND p.entity_id=t.id AND p.is_current
 +           WHERE ts.competition_season_id = %s""", (edition,))
 +
 +
 +def _neighbour_teams(conn, edition):
 +    """The teams of the competition's previous and next editions that this edition does not hold:
 +    a row naming one of them is another season's table."""
-+    names, _ = _spellings(conn, """SELECT t.id, t.name, t.short_name, n.name
++    names, _, _, _ = _spellings(conn, """SELECT t.id, t.name, t.short_name, n.name, p.provider_key
 +           FROM core.competition_seasons e
 +           JOIN core.competition_seasons o ON o.competition_id = e.competition_id AND o.season_id IN (e.season_id - 1, e.season_id + 1)
 +           JOIN core.team_seasons ts ON ts.competition_season_id = o.id
 +           JOIN core.teams t ON t.id = ts.team_id
 +           LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
++           LEFT JOIN core.provider_ids p ON p.entity_type='team' AND p.provider='pitchapi' AND p.entity_id=t.id AND p.is_current
 +           WHERE e.id = %s AND NOT EXISTS (SELECT 1 FROM core.team_seasons x WHERE x.competition_season_id = e.id AND x.team_id = t.id)""",
 +                          (edition,))
 +    return names
-+
-+
+ 
+ 
  # Words of a club's official name that say what it is, not which one ("Stade Rennais FC").
- FORM_WORDS = {"fc", "cf", "sc", "ac", "as", "af", "afc", "ssc", "ss", "us", "rc", "aj", "ogc", "sco", "sk", "fk", "nk", "bk", "if",
-               "sv", "vfb", "vfl", "tsg", "bsc", "cd", "ud", "sd", "rcd", "club", "athletic", "stade", "sporting", "calcio", "de", "del",
-@@ -166,94 +313,419 @@ def _closeness(source_tokens, team_tokens):
+@@ -149,8 +360,8 @@ FORM_WORDS = {"fc", "cf", "sc", "ac", "as", "af", "afc", "ssc", "ss", "us", "rc"
+ 
+ 
+ def _tokens(name):
+-    plain = unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode().lower()
+-    return {t for t in re.split(r"[^a-z0-9]+", plain) if t and t not in FORM_WORDS}
++    plain = AGE_GROUP.sub("", _ascii(name))
++    return {t for t in re.split(r"[^a-z0-9]+", plain) if t and t not in FORM_WORDS and t not in SIDE_SUFFIXES and t != "jong"}
+ 
+ 
+ def _closeness(source_tokens, team_tokens):
+@@ -166,94 +377,427 @@ def _closeness(source_tokens, team_tokens):
      return best
  
  
@@ -270,9 +345,15 @@ index cb42bf2287..790e08521c 100644
 +    return found
 +
 +
-+def _closest(rows, spelled):
++def _closest(rows, spelled, squads=None):
 +    """Distinctive words, over the rows and teams still unpaired: a row takes the team it is
 +    closest to only when that team is not as close to another row, and no other team ties."""
++    words = {name: _tokens(name) for name in rows}
++    team_words = {team: [_tokens(name) for name in names] for team, names in spelled.items()}
++    source_squads = {name: _squad(name) for name in rows} if squads is not None else {}
++    scores = {(name, team): max((_closeness(tokens, variant) for variant in variants), default=0)
++              for name, tokens in words.items() for team, variants in team_words.items()
++              if squads is None or source_squads[name] == squads[team]}
 +    found = {}
      while True:
 -        rows = [n for n in wanted if n not in found]
@@ -280,16 +361,16 @@ index cb42bf2287..790e08521c 100644
 -        scores = {(n, t): max((_closeness(_tokens(n), _tokens(s)) for s in spelled[t]), default=0) for n in rows for t in free}
 +        left = [n for n in rows if n not in found]
 +        free = [t for t in spelled if t not in found.values()]
-+        scores = {(n, t): max((_closeness(_tokens(n), _tokens(s)) for s in spelled[t]), default=0) for n in left for t in free}
          paired = False
 -        for n in rows:
+-            ranked = sorted(((scores[(n, t)], t) for t in free), reverse=True)
 +        for n in left:
-             ranked = sorted(((scores[(n, t)], t) for t in free), reverse=True)
++            ranked = sorted(((scores.get((n, t), 0), t) for t in free), reverse=True)
              if not ranked or ranked[0][0] == 0 or (len(ranked) > 1 and ranked[1][0] == ranked[0][0]):
                  continue
              team = ranked[0][1]
 -            if any(scores[(other, team)] >= ranked[0][0] for other in rows if other != n):
-+            if any(scores[(other, team)] >= ranked[0][0] for other in left if other != n):
++            if any(scores.get((other, team), 0) >= ranked[0][0] for other in left if other != n):
                  continue
              found[n] = team
              paired = True
@@ -319,13 +400,16 @@ index cb42bf2287..790e08521c 100644
 +    """{row name: team id} of a response, every name designating one team of the edition;
 +    SourceError WRONG_EDITION, UNMATCHED_TEAMS or DUPLICATE_ROW otherwise."""
 +    wanted = {row["name"] for _, rows in tables for row in rows}
-+    teams, spelled = _edition_teams(conn, edition)
++    teams, spelled, squads, rejected = _edition_teams(conn, edition)
 +    found = _exact(wanted, teams)
 +    others = _neighbour_teams(conn, edition)
 +    foreign = sorted(name for name in wanted - set(found) if any(normalize(name) in keys for keys in others.values()))
 +    if foreign:
 +        raise SourceError("WRONG_EDITION", f"edition {edition}: {', '.join(foreign)}: clubs of the previous or next edition only")
-+    found.update(_closest(wanted - set(found), {t: s for t, s in spelled.items() if t not in found.values()}))
++    # A known but contradictory spelling, or an exact homonym, cannot become a match by prefix.
++    known = rejected.union(*teams.values())
++    unmatched = {name for name in wanted - set(found) if normalize(name) not in known}
++    found.update(_closest(unmatched, {t: s for t, s in spelled.items() if t not in found.values()}, squads))
 +    unmatched = sorted(wanted - set(found))
 +    if unmatched:
 +        raise SourceError("UNMATCHED_TEAMS", f"edition {edition}: not linked: {', '.join(unmatched)}")
@@ -1627,160 +1711,3 @@ index 4569d97312..8ef9ed68f2 100644
                              className={
                                kind === "players" ? "player-avatar" : "crest"
                              }
-diff --git a/dashboard/frontend/src/components/KnockoutBracket.jsx b/dashboard/frontend/src/components/KnockoutBracket.jsx
-index 3d26d90597..c35464520c 100644
---- a/dashboard/frontend/src/components/KnockoutBracket.jsx
-+++ b/dashboard/frontend/src/components/KnockoutBracket.jsx
-@@ -25,13 +25,14 @@ function MatchCard({ match, view }) {
-     { name: match.away, image: match.awayImage },
-   ];
-   const label = (name) => bracketTeamLabel(nationalTeams ? nationalTeamLabel(name) : name);
--  const tag = match.penalties ? "t.a.b." : match.notes?.includes("après prolongation") ? "a.p." : null;
-+  const canceled = match.status === "canceled";
-+  const tag = canceled ? "Annulé" : match.penalties ? "t.a.b." : match.notes?.includes("après prolongation") ? "a.p." : null;
-   const followed = teams.some((team) => follows(team.name));
-   const dimmed = hover && !teams.some((team) => teamKey(team.name) === hover);
-   return (
-     <Tag
-       className={"knockout-match" + (href ? " knockout-match-link" : "") + (followed ? " knockout-followed" : "") + (dimmed ? " knockout-dimmed" : "")}
--      title={[match.date ? date(match.date) : "", match.penalties ? "tirs au but" : tag ? "après prolongation" : "", ...(match.notes?.includes("match rejoué") ? ["match rejoué"] : [])].filter(Boolean).join(" · ") || undefined}
-+      title={[match.date ? date(match.date) : "", canceled ? "Annulé" : match.penalties ? "tirs au but" : tag ? "après prolongation" : "", ...(match.notes?.includes("match rejoué") ? ["match rejoué"] : [])].filter(Boolean).join(" · ") || undefined}
-       {...(href ? { href, prefetch: false } : {})}
-     >
-       {tag && <span className="knockout-tag">{tag}</span>}
-@@ -53,7 +54,7 @@ function MatchCard({ match, view }) {
-             <span className="knockout-team-name" title={label(team.name)}>{label(team.name)}</span>
-             {match.score ? (
-               <strong>{match.score[index]}</strong>
--            ) : index === 0 && match.date ? (
-+            ) : index === 0 && match.date && !canceled ? (
-               <span className="knockout-when">{date(match.date)}</span>
-             ) : (
-               <strong>–</strong>
-@@ -95,20 +96,21 @@ function Champion({ sides, view, trophy }) {
- }
- 
- /* A group the bracket starts from (1974's and 1978's second round, 1982's, 1930's groups) or ends with (1950's final
-- * round): its table, the winner first. */
-+ * round): its table, with the established winner highlighted. */
- function GroupCard({ table, view }) {
-   const { nationalTeams, season, follows } = view;
-+  const leader = table.rows.find((row) => row.position === 1 && !row.tied);
-   return (
-     <div className={"knockout-match knockout-group" + (table.rows.some((row) => follows(row.name)) ? " knockout-followed" : "")}>
-       <div className="knockout-group-name">
-         <span>{table.name}</span>
-         <span>Pts</span>
-       </div>
--      {table.rows.map((row, index) => (
--        <div key={row.name} className={"knockout-team" + (index === 0 ? " knockout-winner" : " knockout-loser") + (follows(row.name) ? " knockout-own" : "")}>
-+      {table.rows.map((row) => (
-+        <div key={row.name} className={"knockout-team" + (leader ? (row === leader ? " knockout-winner" : " knockout-loser") : "") + (follows(row.name) ? " knockout-own" : "")}>
-           {nationalTeams && nationalFlagCode(row.name, season) ? <NationalFlag name={row.name} season={season} /> : null}
-           <span className="knockout-team-name" title={nationalTeams ? nationalTeamLabel(row.name) : row.name}>{nationalTeams ? nationalTeamLabel(row.name) : row.name}</span>
--          <strong>{row.points}</strong>
-+          <strong>{row.points ?? "—"}</strong>
-         </div>
-       ))}
-     </div>
-@@ -125,19 +127,17 @@ const ThirdPlace = ({ match, view }) =>
- 
- /** The round a phone opens on: the first one still to be played, else the final. */
- function openRound(rounds) {
--  const pending = rounds.findIndex((round) => round.matches.some((match) => match.status !== "finished"));
-+  const pending = rounds.findIndex((round) => round.matches.some((match) => !["finished", "canceled"].includes(match.status)));
-   return pending === -1 ? rounds.length - 1 : pending;
- }
- 
--export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams = false, season, highlight = "", trophy = null, win = 3 }) {
-+export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams = false, competition, season, highlight = "", trophy = null }) {
-   const bracket = useMemo(() => buildKnockoutBracket(matches), [matches]);
-   const early = bracket.rounds.length > 1 && bracket.rounds[0].key === "round64" ? bracket.rounds[0] : null;
-   const rounds = early ? bracket.rounds.slice(1) : bracket.rounds;
-   const sides = useMemo(() => bracketSides({ ...bracket, rounds }), [bracket, early]);
--  // The groups the bracket starts from (a second round of groups, 1930's groups), and the group that ends an
--  // edition without a final (1950); `win`: the points of a win in the edition.
--  const groups = useMemo(() => bracketGroups(sides, matches, { win }), [sides, matches, win]);
--  const last = useMemo(() => finalGroup(matches, { win }), [matches, win]);
-+  const groups = useMemo(() => bracketGroups(sides, matches, { competition, season }), [sides, matches, competition, season]);
-+  const last = useMemo(() => finalGroup(matches, { competition, season }), [matches, competition, season]);
-   const [hover, setHover] = useState("");
-   const [phoneRound, setPhoneRound] = useState(null);
-   // The bracket takes the height the screen leaves under its own top edge.
-@@ -171,7 +171,7 @@ export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams =
-   const legs = rounds.some((round) => round.matches.some((match) => match.legs?.length));
-   // A phone's tabs: the groups the bracket starts from, then its rounds.
-   const tabs = [...(groups ? [{ key: "groups", label: groups.label === "Second tour" ? "2e tour" : "Groupes", tables: [...groups.left, ...groups.right] }] : []), ...rounds];
--  const current = phoneRound ?? openRound(rounds) + (groups ? 1 : 0);
-+  const activeTab = tabs.find((tab) => tab.key === phoneRound) ?? tabs[openRound(rounds) + (groups ? 1 : 0)];
-   // With groups before it, a round's ties are twice as tall: two groups lead to each tie of the first round.
-   const depth = groups ? 1 : 0;
-   const column = (round, index, side) => (
-@@ -230,21 +230,21 @@ export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams =
-           </div>
-           <div className="knockout-phone">
-             <div className="segmented-control knockout-rounds" aria-label="Tour du tableau">
--              {tabs.map((tab, index) => (
--                <button key={tab.key} type="button" aria-pressed={index === current} onClick={() => setPhoneRound(index)}>
-+              {tabs.map((tab) => (
-+                <button key={tab.key} type="button" aria-pressed={tab === activeTab} onClick={() => setPhoneRound(tab.key)}>
-                   {SHORT[tab.key] || tab.label}
-                 </button>
-               ))}
-             </div>
--            {tabs[current].key === "final" && <Champion sides={sides} view={view} trophy={trophy} />}
--            {tabs[current].tables ? (
--              <div className="knockout-list">{tabs[current].tables.map((table) => <GroupCard key={table.name} table={table} view={view} />)}</div>
-+            {activeTab.key === "final" && <Champion sides={sides} view={view} trophy={trophy} />}
-+            {activeTab.tables ? (
-+              <div className="knockout-list">{activeTab.tables.map((table) => <GroupCard key={table.name} table={table} view={view} />)}</div>
-             ) : (
--              <div className={"knockout-list" + (tabs[current].matches.length < 3 ? " knockout-list-single" : "")}>
--                {tabs[current].matches.map((match) => <MatchCard key={match.key} match={match} view={view} />)}
-+              <div className={"knockout-list" + (activeTab.matches.length < 3 ? " knockout-list-single" : "")}>
-+                {activeTab.matches.map((match) => <MatchCard key={match.key} match={match} view={view} />)}
-               </div>
-             )}
--            {tabs[current].key === "final" && <ThirdPlace match={sides.third} view={view} />}
-+            {activeTab.key === "final" && <ThirdPlace match={sides.third} view={view} />}
-           </div>
-         </>
-       ) : (
-diff --git a/dashboard/frontend/src/components/MatchDetail.jsx b/dashboard/frontend/src/components/MatchDetail.jsx
-index 7576d5ecb7..6342f18308 100644
---- a/dashboard/frontend/src/components/MatchDetail.jsx
-+++ b/dashboard/frontend/src/components/MatchDetail.jsx
-@@ -1,4 +1,5 @@
- import { nationalFlagCode } from "../services/national-flags.js";
-+import { editionArtworkUrl } from "../services/competition-artwork.js";
- import React, {
-   lazy,
-   Suspense,
-@@ -515,8 +516,11 @@ export default function MatchDetail({ match }) {
-       <section className="match-scoreboard" aria-label="Résumé du match">
-         <div className="scoreboard-meta">
-           <div>
--            {competition && (
--              <Media name={competition.name} url={competition.imageUrl} />
-+            {(competition || match.editionArtwork) && (
-+              <Media
-+                url={editionArtworkUrl(match.leagueId, competition?.imageUrl, match.editionArtwork)}
-+                initials={false}
-+              />
-             )}
-             <span>{match.league || competition?.name}</span>
-           </div>
-diff --git a/dashboard/frontend/src/components/Media.module.css b/dashboard/frontend/src/components/Media.module.css
-index 40d9ae4985..28627932f0 100644
---- a/dashboard/frontend/src/components/Media.module.css
-+++ b/dashboard/frontend/src/components/Media.module.css
-@@ -14,3 +14,9 @@
- .imageReady {
-   opacity: 1;
- }
-+
-+.empty.empty {
-+  background: transparent;
-+  border-color: transparent;
-+  box-shadow: none;
-+}

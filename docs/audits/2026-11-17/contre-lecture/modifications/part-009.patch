@@ -1,13 +1,13 @@
 diff --git a/backend/tests/test_calculator.py b/backend/tests/test_calculator.py
-index 88de63d314..61e0b65930 100644
+index b0217faf49..800114197a 100644
 --- a/backend/tests/test_calculator.py
 +++ b/backend/tests/test_calculator.py
 @@ -275,7 +275,7 @@ class ApiViewTest(CalculatorTest):
          views = [r[0] for r in self.db.execute(
              "SELECT table_schema||'.'||table_name FROM information_schema.views WHERE table_schema IN ('api','ops') ORDER BY 1"
          )]
--        self.assertEqual(len([v for v in views if v.startswith("api.")]), 156)  # 21 + 5 read API (016) + 3 players (019) + media (020) + 4 matches (021) + 2 (022) + cards (023) + 3 search (024) + 4 archives (025) + 4 rankings (026) + 4 Wikidata (027) + 2 cups (028) + honours (029) + 19 match details and profiles (031) + 2 power rankings (032) + cup tables (035) + power roles (037) + season keys (039) + 12 status page (043) + 2 home settings (044) + home leaders (046) + edition keys (047) + home player rows (048) + presence (053) + 2 performance peers (055) + player match keys (057) + 2 archive seasons (058) + 3 player list (060) + match keys (066) + power role counts (069) + 2 league strength (073) + 3 forecasts (076) + schedule forecasts (078) + pass partners (079) + 3 profile vectors (081) + 2 substitutions (082) + halves and pass edges (083) + 5 in-play (086) + 2 returns (087) + 2 breakouts (088) + action values (089) + 3 line-ups (090) + line-up forecasts (091) + pressing rows and keepers' shots (092) + match grades (099) + team age minutes (100) + player fact coverage (104) + confirmed contracts and market values (106) + grade editions (107) + 3 league rounds (109) + match odds (111) + league fates (112) + provider reader progress (114) + player injuries and injury reads (116) + cup stage odds (122) + team style centiles (123) + cup round opponents (124) + cup team groups (125) + match scoring (132)
-+        self.assertEqual(len([v for v in views if v.startswith("api.")]), 158)  # 21 + 5 read API (016) + 3 players (019) + media (020) + 4 matches (021) + 2 (022) + cards (023) + 3 search (024) + 4 archives (025) + 4 rankings (026) + 4 Wikidata (027) + 2 cups (028) + honours (029) + 19 match details and profiles (031) + 2 power rankings (032) + cup tables (035) + power roles (037) + season keys (039) + 12 status page (043) + 2 home settings (044) + home leaders (046) + edition keys (047) + home player rows (048) + presence (053) + 2 performance peers (055) + player match keys (057) + 2 archive seasons (058) + 3 player list (060) + match keys (066) + power role counts (069) + 2 league strength (073) + 3 forecasts (076) + schedule forecasts (078) + pass partners (079) + 3 profile vectors (081) + 2 substitutions (082) + halves and pass edges (083) + 5 in-play (086) + 2 returns (087) + 2 breakouts (088) + action values (089) + 3 line-ups (090) + line-up forecasts (091) + pressing rows and keepers' shots (092) + match grades (099) + team age minutes (100) + player fact coverage (104) + confirmed contracts and market values (106) + grade editions (107) + 3 league rounds (109) + match odds (111) + league fates (112) + provider reader progress (114) + player injuries and injury reads (116) + cup stage odds (122) + team style centiles (123) + cup round opponents (124) + cup team groups (125) + match scoring (132) + half coverage (137) + archive match aliases (143)
+-        self.assertEqual(len([v for v in views if v.startswith("api.")]), 158)  # 21 + 5 read API (016) + 3 players (019) + media (020) + 4 matches (021) + 2 (022) + cards (023) + 3 search (024) + 4 archives (025) + 4 rankings (026) + 4 Wikidata (027) + 2 cups (028) + honours (029) + 19 match details and profiles (031) + 2 power rankings (032) + cup tables (035) + power roles (037) + season keys (039) + 12 status page (043) + 2 home settings (044) + home leaders (046) + edition keys (047) + home player rows (048) + presence (053) + 2 performance peers (055) + player match keys (057) + 2 archive seasons (058) + 3 player list (060) + match keys (066) + power role counts (069) + 2 league strength (073) + 3 forecasts (076) + schedule forecasts (078) + pass partners (079) + 3 profile vectors (081) + 2 substitutions (082) + halves and pass edges (083) + 5 in-play (086) + 2 returns (087) + 2 breakouts (088) + action values (089) + 3 line-ups (090) + line-up forecasts (091) + pressing rows and keepers' shots (092) + match grades (099) + team age minutes (100) + player fact coverage (104) + confirmed contracts and market values (106) + grade editions (107) + 3 league rounds (109) + match odds (111) + league fates (112) + provider reader progress (114) + player injuries and injury reads (116) + cup stage odds (122) + team style centiles (123) + cup round opponents (124) + cup team groups (125) + match scoring (132) + player transfers and transfer reads (135)
++        self.assertEqual(len([v for v in views if v.startswith("api.")]), 160)  # 21 + 5 read API (016) + 3 players (019) + media (020) + 4 matches (021) + 2 (022) + cards (023) + 3 search (024) + 4 archives (025) + 4 rankings (026) + 4 Wikidata (027) + 2 cups (028) + honours (029) + 19 match details and profiles (031) + 2 power rankings (032) + cup tables (035) + power roles (037) + season keys (039) + 12 status page (043) + 2 home settings (044) + home leaders (046) + edition keys (047) + home player rows (048) + presence (053) + 2 performance peers (055) + player match keys (057) + 2 archive seasons (058) + 3 player list (060) + match keys (066) + power role counts (069) + 2 league strength (073) + 3 forecasts (076) + schedule forecasts (078) + pass partners (079) + 3 profile vectors (081) + 2 substitutions (082) + halves and pass edges (083) + 5 in-play (086) + 2 returns (087) + 2 breakouts (088) + action values (089) + 3 line-ups (090) + line-up forecasts (091) + pressing rows and keepers' shots (092) + match grades (099) + team age minutes (100) + player fact coverage (104) + confirmed contracts and market values (106) + grade editions (107) + 3 league rounds (109) + match odds (111) + league fates (112) + provider reader progress (114) + player injuries and injury reads (116) + cup stage odds (122) + team style centiles (123) + cup round opponents (124) + cup team groups (125) + match scoring (132) + player transfers and transfer reads (135) + half coverage (137) + archive match aliases (143)
          self.assertEqual(len([v for v in views if v.startswith("ops.")]), 4)  # + live reliability (042)
          for view in views:
              self.db.execute(f"SELECT * FROM {view} LIMIT 5").fetchall()
@@ -289,10 +289,10 @@ index 8d43894232..60ec88ad10 100644
  
 diff --git a/backend/tests/test_source_snapshots.py b/backend/tests/test_source_snapshots.py
 new file mode 100644
-index 0000000000..3cd1578849
+index 0000000000..059d47c664
 --- /dev/null
 +++ b/backend/tests/test_source_snapshots.py
-@@ -0,0 +1,803 @@
+@@ -0,0 +1,922 @@
 +"""Cup and open-matchday snapshots (VI-27), written before the code: FAILURE_MODES.md §19.
 +
 +The OpenFootball bodies are the frozen upstream files of fixtures/openfootball (CC0). The real
@@ -323,7 +323,7 @@ index 0000000000..3cd1578849
 +REPO = ROOT.parent
 +sys.path.insert(0, str(ROOT))
 +from vega import sources
-+from vega.sources import SourceError, cups, curated, open_matchday
++from vega.sources import SourceError, cups, curated, open_matchday, snapshot
 +
 +try:
 +    import psycopg
@@ -673,6 +673,7 @@ index 0000000000..3cd1578849
 +RESULTS = ("date,home,away,ft_home,ft_away,ht_home,ht_away,home_shots,away_shots,home_corners,away_corners\n"
 +           "2026-11-01,North FC,South FC,2,1,1,0,11,7,6,3\n")
 +FIXTURES = "date,home,away,gw\n2026-11-29,South FC,North FC,16\n"
++ROUND_RESULTS = "\n".join((RESULTS.splitlines()[0] + ",gw", RESULTS.splitlines()[1] + ",15", ""))
 +
 +
 +def league(folder=FOLDER, **over):
@@ -680,7 +681,7 @@ index 0000000000..3cd1578849
 +
 +
 +class OpenMatchdayGuardTest(SnapshotDatabase):
-+    def read(self, leagues, files, at):
++    def read(self, leagues, files, at, db=None):
 +        """One due read of the europe scope: its outcome, rows written and unmatched."""
 +        def get(url, *, as_text=False):
 +            if url.endswith("build_summary.json"):
@@ -690,7 +691,7 @@ index 0000000000..3cd1578849
 +                raise SourceError("HTTP_404")
 +            return files[name]
 +
-+        outcome = sources.run_due(self.db, get, at, names={"open_matchday"})[("open_matchday", "europe")]
++        outcome = sources.run_due(db or self.db, get, at, names={"open_matchday"})[("open_matchday", "europe")]
 +        return (outcome, *self.run_record("open_matchday", "europe")[2:])
 +
 +    @staticmethod
@@ -807,6 +808,124 @@ index 0000000000..3cd1578849
 +    def test_19w_a_fixture_no_longer_listed_is_removed(self):
 +        self.assertEqual(self.read([league(fixtures=0)], self.files(fixtures=None), NOW + timedelta(days=1)), ("ok", 1, 0))
 +        self.assertEqual(self.state(), self.before[:1])
++
++    def public_matches(self):
++        return self.x("""SELECT r.match_id, r.gw, r.status, r.home_score, r.away_score, m.revision, m.xmin::text
++                         FROM api.cup_table_rows r JOIN core.matches m ON m.id=r.match_id
++                         WHERE r.competition=%s ORDER BY r.home""", (FOLDER,)).fetchall()
++
++    def test_round_is_an_optional_observation_in_the_same_edition(self):
++        self.read([league()], self.files(results=ROUND_RESULTS), NOW + timedelta(hours=6))
++        original, fixture = self.public_matches()
++        self.assertEqual(original[1], "15")
++        for day, results in enumerate((RESULTS, ROUND_RESULTS.replace(",15\n", ",\n")), 1):
++            with self.subTest(input=results):
++                self.assertEqual(self.read([league()], self.files(results=results), NOW + timedelta(days=day)), ("ok", 2, 0))
++                self.assertEqual(self.public_matches(), [original, fixture])
++
++        changed = self.files(results=ROUND_RESULTS.replace(",15\n", ",17\n"),
++                             fixtures=FIXTURES + "2026-12-06,Third FC,North FC,\n")
++        self.assertEqual(self.read([league(fixtures=2)], changed, NOW + timedelta(days=3)), ("ok", 3, 0))
++        corrected, old_fixture, new_fixture = self.public_matches()
++        self.assertEqual(corrected[:6], (original[0], "17", *original[2:5], original[5] + 1))
++        self.assertEqual(old_fixture, fixture)
++        self.assertIsNone(new_fixture[1])
++        self.assertEqual(self.read([league(fixtures=2)], changed, NOW + timedelta(days=4)), ("ok", 3, 0))
++        self.assertEqual(self.public_matches(), [corrected, old_fixture, new_fixture])
++
++    def test_a_match_moved_from_another_edition_keeps_no_foreign_round(self):
++        _, fixture = self.public_matches()
++        self.read([league(OTHER)], self.files(OTHER), NOW + timedelta(days=1))
++        self.x("""UPDATE core.matches m SET competition_season_id=r.competition_season_id, round_id=r.id
++                  FROM core.rounds r JOIN core.competition_seasons e ON e.id=r.competition_season_id
++                  WHERE e.cup_key=%s AND r.name='16' AND m.id=%s""", (f"open-matchday:{OTHER}:2026/2027", fixture[0]))
++        files = self.files(fixtures=FIXTURES.replace(",16", ","))
++        self.assertEqual(self.read([league()], files, NOW + timedelta(days=2)), ("ok", 2, 0))
++        current = self.public_matches()[1]
++        self.assertEqual(current[:6], (fixture[0], None, *fixture[2:5], fixture[5] + 1))
++
++    def test_a_published_result_in_another_edition_cannot_be_imported_as_a_fixture(self):
++        _, fixture = self.public_matches()
++        self.read([league(OTHER)], self.files(OTHER), NOW + timedelta(days=1))
++        self.x("""UPDATE core.matches m SET competition_season_id=r.competition_season_id, round_id=r.id,
++                    status='finished', home_score=2, away_score=1
++                  FROM core.rounds r JOIN core.competition_seasons e ON e.id=r.competition_season_id
++                  WHERE e.cup_key=%s AND r.name='16' AND m.id=%s""", (f"open-matchday:{OTHER}:2026/2027", fixture[0]))
++        own, other = self.state(), self.state(OTHER)
++        outcome = self.read([league()], self.files(), NOW + timedelta(days=2))
++        self.assertEqual((self.state(), self.state(OTHER)), (own, other))
++        self.assertEqual(outcome, ("ok", 0, 1))
++        self.assertIn("RESULT_DOWNGRADED", {code for code, _ in self.failures()})
++
++    def test_a_snapshot_cannot_remove_or_downgrade_a_result_published_since_its_read(self):
++        from vega.store import connect_local
++
++        for action in ("remove", "downgrade", "change"):
++            with self.subTest(action=action):
++                if action != "remove":
++                    self.setUp()
++                _, fixture = self.public_matches()
++                keep = action != "remove"
++                former = self.files(fixtures=FIXTURES.replace(",16", ",17") if keep else None)
++                if action == "change":
++                    former = self.files(results=ROUND_RESULTS.replace(",2,1,1,0,", ",3,1,1,0,"))
++                finish = ROUND_RESULTS.replace(",15\n", ",18\n") + "2026-11-29,South FC,North FC,2,1,1,1,10,9,3,4,17\n"
++                base_read = snapshot.stored
++                published = []
++                with connect_local(DSN) as writer:
++                    def stored(conn, provider, edition):
++                        before = base_read(conn, provider, edition)
++                        if conn is self.db:
++                            self.assertFalse(published)
++                            self.assertEqual(self.read([league(results=2, fixtures=0)], self.files(results=finish, fixtures=None),
++                                                       NOW + timedelta(days=1, minutes=1), writer), ("ok", 2, 0))
++                            published.extend(self.public_matches())
++                        return before
++
++                    with patch.object(snapshot, "stored", stored):
++                        outcome = self.read([league(fixtures=int(keep))], former, NOW + timedelta(days=1))
++                self.assertEqual(published[1][:6], (fixture[0], "17", "finished", 2, 1, fixture[5] + 1))
++                with self.subTest(check="published state"):
++                    self.assertEqual(self.public_matches(), published)
++                    self.assertEqual(self.state()[1][0:5], (self.before[1][0], fixture[0], "finished", 2, 1))
++                with self.subTest(check="observable refusal"):
++                    self.assertEqual(outcome, ("ok", 0, 1))
++                    self.assertIn("SNAPSHOT_CHANGED", {code for code, _ in self.failures()})
++
++    def test_only_a_reviewed_result_may_be_retracted(self):
++        key = self.before[0][0]
++        with patch.dict(snapshot.RETRACTIONS, {("open_matchday", key): "test review"}):
++            self.assertEqual(self.read([league(results=0)], self.files(results=None), NOW + timedelta(days=1)), ("ok", 1, 0))
++        after, = self.state()
++        self.assertEqual(after[:9], self.before[1][:9])  # the remaining fixture moves to position 0
++
++    def test_only_the_current_provider_key_drives_a_snapshot(self):
++        initial = self.public_matches()
++        retired = (self.before[0][0].replace("2026-11-01", "2026-11-02"),
++                   self.before[1][0].replace("2026-11-29", "2026-11-30"))
++        for (mid, *_), key in zip(initial, retired):
++            self.x("""INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id,is_current)
++                      VALUES ('match','open_matchday',%s,%s,false)""", (key, mid))
++        before = self.state()
++        self.assertEqual(len(before), 4)
++        with self.subTest(check="unchanged source"):
++            self.assertEqual(self.read([league()], self.files(), NOW + timedelta(days=1)), ("ok", 2, 0))
++            self.assertEqual(self.public_matches(), initial)
++            self.assertEqual(self.state(), before)
++
++        older = FIXTURES + "2026-11-02,North FC,South FC,15\n2026-11-30,South FC,North FC,16\n"
++        with self.subTest(check="inactive keys supplied"):
++            self.assertEqual(self.read([league(fixtures=3)], self.files(fixtures=older), NOW + timedelta(days=2)), ("ok", 0, 1))
++            self.assertEqual(self.state(), before)
++            failure = next(message for code, message in self.failures() if code == "INACTIVE_MATCH_KEY")
++            self.assertTrue(all(key in failure for key in retired))
++
++        with self.subTest(check="ordinary fixture withdrawal"):
++            self.assertEqual(self.read([league(fixtures=0)], self.files(fixtures=None), NOW + timedelta(days=3)), ("ok", 1, 0))
++            self.assertEqual(self.public_matches(), initial[:1])
++            self.assertEqual(self.state(), [r for r in before if r[1] == initial[0][0]])
++            self.assertIsNone(self.x("SELECT entity_id FROM core.provider_ids WHERE provider='open_matchday' AND provider_key=%s",
++                                     (retired[1],)).fetchone())
 +
 +
 +    # 22a, 22b (FAILURE_MODES.md §22, written before the code): a later file without a statistic keeps it; a
@@ -1166,10 +1285,10 @@ index 584a53b962..4769290563 100644
              sportscore.run(self.db, get, "standings:l_3FJFUl", NOW)
 diff --git a/backend/tests/test_sportscore_standings.py b/backend/tests/test_sportscore_standings.py
 new file mode 100644
-index 0000000000..1362229499
+index 0000000000..a70b1db30d
 --- /dev/null
 +++ b/backend/tests/test_sportscore_standings.py
-@@ -0,0 +1,75 @@
+@@ -0,0 +1,186 @@
 +"""SportScore official standings through sources.run_due, PostgreSQL and api.standing_rows:
 +the cases of docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md §3 (sportscore_cases.py).
 +The widget answers from memory; the end-to-end replay of the same cases over HTTPS and the read
@@ -1186,7 +1305,7 @@ index 0000000000..1362229499
 +sys.path.insert(0, str(ROOT / "tests"))
 +from vega import sources
 +from vega.sources import SourceError, sportscore
-+from sportscore_cases import CASES
++from sportscore_cases import CASES, H, START, T0, replace, tables, without
 +import sportscore_replay as replay
 +
 +try:
@@ -1197,7 +1316,7 @@ index 0000000000..1362229499
 +
 +
 +@unittest.skipUnless(DSN and psycopg, "requires disposable local sources DB and psycopg")
-+class SportScoreStandingsTest(unittest.TestCase):
++class SportScoreDatabase(unittest.TestCase):
 +    @classmethod
 +    def setUpClass(cls):
 +        from vega.store import Store, connect_local, migrate
@@ -1216,6 +1335,8 @@ index 0000000000..1362229499
 +        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
 +        cls.db.close()
 +
++
++class SportScoreStandingsTest(SportScoreDatabase):
 +    def test_every_case(self):
 +        for index, case in enumerate(CASES, 1):
 +            flipped = False
@@ -1241,6 +1362,115 @@ index 0000000000..1362229499
 +        self.assertEqual([r[0] for r in rows], ["UNMATCHED_TEAMS"])
 +        self.assertIn("Ghost Wanderers", rows[0][1])
 +        self.assertIn("Harbour United", rows[0][1])
++
++
++class SportScoreWriterQualificationTest(SportScoreDatabase):
++    def setUp(self):
++        transaction = self.db.transaction()
++        transaction.__enter__()
++        self.addCleanup(transaction.__exit__, psycopg.Rollback, psycopg.Rollback(), None)
++
++    def write(self, rows, hours=0):
++        body = tables((None, rows))
++        return replay.play(sources, sportscore, self.db, CASES[0], {"at": T0 + hours * H},
++                           lambda url: replay.widget(body, replay.slug_of(url)))
++
++    def read(self):
++        return self.db.execute("""SELECT s.team_id,s.team_name,s.played,s.won,s.drawn,s.lost,s.points,s.source,r.version
++                                  FROM api.standings s JOIN ops.resource_versions r
++                                    ON r.resource_kind='competition_season' AND r.resource_id=s.competition_season_id
++                                 WHERE s.competition_season_id=5001 ORDER BY s.position""").fetchall()
++
++    def alias(self, name):
++        self.db.execute("""INSERT INTO core.entity_names(entity_type,entity_id,name,normalized,kind,source)
++                           VALUES ('team',101,%s,%s,'source_spelling','sportscore') ON CONFLICT DO NOTHING""",
++                        (name, sources.normalize(name)))
++
++    def aliases(self):
++        return self.db.execute("""SELECT entity_id,name FROM core.entity_names
++                                 WHERE entity_type='team' AND entity_id BETWEEN 101 AND 103 ORDER BY 1,2""").fetchall()
++
++    def assert_refused(self, rows, hours, code):
++        prior, aliases = self.read(), self.aliases()
++        outcome = self.write(rows, hours)
++        self.assertEqual(self.read(), prior)
++        self.assertEqual(self.aliases(), aliases)
++        self.assertEqual(outcome, code)
++        failure = self.db.execute("SELECT error_code,message FROM ops.parse_failures ORDER BY id DESC LIMIT 1").fetchone()
++        self.assertEqual(failure[0], code)
++        self.assertIn(rows[0]["team"], failure[1])
++
++    def test_impossible_complete_and_partial_counts_keep_the_published_table(self):
++        self.assertIsNone(self.write(without(START, 0, "l")))
++        for step, changes in enumerate(({"w": 17}, {"w": 1}, {"w": 3, "d": 2, "l": None}), 1):
++            with self.subTest(changes=changes):
++                try:
++                    with self.db.transaction():
++                        self.assert_refused(replace(START, 0, **changes), step * 3, "INVALID_ROW")
++                        raise psycopg.Rollback()
++                except psycopg.Rollback:
++                    pass
++        corrected = replace(START, 0, w=2, d=2, pts=9)
++        self.assertIsNone(self.write(corrected, 12))
++        observed = self.read()
++        self.assertEqual(observed[0][:8], (101, "Aster City", 4, 2, 2, 0, 9, "sportscore"))
++        self.assertIsNone(self.write(corrected, 15))
++        self.assertEqual(self.read(), observed)
++
++    def test_known_good_partial_counts_and_points_deduction_are_published(self):
++        self.assertIsNone(self.write(without(START, 0, "l")))
++        self.assertEqual(self.read()[0][:8], (101, "Aster City", 4, 3, 1, None, 8, "sportscore"))
++
++    def test_new_and_previously_learned_reserve_aliases_are_refused_for_a_first_team(self):
++        self.assertIsNone(self.write(START))
++        for step, name in enumerate(("Aster City II", "Aster City B", "Aster City U-21"), 1):
++            with self.subTest(spelling=name):
++                self.assert_refused(replace(START, 0, team=name, pts=9), step * 3, "UNMATCHED_TEAMS")
++        self.alias("Aster City II")
++        self.assert_refused(replace(START, 0, team="Aster City II", pts=9), 12, "UNMATCHED_TEAMS")
++        self.assert_refused(replace(START, 0, team="AsterCityII", pts=9), 15, "UNMATCHED_TEAMS")
++
++    def test_a_real_reserve_accepts_its_own_name_and_variant_but_not_its_first_team(self):
++        self.db.execute("UPDATE core.teams SET name='Aster City II' WHERE id=101")
++        self.assertIsNone(self.write(replace(START, 0, team="Aster City II")))
++        self.assertIsNone(self.write(replace(START, 0, team="Aster City B", pts=9), 3))
++        self.assertIn((101, "Aster City B"), self.aliases())
++        self.assert_refused(replace(START, 0, pts=10), 6, "UNMATCHED_TEAMS")
++        self.alias("Aster City")
++        self.assert_refused(replace(START, 0, pts=10), 9, "UNMATCHED_TEAMS")
++        self.assert_refused(replace(START, 0, team="Aster City U21", pts=10), 12, "UNMATCHED_TEAMS")
++
++    def test_reviewed_spellings_stay_bound_to_their_canonical_identities(self):
++        cases = (
++            ("t_1ekXAt", "Gent U23", "Gent B", "Gent"),
++            ("t_48QCy0", "Genk U23", "Jong Genk", "Genk"),
++            ("t_4YXkkv", "Celta Fortuna", "Celta Vigo B", "Celta Vigo"),
++            ("t_1XzLP9", "Juan Pablo II College", "Juan Pablo II", None),
++            ("t_2UPrdj", "Heart of Midlothian", "Heart of Midlothian F.C.", None),
++        )
++        for key, canonical, spelling, first in cases:
++            with self.subTest(spelling=spelling):
++                with self.db.transaction():
++                    self.db.execute("UPDATE core.teams SET name=%s WHERE id=101", (canonical,))
++                    self.db.execute("UPDATE core.provider_ids SET provider_key=%s WHERE entity_type='team' AND provider='pitchapi' AND entity_id=101",
++                                    (key,))
++                    self.assertIsNone(self.write(replace(START, 0, team=spelling)))
++                    self.assertEqual(self.read()[0][:2], (101, canonical))
++                    self.assertIn((101, spelling), self.aliases())
++                    if first:
++                        self.assert_refused(replace(START, 0, team=first, pts=9), 3, "UNMATCHED_TEAMS")
++                    raise psycopg.Rollback()
++
++    def test_a_reviewed_spelling_does_not_belong_to_an_unrelated_homonym(self):
++        self.db.execute("UPDATE core.teams SET name='Gent U23' WHERE id=101")
++        self.assertIsNone(self.write(replace(START, 0, team="Gent U23")))
++        self.assert_refused(replace(START, 0, team="Gent B", pts=9), 3, "UNMATCHED_TEAMS")
++
++    def test_an_exact_homonym_is_ambiguous(self):
++        self.assertIsNone(self.write(START))
++        self.db.execute("INSERT INTO core.teams(id,name) VALUES (199,'Aster-City')")
++        self.db.execute("INSERT INTO core.team_seasons VALUES (199,5001)")
++        self.assert_refused(replace(START, 0, pts=9), 3, "UNMATCHED_TEAMS")
 +
 +
 +if __name__ == "__main__":

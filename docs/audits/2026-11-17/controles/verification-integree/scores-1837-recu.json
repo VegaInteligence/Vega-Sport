@@ -1,0 +1,32 @@
+{
+  "archive": "couverture-1837.zip",
+  "sha256": "0f41e510abfccb6bf6de8c77e84e04ff575fc934cdd30e600453e4c386d12fcb",
+  "bytes": 765536,
+  "entries": 248,
+  "extraction_propre": true,
+  "reseau_et_dossier_preuves_interdits": true,
+  "refus_alteration_transferts": 1,
+  "rejeu": {
+    "statut": "verified",
+    "release": "5956a83cd76bf0b41924795e05b5024c8e1770d6",
+    "transaction": {
+      "at": "2026-11-18 18:37:54.915800+00:00",
+      "snapshot": "4452926:4452926:",
+      "database": "vega_v2",
+      "isolation": "repeatable read",
+      "read_only": "on"
+    },
+    "reference": {
+      "at": "2026-11-18 17:53:27.125902+00:00",
+      "snapshot": "4450752:4450752:",
+      "database": "vega_v2",
+      "isolation": "repeatable read",
+      "read_only": "on"
+    },
+    "requêtes_précédentes_identiques": 52,
+    "requêtes_actuelles": 53,
+    "comparaison": "toutes les cellules des grilles des 2 149 éditions et des 471 lignes saison/entité identiques entre les deux transactions",
+    "lignes_agregees_competition_saison_type": 6447,
+    "sha256_grille_agregee": "11d3a0a98c2d04a87ac51b4020a83492295fcbb4b0d3cf98a89fa9a84c843adc"
+  }
+}

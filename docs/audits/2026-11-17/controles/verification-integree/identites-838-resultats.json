@@ -1,0 +1,28 @@
+{
+  "aliases": 838,
+  "unique_alias_strings": 838,
+  "unique_target_ids": 838,
+  "exacts_candidates_rows": 917,
+  "family_candidates_rows": 370,
+  "edition_shared_conflicts": 0,
+  "saudi_gender_disambiguations": {
+    "5315": 5584,
+    "5317": 5334,
+    "5318": 5328,
+    "5322": 5329,
+    "5325": 5331,
+    "5309": 5327,
+    "5316": 5330
+  },
+  "statistics": {
+    "SportScore est la seule preuve exacte sur cet ID": 308,
+    "membre_classement_courant": 818,
+    "nom canonique ou court exact": 483,
+    "famille_avec_autre_ID_actif": 147,
+    "autre_ID_actif_exact": 114,
+    "autre_ID_exact_avec_redirections": 155,
+    "autre fournisseur, graphie acquise exacte": 47,
+    "paires_marquees": 8,
+    "marqueurs_differents": 3
+  }
+}

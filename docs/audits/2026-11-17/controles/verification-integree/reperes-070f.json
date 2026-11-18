@@ -1,0 +1,18 @@
+{
+  "reference_deploiement": {
+    "site": "fc0deba100288117b0ea122e7199d1c9db9dcc37",
+    "worker": "5956a83cd76bf0b41924795e05b5024c8e1770d6",
+    "ecs_revision": 144,
+    "schema": "135_player_transfers.sql"
+  },
+  "score_snapshot_utc": "2026-11-18T18:37:54.915800Z",
+  "identites_snapshot_utc": "2026-11-18T18:50:55Z",
+  "code_correctifs": "070f7c82cf99cf240d77278eca152dcdc20803ab",
+  "linear": {
+    "identite": "https://linear.app/vegainteligence/issue/VI-21#comment-57aa586e-5693-4776-98c0-b5b426a6791d",
+    "registre_id": "888131bd-9b29-49ae-a23e-9041e6988960",
+    "risque_classements": "https://linear.app/vegainteligence/issue/VI-29#comment-34d3ae5c-296c-465f-80ad-1e732d75465d",
+    "declenchement_elo": "https://linear.app/vegainteligence/issue/VI-21#comment-defe3038-f577-4df4-b1c5-1be897e8e1e3"
+  },
+  "portee": "La concordance des comptes Elo concerne les côtés admissibles mesurés. Sur six matchs de coupe, le club est erroné et les six adversaires sont évalués contre celui-ci."
+}

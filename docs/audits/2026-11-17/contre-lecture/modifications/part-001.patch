@@ -39,7 +39,7 @@ index 174e439d01..40c00dd1b3 100644
  !dashboard/frontend/src/data-url.js
  !dashboard/frontend/src/services/api-routes.js
 diff --git a/backend/README.md b/backend/README.md
-index c092c5a612..3405f7736f 100644
+index 013909e7c9..cc695fa420 100644
 --- a/backend/README.md
 +++ b/backend/README.md
 @@ -131,11 +131,12 @@ Chaque route liste en tête de fichier ses écarts voulus avec l'API précédent
@@ -63,9 +63,9 @@ index c092c5a612..3405f7736f 100644
      `UPDATE ops.transfermarkt_state SET gave_up_at = NULL, paused_until = NULL, blocks_in_row = 0, blocked_since = NULL WHERE id = 1;`
    - **Avancement :** la vue `api.provider_reader_progress`.
 +  - **Revenir à une image d’avant la migration 139** : arrêter d’abord le lecteur, `UPDATE ops.transfermarkt_state SET gave_up_at = now() WHERE id = 1;`, et le laisser arrêté jusqu’au retour d’une version qui conserve l’historique. L’ancien lecteur efface à chaque lecture ; s’il tourne quand même, la migration 139 refuse ses suppressions (`TRANSFERMARKT_HISTORY_KEPT`) et son processus redémarre toutes les 5 minutes sans rien perdre. Une suppression voulue par une personne pose `SET LOCAL vega.allow_history_delete = 'on'` dans sa transaction.
+   - **Ce que le site en lit** (migration 135) : `/api/player-market-values?id=` nomme le club de chaque estimation quand il est connu (`club`), et `/api/players/{id}/transfers` donne les transferts faits du joueur, du plus ancien au plus récent, avec le club quitté et le club rejoint. Un de nos clubs porte son identifiant, notre nom et son écusson ; un autre, le seul nom du fournisseur. Un joueur dont les transferts n’ont pas encore été lus répond 404, pas une liste vide.
  - coefficients UEFA, avec les points par saison et les clubs encore en lice ;
  - classement FIFA, toutes les éditions depuis 2021 ;
- - classements officiels SportScore, écrits seulement si chaque ligne désigne un club de l'édition ;
 diff --git a/backend/api/src/edition-artwork.mjs b/backend/api/src/edition-artwork.mjs
 new file mode 100644
 index 0000000000..8f5c89b711
@@ -477,7 +477,7 @@ index ffa761d45c..a0abbe08bb 100644
        if (tone) out.tone = tone;
        return out;
 diff --git a/backend/api/src/routes/profiles.mjs b/backend/api/src/routes/profiles.mjs
-index 0e8a91aa0b..ee002087c2 100644
+index 55c30f1465..1751b43fce 100644
 --- a/backend/api/src/routes/profiles.mjs
 +++ b/backend/api/src/routes/profiles.mjs
 @@ -29,7 +29,10 @@
@@ -492,7 +492,7 @@ index 0e8a91aa0b..ee002087c2 100644
   * GET /api/teams/{id}/age-profile?season= — minutes played by age on the match date.
   * GET /api/teams/{id}/passing?season= — the club's most used passing triangle and its most
   * linked pair, from the season's pass networks (083).
-@@ -121,6 +124,8 @@ export function keeperStanding(rows, min = FACED_MIN_SHOTS) {
+@@ -130,6 +133,8 @@ export function keeperStanding(rows, min = FACED_MIN_SHOTS) {
  const ACTION_VALUES = [["vaep", true], ["pv", true], ["xt", false]];
  // Only what the source publishes per half: it gives no chances created or expected assists there.
  const HALF_FIELDS = ["matches", "minutes", "goals", "shots", "xg", "touches_box", "dribbles", "passes", "touches", "duels_won", "tackles", "recoveries"];
@@ -501,7 +501,7 @@ index 0e8a91aa0b..ee002087c2 100644
  
  /**
   * The three players of a club who exchange the most passes: among the trios whose three
-@@ -426,18 +431,31 @@ export function createProfileRoute(read) {
+@@ -464,18 +469,31 @@ export function createProfileRoute(read) {
        validateParams(params, ["season"]);
        const season = params.get("season");
        if (!/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");

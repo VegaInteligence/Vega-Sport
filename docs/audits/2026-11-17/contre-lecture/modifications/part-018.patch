@@ -1,3 +1,274 @@
+diff --git a/dashboard/shared/legacy-8018e08/openfootball-history.js b/dashboard/shared/legacy-8018e08/openfootball-history.js
+new file mode 100644
+index 0000000000..0b4e1cc801
+--- /dev/null
++++ b/dashboard/shared/legacy-8018e08/openfootball-history.js
+@@ -0,0 +1,116 @@
++import { normalizeText } from "./archive-text.js";
++
++/** OpenFootball stays separate from PitchAPI; no player or xG fields are inferred. */
++export function historicalRows(season, competition = "all", query = "") {
++  const needle = normalizeText(query).trim();
++  const rows = [];
++  for (const league of season?.competitions || []) {
++    if (competition !== "all" && league.id !== competition) continue;
++    for (let i = 0; i < league.matches.length; i++) {
++      const match = league.matches[i];
++      if (
++        needle &&
++        !normalizeText(`${match.team1 || ""} ${match.team2 || ""}`).includes(
++          needle,
++        )
++      )
++        continue;
++      rows.push({
++        key: `${league.id}:${i}`,
++        competition: league.name,
++        country: league.country,
++        match,
++      });
++    }
++  }
++  rows.sort(
++    (a, b) =>
++      String(b.match.date || "").localeCompare(String(a.match.date || "")) ||
++      a.key.localeCompare(b.key),
++  );
++  return rows;
++}
++
++export function historicalPair(value) {
++  if (!Array.isArray(value) || value.length !== 2) return [null, null];
++  return value.map((item) =>
++    Number.isInteger(item) && item >= 0 ? item : null,
++  );
++}
++
++/** Show the final match score, with extra time distinguished from penalties. */
++export function historicalScore(match) {
++  const final = historicalPair(match?.score?.final);
++  if (final.every((value) => value !== null)) return final;
++  const extra = historicalPair(match?.score?.et);
++  return extra.every((value) => value !== null)
++    ? extra
++    : historicalPair(match?.score?.ft);
++}
++
++export function historicalScoreNotes(match) {
++  const notes = [];
++  const extra = historicalPair(match?.score?.et);
++  const penalties = historicalPair(match?.score?.p);
++  if (extra.every((value) => value !== null)) notes.push("après prolongation");
++  if (penalties.every((value) => value !== null))
++    notes.push(`tirs au but ${penalties[0]} – ${penalties[1]}`);
++  const fields = match?.sourceFields || {};
++  if (match?.status === "not_played")
++    notes.push(
++      `Rencontre non disputée${fields.nonmatch ? ` : ${fields.nonmatch}` : ""}`,
++    );
++  if ((fields.neutral || "").toLowerCase() === "yes")
++    notes.push("terrain neutre");
++  const comment = (fields.Comments || fields.notes || "").trim();
++  if (comment && comment.toLowerCase() !== "na")
++    notes.push(`Source : ${comment}`);
++  return notes;
++}
++
++export const HISTORICAL_CSV_FIELDS = [
++  "date",
++  "competition",
++  "round",
++  "home",
++  "home_goals",
++  "away_goals",
++  "away",
++  "home_goals_90",
++  "away_goals_90",
++  "penalties_home",
++  "penalties_away",
++  "notes",
++  "source_date",
++  "source_venue",
++  "source_attendance",
++  "source_neutral",
++  "status",
++  "date_note",
++];
++
++export function historicalCsvRow({ competition, match }) {
++  const [home90, away90] = historicalPair(match.score?.ft);
++  const [home, away] = historicalScore(match);
++  const [penaltiesHome, penaltiesAway] = historicalPair(match.score?.p);
++  return [
++    match.date,
++    competition,
++    match.round,
++    match.team1,
++    home,
++    away,
++    match.team2,
++    home90,
++    away90,
++    penaltiesHome,
++    penaltiesAway,
++    historicalScoreNotes(match).join(" · "),
++    match.sourceFields?.Date,
++    match.sourceFields?.Venue,
++    match.sourceFields?.attendance,
++    match.sourceFields?.neutral,
++    match.status,
++    match.dateNote,
++  ];
++}
+diff --git a/dashboard/shared/openfootball-history.js b/dashboard/shared/openfootball-history.js
+index 0b4e1cc801..2ef05dcd19 100644
+--- a/dashboard/shared/openfootball-history.js
++++ b/dashboard/shared/openfootball-history.js
+@@ -31,32 +31,63 @@ export function historicalRows(season, competition = "all", query = "") {
+   return rows;
+ }
+ 
++const isPair = (value) => Array.isArray(value) && value.length === 2 && value.every((item) => Number.isInteger(item) && item >= 0);
++
++/** Two non-negative integer goals, or [null, null]: half a pair is no score. */
+ export function historicalPair(value) {
+-  if (!Array.isArray(value) || value.length !== 2) return [null, null];
+-  return value.map((item) =>
+-    Number.isInteger(item) && item >= 0 ? item : null,
+-  );
++  return isPair(value) ? [...value] : [null, null];
++}
++
++// worldcup.json writes a full-time result as {ft: [2, 1], ht: […]} or, in most editions from 1950
++// to 2014 and seven matches of 2022, as [2, 1]: the same full-time result.
++const scoreObject = (score) => (Array.isArray(score) ? { ft: score } : score);
++const SCORE_PARTS = ["ft", "ht", "et", "p"];
++
++/**
++ * An OpenFootball score as the cup sources store it (open-cups.mjs, vega/sources/cups.py
++ * score_parts): {ft, ht, et, p}, each a [home, away] pair, or null without a result. Throws on
++ * anything else (an INVALID_SCORE: the edition is not written).
++ */
++export function openFootballScore(score) {
++  if (score === undefined || score === null) return null;
++  const parts = scoreObject(score);
++  if (!parts || typeof parts !== "object" || Array.isArray(parts)) throw invalidScore();
++  const keys = Object.keys(parts);
++  if (keys.some((key) => !SCORE_PARTS.includes(key) || !isPair(parts[key]))) throw invalidScore();
++  if (!keys.length) return null;
++  // A half time or a shoot-out without the match's score is incomplete.
++  if (!keys.includes("ft") && !keys.includes("et")) throw invalidScore();
++  return Object.fromEntries(keys.map((key) => [key, [...parts[key]]]));
++}
++
++function invalidScore() {
++  return Object.assign(new Error("Invalid OpenFootball score"), { code: "INVALID_SCORE" });
+ }
+ 
+ /** Show the final match score, with extra time distinguished from penalties. */
+ export function historicalScore(match) {
+-  const final = historicalPair(match?.score?.final);
++  const score = scoreObject(match?.score);
++  const final = historicalPair(score?.final);
+   if (final.every((value) => value !== null)) return final;
+-  const extra = historicalPair(match?.score?.et);
++  const extra = historicalPair(score?.et);
+   return extra.every((value) => value !== null)
+     ? extra
+-    : historicalPair(match?.score?.ft);
++    : historicalPair(score?.ft);
+ }
+ 
++// A match the source says was never played (football.json: "cancelled"; the archive builders: "not_played").
++const CANCELED = new Set(["not_played", "cancelled", "canceled"]);
++
+ export function historicalScoreNotes(match) {
+   const notes = [];
+-  const extra = historicalPair(match?.score?.et);
+-  const penalties = historicalPair(match?.score?.p);
++  const score = scoreObject(match?.score);
++  const extra = historicalPair(score?.et);
++  const penalties = historicalPair(score?.p);
+   if (extra.every((value) => value !== null)) notes.push("après prolongation");
+   if (penalties.every((value) => value !== null))
+     notes.push(`tirs au but ${penalties[0]} – ${penalties[1]}`);
+   const fields = match?.sourceFields || {};
+-  if (match?.status === "not_played")
++  if (CANCELED.has(match?.status))
+     notes.push(
+       `Rencontre non disputée${fields.nonmatch ? ` : ${fields.nonmatch}` : ""}`,
+     );
+@@ -90,9 +121,10 @@ export const HISTORICAL_CSV_FIELDS = [
+ ];
+ 
+ export function historicalCsvRow({ competition, match }) {
+-  const [home90, away90] = historicalPair(match.score?.ft);
++  const score = scoreObject(match.score);
++  const [home90, away90] = historicalPair(score?.ft);
+   const [home, away] = historicalScore(match);
+-  const [penaltiesHome, penaltiesAway] = historicalPair(match.score?.p);
++  const [penaltiesHome, penaltiesAway] = historicalPair(score?.p);
+   return [
+     match.date,
+     competition,
+diff --git a/dashboard/shared/tournament-stages.js b/dashboard/shared/tournament-stages.js
+new file mode 100644
+index 0000000000..bc0975947b
+--- /dev/null
++++ b/dashboard/shared/tournament-stages.js
+@@ -0,0 +1,16 @@
++export const UNKNOWN_STAGE_LABEL = "Phase non renseignée";
++
++/** Read only round labels that identify a stage in the competition sources. */
++export function stageKind(round) {
++  const name = String(round ?? "").trim().toLowerCase()
++    .replace(/^finals,\s*|,\s*replays?$/g, "");
++  if (/^(?:(?:match for )?third[ -]place(?: match| play[ -]?off)?|3rd place|bronze|match pour la troisi[eè]me place)$/.test(name)) return "third";
++  if (/^(?:the )?finale?s?$/.test(name)) return "final";
++  if (name === "final round") return "final-pool";
++  if (/^(?:semi[ -]?finals?|1\/2|demi(?:[ -]?finales?)?)$/.test(name)) return "semi";
++  if (/^(?:quarter[ -]?finals?|1\/4|quarts?(?: de finale)?)$/.test(name)) return "quarter";
++  if (/^(?:round of 16|1\/8|huiti[eè]mes?(?: de finale)?)$/.test(name)) return "r16";
++  if (/^(?:round of 32|1\/16|seizi[eè]mes?(?: de finale)?)$/.test(name)) return "r32";
++  if (/^(?:\d+|(?:matchday|journ[eé]e) \d+|(?:group|groupe|gruppe) [a-z0-9]+(?: play[ -]?off)?|(?:first|preliminary|1st) round|phase de groupes)$/.test(name)) return "group";
++  return "unknown";
++}
+diff --git a/dashboard/shared/world-cup-1950.js b/dashboard/shared/world-cup-1950.js
+new file mode 100644
+index 0000000000..97bfd3a82c
+--- /dev/null
++++ b/dashboard/shared/world-cup-1950.js
+@@ -0,0 +1,30 @@
++// FIFA's 1950 final pool and the six dated OpenFootball results checked against it (VI-27 B).
++// https://www.fifa.com/es/articles/cuantas-finales-mundial-participo-uruguay-historial
++export const WORLD_CUP_1950_EDITION = "open-cups:world-cup-history:1950";
++const PLACES = ["Uruguay", "Brazil", "Sweden", "Spain"];
++const GAMES = [
++  { date: "1950-07-09", home: "Uruguay", away: "Spain", score: [2, 2] },
++  { date: "1950-07-09", home: "Brazil", away: "Sweden", score: [7, 1] },
++  { date: "1950-07-13", home: "Brazil", away: "Spain", score: [6, 1] },
++  { date: "1950-07-13", home: "Uruguay", away: "Sweden", score: [3, 2] },
++  { date: "1950-07-16", home: "Sweden", away: "Spain", score: [3, 1] },
++  { date: "1950-07-16", home: "Uruguay", away: "Brazil", score: [2, 1] },
++];
++
++const signature = ({ date, home, away, score }) =>
++  JSON.stringify([date, ...(home < away ? [home, away, score?.[0], score?.[1]] : [away, home, score?.[1], score?.[0]])]);
++
++function corroborates(matches, expected) {
++  if (matches.length !== expected.length) return false;
++  const observed = new Set(matches.map(signature));
++  return expected.every((match) => observed.has(signature(match)));
++}
++
++export const isFinalPool1950 = (matches) => corroborates(matches, GAMES);
++
++export function finalPoolPosition1950(matches, team) {
++  const index = PLACES.indexOf(team);
++  if (index < 0) return null;
++  const expected = GAMES.filter(({ home, away }) => team === home || team === away);
++  return corroborates(matches, expected) ? index + 1 : null;
++}
 diff --git a/docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md b/docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md
 index 3a9ef64c25..df1e6499d2 100644
 --- a/docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md

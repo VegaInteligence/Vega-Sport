@@ -1,5 +1,5 @@
 diff --git a/docs/calculs/09-audit-2026-11/FAILURE_MODES.md b/docs/calculs/09-audit-2026-11/FAILURE_MODES.md
-index 8b19aff978..30f1eb51c5 100644
+index 8b19aff978..501fef7e28 100644
 --- a/docs/calculs/09-audit-2026-11/FAILURE_MODES.md
 +++ b/docs/calculs/09-audit-2026-11/FAILURE_MODES.md
 @@ -245,6 +245,100 @@ integer` are appended at the end.
@@ -103,7 +103,7 @@ index 8b19aff978..30f1eb51c5 100644
  ## 5. B4 — Returns from absence on the club stream (audit 15g)
  
  **Failure modes:**
-@@ -1438,3 +1532,989 @@ the normalizer's NULL for an ordinary goal shot (VI-21).
+@@ -1438,3 +1532,1004 @@ the normalizer's NULL for an ordinary goal shot (VI-21).
  End to end: on a local database, one cohort is re-marked every minute for 70 simulated minutes while another
  is marked once. The first is refreshed at the maximum wait, once only, and stays queued after its last
  re-mark. The second is refreshed 10 minutes after its mark.
@@ -167,6 +167,21 @@ index 8b19aff978..30f1eb51c5 100644
 +edition's `cup_updated_at` moves only when a match is added, changed or removed, or the edition is
 +renamed. `cup_checked_at` is the last accepted read. Open-matchday statistics are rewritten only when
 +they differ, and a statistics change is a change of its match.
++
++For Open Matchday, `gw` is optional. An omitted column or an empty cell keeps the round
++already published in the same edition. A supplied round replaces it. A new match or a match
++moved from another edition without a supplied round has no round.
++
++Concurrent changes are checked when a snapshot updates or removes a match. PostgreSQL
++compares the row version with the version read for the snapshot. If another transaction
++changed it, `SNAPSHOT_CHANGED` rolls back the edition before removing its provider keys.
++The result guard also applies to an existing key read in another edition. Identical match
++rows still require no write.
++
++Only a match's current provider key participates in comparing membership. Historical keys
++remain attached to a retained match. An incoming historical key refuses the changed snapshot
++with `INACTIVE_MATCH_KEY`. A permitted withdrawal of the current key removes the match and
++the provider's keys for it, including historical keys.
 +
 +**A snapshot replaces an edition only when it is complete and keeps its results.** Before any write:
 +- open-matchday: the folder's manifest declares integer counts (not booleans) and no `errors`. Each

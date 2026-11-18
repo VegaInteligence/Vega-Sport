@@ -1,0 +1,25 @@
+{
+  "git": "5956a83cd76bf0b41924795e05b5024c8e1770d6",
+  "effective_pitch_names_among_captured": {
+    "707": [
+      "Barcelona",
+      "FC Barcelona"
+    ],
+    "740": [
+      "Barcelona"
+    ]
+  },
+  "cup_fc_barcelona_country_unspecified": 707,
+  "europe_archive_fc_barcelona": [
+    707,
+    true
+  ],
+  "limitations": "Subset of captured candidates, no timestamped historic merge log. Keys already bound in the observed database are used directly by the two writers.",
+  "blob_sha256": {
+    "sources/identity.py": "d671e7e90601326420ffe9faf1f70cbdc3e1db4dc9539274b43f99ffa9e2209d",
+    "sources/curated.py": "f3773904e3803fb98cc226f2320670a01b2cb034b55b3b99fe9c331e7b58789f",
+    "sources/cups.py": "8b9d41d1d2bd0fec85c3648e298211a037c5f7796109d289128e799651d2b384",
+    "archives.py": "ff367f9962ea437011898f9f59c30c4873b9e156c4de7a98688d13a863cba06b",
+    "power.py": "75d3b2a829b585d8dbadb60d1fb2a6b4233e7f74d220a0f76bab0ebb6fdb93ff"
+  }
+}

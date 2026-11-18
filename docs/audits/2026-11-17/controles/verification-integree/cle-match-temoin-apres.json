@@ -1,0 +1,64 @@
+{
+  "server": "18.6 (Debian 18.6-1.pgdg12+2)",
+  "source": "AUT_CUP_ofb-cup:2026/2027",
+  "initial": [
+    "ok",
+    [
+      1,
+      1,
+      "finished",
+      "1",
+      1,
+      2
+    ],
+    [
+      8,
+      1,
+      "not_started",
+      "4",
+      null,
+      null
+    ]
+  ],
+  "before": [
+    [
+      8,
+      1,
+      "not_started",
+      "4",
+      null,
+      null
+    ],
+    [
+      [
+        "AUT_CUP_ofb-cup:2026/2027:2027-02-10|Hartberg|A. Lustenau",
+        true
+      ],
+      [
+        "legacy:Hartberg-prev",
+        false
+      ]
+    ]
+  ],
+  "after": [
+    "ok",
+    [
+      8,
+      1,
+      "not_started",
+      "4",
+      null,
+      null
+    ],
+    [
+      [
+        "AUT_CUP_ofb-cup:2026/2027:2027-02-10|Hartberg|A. Lustenau",
+        true
+      ],
+      [
+        "legacy:Hartberg-prev",
+        false
+      ]
+    ]
+  ]
+}

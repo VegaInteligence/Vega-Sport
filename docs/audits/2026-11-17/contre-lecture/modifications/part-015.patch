@@ -1740,7 +1740,7 @@ index 0000000000..8c007119a3
 +  }
 +}
 diff --git a/backend/vega/sources/open_matchday.py b/backend/vega/sources/open_matchday.py
-index 311a3e0e8a..f10e0d75ba 100644
+index 311a3e0e8a..56042ec2d4 100644
 --- a/backend/vega/sources/open_matchday.py
 +++ b/backend/vega/sources/open_matchday.py
 @@ -13,6 +13,12 @@ the team statistics the source gives (shots, shots on target, fouls, corners, pe
@@ -1756,15 +1756,17 @@ index 311a3e0e8a..f10e0d75ba 100644
  """
  
  import csv
-@@ -20,7 +26,7 @@ from datetime import timedelta
+@@ -20,8 +26,8 @@ from datetime import timedelta
  import io
  import re
  
 -from . import SourceError
+-from .cups import _team
 +from . import SourceError, failure, open_matchday_history, snapshot
- from .cups import _team
++from .cups import _round, _team
  from ..seasons import sporting_season
  from ..store import Store
+ 
 @@ -57,6 +63,10 @@ SPELLINGS = {
  }
  # CSV columns -> team_match_stats columns, per side and period.
@@ -1915,7 +1917,7 @@ index 311a3e0e8a..f10e0d75ba 100644
      season_id = Store(conn).season(label)
      country = country_of(folder)
      family = f"cup:open-matchday:{folder}"
-@@ -115,58 +241,49 @@ def save(conn, folder, name, season, results, fixtures, now):
+@@ -115,58 +241,53 @@ def save(conn, folder, name, season, results, fixtures, now):
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
             ON CONFLICT (cup_key) DO UPDATE SET cup_name=EXCLUDED.cup_name, cup_checked_at=EXCLUDED.cup_checked_at, updated_at=now()
             RETURNING id""",
@@ -1923,7 +1925,9 @@ index 311a3e0e8a..f10e0d75ba 100644
 +        (comp, season_id, season, cup_key, name, SOURCE, now, now),
      ).fetchone()[0]
 -    keep = []
-+    before.update(snapshot.elsewhere(conn, "open_matchday", edition, [key for key in snap if key not in before]))
++    elsewhere = snapshot.elsewhere(conn, "open_matchday", edition, [key for key in snap if key not in before])
++    snapshot.guard("open_matchday", elsewhere, status, cup_key)
++    before.update(elsewhere)
 +    changes = 0
 +    reserved = {before[key]["archive_position"] for key in preserved}
      position = 0
@@ -1936,6 +1940,14 @@ index 311a3e0e8a..f10e0d75ba 100644
 -            key = f"{folder}:{season}:{day}|{home_name}|{away_name}"
 -            home = _team(conn, "open_matchday", f"name:{home_name}", home_name)
 -            away = _team(conn, "open_matchday", f"name:{away_name}", away_name)
+-            round_id = None
+-            if (item.get("gw") or "").strip():
+-                round_id = conn.execute(
+-                    """INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s)
+-                       ON CONFLICT (competition_season_id, name) DO UPDATE SET name=EXCLUDED.name RETURNING id""",
+-                    (edition, item["gw"].strip()),
+-                ).fetchone()[0]
+-            hs, as_ = (_int(item.get("ft_home")), _int(item.get("ft_away"))) if status == "finished" else (None, None)
 +    for key, row in snap.items():
 +        found = before.get(key)
 +        if key in preserved:
@@ -1948,25 +1960,13 @@ index 311a3e0e8a..f10e0d75ba 100644
 +                position += 1
 +            home = _team(conn, "open_matchday", f"name:{row['home']}", row["home"])
 +            away = _team(conn, "open_matchday", f"name:{row['away']}", row["away"])
-             round_id = None
--            if (item.get("gw") or "").strip():
--                round_id = conn.execute(
--                    """INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s)
--                       ON CONFLICT (competition_season_id, name) DO UPDATE SET name=EXCLUDED.name RETURNING id""",
--                    (edition, item["gw"].strip()),
--                ).fetchone()[0]
--            hs, as_ = (_int(item.get("ft_home")), _int(item.get("ft_away"))) if status == "finished" else (None, None)
-+            if row["round"]:
-+                found_round = conn.execute("SELECT id FROM core.rounds WHERE competition_season_id=%s AND name=%s", (edition, row["round"])).fetchone()
-+                round_id = found_round[0] if found_round else conn.execute(
-+                    "INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s) RETURNING id", (edition, row["round"])).fetchone()[0]
              values = {
 -                "competition_season_id": edition, "season_id": season_id, "source": "open_matchday", "status": status if hs is not None or status == "not_started" else "not_started",
 -                "match_date": day, "home_team_id": home, "away_team_id": away, "home_team_name": home_name, "away_team_name": away_name,
 -                "round_id": round_id, "home_score": hs, "away_score": as_, "home_score_ht": _int(item.get("ht_home")), "away_score_ht": _int(item.get("ht_away")),
 +                "competition_season_id": edition, "season_id": season_id, "source": "open_matchday", "status": row["status"],
 +                "match_date": row["date"], "home_team_id": home, "away_team_id": away, "home_team_name": row["home"], "away_team_name": row["away"],
-+                "round_id": round_id, "home_score": row["home_score"], "away_score": row["away_score"],
++                "home_score": row["home_score"], "away_score": row["away_score"],
                  "archive_position": position,
              }
              position += 1
@@ -1994,12 +1994,19 @@ index 311a3e0e8a..f10e0d75ba 100644
 -        "DELETE FROM core.provider_ids p WHERE p.entity_type='match' AND p.provider='open_matchday' AND NOT EXISTS (SELECT 1 FROM core.matches m WHERE m.id=p.entity_id)"
 -    )
 -    return len(keep)
++        if row["round"]:
++            values["round_id"] = _round(conn, edition, row["round"])
++        elif found is not None and found["competition_season_id"] != edition:
++            values["round_id"] = None  # a round belongs to its former edition
 +        if row["home_score_ht"] is not None and row["away_score_ht"] is not None:
 +            values.update(home_score_ht=row["home_score_ht"], away_score_ht=row["away_score_ht"])
 +        mid, outcome = snapshot.write(conn, "open_matchday", key, values, found)
 +        match_changed = outcome in ("inserted", "updated")
 +        stats_changed = _write_stats(conn, season_id, mid, row, home, away)
-+        if stats_changed and not match_changed:
++        if stats_changed and outcome is None:
++            snapshot.write(conn, "open_matchday", key, values, found, changed=True)
++        elif stats_changed and outcome == "moved":
++            # snapshot.write already checked and updated the same match in this transaction.
 +            conn.execute("""UPDATE core.matches SET revision=revision+1, updated_at=now()
 +                            WHERE id=%s AND season_id=%s""", (mid, season_id))
 +        changes += match_changed or stats_changed
@@ -2010,7 +2017,7 @@ index 311a3e0e8a..f10e0d75ba 100644
  
  
  def held(conn, folder, season):
-@@ -219,13 +336,17 @@ def run(conn, get, scope, now):
+@@ -219,13 +340,17 @@ def run(conn, get, scope, now):
                  drop_copy(conn, folder, season)
              continue
          try:
@@ -2165,10 +2172,10 @@ index 0000000000..0769a5c7bc
 +    return preserved
 diff --git a/backend/vega/sources/snapshot.py b/backend/vega/sources/snapshot.py
 new file mode 100644
-index 0000000000..04c0364047
+index 0000000000..77c188e486
 --- /dev/null
 +++ b/backend/vega/sources/snapshot.py
-@@ -0,0 +1,103 @@
+@@ -0,0 +1,134 @@
 +"""A source edition replaced by a later snapshot of it (VI-27, FAILURE_MODES.md §19).
 +
 +The cup sources (cups.py) and open-matchday (open_matchday.py) publish each edition whole: the
@@ -2179,7 +2186,9 @@ index 0000000000..04c0364047
 +  the edition is kept as it was and the snapshot refused, unless the match is in RETRACTIONS;
 +- a match whose values have not changed is not written again (`write`): no revision, no
 +  `updated_at`; one that changed gets `revision + 1`; a new place in the source's order alone
-+  moves `archive_position` only.
++  moves `archive_position` only;
++- a writer can only change or remove the row it observed. If another transaction changed it,
++  the snapshot transaction must roll back. A later read can use the new state for its guard.
 +
 +The removal of an open-matchday copy of a league PitchAPI holds (open_matchday.drop_copy) is a
 +reviewed decision of its own (VI-21) and does not pass through here.
@@ -2206,23 +2215,30 @@ index 0000000000..04c0364047
 +def _read(conn, provider, where, args):
 +    names = list(COLUMNS)
 +    rows = conn.execute(
-+        f"""SELECT p.provider_key, m.id, m.revision, {', '.join(COLUMNS.values())}
++        f"""SELECT p.provider_key, p.is_current, m.id, m.revision, m.xmin::text, {', '.join(COLUMNS.values())}
 +            FROM core.matches m JOIN core.provider_ids p ON p.entity_type = 'match' AND p.provider = %s AND p.entity_id = m.id
 +            WHERE {where}""",
 +        (provider, *args),
 +    ).fetchall()
-+    return {r[0]: {"id": r[1], "revision": r[2], **dict(zip(names, r[3:]))} for r in rows}
++    return {key: {"id": match, "revision": revision, "row_version": version, "is_current": current, **dict(zip(names, columns))}
++            for key, current, match, revision, version, *columns in rows}
 +
 +
 +def stored(conn, provider, edition):
-+    """{provider key: {"id", "revision", column: value}} of the edition's matches (none for a new edition)."""
-+    return {} if edition is None else _read(conn, provider, "m.competition_season_id = %s", (edition,))
++    """{current provider key: {"id", "revision", column: value}} of the edition's matches."""
++    return {} if edition is None else _read(conn, provider, "m.competition_season_id = %s AND p.is_current", (edition,))
 +
 +
 +def elsewhere(conn, provider, edition, keys):
-+    """The same, for those of `keys` the provider gave a match of another edition: the writer moves
-+    such a match into this edition, as it always did, rather than creating a second one."""
-+    return _read(conn, provider, "p.provider_key = ANY(%s) AND m.competition_season_id IS DISTINCT FROM %s", (list(keys), edition)) if keys else {}
++    """Resolve current keys of another edition and refuse incoming keys retired in any edition."""
++    if not keys:
++        return {}
++    matches = _read(conn, provider, "p.provider_key = ANY(%s) AND (NOT p.is_current OR m.competition_season_id IS DISTINCT FROM %s)",
++                    (list(keys), edition))
++    retired = sorted(key for key, match in matches.items() if not match["is_current"])
++    if retired:
++        raise SourceError("INACTIVE_MATCH_KEY", f"{provider}: retired match keys in the snapshot: {', '.join(retired[:5])}")
++    return matches
 +
 +
 +def guard(provider, before, after, label):
@@ -2256,19 +2272,41 @@ index 0000000000..04c0364047
 +        return mid, "inserted"
 +    differs = [c for c in columns if c != "archive_position" and values[c] != found[c]]
 +    if differs or changed:
-+        conn.execute(f"UPDATE core.matches SET {', '.join(f'{c}=%s' for c in columns)}, revision=revision+1, updated_at=now() WHERE id=%s",
-+                     [values[c] for c in columns] + [found["id"]])
-+        return found["id"], "updated"
-+    if values.get("archive_position") != found["archive_position"]:
-+        conn.execute("UPDATE core.matches SET archive_position=%s WHERE id=%s", (values["archive_position"], found["id"]))
-+        return found["id"], "moved"
-+    return found["id"], None
++        assignments = ", ".join(f"{c}=%s" for c in columns) + ", revision=revision+1, updated_at=now()"
++        args, outcome = [values[c] for c in columns], "updated"
++    elif "archive_position" in values and values["archive_position"] != found["archive_position"]:
++        assignments = "archive_position=%s"
++        args, outcome = [values["archive_position"]], "moved"
++    else:
++        return found["id"], None
++    # PostgreSQL rechecks this row version after waiting on a concurrent update. A user-facing
++    # revision alone misses revisions of archive_position and maintenance changes to a row.
++    updated = conn.execute(
++        f"""UPDATE core.matches m SET {assignments} WHERE m.id=%s AND m.xmin::text=%s
++              AND EXISTS (SELECT 1 FROM core.provider_ids p WHERE p.entity_type='match' AND p.provider=%s
++                            AND p.provider_key=%s AND p.entity_id=m.id AND p.is_current)""",
++        (*args, found["id"], found["row_version"], provider, key),
++    )
++    if updated.rowcount != 1:
++        raise SourceError("SNAPSHOT_CHANGED", f"{provider}: {key} changed after the snapshot read")
++    return found["id"], outcome
 +
 +
 +def remove(conn, provider, before, keep):
-+    """Delete the edition's matches the snapshot no longer holds (guard() allowed it); returns how many."""
-+    gone = [m["id"] for k, m in before.items() if k not in keep]
++    """Delete matches whose current keys the snapshot withdrew, including their former aliases."""
++    gone = {m["id"]: (m["row_version"], key) for key, m in before.items() if key not in keep}
 +    if gone:
-+        conn.execute("DELETE FROM core.matches WHERE id = ANY(%s)", (gone,))
-+        conn.execute("DELETE FROM core.provider_ids WHERE entity_type='match' AND provider=%s AND entity_id = ANY(%s)", (provider, gone))
++        deleted = {match for (match,) in conn.execute(
++            """DELETE FROM core.matches m USING unnest(%s::integer[], %s::text[], %s::text[]) observed(id, version, key)
++                WHERE m.id=observed.id AND m.xmin::text=observed.version
++                  AND EXISTS (SELECT 1 FROM core.provider_ids p WHERE p.entity_type='match' AND p.provider=%s
++                               AND p.provider_key=observed.key AND p.entity_id=m.id AND p.is_current)
++                RETURNING m.id""",
++            (list(gone), [version for version, _ in gone.values()], [key for _, key in gone.values()], provider),
++        ).fetchall()}
++        if deleted != gone.keys():
++            missed = ", ".join(sorted(gone[match][1] for match in gone.keys() - deleted)[:5])
++            raise SourceError("SNAPSHOT_CHANGED", f"{provider}: cannot remove matches changed after the snapshot read: {missed}")
++        conn.execute("DELETE FROM core.provider_ids WHERE entity_type='match' AND provider=%s AND entity_id = ANY(%s)",
++                     (provider, list(gone)))
 +    return len(gone)

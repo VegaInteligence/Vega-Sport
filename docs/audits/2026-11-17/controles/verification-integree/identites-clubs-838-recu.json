@@ -1,0 +1,64 @@
+{
+  "archive": "alias-sportscore-barcelona-5956a83c.zip",
+  "bloquage_reseau": "sandbox-exec deny network*, socket.connect_ex(loopback) = EPERM sur les deux extractions",
+  "commandes_verification": [
+    "python3 -I -B verifier.py",
+    "/usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' python3 -I -B verifier.py"
+  ],
+  "controle_utc": "2026-11-18T19:02:35.711588+00:00",
+  "essais_positifs_independants": [
+    {
+      "cotes_elo_2099": 12,
+      "graphies": 838,
+      "graphies_classement": 818,
+      "homonymes_exacts_autre_id": 114,
+      "matchs_termines": 15,
+      "produits_regeneres": {
+        "barcelone/matches-15.csv": "500935e14f1b39028ec66834919ba6b362b8cb9f864906608306eccf129c3c7d",
+        "registre-838.csv": "01d52e83d9c7011aa11e0ae75bfff11151107a1cccc878c782bde06f0f49a9fe",
+        "totaux.json": "41433bd4c07b9d4870f57e89246f156be550b951582ed6428bce75484836a3ef"
+      },
+      "resolutions_sur_deux_candidats": [
+        707,
+        707
+      ]
+    },
+    {
+      "cotes_elo_2099": 12,
+      "graphies": 838,
+      "graphies_classement": 818,
+      "homonymes_exacts_autre_id": 114,
+      "matchs_termines": 15,
+      "produits_regeneres": {
+        "barcelone/matches-15.csv": "500935e14f1b39028ec66834919ba6b362b8cb9f864906608306eccf129c3c7d",
+        "registre-838.csv": "01d52e83d9c7011aa11e0ae75bfff11151107a1cccc878c782bde06f0f49a9fe",
+        "totaux.json": "41433bd4c07b9d4870f57e89246f156be550b951582ed6428bce75484836a3ef"
+      },
+      "resolutions_sur_deux_candidats": [
+        707,
+        707
+      ]
+    }
+  ],
+  "fichiers_avec_manifeste": 48,
+  "motifs_techniques_controles": 11,
+  "octets": 134660,
+  "portee": "Archive finale rechargée et extraite cinq fois en répertoires indépendants.",
+  "runtime": "3.14.6",
+  "sha256": "061b344e03cc912e624db5c3c07a64d1cac3024c577261dfe7650aebc576d97f",
+  "temoins_negatifs": {
+    "alteration_octet": {
+      "code": 1,
+      "sortie": "SHA-256 divergent : barcelone/matches.json"
+    },
+    "entree_absente": {
+      "code": 1,
+      "sortie": "inventaire divergent : contexte/pairs.json"
+    },
+    "statut_match_et_empreintes_remplaces": {
+      "assertion": "ensemble des statuts == {'finished'}",
+      "code": 1,
+      "resultat": "échec attendu dans barcelone/analyser.py"
+    }
+  }
+}

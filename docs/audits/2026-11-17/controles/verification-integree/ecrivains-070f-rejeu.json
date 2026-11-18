@@ -1,0 +1,102 @@
+{
+  "server": "18.6 (Debian 18.6-1.pgdg12+2)",
+  "source": "AUT_CUP_ofb-cup:2026/2027",
+  "initial": [
+    "ok",
+    [
+      1,
+      1,
+      "finished",
+      "1",
+      1,
+      2
+    ],
+    [
+      8,
+      1,
+      "not_started",
+      "4",
+      null,
+      null
+    ]
+  ],
+  "blank_round": [
+    "ok",
+    [
+      1,
+      1,
+      "finished",
+      "1",
+      1,
+      2
+    ]
+  ],
+  "repeat": [
+    "ok",
+    [
+      1,
+      1,
+      "finished",
+      "1",
+      1,
+      2
+    ]
+  ],
+  "B_committed": [
+    "ok",
+    [
+      8,
+      2,
+      "finished",
+      "4",
+      2,
+      1
+    ]
+  ],
+  "A_resumed": [
+    "ok",
+    [
+      8,
+      2,
+      "finished",
+      "4",
+      2,
+      1
+    ]
+  ],
+  "final_key_count": 1,
+  "sportscore_before": [
+    null,
+    [
+      "Aster City",
+      4,
+      3,
+      1,
+      0,
+      "sportscore"
+    ]
+  ],
+  "sportscore_impossible": [
+    "INVALID_ROW",
+    [
+      "Aster City",
+      4,
+      3,
+      1,
+      0,
+      "sportscore"
+    ]
+  ],
+  "sportscore_reserve": [
+    "UNMATCHED_TEAMS",
+    [
+      "Aster City",
+      4,
+      3,
+      1,
+      0,
+      "sportscore"
+    ]
+  ],
+  "sportscore_reserve_alias": []
+}

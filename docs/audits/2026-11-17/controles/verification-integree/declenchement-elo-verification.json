@@ -1,0 +1,96 @@
+{
+  "archive": "vega-sport-e04k-7ce5d605.zip",
+  "sha256": "2335f9f58a17d361fd1d99097d2ab1b388deac57a5b470904ede23fc9a32c33d",
+  "bytes": 576832,
+  "runs": [
+    {
+      "label": "A",
+      "database": "vega_v2_e04k_e25dea28ee5e",
+      "receipt_sha256": "b34b8eb890ce2bf78c48a66dbf02e53caa63b193ed53e55ee1c0f7c78d61c41f",
+      "passes": 6,
+      "matches_both_originals": true,
+      "removed": true,
+      "source_modules": 38,
+      "network": {
+        "interfaces": [
+          "lo"
+        ],
+        "ipv4_routes": [],
+        "external_ipv4_probe": 101,
+        "expected": 101,
+        "postgres_address": "127.0.0.1:5432"
+      },
+      "images": [
+        "sha256:c29f30688a9ad961691bdf0ec1650717cc132a5814619d80f80463d6e4c42e47",
+        "sha256:94fbd26a3f0af717c3068195a3adbef1dd2c573475bfa30f446e8a973f7c3752"
+      ]
+    },
+    {
+      "label": "B",
+      "database": "vega_v2_e04k_4b52160afa4c",
+      "receipt_sha256": "8f0db2bf15b0e6a54f6cd194de8db8a68359d6f16f5bcc3b2c2d4917b0029c00",
+      "passes": 6,
+      "matches_both_originals": true,
+      "removed": true,
+      "source_modules": 38,
+      "network": {
+        "interfaces": [
+          "lo"
+        ],
+        "ipv4_routes": [],
+        "external_ipv4_probe": 101,
+        "expected": 101,
+        "postgres_address": "127.0.0.1:5432"
+      },
+      "images": [
+        "sha256:c29f30688a9ad961691bdf0ec1650717cc132a5814619d80f80463d6e4c42e47",
+        "sha256:94fbd26a3f0af717c3068195a3adbef1dd2c573475bfa30f446e8a973f7c3752"
+      ]
+    }
+  ],
+  "negative": [
+    {
+      "action": "remove",
+      "member": "inputs/current/results_2627.csv",
+      "exit": 1,
+      "message": "inventory mismatch: ['inputs/current/results_2627.csv']",
+      "output_exists": false
+    },
+    {
+      "action": "alter",
+      "member": "inputs/organizer-four.json",
+      "exit": 1,
+      "message": "SHA-256 mismatch: inputs/organizer-four.json",
+      "output_exists": false
+    },
+    {
+      "action": "alter",
+      "member": "run-1/resultat.json",
+      "exit": 1,
+      "message": "SHA-256 mismatch: run-1/resultat.json",
+      "output_exists": false
+    },
+    {
+      "action": "alter",
+      "member": "backend/vega/worker.py",
+      "exit": 1,
+      "message": "SHA-256 mismatch: backend/vega/worker.py",
+      "output_exists": false
+    }
+  ],
+  "zip_members": 212,
+  "member_sha256_verified": 211,
+  "verified_files": {
+    "A/images.txt": "9b666fbdf9b9bb92e9834396addbd81ec94d9d76d7a8df876060d9d4d6a5ee21",
+    "A/network.json": "7218516093d75d740efff706a7f53de94a75885ce9877645d9eef9fd890960b2",
+    "A/passage/resultat.json": "b34b8eb890ce2bf78c48a66dbf02e53caa63b193ed53e55ee1c0f7c78d61c41f",
+    "A/postgres-network.txt": "fcf33dfbe13c2354bf0e1b063f9fb422747a46cee00b7420bceff2b81457b345",
+    "A.log": "6b2a0e0ce0071abd69c7e1cf5e66d0951af5c435e06a4dc459e99da76bc75d39",
+    "B/images.txt": "9b666fbdf9b9bb92e9834396addbd81ec94d9d76d7a8df876060d9d4d6a5ee21",
+    "B/network.json": "7218516093d75d740efff706a7f53de94a75885ce9877645d9eef9fd890960b2",
+    "B/passage/resultat.json": "8f0db2bf15b0e6a54f6cd194de8db8a68359d6f16f5bcc3b2c2d4917b0029c00",
+    "B/postgres-network.txt": "fcf33dfbe13c2354bf0e1b063f9fb422747a46cee00b7420bceff2b81457b345",
+    "B.log": "6b2a0e0ce0071abd69c7e1cf5e66d0951af5c435e06a4dc459e99da76bc75d39"
+  },
+  "ok": true
+}

@@ -1,0 +1,30 @@
+{
+  "at": "2026-11-18 18:37:54.915800+00:00",
+  "snapshot": "4452926:4452926:",
+  "database": "vega_v2",
+  "isolation": "repeatable read",
+  "read_only": "on",
+  "statement_at": "2026-11-18 18:41:18.237095+00:00",
+  "columns": [
+    "transfers",
+    "missing_at_least_one_team",
+    "missing_both_teams",
+    "readable_dated_rows",
+    "players_with_recorded_success",
+    "readable_rows_with_unresolved_endpoint",
+    "readable_rows_with_no_names",
+    "readable_market_values"
+  ],
+  "rows": [
+    [
+      136902,
+      86619,
+      47157,
+      134916,
+      16957,
+      86140,
+      12,
+      342408
+    ]
+  ]
+}

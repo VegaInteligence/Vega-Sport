@@ -1,0 +1,51 @@
+{
+  "archive": "ecrivains-postgres.zip",
+  "size_bytes": 6878919,
+  "sha256": "e0cb0bfac1d5215e59231c3f33103cce8cf29559ceeab0b96e68e5dab42f9ea8",
+  "manifest_sha256": "09f92e27e60ad96f8fdbd24bce8c0bf73a8ea01f4d390ac2c5cc680ae8558273",
+  "candidate": "070f7c82cf99cf240d77278eca152dcdc20803ab",
+  "verified_at_utc": "2026-11-18T19:04:51+00:00",
+  "files": 342,
+  "zip_crc": "valid",
+  "private_path_or_credential_patterns": 0,
+  "relative_readme_links": {
+    "valid": 4,
+    "missing": 0
+  },
+  "offline_verification": {
+    "extracted_archive": {
+      "status": 0,
+      "message": "VÉRIFIÉ · 342 fichiers, cinq correctifs, 72 tests ciblés, 11 observations HTTP, 28 T2, 838 alias"
+    },
+    "negative_missing_key": {
+      "status": 1,
+      "message": "REFUSÉ · la rencontre, sa révision ou sa clé a changé"
+    },
+    "negative_altered_file": {
+      "status": 1,
+      "message": "REFUSÉ · fichier altéré · proof/keys-after.json"
+    },
+    "positive_after_restoring_file": {
+      "status": 0,
+      "message": "VÉRIFIÉ · 342 fichiers, cinq correctifs, 72 tests ciblés, 11 observations HTTP, 28 T2, 838 alias"
+    },
+    "fresh_replay": {
+      "status": 0,
+      "message": "VÉRIFIÉ · 342 fichiers, cinq correctifs, 72 tests ciblés, 11 observations HTTP, 28 T2, 838 alias"
+    },
+    "fresh_replay_network": {
+      "loopback": "allowed",
+      "outside_loopback": "denied",
+      "server_version": "18.6 (Debian 18.6-1.pgdg12+2)"
+    }
+  },
+  "coverage": {
+    "writer_defects": 5,
+    "stored_targeted_test_passes": 72,
+    "fresh_http_observations": 11,
+    "fresh_http_refusals_preserving_etag": 6,
+    "stored_t2_observations": 28,
+    "fresh_aliases": 838,
+    "fresh_alias_checks": 872
+  }
+}

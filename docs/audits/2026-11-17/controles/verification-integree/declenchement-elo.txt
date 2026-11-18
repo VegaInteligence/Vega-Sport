@@ -1,0 +1,30 @@
+# E04k · Les quatre scores de National League North attendent une échéance native
+
+**Déclenchement autonome réfuté sur la branche `7ce5d605d4baa5939d50f53d5f42d28a656f01a7`.** Le vrai worker a ingéré quatre résultats supplémentaires admissibles. Le passage qui les écrit, le passage ordinaire suivant et une nouvelle lecture du même CSV laissent les huit côtés Elo absents. En ajoutant ensuite un seul match natif terminé dans une autre saison, le même worker publie les huit côtés. Deux exécutions sur des bases PostgreSQL 18.6 distinctes reproduisent à l’identique les six passages, les clés et les lectures de la source. [Premier reçu](run-1/resultat.json) · [Deuxième reçu](run-2/resultat.json)
+
+| Passage du worker | Saisons dues avant → après | Résultats complémentaires en base | Côtés de la publication / côtés admissibles | Run Elo local publié |
+|---|---|---:|---:|---:|
+| État de référence, CSV précédent et un match natif de 2019 | 2019 → aucune | 124 | 250 / 250 | 1 |
+| Nouvel état du fournisseur seul | aucune → aucune | 128 | 250 / 258 | 1 |
+| Passage ordinaire une heure simulée plus tard | aucune → aucune | 128 | 250 / 258 | 1 |
+| Nouvelle collecte ordinaire du même CSV, sept heures après sa première lecture | aucune → aucune | 128 | 250 / 258 | 1 |
+| Échéance native de 2020, sans nouvelle collecte | 2020 → aucune | 128 | 260 / 260 | 3 |
+| Passage ordinaire après rattrapage | aucune → aucune | 128 | 260 / 260 | 3 |
+
+Les quatre matchs du 17 novembre 2026 sont Bedford Town–Chorley (1–2), Oxford City–Macclesfield (1–3), Spalding United–Hebburn Town (0–0) et Spennymoor Town–Chester (0–5). Le flux de l’organisateur les classe tous `FullTime`. Le produit lit les CSV Open Matchday. Le script confronte les dates, les paires et les scores correspondants à quatre objets archivés de la National League, avec les formes courtes Bedford et Spennymoor. La première et la seconde publication fournisseur déclarent respectivement 124 et 116 résultats. La seconde apporte les quatre scores et omet douze anciennes rencontres dont la branche conserve les clés, donnant 128 résultats locaux. Le reçu de collecte à 252 lignes couvre résultats et matchs à jouer. [Pièces officielles extraites](inputs/organizer-four.json) · [URL, révisions et empreintes des sources](inputs/provenance.json)
+
+**Cause vérifiée.** Dans `backend/vega/worker.py:137`, la jointure de `due_seasons` exige des valeurs nulles pour `archive_key` et `cup_key`. L’édition importée possède une `cup_key`. `Worker.daily` lit les échéances à la ligne 439, exécute le collecteur à partir de la ligne 449 et conditionne l’appel à `refresh_elo` à la présence d’une saison due à la ligne 486. Lors du passage positif, `backend/vega/power.py:932` relit la population mondiale admissible et publie à la ligne 1007. Le contrôle rapproche les couples exacts (match, équipe) du modèle et du run en état `published`. Les huit clés manquantes sont ainsi attribuées aux quatre matchs. [Script et assertions](rejouer.py) · [Journal du worker](run-1.log)
+
+**Portée en production.** Les blobs Git de `worker.py` et `power.py` sont identiques à ceux du worker AWS `b2e6dd82d36a2ca0f439ec84bf2e5dbbcd3013d9` identifié dans le reçu existant. Le collecteur Open Matchday et le module de gestion des sources diffèrent entre les deux versions. L’expérience qualifie le mécanisme d’ordonnancement sur copie. Elle ne mesure ni la cause du run de production 2099 ni le délai du prochain rattrapage en service. Les autres sources, la cadence du processus ECS, les reprises après échec et les suppressions relèvent de contrôles distincts. E04k conserve la couverture ponctuelle précédemment mesurée et porte désormais un contre-exemple reproductible à la garantie de réveil. Le suivi du planificateur relève de VI-21. [Blobs Git](comparaison-git.json) · [Reçu AWS et lectures du service](../../actualisation-main-1750/production/README.md) · [Mesure T6 antérieure du prédicat à 14 h 20](../../../tracks/6-teams/ecart-elo-1356/README.md)
+
+## Rejouer
+
+Prérequis utilisés ici : serveur PostgreSQL 18 local dédié aux tests disponible sur `127.0.0.1:55439`, compte administrateur local `postgres`, Python 3.14.6 et psycopg 3.3.9, Git, tar et accès au commit. La commande se lance depuis ce dossier. Le nom du répertoire de résultat doit être neuf.
+
+```sh
+../../../ci-clean/bin/python -B rejouer.py \
+  --repo '/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117' \
+  --port 55439 --out run-verification
+```
+
+Le script extrait les blobs Git de `backend/vega` et `backend/sql` dans un dossier temporaire, crée une base inédite, applique 151 migrations jusqu’à `150_sportscore_standings_quarantine.sql` et exerce les rôles `vega_collect` et `vega_calc`. Il appelle six fois le vrai `Worker.daily`. La liste d’adaptateurs et le manifeste sont limités à une compétition pour isoler l’unique changement. Le transport lit les CSV archivés octet pour octet et refuse toute URL imprévue. Le script configure une horloge d’observation et crée deux matchs historiques natifs synthétiques, un par saison distincte, pour déclencher les publications de référence et de contrôle. Chaque reçu contient l’état avant et après, les sorties du worker, les requêtes de source et la confirmation de suppression de la base. [Attendus consignés avant l’exécution](ATTENDUS.md) · [Second journal](run-2.log)

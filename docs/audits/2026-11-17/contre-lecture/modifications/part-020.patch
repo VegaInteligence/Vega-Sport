@@ -1,9 +1,9 @@
 diff --git a/docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md b/docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md
 new file mode 100644
-index 0000000000..94739f6b62
+index 0000000000..d3f4a27e15
 --- /dev/null
 +++ b/docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md
-@@ -0,0 +1,430 @@
+@@ -0,0 +1,431 @@
 +# SportScore official standings: failure modes, edge cases and expected outcomes (VI-29)
 +
 +## Stage 5 — 18 November 2026, 17:40 UTC, written before its tests and its code
@@ -160,11 +160,12 @@ index 0000000000..94739f6b62
 +| 2 | Every table is an object with a `rows` list; at most 30 tables and 100 rows a table (they were cut silently before). Every row is an object with a non-empty `team`, and `pos`, `p` and `pts` known. A known number is an integer (an integral float is accepted, as before; booleans and strings are not). `pos ≥ 1`; `p`, `w`, `d`, `l`, `gf`, `ga ≥ 0`; `pts` may be negative (a deduction) | `INVALID_ROW` |
 +| 3 | At least one row | `EMPTY_TABLE` |
 +| 4 | Several tables have distinct names. One table is stored without a name, as before | `DUPLICATE_GROUP` |
++| 4b | Known wins, draws and losses sum to at most `p`. When all three are given, they sum to exactly `p`. Published points can include deductions or bonuses | `INVALID_ROW` |
 +| 5 | Within a table, one row per name | `DUPLICATE_ROW` |
 +| 6 | Within a table, clubs sharing a position have equal points. That is the only invariant every ranking shares; no tie-break order is assumed | `DUPLICATE_POSITION` |
 +| 7 | A single table holds every position it names: `pos ≤` its row count. Tables of a split may continue one numbering (7–12), so this is not checked across tables | `INCOMPLETE_TABLE` |
 +| 8 | No name designates a club of the previous or next edition of the competition that this edition does not hold | `WRONG_EDITION` |
-+| 9 | Every name designates exactly one team of the current edition: a known spelling, or its distinctive words when one team is clearly closest. There is no pairing by elimination | `UNMATCHED_TEAMS` |
++| 9 | Every name designates exactly one team of the current edition through a known spelling or its distinctive words. Reserve and age-group markers must agree with the canonical identity, including when a spelling was previously learned. Reviewed spellings with different markers are tied to the canonical name and current PitchAPI team key. An ambiguous exact spelling cannot fall back to prefix matching | `UNMATCHED_TEAMS` |
 +| 10 | Within a table, no two rows designate one team | `DUPLICATE_ROW` |
 +| 11 | If every club is more than 4 matches ahead of the edition's kicked-off matches in counted rounds, require independent season evidence when available. The Swedish league's organiser corroborates the exact native year, each club, and played/W/D/L/GF/GA for one complete table. Other scopes still use the calendar guard | `UNVERIFIED_EDITION` when the organiser serves another season, malformed rows or other totals. `ORGANISER_UNAVAILABLE` when it cannot be read (HTTP error, transport, not JSON; stage 5). `WRONG_EDITION` for a scope without a corroboration path |
 +| 12 | Every club of Vega's own table (a club with a counted result in the edition) is in one of the response's tables. Each group is not required to hold the edition's clubs | `INCOMPLETE_TABLE` |

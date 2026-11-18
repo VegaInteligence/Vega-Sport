@@ -1,0 +1,16 @@
+{
+  "at": "2026-11-18T18:43:26.036Z",
+  "method": "Vercel get_deployment for exact public alias",
+  "id": "dpl_7WjuoJZrNNfDxxKcjbXFj63B4tUG",
+  "readyState": "READY",
+  "ready": "2026-11-18T18:39:58.005Z",
+  "target": "production",
+  "alias": [
+    "vegasport.vercel.app",
+    "vega-vegainteligence.vercel.app",
+    "vega-git-main-vegainteligence.vercel.app"
+  ],
+  "sha": "fc0deba100288117b0ea122e7199d1c9db9dcc37",
+  "ref": "main",
+  "url": "vega-ju1z0gr4j-vegainteligence.vercel.app"
+}

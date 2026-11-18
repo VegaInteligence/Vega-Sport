@@ -1,0 +1,1 @@
+{"columns":["kind","dated_rows","unknown_fee","known_zero_fee","positive_fee","negative_fee","neither_name"],"rows":[["free",31152,31152,0,0,0,12],["internal",26646,26618,0,28,0,8],["loan",24537,23013,0,1524,0,4],["loan_return",22698,22670,0,28,0,4],["transfer",31537,18413,0,13124,0,7]]}

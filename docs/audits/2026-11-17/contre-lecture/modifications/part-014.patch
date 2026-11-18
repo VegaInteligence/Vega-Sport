@@ -640,7 +640,7 @@ index 0000000000..db05ddb958
 +    def record_refusal(self, conn):
 +        record(conn, self.scope, self.now, self.observation, "refused", self.code, self.detail)
 diff --git a/backend/vega/sources/cups.py b/backend/vega/sources/cups.py
-index ac22aa283c..b9ce32815b 100644
+index ac22aa283c..ee3fc8aaa7 100644
 --- a/backend/vega/sources/cups.py
 +++ b/backend/vega/sources/cups.py
 @@ -3,15 +3,18 @@ source projections (scripts/source-projections, through backend/sources/bridge.m
@@ -764,7 +764,7 @@ index ac22aa283c..b9ce32815b 100644
          out.append((key, dict(row, position=position)))
      return out
  
-@@ -144,65 +183,129 @@ def _team(conn, provider, key, name):
+@@ -144,65 +183,130 @@ def _team(conn, provider, key, name):
      return team
  
  
@@ -881,6 +881,7 @@ index ac22aa283c..b9ce32815b 100644
 +    elsewhere = snapshot.elsewhere(conn, provider, edition, [key for key, _ in rows if key not in before])
 +    if typed_dfb and elsewhere:
 +        raise SourceError("PERIODS_CONFLICT", f"match keys already bound to another edition: {', '.join(sorted(elsewhere))}")
++    snapshot.guard(provider, elsewhere, {key: m["status"] for key, m in rows}, cup_key)
 +    before.update(elsewhere)
 +    changes, keep = 0, set()
      for key, m in rows:
@@ -933,7 +934,7 @@ index ac22aa283c..b9ce32815b 100644
  
  
  def run(conn, get, scope, now):
-@@ -211,9 +314,23 @@ def run(conn, get, scope, now):
+@@ -211,9 +315,23 @@ def run(conn, get, scope, now):
          raise ValueError(scope)
      query = {"competition": competition, "season": season}
      answer = bridge("projection", kind, urlencode(query)) or {}

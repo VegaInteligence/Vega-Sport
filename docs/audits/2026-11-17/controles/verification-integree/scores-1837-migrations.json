@@ -1,0 +1,30 @@
+{
+  "at": "2026-11-18 18:37:54.915800+00:00",
+  "snapshot": "4452926:4452926:",
+  "database": "vega_v2",
+  "isolation": "repeatable read",
+  "read_only": "on",
+  "statement_at": "2026-11-18 18:41:18.183858+00:00",
+  "columns": [
+    "version",
+    "sha256",
+    "applied_at"
+  ],
+  "rows": [
+    [
+      "133_cohort_max_wait.sql",
+      "4f08e25c4a3f694f8642911199948389b4feebe1ef644b1ece41be255e477609",
+      "2026-11-17 17:01:35.402304+00:00"
+    ],
+    [
+      "134_archive_scores_due.sql",
+      "89dcafc08b55b2f6b6bb8cbf22f485452de419e9d8b7f0bebb8b8585bfacd5f6",
+      "2026-11-18 16:52:50.615988+00:00"
+    ],
+    [
+      "135_player_transfers.sql",
+      "131c37b1f505a7d7377de019e522a880bfad4c25005f6e039c33e308e29a6e94",
+      "2026-11-18 18:22:31.334579+00:00"
+    ]
+  ]
+}

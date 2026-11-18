@@ -1,0 +1,39 @@
+# Rejeu des écrivains Open Matchday et SportScore
+
+Le lot Sol 6.2 xhigh se termine à `1a3c923ca92af2b5fc9e05c9137631138f0b2c77`. Les trois commits locaux sont `111472ac47` pour la journée et la concurrence, `dfe681a804` pour les clés de match historiques et `1a3c923ca9` pour les classements. Les rejeux HTTP, T2 et des alias ont tourné sur le merge `070f7c82cf99cf240d77278eca152dcdc20803ab`. Git confirme que les modules de sources et les deux fichiers de tests sont identiques entre ce merge et le lot.
+
+## Entrées et résultats
+
+- [Scénarios définis avant le code](SCENARIOS.md). Les tests appellent le point d’entrée du worker avec des entrées contrôlées et relisent des vues SQL. Pour la concurrence, la barrière laisse la connexion B committer après la lecture réelle de A. La vue est lue avec le match et ses clés, puis comparée après la fin de A.
+- Le rouge initial reproduit l’effacement de la journée et l’écrasement ou la suppression du résultat. Le rejeu Open Matchday final passe 36 tests. Le rouge des clés historiques montre que l’alias provoquait un refus du cas inchangé avec un résultat, et le [témoin autrichien du coordinateur](../alias-match/recu-initial.json) isole la disparition d’une fixture et de ses deux clés. Le vert garde les deux clés tant que le match reste, refuse les clés historiques réémises et retire les clés d’une fixture dont le retrait est admissible. [Rouge Open Matchday](red-final-open-matchday.log) · [Rouge clés historiques](red-old-match-keys.log) · [Vert Open Matchday](green-final-open-matchday.log)
+- Le rouge SportScore montre les bilans impossibles et l’association première–réserve. Le vert des sources passe 36 tests, dont les 54 cas existants de la matrice SportScore. Les tests confirment les variantes de réserve connues, la ponctuation F.C., les homonymes et les déductions. [Rouge SportScore](red-final-sportscore.log) · [Variantes](red-reviewed-variants.log) · [Vert des sources](green-final-sportscore.log)
+- Rejeu de 11 observations ciblées par HTTPS local, PostgreSQL 18.6 puis l’API HTTP avec le rôle de lecture. Six refus préservent l’ETag et donnent une réponse conditionnelle 304. La correction cohérente donne 200 avec une nouvelle version, et sa répétition conserve la version. Les 28 observations de la suite T2 gardent les résultats attendus. [HTTP ciblé](http-final/results.json) · [T2](t2-final/results.json)
+- Le chargeur SportScore reconnaît les 838 alias existants de la capture. Sur 872 vérifications, 852 utilisent une appartenance d’édition dans la capture et 20 placent dans un roster synthétique les clubs sans édition officielle capturée. Cela teste l’admissibilité de la graphie, avec les identités actuelles et les collisions exactes capturées. Les véritables exceptions sont liées aux clés PitchAPI. [Vérification des alias](aliases-final.json)
+
+- Le harnais inchangé de la revue Astra retrouve la journée 1 après deux lectures et conserve Hartberg, son résultat 2–1 et sa clé au terme des deux transactions. Le classement conserve ses quatre joués et trois victoires après les deux refus et ne crée aucun nouvel alias. [Rejeu original](witness-astra-final.json)
+
+## Commandes
+
+Lancer depuis le worktree intégré avec PostgreSQL 18 jetable sur 127.0.0.1:55439, le venv `ci-clean` contenant Python 3.14 et psycopg, Node installé et les dépendances de l’API installées. Les deux suites utilisent les bases de test dédiées déjà créées. Les trois harnais supplémentaires créent et suppriment chacun leur base à nom aléatoire.
+
+```sh
+W='/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117'
+E='/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review'
+R="$E/delivery/actualisation-main-1803/corrections-revue/sol"
+cd "$W"
+export PYTHONPATH=backend:backend/tests PYTHONDONTWRITEBYTECODE=1
+VEGA_V2_SNAPSHOTS_TEST_DSN=postgresql://postgres@127.0.0.1:55439/vega_v2_snapshots_test \
+  "$E/ci-clean/bin/python" -m unittest -v test_source_snapshots
+VEGA_V2_SOURCES_TEST_DSN=postgresql://postgres@127.0.0.1:55439/vega_v2_sources_test \
+  "$E/ci-clean/bin/python" -m unittest -v test_sportscore_standings test_open_matchday test_sources
+"$E/ci-clean/bin/python" "$R/replay-http.py" "$R/http-rerun"
+"$E/ci-clean/bin/python" "$R/load-harness.py" "$R/t2-rerun"
+"$E/ci-clean/bin/python" "$R/replay-aliases.py" "$R/aliases-rerun.json"
+"$E/ci-clean/bin/python" "$E/reviews/integrated-7ce5d605/astra/writer_witness.py" "$W"
+```
+
+Les dossiers de sortie des harnais HTTP doivent être disponibles à la création. Les journaux `setup-previous-track-*` correspondent au premier démarrage du harnais figé qui pointait encore vers l’ancien worktree T2. `load-harness.py` fixe le worktree et vérifie les modules chargés. Pour le rouge d’origine les nouveaux tests ont tourné avant l’implémentation à `7ce5d605`, puis à `111472ac47` pour les clés historiques. Les métriques de l’API restent locales.
+
+## Portée
+
+Le contrôle de l’identité SportScore repose sur les marqueurs explicites et les variantes attestées. Il garde les homonymes exacts ambigus au sein d’une même édition. Les fonctions d’archives de `identity.py` excluent déjà `kind=source_spelling`. Les candidats UEFA dans `uefa.py` relisent des noms par pays au-delà du roster SportScore. Les collisions d’alias entre entités de plusieurs compétitions ou sections, notamment Andorra et Varteks, restent à résoudre dans le catalogue intersources. Les données existantes restent en place. Aucune migration, mutation de production ou publication distante n’a été réalisée dans ce lot.

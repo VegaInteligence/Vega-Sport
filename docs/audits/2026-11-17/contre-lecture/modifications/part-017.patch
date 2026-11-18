@@ -1,3 +1,160 @@
+diff --git a/dashboard/frontend/src/components/KnockoutBracket.jsx b/dashboard/frontend/src/components/KnockoutBracket.jsx
+index 3d26d90597..c35464520c 100644
+--- a/dashboard/frontend/src/components/KnockoutBracket.jsx
++++ b/dashboard/frontend/src/components/KnockoutBracket.jsx
+@@ -25,13 +25,14 @@ function MatchCard({ match, view }) {
+     { name: match.away, image: match.awayImage },
+   ];
+   const label = (name) => bracketTeamLabel(nationalTeams ? nationalTeamLabel(name) : name);
+-  const tag = match.penalties ? "t.a.b." : match.notes?.includes("après prolongation") ? "a.p." : null;
++  const canceled = match.status === "canceled";
++  const tag = canceled ? "Annulé" : match.penalties ? "t.a.b." : match.notes?.includes("après prolongation") ? "a.p." : null;
+   const followed = teams.some((team) => follows(team.name));
+   const dimmed = hover && !teams.some((team) => teamKey(team.name) === hover);
+   return (
+     <Tag
+       className={"knockout-match" + (href ? " knockout-match-link" : "") + (followed ? " knockout-followed" : "") + (dimmed ? " knockout-dimmed" : "")}
+-      title={[match.date ? date(match.date) : "", match.penalties ? "tirs au but" : tag ? "après prolongation" : "", ...(match.notes?.includes("match rejoué") ? ["match rejoué"] : [])].filter(Boolean).join(" · ") || undefined}
++      title={[match.date ? date(match.date) : "", canceled ? "Annulé" : match.penalties ? "tirs au but" : tag ? "après prolongation" : "", ...(match.notes?.includes("match rejoué") ? ["match rejoué"] : [])].filter(Boolean).join(" · ") || undefined}
+       {...(href ? { href, prefetch: false } : {})}
+     >
+       {tag && <span className="knockout-tag">{tag}</span>}
+@@ -53,7 +54,7 @@ function MatchCard({ match, view }) {
+             <span className="knockout-team-name" title={label(team.name)}>{label(team.name)}</span>
+             {match.score ? (
+               <strong>{match.score[index]}</strong>
+-            ) : index === 0 && match.date ? (
++            ) : index === 0 && match.date && !canceled ? (
+               <span className="knockout-when">{date(match.date)}</span>
+             ) : (
+               <strong>–</strong>
+@@ -95,20 +96,21 @@ function Champion({ sides, view, trophy }) {
+ }
+ 
+ /* A group the bracket starts from (1974's and 1978's second round, 1982's, 1930's groups) or ends with (1950's final
+- * round): its table, the winner first. */
++ * round): its table, with the established winner highlighted. */
+ function GroupCard({ table, view }) {
+   const { nationalTeams, season, follows } = view;
++  const leader = table.rows.find((row) => row.position === 1 && !row.tied);
+   return (
+     <div className={"knockout-match knockout-group" + (table.rows.some((row) => follows(row.name)) ? " knockout-followed" : "")}>
+       <div className="knockout-group-name">
+         <span>{table.name}</span>
+         <span>Pts</span>
+       </div>
+-      {table.rows.map((row, index) => (
+-        <div key={row.name} className={"knockout-team" + (index === 0 ? " knockout-winner" : " knockout-loser") + (follows(row.name) ? " knockout-own" : "")}>
++      {table.rows.map((row) => (
++        <div key={row.name} className={"knockout-team" + (leader ? (row === leader ? " knockout-winner" : " knockout-loser") : "") + (follows(row.name) ? " knockout-own" : "")}>
+           {nationalTeams && nationalFlagCode(row.name, season) ? <NationalFlag name={row.name} season={season} /> : null}
+           <span className="knockout-team-name" title={nationalTeams ? nationalTeamLabel(row.name) : row.name}>{nationalTeams ? nationalTeamLabel(row.name) : row.name}</span>
+-          <strong>{row.points}</strong>
++          <strong>{row.points ?? "—"}</strong>
+         </div>
+       ))}
+     </div>
+@@ -125,19 +127,17 @@ const ThirdPlace = ({ match, view }) =>
+ 
+ /** The round a phone opens on: the first one still to be played, else the final. */
+ function openRound(rounds) {
+-  const pending = rounds.findIndex((round) => round.matches.some((match) => match.status !== "finished"));
++  const pending = rounds.findIndex((round) => round.matches.some((match) => !["finished", "canceled"].includes(match.status)));
+   return pending === -1 ? rounds.length - 1 : pending;
+ }
+ 
+-export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams = false, season, highlight = "", trophy = null, win = 3 }) {
++export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams = false, competition, season, highlight = "", trophy = null }) {
+   const bracket = useMemo(() => buildKnockoutBracket(matches), [matches]);
+   const early = bracket.rounds.length > 1 && bracket.rounds[0].key === "round64" ? bracket.rounds[0] : null;
+   const rounds = early ? bracket.rounds.slice(1) : bracket.rounds;
+   const sides = useMemo(() => bracketSides({ ...bracket, rounds }), [bracket, early]);
+-  // The groups the bracket starts from (a second round of groups, 1930's groups), and the group that ends an
+-  // edition without a final (1950); `win`: the points of a win in the edition.
+-  const groups = useMemo(() => bracketGroups(sides, matches, { win }), [sides, matches, win]);
+-  const last = useMemo(() => finalGroup(matches, { win }), [matches, win]);
++  const groups = useMemo(() => bracketGroups(sides, matches, { competition, season }), [sides, matches, competition, season]);
++  const last = useMemo(() => finalGroup(matches, { competition, season }), [matches, competition, season]);
+   const [hover, setHover] = useState("");
+   const [phoneRound, setPhoneRound] = useState(null);
+   // The bracket takes the height the screen leaves under its own top edge.
+@@ -171,7 +171,7 @@ export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams =
+   const legs = rounds.some((round) => round.matches.some((match) => match.legs?.length));
+   // A phone's tabs: the groups the bracket starts from, then its rounds.
+   const tabs = [...(groups ? [{ key: "groups", label: groups.label === "Second tour" ? "2e tour" : "Groupes", tables: [...groups.left, ...groups.right] }] : []), ...rounds];
+-  const current = phoneRound ?? openRound(rounds) + (groups ? 1 : 0);
++  const activeTab = tabs.find((tab) => tab.key === phoneRound) ?? tabs[openRound(rounds) + (groups ? 1 : 0)];
+   // With groups before it, a round's ties are twice as tall: two groups lead to each tie of the first round.
+   const depth = groups ? 1 : 0;
+   const column = (round, index, side) => (
+@@ -230,21 +230,21 @@ export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams =
+           </div>
+           <div className="knockout-phone">
+             <div className="segmented-control knockout-rounds" aria-label="Tour du tableau">
+-              {tabs.map((tab, index) => (
+-                <button key={tab.key} type="button" aria-pressed={index === current} onClick={() => setPhoneRound(index)}>
++              {tabs.map((tab) => (
++                <button key={tab.key} type="button" aria-pressed={tab === activeTab} onClick={() => setPhoneRound(tab.key)}>
+                   {SHORT[tab.key] || tab.label}
+                 </button>
+               ))}
+             </div>
+-            {tabs[current].key === "final" && <Champion sides={sides} view={view} trophy={trophy} />}
+-            {tabs[current].tables ? (
+-              <div className="knockout-list">{tabs[current].tables.map((table) => <GroupCard key={table.name} table={table} view={view} />)}</div>
++            {activeTab.key === "final" && <Champion sides={sides} view={view} trophy={trophy} />}
++            {activeTab.tables ? (
++              <div className="knockout-list">{activeTab.tables.map((table) => <GroupCard key={table.name} table={table} view={view} />)}</div>
+             ) : (
+-              <div className={"knockout-list" + (tabs[current].matches.length < 3 ? " knockout-list-single" : "")}>
+-                {tabs[current].matches.map((match) => <MatchCard key={match.key} match={match} view={view} />)}
++              <div className={"knockout-list" + (activeTab.matches.length < 3 ? " knockout-list-single" : "")}>
++                {activeTab.matches.map((match) => <MatchCard key={match.key} match={match} view={view} />)}
+               </div>
+             )}
+-            {tabs[current].key === "final" && <ThirdPlace match={sides.third} view={view} />}
++            {activeTab.key === "final" && <ThirdPlace match={sides.third} view={view} />}
+           </div>
+         </>
+       ) : (
+diff --git a/dashboard/frontend/src/components/MatchDetail.jsx b/dashboard/frontend/src/components/MatchDetail.jsx
+index 7576d5ecb7..6342f18308 100644
+--- a/dashboard/frontend/src/components/MatchDetail.jsx
++++ b/dashboard/frontend/src/components/MatchDetail.jsx
+@@ -1,4 +1,5 @@
+ import { nationalFlagCode } from "../services/national-flags.js";
++import { editionArtworkUrl } from "../services/competition-artwork.js";
+ import React, {
+   lazy,
+   Suspense,
+@@ -515,8 +516,11 @@ export default function MatchDetail({ match }) {
+       <section className="match-scoreboard" aria-label="Résumé du match">
+         <div className="scoreboard-meta">
+           <div>
+-            {competition && (
+-              <Media name={competition.name} url={competition.imageUrl} />
++            {(competition || match.editionArtwork) && (
++              <Media
++                url={editionArtworkUrl(match.leagueId, competition?.imageUrl, match.editionArtwork)}
++                initials={false}
++              />
+             )}
+             <span>{match.league || competition?.name}</span>
+           </div>
+diff --git a/dashboard/frontend/src/components/Media.module.css b/dashboard/frontend/src/components/Media.module.css
+index 40d9ae4985..28627932f0 100644
+--- a/dashboard/frontend/src/components/Media.module.css
++++ b/dashboard/frontend/src/components/Media.module.css
+@@ -14,3 +14,9 @@
+ .imageReady {
+   opacity: 1;
+ }
++
++.empty.empty {
++  background: transparent;
++  border-color: transparent;
++  box-shadow: none;
++}
 diff --git a/dashboard/frontend/src/components/NationPages.jsx b/dashboard/frontend/src/components/NationPages.jsx
 index 348fc23459..de99e8ee48 100644
 --- a/dashboard/frontend/src/components/NationPages.jsx
@@ -136,10 +293,10 @@ index 9be67383ba..9a82394bd5 100644
          <span className="fixture-competition-copy">
            <span className="fixture-competition-name">{competition.name}</span>
 diff --git a/dashboard/frontend/src/server/report-data.js b/dashboard/frontend/src/server/report-data.js
-index 2f120886c6..abbd52e8e8 100644
+index f712c5315f..bef842d3ec 100644
 --- a/dashboard/frontend/src/server/report-data.js
 +++ b/dashboard/frontend/src/server/report-data.js
-@@ -182,8 +182,15 @@ export function buildMatchReport({ id, match, stats, grades, live, forecast }, t
+@@ -188,8 +188,15 @@ export function buildMatchReport({ id, match, stats, grades, live, forecast }, t
      const item = items.get(key);
      return { key, label, format, home: statValue(item.home), away: statValue(item.away), homeText: item.home, awayText: item.away };
    });
@@ -2092,274 +2249,3 @@ index 0000000000..55c44c8dc2
 +}
 +
 +export { historicalPair };
-diff --git a/dashboard/shared/legacy-8018e08/openfootball-history.js b/dashboard/shared/legacy-8018e08/openfootball-history.js
-new file mode 100644
-index 0000000000..0b4e1cc801
---- /dev/null
-+++ b/dashboard/shared/legacy-8018e08/openfootball-history.js
-@@ -0,0 +1,116 @@
-+import { normalizeText } from "./archive-text.js";
-+
-+/** OpenFootball stays separate from PitchAPI; no player or xG fields are inferred. */
-+export function historicalRows(season, competition = "all", query = "") {
-+  const needle = normalizeText(query).trim();
-+  const rows = [];
-+  for (const league of season?.competitions || []) {
-+    if (competition !== "all" && league.id !== competition) continue;
-+    for (let i = 0; i < league.matches.length; i++) {
-+      const match = league.matches[i];
-+      if (
-+        needle &&
-+        !normalizeText(`${match.team1 || ""} ${match.team2 || ""}`).includes(
-+          needle,
-+        )
-+      )
-+        continue;
-+      rows.push({
-+        key: `${league.id}:${i}`,
-+        competition: league.name,
-+        country: league.country,
-+        match,
-+      });
-+    }
-+  }
-+  rows.sort(
-+    (a, b) =>
-+      String(b.match.date || "").localeCompare(String(a.match.date || "")) ||
-+      a.key.localeCompare(b.key),
-+  );
-+  return rows;
-+}
-+
-+export function historicalPair(value) {
-+  if (!Array.isArray(value) || value.length !== 2) return [null, null];
-+  return value.map((item) =>
-+    Number.isInteger(item) && item >= 0 ? item : null,
-+  );
-+}
-+
-+/** Show the final match score, with extra time distinguished from penalties. */
-+export function historicalScore(match) {
-+  const final = historicalPair(match?.score?.final);
-+  if (final.every((value) => value !== null)) return final;
-+  const extra = historicalPair(match?.score?.et);
-+  return extra.every((value) => value !== null)
-+    ? extra
-+    : historicalPair(match?.score?.ft);
-+}
-+
-+export function historicalScoreNotes(match) {
-+  const notes = [];
-+  const extra = historicalPair(match?.score?.et);
-+  const penalties = historicalPair(match?.score?.p);
-+  if (extra.every((value) => value !== null)) notes.push("après prolongation");
-+  if (penalties.every((value) => value !== null))
-+    notes.push(`tirs au but ${penalties[0]} – ${penalties[1]}`);
-+  const fields = match?.sourceFields || {};
-+  if (match?.status === "not_played")
-+    notes.push(
-+      `Rencontre non disputée${fields.nonmatch ? ` : ${fields.nonmatch}` : ""}`,
-+    );
-+  if ((fields.neutral || "").toLowerCase() === "yes")
-+    notes.push("terrain neutre");
-+  const comment = (fields.Comments || fields.notes || "").trim();
-+  if (comment && comment.toLowerCase() !== "na")
-+    notes.push(`Source : ${comment}`);
-+  return notes;
-+}
-+
-+export const HISTORICAL_CSV_FIELDS = [
-+  "date",
-+  "competition",
-+  "round",
-+  "home",
-+  "home_goals",
-+  "away_goals",
-+  "away",
-+  "home_goals_90",
-+  "away_goals_90",
-+  "penalties_home",
-+  "penalties_away",
-+  "notes",
-+  "source_date",
-+  "source_venue",
-+  "source_attendance",
-+  "source_neutral",
-+  "status",
-+  "date_note",
-+];
-+
-+export function historicalCsvRow({ competition, match }) {
-+  const [home90, away90] = historicalPair(match.score?.ft);
-+  const [home, away] = historicalScore(match);
-+  const [penaltiesHome, penaltiesAway] = historicalPair(match.score?.p);
-+  return [
-+    match.date,
-+    competition,
-+    match.round,
-+    match.team1,
-+    home,
-+    away,
-+    match.team2,
-+    home90,
-+    away90,
-+    penaltiesHome,
-+    penaltiesAway,
-+    historicalScoreNotes(match).join(" · "),
-+    match.sourceFields?.Date,
-+    match.sourceFields?.Venue,
-+    match.sourceFields?.attendance,
-+    match.sourceFields?.neutral,
-+    match.status,
-+    match.dateNote,
-+  ];
-+}
-diff --git a/dashboard/shared/openfootball-history.js b/dashboard/shared/openfootball-history.js
-index 0b4e1cc801..2ef05dcd19 100644
---- a/dashboard/shared/openfootball-history.js
-+++ b/dashboard/shared/openfootball-history.js
-@@ -31,32 +31,63 @@ export function historicalRows(season, competition = "all", query = "") {
-   return rows;
- }
- 
-+const isPair = (value) => Array.isArray(value) && value.length === 2 && value.every((item) => Number.isInteger(item) && item >= 0);
-+
-+/** Two non-negative integer goals, or [null, null]: half a pair is no score. */
- export function historicalPair(value) {
--  if (!Array.isArray(value) || value.length !== 2) return [null, null];
--  return value.map((item) =>
--    Number.isInteger(item) && item >= 0 ? item : null,
--  );
-+  return isPair(value) ? [...value] : [null, null];
-+}
-+
-+// worldcup.json writes a full-time result as {ft: [2, 1], ht: […]} or, in most editions from 1950
-+// to 2014 and seven matches of 2022, as [2, 1]: the same full-time result.
-+const scoreObject = (score) => (Array.isArray(score) ? { ft: score } : score);
-+const SCORE_PARTS = ["ft", "ht", "et", "p"];
-+
-+/**
-+ * An OpenFootball score as the cup sources store it (open-cups.mjs, vega/sources/cups.py
-+ * score_parts): {ft, ht, et, p}, each a [home, away] pair, or null without a result. Throws on
-+ * anything else (an INVALID_SCORE: the edition is not written).
-+ */
-+export function openFootballScore(score) {
-+  if (score === undefined || score === null) return null;
-+  const parts = scoreObject(score);
-+  if (!parts || typeof parts !== "object" || Array.isArray(parts)) throw invalidScore();
-+  const keys = Object.keys(parts);
-+  if (keys.some((key) => !SCORE_PARTS.includes(key) || !isPair(parts[key]))) throw invalidScore();
-+  if (!keys.length) return null;
-+  // A half time or a shoot-out without the match's score is incomplete.
-+  if (!keys.includes("ft") && !keys.includes("et")) throw invalidScore();
-+  return Object.fromEntries(keys.map((key) => [key, [...parts[key]]]));
-+}
-+
-+function invalidScore() {
-+  return Object.assign(new Error("Invalid OpenFootball score"), { code: "INVALID_SCORE" });
- }
- 
- /** Show the final match score, with extra time distinguished from penalties. */
- export function historicalScore(match) {
--  const final = historicalPair(match?.score?.final);
-+  const score = scoreObject(match?.score);
-+  const final = historicalPair(score?.final);
-   if (final.every((value) => value !== null)) return final;
--  const extra = historicalPair(match?.score?.et);
-+  const extra = historicalPair(score?.et);
-   return extra.every((value) => value !== null)
-     ? extra
--    : historicalPair(match?.score?.ft);
-+    : historicalPair(score?.ft);
- }
- 
-+// A match the source says was never played (football.json: "cancelled"; the archive builders: "not_played").
-+const CANCELED = new Set(["not_played", "cancelled", "canceled"]);
-+
- export function historicalScoreNotes(match) {
-   const notes = [];
--  const extra = historicalPair(match?.score?.et);
--  const penalties = historicalPair(match?.score?.p);
-+  const score = scoreObject(match?.score);
-+  const extra = historicalPair(score?.et);
-+  const penalties = historicalPair(score?.p);
-   if (extra.every((value) => value !== null)) notes.push("après prolongation");
-   if (penalties.every((value) => value !== null))
-     notes.push(`tirs au but ${penalties[0]} – ${penalties[1]}`);
-   const fields = match?.sourceFields || {};
--  if (match?.status === "not_played")
-+  if (CANCELED.has(match?.status))
-     notes.push(
-       `Rencontre non disputée${fields.nonmatch ? ` : ${fields.nonmatch}` : ""}`,
-     );
-@@ -90,9 +121,10 @@ export const HISTORICAL_CSV_FIELDS = [
- ];
- 
- export function historicalCsvRow({ competition, match }) {
--  const [home90, away90] = historicalPair(match.score?.ft);
-+  const score = scoreObject(match.score);
-+  const [home90, away90] = historicalPair(score?.ft);
-   const [home, away] = historicalScore(match);
--  const [penaltiesHome, penaltiesAway] = historicalPair(match.score?.p);
-+  const [penaltiesHome, penaltiesAway] = historicalPair(score?.p);
-   return [
-     match.date,
-     competition,
-diff --git a/dashboard/shared/tournament-stages.js b/dashboard/shared/tournament-stages.js
-new file mode 100644
-index 0000000000..bc0975947b
---- /dev/null
-+++ b/dashboard/shared/tournament-stages.js
-@@ -0,0 +1,16 @@
-+export const UNKNOWN_STAGE_LABEL = "Phase non renseignée";
-+
-+/** Read only round labels that identify a stage in the competition sources. */
-+export function stageKind(round) {
-+  const name = String(round ?? "").trim().toLowerCase()
-+    .replace(/^finals,\s*|,\s*replays?$/g, "");
-+  if (/^(?:(?:match for )?third[ -]place(?: match| play[ -]?off)?|3rd place|bronze|match pour la troisi[eè]me place)$/.test(name)) return "third";
-+  if (/^(?:the )?finale?s?$/.test(name)) return "final";
-+  if (name === "final round") return "final-pool";
-+  if (/^(?:semi[ -]?finals?|1\/2|demi(?:[ -]?finales?)?)$/.test(name)) return "semi";
-+  if (/^(?:quarter[ -]?finals?|1\/4|quarts?(?: de finale)?)$/.test(name)) return "quarter";
-+  if (/^(?:round of 16|1\/8|huiti[eè]mes?(?: de finale)?)$/.test(name)) return "r16";
-+  if (/^(?:round of 32|1\/16|seizi[eè]mes?(?: de finale)?)$/.test(name)) return "r32";
-+  if (/^(?:\d+|(?:matchday|journ[eé]e) \d+|(?:group|groupe|gruppe) [a-z0-9]+(?: play[ -]?off)?|(?:first|preliminary|1st) round|phase de groupes)$/.test(name)) return "group";
-+  return "unknown";
-+}
-diff --git a/dashboard/shared/world-cup-1950.js b/dashboard/shared/world-cup-1950.js
-new file mode 100644
-index 0000000000..97bfd3a82c
---- /dev/null
-+++ b/dashboard/shared/world-cup-1950.js
-@@ -0,0 +1,30 @@
-+// FIFA's 1950 final pool and the six dated OpenFootball results checked against it (VI-27 B).
-+// https://www.fifa.com/es/articles/cuantas-finales-mundial-participo-uruguay-historial
-+export const WORLD_CUP_1950_EDITION = "open-cups:world-cup-history:1950";
-+const PLACES = ["Uruguay", "Brazil", "Sweden", "Spain"];
-+const GAMES = [
-+  { date: "1950-07-09", home: "Uruguay", away: "Spain", score: [2, 2] },
-+  { date: "1950-07-09", home: "Brazil", away: "Sweden", score: [7, 1] },
-+  { date: "1950-07-13", home: "Brazil", away: "Spain", score: [6, 1] },
-+  { date: "1950-07-13", home: "Uruguay", away: "Sweden", score: [3, 2] },
-+  { date: "1950-07-16", home: "Sweden", away: "Spain", score: [3, 1] },
-+  { date: "1950-07-16", home: "Uruguay", away: "Brazil", score: [2, 1] },
-+];
-+
-+const signature = ({ date, home, away, score }) =>
-+  JSON.stringify([date, ...(home < away ? [home, away, score?.[0], score?.[1]] : [away, home, score?.[1], score?.[0]])]);
-+
-+function corroborates(matches, expected) {
-+  if (matches.length !== expected.length) return false;
-+  const observed = new Set(matches.map(signature));
-+  return expected.every((match) => observed.has(signature(match)));
-+}
-+
-+export const isFinalPool1950 = (matches) => corroborates(matches, GAMES);
-+
-+export function finalPoolPosition1950(matches, team) {
-+  const index = PLACES.indexOf(team);
-+  if (index < 0) return null;
-+  const expected = GAMES.filter(({ home, away }) => team === home || team === away);
-+  return corroborates(matches, expected) ? index + 1 : null;
-+}

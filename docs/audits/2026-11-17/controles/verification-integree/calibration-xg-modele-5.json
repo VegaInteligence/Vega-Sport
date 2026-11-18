@@ -1,0 +1,240 @@
+{
+  "status": "observed_post_fit_cohort",
+  "worker_revision": "5956a83cd76bf0b41924795e05b5024c8e1770d6",
+  "worker_image_digest": "sha256:aabd97a97c17c4a344c542f656254e25cda1eff4312da211aa4e9a3c8ad4e0f9",
+  "deployed_sources_sha256": {
+    "backend/vega/xg.py": "8f92e87f5881b4e5e2c6862ad0870c1d8dc53c5630afd337e4e3d2073e18f6c2",
+    "backend/vega/models.py": "87e9ee3fc43f35d4ca06b1969034c3b9c96a486365165a6a2522219c675f181b",
+    "backend/vega/planner.py": "99f87139923b4e1c187c92b38b9cf73d4a07aa87440f1464ddae5b23da5b5b8d",
+    "backend/sql/080_vega_xg.sql": "83a2991c752d193fa431d80ca02b18c6810021357e05ff8100ec90fac8966c0b"
+  },
+  "model": {
+    "id": 5,
+    "version": "xg-v2",
+    "fitted_at": "2026-11-17 14:21:21.688321+00:00",
+    "shots": 1798648,
+    "goals": 174103,
+    "penalty": 0.7788121392664308,
+    "intercept": -1.5079719967860883,
+    "angle": 1.6056168455753062,
+    "distance": -0.08875797986259322,
+    "distance_sq": 0.0,
+    "angle_distance": 0.0,
+    "header": -0.11994203796917462,
+    "other_body": -0.5107783144076689,
+    "from_corner": -0.7103847474197587,
+    "set_piece": -0.3816925042943917,
+    "fast_break": 0.571569239561603,
+    "free_kick": 0.6272173785783007,
+    "throw_in": -0.4785798489787042,
+    "individual_play": -0.45367138127251555,
+    "header_distance": -0.9950860531297689,
+    "referenced_by_scores": true,
+    "stored_model_count": 1
+  },
+  "training_snapshot_exact": null,
+  "strict_holdout_after": "2026-11-17 14:21:21.688321+00:00",
+  "strict_holdout_after_basis": "Deployed xg.refresh reads BINS, fits and reads PENALTIES before inserting model; fitted_at defaults to transaction now(). Only matches with a verified post-publication kickoff and later observed finish are evaluated.",
+  "observation": {
+    "at": "2026-11-18 18:35:05.165302+00:00",
+    "snapshot": "4452794:4452794:",
+    "database": "vega_v2",
+    "read_only": "on",
+    "isolation": "repeatable read"
+  },
+  "coverage_window_days_cap": 45,
+  "coverage_after_fit_full_within_window": true,
+  "sources_scope": "native pitchapi, finished, exact fixture kickoff; archive and date-only rows excluded from scores",
+  "coverage_by_timing": {
+    "after_fit_verified_kickoff": {
+      "fixtures": 1,
+      "fixtures_with_shots": 1,
+      "shots": 25,
+      "eligible": 25,
+      "npxg_eligible": 24,
+      "npxg_35m": 1,
+      "scores_latest": 25,
+      "scores_other": 0,
+      "updated_after_fit": 25
+    },
+    "at_or_before_fit": {
+      "fixtures": 5,
+      "fixtures_with_shots": 5,
+      "shots": 135,
+      "eligible": 134,
+      "npxg_eligible": 131,
+      "npxg_35m": 6,
+      "scores_latest": 134,
+      "scores_other": 0,
+      "updated_after_fit": 0
+    },
+    "future_kickoff": {
+      "fixtures": 13,
+      "fixtures_with_shots": 0,
+      "shots": 0,
+      "eligible": 0,
+      "npxg_eligible": 0,
+      "npxg_35m": 0,
+      "scores_latest": 0,
+      "scores_other": 0,
+      "updated_after_fit": 0
+    },
+    "kickoff_unknown": {
+      "fixtures": 34,
+      "fixtures_with_shots": 0,
+      "shots": 0,
+      "eligible": 0,
+      "npxg_eligible": 0,
+      "npxg_35m": 0,
+      "scores_latest": 0,
+      "scores_other": 0,
+      "updated_after_fit": 0
+    }
+  },
+  "candidates_before_finish_gate": 25,
+  "counts_excluded_after_sql": {},
+  "domains": {
+    "all_non_penalty": {
+      "shots": 24,
+      "matches": 1,
+      "goals": 5,
+      "expected_goals": 3.3366605718092432,
+      "predicted_rate": 0.13902752382538514,
+      "observed_rate": 0.20833333333333334,
+      "brier": 0.11935845943006107,
+      "observed_minus_expected_rate": 0.0693058095079482,
+      "cluster_bootstrap_95pct": null
+    },
+    "35m_plus": {
+      "shots": 1,
+      "matches": 1,
+      "goals": 0,
+      "expected_goals": 0.00984673926995242,
+      "predicted_rate": 0.00984673926995242,
+      "observed_rate": 0.0,
+      "brier": 9.695827425042311e-05,
+      "observed_minus_expected_rate": -0.00984673926995242,
+      "cluster_bootstrap_95pct": null
+    },
+    "24_to_under_35m": {
+      "shots": 4,
+      "matches": 1,
+      "goals": 0,
+      "expected_goals": 0.10316556904287377,
+      "predicted_rate": 0.025791392260718443,
+      "observed_rate": 0.0,
+      "brier": 0.0006850619129241942,
+      "observed_minus_expected_rate": -0.025791392260718443,
+      "cluster_bootstrap_95pct": null
+    },
+    "12_to_under_24m": {
+      "shots": 6,
+      "matches": 1,
+      "goals": 2,
+      "expected_goals": 0.511953520946367,
+      "predicted_rate": 0.0853255868243945,
+      "observed_rate": 0.3333333333333333,
+      "brier": 0.2662379057361543,
+      "observed_minus_expected_rate": 0.24800774650893884,
+      "cluster_bootstrap_95pct": null
+    },
+    "under_12m": {
+      "shots": 13,
+      "matches": 1,
+      "goals": 3,
+      "expected_goals": 2.71169474255005,
+      "predicted_rate": 0.20859190327308078,
+      "observed_rate": 0.23076923076923078,
+      "brier": 0.09725679892143022,
+      "observed_minus_expected_rate": 0.022177327496150003,
+      "cluster_bootstrap_95pct": null
+    },
+    "head": {
+      "shots": 5,
+      "matches": 1,
+      "goals": 0,
+      "expected_goals": 0.5564273698201957,
+      "predicted_rate": 0.11128547396403914,
+      "observed_rate": 0.0,
+      "brier": 0.013056051381887219,
+      "observed_minus_expected_rate": -0.11128547396403914,
+      "cluster_bootstrap_95pct": null
+    },
+    "non_head": {
+      "shots": 19,
+      "matches": 1,
+      "goals": 5,
+      "expected_goals": 2.7802332019890477,
+      "predicted_rate": 0.14632806326258146,
+      "observed_rate": 0.2631578947368421,
+      "brier": 0.14733277733747524,
+      "observed_minus_expected_rate": 0.11682983147426065,
+      "cluster_bootstrap_95pct": null
+    },
+    "open_play": {
+      "shots": 20,
+      "matches": 1,
+      "goals": 5,
+      "expected_goals": 2.927581205634643,
+      "predicted_rate": 0.14637906028173214,
+      "observed_rate": 0.25,
+      "brier": 0.14073977785152708,
+      "observed_minus_expected_rate": 0.10362093971826784,
+      "cluster_bootstrap_95pct": null
+    },
+    "set_piece_non_penalty": {
+      "shots": 4,
+      "matches": 1,
+      "goals": 0,
+      "expected_goals": 0.4090793661746005,
+      "predicted_rate": 0.10226984154365013,
+      "observed_rate": 0.0,
+      "brier": 0.01245186732273108,
+      "observed_minus_expected_rate": -0.10226984154365013,
+      "cluster_bootstrap_95pct": null
+    },
+    "penalties_only": {
+      "shots": 1,
+      "matches": 1,
+      "goals": 1,
+      "expected_goals": 0.7788121392664308,
+      "predicted_rate": 0.7788121392664308,
+      "observed_rate": 1.0,
+      "brier": 0.04892406973589281,
+      "observed_minus_expected_rate": 0.22118786073356922,
+      "cluster_bootstrap_95pct": null
+    }
+  },
+  "by_competition_kind_non_penalty": {
+    "null": {
+      "shots": 24,
+      "matches": 1,
+      "goals": 5,
+      "expected_goals": 3.3366605718092432,
+      "predicted_rate": 0.13902752382538514,
+      "observed_rate": 0.20833333333333334,
+      "brier": 0.11935845943006107,
+      "observed_minus_expected_rate": 0.0693058095079482,
+      "cluster_bootstrap_95pct": null
+    }
+  },
+  "stored_probability_parity": {
+    "scored_with_same_model": 25,
+    "without_same_served_model": 0,
+    "max_abs": 2.8842389032668336e-08
+  },
+  "unrelated_open_matchday_rounds": [
+    {
+      "source": "open_matchday",
+      "status": "finished",
+      "rows": 2576,
+      "rounds": 2576
+    },
+    {
+      "source": "open_matchday",
+      "status": "not_started",
+      "rows": 2106,
+      "rounds": 2106
+    }
+  ]
+}
