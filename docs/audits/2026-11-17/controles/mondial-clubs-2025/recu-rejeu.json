@@ -1,0 +1,27 @@
+{
+  "zip_sha256": "e8415a7e31015cb0b38c435032a8901a87591f300c5e3050cae224502d01f889",
+  "bytes": 84726,
+  "verified": [
+    {
+      "matchs": 63,
+      "participations": 1996,
+      "joueurs": 673,
+      "bancs": 1193,
+      "barrage": 36,
+      "notes_stockees": 0,
+      "elo_cotes": 128,
+      "fichiers_controles": 23
+    },
+    {
+      "matchs": 63,
+      "participations": 1996,
+      "joueurs": 673,
+      "bancs": 1193,
+      "barrage": 36,
+      "notes_stockees": 0,
+      "elo_cotes": 128,
+      "fichiers_controles": 23
+    }
+  ],
+  "conditions": "Deux extractions dans des nouveaux dossiers ; bibliothèque standard, données RDS datées, sans accès AWS, dépôt ou FIFA."
+}

@@ -1,20 +1,29 @@
 {
-  "previous_manifest": "e75cd1af492442a401bbefc1422e6c5f67848a9ce92e66a8aab1cbc0c4090baa",
-  "previous_records": 1577,
-  "tag": "checked1584fresh",
-  "started": "2026-11-18T08:35:00.482327+00:00",
+  "previous_manifest": "e97263f32d2f68ca5fcec05cad71a85f719dc76e35798c60fa6311e2e365124a",
+  "previous_records": 1584,
+  "tag": "checked1585fresh",
+  "started": "2026-11-18T09:38:15.718254+00:00",
   "production_writes": 0,
   "initial_production_pointers": 1611,
-  "records": 1584,
-  "manifest": "e97263f32d2f68ca5fcec05cad71a85f719dc76e35798c60fa6311e2e365124a",
-  "archive_sha256": "558214e7c86bdc516320e02095194b86f0febc17cf9502cb89a268bf0243bccb",
+  "records": 1585,
+  "manifest": "032e67a8d995f0f988834800d48f3649fb323af3d0d5f5ad32a4aba33a893037",
+  "archive_sha256": "e557b0e2ebf10fdcbbf60df85b73244d03fd1d7b2c1b1e5eb0f9614b026f934d",
   "commands": [
     [
       "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
       "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/7-artwork/refresh-media-nov18/runner/verify_artwork_pack.py",
-      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/logos-verifies-1584.zip",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/logos-verifies-1585.zip",
       "--manifest-sha256",
-      "e97263f32d2f68ca5fcec05cad71a85f719dc76e35798c60fa6311e2e365124a"
+      "032e67a8d995f0f988834800d48f3649fb323af3d0d5f5ad32a4aba33a893037"
+    ],
+    [
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/7-artwork/refresh-media-nov18/runner/root-checks/artwork_snapshot.py",
+      "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/artwork-expanded-1585",
+      "032e67a8d995f0f988834800d48f3649fb323af3d0d5f5ad32a4aba33a893037",
+      "checked1585freshdirect",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/7-artwork/refresh-media-nov18/runner/root-checks/artwork-checked1585fresh/direct"
     ],
     [
       "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
@@ -22,48 +31,39 @@
       "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117",
       "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/artwork-expanded-1584",
       "e97263f32d2f68ca5fcec05cad71a85f719dc76e35798c60fa6311e2e365124a",
-      "checked1584freshdirect",
-      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/7-artwork/refresh-media-nov18/runner/root-checks/artwork-checked1584fresh/direct"
-    ],
-    [
-      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
-      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/7-artwork/refresh-media-nov18/runner/root-checks/artwork_snapshot.py",
-      "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117",
-      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/artwork-expanded-1577",
-      "e75cd1af492442a401bbefc1422e6c5f67848a9ce92e66a8aab1cbc0c4090baa",
-      "checked1584freshincremental",
-      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/7-artwork/refresh-media-nov18/runner/root-checks/artwork-checked1584fresh/incremental"
+      "checked1585freshincremental",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/7-artwork/refresh-media-nov18/runner/root-checks/artwork-checked1585fresh/incremental"
     ]
   ],
   "modes": {
     "direct": {
-      "linked_before_stage": 3195,
-      "complete_verified_image_hashes": 1584,
+      "linked_before_stage": 3196,
+      "complete_verified_image_hashes": 1585,
       "unchanged_original_pointers": 1611,
       "unexpected_links": 0,
       "clubs_competitions_after": [
-        2955,
+        2956,
         186
       ]
     },
     "incremental": {
-      "linked_before_stage": 3188,
-      "complete_verified_image_hashes": 1584,
+      "linked_before_stage": 3195,
+      "complete_verified_image_hashes": 1585,
       "unchanged_original_pointers": 1611,
       "unexpected_links": 0,
       "clubs_competitions_after": [
-        2955,
+        2956,
         186
       ],
-      "added": 7,
-      "prior_stage_preserved": 1577,
+      "added": 1,
+      "prior_stage_preserved": 1584,
       "repeat": {
-        "already_linked": 1584
+        "already_linked": 1585
       }
     }
   },
   "status": "passed",
-  "ended": "2026-11-18T08:36:26.592550+00:00",
+  "ended": "2026-11-18T09:39:49.297494+00:00",
   "sources_sha256": {
     "verify_artwork_upgrade.py": "5a2fbe662f3adfa10f4a43ead77e1fa675829ce5b77ac8d61680c3c91668d66d",
     "artwork_snapshot.py": "e0b9a094da995068dcd87a141de24a22bb84c3c69a9e25c0b1422ff64f040ad3",

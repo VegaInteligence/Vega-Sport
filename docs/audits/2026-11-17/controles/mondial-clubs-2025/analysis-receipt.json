@@ -1,0 +1,20 @@
+{
+  "status": "passed",
+  "source_fifa_matches": 63,
+  "local_edition_matches": 64,
+  "exact_finals_matched": 63,
+  "unique_fifa_ids": 32,
+  "unique_final_roots": 32,
+  "extra_playin_match": 1608,
+  "all_roots": 33,
+  "same_country_negative_controls": 32,
+  "all_negative_controls_rejected": 992,
+  "utc_day_differences": 20,
+  "existing_profile_states": {
+    "published_profile": 30,
+    "verified_candidate": 2,
+    "unresolved": 1
+  },
+  "no_new_rds_collection": true,
+  "writes_to_product_or_production": 0
+}

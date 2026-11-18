@@ -1,0 +1,38 @@
+{
+  "fifa_registration_as_of": "2025-07-04T14:14Z",
+  "pdf_sha256": "1f08cb6f9e71e0aa304588102e6e95b69bb4a6224e63f187c5ae1365a6cbc220",
+  "pdf_teams": 32,
+  "named_registrations": 1000,
+  "different_players": 673,
+  "appearances": 1996,
+  "core_snapshot": "2026-11-18 03:45:22.011984+00:00",
+  "core_player_rows": 64972,
+  "dated_nonquarantined_accepted_provider_rows": 22540,
+  "core_snapshot_sha256": "f8941c76c7f978c13dfeda7bc27b7419edb154d27185df08942128d3b1dd8dac",
+  "whole_name_and_shirt_links": 673,
+  "registry_confirmed_appearances": 1996,
+  "unique_injective_dob_and_alias_candidates": 511,
+  "unique_candidate_appearances": 1615,
+  "players_by_status": {
+    "no_exact_alias_and_dob": 162,
+    "single_core_dob_candidate": 251,
+    "single_linked_stage_dob_candidate": 260
+  },
+  "appearances_by_status": {
+    "no_exact_alias_and_dob": 381,
+    "single_core_dob_candidate": 891,
+    "single_linked_stage_dob_candidate": 724
+  },
+  "name_strength_among_single_candidates": {
+    "two_full_name_elements": 455,
+    "short_or_single_name_evidence": 56
+  },
+  "negative_controls": {
+    "shift_to_nearest_next_known_dob_trials": 655,
+    "shifted_dob_exact_alias_contacts": 0,
+    "multiple_name_only_ids": 134,
+    "matched_DOB_but_other_name_only_ids": 107
+  },
+  "review_only": true,
+  "production_changes": 0
+}

@@ -1,0 +1,109 @@
+{
+  "edition": {
+    "fifa_competition": 10005,
+    "fifa_season": 289175,
+    "vega_edition": 294,
+    "storage_season": 2024,
+    "matches": 63,
+    "sides": 126,
+    "appearances_reference": 1996,
+    "pdf_stat_rows_per_series": 1998
+  },
+  "fifa_counts": {
+    "passes_efi": 1996,
+    "completed_efi": 1996,
+    "shots_efi": 1996,
+    "shots_fdp": 1996,
+    "on_target_fdp": 1996,
+    "time_fdp": 1984
+  },
+  "time": {
+    "considerable_fdp_minutes": 1962,
+    "blocked_match": 21,
+    "missing_min": 12,
+    "reported_54": 22,
+    "fdp_no_aet_full_match_minima_maxima": [
+      93,
+      106
+    ],
+    "aet": {
+      "49": 140,
+      "50": 136,
+      "54": 135
+    }
+  },
+  "shot_delta_efi_minus_fdp": {
+    "appearances": 132,
+    "sides": 71,
+    "matches": 51,
+    "histogram": {
+      "-2": 4,
+      "-1": 71,
+      "0": 1864,
+      "1": 54,
+      "2": 3
+    }
+  },
+  "keepers": {
+    "role_appearances": 126,
+    "distinct_fifa_players": 37,
+    "one_per_side": true,
+    "sole_and_fdp_match_max_nonanomalous": 124,
+    "directly_named_FIFA_saves_field": 0,
+    "opposing_EFI_on_target_saved_events": 385,
+    "opposing_EFI_off_target_saved_events": 17
+  },
+  "extras": [
+    {
+      "number": "24",
+      "side": "1884422",
+      "shirt": "6",
+      "fifa_player": "318688",
+      "name": "Marcos ROJO",
+      "time_fdp": "102",
+      "passes_efi": "0",
+      "shots_efi": "0"
+    },
+    {
+      "number": "49",
+      "side": "1955636",
+      "shirt": "21",
+      "fifa_player": "492446",
+      "name": "MARCAL",
+      "time_fdp": "140",
+      "passes_efi": "0",
+      "shots_efi": "0"
+    }
+  ],
+  "global_calendar": {
+    "days": 23,
+    "returned_rows": 1189,
+    "recovered_native": 63,
+    "additional_name_or_abbreviation_matches": 0,
+    "additional_venue_or_competition_name_matches": 0,
+    "other_pairs_same_kickoff": 94,
+    "other_pairs_same_kickoff_and_score": [
+      [
+        58,
+        "4u9y0uyrmqnjy830z19j3p5as",
+        "El Paso Locomotive",
+        "San Antonio"
+      ],
+      [
+        61,
+        "8tul8117rp7ojznms19n6da1g",
+        "Virtus",
+        "HSK Zrinjski"
+      ]
+    ]
+  },
+  "cross_previous_identity_audit": {
+    "source_sha256": "eaa0fed4674fb5fb04ad4f88119f6b20849e7902ff03dfc3abfd3cb911abb50a",
+    "people": 511,
+    "appearances": 1615,
+    "outside_m21": 1599,
+    "gk_appearances": 97,
+    "no_new_identity_approval": true
+  },
+  "scope": "2025 FIFA Club World Cup tournament proper only"
+}

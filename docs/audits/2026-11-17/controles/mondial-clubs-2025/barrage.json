@@ -1,0 +1,43 @@
+{
+  "portee": "barrage seul",
+  "date_utc": "2025-06-01T02:30:00Z",
+  "stade": "BMO Stadium",
+  "equipes": {
+    "LAFC": {
+      "formation_fifa": "4-3-3",
+      "inscrits": 24,
+      "titulaires": 11,
+      "entrees": 7,
+      "joueurs_avec_entree_et_sortie": 2,
+      "participants": 18,
+      "banc_sans_entree": 6,
+      "buts_fifa": 2,
+      "minutes_individuelles_opta_index": 1320,
+      "touches_individuelles_opta_index": 821
+    },
+    "AMERICA": {
+      "formation_fifa": "4-2-3-1",
+      "inscrits": 26,
+      "titulaires": 11,
+      "entrees": 7,
+      "joueurs_avec_entree_et_sortie": 0,
+      "participants": 18,
+      "banc_sans_entree": 8,
+      "buts_fifa": 1,
+      "minutes_individuelles_opta_index": 1320,
+      "touches_individuelles_opta_index": 959
+    }
+  },
+  "total_inscrits": 50,
+  "total_participants": 36,
+  "total_banc_sans_entree": 14,
+  "identites_vega_et_notes_production": "hors mesure",
+  "seuils_minutes_opta_index": {
+    "1": 36,
+    "15": 34,
+    "30": 32,
+    "45": 26,
+    "60": 22,
+    "90": 14
+  }
+}

@@ -1,0 +1,400 @@
+{
+  "w": {
+    "responses": [
+      {
+        "url": "/api/cups/edition?competition=l_v0000702&season=2025%2F2026",
+        "status": 200,
+        "body": {
+          "name": "Preflight extra time",
+          "season": "2025/2026",
+          "matches": [
+            {
+              "date": "2026-01-15T23:00:00.000Z",
+              "team1": "Home",
+              "team2": "Away",
+              "score": {
+                "et": [
+                  3,
+                  2
+                ]
+              }
+            }
+          ],
+          "source": {
+            "name": "OpenFootball",
+            "url": null,
+            "license": "CC0-1.0"
+          }
+        }
+      },
+      {
+        "url": "/api/cups/edition?competition=l_v0000701&season=2025%2F2026",
+        "status": 200,
+        "body": {
+          "name": "Preflight Cup",
+          "season": "2025/2026",
+          "source": {
+            "name": "open-matchday",
+            "url": null,
+            "license": "informational, non-commercial use with attribution"
+          },
+          "results": [
+            {
+              "gw": "",
+              "away": "Away",
+              "date": "2026-01-14T23:00:00.000Z",
+              "home": "Historical home identity",
+              "time": "",
+              "source": "",
+              "ft_away": "1",
+              "ft_home": "2",
+              "ht_away": "",
+              "ht_home": "",
+              "ft_result": "H",
+              "ht_result": "",
+              "goal_minutes": "",
+              "home_shots": "",
+              "home_target": "",
+              "home_fouls": "",
+              "home_corners": "",
+              "home_yellow": "",
+              "home_red": "",
+              "home_corners_1h": "",
+              "home_corners_2h": "",
+              "away_shots": "",
+              "away_target": "",
+              "away_fouls": "",
+              "away_corners": "",
+              "away_yellow": "",
+              "away_red": "",
+              "away_corners_1h": "",
+              "away_corners_2h": ""
+            }
+          ],
+          "fixtures": []
+        }
+      },
+      {
+        "url": "/api/cup-index?kind=supplemental",
+        "status": 200,
+        "body": {
+          "meta": {
+            "terms": "https://github.com/oladeeayo/open-matchday/blob/master/DISCLAIMER.md",
+            "usage": "informational, non-commercial use with attribution",
+            "source": "https://github.com/oladeeayo/open-matchday",
+            "retrieved_at_utc": null,
+            "source_generated_at_utc": null
+          },
+          "competitions": [
+            {
+              "name": "Preflight Cup",
+              "folder": "preflight",
+              "season": "2025/2026",
+              "tables": {
+                "goals": {
+                  "rows": 0
+                },
+                "results": {
+                  "rows": 1
+                },
+                "fixtures": {
+                  "rows": 0
+                }
+              },
+              "country_code": "preflight",
+              "image_url": "https://example.invalid/competition.png"
+            }
+          ]
+        }
+      }
+    ],
+    "extra_time": [
+      3,
+      2
+    ],
+    "regulation": null,
+    "sides": null,
+    "catalog_competition_id": null
+  },
+  "t7": {
+    "responses": [
+      {
+        "url": "/api/cups/edition?competition=l_v0000702&season=2025%2F2026",
+        "status": 200,
+        "body": {
+          "name": "Preflight extra time",
+          "season": "2025/2026",
+          "matches": [
+            {
+              "date": "2026-01-15T23:00:00.000Z",
+              "team1": "Home",
+              "team2": "Away",
+              "score": {
+                "ft": [
+                  3,
+                  2
+                ],
+                "et": [
+                  3,
+                  2
+                ]
+              }
+            }
+          ],
+          "source": {
+            "name": "OpenFootball",
+            "url": null,
+            "license": "CC0-1.0"
+          }
+        }
+      },
+      {
+        "url": "/api/cups/edition?competition=l_v0000701&season=2025%2F2026",
+        "status": 200,
+        "body": {
+          "name": "Preflight Cup",
+          "season": "2025/2026",
+          "source": {
+            "name": "open-matchday",
+            "url": null,
+            "license": "informational, non-commercial use with attribution"
+          },
+          "results": [
+            {
+              "gw": "",
+              "away": "Away",
+              "date": "2026-01-14T23:00:00.000Z",
+              "home": "Historical home identity",
+              "time": "",
+              "source": "",
+              "ft_away": "1",
+              "ft_home": "2",
+              "ht_away": "",
+              "ht_home": "",
+              "ft_result": "H",
+              "ht_result": "",
+              "goal_minutes": "",
+              "home_shots": "",
+              "home_target": "",
+              "home_fouls": "",
+              "home_corners": "",
+              "home_yellow": "",
+              "home_red": "",
+              "home_corners_1h": "",
+              "home_corners_2h": "",
+              "away_shots": "",
+              "away_target": "",
+              "away_fouls": "",
+              "away_corners": "",
+              "away_yellow": "",
+              "away_red": "",
+              "away_corners_1h": "",
+              "away_corners_2h": "",
+              "sides": {
+                "home": {
+                  "id": "t_v0000701",
+                  "image_url": "https://example.invalid/home.png"
+                },
+                "away": {
+                  "id": "t_v0000702",
+                  "image_url": "https://example.invalid/away.png"
+                }
+              }
+            }
+          ],
+          "fixtures": []
+        }
+      },
+      {
+        "url": "/api/cup-index?kind=supplemental",
+        "status": 200,
+        "body": {
+          "meta": {
+            "terms": "https://github.com/oladeeayo/open-matchday/blob/master/DISCLAIMER.md",
+            "usage": "informational, non-commercial use with attribution",
+            "source": "https://github.com/oladeeayo/open-matchday",
+            "retrieved_at_utc": null,
+            "source_generated_at_utc": null
+          },
+          "competitions": [
+            {
+              "name": "Preflight Cup",
+              "folder": "preflight",
+              "season": "2025/2026",
+              "tables": {
+                "goals": {
+                  "rows": 0
+                },
+                "results": {
+                  "rows": 1
+                },
+                "fixtures": {
+                  "rows": 0
+                }
+              },
+              "country_code": "preflight",
+              "image_url": "https://example.invalid/competition.png",
+              "competition_id": "l_v0000701"
+            }
+          ]
+        }
+      }
+    ],
+    "extra_time": [
+      3,
+      2
+    ],
+    "regulation": [
+      3,
+      2
+    ],
+    "sides": {
+      "home": {
+        "id": "t_v0000701",
+        "image_url": "https://example.invalid/home.png"
+      },
+      "away": {
+        "id": "t_v0000702",
+        "image_url": "https://example.invalid/away.png"
+      }
+    },
+    "catalog_competition_id": "l_v0000701"
+  },
+  "combine": {
+    "responses": [
+      {
+        "url": "/api/cups/edition?competition=l_v0000702&season=2025%2F2026",
+        "status": 200,
+        "body": {
+          "name": "Preflight extra time",
+          "season": "2025/2026",
+          "matches": [
+            {
+              "date": "2026-01-15T23:00:00.000Z",
+              "team1": "Home",
+              "team2": "Away",
+              "score": {
+                "et": [
+                  3,
+                  2
+                ]
+              }
+            }
+          ],
+          "source": {
+            "name": "OpenFootball",
+            "url": null,
+            "license": "CC0-1.0"
+          }
+        }
+      },
+      {
+        "url": "/api/cups/edition?competition=l_v0000701&season=2025%2F2026",
+        "status": 200,
+        "body": {
+          "name": "Preflight Cup",
+          "season": "2025/2026",
+          "source": {
+            "name": "open-matchday",
+            "url": null,
+            "license": "informational, non-commercial use with attribution"
+          },
+          "results": [
+            {
+              "gw": "",
+              "away": "Away",
+              "date": "2026-01-14T23:00:00.000Z",
+              "home": "Historical home identity",
+              "time": "",
+              "source": "",
+              "ft_away": "1",
+              "ft_home": "2",
+              "ht_away": "",
+              "ht_home": "",
+              "ft_result": "H",
+              "ht_result": "",
+              "goal_minutes": "",
+              "home_shots": "",
+              "home_target": "",
+              "home_fouls": "",
+              "home_corners": "",
+              "home_yellow": "",
+              "home_red": "",
+              "home_corners_1h": "",
+              "home_corners_2h": "",
+              "away_shots": "",
+              "away_target": "",
+              "away_fouls": "",
+              "away_corners": "",
+              "away_yellow": "",
+              "away_red": "",
+              "away_corners_1h": "",
+              "away_corners_2h": "",
+              "sides": {
+                "home": {
+                  "id": "t_v0000701",
+                  "image_url": "https://example.invalid/home.png"
+                },
+                "away": {
+                  "id": "t_v0000702",
+                  "image_url": "https://example.invalid/away.png"
+                }
+              }
+            }
+          ],
+          "fixtures": []
+        }
+      },
+      {
+        "url": "/api/cup-index?kind=supplemental",
+        "status": 200,
+        "body": {
+          "meta": {
+            "terms": "https://github.com/oladeeayo/open-matchday/blob/master/DISCLAIMER.md",
+            "usage": "informational, non-commercial use with attribution",
+            "source": "https://github.com/oladeeayo/open-matchday",
+            "retrieved_at_utc": null,
+            "source_generated_at_utc": null
+          },
+          "competitions": [
+            {
+              "name": "Preflight Cup",
+              "folder": "preflight",
+              "season": "2025/2026",
+              "tables": {
+                "goals": {
+                  "rows": 0
+                },
+                "results": {
+                  "rows": 1
+                },
+                "fixtures": {
+                  "rows": 0
+                }
+              },
+              "country_code": "preflight",
+              "image_url": "https://example.invalid/competition.png",
+              "competition_id": "l_v0000701"
+            }
+          ]
+        }
+      }
+    ],
+    "extra_time": [
+      3,
+      2
+    ],
+    "regulation": null,
+    "sides": {
+      "home": {
+        "id": "t_v0000701",
+        "image_url": "https://example.invalid/home.png"
+      },
+      "away": {
+        "id": "t_v0000702",
+        "image_url": "https://example.invalid/away.png"
+      }
+    },
+    "catalog_competition_id": "l_v0000701"
+  }
+}

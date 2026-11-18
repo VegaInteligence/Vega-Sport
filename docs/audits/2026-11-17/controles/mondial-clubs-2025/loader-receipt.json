@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "loader": "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117/backend/vega/artwork.py",
+  "loader_sha256": "e53dd0f791456eb419df6ffc7a87cfc1e67d0a73f0d123ad7b07b145e81f400a",
+  "manifest_sha256": "4cc36ec73e51d772837e4b11b0d992a0196025ccb174e22ccc614ad82c025e32",
+  "records": 1,
+  "rasters": 1,
+  "wrong_expected_digest_rejected": true,
+  "zip_members_verified": 3,
+  "all_frozen_remote_source_hashes_verified": true,
+  "scope": "Real loader bytes/schema compatibility only; no live identity resolution, publication, route E2E or cache validation.",
+  "production_writes": 0,
+  "python": "3.12.11 (main, Sep 18 2025, 19:41:45) [Clang 20.1.4 ]"
+}

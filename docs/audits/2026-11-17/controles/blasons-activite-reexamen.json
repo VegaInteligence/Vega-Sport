@@ -1,6 +1,6 @@
 {
-  "manifest": "e97263f32d2f68ca5fcec05cad71a85f719dc76e35798c60fa6311e2e365124a",
-  "records": 1584,
+  "manifest": "032e67a8d995f0f988834800d48f3649fb323af3d0d5f5ad32a4aba33a893037",
+  "records": 1585,
   "records_at_baseline": 1468,
   "closed_from_the_99": 92,
   "named_open": 3,
@@ -19,9 +19,9 @@
   "eligible_active_club_identities_undetermined": true,
   "structurally_malformed_name_flags": 1782,
   "clubs": {
-    "verified_candidate": 1480,
+    "verified_candidate": 1481,
     "published_profile": 1475,
-    "unresolved": 8048
+    "unresolved": 8047
   },
   "competitions": {
     "published_profile": 82,

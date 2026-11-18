@@ -1,0 +1,33 @@
+{
+  "lecture": "2026-11-18T09:27:57.141600+00:00",
+  "octopus": "1b28961a88e968d5602f9fb278fc3c471ebb7467",
+  "source_migrate": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "base_133_identique_source_deployee": true,
+  "sha256_sql": {
+    "134_archive_repair_boundary.sql": "aa4b0f920b200335ba3ac63f95a750538f14e53f6d63b40b27b54e57ab75c167",
+    "135_cup_competition_logo.sql": "af2352a8cb12bf6e1b148afbd3ade1f45e61ddb10cab94ddaa10c356009ffe25",
+    "136_cup_table_sides.sql": "54542482c50b17715acb997c0b6533a2c8b5c330bedc0abcc7438e728e9be1c5",
+    "137_half_metric_coverage.sql": "c6916fd715d6f5bb3c20f4220fc7f92d67439d5b98bd164e14834122ef48cab0",
+    "138_sportscore_standings.sql": "4d6f61a78fabb9170112360880dbef444a16ca591f8c3fc1bc40feaa291305e0",
+    "139_transfermarkt_history.sql": "e66951f8f973e4954f800b17bb39d447113c2a7e8fe5a42f4412c49c708846b3",
+    "140_archive_apply_decisions.sql": "b7aa3c965b8bdb4901f389cbc4121d138b273873d9e1801a264d02227c4185ec"
+  },
+  "pg18": "18.6",
+  "vector": "0.8.7",
+  "image": "sha256:c29f30688a9ad961691bdf0ec1650717cc132a5814619d80f80463d6e4c42e47",
+  "fichiers_133": 135,
+  "fichiers_140": 142,
+  "checksums_et_horodatages_stables": true,
+  "vue_lisible": 7,
+  "ddl_distincts": 18,
+  "perte_de_colonne": 0,
+  "comparaison_http": 9,
+  "contre_exemple_139": {
+    "message": "TRANSFER_KEYS_NOT_UNIQUE: 1 Transfermarkt player/key pairs hold more than one transfer (first: player 701, key preflight-701, 2 rows); nothing was changed",
+    "rows_preserved": 2,
+    "migration_recorded": 0,
+    "new_column_visible": 0
+  },
+  "routes_combinees_sha256": "72fb612b95f9c9fd1a6b80b8478fd63df24e2f237284acbf066e1f2d5d062123",
+  "ressource_locale_retiree": true
+}

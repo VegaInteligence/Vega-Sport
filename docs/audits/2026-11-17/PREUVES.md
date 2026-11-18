@@ -34,7 +34,7 @@ La collecte annuelle et la comparaison du top 100 sont dans `tracks/5-players/to
 
 Les [91 entrées du registre](registres/requirements.csv) couvrent les sous-points du document initial, la demande du 17 novembre, les tickets clos et les constats de traçabilité. Les [26 changements de calcul](registres/new-calculations.csv) citent leur commit et le fichier qui produit ou lit le résultat. Les [instructions de reproduction](registres/requirements-README.md) explicitent le périmètre et la date de chaque état.
 
-Le fichier `visuels-manifeste.json.gz` décrit les 1 584 associations proposées, leur source, leur clé et leurs empreintes. Le contrôle direct et le contrôle incrémental sur deux copies de PostgreSQL ont conservé les 1 611 pointeurs présents avant import. [Vérification des deux chemins](controles/visuels-actuels-rejeu.json)
+Le fichier `visuels-manifeste.json.gz` décrit les 1 585 associations proposées, leur source, leur clé et leurs empreintes. Le contrôle direct et le contrôle incrémental sur deux copies de PostgreSQL ont conservé les 1 611 pointeurs présents avant import. [Vérification des deux chemins](controles/visuels-actuels-rejeu.json)
 
 Le contrôle de la Coupe du monde utilise les 1 068 feuilles FIFA figées, les 23 calendriers et des exportations RDS triangulées. Les 168 rencontres des deux éditions natives sont rapprochées par côté, maillot et preuve nominale. Les fichiers se trouvent sous `tracks/2-ingestion/world-cup-calendar` et `tracks/5-players/modern-world-cups`. Les cas saoudiens, argentins, français et turcs ont leurs pièces originales, requêtes et rejoueurs dans les sous-dossiers `adjudications` et `provider-observation` des volets 2, 3 et 5. [Constats et pièces compactes](RENCONTRES.md)
 
@@ -49,3 +49,7 @@ La [publication transactionnelle](notes-transaction/README.md) contient les SQL 
 ## Contrôles de dépendance et de collecte du 18 novembre
 
 [Trois essais de remplacement des deux Elo et rattrapage 2025–2026](RECALCUL-JOUEURS.md) · [Tentatives de collecte PitchAPI par famille et statut](SOURCES.md#appels-pitchapi-sur-24-heures-complètes)
+
+## Mondial des clubs et migrations 134 à 140
+
+[Feuilles de match, identités et Elo](MONDIAL-DES-CLUBS-2025.md) · [Répétition PostgreSQL des migrations](BRANCHE.md#répétition-des-migrations-134-à-140)

@@ -108,3 +108,7 @@ Seraing–Beerschot, le 18 septembre, reçoit le statut fédéral de forfait et 
 Les six sorties de comparaison ont été reproduites à l’octet à partir des entrées gelées. [Reçu et commande](controles/belgique-u21-rejeu.json)
 
 [Recalcul de sept millésimes depuis les statistiques et comparaison aux six lecteurs publics](RECALCUL-JOUEURS.md)
+
+## Mondial des clubs 2025 et barrage
+
+[64 matchs, 128 Elo, aucune note de joueur stockée et 2 032 participations établies](MONDIAL-DES-CLUBS-2025.md)

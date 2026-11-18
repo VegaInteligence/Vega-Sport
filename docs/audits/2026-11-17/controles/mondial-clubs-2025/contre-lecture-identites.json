@@ -1,0 +1,181 @@
+{
+  "clubs": {
+    "apparitions": {
+      "contract_at_expected_club": 285,
+      "different_contract_only_or_mixed": 4,
+      "one_compatible_endpoint": 438,
+      "open_or_mixed_endpoints": 478,
+      "transfer_endpoints_agree_expected": 408,
+      "transfer_endpoints_agree_other": 2
+    },
+    "input_sha256": "fb8ca47c24b83fabeb43b58714a718d42eb5bef9170bcac17a2b466be03fc2b7",
+    "personnes_par_statut_non_exclusif": {
+      "contract_at_expected_club": 95,
+      "different_contract_only_or_mixed": 2,
+      "one_compatible_endpoint": 109,
+      "open_or_mixed_endpoints": 180,
+      "transfer_endpoints_agree_expected": 127,
+      "transfer_endpoints_agree_other": 2
+    },
+    "snapshot": [
+      "2026-11-18 09:41:37.79+00",
+      "4425328:4425328:"
+    ]
+  },
+  "concurrence": {
+    "autres_editions_univers": 1197,
+    "autres_matchs_dans_une_fenetre_des_63": 863,
+    "cotes_elo": 126,
+    "deux_cotes_et_score": 0,
+    "faux_amis_un_cote": [
+      [
+        "400019151",
+        68507,
+        "Miami",
+        "Charleston Battery",
+        "home",
+        1,
+        0,
+        false
+      ],
+      [
+        "400019152",
+        68500,
+        "Tampa Bay Rowdies",
+        "Miami",
+        "home",
+        0,
+        1,
+        false
+      ],
+      [
+        "400019153",
+        60944,
+        "Inter Miami II",
+        "Chicago Fire II",
+        "home",
+        1,
+        0,
+        false
+      ],
+      [
+        "400019156",
+        65971,
+        "Botafogo SP",
+        "Chapecoense",
+        "away",
+        0,
+        1,
+        true
+      ],
+      [
+        "400019157",
+        65962,
+        "Paysandu",
+        "Botafogo SP",
+        "away",
+        1,
+        0,
+        false
+      ]
+    ],
+    "id_ou_alias_entier_au_moins_un_cote_paires": 0,
+    "jeton_distinctif_au_moins_un_cote_paires": 5,
+    "jeton_distinctif_deux_cotes_paires": 0,
+    "matchs_sans_deux_ids_univers": [
+      738441
+    ],
+    "meme_score_deux_sens_paires": 442,
+    "originaux_retrouves_sans_id_de_match": 63,
+    "paires_faibles_deux_cotes": [],
+    "sans_deux_ids_dans_fenetres": [],
+    "snapshot_utc": "2026-11-18 09:30:36.936652+00:00",
+    "tables_edition_294_63": {
+      "advanced": 0,
+      "events": 0,
+      "halves": 0,
+      "lineups": 0,
+      "player_grades": 0,
+      "player_intermediates": 0,
+      "positive_minutes": 0,
+      "shots": 0,
+      "stats": 0,
+      "team_sheets": 0
+    },
+    "univers_capture": 1261
+  },
+  "cotes": 126,
+  "feuilles": 63,
+  "identite": {
+    "acteurs_partageant_date_dans_pdf": 74,
+    "candidats": 511,
+    "comptes": {
+      "alias_seul_plusieurs_ids_formes_concatenees": 134,
+      "alias_seul_plusieurs_ids_tous_avec_permutation": 135,
+      "candidats_avec_concurrents_alias_concatene": 107,
+      "candidats_avec_concurrents_de_meme_alias": 107,
+      "candidats_avec_concurrents_de_meme_naissance": 465,
+      "classe_residuelle_autres": 43,
+      "classe_residuelle_deux_composantes_concatenees": 12,
+      "classe_residuelle_initiale": 1,
+      "court_ou_abrege": 56,
+      "date_core": 251,
+      "date_fournisseur_seule": 260,
+      "deux_composantes": 455,
+      "naissance_sans_id": 18,
+      "naissance_seule_plusieurs_ids": 593,
+      "residuel_autre_racine_nom_long": 1,
+      "seul_pliage_diacritiques_ou_translitteration": 83
+    },
+    "distribution_groupes_naissance": {
+      "0": 18,
+      "1": 62,
+      "2": 83,
+      "3": 94,
+      "4": 101,
+      "5": 90,
+      "6": 69,
+      "7": 59,
+      "8": 39,
+      "9": 27,
+      "10": 20,
+      "11": 6,
+      "12": 4,
+      "13": 1
+    },
+    "groupes_alias_fifa_partages": 16,
+    "identites_utc": "2026-11-18 03:45:22.011984+00:00",
+    "joueurs": 673,
+    "max_ids_si_date_seule": 13,
+    "par_participation": {
+      "classe_residuelle_autres": 151,
+      "classe_residuelle_deux_composantes_concatenees": 31,
+      "classe_residuelle_initiale": 2,
+      "court_ou_abrege": 184,
+      "date_core": 891,
+      "date_fournisseur_seule": 724,
+      "deux_composantes": 1431,
+      "residuel_autre_racine_nom_long": 2,
+      "seul_pliage_diacritiques_ou_translitteration": 254
+    },
+    "participations": 1996,
+    "participations_candidats": 1615,
+    "personnes_avec_une_telle_permutation": 9,
+    "substitution_de_la_date_d_un_homonyme_autre_candidat_unique_paires_orientees": 12
+  },
+  "participation": {
+    "entrees": 610,
+    "inscriptions": 3189,
+    "non_entres": 1193,
+    "sans_minute": 67,
+    "titulaires": 1386
+  },
+  "pdf_inscrits": 1000,
+  "pdf_pages": 32,
+  "premiers_coups_envoi_avant_version_pdf": 56,
+  "scope": "63 matchs du tournoi principal",
+  "sha_feuilles_triees": "6c6a4f6ee222eda09e03cb30ed2b87be7890f1df60042f56d398c2306396c47e",
+  "sha_pdf": "1f08cb6f9e71e0aa304588102e6e95b69bb4a6224e63f187c5ae1365a6cbc220",
+  "sha_rds_matchs": "a39b675ba5eef1e6309b89f5d093cab315abd15d4b84f8b1b554ad0c57f20774",
+  "sha_rds_personnes": "f8941c76c7f978c13dfeda7bc27b7419edb154d27185df08942128d3b1dd8dac"
+}

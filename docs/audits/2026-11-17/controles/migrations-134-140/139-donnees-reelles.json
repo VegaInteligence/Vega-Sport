@@ -1,0 +1,119 @@
+{
+  "snapshot": [
+    "2026-11-18 09:41:37.79+00",
+    "4425328:4425328:",
+    "vega_v2",
+    "on",
+    "repeatable read",
+    "PostgreSQL 18.3 on aarch64-unknown-linux-gnu, compiled by aarch64-unknown-linux-gnu-gcc (GCC) 12.4.0, 64-bit"
+  ],
+  "tables": {
+    "core.player_transfers": {
+      "count": 46362,
+      "all_base_columns_sha256": "f28852e1d39aa48cbabf0d942a8c7ee8b6b53dc3699f0fd100bc26f087e1fe0d"
+    },
+    "core.player_contracts": {
+      "count": 12570,
+      "all_base_columns_sha256": "7757f4836a3f1b935e351a28feea524712051af711f59c7c0983280155a86202"
+    }
+  },
+  "fournisseurs": {
+    "columns": [
+      "relation",
+      "source",
+      "rows",
+      "players",
+      "keyed"
+    ],
+    "rows": [
+      [
+        "contracts",
+        "other",
+        2,
+        2,
+        null
+      ],
+      [
+        "contracts",
+        "transfermarkt",
+        12568,
+        12568,
+        null
+      ],
+      [
+        "transfers",
+        "transfermarkt",
+        46362,
+        5510,
+        46362
+      ]
+    ]
+  },
+  "precondition_139": {
+    "columns": [
+      "duplicate_pairs",
+      "affected_rows",
+      "surplus_rows"
+    ],
+    "rows": [
+      [
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  "liens_des_transferts": {
+    "columns": [
+      "rows",
+      "both_resolved",
+      "one_resolved",
+      "neither_resolved",
+      "missing_provider_endpoint",
+      "date_null",
+      "key_null"
+    ],
+    "rows": [
+      [
+        46362,
+        19912,
+        11720,
+        14730,
+        0,
+        4,
+        0
+      ]
+    ]
+  },
+  "lectures": {
+    "columns": [
+      "transfer_units",
+      "read_once",
+      "never_read",
+      "latest_read"
+    ],
+    "rows": [
+      [
+        23321,
+        5513,
+        17808,
+        "2026-11-18 09:41:36.843314+00"
+      ]
+    ]
+  },
+  "verifications": {
+    "live_fact_schema_matches133": true,
+    "full_import_matches_all_source_columns": true,
+    "all_base_values_and_primary_keys_preserved": true,
+    "all_new_dates_null": true,
+    "prior_constraints_and_indexes_preserved": true,
+    "view_columns_and_reader_permissions_preserved": true,
+    "two_delete_triggers_enabled": true,
+    "partial_unique_index_valid": true,
+    "second_pass_identical_facts_schema_and_migration_timestamps": true,
+    "rollback_probes_preserved_final_data_and_schema": true
+  },
+  "empreinte_139": "e66951f8f973e4954f800b17bb39d447113c2a7e8fe5a42f4412c49c708846b3",
+  "modifications_prod": 0,
+  "jeu_local": "Toutes lignes réelles des deux tables avec clés parentes minimales. PostgreSQL 18.6 en local et 18.3 en production."
+}

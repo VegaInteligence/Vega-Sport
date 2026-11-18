@@ -1,0 +1,29 @@
+{
+  "source_sha256": "0537a06e05d5fce30408f39ac6fd431b357481628f252f7da17f92ce1d138142",
+  "manifest": "032e67a8d995f0f988834800d48f3649fb323af3d0d5f5ad32a4aba33a893037",
+  "clubs_ouverts": 8047,
+  "origines": {
+    "openfootball": 683,
+    "open_matchday": 227,
+    "vega": 7133,
+    "pitchapi": 4
+  },
+  "places_pitchapi": [
+    {
+      "id": 5012,
+      "label": "2nd ranked"
+    },
+    {
+      "id": 5017,
+      "label": "3rd ranked"
+    },
+    {
+      "id": 13540,
+      "label": "Orlando City/FC Cincinnati"
+    },
+    {
+      "id": 13541,
+      "label": "Seattle Sounders FC/Real Salt Lake"
+    }
+  ]
+}
