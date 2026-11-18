@@ -33,6 +33,8 @@ FOLDERS = {
 MATCHES = "core.matches"
 BINDINGS = "core.provider_ids"
 ELO = "agg.team_elo"
+MATCH_STATS = "core.team_match_stats"
+ENRICHMENT_COLUMNS = {"home_score_ht", "away_score_ht", "revision", "updated_at"}
 ADDED_DEPENDENCIES = {"core.archive_match_attestations", "ops.archive_removals"}
 REFS = {
     "season_id": ("core.seasons", "season_id", ("id", "label")),
@@ -216,7 +218,7 @@ def guard_references(conn, capture, matches):
                 for m in matches if m["round_id"] is not None), "round edition mismatch")
 
 
-def verify_elo(conn, elo, bits, run, captured_after):
+def verify_elo(conn, elo, bits, run, captured_after, needed):
     have = select_rows(conn, ELO, sql.SQL("t.match_id=ANY(%s)"), (list(IDS),))
     actual_bits = conn.execute("""
         SELECT match_id,team_id,jsonb_build_object('elo_before',encode(float4send(elo_before),'hex'),
@@ -227,8 +229,8 @@ def verify_elo(conn, elo, bits, run, captured_after):
     original_run = select_rows(conn, "agg.power_runs", sql.SQL("t.id=2097"))
     if (same_rows(elo, have) and bits == [list(r) for r in actual_bits] and same_rows(run, original_run)):
         return {"preserved_elo": 70, "elo_pending_sides": 0, "elo_run": 2097}
-    require(not have and not actual_bits and same_rows([dict(run[0], status="superseded")], original_run),
-            "Elo drift: the 70 signed sides must all match or all have been superseded")
+    require(same_rows([dict(run[0], status="superseded")], original_run),
+            "Elo drift: the original run differs from the reviewed publication")
     published = select_rows(conn, "agg.power_runs", sql.SQL("t.kind='elo' AND t.season_id IS NULL AND t.status='published'"))
     require(len(published) == 1, "Elo drift: expected one later published run")
     later = published[0]
@@ -240,6 +242,12 @@ def verify_elo(conn, elo, bits, run, captured_after):
           FROM (SELECT count(*) AS n,bool_and(run_id=%s) AS same_run FROM agg.team_elo GROUP BY match_id) checks
     """, (later["id"],)).fetchone()
     require(counted == later["matches"] and not malformed, "Elo drift: incomplete later published population")
+    if have:
+        expected = {(r["match_id"], r["team_id"], r["season_id"]) for r in elo}
+        sides = {(r["match_id"], r["team_id"], r["season_id"]) for r in have}
+        require(not needed and len(have) == len(expected) and sides == expected,
+                "Elo drift: later published sides differ from the restored identities")
+        return {"preserved_elo": 70, "elo_pending_sides": 0, "elo_run": later["id"]}
     return {"preserved_elo": 0, "elo_pending_sides": 70, "elo_run": later["id"]}
 
 
@@ -250,7 +258,7 @@ def guard_sequence(conn):
     require(step == 1 and not cycle and cache == 1 and last + int(called) > max(max_existing, *IDS), "match identity sequence unsafe")
 
 
-def current_state(conn, facts, parents, bindings):
+def current_state(conn, facts, parents, bindings, *, allow_enrichment=False):
     mids = list(IDS)
     keys = [r["provider_key"] for r in bindings]
     existing = select_rows(conn, MATCHES, sql.SQL("t.id=ANY(%s)"), (mids,))
@@ -264,7 +272,18 @@ def current_state(conn, facts, parents, bindings):
         """, (day,mid,home,away,away,home)).fetchone()
         require(duplicate is None, "same-day pair collision at " + str(mid))
     if existing or keyed:
-        require(same_rows(existing, parents) and same_rows(keyed, bindings), "physical identity or provider key collision")
+        require(same_rows(keyed, bindings), "physical identity or provider key collision")
+        if not same_rows(existing, parents):
+            def identity(rows):
+                return [{k: v for k, v in row.items() if k not in ENRICHMENT_COLUMNS} for row in rows]
+
+            require(allow_enrichment and same_rows(identity(existing), identity(parents)), "physical identity or provider key collision")
+            original = {m["id"]: m for m in parents}
+            for row in existing:
+                saved = original[row["id"]]
+                require(row == saved or (row["revision"] > saved["revision"] and
+                        datetime.fromisoformat(row["updated_at"]) >= datetime.fromisoformat(saved["updated_at"])),
+                        "physical row changes have no newer enrichment revision")
         return False
     return True
 
@@ -290,13 +309,17 @@ def restore(conn, before, after, apply):
                                                                  "ops.resource_versions"}
             conn.execute(sql.SQL("LOCK TABLE {} IN SHARE ROW EXCLUSIVE MODE NOWAIT").format(sql.SQL(", ").join(map(typed, sorted(locked)))))
         guard_references(conn, before, parents)
-        elo_state = verify_elo(conn, elo, bits, run, after["at"])
-        needed = current_state(conn, facts, parents, bindings)
+        needed = current_state(conn, facts, parents, bindings, allow_enrichment=True)
+        elo_state = verify_elo(conn, elo, bits, run, after["at"], needed)
         guard_sequence(conn)
         for table, predicates in checks.items():
             if table in (ELO, BINDINGS):
                 continue
             where = sql.SQL(" OR ").join(sql.SQL("(") + sql.SQL(p) + sql.SQL(")") for p in sorted(predicates))
+            if table == MATCH_STATS and not needed:
+                # After restoration the normal writer may enrich only the verified match and its participants.
+                where = sql.SQL("({}) AND NOT EXISTS (SELECT 1 FROM core.matches m WHERE m.id=t.match_id "
+                                "AND m.season_id=t.season_id AND t.team_id IN (m.home_team_id,m.away_team_id))").format(where)
             occupied = conn.execute(sql.SQL("SELECT 1 FROM {} t WHERE {} LIMIT 1").format(typed(table), where),
                                     tuple(list(IDS) for _ in predicates)).fetchone()
             require(occupied is None, "unexpected dependent row in " + table)
@@ -309,7 +332,7 @@ def restore(conn, before, after, apply):
                 conn.execute(sql.SQL("INSERT INTO {} SELECT * FROM jsonb_populate_recordset(NULL::{},%s)").format(typed(table), typed(table)),
                              (Jsonb(data),))
             require(not current_state(conn, facts, parents, bindings), "restored identity differs")
-            require(verify_elo(conn, elo, bits, run, after["at"]) == elo_state, "Elo drift during restoration")
+            require(verify_elo(conn, elo, bits, run, after["at"], False) == elo_state, "Elo drift during restoration")
             conn.execute("UPDATE core.competition_seasons SET cup_updated_at=now() WHERE id=ANY(%s)", (list(FOLDERS),))
             for edition in sorted(FOLDERS):
                 version = conn.execute("""INSERT INTO ops.resource_versions(resource_kind,resource_id) VALUES('competition_season',%s)
