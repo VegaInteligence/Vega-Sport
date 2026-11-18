@@ -1,0 +1,84 @@
+{
+  "assigned": 14418,
+  "computed": 14418,
+  "computed_grade_keys_and_binary32_sha256": "dda3999bcc77db6c2d404f2d7f7e117a4848680b6facdf9a567dad7b17280fcd",
+  "editions": {
+    "714": {
+      "admitted": 459,
+      "assigned": 459,
+      "computable_index": 459,
+      "contribution": 459
+    },
+    "729": {
+      "admitted": 2862,
+      "assigned": 2856,
+      "computable_index": 2856,
+      "contribution": 2856,
+      "no_role": 6
+    },
+    "744": {
+      "admitted": 268,
+      "assigned": 268,
+      "computable_index": 268,
+      "contribution": 268
+    },
+    "780": {
+      "admitted": 3178,
+      "assigned": 3178,
+      "computable_index": 3178,
+      "contribution": 3178
+    },
+    "798": {
+      "admitted": 404,
+      "assigned": 404,
+      "computable_index": 404,
+      "contribution": 404
+    },
+    "853": {
+      "admitted": 368,
+      "assigned": 365,
+      "computable_index": 365,
+      "contribution": 365,
+      "no_role": 3
+    },
+    "883": {
+      "admitted": 6162,
+      "assigned": 6162,
+      "computable_index": 6162,
+      "contribution": 6162
+    },
+    "913": {
+      "admitted": 110,
+      "assigned": 110,
+      "computable_index": 110,
+      "contribution": 110
+    },
+    "963": {
+      "admitted": 214,
+      "assigned": 214,
+      "computable_index": 214,
+      "contribution": 214
+    },
+    "980": {
+      "admitted": 402,
+      "assigned": 402,
+      "computable_index": 402,
+      "contribution": 402
+    }
+  },
+  "first_read": "2026-11-18 08:21:50.093404+00",
+  "inputs": 14427,
+  "missing_role": 9,
+  "persisted": 0,
+  "raw_multiset_sha256": "58cbc68286eee3336736feb93396360975413f1cd61f25723bc0f52ecdc5c7d6",
+  "roles_used": {
+    "central_midfielder": 1755,
+    "centre_back": 2128,
+    "centre_forward": 1131,
+    "defensive_midfielder": 498,
+    "full_back": 1826,
+    "goalkeeper": 970,
+    "winger": 1704
+  },
+  "second_read": "2026-11-18 08:45:46.70736+00"
+}

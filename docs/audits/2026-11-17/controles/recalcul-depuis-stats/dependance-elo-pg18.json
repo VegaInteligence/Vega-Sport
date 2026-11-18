@@ -1,0 +1,627 @@
+{
+  "release": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "postgres": "18.6 (Debian 18.6-1.pgdg12+2)",
+  "observed_clocks": {
+    "baseline": {
+      "clock_utc": "2026-11-18 08:49:36.381512+00:00",
+      "due": [
+        2024,
+        2021
+      ]
+    },
+    "initial_idle": {
+      "clock_utc": "2026-11-18 08:49:36.988765+00:00",
+      "due": []
+    },
+    "control_idle": {
+      "clock_utc": "2026-11-18 15:49:37.235403+00:00",
+      "due": []
+    },
+    "before_deadline": {
+      "clock_utc": "2026-11-18 08:49:37.798451+00:00",
+      "due": []
+    },
+    "normal_due": {
+      "clock_utc": "2026-11-18 15:49:37.906131+00:00",
+      "due": [
+        2024
+      ]
+    },
+    "normal_repeat": {
+      "clock_utc": "2026-11-18 15:49:38.219659+00:00",
+      "due": []
+    },
+    "final_idle": {
+      "clock_utc": "2026-11-18 15:49:38.702501+00:00",
+      "due": []
+    }
+  },
+  "baseline_rows": 320,
+  "corrected_match": {
+    "away_score": 2,
+    "away_team_id": 3,
+    "competition_season_id": 43,
+    "home_score": 1,
+    "home_team_id": 16,
+    "id": 4160,
+    "match_date": "2025-03-31",
+    "revision": 2,
+    "season_id": 2024,
+    "updated_at": "2026-11-18 08:49:37.689502+00:00"
+  },
+  "first_match_version": {
+    "away_score": 1,
+    "away_team_id": 3,
+    "competition_season_id": 43,
+    "home_score": 2,
+    "home_team_id": 16,
+    "id": 4160,
+    "match_date": "2025-03-31",
+    "revision": 1,
+    "season_id": 2024,
+    "updated_at": "2026-11-18 08:49:36.272664+00:00"
+  },
+  "due_sets": {
+    "baseline": [
+      2024,
+      2021
+    ],
+    "initial_idle": [],
+    "control_idle": [],
+    "before_deadline": [],
+    "normal_due": [
+      2024
+    ],
+    "normal_repeat": [],
+    "final_idle": []
+  },
+  "compared": {
+    "normal_vs_original": {
+      "elo.elo_before": {
+        "changed": 298,
+        "over_1e4": 297,
+        "max_abs": 10.45510000000013
+      },
+      "elo.elo_after": {
+        "changed": 306,
+        "over_1e4": 305,
+        "max_abs": 10.45510000000013
+      },
+      "elo.run_id": {
+        "changed": 320,
+        "over_1e4": 320,
+        "max_abs": 3
+      },
+      "power.opponent_elo": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "power.contribution": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "power.match_index": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "power.run_id": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0
+      },
+      "grades.z": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "grades.first_z": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "grades.grade": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "grades.run_id": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0
+      },
+      "rounded_grade": 0,
+      "one_decimal_grade": 0,
+      "first_graded_at_changed": 0,
+      "last_changed_at_changed": 0
+    },
+    "explicit_vs_normal": {
+      "elo.elo_before": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "elo.elo_after": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "elo.run_id": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0
+      },
+      "power.opponent_elo": {
+        "changed": 298,
+        "over_1e4": 297,
+        "max_abs": 10.45510000000013
+      },
+      "power.contribution": {
+        "changed": 320,
+        "over_1e4": 319,
+        "max_abs": 0.07885363000000001
+      },
+      "power.match_index": {
+        "changed": 245,
+        "over_1e4": 245,
+        "max_abs": 0.1949943999999999
+      },
+      "power.run_id": {
+        "changed": 320,
+        "over_1e4": 320,
+        "max_abs": 3
+      },
+      "grades.z": {
+        "changed": 245,
+        "over_1e4": 245,
+        "max_abs": 0.1949943999999999
+      },
+      "grades.first_z": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "grades.grade": {
+        "changed": 245,
+        "over_1e4": 245,
+        "max_abs": 2.016110952015609
+      },
+      "grades.run_id": {
+        "changed": 245,
+        "over_1e4": 245,
+        "max_abs": 3
+      },
+      "rounded_grade": 96,
+      "one_decimal_grade": 245,
+      "first_graded_at_changed": 0,
+      "last_changed_at_changed": 245
+    },
+    "end_vs_control": {
+      "elo.elo_before": {
+        "changed": 296,
+        "over_1e4": 296,
+        "max_abs": 10.45510000000013
+      },
+      "elo.elo_after": {
+        "changed": 304,
+        "over_1e4": 304,
+        "max_abs": 10.45510000000013
+      },
+      "elo.run_id": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0
+      },
+      "power.opponent_elo": {
+        "changed": 296,
+        "over_1e4": 296,
+        "max_abs": 10.45510000000013
+      },
+      "power.contribution": {
+        "changed": 320,
+        "over_1e4": 319,
+        "max_abs": 0.07885349999999999
+      },
+      "power.match_index": {
+        "changed": 245,
+        "over_1e4": 245,
+        "max_abs": 0.1949943999999999
+      },
+      "power.run_id": {
+        "changed": 320,
+        "over_1e4": 320,
+        "max_abs": 1
+      },
+      "grades.z": {
+        "changed": 245,
+        "over_1e4": 245,
+        "max_abs": 0.1949943999999999
+      },
+      "grades.first_z": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "grades.grade": {
+        "changed": 245,
+        "over_1e4": 245,
+        "max_abs": 2.016110952015609
+      },
+      "grades.run_id": {
+        "changed": 245,
+        "over_1e4": 245,
+        "max_abs": 3
+      },
+      "rounded_grade": 96,
+      "one_decimal_grade": 245,
+      "first_graded_at_changed": 0,
+      "last_changed_at_changed": 245
+    },
+    "control_vs_original": {
+      "elo.elo_before": {
+        "changed": 150,
+        "over_1e4": 53,
+        "max_abs": 0.00020000000017716957
+      },
+      "elo.elo_after": {
+        "changed": 151,
+        "over_1e4": 49,
+        "max_abs": 0.00020000000017716957
+      },
+      "elo.run_id": {
+        "changed": 320,
+        "over_1e4": 320,
+        "max_abs": 3
+      },
+      "power.opponent_elo": {
+        "changed": 150,
+        "over_1e4": 53,
+        "max_abs": 0.00020000000017716957
+      },
+      "power.contribution": {
+        "changed": 278,
+        "over_1e4": 0,
+        "max_abs": 2.1000000000048757e-06
+      },
+      "power.match_index": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "power.run_id": {
+        "changed": 320,
+        "over_1e4": 320,
+        "max_abs": 2
+      },
+      "grades.z": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "grades.first_z": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "grades.grade": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "grades.run_id": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0
+      },
+      "rounded_grade": 0,
+      "one_decimal_grade": 0,
+      "first_graded_at_changed": 0,
+      "last_changed_at_changed": 0
+    },
+    "second_refit_vs_first": {
+      "elo.elo_before": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "elo.elo_after": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "elo.run_id": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0
+      },
+      "power.opponent_elo": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "power.contribution": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "power.match_index": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "power.run_id": {
+        "changed": 320,
+        "over_1e4": 320,
+        "max_abs": 1
+      },
+      "grades.z": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "grades.first_z": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "grades.grade": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0.0
+      },
+      "grades.run_id": {
+        "changed": 0,
+        "over_1e4": 0,
+        "max_abs": 0
+      },
+      "rounded_grade": 0,
+      "one_decimal_grade": 0,
+      "first_graded_at_changed": 0,
+      "last_changed_at_changed": 0
+    }
+  },
+  "shots_fit": {
+    "baseline": {
+      "alpha_beta": [
+        0.8522378374861008,
+        -1.1354308764852172
+      ],
+      "distinct_delta": 297,
+      "min_fit": 200,
+      "n": 320
+    },
+    "control_after_refit": {
+      "alpha_beta": [
+        0.8522378434291009,
+        -1.135430486755015
+      ],
+      "distinct_delta": 295,
+      "min_fit": 200,
+      "n": 320
+    },
+    "normal_due": {
+      "alpha_beta": [
+        0.8533824815382653,
+        -1.0631664149286735
+      ],
+      "distinct_delta": 297,
+      "min_fit": 200,
+      "n": 320
+    },
+    "explicit_historical": {
+      "alpha_beta": [
+        0.8533824815382653,
+        -1.0631664149286735
+      ],
+      "distinct_delta": 297,
+      "min_fit": 200,
+      "n": 320
+    }
+  },
+  "resolved_runs": {
+    "baseline": {
+      "elo": 1,
+      "players_2024": 2,
+      "players_2021": 3
+    },
+    "control_after_refit": {
+      "players_2024": 2,
+      "elo": 4,
+      "players_2021": 5
+    },
+    "normal_due": {
+      "players_2021": 3,
+      "elo": 4,
+      "players_2024": 5
+    },
+    "explicit_historical": {
+      "elo": 4,
+      "players_2024": 5,
+      "players_2021": 6
+    },
+    "explicit_repeat": {
+      "elo": 4,
+      "players_2024": 5,
+      "players_2021": 7
+    }
+  },
+  "old_levels_watermarks": {
+    "baseline": [
+      {
+        "levels_at": "2026-11-18 08:49:36.805419+00:00",
+        "scope": "season:2021"
+      },
+      {
+        "levels_at": "2026-11-18 08:49:36.598746+00:00",
+        "scope": "season:2024"
+      }
+    ],
+    "normal_due": [
+      {
+        "levels_at": "2026-11-18 08:49:36.805419+00:00",
+        "scope": "season:2021"
+      },
+      {
+        "levels_at": "2026-11-18 08:49:38.040297+00:00",
+        "scope": "season:2024"
+      }
+    ]
+  },
+  "leagues": {
+    "baseline": [
+      {
+        "competition_id": 1,
+        "entry_level": 1541.7124,
+        "linked": true
+      },
+      {
+        "competition_id": 2,
+        "entry_level": 1458.2876,
+        "linked": true
+      }
+    ],
+    "control_after_refit": [
+      {
+        "competition_id": 1,
+        "entry_level": 1541.7124,
+        "linked": true
+      },
+      {
+        "competition_id": 2,
+        "entry_level": 1458.2875,
+        "linked": true
+      }
+    ],
+    "normal_due": [
+      {
+        "competition_id": 1,
+        "entry_level": 1541.7124,
+        "linked": true
+      },
+      {
+        "competition_id": 2,
+        "entry_level": 1447.8325,
+        "linked": true
+      }
+    ]
+  },
+  "preview_minus_published_z": {
+    "baseline": {
+      "changed": 320,
+      "over_1e4": 0,
+      "max_abs": 1.5543505860193818e-07
+    },
+    "control_after_refit": {
+      "changed": 320,
+      "over_1e4": 0,
+      "max_abs": 1.5543505860193818e-07
+    },
+    "normal_due": {
+      "changed": 320,
+      "over_1e4": 245,
+      "max_abs": 0.1949944177677987
+    },
+    "explicit_historical": {
+      "changed": 320,
+      "over_1e4": 0,
+      "max_abs": 1.5543505860193818e-07
+    },
+    "explicit_repeat": {
+      "changed": 320,
+      "over_1e4": 0,
+      "max_abs": 1.5543505860193818e-07
+    }
+  },
+  "largest_api_grade": {
+    "baseline": {
+      "changed_at": "2026-11-18 08:49:36.752069+00:00",
+      "first_z": 2.1506987,
+      "grade": 77.5222954566675,
+      "graded_at": "2026-11-18 08:49:36.752069+00:00",
+      "match_id": 1006,
+      "player_id": 14,
+      "ref_season": 2021,
+      "run_id": 3,
+      "z": 2.1506987
+    },
+    "after": {
+      "changed_at": "2026-11-18 08:49:38.354568+00:00",
+      "first_z": 2.1506987,
+      "grade": 75.5061845046519,
+      "graded_at": "2026-11-18 08:49:36.752069+00:00",
+      "match_id": 1006,
+      "player_id": 14,
+      "ref_season": 2021,
+      "run_id": 6,
+      "z": 1.9557043
+    }
+  },
+  "persisted_full_row_fingerprints": {
+    "baseline": {
+      "elo": "31663629da4212112c5fd815f1e2b6ccf0e11d08f7a328d1e797ef2bdac11c5c",
+      "power": "08b976cd10953f1ed6f6f3829793219c80b368bb62f304fd696c34d79cc430ca",
+      "grades": "f4c9eb7c664c9011ef5e346408a99a1c95a7e7d72709f3ccdb32301fc470ecdc",
+      "refs_hash": "c92a817bcd3b14b9b8b51a780a9e6ab3c8597276fd0fe25df30c3365e38f9c8e"
+    },
+    "control_after_refit": {
+      "elo": "c7189411fa9e1fc42bf66c30cd110fffe55bf3a4a987bea33b067740bbe2a231",
+      "power": "eb2babee56853edc19685a086e7f35405804bcbe08a0985c15b33ac45e107cb3",
+      "grades": "f4c9eb7c664c9011ef5e346408a99a1c95a7e7d72709f3ccdb32301fc470ecdc",
+      "refs_hash": "ee36ce3214e5fbec68a3c954c0e3a9e66e501f2ad2175c08aca861261d2a4166"
+    },
+    "normal_due": {
+      "elo": "3a2d1667ea3c3ff69633e78a0b6d25b4e9c378fdf896aabc151b9bdf504ac421",
+      "power": "08b976cd10953f1ed6f6f3829793219c80b368bb62f304fd696c34d79cc430ca",
+      "grades": "f4c9eb7c664c9011ef5e346408a99a1c95a7e7d72709f3ccdb32301fc470ecdc",
+      "refs_hash": "c92a817bcd3b14b9b8b51a780a9e6ab3c8597276fd0fe25df30c3365e38f9c8e"
+    },
+    "explicit_historical": {
+      "elo": "3a2d1667ea3c3ff69633e78a0b6d25b4e9c378fdf896aabc151b9bdf504ac421",
+      "power": "1677c669c03653ff45218da8dadf8623d986684c950ea5febbb193055af4872a",
+      "grades": "f13b6667bc2102588251d5fae320ce31e0ccfda70547a9dbce3dd26c13950514",
+      "refs_hash": "40374492564aedc037642c339a497e2b1c2fb14b3506aa23bcadf6ba979aefaa"
+    },
+    "explicit_repeat": {
+      "elo": "3a2d1667ea3c3ff69633e78a0b6d25b4e9c378fdf896aabc151b9bdf504ac421",
+      "power": "6d8391f7493501f71738cb4573865d3bc7e1fa38dfead9e3dca9547189af5597",
+      "grades": "f13b6667bc2102588251d5fae320ce31e0ccfda70547a9dbce3dd26c13950514",
+      "refs_hash": "40374492564aedc037642c339a497e2b1c2fb14b3506aa23bcadf6ba979aefaa"
+    }
+  },
+  "historical_source_fingerprints": {
+    "advanced": [
+      0,
+      "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    ],
+    "coverage": [
+      160,
+      "98996d46ab573586d6f9500756ae9fe34d555d4fb974f6f41d42cfcaaf86afcf"
+    ],
+    "events": [
+      0,
+      "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    ],
+    "lineup_players": [
+      0,
+      "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    ],
+    "lineups": [
+      0,
+      "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    ],
+    "matches": [
+      160,
+      "11c74787f64ab5bc8ffff51e5307da4ad9407a873e58790302a4379c907583a5"
+    ],
+    "stats": [
+      320,
+      "160643d3864981f7e9d7465d4210be81d43074a81e5bb392994dcbae92488be8"
+    ]
+  },
+  "raw_match_changes": 1,
+  "method_versions": [
+    "power-ranking-v8"
+  ]
+}
