@@ -159,6 +159,45 @@ class ImportTest(unittest.TestCase):
         except psycopg.Rollback:
             pass
 
+    def test_stored_goal_twins_become_one_match(self):
+        # The archive base kept some matches twice (18 Nov 2026, measured in production: 64 in the
+        # 2019/20 Premier League, 5 in the 2000/01 Serie A, about 30 a season in Portugal): the result
+        # (« r: », no goals) and the goals archive's match (« g: ») a few days or a year apart, or with
+        # one club written otherwise. merge_twins (shared/archive.js's goalTwins) keeps the result,
+        # moves the goals onto it (their clubs become the result's), takes the goals' date, removes
+        # the twin and gives the season a new version; a goal match with no twin stays.
+        x = self.db.execute
+        comp = "t/2005/pt.1"
+        goal = lambda team, minute: {"team": team, "minute": minute, "player": f"P{minute}", "score": [1, 0], "side": "home"}
+        data = {"competitions": [{"id": comp, "name": "Liga", "country": "Portugal"}], "matches": [
+            {"key": f"r:{comp}:1", "competitionId": comp, "date": "2006-03-05", "team1": "Sp Lisbon", "team2": "Gil Vicente", "score": [2, 0]},
+            {"key": "g:por:2006-03-05:9", "competitionId": comp, "date": "2006-03-05", "team1": "Sporting CP", "team2": "Gil Vicente", "score": [2, 0],
+             "goals": [goal("Sporting CP", "12"), goal("Sporting CP", "80")]},
+            {"key": f"r:{comp}:2", "competitionId": comp, "date": "2005-07-26", "team1": "Arsenal FC", "team2": "Watford FC", "score": [3, 2]},
+            {"key": "g:por:2006-07-26:10", "competitionId": comp, "date": "2006-07-26", "team1": "Arsenal FC", "team2": "Watford FC", "score": [3, 2],
+             "goals": [goal("Arsenal FC", "5")]},
+            {"key": "g:por:2006-01-01:11", "competitionId": comp, "date": "2006-01-01", "team1": "Celtic", "team2": "Rangers", "score": [1, 0],
+             "goals": [goal("Celtic", "44")]},
+        ]}
+        try:
+            with self.db.transaction():
+                archives.Loader(self.db).season("2005/2006", data, lambda match: "engsoccerdata")
+                version = lambda: x("SELECT version FROM ops.resource_versions WHERE resource_kind='archive_season' AND resource_id=2005").fetchone()[0]
+                before = version()
+                rows = lambda: x("SELECT archive_key, match_date::text, home_team_name FROM core.matches WHERE season_id=2005 AND archive_key LIKE ANY(ARRAY['r:t/%%','g:por:%%']) ORDER BY 1").fetchall()
+                self.assertEqual(len(rows()), 5)
+                self.assertEqual(archives.merge_twins(self.db), {"2005/2006": 2})
+                self.assertEqual(rows(), [("g:por:2006-01-01:11", "2006-01-01", "Celtic"),
+                                          (f"r:{comp}:1", "2006-03-05", "Sp Lisbon"), (f"r:{comp}:2", "2006-07-26", "Arsenal FC")])
+                lisbon = x("SELECT id, home_team_id FROM core.matches WHERE archive_key=%s", (f"r:{comp}:1",)).fetchone()
+                self.assertEqual(x("SELECT count(*), count(*) FILTER (WHERE team_id=%s) FROM core.match_events WHERE match_id=%s",
+                                   (lisbon[1], lisbon[0])).fetchone(), (2, 2))
+                self.assertEqual(version(), before + 1)
+                self.assertEqual(archives.merge_twins(self.db), {})
+                raise psycopg.Rollback()
+        except psycopg.Rollback:
+            pass
+
     def test_recent_seasons_fill_what_pitchapi_lacks(self):
         from vega.store import Store
 

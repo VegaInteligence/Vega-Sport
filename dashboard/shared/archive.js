@@ -177,6 +177,52 @@ function groupNotes(group) {
   return notes;
 }
 
+function dayNumber(day) {
+  const time = Date.parse(`${day}T12:00:00Z`);
+  return Number.isNaN(time) ? null : Math.round(time / 86400000);
+}
+
+/**
+ * The goal-only matches that are a results match the first pass missed: the results archive
+ * dated it a few days or a year off (a season's year inferred wrong), or wrote one club
+ * otherwise ("Sp Lisbon" / "Sporting CP"). Same competition, same score, a result without goals,
+ * and one candidate only; then both clubs alike within three days, one club the same within a
+ * day, or both clubs the same a year apart. Returns [{ goal, result, date }] (the goals' date:
+ * that archive is dated by match day). Used by buildArchiveSeason and on stored archive rows
+ * (backend/archives/twins.mjs).
+ */
+export function goalTwins(matches) {
+  const results = new Map();
+  for (const match of matches) {
+    if (!String(match.key).startsWith("r:") || match.goals || dayNumber(match.date) === null) continue;
+    if (!results.has(match.competitionId)) results.set(match.competitionId, []);
+    results.get(match.competitionId).push(match);
+  }
+  const claimed = new Set(),
+    twins = [];
+  for (const goal of matches) {
+    const day = dayNumber(goal.date);
+    if (!String(goal.key).startsWith("g:") || !goal.goals || day === null) continue;
+    const [h, a] = goal.score || [];
+    if (!Number.isInteger(h) || !Number.isInteger(a)) continue;
+    const candidates = (results.get(goal.competitionId) || []).filter((match) => {
+      if (claimed.has(match.key) || match.score?.[0] !== h || match.score?.[1] !== a) return false;
+      const apart = Math.abs(dayNumber(match.date) - day);
+      const home = teamSimilarity(match.team1, goal.team1),
+        away = teamSimilarity(match.team2, goal.team2);
+      return (
+        (apart <= 3 && home > 0 && away > 0) ||
+        (apart <= 1 && (home >= 2 || away >= 2)) ||
+        (apart >= 363 && apart <= 368 && home >= 2 && away >= 2)
+      );
+    });
+    if (candidates.length !== 1) continue;
+    claimed.add(candidates[0].key);
+    twins.push({ goal: goal.key, result: candidates[0].key, date: goal.date });
+  }
+  return twins;
+}
+
 export function buildArchiveSeason(results, goals) {
   const competitions = new Map();
   const matches = [];
@@ -283,7 +329,17 @@ export function buildArchiveSeason(results, goals) {
     });
   });
 
-  matches.sort(
+  // A goal-only match that is a result missed above is that result: one row, with its goals.
+  const byKey = new Map(matches.map((match) => [match.key, match]));
+  const twins = new Set();
+  for (const twin of goalTwins(matches)) {
+    const result = byKey.get(twin.result);
+    result.goals = byKey.get(twin.goal).goals;
+    result.date = twin.date;
+    twins.add(twin.goal);
+  }
+  const kept = twins.size ? matches.filter((match) => !twins.has(match.key)) : matches;
+  kept.sort(
     (a, b) =>
       String(b.date).localeCompare(String(a.date)) ||
       a.key.localeCompare(b.key),
@@ -291,7 +347,7 @@ export function buildArchiveSeason(results, goals) {
   return {
     season: results?.season || goals?.season || "",
     competitions: [...competitions.values()],
-    matches,
+    matches: kept,
   };
 }
 

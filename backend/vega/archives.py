@@ -69,6 +69,7 @@ PITCHAPI_COMPETITIONS = {
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = Path(os.environ.get("VEGA_ARCHIVE_SCRIPTS", ROOT / "backend/archives/builders"))
 EDITION = Path(os.environ.get("VEGA_ARCHIVE_EDITION", ROOT / "backend/archives/edition.mjs"))
+TWINS = Path(os.environ.get("VEGA_ARCHIVE_TWINS", ROOT / "backend/archives/twins.mjs"))
 PROVIDERS = {"openfootball": "openfootball", "footballcsv": "footballcsv", "engsoccerdata": "engsoccerdata", "worldclub": "worldclub"}
 
 
@@ -420,6 +421,61 @@ def download(url, target, client=None):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 s3.download_file(bucket, item["Key"], str(path))
     return Path(target)
+
+
+def merge_twins(conn):
+    """The archive matches stored twice (a goal-only match « g: » beside its result « r: »,
+    which an earlier edition builder missed: shared/archive.js's goalTwins) become one: the
+    result keeps its row, takes the goals (their clubs made the result's) and the goals' date,
+    and the twin goes. Returns {season: twins merged}; a later import builds the same."""
+    out = {}
+    seasons = [r[0] for r in conn.execute(
+        "SELECT DISTINCT season_id FROM core.matches WHERE archive_key LIKE 'g:%%' ORDER BY 1"
+    )]
+    for season in seasons:
+        rows = conn.execute(
+            """SELECT m.id, m.archive_key, cs.archive_key, m.match_date::text, m.home_team_name, m.away_team_name,
+                      m.home_score, m.away_score, m.home_team_id, m.away_team_id,
+                      EXISTS (SELECT 1 FROM core.match_events e WHERE e.season_id = m.season_id AND e.match_id = m.id AND e.event_type = 'goal')
+               FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+               WHERE m.season_id = %s AND m.archive_key IS NOT NULL AND cs.archive_key IS NOT NULL""",
+            (season,),
+        ).fetchall()
+        if not any(key.startswith("g:") for _, key, *_ in rows):
+            continue
+        by_key = {row[1]: row for row in rows}
+        payload = {"matches": [
+            {"key": key, "competitionId": comp, "date": day, "team1": home, "team2": away, "score": [hs, aws],
+             "goals": [{}] if has_goals else None}
+            for _, key, comp, day, home, away, hs, aws, _h, _a, has_goals in rows
+        ]}
+        done = subprocess.run(["node", str(TWINS)], input=json.dumps(payload), capture_output=True, text=True, timeout=600)
+        if done.returncode != 0:
+            raise ArchiveError(f"twins.mjs failed: {done.stderr.strip()[-500:]}")
+        twins = json.loads(done.stdout)
+        if not twins:
+            continue
+        with conn.transaction():
+            for twin in twins:
+                goal, result = by_key[twin["goal"]], by_key[twin["result"]]
+                conn.execute(
+                    """UPDATE core.match_events SET match_id = %s,
+                         team_id = CASE team_id WHEN %s THEN %s WHEN %s THEN %s ELSE team_id END
+                       WHERE season_id = %s AND match_id = %s""",
+                    (result[0], goal[8], result[8], goal[9], result[9], season, goal[0]),
+                )
+                conn.execute(
+                    "UPDATE core.matches SET match_date = %s, revision = revision + 1, updated_at = now() WHERE id = %s",
+                    (twin["date"], result[0]),
+                )
+                conn.execute("DELETE FROM core.matches WHERE id = %s", (goal[0],))
+            conn.execute(
+                """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES ('archive_season', %s)
+                   ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
+                (season,),
+            )
+        out[f"{season}/{season + 1}"] = len(twins)
+    return out
 
 
 def run(conn, sources, seasons=None):
