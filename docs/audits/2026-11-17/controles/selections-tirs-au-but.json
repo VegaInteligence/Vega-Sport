@@ -1,0 +1,239 @@
+{
+ "at": "2026-11-18 01:04:27.698748+00:00",
+ "database": "vega_v2",
+ "columns": [
+  "eligible_nations",
+  "returned_nation_match_rows",
+  "distinct_returned_matches",
+  "source_matches",
+  "invalid_team_shapes",
+  "unique_keys",
+  "keys_missing_reader_result",
+  "reader_ids_without_expected_key",
+  "inconsistent_nation_sides",
+  "retained_regular_score_mismatch",
+  "fallback_replay_mismatch",
+  "copied_keys",
+  "rows_in_copied_keys",
+  "keys_reversing_home_away",
+  "keys_native_and_supplement",
+  "published_complete_penalties",
+  "copied_complete_penalties",
+  "published_partial_penalties",
+  "published_empty_penalties",
+  "filled_keys",
+  "filled_keys_reversing_home_away",
+  "published_pair_from_no_single_source_including_nulls",
+  "published_complete_from_no_single_source",
+  "conflicting_score_component",
+  "distinct_complete_regular_score_pairs",
+  "conflicting_penalty_component",
+  "distinct_complete_penalty_pairs",
+  "any_conflicting_score_component",
+  "witnesses",
+  "function_body_md5"
+ ],
+ "rows": [
+  [
+   153,
+   3256,
+   1628,
+   1760,
+   0,
+   1628,
+   0,
+   0,
+   0,
+   0,
+   0,
+   132,
+   "264",
+   0,
+   132,
+   46,
+   8,
+   0,
+   1582,
+   8,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   [
+    {
+     "hi": 5482,
+     "lo": 5475,
+     "kind": "filled_from_copy",
+     "chosen": 230439,
+     "daykey": "2022-12-05",
+     "sources": [
+      {
+       "away": 5482,
+       "home": 5475,
+       "match": 1429,
+       "collected": false,
+       "penalties_by_team": [
+        1,
+        3
+       ],
+       "match_scores_by_team": [
+        1,
+        1
+       ]
+      },
+      {
+       "away": 5482,
+       "home": 5475,
+       "match": 230439,
+       "collected": true,
+       "penalties_by_team": [
+        null,
+        null
+       ],
+       "match_scores_by_team": [
+        1,
+        1
+       ]
+      }
+     ],
+     "match_key": "m_1YHoM6",
+     "chosen_away_id": 5482,
+     "chosen_home_id": 5475,
+     "published_pen_hi": 3,
+     "published_pen_lo": 1
+    },
+    {
+     "hi": 5506,
+     "lo": 5497,
+     "kind": "filled_from_copy",
+     "chosen": 230441,
+     "daykey": "2022-12-06",
+     "sources": [
+      {
+       "away": 5506,
+       "home": 5497,
+       "match": 1431,
+       "collected": false,
+       "penalties_by_team": [
+        3,
+        0
+       ],
+       "match_scores_by_team": [
+        0,
+        0
+       ]
+      },
+      {
+       "away": 5506,
+       "home": 5497,
+       "match": 230441,
+       "collected": true,
+       "penalties_by_team": [
+        null,
+        null
+       ],
+       "match_scores_by_team": [
+        0,
+        0
+       ]
+      }
+     ],
+     "match_key": "m_36Wxbh",
+     "chosen_away_id": 5506,
+     "chosen_home_id": 5497,
+     "published_pen_hi": 0,
+     "published_pen_lo": 3
+    },
+    {
+     "hi": 5480,
+     "lo": 5467,
+     "kind": "filled_from_copy",
+     "chosen": 230444,
+     "daykey": "2022-12-09",
+     "sources": [
+      {
+       "away": 5467,
+       "home": 5480,
+       "match": 1434,
+       "collected": false,
+       "penalties_by_team": [
+        4,
+        3
+       ],
+       "match_scores_by_team": [
+        2,
+        2
+       ]
+      },
+      {
+       "away": 5467,
+       "home": 5480,
+       "match": 230444,
+       "collected": true,
+       "penalties_by_team": [
+        null,
+        null
+       ],
+       "match_scores_by_team": [
+        2,
+        2
+       ]
+      }
+     ],
+     "match_key": "m_09Rwuw",
+     "chosen_away_id": 5467,
+     "chosen_home_id": 5480,
+     "published_pen_hi": 3,
+     "published_pen_lo": 4
+    },
+    {
+     "hi": 5490,
+     "lo": 5467,
+     "kind": "world_cup_final_2022_control",
+     "chosen": 230450,
+     "daykey": "2022-12-18",
+     "sources": [
+      {
+       "away": 5490,
+       "home": 5467,
+       "match": 1440,
+       "collected": false,
+       "penalties_by_team": [
+        4,
+        2
+       ],
+       "match_scores_by_team": [
+        3,
+        3
+       ]
+      },
+      {
+       "away": 5490,
+       "home": 5467,
+       "match": 230450,
+       "collected": true,
+       "penalties_by_team": [
+        null,
+        null
+       ],
+       "match_scores_by_team": [
+        3,
+        3
+       ]
+      }
+     ],
+     "match_key": "m_3Zw3cP",
+     "chosen_away_id": 5490,
+     "chosen_home_id": 5467,
+     "published_pen_hi": 2,
+     "published_pen_lo": 4
+    }
+   ],
+   "1b49467e17c19784721d6fdd9766d6ce"
+  ]
+ ]
+}

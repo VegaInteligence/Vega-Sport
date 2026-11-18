@@ -1,0 +1,27 @@
+{
+  "captured_utc": [
+    "2026-11-18T01:11:01.724772+00:00",
+    "2026-11-18T01:11:17.698741+00:00"
+  ],
+  "widths": [
+    641,
+    768,
+    1024,
+    1280
+  ],
+  "themes": [
+    "light",
+    "dark"
+  ],
+  "urls_checked": 2,
+  "layout_rows_passed": 16,
+  "club_metrics_same_row": 8,
+  "player_style_and_role_views": 8,
+  "public_interactions": 12,
+  "resolved_club_contexts": [
+    "Barcelona",
+    "Real Madrid"
+  ],
+  "positive_report_navigations": 2,
+  "png_verified": 34
+}

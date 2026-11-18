@@ -1,0 +1,66 @@
+{
+  "version": "18.6",
+  "listen_addresses": "",
+  "migration_sha256": "66f6b725b0eac939823af12960cbb408680e57a8b5ef8907a3a123b8b4a2ca39",
+  "cases": [
+    {
+      "day": "2020-01-01",
+      "published": [
+        4,
+        5
+      ],
+      "source_pairs": [
+        [
+          null,
+          null
+        ],
+        [
+          4,
+          2
+        ],
+        [
+          3,
+          5
+        ]
+      ],
+      "observed": false
+    },
+    {
+      "day": "2020-01-02",
+      "published": [
+        4,
+        2
+      ],
+      "source_pairs": [
+        [
+          null,
+          null
+        ],
+        [
+          4,
+          2
+        ]
+      ],
+      "observed": true
+    },
+    {
+      "day": "2020-01-03",
+      "published": [
+        4,
+        3
+      ],
+      "source_pairs": [
+        [
+          4,
+          null
+        ],
+        [
+          null,
+          3
+        ]
+      ],
+      "observed": false
+    }
+  ],
+  "private_cluster_removed": true
+}
