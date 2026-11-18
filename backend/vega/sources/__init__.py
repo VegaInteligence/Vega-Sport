@@ -44,17 +44,19 @@ LOCK_WAIT = "30s"
 
 def due(conn, now, adapter_name, adapter):
     rows = {
-        scope: (success, attempt)
-        for scope, success, attempt in conn.execute(
-            "SELECT scope, last_success_at, last_attempt_at FROM ops.source_runs WHERE source=%s", (adapter_name,)
+        scope: (success, attempt, code)
+        for scope, success, attempt, code in conn.execute(
+            "SELECT scope, last_success_at, last_attempt_at, error_code FROM ops.source_runs WHERE source=%s", (adapter_name,)
         ).fetchall()
     }
+    retry_after = getattr(adapter, "retry_after", None)
 
     def is_due(scope, period):
-        success, attempt = rows.get(scope, (None, None))
+        success, attempt, code = rows.get(scope, (None, None, None))
         if success is not None and success > now - period:
             return False
-        return attempt is None or attempt <= now - min(period, RETRY_AFTER)
+        delay = retry_after(code, period, RETRY_AFTER) if retry_after else min(period, RETRY_AFTER)
+        return attempt is None or attempt <= now - delay
 
     return [scope for scope, period in adapter.scopes(now).items() if is_due(scope, period)]
 
@@ -92,17 +94,24 @@ def run_due(conn, get, now=None, *, names=None):
 
 
 def record_run(conn, name, scope, instant, code, written, unmatched, detail=None, *, refusal=None):
+    refusal_detail = detail[:2000] if name == "sportscore" and code and detail else None
     with conn.transaction():
-        conn.execute(
-            """INSERT INTO ops.source_runs(source, scope, last_attempt_at, last_success_at, status, error_code, rows_written, unmatched, updated_at)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,now())
+        repeats, = conn.execute(
+            """INSERT INTO ops.source_runs(source, scope, last_attempt_at, last_success_at, status, error_code,
+                                            rows_written, unmatched, detail, repeats, updated_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
                ON CONFLICT (source, scope) DO UPDATE SET last_attempt_at=EXCLUDED.last_attempt_at,
                  last_success_at=coalesce(EXCLUDED.last_success_at, ops.source_runs.last_success_at),
                  status=EXCLUDED.status, error_code=EXCLUDED.error_code, rows_written=EXCLUDED.rows_written,
-                 unmatched=EXCLUDED.unmatched, updated_at=now()""",
-            (name, scope, instant, None if code else instant, "error" if code else "ok", code, written, unmatched),
-        )
-        if code and detail:
+                 unmatched=EXCLUDED.unmatched, detail=EXCLUDED.detail, updated_at=now(),
+                 repeats=CASE WHEN EXCLUDED.detail IS NOT NULL
+                   AND (ops.source_runs.error_code, ops.source_runs.detail) = (EXCLUDED.error_code, EXCLUDED.detail)
+                   THEN ops.source_runs.repeats + 1 ELSE EXCLUDED.repeats END
+               RETURNING repeats""",
+            (name, scope, instant, None if code else instant, "error" if code else "ok", code, written, unmatched,
+             refusal_detail, int(refusal_detail is not None)),
+        ).fetchone()
+        if code and detail and repeats <= 1:
             # What a refused snapshot would have changed (snapshot.py): the scope's status says that it
             # failed, this says which matches.
             failure(conn, code, f"{name}:{scope}: {detail}")

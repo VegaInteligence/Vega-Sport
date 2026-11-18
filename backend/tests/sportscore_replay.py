@@ -9,7 +9,7 @@ runs on a tree without migration 138: the basis then reads "no column".
 import copy
 from urllib.parse import parse_qs, urlsplit
 
-from sportscore_cases import CASES, CURRENT, NEXT, PREVIOUS, T0, TEAMS, VEGA, VEGA_AT
+from sportscore_cases import CASES, CURRENT, DAY, NEXT, PREVIOUS, T0, TEAMS, VEGA, VEGA_AT, game
 
 NAMES = ("Aster City", "Birch Town", "Cedar Athletic", "Fjord Rovers", "Dune Town", "Elm Park")
 SOURCE_NAMES = {"sportscore": "SportScore", "vega": "Vega"}
@@ -85,6 +85,10 @@ def build(db, store):
                     x("INSERT INTO core.team_seasons(team_id, competition_season_id) VALUES (%s, %s)", (team, k["editions"][label]))
         for g in case["matches"]:
             _game(db, index, CURRENT, g)
+        if not case["matches"] and case["id"] != "S51" and case.get("kind", "league") == "league":
+            for n, name in enumerate(members[CURRENT]):
+                opponent = members[CURRENT][n - 1]
+                _game(db, index, CURRENT, game(f"scheduled-{n}", name, opponent, None, T0 + DAY, status="not_started"))
         if case["vega"]:
             _vega(db, k["editions"][CURRENT], VEGA if case["vega"] is True else case["vega"], VEGA_AT)
         if case["alias"]:
@@ -127,6 +131,10 @@ def apply(db, index, event):
                    (k["editions"][NEXT], k["competition"]))
         for g in e["matches"]:
             _game(db, index, NEXT, g)
+        if not e["matches"]:
+            for n, name in enumerate(TEAMS[NEXT]):
+                opponent = TEAMS[NEXT][n - 1]
+                _game(db, index, NEXT, game(f"next-scheduled-{n}", name, opponent, None, T0 + DAY, status="not_started"))
         if e["vega"]:
             _vega(db, k["editions"][NEXT], e["vega"], e["vega_at"])
     elif kind == "official":
