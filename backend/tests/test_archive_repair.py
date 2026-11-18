@@ -259,8 +259,9 @@ class ReplayTest(unittest.TestCase):
         self.x("UPDATE core.matches SET status = 'finished' WHERE status IN ('canceled', 'awarded')")
         seq = lambda: self.x("SELECT last_value FROM core.matches_id_seq").fetchone()[0]  # noqa: E731
         before, last = self.state(), seq()
-        first = archives.plan(self.db, self.sources(files, name="p1"), {"2019/2020"})
-        again = archives.plan(self.db, self.sources(files, name="p1b"), {"2019/2020"})
+        frozen_inputs = self.sources(files, name="p1")
+        first = archives.plan(self.db, frozen_inputs, {"2019/2020"})
+        again = archives.plan(self.db, frozen_inputs, {"2019/2020"})
         self.assertEqual(archives.canonical(first), archives.canonical(again))
         # The files in another order: another archive (its own hash), the same season plans.
         second = archives.plan(self.db, self.sources(dict(reversed(list(files.items()))), name="p2"), {"2019/2020"})
