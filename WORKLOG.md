@@ -133,4 +133,10 @@
 - Shipped 18 Nov: `42e6535247` (flags), `30b04f1239` (group tables whole in their cards; two points a win before 1994, found on the production screenshot of 1974); CI green on each branch before main; 38 E2E checks pass on vegasport.vercel.app. Evidence: scratchpad `evidence/EVIDENCE.md`.
 - The nations' Elo is recomputed in production with the added results, as measured: Spain 1745, England 1700, France 1691, Netherlands 4th (8th before); France's series has 97 points (57 before).
 - Left as they are: a country of today has today's flag in every edition; the four drawn flags are simplified for an icon; the group tables apply no edition-specific tie-breaker; the remote branches `claude/tournament-editions`, `-flags` and `-groups` are merged and can be deleted.
-- Next action: none; the user looks at the site.
+- The base on AWS checked on the user's question (18 Nov, evening): the 1,069 archived World Cup matches served by the read API equal the source one by one (one without a score in both); Deploy run 44351541140 « migration exit code: 0 »; no backend file changed since. Not done: a direct connection to the base. Evidence: `evidence/aws-base-check.json`.
+- User, 18 Nov (« 74, 78, 82 … faut modifier ça »; « pouvoir cliquer sur les matchs »), shipped `5b08c5990e` and `e45bb0a88f`:
+  - These World Cups had no quarter-finals: a bracket whose first round is played between group winners alone starts from those groups (1930; the second round of 1974, 1978, 1982); 1950's final round is its bracket (`bracketGroups`, `finalGroup`).
+  - Every tie of 2026 and 2022 opens its match page: a tie's collected match is found within a day and under either spelling (8 of 2026's 32 ties did not open).
+  - CI green on each branch before main; 47 E2E checks pass on vegasport.vercel.app.
+- Open, the user's decision: match pages with line-ups for the archive (1930–2018) and the Euros. The base holds none (OpenFootball: stadiums, scorers for some editions). A candidate was read: the Fjelstul World Cup Database (GitHub, CC-BY-SA 4.0: attribution and share-alike; line-ups from 1970, goals, cards, referees, stadiums, 1930–2022; no Euro). It needs a source decision, a schema, a reader, a route and a page's mock-up.
+- Next action: the user's answer on that source; nothing else pending.
