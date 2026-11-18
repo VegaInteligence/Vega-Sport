@@ -284,7 +284,7 @@ def save(conn, folder, name, season, results, fixtures, now, *, declared_results
             conn.execute("""UPDATE core.matches SET revision=revision+1, updated_at=now()
                             WHERE id=%s AND season_id=%s""", (mid, season_id))
         changes += match_changed or stats_changed
-    changes += snapshot.remove(conn, "open_matchday", before, status)
+    changes += snapshot.remove(conn, "open_matchday", before, status, list(STATS.values()))
     if changes:
         conn.execute("UPDATE core.competition_seasons SET cup_updated_at=%s WHERE id=%s", (now, edition))
     return len(status)
