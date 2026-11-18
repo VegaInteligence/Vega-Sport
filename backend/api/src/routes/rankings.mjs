@@ -49,7 +49,8 @@
  * GET /api/rankings/match?match= — each player's grade in one match (vega/power.py, « Match
  * grades »): how exceptional the match was for his role, whatever his season, on the season's
  * 0–100 curve; ranked within the match among the grades shown (20 minutes or more, or a
- * match a full standard deviation from the ordinary), the minutes beside each.
+ * match a full standard deviation from the ordinary), the minutes beside each. `grade`
+ * keeps its tenth; `gradeExact` is the visible, finite grade read from the same SQL row.
  *
  * GET /api/rankings/power/player?season=&player= — one player's power ranking of a
  * season, for his page: the object of the player reads (powerOf) and `roleCount`, the
@@ -662,11 +663,15 @@ async function matchGrades(read, params) {
   let rank = 0;
   return {
     match: id,
-    grades: ordered.map((r) => ({
-      playerId: r.player_id, teamId: r.team_id ?? null, name: r.name ?? null, imageUrl: r.image_url ?? null, team: r.team ?? null,
-      role: r.role, position: ROLE_LABEL[r.role] ?? r.role, minutes: r.minutes, goals: r.goals ?? null, assists: r.assists ?? null,
-      grade: shown(r) ? round(r.grade, 1) : null, rank: shown(r) ? ++rank : null,
-    })),
+    grades: ordered.map((r) => {
+      const visible = shown(r);
+      const gradeExact = visible && Number.isFinite(r.grade) && r.grade >= 0 && r.grade <= 100 ? r.grade : null;
+      return {
+        playerId: r.player_id, teamId: r.team_id ?? null, name: r.name ?? null, imageUrl: r.image_url ?? null, team: r.team ?? null,
+        role: r.role, position: ROLE_LABEL[r.role] ?? r.role, minutes: r.minutes, goals: r.goals ?? null, assists: r.assists ?? null,
+        grade: visible ? round(r.grade, 1) : null, rank: visible ? ++rank : null, gradeExact,
+      };
+    }),
   };
 }
 

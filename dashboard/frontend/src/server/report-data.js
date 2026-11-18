@@ -182,8 +182,15 @@ export function buildMatchReport({ id, match, stats, grades, live, forecast }, t
     const item = items.get(key);
     return { key, label, format, home: statValue(item.home), away: statValue(item.away), homeText: item.home, awayText: item.away };
   });
-  const rows = (grades?.grades || []).map((g) => ({ id: g.playerId, teamId: g.teamId, name: g.name, imageUrl: g.imageUrl || null, team: g.team,
-    position: g.position, minutes: g.minutes, goals: g.goals ?? 0, assists: g.assists ?? 0, grade: num(g.grade), rank: g.rank }));
+  const rows = (grades?.grades || []).map((g) => {
+    const grade = num(g.grade), exact = num(g.gradeExact);
+    const row = { id: g.playerId, teamId: g.teamId, name: g.name, imageUrl: g.imageUrl || null, team: g.team,
+      position: g.position, minutes: g.minutes, goals: g.goals ?? 0, assists: g.assists ?? 0, grade, rank: g.rank };
+    if (Object.hasOwn(g, "gradeExact")) {
+      row.gradeExact = grade != null && exact != null && exact >= 0 && exact <= 100 && round(exact) === grade ? exact : null;
+    }
+    return row;
+  });
   const best = (teamId) => rows.filter((r) => r.teamId === teamId && r.grade != null).sort((a, b) => b.grade - a.grade).slice(0, 3);
   const points = (live?.points || []).map((p) => ({ minute: p.minute, home: num(p.home), draw: num(p.draw), away: num(p.away) }));
   const before = points[0] || (forecast?.forecast ? { minute: 0, ...forecast.forecast } : null);
