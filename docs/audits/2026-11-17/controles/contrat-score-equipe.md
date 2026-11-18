@@ -1,17 +1,14 @@
-# Mesure d’équipe attendue dans l’audit
+# Quelles notes Vega fournit-elle pour une équipe ?
 
-Le document de calcul du 16 novembre distingue l’Elo de force et l’indice descriptif d’un club par cohorte. La demande de couverture du 17 novembre porte sur le « appropriate Vega Score » pour chaque joueur, club et sélection. Elle ne fixe aucune échelle supplémentaire pour les équipes.
+À chaque match admis, Vega conserve une **force Elo avant et après la rencontre** pour chacun des deux côtés. À l’échelle de la saison, le classement des clubs affiche aussi **un score de force sur 100**, calculé à la lecture. Pour les sélections, le classement expose l’Elo et sa variation. Son schéma omet les champs score sur 100 et référence. [Contrôle du véritable module API](../contre-lecture/equipes/score-witness.json)
 
-Dans le journal de la session responsable, le commit `2b1ab2ad02` consigne le choix du 16 novembre, « one club Elo for every match, no separate cup Elo », puis la validation du 17 novembre. La revue de périmètre commune des modèles retient l’Elo interne et demande de documenter les limites du calcul. Le libellé E04h qui imposait de publier une deuxième note était une interprétation ajoutée au registre d’audit.
+| Objet | Unité et lecture | Interprétation |
+|---|---|---|
+| Elo d’une équipe | Équipe × match, avant et après, dans agg.team_elo | Force cumulative. La mise à jour utilise le résultat, l’espérance, l’avantage territorial et l’enjeu. Un club conserve une même trajectoire entre championnat et coupe. |
+| Force du club sur 100 | Club × saison, à la lecture du classement et de la fiche | Espérance de résultat sur terrain neutre contre une équipe de référence. Une victoire compte 1, un nul 0,5. Aucune ligne équipe × match n’est créée par cette transformation. |
+| Indice descriptif du club | Club × cohorte dans agg.team_index | Synthèse de mesures dans une population de référence. Son unité et sa population diffèrent de celles du classement de force. |
+| Note synthétique de prestation ponctuelle d’une équipe sur 100 | Aucun calcul ni stockage dédié identifié dans le code audité | L’audit ne dispose d’aucune décision utilisateur imposant cette nouvelle mesure. Les valeurs par match telles que xG, points attendus ou Elo conservent leur propre définition. |
 
-E04g vérifie le calcul de la mesure définie chez les clubs et les sélections. E04a–d vérifient le périmètre réel, notamment les résultats absents ou exclus. E04h documente la distinction entre une force qui évolue et une note de prestation ponctuelle pour expliquer aux lecteurs les unités disponibles. Cette seconde échelle reste une hypothèse de produit hors cahier des charges. Une couverture complète nécessite les fixtures véritables ainsi que deux côtés correctement attribués, un contexte de lieu exact et la valeur calculée sur les entrées correctes.
+Le lecteur du classement utilise l’Elo de fin de saison et la formule **100 / (1 + 10^((référence − Elo)/400))**, arrondie à une décimale. La référence est la moyenne des niveaux mesurés des premières divisions masculines (un rang manquant vaut 1). Le lecteur se replie sur les niveaux des ligues masculines lorsque la première sélection est vide. La requête de référence n’est pas filtrée sur la saison demandée. Pour un Elo de 1 500 en 2024/25, le module sert 50 avec une référence de 1 500, puis 24 avec une référence de 1 700. La fiche de club a livré 50 pour la première configuration. Le contrôle a exécuté le module de route réel avec un lecteur SQL déterministe injecté, sans accès à l’API de production. Ses 17 assertions passent. Le fichier de route a le même blob Git dans le commit contrôlé et celui de l’image worker de référence. [Script et assertions](../contre-lecture/equipes/score-witness.mjs) · [Code de classement](https://github.com/VegaInteligence/Vega-Sport/blob/1b28961a88e968d5602f9fb278fc3c471ebb7467/backend/api/src/routes/rankings.mjs#L206) · [Note de calcul §4.8](https://github.com/VegaInteligence/Vega-Sport/blob/1b28961a88e968d5602f9fb278fc3c471ebb7467/docs/calculs/08-notes-vega/01-formules-et-raisons.md#L241)
 
-Vérification Git depuis une copie du dépôt contenant l’historique concerné :
-
-```sh
-git show 2b1ab2ad02:WORKLOG.md
-git rev-list --left-right --count 2b1ab2ad02...8018e0836c
-git diff --name-only 2b1ab2ad02 8018e0836c
-```
-
-Au contrôle du 18 novembre, la branche de travail historique `claude/v2-complete` s’arrêtait au premier commit et le code AWS au second. Résultat du décompte Git, zéro commit propre au premier et un au second. Les différences concernent le délai maximal de rafraîchissement des cohortes, sa migration 133, les tests et les documents correspondants. L’état d’une nouvelle session ou d’un changement encore privé reste inconnu.
+Le journal du 16 novembre consigne « one club Elo for every match, no separate cup Elo ». La demande du 17 novembre exige un score Vega approprié pour chaque équipe éligible. E04g porte donc sur la production de l’Elo interne dans le périmètre admis. E04h explique les sorties existantes. Une éventuelle note de prestation d’équipe indépendante requerrait une décision de produit. E04a–d, E04i et E04j restent ouverts lorsque les matchs, les identités, les terrains ou les tours requis sont absents. [Décision historique](https://github.com/VegaInteligence/Vega-Sport/blob/2b1ab2ad02/WORKLOG.md#L13) · [Registre T6](../registres/requirements.csv)

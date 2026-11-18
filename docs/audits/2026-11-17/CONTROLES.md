@@ -1,5 +1,7 @@
 # Duels, niveaux des ligues et sources indépendantes
 
+Les contrôles joueurs et équipes rapprochent les publications de PostgreSQL, les calendriers officiels et les résultats administratifs datés. [Contre-lecture du 18 novembre](CONTRE-LECTURE.md)
+
 Ces mesures relient trois questions du document initial à des conséquences observables. La première porte sur le classement des joueurs, la deuxième sur les niveaux de départ des clubs, et la troisième sur les résultats effectivement ingérés et servis.
 
 ## Duels et classement annuel 2022/23
