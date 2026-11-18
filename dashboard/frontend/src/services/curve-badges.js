@@ -3,11 +3,12 @@
  *
  * `points` is the line as drawn ({x, y}, by x, y growing downwards); `badges` the marks to
  * place ({x}, by x). Each badge sits above the highest point of the line under its own width
- * (so it clears a slope), and above any earlier badge it would cover. It never leaves the
- * drawing by the top. Returns, in the badges' order, the centre ({x, y}) and the line's
- * height at x (`footY`, the last point's height past the line's end).
+ * (so it clears a slope), and above any earlier badge it would cover; it may rise above the
+ * drawing's top edge (`badgeOverflow` says by how much). Returns, in the badges' order, the
+ * centre ({x, y}) and the line's height at x (`footY`, the last point's height past the
+ * line's end).
  */
-export function placeBadges(points, badges, { radius, gap = 7, margin = 2, spacing = 4, top = radius } = {}) {
+export function placeBadges(points, badges, { radius, gap = 7, margin = 2, spacing = 4 } = {}) {
   if (!points.length) return [];
   const lineY = (x) => {
     if (x <= points[0].x) return points[0].y;
@@ -32,7 +33,11 @@ export function placeBadges(points, badges, { radius, gap = 7, margin = 2, spaci
           moved = true;
         }
     }
-    placed.push({ x: badge.x, y: Math.max(top, y), footY: lineY(badge.x) });
+    placed.push({ x: badge.x, y, footY: lineY(badge.x) });
   }
   return placed;
 }
+
+/** How far the highest badge rises above the drawing's top edge, `pad` kept clear: what the
+ * chart adds above its plot so that no badge is cut or pushed back onto another. */
+export const badgeOverflow = (placed, radius, pad = 0) => Math.max(0, ...placed.map((badge) => pad + radius - badge.y));

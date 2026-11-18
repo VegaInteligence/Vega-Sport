@@ -19,6 +19,10 @@ import {
   playerMarketValuesKey,
   servesMarketValues,
 } from "../services/player-market-values.js";
+import {
+  loadPlayerTransfers,
+  playerTransfersKey,
+} from "../services/player-transfers.js";
 import { AsyncState, Media } from "./UI.jsx";
 import NationalFlag from "./NationalFlag.jsx";
 import { fmt } from "./PlayerScoutCharts.jsx";
@@ -68,6 +72,12 @@ export default function PlayerScoutCareer({
   );
   const market = marketServed ? marketRead : MARKET_VALUES_UNSERVED;
   const values = market.value?.history || [];
+  // The clubs he joined, drawn on the value curve: asked for with the values.
+  const transfers = useResource(
+    playerTransfersKey(id),
+    ({ signal }) => loadPlayerTransfers(id, { signal }),
+    Boolean(id) && marketServed,
+  );
   const valuation = latestMarketEstimate(values, playerFacts(record).value);
   const history = useResource(playerHistoryKey(f.manifest, id), ({ signal }) =>
     loadPlayerHistory(f.manifest, id, { signal }),
@@ -132,6 +142,8 @@ export default function PlayerScoutCareer({
         <PlayerMarketValueCard
           key={id}
           values={values}
+          transfers={transfers.value}
+          transfersPending={transfers.loading}
           loading={market.loading}
           error={market.error}
           teams={[team, ...clubs.map((row) => row.teamInfo)].filter(Boolean)}
