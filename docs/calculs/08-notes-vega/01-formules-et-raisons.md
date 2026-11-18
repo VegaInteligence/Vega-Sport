@@ -12,7 +12,7 @@ Tout est sur une seule échelle, en **points Elo**. 400 points d'écart entre de
 
 | Objet | Sa note | En une phrase |
 | --- | --- | --- |
-| Championnat | son niveau ℓ, avec une erreur-type | la force moyenne de ses clubs, tirée des matchs entre championnats, des joueurs qui changent de championnat et de sa division |
+| Championnat | son niveau ℓ et une marge interne en points Elo | la force moyenne de ses clubs, tirée des matchs entre championnats, des joueurs qui changent de championnat et de sa division |
 | Club | sa force Elo R | il entre au niveau de son championnat, puis chaque résultat la corrige, selon ce que les deux forces prévoyaient |
 | Joueur | son score de 0 à 100 | ce qu'il fait au-dessus de l'attendu de son rôle, match par match, plus le niveau du club où il le fait, comparé aux joueurs de son rôle |
 
@@ -96,7 +96,7 @@ $$
 
 ### 4.1 Ce qu'on cherche
 
-ℓ_j, le niveau du championnat j : la force à laquelle ses clubs entrent dans l'Elo. Trois preuves le disent, avec des précisions différentes. Le niveau retenu est le **maximum a posteriori** d'un seul modèle qui les réunit, chacune comptée selon sa précision : plus une preuve est précise, plus elle pèse.
+Le niveau initial ℓ_j détermine la force d’entrée des clubs du championnat j. Le calcul combine les résultats entre championnats, les passages de joueurs et les hypothèses de division et de confédération. Il résout un système itératif approché. La dérivée des mises à jour Elo successives manque dans le terme des matchs, ce qui invalide son interprétation comme maximum a posteriori de la vraisemblance séquentielle annoncée. [Calcul](../../../backend/vega/power.py) · [Contre-exemple du §3](../09-audit-2026-11/SOURCE_AUDIT.md)
 
 **Pourquoi un seul modèle.** La version 3 retenait le niveau vers 1500 dans la proportion liens / (liens + 30). Elle avait deux défauts :
 - **Ce n'était pas un a priori cohérent.** À l'équilibre, sa force baissait quand les liens augmentaient, et 1500 est arbitraire.
@@ -116,8 +116,8 @@ $$
 \Lambda_{aa} \mathrel{+}= I_m E(1-E)c^2, \quad \Lambda_{bb} \mathrel{+}= I_m E(1-E)c^2, \quad \Lambda_{ab} = \Lambda_{ba} \mathrel{-}= I_m E(1-E)c^2
 $$
 
-- $g$ est la **pente** de la vraisemblance des résultats, $\Lambda$ son **information**. Les matchs à l'intérieur d'un championnat s'annulent : seul compte ce que ses clubs font contre les autres.
-- Les deux sont divisés par la **dispersion** $\varphi = \sum (r - E)^2 / \sum E(1-E)$, sur ces mêmes matchs (0,73). Les nuls rendent les résultats moins dispersés qu'un pile ou face, et l'information est d'autant plus grande.
+- Pour un match entre deux championnats ajustés distincts, le code utilise +1 et −1 comme sensibilités de l’écart Elo aux deux niveaux initiaux. Il ajoute le résidu pondéré à $g$ et sa courbure locale à $\Lambda$. Tous les matchs font évoluer les Elo suivants, y compris les matchs internes. Le calcul de $g$ et de $\Lambda$ omet la propagation de ces dépendances.
+- Les deux sont divisés par la **dispersion** $\varphi = \sum (r - E)^2 / \sum E(1-E)$, sur ces mêmes matchs (0,73). Les nuls rendent les résultats moins dispersés qu'un pile ou face, ce qui augmente le poids numérique du terme des matchs lorsque la dispersion est inférieure à 1.
 - Matchs lus : coupes d'Europe, coupes nationales entre divisions, Coupe du monde des clubs, Copa Libertadores et Sudamericana, Coupes des champions CONCACAF et CAF.
 
 ### 4.3 Les joueurs qui changent de championnat
@@ -204,15 +204,15 @@ Les divisions sont relues une par une (`TIERS`). Le Paulista A1, championnat d'�
 ### 4.5 Le calcul
 
 1. **Matchs et passages seuls**, avec un a priori très large (1500 ± 400) qui ne fixe que l'origine de l'échelle. On en tire $\tau_u$, puis $b$, $\tau_b$, $\tau_c$ et les moyennes de confédération.
-2. **Les trois preuves ensemble.** Pas de Newton :
+2. **Les trois sources réunies.** Le calcul résout le système linéaire suivant à chaque itération.
 
 $$
 \ell \leftarrow \ell + (\Lambda_\text{matchs} + \Lambda_\text{passages} + \Lambda_\text{a priori})^{-1}\,(g_\text{matchs} + g_\text{passages} + g_\text{a priori})
 $$
 
    L'Elo est redéroulé à chaque pas, depuis les nouveaux niveaux. Le calcul s'arrête quand plus aucun niveau ne bouge de 0,25 point (7 pas en service). Au-delà de 40 pas, il échoue et les niveaux d'avant restent.
-3. **L'origine de l'échelle.** Matchs et passages ne disent que des écarts. On décale tous les niveaux d'une même constante, pour que les championnats qui tiennent l'échelle gardent leur niveau d'avant. Ces championnats sont ceux mesurés à 25 points près contre le mieux mesuré : les cinq grands championnats, les championnats anglais, la 2. Bundesliga, les Pays-Bas, le Portugal.
-4. **L'erreur-type** d'un niveau, contre la moyenne de ces championnats :
+3. **L’origine de l’échelle.** Le code décale ensemble les niveaux ajustés pour conserver, en moyenne, les valeurs antérieures des références disponibles. Les groupes hors ajustement gardent l’initialisation du lecteur. Ce décalage peut donc modifier l’espérance d’une rencontre entre groupes ajustés et groupes laissés à leur valeur initiale. Les références sont les championnats ordinaires à moins de 25 points de marge relative à la meilleure référence, avec repli sur celle-ci. Les cinq grands championnats, les divisions anglaises, la 2. Bundesliga, les Pays-Bas et le Portugal sont des exemples de la mesure historique.
+4. **Marge interne d’un niveau.** Le code inverse la matrice approchée et mesure l’écart à la moyenne des références selon la formule ci-dessous. La calibration de cette marge comme erreur-type d’un estimateur séquentiel reste à établir.
 
 $$
 \text{se}_j = \sqrt{v^\top \Lambda^{-1} v}, \qquad v = e_j - \tfrac{1}{|\text{réf}|}\mathbf{1}_\text{réf}
@@ -220,7 +220,7 @@ $$
 
 ### 4.6 Mesuré ou provisoire
 
-Un championnat est **mesuré** quand se ≤ **45 points**. Il le reste jusqu'à **52**, pour qu'aucun championnat n'entre et ne sorte du classement à chaque calcul. Ses joueurs reçoivent un rang. Un championnat au-dessus est **provisoire** : il garde son niveau, affiché avec sa marge, et ses joueurs un score sans rang.
+Pour les championnats masculins ajustés, le statut **mesuré** s’ouvre lorsque la marge interne vaut au plus **45 points** et se conserve jusqu’à **52 points** inclus. Au-delà, le championnat garde son niveau et sa marge avec le statut **provisoire**. Dans le classement de puissance des joueurs, un indice publié donne toujours un rang dans son univers. Le statut provisoire du championnat masculin peut rendre ce rang provisoire.
 
 Pourquoi 45 : une erreur e sur le niveau déplace l'indice d'un joueur d'environ $e/(\sqrt{2}\,\sigma)$ écart-type de son rôle, σ = 132 étant l'écart-type des forces des clubs sur les matchs de championnat de 2026/2027. On veut au plus un quart d'écart-type : e ≤ 0,25 × √2 × 132 ≈ 47, arrondi à 45. À 60 points, ce serait 0,32.
 
@@ -398,11 +398,11 @@ $$
 
 **Rangs.**
 - Le **rang** est l'ordre de Z parmi tous les joueurs de son univers (hommes, femmes), puis T, puis les minutes, à égalité le même rang. Chaque univers est numéroté à partir de 1. Le **rang dans le rôle** suit le même ordre dans le rôle principal, et « sur N au poste » compte l'univers du joueur.
-- Un rang est **provisoire** sous le seuil de minutes (`eligible` faux), dans un championnat provisoire (`linked` faux), dans un club qu'aucun championnat de la base ne connaît (vu seulement en coupe d'Europe, `in_league` faux), ou pour un joueur connu seulement par sa sélection. Le site en donne la raison. Le site le dit sur la fiche du joueur. L'incertitude d'un championnat provisoire est commune à tous ses joueurs : l'ordre entre eux est exact. Face aux autres, elle vaut environ ± 200 à 300 places dans les 500 premiers, et beaucoup plus au milieu du classement, où les joueurs sont serrés.
+- Sur la fiche et dans le classement complet, le rang est **provisoire** si le seuil de minutes n’est pas atteint. Ensuite, le lecteur donne aux hommes d’une sélection seule, d’un club sans championnat dans la base ou d’un championnat de niveau provisoire le motif correspondant. Une joueuse admissible en minutes a un rang dans l’univers féminin sans motif de ligue provisoire. Le statut renseigne sur la fiabilité des entrées. La marge interne de la ligue ne fournit pas un intervalle statistique validé pour le rang du joueur.
 - **Centiles** des blocs et de T, R\* : rang moyen dans le rôle, (nombre en dessous + ½ égaux) / n.
 - **Course au Ballon d'Or** : les trente premiers classés d'un club de première division.
 
-Depuis la version 6 (15 novembre 2026), **tout joueur qui a joué a un rang**. Un joueur connu seulement par sa sélection, ou d'un club vu seulement en coupe d'Europe, est classé parmi les hommes, provisoirement : sa part de niveau vient de l'Elo de son équipe, mesurée contre les équipes de même nature (la moyenne des sélections pour une sélection), et son championnat n'est pas mesuré. Les joueuses d'un championnat féminin sont notées entre elles (leur propre κ, leurs propres moyennes et écarts-types) et ont leur propre classement. Un poste qui n'a encore aucun joueur éligible dans son univers (premiers jours d'une année, petit championnat féminin) est placé face aux joueurs éligibles de tous les postes de l'univers : C est déjà relatif à l'attendu du rôle, son centre est commun.
+Depuis la version 6 (15 novembre 2026), **tout joueur doté d’un indice a un rang dans son univers**. Un joueur connu seulement par sa sélection, ou d'un club vu seulement en coupe d'Europe, est classé parmi les hommes, provisoirement : sa part de niveau vient de l'Elo de son équipe, mesurée contre les équipes de même nature (la moyenne des sélections pour une sélection), et son championnat n'est pas mesuré. Les joueuses d'un championnat féminin sont notées entre elles (leur propre κ, leurs propres moyennes et écarts-types) et ont leur propre classement. Un poste qui n'a encore aucun joueur éligible dans son univers (premiers jours d'une année, petit championnat féminin) est placé face aux joueurs éligibles de tous les postes de l'univers : C est déjà relatif à l'attendu du rôle, son centre est commun.
 
 **L'a priori de la saison passée (version 8, 15 novembre 2026).** En début de saison, quelques matchs ne disent pas grand-chose ; la saison passée du joueur en dit davantage. L'indice affiché les mêle :
 

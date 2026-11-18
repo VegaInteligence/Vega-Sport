@@ -53,7 +53,7 @@ Toutes les phrases portent sur le même joueur et la même cohorte que le reste 
 
 ## Exemple
 
-Un milieu joue 1 800 minutes sur la période, avec 2 buts, 3 passes décisives et une note moyenne de 7,05. Dans sa cohorte :
+Un milieu joue 1 800 minutes sur la période, marque 2 buts et donne 3 passes décisives. Dans cet exemple, le z moyen pondéré par les minutes des matchs admissibles vaut 0,5, ce qui donne une note Vega arrondie de 57 sur 100. Dans sa cohorte :
 
 - Construction : passes réussies P84, précision des passes P78, ballons touchés P81 → `(84 + 78 + 81) / 3 = 81` ; Récupération : récupérations P88, interceptions P70, tacles P62 → 73 ; Création et Percussion plus bas ;
 - parmi les axes de style, les plus hauts sont récupérations P88 et passes réussies P84, le plus bas dribbles réussis P12.
@@ -62,7 +62,7 @@ La carte affiche :
 
 - Meilleur rôle : construction, indice 81 sur 100 face aux milieux.
 - Points forts : récupérations (P88) et passes réussies (P84).
-- Production : 0,10 but et 0,15 passe décisive par 90 min, note moyenne 7,05.
+- Production : 0,10 but et 0,15 passe décisive par 90 min, note Vega 57 sur 100.
 - Point de vigilance : dribbles réussis (P12).
 
 `90 × 2 / 1 800 = 0,10` et `90 × 3 / 1 800 = 0,15`.

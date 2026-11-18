@@ -18,7 +18,7 @@
 
 `seasonTotals` et `seasonLeaders` dans [home-insights.js](../../../dashboard/frontend/src/services/home-insights.js#L564), même calcul en SQL dans [home.mjs](../../../backend/api/src/routes/home.mjs).
 
-Totaux saison par joueur (matchs avec minutes > 0) : matchs, minutes, buts, passes décisives, xG et xA (**seulement s'ils couvrent tous les matchs**, sinon `null`), note pondérée par les minutes. Le club affiché est le dernier club national : un match européen ne change pas de club. Un but ou une passe décisive absents y comptent pour 0 (convention de l'accueil, antérieure à l'audit) : un xG complet ne prouve pas des buts complets, et l'écart « Efficaces » / « Maladroits » de l'accueil, faute de profil apparié, se lit sur ces totaux tels quels.
+Totaux saison par joueur (matchs avec minutes > 0) : matchs, minutes, buts, passes décisives, xG et xA (**seulement s'ils couvrent tous les matchs**, sinon `null`), note Vega du z moyen pondéré par les minutes des matchs d’au moins 20 minutes dont le z est connu. Le club affiché est le dernier club national : un match européen ne change pas de club. Un but ou une passe décisive absents y comptent pour 0 (convention de l'accueil, antérieure à l'audit) : un xG complet ne prouve pas des buts complets, et l'écart « Efficaces » / « Maladroits » de l'accueil, faute de profil apparié, se lit sur ces totaux tels quels.
 
 | Liste | Taille | Règle |
 | --- | --- | --- |
@@ -26,7 +26,7 @@ Totaux saison par joueur (matchs avec minutes > 0) : matchs, minutes, buts, pass
 | Passeurs | 10 | comme l'annuaire |
 | Efficaces | 8 | comme l'annuaire |
 | Maladroits | 8 | comme l'annuaire |
-| Notes | 10 | note pondérée, minutes ≥ `max(450, arrondi(0,4 × minutes max))` |
+| Notes | 10 | note Vega de saison, minutes notées ≥ `max(450, arrondi(0,4 × minutes max))` |
 
 ## Joueur de la semaine
 
