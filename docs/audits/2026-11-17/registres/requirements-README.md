@@ -15,7 +15,7 @@
 
 ## Vérification reproductible
 
-Depuis le dossier contenant les deux CSV, désigner le dépôt et l’archive de preuves dans les deux variables d’environnement. Les fichiers cités ont été contrôlés au moment de la remise sur disque et dans l’archive. Un repaquetage est nécessaire si le rapport évolue. Les deux CSV contiennent 82 chemins de preuve distincts. Ce contrôle relit les artefacts; il ne relance aucun modèle ni aucune collecte.
+Depuis le dossier contenant les deux CSV, désigner le dépôt et l’archive de preuves dans les deux variables d’environnement. Les fichiers cités ont été contrôlés au moment de la remise sur disque et dans l’archive. Un repaquetage est nécessaire si le rapport évolue. Les deux CSV contiennent 87 chemins de preuve distincts. Ce contrôle relit les artefacts; il ne relance aucun modèle ni aucune collecte.
 
 ```sh
 export VEGA_REVIEW_REPO='/chemin/vers/Vega-Sport'
