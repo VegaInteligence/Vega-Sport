@@ -51,25 +51,31 @@
   height: auto;
   overflow: visible;
 }
-.lineMarker {
+/* A badge above a line chart's line (a club's crest at the date of a transfer). Its size
+   is set on the element: the chart places it for that size on the screen. */
+.lineBadge {
   position: absolute;
   display: grid;
   place-items: center;
-  aspect-ratio: 1;
   box-sizing: border-box;
   transform: translate(-50%, -50%);
   border: 1px solid var(--accent);
   border-radius: 50%;
   background: var(--mq-gap);
+  /* A ring of the surface keeps a raised badge apart from the stem or the badge under it. */
+  box-shadow: 0 0 0 2px var(--mq-gap);
 }
-.lineMarker > span {
-  width: 82%;
-  height: 82%;
+.lineBadge > span {
+  width: 68%;
+  height: 68%;
 }
-.lineMarker :global(.image-fallback) {
-  font-size: 6px;
+.lineBadge :global(.image-fallback) {
+  font-size: 7px;
+  letter-spacing: 0;
 }
-.lineMarker:focus-visible {
+.lineBadge:hover,
+.lineBadge:focus-visible {
+  z-index: 1;
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }

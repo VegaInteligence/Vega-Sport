@@ -148,6 +148,7 @@ Chaque route liste en tête de fichier ses écarts voulus avec l'API précédent
     `UPDATE ops.transfermarkt_state SET gave_up_at = NULL, paused_until = NULL, blocks_in_row = 0, blocked_since = NULL WHERE id = 1;`
   - **Avancement :** la vue `api.provider_reader_progress`.
   - **Revenir à une image d’avant la migration 139** : arrêter d’abord le lecteur, `UPDATE ops.transfermarkt_state SET gave_up_at = now() WHERE id = 1;`, et le laisser arrêté jusqu’au retour d’une version qui conserve l’historique. L’ancien lecteur efface à chaque lecture ; s’il tourne quand même, la migration 139 refuse ses suppressions (`TRANSFERMARKT_HISTORY_KEPT`) et son processus redémarre toutes les 5 minutes sans rien perdre. Une suppression voulue par une personne pose `SET LOCAL vega.allow_history_delete = 'on'` dans sa transaction.
+  - **Ce que le site en lit** (migration 135) : `/api/player-market-values?id=` nomme le club de chaque estimation quand il est connu (`club`), et `/api/players/{id}/transfers` donne les transferts faits du joueur, du plus ancien au plus récent, avec le club quitté et le club rejoint. Un de nos clubs porte son identifiant, notre nom et son écusson ; un autre, le seul nom du fournisseur. Un joueur dont les transferts n’ont pas encore été lus répond 404, pas une liste vide.
 - coefficients UEFA, avec les points par saison et les clubs encore en lice ;
 - classement FIFA, toutes les éditions depuis 2021 ;
 - classements officiels SportScore, écrits seulement si chaque ligne désigne un club de l'édition ;

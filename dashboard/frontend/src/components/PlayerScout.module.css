@@ -878,16 +878,12 @@
   }
 }
 .marketClubs {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-}
-.marketClubs ol {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 0;
-  margin: 7px 0 0;
+  margin: 12px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--border);
   list-style: none;
 }
 .marketClubs li {
@@ -900,6 +896,10 @@
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   line-height: 1.3;
+}
+/* The move whose badge is pointed at on the curve. */
+.marketClubs li.marketClubActive {
+  border-color: var(--accent);
 }
 .marketClubs strong,
 .marketClubs small {
