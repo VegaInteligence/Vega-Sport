@@ -140,3 +140,17 @@
   - CI green on each branch before main; 47 E2E checks pass on vegasport.vercel.app.
 - Open, the user's decision: match pages with line-ups for the archive (1930–2018) and the Euros. The base holds none (OpenFootball: stadiums, scorers for some editions). A candidate was read: the Fjelstul World Cup Database (GitHub, CC-BY-SA 4.0: attribution and share-alike; line-ups from 1970, goals, cards, referees, stadiums, 1930–2022; no Euro). It needs a source decision, a schema, a reader, a route and a page's mock-up.
 - Next action: the user's answer on that source; nothing else pending.
+
+## Player page — transfers on the market value curve (18 Nov 2026, scratchpad worktree `wt`, branch `claude/player-transfers`)
+
+- Ask (18 Nov): on « Carrière et marché », the value curve shows, at each transfer's date, the crest of the club the player joins; for every player, not Giroud alone.
+- Found: the card already draws club markers from a `clubName` on each valuation, which the API never served; the base holds the transfers (`core.player_transfers`) and each valuation's club (reader, 114), and no route served them.
+- Built: migration 135 (`api.player_transfers`, `api.player_transfer_reads`, the club columns of `api.player_market_values`), `GET /api/players/{id}/transfers`, `club` on each row of `/api/player-market-values`. Contract test written first (`e67b19fca9`): 3 of its 4 tests red before the route; API 186/186 on a local PostgreSQL 18 (binaries from npm, in the scratchpad).
+- Mockup validated 18 Nov (« Je valide et tu peux push sur Vega, c'est très bien. »): scratchpad `ab654013…/mock/` (`mock-*.png`, `maquette-transferts.html`). Direction shown:
+  - a crest badge above the curve, on a stem down to the transfer's date; a badge that would cover another is raised;
+  - the club of the first valuation at the curve's start;
+  - a return from loan followed by a new departure within 92 days stays in the list only;
+  - every move listed under the chart; a club without a crest as initials; moves inside a club left out.
+- Not known: how many players have their transfers read in production (no public route before 135 is deployed); the provider's pseudo-clubs (« Without Club », « Retired ») are to be checked on real rows before the frontend.
+- Linear: overlap check not done (the connector opens another workspace; nothing is written there).
+- Next action: push 135 and the route to main (the user's word covers the push; the Deploy run needs his explicit word or his hand); the frontend as validated, tests first, E2E with evidence; real transfers measured through the route once it is deployed.
