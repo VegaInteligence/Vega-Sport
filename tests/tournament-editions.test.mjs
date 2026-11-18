@@ -30,7 +30,9 @@
 //     nations and the teams of the past included; a fixture's placeholder (« Winner Match 45 ») is left as it is.
 //     The same team under two spellings (« Italy », « Italie ») is one team; two unknown names are compared as text.
 // 12. The groups of an edition: one table per group the source names, in order; 1950's final round, which has no
-//     group name, is the « Poule finale »; an edition without groups (1934) has no table.
+//     group name, is the « Poule finale »; an edition without groups (1934) has no table. A win is worth three
+//     points unless the edition says otherwise: two in the World Cups before 1994 (East Germany's 1974 group is won
+//     with 5 points, not 7).
 // 13. Flags of the old editions (the user, 18 Nov 2026: « n'hésite pas à mettre les drapeaux »; before, an edition
 //     earlier than 1994 showed none). A country that exists today has its flag whatever the year. A team of the past
 //     has the flag it played under: West Germany's and Czechoslovakia's are their successors', the Dutch East Indies
@@ -221,6 +223,8 @@ test("12. the groups of an edition, 1950's final round included", () => {
   assert.deepEqual(tables.map((t) => t.name), ["Groupe 1", "Groupe 2", "Poule finale"]);
   assert.deepEqual(tables[0].rows.map((r) => [r.name, r.points]), [["France", 3], ["Argentina", 3], ["Mexico", 0]]);
   assert.deepEqual(tables[2].rows.map((r) => r.name), ["Sweden", "Uruguay", "Brazil", "Spain"]);
+  // A win was worth two points in the World Cups before 1994: the page says which rule the edition played under.
+  assert.deepEqual(groupTables(rows, { win: 2 })[0].rows.map((r) => [r.name, r.points]), [["France", 2], ["Argentina", 2], ["Mexico", 0]]);
   assert.deepEqual(groupTables(normalizeOpenCup([open("Quarter-finals", "Italy", "Spain", ft(1, 0))])), []);
   assert.deepEqual(groupTables(undefined), []);
 });
