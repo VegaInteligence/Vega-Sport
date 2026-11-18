@@ -53,6 +53,13 @@
  * side), the foot he shoots with and his share of his team's passes in its pass networks,
  * placed among the players of his role in his league (117).
  *
+ * GET /api/players/{id}/transfers — the player's transfers once they were read, oldest first
+ * (135): the date, the kind (transfer, free, loan, loan_return, internal; null when the
+ * provider gives none), the fee when it is known, the club left and the club joined. A club
+ * of ours carries its id, our name and its crest; another one the provider's name alone; a
+ * club nobody names, or a name that is no club (« Without Club », « Retired »), is null. GET /api/player-market-values names each valuation's club the
+ * same way (`club`), when it is known.
+ *
  * Differences with the legacy read: a field without a value is omitted; a competition
  * carries no `is_free` (a plan of the source, not a fact of the competition); team
  * profiles are served (legacy: none was kept).
@@ -94,6 +101,8 @@ const ACTIONS = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/actions$/;
 const FACED = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/faced$/;
 // GET /api/players/{id}/injuries: a player's injuries, most recent first (api.player_injuries, 116).
 const INJURIES = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/injuries$/;
+// GET /api/players/{id}/transfers: a player's transfers, oldest first (api.player_transfers, 135).
+const TRANSFERS = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/transfers$/;
 const SQUAD = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/squad$/;
 // Share of a league's clubs with a squad value before a club's rank among them is given.
 export const SQUAD_RANKED = 0.75;
@@ -193,6 +202,14 @@ export function changeImpact(rows) {
 /** 100 for the same profile, 0 from the median distance between the player and the others. */
 export const similarity = (distance, median) => (median > 0 ? Math.max(0, Math.round(100 * (1 - distance / median))) : 0);
 const put = (o, k, v) => (v === null || v === undefined ? o : ((o[k] = v), o));
+/** transfermarkt.py NO_CLUB: provider names that are no club (a player without one, retired,
+ * unknown or on a break), in the reader's comparison form. A test keeps the two lists equal. */
+export const NO_CLUB = ["withoutclub", "retired", "unknown", "careerbreak", "vereinslos", "karriereende", "unbekannt", "pause"];
+const comparable = (name) => name.normalize("NFKD").toLowerCase().replace(/[^a-z0-9]/g, "");
+/** A club as the transfers and the valuations name it: null when nobody names it, or when
+ * the provider's name is no club. */
+const namedClub = (id, name, image) =>
+  name && (id || !NO_CLUB.includes(comparable(name))) ? put(put(put({}, "id", id), "name", name), "image_url", image) : null;
 
 function respond(req, data) {
   const etag = `W/"profile-v1-${createHash("sha256").update(JSON.stringify(data)).digest("hex")}"`;
@@ -392,6 +409,27 @@ export function createProfileRoute(read) {
         id: injuries[1],
         injuries: rows.map((r) => ({ kind: r.kind ?? null, label: r.label ?? null, start: r.start_date, end: r.end_date ?? null,
           days: r.days ?? null, matchesMissed: r.matches_missed ?? null, season: r.season_year ?? null })),
+      });
+    }
+    const transfers = path.match(TRANSFERS);
+    if (transfers) {
+      validateParams(params, []);
+      const [rows, [known]] = await Promise.all([
+        // Two moves of one day in the provider's order: its key is a number written as text.
+        read(
+          `SELECT transfer_date::text AS date, kind, fee_eur, from_id, from_name, from_image_url, to_id, to_name, to_image_url
+           FROM api.player_transfers WHERE player_key=api.internal_id('player',$1)
+           ORDER BY transfer_date, length(source_key), source_key`,
+          [transfers[1]],
+        ),
+        read(`SELECT read_at FROM api.player_transfer_reads WHERE player_key=api.internal_id('player',$1) LIMIT 1`, [transfers[1]]),
+      ]);
+      // A player whose transfers were never read is not known: no list, rather than an empty one.
+      if (!known) reject(404, "Donnée indisponible.");
+      return respond(req, {
+        id: transfers[1],
+        transfers: rows.map((r) => ({ date: r.date, kind: r.kind ?? null, feeEur: r.fee_eur ?? null,
+          from: namedClub(r.from_id, r.from_name, r.from_image_url), to: namedClub(r.to_id, r.to_name, r.to_image_url) })),
       });
     }
     const partners = path.match(PARTNERS);
@@ -662,14 +700,17 @@ export function createProfileRoute(read) {
       const id = params.get("id");
       if (!PLAYER.test(`/api/players/${id}`)) reject(400, "Paramètre invalide.");
       const rows = await read(
-        `SELECT valued_at::text AS date, value_eur AS "valueEur"
+        `SELECT valued_at::text AS date, value_eur AS "valueEur", club_id, club_name, club_image_url
          FROM api.player_market_values
          WHERE player_id=api.internal_id('player',$1)
          ORDER BY valued_at`,
         [id],
       );
       if (!rows.length) reject(404, "Donnée indisponible.");
-      return respond(req, { currency: "EUR", source: "Transfermarkt", history: rows });
+      return respond(req, {
+        currency: "EUR", source: "Transfermarkt",
+        history: rows.map((r) => put({ date: r.date, valueEur: r.valueEur }, "club", namedClub(r.club_id, r.club_name, r.club_image_url))),
+      });
     }
     if (path === "/api/players/facts-coverage") {
       validateParams(params, []);

@@ -4,6 +4,7 @@
  * loader reads the API on the server (the proxy's origin).
  */
 import { API_ORIGIN } from "../api-origin.js";
+import { careerMoves } from "../services/career-moves.js";
 
 const ID = { player: /^p_(?:[A-Za-z0-9]{6}|v\d{7})$/, club: /^t_(?:[A-Za-z0-9]{6}|v\d{7})$/, match: /^m_(?:[A-Za-z0-9]{6}|v\d{7})$/ };
 const SEASON = /^\d{4}\/\d{4}$/;
@@ -58,7 +59,7 @@ function age(birth, today) {
 
 // Player ---------------------------------------------------------------------
 
-export function buildPlayerReport({ id, season, read, power, profile, values }, today = new Date()) {
+export function buildPlayerReport({ id, season, read, power, profile, values, transfers }, today = new Date()) {
   const data = read?.data || {};
   const matches = new Map((data.matches || []).map((m) => [m.id, m]));
   const apps = (data.appearances || []).filter((a) => a.playerId === id && (a.minutes ?? 0) > 0)
@@ -97,7 +98,12 @@ export function buildPlayerReport({ id, season, read, power, profile, values }, 
     appearances: apps.map(appearance),
     last: apps.slice(-10).map(appearance),
     best: [...graded].sort((a, b) => b.grade - a.grade).slice(0, 3).map(appearance),
-    values: { current: history.at(-1) || null, history: history.map((v) => ({ date: v.date, valueEur: v.valueEur })), source: values?.data?.source || null },
+    values: {
+      current: history.at(-1) || null, history: history.map((v) => ({ date: v.date, valueEur: v.valueEur })), source: values?.data?.source || null,
+      // The clubs he joined, drawn on the curve as the player page does (career-moves.js).
+      clubs: careerMoves([...history].sort((a, b) => a.date.localeCompare(b.date)), transfers?.data?.transfers ?? null).curve
+        .map((move) => ({ at: move.at, name: move.club.name, imageUrl: move.club.image_url || null })),
+    },
   };
 }
 
@@ -234,14 +240,15 @@ export async function loadReport(id, { season, get = apiGet, today = new Date() 
   if (!kind) return null;
   const s = SEASON.test(season || "") ? season : currentSeason(today);
   if (kind === "player") {
-    const [read, power, profile, values] = await Promise.all([
+    const [read, power, profile, values, transfers] = await Promise.all([
       get("/api/read/player", { season: s, player: id, leagues: "all", detail: "summary", limit: "100" }),
       quiet(get("/api/rankings/power/player", { season: s, player: id })),
       quiet(get(`/api/players/${id}`)),
       quiet(get("/api/player-market-values", { id })),
+      quiet(get(`/api/players/${id}/transfers`)),
     ]);
     if (!read) return null;
-    return buildPlayerReport({ id, season: s, read, power, profile, values }, today);
+    return buildPlayerReport({ id, season: s, read, power, profile, values, transfers }, today);
   }
   if (kind === "club") {
     const [read, clubs] = await Promise.all([
