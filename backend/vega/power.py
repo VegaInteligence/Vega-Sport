@@ -538,15 +538,14 @@ MEASURED_SE_KEEP = 52.0  # a measured league stays measured up to this error: no
 _C = log(10) / 400
 # Each league's division in its country, by its PitchAPI key (1 when not named): reviewed one by
 # one on 15 November 2026. Paulista A1 is the state championship of São Paulo, played by Serie A
-# and Serie B clubs before the national season; MLS Next Pro is MLS's reserve league.
+# and Serie B clubs before the national season. The leagues removed on 18 November 2026 (scope.py) are not here.
 TIERS = {
     "l_4DWyTT": 2, "l_0ahLw8": 3, "l_1W6idJ": 4,  # Championship, League One, League Two
     "l_3hvsne": 2, "l_47077Y": 3,  # 2. Bundesliga, 3. Liga
     "l_3kyHLd": 2, "l_0jy5yE": 2, "l_0275VP": 2,  # LaLiga2, Serie B (ITA), Ligue 2
     "l_3qUkB8": 2, "l_4V6jPs": 2,  # Serie B (BRA), Paulista A1
-    "l_1pQOHK": 2, "l_1rPvVD": 2, "l_49KZaB": 2, "l_4auCPk": 2,  # Challenger Pro League, 1. Division, Eerste Divisie, Challenge League
-    "l_3CB6qX": 2, "l_271pqa": 2, "l_3fglZv": 3,  # Saudi First Division, K League 2, J3 League
-    "l_3yVUAO": 2, "l_3Kf7Ni": 3, "l_3Tn1kG": 3,  # USL Championship, USL League One, MLS Next Pro
+    "l_1pQOHK": 2, "l_49KZaB": 2, "l_4auCPk": 2,  # Challenger Pro League, Eerste Divisie, Challenge League
+    "l_3yVUAO": 2,  # USL Championship
     "l_1BFfna": 2,  # TFF 1. Lig, Turkey's second division
 }
 # Women's leagues: a universe of their own (their clubs never meet the others').

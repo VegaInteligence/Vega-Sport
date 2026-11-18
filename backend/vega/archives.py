@@ -31,6 +31,7 @@ import sys
 import tempfile
 import unicodedata
 
+from . import scope
 from .store import Store
 
 LAST_ARCHIVE_SEASON = 2020
@@ -242,6 +243,9 @@ class Loader:
         start = int(label[:4])
         Store(self.conn).season(label)
         competitions, matches = data["competitions"], data["matches"]
+        # The archives of the leagues the user removed (scope.py) are not loaded.
+        competitions = [c for c in competitions if family(c["id"]) not in scope.REMOVED_ARCHIVES]
+        matches = [m for m in matches if family(m["competitionId"]) not in scope.REMOVED_ARCHIVES]
         if start > LAST_ARCHIVE_SEASON:
             ours = self.uncovered(label, competitions)
             competitions = [c for c in competitions if c["id"] in ours]

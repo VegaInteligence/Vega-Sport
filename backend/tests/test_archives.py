@@ -124,6 +124,41 @@ class ImportTest(unittest.TestCase):
                         WHERE cs.archive_key = '2015-16/en.1' GROUP BY 1 ORDER BY 1""").fetchall()
         self.assertEqual(editions, [("2015/2016", 1), ("2016/2017", 1)])
 
+    def test_a_removed_archive_is_not_loaded_and_what_was_loaded_goes(self):
+        # The user removed Scotland's second to fourth tiers (18 Nov 2026, scope.REMOVED_ARCHIVES):
+        # engsoccerdata still has them. Loaded before the removal, they go with the purge; the
+        # next load writes the first tier only.
+        from vega import scope
+
+        x = self.db.execute
+        tier = lambda n: {"id": f"engsoccerdata/scotland/{n}/2005", "name": f"Écosse · Division {n}", "country": "Écosse"}
+        game = lambda n, i: {"key": f"r:engsoccerdata/scotland/{n}/2005:{i}", "competitionId": f"engsoccerdata/scotland/{n}/2005",
+                             "date": "2006-01-0" + str(i + 1), "team1": f"Club {n}{i}", "team2": f"Club {n}{i + 1}", "score": [1, 0]}
+        data = {"competitions": [tier(1), tier(2), tier(4)], "matches": [game(1, 0), game(1, 1), game(2, 0), game(4, 0)]}
+        self.assertIn("engsoccerdata/scotland/2", scope.REMOVED_ARCHIVES)
+        self.assertNotIn("engsoccerdata/scotland/1", scope.REMOVED_ARCHIVES)
+        try:
+            with self.db.transaction():
+                removed = dict(scope.REMOVED_ARCHIVES)
+                try:
+                    scope.REMOVED_ARCHIVES.clear()
+                    with self.db.transaction():
+                        archives.Loader(self.db).season("2005/2006", data, lambda match: "engsoccerdata")
+                finally:
+                    scope.REMOVED_ARCHIVES.update(removed)
+                keys = lambda: sorted(r[0] for r in x("SELECT archive_key FROM core.competition_seasons WHERE archive_key LIKE 'engsoccerdata/scotland/%'"))
+                self.assertEqual(len(keys()), 3)
+                self.assertEqual(scope.purge(self.db), {"competitions": 2, "editions": 2, "matches": 2})
+                self.assertEqual(keys(), ["engsoccerdata/scotland/1/2005"])
+                self.assertEqual(x("SELECT count(*) FROM core.provider_ids WHERE provider_key LIKE 'archive:engsoccerdata/scotland/%'").fetchone()[0], 1)
+                with self.db.transaction():
+                    self.assertEqual(archives.Loader(self.db).season("2005/2006", data, lambda match: "engsoccerdata"), 2)
+                self.assertEqual(keys(), ["engsoccerdata/scotland/1/2005"])
+                self.assertEqual(x("SELECT count(*) FROM core.matches WHERE archive_key LIKE 'r:engsoccerdata/scotland/%'").fetchone()[0], 2)
+                raise psycopg.Rollback()  # the other tests start from the base as it was
+        except psycopg.Rollback:
+            pass
+
     def test_recent_seasons_fill_what_pitchapi_lacks(self):
         from vega.store import Store
 

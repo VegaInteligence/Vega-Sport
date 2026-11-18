@@ -196,3 +196,22 @@
 - Mock-up sent, awaiting validation: scratchpad `e6ee2704…/mock-wp` (`maquette-probabilite.html`, `shots/`): one stacked column per minute, home team's goals above (chips with minute, scorer, score), away team's below, two close goals on two rows; a « Prolongation » zone and a final « t.a.b. » column; the list of what each goal changed, with names.
 - Open decision for the user: extending the model to extra time (proposed in the mock-up: the same rates over the 30 minutes left, a level score going to the shoot-out at 50/50) is a method change: measure, then ask, before applying.
 - Next action: the user's validation and decision; then tests first, implementation, E2E, deploy.
+
+## Competition scope — remove the leagues the user does not want (18 Nov 2026, scratchpad worktree `e03ea355…/wt`, branch `claude/prune-leagues`)
+
+- Goal (user, 18 Nov, in French): remove the competitions listed below from collection and from the base, then update the competition list in `docs/vega-sport-data-coverage.xlsx`. Afterwards (next objective, not started): collect more seasons for every league kept, back to 2010 at least, the seven big European leagues first.
+- Removed, PitchAPI (21): J. League `l_2ApGa4`, J3 League `l_3fglZv`, K League 1 `l_2EKrnc`, K League 2 `l_271pqa`, Indian Super League `l_1qpFVw`, Thai League 1 `l_3hW1NO`, Bolivia `l_4dzm4e`, Paraguay `l_4FPF2L`, Peru `l_3uNwVX`, Venezuela `l_1TVRZW`, Chile `l_3qNjzC`, China `l_20pNSc`, Egypt `l_46aZMC`, South Africa `l_1Kknkl`, Saudi First Division `l_3CB6qX`, Saudi Women's Premier League `l_1SGwQT` (men only for now), Virsliga `l_45xKXM`, Allsvenskan `l_1XsMdH`, Denmark 1. Division `l_1rPvVD`, MLS Next Pro `l_3Tn1kG`, USL League One `l_3Kf7Ni`.
+- Removed, open-matchday (10): CYP_1, KAZ_1, SVN_1, IRE_2, IRE_3, SCO_2, SCO_3, SCO_4, WAL_2, WAL_3 (and engsoccerdata's Scottish second to fourth tiers, the same leagues' archive).
+- Kept explicitly: France L1/L2, Italy A/B, Spain 1/2, Germany 1–3, England every level, Netherlands 1/2, Portugal 1, Brazil A/B, MLS + USL Championship, Saudi Pro League, Qatar, Liga MX, Denmark Superligaen, Hungary NB I, Ireland Premier Division, Norway Eliteserien, Scotland Premiership (and its cups), Wales Cymru Premier, Russia, Ukraine. Everything not named stays.
+- Wanted but held by no source: National (FRA 3), Serie C, Primera Federación, Liga Portugal 2.
+- Ambiguous, decided: « le Chili, donc la Chine » read as both removed (reversible by taking the key off the list); « MLS 2 » → USL Championship (« premier et deuxième niveau »).
+- Linear: overlap check not done (the connector opens another workspace; nothing is written there).
+- Done (branch `claude/prune-leagues`):
+  - `backend/vega/scope.py`: REMOVED (21 PitchAPI keys), REMOVED_FOLDERS (10 + SWE_1_allsvenskan, else its copy returns once PitchAPI's league is gone), REMOVED_ARCHIVES (engsoccerdata/scotland/2–4, seen in production as « Écosse · Division 2–4 »).
+  - Collection skips them: PitchAPI day calendar and catalogue (worker `_held`, `scope.kept`), league profile fetch, open-matchday, archive loader.
+  - `scope.purge` (worker daily pass, once a UTC day): per competition, deletes rows blocking FKs first (read from pg_constraint), then matches, rounds, editions, competition, provider ids and jobs; marks the seasons' published player rankings stale (production's 2024/25 top 200 shows Bolívar players); stops monthly profile reads of teams/players left with no match. Teams and players stay.
+  - Static lists trimmed: SportScore maps (server and site), league-rules.json, site league pyramid, COUNTRY_LEAGUES (LV, SE), Elo TIERS. Kept on purpose: power.WOMEN rule, cup-catalog display names.
+  - Spreadsheet: 130 → 99 competitions, every tab, 5 count texts updated (subagent; checked by reopening, not in Excel).
+- Not handled: orphan `agg.cohorts` of removed editions (not served: the only API view inner-joins competitions); logs (`ops.fetch_log`, `parse_failures`); global fitted models keep their earlier fits.
+- Incidents: my first local PostgreSQL port (54319) was another session's server; `test_databases.py` dropped and recreated that server's `vega_v2_*_test` bases (not its e2e ones). The checkout was renamed to /home/romai/Vega at 22:35 (not by me); `git worktree repair` relinked this worktree and three other sessions' worktrees.
+- Next action: full test runs, commit, push branch, CI; deploy only on the user's word; then seasons back to 2010 (big seven first).

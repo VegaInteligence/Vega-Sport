@@ -4,9 +4,9 @@ export const COUNTRY_LEAGUES = {
   IT: "l_0ALvwF", PT: "l_4QexZg", NL: "l_4H43wr", BE: "l_2L6d1F",
   CH: "l_4d6Bwl", AT: "l_3zsMpo", TR: "l_0S1uaf", HR: "l_2tFk9k",
   CZ: "l_0F4I4F", DK: "l_49Zmno", FI: "l_3Ci5Cg", GR: "l_3xwVF2",
-  IE: "l_1eJSA7", IS: "l_1TTHxD", IL: "l_16Sq13", LV: "l_45xKXM",
+  IE: "l_1eJSA7", IS: "l_1TTHxD", IL: "l_16Sq13",
   NO: "l_0uqFK8", PL: "l_214sqK", RO: "l_0kSJLz", RU: "l_2Mh0jT",
-  RS: "l_2xBPKk", SK: "l_4MU9Yh", SE: "l_1XsMdH",
+  RS: "l_2xBPKk", SK: "l_4MU9Yh",
 };
 // Provider country codes are not always ISO alpha-3 (for example ENG and NED).
 const PROVIDER_COUNTRIES = { TH: "THA", AU: "AUS", US: "USA", BR: "BRA", AR: "ARG", JP: "JPN", KR: "KOR", MX: "MEX", CA: "CAN", CO: "COL", PE: "PER", QA: "QAT", AE: "UAE", SA: "KSA", ZA: "RSA", CL: "CHI", PY: "PAR", UY: "URU" };
